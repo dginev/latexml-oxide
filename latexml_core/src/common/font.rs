@@ -1264,15 +1264,13 @@ impl Font {
         }),
       );
     }
-    if is_diff(self.encoding.as_ref(), other.encoding.as_ref()) {
-      result.insert(
-        "encoding".to_string(),
-        (self.encoding.as_ref().unwrap().to_string(), Font {
-          encoding: self.encoding.clone(),
-          ..Font::default()
-        }),
-      );
-    }
+    // #638: the font `encoding` is a FontMap-lookup key consumed DURING digestion
+    // (unicode decoding), not a presentation property — it is meaningless as an
+    // output attribute and no ltx element even declares it, so Perl emits no
+    // `@encoding` anywhere. Emitting it here only ever surfaced (spuriously) on a
+    // foreign `xhtml:*` element whose `attribute *` wildcard accepts anything.
+    // Omit it from the relativized attribute set entirely (Perl `Font.pm` keeps
+    // the analogous line, but the value never reaches real output there).
     if is_diff(self.language.as_ref(), other.language.as_ref()) {
       result.insert(
         "xml:lang".to_string(),
@@ -2322,6 +2320,56 @@ mod tests {
     // An integral float still reads back cleanly.
     assign_value("NOMINAL_FONT_SIZE", Float(12.0), None);
     assert_eq!(defsize(), 12.0, "12pt reads back as 12.0");
+  }
+
+  /// #638: LaTeXML treats the font `encoding` three different ways, and this
+  /// pins all three so the "omit encoding from `relative_to`" fix cannot drift
+  /// into collapsing font *identity*. Two fonts that differ ONLY in encoding are:
+  ///   - **unequal** (`eq`) and **distinctly hashable** — a T1 span is a
+  ///     different font than an OT1 span, so `set_node_font`'s `_font` /
+  ///     `node_fonts` keys keep them apart;
+  ///   - **distance 0** — encoding alone never opens a font wrapper (Perl's
+  ///     `distance` skips it explicitly, `Common/Font.pm`);
+  ///   - **empty under `relative_to`** — encoding is a FontMap-lookup key consumed
+  ///     at digestion, meaningless as output, so it is omitted from the relativized
+  ///     attribute set (otherwise it leaks onto raw `xhtml:*`, whose `attribute *`
+  ///     schema wildcard accepts it — the reported bug).
+  #[test]
+  fn encoding_is_font_identity_but_not_distance_or_output() {
+    use crate::state::{State, StateOptions, set_state};
+    set_state(State::new(StateOptions::default()));
+
+    let base = Font::default();
+    let mut t1 = base.clone();
+    t1.encoding = Some(Cow::Borrowed("T1"));
+    let mut ot1 = base.clone();
+    ot1.encoding = Some(Cow::Borrowed("OT1"));
+
+    // Identity: different encodings ⇒ different fonts.
+    assert_ne!(
+      t1, ot1,
+      "fonts differing only in encoding must not be equal"
+    );
+    assert_ne!(
+      t1.to_hashable(),
+      ot1.to_hashable(),
+      "differently-encoded fonts must get distinct `_font` ids"
+    );
+
+    // Distance: encoding is not a font-switch factor (faithful to Perl).
+    assert_eq!(
+      t1.distance(&ot1),
+      0,
+      "encoding alone must not count as a font-switch distance"
+    );
+
+    // Output: encoding is never emitted as a relativized attribute (#638). Since
+    // the two fonts differ only in encoding, the relativized set is empty.
+    let rel = t1.relative_to(&ot1);
+    assert!(
+      rel.is_empty(),
+      "relative_to must not emit @encoding (it leaks onto foreign xhtml); got {rel:?}"
+    );
   }
 
   #[test]

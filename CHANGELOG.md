@@ -26,6 +26,15 @@
     typed value, `()` when absent) and `document.getProperties()` (the whole map)
     read the same construction-time property map, matching Perl, which hands
     `$whatsit->getProperties` to a CODE replacement (`Constructor.pm:137`) (#635).
+  - **The font `encoding` is no longer emitted as an output attribute.** The
+    font-encoding property is a FontMap-lookup key used *during* digestion to decode
+    unicode; it is meaningless afterwards and no `ltx:` element declares it. It was
+    still placed in the relativized font-attribute set, where it normally vanished
+    (no element accepts it) but leaked onto raw xhtml a binding splices in via
+    `insertXML` — `\fontencoding{T1}\selectfont` + a `\bmlRawHTML`-style binding
+    produced `<xhtml:div encoding="T1">` (the div's `attribute *` schema wildcard
+    accepts anything). `Font::relative_to` now omits it, so `@encoding` appears
+    nowhere (#638).
   - **A shared author-email line distributes across the authors instead of bunching
     on the last one.** `\email{a@x, b@y, c@z}` (or a single `\email` covering several
     authors) previously attached every address to whichever creator was open when the
