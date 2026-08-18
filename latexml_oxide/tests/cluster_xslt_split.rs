@@ -1262,3 +1262,151 @@ mod cleanup_scripts_xmlid {
     );
   }
 }
+
+mod urlstyle {
+  //! `--urlstyle` (#656, feature parity with `latexmlpost`): rewrite generated
+  //! cross-reference URLs for the serving environment. Full pipeline (split +
+  //! CrossRef `generateURL` + the output-extension plumbing + XSLT `f:url`).
+  //!
+  //! Perl `CrossRef::generateURL` (CrossRef.pm L656-663) with `extension =>`
+  //! set to the output extension (LaTeXML.pm L479): `server` strips a trailing
+  //! `index.<ext>`, `negotiated` also strips the `.<ext>` extension, `file`
+  //! keeps the full path. Only checkable end-to-end — the in-process `Converter`
+  //! stops at Core XML, before CrossRef runs. The default is `file` (Rust keeps
+  //! full paths; a documented divergence from Perl's `server` default —
+  //! OXIDIZED_DESIGN).
+
+  use std::process::Command;
+
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\begin{document}\n\
+                     \\chapter{Alpha}\n\
+                     \\section{Beta}\n\
+                     \\subsection{Gamma}\n\
+                     \\section{Delta}\n\
+                     \\chapter{Epsilon}\n\
+                     \\end{document}\n";
+
+  /// Convert the book with `--splitat=section` (plus `extra` args), returning the
+  /// `<head>` navigation `<link rel=… href=…>` hrefs of the `Ch1.S1.html` page.
+  fn nav_hrefs(extra: &[&str]) -> Vec<String> {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("index.tex"), DOC).unwrap();
+    let mut args = vec![
+      "index.tex",
+      "--splitat",
+      "section",
+      "--format",
+      "html5",
+      "--dest",
+      "index.html",
+    ];
+    args.extend_from_slice(extra);
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(&args)
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{}",
+      out.status.code(),
+      String::from_utf8_lossy(&out.stderr)
+    );
+    let page = std::fs::read_to_string(work.path().join("Ch1.S1.html")).expect("read Ch1.S1.html");
+    let head = page.split("</head>").next().unwrap_or(&page);
+    head
+      .match_indices("<link rel=")
+      .map(|(i, _)| {
+        let rest = &head[i..];
+        rest[..rest.find('>').map(|j| j + 1).unwrap_or(rest.len())].to_string()
+      })
+      .filter(|l| !l.contains("stylesheet"))
+      .collect()
+  }
+
+  fn has(links: &[String], rel: &str, href: &str) -> bool {
+    let needle_rel = format!("rel=\"{rel}\"");
+    let needle_href = format!("href=\"{href}\"");
+    links
+      .iter()
+      .any(|l| l.contains(&needle_rel) && l.contains(&needle_href))
+  }
+
+  /// Default (`file`, no `--urlstyle`): full paths, nothing stripped.
+  #[test]
+  fn default_is_file_style_full_paths() {
+    let links = nav_hrefs(&[]);
+    assert!(
+      has(&links, "start", "index.html"),
+      "default should keep index.html: {links:?}"
+    );
+    assert!(
+      has(&links, "chapter", "Ch1.html"),
+      "default should keep Ch1.html: {links:?}"
+    );
+    // Explicit `--urlstyle=file` is identical to the default.
+    let explicit = nav_hrefs(&["--urlstyle", "file"]);
+    assert!(has(&explicit, "start", "index.html") && has(&explicit, "chapter", "Ch1.html"));
+  }
+
+  /// `server`: strip a trailing `index.html` (landing page → `./`); a non-index
+  /// sub-page keeps its `.html`.
+  #[test]
+  fn server_style_strips_trailing_index() {
+    let links = nav_hrefs(&["--urlstyle", "server"]);
+    assert!(
+      has(&links, "start", "./"),
+      "server should strip index.html → ./ : {links:?}"
+    );
+    assert!(
+      has(&links, "chapter", "Ch1.html"),
+      "server keeps a non-index sub-page: {links:?}"
+    );
+    assert!(
+      !has(&links, "start", "index.html"),
+      "server must not leave index.html: {links:?}"
+    );
+  }
+
+  /// `negotiated`: also strip the `.html` extension (and a trailing `index`).
+  /// Proves the output-extension is plumbed into CrossRef (else `.html` would
+  /// survive because the default strip target is `xml`).
+  #[test]
+  fn negotiated_style_strips_extension() {
+    let links = nav_hrefs(&["--urlstyle", "negotiated"]);
+    assert!(
+      has(&links, "chapter", "Ch1"),
+      "negotiated should drop .html → Ch1: {links:?}"
+    );
+    assert!(
+      has(&links, "start", "."),
+      "negotiated should strip index.html → . : {links:?}"
+    );
+    assert!(
+      !links.iter().any(|l| l.contains(".html\"")),
+      "negotiated must leave no .html in nav hrefs: {links:?}"
+    );
+  }
+
+  /// An unknown `--urlstyle` value is rejected at the CLI (Perl `_checkOptionValue`).
+  #[test]
+  fn unknown_urlstyle_value_is_rejected() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("index.tex"), DOC).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["index.tex", "--urlstyle", "bogus", "--dest", "index.html"])
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      !out.status.success(),
+      "an invalid --urlstyle value must fail"
+    );
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(
+      err.contains("bogus") || err.to_lowercase().contains("invalid"),
+      "error should name the bad value:\n{err}"
+    );
+  }
+}

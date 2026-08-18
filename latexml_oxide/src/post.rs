@@ -72,6 +72,11 @@ pub struct PostOptions<'a> {
   /// (Perl `--hackplane1`); implies `plane1`.
   pub hackplane1:                bool,
   pub mathtex:                   bool,
+  /// Cross-reference URL style (Perl `--urlstyle`; `CrossRef::generateURL`).
+  /// Defaults to [`UrlStyle::File`](latexml_post::crossref::UrlStyle::File) at
+  /// every non-CLI construction site (the binary threads the parsed `--urlstyle`
+  /// value here).
+  pub url_style:                 latexml_post::crossref::UrlStyle,
   pub navigationtoc:             Option<&'a str>,
   pub schemadocs:                bool,
   pub split:                     bool,
@@ -534,6 +539,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     plane1,
     hackplane1,
     mathtex,
+    url_style,
     navigationtoc,
     schemadocs,
     split,
@@ -863,11 +869,27 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // on the thread that is about to run the pipeline.
   crate::bib_session::install();
 
+  // The output file extension CrossRef strips for `--urlstyle` (Perl
+  // `extension => $$opts{extension}`, LaTeXML.pm L479; derived in Config.pm
+  // L408-420 from the destination's extension, else the format). Without it the
+  // `server`/`negotiated` styles would strip the wrong suffix (the `xml` default)
+  // and leave an html site's links untouched.
+  let out_extension = destination
+    .and_then(|d| std::path::Path::new(d).extension().and_then(|e| e.to_str()))
+    .map(str::to_string)
+    .unwrap_or_else(|| {
+      if stylesheet.is_some_and(|s| s.contains("html")) {
+        "html".to_string()
+      } else {
+        "xml".to_string()
+      }
+    });
+
   // Phase 4: CrossRef — built only once the bibliography sweep has handed the
   // ObjectDB baton on (see `sweep_pages`), so nothing holds two owners of it.
   let build_crossref = |db| {
-    let mut crossref =
-      latexml_post::crossref::CrossRef::new(db, latexml_post::crossref::UrlStyle::File, true);
+    let mut crossref = latexml_post::crossref::CrossRef::new(db, url_style, true);
+    crossref.set_extension(&out_extension);
     if let Some(navtoc) = navigationtoc {
       crossref.set_navigation_toc(navtoc);
     }
@@ -1143,6 +1165,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       // Filled in by `parallel_render` once the db is saved.
       dbfile: std::path::PathBuf::new(),
       navigation_toc: navigationtoc.map(String::from),
+      url_style: url_style.as_cli().to_string(),
+      out_extension: out_extension.clone(),
       graphicimages,
       graphics_svg_threshold_kb,
       pmml,

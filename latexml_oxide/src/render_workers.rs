@@ -112,6 +112,11 @@ pub struct RenderManifest {
   /// The saved ObjectDB (SQLite, attached readonly by each worker).
   pub dbfile:                    PathBuf,
   pub navigation_toc:            Option<String>,
+  /// Cross-reference URL style as its canonical CLI tag (`UrlStyle::as_cli` /
+  /// `from_cli` round-trip), serialized across the worker manifest.
+  pub url_style:                 String,
+  /// Output file extension CrossRef strips for `--urlstyle` (Perl `extension`).
+  pub out_extension:             String,
   pub graphicimages:             bool,
   pub graphics_svg_threshold_kb: u32,
   pub pmml:                      bool,
@@ -584,7 +589,9 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
       return 0;
     },
   };
-  let mut crossref = CrossRef::new(db, UrlStyle::File, true);
+  let url_style = UrlStyle::from_cli(&m.url_style).unwrap_or(UrlStyle::File);
+  let mut crossref = CrossRef::new(db, url_style, true);
+  crossref.set_extension(&m.out_extension);
   if let Some(navtoc) = m.navigation_toc.as_deref() {
     crossref.set_navigation_toc(navtoc);
   }

@@ -87,6 +87,7 @@ fn post_opts<'a>(dest: &'a str, src_dir: &'a str) -> PostOptions<'a> {
     plane1:                    true,
     hackplane1:                false,
     mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
     schemadocs:                false,
     split:                     true,

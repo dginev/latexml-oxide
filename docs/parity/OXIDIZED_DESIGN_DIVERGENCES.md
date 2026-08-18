@@ -5092,3 +5092,28 @@ regressing the tokenize `comment` fixture's `%`-guarded edge cases.)
 mid-line-end scan would benefit Perl `comment.sty.ltxml`).
 
 **Guard**: `06_cluster_bibliography::comment_midline_end_keeps_bibliography`.
+
+### 134. `--urlstyle` defaults to `file`, not Perl's `server`
+
+**Perl**: `Config.pm` L482 defaults `urlstyle` to `server`, so `latexml`'s
+cross-reference URLs strip a trailing `index.<ext>` (a split document's landing
+page links as `./`) out of the box.
+
+**Rust**: `--urlstyle` accepts the same three values (`server` / `negotiated` /
+`file`) and applies the identical `CrossRef::generateURL` transform (CrossRef.pm
+L656-663), but **defaults to `file`** — full paths, nothing stripped. Passing
+`--urlstyle=server` reproduces Perl's default exactly.
+
+**Why**: latexml-oxide's north star is a self-contained artifact often viewed
+straight off disk (`file://`), where `server`-style links (`./`, `dir/`) do not
+resolve — a browser opening `file:///…/dir/` will not serve `dir/index.html`.
+`file` is the safe default for that case (the very reason the issue reporter, the
+BookML author, notes needing `--urlstyle=file` for `index.html`-buggy servers);
+a real HTTP deployment opts into `server`/`negotiated`. Keeping `file` also
+avoids changing the current cross-ref output for every split document. Approved
+by the maintainer 2026-08-18 when resolving #656.
+
+**Upstream**: n/a — a default choice, not a bug in Perl.
+
+**Guard**: `cluster_xslt_split::urlstyle::default_is_file_style_full_paths` (and
+the `server`/`negotiated` siblings prove the opt-in styles match Perl).
