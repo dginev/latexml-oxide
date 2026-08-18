@@ -141,6 +141,7 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     plane1:                    true,
     hackplane1:                false,
     mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
     schemadocs:                false,
     split:                     false,

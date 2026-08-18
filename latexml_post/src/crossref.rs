@@ -134,15 +134,81 @@ fn strip_ref_display_fragids(doc: &PostDocument) {
   }
 }
 
-/// URL style for cross-references.
-#[derive(Debug, Clone)]
+/// URL style for cross-references (Perl `--urlstyle`; `Config.pm` accepts
+/// `server`, `negotiated`, `file`). Selects how [`CrossRef`]'s URL generation
+/// rewrites a generated cross-reference URL for the serving environment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UrlStyle {
-  /// Use file.html#fragment
+  /// Keep the full `file.html#fragment` — nothing stripped. Correct for
+  /// `file://` viewing and servers that do not rewrite `index.html`.
   File,
-  /// Use server-side paths (strip trailing index.ext)
+  /// Strip a trailing `index.ext` so a directory index links as `dir/`
+  /// (Perl's `latexml` default; for servers that serve `dir/` → `dir/index.ext`).
   Server,
-  /// Negotiated: strip file extension and trailing index
+  /// Content negotiation: strip the `.ext` extension AND a trailing `index`
+  /// (for servers that hide the extension, e.g. BookML's `--urlstyle=negotiated`).
   Negotiated,
+}
+
+impl UrlStyle {
+  /// Parse a CLI `--urlstyle` value. Returns `None` for an unrecognized value
+  /// (the caller reports it, mirroring Perl `_checkOptionValue`).
+  pub fn from_cli(s: &str) -> Option<Self> {
+    match s {
+      "file" => Some(UrlStyle::File),
+      "server" => Some(UrlStyle::Server),
+      "negotiated" => Some(UrlStyle::Negotiated),
+      _ => None,
+    }
+  }
+
+  /// The canonical CLI tag — round-trips through [`UrlStyle::from_cli`]. Used to
+  /// serialize the style across the parallel page-render worker manifest.
+  pub fn as_cli(self) -> &'static str {
+    match self {
+      UrlStyle::File => "file",
+      UrlStyle::Server => "server",
+      UrlStyle::Negotiated => "negotiated",
+    }
+  }
+}
+
+/// Rewrite a generated cross-reference `url` for the given [`UrlStyle`], mirroring
+/// Perl `CrossRef::generateURL` (CrossRef.pm L656-663) verbatim — including its
+/// `(^|\/)` path boundary: a trailing `index[.ext]` is stripped only at the very
+/// start of the URL or right after a `/`, so a filename like `myindex.html` is
+/// left intact. `extension` is the output file extension (e.g. `html`).
+fn apply_url_style(url: &str, style: UrlStyle, extension: &str) -> String {
+  match style {
+    // Perl: s/(^|\/)index.\Q$ext\E$/($1 ? $1 : '.\/')/e
+    UrlStyle::Server => {
+      let index_suffix = format!("index.{extension}");
+      if let Some(prefix) = url.strip_suffix(&index_suffix) {
+        if prefix.is_empty() {
+          return "./".to_string(); // matched at start ($1 empty → './')
+        } else if prefix.ends_with('/') {
+          return prefix.to_string(); // matched after '/' ($1 = '/', kept)
+        } // else: no path boundary before `index` → leave url unchanged
+      }
+      url.to_string()
+    },
+    // Perl: s/\.\Q$ext\E$// then s/(^|\/)index$/$1/
+    UrlStyle::Negotiated => {
+      let stripped = url.strip_suffix(&format!(".{extension}")).unwrap_or(url);
+      if stripped == "index" {
+        String::new() // matched at start ($1 empty)
+      } else if let Some(prefix) = stripped.strip_suffix("index") {
+        if prefix.ends_with('/') {
+          prefix.to_string() // matched after '/' ($1 = '/', kept)
+        } else {
+          stripped.to_string() // no path boundary → leave (e.g. `myindex`)
+        }
+      } else {
+        stripped.to_string()
+      }
+    },
+    UrlStyle::File => url.to_string(),
+  }
 }
 
 /// CrossRef post-processor.
@@ -306,30 +372,7 @@ impl CrossRef {
     let doc_location = doc.site_relative_destination().unwrap_or_default();
     let mut url = relative_url(location, &doc_location);
 
-    // Apply URL style
-    match self.url_style {
-      UrlStyle::Server => {
-        let index_suffix = format!("index.{}", self.extension);
-        if url.ends_with(&index_suffix) {
-          let prefix = &url[..url.len() - index_suffix.len()];
-          url = if prefix.is_empty() {
-            "./".to_string()
-          } else {
-            prefix.to_string()
-          };
-        }
-      },
-      UrlStyle::Negotiated => {
-        let ext_suffix = format!(".{}", self.extension);
-        if url.ends_with(&ext_suffix) {
-          url = url[..url.len() - ext_suffix.len()].to_string();
-        }
-        if url.ends_with("/index") {
-          url = url[..url.len() - 5].to_string();
-        }
-      },
-      UrlStyle::File => {},
-    }
+    url = apply_url_style(&url, self.url_style, &self.extension);
 
     if url.is_empty() {
       url = ".".to_string();
@@ -1925,5 +1968,71 @@ mod tests {
       NodeData::Text(" tail".to_string()),
     ];
     assert_eq!(text_content(&nodes), "outer inner tail");
+  }
+
+  // --- URL-style transform (Perl CrossRef::generateURL L656-663) -------------
+
+  #[test]
+  fn url_style_file_is_identity() {
+    // `file` keeps the full path untouched, whatever it is.
+    for url in ["a/b.html", "index.html", "sub/index.html", "index", ""] {
+      assert_eq!(apply_url_style(url, UrlStyle::File, "html"), url);
+    }
+  }
+
+  #[test]
+  fn url_style_server_strips_trailing_index() {
+    // At start → "./"; after a slash → keep the directory (with slash).
+    assert_eq!(
+      apply_url_style("index.html", UrlStyle::Server, "html"),
+      "./"
+    );
+    assert_eq!(
+      apply_url_style("dir/index.html", UrlStyle::Server, "html"),
+      "dir/"
+    );
+    assert_eq!(
+      apply_url_style("a/b/index.html", UrlStyle::Server, "html"),
+      "a/b/"
+    );
+    // A non-index page is untouched.
+    assert_eq!(
+      apply_url_style("dir/page.html", UrlStyle::Server, "html"),
+      "dir/page.html"
+    );
+    // Boundary: `index.html` NOT preceded by start-or-`/` must NOT be stripped
+    // (Perl's `(^|\/)`); the old `ends_with` check wrongly mangled this.
+    assert_eq!(
+      apply_url_style("myindex.html", UrlStyle::Server, "html"),
+      "myindex.html"
+    );
+  }
+
+  #[test]
+  fn url_style_negotiated_strips_extension_and_index() {
+    // Extension goes; a plain page keeps its stem.
+    assert_eq!(
+      apply_url_style("dir/page.html", UrlStyle::Negotiated, "html"),
+      "dir/page"
+    );
+    // Trailing `index` after the extension strip: at start → ""; after "/" → keep dir.
+    assert_eq!(
+      apply_url_style("index.html", UrlStyle::Negotiated, "html"),
+      ""
+    );
+    assert_eq!(
+      apply_url_style("dir/index.html", UrlStyle::Negotiated, "html"),
+      "dir/"
+    );
+    // Boundary: a bare `index` NOT after start-or-`/` stays (Perl's `(^|\/)index$`).
+    assert_eq!(
+      apply_url_style("myindex.html", UrlStyle::Negotiated, "html"),
+      "myindex"
+    );
+    // Honors a non-html extension.
+    assert_eq!(
+      apply_url_style("dir/index.xml", UrlStyle::Negotiated, "xml"),
+      "dir/"
+    );
   }
 }

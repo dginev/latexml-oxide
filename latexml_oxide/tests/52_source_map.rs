@@ -62,6 +62,7 @@ fn html_from(xml: &str) -> String {
     plane1:                    true,
     hackplane1:                false,
     mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
     schemadocs:                false,
     split:                     false,

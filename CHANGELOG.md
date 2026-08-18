@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+  - **`--urlstyle=(server|negotiated|file)` rewrites cross-reference URLs for the
+    serving environment** (feature parity with `latexmlpost`; #656). `server`
+    strips a trailing `index.html` (landing page → `./`), `negotiated` also strips
+    the `.html` extension (BookML's extensionless URLs), `file` keeps full paths.
+    The `UrlStyle` transform existed but was unreachable (hard-coded, and the
+    output extension was never plumbed into CrossRef, so it stripped the wrong
+    suffix); now the flag selects it and the extension is threaded through both the
+    serial and parallel-render paths, matching Perl `CrossRef::generateURL` +
+    `extension =>` (CrossRef.pm L656-663, LaTeXML.pm L479) exactly — including the
+    `(^|/)` path boundary (a `myindex.html` is left intact). Default is `file`
+    (Perl defaults to `server`; a documented divergence — OXIDIZED_DESIGN #134).
   - **Rhai bindings can read a verbatim body via `StartSemiverbatim`/`EndSemiverbatim`.**
     A `DefEnvironment` whose body contains `^`/`_`/`&`/… (e.g. a code block) raised
     "Script ^ can only appear in math mode" because the body was digested normally.

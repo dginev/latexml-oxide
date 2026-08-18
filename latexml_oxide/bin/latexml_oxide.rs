@@ -307,6 +307,12 @@ struct Cli {
   #[arg(long, alias = "navtoc", value_name = "STYLE")]
   navigationtoc: Option<String>,
 
+  /// Cross-reference URL style for the serving environment: `server` (strip a
+  /// trailing `index.html`), `negotiated` (also strip the `.html` extension), or
+  /// `file` (keep full paths; the default, best for local `file://` viewing).
+  #[arg(long, value_name = "STYLE", value_parser = ["server", "negotiated", "file"])]
+  urlstyle: Option<String>,
+
   /// Favicon for the generated site: emitted as `<link rel="icon">` and copied
   /// to the destination.
   #[arg(long, value_name = "FILE")]
@@ -1441,6 +1447,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           mathtex: resolved.mathtex,
           plane1: resolved.plane1,
           hackplane1: cli.hackplane1,
+          // Perl `--urlstyle` (Config.pm L482 defaults to `server`; we default
+          // to `file` — no trailing-index stripping, safest for local `file://`
+          // viewing — OXIDIZED_DESIGN #134). clap already restricted the value to
+          // the three valid tags, so `from_cli` never returns None here.
+          url_style: cli
+            .urlstyle
+            .as_deref()
+            .and_then(latexml_post::crossref::UrlStyle::from_cli)
+            .unwrap_or(latexml_post::crossref::UrlStyle::File),
           navigationtoc: cli.navigationtoc.as_deref(),
           schemadocs: cli.schemadocs,
           split: split_enabled,
