@@ -64,8 +64,32 @@ LoadDefinitions!({
   // so an undefined `\tex_let:D` here ⇒ raw load will fire.
   let raw_load_will_run = lookup_meaning(&T_CS!("\\tex_let:D")).is_none();
 
+  // In degraded no-dump mode the raw expl3.sty load re-runs expl3-code.tex,
+  // whose group-end codepoint block (L33074-33180) trips known raw-load-only
+  // cascades that the dump avoids and that Perl's own raw-load does not produce
+  // (Perl converts `\usepackage{fvextra}` with 0 errors). They leave expl3's
+  // runtime usable — the document still converts correctly — but their benign
+  // error/fatal records would otherwise count against the CONVERSION, so a
+  // perfectly good no-dump run reports "Conversion failed: 1 fatal error" (issue
+  // #651: a bare `\usepackage{fvextra}`, whose output is a healthy
+  // `<p>text</p>`). Snapshot the report across this raw load and restore it —
+  // and mute the spurious stderr lines — so only the DOCUMENT's own diagnostics
+  // reach the conversion verdict. Dump mode short-circuits the re-load
+  // (`raw_load_will_run == false`), so this is scoped strictly to the degraded
+  // fallback; canvas/parity always run on the dump.
+  use latexml_core::common::error::{REPORT, set_suppress_log_output};
+  let report_snapshot = raw_load_will_run.then(|| REPORT.borrow().clone());
+  let prev_suppress = raw_load_will_run.then(|| set_suppress_log_output(true));
+
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+
+  if let Some(snapshot) = report_snapshot {
+    *REPORT.borrow_mut() = snapshot;
+  }
+  if let Some(prev) = prev_suppress {
+    set_suppress_log_output(prev);
+  }
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
   // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }

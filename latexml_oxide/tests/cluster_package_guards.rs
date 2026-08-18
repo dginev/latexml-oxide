@@ -1738,3 +1738,82 @@ mod texinputs_usepackage {
     );
   }
 }
+
+/// A no-dump (degraded raw-load) conversion of an expl3-using document must
+/// still succeed. Witness issue #651: a bare `\usepackage{fvextra}` reported
+/// "Conversion failed: 1 fatal error" under DEGRADED mode even though the output
+/// (`<p>text</p>`) was correct. The failure was a benign expl3-code.tex
+/// group-end codepoint cascade (L33074-33180) that the dump avoids and Perl's
+/// own raw-load never produces, leaking a fatal into the conversion status.
+/// `expl3_sty.rs` now snapshots the error report across the degraded raw expl3
+/// load (gated on `raw_load_will_run`, so dump mode — which short-circuits the
+/// re-load — is untouched). The fixture uses `\usepackage{expl3}` directly (the
+/// l3kernel is always present, unlike a trimmed-TL `fvextra`), which triggers
+/// the same raw-load path.
+///
+/// Linux-only: the degraded raw-load re-runs the whole ~33k-line expl3-code.tex,
+/// which under the unoptimized `ci`/`dev` test profile takes ~2 min (measured
+/// 124 s local `dev`); the behavior is OS-independent, so guarding one platform
+/// keeps the ~2-min cost off all four macOS shards. It also needs an explicit
+/// `--timeout` far above the 60 s CLI default (which is calibrated for the fast
+/// dump path): with the default, the legitimate slow bootstrap is killed as a
+/// `Fatal:timeout:wallclock` before the load can finish. Release-optimized
+/// binaries — what real degraded users run — complete the same load well under
+/// 60 s, so this large timeout is purely a slow-test-build accommodation.
+#[cfg(target_os = "linux")]
+mod expl3_degraded_no_dump {
+  use std::{path::Path, process::Command};
+
+  const EXPL3_TEX: &str = r"\documentclass{article}
+\usepackage{expl3}
+\begin{document}
+degraded-body-text
+\end{document}
+";
+
+  fn convert_nodump() -> (bool, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("e.tex"), EXPL3_TEX).expect("write e.tex");
+    let output = Command::new(bin)
+      // `--timeout 900`: the unoptimized test-build raw expl3 load runs ~2 min,
+      // far over the 60 s CLI default; 900 s stays well under nextest's 20 min
+      // terminate-after so a genuine hang still surfaces.
+      .args([
+        "e.tex",
+        "--dest",
+        "e.xml",
+        "--nocomments",
+        "--timeout",
+        "900",
+      ])
+      .env("LATEXML_NODUMP", "1")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("e.xml")).unwrap_or_default();
+    (
+      output.status.success(),
+      format!("{stderr}\n<<<XML>>>\n{xml}"),
+    )
+  }
+
+  #[test]
+  fn expl3_converts_healthily_without_a_dump() {
+    let (ok, out) = convert_nodump();
+    assert!(
+      ok,
+      "degraded no-dump expl3 conversion exited non-zero:\n{out}"
+    );
+    assert!(
+      !out.contains("fatal error"),
+      "degraded no-dump conversion leaked a fatal (benign expl3 cascade):\n{out}"
+    );
+    assert!(
+      out.contains("degraded-body-text"),
+      "degraded no-dump conversion dropped the body:\n{out}"
+    );
+  }
+}
