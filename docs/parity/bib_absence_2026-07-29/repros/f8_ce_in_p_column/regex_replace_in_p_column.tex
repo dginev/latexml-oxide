@@ -1,0 +1,31 @@
+% F8 root-cause isolation — the trigger is NOT mhchem, it is the expl3
+% regex-REPLACE primitive `\regex_replace_all:nnN` running inside a `p{}`/`m{}`
+% paragraph column. No chem package is loaded here; expl3 is part of base
+% LaTeXML, so this reproduces on the PLAIN binary (and on bare Perl 0.8.8, no
+% `--includestyles` needed — expl3 needs no raw .sty).
+%
+%   pdflatex: renders "X" and TAILTEXT, raises nothing (regex-replace is pure
+%   expansion in real TeX and never touches mode/alignment state).
+%   BOTH LaTeXML engines: 7 errors — `\@end@tabular Attempt to close a group
+%   that switched to mode horizontal`, `\lx@begin@alignment … internal_vertical`
+%   (×3), `\@@tabular … restricted_horizontal`; TAILTEXT + bibliography lost.
+%
+% Rust 0.7.x and Perl 0.8.8 give the byte-identical 7-error cascade → SHARED.
+% `\regex_match` (MATCH, read-only) in the same column is CLEAN; a `c`/`l`
+% column is CLEAN. Only regex-REPLACE in a PARAGRAPH column corrupts the
+% deferred-alignment mode/group state. mhchem `\ce` and chemformula `\ch`
+% (witness 2606.04125) both reach this primitive, so they are two faces of one
+% shared limit, not two bugs.
+\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+\tl_new:N \l_tmpa_tl
+\newcommand\myop{\tl_set:Nn \l_tmpa_tl {aaa}
+  \regex_replace_all:nnN {a} {X} \l_tmpa_tl \tl_use:N \l_tmpa_tl}
+\ExplSyntaxOff
+\begin{tabular}{p{3cm}}
+\myop \\
+\end{tabular}
+TAILTEXT here.
+\begin{thebibliography}{9}\bibitem{a} An entry.\end{thebibliography}
+\end{document}

@@ -19,11 +19,37 @@ const SAMPLE: &str = r##"
   DefMacro("\\twicex{}", |x| x + x);
 
   // Constructor (imperative, proxy syntax close to Perl's $document->method):
-  // \myemph{X} -> <ltx:emph>X</ltx:emph>.
+  // \myemph{X} -> <ltx:emph>X</ltx:emph>. `x` is a digested `{}` arg — an opaque
+  // Digested handle the body hands to `document.absorb`.
   DefConstructor("\\myemph{}", |document, x| {
     document.openElement("ltx:emph");
     document.absorb(x);
     document.closeElement("ltx:emph");
+  });
+
+  // Undigested parameter (#634): Perl hands an `Undigested` arg to a CODE
+  // replacement as raw *Tokens* (Constructor.pm:137 `$whatsit->getArgs`), never a
+  // digested box — the reader keeps it undigested. So a Rhai imperative body must
+  // receive `Tokens` (usable with UnTeX/Expand/absorb), NOT an opaque `Digested`
+  // handle. \uarg{hi} -> <ltx:text class="uarg">U[hi]</ltx:text>. `UnTeX` is
+  // registered ONLY for `Tokens`; before the fix `toks` arrived as a `Digested`
+  // and this threw, degrading the binding (the reported "value of type Digested").
+  DefConstructor("\\uarg Undigested", |document, toks| {
+    let s = "U[" + UnTeX(toks) + "]";
+    document.openElement("ltx:text");
+    document.setAttribute("class", "uarg");
+    document.absorbString(s);
+    document.closeElement("ltx:text");
+  });
+
+  // Undigested arg absorbed directly: the dominant Perl port idiom
+  // `$document->absorb($tokens)`. Guards the `absorb(Tokens)` overload (#634) —
+  // \uabs{ZZ} -> <ltx:text class="uabs">ZZ</ltx:text>.
+  DefConstructor("\\uabs Undigested", |document, toks| {
+    document.openElement("ltx:text");
+    document.setAttribute("class", "uabs");
+    document.absorb(toks);
+    document.closeElement("ltx:text");
   });
 
   // The documentation example, translated 1:1 from Perl. A no-arg constructor
@@ -313,7 +339,7 @@ fn script_binding_macro_and_constructor_convert() {
 
   let tex = concat!(
     "literal:\\documentclass{article}\\usepackage[draft]{lxrhaitest}",
-    "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\wrap{\\wrap{\\myemph{deeper}}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
+    "\\begin{document}\\twicex{ab} \\myemph{hi} \\uarg{hi} \\uabs{ZZ} \\mytext{zz} \\wrap{\\myemph{deep}} \\wrap{\\wrap{\\myemph{deeper}}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
@@ -348,6 +374,18 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("<emph>hi</emph>"),
     "imperative constructor \\myemph did not emit its element; xml=\n{xml}"
+  );
+  // #634: an `Undigested` arg reaches the imperative body as `Tokens` (UnTeX,
+  // registered only for Tokens, succeeds) — not a `Digested` handle.
+  assert!(
+    xml.contains("class=\"uarg\"") && xml.contains("U[hi]"),
+    "Undigested arg did not reach the body as Tokens (\\uarg); xml=\n{xml}"
+  );
+  // #634: `document.absorb(tokens)` — the Perl `$document->absorb($tokens)` port
+  // idiom — works on the Undigested Tokens arg.
+  assert!(
+    xml.contains("class=\"uabs\"") && xml.contains(">ZZ<"),
+    "absorb(Tokens) on an Undigested arg failed (\\uabs); xml=\n{xml}"
   );
   assert!(
     xml.contains("class=\"rhai\"") && xml.contains("zz"),

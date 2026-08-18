@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+  - **An `Undigested` constructor argument reaches a Rhai body as `Tokens`.** A
+    runtime `DefConstructor` with an `Undigested` (or `OptionalUndigested`) parameter
+    handed its imperative `|document, arg|` body an opaque `Digested` handle wrapping
+    nonsensical-looking token data, so `UnTeX`/`Expand` on the argument threw and the
+    binding degraded. It now arrives as `Tokens` — matching Perl, where an undigested
+    reader keeps its argument as raw Tokens (`Constructor.pm` `getArgs`) — and
+    `document.absorb(tokens)` accepts it directly (#634).
   - **A shared author-email line distributes across the authors instead of bunching
     on the last one.** `\email{a@x, b@y, c@z}` (or a single `\email` covering several
     authors) previously attached every address to whichever creator was open when the

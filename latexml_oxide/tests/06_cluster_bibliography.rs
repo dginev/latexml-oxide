@@ -1678,6 +1678,46 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
   }
 }
 
+/// A document that leaves `@` catcode-ACTIVE at end-of-file must still get its
+/// bibliography. Witness arXiv:2606.03480.
+///
+/// The paper makes `@` active for a `\def@#1@{...}` red-annotation shorthand and
+/// leaves an unmatched `\shorthandon` (3 on vs 2 off), so `@` is active at EOF.
+/// Our `.bib` post-session REUSES the core State (`bib_session.rs`); Perl builds
+/// a FRESH `catcodes => 'standard'` State per `.bib` (`Core.pm:39`), where `@` is
+/// catcode OTHER. So the leaked active `@` reached the emitted
+/// `\begin{bibtex@bibliography}` wrapper and EXPANDED inside the environment name
+/// (`\def@#1@` scans forward for the next `@`) → `Gullet->readBalanced ran out of
+/// input`, and the bibliography was destroyed (0 bibitems). The fix resets `@` to
+/// its standard catcode for the `.bib` digestion, matching Perl.
+///
+/// RED before the fix: 6 post-stage `readBalanced ran out of input` errors and 0
+/// `<bibitem>` on this fixture (and on the witness, 30 → 0 bibentries). The body
+/// `@an inline annotation@` still renders bold, proving the fix is scoped to the
+/// `.bib` digestion and does not disturb the document's own active-`@` shorthand.
+#[test]
+fn active_at_catcode_does_not_corrupt_bibtex_wrapper() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_active_at_catcode.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "active-@: bibliography destroyed by a leaked active `@`:\n{x}"
+  );
+  // Both entries must arrive — the `@` in `\begin{bibtex@bibliography}` no longer
+  // eats the wrapper. Titles are recased (MakeBibliography lowercases all but the
+  // first word, Perl parity), so "Alpha Title" renders as "Alpha title".
+  for needle in ["Alpha title", "Anderson", "Beta title", "Baker"] {
+    assert!(
+      x.contains(needle),
+      "active-@: {needle:?} lost — the bibtex wrapper was corrupted:\n{x}"
+    );
+  }
+  // The document's own active-`@` shorthand still works where it is intended.
+  assert!(
+    x.contains("an inline annotation"),
+    "active-@: the body `@...@` annotation was lost:\n{x}"
+  );
+}
+
 /// A `%` inside a `.bib` field value is data, not a comment.
 ///
 /// BibTeX's lexer has no comment syntax inside an entry — `Pre::BibTeX` only
@@ -2059,6 +2099,40 @@ fn bib_xpatch_does_not_truncate_the_document() {
   );
 }
 
+/// A `comment` whose `\end{comment}` carries text before it on the same line
+/// must not overrun and swallow the rest of the document. Witness arXiv:2606.11493.
+///
+/// comment.sty / pdflatex detect `\end{comment}` mid-line (like verbatim.sty's
+/// `\verbatim@`) and drop the rest of that line. Perl comment.sty.ltxml matches
+/// only a whole `\end{comment}` line (`/^\s*\end{comment}\s*$/`), and our prior
+/// port did too (`line.trim() == end_mark`), so `…text.\end{comment}` overran to
+/// EOF — in 2606.11493 it swallowed a 31-`\bibitem` thebibliography, leaving 0
+/// entries with NO diagnostic. Both LaTeXML engines lose it, pdflatex keeps it;
+/// the fix matches real comment.sty (surpass-Perl, OXIDIZED_DESIGN #133).
+///
+/// RED before the fix: 0 `<bibitem>` and "After the comment block" absent.
+#[test]
+fn comment_midline_end_keeps_bibliography() {
+  let x = convert_and_post_clean("tests/cluster_regressions/comment_midline_end.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "comment overran and swallowed the bibliography, got {n}\n{x}"
+  );
+  assert!(
+    x.contains("After the comment block"),
+    "comment overran past its mid-line \\end{{comment}}:\n{x}"
+  );
+  for needle in ["First entry", "Second entry"] {
+    assert!(x.contains(needle), "comment: {needle:?} lost:\n{x}");
+  }
+  // The comment body itself must NOT leak into the output.
+  assert!(
+    !x.contains("commented reasoning"),
+    "the comment body leaked into the output:\n{x}"
+  );
+}
+
 /// A `&` inside a delimiter-fenced macro argument must not end an alignment cell.
 ///
 /// `tex.web` §394 `macro_call` sets `align_state:=1000000` while it scans a
@@ -2086,6 +2160,28 @@ fn alignment_fenced_amp_does_not_split_a_row() {
   assert_eq!(
     n, 2,
     "expected both bibitems past the alignment, got {n}\n{x}"
+  );
+}
+
+/// A `\columncolor` in a p/m column, followed by a cell whose content starts with
+/// `\lbrack` (a CS `\let` to `[`), made colortbl's overhang-arg gobble run forward
+/// past the row's `\\`, cascading the paragraph-column mode
+/// (`\@end@tabular … internal_vertical`) — truncating the document and dropping the
+/// bibliography below. `\toprule[1pt]` (a booktabs rule with an optional-width arg)
+/// completes the trigger. Reading the overhang args with LaTeXML's optional reader
+/// (literal `[` only, never a `\lbrack` CS) keeps the cell content, as pdflatex
+/// renders it. Rust-only; witness arXiv:2606.02077 (0 -> 15 bibitems, matching Perl).
+#[test]
+fn columncolor_lbrack_cell_does_not_cascade_the_column_mode() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_columncolor_lbrack_overhang.tex");
+  assert!(
+    x.contains("[3]") && x.contains("second cell"),
+    "the `\\lbrack` cell content was eaten as a colortbl overhang arg:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 1,
+    "the paragraph-column mode cascade truncated the bibliography, got {n}\n{x}"
   );
 }
 
