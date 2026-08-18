@@ -174,21 +174,26 @@ LoadDefinitions!({
   // Witness 2402.17342.
   Let!("\\botrule", "\\hline");
 
-  // Frontmatter envs — internal_vertical mode for multi-paragraph
-  // bodies (declarations especially carries author prose with \par
-  // separators). Without explicit mode, restricted_horizontal default
-  // trips Endgroup mismatch on \par-containing bodies.
-  DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
-    mode => "internal_vertical");
-  // Real sn-jnl.cls defines `\abstract{...}` as a *macro* form (not the
-  // standard env). Without this stub, our environment binding's
-  // auto-created `\abstract` token (which expects a matching
-  // `\endabstract`) eats every subsequent `\title`/`\author`/`\maketitle`
-  // /`\section` into the still-open `<ltx:abstract>`, producing a
-  // cascade of `Error:malformed:ltx:* isn't allowed in <ltx:abstract>`.
-  // Forward to the env so the body is wrapped *and* properly closed.
-  // Witness 2306.11901.
-  DefMacro!("\\abstract{}", "\\begin{abstract}#1\\end{abstract}");
+  // Do NOT override `\abstract` or the `{abstract}` environment here. The
+  // kernel's `\abstract` (latex_constructs `\abstract`, L5153) is `locked`: the
+  // brace form routes to the *deferred* `\lx@add@abstract` frontmatter
+  // accumulator, so `\maketitle` flushes it in schema-canonical order (document
+  // `<title>` first, `<abstract>` after). Perl relies on exactly this lock — the
+  // raw sn-jnl.cls's `\long\def\abstract#1{\def\@abstract{...}}` (deferred store,
+  // emitted by `\@maketitle`'s `\printabstract` AFTER title+authors) cannot pull
+  // the core `\abstract` back to an immediate emit. A binding-level
+  // `DefEnvironment!("{abstract}", <ltx:abstract>...)` + `\abstract{}` forwarder
+  // bypasses that lock and emits `<ltx:abstract>` at the *call site* — which in
+  // every sn-jnl paper is BEFORE `\maketitle`, so the abstract lands ahead of the
+  // still-deferred title. That is the abstract-before-title regression; letting
+  // the locked kernel macro run fixes it and keeps the env properly bounded
+  // (`\begin{abstract}`→`\lx@begin@abstract`, `\end{abstract}`→`\lx@end@abstract`
+  // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
+  //
+  // Frontmatter envs — internal_vertical mode for multi-paragraph bodies
+  // (declarations especially carries author prose with \par separators). Without
+  // explicit mode, restricted_horizontal default trips Endgroup mismatch on
+  // \par-containing bodies.
   DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
   DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>",

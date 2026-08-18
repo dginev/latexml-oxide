@@ -854,6 +854,38 @@ fn frontmatter_sn_jnl_shared_affil() {
   );
 }
 
+/// Springer-Nature `sn-jnl.cls` with `\abstract{...}` written BEFORE
+/// `\maketitle` (the shape every sn-jnl paper uses). The abstract is a *locked*
+/// deferred-frontmatter macro (`\lx@add@abstract`, latex_constructs `\abstract`
+/// L5153), so `\maketitle` must flush it in schema-canonical order — the
+/// document `<title>` FIRST, the `<abstract>` after it — not emit the abstract
+/// immediately at its call site (which lands it before the still-deferred
+/// title). Perl locks the core `\abstract` so the raw class's `\def\abstract`
+/// cannot pull it back to an immediate emit; the binding must not override it
+/// either. arXiv/html_feedback#3436, witness 2411.11158, 2306.11901.
+#[test]
+fn frontmatter_sn_jnl_abstract_after_title() {
+  let x =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_sn_jnl_abstract_order.tex");
+  let title = x.find("<title>").expect("document <title> present");
+  let abstract_ = x.find("<abstract").expect("<abstract> present");
+  assert!(
+    title < abstract_,
+    "sn-jnl abstract must render AFTER the title, not before it \
+     (title@{title}, abstract@{abstract_}):\n{x}"
+  );
+  // The abstract text is preserved…
+  assert!(
+    x.contains("This is the abstract."),
+    "sn-jnl abstract body missing:\n{x}"
+  );
+  // …and the author frontmatter still flushes with the title block.
+  assert!(
+    x.contains("<personname>") && x.contains("Asare"),
+    "sn-jnl author frontmatter missing:\n{x}"
+  );
+}
+
 /// LNCS `llncs.cls`: several authors all bound to ONE `\institute` via
 /// `\inst{1}`, whose body is the shared affiliation line followed by a single
 /// shared `\email{\{a,b\}@host}` covering every author. Both the affiliation
