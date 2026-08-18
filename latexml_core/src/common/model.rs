@@ -943,28 +943,39 @@ pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
 // to submodel, in case it can evolve to more precision?
 // However, it would need more context to do that.
 
-/// A check for allowed direct element containment, using ticket-based `SymStr` names.
+/// The single faithful containment check (Perl `Common/Model.pm::canContain`),
+/// keyed on interned `SymStr` names — the arena's native currency. This is the
+/// canonical implementation; [`can_contain`] is a thin `&str` wrapper over it.
 ///
-/// TODO: This is a major code smell, experimental prototyping to see how to interoperate
-/// strings with the inerned arena.
-/// `can_contain` and `can_contain_sym` should be implemented once, and one should be an
-/// interning-only helper.
+/// It is the entry point the serializer's `#PCDATA` indentation test
+/// (`Document::serialize_into`) and the digestion auto-open/close logic use, so
+/// it stays allocation-lean: the common exact-match branch interns nothing, and
+/// the negation/namespace-wildcard probes fire only when the exact child is
+/// absent from the content model.
+///
+/// The `ns:*` namespace-wildcard fallback (below) is why a FOREIGN element whose
+/// content model is a wildcard — `ltx:rawhtml`'s `xhtml:*`, `svg:*` — is handled
+/// correctly: it has no exact `tagprop` entry, so an exact-match-only check
+/// wrongly answered `can_contain(xhtml:b, #PCDATA) == false`, and the serializer
+/// then treated mixed HTML content as block and injected indentation whitespace
+/// that HTML treats as significant (`<xhtml:b>\n  bold  </xhtml:b>`).
+/// arXiv/html_feedback#680 (xworld21).
 pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
-  // Handle obvious cases explicitly.
+  // Handle obvious cases explicitly (Perl Common/Model.pm::canContain).
   if tag == pin!("#PCDATA") || tag == pin!("#Comment") || tag == pin!("") {
     return false;
   } else if tag == pin!("_WildCard_") {
     return true;
-  };
-  if arena::with(tag, |tag_str| tag_str.ends_with("_Capture_"))
-    || arena::with(child, |child_str| {
-      child_str.ends_with("_Capture_") || child_str.ends_with("_CaptureBlock_")
+  }
+  // A `_Capture_` tag contains anything; a `_Capture_`/`_CaptureBlock_` child is
+  // contained by anything (with or without a namespace prefix).
+  if arena::with(tag, |t| t.ends_with("_Capture_"))
+    || arena::with(child, |c| {
+      c.ends_with("_Capture_") || c.ends_with("_CaptureBlock_")
     })
   {
-    // with or without namespace prefix
     return true;
   }
-
   if child == pin!("_WildCard_")
     || child == pin!("#Comment")
     || child == pin!("#ProcessingInstruction")
@@ -973,46 +984,18 @@ pub fn can_contain_sym(tag: SymStr, child: SymStr) -> bool {
     return true;
   }
 
-  let mut model = model_mut!();
+  let model = model!();
   if model.permissive && tag == pin!("#Document") && child != pin!("#PCDATA") {
     return true; // No schema? Punt!
   }
 
-  // Else query tag properties.
-  let model_entry = &mut model.tagprop.entry_sym(tag).or_default().model;
-  model_entry.contains(&pin!("ANY")) || model_entry.contains(&child)
-}
-
-/// Can an element with (qualified name) `tag` contain a `child` element?
-pub fn can_contain(tag: &str, child: &str) -> bool {
-  // Handle obvious cases explicitly.
-  match tag {
-    "#PCDATA" | "#Comment" | "" => return false,
-    "_WildCard_" => return true,
-    _ => {},
-  };
-  if tag.ends_with("_Capture_") || child.ends_with("_Capture_") || tag.ends_with("_CaptureBlock_") {
-    // with or without namespace prefix
-    return true;
-  }
-
-  match child {
-    "_WildCard_" | "#Comment" | "#ProcessingInstruction" | "#DTD" => return true,
-    _ => {},
-  };
-  let state_model = model!();
-  if state_model.permissive && tag == "#Document" && child != "#PCDATA" {
-    return true; // No schema? Punt!
-  }
-
-  // Else query tag properties, falling back to the `ns:*` wildcard entry when this
-  // exact tag has none of its own, then applying the same most-specific-first
-  // chain as the attribute test — both are Perl `Common/Model.pm`. Without the
-  // fallback a wildcard content model such as `ltx:rawhtml{}(xhtml:*)` would
-  // reject every concrete `xhtml:p` absorbed into it.
-  let frame = state_model.tagprop.get(tag);
+  // Query tag properties, falling back to the `ns:*` wildcard entry when this
+  // exact tag has none of its own, then the most-specific-first chain — Perl
+  // `Common/Model.pm`. The fallback is what lets a wildcard content model such
+  // as `ltx:rawhtml{}(xhtml:*)` accept every concrete `xhtml:p`/`xhtml:b`.
+  let frame = model.tagprop.get_sym(tag);
   let wildcard_frame = if frame.is_none() {
-    namespace_wildcard_tag(tag).and_then(|w| state_model.tagprop.get(&w))
+    namespace_wildcard_sym(tag).and_then(|w| model.tagprop.get_sym(w))
   } else {
     None
   };
@@ -1021,6 +1004,12 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .model;
   content.contains(&pin!("ANY")) || set_allows(content, child)
+}
+
+/// `&str` wrapper over the canonical [`can_contain_sym`]; interns both names and
+/// delegates. Kept for call sites that hold string names rather than `SymStr`.
+pub fn can_contain(tag: &str, child: &str) -> bool {
+  can_contain_sym(arena::pin(tag), arena::pin(child))
 }
 
 /// Perl `Model::canContain`/`canHaveAttribute` fall back to the NAMESPACE
@@ -1040,8 +1029,8 @@ pub fn can_contain(tag: &str, child: &str) -> bool {
 /// * Perl's `\w*` does not match `*`, so it never derives a wildcard from a tag
 ///   that is already one; `split_once` would, but only for the `*:*` entry, which
 ///   maps to itself and is looked up only when it has no frame — and it has one.
-fn namespace_wildcard_tag(tag: &str) -> Option<String> {
-  tag.split_once(':').map(|(ns, _)| s!("{ns}:*"))
+fn namespace_wildcard_sym(tag: SymStr) -> Option<SymStr> {
+  arena::with(tag, |t| t.split_once(':').map(|(ns, _)| s!("{ns}:*"))).map(|w| arena::pin(&w))
 }
 
 /// Perl's most-specific-first membership chain over a `tagprop` set — shared by
@@ -1052,36 +1041,56 @@ fn namespace_wildcard_tag(tag: &str) -> Option<String> {
 /// always beats the broader wildcard that follows it. The compiled model really
 /// does carry these (e.g. `ltx:XMText{!aria:*,!xml:*,*:*,…}`), so an exact-match-only
 /// test both over-rejects (ignoring `*:*`) and under-rejects (ignoring `!ns:*`).
-fn set_allows(set: &HashSet<SymStr>, key: &str) -> bool {
-  if set.contains(&arena::pin(key)) {
-    return true;
+///
+/// Allocation profile: the exact-match branch interns nothing (the caller's
+/// `key` is already a `SymStr`). On an exact miss we probe the broadest ALLOWING
+/// wildcard first — a cached `pin!` for `*` / `*:*`, no allocation — and build a
+/// `!key` / `ns:*` probe string only when it can still change the answer. So the
+/// serializer's hot `can_contain(<block element>, #PCDATA)` query, whose model
+/// carries no `*`, returns here having interned nothing. Any owned probe string
+/// is built inside `arena::with` and interned only AFTER that borrow is released:
+/// the `BufferBackend` interner can realloc on a new intern, which would dangle a
+/// resolved `&str` still held from `key`.
+fn set_allows(set: &HashSet<SymStr>, key: SymStr) -> bool {
+  if set.contains(&key) {
+    return true; // exact hit — the common case, interns nothing
   }
   if set.is_empty() {
-    return false; // nothing can match; skip the probe allocations
-  }
-  if set.contains(&arena::pin(s!("!{key}"))) {
     return false;
   }
-  match key.split_once(':') {
-    Some((ns, _)) => {
-      if set.contains(&arena::pin(s!("{ns}:*"))) {
-        return true;
-      }
-      if set.contains(&arena::pin(s!("!{ns}:*"))) {
-        return false;
-      }
-      if set.contains(&pin!("!*:*")) {
-        return false;
-      }
-      set.contains(&pin!("*:*"))
-    },
-    None => {
-      if set.contains(&pin!("!*")) {
-        return false;
-      }
-      set.contains(&pin!("*"))
-    },
+  // Exact miss. The unprefixed hot path (the serializer's `#PCDATA` query) can
+  // only be turned `true` by `*`, a cached `pin!` — so a block element's model,
+  // which has no `*`, returns here without interning any probe string.
+  if !arena::with(key, |k| k.contains(':')) {
+    // Unprefixed key — Perl only consults `!*` / `*`, both cached pins.
+    if !set.contains(&pin!("*")) || set.contains(&pin!("!*")) {
+      return false;
+    }
+    // `*` allows it unless an explicit `!key` excludes it — build that one probe.
+    let negated = arena::with(key, |k| s!("!{k}"));
+    return !set.contains(&arena::pin(&negated));
   }
+  // Prefixed key (cold path — the serializer never queries one). Perl order:
+  // !key, ns:*, !ns:*, !*:*, *:*. Each probe string is built inside `arena::with`
+  // and interned only after that borrow drops (BufferBackend may realloc).
+  let negated = arena::with(key, |k| s!("!{k}"));
+  if set.contains(&arena::pin(&negated)) {
+    return false;
+  }
+  let (ns_star, neg_ns_star) = arena::with(key, |k| {
+    let ns = k.split_once(':').map_or("", |(ns, _)| ns);
+    (s!("{ns}:*"), s!("!{ns}:*"))
+  });
+  if set.contains(&arena::pin(&ns_star)) {
+    return true;
+  }
+  if set.contains(&arena::pin(&neg_ns_star)) {
+    return false;
+  }
+  if set.contains(&pin!("!*:*")) {
+    return false;
+  }
+  set.contains(&pin!("*:*"))
 }
 
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
@@ -1108,7 +1117,7 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
   // this exact tag has none of its own (Perl canHaveAttribute).
   let frame = model.tagprop.get_sym(tag);
   let wildcard_frame = if frame.is_none() {
-    arena::with(tag, namespace_wildcard_tag).and_then(|w| model.tagprop.get(&w))
+    namespace_wildcard_sym(tag).and_then(|w| model.tagprop.get_sym(w))
   } else {
     None
   };
@@ -1116,7 +1125,7 @@ pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
     .or(wildcard_frame)
     .unwrap_or(&*DEFAULT_TAG_FRAME)
     .attributes;
-  arena::with(attrib, |a| set_allows(attributes, a))
+  set_allows(attributes, attrib)
 }
 
 pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
@@ -1268,25 +1277,28 @@ mod wildcard_resolution_tests {
   use super::*;
 
   fn set_of(keys: &[&str]) -> HashSet<SymStr> { keys.iter().map(|k| arena::pin(*k)).collect() }
+  // `&str` shims over the sym-native helpers under test, so the cases read the
+  // same as the schema keys they mirror.
+  fn allows(set: &HashSet<SymStr>, key: &str) -> bool { set_allows(set, arena::pin(key)) }
+  fn wildcard(tag: &str) -> Option<String> {
+    namespace_wildcard_sym(arena::pin(tag)).map(|w| arena::with(w, str::to_string))
+  }
 
   #[test]
   fn namespace_wildcard_tag_only_applies_to_prefixed_tags() {
-    assert_eq!(
-      namespace_wildcard_tag("xhtml:p").as_deref(),
-      Some("xhtml:*")
-    );
-    assert_eq!(namespace_wildcard_tag("ltx:para").as_deref(), Some("ltx:*"));
+    assert_eq!(wildcard("xhtml:p").as_deref(), Some("xhtml:*"));
+    assert_eq!(wildcard("ltx:para").as_deref(), Some("ltx:*"));
     // Unprefixed names have no namespace wildcard to fall back on.
-    assert_eq!(namespace_wildcard_tag("para"), None);
-    assert_eq!(namespace_wildcard_tag("#PCDATA"), None);
+    assert_eq!(wildcard("para"), None);
+    assert_eq!(wildcard("#PCDATA"), None);
   }
 
   #[test]
   fn exact_membership_wins_and_empty_sets_reject() {
     let s = set_of(&["class", "href"]);
-    assert!(set_allows(&s, "class"));
-    assert!(!set_allows(&s, "style"));
-    assert!(!set_allows(&HashSet::default(), "class"));
+    assert!(allows(&s, "class"));
+    assert!(!allows(&s, "style"));
+    assert!(!allows(&HashSet::default(), "class"));
   }
 
   #[test]
@@ -1296,45 +1308,51 @@ mod wildcard_resolution_tests {
     // This is the real shape of a compiled entry, e.g.
     // `ltx:XMText{!aria:*,!xml:*,*:*,about,…}`.
     let s = set_of(&["!aria:*", "!xml:*", "*:*", "about"]);
-    assert!(set_allows(&s, "about"), "exact entry allows");
-    assert!(
-      set_allows(&s, "data:foo"),
-      "*:* allows an unexcluded namespace"
-    );
-    assert!(
-      !set_allows(&s, "aria:label"),
-      "!aria:* excludes its namespace"
-    );
-    assert!(!set_allows(&s, "xml:lang"), "!xml:* excludes its namespace");
+    assert!(allows(&s, "about"), "exact entry allows");
+    assert!(allows(&s, "data:foo"), "*:* allows an unexcluded namespace");
+    assert!(!allows(&s, "aria:label"), "!aria:* excludes its namespace");
+    assert!(!allows(&s, "xml:lang"), "!xml:* excludes its namespace");
 
     // An exact exclusion beats a namespace wildcard that would allow it.
     let s2 = set_of(&["!svg:width", "svg:*"]);
-    assert!(set_allows(&s2, "svg:height"));
-    assert!(!set_allows(&s2, "svg:width"));
+    assert!(allows(&s2, "svg:height"));
+    assert!(!allows(&s2, "svg:width"));
 
     // `!*:*` denies every namespaced key that is not exactly listed.
     let s3 = set_of(&["!*:*", "svg:width"]);
-    assert!(set_allows(&s3, "svg:width"));
-    assert!(!set_allows(&s3, "svg:height"));
+    assert!(allows(&s3, "svg:width"));
+    assert!(!allows(&s3, "svg:height"));
   }
 
   #[test]
   fn unprefixed_keys_use_the_bare_star_not_the_namespaced_one() {
     // `*:*` governs PREFIXED keys only; an unprefixed `class` needs `*`.
     let namespaced_only = set_of(&["*:*"]);
-    assert!(!set_allows(&namespaced_only, "class"));
-    assert!(set_allows(&namespaced_only, "svg:width"));
+    assert!(!allows(&namespaced_only, "class"));
+    assert!(allows(&namespaced_only, "svg:width"));
 
     // This is the entry that lets attributes survive on absorbed xhtml markup:
     // the compiled model carries `xhtml:*{*,*:*}`.
     let html_wildcard = set_of(&["*", "*:*"]);
-    assert!(set_allows(&html_wildcard, "class"));
-    assert!(set_allows(&html_wildcard, "xlink:href"));
+    assert!(allows(&html_wildcard, "class"));
+    assert!(allows(&html_wildcard, "xlink:href"));
 
     // …and `!*` denies the unprefixed ones.
     let denied = set_of(&["!*", "*:*"]);
-    assert!(!set_allows(&denied, "class"));
-    assert!(set_allows(&denied, "svg:width"));
+    assert!(!allows(&denied, "class"));
+    assert!(allows(&denied, "svg:width"));
+
+    // An explicit `!key` exclusion denies the key even when a bare `*` would
+    // otherwise allow it (the `*`-present branch of the unprefixed fast path).
+    let star_but_excluded = set_of(&["*", "!class"]);
+    assert!(
+      !allows(&star_but_excluded, "class"),
+      "!class excludes despite *"
+    );
+    assert!(
+      allows(&star_but_excluded, "id"),
+      "* still allows an unexcluded name"
+    );
   }
 }
 
