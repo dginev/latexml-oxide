@@ -312,6 +312,16 @@ DefMacro("\\greet{}", |name| "Hello, " + name + "!");
 DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
 ```
 
+> **Coming from Perl LaTeXML?** A Perl `.sty.ltxml` / `.cls.ltxml` binding is
+> **not** loaded — latexml-oxide has no Perl interpreter. Rewrite it as a
+> `.sty.rhai` / `.cls.rhai` file: the common `Def…` entry points (`DefMacro`,
+> `DefEnvironment`, `DefConstructor`, `DefPrimitive`, …) keep the same names and
+> signatures, in Rhai syntax (doubled backslashes). For example, Perl
+> `DefEnvironment('{nowrap}', "<ltx:block class='nowrap'>#body</ltx:block>")`
+> becomes, verbatim minus the `use`/`1;` boilerplate,
+> `DefEnvironment("{nowrap}", "<ltx:block class='nowrap'>#body</ltx:block>");`.
+> See the worked example and interface reference below for the full surface.
+
 Discovery rides the ordinary search paths (the document's own directory, plus any
 `--path DIR`), and the `.rhai` tier is consulted **first** — so a
 `article.cls.rhai` deliberately *overrides* the built-in `article` binding, which
