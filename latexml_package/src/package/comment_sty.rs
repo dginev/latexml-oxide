@@ -1,5 +1,26 @@
 use crate::prelude::*;
 
+/// The prefix of a raw body line up to its first *unescaped* `%` — comment.sty
+/// reads its body with `%` active as a TeX comment, so an `\end{name}` sitting
+/// behind a `%` (e.g. `% […] \end{comment}`) does NOT close the environment.
+/// `%` and `\` are ASCII, so byte scanning is UTF-8-safe (the cut index always
+/// lands on a char boundary).
+fn strip_tex_comment(line: &str) -> &str {
+  let bytes = line.as_bytes();
+  for i in 0..bytes.len() {
+    if bytes[i] == b'%' {
+      let mut bs = 0;
+      while i > bs && bytes[i - 1 - bs] == b'\\' {
+        bs += 1;
+      }
+      if bs % 2 == 0 {
+        return &line[..i];
+      }
+    }
+  }
+  line
+}
+
 LoadDefinitions!({
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
@@ -7,17 +28,33 @@ LoadDefinitions!({
   let define_excluded: PrimitiveClosure = Rc::new(|mut args: Vec<ArgWrap>| {
     let name = args.remove(0).owned_tokens().unwrap();
     let begin_mark = s!("\\begin{{{name}}}");
-    let end_mark = s!("\\end{{{name}}}");
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
+      // Detect `\end{name}` MID-LINE (allowing spaces, `\end {name}`), but only
+      // in the code part of the line — an `\end` hidden behind a `%` comment
+      // does NOT close the environment (comment.sty reads its body with `%`
+      // active). Perl comment.sty.ltxml L30 matched only a whole line,
+      // `/^\s*\Q$endmark\E\s*$/`, and our prior port did the same
+      // (`line.trim() == end_mark`), so a comment ending `…text.\end{name}`
+      // overran to EOF and silently swallowed everything after it — a document's
+      // bibliography included. Surpass-Perl divergence (OXIDIZED_DESIGN #133):
+      // both LaTeXML engines lose it, and pdflatex keeps it for the witness
+      // arXiv:2606.11493 (`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed
+      // a 31-`\bibitem` thebibliography). The `%`-guard keeps the tokenize
+      // `comment` fixture's `% […] \end{Excluded}` from closing early. Guard
+      // `comment_midline_end_keeps_bibliography`.
+      let end_re = Regex::new(&format!("\\\\end\\s*\\{{{name}\\}}")).unwrap();
       let mut nlines = 0;
       read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
-      // Perl comment.sty.ltxml L30 matches `/^\s*\Q$endmark\E\s*$/` —
-      // the end line may carry leading/trailing whitespace. Strict
-      // equality missed indented `  \end{comment}  `, stranding the
-      // excluded block consumption.
       while let Some(line) = read_raw_line() {
-        if line.trim() == end_mark {
+        let code = strip_tex_comment(&line);
+        if let Some(m) = end_re.find(code) {
+          // comment.sty expects `\end{name}` at the line's end; trailing content
+          // on that line is dropped, as verbatim.sty's `\verbatim@` does too.
+          if !code[m.end()..].trim().is_empty() {
+            Info!("unexpected", "stuff",
+              s!("Characters dropped after '\\end{{{name}}}'"));
+          }
           break;
         }
         nlines += 1;

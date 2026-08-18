@@ -2099,6 +2099,40 @@ fn bib_xpatch_does_not_truncate_the_document() {
   );
 }
 
+/// A `comment` whose `\end{comment}` carries text before it on the same line
+/// must not overrun and swallow the rest of the document. Witness arXiv:2606.11493.
+///
+/// comment.sty / pdflatex detect `\end{comment}` mid-line (like verbatim.sty's
+/// `\verbatim@`) and drop the rest of that line. Perl comment.sty.ltxml matches
+/// only a whole `\end{comment}` line (`/^\s*\end{comment}\s*$/`), and our prior
+/// port did too (`line.trim() == end_mark`), so `…text.\end{comment}` overran to
+/// EOF — in 2606.11493 it swallowed a 31-`\bibitem` thebibliography, leaving 0
+/// entries with NO diagnostic. Both LaTeXML engines lose it, pdflatex keeps it;
+/// the fix matches real comment.sty (surpass-Perl, OXIDIZED_DESIGN #133).
+///
+/// RED before the fix: 0 `<bibitem>` and "After the comment block" absent.
+#[test]
+fn comment_midline_end_keeps_bibliography() {
+  let x = convert_and_post_clean("tests/cluster_regressions/comment_midline_end.tex");
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 2,
+    "comment overran and swallowed the bibliography, got {n}\n{x}"
+  );
+  assert!(
+    x.contains("After the comment block"),
+    "comment overran past its mid-line \\end{{comment}}:\n{x}"
+  );
+  for needle in ["First entry", "Second entry"] {
+    assert!(x.contains(needle), "comment: {needle:?} lost:\n{x}");
+  }
+  // The comment body itself must NOT leak into the output.
+  assert!(
+    !x.contains("commented reasoning"),
+    "the comment body leaked into the output:\n{x}"
+  );
+}
+
 /// A `&` inside a delimiter-fenced macro argument must not end an alignment cell.
 ///
 /// `tex.web` §394 `macro_call` sets `align_state:=1000000` while it scans a

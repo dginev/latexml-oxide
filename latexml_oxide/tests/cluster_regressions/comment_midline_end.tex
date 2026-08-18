@@ -1,0 +1,23 @@
+% comment.sty's `\end{comment}` with content BEFORE it on the same line.
+% Witness arXiv:2606.11493.
+%
+% comment.sty / pdflatex detect `\end{comment}` mid-line and drop the rest of
+% that line. Perl comment.sty.ltxml (and our prior port) matched only a whole
+% `\end{comment}` line, so `…text.\end{comment}` overran to EOF and silently
+% swallowed everything after it — in 2606.11493 a 31-`\bibitem`
+% thebibliography, leaving 0 entries with no diagnostic. Both LaTeXML engines
+% lose it; pdflatex keeps it. Surpass-Perl (OXIDIZED_DESIGN #133).
+% Guard: comment_midline_end_keeps_bibliography.
+\documentclass{article}
+\usepackage{comment}
+\begin{document}
+Body cites \cite{a} and \cite{b}.
+\begin{comment}
+Some commented reasoning that runs for a while.
+The proof concludes here.\end{comment}
+After the comment block.
+\begin{thebibliography}{9}
+\bibitem{a} First entry.
+\bibitem{b} Second entry.
+\end{thebibliography}
+\end{document}
