@@ -99,6 +99,25 @@ pub(super) fn wire_macro_string_opts(proto: &str, body: &str, opts: Map) -> Resu
   Ok(())
 }
 
+/// Convert one digested constructor argument to the value a Rhai imperative body
+/// receives. Mirrors Perl `Constructor.pm:137` — `&{$replacement}($document,
+/// $whatsit->getArgs, …)` — where `getArgs` returns the stored arguments in
+/// order: a normal (digested) arg is a boxed object, but an `Undigested`-family
+/// arg (reader flagged `undigested`) is kept as raw `Tokens`. In Rust an
+/// undigested arg is a `Digested::Postponed(Tokens)` (`raw_tokens()` is `Some`
+/// exactly then), so we hand the inner `Tokens` to the script — usable with
+/// `UnTeX`/`Expand`/`absorb` — instead of an opaque `Digested` handle (#634). A
+/// normal arg stays a `Digested` handle; an omitted optional is Rhai `()`.
+pub(super) fn ctor_arg_to_dynamic(a: &Option<Digested>) -> Dynamic {
+  match a {
+    Some(d) => match d.raw_tokens() {
+      Some(tokens) => Dynamic::from(tokens.clone()),
+      None => Dynamic::from(d.clone()),
+    },
+    None => Dynamic::UNIT,
+  }
+}
+
 /// The imperative-body replacement closure: publishes the active context, calls
 /// the body as `|document, arg1, …|`, pops the context. Shared by every
 /// constructor form that uses a closure body.
@@ -114,14 +133,11 @@ pub(super) fn closure_replacement(
       // panic out of `body.call` (Rhai doesn't catch_unwind native calls) — so
       // a script-body panic can't leave a stale CTOR_CTX entry. Review M1.
       let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props });
-      // `document` first (Perl's `$_[0]`), then each digested arg as a handle.
+      // `document` first (Perl's `$_[0]`), then each argument as its Rhai value.
       let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 1);
       call_args.push(Dynamic::from(DocProxy));
       for a in args {
-        call_args.push(match a {
-          Some(d) => Dynamic::from(d.clone()),
-          None => Dynamic::UNIT,
-        });
+        call_args.push(ctor_arg_to_dynamic(a));
       }
       match call_deferred_body(&engine, &ast, &body, call_args) {
         Ok(_) => Ok(()),

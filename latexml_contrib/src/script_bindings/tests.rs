@@ -364,6 +364,50 @@ fn lookup_str(key: &str) -> String {
   }
 }
 
+/// #634: the constructor-argument boundary. A Rhai imperative body must receive
+/// an `Undigested` arg as `Tokens` (Perl `Constructor.pm:137` hands `getArgs`,
+/// which keeps an undigested reader's arg as raw Tokens), a normal digested arg
+/// as an opaque `Digested` handle, and an omitted optional as unit. This guards
+/// `ctor_arg_to_dynamic` directly — the one body-invocation path that passes a
+/// live typed value rather than a stringified form — without needing a Document.
+#[test]
+fn ctor_arg_boundary_maps_undigested_to_tokens() {
+  use latexml_core::{
+    binding::content::digest_text, digested::Digested, reset_thread_engine, tokens::Tokens,
+  };
+  fresh_state();
+
+  // An `Undigested` arg is a `Digested::Postponed(Tokens)` in Rust.
+  let undigested: Digested = Digested::from(mouth::tokenize_internal("hi"));
+  let dyn_und = ctor_arg_to_dynamic(&Some(undigested));
+  assert!(
+    dyn_und.is::<Tokens>(),
+    "an Undigested arg must reach the body as Tokens, got {}",
+    dyn_und.type_name()
+  );
+
+  // A normal `{}` arg digests to a box/list — stays an opaque Digested handle.
+  let digested = digest_text(mouth::tokenize_internal("ab")).expect("digest");
+  assert!(
+    digested.raw_tokens().is_none(),
+    "a digested {{}} arg must not be a Postponed(Tokens)"
+  );
+  let dyn_dig = ctor_arg_to_dynamic(&Some(digested));
+  assert!(
+    dyn_dig.is::<Digested>(),
+    "a normal digested arg must stay a Digested handle, got {}",
+    dyn_dig.type_name()
+  );
+
+  // An omitted optional is Rhai unit.
+  assert!(
+    ctor_arg_to_dynamic(&None).is_unit(),
+    "an omitted optional arg must be unit"
+  );
+
+  reset_thread_engine();
+}
+
 /// Conformance: the *same* `afterDigest` constructor defined two ways —
 /// macro-style (calling `ConstructorBuilder` directly, as `DefConstructor!`
 /// lowers) and via Rhai (which now also routes through `ConstructorBuilder`) —
