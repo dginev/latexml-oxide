@@ -13,6 +13,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Path gate. Emits two booleans the expensive jobs branch on, so that a PR
+  # only pays for what its diff can actually affect. The `main`-push run
+  # (trigger above) is the safety net: anything a PR skips is re-checked in
+  # full at most one merge later, so a miss is recoverable, never silent.
+  #
+  #  * not_docs — false ONLY when every changed file is prose documentation
+  #    (top-level `*.md`, all of `docs/**`, `.github/**/*.md`, LICENSE). It is
+  #    computed as "`**` minus those", so ANY other path — a `.rs`, a `.tex`/
+  #    `.xml` fixture, a `.rng`/`.xsl`/`.css`, a `Cargo.toml`, even a stray
+  #    crate-level `notes.md` — flips it true and runs CI. Deliberately NOT
+  #    excluded: `**/src/**/*.md`, because `latexml_contrib/src/script_bindings/
+  #    API.md` is `#[doc = include_str!()]`-compiled and IS a rustdoc input.
+  #  * macos — the native-libxml2/libxslt divergence surface (witness #292):
+  #    `latexml_core/**` + `latexml_post/**` (where rust-libxml is used) plus the
+  #    link/dep/config inputs. On a PR the macOS leg runs only when this matches;
+  #    on a `main` push it runs for ANY code change (the net, see the macos job).
+  #
+  # This never SELECTS a test subset by path — that would hide regressions in a
+  # coupled engine. It only skips WHOLE jobs when the diff cannot change their
+  # outcome. The single required status check is `CI success` (bottom of file),
+  # so a skipped job never blocks a PR.
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      not_docs: ${{ steps.filter.outputs.not_docs }}
+      macos: ${{ steps.filter.outputs.macos }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # micromatch semantics: a file matches when it matches a positive
+          # pattern and none of the `!` negations. `!*.md` is top-level only
+          # (`*` does not cross `/`), so `.../src/**/API.md` stays code.
+          filters: |
+            not_docs:
+              - '**'
+              - '!*.md'
+              - '!docs/**'
+              - '!.github/**/*.md'
+              - '!LICENSE'
+            macos:
+              - 'latexml_core/**'
+              - 'latexml_post/**'
+              - '**/build.rs'
+              - '**/Cargo.toml'
+              - 'Cargo.lock'
+              - '.cargo/**'
+              - '.config/nextest.toml'
+              - '.github/workflows/CI.yml'
+
   # Quality gate, running the SAME script as the local pre-push hook
   # (tools/lint.sh — see the comment on the gate step below). No TeX Live: the
   # engine compiles without on-disk dumps (self-contained / embedded-fallback
@@ -29,6 +82,9 @@ jobs:
   # tools.
   lint:
     name: lint (fmt + clippy + deny)
+    needs: changes
+    # A docs-only diff changes no `.rs`, so clippy/rustdoc/deny cannot differ.
+    if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -102,6 +158,8 @@ jobs:
   # (libxml/kpathsea/marpa) still compile C natively, hence the dev headers.
   miri:
     name: miri (pure-Rust UB check)
+    needs: changes
+    if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -135,6 +193,10 @@ jobs:
     # 16 GB (see `test-threads` in .config/nextest.toml). `--partition` is
     # exact — measured 524 + 462 + 433 + 416 = 1835, the whole suite.
     name: latexml-oxide CI (shard ${{ matrix.shard }}/4)
+    needs: changes
+    # Full Linux suite on every code change (PR and main push); skipped only
+    # for a docs-only diff.
+    if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:
@@ -257,6 +319,15 @@ jobs:
   # the full suite needs.)
   macos:
     name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
+    needs: changes
+    # macOS is the slow leg and its unique value is the native libxml2/libxslt
+    # divergence surface (#292). On a PR run it only when that surface changed
+    # (`changes.macos`); on a `main` push run it for ANY code change — that
+    # post-merge run is the net that catches a macOS regression a PR's narrow
+    # filter let through. Docs-only diffs skip it on both.
+    if: >-
+      needs.changes.outputs.not_docs == 'true' &&
+      (needs.changes.outputs.macos == 'true' || github.event_name == 'push')
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
     # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
@@ -324,3 +395,31 @@ jobs:
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
+
+  # Single aggregating gate. Branch protection matches required checks BY NAME,
+  # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR
+  # "waiting for status" forever — so the individual jobs above CANNOT be the
+  # required checks once they became conditional. Make THIS the sole required
+  # check instead (plus the external GitGuardian one). It always runs (the
+  # workflow always triggers; `if: always()`), and passes iff every upstream
+  # job either succeeded or was legitimately skipped — a real failure or
+  # cancellation fails it. Repointing branch protection to `CI success` is a
+  # repo-settings change that must land WITH this workflow.
+  ci-success:
+    name: CI success
+    needs: [changes, lint, miri, test, macos]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: verify no required job failed
+        run: |
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.test.result }} ${{ needs.macos.result }}'
+          echo "upstream job results: $results"
+          for r in $results; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::a required job did not pass (result: $r)"; exit 1 ;;
+            esac
+          done
+          echo "all required jobs passed or were legitimately skipped"
