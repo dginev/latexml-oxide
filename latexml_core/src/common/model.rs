@@ -446,9 +446,32 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
             search_paths.iter().map(std::path::Path::new).collect();
           let schema = model.schema.as_mut().unwrap();
           let schema_name = schema.name.clone();
-          if let Err(err) = schema.load_schema(&schema_name, &paths) {
-            let msg = format!("load_schema failed for {}: {}", schema_name, err);
-            Warn!("expected", "RelaxNG", msg);
+          match schema.load_schema(&schema_name, &paths) {
+            Err(err) => {
+              let msg = format!("load_schema failed for {}: {}", schema_name, err);
+              Warn!("expected", "RelaxNG", msg);
+            },
+            // A raw `.rng` was scanned but the tag/attribute/namespace/class
+            // tables the runtime consults are NOT baked into it (unlike a
+            // compiled `.model`). Distil them now — else `tagprop` stays empty
+            // and every element is rejected (#652). `compute_model_data` owns its
+            // result, so the immutable `model.schema` borrow ends before the
+            // `add_*`/`register_*`/`set_*` mutations below.
+            Ok(()) => {
+              let data = model.schema.as_ref().unwrap().compute_model_data();
+              for (tag, children) in &data.tag_contents {
+                model.add_tag_content(tag, children.iter().map(String::as_str).collect());
+              }
+              for (tag, attrs) in &data.tag_attributes {
+                model.add_tag_attribute(tag, attrs.iter().map(String::as_str).collect());
+              }
+              for (name, members) in &data.schema_classes {
+                model.set_schema_class(name, members.iter().map(arena::pin).collect());
+              }
+              for (prefix, uri) in &data.namespaces {
+                model.register_document_namespace(prefix, Some(uri));
+              }
+            },
           }
         }
       },
@@ -1270,5 +1293,52 @@ mod wildcard_resolution_tests {
     let denied = set_of(&["!*", "*:*"]);
     assert!(!set_allows(&denied, "class"));
     assert!(set_allows(&denied, "svg:width"));
+  }
+}
+
+#[cfg(test)]
+mod schema_load_tests {
+  //! #652: a raw `.rng` selected via `RelaxNGSchema()` (no compiled `.model`)
+  //! must populate the runtime tag/attribute tables through `load_schema`, so
+  //! the document validates instead of every element being rejected.
+  use super::*;
+
+  #[test]
+  fn raw_rng_scan_populates_tagprop_end_to_end() {
+    // A minimal self-contained grammar, no `.model` alongside it → forces the
+    // runtime raw-`.rng` scan path.
+    let dir = std::env::temp_dir().join(format!("lxo652_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    let rng = "<grammar xmlns=\"http://relaxng.org/ns/structure/1.0\">\
+       <start><ref name=\"document\"/></start>\
+       <define name=\"document\"><element name=\"document\">\
+         <zeroOrMore><ref name=\"para\"/></zeroOrMore></element></define>\
+       <define name=\"para\"><element name=\"para\">\
+         <attribute name=\"class\"/><text/></element></define>\
+       </grammar>";
+    std::fs::write(dir.join("lxo652schema.rng"), rng).expect("write rng");
+
+    initialize_model();
+    model_mut!().set_relaxng_schema("lxo652schema");
+    let dir_str = dir.to_str().unwrap();
+    load_schema(&[dir_str]).expect("load_schema");
+
+    // Before the fix these were all false (empty tagprop) → the document was
+    // rejected and the output emptied.
+    assert!(
+      can_contain("#Document", "document"),
+      "document root must be allowed after a raw .rng scan"
+    );
+    assert!(can_contain("document", "para"), "document may contain para");
+    assert!(
+      can_have_attribute(pin!("para"), pin!("class")),
+      "para must allow its @class"
+    );
+    assert!(
+      !can_have_attribute(pin!("para"), pin!("bogus")),
+      "para must NOT allow an undeclared attribute"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
   }
 }
