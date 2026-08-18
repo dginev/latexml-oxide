@@ -684,6 +684,50 @@ fn script_binding_macro_and_constructor_convert() {
   latexml_core::reset_thread_engine();
 }
 
+/// #680 (xworld21): a mixed-content FOREIGN element (xhtml) injected into
+/// `<ltx:rawhtml>` must serialize INLINE — the serializer must not inject
+/// indentation whitespace around its text, which HTML treats as significant.
+/// The serializer's schema-based indentation decides `noindent` from
+/// `can_contain(tag, #PCDATA)`, but its `SymStr` entry point `can_contain_sym`
+/// lacked the `ns:*` namespace-wildcard fallback that the `&str` `can_contain`
+/// already had — so `can_contain(xhtml:b, #PCDATA)` wrongly returned false
+/// (the model has no `xhtml:b`, only the `xhtml:*` wildcard from `ltx:rawhtml`'s
+/// content model) and `<xhtml:b>bold</xhtml:b>` was indented to
+/// `<xhtml:b>\nbold          </xhtml:b>`, corrupting the emphasized text. The
+/// two `can_contain` variants are now one faithful implementation.
+#[test]
+fn rawhtml_foreign_mixed_content_serializes_inline() {
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(script_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage[draft]{lxrhaitest}",
+    "\\begin{document}\\rhrawhtml\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("conversion with a script binding should succeed");
+  let xml = doc.serialize_to_string();
+
+  // The mixed content serializes on one line, verbatim: no newline/indent is
+  // injected inside `<xhtml:b>`, and the text nodes "hi " / " x" keep their
+  // single spaces around the inline `<b>`.
+  assert!(
+    xml.contains("<xhtml:p class=\"lead\">hi <xhtml:b>bold</xhtml:b> x</xhtml:p>"),
+    "rawhtml mixed foreign content was indented (whitespace injected around text nodes):\n{xml}"
+  );
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 /// #321: `LookupDefinition(cs).pushBeforeConstruct/pushAfterConstruct` — the
 /// BookML shape (`push(@{ $$def{afterConstruct} }, sub{…})`) driven end-to-end
 /// through a real conversion, so the construct hooks fire with a LIVE Document.
