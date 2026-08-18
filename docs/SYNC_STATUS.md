@@ -1427,6 +1427,33 @@ PDF→PNG `mutool draw`→`pdftocairo`→`convert+gs`; PDF→SVG `mutool convert
 removed 2026-06-29 (GTK stack, 20–40× slower, timeout-prone, no coverage over the
 raster fallback).
 
+### (not ranked) SVG picture path: regex/string-splice → DOM, to match Perl
+The post SVG handling for `<ltx:picture>` in `latexml_oxide/src/post.rs`
+(`extract_svg_fragments` → `convert_picture_children_to_svg` → the
+`finalize_html5` splice) is **regex/string-based**: it serializes each picture in
+pass A, converts an *enumerated* child set (`g`/`line`/`circle`/`ellipse`/`rect`/
+`polygon`/`path`/`bezier`/`text`/`Math`/`graphics`) to inline SVG by regex, and
+splices the string into the empty `ltx_picture` placeholder **after XSLT**. It
+exists only to dodge a rust-libxml `PostDocument`-cleanup use-after-free (see the
+`finalize_html5` splice note); the canonical DOM port `latexml_post::svg::SVG`
+(faithful `SVG.pm::convertNode`, `LaTeXML/lib/LaTeXML/Post/SVG.pm` L148-182) is
+already written but unused. Because our content never re-enters the XSLT, it
+diverges from Perl on foreignObject content: Perl wraps it in
+`<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">`
+(we omit both), and picture geometry is pt→px-rounded differently (138 vs 132.44
+on the `none.png` repro). The **task**: once rust-libxml's `PostDocument` cleanup
+no longer UAFs on an inserted subtree (adjacent UAF/NULL-deref bugs fixed there in
+2026), retire the string path for the `svg::SVG` `Processor` — inject the SVG as
+child nodes pre-serialization, so all picture content (and any element type, not
+just the enumerated set) goes through the real XSLT and matches Perl byte-for-byte.
+Witnesses: arXiv:2311.14363v2 (#1291 — picture-nested `\includegraphics`, image
+resolution now restored at splice by re-injecting the Graphics-phase result; the
+`<img>`/`<object>` itself is byte-identical to Perl, only the wrappers/geometry
+differ), html_feedback#74 (xfig Math labels). Ordering note: our pass-A extraction
+snapshots the picture BEFORE the pass-B Graphics phase, inverting Perl's
+Graphics-before-SVG order (`LaTeXML.pm` L493 before L502) — hence the splice-time
+re-resolution `#1291` added.
+
 ### Other tracks (separate docs)
 - Performance: `PERFORMANCE.md` (P1 math/large-doc open; P2 allocation partial).
 - Release gates: `RELEASE_CRITERIA.md`. Releasing: `RELEASING.md`.
