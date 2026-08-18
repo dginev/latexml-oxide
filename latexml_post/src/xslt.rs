@@ -218,18 +218,39 @@ impl XSLT {
       .and_then(|f| f.to_str())
       .unwrap_or(src);
 
+    // The path (relative to the destination base) the resource is copied to.
+    // Perl `copyResource`: with a `resource_directory`, flatten into it; otherwise
+    // PRESERVE the src's path relative to the source directory — provided it stays
+    // BELOW the destination (a plain relative path, not escaping via `../` or
+    // absolute), else flatten to the basename. So `subdir/foo.css` lands at
+    // `<dest>/subdir/foo.css`, matching the `<link>`/`<script>` href, instead of a
+    // flattened `foo.css` the tag can no longer resolve (#662).
+    let rel_dest: String = if self.resource_directory.is_some() {
+      basename.to_string()
+    } else {
+      let relpath = latexml_core::util::pathname::relative(src, doc.get_source_directory());
+      if relpath.starts_with("../") || Path::new(&relpath).is_absolute() {
+        basename.to_string()
+      } else {
+        relpath
+      }
+    };
+
     // Determine destination once — same logic regardless of whether
     // the resource ends up on disk or comes from the embedded table.
     let dest = if let Some(ref rd) = self.resource_directory {
       if let Some(site_dir) = doc.get_site_directory() {
-        format!("{}/{}/{}", site_dir, rd, basename)
+        format!("{}/{}/{}", site_dir, rd, rel_dest)
       } else {
-        format!("{}/{}", rd, basename)
+        format!("{}/{}", rd, rel_dest)
       }
-    } else if let Some(dest_dir) = doc.get_destination_directory() {
-      format!("{}/{}", dest_dir, basename)
+    } else if let Some(base) = doc
+      .get_site_directory()
+      .or_else(|| doc.get_destination_directory())
+    {
+      format!("{}/{}", base, rel_dest)
     } else {
-      basename.to_string()
+      rel_dest.clone()
     };
     let ensure_parent = |dest: &str| {
       if let Some(parent) = Path::new(dest).parent() {
@@ -618,7 +639,13 @@ impl Processor for XSLT {
       for node in &resource_nodes {
         if let Some(src) = node.get_attribute("src") {
           let resource_type = node.get_attribute("type");
-          let _path = self.copy_resource(&doc, &src, resource_type.as_deref());
+          let path = self.copy_resource(&doc, &src, resource_type.as_deref());
+          // Perl XSLT.pm:70 — rewrite `@src` to where the file was actually copied,
+          // so the `<link>`/`<script>` the stylesheet emits resolves (#662). Node is
+          // a shared handle, so mutating the clone edits the real node.
+          if path != src {
+            node.clone().set_attribute("src", &path).ok();
+          }
         }
       }
     }
