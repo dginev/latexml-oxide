@@ -526,7 +526,10 @@ Source-Map-v3 <code>sources</code> convention (compact + anonymisable). Only
 called on the source-map path. See <code>docs/performance/SOURCE_PROVENANCE.md</code> §0.1.</dd><dt><a class="fn" href="fn.spill_watermark_bytes.html" title="fn latexml_package::prelude::spill_watermark_bytes">spill_<wbr>watermark_<wbr>bytes</a></dt><dd>The RAM watermark, in bytes, at which streaming pass 1 begins spilling
 closed subtrees to disk — the second derived quantity of the single
 <code>--max-memory</code> knob, and deliberately NOT a flag of its own (a watermark a
-user could raise above the fuse would Fatal before it ever spilled).</dd><dt><a class="fn" href="fn.split_tokens.html" title="fn latexml_package::prelude::split_tokens">split_<wbr>tokens</a></dt><dd>Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
+user could raise above the fuse would Fatal before it ever spilled).</dd><dt><a class="fn" href="fn.split_author_line.html" title="fn latexml_package::prelude::split_author_line">split_<wbr>author_<wbr>line</a></dt><dd>Second-level split of the author heuristic: divide ONE line that has already
+been classified as an <em>author</em> line (its superscript marker sits far enough
+from the front — <code>Some(p)</code> with <code>p &gt;= 8</code> in <code>\lx@add@authors</code>) into the
+individual creators it names.</dd><dt><a class="fn" href="fn.split_tokens.html" title="fn latexml_package::prelude::split_tokens">split_<wbr>tokens</a></dt><dd>Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
 Each of <code>delims</code> is a Token, OR Tokens to match a sequence.
 Returns a list of Tokens for the sub-sequences, with leading/trailing
 spaces trimmed from each piece, and any empty trailing piece dropped.</dd><dt><a class="fn" href="fn.stage_snapshot.html" title="fn latexml_package::prelude::stage_snapshot">stage_<wbr>snapshot</a></dt><dd>Take a snapshot now and store it under a named key for later retrieval.
