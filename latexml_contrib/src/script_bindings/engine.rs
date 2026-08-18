@@ -1749,6 +1749,21 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // absorb overload for a `Tokens` value — an `Undigested` constructor arg reaches
+  // the body as `Tokens` (#634), and the dominant Perl port idiom is
+  // `$document->absorb($tokens)`. Wrapping as `Digested::from` yields the
+  // `Postponed(Tokens)` the core absorbs as text under the active font/mode —
+  // identical to how the arg was absorbed before it was unwrapped at the boundary.
+  engine.register_fn(
+    "absorb",
+    |_d: &mut DocProxy, tokens: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
+      let arg = Digested::from(tokens);
+      with_doc(|doc, _props| {
+        doc.absorb(&arg, None).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
   // Absorb a whatsit property at the current point — the imperative analog of a
   // template's `#name` hole at content position. The workhorse is
   // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
