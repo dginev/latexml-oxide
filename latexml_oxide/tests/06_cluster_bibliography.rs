@@ -965,6 +965,48 @@ fn cluster_apacite_old_bbl_format_renders() {
     );
   }
 }
+/// `sn-jnl.cls` (Springer Nature journal class) with the `sn-apa` reference
+/// style loads apacite for its APA-formatted bibliography — sn-jnl.cls L1683
+/// `\if@APA@refstyle \usepackage[natbibapa]{apacite} \fi`. Our class binding
+/// short-circuits the raw `.cls`, so it must reproduce that conditional load;
+/// before the fix it required only natbib, leaving the `.bbl`'s apacite macros
+/// (`\APACinsertmetastar`, `\BOthers`, `\BDBL`, `{APACrefauthors}`,
+/// `\APACrefYearMonthDay`, `\APACjournalVolNumPages`, `\PrintBackRefs`, …)
+/// undefined — an `Error:undefined:` flood, References as raw macro names.
+/// Now `sn_jnl_cls`'s `DeclareOption("sn-apa", RequirePackage("apacite"))`
+/// loads the (already-complete) apacite binding. The `_clean` helper gates on
+/// 0 errors — the red→green signal. Perl ships no sn-jnl/apacite binding →
+/// Rust surpasses. arXiv/html_feedback#1261, witness 2404.15224.
+#[test]
+fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
+  let x = convert_to_xml_contrib_clean("tests/cluster_regressions/sn_jnl_apacite_bbl.tex");
+  // No apacite macro name leaks into the rendered bibliography as raw text.
+  for leak in [
+    "APACinsertmetastar",
+    "BOthers",
+    "APACrefYearMonthDay",
+    "APACjournalVolNumPages",
+    "PrintBackRefs",
+    "APACrefauthors",
+  ] {
+    assert!(
+      !x.contains(leak),
+      "sn-jnl/apacite macro `{leak}` leaked into the output (apacite not loaded):\n{x}"
+    );
+  }
+  // The entry renders its real content (authors, title, arXiv id).
+  for needle in ["Ottersten", "survey on deep learning", "1808.01462"] {
+    assert!(
+      x.contains(needle),
+      "sn-jnl/apacite bibitem content `{needle}` missing:\n{x}"
+    );
+  }
+  // And it is a structured bibitem, not leaked body text.
+  assert!(
+    x.contains("<bibitem"),
+    "sn-jnl/apacite bibliography did not produce a <bibitem>:\n{x}"
+  );
+}
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
 /// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
 /// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the

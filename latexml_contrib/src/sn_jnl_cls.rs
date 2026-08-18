@@ -58,6 +58,26 @@ LoadDefinitions!({
   // (sn-basic), 2606.10215, 2606.11534.
   RequirePackage!("natbib");
 
+  // sn-jnl.cls reference styles select the bibliography package by class
+  // option (sn-jnl.cls L1656-1694): the numeric/author-year styles use natbib
+  // (loaded above), but the `sn-apa` style loads apacite —
+  // `\if@APA@refstyle \usepackage[natbibapa]{apacite} \fi` (L1683-1685,
+  // guarded by `\DeclareOption{sn-apa}{\@APA@refstyletrue}` L111). Without it,
+  // an `sn-apa` paper's apacite-formatted `.bbl` (`\APACinsertmetastar`,
+  // `\BOthers`, `\BDBL`, `{APACrefauthors}`, `\APACrefYearMonthDay`,
+  // `\PrintBackRefs`, …) hits our apacite binding UNLOADED, so every one of
+  // those macros floods `Error:undefined:` and the References render as raw
+  // macro names. Mirror the class: fire apacite when `sn-apa` is passed.
+  // (natbib above stays unconditional — the existing simplification; apacite
+  // requires natbib anyway, so loading both under `sn-apa` is harmless.)
+  // Perl ships no sn-jnl / apacite binding at all → Rust surpasses.
+  // arXiv/html_feedback#1261, witness 2404.15224
+  // (`\documentclass[referee,sn-apa,pdflatex,natbib]{sn-jnl}`).
+  DeclareOption!("sn-apa", {
+    RequirePackage!("apacite");
+  });
+  ProcessOptions!();
+
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");
   DefMacro!("\\bmsection{}", "\\section*{#1}");
