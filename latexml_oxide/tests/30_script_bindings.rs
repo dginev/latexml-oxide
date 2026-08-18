@@ -1162,6 +1162,77 @@ fn a_throwing_script_body_degrades_only_its_binding() {
   latexml_core::reset_thread_engine();
 }
 
+// #638: a raw-HTML binding (BookML `\bmlRawHTML`) that ParseXML+insertXML a
+// foreign `xhtml:div` while a non-default font encoding is active.
+const RAWHTML_SAMPLE: &str = r##"
+  DefConstructor("\\bmlraw{}", |document, rawhtml| {
+    let nodes = ParseXML("<div xmlns='http://www.w3.org/1999/xhtml'>" + ToString(rawhtml) + "</div>");
+    document.openElement("ltx:rawhtml");
+    document.insertXML(nodes);
+    document.closeElement("ltx:rawhtml");
+  });
+"##;
+
+fn rawhtml_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  if base == "lxrawhtmltest" {
+    Some(latexml_contrib::script_bindings::load_script(RAWHTML_SAMPLE).map(|_| ()))
+  } else {
+    None
+  }
+}
+
+/// #638: the font `encoding` is a FontMap-lookup key, meaningless as an output
+/// attribute — no ltx element declares it, so it must never appear. It used to
+/// leak onto a foreign `xhtml:div` a `\bmlRawHTML`-style binding splices in under
+/// `\fontencoding{T1}\selectfont` (the div's `attribute *` schema wildcard accepts
+/// anything), producing `<xhtml:div encoding="T1">`. `relative_to` no longer emits
+/// it, so it appears nowhere.
+#[test]
+fn raw_html_insertxml_does_not_leak_font_encoding() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(rawhtml_dispatch));
+
+  // A non-default font encoding is active when the raw HTML is spliced.
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxrawhtmltest}\\begin{document}",
+    "\\fontencoding{T1}\\selectfont\\bmlraw{leaked}",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("raw-html conversion should succeed");
+  let xml = doc.serialize_to_string();
+
+  assert!(
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "conversion logged errors: {}",
+    latexml_core::common::error::get_status_message()
+  );
+  // The div and its content are present …
+  assert!(
+    xml.contains("<rawhtml") && xml.contains("leaked") && xml.contains("div"),
+    "raw html was not inserted; xml=\n{xml}"
+  );
+  // … and no font `encoding` attribute appears anywhere in the output.
+  assert!(
+    !xml.contains("encoding=\"T1\""),
+    "font encoding leaked as an output attribute (#638); xml=\n{xml}"
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
 const OPTBAG_SAMPLE: &str = r##"
   DefPrimitive("\\optbagprim", || { AssignValue("optbag:body", "X", "global"); }, #{
     beforeDigest: || { AssignValue("optbag:before", "B", "global"); },
