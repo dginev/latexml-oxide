@@ -1121,20 +1121,21 @@ impl Document {
       .document
       .create_processing_instruction(op, &attr_data.join(" "))
       .unwrap();
-    if self.node.get_type() == Some(NodeType::DocumentNode) {
+    // Perl (Core/Document.pm insertPI): a PI always lands before the root
+    // element. When the root already exists — a mid-body or document-final PI
+    // (#683's `<?latexml nominal-font-size?>` is emitted at finalization) —
+    // insert directly before it, whatever the current insertion point. Only
+    // when NO root has been opened yet (the usual pre-`\begin{document}` case)
+    // queue the PI in `pending`, to be flushed the moment the root opens
+    // (`open_element_at`). The old code keyed solely on the insertion point
+    // being the DocumentNode and so re-queued a post-root PI into `pending`,
+    // which drains once and never again — the PI was silently lost.
+    if let Some(mut root) = self.document.get_root_element() {
+      root.add_prev_sibling(&mut pi_node)?;
+    } else if self.node.get_type() == Some(NodeType::DocumentNode) {
       self.pending.push(pi_node);
     } else {
-      // Perl: insertPI always places PIs before the root element.
-      // Find the document root and insert before it.
-      let doc_node = self.document.clone();
-      match doc_node.get_root_element() {
-        Some(mut root) => {
-          root.add_prev_sibling(&mut pi_node)?;
-        },
-        _ => {
-          self.node.add_prev_sibling(&mut pi_node)?;
-        },
-      }
+      self.node.add_prev_sibling(&mut pi_node)?;
     }
     Ok(())
   }

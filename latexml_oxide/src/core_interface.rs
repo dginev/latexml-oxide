@@ -482,6 +482,23 @@ fn finish_document(document: &mut Document) -> Result<()> {
     }
   }
 
+  // #683 (xworld21): persist NOMINAL_FONT_SIZE as a
+  // `<?latexml nominal-font-size="X"?>` processing instruction when it differs
+  // from the 10pt default, so post-processing can size font-relative (em)
+  // external SVGs correctly (an `em` is `NOMINAL_FONT_SIZE`pt, not always 10pt).
+  // Perl does not emit this — NOMINAL_FONT_SIZE is digestion-only (`DEFSIZE`),
+  // so this is beyond-Perl. Only a0poster (25), the NNpt class options, and
+  // BookML move it off 10, so a normal document's output stays byte-identical
+  // (no new PI). `insert_pi` places it before the root, alongside the other
+  // `<?latexml …?>` metadata PIs (class/package/graphicspath).
+  if let Some(nominal) = state::lookup_float("NOMINAL_FONT_SIZE")
+    && (nominal.0 - 10.0).abs() > 1e-6
+  {
+    let mut attrs = HashMap::default();
+    attrs.insert(String::from("nominal-font-size"), nominal.0.to_string());
+    document.insert_pi("latexml", Some(attrs))?;
+  }
+
   note_begin("Finalizing");
   document.finalize()?;
   note_end("Finalizing");

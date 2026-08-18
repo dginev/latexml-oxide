@@ -5162,3 +5162,32 @@ coordinate math; the `grid` option (epic's `\grid`, no Rust binding) and the
 the maintainer 2026-08-18.
 
 **Guard:** `cluster_package_guards::overpic_renders_graphic_and_overlays::{overpic_emits_populated_sized_picture_with_graphic_and_overlays, overpic_missing_natural_size_image_does_not_divide_by_zero}`.
+
+### 136. `<?latexml nominal-font-size?>` PI persists a non-default `NOMINAL_FONT_SIZE`
+
+**Decision:** When `NOMINAL_FONT_SIZE` differs from the 10pt default at document
+finalization, emit a `<?latexml nominal-font-size="X"?>` processing instruction,
+alongside the existing `<?latexml class=… package=…?>` metadata PIs. A default
+(10pt) document emits nothing, so its output stays byte-identical.
+
+**Perl behavior:** Perl never persists `NOMINAL_FONT_SIZE` — it is a digestion-only
+value read by `Common/Font.pm::DEFSIZE` and then discarded. Post-processing has no
+way to recover the body font size, so an external SVG sized in `em` units is scaled
+against an assumed 10pt even when the class chose another size.
+
+**Rationale:** an `em` is `NOMINAL_FONT_SIZE`pt, not always 10pt. a0poster (25),
+BookML, and the `NNpt` class options move it off 10, and post-processing needs the
+value to size font-relative external SVGs correctly. Exposing it as a PI (the
+reporter's suggested form) makes it available without touching any element.
+arXiv/html_feedback#683 (xworld21).
+
+**Impact:** only documents whose class sets a non-default `NOMINAL_FONT_SIZE` gain
+the PI. Emitting it also surfaced and fixed an `insert_pi` bug — a PI added after
+the root element already exists was queued into the once-drained `pending` list and
+silently lost; it is now inserted directly before the root, matching Perl
+`Core/Document.pm::insertPI` ("a PI always lands before the root element").
+
+**Upstream:** n/a — beyond-Perl (post-processing metadata Perl does not carry).
+Approved by the maintainer 2026-08-18.
+
+**Guard:** `cluster_sizing::delimiter_size_nominal_font::nominal_font_size_persisted_as_pi_only_when_non_default`.
