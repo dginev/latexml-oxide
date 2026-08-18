@@ -5044,3 +5044,35 @@ heuristic-2-before-3 reorder would benefit Perl `Pack.pm`).
 
 **Guards**: `main_tex::tests::bbl_sibling_outranks_pdf_include_marker` and
 `::reorder_preserves_common_name_when_multiple_bbl`.
+
+### 133. comment.sty detects `\end{comment}` mid-line, not only as a whole line
+
+**Perl**: `comment.sty.ltxml`'s `defineExcluded` reads the body raw line-by-line
+and stops only at a line that is *entirely* the end marker — `/^\s*\Q\end{name}\E\s*$/`
+(L30). A comment whose closing sits at the end of a content line —
+`…text.\end{comment}` — never matches, so the raw-line scan runs to **end of
+file**, silently swallowing everything after the comment. The old Rust port
+matched Perl exactly (`line.trim() == end_mark`).
+
+**Rust**: match `\end{name}` **anywhere in a line** (allowing spaces between
+`\end` and `{`, i.e. `\end {name}`), mirroring the in-tree verbatim.sty
+`\verbatim@` scanner (`verbatim_sty.rs`), and drop the rest of that line (with an
+`Info:unexpected:stuff`). Crucially, the scan looks only at the **code part** of
+each line — an `\end` behind a `%` comment (`% […] \end{name}`) is NOT an end,
+because comment.sty reads its body with `%` active as a comment. `comment_sty.rs`.
+
+This surpasses Perl on a **SHARED-FAILURE**: both LaTeXML engines silently drop
+the content. Witness **arXiv:2606.11493** — a proof wrapped in
+`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed the document's 31-`\bibitem`
+`thebibliography`, so the paper rendered with **0** bibliography entries and **no
+diagnostic** (R3b: silent bibliography loss); pdflatex compiles the same source
+with the full 31-entry bibliography, and after the fix Rust does too. (comment.sty
+itself is finicky about mid-line closings — reduced/synthetic cases can even
+`Runaway` in pdflatex — so this is not a byte-for-byte pdflatex port but the
+robust reading verbatim.sty already used, which recovers the real witness without
+regressing the tokenize `comment` fixture's `%`-guarded edge cases.)
+
+**Upstream**: not yet filed to `brucemiller/LaTeXML` (TODO — the same
+mid-line-end scan would benefit Perl `comment.sty.ltxml`).
+
+**Guard**: `06_cluster_bibliography::comment_midline_end_keeps_bibliography`.
