@@ -555,6 +555,33 @@ fn cluster_biblatex_two_datalists() {
     "expected exactly 4 bibitems (2 entries x 2 datalists, no stray):\n{x}"
   );
 }
+/// biblatex must NOT globally define `\type` (nor `\subtype`). Real biblatex
+/// defines `\def\type#1{type=#1}` only inside a `\begingroup` bibliography-filter
+/// body (biblatex.sty L9380-9388), so in the document body `\type` is undefined
+/// and a user's `\newcommand{\type}{\mathrm{type}}` — a ubiquitous math macro —
+/// takes effect. Our binding mirrored ar5iv's global `DefMacro('\type{}',
+/// Tokens())`, an arg-grabbing noop that shadowed the user macro AND ate the
+/// token after it: `\(\type\)` consumed the closing `\)`, inline math never
+/// closed, and every following display equation nested as `<ltx:equation> isn't
+/// allowed in <ltx:XMath>` — the document came out "half missing". The `_clean`
+/// helper's 0-error gate is the red→green signal. arXiv/html_feedback#6681,
+/// witness 2606.22155.
+#[test]
+fn biblatex_does_not_shadow_user_type_macro() {
+  let x = convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_type_macro_math.tex");
+  // The content AFTER the display equation survives (math mode closed) — the
+  // "half missing" symptom is gone.
+  assert!(
+    x.contains("Body text after the display equation"),
+    "content after the display equation was swallowed (math mode left open):\n{x}"
+  );
+  // The user's `\type` rendered as its math (`\mathrm{type}`), and the display
+  // equation is a proper sibling equation, not a malformed nested one.
+  assert!(
+    x.contains("type") && x.matches("<equation").count() == 1,
+    "expected the user \\type to render and exactly one display <equation>:\n{x}"
+  );
+}
 /// arXiv/html_feedback#6797 — an author-year bibliography built from a `.bib`
 /// used the FULL author list as the entry's refnum LABEL (5104 characters on the
 /// witness, arXiv 2607.21432); and because the author-year branch also skipped
