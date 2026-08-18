@@ -1,0 +1,23 @@
+\documentclass{article}
+\usepackage{caption}
+% titlepic.sty's essential mechanism, inlined so the guard needs neither the host
+% titlepic.sty nor --includestyles: \titlepic stores its argument in \@titlepic,
+% and the redefined \@maketitle injects it between the author block and the
+% abstract. The witness (arXiv:2606.25280, arXiv/html_feedback#6675) places a
+% \captionof{figure}+\label "teaser" figure there.
+\makeatletter
+\def\titlepic#1{\gdef\@titlepic{#1}}
+\def\@titlepic{}
+\renewcommand\@maketitle{\newpage\null\vskip 2em%
+  \begin{center}{\LARGE \@title \par}\vskip 1.5em{\large\@author \par}\end{center}%
+  \vskip .5em{\centering\@titlepic\par}\par\vskip 1.5em}
+\makeatother
+\title{Teaser}\author{A. Author}\date{}
+\titlepic{\captionof{figure}{Teaser flock caption}\label{fig:teaser}}
+\begin{document}
+\maketitle
+\begin{abstract}Abstract text.\end{abstract}
+Body sees Figure~\ref{fig:teaser}.
+\begin{figure}\caption{Second figure}\label{fig:second}\end{figure}
+Body also sees Figure~\ref{fig:second}.
+\end{document}

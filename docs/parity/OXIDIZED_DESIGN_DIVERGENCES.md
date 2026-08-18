@@ -4704,7 +4704,19 @@ figure vanished and `\figref{fig:teaser}` rendered "Fig. LABEL:fig:teaser". Now 
 figure renders (`xml:id="S0.F1"`) and the reference resolves to "Fig. 1". Shared
 upstream bug recorded as KNOWN_PERL_ERRORS #90.
 
-**Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+Second witness, a distinct authoring path into the same mechanism: arXiv 2606.25280
+(html_feedback #6675) uses `titlepic.sty`, which does not *append* to `\@maketitle`
+but *redefines* it wholesale (`\renewcommand\@maketitle{…{\centering\@titlepic\par}…}`)
+with the teaser `\captionof{figure}`+`\label` held in `\@titlepic`. Because the
+redefinition makes `\@maketitle` non-empty, the `\ifx\@maketitle\@empty` guard falls
+through and `\lx@deposit@maketitle` runs it — so the figure survives and takes number 1
+here too, while production ar5iv (Perl) still drops it. (Author-local `\def\name`
+*inside* a redefined `\@maketitle` remains unsupported — that needs the author block, not
+just the injected content; KNOWN_PERL_ERRORS #47.)
+
+**Guard**: `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`
+(append path); `06_cluster_frontmatter::frontmatter_titlepic_redefined_maketitle_figure_survives`
+(titlepic redefine path).
 ### 122. A `font="bold"` wrapping an entire author name is unwrapped for coherence
 
 **Perl** captures semantic creators from `\author`, not the class's visual title
