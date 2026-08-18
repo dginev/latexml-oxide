@@ -2062,13 +2062,23 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let code = if !cached.is_empty() {
     cached
   } else {
-    // Use read (bytes) + lossy UTF-8 conversion so non-UTF-8 cls/sty
-    // files (ISO-8859 with vendor copyright headers, e.g. cpc-hepnp.cls
-    // with Chinese comments) still get scanned. read_to_string strict
-    // UTF-8 validation would error out, leaving \RequirePackage{fancyhdr}
-    // and friends silently undiscovered. Witness 2203.16500.
+    // Use read (bytes) + UTF-8 conversion so non-UTF-8 cls/sty files
+    // (ISO-8859 with vendor copyright headers, e.g. cpc-hepnp.cls with
+    // Chinese comments) still get scanned. read_to_string strict UTF-8
+    // validation would error out, leaving \RequirePackage{fancyhdr} and
+    // friends silently undiscovered. Witness 2203.16500.
+    //
+    // Fast path for valid UTF-8 (the overwhelming majority): `str::from_utf8`
+    // SIMD-validates the whole slice in one pass, where `from_utf8_lossy`
+    // walks it through the grapheme-aware `Utf8Chunks` iterator hunting for
+    // invalid bytes — measurable on a 197 KB class file like ieeeconf.cls.
+    // Byte-identical to the lossy path for valid UTF-8; fall back to lossy
+    // only on invalid bytes. Same pattern as the per-line reader in `mouth.rs`.
     match std::fs::read(&path) {
-      Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+      Ok(bytes) => match str::from_utf8(&bytes) {
+        Ok(s) => s.to_string(),
+        Err(_) => String::from_utf8_lossy(&bytes).into_owned(),
+      },
       Err(_) => {
         Warn!(
           "I/O",

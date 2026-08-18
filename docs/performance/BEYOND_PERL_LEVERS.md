@@ -50,6 +50,29 @@ hottest templates the profile flags into **native Rust DOM transforms**, bypassi
 libxslt entirely for them (Perl is libxslt-bound and cannot). *Feasibility:* Step1
 low-risk/moderate win; Step2 high-effort/high-win.
 
+> **⚠️ MEASURED 2026-08-18 — Step 1 is REFUTED; the "re-parsed per process"
+> premise is false.** Flat CPU profile of witness 1910.01256 (AMD Threadripper,
+> `perf` cycles self-time, 65k samples/20 iters): every `xsltParseStylesheet*`
+> symbol is **≤0.01%**, the whole `libxslt` DSO is **0.6%**, `libexslt` 0.02%. The
+> stylesheet **compile is below sampling noise** — precompiling/embedding a parsed
+> stylesheet buys **<0.1%**. The visible libxslt time is template *application*
+> (`xsltApplyTemplates`/`xsltGetTemplate`), not parsing, so **only Step 2
+> (transpile hot apply-templates) remains live**. Caveat: 1910.01256 is
+> small/text-heavy (XSLT is only **0.9%** here); the 13.2% figure is a corpus
+> aggregate dominated by large docs, so **re-measure the XSLT *apply* share on a
+> big multi-section paper before committing to Step 2** — don't invest on the 13.2%
+> aggregate alone.
+
+> **Median-path micro-wins found in the same profile (2026-08-18)** — cheap,
+> divergence-neutral, off the BP roadmap but worth landing opportunistically:
+> **(1) UTF-8 SIMD fast-path on the `.cls`/`.sty` dep-scan slurp** (`binding/content.rs`
+> — `from_utf8_lossy` walked a 197 KB `ieeeconf.cls` grapheme-aware; ~3% CPU) —
+> **LANDED** on `perf-utf8-slurp-fastpath`, byte-identical. **(2) `state.rs`
+> snapshot-diff compares values via `format!("{:?}") != format!("{:?}")`** (~2% CPU,
+> two heap Debug walks per entry) — candidate, needs a structural-`eq`-vs-dump-diff
+> semantics check first. The **25.5% gullet loop** and **12.7% alloc/memcpy** token
+> churn are architectural, not free wins.
+
 **BP-3 — Concurrent graphics + parallel MathML structure** (graphics 8.9% +
 mathml_pres 4.5% ≈ 13%). Graphics conversions are independent *subprocesses*
 (gs/dvisvgm/inkscape) run **serially** today — fork them in a bounded concurrent
