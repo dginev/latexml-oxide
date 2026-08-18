@@ -1,0 +1,17 @@
+\documentclass{article}
+\usepackage{minted}
+% A \newminted-created environment used the normal way (outside any comment). It
+% is closed by \end{leancode}, NOT \end{lstlisting}: the created env must read its
+% body verbatim up to its own \end{name} and hand control back, so the text after
+% it stays in the document flow. Before the fix the env aliased to
+% \begin{lstlisting}, whose reader hunts for the literal \end{lstlisting} and so
+% ran to end-of-file (issue #520, "wrong \end marker").
+\newminted[leancode]{lean4}{fontsize=\footnotesize}
+\begin{document}
+Before the code listing.
+\begin{leancode}
+some lean code
+more lean code
+\end{leancode}
+After the code listing.
+\end{document}
