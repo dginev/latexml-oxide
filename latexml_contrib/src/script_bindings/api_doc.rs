@@ -327,6 +327,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "EndSemiverbatim",
+    Doc::Rust(
+      "Close a `StartSemiverbatim` region, restoring the saved catcodes.",
+      "latexml_core::state::end_semiverbatim",
+    ),
+  ),
+  (
     "Error",
     Doc::Note(
       "Log an `Error:`. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion.",
@@ -667,6 +674,16 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Discard any run of spaces at the head of the input.",
       "latexml_core::gullet::skip_spaces",
+    ),
+  ),
+  (
+    "StartSemiverbatim",
+    Doc::Rust(
+      "Begin reading raw: neutralize the math/special catcodes (`^ _ ~ & $ # '`) to \
+       literal `OTHER`, keeping `\\ { }` special. Pass extra single-char strings to \
+       neutralize them too. Pair with `EndSemiverbatim` — the canonical way to give a \
+       `DefEnvironment` a verbatim body (`beforeDigest`/`beforeDigestEnd`).",
+      "latexml_core::state::begin_semiverbatim",
     ),
   ),
   (

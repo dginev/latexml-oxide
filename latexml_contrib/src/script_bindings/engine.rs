@@ -305,6 +305,30 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), None);
     }
   });
+  // StartSemiverbatim/EndSemiverbatim (Perl `Package.pm` exports, L1002-1008):
+  // read the following content raw — the default neutralizes the math/special
+  // catcodes (`^ _ ~ & $ # '`) to `OTHER` so they are literal, keeping `\ { }`
+  // special so e.g. `\end{env}` still parses (#653). The canonical way to give a
+  // Rhai `DefEnvironment` a verbatim body: `beforeDigest: || StartSemiverbatim()`
+  // + `afterDigestBody: || EndSemiverbatim()`. Pass extra single-char strings to
+  // neutralize them too (e.g. `StartSemiverbatim(["%"])`).
+  engine.register_fn("StartSemiverbatim", || {
+    latexml_core::state::begin_semiverbatim(None);
+  });
+  engine.register_fn("StartSemiverbatim", |extra: rhai::Array| {
+    let chars: Vec<char> = extra
+      .iter()
+      .filter_map(|d| d.clone().into_string().ok())
+      .filter_map(|s| s.chars().next())
+      .collect();
+    latexml_core::state::begin_semiverbatim(Some(&chars));
+  });
+  engine.register_fn(
+    "EndSemiverbatim",
+    || -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::end_semiverbatim().map_err(rhai_err)
+    },
+  );
   // LookupMeaning: the meaning of a CS as its display string ("" if none).
   engine.register_fn("LookupMeaning", |cs: &str| -> String {
     match latexml_core::state::lookup_meaning(&latexml_core::T_CS!(cs)) {

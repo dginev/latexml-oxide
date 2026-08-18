@@ -35,7 +35,7 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-102 functions, 135 calls.
+104 functions, 138 calls.
 
 | call | documentation |
 |---|---|
@@ -70,6 +70,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
 | `Digest(Tokens) -> Digested` | Digest tokens into boxes, independent of the current gullet. ([`digest`](latexml_core::stomach::digest)) |
 | `DigestText(string) -> Digested` | Digest tokens in text mode, whatever mode the caller is in. ([`digest_text`](latexml_core::binding::content::digest_text)) |
+| `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Error(string, string, string)` | Log an `Error:`. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
 | `ExecuteOptions(array)` | Run the handlers for a list of class/package options. ([`execute_options`](latexml_core::binding::content::execute_options)) |
 | `Expand(Tokens) -> Tokens` | Fully expand tokens, without digesting them. ([`do_expand`](latexml_core::gullet::do_expand)) |
@@ -123,6 +124,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Revert(Digested) -> Tokens` | A digested value back to the source tokens that made it. ([`Digested::revert`](latexml_core::digested::Digested::revert)) |
 | `ShiftValue(string) -> ?` | Remove and return the first value of a value-table list, type preserved (`()` if empty). ([`shift_value`](latexml_core::state::shift_value)) |
 | `SkipSpaces()` | Discard any run of spaces at the head of the input. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
+| `StartSemiverbatim()`<br>`StartSemiverbatim(array)` | Begin reading raw: neutralize the math/special catcodes (`^ _ ~ & $ # '`) to literal `OTHER`, keeping `\ { }` special. Pass extra single-char strings to neutralize them too. Pair with `EndSemiverbatim` — the canonical way to give a `DefEnvironment` a verbatim body (`beforeDigest`/`beforeDigestEnd`). ([`begin_semiverbatim`](latexml_core::state::begin_semiverbatim)) |
 | `StepCounter(string)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
 | `T_CS(string) -> Tokens` | One control-sequence token, wrapped as `Tokens` so it composes with `Digest`/`Expand`. |
 | `Tag(string, map)` | Declare document-model properties for one element tag. ([`install_tag`](latexml_core::binding::content::install_tag)) |
