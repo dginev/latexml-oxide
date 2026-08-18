@@ -66,3 +66,28 @@ divergence needing the three qualifying tests + user escalation — NOT a straig
 parity fix. Deprioritized until a surpass decision is taken. The sibling
 `\ce`-in-`align*` residual noted in `mhchem_sty.rs` is the same family and a fix
 should address both.
+
+## Root cause isolated: expl3 regex-REPLACE, not mhchem (2026-08-17)
+
+`regex_replace_in_p_column.tex` (beside this file) strips the mystery to its
+core: **`\regex_replace_all:nnN` inside a `p{}` column, with NO chem package
+loaded** — expl3 is base LaTeXML, so it reproduces on the plain binary and on
+**bare** Perl 0.8.8 (no `--includestyles` needed, unlike the `\ce` form). Both
+engines give the byte-identical 7-error cascade. `\regex_match` (read-only) in
+the same column is clean; a `c`/`l` column is clean. So the trigger is
+regex-**REPLACE** in a **paragraph** column corrupting the deferred-alignment
+mode/group state — a shared property of LaTeXML's alignment reimplementation,
+independent of chemistry.
+
+This also generalises the witness set: **chemformula `\ch` hits the identical
+cascade** (witness **2606.04125**, `\ch{Li+}` in `tabularx` `X`/`P{5.5cm}`
+columns), because `\ch` and mhchem `\ce` both route through `\regex_replace_all`.
+mhchem `\ce` witnesses remain 2605.12186 and 2606.00894 (`\ce` in a `p{3cm}`
+column of a `sidewaystable`).
+
+**False-clean trap (cost a triage pass 2026-08-17):** a same-host Perl run that
+*omits* `--includestyles` reports `Can't find binding for package
+mhchem/chemformula` and leaves `\ce`/`\ch` **undefined** — the table then closes
+cleanly and Perl looks correct while Rust looks broken, i.e. a spurious
+"Rust-only" verdict. The mhchem-free `\regex_replace_all` repro sidesteps the
+trap entirely and is the fastest way to re-confirm the shared nature.
