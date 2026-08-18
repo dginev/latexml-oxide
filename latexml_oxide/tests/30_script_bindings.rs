@@ -192,6 +192,17 @@ const SAMPLE: &str = r##"
     document.closeElement("ltx:text");
   });
 
+  // #653: a VERBATIM environment body via StartSemiverbatim/EndSemiverbatim
+  // (Perl `Package.pm` exports). The default neutralizes `^ _ ~ & $ # '` to
+  // literal `OTHER`, so `2^3`/`a_b` in the body are text, not math sub/superscript
+  // errors — while `\ { }` stay special so `\end{rvverb}` still parses. End at
+  // `beforeDigestEnd` (the `\end`'s before-digest, before the environment's group
+  // pop) so the pushed catcode frame is popped exactly once.
+  DefEnvironment("{rvverb}", "<ltx:block class=\"rvverb\">#body</ltx:block>", #{
+    beforeDigest: || StartSemiverbatim(),
+    beforeDigestEnd: || EndSemiverbatim()
+  });
+
   // ── Wave C/E: package-option machinery through a real \usepackage[draft] ──
   // (ieeetran/article classes' DeclareOption + ProcessOptions shape.)
   DeclareOption("draft", || assign_global("rh:opt", "draft-on"));
@@ -362,6 +373,7 @@ fn script_binding_macro_and_constructor_convert() {
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
+    "\\begin{rvverb}2^3 and a_b\\end{rvverb} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
     "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
     "\\rhrawhtml \\rhfragment \\rhpi ",
@@ -525,6 +537,13 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("class=\"rbox\"") && xml.contains("Boxed"),
     "imperative environment ({{rbox}}) / absorbProperty failed; xml=\n{xml}"
+  );
+  // #653: the verbatim env kept `^`/`_` LITERAL — the body renders as text, not
+  // a "Script ^ can only appear in math mode" error (the top-of-test 0-error gate
+  // also catches that). `\end{rvverb}` still parsed (braces stayed special).
+  assert!(
+    xml.contains("class=\"rvverb\"") && xml.contains("2^3 and a_b"),
+    "verbatim env (StartSemiverbatim) did not keep ^/_ literal; xml=\n{xml}"
   );
   // Wave C: \usepackage[draft] → DeclareOption body ran via ProcessOptions.
   let opt = match state::lookup_value("rh:opt") {

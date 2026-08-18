@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+  - **Rhai bindings can read a verbatim body via `StartSemiverbatim`/`EndSemiverbatim`.**
+    A `DefEnvironment` whose body contains `^`/`_`/`&`/… (e.g. a code block) raised
+    "Script ^ can only appear in math mode" because the body was digested normally.
+    The two Perl `Package.pm` exports are now on the Rhai surface, so a binding can
+    bracket its body — `beforeDigest: || StartSemiverbatim()` +
+    `beforeDigestEnd: || EndSemiverbatim()` — to neutralize the math/special
+    catcodes (`^ _ ~ & $ # '`) to literal text while keeping `\ { }` special so
+    `\end{env}` still parses. Extra single-char strings customize the set (#653).
   - **`RelaxNGSchema()` actually loads a custom schema.** Selecting a RelaxNG
     schema from raw `.rng` at runtime (the Rhai `RelaxNGSchema()` binding, or any
     non-`LaTeXML` schema with no compiled `.model`) scanned and parsed the file but
