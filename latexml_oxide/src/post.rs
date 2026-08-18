@@ -1580,6 +1580,14 @@ fn escape_attr(s: &str) -> String {
     .replace('"', "&quot;")
 }
 
+/// A self-closing `<graphics …/>` element — the frozen pre-Graphics placeholder
+/// the picture-SVG path carries until splice time. Shared by the two consumers:
+/// `convert_picture_children_to_svg` (strip it from a makebox `<text>` copy /
+/// re-emit it as `<foreignObject>`) and `resolve_fragment_graphics` (rewrite it
+/// to the resolved `<img>`/`<object>`).
+static GRAPHICS_SELF_CLOSE_RE: std::sync::LazyLock<regex::Regex> =
+  std::sync::LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
+
 /// Render a resolved graphic as the HTML the XSLT would have produced for the
 /// `<ltx:graphics>` — `<object>` for an `.svg` imagesrc (interactivity), `<img>`
 /// otherwise. Attribute set and order (src/data, id, class, width, height,
@@ -1644,8 +1652,6 @@ fn resolve_fragment_graphics(
   resolved: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
 ) -> String {
   use std::sync::LazyLock;
-  static GRAPHICS_TAG_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
   static XMLID_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
   static SVG_DIM_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
@@ -1672,7 +1678,7 @@ fn resolve_fragment_graphics(
     })
     // No parseable outer <svg> dims → assume a real picture and constrain.
     .unwrap_or(true);
-  GRAPHICS_TAG_RE
+  GRAPHICS_SELF_CLOSE_RE
     .replace_all(fragment, |caps: &regex::Captures| {
       let tag = &caps[0];
       match XMLID_RE.captures(tag) {
@@ -1888,11 +1894,11 @@ fn convert_picture_children_to_svg(content: &str) -> String {
   static TEXT_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap());
   // Foreign (non-SVG) content that a picture makebox can carry: a math label or
-  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>.
+  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>. The
+  // `<graphics …/>` matcher is the module-level `GRAPHICS_SELF_CLOSE_RE` (shared
+  // with `resolve_fragment_graphics`).
   static MATH_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"(?s)<Math\b[^>]*>.*?</Math>"#).unwrap());
-  static GRAPHICS_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<graphics\b[^>]*/>"#).unwrap());
 
   let mut svg = String::new();
 
@@ -1983,8 +1989,14 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     // arXiv:2510.17772 Fig 7). Plain-text labels are untouched.
     for text_caps in TEXT_RE.captures_iter(g_content) {
       let text_attrs = &text_caps[1];
-      let text_content = GRAPHICS_RE.replace_all(&text_caps[2], "");
+      let text_content = GRAPHICS_SELF_CLOSE_RE.replace_all(&text_caps[2], "");
       let text_content = MATH_RE.replace_all(&text_content, "");
+      // The overpic BACKGROUND makebox wraps only the graphic, so after the strip
+      // there is no label left — skip the wrapper rather than emit a dead
+      // `<text></text>` (the graphic still renders via the foreign block below).
+      if text_content.trim().is_empty() {
+        continue;
+      }
       svg.push_str(&format!(
         r#"<g transform="scale(1,-1)"><text{text_attrs}>{text_content}</text></g>"#,
       ));
@@ -2007,7 +2019,7 @@ fn convert_picture_children_to_svg(content: &str) -> String {
     // block and its siblings above are deleted in favor of the `svg.rs` Processor.
     for node in MATH_RE
       .find_iter(g_content)
-      .chain(GRAPHICS_RE.find_iter(g_content))
+      .chain(GRAPHICS_SELF_CLOSE_RE.find_iter(g_content))
       .map(|m| m.as_str())
     {
       let width = svg_attr(node, "width")
@@ -2367,6 +2379,29 @@ mod picture_svg_foreign_content_tests {
     assert!(
       out.contains(">A<") || text_inner.contains('A'),
       "plain label dropped: {out}"
+    );
+  }
+
+  #[test]
+  fn background_makebox_graphic_only_emits_no_empty_text() {
+    // The overpic BACKGROUND — `\put(0,0){\makebox(0,0)[bl]{\usebox\OVP@box}}` —
+    // wraps ONLY the graphic, so the `<text>` has no sibling label. After the
+    // graphic is stripped from the text copy, the leftover is empty: emit the
+    // graphic once (as `<foreignObject>`) and NO dead `<text></text>` wrapper.
+    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><text><graphics graphic="bg.png" xml:id="p1.g0"/></text></g>"#;
+    let out = convert_picture_children_to_svg(input);
+    assert_eq!(
+      out.matches("<graphics").count(),
+      1,
+      "background graphic emitted more than once: {out}"
+    );
+    assert!(
+      out.contains("foreignObject"),
+      "the graphic must survive as a <foreignObject>: {out}"
+    );
+    assert!(
+      !out.contains("<text>") && !out.contains("<text "),
+      "an empty <text> wrapper was emitted for a label-less makebox: {out}"
     );
   }
 }
