@@ -18,6 +18,8 @@
 //! several methods at once; the Rust version threads `&mut self` the
 //! same way.
 
+use std::collections::BTreeSet;
+
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
@@ -189,6 +191,12 @@ pub struct Relaxng {
   /// (mapped to the `ltx` prefix) becomes a strip-prefix so display
   /// names read `para` rather than `ltx:para`.
   pub display_strip_prefixes: Vec<String>,
+
+  /// The simplified `<start>` patterns — the grammar's document root
+  /// content. Captured by [`Self::load_schema`] so [`Self::compute_model_data`]
+  /// can distil `#Document`'s allowed children (Perl `RelaxNG.pm`'s
+  /// `extractContent('#Document', @schema)`, L71).
+  pub start: Vec<Pattern>,
 }
 
 impl Default for Relaxng {
@@ -206,6 +214,7 @@ impl Default for Relaxng {
       document_namespaces:    HashMap::default(),
       primary_namespace:      None,
       display_strip_prefixes: Vec::new(),
+      start:                  Vec::new(),
     }
   }
 }
@@ -305,7 +314,189 @@ impl Relaxng {
     search_paths: &[&std::path::Path],
   ) -> Result<(), scan::ScanError> {
     let raw = scan::scan_external(self, name, None, search_paths)?;
-    let _start = simplify::simplify_top(self, raw);
+    self.start = simplify::simplify_top(self, raw);
     Ok(())
+  }
+
+  /// Distil the scanned+simplified schema into the tag/attribute/namespace/class
+  /// tables the runtime `Model` consults (`canContain`/`canHaveAttribute`/
+  /// `isInSchemaClass`). A faithful port of Perl `Common/Model/RelaxNG.pm`'s
+  /// post-scan loop (L70-95) and `extractContent` (L100-128): for each element
+  /// tag, walk its body to the set of child elements and attributes it allows;
+  /// for `#Document`, the same over the grammar `<start>`; class-defining symbols
+  /// (`grammarN:NAME.class`) become schema classes. This is the step the compiled
+  /// `.model` path bakes ahead of time (`Model::load_compiled_schema_str`); a
+  /// schema loaded from raw `.rng` at runtime (`RelaxNGSchema()`, no compiled
+  /// `.model`) needs it computed here, or `tagprop` stays empty and every element
+  /// is rejected as "not allowed" (dginev/latexml-oxide#652).
+  pub fn compute_model_data(&self) -> ModelData {
+    let mut tag_contents: Vec<(String, Vec<String>)> = Vec::new();
+    let mut tag_attributes: Vec<(String, Vec<String>)> = Vec::new();
+    let mut schema_classes: Vec<(String, Vec<String>)> = Vec::new();
+
+    // `#Document`: the start's content (Perl L71). Attributes are irrelevant.
+    let (doc_children, _) = self.extract_content(&self.start);
+    tag_contents.push(("#Document".to_string(), doc_children.into_iter().collect()));
+
+    // Each element tag → (allowed children, allowed attributes). `*:*` (the
+    // any-name element) carries no internal structure (Perl L82-85).
+    let mut tags: Vec<&String> = self.elements.keys().collect();
+    tags.sort();
+    for tag in tags {
+      if tag == "*:*" {
+        tag_contents.push((tag.clone(), vec!["*:*".to_string()]));
+        continue;
+      }
+      let (children, attrs) = self.extract_content(&self.elements[tag]);
+      tag_contents.push((tag.clone(), children.into_iter().collect()));
+      tag_attributes.push((tag.clone(), attrs.into_iter().collect()));
+    }
+
+    // Schema classes: a `def` named `grammarN:NAME.class` (Perl L91-95).
+    let mut defs: Vec<&String> = self.defs.keys().collect();
+    defs.sort();
+    for sym in defs {
+      if let Some(name) = sym
+        .strip_suffix(".class")
+        .and_then(|s| s.split_once(':').map(|(_, n)| n))
+        && let Some(def) = self.defs.get(sym)
+      {
+        let (members, _) = self.extract_content(std::slice::from_ref(def));
+        schema_classes.push((name.to_string(), members.into_iter().collect()));
+      }
+    }
+
+    ModelData {
+      tag_contents,
+      tag_attributes,
+      schema_classes,
+      namespaces: self
+        .document_namespaces
+        .iter()
+        .map(|(p, u)| (p.clone(), u.clone()))
+        .collect(),
+    }
+  }
+
+  /// Walk a pattern body to the sets of (child elements, attributes) it permits,
+  /// resolving `ref`s through `elementdefs` (single-element defs → a child) and
+  /// `defs` (other defs → inline expansion). Port of Perl `extractContent`
+  /// (`RelaxNG.pm` L100-128); the `seen` guard is Rust-only defence against a
+  /// self-referential `def` (a recursive content model) looping forever.
+  fn extract_content(&self, body: &[Pattern]) -> (BTreeSet<String>, BTreeSet<String>) {
+    let mut children: BTreeSet<String> = BTreeSet::new();
+    let mut attrs: BTreeSet<String> = BTreeSet::new();
+    let mut seen: HashSet<String> = HashSet::default();
+    let mut work: Vec<Pattern> = body.to_vec();
+    while let Some(item) = work.pop() {
+      match item {
+        Pattern::Attribute { name, .. } => {
+          attrs.insert(name);
+        },
+        Pattern::Element { name, .. } | Pattern::ElementRef { qname: name } => {
+          children.insert(name);
+        },
+        Pattern::Combination { body, .. } | Pattern::Def { body, .. } | Pattern::Start { body } => {
+          work.extend(body);
+        },
+        Pattern::Grammar { body, .. } | Pattern::Module { body, .. } => {
+          work.extend(simplify::extract_start(&body));
+        },
+        Pattern::Ref { qname } | Pattern::ParentRef { qname } => {
+          if let Some(el) = self.elementdefs.get(&qname) {
+            children.insert(el.clone());
+          } else if seen.insert(qname.clone())
+            && let Some(expansion) = self.defs.get(&qname)
+          {
+            work.push(expansion.clone());
+          }
+        },
+        Pattern::Value(_) | Pattern::Data(_) | Pattern::Text => {
+          children.insert("#PCDATA".to_string());
+        },
+        Pattern::Doc(_) | Pattern::Override { .. } => {},
+      }
+    }
+    (children, attrs)
+  }
+}
+
+/// The tables [`Relaxng::compute_model_data`] distils out of a scanned schema,
+/// ready to be pushed into the runtime `Model` (`add_tag_content` /
+/// `add_tag_attribute` / `set_schema_class` / `register_document_namespace`).
+#[derive(Debug, Default)]
+pub struct ModelData {
+  pub tag_contents:   Vec<(String, Vec<String>)>,
+  pub tag_attributes: Vec<(String, Vec<String>)>,
+  pub schema_classes: Vec<(String, Vec<String>)>,
+  pub namespaces:     Vec<(String, String)>,
+}
+
+#[cfg(test)]
+mod distill_tests {
+  use super::*;
+  use crate::common::relaxng::scan::scan_string;
+
+  /// #652: a raw `.rng` scanned at runtime must yield the same tag→children /
+  /// tag→attributes tables the compiled `.model` bakes ahead of time. Before the
+  /// fix the runtime scan built the AST but never distilled `tagprop`, so every
+  /// element was rejected ("<ltx:document> isn't allowed in <#Document>") and the
+  /// output was empty.
+  #[test]
+  fn compute_model_data_distills_tagprop_from_scanned_schema() {
+    let xml = r#"
+      <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <start><ref name="document"/></start>
+        <define name="document">
+          <element name="document"><zeroOrMore><ref name="para"/></zeroOrMore></element>
+        </define>
+        <define name="para">
+          <element name="para"><attribute name="class"/><text/></element>
+        </define>
+      </grammar>
+    "#;
+    let mut rng = Relaxng::default();
+    let raw = scan_string(&mut rng, xml).expect("scan");
+    rng.start = simplify::simplify_top(&mut rng, raw);
+    let data = rng.compute_model_data();
+
+    let content = |tag: &str| -> Vec<String> {
+      data
+        .tag_contents
+        .iter()
+        .find(|(t, _)| t == tag)
+        .map(|(_, c)| c.clone())
+        .unwrap_or_default()
+    };
+    let attrs = |tag: &str| -> Vec<String> {
+      data
+        .tag_attributes
+        .iter()
+        .find(|(t, _)| t == tag)
+        .map(|(_, a)| a.clone())
+        .unwrap_or_default()
+    };
+
+    assert_eq!(
+      content("#Document"),
+      vec!["document".to_string()],
+      "the grammar <start> makes `document` the only allowed document root; got {:?}",
+      data.tag_contents
+    );
+    assert_eq!(
+      content("document"),
+      vec!["para".to_string()],
+      "document's content model allows para"
+    );
+    assert_eq!(
+      content("para"),
+      vec!["#PCDATA".to_string()],
+      "para's <text/> becomes #PCDATA content"
+    );
+    assert_eq!(
+      attrs("para"),
+      vec!["class".to_string()],
+      "para allows @class"
+    );
   }
 }

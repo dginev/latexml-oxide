@@ -649,14 +649,26 @@ fn find_file(name: &str, search_paths: &[&Path]) -> Option<PathBuf> {
     Some(rest) => rest.replace(':', "/"),
     None => name.to_string(),
   };
-  let asis = Path::new(&bare);
-  if asis.is_file() {
-    return Some(asis.to_path_buf());
+  // A schema is normally referenced by its bare name (`RelaxNGSchema('MySchema')`),
+  // so try both the name as given and `<name>.rng` — Perl `RelaxNG.pm:33` appends
+  // `.rng` when absent, and the embedded fallback (`resolve_schema_ref`) does too;
+  // disk lookup must match, or a bare name never resolves on the `--path`
+  // SEARCHPATHS (dginev/latexml-oxide#652).
+  let mut candidates: Vec<String> = vec![bare.clone()];
+  if !bare.ends_with(".rng") {
+    candidates.push(format!("{bare}.rng"));
   }
-  for dir in search_paths {
-    let candidate = dir.join(&bare);
-    if candidate.is_file() {
-      return Some(candidate);
+  for candidate in &candidates {
+    let asis = Path::new(candidate);
+    if asis.is_file() {
+      return Some(asis.to_path_buf());
+    }
+    // Search EVERY provided path (the `--path` SEARCHPATHS), in order.
+    for dir in search_paths {
+      let joined = dir.join(candidate);
+      if joined.is_file() {
+        return Some(joined);
+      }
     }
   }
   None

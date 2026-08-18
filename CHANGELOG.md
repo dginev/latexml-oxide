@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+  - **`RelaxNGSchema()` actually loads a custom schema.** Selecting a RelaxNG
+    schema from raw `.rng` at runtime (the Rhai `RelaxNGSchema()` binding, or any
+    non-`LaTeXML` schema with no compiled `.model`) scanned and parsed the file but
+    never distilled it into the tag/attribute/namespace tables the runtime consults
+    — so every element was rejected (`<ltx:document> isn't allowed in <#Document>`)
+    and the output came out empty. The scan now populates those tables (a port of
+    Perl `Model/RelaxNG.pm`'s `extractContent` + tag loop), including the document
+    namespaces, so a custom schema validates. Disk lookup also appends `.rng` to a
+    bare schema name across all `--path` search dirs (matching Perl), so
+    `RelaxNGSchema('MySchema')` resolves `MySchema.rng` (#652).
   - **An `Undigested` constructor argument reaches a Rhai body as `Tokens`.** A
     runtime `DefConstructor` with an `Undigested` (or `OptionalUndigested`) parameter
     handed its imperative `|document, arg|` body an opaque `Digested` handle wrapping
