@@ -74,6 +74,13 @@ pub mod plain_dump; // Rust: precompiled plain.ltx state (auto-generated) // Per
 // Versioned dump filename conventions + ambient-TeXLive year detection.
 pub mod dump_paths;
 
+// `cargo:rerun-if-changed` path selection for the dump embed. The build script
+// pulls this file in directly via `#[path] mod`; declared here under cfg(test)
+// only, so its unit tests run under `cargo test` without adding a public item
+// or a dead-code warning to normal library builds (#676).
+#[cfg(test)]
+mod build_rerun;
+
 // Compile-time-bundled fallback for plain.dump.txt + latex.dump.txt.
 // Used when no on-disk dump is resolvable (single-file binary distribution).
 pub mod embedded_dumps;
