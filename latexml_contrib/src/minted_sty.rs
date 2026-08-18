@@ -95,29 +95,38 @@ LoadDefinitions!({
   // issue #520). Each of the three now branches on `\@ifnextchar[` (as
   // `\newmintedfile` already did) and consumes all three args, so the optional
   // env/command name binds correctly and nothing (least of all `\[`) leaks. Default names match
-  // minted: `\newmint{lang}` → `\lang` (verb-like); `\newmintinline{lang}` →
-  // `\langinline`; `\newminted{lang}` → env `langcode`; the optional form uses the
-  // given name verbatim. listings is the Perl-chosen substrate (L30), so a
-  // `\newminted` env delegates to `\lstnewenvironment{name}` (as the tcolorbox
+  // minted: `\newmint{lang}` → `\lang`; `\newmintinline{lang}` → `\langinline`;
+  // `\newminted{lang}` → env `langcode`; the optional form uses the given name
+  // verbatim.
+  //
+  // The inline commands (`\mint`, `\mintinline`, and the `\newmint`/`\newmintinline`
+  // aliases) route to `\lstinline[language=<lang>]`, NOT `\verb`: `\verb` is
+  // delimiter-based, so the common `\mintinline{lang}{code}` BRACE form read `{` as
+  // the delimiter and ran past the closing `}` (garbled code + unbalanced-group
+  // errors that broke following content); `\lstinline` accepts braces and, given the
+  // language, highlights the snippet. listings is the Perl-chosen substrate (L30),
+  // so a `\newminted` env delegates to `\lstnewenvironment{name}` (as the tcolorbox
   // binding's `\newtcblisting` does) — whose verbatim reader stops at the env's own
-  // `\end{name}`. The prior alias to `\begin{lstlisting}` read raw until the literal
-  // `\end{lstlisting}`, so a `\newminted` env used normally (closed by `\end{name}`)
-  // never saw its marker and ran to EOF, swallowing the rest of the document.
-  // `\newmintedfile` binds either the given optional macro or `\<lang>file` to
-  // `\inputminted`.
+  // `\end{name}` (the prior alias to `\begin{lstlisting}` read raw until the literal
+  // `\end{lstlisting}`, so a `\newminted` env used normally ran to EOF) — and its
+  // start code activates the language via `\lstset{language=<lang>}` for keyword/
+  // string/comment highlighting. Language matching is case-insensitive and an unknown
+  // language (e.g. `lean4`) is a silent no-op, so minted's Pygments lexer name passes
+  // through verbatim and degrades to plain text rather than erroring. `\newmintedfile`
+  // binds either the given optional macro or `\<lang>file` to `\inputminted`.
   RawTeX!(
     r#"\def\newmint{\@ifnextchar[\lx@minted@nm@opt\lx@minted@nm@noopt}
-\def\lx@minted@nm@noopt#1#2{\expandafter\def\csname #1\endcsname{\verb}}
-\def\lx@minted@nm@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\verb}}
+\def\lx@minted@nm@noopt#1#2{\expandafter\def\csname #1\endcsname{\lstinline[language=#1]}}
+\def\lx@minted@nm@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[language=#2]}}
 \def\newmintinline{\@ifnextchar[\lx@minted@nmi@opt\lx@minted@nmi@noopt}
-\def\lx@minted@nmi@noopt#1#2{\expandafter\def\csname #1inline\endcsname{\verb}}
-\def\lx@minted@nmi@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\verb}}
+\def\lx@minted@nmi@noopt#1#2{\expandafter\def\csname #1inline\endcsname{\lstinline[language=#1]}}
+\def\lx@minted@nmi@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\lstinline[language=#2]}}
 \def\newminted{\@ifnextchar[\lx@minted@nmd@opt\lx@minted@nmd@noopt}
-\def\lx@minted@nmd@noopt#1#2{\lx@minted@nmd@def{#1code}}
-\def\lx@minted@nmd@opt[#1]#2#3{\lx@minted@nmd@def{#1}}
-\def\lx@minted@nmd@def#1{%
-  \lstnewenvironment{#1}{}{}%
-  \lstnewenvironment{#1*}[1]{}{}}
+\def\lx@minted@nmd@noopt#1#2{\lx@minted@nmd@def{#1code}{#1}}
+\def\lx@minted@nmd@opt[#1]#2#3{\lx@minted@nmd@def{#1}{#2}}
+\def\lx@minted@nmd@def#1#2{%
+  \lstnewenvironment{#1}{\lstset{language=#2}}{}%
+  \lstnewenvironment{#1*}[1]{\lstset{language=#2,##1}}{}}
 \def\newmintedfile{\@ifnextchar[\lx@minted@nmf@opt\lx@minted@nmf@noopt}
 \def\lx@minted@nmf@opt[#1]#2{\let#1\inputminted}
 \def\lx@minted@nmf@noopt#1{\expandafter\let\csname #1file\endcsname\inputminted}
@@ -127,8 +136,8 @@ LoadDefinitions!({
   def_macro_noop("\\setmintedinline[]{}")?;
   def_macro_noop("\\usemintedstyle[]{}")?;
   def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
-  DefMacro!("\\mint[]{}", "\\verb");
-  DefMacro!("\\mintinline[]{}", "\\verb");
+  DefMacro!("\\mint[]{}", "\\lstinline[language=#2]");
+  DefMacro!("\\mintinline[]{}", "\\lstinline[language=#2]");
   // \begin{minted}[opts]{language} — port of Perl mintedEnvBody
   // (minted.sty.ltxml L68-85). Read raw input lines until \end{minted},
   // then dispatch to listings' lst_process_display, mirroring Perl's
@@ -145,17 +154,19 @@ LoadDefinitions!({
     // `escapeinside=!!` never reached the listings tokenizer: an inline
     // `!$\label{…}$!` was emitted as literal code, its `\label` never ran, and
     // `\ref` to that line vanished (html_feedback#1028, arXiv:2308.03276;
-    // OXIDIZED_DESIGN #127). We now feed the options through `\lstset{…}` (the
-    // same activation `\begin{lstlisting}` uses), so minted's `escapeinside`/
-    // `mathescape` — shared verbatim with the listings substrate — take effect;
-    // minted-only keys (`linenos`, `fontsize`, …) are stored harmlessly and
-    // ignored. The `{language}` arg is left unapplied (we keep the current
-    // language-agnostic rendering). Scoped to the environment's `bgroup`.
+    // OXIDIZED_DESIGN #127). We now feed both the `{language}` and the options
+    // through `\lstset{…}` (the same activation `\begin{lstlisting}` uses), so
+    // minted's `escapeinside`/`mathescape` — shared verbatim with the listings
+    // substrate — take effect and the language activates listings' keyword/string/
+    // comment highlighting; minted-only keys (`linenos`, `fontsize`, …) are stored
+    // harmlessly. Scoped to the environment's `bgroup`.
     let params = parse_parameters("[]{}", &cs, true)?;
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        // args[0] = `[opts]` (optional); args[1] = `{language}` (unapplied).
-        let opts = args.into_iter().next().and_then(|a| a.owned_tokens());
+        // args[0] = `[opts]` (optional); args[1] = `{language}`.
+        let mut it = args.into_iter();
+        let opts = it.next().and_then(|a| a.owned_tokens());
+        let lang = it.next().and_then(|a| a.owned_tokens());
         bgroup();
         assign_value(
           "current_environment",
@@ -168,13 +179,29 @@ LoadDefinitions!({
           Tokens!(T_OTHER!("lstlisting")),
           None,
         )?;
-        if let Some(opts) = opts
-          && !opts.unlist_ref().is_empty()
-        {
+        // Feed `language=<lang>,<opts>` to `\lstset`. The language activates the
+        // listings language pack for keyword/string/comment highlighting; matching
+        // is case-insensitive and an unknown language (e.g. `lean4`) is a silent
+        // no-op, so passing minted's Pygments lexer name verbatim degrades to the
+        // old plain rendering rather than erroring. The `[opts]` still ride along
+        // for `escapeinside`/`mathescape` (html_feedback#1028); minted-only keys
+        // (`linenos`, `fontsize`, …) are stored harmlessly.
+        let mut kv: Vec<Token> = Vec::new();
+        if let Some(lang) = lang.as_ref().filter(|l| !l.unlist_ref().is_empty()) {
+          kv.extend(Tokenize!("language=").unlist());
+          kv.extend(lang.unlist_ref().iter().cloned());
+        }
+        if let Some(opts) = opts.as_ref().filter(|o| !o.unlist_ref().is_empty()) {
+          if !kv.is_empty() {
+            kv.push(T_OTHER!(","));
+          }
+          kv.extend(opts.unlist_ref().iter().cloned());
+        }
+        if !kv.is_empty() {
           let _ = digest(Tokens::new(
-            vec![T_CS!("\\lstset"), T_BEGIN!()]
-              .into_iter()
-              .chain(opts.unlist().iter().cloned())
+            std::iter::once(T_CS!("\\lstset"))
+              .chain(std::iter::once(T_BEGIN!()))
+              .chain(kv)
               .chain(std::iter::once(T_END!()))
               .collect(),
           ));
