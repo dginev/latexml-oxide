@@ -1,0 +1,29 @@
+% Driver for `bib_active_at_catcode_refs.bib`. Witness arXiv:2606.03480.
+%
+% The paper defines an active-`@` shorthand for red draft annotations
+% (`\catcode`@=\active` then a DELIMITED `\def@#1@{...}`), toggled by
+% `\shorthandon`/`\shorthandoff`. Its body has an unmatched `\shorthandon`
+% (3 on vs 2 off), so `@` is left catcode-ACTIVE at end-of-document.
+%
+% Our `.bib` post-session REUSES the core State (bib_session.rs), whereas Perl
+% builds a FRESH `catcodes => 'standard'` State per `.bib` (Core.pm:39) where
+% `@` is catcode OTHER. So the leaked active `@` reached the emitted
+% `\begin{bibtex@bibliography}` wrapper, where the `@` in the environment name
+% EXPANDED mid-name via `\def@#1@` — `Gullet->readBalanced ran out of input`,
+% and the whole bibliography was lost (0 bibitems). Guarded by
+% `active_at_catcode_does_not_corrupt_bibtex_wrapper`.
+%
+% This fixture reduces the leak to a single unmatched `\shorthandon` (net: `@`
+% active at `.bib`-digestion time) and keeps a body `@annotation@` to prove the
+% shorthand still works where the document intends it.
+\documentclass{article}
+\newcommand\shorthandon{\catcode`@=\active }
+\newcommand\shorthandoff{\catcode`@=12 }
+\shorthandon
+\def@#1@ {\textbf{#1} }%
+\begin{document}
+A body with @an inline annotation@ that must still render.
+See \cite{alpha,beta}.
+\bibliographystyle{plain}
+\bibliography{bib_active_at_catcode_refs}
+\end{document}

@@ -1678,6 +1678,46 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
   }
 }
 
+/// A document that leaves `@` catcode-ACTIVE at end-of-file must still get its
+/// bibliography. Witness arXiv:2606.03480.
+///
+/// The paper makes `@` active for a `\def@#1@{...}` red-annotation shorthand and
+/// leaves an unmatched `\shorthandon` (3 on vs 2 off), so `@` is active at EOF.
+/// Our `.bib` post-session REUSES the core State (`bib_session.rs`); Perl builds
+/// a FRESH `catcodes => 'standard'` State per `.bib` (`Core.pm:39`), where `@` is
+/// catcode OTHER. So the leaked active `@` reached the emitted
+/// `\begin{bibtex@bibliography}` wrapper and EXPANDED inside the environment name
+/// (`\def@#1@` scans forward for the next `@`) → `Gullet->readBalanced ran out of
+/// input`, and the bibliography was destroyed (0 bibitems). The fix resets `@` to
+/// its standard catcode for the `.bib` digestion, matching Perl.
+///
+/// RED before the fix: 6 post-stage `readBalanced ran out of input` errors and 0
+/// `<bibitem>` on this fixture (and on the witness, 30 → 0 bibentries). The body
+/// `@an inline annotation@` still renders bold, proving the fix is scoped to the
+/// `.bib` digestion and does not disturb the document's own active-`@` shorthand.
+#[test]
+fn active_at_catcode_does_not_corrupt_bibtex_wrapper() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_active_at_catcode.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "active-@: bibliography destroyed by a leaked active `@`:\n{x}"
+  );
+  // Both entries must arrive — the `@` in `\begin{bibtex@bibliography}` no longer
+  // eats the wrapper. Titles are recased (MakeBibliography lowercases all but the
+  // first word, Perl parity), so "Alpha Title" renders as "Alpha title".
+  for needle in ["Alpha title", "Anderson", "Beta title", "Baker"] {
+    assert!(
+      x.contains(needle),
+      "active-@: {needle:?} lost — the bibtex wrapper was corrupted:\n{x}"
+    );
+  }
+  // The document's own active-`@` shorthand still works where it is intended.
+  assert!(
+    x.contains("an inline annotation"),
+    "active-@: the body `@...@` annotation was lost:\n{x}"
+  );
+}
+
 /// A `%` inside a `.bib` field value is data, not a comment.
 ///
 /// BibTeX's lexer has no comment syntax inside an entry — `Pre::BibTeX` only

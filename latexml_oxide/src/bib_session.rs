@@ -213,6 +213,22 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
 
   let result = (|| -> Result<PostDocument> {
     ensure_session(request)?;
+    // Perl builds a FRESH `catcodes => 'standard'` State per `.bib` (`Core.pm:39`),
+    // where `@` is catcode OTHER. We REUSE the live document State (module docs),
+    // so any catcode the document left non-standard leaks into the `.bib`
+    // digestion. `@` is the one that matters: the emitted
+    // `\begin{bibtex@bibliography}` wrapper carries `@` in its environment name, so
+    // a document that leaves `@` ACTIVE — e.g. an unmatched `\makeatletter` or the
+    // `\catcode`@=\active`+`\def@#1@{…}` red-annotation shorthand of
+    // arXiv:2606.03480 (an unmatched `\shorthandon`) — makes that `@` EXPAND
+    // mid-name, giving `readBalanced ran out of input` and losing the whole
+    // bibliography. Reset `@` to its standard catcode to match Perl's fresh state.
+    // Guard: `active_at_catcode_does_not_corrupt_bibtex_wrapper`.
+    latexml_core::state::assign_catcode(
+      '@',
+      latexml_core::token::Catcode::OTHER,
+      Some(latexml_core::state::Scope::Global),
+    );
     // Give the fields what a `.bbl` would have given them, once the session is
     // ready and before any entry is digested.
     provide_url_command()?;
