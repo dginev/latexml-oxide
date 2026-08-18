@@ -1738,3 +1738,61 @@ mod texinputs_usepackage {
     );
   }
 }
+
+/// A no-dump (degraded raw-load) conversion of an expl3-using document must
+/// still succeed. Witness issue #651: a bare `\usepackage{fvextra}` reported
+/// "Conversion failed: 1 fatal error" under DEGRADED mode even though the output
+/// (`<p>text</p>`) was correct. The failure was a benign expl3-code.tex
+/// group-end codepoint cascade (L33074-33180) that the dump avoids and Perl's
+/// own raw-load never produces, leaking a fatal into the conversion status.
+/// `expl3_sty.rs` now snapshots the error report across the degraded raw expl3
+/// load (gated on `raw_load_will_run`, so dump mode — which short-circuits the
+/// re-load — is untouched). The fixture uses `\usepackage{expl3}` directly (the
+/// l3kernel is always present, unlike a trimmed-TL `fvextra`), which triggers
+/// the same raw-load path.
+mod expl3_degraded_no_dump {
+  use std::{path::Path, process::Command};
+
+  const EXPL3_TEX: &str = r"\documentclass{article}
+\usepackage{expl3}
+\begin{document}
+degraded-body-text
+\end{document}
+";
+
+  fn convert_nodump() -> (bool, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("e.tex"), EXPL3_TEX).expect("write e.tex");
+    let output = Command::new(bin)
+      .args(["e.tex", "--dest", "e.xml", "--nocomments"])
+      .env("LATEXML_NODUMP", "1")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("e.xml")).unwrap_or_default();
+    (
+      output.status.success(),
+      format!("{stderr}\n<<<XML>>>\n{xml}"),
+    )
+  }
+
+  #[test]
+  fn expl3_converts_healthily_without_a_dump() {
+    let (ok, out) = convert_nodump();
+    assert!(
+      ok,
+      "degraded no-dump expl3 conversion exited non-zero:\n{out}"
+    );
+    assert!(
+      !out.contains("fatal error"),
+      "degraded no-dump conversion leaked a fatal (benign expl3 cascade):\n{out}"
+    );
+    assert!(
+      out.contains("degraded-body-text"),
+      "degraded no-dump conversion dropped the body:\n{out}"
+    );
+  }
+}
