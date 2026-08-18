@@ -2,31 +2,86 @@
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: overpic.sty.ltxml
-<a href=#6 id=6 data-nosnippet>6</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">RequirePackage!</span>(<span class="string">"epic"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="comment">// Perl: creates an EMPTY picture environment with tex attribute for LaTeX image generation.
-<a href=#10 id=10 data-nosnippet>10</a>  // afterDigestBody digests \@includegraphicx to get dimensions, sets width/height/tex.
-<a href=#11 id=11 data-nosnippet>11</a>  // The picture element gets the graphic's dimensions and a tex attribute for fallback rendering.
-<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{overpic} OptionalKeyVals:Gin Semiverbatim"</span>,
-<a href=#13 id=13 data-nosnippet>13</a>    <span class="string">"&lt;ltx:picture fill='none' stroke='none' tex='#tex'&gt;&lt;/ltx:picture&gt;"</span>,
-<a href=#14 id=14 data-nosnippet>14</a>    after_digest_body =&gt; sub[whatsit] {
-<a href=#15 id=15 data-nosnippet>15</a>      <span class="comment">// Set tex attribute from reversion of the full overpic content.
-<a href=#16 id=16 data-nosnippet>16</a>      // `untex()`, NOT `to_string()`: Perl L35 is `UnTeX(Tokens($whatsit-&gt;revert))`,
-<a href=#17 id=17 data-nosnippet>17</a>      // and the whole point of this attribute is to hand valid TeX to an image
-<a href=#18 id=18 data-nosnippet>18</a>      // generator. `to_string()` drops the space that terminates a control word,
-<a href=#19 id=19 data-nosnippet>19</a>      // so `\put (1,2)` reverts as `\put(1,2)` and a control word followed by a
-<a href=#20 id=20 data-nosnippet>20</a>      // letter welds outright. See `Tokens::untex`.
-<a href=#21 id=21 data-nosnippet>21</a>      </span><span class="kw">let </span>tex_str = whatsit
-<a href=#22 id=22 data-nosnippet>22</a>        .revert()
-<a href=#23 id=23 data-nosnippet>23</a>        .map(Tokens::untex)
-<a href=#24 id=24 data-nosnippet>24</a>        .unwrap_or_default();
-<a href=#25 id=25 data-nosnippet>25</a>      whatsit.set_property(<span class="string">"tex"</span>, Stored::String(pin(tex_str)));
-<a href=#26 id=26 data-nosnippet>26</a>    }
-<a href=#27 id=27 data-nosnippet>27</a>  );
-<a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="comment">// Perl: {Overpic} (capital O) takes random TeX instead of image — not ported.
-<a href=#30 id=30 data-nosnippet>30</a>  // Used in only ~3 papers on arXiv.
-<a href=#31 id=31 data-nosnippet>31</a></span>});
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: overpic.sty.ltxml requires graphicx + epic. epic (only needed for the
+<a href=#6 id=6 data-nosnippet>6</a>  // `grid` option's `\grid`) has no Rust binding — a benign `missing_file`
+<a href=#7 id=7 data-nosnippet>7</a>  // warning; the grid option is off by default, so overlay rendering is
+<a href=#8 id=8 data-nosnippet>8</a>  // unaffected.
+<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RequirePackage!</span>(<span class="string">"epic"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// DIVERGENCE from Perl (OXIDIZED_DESIGN #135): Perl's overpic.sty.ltxml emits an
+<a href=#13 id=13 data-nosnippet>13</a>  // EMPTY `&lt;ltx:picture tex='...'/&gt;` and relies on the `PictureImages` post-
+<a href=#14 id=14 data-nosnippet>14</a>  // processor to render the whole thing (graphic + overlays) as one LaTeX image.
+<a href=#15 id=15 data-nosnippet>15</a>  // Two Rust realities make that produce nothing: `tex=` on `&lt;ltx:picture&gt;` is
+<a href=#16 id=16 data-nosnippet>16</a>  // suppressed unconditionally (intentional divergence), and the LaTeXImages
+<a href=#17 id=17 data-nosnippet>17</a>  // renderer is unwired — Rust renders `&lt;ltx:picture&gt;` as inline SVG from its
+<a href=#18 id=18 data-nosnippet>18</a>  // CHILD elements. So instead we reproduce overpic.sty's OWN construction: box
+<a href=#19 id=19 data-nosnippet>19</a>  // the graphic to size a `{picture}` to it, place the graphic at the origin, and
+<a href=#20 id=20 data-nosnippet>20</a>  // let the body's `\put` overlays draw on top. This routes through Rust's
+<a href=#21 id=21 data-nosnippet>21</a>  // working picture + `&lt;ltx:graphics&gt;` + `\put` machinery (the graphic resolves
+<a href=#22 id=22 data-nosnippet>22</a>  // via the picture-nested-graphics SVG path, PR #675), so all of the ~37 arXiv
+<a href=#23 id=23 data-nosnippet>23</a>  // papers that report a missing overpic figure now render.
+<a href=#24 id=24 data-nosnippet>24</a>  //
+<a href=#25 id=25 data-nosnippet>25</a>  // Faithful to overpic.sty's `\OVP@picture` + coordinate-mode keys. The default
+<a href=#26 id=26 data-nosnippet>26</a>  // is `percent` (`\ExecuteOptions{percent}` → `rel=100`): the LARGER of
+<a href=#27 id=27 data-nosnippet>27</a>  // width/total-height gets 100 coordinate units and `\unitlength = max(w,h)/100`
+<a href=#28 id=28 data-nosnippet>28</a>  // (so `\put(50,50)` is the centre of a square image). The OVP keys are ported
+<a href=#29 id=29 data-nosnippet>29</a>  // so a paper that overrides the mode positions its overlays correctly:
+<a href=#30 id=30 data-nosnippet>30</a>  //   percent / rel=N / permil : `\unitlength = max(w,h)/N`, larger dim spans N.
+<a href=#31 id=31 data-nosnippet>31</a>  //   abs                      : coordinates are `\unitlength`s (default 1pt or `unit=`).
+<a href=#32 id=32 data-nosnippet>32</a>  //   unit=&lt;dim&gt;               : set `\unitlength` (used by `abs`).
+<a href=#33 id=33 data-nosnippet>33</a>  //   grid / tics              : accepted; `grid` needs epic's `\grid` (unbound), so no-op.
+<a href=#34 id=34 data-nosnippet>34</a>  // Rust measures a boxed `\includegraphics` (`\wd`/`\ht`/`\dp`) as pdfTeX does,
+<a href=#35 id=35 data-nosnippet>35</a>  // which is what makes this port possible.
+<a href=#36 id=36 data-nosnippet>36</a>  //
+<a href=#37 id=37 data-nosnippet>37</a>  // Witnesses (arXiv/html_feedback): 2412.15262 (baseline, no `\put`),
+<a href=#38 id=38 data-nosnippet>38</a>  // 2510.17772 (percent labels + trim/clip), 2401.13599 (abs/unit), 2409.06474
+<a href=#39 id=39 data-nosnippet>39</a>  // (nested `\includegraphics` in `\put` + rotate/scale), 2405.00666 (128 envs).
+<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="macro">RawTeX!</span>(<span class="macro">concat!</span>(
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">r"\newsavebox\OVP@box"</span>, <span class="string">"\n"</span>,
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="comment">// percent/rel mode: unitlength = max(w,h)/scale; the larger dim spans `scale`
+<a href=#43 id=43 data-nosnippet>43</a>    // units. The `&lt;\@ne` clamp keeps unitlength &gt;= 1sp so a degenerate (missing /
+<a href=#44 id=44 data-nosnippet>44</a>    // zero-size) image never triggers `Illegal \divide by 0` — common on arXiv.
+<a href=#45 id=45 data-nosnippet>45</a>    </span><span class="string">r"\newcommand\OVP@calc@rel{%"</span>, <span class="string">"\n"</span>,
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">r"  \ifnum\@tempcnta&gt;\@tempcntb "</span>, <span class="string">"\n"</span>,
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="string">r"    \divide\@tempcnta by \OVP@scale \ifnum\@tempcnta&lt;\@ne \@tempcnta=\@ne \fi "</span>, <span class="string">"\n"</span>,
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">r"    \unitlength=\@tempcnta sp\relax \@tempcnta=\OVP@scale \divide\@tempcntb by \unitlength "</span>, <span class="string">"\n"</span>,
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">r"  \else "</span>, <span class="string">"\n"</span>,
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">r"    \divide\@tempcntb by \OVP@scale \ifnum\@tempcntb&lt;\@ne \@tempcntb=\@ne \fi "</span>, <span class="string">"\n"</span>,
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">r"    \unitlength=\@tempcntb sp\relax \@tempcntb=\OVP@scale \divide\@tempcnta by \unitlength "</span>, <span class="string">"\n"</span>,
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">r"  \fi}"</span>, <span class="string">"\n"</span>,
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="comment">// abs mode: coordinates are `\unitlength`s (set by `unit=`, else the 1pt
+<a href=#54 id=54 data-nosnippet>54</a>    // register default). Clamp unitlength &gt;= 1sp for the same divide-by-0 guard.
+<a href=#55 id=55 data-nosnippet>55</a>    </span><span class="string">r"\newcommand\OVP@calc@abs{%"</span>, <span class="string">"\n"</span>,
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="string">r"  \ifdim\unitlength&lt;\@ne sp \unitlength=1pt\relax \fi "</span>, <span class="string">"\n"</span>,
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">r"  \divide\@tempcnta by \unitlength \divide\@tempcntb by \unitlength}"</span>, <span class="string">"\n"</span>,
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="comment">// OVP key family (overpic.sty L25-48). `\@m` = 1000 (permil).
+<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="string">r"\define@key{OVP}{rel}{\def\OVP@scale{#1}\let\OVP@calc\OVP@calc@rel}"</span>, <span class="string">"\n"</span>,
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="string">r"\define@key{OVP}{percent}[]{\def\OVP@scale{100}\let\OVP@calc\OVP@calc@rel}"</span>, <span class="string">"\n"</span>,
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="string">r"\define@key{OVP}{permil}[]{\def\OVP@scale{\@m}\let\OVP@calc\OVP@calc@rel}"</span>, <span class="string">"\n"</span>,
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="string">r"\define@key{OVP}{abs}[]{\let\OVP@calc\OVP@calc@abs}"</span>, <span class="string">"\n"</span>,
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">r"\define@key{OVP}{unit}{\unitlength=\dimexpr#1\relax}"</span>, <span class="string">"\n"</span>,
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="string">r"\define@key{OVP}{grid}[true]{}"</span>, <span class="string">"\n"</span>,
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="string">r"\define@key{OVP}{tics}{}"</span>, <span class="string">"\n"</span>,
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="string">r"\newenvironment{overpic}[2][]{%"</span>, <span class="string">"\n"</span>,
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">r"  \sbox\OVP@box{\includegraphics[#1]{#2}}%"</span>, <span class="string">"\n"</span>,
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="comment">// per-env default is percent (overpic.sty `\ExecuteOptions{percent}`); then
+<a href=#69 id=69 data-nosnippet>69</a>    // read any OVP keys from the optarg. `\setkeys*` is relaxed — it ignores the
+<a href=#70 id=70 data-nosnippet>70</a>    // graphicx keys (width/trim/clip/...) that also live in `#1`.
+<a href=#71 id=71 data-nosnippet>71</a>    </span><span class="string">r"  \def\OVP@scale{100}\let\OVP@calc\OVP@calc@rel "</span>, <span class="string">"\n"</span>,
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="string">r"  \setkeys*{OVP}{#1}%"</span>, <span class="string">"\n"</span>,
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="string">r"  \@tempcnta=\wd\OVP@box "</span>, <span class="string">"\n"</span>,
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">r"  \@tempcntb=\ht\OVP@box \advance\@tempcntb\dp\OVP@box "</span>, <span class="string">"\n"</span>,
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">r"  \OVP@calc "</span>, <span class="string">"\n"</span>,
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">r"  \ifnum\@tempcnta&lt;\@ne \@tempcnta=\@ne \fi \ifnum\@tempcntb&lt;\@ne \@tempcntb=\@ne \fi "</span>, <span class="string">"\n"</span>,
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">r"  \begin{picture}(\@tempcnta,\@tempcntb)%"</span>, <span class="string">"\n"</span>,
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">r"    \put(0,0){\makebox(0,0)[bl]{\usebox\OVP@box}}%"</span>, <span class="string">"\n"</span>,
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">r"}{%"</span>, <span class="string">"\n"</span>,
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="string">r"  \end{picture}%"</span>, <span class="string">"\n"</span>,
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">r"}"</span>,
+<a href=#82 id=82 data-nosnippet>82</a>  ));
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>  <span class="comment">// Perl: {Overpic} (capital O) takes arbitrary TeX instead of an image — used in
+<a href=#85 id=85 data-nosnippet>85</a>  // ~3 arXiv papers, not ported (none of the 44 overpic reports use it).
+<a href=#86 id=86 data-nosnippet>86</a></span>});
 </code></pre></div></section></main></body></html>
