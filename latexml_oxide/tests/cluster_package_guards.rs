@@ -1750,6 +1750,17 @@ mod texinputs_usepackage {
 /// re-load — is untouched). The fixture uses `\usepackage{expl3}` directly (the
 /// l3kernel is always present, unlike a trimmed-TL `fvextra`), which triggers
 /// the same raw-load path.
+///
+/// Linux-only: the degraded raw-load re-runs the whole ~33k-line expl3-code.tex,
+/// which under the unoptimized `ci`/`dev` test profile takes ~2 min (measured
+/// 124 s local `dev`); the behavior is OS-independent, so guarding one platform
+/// keeps the ~2-min cost off all four macOS shards. It also needs an explicit
+/// `--timeout` far above the 60 s CLI default (which is calibrated for the fast
+/// dump path): with the default, the legitimate slow bootstrap is killed as a
+/// `Fatal:timeout:wallclock` before the load can finish. Release-optimized
+/// binaries — what real degraded users run — complete the same load well under
+/// 60 s, so this large timeout is purely a slow-test-build accommodation.
+#[cfg(target_os = "linux")]
 mod expl3_degraded_no_dump {
   use std::{path::Path, process::Command};
 
@@ -1766,7 +1777,17 @@ degraded-body-text
     let workdir = tempfile::tempdir().expect("create tempdir");
     std::fs::write(workdir.path().join("e.tex"), EXPL3_TEX).expect("write e.tex");
     let output = Command::new(bin)
-      .args(["e.tex", "--dest", "e.xml", "--nocomments"])
+      // `--timeout 900`: the unoptimized test-build raw expl3 load runs ~2 min,
+      // far over the 60 s CLI default; 900 s stays well under nextest's 20 min
+      // terminate-after so a genuine hang still surfaces.
+      .args([
+        "e.tex",
+        "--dest",
+        "e.xml",
+        "--nocomments",
+        "--timeout",
+        "900",
+      ])
       .env("LATEXML_NODUMP", "1")
       .current_dir(workdir.path())
       .output()
