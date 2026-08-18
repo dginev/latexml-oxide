@@ -117,6 +117,37 @@ mod delimiter_size_nominal_font {
       );
     }
   }
+
+  /// #683 (xworld21): a non-default `NOMINAL_FONT_SIZE` is persisted into the XML
+  /// as a `<?latexml nominal-font-size="X"?>` processing instruction, so
+  /// post-processing can size font-relative (`em`) external SVGs correctly (an
+  /// `em` is `NOMINAL_FONT_SIZE`pt, not always 10pt). Perl does not emit this —
+  /// `NOMINAL_FONT_SIZE` is digestion-only (`DEFSIZE`) — so this is beyond-Perl.
+  /// The PI fires ONLY when the value differs from the 10pt default, so ordinary
+  /// documents stay byte-identical. Emitting it also exercised (and fixed) an
+  /// `insert_pi` bug: a PI added after the root already exists was queued into
+  /// the once-drained `pending` list and silently lost.
+  #[test]
+  fn nominal_font_size_persisted_as_pi_only_when_non_default() {
+    use crate::cluster::{convert_expecting_errors, convert_to_xml};
+    // a0poster sets NOMINAL_FONT_SIZE=25 → the PI carries it. The 4 errors are
+    // a0poster's unrelated class-binding defect (pinned by the sibling delimiter
+    // test); tolerate them here — they are orthogonal to the PI.
+    let a0 = convert_expecting_errors(
+      "tests/cluster_regressions/delimiter_size_nominal_font.tex",
+      4,
+    );
+    assert!(
+      a0.contains("<?latexml nominal-font-size=\"25\"?>"),
+      "a0poster (NOMINAL_FONT_SIZE=25) did not persist the nominal-font-size PI:\n{a0}"
+    );
+    // A default 10pt document must emit NO such PI (output stays byte-identical).
+    let plain = convert_to_xml("tests/cluster_regressions/nominal_font_size_default.tex");
+    assert!(
+      !plain.contains("nominal-font-size"),
+      "a default-size document must not emit a nominal-font-size PI:\n{plain}"
+    );
+  }
 }
 
 mod image_sizing_characterization {

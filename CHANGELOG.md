@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+  - **A non-default `NOMINAL_FONT_SIZE` is persisted as a
+    `<?latexml nominal-font-size="X"?>` processing instruction** so post-processing
+    can size font-relative (`em`) external SVGs correctly — an `em` is
+    `NOMINAL_FONT_SIZE`pt, not always 10pt (#683). Perl never carries this value
+    (it is digestion-only `DEFSIZE`), so this is beyond-Perl (OXIDIZED_DESIGN #136).
+    The PI fires only when the value differs from the 10pt default (a0poster=25,
+    BookML, the NNpt class options), so ordinary documents stay byte-identical.
+    Emitting it also fixed an `insert_pi` bug: a PI added after the root element
+    already exists was queued into the once-drained `pending` list and silently
+    lost; it is now inserted directly before the root, matching Perl
+    `Core/Document.pm::insertPI`.
   - **`--urlstyle=(server|negotiated|file)` rewrites cross-reference URLs for the
     serving environment** (feature parity with `latexmlpost`; #656). `server`
     strips a trailing `index.html` (landing page → `./`), `negotiated` also strips
