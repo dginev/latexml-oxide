@@ -886,6 +886,37 @@ fn frontmatter_sn_jnl_abstract_after_title() {
   );
 }
 
+/// Same defect via the *environment* form `\begin{abstract}…\end{abstract}`
+/// (rather than the braced `\abstract{…}`). In LaTeXML the abstract environment
+/// is NOT backed by the raw-LaTeX `\abstract`/`\endabstract` pair — the kernel
+/// binds `\begin{abstract}`→`\lx@begin@abstract` and `\end{abstract}`→
+/// `\lx@end@abstract` directly (latex_constructs L5147-5148), both deferred — so
+/// the env form routes to the same frontmatter accumulator as the braced form and
+/// must likewise land after the title. Removing the binding's `{abstract}`
+/// override could only *regress* this if it clobbered those kernel bindings; it
+/// does not, and this guard proves it. arXiv/html_feedback#3436.
+#[test]
+fn frontmatter_sn_jnl_abstract_env_after_title() {
+  let x = convert_to_xml_contrib_clean(
+    "tests/cluster_regressions/frontmatter_sn_jnl_abstract_env_order.tex",
+  );
+  let title = x.find("<title>").expect("document <title> present");
+  let abstract_ = x.find("<abstract").expect("<abstract> present");
+  assert!(
+    title < abstract_,
+    "sn-jnl env-form abstract must render AFTER the title, not before it \
+     (title@{title}, abstract@{abstract_}):\n{x}"
+  );
+  assert!(
+    x.contains("This is the env-form abstract."),
+    "sn-jnl env-form abstract body missing:\n{x}"
+  );
+  assert!(
+    x.contains("<personname>") && x.contains("Asare"),
+    "sn-jnl env-form author frontmatter missing:\n{x}"
+  );
+}
+
 /// LNCS `llncs.cls`: several authors all bound to ONE `\institute` via
 /// `\inst{1}`, whose body is the shared affiliation line followed by a single
 /// shared `\email{\{a,b\}@host}` covering every author. Both the affiliation
