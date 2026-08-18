@@ -1,0 +1,24 @@
+% physics.sty `\qty(...)` whose argument contains a `(` inside a `{…}` group —
+% the symmetrization index `D_{(\alpha}` — must NOT run away. Witness
+% arXiv:2605.19817.
+%
+% `phys_read_arg` matched the fenced `(`/`)` by token, counting even parens
+% nested inside braces, so `\qty(\frac12 D_{(\alpha}…)` never reached delimiter
+% level 0: the read ran to EOF and swallowed the following section AND the
+% bibliography into the math argument (58 `malformed:ltx` errors, 0 bibitems).
+% TeX's delimited-argument matching skips balanced `{…}` groups, so a `)` inside
+% a subscript is content, not a delimiter. Guard:
+% physics_qty_braced_paren_does_not_run_away.
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+Body cites \cite{a}.
+\begin{equation}
+G_{\alpha\beta}=\qty(\frac{1}{2}D_{(\alpha}-\partial_{(\alpha}) .
+\end{equation}
+\section{After The Math}
+Text after the equation must render, not be swallowed into the math.
+\begin{thebibliography}{9}
+\bibitem{a} First entry.
+\end{thebibliography}
+\end{document}

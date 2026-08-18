@@ -2133,6 +2133,38 @@ fn comment_midline_end_keeps_bibliography() {
   );
 }
 
+/// A physics.sty `\qty(...)` whose argument holds a `(` inside a `{…}` group
+/// must not run away and swallow the document. Witness arXiv:2605.19817.
+///
+/// `phys_read_arg` matched the fenced `(`/`)` by token, counting even parens
+/// nested inside braces (the tracked brace level was unused), so
+/// `\qty(\frac12 D_{(\alpha}…)` — physics symmetrization notation `D_{(\alpha}` —
+/// never reached delimiter level 0. The read ran to EOF and pulled the following
+/// `\section` and the `thebibliography` INTO the math argument (58
+/// `malformed:ltx` errors, 0 bibitems, no other diagnostic). TeX's
+/// delimited-argument matching skips balanced `{…}` groups; making the match
+/// brace-level-aware recovers the document (Perl errors but recovers similarly).
+///
+/// RED before the fix: 0 `<bibitem>`, "After The Math" swallowed into the math.
+#[test]
+fn physics_qty_braced_paren_does_not_run_away() {
+  let x = convert_and_post_clean("tests/cluster_regressions/physics_qty_braced_paren.tex");
+  assert!(
+    x.contains("<bibitem"),
+    "physics \\qty ran away and swallowed the bibliography:\n{x}"
+  );
+  assert!(
+    x.contains("First entry"),
+    "physics \\qty: the bib entry was lost:\n{x}"
+  );
+  // The section AFTER the equation must render as document structure, not be
+  // pulled into the math argument.
+  assert!(
+    x.contains("After The Math"),
+    "physics \\qty swallowed the following section into the math:\n{x}"
+  );
+}
+
 /// A `&` inside a delimiter-fenced macro argument must not end an alignment cell.
 ///
 /// `tex.web` §394 `macro_call` sets `align_state:=1000000` while it scans a
