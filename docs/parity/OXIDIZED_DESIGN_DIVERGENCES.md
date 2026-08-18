@@ -5117,3 +5117,36 @@ by the maintainer 2026-08-18 when resolving #656.
 
 **Guard**: `cluster_xslt_split::urlstyle::default_is_file_style_full_paths` (and
 the `server`/`negotiated` siblings prove the opt-in styles match Perl).
+
+### 135. overpic renders a populated `<ltx:picture>` (not Perl's empty `tex=` stub)
+
+**Decision:** The `overpic` environment emits a **populated** `<ltx:picture>` — the
+`\includegraphics` background nested at the origin plus the body's `\put` overlays,
+sized to the graphic (`unitlength = max(w,h)/100` in the default percent mode) —
+rather than Perl's empty `<ltx:picture tex='…'/>`.
+
+**Perl behavior** (`overpic.sty.ltxml`): emits an EMPTY `<ltx:picture>` carrying a
+`tex=` attribute with the full overpic source, relying on the `PictureImages`
+post-processor to render the whole thing (graphic + overlays) as one LaTeX+dvipng
+image.
+
+**Rationale:** that path is a dead end in Rust — `tex=` on `<ltx:picture>` is
+suppressed unconditionally (divergence #21) and the LaTeXImages renderer is unwired
+(Rust renders pictures as inline SVG from their CHILD elements). A faithful port
+therefore renders NOTHING: no graphic, and `#body` (the overlays) is dropped. Since
+Rust's `{picture}` + `\includegraphics` + `\put` already produce correct SVG, we
+reproduce overpic.sty's OWN construction (`\OVP@picture` / `\OVP@calc@rel`) — box the
+graphic, size a picture to it, `\put(0,0)` the graphic, run the body — routing
+through the picture-nested-graphics SVG path (PR #675). Rust measures a boxed
+`\includegraphics` (`\wd`/`\ht`/`\dp`) as pdfTeX does, which is what makes this
+possible.
+
+**Impact:** ~37 arXiv papers (44 html_feedback reports) whose overpic figures were
+missing/blank now render the image + labels. Faithful to overpic.sty's percent-mode
+coordinate math; the `grid` option (epic's `\grid`, no Rust binding) and the
+`\Overpic` capital-O variant are unported (no report uses either).
+
+**Upstream:** n/a — a Rust-rendering-model adaptation, not a Perl bug. Approved by
+the maintainer 2026-08-18.
+
+**Guard:** `cluster_package_guards::overpic_renders_graphic_and_overlays::{overpic_emits_populated_sized_picture_with_graphic_and_overlays, overpic_missing_natural_size_image_does_not_divide_by_zero}`.
