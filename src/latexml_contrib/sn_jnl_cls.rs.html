@@ -174,24 +174,29 @@
 <a href=#174 id=174 data-nosnippet>174</a>  // Witness 2402.17342.
 <a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\hline"</span>);
 <a href=#176 id=176 data-nosnippet>176</a>
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Frontmatter envs — internal_vertical mode for multi-paragraph
-<a href=#178 id=178 data-nosnippet>178</a>  // bodies (declarations especially carries author prose with \par
-<a href=#179 id=179 data-nosnippet>179</a>  // separators). Without explicit mode, restricted_horizontal default
-<a href=#180 id=180 data-nosnippet>180</a>  // trips Endgroup mismatch on \par-containing bodies.
-<a href=#181 id=181 data-nosnippet>181</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>,
-<a href=#182 id=182 data-nosnippet>182</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="comment">// Real sn-jnl.cls defines `\abstract{...}` as a *macro* form (not the
-<a href=#184 id=184 data-nosnippet>184</a>  // standard env). Without this stub, our environment binding's
-<a href=#185 id=185 data-nosnippet>185</a>  // auto-created `\abstract` token (which expects a matching
-<a href=#186 id=186 data-nosnippet>186</a>  // `\endabstract`) eats every subsequent `\title`/`\author`/`\maketitle`
-<a href=#187 id=187 data-nosnippet>187</a>  // /`\section` into the still-open `&lt;ltx:abstract&gt;`, producing a
-<a href=#188 id=188 data-nosnippet>188</a>  // cascade of `Error:malformed:ltx:* isn't allowed in &lt;ltx:abstract&gt;`.
-<a href=#189 id=189 data-nosnippet>189</a>  // Forward to the env so the body is wrapped *and* properly closed.
-<a href=#190 id=190 data-nosnippet>190</a>  // Witness 2306.11901.
-<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{declarations}"</span>, <span class="string">"&lt;ltx:acknowledgements name='declarations'&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
-<a href=#193 id=193 data-nosnippet>193</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{appendices}"</span>, <span class="string">"&lt;ltx:appendix&gt;#body&lt;/ltx:appendix&gt;"</span>,
-<a href=#195 id=195 data-nosnippet>195</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#196 id=196 data-nosnippet>196</a>});
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Do NOT override `\abstract` or the `{abstract}` environment here. The
+<a href=#178 id=178 data-nosnippet>178</a>  // kernel's `\abstract` (latex_constructs `\abstract`, L5153) is `locked`: the
+<a href=#179 id=179 data-nosnippet>179</a>  // brace form routes to the *deferred* `\lx@add@abstract` frontmatter
+<a href=#180 id=180 data-nosnippet>180</a>  // accumulator, so `\maketitle` flushes it in schema-canonical order (document
+<a href=#181 id=181 data-nosnippet>181</a>  // `&lt;title&gt;` first, `&lt;abstract&gt;` after). Perl relies on exactly this lock — the
+<a href=#182 id=182 data-nosnippet>182</a>  // raw sn-jnl.cls's `\long\def\abstract#1{\def\@abstract{...}}` (deferred store,
+<a href=#183 id=183 data-nosnippet>183</a>  // emitted by `\@maketitle`'s `\printabstract` AFTER title+authors) cannot pull
+<a href=#184 id=184 data-nosnippet>184</a>  // the core `\abstract` back to an immediate emit. A binding-level
+<a href=#185 id=185 data-nosnippet>185</a>  // `DefEnvironment!("{abstract}", &lt;ltx:abstract&gt;...)` + `\abstract{}` forwarder
+<a href=#186 id=186 data-nosnippet>186</a>  // bypasses that lock and emits `&lt;ltx:abstract&gt;` at the *call site* — which in
+<a href=#187 id=187 data-nosnippet>187</a>  // every sn-jnl paper is BEFORE `\maketitle`, so the abstract lands ahead of the
+<a href=#188 id=188 data-nosnippet>188</a>  // still-deferred title. That is the abstract-before-title regression; letting
+<a href=#189 id=189 data-nosnippet>189</a>  // the locked kernel macro run fixes it and keeps the env properly bounded
+<a href=#190 id=190 data-nosnippet>190</a>  // (`\begin{abstract}`→`\lx@begin@abstract`, `\end{abstract}`→`\lx@end@abstract`
+<a href=#191 id=191 data-nosnippet>191</a>  // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
+<a href=#192 id=192 data-nosnippet>192</a>  //
+<a href=#193 id=193 data-nosnippet>193</a>  // Frontmatter envs — internal_vertical mode for multi-paragraph bodies
+<a href=#194 id=194 data-nosnippet>194</a>  // (declarations especially carries author prose with \par separators). Without
+<a href=#195 id=195 data-nosnippet>195</a>  // explicit mode, restricted_horizontal default trips Endgroup mismatch on
+<a href=#196 id=196 data-nosnippet>196</a>  // \par-containing bodies.
+<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{declarations}"</span>, <span class="string">"&lt;ltx:acknowledgements name='declarations'&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
+<a href=#198 id=198 data-nosnippet>198</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{appendices}"</span>, <span class="string">"&lt;ltx:appendix&gt;#body&lt;/ltx:appendix&gt;"</span>,
+<a href=#200 id=200 data-nosnippet>200</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#201 id=201 data-nosnippet>201</a>});
 </code></pre></div></section></main></body></html>
