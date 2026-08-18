@@ -81,20 +81,43 @@ LoadDefinitions!({
   DefMacro!("\\listoflistingscaption", "List of listings");
   // Perl minted.sty.ltxml L58-99 dynamically defined new CSes via runtime
   // DefMacroI closures. The TeX-level equivalent uses `\expandafter\def
-  // \csname <name>\endcsname` so the same user input now binds working
-  // aliases. `\newmint{foo}{opts}` → `\foo` behaves like `\verb`;
-  // `\newmintinline{foo}{opts}` → `\fooinline`; `\newminted{foo}{opts}`
-  // → `\begin{foo}`/`\begin{foo*}` expand to `\begin{lstlisting}` (since
-  // listings is the Perl-chosen substrate on L30). `\newmintedfile` binds
-  // either the given optional macro or `\<lang>file` to `\inputminted`.
+  // \csname <name>\endcsname` so the same user input now binds working aliases.
+  //
+  // Each of `\newmint` / `\newmintinline` / `\newminted` / `\newmintedfile` takes
+  // an OPTIONAL `[name]` before the two mandatory `{language}{options}` args (real
+  // minted.sty: `\newcommand{..}[3][]`, each with its own default name). The prior
+  // port declared the first three as two-mandatory `#1#2`, so
+  // `\newminted[leancode]{lean4}{...}` bound `#1 = "["` and then ran
+  // `\expandafter\def\csname [\endcsname{...}` — but `\csname [\endcsname` IS the
+  // control sequence `\[`, silently redefining display-math open to
+  // `\begin{lstlisting}`; every later `\[` opened a listing that ran to EOF,
+  // swallowing the body and `\bibliography` with no `Error:` (arXiv:2606.05629,
+  // issue #520). Each of the three now branches on `\@ifnextchar[` (as
+  // `\newmintedfile` already did) and consumes all three args, so the optional
+  // env/command name binds correctly and nothing (least of all `\[`) leaks. Default names match
+  // minted: `\newmint{lang}` → `\lang` (verb-like); `\newmintinline{lang}` →
+  // `\langinline`; `\newminted{lang}` → env `langcode`; the optional form uses the
+  // given name verbatim. listings is the Perl-chosen substrate (L30), so a
+  // `\newminted` env delegates to `\lstnewenvironment{name}` (as the tcolorbox
+  // binding's `\newtcblisting` does) — whose verbatim reader stops at the env's own
+  // `\end{name}`. The prior alias to `\begin{lstlisting}` read raw until the literal
+  // `\end{lstlisting}`, so a `\newminted` env used normally (closed by `\end{name}`)
+  // never saw its marker and ran to EOF, swallowing the rest of the document.
+  // `\newmintedfile` binds either the given optional macro or `\<lang>file` to
+  // `\inputminted`.
   RawTeX!(
-    r#"\def\newmint#1#2{\expandafter\def\csname #1\endcsname{\verb}}
-\def\newmintinline#1#2{\expandafter\def\csname #1inline\endcsname{\verb}}
-\def\newminted#1#2{%
-  \expandafter\def\csname #1\endcsname{\begin{lstlisting}}%
-  \expandafter\def\csname end#1\endcsname{\end{lstlisting}}%
-  \expandafter\def\csname #1*\endcsname{\begin{lstlisting}}%
-  \expandafter\def\csname end#1*\endcsname{\end{lstlisting}}}
+    r#"\def\newmint{\@ifnextchar[\lx@minted@nm@opt\lx@minted@nm@noopt}
+\def\lx@minted@nm@noopt#1#2{\expandafter\def\csname #1\endcsname{\verb}}
+\def\lx@minted@nm@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\verb}}
+\def\newmintinline{\@ifnextchar[\lx@minted@nmi@opt\lx@minted@nmi@noopt}
+\def\lx@minted@nmi@noopt#1#2{\expandafter\def\csname #1inline\endcsname{\verb}}
+\def\lx@minted@nmi@opt[#1]#2#3{\expandafter\def\csname #1\endcsname{\verb}}
+\def\newminted{\@ifnextchar[\lx@minted@nmd@opt\lx@minted@nmd@noopt}
+\def\lx@minted@nmd@noopt#1#2{\lx@minted@nmd@def{#1code}}
+\def\lx@minted@nmd@opt[#1]#2#3{\lx@minted@nmd@def{#1}}
+\def\lx@minted@nmd@def#1{%
+  \lstnewenvironment{#1}{}{}%
+  \lstnewenvironment{#1*}[1]{}{}}
 \def\newmintedfile{\@ifnextchar[\lx@minted@nmf@opt\lx@minted@nmf@noopt}
 \def\lx@minted@nmf@opt[#1]#2{\let#1\inputminted}
 \def\lx@minted@nmf@noopt#1{\expandafter\let\csname #1file\endcsname\inputminted}

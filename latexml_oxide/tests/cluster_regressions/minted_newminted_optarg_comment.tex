@@ -1,0 +1,31 @@
+\documentclass{article}
+\usepackage{comment}
+\usepackage{minted}
+% minted's \newmintinline / \newminted take an optional [env-name] before the two
+% mandatory {language}{options} args (real minted.sty: \newcommand{..}[3][]). The
+% Rust binding must parse that optional arg: with a wrong #1#2 (two-mandatory)
+% signature, \newminted[leancode]{lean4}{...} captures #1 = "[" and then runs
+% \expandafter\def\csname [\endcsname{...} — but \csname [\endcsname IS the control
+% sequence \[ , silently redefining display-math open to \begin{lstlisting}. Every
+% later \[ then opens a listing that runs to end-of-file, swallowing the body and
+% \bibliography with no Error:. Witness arXiv:2606.05629 (issue #520).
+\newmintinline[lean]{lean4}{bgcolor=white}
+\newminted[leancode]{lean4}{
+  fontsize=\footnotesize,
+  breaklines=true
+}
+\begin{document}
+Intro paragraph before the display equation.
+\[
+  4n-3 \le R(B_{n-2},B_n)
+\]
+Body text after the display equation, still in the flow.
+\begin{comment}
+\begin{leancode}[escapeinside=||]
+abbrev Vertex := Fin 37
+\end{leancode}
+\end{comment}
+Tail paragraph immediately before the bibliography.
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
