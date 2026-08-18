@@ -5,6 +5,8 @@
 //! economy. All members are subprocess- or few-conversion tests, so
 //! co-locating them in one process stays far under the RSS fuse.
 
+mod cluster;
+
 mod fairmeta_frontmatter {
   //! Regression test: the `fairmeta.cls` (FAIR / Meta pre-print class) binding
   //! captures the class's custom frontmatter into the XML.
@@ -446,5 +448,113 @@ mod scrartcl_titlehead {
         "titlehead content {token:?} missing:\n{xml}"
       );
     }
+  }
+}
+
+mod omnibus_agu_authors {
+  //! An UNKNOWN class using the AGU `agujournal2019` author interface —
+  //! `\authors{A\affil{1}, B\affil{2}, and C\affil{3}}` with numbered
+  //! `\affiliation{n}{text}` blocks — must land as proper document creators +
+  //! affiliation contacts, NOT a side-margin `<note role="authors">` with the
+  //! affiliation bodies leaking into the flow (arXiv/html_feedback #6901, witness
+  //! 2608.15512, `\documentclass[preprint]{agujournal2019}`).
+  //!
+  //! Fixed in OmniBus (the generic unknown-class fallback), so ANY unknown class
+  //! with this interface benefits. An unknown class name (`foo`) resolves to
+  //! OmniBus regardless of whether a `foo.cls` is on disk (`load_class` never
+  //! raw-loads a class — it defaults `notex => true`), so its `\authors` /
+  //! `\affil` / `\affiliation` bindings are exactly what run for the witness's
+  //! `agujournal2019` too (that contrib binding `LoadClass!("OmniBus")`s and
+  //! defines none of these itself).
+  //!
+  //! Resilient dispatch: `\affil{n}`/`\affiliation{n}{..}` take AGU's numbered
+  //! superscript-ref path only when the label is all-digits; a non-numeric
+  //! `\affil{Dept…}`/`\affiliation{Dept…}` (authblk/AAS convention) still routes
+  //! to the plain affiliation-text form.
+  use crate::cluster::convert_to_xml;
+
+  #[test]
+  fn agu_authors_become_creators_not_a_note() {
+    // The fixture uses the AGU interface verbatim (witness 2608.15512): a
+    // comma+"and"-separated \authors list, `\affil{n}` marks, `\affiliation{n}{}`
+    // blocks, and a \thanks on the first author. `\documentclass{foo}` is an
+    // unknown class → OmniBus (never raw-loaded), the same path the witness's
+    // agujournal2019 contrib binding reaches via LoadClass!("OmniBus").
+    let xml = convert_to_xml("tests/cluster_regressions/frontmatter_agu_authors.tex");
+
+    // The four authors are SEPARATE document creators, each with a personname —
+    // never one merged blob and never a side-margin note.
+    assert!(
+      !xml.contains("role=\"authors\""),
+      "authors still land in a <note role=\"authors\"> instead of creators:\n{xml}"
+    );
+    let creators = xml.matches("role=\"author\"").count();
+    assert_eq!(
+      creators, 4,
+      "expected 4 separate author creators, found {creators}:\n{xml}"
+    );
+    for name in [
+      "Keshav Aggarwal",
+      "R. K. Choudhary",
+      "Abhirup Datta",
+      "Anshuman Sharma",
+    ] {
+      assert!(xml.contains(name), "author {name:?} missing:\n{xml}");
+    }
+    // The literal joining word "and" before the last author is a separator, not
+    // part of the name.
+    assert!(
+      !xml.contains("and Anshuman"),
+      "the joining \"and\" leaked into the last author name:\n{xml}"
+    );
+
+    // Each numbered \affiliation{n}{text} is captured as an affiliation contact —
+    // its text must NOT leak into the body flow as a bare paragraph.
+    assert!(
+      xml.contains("role=\"affiliation\""),
+      "no affiliation contact captured:\n{xml}"
+    );
+    for aff in [
+      "Indian Institute of Technology Indore",
+      "Physical Research Laboratory",
+      "Some Other Place",
+    ] {
+      assert!(
+        xml.contains(aff),
+        "affiliation text {aff:?} missing:\n{xml}"
+      );
+    }
+    // The affiliation body leaked into a leading <p> in the buggy baseline; the
+    // first institute text must sit inside frontmatter, never a standalone para.
+    assert!(
+      !xml.contains("<p>Indian Institute of Technology Indore"),
+      "affiliation text leaked into the body flow as a paragraph:\n{xml}"
+    );
+    // The first author's \thanks survives as its own note on that creator.
+    assert!(
+      xml.contains("Corresponding author"),
+      "first author's \\thanks note was dropped:\n{xml}"
+    );
+  }
+
+  #[test]
+  fn authblk_style_affiliation_text_still_works() {
+    // Resilience: a non-numeric argument keeps the authblk/AAS convention where
+    // the argument IS the affiliation text (`\affil{Dept…}`/`\affiliation{Dept…}`),
+    // NOT a numbered superscript reference. `bar` is another unknown class →
+    // OmniBus; the numeric dispatch must not disturb this common path.
+    let xml = convert_to_xml("tests/cluster_regressions/frontmatter_authblk_affil.tex");
+    // Both non-numeric affiliation texts are captured verbatim as affiliation
+    // contacts — not swallowed as superscript labels or dropped.
+    for text in ["Analytical Engine Institute", "Department of Computation"] {
+      assert!(
+        xml.contains(text),
+        "authblk-style affiliation text {text:?} missing:\n{xml}"
+      );
+    }
+    assert!(
+      xml.contains("role=\"affiliation\""),
+      "no affiliation contact for authblk-style text:\n{xml}"
+    );
   }
 }

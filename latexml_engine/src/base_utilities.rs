@@ -4044,7 +4044,12 @@ fn whole_line_cs_wrapper(tokens: &Tokens) -> Option<(Token, Tokens)> {
 ///     as a duplicate affiliation — arXiv 2605.00347), descend through the
 ///     wrapper, split its inner name list, and re-apply `\cmd` to each name so
 ///     every author becomes its own creator with the correct affiliation.
-fn split_author_line(line: Tokens) -> Vec<Tokens> {
+///
+/// Public so a class binding whose `\authors{...}` is a comma/"and"-separated
+/// name list (e.g. AGU's `agujournal2019`) reuses this canonical splitter
+/// instead of re-listing the separators — the same split `\lx@add@authors`
+/// applies to a superscript-marked author line.
+pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
   // Name-level separators: comma and the literal word " and " ("Alice and Bob").
   let name_seps = || vec![SplitDelim::Token(T_OTHER!(",")), literal_and()];
   let top = split_tokens(line.clone(), name_seps());

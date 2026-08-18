@@ -33,6 +33,15 @@ fn push_keyword_body_to_frontmatter(whatsit: &mut Whatsit) -> Result<Vec<Digeste
   Ok(Vec::new())
 }
 
+/// True when `arg` (trimmed) is one or more ASCII digits and nothing else — the
+/// signal that a `\affil{n}` / `\affiliation{n}{…}` uses AGU's numbered
+/// superscript-reference convention rather than authblk/AAS affiliation text.
+fn is_all_ascii_digits(arg: &Tokens) -> bool {
+  let s = arg.to_string();
+  let s = s.trim();
+  !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L33: LoadClass('article');
@@ -152,10 +161,31 @@ LoadDefinitions!({
   // gobble (redundant running head). Match Perl; preserving it errored on a
   // literal `&` in the running head. See 0709.4236 and aas_support_sty.rs.
   def_macro_noop("\\shortauthors{}")?;
-  // \authors{author list} — alternative to \author; preserve as
-  // author list note.
-  DefMacro!("\\authors{}",
-    "\\lx@add@frontmatter{ltx:note}[role=authors]{#1}");
+  // \authors{author list} — the plural byline macro used by journal classes
+  // (AGU's agujournal2019, ametsoc, …) as an alternative to \author. It holds
+  // ONE comma-separated list of authors, the last joined with "and", each name
+  // trailed by an `\affil{n}` superscript that cross-references a numbered
+  // `\affiliation{n}{text}` block (see \affil / \affiliation below). Split it on
+  // comma + the literal " and " into SEPARATE creators (never one merged blob,
+  // never the old side-margin `<note role=authors>` — arXiv/html_feedback #6901,
+  // witness 2608.15512). Each piece keeps its `\affil{n}`, which registers the
+  // affiliation annotation on that creator during personname digestion. Empty
+  // pieces (a trailing comma, or the "and" split leaving nothing) are dropped.
+  DefMacro!("\\authors{}", sub[(list)] {
+    // Reuse the engine's canonical author-name splitter (comma + literal " and ",
+    // plus its font-wrapper descent) rather than re-listing separators — this is
+    // exactly the split `\lx@add@authors` applies to a superscript-marked author
+    // line. Each piece keeps its `\affil{n}`, which registers the affiliation
+    // annotation on that creator during personname digestion.
+    let mut calls: Vec<Token> = Vec::new();
+    for piece in split_author_line(list) {
+      if piece.to_string().trim().is_empty() {
+        continue;
+      }
+      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(piece)]).unlist());
+    }
+    Ok(Tokens::new(calls))
+  });
   def_macro_noop("\\alignauthor")?;
   // \correspondingauthor{name/email} — common journal-class CS used
   // inside author lists (AAS / AGU / AMS / many journals). aas_support
@@ -188,8 +218,41 @@ LoadDefinitions!({
 
   DefMacro!("\\address[]{}", "\\lx@add@address{#2}");
   Let!("\\affaddr", "\\address");
-  DefMacro!("\\affil{}",       "\\lx@add@affiliation{#1}");
-  DefMacro!("\\affiliation{}", "\\lx@add@affiliation{#1}");
+  // \affil / \affiliation carry two incompatible conventions across unknown
+  // classes, so dispatch resiliently on the argument (OmniBus must "do the best
+  // with the available information"):
+  //   * an ALL-DIGITS argument is AGU's `agujournal2019` superscript reference —
+  //     `\affil{1}` marks its author as belonging to affiliation 1, and
+  //     `\affiliation{1}{text}` declares that numbered block. Route them through
+  //     the same label/annotation pair as \altaffilmark/\altaffiltext (and
+  //     llncs \inst/\institute), so the mark cross-references the block.
+  //   * any other argument is the authblk / AAS convention where the argument IS
+  //     the affiliation text — keep the original `\lx@add@affiliation` behavior.
+  // Witness 2608.15512 (AGU) for the numbered path; authblk papers for the text
+  // path. arXiv/html_feedback #6901.
+  DefMacro!("\\affil{}", sub[(arg)] {
+    if is_all_ascii_digits(&arg) {
+      Ok(Invocation!(T_CS!("\\lx@omnibus@affil@ref"), vec![Some(arg)]))
+    } else {
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(arg)]))
+    }
+  });
+  DefMacro!("\\lx@omnibus@affil@ref{}",
+    "\\lx@request@frontmatter@annotation[affiliation]{#1}");
+  DefMacro!("\\affiliation{}", sub[(arg)] {
+    if is_all_ascii_digits(&arg) {
+      // AGU's `\affiliation{n}{text}` — a second brace group follows. Grab it via
+      // \@ifnextchar\bgroup so a bare numeric `\affiliation{5}` (no text block)
+      // still falls back to single-arg text rather than swallowing what follows.
+      Ok(Invocation!(T_CS!("\\lx@omnibus@affiliation@numbered"), vec![Some(arg)]))
+    } else {
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(arg)]))
+    }
+  });
+  DefMacro!("\\lx@omnibus@affiliation@numbered{}",
+    "\\@ifnextchar\\bgroup{\\lx@omnibus@affiliation@numbered@ii{#1}}{\\lx@add@affiliation{#1}}");
+  DefMacro!("\\lx@omnibus@affiliation@numbered@ii{}{}",
+    "\\lx@add@contact[role=affiliation,label={affiliation:#1}]{#2}");
   DefRegister!("\\affilskip" => Dimension::new(0));
 
   // Perl L104-123: misc name macros, mostly no-ops
