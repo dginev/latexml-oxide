@@ -10,6 +10,14 @@
     `beforeDigestEnd: || EndSemiverbatim()` — to neutralize the math/special
     catcodes (`^ _ ~ & $ # '`) to literal text while keeping `\ { }` special so
     `\end{env}` still parses. Extra single-char strings customize the set (#653).
+  - **Post-processing keeps the folder component of a resource `@src`.** A
+    resource whose `@src` had a directory part (e.g. `<ltx:resource
+    src="subdir/foo.css">`, from `RequireResource("subdir/foo.css")`) was copied to
+    a *flattened* path (`<dest>/foo.css`) while the emitted `<link>`/`<script>`
+    href kept `subdir/foo.css` — a dangling reference. The copy now preserves the
+    path relative to the source directory when it stays below the destination (else
+    flattens to the basename), and rewrites `@src` to where the file actually
+    landed — matching Perl `XSLT::copyResource` (#662).
   - **`RelaxNGSchema()` actually loads a custom schema.** Selecting a RelaxNG
     schema from raw `.rng` at runtime (the Rhai `RelaxNGSchema()` binding, or any
     non-`LaTeXML` schema with no compiled `.model`) scanned and parsed the file but

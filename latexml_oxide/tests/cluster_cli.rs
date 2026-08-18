@@ -2145,3 +2145,111 @@ mod math_greek_no_replacement_char {
     }
   }
 }
+
+mod resource_src_path {
+  //! #662: a resource whose `@src` has a folder component (`subdir/foo.css`) must
+  //! be copied PRESERVING that folder — `<dest>/subdir/foo.css` — so the
+  //! `<link>`/`<script>` href the stylesheet emits still resolves, instead of the
+  //! file being flattened to `<dest>/foo.css` while the tag keeps `subdir/foo.css`.
+  use std::process::Command;
+
+  #[test]
+  fn resource_folder_component_is_preserved_on_copy() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("subdir")).unwrap();
+    std::fs::create_dir_all(root.join("out")).unwrap();
+    std::fs::write(root.join("subdir/mystyle.css"), "body{color:red}").unwrap();
+    std::fs::write(
+      root.join("myres.sty.rhai"),
+      "RequireResource(\"subdir/mystyle.css\", #{ type: \"text/css\" });",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("doc.tex"),
+      "\\documentclass{article}\\usepackage{myres}\\begin{document}Hi.\\end{document}",
+    )
+    .unwrap();
+
+    let out = Command::new(bin)
+      .args([
+        "--format=html5",
+        "--path=.",
+        "--dest=out/doc.html",
+        "doc.tex",
+      ])
+      .env("LATEXML_NODUMP", "1")
+      .current_dir(root)
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      out.status.success(),
+      "binary failed; stderr:\n{}",
+      String::from_utf8_lossy(&out.stderr)
+    );
+
+    // The file kept its folder …
+    assert!(
+      root.join("out/subdir/mystyle.css").is_file(),
+      "resource was not copied to out/subdir/mystyle.css (folder dropped)"
+    );
+    // … and was NOT flattened to the destination root.
+    assert!(
+      !root.join("out/mystyle.css").exists(),
+      "resource was flattened to out/mystyle.css, dropping its folder (#662)"
+    );
+    // … and the emitted <link> href matches the file location.
+    let html = std::fs::read_to_string(root.join("out/doc.html")).unwrap();
+    assert!(
+      html.contains("href=\"subdir/mystyle.css\""),
+      "the <link> href does not point at the preserved path; html=\n{html}"
+    );
+  }
+
+  /// A resource that ESCAPES the source dir (`../shared.css`) is flattened to the
+  /// basename (Perl's "otherwise flatten" branch), and the tag is rewritten to match.
+  #[test]
+  fn resource_escaping_source_dir_is_flattened() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    std::fs::create_dir_all(root.join("src/out")).unwrap();
+    std::fs::write(root.join("shared.css"), "body{color:blue}").unwrap();
+    std::fs::write(
+      root.join("src/myesc.sty.rhai"),
+      "RequireResource(\"../shared.css\", #{ type: \"text/css\" });",
+    )
+    .unwrap();
+    std::fs::write(
+      root.join("src/doc.tex"),
+      "\\documentclass{article}\\usepackage{myesc}\\begin{document}Hi.\\end{document}",
+    )
+    .unwrap();
+
+    let out = Command::new(bin)
+      .args([
+        "--format=html5",
+        "--path=.",
+        "--dest=out/doc.html",
+        "doc.tex",
+      ])
+      .env("LATEXML_NODUMP", "1")
+      .current_dir(root.join("src"))
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(out.status.success(), "binary failed on escaping resource");
+
+    // Flattened INTO the destination root — never written outside it via `../`
+    // (which is where a naive "preserve `../shared.css`" would land it).
+    assert!(
+      root.join("src/out/shared.css").is_file(),
+      "escaping resource should flatten into the destination"
+    );
+    assert!(
+      !root.join("src/shared.css").exists(),
+      "escaping resource must NOT be written outside the destination (path traversal)"
+    );
+  }
+}
