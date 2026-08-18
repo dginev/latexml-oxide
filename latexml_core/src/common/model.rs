@@ -444,7 +444,25 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
         } else {
           let paths: Vec<&std::path::Path> =
             search_paths.iter().map(std::path::Path::new).collect();
+          // Seed the scanner with the model's registered code-namespace prefixes
+          // (e.g. `ltx` → dlmf from `base_schema`), so a schema whose target
+          // namespace appears only as a default `ns=` — with no `xmlns:` prefix,
+          // exactly how `LaTeXML.rng` is written — resolves to that conventional
+          // prefix instead of a synthetic `namespaceN` the runtime never matches
+          // (Perl: the scanner delegates `encodeQName` to the model; #652).
+          // Collect first: the immutable borrow ends before `schema.as_mut()`.
+          let code_prefix_seed: Vec<(String, String)> = model
+            .code_namespace_prefixes
+            .iter()
+            .map(|(uri, prefix)| {
+              (
+                arena::with(*uri, |s| s.to_string()),
+                arena::with(*prefix, |s| s.to_string()),
+              )
+            })
+            .collect();
           let schema = model.schema.as_mut().unwrap();
+          schema.code_namespace_prefixes = code_prefix_seed.into_iter().collect();
           let schema_name = schema.name.clone();
           match schema.load_schema(&schema_name, &paths) {
             Err(err) => {
@@ -470,6 +488,18 @@ pub fn load_schema(search_paths: &[&str]) -> Result<()> {
               }
               for (prefix, uri) in &data.namespaces {
                 model.register_document_namespace(prefix, Some(uri));
+              }
+              // Perl RelaxNG.pm L78: register the schema's primary namespace as
+              // the DEFAULT document namespace, so the output serializes it with
+              // no prefix (the schema's unprefixed default-`ns=` elements).
+              // Generalized from Perl's hardcoded dlmf to the schema's ACTUAL
+              // primary namespace, so a schema with a different default namespace
+              // gets ITS namespace as the output default — full namespace
+              // expressivity, user-directed (#652). For a LaTeXML-namespace
+              // schema this is identical to Perl. (`""` prefix → `#default`.)
+              let primary = model.schema.as_ref().unwrap().primary_namespace.clone();
+              if let Some(primary) = primary {
+                model.register_document_namespace("", Some(&primary));
               }
             },
           }
@@ -507,6 +537,18 @@ pub fn get_document_namespace_prefix(
       .document_namespace_prefixes
       .get_sym(ns_sym)
       .copied();
+  }
+
+  // Perl Model.pm `getDocumentNamespacePrefix` L242: for a non-LaTeXML
+  // namespace with no explicit document prefix, fall back to the registered
+  // CODE prefix. This is what lets FOREIGN namespaces — built-in (`svg`, `m`,
+  // `xlink`, `xhtml`) or supplied by a third-party / runtime `.rhai` binding via
+  // `RegisterNamespace` — serialize under their conventional prefix instead of a
+  // synthetic `namespaceN` + "no prefix registered" warning (#652). The LaTeXML
+  // namespace is excluded: it is the default document namespace (registered from
+  // the schema's primary `ns=`) and serializes with no prefix.
+  if docprefix.is_none() && namespace != LTX_NAMESPACE {
+    docprefix = model!().code_namespace_prefixes.get_sym(ns_sym).copied();
   }
 
   if docprefix.is_none() && !probe {
@@ -1340,5 +1382,134 @@ mod schema_load_tests {
     );
 
     let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  /// #652 (reopened): a schema whose target namespace is a **default `ns=`** (no
+  /// `xmlns:` prefix — how real `LaTeXML.rng` is written) must resolve to the
+  /// conventional code prefix (`ltx`) that `base_schema` registered, NOT a
+  /// synthetic `namespace1`. Perl: the scanner delegates `encodeQName` to the
+  /// model, which consults `code_namespace_prefixes`.
+  #[test]
+  fn default_ns_schema_uses_registered_code_prefix() {
+    let dir = std::env::temp_dir().join(format!("lxo652def_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    // dlmf as the DEFAULT namespace; NO xmlns:ltx declaration in the schema.
+    let default_ns = "<grammar xmlns=\"http://relaxng.org/ns/structure/1.0\" \
+         ns=\"http://dlmf.nist.gov/LaTeXML\">\
+       <start><ref name=\"document\"/></start>\
+       <define name=\"document\"><element name=\"document\">\
+         <zeroOrMore><ref name=\"para\"/></zeroOrMore></element></define>\
+       <define name=\"para\"><element name=\"para\">\
+         <attribute name=\"class\"/><text/></element></define>\
+       </grammar>";
+    std::fs::write(dir.join("lxo652def.rng"), default_ns).expect("write rng");
+
+    initialize_model();
+    // Mimic base_schema.rs:11 — the engine registers `ltx` for the dlmf namespace
+    // on every conversion, before any RelaxNGSchema() runs.
+    model_mut!().register_namespace("ltx", Some(LTX_NAMESPACE));
+    model_mut!().set_relaxng_schema("lxo652def");
+    let dir_str = dir.to_str().unwrap();
+    load_schema(&[dir_str]).expect("load_schema");
+
+    // The document root is in the default (dlmf) namespace → it must be reachable
+    // under the registered `ltx` prefix, not a synthesized `namespaceN`.
+    assert!(
+      can_contain("#Document", "ltx:document"),
+      "default-ns root must resolve to the registered ltx: prefix (#652)"
+    );
+    assert!(
+      can_contain("ltx:document", "ltx:para"),
+      "ltx:document may contain ltx:para"
+    );
+    assert!(
+      !can_contain("#Document", "namespace1:document"),
+      "must NOT invent a synthetic namespace1 prefix for a registered namespace (#652)"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  /// #652 fallback guard: a namespace the engine did NOT register, but the
+  /// schema declares an explicit `xmlns:` prefix for, keeps that declared prefix
+  /// (Perl `getNamespacePrefix`: code prefix → document prefix → synthesize).
+  #[test]
+  fn schema_declared_prefix_survives_when_unregistered_in_code() {
+    let dir = std::env::temp_dir().join(format!("lxo652decl_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    // `ex` is declared in the schema (xmlns:ex) but never registered in code.
+    let rng = "<grammar xmlns=\"http://relaxng.org/ns/structure/1.0\" \
+         ns=\"http://example.com/ex\" xmlns:ex=\"http://example.com/ex\">\
+       <start><ref name=\"root\"/></start>\
+       <define name=\"root\"><element name=\"root\"><empty/></element></define>\
+       </grammar>";
+    std::fs::write(dir.join("lxo652decl.rng"), rng).expect("write rng");
+
+    initialize_model();
+    model_mut!().set_relaxng_schema("lxo652decl");
+    load_schema(&[dir.to_str().unwrap()]).expect("load_schema");
+
+    assert!(
+      can_contain("#Document", "ex:root"),
+      "schema-declared xmlns:ex prefix must be used when code has none (#652)"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  /// #652 output-serialization: the schema's primary (default `ns=`) namespace
+  /// becomes the DEFAULT document namespace — serialized with NO prefix — rather
+  /// than being forgotten (Perl RelaxNG.pm L78).
+  #[test]
+  fn schema_primary_ns_becomes_default_document_namespace() {
+    let dir = std::env::temp_dir().join(format!("lxo652out_{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    let rng = "<grammar xmlns=\"http://relaxng.org/ns/structure/1.0\" \
+         ns=\"http://dlmf.nist.gov/LaTeXML\">\
+       <start><ref name=\"document\"/></start>\
+       <define name=\"document\"><element name=\"document\"><empty/></element></define>\
+       </grammar>";
+    std::fs::write(dir.join("lxo652out.rng"), rng).expect("write rng");
+
+    initialize_model();
+    model_mut!().register_namespace("ltx", Some(LTX_NAMESPACE));
+    model_mut!().set_relaxng_schema("lxo652out");
+    load_schema(&[dir.to_str().unwrap()]).expect("load_schema");
+
+    // The primary namespace is the output default (`#default` → dlmf) …
+    assert_eq!(
+      get_document_namespace("", true).as_deref(),
+      Some(LTX_NAMESPACE),
+      "schema primary ns must be the default document namespace (#652)"
+    );
+    // … so it serializes with NO prefix (probe → no synthetic namespaceN + warning).
+    assert_eq!(
+      get_document_namespace_prefix(LTX_NAMESPACE, false, true),
+      None,
+      "the default document namespace serializes without a prefix (#652)"
+    );
+  }
+
+  /// #652 foreign prefixes: a namespace registered only in CODE — a built-in
+  /// (`svg`) or a third-party / runtime `.rhai` `RegisterNamespace` — serializes
+  /// under that code prefix, never a synthetic `namespaceN` + warning (Perl
+  /// Model.pm `getDocumentNamespacePrefix` L242 code-prefix fallback).
+  #[test]
+  fn foreign_and_runtime_namespaces_serialize_under_their_code_prefix() {
+    initialize_model();
+    // Built-in foreign namespace, as base_schema registers it.
+    model_mut!().register_namespace("svg", Some("http://www.w3.org/2000/svg"));
+    // A third-party / runtime binding's RegisterNamespace (e.g. a BookML .rhai).
+    model_mut!().register_namespace("bk", Some("http://bookml.example/ns"));
+
+    assert_eq!(
+      get_document_namespace_prefix("http://www.w3.org/2000/svg", false, true),
+      Some(pin!("svg")),
+      "built-in foreign svg namespace serializes under its code prefix (#652)"
+    );
+    assert_eq!(
+      get_document_namespace_prefix("http://bookml.example/ns", false, true),
+      Some(pin!("bk")),
+      "a runtime/third-party registered namespace serializes under its prefix (#652)"
+    );
   }
 }

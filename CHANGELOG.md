@@ -45,10 +45,19 @@
     never distilled it into the tag/attribute/namespace tables the runtime consults
     — so every element was rejected (`<ltx:document> isn't allowed in <#Document>`)
     and the output came out empty. The scan now populates those tables (a port of
-    Perl `Model/RelaxNG.pm`'s `extractContent` + tag loop), including the document
-    namespaces, so a custom schema validates. Disk lookup also appends `.rng` to a
-    bare schema name across all `--path` search dirs (matching Perl), so
-    `RelaxNGSchema('MySchema')` resolves `MySchema.rng` (#652).
+    Perl `Model/RelaxNG.pm`'s `extractContent` + tag loop), so a custom schema
+    validates. Namespaces are now resolved with the full XML expressivity Perl
+    has: a schema's target namespace given only as a default `ns=` (no `xmlns:`
+    prefix — how `LaTeXML.rng` is written) resolves to the conventional code
+    prefix the engine registered (dlmf → `ltx`) instead of a synthetic
+    `namespace1`, and becomes the default output namespace; foreign namespaces,
+    whether built-in (`svg`/`m`/`xlink`/`xhtml`) or supplied by a third-party or
+    runtime `.rhai` `RegisterNamespace`, serialize under their registered prefix
+    instead of a `namespaceN` + "no prefix registered" warning (ports of Perl
+    `encodeQName`/`getNamespacePrefix`, `getDocumentNamespacePrefix`'s code-prefix
+    fallback, and `RelaxNG.pm`'s default-namespace registration). Disk lookup also
+    appends `.rng` to a bare schema name across all `--path` search dirs (matching
+    Perl), so `RelaxNGSchema('MySchema')` resolves `MySchema.rng` (#652).
   - **An `Undigested` constructor argument reaches a Rhai body as `Tokens`.** A
     runtime `DefConstructor` with an `Undigested` (or `OptionalUndigested`) parameter
     handed its imperative `|document, arg|` body an opaque `Digested` handle wrapping

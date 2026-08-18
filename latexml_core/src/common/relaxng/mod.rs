@@ -176,6 +176,15 @@ pub struct Relaxng {
   /// `xmlns:` attributes on RelaxNG nodes.
   pub document_namespaces: HashMap<String, String>,
 
+  /// URI → code prefix, seeded from the model's `code_namespace_prefixes`
+  /// before scanning (`Model::load_schema`). Lets a namespace referenced only
+  /// as a default `ns=` (no `xmlns:` prefix in the schema) resolve to the
+  /// conventional prefix the engine already registered — e.g.
+  /// `http://dlmf.nist.gov/LaTeXML` → `ltx` from `base_schema` — instead of a
+  /// synthetic `namespaceN`. Port of Perl `encodeQName` → `getNamespacePrefix`
+  /// consulting `code_namespace_prefixes` (#652).
+  pub code_namespace_prefixes: HashMap<String, String>,
+
   /// The master grammar's `<grammar ns="…">` URI — populated by the
   /// first call to `scan_external` (i.e. the schema entry point).
   /// Subsequent included grammars don't overwrite it. Used by the
@@ -202,19 +211,20 @@ pub struct Relaxng {
 impl Default for Relaxng {
   fn default() -> Self {
     Relaxng {
-      name:                   String::from("LaTeXML"),
-      modules:                Vec::new(),
-      elementdefs:            HashMap::default(),
-      element_reverse_defs:   HashMap::default(),
-      elements:               HashMap::default(),
-      defs:                   HashMap::default(),
-      def_combiner:           HashMap::default(),
-      uses_name:              HashMap::default(),
-      internal_grammars:      0,
-      document_namespaces:    HashMap::default(),
-      primary_namespace:      None,
-      display_strip_prefixes: Vec::new(),
-      start:                  Vec::new(),
+      name:                    String::from("LaTeXML"),
+      modules:                 Vec::new(),
+      elementdefs:             HashMap::default(),
+      element_reverse_defs:    HashMap::default(),
+      elements:                HashMap::default(),
+      defs:                    HashMap::default(),
+      def_combiner:            HashMap::default(),
+      uses_name:               HashMap::default(),
+      internal_grammars:       0,
+      document_namespaces:     HashMap::default(),
+      code_namespace_prefixes: HashMap::default(),
+      primary_namespace:       None,
+      display_strip_prefixes:  Vec::new(),
+      start:                   Vec::new(),
     }
   }
 }
