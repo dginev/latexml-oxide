@@ -50,6 +50,37 @@ hottest templates the profile flags into **native Rust DOM transforms**, bypassi
 libxslt entirely for them (Perl is libxslt-bound and cannot). *Feasibility:* Step1
 low-risk/moderate win; Step2 high-effort/high-win.
 
+> **⚠️ MEASURED 2026-08-18 — Step 1 is REFUTED; the "re-parsed per process"
+> premise is false.** Flat CPU profile of witness 1910.01256 (AMD Threadripper,
+> `perf` cycles self-time, 65k samples/20 iters): every `xsltParseStylesheet*`
+> symbol is **≤0.01%**, the whole `libxslt` DSO is **0.6%**, `libexslt` 0.02%. The
+> stylesheet **compile is below sampling noise** — precompiling/embedding a parsed
+> stylesheet buys **<0.1%**. The visible libxslt time is template *application*
+> (`xsltApplyTemplates`/`xsltGetTemplate`), not parsing, so **only Step 2
+> (transpile hot apply-templates) remains live**. Caveat: 1910.01256 is
+> small/text-heavy (XSLT is only **0.9%** here); the 13.2% figure is a corpus
+> aggregate dominated by large docs, so **re-measure the XSLT *apply* share on a
+> big multi-section paper before committing to Step 2** — don't invest on the 13.2%
+> aggregate alone.
+
+> **Median-path micro-wins found in the same profile (2026-08-18)** — cheap,
+> divergence-neutral, off the BP roadmap but worth landing opportunistically:
+> **(1) UTF-8 SIMD fast-path on the `.cls`/`.sty` dep-scan slurp** (`binding/content.rs`
+> — `from_utf8_lossy` walked a 197 KB `ieeeconf.cls` grapheme-aware; ~3% CPU) —
+> **LANDED** on `perf-utf8-slurp-fastpath`, byte-identical. **(2) `state.rs:789`
+> `format!("{:?}") != format!("{:?}")` value compare — SPIKED + REFUTED 2026-08-18,
+> do not chase.** `diff_from_snapshot` runs ONLY at dump *generation*
+> (`ini_tex.rs:214`, `make_formats.sh`/release), NEVER during paper conversion — the
+> LBR-less AMD profile misattributed the 4.3% fmt cluster to it (no call tree). That
+> fmt cluster is actually **eager logging** (`Info!`/`Warn!`/`Debug!` format their
+> args before the level gate + token `{:?}` in messages), wasted only in bare-CLI
+> suppressed runs — a bound log buffer (`--log`/fleet) consumes them, so it's not a
+> production win either. Leave state.rs:789 alone: it feeds the format-dump parity
+> oracle, so a structural-`eq` swap risks changing which entries serialize for zero
+> conversion benefit. **Method lesson:** on the AMD box (no LBR), verify a profile's
+> caller attribution against the actual call graph before acting. The **25.5% gullet
+> loop** and **12.7% alloc/memcpy** token churn are architectural, not free wins.
+
 **BP-3 — Concurrent graphics + parallel MathML structure** (graphics 8.9% +
 mathml_pres 4.5% ≈ 13%). Graphics conversions are independent *subprocesses*
 (gs/dvisvgm/inkscape) run **serially** today — fork them in a bounded concurrent
