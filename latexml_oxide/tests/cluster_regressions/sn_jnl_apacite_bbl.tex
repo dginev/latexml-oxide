@@ -1,0 +1,37 @@
+% sn-jnl.cls with the `sn-apa` reference style loads apacite (APA citations),
+% so the apacite-formatted `.bbl` macros must be defined. arXiv/html_feedback
+% #1261, witness 2404.15224 (`\documentclass[referee,sn-apa,...]{sn-jnl}`).
+\documentclass[sn-apa]{sn-jnl}
+\begin{document}
+\title{A note}
+\author[1]{\fnm{Ada} \sur{Lovelace}}
+\affil[1]{\orgname{Analytical Engine Co.}}
+\maketitle
+An analysis of things~\cite{survey2018}.
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {%
+Ahmed%
+\ \protect \BOthers {.}}{%
+Ahmed%
+\ \protect \BOthers {.}}{%
+{\protect \APACyear {2018}}%
+}]{%
+survey2018}
+\APACinsertmetastar {%
+survey2018}%
+\begin{APACrefauthors}%
+Ahmed, E.%
+, Saint, A.%
+\BDBL {}Ottersten, B.%
+\end{APACrefauthors}%
+\unskip\
+\newblock
+\APACrefYearMonthDay{2018}{}{}.
+\newblock
+{\BBOQ}\APACrefatitle {A survey on deep learning}{A survey on deep learning}.{\BBCQ}
+\newblock
+\APACjournalVolNumPages{arXiv preprint arXiv:1808.01462}{}{}{,}
+\newblock
+\PrintBackRefs{\CurrentBib}
+\end{thebibliography}
+\end{document}
