@@ -18,6 +18,16 @@
     path relative to the source directory when it stays below the destination (else
     flattens to the basename), and rewrites `@src` to where the file actually
     landed — matching Perl `XSLT::copyResource` (#662).
+  - **`--whatsin=xml` post-processes an already-converted core document (the
+    `latexmlpost` role).** The input type was inferred only from the file
+    extension, so a core LaTeXML XML document under a project-specific name (e.g.
+    `paper.preprocessed-xml`) was mistaken for TeX and re-digested as garbage. Now
+    any extension ending in `-xml`/`_xml` (or exactly `.xml`) is auto-detected as
+    XML input, and `--whatsin=xml` forces the XML-input path regardless of the
+    extension — the input analog of `--format` for output. Either way the TeX
+    engine is skipped and the file goes straight to post-processing, so the same
+    XML can be re-rendered to several outputs without re-digesting the source
+    (#655).
   - **`RelaxNGSchema()` actually loads a custom schema.** Selecting a RelaxNG
     schema from raw `.rng` at runtime (the Rhai `RelaxNGSchema()` binding, or any
     non-`LaTeXML` schema with no compiled `.model`) scanned and parsed the file but

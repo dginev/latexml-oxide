@@ -2253,3 +2253,75 @@ mod resource_src_path {
     );
   }
 }
+
+mod whatsin_xml_input {
+  //! #655: a core LaTeXML XML document is post-processed directly (the
+  //! `latexmlpost` role) when its extension is `.xml` / `*-xml` / `*_xml`, or
+  //! when `--whatsin=xml` forces it regardless of the extension. Neither path
+  //! spins up the TeX engine or re-digests the source.
+  use std::{path::Path, process::Command};
+
+  /// A full core `<document>` (article, with sections) that post-processes to
+  /// HTML — reused from the `latexmlpost` fixtures.
+  fn core_xml() -> String {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/post/hyperref.xml");
+    std::fs::read_to_string(p).expect("read hyperref.xml fixture")
+  }
+
+  fn run(input_name: &str, extra: &[&str]) -> (bool, String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join(input_name), core_xml()).expect("write input");
+    let mut cmd = Command::new(bin);
+    cmd.arg(input_name).arg("--dest").arg("out.html");
+    for a in extra {
+      cmd.arg(a);
+    }
+    let out = cmd
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let html = std::fs::read_to_string(dir.path().join("out.html")).unwrap_or_default();
+    (
+      out.status.success(),
+      html,
+      String::from_utf8_lossy(&out.stderr).into_owned(),
+    )
+  }
+
+  /// A `.preprocessed-xml` extension (ends in `-xml`) is auto-detected as XML
+  /// input. Before #655 it was treated as TeX and the XML source was digested
+  /// as garbage instead of post-processed.
+  #[test]
+  fn dash_xml_extension_is_post_processed_directly() {
+    let (ok, html, stderr) = run("input.preprocessed-xml", &[]);
+    assert!(
+      ok,
+      "binary failed on a .preprocessed-xml core doc; stderr:\n{stderr}"
+    );
+    // The section titles from the CORE document survive into HTML — proof the
+    // file went through post-processing, not TeX digestion of `<?xml …>`.
+    // The core document's SECTION STRUCTURE (ltx_section + the `xml:id`s S1/S2/S3)
+    // survives into HTML — a signal absent when the XML source is instead digested
+    // as TeX (angle brackets become garbage text, no sections).
+    assert!(
+      html.contains("ltx_section") && html.contains("id=\"S1\""),
+      "the -xml file was not post-processed as a LaTeXML core document; got:\n{html}"
+    );
+  }
+
+  /// An unrecognised extension (`.dat`) is NOT auto-detected; `--whatsin=xml`
+  /// forces the XML-input path anyway.
+  #[test]
+  fn whatsin_xml_forces_post_on_unrecognised_extension() {
+    let (ok, html, stderr) = run("input.dat", &["--whatsin", "xml"]);
+    assert!(
+      ok,
+      "binary failed with --whatsin=xml on a .dat core doc; stderr:\n{stderr}"
+    );
+    assert!(
+      html.contains("ltx_section") && html.contains("id=\"S1\""),
+      "--whatsin=xml did not force post-processing of the core document; got:\n{html}"
+    );
+  }
+}

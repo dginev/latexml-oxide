@@ -331,8 +331,10 @@ struct Cli {
   /// What the input is: `document` (default; a standalone file), `fragment` (a
   /// snippet wrapped with --preamble/--postamble or a standard pre/postamble,
   /// implied if either is given), `math` (a bare formula), `archive` (a `.zip`
-  /// bundle, also implied by a `.zip` source), or `directory` (a source dir,
-  /// also implied by a trailing `/`).
+  /// bundle, also implied by a `.zip` source), `directory` (a source dir, also
+  /// implied by a trailing `/`), or `xml` (an already-converted LaTeXML core
+  /// document to post-process directly — forces the XML-input path regardless of
+  /// the file's extension; also implied by a `.xml`/`*-xml`/`*_xml` extension).
   #[arg(long, value_name = "TYPE")]
   whatsin: Option<String>,
 
@@ -1079,11 +1081,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   }
 
   let mut converter = Converter::from_config(opts.clone());
+  // `--whatsin=xml` forces the already-converted-XML input path regardless of the
+  // file's extension (Perl-style: the input analog of `--format` for output),
+  // covering a core document under a name `is_xml_input` doesn't recognise (#655).
+  let xml_input = is_xml_input(&source) || cli.whatsin.as_deref() == Some("xml");
   // Skip engine init for already-converted XML input: post-processing is pure
   // libxml2 and never touches the TeX engine or its dump, so loading
   // TeX.pool/latex + the format dump (~85–160 ms and a chunk of RSS) is wasted
   // work. Init mode (`--init`) and every real TeX conversion still need it.
-  if (cli.init.is_some() || !is_xml_input(&source))
+  if (cli.init.is_some() || !xml_input)
     && let Err(e) = converter.prepare_session(&opts)
   {
     eprintln!("Could not prepare converter session: {}", e);
@@ -1185,7 +1191,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // the file straight to post-processing. Mirrors what
     // `latexmlpost_oxide` did as a separate binary (per the
     // retirement plan in `docs/SYNC_STATUS.md`).
-    let response = if is_xml_input(&source) {
+    let response = if xml_input {
       // Do NOT slurp the file into a String — a large already-converted
       // document (the reporter's index.xml is 614 MB) would sit resident on
       // top of the ~11× libxml2 DOM. Post-processing streams it from disk via
@@ -1316,7 +1322,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // meaningful action is to run the post-pipeline on it.
       // Matches the always-on post-processing behaviour of the now-
       // retired `latexmlpost_oxide` binary.
-      let xml_input_mode = is_xml_input(&source_for_post);
+      let xml_input_mode = xml_input;
       let split_enabled = resolved.split_enabled;
       // Perl `post!` is last-wins (resolved in `ResolvedOptions`); its
       // format-dependent default — post is implied by requested reps / an
@@ -1783,7 +1789,14 @@ fn is_xml_input(source: &str) -> bool {
   Path::new(source)
     .extension()
     .and_then(|e| e.to_str())
-    .is_some_and(|ext| ext.eq_ignore_ascii_case("xml"))
+    .is_some_and(|ext| {
+      // `xml` itself, or any compound extension ending in `-xml`/`_xml`
+      // (e.g. `.preprocessed-xml`, `.core_xml`) — an already-converted
+      // LaTeXML core document under a project-specific name (#655). Force it
+      // explicitly with `--whatsin=xml` for names outside this pattern.
+      let ext = ext.to_ascii_lowercase();
+      ext == "xml" || ext.ends_with("-xml") || ext.ends_with("_xml")
+    })
 }
 
 fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box<dyn Error>> {
