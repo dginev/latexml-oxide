@@ -1050,3 +1050,63 @@ fn api_reference_is_up_to_date() {
     );
   }
 }
+
+/// #652 end-to-end through the REAL Rhai binding surface. A `.rhai` preamble
+/// (as BookML emits) calls `RegisterNamespace` + `RelaxNGSchema` on a custom
+/// schema whose target namespace is a bare default `ns=` — exactly how
+/// `LaTeXML.rng` is written. The schema must load with correct namespaces: the
+/// document root validates under the `ltx:` prefix and the primary namespace
+/// becomes the default output namespace — NOT empty out with
+/// `<ltx:document> isn't allowed in <#Document>`. Exercises the full path
+/// Rhai fn → `select_relaxng_schema` → `Model::load_schema` → scan → distil →
+/// namespace resolution, which the model-level `schema_load_tests` reach only
+/// by calling the internals directly.
+#[test]
+fn rhai_relaxngschema_loads_default_ns_schema_with_namespaces() {
+  use latexml_core::common::model::{self, LTX_NAMESPACE};
+  fresh_state();
+  model::initialize_model();
+
+  let dir = std::env::temp_dir().join(format!("lxo652rhai_{}", std::process::id()));
+  std::fs::create_dir_all(&dir).expect("mkdir");
+  // dlmf as the DEFAULT namespace, NO xmlns:ltx — the LaTeXML.rng shape.
+  std::fs::write(
+    dir.join("bookmlschema.rng"),
+    "<grammar xmlns=\"http://relaxng.org/ns/structure/1.0\" \
+         ns=\"http://dlmf.nist.gov/LaTeXML\">\
+       <start><ref name=\"document\"/></start>\
+       <define name=\"document\"><element name=\"document\">\
+         <zeroOrMore><ref name=\"para\"/></zeroOrMore></element></define>\
+       <define name=\"para\"><element name=\"para\">\
+         <attribute name=\"class\"/><text/></element></define>\
+     </grammar>",
+  )
+  .expect("write rng");
+
+  // Drive the ACTUAL Rhai functions the reporter's BookML .rhai uses.
+  load_script(
+    r#"
+      RegisterNamespace("ltx", "http://dlmf.nist.gov/LaTeXML");
+      RelaxNGSchema("bookmlschema");
+    "#,
+  )
+  .expect("rhai load_script");
+
+  // In a real run the load fires at document construction; drive it at our dir.
+  model::load_schema(&[dir.to_str().unwrap()]).expect("load_schema");
+
+  assert!(
+    model::can_contain("#Document", "ltx:document"),
+    ".rhai-selected default-ns schema root must validate under ltx: (#652)"
+  );
+  assert!(
+    model::can_contain("ltx:document", "ltx:para"),
+    "nested default-ns elements validate under ltx: too (#652)"
+  );
+  assert_eq!(
+    model::get_document_namespace("", true).as_deref(),
+    Some(LTX_NAMESPACE),
+    "schema primary ns is the default output namespace (#652)"
+  );
+  let _ = std::fs::remove_dir_all(&dir);
+}
