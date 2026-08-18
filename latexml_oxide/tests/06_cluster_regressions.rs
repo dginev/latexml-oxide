@@ -1045,6 +1045,35 @@ fn cleveref_custom_theorem_cref_shows_heading_name() {
   );
 }
 
+/// html_feedback#861 (arXiv:2403.15796, neurips_2023 preprint): "everything after
+/// the abstract missing". The paper defines its own brace-gobbling `\newcommand
+/// {\hide}[1]{}` and comments blocks out with `\hide{ … }`. The neurips binding
+/// defined the `{hide}` environment UNCONDITIONALLY, so `\hide` was already a CS,
+/// the author's `\newcommand` was ignored as a redefinition, and `\hide{` opened a
+/// runaway environment that ran to `\end{document}` looking for `\endhide` —
+/// swallowing the whole body. The real neurips_2023.cls only defines `{hide}` in
+/// SUBMISSION mode (not preprint/final), so the binding now gates on it. Perl 0.8.8
+/// drops the body identically; this surpasses it. Canary: the visible sections
+/// AFTER the hidden block must survive, and the hidden content must stay gone.
+#[test]
+fn neurips_hide_preprint_preserves_body() {
+  let x = convert_to_xml("tests/cluster_regressions/neurips_hide_preprint_body.tex");
+  // The body after the abstract survives — the reported symptom.
+  assert!(
+    x.contains("Visible Introduction") && x.contains("The body after the abstract must survive."),
+    "neurips preprint: body after the abstract was swallowed:\n{x}"
+  );
+  assert!(
+    x.contains("Conclusion") && x.contains("Concluding remarks that must not vanish."),
+    "neurips preprint: sections after the hidden block are missing:\n{x}"
+  );
+  // …and `\hide{…}` still hid its argument (the author's intent).
+  assert!(
+    !x.contains("Hidden paragraph") && !x.contains("Hidden Introduction"),
+    "neurips preprint: the \\hide{{…}} block leaked into the output:\n{x}"
+  );
+}
+
 /// Companion to the above (html_feedback#140): an explicit `\crefname{widget}{gadget}
 /// {gadgets}` must WIN over the theorem-heading fallback — `\cref` renders the explicit
 /// "gadget", not the heading "Widget". `\crefname` is now a real definition (a faithful

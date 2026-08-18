@@ -3827,3 +3827,48 @@ counter (init 5, `$pdfoutput_checks-- if $pdfoutput_checks`) clamps at 0, so the
 `$pdfoutput_checks >= 0` guard on the `\pdfoutput=1` probe is *always* true — the
 intended "first few lines only" cap is a no-op and `\pdfoutput=1` matches on any
 line. The Rust port (`has_pdftex_marker`) mirrors this effective behavior.
+
+---
+
+## 98. neurips `{hide}` environment defined unconditionally swallows the body in preprint/final mode (Rust surpasses)
+
+**Perl source:** `LaTeXML/lib/LaTeXML/Package/neurips.sty.ltxml` line 59:
+`DefEnvironment('{hide}', '');`
+
+**Symptom:** A `neurips_2019`–`neurips_2025` paper in `[preprint]` (or `[final]`)
+mode that defines its own brace-gobbling `\newcommand{\hide}[1]{}` and uses it as
+`\hide{ … }` loses **everything after the abstract**:
+```
+Info:ignore:\hide Ignoring redefinition (\newcommand) of '\hide'
+Warning:unexpected:\end{document} Attempt to end document with open groups …
+Warning:expected:\endhide body should have ended with '\endhide'
+```
+
+**Root cause:** The real `neurips_20XX.cls` only runs `\NewEnviron{hide}{}` in the
+**submission** branch (`\if@preprint … \else \if@neuripsfinal … \else <here>`,
+neurips_2023.cls L336-390), so in preprint/final mode `\hide` is left undefined
+and the author's own `\newcommand{\hide}[1]{}` wins. Perl's `.ltxml` defines
+`{hide}` **unconditionally**, so `\hide` is already a CS, the `\newcommand` is
+ignored as a redefinition, and `\hide{` opens a runaway environment that consumes
+tokens to `\end{document}` looking for `\endhide` — swallowing the whole body.
+Same failure family as entry #48 (unconditional `DefEnvironment` shadows a
+definition → unclosed group eats the document).
+
+**Minimal trigger:**
+```tex
+\documentclass{article}
+\usepackage[preprint]{neurips_2023}
+\newcommand{\hide}[1]{}
+\begin{document}\maketitle
+\begin{abstract}Abstract.\end{abstract}
+\hide{\section{Hidden}Gone.}
+\section{Visible}Body must survive.
+\end{document}
+```
+
+**Impact:** Perl-origin, SHARED with the Rust binding (a faithful port of L59).
+**Rust status (FIXED — `neurips_sty.rs`):** the `{hide}` `DefEnvironment` is gated
+on submission mode (neither `neurips_preprint` nor `neurips_final` set), matching
+the real class; submission-mode `\begin{hide}…\end{hide}` still hides. Guard:
+`06_cluster_regressions::neurips_hide_preprint_preserves_body`. Witness:
+html_feedback #861 (arXiv:2403.15796v1).

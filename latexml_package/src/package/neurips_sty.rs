@@ -65,8 +65,24 @@ LoadDefinitions!({
   DefEnvironment!("{ack}", "#body",
     before_digest => { unread_one(T_CS!("\\acksection")); });
 
-  // {hide} environment — Perl L59
-  DefEnvironment!("{hide}", "");
+  // {hide} environment. Perl (neurips.sty.ltxml L59) defines it
+  // UNCONDITIONALLY, but the raw neurips_2023.sty (L336-390) only runs
+  // `\NewEnviron{hide}{}` in the SUBMISSION branch —
+  // `\if@preprint … \else \if@neuripsfinal … \else <here> \fi \fi` — so in
+  // preprint/final mode `\hide` is left undefined. That matters: papers define
+  // their own `\newcommand{\hide}[1]{}` (a brace-gobbling "comment this out"
+  // helper) and use it as `\hide{ … }`. Defining `{hide}` unconditionally
+  // shadows that `\newcommand` (silently ignored as a redefinition), so `\hide{`
+  // is parsed as the environment opener and runs away to `\end{document}`
+  // looking for `\endhide` — swallowing the whole body (everything after the
+  // abstract). Gate on submission mode (neither preprint nor final) to match the
+  // real class. SURPASSES Perl, which drops the body identically here.
+  // arXiv/html_feedback#861, witness 2403.15796.
+  if with_value("neurips_preprint", |v| v.is_none())
+    && with_value("neurips_final", |v| v.is_none())
+  {
+    DefEnvironment!("{hide}", "");
+  }
 
   // Theorem-likes — neurips_2024.sty L451-460 (and similar in 2022-2025).
   // Real templates define a `theorem` counter and a small set of named

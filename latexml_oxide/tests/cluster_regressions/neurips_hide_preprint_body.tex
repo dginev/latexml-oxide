@@ -1,0 +1,24 @@
+\documentclass{article}
+\usepackage[preprint]{neurips_2023}
+% The author's own "comment this out" helper — a brace-gobbling macro, exactly
+% the shape witness 2403.15796 uses. In preprint mode the real neurips_2023.cls
+% leaves \hide undefined, so this \newcommand wins and \hide{...} eats its arg.
+\newcommand{\hide}[1]{}
+\title{Emergent Abilities}
+\author{A. Author}
+\begin{document}
+\maketitle
+\begin{abstract}
+This is the abstract.
+\end{abstract}
+\hide{
+\section{Hidden Introduction}
+Hidden paragraph one.
+
+Hidden paragraph two, after a blank line, inside the hidden block.
+}
+\section{Visible Introduction}
+The body after the abstract must survive.
+\section{Conclusion}
+Concluding remarks that must not vanish.
+\end{document}
