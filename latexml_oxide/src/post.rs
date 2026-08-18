@@ -1433,6 +1433,22 @@ pub(crate) fn render_spilled_page(
     staged = next;
   }
 
+  // Harvest the Graphics-resolved image for every `<ltx:graphics>` that lives
+  // inside a `<ltx:picture>`, keyed by `xml:id`. The picture's serialized SVG
+  // fragment (captured in pass A, BEFORE Graphics ran) carries the RAW
+  // `<graphics>` with no `@imagesrc`; the imagesrc set here on the page DOM is
+  // then discarded when XSLT collapses the picture to an empty placeholder span.
+  // So we snapshot the resolution now and re-inject it into the fragment at
+  // splice time (`finalize_html5`). This restores Perl's Graphics→SVG order
+  // (`LaTeXML.pm` L493 before L502), which our pass-A/pass-B split inverts.
+  // arXiv/html_feedback#1291 (witness arXiv:2311.14363v2, Inkscape `.pdf_tex`
+  // figures). Only meaningful for the HTML splice path.
+  let resolved_graphics = if ctx.is_html_out {
+    harvest_resolved_graphics(&staged)
+  } else {
+    rustc_hash::FxHashMap::default()
+  };
+
   let rendered = match procs.post.process_chain(staged, &mut procs.processors) {
     Ok(r) => r,
     Err(e) => {
@@ -1446,7 +1462,7 @@ pub(crate) fn render_spilled_page(
     let dest = doc.get_destination().map(String::from);
     let output = latexml_post::extract::serialize_whatsout(&doc, ctx.whatsout);
     let output = if ctx.is_html_out {
-      finalize_html5(output, &ctx.svg_fragments)
+      finalize_html5(output, &ctx.svg_fragments, &resolved_graphics)
     } else {
       output
     };
@@ -1491,10 +1507,157 @@ fn extract_svg_fragments_from_doc(doc: &PostDocument) -> Vec<(String, String)> {
   extract_svg_fragments(&joined)
 }
 
+/// A picture-nested `<ltx:graphics>` that the Graphics phase resolved to a web
+/// image, harvested (by `xml:id`) from the post-Graphics page DOM before XSLT
+/// discards it. Re-injected into the picture's SVG fragment at splice time so
+/// the `<foreignObject>` carries a real `<img>`/`<object>` instead of the raw
+/// `<graphics>` the pass-A snapshot froze. arXiv/html_feedback#1291.
+struct ResolvedGraphic {
+  imagesrc:     String,
+  imagewidth:   Option<String>,
+  imageheight:  Option<String>,
+  /// The `ltx_img_landscape|portrait|square` token Graphics adds (aspect ratio).
+  aspect_class: Option<String>,
+  /// Mirrors the XSLT `alt`: `@description`, else "Refer to caption" when inside
+  /// a captioned figure, else "[Uncaptioned image]".
+  alt:          String,
+  is_svg:       bool,
+}
+
+/// Harvest [`ResolvedGraphic`]s for every `<ltx:graphics>` inside a
+/// `<ltx:picture>` that Graphics gave an `@imagesrc`, keyed by `xml:id`.
+/// The `alt`/`object`-vs-`img` decisions mirror `LaTeXML-misc-xhtml.xsl`'s
+/// `ltx:graphics` templates (L142 raster → `<img>`, L192 `.svg` → `<object>`).
+fn harvest_resolved_graphics(
+  docs: &[PostDocument],
+) -> rustc_hash::FxHashMap<String, ResolvedGraphic> {
+  let mut map = rustc_hash::FxHashMap::default();
+  for d in docs {
+    for g in d.findnodes("//ltx:graphics[@imagesrc][ancestor::ltx:picture]") {
+      // xml:id is namespace-bound; the bare string key silently misses it
+      // (docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md).
+      let Some(id) = g.get_attribute_ns("id", latexml_core::common::xml::XML_NS) else {
+        continue;
+      };
+      let imagesrc = g.get_attribute("imagesrc").unwrap_or_default();
+      if imagesrc.is_empty() {
+        continue;
+      }
+      let is_svg = imagesrc.ends_with(".svg");
+      let aspect_class = g.get_attribute("class").and_then(|c| {
+        c.split_whitespace()
+          .find(|t| t.starts_with("ltx_img_"))
+          .map(str::to_string)
+      });
+      let alt = if let Some(desc) = g.get_attribute("description") {
+        desc
+      } else if !d
+        .findnodes_at("ancestor::ltx:figure[1]/ltx:caption", Some(&g))
+        .is_empty()
+      {
+        "Refer to caption".to_string()
+      } else {
+        "[Uncaptioned image]".to_string()
+      };
+      map.insert(id, ResolvedGraphic {
+        imagesrc,
+        imagewidth: g.get_attribute("imagewidth"),
+        imageheight: g.get_attribute("imageheight"),
+        aspect_class,
+        alt,
+        is_svg,
+      });
+    }
+  }
+  map
+}
+
+/// Escape a string for use inside a double-quoted HTML attribute value.
+fn escape_attr(s: &str) -> String {
+  s.replace('&', "&amp;")
+    .replace('<', "&lt;")
+    .replace('>', "&gt;")
+    .replace('"', "&quot;")
+}
+
+/// Render a resolved graphic as the HTML the XSLT would have produced for the
+/// `<ltx:graphics>` — `<object>` for an `.svg` imagesrc (interactivity), `<img>`
+/// otherwise. Attribute set and order (src/data, id, class, width, height,
+/// alt/aria-label) mirror `LaTeXML-misc-xhtml.xsl` (`add_id` carries the
+/// graphic's `xml:id` onto the element, as Perl's SVG.pm→XSLT chain does).
+fn render_resolved_graphic(id: &str, g: &ResolvedGraphic) -> String {
+  let id = format!(" id=\"{}\"", escape_attr(id));
+  let class = match &g.aspect_class {
+    Some(c) => format!(" class=\"ltx_graphics {c}\""),
+    None => " class=\"ltx_graphics\"".to_string(),
+  };
+  let w = g
+    .imagewidth
+    .as_deref()
+    .map(|w| format!(" width=\"{}\"", escape_attr(w)))
+    .unwrap_or_default();
+  let h = g
+    .imageheight
+    .as_deref()
+    .map(|h| format!(" height=\"{}\"", escape_attr(h)))
+    .unwrap_or_default();
+  let src = escape_attr(&g.imagesrc);
+  let alt = escape_attr(&g.alt);
+  if g.is_svg {
+    // The XSLT uses aria-label (not alt) on <object>, and a <p> fallback; the
+    // aria-label alone is enough inside the SVG foreignObject.
+    format!(
+      "<object type=\"image/svg+xml\" data=\"{src}\"{id}{class}{w}{h} aria-label=\"{alt}\"></object>"
+    )
+  } else {
+    format!("<img src=\"{src}\"{id}{class}{w}{h} alt=\"{alt}\">")
+  }
+}
+
+/// Rewrite each raw `<graphics .../>` in a picture's SVG fragment into the
+/// Graphics-resolved `<img>`/`<object>`, matched by its own `xml:id`. A picture
+/// can hold several (e.g. an Inkscape `.pdf_tex` overlay: `page=1` background +
+/// `page=2` labels). An id with no resolved entry is left as-is (a genuinely
+/// unconverted / missing image, exactly as before).
+fn resolve_fragment_graphics(
+  fragment: &str,
+  resolved: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
+) -> String {
+  use std::sync::LazyLock;
+  static GRAPHICS_TAG_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
+  static XMLID_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
+  if resolved.is_empty() || !fragment.contains("<graphics") {
+    return fragment.to_string();
+  }
+  GRAPHICS_TAG_RE
+    .replace_all(fragment, |caps: &regex::Captures| {
+      let tag = &caps[0];
+      match XMLID_RE.captures(tag) {
+        Some(c) => match resolved.get(&c[1]) {
+          Some(g) => render_resolved_graphic(&c[1], g),
+          None => tag.to_string(),
+        },
+        None => tag.to_string(),
+      }
+    })
+    .to_string()
+}
+
 /// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
 /// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
 /// so it can run on every split sub-document, not just the first.
-fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String {
+///
+/// `resolved_graphics` carries the Graphics-phase image resolution for
+/// picture-nested `<graphics>` (see [`harvest_resolved_graphics`]); the raw
+/// `<graphics>` frozen into each fragment during pass-A extraction is rewritten
+/// to the resolved `<img>`/`<object>` here. arXiv/html_feedback#1291.
+fn finalize_html5(
+  output: String,
+  svg_fragments: &[(String, String)],
+  resolved_graphics: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
+) -> String {
   use std::sync::LazyLock;
   // Cached at first call — regex compile is the slow part of `Regex::new`,
   // and finalize_html5 runs on every (sub-)document in the post-pipeline.
@@ -1580,7 +1743,12 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
           .map(|m| m.as_str());
         match id.and_then(|id| svg_fragments.iter().find(|(fid, _)| fid == id)) {
           // Preserve the placeholder's own attributes verbatim; only fill it.
-          Some((_, svg_html)) => format!("<span{attrs}>{svg_html}</span>"),
+          // The fragment's raw `<graphics>` (frozen pre-Graphics) is rewritten
+          // to the resolved image here — Perl's Graphics→SVG order (#1291).
+          Some((_, svg_html)) => {
+            let filled = resolve_fragment_graphics(svg_html, resolved_graphics);
+            format!("<span{attrs}>{filled}</span>")
+          },
           // A picture span we have no fragment for — leave it untouched.
           None => caps[0].to_string(),
         }
@@ -1891,10 +2059,11 @@ mod finalize_html5_splice_tests {
   use super::finalize_html5;
 
   fn splice(span: &str) -> String {
-    finalize_html5(span.to_string(), &[(
-      "p1".to_string(),
-      "<svg>OK</svg>".to_string(),
-    )])
+    finalize_html5(
+      span.to_string(),
+      &[("p1".to_string(), "<svg>OK</svg>".to_string())],
+      &rustc_hash::FxHashMap::default(),
+    )
   }
 
   #[test]
@@ -1933,6 +2102,112 @@ mod finalize_html5_splice_tests {
       splice(r#"<span id="p1" class="ltx_picturewide"></span>"#),
       r#"<span id="p1" class="ltx_picturewide"></span>"#
     );
+  }
+}
+
+#[cfg(test)]
+mod picture_graphics_resolution_tests {
+  //! arXiv/html_feedback#1291 (witness arXiv:2311.14363v2): a `<graphics>` inside
+  //! a `{picture}` (Inkscape `.pdf_tex` figures) must carry the Graphics-resolved
+  //! `<img>`/`<object>` into its `<foreignObject>`, not the raw `<graphics>` the
+  //! pass-A snapshot froze before Graphics ran. `finalize_html5` re-injects the
+  //! resolution harvested from the post-Graphics page DOM.
+  use rustc_hash::FxHashMap;
+
+  use super::{ResolvedGraphic, finalize_html5};
+
+  fn resolved(pairs: Vec<(&str, ResolvedGraphic)>) -> FxHashMap<String, ResolvedGraphic> {
+    pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
+  }
+
+  /// A picture placeholder span + its SVG fragment carrying two raw `<graphics>`
+  /// (an Inkscape overlay: `page=1` background + `page=2` labels).
+  fn placeholder_and_fragment() -> (String, (String, String)) {
+    let span = r#"<span id="p1" class="ltx_picture"></span>"#.to_string();
+    let fragment = (
+      "p1".to_string(),
+      concat!(
+        r#"<svg><g><foreignObject width="100" height="120">"#,
+        r#"<graphics graphic="bg.pdf" options="page=1" xml:id="p1.g1"/></foreignObject>"#,
+        r#"<foreignObject width="100" height="120">"#,
+        r#"<graphics graphic="bg.pdf" options="page=2" xml:id="p1.g2"/></foreignObject>"#,
+        r#"</g></svg>"#,
+      )
+      .to_string(),
+    );
+    (span, fragment)
+  }
+
+  #[test]
+  fn raster_graphics_becomes_img_inside_foreignobject() {
+    let (span, fragment) = placeholder_and_fragment();
+    let map = resolved(vec![
+      ("p1.g1", ResolvedGraphic {
+        imagesrc:     "bg.png".to_string(),
+        imagewidth:   Some("100".to_string()),
+        imageheight:  Some("120".to_string()),
+        aspect_class: Some("ltx_img_portrait".to_string()),
+        alt:          "Refer to caption".to_string(),
+        is_svg:       false,
+      }),
+      ("p1.g2", ResolvedGraphic {
+        imagesrc:     "bg-2.png".to_string(),
+        imagewidth:   None,
+        imageheight:  None,
+        aspect_class: None,
+        alt:          "[Uncaptioned image]".to_string(),
+        is_svg:       false,
+      }),
+    ]);
+    let out = finalize_html5(span, &[fragment], &map);
+    // Both nested graphics are resolved to <img>, each by its own xml:id.
+    assert!(
+      out.contains(r#"<img src="bg.png" id="p1.g1" class="ltx_graphics ltx_img_portrait" width="100" height="120" alt="Refer to caption">"#),
+      "page=1 graphic not resolved to <img>:\n{out}"
+    );
+    assert!(
+      out.contains(
+        r#"<img src="bg-2.png" id="p1.g2" class="ltx_graphics" alt="[Uncaptioned image]">"#
+      ),
+      "page=2 graphic not resolved to <img>:\n{out}"
+    );
+    // The raw <graphics> element must be gone (the #1291 defect).
+    assert!(
+      !out.contains("<graphics"),
+      "raw <graphics> survived into HTML (missing image):\n{out}"
+    );
+  }
+
+  #[test]
+  fn svg_imagesrc_becomes_object() {
+    let (span, fragment) = placeholder_and_fragment();
+    let map = resolved(vec![("p1.g1", ResolvedGraphic {
+      imagesrc:     "x1.svg".to_string(),
+      imagewidth:   Some("100".to_string()),
+      imageheight:  Some("120".to_string()),
+      aspect_class: Some("ltx_img_square".to_string()),
+      alt:          "Refer to caption".to_string(),
+      is_svg:       true,
+    })]);
+    let out = finalize_html5(span, &[fragment], &map);
+    assert!(
+      out.contains(r#"<object type="image/svg+xml" data="x1.svg" id="p1.g1" class="ltx_graphics ltx_img_square" width="100" height="120" aria-label="Refer to caption"></object>"#),
+      "svg graphic not resolved to <object>:\n{out}"
+    );
+    // p1.g2 has no map entry → its raw <graphics> is left as-is (genuinely
+    // unconverted), never silently promoted to a broken <img>.
+    assert!(
+      out.contains(r#"<graphics graphic="bg.pdf" options="page=2" xml:id="p1.g2"/>"#),
+      "unresolved graphic should be left raw:\n{out}"
+    );
+  }
+
+  #[test]
+  fn empty_map_leaves_raw_graphics_untouched() {
+    // Non-HTML / graphicimages-off path: no resolution, no rewrite.
+    let (span, fragment) = placeholder_and_fragment();
+    let out = finalize_html5(span, &[fragment], &FxHashMap::default());
+    assert!(out.contains(r#"<graphics graphic="bg.pdf" options="page=1" xml:id="p1.g1"/>"#));
   }
 }
 

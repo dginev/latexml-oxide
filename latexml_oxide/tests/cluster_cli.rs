@@ -2325,3 +2325,60 @@ mod whatsin_xml_input {
     );
   }
 }
+
+/// arXiv/html_feedback#1291: an `\includegraphics` INSIDE a `{picture}` (the
+/// Inkscape `.pdf_tex` figure idiom) must land as a resolved `<img>`/`<object>`
+/// in the picture's `<foreignObject>`, not the raw `<graphics>` the pass-A SVG
+/// snapshot froze before the Graphics phase ran. Uses a real PNG (passthrough —
+/// no ghostscript/mutool needed), so the guard is deterministic on every host.
+/// Witness paper: arXiv:2311.14363v2 (Figures 1 and 4 lost their images).
+mod picture_graphics_e2e {
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn includegraphics_inside_picture_resolves_to_img() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    // A real PNG the Graphics phase copies through without any converter.
+    let png = std::fs::read("tests/graphics/none.png").expect("read none.png fixture");
+    std::fs::write(workdir.path().join("pic.png"), &png).expect("stage pic.png");
+    let tex = "\\documentclass{article}\n\
+       \\usepackage{graphicx}\n\
+       \\begin{document}\n\
+       \\setlength{\\unitlength}{100pt}\n\
+       \\begin{picture}(1,1)\n\
+       \\put(0,0){\\includegraphics[width=\\unitlength]{pic.png}}\n\
+       \\end{picture}\n\
+       \\end{document}\n";
+    std::fs::write(workdir.path().join("pic.tex"), tex).expect("write pic.tex");
+
+    let output = Command::new(bin)
+      .arg("pic.tex")
+      .arg("--dest")
+      .arg("pic.html")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited with {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+
+    let html = std::fs::read_to_string(workdir.path().join("pic.html")).expect("read pic.html");
+    // The picture renders as an inline <svg> with a <foreignObject>; the nested
+    // graphic must be a resolved <img> pointing at the PNG.
+    assert!(
+      html.contains("<foreignObject") && html.contains("<img") && html.contains("pic.png"),
+      "picture-nested graphic did not resolve to an <img src=pic.png>:\n{html}"
+    );
+    // The #1291 defect: a raw <graphics> element surviving into the HTML.
+    assert!(
+      !html.contains("<graphics"),
+      "raw <graphics> survived into the HTML (missing image):\n{html}"
+    );
+    // Guard the fixture path stays valid.
+    assert!(Path::new(bin).is_file());
+  }
+}
