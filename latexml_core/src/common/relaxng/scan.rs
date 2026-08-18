@@ -198,6 +198,16 @@ fn encode_qname(rng: &mut Relaxng, ns: Option<&str>, local: &str) -> String {
 }
 
 fn ensure_prefix(rng: &mut Relaxng, uri: &str) -> String {
+  // Perl `getNamespacePrefix` order: the model's CODE prefix wins. Seeded from
+  // `code_namespace_prefixes` before the scan, this maps e.g.
+  // `http://dlmf.nist.gov/LaTeXML` → `ltx` (registered by `base_schema`), so a
+  // namespace referenced only as a default `ns=` — with no `xmlns:` declaration
+  // in the schema — resolves to the conventional prefix the rest of the engine
+  // uses, not a synthetic `namespaceN` that the runtime would never match (#652).
+  if let Some(prefix) = rng.code_namespace_prefixes.get(uri) {
+    return prefix.clone();
+  }
+  // Else a schema-local `xmlns:` prefix for this URI (Perl: document prefix).
   if let Some((prefix, _)) = rng
     .document_namespaces
     .iter()
