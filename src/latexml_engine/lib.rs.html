@@ -74,28 +74,35 @@
 <a href=#74 id=74 data-nosnippet>74</a>// Versioned dump filename conventions + ambient-TeXLive year detection.
 <a href=#75 id=75 data-nosnippet>75</a></span><span class="kw">pub mod </span>dump_paths;
 <a href=#76 id=76 data-nosnippet>76</a>
-<a href=#77 id=77 data-nosnippet>77</a><span class="comment">// Compile-time-bundled fallback for plain.dump.txt + latex.dump.txt.
-<a href=#78 id=78 data-nosnippet>78</a>// Used when no on-disk dump is resolvable (single-file binary distribution).
-<a href=#79 id=79 data-nosnippet>79</a></span><span class="kw">pub mod </span>embedded_dumps;
-<a href=#80 id=80 data-nosnippet>80</a>
-<a href=#81 id=81 data-nosnippet>81</a><span class="comment">// LaTeX format — LoadFormat('latex') chain called by latex.rs
-<a href=#82 id=82 data-nosnippet>82</a></span><span class="kw">pub mod </span>latex_base; <span class="comment">// Perl: latex_base.pool.ltxml
-<a href=#83 id=83 data-nosnippet>83</a></span><span class="kw">pub mod </span>latex_bootstrap; <span class="comment">// Perl: latex_bootstrap.pool.ltxml
-<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub mod </span>latex_constructs;
-<a href=#85 id=85 data-nosnippet>85</a><span class="kw">pub mod </span>latex_constructs_rust_only; <span class="comment">// Rust-only overrides loaded LAST in latex.rs after latex_constructs.
-<a href=#86 id=86 data-nosnippet>86</a></span><span class="kw">pub mod </span>latex_dump; <span class="comment">// Rust: precompiled latex.ltx state (auto-generated) // Perl: latex_constructs.pool.ltxml (C.1-C.15)
-<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">pub mod </span>latex_kernel; <span class="comment">// Rust-only: on-demand LaTeX format load for kernel CSes used before \documentclass
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a>// Top-level entry points
-<a href=#90 id=90 data-nosnippet>90</a></span><span class="kw">pub mod </span>latex;
-<a href=#91 id=91 data-nosnippet>91</a><span class="kw">pub mod </span>tex; <span class="comment">// Perl: TeX.pool.ltxml (loads Base + LoadFormat('plain')) // Perl: LaTeX.pool.ltxml (loads TeX + LoadFormat('latex'))
-<a href=#92 id=92 data-nosnippet>92</a>
-<a href=#93 id=93 data-nosnippet>93</a>// AmSTeX format — LoadPool('AmSTeX'), routed via `\input amstex`.
-<a href=#94 id=94 data-nosnippet>94</a></span><span class="kw">pub mod </span>amstex; <span class="comment">// Perl: AmSTeX.pool.ltxml
+<a href=#77 id=77 data-nosnippet>77</a><span class="comment">// `cargo:rerun-if-changed` path selection for the dump embed. The build script
+<a href=#78 id=78 data-nosnippet>78</a>// pulls this file in directly via `#[path] mod`; declared here under cfg(test)
+<a href=#79 id=79 data-nosnippet>79</a>// only, so its unit tests run under `cargo test` without adding a public item
+<a href=#80 id=80 data-nosnippet>80</a>// or a dead-code warning to normal library builds (#676).
+<a href=#81 id=81 data-nosnippet>81</a></span><span class="attr">#[cfg(test)]
+<a href=#82 id=82 data-nosnippet>82</a></span><span class="kw">mod </span>build_rerun;
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a><span class="comment">// Compile-time-bundled fallback for plain.dump.txt + latex.dump.txt.
+<a href=#85 id=85 data-nosnippet>85</a>// Used when no on-disk dump is resolvable (single-file binary distribution).
+<a href=#86 id=86 data-nosnippet>86</a></span><span class="kw">pub mod </span>embedded_dumps;
+<a href=#87 id=87 data-nosnippet>87</a>
+<a href=#88 id=88 data-nosnippet>88</a><span class="comment">// LaTeX format — LoadFormat('latex') chain called by latex.rs
+<a href=#89 id=89 data-nosnippet>89</a></span><span class="kw">pub mod </span>latex_base; <span class="comment">// Perl: latex_base.pool.ltxml
+<a href=#90 id=90 data-nosnippet>90</a></span><span class="kw">pub mod </span>latex_bootstrap; <span class="comment">// Perl: latex_bootstrap.pool.ltxml
+<a href=#91 id=91 data-nosnippet>91</a></span><span class="kw">pub mod </span>latex_constructs;
+<a href=#92 id=92 data-nosnippet>92</a><span class="kw">pub mod </span>latex_constructs_rust_only; <span class="comment">// Rust-only overrides loaded LAST in latex.rs after latex_constructs.
+<a href=#93 id=93 data-nosnippet>93</a></span><span class="kw">pub mod </span>latex_dump; <span class="comment">// Rust: precompiled latex.ltx state (auto-generated) // Perl: latex_constructs.pool.ltxml (C.1-C.15)
+<a href=#94 id=94 data-nosnippet>94</a></span><span class="kw">pub mod </span>latex_kernel; <span class="comment">// Rust-only: on-demand LaTeX format load for kernel CSes used before \documentclass
 <a href=#95 id=95 data-nosnippet>95</a>
-<a href=#96 id=96 data-nosnippet>96</a>// BibTeX format — LoadPool('BibTeX'), preloaded for `--type=BibTeX`
-<a href=#97 id=97 data-nosnippet>97</a>// or via `LoadPool('BibTeX')` from amsrefs.sty.ltxml.
-<a href=#98 id=98 data-nosnippet>98</a>// Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
-<a href=#99 id=99 data-nosnippet>99</a></span><span class="kw">pub mod </span>bibtex; <span class="comment">// Perl: BibTeX.pool.ltxml
-<a href=#100 id=100 data-nosnippet>100</a></span><span class="kw">pub mod </span>pre_bibtex; <span class="comment">// Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser
+<a href=#96 id=96 data-nosnippet>96</a>// Top-level entry points
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="kw">pub mod </span>latex;
+<a href=#98 id=98 data-nosnippet>98</a><span class="kw">pub mod </span>tex; <span class="comment">// Perl: TeX.pool.ltxml (loads Base + LoadFormat('plain')) // Perl: LaTeX.pool.ltxml (loads TeX + LoadFormat('latex'))
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a>// AmSTeX format — LoadPool('AmSTeX'), routed via `\input amstex`.
+<a href=#101 id=101 data-nosnippet>101</a></span><span class="kw">pub mod </span>amstex; <span class="comment">// Perl: AmSTeX.pool.ltxml
+<a href=#102 id=102 data-nosnippet>102</a>
+<a href=#103 id=103 data-nosnippet>103</a>// BibTeX format — LoadPool('BibTeX'), preloaded for `--type=BibTeX`
+<a href=#104 id=104 data-nosnippet>104</a>// or via `LoadPool('BibTeX')` from amsrefs.sty.ltxml.
+<a href=#105 id=105 data-nosnippet>105</a>// Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
+<a href=#106 id=106 data-nosnippet>106</a></span><span class="kw">pub mod </span>bibtex; <span class="comment">// Perl: BibTeX.pool.ltxml
+<a href=#107 id=107 data-nosnippet>107</a></span><span class="kw">pub mod </span>pre_bibtex; <span class="comment">// Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser
 </span></code></pre></div></section></main></body></html>
