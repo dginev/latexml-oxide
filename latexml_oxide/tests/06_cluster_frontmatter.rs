@@ -1026,3 +1026,38 @@ fn frontmatter_maketitle_injected_figure_survives() {
     "the injected figure's graphics were lost:\n{x}"
   );
 }
+
+/// `titlepic` variant of the injected-figure case above. `titlepic.sty` does not
+/// APPEND to `\@maketitle` (`\g@addto@macro`); it stores its argument in
+/// `\@titlepic` and REDEFINES `\@maketitle` wholesale (`\renewcommand`) to inject
+/// `{\centering\@titlepic\par}` between the author block and the abstract. That is
+/// a different path into the same machinery OXIDIZED_DESIGN #124 repaired, so it
+/// gets its own guard: the teaser `\captionof{figure}`+`\label` must survive,
+/// register its label, and take figure number 1 — otherwise every `\ref` renders
+/// the raw "LABEL:fig:…" and the real second figure shifts to Figure 1.
+///
+/// New witness arXiv:2606.25280 (html_feedback#6675). The production ar5iv (Perl)
+/// still drops it — this is a Rust-supersedes-Perl behavior, locked here.
+#[test]
+fn frontmatter_titlepic_redefined_maketitle_figure_survives() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_titlepic_teaser_figure.tex");
+  // Teaser figure survived and carries its label (dropped before #124).
+  assert!(
+    x.contains(r#"labels="LABEL:fig:teaser""#),
+    "titlepic teaser figure dropped (no label):\n{x}"
+  );
+  assert!(
+    x.contains("Teaser flock caption"),
+    "titlepic teaser caption lost:\n{x}"
+  );
+  // Numbered as the first figure (xml:id S0.F1) — so the body `\ref{fig:teaser}`
+  // resolves to "Figure 1", not the raw key, and the real figure stays Figure 2.
+  assert!(
+    x.contains(r#"labels="LABEL:fig:teaser" xml:id="S0.F1""#),
+    "titlepic teaser figure not numbered first (expected xml:id S0.F1):\n{x}"
+  );
+  assert!(
+    x.contains(r#"labels="LABEL:fig:second""#),
+    "the real second figure lost its label:\n{x}"
+  );
+}

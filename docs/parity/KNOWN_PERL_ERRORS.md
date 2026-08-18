@@ -3608,6 +3608,14 @@ Same-host Perl 0.8.8 drops it identically (SHARED-FAILURE, Perl-origin). Minimal
 accumulated content in a title-neutralized group before relaxing it, so the figure renders and the
 reference resolves to "Fig. 1". Guard:
 `06_cluster_frontmatter::frontmatter_maketitle_injected_figure_survives`.
+
+Second witness via `titlepic.sty`, which *redefines* `\@maketitle` (rather than
+`\g@addto@macro`-appending) to inject a `\@titlepic`-held `\captionof{figure}`+`\label`:
+arXiv/html_feedback#6675 (witness 2606.25280, the boids/EvoFlock paper — teaser
+`\ref{fig:boid_flock}` rendered "Figure LABEL:fig:boid_flock", the figure dropped, and
+the real Figure 2 became Figure 1). Same #124 mechanism recovers it (the redefinition
+leaves `\@maketitle` non-empty, so it is deposited); production ar5iv (Perl) still drops
+it. Guard: `06_cluster_frontmatter::frontmatter_titlepic_redefined_maketitle_figure_survives`.
 ## 88. Partially-bold author block renders incoherently (Rust surpasses)
 
 `neurips_2023` (and similar classes) bold the *whole* author block with a block-level `\bf` in
