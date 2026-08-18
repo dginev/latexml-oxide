@@ -2364,6 +2364,9 @@ mod picture_svg_foreign_content_tests {
       !text_inner.contains("<graphic"),
       "graphic left inside <text> (will double-render): {out}"
     );
-    assert!(out.contains(">A<") || text_inner.contains('A'), "plain label dropped: {out}");
+    assert!(
+      out.contains(">A<") || text_inner.contains('A'),
+      "plain label dropped: {out}"
+    );
   }
 }
