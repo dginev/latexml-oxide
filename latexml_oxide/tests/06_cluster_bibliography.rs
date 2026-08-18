@@ -2089,6 +2089,28 @@ fn alignment_fenced_amp_does_not_split_a_row() {
   );
 }
 
+/// A `\columncolor` in a p/m column, followed by a cell whose content starts with
+/// `\lbrack` (a CS `\let` to `[`), made colortbl's overhang-arg gobble run forward
+/// past the row's `\\`, cascading the paragraph-column mode
+/// (`\@end@tabular … internal_vertical`) — truncating the document and dropping the
+/// bibliography below. `\toprule[1pt]` (a booktabs rule with an optional-width arg)
+/// completes the trigger. Reading the overhang args with LaTeXML's optional reader
+/// (literal `[` only, never a `\lbrack` CS) keeps the cell content, as pdflatex
+/// renders it. Rust-only; witness arXiv:2606.02077 (0 -> 15 bibitems, matching Perl).
+#[test]
+fn columncolor_lbrack_cell_does_not_cascade_the_column_mode() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_columncolor_lbrack_overhang.tex");
+  assert!(
+    x.contains("[3]") && x.contains("second cell"),
+    "the `\\lbrack` cell content was eaten as a colortbl overhang arg:\n{x}"
+  );
+  let n = x.matches("<bibitem").count();
+  assert_eq!(
+    n, 1,
+    "the paragraph-column mode cascade truncated the bibliography, got {n}\n{x}"
+  );
+}
+
 /// chapterbib's per-unit bibliography `lists` id must be the RAW unit name so it
 /// matches the citation-side `<ltx:bibref inlist=...>`; otherwise MakeBibliography
 /// selects nothing (0 cited) and the References render empty. An `\include`
