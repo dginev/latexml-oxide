@@ -19,6 +19,20 @@ LoadDefinitions!({
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
+  // imsart.sty (L3015) redefines `\bibliography#1` to only
+  // `\@input@{\jobname.bbl}` — it inputs a pre-built `.bbl` and NEVER reads the
+  // `.bib`. arXiv imsart submissions routinely ship the `.bib` alone (no
+  // compiled `<jobname>.bbl`), so that raw definition silently drops the whole
+  // bibliography (0 bibitems, no diagnostic). Restore the core `\bibliography`
+  // (`latex_constructs.rs`): `\lx@ifusebbl` inputs `<jobname>.bbl` when it
+  // exists (unchanged for `.bbl` papers) and otherwise reads the `.bib` directly
+  // via `\lx@bibliography`, which is our beyond-Perl `.bib` path. Witnesses
+  // 2606.00231 (`reference.bib`, 0→N) and 2606.17491 (two `.bib` files, 0→N).
+  DefMacro!(
+    "\\bibliography Semiverbatim",
+    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#
+  );
+
   // Frontmatter primitives commonly used in imsart papers but not
   // always defined by imsart.sty (some are journal-driver dependent).
   // \startlocaldefs / \endlocaldefs are defined in imsart.sty L657-660;
