@@ -146,7 +146,7 @@ Called at the top level of a binding file, or from inside any body.
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-27 functions, 40 calls.
+29 functions, 42 calls.
 
 | call | documentation |
 |---|---|
@@ -164,6 +164,8 @@ Reached through the `document` handle a constructor body receives as its first a
 | `generateID(Node, string)` | Give a node an `xml:id`, if it has none. ([`Document::generate_id`](latexml_core::document::Document::generate_id)) |
 | `getElement() -> Node?` | The element at, or containing, the insertion point. ([`Document::get_element`](latexml_core::document::Document::get_element)) |
 | `getNode() -> Node` | The current insertion point. ([`Document::get_node`](latexml_core::document::Document::get_node)) |
+| `getProperties() -> map` | The whatsit's whole property map (a Rhai object map), inside a constructor body. |
+| `getProperty(string) -> ?` | One whatsit property by name, inside a constructor body — its typed value (string / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`. |
 | `insertElement(string) -> Node`<br>`insertElement(string, Digested) -> Node`<br>`insertElement(string, Digested, map) -> Node`<br>`insertElement(string, map) -> Node` | Open, absorb and close in one step; returns the new element. ([`Document::insert_element`](latexml_core::document::Document::insert_element)) |
 | `insertPI(string)`<br>`insertPI(string, map)` | Insert a processing instruction: a target, with optional attributes. ([`Document::insert_pi`](latexml_core::document::Document::insert_pi)) |
 | `insertXML(Node)`<br>`insertXML(array)`<br>`insertXML(string)` | Splice ALREADY-PARSED nodes in at the insertion point. ([`Document::insert_nodes`](latexml_core::document::Document::insert_nodes)) |

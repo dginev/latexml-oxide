@@ -125,6 +125,25 @@ const SAMPLE: &str = r##"
     properties: #{ cls: "static-props" }
   });
 
+  // #635: READ a whatsit property inside an imperative constructor body. Perl
+  // passes `$whatsit->getProperties` to the CODE replacement (Constructor.pm:137),
+  // so the body can branch on / compose from them; the Rhai body reaches them
+  // through `document.getProperty(name)` (typed, `()` when absent) and
+  // `document.getProperties()` (the whole map) — read-siblings of
+  // `absorbProperty`, off the same construction-time property map. \gp{Z} sets
+  // `tag`/`n` via its properties closure, then the body reads them back:
+  // \gp{Z} -> <ltx:text class="gp">T-Z/2</ltx:text>.
+  DefConstructor("\\gp{}", |document, x| {
+    let t = document.getProperty("tag");
+    let all = document.getProperties();
+    document.openElement("ltx:text");
+    document.setAttribute("class", "gp");
+    document.absorbString(t + "/" + all.n);
+    document.closeElement("ltx:text");
+  }, #{
+    properties: |x| #{ tag: "T-" + x, n: "2" }
+  });
+
   // Processing-instruction template (the class/package PI dialect shape).
   DefConstructor("\\mypi{}", "<?mypi data=\"#1\"?>");
 
@@ -339,7 +358,7 @@ fn script_binding_macro_and_constructor_convert() {
 
   let tex = concat!(
     "literal:\\documentclass{article}\\usepackage[draft]{lxrhaitest}",
-    "\\begin{document}\\twicex{ab} \\myemph{hi} \\uarg{hi} \\uabs{ZZ} \\mytext{zz} \\wrap{\\myemph{deep}} \\wrap{\\wrap{\\myemph{deeper}}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
+    "\\begin{document}\\twicex{ab} \\myemph{hi} \\uarg{hi} \\uabs{ZZ} \\gp{Z} \\mytext{zz} \\wrap{\\myemph{deep}} \\wrap{\\wrap{\\myemph{deeper}}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
@@ -456,6 +475,12 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("class=\"static-props\""),
     "static properties map (\\snote) did not populate #cls; xml=\n{xml}"
+  );
+  // #635: reading whatsit properties inside an imperative constructor body via
+  // document.getProperty(name) (typed "T-Z") + document.getProperties() (map, .n).
+  assert!(
+    xml.contains("class=\"gp\"") && xml.contains("T-Z/2"),
+    "getProperty/getProperties did not read the whatsit properties (\\gp); xml=\n{xml}"
   );
   // PI template through the runtime interpreter.
   assert!(

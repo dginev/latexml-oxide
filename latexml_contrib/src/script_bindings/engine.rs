@@ -1782,6 +1782,33 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Read a whatsit property BY VALUE inside a constructor body — the read-sibling
+  // of `absorbProperty`. Perl hands `$whatsit->getProperties` to the CODE
+  // replacement (Constructor.pm:137), so the body can branch on / compose from a
+  // property; `absorbProperty` alone (which only splices a property into the tree)
+  // could not (#635). Returns the typed value (string / `Digested` handle / int /
+  // bool …), `()` when the property is absent. Reads the same construction-time
+  // property map `absorbProperty` does; errors (like every `document.*` op) when
+  // called outside an active constructor body.
+  engine.register_fn(
+    "getProperty",
+    |_d: &mut DocProxy, name: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|_doc, props| {
+        Ok(match props.get(name) {
+          Some(stored) => stored_to_dynamic(stored.clone()),
+          None => Dynamic::UNIT,
+        })
+      })
+    },
+  );
+  // The whole property map as a Rhai object map (Perl `$whatsit->getProperties`) —
+  // for a body that iterates keys or reads several at once (#635).
+  engine.register_fn(
+    "getProperties",
+    |_d: &mut DocProxy| -> std::result::Result<Map, Box<EvalAltResult>> {
+      with_doc(|_doc, props| Ok(props_to_map(props.clone())))
+    },
+  );
 
   // ── whatsit proxy: reached from a hook body via `whatsit()` ──
   engine.register_type_with_name::<WhatsitProxy>("Whatsit");

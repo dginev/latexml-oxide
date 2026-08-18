@@ -911,6 +911,16 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "getProperties",
+    Doc::Note("The whatsit's whole property map (a Rhai object map), inside a constructor body."),
+  ),
+  (
+    "getProperty",
+    Doc::Note(
+      "One whatsit property by name, inside a constructor body — its typed value (string / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`.",
+    ),
+  ),
+  (
     "hasAttribute",
     Doc::Rust(
       "Whether the node carries that attribute.",

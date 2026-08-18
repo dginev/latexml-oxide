@@ -9,6 +9,13 @@
     binding degraded. It now arrives as `Tokens` — matching Perl, where an undigested
     reader keeps its argument as raw Tokens (`Constructor.pm` `getArgs`) — and
     `document.absorb(tokens)` accepts it directly (#634).
+  - **A Rhai constructor body can read the whatsit's properties.** Inside an
+    imperative `DefConstructor` body only `document.absorbProperty(name)` existed —
+    it splices a property into the tree but cannot return one, so a body could not
+    branch on or compose from a property. New `document.getProperty(name)` (the
+    typed value, `()` when absent) and `document.getProperties()` (the whole map)
+    read the same construction-time property map, matching Perl, which hands
+    `$whatsit->getProperties` to a CODE replacement (`Constructor.pm:137`) (#635).
   - **A shared author-email line distributes across the authors instead of bunching
     on the last one.** `\email{a@x, b@y, c@z}` (or a single `\email` covering several
     authors) previously attached every address to whichever creator was open when the
