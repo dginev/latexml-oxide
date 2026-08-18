@@ -129,22 +129,34 @@ fn phys_read_arg(
       let close_tok = Token::from(close_str);
       let mut tokens = Vec::new();
       let mut level = 1i32;
-      let mut _blevel = 0i32;
+      let mut blevel = 0i32;
       while let Some(tok) = read_token()? {
         let cc = tok.get_catcode();
         if cc == Catcode::END {
-          _blevel -= 1;
+          blevel -= 1;
           tokens.push(tok);
         } else if cc == Catcode::BEGIN {
-          _blevel += 1;
+          blevel += 1;
           tokens.push(tok);
-        } else if tok == close_tok {
+        } else if tok == close_tok && blevel == 0 {
+          // Only a close delimiter at brace-level 0 ends the fenced body. A
+          // `)`/`]` INSIDE a `{…}` group — e.g. the `(` of physics symmetrization
+          // notation `D_{(\alpha}` sitting in a subscript — is ordinary content,
+          // not a delimiter, exactly as TeX's delimited-argument matching skips
+          // balanced groups. Counting those (the `blevel` was tracked but unused)
+          // meant `\qty(\frac12 D_{(\alpha}…)` never reached level 0, so the read
+          // ran away to EOF and swallowed the rest of the document — section,
+          // bibliography and all — into the math argument (58 `malformed:ltx`
+          // errors and a lost bibliography). Perl errors but recovers and keeps
+          // the references; this grouping-aware match recovers them here too.
+          // Witness arXiv:2605.19817 (0 → 39 bibitems). Guard
+          // `physics_qty_braced_paren_does_not_run_away`.
           level -= 1;
           if level == 0 {
             break;
           }
           tokens.push(tok);
-        } else if tok == open_tok {
+        } else if tok == open_tok && blevel == 0 {
           level += 1;
           tokens.push(tok);
         } else {
