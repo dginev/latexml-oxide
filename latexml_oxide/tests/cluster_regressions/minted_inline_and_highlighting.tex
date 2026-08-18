@@ -1,0 +1,22 @@
+\documentclass{article}
+\usepackage{minted}
+% Two quality guarantees of the minted binding:
+%  1. \mintinline{lang}{code} (BRACE form) must render inline and not error. It
+%     used to map to \verb, which is delimiter-based: `\verb{code}` reads `{` as
+%     the delimiter and runs past the closing `}`, garbling the code, emitting
+%     unbalanced-group errors, and breaking the following block. Routing to
+%     \lstinline (minted's real listings substrate, which accepts braces) fixes it.
+%  2. \begin{minted}{python} must syntax-highlight: the {language} argument is fed
+%     to \lstset so listings activates its keyword/string/comment classes.
+\begin{document}
+Inline \mintinline{python}{lambda x: x + 1} in a sentence.
+
+\begin{minted}{python}
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+\end{minted}
+
+Tail paragraph after the block.
+\end{document}
