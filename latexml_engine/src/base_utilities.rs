@@ -4542,6 +4542,24 @@ fn starts_with_affiliation_mark(content: &Tokens) -> bool {
 /// `affiliation:N` label that the authors' own marks already request
 /// (`relocate_annotations` links them).
 fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
+  // Trim the institution SEPARATOR that clings to the end of a segment when the
+  // affiliations are comma-joined (`\textsuperscript{1}Univ A, \textsuperscript{2}
+  // Univ B`) rather than space-joined: without this the affiliation contact reads
+  // "Univ A," with a stray trailing comma (html_feedback#6588, arXiv:2606.01317).
+  // Only trailing whitespace + a SINGLE trailing comma are removed, so a comma
+  // INSIDE an institution name ("Dept X, Univ Y, City") is untouched.
+  fn trim_trailing_separator(mut toks: Vec<Token>) -> Tokens {
+    while toks.last() == Some(&T_SPACE!()) {
+      toks.pop();
+    }
+    if toks.last() == Some(&T_OTHER!(",")) {
+      toks.pop();
+      while toks.last() == Some(&T_SPACE!()) {
+        toks.pop();
+      }
+    }
+    Tokens::new(toks)
+  }
   let toks = tokens.unlist();
   let mut segments: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
@@ -4555,12 +4573,12 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
     // wrongly split (reviewer-flagged). The first mark (current empty) always
     // opens segment 0.
     if is_mark_start && current.last() == Some(&T_SPACE!()) {
-      segments.push(Tokens::new(std::mem::take(&mut current)));
+      segments.push(trim_trailing_separator(std::mem::take(&mut current)));
     }
     current.push(*t);
   }
   if !current.is_empty() {
-    segments.push(Tokens::new(current));
+    segments.push(trim_trailing_separator(current));
   }
   segments
 }
