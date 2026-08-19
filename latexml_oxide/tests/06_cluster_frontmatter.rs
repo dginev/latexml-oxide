@@ -171,6 +171,67 @@ fn frontmatter_superscript_affil_comma() {
     "Lin Zhang (\\textsuperscript{{5}}) not linked to HKUST:\n{x}"
   );
 }
+/// html_feedback#6880 (arXiv:2605.23553, IEEEtran journal): the "all authors, then
+/// all affiliations keyed by `\textsuperscript{N}`" block — the harder variation of
+/// #6242. A comma-list superscript (`\textsuperscript{1,2}`) links ONE author to
+/// TWO affiliations; the affiliations sit one-per-`\\`-line, each led by its own
+/// `\textsuperscript{N}`; and `\\[1em]` spacing separates the groups. The reporter's
+/// deployed binary — and Perl 0.8.8 — scrambled it: `[1em]` leaked as literal text
+/// and the affiliation lines ("University of Pisa", "Italy") became phantom authors
+/// (9 creators instead of 6). HEAD's OXIDIZED_DESIGN #52 author-splitter maps each
+/// author to its affiliation(s) by number; Rust surpasses Perl. Deployed-lag; this
+/// pins the correct mapping so it cannot regress back.
+#[test]
+fn frontmatter_ieeetran_journal_superscript_affil() {
+  let x =
+    convert_to_xml("tests/cluster_regressions/frontmatter_ieeetran_journal_superscript_affil.tex");
+  // Exactly the six real authors — no affiliation fragment promoted to a creator.
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    6,
+    "IEEEtran journal: expected exactly 6 author creators (affiliation lines must \
+     not become phantom authors):\n{x}"
+  );
+  for name in [
+    "Davide Cosimo",
+    "Davide Costa",
+    "Riccardo Costanzi",
+    "Filippo Campagnaro",
+    "Andrea Caiti",
+    "Michele Zorzi",
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "IEEEtran journal: author {name:?} missing as its own creator:\n{x}"
+    );
+  }
+  // No affiliation fragment promoted to a phantom author, and no `\\[1em]` leak.
+  for phantom in [
+    "<personname>University of Pisa",
+    "<personname>Italy</personname>",
+    "<personname>Dept. of Information",
+  ] {
+    assert!(
+      !x.contains(phantom),
+      "IEEEtran journal: affiliation fragment leaked as a phantom author ({phantom}):\n{x}"
+    );
+  }
+  assert!(
+    !x.contains("[1em]"),
+    "IEEEtran journal: `\\\\[1em]` leaked as literal text:\n{x}"
+  );
+  // Comma-list `\textsuperscript{1,2}`: the first author (Cosimo) links to BOTH
+  // affiliation 1 (Pisa) AND affiliation 2 (Naval).
+  let cosimo = x
+    .split("<creator")
+    .find(|b| b.contains("<personname>Davide Cosimo</personname>"))
+    .unwrap_or("");
+  assert!(
+    cosimo.contains("University of Pisa") && cosimo.contains("Naval Support"),
+    "IEEEtran journal: comma-list superscript {{1,2}} must link Cosimo to BOTH \
+     Pisa and Naval:\n{cosimo}"
+  );
+}
 /// html_feedback#6255 (googledeepmind, authblk): a single `\author{A, B, C}` comma
 /// list is authblk's one-author-arg form, so it stayed as one merged
 /// `<personname>A, B, C</personname>`. The DEFAULT `\author` already splits a comma
