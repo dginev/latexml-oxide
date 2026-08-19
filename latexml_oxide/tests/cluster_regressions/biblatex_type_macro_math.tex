@@ -1,0 +1,17 @@
+% biblatex must not globally define \type — real biblatex scopes \type/\subtype
+% to \begingroup bibliography-filter contexts (biblatex.sty L9380-9388), leaving
+% \type undefined in the document body so a user \newcommand{\type} works. Our
+% binding mirrored ar5iv's global `DefMacro('\type{}', Tokens())`, an
+% arg-grabbing noop: \(\type\) then ate the closing \), inline math never
+% closed, and every following display equation nested as
+% `<ltx:equation> isn't allowed in <ltx:XMath>` — the document came out "half
+% missing". arXiv/html_feedback#6681, witness 2606.22155.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage[backend=biber]{biblatex}
+\newcommand{\type}{\mathrm{type}}
+\begin{document}
+The map \(\type\) sends words onto the discrete simplex
+\[ T_{n} = \{a : a = n\}. \]
+Body text after the display equation.
+\end{document}

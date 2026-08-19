@@ -2069,9 +2069,23 @@ LoadDefinitions!({
     r"\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}"
   ))?;
 
-  // Perl L646-671: \the* counter-readouts (all empty)
-  def_macro_noop("\\type{}")?;
-  def_macro_noop("\\subtype{}")?;
+  // \type / \subtype are DELIBERATELY NOT defined here (the ar5iv
+  // `biblatex.sty.ltxml` L646-647 defined both globally as `Tokens()`). Real
+  // biblatex.sty defines `\def\type#1{type=#1}` / `\def\subtype#1{...}` ONLY
+  // inside the `\begingroup` of a bibliography-filter body (biblatex.sty
+  // L9380-9388, `\blx@defbibfilter`) — so in the document body `\type` is
+  // undefined and a user's `\newcommand{\type}{...}` (a ubiquitous math macro)
+  // takes effect. Defining `\type{}` globally as an arg-grabbing noop shadowed
+  // that user macro AND, being `#1`-arity, ate the token after it: `\(\type\)`
+  // consumed the closing `\)`, inline math never closed, and every following
+  // display equation nested as `<ltx:equation> isn't allowed in <ltx:XMath>` —
+  // the document rendered "half missing". arXiv/html_feedback#6681, witness
+  // 2606.22155. (A `\defbibfilter{...\type{...}...}` is the only place biblatex
+  // itself uses `\type`; our binding doesn't process filter bodies, so nothing
+  // here needs the global stub.)
+  //
+  // Perl L648-671: \the* counter-readouts (all empty, argument-less — safe to
+  // keep global).
   def_macro_noop("\\theparenlevel")?;
   def_macro_noop("\\therefsection")?;
   def_macro_noop("\\therefsegment")?;
