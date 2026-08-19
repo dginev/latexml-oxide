@@ -3872,3 +3872,43 @@ on submission mode (neither `neurips_preprint` nor `neurips_final` set), matchin
 the real class; submission-mode `\begin{hide}…\end{hide}` still hides. Guard:
 `06_cluster_regressions::neurips_hide_preprint_preserves_body`. Witness:
 html_feedback #861 (arXiv:2403.15796v1).
+
+---
+
+## 99. IEEE journal `\textsuperscript`-keyed author/affiliation block scrambles into phantom authors (Rust surpasses)
+
+**Perl source:** the default `\author` name-splitter (`Base_Utility.pool.ltxml`),
+which has no notion of a trailing `\textsuperscript{N}`-keyed affiliation list.
+
+**Symptom:** The IEEEtran *journal* front-matter idiom — all authors first, each
+tagged `\textsuperscript{N}` (a comma list `\textsuperscript{1,2}` links one author
+to several), then the affiliations one per `\\` line each led by `\textsuperscript{N}`,
+then a `\texttt{…}` email block, `\\[1em]` spacing between groups — comes out
+scrambled: `\\[1em]` leaks as literal `[1em]`, and the affiliation lines
+("University of Pisa", "Italy", …) are promoted to **phantom authors** (9 creators
+for a 6-author paper). Distinct from entry #94 (the `\IEEEauthorblockN` *conference*
+grid).
+
+**Minimal trigger:**
+```tex
+\documentclass[12pt,onecolumn]{IEEEtran}
+\author{
+Alice\textsuperscript{1,2}, Bob\textsuperscript{3} \\[1em]
+
+\textsuperscript{1}Univ A \\
+\textsuperscript{2}Lab B \\
+\textsuperscript{3}Univ C
+}
+\title{T}\begin{document}\maketitle\end{document}
+```
+Perl → a single phantom creator named `[1em]`, the real authors Alice/Bob dropped
+entirely; on the full witness the affiliation lines themselves surface as extra
+creators ("University of Pisa", "Italy") — 9 for a 6-author paper. Correct (Rust):
+`Alice` (→ Univ A, Lab B) and `Bob` (→ Univ C).
+
+**Impact:** Perl-origin. **Rust status (FIXED — surpasses, OXIDIZED_DESIGN #52):**
+the beyond-Perl author-splitter keys each author to its affiliation(s) by the
+superscript number (comma lists attach to several), drops the `\\[1em]` spacing, and
+never promotes an affiliation line to a creator. Guard:
+`06_cluster_frontmatter::frontmatter_ieeetran_journal_superscript_affil`. Witness:
+html_feedback #6880 (arXiv:2605.23553v1). Sibling of #6242 (single-line variant).
