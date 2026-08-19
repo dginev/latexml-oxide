@@ -881,6 +881,27 @@ LoadDefinitions!({
   // AND, matching \\ this way fails to catch \\[1em], so really should Let it
 
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
+    // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
+    // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
+    // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
+    // `\emails` list into ONE `\author{}`. The default splitter below does not
+    // recognise those section markers, so the comma-joined email list is shredded
+    // into phantom author creators and the affiliation is dropped (Perl 0.8.8 does
+    // the same, and both raise `\affiliations`/`\emails` as undefined). When the
+    // body carries either marker, delegate to the shared sectioned-author machinery
+    // (`\lx@ijcai@authorsplit`, also used by `ijcai_sty`): it consumes the markers
+    // as `Until:` delimiters (so they no longer error) and splits names /
+    // affiliations / emails, attaching the n-th email to the n-th author. This runs
+    // before any dequeue/normalization because the delegate re-enters
+    // `\lx@add@authors` on the (marker-free) name list.
+    // Witness html_feedback#1361 + #1362.
+    if position_of(&stuff, &[T_CS!("\\affiliations"), T_CS!("\\emails")]).is_some() {
+      let mut out = vec![T_CS!("\\lx@ijcai@authorsplit")];
+      out.extend(stuff.unlist());
+      out.push(T_CS!("\\affiliations"));
+      out.push(T_CS!("\\done"));
+      return Ok(Tokens::new(out));
+    }
     let mut calls: Vec<Token> = Vec::new();
     dequeue_front_matter("ltx:creator", &[("role", "author")]);
     // Consume any `\\[len]` / `\\*[len]` row-break optionals up front so the line
@@ -1093,6 +1114,33 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(calls))
   });
+
+  // Shared "sectioned author block" machinery for the IJCAI author idiom
+  // (ijcai97.sty and its derivatives): one `\author{}` holding names, then
+  // `\affiliations`, then a comma-separated `\emails` list. Used both by the
+  // `ijcai_sty` binding's `\author` override and by the `\lx@add@authors`
+  // marker-branch above (so raw-loaded derivatives like ttm.sty work too).
+  // `\lx@ijcai@authorsplit` reads the names up to `\affiliations` and runs them
+  // through `\lx@add@authors` (now marker-free), then splits the remainder into
+  // affiliations (up to `\emails`) and the comma-separated emails, attaching the
+  // n-th email to the n-th author. Ported from Perl ijcai.sty.ltxml (PR #2767).
+  DefMacro!(
+    "\\lx@ijcai@authorsplit Until:\\affiliations Until:\\done",
+    "\\lx@add@authors{#1}\\ifx.#2.\\else\\lx@ijcai@affilsplit#2\\emails\\affiliations\\done\\fi"
+  );
+  DefMacro!(
+    "\\lx@ijcai@affilsplit  Until:\\emails Until:\\affiliations Until:\\done",
+    "\\ifx.#1.\\else\\expandafter\\lx@ijcai@affiliations\\expandafter{\\lx@strip@braces{#1}}\\fi\\ifx.#2.\\else\\expandafter\\lx@ijcai@emails\\expandafter{\\lx@strip@braces{#2}}\\fi"
+  );
+  DefMacro!(
+    "\\lx@ijcai@affiliations{}",
+    "\\lx@add@affiliations[labelseq=author]{#1}"
+  );
+  DefMacro!(
+    "\\lx@ijcai@emails{}",
+    "\\lx@clear@frontmatter{ltx:contact}[role=email]\\lx@splitting{\\lx@ijcai@email}{,}{#1}"
+  );
+  DefMacro!("\\lx@ijcai@email{}", "\\lx@add@email[labelseq=author]{#1}");
 
   // Superscript markers in author/affiliation blocks carry the affiliation
   // number. Both sides use the "affiliation" prefix so the author's requested
