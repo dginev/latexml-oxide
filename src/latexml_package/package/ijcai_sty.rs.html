@@ -21,18 +21,11 @@
 <a href=#21 id=21 data-nosnippet>21</a>  </span>def_macro_noop(<span class="string">"\\affiliations"</span>)<span class="question-mark">?</span>;
 <a href=#22 id=22 data-nosnippet>22</a>  def_macro_noop(<span class="string">"\\emails"</span>)<span class="question-mark">?</span>;
 <a href=#23 id=23 data-nosnippet>23</a>
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\lx@ijcai@authorsplit#1\\affiliations\\done"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ijcai@authorsplit Until:\\affiliations Until:\\done"</span>,
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="string">"\\lx@add@authors{#1}\\ifx.#2.\\else\\lx@ijcai@affilsplit#2\\emails\\affiliations\\done\\fi"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ijcai@affilsplit  Until:\\emails Until:\\affiliations Until:\\done"</span>,
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="string">"\\ifx.#1.\\else\\expandafter\\lx@ijcai@affiliations\\expandafter{\\lx@strip@braces{#1}}\\fi\\ifx.#2.\\else\\expandafter\\lx@ijcai@emails\\expandafter{\\lx@strip@braces{#2}}\\fi"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ijcai@affiliations{}"</span>, <span class="string">"\\lx@add@affiliations[labelseq=author]{#1}"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// emails is expected WITHIN \author.
-<a href=#32 id=32 data-nosnippet>32</a>  // Multiple affiliations separated by ,
-<a href=#33 id=33 data-nosnippet>33</a>  // the n-th email is attached to n-th author
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@ijcai@emails{}"</span>,
-<a href=#35 id=35 data-nosnippet>35</a>    <span class="string">"\\lx@clear@frontmatter{ltx:contact}[role=email]\\lx@splitting{\\lx@ijcai@email}{,}{#1}"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ijcai@email{}"</span>, <span class="string">"\\lx@add@email[labelseq=author]{#1}"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>});
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="comment">// `\author{}` → the shared sectioned-author splitter. The `\lx@ijcai@*`
+<a href=#25 id=25 data-nosnippet>25</a>  // machinery it drives now lives in the engine (base_utilities.rs), so a
+<a href=#26 id=26 data-nosnippet>26</a>  // raw-loaded ijcai derivative (e.g. ttm.sty) that never loads this binding
+<a href=#27 id=27 data-nosnippet>27</a>  // still gets the same split via the `\lx@add@authors` marker-branch.
+<a href=#28 id=28 data-nosnippet>28</a>  // n-th email attaches to the n-th author; affiliations are `\\`-separated.
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\lx@ijcai@authorsplit#1\\affiliations\\done"</span>);
+<a href=#30 id=30 data-nosnippet>30</a>});
 </code></pre></div></section></main></body></html>
