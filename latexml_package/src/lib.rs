@@ -189,6 +189,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::neurips_sty::load_definitions,
   ),
   (
+    "neurips_2026",
+    "sty",
+    package::neurips_sty::load_definitions,
+  ),
+  (
     "algorithm2e",
     "sty",
     package::algorithm2e_sty::load_definitions,
@@ -1165,6 +1170,23 @@ mod tests {
     let second = binding_names();
     assert_eq!(first.as_ptr(), second.as_ptr());
     assert_eq!(first.len(), second.len());
+  }
+
+  #[test]
+  fn neurips_year_bindings_cover_2019_through_2026() {
+    // The NeurIPS class ships one `.sty` per year (`neurips_YYYY`). Every
+    // supported year must map to the shared neurips binding, or a new year is
+    // silently left to raw-load — the gap that left `neurips_2026` unbound while
+    // 2019-2025 were covered (witness arXiv 2605.23950, `\usepackage{neurips_2026}`).
+    // Bump the upper bound when a new year ships.
+    let names = binding_names();
+    for year in 2019..=2026 {
+      let pkg = format!("neurips_{year}");
+      assert!(
+        names.iter().any(|(n, e)| *n == pkg && *e == "sty"),
+        "{pkg}.sty must be a registered binding"
+      );
+    }
   }
 
   #[test]
