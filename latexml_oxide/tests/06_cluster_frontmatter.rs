@@ -116,6 +116,55 @@ fn frontmatter_multi_affil_superscript() {
     "the two superscript affiliations merged into one:\n{x}"
   );
 }
+/// html_feedback#1361 + #1362 (arXiv:2401.03955, ttm.sty — an ijcai97.sty
+/// derivative): the IJCAI author idiom packs names, `\affiliations` and a
+/// comma-separated `\emails` list into ONE `\author{}`. Neither engine's default
+/// splitter recognises those section markers, so the email list is shredded into
+/// phantom author creators (13 for 7 authors) and the affiliation is dropped —
+/// same on Perl 0.8.8 (parity). The fix delegates any `\author{}` carrying an
+/// `\affiliations`/`\emails` marker to the shared sectioned-author machinery
+/// (also used by `ijcai_sty`), which splits names / affiliations / emails and
+/// attaches the n-th email to the n-th author. Rust surpasses Perl.
+#[test]
+fn frontmatter_ijcai_affiliations_emails() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_ijcai_affiliations_emails.tex");
+  // Exactly the seven real authors — the email list must NOT become creators.
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    7,
+    "IJCAI author block: expected exactly 7 author creators (the \\emails list must \
+     not become phantom authors):\n{x}"
+  );
+  for name in [
+    "Vijay Ekambaram",
+    "Arindam Jati",
+    "Nam H. Nguyen",
+    "Pankaj Dayama",
+    "Chandra Reddy",
+    "Wesley M.\u{a0}Gifford", // `Wesley M.~Gifford` — the ~ tie is a NBSP
+    "Jayant Kalagnanam",
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "IJCAI author block: author {name:?} missing as its own creator:\n{x}"
+    );
+  }
+  // No email address promoted to a phantom author.
+  assert!(
+    !x.contains("<personname>arindam.jati") && !x.contains("<personname>nnguyen"),
+    "IJCAI author block: an email address leaked into a <personname>:\n{x}"
+  );
+  // The `\affiliations` payload survives as a structured affiliation contact…
+  assert!(
+    x.contains("role=\"affiliation\"") && x.contains("IBM Research"),
+    "IJCAI author block: the \\affiliations \"IBM Research\" was dropped:\n{x}"
+  );
+  // …and the emails are email contacts, not names.
+  assert!(
+    x.contains("role=\"email\"") && x.contains("vijaye12@in.ibm.com"),
+    "IJCAI author block: the \\emails list is not structured as email contacts:\n{x}"
+  );
+}
 /// html_feedback#6880 (arXiv:2605.23553, IEEEtran journal): the "all authors, then
 /// all affiliations keyed by `\textsuperscript{N}`" block — the harder variation of
 /// #6242. A comma-list superscript (`\textsuperscript{1,2}`) links ONE author to

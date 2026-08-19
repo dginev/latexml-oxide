@@ -3912,3 +3912,38 @@ superscript number (comma lists attach to several), drops the `\\[1em]` spacing,
 never promotes an affiliation line to a creator. Guard:
 `06_cluster_frontmatter::frontmatter_ieeetran_journal_superscript_affil`. Witness:
 html_feedback #6880 (arXiv:2605.23553v1). Sibling of #6242 (single-line variant).
+
+---
+
+## 100. IJCAI-derivative `\author{}` with `\affiliations`/`\emails` shreds emails into phantom authors (Rust surpasses)
+
+**Perl source:** the default `\author` splitter (`Base_Utility.pool.ltxml`); Perl's
+`ijcai.sty.ltxml` handles the idiom, but only for a document that actually loads
+the `ijcai` package.
+
+**Symptom:** The IJCAI author idiom (ijcai97.sty) packs names, `\affiliations` and a
+comma-separated `\emails` list into ONE `\author{}`. A paper using a *renamed copy*
+of ijcai97.sty — e.g. the `ttm.sty` bundled with arXiv:2401.03955 — never loads the
+`ijcai` binding, so the raw package is used and neither engine recognises the
+section markers: the comma-joined email list is shredded into phantom author
+creators (13 for 7 authors), the `\affiliations` payload is dropped, and
+`\affiliations`/`\emails` raise `Error:undefined:`. Same on Perl 0.8.8.
+
+**Minimal trigger:**
+```tex
+\documentclass{article}
+\author{Alice \and Bob \affiliations Some Lab \emails a@x.org, b@x.org}
+\title{T}\begin{document}\maketitle\end{document}
+```
+Perl → `Alice`, `Bob`, and a phantom `b@x.org` creator (`Some Lab` mishandled); on
+the full witness it shreds all six emails into creators (13 for 7). Correct (Rust):
+`Alice`/`Bob`, `Some Lab` an affiliation, the addresses as emails, no errors.
+
+**Impact:** Perl-origin, SHARED with the Rust default splitter. **Rust status (FIXED —
+surpasses, OXIDIZED_DESIGN #52):** `\lx@add@authors` detects an `\affiliations`/
+`\emails` marker in the body and delegates to the shared sectioned-author machinery
+(`\lx@ijcai@authorsplit`, hoisted from `ijcai_sty` into `base_utilities.rs`) — names /
+affiliations / emails split, n-th email to n-th author, markers consumed as
+delimiters (no undefined-CS error). Guard:
+`06_cluster_frontmatter::frontmatter_ijcai_affiliations_emails`. Witness:
+html_feedback #1361 + #1362 (arXiv:2401.03955v5, ttm.sty).
