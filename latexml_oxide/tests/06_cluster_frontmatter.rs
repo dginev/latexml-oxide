@@ -116,6 +116,61 @@ fn frontmatter_multi_affil_superscript() {
     "the two superscript affiliations merged into one:\n{x}"
   );
 }
+/// html_feedback#6588 (arXiv:2606.01317, ACL superscript block): 10 authors, each
+/// `\textbf{Name\textsuperscript{N}}`, then five affiliations one per
+/// `\textsuperscript{N}`, COMMA-separated across two `\\` lines. Each author must map
+/// to its numbered affiliation, and — the reported "affiliation notes" defect — the
+/// institution's trailing comma separator must NOT cling to the name
+/// ("The University of Hong Kong," was wrong). Rust already surpasses Perl here (Perl
+/// loses every author name). OXIDIZED_DESIGN #52.
+#[test]
+fn frontmatter_superscript_affil_comma() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_superscript_affil_comma.tex");
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    10,
+    "expected 10 author creators:\n{x}"
+  );
+  // The reported canary: no affiliation carries a trailing comma separator.
+  for stray in [
+    "The University of Hong Kong,",
+    "Shandong University,",
+    "Carnegie Mellon University,",
+    "National University of Singapore,",
+  ] {
+    assert!(
+      !x.contains(stray),
+      "affiliation kept its trailing comma separator ({stray:?}):\n{x}"
+    );
+  }
+  // …the clean names are all present…
+  for name in [
+    "The University of Hong Kong",
+    "Shandong University",
+    "The Hong Kong University of Science and Technology",
+  ] {
+    assert!(x.contains(name), "affiliation {name:?} missing:\n{x}");
+  }
+  // …and the superscript marks still map each author to the right institution.
+  let by_name = |name: &str| -> String {
+    x.split("<creator")
+      .find(|b| b.contains(&format!("<personname>{name}</personname>")))
+      .unwrap_or("")
+      .to_string()
+  };
+  assert!(
+    by_name("Qi HU").contains("The University of Hong Kong"),
+    "Qi HU (\\textsuperscript{{1}}) not linked to Hong Kong:\n{x}"
+  );
+  assert!(
+    by_name("Pengji Zhang").contains("Carnegie Mellon University"),
+    "Pengji Zhang (\\textsuperscript{{3}}) not linked to CMU:\n{x}"
+  );
+  assert!(
+    by_name("Lin Zhang").contains("The Hong Kong University of Science and Technology"),
+    "Lin Zhang (\\textsuperscript{{5}}) not linked to HKUST:\n{x}"
+  );
+}
 /// html_feedback#6255 (googledeepmind, authblk): a single `\author{A, B, C}` comma
 /// list is authblk's one-author-arg form, so it stayed as one merged
 /// `<personname>A, B, C</personname>`. The DEFAULT `\author` already splits a comma
