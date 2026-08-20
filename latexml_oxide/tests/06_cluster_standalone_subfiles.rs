@@ -386,3 +386,43 @@ fn subimport_sibling_graphic_candidate_is_relative() {
      (it leaks into the output `data=`/`src=` URL):\n{xml}"
   );
 }
+
+/// Issue #697 / OXIDIZED_DESIGN #137 (surpass Perl): `\subimport*` with an
+/// ABSOLUTE directory argument resolves in real LaTeX (pdflatex, verified) but
+/// failed in BOTH LaTeXML engines — `\lx@append@path` concatenated the
+/// absolute arg onto the lead search path (`<lead>//abs/…`), which never
+/// resolved. An absolute arg is now used verbatim (mirroring `\lx@set@path`),
+/// matching pdflatex. The path is generated at runtime, so this is driven
+/// through a tempdir rather than a committed fixture.
+#[test]
+fn subimport_absolute_path_resolves_like_real_latex() {
+  let dir = tempfile::tempdir().expect("tempdir");
+  let child = dir.path().join("child");
+  std::fs::create_dir_all(&child).expect("mk child");
+  std::fs::write(
+    child.join("index.tex"),
+    "\\documentclass{article}\\begin{document}ABSOLUTEsubimportBODY\\end{document}",
+  )
+  .expect("write child");
+  let main = dir.path().join("main.tex");
+  std::fs::write(
+    &main,
+    format!(
+      "\\documentclass{{article}}\\usepackage{{import}}\\usepackage{{standalone}}\
+       \\begin{{document}}\\subimport*{{{}/}}{{index.tex}}\\end{{document}}",
+      child.display()
+    ),
+  )
+  .expect("write main");
+  let src = main.to_str().expect("utf8 path");
+
+  let log = convert_log(src);
+  assert!(
+    !log.contains("missing_file"),
+    "#697: absolute-path \\subimport* must resolve (matches pdflatex):\n{log}"
+  );
+  assert!(
+    convert_to_xml(src).contains("ABSOLUTEsubimportBODY"),
+    "#697: the absolutely-subimported child body was lost"
+  );
+}
