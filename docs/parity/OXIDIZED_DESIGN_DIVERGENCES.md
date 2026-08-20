@@ -5253,3 +5253,33 @@ would benefit from the same graphic-width fallback — to be filed at
 `brucemiller/LaTeXML`.
 
 **Guard**: `06_cluster_regressions::cluster_subfigure_panels_share_a_row_6903`.
+
+### 139. A graphics `<img>` carries an explicit `aspect-ratio` (requested W/H)
+
+**Perl behavior** (`Post/Graphics.pm` `setGraphicSrc`; `LaTeXML.css` flex rules): the
+`<img>` gets `width`/`height` attributes (the *requested* size, from the
+`\includegraphics` options and the file) plus a coarse
+`ltx_img_{square,portrait,landscape}` class, but **no** `aspect-ratio`. The flex
+subfigure CSS then caps `max-width` (`.ltx_flex_size_N .ltx_graphics`), which shrinks
+the width and leaves the height attribute untouched — so a square figure renders as a
+vertical ellipsoid (a sphere becomes an ellipse). brucemiller/LaTeXML#2392, still open;
+Perl 0.8.8 distorts identically (verified: 288×476 for a 476² square under `flex_size_3`).
+
+**Rust behavior** (`latexml_post/src/graphics.rs` `set_graphic_src`; owned `LaTeXML.css`):
+`set_graphic_src` also emits `cssstyle="aspect-ratio:W/H"` from the requested
+width/height (the same W/H it puts on the attributes), and the flex/minipage image
+rules add `height:auto`. When `max-width` caps the width the browser recomputes the
+height from that ratio, so the *requested* aspect ratio is preserved — not merely the
+file's (which matters for `\includegraphics[width=…,height=…]` where they differ). All
+five panels of the issue MWE render at ratio 1.000 (were 0.605 / 0.887).
+
+**Why**: this is the design the upstream thread converged on (xworld21's
+`aspect-ratio: @imagewidth / @imageheight` proposal, meeting brucemiller's requirement
+that any width/height/min/max tweak preserve the *requested* ratio). Emitting the ratio
+per-image is CSS-safe (inert unless a dimension is freed) and beyond Perl, which has not
+implemented it. The coarse `ltx_img_*` classes still pick the flex layout.
+
+**Upstream**: brucemiller/LaTeXML#2392 (open) — the same emission + `height:auto` would
+fix Perl; not filed here.
+
+**Guard**: `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392`.

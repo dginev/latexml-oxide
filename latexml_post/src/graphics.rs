@@ -521,6 +521,20 @@ impl Graphics {
         format!("{} {}", existing, class)
       };
       node.set_attribute("class", &new_class).ok();
+      // brucemiller/LaTeXML#2392: also emit the REQUESTED aspect ratio explicitly.
+      // The coarse `ltx_img_{square,portrait,landscape}` bucket is enough to pick a
+      // flex layout, but the flex CSS caps `max-width`, changing the width and not
+      // the height — so a square picture renders as a vertical ellipsoid. An
+      // `aspect-ratio:W/H` on the img lets a width-only cap (paired with
+      // `height:auto` in the flex rules) preserve the ratio, and the *requested*
+      // ratio (from `\includegraphics`), not the file's. Beyond Perl 0.8.8, which
+      // emits no aspect-ratio (OXIDIZED_DESIGN #139).
+      let ar = format!("aspect-ratio:{w}/{h}");
+      let cssstyle = match node.get_attribute("cssstyle") {
+        Some(s) if !s.is_empty() => format!("{s};{ar}"),
+        _ => ar,
+      };
+      node.set_attribute("cssstyle", &cssstyle).ok();
     }
   }
 
@@ -3001,6 +3015,51 @@ endobj
       deltas.len(),
       matrix.len(),
       deltas.join("\n")
+    );
+  }
+
+  /// brucemiller/LaTeXML#2392: a graphics `<img>` carries width/height that
+  /// give the *requested* aspect ratio (from `\includegraphics`). The flex
+  /// subfigure CSS caps `max-width`, which changes the width but not the
+  /// height, so a square picture renders as a vertical ellipsoid. `set_graphic_src`
+  /// now also emits an explicit `aspect-ratio:W/H` in `cssstyle`, so a width-only
+  /// CSS cap (paired with `height:auto`) preserves the requested ratio — and the
+  /// *requested* ratio, not the file's, per Bruce Miller's requirement in the
+  /// thread. Beyond Perl 0.8.8, which emits no aspect-ratio (OXIDIZED_DESIGN #139).
+  #[test]
+  fn set_graphic_src_emits_requested_aspect_ratio_2392() {
+    let doc = libxml::tree::Document::new().unwrap();
+    for (w, h, bucket) in [
+      (200u32, 100u32, "ltx_img_landscape"),
+      (476, 476, "ltx_img_square"),
+    ] {
+      let mut node = Node::new("graphics", None, &doc).unwrap();
+      Graphics::set_graphic_src(&mut node, "fig.png", Some(w), Some(h));
+      let style = node.get_attribute("cssstyle").unwrap_or_default();
+      assert!(
+        style.contains(&format!("aspect-ratio:{w}/{h}")),
+        "expected the requested aspect-ratio {w}/{h} in cssstyle, got {style:?}"
+      );
+      assert!(
+        node
+          .get_attribute("class")
+          .unwrap_or_default()
+          .contains(bucket)
+      );
+    }
+  }
+
+  /// The #2392 fix is two coupled halves: the emitted `aspect-ratio` (guarded
+  /// above) and `height:auto` on flex/minipage images, so that ratio governs
+  /// when the `flex_size` `max-width` caps the width. Guard the CSS half — the
+  /// embedded `LaTeXML.css` — so removing it can't silently re-introduce the
+  /// distortion while the emission test stays green.
+  #[test]
+  fn flex_graphics_css_frees_height_for_aspect_ratio_2392() {
+    let css = include_str!("../resources/CSS/LaTeXML.css");
+    assert!(
+      css.contains(".ltx_flex_figure .ltx_graphics { height: auto; }"),
+      "the flex-graphics height:auto companion to #2392's aspect-ratio is missing from LaTeXML.css"
     );
   }
 

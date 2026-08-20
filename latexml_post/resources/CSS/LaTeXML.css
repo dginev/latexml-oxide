@@ -167,6 +167,12 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_flex_size_many .ltx_graphics {
   max-width: calc(0.24*60rem);
 }
+/* brucemiller/LaTeXML#2392: the flex_size caps above change an image's width but
+   not its height, distorting the aspect ratio (a square figure becomes a vertical
+   ellipsoid). Each ltx:graphics now carries an explicit `aspect-ratio` (emitted in
+   post-processing from the requested width/height); freeing the height lets that
+   ratio govern, so the capped width scales the height with it. */
+.ltx_flex_figure .ltx_graphics { height: auto; }
 
 /* flex row breaks */
 .ltx_flex_figure .ltx_flex_break {
@@ -631,6 +637,7 @@ cite                 { font-style: normal; }
 }
 .ltx_minipage > .ltx_graphics {
   max-width:100%;
+  height:auto; /* #2392: preserve the emitted aspect-ratio when the width is capped */
 }
 
 .ltx_overlay {position:relative; }
