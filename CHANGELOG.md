@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+  - **amsart authors declared up front no longer bunch every address/email under the
+    last author.** The idiom `\author{A}\author{B}\author{C}` followed by one
+    `\address`/`\email` pair each makes LaTeXML's default "attach a contact to the
+    preceding creator" pile every contact onto the last author, so A and B render bare
+    (arXiv/html_feedback#46, witness arXiv:2308.06214v1; Perl 0.8.8 identical — SHARED).
+    A new DOM pass `distribute_upfront_contacts` redistributes ONLY a clean `N × m`
+    pile — the other N−1 authors carry no contact and the last author's `K` contacts
+    split evenly (`K = N·m`) into a role-periodic sequence — handing group *i* to
+    author *i*. Irregular piles (heterogeneous roles, differing per-author counts) and
+    the interleaved idiom fail the gate and are left exactly as Perl attached them, so
+    `tests/structure/amsarticle.tex` is byte-unchanged. Beyond-Perl (OXIDIZED_DESIGN
+    #140 / KNOWN_PERL_ERRORS #104). Guard
+    `06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`.
   - **A non-default `NOMINAL_FONT_SIZE` is persisted as a
     `<?latexml nominal-font-size="X"?>` processing instruction** so post-processing
     can size font-relative (`em`) external SVGs correctly — an `em` is

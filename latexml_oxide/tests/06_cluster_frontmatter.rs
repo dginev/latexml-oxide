@@ -22,6 +22,15 @@ fn creator_has_email(xml: &str, name: &str, mail: &str) -> bool {
   })
 }
 
+/// True if the `<creator>` whose `<personname>` is `name` has a block containing
+/// `needle` (a contact text/attribute substring).
+fn creator_block_contains(xml: &str, name: &str, needle: &str) -> bool {
+  xml.split("<creator").skip(1).any(|rest| {
+    let block = rest.split("</creator>").next().unwrap_or("");
+    block.contains(&format!("<personname>{name}</personname>")) && block.contains(needle)
+  })
+}
+
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
 /// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
@@ -355,6 +364,64 @@ fn frontmatter_shared_email_distribution() {
     !creator_has_email(&s, "Bob", "contact@lab.org"),
     "single shared: must not also land on a trailing author:\n{s}"
   );
+}
+/// arXiv/html_feedback#46 (witness 2308.06214v1, amsart): all `\author` declared up
+/// front, THEN one `\address`/`\email` pair each. LaTeXML's default "attach contact
+/// to the preceding creator" bunches every address+email under the LAST author
+/// (Perl 0.8.8 too — SHARED). A clean N×m grid (3 authors × {address,email}) must
+/// redistribute pair i to author i. The interleaved control (each author followed by
+/// its own contacts) is already correct and must stay untouched.
+/// OXIDIZED_DESIGN #140 / KNOWN_PERL_ERRORS #104.
+#[test]
+fn frontmatter_amsart_upfront_contact_distribution() {
+  let up = convert_to_xml("tests/cluster_regressions/frontmatter_amsart_upfront_46.tex");
+  let authors = [
+    ("Peter Feller", "peter.feller@math.ch", "ETH Zurich"),
+    (
+      "Diana Hubbard",
+      "diana.hubbard@brooklyn.cuny.edu",
+      "Brooklyn College",
+    ),
+    (
+      "Hannah Turner",
+      "hannah.turner@math.gatech.edu",
+      "Georgia Institute",
+    ),
+  ];
+  for (name, mail, addr) in authors {
+    assert!(
+      creator_has_email(&up, name, mail),
+      "up-front: {name} must carry its own email {mail}:\n{up}"
+    );
+    assert!(
+      creator_block_contains(&up, name, addr),
+      "up-front: {name} must carry its own address {addr}:\n{up}"
+    );
+  }
+  // Tight guard: no author may carry another author's email.
+  for (name, ..) in authors {
+    for (_, other_mail, _) in authors.iter().filter(|(n, ..)| *n != name) {
+      assert!(
+        !creator_has_email(&up, name, other_mail),
+        "up-front: {name} must NOT carry another author's email {other_mail}:\n{up}"
+      );
+    }
+  }
+
+  // Interleaved control: already correct; the redistribution pass must not disturb it.
+  let il = convert_to_xml("tests/cluster_regressions/frontmatter_amsart_interleaved_46.tex");
+  for (name, mail, addr) in authors {
+    assert!(
+      creator_has_email(&il, name, mail) && creator_block_contains(&il, name, addr),
+      "interleaved: {name} must keep its own {mail} / {addr}:\n{il}"
+    );
+    for (_, other_mail, _) in authors.iter().filter(|(n, ..)| *n != name) {
+      assert!(
+        !creator_has_email(&il, name, other_mail),
+        "interleaved: {name} must NOT gain another author's email {other_mail}:\n{il}"
+      );
+    }
+  }
 }
 /// arXiv:2403.16405 (IEEEtran conference): a `\author{}` grid where `\and` starts a
 /// COLUMN and top-level `\\` a ROW within it is linearized column-major (declaration

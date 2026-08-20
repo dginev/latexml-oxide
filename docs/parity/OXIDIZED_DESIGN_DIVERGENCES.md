@@ -5283,3 +5283,33 @@ implemented it. The coarse `ltx_img_*` classes still pick the flex layout.
 fix Perl; not filed here.
 
 **Guard**: `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392`.
+
+### 140. amsart up-front author/contact grid redistributes to the right author
+
+**Perl behavior** (`ams_support.sty.ltxml` `\address`/`\email`; `Base_Utility.pool.ltxml`
+`\lx@annotate@frontmatter@now` L510-530): a contact with no `label`/`labelseq`/`annotate`
+attaches to the **single most-recent** creator. When a document declares every `\author`
+before any `\address`/`\email` (a common amsart idiom, witness arXiv:2308.06214v1), the
+most-recent author at every contact is the *last* one, so all addresses/emails bunch under
+that last author. Perl 0.8.8 does the same (verified same-host, byte-identical).
+
+**Rust behavior** (`base_utilities.rs::distribute_upfront_contacts`, a DOM pass in
+`insert_frontmatter` between `coalesce_empty_creators` and `relocate_annotations`):
+after creators are built, a *clean* pile is redistributed — the signature is that the
+other N−1 authors carry no `ltx:contact` and the last author's `K` contacts split evenly
+(`K = N·m`) into a role-periodic sequence (`role[i] == role[i+m]`); group *i* is then
+handed to author *i* (`address i` → author i, `email i` → author i, …). All-same-role
+piles (`m = 1`) work too.
+
+**Why**: the input is genuinely ambiguous (amsart's PDF renders one flat block, no
+pairing), so we distribute ONLY the unambiguous regular grid and otherwise keep Perl's
+attachment verbatim. This mirrors the shared-email splitter's "distribute-when-clean,
+else keep prior" rule (#52(j)). The gate's `N-1`-empty + periodicity conditions make the
+interleaved idiom (each author immediately followed by its own contacts — already correct)
+fail the check, so it is never disturbed (guard `tests/structure/amsarticle.tex`, whose
+Joe-Blow/Frank-Zappa/Someone-Else block is interleaved and byte-unchanged).
+
+**Upstream**: brucemiller/LaTeXML — the same redistribution would help Perl; not filed here.
+
+**Guard**: `06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`
+(up-front pile distributes; interleaved control untouched). KNOWN_PERL_ERRORS #104.

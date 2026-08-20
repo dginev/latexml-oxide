@@ -4050,3 +4050,34 @@ the *text* height rather than an arbitrary `ref` — correct for the dominant
 inline-icon use. Guard: `06_cluster_regressions::cluster_scalerel_defined_6895`.
 Witness: arXiv/html_feedback#6895 (arXiv:2608.12272). The ar5iv stylesheet carries the
 matching `.ltx_scalerel` rule.
+
+## 104. amsart authors declared up front bunch every address/email under the last author (Rust surpasses)
+
+**Perl source:** `ams_support.sty.ltxml` (`\address`/`\email`/`\curraddr` → `\lx@add@address`
+etc.) + `Base_Utility.pool.ltxml` `\lx@annotate@frontmatter@now` (L510-530). With no
+`label`/`labelseq`/`annotate` option, a contact attaches to the **single preceding**
+(most-recent) creator.
+
+**Symptom:** the amsart idiom that declares all authors first, then one `\address`/`\email`
+pair each —
+```tex
+\documentclass{amsart}\begin{document}\title{T}
+\author{A}\author{B}\author{C}
+\address{A-addr}\email{a@x}\address{B-addr}\email{b@y}\address{C-addr}\email{c@z}
+\maketitle\end{document}
+```
+— makes every `\address`/`\email` attach to the *last* author C, so all three addresses and
+emails render in C's column while A and B are bare. Same on Perl 0.8.8 (verified same-host,
+byte-identical `<ltx:creator>` output). amsart's own PDF also lists them as one flat block
+(no per-author association), so there is no ground-truth pairing — only reading-order intent.
+
+**Impact:** Perl-origin (default single-preceding attachment), shared with Rust. **Rust status
+(FIXED — surpasses):** `base_utilities.rs::distribute_upfront_contacts` (a DOM pass beside
+`coalesce_empty_creators`) redistributes ONLY a clean `N × m` pile — the other N−1 authors
+carry no contact and the last author's `K` contacts split evenly (`K = N·m`) into a
+role-periodic sequence — handing group *i* to author *i*. Any irregular pile (heterogeneous
+roles, differing per-author counts) or already-interleaved contacts fail the gate and are left
+exactly as Perl attached them, so the common interleaved idiom (guard
+`tests/structure/amsarticle.tex`) is untouched. Guard:
+`06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`. Witness:
+arXiv/html_feedback#46 (arXiv:2308.06214v1). Divergence: OXIDIZED_DESIGN #140.
