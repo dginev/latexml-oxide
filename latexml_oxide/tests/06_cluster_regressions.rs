@@ -92,6 +92,28 @@ fn cluster_fvextra_preserves_ltx_verbatim() {
      overwrote the fancyvrb hook, so verbatim lines lose white-space:pre:\n{xml}"
   );
 }
+/// brucemiller/LaTeXML#2709: `arrange_panels`' merge heuristic (a >8x size
+/// disparity, a tiny joint width, or a zero-width sibling) grouped two panels
+/// into an `ltx:block`. For `ltx:figure`/`ltx:table` panels that yields a
+/// schema-invalid `<block><figure/></block>` — a block cannot contain a float.
+/// Float panels must stay siblings (the merge is only for small inline content).
+/// Present in both engines (Perl 0.8.8 has the identical `wrapNodes('ltx:block')`
+/// at `latex_constructs.pool.ltxml:3322`); recorded in `KNOWN_PERL_ERRORS.md`.
+#[test]
+fn cluster_panel_merge_never_wraps_a_figure_in_a_block_2709() {
+  let xml = convert_to_xml("tests/cluster_regressions/panel_block_invalid_2709.tex");
+  assert!(
+    !xml.contains("<block"),
+    "arrange_panels wrapped disparate/tiny figure panels in an invalid <block> \
+     (#2709) — a block cannot contain a float; the panels must stay siblings:\n{xml}"
+  );
+  // Both figures keep their two subfigure panels as marked siblings.
+  assert_eq!(
+    xml.matches("ltx_figure_panel").count(),
+    4,
+    "expected 4 subfigure panels (2 per figure) as siblings:\n{xml}"
+  );
+}
 /// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
 /// side-loads natbib must not leave a body `\citep` looping. The side-load runs
 /// inside the `thebibliography` group, so natbib's `\citep` would be popped on

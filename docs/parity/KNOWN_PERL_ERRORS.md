@@ -3947,3 +3947,42 @@ affiliations / emails split, n-th email to n-th author, markers consumed as
 delimiters (no undefined-CS error). Guard:
 `06_cluster_frontmatter::frontmatter_ijcai_affiliations_emails`. Witness:
 html_feedback #1361 + #1362 (arXiv:2401.03955v5, ttm.sty).
+
+## 101. `arrange_panels_and_breaks` wraps figure/table panels in a schema-invalid `ltx:block` (Rust surpasses)
+
+**Perl source:** `Engine/latex_constructs.pool.ltxml:3322`
+(`arrange_panels_and_breaks`): `my $block = $document->wrapNodes('ltx:block', $prev_node, $child)`.
+
+**Symptom:** The per-row panel arranger groups two sibling panels into a single
+`ltx:block` when a merge heuristic fires — a zero-width sibling, a >8× size
+disparity, or a joint width below `0.03125·float_width` (L3305). When the panels
+are `ltx:figure`/`ltx:table` (subfigures) the result is
+`<ltx:block><ltx:figure/>…</ltx:block>` — schema-INVALID, since a block cannot
+contain a float. Reported upstream by the LaTeXML author
+(brucemiller/LaTeXML#2709, `acmart` + `subfigure`). Present in Perl 0.8.8
+(identical L3322 code): the `child_width==0` branch fires for **every**
+`\subcaptionbox`/`\subfloat` multi-panel figure (their panels report width 0), so
+Perl-generated HTML carries the invalid block widely — not only Bruce's `acmart`
+case. The Rust port reaches it via the disparity / tiny-sum branches (explicit
+small/disparate `{width}` subfigures).
+
+**Minimal trigger:**
+```tex
+\documentclass{article}\usepackage{graphicx}\usepackage{subcaption}
+\begin{document}
+\begin{figure}\centering
+  \begin{subfigure}{0.9\linewidth}\includegraphics[width=\linewidth]{a}\caption{}\end{subfigure}
+  \begin{subfigure}{0.05\linewidth}\includegraphics[width=\linewidth]{b}\caption{}\end{subfigure}
+  \caption{}\end{figure}
+\end{document}
+```
+Both engines emit `<block>` wrapping the two subfigure `<figure>` panels.
+
+**Impact:** Perl-origin, SHARED with the Rust `arrange_panels`. **Rust status
+(FIXED — surpasses):** the block-merge now asks the MODEL whether `ltx:block` can
+validly contain the incoming panel (`model::can_contain_sym`, per merge branch) —
+a float cannot, so the panels stay siblings: valid markup and the correct
+side-by-side layout. Guard:
+`06_cluster_regressions::cluster_panel_merge_never_wraps_a_figure_in_a_block_2709`.
+An upstream Perl patch (same model-guard at L3305/3322) is to be filed at
+brucemiller/LaTeXML#2709.

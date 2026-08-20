@@ -1,0 +1,24 @@
+% brucemiller/LaTeXML#2709: arrange_panels_and_breaks merges "disparate" or
+% "tiny" sibling panels into a single ltx:block. When the panels are ltx:figure
+% (subfigures), the resulting <block><figure/></block> is schema-invalid (block
+% cannot contain a float). The merge heuristic is for small inline content, not
+% floats — figure/table panels must stay siblings.
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+% (1) >8x size disparity between two subfigure panels -> the merge fires.
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.9\linewidth}\includegraphics[width=\linewidth]{wide}\caption{}\end{subfigure}
+  \begin{subfigure}{0.05\linewidth}\includegraphics[width=\linewidth]{narrow}\caption{}\end{subfigure}
+  \caption{Disparate subfigure panels.}
+\end{figure}
+% (2) tiny joint width (< 0.03125 of the float) -> the merge fires.
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.01\linewidth}\includegraphics[width=\linewidth]{tinya}\caption{}\end{subfigure}
+  \begin{subfigure}{0.01\linewidth}\includegraphics[width=\linewidth]{tinyb}\caption{}\end{subfigure}
+  \caption{Tiny subfigure panels.}
+\end{figure}
+\end{document}
