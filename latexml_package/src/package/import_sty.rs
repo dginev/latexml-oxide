@@ -57,6 +57,8 @@ LoadDefinitions!({
   //   If SEARCHPATHS has entries, concat the first with path:
   //   new_lead = concat(lead_path, path); star → [new_lead], else → [new_lead, ...rest].
   //   If SEARCHPATHS is empty, this is a no-op (matches Perl's early-return).
+  //   DIVERGENCE (OXIDIZED_DESIGN #137): an absolute `path` is used verbatim
+  //   rather than concatenated, to match real LaTeX — see the body.
   DefPrimitive!("\\lx@append@path OptionalMatch:* {}", sub[(star, path_tks)] {
     let raw = Expand!(path_tks).to_string();
     let path = raw.trim().to_string();
@@ -64,7 +66,18 @@ LoadDefinitions!({
     let mut paths = get_search_paths();
     if paths.is_empty() { return Ok(Vec::new()); }
     let lead = paths.remove(0);
-    let new_lead = pathname::concat(&lead, &path);
+    // OXIDIZED_DESIGN #137 — surpass Perl to match real LaTeX (pdflatex,
+    // verified): an ABSOLUTE directory arg is used verbatim, not concatenated
+    // onto the lead search path (which yields an unresolvable `<lead>//abs/…`).
+    // Perl's \lx@append@path (import.sty.ltxml L31-42) ALWAYS concats, so both
+    // engines fail `\subimport*{/abs/}{file}` where pdflatex succeeds — issue
+    // #697. \lx@set@path already special-cases absolute; mirror it here.
+    // Relative args are unchanged (the common `\subimport*{sub/}{file}` case).
+    let new_lead = if pathname::is_absolute(&path) {
+      pathname::canonical(&path)
+    } else {
+      pathname::concat(&lead, &path)
+    };
     // LOCAL (see `\lx@set@path`): the `{…}` group reverts it.
     if star.is_some() {
       set_search_paths_local(vec![new_lead]);

@@ -5191,3 +5191,31 @@ silently lost; it is now inserted directly before the root, matching Perl
 Approved by the maintainer 2026-08-18.
 
 **Guard:** `cluster_sizing::delimiter_size_nominal_font::nominal_font_size_persisted_as_pi_only_when_non_default`.
+
+### 137. `\subimport*`/`\subimport` accept an ABSOLUTE directory argument
+
+**Perl behavior** (`import.sty.ltxml` L31-42, `\lx@append@path`): the directory
+argument of `\subimport` is **always** `pathname_concat`'d onto the current lead
+search path. For an absolute argument that yields `<lead>//abs/dir`, which never
+resolves, so `\subimport*{/abs/dir/}{file}` reports `missing_file` — even though
+real LaTeX (pdflatex, verified) opens the file. `\import`/`\import*`
+(`\lx@set@path`) already special-case absolute paths; `\subimport` does not.
+
+**Rust behavior**: `\lx@append@path` uses an absolute argument **verbatim**
+(`pathname::canonical`, as `\lx@set@path` does), so `\subimport*{/abs/dir/}{file}`
+resolves and matches pdflatex. A relative argument is still concatenated onto the
+lead path (unchanged — the common `\subimport*{sub/}{file}` case), so no
+currently-passing document changes: the fix only turns a `missing_file` failure
+into a success (it cannot regress, since no document resolves an absolute
+`\subimport` today).
+
+**Why**: real LaTeX is the ground truth and it resolves the absolute path; both
+LaTeXML engines diverging from `pdflatex` here is a file-resolution quality bug,
+not a TeX-semantics choice. The reporter hit it converting a book whose chapters
+`\subimport*` shared assets by absolute path. Approved by the maintainer 2026-08-19
+(#697), conditional on the confirmed pdflatex behavior.
+
+**Upstream**: Perl's `\lx@append@path` has the identical limitation and would
+benefit from the same one-line fix — to be filed at `brucemiller/LaTeXML`.
+
+**Guard**: `06_cluster_standalone_subfiles::subimport_absolute_path_resolves_like_real_latex`.
