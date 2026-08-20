@@ -82,12 +82,14 @@ pub fn image_candidates(path: &str) -> String {
     let base = PathBuf::from(dir).join(path);
     if has_extension {
       if base.exists() {
+        // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
+        // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
+        // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
+        // sideways tree). `strip_prefix` can only strip a *descendant* prefix, so
+        // a sibling hit fell back to the raw ABSOLUTE path and leaked into the
+        // output `data=`/`src=` URL. Use the same lexical abs2rel as below.
         let rel = match &source_path {
-          Some(sp) => base
-            .strip_prefix(sp)
-            .unwrap_or(&base)
-            .to_string_lossy()
-            .to_string(),
+          Some(sp) => abs2rel(&base, sp),
           None => base.to_string_lossy().to_string(),
         };
         candidates.push(rel);
@@ -106,12 +108,10 @@ pub fn image_candidates(path: &str) -> String {
             && fname[..dot_pos] == stem
           {
             let full = entry.path();
+            // Sibling-directory relativization (issue #698) — see the
+            // extension branch above: abs2rel, not strip_prefix.
             let rel = match &source_path {
-              Some(sp) => full
-                .strip_prefix(sp)
-                .unwrap_or(&full)
-                .to_string_lossy()
-                .to_string(),
+              Some(sp) => abs2rel(&full, sp),
               None => full.to_string_lossy().to_string(),
             };
             candidates.push(rel);
