@@ -1962,6 +1962,39 @@ fn panel_width(document: &Document, node: &Node) -> f64 {
     .unwrap_or(0.0)
 }
 
+/// Width (scaled points) of the sole `ltx:graphics` descendant of a figure/table
+/// panel, or `None` unless there is exactly one. `\subcaptionbox` and subfig
+/// `\subfloat` panels carry no explicit `{width}`, so their box is sized to the
+/// full float `\hsize` — which hides the panel's real content width from
+/// [`arrange_panels`] and stacks the panels one-per-row. Sizing such a panel to
+/// its lone graphic lets siblings share a row, the way an explicit-width
+/// `{subfigure}{0.48\linewidth}` already does (#6903). Ambiguous panels (0 or >1
+/// graphic) return `None`, so the caller keeps the box width unchanged.
+fn sole_graphic_width(document: &Document, node: &Node) -> Option<f64> {
+  let qname = document::get_node_qname(node);
+  if qname != pin!("ltx:figure") && qname != pin!("ltx:table") {
+    return None;
+  }
+  let graphics_qname = pin!("ltx:graphics");
+  let mut found: Option<Node> = None;
+  let mut stack = node.get_child_elements();
+  while let Some(n) = stack.pop() {
+    if document::get_node_qname(&n) == graphics_qname {
+      if found.is_some() {
+        return None; // >1 graphic — don't guess which sizes the panel
+      }
+      found = Some(n);
+    } else {
+      stack.extend(n.get_child_elements());
+    }
+  }
+  document
+    .get_node_box(&found?)
+    .and_then(|b| b.get_width(None).ok().flatten())
+    .map(|r| r.value_of() as f64)
+    .filter(|w| *w > 0.0)
+}
+
 /// Insert a `<ltx:break class="ltx_break"/>` immediately before `child`.
 fn insert_break_before(document: &Document, child: &mut Node) -> Result<Node> {
   let ns = child.get_namespace();
@@ -2036,7 +2069,17 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       row.clear();
     }
 
-    let child_width = panel_width(document, &child);
+    let mut child_width = panel_width(document, &child);
+    // #6903: a subcaptionbox / subfig \subfloat panel is sized to the full float
+    // \hsize (it has no explicit `{width}`), so it would take its own row. When
+    // it wraps a single narrower graphic, size it to that graphic so sibling
+    // panels share a row — an explicit-width `{subfigure}{W}` already does.
+    if child_width >= float_width
+      && let Some(inner) = sole_graphic_width(document, &child)
+      && inner < child_width
+    {
+      child_width = inner;
+    }
 
     if !row.is_empty() && (current_width + child_width > float_width) {
       // Perl L3287-3295: row overflow — break before this child, start a new row.

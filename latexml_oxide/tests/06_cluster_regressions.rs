@@ -53,6 +53,28 @@ fn cluster_fvextra_breakanywhere() {
 /// — the verbatim collapsed to ordinary typewriter text, silently, 0 errors.
 /// `fvextra_sty.rs` re-installs the hook over fvextra's redefinition. Witness:
 /// issue #502 (fancyvrb + fvextra; pre-fix 0 `ltx_verbatim`, post-fix one per line).
+/// arXiv/html_feedback#6903: two-column subfigure panels with no explicit
+/// `{width}` — `\subcaptionbox` and subfig `\subfloat` — are sized to the full
+/// `\hsize` and were stacked one-per-row (each full text width). `arrange_panels`
+/// now sizes such a panel to its sole graphic, so the panels share a row like an
+/// explicit-width `\begin{subfigure}{0.48\linewidth}` already does. Guarded on
+/// the core XML: both panels of each figure carry `ltx_figure_panel`, and no
+/// `<break>` is inserted between them (a break is the "start a new row" marker,
+/// so its absence is exactly "they share a row").
+#[test]
+fn cluster_subfigure_panels_share_a_row_6903() {
+  let xml = convert_to_xml("tests/cluster_regressions/subfigure_panel_wrapping_6903.tex");
+  assert_eq!(
+    xml.matches("ltx_figure_panel").count(),
+    4,
+    "expected 4 subfigure panels marked ltx_figure_panel (2 per figure):\n{xml}"
+  );
+  assert!(
+    !xml.contains("<break"),
+    "subcaptionbox/subfloat panels must share a row — a <break> means they \
+     stacked full-width (the #6903 bug):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");

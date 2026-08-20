@@ -1,0 +1,23 @@
+% arXiv/html_feedback#6903: in a two-column layout, subfigure panels that carry
+% no explicit {width} — subcaption's \subcaptionbox and subfig's \subfloat — were
+% sized to the full \hsize and stacked one-per-row (each spanning the full text
+% width), unlike an explicit-width \begin{subfigure}{0.48\linewidth}. They should
+% share a row: arrange_panels now sizes such a panel to its sole graphic.
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{subfig}
+\begin{document}
+\begin{figure}
+  \centering
+  \subcaptionbox{}{\includegraphics[width=0.48\linewidth]{panel_a}}\hfill
+  \subcaptionbox{}{\includegraphics[width=0.48\linewidth]{panel_b}}
+  \caption{subcaptionbox panels.}
+\end{figure}
+\begin{figure}
+  \centering
+  \subfloat[]{\includegraphics[width=0.48\linewidth]{panel_a}}\hfill
+  \subfloat[]{\includegraphics[width=0.48\linewidth]{panel_b}}
+  \caption{subfig subfloat panels.}
+\end{figure}
+\end{document}

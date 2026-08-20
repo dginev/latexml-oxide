@@ -18,6 +18,11 @@ fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHashMap<Stored
     .get(1)
     .and_then(|a| a.as_ref())
     .and_then(|a| Dimension::spec_to_f64(&a.to_string()).ok())
+    // #6903: a non-positive Dimension (e.g. `\subcaptionbox`'s `{0pt}` default,
+    // subcaption_sty L219) must NOT pin the panel width to 0 — that reads as a
+    // zero-width box in `arrange_panels` and the panels never share a row. Skip
+    // it so `panel_width` falls back to the panel's natural content width.
+    .filter(|w| *w > 0.0)
   {
     props.insert("width", Stored::Dimension(Dimension::new_f64(w)));
   }
