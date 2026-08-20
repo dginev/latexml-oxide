@@ -18,31 +18,6 @@ use crate::{
   whatsit::Whatsit,
 };
 
-/// Lexical relative path from `base` to `target`, with `..` for divergent base
-/// components — matching Perl's `File::Spec->abs2rel` (used by
-/// `pathname_relative`). Component-based, no symlink resolution. Falls back to
-/// the target's string form if either side isn't absolute or has no common root.
-fn abs2rel(target: &Path, base: &Path) -> String {
-  use std::path::Component;
-  if !target.is_absolute() || !base.is_absolute() {
-    return target.to_string_lossy().to_string();
-  }
-  let t: Vec<Component> = target.components().collect();
-  let b: Vec<Component> = base.components().collect();
-  let common = t.iter().zip(b.iter()).take_while(|(a, c)| a == c).count();
-  if common == 0 {
-    return target.to_string_lossy().to_string();
-  }
-  let mut result = PathBuf::new();
-  for _ in 0..(b.len() - common) {
-    result.push("..");
-  }
-  for comp in &t[common..] {
-    result.push(comp.as_os_str());
-  }
-  result.to_string_lossy().to_string()
-}
-
 /// Perl: `image_candidates($path)` (Util::Image L43-57).
 ///
 /// Returns comma-separated list of candidate paths for `path`, searching
@@ -82,12 +57,15 @@ pub fn image_candidates(path: &str) -> String {
     let base = PathBuf::from(dir).join(path);
     if has_extension {
       if base.exists() {
+        // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
+        // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
+        // SIBLING directory (issue #698: `\subimport*{../gfx_asset/}` reaching a
+        // sideways tree). See `pathname::relative`, which now matches Perl (it
+        // used to leak the absolute path on a non-descendant hit).
         let rel = match &source_path {
-          Some(sp) => base
-            .strip_prefix(sp)
-            .unwrap_or(&base)
-            .to_string_lossy()
-            .to_string(),
+          Some(sp) => {
+            crate::util::pathname::relative(&base.to_string_lossy(), &sp.to_string_lossy())
+          },
           None => base.to_string_lossy().to_string(),
         };
         candidates.push(rel);
@@ -106,12 +84,12 @@ pub fn image_candidates(path: &str) -> String {
             && fname[..dot_pos] == stem
           {
             let full = entry.path();
+            // Sibling-directory relativization (issue #698) — see the
+            // extension branch above: pathname::relative (abs2rel semantics).
             let rel = match &source_path {
-              Some(sp) => full
-                .strip_prefix(sp)
-                .unwrap_or(&full)
-                .to_string_lossy()
-                .to_string(),
+              Some(sp) => {
+                crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy())
+              },
               None => full.to_string_lossy().to_string(),
             };
             candidates.push(rel);
@@ -136,10 +114,10 @@ pub fn image_candidates(path: &str) -> String {
       // Perl relativizes every candidate to SOURCEDIRECTORY via pathname_relative,
       // which yields a `../…`-style path for a kpsewhich hit in the texmf tree
       // (e.g. `../usr/share/texlive/…/example-image-a.png`) — NOT an absolute
-      // machine path. `pathname::relative`/`strip_prefix` only handle the
-      // descendant case, so use a lexical abs2rel for the non-descendant tree.
+      // machine path. `pathname::relative` now emits that `../…` form for a
+      // non-descendant tree (issue #698 fixed its strip_prefix leak).
       let rel = match &source_path {
-        Some(sp) => abs2rel(Path::new(&found), sp),
+        Some(sp) => crate::util::pathname::relative(&found, &sp.to_string_lossy()),
         None => found,
       };
       candidates.push(rel);

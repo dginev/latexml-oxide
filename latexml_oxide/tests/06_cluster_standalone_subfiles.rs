@@ -359,3 +359,30 @@ fn keyval_internals_survive_xkeyval_preloading_it() {
     "#500: the already-working `fancyvrb` then `standalone` order regressed"
   );
 }
+
+/// Issue #698: a `\includegraphics` inside a `\subimport*`-ed child whose file
+/// lives in a SIBLING directory (reached via `../`) must record its graphic
+/// `candidates` RELATIVE to the main file's directory — never as an absolute
+/// filesystem path. `util::image::image_candidates` relativizes each hit
+/// against `SOURCEDIRECTORY`; it used `strip_prefix`, which can only strip a
+/// *descendant* prefix, so a sibling-dir graphic fell back to the raw absolute
+/// path (`/mnt/g/…` in the report) and leaked verbatim into the HTML `data=`
+/// URL, breaking every deployment. Perl stores `../gfx_asset/images/pic.svg`
+/// (Util/Image.pm `pathname_relative` → `File::Spec->abs2rel`); the lexical
+/// `abs2rel` helper already used for the kpsewhich branch produces the same.
+#[test]
+fn subimport_sibling_graphic_candidate_is_relative() {
+  let xml = convert_to_xml("tests/cluster_regressions/subimport/gfx_main/index_gfx_sibling.tex");
+  // The exact Perl-parity relative candidate for a sibling-dir asset.
+  assert!(
+    xml.contains("candidates=\"../gfx_asset/images/pic.svg\""),
+    "#698: sibling-dir graphic must record a relative candidate \
+     `../gfx_asset/images/pic.svg`:\n{xml}"
+  );
+  // The canary: an absolute candidate is the bug, machine-independent.
+  assert!(
+    !xml.contains("candidates=\"/"),
+    "#698: graphic candidate must never be an absolute filesystem path \
+     (it leaks into the output `data=`/`src=` URL):\n{xml}"
+  );
+}
