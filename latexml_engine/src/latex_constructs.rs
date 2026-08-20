@@ -2098,7 +2098,24 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       let big_disparity = prev_width > 0.0
         && child_width > 0.0
         && (prev_width.max(child_width) / prev_width.min(child_width) > 8.0);
-      if child_width == 0.0 || big_disparity || (prev_width + child_width < min_panel_width) {
+      // #2709: the merge groups small/disparate content into an `ltx:block`, but
+      // the schema forbids a float (`ltx:figure`/`ltx:table`, or any future
+      // `ltx:float`) as a block child — wrapping one yields an invalid
+      // `<block><figure/></block>`. Ask the MODEL (not a hard-coded name list)
+      // whether the block can hold what would go into it, per merge branch; if
+      // not, keep the panels as siblings. Minipage grids stay valid block content
+      // and are unaffected.
+      let merge_is_valid = if prev_name == block_qname {
+        model::can_contain_sym(block_qname, child_name)
+      } else if child_name == block_qname {
+        model::can_contain_sym(block_qname, prev_name)
+      } else {
+        model::can_contain_sym(block_qname, prev_name)
+          && model::can_contain_sym(block_qname, child_name)
+      };
+      if merge_is_valid
+        && (child_width == 0.0 || big_disparity || (prev_width + child_width < min_panel_width))
+      {
         // Perl L3312-3325: contain the two pieces in a single ltx:block panel.
         let merged_width = prev_width + child_width;
         if prev_name == block_qname {
