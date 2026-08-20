@@ -387,6 +387,7 @@ pub mod rotate_sty;
 pub mod rotating_sty;
 pub mod rsfs_sty;
 pub mod scalefnt_sty;
+pub mod scalerel_sty;
 pub mod sectsty_sty;
 pub mod setspace_sty;
 pub mod shellesc_sty;

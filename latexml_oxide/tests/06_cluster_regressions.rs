@@ -111,6 +111,17 @@ fn cluster_svg_subfloat_survives_subcaption_2563() {
     "\\subfloat's body content was lost:\n{xml}"
   );
 }
+/// arXiv/html_feedback#6895: `\RequirePackage{scalerel}` leaves `\scalerel`
+/// undefined (no binding in Perl or Rust; the raw `.sty` load fails to define it),
+/// so an inline icon built with `\scalerel*` (the `\orcidicon` of arXiv:2608.12272)
+/// raised `Error:undefined:\scalerel` and rendered its picture unscaled. The
+/// `scalerel_sty` binding defines `\scalerel`/`\stretchrel` so the object scales to
+/// the reference's height. Beyond Perl 0.8.8 (which errors identically). Witness:
+/// 2608.12272.
+#[test]
+fn cluster_scalerel_defined_6895() {
+  convert_clean("tests/cluster_regressions/scalerel_icon_6895.tex");
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");

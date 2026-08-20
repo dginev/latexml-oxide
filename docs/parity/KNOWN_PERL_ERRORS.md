@@ -4019,3 +4019,34 @@ surpasses):** `subfig_sty.rs` defines `\lx@subfloat@figure`/`\lx@subfloat@table`
 **unconditionally** and calls `NewCounter!` directly (idempotent), dropping the
 counter guard — so the subfloat macros exist regardless of a pre-existing counter.
 Guard: `06_cluster_regressions::cluster_svg_subfloat_survives_subcaption_2563`.
+
+## 103. `\scalerel` is undefined, so a scaled inline icon renders unscaled (Rust surpasses)
+
+**Perl source:** none — the `scalerel` package has **no** `.ltxml` binding, and
+`\RequirePackage{scalerel}` loads only the raw `.sty`'s dependencies (calc, graphicx,
+etoolbox), not its body, so `\scalerel` is never defined.
+
+**Symptom:** an inline icon built with `\scalerel*{obj}{ref}` (which should scale
+`obj` to the height of `ref`) — e.g. the `\orcidicon` macro that packs a tikz
+`orcidlogo` picture into `\scalerel*` — raises `Error:undefined:\scalerel` and drops
+the object in **unscaled**, so the ORCID logo covers multiple text lines. Same on
+Perl 0.8.8 (verified same-host: `Error:undefined:\scalerel`).
+
+**Minimal trigger:**
+```tex
+\documentclass{article}\usepackage{scalerel}
+\begin{document}X\scalerel*{\rule{2cm}{2cm}}{Xg}Y\end{document}
+```
+Perl → `Error:undefined:\scalerel`, the `2cm` rule unscaled. Correct (Rust): the
+object wrapped in an inline-block scaled to text height (a 16×16 px inline glyph for
+the ORCID witness), zero errors.
+
+**Impact:** Perl-origin (missing binding), shared with the Rust raw-load. **Rust status
+(FIXED — surpasses):** `scalerel_sty.rs` binds `\scalerel`/`\stretchrel`; `\scalerel*`
+wraps the object in `.ltx_scalerel`, which `LaTeXML.css` sizes to `1em` with its
+`svg`/`img` child at `height:100%; width:auto`, so the object scales to the text
+height (aspect preserved). Box-measurement scaling being unavailable, the CSS sizes to
+the *text* height rather than an arbitrary `ref` — correct for the dominant
+inline-icon use. Guard: `06_cluster_regressions::cluster_scalerel_defined_6895`.
+Witness: arXiv/html_feedback#6895 (arXiv:2608.12272). The ar5iv stylesheet carries the
+matching `.ltx_scalerel` rule.
