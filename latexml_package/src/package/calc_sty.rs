@@ -445,18 +445,30 @@ LoadDefinitions!({
     // (Dimension), treated as zero". The canonical trigger is Pandoc's default
     // relative-width table column `p{(\columnwidth - N\tabcolsep) * \real{X}}`:
     // an unparsed width collapses the p{} column to a zero-width cell whose text
-    // wraps one character per line ("a river of characters"). Route the whole
-    // expression through calc's own parser on the LIVE stream; it stops at the
-    // first non-(+|-|*|/) token so it never over-consumes, and is scoped to a
-    // leading `(` (the exact Pandoc idiom). Real LaTeX+calc evaluates lengths
-    // here too. Surpass-perl (Perl 0.8.8 emits the same 0pt): OXIDIZED_DESIGN
-    // #141. arXiv/html_feedback#6909; witness 2606.08266.
+    // wraps one character per line ("a river of characters").
+    //
+    // Real LaTeX defers this length: `array.sty`'s `\@startpbox` (L189-191) keeps
+    // the `p{}` width as *tokens* and only later assigns `\setlength\hsize{#1}`,
+    // and calc.sty patches `\setlength` to run its scanner — so the expression is
+    // evaluated at box-setup time, never eagerly. LaTeXML has no such deferral: it
+    // must yield the width *value* to emit `<td>`'s `width=` attribute, so it reads
+    // the width eagerly here. We evaluate with calc's OWN parser (`read_value` ->
+    // `read_expression_body`, the same grammar `\setlength` uses), so the result
+    // matches calc — only the invocation point differs. The parser reads the whole
+    // expression off the LIVE stream and stops at the first non-(+|-|*|/) token, so
+    // it never over-consumes; scoped to a leading `(` (the exact Pandoc idiom), so
+    // nothing that parsed before is disturbed. `read_dimension` has already peeled
+    // any leading sign, so `-(…)` negates the evaluated result correctly.
+    //
+    // Surpass-perl (Perl 0.8.8 emits the same 0pt): OXIDIZED_DESIGN #141.
+    // arXiv/html_feedback#6909; witness 2606.08266.
     if *tok == T_OTHER!("(") {
       unread_one(*tok);
-      let value = read_expression_body("Glue")?;
-      return Ok(Some(RegisterValue::Dimension(Dimension::new(
-        value.value_of(),
-      ))));
+      // "Glue" mirrors calc's `\setlength`; the cell width is a pure `<dimen>`, so
+      // coerce down (dropping any stretch/shrink) exactly as `read_internal_dimension`
+      // does for a register value.
+      let value: Dimension = read_expression_body("Glue")?.into();
+      return Ok(Some(RegisterValue::Dimension(value)));
     }
     let kind = if *tok == T_CS!("\\widthof") {
       BoxDim::Width
