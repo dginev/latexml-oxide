@@ -1146,8 +1146,8 @@ impl Graphics {
     status
   }
 
-  /// The SVG viewport in pixels — `viewBox` extent, else the root
-  /// `width`/`height` lengths. `None` when the geometry can't be recovered, so
+  /// The SVG viewport in pixels — the root `width`/`height`, else the `viewBox`
+  /// extent (issue #696). `None` when the geometry can't be recovered, so
   /// callers omit the dimension attributes entirely (a browser then sizes the
   /// image itself, which beats writing a wrong number).
   ///
@@ -2697,12 +2697,13 @@ endobj
     );
   }
 
-  /// SVG viewBox parsing extracts width/height — and, when both are present,
-  /// the viewBox wins over the root lengths. That precedence is load-bearing:
-  /// `pdftocairo -svg` writes `width="612pt" … viewBox="0 0 612 792"`, so
-  /// preferring the lengths would rescale every PDF-derived figure by 96/72.
+  /// The viewport dimensions come from the root `width`/`height`, the way a
+  /// browser sizes an SVG — the `viewBox` is only a fallback (issue #696). Here
+  /// `10cm`/`7.5cm` convert to 378×283 px (96 dpi); the disagreeing `viewBox`
+  /// `0 0 640 480` is ignored for sizing. When the root carries no lengths, the
+  /// viewBox is what remains.
   #[test]
-  fn read_svg_dimensions_parses_viewbox() {
+  fn read_svg_dimensions_sizes_from_root_lengths() {
     let dir = TempDir::new("svg_dim");
     let tmp = dir.join("dims.svg");
     std::fs::write(
@@ -2714,14 +2715,25 @@ endobj
     )
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
-    assert_eq!(dims, (640, 480));
+    assert_eq!(dims, (378, 283));
+    // No root lengths → the viewBox is the fallback.
+    let vb = dir.join("vb.svg");
+    std::fs::write(
+      &vb,
+      r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><rect/></svg>"#,
+    )
+    .unwrap();
+    assert_eq!(
+      Graphics::read_svg_dimensions(vb.to_str().unwrap()).expect("viewbox fallback"),
+      (640, 480)
+    );
   }
 
-  /// Falls back to width/height attrs when viewBox is missing — **converting**
-  /// the unit, not truncating it. `123.7pt` is 123.7/72 in = 164.9 px; the
-  /// previous reader dropped the `pt` and called it 124 px, so a `\includegraphics`
-  /// of this file rendered at three quarters of its size (and, for `cm`/`in`
-  /// sources, at a small fraction of it — issue 498 follow-up).
+  /// A unit-bearing root length must be **converted**, not truncated. `123.7pt`
+  /// is 123.7/72 in = 164.9 px; the previous reader dropped the `pt` and called
+  /// it 124 px, so a `\includegraphics` of this file rendered at three quarters
+  /// of its size (and, for `cm`/`in` sources, at a small fraction of it — issue
+  /// 498 follow-up).
   #[test]
   fn read_svg_dimensions_falls_back_to_width_height() {
     let dir = TempDir::new("svg_dim_fallback");
