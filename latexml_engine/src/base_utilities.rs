@@ -2469,6 +2469,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     }
   }
   coalesce_empty_creators(document)?;
+  distribute_upfront_contacts(document)?;
   relocate_annotations(document)?;
   Ok(())
 }
@@ -2518,6 +2519,74 @@ fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   }
   for creator in to_remove {
     document.remove_node(creator);
+  }
+  Ok(())
+}
+
+/// Redistribute a mis-piled contact block back to its authors (surpass-Perl).
+///
+/// The amsart idiom `\author{A}\author{B}\author{C}` followed by paired
+/// `\address{}\email{}` declares every author up front, then all the contacts.
+/// LaTeXML's default "attach a contact to the preceding creator" then bunches
+/// EVERY address+email under the LAST author (arXiv:2308.06214v1,
+/// arXiv/html_feedback#46); Perl 0.8.8 does the same (SHARED limitation).
+///
+/// Fix ONLY the clean, unambiguous pile — an `N × m` grid: the other `N-1`
+/// authors carry no contact, the last author's `K` contacts split evenly
+/// (`K = N·m`) into a role-periodic sequence (`role[i] == role[i+m]`), so group
+/// `j` is handed to author `j`. Any irregular pile — a heterogeneous role
+/// sequence, per-author counts that differ, or contacts already spread across
+/// authors (the interleaved idiom, which is correct as-is) — fails the gate and
+/// is left EXACTLY as Perl attached it. Mirrors the "distribute-when-clean, else
+/// keep prior" rule of the shared-email splitter (OXIDIZED_DESIGN #52(j)).
+fn distribute_upfront_contacts(document: &mut Document) -> Result<()> {
+  let creators = document.findnodes("//ltx:creator[@role='author']", None);
+  let n = creators.len();
+  if n < 2 {
+    return Ok(());
+  }
+  let contacts_of = |c: &Node| -> Vec<Node> {
+    c.get_child_nodes()
+      .into_iter()
+      .filter(|x| {
+        x.get_type() == Some(NodeType::ElementNode)
+          && with(document::get_node_qname(x), |q| q == "ltx:contact")
+      })
+      .collect()
+  };
+  // Signature: only the LAST author carries any contacts.
+  for creator in &creators[..n - 1] {
+    if !contacts_of(creator).is_empty() {
+      return Ok(());
+    }
+  }
+  let last = creators[n - 1].clone();
+  let contacts = contacts_of(&last);
+  let k = contacts.len();
+  if k == 0 || k % n != 0 {
+    return Ok(());
+  }
+  let m = k / n;
+  // Role sequence must be periodic with period m (every group has the same
+  // role pattern), else the pile is not a clean grid — leave it to Perl's rule.
+  let roles: Vec<String> = contacts
+    .iter()
+    .map(|x| x.get_attribute("role").unwrap_or_default())
+    .collect();
+  if (0..k - m).any(|i| roles[i] != roles[i + m]) {
+    return Ok(());
+  }
+  // Group j (contacts[j*m .. (j+1)*m]) -> author j. The last group stays put;
+  // the earlier groups clone onto their author and the originals are removed.
+  let mut to_remove: Vec<Node> = Vec::new();
+  for (j, creator) in creators.iter().enumerate().take(n - 1) {
+    let group: Vec<Node> = contacts[j * m..(j + 1) * m].to_vec();
+    let mut target = creator.clone();
+    document.append_clone(&mut target, group.clone())?;
+    to_remove.extend(group);
+  }
+  for node in to_remove {
+    document.remove_node(node);
   }
   Ok(())
 }

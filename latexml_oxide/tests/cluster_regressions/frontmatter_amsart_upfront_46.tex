@@ -1,0 +1,25 @@
+% arXiv/html_feedback#46 (witness 2308.06214v1, amsart): all three \author are
+% declared up front, THEN one \address/\email pair each. LaTeXML's default
+% "attach contact to the preceding creator" bunches EVERY address+email under the
+% LAST author (Hannah Turner); Perl 0.8.8 does the same (SHARED limitation). The
+% clean N x m grid (3 authors x {address,email}) must redistribute: pair i to
+% author i.
+\documentclass{amsart}
+\begin{document}
+\title{The Dehn twist coefficient}
+\author{Peter Feller}
+\author{Diana Hubbard}
+\author{Hannah Turner}
+
+\address{ETH Zurich, Ramistrasse 101, 8092 Zurich, Switzerland}
+\email{peter.feller@math.ch}
+
+\address{Brooklyn College CUNY, 2900 Bedford Avenue 11210 USA}
+\email{diana.hubbard@brooklyn.cuny.edu}
+
+\address{Georgia Institute of Technology}
+\email{hannah.turner@math.gatech.edu}
+
+\maketitle
+Body text.
+\end{document}
