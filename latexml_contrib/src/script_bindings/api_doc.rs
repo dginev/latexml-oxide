@@ -683,8 +683,10 @@ const DOCS: &[(&str, Doc)] = &[
        (`^ _ ~ & $ # '`) to literal `OTHER`, but keep `\\ { }` special so control \
        sequences and `\\end{env}` still parse. This is NOT full verbatim — a backslash \
        command is still expanded (e.g. the Mathematica `\\[Gamma]` fires `\\[`, which \
-       opens display math); only the `{verbatim}` / fancyvrb environments read a body \
-       as raw lines where even `\\` is literal. Pass extra single-char strings to \
+       opens display math), and because `{` `}` stay group-markers a literal brace in \
+       the source is consumed as grouping, not printed: `{}` yields nothing and `{x}` \
+       yields `x`. Only the `{verbatim}` / fancyvrb environments read a body \
+       as raw lines where even `\\ { }` are literal. Pass extra single-char strings to \
        neutralize them too — but not `\\`, since `\\end{env}` needs it. Pair with \
        `EndSemiverbatim` in a `DefEnvironment`'s `beforeDigest`/`beforeDigestEnd`.",
       "latexml_core::state::begin_semiverbatim",
