@@ -39,17 +39,25 @@ fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
   let reader_mouth = Mouth::new("", None)?;
   reading_from_mouth(reader_mouth, move || {
     unread(tokens);
-    let mut result = read_term(expr_type)?;
-    while let Some(op) = read_keyword(&["+", "-"])? {
-      let term2 = read_term(expr_type)?;
-      result = if op == "+" {
-        result.add(term2)
-      } else {
-        result.subtract(term2)
-      };
-    }
-    Ok(result)
+    read_expression_body(expr_type)
   })
+}
+
+/// The calc `<expression> -> <term> ((+|-) <term>)*` loop, reading from the
+/// CURRENT gullet context. [`read_expression`] wraps it with a mouth over a
+/// captured token list; the base-dimension seam (installed below) calls it
+/// directly on the live stream to evaluate an inline `( … ) * \real{…}` width.
+fn read_expression_body(expr_type: &str) -> Result<RegisterValue> {
+  let mut result = read_term(expr_type)?;
+  while let Some(op) = read_keyword(&["+", "-"])? {
+    let term2 = read_term(expr_type)?;
+    result = if op == "+" {
+      result.add(term2)
+    } else {
+      result.subtract(term2)
+    };
+  }
+  Ok(result)
 }
 
 fn read_term(expr_type: &str) -> Result<RegisterValue> {
@@ -432,6 +440,36 @@ LoadDefinitions!({
   // fires ONLY when the dimension reader — not digestion — meets the token.
   // Surpass-perl: OXIDIZED_DESIGN #115. html_feedback#6869; witness 2603.23669.
   set_internal_dimension_fn(Rc::new(|tok: &Token| {
+    // calc infix expression opening with `(` — the base dimension reader
+    // (read_dimension/read_glue) cannot parse it and would warn "Missing number
+    // (Dimension), treated as zero". The canonical trigger is Pandoc's default
+    // relative-width table column `p{(\columnwidth - N\tabcolsep) * \real{X}}`:
+    // an unparsed width collapses the p{} column to a zero-width cell whose text
+    // wraps one character per line ("a river of characters").
+    //
+    // Real LaTeX defers this length: `array.sty`'s `\@startpbox` (L189-191) keeps
+    // the `p{}` width as *tokens* and only later assigns `\setlength\hsize{#1}`,
+    // and calc.sty patches `\setlength` to run its scanner — so the expression is
+    // evaluated at box-setup time, never eagerly. LaTeXML has no such deferral: it
+    // must yield the width *value* to emit `<td>`'s `width=` attribute, so it reads
+    // the width eagerly here. We evaluate with calc's OWN parser (`read_value` ->
+    // `read_expression_body`, the same grammar `\setlength` uses), so the result
+    // matches calc — only the invocation point differs. The parser reads the whole
+    // expression off the LIVE stream and stops at the first non-(+|-|*|/) token, so
+    // it never over-consumes; scoped to a leading `(` (the exact Pandoc idiom), so
+    // nothing that parsed before is disturbed. `read_dimension` has already peeled
+    // any leading sign, so `-(…)` negates the evaluated result correctly.
+    //
+    // Surpass-perl (Perl 0.8.8 emits the same 0pt): OXIDIZED_DESIGN #141.
+    // arXiv/html_feedback#6909; witness 2606.08266.
+    if *tok == T_OTHER!("(") {
+      unread_one(*tok);
+      // "Glue" mirrors calc's `\setlength`; the cell width is a pure `<dimen>`, so
+      // coerce down (dropping any stretch/shrink) exactly as `read_internal_dimension`
+      // does for a register value.
+      let value: Dimension = read_expression_body("Glue")?.into();
+      return Ok(Some(RegisterValue::Dimension(value)));
+    }
     let kind = if *tok == T_CS!("\\widthof") {
       BoxDim::Width
     } else if *tok == T_CS!("\\heightof") {

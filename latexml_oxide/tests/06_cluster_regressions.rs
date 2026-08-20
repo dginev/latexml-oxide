@@ -122,6 +122,30 @@ fn cluster_svg_subfloat_survives_subcaption_2563() {
 fn cluster_scalerel_defined_6895() {
   convert_clean("tests/cluster_regressions/scalerel_icon_6895.tex");
 }
+/// arXiv/html_feedback#6909 (witness 2606.08266): Pandoc's default relative-width
+/// table column `p{(\columnwidth - N\tabcolsep) * \real{X}}` is a calc infix
+/// expression the base dimension reader could not evaluate, so every column
+/// collapsed to `width="0.0pt"` and the cell text wrapped one character per line
+/// ("a river of characters"). Column widths now route through the calc expression
+/// parser when calc is loaded. Surpasses Perl 0.8.8 (which emits the same 0pt +
+/// `Missing number` warning); pdflatex renders the real widths. OXIDIZED_DESIGN #141.
+#[test]
+fn cluster_pandoc_calc_colwidth_6909() {
+  let xml = convert_to_xml("tests/cluster_regressions/pandoc_calc_colwidth_6909.tex");
+  // Canary: a zero-width p{} column is the corruption.
+  assert!(
+    !xml.contains(r#"width="0.0pt""#),
+    "a Pandoc calc column width collapsed to 0pt (#6909) — the calc expression \
+     `(\\columnwidth - N\\tabcolsep) * \\real{{X}}` was not evaluated:\n{xml}"
+  );
+  // The two \real factors (0.30 / 0.70) of (345pt - 4*6pt) = 321pt give distinct,
+  // proportional widths: 96.3pt and 224.7pt.
+  assert!(
+    xml.contains(r#"width="96.3pt""#) && xml.contains(r#"width="224.7pt""#),
+    "Pandoc calc column widths are not the expected proportional 96.3pt / 224.7pt \
+     (30%/70% of 321pt):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");

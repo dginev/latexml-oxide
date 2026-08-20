@@ -5313,3 +5313,41 @@ Joe-Blow/Frank-Zappa/Someone-Else block is interleaved and byte-unchanged).
 
 **Guard**: `06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`
 (up-front pile distributes; interleaved control untouched). KNOWN_PERL_ERRORS #104.
+
+### 141. calc column widths (`p{(\columnwidth - N\tabcolsep) * \real{X}}`) evaluate, not collapse to 0pt
+
+**Perl** LaTeXML's `calc.sty.ltxml` patches only the explicit length/counter setters
+(`\setlength`/`\addtolength`/`\setcounter`/`\settowidth`/…) to run its expression scanner. A
+`p{Dimension}`/`m`/`b`/`w`/`W` column width, however, is read by the *base* dimension reader,
+which never routes through that scanner. When the width is a calc infix expression — the default
+Pandoc emits for a relative-width table column, `>{\raggedright\arraybackslash}p{(\columnwidth -
+N\tabcolsep) * \real{X}}` — the base reader meets `(`, cannot parse it, and warns `Missing number
+(Dimension), treated as zero`. Every such column comes out `width="0.0pt"`; a zero-width `p{}`
+cell wraps its text one character per line — the reporter's "river of characters with no
+resemblance to the original". Real pdflatex+calc evaluates the width (calc patches length
+scanning wherever a `<dimen>` is read). latexml-oxide reproduced Perl exactly (SHARED-FAILURE,
+both diverge from real LaTeX; verified same-host — identical 0pt + identical warning).
+
+**Perl behavior**: a Pandoc calc column width → `width="0.0pt"`; the whole table collapses.
+**Rust behavior**: the base dimension reader's calc seam (`gullet::set_internal_dimension_fn`,
+the same one #115 installs for `\widthof`) also fires on a leading `(`: it un-reads the paren and
+runs calc's own expression parser (`read_expression_body`) on the live stream, returning the
+evaluated dimension. The parser stops at the first non-`(+|-|*|/)` token, so it never
+over-consumes; it is scoped to a leading `(` (the exact Pandoc idiom), so nothing that parsed
+before changes. When `calc` is not loaded the seam is unset → byte-identical to before. So
+`p{(\columnwidth - 4\tabcolsep) * \real{0.30}}` with `\columnwidth`=345pt now yields
+`width="96.3pt"` instead of `0.0pt`.
+
+**Why**: a kernel-quality gap, not a TeX-semantics change — real LaTeX+calc already evaluates a
+length here; both LaTeXML engines simply failed to. The fix halos across every calc-relative
+column width, i.e. essentially every Pandoc-authored table on arXiv.
+
+**Witnesses**: arXiv 2606.08266v1 (html_feedback#6909) — an IEEEtran survey whose five-column
+`p{(\columnwidth - 8\tabcolsep) * \real{…}}` failure-statistics table collapsed to zero-width
+columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (of 321pt avail).
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same gap upstream).
+
+**Guards**: `06_cluster_regressions::cluster_pandoc_calc_colwidth_6909` — a two-column
+`p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
+proportional 96.3pt / 224.7pt.

@@ -1,5 +1,17 @@
 # Change Log
 
+## Unreleased
+
+  - **Pandoc relative-width table columns no longer collapse to a "river of
+    characters".** A `p{(\columnwidth - N\tabcolsep) * \real{X}}` column — the width
+    format Pandoc emits by default — is a `calc` infix expression the base dimension
+    reader could not evaluate, so every column came out `width="0.0pt"` and its text
+    wrapped one character per line. Column widths now route through the `calc`
+    expression parser when `calc` is loaded, giving the intended proportional widths.
+    Surpasses Perl 0.8.8 (which emits the same 0pt + `Missing number` warning);
+    pdflatex renders the real widths (OXIDIZED_DESIGN #141, arXiv/html_feedback#6909,
+    witness 2606.08266).
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render with syntax highlighting, and inline `\mint`/`\mintinline`

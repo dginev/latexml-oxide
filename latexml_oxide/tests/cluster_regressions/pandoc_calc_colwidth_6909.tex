@@ -1,0 +1,17 @@
+\documentclass{article}
+% arXiv/html_feedback#6909 (witness 2606.08266): Pandoc's default relative-width
+% table column — p{(\columnwidth - N\tabcolsep) * \real{X}} — is a calc infix
+% expression. The base dimension reader could not evaluate it, so every column
+% collapsed to width="0.0pt" and the cell text wrapped one character per line
+% ("a river of characters"). Fixed by routing column widths through the calc
+% expression parser when calc is loaded (surpass Perl; OXIDIZED_DESIGN).
+\usepackage{array}
+\usepackage{calc}
+\providecommand{\real}[1]{#1}
+\begin{document}
+\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.30}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.70}}@{}}
+Narrow column & Wide column with a fair amount of prose that must wrap normally \\
+\end{tabular}
+\end{document}
