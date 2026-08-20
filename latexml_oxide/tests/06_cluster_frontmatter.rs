@@ -824,6 +824,34 @@ fn frontmatter_czipreprint_author_star() {
     "czipreprint `[n]` optarg leaked a `]`:\n{x}"
   );
 }
+/// ceurart `\author[affil]{name}[orcid=…,email=…]` — the modern per-author
+/// keyval bracket (ceurart.cls L1247 `\RenewDocumentCommand\author{O{} m O{}}`).
+/// The binding didn't define `\author`, so the trailing `[keyval]` fell through
+/// OmniBus's `\author[]{}` unconsumed and LEAKED as raw `orcid=…, email=…` text.
+/// The 3-arg form now routes the name to a creator and parses the keyval into
+/// role=orcid/email notes. arXiv/html_feedback#6650, witness 2511.11770.
+#[test]
+fn frontmatter_ceurart_author_orcid_keyval() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/ceurart_author_orcid_keyval.tex");
+  // The keyval no longer leaks as literal `key=value` text.
+  assert!(
+    !x.contains("orcid=") && !x.contains("email="),
+    "ceurart author keyval leaked as raw text:\n{x}"
+  );
+  // The author renders, and the orcid/email VALUES are preserved as notes.
+  assert!(
+    x.contains("Alice Smith"),
+    "ceurart author name missing:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"orcid\"") && x.contains("0000-0003-0583-6969"),
+    "ceurart orcid value not preserved as a note:\n{x}"
+  );
+  assert!(
+    x.contains("role=\"email\"") && x.contains("alice@example.org"),
+    "ceurart email value not preserved as a note:\n{x}"
+  );
+}
 /// spconf.sty / INTERSPEECH2021.sty single-arg `\name{Author1$^1$, Author2$^2$}`
 /// on `\documentclass{article}`: the name list becomes structured creators
 /// rather than being stashed and dropped. Witness 2309.14838, 2405.13379.

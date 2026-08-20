@@ -81,6 +81,39 @@ LoadDefinitions!({
   def_macro_noop("\\eadsep")?;
   def_macro_noop("\\eadauthor")?;
 
+  // ceurart.cls L1247 `\RenewDocumentCommand\author{ O{} m O{} }` —
+  // `\author[affil]{name}[orcid=…,email=…,url=…,…]`. The trailing keyval bracket
+  // is the modern per-author metadata carrier. Our binding didn't define
+  // `\author`, so it fell to OmniBus's `\author[]{}`, leaving the `[keyval]`
+  // bracket unconsumed — it LEAKED as raw `orcid=…, email=…` text into the body.
+  // Define the 3-arg form: route the name to a structured creator and parse the
+  // keyval (ceurart.cls L1033-1061) so the content-bearing keys survive as
+  // frontmatter notes (matching `\orcidauthor`/`\ead` above), while the
+  // formatting/flag keys are gobbled — so `\setkeys` never hits an undefined
+  // key. arXiv/html_feedback#6650, witness 2511.11770 (both authors'
+  // `orcid=…,email=…` leaked).
+  RequirePackage!("keyval");
+  RawTeX!(
+    r"\define@key{lx@ceur@au}{orcid}{\@add@frontmatter{ltx:note}[role=orcid]{#1}}%
+\define@key{lx@ceur@au}{email}{\@add@frontmatter{ltx:note}[role=email]{#1}}%
+\define@key{lx@ceur@au}{url}{\@add@frontmatter{ltx:note}[role=url]{#1}}%
+\define@key{lx@ceur@au}{twitter}{\@add@frontmatter{ltx:note}[role=twitter]{#1}}%
+\define@key{lx@ceur@au}{facebook}{\@add@frontmatter{ltx:note}[role=facebook]{#1}}%
+\define@key{lx@ceur@au}{linkedin}{\@add@frontmatter{ltx:note}[role=linkedin]{#1}}%
+\define@key{lx@ceur@au}{plus}{\@add@frontmatter{ltx:note}[role=gplus]{#1}}%
+\define@key{lx@ceur@au}{gplus}{\@add@frontmatter{ltx:note}[role=gplus]{#1}}%
+\define@key{lx@ceur@au}{prefix}{}\define@key{lx@ceur@au}{suffix}{}%
+\define@key{lx@ceur@au}{degree}{}\define@key{lx@ceur@au}{role}{}%
+\define@key{lx@ceur@au}{auid}{}\define@key{lx@ceur@au}{bioid}{}%
+\define@key{lx@ceur@au}{alt}{}\define@key{lx@ceur@au}{style}{}%
+\define@key{lx@ceur@au}{collab}{}\define@key{lx@ceur@au}{anon}{}%
+\define@key{lx@ceur@au}{deceased}{}\define@key{lx@ceur@au}{type}{}"
+  );
+  DefMacro!(
+    "\\author []{} []",
+    "\\lx@add@creator[annotations={#1}]{#2}\\setkeys{lx@ceur@au}{#3}"
+  );
+
   // ORCID/URL/email per-author; preserve user-visible value (#2) as
   // ltx:note. #1 is the author tag (used for cross-ref; ignored here).
   DefMacro!(
