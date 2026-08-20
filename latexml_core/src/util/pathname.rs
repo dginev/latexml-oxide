@@ -823,6 +823,32 @@ pub fn make(dir: Option<&str>, name: Option<&str>, ext: Option<&str>) -> String 
   canonical(&result)
 }
 
+/// Lexical relative path from `base` to `target`, with `..` for the divergent
+/// tail of `base` — the semantics of Perl's `File::Spec->abs2rel`, which
+/// `pathname_relative` is built on. Component-based, no symlink resolution.
+/// Both sides must be absolute (the only case `relative` calls it with); if
+/// they share no root, falls back to the target string.
+fn abs2rel(target: &Path, base: &Path) -> String {
+  use std::path::Component;
+  if !target.is_absolute() || !base.is_absolute() {
+    return target.to_string_lossy().to_string();
+  }
+  let t: Vec<Component> = target.components().collect();
+  let b: Vec<Component> = base.components().collect();
+  let common = t.iter().zip(b.iter()).take_while(|(a, c)| a == c).count();
+  if common == 0 {
+    return target.to_string_lossy().to_string();
+  }
+  let mut result = PathBuf::new();
+  for _ in 0..(b.len() - common) {
+    result.push("..");
+  }
+  for comp in &t[common..] {
+    result.push(comp.as_os_str());
+  }
+  result.to_string_lossy().to_string()
+}
+
 /// Make a pathname relative to a base directory.
 /// Port of Perl's pathname_relative($pathname, $base).
 pub fn relative(pathname: &str, base: &str) -> String {
@@ -831,12 +857,13 @@ pub fn relative(pathname: &str, base: &str) -> String {
     return canonical_pathname;
   }
   let canonical_base = canonical(base);
-  let path = Path::new(&canonical_pathname);
-  let base_path = Path::new(&canonical_base);
-  match path.strip_prefix(base_path) {
-    Ok(rel) => rel.to_string_lossy().to_string(),
-    Err(_) => canonical_pathname,
-  }
+  // Perl's pathname_relative uses File::Spec->abs2rel, which emits a `../…`
+  // path when `pathname` is NOT a descendant of `base` (a sibling tree, e.g.
+  // a graphic reached through `\subimport*{../A/child/}` — issue #698).
+  // `strip_prefix` can only strip a descendant prefix, so it used to fall back
+  // to the raw ABSOLUTE path there, which then leaked into resource/graphic
+  // URLs. abs2rel matches Perl and never leaks an absolute path.
+  abs2rel(Path::new(&canonical_pathname), Path::new(&canonical_base))
 }
 
 /// Find all matching files (like pathname_findall).
@@ -977,6 +1004,35 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// `relative` is Perl's `pathname_relative` (→ `File::Spec->abs2rel`): a
+  /// path that is NOT a descendant of `base` must come back as a `../…` path,
+  /// never the raw absolute path. The strip_prefix port used to leak the
+  /// absolute path here, which surfaced as a `/mnt/g/…` graphic URL (issue
+  /// #698) and would do the same for any resource relativized against the
+  /// source directory (e.g. `xslt.rs`).
+  #[test]
+  fn relative_emits_dotdot_for_non_descendant() {
+    // Sibling tree: base and target diverge one level up.
+    assert_eq!(
+      relative(
+        "/home/u/proj/A/child/images/pic.svg",
+        "/home/u/proj/latexml"
+      ),
+      "../A/child/images/pic.svg"
+    );
+    // Descendant is unchanged (the case strip_prefix already handled).
+    assert_eq!(
+      relative("/home/u/proj/sub/pic.png", "/home/u/proj"),
+      "sub/pic.png"
+    );
+    // Cousin that diverges two levels up.
+    assert_eq!(relative("/a/b/c/f.tex", "/a/x/y"), "../../b/c/f.tex");
+    // A non-absolute pathname is returned canonicalized, as Perl does.
+    assert_eq!(relative("sub/pic.png", "/home/u/proj"), "sub/pic.png");
+    // Empty base short-circuits to the canonical pathname.
+    assert_eq!(relative("/a/b/pic.png", ""), "/a/b/pic.png");
+  }
 
   /// `choose_kpaths` branches that a real host cannot exercise: a MiKTeX
   /// banner, a failed in-process construction, and a TeX-less machine.

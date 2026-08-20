@@ -738,10 +738,12 @@ impl Graphics {
   /// Copy a source image to the destination directory, preserving relative paths.
   /// Returns the destination path (relative to dest_dir).
   fn copy_to_destination(source: &str, source_dir: &str, dest_dir: &str) -> Option<String> {
-    // Compute relative path of source from source_dir
-    let source_path = Path::new(source);
-    let source_base = Path::new(source_dir);
-    let rel_path = source_path.strip_prefix(source_base).unwrap_or(source_path);
+    // Relativize like Perl's pathname_relative (→ File::Spec->abs2rel): a
+    // source OUTSIDE source_dir comes back as `../…`, never the raw absolute
+    // path. A bare `strip_prefix` used to leak the absolute path for a graphic
+    // reached through `\subimport*{../A/child/}` (issue #698 class).
+    let rel = latexml_core::util::pathname::relative(source, source_dir);
+    let rel_path = Path::new(&rel);
 
     // Build absolute destination path
     let abs_dest = PathBuf::from(dest_dir).join(rel_path);
@@ -2419,13 +2421,10 @@ impl Processor for Graphics {
             existing.clone()
           } else {
             let rel_opt = Self::copy_to_destination(source, &source_dir, &dest_dir);
-            let rel = rel_opt.unwrap_or_else(|| {
-              Path::new(source)
-                .strip_prefix(&source_dir)
-                .unwrap_or_else(|_| Path::new(source))
-                .to_string_lossy()
-                .to_string()
-            });
+            // If the copy itself failed, still emit a RELATIVE URL (abs2rel),
+            // never the raw absolute source path (issue #698 class).
+            let rel = rel_opt
+              .unwrap_or_else(|| latexml_core::util::pathname::relative(source, &source_dir));
             // Plan::Copy fires for web-native sources (PNG / JPG / GIF
             // / SVG) where `dest_type == src_ext`. graphicx `angle=`
             // rotation IS meaningful here — the source carries no PDF
