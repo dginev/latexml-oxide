@@ -203,14 +203,6 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
-      # ASAN instrumentation. Setting RUSTFLAGS overrides the target rustflags
-      # in .cargo/config.toml, so the parallel-frontend flags are re-added here;
-      # mold is dropped — the default linker links the sanitizer runtime fine.
-      RUSTFLAGS: "-Zsanitizer=address -Zthreads=8 -Zunstable-options"
-      # LSAN off: the engine leaks thread-local / arena state by design (see
-      # the reset_thread_engine rationale), which is not what this lane guards.
-      # halt_on_error stays default (1), so a UAF / double-free / OOB fails.
-      ASAN_OPTIONS: "detect_leaks=0"
     steps:
       - name: install dependencies
         run: |
@@ -246,10 +238,22 @@ jobs:
       # `06_cluster_math` exercises the math-parser discard/free paths (the
       # #703 use-after-free lived there). Under ASAN this run is red on any
       # platform when a node is freed twice — the deterministic catch the plain
-      # suite lacks. `--cargo-profile ci` = fast build; `--profile ci` = nextest
-      # profile (unrelated same-named knobs, as in the `test` job).
+      # suite lacks. The sanitizer flags are scoped to THIS step (not the job
+      # env) and paired with an explicit `--target`: that is exactly what makes
+      # cargo build the proc-macros / build-scripts for the host WITHOUT the
+      # sanitizer, so they still load — a job-wide RUSTFLAGS instruments them and
+      # rustc then can't load them (E0463), and it would also contaminate the
+      # `make formats` build above. Setting RUSTFLAGS overrides config.toml's
+      # target rustflags, so the parallel-frontend flags are re-added; mold is
+      # dropped (the default linker links the sanitizer runtime fine). LSAN off
+      # (detect_leaks=0): the engine leaks thread-local / arena state by design;
+      # halt_on_error stays default 1, so a UAF / double-free / OOB fails the job.
+      # `--cargo-profile ci` = fast build; `--profile ci` = nextest profile.
       - name: run memory-safety tests under ASAN
-        run: cargo nextest run --cargo-profile ci --profile ci -p latexml --test 06_cluster_math
+        env:
+          RUSTFLAGS: "-Zsanitizer=address -Zthreads=8 -Zunstable-options"
+          ASAN_OPTIONS: "detect_leaks=0"
+        run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
 
   test:
     # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
