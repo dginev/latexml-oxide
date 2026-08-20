@@ -1,0 +1,20 @@
+% brucemiller/LaTeXML#2563: loading `svg` after `subcaption` must not break
+% subfig's `\subfloat`. LaTeXML's svg.sty.ltxml does RequirePackage('subfig'),
+% and subfig's RawTeX tail defines `\lx@subfloat@figure` only inside
+% `\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}` — a guard on the COUNTER.
+% subcaption (loaded first) already defined `c@subfigure`, so Perl 0.8.8 skips
+% \newsubfloat, leaves `\lx@subfloat@figure` undefined, and `\subfloat` dumps its
+% args as literal text: `<p>[This is a caption.]This is a figure.</p>`.
+%
+% Rust's subfig_sty.rs defines `\lx@subfloat@figure`/`\lx@subfloat@table`
+% UNCONDITIONALLY (the counter guard is dropped because NewCounter is idempotent),
+% so `\subfloat` still yields a proper figure panel with its subcaption. This
+% fixture guards that surpass-Perl win.
+\documentclass{article}
+\usepackage{subcaption}
+\usepackage{svg}
+\begin{document}
+\begin{figure}
+    \subfloat[This is a caption.]{This is a figure.}
+\end{figure}
+\end{document}

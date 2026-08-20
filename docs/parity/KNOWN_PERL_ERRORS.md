@@ -3986,3 +3986,36 @@ side-by-side layout. Guard:
 `06_cluster_regressions::cluster_panel_merge_never_wraps_a_figure_in_a_block_2709`.
 An upstream Perl patch (same model-guard at L3305/3322) is to be filed at
 brucemiller/LaTeXML#2709.
+
+## 102. Loading `svg` after `subcaption` breaks subfig's `\subfloat` (Rust surpasses)
+
+**Perl source:** `subfig.sty.ltxml:114` — the RawTeX trailer
+`\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}`. `svg.sty.ltxml:19` does
+`RequirePackage('subfig')`, so loading `svg` pulls subfig in.
+
+**Symptom:** `\newsubfloat{figure}` defines *both* the `subfigure` counter and the
+actual `\lx@subfloat@figure` implementation macro, but subfig guards the whole call
+on the **counter** existing. When `subcaption` is loaded first it already defines
+`c@subfigure` (`subcaption.sty.ltxml:25`), so subfig skips `\newsubfloat` entirely
+and never defines `\lx@subfloat@figure`. `\subfloat` then expands through
+`\sf@subfloat` → `\csname lx@subfloat@figure\endcsname` = `\relax`, and its
+`[caption]{body}` arguments leak as literal text. Same on Perl 0.8.8.
+
+**Minimal trigger:**
+```tex
+\documentclass{article}
+\usepackage{subcaption}
+\usepackage{svg}
+\begin{document}
+\begin{figure}\subfloat[This is a caption.]{This is a figure.}\end{figure}
+\end{document}
+```
+Perl → `<figure><p>[This is a caption.]This is a figure.</p></figure>` (no panel,
+no caption). Correct (Rust): a `<figure>` panel whose `<caption>` carries
+`This is a caption.` and whose body is `This is a figure.`.
+
+**Impact:** Perl-origin, in subfig's load-time guard. **Rust status (FIXED —
+surpasses):** `subfig_sty.rs` defines `\lx@subfloat@figure`/`\lx@subfloat@table`
+**unconditionally** and calls `NewCounter!` directly (idempotent), dropping the
+counter guard — so the subfloat macros exist regardless of a pre-existing counter.
+Guard: `06_cluster_regressions::cluster_svg_subfloat_survives_subcaption_2563`.

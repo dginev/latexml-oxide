@@ -83,6 +83,34 @@ fn cluster_subfigure_panels_share_a_row_6903() {
      break count, so the reflow is either not firing or too eager:\n{xml}"
   );
 }
+/// brucemiller/LaTeXML#2563: loading `svg` (which does `RequirePackage('subfig')`)
+/// after `subcaption` must not break subfig's `\subfloat`. Perl 0.8.8 gates
+/// subfig's `\lx@subfloat@figure` behind `\@ifundefined{c@subfigure}{\newsubfloat
+/// {figure}}{}` (subfig.sty.ltxml:114) — a guard on the COUNTER, which subcaption
+/// already defined. So Perl skips the definition and `\subfloat` leaks its args as
+/// literal text: `<p>[This is a caption.]This is a figure.</p>`. Rust's
+/// `subfig_sty.rs` defines the subfloat macros unconditionally (NewCounter is
+/// idempotent), so the panel + its subcaption survive. Guards that surpass-Perl win.
+#[test]
+fn cluster_svg_subfloat_survives_subcaption_2563() {
+  let xml = convert_to_xml("tests/cluster_regressions/svg_subfloat_2563.tex");
+  // The Perl breakage signature: the optional arg dumped verbatim, unparsed.
+  assert!(
+    !xml.contains("[This is a caption.]"),
+    "svg+subcaption broke \\subfloat — its optional arg was dumped as literal text \
+     (#2563 Perl breakage). Expected a figure panel, not a raw `[...]`:\n{xml}"
+  );
+  // The subcaption must render as an actual caption, and the body as the panel.
+  assert!(
+    xml.contains("<caption") && xml.contains("This is a caption."),
+    "\\subfloat's subcaption was lost — expected a <caption> carrying \
+     'This is a caption.':\n{xml}"
+  );
+  assert!(
+    xml.contains("This is a figure."),
+    "\\subfloat's body content was lost:\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");
