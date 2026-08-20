@@ -182,6 +182,79 @@ jobs:
       - name: miri (scoped arena UB check)
         run: tools/miri_check.sh
 
+  # AddressSanitizer lane — the deterministic net for heap memory-safety bugs
+  # (use-after-free, double-free, out-of-bounds) that neither the plain Linux
+  # suite nor miri catches. glibc TOLERATES a use-after-free that Darwin's
+  # allocator aborts on (issue #703: a math-parser discard freed a libxml node
+  # then read it — green on Linux, SIGABRT on the reporter's Mac), so a green
+  # Linux suite is NOT proof of memory safety; and miri cannot cross the
+  # libmarpa/libxml2 C FFI. ASAN intercepts the system allocator, so it catches
+  # heap errors inside those C libraries too. Scoped to the math-parser
+  # discard/free class (`06_cluster_math`, which carries the #703 guard) to stay
+  # a single fast job — widen the nextest selection as new witnesses land.
+  asan:
+    name: asan (memory-safety UB check)
+    needs: changes
+    if: needs.changes.outputs.not_docs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 \
+            texlive texlive-latex-extra texlive-science
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: asan
+      # Same dump cache as the Linux `test` job (identical key): the dumps are
+      # TL-derived text, independent of the ASAN instrumentation, so the two
+      # jobs share one entry and this step is a no-op on the common cache hit.
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+      - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
+        env:
+          PROFILE: ci
+        run: tools/make_formats.sh
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      # `06_cluster_math` exercises the math-parser discard/free paths (the
+      # #703 use-after-free lived there). Under ASAN this run is red on any
+      # platform when a node is freed twice — the deterministic catch the plain
+      # suite lacks. The sanitizer flags are scoped to THIS step (not the job
+      # env) and paired with an explicit `--target`: that is exactly what makes
+      # cargo build the proc-macros / build-scripts for the host WITHOUT the
+      # sanitizer, so they still load — a job-wide RUSTFLAGS instruments them and
+      # rustc then can't load them (E0463), and it would also contaminate the
+      # `make formats` build above. Setting RUSTFLAGS overrides config.toml's
+      # target rustflags, so the parallel-frontend flags are re-added; mold is
+      # dropped (the default linker links the sanitizer runtime fine). LSAN off
+      # (detect_leaks=0): the engine leaks thread-local / arena state by design;
+      # halt_on_error stays default 1, so a UAF / double-free / OOB fails the job.
+      # `--cargo-profile ci` = fast build; `--profile ci` = nextest profile.
+      - name: run memory-safety tests under ASAN
+        env:
+          RUSTFLAGS: "-Zsanitizer=address -Zthreads=8 -Zunstable-options"
+          ASAN_OPTIONS: "detect_leaks=0"
+        run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
+
   test:
     # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
     # execution spread over the test targets (consolidated 2026-08 into fewer,
@@ -407,14 +480,14 @@ jobs:
   # repo-settings change that must land WITH this workflow.
   ci-success:
     name: CI success
-    needs: [changes, lint, miri, test, macos]
+    needs: [changes, lint, miri, asan, test, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: verify no required job failed
         run: |
-          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.test.result }} ${{ needs.macos.result }}'
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos.result }}'
           echo "upstream job results: $results"
           for r in $results; do
             case "$r" in

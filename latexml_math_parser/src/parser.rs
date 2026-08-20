@@ -3438,6 +3438,15 @@ fn drain_pending_discards(document: &mut Document, queued: &rustc_hash::FxHashSe
   let mut released: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
   for node in crate::data::take_pending_discards() {
     if released.contains(&node.to_hashable()) {
+      // Already freed as part of an earlier subtree in this drain (B ⊂ A, both
+      // queued). Its C memory is gone; `free_subtree` neutralized only the
+      // wrappers still registered in the document, so this unregistered
+      // pending-discard handle kept a dangling `node_ptr`. Letting it Drop
+      // would read freed memory (`_Node::drop` dereferences `node->doc` for an
+      // Unlinked handle — the #703 use-after-free). Mark it linked first —
+      // wrapper-only bookkeeping that makes the drop a no-op at the FFI layer,
+      // exactly as `data::sweep_stale_math_state` does for stale handles.
+      node.set_linked();
       continue;
     }
     let mut ptrs = rustc_hash::FxHashSet::default();

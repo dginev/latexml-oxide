@@ -306,3 +306,27 @@ fn cluster_script_chain_depth() {
     );
   }
 }
+
+/// #703: nested `\sbox0{$#1$}\box0` boxes inside display math must not free a
+/// libxml node twice. `\rulebox{\rulebox{foof}}` queues two nested subtrees for
+/// deferred discard (B ⊂ A); `drain_pending_discards` freed A's subtree — B's C
+/// node with it — then dropped B's unregistered handle, whose `_Node::drop`
+/// dereferenced the freed `node->doc` (heap-use-after-free; Darwin's allocator
+/// aborts, glibc tolerates). Verified red→green under AddressSanitizer. This
+/// guard asserts the whole nested structure survives the drain.
+#[test]
+fn cluster_nested_sbox_discard_no_double_free() {
+  let x = convert_to_xml("tests/cluster_regressions/mathparse_nested_sbox_discard.tex");
+  // Innermost `$foof$` box, and the middle box wrapping it, both convert —
+  // proving no subtree was freed out from under the parse.
+  assert!(
+    x.contains(r#"tex="foof""#),
+    "innermost \\sbox math missing — nested discard corrupted the tree:\n{x}"
+  );
+  assert!(
+    x.contains(r#"tex="\hbox{$foof$}\hrule barf""#),
+    "middle \\sbox box missing — nested discard corrupted the tree:\n{x}"
+  );
+  // The trailing `barf` text after each `\box0\hrule` must still be present.
+  assert!(x.contains("barf"), "trailing text lost:\n{x}");
+}
