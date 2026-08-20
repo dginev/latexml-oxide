@@ -11,6 +11,12 @@
     Surpasses Perl 0.8.8 (which emits the same 0pt + `Missing number` warning);
     pdflatex renders the real widths (OXIDIZED_DESIGN #141, arXiv/html_feedback#6909,
     witness 2606.08266).
+  - **A framed `fvextra` verbatim with `breaklines=true` carries a stable `ltx_break`
+    css class**, so a stylesheet can target wrapping vs non-wrapping verbatims apart
+    (`.ltx_framed_verbatim.ltx_break` vs `:not(.ltx_break)`) without reaching for the
+    fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
+    Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
+    `frame=single`→`ltx_framed_verbatim` remap (#702).
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

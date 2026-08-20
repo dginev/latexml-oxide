@@ -993,6 +993,30 @@ fn cluster_fvextra_backgroundcolor_paints_the_frame_box() {
   );
 }
 
+/// fvextra `breaklines=true` on a framed `Verbatim` surfaces the wrapping
+/// directive as a stable `ltx_break` css class on the frame box, so a stylesheet
+/// can style wrapping vs non-wrapping verbatims apart WITHOUT reaching for the
+/// accidental `:has(.ltx_parbox)` selector (issue #702). Beyond-Perl, same spirit
+/// as the `frame=single`->`ltx_framed_verbatim` remap (OXIDIZED_DESIGN #111): both
+/// engines emit no breaklines hook natively. The class rides `\lx@fv@breakclass`,
+/// which `fancyvrb_sty.rs` defaults to empty (plain fancyvrb never wraps) and
+/// `fvextra_sty.rs` redefines to fire off `\ifFV@breaklines`. Only the break box
+/// gets it: exactly one `ltx_break` against two `ltx_framed_verbatim` boxes.
+#[test]
+fn cluster_fvextra_breaklines_class() {
+  let x = convert_to_xml("tests/cluster_regressions/fvextra_breaklines_class.tex");
+  assert_eq!(
+    x.matches("ltx_framed_verbatim").count(),
+    2,
+    "both Verbatim boxes should frame (issue #702):\n{x}"
+  );
+  assert_eq!(
+    x.matches("ltx_break").count(),
+    1,
+    "only the breaklines=true box should carry the ltx_break hook (issue #702):\n{x}"
+  );
+}
+
 /// A faked space's glyph run must be sized by the font the skip was DIGESTED
 /// in, not by whatever font happens to be current when the document is BUILT.
 ///

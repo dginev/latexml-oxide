@@ -71,4 +71,19 @@ LoadDefinitions!({
   // from the single wrapper on BOTH fvextra versions, keeping the output clean
   // and stable. Guarded on the macro's presence (the older fvextra has none).
   RawTeX!(r"\@ifundefined{FV@BGColor@List}{}{\long\def\FV@BGColor@List#1{#1}}");
+
+  // Issue #702: surface fvextra's `breaklines` wrapping directive as a stable
+  // `ltx_break` css class on the framed verbatim box, so a stylesheet can style a
+  // wrapping verbatim apart from a non-wrapping one WITHOUT the fragile
+  // `:has(.ltx_parbox)` selector (the only distinguisher otherwise, an accident of
+  // fvextra's `\parbox`-based break rendering). `fancyvrb_sty.rs`'s frame box reads
+  // `\lx@fv@breakclass` (default EMPTY — plain fancyvrb never wraps); redefine it to
+  // expand to `1` off `\ifFV@breaklines`, the boolean fvextra's `breaklines` key
+  // sets (fvextra.sty L2757-2762, `\newbool{FV@breaklines}`), which is live by the
+  // time the frame box opens (set at option-parse, frame fires later in \FV@List).
+  // The constructor maps `1` → `ltx_break`. Beyond-Perl (both engines emit no
+  // breaklines hook natively), same spirit as the frame remap (#525 / OXIDIZED_DESIGN
+  // #111). Only the framed case is marked — a frameless breaklines verbatim has no
+  // single wrapper to hang the class on; that is a follow-up.
+  RawTeX!(r"\def\lx@fv@breakclass{\ifFV@breaklines 1\fi}");
 });
