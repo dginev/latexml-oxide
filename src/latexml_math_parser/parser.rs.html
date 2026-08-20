@@ -3438,287 +3438,296 @@
 <a href=#3438 id=3438 data-nosnippet>3438</a>  <span class="kw">let </span><span class="kw-2">mut </span>released: rustc_hash::FxHashSet&lt;usize&gt; = rustc_hash::FxHashSet::default();
 <a href=#3439 id=3439 data-nosnippet>3439</a>  <span class="kw">for </span>node <span class="kw">in </span><span class="kw">crate</span>::data::take_pending_discards() {
 <a href=#3440 id=3440 data-nosnippet>3440</a>    <span class="kw">if </span>released.contains(<span class="kw-2">&amp;</span>node.to_hashable()) {
-<a href=#3441 id=3441 data-nosnippet>3441</a>      <span class="kw">continue</span>;
-<a href=#3442 id=3442 data-nosnippet>3442</a>    }
-<a href=#3443 id=3443 data-nosnippet>3443</a>    <span class="kw">let </span><span class="kw-2">mut </span>ptrs = rustc_hash::FxHashSet::default();
-<a href=#3444 id=3444 data-nosnippet>3444</a>    mark(<span class="kw-2">&amp;</span>node, <span class="kw-2">&amp;mut </span>ptrs);
-<a href=#3445 id=3445 data-nosnippet>3445</a>    <span class="kw">if </span>!queued.is_empty() &amp;&amp; ptrs.iter().any(|p| queued.contains(p)) {
-<a href=#3446 id=3446 data-nosnippet>3446</a>      <span class="kw">crate</span>::data::requeue_pending_discard(node);
-<a href=#3447 id=3447 data-nosnippet>3447</a>      <span class="kw">continue</span>;
-<a href=#3448 id=3448 data-nosnippet>3448</a>    }
-<a href=#3449 id=3449 data-nosnippet>3449</a>    <span class="kw">crate</span>::data::purge_math_idstore_subtree(<span class="kw-2">&amp;</span>node);
-<a href=#3450 id=3450 data-nosnippet>3450</a>    released.extend(ptrs);
-<a href=#3451 id=3451 data-nosnippet>3451</a>    document.discard_subtree(node);
-<a href=#3452 id=3452 data-nosnippet>3452</a>  }
-<a href=#3453 id=3453 data-nosnippet>3453</a>}
-<a href=#3454 id=3454 data-nosnippet>3454</a>
-<a href=#3455 id=3455 data-nosnippet>3455</a><span class="doccomment">/// `Document::replace_tree_free`, with the FREE deferred to the end of math
-<a href=#3456 id=3456 data-nosnippet>3456</a>/// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
-<a href=#3457 id=3457 data-nosnippet>3457</a>/// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
-<a href=#3458 id=3458 data-nosnippet>3458</a>/// moves.
-<a href=#3459 id=3459 data-nosnippet>3459</a></span><span class="kw">fn </span>replace_tree_deferred(document: <span class="kw-2">&amp;mut </span>Document, new: Node, old: Node) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
-<a href=#3460 id=3460 data-nosnippet>3460</a>  <span class="comment">// Resolve new's standalone root BEFORE the swap, exactly as
-<a href=#3461 id=3461 data-nosnippet>3461</a>  // `replace_tree_free` does — afterwards the chain may no longer be walkable.
-<a href=#3462 id=3462 data-nosnippet>3462</a>  </span><span class="kw">let </span>new_root = detached_root(<span class="kw-2">&amp;</span>new);
-<a href=#3463 id=3463 data-nosnippet>3463</a>  <span class="kw">let </span>inserted = document.replace_tree(new, old.clone())<span class="question-mark">?</span>;
-<a href=#3464 id=3464 data-nosnippet>3464</a>  <span class="kw">if </span>inserted.is_some() {
-<a href=#3465 id=3465 data-nosnippet>3465</a>    <span class="kw">crate</span>::data::defer_discard(old);
-<a href=#3466 id=3466 data-nosnippet>3466</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = new_root {
-<a href=#3467 id=3467 data-nosnippet>3467</a>      <span class="kw">crate</span>::data::defer_discard(root);
-<a href=#3468 id=3468 data-nosnippet>3468</a>    }
-<a href=#3469 id=3469 data-nosnippet>3469</a>  }
-<a href=#3470 id=3470 data-nosnippet>3470</a>  <span class="prelude-val">Ok</span>(inserted)
-<a href=#3471 id=3471 data-nosnippet>3471</a>}
-<a href=#3472 id=3472 data-nosnippet>3472</a>
-<a href=#3473 id=3473 data-nosnippet>3473</a><span class="attr">#[cfg(test)]
-<a href=#3474 id=3474 data-nosnippet>3474</a></span><span class="kw">mod </span>tests {
-<a href=#3475 id=3475 data-nosnippet>3475</a>  <span class="kw">use </span>libxml::parser::Parser <span class="kw">as </span>XmlParser;
-<a href=#3476 id=3476 data-nosnippet>3476</a>
-<a href=#3477 id=3477 data-nosnippet>3477</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#3478 id=3478 data-nosnippet>3478</a>
-<a href=#3479 id=3479 data-nosnippet>3479</a>  <span class="attr">#[test]
-<a href=#3480 id=3480 data-nosnippet>3480</a>  </span><span class="kw">fn </span>token_type_footprint_bounds_to_varchar200_with_cntd() {
-<a href=#3481 id=3481 data-nosnippet>3481</a>    <span class="comment">// arXiv 0708.2155 — a short slice fits whole: just the token TYPES, no suffix.
-<a href=#3482 id=3482 data-nosnippet>3482</a>    </span><span class="kw">let </span>short = <span class="string">"UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 CLOSE:):4 RELOP:equals:5 \
-<a href=#3483 id=3483 data-nosnippet>3483</a>                 start_POSTSUBSCRIPT:start:9 NUMBER:0:10"</span>;
-<a href=#3484 id=3484 data-nosnippet>3484</a>    <span class="macro">assert_eq!</span>(
-<a href=#3485 id=3485 data-nosnippet>3485</a>      token_type_footprint(short),
-<a href=#3486 id=3486 data-nosnippet>3486</a>      <span class="string">"UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_start_POSTSUBSCRIPT_NUMBER"
-<a href=#3487 id=3487 data-nosnippet>3487</a>    </span>);
-<a href=#3488 id=3488 data-nosnippet>3488</a>    <span class="comment">// The type is the segment before the first `:` (value/position dropped); empty → placeholder.
-<a href=#3489 id=3489 data-nosnippet>3489</a>    </span><span class="macro">assert_eq!</span>(token_type_footprint(<span class="string">"UNKNOWN:x:1 OPEN:(:2"</span>), <span class="string">"UNKNOWN_OPEN"</span>);
-<a href=#3490 id=3490 data-nosnippet>3490</a>    <span class="macro">assert_eq!</span>(token_type_footprint(<span class="string">""</span>), <span class="string">"none"</span>);
-<a href=#3491 id=3491 data-nosnippet>3491</a>    <span class="comment">// A long formula is bounded to the varchar(200) `what` column and carries the `_cntd` marker;
-<a href=#3492 id=3492 data-nosnippet>3492</a>    // the result never exceeds 200 chars so the dispatcher insert can't chop the marker.
-<a href=#3493 id=3493 data-nosnippet>3493</a>    </span><span class="kw">let </span>many = (<span class="number">0</span>..<span class="number">120</span>)
-<a href=#3494 id=3494 data-nosnippet>3494</a>      .map(|i| <span class="macro">format!</span>(<span class="string">"UNKNOWN:x{i}:{i}"</span>))
-<a href=#3495 id=3495 data-nosnippet>3495</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#3496 id=3496 data-nosnippet>3496</a>      .join(<span class="string">" "</span>);
-<a href=#3497 id=3497 data-nosnippet>3497</a>    <span class="kw">let </span>fp = token_type_footprint(<span class="kw-2">&amp;</span>many);
-<a href=#3498 id=3498 data-nosnippet>3498</a>    <span class="macro">assert!</span>(
-<a href=#3499 id=3499 data-nosnippet>3499</a>      fp.len() &lt;= <span class="number">200</span>,
-<a href=#3500 id=3500 data-nosnippet>3500</a>      <span class="string">"footprint {} exceeds varchar(200)"</span>,
-<a href=#3501 id=3501 data-nosnippet>3501</a>      fp.len()
-<a href=#3502 id=3502 data-nosnippet>3502</a>    );
-<a href=#3503 id=3503 data-nosnippet>3503</a>    <span class="macro">assert!</span>(
-<a href=#3504 id=3504 data-nosnippet>3504</a>      fp.ends_with(<span class="string">"_cntd"</span>),
-<a href=#3505 id=3505 data-nosnippet>3505</a>      <span class="string">"a truncated footprint must mark it: {fp}"
-<a href=#3506 id=3506 data-nosnippet>3506</a>    </span>);
-<a href=#3507 id=3507 data-nosnippet>3507</a>    <span class="macro">assert!</span>(fp.starts_with(<span class="string">"UNKNOWN_UNKNOWN"</span>));
-<a href=#3508 id=3508 data-nosnippet>3508</a>  }
-<a href=#3509 id=3509 data-nosnippet>3509</a>
-<a href=#3510 id=3510 data-nosnippet>3510</a>  <span class="attr">#[test]
-<a href=#3511 id=3511 data-nosnippet>3511</a>  </span><span class="kw">fn </span>warns_once_per_distinct_formula_per_document() {
-<a href=#3512 id=3512 data-nosnippet>3512</a>    <span class="comment">// Per-document scope = one `seen` set per document (the parser is built per document).
-<a href=#3513 id=3513 data-nosnippet>3513</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>doc = HashSet::new();
-<a href=#3514 id=3514 data-nosnippet>3514</a>    <span class="kw">let </span>f1 = <span class="string">"UNKNOWN:x:1 RELOP:=:2 NUMBER:0:3"</span>;
-<a href=#3515 id=3515 data-nosnippet>3515</a>    <span class="kw">let </span>f2 = <span class="string">"UNKNOWN:y:1 ADDOP:+:2 UNKNOWN:z:3"</span>;
-<a href=#3516 id=3516 data-nosnippet>3516</a>    <span class="macro">assert!</span>(warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1), <span class="string">"first sighting warns"</span>);
-<a href=#3517 id=3517 data-nosnippet>3517</a>    <span class="macro">assert!</span>(
-<a href=#3518 id=3518 data-nosnippet>3518</a>      !warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1),
-<a href=#3519 id=3519 data-nosnippet>3519</a>      <span class="string">"the same formula repeated is suppressed"
-<a href=#3520 id=3520 data-nosnippet>3520</a>    </span>);
-<a href=#3521 id=3521 data-nosnippet>3521</a>    <span class="macro">assert!</span>(
-<a href=#3522 id=3522 data-nosnippet>3522</a>      !warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1),
-<a href=#3523 id=3523 data-nosnippet>3523</a>      <span class="string">"still suppressed on the 3rd repeat"
-<a href=#3524 id=3524 data-nosnippet>3524</a>    </span>);
-<a href=#3525 id=3525 data-nosnippet>3525</a>    <span class="macro">assert!</span>(
-<a href=#3526 id=3526 data-nosnippet>3526</a>      warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f2),
-<a href=#3527 id=3527 data-nosnippet>3527</a>      <span class="string">"a DISTINCT formula warns once of its own"
-<a href=#3528 id=3528 data-nosnippet>3528</a>    </span>);
-<a href=#3529 id=3529 data-nosnippet>3529</a>    <span class="macro">assert!</span>(!warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f2));
-<a href=#3530 id=3530 data-nosnippet>3530</a>    <span class="comment">// A new document (fresh set) warns again for the same formula — dedup is document-scoped.
-<a href=#3531 id=3531 data-nosnippet>3531</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>other_doc = HashSet::new();
-<a href=#3532 id=3532 data-nosnippet>3532</a>    <span class="macro">assert!</span>(warn_formula_once(<span class="kw-2">&amp;mut </span>other_doc, f1));
-<a href=#3533 id=3533 data-nosnippet>3533</a>  }
-<a href=#3534 id=3534 data-nosnippet>3534</a>
-<a href=#3535 id=3535 data-nosnippet>3535</a>  <span class="doccomment">/// Pin the message↔classifier coupling for the string-fallback path of
-<a href=#3536 id=3536 data-nosnippet>3536</a>  /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured
-<a href=#3537 id=3537 data-nosnippet>3537</a>  /// `take_last_resource_fatal` latch; this fallback exists for errors that
-<a href=#3538 id=3538 data-nosnippet>3538</a>  /// were flattened before the latch landed. If an engine message is
-<a href=#3539 id=3539 data-nosnippet>3539</a>  /// reworded, this test points at the matcher to update.
-<a href=#3540 id=3540 data-nosnippet>3540</a>  </span><span class="attr">#[test]
-<a href=#3541 id=3541 data-nosnippet>3541</a>  </span><span class="kw">fn </span>resource_fatal_message_fallback_recognizes_engine_messages() {
-<a href=#3542 id=3542 data-nosnippet>3542</a>    <span class="kw">use </span>latexml_core::common::error::ErrorCategory <span class="kw">as </span>C;
-<a href=#3543 id=3543 data-nosnippet>3543</a>    <span class="kw">let </span>cases = [
-<a href=#3544 id=3544 data-nosnippet>3544</a>      (
-<a href=#3545 id=3545 data-nosnippet>3545</a>        <span class="string">"Infinite expansion loop: a window of 2 token(s) repeated 100+ times"</span>,
-<a href=#3546 id=3546 data-nosnippet>3546</a>        C::Recursion,
-<a href=#3547 id=3547 data-nosnippet>3547</a>      ),
-<a href=#3548 id=3548 data-nosnippet>3548</a>      (
-<a href=#3549 id=3549 data-nosnippet>3549</a>        <span class="string">"Token limit of 400000000 exceeded, infinite loop?"</span>,
-<a href=#3550 id=3550 data-nosnippet>3550</a>        C::TokenLimit,
-<a href=#3551 id=3551 data-nosnippet>3551</a>      ),
-<a href=#3552 id=3552 data-nosnippet>3552</a>      (
-<a href=#3553 id=3553 data-nosnippet>3553</a>        <span class="string">"Pushback limit of 650000 exceeded, infinite loop?"</span>,
-<a href=#3554 id=3554 data-nosnippet>3554</a>        C::PushbackLimit,
-<a href=#3555 id=3555 data-nosnippet>3555</a>      ),
-<a href=#3556 id=3556 data-nosnippet>3556</a>      (
-<a href=#3557 id=3557 data-nosnippet>3557</a>        <span class="string">"Memory budget exceeded: RSS 4500 MB &gt; cap 4500 MB"</span>,
-<a href=#3558 id=3558 data-nosnippet>3558</a>        C::MemoryBudget,
-<a href=#3559 id=3559 data-nosnippet>3559</a>      ),
-<a href=#3560 id=3560 data-nosnippet>3560</a>    ];
-<a href=#3561 id=3561 data-nosnippet>3561</a>    <span class="kw">for </span>(msg, expected) <span class="kw">in </span>cases {
-<a href=#3562 id=3562 data-nosnippet>3562</a>      <span class="kw">let </span>err = resource_fatal_from_message(msg)
-<a href=#3563 id=3563 data-nosnippet>3563</a>        .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">"classifier must recognize: {msg}"</span>));
-<a href=#3564 id=3564 data-nosnippet>3564</a>      <span class="macro">assert_eq!</span>(
-<a href=#3565 id=3565 data-nosnippet>3565</a>        std::mem::discriminant(<span class="kw-2">&amp;</span>err.category),
-<a href=#3566 id=3566 data-nosnippet>3566</a>        std::mem::discriminant(<span class="kw-2">&amp;</span>expected),
-<a href=#3567 id=3567 data-nosnippet>3567</a>        <span class="string">"wrong category for: {msg}"
-<a href=#3568 id=3568 data-nosnippet>3568</a>      </span>);
-<a href=#3569 id=3569 data-nosnippet>3569</a>    }
-<a href=#3570 id=3570 data-nosnippet>3570</a>    <span class="macro">assert!</span>(resource_fatal_from_message(<span class="string">"Some unrelated parse failure"</span>).is_none());
-<a href=#3571 id=3571 data-nosnippet>3571</a>  }
-<a href=#3572 id=3572 data-nosnippet>3572</a>
-<a href=#3573 id=3573 data-nosnippet>3573</a>  <span class="comment">// Keep the Document alive for the duration of each test — Node holds an
-<a href=#3574 id=3574 data-nosnippet>3574</a>  // implicit weak ref, so dropping the owning Document before reading the
-<a href=#3575 id=3575 data-nosnippet>3575</a>  // Node leaves us with a hollow handle (get_type returns None, etc.).
-<a href=#3576 id=3576 data-nosnippet>3576</a>  </span><span class="kw">fn </span>parse(xml: <span class="kw-2">&amp;</span>str) -&gt; libxml::tree::Document {
-<a href=#3577 id=3577 data-nosnippet>3577</a>    XmlParser::default().parse_string(xml).expect(<span class="string">"parse xml"</span>)
-<a href=#3578 id=3578 data-nosnippet>3578</a>  }
-<a href=#3579 id=3579 data-nosnippet>3579</a>  <span class="kw">fn </span>root(doc: <span class="kw-2">&amp;</span>libxml::tree::Document) -&gt; Node { doc.get_root_element().expect(<span class="string">"root"</span>) }
-<a href=#3580 id=3580 data-nosnippet>3580</a>
-<a href=#3581 id=3581 data-nosnippet>3581</a>  <span class="attr">#[test]
-<a href=#3582 id=3582 data-nosnippet>3582</a>  </span><span class="kw">fn </span>is_float_script_recognized() {
-<a href=#3583 id=3583 data-nosnippet>3583</a>    <span class="macro">assert!</span>(is_float_script(<span class="string">"FLOATSUPERSCRIPT"</span>));
-<a href=#3584 id=3584 data-nosnippet>3584</a>    <span class="macro">assert!</span>(is_float_script(<span class="string">"FLOATSUBSCRIPT"</span>));
-<a href=#3585 id=3585 data-nosnippet>3585</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">"SUPERSCRIPT"</span>));
-<a href=#3586 id=3586 data-nosnippet>3586</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">"POSTSUPERSCRIPT"</span>));
-<a href=#3587 id=3587 data-nosnippet>3587</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">""</span>));
-<a href=#3588 id=3588 data-nosnippet>3588</a>  }
+<a href=#3441 id=3441 data-nosnippet>3441</a>      <span class="comment">// Already freed as part of an earlier subtree in this drain (B ⊂ A, both
+<a href=#3442 id=3442 data-nosnippet>3442</a>      // queued). Its C memory is gone; `free_subtree` neutralized only the
+<a href=#3443 id=3443 data-nosnippet>3443</a>      // wrappers still registered in the document, so this unregistered
+<a href=#3444 id=3444 data-nosnippet>3444</a>      // pending-discard handle kept a dangling `node_ptr`. Letting it Drop
+<a href=#3445 id=3445 data-nosnippet>3445</a>      // would read freed memory (`_Node::drop` dereferences `node-&gt;doc` for an
+<a href=#3446 id=3446 data-nosnippet>3446</a>      // Unlinked handle — the #703 use-after-free). Mark it linked first —
+<a href=#3447 id=3447 data-nosnippet>3447</a>      // wrapper-only bookkeeping that makes the drop a no-op at the FFI layer,
+<a href=#3448 id=3448 data-nosnippet>3448</a>      // exactly as `data::sweep_stale_math_state` does for stale handles.
+<a href=#3449 id=3449 data-nosnippet>3449</a>      </span>node.set_linked();
+<a href=#3450 id=3450 data-nosnippet>3450</a>      <span class="kw">continue</span>;
+<a href=#3451 id=3451 data-nosnippet>3451</a>    }
+<a href=#3452 id=3452 data-nosnippet>3452</a>    <span class="kw">let </span><span class="kw-2">mut </span>ptrs = rustc_hash::FxHashSet::default();
+<a href=#3453 id=3453 data-nosnippet>3453</a>    mark(<span class="kw-2">&amp;</span>node, <span class="kw-2">&amp;mut </span>ptrs);
+<a href=#3454 id=3454 data-nosnippet>3454</a>    <span class="kw">if </span>!queued.is_empty() &amp;&amp; ptrs.iter().any(|p| queued.contains(p)) {
+<a href=#3455 id=3455 data-nosnippet>3455</a>      <span class="kw">crate</span>::data::requeue_pending_discard(node);
+<a href=#3456 id=3456 data-nosnippet>3456</a>      <span class="kw">continue</span>;
+<a href=#3457 id=3457 data-nosnippet>3457</a>    }
+<a href=#3458 id=3458 data-nosnippet>3458</a>    <span class="kw">crate</span>::data::purge_math_idstore_subtree(<span class="kw-2">&amp;</span>node);
+<a href=#3459 id=3459 data-nosnippet>3459</a>    released.extend(ptrs);
+<a href=#3460 id=3460 data-nosnippet>3460</a>    document.discard_subtree(node);
+<a href=#3461 id=3461 data-nosnippet>3461</a>  }
+<a href=#3462 id=3462 data-nosnippet>3462</a>}
+<a href=#3463 id=3463 data-nosnippet>3463</a>
+<a href=#3464 id=3464 data-nosnippet>3464</a><span class="doccomment">/// `Document::replace_tree_free`, with the FREE deferred to the end of math
+<a href=#3465 id=3465 data-nosnippet>3465</a>/// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
+<a href=#3466 id=3466 data-nosnippet>3466</a>/// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
+<a href=#3467 id=3467 data-nosnippet>3467</a>/// moves.
+<a href=#3468 id=3468 data-nosnippet>3468</a></span><span class="kw">fn </span>replace_tree_deferred(document: <span class="kw-2">&amp;mut </span>Document, new: Node, old: Node) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; {
+<a href=#3469 id=3469 data-nosnippet>3469</a>  <span class="comment">// Resolve new's standalone root BEFORE the swap, exactly as
+<a href=#3470 id=3470 data-nosnippet>3470</a>  // `replace_tree_free` does — afterwards the chain may no longer be walkable.
+<a href=#3471 id=3471 data-nosnippet>3471</a>  </span><span class="kw">let </span>new_root = detached_root(<span class="kw-2">&amp;</span>new);
+<a href=#3472 id=3472 data-nosnippet>3472</a>  <span class="kw">let </span>inserted = document.replace_tree(new, old.clone())<span class="question-mark">?</span>;
+<a href=#3473 id=3473 data-nosnippet>3473</a>  <span class="kw">if </span>inserted.is_some() {
+<a href=#3474 id=3474 data-nosnippet>3474</a>    <span class="kw">crate</span>::data::defer_discard(old);
+<a href=#3475 id=3475 data-nosnippet>3475</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(root) = new_root {
+<a href=#3476 id=3476 data-nosnippet>3476</a>      <span class="kw">crate</span>::data::defer_discard(root);
+<a href=#3477 id=3477 data-nosnippet>3477</a>    }
+<a href=#3478 id=3478 data-nosnippet>3478</a>  }
+<a href=#3479 id=3479 data-nosnippet>3479</a>  <span class="prelude-val">Ok</span>(inserted)
+<a href=#3480 id=3480 data-nosnippet>3480</a>}
+<a href=#3481 id=3481 data-nosnippet>3481</a>
+<a href=#3482 id=3482 data-nosnippet>3482</a><span class="attr">#[cfg(test)]
+<a href=#3483 id=3483 data-nosnippet>3483</a></span><span class="kw">mod </span>tests {
+<a href=#3484 id=3484 data-nosnippet>3484</a>  <span class="kw">use </span>libxml::parser::Parser <span class="kw">as </span>XmlParser;
+<a href=#3485 id=3485 data-nosnippet>3485</a>
+<a href=#3486 id=3486 data-nosnippet>3486</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#3487 id=3487 data-nosnippet>3487</a>
+<a href=#3488 id=3488 data-nosnippet>3488</a>  <span class="attr">#[test]
+<a href=#3489 id=3489 data-nosnippet>3489</a>  </span><span class="kw">fn </span>token_type_footprint_bounds_to_varchar200_with_cntd() {
+<a href=#3490 id=3490 data-nosnippet>3490</a>    <span class="comment">// arXiv 0708.2155 — a short slice fits whole: just the token TYPES, no suffix.
+<a href=#3491 id=3491 data-nosnippet>3491</a>    </span><span class="kw">let </span>short = <span class="string">"UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 CLOSE:):4 RELOP:equals:5 \
+<a href=#3492 id=3492 data-nosnippet>3492</a>                 start_POSTSUBSCRIPT:start:9 NUMBER:0:10"</span>;
+<a href=#3493 id=3493 data-nosnippet>3493</a>    <span class="macro">assert_eq!</span>(
+<a href=#3494 id=3494 data-nosnippet>3494</a>      token_type_footprint(short),
+<a href=#3495 id=3495 data-nosnippet>3495</a>      <span class="string">"UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_start_POSTSUBSCRIPT_NUMBER"
+<a href=#3496 id=3496 data-nosnippet>3496</a>    </span>);
+<a href=#3497 id=3497 data-nosnippet>3497</a>    <span class="comment">// The type is the segment before the first `:` (value/position dropped); empty → placeholder.
+<a href=#3498 id=3498 data-nosnippet>3498</a>    </span><span class="macro">assert_eq!</span>(token_type_footprint(<span class="string">"UNKNOWN:x:1 OPEN:(:2"</span>), <span class="string">"UNKNOWN_OPEN"</span>);
+<a href=#3499 id=3499 data-nosnippet>3499</a>    <span class="macro">assert_eq!</span>(token_type_footprint(<span class="string">""</span>), <span class="string">"none"</span>);
+<a href=#3500 id=3500 data-nosnippet>3500</a>    <span class="comment">// A long formula is bounded to the varchar(200) `what` column and carries the `_cntd` marker;
+<a href=#3501 id=3501 data-nosnippet>3501</a>    // the result never exceeds 200 chars so the dispatcher insert can't chop the marker.
+<a href=#3502 id=3502 data-nosnippet>3502</a>    </span><span class="kw">let </span>many = (<span class="number">0</span>..<span class="number">120</span>)
+<a href=#3503 id=3503 data-nosnippet>3503</a>      .map(|i| <span class="macro">format!</span>(<span class="string">"UNKNOWN:x{i}:{i}"</span>))
+<a href=#3504 id=3504 data-nosnippet>3504</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#3505 id=3505 data-nosnippet>3505</a>      .join(<span class="string">" "</span>);
+<a href=#3506 id=3506 data-nosnippet>3506</a>    <span class="kw">let </span>fp = token_type_footprint(<span class="kw-2">&amp;</span>many);
+<a href=#3507 id=3507 data-nosnippet>3507</a>    <span class="macro">assert!</span>(
+<a href=#3508 id=3508 data-nosnippet>3508</a>      fp.len() &lt;= <span class="number">200</span>,
+<a href=#3509 id=3509 data-nosnippet>3509</a>      <span class="string">"footprint {} exceeds varchar(200)"</span>,
+<a href=#3510 id=3510 data-nosnippet>3510</a>      fp.len()
+<a href=#3511 id=3511 data-nosnippet>3511</a>    );
+<a href=#3512 id=3512 data-nosnippet>3512</a>    <span class="macro">assert!</span>(
+<a href=#3513 id=3513 data-nosnippet>3513</a>      fp.ends_with(<span class="string">"_cntd"</span>),
+<a href=#3514 id=3514 data-nosnippet>3514</a>      <span class="string">"a truncated footprint must mark it: {fp}"
+<a href=#3515 id=3515 data-nosnippet>3515</a>    </span>);
+<a href=#3516 id=3516 data-nosnippet>3516</a>    <span class="macro">assert!</span>(fp.starts_with(<span class="string">"UNKNOWN_UNKNOWN"</span>));
+<a href=#3517 id=3517 data-nosnippet>3517</a>  }
+<a href=#3518 id=3518 data-nosnippet>3518</a>
+<a href=#3519 id=3519 data-nosnippet>3519</a>  <span class="attr">#[test]
+<a href=#3520 id=3520 data-nosnippet>3520</a>  </span><span class="kw">fn </span>warns_once_per_distinct_formula_per_document() {
+<a href=#3521 id=3521 data-nosnippet>3521</a>    <span class="comment">// Per-document scope = one `seen` set per document (the parser is built per document).
+<a href=#3522 id=3522 data-nosnippet>3522</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>doc = HashSet::new();
+<a href=#3523 id=3523 data-nosnippet>3523</a>    <span class="kw">let </span>f1 = <span class="string">"UNKNOWN:x:1 RELOP:=:2 NUMBER:0:3"</span>;
+<a href=#3524 id=3524 data-nosnippet>3524</a>    <span class="kw">let </span>f2 = <span class="string">"UNKNOWN:y:1 ADDOP:+:2 UNKNOWN:z:3"</span>;
+<a href=#3525 id=3525 data-nosnippet>3525</a>    <span class="macro">assert!</span>(warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1), <span class="string">"first sighting warns"</span>);
+<a href=#3526 id=3526 data-nosnippet>3526</a>    <span class="macro">assert!</span>(
+<a href=#3527 id=3527 data-nosnippet>3527</a>      !warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1),
+<a href=#3528 id=3528 data-nosnippet>3528</a>      <span class="string">"the same formula repeated is suppressed"
+<a href=#3529 id=3529 data-nosnippet>3529</a>    </span>);
+<a href=#3530 id=3530 data-nosnippet>3530</a>    <span class="macro">assert!</span>(
+<a href=#3531 id=3531 data-nosnippet>3531</a>      !warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f1),
+<a href=#3532 id=3532 data-nosnippet>3532</a>      <span class="string">"still suppressed on the 3rd repeat"
+<a href=#3533 id=3533 data-nosnippet>3533</a>    </span>);
+<a href=#3534 id=3534 data-nosnippet>3534</a>    <span class="macro">assert!</span>(
+<a href=#3535 id=3535 data-nosnippet>3535</a>      warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f2),
+<a href=#3536 id=3536 data-nosnippet>3536</a>      <span class="string">"a DISTINCT formula warns once of its own"
+<a href=#3537 id=3537 data-nosnippet>3537</a>    </span>);
+<a href=#3538 id=3538 data-nosnippet>3538</a>    <span class="macro">assert!</span>(!warn_formula_once(<span class="kw-2">&amp;mut </span>doc, f2));
+<a href=#3539 id=3539 data-nosnippet>3539</a>    <span class="comment">// A new document (fresh set) warns again for the same formula — dedup is document-scoped.
+<a href=#3540 id=3540 data-nosnippet>3540</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>other_doc = HashSet::new();
+<a href=#3541 id=3541 data-nosnippet>3541</a>    <span class="macro">assert!</span>(warn_formula_once(<span class="kw-2">&amp;mut </span>other_doc, f1));
+<a href=#3542 id=3542 data-nosnippet>3542</a>  }
+<a href=#3543 id=3543 data-nosnippet>3543</a>
+<a href=#3544 id=3544 data-nosnippet>3544</a>  <span class="doccomment">/// Pin the message↔classifier coupling for the string-fallback path of
+<a href=#3545 id=3545 data-nosnippet>3545</a>  /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured
+<a href=#3546 id=3546 data-nosnippet>3546</a>  /// `take_last_resource_fatal` latch; this fallback exists for errors that
+<a href=#3547 id=3547 data-nosnippet>3547</a>  /// were flattened before the latch landed. If an engine message is
+<a href=#3548 id=3548 data-nosnippet>3548</a>  /// reworded, this test points at the matcher to update.
+<a href=#3549 id=3549 data-nosnippet>3549</a>  </span><span class="attr">#[test]
+<a href=#3550 id=3550 data-nosnippet>3550</a>  </span><span class="kw">fn </span>resource_fatal_message_fallback_recognizes_engine_messages() {
+<a href=#3551 id=3551 data-nosnippet>3551</a>    <span class="kw">use </span>latexml_core::common::error::ErrorCategory <span class="kw">as </span>C;
+<a href=#3552 id=3552 data-nosnippet>3552</a>    <span class="kw">let </span>cases = [
+<a href=#3553 id=3553 data-nosnippet>3553</a>      (
+<a href=#3554 id=3554 data-nosnippet>3554</a>        <span class="string">"Infinite expansion loop: a window of 2 token(s) repeated 100+ times"</span>,
+<a href=#3555 id=3555 data-nosnippet>3555</a>        C::Recursion,
+<a href=#3556 id=3556 data-nosnippet>3556</a>      ),
+<a href=#3557 id=3557 data-nosnippet>3557</a>      (
+<a href=#3558 id=3558 data-nosnippet>3558</a>        <span class="string">"Token limit of 400000000 exceeded, infinite loop?"</span>,
+<a href=#3559 id=3559 data-nosnippet>3559</a>        C::TokenLimit,
+<a href=#3560 id=3560 data-nosnippet>3560</a>      ),
+<a href=#3561 id=3561 data-nosnippet>3561</a>      (
+<a href=#3562 id=3562 data-nosnippet>3562</a>        <span class="string">"Pushback limit of 650000 exceeded, infinite loop?"</span>,
+<a href=#3563 id=3563 data-nosnippet>3563</a>        C::PushbackLimit,
+<a href=#3564 id=3564 data-nosnippet>3564</a>      ),
+<a href=#3565 id=3565 data-nosnippet>3565</a>      (
+<a href=#3566 id=3566 data-nosnippet>3566</a>        <span class="string">"Memory budget exceeded: RSS 4500 MB &gt; cap 4500 MB"</span>,
+<a href=#3567 id=3567 data-nosnippet>3567</a>        C::MemoryBudget,
+<a href=#3568 id=3568 data-nosnippet>3568</a>      ),
+<a href=#3569 id=3569 data-nosnippet>3569</a>    ];
+<a href=#3570 id=3570 data-nosnippet>3570</a>    <span class="kw">for </span>(msg, expected) <span class="kw">in </span>cases {
+<a href=#3571 id=3571 data-nosnippet>3571</a>      <span class="kw">let </span>err = resource_fatal_from_message(msg)
+<a href=#3572 id=3572 data-nosnippet>3572</a>        .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">"classifier must recognize: {msg}"</span>));
+<a href=#3573 id=3573 data-nosnippet>3573</a>      <span class="macro">assert_eq!</span>(
+<a href=#3574 id=3574 data-nosnippet>3574</a>        std::mem::discriminant(<span class="kw-2">&amp;</span>err.category),
+<a href=#3575 id=3575 data-nosnippet>3575</a>        std::mem::discriminant(<span class="kw-2">&amp;</span>expected),
+<a href=#3576 id=3576 data-nosnippet>3576</a>        <span class="string">"wrong category for: {msg}"
+<a href=#3577 id=3577 data-nosnippet>3577</a>      </span>);
+<a href=#3578 id=3578 data-nosnippet>3578</a>    }
+<a href=#3579 id=3579 data-nosnippet>3579</a>    <span class="macro">assert!</span>(resource_fatal_from_message(<span class="string">"Some unrelated parse failure"</span>).is_none());
+<a href=#3580 id=3580 data-nosnippet>3580</a>  }
+<a href=#3581 id=3581 data-nosnippet>3581</a>
+<a href=#3582 id=3582 data-nosnippet>3582</a>  <span class="comment">// Keep the Document alive for the duration of each test — Node holds an
+<a href=#3583 id=3583 data-nosnippet>3583</a>  // implicit weak ref, so dropping the owning Document before reading the
+<a href=#3584 id=3584 data-nosnippet>3584</a>  // Node leaves us with a hollow handle (get_type returns None, etc.).
+<a href=#3585 id=3585 data-nosnippet>3585</a>  </span><span class="kw">fn </span>parse(xml: <span class="kw-2">&amp;</span>str) -&gt; libxml::tree::Document {
+<a href=#3586 id=3586 data-nosnippet>3586</a>    XmlParser::default().parse_string(xml).expect(<span class="string">"parse xml"</span>)
+<a href=#3587 id=3587 data-nosnippet>3587</a>  }
+<a href=#3588 id=3588 data-nosnippet>3588</a>  <span class="kw">fn </span>root(doc: <span class="kw-2">&amp;</span>libxml::tree::Document) -&gt; Node { doc.get_root_element().expect(<span class="string">"root"</span>) }
 <a href=#3589 id=3589 data-nosnippet>3589</a>
 <a href=#3590 id=3590 data-nosnippet>3590</a>  <span class="attr">#[test]
-<a href=#3591 id=3591 data-nosnippet>3591</a>  </span><span class="kw">fn </span>is_post_script_recognized() {
-<a href=#3592 id=3592 data-nosnippet>3592</a>    <span class="macro">assert!</span>(is_post_script(<span class="string">"POSTSUPERSCRIPT"</span>));
-<a href=#3593 id=3593 data-nosnippet>3593</a>    <span class="macro">assert!</span>(is_post_script(<span class="string">"POSTSUBSCRIPT"</span>));
-<a href=#3594 id=3594 data-nosnippet>3594</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">"SUPERSCRIPT"</span>));
-<a href=#3595 id=3595 data-nosnippet>3595</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">"FLOATSUPERSCRIPT"</span>));
-<a href=#3596 id=3596 data-nosnippet>3596</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">""</span>));
+<a href=#3591 id=3591 data-nosnippet>3591</a>  </span><span class="kw">fn </span>is_float_script_recognized() {
+<a href=#3592 id=3592 data-nosnippet>3592</a>    <span class="macro">assert!</span>(is_float_script(<span class="string">"FLOATSUPERSCRIPT"</span>));
+<a href=#3593 id=3593 data-nosnippet>3593</a>    <span class="macro">assert!</span>(is_float_script(<span class="string">"FLOATSUBSCRIPT"</span>));
+<a href=#3594 id=3594 data-nosnippet>3594</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">"SUPERSCRIPT"</span>));
+<a href=#3595 id=3595 data-nosnippet>3595</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">"POSTSUPERSCRIPT"</span>));
+<a href=#3596 id=3596 data-nosnippet>3596</a>    <span class="macro">assert!</span>(!is_float_script(<span class="string">""</span>));
 <a href=#3597 id=3597 data-nosnippet>3597</a>  }
 <a href=#3598 id=3598 data-nosnippet>3598</a>
 <a href=#3599 id=3599 data-nosnippet>3599</a>  <span class="attr">#[test]
-<a href=#3600 id=3600 data-nosnippet>3600</a>  </span><span class="kw">fn </span>parse_scriptpos_empty_defaults_to_post_zero() {
-<a href=#3601 id=3601 data-nosnippet>3601</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">""</span>), (<span class="string">"post"</span>, <span class="number">0</span>));
-<a href=#3602 id=3602 data-nosnippet>3602</a>  }
-<a href=#3603 id=3603 data-nosnippet>3603</a>
-<a href=#3604 id=3604 data-nosnippet>3604</a>  <span class="comment">// ---- LATEXML_MARPA_HYBRID_AUDIT_PARITY relaxed-comparison tests ----
-<a href=#3605 id=3605 data-nosnippet>3605</a>  //
-<a href=#3606 id=3606 data-nosnippet>3606</a>  // The audit's load-bearing question is "if both paths accept, do
-<a href=#3607 id=3607 data-nosnippet>3607</a>  // they produce the same XM?". Non-Accepted/Non-Multiple outcome
-<a href=#3608 id=3608 data-nosnippet>3608</a>  // pairs (Empty vs Rejected etc.) are compatible. The minimal
-<a href=#3609 id=3609 data-nosnippet>3609</a>  // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
-<a href=#3610 id=3610 data-nosnippet>3610</a>  // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
-<a href=#3611 id=3611 data-nosnippet>3611</a>
-<a href=#3612 id=3612 data-nosnippet>3612</a>  </span><span class="kw">fn </span>lex(name: <span class="kw-2">&amp;</span>str) -&gt; XM { XM::Lexeme(std::rc::Rc::from(name), metadata::Meta::default()) }
-<a href=#3613 id=3613 data-nosnippet>3613</a>
-<a href=#3614 id=3614 data-nosnippet>3614</a>  <span class="attr">#[test]
-<a href=#3615 id=3615 data-nosnippet>3615</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_both_empty_is_ok() {
-<a href=#3616 id=3616 data-nosnippet>3616</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(
-<a href=#3617 id=3617 data-nosnippet>3617</a>      <span class="kw-2">&amp;</span>ParseOutcome::Empty,
-<a href=#3618 id=3618 data-nosnippet>3618</a>      <span class="kw-2">&amp;</span>ParseOutcome::Empty
-<a href=#3619 id=3619 data-nosnippet>3619</a>    ));
-<a href=#3620 id=3620 data-nosnippet>3620</a>  }
-<a href=#3621 id=3621 data-nosnippet>3621</a>
-<a href=#3622 id=3622 data-nosnippet>3622</a>  <span class="attr">#[test]
-<a href=#3623 id=3623 data-nosnippet>3623</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_both_rejected_is_ok_even_with_different_messages() {
-<a href=#3624 id=3624 data-nosnippet>3624</a>    <span class="kw">let </span>a = ParseOutcome::Rejected(<span class="string">"infix_relation: …"</span>.to_string());
-<a href=#3625 id=3625 data-nosnippet>3625</a>    <span class="kw">let </span>b = ParseOutcome::Rejected(<span class="string">"some other pragma rejected"</span>.to_string());
-<a href=#3626 id=3626 data-nosnippet>3626</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
-<a href=#3627 id=3627 data-nosnippet>3627</a>  }
-<a href=#3628 id=3628 data-nosnippet>3628</a>
-<a href=#3629 id=3629 data-nosnippet>3629</a>  <span class="attr">#[test]
-<a href=#3630 id=3630 data-nosnippet>3630</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_empty_vs_rejected_is_ok_in_either_order() {
-<a href=#3631 id=3631 data-nosnippet>3631</a>    <span class="kw">let </span>empty = ParseOutcome::Empty;
-<a href=#3632 id=3632 data-nosnippet>3632</a>    <span class="kw">let </span>rej = ParseOutcome::Rejected(<span class="string">"…"</span>.to_string());
-<a href=#3633 id=3633 data-nosnippet>3633</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>rej));
-<a href=#3634 id=3634 data-nosnippet>3634</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>rej, <span class="kw-2">&amp;</span>empty));
-<a href=#3635 id=3635 data-nosnippet>3635</a>  }
-<a href=#3636 id=3636 data-nosnippet>3636</a>
-<a href=#3637 id=3637 data-nosnippet>3637</a>  <span class="attr">#[test]
-<a href=#3638 id=3638 data-nosnippet>3638</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_vs_empty_is_a_real_mismatch() {
-<a href=#3639 id=3639 data-nosnippet>3639</a>    <span class="kw">let </span>acc = ParseOutcome::Accepted(lex(<span class="string">"x"</span>));
+<a href=#3600 id=3600 data-nosnippet>3600</a>  </span><span class="kw">fn </span>is_post_script_recognized() {
+<a href=#3601 id=3601 data-nosnippet>3601</a>    <span class="macro">assert!</span>(is_post_script(<span class="string">"POSTSUPERSCRIPT"</span>));
+<a href=#3602 id=3602 data-nosnippet>3602</a>    <span class="macro">assert!</span>(is_post_script(<span class="string">"POSTSUBSCRIPT"</span>));
+<a href=#3603 id=3603 data-nosnippet>3603</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">"SUPERSCRIPT"</span>));
+<a href=#3604 id=3604 data-nosnippet>3604</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">"FLOATSUPERSCRIPT"</span>));
+<a href=#3605 id=3605 data-nosnippet>3605</a>    <span class="macro">assert!</span>(!is_post_script(<span class="string">""</span>));
+<a href=#3606 id=3606 data-nosnippet>3606</a>  }
+<a href=#3607 id=3607 data-nosnippet>3607</a>
+<a href=#3608 id=3608 data-nosnippet>3608</a>  <span class="attr">#[test]
+<a href=#3609 id=3609 data-nosnippet>3609</a>  </span><span class="kw">fn </span>parse_scriptpos_empty_defaults_to_post_zero() {
+<a href=#3610 id=3610 data-nosnippet>3610</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">""</span>), (<span class="string">"post"</span>, <span class="number">0</span>));
+<a href=#3611 id=3611 data-nosnippet>3611</a>  }
+<a href=#3612 id=3612 data-nosnippet>3612</a>
+<a href=#3613 id=3613 data-nosnippet>3613</a>  <span class="comment">// ---- LATEXML_MARPA_HYBRID_AUDIT_PARITY relaxed-comparison tests ----
+<a href=#3614 id=3614 data-nosnippet>3614</a>  //
+<a href=#3615 id=3615 data-nosnippet>3615</a>  // The audit's load-bearing question is "if both paths accept, do
+<a href=#3616 id=3616 data-nosnippet>3616</a>  // they produce the same XM?". Non-Accepted/Non-Multiple outcome
+<a href=#3617 id=3617 data-nosnippet>3617</a>  // pairs (Empty vs Rejected etc.) are compatible. The minimal
+<a href=#3618 id=3618 data-nosnippet>3618</a>  // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
+<a href=#3619 id=3619 data-nosnippet>3619</a>  // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
+<a href=#3620 id=3620 data-nosnippet>3620</a>
+<a href=#3621 id=3621 data-nosnippet>3621</a>  </span><span class="kw">fn </span>lex(name: <span class="kw-2">&amp;</span>str) -&gt; XM { XM::Lexeme(std::rc::Rc::from(name), metadata::Meta::default()) }
+<a href=#3622 id=3622 data-nosnippet>3622</a>
+<a href=#3623 id=3623 data-nosnippet>3623</a>  <span class="attr">#[test]
+<a href=#3624 id=3624 data-nosnippet>3624</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_both_empty_is_ok() {
+<a href=#3625 id=3625 data-nosnippet>3625</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(
+<a href=#3626 id=3626 data-nosnippet>3626</a>      <span class="kw-2">&amp;</span>ParseOutcome::Empty,
+<a href=#3627 id=3627 data-nosnippet>3627</a>      <span class="kw-2">&amp;</span>ParseOutcome::Empty
+<a href=#3628 id=3628 data-nosnippet>3628</a>    ));
+<a href=#3629 id=3629 data-nosnippet>3629</a>  }
+<a href=#3630 id=3630 data-nosnippet>3630</a>
+<a href=#3631 id=3631 data-nosnippet>3631</a>  <span class="attr">#[test]
+<a href=#3632 id=3632 data-nosnippet>3632</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_both_rejected_is_ok_even_with_different_messages() {
+<a href=#3633 id=3633 data-nosnippet>3633</a>    <span class="kw">let </span>a = ParseOutcome::Rejected(<span class="string">"infix_relation: …"</span>.to_string());
+<a href=#3634 id=3634 data-nosnippet>3634</a>    <span class="kw">let </span>b = ParseOutcome::Rejected(<span class="string">"some other pragma rejected"</span>.to_string());
+<a href=#3635 id=3635 data-nosnippet>3635</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
+<a href=#3636 id=3636 data-nosnippet>3636</a>  }
+<a href=#3637 id=3637 data-nosnippet>3637</a>
+<a href=#3638 id=3638 data-nosnippet>3638</a>  <span class="attr">#[test]
+<a href=#3639 id=3639 data-nosnippet>3639</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_empty_vs_rejected_is_ok_in_either_order() {
 <a href=#3640 id=3640 data-nosnippet>3640</a>    <span class="kw">let </span>empty = ParseOutcome::Empty;
-<a href=#3641 id=3641 data-nosnippet>3641</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>acc, <span class="kw-2">&amp;</span>empty));
-<a href=#3642 id=3642 data-nosnippet>3642</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>acc));
-<a href=#3643 id=3643 data-nosnippet>3643</a>  }
-<a href=#3644 id=3644 data-nosnippet>3644</a>
-<a href=#3645 id=3645 data-nosnippet>3645</a>  <span class="attr">#[test]
-<a href=#3646 id=3646 data-nosnippet>3646</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_vs_rejected_is_a_real_mismatch() {
-<a href=#3647 id=3647 data-nosnippet>3647</a>    <span class="kw">let </span>acc = ParseOutcome::Accepted(lex(<span class="string">"x"</span>));
-<a href=#3648 id=3648 data-nosnippet>3648</a>    <span class="kw">let </span>rej = ParseOutcome::Rejected(<span class="string">"…"</span>.to_string());
-<a href=#3649 id=3649 data-nosnippet>3649</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>acc, <span class="kw-2">&amp;</span>rej));
-<a href=#3650 id=3650 data-nosnippet>3650</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>rej, <span class="kw-2">&amp;</span>acc));
-<a href=#3651 id=3651 data-nosnippet>3651</a>  }
-<a href=#3652 id=3652 data-nosnippet>3652</a>
-<a href=#3653 id=3653 data-nosnippet>3653</a>  <span class="attr">#[test]
-<a href=#3654 id=3654 data-nosnippet>3654</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_equal_xm_is_ok() {
-<a href=#3655 id=3655 data-nosnippet>3655</a>    <span class="kw">let </span>a = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
-<a href=#3656 id=3656 data-nosnippet>3656</a>    <span class="kw">let </span>b = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
-<a href=#3657 id=3657 data-nosnippet>3657</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
-<a href=#3658 id=3658 data-nosnippet>3658</a>  }
-<a href=#3659 id=3659 data-nosnippet>3659</a>
-<a href=#3660 id=3660 data-nosnippet>3660</a>  <span class="attr">#[test]
-<a href=#3661 id=3661 data-nosnippet>3661</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_different_xm_is_a_real_mismatch() {
-<a href=#3662 id=3662 data-nosnippet>3662</a>    <span class="kw">let </span>a = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
-<a href=#3663 id=3663 data-nosnippet>3663</a>    <span class="kw">let </span>b = ParseOutcome::Accepted(lex(<span class="string">"bar"</span>));
-<a href=#3664 id=3664 data-nosnippet>3664</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
-<a href=#3665 id=3665 data-nosnippet>3665</a>  }
-<a href=#3666 id=3666 data-nosnippet>3666</a>
-<a href=#3667 id=3667 data-nosnippet>3667</a>  <span class="attr">#[test]
-<a href=#3668 id=3668 data-nosnippet>3668</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_multiple_treated_as_accepted_kind() {
-<a href=#3669 id=3669 data-nosnippet>3669</a>    <span class="kw">let </span>m = ParseOutcome::Multiple(<span class="macro">vec!</span>[lex(<span class="string">"x"</span>), lex(<span class="string">"y"</span>)]);
-<a href=#3670 id=3670 data-nosnippet>3670</a>    <span class="kw">let </span>empty = ParseOutcome::Empty;
-<a href=#3671 id=3671 data-nosnippet>3671</a>    <span class="comment">// Multiple-vs-Empty is a real mismatch (one path returned trees,
-<a href=#3672 id=3672 data-nosnippet>3672</a>    // the other didn't) — same semantics as Accepted-vs-Empty.
-<a href=#3673 id=3673 data-nosnippet>3673</a>    </span><span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>m, <span class="kw-2">&amp;</span>empty));
-<a href=#3674 id=3674 data-nosnippet>3674</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>m));
-<a href=#3675 id=3675 data-nosnippet>3675</a>  }
-<a href=#3676 id=3676 data-nosnippet>3676</a>
-<a href=#3677 id=3677 data-nosnippet>3677</a>  <span class="attr">#[test]
-<a href=#3678 id=3678 data-nosnippet>3678</a>  </span><span class="kw">fn </span>parse_scriptpos_str_just_position() {
-<a href=#3679 id=3679 data-nosnippet>3679</a>    <span class="comment">// No digits → level 0.
-<a href=#3680 id=3680 data-nosnippet>3680</a>    </span><span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"post"</span>), (<span class="string">"post"</span>, <span class="number">0</span>));
-<a href=#3681 id=3681 data-nosnippet>3681</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"mid"</span>), (<span class="string">"mid"</span>, <span class="number">0</span>));
-<a href=#3682 id=3682 data-nosnippet>3682</a>  }
-<a href=#3683 id=3683 data-nosnippet>3683</a>
-<a href=#3684 id=3684 data-nosnippet>3684</a>  <span class="attr">#[test]
-<a href=#3685 id=3685 data-nosnippet>3685</a>  </span><span class="kw">fn </span>parse_scriptpos_str_position_and_level() {
-<a href=#3686 id=3686 data-nosnippet>3686</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"post1"</span>), (<span class="string">"post"</span>, <span class="number">1</span>));
-<a href=#3687 id=3687 data-nosnippet>3687</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"mid2"</span>), (<span class="string">"mid"</span>, <span class="number">2</span>));
-<a href=#3688 id=3688 data-nosnippet>3688</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"pre3"</span>), (<span class="string">"pre"</span>, <span class="number">3</span>));
-<a href=#3689 id=3689 data-nosnippet>3689</a>  }
-<a href=#3690 id=3690 data-nosnippet>3690</a>
-<a href=#3691 id=3691 data-nosnippet>3691</a>  <span class="attr">#[test]
-<a href=#3692 id=3692 data-nosnippet>3692</a>  </span><span class="kw">fn </span>parse_scriptpos_str_just_digit_is_empty_pos() {
-<a href=#3693 id=3693 data-nosnippet>3693</a>    <span class="comment">// Entirely-numeric input → position is the empty string, level parses.
-<a href=#3694 id=3694 data-nosnippet>3694</a>    </span><span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"5"</span>), (<span class="string">""</span>, <span class="number">5</span>));
-<a href=#3695 id=3695 data-nosnippet>3695</a>  }
-<a href=#3696 id=3696 data-nosnippet>3696</a>
-<a href=#3697 id=3697 data-nosnippet>3697</a>  <span class="attr">#[test]
-<a href=#3698 id=3698 data-nosnippet>3698</a>  </span><span class="kw">fn </span>p_get_attribute_returns_attr_on_element() {
-<a href=#3699 id=3699 data-nosnippet>3699</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok role="ADDOP" meaning="plus"&gt;+&lt;/XMTok&gt;"#</span>);
-<a href=#3700 id=3700 data-nosnippet>3700</a>    <span class="kw">let </span>n = root(<span class="kw-2">&amp;</span>doc);
-<a href=#3701 id=3701 data-nosnippet>3701</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"role"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"ADDOP"</span>));
-<a href=#3702 id=3702 data-nosnippet>3702</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"meaning"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"plus"</span>));
-<a href=#3703 id=3703 data-nosnippet>3703</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"absent"</span>), <span class="prelude-val">None</span>);
+<a href=#3641 id=3641 data-nosnippet>3641</a>    <span class="kw">let </span>rej = ParseOutcome::Rejected(<span class="string">"…"</span>.to_string());
+<a href=#3642 id=3642 data-nosnippet>3642</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>rej));
+<a href=#3643 id=3643 data-nosnippet>3643</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>rej, <span class="kw-2">&amp;</span>empty));
+<a href=#3644 id=3644 data-nosnippet>3644</a>  }
+<a href=#3645 id=3645 data-nosnippet>3645</a>
+<a href=#3646 id=3646 data-nosnippet>3646</a>  <span class="attr">#[test]
+<a href=#3647 id=3647 data-nosnippet>3647</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_vs_empty_is_a_real_mismatch() {
+<a href=#3648 id=3648 data-nosnippet>3648</a>    <span class="kw">let </span>acc = ParseOutcome::Accepted(lex(<span class="string">"x"</span>));
+<a href=#3649 id=3649 data-nosnippet>3649</a>    <span class="kw">let </span>empty = ParseOutcome::Empty;
+<a href=#3650 id=3650 data-nosnippet>3650</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>acc, <span class="kw-2">&amp;</span>empty));
+<a href=#3651 id=3651 data-nosnippet>3651</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>acc));
+<a href=#3652 id=3652 data-nosnippet>3652</a>  }
+<a href=#3653 id=3653 data-nosnippet>3653</a>
+<a href=#3654 id=3654 data-nosnippet>3654</a>  <span class="attr">#[test]
+<a href=#3655 id=3655 data-nosnippet>3655</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_vs_rejected_is_a_real_mismatch() {
+<a href=#3656 id=3656 data-nosnippet>3656</a>    <span class="kw">let </span>acc = ParseOutcome::Accepted(lex(<span class="string">"x"</span>));
+<a href=#3657 id=3657 data-nosnippet>3657</a>    <span class="kw">let </span>rej = ParseOutcome::Rejected(<span class="string">"…"</span>.to_string());
+<a href=#3658 id=3658 data-nosnippet>3658</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>acc, <span class="kw-2">&amp;</span>rej));
+<a href=#3659 id=3659 data-nosnippet>3659</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>rej, <span class="kw-2">&amp;</span>acc));
+<a href=#3660 id=3660 data-nosnippet>3660</a>  }
+<a href=#3661 id=3661 data-nosnippet>3661</a>
+<a href=#3662 id=3662 data-nosnippet>3662</a>  <span class="attr">#[test]
+<a href=#3663 id=3663 data-nosnippet>3663</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_equal_xm_is_ok() {
+<a href=#3664 id=3664 data-nosnippet>3664</a>    <span class="kw">let </span>a = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
+<a href=#3665 id=3665 data-nosnippet>3665</a>    <span class="kw">let </span>b = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
+<a href=#3666 id=3666 data-nosnippet>3666</a>    <span class="macro">assert!</span>(parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
+<a href=#3667 id=3667 data-nosnippet>3667</a>  }
+<a href=#3668 id=3668 data-nosnippet>3668</a>
+<a href=#3669 id=3669 data-nosnippet>3669</a>  <span class="attr">#[test]
+<a href=#3670 id=3670 data-nosnippet>3670</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_accepted_different_xm_is_a_real_mismatch() {
+<a href=#3671 id=3671 data-nosnippet>3671</a>    <span class="kw">let </span>a = ParseOutcome::Accepted(lex(<span class="string">"foo"</span>));
+<a href=#3672 id=3672 data-nosnippet>3672</a>    <span class="kw">let </span>b = ParseOutcome::Accepted(lex(<span class="string">"bar"</span>));
+<a href=#3673 id=3673 data-nosnippet>3673</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>a, <span class="kw-2">&amp;</span>b));
+<a href=#3674 id=3674 data-nosnippet>3674</a>  }
+<a href=#3675 id=3675 data-nosnippet>3675</a>
+<a href=#3676 id=3676 data-nosnippet>3676</a>  <span class="attr">#[test]
+<a href=#3677 id=3677 data-nosnippet>3677</a>  </span><span class="kw">fn </span>parity_outcomes_compatible_multiple_treated_as_accepted_kind() {
+<a href=#3678 id=3678 data-nosnippet>3678</a>    <span class="kw">let </span>m = ParseOutcome::Multiple(<span class="macro">vec!</span>[lex(<span class="string">"x"</span>), lex(<span class="string">"y"</span>)]);
+<a href=#3679 id=3679 data-nosnippet>3679</a>    <span class="kw">let </span>empty = ParseOutcome::Empty;
+<a href=#3680 id=3680 data-nosnippet>3680</a>    <span class="comment">// Multiple-vs-Empty is a real mismatch (one path returned trees,
+<a href=#3681 id=3681 data-nosnippet>3681</a>    // the other didn't) — same semantics as Accepted-vs-Empty.
+<a href=#3682 id=3682 data-nosnippet>3682</a>    </span><span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>m, <span class="kw-2">&amp;</span>empty));
+<a href=#3683 id=3683 data-nosnippet>3683</a>    <span class="macro">assert!</span>(!parity_outcomes_compatible(<span class="kw-2">&amp;</span>empty, <span class="kw-2">&amp;</span>m));
+<a href=#3684 id=3684 data-nosnippet>3684</a>  }
+<a href=#3685 id=3685 data-nosnippet>3685</a>
+<a href=#3686 id=3686 data-nosnippet>3686</a>  <span class="attr">#[test]
+<a href=#3687 id=3687 data-nosnippet>3687</a>  </span><span class="kw">fn </span>parse_scriptpos_str_just_position() {
+<a href=#3688 id=3688 data-nosnippet>3688</a>    <span class="comment">// No digits → level 0.
+<a href=#3689 id=3689 data-nosnippet>3689</a>    </span><span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"post"</span>), (<span class="string">"post"</span>, <span class="number">0</span>));
+<a href=#3690 id=3690 data-nosnippet>3690</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"mid"</span>), (<span class="string">"mid"</span>, <span class="number">0</span>));
+<a href=#3691 id=3691 data-nosnippet>3691</a>  }
+<a href=#3692 id=3692 data-nosnippet>3692</a>
+<a href=#3693 id=3693 data-nosnippet>3693</a>  <span class="attr">#[test]
+<a href=#3694 id=3694 data-nosnippet>3694</a>  </span><span class="kw">fn </span>parse_scriptpos_str_position_and_level() {
+<a href=#3695 id=3695 data-nosnippet>3695</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"post1"</span>), (<span class="string">"post"</span>, <span class="number">1</span>));
+<a href=#3696 id=3696 data-nosnippet>3696</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"mid2"</span>), (<span class="string">"mid"</span>, <span class="number">2</span>));
+<a href=#3697 id=3697 data-nosnippet>3697</a>    <span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"pre3"</span>), (<span class="string">"pre"</span>, <span class="number">3</span>));
+<a href=#3698 id=3698 data-nosnippet>3698</a>  }
+<a href=#3699 id=3699 data-nosnippet>3699</a>
+<a href=#3700 id=3700 data-nosnippet>3700</a>  <span class="attr">#[test]
+<a href=#3701 id=3701 data-nosnippet>3701</a>  </span><span class="kw">fn </span>parse_scriptpos_str_just_digit_is_empty_pos() {
+<a href=#3702 id=3702 data-nosnippet>3702</a>    <span class="comment">// Entirely-numeric input → position is the empty string, level parses.
+<a href=#3703 id=3703 data-nosnippet>3703</a>    </span><span class="macro">assert_eq!</span>(parse_scriptpos_str(<span class="string">"5"</span>), (<span class="string">""</span>, <span class="number">5</span>));
 <a href=#3704 id=3704 data-nosnippet>3704</a>  }
 <a href=#3705 id=3705 data-nosnippet>3705</a>
 <a href=#3706 id=3706 data-nosnippet>3706</a>  <span class="attr">#[test]
-<a href=#3707 id=3707 data-nosnippet>3707</a>  </span><span class="kw">fn </span>p_get_value_element_content_wins() {
-<a href=#3708 id=3708 data-nosnippet>3708</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok name="fallback"&gt;+&lt;/XMTok&gt;"#</span>);
-<a href=#3709 id=3709 data-nosnippet>3709</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">"+"</span>);
-<a href=#3710 id=3710 data-nosnippet>3710</a>  }
-<a href=#3711 id=3711 data-nosnippet>3711</a>
-<a href=#3712 id=3712 data-nosnippet>3712</a>  <span class="attr">#[test]
-<a href=#3713 id=3713 data-nosnippet>3713</a>  </span><span class="kw">fn </span>p_get_value_element_falls_back_to_name_attr() {
-<a href=#3714 id=3714 data-nosnippet>3714</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok name="plus"/&gt;"#</span>);
-<a href=#3715 id=3715 data-nosnippet>3715</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">"plus"</span>);
-<a href=#3716 id=3716 data-nosnippet>3716</a>  }
-<a href=#3717 id=3717 data-nosnippet>3717</a>
-<a href=#3718 id=3718 data-nosnippet>3718</a>  <span class="attr">#[test]
-<a href=#3719 id=3719 data-nosnippet>3719</a>  </span><span class="kw">fn </span>p_get_value_element_empty_with_no_name_is_empty() {
-<a href=#3720 id=3720 data-nosnippet>3720</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok/&gt;"#</span>);
-<a href=#3721 id=3721 data-nosnippet>3721</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">""</span>);
-<a href=#3722 id=3722 data-nosnippet>3722</a>  }
-<a href=#3723 id=3723 data-nosnippet>3723</a>}
+<a href=#3707 id=3707 data-nosnippet>3707</a>  </span><span class="kw">fn </span>p_get_attribute_returns_attr_on_element() {
+<a href=#3708 id=3708 data-nosnippet>3708</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok role="ADDOP" meaning="plus"&gt;+&lt;/XMTok&gt;"#</span>);
+<a href=#3709 id=3709 data-nosnippet>3709</a>    <span class="kw">let </span>n = root(<span class="kw-2">&amp;</span>doc);
+<a href=#3710 id=3710 data-nosnippet>3710</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"role"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"ADDOP"</span>));
+<a href=#3711 id=3711 data-nosnippet>3711</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"meaning"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"plus"</span>));
+<a href=#3712 id=3712 data-nosnippet>3712</a>    <span class="macro">assert_eq!</span>(p_get_attribute(<span class="kw-2">&amp;</span>n, <span class="string">"absent"</span>), <span class="prelude-val">None</span>);
+<a href=#3713 id=3713 data-nosnippet>3713</a>  }
+<a href=#3714 id=3714 data-nosnippet>3714</a>
+<a href=#3715 id=3715 data-nosnippet>3715</a>  <span class="attr">#[test]
+<a href=#3716 id=3716 data-nosnippet>3716</a>  </span><span class="kw">fn </span>p_get_value_element_content_wins() {
+<a href=#3717 id=3717 data-nosnippet>3717</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok name="fallback"&gt;+&lt;/XMTok&gt;"#</span>);
+<a href=#3718 id=3718 data-nosnippet>3718</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">"+"</span>);
+<a href=#3719 id=3719 data-nosnippet>3719</a>  }
+<a href=#3720 id=3720 data-nosnippet>3720</a>
+<a href=#3721 id=3721 data-nosnippet>3721</a>  <span class="attr">#[test]
+<a href=#3722 id=3722 data-nosnippet>3722</a>  </span><span class="kw">fn </span>p_get_value_element_falls_back_to_name_attr() {
+<a href=#3723 id=3723 data-nosnippet>3723</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok name="plus"/&gt;"#</span>);
+<a href=#3724 id=3724 data-nosnippet>3724</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">"plus"</span>);
+<a href=#3725 id=3725 data-nosnippet>3725</a>  }
+<a href=#3726 id=3726 data-nosnippet>3726</a>
+<a href=#3727 id=3727 data-nosnippet>3727</a>  <span class="attr">#[test]
+<a href=#3728 id=3728 data-nosnippet>3728</a>  </span><span class="kw">fn </span>p_get_value_element_empty_with_no_name_is_empty() {
+<a href=#3729 id=3729 data-nosnippet>3729</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;XMTok/&gt;"#</span>);
+<a href=#3730 id=3730 data-nosnippet>3730</a>    <span class="macro">assert_eq!</span>(p_get_value(<span class="kw-2">&amp;</span>root(<span class="kw-2">&amp;</span>doc)), <span class="string">""</span>);
+<a href=#3731 id=3731 data-nosnippet>3731</a>  }
+<a href=#3732 id=3732 data-nosnippet>3732</a>}
 </code></pre></div></section></main></body></html>
