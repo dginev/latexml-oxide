@@ -910,26 +910,18 @@ fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
   Some((px_to_pt(vw), px_to_pt(vh)))
 }
 
-/// SVG **viewport** size in CSS px, as a browser would take it: the root
-/// `width`/`height` lengths (a unitless value is user units = px), and only when
-/// those are absent or relative (`%`) the `viewBox` extent as a last resort.
+/// SVG **viewport** size in CSS px, the way a browser takes it: the root
+/// `width`/`height` (a unitless value is CSS px), falling back to the `viewBox`
+/// only when the lengths are absent or relative (`%`). `None` when neither is
+/// usable, so the caller omits the dimensions and lets the browser size it.
 ///
-/// This is the sizing basis for `imagewidth`/`imageheight` in
-/// `LaTeXML::Post::Graphics`. Perl has no viewBox-vs-length preference of its
-/// own: it hands the file to Image::Magick, which *renders* the SVG and reports
-/// the raster it produced (`Util/Image.pm:image_size`, L86-97). At Image::Magick's
-/// usual ~96 DPI that raster equals the `width`/`height` length in px — the same
-/// number a browser draws. **The browser is the actual renderer of our HTML, so
-/// we size the way it does: width/height first.**
-///
-/// The `viewBox` is by definition an abstract coordinate system, unrelated to
-/// the rendered size; PDF→SVG tools write it in PostScript points while the
-/// browser still sizes from `width`/`height`. Preferring it under-sized every
-/// figure whose lengths carry a unit by 72/96 — the bug in issue #696, reported
-/// by the LaTeXML maintainer. This is not parity-relevant either way: our own
-/// beyond-Perl PDF→SVG pipeline (`pdftocairo -svg`, `mutool draw -F svg`) has no
-/// counterpart in Perl, which rasterizes PDFs to PNG. `None` when neither basis
-/// is usable, so the caller omits the dimensions and the browser sizes the image.
+/// Basis for `imagewidth`/`imageheight` in `LaTeXML::Post::Graphics`. The
+/// `viewBox` is only a coordinate system, not the rendered size; preferring it
+/// under-sized SVGs whose lengths disagreed with it (issue #696, reported by the
+/// LaTeXML maintainer). Not parity-relevant: Perl parses no SVG — it renders via
+/// Image::Magick, whose raster follows `width`/`height`, not the `viewBox`
+/// (`Util/Image.pm:86-97`); `pdftocairo`/`mutool` are our own beyond-Perl
+/// PDF→SVG pipeline, absent from Perl.
 pub fn read_svg_viewport_px(path: &Path) -> Option<(u32, u32)> {
   let head = read_head_lossy(path)?;
   let tag = svg_root_tag(&head)?;

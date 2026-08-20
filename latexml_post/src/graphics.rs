@@ -1144,8 +1144,8 @@ impl Graphics {
     status
   }
 
-  /// The SVG viewport in pixels — `viewBox` extent, else the root
-  /// `width`/`height` lengths. `None` when the geometry can't be recovered, so
+  /// The SVG viewport in pixels — the root `width`/`height`, else the `viewBox`
+  /// extent (issue #696). `None` when the geometry can't be recovered, so
   /// callers omit the dimension attributes entirely (a browser then sizes the
   /// image itself, which beats writing a wrong number).
   ///
@@ -2730,11 +2730,11 @@ endobj
     );
   }
 
-  /// Falls back to width/height attrs when viewBox is missing — **converting**
-  /// the unit, not truncating it. `123.7pt` is 123.7/72 in = 164.9 px; the
-  /// previous reader dropped the `pt` and called it 124 px, so a `\includegraphics`
-  /// of this file rendered at three quarters of its size (and, for `cm`/`in`
-  /// sources, at a small fraction of it — issue 498 follow-up).
+  /// A unit-bearing root length must be **converted**, not truncated. `123.7pt`
+  /// is 123.7/72 in = 164.9 px; the previous reader dropped the `pt` and called
+  /// it 124 px, so a `\includegraphics` of this file rendered at three quarters
+  /// of its size (and, for `cm`/`in` sources, at a small fraction of it — issue
+  /// 498 follow-up).
   #[test]
   fn read_svg_dimensions_falls_back_to_width_height() {
     let dir = TempDir::new("svg_dim_fallback");
