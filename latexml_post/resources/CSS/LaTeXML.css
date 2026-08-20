@@ -639,6 +639,13 @@ cite                 { font-style: normal; }
   max-width:100%;
   height:auto; /* #2392: preserve the emitted aspect-ratio when the width is capped */
 }
+/* arXiv/html_feedback#6895: \scalerel*{obj}{ref} scales obj to ref's (text) height.
+   The scalerel binding wraps obj in .ltx_scalerel; size the box to the line height
+   and let its child (an SVG/picture/rule) fill it, so a picture-based inline icon
+   (e.g. \orcidicon) renders as a text-height glyph instead of its unscaled size. */
+.ltx_scalerel { display:inline-block; height:1em; vertical-align:-0.1em; }
+.ltx_scalerel .ltx_inline-block { height:100%; }
+.ltx_scalerel svg, .ltx_scalerel img { height:100%; width:auto; }
 
 .ltx_overlay {position:relative; }
 .ltx_overlay > span:nth-child(2) {position:absolute; left:0; }

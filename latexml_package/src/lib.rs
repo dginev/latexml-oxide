@@ -928,6 +928,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ragged2e", "sty", package::ragged2e_sty::load_definitions),
   ("relsize", "sty", package::relsize_sty::load_definitions),
   ("scalefnt", "sty", package::scalefnt_sty::load_definitions),
+  ("scalerel", "sty", package::scalerel_sty::load_definitions),
   ("sectsty", "sty", package::sectsty_sty::load_definitions),
   ("xfrac", "sty", package::xfrac_sty::load_definitions),
   ("adjustbox", "sty", package::adjustbox_sty::load_definitions),

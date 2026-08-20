@@ -1,0 +1,12 @@
+% arXiv/html_feedback#6895: the scalerel package (\RequirePackage{scalerel}) has no
+% .ltxml binding in Perl OR Rust, and the raw .sty load leaves \scalerel undefined,
+% so an inline icon built with \scalerel* (e.g. the \orcidicon macro of
+% arXiv:2608.12272) raises Error:undefined:\scalerel and renders its picture
+% unscaled ("too big / multi-line"). A scalerel binding defines \scalerel so the
+% object scales to the reference's (text) height instead. Witness: 2608.12272.
+\documentclass{article}
+\usepackage{scalerel}
+\begin{document}
+Inline X\scalerel*{\rule{2cm}{2cm}}{Xg}Y here.
+And non-star Z\scalerel{\rule{2cm}{1cm}}{Xg}W appends the reference.
+\end{document}
