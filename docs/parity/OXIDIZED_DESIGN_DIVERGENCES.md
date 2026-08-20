@@ -5219,3 +5219,37 @@ not a TeX-semantics choice. The reporter hit it converting a book whose chapters
 benefit from the same one-line fix — to be filed at `brucemiller/LaTeXML`.
 
 **Guard**: `06_cluster_standalone_subfiles::subimport_absolute_path_resolves_like_real_latex`.
+
+### 138. Subfigure panels with no explicit `{width}` share a row (not stacked full-width)
+
+**Perl behavior** (`latex_constructs.pool.ltxml:3229-3349` `arrange_panels_and_breaks`,
+`subcaption.sty.ltxml:104`, `subfig.sty.ltxml`): a panel's per-row width is its box
+width. `\subcaptionbox` and subfig `\subfloat` carry no explicit `{width}`
+(subcaption's `\subfloat` passes `{\columnwidth}`), so the panel box is sized to the
+full float `\hsize`, and `arrange_panels` then gives each panel its own row. In a
+two-column layout that renders every such panel at the full text width, stacked —
+even though the PDF sets them side-by-side in one column. An explicit-width
+`\begin{subfigure}{0.48\linewidth}` is unaffected (box = 0.48·\hsize → two per row).
+Verified: Perl 0.8.8 emits `width=345.0pt` for the panels and stacks them, identical
+to the pre-fix Rust.
+
+**Rust behavior** (`latex_constructs.rs` `arrange_panels` + `sole_graphic_width`;
+`subcaption_sty.rs` `subcaption_width_props`): when a panel is sized to the full
+float width but wraps exactly one graphic narrower than the float, `arrange_panels`
+uses the graphic's width for the per-row layout, so the panels share a row like an
+explicit-width `{subfigure}{W}`. A `{0pt}` default width (subcaptionbox) no longer
+pins the panel to zero. Only the row-arrangement threshold changes; the markup is
+unchanged. Guarded to only ever *shrink* a full-width panel to its narrower content,
+so it cannot widen or reflow a correctly-sized figure.
+
+**Why**: the HTML is single-column, so a panel meant to sit beside its sibling in one
+PDF column should share a row, not span the full text width. arXiv/html_feedback#6903
+(two-column paper, subfigure figures rendering full-width). The content width is only
+knowable post-digest (the graphic's box), so the fix lives in `arrange_panels`, not
+the binding. Approved by the maintainer 2026-08-20.
+
+**Upstream**: Perl's `arrange_panels_and_breaks` has the identical limitation and
+would benefit from the same graphic-width fallback — to be filed at
+`brucemiller/LaTeXML`.
+
+**Guard**: `06_cluster_regressions::cluster_subfigure_panels_share_a_row_6903`.
