@@ -56,23 +56,31 @@ fn cluster_fvextra_breakanywhere() {
 /// arXiv/html_feedback#6903: two-column subfigure panels with no explicit
 /// `{width}` — `\subcaptionbox` and subfig `\subfloat` — are sized to the full
 /// `\hsize` and were stacked one-per-row (each full text width). `arrange_panels`
-/// now sizes such a panel to its sole graphic, so the panels share a row like an
-/// explicit-width `\begin{subfigure}{0.48\linewidth}` already does. Guarded on
-/// the core XML: both panels of each figure carry `ltx_figure_panel`, and no
-/// `<break>` is inserted between them (a break is the "start a new row" marker,
-/// so its absence is exactly "they share a row").
+/// now sizes such a panel to its sole graphic, so panels narrower than the column
+/// share a row like an explicit-width `\begin{subfigure}{0.48\linewidth}` already
+/// does. The fix only ever SHRINKS a full-width panel to a narrower graphic, so a
+/// panel whose content is genuinely full width must still stack — guarded here so
+/// no future change makes the reflow over-eager.
+///
+/// Read from the core XML via `<break>`, the "start a new row" marker: two narrow
+/// figures (fig 1-2) with NO break between their panels = shared row; one
+/// full-width figure (fig 3) with exactly ONE break = still stacked.
 #[test]
 fn cluster_subfigure_panels_share_a_row_6903() {
   let xml = convert_to_xml("tests/cluster_regressions/subfigure_panel_wrapping_6903.tex");
   assert_eq!(
     xml.matches("ltx_figure_panel").count(),
-    4,
-    "expected 4 subfigure panels marked ltx_figure_panel (2 per figure):\n{xml}"
+    6,
+    "expected 6 subfigure panels marked ltx_figure_panel (2 per figure):\n{xml}"
   );
-  assert!(
-    !xml.contains("<break"),
-    "subcaptionbox/subfloat panels must share a row — a <break> means they \
-     stacked full-width (the #6903 bug):\n{xml}"
+  // arrange_panels inserts one `<break>` per stacked row transition. Only the
+  // full-width-content figure (3) stacks; the two narrow figures share a row.
+  assert_eq!(
+    xml.matches("<break").count(),
+    1,
+    "narrow subcaptionbox/subfloat panels must share a row (0 breaks), and the \
+     full-width-content figure must still stack (1 break) — got a different \
+     break count, so the reflow is either not firing or too eager:\n{xml}"
   );
 }
 #[test]
