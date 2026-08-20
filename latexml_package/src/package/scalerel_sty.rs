@@ -25,4 +25,29 @@ LoadDefinitions!({
   // `\stretchrel` stretches ignoring the aspect ratio; aspect-preserving is the
   // safe default for an inline icon, so alias it to `\scalerel` (scalerel.sty L86).
   Let!("\\stretchrel", "\\scalerel");
+  // Binding scalerel short-circuits the raw `.sty`, so EVERY command it defines is
+  // lost unless re-added here. Before this binding the raw load defined the whole
+  // family (as `\newcommand`s), so papers using them converted clean; covering only
+  // `\scalerel`/`\stretchrel` regressed `\scaleto`/`\scaleobj`/`\stretchto` &c. to
+  // `Error:undefined` (sandbox-arxiv-2605: 20+ papers, e.g. 2605.02053, 2605.03024,
+  // 2605.03521). Each scales/stretches its OBJECT to a height or by a factor we
+  // cannot measure box-wise, so — as with `\scalerel` — we wrap just the object in
+  // the text-height inline-block and drop the target (scalerel.sty L104/117/145-159).
+  //   \scaleto  [max]{obj}{ht}     obj=#2  (scalerel.sty L104)
+  //   \stretchto[min]{obj}{ht}     obj=#2  (scalerel.sty L117)
+  //   \scaleobj      {factor}{obj} obj=#2  (scalerel.sty L145)
+  //   \hstretch      {factor}{obj} obj=#2  (scalerel.sty L138)
+  //   \vstretch      {factor}{obj} obj=#2  (scalerel.sty L141)
+  DefMacro!("\\scaleto []{}{}",   "\\lx@scalerel@obj{#2}");
+  DefMacro!("\\stretchto []{}{}", "\\lx@scalerel@obj{#2}");
+  DefMacro!("\\scaleobj {}{}",    "\\lx@scalerel@obj{#2}");
+  DefMacro!("\\hstretch {}{}",    "\\lx@scalerel@obj{#2}");
+  DefMacro!("\\vstretch {}{}",    "\\lx@scalerel@obj{#2}");
+  // `\scaleleftright`/`\stretchleftright` place a scaled left and right object around
+  // a reference; both are built on `\scalerel`/`\stretchrel` (scalerel.sty L129-137),
+  // and the `.`-sentinel `\ifx` skips an empty side.
+  DefMacro!("\\scaleleftright []{}{}{}",
+    "\\ifx.#2#3\\else\\scalerel[#1]{#2}{#3}\\fi\\ifx.#4\\else\\scalerel*[#1]{#4}{#3}\\fi");
+  DefMacro!("\\stretchleftright []{}{}{}",
+    "\\ifx.#2#3\\else\\stretchrel[#1]{#2}{#3}\\fi\\ifx.#4\\else\\stretchrel*[#1]{#4}{#3}\\fi");
 });
