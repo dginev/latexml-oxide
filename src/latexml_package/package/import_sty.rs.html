@@ -57,50 +57,63 @@
 <a href=#57 id=57 data-nosnippet>57</a>  //   If SEARCHPATHS has entries, concat the first with path:
 <a href=#58 id=58 data-nosnippet>58</a>  //   new_lead = concat(lead_path, path); star → [new_lead], else → [new_lead, ...rest].
 <a href=#59 id=59 data-nosnippet>59</a>  //   If SEARCHPATHS is empty, this is a no-op (matches Perl's early-return).
-<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@append@path OptionalMatch:* {}"</span>, sub[(star, path_tks)] {
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">let </span>raw = <span class="macro">Expand!</span>(path_tks).to_string();
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">let </span>path = raw.trim().to_string();
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">if </span>path.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); }
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">let </span><span class="kw-2">mut </span>paths = get_search_paths();
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">if </span>paths.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); }
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">let </span>lead = paths.remove(<span class="number">0</span>);
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">let </span>new_lead = pathname::concat(<span class="kw-2">&amp;</span>lead, <span class="kw-2">&amp;</span>path);
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="comment">// LOCAL (see `\lx@set@path`): the `{…}` group reverts it.
-<a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">if </span>star.is_some() {
-<a href=#70 id=70 data-nosnippet>70</a>      set_search_paths_local(<span class="macro">vec!</span>[new_lead]);
-<a href=#71 id=71 data-nosnippet>71</a>    } <span class="kw">else </span>{
-<a href=#72 id=72 data-nosnippet>72</a>      <span class="kw">let </span><span class="kw-2">mut </span>new_paths = <span class="macro">vec!</span>[new_lead];
-<a href=#73 id=73 data-nosnippet>73</a>      new_paths.extend(paths);
-<a href=#74 id=74 data-nosnippet>74</a>      set_search_paths_local(new_paths);
-<a href=#75 id=75 data-nosnippet>75</a>    }
-<a href=#76 id=76 data-nosnippet>76</a>  });
-<a href=#77 id=77 data-nosnippet>77</a>
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="comment">// Each `\import`/`\subimport` wraps its body in a `{…}` group (with
-<a href=#79 id=79 data-nosnippet>79</a>  // `\lx@activate@subfile@scope` naming the subfile scope). The path change is LOCAL, so the
-<a href=#80 id=80 data-nosnippet>80</a>  // group reverts it at `}` — each sibling starts from the BASE search paths,
-<a href=#81 id=81 data-nosnippet>81</a>  // exactly as Perl's default-local `AssignValue(SEARCHPATHS…)` does. Without
-<a href=#82 id=82 data-nosnippet>82</a>  // group-local paths, two sibling `\subimport{Chapter/}{Abstract}` +
-<a href=#83 id=83 data-nosnippet>83</a>  // `\subimport{Chapter/}{Poster}` would concat Chapter/ onto the first call's
-<a href=#84 id=84 data-nosnippet>84</a>  // still-mutated lead → "Chapter/Chapter/Poster". Witnesses 2604.09744, 2603.04457.
-<a href=#85 id=85 data-nosnippet>85</a>  //
-<a href=#86 id=86 data-nosnippet>86</a>  // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
-<a href=#87 id=87 data-nosnippet>87</a>  // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
-<a href=#88 id=88 data-nosnippet>88</a>  // only one while their bodies reference `#3` (import.sty.ltxml L45/L47). The
-<a href=#89 id=89 data-nosnippet>89</a>  // undeclared `#3` expands to nothing, so `\include{}` includes nothing and the
-<a href=#90 id=90 data-nosnippet>90</a>  // file is dropped in silence: no error, no warning, no content. Real
-<a href=#91 id=91 data-nosnippet>91</a>  // `import.sty` takes both for all four (L57/L58 route `\includefrom` /
-<a href=#92 id=92 data-nosnippet>92</a>  // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
-<a href=#93 id=93 data-nosnippet>93</a>  // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
-<a href=#94 id=94 data-nosnippet>94</a>  // name as #7), so the arity below is the real package's, not Perl's typo.
-<a href=#95 id=95 data-nosnippet>95</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\import OptionalMatch:* {}{}"</span>,
-<a href=#96 id=96 data-nosnippet>96</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\input{#3}}"</span>);
-<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\includefrom OptionalMatch:* {}{}"</span>,
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\include{#3}}"</span>);
-<a href=#99 id=99 data-nosnippet>99</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subimport OptionalMatch:* {}{}"</span>,
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\input{#3}}"</span>);
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subincludefrom OptionalMatch:* {}{}"</span>,
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\include{#3}}"</span>);
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="macro">Let!</span>(<span class="string">"\\inputfrom"</span>, <span class="string">"\\import"</span>);
-<a href=#104 id=104 data-nosnippet>104</a>  <span class="macro">Let!</span>(<span class="string">"\\subinputfrom"</span>, <span class="string">"\\subimport"</span>);
-<a href=#105 id=105 data-nosnippet>105</a>});
+<a href=#60 id=60 data-nosnippet>60</a>  //   DIVERGENCE (OXIDIZED_DESIGN #137): an absolute `path` is used verbatim
+<a href=#61 id=61 data-nosnippet>61</a>  //   rather than concatenated, to match real LaTeX — see the body.
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@append@path OptionalMatch:* {}"</span>, sub[(star, path_tks)] {
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">let </span>raw = <span class="macro">Expand!</span>(path_tks).to_string();
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">let </span>path = raw.trim().to_string();
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">if </span>path.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); }
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">let </span><span class="kw-2">mut </span>paths = get_search_paths();
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">if </span>paths.is_empty() { <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()); }
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">let </span>lead = paths.remove(<span class="number">0</span>);
+<a href=#69 id=69 data-nosnippet>69</a>    <span class="comment">// OXIDIZED_DESIGN #137 — surpass Perl to match real LaTeX (pdflatex,
+<a href=#70 id=70 data-nosnippet>70</a>    // verified): an ABSOLUTE directory arg is used verbatim, not concatenated
+<a href=#71 id=71 data-nosnippet>71</a>    // onto the lead search path (which yields an unresolvable `&lt;lead&gt;//abs/…`).
+<a href=#72 id=72 data-nosnippet>72</a>    // Perl's \lx@append@path (import.sty.ltxml L31-42) ALWAYS concats, so both
+<a href=#73 id=73 data-nosnippet>73</a>    // engines fail `\subimport*{/abs/}{file}` where pdflatex succeeds — issue
+<a href=#74 id=74 data-nosnippet>74</a>    // #697. \lx@set@path already special-cases absolute; mirror it here.
+<a href=#75 id=75 data-nosnippet>75</a>    // Relative args are unchanged (the common `\subimport*{sub/}{file}` case).
+<a href=#76 id=76 data-nosnippet>76</a>    </span><span class="kw">let </span>new_lead = <span class="kw">if </span>pathname::is_absolute(<span class="kw-2">&amp;</span>path) {
+<a href=#77 id=77 data-nosnippet>77</a>      pathname::canonical(<span class="kw-2">&amp;</span>path)
+<a href=#78 id=78 data-nosnippet>78</a>    } <span class="kw">else </span>{
+<a href=#79 id=79 data-nosnippet>79</a>      pathname::concat(<span class="kw-2">&amp;</span>lead, <span class="kw-2">&amp;</span>path)
+<a href=#80 id=80 data-nosnippet>80</a>    };
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="comment">// LOCAL (see `\lx@set@path`): the `{…}` group reverts it.
+<a href=#82 id=82 data-nosnippet>82</a>    </span><span class="kw">if </span>star.is_some() {
+<a href=#83 id=83 data-nosnippet>83</a>      set_search_paths_local(<span class="macro">vec!</span>[new_lead]);
+<a href=#84 id=84 data-nosnippet>84</a>    } <span class="kw">else </span>{
+<a href=#85 id=85 data-nosnippet>85</a>      <span class="kw">let </span><span class="kw-2">mut </span>new_paths = <span class="macro">vec!</span>[new_lead];
+<a href=#86 id=86 data-nosnippet>86</a>      new_paths.extend(paths);
+<a href=#87 id=87 data-nosnippet>87</a>      set_search_paths_local(new_paths);
+<a href=#88 id=88 data-nosnippet>88</a>    }
+<a href=#89 id=89 data-nosnippet>89</a>  });
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// Each `\import`/`\subimport` wraps its body in a `{…}` group (with
+<a href=#92 id=92 data-nosnippet>92</a>  // `\lx@activate@subfile@scope` naming the subfile scope). The path change is LOCAL, so the
+<a href=#93 id=93 data-nosnippet>93</a>  // group reverts it at `}` — each sibling starts from the BASE search paths,
+<a href=#94 id=94 data-nosnippet>94</a>  // exactly as Perl's default-local `AssignValue(SEARCHPATHS…)` does. Without
+<a href=#95 id=95 data-nosnippet>95</a>  // group-local paths, two sibling `\subimport{Chapter/}{Abstract}` +
+<a href=#96 id=96 data-nosnippet>96</a>  // `\subimport{Chapter/}{Poster}` would concat Chapter/ onto the first call's
+<a href=#97 id=97 data-nosnippet>97</a>  // still-mutated lead → "Chapter/Chapter/Poster". Witnesses 2604.09744, 2603.04457.
+<a href=#98 id=98 data-nosnippet>98</a>  //
+<a href=#99 id=99 data-nosnippet>99</a>  // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
+<a href=#100 id=100 data-nosnippet>100</a>  // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
+<a href=#101 id=101 data-nosnippet>101</a>  // only one while their bodies reference `#3` (import.sty.ltxml L45/L47). The
+<a href=#102 id=102 data-nosnippet>102</a>  // undeclared `#3` expands to nothing, so `\include{}` includes nothing and the
+<a href=#103 id=103 data-nosnippet>103</a>  // file is dropped in silence: no error, no warning, no content. Real
+<a href=#104 id=104 data-nosnippet>104</a>  // `import.sty` takes both for all four (L57/L58 route `\includefrom` /
+<a href=#105 id=105 data-nosnippet>105</a>  // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
+<a href=#106 id=106 data-nosnippet>106</a>  // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
+<a href=#107 id=107 data-nosnippet>107</a>  // name as #7), so the arity below is the real package's, not Perl's typo.
+<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\import OptionalMatch:* {}{}"</span>,
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\input{#3}}"</span>);
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\includefrom OptionalMatch:* {}{}"</span>,
+<a href=#111 id=111 data-nosnippet>111</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\include{#3}}"</span>);
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subimport OptionalMatch:* {}{}"</span>,
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\input{#3}}"</span>);
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subincludefrom OptionalMatch:* {}{}"</span>,
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="string">"{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\include{#3}}"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="macro">Let!</span>(<span class="string">"\\inputfrom"</span>, <span class="string">"\\import"</span>);
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="macro">Let!</span>(<span class="string">"\\subinputfrom"</span>, <span class="string">"\\subimport"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>});
 </code></pre></div></section></main></body></html>
