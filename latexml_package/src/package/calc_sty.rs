@@ -39,17 +39,25 @@ fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
   let reader_mouth = Mouth::new("", None)?;
   reading_from_mouth(reader_mouth, move || {
     unread(tokens);
-    let mut result = read_term(expr_type)?;
-    while let Some(op) = read_keyword(&["+", "-"])? {
-      let term2 = read_term(expr_type)?;
-      result = if op == "+" {
-        result.add(term2)
-      } else {
-        result.subtract(term2)
-      };
-    }
-    Ok(result)
+    read_expression_body(expr_type)
   })
+}
+
+/// The calc `<expression> -> <term> ((+|-) <term>)*` loop, reading from the
+/// CURRENT gullet context. [`read_expression`] wraps it with a mouth over a
+/// captured token list; the base-dimension seam (installed below) calls it
+/// directly on the live stream to evaluate an inline `( … ) * \real{…}` width.
+fn read_expression_body(expr_type: &str) -> Result<RegisterValue> {
+  let mut result = read_term(expr_type)?;
+  while let Some(op) = read_keyword(&["+", "-"])? {
+    let term2 = read_term(expr_type)?;
+    result = if op == "+" {
+      result.add(term2)
+    } else {
+      result.subtract(term2)
+    };
+  }
+  Ok(result)
 }
 
 fn read_term(expr_type: &str) -> Result<RegisterValue> {
@@ -432,6 +440,24 @@ LoadDefinitions!({
   // fires ONLY when the dimension reader — not digestion — meets the token.
   // Surpass-perl: OXIDIZED_DESIGN #115. html_feedback#6869; witness 2603.23669.
   set_internal_dimension_fn(Rc::new(|tok: &Token| {
+    // calc infix expression opening with `(` — the base dimension reader
+    // (read_dimension/read_glue) cannot parse it and would warn "Missing number
+    // (Dimension), treated as zero". The canonical trigger is Pandoc's default
+    // relative-width table column `p{(\columnwidth - N\tabcolsep) * \real{X}}`:
+    // an unparsed width collapses the p{} column to a zero-width cell whose text
+    // wraps one character per line ("a river of characters"). Route the whole
+    // expression through calc's own parser on the LIVE stream; it stops at the
+    // first non-(+|-|*|/) token so it never over-consumes, and is scoped to a
+    // leading `(` (the exact Pandoc idiom). Real LaTeX+calc evaluates lengths
+    // here too. Surpass-perl (Perl 0.8.8 emits the same 0pt): OXIDIZED_DESIGN
+    // #141. arXiv/html_feedback#6909; witness 2606.08266.
+    if *tok == T_OTHER!("(") {
+      unread_one(*tok);
+      let value = read_expression_body("Glue")?;
+      return Ok(Some(RegisterValue::Dimension(Dimension::new(
+        value.value_of(),
+      ))));
+    }
     let kind = if *tok == T_CS!("\\widthof") {
       BoxDim::Width
     } else if *tok == T_CS!("\\heightof") {
