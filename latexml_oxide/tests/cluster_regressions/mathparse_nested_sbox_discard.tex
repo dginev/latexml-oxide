@@ -1,0 +1,10 @@
+\documentclass{article}
+\newcommand*\rulebox[1]{%
+  \sbox0{$#1$}%
+  \box0\hrule barf
+}
+\begin{document}
+\[
+  \rulebox{\rulebox{foof}}
+\]
+\end{document}
