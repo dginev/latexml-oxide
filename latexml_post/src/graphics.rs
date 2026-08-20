@@ -2698,12 +2698,13 @@ endobj
     );
   }
 
-  /// SVG viewBox parsing extracts width/height — and, when both are present,
-  /// the viewBox wins over the root lengths. That precedence is load-bearing:
-  /// `pdftocairo -svg` writes `width="612pt" … viewBox="0 0 612 792"`, so
-  /// preferring the lengths would rescale every PDF-derived figure by 96/72.
+  /// The viewport dimensions come from the root `width`/`height`, the way a
+  /// browser sizes an SVG — the `viewBox` is only a fallback (issue #696). Here
+  /// `10cm`/`7.5cm` convert to 378×283 px (96 dpi); the disagreeing `viewBox`
+  /// `0 0 640 480` is ignored for sizing. When the root carries no lengths, the
+  /// viewBox is what remains.
   #[test]
-  fn read_svg_dimensions_parses_viewbox() {
+  fn read_svg_dimensions_sizes_from_root_lengths() {
     let dir = TempDir::new("svg_dim");
     let tmp = dir.join("dims.svg");
     std::fs::write(
@@ -2715,7 +2716,18 @@ endobj
     )
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
-    assert_eq!(dims, (640, 480));
+    assert_eq!(dims, (378, 283));
+    // No root lengths → the viewBox is the fallback.
+    let vb = dir.join("vb.svg");
+    std::fs::write(
+      &vb,
+      r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><rect/></svg>"#,
+    )
+    .unwrap();
+    assert_eq!(
+      Graphics::read_svg_dimensions(vb.to_str().unwrap()).expect("viewbox fallback"),
+      (640, 480)
+    );
   }
 
   /// Falls back to width/height attrs when viewBox is missing — **converting**

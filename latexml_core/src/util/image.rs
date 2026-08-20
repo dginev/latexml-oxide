@@ -891,48 +891,49 @@ fn byte_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
   haystack.windows(needle.len()).position(|w| w == needle)
 }
 
-/// Natural SVG size in pt, from the root `<svg>` element: prefer absolute
-/// `width`/`height` lengths, else fall back to the `viewBox` (user units treated
-/// as CSS px). Gives at least a correct aspect ratio, which is all a `width=`-ed
+/// Natural SVG size in pt, from the root `<svg>` element: the root
+/// `width`/`height` lengths (a unitless value is CSS px, exactly as a browser
+/// treats it), else the `viewBox` extent (user units ≈ CSS px) as a last
+/// resort. Gives at least a correct aspect ratio, which is all a `width=`-ed
 /// inclusion needs. `None` if the file isn't an SVG or has no usable geometry.
+///
+/// Width/height lead and the viewBox only backstops them — see
+/// [`read_svg_viewport_px`] for the full rationale (issue #696).
 fn read_svg_size_pt(path: &Path) -> Option<(f64, f64)> {
   let head = read_head_lossy(path)?;
   let tag = svg_root_tag(&head)?;
-  if let (Some(w), Some(h)) = (
-    svg_attr_len_pt(tag, "width"),
-    svg_attr_len_pt(tag, "height"),
-  ) {
-    return Some((w, h));
+  if let Some((w, h)) = svg_root_lengths_px(tag) {
+    return Some((px_to_pt(w), px_to_pt(h)));
   }
   let (vw, vh) = svg_viewbox_extent(tag)?;
   // viewBox user units ≈ CSS px (1/96"); convert to pt for a plausible scale.
   Some((px_to_pt(vw), px_to_pt(vh)))
 }
 
-/// SVG **viewport** size in CSS px, as a browser would take it: the `viewBox`
-/// extent when there is one, else the root `width`/`height` lengths.
+/// SVG **viewport** size in CSS px, as a browser would take it: the root
+/// `width`/`height` lengths (a unitless value is user units = px), and only when
+/// those are absent or relative (`%`) the `viewBox` extent as a last resort.
 ///
 /// This is the sizing basis for `imagewidth`/`imageheight` in
-/// `LaTeXML::Post::Graphics` — where Perl asks Image::Magick, which renders the
-/// SVG and reports the raster it produced.
+/// `LaTeXML::Post::Graphics`. Perl has no viewBox-vs-length preference of its
+/// own: it hands the file to Image::Magick, which *renders* the SVG and reports
+/// the raster it produced (`Util/Image.pm:image_size`, L86-97). At Image::Magick's
+/// usual ~96 DPI that raster equals the `width`/`height` length in px — the same
+/// number a browser draws. **The browser is the actual renderer of our HTML, so
+/// we size the way it does: width/height first.**
 ///
-/// **The viewBox comes first here, and that is deliberate** — the opposite of
-/// `read_svg_size_pt`, which wants the natural *typeset* size. Both of our own
-/// PDF→SVG converters emit a `viewBox` alongside pt-valued `width`/`height`
-/// (`pdftocairo -svg`: `width="612pt" height="792pt" viewBox="0 0 612 792"`;
-/// `mutool draw -F svg`: `width="612" height="792" viewBox="0 0 612 792"`), so
-/// preferring the lengths would silently rescale every PDF-derived figure in the
-/// corpus by 96/72 = 1.33×. The viewBox keeps them at their long-standing pixel
-/// size, and for a `width=`-ed inclusion only the aspect ratio matters anyway.
+/// The `viewBox` is by definition an abstract coordinate system, unrelated to
+/// the rendered size; PDF→SVG tools write it in PostScript points while the
+/// browser still sizes from `width`/`height`. Preferring it under-sized every
+/// figure whose lengths carry a unit by 72/96 — the bug in issue #696, reported
+/// by the LaTeXML maintainer. This is not parity-relevant either way: our own
+/// beyond-Perl PDF→SVG pipeline (`pdftocairo -svg`, `mutool draw -F svg`) has no
+/// counterpart in Perl, which rasterizes PDFs to PNG. `None` when neither basis
+/// is usable, so the caller omits the dimensions and the browser sizes the image.
 pub fn read_svg_viewport_px(path: &Path) -> Option<(u32, u32)> {
   let head = read_head_lossy(path)?;
   let tag = svg_root_tag(&head)?;
-  let (w, h) = svg_viewbox_extent(tag).or_else(|| {
-    Some((
-      svg_attr_len_px(tag, "width")?,
-      svg_attr_len_px(tag, "height")?,
-    ))
-  })?;
+  let (w, h) = svg_root_lengths_px(tag).or_else(|| svg_viewbox_extent(tag))?;
   Some((w.round().max(1.0) as u32, h.round().max(1.0) as u32))
 }
 
@@ -1029,16 +1030,15 @@ pub fn svg_attr_len_px(tag: &str, name: &str) -> Option<f64> {
   svg_len_px(svg_attr_value(tag, name)?)
 }
 
-/// An SVG length attribute converted to pt, iff it carries an absolute unit.
-/// Unitless/`%` values return `None` (the caller falls back to the viewBox) —
-/// unlike [`svg_attr_len_px`], a unitless value is *not* accepted here: without
-/// a unit there is no natural typeset size to report, only a scale.
-fn svg_attr_len_pt(tag: &str, name: &str) -> Option<f64> {
-  let raw = svg_attr_value(tag, name)?.trim();
-  if !raw.ends_with(|c: char| c.is_alphabetic()) {
-    return None;
-  }
-  Some(px_to_pt(svg_len_px(raw)?))
+/// The root `<svg>` `width`/`height` as a CSS-px pair — the browser's sizing
+/// basis. `Some` only when **both** are absolute lengths (a unitless value is
+/// user units = px, a unit-bearing value is converted); `None` if either is
+/// missing or relative (`%`, `em`, …), so the caller falls back to the viewBox.
+fn svg_root_lengths_px(tag: &str) -> Option<(f64, f64)> {
+  Some((
+    svg_attr_len_px(tag, "width")?,
+    svg_attr_len_px(tag, "height")?,
+  ))
 }
 
 /// Parse an SVG/CSS length into CSS px (1/96"), or `None` if it carries no
@@ -1163,19 +1163,20 @@ mod svg_geometry_tests {
     }
   }
 
-  /// Both of our PDF→SVG converters emit `viewBox` **and** root lengths. The
-  /// viewport reader must keep reporting the viewBox extent for them — taking
-  /// pdftocairo's `612pt` instead would rescale every PDF-derived figure in the
-  /// corpus by 96/72. Root tags copied verbatim from the tools.
+  /// The viewport reader sizes the way a browser does: the root `width`/`height`
+  /// lead, the `viewBox` only backstops them (issue #696). `pdftocairo -svg`
+  /// writes `width="612pt"`, which a browser renders at 612·96/72 = 816 px — not
+  /// the viewBox's 612. `mutool draw -F svg` writes a unitless `612`, i.e. 612
+  /// px, matching its viewBox. Root tags copied verbatim from the tools.
   #[test]
-  fn viewport_px_is_stable_for_our_own_converter_output() {
+  fn viewport_px_sizes_from_root_lengths_like_a_browser() {
     let pdftocairo = svg_file(
       "pdftocairo",
       r#"<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="612pt" height="792pt" viewBox="0 0 612 792">
 <defs/></svg>"#,
     );
-    assert_eq!(read_svg_viewport_px(&pdftocairo), Some((612, 792)));
+    assert_eq!(read_svg_viewport_px(&pdftocairo), Some((816, 1056)));
     let mutool = svg_file(
       "mutool",
       r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" width="612" height="792" viewBox="0 0 612 792">
@@ -1184,6 +1185,34 @@ mod svg_geometry_tests {
     assert_eq!(read_svg_viewport_px(&mutool), Some((612, 792)));
     let _ = std::fs::remove_file(pdftocairo);
     let _ = std::fs::remove_file(mutool);
+  }
+
+  /// The `viewBox` is only a fallback now: it sizes the viewport iff the root
+  /// carries no absolute `width`/`height`. When both are present the lengths win
+  /// (that is the whole of issue #696), so a viewBox that disagrees with them is
+  /// ignored for sizing.
+  #[test]
+  fn viewport_px_uses_the_viewbox_only_when_lengths_are_absent() {
+    let vb_only = svg_file(
+      "vb_only",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&vb_only), Some((640, 480)));
+    // Lengths present and disagreeing with the viewBox → lengths win.
+    let both = svg_file(
+      "vb_both",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 640 480"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&both), Some((200, 100)));
+    // A percentage width is not absolute → fall through to the viewBox.
+    let pct_w = svg_file(
+      "vb_pct",
+      r#"<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 640 480"><rect/></svg>"#,
+    );
+    assert_eq!(read_svg_viewport_px(&pct_w), Some((640, 480)));
+    for p in [vb_only, both, pct_w] {
+      let _ = std::fs::remove_file(p);
+    }
   }
 
   /// Without a viewBox the root lengths are the viewport — and they must be
@@ -1239,9 +1268,10 @@ mod svg_geometry_tests {
     let _ = std::fs::remove_file(comma);
   }
 
-  /// `read_svg_size_pt` keeps the opposite precedence — absolute lengths first,
-  /// viewBox second — because it answers "how big would this typeset?", not
-  /// "how many pixels is the viewport?".
+  /// `read_svg_size_pt` shares the viewport reader's precedence — root lengths
+  /// first, viewBox second — differing only in that it answers "how big would
+  /// this typeset (pt)?" rather than "how many px is the viewport?". SVG `pt` is
+  /// a PostScript big point (1/72"), and a unitless length is CSS px.
   #[test]
   fn size_pt_prefers_absolute_lengths_then_falls_back_to_the_viewbox() {
     // 4in = 288.something TeX pt (72.27/in).
@@ -1260,15 +1290,21 @@ mod svg_geometry_tests {
     assert!((w - 72.27).abs() < 1e-9, "w = {w}");
     assert!((h - 72.27 / 2.0).abs() < 1e-9, "h = {h}");
     let _ = std::fs::remove_file(bigpt);
-    // Unitless lengths are only a scale — the viewBox wins.
+    // Unitless lengths are CSS px, and they WIN over a disagreeing viewBox
+    // (issue #696): 96 px → 72.27 pt, 48 px → 36.135 pt, not the viewBox's 634.
     let unitless = svg_file(
-      "pt_vb",
-      r#"<svg width="634" height="805" viewBox="0 0 96 48"><rect/></svg>"#,
+      "pt_len",
+      r#"<svg width="96" height="48" viewBox="0 0 634 805"><rect/></svg>"#,
     );
-    let (w, h) = read_svg_size_pt(&unitless).expect("viewBox fallback");
+    let (w, h) = read_svg_size_pt(&unitless).expect("root lengths");
     assert!((w - 72.27).abs() < 1e-9, "w = {w}");
     assert!((h - 72.27 / 2.0).abs() < 1e-9, "h = {h}");
-    for p in [inch, unitless] {
+    // Only a root without absolute lengths falls back to the viewBox.
+    let vb_only = svg_file("pt_vb", r#"<svg viewBox="0 0 96 48"><rect/></svg>"#);
+    let (w, h) = read_svg_size_pt(&vb_only).expect("viewBox fallback");
+    assert!((w - 72.27).abs() < 1e-9, "w = {w}");
+    assert!((h - 72.27 / 2.0).abs() < 1e-9, "h = {h}");
+    for p in [inch, unitless, vb_only] {
       let _ = std::fs::remove_file(p);
     }
   }
