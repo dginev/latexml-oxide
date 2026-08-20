@@ -316,6 +316,99 @@ mod deferred_load_retry {
   }
 }
 
+mod nicetabular_binding {
+  //! `\begin{NiceTabular}[opts]{colspec}` must render a real table, not
+  //! `Error:undefined:{NiceTabular}` + a dropped body.
+  //!
+  //! nicematrix's NiceTabular is a tabular over a standard colspec (nicematrix.sty
+  //! L3806-3841 reduce it to `\NiceArray{colspec}` under a text-mode tabular flag),
+  //! so binding it to `\tabular` recovers real tables for sandbox-arxiv-2605 papers
+  //! (2605.08776, 2605.13835, 2605.18423) the placeholder stub previously errored on.
+  //! Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors here.
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{nicematrix}\n\
+    \\begin{document}\n\
+    \\begin{NiceTabular}[colortbl-like]{ccc}\n\
+    1 & 2 & 3 \\\\ 4 & 5 & 6 \\\\\n\
+    \\end{NiceTabular}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn nicetabular_renders_real_table() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("undefined:\\NiceTabular") && !stderr.contains("undefined:{NiceTabular}"),
+      "NiceTabular should be bound, not undefined:\n{stderr}",
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
+    assert!(
+      xml.contains("<tabular"),
+      "NiceTabular did not render a real table:\n{xml}"
+    );
+    assert!(
+      xml.matches("<td").count() >= 6,
+      "NiceTabular table is missing cells (expected the 6 `1..6`):\n{xml}",
+    );
+  }
+}
+
+mod neurips_anonymous {
+  //! `\if@anonymous` (neurips_2026.sty L72 `\newif`) must be defined by the neurips
+  //! binding. The binding intercepts the versioned name `neurips_2026` and never
+  //! creates the conditional, so a paper copying the style's `\@maketitle` (which
+  //! branches on `\if@anonymous`) hit `Error:undefined:\if@anonymous`. Rust-only
+  //! divergence: Perl 0.8.8 converts the same paper (2605.17249) without it.
+  //! Default false => the `\else` (authors-shown) branch, correct for arXiv uploads.
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage[preprint]{neurips_2026}\n\
+    \\makeatletter\n\
+    \\renewcommand{\\@maketitle}{\\if@anonymous Anon\\else Named\\fi}\n\
+    \\makeatother\n\
+    \\begin{document}\\maketitle\\end{document}\n";
+
+  #[test]
+  fn neurips_if_anonymous_defined() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("undefined:\\if@anonymous"),
+      "\\if@anonymous should be defined by the neurips binding:\n{stderr}",
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
+    assert!(
+      xml.contains("Named") && !xml.contains(">Anon"),
+      "default-false \\if@anonymous should take the authors-shown (`Named`) branch:\n{xml}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).
