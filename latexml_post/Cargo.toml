@@ -1,6 +1,6 @@
 [package]
 name = "latexml_post"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
@@ -52,7 +52,7 @@ which = "8"
 # a raw `.bib` is now converted by the injected recursive BibTeX session, which
 # lives in `latexml_oxide` because it needs the model loader. This crate is back
 # to depending on `latexml_core` alone.
-latexml_core = {path = "../latexml_core", version = "0.5.0"}
+latexml_core = {path = "../latexml_core", version = "0.6.0"}
 rusqlite = { version = "0.40.1", features = ["bundled"] }
 serde_json = "1.0.151"
 

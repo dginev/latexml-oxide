@@ -1,7 +1,77 @@
 # Change Log
 
-## [Unreleased]
+## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
+  - **`minted` code blocks render with syntax highlighting, and inline `\mint`/`\mintinline`
+    work.** The `minted` family now emits highlight token classes so a stylesheet colors the
+    source; inline `\mint`/`\mintinline` render like the block form; `\newmint*` accepts the
+    optional `[env-name]`; and `escapeinside` lets a `\label` inside a listing register on its
+    own line (#668, #665, #625). Tier-2 (an exact-Pygments `pygmentize` subprocess) is parked
+    behind issue #670.
+  - **`overpic` renders its base graphic plus `\put` overlays.** The `overpic`/`overpic*`
+    environment — a `graphicx` image carrying a `picture`-coordinate overlay — was unbound; it
+    now draws the base graphic and composes the `\put` overlays on top, recovering ~37 arXiv
+    papers that previously lost the annotated figure entirely (#677).
+  - **Figures and SVG pictures render at the right size and shape.** A sweep of
+    graphics/`picture`/SVG fidelity fixes: an `\includegraphics` in a flex-capped figure keeps
+    its aspect ratio via an emitted `aspect-ratio` (#711); external SVGs are sized from the root
+    `width`/`height` like a browser rather than the `viewBox` (#700, witness #696);
+    `picture`-nested graphics resolve into the SVG `foreignObject` instead of rendering giant,
+    doubled, or dropped (#675, #682, #609/html_feedback#74); two-column subfigure panels share a
+    row instead of stacking full-width and a float panel is never wrapped in an invalid
+    `ltx:block` (#706, #708); `\scalerel*` inline icons scale to text height (#712,
+    html_feedback#6895); sibling-directory graphic candidates are relativized so no absolute path
+    leaks into `@src` (#699/#698); `wrapfig` reduces the inner `\linewidth` to the wrap width
+    (#592); and the `ltx_picture` SVG splice is hardened against attribute order/quoting
+    (#575/#398).
+  - **A large author/frontmatter class sweep — more journal & conference classes emit a
+    correct author list.** Building on the author-markup pipeline unification, many class idioms
+    now attach names, affiliations, and emails to the right creator: IEEEtran multi-row grids
+    transpose to reading order and lazy `\\[1em]`+shared-email blocks structure (#624, #546);
+    LNCS/LLNCS shared `\email` and deduped `\inst` (#545, #590); authblk `\author{A, B, C}` comma
+    lists split into separate creators (#633, html_feedback#6255); IJCAI/ceurart/cvpr keyval
+    author blocks stop leaking `orcid=`/`email=` as text and pre-load numeric natbib (#691, #692,
+    #626); `neurips_2026` registers and neurips/sn-jnl keep the body after the abstract and order
+    the abstract after the title (#690, #687, #685, #681); and OmniBus `\authors`, ACL short
+    names, `\and` as a hard boundary, nested inline-math markers, one-line `\textsuperscript{n}`
+    affiliations, `\quad\\` line-2 authors, whole-name bold, phantom empty creators, an
+    `\abstractname` `\centering` leak, a `\twocolumn` header-font leak, and figures injected into
+    the title via `\g@addto@macro\@maketitle` are all handled (#664, #611, #631, #629, #623,
+    #620, #615, #619, #613, #632, #618).
+  - **Wider package compatibility — more third-party packages convert cleanly instead of
+    cascading errors.** `physics.sty` `\qty(...)` with a braced paren no longer runs away (#654);
+    `comment.sty` `\end{comment}` mid-line no longer swallows the document (#649); a `colortbl`
+    `\columncolor` overhang read stops eating a `\lbrack` cell (#642); `aa.cls` loads
+    `[T1]{fontenc}` so text `<`/`>` render as themselves (#603, html_feedback#84); `\verb` inside
+    `\index` renders as typewriter (#601/#354); `fancyvrb` `frame=single` renders as a semantic
+    box (#573/#525); `parskip` sets `\parindent=0` (#568/#558); an empty `\hypertarget` no longer
+    wraps the open note (#565/#526); `siunitx` empty units render invisibly (#584,
+    html_feedback#970); `\widthof` box widths resolve in every dimension context (#589,
+    html_feedback#6869); `\everyjob` is emulated so l3sys system constants are defined (#583);
+    `biblatex` no longer globally defines `\type` over a user math macro (#689); `cleveref`
+    `\cref` matches LaTeX for custom `\newtheorem` types and reverts a `~` tie (#636, #630); a
+    `pdfcol.sty` no-op stub lets breakable `tcolorbox` work (#579/#531); and a wrapper box merges
+    its class onto a single block child, keeping `ltx_lstlisting` (#614).
+  - **Math rendering fixes.** A nested `\sbox` inside a discarded math parse no longer
+    double-frees its subtree (a crash fix, #709/#703); display math is contained inside a
+    width-constrained table cell (#572/#533); and a unary minus after a relation keeps its
+    spacing (#569/#535).
+  - **More bibliographies and citations recover their content.** `imsart` reads the `.bib` when
+    no `.bbl` ships (#658); a leaked active `@` no longer destroys the `.bib` bibliography (#646);
+    chapterbib/bibunits per-unit list ids keep `_` raw (#641); a numeric-mode natbib `.bbl`
+    labels the References with `[N]` matching pdflatex (#612, #616); and author-year inline
+    citations match the References list label (#587).
+  - **CLI, Rhai, and build additions.** `\subimport*` accepts an absolute directory path to
+    match pdflatex (#701/#697); the serializer keeps foreign mixed content inline without
+    injected whitespace (#684/#680); a no-dump conversion no longer fails on a benign expl3
+    raw-load cascade (#660/#651); `GetKeyVals` accepts a digested KeyVals and `Revert` keeps its
+    values (#628/#627); `canContain`/`floatToElement` are exposed to Rhai (#598/#594);
+    `Note`/`NoteLog`/`NoteSTDERR` write to the correct stream(s) (#596/#593); `--opt`/`--noopt`
+    flag pairs resolve rightmost-wins like `GetOpt::Long` (#563/#530); `enumitem` `leftmargin`
+    is surfaced for CSS theming (#567/#559); `\LaTeXMLversion` reports the running binary version
+    (#553); `\lx@save@parameter` lets `latexml.sty` save conversion params (#551/#536); a UTF-8
+    SIMD fast-path speeds the `.cls`/`.sty` dependency scan (#674); and the nightly toolchain
+    floats again now that the fat-LTO OOM regression is fixed upstream (#582/#512).
   - **amsart authors declared up front no longer bunch every address/email under the
     last author.** The idiom `\author{A}\author{B}\author{C}` followed by one
     `\address`/`\email` pair each makes LaTeXML's default "attach a contact to the
