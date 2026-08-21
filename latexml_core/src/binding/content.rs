@@ -2709,26 +2709,31 @@ pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
   } else {
     basename
   };
-  let mut changed = base != name;
+  // Mirror find_file_fallback: a directory strip ALONE must not qualify (a `subdir/<name>` is a
+  // path, not a version — it must not name-match `<name>`'s binding). Only a real version
+  // suffix/prefix strip counts; guard the `^`-anchored prefix strip behind `!dir_stripped` so
+  // `sty/myunits` doesn't become `units`.
+  let dir_stripped = base != name;
+  let mut suffix_stripped = false;
   loop {
     if let Some(m) = suffix_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     if let Some(m) = glued_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
-    if let Some(m) = prefix_rx.find(&base) {
+    if !dir_stripped && let Some(m) = prefix_rx.find(&base) {
       base = base[m.end()..].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     break;
   }
-  if !changed || base.is_empty() || base == name {
+  if !suffix_stripped || base.is_empty() || base == name {
     return false;
   }
   binding_exists(&base, ext_type)
@@ -2818,18 +2823,21 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
     break;
   }
 
-  if !suffix_stripped && !dir_stripped {
+  // A directory strip ALONE no longer triggers a fallback: `subdir/<name>` is a PATH, not a
+  // version, so it must not name-match `<name>`'s binding (that shadowed paper-local subdir
+  // packages, e.g. `utils/mathenv` -> the unrelated CTAN mathenv binding, leaving the local
+  // file — and its cleveref/theorem defs — unloaded). Only a real VERSION suffix/prefix strip
+  // (neurips_2026->neurips, mysvjour3->svjour3) qualifies, matching Perl's FindFile_fallback
+  // (which never strips a directory). The retired `BasenameOnly` convenience (2105.02087
+  // misc/ieeetran, 2405.18387 assets/equations) now falls to raw-load/OmniBus like Perl.
+  if !suffix_stripped {
     return None;
   }
   if base.is_empty() || base == name {
     return None;
   }
 
-  let kind = if suffix_stripped {
-    FallbackKind::Versioned
-  } else {
-    FallbackKind::BasenameOnly
-  };
+  let kind = FallbackKind::Versioned;
 
   let fallback_filename = format!("{base}.{ext_type}");
   // Check if fallback binding exists
