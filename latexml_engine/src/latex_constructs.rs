@@ -3843,8 +3843,14 @@ LoadDefinitions!({
   enter_horizontal => true,
   sizer => { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
-  DefMacro!("\\fmtname", "LaTeX2e");
-  DefMacro!("\\fmtversion", "2018/12/01");
+  // \fmtname / \fmtversion are intentionally NOT (re)defined here. Perl defines
+  // them once, in latex_base.pool (↔ our latex_base.rs); this constructs-phase
+  // copy was a Rust-only duplicate. Crucially, `constructs` runs AFTER the dump
+  // apply (LoadFormat: bootstrap → dump → constructs), so re-hardcoding here
+  // CLOBBERED the real per-TL-year kernel value the dump already carries
+  // (e.g. \fmtversion 2025-11-01 on TL2025), pinning every \@ifl@t@r\fmtversion
+  // check to the stale 2018/12/01 (issue #739). The dump is authoritative; the
+  // no-dump/base path falls back to latex_base.rs's Perl-faithful value.
 
   DefMacro!("\\today", { ExplodeText!(Today!()) });
 
