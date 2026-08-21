@@ -51,16 +51,17 @@
 <a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablefoot{}"</span>, <span class="string">"\\footnote{\\textbf{Notes.} #1}"</span>);
 <a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablebibname"</span>, <span class="string">"References"</span>);
 <a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablefootname"</span>, <span class="string">"Notes"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="comment">// A&amp;A authors use \orcid for ORCID identifier. Preserve as ltx:note.
-<a href=#55 id=55 data-nosnippet>55</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>,
-<a href=#56 id=56 data-nosnippet>56</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
-<a href=#57 id=57 data-nosnippet>57</a>
-<a href=#58 id=58 data-nosnippet>58</a>  <span class="comment">// Real aa.cls ends with `\RequirePackage[modulo,mathlines,switch,running,
-<a href=#59 id=59 data-nosnippet>59</a>  // columnwise,pagewise]{linenoaa}` (the A&amp;A-bundled lineno variant), so
-<a href=#60 id=60 data-nosnippet>60</a>  // documents call \nolinenumbers / \linenumbers freely (witness
-<a href=#61 id=61 data-nosnippet>61</a>  // 2605.00223 line 123). Our lineno binding stubs the full macro set —
-<a href=#62 id=62 data-nosnippet>62</a>  // require it (options irrelevant to the XML stubs). Perl's aa.cls.ltxml
-<a href=#63 id=63 data-nosnippet>63</a>  // lacks this (\nolinenumbers undefined there); candidate to upstream.
-<a href=#64 id=64 data-nosnippet>64</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>});
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="comment">// A&amp;A authors use \orcid for the ORCID identifier. Route through the kernel
+<a href=#55 id=55 data-nosnippet>55</a>  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link + logo
+<a href=#56 id=56 data-nosnippet>56</a>  // icon (vs a bare dagger note). html_feedback#6571.
+<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="comment">// Real aa.cls ends with `\RequirePackage[modulo,mathlines,switch,running,
+<a href=#60 id=60 data-nosnippet>60</a>  // columnwise,pagewise]{linenoaa}` (the A&amp;A-bundled lineno variant), so
+<a href=#61 id=61 data-nosnippet>61</a>  // documents call \nolinenumbers / \linenumbers freely (witness
+<a href=#62 id=62 data-nosnippet>62</a>  // 2605.00223 line 123). Our lineno binding stubs the full macro set —
+<a href=#63 id=63 data-nosnippet>63</a>  // require it (options irrelevant to the XML stubs). Perl's aa.cls.ltxml
+<a href=#64 id=64 data-nosnippet>64</a>  // lacks this (\nolinenumbers undefined there); candidate to upstream.
+<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>});
 </code></pre></div></section></main></body></html>

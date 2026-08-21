@@ -60,84 +60,86 @@
 <a href=#60 id=60 data-nosnippet>60</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{acks}"</span>,
 <a href=#61 id=61 data-nosnippet>61</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
 <a href=#62 id=62 data-nosnippet>62</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="comment">// IMS authors use \orcid for ORCID identifier. Preserve as ltx:note.
-<a href=#64 id=64 data-nosnippet>64</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// IMS journal bibliography entry types — imsart.sty defines these as
-<a href=#66 id=66 data-nosnippet>66</a>  // \def commands but they're used as environments in some .bbl files.
-<a href=#67 id=67 data-nosnippet>67</a>  // Provide as no-op envs (the actual bibliography rendering is handled
-<a href=#68 id=68 data-nosnippet>68</a>  // by biblatex/natbib elsewhere). Witness 2406.15844 (+4 imsart papers).
-<a href=#69 id=69 data-nosnippet>69</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{barticle}"</span>, <span class="string">"#body"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bbook}"</span>, <span class="string">"#body"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bbooklet}"</span>, <span class="string">"#body"</span>);
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{binbook}"</span>, <span class="string">"#body"</span>);
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bincollection}"</span>, <span class="string">"#body"</span>);
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bunpublished}"</span>, <span class="string">"#body"</span>);
-<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bmisc}"</span>, <span class="string">"#body"</span>);
-<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bproceedings}"</span>, <span class="string">"#body"</span>);
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bphdthesis}"</span>, <span class="string">"#body"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bmastersthesis}"</span>, <span class="string">"#body"</span>);
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{btechreport}"</span>, <span class="string">"#body"</span>);
-<a href=#80 id=80 data-nosnippet>80</a>
-<a href=#81 id=81 data-nosnippet>81</a>  <span class="comment">// IMS bibliography field-tagging macros — imsart.sty defines these
-<a href=#82 id=82 data-nosnippet>82</a>  // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:
-<a href=#83 id=83 data-nosnippet>83</a>  // \bauthor{name}, \binits{initials}, \bfnm{first}, \bsnm{surname},
-<a href=#84 id=84 data-nosnippet>84</a>  // \byear{2024}, \bvolume{42}, \bissue{3}, \bpages{1-20},
-<a href=#85 id=85 data-nosnippet>85</a>  // \bjournal{Annals}, \bpublisher{Springer}, \bseries{Lecture Notes},
-<a href=#86 id=86 data-nosnippet>86</a>  // \btitle{...}, \bmrnumber{...}, etc. Raw imsart.sty defines them,
-<a href=#87 id=87 data-nosnippet>87</a>  // but its preamble has complex catcode/group state that sometimes
-<a href=#88 id=88 data-nosnippet>88</a>  // fails mid-load, leaving these undefined. Provide content-
-<a href=#89 id=89 data-nosnippet>89</a>  // preserving stubs that emit args inline so the substantive
-<a href=#90 id=90 data-nosnippet>90</a>  // bibliography text survives. Witness 2305.13037, 2306.02821.
-<a href=#91 id=91 data-nosnippet>91</a>  </span>def_macro_identity(<span class="string">"\\bauthor{}"</span>)<span class="question-mark">?</span>;
-<a href=#92 id=92 data-nosnippet>92</a>  def_macro_identity(<span class="string">"\\binits{}"</span>)<span class="question-mark">?</span>;
-<a href=#93 id=93 data-nosnippet>93</a>  def_macro_identity(<span class="string">"\\bfnm{}"</span>)<span class="question-mark">?</span>;
-<a href=#94 id=94 data-nosnippet>94</a>  def_macro_identity(<span class="string">"\\bsnm{}"</span>)<span class="question-mark">?</span>;
-<a href=#95 id=95 data-nosnippet>95</a>  def_macro_identity(<span class="string">"\\byear{}"</span>)<span class="question-mark">?</span>;
-<a href=#96 id=96 data-nosnippet>96</a>  def_macro_identity(<span class="string">"\\bvolume{}"</span>)<span class="question-mark">?</span>;
-<a href=#97 id=97 data-nosnippet>97</a>  def_macro_identity(<span class="string">"\\bissue{}"</span>)<span class="question-mark">?</span>;
-<a href=#98 id=98 data-nosnippet>98</a>  def_macro_identity(<span class="string">"\\bpages{}"</span>)<span class="question-mark">?</span>;
-<a href=#99 id=99 data-nosnippet>99</a>  def_macro_identity(<span class="string">"\\bjournal{}"</span>)<span class="question-mark">?</span>;
-<a href=#100 id=100 data-nosnippet>100</a>  def_macro_identity(<span class="string">"\\bpublisher{}"</span>)<span class="question-mark">?</span>;
-<a href=#101 id=101 data-nosnippet>101</a>  def_macro_identity(<span class="string">"\\bseries{}"</span>)<span class="question-mark">?</span>;
-<a href=#102 id=102 data-nosnippet>102</a>  def_macro_identity(<span class="string">"\\btitle{}"</span>)<span class="question-mark">?</span>;
-<a href=#103 id=103 data-nosnippet>103</a>  def_macro_identity(<span class="string">"\\bmrnumber{}"</span>)<span class="question-mark">?</span>;
-<a href=#104 id=104 data-nosnippet>104</a>  def_macro_identity(<span class="string">"\\bedition{}"</span>)<span class="question-mark">?</span>;
-<a href=#105 id=105 data-nosnippet>105</a>  def_macro_identity(<span class="string">"\\beditor{}"</span>)<span class="question-mark">?</span>;
-<a href=#106 id=106 data-nosnippet>106</a>  def_macro_identity(<span class="string">"\\beditortype{}"</span>)<span class="question-mark">?</span>;
-<a href=#107 id=107 data-nosnippet>107</a>  def_macro_identity(<span class="string">"\\baddress{}"</span>)<span class="question-mark">?</span>;
-<a href=#108 id=108 data-nosnippet>108</a>  def_macro_identity(<span class="string">"\\borganization{}"</span>)<span class="question-mark">?</span>;
-<a href=#109 id=109 data-nosnippet>109</a>  def_macro_identity(<span class="string">"\\bcollaboration{}"</span>)<span class="question-mark">?</span>;
-<a href=#110 id=110 data-nosnippet>110</a>  def_macro_identity(<span class="string">"\\bdoi{}"</span>)<span class="question-mark">?</span>;
-<a href=#111 id=111 data-nosnippet>111</a>  def_macro_identity(<span class="string">"\\burl{}"</span>)<span class="question-mark">?</span>;
-<a href=#112 id=112 data-nosnippet>112</a>  def_macro_identity(<span class="string">"\\bothertype{}"</span>)<span class="question-mark">?</span>;
-<a href=#113 id=113 data-nosnippet>113</a>  def_macro_identity(<span class="string">"\\bparticle{}"</span>)<span class="question-mark">?</span>;
-<a href=#114 id=114 data-nosnippet>114</a>  def_macro_identity(<span class="string">"\\bnote{}"</span>)<span class="question-mark">?</span>;
-<a href=#115 id=115 data-nosnippet>115</a>  def_macro_identity(<span class="string">"\\btype{}"</span>)<span class="question-mark">?</span>;
-<a href=#116 id=116 data-nosnippet>116</a>  <span class="comment">// imsart.sty `\common@pub@types` also `\let`s these to `\@firstofone`
-<a href=#117 id=117 data-nosnippet>117</a>  // (identity), but they were missing from the list above — so an imsart
-<a href=#118 id=118 data-nosnippet>118</a>  // `.bbl` using `\begin{barticle}…\betal{…}` (bold-"et al." separator) or
-<a href=#119 id=119 data-nosnippet>119</a>  // `\banumber{…}` saw them undefined. Witness 1912.11583 (`\betal`, 1 error
-<a href=#120 id=120 data-nosnippet>120</a>  // → 0). Mirror `\common@pub@types`.
-<a href=#121 id=121 data-nosnippet>121</a>  </span>def_macro_identity(<span class="string">"\\betal{}"</span>)<span class="question-mark">?</span>;
-<a href=#122 id=122 data-nosnippet>122</a>  def_macro_identity(<span class="string">"\\banumber{}"</span>)<span class="question-mark">?</span>;
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// Additional imsart bibliography field macros. The bundled imsart.cls/sty
-<a href=#124 id=124 data-nosnippet>124</a>  // `\let`s each of these to `\@firstofone` (identity) inside its bib setup
-<a href=#125 id=125 data-nosnippet>125</a>  // (or applies a style via `\set@bibl@cmd`, e.g. `\bbooktitle` → \itshape —
-<a href=#126 id=126 data-nosnippet>126</a>  // we keep content-preserving identity, matching the sibling stubs above).
-<a href=#127 id=127 data-nosnippet>127</a>  // They were missing, so an imsart `.bbl` using `\bbooktitle{…}` (book title
-<a href=#128 id=128 data-nosnippet>128</a>  // in an `In …` reference), `\bchapter`, `\bschool` (theses), etc. saw them
-<a href=#129 id=129 data-nosnippet>129</a>  // undefined. Witness 2006.02044 (`\bbooktitle`, 1 error → 0; Perl errors on
-<a href=#130 id=130 data-nosnippet>130</a>  // ALL 28 imsart `\b*`/`{b*}` constructs, so this also surpasses Perl). NB:
-<a href=#131 id=131 data-nosnippet>131</a>  // `\bmisc` is intentionally NOT added as a macro — it would clobber the
-<a href=#132 id=132 data-nosnippet>132</a>  // `{bmisc}` environment defined above.
-<a href=#133 id=133 data-nosnippet>133</a>  </span>def_macro_identity(<span class="string">"\\bbooktitle{}"</span>)<span class="question-mark">?</span>;
-<a href=#134 id=134 data-nosnippet>134</a>  def_macro_identity(<span class="string">"\\bchapter{}"</span>)<span class="question-mark">?</span>;
-<a href=#135 id=135 data-nosnippet>135</a>  def_macro_identity(<span class="string">"\\bhowpublished{}"</span>)<span class="question-mark">?</span>;
-<a href=#136 id=136 data-nosnippet>136</a>  def_macro_identity(<span class="string">"\\binstitution{}"</span>)<span class="question-mark">?</span>;
-<a href=#137 id=137 data-nosnippet>137</a>  def_macro_identity(<span class="string">"\\bisbn{}"</span>)<span class="question-mark">?</span>;
-<a href=#138 id=138 data-nosnippet>138</a>  def_macro_identity(<span class="string">"\\blocation{}"</span>)<span class="question-mark">?</span>;
-<a href=#139 id=139 data-nosnippet>139</a>  def_macro_identity(<span class="string">"\\bnumber{}"</span>)<span class="question-mark">?</span>;
-<a href=#140 id=140 data-nosnippet>140</a>  def_macro_identity(<span class="string">"\\bschool{}"</span>)<span class="question-mark">?</span>;
-<a href=#141 id=141 data-nosnippet>141</a>  def_macro_identity(<span class="string">"\\bsuffix{}"</span>)<span class="question-mark">?</span>;
-<a href=#142 id=142 data-nosnippet>142</a>});
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="comment">// IMS authors use \orcid for the ORCID identifier. Route it through the kernel
+<a href=#64 id=64 data-nosnippet>64</a>  // `\lx@add@orcid`, producing an `ltx:contact[role=orcid]` the XSLT renders as a
+<a href=#65 id=65 data-nosnippet>65</a>  // clickable https://orcid.org/&lt;id&gt; link (vs a bare dagger note). html_feedback#6571.
+<a href=#66 id=66 data-nosnippet>66</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="comment">// IMS journal bibliography entry types — imsart.sty defines these as
+<a href=#68 id=68 data-nosnippet>68</a>  // \def commands but they're used as environments in some .bbl files.
+<a href=#69 id=69 data-nosnippet>69</a>  // Provide as no-op envs (the actual bibliography rendering is handled
+<a href=#70 id=70 data-nosnippet>70</a>  // by biblatex/natbib elsewhere). Witness 2406.15844 (+4 imsart papers).
+<a href=#71 id=71 data-nosnippet>71</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{barticle}"</span>, <span class="string">"#body"</span>);
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bbook}"</span>, <span class="string">"#body"</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bbooklet}"</span>, <span class="string">"#body"</span>);
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{binbook}"</span>, <span class="string">"#body"</span>);
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bincollection}"</span>, <span class="string">"#body"</span>);
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bunpublished}"</span>, <span class="string">"#body"</span>);
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bmisc}"</span>, <span class="string">"#body"</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bproceedings}"</span>, <span class="string">"#body"</span>);
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bphdthesis}"</span>, <span class="string">"#body"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bmastersthesis}"</span>, <span class="string">"#body"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{btechreport}"</span>, <span class="string">"#body"</span>);
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="comment">// IMS bibliography field-tagging macros — imsart.sty defines these
+<a href=#84 id=84 data-nosnippet>84</a>  // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:
+<a href=#85 id=85 data-nosnippet>85</a>  // \bauthor{name}, \binits{initials}, \bfnm{first}, \bsnm{surname},
+<a href=#86 id=86 data-nosnippet>86</a>  // \byear{2024}, \bvolume{42}, \bissue{3}, \bpages{1-20},
+<a href=#87 id=87 data-nosnippet>87</a>  // \bjournal{Annals}, \bpublisher{Springer}, \bseries{Lecture Notes},
+<a href=#88 id=88 data-nosnippet>88</a>  // \btitle{...}, \bmrnumber{...}, etc. Raw imsart.sty defines them,
+<a href=#89 id=89 data-nosnippet>89</a>  // but its preamble has complex catcode/group state that sometimes
+<a href=#90 id=90 data-nosnippet>90</a>  // fails mid-load, leaving these undefined. Provide content-
+<a href=#91 id=91 data-nosnippet>91</a>  // preserving stubs that emit args inline so the substantive
+<a href=#92 id=92 data-nosnippet>92</a>  // bibliography text survives. Witness 2305.13037, 2306.02821.
+<a href=#93 id=93 data-nosnippet>93</a>  </span>def_macro_identity(<span class="string">"\\bauthor{}"</span>)<span class="question-mark">?</span>;
+<a href=#94 id=94 data-nosnippet>94</a>  def_macro_identity(<span class="string">"\\binits{}"</span>)<span class="question-mark">?</span>;
+<a href=#95 id=95 data-nosnippet>95</a>  def_macro_identity(<span class="string">"\\bfnm{}"</span>)<span class="question-mark">?</span>;
+<a href=#96 id=96 data-nosnippet>96</a>  def_macro_identity(<span class="string">"\\bsnm{}"</span>)<span class="question-mark">?</span>;
+<a href=#97 id=97 data-nosnippet>97</a>  def_macro_identity(<span class="string">"\\byear{}"</span>)<span class="question-mark">?</span>;
+<a href=#98 id=98 data-nosnippet>98</a>  def_macro_identity(<span class="string">"\\bvolume{}"</span>)<span class="question-mark">?</span>;
+<a href=#99 id=99 data-nosnippet>99</a>  def_macro_identity(<span class="string">"\\bissue{}"</span>)<span class="question-mark">?</span>;
+<a href=#100 id=100 data-nosnippet>100</a>  def_macro_identity(<span class="string">"\\bpages{}"</span>)<span class="question-mark">?</span>;
+<a href=#101 id=101 data-nosnippet>101</a>  def_macro_identity(<span class="string">"\\bjournal{}"</span>)<span class="question-mark">?</span>;
+<a href=#102 id=102 data-nosnippet>102</a>  def_macro_identity(<span class="string">"\\bpublisher{}"</span>)<span class="question-mark">?</span>;
+<a href=#103 id=103 data-nosnippet>103</a>  def_macro_identity(<span class="string">"\\bseries{}"</span>)<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>  def_macro_identity(<span class="string">"\\btitle{}"</span>)<span class="question-mark">?</span>;
+<a href=#105 id=105 data-nosnippet>105</a>  def_macro_identity(<span class="string">"\\bmrnumber{}"</span>)<span class="question-mark">?</span>;
+<a href=#106 id=106 data-nosnippet>106</a>  def_macro_identity(<span class="string">"\\bedition{}"</span>)<span class="question-mark">?</span>;
+<a href=#107 id=107 data-nosnippet>107</a>  def_macro_identity(<span class="string">"\\beditor{}"</span>)<span class="question-mark">?</span>;
+<a href=#108 id=108 data-nosnippet>108</a>  def_macro_identity(<span class="string">"\\beditortype{}"</span>)<span class="question-mark">?</span>;
+<a href=#109 id=109 data-nosnippet>109</a>  def_macro_identity(<span class="string">"\\baddress{}"</span>)<span class="question-mark">?</span>;
+<a href=#110 id=110 data-nosnippet>110</a>  def_macro_identity(<span class="string">"\\borganization{}"</span>)<span class="question-mark">?</span>;
+<a href=#111 id=111 data-nosnippet>111</a>  def_macro_identity(<span class="string">"\\bcollaboration{}"</span>)<span class="question-mark">?</span>;
+<a href=#112 id=112 data-nosnippet>112</a>  def_macro_identity(<span class="string">"\\bdoi{}"</span>)<span class="question-mark">?</span>;
+<a href=#113 id=113 data-nosnippet>113</a>  def_macro_identity(<span class="string">"\\burl{}"</span>)<span class="question-mark">?</span>;
+<a href=#114 id=114 data-nosnippet>114</a>  def_macro_identity(<span class="string">"\\bothertype{}"</span>)<span class="question-mark">?</span>;
+<a href=#115 id=115 data-nosnippet>115</a>  def_macro_identity(<span class="string">"\\bparticle{}"</span>)<span class="question-mark">?</span>;
+<a href=#116 id=116 data-nosnippet>116</a>  def_macro_identity(<span class="string">"\\bnote{}"</span>)<span class="question-mark">?</span>;
+<a href=#117 id=117 data-nosnippet>117</a>  def_macro_identity(<span class="string">"\\btype{}"</span>)<span class="question-mark">?</span>;
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="comment">// imsart.sty `\common@pub@types` also `\let`s these to `\@firstofone`
+<a href=#119 id=119 data-nosnippet>119</a>  // (identity), but they were missing from the list above — so an imsart
+<a href=#120 id=120 data-nosnippet>120</a>  // `.bbl` using `\begin{barticle}…\betal{…}` (bold-"et al." separator) or
+<a href=#121 id=121 data-nosnippet>121</a>  // `\banumber{…}` saw them undefined. Witness 1912.11583 (`\betal`, 1 error
+<a href=#122 id=122 data-nosnippet>122</a>  // → 0). Mirror `\common@pub@types`.
+<a href=#123 id=123 data-nosnippet>123</a>  </span>def_macro_identity(<span class="string">"\\betal{}"</span>)<span class="question-mark">?</span>;
+<a href=#124 id=124 data-nosnippet>124</a>  def_macro_identity(<span class="string">"\\banumber{}"</span>)<span class="question-mark">?</span>;
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// Additional imsart bibliography field macros. The bundled imsart.cls/sty
+<a href=#126 id=126 data-nosnippet>126</a>  // `\let`s each of these to `\@firstofone` (identity) inside its bib setup
+<a href=#127 id=127 data-nosnippet>127</a>  // (or applies a style via `\set@bibl@cmd`, e.g. `\bbooktitle` → \itshape —
+<a href=#128 id=128 data-nosnippet>128</a>  // we keep content-preserving identity, matching the sibling stubs above).
+<a href=#129 id=129 data-nosnippet>129</a>  // They were missing, so an imsart `.bbl` using `\bbooktitle{…}` (book title
+<a href=#130 id=130 data-nosnippet>130</a>  // in an `In …` reference), `\bchapter`, `\bschool` (theses), etc. saw them
+<a href=#131 id=131 data-nosnippet>131</a>  // undefined. Witness 2006.02044 (`\bbooktitle`, 1 error → 0; Perl errors on
+<a href=#132 id=132 data-nosnippet>132</a>  // ALL 28 imsart `\b*`/`{b*}` constructs, so this also surpasses Perl). NB:
+<a href=#133 id=133 data-nosnippet>133</a>  // `\bmisc` is intentionally NOT added as a macro — it would clobber the
+<a href=#134 id=134 data-nosnippet>134</a>  // `{bmisc}` environment defined above.
+<a href=#135 id=135 data-nosnippet>135</a>  </span>def_macro_identity(<span class="string">"\\bbooktitle{}"</span>)<span class="question-mark">?</span>;
+<a href=#136 id=136 data-nosnippet>136</a>  def_macro_identity(<span class="string">"\\bchapter{}"</span>)<span class="question-mark">?</span>;
+<a href=#137 id=137 data-nosnippet>137</a>  def_macro_identity(<span class="string">"\\bhowpublished{}"</span>)<span class="question-mark">?</span>;
+<a href=#138 id=138 data-nosnippet>138</a>  def_macro_identity(<span class="string">"\\binstitution{}"</span>)<span class="question-mark">?</span>;
+<a href=#139 id=139 data-nosnippet>139</a>  def_macro_identity(<span class="string">"\\bisbn{}"</span>)<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>  def_macro_identity(<span class="string">"\\blocation{}"</span>)<span class="question-mark">?</span>;
+<a href=#141 id=141 data-nosnippet>141</a>  def_macro_identity(<span class="string">"\\bnumber{}"</span>)<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>  def_macro_identity(<span class="string">"\\bschool{}"</span>)<span class="question-mark">?</span>;
+<a href=#143 id=143 data-nosnippet>143</a>  def_macro_identity(<span class="string">"\\bsuffix{}"</span>)<span class="question-mark">?</span>;
+<a href=#144 id=144 data-nosnippet>144</a>});
 </code></pre></div></section></main></body></html>

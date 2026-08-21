@@ -59,7 +59,9 @@
 <a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
 <a href=#60 id=60 data-nosnippet>60</a>  </span>);
 <a href=#61 id=61 data-nosnippet>61</a>  def_macro_noop(<span class="string">"\\LastPageEnding"</span>)<span class="question-mark">?</span>;
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="comment">// SIGMA authors use \orcid for ORCID identifier. Preserve as ltx:note.
-<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
-<a href=#64 id=64 data-nosnippet>64</a>});
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="comment">// SIGMA authors use \orcid for the ORCID identifier. Route through the kernel
+<a href=#63 id=63 data-nosnippet>63</a>  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link
+<a href=#64 id=64 data-nosnippet>64</a>  // (vs a bare dagger note). html_feedback#6571.
+<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>});
 </code></pre></div></section></main></body></html>

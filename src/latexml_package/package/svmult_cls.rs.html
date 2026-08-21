@@ -131,9 +131,10 @@
 <a href=#131 id=131 data-nosnippet>131</a>
 <a href=#132 id=132 data-nosnippet>132</a>  def_macro_noop(<span class="string">"\\clearheadinfo"</span>)<span class="question-mark">?</span>;
 <a href=#133 id=133 data-nosnippet>133</a>  def_macro_noop(<span class="string">"\\clearemptydoublepage"</span>)<span class="question-mark">?</span>;
-<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Springer Multi-author authors use \orcid for ORCID identifier.
-<a href=#135 id=135 data-nosnippet>135</a>  // Witness 2408.17087, 2411.17645 (2 svmult papers).
-<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>,
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
-<a href=#138 id=138 data-nosnippet>138</a>});
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Springer Multi-author authors use \orcid for the ORCID identifier. Route
+<a href=#135 id=135 data-nosnippet>135</a>  // through the kernel `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable
+<a href=#136 id=136 data-nosnippet>136</a>  // orcid.org link + logo icon (vs a bare dagger note). html_feedback#6571.
+<a href=#137 id=137 data-nosnippet>137</a>  // Witness 2408.17087, 2411.17645 (2 svmult papers).
+<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>});
 </code></pre></div></section></main></body></html>
