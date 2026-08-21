@@ -440,6 +440,42 @@ mod expl3_nested_raw_load_catcodes {
   }
 }
 
+mod cleveref_class_stubs {
+  //! lipics-v2021 and IEEEtaes are OmniBus/IEEEtran stub bindings that replace the
+  //! paper's real `.cls` and omitted its `\RequirePackage{cleveref}`, so `\cref`/`\Cref`
+  //! came out `Error:undefined`. Perl (no lipics/IEEEtaes binding) raw-loads the `.cls`
+  //! and gets cleveref, so this was a Rust-only parity gap. The stubs now require
+  //! cleveref after hyperref. Witnesses 2606.01187 (lipics), 2606.01169 (IEEEtaes).
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass[cleveref]{lipics-v2021}\n\
+    \\begin{document}\n\
+    \\section{Intro}\\label{sec:intro}\n\
+    See \\cref{sec:intro} and \\Cref{sec:intro}.\n\
+    \\end{document}\n";
+
+  #[test]
+  fn lipics_stub_requires_cleveref() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("undefined:\\cref") && !stderr.contains("undefined:\\Cref"),
+      "lipics stub must require cleveref so \\cref/\\Cref resolve:\n{stderr}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).
