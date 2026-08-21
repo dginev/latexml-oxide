@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsthm"?>
+<?latexml package="aliascnt"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <section inlist="toc" xml:id="S1">
+    <tags>
+      <tag>1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">§1</tag>
+    </tags>
+    <title><tag close=" ">1</tag>First</title>
+    <theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:thm:a" xml:id="S1.Thmtheorem1">
+      <tags>
+        <tag>Theorem 1.1</tag>
+        <tag role="refnum">1.1</tag>
+        <tag role="typerefnum">Theorem 1.1</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="bold">Theorem 1.1</text></tag><text font="bold">.</text></title>
+      <para xml:id="S1.Thmtheorem1.p1">
+        <p><text font="italic">First theorem.</text></p>
+      </para>
+    </theorem>
+  </section>
+  <section inlist="toc" xml:id="S2">
+    <tags>
+      <tag>2</tag>
+      <tag role="refnum">2</tag>
+      <tag role="typerefnum">§2</tag>
+    </tags>
+    <title><tag close=" ">2</tag>Second</title>
+    <theorem class="ltx_theorem_lemma" inlist="thm theorem:lemma" labels="LABEL:lem:a" xml:id="S2.Thmtheorem1">
+      <tags>
+        <tag>Lemma 2.1</tag>
+        <tag role="refnum">2.1</tag>
+        <tag role="typerefnum">Lemma 2.1</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="bold">Lemma 2.1</text></tag><text font="bold">.</text></title>
+      <para xml:id="S2.Thmtheorem1.p1">
+        <p><text font="italic">First lemma.</text></p>
+      </para>
+    </theorem>
+    <theorem class="ltx_theorem_lemma" inlist="thm theorem:lemma" labels="LABEL:lem:b" xml:id="S2.Thmtheorem2">
+      <tags>
+        <tag>Lemma 2.2</tag>
+        <tag role="refnum">2.2</tag>
+        <tag role="typerefnum">Lemma 2.2</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="bold">Lemma 2.2</text></tag><text font="bold">.</text></title>
+      <para xml:id="S2.Thmtheorem2.p1">
+        <p><text font="italic">Second lemma.</text></p>
+      </para>
+    </theorem>
+    <theorem class="ltx_theorem_corollary" inlist="thm theorem:corollary" labels="LABEL:cor:a" xml:id="S2.Thmtheorem3">
+      <tags>
+        <tag>Corollary 2.3</tag>
+        <tag role="refnum">2.3</tag>
+        <tag role="typerefnum">Corollary 2.3</tag>
+      </tags>
+      <title class="ltx_runin"><tag><text font="bold">Corollary 2.3</text></tag><text font="bold">.</text></title>
+      <para xml:id="S2.Thmtheorem3.p1">
+        <p><text font="italic">A corollary.</text></p>
+      </para>
+    </theorem>
+    <para xml:id="S2.p1">
+      <p>References: <ref labelref="LABEL:thm:a"/>, <ref labelref="LABEL:lem:a"/>, <ref labelref="LABEL:lem:b"/>, <ref labelref="LABEL:cor:a"/>.</p>
+    </para>
+  </section>
+</document>
