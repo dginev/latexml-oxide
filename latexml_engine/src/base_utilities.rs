@@ -1309,7 +1309,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@contact@address@name", "Address:~");
   DefMacro!("\\lx@contact@email@name", "Email:~");
   DefMacro!("\\lx@contact@url@name", "URL:~");
-  DefMacro!("\\lx@contact@orcid@name", "OrcID:~");
+  // Empty: an ORCID contact renders the iD glyph (\lx@orcidlogo), which already
+  // identifies itself — so it carries no textual "OrcID:" label (get_frontmatter_name
+  // maps an empty per-role default to no label at all).
+  DefMacro!("\\lx@contact@orcid@name", "");
   DefMacro!("\\lx@contact@note@name", "Note:~");
   DefMacro!("\\lx@contact@thanks@name", "Thanks:~");
   DefMacro!("\\lx@contact@correspondent@name", "Corresponding author:~");
@@ -2109,12 +2112,20 @@ fn get_frontmatter_name(name: Option<&String>, tag: &str, role: &str) -> Result<
   if !role.is_empty() {
     let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));
     if lookup_definition(&cs)?.is_some() {
-      return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+      let n = digest_text(Tokens!(cs))?.to_string();
+      // A defined-but-empty per-role default (e.g. `\lx@contact@orcid@name`,
+      // emptied because the iD glyph self-identifies) means NO label — return
+      // None rather than an empty `ltx:contact_name`, and do not fall back to
+      // the generic default. General, not role-special.
+      return Ok(if n.is_empty() { None } else { Some(n) });
     }
   }
   let cs = T_CS!(s!("\\lx@{stag}@name"));
   if lookup_definition(&cs)?.is_some() {
-    return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+    let n = digest_text(Tokens!(cs))?.to_string();
+    if !n.is_empty() {
+      return Ok(Some(n));
+    }
   }
   Ok(None)
 }
