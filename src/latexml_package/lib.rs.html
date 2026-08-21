@@ -1091,129 +1091,125 @@
 <a href=#1091 id=1091 data-nosnippet>1091</a>/// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
 <a href=#1092 id=1092 data-nosnippet>1092</a></span><span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
 <a href=#1093 id=1093 data-nosnippet>1093</a>  <span class="kw">let </span>(base, ext) = filename.split_once(<span class="string">'.'</span>)<span class="question-mark">?</span>;
-<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="comment">// Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
-<a href=#1095 id=1095 data-nosnippet>1095</a>  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
-<a href=#1096 id=1096 data-nosnippet>1096</a>  // (FindFile_fallback) does the same. Without this, paper-bundled
-<a href=#1097 id=1097 data-nosnippet>1097</a>  // class files like `Definitions/mdpi.cls` miss the registered
-<a href=#1098 id=1098 data-nosnippet>1098</a>  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
-<a href=#1099 id=1099 data-nosnippet>1099</a>  // producing 50+ cascading undefined errors. Witness 2403.18716.
-<a href=#1100 id=1100 data-nosnippet>1100</a>  </span><span class="kw">let </span>base_only = base.rsplit_once([<span class="string">'/'</span>, <span class="string">'\\'</span>]).map_or(base, |(<span class="kw">_</span>, b)| b);
-<a href=#1101 id=1101 data-nosnippet>1101</a>  <span class="comment">// Perl pathname_find L383-389: try strict-case match first, then fall back
-<a href=#1102 id=1102 data-nosnippet>1102</a>  // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
-<a href=#1103 id=1103 data-nosnippet>1103</a>  // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
-<a href=#1104 id=1104 data-nosnippet>1104</a>  // Without the fallback, lowercase-input / uppercase-binding pairs miss
-<a href=#1105 id=1105 data-nosnippet>1105</a>  // and trigger spurious `missing_file` warnings.
-<a href=#1106 id=1106 data-nosnippet>1106</a>  </span>BINDINGS
-<a href=#1107 id=1107 data-nosnippet>1107</a>    .iter()
-<a href=#1108 id=1108 data-nosnippet>1108</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
-<a href=#1109 id=1109 data-nosnippet>1109</a>    .or_else(|| {
-<a href=#1110 id=1110 data-nosnippet>1110</a>      BINDINGS
-<a href=#1111 id=1111 data-nosnippet>1111</a>        .iter()
-<a href=#1112 id=1112 data-nosnippet>1112</a>        .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base_only &amp;&amp; <span class="kw-2">*</span>extension == ext)
-<a href=#1113 id=1113 data-nosnippet>1113</a>    })
-<a href=#1114 id=1114 data-nosnippet>1114</a>    .or_else(|| {
-<a href=#1115 id=1115 data-nosnippet>1115</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
-<a href=#1116 id=1116 data-nosnippet>1116</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
-<a href=#1117 id=1117 data-nosnippet>1117</a>      })
-<a href=#1118 id=1118 data-nosnippet>1118</a>    })
-<a href=#1119 id=1119 data-nosnippet>1119</a>    .or_else(|| {
-<a href=#1120 id=1120 data-nosnippet>1120</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
-<a href=#1121 id=1121 data-nosnippet>1121</a>        name.eq_ignore_ascii_case(base_only) &amp;&amp; extension.eq_ignore_ascii_case(ext)
-<a href=#1122 id=1122 data-nosnippet>1122</a>      })
-<a href=#1123 id=1123 data-nosnippet>1123</a>    })
-<a href=#1124 id=1124 data-nosnippet>1124</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
-<a href=#1125 id=1125 data-nosnippet>1125</a>}
-<a href=#1126 id=1126 data-nosnippet>1126</a>
-<a href=#1127 id=1127 data-nosnippet>1127</a><span class="doccomment">/// All registered (name, extension) pairs across the BINDINGS table.
-<a href=#1128 id=1128 data-nosnippet>1128</a>/// Consumed by `find_file(notex=true)` to discover whether a compiled
-<a href=#1129 id=1129 data-nosnippet>1129</a>/// binding exists for a given filename — across `.cls` / `.sty` / `.def`
-<a href=#1130 id=1130 data-nosnippet>1130</a>/// / `.pool` / `code.tex` / etc. Also surfaces classes (extension `"cls"`)
-<a href=#1131 id=1131 data-nosnippet>1131</a>/// for `load_class`'s Perl-parity prefix-match fallback via
-<a href=#1132 id=1132 data-nosnippet>1132</a>/// `state::get_class_binding_names()` (a filtered view of this list).
-<a href=#1133 id=1133 data-nosnippet>1133</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
-<a href=#1134 id=1134 data-nosnippet>1134</a>  <span class="kw">use </span>std::sync::OnceLock;
-<a href=#1135 id=1135 data-nosnippet>1135</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
-<a href=#1136 id=1136 data-nosnippet>1136</a>  NAMES
-<a href=#1137 id=1137 data-nosnippet>1137</a>    .get_or_init(|| {
-<a href=#1138 id=1138 data-nosnippet>1138</a>      BINDINGS
-<a href=#1139 id=1139 data-nosnippet>1139</a>        .iter()
-<a href=#1140 id=1140 data-nosnippet>1140</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
-<a href=#1141 id=1141 data-nosnippet>1141</a>        .collect()
-<a href=#1142 id=1142 data-nosnippet>1142</a>    })
-<a href=#1143 id=1143 data-nosnippet>1143</a>    .as_slice()
-<a href=#1144 id=1144 data-nosnippet>1144</a>}
+<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="comment">// NO directory strip: a subdir name like `Definitions/mdpi` or `utils/mathenv` is a file
+<a href=#1095 id=1095 data-nosnippet>1095</a>  // PATH, not a binding name — dispatch matches a compile-time binding by the class/package
+<a href=#1096 id=1096 data-nosnippet>1096</a>  // NAME only. A subdir-bundled file with no exact-name binding falls through to the caller's
+<a href=#1097 id=1097 data-nosnippet>1097</a>  // raw load — a local `.sty` under `localrawstyles` (INCLUDE_STYLES:searchpaths), or, for a
+<a href=#1098 id=1098 data-nosnippet>1098</a>  // `.cls` with INCLUDE_CLASSES off, to OmniBus — which MATCHES Perl: its FindFile_fallback
+<a href=#1099 id=1099 data-nosnippet>1099</a>  // (Package.pm:2191) strips VERSION suffixes (neurips_2026-&gt;neurips, aastex701-&gt;aastex), never
+<a href=#1100 id=1100 data-nosnippet>1100</a>  // a directory. Witnesses: 2606.02073 (`\RequirePackage{utils/mathenv}` now raw-loads its
+<a href=#1101 id=1101 data-nosnippet>1101</a>  // local cleveref/theorem defs — a prior directory-strip matched the unrelated CTAN `mathenv`
+<a href=#1102 id=1102 data-nosnippet>1102</a>  // binding and shadowed the local file); `\documentclass{Definitions/mdpi}` now OmniBuses like
+<a href=#1103 id=1103 data-nosnippet>1103</a>  // Perl (the strip was a beyond-Perl name-match convenience for a bundled journal-class copy,
+<a href=#1104 id=1104 data-nosnippet>1104</a>  // dropped to stop conflating a path with a binding name — the `localrawstyles`/INCLUDE_CLASSES
+<a href=#1105 id=1105 data-nosnippet>1105</a>  // config, not this dispatch, governs whether a local file raw-loads). A future RUNTIME `.rhai`
+<a href=#1106 id=1106 data-nosnippet>1106</a>  // binding follows the path (`Definitions/mdpi.cls.rhai`) and is looked up there, not here.
+<a href=#1107 id=1107 data-nosnippet>1107</a>  //
+<a href=#1108 id=1108 data-nosnippet>1108</a>  // Perl pathname_find L383-389: try strict-case match first, then fall back to case-insensitive
+<a href=#1109 id=1109 data-nosnippet>1109</a>  // (`m/$i_regex/i` then `@nocase_paths`) — so `\documentclass{jhep}` resolves the
+<a href=#1110 id=1110 data-nosnippet>1110</a>  // `JHEP.cls.ltxml`-derived binding. Without the fallback, lowercase-input / uppercase-binding
+<a href=#1111 id=1111 data-nosnippet>1111</a>  // pairs miss and trigger spurious `missing_file` warnings.
+<a href=#1112 id=1112 data-nosnippet>1112</a>  </span>BINDINGS
+<a href=#1113 id=1113 data-nosnippet>1113</a>    .iter()
+<a href=#1114 id=1114 data-nosnippet>1114</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
+<a href=#1115 id=1115 data-nosnippet>1115</a>    .or_else(|| {
+<a href=#1116 id=1116 data-nosnippet>1116</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
+<a href=#1117 id=1117 data-nosnippet>1117</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
+<a href=#1118 id=1118 data-nosnippet>1118</a>      })
+<a href=#1119 id=1119 data-nosnippet>1119</a>    })
+<a href=#1120 id=1120 data-nosnippet>1120</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
+<a href=#1121 id=1121 data-nosnippet>1121</a>}
+<a href=#1122 id=1122 data-nosnippet>1122</a>
+<a href=#1123 id=1123 data-nosnippet>1123</a><span class="doccomment">/// All registered (name, extension) pairs across the BINDINGS table.
+<a href=#1124 id=1124 data-nosnippet>1124</a>/// Consumed by `find_file(notex=true)` to discover whether a compiled
+<a href=#1125 id=1125 data-nosnippet>1125</a>/// binding exists for a given filename — across `.cls` / `.sty` / `.def`
+<a href=#1126 id=1126 data-nosnippet>1126</a>/// / `.pool` / `code.tex` / etc. Also surfaces classes (extension `"cls"`)
+<a href=#1127 id=1127 data-nosnippet>1127</a>/// for `load_class`'s Perl-parity prefix-match fallback via
+<a href=#1128 id=1128 data-nosnippet>1128</a>/// `state::get_class_binding_names()` (a filtered view of this list).
+<a href=#1129 id=1129 data-nosnippet>1129</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
+<a href=#1130 id=1130 data-nosnippet>1130</a>  <span class="kw">use </span>std::sync::OnceLock;
+<a href=#1131 id=1131 data-nosnippet>1131</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
+<a href=#1132 id=1132 data-nosnippet>1132</a>  NAMES
+<a href=#1133 id=1133 data-nosnippet>1133</a>    .get_or_init(|| {
+<a href=#1134 id=1134 data-nosnippet>1134</a>      BINDINGS
+<a href=#1135 id=1135 data-nosnippet>1135</a>        .iter()
+<a href=#1136 id=1136 data-nosnippet>1136</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
+<a href=#1137 id=1137 data-nosnippet>1137</a>        .collect()
+<a href=#1138 id=1138 data-nosnippet>1138</a>    })
+<a href=#1139 id=1139 data-nosnippet>1139</a>    .as_slice()
+<a href=#1140 id=1140 data-nosnippet>1140</a>}
+<a href=#1141 id=1141 data-nosnippet>1141</a>
+<a href=#1142 id=1142 data-nosnippet>1142</a><span class="attr">#[cfg(test)]
+<a href=#1143 id=1143 data-nosnippet>1143</a></span><span class="kw">mod </span>tests {
+<a href=#1144 id=1144 data-nosnippet>1144</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#1145 id=1145 data-nosnippet>1145</a>
-<a href=#1146 id=1146 data-nosnippet>1146</a><span class="attr">#[cfg(test)]
-<a href=#1147 id=1147 data-nosnippet>1147</a></span><span class="kw">mod </span>tests {
-<a href=#1148 id=1148 data-nosnippet>1148</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#1149 id=1149 data-nosnippet>1149</a>
-<a href=#1150 id=1150 data-nosnippet>1150</a>  <span class="attr">#[test]
-<a href=#1151 id=1151 data-nosnippet>1151</a>  </span><span class="kw">fn </span>bindings_registry_is_non_empty() {
-<a href=#1152 id=1152 data-nosnippet>1152</a>    <span class="macro">assert!</span>(!BINDINGS.is_empty(), <span class="string">"at least one package registered"</span>);
-<a href=#1153 id=1153 data-nosnippet>1153</a>  }
-<a href=#1154 id=1154 data-nosnippet>1154</a>
-<a href=#1155 id=1155 data-nosnippet>1155</a>  <span class="attr">#[test]
-<a href=#1156 id=1156 data-nosnippet>1156</a>  </span><span class="kw">fn </span>binding_names_round_trips_with_bindings() {
-<a href=#1157 id=1157 data-nosnippet>1157</a>    <span class="comment">// Cross-check: every (name, ext) in `binding_names()` matches an entry in
-<a href=#1158 id=1158 data-nosnippet>1158</a>    // `BINDINGS`, and the lengths agree.
-<a href=#1159 id=1159 data-nosnippet>1159</a>    </span><span class="kw">let </span>names = binding_names();
-<a href=#1160 id=1160 data-nosnippet>1160</a>    <span class="macro">assert_eq!</span>(names.len(), BINDINGS.len());
-<a href=#1161 id=1161 data-nosnippet>1161</a>    <span class="kw">for </span>(name, ext) <span class="kw">in </span>names {
-<a href=#1162 id=1162 data-nosnippet>1162</a>      <span class="kw">let </span>matched = BINDINGS.iter().any(|(n, e, <span class="kw">_</span>)| n == name &amp;&amp; e == ext);
-<a href=#1163 id=1163 data-nosnippet>1163</a>      <span class="macro">assert!</span>(matched, <span class="string">"{}.{} must round-trip via BINDINGS"</span>, name, ext);
-<a href=#1164 id=1164 data-nosnippet>1164</a>    }
-<a href=#1165 id=1165 data-nosnippet>1165</a>  }
-<a href=#1166 id=1166 data-nosnippet>1166</a>
-<a href=#1167 id=1167 data-nosnippet>1167</a>  <span class="attr">#[test]
-<a href=#1168 id=1168 data-nosnippet>1168</a>  </span><span class="kw">fn </span>binding_names_cached_via_once_lock() {
-<a href=#1169 id=1169 data-nosnippet>1169</a>    <span class="comment">// Two consecutive calls return the same &amp;'static slice (same data pointer).
-<a href=#1170 id=1170 data-nosnippet>1170</a>    </span><span class="kw">let </span>first = binding_names();
-<a href=#1171 id=1171 data-nosnippet>1171</a>    <span class="kw">let </span>second = binding_names();
-<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="macro">assert_eq!</span>(first.as_ptr(), second.as_ptr());
-<a href=#1173 id=1173 data-nosnippet>1173</a>    <span class="macro">assert_eq!</span>(first.len(), second.len());
-<a href=#1174 id=1174 data-nosnippet>1174</a>  }
-<a href=#1175 id=1175 data-nosnippet>1175</a>
-<a href=#1176 id=1176 data-nosnippet>1176</a>  <span class="attr">#[test]
-<a href=#1177 id=1177 data-nosnippet>1177</a>  </span><span class="kw">fn </span>neurips_year_bindings_cover_2019_through_2026() {
-<a href=#1178 id=1178 data-nosnippet>1178</a>    <span class="comment">// The NeurIPS class ships one `.sty` per year (`neurips_YYYY`). Every
-<a href=#1179 id=1179 data-nosnippet>1179</a>    // supported year must map to the shared neurips binding, or a new year is
-<a href=#1180 id=1180 data-nosnippet>1180</a>    // silently left to raw-load — the gap that left `neurips_2026` unbound while
-<a href=#1181 id=1181 data-nosnippet>1181</a>    // 2019-2025 were covered (witness arXiv 2605.23950, `\usepackage{neurips_2026}`).
-<a href=#1182 id=1182 data-nosnippet>1182</a>    // Bump the upper bound when a new year ships.
-<a href=#1183 id=1183 data-nosnippet>1183</a>    </span><span class="kw">let </span>names = binding_names();
-<a href=#1184 id=1184 data-nosnippet>1184</a>    <span class="kw">for </span>year <span class="kw">in </span><span class="number">2019</span>..=<span class="number">2026 </span>{
-<a href=#1185 id=1185 data-nosnippet>1185</a>      <span class="kw">let </span>pkg = <span class="macro">format!</span>(<span class="string">"neurips_{year}"</span>);
-<a href=#1186 id=1186 data-nosnippet>1186</a>      <span class="macro">assert!</span>(
-<a href=#1187 id=1187 data-nosnippet>1187</a>        names.iter().any(|(n, e)| <span class="kw-2">*</span>n == pkg &amp;&amp; <span class="kw-2">*</span>e == <span class="string">"sty"</span>),
-<a href=#1188 id=1188 data-nosnippet>1188</a>        <span class="string">"{pkg}.sty must be a registered binding"
-<a href=#1189 id=1189 data-nosnippet>1189</a>      </span>);
-<a href=#1190 id=1190 data-nosnippet>1190</a>    }
-<a href=#1191 id=1191 data-nosnippet>1191</a>  }
-<a href=#1192 id=1192 data-nosnippet>1192</a>
-<a href=#1193 id=1193 data-nosnippet>1193</a>  <span class="attr">#[test]
-<a href=#1194 id=1194 data-nosnippet>1194</a>  </span><span class="kw">fn </span>dispatch_none_for_unknown_filename() {
-<a href=#1195 id=1195 data-nosnippet>1195</a>    <span class="comment">// No ".foo" extension registered anywhere → None.
-<a href=#1196 id=1196 data-nosnippet>1196</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"definitely-not-a-package.foo"</span>).is_none());
-<a href=#1197 id=1197 data-nosnippet>1197</a>  }
-<a href=#1198 id=1198 data-nosnippet>1198</a>
-<a href=#1199 id=1199 data-nosnippet>1199</a>  <span class="attr">#[test]
-<a href=#1200 id=1200 data-nosnippet>1200</a>  </span><span class="kw">fn </span>dispatch_none_for_no_dot() {
-<a href=#1201 id=1201 data-nosnippet>1201</a>    <span class="comment">// No dot → split_once returns None → dispatch returns None.
-<a href=#1202 id=1202 data-nosnippet>1202</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"bareword"</span>).is_none());
-<a href=#1203 id=1203 data-nosnippet>1203</a>  }
-<a href=#1204 id=1204 data-nosnippet>1204</a>
-<a href=#1205 id=1205 data-nosnippet>1205</a>  <span class="attr">#[test]
-<a href=#1206 id=1206 data-nosnippet>1206</a>  </span><span class="kw">fn </span>dispatch_splits_on_first_dot() {
-<a href=#1207 id=1207 data-nosnippet>1207</a>    <span class="comment">// The doc-comment promises first-dot splitting. Verify by checking a
-<a href=#1208 id=1208 data-nosnippet>1208</a>    // name that only makes sense when split at the *first* dot (a hypothetical
-<a href=#1209 id=1209 data-nosnippet>1209</a>    // "foo.code.tex" with no "foo.code" binding should be found as ("foo",
-<a href=#1210 id=1210 data-nosnippet>1210</a>    // "code.tex") if that exact tuple is registered, or None otherwise).
-<a href=#1211 id=1211 data-nosnippet>1211</a>    // We can't commit to a specific tuple without coupling to registry state,
-<a href=#1212 id=1212 data-nosnippet>1212</a>    // so just confirm that misleading "last-dot" splits do not resolve:
-<a href=#1213 id=1213 data-nosnippet>1213</a>    // If a name like "nonexistent.code.tex" yields anything other than None,
-<a href=#1214 id=1214 data-nosnippet>1214</a>    // that's a bug regardless of split direction — since no "nonexistent"
-<a href=#1215 id=1215 data-nosnippet>1215</a>    // binding exists in any form.
-<a href=#1216 id=1216 data-nosnippet>1216</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"nonexistent.code.tex"</span>).is_none());
-<a href=#1217 id=1217 data-nosnippet>1217</a>  }
-<a href=#1218 id=1218 data-nosnippet>1218</a>}
+<a href=#1146 id=1146 data-nosnippet>1146</a>  <span class="attr">#[test]
+<a href=#1147 id=1147 data-nosnippet>1147</a>  </span><span class="kw">fn </span>bindings_registry_is_non_empty() {
+<a href=#1148 id=1148 data-nosnippet>1148</a>    <span class="macro">assert!</span>(!BINDINGS.is_empty(), <span class="string">"at least one package registered"</span>);
+<a href=#1149 id=1149 data-nosnippet>1149</a>  }
+<a href=#1150 id=1150 data-nosnippet>1150</a>
+<a href=#1151 id=1151 data-nosnippet>1151</a>  <span class="attr">#[test]
+<a href=#1152 id=1152 data-nosnippet>1152</a>  </span><span class="kw">fn </span>binding_names_round_trips_with_bindings() {
+<a href=#1153 id=1153 data-nosnippet>1153</a>    <span class="comment">// Cross-check: every (name, ext) in `binding_names()` matches an entry in
+<a href=#1154 id=1154 data-nosnippet>1154</a>    // `BINDINGS`, and the lengths agree.
+<a href=#1155 id=1155 data-nosnippet>1155</a>    </span><span class="kw">let </span>names = binding_names();
+<a href=#1156 id=1156 data-nosnippet>1156</a>    <span class="macro">assert_eq!</span>(names.len(), BINDINGS.len());
+<a href=#1157 id=1157 data-nosnippet>1157</a>    <span class="kw">for </span>(name, ext) <span class="kw">in </span>names {
+<a href=#1158 id=1158 data-nosnippet>1158</a>      <span class="kw">let </span>matched = BINDINGS.iter().any(|(n, e, <span class="kw">_</span>)| n == name &amp;&amp; e == ext);
+<a href=#1159 id=1159 data-nosnippet>1159</a>      <span class="macro">assert!</span>(matched, <span class="string">"{}.{} must round-trip via BINDINGS"</span>, name, ext);
+<a href=#1160 id=1160 data-nosnippet>1160</a>    }
+<a href=#1161 id=1161 data-nosnippet>1161</a>  }
+<a href=#1162 id=1162 data-nosnippet>1162</a>
+<a href=#1163 id=1163 data-nosnippet>1163</a>  <span class="attr">#[test]
+<a href=#1164 id=1164 data-nosnippet>1164</a>  </span><span class="kw">fn </span>binding_names_cached_via_once_lock() {
+<a href=#1165 id=1165 data-nosnippet>1165</a>    <span class="comment">// Two consecutive calls return the same &amp;'static slice (same data pointer).
+<a href=#1166 id=1166 data-nosnippet>1166</a>    </span><span class="kw">let </span>first = binding_names();
+<a href=#1167 id=1167 data-nosnippet>1167</a>    <span class="kw">let </span>second = binding_names();
+<a href=#1168 id=1168 data-nosnippet>1168</a>    <span class="macro">assert_eq!</span>(first.as_ptr(), second.as_ptr());
+<a href=#1169 id=1169 data-nosnippet>1169</a>    <span class="macro">assert_eq!</span>(first.len(), second.len());
+<a href=#1170 id=1170 data-nosnippet>1170</a>  }
+<a href=#1171 id=1171 data-nosnippet>1171</a>
+<a href=#1172 id=1172 data-nosnippet>1172</a>  <span class="attr">#[test]
+<a href=#1173 id=1173 data-nosnippet>1173</a>  </span><span class="kw">fn </span>neurips_year_bindings_cover_2019_through_2026() {
+<a href=#1174 id=1174 data-nosnippet>1174</a>    <span class="comment">// The NeurIPS class ships one `.sty` per year (`neurips_YYYY`). Every
+<a href=#1175 id=1175 data-nosnippet>1175</a>    // supported year must map to the shared neurips binding, or a new year is
+<a href=#1176 id=1176 data-nosnippet>1176</a>    // silently left to raw-load — the gap that left `neurips_2026` unbound while
+<a href=#1177 id=1177 data-nosnippet>1177</a>    // 2019-2025 were covered (witness arXiv 2605.23950, `\usepackage{neurips_2026}`).
+<a href=#1178 id=1178 data-nosnippet>1178</a>    // Bump the upper bound when a new year ships.
+<a href=#1179 id=1179 data-nosnippet>1179</a>    </span><span class="kw">let </span>names = binding_names();
+<a href=#1180 id=1180 data-nosnippet>1180</a>    <span class="kw">for </span>year <span class="kw">in </span><span class="number">2019</span>..=<span class="number">2026 </span>{
+<a href=#1181 id=1181 data-nosnippet>1181</a>      <span class="kw">let </span>pkg = <span class="macro">format!</span>(<span class="string">"neurips_{year}"</span>);
+<a href=#1182 id=1182 data-nosnippet>1182</a>      <span class="macro">assert!</span>(
+<a href=#1183 id=1183 data-nosnippet>1183</a>        names.iter().any(|(n, e)| <span class="kw-2">*</span>n == pkg &amp;&amp; <span class="kw-2">*</span>e == <span class="string">"sty"</span>),
+<a href=#1184 id=1184 data-nosnippet>1184</a>        <span class="string">"{pkg}.sty must be a registered binding"
+<a href=#1185 id=1185 data-nosnippet>1185</a>      </span>);
+<a href=#1186 id=1186 data-nosnippet>1186</a>    }
+<a href=#1187 id=1187 data-nosnippet>1187</a>  }
+<a href=#1188 id=1188 data-nosnippet>1188</a>
+<a href=#1189 id=1189 data-nosnippet>1189</a>  <span class="attr">#[test]
+<a href=#1190 id=1190 data-nosnippet>1190</a>  </span><span class="kw">fn </span>dispatch_none_for_unknown_filename() {
+<a href=#1191 id=1191 data-nosnippet>1191</a>    <span class="comment">// No ".foo" extension registered anywhere → None.
+<a href=#1192 id=1192 data-nosnippet>1192</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"definitely-not-a-package.foo"</span>).is_none());
+<a href=#1193 id=1193 data-nosnippet>1193</a>  }
+<a href=#1194 id=1194 data-nosnippet>1194</a>
+<a href=#1195 id=1195 data-nosnippet>1195</a>  <span class="attr">#[test]
+<a href=#1196 id=1196 data-nosnippet>1196</a>  </span><span class="kw">fn </span>dispatch_none_for_no_dot() {
+<a href=#1197 id=1197 data-nosnippet>1197</a>    <span class="comment">// No dot → split_once returns None → dispatch returns None.
+<a href=#1198 id=1198 data-nosnippet>1198</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"bareword"</span>).is_none());
+<a href=#1199 id=1199 data-nosnippet>1199</a>  }
+<a href=#1200 id=1200 data-nosnippet>1200</a>
+<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="attr">#[test]
+<a href=#1202 id=1202 data-nosnippet>1202</a>  </span><span class="kw">fn </span>dispatch_splits_on_first_dot() {
+<a href=#1203 id=1203 data-nosnippet>1203</a>    <span class="comment">// The doc-comment promises first-dot splitting. Verify by checking a
+<a href=#1204 id=1204 data-nosnippet>1204</a>    // name that only makes sense when split at the *first* dot (a hypothetical
+<a href=#1205 id=1205 data-nosnippet>1205</a>    // "foo.code.tex" with no "foo.code" binding should be found as ("foo",
+<a href=#1206 id=1206 data-nosnippet>1206</a>    // "code.tex") if that exact tuple is registered, or None otherwise).
+<a href=#1207 id=1207 data-nosnippet>1207</a>    // We can't commit to a specific tuple without coupling to registry state,
+<a href=#1208 id=1208 data-nosnippet>1208</a>    // so just confirm that misleading "last-dot" splits do not resolve:
+<a href=#1209 id=1209 data-nosnippet>1209</a>    // If a name like "nonexistent.code.tex" yields anything other than None,
+<a href=#1210 id=1210 data-nosnippet>1210</a>    // that's a bug regardless of split direction — since no "nonexistent"
+<a href=#1211 id=1211 data-nosnippet>1211</a>    // binding exists in any form.
+<a href=#1212 id=1212 data-nosnippet>1212</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"nonexistent.code.tex"</span>).is_none());
+<a href=#1213 id=1213 data-nosnippet>1213</a>  }
+<a href=#1214 id=1214 data-nosnippet>1214</a>}
 </code></pre></div></section></main></body></html>
