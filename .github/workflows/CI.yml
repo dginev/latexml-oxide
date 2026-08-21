@@ -209,7 +209,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 \
-            texlive texlive-latex-extra texlive-science
+            texlive texlive-latex-extra texlive-science mold
+          # `mold` is REQUIRED even though the ASAN test step drops it: the
+          # `make formats` build below inherits `.cargo/config.toml`'s
+          # `-C link-arg=-fuse-ld=mold` (gated to x86_64-linux), and it runs only
+          # on a COLD dump cache — i.e. exactly when a PR touches the engine. With
+          # mold absent, collect2 could find neither `ld.mold` nor `ld` and every
+          # such PR failed here with `cannot find 'ld'`. The other Linux jobs
+          # already install it; the asan job had been the lone omission.
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
