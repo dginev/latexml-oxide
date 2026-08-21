@@ -1,0 +1,9 @@
+\documentclass[12pt]{article}
+% Issue #719 control: with the DEFAULT \parindent (nonzero), NO paragraph may be
+% marked `ltx_noindent`. Guards the first-paragraph surpass against
+% over-application — the fix must fire only when \parindent is genuinely zero.
+\begin{document}
+First line
+
+second lines
+\end{document}

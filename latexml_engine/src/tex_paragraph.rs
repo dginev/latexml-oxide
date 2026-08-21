@@ -207,17 +207,43 @@ LoadDefinitions!({
         whatsit.set_property("noop", true);
         Ok(Vec::new())
       } else {
+        // Did the para closing NOW inherit a class from the PRIOR \par (the
+        // deferred mechanism below)? The very first body paragraph never does.
+        let mut class_from_prior = false;
         if let Some(c) = lookup_value("next_para_class") {
           // Check if flags were set by prior \par:
           whatsit.set_property("class", c);
           { assign_value("next_para_class", Stored::None, None); }
+          class_from_prior = true;
         }
         // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
         { assign_value("interlinepenalties", Stored::None, None); }
-        // Fish out flags for next ltx:para, to be used when the next \par closes:
         // `\parindent` is normally defined; if it isn't (None), don't assume zero
         // and force noindent — skip the override. Witness: 1502.07281.
-        if lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0) {
+        let parindent_zero =
+          lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
+        // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): the deferred rule
+        // below records `ltx_noindent` for the NEXT paragraph, because a
+        // paragraph's indent is fixed by `\parindent` when it BEGINS, not when
+        // its `\par` closes. The first body paragraph has no prior `\par` to
+        // have recorded that class, so with `\parindent=0` it was left unmarked
+        // and inherited the stylesheet's default 2em first-line indent — visibly
+        // indented where pdflatex is flush-left. Perl LaTeXML has the identical
+        // off-by-one (byte-identical XML, verified same-host). Stamp the first
+        // paragraph here from the live `\parindent`, one-shot via
+        // `seen_first_para` so only the first paragraph is touched — later
+        // paragraphs keep the unchanged deferred mechanism. The stamp fires only
+        // when `\parindent==0` (where `ltx_noindent` is the correct outcome),
+        // and `seen_first_para` shares `next_para_class`'s local, per-conversion
+        // scope. Witness: issue #719 MWE (`first_para_noindent_719.tex`).
+        if !LookupBool!("seen_first_para") {
+          if parindent_zero && !class_from_prior {
+            whatsit.set_property("class", "ltx_noindent");
+          }
+          assign_value("seen_first_para", true, None);
+        }
+        // Fish out flags for next ltx:para, to be used when the next \par closes:
+        if parindent_zero {
           // respect \parindent if no overrides are given
           { assign_value("next_para_class", "ltx_noindent", None); }
         }

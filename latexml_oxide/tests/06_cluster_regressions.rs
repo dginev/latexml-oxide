@@ -146,6 +146,35 @@ fn cluster_pandoc_calc_colwidth_6909() {
      (30%/70% of 321pt):\n{xml}"
   );
 }
+/// Issue #719 (witness: user MWE): with `\setlength{\parindent}{0pt}`, the FIRST
+/// paragraph must be marked `ltx_noindent` so the stylesheet's default 2em
+/// first-line indent (`ltx-article.css` `.ltx_para > .ltx_p:first-child`) does
+/// not apply — pdflatex shows no indent. Perl LaTeXML emits byte-identical XML
+/// (only the 2nd+ paragraphs carry the class, since `\par` records it for the
+/// NEXT paragraph and the first has no prior `\par`); Rust surpasses by also
+/// stamping the first paragraph from the live `\parindent`. OXIDIZED_DESIGN #142.
+#[test]
+fn cluster_first_para_noindent_719() {
+  let xml = convert_to_xml("tests/cluster_regressions/first_para_noindent_719.tex");
+  // Canary: the FIRST <para> must now carry ltx_noindent (it did not before).
+  assert!(
+    xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
+    "first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
+  );
+  // The 2nd paragraph keeps its class (deferred mechanism, unchanged).
+  assert!(
+    xml.contains(r#"<para class="ltx_noindent" xml:id="p2">"#),
+    "second paragraph lost its ltx_noindent class (#719 regression):\n{xml}"
+  );
+  // Control: DEFAULT (nonzero) \parindent must leave NO paragraph noindent —
+  // the surpass fires only on a genuine zero \parindent, never by default.
+  let def = convert_to_xml("tests/cluster_regressions/first_para_indent_default_719.tex");
+  assert!(
+    !def.contains("ltx_noindent"),
+    "a paragraph was wrongly marked ltx_noindent under the DEFAULT \\parindent \
+     (#719 over-application):\n{def}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");
