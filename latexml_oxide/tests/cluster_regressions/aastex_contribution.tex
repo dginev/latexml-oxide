@@ -1,0 +1,14 @@
+% sandbox-arxiv-2606: aastex701/631/7 digit-strip to the aastex-v5 aastex.cls.ltxml
+% shim, which predates aastex7, so the {contribution} environment and
+% \restartappendixnumbering came out Error:undefined (Perl errors identically -- a
+% beyond-Perl addition in aas_support_sty.rs, which already carries the \uat beyond-Perl
+% addition). Witnesses 2606.03375/04105 (contribution), 2606.00569/03850/07452
+% (restartappendixnumbering).
+\documentclass{aastex701}
+\begin{document}
+\begin{contribution}
+Author did the work.
+\end{contribution}
+\appendix
+\restartappendixnumbering
+\end{document}

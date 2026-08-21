@@ -446,33 +446,28 @@ mod cleveref_class_stubs {
   //! came out `Error:undefined`. Perl (no lipics/IEEEtaes binding) raw-loads the `.cls`
   //! and gets cleveref, so this was a Rust-only parity gap. The stubs now require
   //! cleveref after hyperref. Witnesses 2606.01187 (lipics), 2606.01169 (IEEEtaes).
-  use std::{path::Path, process::Command};
-
-  const TEX: &str = "\\documentclass[cleveref]{lipics-v2021}\n\
-    \\begin{document}\n\
-    \\section{Intro}\\label{sec:intro}\n\
-    See \\cref{sec:intro} and \\Cref{sec:intro}.\n\
-    \\end{document}\n";
+  use crate::cluster::convert_to_xml_contrib_clean;
 
   #[test]
   fn lipics_stub_requires_cleveref() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      !stderr.contains("undefined:\\cref") && !stderr.contains("undefined:\\Cref"),
-      "lipics stub must require cleveref so \\cref/\\Cref resolve:\n{stderr}",
-    );
+    // Red before the fix: `\cref`/`\Cref` come out Error:undefined; green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/cleveref_lipics_stub.tex");
+  }
+}
+
+mod aastex_contribution_appendix {
+  //! aastex701/631/7 digit-strip to the aastex-v5 `aastex.cls.ltxml` shim, which predates
+  //! aastex7, so the `{contribution}` env and `\restartappendixnumbering` came out
+  //! `Error:undefined` (Perl errors identically — this is a beyond-Perl addition in the
+  //! `aas_support_sty.rs` home that already carries the `\uat` beyond-Perl addition).
+  //! Witnesses 2606.03375/04105 (contribution), 2606.00569/03850/07452 (restartappendixnumbering).
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn aastex_contribution_and_restartappendix_defined() {
+    // Red before the fix: `{contribution}` / `\restartappendixnumbering` Error:undefined;
+    // green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/aastex_contribution.tex");
   }
 }
 
