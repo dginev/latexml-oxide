@@ -169,6 +169,40 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
 
+### CSS themes — `ar5iv.css` is the active surface; base `LaTeXML.css` is upstream
+
+**Policy.** In latexml-oxide we actively develop **`ar5iv.css`** only (repo
+`~/git/ar5iv-css`, mirror workflow: off `main`, rebuild `dist/`, CHANGELOG). The
+base **`LaTeXML.css`** (`latexml_post/resources/CSS/LaTeXML.css`) is a faithful
+copy of Perl LaTeXML's default theme — its rendering behaviour and bugs route
+**upstream to `brucemiller/LaTeXML`**, not here. When a user reports a
+rendering/CSS complaint, first establish which theme; base-CSS issues → upstream.
+
+**Plan (not yet scheduled).** Make `ar5iv.css` the **default** theme (currently the
+base `LaTeXML.css` is default). Tracks the reality that the base theme is upstream
+and unmaintained here.
+
+**Absolute-vs-responsive image sizing — data-model gap (witness #721, ar5iv#83).**
+`\includegraphics[width=7in]` inside a `minipage{.5\textwidth}` renders small, not
+7in. The engine is faithful: it emits the absolute width as the `<img>` attribute
+(`width="698"` ≈ 7in), **byte-identical to Perl 0.8.8** — no engine clamp. The
+clamp is purely CSS and differs by theme: base `LaTeXML.css:639`
+`.ltx_minipage > .ltx_graphics { max-width:100% }` caps to the container (PARITY —
+same rule at Perl `LaTeXML.css:573`); `ar5iv.css` goes further and **fluidizes**
+layout-nested images (`ar5iv.css:1681-1701` orientation rules set `width:auto` +
+max in `--main-width:52rem`; `2291` re-declares the minipage cap), *discarding* the
+absolute width **by design** (responsive column-fill). So neither engine, nor the
+default nor the ar5iv theme, honours the 7in for a nested image. The durable fix is
+**NOT CSS tuning** — it is preserving the sizing **intent** the pipeline currently
+flattens (`to_bp`, `latexml_core/src/util/image.rs:186`, collapses absolute `7in`
+and relative `\textwidth` to the same `pt`). Mark absolute-authored vs
+relative/natural widths (and, longer-term, panel vs sized-box minipages) so the
+theme can *deterministically* honour absolute intents (7in fits `--main-width`)
+instead of guessing by nesting depth — the fragile negation-selector heuristic the
+ar5iv authors flag at `ar5iv.css:1678-1679`. Trackers: upstream data-model discussion
+`brucemiller/LaTeXML#1797` (model + styling for figures in minipages); theme-side
+`ar5iv#83` and `dginev/ar5iv-css#38` (side-by-side minipages).
+
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 
 Issue #191 "support the original latexmlc/latexmlpost options" is **closed**;
