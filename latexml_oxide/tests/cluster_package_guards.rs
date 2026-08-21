@@ -409,6 +409,103 @@ mod neurips_anonymous {
   }
 }
 
+mod biblatex_fallback_no_cite_loop {
+  //! `\usepackage{myBiblatex}` hits the versioned-package fallback -> the native
+  //! `biblatex` binding, which `find_file_fallback` double-runs (probe then load).
+  //! The non-idempotent `\let\blx@saved@cite\cite` used to capture biblatex's OWN
+  //! `\cite` on the 2nd init, so `\cite -> \blx@saved@cite -> \cite` looped to
+  //! `Fatal:Timeout:TokenLimit`/`Recursion` (witness 2605.03965; Perl never loads
+  //! biblatex on this name, so no loop). The save is now `\@ifundefined`-guarded.
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{myBiblatex}\n\
+    \\begin{document}\\cite{X}\\end{document}\n";
+
+  #[test]
+  fn mybiblatex_fallback_does_not_loop() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("Timeout:TokenLimit")
+        && !stderr.contains("Timeout:Recursion")
+        && !stderr.contains("Stomach:Recursion"),
+      "myBiblatex fallback re-ran biblatex init and looped on \\cite:\n{stderr}",
+    );
+    assert!(
+      output.status.success(),
+      "binary exited {:?}:\n{stderr}",
+      output.status.code(),
+    );
+  }
+}
+
+mod expl3_nested_raw_load_catcodes {
+  //! A `\ProvidesExplPackage` file that `\RequirePackage{derivative}` — a native
+  //! binding (#630) that force-raw-loads its own expl3 `.sty` — used to leave `_`
+  //! as SUB after the nested load, so later expl3 lines (`\seq_new:N` …) errored
+  //! `unexpected:_` (witness 2605.21946, pomegranate.sty). The input_definitions
+  //! expl3-frame stack (content.rs) makes the inner load inherit the outer frame's
+  //! expl3 state instead of re-snapshotting after the outer `\@pushfilename`.
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn nested_expl3_raw_load_preserves_catcodes() {
+    // Self-skip green when derivative.sty is absent (trimmed CI texlive): with no
+    // raw double-load there is nothing to guard.
+    let has_derivative = Command::new("kpsewhich")
+      .arg("derivative.sty")
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false);
+    if !has_derivative {
+      eprintln!("skip nested_expl3_raw_load_preserves_catcodes: derivative.sty not installed");
+      return;
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("mymac.sty"),
+      "\\ProvidesExplPackage{mymac}{2025/01/01}{1.0}{repro}\n\
+       \\RequirePackage{derivative}\n\
+       \\seq_new:N \\l_mymac_seq\n",
+    )
+    .expect("write mymac.sty");
+    std::fs::write(
+      workdir.path().join("d.tex"),
+      "\\documentclass{article}\n\\usepackage{mymac}\n\\begin{document}hi\\end{document}\n",
+    )
+    .expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--includestyles")
+      .arg("--path")
+      .arg(workdir.path())
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("unexpected:_"),
+      "nested expl3 raw-load left `_` as SUB (expl3 catcodes lost after the inner load):\n{stderr}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).

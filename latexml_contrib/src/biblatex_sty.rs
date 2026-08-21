@@ -778,7 +778,13 @@ LoadDefinitions!({
   //
   // Save the core \cite FIRST: \cite itself is redefined below, and the
   // fallback must reach the original, not recurse into our closure.
-  Let!("\\blx@saved@cite", "\\cite");
+  // IDEMPOTENT: the versioned-package fallback (\RequirePackage{myBiblatex} ->
+  // biblatex) probes by running the binding and then loads it again
+  // (content.rs find_file_fallback + input_definitions reloadable), so this init
+  // can execute twice. A bare `\let` on the 2nd pass would save biblatex's OWN
+  // \cite closure, and \cite -> \blx@saved@cite -> \cite loops to the TokenLimit
+  // (witness 2605.03965; Perl never loads biblatex on this name, so no loop).
+  RawTeX!(r"\@ifundefined{blx@saved@cite}{\let\blx@saved@cite\cite}{}");
 
   // -- Parenthetical commands: (prenote Author, Year, postnote) ---------
   DefMacro!("\\parencite OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -1817,7 +1823,9 @@ LoadDefinitions!({
       }
     }
   });
-  Let!("\\biblatex@saved@bibliography", "\\bibliography");
+  // Idempotent for the same double-init reason as \blx@saved@cite above: a bare
+  // \let on a 2nd init would save the already-rebound \bibliography (=\addbibresource).
+  RawTeX!(r"\@ifundefined{biblatex@saved@bibliography}{\let\biblatex@saved@bibliography\bibliography}{}");
   Let!("\\bibliography",                "\\addbibresource");
 
   // \printbibliography: biber's \jobname.bbl is ground truth when present
