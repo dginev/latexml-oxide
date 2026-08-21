@@ -817,9 +817,48 @@ LoadDefinitions!({
     "\\lx@add@url [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}"
   );
+  // The ORCID iD logo — the green "iD" badge — as ONE self-contained SVG asset,
+  // defined in the kernel so every orcid rendering path reuses it (orcidlink.sty's
+  // \orcidlogo aliases this; \lx@add@orcid embeds it). Adapted from
+  // https://orcid.org/assets/vectors/orcid.logo.icon.svg; the viewBox exactly
+  // frames the 72×72 disk and the `.ltx_orcidlogo` CSS rule sizes it to the text
+  // (1em), so it renders as an inline glyph — not the oversized 1.7em badge that
+  // overflowed the line (html_feedback #6895, #6016, #5789, #2176, #5615).
+  DefConstructor!("\\lx@orcidlogo", sub[document, _args, _props] {
+    document.open_element("svg:svg", Some(string_map!(
+      "class" => "ltx_orcidlogo", "width" => "1em", "height" => "1em",
+      "viewBox" => "0 0 72 72", "version" => "1.1")), None)?;
+    document.open_element("svg:path", Some(string_map!(
+      "fill" => "#A6CE39",
+      "d" => "M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.open_element("svg:g", Some(string_map!(
+      "fill" => "#FFFFFF", "transform" => "translate(18.868966, 12.910345)")), None)?;
+    document.open_element("svg:polygon", Some(string_map!(
+      "points" => "5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878")), None)?;
+    document.close_element("svg:polygon")?;
+    document.open_element("svg:path", Some(string_map!(
+      "d" => "M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.open_element("svg:path", Some(string_map!(
+      "d" => "M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.close_element("svg:g")?;
+    document.close_element("svg:svg")?;
+  });
+  // A link to https://orcid.org/<#1> wrapping content #2 (class ltx_orcid). Shared
+  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681.
+  DefConstructor!(
+    "\\lx@orcidlink{}{}",
+    "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>"
+  );
+  // The single canonical author-ORCID frontmatter macro: a `ltx:contact[role=orcid]`
+  // (consistent with \lx@add@email / \lx@add@affiliation &c.) whose value is the iD
+  // logo linked to the author's orcid.org page. The id is preserved in the href for
+  // the metadata. Every class binding routes its \orcid here (html_feedback #6571).
   DefMacro!(
     "\\lx@add@orcid [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}"
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\lx@orcidlink{#2}{\\lx@orcidlogo}}"
   );
   // Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
   // affiliations into an author \thanks{...}, linking them to authors by a

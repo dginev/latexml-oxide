@@ -647,6 +647,12 @@ cite                 { font-style: normal; }
 .ltx_scalerel .ltx_inline-block { height:100%; }
 .ltx_scalerel svg, .ltx_scalerel img { height:100%; width:auto; }
 
+/* The ORCID iD logo (a `\lx@orcidlogo` SVG, shared by \lx@add@orcid and
+   \orcidlink) renders as a text-height inline glyph. It used to be an oversized
+   1.7em badge that overflowed the line (html_feedback #6895, #6016, #5789, #2176,
+   #5615). #6571 &c. */
+.ltx_orcidlogo { height:1em; width:1em; vertical-align:-0.15em; }
+
 .ltx_overlay {position:relative; }
 .ltx_overlay > span:nth-child(2) {position:absolute; left:0; }
 
