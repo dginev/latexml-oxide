@@ -5,7 +5,7 @@ use crate::common::{error::*, xml::XML_NS};
 
 /// Does an `ltx:para` element immediately precede `node`? Both `prune_empty_para`
 /// (to decide `ltx_pruned_first`) and the first-paragraph `ltx_noindent` stamp
-/// (`tex_paragraph.rs`, OXIDIZED_DESIGN #142) ask this: a paragraph with no
+/// (`tex_paragraph.rs`, OXIDIZED_DESIGN #143) ask this: a paragraph with no
 /// preceding `ltx:para` sibling is the first paragraph of its parent, structurally
 /// — a signal robust to how many stray `\par`s fired before it (which varies by
 /// TeX Live year / dump vs no-dump).

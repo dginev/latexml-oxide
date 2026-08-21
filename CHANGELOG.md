@@ -8,7 +8,7 @@
     that suppresses it is recorded by the *previous* `\par` and the first paragraph has
     none. It is now marked `ltx_noindent` too, matching pdflatex — and only when
     `\parindent` is genuinely zero, so default documents are unchanged. Surpasses Perl
-    (identical off-by-one); completes the `parskip` fix (OXIDIZED_DESIGN #142, #719).
+    (identical off-by-one); completes the `parskip` fix (OXIDIZED_DESIGN #143, #719).
   - **Pandoc relative-width table columns no longer collapse to a "river of
     characters".** A `p{(\columnwidth - N\tabcolsep) * \real{X}}` column — the width
     format Pandoc emits by default — is a `calc` infix expression the base dimension

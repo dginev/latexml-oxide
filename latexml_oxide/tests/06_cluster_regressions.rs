@@ -152,7 +152,7 @@ fn cluster_pandoc_calc_colwidth_6909() {
 /// not apply — pdflatex shows no indent. Perl LaTeXML emits byte-identical XML
 /// (only the 2nd+ paragraphs carry the class, since `\par` records it for the
 /// NEXT paragraph and the first has no prior `\par`); Rust surpasses by also
-/// stamping the first paragraph from the live `\parindent`. OXIDIZED_DESIGN #142.
+/// stamping the first paragraph from the live `\parindent`. OXIDIZED_DESIGN #143.
 #[test]
 fn cluster_first_para_noindent_719() {
   let xml = convert_to_xml("tests/cluster_regressions/first_para_noindent_719.tex");
@@ -203,6 +203,26 @@ fn cluster_first_para_noindent_nodump_719() {
   assert!(
     status.status.success() && xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
     "no-dump first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
+  );
+}
+/// Issue #722: the optional `[dimen]` of `\\[20pt]` (extra vertical space at a
+/// forced line break) is preserved as a themeable CSS custom property
+/// `--ltx-break-space` on `ltx:break`. Perl parses the glue and drops it
+/// (`ltx:break` has no spacing slot); we surpass it, default-inert. Plain `\\` and
+/// `\\[0pt]` stay bare. OXIDIZED_DESIGN #142.
+#[test]
+fn cluster_break_optional_glue_722() {
+  let xml = convert_to_xml("tests/cluster_regressions/break_optional_space_722.tex");
+  assert!(
+    xml.contains(r#"<break cssstyle="--ltx-break-space:20.0pt"/>"#),
+    "\\\\[20pt] should preserve its optional glue as --ltx-break-space on ltx:break:\n{xml}"
+  );
+  // Exactly one break carries the variable — plain \\ and \\[0pt] must stay bare.
+  assert_eq!(
+    xml.matches("--ltx-break-space").count(),
+    1,
+    "only the \\\\[20pt] break should carry --ltx-break-space (plain \\\\ and \\\\[0pt] \
+     stay attribute-free):\n{xml}"
   );
 }
 #[test]

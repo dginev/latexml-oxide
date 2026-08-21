@@ -137,7 +137,7 @@ LoadDefinitions!({
             } else if prop_bool!(props, "first_para_noindent")
               && !document::helpers::preceding_para_sibling(&node)
             {
-              // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): the deferred
+              // Surpass Perl (OXIDIZED_DESIGN #143, issue #719): the deferred
               // `next_para_class` above never reaches the document's FIRST
               // paragraph — no prior `\par` recorded a class for it — so with
               // `\parindent=0` it kept the stylesheet's default first-line indent
@@ -238,7 +238,7 @@ LoadDefinitions!({
         // and force noindent — skip the override. Witness: 1502.07281.
         let parindent_zero =
           lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
-        // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): flag this paragraph as
+        // Surpass Perl (OXIDIZED_DESIGN #143, issue #719): flag this paragraph as
         // the first-paragraph `ltx_noindent` candidate when `\parindent==0` and no
         // deferred class already applies. The constructor makes the final decision
         // — it has the DOM and confirms this really is the first paragraph — but

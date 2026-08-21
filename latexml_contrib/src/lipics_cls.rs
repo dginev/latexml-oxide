@@ -23,6 +23,11 @@ LoadDefinitions!({
   // loads xcolor with its own options; `\color`/`\definecolor` stay
   // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
+  // lipics-v2021.cls:1113 `\RequirePackage[capitalise,noabbrev]{cleveref}` (guarded by
+  // the `cleveref` class option). This OmniBus stub replaces the real `.cls`, so without
+  // it `\cref`/`\Cref` come out Error:undefined — Perl (no lipics binding) raw-loads the
+  // `.cls` and gets cleveref. Must load AFTER hyperref. Witness 2606.01187.
+  RequirePackage!("cleveref", options => vec!["capitalise".to_string(), "noabbrev".to_string()]);
 
   // LIPIcs frontmatter — preserve author content as ltx:note
   // frontmatter entries with role markers.
