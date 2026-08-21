@@ -146,6 +146,67 @@ fn cluster_pandoc_calc_colwidth_6909() {
      (30%/70% of 321pt):\n{xml}"
   );
 }
+/// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
+/// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
+/// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
+/// Miller, LaTeXML #2435) — we keep that. Instead, `Verbatim`/`HyperVerbatim`
+/// now hold an identity ASCII fontmap THROUGH digestion (a `before_digest`
+/// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
+/// argument stays ASCII while normal T1 text still follows Bruce's mapping.
+/// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #143.
+/// Driven by the binary so the runtime Rhai binding loads (the reported path).
+#[test]
+fn cluster_t1_hyperverbatim_ascii_723() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(
+    dir.path().join("myhyper.sty.rhai"),
+    "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
+  )
+  .expect("write rhai");
+  std::fs::write(
+    dir.path().join("m.tex"),
+    "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{myhyper}\n\
+     \\begin{document}\n\\myhyper{http://x/a~b^c}\n\\end{document}\n",
+  )
+  .expect("write m.tex");
+  let out = Command::new(bin)
+    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+  // Canary: the HyperVerbatim `~`/`^` (href AND text) must be ASCII, not U+02DC/U+02C6.
+  assert!(
+    out.status.success()
+      && xml.contains("http://x/a~b^c")
+      && !xml.contains('\u{02DC}')
+      && !xml.contains('\u{02C6}'),
+    "T1 HyperVerbatim `~`/`^` not ASCII (#723):\n{xml}"
+  );
+}
+/// Issue #723, extended scope: the same rule applies to `\verb` and the
+/// `verbatim` environment (they select the identity ASCII fontmap for their run
+/// while keeping the typewriter family). `~`/`^` stay ASCII, not Bruce's accent
+/// glyphs. OXIDIZED_DESIGN #143.
+#[test]
+fn cluster_t1_verbatim_ascii_723() {
+  let xml = convert_to_xml("tests/cluster_regressions/t1_ascii_tilde_circumflex_723.tex");
+  // \verb|a~b^c| and the verbatim env `d~e^f` — both ASCII, both typewriter.
+  assert!(
+    xml.contains("a~b^c") && xml.contains("d~e^f"),
+    "T1 \\verb / verbatim env did not keep `~`/`^` ASCII (#723):\n{xml}"
+  );
+  assert!(
+    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
+    "T1 verbatim still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+  );
+  assert!(
+    xml.matches(r#"font="typewriter""#).count() >= 2,
+    "verbatim runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");

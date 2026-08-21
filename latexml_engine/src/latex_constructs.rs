@@ -6014,15 +6014,19 @@ LoadDefinitions!({
     "\\@internal@verb{}{}{}",
     r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi"
   );
+  // `encoding => "ASCII"` (OXIDIZED_DESIGN #143, issue #723): `\verb`'s body is
+  // literal catcode-12 text, so under T1 a `~`/`^` would decode to Bruce Miller's
+  // accent glyphs U+02DC/U+02C6 (#2435). Verbatim wants them ASCII; the identity
+  // `ASCII` fontmap keeps `~`/`^` literal while `typewriter` still styles the run.
   DefConstructor!("\\@internal@math@verb{} Undigested {}",
     "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
     mode      => "text",
     enter_horizontal => true,
-    font      => { family => "typewriter", series => "medium", shape => "upright" },
+    font      => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
     reversion => "\\verb#1#2#3#2");
   DefConstructor!("\\@internal@text@verb{} Undigested {}",
     "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
-    font            => { family => "typewriter", series => "medium", shape => "upright" },
+    font            => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
     enter_horizontal => true,
     before_construct => sub[doc,_whatsit] {
       if !document::can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
@@ -10706,9 +10710,16 @@ LoadDefinitions!({
     "\\normalfont",
     "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
+  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #143, issue #723): a verbatim `~`/`^`
+  // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
+  // Bruce Miller's deliberate accent glyphs U+02DC/U+02C6 (LaTeXML #2435). In a
+  // verbatim/URL those must stay ASCII. Selecting the identity `ASCII` fontmap for
+  // the verbatim font (grouped, so it reverts after) keeps `~`/`^` ASCII while the
+  // `\ttdefault` family still drives the typewriter styling — the same treatment
+  // `Verbatim`/`HyperVerbatim` apply at digest time. Perl loses ASCII here too.
   DefMacro!(
     "\\verbatim@font",
-    "\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+    "\\fontencoding{ASCII}\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
 
   Let!("\\reset@font", "\\normalfont");

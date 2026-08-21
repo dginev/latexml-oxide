@@ -5351,3 +5351,51 @@ columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (
 **Guards**: `06_cluster_regressions::cluster_pandoc_calc_colwidth_6909` — a two-column
 `p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
 proportional 96.3pt / 224.7pt.
+
+### 143. Verbatim contexts keep `~`/`^` ASCII under T1 (the fontmap accent stays for normal text)
+
+**Background.** LaTeXML's `t1.fontmap` (and `t2a`/`t2b`/`t2c`) *deliberately* map slot 126 (`~`)
+to `U+02DC` SMALL TILDE and slot 94 (`^`) to `U+02C6` MODIFIER LETTER CIRCUMFLEX — Bruce Miller,
+commit `9ec6a4122` "Encodings (#2435)", 2024-11-20: "^ and ~ which should be accents". We KEEP
+that mapping. Those slots are reached only by a *literal catcode-12* `~`/`^`: in normal text `~`
+is active and `^` is superscript, and `\textasciitilde`/`\textasciicircum` emit ASCII U+007E/U+005E
+directly (not via the slot). The one place the slot is hit is a **verbatim** context — `\verb`,
+the `verbatim` environment, a `Verbatim`/`HyperVerbatim` argument (incl. `\url`/`\href` and a Rhai
+binding's verbatim arg) — where the intent is the *literal* character, so a `.../~user` URL must
+stay ASCII (the reporter's Rhai `HyperVerbatim` URL came out `˜`, breaking the link).
+
+**Perl behavior**: a verbatim/URL `~`/`^` under T1 font-decodes through the fontmap to the accent
+glyphs `U+02DC`/`U+02C6` (SHARED-FAILURE — Perl does the same). Only `Semiverbatim` escaped,
+because it swaps to the identity `"ASCII"` fontmap for the whole read+digest — hence #723's
+"Semiverbatim is fine, HyperVerbatim is not".
+**Rust behavior**: every verbatim context now selects the identity `"ASCII"` fontmap for its run,
+so `~`/`^` (and `` ` ``/`'`) stay ASCII, while the fontmap itself is untouched — normal T1 text
+still follows Bruce. Three sites, all leaving the `typewriter` family intact (styling unchanged):
+`Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
+(`base_parameter_types.rs`, mirroring how `Semiverbatim`'s descriptor re-runs `begin_semiverbatim`
+at digest time); `\verbatim@font` gains `\fontencoding{ASCII}` (`latex_constructs.rs`, covers the
+`verbatim` environment); and `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
+"ASCII"` (covers `\verb`).
+
+**Why**: verbatim wants the literal input character; the T1 slot's accent shape is right only for
+the accent-command contexts (a standalone `\^{}`/`\~{}`) that Bruce was protecting, which do not
+take the verbatim path. Scoping ASCII to verbatim reconciles both, and matches what pdflatex
+extracts (a verbatim `~`/`^` under T1 → ASCII U+007E/U+005E, verified via pdftotext and via the
+pdftex golden `ec.enc ∘ glyphtounicode.tex`).
+
+**Fontmap drift tooling**: `tools/fontmap_drift.py` recomputes that pdftex golden for each shipped
+text encoding and fails on un-allowlisted drift. Slots 94/126 are allowlisted there **as Bruce's
+intentional accent choice** (with the `#2435` reason), documenting exactly why our fontmap differs
+from `glyphtounicode` — alongside slot 127 (line-break hyphen `U+2010`) and T2 slots 14/15
+(Cyrillic angle quotes `‹›`).
+
+**Witnesses**: issue #723 (reporter xworld21) — a Rhai `HyperVerbatim` URL argument under T1 whose
+`~` became `U+02DC`. MWE: `\usepackage[T1]{fontenc}` + `\verb|a~b^c|` → `a~b^c`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (verbatim loses ASCII there too, and Bruce
+can weigh the verbatim-vs-accent split).
+
+**Guards**: `06_cluster_regressions::cluster_t1_hyperverbatim_ascii_723` (the reported Rhai
+`HyperVerbatim` URL, ASCII, via a subprocess so the runtime binding loads);
+`cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env stay ASCII AND keep `font="typewriter"`);
+`tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as Bruce's accents).
