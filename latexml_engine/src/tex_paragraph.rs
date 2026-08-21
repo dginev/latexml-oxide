@@ -134,6 +134,22 @@ LoadDefinitions!({
             if class_sym != pin!("") {
               let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
+            } else if prop_bool!(props, "first_para_noindent")
+              && !document::helpers::preceding_para_sibling(&node)
+            {
+              // Surpass Perl (OXIDIZED_DESIGN #143, issue #719): the deferred
+              // `next_para_class` above never reaches the document's FIRST
+              // paragraph — no prior `\par` recorded a class for it — so with
+              // `\parindent=0` it kept the stylesheet's default first-line indent
+              // where pdflatex is flush. `after_digest` flags the candidate when
+              // `\parindent==0` and no deferred class applies; we stamp it here,
+              // in the constructor, gated on the STRUCTURAL "first paragraph of
+              // its parent" test (no preceding `ltx:para` sibling). That is robust
+              // to how many stray `\par`s fired before the first content (which
+              // varies by TeX Live year / dump vs no-dump) — a state one-shot was
+              // not (issue #719 first landed with `seen_first_para`, which a
+              // begin-document `\par` consumed under the no-dump/tl2023 path).
+              document.set_attribute(&mut node, "class", "ltx_noindent")?;
             }
           }
           // NOTE: Perl's \par (\lx@normal@par) does NOT insert figure-separating
@@ -207,17 +223,35 @@ LoadDefinitions!({
         whatsit.set_property("noop", true);
         Ok(Vec::new())
       } else {
+        // Did the para closing NOW inherit a class from the PRIOR \par (the
+        // deferred mechanism below)? The very first body paragraph never does.
+        let mut class_from_prior = false;
         if let Some(c) = lookup_value("next_para_class") {
           // Check if flags were set by prior \par:
           whatsit.set_property("class", c);
           { assign_value("next_para_class", Stored::None, None); }
+          class_from_prior = true;
         }
         // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
         { assign_value("interlinepenalties", Stored::None, None); }
-        // Fish out flags for next ltx:para, to be used when the next \par closes:
         // `\parindent` is normally defined; if it isn't (None), don't assume zero
         // and force noindent — skip the override. Witness: 1502.07281.
-        if lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0) {
+        let parindent_zero =
+          lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
+        // Surpass Perl (OXIDIZED_DESIGN #143, issue #719): flag this paragraph as
+        // the first-paragraph `ltx_noindent` candidate when `\parindent==0` and no
+        // deferred class already applies. The constructor makes the final decision
+        // — it has the DOM and confirms this really is the first paragraph — but
+        // the `\parindent` register must be sampled HERE, at digest time, where it
+        // holds the value in force as the paragraph closed (a paragraph's indent
+        // is fixed by `\parindent` when it begins; the deferred rule below carries
+        // that to the NEXT paragraph, and the first paragraph has no prior `\par`
+        // to have carried it). Witness: issue #719 MWE (`first_para_noindent_719.tex`).
+        if parindent_zero && !class_from_prior {
+          whatsit.set_property("first_para_noindent", true);
+        }
+        // Fish out flags for next ltx:para, to be used when the next \par closes:
+        if parindent_zero {
           // respect \parindent if no overrides are given
           { assign_value("next_para_class", "ltx_noindent", None); }
         }

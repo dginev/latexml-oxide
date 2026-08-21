@@ -59,7 +59,7 @@ ALLOWLIST = {
     # accents". We keep that fontmap value; ASCII in verbatim/URL contexts is
     # instead handled at the parameter level (Verbatim/HyperVerbatim install an
     # identity ASCII fontmap through digestion — see base_parameter_types.rs,
-    # OXIDIZED_DESIGN #143). glyphtounicode maps asciicircum/asciitilde to ASCII.
+    # OXIDIZED_DESIGN #144). glyphtounicode maps asciicircum/asciitilde to ASCII.
     ("t1", 94): "Bruce #2435: ^ mapped as accent U+02C6, not ASCII",
     ("t1", 126): "Bruce #2435: ~ mapped as accent U+02DC, not ASCII",
     ("t2a", 94): "Bruce #2435: ^ mapped as accent U+02C6, not ASCII",

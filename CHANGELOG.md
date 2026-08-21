@@ -11,7 +11,14 @@
     the T1 fontmap — where those slots are Bruce Miller's deliberate accents
     (LaTeXML #2435) — is untouched for normal text. A new `tools/fontmap_drift.py`
     checks our fontmaps against pdftex's `glyphtounicode` golden. Surpasses Perl
-    (verbatim loses ASCII there too); OXIDIZED_DESIGN #143, #723.
+    (verbatim loses ASCII there too); OXIDIZED_DESIGN #144, #723.
+  - **The first paragraph is no longer indented when `\parindent` is zero.** With
+    `\setlength{\parindent}{0pt}` (or `\usepackage{parskip}`), the very first paragraph
+    still picked up the stylesheet's default 2em first-line indent, because the class
+    that suppresses it is recorded by the *previous* `\par` and the first paragraph has
+    none. It is now marked `ltx_noindent` too, matching pdflatex — and only when
+    `\parindent` is genuinely zero, so default documents are unchanged. Surpasses Perl
+    (identical off-by-one); completes the `parskip` fix (OXIDIZED_DESIGN #143, #719).
   - **Pandoc relative-width table columns no longer collapse to a "river of
     characters".** A `p{(\columnwidth - N\tabcolsep) * \real{X}}` column — the width
     format Pandoc emits by default — is a `calc` infix expression the base dimension

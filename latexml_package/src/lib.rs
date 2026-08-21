@@ -1091,34 +1091,30 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
-  // Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
-  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
-  // (FindFile_fallback) does the same. Without this, paper-bundled
-  // class files like `Definitions/mdpi.cls` miss the registered
-  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
-  // producing 50+ cascading undefined errors. Witness 2403.18716.
-  let base_only = base.rsplit_once(['/', '\\']).map_or(base, |(_, b)| b);
-  // Perl pathname_find L383-389: try strict-case match first, then fall back
-  // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
-  // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
-  // Without the fallback, lowercase-input / uppercase-binding pairs miss
-  // and trigger spurious `missing_file` warnings.
+  // NO directory strip: a subdir name like `Definitions/mdpi` or `utils/mathenv` is a file
+  // PATH, not a binding name — dispatch matches a compile-time binding by the class/package
+  // NAME only. A subdir-bundled file with no exact-name binding falls through to the caller's
+  // raw load — a local `.sty` under `localrawstyles` (INCLUDE_STYLES:searchpaths), or, for a
+  // `.cls` with INCLUDE_CLASSES off, to OmniBus — which MATCHES Perl: its FindFile_fallback
+  // (Package.pm:2191) strips VERSION suffixes (neurips_2026->neurips, aastex701->aastex), never
+  // a directory. Witnesses: 2606.02073 (`\RequirePackage{utils/mathenv}` now raw-loads its
+  // local cleveref/theorem defs — a prior directory-strip matched the unrelated CTAN `mathenv`
+  // binding and shadowed the local file); `\documentclass{Definitions/mdpi}` now OmniBuses like
+  // Perl (the strip was a beyond-Perl name-match convenience for a bundled journal-class copy,
+  // dropped to stop conflating a path with a binding name — the `localrawstyles`/INCLUDE_CLASSES
+  // config, not this dispatch, governs whether a local file raw-loads). A future RUNTIME `.rhai`
+  // binding follows the path (`Definitions/mdpi.cls.rhai`) and is looked up there, not here.
+  //
+  // Perl pathname_find L383-389: try strict-case match first, then fall back to case-insensitive
+  // (`m/$i_regex/i` then `@nocase_paths`) — so `\documentclass{jhep}` resolves the
+  // `JHEP.cls.ltxml`-derived binding. Without the fallback, lowercase-input / uppercase-binding
+  // pairs miss and trigger spurious `missing_file` warnings.
   BINDINGS
     .iter()
     .find(|(name, extension, _)| *name == base && *extension == ext)
     .or_else(|| {
-      BINDINGS
-        .iter()
-        .find(|(name, extension, _)| *name == base_only && *extension == ext)
-    })
-    .or_else(|| {
       BINDINGS.iter().find(|(name, extension, _)| {
         name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
-      })
-    })
-    .or_else(|| {
-      BINDINGS.iter().find(|(name, extension, _)| {
-        name.eq_ignore_ascii_case(base_only) && extension.eq_ignore_ascii_case(ext)
       })
     })
     .map(|(_, _, loader)| loader())

@@ -1,0 +1,10 @@
+% Issue #722: the optional [dimen] of \\[20pt] (the extra vertical space LaTeX
+% inserts at a forced line break) is preserved as a themeable CSS custom property
+% --ltx-break-space on ltx:break. Perl parses the glue and drops it (ltx:break has
+% no spacing slot in the schema); we surpass it, default-inert (no rule consumes the
+% variable). Plain \\ and \\[0pt] must stay bare, so only ONE break carries the var.
+\documentclass[12pt]{book}
+\begin{document}
+\title{Alpha\\[20pt] Beta\\ Gamma\\[0pt] Delta}
+\author{a}\date{}\maketitle
+\end{document}

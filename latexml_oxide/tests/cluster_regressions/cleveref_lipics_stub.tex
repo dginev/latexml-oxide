@@ -1,0 +1,10 @@
+% sandbox-arxiv-2606: the lipics-v2021 / IEEEtaes class stubs (OmniBus/IEEEtran
+% LoadClass) replace the paper's real .cls and omitted its \RequirePackage{cleveref},
+% so \cref/\Cref came out Error:undefined. Perl (no lipics/IEEEtaes binding) raw-loads
+% the .cls and gets cleveref -> Rust-only parity gap. The stubs now require cleveref
+% after hyperref. Witnesses 2606.01187 (lipics), 2606.01169 (IEEEtaes).
+\documentclass[cleveref]{lipics-v2021}
+\begin{document}
+\section{Intro}\label{sec:intro}
+See \cref{sec:intro} and \Cref{sec:intro}.
+\end{document}

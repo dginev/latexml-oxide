@@ -169,6 +169,40 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
 
+### CSS themes — `ar5iv.css` is the active surface; base `LaTeXML.css` is upstream
+
+**Policy.** In latexml-oxide we actively develop **`ar5iv.css`** only (repo
+`~/git/ar5iv-css`, mirror workflow: off `main`, rebuild `dist/`, CHANGELOG). The
+base **`LaTeXML.css`** (`latexml_post/resources/CSS/LaTeXML.css`) is a faithful
+copy of Perl LaTeXML's default theme — its rendering behaviour and bugs route
+**upstream to `brucemiller/LaTeXML`**, not here. When a user reports a
+rendering/CSS complaint, first establish which theme; base-CSS issues → upstream.
+
+**Plan (not yet scheduled).** Make `ar5iv.css` the **default** theme (currently the
+base `LaTeXML.css` is default). Tracks the reality that the base theme is upstream
+and unmaintained here.
+
+**Absolute-vs-responsive image sizing — data-model gap (witness #721, ar5iv#83).**
+`\includegraphics[width=7in]` inside a `minipage{.5\textwidth}` renders small, not
+7in. The engine is faithful: it emits the absolute width as the `<img>` attribute
+(`width="698"` ≈ 7in), **byte-identical to Perl 0.8.8** — no engine clamp. The
+clamp is purely CSS and differs by theme: base `LaTeXML.css:639`
+`.ltx_minipage > .ltx_graphics { max-width:100% }` caps to the container (PARITY —
+same rule at Perl `LaTeXML.css:573`); `ar5iv.css` goes further and **fluidizes**
+layout-nested images (`ar5iv.css:1681-1701` orientation rules set `width:auto` +
+max in `--main-width:52rem`; `2291` re-declares the minipage cap), *discarding* the
+absolute width **by design** (responsive column-fill). So neither engine, nor the
+default nor the ar5iv theme, honours the 7in for a nested image. The durable fix is
+**NOT CSS tuning** — it is preserving the sizing **intent** the pipeline currently
+flattens (`to_bp`, `latexml_core/src/util/image.rs:186`, collapses absolute `7in`
+and relative `\textwidth` to the same `pt`). Mark absolute-authored vs
+relative/natural widths (and, longer-term, panel vs sized-box minipages) so the
+theme can *deterministically* honour absolute intents (7in fits `--main-width`)
+instead of guessing by nesting depth — the fragile negation-selector heuristic the
+ar5iv authors flag at `ar5iv.css:1678-1679`. Trackers: upstream data-model discussion
+`brucemiller/LaTeXML#1797` (model + styling for figures in minipages); theme-side
+`ar5iv#83` and `dginev/ar5iv-css#38` (side-by-side minipages).
+
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 
 Issue #191 "support the original latexmlc/latexmlpost options" is **closed**;
@@ -804,6 +838,94 @@ object box and the reference box (or read the factor), compute the ratio, and em
 `transform: scale()` / an SVG viewBox — which needs box measurement the engine does not yet
 expose. Witnesses 2605.02053 / 2605.03024 / 2605.03521 (now convert clean, content preserved).
 Do not mistake the text-height approximation for correct sizing.
+### (not ranked) sandbox-arxiv-2605/2606 cortex corpus triage — deferred items (2026-08-21)
+
+Two waves of subagent triage over the 2605/2606 `oxidized_tex_to_html` error+fatal
+clusters. Landed: PR #720 (scalerel, neurips `\if@anonymous`, NiceTabular, expl3
+`#630`, biblatex loop, `cleanup_scripts` O(M×N)→O(N+M)) + stacked PR (cleveref class
+stubs, AASTeX, subdir/`.sty` binding shadow — no directory stripping in dispatch or
+`find_file_fallback`). Method for every row below: reproduce the witness with
+`--preload=ar5iv.sty --path ar5iv-bindings/originals` (raw-loads bundled **styles**,
+NOT bundled **classes**), then run the same-host Perl `latexml` oracle to classify
+Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90% fleet
+**memory pressure**, not code — is in [[reference_cortex_fleet_memory_pressure_hardening]]
+/ CorTeX#423; the error population is overwhelmingly faithful-Perl-parity.
+
+**A. Genuine Rust-only — worth fixing, needs deeper work:**
+
+- **sn-jnl.cls raw-load drops booktabs + appendix** → `\toprule`/`\midrule`/`\bottomrule`
+  undefined → table breaks → `malformed:ltx:{section,subsection,appendix}` cascade.
+  Witness **2606.00121** (`\documentclass[sn-mathphys]{sn-jnl}`). Method: Perl dep-scans
+  sn-jnl.cls (booktabs loads → 11 clean errors, no cascade); Rust raw-loads the full
+  1765-line sn-jnl.cls but `\usepackage{booktabs}` (sn-jnl.cls:307) + `\usepackage[title]{appendix}`
+  (:303) fail to take effect while flat-block neighbours (multirow:298, rotating:302,
+  xcolor:304, algorithm:308) load fine. Isolated `\usepackage{booktabs}` loads correctly
+  — only the full raw-cls-load drops it. Needs instrumented tracing of raw-load dependency
+  handling (`content.rs:1993` `maybe_require_dependencies`, ~10-witness guard); a blind
+  patch is reckless. Min-repro: `\documentclass[sn-mathphys]{sn-jnl}` (real .cls present)
+  + a `\toprule`/`\bottomrule` tabular → Rust undefined; generic class + same
+  `\usepackage{booktabs}` → 0 errors.
+- **subdir/`.sty` binding shadow — LANDED (no directory stripping anywhere).** A paper-local
+  `\usepackage{subdir/<name>}` whose basename collided with a bound CTAN package (e.g.
+  `utils/mathenv` → the `mathenv` binding, `latexml_package/src/package/mathenv_sty.rs`, a
+  no-op) had its directory stripped at TWO sites — the package dispatcher (`lib.rs`) and
+  `find_file_fallback`/`_exists` (`content.rs`, the `BasenameOnly` fallback) — so the binding
+  shadowed the local file and its cleveref/theorem defs never loaded. Perl never strips a
+  directory (`Package.pm:2191` FindFile_fallback strips VERSION suffixes only). Fix: dropped
+  the strip at BOTH sites — `subdir/<name>` is a PATH, so the local file raw-loads under
+  `localrawstyles`. The retired `find_file_fallback` `BasenameOnly` convenience (subdir copies
+  of KNOWN packages — 2105.02087 `misc/ieeetran`, 2405.18387 `assets/equations`) now falls to
+  OmniBus/raw-load like Perl (no test guarded them; full-suite blast radius nil). Witness
+  **2606.02073** (its own `\cref` is also defined via the icml binding, so the corpus error
+  there was already masked — the shadow is proven by the synthetic guards). Guards:
+  `cluster_package_guards.rs::subdir_dispatch_no_strip` (`.sty` raw-loads, `.cls` stays OmniBus
+  under classes-off), both driven through `convert_to_xml_ar5iv` (the real fleet config).
+
+**B. Beyond-Perl levers — policy call (need an OXIDIZED_DESIGN entry + Perl upstream):**
+
+- **OmniBus frontmatter vocabulary extension** (~150 docs, the biggest cluster). Bundled
+  journal `.cls` (INCLUDE_CLASSES defaults false → OmniBus fallback, `content.rs:2457-2622`,
+  faithful port of Perl `LoadClass`) leaves `\orcid \contribution {contribution} \ack
+  \correspondence \aff \lefttitle \righttitle \reportnumber \data \checkdata
+  \restartappendixnumbering` undefined. **Perl fails identically** (Rust slightly ahead:
+  3 vs 5 errors on the witness). ~15+ distinct bundled classes. Witnesses: 2606.01241
+  (xiaomiev: contribution/correspondence/checkdata), 2606.00645 (jfm: aff/lefttitle/righttitle),
+  2606.04098 (iopjournal: data), 2606.00213 (pasj02: orcid). Lever: extend OmniBus's generic
+  vocabulary ONLY for commands with clean `\lx@add@*` mappings (`\aff`→`\lx@add@affiliation`,
+  `\reportnumber`→`\lx@add@pubnote`, `\ack`→`Let \acknowledgments`); gobble the
+  running-head/presentational ones — **`\lefttitle`/`\righttitle` are running-head / journal-name
+  registers, do NOT route to title**; `\data` embeds a HuggingFace `\includegraphics`. Single
+  edit to `omnibus_cls.rs`, NOT 15 class bindings; do NOT raw-load the 2000-line classes (the
+  cascade OmniBus exists to prevent). Must upstream the same to Perl's `OmniBus.cls.ltxml` to
+  stay parity. CUP family (jfm/iau/pas) subsumed here.
+- **native newunicodechar binding** (~50 docs, ~100 occurrences). `\newunicodechar{<non-ASCII>}{repl}`
+  → both engines take the 8-bit path (UTF-8 char = one Unicode token → length 1 →
+  `\nuc@onebyteerr` → `Error:latex:(newunicodechar) ASCII character requested`). **Perl
+  byte-identical**, non-fatal (char passes through; the mapping is DROPPED by both).
+  Witnesses: 2606.00241 (icml2026.sty), 2606.00683 (colm2024), 2606.00739 (acl.sty).
+  Min-repro: `\usepackage{newunicodechar}\newunicodechar{，}{,}` (， = U+FF0C). Lever
+  (separate branch, upstream to Perl): a native binding that registers the
+  Unicode-char→replacement mapping and suppresses the spurious error.
+
+**C. Pure Perl-parity — record only (Perl-origin; belongs in KNOWN_PERL_ERRORS too):**
+
+- **forest** `Error:undefined:{forest}` — line-for-line port of ar5iv `forest.sty.ltxml`,
+  non-fatal (body swallowed via `discard_env`, valid output). Witnesses 2605.07358/12090/12792.
+  Shared helper `discard_env.rs` also backs nicematrix (math family)/diagrams/pb-diagram.
+  Whole-family lever (policy): `Error!`→`Warn!` at `discard_env.rs:55`.
+- **malformed:ltx:para** — `\begin{center}` inside `\begin{titlepage}` with an abstract +
+  multi-paragraph flow → `insertBlock` fallback forces `ltx:block` (`TeX_Box.pool.ltxml:516`)
+  which can't hold `ltx:para`/`ltx:abstract`. Perl identical (oracle-verified). Witnesses
+  2605.00729/00750/12448.
+- **malformed:ltx:section/subsection (parity subset — the majority)** — broken source
+  (unclosed lists/boxes, broken alignments) traps sectioning inside an open container; a
+  CASCADE, not a sectioning bug. Perl identical. Witnesses 2606.00338 (unclosed `\squishlist`
+  `\begin{list}`), 2606.00679 (`\ytableaushort` inside an `eqnarray*` alignment).
+- **graphicx-in-neurips** — author-customized `neurips_2026.sty` (does `\usepackage{graphicx}`)
+  is discarded by the neurips-binding interception (#690); `\includegraphics`/`\rotatebox`
+  undefined + a downstream `_` cascade. Perl fails identically (22 errors; version-suffix
+  fallback → `neurips.sty.ltxml`, which also lacks graphicx). Witness 2605.21325. #690 brought
+  Rust *to* Perl parity (it was accidentally better before).
 
 ## Parked families — pointers, not content
 

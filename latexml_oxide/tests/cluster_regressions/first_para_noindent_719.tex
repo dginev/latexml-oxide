@@ -1,0 +1,12 @@
+\documentclass[12pt]{article}
+% Issue #719 (witness: user MWE): with \parindent set to 0pt, the FIRST
+% paragraph must render without a first-line indent, matching pdflatex. Both
+% engines only mark the SECOND-and-later paragraphs `ltx_noindent` (the class is
+% recorded by the PREVIOUS \par), so the first paragraph was left un-marked and
+% picked up the stylesheet's default 2em first-line indent. Surpass Perl.
+\setlength{\parindent}{0pt}
+\begin{document}
+First line
+
+second lines
+\end{document}

@@ -463,7 +463,7 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
       MergeFont!(family => "typewriter");
-      // Surpass Perl (OXIDIZED_DESIGN #143, issue #723): keep the identity ASCII
+      // Surpass Perl (OXIDIZED_DESIGN #144, issue #723): keep the identity ASCII
       // fontmap live THROUGH digestion, not just during the read. `begin_semiverbatim`
       // sets it, but `end_semiverbatim` pops it before the argument digests, so under
       // a non-default encoding (e.g. T1, where slots 94/126 are Bruce's accent glyphs
@@ -535,7 +535,7 @@ LoadDefinitions!({
       bgroup();
       MergeFont!(family => "typewriter");
       // Keep ASCII live through digestion — see Verbatim above (OXIDIZED_DESIGN
-      // #143, issue #723): this is exactly the reported case, a HyperVerbatim URL
+      // #144, issue #723): this is exactly the reported case, a HyperVerbatim URL
       // argument whose `~` decoded to U+02DC under T1.
       MergeFont!(encoding => "ASCII"); },
     after_digest => {

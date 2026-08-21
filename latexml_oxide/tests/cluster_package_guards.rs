@@ -440,6 +440,74 @@ mod expl3_nested_raw_load_catcodes {
   }
 }
 
+mod cleveref_class_stubs {
+  //! lipics-v2021 and IEEEtaes are OmniBus/IEEEtran stub bindings that replace the
+  //! paper's real `.cls` and omitted its `\RequirePackage{cleveref}`, so `\cref`/`\Cref`
+  //! came out `Error:undefined`. Perl (no lipics/IEEEtaes binding) raw-loads the `.cls`
+  //! and gets cleveref, so this was a Rust-only parity gap. The stubs now require
+  //! cleveref after hyperref. Witnesses 2606.01187 (lipics), 2606.01169 (IEEEtaes).
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn lipics_stub_requires_cleveref() {
+    // Red before the fix: `\cref`/`\Cref` come out Error:undefined; green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/cleveref_lipics_stub.tex");
+  }
+}
+
+mod aastex_contribution_appendix {
+  //! aastex701/631/7 digit-strip to the aastex-v5 `aastex.cls.ltxml` shim, which predates
+  //! aastex7, so the `{contribution}` env and `\restartappendixnumbering` came out
+  //! `Error:undefined` (Perl errors identically — this is a beyond-Perl addition in the
+  //! `aas_support_sty.rs` home that already carries the `\uat` beyond-Perl addition).
+  //! Witnesses 2606.03375/04105 (contribution), 2606.00569/03850/07452 (restartappendixnumbering).
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn aastex_contribution_and_restartappendix_defined() {
+    // Red before the fix: `{contribution}` / `\restartappendixnumbering` Error:undefined;
+    // green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/aastex_contribution.tex");
+  }
+}
+
+mod subdir_dispatch_no_strip {
+  //! Neither the package dispatcher (latexml_package::lib) nor `find_file_fallback`
+  //! (latexml_core::binding::content) strips a leading directory any more, so `subdir/<name>`
+  //! is a file PATH, not a binding name. Both tests drive the REAL fleet config via
+  //! `convert_to_xml_ar5iv` — `ar5iv.sty` sets INCLUDE_STYLES="searchpaths" (`localrawstyles`:
+  //! raw-load local `.sty`, classes OFF), the exact `cortex_worker --preload=ar5iv.sty` route.
+  use crate::cluster::convert_to_xml_ar5iv;
+
+  /// A paper-local `subdirdispatch/mathenv.sty`, whose basename collides with the CTAN `mathenv`
+  /// binding, must raw-load under `localrawstyles` (via SOURCEDIRECTORY), not be shadowed by a
+  /// directory-stripped binding match — the 2606.02073 cleveref/theorem bug. RED before the drop
+  /// (strip -> `mathenv` binding no-op -> the local `\subdirstymarker` never defined), GREEN
+  /// after. Guards both the dispatch strip and the `find_file_fallback` BasenameOnly strip stay
+  /// gone.
+  #[test]
+  fn subdir_sty_raw_loads_not_shadowed() {
+    let xml = convert_to_xml_ar5iv("tests/cluster_regressions/subdir_sty_not_shadowed.tex");
+    assert!(
+      xml.contains("SUBDIRSTYLOADED"),
+      "subdirdispatch/mathenv.sty should raw-load its local def (not be shadowed by the CTAN \
+       mathenv binding):\n{xml}",
+    );
+  }
+
+  /// INCLUDE_CLASSES stays disabled under `localrawstyles` (styles-only): a paper-local subdir
+  /// `.cls` must NOT raw-load — it falls to OmniBus, so its `\subdirclsmarker` stays undefined
+  /// and SUBDIRCLSLOADED never reaches the output. (Enabling `rawclasses` would flip this.)
+  #[test]
+  fn subdir_cls_does_not_raw_load_include_classes_off() {
+    let xml = convert_to_xml_ar5iv("tests/cluster_regressions/subdir_cls_not_rawloaded.tex");
+    assert!(
+      !xml.contains("SUBDIRCLSLOADED"),
+      "subdir `.cls` raw-loaded despite INCLUDE_CLASSES off (localrawstyles is styles-only):\n{xml}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).

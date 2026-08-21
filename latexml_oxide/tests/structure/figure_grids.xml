@@ -10,38 +10,38 @@
   <figure xml:id="fig1">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g1"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g2"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig2">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=342.15474pt,keepaspectratio=true" xml:id="g3"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=342.15474pt,keepaspectratio=true" xml:id="g4"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig3">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g5"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g6"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g7"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g8"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig4">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g9"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g10"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g11"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g12"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g13"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g14"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g15"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g16"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g17"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig5">
@@ -49,22 +49,22 @@
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g19"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g20"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g21"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g22"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g23"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g24"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g25"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g26"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g27"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g28"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g29"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g30"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g31"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g32"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g33"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig6">
@@ -72,27 +72,27 @@
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g35"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g36"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g37"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g38"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g39"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g40"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g41"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig7">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g42"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g43"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g44"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g45"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g46"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g47"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g48"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g49"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig8">
@@ -101,31 +101,31 @@
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g52"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g53"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g54"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g55"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g56"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g57"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g58"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g59"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g60"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g61"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g62"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g63"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g64"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g65"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g66"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g67"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g68"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g69"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g70"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g71"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g72"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g73"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g74"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig9">
@@ -135,42 +135,42 @@
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g78"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g79"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g80"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g81"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g82"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g83"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g84"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g85"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g86"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g87"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g88"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g89"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g90"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g91"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g92"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g93"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g94"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g95"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g96"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g97"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g98"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g99"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g100"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g101"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g102"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g103"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g104"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g105"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g106"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g107"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g108"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g109"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g110"/>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig10">
@@ -192,7 +192,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(b)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig11">
@@ -205,7 +205,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(a)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F2.sf2">
       <tags>
         <tag><text fontsize="90%">(b)</text></tag>
@@ -215,7 +215,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(b)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig12">
@@ -237,7 +237,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(b)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F3.sf3">
       <tags>
         <tag><text fontsize="90%">(c)</text></tag>
@@ -256,7 +256,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(d)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(d)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig13">
@@ -287,7 +287,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(c)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(c)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F4.sf4">
       <tags>
         <tag><text fontsize="90%">(d)</text></tag>
@@ -315,7 +315,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(f)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(f)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F4.sf7">
       <tags>
         <tag><text fontsize="90%">(g)</text></tag>
@@ -343,7 +343,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(i)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(i)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig14">
@@ -383,7 +383,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(d)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(d)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F5.sf5">
       <tags>
         <tag><text fontsize="90%">(e)</text></tag>
@@ -420,7 +420,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(h)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(h)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F5.sf9">
       <tags>
         <tag><text fontsize="90%">(i)</text></tag>
@@ -457,7 +457,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(l)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(l)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F5.sf13">
       <tags>
         <tag><text fontsize="90%">(m)</text></tag>
@@ -494,7 +494,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(p)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(p)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig15">
@@ -534,7 +534,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(d)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(d)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F6.sf5">
       <tags>
         <tag><text fontsize="90%">(e)</text></tag>
@@ -571,7 +571,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(h)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(h)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig16">
@@ -593,7 +593,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(b)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F7.sf3">
       <tags>
         <tag><text fontsize="90%">(c)</text></tag>
@@ -612,7 +612,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(d)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(d)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F7.sf5">
       <tags>
         <tag><text fontsize="90%">(e)</text></tag>
@@ -631,7 +631,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(f)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(f)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F7.sf7">
       <tags>
         <tag><text fontsize="90%">(g)</text></tag>
@@ -650,7 +650,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(h)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(h)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig17">
@@ -699,7 +699,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(e)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(e)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F8.sf6">
       <tags>
         <tag><text fontsize="90%">(f)</text></tag>
@@ -745,7 +745,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(j)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(j)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F8.sf11">
       <tags>
         <tag><text fontsize="90%">(k)</text></tag>
@@ -791,7 +791,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(o)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(o)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F8.sf16">
       <tags>
         <tag><text fontsize="90%">(p)</text></tag>
@@ -837,7 +837,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(t)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(t)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F8.sf21">
       <tags>
         <tag><text fontsize="90%">(u)</text></tag>
@@ -883,7 +883,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(y)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(y)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig18">
@@ -941,7 +941,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(f)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(f)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf7">
       <tags>
         <tag><text fontsize="90%">(g)</text></tag>
@@ -996,7 +996,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(l)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(l)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf13">
       <tags>
         <tag><text fontsize="90%">(m)</text></tag>
@@ -1051,7 +1051,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(r)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(r)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf19">
       <tags>
         <tag><text fontsize="90%">(s)</text></tag>
@@ -1106,7 +1106,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(x)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(x)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf25">
       <tags>
         <tag><text fontsize="90%">(y)</text></tag>
@@ -1161,7 +1161,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(ad)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(ad)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <figure align="center" class="ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf31">
       <tags>
         <tag><text fontsize="90%">(ae)</text></tag>
@@ -1216,7 +1216,7 @@
       <toccaption class="ltx_centering"><tag close=" ">(aj)</tag>subcaption</toccaption>
       <caption class="ltx_centering"><tag close=" "><text fontsize="90%">(aj)</text></tag><text fontsize="90%">subcaption</text></caption>
     </figure>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig19">
@@ -1226,18 +1226,18 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g112"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig20">
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=273.72482pt,keepaspectratio=true" xml:id="g113"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=273.72482pt,keepaspectratio=true" xml:id="g114"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig21">
@@ -1247,14 +1247,14 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g116"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g117"/>
     </block>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g118"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig22">
@@ -1267,7 +1267,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g121"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g122"/>
     </block>
@@ -1277,7 +1277,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g124"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g125"/>
     </block>
@@ -1287,7 +1287,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g127"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig23">
@@ -1303,7 +1303,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g131"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g132"/>
     </block>
@@ -1316,7 +1316,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g135"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g136"/>
     </block>
@@ -1329,7 +1329,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g139"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g140"/>
     </block>
@@ -1342,7 +1342,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g143"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig24">
@@ -1358,7 +1358,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g147"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g148"/>
     </block>
@@ -1371,7 +1371,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g151"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig25">
@@ -1381,28 +1381,28 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g153"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g154"/>
     </block>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g155"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g156"/>
     </block>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g157"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g158"/>
     </block>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g159"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig26">
@@ -1421,7 +1421,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g164"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g165"/>
     </block>
@@ -1437,7 +1437,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g169"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g170"/>
     </block>
@@ -1453,7 +1453,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g174"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g175"/>
     </block>
@@ -1469,7 +1469,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g179"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g180"/>
     </block>
@@ -1485,7 +1485,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g184"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
   <figure xml:id="fig27">
@@ -1507,7 +1507,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g190"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g191"/>
     </block>
@@ -1526,7 +1526,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g196"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g197"/>
     </block>
@@ -1545,7 +1545,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g202"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g203"/>
     </block>
@@ -1564,7 +1564,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g208"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g209"/>
     </block>
@@ -1583,7 +1583,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g214"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g215"/>
     </block>
@@ -1602,7 +1602,7 @@
     <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g220"/>
     </block>
-    <break class="ltx_centering"/>
+    <break class="ltx_centering" cssstyle="--ltx-break-space:5.7pt"/>
   </figure>
   <pagination role="newpage"/>
 </document>

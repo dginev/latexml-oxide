@@ -3417,10 +3417,23 @@ LoadDefinitions!({
   //   - no context or _CaptureBlock_: skip
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
-  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
+  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document, args] {
     if lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
+      // OXIDIZED_DESIGN surpass-Perl (#722): the optional [Glue] of `\\[20pt]` is the
+      // extra vertical space LaTeX inserts at the break. Perl parses it and drops it
+      // (ltx:break has no spacing slot in the schema). We PRESERVE it as a themeable CSS
+      // custom property `--ltx-break-space` on the break; NO default rule consumes it, so
+      // default rendering is byte-identical to a plain break — a theme (ar5iv) may map it
+      // to margin/padding. Plain `\\` has no [Glue] (arg absent) so it stays attribute-free.
+      // args[1] is the [Glue] (args[0] is the OptionalMatch:* star).
+      let break_attrs = args
+        .get(1)
+        .and_then(|a| a.as_ref())
+        .map(|g| g.to_attribute())
+        .filter(|v| !v.is_empty() && v != "0.0pt" && v != "0pt")
+        .map(|v| map!("cssstyle" => s!("--ltx-break-space:{v}")));
       if let Some(context) = document.get_element() {
         let tag = document::get_node_qname(&context);
         let capture_block = pin!("ltx:_CaptureBlock_");
@@ -3432,11 +3445,11 @@ LoadDefinitions!({
             if document::get_node_qname(&parent) == capture_block {
               document.maybe_close_element("ltx:p")?;
             } else if document::can_contain(&context, "ltx:break") {
-              document.insert_element("ltx:break", Vec::new(), None)?;
+              document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
             }
           }
         } else if document::can_contain(&context, "ltx:break") {
-          document.insert_element("ltx:break", Vec::new(), None)?;
+          document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
         }
       }
       // else: no context => skip
@@ -6014,7 +6027,7 @@ LoadDefinitions!({
     "\\@internal@verb{}{}{}",
     r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi"
   );
-  // `encoding => "ASCII"` (OXIDIZED_DESIGN #143, issue #723): `\verb`'s body is
+  // `encoding => "ASCII"` (OXIDIZED_DESIGN #144, issue #723): `\verb`'s body is
   // literal catcode-12 text, so under T1 a `~`/`^` would decode to Bruce Miller's
   // accent glyphs U+02DC/U+02C6 (#2435). Verbatim wants them ASCII; the identity
   // `ASCII` fontmap keeps `~`/`^` literal while `typewriter` still styles the run.
@@ -10710,7 +10723,7 @@ LoadDefinitions!({
     "\\normalfont",
     "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
-  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #143, issue #723): a verbatim `~`/`^`
+  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
   // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
   // Bruce Miller's deliberate accent glyphs U+02DC/U+02C6 (LaTeXML #2435). In a
   // verbatim/URL those must stay ASCII. Selecting the identity `ASCII` fontmap for

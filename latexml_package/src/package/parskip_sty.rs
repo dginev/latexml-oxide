@@ -15,6 +15,10 @@ LoadDefinitions!({
   // machinery flips every paragraph to the `ltx_noindent` class when the
   // `\parindent` register is zero (`tex_paragraph.rs`, the boolean no-indent
   // toggle), exactly as a manual `\setlength{\parindent}{0pt}` already does.
+  // The FIRST paragraph joined this only with issue #719 (same reporter): the
+  // deferred `\par` mechanism records the class for the NEXT paragraph, so
+  // before #719 the first paragraph kept the stylesheet's default indent.
+  // Guarded by `parskip_test` (all three paragraphs now `ltx_noindent`).
   // `\parskip` is set for faithfulness to the real package (its glue is not
   // typeset into HTML by LaTeXML — neither here nor for a manual `\setlength`).
   //

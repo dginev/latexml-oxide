@@ -252,6 +252,19 @@ LoadDefinitions!({
   // ptephy's argument-less form).
   DefMacro!("\\ack{}", "\\begin{acknowledgements}#1\\end{acknowledgements}");
 
+  // AASTeX 7 `{contribution}` — author-contribution statement placed in the document
+  // body just before `{acknowledgments}` (real aastex7/aastex701.cls L7903 renders it as
+  // `\section*{Author contributions}` + body). Map to the established acknowledgement-block
+  // idiom (cf. `\acknowledgements` above; aa_support/acmart/JHEP), NOT title-block frontmatter.
+  // BEYOND PERL: the aastex-v5 `aastex.cls.ltxml` shim (matched via the version-suffix fallback
+  // aastex701->aastex) predates aastex7, so Perl also errors `undefined:{contribution}`.
+  // Witnesses 2606.03375, 2606.04105 (aastex701).
+  DefConstructor!("\\contribution", "<ltx:acknowledgements name='Author contributions'>");
+  DefMacro!("\\endcontribution", "");
+  // AASTeX draft `\watermark{DRAFT}` — page-header decoration only; gobble. BEYOND PERL.
+  // Witness 2606.04105.
+  DefMacro!("\\watermark{}", "");
+
   // \uat{name}{id} — Unified Astronomy Thesaurus term link. Used in
   // \keywords by AASTeX 6.3+. Round-34 surpass: emit as a clickable
   // link to https://astrothesaurus.org/uat/<id> so the UAT id is
@@ -291,6 +304,18 @@ LoadDefinitions!({
       Some(ExpandableOptions { scope: Some(Scope::Global), ..Default::default() }),
     )?;
   });
+
+  // AASTeX 6.3+/7 `\restartappendixnumbering` (== `\apptablenumbers`, aastex701.cls L13630 /
+  // aastex631.cls L7206): restart table/figure/equation numbering within each appendix
+  // section, prefixed by the lettered section number. Faithful port of `\apptablenumbers`
+  // (drops the presentational `\fnum@`/`\theH` lines). BEYOND PERL: absent from the aastex-v5
+  // shim, so Perl also errors `undefined:\restartappendixnumbering`. Witnesses 2606.00569,
+  // 2606.03850, 2606.07452.
+  DefMacro!("\\apptablenumbers",
+    "\\setcounter{table}{0}\\setcounter{figure}{0}\\setcounter{equation}{0}\
+     \\def\\thetable{\\thesection\\arabic{table}}\
+     \\def\\thefigure{\\thesection\\arabic{figure}}");
+  Let!("\\restartappendixnumbering", "\\apptablenumbers");
 
   // 2.12 Equations
   DefMacro!("\\mathletters", "\\lx@equationgroup@subnumbering@begin");

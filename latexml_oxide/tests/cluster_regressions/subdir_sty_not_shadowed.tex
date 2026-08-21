@@ -1,0 +1,8 @@
+% The subdir-dispatch drop: `\usepackage{subdirdispatch/mathenv}` names a paper-local
+% subdirdispatch/mathenv.sty. The name collides with the CTAN `mathenv` binding; before the
+% directory-strip was dropped, dispatch stripped to `mathenv`, matched that binding (a no-op),
+% and the local file never loaded -> \subdirstymarker undefined (like 2606.02073's cleveref).
+% Now the local file raw-loads under localrawstyles/INCLUDE_STYLES.
+\documentclass{article}
+\usepackage{subdirdispatch/mathenv}
+\begin{document}\subdirstymarker\end{document}

@@ -5352,7 +5352,80 @@ columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (
 `p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
 proportional 96.3pt / 224.7pt.
 
-### 143. Verbatim contexts keep `~`/`^` ASCII under T1 (the fontmap accent stays for normal text)
+### 142. `\\[dimen]` optional glue preserved as a themeable `--ltx-break-space` CSS variable
+
+**Perl** LaTeXML's `\lx@newline OptionalMatch:* [Glue]` constructor parses the optional length of
+`\\[20pt]` (the extra vertical space LaTeX inserts at a forced line break) and then **drops it**:
+it emits a bare `<ltx:break/>`, and `ltx:break` has no spacing attribute in the schema (`break_model
+= empty`). So the author's requested gap is lost in HTML while the PDF keeps it. latexml-oxide
+reproduced this exactly (SHARED-FAILURE; verified same-host — byte-identical core XML, both a bare
+`<break/>`).
+
+**Perl behavior**: `\\[20pt]` → `<break/>` (the 20pt is discarded).
+**Rust behavior**: the constructor reads the optional `[Glue]` (`args[1]`) and, when non-zero, sets
+`cssstyle="--ltx-break-space:<pt>"` on the break, so `\\[20pt]` → `<break
+cssstyle="--ltx-break-space:20.0pt"/>` → `<br class="ltx_break" style="--ltx-break-space:20.0pt;">`.
+Plain `\\` (no optional) and `\\[0pt]` stay bare. **No default CSS rule consumes the variable**, so
+default rendering is byte-identical to Perl's bare break — the value is *preserved for a theme to opt
+into* (e.g. ar5iv mapping it to a margin), not acted on.
+
+**Why**: the same "preserve intent in the data model, let the theme decide" principle as the #721
+image-sizing discussion — the engine stays faithful (emits the value, changes nothing visually) and
+spacing policy lives in the theme layer. A default-inert attribute is a strict superset of the
+parity output.
+
+**Witnesses**: html_feedback #722 (a `\title{… \\[20pt] {\small …}}` whose 20pt gap vanished in HTML).
+
+**Upstream**: worth raising against `brucemiller/LaTeXML` (the drop is upstream; a `--ltx-break-space`
+convention or a break spacing attribute would let both engines carry it).
+
+**Guards**: `06_cluster_regressions::cluster_break_optional_glue_722` — `\\[20pt]` carries
+`--ltx-break-space:20.0pt` on its break and exactly one break in the document does (plain `\\` and
+`\\[0pt]` stay bare).
+
+### 143. The FIRST paragraph is `ltx_noindent` when `\parindent` is zero
+
+**Perl** LaTeXML's `\par` (`TeX_Paragraph.pool.ltxml` L131-137) marks a paragraph `ltx_noindent`
+via a *deferred* flag: the `\par` that closes paragraph N reads `next_para_class` (set by the
+`\par` that closed N-1) and records a fresh flag for N+1, keyed on `\parindent==0` at close time.
+The mechanism models the fact that a paragraph's indent is fixed by `\parindent` when it *begins*,
+approximated by `\parindent` at the *previous* `\par`. But the very first body paragraph has no
+prior `\par`, so it is never marked — even under `\setlength{\parindent}{0pt}`. It then inherits
+the stylesheet's default first-line indent (`ltx-article.css` `.ltx_para > .ltx_p:first-child {
+text-indent:2em }`), rendering visibly indented where pdflatex is flush-left. latexml-oxide
+reproduced Perl exactly (SHARED-FAILURE; verified same-host — byte-identical XML, first `<para>`
+un-classed in both).
+
+**Perl behavior**: with `\parindent=0`, the first paragraph is un-classed → indented 2em by CSS;
+the 2nd+ paragraphs are `ltx_noindent`.
+**Rust behavior**: `\par`'s `after_digest` (`tex_paragraph.rs`) flags the closing paragraph a
+first-paragraph candidate when `\parindent==0` and no deferred class applies; the constructor then
+stamps `ltx_noindent` iff the paragraph is *structurally* first — no preceding `ltx:para` sibling
+(`document::helpers::preceding_para_sibling`, shared with `prune_empty_para`). The structural test
+matters: a state one-shot ("first `\par` seen") is consumed by a begin-document `\par` before the
+first content paragraph under the no-dump / freshly-generated-dump sequence (the CI path), so the
+first landing reverted there; the DOM position is robust to how many stray `\par`s fired. The stamp
+fires only when `\parindent` is genuinely zero — where `ltx_noindent` is correct — so
+default-`\parindent` documents are byte-identical to before, and only the first paragraph is
+touched (later paragraphs keep the unchanged deferred mechanism).
+
+**Why**: a kernel-quality off-by-one, not a TeX-semantics change — real LaTeX+`\parindent=0`
+leaves the first line flush too. The fix halos across every `\parindent=0` document (manual
+`\setlength`, `parskip`, KOMA `parskip=`, …). Completes #106's `parskip` surpass, whose first
+paragraph was the residual gap.
+
+**Witnesses**: issue #719 (reporter nasser1), the first-paragraph tail of #558/#106 (same
+reporter). MWE: `\setlength{\parindent}{0pt}` + two paragraphs → both `ltx_noindent`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same off-by-one upstream).
+
+**Guards**: `06_cluster_regressions::cluster_first_para_noindent_719` (first paragraph
+`ltx_noindent` under `\parindent=0`; a control fixture confirms default `\parindent` marks no
+paragraph); `cluster_first_para_noindent_nodump_719` (the same via `LATEXML_NODUMP=1` subprocess —
+guards the exact stray-`\par` path that broke the state-flag first landing);
+`50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
+
+### 144. Verbatim contexts keep `~`/`^` ASCII under T1 (the fontmap accent stays for normal text)
 
 **Background.** LaTeXML's `t1.fontmap` (and `t2a`/`t2b`/`t2c`) *deliberately* map slot 126 (`~`)
 to `U+02DC` SMALL TILDE and slot 94 (`^`) to `U+02C6` MODIFIER LETTER CIRCUMFLEX — Bruce Miller,
