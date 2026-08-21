@@ -809,7 +809,8 @@ Do not mistake the text-height approximation for correct sizing.
 Two waves of subagent triage over the 2605/2606 `oxidized_tex_to_html` error+fatal
 clusters. Landed: PR #720 (scalerel, neurips `\if@anonymous`, NiceTabular, expl3
 `#630`, biblatex loop, `cleanup_scripts` O(M×N)→O(N+M)) + stacked PR (cleveref class
-stubs, AASTeX). Method for every row below: reproduce the witness with
+stubs, AASTeX, subdir/`.sty` binding shadow — no directory stripping in dispatch or
+`find_file_fallback`). Method for every row below: reproduce the witness with
 `--preload=ar5iv.sty --path ar5iv-bindings/originals` (raw-loads bundled **styles**,
 NOT bundled **classes**), then run the same-host Perl `latexml` oracle to classify
 Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90% fleet
@@ -830,14 +831,21 @@ Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90%
   patch is reckless. Min-repro: `\documentclass[sn-mathphys]{sn-jnl}` (real .cls present)
   + a `\toprule`/`\bottomrule` tabular → Rust undefined; generic class + same
   `\usepackage{booktabs}` → 0 errors.
-- **cleveref Mechanism B — subdir/`.sty` dispatch shadow** (landed separately IF suite
-  passes; else deferred). `\RequirePackage{utils/mathenv}` (paper-local `utils/mathenv.sty`
-  that `\RequirePackage`s cleveref) → `lib.rs:1100` strips the dir → matches the CTAN
-  `mathenv` binding (mdwtools) → no-ops → local file never loads → `\cref`/`{theorem}`
-  undefined. Witness **2606.02073**. Perl doesn't strip → raw-loads local → clean. Fix:
-  restrict the dir-strip to `.cls` only; GATE on `cargo nextest run --workspace` (changes
-  global package resolution). General: any `subdir/<name>.sty` colliding with a bound CTAN
-  package name.
+- **subdir/`.sty` binding shadow — LANDED (no directory stripping anywhere).** A paper-local
+  `\usepackage{subdir/<name>}` whose basename collided with a bound CTAN package (e.g.
+  `utils/mathenv` → the `mathenv` binding, `latexml_package/src/package/mathenv_sty.rs`, a
+  no-op) had its directory stripped at TWO sites — the package dispatcher (`lib.rs`) and
+  `find_file_fallback`/`_exists` (`content.rs`, the `BasenameOnly` fallback) — so the binding
+  shadowed the local file and its cleveref/theorem defs never loaded. Perl never strips a
+  directory (`Package.pm:2191` FindFile_fallback strips VERSION suffixes only). Fix: dropped
+  the strip at BOTH sites — `subdir/<name>` is a PATH, so the local file raw-loads under
+  `localrawstyles`. The retired `find_file_fallback` `BasenameOnly` convenience (subdir copies
+  of KNOWN packages — 2105.02087 `misc/ieeetran`, 2405.18387 `assets/equations`) now falls to
+  OmniBus/raw-load like Perl (no test guarded them; full-suite blast radius nil). Witness
+  **2606.02073** (its own `\cref` is also defined via the icml binding, so the corpus error
+  there was already masked — the shadow is proven by the synthetic guards). Guards:
+  `cluster_package_guards.rs::subdir_dispatch_no_strip` (`.sty` raw-loads, `.cls` stays OmniBus
+  under classes-off), both driven through `convert_to_xml_ar5iv` (the real fleet config).
 
 **B. Beyond-Perl levers — policy call (need an OXIDIZED_DESIGN entry + Perl upstream):**
 
