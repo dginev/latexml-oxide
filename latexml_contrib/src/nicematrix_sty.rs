@@ -17,11 +17,16 @@ LoadDefinitions!({
   // DefConstructorI entries wrapping `\begin{<name>}`. Each emits
   // `<ltx:note role='nicematrix-placeholder'>(<name>)</ltx:note>` and discards the environment body
   // via discard_env_body. Paired `\end<name>` macros stay as `\relax`.
-  DefConstructor!(T_CS!("\\begin{NiceTabular}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceTabular (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceTabular", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceTabular", "\\relax", locked => true);
+  // NiceTabular[opts]{colspec}[opts] is nicematrix's tabular-like environment; the
+  // real nicematrix.sty (L3806-3841) reduces it to \NiceArray{colspec} under a
+  // text-mode tabular flag. Degrade faithfully to \tabular with the SAME colspec,
+  // dropping the nicematrix-only [opts] — recovers real tables (witnesses 2605.08776,
+  // 2605.13835, 2605.18423) instead of discarding the body + Error:undefined.
+  // Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors here; mirror this
+  // upgrade there for strict Rust<->ar5iv parity. The math-mode Nice* matrix family
+  // below stays a placeholder stub (no faithful text reduction). OXIDIZED_DESIGN divergence.
+  DefMacro!("\\NiceTabular[]{}[]", "\\tabular{#2}", locked => true);
+  DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
   DefConstructor!(T_CS!("\\begin{NiceArray}"), None,
     "<ltx:note role=\"nicematrix-placeholder\">NiceArray (nicematrix)</ltx:note>",
     bounded => true, mode => "text", locked => true,

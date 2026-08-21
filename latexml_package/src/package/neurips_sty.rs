@@ -12,6 +12,13 @@ LoadDefinitions!({
   DefConditional!("\\if@preprint");
   DefConditional!("\\if@submission");
   DefConditional!("\\if@final");
+  // neurips_2026.sty L72 adds \newif\if@anonymous\@anonymoustrue (toggled false by
+  // preprint/final). The binding intercepts the versioned name and never creates it,
+  // so papers copying the style's \@maketitle (which branches on \if@anonymous) hit
+  // Error:undefined:\if@anonymous — a Rust-only divergence: Perl 0.8.8 converts the
+  // same paper without it. Default false = authors shown (correct for preprint/final
+  // arXiv uploads). Witness 2605.17249.
+  DefConditional!("\\if@anonymous");
   DeclareOption!("final", {
     assign_value("neurips_final", Stored::from(1), Some(Scope::Global));
   });

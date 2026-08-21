@@ -1,0 +1,12 @@
+% sandbox-arxiv-2605: nicematrix NiceTabular was a placeholder stub that errored
+% (Error:undefined:{NiceTabular}) and dropped the body. It is really a tabular over a
+% standard colspec (nicematrix.sty L3806-3841 -> \NiceArray{colspec}); bound to \tabular it
+% renders real tables. Beyond-Perl (the ar5iv stub still errors). Witnesses 2605.08776,
+% 2605.13835, 2605.18423.
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}[colortbl-like]{ccc}
+1 & 2 & 3 \\ 4 & 5 & 6 \\
+\end{NiceTabular}
+\end{document}

@@ -41,6 +41,16 @@ const MAX_INPUT_DEPTH: usize = 500;
 thread_local! {
   /// Current nesting depth of input_definitions calls.
   static INPUT_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// Stack of each active input_definitions frame's `grandparent_in_expl3` flag.
+  /// A native binding that force-raw-loads its own `\ProvidesExplPackage` .sty via
+  /// `InputDefinitions!(noltxml => true)` (e.g. derivative_sty.rs, #630) re-enters
+  /// input_definitions AFTER the outer `\@pushfilename` already ran `\ExplSyntaxOff`
+  /// (`_` -> SUB). A fresh snapshot then reads false, so the exit cleanup over-fires
+  /// `\ExplSyntaxOff` and corrupts `\l__expl_status_stack_tl`. The inner frame
+  /// inherits the outer's flag instead. Witness arXiv:2605.21946 (pomegranate.sty
+  /// -> `\RequirePackage{derivative}`).
+  static INPUT_DEF_EXPL3: std::cell::RefCell<Vec<bool>> =
+    const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
@@ -386,7 +396,30 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // arXiv:2509.05997 / .07893 / .02344, 2510.13206/.13942/.17317
   // (xsavebox + sys_load_backend + l3backend-dvips.def chain — minimal
   // repro: \usepackage{xsavebox}).
-  let grandparent_in_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
+  let self_snapshot = lookup_catcode('_') == Some(Catcode::LETTER);
+  // Inherit the immediate parent frame's flag only when the parent WAS in expl3 but
+  // our own fresh read is false — the double-nested same-file case (an outer
+  // `\RequirePackage{X}` whose X-binding force-raw-loads its own expl3 .sty, so this
+  // inner call snapshots after the outer `\@pushfilename` already flipped `_` to SUB).
+  // Never overrides a correct fresh read, so xsavebox/tcolorbox/lipsum are unaffected.
+  let grandparent_in_expl3 = INPUT_DEF_EXPL3
+    .with(|s| {
+      s.borrow()
+        .last()
+        .copied()
+        .filter(|&parent| parent && !self_snapshot)
+    })
+    .unwrap_or(self_snapshot);
+  INPUT_DEF_EXPL3.with(|s| s.borrow_mut().push(grandparent_in_expl3));
+  struct Expl3FrameGuard;
+  impl Drop for Expl3FrameGuard {
+    fn drop(&mut self) {
+      INPUT_DEF_EXPL3.with(|s| {
+        s.borrow_mut().pop();
+      });
+    }
+  }
+  let _expl3_frame = Expl3FrameGuard;
   // Strict-LaTeX-kernel order (latex.ltx `\@onefilewithoptions`, L15518-L15519):
   //   \@pushfilename                        % capture OLD \@currname / \@currext
   //   \xdef\@currname{ <new name> }         % then update to NEW
