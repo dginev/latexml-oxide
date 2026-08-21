@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+  - **Vertical rules in a math `array` now render, and `!{|}` aligns like Perl.**
+    Two defects from one report, both now byte-for-byte Perl parity. (1) A `|` or
+    `\hline` in a display-math `array` — `\begin{array}{cc|c}`, a framed `|c|c|`, or
+    a `colortbl` `\arrayrulecolor` rule — already carried the correct
+    `border="r"`/`border="b l r"` on each cell in the core XML (identical to Perl),
+    but the MathML post-processor emitted a bare `<m:mtd>` and the rule vanished.
+    `pmml_array` now folds `border` → `ltx_border_*` (and `thead` → `ltx_th_*`) CSS
+    classes onto the `m:mtd`, matching Perl `MathML.pm`. As in Perl,
+    `\arrayrulecolor`'s color is not yet carried (the plain rule renders). (2) The
+    `array`-package `!{|}` inserts its filler past the column's trailing `\hfil`,
+    defeating the centering, so Perl right-aligns that cell; a Rust-only alignment
+    fallback (meant for trailing fills lost in nested `\hbox` digestion) wrongly
+    re-centered it. `extract_alignment_column` now recognises a fill defeated by
+    inserted content — while a `\vrule` rule stays skippable, so `cc|c` cells remain
+    centered. Reported in dginev/latexml-oxide#740 and #742 (reporter nasser1);
+    guard `cluster_array_vertical_rule_border_740`.
   - **Author ORCID iDs render as the green iD logo, uniformly.** Every class that
     provides an `\orcid` now routes through the one canonical frontmatter macro
     `\lx@add@orcid`, which emits a standard `ltx:contact[role=orcid]` carrying the
