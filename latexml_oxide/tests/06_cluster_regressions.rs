@@ -265,10 +265,14 @@ fn cluster_t1_hyperverbatim_ascii_723() {
     "T1 HyperVerbatim `~`/`^` not ASCII (#723):\n{xml}"
   );
 }
-/// Issue #723, extended scope: the same rule applies to `\verb` and the
-/// `verbatim` environment (they select the identity ASCII fontmap for their run
-/// while keeping the typewriter family). `~`/`^` stay ASCII, not Bruce's accent
-/// glyphs. OXIDIZED_DESIGN #144.
+/// Issue #723, extended scope: the same rule applies to `\verb`, the `verbatim`
+/// environment, and `\url`/`\path` (all select the identity ASCII fontmap for
+/// their run while keeping the typewriter family). `~`/`^` stay ASCII in the
+/// DISPLAYED text, not Bruce's accent glyphs. `\url`/`\path` were missed by the
+/// first pass (#727): their display is `\UrlFont`-wrapped (a plain, non-verbatim
+/// arg), so the reader's ASCII fontmap didn't reach it — `\UrlFont` now selects
+/// `\fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
+/// OXIDIZED_DESIGN #144.
 #[test]
 fn cluster_t1_verbatim_ascii_723() {
   let xml = convert_to_xml("tests/cluster_regressions/t1_ascii_tilde_circumflex_723.tex");
@@ -277,13 +281,19 @@ fn cluster_t1_verbatim_ascii_723() {
     xml.contains("a~b^c") && xml.contains("d~e^f"),
     "T1 \\verb / verbatim env did not keep `~`/`^` ASCII (#723):\n{xml}"
   );
+  // \url{http://g/~h^i} and \path|j~k^l| — the DISPLAYED url text (the href
+  // attribute was always ASCII via reversion) must stay ASCII too.
   assert!(
-    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
-    "T1 verbatim still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+    xml.contains("http://g/~h^i") && xml.contains("j~k^l"),
+    "T1 \\url / \\path displayed text did not keep `~`/`^` ASCII (#723):\n{xml}"
   );
   assert!(
-    xml.matches(r#"font="typewriter""#).count() >= 2,
-    "verbatim runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
+    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
+    "T1 verbatim/url still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+  );
+  assert!(
+    xml.matches(r#"font="typewriter""#).count() >= 4,
+    "verbatim/url runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
   );
 }
 #[test]
