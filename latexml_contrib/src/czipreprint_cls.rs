@@ -27,10 +27,7 @@ LoadDefinitions!({
     "\\affiliation[]{}",
     "\\lx@add@contact[role=affiliation,annotate=new]{#2}"
   );
-  DefMacro!(
-    "\\orcid{}",
-    "\\lx@add@contact[role=orcid, name={OrcID: }]{#1}"
-  );
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
   DefMacro!(
     "\\email [] Semiverbatim",
     "\\lx@add@contact[role=email,name={email: }]{#2}"

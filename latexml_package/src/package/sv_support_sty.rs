@@ -72,7 +72,7 @@ LoadDefinitions!({
     "\\thanks[]{}",
     "\\lx@add@contact[role=thanks,name={#1}]{#2}"
   );
-  DefMacro!("\\orcid[]{}", "\\lx@add@contact[role=orcid,name={#1}]{#2}"); // ?
+  DefMacro!("\\orcid[]{}", "\\lx@add@orcid[name={#1}]{#2}");
 
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
   DefMacro!(

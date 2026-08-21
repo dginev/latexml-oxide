@@ -24,12 +24,11 @@ LoadDefinitions!({
   // render the name as a creator and attach the ORCID as a contact.
   DefMacro!(
     "\\author[]{}{}",
-    "\\lx@add@creator[role=author]{#2}\\lx@add@contact[role=orcid]{#3}"
+    "\\lx@add@creator[role=author]{#2}\\ifx&#3&\\else\\lx@add@orcid{#3}\\fi"
   );
-  // \orcid{id} — used as the third \author argument. Render the id as an
-  // orcid.org hyperlink (matching sn-jnl.cls treatment); the class's logo
-  // image isn't shipped, so the id stays as visible, linked text.
-  DefMacro!("\\orcid{}", "\\href{https://orcid.org/#1}{#1}");
+  // \orcid{id} — used inline (matching sn-jnl.cls). Render the shared iD logo
+  // linked to the author's orcid.org page, via the kernel `\lx@orcidlink` asset.
+  DefMacro!("\\orcid{}", "\\lx@orcidlink{#1}{\\lx@orcidlogo}");
   // \authormark{...} — running-head author; redundant with the creator names.
   def_macro_noop("\\authormark{}")?;
   // \state{...} — a US-state address component. OmniBus deliberately omits it

@@ -361,7 +361,7 @@ LoadDefinitions!({
   DefMacro!("\\affiliation{}",           "\\lx@add@contact[role=affiliation,annotate=new]{#1}");
   DefMacro!("\\additionalaffiliation{}", "\\lx@add@contact[role=altaffiliation]{#1}");
   DefMacro!("\\email [] Semiverbatim",   "\\lx@add@contact[role=email,name={email: }]{#2}");
-  DefMacro!("\\orcid{}",                 "\\lx@add@contact[role=orcid, name={OrcID: }]{#1}");
+  DefMacro!("\\orcid{}",                 "\\lx@add@orcid{#1}");
 
   //======================================================================
   // Internal structure to affiliation (Perl PR #2767: comma-joined parts;

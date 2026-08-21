@@ -655,10 +655,31 @@
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
-      <xsl:apply-templates select="ltx:personname">
-        <xsl:with-param name="context" select="$innercontext"/>
-      </xsl:apply-templates>
-      <xsl:if test="ltx:contact">
+      <!-- The author's ORCID iD badge is rendered as a sibling of the name inside
+           a thin inline wrapper, so "Name  iD" share one line (the creator is a
+           flex column; a bare sibling, or a badge left in the author-notes group,
+           would drop to its own line). The badge is NOT inside the personname span,
+           and every other contact (affiliation, email, thanks, …) still goes to
+           the author-notes group. html_feedback #6571, #4958, #4930, #1211. -->
+      <xsl:choose>
+        <xsl:when test="ltx:contact[@role='orcid']">
+          <xsl:element name="span" namespace="{$html_ns}">
+            <xsl:attribute name="class">ltx_annotated_personname</xsl:attribute>
+            <xsl:apply-templates select="ltx:personname">
+              <xsl:with-param name="context" select="$innercontext"/>
+            </xsl:apply-templates>
+            <xsl:apply-templates select="ltx:contact[@role='orcid']">
+              <xsl:with-param name="context" select="$innercontext"/>
+            </xsl:apply-templates>
+          </xsl:element>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:apply-templates select="ltx:personname">
+            <xsl:with-param name="context" select="$innercontext"/>
+          </xsl:apply-templates>
+        </xsl:otherwise>
+      </xsl:choose>
+      <xsl:if test="ltx:contact[not(@role='orcid')]">
         <xsl:call-template name="author_notes">
           <xsl:with-param name="context" select="$innercontext"/>
         </xsl:call-template>
@@ -682,7 +703,9 @@
       <xsl:attribute name="class">ltx_author_notes</xsl:attribute>
       <xsl:element name="span" namespace="{$html_ns}">
         <xsl:attribute name="class">ltx_author_notes_content</xsl:attribute>
-        <xsl:apply-templates select="ltx:contact">
+        <!-- orcid is rendered as a name-sibling badge (see creator[@role='author']),
+             not in this notes group. -->
+        <xsl:apply-templates select="ltx:contact[not(@role='orcid')]">
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
       </xsl:element>

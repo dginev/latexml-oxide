@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+  - **Author ORCID iDs render as the green iD logo, uniformly.** Every class that
+    provides an `\orcid` now routes through the one canonical frontmatter macro
+    `\lx@add@orcid`, which emits a standard `ltx:contact[role=orcid]` carrying the
+    ORCID logo linked to `https://orcid.org/<id>`. The logo is a single shared
+    kernel asset (`\lx@orcidlogo` / `\lx@orcidlink`), reused by `orcidlink.sty`'s
+    `\orcidlink` and every class binding — so there is one definition, not a per-
+    class reimplementation. Previously several classes (ecai, imsart, sigma, aa,
+    svmult, egpubl, ceurart, …) rendered the ORCID as a bare dagger footnote with
+    the raw number. The `\orcidlink`/`\orcidlogo` logo is also sized to the text
+    (1em) instead of an oversized 1.7em badge that overflowed the line. Fixes
+    arXiv/html_feedback#6571 and the ORCID-icon cluster (#6895, #6016, #5789,
+    #2176, #5615, #4958, #4930, #1211, #5879, #3659). Guard: `orc_test`.
+  - **ecai.cls: reference-linked authors and affiliations.** `\author[A,D]{…}`
+    with `\address[A]{…}` now attaches each affiliation to the author(s) whose
+    optional-arg labels match (the elsarticle model), instead of piling every
+    address onto the last author; `\fnms`/`\snm`/`\orcid`/`\thanks` inside the
+    author are handled. Fixes arXiv/html_feedback#6571.
   - **`~` and `^` stay ASCII in verbatim under T1 font encoding.** A `\verb`, the
     `verbatim` environment, or a `Verbatim`/`HyperVerbatim` argument (`\url`,
     `\href`, a Rhai binding's verbatim arg) containing `~`/`^` under
