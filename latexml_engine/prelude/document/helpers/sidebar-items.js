@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["prune_empty_para"]};
+window.SIDEBAR_ITEMS = {"fn":["preceding_para_sibling","prune_empty_para"]};

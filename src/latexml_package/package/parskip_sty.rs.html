@@ -15,12 +15,16 @@
 <a href=#15 id=15 data-nosnippet>15</a>  // machinery flips every paragraph to the `ltx_noindent` class when the
 <a href=#16 id=16 data-nosnippet>16</a>  // `\parindent` register is zero (`tex_paragraph.rs`, the boolean no-indent
 <a href=#17 id=17 data-nosnippet>17</a>  // toggle), exactly as a manual `\setlength{\parindent}{0pt}` already does.
-<a href=#18 id=18 data-nosnippet>18</a>  // `\parskip` is set for faithfulness to the real package (its glue is not
-<a href=#19 id=19 data-nosnippet>19</a>  // typeset into HTML by LaTeXML — neither here nor for a manual `\setlength`).
-<a href=#20 id=20 data-nosnippet>20</a>  //
-<a href=#21 id=21 data-nosnippet>21</a>  // Package options (`skip`/`indent`/`tocskip`, kvoptions) are not yet handled;
-<a href=#22 id=22 data-nosnippet>22</a>  // the no-option `\usepackage{parskip}` default is the common case (and the one
-<a href=#23 id=23 data-nosnippet>23</a>  // reported).
-<a href=#24 id=24 data-nosnippet>24</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\setlength{\parindent}{0pt}\setlength{\parskip}{.5\baselineskip plus 2pt}"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>});
+<a href=#18 id=18 data-nosnippet>18</a>  // The FIRST paragraph joined this only with issue #719 (same reporter): the
+<a href=#19 id=19 data-nosnippet>19</a>  // deferred `\par` mechanism records the class for the NEXT paragraph, so
+<a href=#20 id=20 data-nosnippet>20</a>  // before #719 the first paragraph kept the stylesheet's default indent.
+<a href=#21 id=21 data-nosnippet>21</a>  // Guarded by `parskip_test` (all three paragraphs now `ltx_noindent`).
+<a href=#22 id=22 data-nosnippet>22</a>  // `\parskip` is set for faithfulness to the real package (its glue is not
+<a href=#23 id=23 data-nosnippet>23</a>  // typeset into HTML by LaTeXML — neither here nor for a manual `\setlength`).
+<a href=#24 id=24 data-nosnippet>24</a>  //
+<a href=#25 id=25 data-nosnippet>25</a>  // Package options (`skip`/`indent`/`tocskip`, kvoptions) are not yet handled;
+<a href=#26 id=26 data-nosnippet>26</a>  // the no-option `\usepackage{parskip}` default is the common case (and the one
+<a href=#27 id=27 data-nosnippet>27</a>  // reported).
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\setlength{\parindent}{0pt}\setlength{\parskip}{.5\baselineskip plus 2pt}"</span>);
+<a href=#29 id=29 data-nosnippet>29</a>});
 </code></pre></div></section></main></body></html>
