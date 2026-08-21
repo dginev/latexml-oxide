@@ -329,6 +329,58 @@ fn cluster_nicematrix_multi_matrix_no_color_leak_6569() {
     "the first matrix must hold only its own colored cell, not the second's:\n{xml}"
   );
 }
+/// dginev/latexml-oxide#740 + #742 (reporter nasser1): vertical rules in a math
+/// `array`, two independent defects fixed to byte-for-byte Perl parity.
+///
+/// #740 (POST): `cc|c`, framed `|c|c|`, and colortbl `\arrayrulecolor` rendered as
+/// bare `<m:mtd>` — the rule vanished. The CORE XML already carried the correct
+/// `border="r"`/`border="b l r"` on each `XMCell` (identical to Perl); the loss was
+/// in `pmml_array`, which never read `border`. Ported Perl `MathML.pm` L456-475:
+/// `border` → space-joined `ltx_border_*` classes (and `thead` → `ltx_th_*`, folded
+/// with any explicit `class`).
+///
+/// #742 (CORE): the `array`-package `!{|}` (`@{}cc!{|}c@{}`) inserts its filler past
+/// the column's trailing `\hfil`, defeating the centering, so Perl right-aligns that
+/// cell (`align="right"`). Rust's `expected_from_template` fallback in
+/// `extract_alignment_column` — a Rust-only patch for trailing fills lost in nested
+/// `\hbox` digestion — wrongly restored Center. `template_after_fill_defeated` now
+/// detects the defeated fill (real content after the last `\hfil` in the `after`
+/// template; a `\vrule` rule is skippable and does NOT defeat it) and the fallback
+/// leaves the Perl-faithful Right. RED before the fixes: zero `ltx_border_` classes,
+/// and the `!{|}` cell centered.
+#[test]
+fn cluster_array_vertical_rule_border_740() {
+  let pmml = convert_and_post_pmml_clean("tests/cluster_regressions/array_vertical_rule_740.tex");
+  // #740 — `cc|c` right rule on the middle column of each of two rows.
+  assert_eq!(
+    pmml.matches("ltx_border_r").count(),
+    4,
+    "expected 4 m:mtd with a right rule (2 from cc|c, 2 from the framed array):\n{pmml}"
+  );
+  // #740 — framed `|c|c|` + `\hline` corner cell folds three borders into one class.
+  assert!(
+    pmml.contains(r#"class="ltx_border_b ltx_border_l ltx_border_r""#),
+    "framed corner cell should fold b/l/r into one class attribute:\n{pmml}"
+  );
+  // #740 — `\hline` top rule.
+  assert!(
+    pmml.contains("ltx_border_t"),
+    "the \\hline should surface as a top-rule class:\n{pmml}"
+  );
+  // #742 — the two `!{|}` cells (columns q,t) are right-aligned in the core XML …
+  let xml = convert_to_xml("tests/cluster_regressions/array_vertical_rule_740.tex");
+  assert_eq!(
+    xml.matches(r#"<XMCell align="right">"#).count(),
+    2,
+    "the two `!{{|}}` cells must be right-aligned like Perl, not centered:\n{xml}"
+  );
+  // … and that survives into the rendered MathML as `ltx_align_right`.
+  assert_eq!(
+    pmml.matches("ltx_align_right").count(),
+    2,
+    "the two `!{{|}}` cells should render `ltx_align_right`:\n{pmml}"
+  );
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
@@ -369,10 +421,14 @@ fn cluster_t1_hyperverbatim_ascii_723() {
     "T1 HyperVerbatim `~`/`^` not ASCII (#723):\n{xml}"
   );
 }
-/// Issue #723, extended scope: the same rule applies to `\verb` and the
-/// `verbatim` environment (they select the identity ASCII fontmap for their run
-/// while keeping the typewriter family). `~`/`^` stay ASCII, not Bruce's accent
-/// glyphs. OXIDIZED_DESIGN #144.
+/// Issue #723, extended scope: the same rule applies to `\verb`, the `verbatim`
+/// environment, and `\url`/`\path` (all select the identity ASCII fontmap for
+/// their run while keeping the typewriter family). `~`/`^` stay ASCII in the
+/// DISPLAYED text, not Bruce's accent glyphs. `\url`/`\path` were missed by the
+/// first pass (#727): their display is `\UrlFont`-wrapped (a plain, non-verbatim
+/// arg), so the reader's ASCII fontmap didn't reach it — `\UrlFont` now selects
+/// `\fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
+/// OXIDIZED_DESIGN #144.
 #[test]
 fn cluster_t1_verbatim_ascii_723() {
   let xml = convert_to_xml("tests/cluster_regressions/t1_ascii_tilde_circumflex_723.tex");
@@ -381,13 +437,19 @@ fn cluster_t1_verbatim_ascii_723() {
     xml.contains("a~b^c") && xml.contains("d~e^f"),
     "T1 \\verb / verbatim env did not keep `~`/`^` ASCII (#723):\n{xml}"
   );
+  // \url{http://g/~h^i} and \path|j~k^l| — the DISPLAYED url text (the href
+  // attribute was always ASCII via reversion) must stay ASCII too.
   assert!(
-    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
-    "T1 verbatim still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+    xml.contains("http://g/~h^i") && xml.contains("j~k^l"),
+    "T1 \\url / \\path displayed text did not keep `~`/`^` ASCII (#723):\n{xml}"
   );
   assert!(
-    xml.matches(r#"font="typewriter""#).count() >= 2,
-    "verbatim runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
+    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
+    "T1 verbatim/url still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+  );
+  assert!(
+    xml.matches(r#"font="typewriter""#).count() >= 4,
+    "verbatim/url runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
   );
 }
 #[test]

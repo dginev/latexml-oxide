@@ -1095,6 +1095,44 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
 }
 // Given the boxes for an alignment cell,
 // extract & remove the various fills and rules from the ends to annotate the cell structure
+/// True when a column's `after` template carries real content *after* its
+/// trailing fill, so the fill no longer centers the cell.
+///
+/// The `array`-package `!{<filler>}` (`array.sty` `DefColumnType('!{}')` →
+/// `addBetweenColumn`) appends `\lx@intercol <filler> \lx@intercol` past the
+/// column's `\hfil`; when `<filler>` is real content (e.g. a math `|`) Perl's
+/// back-scan meets it before the fill and leaves the cell right-aligned
+/// (dginev#742). A plain `|` rule digests to `\vrule\relax`, which is skippable
+/// and must NOT count as defeating — that cell stays centered with a `border`.
+/// The skippable set matches [`intercol_reachable_in_before`]'s left-scan.
+fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
+  let Some(toks) = after else { return false };
+  let toks = toks.unlist_ref();
+  // Index just past the last fill in the template.
+  let mut last_fill = None;
+  for (i, tok) in toks.iter().enumerate() {
+    let s = tok.to_string();
+    if s == "\\hfil" || s == "\\hfill" {
+      last_fill = Some(i);
+    }
+  }
+  let Some(fill_idx) = last_fill else {
+    return false;
+  };
+  toks.iter().skip(fill_idx + 1).any(|tok| {
+    let s = tok.to_string();
+    !(s == "\\lx@intercol"
+      || s.contains("intercol")
+      || s == "\\lx@column@trimright"
+      || s == "\\vrule"
+      || s == "\\relax"
+      || s == "\\hfil"
+      || s == "\\hfill"
+      || s == "\\hskip"
+      || s.trim().is_empty())
+  })
+}
+
 pub fn extract_alignment_column(
   mut alignment: RefMut<Alignment>,
   in_box: Digested,
@@ -1108,6 +1146,7 @@ pub fn extract_alignment_column(
 
   // --- Read phase: extract values from colspec, then drop the borrow ---
   let (initial_align, tabskip_clone, is_omitted, has_before_fill, has_after_fill, old_border);
+  let after_fill_defeated;
   {
     let colspec = match alignment.get_column(n0) {
       Some(c) => c,
@@ -1137,6 +1176,14 @@ pub fn extract_alignment_column(
           .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
       })
       .unwrap_or(false);
+    // The trailing `\hfil` is *defeated* when the column's `after` template
+    // carries real content after it — the `array`-package `!{|}` appends
+    // `\lx@intercol <filler> \lx@intercol` past the fill (e.g. a math `|`),
+    // dginev#742. Perl leaves such a cell right-aligned because its back-scan
+    // hits that content before the trailing fill. A plain `|` rule
+    // (`\vrule\relax`) does NOT defeat it — the rule is skippable and the cell
+    // stays centered (Perl `cc|c` → `align="center" border="r"`).
+    after_fill_defeated = template_after_fill_defeated(&colspec.after);
   } // colspec borrow dropped
 
   let mut align = initial_align;
@@ -1169,7 +1216,11 @@ pub fn extract_alignment_column(
   }
   // Determine expected alignment from template fills, as a fallback for when
   // the trailing fill box is lost during digestion (known issue with nested \hbox groups).
-  let expected_from_template = match (has_before_fill, has_after_fill) {
+  // A trailing fill *defeated* by inserted `!{}` content (dginev#742) is not a
+  // real centering fill — treat it as absent so the fallback does not restore
+  // Center over the Perl-faithful Right.
+  let effective_after_fill = has_after_fill && !after_fill_defeated;
+  let expected_from_template = match (has_before_fill, effective_after_fill) {
     (true, true) => Some(Align::Center),
     (false, true) => Some(Align::Left),
     (true, false) => Some(Align::Right),
