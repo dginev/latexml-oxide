@@ -5433,22 +5433,28 @@ commit `9ec6a4122` "Encodings (#2435)", 2024-11-20: "^ and ~ which should be acc
 that mapping. Those slots are reached only by a *literal catcode-12* `~`/`^`: in normal text `~`
 is active and `^` is superscript, and `\textasciitilde`/`\textasciicircum` emit ASCII U+007E/U+005E
 directly (not via the slot). The one place the slot is hit is a **verbatim** context — `\verb`,
-the `verbatim` environment, a `Verbatim`/`HyperVerbatim` argument (incl. `\url`/`\href` and a Rhai
-binding's verbatim arg) — where the intent is the *literal* character, so a `.../~user` URL must
-stay ASCII (the reporter's Rhai `HyperVerbatim` URL came out `˜`, breaking the link).
+the `verbatim` environment, a `Verbatim`/`HyperVerbatim` argument (incl. `\href` and a Rhai
+binding's verbatim arg), and `\url`/`\path` — where the intent is the *literal* character, so a
+`.../~user` URL must stay ASCII (the reporter's Rhai `HyperVerbatim` URL came out `˜`).
 
 **Perl behavior**: a verbatim/URL `~`/`^` under T1 font-decodes through the fontmap to the accent
-glyphs `U+02DC`/`U+02C6` (SHARED-FAILURE — Perl does the same). Only `Semiverbatim` escaped,
-because it swaps to the identity `"ASCII"` fontmap for the whole read+digest — hence #723's
-"Semiverbatim is fine, HyperVerbatim is not".
+glyphs `U+02DC`/`U+02C6` in the **displayed** text (SHARED-FAILURE — Perl does the same for `\verb`,
+`\url`, and a `HyperVerbatim`/`Verbatim` constructor argument alike). What always stayed ASCII was
+the href **attribute**: it is built by *reversion* of the catcode-12 tokens, which never touches
+the fontmap — so #723's "`\href`/Semiverbatim is fine" was about the attribute, NOT the display.
+(Verified same-host: Perl `\url{~a^b}` → `<ref … href="~a^b">˜aˆb</ref>`; a `DefConstructor('\x
+HyperVerbatim {}')` → the same `˜aˆb` display.)
 **Rust behavior**: every verbatim context now selects the identity `"ASCII"` fontmap for its run,
-so `~`/`^` (and `` ` ``/`'`) stay ASCII, while the fontmap itself is untouched — normal T1 text
-still follows Bruce. Three sites, all leaving the `typewriter` family intact (styling unchanged):
-`Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
-(`base_parameter_types.rs`, mirroring how `Semiverbatim`'s descriptor re-runs `begin_semiverbatim`
-at digest time); `\verbatim@font` gains `\fontencoding{ASCII}` (`latex_constructs.rs`, covers the
-`verbatim` environment); and `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
-"ASCII"` (covers `\verb`).
+so `~`/`^` (and `` ` ``/`'`) stay ASCII in the display too, while the fontmap itself is untouched —
+normal T1 text still follows Bruce. Four sites, all leaving the `typewriter` family intact (styling
+unchanged): `Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
+(`base_parameter_types.rs`); `\verbatim@font` gains `\fontencoding{ASCII}` (`latex_constructs.rs`,
+covers the `verbatim` environment); `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
+"ASCII"` (covers `\verb`); and `\UrlFont` (all `\urlstyle` variants) gains `\fontencoding{ASCII}`
+(`url_sty.rs`, covers `\url`/`\path` — whose displayed text is a separately-digested `\UrlFont`-
+wrapped plain arg, so the reader's semiverbatim ASCII fontmap did not reach it). `\fontencoding`
+merges only the encoding and `\selectfont` merges only family/series/shape, so the ASCII encoding
+survives the family switch.
 
 **Why**: verbatim wants the literal input character; the T1 slot's accent shape is right only for
 the accent-command contexts (a standalone `\^{}`/`\~{}`) that Bruce was protecting, which do not
@@ -5463,15 +5469,18 @@ from `glyphtounicode` — alongside slot 127 (line-break hyphen `U+2010`) and T2
 (Cyrillic angle quotes `‹›`).
 
 **Witnesses**: issue #723 (reporter xworld21) — a Rhai `HyperVerbatim` URL argument under T1 whose
-`~` became `U+02DC`. MWE: `\usepackage[T1]{fontenc}` + `\verb|a~b^c|` → `a~b^c`.
+`~` became `U+02DC`; the `\url`/`\path` follow-up came from Vincenzo's observation that "hyperref
+works fine" (the attribute) while a constructor's verbatim arg did not (the display). MWE:
+`\usepackage[T1]{fontenc}` + `\verb|a~b^c|` → `a~b^c`; `\url{http://g/~h^i}` → display `~h^i`.
 
-**Upstream**: worth filing against `brucemiller/LaTeXML` (verbatim loses ASCII there too, and Bruce
-can weigh the verbatim-vs-accent split).
+**Upstream**: worth filing against `brucemiller/LaTeXML` (verbatim/`\url` display loses ASCII there
+too, and Bruce can weigh the verbatim-vs-accent split).
 
 **Guards**: `06_cluster_regressions::cluster_t1_hyperverbatim_ascii_723` (the reported Rhai
 `HyperVerbatim` URL, ASCII, via a subprocess so the runtime binding loads);
-`cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env stay ASCII AND keep `font="typewriter"`);
-`tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as Bruce's accents).
+`cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env + `\url`/`\path` stay ASCII AND keep
+`font="typewriter"`); `tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as
+Bruce's accents).
 
 ### 145. nicematrix `\begin{<x>NiceMatrix}` renders as a real math array with `\CodeBefore` cell colors
 

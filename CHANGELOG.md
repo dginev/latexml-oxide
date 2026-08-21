@@ -19,16 +19,20 @@
     optional-arg labels match (the elsarticle model), instead of piling every
     address onto the last author; `\fnms`/`\snm`/`\orcid`/`\thanks` inside the
     author are handled. Fixes arXiv/html_feedback#6571.
-  - **`~` and `^` stay ASCII in verbatim under T1 font encoding.** A `\verb`, the
-    `verbatim` environment, or a `Verbatim`/`HyperVerbatim` argument (`\url`,
-    `\href`, a Rhai binding's verbatim arg) containing `~`/`^` under
-    `\usepackage[T1]{fontenc}` decoded to the accent glyphs U+02DC/U+02C6 — e.g. a
-    `.../~user` URL broke. Verbatim contexts now select an identity ASCII fontmap
-    for their run (keeping the typewriter styling), so `~`/`^` stay literal, while
-    the T1 fontmap — where those slots are Bruce Miller's deliberate accents
-    (LaTeXML #2435) — is untouched for normal text. A new `tools/fontmap_drift.py`
-    checks our fontmaps against pdftex's `glyphtounicode` golden. Surpasses Perl
-    (verbatim loses ASCII there too); OXIDIZED_DESIGN #144, #723.
+  - **`~` and `^` stay ASCII in verbatim under T1 font encoding.** The displayed
+    text of a `\verb`, the `verbatim` environment, `\url`/`\path`, or a
+    `Verbatim`/`HyperVerbatim` argument (including a Rhai binding's verbatim arg)
+    containing `~`/`^` under `\usepackage[T1]{fontenc}` decoded to the accent glyphs
+    U+02DC/U+02C6 — e.g. a `\url{.../~user}` printed `˜`. (The href *attribute* was
+    always ASCII — it is built by reversion, not font decoding.) Every verbatim
+    context now selects an identity ASCII fontmap for its run (keeping the
+    typewriter styling), so `~`/`^` stay literal, while the T1 fontmap — where those
+    slots are Bruce Miller's deliberate accents (LaTeXML #2435) — is untouched for
+    normal text. `\url`/`\path` were completed after Vincenzo's follow-up on #723
+    (their `\UrlFont`-wrapped display is digested separately from the semiverbatim
+    href arg). A new `tools/fontmap_drift.py` checks our fontmaps against pdftex's
+    `glyphtounicode` golden. Surpasses Perl (verbatim/`\url` display loses ASCII
+    there too); OXIDIZED_DESIGN #144, #723.
   - **The first paragraph is no longer indented when `\parindent` is zero.** With
     `\setlength{\parindent}{0pt}` (or `\usepackage{parskip}`), the very first paragraph
     still picked up the stylesheet's default 2em first-line indent, because the class

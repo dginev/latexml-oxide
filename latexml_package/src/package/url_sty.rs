@@ -17,11 +17,31 @@ LoadDefinitions!({
     "\\urlstyle{}",
     r#"\expandafter\protect\csname url@#1style\endcsname"#
   );
-  DefMacro!("\\url@ttstyle", "\\def\\UrlFont{\\ttfamily}");
-  DefMacro!("\\url@rmstyle", "\\def\\UrlFont{\\rmfamily}");
-  DefMacro!("\\url@sfstyle", "\\def\\UrlFont{\\sffamily}");
+  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): the DISPLAYED url
+  // text (`\lx@url@url@nolink`'s `#5`, a `\UrlFont`-wrapped plain arg) is literal
+  // catcode-12 characters, so under T1 a `~`/`^` decodes through the fontmap to
+  // Bruce Miller's accent glyphs U+02DC/U+02C6 (LaTeXML #2435). A verbatim `\url`/
+  // `\path` wants them ASCII (pdflatex renders the literal char). The reader's
+  // `begin_semiverbatim` ASCII fontmap covers the Semiverbatim href arg but NOT
+  // this separately-digested display arg, so `\UrlFont` selects the identity
+  // `ASCII` fontmap itself — `\selectfont` merges only family/series/shape, so the
+  // encoding survives the following `\ttfamily`, keeping the typewriter styling.
+  // This is exactly the treatment `\verbatim@font` / `Verbatim` / `HyperVerbatim`
+  // already apply; Perl loses ASCII here too (SHARED-FAILURE).
+  DefMacro!(
+    "\\url@ttstyle",
+    "\\def\\UrlFont{\\fontencoding{ASCII}\\ttfamily}"
+  );
+  DefMacro!(
+    "\\url@rmstyle",
+    "\\def\\UrlFont{\\fontencoding{ASCII}\\rmfamily}"
+  );
+  DefMacro!(
+    "\\url@sfstyle",
+    "\\def\\UrlFont{\\fontencoding{ASCII}\\sffamily}"
+  );
   def_macro_noop("\\url@samestyle")?;
-  DefMacro!("\\UrlFont", "\\ttfamily");
+  DefMacro!("\\UrlFont", "\\fontencoding{ASCII}\\ttfamily");
 
   // Bracketting.
   Let!("\\UrlLeft", "\\@empty");
