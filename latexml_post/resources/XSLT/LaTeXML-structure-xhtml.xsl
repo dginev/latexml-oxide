@@ -664,7 +664,7 @@
       <xsl:choose>
         <xsl:when test="ltx:contact[@role='orcid']">
           <xsl:element name="span" namespace="{$html_ns}">
-            <xsl:attribute name="class">ltx_author_name_orcid</xsl:attribute>
+            <xsl:attribute name="class">ltx_annotated_personname</xsl:attribute>
             <xsl:apply-templates select="ltx:personname">
               <xsl:with-param name="context" select="$innercontext"/>
             </xsl:apply-templates>
