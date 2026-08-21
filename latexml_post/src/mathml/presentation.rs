@@ -1609,6 +1609,48 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
           td_attrs.insert("class".to_string(), format!("ltx_align_{}", a));
         }
       }
+      // Perl MathML.pm L456-473: fold `border` → `ltx_border_*` and `thead` →
+      // `ltx_th_*` (each attribute is space-separated values) together with any
+      // explicit `class` into the `m:mtd` `class`. This is how a column rule
+      // (`|` / `\hline` / array `!{|}`, dginev#740) and colortbl rules reach the
+      // rendered table — the CSS paints `ltx_border_*`. Perl assembles the cell
+      // from a hash literal whose LATER `class` key wins, so when a cell has BOTH
+      // a non-center align AND a border/thead/class the border/thead/class value
+      // REPLACES the `ltx_align_*` class set just above (the `columnalign`
+      // attribute stays). We mirror that by overwriting the `class` key here.
+      let bc = cell_node.get_attribute("border").and_then(|b| {
+        let s = b
+          .split_whitespace()
+          .map(|p| format!("ltx_border_{p}"))
+          .collect::<Vec<_>>()
+          .join(" ");
+        (!s.is_empty()).then_some(s)
+      });
+      let hc = cell_node.get_attribute("thead").and_then(|t| {
+        let s = t
+          .split_whitespace()
+          .map(|p| format!("ltx_th_{p}"))
+          .collect::<Vec<_>>()
+          .join(" ");
+        (!s.is_empty()).then_some(s)
+      });
+      // Perl `$c = ($bc ? ($hc ? "$bc $hc" : $bc) : $hc)`.
+      let border_thead = match (bc, hc) {
+        (Some(bc), Some(hc)) => Some(format!("{bc} {hc}")),
+        (Some(bc), None) => Some(bc),
+        (None, Some(hc)) => Some(hc),
+        (None, None) => None,
+      };
+      let cl = cell_node.get_attribute("class").filter(|s| !s.is_empty());
+      // Perl `($c || $cl ? (class => ($c && $cl ? "$c $cl" : $c || $cl)) : ())`.
+      if let Some(class) = match (border_thead, cl) {
+        (Some(c), Some(cl)) => Some(format!("{c} {cl}")),
+        (Some(c), None) => Some(c),
+        (None, Some(cl)) => Some(cl),
+        (None, None) => None,
+      } {
+        td_attrs.insert("class".to_string(), class);
+      }
       if let Some(cs) = colspan {
         td_attrs.insert("columnspan".to_string(), cs);
       }
