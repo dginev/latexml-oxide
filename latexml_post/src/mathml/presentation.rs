@@ -1615,6 +1615,12 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
       if let Some(rs) = rowspan {
         td_attrs.insert("rowspan".to_string(), rs);
       }
+      // A cell's `backgroundcolor` (e.g. nicematrix `\CodeBefore` fills, #6569)
+      // rides onto the `m:mtd` as `mathbackground`, matching how token-level
+      // backgrounds are emitted (`mod.rs` `pmml_token`).
+      if let Some(bg) = cell_node.get_attribute("backgroundcolor") {
+        td_attrs.insert("mathbackground".to_string(), bg);
+      }
 
       let cell_children = element_children(&cell_node);
       let cell_content = if cell_children.is_empty() {
