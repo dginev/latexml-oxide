@@ -72,9 +72,11 @@ fn try_color_algebra(name: &str) -> Option<Color> {
         i += 1;
         color::WHITE
       };
-    // xcolor `c!p!c2`: mix c at p% with c2. mix(self, other, fraction)
-    // expects fraction = weight of `other`; xcolor's `p` is weight of `self`.
-    current = current.mix(&other, 1.0 - pct_frac);
+    // xcolor `c!p!c2` = p% of c mixed with (100-p)% of c2 (`c!p` alone → c2=white).
+    // `Color::mix(self, other, fraction)` = fraction*self + (1-fraction)*other, i.e.
+    // fraction IS the weight of `self` (=c) — which is exactly xcolor's `p`. So pass
+    // pct_frac directly: `blue!15` → 15% blue + 85% white (light), not 85% blue.
+    current = current.mix(&other, pct_frac);
   }
   Some(current)
 }
