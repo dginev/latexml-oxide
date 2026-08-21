@@ -94,7 +94,7 @@ LoadDefinitions!({
   // `orcid=…,email=…` leaked).
   RequirePackage!("keyval");
   RawTeX!(
-    r"\define@key{lx@ceur@au}{orcid}{\@add@frontmatter{ltx:note}[role=orcid]{#1}}%
+    r"\define@key{lx@ceur@au}{orcid}{\lx@add@orcid{#1}}%
 \define@key{lx@ceur@au}{email}{\@add@frontmatter{ltx:note}[role=email]{#1}}%
 \define@key{lx@ceur@au}{url}{\@add@frontmatter{ltx:note}[role=url]{#1}}%
 \define@key{lx@ceur@au}{twitter}{\@add@frontmatter{ltx:note}[role=twitter]{#1}}%
@@ -114,12 +114,11 @@ LoadDefinitions!({
     "\\lx@add@creator[annotations={#1}]{#2}\\setkeys{lx@ceur@au}{#3}"
   );
 
-  // ORCID/URL/email per-author; preserve user-visible value (#2) as
-  // ltx:note. #1 is the author tag (used for cross-ref; ignored here).
-  DefMacro!(
-    "\\orcidauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#2}"
-  );
+  // ORCID/URL/email per-author. #1 is the author tag (cross-ref; ignored here);
+  // #2 is the ORCID id. Route ORCID through `\lx@add@orcid` → `ltx:contact
+  // [role=orcid]` → clickable orcid.org link + logo icon (vs a dagger note).
+  // The contact attaches to the most-recent creator. html_feedback#6571.
+  DefMacro!("\\orcidauthor{}{}", "\\lx@add@orcid{#2}");
   DefMacro!(
     "\\urlauthor{}{}",
     "\\@add@frontmatter{ltx:note}[role=url]{#2}"

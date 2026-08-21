@@ -1,0 +1,15 @@
+% arXiv/html_feedback#6569 (PR-review regression): two Nice matrices sharing ONE
+% display must each paint their OWN array. The color-walk had targeted the FIRST
+% matrix-XMDual under the shared ltx:XMath, so matrix B's color leaked onto matrix
+% A (and could even miscolor an adjacent plain pmatrix). Convert via the contrib
+% path. Expect: red on matrix A's (1,1), green on matrix B's (2,2) — one each.
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{nicematrix}
+\begin{document}
+\[
+\begin{pNiceMatrix}\CodeBefore\cellcolor{red!40}{1-1}\Body a & b \\ c & d \end{pNiceMatrix}
+\quad
+\begin{pNiceMatrix}\CodeBefore\cellcolor{green!40}{2-2}\Body e & f \\ g & h \end{pNiceMatrix}
+\]
+\end{document}

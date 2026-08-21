@@ -10,8 +10,9 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post_clean, convert_and_post_pmml_clean, convert_clean, convert_expecting_errors,
-  convert_log, convert_to_xml, convert_to_xml_contrib,
+  convert_and_post_clean, convert_and_post_pmml_clean, convert_and_post_pmml_contrib_clean,
+  convert_clean, convert_expecting_errors, convert_log, convert_to_xml, convert_to_xml_contrib,
+  convert_to_xml_contrib_clean,
 };
 
 #[test]
@@ -223,6 +224,109 @@ fn cluster_break_optional_glue_722() {
     1,
     "only the \\\\[20pt] break should carry --ltx-break-space (plain \\\\ and \\\\[0pt] \
      stay attribute-free):\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6924 (witness arXiv 2608.10928): the paper sets `\title{}`
+/// (structured `<ltx:title>`) but never calls `\maketitle`; it hand-typesets the
+/// title (and authors) as a leading centered display-font block. LaTeXML captured
+/// the structured title AND kept the ink → the title rendered twice. We prioritize
+/// the structured metadata: the redundant leading title-ink is removed, the
+/// semantic `<ltx:title>` kept, and the author ink (no structured counterpart) is
+/// preserved.
+#[test]
+fn cluster_frontmatter_title_ink_dedup_6924() {
+  let xml = convert_to_xml("tests/cluster_regressions/frontmatter_title_ink_dedup_6924.tex");
+  // The structured title survives.
+  assert!(
+    xml.contains("<title>"),
+    "the structured <ltx:title> must remain:\n{xml}"
+  );
+  // The title text now appears exactly ONCE (structured only; the body ink is gone).
+  assert_eq!(
+    xml.matches("My Great Title").count(),
+    1,
+    "title should appear once (structured), not duplicated as body ink:\n{xml}"
+  );
+  assert_eq!(
+    xml.matches("A Longer Subtitle").count(),
+    1,
+    "subtitle line once:\n{xml}"
+  );
+  // The hand-typeset AUTHOR block has no structured counterpart, so it stays.
+  assert!(
+    xml.contains("Jane Q. Author"),
+    "author ink must be preserved:\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6569 (witness arXiv 2410.00317): a nicematrix
+/// `bNiceMatrix[first-row,first-col]` with a `\CodeBefore … \Body` cell-coloring
+/// block. Beyond-Perl (no Perl `nicematrix.sty.ltxml`): the family reduces to a real
+/// bracketed math array (`ltx:XMArray`), each `\rectanglecolor{blue!15}{i-j}{k-l}`
+/// fills its mapped `XMCell`s with `backgroundcolor`, and the first-row/first-col
+/// label cells are marked `thead` — NOT a discarded placeholder + `Error:undefined`.
+/// The four rects color exactly the 6 nonzero rigidity-matrix entries
+/// (`{1-1},{1-3},{2-1..2-2},{3-2..3-3}` = 1+1+2+2). See `nicematrix_sty.rs`.
+#[test]
+fn cluster_nicematrix_codebefore_6569() {
+  let xml =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/nicematrix_codebefore_6569.tex");
+  // Stage 1: the matrix renders as a real array, no placeholder leak.
+  assert!(
+    xml.contains("<XMArray"),
+    "matrix should render as a real ltx:XMArray:\n{xml}"
+  );
+  assert!(
+    !xml.contains("nicematrix-placeholder"),
+    "no nicematrix placeholder note should remain:\n{xml}"
+  );
+  // Stage 3: the \CodeBefore rects color exactly the 6 blue!15 cells.
+  let bg = xml.matches("backgroundcolor=").count();
+  assert_eq!(
+    bg, 6,
+    "expected 6 blue!15 backgroundcolor cells, got {bg}:\n{xml}"
+  );
+  // Stage 2: first-row/first-col labels carry thead.
+  assert!(
+    xml.contains("thead="),
+    "first-row/first-col label cells should be marked thead:\n{xml}"
+  );
+  // End-to-end: the cell colors must survive MathML post-processing onto the
+  // `m:mtd` (as `mathbackground`, which the XSLT turns into the `--ltx-bg-color`
+  // theming variable the CSS paints). Guards the pmml `pmml_array` carry.
+  let pmml =
+    convert_and_post_pmml_contrib_clean("tests/cluster_regressions/nicematrix_codebefore_6569.tex");
+  let mtd_bg = pmml.matches("mathbackground=").count();
+  assert_eq!(
+    mtd_bg, 6,
+    "expected 6 m:mtd carrying mathbackground, got {mtd_bg}:\n{pmml}"
+  );
+}
+/// arXiv/html_feedback#6569 (PR-review regression): two Nice matrices sharing ONE
+/// display must each paint their OWN array. The `\lx@nicematrix@applycolors`
+/// color-walk targeted the FIRST matrix-XMDual under the shared `ltx:XMath`, so
+/// the second matrix's `\CodeBefore` color leaked onto the first (and could even
+/// miscolor an adjacent plain `pmatrix`). Fixed by selecting the LAST
+/// matrix-XMDual (the just-closed one). RED before the fix: the first array held
+/// BOTH colored cells.
+#[test]
+fn cluster_nicematrix_multi_matrix_no_color_leak_6569() {
+  let xml =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/nicematrix_multi_display_6569.tex");
+  // Two matrices, one colored cell each → exactly two backgrounds total.
+  assert_eq!(
+    xml.matches("backgroundcolor=").count(),
+    2,
+    "each of the two matrices colors exactly one cell:\n{xml}"
+  );
+  // The leak painted both onto the FIRST matrix's array; assert the first
+  // `<XMArray>` holds exactly ONE colored cell, not both.
+  let start = xml.find("<XMArray").expect("an XMArray must be present");
+  let first_array = &xml[start..];
+  let end = first_array.find("</XMArray>").expect("a closed XMArray");
+  assert_eq!(
+    first_array[..end].matches("backgroundcolor=").count(),
+    1,
+    "the first matrix must hold only its own colored cell, not the second's:\n{xml}"
   );
 }
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument

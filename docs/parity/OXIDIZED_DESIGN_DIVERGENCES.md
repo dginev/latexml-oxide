@@ -5481,3 +5481,95 @@ too, and Bruce can weigh the verbatim-vs-accent split).
 `cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env + `\url`/`\path` stay ASCII AND keep
 `font="typewriter"`); `tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as
 Bruce's accents).
+
+### 145. nicematrix `\begin{<x>NiceMatrix}` renders as a real math array with `\CodeBefore` cell colors
+
+**Background.** `nicematrix` has **no** Perl `LaTeXML/…/nicematrix.sty.ltxml` binding — it is a
+Rust-contrib package (`latexml_contrib/src/nicematrix_sty.rs`). Its math matrix family
+(`NiceMatrix`, `pNiceMatrix`, `bNiceMatrix`, `BNiceMatrix`, `vNiceMatrix`, `VNiceMatrix`) was
+previously stubbed to an `<ltx:note role="nicematrix-placeholder">` plus `Error:undefined`, and the
+matrix body was **discarded** — the entries (and any `\CodeBefore` cell coloring) vanished. Witness
+arXiv 2410.00317 (a rigidity-matrix paper: 5× `bNiceMatrix[first-row,first-col]`, each with a
+`\CodeBefore … \Body` block and `\rectanglecolor{blue!15}` marking the nonzero entries).
+
+**Rust behavior (beyond-Perl).** Each `\begin{<x>NiceMatrix}[opts]` reduces to the amsmath matrix
+flavour for its delimiter (`b→[]`, `p→()`, `B→{}`, `v→||`, `V→‖‖`, plain→none) via the shared
+`\lx@ams@matrix` path (`amsmath_sty.rs`, `base_xmath.rs:1151`), so the entries render through the
+real math-array engine as `ltx:XMDual > XMWrap > XMArg > XMArray`. Three nicematrix features map
+onto LaTeXML's native math-table model:
+
+- **`\CodeBefore … \Body` cell coloring.** The color commands (`\rectanglecolor`, `\cellcolor`,
+  `\rowcolor`, `\columncolor`, `\arraycolor`) run during CodeBefore digestion and record fill
+  rectangles (1-based, over the main matrix); a no-output `\lx@nicematrix@applycolors` constructor
+  — run right after the matrix closes, mirroring colortbl's `\lxsetcellcolor` DOM write — paints
+  `backgroundcolor` (schema `LaTeXML-math.rnc:330`) onto the covered `ltx:XMCell`s. Colors reuse
+  `color_sty::parse_color` (xcolor `!`-algebra), so `blue!15` resolves DRY. Because digestion and
+  construction are **separate phases** (the recorders run at digest, the color-walk at construct),
+  each matrix's `\lx@nicematrix@applycolors` snapshots ITS rects+flags in its digest-time
+  `properties` closure (before the next `\begin` clears the thread_local) and reads them back at
+  construction. The MathML post-processor (`pmml_array`) then carries `XMCell/@backgroundcolor`
+  onto the `m:mtd` as `mathbackground`, which the XSLT turns into the `--ltx-bg-color` theming
+  variable the CSS paints — so the fill is visible in the HTML.
+- **`[first-row,first-col]`** label lines are kept INSIDE the array (row 0 / col 0) and marked
+  `thead='column'`/`'row'` (`LaTeXML-math.rnc:352`), rather than nicematrix's outside-the-brackets
+  placement. (Accepted nuance; the semantic header role is preserved.)
+- The tabular-like family (`\NiceArray`/`pNiceArray`/…/`NiceTabular*`/`NiceTabularX`, which take a
+  `{colspec}`) still degrades to a placeholder/`\tabular` — no faithful colspec reduction yet.
+
+**Bundled fix (not a divergence).** `color_sty::try_color_algebra` mixed `c!p` at `(100-p)%` of the
+color instead of `p%` (`blue!15` came out dark `#2626FF` instead of light `#D9D9FF`), because it
+passed `1.0 - pct_frac` to `Color::mix` whose `fraction` is the weight of *self*. Corrected to
+`pct_frac`. This only surfaced through **direct** Rust callers of the algebra path
+(nicematrix here, plus `soul`/`fancyvrb`/`colordvi`); `\color`/`\textcolor` were already correct
+because xcolor's own decoder (`xcolor_sty::apply_mix_expr`) does the mix right.
+
+**Limitation.** Only the *color* commands in `\CodeBefore` are interpreted; other decorations
+(`\tikz`, `\SubMatrix`, …) are undefined and may emit `Error:undefined` (the matrix still renders).
+Several Nice matrices in ONE display are handled — the color-walk paints the *last* matrix-XMDual,
+i.e. the just-closed one (guard `cluster_nicematrix_multi_matrix_no_color_leak_6569`). A Nice matrix
+NESTED in another's cell is not: the inner `\begin` clears the shared thread_local, so the outer
+loses its `\CodeBefore` rects and both share one first-row/first-col flag pair (inner wins).
+
+**Upstream / mirror**: the ar5iv `nicematrix.sty.ltxml` stub still errors here; mirror this upgrade
+there for strict Rust↔ar5iv parity.
+
+**Witnesses**: arXiv/html_feedback#6569 (witness arXiv 2410.00317).
+
+**Guards**: `06_cluster_regressions::cluster_nicematrix_codebefore_6569` (the witness's first matrix:
+`ltx:XMArray` present, exactly 6 `backgroundcolor` cells at the nonzero entries, `thead` on the
+first-row/first-col labels, 0 errors, no `nicematrix-placeholder`).
+
+### 146. A hand-typeset title that duplicates the structured `\title{}` is dropped
+
+**Background.** LaTeXML's unified Frontmatter API captures `\title{}` into a semantic
+`<ltx:title>` the moment it is seen — independent of `\maketitle` (unlike LaTeX, where `\title{}`
+without `\maketitle` renders nothing), and the stylesheet renders that title as the visible
+document heading. When a paper *also* hand-typesets its title as ordinary body text — a leading
+centered display-font block, with `\title{}` set but `\maketitle` never called — the title appears
+twice: once from the structured frontmatter, once as the author's "ink". Witness arXiv 2608.10928
+(`\title{…}` + a `\begin{center}{\LARGE\bfseries …}` reproduction; no `\maketitle`).
+
+**Perl behavior**: SHARED — Perl LaTeXML emits the structured `<ltx:title>` from `\title{}` without
+`\maketitle` too, so it duplicates identically (verified on the witness). This is not a Rust-only
+bug; the divergence below is a deliberate surpass-Perl.
+
+**Rust behavior**: at frontmatter finalization (`\lx@frontmatter@fallback`, the no-`\maketitle`
+path), once the structured `<ltx:title>` is in the tree, `maybe_dedup_leading_title_ink`
+(`base_utilities.rs`) removes a **leading, non-sectional, centered, display-font** paragraph whose
+normalized text **exactly** reproduces the structured title. Structure wins over ink: the semantic
+`<ltx:title>` is kept; the redundant hand-typeset copy is dropped (empty wrappers pruned). It is the
+mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
+block *into* the title) and reuses the same detection helpers.
+
+**Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
+path disables the fallback), and only on a full normalized-text match against the structured title
+in a leading display-font centered block. A paper that sets `\title` but doesn't hand-typeset keeps
+its title; a leading centered block that *doesn't* match the title is left untouched; author/abstract
+"ink" (no structured counterpart) is preserved. Never removes a title the PDF actually shows —
+`\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
+visible there.
+
+**Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
+
+**Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
+kept, title text appears exactly once, hand-typeset author block preserved).

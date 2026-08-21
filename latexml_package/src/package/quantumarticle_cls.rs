@@ -28,7 +28,7 @@ LoadDefinitions!({
   DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{#2}");
   DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{#2}");
   DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
-  DefMacro!("\\orcid[]{}",               "\\lx@add@contact[role=orcid,name={#1}]{#2}");
+  DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}");
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
   DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");

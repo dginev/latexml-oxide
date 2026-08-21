@@ -131,8 +131,9 @@ LoadDefinitions!({
 
   def_macro_noop("\\clearheadinfo")?;
   def_macro_noop("\\clearemptydoublepage")?;
-  // Springer Multi-author authors use \orcid for ORCID identifier.
+  // Springer Multi-author authors use \orcid for the ORCID identifier. Route
+  // through the kernel `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable
+  // orcid.org link + logo icon (vs a bare dagger note). html_feedback#6571.
   // Witness 2408.17087, 2411.17645 (2 svmult papers).
-  DefMacro!("\\orcid{}",
-    "\\lx@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
 });
