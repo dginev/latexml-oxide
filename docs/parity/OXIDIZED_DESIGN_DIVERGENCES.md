@@ -5351,3 +5351,34 @@ columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (
 **Guards**: `06_cluster_regressions::cluster_pandoc_calc_colwidth_6909` — a two-column
 `p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
 proportional 96.3pt / 224.7pt.
+
+### 142. `\\[dimen]` optional glue preserved as a themeable `--ltx-break-space` CSS variable
+
+**Perl** LaTeXML's `\lx@newline OptionalMatch:* [Glue]` constructor parses the optional length of
+`\\[20pt]` (the extra vertical space LaTeX inserts at a forced line break) and then **drops it**:
+it emits a bare `<ltx:break/>`, and `ltx:break` has no spacing attribute in the schema (`break_model
+= empty`). So the author's requested gap is lost in HTML while the PDF keeps it. latexml-oxide
+reproduced this exactly (SHARED-FAILURE; verified same-host — byte-identical core XML, both a bare
+`<break/>`).
+
+**Perl behavior**: `\\[20pt]` → `<break/>` (the 20pt is discarded).
+**Rust behavior**: the constructor reads the optional `[Glue]` (`args[1]`) and, when non-zero, sets
+`cssstyle="--ltx-break-space:<pt>"` on the break, so `\\[20pt]` → `<break
+cssstyle="--ltx-break-space:20.0pt"/>` → `<br class="ltx_break" style="--ltx-break-space:20.0pt;">`.
+Plain `\\` (no optional) and `\\[0pt]` stay bare. **No default CSS rule consumes the variable**, so
+default rendering is byte-identical to Perl's bare break — the value is *preserved for a theme to opt
+into* (e.g. ar5iv mapping it to a margin), not acted on.
+
+**Why**: the same "preserve intent in the data model, let the theme decide" principle as the #721
+image-sizing discussion — the engine stays faithful (emits the value, changes nothing visually) and
+spacing policy lives in the theme layer. A default-inert attribute is a strict superset of the
+parity output.
+
+**Witnesses**: html_feedback #722 (a `\title{… \\[20pt] {\small …}}` whose 20pt gap vanished in HTML).
+
+**Upstream**: worth raising against `brucemiller/LaTeXML` (the drop is upstream; a `--ltx-break-space`
+convention or a break spacing attribute would let both engines carry it).
+
+**Guards**: `06_cluster_regressions::cluster_break_optional_glue_722` — `\\[20pt]` carries
+`--ltx-break-space:20.0pt` on its break and exactly one break in the document does (plain `\\` and
+`\\[0pt]` stay bare).

@@ -146,6 +146,26 @@ fn cluster_pandoc_calc_colwidth_6909() {
      (30%/70% of 321pt):\n{xml}"
   );
 }
+/// Issue #722: the optional `[dimen]` of `\\[20pt]` (extra vertical space at a
+/// forced line break) is preserved as a themeable CSS custom property
+/// `--ltx-break-space` on `ltx:break`. Perl parses the glue and drops it
+/// (`ltx:break` has no spacing slot); we surpass it, default-inert. Plain `\\` and
+/// `\\[0pt]` stay bare. OXIDIZED_DESIGN #142.
+#[test]
+fn cluster_break_optional_glue_722() {
+  let xml = convert_to_xml("tests/cluster_regressions/break_optional_space_722.tex");
+  assert!(
+    xml.contains(r#"<break cssstyle="--ltx-break-space:20.0pt"/>"#),
+    "\\\\[20pt] should preserve its optional glue as --ltx-break-space on ltx:break:\n{xml}"
+  );
+  // Exactly one break carries the variable — plain \\ and \\[0pt] must stay bare.
+  assert_eq!(
+    xml.matches("--ltx-break-space").count(),
+    1,
+    "only the \\\\[20pt] break should carry --ltx-break-space (plain \\\\ and \\\\[0pt] \
+     stay attribute-free):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");
