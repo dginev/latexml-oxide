@@ -126,7 +126,7 @@ AUDITED = {
     # ---- Build-tooling and test fixtures: native files present, NOT linked into any
     # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
     # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
-    "cc": (("1.4.0", "1.4.2", "1.4.3"),
+    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4"),
         "src/detect_compiler_family.c -- a probe compiled to identify the host "
         "toolchain, never linked into our binary. The crate itself is pure Rust. "
         "Re-verified at 1.4.0: still the only non-Rust file in the crate, and still "
@@ -135,7 +135,10 @@ AUDITED = {
         "byte-identical, still the only native file, license MIT OR Apache-2.0 "
         "unchanged. 1.4.2 -> 1.4.3 diffed 2026-08-14: detect_compiler_family.c "
         "byte-identical (sha 97ca4b021495), still the only native file, license "
-        "MIT OR Apache-2.0 unchanged.",
+        "MIT OR Apache-2.0 unchanged. 1.4.3 -> 1.4.4 verified 2026-08-21: "
+        "detect_compiler_family.c still the ONLY native file, sha256 unchanged "
+        "(97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f), "
+        "license MIT OR Apache-2.0 unchanged.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
