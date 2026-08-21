@@ -652,6 +652,13 @@ cite                 { font-style: normal; }
    1.7em badge that overflowed the line (html_feedback #6895, #6016, #5789, #2176,
    #5615). #6571 &c. */
 .ltx_orcidlogo { height:1em; width:1em; vertical-align:-0.15em; }
+/* Author name + ORCID iD badge on one line ("Name  iD"): the badge is a sibling of
+   the name inside this thin inline wrapper (not in the author-notes group). The
+   name shrinks to its text so the badge sits right after it. */
+.ltx_author_name_orcid {
+  display:inline-flex; flex-wrap:wrap; align-items:baseline;
+  justify-content:center; column-gap:0.35em; }
+.ltx_author_name_orcid > .ltx_personname { min-width:0; }
 
 .ltx_overlay {position:relative; }
 .ltx_overlay > span:nth-child(2) {position:absolute; left:0; }
