@@ -1,0 +1,11 @@
+% sandbox-arxiv-2605 (witness 2605.17249): the neurips binding intercepts the versioned
+% neurips_2026 name but never creates \if@anonymous (neurips_2026.sty L72 \newif). A paper
+% copying the style's \@maketitle (which branches on \if@anonymous) hit
+% Error:undefined:\if@anonymous. Perl 0.8.8 converts it without the error. Default false =>
+% the authors-shown (\else "Named") branch, correct for arXiv uploads.
+\documentclass{article}
+\usepackage[preprint]{neurips_2026}
+\makeatletter
+\renewcommand{\@maketitle}{\if@anonymous Anon\else Named\fi}
+\makeatother
+\begin{document}\maketitle\end{document}

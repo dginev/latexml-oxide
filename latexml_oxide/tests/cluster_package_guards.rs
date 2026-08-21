@@ -325,36 +325,12 @@ mod nicetabular_binding {
   //! so binding it to `\tabular` recovers real tables for sandbox-arxiv-2605 papers
   //! (2605.08776, 2605.13835, 2605.18423) the placeholder stub previously errored on.
   //! Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors here.
-  use std::{path::Path, process::Command};
-
-  const TEX: &str = "\\documentclass{article}\n\
-    \\usepackage{nicematrix}\n\
-    \\begin{document}\n\
-    \\begin{NiceTabular}[colortbl-like]{ccc}\n\
-    1 & 2 & 3 \\\\ 4 & 5 & 6 \\\\\n\
-    \\end{NiceTabular}\n\
-    \\end{document}\n";
+  use crate::cluster::convert_to_xml_contrib;
 
   #[test]
   fn nicetabular_renders_real_table() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      !stderr.contains("undefined:\\NiceTabular") && !stderr.contains("undefined:{NiceTabular}"),
-      "NiceTabular should be bound, not undefined:\n{stderr}",
-    );
-    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
+    // Red before the fix: Error:undefined:{NiceTabular} + dropped body (no <tabular>).
+    let xml = convert_to_xml_contrib("tests/cluster_regressions/nicetabular_binding.tex");
     assert!(
       xml.contains("<tabular"),
       "NiceTabular did not render a real table:\n{xml}"
@@ -373,35 +349,12 @@ mod neurips_anonymous {
   //! branches on `\if@anonymous`) hit `Error:undefined:\if@anonymous`. Rust-only
   //! divergence: Perl 0.8.8 converts the same paper (2605.17249) without it.
   //! Default false => the `\else` (authors-shown) branch, correct for arXiv uploads.
-  use std::{path::Path, process::Command};
-
-  const TEX: &str = "\\documentclass{article}\n\
-    \\usepackage[preprint]{neurips_2026}\n\
-    \\makeatletter\n\
-    \\renewcommand{\\@maketitle}{\\if@anonymous Anon\\else Named\\fi}\n\
-    \\makeatother\n\
-    \\begin{document}\\maketitle\\end{document}\n";
+  use crate::cluster::convert_to_xml_contrib_clean;
 
   #[test]
   fn neurips_if_anonymous_defined() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      !stderr.contains("undefined:\\if@anonymous"),
-      "\\if@anonymous should be defined by the neurips binding:\n{stderr}",
-    );
-    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
+    // Red before the fix: Error:undefined:\if@anonymous. Green: 0 errors + the Named branch.
+    let xml = convert_to_xml_contrib_clean("tests/cluster_regressions/neurips_anonymous.tex");
     assert!(
       xml.contains("Named") && !xml.contains(">Anon"),
       "default-false \\if@anonymous should take the authors-shown (`Named`) branch:\n{xml}",
@@ -416,38 +369,13 @@ mod biblatex_fallback_no_cite_loop {
   //! `\cite` on the 2nd init, so `\cite -> \blx@saved@cite -> \cite` looped to
   //! `Fatal:Timeout:TokenLimit`/`Recursion` (witness 2605.03965; Perl never loads
   //! biblatex on this name, so no loop). The save is now `\@ifundefined`-guarded.
-  use std::{path::Path, process::Command};
-
-  const TEX: &str = "\\documentclass{article}\n\
-    \\usepackage{myBiblatex}\n\
-    \\begin{document}\\cite{X}\\end{document}\n";
+  use crate::cluster::convert_to_xml_contrib_clean;
 
   #[test]
   fn mybiblatex_fallback_does_not_loop() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      !stderr.contains("Timeout:TokenLimit")
-        && !stderr.contains("Timeout:Recursion")
-        && !stderr.contains("Stomach:Recursion"),
-      "myBiblatex fallback re-ran biblatex init and looped on \\cite:\n{stderr}",
-    );
-    assert!(
-      output.status.success(),
-      "binary exited {:?}:\n{stderr}",
-      output.status.code(),
-    );
+    // Red before the fix: \cite loops to Fatal:Timeout:TokenLimit (fatal status / no result).
+    // Green: converts clean (convert_to_xml_contrib_clean asserts 0 errors + non-fatal).
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_mybiblatex_loop.tex");
   }
 }
 
@@ -458,6 +386,12 @@ mod expl3_nested_raw_load_catcodes {
   //! `unexpected:_` (witness 2605.21946, pomegranate.sty). The input_definitions
   //! expl3-frame stack (content.rs) makes the inner load inherit the outer frame's
   //! expl3 state instead of re-snapshotting after the outer `\@pushfilename`.
+  //!
+  //! Subprocess (not the in-process `convert_*` helpers) on purpose: reproducing the
+  //! bug needs `--includestyles` AND the contrib dispatch (for the `derivative` binding)
+  //! AND a paper-local `mymac.sty` on the search path, simultaneously — no single
+  //! in-process helper combines all three. Same legitimate subprocess reason as the
+  //! `newtcblisting_verbatim` / `deferred_load_retry` tests.
   use std::{path::Path, process::Command};
 
   #[test]

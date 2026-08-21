@@ -1,0 +1,8 @@
+% sandbox-arxiv-2605 (witness 2605.03965): \usepackage{myBiblatex} hits the versioned-package
+% fallback -> the native biblatex binding, which find_file_fallback double-runs (probe then
+% load). The non-idempotent \let\blx@saved@cite\cite captured biblatex's OWN \cite on the 2nd
+% init -> \cite -> \blx@saved@cite -> \cite looped to Fatal:Timeout:TokenLimit. Perl never
+% loads biblatex on this name. The save is now \@ifundefined-guarded, so this converts clean.
+\documentclass{article}
+\usepackage{myBiblatex}
+\begin{document}\cite{X}\end{document}
