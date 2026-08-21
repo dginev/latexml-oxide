@@ -226,6 +226,38 @@ fn cluster_break_optional_glue_722() {
      stay attribute-free):\n{xml}"
   );
 }
+/// arXiv/html_feedback#6924 (witness arXiv 2608.10928): the paper sets `\title{}`
+/// (structured `<ltx:title>`) but never calls `\maketitle`; it hand-typesets the
+/// title (and authors) as a leading centered display-font block. LaTeXML captured
+/// the structured title AND kept the ink → the title rendered twice. We prioritize
+/// the structured metadata: the redundant leading title-ink is removed, the
+/// semantic `<ltx:title>` kept, and the author ink (no structured counterpart) is
+/// preserved.
+#[test]
+fn cluster_frontmatter_title_ink_dedup_6924() {
+  let xml = convert_to_xml("tests/cluster_regressions/frontmatter_title_ink_dedup_6924.tex");
+  // The structured title survives.
+  assert!(
+    xml.contains("<title>"),
+    "the structured <ltx:title> must remain:\n{xml}"
+  );
+  // The title text now appears exactly ONCE (structured only; the body ink is gone).
+  assert_eq!(
+    xml.matches("My Great Title").count(),
+    1,
+    "title should appear once (structured), not duplicated as body ink:\n{xml}"
+  );
+  assert_eq!(
+    xml.matches("A Longer Subtitle").count(),
+    1,
+    "subtitle line once:\n{xml}"
+  );
+  // The hand-typeset AUTHOR block has no structured counterpart, so it stays.
+  assert!(
+    xml.contains("Jane Q. Author"),
+    "author ink must be preserved:\n{xml}"
+  );
+}
 /// arXiv/html_feedback#6569 (witness arXiv 2410.00317): a nicematrix
 /// `bNiceMatrix[first-row,first-col]` with a `\CodeBefore … \Body` cell-coloring
 /// block. Beyond-Perl (no Perl `nicematrix.sty.ltxml`): the family reduces to a real

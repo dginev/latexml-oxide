@@ -5529,3 +5529,38 @@ there for strict Rust↔ar5iv parity.
 **Guards**: `06_cluster_regressions::cluster_nicematrix_codebefore_6569` (the witness's first matrix:
 `ltx:XMArray` present, exactly 6 `backgroundcolor` cells at the nonzero entries, `thead` on the
 first-row/first-col labels, 0 errors, no `nicematrix-placeholder`).
+
+### 146. A hand-typeset title that duplicates the structured `\title{}` is dropped
+
+**Background.** LaTeXML's unified Frontmatter API captures `\title{}` into a semantic
+`<ltx:title>` the moment it is seen — independent of `\maketitle` (unlike LaTeX, where `\title{}`
+without `\maketitle` renders nothing), and the stylesheet renders that title as the visible
+document heading. When a paper *also* hand-typesets its title as ordinary body text — a leading
+centered display-font block, with `\title{}` set but `\maketitle` never called — the title appears
+twice: once from the structured frontmatter, once as the author's "ink". Witness arXiv 2608.10928
+(`\title{…}` + a `\begin{center}{\LARGE\bfseries …}` reproduction; no `\maketitle`).
+
+**Perl behavior**: SHARED — Perl LaTeXML emits the structured `<ltx:title>` from `\title{}` without
+`\maketitle` too, so it duplicates identically (verified on the witness). This is not a Rust-only
+bug; the divergence below is a deliberate surpass-Perl.
+
+**Rust behavior**: at frontmatter finalization (`\lx@frontmatter@fallback`, the no-`\maketitle`
+path), once the structured `<ltx:title>` is in the tree, `maybe_dedup_leading_title_ink`
+(`base_utilities.rs`) removes a **leading, non-sectional, centered, display-font** paragraph whose
+normalized text **exactly** reproduces the structured title. Structure wins over ink: the semantic
+`<ltx:title>` is kept; the redundant hand-typeset copy is dropped (empty wrappers pruned). It is the
+mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
+block *into* the title) and reuses the same detection helpers.
+
+**Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
+path disables the fallback), and only on a full normalized-text match against the structured title
+in a leading display-font centered block. A paper that sets `\title` but doesn't hand-typeset keeps
+its title; a leading centered block that *doesn't* match the title is left untouched; author/abstract
+"ink" (no structured counterpart) is preserved. Never removes a title the PDF actually shows —
+`\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
+visible there.
+
+**Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
+
+**Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
+kept, title text appears exactly once, hand-typeset author block preserved).

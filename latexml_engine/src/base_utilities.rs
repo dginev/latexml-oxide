@@ -1395,6 +1395,9 @@ LoadDefinitions!({
       document.unwrap_nodes(wrapper)?;
       document.set_node(&savenode);
     }
+    // With the structured <ltx:title> now in the tree, drop a redundant leading
+    // hand-typeset copy of it (no \maketitle; #6924). Author/abstract ink stays.
+    maybe_dedup_leading_title_ink(document)?;
     }
   },
   after_digest => {
@@ -2422,6 +2425,93 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
   // Drop the now-empty paragraph, and any wrapper ancestor it leaves empty
   // (para → logical-block), so we don't strand empty blocks above the abstract.
   let mut victim = title_p;
+  loop {
+    let parent = victim.get_parent();
+    document.remove_node(victim);
+    match parent {
+      Some(p) if !has_element_child(&p) => {
+        let is_wrapper = with(document::get_node_qname(&p), |name| {
+          name == "ltx:para" || name == "ltx:logical-block"
+        });
+        if is_wrapper {
+          victim = p;
+          continue;
+        }
+      },
+      _ => {},
+    }
+    break;
+  }
+  Ok(())
+}
+
+/// Whitespace-collapsed, lowercased text — so a `<break>` (`\\`) and any spacing
+/// differences between the structured title and its hand-typeset copy don't
+/// defeat the comparison in [`maybe_dedup_leading_title_ink`].
+fn normalize_frontmatter_text(s: &str) -> String {
+  s.split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+    .to_lowercase()
+}
+
+/// Companion to [`maybe_promote_leading_title`] for the mirror case
+/// (arXiv/html_feedback#6924, witness arXiv 2608.10928): a structured
+/// `<ltx:title>` DOES exist (from `\title`), but the author ALSO hand-typeset the
+/// title as a leading centered display-font block and never called `\maketitle`,
+/// so that block reproduces the structured title and the title renders twice.
+///
+/// Prioritize the structured metadata (LaTeXML's unified Frontmatter API stays
+/// authoritative): remove the redundant leading title *ink*, keeping the semantic
+/// `<ltx:title>` and any author/abstract ink (which has no structured counterpart,
+/// so is the only copy). Fires only on a FULL normalized-text match against the
+/// structured title, and only for a leading, non-sectional, display-font centered
+/// paragraph — so an unrelated centered display block is never removed. Reuses the
+/// same detection helpers as the promote path.
+fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
+  // Needs a structured document title to prioritize over.
+  let Some(title) = document.findnode("/ltx:document/ltx:title", None) else {
+    return Ok(());
+  };
+  let title_text = normalize_frontmatter_text(&title.get_content());
+  if title_text.is_empty() {
+    return Ok(());
+  }
+  let nominal = {
+    let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
+    if v > 0.0 { v } else { 10.0 }
+  };
+  // Leading centered paragraphs — anywhere in the pre-first-section frontmatter
+  // region, NOT inside a section (a hand-formatted title block sits at document
+  // level, often after a `\vspace`/`\rule` so it isn't the first body element).
+  // Absolute query so the returned nodes support child traversal (shared-node
+  // caveat in `maybe_promote_leading_title`).
+  let candidates = document.findnodes(
+    "/ltx:document//ltx:p[@align='center']\
+     [not(preceding::ltx:section) and not(ancestor::ltx:section)]",
+    None,
+  );
+  // Remove the FIRST leading centered display-font block that EXACTLY reproduces
+  // the structured title. Only one — a paper may repeat the title text later
+  // (e.g. a running head); we drop just the redundant hand-typeset title.
+  let Some(victim) = candidates.into_iter().find(|p| {
+    descendant_has_display_font(document, p, nominal)
+      && normalize_frontmatter_text(&p.get_content()) == title_text
+  }) else {
+    return Ok(());
+  };
+  // Log what we drop (never remove content silently; #6924).
+  Info!(
+    "frontmatter",
+    "title_ink_dedup",
+    s!(
+      "dropped a hand-typeset title block duplicating the structured <ltx:title> (\"{title_text}\")"
+    )
+  );
+  // Remove the redundant title ink, pruning any wrapper it leaves empty
+  // (para → logical-block) — mirroring the promote path's cleanup. Sibling `<p>`s
+  // (e.g. the author block) keep their wrapper non-empty and survive.
+  let mut victim = victim;
   loop {
     let parent = victim.get_parent();
     document.remove_node(victim);
