@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+  - **`~` and `^` stay ASCII in verbatim under T1 font encoding.** A `\verb`, the
+    `verbatim` environment, or a `Verbatim`/`HyperVerbatim` argument (`\url`,
+    `\href`, a Rhai binding's verbatim arg) containing `~`/`^` under
+    `\usepackage[T1]{fontenc}` decoded to the accent glyphs U+02DC/U+02C6 — e.g. a
+    `.../~user` URL broke. Verbatim contexts now select an identity ASCII fontmap
+    for their run (keeping the typewriter styling), so `~`/`^` stay literal, while
+    the T1 fontmap — where those slots are Bruce Miller's deliberate accents
+    (LaTeXML #2435) — is untouched for normal text. A new `tools/fontmap_drift.py`
+    checks our fontmaps against pdftex's `glyphtounicode` golden. Surpasses Perl
+    (verbatim loses ASCII there too); OXIDIZED_DESIGN #144, #723.
   - **The first paragraph is no longer indented when `\parindent` is zero.** With
     `\setlength{\parindent}{0pt}` (or `\usepackage{parskip}`), the very first paragraph
     still picked up the stylesheet's default 2em first-line indent, because the class

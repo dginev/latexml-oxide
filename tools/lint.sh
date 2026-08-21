@@ -171,5 +171,19 @@ if require_or_skip cargo-machete "cargo-machete (unused dependencies)" \
     cargo machete
 fi
 
+# 8. Font-encoding fontmap drift vs pdftex's own golden (<enc>.enc ∘
+#    glyphtounicode.tex). Needs the host TeX tree (kpsewhich + the .enc /
+#    glyphtounicode.tex files), so it skips where those are absent — e.g. the
+#    CI `lint` job, which installs no texlive. It runs for developers with a full
+#    TL and on the pre-push hook; the per-slot conversion guard
+#    (cluster_t1_ascii_tilde_circumflex_723) is the CI-side regression net.
+if command -v kpsewhich >/dev/null 2>&1 && [ -n "$(kpsewhich glyphtounicode.tex 2>/dev/null)" ]; then
+  run "fontmap drift (vs pdftex glyphtounicode golden)" \
+    "a text-encoding fontmap slot drifted from <enc>.enc ∘ glyphtounicode.tex; fix the value or allowlist it with a reason in tools/fontmap_drift.py" -- \
+    python3 tools/fontmap_drift.py
+else
+  skip "fontmap drift" "no TeX tree (kpsewhich/glyphtounicode.tex absent); the T1 conversion guard covers CI"
+fi
+
 summarize
 [ ${#failed[@]} -eq 0 ]

@@ -453,7 +453,6 @@ LoadDefinitions!({
   );
 
   // Be careful here: if % appears before the initial {, it's still a comment!
-  // Also, note that non-typewriter fonts will mess up some chars on digestion!
   DefParameterType!(Verbatim, sub[_inner, _extra] {
       read_until(&Tokens!(T_BEGIN!()))?;
     begin_semiverbatim(Some(&['%', '\\']));
@@ -464,6 +463,16 @@ LoadDefinitions!({
     before_digest => {
       bgroup();
       MergeFont!(family => "typewriter");
+      // Surpass Perl (OXIDIZED_DESIGN #144, issue #723): keep the identity ASCII
+      // fontmap live THROUGH digestion, not just during the read. `begin_semiverbatim`
+      // sets it, but `end_semiverbatim` pops it before the argument digests, so under
+      // a non-default encoding (e.g. T1, where slots 94/126 are Bruce's accent glyphs
+      // U+02C6/U+02DC — commit 9ec6a4122 #2435) a verbatim `~`/`^` decoded to those
+      // non-ASCII chars (a `.../~user` URL broke). `Semiverbatim` stays ASCII because
+      // its descriptor re-runs `begin_semiverbatim` at digest time; do the same here by
+      // merging `encoding => "ASCII"` for the digestion group. Perl's Verbatim loses
+      // ASCII the same way (SHARED-FAILURE); Bruce's fontmap is unchanged.
+      MergeFont!(encoding => "ASCII");
     },
     after_digest => {
       egroup()?;
@@ -524,7 +533,11 @@ LoadDefinitions!({
     },
     before_digest => {
       bgroup();
-      MergeFont!(family => "typewriter"); },
+      MergeFont!(family => "typewriter");
+      // Keep ASCII live through digestion — see Verbatim above (OXIDIZED_DESIGN
+      // #144, issue #723): this is exactly the reported case, a HyperVerbatim URL
+      // argument whose `~` decoded to U+02DC under T1.
+      MergeFont!(encoding => "ASCII"); },
     after_digest => {
       egroup()?; },
     reversion => sub[arg, _inner, _extra] {
