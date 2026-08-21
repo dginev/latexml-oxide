@@ -2,6 +2,18 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // STATUS — the whole scalerel family is NEUTRALIZED, not yet fully supported.
+  // This binding is deliberately STEP 1: *preserve the content* (the object survives,
+  // sized to text height) and stop the `Error:undefined` + broken layout — at the cost
+  // of the ACTUAL scale. The target height (`\scalerel`/`\scaleto`/`\stretchto`) and the
+  // numeric factor (`\scaleobj`/`\hstretch`/`\vstretch`) are DROPPED, so every scaled
+  // object renders at ~1em (text height) regardless of the requested size. Do NOT mistake
+  // this approximation for correct sizing.
+  // FUTURE (complete support): honour the real scale — measure the object box and the
+  // reference box (or read the factor), compute the ratio, and emit a CSS
+  // `transform: scale()` / SVG viewBox — which needs box measurement the engine does not
+  // yet expose. Tracked in docs/SYNC_STATUS.md (scalerel full box-measurement scaling).
+  //
   // arXiv/html_feedback#6895: the `scalerel` package has no `.ltxml` binding in
   // Perl OR Rust, and the raw `.sty` load leaves `\scalerel` undefined — so an
   // inline icon built with `\scalerel*` (the `\orcidicon` of arXiv:2608.12272)

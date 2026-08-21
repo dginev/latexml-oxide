@@ -790,6 +790,21 @@ with file:line, not established facts — re-verify before acting**:
 `docs/parity/OXIDIZED_DESIGN.md` has no font section, so none of these is a
 documented divergence. Method and the two detection traps: [`WISDOM.md`](parity/WISDOM.md) §80.
 
+### (not ranked) scalerel family — NEUTRALIZED, full scaling deferred (2026-08-21)
+
+`\scalerel` / `\scaleto` / `\stretchto` / `\scaleobj` / `\hstretch` / `\vstretch` /
+`\scaleleftright` / `\stretchleftright` are bound
+(`latexml_package/src/package/scalerel_sty.rs`, arXiv/html_feedback#6895) but **neutralized,
+not fully supported**: the object is *preserved* (wrapped in `.ltx_scalerel`, CSS-sized to
+text height) and the requested scale — the target height (`\scaleto`/`\stretchto`/`\scalerel`)
+or the numeric factor (`\scaleobj`/`\hstretch`/`\vstretch`) — is **dropped**, so every scaled
+object renders at ~1em regardless of the requested size. This is **step 1** (preserve content,
+stop `Error:undefined` + broken layout). **Full support** = honour the real scale: measure the
+object box and the reference box (or read the factor), compute the ratio, and emit CSS
+`transform: scale()` / an SVG viewBox — which needs box measurement the engine does not yet
+expose. Witnesses 2605.02053 / 2605.03024 / 2605.03521 (now convert clean, content preserved).
+Do not mistake the text-height approximation for correct sizing.
+
 ## Parked families — pointers, not content
 
 Each outgrew this file and now lives on its own. Read the doc before starting;
