@@ -134,6 +134,22 @@ LoadDefinitions!({
             if class_sym != pin!("") {
               let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
+            } else if prop_bool!(props, "first_para_noindent")
+              && !document::helpers::preceding_para_sibling(&node)
+            {
+              // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): the deferred
+              // `next_para_class` above never reaches the document's FIRST
+              // paragraph — no prior `\par` recorded a class for it — so with
+              // `\parindent=0` it kept the stylesheet's default first-line indent
+              // where pdflatex is flush. `after_digest` flags the candidate when
+              // `\parindent==0` and no deferred class applies; we stamp it here,
+              // in the constructor, gated on the STRUCTURAL "first paragraph of
+              // its parent" test (no preceding `ltx:para` sibling). That is robust
+              // to how many stray `\par`s fired before the first content (which
+              // varies by TeX Live year / dump vs no-dump) — a state one-shot was
+              // not (issue #719 first landed with `seen_first_para`, which a
+              // begin-document `\par` consumed under the no-dump/tl2023 path).
+              document.set_attribute(&mut node, "class", "ltx_noindent")?;
             }
           }
           // NOTE: Perl's \par (\lx@normal@par) does NOT insert figure-separating
@@ -222,25 +238,17 @@ LoadDefinitions!({
         // and force noindent — skip the override. Witness: 1502.07281.
         let parindent_zero =
           lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0);
-        // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): the deferred rule
-        // below records `ltx_noindent` for the NEXT paragraph, because a
-        // paragraph's indent is fixed by `\parindent` when it BEGINS, not when
-        // its `\par` closes. The first body paragraph has no prior `\par` to
-        // have recorded that class, so with `\parindent=0` it was left unmarked
-        // and inherited the stylesheet's default 2em first-line indent — visibly
-        // indented where pdflatex is flush-left. Perl LaTeXML has the identical
-        // off-by-one (byte-identical XML, verified same-host). Stamp the first
-        // paragraph here from the live `\parindent`, one-shot via
-        // `seen_first_para` so only the first paragraph is touched — later
-        // paragraphs keep the unchanged deferred mechanism. The stamp fires only
-        // when `\parindent==0` (where `ltx_noindent` is the correct outcome),
-        // and `seen_first_para` shares `next_para_class`'s local, per-conversion
-        // scope. Witness: issue #719 MWE (`first_para_noindent_719.tex`).
-        if !LookupBool!("seen_first_para") {
-          if parindent_zero && !class_from_prior {
-            whatsit.set_property("class", "ltx_noindent");
-          }
-          assign_value("seen_first_para", true, None);
+        // Surpass Perl (OXIDIZED_DESIGN #142, issue #719): flag this paragraph as
+        // the first-paragraph `ltx_noindent` candidate when `\parindent==0` and no
+        // deferred class already applies. The constructor makes the final decision
+        // — it has the DOM and confirms this really is the first paragraph — but
+        // the `\parindent` register must be sampled HERE, at digest time, where it
+        // holds the value in force as the paragraph closed (a paragraph's indent
+        // is fixed by `\parindent` when it begins; the deferred rule below carries
+        // that to the NEXT paragraph, and the first paragraph has no prior `\par`
+        // to have carried it). Witness: issue #719 MWE (`first_para_noindent_719.tex`).
+        if parindent_zero && !class_from_prior {
+          whatsit.set_property("first_para_noindent", true);
         }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
         if parindent_zero {

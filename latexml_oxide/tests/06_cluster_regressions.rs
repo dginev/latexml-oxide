@@ -175,6 +175,36 @@ fn cluster_first_para_noindent_719() {
      (#719 over-application):\n{def}"
   );
 }
+/// Issue #719, no-dump path. The first landing keyed the first-paragraph stamp on
+/// a `seen_first_para` state one-shot, which a begin-document `\par` consumed
+/// before the first content paragraph under the no-dump sequence — so the fix
+/// silently reverted there (and in CI, whose freshly-generated dump takes the same
+/// path). The stamp is now structural (first `ltx:para` of its parent), robust to
+/// stray `\par` timing. This subprocess drives the binary with `LATEXML_NODUMP=1`
+/// (env-isolated to dodge the shared-env race) to guard exactly that path.
+#[test]
+fn cluster_first_para_noindent_nodump_719() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(
+    dir.path().join("m.tex"),
+    "\\documentclass[12pt]{article}\n\\setlength{\\parindent}{0pt}\n\
+     \\begin{document}\nFirst line\n\nsecond lines\n\\end{document}\n",
+  )
+  .expect("write m.tex");
+  let status = Command::new(bin)
+    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
+    .env("LATEXML_NODUMP", "1")
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+  assert!(
+    status.status.success() && xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
+    "no-dump first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");

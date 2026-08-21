@@ -3,24 +3,34 @@ use libxml::tree::Node;
 use super::{Document, get_node_qname};
 use crate::common::{error::*, xml::XML_NS};
 
+/// Does an `ltx:para` element immediately precede `node`? Both `prune_empty_para`
+/// (to decide `ltx_pruned_first`) and the first-paragraph `ltx_noindent` stamp
+/// (`tex_paragraph.rs`, OXIDIZED_DESIGN #142) ask this: a paragraph with no
+/// preceding `ltx:para` sibling is the first paragraph of its parent, structurally
+/// — a signal robust to how many stray `\par`s fired before it (which varies by
+/// TeX Live year / dump vs no-dump).
+pub fn preceding_para_sibling(node: &Node) -> bool {
+  match node.get_prev_element_sibling() {
+    None => false,
+    Some(prev) => {
+      if prev.get_name() == "_spilled_" {
+        // Streaming pass 1: earlier siblings were spilled; the placeholder
+        // records the LAST spilled node's qname (see `spill_run`) so this
+        // test matches what the eager walk would have seen.
+        prev.get_attribute("last").as_deref() == Some("ltx:para")
+      } else {
+        get_node_qname(&prev) == crate::pin!("ltx:para")
+      }
+    },
+  }
+}
+
 /// In some cases we could have e.g. a \noindent followed by a {table},
 /// in which case we end up with an empty ltx:para which we can prune.
 pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> {
   let children = node.get_child_elements();
   if children.is_empty() {
-    let prev_is_para = match node.get_prev_element_sibling() {
-      None => false,
-      Some(prev) => {
-        if prev.get_name() == "_spilled_" {
-          // Streaming pass 1: earlier siblings were spilled; the placeholder
-          // records the LAST spilled node's qname (see `spill_run`) so this
-          // test matches what the eager walk would have seen.
-          prev.get_attribute("last").as_deref() == Some("ltx:para")
-        } else {
-          get_node_qname(&prev) == crate::pin!("ltx:para")
-        }
-      },
-    };
+    let prev_is_para = preceding_para_sibling(node);
     if !prev_is_para {
       // If `node` WAS the 1st child
       document.add_class(&mut node.get_parent().unwrap(), "ltx_pruned_first")?;

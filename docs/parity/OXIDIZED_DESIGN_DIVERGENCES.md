@@ -5367,12 +5367,16 @@ un-classed in both).
 
 **Perl behavior**: with `\parindent=0`, the first paragraph is un-classed → indented 2em by CSS;
 the 2nd+ paragraphs are `ltx_noindent`.
-**Rust behavior**: `\par`'s `after_digest` (`tex_paragraph.rs`) additionally stamps the *closing*
-paragraph `ltx_noindent` when it is the document's first (`seen_first_para` one-shot, sharing
-`next_para_class`'s local per-conversion scope) and `\parindent==0` and no prior `\par` supplied a
-class. The stamp fires only when `\parindent` is genuinely zero — where `ltx_noindent` is the
-correct outcome — so default-`\parindent` documents are byte-identical to before, and only the
-first paragraph is ever touched (later paragraphs keep the unchanged deferred mechanism).
+**Rust behavior**: `\par`'s `after_digest` (`tex_paragraph.rs`) flags the closing paragraph a
+first-paragraph candidate when `\parindent==0` and no deferred class applies; the constructor then
+stamps `ltx_noindent` iff the paragraph is *structurally* first — no preceding `ltx:para` sibling
+(`document::helpers::preceding_para_sibling`, shared with `prune_empty_para`). The structural test
+matters: a state one-shot ("first `\par` seen") is consumed by a begin-document `\par` before the
+first content paragraph under the no-dump / freshly-generated-dump sequence (the CI path), so the
+first landing reverted there; the DOM position is robust to how many stray `\par`s fired. The stamp
+fires only when `\parindent` is genuinely zero — where `ltx_noindent` is correct — so
+default-`\parindent` documents are byte-identical to before, and only the first paragraph is
+touched (later paragraphs keep the unchanged deferred mechanism).
 
 **Why**: a kernel-quality off-by-one, not a TeX-semantics change — real LaTeX+`\parindent=0`
 leaves the first line flush too. The fix halos across every `\parindent=0` document (manual
@@ -5386,4 +5390,6 @@ reporter). MWE: `\setlength{\parindent}{0pt}` + two paragraphs → both `ltx_noi
 
 **Guards**: `06_cluster_regressions::cluster_first_para_noindent_719` (first paragraph
 `ltx_noindent` under `\parindent=0`; a control fixture confirms default `\parindent` marks no
-paragraph); `50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
+paragraph); `cluster_first_para_noindent_nodump_719` (the same via `LATEXML_NODUMP=1` subprocess —
+guards the exact stray-`\par` path that broke the state-flag first landing);
+`50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
