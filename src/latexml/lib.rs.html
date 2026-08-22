@@ -9,35 +9,36 @@
 <a href=#9 id=9 data-nosnippet>9</a><span class="kw">pub mod </span>bib_session;
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">pub mod </span>converter;
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">pub mod </span>core_interface;
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub mod </span>ini_tex;
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">pub mod </span>lsp_server;
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub mod </span>main_tex;
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">pub mod </span>multidoc;
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub mod </span>post;
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub mod </span>render_workers;
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub mod </span>util;
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// Load the embedded LaTeXML schema (compile-time) into the runtime
-<a href=#21 id=21 data-nosnippet>21</a>/// `MODEL`. Single home for the `load_model!("LaTeXML")` macro
-<a href=#22 id=22 data-nosnippet>22</a>/// expansion — the macro generates a fresh `_ModelLoader::build_model`
-<a href=#23 id=23 data-nosnippet>23</a>/// at each call site (~600 KiB of `.text` per copy), so funnelling
-<a href=#24 id=24 data-nosnippet>24</a>/// all callers through this one function lets LTO keep exactly one
-<a href=#25 id=25 data-nosnippet>25</a>/// instance in the final binary. Mirrors Perl
-<a href=#26 id=26 data-nosnippet>26</a>/// `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136).
-<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">pub fn </span>load_latexml_default_model() {
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="kw">use </span>latexml_codegen::LoadModel;
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>}
-<a href=#31 id=31 data-nosnippet>31</a>
-<a href=#32 id=32 data-nosnippet>32</a><span class="doccomment">/// Load the embedded LaTeXML schema and return its compiled-model
-<a href=#33 id=33 data-nosnippet>33</a>/// serialisation in the `.model` plain-text format. Used by
-<a href=#34 id=34 data-nosnippet>34</a>/// `tools/compileschema.sh` stage 2 (and the `--dump-model` flag on
-<a href=#35 id=35 data-nosnippet>35</a>/// the `latexml_oxide` binary) to regenerate `LaTeXML.model` from the
-<a href=#36 id=36 data-nosnippet>36</a>/// same source the runtime sees.
-<a href=#37 id=37 data-nosnippet>37</a></span><span class="kw">pub fn </span>dump_compiled_latexml_model() -&gt; String {
-<a href=#38 id=38 data-nosnippet>38</a>  load_latexml_default_model();
-<a href=#39 id=39 data-nosnippet>39</a>  latexml_core::common::model::MODEL
-<a href=#40 id=40 data-nosnippet>40</a>    .borrow()
-<a href=#41 id=41 data-nosnippet>41</a>    .dump_compiled_schema()
-<a href=#42 id=42 data-nosnippet>42</a>}
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">pub mod </span>identity;
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">pub mod </span>ini_tex;
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">pub mod </span>lsp_server;
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">pub mod </span>main_tex;
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">pub mod </span>multidoc;
+<a href=#17 id=17 data-nosnippet>17</a><span class="kw">pub mod </span>post;
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">pub mod </span>render_workers;
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">pub mod </span>util;
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="doccomment">/// Load the embedded LaTeXML schema (compile-time) into the runtime
+<a href=#22 id=22 data-nosnippet>22</a>/// `MODEL`. Single home for the `load_model!("LaTeXML")` macro
+<a href=#23 id=23 data-nosnippet>23</a>/// expansion — the macro generates a fresh `_ModelLoader::build_model`
+<a href=#24 id=24 data-nosnippet>24</a>/// at each call site (~600 KiB of `.text` per copy), so funnelling
+<a href=#25 id=25 data-nosnippet>25</a>/// all callers through this one function lets LTO keep exactly one
+<a href=#26 id=26 data-nosnippet>26</a>/// instance in the final binary. Mirrors Perl
+<a href=#27 id=27 data-nosnippet>27</a>/// `LaTeXML::Common::Model::compileSchema` (Model.pm L121-136).
+<a href=#28 id=28 data-nosnippet>28</a></span><span class="kw">pub fn </span>load_latexml_default_model() {
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="kw">use </span>latexml_codegen::LoadModel;
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">load_model!</span>(<span class="string">"LaTeXML"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>}
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="doccomment">/// Load the embedded LaTeXML schema and return its compiled-model
+<a href=#34 id=34 data-nosnippet>34</a>/// serialisation in the `.model` plain-text format. Used by
+<a href=#35 id=35 data-nosnippet>35</a>/// `tools/compileschema.sh` stage 2 (and the `--dump-model` flag on
+<a href=#36 id=36 data-nosnippet>36</a>/// the `latexml_oxide` binary) to regenerate `LaTeXML.model` from the
+<a href=#37 id=37 data-nosnippet>37</a>/// same source the runtime sees.
+<a href=#38 id=38 data-nosnippet>38</a></span><span class="kw">pub fn </span>dump_compiled_latexml_model() -&gt; String {
+<a href=#39 id=39 data-nosnippet>39</a>  load_latexml_default_model();
+<a href=#40 id=40 data-nosnippet>40</a>  latexml_core::common::model::MODEL
+<a href=#41 id=41 data-nosnippet>41</a>    .borrow()
+<a href=#42 id=42 data-nosnippet>42</a>    .dump_compiled_schema()
+<a href=#43 id=43 data-nosnippet>43</a>}
 </code></pre></div></section></main></body></html>
