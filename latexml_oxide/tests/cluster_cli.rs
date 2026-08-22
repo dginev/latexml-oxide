@@ -556,6 +556,19 @@ mod kpathsea_backend_resolution {
     let produced = fs::read_to_string(dir.join("out.xml")).unwrap_or_default();
     let _ = fs::remove_dir_all(&dir);
 
+    // This test's premise — resolution survives a disabled `kpsewhich` — only
+    // holds when libkpathsea is linked in-process (the shipped distribution,
+    // `--features kpathsea-build-from-source`). A plain `cargo build` links no
+    // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
+    // pointed at nothing there is no resolver at all, so skip rather than fail.
+    if log.contains("no libkpathsea is linked") {
+      eprintln!(
+        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
+         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      );
+      return;
+    }
+
     assert!(
       !log.contains("Error:missing_file:lxo_probe_304"),
       "the TEXINPUTS-only include must resolve with no usable kpsewhich; log:\n{log}"
@@ -1517,13 +1530,15 @@ mod dir_prefixed_package_loading {
     std::fs::create_dir_all(root.join("sub")).unwrap();
     std::fs::create_dir_all(root.join("extra")).unwrap();
 
-    let extra_abs = root.join("extra");
+    // A RELATIVE dir keeps this cross-platform without any path-string surgery:
+    // an absolute OS path in TeX source is hostile on Windows (`\` is catcode 0,
+    // so `C:\Users\…` tokenizes \U, \e, … as control sequences and mangles the
+    // arg that `\lx@set@path` Expand!s). `\lx@set@path` resolves a relative arg
+    // against SOURCEDIRECTORY (here the temp root), so `extra` == root/extra on
+    // every platform.
     std::fs::write(
       root.join("sub/lpkg.sty"),
-      format!(
-        "\\ProvidesPackage{{lpkg}}\n\\RequirePackage{{import}}\n\\lx@set@path{{{}}}\n",
-        extra_abs.to_string_lossy()
-      ),
+      "\\ProvidesPackage{lpkg}\n\\RequirePackage{import}\n\\lx@set@path{extra}\n",
     )
     .unwrap();
     std::fs::write(

@@ -818,33 +818,51 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
   fresh_state();
   // Allowed by default (no env set).
   unsafe { std::env::remove_var("LATEXML_DISABLE_SHELL_ESCAPE") };
-  load_script(
+  // Unix `printf`/`false` don't exist on Windows; use `cmd` there. The
+  // shell-escape gate and stdout/status capture under test are platform-agnostic.
+  let (ok_cmd, bad_cmd) = if cfg!(windows) {
+    (
+      r#"let cmd = Command("cmd"); cmd.args(["/C", "echo hello-world"]);"#,
+      r#"let bad = Command("cmd"); bad.args(["/C", "exit 1"]);"#,
+    )
+  } else {
+    (
+      r#"let cmd = Command("printf"); cmd.args(["%s", "hello-world"]);"#,
+      r#"let bad = Command("false");"#,
+    )
+  };
+  load_script(&format!(
     r#"
-    let cmd = Command("printf");
-    cmd.args(["%s", "hello-world"]);
+    {ok_cmd}
     let out = cmd.output();
     assign_global("cmd:out", out.stdout);
-    assign_global("cmd:ok", if out.success { "yes" } else { "no" });
+    assign_global("cmd:ok", if out.success {{ "yes" }} else {{ "no" }});
     assign_global("cmd:status", out.status.to_string());
 
-    let bad = Command("false");
+    {bad_cmd}
     let bout = bad.output();
-    assign_global("cmd:bad", if bout.success { "ok" } else { "fail" });
-    "#,
-  )
+    assign_global("cmd:bad", if bout.success {{ "ok" }} else {{ "fail" }});
+    "#
+  ))
   .expect("Command(...).output() must run and capture by default");
-  assert_eq!(lookup_str("cmd:out"), "hello-world", "stdout captured");
-  assert_eq!(lookup_str("cmd:ok"), "yes", "printf exits 0 -> success");
+  // `.trim()` tolerates Windows `echo`'s trailing CRLF; Unix `printf` emits none.
+  assert_eq!(lookup_str("cmd:out").trim(), "hello-world", "stdout captured");
+  assert_eq!(lookup_str("cmd:ok"), "yes", "the command exits 0 -> success");
   assert_eq!(lookup_str("cmd:status"), "0", "exit code 0");
   assert_eq!(
     lookup_str("cmd:bad"),
     "fail",
-    "`false` exits 1 -> success == false"
+    "a failing command exits nonzero -> success == false"
   );
 
   // Blockable: with the opt-out env set, `output()` refuses (a Rhai error).
   unsafe { std::env::set_var("LATEXML_DISABLE_SHELL_ESCAPE", "1") };
-  let blocked = load_script(r#"let c = Command("printf"); c.args(["%s", "x"]); c.output();"#);
+  let block_cmd = if cfg!(windows) {
+    r#"let c = Command("cmd"); c.args(["/C", "echo x"]); c.output();"#
+  } else {
+    r#"let c = Command("printf"); c.args(["%s", "x"]); c.output();"#
+  };
+  let blocked = load_script(block_cmd);
   unsafe { std::env::remove_var("LATEXML_DISABLE_SHELL_ESCAPE") };
   assert!(
     blocked.is_err(),
