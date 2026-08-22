@@ -239,6 +239,28 @@ against Perl (Perl's algorithmic listing carries no such class today) — see th
 `surpass-perl` skill protocol. Defer until the 0.7.6 release lands. Related open theme
 item above: side-by-side minipages (`dginev/ar5iv-css#38`, witness 2402.19043).
 
+### tcolorbox listings render poorly (widths + font size) — DEFERRED (user-flagged 2026-08-22)
+
+`tcolorbox`-wrapped code listings (a `listings`/`lstlisting` inside a `tcolorbox`,
+often a `\tcblisting`/`\newtcblisting`) render with wrong box widths and oversized font
+— visibly poor. Witness arXiv 2512.24601 (algorithm2e `[ruled]` paper that ALSO uses
+tcolorbox listings). Separate from the algorithm-binding work: it is a
+`tcolorbox`+`listings` sizing/CSS concern (the listings dialect is out of scope to
+change — see the unification note above), and likely wants a dedicated pass over the
+`tcolorbox` box model + the ar5iv `.ltx_lstlisting` width/font rules. Not started.
+
+### Frontmatter + footnote rendering residuals (user-flagged 2026-08-22) — DEFERRED
+
+Two more from the manual review, both likely separate from the algorithm work:
+- **Custom white-paper frontmatter (witness arXiv 2511.21969):** the authors are missing
+  and the abstract heading is duplicated. That paper uses a non-standard "white paper"
+  title/author setup; relates to the author-markup pipeline
+  ([`parity/AUTHOR_MARKUP_PIPELINE.md`](parity/AUTHOR_MARKUP_PIPELINE.md)) — verify against
+  Perl before scoping.
+- **Footnote side-margin overlap on wide displays (same witness):** footnotes 3 and 4
+  overlap in the ar5iv side-margin rendering at wide viewports — a CSS margin-note layout
+  concern (`ar5iv-css`), not core XML.
+
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 
 Issue #191 "support the original latexmlc/latexmlpost options" is **closed**;

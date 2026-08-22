@@ -891,6 +891,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::actuarialangle_sty::load_definitions,
   ),
   ("framed", "sty", package::framed_sty::load_definitions),
+  ("tabto", "sty", package::tabto_sty::load_definitions),
   ("tabularx", "sty", package::tabularx_sty::load_definitions),
   ("tabulary", "sty", package::tabulary_sty::load_definitions),
   ("tcolorbox", "sty", package::tcolorbox_sty::load_definitions),

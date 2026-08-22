@@ -5690,3 +5690,35 @@ the `\floatname`/`\newfloat` bindings.
 
 **Upstream**: to be filed at brucemiller/LaTeXML (float.sty.ltxml should alias
 `\fname@<type>` to its `\lx@name@<type>`).
+
+### 150. `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline
+
+**Background.** `tabto` (package `tabto-ltx`) moves to a horizontal tab position.
+`algpseudocodex` `\RequirePackage{tabto}` (sty L29) and right-justifies each `\Comment`
+with `\tabto{\dimexpr\linewidth-\algpx@tmpLen}`, so a `\State … \Comment{…}` line shows
+its comment flushed to the right margin (as pdflatex does).
+
+**Perl behavior**: SHARED failure. LaTeXML has no `tabto` binding, so both engines
+raw-load it. Raw `\tabto` measures the current line position with a `$$…$$` display-math
++ one-row `\halign` hack (reads `\predisplaysize`, tabto.sty L85-120). Our engine — with
+no positional layout model — turns that hack into (a) a spurious empty display
+`<equation/>` (see KNOWN_PERL_ERRORS #108) and (b) a paragraph break, so the comment
+**stacks on its own line below the statement** instead of flushing right. Same-host Perl
+raw-loads the identical hack.
+
+**Rust behavior**: a `tabto.sty.ltxml`-equivalent binding (`tabto_sty.rs`) approximates
+`\tabto{pos}` (and `\tabto*`, `\tab`) as `\hfill`. LaTeXML renders `\hfill` before inline
+content as a `float:right`, so the comment stays in the statement's line box and flushes
+right — matching the pdflatex golden. The dominant `\tabto` use IS this right-justify, so
+the approximation is faithful in practice; a genuinely left-directed `\tabto{2cm}` would
+also become a right-fill, but the raw `$$`-hack (break + empty equation) was strictly
+worse. The length registers `\CurrentLineWidth` / `\TabPrevPos` are provided so
+algpseudocodex's `\settowidth`/`\dimexpr` reads resolve.
+
+**Why it's safe.** Replaces an unmodellable positional hack with the layout primitive
+LaTeXML already renders correctly; no positional information was being honoured before.
+
+**Witnesses**: arXiv 2511.21969 (Algorithm 1 `\State … \Comment` lines).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (raw `\tabto`'s `$$` measurement hack
+emits an empty equation and breaks the line; a `\hfill` approximation renders correctly).
