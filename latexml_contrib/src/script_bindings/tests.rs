@@ -846,8 +846,16 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
   ))
   .expect("Command(...).output() must run and capture by default");
   // `.trim()` tolerates Windows `echo`'s trailing CRLF; Unix `printf` emits none.
-  assert_eq!(lookup_str("cmd:out").trim(), "hello-world", "stdout captured");
-  assert_eq!(lookup_str("cmd:ok"), "yes", "the command exits 0 -> success");
+  assert_eq!(
+    lookup_str("cmd:out").trim(),
+    "hello-world",
+    "stdout captured"
+  );
+  assert_eq!(
+    lookup_str("cmd:ok"),
+    "yes",
+    "the command exits 0 -> success"
+  );
   assert_eq!(lookup_str("cmd:status"), "0", "exit code 0");
   assert_eq!(
     lookup_str("cmd:bad"),

@@ -1355,8 +1355,7 @@ mod sizing_characterization_tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
     let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-    let path =
-      std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
+    let path = std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
     std::fs::write(&path, bytes).expect("write fixture");
     path
   }
