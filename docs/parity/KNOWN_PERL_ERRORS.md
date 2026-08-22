@@ -4081,3 +4081,77 @@ exactly as Perl attached them, so the common interleaved idiom (guard
 `tests/structure/amsarticle.tex`) is untouched. Guard:
 `06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`. Witness:
 arXiv/html_feedback#46 (arXiv:2308.06214v1). Divergence: OXIDIZED_DESIGN #140.
+
+## 105. algorithm2e `\Comment*[r]` statement loses its line number (Rust surpasses)
+
+**Perl source:** `algorithm2e.sty.ltxml` L171 —
+`DefMacro('\lx@algo@endline', '\lx@prepend@indentation\the\everypar\lx@algo@@endline')`.
+Perl fires `\the\everypar` (which under `linesnumbered` is `\nl`) at **end-of-line**, not
+at paragraph start. `enterHorizontal` (Stomach.pm) is a plain mode switch and never fires
+`\everypar` the way real TeX's `new_graf` does.
+
+**Symptom:** with `[linesnumbered]`, a statement that carries a trailing right side comment
+—
+```tex
+\usepackage[linesnumbered]{algorithm2e}
+...
+$a \leftarrow 1$ \Comment*[r]{scaling}
+```
+— renders the statement **unnumbered** and pushes the comment to the next line. The raw
+side-comment path (algorithm2e.sty `\SetKwComment`, the non-`altsidecomment` branch)
+resets `everyparnl` to `\relax` before `\lx@algo@endline` runs, so the end-of-line
+`\the\everypar` sees `\relax` and emits no number. A KwInOut header, whose `\relax` is set
+*before* its content, is correctly unnumbered — the two are indistinguishable at end-of-line
+and only separable at content-start. Verified same-host on Perl 0.8.8 (witness arXiv
+2602.20153): the JUCAL algorithm's `\Comment*[r]` statement lines are unnumbered.
+
+**Rust:** fixed by firing `\everypar` at content-start (tex.web `new_graf`) — see
+`OXIDIZED_DESIGN_DIVERGENCES.md` #147. Statement keeps its number; comment stays on the
+statement's line intent (numbering matches the pdflatex golden). To be filed upstream.
+
+## 106. Float body frame (`ruled`/`boxed`) is dropped onto `<ltx:tags>` and never drawn (Rust surpasses)
+
+**Perl source:** `float.sty.ltxml` L82 — `addFloatFrames` picks the body as the first
+non-caption child: `grep { getNodeQName !~ /^ltx:(?:toc)?caption$/ } $float->childNodes`.
+But a `\refstepcounter`'d float emits `<ltx:tags>` as its **first** child, and `<tags>`
+(`LaTeXML-block.rnc:325`, `element tags { tag+ }`) has **no attributes**, so
+`setAttribute($tags, framed => …)` is silently schema-rejected. The inner frame is lost.
+
+**Symptom:** a `ruled` float draws only its top rule (the outer `framed="top"`, set on the
+float itself, survives); a `boxed` float draws **no frame at all**.
+```tex
+\usepackage{newfloat}\floatstyle{ruled}\newfloat{algorithm}{thp}{lop}
+% or: \usepackage[boxed]{algorithm2e}
+```
+Verified same-host on Perl 0.8.8: `floatnames.tex` and a `[boxed]` algorithm2e MWE emit only
+the outer `framed`, never the inner `framed="topbottom"`/`"rectangle"` that pdflatex draws.
+Separately, algorithm2e's binding (`algorithm2e.sty.ltxml` L88-91) wires only the `box` family
+to a frame, so the default `[ruled]` family draws no rules in either engine.
+
+**Rust:** fixed by also skipping `<ltx:tags>` when selecting the body, so the inner frame lands
+on the real body element — and by extending algorithm2e's `\algocf@style` dispatch to map the
+`ruled` family → `ruled`. See `OXIDIZED_DESIGN_DIVERGENCES.md` #148. All framed floats
+(algorithm/algorithmicx, newfloat, float.sty, algorithm2e boxed/ruled) now frame their body,
+matching the pdflatex golden. To be filed upstream.
+
+## 107. `\fname@<type>` is undefined — float.sty's real caption-name internal missing (Rust surpasses)
+
+**Perl source:** `float.sty.ltxml` L36 reimplements `\floatname` as
+`\@namedef{lx@name@#1}{#2}` — LaTeXML's own internal — and never defines real float.sty's
+`\fname@<type>` (`float.sty` L34, `\@namedef{fname@#1}`). `\newfloat` likewise defaults only
+`\lx@name@<type>` (L46-47).
+
+**Symptom:** a document that references the real float.sty internal directly — e.g. the
+widely-copied `breakablealgorithm` recipe —
+```tex
+\usepackage{algorithm}
+\newenvironment{breakablealgorithm}{...
+  \renewcommand{\caption}[2][\relax]{\textbf{\fname@algorithm~\thealgorithm} ##2\par ...}}...
+```
+leaks a raw, undefined `\fname@algorithm`: `<ltx:ERROR ...>\fname@algorithm</ltx:ERROR>`
+("Still LaTeX / has not been compiled"). Verified same-host on Perl 0.8.8 (witness arXiv
+2408.07803, html_feedback #1998): the algorithm caption errors identically.
+
+**Rust:** fixed by defining `\fname@<type>` alongside `\lx@name@<type>` in `\floatname` and
+`\newfloat` (real float.sty's internal name). See `OXIDIZED_DESIGN_DIVERGENCES.md` #149. The
+caption compiles to "Algorithm 1 …". Additive; to be filed upstream.

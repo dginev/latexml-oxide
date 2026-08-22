@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\SetKwComment{Comment}{/* }{ */}
+\begin{document}
+\begin{algorithm}[H]
+\DontPrintSemicolon
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{a value}
+\Output{a result}
+\Comment{a standalone comment, unnumbered}
+$a \leftarrow 1$ \Comment*[r]{a side comment; the statement stays numbered}
+\For{$i \leftarrow 1$ \KwTo $n$}{
+  $a \leftarrow a + i$\;
+}
+\Return $a$\;
+\caption{line numbering with a side comment}
+\end{algorithm}
+\end{document}

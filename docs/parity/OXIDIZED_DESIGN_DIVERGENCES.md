@@ -5573,3 +5573,120 @@ visible there.
 
 **Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
 kept, title text appears exactly once, hand-typeset author block preserved).
+
+### 147. `\everypar` fires at paragraph start (tex.web `new_graf`), enabling correct algorithm2e line numbering
+
+**Background.** algorithm2e's `linesnumbered` numbers each body line by setting
+`\everypar`→`\nl` (which steps `AlgoLine` and typesets `\algocf@printnl`). The number
+must be emitted when a line's paragraph starts — after any leading `everyparnl`-setter
+(a KwInOut header sets it to `\relax` BEFORE its content, so Input/Output stay
+unnumbered) but before a trailing one (a `\Comment*[r]` side comment resets it to
+`\relax` AFTER the statement). Only the content-start moment distinguishes them.
+
+**Perl behavior**: SHARED failure. Perl LaTeXML never fires `\everypar` on
+horizontal-mode entry (`enterHorizontal`, Stomach.pm, is a plain mode switch); the
+algorithm2e binding runs `\the\everypar` MANUALLY at **end-of-line**
+(`algorithm2e.sty.ltxml` L171). By then a `\Comment*[r]` statement's `everyparnl` is
+already `\relax`, so the statement **loses its line number** and the comment falls to
+the next line. Verified on the witness (2602.20153) with same-host Perl.
+
+**Rust behavior**: `stomach::enter_horizontal` fires `\the\everypar` on the
+vertical→horizontal transition, faithful to tex.web `new_graf` (background/tex.web
+L21117, `begin_token_list(every_par)`). It is guarded two ways — a no-op when
+`\everypar` is empty (every ordinary paragraph, post-`\begin{document}`), and skipped
+in the preamble/kernel-load where `\everypar` holds LaTeX3's unmodelled para-hook list
+`\g__para_standard_everypar_tl` (guard: `\@nodocument` is `\relax`). A prerequisite fix:
+`\begin{document}` now clears `\everypar` via `assign_register` (Perl `AssignRegister`),
+not `assign_value`, so the register `\the\everypar` reads is actually emptied. The
+algorithm2e binding then makes each listing line a real hmode entry (a per-line
+`leave_horizontal_internal` seam) and moves line indentation to an end-of-line DOM
+prepend so it does not enter hmode early. Result: statement lines carrying a trailing
+`\Comment*[r]` KEEP their number; KwInOut headers and standalone comments stay
+unnumbered — matching the pdflatex golden and surpassing Perl.
+
+**Why it's safe.** `\everypar` firing is body-only and a no-op for normal paragraphs
+(LaTeXML's list/item machinery does not populate `\everypar`, unlike real LaTeX);
+inside a listing algorithm2e overrides `\everypar` with its own `\algocf@everypar`.
+Full suite 2143/2143, tikz/streaming re-verified clean.
+
+**Witnesses**: arXiv 2602.20153 (JUCAL, `\Comment*[r]`); the disjoint-decomposition and
+generic-`\Fn` examples from the algorithm2e manual.
+
+**Guards**: `50_structure::algorithm2e_linenumbers_test` (KwInOut unnumbered; a
+`\Comment*[r]` statement numbered; body 1..N; nested indentation).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (endline-timed `\the\everypar` drops
+the `\Comment*[r]` statement number).
+
+### 148. Float body frames (`ruled`/`boxed`) land on the body, not the metadata `<tags>` — algorithm2e ruled family wired
+
+**Background.** `addFloatFrames` (`float.sty.ltxml` L76-85) draws a float's frame from
+two maps: `%float_outerframe` puts an outer rule on the `<float>` itself, `%float_innerframe`
+puts an inner rule on the float's **body** — the first child that is not a caption
+(`grep { getNodeQName !~ /^ltx:(?:toc)?caption$/ } childNodes`). `ruled` → outer `top` +
+inner `topbottom`; `boxed` → inner `rectangle`. pdflatex draws both rules.
+
+**Perl behavior**: SHARED failure. A `\refstepcounter`'d float emits `<ltx:tags>` as its
+**first** child, and `<tags>` (`LaTeXML-block.rnc:325`, `element tags { tag+ }`) carries
+**no attributes** — so `setAttribute($body, framed => …)` is silently schema-dropped and the
+**inner rule is never drawn**. The outer `framed="top"` (set on the float) survives, so a
+ruled float shows only its top rule; a `boxed` float shows **no frame at all** (boxed has no
+outer rule). Verified same-host on Perl 0.8.8: `floatnames.tex` (newfloat `\floatstyle{ruled}`)
+and a `[boxed]` algorithm2e MWE both emit only the outer `framed`, never the inner. Separately,
+algorithm2e's own binding (`algorithm2e.sty.ltxml` L88-91) wires **only** the `box` family to a
+frame; the `ruled` family (`ruled`/`algoruled`/`tworuled`/`plainruled`) is dropped by both
+engines, so a default `\usepackage[ruled]{algorithm2e}` gets no rules.
+
+**Rust behavior**: `add_float_frames` also skips `<ltx:tags>` when choosing the body, so the
+inner `framed` lands on the real body element (`<listing>`, `<p>`, …) that pdflatex frames.
+And the algorithm2e binding extends its `\algocf@style` dispatch: `box`→`boxed` (unchanged),
+else `ruled`→`ruled`, so `[ruled]`/`[algoruled]`/… draw the top+body rules. Reach is
+engine-level — every framed float (algorithm/algorithmicx, `newfloat`, `float.sty`,
+algorithm2e boxed/ruled) now frames its body.
+
+**Why it's safe.** `framed` is a generic `Backgroundable.attributes` decoration; the fix only
+moves the *target* of an already-intended `setAttribute` from a metadata element that rejects
+it to the body element that accepts it — no new markup shape, no change to the listings dialect
+(an `lstlisting` serving as a ruled-float body is decorated exactly as any other body would be).
+The outer-frame path is unchanged. Full suite green.
+
+**Witnesses**: `floatnames.tex` (newfloat ruled), `algx.tex` (algorithmicx ruled),
+`figure_mixed_content.tex` (algorithm floats), `various_colors.tex` (lstlisting ruled-float body);
+`[boxed]`/`[ruled]` algorithm2e MWEs cross-checked against pdflatex goldens.
+
+**Guards**: `50_structure::algorithm2e_frames_test` (ruled → `top`+`topbottom`, boxed →
+`rectangle`, via `\RestyleAlgo`); the four re-blessed goldens above pin the general fix.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (inner float frame dropped onto `<tags>`; ruled
+family unwired in algorithm2e).
+
+### 149. `\floatname`/`\newfloat` also define float.sty's real `\fname@<type>` internal
+
+**Background.** Real `float.sty` names a float's caption word `\fname@<type>`
+(`float.sty` L34: `\newcommand\floatname[2]{\@namedef{fname@#1}{#2}}`; `\newfloat`
+defaults it, L59). Documents reference that real internal directly — most visibly the
+widely-copied `breakablealgorithm` recipe: `\textbf{\fname@algorithm~\thealgorithm}`.
+
+**Perl behavior**: SHARED failure. LaTeXML *reimplements* float.sty with its own internal
+`\lx@name@<type>` (`float.sty.ltxml` L36) and never defines `\fname@<type>`. So any
+document touching the real internal leaks a raw, undefined `\fname@<type>` —
+`<ltx:ERROR>\fname@algorithm</ltx:ERROR>` — and errors. Verified same-host on Perl 0.8.8
+(witness arXiv 2408.07803).
+
+**Rust behavior**: `\floatname` and `\newfloat` define **both** LaTeXML's `\lx@name@<type>`
+(unchanged, drives our tag machinery) **and** real float.sty's `\fname@<type>`
+(`float_sty.rs`). The `breakablealgorithm` caption then compiles to "Algorithm 1 …"
+instead of leaking raw. Additive — no currently-passing document emits `\fname@<type>`,
+so no existing output shape changes; it only converts the error to correct output.
+
+**Why it's safe.** `\fname@<type>` is the *real* float.sty internal, so defining it makes
+our float.sty emulation more faithful to the actual package, not less. Purely additive to
+the `\floatname`/`\newfloat` bindings.
+
+**Witnesses**: arXiv 2408.07803 (html_feedback #1998, `breakablealgorithm` recipe).
+
+**Guards**: `50_structure::float_fname_internal_test` (`\floatname` sets `\fname@widget`;
+`\newfloat` defaults `\fname@gizmo`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (float.sty.ltxml should alias
+`\fname@<type>` to its `\lx@name@<type>`).

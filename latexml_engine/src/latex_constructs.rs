@@ -3534,8 +3534,17 @@ LoadDefinitions!({
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
-    // Clear \everypar at document start (Perl parity)
-    assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    // Clear \everypar at document start (Perl `AssignRegister('\everypar',
+    // Tokens(), 'global')`, latex_constructs.pool L319). `\everypar` is a REGISTER,
+    // so it must be cleared via `assign_register` (which writes the register
+    // definition's value that `\the\everypar`/`lookup_register` read), NOT
+    // `assign_value` (a separate State value slot the register never consults).
+    // Raw-loading modern `ltpara` leaves the register holding the para-hook token
+    // list `\g__para_standard_everypar_tl`; the old `assign_value` clear did not
+    // actually empty it, so `\the\everypar` in the body still expanded to that
+    // unmodelled hook. Nothing read the register in the body before, so this was
+    // latent; it matters for any code that fires `\everypar` (algorithm2e numbering).
+    assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
     // Perl #2798: at \begin{document}, make the fill widths consistent —
     //   \columnwidth = \hsize = \linewidth = \textwidth
     // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister
