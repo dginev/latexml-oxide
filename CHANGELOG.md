@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+  - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
+    non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
+    semiverbatim and then *digested* — `\def` executed, consumed the following
+    tokens, truncated the URL to `…q=` and raised errors — where pdflatex (and real
+    `url.sty`, via `\meaning`) keep it as literal link text. The hyperref reader now
+    stringifies any leftover control sequence (recatcodes it to `other`) instead of
+    handing it to digestion, while still expanding the `url.sty` escapes (`\%`,
+    `\_`, `\^`, `\textbackslash`, …) during the read, so realistic URLs are
+    unchanged and `\url`/`\href` now agree. Perl LaTeXML digests the same way
+    (byte-identical output, more errors) — a deliberate surpass (OXIDIZED_DESIGN
+    #147). Follow-up to issue #723's rebuttal (reporter xworld21 / Vincenzo
+    Mantova); guards `cluster_url_cs_verbatim_723`, `hyperurls_test`.
   - **`fairmeta.cls` papers now link each author to their institution.** The
     Meta/FAIR pre-print template (and its `selfevolagent`/`openmoss` siblings)
     connects authors to institutions and contribution notes by superscript mark —

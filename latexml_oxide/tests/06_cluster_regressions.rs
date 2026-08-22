@@ -528,6 +528,49 @@ fn cluster_t1_verbatim_ascii_723() {
     "verbatim/url runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
   );
 }
+/// Issue #723 (reporter xworld21 / Vincenzo Mantova), follow-up rebuttal: a
+/// non-expandable control sequence inside a hyperref `\url`/`\href` (e.g. `\def`)
+/// was DIGESTED — it executed, consumed the following tokens, truncated the URL
+/// and raised errors (`\url{…q=\def}` → `href="…q="` + 2 errors), whereas
+/// pdflatex/url.sty keep it as literal href text. url.sty stringifies the URL via
+/// `\meaning` (all leftover control sequences become inert characters); we now
+/// mirror that faithfully: after the semiverbatim read, any surviving control
+/// sequence is recatcoded to `other` instead of being handed to digestion. The
+/// url.sty escapes (`\_`, `\%`, `\^`, `\textasciitilde`, `\textbackslash`, …)
+/// still RESOLVE to their character (they expand during the read), so realistic
+/// URLs are unchanged. Surpasses Perl (same digest bug). Distilled reproductions
+/// cover Vincenzo's reported cases; the full escape matrix is in `hyperurls`.
+#[test]
+fn cluster_url_cs_verbatim_723() {
+  // `convert_to_xml` gates on ZERO `Error:` markers — RED while `\def` digests.
+  let xml = convert_to_xml("tests/cluster_regressions/url_cs_verbatim_723.tex");
+  // (a)+(b) Canary: the leftover `\def` survives as literal href text in BOTH
+  // `\url` and `\href`, rather than executing and truncating the URL.
+  assert!(
+    xml.contains(r#"href="http://x/q=\def""#),
+    "\\url with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  assert!(
+    xml.contains(r#"href="http://x/h=\def""#),
+    "\\href with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  // (c) Regression guard: resolving control sequences stay resolved and a literal
+  // `~` passes through — \textasciitilde -> ~ , \textbackslash -> \ .
+  assert!(
+    xml.contains(r#"href="http://x/a~b~c\d""#),
+    "`\\textasciitilde`/`\\textbackslash`/literal `~` regressed in a URL (#723):\n{xml}"
+  );
+  // (d) Regression guard: `\href` keeps a literal `~`.
+  assert!(
+    xml.contains(r#"href="http://x/~u""#),
+    "`\\href` dropped a literal `~` (#723):\n{xml}"
+  );
+  // (e) Regression guard: url.sty escapes still resolve to their character.
+  assert!(
+    xml.contains(r#"href="http://x/a_b%c""#),
+    "url.sty escapes `\\_`/`\\%` no longer resolve to `_`/`%` (#723 regression):\n{xml}"
+  );
+}
 #[test]
 fn cluster_fvextra_preserves_ltx_verbatim() {
   let xml = convert_to_xml("tests/cluster_regressions/fvextra_ltx_verbatim.tex");
