@@ -68,6 +68,18 @@ filing is a manual step (cannot be done from the conversion tooling).
   and framed lstlistings are contained (`.ltx_lstlisting` overflow-x). The comment
   `<p>`-gaps and the `◁` `\rlap`-on-its-own-line still need the algpseudocodex binding
   below.
+- **`\hbox to \hsize` leader separators fill the column** (`\dashfill`/`\hrulefill`/
+  `\dotfill`) — relativized to `width:100%` instead of a frozen 345pt that overflowed the
+  algorithm. Leader-content discriminator in `tex_box.rs`; text/fixed-width boxes untouched
+  (fancyvrb 345pt parity preserved). Surpass OXIDIZED_DESIGN #152, witness 1510.02728
+  ("Modified ellipsoid method" separators); guard `cluster_hbox_to_hsize_leader_fills_width`.
+- **Repeated frontmatter no longer duplicates** — replaceable tags (title/abstract/…) keep
+  one entry, creators still accumulate (`REPLACEABLE_FRONTMATTER_TAGS`, forward-port of
+  upstream `%ReplaceableFrontmatterTags`). Surpass OXIDIZED_DESIGN #154, witnesses 2002.09766
+  (appendix `\icmltitle`), 2511.21969 (nested `{abstract}`); guard
+  `cluster_frontmatter_replaceable_dedup`.
+- **wrapfigure/minted overlap** (2605.03143) — CSS only: a float-scoped min-width override
+  stops the wrapfig flex cell forcing the code box over the body text (ar5iv.css).
 
 ## Open follow-ups
 
