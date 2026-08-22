@@ -1360,6 +1360,57 @@ mod sizing_characterization_tests {
     path
   }
 
+  fn io_err(kind: std::io::ErrorKind) -> std::io::Error { std::io::Error::from(kind) }
+
+  /// A genuine `NotFound` is a missing file, not a lock: it must map straight to
+  /// `None` on the first attempt, with no retry and no sleep. The "no sleep"
+  /// half is what keeps `read_pdf_page_box`/`read_image_dimensions` cheap for
+  /// the common missing-figure case, so the perf argument depends on it.
+  #[test]
+  fn transient_retry_notfound_is_immediate_none() {
+    let mut calls = 0u32;
+    let got: Option<()> = with_transient_retry(|| {
+      calls += 1;
+      Err(io_err(std::io::ErrorKind::NotFound))
+    });
+    assert!(got.is_none(), "NotFound must map to None");
+    assert_eq!(calls, 1, "NotFound must not be retried");
+  }
+
+  /// A lock that clears after a couple of tries: the op is retried and its
+  /// eventual `Ok` is returned — a fresh figure is not silently dropped to 0x0.
+  #[test]
+  fn transient_retry_recovers_after_transient_errors() {
+    let mut calls = 0u32;
+    let got = with_transient_retry(|| {
+      calls += 1;
+      if calls < 3 {
+        Err(io_err(std::io::ErrorKind::PermissionDenied))
+      } else {
+        Ok(42u32)
+      }
+    });
+    assert_eq!(
+      got,
+      Some(42),
+      "a clearing lock should be retried then succeed"
+    );
+    assert_eq!(calls, 3, "should retry until the op succeeds");
+  }
+
+  /// A persistent non-`NotFound` error gives up with `None` after the retry cap
+  /// (1 initial attempt + 10 retries = 11 invocations) instead of looping.
+  #[test]
+  fn transient_retry_gives_up_after_cap() {
+    let mut calls = 0u32;
+    let got: Option<()> = with_transient_retry(|| {
+      calls += 1;
+      Err(io_err(std::io::ErrorKind::PermissionDenied))
+    });
+    assert!(got.is_none(), "a persistent error must give up with None");
+    assert_eq!(calls, 11, "one attempt then retries up to the cap");
+  }
+
   /// A minimal `%PDF-1.5` whose only object is a Flate-compressed object stream
   /// carrying `payload` — the shape pdflatex emits for a page tree since 1.5.
   fn objstm_pdf(payload: &[u8]) -> Vec<u8> {

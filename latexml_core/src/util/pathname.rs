@@ -846,10 +846,20 @@ fn abs2rel(target: &Path, base: &Path) -> String {
   for comp in &t[common..] {
     result.push(comp.as_os_str());
   }
-  // `PathBuf` joins with the OS separator (`\` on Windows), but this result
-  // feeds forward-slash-only outputs — graphic `candidates`, resource URLs — that
-  // must match Perl/pdflatex on every platform. Normalize; a no-op on Unix.
-  result.to_string_lossy().replace('\\', "/")
+  // `PathBuf` re-joins with the OS separator, so on Windows the result is
+  // `\`-separated — but this feeds forward-slash-only outputs (graphic
+  // `candidates`, resource URLs) that must match Perl/pdflatex on every
+  // platform. Normalize on Windows only; on Unix `\` is a legal filename byte
+  // (and the parts are already `/`-joined), so the rewrite is compiled out
+  // rather than risk corrupting a backslash-bearing name.
+  #[cfg(windows)]
+  {
+    result.to_string_lossy().replace('\\', "/")
+  }
+  #[cfg(not(windows))]
+  {
+    result.to_string_lossy().into_owned()
+  }
 }
 
 /// Make a pathname relative to a base directory.
