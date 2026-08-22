@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+  - **Tables inside a `tcolorbox` no longer render upside down.** A `tabular`
+    inside a `tcolorbox` `enhanced` skin is drawn as SVG, with the table content
+    in an `<svg:foreignObject>` nested in a TeX-y-up (flipped) group; the fo needs
+    a counter-flip `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent
+    afterClose) or it draws vertically upside down. When building that wrapper,
+    `insert_block` renames a `_CaptureBlock_` — which carries the block's box — to
+    `svg:foreignObject`, but the rename dropped the node box (Perl carries it via
+    the internal `_box` attribute), so the afterClose read a zero size and skipped
+    the flip. `rename_node_internal` now carries the node box across, matching
+    Perl, and the table renders right-side-up (byte-for-byte Perl parity on the
+    foreignObject transforms). Fixes arXiv/html_feedback#6873 (reporter tdsmith,
+    paper 2601.13118); guard `cluster_tcolorbox_tabular_not_flipped_6873`.
   - **Every conversion logs an identity banner: executable, version, revision,
     start time.** At the head of each conversion `latexml_oxide`, `cortex_worker`
     and `latexmlmath_oxide` now log a line like `latexml_oxide (latexml-oxide

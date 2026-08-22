@@ -1,0 +1,18 @@
+% Regression guard for arXiv/html_feedback#6873 (paper 2601.13118v1, Table 2).
+% A `tabular` inside a `tcolorbox` `enhanced` skin is drawn as SVG; its content
+% sits in an <svg:foreignObject> nested in a TeX-y-up (flipped) <svg:g>. The fo
+% needs a counter-flip transform="matrix(1 0 0 -1 0 h)" or the table renders
+% vertically upside down. insert_block renames a _CaptureBlock_ (which carries
+% the block's box) to svg:foreignObject; the rename must carry the node box
+% across so the fo's size-dependent afterClose can set the transform.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\begin{document}
+\begin{tcolorbox}[enhanced, title=Demo]
+\begin{tabular}{ll}
+apple & 1 \\
+banana & 2 \\
+\end{tabular}
+\end{tcolorbox}
+\end{document}

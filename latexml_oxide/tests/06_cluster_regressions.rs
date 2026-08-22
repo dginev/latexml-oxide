@@ -428,6 +428,35 @@ fn cluster_listings_tail_leak_6681() {
     "the Verification appendix must survive:\n{xml}"
   );
 }
+/// arXiv/html_feedback#6873 (reporter tdsmith, paper 2601.13118v1): Table 2 — a
+/// `tabular` inside a `tcolorbox` `enhanced` skin — rendered vertically upside
+/// down. The box is drawn as SVG and the table sits in an `<svg:foreignObject>`
+/// inside a TeX-y-up (flipped) `<svg:g>`; the fo needs a counter-flip
+/// `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent afterClose,
+/// `tex_box.rs` / Perl `TeX_Box.pool.ltxml` L407-423) or it renders upside down.
+/// `insert_block` renames a `_CaptureBlock_` — which carries the block's box —
+/// to `svg:foreignObject`; `rename_node_internal` now carries the node box
+/// across (Perl copies it via the `_box` attribute), so the fo's afterClose
+/// finds the size and sets the flip. RED before the fix: the tabular's
+/// foreignObject had no `transform`, so the height was 0 and it drew flipped.
+#[test]
+fn cluster_tcolorbox_tabular_not_flipped_6873() {
+  let xml = convert_to_xml("tests/cluster_regressions/tcolorbox_tabular_flip_6873.tex");
+  // The <svg:foreignObject> that wraps the <tabular> must carry the y-flip
+  // transform — otherwise the table draws upside down inside the flipped group.
+  let tab = xml
+    .find("<tabular")
+    .unwrap_or_else(|| panic!("a tabular should render inside the SVG picture:\n{xml}"));
+  let fo_start = xml[..tab]
+    .rfind("<svg:foreignObject")
+    .unwrap_or_else(|| panic!("the tabular must be wrapped in an svg:foreignObject:\n{xml}"));
+  let fo_open = &xml[fo_start..tab];
+  assert!(
+    fo_open.contains(r#"transform="matrix(1 0 0 -1"#),
+    "the foreignObject wrapping the tabular must carry the y-flip transform \
+     (else the table renders upside down):\n{fo_open}"
+  );
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce

@@ -5478,6 +5478,20 @@ impl Document {
       }
       std::mem::swap(&mut self.node, &mut new);
     }
+    // Carry the node box across the rename. Perl's `renameNode` copies ALL of
+    // `$node`'s attributes to `$new`, and the box is recorded as the internal
+    // `_box` attribute, so `afterClose`'s `getNodeBox($new)` still finds it. Our
+    // node box lives in a side map keyed by node identity — the fresh `new` node
+    // would otherwise be box-less, so a size-dependent afterClose handler
+    // misfires. Concretely: `insert_block` renames a `_CaptureBlock_` (which
+    // carries the block's box) to `svg:foreignObject`; without the box, the fo's
+    // afterClose (`tex_box.rs`, Perl `TeX_Box.pool.ltxml` L407-423) can't read a
+    // size and skips the y-flip `transform="matrix(1 0 0 -1 0 h)"`, so a
+    // `tabular` inside a `tcolorbox` `enhanced` skin renders upside down in the
+    // TeX-y-up SVG group (arXiv/html_feedback#6873, paper 2601.13118 Table 2).
+    if let Some(nodebox) = self.get_node_box(&node) {
+      self.set_node_box(&new, nodebox);
+    }
     // THEN call afterOpen... ?
     //   It would normally be called before children added,
     //   but how can we know if we're duplicated auto-added stuff?
