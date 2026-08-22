@@ -769,8 +769,31 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// xref stream; for the figures `\includegraphics` pulls in, which are
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
+/// Read a file, retrying briefly on a transient lock. On Windows a *just*-written
+/// file — a figure the converter emitted a moment ago, or a test fixture — can be
+/// momentarily locked by another handle (antivirus real-time scanning of the
+/// fresh file, or Windows' stricter default file sharing), so a bare
+/// `fs::read(path).ok()?` turns a transient `ERROR_SHARING_VIOLATION`
+/// (`PermissionDenied`) into a silent `None` and a figure reaches the engine at
+/// 0×0. Retry a handful of times with a short backoff; a genuine `NotFound` still
+/// fails fast, and the happy path (Ok on the first try) pays nothing.
+fn read_file_resilient(path: &Path) -> Option<Vec<u8>> {
+  let mut tries = 0u32;
+  loop {
+    match std::fs::read(path) {
+      Ok(bytes) => return Some(bytes),
+      Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+      Err(_) if tries < 5 => {
+        tries += 1;
+        std::thread::sleep(std::time::Duration::from_millis(2 * u64::from(tries)));
+      },
+      Err(_) => return None,
+    }
+  }
+}
+
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
-  let bytes = std::fs::read(path).ok()?;
+  let bytes = read_file_resilient(path)?;
   if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
     let content = String::from_utf8_lossy(&bytes);
     if let Some(box_) =
