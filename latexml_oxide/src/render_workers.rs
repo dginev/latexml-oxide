@@ -239,10 +239,13 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
 /// One spawned (or spawn-failed) worker awaiting its fold.
 enum Pending {
   /// The drain thread owns the child and returns its full `Output`; the pid
-  /// is kept so a parent-side timeout can kill the fleet.
+  /// is kept so a parent-side timeout can kill the fleet. Only read on Unix
+  /// (`libc::kill` in the breach path below); the equivalent Windows fleet-kill
+  /// (OpenProcess + TerminateProcess) is not wired yet, so the pid is dead on
+  /// non-unix — scope the `dead_code` allow there rather than workspace-wide.
   Spawned(
     std::thread::JoinHandle<std::io::Result<std::process::Output>>,
-    u32,
+    #[cfg_attr(not(unix), allow(dead_code))] u32,
   ),
   Failed(String),
 }
