@@ -1347,7 +1347,16 @@ mod sizing_characterization_tests {
   use super::*;
 
   fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("lxsize-{}-{name}", std::process::id()));
+    // A per-call sequence makes every fixture path unique. Two tests reused the
+    // same `name` ("m.pdf"), so keying only on pid+name let them race on one temp
+    // file when run in parallel: whichever wrote last won, and the other test's
+    // reader saw the wrong bytes -> a flaky `None` under full-suite load (it only
+    // surfaced when scheduling made the two writes overlap).
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+    let path =
+      std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
     std::fs::write(&path, bytes).expect("write fixture");
     path
   }
