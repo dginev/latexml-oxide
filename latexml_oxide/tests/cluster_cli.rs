@@ -2382,3 +2382,69 @@ mod picture_graphics_e2e {
     assert!(Path::new(bin).is_file());
   }
 }
+
+mod identity_banner {
+  //! Every conversion logs a one-line identity banner — executable name, version,
+  //! git revision, exact start time (`latexml::identity`) — mirroring Perl's
+  //! `Note("$LaTeXML::IDENTITY processing $source")`. These guard the end-to-end
+  //! wiring: that both front-ends actually emit it, and that `--quiet` mutes it.
+
+  use std::process::Command;
+
+  /// The four fields the banner must carry, checked against a captured stderr.
+  fn assert_is_banner(stderr: &str, exe: &str) {
+    let line = stderr
+      .lines()
+      .find(|l| l.contains("latexml-oxide") && l.contains("; revision "))
+      .unwrap_or_else(|| panic!("no identity banner in stderr of {exe}:\n{stderr}"));
+    assert!(line.contains(exe), "banner names the wrong exe: {line:?}");
+    assert!(
+      line.contains(env!("CARGO_PKG_VERSION")),
+      "banner missing crate version: {line:?}"
+    );
+    assert!(
+      line.contains(" started "),
+      "banner missing start time: {line:?}"
+    );
+  }
+
+  #[test]
+  fn latexml_oxide_logs_identity() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let tex = workdir.path().join("hi.tex");
+    std::fs::write(
+      &tex,
+      "\\documentclass{article}\\begin{document}Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .arg(tex.file_name().unwrap())
+      .arg("--dest")
+      .arg("hi.html")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert_is_banner(&String::from_utf8_lossy(&output.stderr), "latexml_oxide");
+  }
+
+  #[test]
+  fn latexmlmath_logs_identity_and_quiet_mutes_it() {
+    let bin = env!("CARGO_BIN_EXE_latexmlmath_oxide");
+
+    let loud = Command::new(bin)
+      .arg("x^2")
+      .output()
+      .expect("spawn latexmlmath");
+    assert_is_banner(&String::from_utf8_lossy(&loud.stderr), "latexmlmath_oxide");
+
+    let quiet = Command::new(bin)
+      .args(["--quiet", "x^2"])
+      .output()
+      .expect("spawn latexmlmath --quiet");
+    let quiet_err = String::from_utf8_lossy(&quiet.stderr);
+    assert!(
+      !quiet_err.contains("; revision "),
+      "--quiet must suppress the identity banner, got:\n{quiet_err}"
+    );
+  }
+}

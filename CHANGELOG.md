@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+  - **Every conversion logs an identity banner: executable, version, revision,
+    start time.** At the head of each conversion `latexml_oxide`, `cortex_worker`
+    and `latexmlmath_oxide` now log a line like `latexml_oxide (latexml-oxide
+    0.7.6; revision 6ff599cc08) started 2026-08-21 19:01:23 -0400`, to both stderr
+    and the captured `.latexml.log`. This mirrors Perl's `$LaTeXML::IDENTITY`
+    (executable + version + `make`-filled revision) and adds the exact start time,
+    so a log always names the precise binary and moment that produced it. The
+    revision is embedded at build time (`build.rs`; overridable via the
+    `LATEXML_GIT_SHA` env for packaged builds without `.git`); `--quiet`
+    suppresses the banner. Guards: `identity::tests`, `identity_banner`
+    (cluster_cli).
   - **Vertical rules in a math `array` now render, and `!{|}` aligns like Perl.**
     Two defects from one report, both now byte-for-byte Perl parity. (1) A `|` or
     `\hline` in a display-math `array` — `\begin{array}{cc|c}`, a framed `|c|c|`, or

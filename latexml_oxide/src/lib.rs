@@ -9,6 +9,7 @@ pub mod api;
 pub mod bib_session;
 pub mod converter;
 pub mod core_interface;
+pub mod identity;
 pub mod ini_tex;
 pub mod lsp_server;
 pub mod main_tex;
