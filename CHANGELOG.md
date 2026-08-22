@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+  - **Author `\thanks` renders as a marked note, not an inline affiliation-like blob.**
+    `\author{Name\thanks{…}}` (correspondence, funding, equal-contribution, …) was emitted
+    as an inline `<ltx:contact role="thanks">` that read like an affiliation next to the
+    name. It now becomes a marked `<ltx:note role="thanks">` — a superscript mark on the
+    author + the content as a margin/footnote — carrying semantic class hooks
+    (`ltx_note_frontmatter`, `ltx_role_thanks`, and a best-effort content-kind class
+    `ltx_thanks_correspondence`/`_funding`/`_contribution`/`_address`/`_note`) so a theme
+    can style each kind. A surpass — Perl keeps the inline contact (OXIDIZED_DESIGN #156).
+    `ltx:note` is added to `ltx:creator`'s content model. Witnesses arXiv 2512.24601,
+    1510.02728; guards `authors_test`, `cluster_author_thanks_marked_note`.
   - **A `.bbl` preamble no longer produces a spurious empty `(1)` bibliography entry.**
     An ACM-Reference-Format-style `.bbl` puts macro definitions and a blank line between
     `\begin{thebibliography}` and the first `\bibitem`; the blank line made the bibliography

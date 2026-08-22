@@ -5908,3 +5908,45 @@ entries). Guard `cluster_bib_preamble_no_phantom_entry`.
 
 **Upstream**: to be filed at brucemiller/LaTeXML (the `.bbl`-preamble phantom bibitem should
 be pruned; the existing digest-time guard misses it when whitespace intervenes).
+
+### 156. Author-attached `\thanks` is a marked note with semantic class hooks, not an inline contact
+
+**Background.** In real arXiv author blocks, `\author{Name\thanks{…}}` carries a small set of
+distinct content kinds — correspondence ("Correspondence to X ⟨email⟩"), funding ("supported by
+NSF grant…"), equal-contribution ("contributed equally"), present-address ("now at…"),
+prior-publication/venue, and generic acknowledgement. pdflatex renders `\thanks` as a footnote:
+a superscript mark on the author name + the content at the page bottom.
+
+**Perl behavior**: SHARED readability gap. Creator-scope `\thanks` becomes
+`<ltx:contact role="thanks">` (`Base_Utility.pool.ltxml` `\lx@add@thanks` →
+`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks]`), which the shared HTML XSLT
+renders INLINE next to the author — structurally identical to an affiliation, with no mark. Same
+in Rust before this change. (Title-scope `\thanks` already becomes a marked note/pubnote; only
+creator-scope was the inline contact.)
+
+**Rust behavior**: creator-scope `\thanks` routes to `<ltx:note role="thanks"
+class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_utilities.rs`
+`\lx@add@thanks` else-branch). It reuses the existing `ltx:note` footnote template (a superscript
+`ltx_note_mark` on the author + `ltx_note_outer`/`ltx_note_content`), so a theme can place it as a
+margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
+`correspondence` / `funding` / `contribution` / `address` / `note`. The class hooks
+(`ltx_note_frontmatter`, `ltx_role_thanks`, `ltx_thanks_<kind>`) let theme designers style each
+kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
+(`LaTeXML.model` + `LaTeXML-structure.rng`/`.rnc`) — else `open_element` auto-closes the creator
+and the note detaches; and an XSLT addition rendering the creator's `ltx:note` child as a
+name-sibling (`LaTeXML-structure-xhtml.xsl`). A surpass over the shared inline-contact behavior.
+
+**Why it's safe.** The classifier only picks a CSS hook, never core semantics. The note attaches
+to the same creator the contact did (verified: note is inside `<creator>`); title-scope
+`\thanks` (a pubnote) and affiliation contacts are untouched. Only golden change:
+`tests/structure/authors.xml` (contact → note). The `frontmatter_ieee_membership_no_phantom`,
+`frontmatter_thanks_literal_mark_mix`, and `author_block_thanks_collapses_in_title_not_inline`
+tests are element-agnostic and unchanged.
+
+**Witnesses**: arXiv 2512.24601 (`\thanks{Correspondence to …}` → `ltx_thanks_correspondence`),
+1510.02728 (`\thanks{…supported by NSF…}` → `ltx_thanks_funding`). Guards `authors_test` and
+`cluster_author_thanks_marked_note`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (author-attached `\thanks` should render as a
+marked footnote, not an inline affiliation-like contact; the content-kind class hooks are a
+theme-facing extension).

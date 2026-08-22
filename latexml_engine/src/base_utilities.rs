@@ -926,16 +926,28 @@ LoadDefinitions!({
       }
       Ok(Tokens::new(calls))
     } else {
-      // Unchanged: the parity-faithful role=thanks contact, exactly as the
-      // former template `\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}`.
-      let mut opts = mouth::tokenize_internal("role=thanks").unlist();
+      // SURPASS over Perl (OXIDIZED_DESIGN #156): render an author-attached `\thanks`
+      // as a MARKED note (a superscript mark on the author name + margin/footnote
+      // content) instead of a `role=thanks` CONTACT that reads inline like an
+      // affiliation next to the name. Route to `<ltx:note role="thanks">` so the
+      // existing `ltx:note` footnote template (mark + `ltx_note_outer`/`ltx_note_content`)
+      // renders it, and attach semantic CSS hooks so a theme can style each kind of
+      // thanks content: `ltx_note_frontmatter` (the ar5iv frontmatter-note hook) plus a
+      // best-effort content-kind class `ltx_thanks_<kind>` from `classify_thanks`. Perl
+      // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
+      // (correspondence), 1510.02728 (funding).
+      let kind = classify_thanks(content.clone().untex_string().as_ref());
+      let mut opts = mouth::tokenize_internal(TeXString::assembled(s!(
+        "role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
+      )))
+      .unlist();
       if let Some(a) = &attr {
         opts.push(T_OTHER!(","));
         opts.extend(a.unlist_ref().iter().copied());
       }
       Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
         vec![Some(mouth::tokenize_internal("ltx:creator")),
-             Some(mouth::tokenize_internal("ltx:contact")),
+             Some(mouth::tokenize_internal("ltx:note")),
              Some(Tokens::new(opts)), Some(content)]))
     }
   });
@@ -4776,6 +4788,36 @@ fn keepsup(sym: Vec<Token>) -> Vec<Token> {
   v.extend(sym);
   v.push(T_END!());
   v
+}
+
+/// Best-effort content-kind classifier for a creator-scope `\thanks`, used ONLY to
+/// attach a semantic `ltx_thanks_<kind>` CSS hook (OXIDIZED_DESIGN #156) — it never
+/// affects core semantics. Keyword-matched over the flattened, lowercased note text.
+/// Order matters: correspondence and equal-contribution are checked before funding
+/// (a "supported by …" note is funding; "contributed equally" is contribution).
+/// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
+/// 2506.06941 "Equal contribution" (contribution). Explicitly best-effort.
+fn classify_thanks(text: &str) -> &'static str {
+  let t = text.to_lowercase();
+  if t.contains("correspond") {
+    "correspondence"
+  } else if t.contains("equal") && t.contains("contribut") {
+    "contribution"
+  } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
+    "address"
+  } else if t.contains("support")
+    || t.contains("grant")
+    || t.contains("fund")
+    || t.contains("nsf")
+    || t.contains("nih")
+    || t.contains("onr")
+    || t.contains("darpa")
+    || t.contains("erc")
+  {
+    "funding"
+  } else {
+    "note"
+  }
 }
 
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark

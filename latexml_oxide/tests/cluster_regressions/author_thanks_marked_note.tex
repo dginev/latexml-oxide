@@ -1,0 +1,13 @@
+\documentclass{article}
+% An author-attached \thanks becomes a MARKED <ltx:note role="thanks"> (not an inline
+% affiliation-like contact), carrying a best-effort content-kind CSS hook
+% ltx_thanks_<kind> so a theme can style each kind. Surpass, OXIDIZED_DESIGN #156.
+% Witnesses 2512.24601 (correspondence), 1510.02728 (funding).
+\begin{document}
+\author{Alice\thanks{Correspondence to alice@example.com}
+  \and Bob\thanks{This work was supported by NSF grant 123.}
+  \and Carol\thanks{These authors contributed equally.}
+  \and Dave\thanks{Now at Acme Corp.}
+  \and Eve\thanks{Warm thanks to the reviewers.}}
+\title{Marked Thanks}\maketitle
+\end{document}

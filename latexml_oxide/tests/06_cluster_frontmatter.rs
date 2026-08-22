@@ -771,6 +771,54 @@ fn frontmatter_ieee_authorblock() {
   );
 }
 
+/// An author-attached `\thanks` becomes a MARKED `<ltx:note role="thanks">` (not an
+/// inline `<ltx:contact role="thanks">`), carrying semantic class hooks so a theme can
+/// style each content kind. Surpass, OXIDIZED_DESIGN #156. Witnesses arXiv 2512.24601
+/// (correspondence), 1510.02728 (funding).
+#[test]
+fn cluster_author_thanks_marked_note() {
+  let x = convert_to_xml("tests/cluster_regressions/author_thanks_marked_note.tex");
+  // No author-scope thanks CONTACT survives — every thanks is a <note> now.
+  let thanks_contacts = x
+    .split("<contact")
+    .skip(1)
+    .filter(|seg| {
+      seg
+        .split('>')
+        .next()
+        .unwrap_or("")
+        .contains(r#"role="thanks""#)
+    })
+    .count();
+  assert_eq!(
+    thanks_contacts, 0,
+    "an author \\thanks is still an inline role=thanks contact:\n{x}"
+  );
+  // Each \thanks is a <note role="thanks"> with the right content-kind class hook.
+  for (needle, kind) in [
+    ("Correspondence to", "ltx_thanks_correspondence"),
+    ("supported by NSF", "ltx_thanks_funding"),
+    ("contributed equally", "ltx_thanks_contribution"),
+    ("Now at Acme", "ltx_thanks_address"),
+    ("Warm thanks", "ltx_thanks_note"),
+  ] {
+    // find the note element carrying this text, assert it is a role=thanks note with the class.
+    let has = x.split("<note").skip(1).any(|seg| {
+      let block = seg.split("</note>").next().unwrap_or("");
+      block.contains(needle) && block.contains("role=\"thanks\"") && block.contains(kind)
+    });
+    assert!(
+      has,
+      "\\thanks {needle:?} not a role=thanks <note> classed {kind}:\n{x}"
+    );
+  }
+  // The mark-bearing notes live inside creators (not detached).
+  assert!(
+    x.matches("<note class=\"ltx_note_frontmatter").count() == 5,
+    "expected 5 frontmatter thanks notes:\n{x}"
+  );
+}
+
 /// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}`: a bare
 /// email trailing after `\IEEEauthorblockA` must attach to the creator (as an
 /// affiliation), NOT leak into the document body as the first `<p>`. GENUINE-RUST-ONLY
