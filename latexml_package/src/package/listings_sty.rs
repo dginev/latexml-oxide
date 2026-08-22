@@ -170,7 +170,10 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
 /// Handles mathescape: within $...$, content is read with normal catcodes
 /// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
 /// Returns UnTeX'd string representation.
-fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catcode)]) -> String {
+pub fn listings_read_raw_string(
+  until: Option<&Token>,
+  saved_catcodes: &[(char, Catcode)],
+) -> String {
   let mathescape = lst_get_boolean("mathescape");
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
@@ -1815,8 +1818,16 @@ fn lst_process_inline(text: &str) -> Vec<Token> {
   invoke(T_CS!("\\@listings@inline"), vec![body])
 }
 
-/// Perl: lstProcessBlock — wraps block listing, stores data.
-fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token>) {
+/// Perl: lstProcessBlock — wraps block listing, stores data. The per-line body
+/// tokens are supplied by the caller (the re-parsed path passes
+/// `lst_process("block", text).unlist()`; the minted frozencache path passes
+/// its Pygments-colored listing lines). `text` still feeds the base64 `data`
+/// provenance slot (the true source).
+pub fn lst_process_block_with(
+  name: Option<Tokens>,
+  text: &str,
+  processed: Vec<Token>,
+) -> (Vec<Token>, Vec<Token>) {
   // Store listing data for base64 encoding
   let c_val = lookup_value("LISTINGS_DATA_COUNTER")
     .map(|v| v.to_string().parse::<i64>().unwrap_or(0))
@@ -1830,8 +1841,6 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
   let data_key = s!("LISTINGS_DATA_{c_val}");
   assign_value(&data_key, Stored::String(pin(text)), Some(Scope::Global));
 
-  let processed = lst_process("block", text);
-
   let mut body_tokens = Vec::new();
   // Add preamble_before
   if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
@@ -1841,7 +1850,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
   let name_tokens = name.unwrap_or(Tokens!());
   body_tokens.extend(invoke(T_CS!("\\@@listings@block"), vec![
     Tokens::new(ExplodeText!(&c_val.to_string())),
-    processed,
+    Tokens::new(processed),
     name_tokens,
   ]));
 
@@ -1856,7 +1865,20 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
 
 /// Perl: lstProcessDisplay — generate full display listing with optional caption/title.
 pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
-  let (mut body, trailer) = lst_process_block(name.clone(), text);
+  let processed = lst_process("block", text).unlist();
+  lst_process_display_with(name, text, processed)
+}
+
+/// Like [`lst_process_display`], but the block body tokens are supplied by the
+/// caller (see [`lst_process_block_with`]). The caption/title/label wrapping,
+/// float numbering, and container are identical to the re-parsed path — only the
+/// per-line content differs. Used by the minted frozencache color path.
+pub fn lst_process_display_with(
+  name: Option<Tokens>,
+  text: &str,
+  processed: Vec<Token>,
+) -> Vec<Token> {
+  let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
   if let Some(ref n) = name

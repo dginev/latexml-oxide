@@ -68,7 +68,12 @@ LoadDefinitions!({
       Tokens!(T_OTHER!("lstlisting")),
       None,
     )?;
-    let mut result = lst_process_display(None, &contents);
+    // Beyond-Perl frozencache color path (see \begin{minted}); falls back to the
+    // uncolored listings display on a cache miss / no `_minted/`.
+    let mut result = match crate::minted_frozencache::colored_display_body(&contents) {
+      Some(body) => lst_process_display_with(None, &contents, body),
+      None => lst_process_display(None, &contents),
+    };
     // lst_process_display ends with T_END to balance bgroup we opened above
     // (mirrors `\begin{lstlisting}`'s convention).
     if !matches!(result.last(), Some(t) if t.get_catcode() == Catcode::END) {
@@ -137,7 +142,64 @@ LoadDefinitions!({
   def_macro_noop("\\usemintedstyle[]{}")?;
   def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
   DefMacro!("\\mint[]{}", "\\lstinline[language=#2]");
-  DefMacro!("\\mintinline[]{}", "\\lstinline[language=#2]");
+  // `\mintinline[opts]{lang}{code}` — beyond-Perl frozencache color path.
+  // When NO `_minted/` frozencache is present the code arg is left untouched in
+  // the stream and we reconstruct the historical `\lstinline[language=<lang>]`
+  // expansion (byte-for-byte the old behavior, so non-frozencache papers are
+  // unaffected). When a frozencache IS present we read the `{code}` verbatim
+  // (mirroring `\lx@lstinline`) and emit a colored inline `ltx_lstlisting` span
+  // on a content-match hit, or the plain code on a miss. (OXIDIZED_DESIGN_
+  // DIVERGENCES #157.)
+  {
+    let cs = T_CS!("\\mintinline");
+    let params = parse_parameters("[]{}", &cs, true)?;
+    let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        let mut it = args.into_iter();
+        let _opts = it.next();
+        let lang = it.next().and_then(|a| a.owned_tokens()).unwrap_or_default();
+        if !crate::minted_frozencache::cache_available() {
+          // Delegate to \lstinline, which reads the following {code} verbatim.
+          let mut out = vec![T_CS!("\\lstinline"), T_OTHER!("[")];
+          out.extend(Tokenize!("language=").unlist());
+          out.extend(lang.unlist());
+          out.push(T_OTHER!("]"));
+          return Ok(Tokens::new(out));
+        }
+        // Frozencache present: read the verbatim code ourselves (mirror
+        // \lx@lstinline listings.sty:2076-2108).
+        let init = read_token()?;
+        let until = init.as_ref().map(|t| {
+          if t.get_catcode() == Catcode::BEGIN {
+            T_END!()
+          } else {
+            *t
+          }
+        });
+        let verbatim_chars = ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'];
+        let saved: Vec<(char, Catcode)> = verbatim_chars
+          .iter()
+          .map(|&c| (c, lookup_catcode(c).unwrap_or(Catcode::OTHER)))
+          .collect();
+        push_frame();
+        for c in verbatim_chars {
+          assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+        }
+        let body = listings_read_raw_string(until.as_ref(), &saved);
+        pop_frame()?;
+        let segs = crate::minted_frozencache::inline_body(&body);
+        let mut out = vec![
+          T_CS!("\\leavevmode"),
+          T_CS!("\\@listings@inline"),
+          T_BEGIN!(),
+        ];
+        out.extend(segs);
+        out.push(T_END!());
+        Ok(Tokens::new(out))
+      },
+    )));
+    def_macro(cs, params, expansion, None)?;
+  }
   // \begin{minted}[opts]{language} — port of Perl mintedEnvBody
   // (minted.sty.ltxml L68-85). Read raw input lines until \end{minted},
   // then dispatch to listings' lst_process_display, mirroring Perl's
@@ -147,7 +209,10 @@ LoadDefinitions!({
   // it never sees its own `\end{lstlisting}` marker (the user wrote
   // `\end{minted}`).
   use latexml_core::stomach::bgroup;
-  use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
+  use latexml_package::package::listings_sty::{
+    listings_read_raw_lines, listings_read_raw_string, lst_process_display,
+    lst_process_display_with,
+  };
   {
     let cs = T_CS!("\\begin{minted}");
     // `\begin{minted}[opts]{language}`. Previously the `[opts]` were dropped, so
@@ -207,7 +272,14 @@ LoadDefinitions!({
           ));
         }
         let text = listings_read_raw_lines("minted");
-        let result = lst_process_display(None, &text);
+        // Beyond-Perl: if a `_minted/` frozencache holds this block's Pygments
+        // colors (content-match on the normalized body), emit colored listing
+        // lines; otherwise keep the exact uncolored listings path.
+        // (OXIDIZED_DESIGN_DIVERGENCES #157.)
+        let result = match crate::minted_frozencache::colored_display_body(&text) {
+          Some(body) => lst_process_display_with(None, &text, body),
+          None => lst_process_display(None, &text),
+        };
         Ok(Tokens::new(result))
       },
     )));

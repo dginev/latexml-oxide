@@ -162,6 +162,7 @@ pub mod mdframed_sty;
 pub mod mdpi_cls;
 pub mod memoir_cls;
 pub mod mhchem_sty;
+pub mod minted_frozencache;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
 pub mod morefloats_sty;
