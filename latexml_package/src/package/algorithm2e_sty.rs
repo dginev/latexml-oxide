@@ -2,6 +2,81 @@
 //! Perl: algorithm2e.sty.ltxml — complex package with custom line management
 use crate::prelude::*;
 
+/// Does an `<ltx:listingline>` hold real content, or only its line-number
+/// `<ltx:tags>` and indentation `<ltx:rule>`s? A blank line produced by the
+/// `\lx@strippar` block terminator (three `\lx@algo@parx`) still carries the
+/// prepended indentation rules (`\lx@prepend@indentation`) and, because
+/// `\the\everypar` fires at endline, a stolen line-number tag — but no actual
+/// statement. Neither the number tag nor the indentation rules count as content,
+/// so such a line is dropped; a real line always has text or a non-rule element
+/// beyond them.
+fn listingline_has_content(line: &Node) -> bool {
+  line.get_child_nodes().iter().any(|c| match c.get_type() {
+    Some(NodeType::ElementNode) => {
+      let name = c.get_name();
+      name != "tags" && name != "rule"
+    },
+    Some(NodeType::TextNode) => !c.get_content().trim().is_empty(),
+    _ => false,
+  })
+}
+
+/// Renumber the algorithm's numbered listinglines sequentially from 1, matching
+/// the pdflatex golden. `linesnumbered` numbers each body line via the engine's
+/// content-start `\everypar` hook, which fires `\nl` (steps `AlgoLine`). The count
+/// drifts off `1..N` for two reasons: `\lx@strippar`'s block terminator and other
+/// structural `\nl` fires over-step the counter, and empty listinglines that were
+/// numbered then dropped (see `\lx@algo@@endline`) leave a gap. This
+/// construction-time pass rewrites the SURVIVING numeric line-number tags to
+/// `1..N` in document order — algorithm2e always numbers off the sequential
+/// `AlgoLine` counter (auto via `linesnumbered`, or manual via `\nl`/`\lnl`), so
+/// `1..N` is always the intended visible sequence. Non-numeric tags (`\nlset`
+/// custom references) are left alone. (The underlying counter can still be
+/// over-stepped, so a `\ref` to a line may read high — a pre-existing residual.)
+fn renumber_algo_lines(document: &mut Document) {
+  let Some(float) = document.get_node().get_last_child() else {
+    return;
+  };
+  let Some(listing) = float
+    .get_child_elements()
+    .into_iter()
+    .find(|c| document::get_node_qname(c) == pin!("ltx:listing"))
+  else {
+    return;
+  };
+  // Collect the numeric number-tag nodes in document order.
+  let mut numeric_tags: Vec<Node> = Vec::new();
+  for line in listing.get_child_elements() {
+    if document::get_node_qname(&line) != pin!("ltx:listingline") {
+      continue;
+    }
+    for tags in line.get_child_elements() {
+      if document::get_node_qname(&tags) != pin!("ltx:tags") {
+        continue;
+      }
+      for tag in tags.get_child_elements() {
+        if document::get_node_qname(&tag) == pin!("ltx:tag")
+          && tag.get_content().trim().parse::<i64>().is_ok()
+        {
+          numeric_tags.push(tag);
+        }
+      }
+    }
+  }
+  // Skip when already 1..N (correct sequence — do not touch).
+  let already_sequential = numeric_tags
+    .iter()
+    .enumerate()
+    .all(|(i, t)| t.get_content().trim() == (i + 1).to_string());
+  if already_sequential {
+    return;
+  }
+  for (i, tag) in numeric_tags.into_iter().enumerate() {
+    let mut tag = tag;
+    let _ = tag.set_content(&(i + 1).to_string());
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("float");
@@ -65,13 +140,20 @@ LoadDefinitions!({
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;
-          // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
-          // whatsit so afterConstruct's addFloatFrames draws the rectangle.
-          // Without this, algorithm2e's [boxed] / [boxruled] options silently
-          // dropped their frame instructions in Rust.
+          // Map algorithm2e's \algocf@style to a float frame for afterConstruct's
+          // addFloatFrames. Perl (L88-91) only wires the `box` family → 'boxed'
+          // (the rectangle); the `ruled` family (plainruled/ruled/algoruled/
+          // tworuled — top/underline/bottom rules that pdflatex draws) is dropped
+          // by BOTH engines. We extend the same \algocf@style dispatch to 'ruled'
+          // — a surpass over Perl. See OXIDIZED_DESIGN #149, KNOWN_PERL_ERRORS #106.
+          // `box` must be tested first: `boxruled` contains both substrings and is
+          // a full box in pdflatex, so it maps to 'boxed'.
           if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
-            if style_tokens.to_string().contains("box") {
+            let style = style_tokens.to_string();
+            if style.contains("box") {
               whatsit.set_property("frame", Stored::from("boxed"));
+            } else if style.contains("ruled") {
+              whatsit.set_property("frame", Stored::from("ruled"));
             }
           }
           after_float(whatsit);
@@ -84,6 +166,9 @@ LoadDefinitions!({
           if !style.is_empty() {
             crate::package::float_sty::add_float_frames(document, &style)?;
           }
+          // Rewrite the surviving numbered lines to 1..N (the AlgoLine counter
+          // over-steps / dropped empty lines leave gaps — see the fn doc).
+          renumber_algo_lines(document);
         }
       );
     };
@@ -143,9 +228,20 @@ LoadDefinitions!({
   // Block and group macros
   DefMacro!("\\algocf@group{}", "#1");
   DefMacro!("\\algocf@@@block{}{}", "#1 #2\\lx@algo@parb");
-  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline #1\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline #1\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel #1");
+  // The block body `#1` is wrapped in `\lx@strippar{#1}`, matching Perl
+  // (algorithm2e.sty.ltxml `\algocf@Vline`/`\algocf@Vsline`/`\algocf@Noline`).
+  // `\lx@strippar` appends `\lx@algo@parx\lx@algo@parx\lx@algo@parx` so the block
+  // ALWAYS ends with exactly one line break (the trailing pars dedup via the
+  // `didpar` guard), regardless of whether the author's last statement was
+  // `\;`-terminated. Without it a block whose body's final break was consumed
+  // (e.g. an l-variant's `\strut\par`, eaten by `\lx@algo@strut`) leaves the
+  // indentation `\lx@algo@advline` push un-popped at the right moment — the
+  // vertical rule then dangles past the block. The previous port dropped the
+  // `\lx@strippar` wrap. Any phantom empty listingline the trailing pars create
+  // is removed by the blank-line drop in `\lx@algo@@endline` + the renumber pass.
+  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
+  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
+  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}");
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {
@@ -155,6 +251,23 @@ LoadDefinitions!({
       Ok(Tokens::new(vec![T_OTHER!(";")]))
     }
   }, locked => true);
+  // The line BREAK lives INSIDE `\@endalgocfline`, matching Perl's binding
+  // (algorithm2e.sty.ltxml: `\@endalgocfline` => `\algocf@endline\lx@algo@par`,
+  // `\@endalgoln` => `\@endalgocfline`). NOTE this DELIBERATELY inverts the raw
+  // installed sty (L1699-1702: `\@endalgocfline`=`\algocf@endline` no break;
+  // `\@endalgoln`=`\@endalgocfline\hfill\strut\par`). Perl moves the break into
+  // `\@endalgocfline` on purpose: the single-line block variants `\lIf`/`\lElse`/
+  // `\lElseIf`/`\lFor…` end with `…\@endalgocfline…\strut\par` (raw L2215/2222/
+  // 2229) and call `\@endalgocfline` DIRECTLY — never `\@endalgoln`. Because our
+  // `\strut` is `\lx@algo@strut` (`SkipMatch:\par`, eats the trailing `\par`), the
+  // l-variants' own `\strut\par` break is consumed, so the break MUST come from
+  // `\@endalgocfline` or they run together. (A prior port put the break in
+  // `\@endalgoln` instead — faithful to the raw sty but NOT to LaTeXML's binding —
+  // which silently merged every `\lIf`/`\lElse` with its neighbours onto one
+  // unreadable line: witness the disjoint-decomposition and generic-`\Fn` examples
+  // in the algorithm2e manual, and probe `\If{}{\lIf{}{X}\lElse{Y}}`.) `\;` still
+  // ends+breaks via `\@endalgoln`→`\@endalgocfline`. The `\Comment*[r]` inline
+  // side-comment placement is handled separately (it must NOT ride this break).
   DefMacro!("\\@endalgoln", "\\@endalgocfline");
   DefMacro!("\\@endalgocfline", "\\algocf@endline\\lx@algo@par");
   DefMacro!("\\PrintSemicolon", sub[_args] {
@@ -201,31 +314,75 @@ LoadDefinitions!({
     before_construct => sub[document] {
       document.maybe_close_element("ltx:listingline")?;
     });
-  DefConstructor!("\\lx@algo@@endline", "</ltx:listingline>");
-  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
-  DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
+  // Line numbering: `linesnumbered` overrides `\everypar`→`\algocf@everypar`→`\nl`
+  // inside the listing (steps `AlgoLine`, calls `\algocf@printnl`; raw L1399/L1659).
+  // The ENGINE fires `\the\everypar` at CONTENT-START (each line's vmode→hmode entry,
+  // tex.web `new_graf`; `stomach::enter_horizontal`), which is the only timing that
+  // both leaves a KwInOut header unnumbered (it sets `everyparnl=\relax` BEFORE its
+  // content) and numbers a `\Comment*[r]` statement (its `\relax` comes AFTER). For
+  // that to fire PER LINE, each line must be a real vmode→hmode transition — but our
+  // `\lx@algo@par` keeps horizontal mode across DOM endline/startline, so the seam
+  // resets to internal_vertical via `\lx@algo@leave@hmode` (a gentle
+  // `leaveHorizontal_internal`: repack + mode reset, no `\par`), and the next line's
+  // first content re-enters hmode → fires `\everypar`. The binding therefore does NOT
+  // fire `\the\everypar` at endline. An empty paragraph never enters hmode → never
+  // numbered, so no phantom numbers; we still DROP a listingline left with no real
+  // content (only `<ltx:tags>` / indentation `<ltx:rule>`s) — `\lx@strippar`'s empty
+  // `\lx@algo@parx` block-terminator lines. Witnesses arXiv:2602.20153
+  // (`\Comment*[r]`), arXiv:2512.24601 (html_feedback #6080/#6236).
+  DefConstructor!("\\lx@algo@@endline", sub[document] {
+    document.close_element("ltx:listingline")?;
+    if let Some(line) = document.get_node().get_last_child()
+      && document::get_node_qname(&line) == pin!("ltx:listingline")
+      && !listingline_has_content(&line)
+    {
+      document.remove_node(line);
+    }
+  });
+  // Gentle vmode reset at the line seam: resume internal_vertical WITHOUT firing a
+  // `\par` (which would re-enter the line machinery), so the next line's first box is
+  // a fresh vmode→hmode entry that the engine's `\everypar` hook numbers.
+  DefPrimitive!("\\lx@algo@leave@hmode", {
+    ::latexml_core::stomach::leave_horizontal_internal();
+  });
+  // Indentation is now prepended at ENDLINE (see `\lx@prepend@indentation@`), so
+  // startline emits NO horizontal content — a line's first hmode entry is its real
+  // content, keeping the engine `\everypar` numbering correctly timed.
+  DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline");
+  DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\lx@algo@@endline\\lx@algo@leave@hmode");
 
-  // Indentation prepending — Perl L197-208.
-  // Perl's `\lx@prepend@indentation@{}` does `$doc->floatToElement('ltx:tags')`
-  // FIRST, then prepends the indentation. That `floatToElement('ltx:tags')` is
-  // critical structurally: it repositions the cursor UP to the listingline,
-  // OUT of any open inline box — notably the `_noautoclose` `<ltx:text>` an
-  // `\hbox` opens when an algorithm2e listing is wrapped in `\colorbox{…}{…}`
-  // (→ `\hbox{…}`). With the cursor back at the listingline, the immediately
-  // following `\lx@algo@@endline` (`</ltx:listingline>`) closes cleanly.
+  // Indentation prepending — Perl L197-208 (faithful DOM prepend at ENDLINE).
+  // `\lx@prepend@indentation@{#1}` floats up to the `<ltx:listingline>`, detaches
+  // its current children, absorbs the indentation `#1` (so it becomes the leading
+  // content), then re-appends the saved children — matching Perl's
+  // floatToElement/removeChild/absorb/appendChild.
   //
-  // The previous Rust port emitted indentation at `\lx@algo@startline` instead
-  // and stubbed this as an EMPTY constructor "to avoid DOM manipulation" — but
-  // that dropped the reposition, so a listing inside an `\hbox`/`\colorbox`
-  // left the cursor inside the box's `_noautoclose` `<ltx:text>` and closing
-  // the listingline errored: "ltx:listingline … whose open descendents do not
-  // auto-close. Descendants are text". We keep Rust's startline-indentation
-  // approach (so we deliberately do NOT re-absorb `#1` here — that would double
-  // the indent), but restore Perl's cursor-repositioning float. Witnesses
-  // 1911.01815, 1903.04631 (algorithm2e inside `\colorbox`/`\hbox`).
+  // Emitting the indentation HERE (endline) rather than at `\lx@algo@startline` is
+  // required for the engine `\everypar` line numbering (see `\lx@algo@endline`):
+  // the indentation (`\hskip`s + a `<ltx:rule>`) is horizontal material, so emitting
+  // it at startline entered horizontal mode BEFORE the line's real content and fired
+  // `\everypar` too early — numbering a nested standalone `\tcp` comment that had not
+  // yet set `everyparnl=\relax`. At endline it is a pure DOM prepend (no hmode
+  // entry), so a line's FIRST hmode entry is its real content, at the correct time.
+  // The floatToElement reposition is also load-bearing structurally: it lifts the
+  // cursor OUT of any open inline box (the `_noautoclose` `<ltx:text>` an `\hbox`
+  // opens when a listing is wrapped in `\colorbox{…}{…}`) so the following
+  // `\lx@algo@@endline` closes cleanly. Witnesses 1911.01815, 1903.04631
+  // (algorithm2e inside `\colorbox`/`\hbox`).
   DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
-  DefConstructor!("\\lx@prepend@indentation@{}", sub[document] {
+  DefConstructor!("\\lx@prepend@indentation@{}", sub[document, args] {
     document.float_to_element("ltx:tags", false)?;
+    let mut line = document.get_node().clone();
+    let mut saved: Vec<Node> = line.get_child_nodes();
+    for child in saved.iter_mut() {
+      child.unlink();
+    }
+    if let Some(indent) = args.first().and_then(|a| a.as_ref()) {
+      document.absorb(indent, None)?;
+    }
+    for child in saved.iter_mut() {
+      line.add_child(child)?;
+    }
   });
 
   // Line numbering — Perl L210-221 (the ACTIVE \algocf@printnl; Perl L195's

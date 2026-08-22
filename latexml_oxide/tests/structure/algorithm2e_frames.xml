@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="algorithm2e" options="ruled"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <float class="ltx_algorithm" framed="top" xml:id="algorithm1">
+    <tags>
+      <tag><text font="bold">Algorithm 1</text></tag>
+      <tag role="refnum">1</tag>
+    </tags>
+    <listing class="ltx_lst_numbers_left" framed="topbottom">
+      <listingline><text font="bold">Input:</text> data</listingline>
+      <listingline><Math mode="inline" tex="x\leftarrow 1" text="x leftarrow 1" xml:id="algorithm1.m1">
+          <XMath>
+            <XMApp>
+              <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              <XMTok font="italic" role="UNKNOWN">x</XMTok>
+              <XMTok meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>;</listingline>
+      <listingline/>
+    </listing>
+    <toccaption><tag close=" ">1</tag>Ruled</toccaption>
+    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>Ruled</caption>
+  </float>
+  <float class="ltx_algorithm" xml:id="algorithm2">
+    <tags>
+      <tag><text font="bold">Algorithm 2</text></tag>
+      <tag role="refnum">2</tag>
+    </tags>
+    <listing class="ltx_lst_numbers_left" framed="rectangle">
+      <listingline><Math mode="inline" tex="y\leftarrow 2" text="y leftarrow 2" xml:id="algorithm2.m1">
+          <XMath>
+            <XMApp>
+              <XMTok name="leftarrow" role="ARROW">←</XMTok>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+              <XMTok meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+          </XMath>
+        </Math>;</listingline>
+      <listingline/>
+    </listing>
+    <toccaption><tag close=" ">2</tag>Boxed</toccaption>
+    <caption><tag close=" "><text font="bold">Algorithm 2</text></tag>Boxed</caption>
+  </float>
+</document>

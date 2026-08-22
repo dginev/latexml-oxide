@@ -3534,8 +3534,17 @@ LoadDefinitions!({
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
-    // Clear \everypar at document start (Perl parity)
-    assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    // Clear \everypar at document start (Perl `AssignRegister('\everypar',
+    // Tokens(), 'global')`, latex_constructs.pool L319). `\everypar` is a REGISTER,
+    // so it must be cleared via `assign_register` (which writes the register
+    // definition's value that `\the\everypar`/`lookup_register` read), NOT
+    // `assign_value` (a separate State value slot the register never consults).
+    // Raw-loading modern `ltpara` leaves the register holding the para-hook token
+    // list `\g__para_standard_everypar_tl`; the old `assign_value` clear did not
+    // actually empty it, so `\the\everypar` in the body still expanded to that
+    // unmodelled hook. Nothing read the register in the body before, so this was
+    // latent; it matters for any code that fires `\everypar` (algorithm2e numbering).
+    assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
     // Perl #2798: at \begin{document}, make the fill widths consistent —
     //   \columnwidth = \hsize = \linewidth = \textwidth
     // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister
@@ -6337,6 +6346,31 @@ LoadDefinitions!({
   DefMacro!("\\@lign", None, None);
 
   Tag!("ltx:equationgroup", auto_close => true);
+
+  // Prune spurious empty equations at construction end. A well-formed
+  // `<ltx:equation>` always carries an `<ltx:Math>` child; a math-less one is
+  // spurious markup that serialises as a childless `<equation/>` and renders as a
+  // tall EMPTY display block. Raw-loaded `algpseudocodex` (TikZ code-boxes +
+  // `\savebox{$\m@th…$}` + `\tabto`) opens and closes such empty equations — TWO per
+  // `\State $math$ \Comment{…}` line — blowing out the vertical spacing of a whole
+  // algorithm (witness arXiv 2511.21969, html_feedback). GENUINE-RUST-ONLY: same-host
+  // Perl's box handling never creates them (emits ZERO). We reach parity by dropping
+  // any equation left with no Math. Perl has the afterClose-on-equation precedent
+  // (`amsmath.sty.ltxml:638 rearrangeLoneAMSAligned`). KNOWN_PERL_ERRORS #108.
+  //
+  // `after_close_late` (not `after_close`): it runs AFTER every other equation-close
+  // handler (e.g. amsmath's `rearrangeLoneAMSAligned`), so the prune sees the FINAL
+  // content and never races a handler that legitimately populates the equation at close
+  // time. The predicate is deliberately CONSERVATIVE — TRULY empty (no child nodes at
+  // all, i.e. the self-closing `<equation/>` the algpseudocodex boxes leave behind). A
+  // `<Math>`-presence test is too strict: a pure-text display equation
+  // (`\[\text{…}\]`) legitimately carries no `<ltx:Math>` child yet must be kept
+  // (cluster_cli::display_math_renders_on_one_line_without_clipping).
+  Tag!("ltx:equation", after_close_late => sub[document, node] {
+    if node.get_first_child().is_none() {
+      document.remove_node(node.clone());
+    }
+  });
 
   // Perl: latex_constructs.pool.ltxml L1971-1973
   NewCounter!("subequation", "equation", idprefix => "E", idwithin => "equation");
