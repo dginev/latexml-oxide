@@ -824,15 +824,16 @@ this creator in a formatted titlepage.</a:documentation>
       </attribute>
     </optional>
   </define>
+  <!--
+    `note` added by latexml-oxide (OXIDIZED_DESIGN #156): an author-attached \thanks
+    is a marked <note> child of the creator (mark on the author + margin/footnote content).
+  -->
   <define name="creator_model">
     <a:documentation>Content model for \elementref{creator}.</a:documentation>
     <zeroOrMore>
       <choice>
         <ref name="Person.class"/>
         <ref name="Misc.class"/>
-        <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156): an author-attached
-             \thanks is a marked <note> child of the creator (mark on the author
-             name + margin/footnote content), so authors can carry notes. -->
         <ref name="note"/>
       </choice>
     </zeroOrMore>
