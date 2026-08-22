@@ -1533,8 +1533,9 @@ mod dir_prefixed_package_loading {
     // A RELATIVE dir keeps this cross-platform without any path-string surgery:
     // an absolute OS path in TeX source is hostile on Windows (`\` is catcode 0,
     // so `C:\Users\…` tokenizes \U, \e, … as control sequences and mangles the
-    // arg that `\lx@set@path` Expand!s). `\lx@set@path` resolves a relative arg
-    // against SOURCEDIRECTORY (here the temp root), so `extra` == root/extra on
+    // arg that `\lx@set@path` Expand!s). A relative arg resolves against
+    // SOURCEDIRECTORY when that is set, else the process cwd — both are the temp
+    // root here (the run uses current_dir(root)), so `extra` == root/extra on
     // every platform.
     std::fs::write(
       root.join("sub/lpkg.sty"),

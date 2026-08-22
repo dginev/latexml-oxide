@@ -547,6 +547,41 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
 }
 
+/// Run a fallible I/O op, retrying briefly on a *transient* lock. On Windows a
+/// just-written file — a figure the converter emitted a moment ago, or a test
+/// fixture — can be momentarily locked by another handle (antivirus real-time
+/// scanning of the fresh file, or Windows' stricter default file sharing), which
+/// surfaces as `PermissionDenied` (`ERROR_SHARING_VIOLATION`). A bare
+/// `op().ok()?` would turn that into a silent `None`, and a figure would reach
+/// the engine at 0x0. Retry only that transient class a handful of times with a
+/// short backoff; every other error (incl. a genuine `NotFound`) fails fast, and
+/// the happy path (Ok on the first try) pays nothing.
+fn with_transient_retry<T>(mut op: impl FnMut() -> std::io::Result<T>) -> Option<T> {
+  let mut tries = 0u32;
+  loop {
+    match op() {
+      Ok(v) => return Some(v),
+      Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && tries < 5 => {
+        tries += 1;
+        std::thread::sleep(std::time::Duration::from_millis(2 * u64::from(tries)));
+      },
+      Err(_) => return None,
+    }
+  }
+}
+
+/// [`std::fs::read`] with the transient-lock retry of [`with_transient_retry`].
+fn read_file_resilient(path: &Path) -> Option<Vec<u8>> {
+  with_transient_retry(|| std::fs::read(path))
+}
+
+/// [`std::fs::File::open`] with the transient-lock retry of
+/// [`with_transient_retry`]. Only the open races with the scanner/writer; reads
+/// on the returned handle do not, so callers keep their streaming reads.
+fn open_file_resilient(path: &Path) -> Option<std::fs::File> {
+  with_transient_retry(|| std::fs::File::open(path))
+}
+
 /// Read image dimensions (width, height) in pixels from a file.
 /// Supports PNG, JPEG, and EPS (PostScript BoundingBox).
 ///
@@ -556,7 +591,7 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
 pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
   use std::io::Read;
-  let mut file = std::fs::File::open(path).ok()?;
+  let mut file = open_file_resilient(path)?;
   let mut header = [0u8; 32];
   file.read_exact(&mut header).ok()?;
 
@@ -769,29 +804,6 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// xref stream; for the figures `\includegraphics` pulls in, which are
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
-/// Read a file, retrying briefly on a transient lock. On Windows a *just*-written
-/// file — a figure the converter emitted a moment ago, or a test fixture — can be
-/// momentarily locked by another handle (antivirus real-time scanning of the
-/// fresh file, or Windows' stricter default file sharing), so a bare
-/// `fs::read(path).ok()?` turns a transient `ERROR_SHARING_VIOLATION`
-/// (`PermissionDenied`) into a silent `None` and a figure reaches the engine at
-/// 0×0. Retry a handful of times with a short backoff; a genuine `NotFound` still
-/// fails fast, and the happy path (Ok on the first try) pays nothing.
-fn read_file_resilient(path: &Path) -> Option<Vec<u8>> {
-  let mut tries = 0u32;
-  loop {
-    match std::fs::read(path) {
-      Ok(bytes) => return Some(bytes),
-      Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
-      Err(_) if tries < 5 => {
-        tries += 1;
-        std::thread::sleep(std::time::Duration::from_millis(2 * u64::from(tries)));
-      },
-      Err(_) => return None,
-    }
-  }
-}
-
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
   let bytes = read_file_resilient(path)?;
   if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
