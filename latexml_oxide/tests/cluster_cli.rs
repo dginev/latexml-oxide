@@ -1899,6 +1899,197 @@ mod browser_render_display_math {
   }
 }
 
+mod browser_render_aligned_math_spacing {
+  //! #755 (reporter nasser1), the *rendered* guarantee: an `aligned`/`gather`
+  //! nested in math (ONE `<math>` with a tight `<mtable columnspacing="0pt">`)
+  //! must render the relation with its own spacing only, not the browser's
+  //! default 0.4em `<mtd>` padding on top — which tripled the `y(x) = …` gap.
+  //! `tests/browser/measure_align_mtd.js` renders via Playwright (system Chrome)
+  //! and reports the aligned cells' computed horizontal padding plus the first
+  //! row's left-column→relation gap.
+  //!
+  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (headless-browser jobs
+  //! are expensive), self-skipping (visibly) when node / `playwright-core` / a
+  //! system Chrome is absent. To run it: `npm ci` in `latexml_oxide/tests/browser`,
+  //! then `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_aligned_math_spacing`
+  //! — with that env set a missing toolchain is a hard FAILURE, not a skip. The
+  //! platform-independent structural half is `aligned_mtable_columnspacing_zero`
+  //! (below): the CSS reset only bites when `columnspacing="0pt"` is emitted.
+
+  use std::{fs, path::PathBuf, process::Command};
+
+  // The reporter's MWE, distilled: a `gather*` wrapping an `aligned` makes the
+  // whole thing ONE `<math>` with a native `<mtable>` (the path the bug lives on).
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     y(x) &= C_1 y(x) + C_2 y(x) \\\\\n\
+                     g(x) &= C_1 y_1 + C_2 y_2\n\
+                     \\end{aligned}\n\\end{gather*}\n\
+                     \\end{document}\n";
+
+  fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
+  fn runs(cmd: &str, arg: &str) -> bool {
+    Command::new(cmd)
+      .arg(arg)
+      .output()
+      .map(|o| o.status.success())
+      .unwrap_or(false)
+  }
+  fn have_chrome() -> bool {
+    [
+      "google-chrome",
+      "google-chrome-stable",
+      "chromium",
+      "chromium-browser",
+    ]
+    .iter()
+    .any(|c| runs(c, "--version"))
+  }
+  fn toolchain_ready() -> bool {
+    runs("node", "--version")
+      && have_chrome()
+      && browser_dir().join("node_modules/playwright-core").is_dir()
+  }
+
+  #[test]
+  fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
+    if !toolchain_ready() {
+      assert!(
+        std::env::var("LATEXML_BROWSER_TESTS").is_err(),
+        "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
+         are not all available; run `npm ci` in {}",
+        browser_dir().display()
+      );
+      eprintln!(
+        "SKIP browser render (#755): node/playwright-core/chrome unavailable — \
+         `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
+        browser_dir().display()
+      );
+      return;
+    }
+
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    assert!(
+      root.join("out.html").exists(),
+      "conversion produced no HTML:\n{}",
+      String::from_utf8_lossy(&conv.stderr)
+    );
+
+    let url = format!("file://{}", root.join("out.html").display());
+    let m = Command::new("node")
+      .arg(browser_dir().join("measure_align_mtd.js"))
+      .arg(&url)
+      .output()
+      .expect("run measure_align_mtd.js");
+    let stdout = String::from_utf8_lossy(&m.stdout);
+    assert!(
+      m.status.success(),
+      "measure_align_mtd.js failed: {}\n{stdout}",
+      String::from_utf8_lossy(&m.stderr)
+    );
+
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    let cells = v["cells"].as_array().expect("cells array");
+    // The `aligned` has 2 rows x 2 columns → 4 native alignment cells.
+    assert_eq!(
+      cells.len(),
+      4,
+      "expected 4 aligned <mtd> cells, got {}: {stdout}",
+      cells.len()
+    );
+    // The FIX: the browser's default 0.4em (6.4px) mtd padding is reset to 0 on
+    // these `columnspacing="0pt"` cells, so only the relation operator spaces the
+    // columns. Robust, font-independent.
+    for (i, c) in cells.iter().enumerate() {
+      for side in ["paddingLeft", "paddingRight"] {
+        let p = c[side].as_str().unwrap_or("?");
+        assert_eq!(
+          p, "0px",
+          "aligned cell {i} kept {side}={p} — the native-MathML mtd padding reset \
+           (LaTeXML.css, #755) is missing, so the relation is double-spaced: {stdout}"
+        );
+      }
+    }
+    // Behavioural cross-check: the rendered `y(x)`→`=` gap is the relation space
+    // alone (~4.4px at 16px), not the ~10.8px the UA padding produced. A generous
+    // ceiling separates fixed from broken without pinning the exact font metric.
+    let gap = v["firstRelGap"].as_f64().expect("firstRelGap");
+    assert!(
+      gap < 7.0,
+      "aligned `y(x)`→`=` gap rendered {gap}px — double-spaced by mtd padding \
+       (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
+    );
+  }
+}
+
+mod aligned_mtable_columnspacing_zero {
+  //! #755, the platform-independent (CI-enforced) half: the native-MathML mtd
+  //! padding reset in `LaTeXML.css` keys on `mtable[columnspacing="0pt"]`, so it
+  //! bites only if the post-processor actually emits that attribute on an
+  //! `aligned` table AND the reset rule ships in the embedded stylesheet. Neither
+  //! needs a browser — this guards the CSS/XML contract the browser test above
+  //! renders. If the presentation MathML ever stopped emitting `columnspacing="0pt"`
+  //! for `aligned`, the reset would silently no-op and the relation over-space
+  //! again; if the CSS rule were dropped, likewise.
+
+  use std::{fs, path::Path, process::Command};
+
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     y(x) &= C_1 y(x)\\\\ g(x) &= C_1 y_1\n\
+                     \\end{aligned}\n\\end{gather*}\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn aligned_emits_zero_columnspacing_and_css_resets_mtd_padding() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let work = tempfile::tempdir().expect("tempdir");
+    let root = work.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .args(["--format=html5", "--destination=out.html", "doc.tex"])
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_else(|e| {
+      panic!(
+        "no HTML: {e}\n{}",
+        String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "")
+      )
+    });
+
+    // The `aligned` renders as ONE native `<math>` with a tight mtable — the
+    // attribute the CSS reset keys on. (An HTML `ltx_eqn_table` display would NOT
+    // carry it; this nested-in-`gather*` shape is the reported one.)
+    assert!(
+      html.contains("<mtable columnspacing=\"0pt\""),
+      "aligned did not emit a native <mtable columnspacing=\"0pt\"> — the #755 CSS \
+       reset keys on that attribute and would silently no-op:\n{html}"
+    );
+
+    // The reset rule must ship in the embedded stylesheet the binary wrote out.
+    let css = fs::read_to_string(root.join("LaTeXML.css")).expect("read LaTeXML.css");
+    assert!(
+      css.contains("mtable[columnspacing=\"0pt\"] mtd"),
+      "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
+  }
+}
+
 mod title_pubnote_pollution {
   //! arXiv/html_feedback#6886: publication METADATA pubnotes (conference, DOI,
   //! ISBN, journal, …) were nested inside the title `<h1 class="ltx_title">`,
