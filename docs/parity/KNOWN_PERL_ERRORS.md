@@ -4155,3 +4155,27 @@ leaks a raw, undefined `\fname@algorithm`: `<ltx:ERROR ...>\fname@algorithm</ltx
 **Rust:** fixed by defining `\fname@<type>` alongside `\lx@name@<type>` in `\floatname` and
 `\newfloat` (real float.sty's internal name). See `OXIDIZED_DESIGN_DIVERGENCES.md` #149. The
 caption compiles to "Algorithm 1 …". Additive; to be filed upstream.
+
+## 108. `algpseudocodex` emits spurious empty `<equation/>` blocks (Rust-only; pruned)
+
+**Symptom:** an algorithm using `algpseudocodex` (raw-loaded — there is no `.ltxml`
+binding — under `--includestyles` / ar5iv preload) emits TWO childless, RefStepCounter'd
+`<ltx:equation/>` nodes per `\State $math$ \Comment{…}` line. Each renders as a tall
+EMPTY display-math block, so a whole algorithm is blown apart by huge vertical gaps
+between its lines. Witness arXiv 2511.21969 ("trueTriad", html_feedback).
+
+**Cause:** `algpseudocodex` builds every line with TikZ code-boxes plus
+`\savebox{\algpx@boxedStringBox}{$\m@th#2$}` (sty L519) and right-justifies `\Comment`
+via `\tabto` (sty L895). Our engine's handling of that box/math machinery opens and
+closes an equation with no Math content. **GENUINE-RUST-ONLY:** same-host Perl
+(`--includestyles`) emits ZERO empty equations for the same input — Perl's box handling
+never creates them.
+
+**Rust:** rather than chase the exact box-digestion divergence, we prune at the schema
+layer: `Tag!("ltx:equation", after_close_late => …)` drops any equation left with no
+`<ltx:Math>` child (`latex_constructs.rs`). A well-formed equation always carries a
+`<Math>` element from construction (only its XMath parse is deferred), so the
+presence-test is parse-order-safe; `after_close_late` runs after every other
+equation-close handler (e.g. amsmath's `rearrangeLoneAMSAligned`, `amsmath.sty.ltxml:638`)
+so it never races one that legitimately fills the Math. Reaches Perl parity (0 empty
+equations). Guard: `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.

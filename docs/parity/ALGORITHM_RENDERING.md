@@ -80,6 +80,23 @@ a regression.
    this is a CSS/HTML layout-fidelity concern (inline-block minipage flow after text),
    NOT a core-XML divergence, and improving it is a non-trivial shared-layout surpass
    touching general minipage rendering.
+5. **algorithm2e line-number font is not uniform** (Rust-only). The pdflatex golden
+   renders every line number in one `\NlSty` = `\textnormal{\textbf{…}}` upright-bold
+   style; ours makes a number bold only when its line leads with a bold algorithm2e
+   keyword (`\For`/`\If`/`\While`… via `\KwSty`), plain otherwise — the number inherits
+   the ambient font. Side-effect of the §4 content-start `\everypar` numbering (Perl
+   emits the number at end-of-line = neutral font → uniform). Entangled with the
+   counter over-step above and the real number-emission path (the tag does NOT flow
+   through the binding's `\algocf@printnl` — verified by probe), so a correct fix needs
+   that path mapped. RED/GREEN guard (currently `#[ignore]`d):
+   `06_cluster_regressions::cluster_algorithm2e_uniform_line_number_font`. Group with the
+   counter over-step for the 0.7.7 everypar-timing pass.
+
+**FIXED this pass (was an open item):** raw-loaded `algpseudocodex` emitted spurious
+empty `<equation/>` blocks (2 per `\State $math$ \Comment{…}` line) that blew out
+algorithm vertical spacing (witness 2511.21969). Pruned via
+`Tag!("ltx:equation", after_close_late …)` (drop equations with no Math) — KNOWN_PERL_ERRORS
+#108, guard `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
 
 ## Markup unification across the algorithm bindings (plan — large, cross-binding — SCHEDULED 0.7.7)
 

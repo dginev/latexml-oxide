@@ -11,8 +11,8 @@
 mod cluster;
 use cluster::{
   convert_and_post_clean, convert_and_post_pmml_clean, convert_and_post_pmml_contrib_clean,
-  convert_clean, convert_expecting_errors, convert_log, convert_to_xml, convert_to_xml_contrib,
-  convert_to_xml_contrib_clean,
+  convert_clean, convert_expecting_errors, convert_log, convert_to_xml, convert_to_xml_ar5iv,
+  convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
 #[test]
@@ -1512,5 +1512,82 @@ fn cleveref_explicit_crefname_overrides_heading() {
   assert!(
     !x.contains(r#"<text class="ltx_ref_tag">Widget</text>"#),
     "the heading \"Widget\" leaked past the explicit \\crefname into the ref:\n{x}"
+  );
+}
+
+/// RED/GREEN guard (ignored — SCHEDULED): algorithm2e line numbers must render in
+/// one uniform style, matching the pdflatex golden where every number is
+/// `\NlSty` = `\textnormal{\textbf{…}}` (upright bold). Currently a number instead
+/// inherits the ambient font — bold on a line whose leading algorithm2e keyword
+/// (`\For`/`\If`/`\While`…) has switched to `\KwSty` bold, plain otherwise — so the
+/// gutter numbers come out inconsistent. This is a Rust-only side-effect of the §4
+/// content-start `\everypar` numbering (Perl emits the number at end-of-line, where
+/// the font is neutral, so its numbers are uniformly bold); it is entangled with the
+/// §4(3) counter over-step and the real number-emission path (the tag does NOT flow
+/// through the binding's `\algocf@printnl` — verified by probe), so a correct fix
+/// needs that path mapped. Scheduled for 0.7.7 — see
+/// `docs/parity/ALGORITHM_RENDERING.md`. Remove `#[ignore]` when fixed.
+#[test]
+#[ignore = "scheduled 0.7.7: algorithm2e uniform line-number font (§4(3), ALGORITHM_RENDERING.md)"]
+fn cluster_algorithm2e_uniform_line_number_font() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_bold_number.tex");
+  let listing = {
+    let start = xml
+      .find("<listing")
+      .expect("no <listing> in algorithm output");
+    let end = xml[start..].find("</listing>").expect("unclosed <listing>") + start;
+    &xml[start..end]
+  };
+  // Collect the bold-state of every numeric line-number <tag>.
+  let mut states: Vec<bool> = Vec::new();
+  let mut rest = listing;
+  while let Some(i) = rest.find("<tag") {
+    rest = &rest[i..];
+    let close = rest.find("</tag>").expect("unclosed <tag>");
+    let seg = &rest[..close];
+    let text: String = seg.chars().filter(|c| c.is_ascii_digit()).collect();
+    if !text.is_empty() {
+      states.push(seg.contains(r#"font="bold""#));
+    }
+    rest = &rest[close + 6..];
+  }
+  assert!(
+    !states.is_empty(),
+    "no numeric line-number tags found:\n{listing}"
+  );
+  // The golden renders EVERY number in the same uniform \NlSty upright-bold style.
+  assert!(
+    states.iter().all(|&bold| bold),
+    "algorithm2e line numbers are not uniformly bold (\\NlSty); per-line font leak — got {states:?}:\n{listing}"
+  );
+}
+
+/// Guard: the `algpseudocodex` package (raw-loaded under `--includestyles`/ar5iv
+/// preload; there is no `.ltxml` binding) must not emit spurious empty display
+/// `<equation/>` elements. A `\State $math$ \Comment{…}` line USED to produce two
+/// RefStepCounter'd but EMPTY `<ltx:equation/>` nodes, which rendered as tall empty
+/// display-math blocks and blew out the vertical spacing of the whole algorithm
+/// (witness arXiv 2511.21969 "trueTriad"). GENUINE-RUST-ONLY: same-host Perl
+/// (`--includestyles`) emits ZERO. Root: algpseudocodex builds each line with TikZ
+/// code-boxes + `\savebox{…}{$\m@th…$}` + `\tabto`; our engine's box/math handling
+/// opened+closed empty equations where Perl's did not. Fixed by the
+/// `Tag!("ltx:equation", after_close …)` prune-if-no-Math rule (latex_constructs.rs);
+/// see KNOWN_PERL_ERRORS #108.
+#[test]
+fn cluster_algpseudocodex_no_spurious_empty_equation() {
+  let xml = convert_to_xml_ar5iv("tests/cluster_regressions/algpseudocodex_empty_equation.tex");
+  // An empty display equation serialises as a self-closing `<equation … />`.
+  let mut spurious = 0usize;
+  let mut rest = xml.as_str();
+  while let Some(i) = rest.find("<equation ") {
+    rest = &rest[i + 1..];
+    let end = rest.find('>').expect("unterminated <equation");
+    if rest[..end].ends_with('/') {
+      spurious += 1;
+    }
+  }
+  assert_eq!(
+    spurious, 0,
+    "algpseudocodex emitted {spurious} spurious empty <equation/> element(s) (Perl emits none):\n{xml}"
   );
 }

@@ -6347,6 +6347,31 @@ LoadDefinitions!({
 
   Tag!("ltx:equationgroup", auto_close => true);
 
+  // Prune spurious empty equations at construction end. A well-formed
+  // `<ltx:equation>` always carries an `<ltx:Math>` child; a math-less one is
+  // spurious markup that serialises as a childless `<equation/>` and renders as a
+  // tall EMPTY display block. Raw-loaded `algpseudocodex` (TikZ code-boxes +
+  // `\savebox{$\m@th…$}` + `\tabto`) opens and closes such empty equations — TWO per
+  // `\State $math$ \Comment{…}` line — blowing out the vertical spacing of a whole
+  // algorithm (witness arXiv 2511.21969, html_feedback). GENUINE-RUST-ONLY: same-host
+  // Perl's box handling never creates them (emits ZERO). We reach parity by dropping
+  // any equation left with no Math. Perl has the afterClose-on-equation precedent
+  // (`amsmath.sty.ltxml:638 rearrangeLoneAMSAligned`). KNOWN_PERL_ERRORS #108.
+  //
+  // `after_close_late` (not `after_close`): it runs AFTER every other equation-close
+  // handler (e.g. amsmath's `rearrangeLoneAMSAligned`), so the prune sees the FINAL
+  // content and never races a handler that legitimately populates the equation at close
+  // time. The predicate is deliberately CONSERVATIVE — TRULY empty (no child nodes at
+  // all, i.e. the self-closing `<equation/>` the algpseudocodex boxes leave behind). A
+  // `<Math>`-presence test is too strict: a pure-text display equation
+  // (`\[\text{…}\]`) legitimately carries no `<ltx:Math>` child yet must be kept
+  // (cluster_cli::display_math_renders_on_one_line_without_clipping).
+  Tag!("ltx:equation", after_close_late => sub[document, node] {
+    if node.get_first_child().is_none() {
+      document.remove_node(node.clone());
+    }
+  });
+
   // Perl: latex_constructs.pool.ltxml L1971-1973
   NewCounter!("subequation", "equation", idprefix => "E", idwithin => "equation");
   DefMacro!("\\thesubequation", "\\theequation\\alph{subequation}");
