@@ -92,11 +92,32 @@ a regression.
    `06_cluster_regressions::cluster_algorithm2e_uniform_line_number_font`. Group with the
    counter over-step for the 0.7.7 everypar-timing pass.
 
-**FIXED this pass (was an open item):** raw-loaded `algpseudocodex` emitted spurious
-empty `<equation/>` blocks (2 per `\State $math$ \Comment{…}` line) that blew out
-algorithm vertical spacing (witness 2511.21969). Pruned via
-`Tag!("ltx:equation", after_close_late …)` (drop equations with no Math) — KNOWN_PERL_ERRORS
-#108, guard `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
+**FIXED this pass (were open items):**
+- Raw-loaded `algpseudocodex` emitted spurious empty `<equation/>` blocks (2 per
+  `\State $math$ \Comment{…}` line) that blew out algorithm vertical spacing (witness
+  2511.21969). Pruned via `Tag!("ltx:equation", after_close_late …)` (drop equations with
+  no Math) — KNOWN_PERL_ERRORS #108, guard
+  `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
+- `\tabto` (tabto-ltx, `\RequirePackage`d by algpseudocodex) had no binding; its raw `$$`
+  line-measurement hack broke the right-justified `\Comment` onto its own line. Bound
+  `\tabto`→`\hfill` (`tabto_sty.rs`, OXIDIZED_DESIGN #150) → comments now flush right inline.
+
+**Open — algpseudocodex comment/line box-model polish (witness 2511.21969 Alg 1/2).**
+Against the pdflatex golden (compact; each `▷` comment paired with its `◁` end-marker on
+ONE line) three residual layout facets remain, all rooted in how algpseudocodex builds a
+line (TikZ code-boxes + per-comment `\parbox`/minipage + `\rlap` markers):
+1. **Vertical gaps** between comment/block lines — each comment sits in a ~319pt
+   `ltx_inline-block ltx_minipage` whose `<p>` carries line-height/spacing; the golden is
+   tight. (Not empty equations any more — those are pruned.)
+2. **`◁` end-marker on its own line** — it is emitted as a `width:0.0pt`
+   `ltx_align_left ltx_inline-block` (an `\rlap` overlap) that does not overlap onto the
+   statement's line the way the golden pairs `▷…◁`.
+3. **New scrollbars** — `nowrap` (the algorithm-listing fix) plus the flushed-right
+   comments make lines wide enough to trip the pre-existing `.ltx_float_algorithm
+   .ltx_listing { overflow-x:auto }`; the golden fits without scroll.
+These need a focused `ar5iv.css` + algpseudocodex box-model pass (compact the comment
+minipage/`<p>`; make the `\rlap` `◁` truly overlap; contain width without scroll). Deep;
+group with the markup-unification work below.
 
 ## Markup unification across the algorithm bindings (plan — large, cross-binding — SCHEDULED 0.7.7)
 
