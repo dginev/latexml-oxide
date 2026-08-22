@@ -547,23 +547,30 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
 }
 
-/// Run a fallible I/O op, retrying briefly on a *transient* lock. On Windows a
+/// Run a fallible I/O op, retrying on a *transient* lock. On Windows a
 /// just-written file — a figure the converter emitted a moment ago, or a test
 /// fixture — can be momentarily locked by another handle (antivirus real-time
-/// scanning of the fresh file, or Windows' stricter default file sharing), which
-/// surfaces as `PermissionDenied` (`ERROR_SHARING_VIOLATION`). A bare
-/// `op().ok()?` would turn that into a silent `None`, and a figure would reach
-/// the engine at 0x0. Retry only that transient class a handful of times with a
-/// short backoff; every other error (incl. a genuine `NotFound`) fails fast, and
-/// the happy path (Ok on the first try) pays nothing.
+/// scanning of the fresh file, or Windows' stricter default file sharing). A
+/// bare `op().ok()?` would turn that into a silent `None`, and a figure would
+/// reach the engine at 0x0.
+///
+/// A genuine `NotFound` is not a lock, so it fails fast. Every *other* error is
+/// treated as possibly-transient and retried with a widening backoff up to
+/// ~0.5 s total. The fresh-file lock usually surfaces as `PermissionDenied`
+/// (`ERROR_SHARING_VIOLATION`), but under heavy parallel load (a full `cargo
+/// test` with antivirus active) it has shown other kinds and needed longer than
+/// a few ms to clear — so this deliberately retries broadly rather than gating on
+/// one `ErrorKind`. A permanently-unreadable path pays the full budget once and
+/// then fails; the happy path (Ok on the first try) pays nothing.
 fn with_transient_retry<T>(mut op: impl FnMut() -> std::io::Result<T>) -> Option<T> {
   let mut tries = 0u32;
   loop {
     match op() {
       Ok(v) => return Some(v),
-      Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied && tries < 5 => {
+      Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+      Err(_) if tries < 10 => {
         tries += 1;
-        std::thread::sleep(std::time::Duration::from_millis(2 * u64::from(tries)));
+        std::thread::sleep(std::time::Duration::from_millis(u64::from(tries) * 10));
       },
       Err(_) => return None,
     }
