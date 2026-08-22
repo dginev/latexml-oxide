@@ -1738,6 +1738,13 @@ fn cluster_hbox_to_hsize_leader_fills_width() {
     leader_box_tag.contains(r#"width="100%""#),
     "leader-fill \\hbox to \\hsize should be width:100%, got:\n{leader_box_tag}"
   );
+  // The fill-line box is also class="ltx_leaderfill" so CSS can stack multiple
+  // full-line separators (display:block) instead of overflowing a nowrap listingline
+  // (1510.02728 "Modified ellipsoid method"; OXIDIZED_DESIGN #152 follow-up).
+  assert!(
+    leader_box_tag.contains(r#"class="ltx_leaderfill""#),
+    "leader-fill box should carry class=\"ltx_leaderfill\", got:\n{leader_box_tag}"
+  );
   // The genuine fixed-width box must NOT be relativized.
   assert!(
     xml.contains(r#"width="100.0pt""#),
@@ -1746,6 +1753,50 @@ fn cluster_hbox_to_hsize_leader_fills_width() {
   assert!(
     !xml.contains(r#"width="345"#),
     "a full-line box was frozen at 345pt instead of relativized:\n{xml}"
+  );
+}
+
+/// GREEN guard: algorithm2e `\For` body lines separated by `\\` are each indented
+/// under the Vsline `|` rule. `before_float` re-lets `\\`→`\lx@newline` (a
+/// tabular-in-float guard) AFTER algorithm2e's `Let('\\','\lx@algo@par')`, so
+/// `\\`-separated body lines used to degrade to `<break/>` and MERGE into one
+/// un-indented listingline (SHARED with Perl; we re-assert the binding after
+/// before_float — a surpass, KNOWN_PERL_ERRORS #109). Each `\For` body line must
+/// now be its OWN `<listingline>` beginning with the vertical-rule `<rule ...>`, and
+/// the listing must contain NO `<break`. Witness arXiv 2002.09766 Algorithm 1.
+#[test]
+fn cluster_algorithm2e_for_body_indentation() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_for_indent.tex");
+  let listing = {
+    let start = xml
+      .find("<listing")
+      .expect("no <listing> in algorithm output");
+    let end = xml[start..].find("</listing>").expect("unclosed <listing>") + start;
+    &xml[start..end]
+  };
+  // The buggy output merged the 3 `\For` body lines into one listingline joined by
+  // inline <break/>s. Correct output has no <break> in the listing at all.
+  assert!(
+    !listing.contains("<break"),
+    "algorithm2e \\For body lines merged via <break/> instead of separate indented \
+     listinglines:\n{listing}"
+  );
+  // Each of the 3 `\For` body lines is its own listingline starting with the Vsline
+  // `<rule .../>`. Count listinglines whose first element is a <rule>.
+  let indented = listing
+    .split("<listingline")
+    .skip(1)
+    .filter(|seg| {
+      // within this listingline, a <rule appears before any real text token
+      seg
+        .split_once("</listingline>")
+        .map(|(inner, _)| inner.contains("<rule"))
+        .unwrap_or(false)
+    })
+    .count();
+  assert!(
+    indented >= 3,
+    "expected >=3 indented (<rule-led) \\For body listinglines, found {indented}:\n{listing}"
   );
 }
 

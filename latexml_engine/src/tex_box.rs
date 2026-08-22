@@ -698,15 +698,27 @@ LoadDefinitions!({
       else { "ltx:text" };
     // `\hbox to \hsize` is relativized to width:100% (fill the line/column) rather than
     // a frozen pt value — see the after_digest `fill_line` note. OXIDIZED_DESIGN #152.
-    let width : String = if props.get("fill_line").is_some() {
+    let is_fill_line = props.get("fill_line").is_some();
+    let width : String = if is_fill_line {
       "100%".to_string()
     } else if let Some(Stored::Dimension(w)) = props.get("width") {
       w.to_attribute()
     } else {
       String::new()
     };
-    let node = document.open_element(newtag,
-      Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
+    let mut attrs = string_map!("_noautoclose" => "true", "width" => width);
+    // A full-line leader-fill box (`\hbox to \hsize{\dashfill\hfil}`) must occupy its
+    // OWN line. Two such separators flank a centered label on ONE `nowrap` listingline;
+    // as `width:100%` inline-blocks laid out side by side they sum to >200% and overflow
+    // the listing (arXiv 1510.02728 "Modified ellipsoid method" separators). Mark the box
+    // so CSS sets `display:block`, stacking them like the pdflatex golden. Rides on the
+    // `fill_line` gate, so only the `\hbox to <line-register>{leader}` idiom is marked;
+    // fancyvrb text boxes (345pt parity) and `\hbox to 100pt` are untouched.
+    // OXIDIZED_DESIGN #152.
+    if is_fill_line {
+      attrs.insert("class".to_string(), "ltx_leaderfill".to_string());
+    }
+    let node = document.open_element(newtag, Some(attrs), None)?;
     if let Some(contents) = contents_opt {
       document.absorb(contents, None)?;
     }

@@ -770,6 +770,36 @@ fn frontmatter_ieee_authorblock() {
     x.matches("<personname>").count()
   );
 }
+
+/// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}`: a bare
+/// email trailing after `\IEEEauthorblockA` must attach to the creator (as an
+/// affiliation), NOT leak into the document body as the first `<p>`. GENUINE-RUST-ONLY
+/// (Perl bundles the whole `\author` arg into `<personname>`, so it never leaks).
+/// Fixed by `wrap_bare_author_block_text` in `ieeetran_cls.rs`. Witness arXiv 1901.07768.
+#[test]
+fn frontmatter_ieee_authorblock_trailing_email() {
+  let x =
+    convert_to_xml("tests/cluster_regressions/frontmatter_ieee_authorblock_trailing_email.tex");
+  // The leak symptom: the email opened the document body as its first paragraph.
+  assert!(
+    !x.contains("<p>{anuja") && !x.contains("<p>\n{anuja"),
+    "trailing bare email leaked into the document body as a <p>:\n{x}"
+  );
+  // The email must instead live inside the creator's frontmatter (an affiliation).
+  assert!(
+    creator_block_contains(
+      &x,
+      "Anuja Meetoo Appavoo, Seth Gilbert, and Kian-Lee Tan",
+      "@comp.nus.edu.sg"
+    ),
+    "trailing email is not attached to the creator's frontmatter:\n{x}"
+  );
+  // The genuine body paragraph is still present and correct.
+  assert!(
+    x.contains("Body paragraph here."),
+    "body paragraph missing:\n{x}"
+  );
+}
 /// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
 /// list must not become a phantom "Senior Member, IEEE" creator. Witness
 /// 2508.00603 (html_feedback#4539: reader saw a stray "," between authors). The

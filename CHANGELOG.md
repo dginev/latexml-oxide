@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+  - **algorithm2e `\For`/`\While`/`\If` bodies written with `\\` now indent under the
+    `|` rule.** A body line ended with `\\` (rather than `\;`) was rendered flush-left
+    after the vertical separator instead of indented beneath it, because algorithm2e's
+    `\\`→line-break binding was clobbered by the float setup's tabular guard
+    (`\\`→`\lx@newline`). We re-assert the algorithm line-break binding after that guard,
+    so each `\\`-separated body line becomes its own indented listingline. A deliberate
+    surpass — Perl LaTeXML shares the bug (KNOWN_PERL_ERRORS #109). Witness arXiv 2002.09766
+    Algorithm 1; guard `cluster_algorithm2e_for_body_indentation`.
+  - **A bare email trailing an IEEEtran `\author` block no longer leaks into the body.**
+    `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` places a loose email
+    after the affiliation block (the `\{`/`\}` are literal-brace control symbols, so it is
+    top-level text); it was digested into the document body as the first paragraph. It now
+    attaches to the creator as an affiliation. GENUINE-RUST-ONLY (Perl bundles the whole
+    author argument into `<personname>`). Witness arXiv 1901.07768; guard
+    `frontmatter_ieee_authorblock_trailing_email`.
+  - **Multiple full-line `\hbox to \hsize` separators stack instead of overflowing.**
+    Following the width:100% relativization (OXIDIZED_DESIGN #152), two `\dashfill`
+    separators flanking a centered label on one `nowrap` listingline still overflowed (two
+    width:100% inline-blocks side-by-side sum to >200%). The fill-line box is now also
+    marked `class="ltx_leaderfill"`, and the stylesheets set it `display:block`, so each
+    separator owns its line — matching the pdflatex golden. Witness arXiv 1510.02728
+    ("Modified ellipsoid method"); guard `cluster_hbox_to_hsize_leader_fills_width`.
   - **algorithm2e listings render closer to pdflatex: uniform-bold line numbers,
     `[ruled]` captions at the top, inline `\Comment*[r]` side-comments.** Three
     algorithm2e rendering fixes. (1) Line numbers now render in uniform upright bold

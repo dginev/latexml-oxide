@@ -80,6 +80,14 @@ filing is a manual step (cannot be done from the conversion tooling).
   `cluster_frontmatter_replaceable_dedup`.
 - **wrapfigure/minted overlap** (2605.03143) — CSS only: a float-scoped min-width override
   stops the wrapfig flex cell forcing the code box over the body text (ar5iv.css).
+- **`\For`/`\While`/`\If` bodies written with `\\` now indent under the `|`** — the algorithm
+  line-break binding was clobbered by the float setup's tabular guard (`\\`→`\lx@newline`); we
+  re-assert `\\`→`\lx@algo@par` after `before_float`. Surpass (SHARED, KNOWN_PERL_ERRORS #109),
+  witness 2002.09766 Algorithm 1; guard `cluster_algorithm2e_for_body_indentation`.
+- **Multiple full-line `\hbox to \hsize` separators stack** (follow-up to #152) — two width:100%
+  leader boxes flanking a centered label overflowed a `nowrap` listingline (>200%); the fill-line
+  box is now marked `ltx_leaderfill` and set `display:block` (engine + both stylesheets), so each
+  separator owns its line. Witness 1510.02728.
 
 ## Open follow-ups
 

@@ -4179,3 +4179,40 @@ presence-test is parse-order-safe; `after_close_late` runs after every other
 equation-close handler (e.g. amsmath's `rearrangeLoneAMSAligned`, `amsmath.sty.ltxml:638`)
 so it never races one that legitimately fills the Math. Reaches Perl parity (0 empty
 equations). Guard: `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
+
+## 109. algorithm2e `\\`-separated body lines lose indentation under the Vline `|` (Rust surpasses)
+
+**Trigger** (`\For`/`\While`/`\If` body using `\\` instead of `\;` for line breaks;
+witness arXiv 2002.09766 Algorithm 1):
+
+```latex
+\usepackage[algo2e]{algorithm2e}
+\begin{algorithm*}
+ \For{i=2,\ldots,L-1}{
+  ~~Compute line A\\
+  Line B\;\\
+  Line C\;\\
+ }
+\end{algorithm*}
+```
+
+The `\For` body lines render **flushed flat after the `|` vertical rule** instead of
+indented beneath it: they merge into ONE `<ltx:listingline>` joined by inline
+`<ltx:break/>`, with a single leading indentation `<ltx:rule>`, rather than three
+separate indented listinglines.
+
+**Cause (shared by both engines).** algorithm2e's `beforeDigest` does
+`Let('\\','\lx@algo@par')` (the algorithm line-break) then calls `beforeFloat('algorithm')`
+**last**; `beforeFloat` re-lets `\\`→`\lx@newline` (a tabular-in-float guard, Perl #2775,
+`latex_constructs.pool.ltxml` L3376 / Rust `latex_constructs.rs` `before_float_ex`). So the
+reset **clobbers** the intended `\lx@algo@par` binding, and `\\` inside an algorithm2e
+listing degrades to `<break/>`. `\par` (also Let to `\lx@algo@par`) and `\;`
+(→`\@endalgocfline`→`\lx@algo@par`) are untouched by `beforeFloat`, so they still break
+correctly — only `\\` is broken. Verified byte-identical in Perl LaTeXML (the reimpl
+author's own `Let('\\','\lx@algo@par')` shows the break was intended).
+
+**Rust:** re-assert `Let('\\','\lx@algo@par')` **after** `before_float` in the algorithm2e
+`before_digest` (`algorithm2e_sty.rs`), so each `\\`-separated body line becomes its own
+indented listingline, matching the pdflatex golden. A **surpass** (Perl shares the bug).
+Safe: a nested `tabular`/`array` rebinds `\\` locally (`\@tabularcr`), shadowing this.
+Guard: `06_cluster_regressions::cluster_algorithm2e_for_body_indentation`.

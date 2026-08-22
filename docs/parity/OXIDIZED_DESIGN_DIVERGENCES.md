@@ -5804,8 +5804,17 @@ fixed `\hbox to 100pt`, and any non-leader body (crucially fancyvrb's `\hbox to
 **Why it's safe.** The leader-fill discriminator scopes the change to boxes whose whole
 purpose is to span the line; text-bearing full-width boxes keep their pt width.
 
+**Follow-up (stacking).** width:100% alone is not enough when TWO full-line separators flank a
+centered label on ONE `nowrap` listingline (1510.02728's "Modified ellipsoid method" block, inside
+`\begin{algorithm}`): as inline-blocks they lay side-by-side and sum to >200% width, overflowing the
+listing. The fill-line box is therefore ALSO marked `class="ltx_leaderfill"` (`tex_box.rs`, on the
+same `fill_line` gate), and both stylesheets set `.ltx_inline-block.ltx_leaderfill { display:block; }`
+so each separator owns its line and they stack like the pdflatex golden. fancyvrb/`\hbox to 100pt`
+still untouched (not fill-line).
+
 **Witnesses**: arXiv 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid
-method" separators, 3 per algorithm). Guard `cluster_hbox_to_hsize_leader_fills_width`.
+method" separators, 3 per algorithm; two flank the centered label). Guard
+`cluster_hbox_to_hsize_leader_fills_width` (asserts `width="100%"` + `class="ltx_leaderfill"`).
 
 **Upstream**: to be filed at brucemiller/LaTeXML (a `\hbox to \hsize` leader fill should
 be a fluid full-width box, not a frozen pt value that overflows narrower containers).

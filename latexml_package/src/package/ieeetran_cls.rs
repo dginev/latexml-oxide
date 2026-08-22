@@ -221,8 +221,12 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", sub[(_short, body)] {
     let (target, body) = if body.to_string().contains("authorblockN") {
       // Transpose a genuine `\and`×`\\` grid to row-major reading order first
-      // (arXiv:2403.16405); a single-row `\and` list is returned unchanged.
-      (T_CS!("\\lx@IEEE@author@blocks"), transpose_ieee_author_grid(body))
+      // (arXiv:2403.16405); a single-row `\and` list is returned unchanged. Then
+      // wrap any trailing bare-text run (a loose email after `\IEEEauthorblockA`) in
+      // `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into
+      // the body (arXiv 1901.07768).
+      (T_CS!("\\lx@IEEE@author@blocks"),
+       wrap_bare_author_block_text(transpose_ieee_author_grid(body)))
     } else {
       (T_CS!("\\lx@IEEE@author@plain"), body)
     };
@@ -839,5 +843,75 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
       out.extend(cell.iter().copied());
     }
   }
+  Tokens::new(out)
+}
+
+/// Wrap each top-level bare-text run in an IEEE author BLOCK body in
+/// `\IEEEauthorblockA{...}` so it attaches to the current creator as an affiliation
+/// instead of digesting into the document body. A block macro (`\IEEEauthorblockN/A`,
+/// `\authorblockN/A`) plus its balanced `{...}` argument is copied verbatim; `\and`
+/// and whitespace-only gaps pass through untouched. Without this, the trailing bare
+/// email in `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` (the `\{`/`\}`
+/// are catcode-12 literal-brace control symbols, so the email sits at brace-depth 0 =
+/// top level) is ordinary horizontal text and `\lx@IEEE@author@blocks` digests it into
+/// the document body as the first paragraph. Real Perl LaTeXML bundles the WHOLE author
+/// argument into `<personname>` (`\lx@add@authors`), so the tail never leaks —
+/// GENUINE-RUST-ONLY. Witness arXiv 1901.07768 (`\{anuja, seth.gilbert, tankl\}@comp.nus.edu.sg`).
+fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
+  let toks = body.unlist();
+  let is_block = |t: &Token| {
+    *t == T_CS!("\\IEEEauthorblockN")
+      || *t == T_CS!("\\IEEEauthorblockA")
+      || *t == T_CS!("\\authorblockN")
+      || *t == T_CS!("\\authorblockA")
+  };
+  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>) {
+    if run.iter().any(|t| *t != T_SPACE!()) {
+      // Non-empty bare run → route to the creator as an affiliation.
+      out.push(T_CS!("\\IEEEauthorblockA"));
+      out.push(T_BEGIN!());
+      out.append(run);
+      out.push(T_END!());
+    } else {
+      out.append(run); // whitespace-only gap: pass through
+    }
+    run.clear();
+  }
+  let mut out: Vec<Token> = Vec::new();
+  let mut run: Vec<Token> = Vec::new();
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i];
+    if is_block(&t) {
+      flush(&mut run, &mut out);
+      out.push(t);
+      i += 1;
+      // Copy the block's balanced `{...}` argument verbatim.
+      if i < toks.len() && toks[i].get_catcode() == Catcode::BEGIN {
+        let mut depth = 0;
+        while i < toks.len() {
+          let u = toks[i];
+          match u.get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth -= 1,
+            _ => {},
+          }
+          out.push(u);
+          i += 1;
+          if depth == 0 {
+            break;
+          }
+        }
+      }
+    } else if t == T_CS!("\\and") {
+      flush(&mut run, &mut out);
+      out.push(t);
+      i += 1;
+    } else {
+      run.push(t);
+      i += 1;
+    }
+  }
+  flush(&mut run, &mut out);
   Tokens::new(out)
 }

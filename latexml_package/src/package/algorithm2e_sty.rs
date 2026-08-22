@@ -157,6 +157,19 @@ LoadDefinitions!({
           // Perl (its loop body always calls beginItemize/RefStepCounter on
           // "algorithm").
           before_float("algorithm", None);
+          // SURPASS over Perl (SHARED bug). `before_float` / Perl `beforeFloat`
+          // (latex_constructs.rs `before_float_ex`, Perl latex_constructs.pool
+          // L3376) re-lets `\\`→`\lx@newline` as a tabular-in-float guard (Perl
+          // #2775). Perl's algorithm2e.sty.ltxml runs beforeFloat LAST in its
+          // beforeDigest, so that reset CLOBBERS the `Let('\\','\lx@algo@par')`
+          // above — in BOTH engines `\\` inside an algorithm2e listing degrades to
+          // `<break/>`, so `\\`-separated body lines merge into one listingline and
+          // are NOT indented under the Vsline `|` rule (pdflatex indents each; the
+          // reimpl author's own `Let('\\','\lx@algo@par')` shows the intent). Re-
+          // assert it after before_float. Safe: a nested tabular/array rebinds `\\`
+          // locally (`\@tabularcr`), shadowing this. Witness arXiv 2002.09766
+          // Algorithm 1 (`\For{…}{ …\\ …\;\\ }`). KNOWN_PERL_ERRORS #109.
+          Let!("\\\\", "\\lx@algo@par");
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;
