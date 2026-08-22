@@ -5943,6 +5943,14 @@ to the same creator the contact did (verified: note is inside `<creator>`); titl
 `frontmatter_thanks_literal_mark_mix`, and `author_block_thanks_collapses_in_title_not_inline`
 tests are element-agnostic and unchanged.
 
+**Coalesce edge case.** `coalesce_empty_creators` (which drops nameless comma-split creators and
+moves their annotations to the last real author) special-cased `ltx:contact`; it was extended to
+move `ltx:note` too, so a trailing `\thanks` on a nameless creator — 1510.02728's
+`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%\thanks{…NSF…}}`, where the
+membership pieces digest to empty and the `\thanks` strands on a phantom creator — is not dropped
+with that creator (it lands on Vosoughi, as the contact did). Regression guard
+`cluster_author_thanks_note_survives_empty_creator`.
+
 **Witnesses**: arXiv 2512.24601 (`\thanks{Correspondence to …}` → `ltx_thanks_correspondence`),
 1510.02728 (`\thanks{…supported by NSF…}` → `ltx_thanks_funding`). Guards `authors_test` and
 `cluster_author_thanks_marked_note`.

@@ -2706,34 +2706,43 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// contactless empties are dropped; a contact-bearing empty's contacts move to the
 /// preceding real author. `\footnotemark`-note markers keep a personname non-empty
 /// (2507.06670 "Yu Zhang"), so real authors are untouched.
+///
+/// Moves BOTH `<ltx:contact>` and `<ltx:note>` annotations: an author `\thanks` is a
+/// marked `<ltx:note role="thanks">` (OXIDIZED_DESIGN #156), so a trailing `\thanks` on
+/// a nameless comma-split creator would otherwise be dropped with the empty creator —
+/// witness 1510.02728 (`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%
+/// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did.
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator[@role='author']", None);
   let mut to_remove: Vec<Node> = Vec::new();
   let mut last_real: Option<Node> = None;
-  // Contacts of leading empties (before any real author) held until the first real one.
-  let mut orphan_contacts: Vec<Node> = Vec::new();
+  // Annotations (contacts + notes) of leading empties (before any real author), held
+  // until the first real one.
+  let mut orphan_annotations: Vec<Node> = Vec::new();
   for creator in creators {
     if creator_personname_empty(document, &creator) {
-      let contacts: Vec<Node> = creator
+      let annotations: Vec<Node> = creator
         .get_child_nodes()
         .into_iter()
         .filter(|c| {
           c.get_type() == Some(NodeType::ElementNode)
-            && with(document::get_node_qname(c), |q| q == "ltx:contact")
+            && with(document::get_node_qname(c), |q| {
+              q == "ltx:contact" || q == "ltx:note"
+            })
         })
         .collect();
       if let Some(ref mut prev) = last_real {
-        if !contacts.is_empty() {
-          document.append_clone(prev, contacts)?;
+        if !annotations.is_empty() {
+          document.append_clone(prev, annotations)?;
         }
       } else {
-        orphan_contacts.extend(contacts);
+        orphan_annotations.extend(annotations);
       }
       to_remove.push(creator);
     } else {
-      if !orphan_contacts.is_empty() {
+      if !orphan_annotations.is_empty() {
         let mut first = creator.clone();
-        document.append_clone(&mut first, std::mem::take(&mut orphan_contacts))?;
+        document.append_clone(&mut first, std::mem::take(&mut orphan_annotations))?;
       }
       last_real = Some(creator);
     }

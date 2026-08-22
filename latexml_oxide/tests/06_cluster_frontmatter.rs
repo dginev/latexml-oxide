@@ -771,6 +771,35 @@ fn frontmatter_ieee_authorblock() {
   );
 }
 
+/// A trailing `\thanks` after a comma-split IEEEtran author list strands its marked
+/// `<ltx:note role="thanks">` on a nameless creator; `coalesce_empty_creators` must MOVE
+/// the note to the last real author (as it does for contacts) so the content is not
+/// dropped. Regression guard for OXIDIZED_DESIGN #156. Witness arXiv 1510.02728.
+#[test]
+fn cluster_author_thanks_note_survives_empty_creator() {
+  let x = convert_to_xml("tests/cluster_regressions/author_thanks_trailing_coalesce.tex");
+  assert!(
+    x.contains("supported by NSF"),
+    "the trailing \\thanks content was dropped with the coalesced empty creator:\n{x}"
+  );
+  // The note lands on the last real author (Vosoughi), not a nameless creator.
+  let vosoughi_has_note = x.split("<creator").skip(1).any(|seg| {
+    let block = seg.split("</creator>").next().unwrap_or("");
+    block.contains("Vosoughi")
+      && block.contains("ltx_thanks_funding")
+      && block.contains("role=\"thanks\"")
+  });
+  assert!(
+    vosoughi_has_note,
+    "the \\thanks note did not move to the last real creator:\n{x}"
+  );
+  // No nameless creator survives.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "a nameless creator survived coalesce:\n{x}"
+  );
+}
+
 /// An author-attached `\thanks` becomes a MARKED `<ltx:note role="thanks">` (not an
 /// inline `<ltx:contact role="thanks">`), carrying semantic class hooks so a theme can
 /// style each content kind. Surpass, OXIDIZED_DESIGN #156. Witnesses arXiv 2512.24601
