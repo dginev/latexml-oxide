@@ -927,6 +927,28 @@ Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90%
   fallback → `neurips.sty.ltxml`, which also lacks graphicx). Witness 2605.21325. #690 brought
   Rust *to* Perl parity (it was accidentally better before).
 
+### (not ranked) fairmeta.cls family trailing items (2026-08-21)
+
+The fairmeta author↔institution binding fix (arXiv/html_feedback#1396 + the
+family #662/#3512/#4707/#4971/#5035/#5466; PR #748, shared `meta_class.rs` routes
+`\author`/`\affiliation`/`\contribution` marks through the annotation/label plan)
+left two witness-side issues OUT OF SCOPE, to pursue later. All eight in-scope
+witnesses convert exit 0, front matter error-clean; these are the only residuals:
+
+- **`\pie` undefined (pgf-pie) — missing-package binding.** Non-fatal body error
+  (conversion still exit 0), unrelated to the front matter. Witness
+  **2408.00714v2** (#5144, the SAM 2.1 paper) — a `\pie{…}` pie-chart macro in the
+  document body; the `\documentclass{fairmeta}` front matter converts clean (18/18
+  authors linked). Needs a pgf-pie binding — **confirm same-host Perl parity first**
+  (pgf-pie is niche and likely unbound in both engines → shared missing-package).
+  NOT what #5144 reported (that was the author block, now fixed).
+- **Wrong main-file selection — NOT a binding bug.** Witness **2602.06855v1**
+  (#5967, "2026 template … rendered template instead of content"): the source
+  ships BOTH `og_template.tex` (the FAIR template filler — `\lipsum`,
+  `\rectanglecolor`, `subfigure`; 4 errors) and the real `paper.tex`; the pipeline
+  built the template. A cortex/main-file-selection concern, not the fairmeta
+  binding — the real `paper.tex` converts fine.
+
 ## Parked families — pointers, not content
 
 Each outgrew this file and now lives on its own. Read the doc before starting;
