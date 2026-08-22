@@ -5288,6 +5288,21 @@ impl Document {
               },
             };
           }
+          // Carry the source node's box onto the clone, matching Perl: its
+          // `cloneNode` copies the internal `_box` attribute, so `getNodeBox`
+          // still resolves on the clone. Our node box is a side map keyed by
+          // node identity, so a fresh clone is box-less unless carried
+          // explicitly — the same invariant repaired in `rename_node_internal`
+          // for arXiv/html_feedback#6873. This completes node-box carrying
+          // across all four node-creating ops (open / wrap / rename / clone).
+          // Latent today — the current `append_clone` sites (MathFork, contacts)
+          // don't re-read a clone's box for size, and box-derived outputs
+          // (`tex=`, ids) ride across as copied attributes — but it keeps a
+          // future size-dependent afterClose on cloned SVG content from
+          // silently misfiring the way the foreignObject y-flip transform did.
+          if let Some(childbox) = self.get_node_box(&child) {
+            self.set_node_box(&new, childbox);
+          }
           self.after_open(&mut new)?;
           self.append_clone_aux(&mut new, child.get_child_nodes(), id_map)?;
           self.after_close(&mut new)?;
