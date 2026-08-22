@@ -381,6 +381,53 @@ fn cluster_array_vertical_rule_border_740() {
     "the two `!{{|}}` cells should render `ltx_align_right`:\n{pmml}"
   );
 }
+/// arXiv/html_feedback#6681 (reporter younesmouhib, paper 2606.22155v1): "does
+/// not compile properly: half missing". The deployed page (LaTeXML oxide 0.7.5)
+/// dumped LaTeXML-internal constructors (`\@@listings@block`,
+/// `\@@numbered@section`, `\lx@bibliography`) as literal text from the second
+/// `lstlisting` onward, swallowing the whole document tail — Open questions,
+/// bibliography, and the Verification appendix all became macro soup. The fix
+/// landed after that build; current main converts the paper end-to-end. This
+/// pins the fixed behaviour on the paper's construct: `listings` blocks with
+/// `breaklines=true`/`columns=fullflexible` inside `table`s, followed by more
+/// sectioning and an appendix. A regression would re-leak the internal
+/// constructors and drop the tail. (Any `@@…` in the output is a leak: the
+/// verbatim listing source lives base64-encoded in `data=`, whose alphabet
+/// excludes `@`, so it can never false-match.)
+#[test]
+fn cluster_listings_tail_leak_6681() {
+  let xml = convert_to_xml("tests/cluster_regressions/listings_tail_leak_6681.tex");
+  // No LaTeXML-internal constructor may leak into the serialized body as text.
+  for marker in ["@@listings@block", "@@numbered@section", "lx@bibliography"] {
+    assert!(
+      !xml.contains(marker),
+      "internal constructor `{marker}` leaked as text — the listings tail regressed:\n{xml}"
+    );
+  }
+  // Both witness-table listings survive as real listings, not swallowed text.
+  assert_eq!(
+    xml.matches(r#"class="ltx_lstlisting""#).count(),
+    2,
+    "both lstlisting blocks must render as listings:\n{xml}"
+  );
+  // The document tail after the second listing must render: the second section,
+  // the appendix, and their body paragraphs.
+  for needle in [
+    "Open questions",
+    "Verification",
+    "must render as ordinary text",
+    "must survive as a real appendix",
+  ] {
+    assert!(
+      xml.contains(needle),
+      "tail content `{needle}` missing — the listing swallowed the rest:\n{xml}"
+    );
+  }
+  assert!(
+    xml.contains("<appendix"),
+    "the Verification appendix must survive:\n{xml}"
+  );
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
