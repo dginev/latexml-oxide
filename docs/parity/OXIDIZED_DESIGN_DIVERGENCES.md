@@ -5776,3 +5776,95 @@ LaTeXML already renders correctly; no positional information was being honoured 
 
 **Upstream**: to be filed at brucemiller/LaTeXML (raw `\tabto`'s `$$` measurement hack
 emits an empty equation and breaks the line; a `\hfill` approximation renders correctly).
+
+### 152. `\hbox to \hsize{…leader fill…}` emits `width="100%"`, not a frozen pt value
+
+**Background.** A leader-fill separator — `\hbox to \hsize{\dashfill\hfil}` (where
+`\dashfill`=`\cleaders\hbox{-~-}\hfill`), or `\hrulefill`/`\dotfill` — sizes a box to
+the current line/column width and fills it with a repeating rule. pdflatex confines it
+to the column.
+
+**Perl behavior**: SHARED failure. LaTeXML's `\hbox` constructor derives an ABSOLUTE
+pt `width` from the `to` spec (`TeX_Box.pool.ltxml`, `width => $props{width}`). Since the
+generic article `\textwidth` defaults to `345pt` and two-column class widths aren't
+modeled, `\hsize`=`345pt`, so the box freezes at `width="345.0pt"` — wider than a
+narrower container (e.g. an algorithm), where it OVERFLOWS. Same-host Perl emits the
+identical frozen pt and renders equally too-wide.
+
+**Rust behavior**: when a `\hbox to <line-register>` (`\hsize`/`\linewidth`/
+`\columnwidth`/`\textwidth`) has a body that is a horizontal LEADER FILL (the `\leaders`
+whatsit is marked `hfill_leader`; `tex_box.rs`), the constructor emits a RELATIVE
+`width="100%"` so the box fills its HTML container — matching the pdflatex golden in any
+context. The resolved value is compared against the CURRENT register value, so a
+`\hbox to \hsize` inside a narrowed parbox relativizes to that parbox too. A genuine
+fixed `\hbox to 100pt`, and any non-leader body (crucially fancyvrb's `\hbox to
+\linewidth{…text…}` verbatim lines, whose `345pt` is deliberate Perl parity —
+`wisdom_fancyvrb_linewidth_box_parity`), are UNCHANGED.
+
+**Why it's safe.** The leader-fill discriminator scopes the change to boxes whose whole
+purpose is to span the line; text-bearing full-width boxes keep their pt width.
+
+**Witnesses**: arXiv 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid
+method" separators, 3 per algorithm). Guard `cluster_hbox_to_hsize_leader_fills_width`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (a `\hbox to \hsize` leader fill should
+be a fluid full-width box, not a frozen pt value that overflows narrower containers).
+
+### 153. algorithm2e ruled family draws the caption at the TOP of the frame
+
+**Background.** algorithm2e's `ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`
+styles put the caption at the top of the frame: the real sty sets
+`\@algocf@capt@ruled`=`top` (L2530) / `\@algocf@capt@boxruled`=`above` (L2540), and
+`\algocf@makethealgo` lays the caption out before the body. pdflatex renders it there.
+
+**Perl behavior**: SHARED failure. LaTeXML emits the float caption in standard order
+(last child = bottom), so the ruled caption renders at the BOTTOM. Same-host Perl does
+the same.
+
+**Rust behavior**: for the ruled family, `after_construct` DOM-moves `<ltx:caption>` /
+`<ltx:toccaption>` before the body (`float_sty::reposition_caption_top`, gated by a
+`caption_pos="top"` property set from the resolved `\algocf@style`). DOM order drives the
+XSLT render position, so the caption renders at the top. `plain`/`boxed` keep the caption
+at the bottom (no reposition). The float content model
+(`LaTeXML-para.rnc:196`, an order-free choice) stays schema-valid.
+
+**Why it's safe.** Pure post-construction reorder of two elements for one style family;
+`plain`/`boxed` are untouched, and a guard asserts the plain case does not reorder.
+
+**Witnesses**: any `\RestyleAlgo{ruled}` algorithm. Guard
+`cluster_algorithm2e_ruled_caption_at_top` (+ re-blessed `algorithm2e_{frames,
+linenumbers}.xml`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (ruled-family algorithm captions should
+render at the top of the frame, per algorithm2e's `\@algocf@capt@ruled`).
+
+### 154. Replaceable frontmatter tags keep only one entry (forward-port of upstream dedup)
+
+**Background.** Some frontmatter tags are "replaceable" — only one per document: a later
+`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords` should REPLACE the earlier,
+not stack. Later upstream LaTeXML added `%ReplaceableFrontmatterTags` +
+`\@add@frontmatter@now` (`Base_Utility.pool.ltxml`), which empties `$$frontmatter{$tag}`
+before pushing a replaceable entry.
+
+**Perl behavior**: the VENDORED Perl (our ground truth) PREDATES that fix — its
+`\lx@add@frontmatter@{now,until}` push unconditionally, so a document that re-adds a
+replaceable tag keeps BOTH entries and emits DUPLICATE frontmatter (two `<title>`, two
+`<abstract>`). Newer upstream Perl does NOT.
+
+**Rust behavior**: `base_utilities.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
+`frontmatter{tag}` before the push in `\lx@add@frontmatter@now` (and `@until`, guarded
+against same-tag re-entrancy so a nested/malformed `{abstract}` is not corrupted).
+Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-author
+frontmatter is preserved). A forward-port of the upstream fix; a surpass over the
+vendored Perl.
+
+**Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
+creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
+re-entrancy guard leaves the malformed-nesting case exactly as before.
+
+**Witnesses**: arXiv 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-added
+`ltx:title` → duplicate title + duplicated author block), 2511.21969 (nested
+`{abstract}` env). Guard `cluster_frontmatter_replaceable_dedup`.
+
+**Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
+it into the vendored engine.

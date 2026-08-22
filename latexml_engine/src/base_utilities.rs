@@ -26,6 +26,25 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:classification",
   "ltx:acknowledgements",
 ];
+
+/// Frontmatter tags that are "replaceable" — only one per document; a later entry
+/// replaces the earlier ones instead of stacking. Ported from a later upstream
+/// LaTeXML (`Base_Utility.pool.ltxml` `%ReplaceableFrontmatterTags` +
+/// `\@add@frontmatter@now`), which the vendored copy predates — the vendored
+/// `\lx@add@frontmatter@{now,until}` push unconditionally, so a title/abstract emitted
+/// twice keeps BOTH, producing duplicated frontmatter. Surpass over the vendored Perl
+/// (a forward-port of the upstream fix). OXIDIZED_DESIGN #154. Witnesses: arXiv
+/// 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-adds `ltx:title`), 2511.21969
+/// (nested `{abstract}` env). Creators/notes are deliberately NOT here — multi-author
+/// frontmatter must accumulate.
+const REPLACEABLE_FRONTMATTER_TAGS: &[&str] = &[
+  "ltx:title",
+  "ltx:toctitle",
+  "ltx:subtitle",
+  "ltx:date",
+  "ltx:abstract",
+  "ltx:keywords",
+];
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -399,6 +418,13 @@ LoadDefinitions!({
     };
     DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
+    // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
+    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
+    // (the vendored copy pushes unconditionally → duplicate <title> when a document
+    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
@@ -446,6 +472,15 @@ LoadDefinitions!({
       attr: options,
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
+    // Replaceable tags (abstract/keywords) keep only one entry — but ONLY dedup when no
+    // same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
+    // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
+    // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
+      && !frontmatter_has_open_placekeeper(&tag)
+    {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
@@ -2143,6 +2178,40 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
       list.len() - 1
     } else {
       0
+    }
+  })
+}
+
+/// Empty `frontmatter{tag}` in place (Perl: `$$frontmatter{$tag} = []`), so a later
+/// `REPLACEABLE_FRONTMATTER_TAGS` entry replaces the earlier ones. No-op if the tag
+/// has no entries yet. OXIDIZED_DESIGN #154.
+fn frontmatter_clear(tag: &str) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut(tag)
+    {
+      list.clear();
+    }
+  });
+}
+
+/// True if `frontmatter{tag}` holds an entry still awaiting its content (a lone
+/// `PlaceKeeper`). Used by the `\lx@add@frontmatter@until` dedup to detect
+/// re-entrancy: a same-tag `@until` nested inside another's `digest_next_body` (e.g.
+/// a malformed `\begin{abstract}\begin{abstract}…`) would otherwise clear the parent's
+/// still-open entry and later have the parent overwrite the child's content. When a
+/// parent is in progress we skip the clear (leaving both entries, as before the fix)
+/// rather than corrupt state. OXIDIZED_DESIGN #154.
+fn frontmatter_has_open_placekeeper(tag: &str) -> bool {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get(tag)
+    {
+      list
+        .iter()
+        .any(|e| matches!(e.content.as_slice(), [TagContent::PlaceKeeper]))
+    } else {
+      false
     }
   })
 }

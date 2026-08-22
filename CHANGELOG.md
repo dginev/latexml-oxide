@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+  - **algorithm2e listings render closer to pdflatex: uniform-bold line numbers,
+    `[ruled]` captions at the top, inline `\Comment*[r]` side-comments.** Three
+    algorithm2e rendering fixes. (1) Line numbers now render in uniform upright bold
+    (`\NlSty` = `\textnormal{\textbf{…}}`, restored in `\algocf@printnl`), instead of
+    inheriting the ambient keyword bold on `\For`/`\If`/`\While` lines and staying plain
+    elsewhere; `renumber_algo_lines` was also made font-preserving so the 1..N relabel no
+    longer strips the wrapper. (2) The ruled family (`ruled`/`algoruled`/`boxruled`…) draws
+    its caption at the top of the frame (real sty `\@algocf@capt@ruled`=`top`), so
+    `float_sty::reposition_caption_top` DOM-moves the caption before the body for that
+    family only (`plain`/`boxed` unchanged). (3) A `\Comment*[r]`/`[l]` side comment now
+    stays inline with its numbered statement, flushed right, instead of breaking onto its
+    own line. All three are a deliberate surpass — Perl LaTeXML renders them the pre-fix way
+    too (OXIDIZED_DESIGN #153). Guards `cluster_algorithm2e_uniform_line_number_font`,
+    `cluster_algorithm2e_ruled_caption_at_top`, `algorithm2e_linenumbers`.
+  - **A `\hbox to \hsize{…}` leader separator fills its column instead of overflowing.**
+    A leader-fill rule — `\hbox to \hsize{\dashfill\hfil}`, `\hrulefill`, `\dotfill` — was
+    frozen at an absolute `width="345.0pt"` (the article `\textwidth` default), so inside a
+    narrower container (an algorithm) the dashed line overflowed. When the box body is a
+    horizontal leader fill and its width is a full-line register (`\hsize`/`\linewidth`/
+    `\columnwidth`/`\textwidth`), the constructor now emits a relative `width="100%"`, so
+    the separator fills its HTML container in any context, matching pdflatex. Text-bearing
+    full-width boxes (fancyvrb verbatim lines, whose 345pt is deliberate parity) and genuine
+    fixed-width boxes (`\hbox to 100pt`) are unchanged. A surpass — Perl emits the same frozen
+    pt (OXIDIZED_DESIGN #152). Witness arXiv 1510.02728; guard
+    `cluster_hbox_to_hsize_leader_fills_width`.
+  - **A document that re-adds its title or abstract no longer duplicates it.** Replaceable
+    frontmatter tags (`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords`) now keep a
+    single entry — a later one replaces the earlier — while multi-author `creator`s still
+    accumulate. The vendored engine pushed unconditionally, so an appendix `\twocolumn[\icmltitle{…}]`
+    or a nested `{abstract}` produced two `<title>`/`<abstract>` blocks. Forward-ports upstream
+    LaTeXML's `%ReplaceableFrontmatterTags`; a surpass over the vendored Perl (OXIDIZED_DESIGN
+    #154). Witnesses arXiv 2002.09766, 2511.21969; guard `cluster_frontmatter_replaceable_dedup`.
+  - **Algorithm listings no longer show a phantom vertical scrollbar.** An auto-height
+    `.ltx_listing` never overflows vertically, but the CSS Overflow spec promotes
+    `overflow-y:visible`→`auto` whenever `overflow-x` scrolls, painting a spurious vertical
+    scrollbar (algorithm2e listings). The embedded `LaTeXML.css` now pins
+    `.ltx_listing:not(.ltx_lstlisting){overflow-y:hidden}` (mirroring the ar5iv.css fix).
+    Witness arXiv 2002.09766.
   - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
     non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
     semiverbatim and then *digested* — `\def` executed, consumed the following

@@ -212,6 +212,15 @@ vocabulary and marker class, and derive **generic CSS that works in BOTH
 per-package selectors. Design plan: [`parity/ALGORITHM_RENDERING.md`](parity/ALGORITHM_RENDERING.md)
 §"Markup unification".
 
+**Part 2 LANDED (2026-08-22), independent of the unification goal** — do not re-open these
+as part of it (details + guards in ALGORITHM_RENDERING.md "Landed in Part 2"): uniform
+`\NlSty`-bold line numbers, ruled-family caption-at-top (#153), `\hbox to \hsize` leader
+separators → `width:100%` (#152, witness 1510.02728), `\Comment*[r]` inline side-comment,
+frontmatter dedup (#154), and the CSS batch (algorithm phantom vertical scrollbar
+`overflow-y:hidden` witness 2002.09766, wrapfig overlap 2605.03143, side-by-side minipage
+width-strip 2402.19043, framed-lstlisting page-scroll 2512.24601 — ar5iv.css + embedded
+`LaTeXML.css` mirror).
+
 **Why it is the right fix (not a per-theme CSS patch).** The algorithm-layout rule
 (`white-space:nowrap`, so the pretty-printer's newlines between a line's number tag
 and its statement do not render as breaks) is currently keyed on the **wrapper
@@ -239,27 +248,31 @@ against Perl (Perl's algorithmic listing carries no such class today) — see th
 `surpass-perl` skill protocol. Defer until the 0.7.6 release lands. Related open theme
 item above: side-by-side minipages (`dginev/ar5iv-css#38`, witness 2402.19043).
 
-### tcolorbox listings render poorly (widths + font size) — DEFERRED (user-flagged 2026-08-22)
+### tcolorbox / framed listings render poorly (widths + font size) — PARTIALLY ADDRESSED (user-flagged 2026-08-22)
 
-`tcolorbox`-wrapped code listings (a `listings`/`lstlisting` inside a `tcolorbox`,
-often a `\tcblisting`/`\newtcblisting`) render with wrong box widths and oversized font
-— visibly poor. Witness arXiv 2512.24601 (algorithm2e `[ruled]` paper that ALSO uses
-tcolorbox listings). Separate from the algorithm-binding work: it is a
-`tcolorbox`+`listings` sizing/CSS concern (the listings dialect is out of scope to
-change — see the unification note above), and likely wants a dedicated pass over the
-`tcolorbox` box model + the ar5iv `.ltx_lstlisting` width/font rules. Not started.
+- **Framed lstlisting page-scroll — FIXED (Part 2, CSS).** The reported 2512.24601 defect
+  was NOT a tcolorbox: a plain framed `lstlisting` overflowed and scrolled the WHOLE page.
+  `.ltx_lstlisting { display:block; max-width:100%; overflow-x:auto; box-sizing:border-box }`
+  (ar5iv.css + embedded `LaTeXML.css` mirror) confines the scroll to the box.
+- **Generic tcolorbox width/oversized-font — DEFERRED, no current witness.** A
+  `\tcblisting`/`\newtcblisting` code box may still size/scale poorly; the listings dialect
+  is out of scope to change (see the unification note above), so this wants a dedicated pass
+  over the `tcolorbox` box model + the ar5iv `.ltx_lstlisting` width/font rules. Not started.
 
-### Frontmatter + footnote rendering residuals (user-flagged 2026-08-22) — DEFERRED
+### Frontmatter + footnote rendering residuals (user-flagged 2026-08-22)
 
-Two more from the manual review, both likely separate from the algorithm work:
-- **Custom white-paper frontmatter (witness arXiv 2511.21969):** the authors are missing
-  and the abstract heading is duplicated. That paper uses a non-standard "white paper"
-  title/author setup; relates to the author-markup pipeline
-  ([`parity/AUTHOR_MARKUP_PIPELINE.md`](parity/AUTHOR_MARKUP_PIPELINE.md)) — verify against
-  Perl before scoping.
-- **Footnote side-margin overlap on wide displays (same witness):** footnotes 3 and 4
-  overlap in the ar5iv side-margin rendering at wide viewports — a CSS margin-note layout
-  concern (`ar5iv-css`), not core XML.
+From the manual review, witness arXiv 2511.21969:
+- **Duplicated abstract heading — FIXED (Part 2, OXIDIZED #154).** The nested `{abstract}`
+  env pushed a second `ltx:abstract`; replaceable-frontmatter dedup
+  (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`) now keeps one. Guard
+  `cluster_frontmatter_replaceable_dedup`. The same fix resolves 2002.09766's duplicated
+  `<title>`/author block (appendix `\icmltitle`).
+- **"Authors missing" — NOT a bug.** The preview was built from the wrong source file:
+  `main-ieee.tex` has its authors commented out; the toplevel is `main-white-paper.tex`.
+  No code change.
+- **Footnote side-margin overlap on wide displays (same witness) — DEFERRED:** footnotes 3
+  and 4 overlap in the ar5iv side-margin rendering at wide viewports — a CSS margin-note
+  layout concern (`ar5iv-css`), not core XML.
 
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 

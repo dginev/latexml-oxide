@@ -329,6 +329,12 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
     margin: 1ex 3em 1ex 0em;
     overflow-x:auto;
     text-align: left; }
+/* An auto-height listing never overflows vertically, but the CSS Overflow spec
+   promotes overflow-y:visible -> auto whenever overflow-x scrolls, which paints a
+   phantom vertical scrollbar (algorithm2e listings, witness 2002.09766). Pin it
+   hidden. lstlisting is exempt (its framed box may scroll on purpose). Mirrors the
+   ar5iv.css fix. */
+.ltx_listing:not(.ltx_lstlisting) { overflow-y:hidden; }
 .ltx_float .ltx_listing {
     margin: 0; }
 .ltx_listingline { white-space:nowrap; min-height:1em; }

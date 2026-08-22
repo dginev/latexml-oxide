@@ -696,7 +696,11 @@ LoadDefinitions!({
     let newtag = if is_svg { "svg:g" }
       else if vmode { if inline { "ltx:inline-block" } else { "ltx:p" } }
       else { "ltx:text" };
-    let width : String = if let Some(Stored::Dimension(w)) = props.get("width") {
+    // `\hbox to \hsize` is relativized to width:100% (fill the line/column) rather than
+    // a frozen pt value — see the after_digest `fill_line` note. OXIDIZED_DESIGN #152.
+    let width : String = if props.get("fill_line").is_some() {
+      "100%".to_string()
+    } else if let Some(Stored::Dimension(w)) = props.get("width") {
       w.to_attribute()
     } else {
       String::new()
@@ -732,10 +736,38 @@ LoadDefinitions!({
   // here, which rebound T_MATH to `\lx@dollar@in@textmode`, breaking the
   // revtex3 `$ in equation` toggle (8+ sandbox papers, ~300 errors).
   after_digest => sub[whatsit] {
+    // A `\hbox to <line-width>` whose body is a horizontal LEADER FILL
+    // (`\dashfill`/`\hrulefill`/`\dotfill` = `\leaders…\hfill`, marked `hfill_leader`)
+    // is a fill-to-width separator: it should render at width:100% of its HTML
+    // container, not a frozen pt value. This distinguishes such a separator from a
+    // fixed-width box whose body is text (fancyvrb boxes each verbatim line in
+    // `\hbox to \linewidth{…text…}`, whose 345pt is deliberate Perl parity —
+    // wisdom_fancyvrb_linewidth_box_parity — and must stay pt).
+    let has_fill_leader = whatsit.get_arg(2).is_some_and(|content| {
+      content.any(|d| matches!(d.data(), DigestedData::Whatsit(w)
+        if w.borrow().get_property("hfill_leader").is_some()))
+    });
+    let mut fill_line = false;
     let width : Option<RegisterValue> = {
       let spec = whatsit.get_arg(1);
       if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-        Some((*w).into())
+        // `\hbox to \hsize{…}` (and \linewidth/\columnwidth/\textwidth — all equal at
+        // \begin{document}) sizes the box to the current line/column width. Freezing
+        // that as an absolute pt attribute (article's 345pt \textwidth default, since
+        // two-column class widths aren't modeled) makes a leader-fill separator render
+        // too wide in fluid HTML — the dashed line overflows its algorithm. When the
+        // body is a leader fill, emit a RELATIVE width:100% so it fills the HTML
+        // container, matching the pdflatex golden (box confined to the column). Compare
+        // the RESOLVED value to the CURRENT register, so a `\hbox to \hsize` inside a
+        // narrowed parbox relativizes to that parbox too. Perl LaTeXML emits the same
+        // frozen pt and renders equally too-wide — surpass, OXIDIZED_DESIGN #152.
+        // Witness 1510.02728 (`\hbox to \hsize{\dashfill\hfil}`). A fixed `\hbox to
+        // 100pt` (≠ any full-line register) and non-leader bodies are unaffected.
+        let wd: Dimension = *w;
+        fill_line = has_fill_leader && ["\\hsize", "\\linewidth", "\\columnwidth", "\\textwidth"]
+          .iter()
+          .any(|reg| lookup_dimension(reg) == Some(wd));
+        Some(wd.into())
       } else if let Some(ArgWrap::Dimension(s_num_ref)) = GetKeyVal!(spec, "spread") {
         // The contents arg (and its width) can be absent for a degenerate
         // \hbox (see the None-contents note in the constructor above) —
@@ -753,6 +785,9 @@ LoadDefinitions!({
     };
     if let Some(w) = width {
       whatsit.set_width(w);
+    }
+    if fill_line {
+      whatsit.set_property("fill_line", Stored::from("true"));
     }
     // Perl: $whatsit->setProperty(content_box => $box)
     whatsit.set_property("content_box", whatsit.get_arg(2).cloned());
@@ -1394,6 +1429,14 @@ LoadDefinitions!({
       // Hide alignment so that \hrule inside \leaders doesn't add border="t"
       // Perl: $STATE->assignValue(Alignment => undef);
       assign_value("Alignment", Stored::None, None);
+    },
+    after_digest => sub[whatsit] {
+      // Mark the leader whatsit as a horizontal FILL leader. `\hbox to <line-width>`
+      // uses this to distinguish a fill-to-width separator (`\dashfill`/`\hrulefill`/
+      // `\dotfill`) — which should render at width:100% — from a fixed-width box whose
+      // body is text (e.g. fancyvrb verbatim lines). See the `\hbox` after_digest /
+      // OXIDIZED_DESIGN #152.
+      whatsit.set_property("hfill_leader", Stored::from("true"));
     }
   );
 

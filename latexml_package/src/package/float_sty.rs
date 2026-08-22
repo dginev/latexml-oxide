@@ -266,3 +266,43 @@ pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
   }
   Ok(())
 }
+
+/// Move a float's `<ltx:caption>`/`<ltx:toccaption>` to BEFORE its body element, so
+/// the caption renders at the TOP of the frame. algorithm2e's ruled family
+/// (`ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`) draws the caption at the
+/// top: real algorithm2e.sty sets `\@algocf@capt@ruled`=`top` (L2530) /
+/// `\@algocf@capt@boxruled`=`above` (L2540), and `\algocf@makethealgo` (L2589+) lays
+/// the caption out before the body. LaTeXML emits the caption last (standard float
+/// order = bottom), and so does Perl LaTeXML — so this is a surpass over Perl to match
+/// the pdflatex golden. OXIDIZED_DESIGN #153. DOM order determines the XSLT render
+/// position, so a pre-body caption renders above the listing. The float content model
+/// (`LaTeXML-para.rnc:196`, `(tags? | … | Block.model | Caption.class)*`) is an
+/// order-free choice, so the moved caption stays schema-valid.
+pub fn reposition_caption_top(document: &mut Document) -> Result<()> {
+  let caption_qname = pin!("ltx:caption");
+  let toccaption_qname = pin!("ltx:toccaption");
+  let tags_qname = pin!("ltx:tags");
+  let node = document.get_node();
+  let Some(float_node) = node.get_last_child() else {
+    return Ok(());
+  };
+  let is_body = |qname| qname != caption_qname && qname != toccaption_qname && qname != tags_qname;
+  // The first body element (the listing) is the reference point; captions move ahead
+  // of it, preserving their relative order (toccaption then caption).
+  let children = float_node.get_child_elements();
+  let Some(mut body) = children
+    .iter()
+    .find(|c| is_body(document::get_node_qname(c)))
+    .cloned()
+  else {
+    return Ok(());
+  };
+  for child in children {
+    let qname = document::get_node_qname(&child);
+    if qname == caption_qname || qname == toccaption_qname {
+      let mut child_mut = child;
+      body.add_prev_sibling(&mut child_mut)?;
+    }
+  }
+  Ok(())
+}
