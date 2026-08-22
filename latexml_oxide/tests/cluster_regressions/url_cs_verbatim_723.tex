@@ -1,0 +1,26 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\begin{document}
+% Distilled minimal reproductions covering @xworld21's (Vincenzo Mantova)
+% reported cases on issue #723. The full escape matrix (\#, \&, \_, \%, \^,
+% \~{}, macro expansion, literal specials) is covered by tests/expansion/hyperurls.
+%
+% (a) rebuttal comment 5380586287: a non-expandable primitive (`\def`) inside a
+% URL was DIGESTED — it executed, consumed following tokens, truncated the URL
+% and errored. It must stay LITERAL href text (url.sty `\meaning`), like pdflatex.
+\url{http://x/q=\def}
+
+% (b) the SAME reader backs `\href` — a leftover primitive stays literal there too.
+\href{http://x/h=\def}{link}
+
+% (c) comment 5375053714: control sequences that RESOLVE stay resolved —
+% \textasciitilde -> ~ , \textbackslash -> \ , and a literal ~ passes through.
+\url{http://x/a~b\textasciitilde c\textbackslash d}
+
+% (d) comment 5372406924: `\href` keeps a literal ~ in the URL.
+\href{http://x/~u}{link}
+
+% (e) url.sty escapes still resolve to their character (unchanged behavior).
+\url{http://x/a\_b\%c}
+\end{document}
