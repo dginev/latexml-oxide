@@ -2683,14 +2683,55 @@ mod tests {
     assert_eq!(lit, "x2", "the literal-x1 source falls through to x2");
   }
 
+  // ---- cross-platform child-process fixtures for run_with_timeout ----
+  // Unix `true`/`sh`/`sleep` don't exist on Windows; use cmd/ping there so the
+  // kill / exit-status / stderr-capture logic gets real coverage on both.
+
+  /// A child that runs far longer than any test deadline (so the timeout kills
+  /// it). `ping` is a bare exe — no shell wrapper — so `kill()` reaps it with no
+  /// orphaned grandchild.
+  fn spawn_slow_child() -> std::process::Command {
+    let mut cmd;
+    if cfg!(windows) {
+      cmd = std::process::Command::new("ping");
+      cmd.args(["-n", "11", "127.0.0.1"]);
+    } else {
+      cmd = std::process::Command::new("sleep");
+      cmd.arg("10");
+    }
+    cmd
+  }
+
+  /// A child that exits 0 immediately (Unix `true` / Windows `cmd /C exit 0`).
+  fn spawn_fast_ok() -> std::process::Command {
+    let mut cmd = std::process::Command::new(if cfg!(windows) { "cmd" } else { "true" });
+    if cfg!(windows) {
+      cmd.args(["/C", "exit 0"]);
+    }
+    cmd
+  }
+
+  /// A child that writes to stderr and exits non-zero. Returns the command and
+  /// its program name (for the diagnostic assertion).
+  fn spawn_stderr_fail() -> (std::process::Command, &'static str) {
+    if cfg!(windows) {
+      let mut cmd = std::process::Command::new("cmd");
+      cmd.args(["/C", "echo boom on stderr 1>&2 & exit 3"]);
+      (cmd, "cmd")
+    } else {
+      let mut cmd = std::process::Command::new("sh");
+      cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+      (cmd, "sh")
+    }
+  }
+
   /// `run_with_timeout` kills the child and returns `None` when the
-  /// process exceeds the deadline. Uses `sleep` as a stand-in for any
+  /// process exceeds the deadline. The slow child stands in for any
   /// runaway subprocess (convert, gs, mutool, …).
   #[test]
   fn run_with_timeout_kills_slow_child() {
     let start = std::time::Instant::now();
-    let mut cmd = std::process::Command::new("sleep");
-    cmd.arg("10");
+    let cmd = spawn_slow_child();
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(200));
     let elapsed = start.elapsed();
     assert!(
@@ -2709,10 +2750,10 @@ mod tests {
   /// Fast-completing child returns its real exit status, not a kill.
   #[test]
   fn run_with_timeout_returns_status_for_fast_child() {
-    let cmd = std::process::Command::new("true");
+    let cmd = spawn_fast_ok();
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
     let status = result.expect("expected clean exit");
-    assert!(status.success(), "`true` should exit successfully");
+    assert!(status.success(), "a fast child should exit successfully");
   }
 
   /// Missing binary → `None`, not a panic.
@@ -3443,8 +3484,7 @@ endobj
   #[test]
   fn run_with_timeout_captures_stderr_into_diag() {
     take_converter_diag(); // clear
-    let mut cmd = std::process::Command::new("sh");
-    cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+    let (cmd, prog) = spawn_stderr_fail();
     let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
     assert!(
       status.map(|s| !s.success()).unwrap_or(false),
@@ -3452,7 +3492,7 @@ endobj
     );
     let diag = take_converter_diag().expect("a diagnostic must be recorded");
     assert!(
-      diag.contains("boom on stderr") && diag.contains("sh"),
+      diag.contains("boom on stderr") && diag.contains(prog),
       "diag should name the program + its stderr; got: {diag}"
     );
   }

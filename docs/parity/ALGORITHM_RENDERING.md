@@ -25,18 +25,18 @@ and filed upstream at `brucemiller/LaTeXML`.
   `new_graf`), guarded body-only; per-line `leave_horizontal_internal` seam;
   indentation moved to an endline DOM-prepend. `\Comment*[r]` statements are
   numbered; KwInOut headers stay unnumbered. **Surpass.**
-  → OXIDIZED_DESIGN_DIVERGENCES #147, KNOWN_PERL_ERRORS #105.
+  → OXIDIZED_DESIGN_DIVERGENCES #148, KNOWN_PERL_ERRORS #105.
   Guard `50_structure::algorithm2e_linenumbers_test`.
 - **Ruled/boxed body frames** — `add_float_frames` skips `<ltx:tags>` so the inner
   frame lands on the real body (was silently dropped onto attribute-less `<tags>`
   in both engines); algorithm2e `\algocf@style` dispatch extended to the ruled
   family. Reach: all framed floats. **Surpass.**
-  → OXIDIZED_DESIGN_DIVERGENCES #148, KNOWN_PERL_ERRORS #106.
+  → OXIDIZED_DESIGN_DIVERGENCES #149, KNOWN_PERL_ERRORS #106.
   Guard `50_structure::algorithm2e_frames_test`.
 - **`\fname@<type>` internal** — `\floatname`/`\newfloat` now define real float.sty's
   `\fname@<type>` (LaTeXML reimplemented float.sty with `\lx@name@<type>` only), so
   the `breakablealgorithm` recipe compiles instead of leaking raw `\fname@algorithm`.
-  **Surpass.** → OXIDIZED_DESIGN_DIVERGENCES #149, KNOWN_PERL_ERRORS #107.
+  **Surpass.** → OXIDIZED_DESIGN_DIVERGENCES #150, KNOWN_PERL_ERRORS #107.
   Guard `50_structure::float_fname_internal_test`. Witness arXiv 2408.07803
   (html_feedback #1998).
 
@@ -100,7 +100,7 @@ a regression.
   `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
 - `\tabto` (tabto-ltx, `\RequirePackage`d by algpseudocodex) had no binding; its raw `$$`
   line-measurement hack broke the right-justified `\Comment` onto its own line. Bound
-  `\tabto`→`\hfill` (`tabto_sty.rs`, OXIDIZED_DESIGN #150) → comments now flush right inline.
+  `\tabto`→`\hfill` (`tabto_sty.rs`, OXIDIZED_DESIGN #151) → comments now flush right inline.
 
 **Open — algpseudocodex comment/line box-model polish (witness 2511.21969 Alg 1/2).**
 Against the pdflatex golden (compact; each `▷` comment paired with its `◁` end-marker on

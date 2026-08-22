@@ -145,7 +145,7 @@ LoadDefinitions!({
           // (the rectangle); the `ruled` family (plainruled/ruled/algoruled/
           // tworuled — top/underline/bottom rules that pdflatex draws) is dropped
           // by BOTH engines. We extend the same \algocf@style dispatch to 'ruled'
-          // — a surpass over Perl. See OXIDIZED_DESIGN #148, KNOWN_PERL_ERRORS #106.
+          // — a surpass over Perl. See OXIDIZED_DESIGN #149, KNOWN_PERL_ERRORS #106.
           // `box` must be tested first: `boxruled` contains both substrings and is
           // a full box in pdflatex, so it maps to 'boxed'.
           if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {

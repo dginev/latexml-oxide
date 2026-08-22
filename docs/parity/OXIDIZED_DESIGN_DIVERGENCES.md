@@ -5574,7 +5574,61 @@ visible there.
 **Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
 kept, title text appears exactly once, hand-typeset author block preserved).
 
-### 147. `\everypar` fires at paragraph start (tex.web `new_graf`), enabling correct algorithm2e line numbering
+### 147. A leftover control sequence in a hyperref URL stays literal, not digested
+
+**Background.** LaTeXML reads a hyperref `\url`/`\href` argument *semiverbatim*: it neutralizes the
+specials to catcode-12 but keeps the backslash an escape (`hyperref.sty.ltxml:165-186`,
+"Expand as we go!" / "let CS's through!"), so the argument is read with partial expansion and any
+surviving control sequence is then handed to digestion. Real `url.sty` instead `\meaning`-stringifies
+the whole argument (`\edef\Url@String{\expandafter\strip@prefix\meaning\Url@String}`), which turns
+every leftover control sequence into inert characters. The difference bites on a **non-expandable
+primitive** in a URL, e.g. `\url{https://ex/q=\def}`: digesting `\def` *executes* it — it reads the
+following tokens as its name/parameter-text/body, consumes past the closing brace, truncates the URL
+to `…q=` and raises errors. Escapes (`\%`, `\_`, `\^`, `\textasciitilde`, …) are unaffected because
+they resolve to their character before/at digestion; only a genuine leftover CS misbehaves.
+
+**Perl behavior**: SHARED-FAILURE — Perl LaTeXML digests the `\def` the same way and is in fact
+*worse*. Verified same-host (Perl 0.8.8, rev `0d02309d`): `\url{https://www.google.com/search?q=\def}`
+→ **byte-identical** `href="https://www.google.com/search?q="` in both engines, Perl raising **4**
+errors to our 2. Not a Rust-only bug; the change below is a deliberate surpass. pdflatex keeps the
+`\def` as literal link text (via `url.sty`'s `\meaning`), which is what an author expects.
+
+**Rust behavior (beyond-Perl)**: after the semiverbatim read, any *surviving* control sequence is
+recatcoded to `other` (`Token::as_other`) — url.sty's `\meaning` in one step — so `\def` becomes the
+literal href text `\def` instead of executing. To keep the escapes resolving so realistic URLs are
+unchanged, the reader now expands url.sty's escape set (`\%`, `\#`, `\&`, `\_`, `\~`,
+`\textasciitilde`, `\^`, `\textasciicircum`, `\textbackslash`, `\\`) to their character *during* the
+partial read (mirroring `url.sty`'s first pass), leaving only genuine leftovers as CS to stringify.
+Two sites, kept consistent so `\url` and `\href` agree: `\lx@hyper@url` (`hyperref_sty.rs`, the
+hyperref `\url`) and the `HyperVerbatim` parameter type (`base_parameter_types.rs`, backing `\href`).
+Plain `url.sty` without hyperref already did this (it recatcodes the whole argument to `other`), so
+this brings the hyperref path into line with it — and with pdflatex.
+
+**Why it's safe / precise.** Only a leftover *control sequence* changes — every url.sty escape still
+resolves (`\_`→`_`, `\^`→`^`, `\textbackslash`→`\`, …), literal specials pass through, and an
+expandable `\macro` still expands during the read. The net effect on any URL that previously
+converted cleanly is nil; the only behavior that changes is the one that previously *errored* and
+lost data. Consistent with #144 (which fixed the T1 ASCII *display* of verbatim/URL text) — that
+was the font side, this is the token side.
+
+**Scope / limitation.** `\path` already stringified leftovers (plain `url.sty`'s `\lx@url@url`
+recatcodes its whole argument to `other`), so it was never affected. `\nolinkurl` still digests a
+leftover primitive (SHARED-FAILURE with Perl — both truncate `\nolinkurl{…n=\def}` to `n=`): it reads
+through the generic `Semiverbatim` *parameter type*, so bringing it in line would mean changing that
+shared reader — out of this ticket's scope, left as parity.
+
+**Witnesses**: issue #723 rebuttal (reporter xworld21 / Vincenzo Mantova), comment 5380586287:
+`\url{https://www.google.com/search?q=\def}` lost the `\def` and errored while pdflatex kept it.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` — its `\url`/`\href` digest a leftover
+primitive the same way; adopting `url.sty`'s `\meaning`-stringify would fix it there too.
+
+**Guards**: `06_cluster_regressions::cluster_url_cs_verbatim_723` (distilled reproductions covering
+Vincenzo's cases: `\def` stays literal in both `\url` and `\href`, escapes/`~`/`\textbackslash`
+still resolve, 0 errors); `10_expansion::hyperurls_test` (the full escape matrix — `\#`, `\&`, `\_`,
+`\%`, `\^`, `\~{}`, macro expansion, literal `^`/`$`/`{}` — all still resolve).
+
+### 148. `\everypar` fires at paragraph start (tex.web `new_graf`), enabling correct algorithm2e line numbering
 
 **Background.** algorithm2e's `linesnumbered` numbers each body line by setting
 `\everypar`→`\nl` (which steps `AlgoLine` and typesets `\algocf@printnl`). The number
@@ -5618,7 +5672,7 @@ generic-`\Fn` examples from the algorithm2e manual.
 **Upstream**: to be filed at brucemiller/LaTeXML (endline-timed `\the\everypar` drops
 the `\Comment*[r]` statement number).
 
-### 148. Float body frames (`ruled`/`boxed`) land on the body, not the metadata `<tags>` — algorithm2e ruled family wired
+### 149. Float body frames (`ruled`/`boxed`) land on the body, not the metadata `<tags>` — algorithm2e ruled family wired
 
 **Background.** `addFloatFrames` (`float.sty.ltxml` L76-85) draws a float's frame from
 two maps: `%float_outerframe` puts an outer rule on the `<float>` itself, `%float_innerframe`
@@ -5660,7 +5714,7 @@ The outer-frame path is unchanged. Full suite green.
 **Upstream**: to be filed at brucemiller/LaTeXML (inner float frame dropped onto `<tags>`; ruled
 family unwired in algorithm2e).
 
-### 149. `\floatname`/`\newfloat` also define float.sty's real `\fname@<type>` internal
+### 150. `\floatname`/`\newfloat` also define float.sty's real `\fname@<type>` internal
 
 **Background.** Real `float.sty` names a float's caption word `\fname@<type>`
 (`float.sty` L34: `\newcommand\floatname[2]{\@namedef{fname@#1}{#2}}`; `\newfloat`
@@ -5691,7 +5745,7 @@ the `\floatname`/`\newfloat` bindings.
 **Upstream**: to be filed at brucemiller/LaTeXML (float.sty.ltxml should alias
 `\fname@<type>` to its `\lx@name@<type>`).
 
-### 150. `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline
+### 151. `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline
 
 **Background.** `tabto` (package `tabto-ltx`) moves to a horizontal tab position.
 `algpseudocodex` `\RequirePackage{tabto}` (sty L29) and right-justifies each `\Comment`

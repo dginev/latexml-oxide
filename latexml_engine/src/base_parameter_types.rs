@@ -525,11 +525,25 @@ LoadDefinitions!({
       DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
       let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
       let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+      DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
+      let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
       let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
+      DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
       // Having prepared, read in the argument, expanding as we go
       let arg = read_balanced(ExpansionLevel::Partial,false,false)?;
       end_semiverbatim()?;
-      arg
+      // url.sty stringifies the URL via `\meaning`: with the escapes above
+      // already expanded during the read, any LEFTOVER control sequence (a
+      // non-expandable primitive such as `\def`) must become literal characters,
+      // NOT be handed to digestion — digesting `\def` executes it, consumes the
+      // following tokens and truncates the URL (#723, reporter xworld21).
+      // Recatcode surviving CS tokens to `other`; everything else is untouched.
+      use latexml_core::token::Catcode;
+      Tokens::new(
+        arg.unlist().into_iter()
+          .map(|t| if t.get_catcode() == Catcode::CS { t.as_other() } else { t })
+          .collect(),
+      )
     },
     before_digest => {
       bgroup();

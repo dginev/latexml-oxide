@@ -846,7 +846,20 @@ fn abs2rel(target: &Path, base: &Path) -> String {
   for comp in &t[common..] {
     result.push(comp.as_os_str());
   }
-  result.to_string_lossy().to_string()
+  // `PathBuf` re-joins with the OS separator, so on Windows the result is
+  // `\`-separated — but this feeds forward-slash-only outputs (graphic
+  // `candidates`, resource URLs) that must match Perl/pdflatex on every
+  // platform. Normalize on Windows only; on Unix `\` is a legal filename byte
+  // (and the parts are already `/`-joined), so the rewrite is compiled out
+  // rather than risk corrupting a backslash-bearing name.
+  #[cfg(windows)]
+  {
+    result.to_string_lossy().replace('\\', "/")
+  }
+  #[cfg(not(windows))]
+  {
+    result.to_string_lossy().into_owned()
+  }
 }
 
 /// Make a pathname relative to a base directory.
@@ -1013,25 +1026,37 @@ mod tests {
   /// source directory (e.g. `xslt.rs`).
   #[test]
   fn relative_emits_dotdot_for_non_descendant() {
+    // A bare `/x` is not absolute on Windows (no drive), so prefix one there to
+    // exercise the abs2rel branch on every platform. Results stay forward-slash.
+    let abs = |p: &str| {
+      if cfg!(windows) {
+        format!("C:{p}")
+      } else {
+        p.to_string()
+      }
+    };
     // Sibling tree: base and target diverge one level up.
     assert_eq!(
       relative(
-        "/home/u/proj/A/child/images/pic.svg",
-        "/home/u/proj/latexml"
+        &abs("/home/u/proj/A/child/images/pic.svg"),
+        &abs("/home/u/proj/latexml")
       ),
       "../A/child/images/pic.svg"
     );
     // Descendant is unchanged (the case strip_prefix already handled).
     assert_eq!(
-      relative("/home/u/proj/sub/pic.png", "/home/u/proj"),
+      relative(&abs("/home/u/proj/sub/pic.png"), &abs("/home/u/proj")),
       "sub/pic.png"
     );
     // Cousin that diverges two levels up.
-    assert_eq!(relative("/a/b/c/f.tex", "/a/x/y"), "../../b/c/f.tex");
+    assert_eq!(
+      relative(&abs("/a/b/c/f.tex"), &abs("/a/x/y")),
+      "../../b/c/f.tex"
+    );
     // A non-absolute pathname is returned canonicalized, as Perl does.
-    assert_eq!(relative("sub/pic.png", "/home/u/proj"), "sub/pic.png");
+    assert_eq!(relative("sub/pic.png", &abs("/home/u/proj")), "sub/pic.png");
     // Empty base short-circuits to the canonical pathname.
-    assert_eq!(relative("/a/b/pic.png", ""), "/a/b/pic.png");
+    assert_eq!(relative(&abs("/a/b/pic.png"), ""), abs("/a/b/pic.png"));
   }
 
   /// `choose_kpaths` branches that a real host cannot exercise: a MiKTeX

@@ -18,7 +18,7 @@ LoadDefinitions!({
   // directly (e.g. the popular `breakablealgorithm` recipe:
   // `\textbf{\fname@algorithm~\thealgorithm}`). Define BOTH so such recipes
   // compile instead of leaking a raw `\fname@algorithm`. Surpass over Perl,
-  // which defines only `\lx@name@` and errors here. OXIDIZED_DESIGN #149,
+  // which defines only `\lx@name@` and errors here. OXIDIZED_DESIGN #150,
   // KNOWN_PERL_ERRORS #107. Witness arXiv 2408.07803 (html_feedback #1998).
   DefMacro!(
     "\\floatname{}{}",
@@ -238,7 +238,7 @@ pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
   // `element tags { tag+ }`) carries NO attributes, so `framed` on it is
   // silently schema-dropped and no frame is ever drawn. Both engines lose the
   // box; skipping `<tags>` too puts the frame on the real body.
-  // OXIDIZED_DESIGN #148 (surpass), KNOWN_PERL_ERRORS #106.
+  // OXIDIZED_DESIGN #149 (surpass), KNOWN_PERL_ERRORS #106.
   let is_body = |qname| qname != caption_qname && qname != toccaption_qname && qname != tags_qname;
   let node = document.get_node();
   if let Some(float_node) = node.get_last_child() {

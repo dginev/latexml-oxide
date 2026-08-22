@@ -12,7 +12,7 @@
 //! (fill to the tab stop ≈ push the following content to the right) — the dominant
 //! use is exactly the right-justified algorithm comment, which `\hfill` renders as a
 //! `float:right` on the same line, matching the pdflatex golden. Surpass over Perl,
-//! which raw-loads the `$$` hack and stacks the comment. OXIDIZED_DESIGN #150.
+//! which raw-loads the `$$` hack and stacks the comment. OXIDIZED_DESIGN #151.
 use crate::prelude::*;
 
 #[rustfmt::skip]

@@ -4106,7 +4106,7 @@ and only separable at content-start. Verified same-host on Perl 0.8.8 (witness a
 2602.20153): the JUCAL algorithm's `\Comment*[r]` statement lines are unnumbered.
 
 **Rust:** fixed by firing `\everypar` at content-start (tex.web `new_graf`) — see
-`OXIDIZED_DESIGN_DIVERGENCES.md` #147. Statement keeps its number; comment stays on the
+`OXIDIZED_DESIGN_DIVERGENCES.md` #148. Statement keeps its number; comment stays on the
 statement's line intent (numbering matches the pdflatex golden). To be filed upstream.
 
 ## 106. Float body frame (`ruled`/`boxed`) is dropped onto `<ltx:tags>` and never drawn (Rust surpasses)
@@ -4130,7 +4130,7 @@ to a frame, so the default `[ruled]` family draws no rules in either engine.
 
 **Rust:** fixed by also skipping `<ltx:tags>` when selecting the body, so the inner frame lands
 on the real body element — and by extending algorithm2e's `\algocf@style` dispatch to map the
-`ruled` family → `ruled`. See `OXIDIZED_DESIGN_DIVERGENCES.md` #148. All framed floats
+`ruled` family → `ruled`. See `OXIDIZED_DESIGN_DIVERGENCES.md` #149. All framed floats
 (algorithm/algorithmicx, newfloat, float.sty, algorithm2e boxed/ruled) now frame their body,
 matching the pdflatex golden. To be filed upstream.
 
@@ -4153,7 +4153,7 @@ leaks a raw, undefined `\fname@algorithm`: `<ltx:ERROR ...>\fname@algorithm</ltx
 2408.07803, html_feedback #1998): the algorithm caption errors identically.
 
 **Rust:** fixed by defining `\fname@<type>` alongside `\lx@name@<type>` in `\floatname` and
-`\newfloat` (real float.sty's internal name). See `OXIDIZED_DESIGN_DIVERGENCES.md` #149. The
+`\newfloat` (real float.sty's internal name). See `OXIDIZED_DESIGN_DIVERGENCES.md` #150. The
 caption compiles to "Algorithm 1 …". Additive; to be filed upstream.
 
 ## 108. `algpseudocodex` emits spurious empty `<equation/>` blocks (Rust-only; pruned)

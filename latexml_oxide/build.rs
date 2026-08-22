@@ -19,6 +19,67 @@ use std::{
 fn main() {
   install_git_hooks();
   probe_texlive();
+  emit_git_revision();
+}
+
+/// Embed the source git revision as `env!("LATEXML_GIT_SHA")`, so every
+/// conversion log can name the exact binary that produced it (Perl's
+/// `$LaTeXML::Version::REVISION`, filled by `make` — see `identity.rs`).
+///
+/// Resolution order, mirroring Perl's make-filled revision:
+///   1. An explicit `LATEXML_GIT_SHA` in the build environment wins — the
+///      release workflow injects the tag's sha for tarball / crates.io builds
+///      that have no `.git`.
+///   2. Otherwise, best-effort `git rev-parse --short HEAD` in the source tree.
+///   3. Failing both (no git, no `.git`), `"unknown"`.
+///
+/// **Freshness model — deliberately no VCS `rerun-if-changed`.** This script is
+/// NOT told to re-run when `.git/HEAD` or a ref moves. Watching those would
+/// re-run it (and recompile the crate + its reverse-deps) on every branch
+/// switch / commit / pull — a routine-git-activity recompile cascade the
+/// existing hook-install logic goes out of its way to avoid (#528). So a *dev*
+/// binary reports the revision as of the last time the script ran (a clean
+/// build, a `build.rs` edit, or a `LATEXML_GIT_SHA` change); it can lag HEAD
+/// after a pull. Force an exact value with
+/// `LATEXML_GIT_SHA=$(git rev-parse --short HEAD) cargo build`. Release builds
+/// are always accurate: `release-dumps.yml` builds fresh and/or sets the env.
+///
+/// Best-effort throughout: a distribution build with neither the env override
+/// nor a `.git` simply embeds `"unknown"` and never fails the build.
+fn emit_git_revision() {
+  println!("cargo:rerun-if-env-changed=LATEXML_GIT_SHA");
+
+  // 1. Explicit override (release workflow, packaged builds without `.git`).
+  if let Ok(sha) = std::env::var("LATEXML_GIT_SHA") {
+    let sha = sha.trim();
+    if !sha.is_empty() {
+      println!("cargo:rustc-env=LATEXML_GIT_SHA={sha}");
+      return;
+    }
+  }
+
+  // 2. Best-effort probe of the source checkout (repo root = manifest's parent).
+  let value = std::env::var("CARGO_MANIFEST_DIR")
+    .ok()
+    .and_then(|d| Path::new(&d).parent().map(Path::to_path_buf))
+    .as_deref()
+    .and_then(git_short_sha)
+    .unwrap_or_else(|| "unknown".to_string());
+  println!("cargo:rustc-env=LATEXML_GIT_SHA={value}");
+}
+
+/// `git rev-parse --short HEAD` in `root`; `None` outside a git checkout.
+fn git_short_sha(root: &Path) -> Option<String> {
+  let head = Command::new("git")
+    .current_dir(root)
+    .args(["rev-parse", "--short", "HEAD"])
+    .output()
+    .ok()?;
+  if !head.status.success() {
+    return None;
+  }
+  let sha = String::from_utf8(head.stdout).ok()?.trim().to_string();
+  if sha.is_empty() { None } else { Some(sha) }
 }
 
 /// Emit `cfg(building_with_texlive)` when a TeX installation is usable **on the

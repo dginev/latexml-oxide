@@ -556,6 +556,19 @@ mod kpathsea_backend_resolution {
     let produced = fs::read_to_string(dir.join("out.xml")).unwrap_or_default();
     let _ = fs::remove_dir_all(&dir);
 
+    // This test's premise — resolution survives a disabled `kpsewhich` — only
+    // holds when libkpathsea is linked in-process (the shipped distribution,
+    // `--features kpathsea-build-from-source`). A plain `cargo build` links no
+    // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
+    // pointed at nothing there is no resolver at all, so skip rather than fail.
+    if log.contains("no libkpathsea is linked") {
+      eprintln!(
+        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
+         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      );
+      return;
+    }
+
     assert!(
       !log.contains("Error:missing_file:lxo_probe_304"),
       "the TEXINPUTS-only include must resolve with no usable kpsewhich; log:\n{log}"
@@ -1517,13 +1530,16 @@ mod dir_prefixed_package_loading {
     std::fs::create_dir_all(root.join("sub")).unwrap();
     std::fs::create_dir_all(root.join("extra")).unwrap();
 
-    let extra_abs = root.join("extra");
+    // A RELATIVE dir keeps this cross-platform without any path-string surgery:
+    // an absolute OS path in TeX source is hostile on Windows (`\` is catcode 0,
+    // so `C:\Users\…` tokenizes \U, \e, … as control sequences and mangles the
+    // arg that `\lx@set@path` Expand!s). A relative arg resolves against
+    // SOURCEDIRECTORY when that is set, else the process cwd — both are the temp
+    // root here (the run uses current_dir(root)), so `extra` == root/extra on
+    // every platform.
     std::fs::write(
       root.join("sub/lpkg.sty"),
-      format!(
-        "\\ProvidesPackage{{lpkg}}\n\\RequirePackage{{import}}\n\\lx@set@path{{{}}}\n",
-        extra_abs.to_string_lossy()
-      ),
+      "\\ProvidesPackage{lpkg}\n\\RequirePackage{import}\n\\lx@set@path{extra}\n",
     )
     .unwrap();
     std::fs::write(
@@ -2380,5 +2396,71 @@ mod picture_graphics_e2e {
     );
     // Guard the fixture path stays valid.
     assert!(Path::new(bin).is_file());
+  }
+}
+
+mod identity_banner {
+  //! Every conversion logs a one-line identity banner — executable name, version,
+  //! git revision, exact start time (`latexml::identity`) — mirroring Perl's
+  //! `Note("$LaTeXML::IDENTITY processing $source")`. These guard the end-to-end
+  //! wiring: that both front-ends actually emit it, and that `--quiet` mutes it.
+
+  use std::process::Command;
+
+  /// The four fields the banner must carry, checked against a captured stderr.
+  fn assert_is_banner(stderr: &str, exe: &str) {
+    let line = stderr
+      .lines()
+      .find(|l| l.contains("latexml-oxide") && l.contains("; revision "))
+      .unwrap_or_else(|| panic!("no identity banner in stderr of {exe}:\n{stderr}"));
+    assert!(line.contains(exe), "banner names the wrong exe: {line:?}");
+    assert!(
+      line.contains(env!("CARGO_PKG_VERSION")),
+      "banner missing crate version: {line:?}"
+    );
+    assert!(
+      line.contains(" started "),
+      "banner missing start time: {line:?}"
+    );
+  }
+
+  #[test]
+  fn latexml_oxide_logs_identity() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let tex = workdir.path().join("hi.tex");
+    std::fs::write(
+      &tex,
+      "\\documentclass{article}\\begin{document}Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .arg(tex.file_name().unwrap())
+      .arg("--dest")
+      .arg("hi.html")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert_is_banner(&String::from_utf8_lossy(&output.stderr), "latexml_oxide");
+  }
+
+  #[test]
+  fn latexmlmath_logs_identity_and_quiet_mutes_it() {
+    let bin = env!("CARGO_BIN_EXE_latexmlmath_oxide");
+
+    let loud = Command::new(bin)
+      .arg("x^2")
+      .output()
+      .expect("spawn latexmlmath");
+    assert_is_banner(&String::from_utf8_lossy(&loud.stderr), "latexmlmath_oxide");
+
+    let quiet = Command::new(bin)
+      .args(["--quiet", "x^2"])
+      .output()
+      .expect("spawn latexmlmath --quiet");
+    let quiet_err = String::from_utf8_lossy(&quiet.stderr);
+    assert!(
+      !quiet_err.contains("; revision "),
+      "--quiet must suppress the identity banner, got:\n{quiet_err}"
+    );
   }
 }

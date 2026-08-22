@@ -381,6 +381,82 @@ fn cluster_array_vertical_rule_border_740() {
     "the two `!{{|}}` cells should render `ltx_align_right`:\n{pmml}"
   );
 }
+/// arXiv/html_feedback#6681 (reporter younesmouhib, paper 2606.22155v1): "does
+/// not compile properly: half missing". The deployed page (LaTeXML oxide 0.7.5)
+/// dumped LaTeXML-internal constructors (`\@@listings@block`,
+/// `\@@numbered@section`, `\lx@bibliography`) as literal text from the second
+/// `lstlisting` onward, swallowing the whole document tail — Open questions,
+/// bibliography, and the Verification appendix all became macro soup. The fix
+/// landed after that build; current main converts the paper end-to-end. This
+/// pins the fixed behaviour on the paper's construct: `listings` blocks with
+/// `breaklines=true`/`columns=fullflexible` inside `table`s, followed by more
+/// sectioning and an appendix. A regression would re-leak the internal
+/// constructors and drop the tail. (Any `@@…` in the output is a leak: the
+/// verbatim listing source lives base64-encoded in `data=`, whose alphabet
+/// excludes `@`, so it can never false-match.)
+#[test]
+fn cluster_listings_tail_leak_6681() {
+  let xml = convert_to_xml("tests/cluster_regressions/listings_tail_leak_6681.tex");
+  // No LaTeXML-internal constructor may leak into the serialized body as text.
+  for marker in ["@@listings@block", "@@numbered@section", "lx@bibliography"] {
+    assert!(
+      !xml.contains(marker),
+      "internal constructor `{marker}` leaked as text — the listings tail regressed:\n{xml}"
+    );
+  }
+  // Both witness-table listings survive as real listings, not swallowed text.
+  assert_eq!(
+    xml.matches(r#"class="ltx_lstlisting""#).count(),
+    2,
+    "both lstlisting blocks must render as listings:\n{xml}"
+  );
+  // The document tail after the second listing must render: the second section,
+  // the appendix, and their body paragraphs.
+  for needle in [
+    "Open questions",
+    "Verification",
+    "must render as ordinary text",
+    "must survive as a real appendix",
+  ] {
+    assert!(
+      xml.contains(needle),
+      "tail content `{needle}` missing — the listing swallowed the rest:\n{xml}"
+    );
+  }
+  assert!(
+    xml.contains("<appendix"),
+    "the Verification appendix must survive:\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6873 (reporter tdsmith, paper 2601.13118v1): Table 2 — a
+/// `tabular` inside a `tcolorbox` `enhanced` skin — rendered vertically upside
+/// down. The box is drawn as SVG and the table sits in an `<svg:foreignObject>`
+/// inside a TeX-y-up (flipped) `<svg:g>`; the fo needs a counter-flip
+/// `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent afterClose,
+/// `tex_box.rs` / Perl `TeX_Box.pool.ltxml` L407-423) or it renders upside down.
+/// `insert_block` renames a `_CaptureBlock_` — which carries the block's box —
+/// to `svg:foreignObject`; `rename_node_internal` now carries the node box
+/// across (Perl copies it via the `_box` attribute), so the fo's afterClose
+/// finds the size and sets the flip. RED before the fix: the tabular's
+/// foreignObject had no `transform`, so the height was 0 and it drew flipped.
+#[test]
+fn cluster_tcolorbox_tabular_not_flipped_6873() {
+  let xml = convert_to_xml("tests/cluster_regressions/tcolorbox_tabular_flip_6873.tex");
+  // The <svg:foreignObject> that wraps the <tabular> must carry the y-flip
+  // transform — otherwise the table draws upside down inside the flipped group.
+  let tab = xml
+    .find("<tabular")
+    .unwrap_or_else(|| panic!("a tabular should render inside the SVG picture:\n{xml}"));
+  let fo_start = xml[..tab]
+    .rfind("<svg:foreignObject")
+    .unwrap_or_else(|| panic!("the tabular must be wrapped in an svg:foreignObject:\n{xml}"));
+  let fo_open = &xml[fo_start..tab];
+  assert!(
+    fo_open.contains(r#"transform="matrix(1 0 0 -1"#),
+    "the foreignObject wrapping the tabular must carry the y-flip transform \
+     (else the table renders upside down):\n{fo_open}"
+  );
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
@@ -450,6 +526,49 @@ fn cluster_t1_verbatim_ascii_723() {
   assert!(
     xml.matches(r#"font="typewriter""#).count() >= 4,
     "verbatim/url runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
+  );
+}
+/// Issue #723 (reporter xworld21 / Vincenzo Mantova), follow-up rebuttal: a
+/// non-expandable control sequence inside a hyperref `\url`/`\href` (e.g. `\def`)
+/// was DIGESTED — it executed, consumed the following tokens, truncated the URL
+/// and raised errors (`\url{…q=\def}` → `href="…q="` + 2 errors), whereas
+/// pdflatex/url.sty keep it as literal href text. url.sty stringifies the URL via
+/// `\meaning` (all leftover control sequences become inert characters); we now
+/// mirror that faithfully: after the semiverbatim read, any surviving control
+/// sequence is recatcoded to `other` instead of being handed to digestion. The
+/// url.sty escapes (`\_`, `\%`, `\^`, `\textasciitilde`, `\textbackslash`, …)
+/// still RESOLVE to their character (they expand during the read), so realistic
+/// URLs are unchanged. Surpasses Perl (same digest bug). Distilled reproductions
+/// cover Vincenzo's reported cases; the full escape matrix is in `hyperurls`.
+#[test]
+fn cluster_url_cs_verbatim_723() {
+  // `convert_to_xml` gates on ZERO `Error:` markers — RED while `\def` digests.
+  let xml = convert_to_xml("tests/cluster_regressions/url_cs_verbatim_723.tex");
+  // (a)+(b) Canary: the leftover `\def` survives as literal href text in BOTH
+  // `\url` and `\href`, rather than executing and truncating the URL.
+  assert!(
+    xml.contains(r#"href="http://x/q=\def""#),
+    "\\url with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  assert!(
+    xml.contains(r#"href="http://x/h=\def""#),
+    "\\href with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  // (c) Regression guard: resolving control sequences stay resolved and a literal
+  // `~` passes through — \textasciitilde -> ~ , \textbackslash -> \ .
+  assert!(
+    xml.contains(r#"href="http://x/a~b~c\d""#),
+    "`\\textasciitilde`/`\\textbackslash`/literal `~` regressed in a URL (#723):\n{xml}"
+  );
+  // (d) Regression guard: `\href` keeps a literal `~`.
+  assert!(
+    xml.contains(r#"href="http://x/~u""#),
+    "`\\href` dropped a literal `~` (#723):\n{xml}"
+  );
+  // (e) Regression guard: url.sty escapes still resolve to their character.
+  assert!(
+    xml.contains(r#"href="http://x/a_b%c""#),
+    "url.sty escapes `\\_`/`\\%` no longer resolve to `_`/`%` (#723 regression):\n{xml}"
   );
 }
 #[test]

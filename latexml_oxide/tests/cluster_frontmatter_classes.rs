@@ -16,7 +16,10 @@ mod fairmeta_frontmatter {
   //! the class BODY, which OmniBus does not raw-load — so without a binding those
   //! commands are `Error:undefined` and the metadata is silently dropped
   //! (ar5iv #520/#567/#576). The `fairmeta_cls` contrib binding routes them
-  //! through `\@add@frontmatter` / `\lx@add@author` / `\lx@add@abstract`.
+  //! through `\@add@frontmatter` / `\lx@add@abstract`, and links `\author`/
+  //! `\affiliation`/`\contribution` by their superscript MARK via LaTeXML's
+  //! author-annotation plan (arXiv/html_feedback#1396; see
+  //! `06_cluster_frontmatter::frontmatter_fairmeta_author_affiliation_1396`).
   //!
   //! Driven through the BINARY (fresh process, one conversion) rather than the
   //! in-process `tests/contrib` harness on purpose: loading a
@@ -32,11 +35,11 @@ mod fairmeta_frontmatter {
 
   const FAIRMETA_TEX: &str = "\\documentclass{fairmeta}\n\
     \\title{A FAIR Preprint}\n\
-    \\author[1]{Jane Doe}\n\
+    \\author[1,*]{Jane Doe}\n\
     \\author[2]{John Roe}\n\
     \\affiliation[1]{Meta AI}\n\
     \\affiliation[2]{Some University}\n\
-    \\contribution[$\\star$]{Equal contribution}\n\
+    \\contribution[*]{Equal contribution}\n\
     \\metadata[Date]{January 2026}\n\
     \\correspondence{jane@example.org}\n\
     \\abstract{We study the frontmatter of a preprint class.}\n\
@@ -116,6 +119,21 @@ mod fairmeta_frontmatter {
       xml.contains("January 2026"),
       "metadata date value missing:\n{xml}"
     );
+    // The superscript marks LINK author→institution/contribution (#1396): Jane Doe
+    // [1,*] must carry Meta AI + the contribution, John Roe [2] Some University.
+    let jane = xml
+      .split("<creator")
+      .find(|b| b.contains("<personname>Jane Doe</personname>"))
+      .and_then(|b| b.split("</creator>").next())
+      .unwrap_or("");
+    assert!(
+      jane.contains("Meta AI") && jane.contains("Equal contribution"),
+      "Jane Doe [1,*] lost her linked Meta AI affiliation / contribution:\n{xml}"
+    );
+    assert!(
+      !jane.contains("Some University"),
+      "Jane Doe wrongly carries John's affiliation — marks not honored:\n{xml}"
+    );
     // \abstract{...} reaches the abstract element.
     assert!(
       xml.contains("<abstract") && xml.contains("frontmatter of a preprint class"),
@@ -148,7 +166,7 @@ mod selfevolagent_frontmatter {
 
   const TEX: &str = "\\documentclass{selfevolagent}\n\
     \\title{Self-Evolving Agents: A Survey}\n\
-    \\author[1]{Ana Lee}\n\
+    \\author[1,*]{Ana Lee}\n\
     \\author[2]{Bo Chen}\n\
     \\affiliation[1]{EvoAgentX}\n\
     \\affiliation[2]{A University}\n\
@@ -204,6 +222,17 @@ mod selfevolagent_frontmatter {
       xml.contains("role=\"contribution\""),
       "contribution missing:\n{xml}"
     );
+    // The marks LINK author→affiliation/contribution (#1396): Ana Lee [1,*] carries
+    // EvoAgentX + the contribution; Bo Chen [2] carries A University, not EvoAgentX.
+    let ana = xml
+      .split("<creator")
+      .find(|b| b.contains("<personname>Ana Lee</personname>"))
+      .and_then(|b| b.split("</creator>").next())
+      .unwrap_or("");
+    assert!(
+      ana.contains("EvoAgentX") && ana.contains("Equal Contributor"),
+      "Ana Lee [1,*] lost her linked affiliation / contribution:\n{xml}"
+    );
     assert!(
       xml.contains("role=\"correspondence\""),
       "correspondence missing:\n{xml}"
@@ -238,7 +267,7 @@ mod openmoss_frontmatter {
 
   const TEX: &str = "\\documentclass{openmoss}\n\
     \\title{World Action Models}\n\
-    \\author[1]{Ann Poe}\n\
+    \\author[1,*]{Ann Poe}\n\
     \\affiliation[1]{OpenMOSS}\n\
     \\contribution[*]{Lead}\n\
     \\checkdata[Github Repo]{https://github.com/OpenMOSS/x}\n\

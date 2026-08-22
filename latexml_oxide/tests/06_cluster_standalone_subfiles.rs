@@ -410,7 +410,10 @@ fn subimport_absolute_path_resolves_like_real_latex() {
     format!(
       "\\documentclass{{article}}\\usepackage{{import}}\\usepackage{{standalone}}\
        \\begin{{document}}\\subimport*{{{}/}}{{index.tex}}\\end{{document}}",
-      child.display()
+      // Forward slashes: a Windows abs path (C:\Users\…) in TeX source would
+      // tokenize \U, \d, … as control sequences (`\` is catcode 0). kpathsea
+      // accepts `/` on Windows; no-op on Unix.
+      child.to_string_lossy().replace('\\', "/")
     ),
   )
   .expect("write main");

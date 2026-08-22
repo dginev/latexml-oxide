@@ -184,6 +184,10 @@ dhat = { version = "0.3", optional = true }
 # needs. Used for the mimalloc-vs-jemalloc A/B and the recommended harness build.
 tikv-jemallocator = { version = "0.7", optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
+# Local wall-clock for the per-conversion identity banner (identity.rs). Already
+# in the build graph via latexml_engine (\today / SOURCE_DATE_EPOCH), so this
+# direct dep adds no compile cost; same minimal feature set.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [dev-dependencies]
 # Line-diff engine for tests/90_latexmlpost.rs's golden comparison — the

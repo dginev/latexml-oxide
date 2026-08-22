@@ -2,6 +2,54 @@
 
 ## Unreleased
 
+  - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
+    non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
+    semiverbatim and then *digested* — `\def` executed, consumed the following
+    tokens, truncated the URL to `…q=` and raised errors — where pdflatex (and real
+    `url.sty`, via `\meaning`) keep it as literal link text. The hyperref reader now
+    stringifies any leftover control sequence (recatcodes it to `other`) instead of
+    handing it to digestion, while still expanding the `url.sty` escapes (`\%`,
+    `\_`, `\^`, `\textbackslash`, …) during the read, so realistic URLs are
+    unchanged and `\url`/`\href` now agree. Perl LaTeXML digests the same way
+    (byte-identical output, more errors) — a deliberate surpass (OXIDIZED_DESIGN
+    #147). Follow-up to issue #723's rebuttal (reporter xworld21 / Vincenzo
+    Mantova); guards `cluster_url_cs_verbatim_723`, `hyperurls_test`.
+  - **`fairmeta.cls` papers now link each author to their institution.** The
+    Meta/FAIR pre-print template (and its `selfevolagent`/`openmoss` siblings)
+    connects authors to institutions and contribution notes by superscript mark —
+    `\author[1,2,*]{Name}`, `\affiliation[1]{Inst}`, `\contribution[*]{Note}`. The
+    shared meta-class binding dropped the `[mark]`, so every author lost its
+    institution and affiliations became detached document notes. The binding now
+    routes the marks through LaTeXML's author-annotation / contact-label plan (the
+    `authblk` idiom: `\lx@add@creator[annotations]` + `\lx@add@contact[label]`), so
+    each institution/contribution attaches to the authors that cite its mark. The
+    mechanism is byte-for-byte Perl-parity; on the fairmeta papers themselves Rust
+    surpasses Perl, which has no binding and mangles them under OmniBus. Fixes
+    arXiv/html_feedback#1396 and the fairmeta family (#662, #3512, #4707, #4971,
+    #5035, #5466); guard `frontmatter_fairmeta_author_affiliation_1396`.
+  - **Tables inside a `tcolorbox` no longer render upside down.** A `tabular`
+    inside a `tcolorbox` `enhanced` skin is drawn as SVG, with the table content
+    in an `<svg:foreignObject>` nested in a TeX-y-up (flipped) group; the fo needs
+    a counter-flip `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent
+    afterClose) or it draws vertically upside down. When building that wrapper,
+    `insert_block` renames a `_CaptureBlock_` — which carries the block's box — to
+    `svg:foreignObject`, but the rename dropped the node box (Perl carries it via
+    the internal `_box` attribute), so the afterClose read a zero size and skipped
+    the flip. `rename_node_internal` now carries the node box across, matching
+    Perl, and the table renders right-side-up (byte-for-byte Perl parity on the
+    foreignObject transforms). Fixes arXiv/html_feedback#6873 (reporter tdsmith,
+    paper 2601.13118); guard `cluster_tcolorbox_tabular_not_flipped_6873`.
+  - **Every conversion logs an identity banner: executable, version, revision,
+    start time.** At the head of each conversion `latexml_oxide`, `cortex_worker`
+    and `latexmlmath_oxide` now log a line like `latexml_oxide (latexml-oxide
+    0.7.6; revision 6ff599cc08) started 2026-08-21 19:01:23 -0400`, to both stderr
+    and the captured `.latexml.log`. This mirrors Perl's `$LaTeXML::IDENTITY`
+    (executable + version + `make`-filled revision) and adds the exact start time,
+    so a log always names the precise binary and moment that produced it. The
+    revision is embedded at build time (`build.rs`; overridable via the
+    `LATEXML_GIT_SHA` env for packaged builds without `.git`); `--quiet`
+    suppresses the banner. Guards: `identity::tests`, `identity_banner`
+    (cluster_cli).
   - **Vertical rules in a math `array` now render, and `!{|}` aligns like Perl.**
     Two defects from one report, both now byte-for-byte Perl parity. (1) A `|` or
     `\hline` in a display-math `array` — `\begin{array}{cc|c}`, a framed `|c|c|`, or

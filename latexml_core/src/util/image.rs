@@ -547,6 +547,48 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
   whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
 }
 
+/// Run a fallible I/O op, retrying on a *transient* lock. On Windows a
+/// just-written file — a figure the converter emitted a moment ago, or a test
+/// fixture — can be momentarily locked by another handle (antivirus real-time
+/// scanning of the fresh file, or Windows' stricter default file sharing). A
+/// bare `op().ok()?` would turn that into a silent `None`, and a figure would
+/// reach the engine at 0x0.
+///
+/// A genuine `NotFound` is not a lock, so it fails fast. Every *other* error is
+/// treated as possibly-transient and retried with a widening backoff up to
+/// ~0.5 s total. The fresh-file lock usually surfaces as `PermissionDenied`
+/// (`ERROR_SHARING_VIOLATION`), but under heavy parallel load (a full `cargo
+/// test` with antivirus active) it has shown other kinds and needed longer than
+/// a few ms to clear — so this deliberately retries broadly rather than gating on
+/// one `ErrorKind`. A permanently-unreadable path pays the full budget once and
+/// then fails; the happy path (Ok on the first try) pays nothing.
+fn with_transient_retry<T>(mut op: impl FnMut() -> std::io::Result<T>) -> Option<T> {
+  let mut tries = 0u32;
+  loop {
+    match op() {
+      Ok(v) => return Some(v),
+      Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+      Err(_) if tries < 10 => {
+        tries += 1;
+        std::thread::sleep(std::time::Duration::from_millis(u64::from(tries) * 10));
+      },
+      Err(_) => return None,
+    }
+  }
+}
+
+/// [`std::fs::read`] with the transient-lock retry of [`with_transient_retry`].
+fn read_file_resilient(path: &Path) -> Option<Vec<u8>> {
+  with_transient_retry(|| std::fs::read(path))
+}
+
+/// [`std::fs::File::open`] with the transient-lock retry of
+/// [`with_transient_retry`]. Only the open races with the scanner/writer; reads
+/// on the returned handle do not, so callers keep their streaming reads.
+fn open_file_resilient(path: &Path) -> Option<std::fs::File> {
+  with_transient_retry(|| std::fs::File::open(path))
+}
+
 /// Read image dimensions (width, height) in pixels from a file.
 /// Supports PNG, JPEG, and EPS (PostScript BoundingBox).
 ///
@@ -556,7 +598,7 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
 pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
   use std::io::Read;
-  let mut file = std::fs::File::open(path).ok()?;
+  let mut file = open_file_resilient(path)?;
   let mut header = [0u8; 32];
   file.read_exact(&mut header).ok()?;
 
@@ -770,7 +812,7 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
-  let bytes = std::fs::read(path).ok()?;
+  let bytes = read_file_resilient(path)?;
   if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
     let content = String::from_utf8_lossy(&bytes);
     if let Some(box_) =
@@ -1305,9 +1347,68 @@ mod sizing_characterization_tests {
   use super::*;
 
   fn fixture(name: &str, bytes: &[u8]) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("lxsize-{}-{name}", std::process::id()));
+    // A per-call sequence makes every fixture path unique. Two tests reused the
+    // same `name` ("m.pdf"), so keying only on pid+name let them race on one temp
+    // file when run in parallel: whichever wrote last won, and the other test's
+    // reader saw the wrong bytes -> a flaky `None` under full-suite load (it only
+    // surfaced when scheduling made the two writes overlap).
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!("lxsize-{}-{seq}-{name}", std::process::id()));
     std::fs::write(&path, bytes).expect("write fixture");
     path
+  }
+
+  fn io_err(kind: std::io::ErrorKind) -> std::io::Error { std::io::Error::from(kind) }
+
+  /// A genuine `NotFound` is a missing file, not a lock: it must map straight to
+  /// `None` on the first attempt, with no retry and no sleep. The "no sleep"
+  /// half is what keeps `read_pdf_page_box`/`read_image_dimensions` cheap for
+  /// the common missing-figure case, so the perf argument depends on it.
+  #[test]
+  fn transient_retry_notfound_is_immediate_none() {
+    let mut calls = 0u32;
+    let got: Option<()> = with_transient_retry(|| {
+      calls += 1;
+      Err(io_err(std::io::ErrorKind::NotFound))
+    });
+    assert!(got.is_none(), "NotFound must map to None");
+    assert_eq!(calls, 1, "NotFound must not be retried");
+  }
+
+  /// A lock that clears after a couple of tries: the op is retried and its
+  /// eventual `Ok` is returned — a fresh figure is not silently dropped to 0x0.
+  #[test]
+  fn transient_retry_recovers_after_transient_errors() {
+    let mut calls = 0u32;
+    let got = with_transient_retry(|| {
+      calls += 1;
+      if calls < 3 {
+        Err(io_err(std::io::ErrorKind::PermissionDenied))
+      } else {
+        Ok(42u32)
+      }
+    });
+    assert_eq!(
+      got,
+      Some(42),
+      "a clearing lock should be retried then succeed"
+    );
+    assert_eq!(calls, 3, "should retry until the op succeeds");
+  }
+
+  /// A persistent non-`NotFound` error gives up with `None` after the retry cap
+  /// (1 initial attempt + 10 retries = 11 invocations) instead of looping.
+  #[test]
+  fn transient_retry_gives_up_after_cap() {
+    let mut calls = 0u32;
+    let got: Option<()> = with_transient_retry(|| {
+      calls += 1;
+      Err(io_err(std::io::ErrorKind::PermissionDenied))
+    });
+    assert!(got.is_none(), "a persistent error must give up with None");
+    assert_eq!(calls, 11, "one attempt then retries up to the cap");
   }
 
   /// A minimal `%PDF-1.5` whose only object is a Flate-compressed object stream
