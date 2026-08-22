@@ -4216,3 +4216,34 @@ author's own `Let('\\','\lx@algo@par')` shows the break was intended).
 indented listingline, matching the pdflatex golden. A **surpass** (Perl shares the bug).
 Safe: a nested `tabular`/`array` rebinds `\\` locally (`\@tabularcr`), shadowing this.
 Guard: `06_cluster_regressions::cluster_algorithm2e_for_body_indentation`.
+
+## 110. `.bbl` preamble opens a phantom empty `(N)` bibliography entry (Rust surpasses)
+
+**Trigger** (an ACM-Reference-Format-style `.bbl`: a macro-definition preamble and a blank
+line before the first `\bibitem`; witness arXiv 2605.03143):
+
+```latex
+\begin{thebibliography}{2}
+
+\providecommand\bibinfo[2]{#2}
+
+\bibitem{A}\bibinfo{title}{First}.
+\bibitem{B}\bibinfo{title}{Second}.
+\end{thebibliography}
+```
+
+emits a spurious empty first entry `<ltx:bibitem xml:id="bib.bib1">` (a `(1)` refnum, a
+whitespace-only `<ltx:bibblock>`, no `key`), shifting the real references to `bib.bib2…`.
+
+**Cause (shared by both engines).** The blank line after `\begin{thebibliography}` is a
+`\par`; inside a bibliography that is `\par@in@bibliography`, which — seeing the next token is
+`\providecommand`, not `\par`/`\bibitem` — opens a keyless `\lx@bibitem` for the preamble
+(`latex_constructs.pool.ltxml` L4049 / Rust `latex_constructs.rs` `\par@in@bibliography`). The
+digest-time prune both engines carry (Perl #2409) only inspects the immediately-previous box,
+which the preamble whitespace displaces, so the phantom survives. Verified byte-identical in
+Perl LaTeXML.
+
+**Rust:** an after-close DOM scrub (`Tag!("ltx:bibitem", after_close_late)`) removes any
+bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the phantom. A real
+`\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
+#155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.

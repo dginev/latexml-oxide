@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **A `.bbl` preamble no longer produces a spurious empty `(1)` bibliography entry.**
+    An ACM-Reference-Format-style `.bbl` puts macro definitions and a blank line between
+    `\begin{thebibliography}` and the first `\bibitem`; the blank line made the bibliography
+    auto-open a keyless phantom entry that rendered as an empty `(1)` before the real
+    references. It is now scrubbed after construction (a bibitem with no key and only
+    whitespace content). A surpass — Perl LaTeXML emits the identical phantom
+    (KNOWN_PERL_ERRORS #110, OXIDIZED_DESIGN #155). Witness arXiv 2605.03143; guard
+    `cluster_bib_preamble_no_phantom_entry`.
   - **algorithm2e `\For`/`\While`/`\If` bodies written with `\\` now indent under the
     `|` rule.** A body line ended with `\\` (rather than `\;`) was rendered flush-left
     after the vertical separator instead of indented beneath it, because algorithm2e's

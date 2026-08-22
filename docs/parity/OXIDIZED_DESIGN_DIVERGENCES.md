@@ -5877,3 +5877,34 @@ re-entrancy guard leaves the malformed-nesting case exactly as before.
 
 **Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
 it into the vendored engine.
+
+### 155. A `.bbl` preamble no longer emits a phantom empty `(N)` bibliography entry
+
+**Background.** An ACM-Reference-Format-style `.bbl` (and others) places a preamble —
+`\providecommand`/`\newcommand` macro definitions and a blank line — between
+`\begin{thebibliography}` and the first `\bibitem`. The blank line is a `\par`; inside a
+bibliography that is `\par@in@bibliography`, which (when the next token is not
+`\par`/`\bibitem`) opens a keyless `\lx@bibitem` for the preamble content.
+
+**Perl behavior**: SHARED failure. The keyless phantom `\lx@bibitem` renders as a spurious
+empty first entry — `<ltx:bibitem xml:id="bib.bib1">` with a `(1)` refnum tag and a
+whitespace-only `<ltx:bibblock>` — pushing the real references to `bib.bib2…`. Both engines
+carry a digest-time prune (Perl #2409 / `latex_constructs` `\lx@bibitem` afterDigest) meant
+to catch exactly this, but it only inspects the IMMEDIATELY-previous box; the preamble
+whitespace boxes displace the phantom from that check, so it survives. Same-host Perl emits
+the identical phantom (verified byte-identical on arXiv 2605.03143).
+
+**Rust behavior**: a `Tag!("ltx:bibitem", after_close_late)` scrub (`latex_constructs.rs`)
+removes any bibitem that has no non-empty `key` attribute AND whose `<ltx:bibblock>`s are all
+whitespace — i.e. the auto-opened phantom. A real `\bibitem` always carries a key, so real
+entries are never touched. A surpass over the shared Perl failure.
+
+**Why it's safe.** The discriminator (no `key` + whitespace-only bibblocks) matches only the
+auto-opened phantom; a citeable reference always has a key and real bibblock text. The real
+entries keep their `xml:id`s and keys (cross-references key on the key, not the id).
+
+**Witnesses**: arXiv 2605.03143 (ACM-Reference-Format `.bbl`, empty `(1)` before 23 real
+entries). Guard `cluster_bib_preamble_no_phantom_entry`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (the `.bbl`-preamble phantom bibitem should
+be pruned; the existing digest-time guard misses it when whitespace intervenes).

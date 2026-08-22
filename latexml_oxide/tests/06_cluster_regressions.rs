@@ -1800,6 +1800,41 @@ fn cluster_algorithm2e_for_body_indentation() {
   );
 }
 
+/// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
+/// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
+/// "(N)" bibitem before the real references. The blank line makes
+/// `\par@in@bibliography` auto-open a phantom `\lx@bibitem`; the digest-time prune
+/// misses it (the preamble whitespace displaces it from the last-box check), so an
+/// after-close scrub drops keyless whitespace-only bibitems. SHARED with Perl (both
+/// emit it) — surpass, OXIDIZED_DESIGN #155. Witness arXiv 2605.03143.
+#[test]
+fn cluster_bib_preamble_no_phantom_entry() {
+  let xml = convert_to_xml("tests/cluster_regressions/bib_preamble_no_phantom.tex");
+  // Every surviving bibitem must carry a key — a keyless one is the auto-opened phantom.
+  let keyless = xml
+    .split("<bibitem")
+    .skip(1)
+    .filter(|seg| {
+      let open_tag = seg.split('>').next().unwrap_or("");
+      !open_tag.contains("key=")
+    })
+    .count();
+  assert_eq!(
+    keyless, 0,
+    "spurious keyless phantom bibitem present:\n{xml}"
+  );
+  // The two real references survive.
+  assert_eq!(
+    xml.matches("<bibitem").count(),
+    2,
+    "expected exactly 2 real bibitems (A, B):\n{xml}"
+  );
+  assert!(
+    xml.contains("First Reference") && xml.contains("Second Reference"),
+    "real references missing:\n{xml}"
+  );
+}
+
 /// GREEN guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords)
 /// keep only ONE entry — a later one REPLACES the earlier — while non-replaceable
 /// creators accumulate. Ports upstream `%ReplaceableFrontmatterTags`
