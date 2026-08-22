@@ -72,9 +72,29 @@ fn renumber_algo_lines(document: &mut Document) {
     return;
   }
   for (i, tag) in numeric_tags.into_iter().enumerate() {
-    let mut tag = tag;
-    let _ = tag.set_content(&(i + 1).to_string());
+    set_number_tag_text(&tag, &(i + 1).to_string());
   }
+}
+
+/// Rewrite a numeric line-number `<ltx:tag>`'s text to `n` while PRESERVING any
+/// font-markup wrapper. `\algocf@printnl` wraps the number in `\NlSty`
+/// (`\textnormal{\textbf{…}}`), so a numbered tag is `<ltx:tag><ltx:text
+/// font="bold">N</ltx:text></ltx:tag>`. A blunt `set_content` on the tag would
+/// replace that `<ltx:text>` wrapper with a bare text node, stripping the uniform
+/// bold and reintroducing the per-line font leak. Instead descend through
+/// single-element-child wrappers and set the text on the innermost node, keeping the
+/// `\NlSty` styling intact. Guard: `cluster_algorithm2e_uniform_line_number_font`.
+fn set_number_tag_text(tag: &Node, n: &str) {
+  let mut target = tag.clone();
+  loop {
+    let children = target.get_child_elements();
+    if children.len() == 1 {
+      target = children.into_iter().next().unwrap();
+    } else {
+      break;
+    }
+  }
+  let _ = target.set_content(n);
 }
 
 #[rustfmt::skip]
@@ -137,6 +157,19 @@ LoadDefinitions!({
           // Perl (its loop body always calls beginItemize/RefStepCounter on
           // "algorithm").
           before_float("algorithm", None);
+          // SURPASS over Perl (SHARED bug). `before_float` / Perl `beforeFloat`
+          // (latex_constructs.rs `before_float_ex`, Perl latex_constructs.pool
+          // L3376) re-lets `\\`→`\lx@newline` as a tabular-in-float guard (Perl
+          // #2775). Perl's algorithm2e.sty.ltxml runs beforeFloat LAST in its
+          // beforeDigest, so that reset CLOBBERS the `Let('\\','\lx@algo@par')`
+          // above — in BOTH engines `\\` inside an algorithm2e listing degrades to
+          // `<break/>`, so `\\`-separated body lines merge into one listingline and
+          // are NOT indented under the Vsline `|` rule (pdflatex indents each; the
+          // reimpl author's own `Let('\\','\lx@algo@par')` shows the intent). Re-
+          // assert it after before_float. Safe: a nested tabular/array rebinds `\\`
+          // locally (`\@tabularcr`), shadowing this. Witness arXiv 2002.09766
+          // Algorithm 1 (`\For{…}{ …\\ …\;\\ }`). KNOWN_PERL_ERRORS #109.
+          Let!("\\\\", "\\lx@algo@par");
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;
@@ -155,6 +188,14 @@ LoadDefinitions!({
             } else if style.contains("ruled") {
               whatsit.set_property("frame", Stored::from("ruled"));
             }
+            // The ruled family (ruled/algoruled/tworuled/plainruled AND boxruled) draws
+            // the caption at the TOP of the frame (real sty \@algocf@capt@ruled=top L2530,
+            // boxruled=above L2540); box/plain leave it at the bottom. Flag it for
+            // afterConstruct to reposition. See float_sty::reposition_caption_top,
+            // OXIDIZED_DESIGN #153 (surpass — Perl emits the caption at the bottom too).
+            if style.contains("ruled") {
+              whatsit.set_property("caption_pos", Stored::from("top"));
+            }
           }
           after_float(whatsit);
         },
@@ -165,6 +206,12 @@ LoadDefinitions!({
           let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
           if !style.is_empty() {
             crate::package::float_sty::add_float_frames(document, &style)?;
+          }
+          // Ruled family: move the caption to the top of the frame (surpass —
+          // OXIDIZED_DESIGN #153). Runs after add_float_frames so the frame lands on
+          // the body first; captions are excluded from the body search either way.
+          if whatsit.get_property("caption_pos").map(|v| v.to_string()).as_deref() == Some("top") {
+            crate::package::float_sty::reposition_caption_top(document)?;
           }
           // Rewrite the surviving numbered lines to 1..N (the AlgoLine counter
           // over-steps / dropped empty lines leave gaps — see the fn doc).
@@ -266,10 +313,20 @@ LoadDefinitions!({
   // which silently merged every `\lIf`/`\lElse` with its neighbours onto one
   // unreadable line: witness the disjoint-decomposition and generic-`\Fn` examples
   // in the algorithm2e manual, and probe `\If{}{\lIf{}{X}\lElse{Y}}`.) `\;` still
-  // ends+breaks via `\@endalgoln`→`\@endalgocfline`. The `\Comment*[r]` inline
-  // side-comment placement is handled separately (it must NOT ride this break).
+  // ends+breaks via `\@endalgoln`→`\@endalgocfline`. EXCEPTION: a `\Comment*[r]`/`[l]`
+  // side comment must NOT ride this break — the statement's `;` and the flush-right
+  // comment share one line (the break comes AFTER, from `\algocf@scpar`'s `\par`). The
+  // raw sty's side-comment star branch (algorithm2e.sty L2073-2074) does
+  // `\let\\\algocf@endstartsidecomment` immediately before its `\@endalgocfline\ `, so
+  // `\\` == `\algocf@endstartsidecomment` uniquely identifies "inside a side comment"
+  // (the normal comment path uses `\algocf@endstartcomment`; `\lIf`/`\lElse` don't
+  // touch `\\`). We key on that: non-breaking in a side comment, breaking otherwise.
+  // `\algocf@scrfill`=`\hfill` (raw L2038) then flushes the comment right (our engine
+  // renders a pre-inline `\hfill` as float:right — the same lever as the `\tabto` fix).
+  // Witnesses arXiv 2512.24601, 2511.21969; guard 50_structure::algorithm2e_linenumbers.
   DefMacro!("\\@endalgoln", "\\@endalgocfline");
-  DefMacro!("\\@endalgocfline", "\\algocf@endline\\lx@algo@par");
+  DefMacro!("\\@endalgocfline",
+    "\\ifx\\\\\\algocf@endstartsidecomment\\algocf@endline\\else\\algocf@endline\\lx@algo@par\\fi");
   DefMacro!("\\PrintSemicolon", sub[_args] {
     assign_value("algorithm_dont_print_semicolon", false, Some(Scope::Global));
     Ok(Tokens!())
@@ -401,7 +458,20 @@ LoadDefinitions!({
   // saved node (rather than Perl's manual childNode remove/re-append prepend)
   // so the KwInput label's content keeps its wrapper. Witness 2104.02680
   // (`\SetKwInput{KwInit}{\nl initialize}`).
-  DefConstructor!("\\algocf@printnl{}", sub[document, args] {
+  //
+  // The printed number is wrapped in `\NlSty` — real algorithm2e.sty L1638/L1644:
+  // `\NlSty{#1}` = `\textnormal{\textbf{\relsize{-2}#1}}` — so it renders uniform
+  // upright-bold regardless of the font active when `\nl` fires. Our numbering
+  // seam fires `\nl` at content-start (`\everypar`), where a `\For`/`\If`/`\While`
+  // line has already opened `\KwSty` bold; a BARE number would inherit that on
+  // keyword lines and stay plain elsewhere (non-uniform). `\NlSty`'s `\textnormal`
+  // resets shape/series, so every number is uniform bold. (Perl's `.ltxml` L210
+  // drops the wrap but recovers uniformity from its endline `\the\everypar` timing
+  // instead — we chose content-start timing, so we restore the real-sty wrap.)
+  // Matches the pdflatex golden. Guard: `cluster_algorithm2e_uniform_line_number_font`.
+  // Split into a macro (wraps `\NlSty` before digestion) feeding the constructor.
+  DefMacro!("\\algocf@printnl{}", "\\algocf@printnl@i{\\NlSty{#1}}");
+  DefConstructor!("\\algocf@printnl@i{}", sub[document, args] {
     let num = args.first().and_then(|a| a.as_ref());
     let savenode = document.float_to_element("ltx:tags", false)?;
     document.open_element("ltx:tags", None, None)?;

@@ -43,23 +43,58 @@ and filed upstream at `brucemiller/LaTeXML`.
 All surpass entries carry an **"Upstream: to be filed at brucemiller/LaTeXML"** note —
 filing is a manual step (cannot be done from the conversion tooling).
 
+## Landed in Part 2 (PR feat-algorithm-rendering-part2)
+
+- **`\Comment*[r]`/`[l]` side comment is now inline flush-right.** `\@endalgocfline`
+  stays non-breaking in the side-comment path — keyed on `\ifx\\\algocf@endstartsidecomment`
+  (the raw sty `\let\\` at L2073 uniquely marks that path), still breaking for
+  `\lIf`/`\lElse`. `\algocf@scrfill`=`\hfill` flushes it right. Guard
+  `50_structure::algorithm2e_linenumbers` (re-blessed).
+- **Ruled caption-at-top.** For the ruled family, `after_construct` moves
+  `<caption>`/`<toccaption>` before the body (`float_sty::reposition_caption_top`);
+  `plain`/`boxed` keep it at the bottom. Surpass OXIDIZED_DESIGN #153, guard
+  `06_cluster_regressions::cluster_algorithm2e_ruled_caption_at_top`.
+- **Uniform bold line numbers.** `\algocf@printnl` now wraps the number in the real-sty
+  `\NlSty` (`\textnormal{\textbf{…}}`), and `renumber_algo_lines` was made
+  font-preserving (rewrites the inner `<text>`, not `set_content` on the tag). The old
+  "tag bypasses `\algocf@printnl`" premise was WRONG — it flows through. Guard
+  `06_cluster_regressions::cluster_algorithm2e_uniform_line_number_font` (un-ignored, green).
+  Independent of the counter over-step.
+- **Side-by-side minipages** (2402.19043) — CSS only: `.ltx_align_middle` no longer
+  strips an authored minipage width (ar5iv.css, scoped `:not([style*="width"])`), so the
+  two 0.48-width algorithms keep their width instead of collapsing into the paragraph.
+- **algpseudocodex box-model — scrollbars mitigated** (CSS): the phantom VERTICAL
+  scrollbar is gone (`.ltx_listing` `overflow-y:hidden`, both ar5iv.css + LaTeXML.css),
+  and framed lstlistings are contained (`.ltx_lstlisting` overflow-x). The comment
+  `<p>`-gaps and the `◁` `\rlap`-on-its-own-line still need the algpseudocodex binding
+  below.
+- **`\hbox to \hsize` leader separators fill the column** (`\dashfill`/`\hrulefill`/
+  `\dotfill`) — relativized to `width:100%` instead of a frozen 345pt that overflowed the
+  algorithm. Leader-content discriminator in `tex_box.rs`; text/fixed-width boxes untouched
+  (fancyvrb 345pt parity preserved). Surpass OXIDIZED_DESIGN #152, witness 1510.02728
+  ("Modified ellipsoid method" separators); guard `cluster_hbox_to_hsize_leader_fills_width`.
+- **Repeated frontmatter no longer duplicates** — replaceable tags (title/abstract/…) keep
+  one entry, creators still accumulate (`REPLACEABLE_FRONTMATTER_TAGS`, forward-port of
+  upstream `%ReplaceableFrontmatterTags`). Surpass OXIDIZED_DESIGN #154, witnesses 2002.09766
+  (appendix `\icmltitle`), 2511.21969 (nested `{abstract}`); guard
+  `cluster_frontmatter_replaceable_dedup`.
+- **wrapfigure/minted overlap** (2605.03143) — CSS only: a float-scoped min-width override
+  stops the wrapfig flex cell forcing the code box over the body text (ar5iv.css).
+- **`\For`/`\While`/`\If` bodies written with `\\` now indent under the `|`** — the algorithm
+  line-break binding was clobbered by the float setup's tabular guard (`\\`→`\lx@newline`); we
+  re-assert `\\`→`\lx@algo@par` after `before_float`. Surpass (SHARED, KNOWN_PERL_ERRORS #109),
+  witness 2002.09766 Algorithm 1; guard `cluster_algorithm2e_for_body_indentation`.
+- **Multiple full-line `\hbox to \hsize` separators stack** (follow-up to #152) — two width:100%
+  leader boxes flanking a centered label overflowed a `nowrap` listingline (>200%); the fill-line
+  box is now marked `ltx_leaderfill` and set `display:block` (engine + both stylesheets), so each
+  separator owns its line. Witness 1510.02728.
+
 ## Open follow-ups
 
 All are **SHARED** with Perl (Perl does not achieve them either) — each a surpass, not
 a regression.
 
-1. **`\Comment*[r]` inline-right comment position.** The statement is numbered (the
-   hard part); the comment still falls to its own line because the side-comment path
-   emits `\@endalgocfline\ ` (raw sty L2073, non-alt r/l branch) and our
-   `\@endalgocfline` BREAKS (needed for `\lIf`/`\lElse`, which call it directly). To
-   keep the comment inline the statement-terminator must be non-breaking ONLY in the
-   side-comment path — but that path is inside `\SetKwComment`'s generated
-   `\algocf@<c>@star` macro, not cleanly interceptable, and `altsidecomment` is also
-   false for `\lIf`/`\lElse` so it cannot gate `\@endalgocfline`. Options: re-implement
-   `\SetKwComment` in the binding to use `\algocf@endline` (raw `;`, non-breaking) +
-   let `\algocf@scpar`'s `\par` do the break; OR a distinct `\if@lx@algo@sidecomment`
-   flag set by overriding a side-comment-only presentation hook. Intricate.
-2. **AlgoLine counter over-steps** so a `\ref`/`\lnl` to a line reads high (e.g. a
+1. **AlgoLine counter over-steps** so a `\ref`/`\lnl` to a line reads high (e.g. a
    `\Comment*[r]` example pre-renumber = 2,3,4,5,7). `renumber_algo_lines` fixes the
    VISIBLE tags to `1..N` but not the counter. The extra `\nl` fires come from
    NON-content hmode entries — the `[H]` float placement at the start, and box/glue
@@ -68,29 +103,17 @@ a regression.
    line. Fix needs firing `\everypar` only for GENUINE paragraph content
    (letter/other/math), not box/glue placement — a trigger-catcode gate in
    `enter_horizontal`/`fire_everypar`, done carefully so it does not break legitimate
-   cases. Until then `renumber` stays and `\ref`-to-line is the residual.
-3. **Ruled caption-at-top.** `[ruled]`/`[boxruled]` place the caption at the TOP
-   inside the top rule; we emit it at the bottom (standard float caption). A separate
-   DOM/caption-position change. Check whether Perl shares this first (it does).
-4. **Side-by-side algorithm minipages** (witness arXiv 2402.19043, html_feedback
-   #2282). Two `\noindent\begin{minipage}{0.48\textwidth}…\hfill…\begin{minipage}`
-   blocks following intro text with NO blank line become `inline-logical-block`
-   minipages INSIDE the preceding `<p>`, flowing inline with the paragraph text
-   instead of a block-level side-by-side row. **Perl emits byte-identical core XML** —
-   this is a CSS/HTML layout-fidelity concern (inline-block minipage flow after text),
-   NOT a core-XML divergence, and improving it is a non-trivial shared-layout surpass
-   touching general minipage rendering.
-5. **algorithm2e line-number font is not uniform** (Rust-only). The pdflatex golden
-   renders every line number in one `\NlSty` = `\textnormal{\textbf{…}}` upright-bold
-   style; ours makes a number bold only when its line leads with a bold algorithm2e
-   keyword (`\For`/`\If`/`\While`… via `\KwSty`), plain otherwise — the number inherits
-   the ambient font. Side-effect of the §4 content-start `\everypar` numbering (Perl
-   emits the number at end-of-line = neutral font → uniform). Entangled with the
-   counter over-step above and the real number-emission path (the tag does NOT flow
-   through the binding's `\algocf@printnl` — verified by probe), so a correct fix needs
-   that path mapped. RED/GREEN guard (currently `#[ignore]`d):
-   `06_cluster_regressions::cluster_algorithm2e_uniform_line_number_font`. Group with the
-   counter over-step for the 0.7.7 everypar-timing pass.
+   cases. **HIGH risk** (same `fire_everypar` seam as the numbering surpass + KwInOut
+   unnumbered + `\Comment*[r]` numbered); deferred to its own pass. Until then
+   `renumber` stays and `\ref`-to-line is the residual.
+2. **algpseudocodex `\Comment`/`\Statex` binding** — there is no binding
+   (`algpseudocode_sty.rs` is a stub for the algorithmicx variant; algpseudocodex — the
+   distinct newer package — raw-loads), so `\Comment` runs the package's raw box TeX (a
+   ~319pt `\parbox` minipage + a full-width `\rlap` rule), giving inter-line `<p>` gaps
+   and the `◁` end-marker on its own line. The CSS above only mitigates the scrollbar;
+   the cure is a new `algpseudocodex_sty.rs` emitting a semantic right-aligned inline
+   comment that shares the statement line. Substantial new binding; deferred. Witness
+   arXiv 2511.21969 Alg 1/2.
 
 **FIXED this pass (were open items):**
 - Raw-loaded `algpseudocodex` emitted spurious empty `<equation/>` blocks (2 per

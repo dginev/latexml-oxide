@@ -1,0 +1,16 @@
+\documentclass{article}
+% A `.bbl` (ACM-Reference-Format etc.) puts a PREAMBLE block — macro definitions,
+% a blank line — between \begin{thebibliography} and the first \bibitem. The blank
+% line makes \par@in@bibliography auto-open a keyless PHANTOM \bibitem for that
+% preamble, rendering as a spurious empty "(1)" entry before the real references.
+% SHARED with Perl (both emit it); we surpass. Witness arXiv 2605.03143.
+\begin{document}
+See~\cite{A} and~\cite{B}.
+\begin{thebibliography}{2}
+
+\providecommand\bibinfo[2]{#2}
+
+\bibitem{A}\bibinfo{title}{First Reference}.
+\bibitem{B}\bibinfo{title}{Second Reference}.
+\end{thebibliography}
+\end{document}

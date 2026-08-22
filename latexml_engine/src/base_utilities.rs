@@ -26,6 +26,25 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:classification",
   "ltx:acknowledgements",
 ];
+
+/// Frontmatter tags that are "replaceable" — only one per document; a later entry
+/// replaces the earlier ones instead of stacking. Ported from a later upstream
+/// LaTeXML (`Base_Utility.pool.ltxml` `%ReplaceableFrontmatterTags` +
+/// `\@add@frontmatter@now`), which the vendored copy predates — the vendored
+/// `\lx@add@frontmatter@{now,until}` push unconditionally, so a title/abstract emitted
+/// twice keeps BOTH, producing duplicated frontmatter. Surpass over the vendored Perl
+/// (a forward-port of the upstream fix). OXIDIZED_DESIGN #154. Witnesses: arXiv
+/// 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-adds `ltx:title`), 2511.21969
+/// (nested `{abstract}` env). Creators/notes are deliberately NOT here — multi-author
+/// frontmatter must accumulate.
+const REPLACEABLE_FRONTMATTER_TAGS: &[&str] = &[
+  "ltx:title",
+  "ltx:toctitle",
+  "ltx:subtitle",
+  "ltx:date",
+  "ltx:abstract",
+  "ltx:keywords",
+];
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -399,6 +418,13 @@ LoadDefinitions!({
     };
     DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
+    // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
+    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
+    // (the vendored copy pushes unconditionally → duplicate <title> when a document
+    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
@@ -446,6 +472,15 @@ LoadDefinitions!({
       attr: options,
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
+    // Replaceable tags (abstract/keywords) keep only one entry — but ONLY dedup when no
+    // same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
+    // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
+    // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
+      && !frontmatter_has_open_placekeeper(&tag)
+    {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
@@ -891,16 +926,28 @@ LoadDefinitions!({
       }
       Ok(Tokens::new(calls))
     } else {
-      // Unchanged: the parity-faithful role=thanks contact, exactly as the
-      // former template `\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}`.
-      let mut opts = mouth::tokenize_internal("role=thanks").unlist();
+      // SURPASS over Perl (OXIDIZED_DESIGN #156): render an author-attached `\thanks`
+      // as a MARKED note (a superscript mark on the author name + margin/footnote
+      // content) instead of a `role=thanks` CONTACT that reads inline like an
+      // affiliation next to the name. Route to `<ltx:note role="thanks">` so the
+      // existing `ltx:note` footnote template (mark + `ltx_note_outer`/`ltx_note_content`)
+      // renders it, and attach semantic CSS hooks so a theme can style each kind of
+      // thanks content: `ltx_note_frontmatter` (the ar5iv frontmatter-note hook) plus a
+      // best-effort content-kind class `ltx_thanks_<kind>` from `classify_thanks`. Perl
+      // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
+      // (correspondence), 1510.02728 (funding).
+      let kind = classify_thanks(content.clone().untex_string().as_ref());
+      let mut opts = mouth::tokenize_internal(TeXString::assembled(s!(
+        "role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
+      )))
+      .unlist();
       if let Some(a) = &attr {
         opts.push(T_OTHER!(","));
         opts.extend(a.unlist_ref().iter().copied());
       }
       Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
         vec![Some(mouth::tokenize_internal("ltx:creator")),
-             Some(mouth::tokenize_internal("ltx:contact")),
+             Some(mouth::tokenize_internal("ltx:note")),
              Some(Tokens::new(opts)), Some(content)]))
     }
   });
@@ -2147,6 +2194,40 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
   })
 }
 
+/// Empty `frontmatter{tag}` in place (Perl: `$$frontmatter{$tag} = []`), so a later
+/// `REPLACEABLE_FRONTMATTER_TAGS` entry replaces the earlier ones. No-op if the tag
+/// has no entries yet. OXIDIZED_DESIGN #154.
+fn frontmatter_clear(tag: &str) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut(tag)
+    {
+      list.clear();
+    }
+  });
+}
+
+/// True if `frontmatter{tag}` holds an entry still awaiting its content (a lone
+/// `PlaceKeeper`). Used by the `\lx@add@frontmatter@until` dedup to detect
+/// re-entrancy: a same-tag `@until` nested inside another's `digest_next_body` (e.g.
+/// a malformed `\begin{abstract}\begin{abstract}…`) would otherwise clear the parent's
+/// still-open entry and later have the parent overwrite the child's content. When a
+/// parent is in progress we skip the clear (leaving both entries, as before the fix)
+/// rather than corrupt state. OXIDIZED_DESIGN #154.
+fn frontmatter_has_open_placekeeper(tag: &str) -> bool {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get(tag)
+    {
+      list
+        .iter()
+        .any(|e| matches!(e.content.as_slice(), [TagContent::PlaceKeeper]))
+    } else {
+      false
+    }
+  })
+}
+
 /// Replace the first content item (the 'place_keeper') of the entry at
 /// (tag, index). Perl: `$$entry[2] = ...` on the held entry ref.
 fn frontmatter_set_first_content(tag: &str, index: usize, content: TagContent) {
@@ -2625,34 +2706,43 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// contactless empties are dropped; a contact-bearing empty's contacts move to the
 /// preceding real author. `\footnotemark`-note markers keep a personname non-empty
 /// (2507.06670 "Yu Zhang"), so real authors are untouched.
+///
+/// Moves BOTH `<ltx:contact>` and `<ltx:note>` annotations: an author `\thanks` is a
+/// marked `<ltx:note role="thanks">` (OXIDIZED_DESIGN #156), so a trailing `\thanks` on
+/// a nameless comma-split creator would otherwise be dropped with the empty creator —
+/// witness 1510.02728 (`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%
+/// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did.
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator[@role='author']", None);
   let mut to_remove: Vec<Node> = Vec::new();
   let mut last_real: Option<Node> = None;
-  // Contacts of leading empties (before any real author) held until the first real one.
-  let mut orphan_contacts: Vec<Node> = Vec::new();
+  // Annotations (contacts + notes) of leading empties (before any real author), held
+  // until the first real one.
+  let mut orphan_annotations: Vec<Node> = Vec::new();
   for creator in creators {
     if creator_personname_empty(document, &creator) {
-      let contacts: Vec<Node> = creator
+      let annotations: Vec<Node> = creator
         .get_child_nodes()
         .into_iter()
         .filter(|c| {
           c.get_type() == Some(NodeType::ElementNode)
-            && with(document::get_node_qname(c), |q| q == "ltx:contact")
+            && with(document::get_node_qname(c), |q| {
+              q == "ltx:contact" || q == "ltx:note"
+            })
         })
         .collect();
       if let Some(ref mut prev) = last_real {
-        if !contacts.is_empty() {
-          document.append_clone(prev, contacts)?;
+        if !annotations.is_empty() {
+          document.append_clone(prev, annotations)?;
         }
       } else {
-        orphan_contacts.extend(contacts);
+        orphan_annotations.extend(annotations);
       }
       to_remove.push(creator);
     } else {
-      if !orphan_contacts.is_empty() {
+      if !orphan_annotations.is_empty() {
         let mut first = creator.clone();
-        document.append_clone(&mut first, std::mem::take(&mut orphan_contacts))?;
+        document.append_clone(&mut first, std::mem::take(&mut orphan_annotations))?;
       }
       last_real = Some(creator);
     }
@@ -4707,6 +4797,36 @@ fn keepsup(sym: Vec<Token>) -> Vec<Token> {
   v.extend(sym);
   v.push(T_END!());
   v
+}
+
+/// Best-effort content-kind classifier for a creator-scope `\thanks`, used ONLY to
+/// attach a semantic `ltx_thanks_<kind>` CSS hook (OXIDIZED_DESIGN #156) — it never
+/// affects core semantics. Keyword-matched over the flattened, lowercased note text.
+/// Order matters: correspondence and equal-contribution are checked before funding
+/// (a "supported by …" note is funding; "contributed equally" is contribution).
+/// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
+/// 2506.06941 "Equal contribution" (contribution). Explicitly best-effort.
+fn classify_thanks(text: &str) -> &'static str {
+  let t = text.to_lowercase();
+  if t.contains("correspond") {
+    "correspondence"
+  } else if t.contains("equal") && t.contains("contribut") {
+    "contribution"
+  } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
+    "address"
+  } else if t.contains("support")
+    || t.contains("grant")
+    || t.contains("fund")
+    || t.contains("nsf")
+    || t.contains("nih")
+    || t.contains("onr")
+    || t.contains("darpa")
+    || t.contains("erc")
+  {
+    "funding"
+  } else {
+    "note"
+  }
 }
 
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark

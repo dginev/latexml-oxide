@@ -5776,3 +5776,185 @@ LaTeXML already renders correctly; no positional information was being honoured 
 
 **Upstream**: to be filed at brucemiller/LaTeXML (raw `\tabto`'s `$$` measurement hack
 emits an empty equation and breaks the line; a `\hfill` approximation renders correctly).
+
+### 152. `\hbox to \hsize{…leader fill…}` emits `width="100%"`, not a frozen pt value
+
+**Background.** A leader-fill separator — `\hbox to \hsize{\dashfill\hfil}` (where
+`\dashfill`=`\cleaders\hbox{-~-}\hfill`), or `\hrulefill`/`\dotfill` — sizes a box to
+the current line/column width and fills it with a repeating rule. pdflatex confines it
+to the column.
+
+**Perl behavior**: SHARED failure. LaTeXML's `\hbox` constructor derives an ABSOLUTE
+pt `width` from the `to` spec (`TeX_Box.pool.ltxml`, `width => $props{width}`). Since the
+generic article `\textwidth` defaults to `345pt` and two-column class widths aren't
+modeled, `\hsize`=`345pt`, so the box freezes at `width="345.0pt"` — wider than a
+narrower container (e.g. an algorithm), where it OVERFLOWS. Same-host Perl emits the
+identical frozen pt and renders equally too-wide.
+
+**Rust behavior**: when a `\hbox to <line-register>` (`\hsize`/`\linewidth`/
+`\columnwidth`/`\textwidth`) has a body that is a horizontal LEADER FILL (the `\leaders`
+whatsit is marked `hfill_leader`; `tex_box.rs`), the constructor emits a RELATIVE
+`width="100%"` so the box fills its HTML container — matching the pdflatex golden in any
+context. The resolved value is compared against the CURRENT register value, so a
+`\hbox to \hsize` inside a narrowed parbox relativizes to that parbox too. A genuine
+fixed `\hbox to 100pt`, and any non-leader body (crucially fancyvrb's `\hbox to
+\linewidth{…text…}` verbatim lines, whose `345pt` is deliberate Perl parity —
+`wisdom_fancyvrb_linewidth_box_parity`), are UNCHANGED.
+
+**Why it's safe.** The leader-fill discriminator scopes the change to boxes whose whole
+purpose is to span the line; text-bearing full-width boxes keep their pt width.
+
+**Follow-up (stacking).** width:100% alone is not enough when TWO full-line separators flank a
+centered label on ONE `nowrap` listingline (1510.02728's "Modified ellipsoid method" block, inside
+`\begin{algorithm}`): as inline-blocks they lay side-by-side and sum to >200% width, overflowing the
+listing. The fill-line box is therefore ALSO marked `class="ltx_leaderfill"` (`tex_box.rs`, on the
+same `fill_line` gate), and both stylesheets set `.ltx_inline-block.ltx_leaderfill { display:block; }`
+so each separator owns its line and they stack like the pdflatex golden. fancyvrb/`\hbox to 100pt`
+still untouched (not fill-line).
+
+**Witnesses**: arXiv 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid
+method" separators, 3 per algorithm; two flank the centered label). Guard
+`cluster_hbox_to_hsize_leader_fills_width` (asserts `width="100%"` + `class="ltx_leaderfill"`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (a `\hbox to \hsize` leader fill should
+be a fluid full-width box, not a frozen pt value that overflows narrower containers).
+
+### 153. algorithm2e ruled family draws the caption at the TOP of the frame
+
+**Background.** algorithm2e's `ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`
+styles put the caption at the top of the frame: the real sty sets
+`\@algocf@capt@ruled`=`top` (L2530) / `\@algocf@capt@boxruled`=`above` (L2540), and
+`\algocf@makethealgo` lays the caption out before the body. pdflatex renders it there.
+
+**Perl behavior**: SHARED failure. LaTeXML emits the float caption in standard order
+(last child = bottom), so the ruled caption renders at the BOTTOM. Same-host Perl does
+the same.
+
+**Rust behavior**: for the ruled family, `after_construct` DOM-moves `<ltx:caption>` /
+`<ltx:toccaption>` before the body (`float_sty::reposition_caption_top`, gated by a
+`caption_pos="top"` property set from the resolved `\algocf@style`). DOM order drives the
+XSLT render position, so the caption renders at the top. `plain`/`boxed` keep the caption
+at the bottom (no reposition). The float content model
+(`LaTeXML-para.rnc:196`, an order-free choice) stays schema-valid.
+
+**Why it's safe.** Pure post-construction reorder of two elements for one style family;
+`plain`/`boxed` are untouched, and a guard asserts the plain case does not reorder.
+
+**Witnesses**: any `\RestyleAlgo{ruled}` algorithm. Guard
+`cluster_algorithm2e_ruled_caption_at_top` (+ re-blessed `algorithm2e_{frames,
+linenumbers}.xml`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (ruled-family algorithm captions should
+render at the top of the frame, per algorithm2e's `\@algocf@capt@ruled`).
+
+### 154. Replaceable frontmatter tags keep only one entry (forward-port of upstream dedup)
+
+**Background.** Some frontmatter tags are "replaceable" — only one per document: a later
+`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords` should REPLACE the earlier,
+not stack. Later upstream LaTeXML added `%ReplaceableFrontmatterTags` +
+`\@add@frontmatter@now` (`Base_Utility.pool.ltxml`), which empties `$$frontmatter{$tag}`
+before pushing a replaceable entry.
+
+**Perl behavior**: the VENDORED Perl (our ground truth) PREDATES that fix — its
+`\lx@add@frontmatter@{now,until}` push unconditionally, so a document that re-adds a
+replaceable tag keeps BOTH entries and emits DUPLICATE frontmatter (two `<title>`, two
+`<abstract>`). Newer upstream Perl does NOT.
+
+**Rust behavior**: `base_utilities.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
+`frontmatter{tag}` before the push in `\lx@add@frontmatter@now` (and `@until`, guarded
+against same-tag re-entrancy so a nested/malformed `{abstract}` is not corrupted).
+Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-author
+frontmatter is preserved). A forward-port of the upstream fix; a surpass over the
+vendored Perl.
+
+**Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
+creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
+re-entrancy guard leaves the malformed-nesting case exactly as before.
+
+**Witnesses**: arXiv 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-added
+`ltx:title` → duplicate title + duplicated author block), 2511.21969 (nested
+`{abstract}` env). Guard `cluster_frontmatter_replaceable_dedup`.
+
+**Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
+it into the vendored engine.
+
+### 155. A `.bbl` preamble no longer emits a phantom empty `(N)` bibliography entry
+
+**Background.** An ACM-Reference-Format-style `.bbl` (and others) places a preamble —
+`\providecommand`/`\newcommand` macro definitions and a blank line — between
+`\begin{thebibliography}` and the first `\bibitem`. The blank line is a `\par`; inside a
+bibliography that is `\par@in@bibliography`, which (when the next token is not
+`\par`/`\bibitem`) opens a keyless `\lx@bibitem` for the preamble content.
+
+**Perl behavior**: SHARED failure. The keyless phantom `\lx@bibitem` renders as a spurious
+empty first entry — `<ltx:bibitem xml:id="bib.bib1">` with a `(1)` refnum tag and a
+whitespace-only `<ltx:bibblock>` — pushing the real references to `bib.bib2…`. Both engines
+carry a digest-time prune (Perl #2409 / `latex_constructs` `\lx@bibitem` afterDigest) meant
+to catch exactly this, but it only inspects the IMMEDIATELY-previous box; the preamble
+whitespace boxes displace the phantom from that check, so it survives. Same-host Perl emits
+the identical phantom (verified byte-identical on arXiv 2605.03143).
+
+**Rust behavior**: a `Tag!("ltx:bibitem", after_close_late)` scrub (`latex_constructs.rs`)
+removes any bibitem that has no non-empty `key` attribute AND whose `<ltx:bibblock>`s are all
+whitespace — i.e. the auto-opened phantom. A real `\bibitem` always carries a key, so real
+entries are never touched. A surpass over the shared Perl failure.
+
+**Why it's safe.** The discriminator (no `key` + whitespace-only bibblocks) matches only the
+auto-opened phantom; a citeable reference always has a key and real bibblock text. The real
+entries keep their `xml:id`s and keys (cross-references key on the key, not the id).
+
+**Witnesses**: arXiv 2605.03143 (ACM-Reference-Format `.bbl`, empty `(1)` before 23 real
+entries). Guard `cluster_bib_preamble_no_phantom_entry`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (the `.bbl`-preamble phantom bibitem should
+be pruned; the existing digest-time guard misses it when whitespace intervenes).
+
+### 156. Author-attached `\thanks` is a marked note with semantic class hooks, not an inline contact
+
+**Background.** In real arXiv author blocks, `\author{Name\thanks{…}}` carries a small set of
+distinct content kinds — correspondence ("Correspondence to X ⟨email⟩"), funding ("supported by
+NSF grant…"), equal-contribution ("contributed equally"), present-address ("now at…"),
+prior-publication/venue, and generic acknowledgement. pdflatex renders `\thanks` as a footnote:
+a superscript mark on the author name + the content at the page bottom.
+
+**Perl behavior**: SHARED readability gap. Creator-scope `\thanks` becomes
+`<ltx:contact role="thanks">` (`Base_Utility.pool.ltxml` `\lx@add@thanks` →
+`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks]`), which the shared HTML XSLT
+renders INLINE next to the author — structurally identical to an affiliation, with no mark. Same
+in Rust before this change. (Title-scope `\thanks` already becomes a marked note/pubnote; only
+creator-scope was the inline contact.)
+
+**Rust behavior**: creator-scope `\thanks` routes to `<ltx:note role="thanks"
+class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_utilities.rs`
+`\lx@add@thanks` else-branch). It reuses the existing `ltx:note` footnote template (a superscript
+`ltx_note_mark` on the author + `ltx_note_outer`/`ltx_note_content`), so a theme can place it as a
+margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
+`correspondence` / `funding` / `contribution` / `address` / `note`. The class hooks
+(`ltx_note_frontmatter`, `ltx_role_thanks`, `ltx_thanks_<kind>`) let theme designers style each
+kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
+(`LaTeXML.model` + `LaTeXML-structure.rng`/`.rnc`) — else `open_element` auto-closes the creator
+and the note detaches; and an XSLT addition rendering the creator's `ltx:note` child as a
+name-sibling (`LaTeXML-structure-xhtml.xsl`). A surpass over the shared inline-contact behavior.
+
+**Why it's safe.** The classifier only picks a CSS hook, never core semantics. The note attaches
+to the same creator the contact did (verified: note is inside `<creator>`); title-scope
+`\thanks` (a pubnote) and affiliation contacts are untouched. Only golden change:
+`tests/structure/authors.xml` (contact → note). The `frontmatter_ieee_membership_no_phantom`,
+`frontmatter_thanks_literal_mark_mix`, and `author_block_thanks_collapses_in_title_not_inline`
+tests are element-agnostic and unchanged.
+
+**Coalesce edge case.** `coalesce_empty_creators` (which drops nameless comma-split creators and
+moves their annotations to the last real author) special-cased `ltx:contact`; it was extended to
+move `ltx:note` too, so a trailing `\thanks` on a nameless creator — 1510.02728's
+`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%\thanks{…NSF…}}`, where the
+membership pieces digest to empty and the `\thanks` strands on a phantom creator — is not dropped
+with that creator (it lands on Vosoughi, as the contact did). Regression guard
+`cluster_author_thanks_note_survives_empty_creator`.
+
+**Witnesses**: arXiv 2512.24601 (`\thanks{Correspondence to …}` → `ltx_thanks_correspondence`),
+1510.02728 (`\thanks{…supported by NSF…}` → `ltx_thanks_funding`). Guards `authors_test` and
+`cluster_author_thanks_marked_note`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (author-attached `\thanks` should render as a
+marked footnote, not an inline affiliation-like contact; the content-kind class hooks are a
+theme-facing extension).

@@ -679,6 +679,15 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
+      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156): an author-attached \thanks is a
+           marked <ltx:note> child of the creator. Render it as a name-sibling (like the
+           orcid badge) so the existing ltx:note footnote template puts a superscript mark
+           on the author and the content in a margin/footnote. Content-kind class hooks
+           (ltx_thanks_*) ride on the note's @class. author_notes below selects only
+           ltx:contact, so there is no double-render. -->
+      <xsl:apply-templates select="ltx:note">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
       <xsl:if test="ltx:contact[not(@role='orcid')]">
         <xsl:call-template name="author_notes">
           <xsl:with-param name="context" select="$innercontext"/>

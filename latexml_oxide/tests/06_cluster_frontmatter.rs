@@ -770,6 +770,113 @@ fn frontmatter_ieee_authorblock() {
     x.matches("<personname>").count()
   );
 }
+
+/// A trailing `\thanks` after a comma-split IEEEtran author list strands its marked
+/// `<ltx:note role="thanks">` on a nameless creator; `coalesce_empty_creators` must MOVE
+/// the note to the last real author (as it does for contacts) so the content is not
+/// dropped. Regression guard for OXIDIZED_DESIGN #156. Witness arXiv 1510.02728.
+#[test]
+fn cluster_author_thanks_note_survives_empty_creator() {
+  let x = convert_to_xml("tests/cluster_regressions/author_thanks_trailing_coalesce.tex");
+  assert!(
+    x.contains("supported by NSF"),
+    "the trailing \\thanks content was dropped with the coalesced empty creator:\n{x}"
+  );
+  // The note lands on the last real author (Vosoughi), not a nameless creator.
+  let vosoughi_has_note = x.split("<creator").skip(1).any(|seg| {
+    let block = seg.split("</creator>").next().unwrap_or("");
+    block.contains("Vosoughi")
+      && block.contains("ltx_thanks_funding")
+      && block.contains("role=\"thanks\"")
+  });
+  assert!(
+    vosoughi_has_note,
+    "the \\thanks note did not move to the last real creator:\n{x}"
+  );
+  // No nameless creator survives.
+  assert!(
+    !x.contains("<personname/>") && !x.contains("<personname></personname>"),
+    "a nameless creator survived coalesce:\n{x}"
+  );
+}
+
+/// An author-attached `\thanks` becomes a MARKED `<ltx:note role="thanks">` (not an
+/// inline `<ltx:contact role="thanks">`), carrying semantic class hooks so a theme can
+/// style each content kind. Surpass, OXIDIZED_DESIGN #156. Witnesses arXiv 2512.24601
+/// (correspondence), 1510.02728 (funding).
+#[test]
+fn cluster_author_thanks_marked_note() {
+  let x = convert_to_xml("tests/cluster_regressions/author_thanks_marked_note.tex");
+  // No author-scope thanks CONTACT survives — every thanks is a <note> now.
+  let thanks_contacts = x
+    .split("<contact")
+    .skip(1)
+    .filter(|seg| {
+      seg
+        .split('>')
+        .next()
+        .unwrap_or("")
+        .contains(r#"role="thanks""#)
+    })
+    .count();
+  assert_eq!(
+    thanks_contacts, 0,
+    "an author \\thanks is still an inline role=thanks contact:\n{x}"
+  );
+  // Each \thanks is a <note role="thanks"> with the right content-kind class hook.
+  for (needle, kind) in [
+    ("Correspondence to", "ltx_thanks_correspondence"),
+    ("supported by NSF", "ltx_thanks_funding"),
+    ("contributed equally", "ltx_thanks_contribution"),
+    ("Now at Acme", "ltx_thanks_address"),
+    ("Warm thanks", "ltx_thanks_note"),
+  ] {
+    // find the note element carrying this text, assert it is a role=thanks note with the class.
+    let has = x.split("<note").skip(1).any(|seg| {
+      let block = seg.split("</note>").next().unwrap_or("");
+      block.contains(needle) && block.contains("role=\"thanks\"") && block.contains(kind)
+    });
+    assert!(
+      has,
+      "\\thanks {needle:?} not a role=thanks <note> classed {kind}:\n{x}"
+    );
+  }
+  // The mark-bearing notes live inside creators (not detached).
+  assert!(
+    x.matches("<note class=\"ltx_note_frontmatter").count() == 5,
+    "expected 5 frontmatter thanks notes:\n{x}"
+  );
+}
+
+/// IEEEtran `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}`: a bare
+/// email trailing after `\IEEEauthorblockA` must attach to the creator (as an
+/// affiliation), NOT leak into the document body as the first `<p>`. GENUINE-RUST-ONLY
+/// (Perl bundles the whole `\author` arg into `<personname>`, so it never leaks).
+/// Fixed by `wrap_bare_author_block_text` in `ieeetran_cls.rs`. Witness arXiv 1901.07768.
+#[test]
+fn frontmatter_ieee_authorblock_trailing_email() {
+  let x =
+    convert_to_xml("tests/cluster_regressions/frontmatter_ieee_authorblock_trailing_email.tex");
+  // The leak symptom: the email opened the document body as its first paragraph.
+  assert!(
+    !x.contains("<p>{anuja") && !x.contains("<p>\n{anuja"),
+    "trailing bare email leaked into the document body as a <p>:\n{x}"
+  );
+  // The email must instead live inside the creator's frontmatter (an affiliation).
+  assert!(
+    creator_block_contains(
+      &x,
+      "Anuja Meetoo Appavoo, Seth Gilbert, and Kian-Lee Tan",
+      "@comp.nus.edu.sg"
+    ),
+    "trailing email is not attached to the creator's frontmatter:\n{x}"
+  );
+  // The genuine body paragraph is still present and correct.
+  assert!(
+    x.contains("Body paragraph here."),
+    "body paragraph missing:\n{x}"
+  );
+}
 /// IEEEtran `\IEEEmembership{Senior Member, IEEE}` inside a flat comma author
 /// list must not become a phantom "Senior Member, IEEE" creator. Witness
 /// 2508.00603 (html_feedback#4539: reader saw a stray "," between authors). The

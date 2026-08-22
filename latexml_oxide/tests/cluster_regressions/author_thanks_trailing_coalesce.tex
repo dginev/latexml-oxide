@@ -1,0 +1,12 @@
+\documentclass[journal]{IEEEtran}
+% A trailing \thanks after a comma-split author list (with \IEEEmembership pieces that
+% digest to empty) strands the note on a nameless creator; coalesce_empty_creators must
+% MOVE the marked <note role="thanks"> (OXIDIZED_DESIGN #156) to the last real author, as
+% it already does for contacts — else the \thanks content is dropped. Witness 1510.02728.
+\begin{document}
+\author{Alireza~Sani,~\IEEEmembership{Student Member,~IEEE,}
+        Azadeh~Vosoughi,~\IEEEmembership{Senior Member,~IEEE,}%
+\thanks{This research is supported by NSF under grants CCF-1336123.}%
+}
+\title{T}\maketitle
+\end{document}

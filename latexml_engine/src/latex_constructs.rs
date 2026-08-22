@@ -8909,6 +8909,30 @@ LoadDefinitions!({
     }
   );
 
+  // Prune a phantom keyless bibitem auto-opened for `.bbl` PREAMBLE content — the macro
+  // definitions / blank line an ACM-Reference-Format-style `.bbl` places between
+  // `\begin{thebibliography}` and the first `\bibitem`. The blank line makes
+  // `\par@in@bibliography` open a keyless `\lx@bibitem` for that preamble, rendering as a
+  // spurious empty "(N)" entry before the real references. The digest-time prune in the
+  // `\lx@bibitem` afterDigest only inspects the IMMEDIATELY-previous box, which the
+  // preamble whitespace displaces, so it misses this one — scrub it here after
+  // construction instead. A real `\bibitem` always carries a key; a keyless bibitem whose
+  // `<bibblock>`s are all whitespace is the phantom. SHARED with Perl (both engines emit
+  // it) — a surpass. Witness arXiv 2605.03143. OXIDIZED_DESIGN #155.
+  Tag!("ltx:bibitem", after_close_late => sub[document, node] {
+    let has_key = node.get_attribute("key").is_some_and(|k| !k.trim().is_empty());
+    if !has_key {
+      let blank = node
+        .get_child_elements()
+        .iter()
+        .filter(|c| document::get_node_qname(c) == pin!("ltx:bibblock"))
+        .all(|bb| bb.get_content().trim().is_empty());
+      if blank {
+        document.remove_node(node.clone());
+      }
+    }
+  });
+
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
   // We try to close the list and open the bibliography
   DefMacro!("\\lx@mung@bibliography{}", sub[(env)] {

@@ -1634,20 +1634,18 @@ fn cleveref_explicit_crefname_overrides_heading() {
   );
 }
 
-/// RED/GREEN guard (ignored — SCHEDULED): algorithm2e line numbers must render in
-/// one uniform style, matching the pdflatex golden where every number is
-/// `\NlSty` = `\textnormal{\textbf{…}}` (upright bold). Currently a number instead
-/// inherits the ambient font — bold on a line whose leading algorithm2e keyword
-/// (`\For`/`\If`/`\While`…) has switched to `\KwSty` bold, plain otherwise — so the
-/// gutter numbers come out inconsistent. This is a Rust-only side-effect of the §4
-/// content-start `\everypar` numbering (Perl emits the number at end-of-line, where
-/// the font is neutral, so its numbers are uniformly bold); it is entangled with the
-/// §4(3) counter over-step and the real number-emission path (the tag does NOT flow
-/// through the binding's `\algocf@printnl` — verified by probe), so a correct fix
-/// needs that path mapped. Scheduled for 0.7.7 — see
-/// `docs/parity/ALGORITHM_RENDERING.md`. Remove `#[ignore]` when fixed.
+/// GREEN guard: algorithm2e line numbers must render in one uniform style, matching
+/// the pdflatex golden where every number is `\NlSty` = `\textnormal{\textbf{…}}`
+/// (upright bold). Previously a number inherited the ambient font — bold on a line
+/// whose leading algorithm2e keyword (`\For`/`\If`/`\While`…) had switched to `\KwSty`
+/// bold, plain otherwise — because our §4 content-start `\everypar` numbering fires
+/// `\nl` while the keyword bold is active (Perl emits at end-of-line, font neutral).
+/// FIXED by restoring the real-sty `\NlSty` wrap in `\algocf@printnl`
+/// (`algorithm2e_sty.rs`): the number now flows through `\NlSty{\theAlgoLine}` whose
+/// `\textnormal` resets shape/series, so every number is uniform bold regardless of
+/// ambient font. (Corrects the earlier probe claim that the tag bypassed
+/// `\algocf@printnl` — it does not.) Independent of the §4(3) counter over-step.
 #[test]
-#[ignore = "scheduled 0.7.7: algorithm2e uniform line-number font (§4(3), ALGORITHM_RENDERING.md)"]
 fn cluster_algorithm2e_uniform_line_number_font() {
   let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_bold_number.tex");
   let listing = {
@@ -1678,6 +1676,201 @@ fn cluster_algorithm2e_uniform_line_number_font() {
   assert!(
     states.iter().all(|&bold| bold),
     "algorithm2e line numbers are not uniformly bold (\\NlSty); per-line font leak — got {states:?}:\n{listing}"
+  );
+}
+
+/// GREEN guard: algorithm2e's ruled family draws the caption at the TOP of the frame
+/// (real algorithm2e.sty `\@algocf@capt@ruled`=`top`, L2530), matching the pdflatex
+/// golden. LaTeXML — and Perl LaTeXML — emit the caption last (bottom); we reposition
+/// it before the body for the ruled family only (surpass, OXIDIZED_DESIGN #153;
+/// `float_sty::reposition_caption_top`). `[plain]` must keep the caption after the body
+/// (guard against over-reordering). Fixture switches styles with `\RestyleAlgo`.
+#[test]
+fn cluster_algorithm2e_ruled_caption_at_top() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_ruled_caption.tex");
+  // Split into the two <float>…</float> blocks (ruled first, plain second).
+  let mut floats: Vec<&str> = Vec::new();
+  let mut rest = xml.as_str();
+  while let Some(s) = rest.find("<float") {
+    let e = rest[s..].find("</float>").expect("unclosed <float>") + s + "</float>".len();
+    floats.push(&rest[s..e]);
+    rest = &rest[e..];
+  }
+  assert_eq!(floats.len(), 2, "expected 2 algorithm floats:\n{xml}");
+  let caption_before_listing = |seg: &str| {
+    let cap = seg.find("<caption").expect("no <caption> in float");
+    let listing = seg.find("<listing").expect("no <listing> in float");
+    cap < listing
+  };
+  assert!(
+    caption_before_listing(floats[0]),
+    "ruled algorithm caption is not at the top (before <listing>):\n{}",
+    floats[0]
+  );
+  assert!(
+    !caption_before_listing(floats[1]),
+    "plain algorithm caption was wrongly moved before <listing>:\n{}",
+    floats[1]
+  );
+}
+
+/// GREEN guard: a `\hbox to \hsize{…}` whose body is a horizontal LEADER FILL
+/// (`\dashfill`/`\hrulefill`/`\dotfill`) is relativized to `width="100%"` so it fills
+/// its HTML container instead of freezing the article's 345pt `\textwidth` default —
+/// which overflows narrower contexts (e.g. an algorithm2e separator). Surpass over
+/// Perl (which emits the same frozen pt); OXIDIZED_DESIGN #152; witness arXiv
+/// 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid method"
+/// separators). A GENUINE fixed-width `\hbox to 100pt{…}` must stay `100.0pt` — the
+/// relativization keys off the leader body, not any full-line-width box (so fancyvrb
+/// verbatim boxes, whose 345pt is Perl parity, are untouched — checked separately).
+#[test]
+fn cluster_hbox_to_hsize_leader_fills_width() {
+  let xml = convert_to_xml("tests/cluster_regressions/hbox_to_hsize_fill.tex");
+  // The leader-fill box carries an inner <text class="ltx_leader">; find its width.
+  let leader_at = xml
+    .find(r#"<text class="ltx_leader""#)
+    .expect("no ltx_leader box in output");
+  let box_open = xml[..leader_at]
+    .rfind("<text")
+    .expect("no enclosing <text> for leader");
+  let leader_box_tag = &xml[box_open..leader_at];
+  assert!(
+    leader_box_tag.contains(r#"width="100%""#),
+    "leader-fill \\hbox to \\hsize should be width:100%, got:\n{leader_box_tag}"
+  );
+  // The fill-line box is also class="ltx_leaderfill" so CSS can stack multiple
+  // full-line separators (display:block) instead of overflowing a nowrap listingline
+  // (1510.02728 "Modified ellipsoid method"; OXIDIZED_DESIGN #152 follow-up).
+  assert!(
+    leader_box_tag.contains(r#"class="ltx_leaderfill""#),
+    "leader-fill box should carry class=\"ltx_leaderfill\", got:\n{leader_box_tag}"
+  );
+  // The genuine fixed-width box must NOT be relativized.
+  assert!(
+    xml.contains(r#"width="100.0pt""#),
+    "fixed-width \\hbox to 100pt was wrongly relativized (no 100.0pt found):\n{xml}"
+  );
+  assert!(
+    !xml.contains(r#"width="345"#),
+    "a full-line box was frozen at 345pt instead of relativized:\n{xml}"
+  );
+}
+
+/// GREEN guard: algorithm2e `\For` body lines separated by `\\` are each indented
+/// under the Vsline `|` rule. `before_float` re-lets `\\`→`\lx@newline` (a
+/// tabular-in-float guard) AFTER algorithm2e's `Let('\\','\lx@algo@par')`, so
+/// `\\`-separated body lines used to degrade to `<break/>` and MERGE into one
+/// un-indented listingline (SHARED with Perl; we re-assert the binding after
+/// before_float — a surpass, KNOWN_PERL_ERRORS #109). Each `\For` body line must
+/// now be its OWN `<listingline>` beginning with the vertical-rule `<rule ...>`, and
+/// the listing must contain NO `<break`. Witness arXiv 2002.09766 Algorithm 1.
+#[test]
+fn cluster_algorithm2e_for_body_indentation() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_for_indent.tex");
+  let listing = {
+    let start = xml
+      .find("<listing")
+      .expect("no <listing> in algorithm output");
+    let end = xml[start..].find("</listing>").expect("unclosed <listing>") + start;
+    &xml[start..end]
+  };
+  // The buggy output merged the 3 `\For` body lines into one listingline joined by
+  // inline <break/>s. Correct output has no <break> in the listing at all.
+  assert!(
+    !listing.contains("<break"),
+    "algorithm2e \\For body lines merged via <break/> instead of separate indented \
+     listinglines:\n{listing}"
+  );
+  // Each of the 3 `\For` body lines is its own listingline starting with the Vsline
+  // `<rule .../>`. Count listinglines whose first element is a <rule>.
+  let indented = listing
+    .split("<listingline")
+    .skip(1)
+    .filter(|seg| {
+      // within this listingline, a <rule appears before any real text token
+      seg
+        .split_once("</listingline>")
+        .map(|(inner, _)| inner.contains("<rule"))
+        .unwrap_or(false)
+    })
+    .count();
+  assert!(
+    indented >= 3,
+    "expected >=3 indented (<rule-led) \\For body listinglines, found {indented}:\n{listing}"
+  );
+}
+
+/// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
+/// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
+/// "(N)" bibitem before the real references. The blank line makes
+/// `\par@in@bibliography` auto-open a phantom `\lx@bibitem`; the digest-time prune
+/// misses it (the preamble whitespace displaces it from the last-box check), so an
+/// after-close scrub drops keyless whitespace-only bibitems. SHARED with Perl (both
+/// emit it) — surpass, OXIDIZED_DESIGN #155. Witness arXiv 2605.03143.
+#[test]
+fn cluster_bib_preamble_no_phantom_entry() {
+  let xml = convert_to_xml("tests/cluster_regressions/bib_preamble_no_phantom.tex");
+  // Every surviving bibitem must carry a key — a keyless one is the auto-opened phantom.
+  let keyless = xml
+    .split("<bibitem")
+    .skip(1)
+    .filter(|seg| {
+      let open_tag = seg.split('>').next().unwrap_or("");
+      !open_tag.contains("key=")
+    })
+    .count();
+  assert_eq!(
+    keyless, 0,
+    "spurious keyless phantom bibitem present:\n{xml}"
+  );
+  // The two real references survive.
+  assert_eq!(
+    xml.matches("<bibitem").count(),
+    2,
+    "expected exactly 2 real bibitems (A, B):\n{xml}"
+  );
+  assert!(
+    xml.contains("First Reference") && xml.contains("Second Reference"),
+    "real references missing:\n{xml}"
+  );
+}
+
+/// GREEN guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords)
+/// keep only ONE entry — a later one REPLACES the earlier — while non-replaceable
+/// creators accumulate. Ports upstream `%ReplaceableFrontmatterTags`
+/// (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`); the vendored Perl pushed
+/// unconditionally, so a re-added title/abstract kept BOTH → duplicated frontmatter.
+/// Surpass over the vendored Perl (forward-port of the upstream fix); OXIDIZED_DESIGN
+/// #154. Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`) and
+/// 2511.21969 (nested `{abstract}` duplicated the abstract heading).
+#[test]
+fn cluster_frontmatter_replaceable_dedup() {
+  let xml = convert_to_xml("tests/cluster_regressions/frontmatter_replaceable_dedup.tex");
+  // Restrict to document-level frontmatter (before the first <section>).
+  let head = xml.split("<section").next().unwrap_or(&xml).to_string();
+  let count = |needle: &str| head.matches(needle).count();
+  assert_eq!(
+    count("<title>"),
+    1,
+    "replaceable <title> not deduplicated:\n{head}"
+  );
+  assert!(
+    head.contains("Second Title"),
+    "the LAST replaceable title should win:\n{head}"
+  );
+  assert!(
+    !head.contains("First Title"),
+    "an earlier replaceable title survived:\n{head}"
+  );
+  assert_eq!(
+    count("<creator"),
+    2,
+    "non-replaceable creators must accumulate:\n{head}"
+  );
+  assert_eq!(
+    count("<abstract"),
+    1,
+    "replaceable <abstract> not deduplicated:\n{head}"
   );
 }
 

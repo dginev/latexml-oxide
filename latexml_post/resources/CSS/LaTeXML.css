@@ -329,8 +329,20 @@ dl.ltx_description dl.ltx_description dd { margin-left:3em; }
     margin: 1ex 3em 1ex 0em;
     overflow-x:auto;
     text-align: left; }
+/* An auto-height listing never overflows vertically, but the CSS Overflow spec
+   promotes overflow-y:visible -> auto whenever overflow-x scrolls, which paints a
+   phantom vertical scrollbar (algorithm2e listings, witness 2002.09766). Pin it
+   hidden. lstlisting is exempt (its framed box may scroll on purpose). Mirrors the
+   ar5iv.css fix. */
+.ltx_listing:not(.ltx_lstlisting) { overflow-y:hidden; }
 .ltx_float .ltx_listing {
     margin: 0; }
+/* A full-line leader-fill separator (\hbox to \hsize{\dashfill\hfil}) is a width:100%
+   inline-block wrapping an .ltx_leader; the engine marks it .ltx_leaderfill. Two of them
+   flank a centered label on ONE nowrap listingline; as inline-blocks they lay side-by-side
+   and sum to >200% width, overflowing the listing (witness 1510.02728). Make each own its
+   line so they stack like the pdflatex golden. OXIDIZED_DESIGN #152. */
+.ltx_inline-block.ltx_leaderfill { display:block; }
 .ltx_listingline { white-space:nowrap; min-height:1em; }
 .ltx_lst_space { white-space: pre; }
 .ltx_lst_numbers_left .ltx_listingline .ltx_tag {

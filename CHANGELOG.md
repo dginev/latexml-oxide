@@ -2,6 +2,84 @@
 
 ## Unreleased
 
+  - **Author `\thanks` renders as a marked note, not an inline affiliation-like blob.**
+    `\author{Name\thanks{…}}` (correspondence, funding, equal-contribution, …) was emitted
+    as an inline `<ltx:contact role="thanks">` that read like an affiliation next to the
+    name. It now becomes a marked `<ltx:note role="thanks">` — a superscript mark on the
+    author + the content as a margin/footnote — carrying semantic class hooks
+    (`ltx_note_frontmatter`, `ltx_role_thanks`, and a best-effort content-kind class
+    `ltx_thanks_correspondence`/`_funding`/`_contribution`/`_address`/`_note`) so a theme
+    can style each kind. A surpass — Perl keeps the inline contact (OXIDIZED_DESIGN #156).
+    `ltx:note` is added to `ltx:creator`'s content model. Witnesses arXiv 2512.24601,
+    1510.02728; guards `authors_test`, `cluster_author_thanks_marked_note`.
+  - **A `.bbl` preamble no longer produces a spurious empty `(1)` bibliography entry.**
+    An ACM-Reference-Format-style `.bbl` puts macro definitions and a blank line between
+    `\begin{thebibliography}` and the first `\bibitem`; the blank line made the bibliography
+    auto-open a keyless phantom entry that rendered as an empty `(1)` before the real
+    references. It is now scrubbed after construction (a bibitem with no key and only
+    whitespace content). A surpass — Perl LaTeXML emits the identical phantom
+    (KNOWN_PERL_ERRORS #110, OXIDIZED_DESIGN #155). Witness arXiv 2605.03143; guard
+    `cluster_bib_preamble_no_phantom_entry`.
+  - **algorithm2e `\For`/`\While`/`\If` bodies written with `\\` now indent under the
+    `|` rule.** A body line ended with `\\` (rather than `\;`) was rendered flush-left
+    after the vertical separator instead of indented beneath it, because algorithm2e's
+    `\\`→line-break binding was clobbered by the float setup's tabular guard
+    (`\\`→`\lx@newline`). We re-assert the algorithm line-break binding after that guard,
+    so each `\\`-separated body line becomes its own indented listingline. A deliberate
+    surpass — Perl LaTeXML shares the bug (KNOWN_PERL_ERRORS #109). Witness arXiv 2002.09766
+    Algorithm 1; guard `cluster_algorithm2e_for_body_indentation`.
+  - **A bare email trailing an IEEEtran `\author` block no longer leaks into the body.**
+    `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` places a loose email
+    after the affiliation block (the `\{`/`\}` are literal-brace control symbols, so it is
+    top-level text); it was digested into the document body as the first paragraph. It now
+    attaches to the creator as an affiliation. GENUINE-RUST-ONLY (Perl bundles the whole
+    author argument into `<personname>`). Witness arXiv 1901.07768; guard
+    `frontmatter_ieee_authorblock_trailing_email`.
+  - **Multiple full-line `\hbox to \hsize` separators stack instead of overflowing.**
+    Following the width:100% relativization (OXIDIZED_DESIGN #152), two `\dashfill`
+    separators flanking a centered label on one `nowrap` listingline still overflowed (two
+    width:100% inline-blocks side-by-side sum to >200%). The fill-line box is now also
+    marked `class="ltx_leaderfill"`, and the stylesheets set it `display:block`, so each
+    separator owns its line — matching the pdflatex golden. Witness arXiv 1510.02728
+    ("Modified ellipsoid method"); guard `cluster_hbox_to_hsize_leader_fills_width`.
+  - **algorithm2e listings render closer to pdflatex: uniform-bold line numbers,
+    `[ruled]` captions at the top, inline `\Comment*[r]` side-comments.** Three
+    algorithm2e rendering fixes. (1) Line numbers now render in uniform upright bold
+    (`\NlSty` = `\textnormal{\textbf{…}}`, restored in `\algocf@printnl`), instead of
+    inheriting the ambient keyword bold on `\For`/`\If`/`\While` lines and staying plain
+    elsewhere; `renumber_algo_lines` was also made font-preserving so the 1..N relabel no
+    longer strips the wrapper. (2) The ruled family (`ruled`/`algoruled`/`boxruled`…) draws
+    its caption at the top of the frame (real sty `\@algocf@capt@ruled`=`top`), so
+    `float_sty::reposition_caption_top` DOM-moves the caption before the body for that
+    family only (`plain`/`boxed` unchanged). (3) A `\Comment*[r]`/`[l]` side comment now
+    stays inline with its numbered statement, flushed right, instead of breaking onto its
+    own line. All three are a deliberate surpass — Perl LaTeXML renders them the pre-fix way
+    too (OXIDIZED_DESIGN #153). Guards `cluster_algorithm2e_uniform_line_number_font`,
+    `cluster_algorithm2e_ruled_caption_at_top`, `algorithm2e_linenumbers`.
+  - **A `\hbox to \hsize{…}` leader separator fills its column instead of overflowing.**
+    A leader-fill rule — `\hbox to \hsize{\dashfill\hfil}`, `\hrulefill`, `\dotfill` — was
+    frozen at an absolute `width="345.0pt"` (the article `\textwidth` default), so inside a
+    narrower container (an algorithm) the dashed line overflowed. When the box body is a
+    horizontal leader fill and its width is a full-line register (`\hsize`/`\linewidth`/
+    `\columnwidth`/`\textwidth`), the constructor now emits a relative `width="100%"`, so
+    the separator fills its HTML container in any context, matching pdflatex. Text-bearing
+    full-width boxes (fancyvrb verbatim lines, whose 345pt is deliberate parity) and genuine
+    fixed-width boxes (`\hbox to 100pt`) are unchanged. A surpass — Perl emits the same frozen
+    pt (OXIDIZED_DESIGN #152). Witness arXiv 1510.02728; guard
+    `cluster_hbox_to_hsize_leader_fills_width`.
+  - **A document that re-adds its title or abstract no longer duplicates it.** Replaceable
+    frontmatter tags (`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords`) now keep a
+    single entry — a later one replaces the earlier — while multi-author `creator`s still
+    accumulate. The vendored engine pushed unconditionally, so an appendix `\twocolumn[\icmltitle{…}]`
+    or a nested `{abstract}` produced two `<title>`/`<abstract>` blocks. Forward-ports upstream
+    LaTeXML's `%ReplaceableFrontmatterTags`; a surpass over the vendored Perl (OXIDIZED_DESIGN
+    #154). Witnesses arXiv 2002.09766, 2511.21969; guard `cluster_frontmatter_replaceable_dedup`.
+  - **Algorithm listings no longer show a phantom vertical scrollbar.** An auto-height
+    `.ltx_listing` never overflows vertically, but the CSS Overflow spec promotes
+    `overflow-y:visible`→`auto` whenever `overflow-x` scrolls, painting a spurious vertical
+    scrollbar (algorithm2e listings). The embedded `LaTeXML.css` now pins
+    `.ltx_listing:not(.ltx_lstlisting){overflow-y:hidden}` (mirroring the ar5iv.css fix).
+    Witness arXiv 2002.09766.
   - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
     non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
     semiverbatim and then *digested* — `\def` executed, consumed the following

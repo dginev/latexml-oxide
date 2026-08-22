@@ -10,6 +10,8 @@
       <tag><text font="bold">Algorithm 1</text></tag>
       <tag role="refnum">1</tag>
     </tags>
+    <toccaption><tag close=" ">1</tag>Ruled</toccaption>
+    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>Ruled</caption>
     <listing class="ltx_lst_numbers_left" framed="topbottom">
       <listingline><text font="bold">Input:</text> data</listingline>
       <listingline><Math mode="inline" tex="x\leftarrow 1" text="x leftarrow 1" xml:id="algorithm1.m1">
@@ -23,8 +25,6 @@
         </Math>;</listingline>
       <listingline/>
     </listing>
-    <toccaption><tag close=" ">1</tag>Ruled</toccaption>
-    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>Ruled</caption>
   </float>
   <float class="ltx_algorithm" xml:id="algorithm2">
     <tags>
