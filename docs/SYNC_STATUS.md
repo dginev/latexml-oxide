@@ -203,6 +203,42 @@ ar5iv authors flag at `ar5iv.css:1678-1679`. Trackers: upstream data-model discu
 `brucemiller/LaTeXML#1797` (model + styling for figures in minipages); theme-side
 `ar5iv#83` and `dginev/ar5iv-css#38` (side-by-side minipages).
 
+### Algorithm markup + CSS unification — SCHEDULED 0.7.7 (deferred, user-directed 2026-08-22)
+
+**Goal.** Unify the markup emitted for **all** algorithm kinds (algorithmic,
+algorithmicx/algpseudocode + the language variants, algorithm2e) onto one shared
+vocabulary and marker class, and derive **generic CSS that works in BOTH
+`LaTeXML.css` and `ar5iv.css`** — one algorithm-layout rule set, not per-theme
+per-package selectors. Design plan: [`parity/ALGORITHM_RENDERING.md`](parity/ALGORITHM_RENDERING.md)
+§"Markup unification".
+
+**Why it is the right fix (not a per-theme CSS patch).** The algorithm-layout rule
+(`white-space:nowrap`, so the pretty-printer's newlines between a line's number tag
+and its statement do not render as breaks) is currently keyed on the **wrapper
+classes** `.ltx_float_algorithm` / `.ltx_algorithm`. An algorithm authored **outside
+an `algorithm` float** — e.g. the popular `breakablealgorithm` recipe, which wraps
+`\begin{algorithmic}` in a bare `center` — emits a bare `.ltx_listing` with **neither
+wrapper class**, so it falls through to code's `white-space:pre` and renders broken
+(numbers stacked above wildly-spaced content). This is the commonly-reported
+"algorithm displayed wrongly" class: html_feedback #6080 (2602.20153), #6236
+(2512.24601), #5492 (2511.21969), #3450 (2406.08374); **witness this review: arXiv
+2408.07803** (html_feedback #1998), whose caption now compiles (via the `\fname@`
+fix, OXIDIZED #149) exposing the body breakage.
+
+**Why it can't be a one-line CSS discriminator.** A numbered **code** `lstlisting`
+uses the *same* `.ltx_tag_listingline` / `.ltx_lst_numbers_left` as an algorithm, so
+`:has(.ltx_tag_listingline)` would wrongly `nowrap` code and destroy its indentation
+(#6632). `minted` DOES carry `.ltx_lstlisting` (verified), so `.ltx_listing:not(.ltx_lstlisting)`
+is *nearly* safe but still fragile against future bare-`.ltx_listing` producers. The
+robust fix is the **shared markup class**: give every algorithm listing a positive
+marker (regardless of surrounding env), then ONE generic rule targets it in both
+stylesheets. That is why markup unification and generic CSS are the SAME work item.
+
+**Scope note.** Faithful-translation caveat: any new marker class must be justified
+against Perl (Perl's algorithmic listing carries no such class today) — see the
+`surpass-perl` skill protocol. Defer until the 0.7.6 release lands. Related open theme
+item above: side-by-side minipages (`dginev/ar5iv-css#38`, witness 2402.19043).
+
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 
 Issue #191 "support the original latexmlc/latexmlpost options" is **closed**;

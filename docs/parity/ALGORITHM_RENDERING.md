@@ -81,13 +81,32 @@ a regression.
    NOT a core-XML divergence, and improving it is a non-trivial shared-layout surpass
    touching general minipage rendering.
 
-## Markup unification across the algorithm bindings (plan — large, cross-binding)
+## Markup unification across the algorithm bindings (plan — large, cross-binding — SCHEDULED 0.7.7)
+
+**Scheduled for the 0.7.7 release** (deferred, user-directed 2026-08-22); tracked in
+[`../SYNC_STATUS.md`](../SYNC_STATUS.md) → "Algorithm markup + CSS unification".
 
 **Goal:** unify the markup emitted for all algorithm-related bindings (algorithmic,
-algorithmicx, algorithm2e, and the language variants). **Constraint:** listings
+algorithmicx, algorithm2e, and the language variants) onto one shared marker class,
+**and derive generic CSS that works in BOTH `LaTeXML.css` and `ar5iv.css`** — one
+algorithm-layout rule set, not per-theme per-package selectors. **Constraint:** listings
 (`lstlisting`) is a separate, established XML dialect — do NOT change it; the algorithm
 bindings *borrow* its `<ltx:listing>/<ltx:listingline>/<ltx:tags>` elements (inherited
 from Perl, stays).
+
+**Immediate driver (why the shared class, not a CSS discriminator).** The
+algorithm-layout rule (`white-space:nowrap`, so the pretty-printer's newlines between a
+line's number tag and its statement do not become breaks) is keyed on the wrapper
+classes `.ltx_float_algorithm` / `.ltx_algorithm`. An algorithm authored OUTSIDE an
+`algorithm` float — e.g. the `breakablealgorithm` recipe (bare `center` around
+`\begin{algorithmic}`) — emits a bare `.ltx_listing` with NEITHER wrapper class, so it
+falls through to code's `white-space:pre` and renders broken. A one-line CSS
+discriminator can't fix it safely: a numbered CODE `lstlisting` shares
+`.ltx_tag_listingline`/`.ltx_lst_numbers_left` (so `:has(.ltx_tag_listingline)` would
+break code indentation, #6632); `minted` carries `.ltx_lstlisting` so
+`.ltx_listing:not(.ltx_lstlisting)` is only *nearly* safe. Hence the robust fix is a
+positive shared marker class on every algorithm listing → ONE generic rule for both
+themes. Witness arXiv 2408.07803 (html_feedback #1998); issue class #6080/#6236/#5492/#3450.
 
 **Assessment: possible, ~80% already there.** Every algorithm binding emits the shared
 `<ltx:listing>/<ltx:listingline>/<ltx:tags>` vocabulary. The family reduces to **two
