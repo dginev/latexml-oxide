@@ -1384,3 +1384,65 @@ fn frontmatter_titlepic_redefined_maketitle_figure_survives() {
     "the real second figure lost its label:\n{x}"
   );
 }
+/// arXiv/html_feedback#1396 (+ the fairmeta.cls family: #662/#3512/#4707/#4971/
+/// #5035/#5466). fairmeta.cls — the Meta/FAIR pre-print template — links authors
+/// to institutions by superscript marks: `\author[1,2,*]{Name}`,
+/// `\affiliation[1]{Inst}`, `\contribution[*]{Note}`. The shared meta-class
+/// binding used to DROP the `[mark]` optarg, so every author lost its institution
+/// and affiliations became detached document notes (the reported defect). The fix
+/// routes the marks through LaTeXML's author-annotation / contact-label plan (the
+/// authblk idiom, `\lx@add@creator[annotations]` + `\lx@add@contact[label]`), so
+/// each institution/contribution attaches to the authors that cite its mark.
+/// Verified byte-identical to Perl LaTeXML; covers the two sibling classes
+/// (selfevolagent/openmoss) via `meta_class::install_meta_class_frontmatter`.
+#[test]
+fn frontmatter_fairmeta_author_affiliation_1396() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/fairmeta_author_affiliation_1396.tex");
+  // Four author creators, none leaked as a `[` bracket (the #4707/#5466 canary).
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    4,
+    "expected 4 author creators:\n{x}"
+  );
+  assert!(
+    !x.contains("<personname>[</personname>"),
+    "an author name leaked as a `[` optarg bracket:\n{x}"
+  );
+  // Each institution attaches to exactly the authors that cite its mark…
+  assert!(
+    creator_block_contains(&x, "Alex Havrilla", ">Meta<"),
+    "Alex Havrilla (mark 1) lost affiliation Meta:\n{x}"
+  );
+  assert!(
+    creator_block_contains(&x, "Alex Havrilla", "Georgia Institute of Technology"),
+    "Alex Havrilla (mark 2) lost affiliation Georgia Institute of Technology:\n{x}"
+  );
+  assert!(
+    creator_block_contains(&x, "Yuqing Du", "UC Berkeley"),
+    "Yuqing Du (mark 4) lost affiliation UC Berkeley:\n{x}"
+  );
+  assert!(
+    creator_block_contains(&x, "Maksym Zhuravinskyi", "StabilityAI"),
+    "Maksym Zhuravinskyi (mark 3) lost affiliation StabilityAI:\n{x}"
+  );
+  assert!(
+    creator_block_contains(&x, "Eric Hambro", ">Meta<"),
+    "Eric Hambro (mark 1) lost affiliation Meta:\n{x}"
+  );
+  // …contributions attach to their authors by symbolic mark (#4707 "credit
+  // assignment")…
+  assert!(
+    creator_block_contains(&x, "Alex Havrilla", "Work done during Meta internship"),
+    "Alex Havrilla (mark *) lost its contribution note:\n{x}"
+  );
+  assert!(
+    creator_block_contains(&x, "Eric Hambro", "Work done while at Meta"),
+    "Eric Hambro (mark **) lost its contribution note:\n{x}"
+  );
+  // …and marks are no longer dropped: Yuqing (mark 4 only) must NOT carry Meta,
+  // and no affiliation is left as a detached document-level note.
+  assert!(
+    !creator_block_contains(&x, "Yuqing Du", ">Meta<"),
+    "Yuqing Du (mark 4) wrongly carries Meta — marks not honored:\n{x}"
+  );
+}

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+  - **`fairmeta.cls` papers now link each author to their institution.** The
+    Meta/FAIR pre-print template (and its `selfevolagent`/`openmoss` siblings)
+    connects authors to institutions and contribution notes by superscript mark —
+    `\author[1,2,*]{Name}`, `\affiliation[1]{Inst}`, `\contribution[*]{Note}`. The
+    shared meta-class binding dropped the `[mark]`, so every author lost its
+    institution and affiliations became detached document notes. The binding now
+    routes the marks through LaTeXML's author-annotation / contact-label plan (the
+    `authblk` idiom: `\lx@add@creator[annotations]` + `\lx@add@contact[label]`), so
+    each institution/contribution attaches to the authors that cite its mark. The
+    mechanism is byte-for-byte Perl-parity; on the fairmeta papers themselves Rust
+    surpasses Perl, which has no binding and mangles them under OmniBus. Fixes
+    arXiv/html_feedback#1396 and the fairmeta family (#662, #3512, #4707, #4971,
+    #5035, #5466); guard `frontmatter_fairmeta_author_affiliation_1396`.
   - **Tables inside a `tcolorbox` no longer render upside down.** A `tabular`
     inside a `tcolorbox` `enhanced` skin is drawn as SVG, with the table content
     in an `<svg:foreignObject>` nested in a TeX-y-up (flipped) group; the fo needs
