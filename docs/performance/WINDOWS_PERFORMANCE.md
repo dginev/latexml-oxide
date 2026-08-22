@@ -150,12 +150,21 @@ pass **quantifies and validates** that architecture decision.
   MiKTeX's kpsewhich is ~340 ms/spawn, worse than TL's ~270 ms. MiKTeX users are
   the population that still pays F1 in full.
 
-**F2 — For the subprocess path, batch or cache `kpsewhich`.** The microbench
-proves 5 lookups in one process ≈ 1 (284 vs 273 ms). Two concrete levers for
-the fallback backend: (a) memoise per-file lookups within a conversion so a file
-is never resolved twice; (b) resolve pending includes/fonts in **batched**
-kpsewhich calls instead of one-per-file. Either shrinks the MiKTeX/fallback tax
-by the batching factor. (Neither is needed on the in-process path.)
+**F2 — On the subprocess path, per-file memoisation is already done; only
+batching is left, and it is hard.** `pathname::kpsewhich`
+([`latexml_core/src/util/pathname.rs`](../../latexml_core/src/util/pathname.rs))
+already caches results thread-locally (`KPSE_MEMO`, bounded 4096), so a file is
+never resolved twice within a conversion — the tax is one ~270 ms spawn per
+**unique** file, which is why `various_colors` (≈100 distinct files) is slow and
+`equality_big` (5 files) is not. The microbench shows 5 lookups in one process ≈
+1 (284 vs 273 ms), so the only remaining lever is **batching** distinct lookups
+into fewer kpsewhich processes — but resolution is demand-driven during digest
+(the engine can't know future lookups), so batching is an invasive,
+low-ROI-for-in-process-users refactor. **Conclusion: the in-process backend (F1)
+is the real fix and it already ships; there is no cheap subprocess win** — the
+~270 ms is kpsewhich re-parsing `ls-R` on each fresh process (CPU, not disk: the
+6th warm call is still 273 ms), which only an in-process, load-`ls-R`-once
+backend avoids.
 
 **F3 — Process/exe cost is a non-issue.** ~8 ms spawn, ~2 ms to load the 63–66 MB
 static exe. Binary size and `+crt-static` are not perf problems; no action.
@@ -173,8 +182,11 @@ throughput but found in passing: on Windows a just-written `.pdf` can be briefly
 locked (sharing + Defender scan), and `read_pdf_page_box`
 ([`latexml_core/src/util/image.rs`](../../latexml_core/src/util/image.rs)) does
 `std::fs::read(path).ok()?` — a transient lock becomes a silent `None` (a figure
-reaches the engine at 0×0). It also makes the `read_pdf_page_box_prefers_cropbox…`
-unit test flaky on Windows. Consider a short retry on transient read errors.
+reaches the engine at 0×0). It also made the `read_pdf_page_box_prefers_cropbox…`
+unit test flaky on Windows. **Fixed:** `read_pdf_page_box` now reads through a
+bounded-retry helper (`read_file_resilient`) that backs off briefly on a
+transient lock and still fails fast on a genuine `NotFound`; the happy path pays
+nothing. The test is green on Windows again.
 
 **F6 — Telemetry `max_rss_kb` is 0 on the Windows single-shot CLI.** Peak-RSS is
 only wired through `cortex_worker`'s child accounting; the direct-CLI
