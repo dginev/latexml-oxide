@@ -2655,3 +2655,108 @@ mod identity_banner {
     );
   }
 }
+
+mod quiet_keeps_log_floor {
+  //! Issue #763 (xworld21/Vincenzo Mantova, BookML author): `--quiet` must
+  //! reduce STDERR only — the `.latexml.log` keeps a minimum verbosity floor
+  //! (identity banner, `(Processing …`/`(Loading …` progress notes, `Info:`
+  //! records, the `Status:conversion:` verdict). BookML's makefile dependency
+  //! tracking reads the `(Loading …` lines from the log, so stripping them under
+  //! `--quiet` broke it.
+  //!
+  //! Perl ground truth — `Common/Error.pm` `_printline`/`ProgressSpinup` write to
+  //! `$LOG` whenever the log is open, gating only STDERR on `$VERBOSITY >= 0`;
+  //! `bin/latexml` L83 emits the identity `Note` unconditionally. Confirmed on the
+  //! same host: Perl 0.8.8 `--quiet` keeps the banner + every `(Loading …` line in
+  //! its `.log`.
+
+  use std::{path::Path, process::Command};
+
+  const DOC: &str = "\\documentclass{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     Hello $x^2$.\n\
+                     \\end{document}\n";
+
+  /// The log-floor lines every run must keep, quiet or not.
+  fn assert_log_has_floor(log: &str, label: &str) {
+    for needle in [
+      "; revision ",         // identity banner
+      " started ",           // identity banner start time
+      "(Processing content", // Mouth progress note (ProgressSpinup)
+      "(Loading ",           // binding-module load note (BookML depends on this)
+      "Info:",               // an Info-level diagnostic record
+      "Status:conversion:",  // the final verdict line
+    ] {
+      assert!(
+        log.contains(needle),
+        "{label} log missing floor line {needle:?}; full log:\n{log}"
+      );
+    }
+  }
+
+  fn run(quiet: bool) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(workdir.path().join("doc.tex"), DOC).expect("write doc.tex");
+    let log_name = if quiet { "quiet.log" } else { "loud.log" };
+
+    let mut cmd = Command::new(bin);
+    cmd
+      .arg("doc.tex")
+      .arg("--dest")
+      .arg("doc.html")
+      .arg("--log")
+      .arg(log_name);
+    if quiet {
+      cmd.arg("--quiet");
+    }
+    let output = cmd
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    let log = std::fs::read_to_string(workdir.path().join(log_name)).expect("read log");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    (log, stderr)
+  }
+
+  /// THE FIX: under `--quiet` the on-disk `.log` still carries the full floor,
+  /// while STDERR is quieted (no `Info:` records, no `(Loading …` notes).
+  #[test]
+  fn quiet_log_keeps_floor_but_stderr_is_muted() {
+    let (log, stderr) = run(true);
+    assert_log_has_floor(&log, "--quiet");
+    // STDERR is reduced: progress notes and Info records do not reach the console.
+    assert!(
+      !stderr.contains("(Loading "),
+      "--quiet must mute progress notes on STDERR, got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("Info:"),
+      "--quiet must mute Info records on STDERR, got:\n{stderr}"
+    );
+  }
+
+  /// Parity companion: without `--quiet`, both the log AND stderr keep the floor
+  /// (the normal, unchanged behavior).
+  #[test]
+  fn loud_log_and_stderr_both_keep_floor() {
+    let (log, stderr) = run(false);
+    assert_log_has_floor(&log, "loud");
+    assert!(
+      stderr.contains("(Loading "),
+      "loud STDERR should show progress notes, got:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("Info:"),
+      "loud STDERR should show Info records, got:\n{stderr}"
+    );
+  }
+}
