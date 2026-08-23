@@ -589,6 +589,15 @@ foreignObject {
    keeps the border+padding inside the cap. Desktop/tablet render at \linewidth
    unchanged. */
 .ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #702): fvextra
+   `breaklines=true` on a framed verbatim carries this marker class (emitted by
+   fancyvrb_sty.rs off `\ifFV@breaklines`), the stable hook for styling a wrapping
+   verbatim apart from a non-wrapping one. fvextra wraps via a fixed print-width
+   `\parbox` (~\linewidth), which on a narrow viewport would overflow and scroll
+   horizontally — defeating the point of breaklines. Cap that inner parbox at the
+   box width so the text reflows to fit; desktop (wide box) is unchanged. Scoped
+   to `.ltx_break`, so the non-wrapping frame box keeps its scroll-over behaviour. */
+.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100%; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;

@@ -33,22 +33,41 @@ LoadDefinitions!({
   // Only `frame=single` is remapped here (the case in issue #525); the `@Lines`
   // topline/bottomline/lines variants still draw raw rules — a follow-up.
   // OXIDIZED_DESIGN #111.
+  //
+  // Issue #702: the frame box also carries a `breaklines` marker so a stylesheet
+  // can style wrapping vs non-wrapping verbatims apart. `\lx@fv@breakclass`
+  // defaults to EMPTY here — plain fancyvrb (no fvextra) never wraps a line — and
+  // `fvextra_sty.rs` redefines it to expand to `1` off `\ifFV@breaklines` when the
+  // document loads fvextra and sets `breaklines=true`. The constructor maps that
+  // `1` to the `ltx_break` css class (below).
+  RawTeX!(r"\providecommand\lx@fv@breakclass{}");
   RawTeX!(concat!(
     r"\def\FV@BeginListFrame@Single{",
     r"\edef\lx@fv@sep{\the\dimexpr\FV@FrameSep\relax}",
     r"\edef\lx@fv@rule{\the\dimexpr\FV@FrameRule\relax}",
     r"\lx@fancyvrb@beginframe{\lx@fv@sep}{\lx@fv@rule}",
-    r"{\@ifundefined{FancyVerbBackgroundColor}{}{\FancyVerbBackgroundColor}}}", "\n",
+    r"{\@ifundefined{FancyVerbBackgroundColor}{}{\FancyVerbBackgroundColor}}",
+    r"{\lx@fv@breakclass}}", "\n",
     r"\def\FV@EndListFrame@Single{\lx@fancyvrb@endframe}", "\n",
     r"\let\FV@LeftListFrame@Single\relax", "\n",
     r"\let\FV@RightListFrame@Single\relax", "\n",
   ));
-  DefConstructor!("\\lx@fancyvrb@beginframe {}{}{}",
-    "<ltx:text framed='rectangle' class='ltx_framed_verbatim' cssstyle='#cssstyle' _noautoclose='1'>",
+  DefConstructor!("\\lx@fancyvrb@beginframe {}{}{}{}",
+    "<ltx:text framed='rectangle' class='#frameclass' cssstyle='#cssstyle' _noautoclose='1'>",
     after_digest => sub[whatsit] {
       let sep = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
       let rule = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
       let bg = whatsit.get_arg(3).map(|a| a.to_string()).unwrap_or_default();
+      // breaklines=true (fvextra) → arg 4 expands to "1" → add the ltx_break hook
+      // (issue #702). Anything else (empty: no fvextra or breaklines=false) → the
+      // bare frame class, so existing non-wrapping goldens are unchanged.
+      let brk = whatsit.get_arg(4).map(|a| a.to_string()).unwrap_or_default();
+      let frameclass = if brk.trim() == "1" {
+        "ltx_framed_verbatim ltx_break"
+      } else {
+        "ltx_framed_verbatim"
+      };
+      whatsit.set_property("frameclass", frameclass.to_string());
       let mut parts: Vec<String> = Vec::new();
       // framerule → border width (skip a 0pt rule, e.g. fvextra's bg-only frame).
       let rule = rule.trim();
