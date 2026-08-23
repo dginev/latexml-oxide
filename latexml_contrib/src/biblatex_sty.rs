@@ -1263,7 +1263,7 @@ LoadDefinitions!({
       // The year part carries any disambiguation suffix (2020a, ...) so
       // same-author-same-year entries stay distinct.
       let refnum_str = if author_part == label_str {
-        label_str.clone()
+        label_str
       } else {
         format!("{author_part} ({ay_year})")
       };
@@ -1937,7 +1937,7 @@ LoadDefinitions!({
   // to itself and is harmless.
   DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}",
   sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
-    if let Some(tok) = target.clone().unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
       Let!(tok, T_CS!("\\cite"));
     }
     Ok(Tokens!())

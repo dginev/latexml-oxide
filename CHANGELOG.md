@@ -16,6 +16,29 @@
     witnesses 2606.00213 (pasj02 `\orcid`), 2606.00645 (jfm running heads).
     OXIDIZED_DESIGN #160; guard `omnibus_captures_orcid_and_drops_running_heads`.
 
+  - **Output-neutral performance pass (2026-08-23 audit follow-through).** `Debug!`
+    diagnostics are now lazy: their message expressions — which at the
+    `open_text`/`open_text_internal`/`close_element` sites serialized the current
+    subtree via `node_to_string` on every text insert / element close — evaluate
+    only when `--verbose`/`--debug` would actually emit them (up to ~26% of a
+    build-bound conversion discarded before; PERFORMANCE.md Open levers P0; the
+    Debug status tally is preserved at every verbosity). Also:
+    `Token::is_noexpand_family` memoized per arena symbol (was a string-prefix
+    probe ×2 per CS token); `generate_id` finds its `xml:id` ancestor by a direct
+    parent walk instead of a per-node XPath parse+eval; post-processing's
+    `collect_walk_matches` iterates siblings instead of materializing a child
+    `Vec` per recursion level; the `"{encoding}_fontmap"`-family Value keys are
+    memoized per encoding (were rebuilt ~4× per decoded character run, ~1M
+    allocations on a 1.3 s paper); `install_definition`'s `":locked"` gate probes
+    the arena without interning (no more permanent `:locked` twin per defined
+    cs); `LATEXML_TELEMETRY_OUT` appends JSONL instead of truncating to the last
+    record; 13 clippy `redundant_clone` sites fixed (2 kept as verified false
+    positives). Measured (interleaved best-of-3, idle box): build/text-bound
+    witness 2304.10050 **6.21 → 2.71 s (−56%)**; typical math paper 2408.08292
+    −11%; 82-paper regression-corpus sweep **229.3 → 200.0 s (−12.8%)** with
+    zero exit-status changes and flat max-RSS. Suite green (2175/2175); HTML
+    byte-identical on all four A/B witnesses.
+
   - **`--quiet` reduces console output only; the `.latexml.log` keeps a minimum
     verbosity floor.** Previously `--quiet` lowered the single `log` level filter to
     `Warn`, which dropped the identity banner, every `(Processing …`/`(Loading …`

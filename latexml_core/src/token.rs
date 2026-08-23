@@ -330,6 +330,23 @@ impl PartialEq for Token {
   }
 }
 
+// Per-symbol memo for `Token::is_noexpand_family`, indexed by the symbol's
+// arena index: 0 = not yet computed, 1 = not in the family, 2 = in the family.
+// Sound because the arena is append-only (a symbol's text never changes);
+// MUST be cleared alongside `arena::reset()` (see
+// `reset_noexpand_family_memo`, called from `reset_thread_engine`) since a
+// reset renumbers symbols.
+thread_local! {
+  static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Clear the [`Token::is_noexpand_family`] per-symbol memo. Companion to
+/// `arena::reset()` — symbol indices are reused after a reset, so stale
+/// entries would alias unrelated strings (same bug class as the REPORT-map
+/// fix, `7b64a48ad1`).
+pub fn reset_noexpand_family_memo() { NOEXPAND_FAMILY_MEMO.with(|m| m.borrow_mut().clear()); }
+
 /// Name of the bare no-op control sequence `\noexpand` collapses to, and the
 /// prefix of every member of the no-expand family. See [`Token::is_noexpand_family`].
 pub const NOEXPAND_PREFIX: &str = "\\special_relax";
@@ -858,12 +875,34 @@ impl Token {
   /// (`\dont_expand` at end-of-input). `\x01` is never valid in a CS name or as
   /// an active char, so the encoding is unambiguous.
   pub fn is_noexpand_family(&self) -> bool {
-    self.code == Catcode::CS
-      && self.with_str(|s| {
-        s.starts_with(NOEXPAND_PREFIX)
-          && (s.len() == NOEXPAND_PREFIX.len()
-            || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
-      })
+    if self.code != Catcode::CS {
+      return false;
+    }
+    // Per-symbol memo: this runs ×2 per CS token via `state::meaning_key`
+    // (read_x_token decides whether to expand, invoke_token how to invoke),
+    // and the string-prefix probe was ~2% of digest self-time (2026-08-23
+    // audit). A symbol's text never changes (append-only arena), so the
+    // answer is memoized by symbol index: 0 = unknown, 1 = no, 2 = yes.
+    // Cleared with the arena in `reset_thread_engine` (symbol indices are
+    // reused after `arena::reset`).
+    use string_interner::Symbol;
+    let idx = self.text.to_usize();
+    let cached = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().get(idx).copied().unwrap_or(0));
+    if cached != 0 {
+      return cached == 2;
+    }
+    let is_family = self.with_str(|s| {
+      s.starts_with(NOEXPAND_PREFIX)
+        && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
+    });
+    NOEXPAND_FAMILY_MEMO.with(|m| {
+      let mut memo = m.borrow_mut();
+      if memo.len() <= idx {
+        memo.resize(idx + 1, 0);
+      }
+      memo[idx] = if is_family { 2 } else { 1 };
+    });
+    is_family
   }
 
   /// Recover the shadowed token from a `\special_relax`-family token, if it

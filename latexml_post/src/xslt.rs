@@ -250,7 +250,7 @@ impl XSLT {
     {
       format!("{}/{}", base, rel_dest)
     } else {
-      rel_dest.clone()
+      rel_dest
     };
     let ensure_parent = |dest: &str| {
       if let Some(parent) = Path::new(dest).parent() {

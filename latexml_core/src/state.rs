@@ -1188,8 +1188,12 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     _ => panic!("_wrong_argument_for_install_definition"),
   };
   let cs_sym = token.get_cs_name();
+  // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
+  // skip both the intern (which permanently grew the arena by one ":locked"
+  // twin per defined cs) and the table lookup (2026-08-23 audit R6).
   let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
-  if lookup_bool(&lock_key) && !state_is_unlocked() {
+  let is_locked = arena::get(&lock_key).is_some_and(lookup_bool_sym);
+  if is_locked && !state_is_unlocked() {
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
@@ -1537,8 +1541,9 @@ pub fn pop_value(key: &str) -> Result<Option<Stored>> {
   }
 }
 /// Check if the Value table contains a given key
-pub fn has_value(key: &str) -> bool {
-  let key_sym = arena::pin(key);
+pub fn has_value(key: &str) -> bool { has_value_sym(arena::pin(key)) }
+/// Sym-keyed variant of `has_value` — avoids the per-call `arena::pin(key)`.
+pub fn has_value_sym(key_sym: SymStr) -> bool {
   match state!().value.get(&key_sym) {
     None => false,
     Some(list) => match list.front() {

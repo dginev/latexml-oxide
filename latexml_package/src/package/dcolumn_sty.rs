@@ -84,7 +84,7 @@ LoadDefinitions!({
     // Rust `UnTeX` (see `Tokens::untex`; the `%\n` line-breaking half is
     // OXIDIZED_DESIGN #2, so the suppress-linebreaks flag has no counterpart).
     let delim_str = delim.to_string();
-    let todelim_str = todelim.clone().untex();
+    let todelim_str = todelim.untex();
     if delim_str != todelim_str {
       if let Some(ch) = delim_str.chars().next() {
         // Make the delimiter math-active (code 0x8000)
