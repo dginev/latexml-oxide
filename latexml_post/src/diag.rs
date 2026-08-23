@@ -55,7 +55,10 @@
 #[macro_export]
 macro_rules! Note {
   ($input:expr_2021) => {{
-    if log::max_level() >= log::LevelFilter::Info {
+    // STDERR-only post note, gated on the decoupled console verbosity (Perl
+    // `$VERBOSITY >= 0`), NOT `max_level` — under `--quiet` the log-file floor
+    // holds `max_level` at `Info`, but the console note must stay silent (#763).
+    if latexml_core::util::logger::stderr_shows_info() {
       eprintln!("{}", $input);
     }
   }};

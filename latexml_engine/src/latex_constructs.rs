@@ -9416,11 +9416,13 @@ LoadDefinitions!({
   //======================================================================
   // C.11.6 Terminal Input and Output
   //======================================================================
+  // Perl latex_constructs.pool.ltxml L4538-4541: `Note(ToString($stuff))` — called
+  // UNCONDITIONALLY. `Note!` does the log-always / stderr-if-`$VERBOSITY>=0` split
+  // itself, so no `current_verbosity()` guard here — the old guard dropped
+  // `\typeout` from the log under `--quiet` (the #763 log-floor bug).
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if current_verbosity() > -1 {
-      let content = Expand!(stuff);
-      Note!(s!("{content}"));
-    }
+    let content = Expand!(stuff);
+    Note!(s!("{content}"));
   });
   def_primitive_noop("\\typein[]{}")?;
 

@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+  - **`--quiet` reduces console output only; the `.latexml.log` keeps a minimum
+    verbosity floor.** Previously `--quiet` lowered the single `log` level filter to
+    `Warn`, which dropped the identity banner, every `(Processing …`/`(Loading …`
+    progress note, and all `Info:` records from the on-disk log as well as stderr —
+    breaking BookML's makefile dependency tracking, which reads the `(Loading …`
+    lines from the log (#763, reported by xworld21). The logger now decouples the
+    two gates (Perl `Common/Error.pm` `_printline`/`ProgressSpinup`: `$LOG` is
+    written whenever the log is open, STDERR only when `$VERBOSITY >= 0`): the log
+    floor stays at `Info` regardless of `--quiet`, while STDERR follows the console
+    verbosity; `--verbose`/`--debug` raise both. `Error`/`Fatal` still always reach
+    stderr (the always-emit-errors divergence). The same floor now covers the TeX
+    terminal-output primitives, which Perl calls without a verbosity guard: `\typeout`
+    (Perl `Note` — log always, stderr when not quiet) and `\message` (Perl `NoteLog`
+    — log-only, never stderr); both previously vanished from the log under `--quiet`.
+    Two raw `eprintln!` fallback diagnostics (`store.rs` Stored→Number cast, the math
+    parser's ambiguous-action fallback) now route through the logger instead of
+    printing unconditionally and bypassing the report tally. Guards
+    `quiet_keeps_log_floor::{quiet_log_keeps_floor_but_stderr_is_muted,
+    loud_log_and_stderr_both_keep_floor}`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render Pygments syntax colors, not just bold-black.** When the

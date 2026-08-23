@@ -220,11 +220,13 @@ fn raw_log_warnings_register_in_the_final_verdict() {
 }
 
 /// Error and Fatal messages are the success-rate signal — they must reach the
-/// log at ANY verbosity (user directive 2026-08-02). The quietest CLI mapping
-/// floors the level filter at `Warn`, so `Fatal:`/`Error:` records always
-/// flow; this pins that floor — if someone maps quiet to `LevelFilter::Error`
-/// or `Off`, the Fatal line or the verdict would vanish and this test names
-/// the contract being broken. (`-q` is a plain bool flag — quietest mode.)
+/// log AND stderr at ANY verbosity (user directive 2026-08-02). The quietest CLI
+/// mapping sets the STDERR level to `Warn`, and the logger always echoes
+/// `Error`/`Fatal` records to stderr regardless of the console level
+/// (`logger.rs`: `level <= Error || stderr_admits(level)`); this pins that
+/// contract — if someone dropped the always-emit-errors clause, the Fatal line or
+/// the verdict would vanish and this test names it. (`-q` is a plain bool flag —
+/// quietest mode.)
 #[test]
 fn quiet_mode_still_reports_error_and_fatal() {
   let workdir = tempfile::tempdir().expect("tempdir");

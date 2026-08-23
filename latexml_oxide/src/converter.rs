@@ -250,12 +250,13 @@ impl Converter {
 
     self.bind_log();
     // 1.2 Inform of identity, increase conversion counter. Perl `bin/latexml`
-    // L83 logs `Note("$LaTeXML::IDENTITY processing $source")`; our banner adds
-    // the executable name, git revision and exact start time (`identity.rs`).
-    if self.opts.verbosity >= 0 {
-      Note!(crate::identity::identity_banner());
-      // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
-    }
+    // L83 logs `Note("$LaTeXML::IDENTITY processing $source")` UNCONDITIONALLY;
+    // our banner adds the executable name, git revision and exact start time
+    // (`identity.rs`). `Note!` itself does the log-always / stderr-gated split, so
+    // the banner reaches `.latexml.log` even under `--quiet` (issue #763) while
+    // still being muted on the console — no verbosity guard here.
+    Note!(crate::identity::identity_banner());
+    // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
 
     // 1.3 Prepare for What's IN:
     // - We use a new temporary variable to avoid confusion with daemon caching
