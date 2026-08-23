@@ -998,6 +998,65 @@ Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90%
   fallback → `neurips.sty.ltxml`, which also lacks graphicx). Witness 2605.21325. #690 brought
   Rust *to* Perl parity (it was accidentally better before).
 
+### (not ranked) sandbox-arxiv-2606 study — 2026-08-23 (methodology-corrected)
+
+Third-wave triage of the 2606 `oxidized_tex_to_html` clusters (6 clusters, parallel
+subagents), under the CORRECT same-host method: BOTH engines with `--preload=ar5iv.sty
+--path=ar5iv-bindings/bindings`, NO `--quiet` (it hides Perl's `Error:` lines), ANSI-strip
+Perl stderr (`sed 's/\x1b\[[0-9;]*m//g'` — else `^Error:` reads 0 on Perl), real `--dest`.
+A first pass WITHOUT these produced FALSE "Rust-only" verdicts (comparing oxidized-with-the-
+paper's-`macros.sty` against Perl-without-it): every top cluster re-classified to parity once
+corrected. See [[feedback_sandbox_preload_ar5iv]] + [[feedback_strict_vs_lax_error_grep]].
+
+**Net: the 2606 clusters are overwhelmingly PARITY + error amplification, not regressions.**
+2605↔2606 cluster doc-counts are near-identical (stable long-tail, not new breakage). Under
+the correct method Perl and oxidized fail on the SAME constructs; oxidized is often marginally
+BETTER (clean DOM vs Perl's `<ltx:ERROR/>` nodes; runaway backstop bails as fast or faster).
+
+**LANDED (PR fix/newtcblisting-leading-optarg):** `\newtcblisting` binding stub
+`tcolorbox_sty.rs:41` lacked the LEADING `[init-options]` optional (real sig `{ m +O{} m o +o +m }`),
+so `\newtcblisting[auto counter,...]{name}[2][]{...}` read `[...]` as the mandatory name → env
+undefined → verbatim body tokenized as LaTeX → every `_`/`^` → "Script can only appear in math
+mode". The ONLY genuine Rust-only witness across the `unexpected/_` cluster. Witness **2606.00555**
+455→0 errors; priors 2507.00833/2402.13846 preserved; guard `cluster_newtcblisting_leading_optarg`.
+
+**Cross-cluster policy item — ERROR AMPLIFICATION (biggest measurement distortion):** oxidized's
+diagnostic error cap (500/1000) vs Perl's MAX_ERRORS=100 → oxidized emits 1.4–30× more error
+records on the SAME shared failure (2606.14954 `_`: 141 vs Perl 100; alignment 213 vs 17; achemso
+"501 hits" = the 500-cap on ONE doc = 5× Perl's cap-100). Inflates cluster hit-counts AND the
+`TooManyErrors(500/1000)` fatal population (~96 docs) vs Perl's cap-100 fatals; does NOT reflect
+worse conversion. Policy call (needs an OXIDIZED_DESIGN entry): align the DIAGNOSTIC cap toward
+Perl's 100 — this is distinct from the runaway/expansion backstops, which
+[[feedback_runaway_limit_raise_not_reduce]] governs (raise, never lower) and this does not touch.
+Per-doc DOMINANT-cluster counts (robust to amplification): `unexpected/_` 360, newunicodechar 119,
+`\GenericError` 96, `&` 93, `malformed:ltx:caption` 88.
+
+**Deferred plan, priority order (cross-ref the 2026-08-21 section above; do NOT duplicate):**
+1. **newunicodechar (~119 docs) — ROOT CAUSE found** (deepens §B "native newunicodechar binding"):
+   newunicodechar.sty's engine-probe uses four-hex `^^^^HHHH` caret (XeTeX/LuaTeX only); neither
+   engine supports it (`mouth.rs:715 get_next_char` ≈ Perl `Mouth.pm:156`, both only two-hex `^^HH`
+   + single `^^X`) → both take the utf8-byte-count path → both error. Better fix than a per-package
+   binding: add four-hex/six-hex caret in `get_next_char` so newunicodechar takes its Unicode branch
+   (oxidized's Unicode branch already maps α→945 correctly). Diverges from Perl (oxidized clean / Perl
+   still errors) — upstream the same to `Mouth.pm`. Min-repro
+   `\usepackage{newunicodechar}\newunicodechar{α}{\ensuremath{\alpha}}` → OX/Perl 1 err, pdflatex 0.
+2. **OmniBus frontmatter vocabulary (~150 docs)** — §B above (confirmed parity, unchanged).
+3. **Missing package/class bindings (beyond-Perl conversion wins)** — `tabu`/`tabularray` (alignment
+   cluster; both engines unbound; oxidized amplifies 2–12× and misparses `\begin{tabu} to <dim>{preamble}`
+   as a column template `t`, `alignment.rs:997`), qcircuit/semantex/nicematrix (cascade fatals),
+   achemso/revtex4-2 (frontmatter classes unbound in both). quantikz already landed on HEAD.
+4. **`_` math-mode-loss residual (~360 dominant docs, minus 00555) — PARITY:** both engines lose math
+   mode on shared constructs (theorem `\label{..._..}` + crossreftools active; undefined metadata envs
+   like `{CCSXML}` leaking verbatim bodies; math-`array` `\tabularnewline`+`\hline`). No single Rust fix;
+   the amplification item is the only oxidized-side lever, plus per-binding cascade prevention.
+5. **floatrow raw-load (2606.10047)** — narrow genuine residue (OX 18 `malformed` vs Perl 0); floatrow
+   reroutes subcaption placement, oxidized's raw interp still malforms. Own ticket.
+
+Runaway/fatal re-verification (corrects any "oxidized hard-loops worse than Perl" impression): on
+2606.13219 (pgfplots) oxidized bails `Fatal:Timeout:PushbackLimit` <90s while Perl HANGS (timeout);
+on 2606.30928 (tikz-cd/quiver) oxidized bails in 3s vs Perl 23s. Runaway-fatals = PARITY; the 650k
+PushbackLimit backstop is a strength, not a regression.
+
 ### (not ranked) fairmeta.cls family trailing items (2026-08-21)
 
 The fairmeta author↔institution binding fix (arXiv/html_feedback#1396 + the
