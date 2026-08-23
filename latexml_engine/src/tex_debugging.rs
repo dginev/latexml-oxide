@@ -50,10 +50,13 @@ LoadDefinitions!({
   // doubles #, converts to string; optionally adds spaces after control sequences
   // in the spirit of the B Book, "show_token_list" routine, in 292.
   // [This could be a $tokens->unpackParameters, but for the curious space treatment]
+  // Perl TeX_Debugging.pool.ltxml L65-68: `NoteLog(writableTokens(Expand($stuff)))`
+  // — the log gets it unconditionally (no `$VERBOSITY` guard) and it never reaches
+  // stderr. `NoteLog!` is the faithful vehicle; the old `if current_verbosity() > -1
+  // { Note!(...) }` both echoed to stderr (Perl does not) and dropped `\message`
+  // from the log under `--quiet` (the #763 log-floor bug).
   DefPrimitive!("\\message{}", sub [(message)] {
-    if current_verbosity() > -1 {
-      Note!(writable_tokens(&do_expand(message)?));
-    }
+    NoteLog!(writable_tokens(&do_expand(message)?));
   });
 
   DefRegister!("\\errhelp", Tokens!());

@@ -2669,12 +2669,22 @@ mod quiet_keeps_log_floor {
   //! `bin/latexml` L83 emits the identity `Note` unconditionally. Confirmed on the
   //! same host: Perl 0.8.8 `--quiet` keeps the banner + every `(Loading …` line in
   //! its `.log`.
+  //!
+  //! The same log-floor rule governs the TeX terminal-output primitives, which
+  //! must also survive `--quiet` (Perl calls them WITHOUT a verbosity guard):
+  //! `\typeout` → `Note` (log always + stderr if `$VERBOSITY >= 0`,
+  //! `latex_constructs.pool.ltxml` L4538), `\message` → `NoteLog` (log ONLY, never
+  //! stderr, `TeX_Debugging.pool.ltxml` L65). The `\message` distinction is the
+  //! sharp one: its content must reach the log at any verbosity yet never appear on
+  //! stderr, even loud.
 
   use std::{path::Path, process::Command};
 
   const DOC: &str = "\\documentclass{article}\n\
                      \\usepackage{amsmath}\n\
                      \\begin{document}\n\
+                     \\typeout{TypeoutMarker763}\n\
+                     \\message{MessageMarker763}\n\
                      Hello $x^2$.\n\
                      \\end{document}\n";
 
@@ -2686,6 +2696,8 @@ mod quiet_keeps_log_floor {
       "(Processing content", // Mouth progress note (ProgressSpinup)
       "(Loading ",           // binding-module load note (BookML depends on this)
       "Info:",               // an Info-level diagnostic record
+      "TypeoutMarker763",    // \typeout → Note (log always)
+      "MessageMarker763",    // \message → NoteLog (log always)
       "Status:conversion:",  // the final verdict line
     ] {
       assert!(
@@ -2733,7 +2745,8 @@ mod quiet_keeps_log_floor {
   fn quiet_log_keeps_floor_but_stderr_is_muted() {
     let (log, stderr) = run(true);
     assert_log_has_floor(&log, "--quiet");
-    // STDERR is reduced: progress notes and Info records do not reach the console.
+    // STDERR is reduced: progress notes, Info records, and \typeout do not reach
+    // the console.
     assert!(
       !stderr.contains("(Loading "),
       "--quiet must mute progress notes on STDERR, got:\n{stderr}"
@@ -2742,10 +2755,20 @@ mod quiet_keeps_log_floor {
       !stderr.contains("Info:"),
       "--quiet must mute Info records on STDERR, got:\n{stderr}"
     );
+    assert!(
+      !stderr.contains("TypeoutMarker763"),
+      "--quiet must mute \\typeout on STDERR, got:\n{stderr}"
+    );
+    // \message uses NoteLog — never on stderr at any verbosity.
+    assert!(
+      !stderr.contains("MessageMarker763"),
+      "\\message (NoteLog) must never reach STDERR, got:\n{stderr}"
+    );
   }
 
-  /// Parity companion: without `--quiet`, both the log AND stderr keep the floor
-  /// (the normal, unchanged behavior).
+  /// Parity companion: without `--quiet`, the log keeps the whole floor, and stderr
+  /// keeps the verbosity-gated notes (`(Loading …`, `Info:`, `\typeout`) — but
+  /// `\message` (Perl `NoteLog`) stays log-only, off stderr even loud.
   #[test]
   fn loud_log_and_stderr_both_keep_floor() {
     let (log, stderr) = run(false);
@@ -2757,6 +2780,14 @@ mod quiet_keeps_log_floor {
     assert!(
       stderr.contains("Info:"),
       "loud STDERR should show Info records, got:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("TypeoutMarker763"),
+      "loud STDERR should show \\typeout (Note), got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("MessageMarker763"),
+      "\\message (NoteLog) must stay log-only, never on STDERR — got:\n{stderr}"
     );
   }
 }

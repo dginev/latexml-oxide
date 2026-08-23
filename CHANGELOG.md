@@ -12,7 +12,13 @@
     written whenever the log is open, STDERR only when `$VERBOSITY >= 0`): the log
     floor stays at `Info` regardless of `--quiet`, while STDERR follows the console
     verbosity; `--verbose`/`--debug` raise both. `Error`/`Fatal` still always reach
-    stderr (the always-emit-errors divergence). Guards
+    stderr (the always-emit-errors divergence). The same floor now covers the TeX
+    terminal-output primitives, which Perl calls without a verbosity guard: `\typeout`
+    (Perl `Note` — log always, stderr when not quiet) and `\message` (Perl `NoteLog`
+    — log-only, never stderr); both previously vanished from the log under `--quiet`.
+    Two raw `eprintln!` fallback diagnostics (`store.rs` Stored→Number cast, the math
+    parser's ambiguous-action fallback) now route through the logger instead of
+    printing unconditionally and bypassing the report tally. Guards
     `quiet_keeps_log_floor::{quiet_log_keeps_floor_but_stderr_is_muted,
     loud_log_and_stderr_both_keep_floor}`.
 
