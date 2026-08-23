@@ -60,13 +60,20 @@ fn ref_fallbacks(key: &str) -> &'static [&'static str] {
 }
 
 /// Derive the STRING form of a stored value (page `<title>`, `title=` tooltip).
-/// Perl `CrossRef::getTextContent`. A `Value::Xml` title is flattened tag-aware
-/// (via [`title_text_content`]); any other value uses its plain string form.
-fn value_text(val: &Value) -> String {
-  match val {
-    Value::Xml(node) => title_text_content(node),
+/// Perl `CrossRef::getTextContent` (`CrossRef.pm` L853-859). A `Value::Xml` title
+/// is flattened tag-aware and math-aware (via [`title_text_content`], which routes
+/// `ltx:Math` through `unicodemath`); any other value uses its plain string form.
+/// Either way the result is whitespace-collapsed like Perl: trim both ends, then
+/// `s/\s+/ /g` — so a multi-line math serialization cannot bloat a `title=`
+/// tooltip (issue #761).
+fn value_text(doc: &PostDocument, val: &Value) -> String {
+  let raw = match val {
+    Value::Xml(node) => title_text_content(doc, node),
     other => other.to_string(),
-  }
+  };
+  // Perl `getTextContent`: `s/^\s+//; s/\s+$//; s/\s+/ /g`. `split_whitespace`
+  // does exactly this (drops leading/trailing runs, collapses interior runs).
+  raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Build the child nodes of an `<ltx:ref>` from a stored value.
@@ -396,7 +403,7 @@ impl CrossRef {
   /// Generate a title string for a referenced ID, traversing parents for context.
   ///
   /// Port of `CrossRef::generateTitle`.
-  fn generate_title(&self, _doc: &PostDocument, id: &str, shown: &str) -> Option<String> {
+  fn generate_title(&self, doc: &PostDocument, id: &str, shown: &str) -> Option<String> {
     let mut current_id = id.to_string();
     let mut result = String::new();
     let mut prefix = String::new();
@@ -413,7 +420,7 @@ impl CrossRef {
           // The title is stored as a NODE (`Value::Xml`) for sections; derive
           // its string form tag-aware (Perl `getTextContent`). A plain-string
           // title (e.g. abstract/bibliography names) is used verbatim.
-          pieces.push(value_text(title_val));
+          pieces.push(value_text(doc, title_val));
         }
       }
       if pieces.is_empty() {

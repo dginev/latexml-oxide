@@ -437,31 +437,50 @@ fn unimath_underaccent(doc: &PostDocument, op: &Node, base: &Node) -> (String, i
 
 /// Convert an XMTok's content to styled Unicode text.
 ///
-/// Port of `stylizeContent` (simplified — full version needs unicode_convert).
+/// Port of `stylizeContent` (`UnicodeMath.pm` L234-252): resolve the token text
+/// (with the empty-token failsafe), then remap it into the plane-1 math alphabet
+/// for the token's `font` mathvariant — `unicode_convert` is all-or-nothing, so
+/// a partly-unmappable string keeps its original text (Perl: "didn't remap the
+/// text? Keep text & variant"). This is what turns an italic `x` into `𝑥` in a
+/// title tooltip (issue #761) and in the UnicodeMath annotation.
 fn stylize_content(node: &Node) -> String {
   let role = node
     .get_attribute("role")
     .unwrap_or_else(|| "ID".to_string());
-  let text = node.get_content();
+  let font = node.get_attribute("font").unwrap_or_default();
+  let mut text = node.get_content();
   if text.is_empty() {
-    // Fallback for empty tokens
+    // Failsafe for empty tokens: %default_token_content, else name/meaning/role.
     static DEFAULT_CONTENT: &[(&str, &str)] = &[
       ("MULOP", "\u{2062}"), // INVISIBLE TIMES
       ("ADDOP", "\u{2064}"), // INVISIBLE PLUS
       ("PUNCT", "\u{2063}"), // INVISIBLE SEPARATOR
     ];
-    for (r, default) in DEFAULT_CONTENT {
-      if role == *r {
-        return default.to_string();
+    text = DEFAULT_CONTENT
+      .iter()
+      .find(|(r, _)| role == *r)
+      .map(|(_, d)| (*d).to_string())
+      .unwrap_or_else(|| {
+        node
+          .get_attribute("name")
+          .or_else(|| node.get_attribute("meaning"))
+          .unwrap_or_else(|| role.clone())
+      });
+  }
+  // Perl: `$variant = $font ? unicode_mathvariant($font) : ''`, then
+  // `$u_text = $variant && unicode_convert($text, $variant)`; keep `$u_text`
+  // only if it remapped to a non-empty string. Gating on a non-empty `font`
+  // mirrors the ternary — `unicode_mathvariant("")` would otherwise yield
+  // "normal" and trigger a needless lookup.
+  if !font.is_empty() {
+    let variant = crate::unicode::unicode_mathvariant(&font);
+    if let Some(u) = crate::unicode::unicode_convert(&text, variant) {
+      if !u.is_empty() {
+        text = u;
       }
     }
-    node
-      .get_attribute("name")
-      .or_else(|| node.get_attribute("meaning"))
-      .unwrap_or(role)
-  } else {
-    text
   }
+  text
 }
 
 /// Text content in quotes.
