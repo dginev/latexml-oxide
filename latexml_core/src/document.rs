@@ -5927,9 +5927,22 @@ impl Document {
       && model::can_have_attribute(qname, pin!("xml:id"))
       && (qname != pin!("ltx:_Capture_"))
     {
-      let mut ancestor = self
-        .findnode("ancestor::*[@xml:id][1]", Some(node))
-        .unwrap_or_else(|| self.get_document().get_root_element().unwrap());
+      // Nearest ancestor element carrying @xml:id — a direct parent-chain
+      // walk, equivalent to the previous `ancestor::*[@xml:id][1]` findnode
+      // but without a per-call XPath parse+eval (generate_id runs once per
+      // id-lacking node during finalize; 2026-08-23 audit R5).
+      let mut ancestor = {
+        let mut cur = node.get_parent();
+        let mut found = None;
+        while let Some(p) = cur {
+          if p.get_type() == Some(NodeType::ElementNode) && p.has_attribute_ns("id", XML_NS) {
+            found = Some(p);
+            break;
+          }
+          cur = p.get_parent();
+        }
+        found.unwrap_or_else(|| self.get_document().get_root_element().unwrap())
+      };
       //// Old versions don't like ancestor.getAttribute('xml:id');
       let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
       // If we've got no ancestor_id, then we've got no ancestor (no document yet!),

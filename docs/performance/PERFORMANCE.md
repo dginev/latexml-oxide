@@ -170,17 +170,29 @@ rate (the math lever). Max RSS 1,692 MB.
 
 The phase bands above set priority. Current open work:
 
-### P0 — eager `Debug!` diagnostics on the text-absorption path (up to ~30% of a build-bound paper)
+### P0 — eager `Debug!` diagnostics on the text-absorption path — ✅ LANDED 2026-08-23
 
-Found by the 2026-08-23 audit (see Audit log — full evidence there). `Debug!`
-(`error.rs:631`) and `generate_message!` (`error.rs:800`) build all their
-strings — including `gullet::get_location()` and, at the `open_text` /
-`open_text_internal` / `close_element` sites (`document.rs:2280/2558/2592/1256`),
-a full `node_to_string` subtree serialization — **before** any verbosity check;
-`emit_record` then discards them. Fix: gate argument evaluation like
-`DebugFeature!` (`error.rs:618`) already does, preserving the `note_status`
-side effect. Output-neutral by construction; the largest single lever found
-since the graphics cache.
+Found and fixed the same day as the audit (see Audit log — full evidence
+there). `Debug!` (`error.rs`) and `generate_message!` built all their strings —
+including `gullet::get_location()` and, at the `open_text` /
+`open_text_internal` / `close_element` sites, a full `node_to_string` subtree
+serialization — **before** any verbosity check; `emit_record` then discarded
+them. Now gated on `debug_record_enabled()` (`max_level() >= Debug` and not
+suppressed), with the Debug `note_status` tally preserved unconditionally, so
+status counts are identical at every verbosity.
+
+**Measured** (same branch also carries the audit's R3/R5/R6 mechanical fixes:
+`is_noexpand_family` per-symbol memo, `generate_id` parent-chain walk,
+`collect_walk_matches` sibling iteration, fontmap-key memoization, probe-only
+`:locked` gate via non-interning `arena::get`, 13 redundant-clone fixes;
+interleaved best-of-3, idle box, HTML byte-identical on all four A/B
+witnesses): `2304.10050` (build/text-bound) **6.21 → 2.71 s (−56%)** — the
+band was quadratic-flavored (each insert re-serialized the growing subtree),
+so removal beats the ~26% profile share; `2408.08292` (typical math paper)
+8.66 → 7.74 s (−11%); `2405.14114` (200M-token digest runaway) 20.5 → 20.1 s
+(−2%). 82-paper regression-corpus sweep, same harness/box/day: **229.3 →
+200.0 s (−12.8%)**, zero exit-status changes, sum max-RSS flat (+1.3%,
+two ±≤60 MB movers, rest noise).
 
 ### P1 — math_parse (17% of wall, 17% over-parse) — the top remaining lever
 

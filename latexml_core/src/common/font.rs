@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
   BoxOps, Digested, DigestedData, Result,
-  binding::content::{load_font_map, preload_font_map},
+  binding::content::{fontmap_family_key_sym, fontmap_key_syms, load_font_map, preload_font_map},
   common::{
     arena::{self, SymHashMap, SymStr},
     color::{self, Color},
@@ -2090,8 +2090,7 @@ fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<Str
   // such hazard: `FontDecode` calls `LoadFontMap` first and then indexes one
   // map whose slot already holds the whole string.
   let _ = preload_font_map(&encoding);
-  let mapname = format!("{encoding}_fontmap_multichar");
-  with_value(&mapname, |val_opt| {
+  with_value_sym(fontmap_key_syms(&encoding).multichar, |val_opt| {
     if let Some(Stored::HashString(map)) = val_opt {
       map.get(&code.to_string()).cloned()
     } else {
@@ -2132,14 +2131,14 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
 
   let mut map: Option<Fontmap> = None;
   if !encoding.is_empty() {
-    let _ = preload_font_map(&encoding); // infallible in practice; swallow Result
+    // `load_font_map` preloads; keys are memoized (2026-08-23 audit R6).
     if let Some(encmap) = load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
       if let Some(ref font) = font
         && let Some(family) = (*font).get_family()
       {
-        with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt| {
+        with_value_sym(fontmap_family_key_sym(&encoding, family), |fmap_opt| {
           if let Some(fmap) = fmap_opt {
             map = fmap.into(); // Use the family specific map, if any.
           }
@@ -2189,28 +2188,30 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
     Some(encoding) => encoding,
   };
 
+  // Memoized key syms — this runs per digested character run, and rebuilding
+  // the "{encoding}_fontmap"-family key strings each call was ~1M allocations
+  // on a 1.3 s paper (2026-08-23 audit R6). `load_font_map` preloads, so no
+  // separate `preload_font_map` call is needed.
   let mut map: Option<Fontmap> = None;
-  if !encoding.is_empty() {
-    let _ = preload_font_map(encoding); // infallible in practice; swallow Result
-    if let Some(encmap) = load_font_map(encoding) {
-      // OK got some map.
-      map = Some(encmap);
-      if let Some(ref font) = font
-        && let Some(family) = (*font).get_family()
-      {
-        with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt| {
-          if let Some(fmap) = fmap_opt {
-            map = fmap.into(); // Use the family specific map, if any.
-          }
-        });
-      }
+  if !encoding.is_empty()
+    && let Some(encmap) = load_font_map(encoding)
+  {
+    // OK got some map.
+    map = Some(encmap);
+    if let Some(ref font) = font
+      && let Some(family) = (*font).get_family()
+    {
+      with_value_sym(fontmap_family_key_sym(encoding, family), |fmap_opt| {
+        if let Some(fmap) = fmap_opt {
+          map = fmap.into(); // Use the family specific map, if any.
+        }
+      });
     }
   }
 
   // Load multi-char overrides if available
   let multichar_map: Option<HashMap<String, String>> = if !encoding.is_empty() {
-    let mapname = format!("{encoding}_fontmap_multichar");
-    with_value(&mapname, |val_opt| {
+    with_value_sym(fontmap_key_syms(encoding).multichar, |val_opt| {
       if let Some(Stored::HashString(m)) = val_opt {
         Some(m.clone())
       } else {
