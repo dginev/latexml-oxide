@@ -2894,7 +2894,8 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
   // fallback: Same, but without prefix
   let mut unlabeltable: HashMap<String, Vec<Node>> = HashMap::default();
   for target in document.findnodes(".//*[@_annotations]", None) {
-    if target.get_attribute("role").unwrap_or_default() == "pending" {
+    let target_role = target.get_attribute("role").unwrap_or_default();
+    if target_role == "pending" {
       continue;
     }
     // Dedup labels PER TARGET: a creator that cites the same annotation label
@@ -2913,8 +2914,20 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         .entry(label.to_string())
         .or_default()
         .push(target.clone());
-      // Misuse of labelling macros can lead to prefix mismatch
-      if let Some(pos) = label.find(':') {
+      // Misuse of labelling macros can lead to a prefix mismatch, so fall back to
+      // a prefix-stripped ("noprefix") index — e.g. an affiliation labelled
+      // `institute:1` can still find an author who cited `affiliation:1`.
+      // BUT a creator's OWN role-sequence label (`author:N` / `editor:N` /
+      // `translator:N`, auto-assigned in `\lx@add@frontmatter@now`) must NEVER
+      // enter that fallback: it would let a SHARED affiliation's `affiliation:1`
+      // bind to the first author's `author:1` purely by number, stranding one
+      // shared `\institute` on author 1 (Perl does exactly this — arXiv:2402.19043
+      // / WDM, 5 authors + one `\institute`, no `\inst`; OXIDIZED_DESIGN #159). A
+      // genuine per-author affiliation instead matches EXACTLY via `labeltable`
+      // (the `affiliation:1` that `\inst{1}` requests), which is untouched here.
+      if let Some(pos) = label.find(':')
+        && label[..pos] != target_role
+      {
         unlabeltable
           .entry(label[pos + 1..].to_string())
           .or_default()
@@ -2922,7 +2935,19 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       }
     }
   }
-  for pending in pending_nodes {
+  // Beyond-Perl (OXIDIZED_DESIGN #159): a SHARED affiliation with no per-author
+  // `\inst` target (see Part 1) matches no creator. Perl warns and drops it; the
+  // pre-fix fallback stranded it on author 1. Instead, gather every such orphaned
+  // institute-level contact (the affiliation and any `\email`/`\url` that inherited
+  // its label) into ONE trailing name-LESS `<ltx:creator role="author">`, kept as
+  // the LAST child of the authors container — so the institute renders exactly once
+  // below the whole author row (ar5iv theme already breaks a last-position shared
+  // affiliation out to full width). Witness arXiv:2402.19043 (WDM). We reuse the
+  // first orphaned pending stub in place: it is already a `<creator>` sitting right
+  // after the last real author, so promoting it needs no fresh node.
+  let mut shared_creator: Option<Node> = None;
+  for mut pending in pending_nodes {
+    let mut promote_this = false;
     for note in element_nodes(&pending) {
       let label = note.get_attribute("_label").unwrap_or_default();
       if label.is_empty() {
@@ -2943,6 +2968,23 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
         }
+      } else if is_shared_contact_role(&note.get_attribute("role").unwrap_or_default()) {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT Sharing orphaned annotation {label} below authors"
+        );
+        match &mut shared_creator {
+          // First orphaned shared contact: promote THIS pending stub in place into
+          // the trailing shared creator (its note already lives inside it).
+          None => {
+            promote_this = true;
+          },
+          // Later shared contacts (e.g. the institute's `\email`) join it.
+          Some(sc) => {
+            let mut sc = sc.clone();
+            document.append_clone(&mut sc, vec![note.clone()])?;
+          },
+        }
       } else {
         let mut known: Vec<&String> = labeltable.keys().collect();
         known.sort();
@@ -2961,9 +3003,35 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         );
       }
     }
-    document.remove_node(pending);
+    if promote_this {
+      // pending → real trailing creator (role=pending would otherwise be dropped
+      // with the node; the `_annotations`/`_label` bookkeeping attrs are stripped
+      // at serialization). Name-LESS: it carries no `<ltx:personname>`.
+      document.set_attribute(&mut pending, "role", "author")?;
+      shared_creator = Some(pending);
+    } else {
+      document.remove_node(pending);
+    }
   }
   Ok(())
+}
+
+/// Contact roles that are institute-level information shared by every author (an
+/// affiliation, or an address / email / url that inherited its label), as opposed
+/// to a single person's own note. When such a contact is orphaned (a shared
+/// `\institute` with no per-author `\inst`), it is collected onto the trailing
+/// shared creator rather than dropped or stranded on author 1 (OXIDIZED_DESIGN #159).
+fn is_shared_contact_role(role: &str) -> bool {
+  matches!(
+    role,
+    "affiliation"
+      | "altaffiliation"
+      | "address"
+      | "altaddress"
+      | "currentaddress"
+      | "email"
+      | "url"
+  )
 }
 
 //======================================================================
