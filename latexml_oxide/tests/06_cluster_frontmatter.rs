@@ -1553,3 +1553,42 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
     "Yuqing Du (mark 4) wrongly carries Meta — marks not honored:\n{x}"
   );
 }
+
+/// LLNCS `\author{A \and B \and C}` + one shared `\institute{…}` with NO per-author
+/// `\inst` marker. Perl 0.8.8 (and pre-fix Rust) strand the single affiliation on
+/// the FIRST author only — its `affiliation:1` label binds to author 1's `author:1`
+/// sequence label by number in `relocate_annotations`. Beyond-Perl (OXIDIZED_DESIGN
+/// #159, witness arXiv:2402.19043 / WDM): the shared affiliation is emitted ONCE, on a
+/// trailing name-LESS `<creator>` after all authors, so it renders once below the row
+/// (never under author 1, never replicated per author). Guards both regressions.
+#[test]
+fn frontmatter_llncs_shared_affiliation_below_authors() {
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_affiliation.tex");
+  // Exactly ONE affiliation contact — not dropped, not replicated per author.
+  assert_eq!(
+    x.matches("Shared Institute").count(),
+    1,
+    "shared affiliation should appear exactly once:\n{x}"
+  );
+  // NOT stranded on the first author.
+  assert!(
+    !creator_block_contains(&x, "Alice Alpha", "Shared Institute"),
+    "shared affiliation wrongly nested under first author Alice:\n{x}"
+  );
+  // Lives on a trailing name-LESS creator (a <creator> with no <personname>).
+  let on_nameless = x.split("<creator").skip(1).any(|rest| {
+    let block = rest.split("</creator>").next().unwrap_or("");
+    block.contains("Shared Institute") && !block.contains("<personname")
+  });
+  assert!(
+    on_nameless,
+    "shared affiliation should sit on a name-less trailing creator:\n{x}"
+  );
+  // All three named authors still present.
+  for name in ["Alice Alpha", "Bob Beta", "Carol Gamma"] {
+    assert!(
+      x.contains(&format!("<personname>{name}</personname>")),
+      "author {name} missing:\n{x}"
+    );
+  }
+}
