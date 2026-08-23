@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
+
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
     running heads.** Unbound bundled journal classes fall through to the generic
     OmniBus fallback, where Perl's `OmniBus.cls.ltxml` leaves these three undefined
@@ -70,8 +72,6 @@
     options are dropped as before, and calls without a leading optional are unchanged.
     Found in the sandbox-arxiv-2606 study; witness 2606.00555 (455→0 errors). Guard
     `cluster_newtcblisting_leading_optarg`.
-
-## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render Pygments syntax colors, not just bold-black.** When the
     source ships a committed `_minted/` frozencache, `minted_frozencache.rs` content-matches

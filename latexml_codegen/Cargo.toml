@@ -1,6 +1,6 @@
 [package]
 name = "latexml_codegen"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]

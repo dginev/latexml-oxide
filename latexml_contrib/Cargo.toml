@@ -32,7 +32,7 @@ runtime-bindings = ["dep:rhai", "dep:log"]
 
 [dependencies]
 latexml_core = {path = "../latexml_core", version = "0.6.0"}
-latexml_codegen = {path = "../latexml_codegen", version = "0.4.1"}
+latexml_codegen = {path = "../latexml_codegen", version = "0.4.2"}
 latexml_engine = {path = "../latexml_engine", version = "0.7.0"}
 latexml_package = {path = "../latexml_package", version = "0.7.0"}
 rustc-hash = "2.0.0"
