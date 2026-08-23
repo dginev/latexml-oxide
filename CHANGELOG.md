@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
+
+  - **`minted` code blocks render Pygments syntax colors, not just bold-black.** When the
+    source ships a committed `_minted/` frozencache, `minted_frozencache.rs` content-matches
+    each highlight file's plain code (`\PYG` unwrapped, `\PYGZ*` resolved) to a block body
+    and emits Pygments-colored listing lines, reusing the `listings` constructors + xcolor;
+    a cache miss (or no `_minted/`) falls back byte-identically to the uncolored path. Perl
+    errors on `minted` — beyond-Perl (OXIDIZED_DESIGN #157). Guard
+    `minted_frozencache_colors_from_pygments_cache_157`; witness 2605.03143.
+  - **acmart affiliation parts break after the comma, not before it.** `\lx@acm@addresspart`
+    now `\ignorespaces` between `\institution{}\city{}…` parts and joins with a comma +
+    breakable space, matching real `acmart.cls` — so a line wrap no longer strands the comma
+    at the start of the next line. SHARED-with-Perl (its binding omits the `\unskip`/
+    `\ignorespaces`); beyond-Perl (OXIDIZED_DESIGN #158). Witness 2605.03143.
+  - **A single affiliation shared by all authors renders once, below the authors.**
+    `relocate_annotations` no longer mis-binds a shared `affiliation:1` to author 1 by number,
+    and gathers the orphaned institute-level contacts onto one trailing name-less
+    `<ltx:creator>`. SHARED-with-Perl; beyond-Perl (OXIDIZED_DESIGN #159). Guard
+    `frontmatter_llncs_shared_affiliation_below_authors`; witness 2402.19043 (LLNCS, 5
+    authors + one `\institute`).
   - **Author `\thanks` renders as a marked note, not an inline affiliation-like blob.**
     `\author{Name\thanks{…}}` (correspondence, funding, equal-contribution, …) was emitted
     as an inline `<ltx:contact role="thanks">` that read like an affiliation next to the
@@ -204,8 +224,6 @@
     Surpasses Perl 0.8.8 (which emits the same 0pt + `Missing number` warning);
     pdflatex renders the real widths (OXIDIZED_DESIGN #141, arXiv/html_feedback#6909,
     witness 2606.08266).
-
-## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render with syntax highlighting, and inline `\mint`/`\mintinline`
     work.** The `minted` family now emits highlight token classes so a stylesheet colors the
