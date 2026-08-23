@@ -1052,6 +1052,23 @@ Per-doc DOMINANT-cluster counts (robust to amplification): `unexpected/_` 360, n
 5. **floatrow raw-load (2606.10047)** — narrow genuine residue (OX 18 `malformed` vs Perl 0); floatrow
    reroutes subcaption placement, oxidized's raw interp still malforms. Own ticket.
 
+**Confirmed PARITY — do NOT re-triage or "fix" (both engines identical / oxidized cleaner):**
+- `latex/\GenericError` "Not in outer par mode" (88) + "strip used only in twocolumn mode!" (56) —
+  `cuted.sty` `\begin{strip}` misused (one-column, or after `\maketitle` in non-outer-par). Both
+  engines emit the same message at the SAME source line/col; pdflatex would too. Witnesses 2606.27050
+  (ECOC template `\begin{strip}` after `\maketitle`), 2606.00001 (`jaist` one-column + cuted). Do NOT
+  touch par-mode / twocolumn tracking — it is correct.
+- `malformed/ltx:listing` (52) — always a CASCADE, never root: listings style-hooks with mode-switching
+  bodies (`keywordstyle=\..\bfseries{#1}`, `stringstyle=\text{#1}`) raise "close a group that switched
+  to mode horizontal" in BOTH engines (`stomach.rs:733`); the listing malforms only surface past the
+  100-cap (amplification). Witnesses 2606.00625 (lstlisting in adjustbox), 2606.30854 (macros.tex `\code`
+  = `\lstinline` with style hooks), 2606.29025 (algorithm2e+algorithmic). 2606.17850 is mis-clustered
+  (actually an `ltx:td`/`ltx:tr` table cluster). The only real (shared, deep, not-small) defect is the
+  mode-switch-in-listing-style-hook — a future parity-improvement, not a regression.
+- `misdefined/#` "token # (catcode PARAM) should never reach Stomach" (~32) — algpseudocode `#` leak;
+  both engines emit it ~equally (2606.03769 OX 98 / Perl 96, both capped); oxidized clean where Perl
+  errors on 2606.05922. PARITY.
+
 Runaway/fatal re-verification (corrects any "oxidized hard-loops worse than Perl" impression): on
 2606.13219 (pgfplots) oxidized bails `Fatal:Timeout:PushbackLimit` <90s while Perl HANGS (timeout);
 on 2606.30928 (tikz-cd/quiver) oxidized bails in 3s vs Perl 23s. Runaway-fatals = PARITY; the 650k
