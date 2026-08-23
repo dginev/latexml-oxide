@@ -170,6 +170,18 @@ rate (the math lever). Max RSS 1,692 MB.
 
 The phase bands above set priority. Current open work:
 
+### P0 — eager `Debug!` diagnostics on the text-absorption path (up to ~30% of a build-bound paper)
+
+Found by the 2026-08-23 audit (see Audit log — full evidence there). `Debug!`
+(`error.rs:631`) and `generate_message!` (`error.rs:800`) build all their
+strings — including `gullet::get_location()` and, at the `open_text` /
+`open_text_internal` / `close_element` sites (`document.rs:2280/2558/2592/1256`),
+a full `node_to_string` subtree serialization — **before** any verbosity check;
+`emit_record` then discards them. Fix: gate argument evaluation like
+`DebugFeature!` (`error.rs:618`) already does, preserving the `note_status`
+side effect. Output-neutral by construction; the largest single lever found
+since the graphics cache.
+
 ### P1 — math_parse (17% of wall, 17% over-parse) — the top remaining lever
 
 Every math-heavy witness is now `math_parse`-bound (the `build` quadratic was
@@ -256,6 +268,75 @@ floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-08-23 — pre-0.7.6 diagnostic-only audit: eager-Debug! band + ranked backlog
+
+Idle-box pass at `80999906da` (release build with symbols; 82-paper
+`~/data/html_regressions/sandbox` corpus — serial sweeps, `perf --call-graph
+lbr` on three phase-distinct witnesses, dhat allocation pass, clippy perf
+sweep). **Diagnostic only — no code changed.** No regression since 2026-07-29:
+`2405.14114` reproduces its post-guard wall (21.1 vs 21.45 s), and none of the
+248 commits since added hot-path code (XSLT still zero per-node `//` /
+`preceding::` scans). Healthy-paper RSS p50 285 MB / max ~1 GB — normal-path
+memory is fine. Ranked findings, all output-neutral by construction:
+
+1. **Eager `Debug!` diagnostics — the headline (now Open levers P0).** On
+   witness `2304.10050` (6.3 s, build-bound): `node_to_string` of the current
+   subtree per text insert / element close ≈ **26%** of total conversion
+   (children), plus `<str as Debug>::fmt` 7.1% self, fmt plumbing ~4%, and
+   `generate_message!`'s eager `get_location()` → `pathname::split` ~2.6%.
+   Cross-witness band: ~6–8% on a typical math paper (`2408.08292`), ~1–2% on
+   the token-runaway digest witness (`2405.14114`). Shape is
+   quadratic-flavored (each insert re-serializes the growing subtree). dhat
+   confirms the memory side: the `open_text`/`open_text_internal` Debug! sites
+   are ~440k blocks / ~84 MB churn on a 1.3 s paper (`2402.14207`).
+   Token-frequency sites `constructor.rs:305` / `primitive.rs:101` pay one
+   format+alloc per primitive invocation.
+2. **Global `if_count` per conditional** (~4–5% on digest-heavy papers):
+   `Conditional::invoke` → `assign_value_sym::<i64>` Global-assign walks every
+   undo frame + per-frame hashbrown `remove_entry` (2.39% self on
+   `2405.14114`), plus the per-assignment `\globaldefs` probe
+   (`state.rs:841`). Faithful Perl semantics; the typed-`State`-field
+   translation for LaTeXML-internal counters is the fix — still needs the
+   dump-filter + `if_stack` review flagged 2026-07-29.
+3. **`is_noexpand_family` string probe** — still 1.99% self on the digest
+   witness; intern-time flag bit (SymStr-indexed bitvec) remains the fix.
+4. **libxml2 on glibc malloc ≈ 11.3% self** on `2408.08292` (Rust side is on
+   mimalloc). The closed `xmlMemSetup`→mimalloc experiment (2026-07-31) was
+   confounded by the soft-yield RSS trigger on the 131 MB streaming witness;
+   the ordinary-paper CPU case was never isolated. Re-open candidate with
+   segmentation pinned; fork branch `feat-xml-mem-setup` has the wrapper.
+5. **DOM/XPath mechanics**: `collect_walk_matches`
+   (`latexml_post/document.rs:320`) — the traversal engine for every
+   whole-document post query — allocates a `get_child_nodes()` Vec per
+   recursion level (2.4% self + allocator share); its sibling
+   `collect_split_pages` already uses `get_first_child`/`get_next_sibling`.
+   `generate_id` (`document.rs:5931`) runs `ancestor::*[@xml:id][1]` through
+   full XPath parse+eval per id-lacking node in `finalize_rec` — a direct
+   parent-chain walk is equivalent. `XPath::findnodes` re-parses its
+   expression string every call — a compiled-XPath cache would shave all
+   repeated sites. `Node::_wrap` 4.3% self and per-FFI `CString` ~0.85% are
+   rust-libxml API-shape costs (upstream candidates).
+6. **Churn items**: `preload_font_map`/`load_font_map`
+   (`content.rs:3507-3528`) re-`format!` the `"{encoding}_fontmap"` key on
+   every per-character `decode_string` call — ~1M allocations on the 1.3 s
+   dhat paper; memoize the key/Fontmap per encoding. `install_definition`'s
+   `s!("{cs}:locked")` per `\def` (also interns a permanent `:locked` twin per
+   cs; all writers are `Scope::Global`, so a side-set is the shape).
+   `get_search_paths()` materializes `Vec<String>` per file probe.
+   `Table = FxHashMap<SymStr, VecDeque<Stored>>` pays a heap VecDeque
+   pointer-chase per meaning lookup where an inline-one-binding enum would do.
+   Clippy perf sweep: 15 redundant-clone lints in package/engine/contrib/post
+   (lib core is clean).
+
+Tooling papercut: `LATEXML_TELEMETRY_OUT` truncates per job
+(`File::create` in `write_telemetry_record`) — batch runs keep only the last
+record though `perf_phase_summary.py` documents JSONL; switch to append.
+
+Witness commands + full working notes: session scratchpad
+`PERF_AUDIT_2026-08-23.md` (reproduce: symbols-kept release build,
+`perf record --call-graph lbr`, decode with `perf report --no-inline` — fast,
+vs ~15 min with inline resolution; read the `cpu_core` table).
 
 ### 2026-07-29 — per-token guard overhead: one-borrow gullet read + duty-cycled cycle guard + pinned hot keys
 
