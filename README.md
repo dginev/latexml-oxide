@@ -3,7 +3,7 @@
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
 [![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
 [![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
-![ported tests](https://img.shields.io/badge/ported%20tests-1928-32a852?style=flat)
+![ported tests](https://img.shields.io/badge/ported%20tests-2177-32a852?style=flat)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.16562-b31b1b.svg)](https://arxiv.org/abs/2605.16562)
 
 latexml-oxide turns LaTeX sources into accessible web documents.
@@ -52,7 +52,7 @@ A few external tools are called as subprocesses, mainly to convert graphics file
 
 The steps below use a version variable — set it to the release you want:
 ```
-$ VERSION=0.7.5
+$ VERSION=0.7.6
 ```
 
 ### Ubuntu / Debian
@@ -128,7 +128,7 @@ Homebrew's `texlive` or MacTeX/BasicTeX — just make sure the TeX binaries are 
 shipped in a `.zip`. In PowerShell run:
 
 ```
-> $VERSION = "0.7.5"
+> $VERSION = "0.7.6"
 > curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip"
 > Expand-Archive "latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip" -DestinationPath .
 > .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc\latexml_oxide.exe --version
