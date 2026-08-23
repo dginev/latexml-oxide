@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/store.rs`."><title>store.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c656540d6 2026-08-21)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>store.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, cell::RefCell, collections::VecDeque, fmt, rc::Rc};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/common/store.rs`."><title>store.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/common/</div>store.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{borrow::Cow, cell::RefCell, collections::VecDeque, fmt, rc::Rc};
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
@@ -1045,207 +1045,215 @@
 <a href=#1045 id=1045 data-nosnippet>1045</a>      Stored::MuDimension(n) =&gt; <span class="prelude-val">Some</span>(Number::new(n.value_of())),
 <a href=#1046 id=1046 data-nosnippet>1046</a>      Stored::MuGlue(n) =&gt; <span class="prelude-val">Some</span>(Number::new(n.value_of())),
 <a href=#1047 id=1047 data-nosnippet>1047</a>      other =&gt; {
-<a href=#1048 id=1048 data-nosnippet>1048</a>        <span class="macro">eprintln!</span>(<span class="string">"TODO: auto-cast of Stored to Number attempted on {other:?}"</span>);
-<a href=#1049 id=1049 data-nosnippet>1049</a>        <span class="prelude-val">None
-<a href=#1050 id=1050 data-nosnippet>1050</a>      </span>},
-<a href=#1051 id=1051 data-nosnippet>1051</a>    }
-<a href=#1052 id=1052 data-nosnippet>1052</a>  }
-<a href=#1053 id=1053 data-nosnippet>1053</a>}
-<a href=#1054 id=1054 data-nosnippet>1054</a>
-<a href=#1055 id=1055 data-nosnippet>1055</a><span class="comment">// The counterpart of the `Option&lt;Number&gt;` narrowing above, kept lenient in the
-<a href=#1056 id=1056 data-nosnippet>1056</a>// same spirit: a stored `Float` reads as itself, and the integral numerics
-<a href=#1057 id=1057 data-nosnippet>1057</a>// widen to `Float` (`Number`/`Int`), so `lookup_float` sees a value assigned
-<a href=#1058 id=1058 data-nosnippet>1058</a>// either way. Non-numeric variants are `None` (no eprintln — an optional typed
-<a href=#1059 id=1059 data-nosnippet>1059</a>// read, not a coercion error).
-<a href=#1060 id=1060 data-nosnippet>1060</a></span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Float&gt; {
-<a href=#1061 id=1061 data-nosnippet>1061</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Float&gt; {
-<a href=#1062 id=1062 data-nosnippet>1062</a>    <span class="kw">match </span>value {
-<a href=#1063 id=1063 data-nosnippet>1063</a>      Stored::Float(f) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>f),
-<a href=#1064 id=1064 data-nosnippet>1064</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Float::new(n.value_of())),
-<a href=#1065 id=1065 data-nosnippet>1065</a>      Stored::Int(i) =&gt; <span class="prelude-val">Some</span>(Float(<span class="kw-2">*</span>i <span class="kw">as </span>f64)),
-<a href=#1066 id=1066 data-nosnippet>1066</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1067 id=1067 data-nosnippet>1067</a>    }
-<a href=#1068 id=1068 data-nosnippet>1068</a>  }
-<a href=#1069 id=1069 data-nosnippet>1069</a>}
-<a href=#1070 id=1070 data-nosnippet>1070</a>
-<a href=#1071 id=1071 data-nosnippet>1071</a><span class="comment">// MuGlue/MuDimension store raw mu in fixpoint units (1mu = 1/18 em).
-<a href=#1072 id=1072 data-nosnippet>1072</a>// Convert to scaled-pt by mirroring Perl `MuGlue::spValue` →
-<a href=#1073 id=1073 data-nosnippet>1073</a>// `fixpoint(mu/UNITY, MUWidth)` where `MUWidth = int(size * emwidth /
-<a href=#1074 id=1074 data-nosnippet>1074</a>// 18)`. The two-step integer truncation in Perl is load-bearing: a
-<a href=#1075 id=1075 data-nosnippet>1075</a>// single-step `(mu * size / 18)` gives a slightly larger value (109226
-<a href=#1076 id=1076 data-nosnippet>1076</a>// vs 109219 for 3mu at 10pt), and Knuth's `print_scaled` then formats
-<a href=#1077 id=1077 data-nosnippet>1077</a>// "1.66666pt" instead of the expected "1.66663pt". See
-<a href=#1078 id=1078 data-nosnippet>1078</a>// LaTeXML/lib/LaTeXML/Common/Font.pm:580 (getMUWidth) and
-<a href=#1079 id=1079 data-nosnippet>1079</a>// Core/MuGlue.pm spValue.
-<a href=#1080 id=1080 data-nosnippet>1080</a></span><span class="kw">fn </span>mu_to_pt_value(mu_val: i64) -&gt; i64 {
-<a href=#1081 id=1081 data-nosnippet>1081</a>  <span class="kw">let </span>fs = <span class="kw">crate</span>::state::lookup_font()
-<a href=#1082 id=1082 data-nosnippet>1082</a>    .and_then(|f| f.get_size())
-<a href=#1083 id=1083 data-nosnippet>1083</a>    .unwrap_or(<span class="number">10.0</span>);
-<a href=#1084 id=1084 data-nosnippet>1084</a>  <span class="kw">let </span>unity = <span class="kw">crate</span>::common::numeric_ops::UNITY_F64;
-<a href=#1085 id=1085 data-nosnippet>1085</a>  <span class="comment">// MUWidth = int(font_size * emwidth(=1.0*UNITY) / 18)
-<a href=#1086 id=1086 data-nosnippet>1086</a>  </span><span class="kw">let </span>muwidth = (fs * unity / <span class="number">18.0</span>) <span class="kw">as </span>i64;
-<a href=#1087 id=1087 data-nosnippet>1087</a>  <span class="comment">// fixpoint(mu/UNITY, MUWidth) ≈ (mu_val * muwidth / UNITY).trunc()
-<a href=#1088 id=1088 data-nosnippet>1088</a>  </span>((mu_val <span class="kw">as </span>f64 * muwidth <span class="kw">as </span>f64 / unity).trunc()) <span class="kw">as </span>i64
-<a href=#1089 id=1089 data-nosnippet>1089</a>}
-<a href=#1090 id=1090 data-nosnippet>1090</a>
-<a href=#1091 id=1091 data-nosnippet>1091</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Dimension&gt; {
-<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Dimension&gt; {
-<a href=#1093 id=1093 data-nosnippet>1093</a>    <span class="kw">match </span>value {
-<a href=#1094 id=1094 data-nosnippet>1094</a>      Stored::Dimension(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
-<a href=#1095 id=1095 data-nosnippet>1095</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(n.value_of())),
-<a href=#1096 id=1096 data-nosnippet>1096</a>      Stored::Glue(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(n.value_of())),
-<a href=#1097 id=1097 data-nosnippet>1097</a>      Stored::MuDimension(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(mu_to_pt_value(n.value_of()))),
-<a href=#1098 id=1098 data-nosnippet>1098</a>      Stored::MuGlue(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(mu_to_pt_value(n.value_of()))),
-<a href=#1099 id=1099 data-nosnippet>1099</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1100 id=1100 data-nosnippet>1100</a>    }
-<a href=#1101 id=1101 data-nosnippet>1101</a>  }
-<a href=#1102 id=1102 data-nosnippet>1102</a>}
-<a href=#1103 id=1103 data-nosnippet>1103</a>
-<a href=#1104 id=1104 data-nosnippet>1104</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Glue&gt; {
-<a href=#1105 id=1105 data-nosnippet>1105</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Glue&gt; {
-<a href=#1106 id=1106 data-nosnippet>1106</a>    <span class="kw">match </span>value {
-<a href=#1107 id=1107 data-nosnippet>1107</a>      Stored::Dimension(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
-<a href=#1108 id=1108 data-nosnippet>1108</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
-<a href=#1109 id=1109 data-nosnippet>1109</a>      Stored::MuDimension(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(mu_to_pt_value(n.value_of()))),
-<a href=#1110 id=1110 data-nosnippet>1110</a>      Stored::MuGlue(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(mu_to_pt_value(n.value_of()))),
-<a href=#1111 id=1111 data-nosnippet>1111</a>      Stored::Glue(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
-<a href=#1112 id=1112 data-nosnippet>1112</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1113 id=1113 data-nosnippet>1113</a>    }
-<a href=#1114 id=1114 data-nosnippet>1114</a>  }
-<a href=#1115 id=1115 data-nosnippet>1115</a>}
-<a href=#1116 id=1116 data-nosnippet>1116</a>
-<a href=#1117 id=1117 data-nosnippet>1117</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Tokens&gt; {
-<a href=#1118 id=1118 data-nosnippet>1118</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
-<a href=#1119 id=1119 data-nosnippet>1119</a>    <span class="kw">match </span>value {
-<a href=#1120 id=1120 data-nosnippet>1120</a>      Stored::String(sym) =&gt; <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(
-<a href=#1121 id=1121 data-nosnippet>1121</a>        arena::to_string(sym),
-<a href=#1122 id=1122 data-nosnippet>1122</a>      ))),
-<a href=#1123 id=1123 data-nosnippet>1123</a>      Stored::Token(ts) =&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[ts])),
-<a href=#1124 id=1124 data-nosnippet>1124</a>      Stored::Tokens(ts) =&gt; <span class="prelude-val">Some</span>(ts),
-<a href=#1125 id=1125 data-nosnippet>1125</a>      <span class="comment">// Digested: revert to tokens (needed for \AtBeginDocument hooks that
-<a href=#1126 id=1126 data-nosnippet>1126</a>      // store Digested arguments via push_value)
-<a href=#1127 id=1127 data-nosnippet>1127</a>      </span>Stored::Digested(d) =&gt; {
-<a href=#1128 id=1128 data-nosnippet>1128</a>        <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
-<a href=#1129 id=1129 data-nosnippet>1129</a>        d.revert().ok()
-<a href=#1130 id=1130 data-nosnippet>1130</a>      },
-<a href=#1131 id=1131 data-nosnippet>1131</a>      Stored::VecDequeStored(vdq) =&gt; {
-<a href=#1132 id=1132 data-nosnippet>1132</a>        <span class="comment">// Each item in the queue can be unlisted into a Vec&lt;Token&gt;
-<a href=#1133 id=1133 data-nosnippet>1133</a>        // and then the result can be re-cast as a single Tokens
-<a href=#1134 id=1134 data-nosnippet>1134</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>collected: Vec&lt;Token&gt; = Vec::new();
-<a href=#1135 id=1135 data-nosnippet>1135</a>        <span class="kw">for </span>item <span class="kw">in </span>vdq {
-<a href=#1136 id=1136 data-nosnippet>1136</a>          <span class="kw">let </span>item_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = item.into();
-<a href=#1137 id=1137 data-nosnippet>1137</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(item_tokens) = item_tokens_opt {
-<a href=#1138 id=1138 data-nosnippet>1138</a>            collected.extend(item_tokens.unlist());
-<a href=#1139 id=1139 data-nosnippet>1139</a>          }
-<a href=#1140 id=1140 data-nosnippet>1140</a>        }
-<a href=#1141 id=1141 data-nosnippet>1141</a>        <span class="kw">if </span>collected.is_empty() {
-<a href=#1142 id=1142 data-nosnippet>1142</a>          <span class="prelude-val">None
-<a href=#1143 id=1143 data-nosnippet>1143</a>        </span>} <span class="kw">else </span>{
-<a href=#1144 id=1144 data-nosnippet>1144</a>          <span class="prelude-val">Some</span>(Tokens::new(collected))
-<a href=#1145 id=1145 data-nosnippet>1145</a>        }
-<a href=#1146 id=1146 data-nosnippet>1146</a>      },
-<a href=#1147 id=1147 data-nosnippet>1147</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1148 id=1148 data-nosnippet>1148</a>    }
-<a href=#1149 id=1149 data-nosnippet>1149</a>  }
-<a href=#1150 id=1150 data-nosnippet>1150</a>}
-<a href=#1151 id=1151 data-nosnippet>1151</a>
-<a href=#1152 id=1152 data-nosnippet>1152</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
-<a href=#1153 id=1153 data-nosnippet>1153</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
-<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="kw">match </span>value {
-<a href=#1155 id=1155 data-nosnippet>1155</a>      Stored::Register(reg) =&gt; <span class="prelude-val">Some</span>(Rc::clone(reg)),
-<a href=#1156 id=1156 data-nosnippet>1156</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1157 id=1157 data-nosnippet>1157</a>    }
-<a href=#1158 id=1158 data-nosnippet>1158</a>  }
-<a href=#1159 id=1159 data-nosnippet>1159</a>}
-<a href=#1160 id=1160 data-nosnippet>1160</a>
-<a href=#1161 id=1161 data-nosnippet>1161</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Catcode&gt; {
-<a href=#1162 id=1162 data-nosnippet>1162</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Catcode&gt; {
-<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="kw">match </span>value {
-<a href=#1164 id=1164 data-nosnippet>1164</a>      Stored::Catcode(cc) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>cc),
-<a href=#1165 id=1165 data-nosnippet>1165</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1166 id=1166 data-nosnippet>1166</a>    }
-<a href=#1167 id=1167 data-nosnippet>1167</a>  }
-<a href=#1168 id=1168 data-nosnippet>1168</a>}
-<a href=#1169 id=1169 data-nosnippet>1169</a>
-<a href=#1170 id=1170 data-nosnippet>1170</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[char]&gt; {
-<a href=#1171 id=1171 data-nosnippet>1171</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[char]&gt; {
-<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="kw">match </span>value {
-<a href=#1173 id=1173 data-nosnippet>1173</a>      Stored::Chars(cc) =&gt; <span class="prelude-val">Some</span>(cc),
-<a href=#1174 id=1174 data-nosnippet>1174</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1175 id=1175 data-nosnippet>1175</a>    }
-<a href=#1176 id=1176 data-nosnippet>1176</a>  }
-<a href=#1177 id=1177 data-nosnippet>1177</a>}
-<a href=#1178 id=1178 data-nosnippet>1178</a>
-<a href=#1179 id=1179 data-nosnippet>1179</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
-<a href=#1180 id=1180 data-nosnippet>1180</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
-<a href=#1181 id=1181 data-nosnippet>1181</a>    <span class="kw">match </span>value {
-<a href=#1182 id=1182 data-nosnippet>1182</a>      Stored::Fontmap(cc) =&gt; <span class="prelude-val">Some</span>(Rc::clone(cc)),
-<a href=#1183 id=1183 data-nosnippet>1183</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1184 id=1184 data-nosnippet>1184</a>    }
-<a href=#1185 id=1185 data-nosnippet>1185</a>  }
-<a href=#1186 id=1186 data-nosnippet>1186</a>}
-<a href=#1187 id=1187 data-nosnippet>1187</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
-<a href=#1188 id=1188 data-nosnippet>1188</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; { (<span class="kw-2">&amp;</span>value).into() }
-<a href=#1189 id=1189 data-nosnippet>1189</a>}
-<a href=#1190 id=1190 data-nosnippet>1190</a>
-<a href=#1191 id=1191 data-nosnippet>1191</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
-<a href=#1192 id=1192 data-nosnippet>1192</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
-<a href=#1193 id=1193 data-nosnippet>1193</a>    <span class="kw">match </span>value {
-<a href=#1194 id=1194 data-nosnippet>1194</a>      Stored::Number(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Number(<span class="kw-2">*</span>v)),
-<a href=#1195 id=1195 data-nosnippet>1195</a>      Stored::Dimension(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Dimension(<span class="kw-2">*</span>v)),
-<a href=#1196 id=1196 data-nosnippet>1196</a>      Stored::Glue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Glue(<span class="kw-2">*</span>v)),
-<a href=#1197 id=1197 data-nosnippet>1197</a>      Stored::MuGlue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::MuGlue(<span class="kw-2">*</span>v)),
-<a href=#1198 id=1198 data-nosnippet>1198</a>      Stored::Token(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Token(<span class="kw-2">*</span>v)),
-<a href=#1199 id=1199 data-nosnippet>1199</a>      Stored::Tokens(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Tokens(v.clone())),
-<a href=#1200 id=1200 data-nosnippet>1200</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1201 id=1201 data-nosnippet>1201</a>    }
-<a href=#1202 id=1202 data-nosnippet>1202</a>  }
-<a href=#1203 id=1203 data-nosnippet>1203</a>}
-<a href=#1204 id=1204 data-nosnippet>1204</a>
-<a href=#1205 id=1205 data-nosnippet>1205</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-<a href=#1206 id=1206 data-nosnippet>1206</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-<a href=#1207 id=1207 data-nosnippet>1207</a>    <span class="kw">match </span>value {
-<a href=#1208 id=1208 data-nosnippet>1208</a>      Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>(digested),
-<a href=#1209 id=1209 data-nosnippet>1209</a>      Stored::String(text) =&gt; <span class="prelude-val">Some</span>(text.into()),
-<a href=#1210 id=1210 data-nosnippet>1210</a>      Stored::Int(text) =&gt; <span class="prelude-val">Some</span>(text.to_string().into()),
-<a href=#1211 id=1211 data-nosnippet>1211</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1212 id=1212 data-nosnippet>1212</a>    }
-<a href=#1213 id=1213 data-nosnippet>1213</a>  }
-<a href=#1214 id=1214 data-nosnippet>1214</a>}
-<a href=#1215 id=1215 data-nosnippet>1215</a>
-<a href=#1216 id=1216 data-nosnippet>1216</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-<a href=#1217 id=1217 data-nosnippet>1217</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-<a href=#1218 id=1218 data-nosnippet>1218</a>    <span class="kw">match </span>value {
-<a href=#1219 id=1219 data-nosnippet>1219</a>      Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>digested).clone()),
-<a href=#1220 id=1220 data-nosnippet>1220</a>      Stored::String(text) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>text).into()),
-<a href=#1221 id=1221 data-nosnippet>1221</a>      Stored::Int(text) =&gt; <span class="prelude-val">Some</span>(text.to_string().into()),
-<a href=#1222 id=1222 data-nosnippet>1222</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1223 id=1223 data-nosnippet>1223</a>    }
-<a href=#1224 id=1224 data-nosnippet>1224</a>  }
-<a href=#1225 id=1225 data-nosnippet>1225</a>}
-<a href=#1226 id=1226 data-nosnippet>1226</a>
-<a href=#1227 id=1227 data-nosnippet>1227</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
-<a href=#1228 id=1228 data-nosnippet>1228</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; { (<span class="kw-2">*</span>value).into() }
-<a href=#1229 id=1229 data-nosnippet>1229</a>}
-<a href=#1230 id=1230 data-nosnippet>1230</a>
-<a href=#1231 id=1231 data-nosnippet>1231</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span>Token {
-<a href=#1232 id=1232 data-nosnippet>1232</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; Token {
-<a href=#1233 id=1233 data-nosnippet>1233</a>    <span class="kw">match </span>value {
-<a href=#1234 id=1234 data-nosnippet>1234</a>      Stored::Tokens(ts) =&gt; ts.into(),
-<a href=#1235 id=1235 data-nosnippet>1235</a>      Stored::Token(t) =&gt; <span class="kw-2">*</span>t,
-<a href=#1236 id=1236 data-nosnippet>1236</a>      Stored::String(text) =&gt; Token {
-<a href=#1237 id=1237 data-nosnippet>1237</a>        text: <span class="kw-2">*</span>text,
-<a href=#1238 id=1238 data-nosnippet>1238</a>        code: Catcode::CS,
-<a href=#1239 id=1239 data-nosnippet>1239</a>        <span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#1240 id=1240 data-nosnippet>1240</a>        </span>loc: <span class="number">0</span>,
-<a href=#1241 id=1241 data-nosnippet>1241</a>      },
-<a href=#1242 id=1242 data-nosnippet>1242</a>      t =&gt; {
-<a href=#1243 id=1243 data-nosnippet>1243</a>        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"dangerous cast to CS for {:?}"</span>, t);
-<a href=#1244 id=1244 data-nosnippet>1244</a>        <span class="macro">Warn!</span>(<span class="string">"stored"</span>, <span class="string">"cast"</span>, message);
-<a href=#1245 id=1245 data-nosnippet>1245</a>        <span class="macro">T_CS!</span>(t.to_string())
-<a href=#1246 id=1246 data-nosnippet>1246</a>      }, <span class="comment">/* TODO, is this the right place to default to CS? Do we need a
-<a href=#1247 id=1247 data-nosnippet>1247</a>          * custom method instead? */
-<a href=#1248 id=1248 data-nosnippet>1248</a>    </span>}
-<a href=#1249 id=1249 data-nosnippet>1249</a>  }
-<a href=#1250 id=1250 data-nosnippet>1250</a>}
+<a href=#1048 id=1048 data-nosnippet>1048</a>        <span class="comment">// No Number projection for this Stored variant — surface it through the
+<a href=#1049 id=1049 data-nosnippet>1049</a>        // logger (counts in REPORT, respects the log floor + `--quiet` stderr gate)
+<a href=#1050 id=1050 data-nosnippet>1050</a>        // rather than a raw `eprintln!` that bypassed both; callers degrade on the
+<a href=#1051 id=1051 data-nosnippet>1051</a>        // None. Mirrors the `Warn!("stored", "cast", …)` fallback for the CS cast.
+<a href=#1052 id=1052 data-nosnippet>1052</a>        </span><span class="macro">Warn!</span>(
+<a href=#1053 id=1053 data-nosnippet>1053</a>          <span class="string">"stored"</span>,
+<a href=#1054 id=1054 data-nosnippet>1054</a>          <span class="string">"cast"</span>,
+<a href=#1055 id=1055 data-nosnippet>1055</a>          <span class="macro">s!</span>(<span class="string">"no auto-cast of Stored to Number for {other:?}"</span>)
+<a href=#1056 id=1056 data-nosnippet>1056</a>        );
+<a href=#1057 id=1057 data-nosnippet>1057</a>        <span class="prelude-val">None
+<a href=#1058 id=1058 data-nosnippet>1058</a>      </span>},
+<a href=#1059 id=1059 data-nosnippet>1059</a>    }
+<a href=#1060 id=1060 data-nosnippet>1060</a>  }
+<a href=#1061 id=1061 data-nosnippet>1061</a>}
+<a href=#1062 id=1062 data-nosnippet>1062</a>
+<a href=#1063 id=1063 data-nosnippet>1063</a><span class="comment">// The counterpart of the `Option&lt;Number&gt;` narrowing above, kept lenient in the
+<a href=#1064 id=1064 data-nosnippet>1064</a>// same spirit: a stored `Float` reads as itself, and the integral numerics
+<a href=#1065 id=1065 data-nosnippet>1065</a>// widen to `Float` (`Number`/`Int`), so `lookup_float` sees a value assigned
+<a href=#1066 id=1066 data-nosnippet>1066</a>// either way. Non-numeric variants are `None` (no eprintln — an optional typed
+<a href=#1067 id=1067 data-nosnippet>1067</a>// read, not a coercion error).
+<a href=#1068 id=1068 data-nosnippet>1068</a></span><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Float&gt; {
+<a href=#1069 id=1069 data-nosnippet>1069</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Float&gt; {
+<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="kw">match </span>value {
+<a href=#1071 id=1071 data-nosnippet>1071</a>      Stored::Float(f) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>f),
+<a href=#1072 id=1072 data-nosnippet>1072</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Float::new(n.value_of())),
+<a href=#1073 id=1073 data-nosnippet>1073</a>      Stored::Int(i) =&gt; <span class="prelude-val">Some</span>(Float(<span class="kw-2">*</span>i <span class="kw">as </span>f64)),
+<a href=#1074 id=1074 data-nosnippet>1074</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1075 id=1075 data-nosnippet>1075</a>    }
+<a href=#1076 id=1076 data-nosnippet>1076</a>  }
+<a href=#1077 id=1077 data-nosnippet>1077</a>}
+<a href=#1078 id=1078 data-nosnippet>1078</a>
+<a href=#1079 id=1079 data-nosnippet>1079</a><span class="comment">// MuGlue/MuDimension store raw mu in fixpoint units (1mu = 1/18 em).
+<a href=#1080 id=1080 data-nosnippet>1080</a>// Convert to scaled-pt by mirroring Perl `MuGlue::spValue` →
+<a href=#1081 id=1081 data-nosnippet>1081</a>// `fixpoint(mu/UNITY, MUWidth)` where `MUWidth = int(size * emwidth /
+<a href=#1082 id=1082 data-nosnippet>1082</a>// 18)`. The two-step integer truncation in Perl is load-bearing: a
+<a href=#1083 id=1083 data-nosnippet>1083</a>// single-step `(mu * size / 18)` gives a slightly larger value (109226
+<a href=#1084 id=1084 data-nosnippet>1084</a>// vs 109219 for 3mu at 10pt), and Knuth's `print_scaled` then formats
+<a href=#1085 id=1085 data-nosnippet>1085</a>// "1.66666pt" instead of the expected "1.66663pt". See
+<a href=#1086 id=1086 data-nosnippet>1086</a>// LaTeXML/lib/LaTeXML/Common/Font.pm:580 (getMUWidth) and
+<a href=#1087 id=1087 data-nosnippet>1087</a>// Core/MuGlue.pm spValue.
+<a href=#1088 id=1088 data-nosnippet>1088</a></span><span class="kw">fn </span>mu_to_pt_value(mu_val: i64) -&gt; i64 {
+<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="kw">let </span>fs = <span class="kw">crate</span>::state::lookup_font()
+<a href=#1090 id=1090 data-nosnippet>1090</a>    .and_then(|f| f.get_size())
+<a href=#1091 id=1091 data-nosnippet>1091</a>    .unwrap_or(<span class="number">10.0</span>);
+<a href=#1092 id=1092 data-nosnippet>1092</a>  <span class="kw">let </span>unity = <span class="kw">crate</span>::common::numeric_ops::UNITY_F64;
+<a href=#1093 id=1093 data-nosnippet>1093</a>  <span class="comment">// MUWidth = int(font_size * emwidth(=1.0*UNITY) / 18)
+<a href=#1094 id=1094 data-nosnippet>1094</a>  </span><span class="kw">let </span>muwidth = (fs * unity / <span class="number">18.0</span>) <span class="kw">as </span>i64;
+<a href=#1095 id=1095 data-nosnippet>1095</a>  <span class="comment">// fixpoint(mu/UNITY, MUWidth) ≈ (mu_val * muwidth / UNITY).trunc()
+<a href=#1096 id=1096 data-nosnippet>1096</a>  </span>((mu_val <span class="kw">as </span>f64 * muwidth <span class="kw">as </span>f64 / unity).trunc()) <span class="kw">as </span>i64
+<a href=#1097 id=1097 data-nosnippet>1097</a>}
+<a href=#1098 id=1098 data-nosnippet>1098</a>
+<a href=#1099 id=1099 data-nosnippet>1099</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Dimension&gt; {
+<a href=#1100 id=1100 data-nosnippet>1100</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Dimension&gt; {
+<a href=#1101 id=1101 data-nosnippet>1101</a>    <span class="kw">match </span>value {
+<a href=#1102 id=1102 data-nosnippet>1102</a>      Stored::Dimension(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
+<a href=#1103 id=1103 data-nosnippet>1103</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(n.value_of())),
+<a href=#1104 id=1104 data-nosnippet>1104</a>      Stored::Glue(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(n.value_of())),
+<a href=#1105 id=1105 data-nosnippet>1105</a>      Stored::MuDimension(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(mu_to_pt_value(n.value_of()))),
+<a href=#1106 id=1106 data-nosnippet>1106</a>      Stored::MuGlue(n) =&gt; <span class="prelude-val">Some</span>(Dimension::new(mu_to_pt_value(n.value_of()))),
+<a href=#1107 id=1107 data-nosnippet>1107</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1108 id=1108 data-nosnippet>1108</a>    }
+<a href=#1109 id=1109 data-nosnippet>1109</a>  }
+<a href=#1110 id=1110 data-nosnippet>1110</a>}
+<a href=#1111 id=1111 data-nosnippet>1111</a>
+<a href=#1112 id=1112 data-nosnippet>1112</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Glue&gt; {
+<a href=#1113 id=1113 data-nosnippet>1113</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Glue&gt; {
+<a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="kw">match </span>value {
+<a href=#1115 id=1115 data-nosnippet>1115</a>      Stored::Dimension(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
+<a href=#1116 id=1116 data-nosnippet>1116</a>      Stored::Number(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(n.value_of())),
+<a href=#1117 id=1117 data-nosnippet>1117</a>      Stored::MuDimension(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(mu_to_pt_value(n.value_of()))),
+<a href=#1118 id=1118 data-nosnippet>1118</a>      Stored::MuGlue(n) =&gt; <span class="prelude-val">Some</span>(Glue::new(mu_to_pt_value(n.value_of()))),
+<a href=#1119 id=1119 data-nosnippet>1119</a>      Stored::Glue(n) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>n),
+<a href=#1120 id=1120 data-nosnippet>1120</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1121 id=1121 data-nosnippet>1121</a>    }
+<a href=#1122 id=1122 data-nosnippet>1122</a>  }
+<a href=#1123 id=1123 data-nosnippet>1123</a>}
+<a href=#1124 id=1124 data-nosnippet>1124</a>
+<a href=#1125 id=1125 data-nosnippet>1125</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Tokens&gt; {
+<a href=#1126 id=1126 data-nosnippet>1126</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
+<a href=#1127 id=1127 data-nosnippet>1127</a>    <span class="kw">match </span>value {
+<a href=#1128 id=1128 data-nosnippet>1128</a>      Stored::String(sym) =&gt; <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(
+<a href=#1129 id=1129 data-nosnippet>1129</a>        arena::to_string(sym),
+<a href=#1130 id=1130 data-nosnippet>1130</a>      ))),
+<a href=#1131 id=1131 data-nosnippet>1131</a>      Stored::Token(ts) =&gt; <span class="prelude-val">Some</span>(Tokens::new(<span class="macro">vec!</span>[ts])),
+<a href=#1132 id=1132 data-nosnippet>1132</a>      Stored::Tokens(ts) =&gt; <span class="prelude-val">Some</span>(ts),
+<a href=#1133 id=1133 data-nosnippet>1133</a>      <span class="comment">// Digested: revert to tokens (needed for \AtBeginDocument hooks that
+<a href=#1134 id=1134 data-nosnippet>1134</a>      // store Digested arguments via push_value)
+<a href=#1135 id=1135 data-nosnippet>1135</a>      </span>Stored::Digested(d) =&gt; {
+<a href=#1136 id=1136 data-nosnippet>1136</a>        <span class="kw">use </span><span class="kw">crate</span>::common::object::Object;
+<a href=#1137 id=1137 data-nosnippet>1137</a>        d.revert().ok()
+<a href=#1138 id=1138 data-nosnippet>1138</a>      },
+<a href=#1139 id=1139 data-nosnippet>1139</a>      Stored::VecDequeStored(vdq) =&gt; {
+<a href=#1140 id=1140 data-nosnippet>1140</a>        <span class="comment">// Each item in the queue can be unlisted into a Vec&lt;Token&gt;
+<a href=#1141 id=1141 data-nosnippet>1141</a>        // and then the result can be re-cast as a single Tokens
+<a href=#1142 id=1142 data-nosnippet>1142</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>collected: Vec&lt;Token&gt; = Vec::new();
+<a href=#1143 id=1143 data-nosnippet>1143</a>        <span class="kw">for </span>item <span class="kw">in </span>vdq {
+<a href=#1144 id=1144 data-nosnippet>1144</a>          <span class="kw">let </span>item_tokens_opt: <span class="prelude-ty">Option</span>&lt;Tokens&gt; = item.into();
+<a href=#1145 id=1145 data-nosnippet>1145</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(item_tokens) = item_tokens_opt {
+<a href=#1146 id=1146 data-nosnippet>1146</a>            collected.extend(item_tokens.unlist());
+<a href=#1147 id=1147 data-nosnippet>1147</a>          }
+<a href=#1148 id=1148 data-nosnippet>1148</a>        }
+<a href=#1149 id=1149 data-nosnippet>1149</a>        <span class="kw">if </span>collected.is_empty() {
+<a href=#1150 id=1150 data-nosnippet>1150</a>          <span class="prelude-val">None
+<a href=#1151 id=1151 data-nosnippet>1151</a>        </span>} <span class="kw">else </span>{
+<a href=#1152 id=1152 data-nosnippet>1152</a>          <span class="prelude-val">Some</span>(Tokens::new(collected))
+<a href=#1153 id=1153 data-nosnippet>1153</a>        }
+<a href=#1154 id=1154 data-nosnippet>1154</a>      },
+<a href=#1155 id=1155 data-nosnippet>1155</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1156 id=1156 data-nosnippet>1156</a>    }
+<a href=#1157 id=1157 data-nosnippet>1157</a>  }
+<a href=#1158 id=1158 data-nosnippet>1158</a>}
+<a href=#1159 id=1159 data-nosnippet>1159</a>
+<a href=#1160 id=1160 data-nosnippet>1160</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
+<a href=#1161 id=1161 data-nosnippet>1161</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Register&gt;&gt; {
+<a href=#1162 id=1162 data-nosnippet>1162</a>    <span class="kw">match </span>value {
+<a href=#1163 id=1163 data-nosnippet>1163</a>      Stored::Register(reg) =&gt; <span class="prelude-val">Some</span>(Rc::clone(reg)),
+<a href=#1164 id=1164 data-nosnippet>1164</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1165 id=1165 data-nosnippet>1165</a>    }
+<a href=#1166 id=1166 data-nosnippet>1166</a>  }
+<a href=#1167 id=1167 data-nosnippet>1167</a>}
+<a href=#1168 id=1168 data-nosnippet>1168</a>
+<a href=#1169 id=1169 data-nosnippet>1169</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Catcode&gt; {
+<a href=#1170 id=1170 data-nosnippet>1170</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Catcode&gt; {
+<a href=#1171 id=1171 data-nosnippet>1171</a>    <span class="kw">match </span>value {
+<a href=#1172 id=1172 data-nosnippet>1172</a>      Stored::Catcode(cc) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>cc),
+<a href=#1173 id=1173 data-nosnippet>1173</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1174 id=1174 data-nosnippet>1174</a>    }
+<a href=#1175 id=1175 data-nosnippet>1175</a>  }
+<a href=#1176 id=1176 data-nosnippet>1176</a>}
+<a href=#1177 id=1177 data-nosnippet>1177</a>
+<a href=#1178 id=1178 data-nosnippet>1178</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[char]&gt; {
+<a href=#1179 id=1179 data-nosnippet>1179</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[char]&gt; {
+<a href=#1180 id=1180 data-nosnippet>1180</a>    <span class="kw">match </span>value {
+<a href=#1181 id=1181 data-nosnippet>1181</a>      Stored::Chars(cc) =&gt; <span class="prelude-val">Some</span>(cc),
+<a href=#1182 id=1182 data-nosnippet>1182</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1183 id=1183 data-nosnippet>1183</a>    }
+<a href=#1184 id=1184 data-nosnippet>1184</a>  }
+<a href=#1185 id=1185 data-nosnippet>1185</a>}
+<a href=#1186 id=1186 data-nosnippet>1186</a>
+<a href=#1187 id=1187 data-nosnippet>1187</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
+<a href=#1188 id=1188 data-nosnippet>1188</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
+<a href=#1189 id=1189 data-nosnippet>1189</a>    <span class="kw">match </span>value {
+<a href=#1190 id=1190 data-nosnippet>1190</a>      Stored::Fontmap(cc) =&gt; <span class="prelude-val">Some</span>(Rc::clone(cc)),
+<a href=#1191 id=1191 data-nosnippet>1191</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1192 id=1192 data-nosnippet>1192</a>    }
+<a href=#1193 id=1193 data-nosnippet>1193</a>  }
+<a href=#1194 id=1194 data-nosnippet>1194</a>}
+<a href=#1195 id=1195 data-nosnippet>1195</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; {
+<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;[<span class="prelude-ty">Option</span>&lt;char&gt;]&gt;&gt; { (<span class="kw-2">&amp;</span>value).into() }
+<a href=#1197 id=1197 data-nosnippet>1197</a>}
+<a href=#1198 id=1198 data-nosnippet>1198</a>
+<a href=#1199 id=1199 data-nosnippet>1199</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
+<a href=#1200 id=1200 data-nosnippet>1200</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;RegisterValue&gt; {
+<a href=#1201 id=1201 data-nosnippet>1201</a>    <span class="kw">match </span>value {
+<a href=#1202 id=1202 data-nosnippet>1202</a>      Stored::Number(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Number(<span class="kw-2">*</span>v)),
+<a href=#1203 id=1203 data-nosnippet>1203</a>      Stored::Dimension(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Dimension(<span class="kw-2">*</span>v)),
+<a href=#1204 id=1204 data-nosnippet>1204</a>      Stored::Glue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Glue(<span class="kw-2">*</span>v)),
+<a href=#1205 id=1205 data-nosnippet>1205</a>      Stored::MuGlue(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::MuGlue(<span class="kw-2">*</span>v)),
+<a href=#1206 id=1206 data-nosnippet>1206</a>      Stored::Token(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Token(<span class="kw-2">*</span>v)),
+<a href=#1207 id=1207 data-nosnippet>1207</a>      Stored::Tokens(v) =&gt; <span class="prelude-val">Some</span>(RegisterValue::Tokens(v.clone())),
+<a href=#1208 id=1208 data-nosnippet>1208</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1209 id=1209 data-nosnippet>1209</a>    }
+<a href=#1210 id=1210 data-nosnippet>1210</a>  }
+<a href=#1211 id=1211 data-nosnippet>1211</a>}
+<a href=#1212 id=1212 data-nosnippet>1212</a>
+<a href=#1213 id=1213 data-nosnippet>1213</a><span class="kw">impl </span>From&lt;Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<a href=#1214 id=1214 data-nosnippet>1214</a>  <span class="kw">fn </span>from(value: Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<a href=#1215 id=1215 data-nosnippet>1215</a>    <span class="kw">match </span>value {
+<a href=#1216 id=1216 data-nosnippet>1216</a>      Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>(digested),
+<a href=#1217 id=1217 data-nosnippet>1217</a>      Stored::String(text) =&gt; <span class="prelude-val">Some</span>(text.into()),
+<a href=#1218 id=1218 data-nosnippet>1218</a>      Stored::Int(text) =&gt; <span class="prelude-val">Some</span>(text.to_string().into()),
+<a href=#1219 id=1219 data-nosnippet>1219</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1220 id=1220 data-nosnippet>1220</a>    }
+<a href=#1221 id=1221 data-nosnippet>1221</a>  }
+<a href=#1222 id=1222 data-nosnippet>1222</a>}
+<a href=#1223 id=1223 data-nosnippet>1223</a>
+<a href=#1224 id=1224 data-nosnippet>1224</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<a href=#1225 id=1225 data-nosnippet>1225</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<a href=#1226 id=1226 data-nosnippet>1226</a>    <span class="kw">match </span>value {
+<a href=#1227 id=1227 data-nosnippet>1227</a>      Stored::Digested(digested) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>digested).clone()),
+<a href=#1228 id=1228 data-nosnippet>1228</a>      Stored::String(text) =&gt; <span class="prelude-val">Some</span>((<span class="kw-2">*</span>text).into()),
+<a href=#1229 id=1229 data-nosnippet>1229</a>      Stored::Int(text) =&gt; <span class="prelude-val">Some</span>(text.to_string().into()),
+<a href=#1230 id=1230 data-nosnippet>1230</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1231 id=1231 data-nosnippet>1231</a>    }
+<a href=#1232 id=1232 data-nosnippet>1232</a>  }
+<a href=#1233 id=1233 data-nosnippet>1233</a>}
+<a href=#1234 id=1234 data-nosnippet>1234</a>
+<a href=#1235 id=1235 data-nosnippet>1235</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored&gt; <span class="kw">for </span><span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; {
+<a href=#1236 id=1236 data-nosnippet>1236</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'b </span>Stored) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Digested&gt; { (<span class="kw-2">*</span>value).into() }
+<a href=#1237 id=1237 data-nosnippet>1237</a>}
+<a href=#1238 id=1238 data-nosnippet>1238</a>
+<a href=#1239 id=1239 data-nosnippet>1239</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored&gt; <span class="kw">for </span>Token {
+<a href=#1240 id=1240 data-nosnippet>1240</a>  <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Stored) -&gt; Token {
+<a href=#1241 id=1241 data-nosnippet>1241</a>    <span class="kw">match </span>value {
+<a href=#1242 id=1242 data-nosnippet>1242</a>      Stored::Tokens(ts) =&gt; ts.into(),
+<a href=#1243 id=1243 data-nosnippet>1243</a>      Stored::Token(t) =&gt; <span class="kw-2">*</span>t,
+<a href=#1244 id=1244 data-nosnippet>1244</a>      Stored::String(text) =&gt; Token {
+<a href=#1245 id=1245 data-nosnippet>1245</a>        text: <span class="kw-2">*</span>text,
+<a href=#1246 id=1246 data-nosnippet>1246</a>        code: Catcode::CS,
+<a href=#1247 id=1247 data-nosnippet>1247</a>        <span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#1248 id=1248 data-nosnippet>1248</a>        </span>loc: <span class="number">0</span>,
+<a href=#1249 id=1249 data-nosnippet>1249</a>      },
+<a href=#1250 id=1250 data-nosnippet>1250</a>      t =&gt; {
+<a href=#1251 id=1251 data-nosnippet>1251</a>        <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"dangerous cast to CS for {:?}"</span>, t);
+<a href=#1252 id=1252 data-nosnippet>1252</a>        <span class="macro">Warn!</span>(<span class="string">"stored"</span>, <span class="string">"cast"</span>, message);
+<a href=#1253 id=1253 data-nosnippet>1253</a>        <span class="macro">T_CS!</span>(t.to_string())
+<a href=#1254 id=1254 data-nosnippet>1254</a>      }, <span class="comment">/* TODO, is this the right place to default to CS? Do we need a
+<a href=#1255 id=1255 data-nosnippet>1255</a>          * custom method instead? */
+<a href=#1256 id=1256 data-nosnippet>1256</a>    </span>}
+<a href=#1257 id=1257 data-nosnippet>1257</a>  }
+<a href=#1258 id=1258 data-nosnippet>1258</a>}
 </code></pre></div></section></main></body></html>

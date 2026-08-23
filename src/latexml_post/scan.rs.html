@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/scan.rs`."><title>scan.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c656540d6 2026-08-21)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>scan.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Document structure scanning processor.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/scan.rs`."><title>scan.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>scan.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Document structure scanning processor.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::Scan`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Scans the document for structural elements (sections, figures, equations, etc.)
@@ -346,14 +346,14 @@
 <a href=#346 id=346 data-nosnippet>346</a>        <span class="kw">let </span>value = <span class="self">self
 <a href=#347 id=347 data-nosnippet>347</a>          </span>.db
 <a href=#348 id=348 data-nosnippet>348</a>          .adopt_xml(<span class="kw-2">&amp;</span>title_node)
-<a href=#349 id=349 data-nosnippet>349</a>          .unwrap_or_else(|| Value::from(title_text_content(<span class="kw-2">&amp;</span>title_node).as_str()));
+<a href=#349 id=349 data-nosnippet>349</a>          .unwrap_or_else(|| Value::from(title_text_content(doc, <span class="kw-2">&amp;</span>title_node).as_str()));
 <a href=#350 id=350 data-nosnippet>350</a>        sp.push(<span class="string">"title"</span>, value);
 <a href=#351 id=351 data-nosnippet>351</a>      }
 <a href=#352 id=352 data-nosnippet>352</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(toctitle_node) = doc.findnode_at(<span class="string">"ltx:toctitle"</span>, node) {
 <a href=#353 id=353 data-nosnippet>353</a>        <span class="kw">let </span>value = <span class="self">self
 <a href=#354 id=354 data-nosnippet>354</a>          </span>.db
 <a href=#355 id=355 data-nosnippet>355</a>          .adopt_xml(<span class="kw-2">&amp;</span>toctitle_node)
-<a href=#356 id=356 data-nosnippet>356</a>          .unwrap_or_else(|| Value::from(title_text_content(<span class="kw-2">&amp;</span>toctitle_node).as_str()));
+<a href=#356 id=356 data-nosnippet>356</a>          .unwrap_or_else(|| Value::from(title_text_content(doc, <span class="kw-2">&amp;</span>toctitle_node).as_str()));
 <a href=#357 id=357 data-nosnippet>357</a>        sp.push(<span class="string">"toctitle"</span>, value);
 <a href=#358 id=358 data-nosnippet>358</a>      }
 <a href=#359 id=359 data-nosnippet>359</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(stub) = node.get_attribute(<span class="string">"stub"</span>) {
@@ -1056,46 +1056,58 @@
 <a href=#1056 id=1056 data-nosnippet>1056</a>/// This is the derived STRING form of a title (page `&lt;title&gt;`, `title=`
 <a href=#1057 id=1057 data-nosnippet>1057</a>/// tooltip). The rich node form is kept in the ObjectDB (`Value::Xml`) so
 <a href=#1058 id=1058 data-nosnippet>1058</a>/// CrossRef can deep-clone it into `&lt;ltx:ref&gt;` content. Mirrors Perl
-<a href=#1059 id=1059 data-nosnippet>1059</a>/// `CrossRef::getTextContent_rec`'s `ltx:tag` open/close handling (its
-<a href=#1060 id=1060 data-nosnippet>1060</a>/// `ltx:Math → unicodemath` branch is not yet ported — math in a title still
-<a href=#1061 id=1061 data-nosnippet>1061</a>/// flattens to its token text here, unchanged from before).
-<a href=#1062 id=1062 data-nosnippet>1062</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>title_text_content(node: <span class="kw-2">&amp;</span>Node) -&gt; String {
-<a href=#1063 id=1063 data-nosnippet>1063</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
-<a href=#1064 id=1064 data-nosnippet>1064</a>  <span class="kw">let </span><span class="kw-2">mut </span>child = node.get_first_child();
-<a href=#1065 id=1065 data-nosnippet>1065</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(c) = child {
-<a href=#1066 id=1066 data-nosnippet>1066</a>    <span class="kw">match </span>c.get_type() {
-<a href=#1067 id=1067 data-nosnippet>1067</a>      <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; {
-<a href=#1068 id=1068 data-nosnippet>1068</a>        result.push_str(<span class="kw-2">&amp;</span>c.get_content());
-<a href=#1069 id=1069 data-nosnippet>1069</a>      },
-<a href=#1070 id=1070 data-nosnippet>1070</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
-<a href=#1071 id=1071 data-nosnippet>1071</a>        <span class="kw">let </span>name = c.get_name();
-<a href=#1072 id=1072 data-nosnippet>1072</a>        <span class="kw">if </span>name == <span class="string">"tag" </span>{
-<a href=#1073 id=1073 data-nosnippet>1073</a>          <span class="comment">// Honor open/close attributes on &lt;ltx:tag&gt;
-<a href=#1074 id=1074 data-nosnippet>1074</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(open) = c.get_attribute(<span class="string">"open"</span>) {
-<a href=#1075 id=1075 data-nosnippet>1075</a>            result.push_str(<span class="kw-2">&amp;</span>open);
-<a href=#1076 id=1076 data-nosnippet>1076</a>          }
-<a href=#1077 id=1077 data-nosnippet>1077</a>          result.push_str(<span class="kw-2">&amp;</span>title_text_content(<span class="kw-2">&amp;</span>c));
-<a href=#1078 id=1078 data-nosnippet>1078</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(close) = c.get_attribute(<span class="string">"close"</span>) {
-<a href=#1079 id=1079 data-nosnippet>1079</a>            result.push_str(<span class="kw-2">&amp;</span>close);
-<a href=#1080 id=1080 data-nosnippet>1080</a>          }
-<a href=#1081 id=1081 data-nosnippet>1081</a>        } <span class="kw">else </span>{
-<a href=#1082 id=1082 data-nosnippet>1082</a>          result.push_str(<span class="kw-2">&amp;</span>title_text_content(<span class="kw-2">&amp;</span>c));
-<a href=#1083 id=1083 data-nosnippet>1083</a>        }
-<a href=#1084 id=1084 data-nosnippet>1084</a>      },
-<a href=#1085 id=1085 data-nosnippet>1085</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#1086 id=1086 data-nosnippet>1086</a>    }
-<a href=#1087 id=1087 data-nosnippet>1087</a>    child = c.get_next_sibling();
-<a href=#1088 id=1088 data-nosnippet>1088</a>  }
-<a href=#1089 id=1089 data-nosnippet>1089</a>  result
-<a href=#1090 id=1090 data-nosnippet>1090</a>}
-<a href=#1091 id=1091 data-nosnippet>1091</a>
-<a href=#1092 id=1092 data-nosnippet>1092</a><span class="comment">// NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the
-<a href=#1093 id=1093 data-nosnippet>1093</a>// ObjectDB is ADOPTED first (`ObjectDB::adopt_xml` — a deep copy into a
-<a href=#1094 id=1094 data-nosnippet>1094</a>// DB-owned document), so stored values live exactly as long as the DB and
-<a href=#1095 id=1095 data-nosnippet>1095</a>// never dangle into a page document that streaming has freed. Consumers still
-<a href=#1096 id=1096 data-nosnippet>1096</a>// deep-copy on materialization (`PostDocument::add_xml_node`, with cross-doc
-<a href=#1097 id=1097 data-nosnippet>1097</a>// namespace reconciliation + xml:id uniquification). Section titles are kept
-<a href=#1098 id=1098 data-nosnippet>1098</a>// as nodes (see `section_handler`); the derived string form is
-<a href=#1099 id=1099 data-nosnippet>1099</a>// `title_text_content`. Index `phrases`/`see_also` values are also stored as
-<a href=#1100 id=1100 data-nosnippet>1100</a>// (adopted) `Value::Xml`.
+<a href=#1059 id=1059 data-nosnippet>1059</a>/// `CrossRef::getTextContent_rec` (`CrossRef.pm` L861-879): `ltx:tag` open/close
+<a href=#1060 id=1060 data-nosnippet>1060</a>/// handling, plus the `ltx:Math → unicodemath` branch — a title's math renders
+<a href=#1061 id=1061 data-nosnippet>1061</a>/// as presentation-order infix Unicode (`sin𝑥=𝑥`), NOT the raw content-tree
+<a href=#1062 id=1062 data-nosnippet>1062</a>/// token text, which is operator-first and whitespace-laden (issue #761).
+<a href=#1063 id=1063 data-nosnippet>1063</a>///
+<a href=#1064 id=1064 data-nosnippet>1064</a>/// Whitespace collapse is applied by the caller ([`value_text`] =
+<a href=#1065 id=1065 data-nosnippet>1065</a>/// `getTextContent`), matching Perl's split of the two functions.
+<a href=#1066 id=1066 data-nosnippet>1066</a>///
+<a href=#1067 id=1067 data-nosnippet>1067</a>/// [`value_text`]: crate::crossref
+<a href=#1068 id=1068 data-nosnippet>1068</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>title_text_content(doc: <span class="kw-2">&amp;</span>PostDocument, node: <span class="kw-2">&amp;</span>Node) -&gt; String {
+<a href=#1069 id=1069 data-nosnippet>1069</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::new();
+<a href=#1070 id=1070 data-nosnippet>1070</a>  <span class="kw">let </span><span class="kw-2">mut </span>child = node.get_first_child();
+<a href=#1071 id=1071 data-nosnippet>1071</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(c) = child {
+<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">match </span>c.get_type() {
+<a href=#1073 id=1073 data-nosnippet>1073</a>      <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; {
+<a href=#1074 id=1074 data-nosnippet>1074</a>        result.push_str(<span class="kw-2">&amp;</span>c.get_content());
+<a href=#1075 id=1075 data-nosnippet>1075</a>      },
+<a href=#1076 id=1076 data-nosnippet>1076</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
+<a href=#1077 id=1077 data-nosnippet>1077</a>        <span class="kw">let </span>name = c.get_name();
+<a href=#1078 id=1078 data-nosnippet>1078</a>        <span class="kw">if </span>name == <span class="string">"tag" </span>{
+<a href=#1079 id=1079 data-nosnippet>1079</a>          <span class="comment">// Honor open/close attributes on &lt;ltx:tag&gt;
+<a href=#1080 id=1080 data-nosnippet>1080</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(open) = c.get_attribute(<span class="string">"open"</span>) {
+<a href=#1081 id=1081 data-nosnippet>1081</a>            result.push_str(<span class="kw-2">&amp;</span>open);
+<a href=#1082 id=1082 data-nosnippet>1082</a>          }
+<a href=#1083 id=1083 data-nosnippet>1083</a>          result.push_str(<span class="kw-2">&amp;</span>title_text_content(doc, <span class="kw-2">&amp;</span>c));
+<a href=#1084 id=1084 data-nosnippet>1084</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(close) = c.get_attribute(<span class="string">"close"</span>) {
+<a href=#1085 id=1085 data-nosnippet>1085</a>            result.push_str(<span class="kw-2">&amp;</span>close);
+<a href=#1086 id=1086 data-nosnippet>1086</a>          }
+<a href=#1087 id=1087 data-nosnippet>1087</a>        } <span class="kw">else if </span>name == <span class="string">"Math" </span>{
+<a href=#1088 id=1088 data-nosnippet>1088</a>          <span class="comment">// Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
+<a href=#1089 id=1089 data-nosnippet>1089</a>          // presentation branch of the math, in reading order. Without this a
+<a href=#1090 id=1090 data-nosnippet>1090</a>          // math title flattened to its XMApp/XMDual content tree (operator
+<a href=#1091 id=1091 data-nosnippet>1091</a>          // first: `= sin x x`) with every inter-token newline preserved.
+<a href=#1092 id=1092 data-nosnippet>1092</a>          </span>result.push_str(<span class="kw-2">&amp;</span><span class="kw">crate</span>::unicode_math::unicodemath(doc, <span class="kw-2">&amp;</span>c));
+<a href=#1093 id=1093 data-nosnippet>1093</a>        } <span class="kw">else </span>{
+<a href=#1094 id=1094 data-nosnippet>1094</a>          result.push_str(<span class="kw-2">&amp;</span>title_text_content(doc, <span class="kw-2">&amp;</span>c));
+<a href=#1095 id=1095 data-nosnippet>1095</a>        }
+<a href=#1096 id=1096 data-nosnippet>1096</a>      },
+<a href=#1097 id=1097 data-nosnippet>1097</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1098 id=1098 data-nosnippet>1098</a>    }
+<a href=#1099 id=1099 data-nosnippet>1099</a>    child = c.get_next_sibling();
+<a href=#1100 id=1100 data-nosnippet>1100</a>  }
+<a href=#1101 id=1101 data-nosnippet>1101</a>  result
+<a href=#1102 id=1102 data-nosnippet>1102</a>}
+<a href=#1103 id=1103 data-nosnippet>1103</a>
+<a href=#1104 id=1104 data-nosnippet>1104</a><span class="comment">// NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the
+<a href=#1105 id=1105 data-nosnippet>1105</a>// ObjectDB is ADOPTED first (`ObjectDB::adopt_xml` — a deep copy into a
+<a href=#1106 id=1106 data-nosnippet>1106</a>// DB-owned document), so stored values live exactly as long as the DB and
+<a href=#1107 id=1107 data-nosnippet>1107</a>// never dangle into a page document that streaming has freed. Consumers still
+<a href=#1108 id=1108 data-nosnippet>1108</a>// deep-copy on materialization (`PostDocument::add_xml_node`, with cross-doc
+<a href=#1109 id=1109 data-nosnippet>1109</a>// namespace reconciliation + xml:id uniquification). Section titles are kept
+<a href=#1110 id=1110 data-nosnippet>1110</a>// as nodes (see `section_handler`); the derived string form is
+<a href=#1111 id=1111 data-nosnippet>1111</a>// `title_text_content`. Index `phrases`/`see_also` values are also stored as
+<a href=#1112 id=1112 data-nosnippet>1112</a>// (adopted) `Value::Xml`.
 </span></code></pre></div></section></main></body></html>

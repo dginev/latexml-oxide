@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/converter.rs`."><title>converter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c656540d6 2026-08-21)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/</div>converter.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::rc::Rc;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/converter.rs`."><title>converter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/</div>converter.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::rc::Rc;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::{
 <a href=#4 id=4 data-nosnippet>4</a>  Core, CoreOptions, Debug, Error, Fatal, Info, Note,
@@ -250,576 +250,577 @@
 <a href=#250 id=250 data-nosnippet>250</a>
 <a href=#251 id=251 data-nosnippet>251</a>    <span class="self">self</span>.bind_log();
 <a href=#252 id=252 data-nosnippet>252</a>    <span class="comment">// 1.2 Inform of identity, increase conversion counter. Perl `bin/latexml`
-<a href=#253 id=253 data-nosnippet>253</a>    // L83 logs `Note("$LaTeXML::IDENTITY processing $source")`; our banner adds
-<a href=#254 id=254 data-nosnippet>254</a>    // the executable name, git revision and exact start time (`identity.rs`).
-<a href=#255 id=255 data-nosnippet>255</a>    </span><span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt;= <span class="number">0 </span>{
-<a href=#256 id=256 data-nosnippet>256</a>      <span class="macro">Note!</span>(<span class="kw">crate</span>::identity::identity_banner());
-<a href=#257 id=257 data-nosnippet>257</a>      <span class="comment">// info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} &gt;= 1;
-<a href=#258 id=258 data-nosnippet>258</a>    </span>}
-<a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a>    <span class="comment">// 1.3 Prepare for What's IN:
-<a href=#261 id=261 data-nosnippet>261</a>    // - We use a new temporary variable to avoid confusion with daemon caching
-<a href=#262 id=262 data-nosnippet>262</a>    // - Math needs to magically trigger math mode if needed
-<a href=#263 id=263 data-nosnippet>263</a>    // - Fragments need to have a default pre- and postamble, if none provided
-<a href=#264 id=264 data-nosnippet>264</a>    // Perl LaTeXML.pm:165-172 keys BOTH ambles on `whatsin`; see
-<a href=#265 id=265 data-nosnippet>265</a>    // `resolve_amble`. (The previous inline code keyed the postamble on
-<a href=#266 id=266 data-nosnippet>266</a>    // `whatsout`, dropping `\end{document}` / `\ensuremathpreceeds` for
-<a href=#267 id=267 data-nosnippet>267</a>    // fragment/math inputs.)
-<a href=#268 id=268 data-nosnippet>268</a>    </span><span class="kw">let </span>(current_preamble, current_postamble) = resolve_amble(
-<a href=#269 id=269 data-nosnippet>269</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.whatsin,
-<a href=#270 id=270 data-nosnippet>270</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.preamble,
-<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.postamble,
-<a href=#272 id=272 data-nosnippet>272</a>    );
-<a href=#273 id=273 data-nosnippet>273</a>    <span class="comment">// TODO:
-<a href=#274 id=274 data-nosnippet>274</a>    // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
-<a href=#275 id=275 data-nosnippet>275</a>    //   elsif ($$opts{whatsin} =~ /^archive/) {
-<a href=#276 id=276 data-nosnippet>276</a>    //     // Sandbox the input
-<a href=#277 id=277 data-nosnippet>277</a>    //     $$opts{archive_sourcedirectory} = $$opts{sourcedirectory};
-<a href=#278 id=278 data-nosnippet>278</a>    //     my $sandbox_directory = File::Temp-&gt;newdir(TMPDIR =&gt; 1);
-<a href=#279 id=279 data-nosnippet>279</a>    //     $$opts{sourcedirectory} = $sandbox_directory;
-<a href=#280 id=280 data-nosnippet>280</a>    //     // Extract the archive in the sandbox
-<a href=#281 id=281 data-nosnippet>281</a>    //     $source = unpack_source($source, $sandbox_directory);
-<a href=#282 id=282 data-nosnippet>282</a>    //     if (!defined $source) {    // Unpacking failed to find a source
-<a href=#283 id=283 data-nosnippet>283</a>    //       $$opts{sourcedirectory} = $$opts{archive_sourcedirectory};
-<a href=#284 id=284 data-nosnippet>284</a>    //       my $log = $self-&gt;flush_log;
-<a href=#285 id=285 data-nosnippet>285</a>    // return { result =&gt; undef, log =&gt; $log, status =&gt; "Fatal:IO:Archive Can't detect a
-<a href=#286 id=286 data-nosnippet>286</a>    // source TeX file!", status_code =&gt; 3 }; } // Destination magic: If we expect an archive
-<a href=#287 id=287 data-nosnippet>287</a>    // on output, we need to invent the appropriate destination ourselves when not given.
-<a href=#288 id=288 data-nosnippet>288</a>    // // Since the LaTeXML API never writes the final archive file to disk, we just use a pretend
-<a href=#289 id=289 data-nosnippet>289</a>    // sourcename.zip:     if (($$opts{whatsout} =~ /^archive/) &amp;&amp; (!$$opts{destination})) {
-<a href=#290 id=290 data-nosnippet>290</a>    //       $$opts{placeholder_destination} = 1;
-<a href=#291 id=291 data-nosnippet>291</a>    //       $$opts{destination}             = pathname_name($source) . ".zip"; } }
-<a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a>    //   // 1.4 Prepare for What's OUT (if we need a sandbox)
-<a href=#294 id=294 data-nosnippet>294</a>    //   if ($$opts{whatsout} =~ /^archive/) {
-<a href=#295 id=295 data-nosnippet>295</a>    //     $$opts{archive_sitedirectory} = $$opts{sitedirectory};
-<a href=#296 id=296 data-nosnippet>296</a>    //     $$opts{archive_destination}   = $$opts{destination};
-<a href=#297 id=297 data-nosnippet>297</a>    // my $destination_name = $$opts{destination} ? pathname_name($$opts{destination}) :
-<a href=#298 id=298 data-nosnippet>298</a>    // 'document';     my $sandbox_directory = File::Temp-&gt;newdir(TMPDIR =&gt; 1);
-<a href=#299 id=299 data-nosnippet>299</a>    //     my $extension = $$opts{format};
-<a href=#300 id=300 data-nosnippet>300</a>    //     $extension =~ s/\d+$//;
-<a href=#301 id=301 data-nosnippet>301</a>    //     $extension =~ s/^epub|mobi$/xhtml/;
-<a href=#302 id=302 data-nosnippet>302</a>    //     my $sandbox_destination = "$destination_name.$extension";
-<a href=#303 id=303 data-nosnippet>303</a>    //     $$opts{sitedirectory} = $sandbox_directory;
-<a href=#304 id=304 data-nosnippet>304</a>
-<a href=#305 id=305 data-nosnippet>305</a>    //     if ($$opts{format} eq 'epub') {
-<a href=#306 id=306 data-nosnippet>306</a>    //       $$opts{resource_directory} = File::Spec-&gt;catdir($sandbox_directory, 'OPS');
-<a href=#307 id=307 data-nosnippet>307</a>    // $$opts{destination} = pathname_concat(File::Spec-&gt;catdir($sandbox_directory, 'OPS'),
-<a href=#308 id=308 data-nosnippet>308</a>    // $sandbox_destination); }     else {
-<a href=#309 id=309 data-nosnippet>309</a>    //       $$opts{destination} = pathname_concat($sandbox_directory, $sandbox_destination); }
-<a href=#310 id=310 data-nosnippet>310</a>    //   }
-<a href=#311 id=311 data-nosnippet>311</a>
-<a href=#312 id=312 data-nosnippet>312</a>    // 1.5 Prepare a daemon frame
-<a href=#313 id=313 data-nosnippet>313</a>    // ...
-<a href=#314 id=314 data-nosnippet>314</a>
-<a href=#315 id=315 data-nosnippet>315</a>    // 2 Beginning Core conversion - digest the source:
-<a href=#316 id=316 data-nosnippet>316</a>    // my ($digested, $dom, $serialized) = (undef, undef, undef);
-<a href=#317 id=317 data-nosnippet>317</a>    // Should be this, but is overridden by withState.
-<a href=#318 id=318 data-nosnippet>318</a>    // local $SIG{'ALRM'} = sub { LaTeXML::Common::Error::Fatal('conversion','timeout',
-<a href=#319 id=319 data-nosnippet>319</a>    // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
-<a href=#320 id=320 data-nosnippet>320</a>    // alarm($$opts{timeout});
-<a href=#321 id=321 data-nosnippet>321</a>    // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
-<a href=#322 id=322 data-nosnippet>322</a>    // Streaming (fragmented) conversion: digest and build interleave inside
-<a href=#323 id=323 data-nosnippet>323</a>    // `convert_streaming`, so the eager digest-then-build sequence below does
-<a href=#324 id=324 data-nosnippet>324</a>    // not apply. TeX/Box outputs revert to eager — they serialize the DIGESTED
-<a href=#325 id=325 data-nosnippet>325</a>    // list and never build a DOM, so there is nothing to fragment.
-<a href=#326 id=326 data-nosnippet>326</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(budget) = <span class="self">self</span>.opts.streaming
-<a href=#327 id=327 data-nosnippet>327</a>      &amp;&amp; !<span class="macro">matches!</span>(<span class="self">self</span>.opts.format, OutputFormat::TeX | OutputFormat::Box)
-<a href=#328 id=328 data-nosnippet>328</a>    {
-<a href=#329 id=329 data-nosnippet>329</a>      <span class="kw">let </span>dom_result = {
-<a href=#330 id=330 data-nosnippet>330</a>        <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
-<a href=#331 id=331 data-nosnippet>331</a>        <span class="self">self</span>.core.convert_streaming(
-<a href=#332 id=332 data-nosnippet>332</a>          source,
-<a href=#333 id=333 data-nosnippet>333</a>          current_preamble,
-<a href=#334 id=334 data-nosnippet>334</a>          current_postamble,
-<a href=#335 id=335 data-nosnippet>335</a>          <span class="self">self</span>.opts.mode.clone(),
-<a href=#336 id=336 data-nosnippet>336</a>          budget,
-<a href=#337 id=337 data-nosnippet>337</a>        )
-<a href=#338 id=338 data-nosnippet>338</a>      };
-<a href=#339 id=339 data-nosnippet>339</a>      <span class="kw">let </span>serialized = <span class="kw">match </span>dom_result {
-<a href=#340 id=340 data-nosnippet>340</a>        <span class="prelude-val">Ok</span>(dom) =&gt; {
-<a href=#341 id=341 data-nosnippet>341</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
-<a href=#342 id=342 data-nosnippet>342</a>          dom.serialize_to_string()
-<a href=#343 id=343 data-nosnippet>343</a>        },
-<a href=#344 id=344 data-nosnippet>344</a>        <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#345 id=345 data-nosnippet>345</a>          <span class="comment">// Same resource-fatal surfacing as the eager DOM arm below.
-<a href=#346 id=346 data-nosnippet>346</a>          </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
-<a href=#347 id=347 data-nosnippet>347</a>            e.log_fatal();
-<a href=#348 id=348 data-nosnippet>348</a>          } <span class="kw">else </span>{
-<a href=#349 id=349 data-nosnippet>349</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-<a href=#350 id=350 data-nosnippet>350</a>            <span class="kw">let </span>err = || {
-<a href=#351 id=351 data-nosnippet>351</a>              <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
-<a href=#352 id=352 data-nosnippet>352</a>              <span class="prelude-val">Ok</span>(())
-<a href=#353 id=353 data-nosnippet>353</a>            };
-<a href=#354 id=354 data-nosnippet>354</a>            err().ok();
-<a href=#355 id=355 data-nosnippet>355</a>          }
-<a href=#356 id=356 data-nosnippet>356</a>          String::new()
-<a href=#357 id=357 data-nosnippet>357</a>        },
-<a href=#358 id=358 data-nosnippet>358</a>      };
-<a href=#359 id=359 data-nosnippet>359</a>      <span class="comment">// The SHARED tail, not a hand-copy of parts of it: this arm used to
-<a href=#360 id=360 data-nosnippet>360</a>      // reproduce only the verdict fold and silently skip the rest — so a
-<a href=#361 id=361 data-nosnippet>361</a>      // streamed run emitted no MARPA_ASF_STATS line (measured: the 131 MB
-<a href=#362 id=362 data-nosnippet>362</a>      // witness under MARPA_ASF_STATS=1 produced zero stats), and a streamed
-<a href=#363 id=363 data-nosnippet>363</a>      // `--source-map` run emitted `data:sourcepos` tags with NO decoder
-<a href=#364 id=364 data-nosnippet>364</a>      // table in the log. Streaming auto-activates on exactly the large
-<a href=#365 id=365 data-nosnippet>365</a>      // documents where both matter.
-<a href=#366 id=366 data-nosnippet>366</a>      </span><span class="kw">return </span><span class="self">self</span>.finish_response(serialized);
-<a href=#367 id=367 data-nosnippet>367</a>    }
-<a href=#368 id=368 data-nosnippet>368</a>
-<a href=#369 id=369 data-nosnippet>369</a>    <span class="kw">let </span>digest_result = {
-<a href=#370 id=370 data-nosnippet>370</a>      <span class="kw">let </span>_g = telemetry::phase(Phase::Digest);
-<a href=#371 id=371 data-nosnippet>371</a>      <span class="self">self</span>.core.digest(
-<a href=#372 id=372 data-nosnippet>372</a>        source,
-<a href=#373 id=373 data-nosnippet>373</a>        current_preamble,
-<a href=#374 id=374 data-nosnippet>374</a>        current_postamble,
-<a href=#375 id=375 data-nosnippet>375</a>        <span class="self">self</span>.opts.mode.clone(),
-<a href=#376 id=376 data-nosnippet>376</a>        <span class="bool-val">true</span>,
-<a href=#377 id=377 data-nosnippet>377</a>      )
-<a href=#378 id=378 data-nosnippet>378</a>    };
-<a href=#379 id=379 data-nosnippet>379</a>    <span class="kw">let </span>digested = <span class="kw">match </span>digest_result {
-<a href=#380 id=380 data-nosnippet>380</a>      <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#381 id=381 data-nosnippet>381</a>        <span class="macro">report_mut!</span>().status_code = <span class="number">3</span>;
-<a href=#382 id=382 data-nosnippet>382</a>        e.log_fatal();
-<a href=#383 id=383 data-nosnippet>383</a>        <span class="comment">// Perl L251-259: If digestion failed, try finishDigestion to salvage
-<a href=#384 id=384 data-nosnippet>384</a>        // whatever was partially consumed. This allows partial recovery where
-<a href=#385 id=385 data-nosnippet>385</a>        // the beginning of the document is valid but an error occurs midway.
-<a href=#386 id=386 data-nosnippet>386</a>        </span><span class="kw">match </span><span class="self">self</span>.core.digest_internal() {
-<a href=#387 id=387 data-nosnippet>387</a>          <span class="prelude-val">Ok</span>(salvaged) <span class="kw">if </span>!salvaged.is_empty().unwrap_or(<span class="bool-val">true</span>) =&gt; {
-<a href=#388 id=388 data-nosnippet>388</a>            <span class="macro">Info!</span>(
-<a href=#389 id=389 data-nosnippet>389</a>              <span class="string">"recovery"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>              <span class="string">"digest"</span>,
-<a href=#391 id=391 data-nosnippet>391</a>              <span class="string">"Salvaged partial output after fatal error"
-<a href=#392 id=392 data-nosnippet>392</a>            </span>);
-<a href=#393 id=393 data-nosnippet>393</a>            salvaged
-<a href=#394 id=394 data-nosnippet>394</a>          },
-<a href=#395 id=395 data-nosnippet>395</a>          <span class="kw">_ </span>=&gt; Digested::from(List::new(Vec::new())),
-<a href=#396 id=396 data-nosnippet>396</a>        }
-<a href=#397 id=397 data-nosnippet>397</a>      },
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="prelude-val">Ok</span>(d) =&gt; d,
-<a href=#399 id=399 data-nosnippet>399</a>    };
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="comment">// 2.1 Now, convert to DOM and output, if desired.
-<a href=#401 id=401 data-nosnippet>401</a>    </span><span class="kw">let </span>dom_result: <span class="prelude-ty">Result</span>&lt;Document&gt;;
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">let </span>serialized = <span class="kw">match </span><span class="self">self</span>.opts.format {
-<a href=#403 id=403 data-nosnippet>403</a>      OutputFormat::TeX =&gt; {
-<a href=#404 id=404 data-nosnippet>404</a>        <span class="kw">let </span>untex_result = { digested.untex() };
-<a href=#405 id=405 data-nosnippet>405</a>        <span class="kw">match </span>untex_result {
-<a href=#406 id=406 data-nosnippet>406</a>          <span class="prelude-val">Ok</span>(tex) =&gt; tex,
-<a href=#407 id=407 data-nosnippet>407</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#408 id=408 data-nosnippet>408</a>            <span class="kw">return </span>ConversionResponse {
-<a href=#409 id=409 data-nosnippet>409</a>              result:      <span class="prelude-val">None</span>,
-<a href=#410 id=410 data-nosnippet>410</a>              log:         <span class="self">self</span>.flush_log(),
-<a href=#411 id=411 data-nosnippet>411</a>              status:      <span class="macro">s!</span>(<span class="string">"fatal:untex:{:?}"</span>, e),
-<a href=#412 id=412 data-nosnippet>412</a>              status_code: <span class="number">3</span>,
-<a href=#413 id=413 data-nosnippet>413</a>            };
-<a href=#414 id=414 data-nosnippet>414</a>          },
-<a href=#415 id=415 data-nosnippet>415</a>        }
-<a href=#416 id=416 data-nosnippet>416</a>      },
-<a href=#417 id=417 data-nosnippet>417</a>      OutputFormat::Box =&gt; {
-<a href=#418 id=418 data-nosnippet>418</a>        <span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt; <span class="number">0 </span>{
-<a href=#419 id=419 data-nosnippet>419</a>          digested.stringify()
-<a href=#420 id=420 data-nosnippet>420</a>        } <span class="kw">else </span>{
-<a href=#421 id=421 data-nosnippet>421</a>          digested.to_string()
-<a href=#422 id=422 data-nosnippet>422</a>        }
-<a href=#423 id=423 data-nosnippet>423</a>      },
-<a href=#424 id=424 data-nosnippet>424</a>      <span class="kw">_ </span>=&gt; {
-<a href=#425 id=425 data-nosnippet>425</a>        dom_result = {
-<a href=#426 id=426 data-nosnippet>426</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
-<a href=#427 id=427 data-nosnippet>427</a>          <span class="self">self</span>.core.convert_document(digested)
-<a href=#428 id=428 data-nosnippet>428</a>        };
-<a href=#429 id=429 data-nosnippet>429</a>        <span class="kw">match </span>dom_result {
-<a href=#430 id=430 data-nosnippet>430</a>          <span class="prelude-val">Ok</span>(dom) =&gt; {
-<a href=#431 id=431 data-nosnippet>431</a>            <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
-<a href=#432 id=432 data-nosnippet>432</a>            dom.serialize_to_string()
-<a href=#433 id=433 data-nosnippet>433</a>          },
-<a href=#434 id=434 data-nosnippet>434</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#435 id=435 data-nosnippet>435</a>            <span class="comment">// A resource fatal (Timeout target — e.g. a cycle-guard abort
-<a href=#436 id=436 data-nosnippet>436</a>            // propagated out of math parsing, P1-4) must surface as the
-<a href=#437 id=437 data-nosnippet>437</a>            // standard `Fatal:` log line, not a generic document error;
-<a href=#438 id=438 data-nosnippet>438</a>            // otherwise the summary counts a fatal the log never shows.
-<a href=#439 id=439 data-nosnippet>439</a>            </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
-<a href=#440 id=440 data-nosnippet>440</a>              e.log_fatal();
-<a href=#441 id=441 data-nosnippet>441</a>            } <span class="kw">else </span>{
-<a href=#442 id=442 data-nosnippet>442</a>              <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-<a href=#443 id=443 data-nosnippet>443</a>              <span class="kw">let </span>err = || {
-<a href=#444 id=444 data-nosnippet>444</a>                <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
-<a href=#445 id=445 data-nosnippet>445</a>                <span class="prelude-val">Ok</span>(())
-<a href=#446 id=446 data-nosnippet>446</a>              };
-<a href=#447 id=447 data-nosnippet>447</a>              err().ok();
-<a href=#448 id=448 data-nosnippet>448</a>            }
-<a href=#449 id=449 data-nosnippet>449</a>            String::new()
-<a href=#450 id=450 data-nosnippet>450</a>          },
-<a href=#451 id=451 data-nosnippet>451</a>        }
-<a href=#452 id=452 data-nosnippet>452</a>      },
-<a href=#453 id=453 data-nosnippet>453</a>    };
-<a href=#454 id=454 data-nosnippet>454</a>
-<a href=#455 id=455 data-nosnippet>455</a>    <span class="self">self</span>.runtime.status = get_status_message();
-<a href=#456 id=456 data-nosnippet>456</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="comment">// alarm(0)
-<a href=#458 id=458 data-nosnippet>458</a>
-<a href=#459 id=459 data-nosnippet>459</a>    // 2.2 Bookkeeping in case fatal errors occurred
-<a href=#460 id=460 data-nosnippet>460</a>    // ...
-<a href=#461 id=461 data-nosnippet>461</a>
-<a href=#462 id=462 data-nosnippet>462</a>    // 2.3 Clean up and exit if we only wanted the serialization of the core conversion
-<a href=#463 id=463 data-nosnippet>463</a>    // if ($serialized) {
-<a href=#464 id=464 data-nosnippet>464</a>    //   // If serialized has been set, we are done with the job
-<a href=#465 id=465 data-nosnippet>465</a>    //   // If we just processed an archive, clean up sandbox directory.
-<a href=#466 id=466 data-nosnippet>466</a>    //   if ($$opts{whatsin} =~ /^archive/) {
-<a href=#467 id=467 data-nosnippet>467</a>    //     rmtree($$opts{sourcedirectory});
-<a href=#468 id=468 data-nosnippet>468</a>    //     $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
-<a href=#469 id=469 data-nosnippet>469</a>    //   my $log = $self-&gt;flush_log;
-<a href=#470 id=470 data-nosnippet>470</a>    // return { result =&gt; $serialized, log =&gt; $log, status =&gt; $$runtime{status}, status_code =&gt;
-<a href=#471 id=471 data-nosnippet>471</a>    // $$runtime{status_code} }; }
-<a href=#472 id=472 data-nosnippet>472</a>
-<a href=#473 id=473 data-nosnippet>473</a>    // 3 If desired, post-process
-<a href=#474 id=474 data-nosnippet>474</a>    // my $result = $dom;
-<a href=#475 id=475 data-nosnippet>475</a>    // if ($$opts{post} &amp;&amp; $dom &amp;&amp; $dom-&gt;documentElement) {
-<a href=#476 id=476 data-nosnippet>476</a>    //   my $post_eval_return = eval {
-<a href=#477 id=477 data-nosnippet>477</a>    //     local $SIG{'ALRM'} = sub { die "alarm\n" };
-<a href=#478 id=478 data-nosnippet>478</a>    //     alarm($$opts{timeout});
-<a href=#479 id=479 data-nosnippet>479</a>    //     $result = $self-&gt;convert_post($dom);
-<a href=#480 id=480 data-nosnippet>480</a>    //     alarm(0);
-<a href=#481 id=481 data-nosnippet>481</a>    //     1;
-<a href=#482 id=482 data-nosnippet>482</a>    //   };
-<a href=#483 id=483 data-nosnippet>483</a>    //   // 3.1 Bookkeeping if a post-processing Fatal error occurred
-<a href=#484 id=484 data-nosnippet>484</a>    //   //// $$latexml{state}-&gt;noteStatus('fatal') if $latexml &amp;&amp; $@; // Fatal Error?
-<a href=#485 id=485 data-nosnippet>485</a>    //   local $@ = 'Fatal:conversion:unknown Post-processing failed! (Unknown Reason)'
-<a href=#486 id=486 data-nosnippet>486</a>    //     if ((!$post_eval_return) &amp;&amp; (!$@));
-<a href=#487 id=487 data-nosnippet>487</a>    //   if ($@) {    //Fatal occured!
-<a href=#488 id=488 data-nosnippet>488</a>    //     $$runtime{status_code} = 3;
-<a href=#489 id=489 data-nosnippet>489</a>    //     $@ = 'Fatal:conversion:unknown '.$@ unless $@ =~ /^Fatal:/;
-<a href=#490 id=490 data-nosnippet>490</a>    //     error!($@);
-<a href=#491 id=491 data-nosnippet>491</a>    //     //Since this is postprocessing, we don't need to do anything
-<a href=#492 id=492 data-nosnippet>492</a>    //     //   just avoid crashing...
-<a href=#493 id=493 data-nosnippet>493</a>    //     $result = undef; } }
-<a href=#494 id=494 data-nosnippet>494</a>
-<a href=#495 id=495 data-nosnippet>495</a>    // // 4 Clean-up: undo everything we sandboxed
-<a href=#496 id=496 data-nosnippet>496</a>    // if ($$opts{whatsin} =~ /^archive/) {
-<a href=#497 id=497 data-nosnippet>497</a>    //   rmtree($$opts{sourcedirectory});
-<a href=#498 id=498 data-nosnippet>498</a>    //   $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
-<a href=#499 id=499 data-nosnippet>499</a>    // if ($$opts{whatsout} =~ /^archive/) {
-<a href=#500 id=500 data-nosnippet>500</a>    //   rmtree($$opts{sitedirectory});
-<a href=#501 id=501 data-nosnippet>501</a>    //   $$opts{sitedirectory} = $$opts{archive_sitedirectory};
-<a href=#502 id=502 data-nosnippet>502</a>    //   $$opts{destination}   = $$opts{archive_destination};
-<a href=#503 id=503 data-nosnippet>503</a>    //   if (delete $$opts{placeholder_destination}) {
-<a href=#504 id=504 data-nosnippet>504</a>    //     delete $$opts{destination}; } }
-<a href=#505 id=505 data-nosnippet>505</a>
-<a href=#506 id=506 data-nosnippet>506</a>    // // 5 Output
-<a href=#507 id=507 data-nosnippet>507</a>    // // 5.1 Serialize the XML/HTML result (or just return the Perl object, if requested)
-<a href=#508 id=508 data-nosnippet>508</a>    // undef $serialized;
-<a href=#509 id=509 data-nosnippet>509</a>    // if ((defined $result) &amp;&amp; ref($result) &amp;&amp; (ref($result) =~ /^(:?LaTe)?XML/)) {
-<a href=#510 id=510 data-nosnippet>510</a>    //   if (($$opts{format} =~ 'x(ht)?ml') || ($$opts{format} eq 'jats')) {
-<a href=#511 id=511 data-nosnippet>511</a>    //     $serialized = $result-&gt;to_string(1); }
-<a href=#512 id=512 data-nosnippet>512</a>    //   elsif ($$opts{format} =~ /^html/) {
-<a href=#513 id=513 data-nosnippet>513</a>    //     if (ref($result) =~ '^LaTeXML::(Post::)?Document$') {    // Special for documents
-<a href=#514 id=514 data-nosnippet>514</a>    //       $serialized = $result-&gt;getDocument-&gt;to_stringHTML; }
-<a href=#515 id=515 data-nosnippet>515</a>    //     else {                                                   // Regular for fragments
-<a href=#516 id=516 data-nosnippet>516</a>    //       do {
-<a href=#517 id=517 data-nosnippet>517</a>    //         local $XML::LibXML::setTagCompression = 1;
-<a href=#518 id=518 data-nosnippet>518</a>    //         $serialized = $result-&gt;to_string(1);
-<a href=#519 id=519 data-nosnippet>519</a>    //         } } }
-<a href=#520 id=520 data-nosnippet>520</a>    //   elsif ($$opts{format} eq 'dom') {
-<a href=#521 id=521 data-nosnippet>521</a>    //     $serialized = $result; } }
-<a href=#522 id=522 data-nosnippet>522</a>    // else { $serialized = $result; }                              // Compressed case
-<a href=#523 id=523 data-nosnippet>523</a>
-<a href=#524 id=524 data-nosnippet>524</a>    // 5.2 Finalize logging and return a response containing the document result, log and status
-<a href=#525 id=525 data-nosnippet>525</a>    </span><span class="self">self</span>.finish_response(serialized)
-<a href=#526 id=526 data-nosnippet>526</a>  }
-<a href=#527 id=527 data-nosnippet>527</a>
-<a href=#528 id=528 data-nosnippet>528</a>  <span class="doccomment">/// The SHARED conversion tail: instrumentation flush (ASF stats, the
-<a href=#529 id=529 data-nosnippet>529</a>  /// `--source-map` decoder table), the Perl-faithful completion `Note!`, and
-<a href=#530 id=530 data-nosnippet>530</a>  /// response assembly. Every arm of `convert` must end here — the streaming
-<a href=#531 id=531 data-nosnippet>531</a>  /// arm used to return early with a hand-copy of the verdict fold alone,
-<a href=#532 id=532 data-nosnippet>532</a>  /// silently skipping the rest (no `MARPA_ASF_STATS` line, and a streamed
-<a href=#533 id=533 data-nosnippet>533</a>  /// `--source-map` run emitted `data:sourcepos` tags with no decoder ring).
-<a href=#534 id=534 data-nosnippet>534</a>  ///
-<a href=#535 id=535 data-nosnippet>535</a>  /// Recomputes `status`/`status_code` (idempotent reads of the REPORT
-<a href=#536 id=536 data-nosnippet>536</a>  /// counters), so diagnostics raised during serialization itself still reach
-<a href=#537 id=537 data-nosnippet>537</a>  /// the reported verdict — the streaming arm always did this; the eager path
-<a href=#538 id=538 data-nosnippet>538</a>  /// previously froze status before serializing.
-<a href=#539 id=539 data-nosnippet>539</a>  </span><span class="kw">fn </span>finish_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>, serialized: String) -&gt; ConversionResponse {
-<a href=#540 id=540 data-nosnippet>540</a>    <span class="self">self</span>.runtime.status = get_status_message();
-<a href=#541 id=541 data-nosnippet>541</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
-<a href=#542 id=542 data-nosnippet>542</a>    <span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt;= <span class="number">0 </span>{
-<a href=#543 id=543 data-nosnippet>543</a>      <span class="macro">Debug!</span>(<span class="string">"arena"</span>, <span class="string">"strings_allocated"</span>, arena::len());
-<a href=#544 id=544 data-nosnippet>544</a>      <span class="comment">// Final token-read progress: the calibration basis for `token_limit`
-<a href=#545 id=545 data-nosnippet>545</a>      // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
-<a href=#546 id=546 data-nosnippet>546</a>      // in PR #249 — read_x_token/read_balanced now count too — so limits
-<a href=#547 id=547 data-nosnippet>547</a>      // must be recalibrated against THIS metric, not historical figures).
-<a href=#548 id=548 data-nosnippet>548</a>      </span><span class="macro">Debug!</span>(<span class="string">"gullet"</span>, <span class="string">"progress"</span>, latexml_core::gullet::final_progress());
-<a href=#549 id=549 data-nosnippet>549</a>    }
-<a href=#550 id=550 data-nosnippet>550</a>    <span class="comment">// MARPA_ASF_STATS=1: emit ASF instrumentation counters once
-<a href=#551 id=551 data-nosnippet>551</a>    // per converted document. Codex instrumentation plan, see
-<a href=#552 id=552 data-nosnippet>552</a>    // marpa/docs/ASF_PERFORMANCE_FINDINGS.md. The thread-local
-<a href=#553 id=553 data-nosnippet>553</a>    // accumulator is reset after the snapshot so per-document
-<a href=#554 id=554 data-nosnippet>554</a>    // figures are independent.
-<a href=#555 id=555 data-nosnippet>555</a>    </span>latexml_math_parser::report_and_reset_asf_stats();
-<a href=#556 id=556 data-nosnippet>556</a>    <span class="comment">// --source-map (#47/#92): serialise the `tag → file` decoder table into the
-<a href=#557 id=557 data-nosnippet>557</a>    // `.log` — latexml-oxide's existing conversion-metadata channel — rather than
-<a href=#558 id=558 data-nosnippet>558</a>    // inlining it into the output. The output carries only the anonymous integer
-<a href=#559 id=559 data-nosnippet>559</a>    // `tag` (in each `data:sourcepos`); this is its decoder ring, Source-Map-v3
-<a href=#560 id=560 data-nosnippet>560</a>    // `sources`-style (the array index *is* the tag). Keeping it out of the
-<a href=#561 id=561 data-nosnippet>561</a>    // HTML/XML keeps that output anonymisable: a consumer without the source
-<a href=#562 id=562 data-nosnippet>562</a>    // files sees only opaque tags. In-process embedders (e.g. the ar5iv-editor
-<a href=#563 id=563 data-nosnippet>563</a>    // server) read the same table programmatically via `source_table_snapshot()`.
-<a href=#564 id=564 data-nosnippet>564</a>    // Gated on the switch, so a normal conversion emits nothing.
-<a href=#565 id=565 data-nosnippet>565</a>    </span><span class="kw">if </span>source_map_enabled() {
-<a href=#566 id=566 data-nosnippet>566</a>      <span class="kw">for </span>(tag, sym) <span class="kw">in </span>source_table_snapshot().iter().enumerate() {
-<a href=#567 id=567 data-nosnippet>567</a>        arena::with(<span class="kw-2">*</span>sym, |src| {
-<a href=#568 id=568 data-nosnippet>568</a>          <span class="macro">Info!</span>(<span class="string">"source-map"</span>, <span class="string">"source"</span>, <span class="macro">s!</span>(<span class="string">"[{tag}] {src}"</span>));
-<a href=#569 id=569 data-nosnippet>569</a>        });
-<a href=#570 id=570 data-nosnippet>570</a>      }
-<a href=#571 id=571 data-nosnippet>571</a>    }
-<a href=#572 id=572 data-nosnippet>572</a>    <span class="comment">// Perl: Note("Conversion complete: " . $$runtime{status}); (LaTeXML.pm:315)
-<a href=#573 id=573 data-nosnippet>573</a>    // is reached only on success — a Fatal `die`s before it, and bin/latexml:127
-<a href=#574 id=574 data-nosnippet>574</a>    // then prints `"Conversion " . ($code == 3 ? 'failed' : 'complete')`. Rust
-<a href=#575 id=575 data-nosnippet>575</a>    // recovers from a Fatal (graceful degradation) instead of dying, so it reaches
-<a href=#576 id=576 data-nosnippet>576</a>    // this note even when status_code == 3; fold in bin/latexml's verdict here so
-<a href=#577 id=577 data-nosnippet>577</a>    // a fatal run reports "failed", never the self-contradictory "complete: N fatal
-<a href=#578 id=578 data-nosnippet>578</a>    // error". Success cases (status_code &lt; 3) stay byte-identical.
-<a href=#579 id=579 data-nosnippet>579</a>    </span><span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"{}"</span>, conversion_verdict(<span class="self">self</span>.runtime.status_code)));
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
-<a href=#581 id=581 data-nosnippet>581</a>    <span class="comment">// self-&gt;sanitize($log) if ($$runtime{status_code} == 3);
-<a href=#582 id=582 data-nosnippet>582</a>
-<a href=#583 id=583 data-nosnippet>583</a>    </span>ConversionResponse {
-<a href=#584 id=584 data-nosnippet>584</a>      result: <span class="prelude-val">Some</span>(serialized),
-<a href=#585 id=585 data-nosnippet>585</a>      log,
-<a href=#586 id=586 data-nosnippet>586</a>      status: <span class="self">self</span>.runtime.status.clone(),
-<a href=#587 id=587 data-nosnippet>587</a>      status_code: <span class="self">self</span>.runtime.status_code,
-<a href=#588 id=588 data-nosnippet>588</a>    }
-<a href=#589 id=589 data-nosnippet>589</a>  }
-<a href=#590 id=590 data-nosnippet>590</a>
-<a href=#591 id=591 data-nosnippet>591</a>  <span class="doccomment">/// Convert in-memory `content` under the source name `name`, producing the
-<a href=#592 id=592 data-nosnippet>592</a>  /// HTML5-format core XML (the persistent server then post-processes it).
-<a href=#593 id=593 data-nosnippet>593</a>  /// Unlike [`Converter::convert`] (`literal:` → anonymous source), the source
-<a href=#594 id=594 data-nosnippet>594</a>  /// is *named*, so `--source-map` stamps its locators. Focused on the
-<a href=#595 id=595 data-nosnippet>595</a>  /// `Document`/HTML5 path the server uses — no amble wrapping, no TeX/Box
-<a href=#596 id=596 data-nosnippet>596</a>  /// output formats.
-<a href=#597 id=597 data-nosnippet>597</a>  </span><span class="kw">pub fn </span>convert_content_with_provenance(
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="kw-2">mut </span><span class="self">self</span>,
-<a href=#599 id=599 data-nosnippet>599</a>    name: <span class="kw-2">&amp;</span>str,
-<a href=#600 id=600 data-nosnippet>600</a>    content: String,
-<a href=#601 id=601 data-nosnippet>601</a>  ) -&gt; ConversionResponse {
-<a href=#602 id=602 data-nosnippet>602</a>    <span class="comment">// Load + digest through the shared top-level loader, so the source-context
-<a href=#603 id=603 data-nosnippet>603</a>    // setup is not duplicated here.
-<a href=#604 id=604 data-nosnippet>604</a>    </span><span class="kw">let </span>digested = <span class="kw">match </span><span class="self">self</span>.digest_content_with_provenance(name, content) {
-<a href=#605 id=605 data-nosnippet>605</a>      <span class="prelude-val">Ok</span>(d) =&gt; d,
-<a href=#606 id=606 data-nosnippet>606</a>      <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#607 id=607 data-nosnippet>607</a>        <span class="kw">if </span>!<span class="self">self</span>.ready {
-<a href=#608 id=608 data-nosnippet>608</a>          <span class="kw">return </span>ConversionResponse {
-<a href=#609 id=609 data-nosnippet>609</a>            result:      <span class="prelude-val">None</span>,
-<a href=#610 id=610 data-nosnippet>610</a>            log:         <span class="self">self</span>.flush_log(),
-<a href=#611 id=611 data-nosnippet>611</a>            status:      <span class="macro">s!</span>(<span class="string">"Initialization failed."</span>),
-<a href=#612 id=612 data-nosnippet>612</a>            status_code: <span class="number">3</span>,
-<a href=#613 id=613 data-nosnippet>613</a>          };
-<a href=#614 id=614 data-nosnippet>614</a>        }
-<a href=#615 id=615 data-nosnippet>615</a>        <span class="macro">report_mut!</span>().status_code = <span class="number">3</span>;
-<a href=#616 id=616 data-nosnippet>616</a>        e.log_fatal();
-<a href=#617 id=617 data-nosnippet>617</a>        <span class="comment">// Salvage whatever digested before the error (mirrors `convert`).
-<a href=#618 id=618 data-nosnippet>618</a>        </span><span class="kw">match </span><span class="self">self</span>.core.digest_internal() {
-<a href=#619 id=619 data-nosnippet>619</a>          <span class="prelude-val">Ok</span>(salvaged) <span class="kw">if </span>!salvaged.is_empty().unwrap_or(<span class="bool-val">true</span>) =&gt; salvaged,
-<a href=#620 id=620 data-nosnippet>620</a>          <span class="kw">_ </span>=&gt; Digested::from(List::new(Vec::new())),
-<a href=#621 id=621 data-nosnippet>621</a>        }
-<a href=#622 id=622 data-nosnippet>622</a>      },
-<a href=#623 id=623 data-nosnippet>623</a>    };
-<a href=#624 id=624 data-nosnippet>624</a>
-<a href=#625 id=625 data-nosnippet>625</a>    <span class="self">self</span>.runtime.status = get_status_message();
-<a href=#626 id=626 data-nosnippet>626</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
-<a href=#627 id=627 data-nosnippet>627</a>
-<a href=#628 id=628 data-nosnippet>628</a>    <span class="kw">let </span>serialized = {
-<a href=#629 id=629 data-nosnippet>629</a>      <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
-<a href=#630 id=630 data-nosnippet>630</a>      <span class="kw">match </span><span class="self">self</span>.core.convert_document(digested) {
-<a href=#631 id=631 data-nosnippet>631</a>        <span class="prelude-val">Ok</span>(dom) =&gt; {
-<a href=#632 id=632 data-nosnippet>632</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
-<a href=#633 id=633 data-nosnippet>633</a>          dom.serialize_to_string()
-<a href=#634 id=634 data-nosnippet>634</a>        },
-<a href=#635 id=635 data-nosnippet>635</a>        <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#636 id=636 data-nosnippet>636</a>          <span class="comment">// `Error!` expands into a `Result`-returning context; wrap it the
-<a href=#637 id=637 data-nosnippet>637</a>          // same way `convert` does so it composes in this `-&gt; ConversionResponse` fn.
-<a href=#638 id=638 data-nosnippet>638</a>          // Timeout-target resource fatals get the standard `Fatal:` line
-<a href=#639 id=639 data-nosnippet>639</a>          // (see the sibling handler in `convert` — P1-4).
-<a href=#640 id=640 data-nosnippet>640</a>          </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
-<a href=#641 id=641 data-nosnippet>641</a>            e.log_fatal();
-<a href=#642 id=642 data-nosnippet>642</a>          } <span class="kw">else </span>{
-<a href=#643 id=643 data-nosnippet>643</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
-<a href=#644 id=644 data-nosnippet>644</a>            <span class="kw">let </span>err = || {
-<a href=#645 id=645 data-nosnippet>645</a>              <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
-<a href=#646 id=646 data-nosnippet>646</a>              <span class="prelude-val">Ok</span>(())
-<a href=#647 id=647 data-nosnippet>647</a>            };
-<a href=#648 id=648 data-nosnippet>648</a>            err().ok();
-<a href=#649 id=649 data-nosnippet>649</a>          }
-<a href=#650 id=650 data-nosnippet>650</a>          String::new()
-<a href=#651 id=651 data-nosnippet>651</a>        },
-<a href=#652 id=652 data-nosnippet>652</a>      }
-<a href=#653 id=653 data-nosnippet>653</a>    };
-<a href=#654 id=654 data-nosnippet>654</a>
-<a href=#655 id=655 data-nosnippet>655</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
-<a href=#656 id=656 data-nosnippet>656</a>    ConversionResponse {
-<a href=#657 id=657 data-nosnippet>657</a>      result: <span class="prelude-val">Some</span>(serialized),
-<a href=#658 id=658 data-nosnippet>658</a>      log,
-<a href=#659 id=659 data-nosnippet>659</a>      status: <span class="self">self</span>.runtime.status.clone(),
-<a href=#660 id=660 data-nosnippet>660</a>      status_code: <span class="self">self</span>.runtime.status_code,
-<a href=#661 id=661 data-nosnippet>661</a>    }
-<a href=#662 id=662 data-nosnippet>662</a>  }
-<a href=#663 id=663 data-nosnippet>663</a>
-<a href=#664 id=664 data-nosnippet>664</a>  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">'preplifetime</span>&gt;(
-<a href=#665 id=665 data-nosnippet>665</a>    <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>,
-<a href=#666 id=666 data-nosnippet>666</a>    _opts: <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span>Config,
-<a href=#667 id=667 data-nosnippet>667</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#668 id=668 data-nosnippet>668</a>    <span class="comment">// Per-conversion cache hygiene: a persistent worker converts many papers
-<a href=#669 id=669 data-nosnippet>669</a>    // per thread; cwd-relative kpsewhich results must not leak across them.
-<a href=#670 id=670 data-nosnippet>670</a>    </span>latexml_core::util::pathname::clear_kpsewhich_memo();
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
-<a href=#672 id=672 data-nosnippet>672</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?
-<a href=#673 id=673 data-nosnippet>673</a>    </span>}
-<a href=#674 id=674 data-nosnippet>674</a>    <span class="prelude-val">Ok</span>(())
-<a href=#675 id=675 data-nosnippet>675</a>  }
-<a href=#676 id=676 data-nosnippet>676</a>
-<a href=#677 id=677 data-nosnippet>677</a>  <span class="doccomment">/// Digest in-memory `content` as the **main document** named `name`, leaving
-<a href=#678 id=678 data-nosnippet>678</a>  /// the thread-local engine state **live**. Used by the persistent server to
-<a href=#679 id=679 data-nosnippet>679</a>  /// warm a preamble once (then resume body digestion in a fork child over the
-<a href=#680 id=680 data-nosnippet>680</a>  /// inherited state) and by [`Converter::convert_content_with_provenance`] for
-<a href=#681 id=681 data-nosnippet>681</a>  /// the in-process path.
-<a href=#682 id=682 data-nosnippet>682</a>  ///
-<a href=#683 id=683 data-nosnippet>683</a>  /// This is the in-memory twin of [`crate::core_interface::DigestionAPI::digest_file`]:
-<a href=#684 id=684 data-nosnippet>684</a>  /// same top-level spine — establish the source context, open the source,
-<a href=#685 id=685 data-nosnippet>685</a>  /// `digest_internal` — but the content is *supplied* rather than read from
-<a href=#686 id=686 data-nosnippet>686</a>  /// disk. It shares `core_interface::establish_source_context` with
-<a href=#687 id=687 data-nosnippet>687</a>  /// `digest_file` (so `SOURCEFILE`/`SOURCEDIRECTORY`/`SEARCHPATHS`/
-<a href=#688 id=688 data-nosnippet>688</a>  /// `GRAPHICSPATHS`/`\jobname` can't drift), making sibling
-<a href=#689 id=689 data-nosnippet>689</a>  /// `\usepackage`/`\input`/`\includegraphics` of local files resolve. The
-<a href=#690 id=690 data-nosnippet>690</a>  /// source is opened as a *named* mouth (not the anonymous `literal:`
-<a href=#691 id=691 data-nosnippet>691</a>  /// protocol) so locators carry `name` — the **provenance** that
-<a href=#692 id=692 data-nosnippet>692</a>  /// `--source-map` needs (`stamp_source_locator` only stamps
-<a href=#693 id=693 data-nosnippet>693</a>  /// `.tex`/`.ltx`/`.bbl`/`.bib` user sources). Initializes the session if
-<a href=#694 id=694 data-nosnippet>694</a>  /// needed; does not finalize a document.
-<a href=#695 id=695 data-nosnippet>695</a>  </span><span class="kw">pub fn </span>digest_content_with_provenance(
-<a href=#696 id=696 data-nosnippet>696</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-<a href=#697 id=697 data-nosnippet>697</a>    name: <span class="kw-2">&amp;</span>str,
-<a href=#698 id=698 data-nosnippet>698</a>    content: String,
-<a href=#699 id=699 data-nosnippet>699</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#700 id=700 data-nosnippet>700</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
-<a href=#701 id=701 data-nosnippet>701</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?</span>;
-<a href=#702 id=702 data-nosnippet>702</a>    }
-<a href=#703 id=703 data-nosnippet>703</a>    <span class="self">self</span>.bind_log();
-<a href=#704 id=704 data-nosnippet>704</a>    <span class="comment">// Top-level document load: establish the source context (SOURCEFILE,
-<a href=#705 id=705 data-nosnippet>705</a>    // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling
-<a href=#706 id=706 data-nosnippet>706</a>    // \usepackage/\input/\includegraphics of local files resolve. Shared with
-<a href=#707 id=707 data-nosnippet>707</a>    // `digest_file` via `establish_source_context` so the two can't drift.
-<a href=#708 id=708 data-nosnippet>708</a>    // (A continuation/nested mouth must NOT do this — see
-<a href=#709 id=709 data-nosnippet>709</a>    // `open_named_in_memory_mouth`.)
-<a href=#710 id=710 data-nosnippet>710</a>    </span><span class="kw">let </span>path = std::path::Path::new(name);
-<a href=#711 id=711 data-nosnippet>711</a>    <span class="kw">let </span>dir = path.parent().and_then(|p| p.to_str()).unwrap_or(<span class="string">""</span>);
-<a href=#712 id=712 data-nosnippet>712</a>    <span class="kw">let </span>jobname = path.file_stem().and_then(|s| s.to_str()).unwrap_or(name);
-<a href=#713 id=713 data-nosnippet>713</a>    <span class="kw">crate</span>::core_interface::establish_source_context(<span class="prelude-val">Some</span>(name), jobname, dir);
-<a href=#714 id=714 data-nosnippet>714</a>    open_named_in_memory_mouth(name, content)<span class="question-mark">?</span>;
-<a href=#715 id=715 data-nosnippet>715</a>    <span class="self">self</span>.core.digest_internal()
-<a href=#716 id=716 data-nosnippet>716</a>  }
-<a href=#717 id=717 data-nosnippet>717</a>}
-<a href=#718 id=718 data-nosnippet>718</a>
-<a href=#719 id=719 data-nosnippet>719</a><span class="doccomment">/// Open a gullet mouth over in-memory `content` whose source is named `name`
-<a href=#720 id=720 data-nosnippet>720</a>/// (a real path/filename). Uses the Mouth's cached-content branch so locators
-<a href=#721 id=721 data-nosnippet>721</a>/// carry `name` rather than "Anonymous String".
-<a href=#722 id=722 data-nosnippet>722</a>///
-<a href=#723 id=723 data-nosnippet>723</a>/// Low-level and *position-agnostic*: it does NOT touch the document-global
-<a href=#724 id=724 data-nosnippet>724</a>/// `SOURCEDIRECTORY`/`SEARCHPATHS`, so it is safe for a continuation (the
-<a href=#725 id=725 data-nosnippet>725</a>/// forked child's body over already-inherited state) or a nested include. For
-<a href=#726 id=726 data-nosnippet>726</a>/// the *main* document load, go through `Converter::digest_named`, which
-<a href=#727 id=727 data-nosnippet>727</a>/// installs the document directory first.
-<a href=#728 id=728 data-nosnippet>728</a></span><span class="kw">pub fn </span>open_named_in_memory_mouth(name: <span class="kw-2">&amp;</span>str, content: String) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#729 id=729 data-nosnippet>729</a>  <span class="kw">use </span>latexml_core::{
-<a href=#730 id=730 data-nosnippet>730</a>    gullet,
-<a href=#731 id=731 data-nosnippet>731</a>    mouth::{Mouth, MouthOptions},
-<a href=#732 id=732 data-nosnippet>732</a>  };
-<a href=#733 id=733 data-nosnippet>733</a>  <span class="kw">let </span>mouth = Mouth::create(name, MouthOptions {
-<a href=#734 id=734 data-nosnippet>734</a>    notes: <span class="bool-val">true</span>,
-<a href=#735 id=735 data-nosnippet>735</a>    content: <span class="prelude-val">Some</span>(content),
-<a href=#736 id=736 data-nosnippet>736</a>    ..MouthOptions::default()
-<a href=#737 id=737 data-nosnippet>737</a>  })<span class="question-mark">?</span>;
-<a href=#738 id=738 data-nosnippet>738</a>  gullet::open_mouth(mouth, <span class="bool-val">true</span>);
-<a href=#739 id=739 data-nosnippet>739</a>  <span class="prelude-val">Ok</span>(())
-<a href=#740 id=740 data-nosnippet>740</a>}
-<a href=#741 id=741 data-nosnippet>741</a>
-<a href=#742 id=742 data-nosnippet>742</a><span class="doccomment">/// Resolve the `(preamble, postamble)` to wrap the source in, based on
-<a href=#743 id=743 data-nosnippet>743</a>/// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
-<a href=#744 id=744 data-nosnippet>744</a>/// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
-<a href=#745 id=745 data-nosnippet>745</a>///
-<a href=#746 id=746 data-nosnippet>746</a>/// * `math` → `\begin{document}\ensuremathfollows` … `\ensuremathpreceeds\end{document}` (magic
-<a href=#747 id=747 data-nosnippet>747</a>///   math-mode trigger).
-<a href=#748 id=748 data-nosnippet>748</a>/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting to `standard_preamble.tex`
-<a href=#749 id=749 data-nosnippet>749</a>///   / `standard_postamble.tex`.
-<a href=#750 id=750 data-nosnippet>750</a>/// * everything else (`document`, `archive`, …) → no wrapping.
-<a href=#751 id=751 data-nosnippet>751</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>resolve_amble(
-<a href=#752 id=752 data-nosnippet>752</a>  whatsin: <span class="kw-2">&amp;</span>DataSize,
-<a href=#753 id=753 data-nosnippet>753</a>  preamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#754 id=754 data-nosnippet>754</a>  postamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#755 id=755 data-nosnippet>755</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;) {
-<a href=#756 id=756 data-nosnippet>756</a>  <span class="kw">match </span>whatsin {
-<a href=#757 id=757 data-nosnippet>757</a>    DataSize::Math =&gt; (
-<a href=#758 id=758 data-nosnippet>758</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\begin{{document}}\\ensuremathfollows"</span>)),
-<a href=#759 id=759 data-nosnippet>759</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{{document}}"</span>)),
-<a href=#760 id=760 data-nosnippet>760</a>    ),
-<a href=#761 id=761 data-nosnippet>761</a>    DataSize::Fragment =&gt; (
-<a href=#762 id=762 data-nosnippet>762</a>      <span class="prelude-val">Some</span>(
-<a href=#763 id=763 data-nosnippet>763</a>        preamble
-<a href=#764 id=764 data-nosnippet>764</a>          .clone()
-<a href=#765 id=765 data-nosnippet>765</a>          .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_preamble.tex"</span>)),
-<a href=#766 id=766 data-nosnippet>766</a>      ),
-<a href=#767 id=767 data-nosnippet>767</a>      <span class="prelude-val">Some</span>(
-<a href=#768 id=768 data-nosnippet>768</a>        postamble
-<a href=#769 id=769 data-nosnippet>769</a>          .clone()
-<a href=#770 id=770 data-nosnippet>770</a>          .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_postamble.tex"</span>)),
-<a href=#771 id=771 data-nosnippet>771</a>      ),
-<a href=#772 id=772 data-nosnippet>772</a>    ),
-<a href=#773 id=773 data-nosnippet>773</a>    <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
-<a href=#774 id=774 data-nosnippet>774</a>  }
-<a href=#775 id=775 data-nosnippet>775</a>}
-<a href=#776 id=776 data-nosnippet>776</a>
-<a href=#777 id=777 data-nosnippet>777</a><span class="attr">#[cfg(test)]
-<a href=#778 id=778 data-nosnippet>778</a></span><span class="kw">mod </span>tests {
-<a href=#779 id=779 data-nosnippet>779</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#780 id=780 data-nosnippet>780</a>
-<a href=#781 id=781 data-nosnippet>781</a>  <span class="attr">#[test]
-<a href=#782 id=782 data-nosnippet>782</a>  </span><span class="kw">fn </span>amble_math_wraps_both_ends() {
-<a href=#783 id=783 data-nosnippet>783</a>    <span class="comment">// Perl LaTeXML.pm:166-168 — math sets BOTH preamble and postamble.
-<a href=#784 id=784 data-nosnippet>784</a>    </span><span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Math, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
-<a href=#785 id=785 data-nosnippet>785</a>    <span class="macro">assert_eq!</span>(
-<a href=#786 id=786 data-nosnippet>786</a>      pre.as_deref(),
-<a href=#787 id=787 data-nosnippet>787</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\begin{document}\\ensuremathfollows"</span>)
-<a href=#788 id=788 data-nosnippet>788</a>    );
-<a href=#789 id=789 data-nosnippet>789</a>    <span class="macro">assert_eq!</span>(
-<a href=#790 id=790 data-nosnippet>790</a>      post.as_deref(),
-<a href=#791 id=791 data-nosnippet>791</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{document}"</span>)
-<a href=#792 id=792 data-nosnippet>792</a>    );
-<a href=#793 id=793 data-nosnippet>793</a>  }
-<a href=#794 id=794 data-nosnippet>794</a>
-<a href=#795 id=795 data-nosnippet>795</a>  <span class="attr">#[test]
-<a href=#796 id=796 data-nosnippet>796</a>  </span><span class="kw">fn </span>amble_fragment_defaults_to_standard_files() {
-<a href=#797 id=797 data-nosnippet>797</a>    <span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Fragment, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
-<a href=#798 id=798 data-nosnippet>798</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_preamble.tex"</span>));
-<a href=#799 id=799 data-nosnippet>799</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_postamble.tex"</span>));
-<a href=#800 id=800 data-nosnippet>800</a>  }
-<a href=#801 id=801 data-nosnippet>801</a>
-<a href=#802 id=802 data-nosnippet>802</a>  <span class="attr">#[test]
-<a href=#803 id=803 data-nosnippet>803</a>  </span><span class="kw">fn </span>amble_fragment_honors_explicit_files() {
-<a href=#804 id=804 data-nosnippet>804</a>    <span class="kw">let </span>(pre, post) = resolve_amble(
-<a href=#805 id=805 data-nosnippet>805</a>      <span class="kw-2">&amp;</span>DataSize::Fragment,
-<a href=#806 id=806 data-nosnippet>806</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>.into()),
-<a href=#807 id=807 data-nosnippet>807</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>.into()),
-<a href=#808 id=808 data-nosnippet>808</a>    );
-<a href=#809 id=809 data-nosnippet>809</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>));
-<a href=#810 id=810 data-nosnippet>810</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>));
-<a href=#811 id=811 data-nosnippet>811</a>  }
-<a href=#812 id=812 data-nosnippet>812</a>
-<a href=#813 id=813 data-nosnippet>813</a>  <span class="attr">#[test]
-<a href=#814 id=814 data-nosnippet>814</a>  </span><span class="kw">fn </span>amble_document_and_archive_have_no_wrapping() {
-<a href=#815 id=815 data-nosnippet>815</a>    <span class="macro">assert_eq!</span>(
-<a href=#816 id=816 data-nosnippet>816</a>      resolve_amble(<span class="kw-2">&amp;</span>DataSize::Document, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>),
-<a href=#817 id=817 data-nosnippet>817</a>      (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
-<a href=#818 id=818 data-nosnippet>818</a>    );
-<a href=#819 id=819 data-nosnippet>819</a>    <span class="macro">assert_eq!</span>(
-<a href=#820 id=820 data-nosnippet>820</a>      resolve_amble(<span class="kw-2">&amp;</span>DataSize::Archive, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>),
-<a href=#821 id=821 data-nosnippet>821</a>      (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
-<a href=#822 id=822 data-nosnippet>822</a>    );
-<a href=#823 id=823 data-nosnippet>823</a>  }
-<a href=#824 id=824 data-nosnippet>824</a>}
+<a href=#253 id=253 data-nosnippet>253</a>    // L83 logs `Note("$LaTeXML::IDENTITY processing $source")` UNCONDITIONALLY;
+<a href=#254 id=254 data-nosnippet>254</a>    // our banner adds the executable name, git revision and exact start time
+<a href=#255 id=255 data-nosnippet>255</a>    // (`identity.rs`). `Note!` itself does the log-always / stderr-gated split, so
+<a href=#256 id=256 data-nosnippet>256</a>    // the banner reaches `.latexml.log` even under `--quiet` (issue #763) while
+<a href=#257 id=257 data-nosnippet>257</a>    // still being muted on the console — no verbosity guard here.
+<a href=#258 id=258 data-nosnippet>258</a>    </span><span class="macro">Note!</span>(<span class="kw">crate</span>::identity::identity_banner());
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="comment">// info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} &gt;= 1;
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>    // 1.3 Prepare for What's IN:
+<a href=#262 id=262 data-nosnippet>262</a>    // - We use a new temporary variable to avoid confusion with daemon caching
+<a href=#263 id=263 data-nosnippet>263</a>    // - Math needs to magically trigger math mode if needed
+<a href=#264 id=264 data-nosnippet>264</a>    // - Fragments need to have a default pre- and postamble, if none provided
+<a href=#265 id=265 data-nosnippet>265</a>    // Perl LaTeXML.pm:165-172 keys BOTH ambles on `whatsin`; see
+<a href=#266 id=266 data-nosnippet>266</a>    // `resolve_amble`. (The previous inline code keyed the postamble on
+<a href=#267 id=267 data-nosnippet>267</a>    // `whatsout`, dropping `\end{document}` / `\ensuremathpreceeds` for
+<a href=#268 id=268 data-nosnippet>268</a>    // fragment/math inputs.)
+<a href=#269 id=269 data-nosnippet>269</a>    </span><span class="kw">let </span>(current_preamble, current_postamble) = resolve_amble(
+<a href=#270 id=270 data-nosnippet>270</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.whatsin,
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.preamble,
+<a href=#272 id=272 data-nosnippet>272</a>      <span class="kw-2">&amp;</span><span class="self">self</span>.opts.postamble,
+<a href=#273 id=273 data-nosnippet>273</a>    );
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="comment">// TODO:
+<a href=#275 id=275 data-nosnippet>275</a>    // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
+<a href=#276 id=276 data-nosnippet>276</a>    //   elsif ($$opts{whatsin} =~ /^archive/) {
+<a href=#277 id=277 data-nosnippet>277</a>    //     // Sandbox the input
+<a href=#278 id=278 data-nosnippet>278</a>    //     $$opts{archive_sourcedirectory} = $$opts{sourcedirectory};
+<a href=#279 id=279 data-nosnippet>279</a>    //     my $sandbox_directory = File::Temp-&gt;newdir(TMPDIR =&gt; 1);
+<a href=#280 id=280 data-nosnippet>280</a>    //     $$opts{sourcedirectory} = $sandbox_directory;
+<a href=#281 id=281 data-nosnippet>281</a>    //     // Extract the archive in the sandbox
+<a href=#282 id=282 data-nosnippet>282</a>    //     $source = unpack_source($source, $sandbox_directory);
+<a href=#283 id=283 data-nosnippet>283</a>    //     if (!defined $source) {    // Unpacking failed to find a source
+<a href=#284 id=284 data-nosnippet>284</a>    //       $$opts{sourcedirectory} = $$opts{archive_sourcedirectory};
+<a href=#285 id=285 data-nosnippet>285</a>    //       my $log = $self-&gt;flush_log;
+<a href=#286 id=286 data-nosnippet>286</a>    // return { result =&gt; undef, log =&gt; $log, status =&gt; "Fatal:IO:Archive Can't detect a
+<a href=#287 id=287 data-nosnippet>287</a>    // source TeX file!", status_code =&gt; 3 }; } // Destination magic: If we expect an archive
+<a href=#288 id=288 data-nosnippet>288</a>    // on output, we need to invent the appropriate destination ourselves when not given.
+<a href=#289 id=289 data-nosnippet>289</a>    // // Since the LaTeXML API never writes the final archive file to disk, we just use a pretend
+<a href=#290 id=290 data-nosnippet>290</a>    // sourcename.zip:     if (($$opts{whatsout} =~ /^archive/) &amp;&amp; (!$$opts{destination})) {
+<a href=#291 id=291 data-nosnippet>291</a>    //       $$opts{placeholder_destination} = 1;
+<a href=#292 id=292 data-nosnippet>292</a>    //       $$opts{destination}             = pathname_name($source) . ".zip"; } }
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>    //   // 1.4 Prepare for What's OUT (if we need a sandbox)
+<a href=#295 id=295 data-nosnippet>295</a>    //   if ($$opts{whatsout} =~ /^archive/) {
+<a href=#296 id=296 data-nosnippet>296</a>    //     $$opts{archive_sitedirectory} = $$opts{sitedirectory};
+<a href=#297 id=297 data-nosnippet>297</a>    //     $$opts{archive_destination}   = $$opts{destination};
+<a href=#298 id=298 data-nosnippet>298</a>    // my $destination_name = $$opts{destination} ? pathname_name($$opts{destination}) :
+<a href=#299 id=299 data-nosnippet>299</a>    // 'document';     my $sandbox_directory = File::Temp-&gt;newdir(TMPDIR =&gt; 1);
+<a href=#300 id=300 data-nosnippet>300</a>    //     my $extension = $$opts{format};
+<a href=#301 id=301 data-nosnippet>301</a>    //     $extension =~ s/\d+$//;
+<a href=#302 id=302 data-nosnippet>302</a>    //     $extension =~ s/^epub|mobi$/xhtml/;
+<a href=#303 id=303 data-nosnippet>303</a>    //     my $sandbox_destination = "$destination_name.$extension";
+<a href=#304 id=304 data-nosnippet>304</a>    //     $$opts{sitedirectory} = $sandbox_directory;
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a>    //     if ($$opts{format} eq 'epub') {
+<a href=#307 id=307 data-nosnippet>307</a>    //       $$opts{resource_directory} = File::Spec-&gt;catdir($sandbox_directory, 'OPS');
+<a href=#308 id=308 data-nosnippet>308</a>    // $$opts{destination} = pathname_concat(File::Spec-&gt;catdir($sandbox_directory, 'OPS'),
+<a href=#309 id=309 data-nosnippet>309</a>    // $sandbox_destination); }     else {
+<a href=#310 id=310 data-nosnippet>310</a>    //       $$opts{destination} = pathname_concat($sandbox_directory, $sandbox_destination); }
+<a href=#311 id=311 data-nosnippet>311</a>    //   }
+<a href=#312 id=312 data-nosnippet>312</a>
+<a href=#313 id=313 data-nosnippet>313</a>    // 1.5 Prepare a daemon frame
+<a href=#314 id=314 data-nosnippet>314</a>    // ...
+<a href=#315 id=315 data-nosnippet>315</a>
+<a href=#316 id=316 data-nosnippet>316</a>    // 2 Beginning Core conversion - digest the source:
+<a href=#317 id=317 data-nosnippet>317</a>    // my ($digested, $dom, $serialized) = (undef, undef, undef);
+<a href=#318 id=318 data-nosnippet>318</a>    // Should be this, but is overridden by withState.
+<a href=#319 id=319 data-nosnippet>319</a>    // local $SIG{'ALRM'} = sub { LaTeXML::Common::Error::Fatal('conversion','timeout',
+<a href=#320 id=320 data-nosnippet>320</a>    // "Conversion timed out after " . $$opts{timeout} . " seconds!\n"); };
+<a href=#321 id=321 data-nosnippet>321</a>    // alarm($$opts{timeout});
+<a href=#322 id=322 data-nosnippet>322</a>    // my $mode = ($$opts{type} eq 'auto') ? 'TeX' : $$opts{type};
+<a href=#323 id=323 data-nosnippet>323</a>    // Streaming (fragmented) conversion: digest and build interleave inside
+<a href=#324 id=324 data-nosnippet>324</a>    // `convert_streaming`, so the eager digest-then-build sequence below does
+<a href=#325 id=325 data-nosnippet>325</a>    // not apply. TeX/Box outputs revert to eager — they serialize the DIGESTED
+<a href=#326 id=326 data-nosnippet>326</a>    // list and never build a DOM, so there is nothing to fragment.
+<a href=#327 id=327 data-nosnippet>327</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(budget) = <span class="self">self</span>.opts.streaming
+<a href=#328 id=328 data-nosnippet>328</a>      &amp;&amp; !<span class="macro">matches!</span>(<span class="self">self</span>.opts.format, OutputFormat::TeX | OutputFormat::Box)
+<a href=#329 id=329 data-nosnippet>329</a>    {
+<a href=#330 id=330 data-nosnippet>330</a>      <span class="kw">let </span>dom_result = {
+<a href=#331 id=331 data-nosnippet>331</a>        <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
+<a href=#332 id=332 data-nosnippet>332</a>        <span class="self">self</span>.core.convert_streaming(
+<a href=#333 id=333 data-nosnippet>333</a>          source,
+<a href=#334 id=334 data-nosnippet>334</a>          current_preamble,
+<a href=#335 id=335 data-nosnippet>335</a>          current_postamble,
+<a href=#336 id=336 data-nosnippet>336</a>          <span class="self">self</span>.opts.mode.clone(),
+<a href=#337 id=337 data-nosnippet>337</a>          budget,
+<a href=#338 id=338 data-nosnippet>338</a>        )
+<a href=#339 id=339 data-nosnippet>339</a>      };
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="kw">let </span>serialized = <span class="kw">match </span>dom_result {
+<a href=#341 id=341 data-nosnippet>341</a>        <span class="prelude-val">Ok</span>(dom) =&gt; {
+<a href=#342 id=342 data-nosnippet>342</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
+<a href=#343 id=343 data-nosnippet>343</a>          dom.serialize_to_string()
+<a href=#344 id=344 data-nosnippet>344</a>        },
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#346 id=346 data-nosnippet>346</a>          <span class="comment">// Same resource-fatal surfacing as the eager DOM arm below.
+<a href=#347 id=347 data-nosnippet>347</a>          </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
+<a href=#348 id=348 data-nosnippet>348</a>            e.log_fatal();
+<a href=#349 id=349 data-nosnippet>349</a>          } <span class="kw">else </span>{
+<a href=#350 id=350 data-nosnippet>350</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
+<a href=#351 id=351 data-nosnippet>351</a>            <span class="kw">let </span>err = || {
+<a href=#352 id=352 data-nosnippet>352</a>              <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
+<a href=#353 id=353 data-nosnippet>353</a>              <span class="prelude-val">Ok</span>(())
+<a href=#354 id=354 data-nosnippet>354</a>            };
+<a href=#355 id=355 data-nosnippet>355</a>            err().ok();
+<a href=#356 id=356 data-nosnippet>356</a>          }
+<a href=#357 id=357 data-nosnippet>357</a>          String::new()
+<a href=#358 id=358 data-nosnippet>358</a>        },
+<a href=#359 id=359 data-nosnippet>359</a>      };
+<a href=#360 id=360 data-nosnippet>360</a>      <span class="comment">// The SHARED tail, not a hand-copy of parts of it: this arm used to
+<a href=#361 id=361 data-nosnippet>361</a>      // reproduce only the verdict fold and silently skip the rest — so a
+<a href=#362 id=362 data-nosnippet>362</a>      // streamed run emitted no MARPA_ASF_STATS line (measured: the 131 MB
+<a href=#363 id=363 data-nosnippet>363</a>      // witness under MARPA_ASF_STATS=1 produced zero stats), and a streamed
+<a href=#364 id=364 data-nosnippet>364</a>      // `--source-map` run emitted `data:sourcepos` tags with NO decoder
+<a href=#365 id=365 data-nosnippet>365</a>      // table in the log. Streaming auto-activates on exactly the large
+<a href=#366 id=366 data-nosnippet>366</a>      // documents where both matter.
+<a href=#367 id=367 data-nosnippet>367</a>      </span><span class="kw">return </span><span class="self">self</span>.finish_response(serialized);
+<a href=#368 id=368 data-nosnippet>368</a>    }
+<a href=#369 id=369 data-nosnippet>369</a>
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">let </span>digest_result = {
+<a href=#371 id=371 data-nosnippet>371</a>      <span class="kw">let </span>_g = telemetry::phase(Phase::Digest);
+<a href=#372 id=372 data-nosnippet>372</a>      <span class="self">self</span>.core.digest(
+<a href=#373 id=373 data-nosnippet>373</a>        source,
+<a href=#374 id=374 data-nosnippet>374</a>        current_preamble,
+<a href=#375 id=375 data-nosnippet>375</a>        current_postamble,
+<a href=#376 id=376 data-nosnippet>376</a>        <span class="self">self</span>.opts.mode.clone(),
+<a href=#377 id=377 data-nosnippet>377</a>        <span class="bool-val">true</span>,
+<a href=#378 id=378 data-nosnippet>378</a>      )
+<a href=#379 id=379 data-nosnippet>379</a>    };
+<a href=#380 id=380 data-nosnippet>380</a>    <span class="kw">let </span>digested = <span class="kw">match </span>digest_result {
+<a href=#381 id=381 data-nosnippet>381</a>      <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="macro">report_mut!</span>().status_code = <span class="number">3</span>;
+<a href=#383 id=383 data-nosnippet>383</a>        e.log_fatal();
+<a href=#384 id=384 data-nosnippet>384</a>        <span class="comment">// Perl L251-259: If digestion failed, try finishDigestion to salvage
+<a href=#385 id=385 data-nosnippet>385</a>        // whatever was partially consumed. This allows partial recovery where
+<a href=#386 id=386 data-nosnippet>386</a>        // the beginning of the document is valid but an error occurs midway.
+<a href=#387 id=387 data-nosnippet>387</a>        </span><span class="kw">match </span><span class="self">self</span>.core.digest_internal() {
+<a href=#388 id=388 data-nosnippet>388</a>          <span class="prelude-val">Ok</span>(salvaged) <span class="kw">if </span>!salvaged.is_empty().unwrap_or(<span class="bool-val">true</span>) =&gt; {
+<a href=#389 id=389 data-nosnippet>389</a>            <span class="macro">Info!</span>(
+<a href=#390 id=390 data-nosnippet>390</a>              <span class="string">"recovery"</span>,
+<a href=#391 id=391 data-nosnippet>391</a>              <span class="string">"digest"</span>,
+<a href=#392 id=392 data-nosnippet>392</a>              <span class="string">"Salvaged partial output after fatal error"
+<a href=#393 id=393 data-nosnippet>393</a>            </span>);
+<a href=#394 id=394 data-nosnippet>394</a>            salvaged
+<a href=#395 id=395 data-nosnippet>395</a>          },
+<a href=#396 id=396 data-nosnippet>396</a>          <span class="kw">_ </span>=&gt; Digested::from(List::new(Vec::new())),
+<a href=#397 id=397 data-nosnippet>397</a>        }
+<a href=#398 id=398 data-nosnippet>398</a>      },
+<a href=#399 id=399 data-nosnippet>399</a>      <span class="prelude-val">Ok</span>(d) =&gt; d,
+<a href=#400 id=400 data-nosnippet>400</a>    };
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="comment">// 2.1 Now, convert to DOM and output, if desired.
+<a href=#402 id=402 data-nosnippet>402</a>    </span><span class="kw">let </span>dom_result: <span class="prelude-ty">Result</span>&lt;Document&gt;;
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span>serialized = <span class="kw">match </span><span class="self">self</span>.opts.format {
+<a href=#404 id=404 data-nosnippet>404</a>      OutputFormat::TeX =&gt; {
+<a href=#405 id=405 data-nosnippet>405</a>        <span class="kw">let </span>untex_result = { digested.untex() };
+<a href=#406 id=406 data-nosnippet>406</a>        <span class="kw">match </span>untex_result {
+<a href=#407 id=407 data-nosnippet>407</a>          <span class="prelude-val">Ok</span>(tex) =&gt; tex,
+<a href=#408 id=408 data-nosnippet>408</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#409 id=409 data-nosnippet>409</a>            <span class="kw">return </span>ConversionResponse {
+<a href=#410 id=410 data-nosnippet>410</a>              result:      <span class="prelude-val">None</span>,
+<a href=#411 id=411 data-nosnippet>411</a>              log:         <span class="self">self</span>.flush_log(),
+<a href=#412 id=412 data-nosnippet>412</a>              status:      <span class="macro">s!</span>(<span class="string">"fatal:untex:{:?}"</span>, e),
+<a href=#413 id=413 data-nosnippet>413</a>              status_code: <span class="number">3</span>,
+<a href=#414 id=414 data-nosnippet>414</a>            };
+<a href=#415 id=415 data-nosnippet>415</a>          },
+<a href=#416 id=416 data-nosnippet>416</a>        }
+<a href=#417 id=417 data-nosnippet>417</a>      },
+<a href=#418 id=418 data-nosnippet>418</a>      OutputFormat::Box =&gt; {
+<a href=#419 id=419 data-nosnippet>419</a>        <span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt; <span class="number">0 </span>{
+<a href=#420 id=420 data-nosnippet>420</a>          digested.stringify()
+<a href=#421 id=421 data-nosnippet>421</a>        } <span class="kw">else </span>{
+<a href=#422 id=422 data-nosnippet>422</a>          digested.to_string()
+<a href=#423 id=423 data-nosnippet>423</a>        }
+<a href=#424 id=424 data-nosnippet>424</a>      },
+<a href=#425 id=425 data-nosnippet>425</a>      <span class="kw">_ </span>=&gt; {
+<a href=#426 id=426 data-nosnippet>426</a>        dom_result = {
+<a href=#427 id=427 data-nosnippet>427</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
+<a href=#428 id=428 data-nosnippet>428</a>          <span class="self">self</span>.core.convert_document(digested)
+<a href=#429 id=429 data-nosnippet>429</a>        };
+<a href=#430 id=430 data-nosnippet>430</a>        <span class="kw">match </span>dom_result {
+<a href=#431 id=431 data-nosnippet>431</a>          <span class="prelude-val">Ok</span>(dom) =&gt; {
+<a href=#432 id=432 data-nosnippet>432</a>            <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
+<a href=#433 id=433 data-nosnippet>433</a>            dom.serialize_to_string()
+<a href=#434 id=434 data-nosnippet>434</a>          },
+<a href=#435 id=435 data-nosnippet>435</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#436 id=436 data-nosnippet>436</a>            <span class="comment">// A resource fatal (Timeout target — e.g. a cycle-guard abort
+<a href=#437 id=437 data-nosnippet>437</a>            // propagated out of math parsing, P1-4) must surface as the
+<a href=#438 id=438 data-nosnippet>438</a>            // standard `Fatal:` log line, not a generic document error;
+<a href=#439 id=439 data-nosnippet>439</a>            // otherwise the summary counts a fatal the log never shows.
+<a href=#440 id=440 data-nosnippet>440</a>            </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
+<a href=#441 id=441 data-nosnippet>441</a>              e.log_fatal();
+<a href=#442 id=442 data-nosnippet>442</a>            } <span class="kw">else </span>{
+<a href=#443 id=443 data-nosnippet>443</a>              <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
+<a href=#444 id=444 data-nosnippet>444</a>              <span class="kw">let </span>err = || {
+<a href=#445 id=445 data-nosnippet>445</a>                <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
+<a href=#446 id=446 data-nosnippet>446</a>                <span class="prelude-val">Ok</span>(())
+<a href=#447 id=447 data-nosnippet>447</a>              };
+<a href=#448 id=448 data-nosnippet>448</a>              err().ok();
+<a href=#449 id=449 data-nosnippet>449</a>            }
+<a href=#450 id=450 data-nosnippet>450</a>            String::new()
+<a href=#451 id=451 data-nosnippet>451</a>          },
+<a href=#452 id=452 data-nosnippet>452</a>        }
+<a href=#453 id=453 data-nosnippet>453</a>      },
+<a href=#454 id=454 data-nosnippet>454</a>    };
+<a href=#455 id=455 data-nosnippet>455</a>
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="self">self</span>.runtime.status = get_status_message();
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="comment">// alarm(0)
+<a href=#459 id=459 data-nosnippet>459</a>
+<a href=#460 id=460 data-nosnippet>460</a>    // 2.2 Bookkeeping in case fatal errors occurred
+<a href=#461 id=461 data-nosnippet>461</a>    // ...
+<a href=#462 id=462 data-nosnippet>462</a>
+<a href=#463 id=463 data-nosnippet>463</a>    // 2.3 Clean up and exit if we only wanted the serialization of the core conversion
+<a href=#464 id=464 data-nosnippet>464</a>    // if ($serialized) {
+<a href=#465 id=465 data-nosnippet>465</a>    //   // If serialized has been set, we are done with the job
+<a href=#466 id=466 data-nosnippet>466</a>    //   // If we just processed an archive, clean up sandbox directory.
+<a href=#467 id=467 data-nosnippet>467</a>    //   if ($$opts{whatsin} =~ /^archive/) {
+<a href=#468 id=468 data-nosnippet>468</a>    //     rmtree($$opts{sourcedirectory});
+<a href=#469 id=469 data-nosnippet>469</a>    //     $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
+<a href=#470 id=470 data-nosnippet>470</a>    //   my $log = $self-&gt;flush_log;
+<a href=#471 id=471 data-nosnippet>471</a>    // return { result =&gt; $serialized, log =&gt; $log, status =&gt; $$runtime{status}, status_code =&gt;
+<a href=#472 id=472 data-nosnippet>472</a>    // $$runtime{status_code} }; }
+<a href=#473 id=473 data-nosnippet>473</a>
+<a href=#474 id=474 data-nosnippet>474</a>    // 3 If desired, post-process
+<a href=#475 id=475 data-nosnippet>475</a>    // my $result = $dom;
+<a href=#476 id=476 data-nosnippet>476</a>    // if ($$opts{post} &amp;&amp; $dom &amp;&amp; $dom-&gt;documentElement) {
+<a href=#477 id=477 data-nosnippet>477</a>    //   my $post_eval_return = eval {
+<a href=#478 id=478 data-nosnippet>478</a>    //     local $SIG{'ALRM'} = sub { die "alarm\n" };
+<a href=#479 id=479 data-nosnippet>479</a>    //     alarm($$opts{timeout});
+<a href=#480 id=480 data-nosnippet>480</a>    //     $result = $self-&gt;convert_post($dom);
+<a href=#481 id=481 data-nosnippet>481</a>    //     alarm(0);
+<a href=#482 id=482 data-nosnippet>482</a>    //     1;
+<a href=#483 id=483 data-nosnippet>483</a>    //   };
+<a href=#484 id=484 data-nosnippet>484</a>    //   // 3.1 Bookkeeping if a post-processing Fatal error occurred
+<a href=#485 id=485 data-nosnippet>485</a>    //   //// $$latexml{state}-&gt;noteStatus('fatal') if $latexml &amp;&amp; $@; // Fatal Error?
+<a href=#486 id=486 data-nosnippet>486</a>    //   local $@ = 'Fatal:conversion:unknown Post-processing failed! (Unknown Reason)'
+<a href=#487 id=487 data-nosnippet>487</a>    //     if ((!$post_eval_return) &amp;&amp; (!$@));
+<a href=#488 id=488 data-nosnippet>488</a>    //   if ($@) {    //Fatal occured!
+<a href=#489 id=489 data-nosnippet>489</a>    //     $$runtime{status_code} = 3;
+<a href=#490 id=490 data-nosnippet>490</a>    //     $@ = 'Fatal:conversion:unknown '.$@ unless $@ =~ /^Fatal:/;
+<a href=#491 id=491 data-nosnippet>491</a>    //     error!($@);
+<a href=#492 id=492 data-nosnippet>492</a>    //     //Since this is postprocessing, we don't need to do anything
+<a href=#493 id=493 data-nosnippet>493</a>    //     //   just avoid crashing...
+<a href=#494 id=494 data-nosnippet>494</a>    //     $result = undef; } }
+<a href=#495 id=495 data-nosnippet>495</a>
+<a href=#496 id=496 data-nosnippet>496</a>    // // 4 Clean-up: undo everything we sandboxed
+<a href=#497 id=497 data-nosnippet>497</a>    // if ($$opts{whatsin} =~ /^archive/) {
+<a href=#498 id=498 data-nosnippet>498</a>    //   rmtree($$opts{sourcedirectory});
+<a href=#499 id=499 data-nosnippet>499</a>    //   $$opts{sourcedirectory} = $$opts{archive_sourcedirectory}; }
+<a href=#500 id=500 data-nosnippet>500</a>    // if ($$opts{whatsout} =~ /^archive/) {
+<a href=#501 id=501 data-nosnippet>501</a>    //   rmtree($$opts{sitedirectory});
+<a href=#502 id=502 data-nosnippet>502</a>    //   $$opts{sitedirectory} = $$opts{archive_sitedirectory};
+<a href=#503 id=503 data-nosnippet>503</a>    //   $$opts{destination}   = $$opts{archive_destination};
+<a href=#504 id=504 data-nosnippet>504</a>    //   if (delete $$opts{placeholder_destination}) {
+<a href=#505 id=505 data-nosnippet>505</a>    //     delete $$opts{destination}; } }
+<a href=#506 id=506 data-nosnippet>506</a>
+<a href=#507 id=507 data-nosnippet>507</a>    // // 5 Output
+<a href=#508 id=508 data-nosnippet>508</a>    // // 5.1 Serialize the XML/HTML result (or just return the Perl object, if requested)
+<a href=#509 id=509 data-nosnippet>509</a>    // undef $serialized;
+<a href=#510 id=510 data-nosnippet>510</a>    // if ((defined $result) &amp;&amp; ref($result) &amp;&amp; (ref($result) =~ /^(:?LaTe)?XML/)) {
+<a href=#511 id=511 data-nosnippet>511</a>    //   if (($$opts{format} =~ 'x(ht)?ml') || ($$opts{format} eq 'jats')) {
+<a href=#512 id=512 data-nosnippet>512</a>    //     $serialized = $result-&gt;to_string(1); }
+<a href=#513 id=513 data-nosnippet>513</a>    //   elsif ($$opts{format} =~ /^html/) {
+<a href=#514 id=514 data-nosnippet>514</a>    //     if (ref($result) =~ '^LaTeXML::(Post::)?Document$') {    // Special for documents
+<a href=#515 id=515 data-nosnippet>515</a>    //       $serialized = $result-&gt;getDocument-&gt;to_stringHTML; }
+<a href=#516 id=516 data-nosnippet>516</a>    //     else {                                                   // Regular for fragments
+<a href=#517 id=517 data-nosnippet>517</a>    //       do {
+<a href=#518 id=518 data-nosnippet>518</a>    //         local $XML::LibXML::setTagCompression = 1;
+<a href=#519 id=519 data-nosnippet>519</a>    //         $serialized = $result-&gt;to_string(1);
+<a href=#520 id=520 data-nosnippet>520</a>    //         } } }
+<a href=#521 id=521 data-nosnippet>521</a>    //   elsif ($$opts{format} eq 'dom') {
+<a href=#522 id=522 data-nosnippet>522</a>    //     $serialized = $result; } }
+<a href=#523 id=523 data-nosnippet>523</a>    // else { $serialized = $result; }                              // Compressed case
+<a href=#524 id=524 data-nosnippet>524</a>
+<a href=#525 id=525 data-nosnippet>525</a>    // 5.2 Finalize logging and return a response containing the document result, log and status
+<a href=#526 id=526 data-nosnippet>526</a>    </span><span class="self">self</span>.finish_response(serialized)
+<a href=#527 id=527 data-nosnippet>527</a>  }
+<a href=#528 id=528 data-nosnippet>528</a>
+<a href=#529 id=529 data-nosnippet>529</a>  <span class="doccomment">/// The SHARED conversion tail: instrumentation flush (ASF stats, the
+<a href=#530 id=530 data-nosnippet>530</a>  /// `--source-map` decoder table), the Perl-faithful completion `Note!`, and
+<a href=#531 id=531 data-nosnippet>531</a>  /// response assembly. Every arm of `convert` must end here — the streaming
+<a href=#532 id=532 data-nosnippet>532</a>  /// arm used to return early with a hand-copy of the verdict fold alone,
+<a href=#533 id=533 data-nosnippet>533</a>  /// silently skipping the rest (no `MARPA_ASF_STATS` line, and a streamed
+<a href=#534 id=534 data-nosnippet>534</a>  /// `--source-map` run emitted `data:sourcepos` tags with no decoder ring).
+<a href=#535 id=535 data-nosnippet>535</a>  ///
+<a href=#536 id=536 data-nosnippet>536</a>  /// Recomputes `status`/`status_code` (idempotent reads of the REPORT
+<a href=#537 id=537 data-nosnippet>537</a>  /// counters), so diagnostics raised during serialization itself still reach
+<a href=#538 id=538 data-nosnippet>538</a>  /// the reported verdict — the streaming arm always did this; the eager path
+<a href=#539 id=539 data-nosnippet>539</a>  /// previously froze status before serializing.
+<a href=#540 id=540 data-nosnippet>540</a>  </span><span class="kw">fn </span>finish_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>, serialized: String) -&gt; ConversionResponse {
+<a href=#541 id=541 data-nosnippet>541</a>    <span class="self">self</span>.runtime.status = get_status_message();
+<a href=#542 id=542 data-nosnippet>542</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
+<a href=#543 id=543 data-nosnippet>543</a>    <span class="kw">if </span><span class="self">self</span>.opts.verbosity &gt;= <span class="number">0 </span>{
+<a href=#544 id=544 data-nosnippet>544</a>      <span class="macro">Debug!</span>(<span class="string">"arena"</span>, <span class="string">"strings_allocated"</span>, arena::len());
+<a href=#545 id=545 data-nosnippet>545</a>      <span class="comment">// Final token-read progress: the calibration basis for `token_limit`
+<a href=#546 id=546 data-nosnippet>546</a>      // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
+<a href=#547 id=547 data-nosnippet>547</a>      // in PR #249 — read_x_token/read_balanced now count too — so limits
+<a href=#548 id=548 data-nosnippet>548</a>      // must be recalibrated against THIS metric, not historical figures).
+<a href=#549 id=549 data-nosnippet>549</a>      </span><span class="macro">Debug!</span>(<span class="string">"gullet"</span>, <span class="string">"progress"</span>, latexml_core::gullet::final_progress());
+<a href=#550 id=550 data-nosnippet>550</a>    }
+<a href=#551 id=551 data-nosnippet>551</a>    <span class="comment">// MARPA_ASF_STATS=1: emit ASF instrumentation counters once
+<a href=#552 id=552 data-nosnippet>552</a>    // per converted document. Codex instrumentation plan, see
+<a href=#553 id=553 data-nosnippet>553</a>    // marpa/docs/ASF_PERFORMANCE_FINDINGS.md. The thread-local
+<a href=#554 id=554 data-nosnippet>554</a>    // accumulator is reset after the snapshot so per-document
+<a href=#555 id=555 data-nosnippet>555</a>    // figures are independent.
+<a href=#556 id=556 data-nosnippet>556</a>    </span>latexml_math_parser::report_and_reset_asf_stats();
+<a href=#557 id=557 data-nosnippet>557</a>    <span class="comment">// --source-map (#47/#92): serialise the `tag → file` decoder table into the
+<a href=#558 id=558 data-nosnippet>558</a>    // `.log` — latexml-oxide's existing conversion-metadata channel — rather than
+<a href=#559 id=559 data-nosnippet>559</a>    // inlining it into the output. The output carries only the anonymous integer
+<a href=#560 id=560 data-nosnippet>560</a>    // `tag` (in each `data:sourcepos`); this is its decoder ring, Source-Map-v3
+<a href=#561 id=561 data-nosnippet>561</a>    // `sources`-style (the array index *is* the tag). Keeping it out of the
+<a href=#562 id=562 data-nosnippet>562</a>    // HTML/XML keeps that output anonymisable: a consumer without the source
+<a href=#563 id=563 data-nosnippet>563</a>    // files sees only opaque tags. In-process embedders (e.g. the ar5iv-editor
+<a href=#564 id=564 data-nosnippet>564</a>    // server) read the same table programmatically via `source_table_snapshot()`.
+<a href=#565 id=565 data-nosnippet>565</a>    // Gated on the switch, so a normal conversion emits nothing.
+<a href=#566 id=566 data-nosnippet>566</a>    </span><span class="kw">if </span>source_map_enabled() {
+<a href=#567 id=567 data-nosnippet>567</a>      <span class="kw">for </span>(tag, sym) <span class="kw">in </span>source_table_snapshot().iter().enumerate() {
+<a href=#568 id=568 data-nosnippet>568</a>        arena::with(<span class="kw-2">*</span>sym, |src| {
+<a href=#569 id=569 data-nosnippet>569</a>          <span class="macro">Info!</span>(<span class="string">"source-map"</span>, <span class="string">"source"</span>, <span class="macro">s!</span>(<span class="string">"[{tag}] {src}"</span>));
+<a href=#570 id=570 data-nosnippet>570</a>        });
+<a href=#571 id=571 data-nosnippet>571</a>      }
+<a href=#572 id=572 data-nosnippet>572</a>    }
+<a href=#573 id=573 data-nosnippet>573</a>    <span class="comment">// Perl: Note("Conversion complete: " . $$runtime{status}); (LaTeXML.pm:315)
+<a href=#574 id=574 data-nosnippet>574</a>    // is reached only on success — a Fatal `die`s before it, and bin/latexml:127
+<a href=#575 id=575 data-nosnippet>575</a>    // then prints `"Conversion " . ($code == 3 ? 'failed' : 'complete')`. Rust
+<a href=#576 id=576 data-nosnippet>576</a>    // recovers from a Fatal (graceful degradation) instead of dying, so it reaches
+<a href=#577 id=577 data-nosnippet>577</a>    // this note even when status_code == 3; fold in bin/latexml's verdict here so
+<a href=#578 id=578 data-nosnippet>578</a>    // a fatal run reports "failed", never the self-contradictory "complete: N fatal
+<a href=#579 id=579 data-nosnippet>579</a>    // error". Success cases (status_code &lt; 3) stay byte-identical.
+<a href=#580 id=580 data-nosnippet>580</a>    </span><span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"{}"</span>, conversion_verdict(<span class="self">self</span>.runtime.status_code)));
+<a href=#581 id=581 data-nosnippet>581</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
+<a href=#582 id=582 data-nosnippet>582</a>    <span class="comment">// self-&gt;sanitize($log) if ($$runtime{status_code} == 3);
+<a href=#583 id=583 data-nosnippet>583</a>
+<a href=#584 id=584 data-nosnippet>584</a>    </span>ConversionResponse {
+<a href=#585 id=585 data-nosnippet>585</a>      result: <span class="prelude-val">Some</span>(serialized),
+<a href=#586 id=586 data-nosnippet>586</a>      log,
+<a href=#587 id=587 data-nosnippet>587</a>      status: <span class="self">self</span>.runtime.status.clone(),
+<a href=#588 id=588 data-nosnippet>588</a>      status_code: <span class="self">self</span>.runtime.status_code,
+<a href=#589 id=589 data-nosnippet>589</a>    }
+<a href=#590 id=590 data-nosnippet>590</a>  }
+<a href=#591 id=591 data-nosnippet>591</a>
+<a href=#592 id=592 data-nosnippet>592</a>  <span class="doccomment">/// Convert in-memory `content` under the source name `name`, producing the
+<a href=#593 id=593 data-nosnippet>593</a>  /// HTML5-format core XML (the persistent server then post-processes it).
+<a href=#594 id=594 data-nosnippet>594</a>  /// Unlike [`Converter::convert`] (`literal:` → anonymous source), the source
+<a href=#595 id=595 data-nosnippet>595</a>  /// is *named*, so `--source-map` stamps its locators. Focused on the
+<a href=#596 id=596 data-nosnippet>596</a>  /// `Document`/HTML5 path the server uses — no amble wrapping, no TeX/Box
+<a href=#597 id=597 data-nosnippet>597</a>  /// output formats.
+<a href=#598 id=598 data-nosnippet>598</a>  </span><span class="kw">pub fn </span>convert_content_with_provenance(
+<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw-2">mut </span><span class="self">self</span>,
+<a href=#600 id=600 data-nosnippet>600</a>    name: <span class="kw-2">&amp;</span>str,
+<a href=#601 id=601 data-nosnippet>601</a>    content: String,
+<a href=#602 id=602 data-nosnippet>602</a>  ) -&gt; ConversionResponse {
+<a href=#603 id=603 data-nosnippet>603</a>    <span class="comment">// Load + digest through the shared top-level loader, so the source-context
+<a href=#604 id=604 data-nosnippet>604</a>    // setup is not duplicated here.
+<a href=#605 id=605 data-nosnippet>605</a>    </span><span class="kw">let </span>digested = <span class="kw">match </span><span class="self">self</span>.digest_content_with_provenance(name, content) {
+<a href=#606 id=606 data-nosnippet>606</a>      <span class="prelude-val">Ok</span>(d) =&gt; d,
+<a href=#607 id=607 data-nosnippet>607</a>      <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#608 id=608 data-nosnippet>608</a>        <span class="kw">if </span>!<span class="self">self</span>.ready {
+<a href=#609 id=609 data-nosnippet>609</a>          <span class="kw">return </span>ConversionResponse {
+<a href=#610 id=610 data-nosnippet>610</a>            result:      <span class="prelude-val">None</span>,
+<a href=#611 id=611 data-nosnippet>611</a>            log:         <span class="self">self</span>.flush_log(),
+<a href=#612 id=612 data-nosnippet>612</a>            status:      <span class="macro">s!</span>(<span class="string">"Initialization failed."</span>),
+<a href=#613 id=613 data-nosnippet>613</a>            status_code: <span class="number">3</span>,
+<a href=#614 id=614 data-nosnippet>614</a>          };
+<a href=#615 id=615 data-nosnippet>615</a>        }
+<a href=#616 id=616 data-nosnippet>616</a>        <span class="macro">report_mut!</span>().status_code = <span class="number">3</span>;
+<a href=#617 id=617 data-nosnippet>617</a>        e.log_fatal();
+<a href=#618 id=618 data-nosnippet>618</a>        <span class="comment">// Salvage whatever digested before the error (mirrors `convert`).
+<a href=#619 id=619 data-nosnippet>619</a>        </span><span class="kw">match </span><span class="self">self</span>.core.digest_internal() {
+<a href=#620 id=620 data-nosnippet>620</a>          <span class="prelude-val">Ok</span>(salvaged) <span class="kw">if </span>!salvaged.is_empty().unwrap_or(<span class="bool-val">true</span>) =&gt; salvaged,
+<a href=#621 id=621 data-nosnippet>621</a>          <span class="kw">_ </span>=&gt; Digested::from(List::new(Vec::new())),
+<a href=#622 id=622 data-nosnippet>622</a>        }
+<a href=#623 id=623 data-nosnippet>623</a>      },
+<a href=#624 id=624 data-nosnippet>624</a>    };
+<a href=#625 id=625 data-nosnippet>625</a>
+<a href=#626 id=626 data-nosnippet>626</a>    <span class="self">self</span>.runtime.status = get_status_message();
+<a href=#627 id=627 data-nosnippet>627</a>    <span class="self">self</span>.runtime.status_code = get_status_code();
+<a href=#628 id=628 data-nosnippet>628</a>
+<a href=#629 id=629 data-nosnippet>629</a>    <span class="kw">let </span>serialized = {
+<a href=#630 id=630 data-nosnippet>630</a>      <span class="kw">let </span>_g = telemetry::phase(Phase::Build);
+<a href=#631 id=631 data-nosnippet>631</a>      <span class="kw">match </span><span class="self">self</span>.core.convert_document(digested) {
+<a href=#632 id=632 data-nosnippet>632</a>        <span class="prelude-val">Ok</span>(dom) =&gt; {
+<a href=#633 id=633 data-nosnippet>633</a>          <span class="kw">let </span>_g = telemetry::phase(Phase::Serialize);
+<a href=#634 id=634 data-nosnippet>634</a>          dom.serialize_to_string()
+<a href=#635 id=635 data-nosnippet>635</a>        },
+<a href=#636 id=636 data-nosnippet>636</a>        <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#637 id=637 data-nosnippet>637</a>          <span class="comment">// `Error!` expands into a `Result`-returning context; wrap it the
+<a href=#638 id=638 data-nosnippet>638</a>          // same way `convert` does so it composes in this `-&gt; ConversionResponse` fn.
+<a href=#639 id=639 data-nosnippet>639</a>          // Timeout-target resource fatals get the standard `Fatal:` line
+<a href=#640 id=640 data-nosnippet>640</a>          // (see the sibling handler in `convert` — P1-4).
+<a href=#641 id=641 data-nosnippet>641</a>          </span><span class="kw">if </span><span class="macro">matches!</span>(e.target, ErrorTarget::Timeout) {
+<a href=#642 id=642 data-nosnippet>642</a>            e.log_fatal();
+<a href=#643 id=643 data-nosnippet>643</a>          } <span class="kw">else </span>{
+<a href=#644 id=644 data-nosnippet>644</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{:?}"</span>, e);
+<a href=#645 id=645 data-nosnippet>645</a>            <span class="kw">let </span>err = || {
+<a href=#646 id=646 data-nosnippet>646</a>              <span class="macro">Error!</span>(<span class="string">"document"</span>, <span class="string">"convert"</span>, message);
+<a href=#647 id=647 data-nosnippet>647</a>              <span class="prelude-val">Ok</span>(())
+<a href=#648 id=648 data-nosnippet>648</a>            };
+<a href=#649 id=649 data-nosnippet>649</a>            err().ok();
+<a href=#650 id=650 data-nosnippet>650</a>          }
+<a href=#651 id=651 data-nosnippet>651</a>          String::new()
+<a href=#652 id=652 data-nosnippet>652</a>        },
+<a href=#653 id=653 data-nosnippet>653</a>      }
+<a href=#654 id=654 data-nosnippet>654</a>    };
+<a href=#655 id=655 data-nosnippet>655</a>
+<a href=#656 id=656 data-nosnippet>656</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
+<a href=#657 id=657 data-nosnippet>657</a>    ConversionResponse {
+<a href=#658 id=658 data-nosnippet>658</a>      result: <span class="prelude-val">Some</span>(serialized),
+<a href=#659 id=659 data-nosnippet>659</a>      log,
+<a href=#660 id=660 data-nosnippet>660</a>      status: <span class="self">self</span>.runtime.status.clone(),
+<a href=#661 id=661 data-nosnippet>661</a>      status_code: <span class="self">self</span>.runtime.status_code,
+<a href=#662 id=662 data-nosnippet>662</a>    }
+<a href=#663 id=663 data-nosnippet>663</a>  }
+<a href=#664 id=664 data-nosnippet>664</a>
+<a href=#665 id=665 data-nosnippet>665</a>  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">'preplifetime</span>&gt;(
+<a href=#666 id=666 data-nosnippet>666</a>    <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>,
+<a href=#667 id=667 data-nosnippet>667</a>    _opts: <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span>Config,
+<a href=#668 id=668 data-nosnippet>668</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#669 id=669 data-nosnippet>669</a>    <span class="comment">// Per-conversion cache hygiene: a persistent worker converts many papers
+<a href=#670 id=670 data-nosnippet>670</a>    // per thread; cwd-relative kpsewhich results must not leak across them.
+<a href=#671 id=671 data-nosnippet>671</a>    </span>latexml_core::util::pathname::clear_kpsewhich_memo();
+<a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
+<a href=#673 id=673 data-nosnippet>673</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?
+<a href=#674 id=674 data-nosnippet>674</a>    </span>}
+<a href=#675 id=675 data-nosnippet>675</a>    <span class="prelude-val">Ok</span>(())
+<a href=#676 id=676 data-nosnippet>676</a>  }
+<a href=#677 id=677 data-nosnippet>677</a>
+<a href=#678 id=678 data-nosnippet>678</a>  <span class="doccomment">/// Digest in-memory `content` as the **main document** named `name`, leaving
+<a href=#679 id=679 data-nosnippet>679</a>  /// the thread-local engine state **live**. Used by the persistent server to
+<a href=#680 id=680 data-nosnippet>680</a>  /// warm a preamble once (then resume body digestion in a fork child over the
+<a href=#681 id=681 data-nosnippet>681</a>  /// inherited state) and by [`Converter::convert_content_with_provenance`] for
+<a href=#682 id=682 data-nosnippet>682</a>  /// the in-process path.
+<a href=#683 id=683 data-nosnippet>683</a>  ///
+<a href=#684 id=684 data-nosnippet>684</a>  /// This is the in-memory twin of [`crate::core_interface::DigestionAPI::digest_file`]:
+<a href=#685 id=685 data-nosnippet>685</a>  /// same top-level spine — establish the source context, open the source,
+<a href=#686 id=686 data-nosnippet>686</a>  /// `digest_internal` — but the content is *supplied* rather than read from
+<a href=#687 id=687 data-nosnippet>687</a>  /// disk. It shares `core_interface::establish_source_context` with
+<a href=#688 id=688 data-nosnippet>688</a>  /// `digest_file` (so `SOURCEFILE`/`SOURCEDIRECTORY`/`SEARCHPATHS`/
+<a href=#689 id=689 data-nosnippet>689</a>  /// `GRAPHICSPATHS`/`\jobname` can't drift), making sibling
+<a href=#690 id=690 data-nosnippet>690</a>  /// `\usepackage`/`\input`/`\includegraphics` of local files resolve. The
+<a href=#691 id=691 data-nosnippet>691</a>  /// source is opened as a *named* mouth (not the anonymous `literal:`
+<a href=#692 id=692 data-nosnippet>692</a>  /// protocol) so locators carry `name` — the **provenance** that
+<a href=#693 id=693 data-nosnippet>693</a>  /// `--source-map` needs (`stamp_source_locator` only stamps
+<a href=#694 id=694 data-nosnippet>694</a>  /// `.tex`/`.ltx`/`.bbl`/`.bib` user sources). Initializes the session if
+<a href=#695 id=695 data-nosnippet>695</a>  /// needed; does not finalize a document.
+<a href=#696 id=696 data-nosnippet>696</a>  </span><span class="kw">pub fn </span>digest_content_with_provenance(
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#698 id=698 data-nosnippet>698</a>    name: <span class="kw-2">&amp;</span>str,
+<a href=#699 id=699 data-nosnippet>699</a>    content: String,
+<a href=#700 id=700 data-nosnippet>700</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
+<a href=#701 id=701 data-nosnippet>701</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
+<a href=#702 id=702 data-nosnippet>702</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?</span>;
+<a href=#703 id=703 data-nosnippet>703</a>    }
+<a href=#704 id=704 data-nosnippet>704</a>    <span class="self">self</span>.bind_log();
+<a href=#705 id=705 data-nosnippet>705</a>    <span class="comment">// Top-level document load: establish the source context (SOURCEFILE,
+<a href=#706 id=706 data-nosnippet>706</a>    // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling
+<a href=#707 id=707 data-nosnippet>707</a>    // \usepackage/\input/\includegraphics of local files resolve. Shared with
+<a href=#708 id=708 data-nosnippet>708</a>    // `digest_file` via `establish_source_context` so the two can't drift.
+<a href=#709 id=709 data-nosnippet>709</a>    // (A continuation/nested mouth must NOT do this — see
+<a href=#710 id=710 data-nosnippet>710</a>    // `open_named_in_memory_mouth`.)
+<a href=#711 id=711 data-nosnippet>711</a>    </span><span class="kw">let </span>path = std::path::Path::new(name);
+<a href=#712 id=712 data-nosnippet>712</a>    <span class="kw">let </span>dir = path.parent().and_then(|p| p.to_str()).unwrap_or(<span class="string">""</span>);
+<a href=#713 id=713 data-nosnippet>713</a>    <span class="kw">let </span>jobname = path.file_stem().and_then(|s| s.to_str()).unwrap_or(name);
+<a href=#714 id=714 data-nosnippet>714</a>    <span class="kw">crate</span>::core_interface::establish_source_context(<span class="prelude-val">Some</span>(name), jobname, dir);
+<a href=#715 id=715 data-nosnippet>715</a>    open_named_in_memory_mouth(name, content)<span class="question-mark">?</span>;
+<a href=#716 id=716 data-nosnippet>716</a>    <span class="self">self</span>.core.digest_internal()
+<a href=#717 id=717 data-nosnippet>717</a>  }
+<a href=#718 id=718 data-nosnippet>718</a>}
+<a href=#719 id=719 data-nosnippet>719</a>
+<a href=#720 id=720 data-nosnippet>720</a><span class="doccomment">/// Open a gullet mouth over in-memory `content` whose source is named `name`
+<a href=#721 id=721 data-nosnippet>721</a>/// (a real path/filename). Uses the Mouth's cached-content branch so locators
+<a href=#722 id=722 data-nosnippet>722</a>/// carry `name` rather than "Anonymous String".
+<a href=#723 id=723 data-nosnippet>723</a>///
+<a href=#724 id=724 data-nosnippet>724</a>/// Low-level and *position-agnostic*: it does NOT touch the document-global
+<a href=#725 id=725 data-nosnippet>725</a>/// `SOURCEDIRECTORY`/`SEARCHPATHS`, so it is safe for a continuation (the
+<a href=#726 id=726 data-nosnippet>726</a>/// forked child's body over already-inherited state) or a nested include. For
+<a href=#727 id=727 data-nosnippet>727</a>/// the *main* document load, go through `Converter::digest_named`, which
+<a href=#728 id=728 data-nosnippet>728</a>/// installs the document directory first.
+<a href=#729 id=729 data-nosnippet>729</a></span><span class="kw">pub fn </span>open_named_in_memory_mouth(name: <span class="kw-2">&amp;</span>str, content: String) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#730 id=730 data-nosnippet>730</a>  <span class="kw">use </span>latexml_core::{
+<a href=#731 id=731 data-nosnippet>731</a>    gullet,
+<a href=#732 id=732 data-nosnippet>732</a>    mouth::{Mouth, MouthOptions},
+<a href=#733 id=733 data-nosnippet>733</a>  };
+<a href=#734 id=734 data-nosnippet>734</a>  <span class="kw">let </span>mouth = Mouth::create(name, MouthOptions {
+<a href=#735 id=735 data-nosnippet>735</a>    notes: <span class="bool-val">true</span>,
+<a href=#736 id=736 data-nosnippet>736</a>    content: <span class="prelude-val">Some</span>(content),
+<a href=#737 id=737 data-nosnippet>737</a>    ..MouthOptions::default()
+<a href=#738 id=738 data-nosnippet>738</a>  })<span class="question-mark">?</span>;
+<a href=#739 id=739 data-nosnippet>739</a>  gullet::open_mouth(mouth, <span class="bool-val">true</span>);
+<a href=#740 id=740 data-nosnippet>740</a>  <span class="prelude-val">Ok</span>(())
+<a href=#741 id=741 data-nosnippet>741</a>}
+<a href=#742 id=742 data-nosnippet>742</a>
+<a href=#743 id=743 data-nosnippet>743</a><span class="doccomment">/// Resolve the `(preamble, postamble)` to wrap the source in, based on
+<a href=#744 id=744 data-nosnippet>744</a>/// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
+<a href=#745 id=745 data-nosnippet>745</a>/// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
+<a href=#746 id=746 data-nosnippet>746</a>///
+<a href=#747 id=747 data-nosnippet>747</a>/// * `math` → `\begin{document}\ensuremathfollows` … `\ensuremathpreceeds\end{document}` (magic
+<a href=#748 id=748 data-nosnippet>748</a>///   math-mode trigger).
+<a href=#749 id=749 data-nosnippet>749</a>/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting to `standard_preamble.tex`
+<a href=#750 id=750 data-nosnippet>750</a>///   / `standard_postamble.tex`.
+<a href=#751 id=751 data-nosnippet>751</a>/// * everything else (`document`, `archive`, …) → no wrapping.
+<a href=#752 id=752 data-nosnippet>752</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>resolve_amble(
+<a href=#753 id=753 data-nosnippet>753</a>  whatsin: <span class="kw-2">&amp;</span>DataSize,
+<a href=#754 id=754 data-nosnippet>754</a>  preamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#755 id=755 data-nosnippet>755</a>  postamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#756 id=756 data-nosnippet>756</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;) {
+<a href=#757 id=757 data-nosnippet>757</a>  <span class="kw">match </span>whatsin {
+<a href=#758 id=758 data-nosnippet>758</a>    DataSize::Math =&gt; (
+<a href=#759 id=759 data-nosnippet>759</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\begin{{document}}\\ensuremathfollows"</span>)),
+<a href=#760 id=760 data-nosnippet>760</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{{document}}"</span>)),
+<a href=#761 id=761 data-nosnippet>761</a>    ),
+<a href=#762 id=762 data-nosnippet>762</a>    DataSize::Fragment =&gt; (
+<a href=#763 id=763 data-nosnippet>763</a>      <span class="prelude-val">Some</span>(
+<a href=#764 id=764 data-nosnippet>764</a>        preamble
+<a href=#765 id=765 data-nosnippet>765</a>          .clone()
+<a href=#766 id=766 data-nosnippet>766</a>          .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_preamble.tex"</span>)),
+<a href=#767 id=767 data-nosnippet>767</a>      ),
+<a href=#768 id=768 data-nosnippet>768</a>      <span class="prelude-val">Some</span>(
+<a href=#769 id=769 data-nosnippet>769</a>        postamble
+<a href=#770 id=770 data-nosnippet>770</a>          .clone()
+<a href=#771 id=771 data-nosnippet>771</a>          .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_postamble.tex"</span>)),
+<a href=#772 id=772 data-nosnippet>772</a>      ),
+<a href=#773 id=773 data-nosnippet>773</a>    ),
+<a href=#774 id=774 data-nosnippet>774</a>    <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
+<a href=#775 id=775 data-nosnippet>775</a>  }
+<a href=#776 id=776 data-nosnippet>776</a>}
+<a href=#777 id=777 data-nosnippet>777</a>
+<a href=#778 id=778 data-nosnippet>778</a><span class="attr">#[cfg(test)]
+<a href=#779 id=779 data-nosnippet>779</a></span><span class="kw">mod </span>tests {
+<a href=#780 id=780 data-nosnippet>780</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#781 id=781 data-nosnippet>781</a>
+<a href=#782 id=782 data-nosnippet>782</a>  <span class="attr">#[test]
+<a href=#783 id=783 data-nosnippet>783</a>  </span><span class="kw">fn </span>amble_math_wraps_both_ends() {
+<a href=#784 id=784 data-nosnippet>784</a>    <span class="comment">// Perl LaTeXML.pm:166-168 — math sets BOTH preamble and postamble.
+<a href=#785 id=785 data-nosnippet>785</a>    </span><span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Math, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
+<a href=#786 id=786 data-nosnippet>786</a>    <span class="macro">assert_eq!</span>(
+<a href=#787 id=787 data-nosnippet>787</a>      pre.as_deref(),
+<a href=#788 id=788 data-nosnippet>788</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\begin{document}\\ensuremathfollows"</span>)
+<a href=#789 id=789 data-nosnippet>789</a>    );
+<a href=#790 id=790 data-nosnippet>790</a>    <span class="macro">assert_eq!</span>(
+<a href=#791 id=791 data-nosnippet>791</a>      post.as_deref(),
+<a href=#792 id=792 data-nosnippet>792</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{document}"</span>)
+<a href=#793 id=793 data-nosnippet>793</a>    );
+<a href=#794 id=794 data-nosnippet>794</a>  }
+<a href=#795 id=795 data-nosnippet>795</a>
+<a href=#796 id=796 data-nosnippet>796</a>  <span class="attr">#[test]
+<a href=#797 id=797 data-nosnippet>797</a>  </span><span class="kw">fn </span>amble_fragment_defaults_to_standard_files() {
+<a href=#798 id=798 data-nosnippet>798</a>    <span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Fragment, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
+<a href=#799 id=799 data-nosnippet>799</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_preamble.tex"</span>));
+<a href=#800 id=800 data-nosnippet>800</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_postamble.tex"</span>));
+<a href=#801 id=801 data-nosnippet>801</a>  }
+<a href=#802 id=802 data-nosnippet>802</a>
+<a href=#803 id=803 data-nosnippet>803</a>  <span class="attr">#[test]
+<a href=#804 id=804 data-nosnippet>804</a>  </span><span class="kw">fn </span>amble_fragment_honors_explicit_files() {
+<a href=#805 id=805 data-nosnippet>805</a>    <span class="kw">let </span>(pre, post) = resolve_amble(
+<a href=#806 id=806 data-nosnippet>806</a>      <span class="kw-2">&amp;</span>DataSize::Fragment,
+<a href=#807 id=807 data-nosnippet>807</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>.into()),
+<a href=#808 id=808 data-nosnippet>808</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>.into()),
+<a href=#809 id=809 data-nosnippet>809</a>    );
+<a href=#810 id=810 data-nosnippet>810</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>));
+<a href=#811 id=811 data-nosnippet>811</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>));
+<a href=#812 id=812 data-nosnippet>812</a>  }
+<a href=#813 id=813 data-nosnippet>813</a>
+<a href=#814 id=814 data-nosnippet>814</a>  <span class="attr">#[test]
+<a href=#815 id=815 data-nosnippet>815</a>  </span><span class="kw">fn </span>amble_document_and_archive_have_no_wrapping() {
+<a href=#816 id=816 data-nosnippet>816</a>    <span class="macro">assert_eq!</span>(
+<a href=#817 id=817 data-nosnippet>817</a>      resolve_amble(<span class="kw-2">&amp;</span>DataSize::Document, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>),
+<a href=#818 id=818 data-nosnippet>818</a>      (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
+<a href=#819 id=819 data-nosnippet>819</a>    );
+<a href=#820 id=820 data-nosnippet>820</a>    <span class="macro">assert_eq!</span>(
+<a href=#821 id=821 data-nosnippet>821</a>      resolve_amble(<span class="kw-2">&amp;</span>DataSize::Archive, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>),
+<a href=#822 id=822 data-nosnippet>822</a>      (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
+<a href=#823 id=823 data-nosnippet>823</a>    );
+<a href=#824 id=824 data-nosnippet>824</a>  }
+<a href=#825 id=825 data-nosnippet>825</a>}
 </code></pre></div></section></main></body></html>

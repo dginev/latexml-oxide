@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["bind_log","capture","flush_log","init","mark_stderr_at_line_start","note_to_log","replay_captured"],"struct":["CapturedDiagnostics"]};
+window.SIDEBAR_ITEMS = {"fn":["bind_log","capture","flush_log","init","mark_stderr_at_line_start","note_to_log","replay_captured","stderr_admits","stderr_shows_info"],"struct":["CapturedDiagnostics"]};
