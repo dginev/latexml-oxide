@@ -22,6 +22,18 @@
     `quiet_keeps_log_floor::{quiet_log_keeps_floor_but_stderr_is_muted,
     loud_log_and_stderr_both_keep_floor}`.
 
+  - **`\newtcblisting` now accepts its leading `[init-options]` optional argument.**
+    The binding stub took `{name}[N][default]{options}`, omitting the leading
+    `[init-options]` that the real tcolorbox macro carries (`{ m +O{} m o +o +m }`).
+    A call like `\newtcblisting[auto counter, number within=section]{promptbox}[2][]{…}`
+    therefore read the bracket group as the mandatory name, left `{promptbox}`
+    undefined, and let its verbatim body tokenize as ordinary LaTeX — so every `_`/`^`
+    in the listing raised "Script can only appear in math mode" (455 errors on the
+    witness). The spec now leads with the optional; both it and the trailing tcb
+    options are dropped as before, and calls without a leading optional are unchanged.
+    Found in the sandbox-arxiv-2606 study; witness 2606.00555 (455→0 errors). Guard
+    `cluster_newtcblisting_leading_optarg`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render Pygments syntax colors, not just bold-black.** When the

@@ -457,6 +457,18 @@ fn cluster_tcolorbox_tabular_not_flipped_6873() {
      (else the table renders upside down):\n{fo_open}"
   );
 }
+/// sandbox-arxiv-2606 study (witness 2606.00555): `\newtcblisting`'s real
+/// signature carries a LEADING `[init-options]` optional before the mandatory
+/// `{name}` (real tcolorbox `{ m +O{} m o +o +m }`). The binding stub omitted it,
+/// so `\newtcblisting[auto counter,...]{promptbox}[2][]{...}` read the bracket
+/// group as the name, left `{promptbox}` undefined, and its verbatim body
+/// tokenized as normal LaTeX — every `_`/`^` raising "Script can only appear in
+/// math mode" (455 in the witness). Perl raw-loads the real macro and is clean.
+/// RED before the fix: 4 errors ({promptbox} undefined + `_` scripts).
+#[test]
+fn cluster_newtcblisting_leading_optarg() {
+  convert_clean("tests/cluster_regressions/newtcblisting_leading_optarg.tex");
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce

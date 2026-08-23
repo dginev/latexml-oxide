@@ -1,0 +1,16 @@
+% Regression guard for the sandbox-arxiv-2606 study (witness 2606.00555).
+% \newtcblisting's real signature has a LEADING [init-options] optional before
+% the mandatory {name}. The binding stub omitted it, so a call like
+% \newtcblisting[auto counter,...]{promptbox}[2][]{...} read the bracket group as
+% the name, left {promptbox} undefined, and its verbatim body tokenized as normal
+% LaTeX — every `_`/`^` in the listing raising "Script can only appear in math
+% mode". Perl raw-loads the real macro and is clean; pdflatex compiles.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting[auto counter, number within=section]{promptbox}[2][]{listing only}
+\begin{document}
+\begin{promptbox}[lbl]{cap}
+prompt text with x_1 and y_2 subscripts_here
+\end{promptbox}
+\end{document}

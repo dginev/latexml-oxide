@@ -27,19 +27,29 @@ LoadDefinitions!({
   // Make the check a no-op — the versions are always compatible in practice.
   DefMacro!("\\tcb@check@library@version", "", locked => true);
 
-  // \newtcblisting{name}[N][default]{tcb-options} (tcolorbox `listings`/`minted`
-  // library) — a code-listing box. Its box styling is purely visual; what
-  // matters for the logical output is the code BODY, which must be captured
-  // verbatim and CLOSED at \end{name}. The raw library's body capture does not
-  // integrate with LaTeXML's verbatim reader, so the listing runs past its
-  // \end{name} and swallows following content (sections leak into
+  // \newtcblisting[init-options]{name}[N][default]{tcb-options} (tcolorbox
+  // `listings`/`minted` library) — a code-listing box. Its box styling is purely
+  // visual; what matters for the logical output is the code BODY, which must be
+  // captured verbatim and CLOSED at \end{name}. The raw library's body capture
+  // does not integrate with LaTeXML's verbatim reader, so the listing runs past
+  // its \end{name} and swallows following content (sections leak into
   // <ltx:verbatim>). Delegate to listings' \lstnewenvironment (same
-  // name/[N][default] shape; the tcb options are dropped), whose verbatim reader
-  // terminates correctly. `locked` so a later raw `\tcbuselibrary{listings}`
-  // can't clobber it. Witness: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
+  // name/[N][default] shape; the leading [init-options] and trailing tcb options
+  // are dropped), whose verbatim reader terminates correctly. `locked` so a later
+  // raw `\tcbuselibrary{listings}` can't clobber it.
+  //
+  // The signature MUST include the leading `[init-options]` optional (real
+  // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`,
+  // mirrored by tcblistings): omitting it made a call like
+  // `\newtcblisting[auto counter,...]{promptbox}[2][]{...}` read `[auto counter,...]`
+  // as the mandatory name, so `{promptbox}` was never defined and its verbatim body
+  // tokenized as normal LaTeX — every `_`/`^` in the listing then raising
+  // "Script can only appear in math mode" (Perl raw-loads the real macro and is
+  // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
+  // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
   DefMacro!(
-    "\\newtcblisting{}[][]{}",
-    "\\lstnewenvironment{#1}[#2][#3]{}{}",
+    "\\newtcblisting[]{}[][]{}",
+    "\\lstnewenvironment{#2}[#3][#4]{}{}",
     locked => true
   );
 });
