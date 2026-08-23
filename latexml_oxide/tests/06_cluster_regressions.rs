@@ -1427,6 +1427,14 @@ fn cluster_fvextra_backgroundcolor_paints_the_frame_box() {
 /// which `fancyvrb_sty.rs` defaults to empty (plain fancyvrb never wraps) and
 /// `fvextra_sty.rs` redefines to fire off `\ifFV@breaklines`. Only the break box
 /// gets it: exactly one `ltx_break` against two `ltx_framed_verbatim` boxes.
+///
+/// The fixture verbatims are deliberately MULTI-LINE. A *single-line*
+/// `breaklines=true` framed verbatim trips a PRE-EXISTING streaming divergence
+/// (unrelated to this feature — reproduces with the `ltx_break` class removed):
+/// the frame's lone `ltx:text` child coalesces into the frame under the eager
+/// path but not under the fragment (`--streaming`) path, so the `114_streaming_*`
+/// sweep diverges. Multiple lines give the frame several children, so neither
+/// path collapses the wrapper and the two agree. Keep ≥2 lines here.
 #[test]
 fn cluster_fvextra_breaklines_class() {
   let x = convert_to_xml("tests/cluster_regressions/fvextra_breaklines_class.tex");
