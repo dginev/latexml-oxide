@@ -587,3 +587,72 @@ mod omnibus_agu_authors {
     );
   }
 }
+
+mod omnibus_orcid_running_heads {
+  //! sandbox-arxiv-2606 study (OXIDIZED_DESIGN #160): the safe slice of the
+  //! OmniBus journal-frontmatter vocabulary extension. Perl's OmniBus leaves
+  //! `\orcid` / `\lefttitle` / `\righttitle` undefined (→ Error), even though
+  //! `\orcid` maps cleanly to the existing `\lx@add@orcid` helper and the
+  //! running heads are presentational. We capture the ORCID (surpass-Perl,
+  //! like `scrartcl`'s `\titlehead`) and no-op the running heads. `\orcid`
+  //! appears both as `\orcid{id}` (pasj02, 2606.00213) and `\orcid[name]{id}`
+  //! (aas-style), so the binding accepts the leading optional. Binary-driven
+  //! because an unknown `.cls` `LoadClass!`es OmniBus (see 92_fairmeta_frontmatter).
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{someunknownjournal}\n\
+    \\lefttitle{Left Running Head}\n\
+    \\righttitle{Right Running Head}\n\
+    \\title{A Study of Things}\n\
+    \\author{Ada Lovelace\\orcid{0000-0002-2709-7338}}\n\
+    \\begin{document}\n\
+    \\maketitle\n\
+    \\section{Body}\n\
+    Text.\n\
+    \\end{document}\n";
+
+  #[test]
+  fn omnibus_captures_orcid_and_drops_running_heads() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
+
+    let output = Command::new(bin)
+      .arg("a.tex")
+      .arg("--dest")
+      .arg("a.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+    // \orcid / \lefttitle / \righttitle must no longer be undefined-errors.
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "expected an error-clean conversion, stderr had errors:\n{stderr}",
+    );
+
+    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
+    // The ORCID is captured as a real frontmatter contact, not dropped.
+    assert!(
+      xml.contains("role=\"orcid\"") && xml.contains("orcid.org/0000-0002-2709-7338"),
+      "expected a captured ORCID contact:\n{xml}",
+    );
+    // The running heads are presentational — dropped, never leaked into the body.
+    for leaked in ["Left Running Head", "Right Running Head"] {
+      assert!(
+        !xml.contains(leaked),
+        "running-head {leaked:?} must be dropped, not emitted:\n{xml}",
+      );
+    }
+  }
+}

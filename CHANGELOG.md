@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+  - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
+    running heads.** Unbound bundled journal classes fall through to the generic
+    OmniBus fallback, where Perl's `OmniBus.cls.ltxml` leaves these three undefined
+    (→ `Error`, content dropped). `\orcid[]{}` now routes to the existing
+    `\lx@add@orcid` helper, so the identifier is captured as a real
+    `<ltx:contact role="orcid">` with an `orcid.org` link (surpass-Perl, like
+    `scrartcl`'s `\titlehead`); the running-head registers are no-op'd (presentational,
+    correctly dropped). Only this verified, class-consistent subset is added — the
+    ambiguous/variant journal spellings (`\aff` is a superscript ref marker in jfm,
+    NOT affiliation; `\contribution`/`\correspondence`/`\data`/`\ack`/`\reportnumber`)
+    stay unhandled pending per-class review. From the sandbox-arxiv-2606 study;
+    witnesses 2606.00213 (pasj02 `\orcid`), 2606.00645 (jfm running heads).
+    OXIDIZED_DESIGN #160; guard `omnibus_captures_orcid_and_drops_running_heads`.
+
   - **Output-neutral performance pass (2026-08-23 audit follow-through).** `Debug!`
     diagnostics are now lazy: their message expressions — which at the
     `open_text`/`open_text_internal`/`close_element` sites serialized the current

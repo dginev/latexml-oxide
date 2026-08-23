@@ -161,6 +161,24 @@ LoadDefinitions!({
   // gobble (redundant running head). Match Perl; preserving it errored on a
   // literal `&` in the running head. See 0709.4236 and aas_support_sty.rs.
   def_macro_noop("\\shortauthors{}")?;
+
+  // Beyond-Perl (OXIDIZED_DESIGN #160): journal-class frontmatter spellings
+  // that Perl's OmniBus.cls.ltxml leaves undefined (→ Error). We add only the
+  // subset whose semantics are class-consistent and verified against the
+  // bundled classes; the ambiguous/variant ones (\aff — a superscript ref
+  // marker in jfm, NOT affiliation; \contribution, \correspondence, \data,
+  // \ack, \reportnumber) stay unhandled pending per-class output review
+  // (SYNC_STATUS.md 2026-08-23). Upstream the same to OmniBus.cls.ltxml.
+  //
+  // \orcid — a stored ORCID id (pasj02 `\def\orcid#1{…ORCID: #1…}`); some
+  // classes spell it `\orcid[name]{id}` (aas-style), so accept the leading
+  // optional and route the id to the canonical helper. Witness 2606.00213.
+  DefMacro!("\\orcid[]{}", "\\lx@add@orcid{#2}");
+  // Running heads (jfm `\lefttitle#1{\gdef\@lefttitle{#1}}`, `\righttitle`) —
+  // presentational, correctly dropped (not content). Witness 2606.00645.
+  def_macro_noop("\\lefttitle{}")?;
+  def_macro_noop("\\righttitle{}")?;
+
   // \authors{author list} — the plural byline macro used by journal classes
   // (AGU's agujournal2019, ametsoc, …) as an alternative to \author. It holds
   // ONE comma-separated list of authors, the last joined with "and", each name
