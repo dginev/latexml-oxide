@@ -440,7 +440,7 @@
 <a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">let </span>reversion = Tokens::new(rev);
 <a href=#441 id=441 data-nosnippet>441</a>
 <a href=#442 id=442 data-nosnippet>442</a>    <span class="comment">// Content: apply(symbol(meaning), arg1, arg2)
-<a href=#443 id=443 data-nosnippet>443</a>    </span><span class="kw">let </span>content = i_apply(<span class="kw-2">&amp;</span>[], i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>),
+<a href=#443 id=443 data-nosnippet>443</a>    </span><span class="kw">let </span>content = i_apply(<span class="kw-2">&amp;</span>[], i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>),
 <a href=#444 id=444 data-nosnippet>444</a>      <span class="macro">vec!</span>[a1, a2]);
 <a href=#445 id=445 data-nosnippet>445</a>
 <a href=#446 id=446 data-nosnippet>446</a>    <span class="comment">// Presentation: open arg1 , arg2 close
@@ -502,7 +502,7 @@
 <a href=#502 id=502 data-nosnippet>502</a>    <span class="kw">let </span>cs_tks = cs;
 <a href=#503 id=503 data-nosnippet>503</a>    <span class="kw">let </span>semantic_tex = semantic.untex_string();
 <a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">let </span>function_tks = function;
-<a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>);
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>);
 <a href=#506 id=506 data-nosnippet>506</a>    <span class="kw">let </span>(no_stretch, size_tok) = phys_read_size()<span class="question-mark">?</span>;
 <a href=#507 id=507 data-nosnippet>507</a>    <span class="kw">let </span>(arg, open, close) = phys_read_arg(<span class="bool-val">false</span>, physics_delimiters)<span class="question-mark">?</span>;
 <a href=#508 id=508 data-nosnippet>508</a>
@@ -568,7 +568,7 @@
 <a href=#568 id=568 data-nosnippet>568</a>    <span class="kw">let </span>cs_tks = cs;
 <a href=#569 id=569 data-nosnippet>569</a>    <span class="kw">let </span>semantic_tex = semantic.untex_string();
 <a href=#570 id=570 data-nosnippet>570</a>    <span class="kw">let </span>function_tks = function;
-<a href=#571 id=571 data-nosnippet>571</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>);
+<a href=#571 id=571 data-nosnippet>571</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>);
 <a href=#572 id=572 data-nosnippet>572</a>    <span class="kw">let </span>pfunc = function_tks;
 <a href=#573 id=573 data-nosnippet>573</a>    <span class="kw">let </span>(no_stretch, size_tok) = phys_read_size()<span class="question-mark">?</span>;
 <a href=#574 id=574 data-nosnippet>574</a>    <span class="kw">let </span>power = read_optional(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -719,7 +719,7 @@
 <a href=#719 id=719 data-nosnippet>719</a>    <span class="kw">let </span>raw_tks = raw;
 <a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">let </span>function_tks = function;
 <a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">let </span>(no_stretch, size_tok) = phys_read_size()<span class="question-mark">?</span>;
-<a href=#722 id=722 data-nosnippet>722</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>);
+<a href=#722 id=722 data-nosnippet>722</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>);
 <a href=#723 id=723 data-nosnippet>723</a>    <span class="kw">let </span>arg = phys_read_arg_tex()<span class="question-mark">?</span>;
 <a href=#724 id=724 data-nosnippet>724</a>
 <a href=#725 id=725 data-nosnippet>725</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(arg_tks) = arg {
@@ -821,7 +821,7 @@
 <a href=#821 id=821 data-nosnippet>821</a>    <span class="kw">let </span>cs_tks = cs;
 <a href=#822 id=822 data-nosnippet>822</a>    <span class="kw">let </span>semantic_tex = semantic.untex_string();
 <a href=#823 id=823 data-nosnippet>823</a>    <span class="kw">let </span>diff_tks = diff;
-<a href=#824 id=824 data-nosnippet>824</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>);
+<a href=#824 id=824 data-nosnippet>824</a>    <span class="kw">let </span>cfunc = i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>);
 <a href=#825 id=825 data-nosnippet>825</a>    <span class="kw">let </span>pfunc = i_wrap(<span class="prelude-val">Some</span>(<span class="macro">Tokenize!</span>(<span class="string">"role=DIFFOP"</span>)), diff_tks);
 <a href=#826 id=826 data-nosnippet>826</a>    <span class="kw">let </span>degree = read_optional(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#827 id=827 data-nosnippet>827</a>    <span class="kw">let </span>(arg, open, close) = phys_read_arg(<span class="bool-val">false</span>, |s| {
@@ -1206,7 +1206,7 @@
 <a href=#1206 id=1206 data-nosnippet>1206</a>    <span class="kw">let </span>reversion = Tokens::new(rev);
 <a href=#1207 id=1207 data-nosnippet>1207</a>
 <a href=#1208 id=1208 data-nosnippet>1208</a>    <span class="kw">let </span>content = i_apply(<span class="kw-2">&amp;</span>[],
-<a href=#1209 id=1209 data-nosnippet>1209</a>      i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex.clone()))], <span class="prelude-val">None</span>),
+<a href=#1209 id=1209 data-nosnippet>1209</a>      i_symbol(<span class="kw-2">&amp;</span>[(<span class="string">"meaning"</span>, <span class="macro">Tokenize!</span>(semantic_tex))], <span class="prelude-val">None</span>),
 <a href=#1210 id=1210 data-nosnippet>1210</a>      <span class="macro">vec!</span>[a1, a2]);
 <a href=#1211 id=1211 data-nosnippet>1211</a>    <span class="comment">// Stretchy by default (Perl parity); `no_stretch` passed directly — see the
 <a href=#1212 id=1212 data-nosnippet>1212</a>    // `\matrixelement` note. A prior `!no_stretch` made `\innerproduct`/`\outerproduct`

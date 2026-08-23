@@ -3445,11 +3445,11 @@
 <a href=#3445 id=3445 data-nosnippet>3445</a>            <span class="kw">if </span>document::get_node_qname(<span class="kw-2">&amp;</span>parent) == capture_block {
 <a href=#3446 id=3446 data-nosnippet>3446</a>              document.maybe_close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>;
 <a href=#3447 id=3447 data-nosnippet>3447</a>            } <span class="kw">else if </span>document::can_contain(<span class="kw-2">&amp;</span>context, <span class="string">"ltx:break"</span>) {
-<a href=#3448 id=3448 data-nosnippet>3448</a>              document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), break_attrs.clone())<span class="question-mark">?</span>;
+<a href=#3448 id=3448 data-nosnippet>3448</a>              document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), break_attrs)<span class="question-mark">?</span>;
 <a href=#3449 id=3449 data-nosnippet>3449</a>            }
 <a href=#3450 id=3450 data-nosnippet>3450</a>          }
 <a href=#3451 id=3451 data-nosnippet>3451</a>        } <span class="kw">else if </span>document::can_contain(<span class="kw-2">&amp;</span>context, <span class="string">"ltx:break"</span>) {
-<a href=#3452 id=3452 data-nosnippet>3452</a>          document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), break_attrs.clone())<span class="question-mark">?</span>;
+<a href=#3452 id=3452 data-nosnippet>3452</a>          document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), break_attrs)<span class="question-mark">?</span>;
 <a href=#3453 id=3453 data-nosnippet>3453</a>        }
 <a href=#3454 id=3454 data-nosnippet>3454</a>      }
 <a href=#3455 id=3455 data-nosnippet>3455</a>      <span class="comment">// else: no context =&gt; skip

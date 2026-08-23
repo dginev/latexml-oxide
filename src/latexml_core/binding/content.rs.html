@@ -3504,34 +3504,97 @@
 <a href=#3504 id=3504 data-nosnippet>3504</a>  result
 <a href=#3505 id=3505 data-nosnippet>3505</a>}
 <a href=#3506 id=3506 data-nosnippet>3506</a>
-<a href=#3507 id=3507 data-nosnippet>3507</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
-<a href=#3508 id=3508 data-nosnippet>3508</a>  <span class="kw">let _ </span>= preload_font_map(encoding); <span class="comment">// infallible in practice; swallow Result
-<a href=#3509 id=3509 data-nosnippet>3509</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
-<a href=#3510 id=3510 data-nosnippet>3510</a>  // Rc bump on the inner slice regardless.
-<a href=#3511 id=3511 data-nosnippet>3511</a>  </span>with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>), |v| v.and_then(|s| s.into()))
-<a href=#3512 id=3512 data-nosnippet>3512</a>}
-<a href=#3513 id=3513 data-nosnippet>3513</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#3514 id=3514 data-nosnippet>3514</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
-<a href=#3515 id=3515 data-nosnippet>3515</a>  </span><span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>);
-<a href=#3516 id=3516 data-nosnippet>3516</a>  <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span>key) {
-<a href=#3517 id=3517 data-nosnippet>3517</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#3518 id=3518 data-nosnippet>3518</a>  }
-<a href=#3519 id=3519 data-nosnippet>3519</a>  <span class="kw">let </span>fail_key = <span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>);
-<a href=#3520 id=3520 data-nosnippet>3520</a>  <span class="kw">let </span>failed_flag = lookup_bool(<span class="kw-2">&amp;</span>fail_key);
-<a href=#3521 id=3521 data-nosnippet>3521</a>  <span class="kw">if </span>!failed_flag {
-<a href=#3522 id=3522 data-nosnippet>3522</a>    assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
-<a href=#3523 id=3523 data-nosnippet>3523</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
-<a href=#3524 id=3524 data-nosnippet>3524</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
-<a href=#3525 id=3525 data-nosnippet>3525</a>      noerror: <span class="bool-val">true</span>,
-<a href=#3526 id=3526 data-nosnippet>3526</a>      ..InputDefinitionOptions::default()
-<a href=#3527 id=3527 data-nosnippet>3527</a>    });
-<a href=#3528 id=3528 data-nosnippet>3528</a>    <span class="kw">if </span>has_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)) {
-<a href=#3529 id=3529 data-nosnippet>3529</a>      <span class="comment">// Got map?
-<a href=#3530 id=3530 data-nosnippet>3530</a>      </span>assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#3531 id=3531 data-nosnippet>3531</a>    } <span class="kw">else </span>{
-<a href=#3532 id=3532 data-nosnippet>3532</a>      assign_value(<span class="kw-2">&amp;</span>fail_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#3533 id=3533 data-nosnippet>3533</a>    }
-<a href=#3534 id=3534 data-nosnippet>3534</a>  }
-<a href=#3535 id=3535 data-nosnippet>3535</a>  <span class="prelude-val">Ok</span>(())
-<a href=#3536 id=3536 data-nosnippet>3536</a>}
+<a href=#3507 id=3507 data-nosnippet>3507</a><span class="comment">// Memoized key symbols for the per-encoding fontmap Value-table entries.
+<a href=#3508 id=3508 data-nosnippet>3508</a>// `decode_string` runs per digested character run and used to rebuild (format!
+<a href=#3509 id=3509 data-nosnippet>3509</a>// + arena probe) the `"{encoding}_fontmap"`-family keys on every call — ~1M
+<a href=#3510 id=3510 data-nosnippet>3510</a>// allocations on a 1.3 s paper (2026-08-23 audit R6, dhat). Encodings are few
+<a href=#3511 id=3511 data-nosnippet>3511</a>// (OT1/T1/OML/…), so the (encoding → key syms) maps stay tiny. Value lookups
+<a href=#3512 id=3512 data-nosnippet>3512</a>// still go through the state tables — only the key STRINGS are memoized.
+<a href=#3513 id=3513 data-nosnippet>3513</a>// Keyed by arena SymStr, so MUST be cleared with `arena::reset()`
+<a href=#3514 id=3514 data-nosnippet>3514</a>// (`reset_fontmap_key_memo`, called from `reset_thread_engine`).
+<a href=#3515 id=3515 data-nosnippet>3515</a></span><span class="macro">thread_local!</span> {
+<a href=#3516 id=3516 data-nosnippet>3516</a>  <span class="kw">static </span>FONTMAP_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;String, FontmapKeySyms&gt;&gt; =
+<a href=#3517 id=3517 data-nosnippet>3517</a>    std::cell::RefCell::new(HashMap::default());
+<a href=#3518 id=3518 data-nosnippet>3518</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;(String, String), SymStr&gt;&gt; =
+<a href=#3519 id=3519 data-nosnippet>3519</a>    std::cell::RefCell::new(HashMap::default());
+<a href=#3520 id=3520 data-nosnippet>3520</a>}
+<a href=#3521 id=3521 data-nosnippet>3521</a>
+<a href=#3522 id=3522 data-nosnippet>3522</a><span class="attr">#[derive(Clone, Copy)]
+<a href=#3523 id=3523 data-nosnippet>3523</a></span><span class="kw">pub struct </span>FontmapKeySyms {
+<a href=#3524 id=3524 data-nosnippet>3524</a>  <span class="doccomment">/// `"{encoding}_fontmap"`
+<a href=#3525 id=3525 data-nosnippet>3525</a>  </span><span class="kw">pub </span>map:       SymStr,
+<a href=#3526 id=3526 data-nosnippet>3526</a>  <span class="doccomment">/// `"{encoding}_fontmap_failed_to_load"`
+<a href=#3527 id=3527 data-nosnippet>3527</a>  </span><span class="kw">pub </span>fail:      SymStr,
+<a href=#3528 id=3528 data-nosnippet>3528</a>  <span class="doccomment">/// `"{encoding}_fontmap_multichar"`
+<a href=#3529 id=3529 data-nosnippet>3529</a>  </span><span class="kw">pub </span>multichar: SymStr,
+<a href=#3530 id=3530 data-nosnippet>3530</a>}
+<a href=#3531 id=3531 data-nosnippet>3531</a>
+<a href=#3532 id=3532 data-nosnippet>3532</a><span class="doccomment">/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
+<a href=#3533 id=3533 data-nosnippet>3533</a></span><span class="kw">pub fn </span>fontmap_key_syms(encoding: <span class="kw-2">&amp;</span>str) -&gt; FontmapKeySyms {
+<a href=#3534 id=3534 data-nosnippet>3534</a>  FONTMAP_KEY_MEMO.with(|m| {
+<a href=#3535 id=3535 data-nosnippet>3535</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = m.borrow().get(encoding) {
+<a href=#3536 id=3536 data-nosnippet>3536</a>      <span class="kw">return </span><span class="kw-2">*</span>keys;
+<a href=#3537 id=3537 data-nosnippet>3537</a>    }
+<a href=#3538 id=3538 data-nosnippet>3538</a>    <span class="kw">let </span>keys = FontmapKeySyms {
+<a href=#3539 id=3539 data-nosnippet>3539</a>      map:       arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)),
+<a href=#3540 id=3540 data-nosnippet>3540</a>      fail:      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>)),
+<a href=#3541 id=3541 data-nosnippet>3541</a>      multichar: arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>)),
+<a href=#3542 id=3542 data-nosnippet>3542</a>    };
+<a href=#3543 id=3543 data-nosnippet>3543</a>    m.borrow_mut().insert(encoding.to_string(), keys);
+<a href=#3544 id=3544 data-nosnippet>3544</a>    keys
+<a href=#3545 id=3545 data-nosnippet>3545</a>  })
+<a href=#3546 id=3546 data-nosnippet>3546</a>}
+<a href=#3547 id=3547 data-nosnippet>3547</a>
+<a href=#3548 id=3548 data-nosnippet>3548</a><span class="doccomment">/// The memoized `"{encoding}_{family}_fontmap"` key symbol.
+<a href=#3549 id=3549 data-nosnippet>3549</a></span><span class="kw">pub fn </span>fontmap_family_key_sym(encoding: <span class="kw-2">&amp;</span>str, family: <span class="kw-2">&amp;</span>str) -&gt; SymStr {
+<a href=#3550 id=3550 data-nosnippet>3550</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| {
+<a href=#3551 id=3551 data-nosnippet>3551</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sym) = m.borrow().get(<span class="kw-2">&amp;</span>(encoding.to_string(), family.to_string())) {
+<a href=#3552 id=3552 data-nosnippet>3552</a>      <span class="kw">return </span><span class="kw-2">*</span>sym;
+<a href=#3553 id=3553 data-nosnippet>3553</a>    }
+<a href=#3554 id=3554 data-nosnippet>3554</a>    <span class="kw">let </span>sym = arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>));
+<a href=#3555 id=3555 data-nosnippet>3555</a>    m.borrow_mut()
+<a href=#3556 id=3556 data-nosnippet>3556</a>      .insert((encoding.to_string(), family.to_string()), sym);
+<a href=#3557 id=3557 data-nosnippet>3557</a>    sym
+<a href=#3558 id=3558 data-nosnippet>3558</a>  })
+<a href=#3559 id=3559 data-nosnippet>3559</a>}
+<a href=#3560 id=3560 data-nosnippet>3560</a>
+<a href=#3561 id=3561 data-nosnippet>3561</a><span class="doccomment">/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
+<a href=#3562 id=3562 data-nosnippet>3562</a>/// cached `SymStr`s dangle after a reset renumbers the arena.
+<a href=#3563 id=3563 data-nosnippet>3563</a></span><span class="kw">pub fn </span>reset_fontmap_key_memo() {
+<a href=#3564 id=3564 data-nosnippet>3564</a>  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#3565 id=3565 data-nosnippet>3565</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#3566 id=3566 data-nosnippet>3566</a>}
+<a href=#3567 id=3567 data-nosnippet>3567</a>
+<a href=#3568 id=3568 data-nosnippet>3568</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
+<a href=#3569 id=3569 data-nosnippet>3569</a>  <span class="kw">let </span>keys = fontmap_key_syms(encoding);
+<a href=#3570 id=3570 data-nosnippet>3570</a>  <span class="kw">let _ </span>= preload_font_map_keyed(encoding, keys); <span class="comment">// infallible in practice; swallow Result
+<a href=#3571 id=3571 data-nosnippet>3571</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
+<a href=#3572 id=3572 data-nosnippet>3572</a>  // Rc bump on the inner slice regardless.
+<a href=#3573 id=3573 data-nosnippet>3573</a>  </span>with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
+<a href=#3574 id=3574 data-nosnippet>3574</a>}
+<a href=#3575 id=3575 data-nosnippet>3575</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#3576 id=3576 data-nosnippet>3576</a>  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
+<a href=#3577 id=3577 data-nosnippet>3577</a>}
+<a href=#3578 id=3578 data-nosnippet>3578</a><span class="kw">fn </span>preload_font_map_keyed(encoding: <span class="kw-2">&amp;</span>str, keys: FontmapKeySyms) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#3579 id=3579 data-nosnippet>3579</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
+<a href=#3580 id=3580 data-nosnippet>3580</a>  </span><span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#3581 id=3581 data-nosnippet>3581</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#3582 id=3582 data-nosnippet>3582</a>  }
+<a href=#3583 id=3583 data-nosnippet>3583</a>  <span class="kw">let </span>failed_flag = lookup_bool_sym(keys.fail);
+<a href=#3584 id=3584 data-nosnippet>3584</a>  <span class="kw">if </span>!failed_flag {
+<a href=#3585 id=3585 data-nosnippet>3585</a>    assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
+<a href=#3586 id=3586 data-nosnippet>3586</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
+<a href=#3587 id=3587 data-nosnippet>3587</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
+<a href=#3588 id=3588 data-nosnippet>3588</a>      noerror: <span class="bool-val">true</span>,
+<a href=#3589 id=3589 data-nosnippet>3589</a>      ..InputDefinitionOptions::default()
+<a href=#3590 id=3590 data-nosnippet>3590</a>    });
+<a href=#3591 id=3591 data-nosnippet>3591</a>    <span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#3592 id=3592 data-nosnippet>3592</a>      <span class="comment">// Got map?
+<a href=#3593 id=3593 data-nosnippet>3593</a>      </span>assign_value_sym(keys.fail, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#3594 id=3594 data-nosnippet>3594</a>    } <span class="kw">else </span>{
+<a href=#3595 id=3595 data-nosnippet>3595</a>      assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#3596 id=3596 data-nosnippet>3596</a>    }
+<a href=#3597 id=3597 data-nosnippet>3597</a>  }
+<a href=#3598 id=3598 data-nosnippet>3598</a>  <span class="prelude-val">Ok</span>(())
+<a href=#3599 id=3599 data-nosnippet>3599</a>}
 </code></pre></div></section></main></body></html>

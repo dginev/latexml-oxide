@@ -1441,7 +1441,7 @@
 <a href=#1441 id=1441 data-nosnippet>1441</a>    // not by an infix role it does not actually carry here (issue #535). On the
 <a href=#1442 id=1442 data-nosnippet>1442</a>    // ordinary path the `pmml()` wrapper re-stamps `_role` anyway.
 <a href=#1443 id=1443 data-nosnippet>1443</a>    </span><span class="kw">if </span>role_override.is_none() {
-<a href=#1444 id=1444 data-nosnippet>1444</a>      attrs.insert(<span class="string">"_role"</span>.to_string(), role.clone());
+<a href=#1444 id=1444 data-nosnippet>1444</a>      attrs.insert(<span class="string">"_role"</span>.to_string(), role);
 <a href=#1445 id=1445 data-nosnippet>1445</a>    }
 <a href=#1446 id=1446 data-nosnippet>1446</a>    <span class="kw">if </span>props.lspace &gt; <span class="number">0.0 </span>{
 <a href=#1447 id=1447 data-nosnippet>1447</a>      attrs.insert(<span class="string">"_lspace"</span>.to_string(), fmt_em(props.lspace));

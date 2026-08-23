@@ -8,4 +8,7 @@ real CS such as a (hypothetical) <code>\special_relaxfoo</code>.</dd></dl><h2 id
 dump-safe representation of <code>\noexpand &lt;shadowed&gt;</code> (faithful to TeX’s
 <code>no_expand_flag</code>: the shadowed identity is preserved in the name; the family
 resolves to <code>\relax</code> meaning). <code>shadowed</code> is an expandable/undefined CS or
-active token (the only things <code>\noexpand</code> wraps; see <code>is_dont_expandable</code>).</dd></dl></section></div></main></body></html>
+active token (the only things <code>\noexpand</code> wraps; see <code>is_dont_expandable</code>).</dd><dt><a class="fn" href="fn.reset_noexpand_family_memo.html" title="fn latexml_package::prelude::token::reset_noexpand_family_memo">reset_<wbr>noexpand_<wbr>family_<wbr>memo</a></dt><dd>Clear the <a href="../struct.Token.html#method.is_noexpand_family" title="method latexml_package::prelude::Token::is_noexpand_family"><code>Token::is_noexpand_family</code></a> per-symbol memo. Companion to
+<code>arena::reset()</code> — symbol indices are reused after a reset, so stale
+entries would alias unrelated strings (same bug class as the REPORT-map
+fix, <code>7b64a48ad1</code>).</dd></dl></section></div></main></body></html>

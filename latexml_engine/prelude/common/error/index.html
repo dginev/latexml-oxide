@@ -24,7 +24,14 @@ files[x.sty]” Returns “No obvious problems” when no issues detected.
 The canonical machine-readable conversion-status line, <code>Status:conversion:N</code>.</dd><dt><a class="fn" href="fn.conversion_verdict.html" title="fn latexml_engine::prelude::common::error::conversion_verdict">conversion_<wbr>verdict</a></dt><dd>The human-readable end-of-run verdict: <code>Conversion complete|failed: &lt;counts&gt;</code>.</dd><dt><a class="fn" href="fn.debug_enabled.html" title="fn latexml_engine::prelude::common::error::debug_enabled">debug_<wbr>enabled</a></dt><dd>Perl: truthiness of <code>$LaTeXML::DEBUG{$name}</code>.</dd><dt><a class="fn" href="fn.debug_fatal_enabled.html" title="fn latexml_engine::prelude::common::error::debug_fatal_enabled">debug_<wbr>fatal_<wbr>enabled</a></dt><dd>One shared probe for the <code>LATEXML_DEBUG_FATAL</code> diagnostics (first-fatal
 backtrace, gullet pushback dump, recent-token ring). Lazy-cached so hot
 paths pay a single bool test, and a single seam if the env contract grows
-(PR #249 review P3-13).</dd><dt><a class="fn" href="fn.debuggable_feature.html" title="fn latexml_engine::prelude::common::error::debuggable_feature">debuggable_<wbr>feature</a></dt><dd>Perl: <code>DebuggableFeature($name)</code> — register a feature name so it can
+(PR #249 review P3-13).</dd><dt><a class="fn" href="fn.debug_record_enabled.html" title="fn latexml_engine::prelude::common::error::debug_record_enabled">debug_<wbr>record_<wbr>enabled</a></dt><dd>Would a <code>Debug</code>-status record actually reach the log right now? True only
+when the global <code>log</code> level admits <code>Debug</code> (default is <code>Info</code>; <code>--verbose</code>/
+<code>--debug</code> raise it — <code>util/logger.rs::init</code>) AND output is not suppressed.
+The <code>Debug!</code> macro gates <em>message construction</em> on this: the 2026-08-23
+audit measured up to ~26% of a build-bound conversion spent serializing
+<code>node_to_string</code> subtrees into <code>Debug!</code> messages that <code>emit_record</code> then
+discarded (PERFORMANCE.md, Open levers P0). An atomic load + thread-local
+read — cheap enough for token-frequency call sites.</dd><dt><a class="fn" href="fn.debuggable_feature.html" title="fn latexml_engine::prelude::common::error::debuggable_feature">debuggable_<wbr>feature</a></dt><dd>Perl: <code>DebuggableFeature($name)</code> — register a feature name so it can
 be listed/validated for <code>--debug</code>.</dd><dt><a class="fn" href="fn.emit_error.html" title="fn latexml_engine::prelude::common::error::emit_error">emit_<wbr>error</a></dt><dd>See <a href="../../fn.emit_info.html" title="fn latexml_engine::prelude::emit_info"><code>emit_info</code></a>. Unlike the <code>Error!</code> macro this cannot escalate by
 <code>return</code>ing — there is no <code>Err</code> channel in the contexts it serves — so
 when the error count or the consecutive-error count crosses its cap it

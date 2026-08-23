@@ -84,7 +84,7 @@
 <a href=#84 id=84 data-nosnippet>84</a>    // Rust `UnTeX` (see `Tokens::untex`; the `%\n` line-breaking half is
 <a href=#85 id=85 data-nosnippet>85</a>    // OXIDIZED_DESIGN #2, so the suppress-linebreaks flag has no counterpart).
 <a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">let </span>delim_str = delim.to_string();
-<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>todelim_str = todelim.clone().untex();
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>todelim_str = todelim.untex();
 <a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">if </span>delim_str != todelim_str {
 <a href=#89 id=89 data-nosnippet>89</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(ch) = delim_str.chars().next() {
 <a href=#90 id=90 data-nosnippet>90</a>        <span class="comment">// Make the delimiter math-active (code 0x8000)

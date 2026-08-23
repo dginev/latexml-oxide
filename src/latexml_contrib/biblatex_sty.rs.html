@@ -1263,7 +1263,7 @@
 <a href=#1263 id=1263 data-nosnippet>1263</a>      <span class="comment">// The year part carries any disambiguation suffix (2020a, ...) so
 <a href=#1264 id=1264 data-nosnippet>1264</a>      // same-author-same-year entries stay distinct.
 <a href=#1265 id=1265 data-nosnippet>1265</a>      </span><span class="kw">let </span>refnum_str = <span class="kw">if </span>author_part == label_str {
-<a href=#1266 id=1266 data-nosnippet>1266</a>        label_str.clone()
+<a href=#1266 id=1266 data-nosnippet>1266</a>        label_str
 <a href=#1267 id=1267 data-nosnippet>1267</a>      } <span class="kw">else </span>{
 <a href=#1268 id=1268 data-nosnippet>1268</a>        <span class="macro">format!</span>(<span class="string">"{author_part} ({ay_year})"</span>)
 <a href=#1269 id=1269 data-nosnippet>1269</a>      };
@@ -1937,7 +1937,7 @@
 <a href=#1937 id=1937 data-nosnippet>1937</a>  // to itself and is harmless.
 <a href=#1938 id=1938 data-nosnippet>1938</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}"</span>,
 <a href=#1939 id=1939 data-nosnippet>1939</a>  sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
-<a href=#1940 id=1940 data-nosnippet>1940</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = target.clone().unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+<a href=#1940 id=1940 data-nosnippet>1940</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
 <a href=#1941 id=1941 data-nosnippet>1941</a>      <span class="macro">Let!</span>(tok, <span class="macro">T_CS!</span>(<span class="string">"\\cite"</span>));
 <a href=#1942 id=1942 data-nosnippet>1942</a>    }
 <a href=#1943 id=1943 data-nosnippet>1943</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
