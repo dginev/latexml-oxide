@@ -4179,3 +4179,71 @@ presence-test is parse-order-safe; `after_close_late` runs after every other
 equation-close handler (e.g. amsmath's `rearrangeLoneAMSAligned`, `amsmath.sty.ltxml:638`)
 so it never races one that legitimately fills the Math. Reaches Perl parity (0 empty
 equations). Guard: `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
+
+## 109. algorithm2e `\\`-separated body lines lose indentation under the Vline `|` (Rust surpasses)
+
+**Trigger** (`\For`/`\While`/`\If` body using `\\` instead of `\;` for line breaks;
+witness arXiv 2002.09766 Algorithm 1):
+
+```latex
+\usepackage[algo2e]{algorithm2e}
+\begin{algorithm*}
+ \For{i=2,\ldots,L-1}{
+  ~~Compute line A\\
+  Line B\;\\
+  Line C\;\\
+ }
+\end{algorithm*}
+```
+
+The `\For` body lines render **flushed flat after the `|` vertical rule** instead of
+indented beneath it: they merge into ONE `<ltx:listingline>` joined by inline
+`<ltx:break/>`, with a single leading indentation `<ltx:rule>`, rather than three
+separate indented listinglines.
+
+**Cause (shared by both engines).** algorithm2e's `beforeDigest` does
+`Let('\\','\lx@algo@par')` (the algorithm line-break) then calls `beforeFloat('algorithm')`
+**last**; `beforeFloat` re-lets `\\`→`\lx@newline` (a tabular-in-float guard, Perl #2775,
+`latex_constructs.pool.ltxml` L3376 / Rust `latex_constructs.rs` `before_float_ex`). So the
+reset **clobbers** the intended `\lx@algo@par` binding, and `\\` inside an algorithm2e
+listing degrades to `<break/>`. `\par` (also Let to `\lx@algo@par`) and `\;`
+(→`\@endalgocfline`→`\lx@algo@par`) are untouched by `beforeFloat`, so they still break
+correctly — only `\\` is broken. Verified byte-identical in Perl LaTeXML (the reimpl
+author's own `Let('\\','\lx@algo@par')` shows the break was intended).
+
+**Rust:** re-assert `Let('\\','\lx@algo@par')` **after** `before_float` in the algorithm2e
+`before_digest` (`algorithm2e_sty.rs`), so each `\\`-separated body line becomes its own
+indented listingline, matching the pdflatex golden. A **surpass** (Perl shares the bug).
+Safe: a nested `tabular`/`array` rebinds `\\` locally (`\@tabularcr`), shadowing this.
+Guard: `06_cluster_regressions::cluster_algorithm2e_for_body_indentation`.
+
+## 110. `.bbl` preamble opens a phantom empty `(N)` bibliography entry (Rust surpasses)
+
+**Trigger** (an ACM-Reference-Format-style `.bbl`: a macro-definition preamble and a blank
+line before the first `\bibitem`; witness arXiv 2605.03143):
+
+```latex
+\begin{thebibliography}{2}
+
+\providecommand\bibinfo[2]{#2}
+
+\bibitem{A}\bibinfo{title}{First}.
+\bibitem{B}\bibinfo{title}{Second}.
+\end{thebibliography}
+```
+
+emits a spurious empty first entry `<ltx:bibitem xml:id="bib.bib1">` (a `(1)` refnum, a
+whitespace-only `<ltx:bibblock>`, no `key`), shifting the real references to `bib.bib2…`.
+
+**Cause (shared by both engines).** The blank line after `\begin{thebibliography}` is a
+`\par`; inside a bibliography that is `\par@in@bibliography`, which — seeing the next token is
+`\providecommand`, not `\par`/`\bibitem` — opens a keyless `\lx@bibitem` for the preamble
+(`latex_constructs.pool.ltxml` L4049 / Rust `latex_constructs.rs` `\par@in@bibliography`). The
+digest-time prune both engines carry (Perl #2409) only inspects the immediately-previous box,
+which the preamble whitespace displaces, so the phantom survives. Verified byte-identical in
+Perl LaTeXML.
+
+**Rust:** an after-close DOM scrub (`Tag!("ltx:bibitem", after_close_late)`) removes any
+bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the phantom. A real
+`\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
+#155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.
