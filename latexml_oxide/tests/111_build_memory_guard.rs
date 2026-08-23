@@ -44,6 +44,13 @@ fn corpus() -> String {
 /// its own no-recover policy).
 const BUILD_CUT: &str = "build stopped early";
 
+// Skipped on macOS CI: the sweep drives peak RSS toward a 7.2 GB ceiling (the
+// last ceiling below), but GitHub's macOS runners have only ~7 GB, so those
+// runs can never reach the budget — they just keep building the huge document
+// until nextest's terminate-after kills the shard (a recurring ~20 min timeout,
+// not a real failure). The guard's behaviour is platform-independent and fully
+// exercised on the Linux runners, which have the RAM to hit every ceiling.
+#[cfg_attr(target_os = "macos", ignore = "needs >7GB RAM; covered on Linux CI")]
 #[test]
 fn over_budget_build_degrades_gracefully_instead_of_being_killed() {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");

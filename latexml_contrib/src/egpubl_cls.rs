@@ -18,7 +18,9 @@ LoadDefinitions!({
     "\\teaser{}",
     "\\@add@frontmatter{ltx:note}[role=teaser]{#1}"
   );
-  DefMacro!("\\orcid{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  // ORCID id → kernel `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable
+  // orcid.org link + logo icon (vs a bare dagger note). html_feedback#6571.
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
   DefMacro!(
     "\\ccsdesc[]{}",
     "\\@add@frontmatter{ltx:classification}[scheme=ccs]{#2}"

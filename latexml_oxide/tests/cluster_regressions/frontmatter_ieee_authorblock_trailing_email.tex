@@ -1,0 +1,14 @@
+\documentclass[10pt, conference, letterpaper]{IEEEtran}
+% A bare email trailing after \IEEEauthorblockA inside \author{} must attach to the
+% creator (as an affiliation), NOT leak into the document body as the first paragraph.
+% \{...\} are catcode-12 literal-brace control symbols, so the email is top-level text.
+% Perl bundles the whole \author arg into <personname>, so it never leaks — this is a
+% GENUINE-RUST-ONLY leak. Witness arXiv 1901.07768.
+\title{Test One}
+\author{\IEEEauthorblockN{Anuja Meetoo Appavoo, Seth Gilbert, and Kian-Lee Tan}
+\IEEEauthorblockA{Department of Computer Science, National University of Singapore}
+\{anuja, seth.gilbert, tankl\}@comp.nus.edu.sg}
+\begin{document}
+\maketitle
+Body paragraph here.
+\end{document}

@@ -169,6 +169,111 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
 
+### CSS themes — `ar5iv.css` is the active surface; base `LaTeXML.css` is upstream
+
+**Policy.** In latexml-oxide we actively develop **`ar5iv.css`** only (repo
+`~/git/ar5iv-css`, mirror workflow: off `main`, rebuild `dist/`, CHANGELOG). The
+base **`LaTeXML.css`** (`latexml_post/resources/CSS/LaTeXML.css`) is a faithful
+copy of Perl LaTeXML's default theme — its rendering behaviour and bugs route
+**upstream to `brucemiller/LaTeXML`**, not here. When a user reports a
+rendering/CSS complaint, first establish which theme; base-CSS issues → upstream.
+
+**Plan (not yet scheduled).** Make `ar5iv.css` the **default** theme (currently the
+base `LaTeXML.css` is default). Tracks the reality that the base theme is upstream
+and unmaintained here.
+
+**Absolute-vs-responsive image sizing — data-model gap (witness #721, ar5iv#83).**
+`\includegraphics[width=7in]` inside a `minipage{.5\textwidth}` renders small, not
+7in. The engine is faithful: it emits the absolute width as the `<img>` attribute
+(`width="698"` ≈ 7in), **byte-identical to Perl 0.8.8** — no engine clamp. The
+clamp is purely CSS and differs by theme: base `LaTeXML.css:639`
+`.ltx_minipage > .ltx_graphics { max-width:100% }` caps to the container (PARITY —
+same rule at Perl `LaTeXML.css:573`); `ar5iv.css` goes further and **fluidizes**
+layout-nested images (`ar5iv.css:1681-1701` orientation rules set `width:auto` +
+max in `--main-width:52rem`; `2291` re-declares the minipage cap), *discarding* the
+absolute width **by design** (responsive column-fill). So neither engine, nor the
+default nor the ar5iv theme, honours the 7in for a nested image. The durable fix is
+**NOT CSS tuning** — it is preserving the sizing **intent** the pipeline currently
+flattens (`to_bp`, `latexml_core/src/util/image.rs:186`, collapses absolute `7in`
+and relative `\textwidth` to the same `pt`). Mark absolute-authored vs
+relative/natural widths (and, longer-term, panel vs sized-box minipages) so the
+theme can *deterministically* honour absolute intents (7in fits `--main-width`)
+instead of guessing by nesting depth — the fragile negation-selector heuristic the
+ar5iv authors flag at `ar5iv.css:1678-1679`. Trackers: upstream data-model discussion
+`brucemiller/LaTeXML#1797` (model + styling for figures in minipages); theme-side
+`ar5iv#83` and `dginev/ar5iv-css#38` (side-by-side minipages).
+
+### Algorithm markup + CSS unification — SCHEDULED 0.7.7 (deferred, user-directed 2026-08-22)
+
+**Goal.** Unify the markup emitted for **all** algorithm kinds (algorithmic,
+algorithmicx/algpseudocode + the language variants, algorithm2e) onto one shared
+vocabulary and marker class, and derive **generic CSS that works in BOTH
+`LaTeXML.css` and `ar5iv.css`** — one algorithm-layout rule set, not per-theme
+per-package selectors. Design plan: [`parity/ALGORITHM_RENDERING.md`](parity/ALGORITHM_RENDERING.md)
+§"Markup unification".
+
+**Part 2 LANDED (2026-08-22), independent of the unification goal** — do not re-open these
+as part of it (details + guards in ALGORITHM_RENDERING.md "Landed in Part 2"): uniform
+`\NlSty`-bold line numbers, ruled-family caption-at-top (#153), `\hbox to \hsize` leader
+separators → `width:100%` (#152, witness 1510.02728), `\Comment*[r]` inline side-comment,
+frontmatter dedup (#154), and the CSS batch (algorithm phantom vertical scrollbar
+`overflow-y:hidden` witness 2002.09766, wrapfig overlap 2605.03143, side-by-side minipage
+width-strip 2402.19043, framed-lstlisting page-scroll 2512.24601 — ar5iv.css + embedded
+`LaTeXML.css` mirror).
+
+**Why it is the right fix (not a per-theme CSS patch).** The algorithm-layout rule
+(`white-space:nowrap`, so the pretty-printer's newlines between a line's number tag
+and its statement do not render as breaks) is currently keyed on the **wrapper
+classes** `.ltx_float_algorithm` / `.ltx_algorithm`. An algorithm authored **outside
+an `algorithm` float** — e.g. the popular `breakablealgorithm` recipe, which wraps
+`\begin{algorithmic}` in a bare `center` — emits a bare `.ltx_listing` with **neither
+wrapper class**, so it falls through to code's `white-space:pre` and renders broken
+(numbers stacked above wildly-spaced content). This is the commonly-reported
+"algorithm displayed wrongly" class: html_feedback #6080 (2602.20153), #6236
+(2512.24601), #5492 (2511.21969), #3450 (2406.08374); **witness this review: arXiv
+2408.07803** (html_feedback #1998), whose caption now compiles (via the `\fname@`
+fix, OXIDIZED #150) exposing the body breakage.
+
+**Why it can't be a one-line CSS discriminator.** A numbered **code** `lstlisting`
+uses the *same* `.ltx_tag_listingline` / `.ltx_lst_numbers_left` as an algorithm, so
+`:has(.ltx_tag_listingline)` would wrongly `nowrap` code and destroy its indentation
+(#6632). `minted` DOES carry `.ltx_lstlisting` (verified), so `.ltx_listing:not(.ltx_lstlisting)`
+is *nearly* safe but still fragile against future bare-`.ltx_listing` producers. The
+robust fix is the **shared markup class**: give every algorithm listing a positive
+marker (regardless of surrounding env), then ONE generic rule targets it in both
+stylesheets. That is why markup unification and generic CSS are the SAME work item.
+
+**Scope note.** Faithful-translation caveat: any new marker class must be justified
+against Perl (Perl's algorithmic listing carries no such class today) — see the
+`surpass-perl` skill protocol. Defer until the 0.7.6 release lands. Related open theme
+item above: side-by-side minipages (`dginev/ar5iv-css#38`, witness 2402.19043).
+
+### tcolorbox / framed listings render poorly (widths + font size) — PARTIALLY ADDRESSED (user-flagged 2026-08-22)
+
+- **Framed lstlisting page-scroll — FIXED (Part 2, CSS).** The reported 2512.24601 defect
+  was NOT a tcolorbox: a plain framed `lstlisting` overflowed and scrolled the WHOLE page.
+  `.ltx_lstlisting { display:block; max-width:100%; overflow-x:auto; box-sizing:border-box }`
+  (ar5iv.css + embedded `LaTeXML.css` mirror) confines the scroll to the box.
+- **Generic tcolorbox width/oversized-font — DEFERRED, no current witness.** A
+  `\tcblisting`/`\newtcblisting` code box may still size/scale poorly; the listings dialect
+  is out of scope to change (see the unification note above), so this wants a dedicated pass
+  over the `tcolorbox` box model + the ar5iv `.ltx_lstlisting` width/font rules. Not started.
+
+### Frontmatter + footnote rendering residuals (user-flagged 2026-08-22)
+
+From the manual review, witness arXiv 2511.21969:
+- **Duplicated abstract heading — FIXED (Part 2, OXIDIZED #154).** The nested `{abstract}`
+  env pushed a second `ltx:abstract`; replaceable-frontmatter dedup
+  (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`) now keeps one. Guard
+  `cluster_frontmatter_replaceable_dedup`. The same fix resolves 2002.09766's duplicated
+  `<title>`/author block (appendix `\icmltitle`).
+- **"Authors missing" — NOT a bug.** The preview was built from the wrong source file:
+  `main-ieee.tex` has its authors commented out; the toplevel is `main-white-paper.tex`.
+  No code change.
+- **Footnote side-margin overlap on wide displays (same witness) — DEFERRED:** footnotes 3
+  and 4 overlap in the ar5iv side-margin rendering at wide viewports — a CSS margin-note
+  layout concern (`ar5iv-css`), not core XML.
+
 ### CLI options — the option-C policy (issue #191 CLOSED 2026-07-09) + `validate()`
 
 Issue #191 "support the original latexmlc/latexmlpost options" is **closed**;
@@ -789,6 +894,131 @@ with file:line, not established facts — re-verify before acting**:
 
 `docs/parity/OXIDIZED_DESIGN.md` has no font section, so none of these is a
 documented divergence. Method and the two detection traps: [`WISDOM.md`](parity/WISDOM.md) §80.
+
+### (not ranked) scalerel family — NEUTRALIZED, full scaling deferred (2026-08-21)
+
+`\scalerel` / `\scaleto` / `\stretchto` / `\scaleobj` / `\hstretch` / `\vstretch` /
+`\scaleleftright` / `\stretchleftright` are bound
+(`latexml_package/src/package/scalerel_sty.rs`, arXiv/html_feedback#6895) but **neutralized,
+not fully supported**: the object is *preserved* (wrapped in `.ltx_scalerel`, CSS-sized to
+text height) and the requested scale — the target height (`\scaleto`/`\stretchto`/`\scalerel`)
+or the numeric factor (`\scaleobj`/`\hstretch`/`\vstretch`) — is **dropped**, so every scaled
+object renders at ~1em regardless of the requested size. This is **step 1** (preserve content,
+stop `Error:undefined` + broken layout). **Full support** = honour the real scale: measure the
+object box and the reference box (or read the factor), compute the ratio, and emit CSS
+`transform: scale()` / an SVG viewBox — which needs box measurement the engine does not yet
+expose. Witnesses 2605.02053 / 2605.03024 / 2605.03521 (now convert clean, content preserved).
+Do not mistake the text-height approximation for correct sizing.
+### (not ranked) sandbox-arxiv-2605/2606 cortex corpus triage — deferred items (2026-08-21)
+
+Two waves of subagent triage over the 2605/2606 `oxidized_tex_to_html` error+fatal
+clusters. Landed: PR #720 (scalerel, neurips `\if@anonymous`, NiceTabular, expl3
+`#630`, biblatex loop, `cleanup_scripts` O(M×N)→O(N+M)) + stacked PR (cleveref class
+stubs, AASTeX, subdir/`.sty` binding shadow — no directory stripping in dispatch or
+`find_file_fallback`). Method for every row below: reproduce the witness with
+`--preload=ar5iv.sty --path ar5iv-bindings/originals` (raw-loads bundled **styles**,
+NOT bundled **classes**), then run the same-host Perl `latexml` oracle to classify
+Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90% fleet
+**memory pressure**, not code — is in [[reference_cortex_fleet_memory_pressure_hardening]]
+/ CorTeX#423; the error population is overwhelmingly faithful-Perl-parity.
+
+**A. Genuine Rust-only — worth fixing, needs deeper work:**
+
+- **sn-jnl.cls raw-load drops booktabs + appendix** → `\toprule`/`\midrule`/`\bottomrule`
+  undefined → table breaks → `malformed:ltx:{section,subsection,appendix}` cascade.
+  Witness **2606.00121** (`\documentclass[sn-mathphys]{sn-jnl}`). Method: Perl dep-scans
+  sn-jnl.cls (booktabs loads → 11 clean errors, no cascade); Rust raw-loads the full
+  1765-line sn-jnl.cls but `\usepackage{booktabs}` (sn-jnl.cls:307) + `\usepackage[title]{appendix}`
+  (:303) fail to take effect while flat-block neighbours (multirow:298, rotating:302,
+  xcolor:304, algorithm:308) load fine. Isolated `\usepackage{booktabs}` loads correctly
+  — only the full raw-cls-load drops it. Needs instrumented tracing of raw-load dependency
+  handling (`content.rs:1993` `maybe_require_dependencies`, ~10-witness guard); a blind
+  patch is reckless. Min-repro: `\documentclass[sn-mathphys]{sn-jnl}` (real .cls present)
+  + a `\toprule`/`\bottomrule` tabular → Rust undefined; generic class + same
+  `\usepackage{booktabs}` → 0 errors.
+- **subdir/`.sty` binding shadow — LANDED (no directory stripping anywhere).** A paper-local
+  `\usepackage{subdir/<name>}` whose basename collided with a bound CTAN package (e.g.
+  `utils/mathenv` → the `mathenv` binding, `latexml_package/src/package/mathenv_sty.rs`, a
+  no-op) had its directory stripped at TWO sites — the package dispatcher (`lib.rs`) and
+  `find_file_fallback`/`_exists` (`content.rs`, the `BasenameOnly` fallback) — so the binding
+  shadowed the local file and its cleveref/theorem defs never loaded. Perl never strips a
+  directory (`Package.pm:2191` FindFile_fallback strips VERSION suffixes only). Fix: dropped
+  the strip at BOTH sites — `subdir/<name>` is a PATH, so the local file raw-loads under
+  `localrawstyles`. The retired `find_file_fallback` `BasenameOnly` convenience (subdir copies
+  of KNOWN packages — 2105.02087 `misc/ieeetran`, 2405.18387 `assets/equations`) now falls to
+  OmniBus/raw-load like Perl (no test guarded them; full-suite blast radius nil). Witness
+  **2606.02073** (its own `\cref` is also defined via the icml binding, so the corpus error
+  there was already masked — the shadow is proven by the synthetic guards). Guards:
+  `cluster_package_guards.rs::subdir_dispatch_no_strip` (`.sty` raw-loads, `.cls` stays OmniBus
+  under classes-off), both driven through `convert_to_xml_ar5iv` (the real fleet config).
+
+**B. Beyond-Perl levers — policy call (need an OXIDIZED_DESIGN entry + Perl upstream):**
+
+- **OmniBus frontmatter vocabulary extension** (~150 docs, the biggest cluster). Bundled
+  journal `.cls` (INCLUDE_CLASSES defaults false → OmniBus fallback, `content.rs:2457-2622`,
+  faithful port of Perl `LoadClass`) leaves `\orcid \contribution {contribution} \ack
+  \correspondence \aff \lefttitle \righttitle \reportnumber \data \checkdata
+  \restartappendixnumbering` undefined. **Perl fails identically** (Rust slightly ahead:
+  3 vs 5 errors on the witness). ~15+ distinct bundled classes. Witnesses: 2606.01241
+  (xiaomiev: contribution/correspondence/checkdata), 2606.00645 (jfm: aff/lefttitle/righttitle),
+  2606.04098 (iopjournal: data), 2606.00213 (pasj02: orcid). Lever: extend OmniBus's generic
+  vocabulary ONLY for commands with clean `\lx@add@*` mappings (`\aff`→`\lx@add@affiliation`,
+  `\reportnumber`→`\lx@add@pubnote`, `\ack`→`Let \acknowledgments`); gobble the
+  running-head/presentational ones — **`\lefttitle`/`\righttitle` are running-head / journal-name
+  registers, do NOT route to title**; `\data` embeds a HuggingFace `\includegraphics`. Single
+  edit to `omnibus_cls.rs`, NOT 15 class bindings; do NOT raw-load the 2000-line classes (the
+  cascade OmniBus exists to prevent). Must upstream the same to Perl's `OmniBus.cls.ltxml` to
+  stay parity. CUP family (jfm/iau/pas) subsumed here.
+- **native newunicodechar binding** (~50 docs, ~100 occurrences). `\newunicodechar{<non-ASCII>}{repl}`
+  → both engines take the 8-bit path (UTF-8 char = one Unicode token → length 1 →
+  `\nuc@onebyteerr` → `Error:latex:(newunicodechar) ASCII character requested`). **Perl
+  byte-identical**, non-fatal (char passes through; the mapping is DROPPED by both).
+  Witnesses: 2606.00241 (icml2026.sty), 2606.00683 (colm2024), 2606.00739 (acl.sty).
+  Min-repro: `\usepackage{newunicodechar}\newunicodechar{，}{,}` (， = U+FF0C). Lever
+  (separate branch, upstream to Perl): a native binding that registers the
+  Unicode-char→replacement mapping and suppresses the spurious error.
+
+**C. Pure Perl-parity — record only (Perl-origin; belongs in KNOWN_PERL_ERRORS too):**
+
+- **forest** `Error:undefined:{forest}` — line-for-line port of ar5iv `forest.sty.ltxml`,
+  non-fatal (body swallowed via `discard_env`, valid output). Witnesses 2605.07358/12090/12792.
+  Shared helper `discard_env.rs` also backs nicematrix (math family)/diagrams/pb-diagram.
+  Whole-family lever (policy): `Error!`→`Warn!` at `discard_env.rs:55`.
+- **malformed:ltx:para** — `\begin{center}` inside `\begin{titlepage}` with an abstract +
+  multi-paragraph flow → `insertBlock` fallback forces `ltx:block` (`TeX_Box.pool.ltxml:516`)
+  which can't hold `ltx:para`/`ltx:abstract`. Perl identical (oracle-verified). Witnesses
+  2605.00729/00750/12448.
+- **malformed:ltx:section/subsection (parity subset — the majority)** — broken source
+  (unclosed lists/boxes, broken alignments) traps sectioning inside an open container; a
+  CASCADE, not a sectioning bug. Perl identical. Witnesses 2606.00338 (unclosed `\squishlist`
+  `\begin{list}`), 2606.00679 (`\ytableaushort` inside an `eqnarray*` alignment).
+- **graphicx-in-neurips** — author-customized `neurips_2026.sty` (does `\usepackage{graphicx}`)
+  is discarded by the neurips-binding interception (#690); `\includegraphics`/`\rotatebox`
+  undefined + a downstream `_` cascade. Perl fails identically (22 errors; version-suffix
+  fallback → `neurips.sty.ltxml`, which also lacks graphicx). Witness 2605.21325. #690 brought
+  Rust *to* Perl parity (it was accidentally better before).
+
+### (not ranked) fairmeta.cls family trailing items (2026-08-21)
+
+The fairmeta author↔institution binding fix (arXiv/html_feedback#1396 + the
+family #662/#3512/#4707/#4971/#5035/#5466; PR #748, shared `meta_class.rs` routes
+`\author`/`\affiliation`/`\contribution` marks through the annotation/label plan)
+left two witness-side issues OUT OF SCOPE, to pursue later. All eight in-scope
+witnesses convert exit 0, front matter error-clean; these are the only residuals:
+
+- **`\pie` undefined (pgf-pie) — missing-package binding.** Non-fatal body error
+  (conversion still exit 0), unrelated to the front matter. Witness
+  **2408.00714v2** (#5144, the SAM 2.1 paper) — a `\pie{…}` pie-chart macro in the
+  document body; the `\documentclass{fairmeta}` front matter converts clean (18/18
+  authors linked). Needs a pgf-pie binding — **confirm same-host Perl parity first**
+  (pgf-pie is niche and likely unbound in both engines → shared missing-package).
+  NOT what #5144 reported (that was the author block, now fixed).
+- **Wrong main-file selection — NOT a binding bug.** Witness **2602.06855v1**
+  (#5967, "2026 template … rendered template instead of content"): the source
+  ships BOTH `og_template.tex` (the FAIR template filler — `\lipsum`,
+  `\rectanglecolor`, `subfigure`; 4 errors) and the real `paper.tex`; the pipeline
+  built the template. A cortex/main-file-selection concern, not the fairmeta
+  binding — the real `paper.tex` converts fine.
 
 ## Parked families — pointers, not content
 

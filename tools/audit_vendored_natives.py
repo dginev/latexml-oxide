@@ -14,6 +14,13 @@ So this script audits the thing manifests cannot express: which shipped crates a
 compile or link native code. Every hit must be listed in AUDITED below with a reason.
 A new one fails the build until a human looks at what it compiles and attributes it.
 
+A version *bump* of an already-audited crate also fails by default -- a bump can swap the
+vendored library wholesale -- UNLESS a recorded FINGERPRINTS sha proves the crate's native
+source is byte-identical, in which case the hand verdict provably still holds and the bump
+auto-accepts. Because the lockfile is gitignored, CI re-locks to the newest compatible patch
+on every run; the fingerprint is what stops an identical-code patch bump (e.g. cc 1.4.3 ->
+1.4.4) from reddening unrelated PRs while still failing on any genuine native-code change.
+
 This is a *tripwire, not an oracle*: it tells you a crate pulls in native code and must
 be checked by hand. It cannot read licenses out of a tarball.
 
@@ -24,6 +31,7 @@ Usage:  python3 tools/audit_vendored_natives.py [--verbose]
 Exit:   0 = every native-code crate is audited; 1 = an unaudited crate appeared.
 """
 
+import hashlib
 import json
 import re
 import subprocess
@@ -126,7 +134,7 @@ AUDITED = {
     # ---- Build-tooling and test fixtures: native files present, NOT linked into any
     # shipped binary, so no disclosure is owed. Each verdict verified by looking at the
     # file, not at the name. Recorded so the gate stays loud on substance and quiet here.
-    "cc": (("1.4.0", "1.4.2", "1.4.3"),
+    "cc": (("1.4.0", "1.4.2", "1.4.3", "1.4.4"),
         "src/detect_compiler_family.c -- a probe compiled to identify the host "
         "toolchain, never linked into our binary. The crate itself is pure Rust. "
         "Re-verified at 1.4.0: still the only non-Rust file in the crate, and still "
@@ -135,7 +143,10 @@ AUDITED = {
         "byte-identical, still the only native file, license MIT OR Apache-2.0 "
         "unchanged. 1.4.2 -> 1.4.3 diffed 2026-08-14: detect_compiler_family.c "
         "byte-identical (sha 97ca4b021495), still the only native file, license "
-        "MIT OR Apache-2.0 unchanged.",
+        "MIT OR Apache-2.0 unchanged. 1.4.3 -> 1.4.4 verified 2026-08-21: "
+        "detect_compiler_family.c still the ONLY native file, sha256 unchanged "
+        "(97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f), "
+        "license MIT OR Apache-2.0 unchanged.",
     ),
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
@@ -266,6 +277,37 @@ PREBUILT_SO_RE = re.compile(r"\.so(\.\d+)+$")
 BUILD_RS_NATIVE_RE = re.compile(
     r"cc::Build|cmake::|Build::new\(\)|\.compile\(|rustc-link-lib|pkg_config|pkg-config"
 )
+
+# Native-source FINGERPRINTS: for a crate that bumps versions often, record the sha256 of
+# every native SOURCE file it ships. When the shipped version is NOT in its AUDITED tuple
+# but its native sources are byte-identical to this fingerprint, the audit AUTO-ACCEPTS the
+# bump -- the hand verdict provably still holds because the compiled code did not change
+# (only the wrapper's Rust / metadata did). A crate WITHOUT a fingerprint still hard-fails
+# on any version change, and ANY sha mismatch or an added/removed native file here also
+# hard-fails, so a bump that actually touches native code still demands a re-audit. This is
+# what makes the gitignored lockfile survivable: CI re-locks to the highest compatible patch
+# (e.g. cc 1.4.3 -> 1.4.4, native probe byte-identical) without a manual AUDITED edit each time.
+FINGERPRINTS = {
+    "cc": {
+        "src/detect_compiler_family.c":
+            "97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f",
+    },
+}
+
+
+def native_source_shas(pkg_dir):
+    """{relative_posix_path: sha256} over every native SOURCE file the crate ships."""
+    return {
+        p.relative_to(pkg_dir).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(pkg_dir.rglob("*"))
+        if p.is_file() and p.suffix.lower() in NATIVE_SOURCE_SUFFIXES
+    }
+
+
+def fingerprint_holds(pkg_dir, fingerprint):
+    """True iff the crate's native SOURCE files exactly match the recorded fingerprint --
+    same set of paths, each byte-identical. A new/removed/changed native file breaks it."""
+    return native_source_shas(pkg_dir) == fingerprint
 
 
 def run(cmd):
@@ -528,7 +570,7 @@ def main():
     dirs, workspace_ids = package_dirs()
     shipped = shipped_packages()
 
-    found, unresolved = {}, []
+    found, found_dir, unresolved = {}, {}, []
     for name, version in sorted(shipped):
         entry = dirs.get((name, version))
         if entry is None:
@@ -548,6 +590,7 @@ def main():
             # here today (getrandom x3, hashbrown x2). Two versions of one native crate
             # can vendor two different libraries.
             found[(name, version)] = why
+            found_dir[(name, version)] = pkg_dir
 
     if unresolved:
         print("ERROR: shipped crate(s) that cargo metadata could not locate:")
@@ -561,11 +604,23 @@ def main():
     # inheriting the old verdict by name is how a stale "ok" outlives the thing it
     # described. A bump is cheap to clear -- re-check and edit one line.
     unaudited = {k: v for k, v in found.items() if k[0] not in AUDITED}
-    rebumped = {
-        k: AUDITED[k[0]][0]
-        for k in found
-        if k[0] in AUDITED and k[1] not in _audited_versions(AUDITED[k[0]][0])
-    }
+    # A version bump of an AUDITED crate fails UNLESS a fingerprint (above) proves the
+    # crate's native source is byte-identical to the recorded baseline — then the hand
+    # verdict provably still holds and the bump is auto-accepted (the lockfile is gitignored,
+    # so CI re-locks to the newest compatible patch on every run; without this, every such
+    # bump reddens unrelated PRs until someone re-audits identical code by hand).
+    rebumped, fp_accepted = {}, []
+    for k in found:
+        if k[0] not in AUDITED or k[1] in _audited_versions(AUDITED[k[0]][0]):
+            continue
+        fp = FINGERPRINTS.get(k[0])
+        if fp is not None and fingerprint_holds(found_dir[k], fp):
+            fp_accepted.append(k)
+        else:
+            rebumped[k] = AUDITED[k[0]][0]
+    for name, version in sorted(fp_accepted):
+        print(f"note: {name} v{version} is not in AUDITED, but its native source is "
+              f"byte-identical to the recorded fingerprint — auto-accepted (verdict holds).")
     stale = [n for n in AUDITED if n not in {k[0] for k in found}]
 
     if rebumped:

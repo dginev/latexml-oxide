@@ -26,6 +26,25 @@ const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:classification",
   "ltx:acknowledgements",
 ];
+
+/// Frontmatter tags that are "replaceable" — only one per document; a later entry
+/// replaces the earlier ones instead of stacking. Ported from a later upstream
+/// LaTeXML (`Base_Utility.pool.ltxml` `%ReplaceableFrontmatterTags` +
+/// `\@add@frontmatter@now`), which the vendored copy predates — the vendored
+/// `\lx@add@frontmatter@{now,until}` push unconditionally, so a title/abstract emitted
+/// twice keeps BOTH, producing duplicated frontmatter. Surpass over the vendored Perl
+/// (a forward-port of the upstream fix). OXIDIZED_DESIGN #154. Witnesses: arXiv
+/// 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-adds `ltx:title`), 2511.21969
+/// (nested `{abstract}` env). Creators/notes are deliberately NOT here — multi-author
+/// frontmatter must accumulate.
+const REPLACEABLE_FRONTMATTER_TAGS: &[&str] = &[
+  "ltx:title",
+  "ltx:toctitle",
+  "ltx:subtitle",
+  "ltx:date",
+  "ltx:abstract",
+  "ltx:keywords",
+];
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -399,6 +418,13 @@ LoadDefinitions!({
     };
     DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
+    // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
+    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
+    // (the vendored copy pushes unconditionally → duplicate <title> when a document
+    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
@@ -446,6 +472,15 @@ LoadDefinitions!({
       attr: options,
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
+    // Replaceable tags (abstract/keywords) keep only one entry — but ONLY dedup when no
+    // same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
+    // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
+    // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
+    if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
+      && !frontmatter_has_open_placekeeper(&tag)
+    {
+      frontmatter_clear(&tag);
+    }
     let index = frontmatter_push(&tag, entry);
     let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
@@ -817,9 +852,48 @@ LoadDefinitions!({
     "\\lx@add@url [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}"
   );
+  // The ORCID iD logo — the green "iD" badge — as ONE self-contained SVG asset,
+  // defined in the kernel so every orcid rendering path reuses it (orcidlink.sty's
+  // \orcidlogo aliases this; \lx@add@orcid embeds it). Adapted from
+  // https://orcid.org/assets/vectors/orcid.logo.icon.svg; the viewBox exactly
+  // frames the 72×72 disk and the `.ltx_orcidlogo` CSS rule sizes it to the text
+  // (1em), so it renders as an inline glyph — not the oversized 1.7em badge that
+  // overflowed the line (html_feedback #6895, #6016, #5789, #2176, #5615).
+  DefConstructor!("\\lx@orcidlogo", sub[document, _args, _props] {
+    document.open_element("svg:svg", Some(string_map!(
+      "class" => "ltx_orcidlogo", "width" => "1em", "height" => "1em",
+      "viewBox" => "0 0 72 72", "version" => "1.1")), None)?;
+    document.open_element("svg:path", Some(string_map!(
+      "fill" => "#A6CE39",
+      "d" => "M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.open_element("svg:g", Some(string_map!(
+      "fill" => "#FFFFFF", "transform" => "translate(18.868966, 12.910345)")), None)?;
+    document.open_element("svg:polygon", Some(string_map!(
+      "points" => "5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878")), None)?;
+    document.close_element("svg:polygon")?;
+    document.open_element("svg:path", Some(string_map!(
+      "d" => "M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.open_element("svg:path", Some(string_map!(
+      "d" => "M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z")), None)?;
+    document.close_element("svg:path")?;
+    document.close_element("svg:g")?;
+    document.close_element("svg:svg")?;
+  });
+  // A link to https://orcid.org/<#1> wrapping content #2 (class ltx_orcid). Shared
+  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681.
+  DefConstructor!(
+    "\\lx@orcidlink{}{}",
+    "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>"
+  );
+  // The single canonical author-ORCID frontmatter macro: a `ltx:contact[role=orcid]`
+  // (consistent with \lx@add@email / \lx@add@affiliation &c.) whose value is the iD
+  // logo linked to the author's orcid.org page. The id is preserved in the href for
+  // the metadata. Every class binding routes its \orcid here (html_feedback #6571).
   DefMacro!(
     "\\lx@add@orcid [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}"
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\lx@orcidlink{#2}{\\lx@orcidlogo}}"
   );
   // Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
   // affiliations into an author \thanks{...}, linking them to authors by a
@@ -852,16 +926,28 @@ LoadDefinitions!({
       }
       Ok(Tokens::new(calls))
     } else {
-      // Unchanged: the parity-faithful role=thanks contact, exactly as the
-      // former template `\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}`.
-      let mut opts = mouth::tokenize_internal("role=thanks").unlist();
+      // SURPASS over Perl (OXIDIZED_DESIGN #156): render an author-attached `\thanks`
+      // as a MARKED note (a superscript mark on the author name + margin/footnote
+      // content) instead of a `role=thanks` CONTACT that reads inline like an
+      // affiliation next to the name. Route to `<ltx:note role="thanks">` so the
+      // existing `ltx:note` footnote template (mark + `ltx_note_outer`/`ltx_note_content`)
+      // renders it, and attach semantic CSS hooks so a theme can style each kind of
+      // thanks content: `ltx_note_frontmatter` (the ar5iv frontmatter-note hook) plus a
+      // best-effort content-kind class `ltx_thanks_<kind>` from `classify_thanks`. Perl
+      // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
+      // (correspondence), 1510.02728 (funding).
+      let kind = classify_thanks(content.clone().untex_string().as_ref());
+      let mut opts = mouth::tokenize_internal(TeXString::assembled(s!(
+        "role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
+      )))
+      .unlist();
       if let Some(a) = &attr {
         opts.push(T_OTHER!(","));
         opts.extend(a.unlist_ref().iter().copied());
       }
       Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
         vec![Some(mouth::tokenize_internal("ltx:creator")),
-             Some(mouth::tokenize_internal("ltx:contact")),
+             Some(mouth::tokenize_internal("ltx:note")),
              Some(Tokens::new(opts)), Some(content)]))
     }
   });
@@ -1270,7 +1356,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@contact@address@name", "Address:~");
   DefMacro!("\\lx@contact@email@name", "Email:~");
   DefMacro!("\\lx@contact@url@name", "URL:~");
-  DefMacro!("\\lx@contact@orcid@name", "OrcID:~");
+  // Empty: an ORCID contact renders the iD glyph (\lx@orcidlogo), which already
+  // identifies itself — so it carries no textual "OrcID:" label (get_frontmatter_name
+  // maps an empty per-role default to no label at all).
+  DefMacro!("\\lx@contact@orcid@name", "");
   DefMacro!("\\lx@contact@note@name", "Note:~");
   DefMacro!("\\lx@contact@thanks@name", "Thanks:~");
   DefMacro!("\\lx@contact@correspondent@name", "Corresponding author:~");
@@ -1353,6 +1442,9 @@ LoadDefinitions!({
       document.unwrap_nodes(wrapper)?;
       document.set_node(&savenode);
     }
+    // With the structured <ltx:title> now in the tree, drop a redundant leading
+    // hand-typeset copy of it (no \maketitle; #6924). Author/abstract ink stays.
+    maybe_dedup_leading_title_ink(document)?;
     }
   },
   after_digest => {
@@ -2070,12 +2162,20 @@ fn get_frontmatter_name(name: Option<&String>, tag: &str, role: &str) -> Result<
   if !role.is_empty() {
     let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));
     if lookup_definition(&cs)?.is_some() {
-      return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+      let n = digest_text(Tokens!(cs))?.to_string();
+      // A defined-but-empty per-role default (e.g. `\lx@contact@orcid@name`,
+      // emptied because the iD glyph self-identifies) means NO label — return
+      // None rather than an empty `ltx:contact_name`, and do not fall back to
+      // the generic default. General, not role-special.
+      return Ok(if n.is_empty() { None } else { Some(n) });
     }
   }
   let cs = T_CS!(s!("\\lx@{stag}@name"));
   if lookup_definition(&cs)?.is_some() {
-    return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+    let n = digest_text(Tokens!(cs))?.to_string();
+    if !n.is_empty() {
+      return Ok(Some(n));
+    }
   }
   Ok(None)
 }
@@ -2090,6 +2190,40 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
       list.len() - 1
     } else {
       0
+    }
+  })
+}
+
+/// Empty `frontmatter{tag}` in place (Perl: `$$frontmatter{$tag} = []`), so a later
+/// `REPLACEABLE_FRONTMATTER_TAGS` entry replaces the earlier ones. No-op if the tag
+/// has no entries yet. OXIDIZED_DESIGN #154.
+fn frontmatter_clear(tag: &str) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut(tag)
+    {
+      list.clear();
+    }
+  });
+}
+
+/// True if `frontmatter{tag}` holds an entry still awaiting its content (a lone
+/// `PlaceKeeper`). Used by the `\lx@add@frontmatter@until` dedup to detect
+/// re-entrancy: a same-tag `@until` nested inside another's `digest_next_body` (e.g.
+/// a malformed `\begin{abstract}\begin{abstract}…`) would otherwise clear the parent's
+/// still-open entry and later have the parent overwrite the child's content. When a
+/// parent is in progress we skip the clear (leaving both entries, as before the fix)
+/// rather than corrupt state. OXIDIZED_DESIGN #154.
+fn frontmatter_has_open_placekeeper(tag: &str) -> bool {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get(tag)
+    {
+      list
+        .iter()
+        .any(|e| matches!(e.content.as_slice(), [TagContent::PlaceKeeper]))
+    } else {
+      false
     }
   })
 }
@@ -2392,6 +2526,93 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
+/// Whitespace-collapsed, lowercased text — so a `<break>` (`\\`) and any spacing
+/// differences between the structured title and its hand-typeset copy don't
+/// defeat the comparison in [`maybe_dedup_leading_title_ink`].
+fn normalize_frontmatter_text(s: &str) -> String {
+  s.split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+    .to_lowercase()
+}
+
+/// Companion to [`maybe_promote_leading_title`] for the mirror case
+/// (arXiv/html_feedback#6924, witness arXiv 2608.10928): a structured
+/// `<ltx:title>` DOES exist (from `\title`), but the author ALSO hand-typeset the
+/// title as a leading centered display-font block and never called `\maketitle`,
+/// so that block reproduces the structured title and the title renders twice.
+///
+/// Prioritize the structured metadata (LaTeXML's unified Frontmatter API stays
+/// authoritative): remove the redundant leading title *ink*, keeping the semantic
+/// `<ltx:title>` and any author/abstract ink (which has no structured counterpart,
+/// so is the only copy). Fires only on a FULL normalized-text match against the
+/// structured title, and only for a leading, non-sectional, display-font centered
+/// paragraph — so an unrelated centered display block is never removed. Reuses the
+/// same detection helpers as the promote path.
+fn maybe_dedup_leading_title_ink(document: &mut Document) -> Result<()> {
+  // Needs a structured document title to prioritize over.
+  let Some(title) = document.findnode("/ltx:document/ltx:title", None) else {
+    return Ok(());
+  };
+  let title_text = normalize_frontmatter_text(&title.get_content());
+  if title_text.is_empty() {
+    return Ok(());
+  }
+  let nominal = {
+    let v = lookup_float("NOMINAL_FONT_SIZE").map_or(0.0, |f| f.0);
+    if v > 0.0 { v } else { 10.0 }
+  };
+  // Leading centered paragraphs — anywhere in the pre-first-section frontmatter
+  // region, NOT inside a section (a hand-formatted title block sits at document
+  // level, often after a `\vspace`/`\rule` so it isn't the first body element).
+  // Absolute query so the returned nodes support child traversal (shared-node
+  // caveat in `maybe_promote_leading_title`).
+  let candidates = document.findnodes(
+    "/ltx:document//ltx:p[@align='center']\
+     [not(preceding::ltx:section) and not(ancestor::ltx:section)]",
+    None,
+  );
+  // Remove the FIRST leading centered display-font block that EXACTLY reproduces
+  // the structured title. Only one — a paper may repeat the title text later
+  // (e.g. a running head); we drop just the redundant hand-typeset title.
+  let Some(victim) = candidates.into_iter().find(|p| {
+    descendant_has_display_font(document, p, nominal)
+      && normalize_frontmatter_text(&p.get_content()) == title_text
+  }) else {
+    return Ok(());
+  };
+  // Log what we drop (never remove content silently; #6924).
+  Info!(
+    "frontmatter",
+    "title_ink_dedup",
+    s!(
+      "dropped a hand-typeset title block duplicating the structured <ltx:title> (\"{title_text}\")"
+    )
+  );
+  // Remove the redundant title ink, pruning any wrapper it leaves empty
+  // (para → logical-block) — mirroring the promote path's cleanup. Sibling `<p>`s
+  // (e.g. the author block) keep their wrapper non-empty and survive.
+  let mut victim = victim;
+  loop {
+    let parent = victim.get_parent();
+    document.remove_node(victim);
+    match parent {
+      Some(p) if !has_element_child(&p) => {
+        let is_wrapper = with(document::get_node_qname(&p), |name| {
+          name == "ltx:para" || name == "ltx:logical-block"
+        });
+        if is_wrapper {
+          victim = p;
+          continue;
+        }
+      },
+      _ => {},
+    }
+    break;
+  }
+  Ok(())
+}
+
 /// Insert FrontMatter into document, if not already added
 /// Perl: insertFrontMatter($document).
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
@@ -2485,34 +2706,43 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// contactless empties are dropped; a contact-bearing empty's contacts move to the
 /// preceding real author. `\footnotemark`-note markers keep a personname non-empty
 /// (2507.06670 "Yu Zhang"), so real authors are untouched.
+///
+/// Moves BOTH `<ltx:contact>` and `<ltx:note>` annotations: an author `\thanks` is a
+/// marked `<ltx:note role="thanks">` (OXIDIZED_DESIGN #156), so a trailing `\thanks` on
+/// a nameless comma-split creator would otherwise be dropped with the empty creator —
+/// witness 1510.02728 (`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%
+/// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did.
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator[@role='author']", None);
   let mut to_remove: Vec<Node> = Vec::new();
   let mut last_real: Option<Node> = None;
-  // Contacts of leading empties (before any real author) held until the first real one.
-  let mut orphan_contacts: Vec<Node> = Vec::new();
+  // Annotations (contacts + notes) of leading empties (before any real author), held
+  // until the first real one.
+  let mut orphan_annotations: Vec<Node> = Vec::new();
   for creator in creators {
     if creator_personname_empty(document, &creator) {
-      let contacts: Vec<Node> = creator
+      let annotations: Vec<Node> = creator
         .get_child_nodes()
         .into_iter()
         .filter(|c| {
           c.get_type() == Some(NodeType::ElementNode)
-            && with(document::get_node_qname(c), |q| q == "ltx:contact")
+            && with(document::get_node_qname(c), |q| {
+              q == "ltx:contact" || q == "ltx:note"
+            })
         })
         .collect();
       if let Some(ref mut prev) = last_real {
-        if !contacts.is_empty() {
-          document.append_clone(prev, contacts)?;
+        if !annotations.is_empty() {
+          document.append_clone(prev, annotations)?;
         }
       } else {
-        orphan_contacts.extend(contacts);
+        orphan_annotations.extend(annotations);
       }
       to_remove.push(creator);
     } else {
-      if !orphan_contacts.is_empty() {
+      if !orphan_annotations.is_empty() {
         let mut first = creator.clone();
-        document.append_clone(&mut first, std::mem::take(&mut orphan_contacts))?;
+        document.append_clone(&mut first, std::mem::take(&mut orphan_annotations))?;
       }
       last_real = Some(creator);
     }
@@ -2754,7 +2984,8 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
   // fallback: Same, but without prefix
   let mut unlabeltable: HashMap<String, Vec<Node>> = HashMap::default();
   for target in document.findnodes(".//*[@_annotations]", None) {
-    if target.get_attribute("role").unwrap_or_default() == "pending" {
+    let target_role = target.get_attribute("role").unwrap_or_default();
+    if target_role == "pending" {
       continue;
     }
     // Dedup labels PER TARGET: a creator that cites the same annotation label
@@ -2773,8 +3004,20 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         .entry(label.to_string())
         .or_default()
         .push(target.clone());
-      // Misuse of labelling macros can lead to prefix mismatch
-      if let Some(pos) = label.find(':') {
+      // Misuse of labelling macros can lead to a prefix mismatch, so fall back to
+      // a prefix-stripped ("noprefix") index — e.g. an affiliation labelled
+      // `institute:1` can still find an author who cited `affiliation:1`.
+      // BUT a creator's OWN role-sequence label (`author:N` / `editor:N` /
+      // `translator:N`, auto-assigned in `\lx@add@frontmatter@now`) must NEVER
+      // enter that fallback: it would let a SHARED affiliation's `affiliation:1`
+      // bind to the first author's `author:1` purely by number, stranding one
+      // shared `\institute` on author 1 (Perl does exactly this — arXiv:2402.19043
+      // / WDM, 5 authors + one `\institute`, no `\inst`; OXIDIZED_DESIGN #159). A
+      // genuine per-author affiliation instead matches EXACTLY via `labeltable`
+      // (the `affiliation:1` that `\inst{1}` requests), which is untouched here.
+      if let Some(pos) = label.find(':')
+        && label[..pos] != target_role
+      {
         unlabeltable
           .entry(label[pos + 1..].to_string())
           .or_default()
@@ -2782,7 +3025,19 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
       }
     }
   }
-  for pending in pending_nodes {
+  // Beyond-Perl (OXIDIZED_DESIGN #159): a SHARED affiliation with no per-author
+  // `\inst` target (see Part 1) matches no creator. Perl warns and drops it; the
+  // pre-fix fallback stranded it on author 1. Instead, gather every such orphaned
+  // institute-level contact (the affiliation and any `\email`/`\url` that inherited
+  // its label) into ONE trailing name-LESS `<ltx:creator role="author">`, kept as
+  // the LAST child of the authors container — so the institute renders exactly once
+  // below the whole author row (ar5iv theme already breaks a last-position shared
+  // affiliation out to full width). Witness arXiv:2402.19043 (WDM). We reuse the
+  // first orphaned pending stub in place: it is already a `<creator>` sitting right
+  // after the last real author, so promoting it needs no fresh node.
+  let mut shared_creator: Option<Node> = None;
+  for mut pending in pending_nodes {
+    let mut promote_this = false;
     for note in element_nodes(&pending) {
       let label = note.get_attribute("_label").unwrap_or_default();
       if label.is_empty() {
@@ -2803,6 +3058,23 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
         }
+      } else if is_shared_contact_role(&note.get_attribute("role").unwrap_or_default()) {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT Sharing orphaned annotation {label} below authors"
+        );
+        match &mut shared_creator {
+          // First orphaned shared contact: promote THIS pending stub in place into
+          // the trailing shared creator (its note already lives inside it).
+          None => {
+            promote_this = true;
+          },
+          // Later shared contacts (e.g. the institute's `\email`) join it.
+          Some(sc) => {
+            let mut sc = sc.clone();
+            document.append_clone(&mut sc, vec![note.clone()])?;
+          },
+        }
       } else {
         let mut known: Vec<&String> = labeltable.keys().collect();
         known.sort();
@@ -2821,9 +3093,35 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         );
       }
     }
-    document.remove_node(pending);
+    if promote_this {
+      // pending → real trailing creator (role=pending would otherwise be dropped
+      // with the node; the `_annotations`/`_label` bookkeeping attrs are stripped
+      // at serialization). Name-LESS: it carries no `<ltx:personname>`.
+      document.set_attribute(&mut pending, "role", "author")?;
+      shared_creator = Some(pending);
+    } else {
+      document.remove_node(pending);
+    }
   }
   Ok(())
+}
+
+/// Contact roles that are institute-level information shared by every author (an
+/// affiliation, or an address / email / url that inherited its label), as opposed
+/// to a single person's own note. When such a contact is orphaned (a shared
+/// `\institute` with no per-author `\inst`), it is collected onto the trailing
+/// shared creator rather than dropped or stranded on author 1 (OXIDIZED_DESIGN #159).
+fn is_shared_contact_role(role: &str) -> bool {
+  matches!(
+    role,
+    "affiliation"
+      | "altaffiliation"
+      | "address"
+      | "altaddress"
+      | "currentaddress"
+      | "email"
+      | "url"
+  )
 }
 
 //======================================================================
@@ -4567,6 +4865,36 @@ fn keepsup(sym: Vec<Token>) -> Vec<Token> {
   v.extend(sym);
   v.push(T_END!());
   v
+}
+
+/// Best-effort content-kind classifier for a creator-scope `\thanks`, used ONLY to
+/// attach a semantic `ltx_thanks_<kind>` CSS hook (OXIDIZED_DESIGN #156) — it never
+/// affects core semantics. Keyword-matched over the flattened, lowercased note text.
+/// Order matters: correspondence and equal-contribution are checked before funding
+/// (a "supported by …" note is funding; "contributed equally" is contribution).
+/// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
+/// 2506.06941 "Equal contribution" (contribution). Explicitly best-effort.
+fn classify_thanks(text: &str) -> &'static str {
+  let t = text.to_lowercase();
+  if t.contains("correspond") {
+    "correspondence"
+  } else if t.contains("equal") && t.contains("contribut") {
+    "contribution"
+  } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
+    "address"
+  } else if t.contains("support")
+    || t.contains("grant")
+    || t.contains("fund")
+    || t.contains("nsf")
+    || t.contains("nih")
+    || t.contains("onr")
+    || t.contains("darpa")
+    || t.contains("erc")
+  {
+    "funding"
+  } else {
+    "note"
+  }
 }
 
 /// Does this token list *begin* with a NUMERIC affiliation superscript mark

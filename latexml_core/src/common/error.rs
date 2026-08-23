@@ -859,14 +859,17 @@ macro_rules! generate_message {
 
 /// Progress note to BOTH the log and stderr — Perl `Note` (`_printline`): the LOG
 /// always (if a buffer is bound, ANSI-stripped), STDERR only when the verbosity
-/// admits it (`$USE_STDERR && $VERBOSITY>=0` ≈ `max_level >= Info`).
+/// admits it (`$USE_STDERR && $VERBOSITY>=0`). The STDERR gate is the decoupled
+/// console verbosity ([`crate::util::logger::stderr_shows_info`]), NOT `max_level`
+/// — under `--quiet` the log-file floor keeps `max_level` at `Info`, but the
+/// console note must still be silenced (issue #763).
 #[macro_export]
 macro_rules! Note {
   ($input:expr_2021) => {{
     let msg = $input;
     $crate::util::logger::note_to_log(&msg.to_string());
     if !$crate::common::error::is_log_output_suppressed()
-      && log::max_level() >= log::LevelFilter::Info
+      && $crate::util::logger::stderr_shows_info()
     {
       $crate::println_stderr!("{msg}");
       $crate::util::logger::mark_stderr_at_line_start();
@@ -884,12 +887,14 @@ macro_rules! NoteLog {
 }
 
 /// Progress note to STDERR only — Perl `NoteSTDERR` (`if $USE_STDERR &&
-/// $VERBOSITY>=0`). Never touches the log.
+/// $VERBOSITY>=0`). Never touches the log. Gated on the decoupled console
+/// verbosity ([`crate::util::logger::stderr_shows_info`]), not `max_level`
+/// (issue #763).
 #[macro_export]
 macro_rules! NoteSTDERR {
   ($input:expr_2021) => {
     if !$crate::common::error::is_log_output_suppressed()
-      && log::max_level() >= log::LevelFilter::Info
+      && $crate::util::logger::stderr_shows_info()
     {
       let msg = $input;
       $crate::println_stderr!("{msg}");

@@ -51,9 +51,10 @@ LoadDefinitions!({
   DefMacro!("\\tablefoot{}", "\\footnote{\\textbf{Notes.} #1}");
   DefMacro!("\\tablebibname", "References");
   DefMacro!("\\tablefootname", "Notes");
-  // A&A authors use \orcid for ORCID identifier. Preserve as ltx:note.
-  DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  // A&A authors use \orcid for the ORCID identifier. Route through the kernel
+  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link + logo
+  // icon (vs a bare dagger note). html_feedback#6571.
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
 
   // Real aa.cls ends with `\RequirePackage[modulo,mathlines,switch,running,
   // columnwise,pagewise]{linenoaa}` (the A&A-bundled lineno variant), so

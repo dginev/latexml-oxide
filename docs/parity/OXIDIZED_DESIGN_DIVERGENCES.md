@@ -5351,3 +5351,735 @@ columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (
 **Guards**: `06_cluster_regressions::cluster_pandoc_calc_colwidth_6909` — a two-column
 `p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
 proportional 96.3pt / 224.7pt.
+
+### 142. `\\[dimen]` optional glue preserved as a themeable `--ltx-break-space` CSS variable
+
+**Perl** LaTeXML's `\lx@newline OptionalMatch:* [Glue]` constructor parses the optional length of
+`\\[20pt]` (the extra vertical space LaTeX inserts at a forced line break) and then **drops it**:
+it emits a bare `<ltx:break/>`, and `ltx:break` has no spacing attribute in the schema (`break_model
+= empty`). So the author's requested gap is lost in HTML while the PDF keeps it. latexml-oxide
+reproduced this exactly (SHARED-FAILURE; verified same-host — byte-identical core XML, both a bare
+`<break/>`).
+
+**Perl behavior**: `\\[20pt]` → `<break/>` (the 20pt is discarded).
+**Rust behavior**: the constructor reads the optional `[Glue]` (`args[1]`) and, when non-zero, sets
+`cssstyle="--ltx-break-space:<pt>"` on the break, so `\\[20pt]` → `<break
+cssstyle="--ltx-break-space:20.0pt"/>` → `<br class="ltx_break" style="--ltx-break-space:20.0pt;">`.
+Plain `\\` (no optional) and `\\[0pt]` stay bare. **No default CSS rule consumes the variable**, so
+default rendering is byte-identical to Perl's bare break — the value is *preserved for a theme to opt
+into* (e.g. ar5iv mapping it to a margin), not acted on.
+
+**Why**: the same "preserve intent in the data model, let the theme decide" principle as the #721
+image-sizing discussion — the engine stays faithful (emits the value, changes nothing visually) and
+spacing policy lives in the theme layer. A default-inert attribute is a strict superset of the
+parity output.
+
+**Witnesses**: html_feedback #722 (a `\title{… \\[20pt] {\small …}}` whose 20pt gap vanished in HTML).
+
+**Upstream**: worth raising against `brucemiller/LaTeXML` (the drop is upstream; a `--ltx-break-space`
+convention or a break spacing attribute would let both engines carry it).
+
+**Guards**: `06_cluster_regressions::cluster_break_optional_glue_722` — `\\[20pt]` carries
+`--ltx-break-space:20.0pt` on its break and exactly one break in the document does (plain `\\` and
+`\\[0pt]` stay bare).
+
+### 143. The FIRST paragraph is `ltx_noindent` when `\parindent` is zero
+
+**Perl** LaTeXML's `\par` (`TeX_Paragraph.pool.ltxml` L131-137) marks a paragraph `ltx_noindent`
+via a *deferred* flag: the `\par` that closes paragraph N reads `next_para_class` (set by the
+`\par` that closed N-1) and records a fresh flag for N+1, keyed on `\parindent==0` at close time.
+The mechanism models the fact that a paragraph's indent is fixed by `\parindent` when it *begins*,
+approximated by `\parindent` at the *previous* `\par`. But the very first body paragraph has no
+prior `\par`, so it is never marked — even under `\setlength{\parindent}{0pt}`. It then inherits
+the stylesheet's default first-line indent (`ltx-article.css` `.ltx_para > .ltx_p:first-child {
+text-indent:2em }`), rendering visibly indented where pdflatex is flush-left. latexml-oxide
+reproduced Perl exactly (SHARED-FAILURE; verified same-host — byte-identical XML, first `<para>`
+un-classed in both).
+
+**Perl behavior**: with `\parindent=0`, the first paragraph is un-classed → indented 2em by CSS;
+the 2nd+ paragraphs are `ltx_noindent`.
+**Rust behavior**: `\par`'s `after_digest` (`tex_paragraph.rs`) flags the closing paragraph a
+first-paragraph candidate when `\parindent==0` and no deferred class applies; the constructor then
+stamps `ltx_noindent` iff the paragraph is *structurally* first — no preceding `ltx:para` sibling
+(`document::helpers::preceding_para_sibling`, shared with `prune_empty_para`). The structural test
+matters: a state one-shot ("first `\par` seen") is consumed by a begin-document `\par` before the
+first content paragraph under the no-dump / freshly-generated-dump sequence (the CI path), so the
+first landing reverted there; the DOM position is robust to how many stray `\par`s fired. The stamp
+fires only when `\parindent` is genuinely zero — where `ltx_noindent` is correct — so
+default-`\parindent` documents are byte-identical to before, and only the first paragraph is
+touched (later paragraphs keep the unchanged deferred mechanism).
+
+**Why**: a kernel-quality off-by-one, not a TeX-semantics change — real LaTeX+`\parindent=0`
+leaves the first line flush too. The fix halos across every `\parindent=0` document (manual
+`\setlength`, `parskip`, KOMA `parskip=`, …). Completes #106's `parskip` surpass, whose first
+paragraph was the residual gap.
+
+**Witnesses**: issue #719 (reporter nasser1), the first-paragraph tail of #558/#106 (same
+reporter). MWE: `\setlength{\parindent}{0pt}` + two paragraphs → both `ltx_noindent`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same off-by-one upstream).
+
+**Guards**: `06_cluster_regressions::cluster_first_para_noindent_719` (first paragraph
+`ltx_noindent` under `\parindent=0`; a control fixture confirms default `\parindent` marks no
+paragraph); `cluster_first_para_noindent_nodump_719` (the same via `LATEXML_NODUMP=1` subprocess —
+guards the exact stray-`\par` path that broke the state-flag first landing);
+`50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
+
+### 144. Verbatim contexts keep `~`/`^` ASCII under T1 (the fontmap accent stays for normal text)
+
+**Background.** LaTeXML's `t1.fontmap` (and `t2a`/`t2b`/`t2c`) *deliberately* map slot 126 (`~`)
+to `U+02DC` SMALL TILDE and slot 94 (`^`) to `U+02C6` MODIFIER LETTER CIRCUMFLEX — Bruce Miller,
+commit `9ec6a4122` "Encodings (#2435)", 2024-11-20: "^ and ~ which should be accents". We KEEP
+that mapping. Those slots are reached only by a *literal catcode-12* `~`/`^`: in normal text `~`
+is active and `^` is superscript, and `\textasciitilde`/`\textasciicircum` emit ASCII U+007E/U+005E
+directly (not via the slot). The one place the slot is hit is a **verbatim** context — `\verb`,
+the `verbatim` environment, a `Verbatim`/`HyperVerbatim` argument (incl. `\href` and a Rhai
+binding's verbatim arg), and `\url`/`\path` — where the intent is the *literal* character, so a
+`.../~user` URL must stay ASCII (the reporter's Rhai `HyperVerbatim` URL came out `˜`).
+
+**Perl behavior**: a verbatim/URL `~`/`^` under T1 font-decodes through the fontmap to the accent
+glyphs `U+02DC`/`U+02C6` in the **displayed** text (SHARED-FAILURE — Perl does the same for `\verb`,
+`\url`, and a `HyperVerbatim`/`Verbatim` constructor argument alike). What always stayed ASCII was
+the href **attribute**: it is built by *reversion* of the catcode-12 tokens, which never touches
+the fontmap — so #723's "`\href`/Semiverbatim is fine" was about the attribute, NOT the display.
+(Verified same-host: Perl `\url{~a^b}` → `<ref … href="~a^b">˜aˆb</ref>`; a `DefConstructor('\x
+HyperVerbatim {}')` → the same `˜aˆb` display.)
+**Rust behavior**: every verbatim context now selects the identity `"ASCII"` fontmap for its run,
+so `~`/`^` (and `` ` ``/`'`) stay ASCII in the display too, while the fontmap itself is untouched —
+normal T1 text still follows Bruce. Four sites, all leaving the `typewriter` family intact (styling
+unchanged): `Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
+(`base_parameter_types.rs`); `\verbatim@font` gains `\fontencoding{ASCII}` (`latex_constructs.rs`,
+covers the `verbatim` environment); `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
+"ASCII"` (covers `\verb`); and `\UrlFont` (all `\urlstyle` variants) gains `\fontencoding{ASCII}`
+(`url_sty.rs`, covers `\url`/`\path` — whose displayed text is a separately-digested `\UrlFont`-
+wrapped plain arg, so the reader's semiverbatim ASCII fontmap did not reach it). `\fontencoding`
+merges only the encoding and `\selectfont` merges only family/series/shape, so the ASCII encoding
+survives the family switch.
+
+**Why**: verbatim wants the literal input character; the T1 slot's accent shape is right only for
+the accent-command contexts (a standalone `\^{}`/`\~{}`) that Bruce was protecting, which do not
+take the verbatim path. Scoping ASCII to verbatim reconciles both, and matches what pdflatex
+extracts (a verbatim `~`/`^` under T1 → ASCII U+007E/U+005E, verified via pdftotext and via the
+pdftex golden `ec.enc ∘ glyphtounicode.tex`).
+
+**Fontmap drift tooling**: `tools/fontmap_drift.py` recomputes that pdftex golden for each shipped
+text encoding and fails on un-allowlisted drift. Slots 94/126 are allowlisted there **as Bruce's
+intentional accent choice** (with the `#2435` reason), documenting exactly why our fontmap differs
+from `glyphtounicode` — alongside slot 127 (line-break hyphen `U+2010`) and T2 slots 14/15
+(Cyrillic angle quotes `‹›`).
+
+**Witnesses**: issue #723 (reporter xworld21) — a Rhai `HyperVerbatim` URL argument under T1 whose
+`~` became `U+02DC`; the `\url`/`\path` follow-up came from Vincenzo's observation that "hyperref
+works fine" (the attribute) while a constructor's verbatim arg did not (the display). MWE:
+`\usepackage[T1]{fontenc}` + `\verb|a~b^c|` → `a~b^c`; `\url{http://g/~h^i}` → display `~h^i`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (verbatim/`\url` display loses ASCII there
+too, and Bruce can weigh the verbatim-vs-accent split).
+
+**Guards**: `06_cluster_regressions::cluster_t1_hyperverbatim_ascii_723` (the reported Rhai
+`HyperVerbatim` URL, ASCII, via a subprocess so the runtime binding loads);
+`cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env + `\url`/`\path` stay ASCII AND keep
+`font="typewriter"`); `tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as
+Bruce's accents).
+
+### 145. nicematrix `\begin{<x>NiceMatrix}` renders as a real math array with `\CodeBefore` cell colors
+
+**Background.** `nicematrix` has **no** Perl `LaTeXML/…/nicematrix.sty.ltxml` binding — it is a
+Rust-contrib package (`latexml_contrib/src/nicematrix_sty.rs`). Its math matrix family
+(`NiceMatrix`, `pNiceMatrix`, `bNiceMatrix`, `BNiceMatrix`, `vNiceMatrix`, `VNiceMatrix`) was
+previously stubbed to an `<ltx:note role="nicematrix-placeholder">` plus `Error:undefined`, and the
+matrix body was **discarded** — the entries (and any `\CodeBefore` cell coloring) vanished. Witness
+arXiv 2410.00317 (a rigidity-matrix paper: 5× `bNiceMatrix[first-row,first-col]`, each with a
+`\CodeBefore … \Body` block and `\rectanglecolor{blue!15}` marking the nonzero entries).
+
+**Rust behavior (beyond-Perl).** Each `\begin{<x>NiceMatrix}[opts]` reduces to the amsmath matrix
+flavour for its delimiter (`b→[]`, `p→()`, `B→{}`, `v→||`, `V→‖‖`, plain→none) via the shared
+`\lx@ams@matrix` path (`amsmath_sty.rs`, `base_xmath.rs:1151`), so the entries render through the
+real math-array engine as `ltx:XMDual > XMWrap > XMArg > XMArray`. Three nicematrix features map
+onto LaTeXML's native math-table model:
+
+- **`\CodeBefore … \Body` cell coloring.** The color commands (`\rectanglecolor`, `\cellcolor`,
+  `\rowcolor`, `\columncolor`, `\arraycolor`) run during CodeBefore digestion and record fill
+  rectangles (1-based, over the main matrix); a no-output `\lx@nicematrix@applycolors` constructor
+  — run right after the matrix closes, mirroring colortbl's `\lxsetcellcolor` DOM write — paints
+  `backgroundcolor` (schema `LaTeXML-math.rnc:330`) onto the covered `ltx:XMCell`s. Colors reuse
+  `color_sty::parse_color` (xcolor `!`-algebra), so `blue!15` resolves DRY. Because digestion and
+  construction are **separate phases** (the recorders run at digest, the color-walk at construct),
+  each matrix's `\lx@nicematrix@applycolors` snapshots ITS rects+flags in its digest-time
+  `properties` closure (before the next `\begin` clears the thread_local) and reads them back at
+  construction. The MathML post-processor (`pmml_array`) then carries `XMCell/@backgroundcolor`
+  onto the `m:mtd` as `mathbackground`, which the XSLT turns into the `--ltx-bg-color` theming
+  variable the CSS paints — so the fill is visible in the HTML.
+- **`[first-row,first-col]`** label lines are kept INSIDE the array (row 0 / col 0) and marked
+  `thead='column'`/`'row'` (`LaTeXML-math.rnc:352`), rather than nicematrix's outside-the-brackets
+  placement. (Accepted nuance; the semantic header role is preserved.)
+- The tabular-like family (`\NiceArray`/`pNiceArray`/…/`NiceTabular*`/`NiceTabularX`, which take a
+  `{colspec}`) still degrades to a placeholder/`\tabular` — no faithful colspec reduction yet.
+
+**Bundled fix (not a divergence).** `color_sty::try_color_algebra` mixed `c!p` at `(100-p)%` of the
+color instead of `p%` (`blue!15` came out dark `#2626FF` instead of light `#D9D9FF`), because it
+passed `1.0 - pct_frac` to `Color::mix` whose `fraction` is the weight of *self*. Corrected to
+`pct_frac`. This only surfaced through **direct** Rust callers of the algebra path
+(nicematrix here, plus `soul`/`fancyvrb`/`colordvi`); `\color`/`\textcolor` were already correct
+because xcolor's own decoder (`xcolor_sty::apply_mix_expr`) does the mix right.
+
+**Limitation.** Only the *color* commands in `\CodeBefore` are interpreted; other decorations
+(`\tikz`, `\SubMatrix`, …) are undefined and may emit `Error:undefined` (the matrix still renders).
+Several Nice matrices in ONE display are handled — the color-walk paints the *last* matrix-XMDual,
+i.e. the just-closed one (guard `cluster_nicematrix_multi_matrix_no_color_leak_6569`). A Nice matrix
+NESTED in another's cell is not: the inner `\begin` clears the shared thread_local, so the outer
+loses its `\CodeBefore` rects and both share one first-row/first-col flag pair (inner wins).
+
+**Upstream / mirror**: the ar5iv `nicematrix.sty.ltxml` stub still errors here; mirror this upgrade
+there for strict Rust↔ar5iv parity.
+
+**Witnesses**: arXiv/html_feedback#6569 (witness arXiv 2410.00317).
+
+**Guards**: `06_cluster_regressions::cluster_nicematrix_codebefore_6569` (the witness's first matrix:
+`ltx:XMArray` present, exactly 6 `backgroundcolor` cells at the nonzero entries, `thead` on the
+first-row/first-col labels, 0 errors, no `nicematrix-placeholder`).
+
+### 146. A hand-typeset title that duplicates the structured `\title{}` is dropped
+
+**Background.** LaTeXML's unified Frontmatter API captures `\title{}` into a semantic
+`<ltx:title>` the moment it is seen — independent of `\maketitle` (unlike LaTeX, where `\title{}`
+without `\maketitle` renders nothing), and the stylesheet renders that title as the visible
+document heading. When a paper *also* hand-typesets its title as ordinary body text — a leading
+centered display-font block, with `\title{}` set but `\maketitle` never called — the title appears
+twice: once from the structured frontmatter, once as the author's "ink". Witness arXiv 2608.10928
+(`\title{…}` + a `\begin{center}{\LARGE\bfseries …}` reproduction; no `\maketitle`).
+
+**Perl behavior**: SHARED — Perl LaTeXML emits the structured `<ltx:title>` from `\title{}` without
+`\maketitle` too, so it duplicates identically (verified on the witness). This is not a Rust-only
+bug; the divergence below is a deliberate surpass-Perl.
+
+**Rust behavior**: at frontmatter finalization (`\lx@frontmatter@fallback`, the no-`\maketitle`
+path), once the structured `<ltx:title>` is in the tree, `maybe_dedup_leading_title_ink`
+(`base_utilities.rs`) removes a **leading, non-sectional, centered, display-font** paragraph whose
+normalized text **exactly** reproduces the structured title. Structure wins over ink: the semantic
+`<ltx:title>` is kept; the redundant hand-typeset copy is dropped (empty wrappers pruned). It is the
+mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
+block *into* the title) and reuses the same detection helpers.
+
+**Why it's safe / precise.** Fires only for `\title`-without-`\maketitle` papers (the `\maketitle`
+path disables the fallback), and only on a full normalized-text match against the structured title
+in a leading display-font centered block. A paper that sets `\title` but doesn't hand-typeset keeps
+its title; a leading centered block that *doesn't* match the title is left untouched; author/abstract
+"ink" (no structured counterpart) is preserved. Never removes a title the PDF actually shows —
+`\title{}` without `\maketitle` renders nothing in the PDF, so only the manual block was ever
+visible there.
+
+**Witnesses**: arXiv/html_feedback#6924 (witness arXiv 2608.10928).
+
+**Guards**: `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924` (structured `<title>`
+kept, title text appears exactly once, hand-typeset author block preserved).
+
+### 147. A leftover control sequence in a hyperref URL stays literal, not digested
+
+**Background.** LaTeXML reads a hyperref `\url`/`\href` argument *semiverbatim*: it neutralizes the
+specials to catcode-12 but keeps the backslash an escape (`hyperref.sty.ltxml:165-186`,
+"Expand as we go!" / "let CS's through!"), so the argument is read with partial expansion and any
+surviving control sequence is then handed to digestion. Real `url.sty` instead `\meaning`-stringifies
+the whole argument (`\edef\Url@String{\expandafter\strip@prefix\meaning\Url@String}`), which turns
+every leftover control sequence into inert characters. The difference bites on a **non-expandable
+primitive** in a URL, e.g. `\url{https://ex/q=\def}`: digesting `\def` *executes* it — it reads the
+following tokens as its name/parameter-text/body, consumes past the closing brace, truncates the URL
+to `…q=` and raises errors. Escapes (`\%`, `\_`, `\^`, `\textasciitilde`, …) are unaffected because
+they resolve to their character before/at digestion; only a genuine leftover CS misbehaves.
+
+**Perl behavior**: SHARED-FAILURE — Perl LaTeXML digests the `\def` the same way and is in fact
+*worse*. Verified same-host (Perl 0.8.8, rev `0d02309d`): `\url{https://www.google.com/search?q=\def}`
+→ **byte-identical** `href="https://www.google.com/search?q="` in both engines, Perl raising **4**
+errors to our 2. Not a Rust-only bug; the change below is a deliberate surpass. pdflatex keeps the
+`\def` as literal link text (via `url.sty`'s `\meaning`), which is what an author expects.
+
+**Rust behavior (beyond-Perl)**: after the semiverbatim read, any *surviving* control sequence is
+recatcoded to `other` (`Token::as_other`) — url.sty's `\meaning` in one step — so `\def` becomes the
+literal href text `\def` instead of executing. To keep the escapes resolving so realistic URLs are
+unchanged, the reader now expands url.sty's escape set (`\%`, `\#`, `\&`, `\_`, `\~`,
+`\textasciitilde`, `\^`, `\textasciicircum`, `\textbackslash`, `\\`) to their character *during* the
+partial read (mirroring `url.sty`'s first pass), leaving only genuine leftovers as CS to stringify.
+Two sites, kept consistent so `\url` and `\href` agree: `\lx@hyper@url` (`hyperref_sty.rs`, the
+hyperref `\url`) and the `HyperVerbatim` parameter type (`base_parameter_types.rs`, backing `\href`).
+Plain `url.sty` without hyperref already did this (it recatcodes the whole argument to `other`), so
+this brings the hyperref path into line with it — and with pdflatex.
+
+**Why it's safe / precise.** Only a leftover *control sequence* changes — every url.sty escape still
+resolves (`\_`→`_`, `\^`→`^`, `\textbackslash`→`\`, …), literal specials pass through, and an
+expandable `\macro` still expands during the read. The net effect on any URL that previously
+converted cleanly is nil; the only behavior that changes is the one that previously *errored* and
+lost data. Consistent with #144 (which fixed the T1 ASCII *display* of verbatim/URL text) — that
+was the font side, this is the token side.
+
+**Scope / limitation.** `\path` already stringified leftovers (plain `url.sty`'s `\lx@url@url`
+recatcodes its whole argument to `other`), so it was never affected. `\nolinkurl` still digests a
+leftover primitive (SHARED-FAILURE with Perl — both truncate `\nolinkurl{…n=\def}` to `n=`): it reads
+through the generic `Semiverbatim` *parameter type*, so bringing it in line would mean changing that
+shared reader — out of this ticket's scope, left as parity.
+
+**Witnesses**: issue #723 rebuttal (reporter xworld21 / Vincenzo Mantova), comment 5380586287:
+`\url{https://www.google.com/search?q=\def}` lost the `\def` and errored while pdflatex kept it.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` — its `\url`/`\href` digest a leftover
+primitive the same way; adopting `url.sty`'s `\meaning`-stringify would fix it there too.
+
+**Guards**: `06_cluster_regressions::cluster_url_cs_verbatim_723` (distilled reproductions covering
+Vincenzo's cases: `\def` stays literal in both `\url` and `\href`, escapes/`~`/`\textbackslash`
+still resolve, 0 errors); `10_expansion::hyperurls_test` (the full escape matrix — `\#`, `\&`, `\_`,
+`\%`, `\^`, `\~{}`, macro expansion, literal `^`/`$`/`{}` — all still resolve).
+
+### 148. `\everypar` fires at paragraph start (tex.web `new_graf`), enabling correct algorithm2e line numbering
+
+**Background.** algorithm2e's `linesnumbered` numbers each body line by setting
+`\everypar`→`\nl` (which steps `AlgoLine` and typesets `\algocf@printnl`). The number
+must be emitted when a line's paragraph starts — after any leading `everyparnl`-setter
+(a KwInOut header sets it to `\relax` BEFORE its content, so Input/Output stay
+unnumbered) but before a trailing one (a `\Comment*[r]` side comment resets it to
+`\relax` AFTER the statement). Only the content-start moment distinguishes them.
+
+**Perl behavior**: SHARED failure. Perl LaTeXML never fires `\everypar` on
+horizontal-mode entry (`enterHorizontal`, Stomach.pm, is a plain mode switch); the
+algorithm2e binding runs `\the\everypar` MANUALLY at **end-of-line**
+(`algorithm2e.sty.ltxml` L171). By then a `\Comment*[r]` statement's `everyparnl` is
+already `\relax`, so the statement **loses its line number** and the comment falls to
+the next line. Verified on the witness (2602.20153) with same-host Perl.
+
+**Rust behavior**: `stomach::enter_horizontal` fires `\the\everypar` on the
+vertical→horizontal transition, faithful to tex.web `new_graf` (background/tex.web
+L21117, `begin_token_list(every_par)`). It is guarded two ways — a no-op when
+`\everypar` is empty (every ordinary paragraph, post-`\begin{document}`), and skipped
+in the preamble/kernel-load where `\everypar` holds LaTeX3's unmodelled para-hook list
+`\g__para_standard_everypar_tl` (guard: `\@nodocument` is `\relax`). A prerequisite fix:
+`\begin{document}` now clears `\everypar` via `assign_register` (Perl `AssignRegister`),
+not `assign_value`, so the register `\the\everypar` reads is actually emptied. The
+algorithm2e binding then makes each listing line a real hmode entry (a per-line
+`leave_horizontal_internal` seam) and moves line indentation to an end-of-line DOM
+prepend so it does not enter hmode early. Result: statement lines carrying a trailing
+`\Comment*[r]` KEEP their number; KwInOut headers and standalone comments stay
+unnumbered — matching the pdflatex golden and surpassing Perl.
+
+**Why it's safe.** `\everypar` firing is body-only and a no-op for normal paragraphs
+(LaTeXML's list/item machinery does not populate `\everypar`, unlike real LaTeX);
+inside a listing algorithm2e overrides `\everypar` with its own `\algocf@everypar`.
+Full suite 2143/2143, tikz/streaming re-verified clean.
+
+**Witnesses**: arXiv 2602.20153 (JUCAL, `\Comment*[r]`); the disjoint-decomposition and
+generic-`\Fn` examples from the algorithm2e manual.
+
+**Guards**: `50_structure::algorithm2e_linenumbers_test` (KwInOut unnumbered; a
+`\Comment*[r]` statement numbered; body 1..N; nested indentation).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (endline-timed `\the\everypar` drops
+the `\Comment*[r]` statement number).
+
+### 149. Float body frames (`ruled`/`boxed`) land on the body, not the metadata `<tags>` — algorithm2e ruled family wired
+
+**Background.** `addFloatFrames` (`float.sty.ltxml` L76-85) draws a float's frame from
+two maps: `%float_outerframe` puts an outer rule on the `<float>` itself, `%float_innerframe`
+puts an inner rule on the float's **body** — the first child that is not a caption
+(`grep { getNodeQName !~ /^ltx:(?:toc)?caption$/ } childNodes`). `ruled` → outer `top` +
+inner `topbottom`; `boxed` → inner `rectangle`. pdflatex draws both rules.
+
+**Perl behavior**: SHARED failure. A `\refstepcounter`'d float emits `<ltx:tags>` as its
+**first** child, and `<tags>` (`LaTeXML-block.rnc:325`, `element tags { tag+ }`) carries
+**no attributes** — so `setAttribute($body, framed => …)` is silently schema-dropped and the
+**inner rule is never drawn**. The outer `framed="top"` (set on the float) survives, so a
+ruled float shows only its top rule; a `boxed` float shows **no frame at all** (boxed has no
+outer rule). Verified same-host on Perl 0.8.8: `floatnames.tex` (newfloat `\floatstyle{ruled}`)
+and a `[boxed]` algorithm2e MWE both emit only the outer `framed`, never the inner. Separately,
+algorithm2e's own binding (`algorithm2e.sty.ltxml` L88-91) wires **only** the `box` family to a
+frame; the `ruled` family (`ruled`/`algoruled`/`tworuled`/`plainruled`) is dropped by both
+engines, so a default `\usepackage[ruled]{algorithm2e}` gets no rules.
+
+**Rust behavior**: `add_float_frames` also skips `<ltx:tags>` when choosing the body, so the
+inner `framed` lands on the real body element (`<listing>`, `<p>`, …) that pdflatex frames.
+And the algorithm2e binding extends its `\algocf@style` dispatch: `box`→`boxed` (unchanged),
+else `ruled`→`ruled`, so `[ruled]`/`[algoruled]`/… draw the top+body rules. Reach is
+engine-level — every framed float (algorithm/algorithmicx, `newfloat`, `float.sty`,
+algorithm2e boxed/ruled) now frames its body.
+
+**Why it's safe.** `framed` is a generic `Backgroundable.attributes` decoration; the fix only
+moves the *target* of an already-intended `setAttribute` from a metadata element that rejects
+it to the body element that accepts it — no new markup shape, no change to the listings dialect
+(an `lstlisting` serving as a ruled-float body is decorated exactly as any other body would be).
+The outer-frame path is unchanged. Full suite green.
+
+**Witnesses**: `floatnames.tex` (newfloat ruled), `algx.tex` (algorithmicx ruled),
+`figure_mixed_content.tex` (algorithm floats), `various_colors.tex` (lstlisting ruled-float body);
+`[boxed]`/`[ruled]` algorithm2e MWEs cross-checked against pdflatex goldens.
+
+**Guards**: `50_structure::algorithm2e_frames_test` (ruled → `top`+`topbottom`, boxed →
+`rectangle`, via `\RestyleAlgo`); the four re-blessed goldens above pin the general fix.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (inner float frame dropped onto `<tags>`; ruled
+family unwired in algorithm2e).
+
+### 150. `\floatname`/`\newfloat` also define float.sty's real `\fname@<type>` internal
+
+**Background.** Real `float.sty` names a float's caption word `\fname@<type>`
+(`float.sty` L34: `\newcommand\floatname[2]{\@namedef{fname@#1}{#2}}`; `\newfloat`
+defaults it, L59). Documents reference that real internal directly — most visibly the
+widely-copied `breakablealgorithm` recipe: `\textbf{\fname@algorithm~\thealgorithm}`.
+
+**Perl behavior**: SHARED failure. LaTeXML *reimplements* float.sty with its own internal
+`\lx@name@<type>` (`float.sty.ltxml` L36) and never defines `\fname@<type>`. So any
+document touching the real internal leaks a raw, undefined `\fname@<type>` —
+`<ltx:ERROR>\fname@algorithm</ltx:ERROR>` — and errors. Verified same-host on Perl 0.8.8
+(witness arXiv 2408.07803).
+
+**Rust behavior**: `\floatname` and `\newfloat` define **both** LaTeXML's `\lx@name@<type>`
+(unchanged, drives our tag machinery) **and** real float.sty's `\fname@<type>`
+(`float_sty.rs`). The `breakablealgorithm` caption then compiles to "Algorithm 1 …"
+instead of leaking raw. Additive — no currently-passing document emits `\fname@<type>`,
+so no existing output shape changes; it only converts the error to correct output.
+
+**Why it's safe.** `\fname@<type>` is the *real* float.sty internal, so defining it makes
+our float.sty emulation more faithful to the actual package, not less. Purely additive to
+the `\floatname`/`\newfloat` bindings.
+
+**Witnesses**: arXiv 2408.07803 (html_feedback #1998, `breakablealgorithm` recipe).
+
+**Guards**: `50_structure::float_fname_internal_test` (`\floatname` sets `\fname@widget`;
+`\newfloat` defaults `\fname@gizmo`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (float.sty.ltxml should alias
+`\fname@<type>` to its `\lx@name@<type>`).
+
+### 151. `\tabto` (tabto-ltx) approximated as `\hfill` — right-justified algorithm comments flush inline
+
+**Background.** `tabto` (package `tabto-ltx`) moves to a horizontal tab position.
+`algpseudocodex` `\RequirePackage{tabto}` (sty L29) and right-justifies each `\Comment`
+with `\tabto{\dimexpr\linewidth-\algpx@tmpLen}`, so a `\State … \Comment{…}` line shows
+its comment flushed to the right margin (as pdflatex does).
+
+**Perl behavior**: SHARED failure. LaTeXML has no `tabto` binding, so both engines
+raw-load it. Raw `\tabto` measures the current line position with a `$$…$$` display-math
++ one-row `\halign` hack (reads `\predisplaysize`, tabto.sty L85-120). Our engine — with
+no positional layout model — turns that hack into (a) a spurious empty display
+`<equation/>` (see KNOWN_PERL_ERRORS #108) and (b) a paragraph break, so the comment
+**stacks on its own line below the statement** instead of flushing right. Same-host Perl
+raw-loads the identical hack.
+
+**Rust behavior**: a `tabto.sty.ltxml`-equivalent binding (`tabto_sty.rs`) approximates
+`\tabto{pos}` (and `\tabto*`, `\tab`) as `\hfill`. LaTeXML renders `\hfill` before inline
+content as a `float:right`, so the comment stays in the statement's line box and flushes
+right — matching the pdflatex golden. The dominant `\tabto` use IS this right-justify, so
+the approximation is faithful in practice; a genuinely left-directed `\tabto{2cm}` would
+also become a right-fill, but the raw `$$`-hack (break + empty equation) was strictly
+worse. The length registers `\CurrentLineWidth` / `\TabPrevPos` are provided so
+algpseudocodex's `\settowidth`/`\dimexpr` reads resolve.
+
+**Why it's safe.** Replaces an unmodellable positional hack with the layout primitive
+LaTeXML already renders correctly; no positional information was being honoured before.
+
+**Witnesses**: arXiv 2511.21969 (Algorithm 1 `\State … \Comment` lines).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (raw `\tabto`'s `$$` measurement hack
+emits an empty equation and breaks the line; a `\hfill` approximation renders correctly).
+
+### 152. `\hbox to \hsize{…leader fill…}` emits `width="100%"`, not a frozen pt value
+
+**Background.** A leader-fill separator — `\hbox to \hsize{\dashfill\hfil}` (where
+`\dashfill`=`\cleaders\hbox{-~-}\hfill`), or `\hrulefill`/`\dotfill` — sizes a box to
+the current line/column width and fills it with a repeating rule. pdflatex confines it
+to the column.
+
+**Perl behavior**: SHARED failure. LaTeXML's `\hbox` constructor derives an ABSOLUTE
+pt `width` from the `to` spec (`TeX_Box.pool.ltxml`, `width => $props{width}`). Since the
+generic article `\textwidth` defaults to `345pt` and two-column class widths aren't
+modeled, `\hsize`=`345pt`, so the box freezes at `width="345.0pt"` — wider than a
+narrower container (e.g. an algorithm), where it OVERFLOWS. Same-host Perl emits the
+identical frozen pt and renders equally too-wide.
+
+**Rust behavior**: when a `\hbox to <line-register>` (`\hsize`/`\linewidth`/
+`\columnwidth`/`\textwidth`) has a body that is a horizontal LEADER FILL (the `\leaders`
+whatsit is marked `hfill_leader`; `tex_box.rs`), the constructor emits a RELATIVE
+`width="100%"` so the box fills its HTML container — matching the pdflatex golden in any
+context. The resolved value is compared against the CURRENT register value, so a
+`\hbox to \hsize` inside a narrowed parbox relativizes to that parbox too. A genuine
+fixed `\hbox to 100pt`, and any non-leader body (crucially fancyvrb's `\hbox to
+\linewidth{…text…}` verbatim lines, whose `345pt` is deliberate Perl parity —
+`wisdom_fancyvrb_linewidth_box_parity`), are UNCHANGED.
+
+**Why it's safe.** The leader-fill discriminator scopes the change to boxes whose whole
+purpose is to span the line; text-bearing full-width boxes keep their pt width.
+
+**Follow-up (stacking).** width:100% alone is not enough when TWO full-line separators flank a
+centered label on ONE `nowrap` listingline (1510.02728's "Modified ellipsoid method" block, inside
+`\begin{algorithm}`): as inline-blocks they lay side-by-side and sum to >200% width, overflowing the
+listing. The fill-line box is therefore ALSO marked `class="ltx_leaderfill"` (`tex_box.rs`, on the
+same `fill_line` gate), and both stylesheets set `.ltx_inline-block.ltx_leaderfill { display:block; }`
+so each separator owns its line and they stack like the pdflatex golden. fancyvrb/`\hbox to 100pt`
+still untouched (not fill-line).
+
+**Witnesses**: arXiv 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid
+method" separators, 3 per algorithm; two flank the centered label). Guard
+`cluster_hbox_to_hsize_leader_fills_width` (asserts `width="100%"` + `class="ltx_leaderfill"`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (a `\hbox to \hsize` leader fill should
+be a fluid full-width box, not a frozen pt value that overflows narrower containers).
+
+### 153. algorithm2e ruled family draws the caption at the TOP of the frame
+
+**Background.** algorithm2e's `ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`
+styles put the caption at the top of the frame: the real sty sets
+`\@algocf@capt@ruled`=`top` (L2530) / `\@algocf@capt@boxruled`=`above` (L2540), and
+`\algocf@makethealgo` lays the caption out before the body. pdflatex renders it there.
+
+**Perl behavior**: SHARED failure. LaTeXML emits the float caption in standard order
+(last child = bottom), so the ruled caption renders at the BOTTOM. Same-host Perl does
+the same.
+
+**Rust behavior**: for the ruled family, `after_construct` DOM-moves `<ltx:caption>` /
+`<ltx:toccaption>` before the body (`float_sty::reposition_caption_top`, gated by a
+`caption_pos="top"` property set from the resolved `\algocf@style`). DOM order drives the
+XSLT render position, so the caption renders at the top. `plain`/`boxed` keep the caption
+at the bottom (no reposition). The float content model
+(`LaTeXML-para.rnc:196`, an order-free choice) stays schema-valid.
+
+**Why it's safe.** Pure post-construction reorder of two elements for one style family;
+`plain`/`boxed` are untouched, and a guard asserts the plain case does not reorder.
+
+**Witnesses**: any `\RestyleAlgo{ruled}` algorithm. Guard
+`cluster_algorithm2e_ruled_caption_at_top` (+ re-blessed `algorithm2e_{frames,
+linenumbers}.xml`).
+
+**Upstream**: to be filed at brucemiller/LaTeXML (ruled-family algorithm captions should
+render at the top of the frame, per algorithm2e's `\@algocf@capt@ruled`).
+
+### 154. Replaceable frontmatter tags keep only one entry (forward-port of upstream dedup)
+
+**Background.** Some frontmatter tags are "replaceable" — only one per document: a later
+`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords` should REPLACE the earlier,
+not stack. Later upstream LaTeXML added `%ReplaceableFrontmatterTags` +
+`\@add@frontmatter@now` (`Base_Utility.pool.ltxml`), which empties `$$frontmatter{$tag}`
+before pushing a replaceable entry.
+
+**Perl behavior**: the VENDORED Perl (our ground truth) PREDATES that fix — its
+`\lx@add@frontmatter@{now,until}` push unconditionally, so a document that re-adds a
+replaceable tag keeps BOTH entries and emits DUPLICATE frontmatter (two `<title>`, two
+`<abstract>`). Newer upstream Perl does NOT.
+
+**Rust behavior**: `base_utilities.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
+`frontmatter{tag}` before the push in `\lx@add@frontmatter@now` (and `@until`, guarded
+against same-tag re-entrancy so a nested/malformed `{abstract}` is not corrupted).
+Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-author
+frontmatter is preserved). A forward-port of the upstream fix; a surpass over the
+vendored Perl.
+
+**Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
+creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
+re-entrancy guard leaves the malformed-nesting case exactly as before.
+
+**Witnesses**: arXiv 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-added
+`ltx:title` → duplicate title + duplicated author block), 2511.21969 (nested
+`{abstract}` env). Guard `cluster_frontmatter_replaceable_dedup`.
+
+**Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
+it into the vendored engine.
+
+### 155. A `.bbl` preamble no longer emits a phantom empty `(N)` bibliography entry
+
+**Background.** An ACM-Reference-Format-style `.bbl` (and others) places a preamble —
+`\providecommand`/`\newcommand` macro definitions and a blank line — between
+`\begin{thebibliography}` and the first `\bibitem`. The blank line is a `\par`; inside a
+bibliography that is `\par@in@bibliography`, which (when the next token is not
+`\par`/`\bibitem`) opens a keyless `\lx@bibitem` for the preamble content.
+
+**Perl behavior**: SHARED failure. The keyless phantom `\lx@bibitem` renders as a spurious
+empty first entry — `<ltx:bibitem xml:id="bib.bib1">` with a `(1)` refnum tag and a
+whitespace-only `<ltx:bibblock>` — pushing the real references to `bib.bib2…`. Both engines
+carry a digest-time prune (Perl #2409 / `latex_constructs` `\lx@bibitem` afterDigest) meant
+to catch exactly this, but it only inspects the IMMEDIATELY-previous box; the preamble
+whitespace boxes displace the phantom from that check, so it survives. Same-host Perl emits
+the identical phantom (verified byte-identical on arXiv 2605.03143).
+
+**Rust behavior**: a `Tag!("ltx:bibitem", after_close_late)` scrub (`latex_constructs.rs`)
+removes any bibitem that has no non-empty `key` attribute AND whose `<ltx:bibblock>`s are all
+whitespace — i.e. the auto-opened phantom. A real `\bibitem` always carries a key, so real
+entries are never touched. A surpass over the shared Perl failure.
+
+**Why it's safe.** The discriminator (no `key` + whitespace-only bibblocks) matches only the
+auto-opened phantom; a citeable reference always has a key and real bibblock text. The real
+entries keep their `xml:id`s and keys (cross-references key on the key, not the id).
+
+**Witnesses**: arXiv 2605.03143 (ACM-Reference-Format `.bbl`, empty `(1)` before 23 real
+entries). Guard `cluster_bib_preamble_no_phantom_entry`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (the `.bbl`-preamble phantom bibitem should
+be pruned; the existing digest-time guard misses it when whitespace intervenes).
+
+### 156. Author-attached `\thanks` is a marked note with semantic class hooks, not an inline contact
+
+**Background.** In real arXiv author blocks, `\author{Name\thanks{…}}` carries a small set of
+distinct content kinds — correspondence ("Correspondence to X ⟨email⟩"), funding ("supported by
+NSF grant…"), equal-contribution ("contributed equally"), present-address ("now at…"),
+prior-publication/venue, and generic acknowledgement. pdflatex renders `\thanks` as a footnote:
+a superscript mark on the author name + the content at the page bottom.
+
+**Perl behavior**: SHARED readability gap. Creator-scope `\thanks` becomes
+`<ltx:contact role="thanks">` (`Base_Utility.pool.ltxml` `\lx@add@thanks` →
+`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks]`), which the shared HTML XSLT
+renders INLINE next to the author — structurally identical to an affiliation, with no mark. Same
+in Rust before this change. (Title-scope `\thanks` already becomes a marked note/pubnote; only
+creator-scope was the inline contact.)
+
+**Rust behavior**: creator-scope `\thanks` routes to `<ltx:note role="thanks"
+class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_utilities.rs`
+`\lx@add@thanks` else-branch). It reuses the existing `ltx:note` footnote template (a superscript
+`ltx_note_mark` on the author + `ltx_note_outer`/`ltx_note_content`), so a theme can place it as a
+margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
+`correspondence` / `funding` / `contribution` / `address` / `note`. The class hooks
+(`ltx_note_frontmatter`, `ltx_role_thanks`, `ltx_thanks_<kind>`) let theme designers style each
+kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
+(`LaTeXML.model` + `LaTeXML-structure.rng`/`.rnc`) — else `open_element` auto-closes the creator
+and the note detaches; and an XSLT addition rendering the creator's `ltx:note` child as a
+name-sibling (`LaTeXML-structure-xhtml.xsl`). A surpass over the shared inline-contact behavior.
+
+**Why it's safe.** The classifier only picks a CSS hook, never core semantics. The note attaches
+to the same creator the contact did (verified: note is inside `<creator>`); title-scope
+`\thanks` (a pubnote) and affiliation contacts are untouched. Only golden change:
+`tests/structure/authors.xml` (contact → note). The `frontmatter_ieee_membership_no_phantom`,
+`frontmatter_thanks_literal_mark_mix`, and `author_block_thanks_collapses_in_title_not_inline`
+tests are element-agnostic and unchanged.
+
+**Coalesce edge case.** `coalesce_empty_creators` (which drops nameless comma-split creators and
+moves their annotations to the last real author) special-cased `ltx:contact`; it was extended to
+move `ltx:note` too, so a trailing `\thanks` on a nameless creator — 1510.02728's
+`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%\thanks{…NSF…}}`, where the
+membership pieces digest to empty and the `\thanks` strands on a phantom creator — is not dropped
+with that creator (it lands on Vosoughi, as the contact did). Regression guard
+`cluster_author_thanks_note_survives_empty_creator`.
+
+**Witnesses**: arXiv 2512.24601 (`\thanks{Correspondence to …}` → `ltx_thanks_correspondence`),
+1510.02728 (`\thanks{…supported by NSF…}` → `ltx_thanks_funding`). Guards `authors_test` and
+`cluster_author_thanks_marked_note`.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (author-attached `\thanks` should render as a
+marked footnote, not an inline affiliation-like contact; the content-kind class hooks are a
+theme-facing extension).
+### 157. `minted` renders Pygments syntax colors from a committed `_minted/` frozencache
+
+**Perl behavior**: Perl LaTeXML ships no `minted` binding — the `minted` environment
+errors out (no highlighting at all). Our binding already routes `minted` through the
+`listings` substrate (bold-black keywords, no color), which is itself beyond Perl.
+
+**Rust behavior**: when a paper is built with `\usepackage[frozencache]{minted}`, the
+committed `_minted/` directory (sibling of the main `.tex`) already holds Pygments'
+output on disk as plain LaTeX. We read it and re-emit the **actual Pygments colors**
+(green bold keywords, teal italic comments, blue names, gray operators, purple
+decorators, …). Any colored output surpasses Perl's error-out. `\begin{minted}`,
+`\inputminted`, and `\mintinline` all take this path; on a miss they keep the exact
+uncolored `listings` rendering, and with no `_minted/` present the feature is a strict
+no-op.
+
+**The frozencache on disk.** `default.style.minted` defines a `\PYG@tok@<class>` per
+Pygments token class, each `\let\PYG@bf=\textbf` / `\let\PYG@it=\textit` and/or
+`\def\PYG@tc##1{\textcolor[rgb]{r,g,b}{##1}}`. Each `<MD5>.highlight.minted` is a
+`MintedVerbatim` body of `\PYG{<tokclass>}{<text>}` runs interleaved with literal
+spaces and `\PYGZ*` escapes (`\PYGZbs`→`\`, `\PYGZus`→`_`, `\PYGZgt`→`>`, …).
+
+**Method — content-match, not MD5-keying.** minted keys its cache by an MD5 over the
+snippet + options; replicating that keying is fragile. Instead, each highlight file —
+`\PYG` unwrapped and `\PYGZ*` resolved — yields the exact plain code of some snippet.
+We normalize a block's raw body the same way (rstrip each line, drop blank edges) and
+look it up in a `plaincode → lines` map built once per document (memoized by the
+resolved `_minted/` dir, so a later document never reuses a stale cache). Compound
+classes (`n+nf`, `l+m+mf`) are resolved like `\PYG@toks`: color from the LAST
+sub-class that sets one, bold/italic accumulate. Blocks that use `escapeinside`
+(their raw body carries `@…@` markers the highlight file lacks) simply miss and fall
+back — acceptable, since the current path already handles `escapeinside`.
+
+**Emitter.** Colored lines reuse the listings constructors so the output is
+structurally identical to the substrate (same `<ltx:listingline>`, same
+`ltx_lst_space` `white-space:pre` runs for indentation, same `<ltx:listing>`
+container with base64 `data` provenance): the block body is a sequence of
+`\@lst@startline{}` … `\@lst@endline`, each segment's chars mapped through the
+listings special-char table (`<`→`\textless`, `_`→`\textunderscore`, …) and wrapped
+in `\textbf`/`\textit`/`\textcolor[rgb]{…}` per its style. Two small helpers were
+added to `listings_sty` — `lst_process_display_with` / `lst_process_block_with` —
+that accept pre-built body tokens instead of re-parsing the source; the re-parsed
+entry points delegate to them, so the uncolored path is byte-identical.
+
+**Why it's safe.** Reading the host source tree's `_minted/` is in scope (like reading
+a `.sty`; the ban is only on latexml-oxide's *own* embedded resources). The feature
+activates only when `find_file("_minted/default.style.minted")` resolves, so
+non-frozencache papers are untouched; a cache miss keeps the current listings output.
+
+**Witness**: arXiv:2605.03143 (`\begin{minted}{ocaml|python}` blocks in
+`sections/01-introduction.tex`, `02-a-taste-of-pact.tex`, `03-memo.tex`, plus many
+`\mintinline{python}{…}`). Guard: `minted_frozencache_colors_from_pygments_cache_157`
+(`06_cluster_regressions.rs`) — drives the real binary against a hand-built tiny
+`_minted/` and asserts the `#008000`/`#0000FF` color spans, with a no-cache control
+proving the strict no-op. Implementation:
+`latexml_contrib/src/minted_frozencache.rs` + hooks in `minted_sty.rs`.
+
+**Limitation.** `\mintinline` snippets that Pygments leaves as plain names/punctuation
+(classes `n`, `p`) are correctly uncolored (faithful to Pygments); only `\mintinline`
+itself takes the cache path, not the `\newmintinline`-generated aliases.
+
+### 158. acmart affiliation parts break AFTER the comma, not before
+
+**Background.** acmart's `\affiliation{\institution{}\city{}\state{}\country{}}` puts each
+address part on its own source line. The real `acmart.cls` `\institution`/`\city`/… use
+`\unskip`/`\ignorespaces` (`acmart.cls` L1679, L2879) so the inter-part source newlines do
+not become spaces, and joins the parts with a `, ` separator.
+
+**Perl behavior**: SHARED failure. `acmart.cls.ltxml` (L97-101) ports `\lx@acm@addresspart`
+WITHOUT the `\unskip`/`\ignorespaces`, and with a `,~` (comma + non-breaking-space)
+separator. So each source newline between `\institution{}` and `\city{}` leaks as a space
+BEFORE the comma (serialized `…Institute</ltx:text>\n, <ltx:text>New York…`). On a wrap
+the breakable space sits before the comma, pushing the comma to the START of the next line;
+and the `~` forbids a break AFTER the comma, so long affiliations break mid-part instead.
+Same-host Perl renders identically.
+
+**Rust behavior**: `\lx@acm@addresspart` (`acmart_cls.rs`) appends `\ignorespaces` (after its
+`\fi`) so the trailing source newline is gobbled — the comma binds directly to the preceding
+part — and uses a `, ` (comma + a REGULAR breakable space) separator, so a wrap breaks AFTER
+the comma, matching the pdflatex golden. Empty parts are still skipped.
+
+**Why it's safe.** Scoped to acmart's address-part joiner; the only change is which side of the
+comma the breakable space sits on (and that inter-part source newlines no longer leak).
+
+**Witnesses**: arXiv 2605.03143 ("Basis Research Institute, New York, New York, USA").
+
+**Upstream**: to be filed at brucemiller/LaTeXML (acmart address parts should `\ignorespaces`
+between parts and break after the comma, per the real `acmart.cls`).
+
+### 159. A shared single affiliation renders once below all authors, not stranded on author 1
+
+**Background.** LLNCS-style markup `\author{A \and B \and C}` + one `\institute{…}` with NO
+per-author `\inst` marker means the institute is shared by every author (pdflatex centers it
+once below the author row). LaTeXML's frontmatter model has no document-level affiliation slot
+(`ltx:contact` lives only inside `ltx:creator`, per the RelaxNG `contact` content model), and
+its only mechanism for "shared" is per-author replication.
+
+**Perl behavior**: SHARED failure. `\institute` → `\lx@add@affiliation[labelseq=affiliation]`
+gives the affiliation the label `affiliation:1`; each author gets an auto sequence label
+`author:N` (`\lx@add@frontmatter@now`). In `relocateAnnotations` (`Base_Utility.pool.ltxml`
+L880-910) the affiliation matches no author by its own prefix, then the prefix-stripped
+fallback (`$unlabeltable{$noprefix}`, L899-900) reduces `affiliation:1` to `1` and binds it to
+the FIRST author's `author:1` — so the whole shared institute is stranded under author 1 only.
+Perl 0.8.8 (installed and vendored) and pre-fix Rust produce byte-identical output.
+
+**Rust behavior**: `relocate_annotations` (`base_utilities.rs`) two-part fix. (1) A creator's
+own role-sequence label (`author:N`/`editor:N`/`translator:N`) is NOT indexed into the
+prefix-stripped fallback table, so a shared `affiliation:1` no longer binds to `author:1` by
+number. A genuine per-author affiliation still matches EXACTLY via `labeltable` (the
+`affiliation:1` that `\inst{1}` requests), so `\inst`-targeted markup is unchanged. (2) The now
+un-targeted shared affiliation — with any `\email`/`\url` that inherited its label — is gathered
+onto ONE trailing name-LESS `<ltx:creator role="author">`, kept as the last child of the authors
+container. The ar5iv theme's existing breakout rule then renders a last-position shared
+affiliation once, full-width, centered, below the author row.
+
+**Why it's safe.** Only the auto self-sequence labels leave the numeric fallback; exact-label
+(`\inst`) attachment and genuine cross-prefix misuse recovery are untouched. Guarded by
+`frontmatter_llncs_shared_affiliation_below_authors`.
+
+**Witnesses**: arXiv 2402.19043 (WDM: 5 authors, one shared `\institute`, no `\inst`).
+Guardrails that must NOT regress: 2608.11332 (shared `\email` under `\inst{1}`), 2603.23669
+(two-author-per-creator dedup), 2606.00313 (`\thanks`-abuse affiliations).
+
+**Upstream**: the ar5iv CSS comment already anticipates this ("Ideally latexml's schema should
+evolve to handle this via differently organized markup") — the trailing-creator normalization is
+that markup.

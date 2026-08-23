@@ -714,6 +714,60 @@ impl Graphics {
     Some(hasher.finish())
   }
 
+  /// Derive the destination stem for a CONVERTED graphic.
+  ///
+  /// The first job for a given source keeps the source's basename stem, for
+  /// readable output URLs (`figures/mock1/plot.pdf` → `plot.png`). But two
+  /// *different* sources that share a basename must NOT collapse onto one output
+  /// file: `figures/mock1/plot.pdf` and `figures/jackpot/plot.pdf` would both
+  /// claim `plot.png`, and the first write would silently replace one figure
+  /// with the other. When the stem-based destination is already claimed by
+  /// another source (`used_dests`), or this source already produced a job
+  /// (`page=`/subsequent), fall back to a unique `xN` — mirroring Perl's
+  /// `generateResourcePathname` (`Graphics.pm` L299/L319), which never collapses
+  /// distinct sources. `used_dests` keys on the full `stem.ext`, so `plot.png`
+  /// and `plot.svg` (different *primary* output files) don't count as a
+  /// collision. The `xN` fallback is likewise registered and skips any already
+  /// claimed name, so a source literally named `xN` and a generated `xN` can't
+  /// clobber each other. (A PDF's opt-in vector-SVG *alternate* `{stem}.svg` is
+  /// not tracked here — a separate, pre-existing edge, not this collision.)
+  /// Witness arXiv 2606.30620 (arXiv/html_feedback#6922): Figures 2/4/5 all used
+  /// `figures/{mock1,mock3,jackpot}/chi2_residuals.pdf`.
+  fn assign_dest_name(
+    source: &str,
+    dest_type: &str,
+    has_page: bool,
+    prior_source_jobs: u32,
+    used_dests: &mut HashMap<String, String>,
+    resource_counter: &mut u32,
+  ) -> String {
+    let stem = Path::new(source)
+      .file_stem()
+      .and_then(|s| s.to_str())
+      .unwrap_or("image");
+    let stem_dest = format!("{}.{}", stem, dest_type);
+    let stem_taken = used_dests
+      .get(&stem_dest)
+      .is_some_and(|owner| owner != source);
+    if has_page || prior_source_jobs > 0 || stem_taken {
+      // Advance to a counter name whose output file isn't already claimed by
+      // another source, and register it — else a real source named `xK` (which
+      // took the stem branch) could be silently overwritten by this fallback.
+      loop {
+        *resource_counter += 1;
+        let name = format!("x{}", resource_counter);
+        let dest = format!("{}.{}", name, dest_type);
+        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(dest) {
+          slot.insert(source.to_string());
+          return name;
+        }
+      }
+    } else {
+      used_dests.insert(stem_dest, source.to_string());
+      stem.to_string()
+    }
+  }
+
   fn rotate_image_inplace(dest: &str, angle_deg: f64) -> bool {
     // Sibling temp file to avoid IM's flaky in-place rewrite semantics.
     let dest_path = Path::new(dest);
@@ -2016,6 +2070,9 @@ impl Processor for Graphics {
     }
     let mut copy_dedup: HashMap<CopyKey, String> = HashMap::default();
     let mut convert_source_counts: HashMap<String, u32> = HashMap::default();
+    // Maps a stem-based destination file (`stem.ext`) to the source that claimed
+    // it, so two different sources sharing a basename don't collide (#6922).
+    let mut used_dests: HashMap<String, String> = HashMap::default();
     for (idx, node) in nodes.iter().enumerate() {
       let options = node.get_attribute("options").unwrap_or_default();
       let page = Self::parse_page_option(&options);
@@ -2067,16 +2124,14 @@ impl Processor for Graphics {
           job_id
         } else {
           let prior_source_jobs = convert_source_counts.get(&source).copied().unwrap_or(0);
-          let dest_name = if has_page || prior_source_jobs > 0 {
-            resource_counter += 1;
-            format!("x{}", resource_counter)
-          } else {
-            Path::new(&source)
-              .file_stem()
-              .and_then(|s| s.to_str())
-              .unwrap_or("image")
-              .to_string()
-          };
+          let dest_name = Self::assign_dest_name(
+            &source,
+            &dest_type,
+            has_page,
+            prior_source_jobs,
+            &mut used_dests,
+            &mut resource_counter,
+          );
           convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
           // Vector-SVG path: opt-in for small PDFs only. We prepare an
           // alternate `.svg` destination path alongside the normal raster
@@ -2544,14 +2599,139 @@ mod tests {
   use crate::test_env::EnvGuard;
   use crate::test_env::TempDir;
 
+  /// #6922: two DIFFERENT sources that share a basename must map to DISTINCT
+  /// converted-output files. Before the fix, the first job of each source used
+  /// its `file_stem()`, so `figs/a/plot.pdf` and `figs/b/plot.pdf` both became
+  /// `plot.png` and the first write won — one figure silently replaced by the
+  /// other (arXiv 2606.30620, Figures 2/4/5). The colliding second source now
+  /// falls back to a unique `xN`.
+  #[test]
+  fn convert_dest_names_avoid_basename_collision() {
+    let mut used: HashMap<String, String> = HashMap::default();
+    let mut ctr: u32 = 0;
+    let a = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used, &mut ctr);
+    let b = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
+    assert_eq!(a, "plot", "first source keeps the readable stem");
+    assert_ne!(
+      a, b,
+      "distinct sources sharing basename 'plot' must not collide"
+    );
+    assert!(
+      b.starts_with('x'),
+      "colliding source falls back to a unique xN, got {b}"
+    );
+
+    // A distinct stem is unaffected — keeps its readable name.
+    let c = Graphics::assign_dest_name("figs/c/other.pdf", "png", false, 0, &mut used, &mut ctr);
+    assert_eq!(c, "other");
+
+    // Same stem but a DIFFERENT output extension is a different file, not a collision.
+    let d = Graphics::assign_dest_name("figs/d/plot.eps", "svg", false, 0, &mut used, &mut ctr);
+    assert_eq!(d, "plot", "plot.svg does not collide with plot.png");
+
+    // A second job of the SAME source (e.g. `page=`) is still unique.
+    let e = Graphics::assign_dest_name("figs/a/plot.pdf", "png", true, 1, &mut used, &mut ctr);
+    assert!(
+      e.starts_with('x'),
+      "a second job of one source stays unique, got {e}"
+    );
+
+    // The SAME source is never treated as a self-collision (the `owner != source`
+    // guard). In the real caller a repeat reference is deduped upstream by content
+    // hash, and any genuine second job carries `prior_source_jobs > 0`; this pins
+    // the guard's own contract directly.
+    let mut used2: HashMap<String, String> = HashMap::default();
+    let mut ctr2: u32 = 0;
+    let f1 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
+    let f2 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
+    assert_eq!(f1, "plot");
+    assert_eq!(f2, "plot", "the same source is not a self-collision");
+
+    // Three distinct sources sharing a stem → three distinct outputs.
+    let mut u3: HashMap<String, String> = HashMap::default();
+    let mut c3: u32 = 0;
+    let g: Vec<String> = ["m1/chi2.pdf", "m3/chi2.pdf", "jk/chi2.pdf"]
+      .iter()
+      .map(|s| Graphics::assign_dest_name(s, "png", false, 0, &mut u3, &mut c3))
+      .collect();
+    assert_eq!(g[0], "chi2");
+    assert_eq!(
+      g.iter().collect::<std::collections::HashSet<_>>().len(),
+      3,
+      "3 same-stem sources must yield 3 distinct dest names, got {g:?}"
+    );
+  }
+
+  /// #6922 finding (reviewer): the `xN` fallback must not clobber a real source
+  /// literally named `xN`. The tricky ordering is when the GENERATED `x1` is
+  /// claimed FIRST (by a basename collision) and a real `figs/a/x1.pdf` arrives
+  /// LAST — its stem `x1` is already taken, so it too must fall through to a
+  /// fresh name rather than overwrite the generated `x1.png`.
+  #[test]
+  fn generated_xn_survives_a_later_literal_xn_source() {
+    let mut used: HashMap<String, String> = HashMap::default();
+    let mut ctr: u32 = 0;
+    let base = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
+    let coll = Graphics::assign_dest_name("figs/c/plot.pdf", "png", false, 0, &mut used, &mut ctr);
+    let lit = Graphics::assign_dest_name("figs/a/x1.pdf", "png", false, 0, &mut used, &mut ctr);
+    assert_eq!(base, "plot");
+    assert_eq!(coll, "x1", "the colliding source takes the generated x1");
+    assert_ne!(
+      lit, coll,
+      "a real source named x1 must not reuse the generated x1.png"
+    );
+    assert_eq!(lit, "x2", "the literal-x1 source falls through to x2");
+  }
+
+  // ---- cross-platform child-process fixtures for run_with_timeout ----
+  // Unix `true`/`sh`/`sleep` don't exist on Windows; use cmd/ping there so the
+  // kill / exit-status / stderr-capture logic gets real coverage on both.
+
+  /// A child that runs far longer than any test deadline (so the timeout kills
+  /// it). `ping` is a bare exe — no shell wrapper — so `kill()` reaps it with no
+  /// orphaned grandchild.
+  fn spawn_slow_child() -> std::process::Command {
+    let mut cmd;
+    if cfg!(windows) {
+      cmd = std::process::Command::new("ping");
+      cmd.args(["-n", "11", "127.0.0.1"]);
+    } else {
+      cmd = std::process::Command::new("sleep");
+      cmd.arg("10");
+    }
+    cmd
+  }
+
+  /// A child that exits 0 immediately (Unix `true` / Windows `cmd /C exit 0`).
+  fn spawn_fast_ok() -> std::process::Command {
+    let mut cmd = std::process::Command::new(if cfg!(windows) { "cmd" } else { "true" });
+    if cfg!(windows) {
+      cmd.args(["/C", "exit 0"]);
+    }
+    cmd
+  }
+
+  /// A child that writes to stderr and exits non-zero. Returns the command and
+  /// its program name (for the diagnostic assertion).
+  fn spawn_stderr_fail() -> (std::process::Command, &'static str) {
+    if cfg!(windows) {
+      let mut cmd = std::process::Command::new("cmd");
+      cmd.args(["/C", "echo boom on stderr 1>&2 & exit 3"]);
+      (cmd, "cmd")
+    } else {
+      let mut cmd = std::process::Command::new("sh");
+      cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+      (cmd, "sh")
+    }
+  }
+
   /// `run_with_timeout` kills the child and returns `None` when the
-  /// process exceeds the deadline. Uses `sleep` as a stand-in for any
+  /// process exceeds the deadline. The slow child stands in for any
   /// runaway subprocess (convert, gs, mutool, …).
   #[test]
   fn run_with_timeout_kills_slow_child() {
     let start = std::time::Instant::now();
-    let mut cmd = std::process::Command::new("sleep");
-    cmd.arg("10");
+    let cmd = spawn_slow_child();
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_millis(200));
     let elapsed = start.elapsed();
     assert!(
@@ -2570,10 +2750,10 @@ mod tests {
   /// Fast-completing child returns its real exit status, not a kill.
   #[test]
   fn run_with_timeout_returns_status_for_fast_child() {
-    let cmd = std::process::Command::new("true");
+    let cmd = spawn_fast_ok();
     let result = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
     let status = result.expect("expected clean exit");
-    assert!(status.success(), "`true` should exit successfully");
+    assert!(status.success(), "a fast child should exit successfully");
   }
 
   /// Missing binary → `None`, not a panic.
@@ -3304,8 +3484,7 @@ endobj
   #[test]
   fn run_with_timeout_captures_stderr_into_diag() {
     take_converter_diag(); // clear
-    let mut cmd = std::process::Command::new("sh");
-    cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+    let (cmd, prog) = spawn_stderr_fail();
     let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
     assert!(
       status.map(|s| !s.success()).unwrap_or(false),
@@ -3313,7 +3492,7 @@ endobj
     );
     let diag = take_converter_diag().expect("a diagnostic must be recorded");
     assert!(
-      diag.contains("boom on stderr") && diag.contains("sh"),
+      diag.contains("boom on stderr") && diag.contains(prog),
       "diag should name the program + its stderr; got: {diag}"
     );
   }

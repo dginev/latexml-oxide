@@ -1,0 +1,18 @@
+\documentclass{article}
+% algorithm2e \For body lines separated by `\\` must each become their own
+% indented listingline under the Vsline `|` rule — not merge into one line via
+% <break/>. before_float re-lets `\\`→`\lx@newline` (tabular guard); we re-assert
+% `\\`→`\lx@algo@par` after it. Witness arXiv 2002.09766 Algorithm 1. KNOWN_PERL_ERRORS #109.
+\usepackage[algo2e]{algorithm2e}
+\begin{document}
+\begin{algorithm*}
+ ~~Init line before loop\;
+ \For{i=2,\ldots,L-1}{
+  ~~Compute line A\\
+  Line B\;\\
+  Line C\;\\
+ }
+ ~~After loop line
+ \caption{Test}
+\end{algorithm*}
+\end{document}

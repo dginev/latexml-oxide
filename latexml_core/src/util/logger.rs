@@ -1,6 +1,6 @@
 use std::{
   cell::RefCell,
-  sync::atomic::{AtomicBool, Ordering},
+  sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
@@ -31,6 +31,42 @@ fn stderr_use_color() -> bool {
   *USE_COLOR
     .get_or_init(|| std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none())
 }
+
+/// The STDERR verbosity gate, decoupled from the log-file floor.
+///
+/// Perl LaTeXML separates the two: the log file (`$LOG`) receives every message
+/// while it is open, but STDERR prints only when `$USE_STDERR && $VERBOSITY >= 0`
+/// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Warn`) without
+/// lowering what the log keeps — so `(Loading …)` progress notes and `Info:`
+/// records still reach `.latexml.log`, which is what BookML's makefile dependency
+/// tracking reads (issue #763). `--verbose`/`--debug` raise it (to `Debug`).
+///
+/// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
+/// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
+static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
+
+/// The current STDERR verbosity (see [`STDERR_LEVEL`]).
+fn stderr_level() -> LevelFilter {
+  match STDERR_LEVEL.load(Ordering::Relaxed) {
+    0 => LevelFilter::Off,
+    1 => LevelFilter::Error,
+    2 => LevelFilter::Warn,
+    3 => LevelFilter::Info,
+    4 => LevelFilter::Debug,
+    _ => LevelFilter::Trace,
+  }
+}
+
+/// Does the current STDERR verbosity admit a record of `level`? `Error`/`Fatal`
+/// are handled unconditionally by the caller (the project's deliberate
+/// always-emit-errors divergence); this governs the verbosity-gated levels.
+pub fn stderr_admits(level: Level) -> bool { level.to_level_filter() <= stderr_level() }
+
+/// Whether STDERR currently shows `Info`-level progress notes — Perl
+/// `$VERBOSITY >= 0`. The `Note!`/`NoteSTDERR!` macros gate their STDERR echo on
+/// this, decoupled from the log-file floor so `--quiet` silences the console note
+/// while the log keeps it (issue #763).
+pub fn stderr_shows_info() -> bool { stderr_admits(Level::Info) }
 
 struct LatexmlLogger;
 static LOGGER: LatexmlLogger = LatexmlLogger;
@@ -258,9 +294,13 @@ impl log::Log for LatexmlLogger {
         {
           append_note(log, &strip_ansi(&note));
         }
-        // Write and publish the cursor state under ONE stderr lock, so a
-        // concurrent diagnostic record cannot observe a stale flag.
-        {
+        // The LOG append above is the log-file record (Perl `$LOG` write, always).
+        // The STDERR echo is the live console indicator and is gated on the
+        // decoupled verbosity: `--quiet` silences the note here while the log
+        // still keeps it (issue #763; Perl `ProgressSpinup` gates STDERR on
+        // `$VERBOSITY >= 0`). Write and publish the cursor state under ONE stderr
+        // lock, so a concurrent diagnostic record cannot observe a stale flag.
+        if stderr_admits(record.level()) {
           use std::io::Write;
           let mut err = std::io::stderr().lock();
           let _ = err.write_all(note.as_bytes());
@@ -375,7 +415,17 @@ impl log::Log for LatexmlLogger {
       // STDERR_AT_LINE_START). One critical section: read the flag, write, and
       // republish it while holding the stderr lock, so the "record starts at
       // line start" guarantee survives concurrent loggers.
-      {
+      //
+      // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
+      // subject only to the Info floor). The STDERR echo is gated on the decoupled
+      // console verbosity so `--quiet` reduces the console without touching the log
+      // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
+      // project's deliberate always-emit-errors divergence, since cortex aggregates
+      // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
+      // value and Fatal records are emitted at `Level::Error`, so `<= Error`
+      // captures both.
+      let to_stderr = record.level() <= Level::Error || stderr_admits(record.level());
+      if to_stderr {
         use std::io::Write;
         let text = if stderr_use_color() {
           painted_message
@@ -397,7 +447,15 @@ impl log::Log for LatexmlLogger {
   fn flush(&self) {}
 }
 
-/// initialize the logger at a given verbosity `level`
+/// initialize the logger at a given STDERR verbosity `level`
+///
+/// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
+/// `--verbose`/`--debug` ⇒ `Debug`). Perl decouples this from the log-file floor:
+/// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while
+/// STDERR follows `level` (`Common/Error.pm` `_printline`; issue #763). So the
+/// global `log` `max_level` is set to the MORE verbose of `level` and `Info` (the
+/// floor), admitting to `LatexmlLogger::log` everything the log needs; the STDERR
+/// echo is then gated separately on the `STDERR_LEVEL` atomic.
 ///
 /// Returns the underlying `SetLoggerError` if another `log` global logger
 /// is already installed (e.g. an embedder set up `tracing-log` first).
@@ -405,9 +463,12 @@ impl log::Log for LatexmlLogger {
 /// `flush_log` buffers are independent of the `log` crate sink and keep
 /// working either way.
 pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
-  log::set_logger(&LOGGER)?;
-  log::set_max_level(level);
-  Ok(())
+  // Global config (STDERR gate + log-file floor) is set unconditionally — it must
+  // reflect the requested verbosity even if the logger was already installed (a
+  // second `init` in-process returns `Err` from `set_logger`, which callers `.ok()`).
+  STDERR_LEVEL.store(level as usize, Ordering::Relaxed);
+  log::set_max_level(level.max(LevelFilter::Info));
+  log::set_logger(&LOGGER)
 }
 
 #[cfg(test)]

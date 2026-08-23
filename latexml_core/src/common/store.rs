@@ -1045,7 +1045,15 @@ impl<'a> From<&'a Stored> for Option<Number> {
       Stored::MuDimension(n) => Some(Number::new(n.value_of())),
       Stored::MuGlue(n) => Some(Number::new(n.value_of())),
       other => {
-        eprintln!("TODO: auto-cast of Stored to Number attempted on {other:?}");
+        // No Number projection for this Stored variant — surface it through the
+        // logger (counts in REPORT, respects the log floor + `--quiet` stderr gate)
+        // rather than a raw `eprintln!` that bypassed both; callers degrade on the
+        // None. Mirrors the `Warn!("stored", "cast", …)` fallback for the CS cast.
+        Warn!(
+          "stored",
+          "cast",
+          s!("no auto-cast of Stored to Number for {other:?}")
+        );
         None
       },
     }

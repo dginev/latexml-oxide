@@ -175,6 +175,14 @@ fn real_main() -> Result<()> {
     },
   };
 
+  // Identity banner (executable, version, git revision, exact start time) —
+  // the same line `Converter::convert` logs for the document front-ends, emitted
+  // here because latexmlmath drives its own digest path. `Note!` does the
+  // log-always / stderr-gated split, so `--quiet` mutes it on the console
+  // (`stderr_shows_info()` is false at Warn); latexmlmath binds no log buffer, so
+  // there is no log file to keep it in either.
+  Note!(latexml::identity::identity_banner());
+
   let mut core_engine = new_test_engine();
   let (lexemes, mut lex_nodes, xmath_opt, mut doc) =
     lex_single_tex_formula(&source, &mut core_engine);

@@ -10,8 +10,9 @@
 
 mod cluster;
 use cluster::{
-  convert_and_post_clean, convert_and_post_pmml_clean, convert_clean, convert_expecting_errors,
-  convert_log, convert_to_xml, convert_to_xml_contrib,
+  convert_and_post_clean, convert_and_post_pmml_clean, convert_and_post_pmml_contrib_clean,
+  convert_clean, convert_expecting_errors, convert_log, convert_to_xml, convert_to_xml_ar5iv,
+  convert_to_xml_contrib, convert_to_xml_contrib_clean,
 };
 
 #[test]
@@ -144,6 +145,430 @@ fn cluster_pandoc_calc_colwidth_6909() {
     xml.contains(r#"width="96.3pt""#) && xml.contains(r#"width="224.7pt""#),
     "Pandoc calc column widths are not the expected proportional 96.3pt / 224.7pt \
      (30%/70% of 321pt):\n{xml}"
+  );
+}
+/// Issue #719 (witness: user MWE): with `\setlength{\parindent}{0pt}`, the FIRST
+/// paragraph must be marked `ltx_noindent` so the stylesheet's default 2em
+/// first-line indent (`ltx-article.css` `.ltx_para > .ltx_p:first-child`) does
+/// not apply — pdflatex shows no indent. Perl LaTeXML emits byte-identical XML
+/// (only the 2nd+ paragraphs carry the class, since `\par` records it for the
+/// NEXT paragraph and the first has no prior `\par`); Rust surpasses by also
+/// stamping the first paragraph from the live `\parindent`. OXIDIZED_DESIGN #143.
+#[test]
+fn cluster_first_para_noindent_719() {
+  let xml = convert_to_xml("tests/cluster_regressions/first_para_noindent_719.tex");
+  // Canary: the FIRST <para> must now carry ltx_noindent (it did not before).
+  assert!(
+    xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
+    "first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
+  );
+  // The 2nd paragraph keeps its class (deferred mechanism, unchanged).
+  assert!(
+    xml.contains(r#"<para class="ltx_noindent" xml:id="p2">"#),
+    "second paragraph lost its ltx_noindent class (#719 regression):\n{xml}"
+  );
+  // Control: DEFAULT (nonzero) \parindent must leave NO paragraph noindent —
+  // the surpass fires only on a genuine zero \parindent, never by default.
+  let def = convert_to_xml("tests/cluster_regressions/first_para_indent_default_719.tex");
+  assert!(
+    !def.contains("ltx_noindent"),
+    "a paragraph was wrongly marked ltx_noindent under the DEFAULT \\parindent \
+     (#719 over-application):\n{def}"
+  );
+}
+/// Issue #719, no-dump path. The first landing keyed the first-paragraph stamp on
+/// a `seen_first_para` state one-shot, which a begin-document `\par` consumed
+/// before the first content paragraph under the no-dump sequence — so the fix
+/// silently reverted there (and in CI, whose freshly-generated dump takes the same
+/// path). The stamp is now structural (first `ltx:para` of its parent), robust to
+/// stray `\par` timing. This subprocess drives the binary with `LATEXML_NODUMP=1`
+/// (env-isolated to dodge the shared-env race) to guard exactly that path.
+#[test]
+fn cluster_first_para_noindent_nodump_719() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(
+    dir.path().join("m.tex"),
+    "\\documentclass[12pt]{article}\n\\setlength{\\parindent}{0pt}\n\
+     \\begin{document}\nFirst line\n\nsecond lines\n\\end{document}\n",
+  )
+  .expect("write m.tex");
+  let status = Command::new(bin)
+    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
+    .env("LATEXML_NODUMP", "1")
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+  assert!(
+    status.status.success() && xml.contains(r#"<para class="ltx_noindent" xml:id="p1">"#),
+    "no-dump first paragraph is not marked ltx_noindent despite \\parindent=0pt (#719):\n{xml}"
+  );
+}
+/// Issue #722: the optional `[dimen]` of `\\[20pt]` (extra vertical space at a
+/// forced line break) is preserved as a themeable CSS custom property
+/// `--ltx-break-space` on `ltx:break`. Perl parses the glue and drops it
+/// (`ltx:break` has no spacing slot); we surpass it, default-inert. Plain `\\` and
+/// `\\[0pt]` stay bare. OXIDIZED_DESIGN #142.
+#[test]
+fn cluster_break_optional_glue_722() {
+  let xml = convert_to_xml("tests/cluster_regressions/break_optional_space_722.tex");
+  assert!(
+    xml.contains(r#"<break cssstyle="--ltx-break-space:20.0pt"/>"#),
+    "\\\\[20pt] should preserve its optional glue as --ltx-break-space on ltx:break:\n{xml}"
+  );
+  // Exactly one break carries the variable — plain \\ and \\[0pt] must stay bare.
+  assert_eq!(
+    xml.matches("--ltx-break-space").count(),
+    1,
+    "only the \\\\[20pt] break should carry --ltx-break-space (plain \\\\ and \\\\[0pt] \
+     stay attribute-free):\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6924 (witness arXiv 2608.10928): the paper sets `\title{}`
+/// (structured `<ltx:title>`) but never calls `\maketitle`; it hand-typesets the
+/// title (and authors) as a leading centered display-font block. LaTeXML captured
+/// the structured title AND kept the ink → the title rendered twice. We prioritize
+/// the structured metadata: the redundant leading title-ink is removed, the
+/// semantic `<ltx:title>` kept, and the author ink (no structured counterpart) is
+/// preserved.
+#[test]
+fn cluster_frontmatter_title_ink_dedup_6924() {
+  let xml = convert_to_xml("tests/cluster_regressions/frontmatter_title_ink_dedup_6924.tex");
+  // The structured title survives.
+  assert!(
+    xml.contains("<title>"),
+    "the structured <ltx:title> must remain:\n{xml}"
+  );
+  // The title text now appears exactly ONCE (structured only; the body ink is gone).
+  assert_eq!(
+    xml.matches("My Great Title").count(),
+    1,
+    "title should appear once (structured), not duplicated as body ink:\n{xml}"
+  );
+  assert_eq!(
+    xml.matches("A Longer Subtitle").count(),
+    1,
+    "subtitle line once:\n{xml}"
+  );
+  // The hand-typeset AUTHOR block has no structured counterpart, so it stays.
+  assert!(
+    xml.contains("Jane Q. Author"),
+    "author ink must be preserved:\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6569 (witness arXiv 2410.00317): a nicematrix
+/// `bNiceMatrix[first-row,first-col]` with a `\CodeBefore … \Body` cell-coloring
+/// block. Beyond-Perl (no Perl `nicematrix.sty.ltxml`): the family reduces to a real
+/// bracketed math array (`ltx:XMArray`), each `\rectanglecolor{blue!15}{i-j}{k-l}`
+/// fills its mapped `XMCell`s with `backgroundcolor`, and the first-row/first-col
+/// label cells are marked `thead` — NOT a discarded placeholder + `Error:undefined`.
+/// The four rects color exactly the 6 nonzero rigidity-matrix entries
+/// (`{1-1},{1-3},{2-1..2-2},{3-2..3-3}` = 1+1+2+2). See `nicematrix_sty.rs`.
+#[test]
+fn cluster_nicematrix_codebefore_6569() {
+  let xml =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/nicematrix_codebefore_6569.tex");
+  // Stage 1: the matrix renders as a real array, no placeholder leak.
+  assert!(
+    xml.contains("<XMArray"),
+    "matrix should render as a real ltx:XMArray:\n{xml}"
+  );
+  assert!(
+    !xml.contains("nicematrix-placeholder"),
+    "no nicematrix placeholder note should remain:\n{xml}"
+  );
+  // Stage 3: the \CodeBefore rects color exactly the 6 blue!15 cells.
+  let bg = xml.matches("backgroundcolor=").count();
+  assert_eq!(
+    bg, 6,
+    "expected 6 blue!15 backgroundcolor cells, got {bg}:\n{xml}"
+  );
+  // Stage 2: first-row/first-col labels carry thead.
+  assert!(
+    xml.contains("thead="),
+    "first-row/first-col label cells should be marked thead:\n{xml}"
+  );
+  // End-to-end: the cell colors must survive MathML post-processing onto the
+  // `m:mtd` (as `mathbackground`, which the XSLT turns into the `--ltx-bg-color`
+  // theming variable the CSS paints). Guards the pmml `pmml_array` carry.
+  let pmml =
+    convert_and_post_pmml_contrib_clean("tests/cluster_regressions/nicematrix_codebefore_6569.tex");
+  let mtd_bg = pmml.matches("mathbackground=").count();
+  assert_eq!(
+    mtd_bg, 6,
+    "expected 6 m:mtd carrying mathbackground, got {mtd_bg}:\n{pmml}"
+  );
+}
+/// arXiv/html_feedback#6569 (PR-review regression): two Nice matrices sharing ONE
+/// display must each paint their OWN array. The `\lx@nicematrix@applycolors`
+/// color-walk targeted the FIRST matrix-XMDual under the shared `ltx:XMath`, so
+/// the second matrix's `\CodeBefore` color leaked onto the first (and could even
+/// miscolor an adjacent plain `pmatrix`). Fixed by selecting the LAST
+/// matrix-XMDual (the just-closed one). RED before the fix: the first array held
+/// BOTH colored cells.
+#[test]
+fn cluster_nicematrix_multi_matrix_no_color_leak_6569() {
+  let xml =
+    convert_to_xml_contrib_clean("tests/cluster_regressions/nicematrix_multi_display_6569.tex");
+  // Two matrices, one colored cell each → exactly two backgrounds total.
+  assert_eq!(
+    xml.matches("backgroundcolor=").count(),
+    2,
+    "each of the two matrices colors exactly one cell:\n{xml}"
+  );
+  // The leak painted both onto the FIRST matrix's array; assert the first
+  // `<XMArray>` holds exactly ONE colored cell, not both.
+  let start = xml.find("<XMArray").expect("an XMArray must be present");
+  let first_array = &xml[start..];
+  let end = first_array.find("</XMArray>").expect("a closed XMArray");
+  assert_eq!(
+    first_array[..end].matches("backgroundcolor=").count(),
+    1,
+    "the first matrix must hold only its own colored cell, not the second's:\n{xml}"
+  );
+}
+/// dginev/latexml-oxide#740 + #742 (reporter nasser1): vertical rules in a math
+/// `array`, two independent defects fixed to byte-for-byte Perl parity.
+///
+/// #740 (POST): `cc|c`, framed `|c|c|`, and colortbl `\arrayrulecolor` rendered as
+/// bare `<m:mtd>` — the rule vanished. The CORE XML already carried the correct
+/// `border="r"`/`border="b l r"` on each `XMCell` (identical to Perl); the loss was
+/// in `pmml_array`, which never read `border`. Ported Perl `MathML.pm` L456-475:
+/// `border` → space-joined `ltx_border_*` classes (and `thead` → `ltx_th_*`, folded
+/// with any explicit `class`).
+///
+/// #742 (CORE): the `array`-package `!{|}` (`@{}cc!{|}c@{}`) inserts its filler past
+/// the column's trailing `\hfil`, defeating the centering, so Perl right-aligns that
+/// cell (`align="right"`). Rust's `expected_from_template` fallback in
+/// `extract_alignment_column` — a Rust-only patch for trailing fills lost in nested
+/// `\hbox` digestion — wrongly restored Center. `template_after_fill_defeated` now
+/// detects the defeated fill (real content after the last `\hfil` in the `after`
+/// template; a `\vrule` rule is skippable and does NOT defeat it) and the fallback
+/// leaves the Perl-faithful Right. RED before the fixes: zero `ltx_border_` classes,
+/// and the `!{|}` cell centered.
+#[test]
+fn cluster_array_vertical_rule_border_740() {
+  let pmml = convert_and_post_pmml_clean("tests/cluster_regressions/array_vertical_rule_740.tex");
+  // #740 — `cc|c` right rule on the middle column of each of two rows.
+  assert_eq!(
+    pmml.matches("ltx_border_r").count(),
+    4,
+    "expected 4 m:mtd with a right rule (2 from cc|c, 2 from the framed array):\n{pmml}"
+  );
+  // #740 — framed `|c|c|` + `\hline` corner cell folds three borders into one class.
+  assert!(
+    pmml.contains(r#"class="ltx_border_b ltx_border_l ltx_border_r""#),
+    "framed corner cell should fold b/l/r into one class attribute:\n{pmml}"
+  );
+  // #740 — `\hline` top rule.
+  assert!(
+    pmml.contains("ltx_border_t"),
+    "the \\hline should surface as a top-rule class:\n{pmml}"
+  );
+  // #742 — the two `!{|}` cells (columns q,t) are right-aligned in the core XML …
+  let xml = convert_to_xml("tests/cluster_regressions/array_vertical_rule_740.tex");
+  assert_eq!(
+    xml.matches(r#"<XMCell align="right">"#).count(),
+    2,
+    "the two `!{{|}}` cells must be right-aligned like Perl, not centered:\n{xml}"
+  );
+  // … and that survives into the rendered MathML as `ltx_align_right`.
+  assert_eq!(
+    pmml.matches("ltx_align_right").count(),
+    2,
+    "the two `!{{|}}` cells should render `ltx_align_right`:\n{pmml}"
+  );
+}
+/// arXiv/html_feedback#6681 (reporter younesmouhib, paper 2606.22155v1): "does
+/// not compile properly: half missing". The deployed page (LaTeXML oxide 0.7.5)
+/// dumped LaTeXML-internal constructors (`\@@listings@block`,
+/// `\@@numbered@section`, `\lx@bibliography`) as literal text from the second
+/// `lstlisting` onward, swallowing the whole document tail — Open questions,
+/// bibliography, and the Verification appendix all became macro soup. The fix
+/// landed after that build; current main converts the paper end-to-end. This
+/// pins the fixed behaviour on the paper's construct: `listings` blocks with
+/// `breaklines=true`/`columns=fullflexible` inside `table`s, followed by more
+/// sectioning and an appendix. A regression would re-leak the internal
+/// constructors and drop the tail. (Any `@@…` in the output is a leak: the
+/// verbatim listing source lives base64-encoded in `data=`, whose alphabet
+/// excludes `@`, so it can never false-match.)
+#[test]
+fn cluster_listings_tail_leak_6681() {
+  let xml = convert_to_xml("tests/cluster_regressions/listings_tail_leak_6681.tex");
+  // No LaTeXML-internal constructor may leak into the serialized body as text.
+  for marker in ["@@listings@block", "@@numbered@section", "lx@bibliography"] {
+    assert!(
+      !xml.contains(marker),
+      "internal constructor `{marker}` leaked as text — the listings tail regressed:\n{xml}"
+    );
+  }
+  // Both witness-table listings survive as real listings, not swallowed text.
+  assert_eq!(
+    xml.matches(r#"class="ltx_lstlisting""#).count(),
+    2,
+    "both lstlisting blocks must render as listings:\n{xml}"
+  );
+  // The document tail after the second listing must render: the second section,
+  // the appendix, and their body paragraphs.
+  for needle in [
+    "Open questions",
+    "Verification",
+    "must render as ordinary text",
+    "must survive as a real appendix",
+  ] {
+    assert!(
+      xml.contains(needle),
+      "tail content `{needle}` missing — the listing swallowed the rest:\n{xml}"
+    );
+  }
+  assert!(
+    xml.contains("<appendix"),
+    "the Verification appendix must survive:\n{xml}"
+  );
+}
+/// arXiv/html_feedback#6873 (reporter tdsmith, paper 2601.13118v1): Table 2 — a
+/// `tabular` inside a `tcolorbox` `enhanced` skin — rendered vertically upside
+/// down. The box is drawn as SVG and the table sits in an `<svg:foreignObject>`
+/// inside a TeX-y-up (flipped) `<svg:g>`; the fo needs a counter-flip
+/// `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent afterClose,
+/// `tex_box.rs` / Perl `TeX_Box.pool.ltxml` L407-423) or it renders upside down.
+/// `insert_block` renames a `_CaptureBlock_` — which carries the block's box —
+/// to `svg:foreignObject`; `rename_node_internal` now carries the node box
+/// across (Perl copies it via the `_box` attribute), so the fo's afterClose
+/// finds the size and sets the flip. RED before the fix: the tabular's
+/// foreignObject had no `transform`, so the height was 0 and it drew flipped.
+#[test]
+fn cluster_tcolorbox_tabular_not_flipped_6873() {
+  let xml = convert_to_xml("tests/cluster_regressions/tcolorbox_tabular_flip_6873.tex");
+  // The <svg:foreignObject> that wraps the <tabular> must carry the y-flip
+  // transform — otherwise the table draws upside down inside the flipped group.
+  let tab = xml
+    .find("<tabular")
+    .unwrap_or_else(|| panic!("a tabular should render inside the SVG picture:\n{xml}"));
+  let fo_start = xml[..tab]
+    .rfind("<svg:foreignObject")
+    .unwrap_or_else(|| panic!("the tabular must be wrapped in an svg:foreignObject:\n{xml}"));
+  let fo_open = &xml[fo_start..tab];
+  assert!(
+    fo_open.contains(r#"transform="matrix(1 0 0 -1"#),
+    "the foreignObject wrapping the tabular must carry the y-flip transform \
+     (else the table renders upside down):\n{fo_open}"
+  );
+}
+/// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
+/// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
+/// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
+/// Miller, LaTeXML #2435) — we keep that. Instead, `Verbatim`/`HyperVerbatim`
+/// now hold an identity ASCII fontmap THROUGH digestion (a `before_digest`
+/// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
+/// argument stays ASCII while normal T1 text still follows Bruce's mapping.
+/// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #144.
+/// Driven by the binary so the runtime Rhai binding loads (the reported path).
+#[test]
+fn cluster_t1_hyperverbatim_ascii_723() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(
+    dir.path().join("myhyper.sty.rhai"),
+    "DefConstructor(\"\\\\myhyper HyperVerbatim\", \"<ltx:ref class=\\\"myhyper\\\" href=\\\"#1\\\">#1</ltx:ref>\");\n",
+  )
+  .expect("write rhai");
+  std::fs::write(
+    dir.path().join("m.tex"),
+    "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{myhyper}\n\
+     \\begin{document}\n\\myhyper{http://x/a~b^c}\n\\end{document}\n",
+  )
+  .expect("write m.tex");
+  let out = Command::new(bin)
+    .args(["m.tex", "--dest", "m.xml", "--nocomments"])
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let xml = std::fs::read_to_string(dir.path().join("m.xml")).unwrap_or_default();
+  // Canary: the HyperVerbatim `~`/`^` (href AND text) must be ASCII, not U+02DC/U+02C6.
+  assert!(
+    out.status.success()
+      && xml.contains("http://x/a~b^c")
+      && !xml.contains('\u{02DC}')
+      && !xml.contains('\u{02C6}'),
+    "T1 HyperVerbatim `~`/`^` not ASCII (#723):\n{xml}"
+  );
+}
+/// Issue #723, extended scope: the same rule applies to `\verb`, the `verbatim`
+/// environment, and `\url`/`\path` (all select the identity ASCII fontmap for
+/// their run while keeping the typewriter family). `~`/`^` stay ASCII in the
+/// DISPLAYED text, not Bruce's accent glyphs. `\url`/`\path` were missed by the
+/// first pass (#727): their display is `\UrlFont`-wrapped (a plain, non-verbatim
+/// arg), so the reader's ASCII fontmap didn't reach it — `\UrlFont` now selects
+/// `\fontencoding{ASCII}`, matching pdflatex (Perl shows the accents there).
+/// OXIDIZED_DESIGN #144.
+#[test]
+fn cluster_t1_verbatim_ascii_723() {
+  let xml = convert_to_xml("tests/cluster_regressions/t1_ascii_tilde_circumflex_723.tex");
+  // \verb|a~b^c| and the verbatim env `d~e^f` — both ASCII, both typewriter.
+  assert!(
+    xml.contains("a~b^c") && xml.contains("d~e^f"),
+    "T1 \\verb / verbatim env did not keep `~`/`^` ASCII (#723):\n{xml}"
+  );
+  // \url{http://g/~h^i} and \path|j~k^l| — the DISPLAYED url text (the href
+  // attribute was always ASCII via reversion) must stay ASCII too.
+  assert!(
+    xml.contains("http://g/~h^i") && xml.contains("j~k^l"),
+    "T1 \\url / \\path displayed text did not keep `~`/`^` ASCII (#723):\n{xml}"
+  );
+  assert!(
+    !xml.contains('\u{02DC}') && !xml.contains('\u{02C6}'),
+    "T1 verbatim/url still emits accent U+02DC/U+02C6 for a literal `~`/`^` (#723):\n{xml}"
+  );
+  assert!(
+    xml.matches(r#"font="typewriter""#).count() >= 4,
+    "verbatim/url runs lost the typewriter family (#723 — encoding must not clobber font):\n{xml}"
+  );
+}
+/// Issue #723 (reporter xworld21 / Vincenzo Mantova), follow-up rebuttal: a
+/// non-expandable control sequence inside a hyperref `\url`/`\href` (e.g. `\def`)
+/// was DIGESTED — it executed, consumed the following tokens, truncated the URL
+/// and raised errors (`\url{…q=\def}` → `href="…q="` + 2 errors), whereas
+/// pdflatex/url.sty keep it as literal href text. url.sty stringifies the URL via
+/// `\meaning` (all leftover control sequences become inert characters); we now
+/// mirror that faithfully: after the semiverbatim read, any surviving control
+/// sequence is recatcoded to `other` instead of being handed to digestion. The
+/// url.sty escapes (`\_`, `\%`, `\^`, `\textasciitilde`, `\textbackslash`, …)
+/// still RESOLVE to their character (they expand during the read), so realistic
+/// URLs are unchanged. Surpasses Perl (same digest bug). Distilled reproductions
+/// cover Vincenzo's reported cases; the full escape matrix is in `hyperurls`.
+#[test]
+fn cluster_url_cs_verbatim_723() {
+  // `convert_to_xml` gates on ZERO `Error:` markers — RED while `\def` digests.
+  let xml = convert_to_xml("tests/cluster_regressions/url_cs_verbatim_723.tex");
+  // (a)+(b) Canary: the leftover `\def` survives as literal href text in BOTH
+  // `\url` and `\href`, rather than executing and truncating the URL.
+  assert!(
+    xml.contains(r#"href="http://x/q=\def""#),
+    "\\url with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  assert!(
+    xml.contains(r#"href="http://x/h=\def""#),
+    "\\href with a trailing \\def did not keep it as literal href text (#723):\n{xml}"
+  );
+  // (c) Regression guard: resolving control sequences stay resolved and a literal
+  // `~` passes through — \textasciitilde -> ~ , \textbackslash -> \ .
+  assert!(
+    xml.contains(r#"href="http://x/a~b~c\d""#),
+    "`\\textasciitilde`/`\\textbackslash`/literal `~` regressed in a URL (#723):\n{xml}"
+  );
+  // (d) Regression guard: `\href` keeps a literal `~`.
+  assert!(
+    xml.contains(r#"href="http://x/~u""#),
+    "`\\href` dropped a literal `~` (#723):\n{xml}"
+  );
+  // (e) Regression guard: url.sty escapes still resolve to their character.
+  assert!(
+    xml.contains(r#"href="http://x/a_b%c""#),
+    "url.sty escapes `\\_`/`\\%` no longer resolve to `_`/`%` (#723 regression):\n{xml}"
   );
 }
 #[test]
@@ -1230,5 +1655,383 @@ fn cleveref_explicit_crefname_overrides_heading() {
   assert!(
     !x.contains(r#"<text class="ltx_ref_tag">Widget</text>"#),
     "the heading \"Widget\" leaked past the explicit \\crefname into the ref:\n{x}"
+  );
+}
+
+/// GREEN guard: algorithm2e line numbers must render in one uniform style, matching
+/// the pdflatex golden where every number is `\NlSty` = `\textnormal{\textbf{…}}`
+/// (upright bold). Previously a number inherited the ambient font — bold on a line
+/// whose leading algorithm2e keyword (`\For`/`\If`/`\While`…) had switched to `\KwSty`
+/// bold, plain otherwise — because our §4 content-start `\everypar` numbering fires
+/// `\nl` while the keyword bold is active (Perl emits at end-of-line, font neutral).
+/// FIXED by restoring the real-sty `\NlSty` wrap in `\algocf@printnl`
+/// (`algorithm2e_sty.rs`): the number now flows through `\NlSty{\theAlgoLine}` whose
+/// `\textnormal` resets shape/series, so every number is uniform bold regardless of
+/// ambient font. (Corrects the earlier probe claim that the tag bypassed
+/// `\algocf@printnl` — it does not.) Independent of the §4(3) counter over-step.
+#[test]
+fn cluster_algorithm2e_uniform_line_number_font() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_bold_number.tex");
+  let listing = {
+    let start = xml
+      .find("<listing")
+      .expect("no <listing> in algorithm output");
+    let end = xml[start..].find("</listing>").expect("unclosed <listing>") + start;
+    &xml[start..end]
+  };
+  // Collect the bold-state of every numeric line-number <tag>.
+  let mut states: Vec<bool> = Vec::new();
+  let mut rest = listing;
+  while let Some(i) = rest.find("<tag") {
+    rest = &rest[i..];
+    let close = rest.find("</tag>").expect("unclosed <tag>");
+    let seg = &rest[..close];
+    let text: String = seg.chars().filter(|c| c.is_ascii_digit()).collect();
+    if !text.is_empty() {
+      states.push(seg.contains(r#"font="bold""#));
+    }
+    rest = &rest[close + 6..];
+  }
+  assert!(
+    !states.is_empty(),
+    "no numeric line-number tags found:\n{listing}"
+  );
+  // The golden renders EVERY number in the same uniform \NlSty upright-bold style.
+  assert!(
+    states.iter().all(|&bold| bold),
+    "algorithm2e line numbers are not uniformly bold (\\NlSty); per-line font leak — got {states:?}:\n{listing}"
+  );
+}
+
+/// GREEN guard: algorithm2e's ruled family draws the caption at the TOP of the frame
+/// (real algorithm2e.sty `\@algocf@capt@ruled`=`top`, L2530), matching the pdflatex
+/// golden. LaTeXML — and Perl LaTeXML — emit the caption last (bottom); we reposition
+/// it before the body for the ruled family only (surpass, OXIDIZED_DESIGN #153;
+/// `float_sty::reposition_caption_top`). `[plain]` must keep the caption after the body
+/// (guard against over-reordering). Fixture switches styles with `\RestyleAlgo`.
+#[test]
+fn cluster_algorithm2e_ruled_caption_at_top() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_ruled_caption.tex");
+  // Split into the two <float>…</float> blocks (ruled first, plain second).
+  let mut floats: Vec<&str> = Vec::new();
+  let mut rest = xml.as_str();
+  while let Some(s) = rest.find("<float") {
+    let e = rest[s..].find("</float>").expect("unclosed <float>") + s + "</float>".len();
+    floats.push(&rest[s..e]);
+    rest = &rest[e..];
+  }
+  assert_eq!(floats.len(), 2, "expected 2 algorithm floats:\n{xml}");
+  let caption_before_listing = |seg: &str| {
+    let cap = seg.find("<caption").expect("no <caption> in float");
+    let listing = seg.find("<listing").expect("no <listing> in float");
+    cap < listing
+  };
+  assert!(
+    caption_before_listing(floats[0]),
+    "ruled algorithm caption is not at the top (before <listing>):\n{}",
+    floats[0]
+  );
+  assert!(
+    !caption_before_listing(floats[1]),
+    "plain algorithm caption was wrongly moved before <listing>:\n{}",
+    floats[1]
+  );
+}
+
+/// GREEN guard: a `\hbox to \hsize{…}` whose body is a horizontal LEADER FILL
+/// (`\dashfill`/`\hrulefill`/`\dotfill`) is relativized to `width="100%"` so it fills
+/// its HTML container instead of freezing the article's 345pt `\textwidth` default —
+/// which overflows narrower contexts (e.g. an algorithm2e separator). Surpass over
+/// Perl (which emits the same frozen pt); OXIDIZED_DESIGN #152; witness arXiv
+/// 1510.02728 (`\hbox to \hsize{\dashfill\hfil}` "Modified ellipsoid method"
+/// separators). A GENUINE fixed-width `\hbox to 100pt{…}` must stay `100.0pt` — the
+/// relativization keys off the leader body, not any full-line-width box (so fancyvrb
+/// verbatim boxes, whose 345pt is Perl parity, are untouched — checked separately).
+#[test]
+fn cluster_hbox_to_hsize_leader_fills_width() {
+  let xml = convert_to_xml("tests/cluster_regressions/hbox_to_hsize_fill.tex");
+  // The leader-fill box carries an inner <text class="ltx_leader">; find its width.
+  let leader_at = xml
+    .find(r#"<text class="ltx_leader""#)
+    .expect("no ltx_leader box in output");
+  let box_open = xml[..leader_at]
+    .rfind("<text")
+    .expect("no enclosing <text> for leader");
+  let leader_box_tag = &xml[box_open..leader_at];
+  assert!(
+    leader_box_tag.contains(r#"width="100%""#),
+    "leader-fill \\hbox to \\hsize should be width:100%, got:\n{leader_box_tag}"
+  );
+  // The fill-line box is also class="ltx_leaderfill" so CSS can stack multiple
+  // full-line separators (display:block) instead of overflowing a nowrap listingline
+  // (1510.02728 "Modified ellipsoid method"; OXIDIZED_DESIGN #152 follow-up).
+  assert!(
+    leader_box_tag.contains(r#"class="ltx_leaderfill""#),
+    "leader-fill box should carry class=\"ltx_leaderfill\", got:\n{leader_box_tag}"
+  );
+  // The genuine fixed-width box must NOT be relativized.
+  assert!(
+    xml.contains(r#"width="100.0pt""#),
+    "fixed-width \\hbox to 100pt was wrongly relativized (no 100.0pt found):\n{xml}"
+  );
+  assert!(
+    !xml.contains(r#"width="345"#),
+    "a full-line box was frozen at 345pt instead of relativized:\n{xml}"
+  );
+}
+
+/// GREEN guard: algorithm2e `\For` body lines separated by `\\` are each indented
+/// under the Vsline `|` rule. `before_float` re-lets `\\`→`\lx@newline` (a
+/// tabular-in-float guard) AFTER algorithm2e's `Let('\\','\lx@algo@par')`, so
+/// `\\`-separated body lines used to degrade to `<break/>` and MERGE into one
+/// un-indented listingline (SHARED with Perl; we re-assert the binding after
+/// before_float — a surpass, KNOWN_PERL_ERRORS #109). Each `\For` body line must
+/// now be its OWN `<listingline>` beginning with the vertical-rule `<rule ...>`, and
+/// the listing must contain NO `<break`. Witness arXiv 2002.09766 Algorithm 1.
+#[test]
+fn cluster_algorithm2e_for_body_indentation() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_for_indent.tex");
+  let listing = {
+    let start = xml
+      .find("<listing")
+      .expect("no <listing> in algorithm output");
+    let end = xml[start..].find("</listing>").expect("unclosed <listing>") + start;
+    &xml[start..end]
+  };
+  // The buggy output merged the 3 `\For` body lines into one listingline joined by
+  // inline <break/>s. Correct output has no <break> in the listing at all.
+  assert!(
+    !listing.contains("<break"),
+    "algorithm2e \\For body lines merged via <break/> instead of separate indented \
+     listinglines:\n{listing}"
+  );
+  // Each of the 3 `\For` body lines is its own listingline starting with the Vsline
+  // `<rule .../>`. Count listinglines whose first element is a <rule>.
+  let indented = listing
+    .split("<listingline")
+    .skip(1)
+    .filter(|seg| {
+      // within this listingline, a <rule appears before any real text token
+      seg
+        .split_once("</listingline>")
+        .map(|(inner, _)| inner.contains("<rule"))
+        .unwrap_or(false)
+    })
+    .count();
+  assert!(
+    indented >= 3,
+    "expected >=3 indented (<rule-led) \\For body listinglines, found {indented}:\n{listing}"
+  );
+}
+
+/// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
+/// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
+/// "(N)" bibitem before the real references. The blank line makes
+/// `\par@in@bibliography` auto-open a phantom `\lx@bibitem`; the digest-time prune
+/// misses it (the preamble whitespace displaces it from the last-box check), so an
+/// after-close scrub drops keyless whitespace-only bibitems. SHARED with Perl (both
+/// emit it) — surpass, OXIDIZED_DESIGN #155. Witness arXiv 2605.03143.
+#[test]
+fn cluster_bib_preamble_no_phantom_entry() {
+  let xml = convert_to_xml("tests/cluster_regressions/bib_preamble_no_phantom.tex");
+  // Every surviving bibitem must carry a key — a keyless one is the auto-opened phantom.
+  let keyless = xml
+    .split("<bibitem")
+    .skip(1)
+    .filter(|seg| {
+      let open_tag = seg.split('>').next().unwrap_or("");
+      !open_tag.contains("key=")
+    })
+    .count();
+  assert_eq!(
+    keyless, 0,
+    "spurious keyless phantom bibitem present:\n{xml}"
+  );
+  // The two real references survive.
+  assert_eq!(
+    xml.matches("<bibitem").count(),
+    2,
+    "expected exactly 2 real bibitems (A, B):\n{xml}"
+  );
+  assert!(
+    xml.contains("First Reference") && xml.contains("Second Reference"),
+    "real references missing:\n{xml}"
+  );
+}
+
+/// GREEN guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords)
+/// keep only ONE entry — a later one REPLACES the earlier — while non-replaceable
+/// creators accumulate. Ports upstream `%ReplaceableFrontmatterTags`
+/// (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`); the vendored Perl pushed
+/// unconditionally, so a re-added title/abstract kept BOTH → duplicated frontmatter.
+/// Surpass over the vendored Perl (forward-port of the upstream fix); OXIDIZED_DESIGN
+/// #154. Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`) and
+/// 2511.21969 (nested `{abstract}` duplicated the abstract heading).
+#[test]
+fn cluster_frontmatter_replaceable_dedup() {
+  let xml = convert_to_xml("tests/cluster_regressions/frontmatter_replaceable_dedup.tex");
+  // Restrict to document-level frontmatter (before the first <section>).
+  let head = xml.split("<section").next().unwrap_or(&xml).to_string();
+  let count = |needle: &str| head.matches(needle).count();
+  assert_eq!(
+    count("<title>"),
+    1,
+    "replaceable <title> not deduplicated:\n{head}"
+  );
+  assert!(
+    head.contains("Second Title"),
+    "the LAST replaceable title should win:\n{head}"
+  );
+  assert!(
+    !head.contains("First Title"),
+    "an earlier replaceable title survived:\n{head}"
+  );
+  assert_eq!(
+    count("<creator"),
+    2,
+    "non-replaceable creators must accumulate:\n{head}"
+  );
+  assert_eq!(
+    count("<abstract"),
+    1,
+    "replaceable <abstract> not deduplicated:\n{head}"
+  );
+}
+
+/// Guard: the `algpseudocodex` package (raw-loaded under `--includestyles`/ar5iv
+/// preload; there is no `.ltxml` binding) must not emit spurious empty display
+/// `<equation/>` elements. A `\State $math$ \Comment{…}` line USED to produce two
+/// RefStepCounter'd but EMPTY `<ltx:equation/>` nodes, which rendered as tall empty
+/// display-math blocks and blew out the vertical spacing of the whole algorithm
+/// (witness arXiv 2511.21969 "trueTriad"). GENUINE-RUST-ONLY: same-host Perl
+/// (`--includestyles`) emits ZERO. Root: algpseudocodex builds each line with TikZ
+/// code-boxes + `\savebox{…}{$\m@th…$}` + `\tabto`; our engine's box/math handling
+/// opened+closed empty equations where Perl's did not. Fixed by the
+/// `Tag!("ltx:equation", after_close …)` prune-if-no-Math rule (latex_constructs.rs);
+/// see KNOWN_PERL_ERRORS #108.
+#[test]
+fn cluster_algpseudocodex_no_spurious_empty_equation() {
+  let xml = convert_to_xml_ar5iv("tests/cluster_regressions/algpseudocodex_empty_equation.tex");
+  // An empty display equation serialises as a self-closing `<equation … />`.
+  let mut spurious = 0usize;
+  let mut rest = xml.as_str();
+  while let Some(i) = rest.find("<equation ") {
+    rest = &rest[i + 1..];
+    let end = rest.find('>').expect("unterminated <equation");
+    if rest[..end].ends_with('/') {
+      spurious += 1;
+    }
+  }
+  assert_eq!(
+    spurious, 0,
+    "algpseudocodex emitted {spurious} spurious empty <equation/> element(s) (Perl emits none):\n{xml}"
+  );
+}
+
+/// Beyond-Perl (OXIDIZED_DESIGN_DIVERGENCES #157): with `minted`'s
+/// `[frozencache]`, a committed `_minted/` directory carries Pygments' output on
+/// disk as plain `\textcolor`. Our binding content-matches a block's normalized
+/// body against the `*.highlight.minted` files and emits Pygments-colored listing
+/// lines (green bold keywords, blue names, preserved indentation) — Perl LaTeXML
+/// has no minted binding and errors out, so any colored output surpasses it.
+///
+/// This drives the real binary against a hand-built tiny `_minted/` cache in a
+/// tempdir (the cache MUST sit beside the main `.tex`, as minted writes it), and
+/// asserts the keyword/name color spans appear. A control run WITHOUT the cache
+/// proves the feature is a strict no-op there (no color, unchanged rendering) —
+/// guarding the "keep current minted behavior identical on a cache miss" contract.
+#[test]
+fn minted_frozencache_colors_from_pygments_cache_157() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+
+  const DOC: &str = "\\documentclass{article}\n\
+     \\usepackage[frozencache]{minted}\n\
+     \\begin{document}\n\
+     Inline \\mintinline{python}{foo} here.\n\
+     \\begin{minted}{python}\n\
+     def foo():\n\
+     \x20   return 1\n\
+     \\end{minted}\n\
+     \\end{document}\n";
+
+  const STYLE: &str = "\\makeatletter\n\
+     \\@namedef{PYG@tok@k}{\\let\\PYG@bf=\\textbf\\def\\PYG@tc##1{\\textcolor[rgb]{0.00,0.50,0.00}{##1}}}\n\
+     \\@namedef{PYG@tok@nf}{\\def\\PYG@tc##1{\\textcolor[rgb]{0.00,0.00,1.00}{##1}}}\n\
+     \\makeatother\n";
+  // Block body matches DOC's minted block after normalization:
+  //   line1 "def foo():"   line2 "    return 1"
+  const BLOCK_HL: &str = "\\begin{MintedVerbatim}[commandchars=\\\\\\{\\}]\n\
+     \\PYG{k}{def}\\PYG{+w}{ }\\PYG{n+nf}{foo}\\PYG{p}{(}\\PYG{p}{)}\\PYG{p}{:}\n\
+     \\PYG{+w}{    }\\PYG{k}{return}\\PYG{+w}{ }\\PYG{l+m+mi}{1}\n\
+     \\end{MintedVerbatim}\n";
+  // Inline snippet `foo` (blue name).
+  const INLINE_HL: &str = "\\begin{MintedVerbatim}[commandchars=\\\\\\{\\}]\n\
+     \\PYG{n+nf}{foo}\n\
+     \\end{MintedVerbatim}\n";
+
+  // ---- With the frozencache: colors appear. ----
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(dir.path().join("main.tex"), DOC).expect("write tex");
+  let mdir = dir.path().join("_minted");
+  std::fs::create_dir(&mdir).expect("mkdir _minted");
+  std::fs::write(mdir.join("default.style.minted"), STYLE).expect("write style");
+  std::fs::write(mdir.join("AAAA.highlight.minted"), BLOCK_HL).expect("write block hl");
+  std::fs::write(mdir.join("BBBB.highlight.minted"), INLINE_HL).expect("write inline hl");
+
+  let out = Command::new(bin)
+    .args(["main.tex", "--dest", "main.html", "--nocomments"])
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let html = std::fs::read_to_string(dir.path().join("main.html")).unwrap_or_default();
+  let lc = html.to_ascii_lowercase();
+  assert!(
+    out.status.success(),
+    "conversion failed:\n{}",
+    String::from_utf8_lossy(&out.stderr)
+  );
+  // Green bold keyword (`def`/`return`, PYG class `k`).
+  assert!(
+    lc.contains("--ltx-fg-color:#008000"),
+    "frozencache keyword color (#008000) missing — minted block was not colored:\n{html}"
+  );
+  // Blue name (`foo`, PYG class `nf`) — appears in BOTH the block and the inline.
+  assert!(
+    lc.contains("--ltx-fg-color:#0000ff"),
+    "frozencache name color (#0000FF) missing — nf token not colored:\n{html}"
+  );
+  // Indentation preserved as a white-space:pre span.
+  assert!(
+    html.contains("ltx_lst_space"),
+    "minted indentation not preserved via ltx_lst_space:\n{html}"
+  );
+  // Code text intact, and no raw \PYG / \textcolor leaked as literal text.
+  assert!(html.contains("def") && html.contains("foo") && html.contains("return"));
+  assert!(
+    !html.contains("\\PYG") && !html.contains("MintedVerbatim"),
+    "raw frozencache markup leaked into the output:\n{html}"
+  );
+
+  // ---- Control: NO `_minted/` → strict no-op (no frozencache color). ----
+  let dir2 = tempfile::tempdir().expect("tempdir2");
+  std::fs::write(dir2.path().join("main.tex"), DOC).expect("write tex2");
+  let out2 = Command::new(bin)
+    .args(["main.tex", "--dest", "main.html", "--nocomments"])
+    .current_dir(dir2.path())
+    .output()
+    .expect("spawn latexml_oxide (control)");
+  let html2 = std::fs::read_to_string(dir2.path().join("main.html")).unwrap_or_default();
+  assert!(out2.status.success(), "control conversion failed");
+  assert!(
+    !html2
+      .to_ascii_lowercase()
+      .contains("--ltx-fg-color:#008000"),
+    "without a `_minted/` cache the block must NOT be Pygments-colored (feature leaked):\n{html2}"
+  );
+  // The block still renders as a listing (unchanged fallback path).
+  assert!(
+    html2.contains("ltx_lstlisting") && html2.contains("def"),
+    "control minted block did not render via the listings fallback:\n{html2}"
   );
 }

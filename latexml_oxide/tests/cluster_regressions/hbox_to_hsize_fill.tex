@@ -1,0 +1,9 @@
+\documentclass{article}
+% \hbox to \hsize{...} should fill the line (width:100%), not a frozen pt value.
+% Witness arXiv 1510.02728: \hbox to \hsize{\dashfill\hfil} algorithm separators.
+\def\dashfill{\cleaders\hbox{-~-}\hfill}
+\begin{document}
+\hbox to \hsize{\dashfill\hfil}
+
+\hbox to 100pt{x}
+\end{document}

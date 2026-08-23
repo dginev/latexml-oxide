@@ -47,7 +47,7 @@
     </tags>
     <toccaption><tag close=" ">1</tag>Euclid’s algorithm</toccaption>
     <caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Euclid’s algorithm</caption>
-    <listing>
+    <listing framed="topbottom">
       <listingline xml:id="alg1.l1"><tags>
           <tag><text fontsize="80%">1:</text></tag>
           <tag role="refnum">1</tag>

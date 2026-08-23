@@ -9,4 +9,11 @@
 \begin{document}
 Inline X\scalerel*{\rule{2cm}{2cm}}{Xg}Y here.
 And non-star Z\scalerel{\rule{2cm}{1cm}}{Xg}W appends the reference.
+% Binding scalerel short-circuits the raw .sty, so the whole family it defines must
+% be re-added or papers using them regress to Error:undefined (sandbox-arxiv-2605:
+% \scaleto ×8, \scaleobj ×7, \stretchto ×5). Witnesses: 2605.02053, 2605.03521.
+a\scaleto{\rule{1cm}{1cm}}{2ex}b
+c\stretchto{\rule{1cm}{1cm}}{3ex}d
+e\scaleobj{1.5}{\rule{1cm}{1cm}}f
+g\hstretch{2}{\rule{1cm}{1cm}}h\vstretch{2}{\rule{1cm}{1cm}}i
 \end{document}

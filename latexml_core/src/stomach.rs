@@ -1079,13 +1079,59 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   Ok(())
 }
 
+thread_local! {
+  // Re-entrancy guard so `\everypar`'s own digestion can't recursively re-fire it.
+  static EVERYPAR_FIRING: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Fire `\the\everypar` when a paragraph enters horizontal mode, the way tex.web's
+/// `new_graf` (background/tex.web L21117) does `begin_token_list(every_par)`.
+///
+/// Guarded two ways, because LaTeXML's `\everypar` is not TeX's:
+/// * `\everypar` is empty for every ordinary paragraph (post-`\begin{document}` the
+///   register is cleared — see `latex_constructs.rs`), so this is a cheap early
+///   return except where a package populates it (algorithm2e line numbering sets
+///   `\everypar`→`\algocf@everypar`→`\nl` inside a listing).
+/// * We fire ONLY in the document body. In the preamble / during kernel load
+///   `\everypar` holds the unmodelled LaTeX3 para-hook list
+///   `\g__para_standard_everypar_tl` (from raw-loading `ltpara`); firing it trips
+///   `\@nodocument` ("Missing \begin{document}"). `\begin{document}` lets
+///   `\@nodocument`→`\relax`, so "document started" is exactly that test.
+///
+/// The digested boxes are pushed to the current box list BEFORE the triggering box
+/// (the caller `extend_box_list`s that after), so `\nl`'s tag lands at the head of
+/// the listingline. Errors are swallowed (this rides the infallible mode-switch
+/// path); a genuine fatal is re-detected at the next digest-loop checkpoint.
+fn fire_everypar() {
+  if EVERYPAR_FIRING.with(|f| f.get()) {
+    return;
+  }
+  let toks = match lookup_register("\\everypar", Vec::new()) {
+    Ok(Some(RegisterValue::Tokens(t))) if !t.is_empty() => t,
+    _ => return, // empty \everypar — the normal body paragraph
+  };
+  // Skip the preamble/kernel-load para-hook \everypar (see doc comment).
+  if !x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
+    return;
+  }
+  EVERYPAR_FIRING.with(|f| f.set(true));
+  if let Ok(digested) = digest(toks) {
+    // A List box is unwound (flattened) on absorption, so `\nl`'s tag-whatsit runs
+    // inline in the current listingline rather than under a wrapper.
+    push_box_list(digested);
+  }
+  EVERYPAR_FIRING.with(|f| f.set(false));
+}
+
 /// Switch to horizontal mode without stacking the mode.
 /// Can only switch from vertical|internal_vertical to horizontal.
-/// Perl: sub enterHorizontal
+/// Perl: sub enterHorizontal.
+/// tex.web `new_graf` (L21117) fires `\everypar` here (`begin_token_list`).
 pub fn enter_horizontal() {
   let mode = lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
+    fire_everypar();
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
     // Perl L420-422: warn on unexpected mode
     Warn!(

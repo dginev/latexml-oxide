@@ -12,8 +12,18 @@ LoadDefinitions!({
   def_macro_noop("\\floatplacement{}{}")?;
   // \listof{type}{title} — ignore
   def_macro_noop("\\listof{}{}")?;
-  // \floatname{type}{name}
-  DefMacro!("\\floatname{}{}", "\\@namedef{lx@name@#1}{#2}");
+  // \floatname{type}{name}. LaTeXML reimplements float.sty with its own
+  // `\lx@name@<type>` internal (Perl float.sty.ltxml L36), but real float.sty
+  // (L34) names it `\fname@<type>` — and documents poke at that real internal
+  // directly (e.g. the popular `breakablealgorithm` recipe:
+  // `\textbf{\fname@algorithm~\thealgorithm}`). Define BOTH so such recipes
+  // compile instead of leaking a raw `\fname@algorithm`. Surpass over Perl,
+  // which defines only `\lx@name@` and errors here. OXIDIZED_DESIGN #150,
+  // KNOWN_PERL_ERRORS #107. Witness arXiv 2408.07803 (html_feedback #1998).
+  DefMacro!(
+    "\\floatname{}{}",
+    "\\@namedef{lx@name@#1}{#2}\\@namedef{fname@#1}{#2}"
+  );
 
   // \float@endH — close marker for `[H]` placement floats (float.sty
   // L103). Real def does box-placement layout (`\@endfloatbox\vskip
@@ -34,11 +44,16 @@ LoadDefinitions!({
     let auxext = auxext.to_string();
     let within = within.map(|t| t.to_string()).unwrap_or_default();
 
-    // Set \lx@name@ to type name if not already defined (float.sty only, not newfloat)
-    let name_cs_str = s!("\\lx@name@{ftype}");
-    let name_tok = T_CS!(name_cs_str);
-    if !has_meaning(&name_tok) {
-      def_macro(name_tok, None, Tokens::new(ExplodeText!(ftype)), None)?;
+    // Default the float's caption name to its type if not already set (real
+    // float.sty L59: `\@ifundefined{fname@#1}{\floatname{#1}{#1}}`). We keep
+    // LaTeXML's `\lx@name@<type>` internal AND the real float.sty `\fname@<type>`
+    // (see \floatname above) so both our machinery and documents referencing
+    // `\fname@<type>` resolve. float.sty only, not newfloat.
+    for prefix in ["\\lx@name@", "\\fname@"] {
+      let name_tok = T_CS!(s!("{prefix}{ftype}"));
+      if !has_meaning(&name_tok) {
+        def_macro(name_tok, None, Tokens::new(ExplodeText!(ftype)), None)?;
+      }
     }
 
     // Get current float style for format@title
@@ -215,34 +230,78 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
   let caption_qname = pin!("ltx:caption");
   let toccaption_qname = pin!("ltx:toccaption");
+  let tags_qname = pin!("ltx:tags");
+  // The inner frame must land on the float's BODY element (listing/graphics/…),
+  // never on its `<ltx:tags>` metadata sibling. Perl's filter only skips
+  // caption/toccaption (float.sty.ltxml L82) — but a RefStepCounter'd float
+  // emits `<tags>` as its FIRST child, and `<tags>` (LaTeXML-block.rnc:325,
+  // `element tags { tag+ }`) carries NO attributes, so `framed` on it is
+  // silently schema-dropped and no frame is ever drawn. Both engines lose the
+  // box; skipping `<tags>` too puts the frame on the real body.
+  // OXIDIZED_DESIGN #149 (surpass), KNOWN_PERL_ERRORS #106.
+  let is_body = |qname| qname != caption_qname && qname != toccaption_qname && qname != tags_qname;
   let node = document.get_node();
   if let Some(float_node) = node.get_last_child() {
-    match style {
-      "ruled" => {
-        let mut float_mut = float_node.clone();
-        document.set_attribute(&mut float_mut, "framed", "top")?;
-        // inner frame: topbottom on first non-caption child
-        for child in float_node.get_child_elements() {
-          let qname = document::get_node_qname(&child);
-          if qname != caption_qname && qname != toccaption_qname {
-            let mut child_mut = child;
-            document.set_attribute(&mut child_mut, "framed", "topbottom")?;
-            break;
-          }
+    // Frame styles: outer on the float, inner on the body. Ports Perl's
+    // %float_outerframe / %float_innerframe (float.sty.ltxml L37-38) plus the
+    // algorithm2e ruled family (top rule on the float, topbottom on the body).
+    let (outer, inner): (Option<&str>, Option<&str>) = match style {
+      "ruled" => (Some("top"), Some("topbottom")),
+      "boxed" => (None, Some("rectangle")),
+      _ => (None, None), // plain, plaintop — no framing
+    };
+    if let Some(outer) = outer {
+      let mut float_mut = float_node.clone();
+      document.set_attribute(&mut float_mut, "framed", outer)?;
+    }
+    if let Some(inner) = inner {
+      for child in float_node.get_child_elements() {
+        if is_body(document::get_node_qname(&child)) {
+          let mut child_mut = child;
+          document.set_attribute(&mut child_mut, "framed", inner)?;
+          break;
         }
-      },
-      "boxed" => {
-        // inner frame: rectangle on first non-caption child
-        for child in float_node.get_child_elements() {
-          let qname = document::get_node_qname(&child);
-          if qname != caption_qname && qname != toccaption_qname {
-            let mut child_mut = child;
-            document.set_attribute(&mut child_mut, "framed", "rectangle")?;
-            break;
-          }
-        }
-      },
-      _ => {}, // plain, plaintop — no framing
+      }
+    }
+  }
+  Ok(())
+}
+
+/// Move a float's `<ltx:caption>`/`<ltx:toccaption>` to BEFORE its body element, so
+/// the caption renders at the TOP of the frame. algorithm2e's ruled family
+/// (`ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`) draws the caption at the
+/// top: real algorithm2e.sty sets `\@algocf@capt@ruled`=`top` (L2530) /
+/// `\@algocf@capt@boxruled`=`above` (L2540), and `\algocf@makethealgo` (L2589+) lays
+/// the caption out before the body. LaTeXML emits the caption last (standard float
+/// order = bottom), and so does Perl LaTeXML — so this is a surpass over Perl to match
+/// the pdflatex golden. OXIDIZED_DESIGN #153. DOM order determines the XSLT render
+/// position, so a pre-body caption renders above the listing. The float content model
+/// (`LaTeXML-para.rnc:196`, `(tags? | … | Block.model | Caption.class)*`) is an
+/// order-free choice, so the moved caption stays schema-valid.
+pub fn reposition_caption_top(document: &mut Document) -> Result<()> {
+  let caption_qname = pin!("ltx:caption");
+  let toccaption_qname = pin!("ltx:toccaption");
+  let tags_qname = pin!("ltx:tags");
+  let node = document.get_node();
+  let Some(float_node) = node.get_last_child() else {
+    return Ok(());
+  };
+  let is_body = |qname| qname != caption_qname && qname != toccaption_qname && qname != tags_qname;
+  // The first body element (the listing) is the reference point; captions move ahead
+  // of it, preserving their relative order (toccaption then caption).
+  let children = float_node.get_child_elements();
+  let Some(mut body) = children
+    .iter()
+    .find(|c| is_body(document::get_node_qname(c)))
+    .cloned()
+  else {
+    return Ok(());
+  };
+  for child in children {
+    let qname = document::get_node_qname(&child);
+    if qname == caption_qname || qname == toccaption_qname {
+      let mut child_mut = child;
+      body.add_prev_sibling(&mut child_mut)?;
     }
   }
   Ok(())

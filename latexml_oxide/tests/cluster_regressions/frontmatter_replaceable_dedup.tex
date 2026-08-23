@@ -1,0 +1,19 @@
+% Guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords) keep
+% only ONE entry — a later one REPLACES the earlier — while non-replaceable creators
+% accumulate. Ports upstream %ReplaceableFrontmatterTags; the vendored Perl pushed
+% unconditionally, so a re-added title/abstract kept BOTH (duplicate frontmatter).
+% OXIDIZED_DESIGN #154. Witnesses arXiv 2002.09766 (appendix re-\icmltitle duplicated
+% <title>), 2511.21969 (nested {abstract}). Uses \lx@add@frontmatter@now directly so
+% the double-add is deterministic (class \maketitle is once-only).
+\documentclass{article}
+\makeatletter
+\begin{document}
+\lx@add@frontmatter@now{ltx:title}{First Title}
+\lx@add@frontmatter@now{ltx:title}{Second Title}
+\lx@add@frontmatter@now{ltx:creator}{AuthorA}
+\lx@add@frontmatter@now{ltx:creator}{AuthorB}
+\begin{abstract}First abstract.\end{abstract}
+\begin{abstract}Second abstract.\end{abstract}
+\lx@frontmatterhere
+Body paragraph.
+\end{document}

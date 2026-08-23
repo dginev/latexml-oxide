@@ -59,6 +59,8 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
   );
   def_macro_noop("\\LastPageEnding")?;
-  // SIGMA authors use \orcid for ORCID identifier. Preserve as ltx:note.
-  DefMacro!("\\orcid{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  // SIGMA authors use \orcid for the ORCID identifier. Route through the kernel
+  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link
+  // (vs a bare dagger note). html_feedback#6571.
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
 });

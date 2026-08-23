@@ -3417,10 +3417,23 @@ LoadDefinitions!({
   //   - no context or _CaptureBlock_: skip
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
-  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
+  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document, args] {
     if lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
+      // OXIDIZED_DESIGN surpass-Perl (#722): the optional [Glue] of `\\[20pt]` is the
+      // extra vertical space LaTeX inserts at the break. Perl parses it and drops it
+      // (ltx:break has no spacing slot in the schema). We PRESERVE it as a themeable CSS
+      // custom property `--ltx-break-space` on the break; NO default rule consumes it, so
+      // default rendering is byte-identical to a plain break — a theme (ar5iv) may map it
+      // to margin/padding. Plain `\\` has no [Glue] (arg absent) so it stays attribute-free.
+      // args[1] is the [Glue] (args[0] is the OptionalMatch:* star).
+      let break_attrs = args
+        .get(1)
+        .and_then(|a| a.as_ref())
+        .map(|g| g.to_attribute())
+        .filter(|v| !v.is_empty() && v != "0.0pt" && v != "0pt")
+        .map(|v| map!("cssstyle" => s!("--ltx-break-space:{v}")));
       if let Some(context) = document.get_element() {
         let tag = document::get_node_qname(&context);
         let capture_block = pin!("ltx:_CaptureBlock_");
@@ -3432,11 +3445,11 @@ LoadDefinitions!({
             if document::get_node_qname(&parent) == capture_block {
               document.maybe_close_element("ltx:p")?;
             } else if document::can_contain(&context, "ltx:break") {
-              document.insert_element("ltx:break", Vec::new(), None)?;
+              document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
             }
           }
         } else if document::can_contain(&context, "ltx:break") {
-          document.insert_element("ltx:break", Vec::new(), None)?;
+          document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
         }
       }
       // else: no context => skip
@@ -3521,8 +3534,17 @@ LoadDefinitions!({
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
-    // Clear \everypar at document start (Perl parity)
-    assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    // Clear \everypar at document start (Perl `AssignRegister('\everypar',
+    // Tokens(), 'global')`, latex_constructs.pool L319). `\everypar` is a REGISTER,
+    // so it must be cleared via `assign_register` (which writes the register
+    // definition's value that `\the\everypar`/`lookup_register` read), NOT
+    // `assign_value` (a separate State value slot the register never consults).
+    // Raw-loading modern `ltpara` leaves the register holding the para-hook token
+    // list `\g__para_standard_everypar_tl`; the old `assign_value` clear did not
+    // actually empty it, so `\the\everypar` in the body still expanded to that
+    // unmodelled hook. Nothing read the register in the body before, so this was
+    // latent; it matters for any code that fires `\everypar` (algorithm2e numbering).
+    assign_register("\\everypar", RegisterValue::Tokens(Tokens!()), Some(Scope::Global), Vec::new())?;
     // Perl #2798: at \begin{document}, make the fill widths consistent —
     //   \columnwidth = \hsize = \linewidth = \textwidth
     // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister
@@ -3830,8 +3852,14 @@ LoadDefinitions!({
   enter_horizontal => true,
   sizer => { Ok((Dimension!("3.7em"), Dimension!("1.6ex"), Dimension!("0.5ex"))) });
 
-  DefMacro!("\\fmtname", "LaTeX2e");
-  DefMacro!("\\fmtversion", "2018/12/01");
+  // \fmtname / \fmtversion are intentionally NOT (re)defined here. Perl defines
+  // them once, in latex_base.pool (↔ our latex_base.rs); this constructs-phase
+  // copy was a Rust-only duplicate. Crucially, `constructs` runs AFTER the dump
+  // apply (LoadFormat: bootstrap → dump → constructs), so re-hardcoding here
+  // CLOBBERED the real per-TL-year kernel value the dump already carries
+  // (e.g. \fmtversion 2025-11-01 on TL2025), pinning every \@ifl@t@r\fmtversion
+  // check to the stale 2018/12/01 (issue #739). The dump is authoritative; the
+  // no-dump/base path falls back to latex_base.rs's Perl-faithful value.
 
   DefMacro!("\\today", { ExplodeText!(Today!()) });
 
@@ -6014,15 +6042,19 @@ LoadDefinitions!({
     "\\@internal@verb{}{}{}",
     r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi"
   );
+  // `encoding => "ASCII"` (OXIDIZED_DESIGN #144, issue #723): `\verb`'s body is
+  // literal catcode-12 text, so under T1 a `~`/`^` would decode to Bruce Miller's
+  // accent glyphs U+02DC/U+02C6 (#2435). Verbatim wants them ASCII; the identity
+  // `ASCII` fontmap keeps `~`/`^` literal while `typewriter` still styles the run.
   DefConstructor!("\\@internal@math@verb{} Undigested {}",
     "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
     mode      => "text",
     enter_horizontal => true,
-    font      => { family => "typewriter", series => "medium", shape => "upright" },
+    font      => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
     reversion => "\\verb#1#2#3#2");
   DefConstructor!("\\@internal@text@verb{} Undigested {}",
     "<ltx:verbatim font='#font'>#3</ltx:verbatim>",
-    font            => { family => "typewriter", series => "medium", shape => "upright" },
+    font            => { family => "typewriter", series => "medium", shape => "upright", encoding => "ASCII" },
     enter_horizontal => true,
     before_construct => sub[doc,_whatsit] {
       if !document::can_contain(doc.get_element().as_ref().unwrap(), "#PCDATA") {
@@ -6314,6 +6346,31 @@ LoadDefinitions!({
   DefMacro!("\\@lign", None, None);
 
   Tag!("ltx:equationgroup", auto_close => true);
+
+  // Prune spurious empty equations at construction end. A well-formed
+  // `<ltx:equation>` always carries an `<ltx:Math>` child; a math-less one is
+  // spurious markup that serialises as a childless `<equation/>` and renders as a
+  // tall EMPTY display block. Raw-loaded `algpseudocodex` (TikZ code-boxes +
+  // `\savebox{$\m@th…$}` + `\tabto`) opens and closes such empty equations — TWO per
+  // `\State $math$ \Comment{…}` line — blowing out the vertical spacing of a whole
+  // algorithm (witness arXiv 2511.21969, html_feedback). GENUINE-RUST-ONLY: same-host
+  // Perl's box handling never creates them (emits ZERO). We reach parity by dropping
+  // any equation left with no Math. Perl has the afterClose-on-equation precedent
+  // (`amsmath.sty.ltxml:638 rearrangeLoneAMSAligned`). KNOWN_PERL_ERRORS #108.
+  //
+  // `after_close_late` (not `after_close`): it runs AFTER every other equation-close
+  // handler (e.g. amsmath's `rearrangeLoneAMSAligned`), so the prune sees the FINAL
+  // content and never races a handler that legitimately populates the equation at close
+  // time. The predicate is deliberately CONSERVATIVE — TRULY empty (no child nodes at
+  // all, i.e. the self-closing `<equation/>` the algpseudocodex boxes leave behind). A
+  // `<Math>`-presence test is too strict: a pure-text display equation
+  // (`\[\text{…}\]`) legitimately carries no `<ltx:Math>` child yet must be kept
+  // (cluster_cli::display_math_renders_on_one_line_without_clipping).
+  Tag!("ltx:equation", after_close_late => sub[document, node] {
+    if node.get_first_child().is_none() {
+      document.remove_node(node.clone());
+    }
+  });
 
   // Perl: latex_constructs.pool.ltxml L1971-1973
   NewCounter!("subequation", "equation", idprefix => "E", idwithin => "equation");
@@ -8852,6 +8909,30 @@ LoadDefinitions!({
     }
   );
 
+  // Prune a phantom keyless bibitem auto-opened for `.bbl` PREAMBLE content — the macro
+  // definitions / blank line an ACM-Reference-Format-style `.bbl` places between
+  // `\begin{thebibliography}` and the first `\bibitem`. The blank line makes
+  // `\par@in@bibliography` open a keyless `\lx@bibitem` for that preamble, rendering as a
+  // spurious empty "(N)" entry before the real references. The digest-time prune in the
+  // `\lx@bibitem` afterDigest only inspects the IMMEDIATELY-previous box, which the
+  // preamble whitespace displaces, so it misses this one — scrub it here after
+  // construction instead. A real `\bibitem` always carries a key; a keyless bibitem whose
+  // `<bibblock>`s are all whitespace is the phantom. SHARED with Perl (both engines emit
+  // it) — a surpass. Witness arXiv 2605.03143. OXIDIZED_DESIGN #155.
+  Tag!("ltx:bibitem", after_close_late => sub[document, node] {
+    let has_key = node.get_attribute("key").is_some_and(|k| !k.trim().is_empty());
+    if !has_key {
+      let blank = node
+        .get_child_elements()
+        .iter()
+        .filter(|c| document::get_node_qname(c) == pin!("ltx:bibblock"))
+        .all(|bb| bb.get_content().trim().is_empty());
+      if blank {
+        document.remove_node(node.clone());
+      }
+    }
+  });
+
   // This attempts to handle the case where folks put \bibitem's within an enumerate or such.
   // We try to close the list and open the bibliography
   DefMacro!("\\lx@mung@bibliography{}", sub[(env)] {
@@ -9335,11 +9416,13 @@ LoadDefinitions!({
   //======================================================================
   // C.11.6 Terminal Input and Output
   //======================================================================
+  // Perl latex_constructs.pool.ltxml L4538-4541: `Note(ToString($stuff))` — called
+  // UNCONDITIONALLY. `Note!` does the log-always / stderr-if-`$VERBOSITY>=0` split
+  // itself, so no `current_verbosity()` guard here — the old guard dropped
+  // `\typeout` from the log under `--quiet` (the #763 log-floor bug).
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if current_verbosity() > -1 {
-      let content = Expand!(stuff);
-      Note!(s!("{content}"));
-    }
+    let content = Expand!(stuff);
+    Note!(s!("{content}"));
   });
   def_primitive_noop("\\typein[]{}")?;
 
@@ -10706,9 +10789,16 @@ LoadDefinitions!({
     "\\normalfont",
     "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
+  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
+  // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
+  // Bruce Miller's deliberate accent glyphs U+02DC/U+02C6 (LaTeXML #2435). In a
+  // verbatim/URL those must stay ASCII. Selecting the identity `ASCII` fontmap for
+  // the verbatim font (grouped, so it reverts after) keeps `~`/`^` ASCII while the
+  // `\ttdefault` family still drives the typewriter styling — the same treatment
+  // `Verbatim`/`HyperVerbatim` apply at digest time. Perl loses ASCII here too.
   DefMacro!(
     "\\verbatim@font",
-    "\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+    "\\fontencoding{ASCII}\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
   );
 
   Let!("\\reset@font", "\\normalfont");

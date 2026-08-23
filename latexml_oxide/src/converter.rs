@@ -16,8 +16,6 @@ use latexml_core::{
 
 use crate::core_interface::DigestionAPI;
 
-const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.5.0)";
-
 /// Where a runtime `.rhai` binding may be looked up — the two tiers differ in
 /// *cost* and in *authority*, so they sit at opposite ends of the dispatch
 /// chain (see [`install_binding_dispatch`]).
@@ -251,12 +249,14 @@ impl Converter {
     }
 
     self.bind_log();
-    // 1.2 Inform of identity, increase conversion counter
-    if self.opts.verbosity >= 0 {
-      Note!(CONVERTER_IDENTITY);
-      // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
-      // info!("processing started " . localtime() . "\n"; )
-    }
+    // 1.2 Inform of identity, increase conversion counter. Perl `bin/latexml`
+    // L83 logs `Note("$LaTeXML::IDENTITY processing $source")` UNCONDITIONALLY;
+    // our banner adds the executable name, git revision and exact start time
+    // (`identity.rs`). `Note!` itself does the log-always / stderr-gated split, so
+    // the banner reaches `.latexml.log` even under `--quiet` (issue #763) while
+    // still being muted on the console — no verbosity guard here.
+    Note!(crate::identity::identity_banner());
+    // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
 
     // 1.3 Prepare for What's IN:
     // - We use a new temporary variable to avoid confusion with daemon caching

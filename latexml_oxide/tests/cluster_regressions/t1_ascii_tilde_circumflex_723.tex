@@ -1,0 +1,22 @@
+\documentclass{article}
+% Issue #723 (reporter xworld21): under T1 fontencoding a literal `~`/`^` decodes
+% through the fontmap to Bruce Miller's accent glyphs U+02DC/U+02C6 (LaTeXML
+% #2435 — kept). In a verbatim context those must stay ASCII, so \verb and the
+% verbatim environment now select the identity ASCII fontmap (keeping the
+% typewriter family). Guards \verb and the verbatim env; the reported Rhai
+% HyperVerbatim path has its own subprocess guard (cluster_t1_hyperverbatim_ascii_723).
+% \url / \path are verbatim contexts too (url.sty, via \UrlFont); their displayed
+% text must likewise stay ASCII (matching pdflatex — Perl shows the accents there).
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\begin{document}
+\verb|a~b^c|
+
+\begin{verbatim}
+d~e^f
+\end{verbatim}
+
+\url{http://g/~h^i}
+
+\path|j~k^l|
+\end{document}

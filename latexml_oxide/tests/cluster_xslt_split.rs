@@ -1104,6 +1104,37 @@ mod cluster_toc_navigation {
        hardcoded `toc` bucket did exactly that:\n{x}"
     );
   }
+
+  /// Issue #761: math in a title leaked into the `title=` tooltip of every TOC /
+  /// cross-ref link as the raw *content*-tree token dump — operator-first
+  /// (`= sin x x`) with all the inter-token whitespace preserved — producing a
+  /// huge, wrongly-ordered browser tooltip. Perl's `CrossRef::getTextContent_rec`
+  /// routes an `ltx:Math` node through `unicodemath` (presentation-order infix,
+  /// `sin𝑥=𝑥`), and `getTextContent` collapses whitespace to single spaces.
+  /// Witness = the issue MWE (doc title `$\sin x = x$`, two sections).
+  #[test]
+  fn ref_title_math_uses_unicodemath_not_content_dump() {
+    let x = convert_and_post("tests/cluster_regressions/ref_title_math.tex");
+    // The document title carries `$\sin x = x$`; it becomes the "In <doc title>"
+    // context on every section's cross-ref `title=` tooltip.
+    let start = x
+      .find("title=\"In my title")
+      .unwrap_or_else(|| panic!("#761: expected an `In my title…` ref tooltip:\n{x}"));
+    let rest = &x[start + "title=\"".len()..];
+    let end = rest
+      .find('"')
+      .expect("#761: ref title attribute must close");
+    let title_val = &rest[..end];
+    // Byte-for-byte the Perl LaTeXML oracle output: presentation-order infix
+    // (`sin` right after `solve `, RELOP `=` in the middle — NOT the
+    // operator-first content dump `= sin x x`), math-italic `𝑥` (U+1D465) from
+    // the tokens' `font="italic"`, and whitespace collapsed to single spaces
+    // (no `&#10;` newline runs bloating the tooltip).
+    assert_eq!(
+      title_val, "In my title to solve sin\u{1D465}=\u{1D465}",
+      "#761: ref title must match Perl's unicodemath serialization; got: {title_val:?}"
+    );
+  }
 }
 
 mod cleanup_scripts_xmlid {

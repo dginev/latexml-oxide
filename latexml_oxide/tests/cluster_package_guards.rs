@@ -316,6 +316,198 @@ mod deferred_load_retry {
   }
 }
 
+mod nicetabular_binding {
+  //! `\begin{NiceTabular}[opts]{colspec}` must render a real table, not
+  //! `Error:undefined:{NiceTabular}` + a dropped body.
+  //!
+  //! nicematrix's NiceTabular is a tabular over a standard colspec (nicematrix.sty
+  //! L3806-3841 reduce it to `\NiceArray{colspec}` under a text-mode tabular flag),
+  //! so binding it to `\tabular` recovers real tables for sandbox-arxiv-2605 papers
+  //! (2605.08776, 2605.13835, 2605.18423) the placeholder stub previously errored on.
+  //! Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors here.
+  use crate::cluster::convert_to_xml_contrib;
+
+  #[test]
+  fn nicetabular_renders_real_table() {
+    // Red before the fix: Error:undefined:{NiceTabular} + dropped body (no <tabular>).
+    let xml = convert_to_xml_contrib("tests/cluster_regressions/nicetabular_binding.tex");
+    assert!(
+      xml.contains("<tabular"),
+      "NiceTabular did not render a real table:\n{xml}"
+    );
+    assert!(
+      xml.matches("<td").count() >= 6,
+      "NiceTabular table is missing cells (expected the 6 `1..6`):\n{xml}",
+    );
+  }
+}
+
+mod neurips_anonymous {
+  //! `\if@anonymous` (neurips_2026.sty L72 `\newif`) must be defined by the neurips
+  //! binding. The binding intercepts the versioned name `neurips_2026` and never
+  //! creates the conditional, so a paper copying the style's `\@maketitle` (which
+  //! branches on `\if@anonymous`) hit `Error:undefined:\if@anonymous`. Rust-only
+  //! divergence: Perl 0.8.8 converts the same paper (2605.17249) without it.
+  //! Default false => the `\else` (authors-shown) branch, correct for arXiv uploads.
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn neurips_if_anonymous_defined() {
+    // Red before the fix: Error:undefined:\if@anonymous. Green: 0 errors + the Named branch.
+    let xml = convert_to_xml_contrib_clean("tests/cluster_regressions/neurips_anonymous.tex");
+    assert!(
+      xml.contains("Named") && !xml.contains(">Anon"),
+      "default-false \\if@anonymous should take the authors-shown (`Named`) branch:\n{xml}",
+    );
+  }
+}
+
+mod biblatex_fallback_no_cite_loop {
+  //! `\usepackage{myBiblatex}` hits the versioned-package fallback -> the native
+  //! `biblatex` binding, which `find_file_fallback` double-runs (probe then load).
+  //! The non-idempotent `\let\blx@saved@cite\cite` used to capture biblatex's OWN
+  //! `\cite` on the 2nd init, so `\cite -> \blx@saved@cite -> \cite` looped to
+  //! `Fatal:Timeout:TokenLimit`/`Recursion` (witness 2605.03965; Perl never loads
+  //! biblatex on this name, so no loop). The save is now `\@ifundefined`-guarded.
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn mybiblatex_fallback_does_not_loop() {
+    // Red before the fix: \cite loops to Fatal:Timeout:TokenLimit (fatal status / no result).
+    // Green: converts clean (convert_to_xml_contrib_clean asserts 0 errors + non-fatal).
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_mybiblatex_loop.tex");
+  }
+}
+
+mod expl3_nested_raw_load_catcodes {
+  //! A `\ProvidesExplPackage` file that `\RequirePackage{derivative}` — a native
+  //! binding (#630) that force-raw-loads its own expl3 `.sty` — used to leave `_`
+  //! as SUB after the nested load, so later expl3 lines (`\seq_new:N` …) errored
+  //! `unexpected:_` (witness 2605.21946, pomegranate.sty). The input_definitions
+  //! expl3-frame stack (content.rs) makes the inner load inherit the outer frame's
+  //! expl3 state instead of re-snapshotting after the outer `\@pushfilename`.
+  //!
+  //! Subprocess (not the in-process `convert_*` helpers) on purpose: reproducing the
+  //! bug needs `--includestyles` AND the contrib dispatch (for the `derivative` binding)
+  //! AND a paper-local `mymac.sty` on the search path, simultaneously — no single
+  //! in-process helper combines all three. Same legitimate subprocess reason as the
+  //! `newtcblisting_verbatim` / `deferred_load_retry` tests.
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn nested_expl3_raw_load_preserves_catcodes() {
+    // Self-skip green when derivative.sty is absent (trimmed CI texlive): with no
+    // raw double-load there is nothing to guard.
+    let has_derivative = Command::new("kpsewhich")
+      .arg("derivative.sty")
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false);
+    if !has_derivative {
+      eprintln!("skip nested_expl3_raw_load_preserves_catcodes: derivative.sty not installed");
+      return;
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("mymac.sty"),
+      "\\ProvidesExplPackage{mymac}{2025/01/01}{1.0}{repro}\n\
+       \\RequirePackage{derivative}\n\
+       \\seq_new:N \\l_mymac_seq\n",
+    )
+    .expect("write mymac.sty");
+    std::fs::write(
+      workdir.path().join("d.tex"),
+      "\\documentclass{article}\n\\usepackage{mymac}\n\\begin{document}hi\\end{document}\n",
+    )
+    .expect("write d.tex");
+    let output = Command::new(bin)
+      .arg("d.tex")
+      .arg("--dest")
+      .arg("d.xml")
+      .arg("--includestyles")
+      .arg("--path")
+      .arg(workdir.path())
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      !stderr.contains("unexpected:_"),
+      "nested expl3 raw-load left `_` as SUB (expl3 catcodes lost after the inner load):\n{stderr}",
+    );
+  }
+}
+
+mod cleveref_class_stubs {
+  //! lipics-v2021 and IEEEtaes are OmniBus/IEEEtran stub bindings that replace the
+  //! paper's real `.cls` and omitted its `\RequirePackage{cleveref}`, so `\cref`/`\Cref`
+  //! came out `Error:undefined`. Perl (no lipics/IEEEtaes binding) raw-loads the `.cls`
+  //! and gets cleveref, so this was a Rust-only parity gap. The stubs now require
+  //! cleveref after hyperref. Witnesses 2606.01187 (lipics), 2606.01169 (IEEEtaes).
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn lipics_stub_requires_cleveref() {
+    // Red before the fix: `\cref`/`\Cref` come out Error:undefined; green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/cleveref_lipics_stub.tex");
+  }
+}
+
+mod aastex_contribution_appendix {
+  //! aastex701/631/7 digit-strip to the aastex-v5 `aastex.cls.ltxml` shim, which predates
+  //! aastex7, so the `{contribution}` env and `\restartappendixnumbering` came out
+  //! `Error:undefined` (Perl errors identically — this is a beyond-Perl addition in the
+  //! `aas_support_sty.rs` home that already carries the `\uat` beyond-Perl addition).
+  //! Witnesses 2606.03375/04105 (contribution), 2606.00569/03850/07452 (restartappendixnumbering).
+  use crate::cluster::convert_to_xml_contrib_clean;
+
+  #[test]
+  fn aastex_contribution_and_restartappendix_defined() {
+    // Red before the fix: `{contribution}` / `\restartappendixnumbering` Error:undefined;
+    // green: 0 errors.
+    let _ = convert_to_xml_contrib_clean("tests/cluster_regressions/aastex_contribution.tex");
+  }
+}
+
+mod subdir_dispatch_no_strip {
+  //! Neither the package dispatcher (latexml_package::lib) nor `find_file_fallback`
+  //! (latexml_core::binding::content) strips a leading directory any more, so `subdir/<name>`
+  //! is a file PATH, not a binding name. Both tests drive the REAL fleet config via
+  //! `convert_to_xml_ar5iv` — `ar5iv.sty` sets INCLUDE_STYLES="searchpaths" (`localrawstyles`:
+  //! raw-load local `.sty`, classes OFF), the exact `cortex_worker --preload=ar5iv.sty` route.
+  use crate::cluster::convert_to_xml_ar5iv;
+
+  /// A paper-local `subdirdispatch/mathenv.sty`, whose basename collides with the CTAN `mathenv`
+  /// binding, must raw-load under `localrawstyles` (via SOURCEDIRECTORY), not be shadowed by a
+  /// directory-stripped binding match — the 2606.02073 cleveref/theorem bug. RED before the drop
+  /// (strip -> `mathenv` binding no-op -> the local `\subdirstymarker` never defined), GREEN
+  /// after. Guards both the dispatch strip and the `find_file_fallback` BasenameOnly strip stay
+  /// gone.
+  #[test]
+  fn subdir_sty_raw_loads_not_shadowed() {
+    let xml = convert_to_xml_ar5iv("tests/cluster_regressions/subdir_sty_not_shadowed.tex");
+    assert!(
+      xml.contains("SUBDIRSTYLOADED"),
+      "subdirdispatch/mathenv.sty should raw-load its local def (not be shadowed by the CTAN \
+       mathenv binding):\n{xml}",
+    );
+  }
+
+  /// INCLUDE_CLASSES stays disabled under `localrawstyles` (styles-only): a paper-local subdir
+  /// `.cls` must NOT raw-load — it falls to OmniBus, so its `\subdirclsmarker` stays undefined
+  /// and SUBDIRCLSLOADED never reaches the output. (Enabling `rawclasses` would flip this.)
+  #[test]
+  fn subdir_cls_does_not_raw_load_include_classes_off() {
+    let xml = convert_to_xml_ar5iv("tests/cluster_regressions/subdir_cls_not_rawloaded.tex");
+    assert!(
+      !xml.contains("SUBDIRCLSLOADED"),
+      "subdir `.cls` raw-loaded despite INCLUDE_CLASSES off (localrawstyles is styles-only):\n{xml}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).

@@ -4081,3 +4081,169 @@ exactly as Perl attached them, so the common interleaved idiom (guard
 `tests/structure/amsarticle.tex`) is untouched. Guard:
 `06_cluster_frontmatter::frontmatter_amsart_upfront_contact_distribution`. Witness:
 arXiv/html_feedback#46 (arXiv:2308.06214v1). Divergence: OXIDIZED_DESIGN #140.
+
+## 105. algorithm2e `\Comment*[r]` statement loses its line number (Rust surpasses)
+
+**Perl source:** `algorithm2e.sty.ltxml` L171 —
+`DefMacro('\lx@algo@endline', '\lx@prepend@indentation\the\everypar\lx@algo@@endline')`.
+Perl fires `\the\everypar` (which under `linesnumbered` is `\nl`) at **end-of-line**, not
+at paragraph start. `enterHorizontal` (Stomach.pm) is a plain mode switch and never fires
+`\everypar` the way real TeX's `new_graf` does.
+
+**Symptom:** with `[linesnumbered]`, a statement that carries a trailing right side comment
+—
+```tex
+\usepackage[linesnumbered]{algorithm2e}
+...
+$a \leftarrow 1$ \Comment*[r]{scaling}
+```
+— renders the statement **unnumbered** and pushes the comment to the next line. The raw
+side-comment path (algorithm2e.sty `\SetKwComment`, the non-`altsidecomment` branch)
+resets `everyparnl` to `\relax` before `\lx@algo@endline` runs, so the end-of-line
+`\the\everypar` sees `\relax` and emits no number. A KwInOut header, whose `\relax` is set
+*before* its content, is correctly unnumbered — the two are indistinguishable at end-of-line
+and only separable at content-start. Verified same-host on Perl 0.8.8 (witness arXiv
+2602.20153): the JUCAL algorithm's `\Comment*[r]` statement lines are unnumbered.
+
+**Rust:** fixed by firing `\everypar` at content-start (tex.web `new_graf`) — see
+`OXIDIZED_DESIGN_DIVERGENCES.md` #148. Statement keeps its number; comment stays on the
+statement's line intent (numbering matches the pdflatex golden). To be filed upstream.
+
+## 106. Float body frame (`ruled`/`boxed`) is dropped onto `<ltx:tags>` and never drawn (Rust surpasses)
+
+**Perl source:** `float.sty.ltxml` L82 — `addFloatFrames` picks the body as the first
+non-caption child: `grep { getNodeQName !~ /^ltx:(?:toc)?caption$/ } $float->childNodes`.
+But a `\refstepcounter`'d float emits `<ltx:tags>` as its **first** child, and `<tags>`
+(`LaTeXML-block.rnc:325`, `element tags { tag+ }`) has **no attributes**, so
+`setAttribute($tags, framed => …)` is silently schema-rejected. The inner frame is lost.
+
+**Symptom:** a `ruled` float draws only its top rule (the outer `framed="top"`, set on the
+float itself, survives); a `boxed` float draws **no frame at all**.
+```tex
+\usepackage{newfloat}\floatstyle{ruled}\newfloat{algorithm}{thp}{lop}
+% or: \usepackage[boxed]{algorithm2e}
+```
+Verified same-host on Perl 0.8.8: `floatnames.tex` and a `[boxed]` algorithm2e MWE emit only
+the outer `framed`, never the inner `framed="topbottom"`/`"rectangle"` that pdflatex draws.
+Separately, algorithm2e's binding (`algorithm2e.sty.ltxml` L88-91) wires only the `box` family
+to a frame, so the default `[ruled]` family draws no rules in either engine.
+
+**Rust:** fixed by also skipping `<ltx:tags>` when selecting the body, so the inner frame lands
+on the real body element — and by extending algorithm2e's `\algocf@style` dispatch to map the
+`ruled` family → `ruled`. See `OXIDIZED_DESIGN_DIVERGENCES.md` #149. All framed floats
+(algorithm/algorithmicx, newfloat, float.sty, algorithm2e boxed/ruled) now frame their body,
+matching the pdflatex golden. To be filed upstream.
+
+## 107. `\fname@<type>` is undefined — float.sty's real caption-name internal missing (Rust surpasses)
+
+**Perl source:** `float.sty.ltxml` L36 reimplements `\floatname` as
+`\@namedef{lx@name@#1}{#2}` — LaTeXML's own internal — and never defines real float.sty's
+`\fname@<type>` (`float.sty` L34, `\@namedef{fname@#1}`). `\newfloat` likewise defaults only
+`\lx@name@<type>` (L46-47).
+
+**Symptom:** a document that references the real float.sty internal directly — e.g. the
+widely-copied `breakablealgorithm` recipe —
+```tex
+\usepackage{algorithm}
+\newenvironment{breakablealgorithm}{...
+  \renewcommand{\caption}[2][\relax]{\textbf{\fname@algorithm~\thealgorithm} ##2\par ...}}...
+```
+leaks a raw, undefined `\fname@algorithm`: `<ltx:ERROR ...>\fname@algorithm</ltx:ERROR>`
+("Still LaTeX / has not been compiled"). Verified same-host on Perl 0.8.8 (witness arXiv
+2408.07803, html_feedback #1998): the algorithm caption errors identically.
+
+**Rust:** fixed by defining `\fname@<type>` alongside `\lx@name@<type>` in `\floatname` and
+`\newfloat` (real float.sty's internal name). See `OXIDIZED_DESIGN_DIVERGENCES.md` #150. The
+caption compiles to "Algorithm 1 …". Additive; to be filed upstream.
+
+## 108. `algpseudocodex` emits spurious empty `<equation/>` blocks (Rust-only; pruned)
+
+**Symptom:** an algorithm using `algpseudocodex` (raw-loaded — there is no `.ltxml`
+binding — under `--includestyles` / ar5iv preload) emits TWO childless, RefStepCounter'd
+`<ltx:equation/>` nodes per `\State $math$ \Comment{…}` line. Each renders as a tall
+EMPTY display-math block, so a whole algorithm is blown apart by huge vertical gaps
+between its lines. Witness arXiv 2511.21969 ("trueTriad", html_feedback).
+
+**Cause:** `algpseudocodex` builds every line with TikZ code-boxes plus
+`\savebox{\algpx@boxedStringBox}{$\m@th#2$}` (sty L519) and right-justifies `\Comment`
+via `\tabto` (sty L895). Our engine's handling of that box/math machinery opens and
+closes an equation with no Math content. **GENUINE-RUST-ONLY:** same-host Perl
+(`--includestyles`) emits ZERO empty equations for the same input — Perl's box handling
+never creates them.
+
+**Rust:** rather than chase the exact box-digestion divergence, we prune at the schema
+layer: `Tag!("ltx:equation", after_close_late => …)` drops any equation left with no
+`<ltx:Math>` child (`latex_constructs.rs`). A well-formed equation always carries a
+`<Math>` element from construction (only its XMath parse is deferred), so the
+presence-test is parse-order-safe; `after_close_late` runs after every other
+equation-close handler (e.g. amsmath's `rearrangeLoneAMSAligned`, `amsmath.sty.ltxml:638`)
+so it never races one that legitimately fills the Math. Reaches Perl parity (0 empty
+equations). Guard: `06_cluster_regressions::cluster_algpseudocodex_no_spurious_empty_equation`.
+
+## 109. algorithm2e `\\`-separated body lines lose indentation under the Vline `|` (Rust surpasses)
+
+**Trigger** (`\For`/`\While`/`\If` body using `\\` instead of `\;` for line breaks;
+witness arXiv 2002.09766 Algorithm 1):
+
+```latex
+\usepackage[algo2e]{algorithm2e}
+\begin{algorithm*}
+ \For{i=2,\ldots,L-1}{
+  ~~Compute line A\\
+  Line B\;\\
+  Line C\;\\
+ }
+\end{algorithm*}
+```
+
+The `\For` body lines render **flushed flat after the `|` vertical rule** instead of
+indented beneath it: they merge into ONE `<ltx:listingline>` joined by inline
+`<ltx:break/>`, with a single leading indentation `<ltx:rule>`, rather than three
+separate indented listinglines.
+
+**Cause (shared by both engines).** algorithm2e's `beforeDigest` does
+`Let('\\','\lx@algo@par')` (the algorithm line-break) then calls `beforeFloat('algorithm')`
+**last**; `beforeFloat` re-lets `\\`→`\lx@newline` (a tabular-in-float guard, Perl #2775,
+`latex_constructs.pool.ltxml` L3376 / Rust `latex_constructs.rs` `before_float_ex`). So the
+reset **clobbers** the intended `\lx@algo@par` binding, and `\\` inside an algorithm2e
+listing degrades to `<break/>`. `\par` (also Let to `\lx@algo@par`) and `\;`
+(→`\@endalgocfline`→`\lx@algo@par`) are untouched by `beforeFloat`, so they still break
+correctly — only `\\` is broken. Verified byte-identical in Perl LaTeXML (the reimpl
+author's own `Let('\\','\lx@algo@par')` shows the break was intended).
+
+**Rust:** re-assert `Let('\\','\lx@algo@par')` **after** `before_float` in the algorithm2e
+`before_digest` (`algorithm2e_sty.rs`), so each `\\`-separated body line becomes its own
+indented listingline, matching the pdflatex golden. A **surpass** (Perl shares the bug).
+Safe: a nested `tabular`/`array` rebinds `\\` locally (`\@tabularcr`), shadowing this.
+Guard: `06_cluster_regressions::cluster_algorithm2e_for_body_indentation`.
+
+## 110. `.bbl` preamble opens a phantom empty `(N)` bibliography entry (Rust surpasses)
+
+**Trigger** (an ACM-Reference-Format-style `.bbl`: a macro-definition preamble and a blank
+line before the first `\bibitem`; witness arXiv 2605.03143):
+
+```latex
+\begin{thebibliography}{2}
+
+\providecommand\bibinfo[2]{#2}
+
+\bibitem{A}\bibinfo{title}{First}.
+\bibitem{B}\bibinfo{title}{Second}.
+\end{thebibliography}
+```
+
+emits a spurious empty first entry `<ltx:bibitem xml:id="bib.bib1">` (a `(1)` refnum, a
+whitespace-only `<ltx:bibblock>`, no `key`), shifting the real references to `bib.bib2…`.
+
+**Cause (shared by both engines).** The blank line after `\begin{thebibliography}` is a
+`\par`; inside a bibliography that is `\par@in@bibliography`, which — seeing the next token is
+`\providecommand`, not `\par`/`\bibitem` — opens a keyless `\lx@bibitem` for the preamble
+(`latex_constructs.pool.ltxml` L4049 / Rust `latex_constructs.rs` `\par@in@bibliography`). The
+digest-time prune both engines carry (Perl #2409) only inspects the immediately-previous box,
+which the preamble whitespace displaces, so the phantom survives. Verified byte-identical in
+Perl LaTeXML.
+
+**Rust:** an after-close DOM scrub (`Tag!("ltx:bibitem", after_close_late)`) removes any
+bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the phantom. A real
+`\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
+#155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.

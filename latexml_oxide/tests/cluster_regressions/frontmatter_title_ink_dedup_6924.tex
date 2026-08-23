@@ -1,0 +1,18 @@
+% arXiv/html_feedback#6924 (witness arXiv 2608.10928): the paper sets \title{}
+% (structured frontmatter) but never calls \maketitle; it hand-typesets the title
+% (and authors) as "ink" in the body. LaTeXML captures the structured <ltx:title>
+% AND renders the ink block -> the title shows twice. Prioritize structured
+% metadata over the redundant title ink: drop the leading body block that
+% reproduces the <ltx:title> text, keep the structured title + the author ink
+% (which has no structured counterpart).
+\documentclass{article}
+\title{My Great Title \\[2pt] A Longer Subtitle}
+\begin{document}
+\begin{center}
+{\LARGE\bfseries My Great Title \\[3pt] A Longer Subtitle\par}
+\vspace{6pt}
+{\large Jane Q. Author \quad John R. Coauthor\par}
+\end{center}
+\section{Introduction}
+Body text of the paper.
+\end{document}

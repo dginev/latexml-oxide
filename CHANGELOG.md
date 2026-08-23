@@ -2,6 +2,239 @@
 
 ## Unreleased
 
+  - **`--quiet` reduces console output only; the `.latexml.log` keeps a minimum
+    verbosity floor.** Previously `--quiet` lowered the single `log` level filter to
+    `Warn`, which dropped the identity banner, every `(Processing …`/`(Loading …`
+    progress note, and all `Info:` records from the on-disk log as well as stderr —
+    breaking BookML's makefile dependency tracking, which reads the `(Loading …`
+    lines from the log (#763, reported by xworld21). The logger now decouples the
+    two gates (Perl `Common/Error.pm` `_printline`/`ProgressSpinup`: `$LOG` is
+    written whenever the log is open, STDERR only when `$VERBOSITY >= 0`): the log
+    floor stays at `Info` regardless of `--quiet`, while STDERR follows the console
+    verbosity; `--verbose`/`--debug` raise both. `Error`/`Fatal` still always reach
+    stderr (the always-emit-errors divergence). The same floor now covers the TeX
+    terminal-output primitives, which Perl calls without a verbosity guard: `\typeout`
+    (Perl `Note` — log always, stderr when not quiet) and `\message` (Perl `NoteLog`
+    — log-only, never stderr); both previously vanished from the log under `--quiet`.
+    Two raw `eprintln!` fallback diagnostics (`store.rs` Stored→Number cast, the math
+    parser's ambiguous-action fallback) now route through the logger instead of
+    printing unconditionally and bypassing the report tally. Guards
+    `quiet_keeps_log_floor::{quiet_log_keeps_floor_but_stderr_is_muted,
+    loud_log_and_stderr_both_keep_floor}`.
+
+## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
+
+  - **`minted` code blocks render Pygments syntax colors, not just bold-black.** When the
+    source ships a committed `_minted/` frozencache, `minted_frozencache.rs` content-matches
+    each highlight file's plain code (`\PYG` unwrapped, `\PYGZ*` resolved) to a block body
+    and emits Pygments-colored listing lines, reusing the `listings` constructors + xcolor;
+    a cache miss (or no `_minted/`) falls back byte-identically to the uncolored path. Perl
+    errors on `minted` — beyond-Perl (OXIDIZED_DESIGN #157). Guard
+    `minted_frozencache_colors_from_pygments_cache_157`; witness 2605.03143.
+  - **acmart affiliation parts break after the comma, not before it.** `\lx@acm@addresspart`
+    now `\ignorespaces` between `\institution{}\city{}…` parts and joins with a comma +
+    breakable space, matching real `acmart.cls` — so a line wrap no longer strands the comma
+    at the start of the next line. SHARED-with-Perl (its binding omits the `\unskip`/
+    `\ignorespaces`); beyond-Perl (OXIDIZED_DESIGN #158). Witness 2605.03143.
+  - **A single affiliation shared by all authors renders once, below the authors.**
+    `relocate_annotations` no longer mis-binds a shared `affiliation:1` to author 1 by number,
+    and gathers the orphaned institute-level contacts onto one trailing name-less
+    `<ltx:creator>`. SHARED-with-Perl; beyond-Perl (OXIDIZED_DESIGN #159). Guard
+    `frontmatter_llncs_shared_affiliation_below_authors`; witness 2402.19043 (LLNCS, 5
+    authors + one `\institute`).
+  - **Author `\thanks` renders as a marked note, not an inline affiliation-like blob.**
+    `\author{Name\thanks{…}}` (correspondence, funding, equal-contribution, …) was emitted
+    as an inline `<ltx:contact role="thanks">` that read like an affiliation next to the
+    name. It now becomes a marked `<ltx:note role="thanks">` — a superscript mark on the
+    author + the content as a margin/footnote — carrying semantic class hooks
+    (`ltx_note_frontmatter`, `ltx_role_thanks`, and a best-effort content-kind class
+    `ltx_thanks_correspondence`/`_funding`/`_contribution`/`_address`/`_note`) so a theme
+    can style each kind. A surpass — Perl keeps the inline contact (OXIDIZED_DESIGN #156).
+    `ltx:note` is added to `ltx:creator`'s content model. Witnesses arXiv 2512.24601,
+    1510.02728; guards `authors_test`, `cluster_author_thanks_marked_note`.
+  - **A `.bbl` preamble no longer produces a spurious empty `(1)` bibliography entry.**
+    An ACM-Reference-Format-style `.bbl` puts macro definitions and a blank line between
+    `\begin{thebibliography}` and the first `\bibitem`; the blank line made the bibliography
+    auto-open a keyless phantom entry that rendered as an empty `(1)` before the real
+    references. It is now scrubbed after construction (a bibitem with no key and only
+    whitespace content). A surpass — Perl LaTeXML emits the identical phantom
+    (KNOWN_PERL_ERRORS #110, OXIDIZED_DESIGN #155). Witness arXiv 2605.03143; guard
+    `cluster_bib_preamble_no_phantom_entry`.
+  - **algorithm2e `\For`/`\While`/`\If` bodies written with `\\` now indent under the
+    `|` rule.** A body line ended with `\\` (rather than `\;`) was rendered flush-left
+    after the vertical separator instead of indented beneath it, because algorithm2e's
+    `\\`→line-break binding was clobbered by the float setup's tabular guard
+    (`\\`→`\lx@newline`). We re-assert the algorithm line-break binding after that guard,
+    so each `\\`-separated body line becomes its own indented listingline. A deliberate
+    surpass — Perl LaTeXML shares the bug (KNOWN_PERL_ERRORS #109). Witness arXiv 2002.09766
+    Algorithm 1; guard `cluster_algorithm2e_for_body_indentation`.
+  - **A bare email trailing an IEEEtran `\author` block no longer leaks into the body.**
+    `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` places a loose email
+    after the affiliation block (the `\{`/`\}` are literal-brace control symbols, so it is
+    top-level text); it was digested into the document body as the first paragraph. It now
+    attaches to the creator as an affiliation. GENUINE-RUST-ONLY (Perl bundles the whole
+    author argument into `<personname>`). Witness arXiv 1901.07768; guard
+    `frontmatter_ieee_authorblock_trailing_email`.
+  - **Multiple full-line `\hbox to \hsize` separators stack instead of overflowing.**
+    Following the width:100% relativization (OXIDIZED_DESIGN #152), two `\dashfill`
+    separators flanking a centered label on one `nowrap` listingline still overflowed (two
+    width:100% inline-blocks side-by-side sum to >200%). The fill-line box is now also
+    marked `class="ltx_leaderfill"`, and the stylesheets set it `display:block`, so each
+    separator owns its line — matching the pdflatex golden. Witness arXiv 1510.02728
+    ("Modified ellipsoid method"); guard `cluster_hbox_to_hsize_leader_fills_width`.
+  - **algorithm2e listings render closer to pdflatex: uniform-bold line numbers,
+    `[ruled]` captions at the top, inline `\Comment*[r]` side-comments.** Three
+    algorithm2e rendering fixes. (1) Line numbers now render in uniform upright bold
+    (`\NlSty` = `\textnormal{\textbf{…}}`, restored in `\algocf@printnl`), instead of
+    inheriting the ambient keyword bold on `\For`/`\If`/`\While` lines and staying plain
+    elsewhere; `renumber_algo_lines` was also made font-preserving so the 1..N relabel no
+    longer strips the wrapper. (2) The ruled family (`ruled`/`algoruled`/`boxruled`…) draws
+    its caption at the top of the frame (real sty `\@algocf@capt@ruled`=`top`), so
+    `float_sty::reposition_caption_top` DOM-moves the caption before the body for that
+    family only (`plain`/`boxed` unchanged). (3) A `\Comment*[r]`/`[l]` side comment now
+    stays inline with its numbered statement, flushed right, instead of breaking onto its
+    own line. All three are a deliberate surpass — Perl LaTeXML renders them the pre-fix way
+    too (OXIDIZED_DESIGN #153). Guards `cluster_algorithm2e_uniform_line_number_font`,
+    `cluster_algorithm2e_ruled_caption_at_top`, `algorithm2e_linenumbers`.
+  - **A `\hbox to \hsize{…}` leader separator fills its column instead of overflowing.**
+    A leader-fill rule — `\hbox to \hsize{\dashfill\hfil}`, `\hrulefill`, `\dotfill` — was
+    frozen at an absolute `width="345.0pt"` (the article `\textwidth` default), so inside a
+    narrower container (an algorithm) the dashed line overflowed. When the box body is a
+    horizontal leader fill and its width is a full-line register (`\hsize`/`\linewidth`/
+    `\columnwidth`/`\textwidth`), the constructor now emits a relative `width="100%"`, so
+    the separator fills its HTML container in any context, matching pdflatex. Text-bearing
+    full-width boxes (fancyvrb verbatim lines, whose 345pt is deliberate parity) and genuine
+    fixed-width boxes (`\hbox to 100pt`) are unchanged. A surpass — Perl emits the same frozen
+    pt (OXIDIZED_DESIGN #152). Witness arXiv 1510.02728; guard
+    `cluster_hbox_to_hsize_leader_fills_width`.
+  - **A document that re-adds its title or abstract no longer duplicates it.** Replaceable
+    frontmatter tags (`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords`) now keep a
+    single entry — a later one replaces the earlier — while multi-author `creator`s still
+    accumulate. The vendored engine pushed unconditionally, so an appendix `\twocolumn[\icmltitle{…}]`
+    or a nested `{abstract}` produced two `<title>`/`<abstract>` blocks. Forward-ports upstream
+    LaTeXML's `%ReplaceableFrontmatterTags`; a surpass over the vendored Perl (OXIDIZED_DESIGN
+    #154). Witnesses arXiv 2002.09766, 2511.21969; guard `cluster_frontmatter_replaceable_dedup`.
+  - **Algorithm listings no longer show a phantom vertical scrollbar.** An auto-height
+    `.ltx_listing` never overflows vertically, but the CSS Overflow spec promotes
+    `overflow-y:visible`→`auto` whenever `overflow-x` scrolls, painting a spurious vertical
+    scrollbar (algorithm2e listings). The embedded `LaTeXML.css` now pins
+    `.ltx_listing:not(.ltx_lstlisting){overflow-y:hidden}` (mirroring the ar5iv.css fix).
+    Witness arXiv 2002.09766.
+  - **`aligned`/`gather` relations are no longer over-spaced in HTML.** An
+    `aligned` (or `align`/`gather`/`split`) nested in math renders as one `<math>`
+    with a tight `<mtable columnspacing="0pt">`, but browsers add a default 0.4em
+    horizontal padding to every `<mtd>` on top of that — roughly tripling the space
+    around a relation, so `y(x) = …` came out visibly loose. `LaTeXML.css` now
+    zeroes that padding on `columnspacing="0pt"` tables, leaving only the relation
+    operator's own spacing; matrices/arrays (bare `<mtd>`, non-zero `columnspacing`,
+    which some browsers under-honor and lean on the padding) are untouched. Fixes
+    issue #755 (reporter nasser1). The ar5iv.css theme already mitigates this with
+    its global `mtd{padding:0.1rem}` and can adopt the same reset for perfect
+    tightness (follow-up in the ar5iv-css repo). Guards
+    `aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (CI-enforced) and
+    `aligned_relation_is_not_double_spaced_by_mtd_padding` (opt-in browser render).
+  - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
+    non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
+    semiverbatim and then *digested* — `\def` executed, consumed the following
+    tokens, truncated the URL to `…q=` and raised errors — where pdflatex (and real
+    `url.sty`, via `\meaning`) keep it as literal link text. The hyperref reader now
+    stringifies any leftover control sequence (recatcodes it to `other`) instead of
+    handing it to digestion, while still expanding the `url.sty` escapes (`\%`,
+    `\_`, `\^`, `\textbackslash`, …) during the read, so realistic URLs are
+    unchanged and `\url`/`\href` now agree. Perl LaTeXML digests the same way
+    (byte-identical output, more errors) — a deliberate surpass (OXIDIZED_DESIGN
+    #147). Follow-up to issue #723's rebuttal (reporter xworld21 / Vincenzo
+    Mantova); guards `cluster_url_cs_verbatim_723`, `hyperurls_test`.
+  - **`fairmeta.cls` papers now link each author to their institution.** The
+    Meta/FAIR pre-print template (and its `selfevolagent`/`openmoss` siblings)
+    connects authors to institutions and contribution notes by superscript mark —
+    `\author[1,2,*]{Name}`, `\affiliation[1]{Inst}`, `\contribution[*]{Note}`. The
+    shared meta-class binding dropped the `[mark]`, so every author lost its
+    institution and affiliations became detached document notes. The binding now
+    routes the marks through LaTeXML's author-annotation / contact-label plan (the
+    `authblk` idiom: `\lx@add@creator[annotations]` + `\lx@add@contact[label]`), so
+    each institution/contribution attaches to the authors that cite its mark. The
+    mechanism is byte-for-byte Perl-parity; on the fairmeta papers themselves Rust
+    surpasses Perl, which has no binding and mangles them under OmniBus. Fixes
+    arXiv/html_feedback#1396 and the fairmeta family (#662, #3512, #4707, #4971,
+    #5035, #5466); guard `frontmatter_fairmeta_author_affiliation_1396`.
+  - **Tables inside a `tcolorbox` no longer render upside down.** A `tabular`
+    inside a `tcolorbox` `enhanced` skin is drawn as SVG, with the table content
+    in an `<svg:foreignObject>` nested in a TeX-y-up (flipped) group; the fo needs
+    a counter-flip `transform="matrix(1 0 0 -1 0 h)"` (set by its size-dependent
+    afterClose) or it draws vertically upside down. When building that wrapper,
+    `insert_block` renames a `_CaptureBlock_` — which carries the block's box — to
+    `svg:foreignObject`, but the rename dropped the node box (Perl carries it via
+    the internal `_box` attribute), so the afterClose read a zero size and skipped
+    the flip. `rename_node_internal` now carries the node box across, matching
+    Perl, and the table renders right-side-up (byte-for-byte Perl parity on the
+    foreignObject transforms). Fixes arXiv/html_feedback#6873 (reporter tdsmith,
+    paper 2601.13118); guard `cluster_tcolorbox_tabular_not_flipped_6873`.
+  - **Every conversion logs an identity banner: executable, version, revision,
+    start time.** At the head of each conversion `latexml_oxide`, `cortex_worker`
+    and `latexmlmath_oxide` now log a line like `latexml_oxide (latexml-oxide
+    0.7.6; revision 6ff599cc08) started 2026-08-21 19:01:23 -0400`, to both stderr
+    and the captured `.latexml.log`. This mirrors Perl's `$LaTeXML::IDENTITY`
+    (executable + version + `make`-filled revision) and adds the exact start time,
+    so a log always names the precise binary and moment that produced it. The
+    revision is embedded at build time (`build.rs`; overridable via the
+    `LATEXML_GIT_SHA` env for packaged builds without `.git`); `--quiet`
+    suppresses the banner. Guards: `identity::tests`, `identity_banner`
+    (cluster_cli).
+  - **Vertical rules in a math `array` now render, and `!{|}` aligns like Perl.**
+    Two defects from one report, both now byte-for-byte Perl parity. (1) A `|` or
+    `\hline` in a display-math `array` — `\begin{array}{cc|c}`, a framed `|c|c|`, or
+    a `colortbl` `\arrayrulecolor` rule — already carried the correct
+    `border="r"`/`border="b l r"` on each cell in the core XML (identical to Perl),
+    but the MathML post-processor emitted a bare `<m:mtd>` and the rule vanished.
+    `pmml_array` now folds `border` → `ltx_border_*` (and `thead` → `ltx_th_*`) CSS
+    classes onto the `m:mtd`, matching Perl `MathML.pm`. As in Perl,
+    `\arrayrulecolor`'s color is not yet carried (the plain rule renders). (2) The
+    `array`-package `!{|}` inserts its filler past the column's trailing `\hfil`,
+    defeating the centering, so Perl right-aligns that cell; a Rust-only alignment
+    fallback (meant for trailing fills lost in nested `\hbox` digestion) wrongly
+    re-centered it. `extract_alignment_column` now recognises a fill defeated by
+    inserted content — while a `\vrule` rule stays skippable, so `cc|c` cells remain
+    centered. Reported in dginev/latexml-oxide#740 and #742 (reporter nasser1);
+    guard `cluster_array_vertical_rule_border_740`.
+  - **Author ORCID iDs render as the green iD logo, uniformly.** Every class that
+    provides an `\orcid` now routes through the one canonical frontmatter macro
+    `\lx@add@orcid`, which emits a standard `ltx:contact[role=orcid]` carrying the
+    ORCID logo linked to `https://orcid.org/<id>`. The logo is a single shared
+    kernel asset (`\lx@orcidlogo` / `\lx@orcidlink`), reused by `orcidlink.sty`'s
+    `\orcidlink` and every class binding — so there is one definition, not a per-
+    class reimplementation. Previously several classes (ecai, imsart, sigma, aa,
+    svmult, egpubl, ceurart, …) rendered the ORCID as a bare dagger footnote with
+    the raw number. The `\orcidlink`/`\orcidlogo` logo is also sized to the text
+    (1em) instead of an oversized 1.7em badge that overflowed the line. Fixes
+    arXiv/html_feedback#6571 and the ORCID-icon cluster (#6895, #6016, #5789,
+    #2176, #5615, #4958, #4930, #1211, #5879, #3659). Guard: `orc_test`.
+  - **ecai.cls: reference-linked authors and affiliations.** `\author[A,D]{…}`
+    with `\address[A]{…}` now attaches each affiliation to the author(s) whose
+    optional-arg labels match (the elsarticle model), instead of piling every
+    address onto the last author; `\fnms`/`\snm`/`\orcid`/`\thanks` inside the
+    author are handled. Fixes arXiv/html_feedback#6571.
+  - **`~` and `^` stay ASCII in verbatim under T1 font encoding.** The displayed
+    text of a `\verb`, the `verbatim` environment, `\url`/`\path`, or a
+    `Verbatim`/`HyperVerbatim` argument (including a Rhai binding's verbatim arg)
+    containing `~`/`^` under `\usepackage[T1]{fontenc}` decoded to the accent glyphs
+    U+02DC/U+02C6 — e.g. a `\url{.../~user}` printed `˜`. (The href *attribute* was
+    always ASCII — it is built by reversion, not font decoding.) Every verbatim
+    context now selects an identity ASCII fontmap for its run (keeping the
+    typewriter styling), so `~`/`^` stay literal, while the T1 fontmap — where those
+    slots are Bruce Miller's deliberate accents (LaTeXML #2435) — is untouched for
+    normal text. `\url`/`\path` were completed after Vincenzo's follow-up on #723
+    (their `\UrlFont`-wrapped display is digested separately from the semiverbatim
+    href arg). A new `tools/fontmap_drift.py` checks our fontmaps against pdftex's
+    `glyphtounicode` golden. Surpasses Perl (verbatim/`\url` display loses ASCII
+    there too); OXIDIZED_DESIGN #144, #723.
+  - **The first paragraph is no longer indented when `\parindent` is zero.** With
+    `\setlength{\parindent}{0pt}` (or `\usepackage{parskip}`), the very first paragraph
+    still picked up the stylesheet's default 2em first-line indent, because the class
+    that suppresses it is recorded by the *previous* `\par` and the first paragraph has
+    none. It is now marked `ltx_noindent` too, matching pdflatex — and only when
+    `\parindent` is genuinely zero, so default documents are unchanged. Surpasses Perl
+    (identical off-by-one); completes the `parskip` fix (OXIDIZED_DESIGN #143, #719).
   - **Pandoc relative-width table columns no longer collapse to a "river of
     characters".** A `p{(\columnwidth - N\tabcolsep) * \real{X}}` column — the width
     format Pandoc emits by default — is a `calc` infix expression the base dimension
@@ -17,8 +250,6 @@
     fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
     Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
     `frame=single`→`ltx_framed_verbatim` remap (#702).
-
-## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **`minted` code blocks render with syntax highlighting, and inline `\mint`/`\mintinline`
     work.** The `minted` family now emits highlight token classes so a stylesheet colors the

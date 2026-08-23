@@ -436,6 +436,24 @@ LoadDefinitions!({
         assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
       }
     }
+    // url.sty's defined escapes expand to their character DURING the read (its
+    // first pass, `\edef`), so `\%`/`\_`/… resolve here rather than by later
+    // digestion. This mirrors the `HyperVerbatim` parameter type
+    // (base_parameter_types.rs) so `\url` and `\href` agree, and it leaves ONLY
+    // genuinely-leftover control sequences (e.g. `\def`) as CS tokens, which the
+    // filter below stringifies.
+    DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
+    DefMacro!(T_CS!("\\hyper@tilde"),    None, T_OTHER!("~"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
+    let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+    DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
+    let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
+    DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
@@ -446,8 +464,11 @@ LoadDefinitions!({
     end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter()
       .filter(|t| t.get_catcode() != Catcode::SPACE)
-      // Identical with url's \@Url except, let CS's through!
-      .map(|t| if t.get_catcode() == Catcode::CS { t } else { t.as_other() })
+      // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
+      // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
+      // digested/executed (#723). The escapes above already resolved during the
+      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
+      .map(|t| t.as_other())
       .collect();
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
     url_wrapped.extend(toks.clone());

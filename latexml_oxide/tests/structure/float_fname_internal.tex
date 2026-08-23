@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{float}
+\newfloat{widget}{tbp}{low}
+\floatname{widget}{Gadget}
+\newfloat{gizmo}{tbp}{log}
+\makeatletter
+\begin{document}
+named=[\fname@widget] defaulted=[\fname@gizmo]
+\end{document}

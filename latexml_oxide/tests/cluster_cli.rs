@@ -556,6 +556,19 @@ mod kpathsea_backend_resolution {
     let produced = fs::read_to_string(dir.join("out.xml")).unwrap_or_default();
     let _ = fs::remove_dir_all(&dir);
 
+    // This test's premise — resolution survives a disabled `kpsewhich` — only
+    // holds when libkpathsea is linked in-process (the shipped distribution,
+    // `--features kpathsea-build-from-source`). A plain `cargo build` links no
+    // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
+    // pointed at nothing there is no resolver at all, so skip rather than fail.
+    if log.contains("no libkpathsea is linked") {
+      eprintln!(
+        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
+         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      );
+      return;
+    }
+
     assert!(
       !log.contains("Error:missing_file:lxo_probe_304"),
       "the TEXINPUTS-only include must resolve with no usable kpsewhich; log:\n{log}"
@@ -1517,13 +1530,16 @@ mod dir_prefixed_package_loading {
     std::fs::create_dir_all(root.join("sub")).unwrap();
     std::fs::create_dir_all(root.join("extra")).unwrap();
 
-    let extra_abs = root.join("extra");
+    // A RELATIVE dir keeps this cross-platform without any path-string surgery:
+    // an absolute OS path in TeX source is hostile on Windows (`\` is catcode 0,
+    // so `C:\Users\…` tokenizes \U, \e, … as control sequences and mangles the
+    // arg that `\lx@set@path` Expand!s). A relative arg resolves against
+    // SOURCEDIRECTORY when that is set, else the process cwd — both are the temp
+    // root here (the run uses current_dir(root)), so `extra` == root/extra on
+    // every platform.
     std::fs::write(
       root.join("sub/lpkg.sty"),
-      format!(
-        "\\ProvidesPackage{{lpkg}}\n\\RequirePackage{{import}}\n\\lx@set@path{{{}}}\n",
-        extra_abs.to_string_lossy()
-      ),
+      "\\ProvidesPackage{lpkg}\n\\RequirePackage{import}\n\\lx@set@path{extra}\n",
     )
     .unwrap();
     std::fs::write(
@@ -1880,6 +1896,197 @@ mod browser_render_display_math {
          clipped, not shown on one line (#527); cells={stdout}"
       );
     }
+  }
+}
+
+mod browser_render_aligned_math_spacing {
+  //! #755 (reporter nasser1), the *rendered* guarantee: an `aligned`/`gather`
+  //! nested in math (ONE `<math>` with a tight `<mtable columnspacing="0pt">`)
+  //! must render the relation with its own spacing only, not the browser's
+  //! default 0.4em `<mtd>` padding on top — which tripled the `y(x) = …` gap.
+  //! `tests/browser/measure_align_mtd.js` renders via Playwright (system Chrome)
+  //! and reports the aligned cells' computed horizontal padding plus the first
+  //! row's left-column→relation gap.
+  //!
+  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (headless-browser jobs
+  //! are expensive), self-skipping (visibly) when node / `playwright-core` / a
+  //! system Chrome is absent. To run it: `npm ci` in `latexml_oxide/tests/browser`,
+  //! then `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_aligned_math_spacing`
+  //! — with that env set a missing toolchain is a hard FAILURE, not a skip. The
+  //! platform-independent structural half is `aligned_mtable_columnspacing_zero`
+  //! (below): the CSS reset only bites when `columnspacing="0pt"` is emitted.
+
+  use std::{fs, path::PathBuf, process::Command};
+
+  // The reporter's MWE, distilled: a `gather*` wrapping an `aligned` makes the
+  // whole thing ONE `<math>` with a native `<mtable>` (the path the bug lives on).
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     y(x) &= C_1 y(x) + C_2 y(x) \\\\\n\
+                     g(x) &= C_1 y_1 + C_2 y_2\n\
+                     \\end{aligned}\n\\end{gather*}\n\
+                     \\end{document}\n";
+
+  fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
+  fn runs(cmd: &str, arg: &str) -> bool {
+    Command::new(cmd)
+      .arg(arg)
+      .output()
+      .map(|o| o.status.success())
+      .unwrap_or(false)
+  }
+  fn have_chrome() -> bool {
+    [
+      "google-chrome",
+      "google-chrome-stable",
+      "chromium",
+      "chromium-browser",
+    ]
+    .iter()
+    .any(|c| runs(c, "--version"))
+  }
+  fn toolchain_ready() -> bool {
+    runs("node", "--version")
+      && have_chrome()
+      && browser_dir().join("node_modules/playwright-core").is_dir()
+  }
+
+  #[test]
+  fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
+    if !toolchain_ready() {
+      assert!(
+        std::env::var("LATEXML_BROWSER_TESTS").is_err(),
+        "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
+         are not all available; run `npm ci` in {}",
+        browser_dir().display()
+      );
+      eprintln!(
+        "SKIP browser render (#755): node/playwright-core/chrome unavailable — \
+         `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
+        browser_dir().display()
+      );
+      return;
+    }
+
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let root = workdir.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .current_dir(root)
+      .arg("--format=html5")
+      .arg("--destination=out.html")
+      .arg("doc.tex")
+      .output()
+      .expect("run latexml_oxide");
+    assert!(
+      root.join("out.html").exists(),
+      "conversion produced no HTML:\n{}",
+      String::from_utf8_lossy(&conv.stderr)
+    );
+
+    let url = format!("file://{}", root.join("out.html").display());
+    let m = Command::new("node")
+      .arg(browser_dir().join("measure_align_mtd.js"))
+      .arg(&url)
+      .output()
+      .expect("run measure_align_mtd.js");
+    let stdout = String::from_utf8_lossy(&m.stdout);
+    assert!(
+      m.status.success(),
+      "measure_align_mtd.js failed: {}\n{stdout}",
+      String::from_utf8_lossy(&m.stderr)
+    );
+
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    let cells = v["cells"].as_array().expect("cells array");
+    // The `aligned` has 2 rows x 2 columns → 4 native alignment cells.
+    assert_eq!(
+      cells.len(),
+      4,
+      "expected 4 aligned <mtd> cells, got {}: {stdout}",
+      cells.len()
+    );
+    // The FIX: the browser's default 0.4em (6.4px) mtd padding is reset to 0 on
+    // these `columnspacing="0pt"` cells, so only the relation operator spaces the
+    // columns. Robust, font-independent.
+    for (i, c) in cells.iter().enumerate() {
+      for side in ["paddingLeft", "paddingRight"] {
+        let p = c[side].as_str().unwrap_or("?");
+        assert_eq!(
+          p, "0px",
+          "aligned cell {i} kept {side}={p} — the native-MathML mtd padding reset \
+           (LaTeXML.css, #755) is missing, so the relation is double-spaced: {stdout}"
+        );
+      }
+    }
+    // Behavioural cross-check: the rendered `y(x)`→`=` gap is the relation space
+    // alone (~4.4px at 16px), not the ~10.8px the UA padding produced. A generous
+    // ceiling separates fixed from broken without pinning the exact font metric.
+    let gap = v["firstRelGap"].as_f64().expect("firstRelGap");
+    assert!(
+      gap < 7.0,
+      "aligned `y(x)`→`=` gap rendered {gap}px — double-spaced by mtd padding \
+       (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
+    );
+  }
+}
+
+mod aligned_mtable_columnspacing_zero {
+  //! #755, the platform-independent (CI-enforced) half: the native-MathML mtd
+  //! padding reset in `LaTeXML.css` keys on `mtable[columnspacing="0pt"]`, so it
+  //! bites only if the post-processor actually emits that attribute on an
+  //! `aligned` table AND the reset rule ships in the embedded stylesheet. Neither
+  //! needs a browser — this guards the CSS/XML contract the browser test above
+  //! renders. If the presentation MathML ever stopped emitting `columnspacing="0pt"`
+  //! for `aligned`, the reset would silently no-op and the relation over-space
+  //! again; if the CSS rule were dropped, likewise.
+
+  use std::{fs, path::Path, process::Command};
+
+  const DOC: &str = "\\documentclass[12pt]{book}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     y(x) &= C_1 y(x)\\\\ g(x) &= C_1 y_1\n\
+                     \\end{aligned}\n\\end{gather*}\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn aligned_emits_zero_columnspacing_and_css_resets_mtd_padding() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let work = tempfile::tempdir().expect("tempdir");
+    let root = work.path();
+    fs::write(root.join("doc.tex"), DOC).unwrap();
+    let out = Command::new(bin)
+      .current_dir(root)
+      .args(["--format=html5", "--destination=out.html", "doc.tex"])
+      .output()
+      .expect("run latexml_oxide");
+    let html = fs::read_to_string(root.join("out.html")).unwrap_or_else(|e| {
+      panic!(
+        "no HTML: {e}\n{}",
+        String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "")
+      )
+    });
+
+    // The `aligned` renders as ONE native `<math>` with a tight mtable — the
+    // attribute the CSS reset keys on. (An HTML `ltx_eqn_table` display would NOT
+    // carry it; this nested-in-`gather*` shape is the reported one.)
+    assert!(
+      html.contains("<mtable columnspacing=\"0pt\""),
+      "aligned did not emit a native <mtable columnspacing=\"0pt\"> — the #755 CSS \
+       reset keys on that attribute and would silently no-op:\n{html}"
+    );
+
+    // The reset rule must ship in the embedded stylesheet the binary wrote out.
+    let css = fs::read_to_string(root.join("LaTeXML.css")).expect("read LaTeXML.css");
+    assert!(
+      css.contains("mtable[columnspacing=\"0pt\"] mtd"),
+      "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
   }
 }
 
@@ -2380,5 +2587,207 @@ mod picture_graphics_e2e {
     );
     // Guard the fixture path stays valid.
     assert!(Path::new(bin).is_file());
+  }
+}
+
+mod identity_banner {
+  //! Every conversion logs a one-line identity banner — executable name, version,
+  //! git revision, exact start time (`latexml::identity`) — mirroring Perl's
+  //! `Note("$LaTeXML::IDENTITY processing $source")`. These guard the end-to-end
+  //! wiring: that both front-ends actually emit it, and that `--quiet` mutes it.
+
+  use std::process::Command;
+
+  /// The four fields the banner must carry, checked against a captured stderr.
+  fn assert_is_banner(stderr: &str, exe: &str) {
+    let line = stderr
+      .lines()
+      .find(|l| l.contains("latexml-oxide") && l.contains("; revision "))
+      .unwrap_or_else(|| panic!("no identity banner in stderr of {exe}:\n{stderr}"));
+    assert!(line.contains(exe), "banner names the wrong exe: {line:?}");
+    assert!(
+      line.contains(env!("CARGO_PKG_VERSION")),
+      "banner missing crate version: {line:?}"
+    );
+    assert!(
+      line.contains(" started "),
+      "banner missing start time: {line:?}"
+    );
+  }
+
+  #[test]
+  fn latexml_oxide_logs_identity() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    let tex = workdir.path().join("hi.tex");
+    std::fs::write(
+      &tex,
+      "\\documentclass{article}\\begin{document}Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .arg(tex.file_name().unwrap())
+      .arg("--dest")
+      .arg("hi.html")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert_is_banner(&String::from_utf8_lossy(&output.stderr), "latexml_oxide");
+  }
+
+  #[test]
+  fn latexmlmath_logs_identity_and_quiet_mutes_it() {
+    let bin = env!("CARGO_BIN_EXE_latexmlmath_oxide");
+
+    let loud = Command::new(bin)
+      .arg("x^2")
+      .output()
+      .expect("spawn latexmlmath");
+    assert_is_banner(&String::from_utf8_lossy(&loud.stderr), "latexmlmath_oxide");
+
+    let quiet = Command::new(bin)
+      .args(["--quiet", "x^2"])
+      .output()
+      .expect("spawn latexmlmath --quiet");
+    let quiet_err = String::from_utf8_lossy(&quiet.stderr);
+    assert!(
+      !quiet_err.contains("; revision "),
+      "--quiet must suppress the identity banner, got:\n{quiet_err}"
+    );
+  }
+}
+
+mod quiet_keeps_log_floor {
+  //! Issue #763 (xworld21/Vincenzo Mantova, BookML author): `--quiet` must
+  //! reduce STDERR only — the `.latexml.log` keeps a minimum verbosity floor
+  //! (identity banner, `(Processing …`/`(Loading …` progress notes, `Info:`
+  //! records, the `Status:conversion:` verdict). BookML's makefile dependency
+  //! tracking reads the `(Loading …` lines from the log, so stripping them under
+  //! `--quiet` broke it.
+  //!
+  //! Perl ground truth — `Common/Error.pm` `_printline`/`ProgressSpinup` write to
+  //! `$LOG` whenever the log is open, gating only STDERR on `$VERBOSITY >= 0`;
+  //! `bin/latexml` L83 emits the identity `Note` unconditionally. Confirmed on the
+  //! same host: Perl 0.8.8 `--quiet` keeps the banner + every `(Loading …` line in
+  //! its `.log`.
+  //!
+  //! The same log-floor rule governs the TeX terminal-output primitives, which
+  //! must also survive `--quiet` (Perl calls them WITHOUT a verbosity guard):
+  //! `\typeout` → `Note` (log always + stderr if `$VERBOSITY >= 0`,
+  //! `latex_constructs.pool.ltxml` L4538), `\message` → `NoteLog` (log ONLY, never
+  //! stderr, `TeX_Debugging.pool.ltxml` L65). The `\message` distinction is the
+  //! sharp one: its content must reach the log at any verbosity yet never appear on
+  //! stderr, even loud.
+
+  use std::{path::Path, process::Command};
+
+  const DOC: &str = "\\documentclass{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\typeout{TypeoutMarker763}\n\
+                     \\message{MessageMarker763}\n\
+                     Hello $x^2$.\n\
+                     \\end{document}\n";
+
+  /// The log-floor lines every run must keep, quiet or not.
+  fn assert_log_has_floor(log: &str, label: &str) {
+    for needle in [
+      "; revision ",         // identity banner
+      " started ",           // identity banner start time
+      "(Processing content", // Mouth progress note (ProgressSpinup)
+      "(Loading ",           // binding-module load note (BookML depends on this)
+      "Info:",               // an Info-level diagnostic record
+      "TypeoutMarker763",    // \typeout → Note (log always)
+      "MessageMarker763",    // \message → NoteLog (log always)
+      "Status:conversion:",  // the final verdict line
+    ] {
+      assert!(
+        log.contains(needle),
+        "{label} log missing floor line {needle:?}; full log:\n{log}"
+      );
+    }
+  }
+
+  fn run(quiet: bool) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(workdir.path().join("doc.tex"), DOC).expect("write doc.tex");
+    let log_name = if quiet { "quiet.log" } else { "loud.log" };
+
+    let mut cmd = Command::new(bin);
+    cmd
+      .arg("doc.tex")
+      .arg("--dest")
+      .arg("doc.html")
+      .arg("--log")
+      .arg(log_name);
+    if quiet {
+      cmd.arg("--quiet");
+    }
+    let output = cmd
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    let log = std::fs::read_to_string(workdir.path().join(log_name)).expect("read log");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    (log, stderr)
+  }
+
+  /// THE FIX: under `--quiet` the on-disk `.log` still carries the full floor,
+  /// while STDERR is quieted (no `Info:` records, no `(Loading …` notes).
+  #[test]
+  fn quiet_log_keeps_floor_but_stderr_is_muted() {
+    let (log, stderr) = run(true);
+    assert_log_has_floor(&log, "--quiet");
+    // STDERR is reduced: progress notes, Info records, and \typeout do not reach
+    // the console.
+    assert!(
+      !stderr.contains("(Loading "),
+      "--quiet must mute progress notes on STDERR, got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("Info:"),
+      "--quiet must mute Info records on STDERR, got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("TypeoutMarker763"),
+      "--quiet must mute \\typeout on STDERR, got:\n{stderr}"
+    );
+    // \message uses NoteLog — never on stderr at any verbosity.
+    assert!(
+      !stderr.contains("MessageMarker763"),
+      "\\message (NoteLog) must never reach STDERR, got:\n{stderr}"
+    );
+  }
+
+  /// Parity companion: without `--quiet`, the log keeps the whole floor, and stderr
+  /// keeps the verbosity-gated notes (`(Loading …`, `Info:`, `\typeout`) — but
+  /// `\message` (Perl `NoteLog`) stays log-only, off stderr even loud.
+  #[test]
+  fn loud_log_and_stderr_both_keep_floor() {
+    let (log, stderr) = run(false);
+    assert_log_has_floor(&log, "loud");
+    assert!(
+      stderr.contains("(Loading "),
+      "loud STDERR should show progress notes, got:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("Info:"),
+      "loud STDERR should show Info records, got:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("TypeoutMarker763"),
+      "loud STDERR should show \\typeout (Note), got:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains("MessageMarker763"),
+      "\\message (NoteLog) must stay log-only, never on STDERR — got:\n{stderr}"
+    );
   }
 }

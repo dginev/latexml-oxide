@@ -1,0 +1,50 @@
+% Regression guard for arXiv/html_feedback#6681 (paper 2606.22155v1).
+% A `listings` block with breaklines=true/columns=fullflexible inside a
+% `table`, followed by more sectioning, leaked LaTeXML-internal constructors
+% (\@@listings@block, \@@numbered@section, \lx@bibliography) as literal text in
+% an older build (deployed 0.7.5), swallowing the whole document tail — the
+% user's "half missing". This pins the fixed behaviour: the tail must render.
+\documentclass[11pt]{amsart}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+\lstdefinestyle{plainstyle}{
+  basicstyle=\ttfamily\footnotesize,
+  showstringspaces=false,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framesep=4pt,
+  xleftmargin=4pt,
+  literate={'}{{\textquotesingle}}1
+}
+\begin{document}
+\section{The records}\label{sec:records}
+\begin{table}[t]
+\centering
+\caption{First witness.}\label{tab:T21}
+\begin{lstlisting}[style=plainstyle]
+a= 0:  0102210210210210210022
+a= 1:  121002102102102102210
+a=20:  20
+a=21:  0
+\end{lstlisting}
+\end{table}
+\begin{table}[t]
+\centering
+\caption{Second witness (wrapped lines).}\label{tab:T13}
+\begin{lstlisting}[style=plainstyle]
+a= 0: 01111111000001 0101000110111 010001110101 00101010011
+      0110011010 100110101 01101001 0101100 000110 11010 1010 100 00 0
+a= 1: 1010101001011 000110101110 00111101000 1001000110
+      010011110 00110001 0010111 010001 11000 0011 110 01 1
+a=13: 0
+\end{lstlisting}
+\end{table}
+\section{Open questions}\label{sec:open}
+This paragraph after the second listing must render as ordinary text.
+\appendix
+\section{Verification}\label{app:verifier}
+The verification appendix must survive as a real appendix, not leak as macro text.
+\end{document}

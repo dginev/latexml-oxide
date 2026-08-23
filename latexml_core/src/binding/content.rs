@@ -41,6 +41,16 @@ const MAX_INPUT_DEPTH: usize = 500;
 thread_local! {
   /// Current nesting depth of input_definitions calls.
   static INPUT_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// Stack of each active input_definitions frame's `grandparent_in_expl3` flag.
+  /// A native binding that force-raw-loads its own `\ProvidesExplPackage` .sty via
+  /// `InputDefinitions!(noltxml => true)` (e.g. derivative_sty.rs, #630) re-enters
+  /// input_definitions AFTER the outer `\@pushfilename` already ran `\ExplSyntaxOff`
+  /// (`_` -> SUB). A fresh snapshot then reads false, so the exit cleanup over-fires
+  /// `\ExplSyntaxOff` and corrupts `\l__expl_status_stack_tl`. The inner frame
+  /// inherits the outer's flag instead. Witness arXiv:2605.21946 (pomegranate.sty
+  /// -> `\RequirePackage{derivative}`).
+  static INPUT_DEF_EXPL3: std::cell::RefCell<Vec<bool>> =
+    const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// a configuration for loading LaTeX definition files (such as .sty, .cls, and their bindings)
@@ -386,7 +396,30 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // arXiv:2509.05997 / .07893 / .02344, 2510.13206/.13942/.17317
   // (xsavebox + sys_load_backend + l3backend-dvips.def chain — minimal
   // repro: \usepackage{xsavebox}).
-  let grandparent_in_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
+  let self_snapshot = lookup_catcode('_') == Some(Catcode::LETTER);
+  // Inherit the immediate parent frame's flag only when the parent WAS in expl3 but
+  // our own fresh read is false — the double-nested same-file case (an outer
+  // `\RequirePackage{X}` whose X-binding force-raw-loads its own expl3 .sty, so this
+  // inner call snapshots after the outer `\@pushfilename` already flipped `_` to SUB).
+  // Never overrides a correct fresh read, so xsavebox/tcolorbox/lipsum are unaffected.
+  let grandparent_in_expl3 = INPUT_DEF_EXPL3
+    .with(|s| {
+      s.borrow()
+        .last()
+        .copied()
+        .filter(|&parent| parent && !self_snapshot)
+    })
+    .unwrap_or(self_snapshot);
+  INPUT_DEF_EXPL3.with(|s| s.borrow_mut().push(grandparent_in_expl3));
+  struct Expl3FrameGuard;
+  impl Drop for Expl3FrameGuard {
+    fn drop(&mut self) {
+      INPUT_DEF_EXPL3.with(|s| {
+        s.borrow_mut().pop();
+      });
+    }
+  }
+  let _expl3_frame = Expl3FrameGuard;
   // Strict-LaTeX-kernel order (latex.ltx `\@onefilewithoptions`, L15518-L15519):
   //   \@pushfilename                        % capture OLD \@currname / \@currext
   //   \xdef\@currname{ <new name> }         % then update to NEW
@@ -2676,26 +2709,31 @@ pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
   } else {
     basename
   };
-  let mut changed = base != name;
+  // Mirror find_file_fallback: a directory strip ALONE must not qualify (a `subdir/<name>` is a
+  // path, not a version — it must not name-match `<name>`'s binding). Only a real version
+  // suffix/prefix strip counts; guard the `^`-anchored prefix strip behind `!dir_stripped` so
+  // `sty/myunits` doesn't become `units`.
+  let dir_stripped = base != name;
+  let mut suffix_stripped = false;
   loop {
     if let Some(m) = suffix_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     if let Some(m) = glued_rx.find(&base) {
       base = base[..m.start()].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
-    if let Some(m) = prefix_rx.find(&base) {
+    if !dir_stripped && let Some(m) = prefix_rx.find(&base) {
       base = base[m.end()..].to_string();
-      changed = true;
+      suffix_stripped = true;
       continue;
     }
     break;
   }
-  if !changed || base.is_empty() || base == name {
+  if !suffix_stripped || base.is_empty() || base == name {
     return false;
   }
   binding_exists(&base, ext_type)
@@ -2785,18 +2823,21 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
     break;
   }
 
-  if !suffix_stripped && !dir_stripped {
+  // A directory strip ALONE no longer triggers a fallback: `subdir/<name>` is a PATH, not a
+  // version, so it must not name-match `<name>`'s binding (that shadowed paper-local subdir
+  // packages, e.g. `utils/mathenv` -> the unrelated CTAN mathenv binding, leaving the local
+  // file — and its cleveref/theorem defs — unloaded). Only a real VERSION suffix/prefix strip
+  // (neurips_2026->neurips, mysvjour3->svjour3) qualifies, matching Perl's FindFile_fallback
+  // (which never strips a directory). The retired `BasenameOnly` convenience (2105.02087
+  // misc/ieeetran, 2405.18387 assets/equations) now falls to raw-load/OmniBus like Perl.
+  if !suffix_stripped {
     return None;
   }
   if base.is_empty() || base == name {
     return None;
   }
 
-  let kind = if suffix_stripped {
-    FallbackKind::Versioned
-  } else {
-    FallbackKind::BasenameOnly
-  };
+  let kind = FallbackKind::Versioned;
 
   let fallback_filename = format!("{base}.{ext_type}");
   // Check if fallback binding exists

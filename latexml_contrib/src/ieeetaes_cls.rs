@@ -5,6 +5,10 @@ LoadDefinitions!({
   LoadClass!("IEEEtran");
   RequirePackage!("hyperref");
   RequirePackage!("authblk");
+  // IEEEtaes.cls:5158 `\usepackage[capitalize]{cleveref}`; the IEEEtran stub replaces
+  // the real `.cls`, so \cref/\Cref come out Error:undefined — Perl raw-loads the `.cls`
+  // and gets cleveref. Must load AFTER hyperref. Witness 2606.01169.
+  RequirePackage!("cleveref", options => vec!["capitalize".to_string()]);
 
   // IEEEtaes-specific frontmatter — preserve author content.
   DefMacro!("\\doiinfo{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");

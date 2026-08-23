@@ -1,0 +1,7 @@
+% INCLUDE_CLASSES must stay off under localrawstyles (styles-only): a paper-local subdir CLASS
+% must not raw-load. subdirdispatch/localjournal.cls defines \subdirclsmarker; with INCLUDE_CLASSES
+% off it never runs (OmniBus fallback), so \subdirclsmarker is undefined and SUBDIRCLSLOADED never
+% reaches the output. Guards that dispatch does not name-match a stripped `localjournal` binding
+% AND that .cls raw-load stays disabled.
+\documentclass{subdirdispatch/localjournal}
+\begin{document}\subdirclsmarker\end{document}

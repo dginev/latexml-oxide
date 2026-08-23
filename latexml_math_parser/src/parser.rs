@@ -982,6 +982,25 @@ impl MathParser {
       "descendant-or-self::*[@xml:id and contains(@role,'SCRIPT')]",
       None,
     );
+    if apps.is_empty() {
+      return Ok(());
+    }
+    // idref -> [referencing nodes], built in ONE whole-document pass, replacing the
+    // per-app whole-doc `descendant-or-self::*[@idref='X']` findnodes below. That
+    // per-app scan made cleanupScripts O(scriptApps * docNodes) — quadratic on
+    // math-dense papers where one ltx:Math holds hundreds of XMRef-referenced
+    // SUB/SUPERSCRIPT apps (witnesses 2605.25560 / 2605.07347 / 2605.22741: >240s
+    // spin in libxml2 xmlXPathEval on exactly this scan). Perl MathParser.pm:113 has
+    // the identical per-app scan; this index is a semantics-preserving, beyond-Perl
+    // speedup: each XMRef carries exactly one @idref (per-app ref-sets are disjoint)
+    // and every replacement this loop inserts carries idref=script_id (a script
+    // content id, never an app id), so the up-front index stays valid for the loop.
+    let mut refs_by_idref: HashMap<String, Vec<Node>> = HashMap::default();
+    for node in document.findnodes("descendant-or-self::*[@idref]", None) {
+      if let Some(idref) = node.get_attribute("idref") {
+        refs_by_idref.entry(idref).or_default().push(node);
+      }
+    }
     for mut app in apps {
       let role = match app.get_attribute("role") {
         Some(r) => r,
@@ -997,12 +1016,13 @@ impl MathParser {
         Some(id) => id,
         None => continue,
       };
-      // Note: using * instead of ltx:XMRef due to XPath namespace issues in nested predicates
-      let refs_xpath = s!("descendant-or-self::*[@idref = '{}']", appid);
-      let refs = document.findnodes(&refs_xpath, None);
-      if refs.is_empty() {
-        continue;
-      }
+      // Refs to THIS app, from the pre-built index (was a per-app whole-doc
+      // `descendant-or-self::*[@idref='{appid}']`; the `*` node-test, not ltx:XMRef,
+      // is preserved). `remove` takes each app's disjoint ref-set exactly once.
+      let refs = match refs_by_idref.remove(&appid) {
+        Some(v) => v,
+        None => continue,
+      };
       // Get the script content (first child of the XMApp)
       let mut script = match app.get_first_child() {
         Some(child) => child,

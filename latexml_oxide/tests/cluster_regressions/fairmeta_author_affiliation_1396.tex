@@ -1,0 +1,27 @@
+% Regression guard for arXiv/html_feedback#1396 (+ the fairmeta.cls family:
+% #662/#3512/#4707/#4971/#5035/#5466). fairmeta.cls (the Meta/FAIR pre-print
+% template) links authors to institutions by superscript marks:
+%   \author[1,2,*]{Name}   \affiliation[1]{Institution}   \contribution[*]{Note}
+% The shared meta-class binding used to DROP the [mark] optional arg, so every
+% author lost its institution and contributions were unlabeled document notes.
+% The fix routes the marks through LaTeXML's author-annotation / contact-label
+% plan (the authblk idiom), so each institution/contribution attaches to the
+% authors that reference its mark. Verified byte-identical to Perl LaTeXML.
+\documentclass{fairmeta}
+\title{Teaching Models to Reason}
+\author[1,2,*]{Alex Havrilla}
+\author[4]{Yuqing Du}
+\author[3]{Maksym Zhuravinskyi}
+\author[1,**]{Eric Hambro}
+\affiliation[1]{Meta}
+\affiliation[2]{Georgia Institute of Technology}
+\affiliation[3]{StabilityAI}
+\affiliation[4]{UC Berkeley}
+\contribution[*]{Work done during Meta internship}
+\contribution[**]{Work done while at Meta}
+\abstract{A minimal abstract.}
+\correspondence{Alex Havrilla at \email{ahavrilla@example.com}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

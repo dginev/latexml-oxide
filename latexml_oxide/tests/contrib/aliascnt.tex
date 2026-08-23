@@ -1,0 +1,28 @@
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{aliascnt}
+\newtheorem{theorem}{Theorem}[section]
+\newaliascnt{lemma}{theorem}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+% Chained alias: corollary -> lemma -> theorem (root). Guards root-following.
+\newaliascnt{corollary}{lemma}
+\newtheorem{corollary}[corollary]{Corollary}
+\aliascntresetthe{corollary}
+\begin{document}
+\section{First}
+\begin{theorem}\label{thm:a}
+First theorem.
+\end{theorem}
+\section{Second}
+\begin{lemma}\label{lem:a}
+First lemma.
+\end{lemma}
+\begin{lemma}\label{lem:b}
+Second lemma.
+\end{lemma}
+\begin{corollary}\label{cor:a}
+A corollary.
+\end{corollary}
+References: \ref{thm:a}, \ref{lem:a}, \ref{lem:b}, \ref{cor:a}.
+\end{document}

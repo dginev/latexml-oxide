@@ -60,8 +60,10 @@ LoadDefinitions!({
   DefEnvironment!("{acks}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
-  // IMS authors use \orcid for ORCID identifier. Preserve as ltx:note.
-  DefMacro!("\\orcid{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  // IMS authors use \orcid for the ORCID identifier. Route it through the kernel
+  // `\lx@add@orcid`, producing an `ltx:contact[role=orcid]` the XSLT renders as a
+  // clickable https://orcid.org/<id> link (vs a bare dagger note). html_feedback#6571.
+  DefMacro!("\\orcid{}", "\\lx@add@orcid{#1}");
   // IMS journal bibliography entry types — imsart.sty defines these as
   // \def commands but they're used as environments in some .bbl files.
   // Provide as no-op envs (the actual bibliography rendering is handled

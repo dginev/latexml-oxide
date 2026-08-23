@@ -46,6 +46,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | [`parity/OXIDIZED_DESIGN_FUTURE_WORK.md`](parity/OXIDIZED_DESIGN_FUTURE_WORK.md) | Future-work backlog. |
 | [`parity/ORGANIZATION.md`](parity/ORGANIZATION.md) | Maps Perl engine files (`Engine/*.pool.ltxml`) → Rust (`latexml_engine/src/*.rs`); loading hierarchy. |
 | [`parity/AUTHOR_MARKUP_PIPELINE.md`](parity/AUTHOR_MARKUP_PIPELINE.md) | **In-progress worklist** — unify the two-branch `\lx@add@authors` author/affiliation parser into one line-first pipeline; witness corpus + baseline + confirmed metadata-markup defects. |
+| [`parity/ALGORITHM_RENDERING.md`](parity/ALGORITHM_RENDERING.md) | **In-progress worklist** — algorithm2e/algorithmicx golden-match: completed fixes (line numbering, ruled/boxed frames, `\fname@`), open follow-ups (inline `\Comment*[r]`, ruled caption-at-top, `\ref`-to-line counter, side-by-side minipages), and the cross-binding markup-unification plan. |
 
 ### Engine internals & known issues
 | Doc | What it is |

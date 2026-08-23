@@ -1,0 +1,25 @@
+% arXiv/html_feedback#6569 (witness arXiv 2410.00317, its first bNiceMatrix, main.tex L210-223).
+% A nicematrix `bNiceMatrix[first-row,first-col]` with a `\CodeBefore … \Body` cell-coloring
+% block. FAITHFUL target: render a real bracketed math array (ltx:XMDual/XMArray), the
+% first-row/first-col entries marked thead, and the \rectanglecolor cells carrying
+% backgroundcolor — NOT a discarded placeholder + Error:undefined. Beyond-Perl (no Perl
+% nicematrix binding). Convert via the contrib/ar5iv path (convert_to_xml_ar5iv / --preload=ar5iv.sty).
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\setlength{\arraycolsep}{1pt}
+\[
+\begin{bNiceMatrix}[first-row, first-col]
+\CodeBefore
+\rectanglecolor{blue!15}{1-1}{1-1}
+\rectanglecolor{blue!15}{1-3}{1-3}
+\rectanglecolor{blue!15}{2-1}{2-2}
+\rectanglecolor{blue!15}{3-2}{3-3}
+\Body
+&v_1 &v_2&v_3\\
+e_1=(v_1,v_3)&x_1-x_3&0&x_3-x_1\\
+e_2=(v_1,v_2)&x_1-x_2&x_2-x_1&0\\
+e_3=(v_2,v_3)&0&x_2-x_3&x_3-x_2\\
+\end{bNiceMatrix}
+\].
+\end{document}

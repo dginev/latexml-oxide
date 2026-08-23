@@ -346,14 +346,14 @@ impl Scan {
         let value = self
           .db
           .adopt_xml(&title_node)
-          .unwrap_or_else(|| Value::from(title_text_content(&title_node).as_str()));
+          .unwrap_or_else(|| Value::from(title_text_content(doc, &title_node).as_str()));
         sp.push("title", value);
       }
       if let Some(toctitle_node) = doc.findnode_at("ltx:toctitle", node) {
         let value = self
           .db
           .adopt_xml(&toctitle_node)
-          .unwrap_or_else(|| Value::from(title_text_content(&toctitle_node).as_str()));
+          .unwrap_or_else(|| Value::from(title_text_content(doc, &toctitle_node).as_str()));
         sp.push("toctitle", value);
       }
       if let Some(stub) = node.get_attribute("stub") {
@@ -1056,10 +1056,16 @@ fn get_xml_id(node: &Node) -> Option<String> {
 /// This is the derived STRING form of a title (page `<title>`, `title=`
 /// tooltip). The rich node form is kept in the ObjectDB (`Value::Xml`) so
 /// CrossRef can deep-clone it into `<ltx:ref>` content. Mirrors Perl
-/// `CrossRef::getTextContent_rec`'s `ltx:tag` open/close handling (its
-/// `ltx:Math → unicodemath` branch is not yet ported — math in a title still
-/// flattens to its token text here, unchanged from before).
-pub(crate) fn title_text_content(node: &Node) -> String {
+/// `CrossRef::getTextContent_rec` (`CrossRef.pm` L861-879): `ltx:tag` open/close
+/// handling, plus the `ltx:Math → unicodemath` branch — a title's math renders
+/// as presentation-order infix Unicode (`sin𝑥=𝑥`), NOT the raw content-tree
+/// token text, which is operator-first and whitespace-laden (issue #761).
+///
+/// Whitespace collapse is applied by the caller ([`value_text`] =
+/// `getTextContent`), matching Perl's split of the two functions.
+///
+/// [`value_text`]: crate::crossref
+pub(crate) fn title_text_content(doc: &PostDocument, node: &Node) -> String {
   let mut result = String::new();
   let mut child = node.get_first_child();
   while let Some(c) = child {
@@ -1074,12 +1080,18 @@ pub(crate) fn title_text_content(node: &Node) -> String {
           if let Some(open) = c.get_attribute("open") {
             result.push_str(&open);
           }
-          result.push_str(&title_text_content(&c));
+          result.push_str(&title_text_content(doc, &c));
           if let Some(close) = c.get_attribute("close") {
             result.push_str(&close);
           }
+        } else if name == "Math" {
+          // Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
+          // presentation branch of the math, in reading order. Without this a
+          // math title flattened to its XMApp/XMDual content tree (operator
+          // first: `= sin x x`) with every inter-token newline preserved.
+          result.push_str(&crate::unicode_math::unicodemath(doc, &c));
         } else {
-          result.push_str(&title_text_content(&c));
+          result.push_str(&title_text_content(doc, &c));
         }
       },
       _ => {},

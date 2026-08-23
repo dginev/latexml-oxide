@@ -66,8 +66,16 @@ impl Actions {
         0 => Ok(None),
         1 => Ok(args.remove(0)),
         more => {
-          eprintln!(
-            "Only returning first of {more:?} elements at rule id {id:?} content: {args:?}"
+          // No registered action for this rule id with multiple children — the
+          // ambiguous grammar's fallback keeps the first parse (the "aggressively
+          // prune" design). Route it through the math-parser diagnostic path
+          // (`Info:` — captured in the log floor, `--quiet`-gated on stderr, and
+          // NOT inflating the warning verdict) instead of a raw `eprintln!` that
+          // bypassed the logger and printed unconditionally.
+          log_math_info!(
+            "ambiguous",
+            "action",
+            format!("rule {id:?}: returning first of {more} children; dropped {args:?}")
           );
           Ok(args.remove(0))
         },
