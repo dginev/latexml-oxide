@@ -71,5 +71,20 @@
 <a href=#71 id=71 data-nosnippet>71</a>  // from the single wrapper on BOTH fvextra versions, keeping the output clean
 <a href=#72 id=72 data-nosnippet>72</a>  // and stable. Guarded on the macro's presence (the older fvextra has none).
 <a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{FV@BGColor@List}{}{\long\def\FV@BGColor@List#1{#1}}"</span>);
-<a href=#74 id=74 data-nosnippet>74</a>});
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">// Issue #702: surface fvextra's `breaklines` wrapping directive as a stable
+<a href=#76 id=76 data-nosnippet>76</a>  // `ltx_break` css class on the framed verbatim box, so a stylesheet can style a
+<a href=#77 id=77 data-nosnippet>77</a>  // wrapping verbatim apart from a non-wrapping one WITHOUT the fragile
+<a href=#78 id=78 data-nosnippet>78</a>  // `:has(.ltx_parbox)` selector (the only distinguisher otherwise, an accident of
+<a href=#79 id=79 data-nosnippet>79</a>  // fvextra's `\parbox`-based break rendering). `fancyvrb_sty.rs`'s frame box reads
+<a href=#80 id=80 data-nosnippet>80</a>  // `\lx@fv@breakclass` (default EMPTY — plain fancyvrb never wraps); redefine it to
+<a href=#81 id=81 data-nosnippet>81</a>  // expand to `1` off `\ifFV@breaklines`, the boolean fvextra's `breaklines` key
+<a href=#82 id=82 data-nosnippet>82</a>  // sets (fvextra.sty L2757-2762, `\newbool{FV@breaklines}`), which is live by the
+<a href=#83 id=83 data-nosnippet>83</a>  // time the frame box opens (set at option-parse, frame fires later in \FV@List).
+<a href=#84 id=84 data-nosnippet>84</a>  // The constructor maps `1` → `ltx_break`. Beyond-Perl (both engines emit no
+<a href=#85 id=85 data-nosnippet>85</a>  // breaklines hook natively), same spirit as the frame remap (#525 / OXIDIZED_DESIGN
+<a href=#86 id=86 data-nosnippet>86</a>  // #111). Only the framed case is marked — a frameless breaklines verbatim has no
+<a href=#87 id=87 data-nosnippet>87</a>  // single wrapper to hang the class on; that is a follow-up.
+<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@fv@breakclass{\ifFV@breaklines 1\fi}"</span>);
+<a href=#89 id=89 data-nosnippet>89</a>});
 </code></pre></div></section></main></body></html>
