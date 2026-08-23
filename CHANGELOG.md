@@ -250,6 +250,13 @@
     fragile `:has(.ltx_parbox)` selector, which was previously the only distinguisher.
     Beyond-Perl (both engines emit no breaklines hook natively), same spirit as the
     `frame=single`→`ltx_framed_verbatim` remap (#702).
+  - **Streaming byte-identity for a framed `breaklines=true` verbatim.** A single-line
+    such verbatim (its parbox layer crosses a fragment seam) used to render nested under
+    `--streaming` yet collapsed under the eager path, because `spill_closed_subtrees`
+    spilled the frame's sole `ltx:text` child before the frame closed, leaving a
+    `<_spilled_/>` placeholder that `auto_collapse_children` could not merge. The spill
+    guard now keeps that lone child resident until its frame closes, so both paths
+    collapse identically (#702).
 
   - **`minted` code blocks render with syntax highlighting, and inline `\mint`/`\mintinline`
     work.** The `minted` family now emits highlight token classes so a stylesheet colors the

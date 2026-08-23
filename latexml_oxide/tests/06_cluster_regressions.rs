@@ -1428,13 +1428,15 @@ fn cluster_fvextra_backgroundcolor_paints_the_frame_box() {
 /// `fvextra_sty.rs` redefines to fire off `\ifFV@breaklines`. Only the break box
 /// gets it: exactly one `ltx_break` against two `ltx_framed_verbatim` boxes.
 ///
-/// The fixture verbatims are deliberately MULTI-LINE. A *single-line*
-/// `breaklines=true` framed verbatim trips a PRE-EXISTING streaming divergence
-/// (unrelated to this feature — reproduces with the `ltx_break` class removed):
-/// the frame's lone `ltx:text` child coalesces into the frame under the eager
-/// path but not under the fragment (`--streaming`) path, so the `114_streaming_*`
-/// sweep diverges. Multiple lines give the frame several children, so neither
-/// path collapses the wrapper and the two agree. Keep ≥2 lines here.
+/// The fixture verbatims are deliberately SINGLE-LINE: that is also the
+/// red/green guard for the streaming coalesce fix (`document.rs`
+/// `spill_closed_subtrees`). A single-line `breaklines=true` framed verbatim has
+/// a lone `ltx:text` child that `auto_collapse_children` merges into the frame at
+/// close — but the breaklines parbox layer crosses a fragment seam, so under
+/// `--streaming` the child used to spill first (→ `<_spilled_/>`), the frame then
+/// saw a non-`ltx:text` child and skipped the merge, and the `114_streaming_*`
+/// eager-vs-streamed sweep diverged. The spill guard keeps that sole child
+/// resident until the frame closes, so both paths collapse identically.
 #[test]
 fn cluster_fvextra_breaklines_class() {
   let x = convert_to_xml("tests/cluster_regressions/fvextra_breaklines_class.tex");

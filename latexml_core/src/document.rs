@@ -3681,6 +3681,28 @@ impl Document {
         let parent_qname = get_node_qname(&parent);
         model::can_contain_sym(parent_qname, pin!("#PCDATA"))
       };
+      // Do NOT spill the sole `ltx:text` child of an open `ltx:text` frame: that
+      // is exactly the `auto_collapse_children` pattern (a redundant font/frame
+      // wrapper merged into its parent at close). Spilling the child first leaves
+      // the still-open frame with a `<_spilled_/>` placeholder, so the close-time
+      // collapse sees a non-`ltx:text` child and skips the merge the EAGER path
+      // performs — the streamed output then nests where eager collapses, breaking
+      // the byte-identity invariant (witness: a `breaklines=true` framed
+      // `Verbatim` whose parbox layer crosses a fragment seam, issue #702). The
+      // protected node is a small wrapper; keeping it resident until the frame
+      // closes costs negligible memory. Conservative on purpose: it also spares a
+      // few wrappers `auto_collapse` would NOT merge (`_force_font` /
+      // non-mergeable attr), which stay nested in BOTH paths anyway.
+      let parent_is_collapse_frame = get_node_qname(&parent) == pin!("ltx:text") && {
+        let elem_kids: Vec<Node> = parent
+          .get_child_nodes()
+          .into_iter()
+          .filter(|c| {
+            c.get_type() == Some(NodeType::ElementNode) && c.get_name() != SPILL_PLACEHOLDER
+          })
+          .collect();
+        elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
+      };
       let mut run: Vec<Node> = Vec::new();
       for child in parent.get_child_nodes() {
         if Some(&child) == barrier.as_ref() {
@@ -3688,6 +3710,7 @@ impl Document {
         }
         let eligible = child.get_type() == Some(NodeType::ElementNode)
           && child.get_name() != SPILL_PLACEHOLDER
+          && !parent_is_collapse_frame
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
           // A bibliography pins its subtree in RAM: a LATER `\bibstyle`
           // writes attributes onto it through a doc-wide search (sweep
