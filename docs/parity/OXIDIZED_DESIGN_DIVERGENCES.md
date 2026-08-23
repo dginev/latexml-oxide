@@ -6076,6 +6076,33 @@ affiliation once, full-width, centered, below the author row.
 (`\inst`) attachment and genuine cross-prefix misuse recovery are untouched. Guarded by
 `frontmatter_llncs_shared_affiliation_below_authors`.
 
+### 160. OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle`
+
+**Background.** Unbound bundled journal `.cls` files fall through to the generic OmniBus fallback
+(`INCLUDE_CLASSES` defaults false), which supplies a shared frontmatter vocabulary. Many journal
+classes spell frontmatter macros in their own way; three appear widely and unambiguously across
+the sandbox-arxiv-2606 corpus: `\orcid{id}` (a stored ORCID identifier, e.g. pasj02
+`\def\orcid#1{…ORCID: #1…}`; some classes use the `\orcid[name]{id}` form), and the running-head
+registers `\lefttitle`/`\righttitle` (e.g. jfm `\lefttitle#1{\gdef\@lefttitle{#1}}`).
+
+**Perl behavior**: SHARED failure — Perl's `OmniBus.cls.ltxml` defines none of these three, so each
+is `Error:undefined` and its content is dropped. pdflatex renders them (the ORCID as a link, the
+running heads in the page headers).
+
+**Rust behavior**: OmniBus (`omnibus_cls.rs`) maps `\orcid[]{}` → the existing `\lx@add@orcid`
+helper, so the identifier is captured as a real `<ltx:contact role="orcid">` with an `orcid.org`
+link (a surpass-Perl content recovery, sibling of divergence #144's `scrartcl \titlehead`); and
+no-ops `\lefttitle`/`\righttitle`, which are page-layout registers with no document-content
+meaning (correctly dropped, never leaked). Only this verified, class-consistent subset is added;
+the ambiguous/variant journal spellings (`\aff` — a **superscript reference marker** in jfm, NOT
+an affiliation; `\contribution`, `\correspondence`, `\data`, `\ack`, `\reportnumber`) stay
+unhandled pending per-class output review (tracked in `SYNC_STATUS.md`).
+
+**Why it's safe.** The three names are currently undefined for OmniBus docs (they only affect docs
+that use them, all of which error today), the ORCID mapping reuses the canonical helper, and the
+running-head no-ops drop only presentational registers. Upstream the same to Perl's
+`OmniBus.cls.ltxml`. Guarded by `omnibus_captures_orcid_and_drops_running_heads`.
+
 **Witnesses**: arXiv 2402.19043 (WDM: 5 authors, one shared `\institute`, no `\inst`).
 Guardrails that must NOT regress: 2608.11332 (shared `\email` under `\inst{1}`), 2603.23669
 (two-author-per-creator dedup), 2606.00313 (`\thanks`-abuse affiliations).

@@ -961,14 +961,24 @@ Rust-only vs shared. The dominant finding — the 2605 "43 new fatals" were ~90%
   \restartappendixnumbering` undefined. **Perl fails identically** (Rust slightly ahead:
   3 vs 5 errors on the witness). ~15+ distinct bundled classes. Witnesses: 2606.01241
   (xiaomiev: contribution/correspondence/checkdata), 2606.00645 (jfm: aff/lefttitle/righttitle),
-  2606.04098 (iopjournal: data), 2606.00213 (pasj02: orcid). Lever: extend OmniBus's generic
-  vocabulary ONLY for commands with clean `\lx@add@*` mappings (`\aff`→`\lx@add@affiliation`,
-  `\reportnumber`→`\lx@add@pubnote`, `\ack`→`Let \acknowledgments`); gobble the
-  running-head/presentational ones — **`\lefttitle`/`\righttitle` are running-head / journal-name
-  registers, do NOT route to title**; `\data` embeds a HuggingFace `\includegraphics`. Single
-  edit to `omnibus_cls.rs`, NOT 15 class bindings; do NOT raw-load the 2000-line classes (the
-  cascade OmniBus exists to prevent). Must upstream the same to Perl's `OmniBus.cls.ltxml` to
-  stay parity. CUP family (jfm/iau/pas) subsumed here.
+  2606.04098 (iopjournal/youtu: data), 2606.00213 (pasj02: orcid). Single edit to `omnibus_cls.rs`,
+  NOT 15 class bindings; do NOT raw-load the 2000-line classes (the cascade OmniBus exists to
+  prevent). Must upstream the same to Perl's `OmniBus.cls.ltxml` to stay parity.
+  - **SAFE SLICE LANDED (0.7.6, OXIDIZED_DESIGN #160):** `\orcid[]{}`→`\lx@add@orcid{#2}` (captures
+    the id as `<contact role=orcid>` with an orcid.org link) + `\lefttitle`/`\righttitle` no-op'd
+    (presentational running heads). Guard `omnibus_captures_orcid_and_drops_running_heads`.
+  - **CORRECTION to the original plan (verified against the real classes, 2026-08-23):** the plan's
+    `\aff`→`\lx@add@affiliation` mapping is **WRONG** — jfm's `\def\aff#1{\ignorespaces\textsuperscript{#1}}`
+    is a **superscript reference marker**, NOT affiliation text; routing it to affiliation would inject
+    "1"/"2" as affiliations and corrupt every jfm byline. Likewise the semantics of `\correspondence`
+    (xiaomiev→checkdata, youtu→email-metadata, others→store), `\data` (youtu HuggingFace URL), and
+    `\contribution`/`\checkdata` (xiaomiev author-contribution lists) **vary by class**, so a single
+    generic mapping risks corrupt output — these need per-class output review before capture. `\ack`
+    is `\begin{acknowledgments}#1\end{...}` (1 arg, needs the acks env wired); `\reportnumber` has NO
+    texmf definition (arity unknown). REMAINING DEFERRED: `\aff \contribution \correspondence \data
+    \ack \reportnumber \checkdata \restartappendixnumbering`. Note `\contribution`/`\correspondence`
+    are already captured for classes with dedicated bindings (fairmeta/selfevolagent) — only the
+    generic OmniBus path is open. CUP family (jfm/iau/pas) subsumed here.
 - **native newunicodechar binding** (~50 docs, ~100 occurrences). `\newunicodechar{<non-ASCII>}{repl}`
   → both engines take the 8-bit path (UTF-8 char = one Unicode token → length 1 →
   `\nuc@onebyteerr` → `Error:latex:(newunicodechar) ASCII character requested`). **Perl
