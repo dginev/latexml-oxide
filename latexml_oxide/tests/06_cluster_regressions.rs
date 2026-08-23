@@ -1903,3 +1903,111 @@ fn cluster_algpseudocodex_no_spurious_empty_equation() {
     "algpseudocodex emitted {spurious} spurious empty <equation/> element(s) (Perl emits none):\n{xml}"
   );
 }
+
+/// Beyond-Perl (OXIDIZED_DESIGN_DIVERGENCES #157): with `minted`'s
+/// `[frozencache]`, a committed `_minted/` directory carries Pygments' output on
+/// disk as plain `\textcolor`. Our binding content-matches a block's normalized
+/// body against the `*.highlight.minted` files and emits Pygments-colored listing
+/// lines (green bold keywords, blue names, preserved indentation) — Perl LaTeXML
+/// has no minted binding and errors out, so any colored output surpasses it.
+///
+/// This drives the real binary against a hand-built tiny `_minted/` cache in a
+/// tempdir (the cache MUST sit beside the main `.tex`, as minted writes it), and
+/// asserts the keyword/name color spans appear. A control run WITHOUT the cache
+/// proves the feature is a strict no-op there (no color, unchanged rendering) —
+/// guarding the "keep current minted behavior identical on a cache miss" contract.
+#[test]
+fn minted_frozencache_colors_from_pygments_cache_157() {
+  use std::process::Command;
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+
+  const DOC: &str = "\\documentclass{article}\n\
+     \\usepackage[frozencache]{minted}\n\
+     \\begin{document}\n\
+     Inline \\mintinline{python}{foo} here.\n\
+     \\begin{minted}{python}\n\
+     def foo():\n\
+     \x20   return 1\n\
+     \\end{minted}\n\
+     \\end{document}\n";
+
+  const STYLE: &str = "\\makeatletter\n\
+     \\@namedef{PYG@tok@k}{\\let\\PYG@bf=\\textbf\\def\\PYG@tc##1{\\textcolor[rgb]{0.00,0.50,0.00}{##1}}}\n\
+     \\@namedef{PYG@tok@nf}{\\def\\PYG@tc##1{\\textcolor[rgb]{0.00,0.00,1.00}{##1}}}\n\
+     \\makeatother\n";
+  // Block body matches DOC's minted block after normalization:
+  //   line1 "def foo():"   line2 "    return 1"
+  const BLOCK_HL: &str = "\\begin{MintedVerbatim}[commandchars=\\\\\\{\\}]\n\
+     \\PYG{k}{def}\\PYG{+w}{ }\\PYG{n+nf}{foo}\\PYG{p}{(}\\PYG{p}{)}\\PYG{p}{:}\n\
+     \\PYG{+w}{    }\\PYG{k}{return}\\PYG{+w}{ }\\PYG{l+m+mi}{1}\n\
+     \\end{MintedVerbatim}\n";
+  // Inline snippet `foo` (blue name).
+  const INLINE_HL: &str = "\\begin{MintedVerbatim}[commandchars=\\\\\\{\\}]\n\
+     \\PYG{n+nf}{foo}\n\
+     \\end{MintedVerbatim}\n";
+
+  // ---- With the frozencache: colors appear. ----
+  let dir = tempfile::tempdir().expect("tempdir");
+  std::fs::write(dir.path().join("main.tex"), DOC).expect("write tex");
+  let mdir = dir.path().join("_minted");
+  std::fs::create_dir(&mdir).expect("mkdir _minted");
+  std::fs::write(mdir.join("default.style.minted"), STYLE).expect("write style");
+  std::fs::write(mdir.join("AAAA.highlight.minted"), BLOCK_HL).expect("write block hl");
+  std::fs::write(mdir.join("BBBB.highlight.minted"), INLINE_HL).expect("write inline hl");
+
+  let out = Command::new(bin)
+    .args(["main.tex", "--dest", "main.html", "--nocomments"])
+    .current_dir(dir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let html = std::fs::read_to_string(dir.path().join("main.html")).unwrap_or_default();
+  let lc = html.to_ascii_lowercase();
+  assert!(
+    out.status.success(),
+    "conversion failed:\n{}",
+    String::from_utf8_lossy(&out.stderr)
+  );
+  // Green bold keyword (`def`/`return`, PYG class `k`).
+  assert!(
+    lc.contains("--ltx-fg-color:#008000"),
+    "frozencache keyword color (#008000) missing — minted block was not colored:\n{html}"
+  );
+  // Blue name (`foo`, PYG class `nf`) — appears in BOTH the block and the inline.
+  assert!(
+    lc.contains("--ltx-fg-color:#0000ff"),
+    "frozencache name color (#0000FF) missing — nf token not colored:\n{html}"
+  );
+  // Indentation preserved as a white-space:pre span.
+  assert!(
+    html.contains("ltx_lst_space"),
+    "minted indentation not preserved via ltx_lst_space:\n{html}"
+  );
+  // Code text intact, and no raw \PYG / \textcolor leaked as literal text.
+  assert!(html.contains("def") && html.contains("foo") && html.contains("return"));
+  assert!(
+    !html.contains("\\PYG") && !html.contains("MintedVerbatim"),
+    "raw frozencache markup leaked into the output:\n{html}"
+  );
+
+  // ---- Control: NO `_minted/` → strict no-op (no frozencache color). ----
+  let dir2 = tempfile::tempdir().expect("tempdir2");
+  std::fs::write(dir2.path().join("main.tex"), DOC).expect("write tex2");
+  let out2 = Command::new(bin)
+    .args(["main.tex", "--dest", "main.html", "--nocomments"])
+    .current_dir(dir2.path())
+    .output()
+    .expect("spawn latexml_oxide (control)");
+  let html2 = std::fs::read_to_string(dir2.path().join("main.html")).unwrap_or_default();
+  assert!(out2.status.success(), "control conversion failed");
+  assert!(
+    !html2
+      .to_ascii_lowercase()
+      .contains("--ltx-fg-color:#008000"),
+    "without a `_minted/` cache the block must NOT be Pygments-colored (feature leaked):\n{html2}"
+  );
+  // The block still renders as a listing (unchanged fallback path).
+  assert!(
+    html2.contains("ltx_lstlisting") && html2.contains("def"),
+    "control minted block did not render via the listings fallback:\n{html2}"
+  );
+}

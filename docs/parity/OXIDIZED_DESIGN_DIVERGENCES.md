@@ -5958,3 +5958,62 @@ with that creator (it lands on Vosoughi, as the contact did). Regression guard
 **Upstream**: to be filed at brucemiller/LaTeXML (author-attached `\thanks` should render as a
 marked footnote, not an inline affiliation-like contact; the content-kind class hooks are a
 theme-facing extension).
+### 157. `minted` renders Pygments syntax colors from a committed `_minted/` frozencache
+
+**Perl behavior**: Perl LaTeXML ships no `minted` binding — the `minted` environment
+errors out (no highlighting at all). Our binding already routes `minted` through the
+`listings` substrate (bold-black keywords, no color), which is itself beyond Perl.
+
+**Rust behavior**: when a paper is built with `\usepackage[frozencache]{minted}`, the
+committed `_minted/` directory (sibling of the main `.tex`) already holds Pygments'
+output on disk as plain LaTeX. We read it and re-emit the **actual Pygments colors**
+(green bold keywords, teal italic comments, blue names, gray operators, purple
+decorators, …). Any colored output surpasses Perl's error-out. `\begin{minted}`,
+`\inputminted`, and `\mintinline` all take this path; on a miss they keep the exact
+uncolored `listings` rendering, and with no `_minted/` present the feature is a strict
+no-op.
+
+**The frozencache on disk.** `default.style.minted` defines a `\PYG@tok@<class>` per
+Pygments token class, each `\let\PYG@bf=\textbf` / `\let\PYG@it=\textit` and/or
+`\def\PYG@tc##1{\textcolor[rgb]{r,g,b}{##1}}`. Each `<MD5>.highlight.minted` is a
+`MintedVerbatim` body of `\PYG{<tokclass>}{<text>}` runs interleaved with literal
+spaces and `\PYGZ*` escapes (`\PYGZbs`→`\`, `\PYGZus`→`_`, `\PYGZgt`→`>`, …).
+
+**Method — content-match, not MD5-keying.** minted keys its cache by an MD5 over the
+snippet + options; replicating that keying is fragile. Instead, each highlight file —
+`\PYG` unwrapped and `\PYGZ*` resolved — yields the exact plain code of some snippet.
+We normalize a block's raw body the same way (rstrip each line, drop blank edges) and
+look it up in a `plaincode → lines` map built once per document (memoized by the
+resolved `_minted/` dir, so a later document never reuses a stale cache). Compound
+classes (`n+nf`, `l+m+mf`) are resolved like `\PYG@toks`: color from the LAST
+sub-class that sets one, bold/italic accumulate. Blocks that use `escapeinside`
+(their raw body carries `@…@` markers the highlight file lacks) simply miss and fall
+back — acceptable, since the current path already handles `escapeinside`.
+
+**Emitter.** Colored lines reuse the listings constructors so the output is
+structurally identical to the substrate (same `<ltx:listingline>`, same
+`ltx_lst_space` `white-space:pre` runs for indentation, same `<ltx:listing>`
+container with base64 `data` provenance): the block body is a sequence of
+`\@lst@startline{}` … `\@lst@endline`, each segment's chars mapped through the
+listings special-char table (`<`→`\textless`, `_`→`\textunderscore`, …) and wrapped
+in `\textbf`/`\textit`/`\textcolor[rgb]{…}` per its style. Two small helpers were
+added to `listings_sty` — `lst_process_display_with` / `lst_process_block_with` —
+that accept pre-built body tokens instead of re-parsing the source; the re-parsed
+entry points delegate to them, so the uncolored path is byte-identical.
+
+**Why it's safe.** Reading the host source tree's `_minted/` is in scope (like reading
+a `.sty`; the ban is only on latexml-oxide's *own* embedded resources). The feature
+activates only when `find_file("_minted/default.style.minted")` resolves, so
+non-frozencache papers are untouched; a cache miss keeps the current listings output.
+
+**Witness**: arXiv:2605.03143 (`\begin{minted}{ocaml|python}` blocks in
+`sections/01-introduction.tex`, `02-a-taste-of-pact.tex`, `03-memo.tex`, plus many
+`\mintinline{python}{…}`). Guard: `minted_frozencache_colors_from_pygments_cache_157`
+(`06_cluster_regressions.rs`) — drives the real binary against a hand-built tiny
+`_minted/` and asserts the `#008000`/`#0000FF` color spans, with a no-cache control
+proving the strict no-op. Implementation:
+`latexml_contrib/src/minted_frozencache.rs` + hooks in `minted_sty.rs`.
+
+**Limitation.** `\mintinline` snippets that Pygments leaves as plain names/punctuation
+(classes `n`, `p`) are correctly uncolored (faithful to Pygments); only `\mintinline`
+itself takes the cache path, not the `\newmintinline`-generated aliases.

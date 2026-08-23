@@ -80,6 +80,19 @@
     scrollbar (algorithm2e listings). The embedded `LaTeXML.css` now pins
     `.ltx_listing:not(.ltx_lstlisting){overflow-y:hidden}` (mirroring the ar5iv.css fix).
     Witness arXiv 2002.09766.
+  - **`aligned`/`gather` relations are no longer over-spaced in HTML.** An
+    `aligned` (or `align`/`gather`/`split`) nested in math renders as one `<math>`
+    with a tight `<mtable columnspacing="0pt">`, but browsers add a default 0.4em
+    horizontal padding to every `<mtd>` on top of that — roughly tripling the space
+    around a relation, so `y(x) = …` came out visibly loose. `LaTeXML.css` now
+    zeroes that padding on `columnspacing="0pt"` tables, leaving only the relation
+    operator's own spacing; matrices/arrays (bare `<mtd>`, non-zero `columnspacing`,
+    which some browsers under-honor and lean on the padding) are untouched. Fixes
+    issue #755 (reporter nasser1). The ar5iv.css theme already mitigates this with
+    its global `mtd{padding:0.1rem}` and can adopt the same reset for perfect
+    tightness (follow-up in the ar5iv-css repo). Guards
+    `aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (CI-enforced) and
+    `aligned_relation_is_not_double_spaced_by_mtd_padding` (opt-in browser render).
   - **A control sequence in a hyperref `\url`/`\href` no longer disappears.** A
     non-expandable primitive inside a URL (e.g. `\url{https://ex/q=\def}`) was read
     semiverbatim and then *digested* — `\def` executed, consumed the following
