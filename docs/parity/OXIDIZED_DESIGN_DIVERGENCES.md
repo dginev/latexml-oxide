@@ -5836,3 +5836,69 @@ proving the strict no-op. Implementation:
 **Limitation.** `\mintinline` snippets that Pygments leaves as plain names/punctuation
 (classes `n`, `p`) are correctly uncolored (faithful to Pygments); only `\mintinline`
 itself takes the cache path, not the `\newmintinline`-generated aliases.
+
+### 158. acmart affiliation parts break AFTER the comma, not before
+
+**Background.** acmart's `\affiliation{\institution{}\city{}\state{}\country{}}` puts each
+address part on its own source line. The real `acmart.cls` `\institution`/`\city`/… use
+`\unskip`/`\ignorespaces` (`acmart.cls` L1679, L2879) so the inter-part source newlines do
+not become spaces, and joins the parts with a `, ` separator.
+
+**Perl behavior**: SHARED failure. `acmart.cls.ltxml` (L97-101) ports `\lx@acm@addresspart`
+WITHOUT the `\unskip`/`\ignorespaces`, and with a `,~` (comma + non-breaking-space)
+separator. So each source newline between `\institution{}` and `\city{}` leaks as a space
+BEFORE the comma (serialized `…Institute</ltx:text>\n, <ltx:text>New York…`). On a wrap
+the breakable space sits before the comma, pushing the comma to the START of the next line;
+and the `~` forbids a break AFTER the comma, so long affiliations break mid-part instead.
+Same-host Perl renders identically.
+
+**Rust behavior**: `\lx@acm@addresspart` (`acmart_cls.rs`) appends `\ignorespaces` (after its
+`\fi`) so the trailing source newline is gobbled — the comma binds directly to the preceding
+part — and uses a `, ` (comma + a REGULAR breakable space) separator, so a wrap breaks AFTER
+the comma, matching the pdflatex golden. Empty parts are still skipped.
+
+**Why it's safe.** Scoped to acmart's address-part joiner; the only change is which side of the
+comma the breakable space sits on (and that inter-part source newlines no longer leak).
+
+**Witnesses**: arXiv 2605.03143 ("Basis Research Institute, New York, New York, USA").
+
+**Upstream**: to be filed at brucemiller/LaTeXML (acmart address parts should `\ignorespaces`
+between parts and break after the comma, per the real `acmart.cls`).
+
+### 159. A shared single affiliation renders once below all authors, not stranded on author 1
+
+**Background.** LLNCS-style markup `\author{A \and B \and C}` + one `\institute{…}` with NO
+per-author `\inst` marker means the institute is shared by every author (pdflatex centers it
+once below the author row). LaTeXML's frontmatter model has no document-level affiliation slot
+(`ltx:contact` lives only inside `ltx:creator`, per the RelaxNG `contact` content model), and
+its only mechanism for "shared" is per-author replication.
+
+**Perl behavior**: SHARED failure. `\institute` → `\lx@add@affiliation[labelseq=affiliation]`
+gives the affiliation the label `affiliation:1`; each author gets an auto sequence label
+`author:N` (`\lx@add@frontmatter@now`). In `relocateAnnotations` (`Base_Utility.pool.ltxml`
+L880-910) the affiliation matches no author by its own prefix, then the prefix-stripped
+fallback (`$unlabeltable{$noprefix}`, L899-900) reduces `affiliation:1` to `1` and binds it to
+the FIRST author's `author:1` — so the whole shared institute is stranded under author 1 only.
+Perl 0.8.8 (installed and vendored) and pre-fix Rust produce byte-identical output.
+
+**Rust behavior**: `relocate_annotations` (`base_utilities.rs`) two-part fix. (1) A creator's
+own role-sequence label (`author:N`/`editor:N`/`translator:N`) is NOT indexed into the
+prefix-stripped fallback table, so a shared `affiliation:1` no longer binds to `author:1` by
+number. A genuine per-author affiliation still matches EXACTLY via `labeltable` (the
+`affiliation:1` that `\inst{1}` requests), so `\inst`-targeted markup is unchanged. (2) The now
+un-targeted shared affiliation — with any `\email`/`\url` that inherited its label — is gathered
+onto ONE trailing name-LESS `<ltx:creator role="author">`, kept as the last child of the authors
+container. The ar5iv theme's existing breakout rule then renders a last-position shared
+affiliation once, full-width, centered, below the author row.
+
+**Why it's safe.** Only the auto self-sequence labels leave the numeric fallback; exact-label
+(`\inst`) attachment and genuine cross-prefix misuse recovery are untouched. Guarded by
+`frontmatter_llncs_shared_affiliation_below_authors`.
+
+**Witnesses**: arXiv 2402.19043 (WDM: 5 authors, one shared `\institute`, no `\inst`).
+Guardrails that must NOT regress: 2608.11332 (shared `\email` under `\inst{1}`), 2603.23669
+(two-author-per-creator dedup), 2606.00313 (`\thanks`-abuse affiliations).
+
+**Upstream**: the ar5iv CSS comment already anticipates this ("Ideally latexml's schema should
+evolve to handle this via differently organized markup") — the trailing-creator normalization is
+that markup.

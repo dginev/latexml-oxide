@@ -367,8 +367,16 @@ LoadDefinitions!({
   // Internal structure to affiliation (Perl PR #2767: comma-joined parts;
   // empty parts skipped)
   DefMacro!("\\lx@acm@addresspartsep", "");
+  // `\ignorespaces` (after `\fi`) gobbles the source newline the author writes
+  // between `\institution{}`, `\city{}`, `\state{}`, `\country{}` lines — else it
+  // leaks as a space BEFORE the separator comma, so a wrap puts the comma at the
+  // start of the next line. The real acmart.cls does the same with `\unskip`/
+  // `\ignorespaces` (acmart.cls L1679/L2879). Separator is `, ` (comma + a REGULAR
+  // breakable space, matching real acmart's `, `), not `,~`, so the line breaks
+  // AFTER the comma, never before it. SHARED surpass over Perl (its
+  // acmart.cls.ltxml:98-101 has neither) — OXIDIZED_DESIGN #158. Witness 2605.03143.
   DefMacro!("\\lx@acm@addresspart{}{}",
-    "\\ifx.#2.\\else\\lx@acm@addresspartsep\\def\\lx@acm@addresspartsep{,~}\\lx@acm@addresspart@{#1}{#2}\\fi");
+    "\\ifx.#2.\\else\\lx@acm@addresspartsep\\def\\lx@acm@addresspartsep{, }\\lx@acm@addresspart@{#1}{#2}\\fi\\ignorespaces");
   DefConstructor!("\\lx@acm@addresspart@{}{}",
     "<ltx:text class='ltx_affiliation_#1' _noautoclose='1'>#2</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true);
