@@ -3445,11 +3445,11 @@ LoadDefinitions!({
             if document::get_node_qname(&parent) == capture_block {
               document.maybe_close_element("ltx:p")?;
             } else if document::can_contain(&context, "ltx:break") {
-              document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
+              document.insert_element("ltx:break", Vec::new(), break_attrs)?;
             }
           }
         } else if document::can_contain(&context, "ltx:break") {
-          document.insert_element("ltx:break", Vec::new(), break_attrs.clone())?;
+          document.insert_element("ltx:break", Vec::new(), break_attrs)?;
         }
       }
       // else: no context => skip

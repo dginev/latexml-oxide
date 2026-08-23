@@ -440,7 +440,7 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
 
     // Content: apply(symbol(meaning), arg1, arg2)
-    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None),
+    let content = i_apply(&[], i_symbol(&[("meaning", Tokenize!(semantic_tex))], None),
       vec![a1, a2]);
 
     // Presentation: open arg1 , arg2 close
@@ -502,7 +502,7 @@ LoadDefinitions!({
     let cs_tks = cs;
     let semantic_tex = semantic.untex_string();
     let function_tks = function;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(false, physics_delimiters)?;
 
@@ -568,7 +568,7 @@ LoadDefinitions!({
     let cs_tks = cs;
     let semantic_tex = semantic.untex_string();
     let function_tks = function;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = function_tks;
     let (no_stretch, size_tok) = phys_read_size()?;
     let power = read_optional(None)?;
@@ -719,7 +719,7 @@ LoadDefinitions!({
     let raw_tks = raw;
     let function_tks = function;
     let (no_stretch, size_tok) = phys_read_size()?;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let arg = phys_read_arg_tex()?;
 
     if let Some(arg_tks) = arg {
@@ -821,7 +821,7 @@ LoadDefinitions!({
     let cs_tks = cs;
     let semantic_tex = semantic.untex_string();
     let diff_tks = diff;
-    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
+    let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
     let degree = read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, |s| {
@@ -1206,7 +1206,7 @@ LoadDefinitions!({
     let reversion = Tokens::new(rev);
 
     let content = i_apply(&[],
-      i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None),
+      i_symbol(&[("meaning", Tokenize!(semantic_tex))], None),
       vec![a1, a2]);
     // Stretchy by default (Perl parity); `no_stretch` passed directly — see the
     // `\matrixelement` note. A prior `!no_stretch` made `\innerproduct`/`\outerproduct`

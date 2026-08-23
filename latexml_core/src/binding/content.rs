@@ -3504,32 +3504,95 @@ pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bo
   result
 }
 
+// Memoized key symbols for the per-encoding fontmap Value-table entries.
+// `decode_string` runs per digested character run and used to rebuild (format!
+// + arena probe) the `"{encoding}_fontmap"`-family keys on every call — ~1M
+// allocations on a 1.3 s paper (2026-08-23 audit R6, dhat). Encodings are few
+// (OT1/T1/OML/…), so the (encoding → key syms) maps stay tiny. Value lookups
+// still go through the state tables — only the key STRINGS are memoized.
+// Keyed by arena SymStr, so MUST be cleared with `arena::reset()`
+// (`reset_fontmap_key_memo`, called from `reset_thread_engine`).
+thread_local! {
+  static FONTMAP_KEY_MEMO: std::cell::RefCell<HashMap<String, FontmapKeySyms>> =
+    std::cell::RefCell::new(HashMap::default());
+  static FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell<HashMap<(String, String), SymStr>> =
+    std::cell::RefCell::new(HashMap::default());
+}
+
+#[derive(Clone, Copy)]
+pub struct FontmapKeySyms {
+  /// `"{encoding}_fontmap"`
+  pub map:       SymStr,
+  /// `"{encoding}_fontmap_failed_to_load"`
+  pub fail:      SymStr,
+  /// `"{encoding}_fontmap_multichar"`
+  pub multichar: SymStr,
+}
+
+/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
+pub fn fontmap_key_syms(encoding: &str) -> FontmapKeySyms {
+  FONTMAP_KEY_MEMO.with(|m| {
+    if let Some(keys) = m.borrow().get(encoding) {
+      return *keys;
+    }
+    let keys = FontmapKeySyms {
+      map:       arena::pin(s!("{encoding}_fontmap")),
+      fail:      arena::pin(s!("{encoding}_fontmap_failed_to_load")),
+      multichar: arena::pin(s!("{encoding}_fontmap_multichar")),
+    };
+    m.borrow_mut().insert(encoding.to_string(), keys);
+    keys
+  })
+}
+
+/// The memoized `"{encoding}_{family}_fontmap"` key symbol.
+pub fn fontmap_family_key_sym(encoding: &str, family: &str) -> SymStr {
+  FONTMAP_FAMILY_KEY_MEMO.with(|m| {
+    if let Some(sym) = m.borrow().get(&(encoding.to_string(), family.to_string())) {
+      return *sym;
+    }
+    let sym = arena::pin(s!("{encoding}_{family}_fontmap"));
+    m.borrow_mut()
+      .insert((encoding.to_string(), family.to_string()), sym);
+    sym
+  })
+}
+
+/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
+/// cached `SymStr`s dangle after a reset renumbers the arena.
+pub fn reset_fontmap_key_memo() {
+  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
+  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
+}
+
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {
-  let _ = preload_font_map(encoding); // infallible in practice; swallow Result
+  let keys = fontmap_key_syms(encoding);
+  let _ = preload_font_map_keyed(encoding, keys); // infallible in practice; swallow Result
   // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
   // Rc bump on the inner slice regardless.
-  with_value(&s!("{encoding}_fontmap"), |v| v.and_then(|s| s.into()))
+  with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
 }
 pub fn preload_font_map(encoding: &str) -> Result<()> {
+  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
+}
+fn preload_font_map_keyed(encoding: &str, keys: FontmapKeySyms) -> Result<()> {
   // This check is done as a "preload" step for mutability reasons.
-  let key = s!("{encoding}_fontmap");
-  if has_value(&key) {
+  if has_value_sym(keys.map) {
     return Ok(());
   }
-  let fail_key = s!("{encoding}_fontmap_failed_to_load");
-  let failed_flag = lookup_bool(&fail_key);
+  let failed_flag = lookup_bool_sym(keys.fail);
   if !failed_flag {
-    assign_value(&fail_key, true, None); // Stop recursion?
+    assign_value_sym(keys.fail, true, None); // Stop recursion?
     let _ = input_definitions(&encoding.to_lowercase(), InputDefinitionOptions {
       extension: Some(Cow::Borrowed("fontmap")),
       noerror: true,
       ..InputDefinitionOptions::default()
     });
-    if has_value(&s!("{encoding}_fontmap")) {
+    if has_value_sym(keys.map) {
       // Got map?
-      assign_value(&fail_key, false, None);
+      assign_value_sym(keys.fail, false, None);
     } else {
-      assign_value(&fail_key, true, Some(Scope::Global));
+      assign_value_sym(keys.fail, true, Some(Scope::Global));
     }
   }
   Ok(())

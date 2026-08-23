@@ -133,6 +133,13 @@ macro_rules! pin {
 /// per doc). Neither cost was paying for itself.
 pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_or_intern(text)) }
 
+/// Probe-only lookup: the symbol for `text` if it was ever interned, without
+/// interning it. For existence-style checks (e.g. `install_definition`'s
+/// `"{cs}:locked"` gate) a `None` here proves the key cannot be bound in any
+/// state table — and skipping the intern avoids permanently growing the arena
+/// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
+pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
+
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
 /// SymStr for the lifetime of the thread (arena is append-only, syms
 /// never change). Cache entries use `u32::MAX` as the "not yet pinned"

@@ -323,8 +323,14 @@ fn collect_walk_matches(node: &Node, arms: &[WalkArm], out: &mut Vec<Node>) {
   {
     out.push(node.clone());
   }
-  for child in node.get_child_nodes() {
-    collect_walk_matches(&child, arms, out);
+  // first_child/next_sibling like `collect_split_pages` below — the previous
+  // `get_child_nodes()` materialized a Vec of wrapped nodes per recursion
+  // level, ~2.4% self + allocator share on a whole-document walk that answers
+  // every post `//NAME[pred]` query (2026-08-23 audit R5).
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    collect_walk_matches(&c, arms, out);
+    child = c.get_next_sibling();
   }
 }
 

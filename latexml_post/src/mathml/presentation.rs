@@ -1441,7 +1441,7 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
     // not by an infix role it does not actually carry here (issue #535). On the
     // ordinary path the `pmml()` wrapper re-stamps `_role` anyway.
     if role_override.is_none() {
-      attrs.insert("_role".to_string(), role.clone());
+      attrs.insert("_role".to_string(), role);
     }
     if props.lspace > 0.0 {
       attrs.insert("_lspace".to_string(), fmt_em(props.lspace));

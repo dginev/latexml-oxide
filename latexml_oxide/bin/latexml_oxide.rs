@@ -430,8 +430,9 @@ struct Cli {
   #[arg(long)]
   dump_model: bool,
 
-  /// Write a one-line JSON telemetry record for this job to this file (or set
-  /// env `LATEXML_TELEMETRY_OUT`). Written only on a successful conversion.
+  /// Append a one-line JSON telemetry record for this job to this file (or set
+  /// env `LATEXML_TELEMETRY_OUT`); batch runs accumulate a JSONL. Written only
+  /// on a successful conversion.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
 
@@ -1696,7 +1697,15 @@ fn write_telemetry_record(
   {
     let _ = std::fs::create_dir_all(parent);
   }
-  if let Ok(mut fh) = File::create(&path) {
+  // Append (JSONL): batch runs pointing LATEXML_TELEMETRY_OUT at one file
+  // accumulate one record per job — the contract `perf_phase_summary.py`
+  // documents. `File::create` here used to truncate, silently keeping only
+  // the last job's record (2026-08-23 audit papercut).
+  if let Ok(mut fh) = std::fs::OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(&path)
+  {
     let _ = writeln!(fh, "{line}");
   }
 }

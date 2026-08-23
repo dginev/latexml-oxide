@@ -607,6 +607,19 @@ pub fn debug_enabled(name: &str) -> bool {
     .unwrap_or(false)
 }
 
+/// Would a `Debug`-status record actually reach the log right now? True only
+/// when the global `log` level admits `Debug` (default is `Info`; `--verbose`/
+/// `--debug` raise it — `util/logger.rs::init`) AND output is not suppressed.
+/// The `Debug!` macro gates *message construction* on this: the 2026-08-23
+/// audit measured up to ~26% of a build-bound conversion spent serializing
+/// `node_to_string` subtrees into `Debug!` messages that `emit_record` then
+/// discarded (PERFORMANCE.md, Open levers P0). An atomic load + thread-local
+/// read — cheap enough for token-frequency call sites.
+#[inline]
+pub fn debug_record_enabled() -> bool {
+  log::max_level() >= log::LevelFilter::Debug && !is_log_output_suppressed()
+}
+
 /// Feature-gated debug logging — Perl's `Debug(...) if $LaTeXML::DEBUG{feature}`.
 /// Usage: `DebugFeature!("frontmatter", "FRONT Add {}", entry)`.
 /// Logs with the feature name as the `log` target (so output matches the
@@ -627,26 +640,44 @@ macro_rules! DebugFeature {
   }};
 }
 
+/// Debug-status diagnostics. **Lazy**: the argument expressions — which at
+/// several sites build whole `node_to_string` subtree serializations — are
+/// evaluated only when [`debug_record_enabled`] says the record would actually
+/// be logged (2026-08-23 audit, PERFORMANCE.md Open levers P0). The Debug
+/// status tally (`note_status`) is preserved unconditionally, so status counts
+/// are identical to the eager form at every verbosity.
 #[macro_export]
 macro_rules! Debug {
   ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
-    $crate::common::error::emit_record(
-      $crate::common::error::LogStatus::Debug,
-      &format!("{}:{}", $category, $object),
-      &$crate::generate_message!($message))
+    if $crate::common::error::debug_record_enabled() {
+      $crate::common::error::emit_record(
+        $crate::common::error::LogStatus::Debug,
+        &format!("{}:{}", $category, $object),
+        &$crate::generate_message!($message))
+    } else {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Debug, None);
+    }
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
-    $crate::common::error::emit_record(
-      $crate::common::error::LogStatus::Debug,
-      &format!("{}:{}", $category, $object),
-      &$crate::generate_message!($message, $($details),*))
+    if $crate::common::error::debug_record_enabled() {
+      $crate::common::error::emit_record(
+        $crate::common::error::LogStatus::Debug,
+        &format!("{}:{}", $category, $object),
+        &$crate::generate_message!($message, $($details),*))
+    } else {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Debug, None);
+    }
   }};
   ($($simple:expr_2021),*) => {{
-    let __diag_guard = $crate::common::error::macro_diag_guard();
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
-    use log::debug;
-    debug!($($simple),*);
+    if $crate::common::error::debug_record_enabled() {
+      let __diag_guard = $crate::common::error::macro_diag_guard();
+      use log::debug;
+      debug!($($simple),*);
+    }
   }};
 
 }
