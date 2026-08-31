@@ -14,7 +14,7 @@ signature). 770 oracle-clean docs still carry errors; 8 fatal; 1 timeout.
 |---|---|---|---|
 | 1 | `\minisec` (17) + `{labeling}` (11) + `\addsec`-family | beamerposter | KOMA surface missing from the OmniBus-backed scr* bindings. Extend the existing contrib scr* bindings (no new files) or improve OmniBus's KOMA vocabulary. |
 | 2 | `\@indexfile` (14) | arydshln-man | index machinery (`\makeindex`/`theindex` raw path writes `\@indexfile`). Kernel gap — root-cause next. |
-| 3 | `\ltd@title@title` (12) | abraces-doc | ltxdockit.cls's `\renewrobustcmd*{\titlepage}` is refused — `\titlepage` is a LOCKED kernel CS; the keyval title setters never run. **SHARED with Perl** (same-host verified: 7 identical errors + "not-well-structured titlepage"). Future surpass candidate: locked-CS yield for raw-class redefinitions (the surpass-perl skill's own qualifying example). Needs user approval — heavier lock-semantics change. |
+| 3 | `\ltd@title@title` (12) | abraces-doc | **PARKED by user decision 2026-08-31 ("Keep locks")**: locked kernel CSes stay protected from raw-file redefinitions everywhere (Perl-identical). ltxdockit.cls's `\renewrobustcmd*{\titlepage}` stays refused; the 12 bundles remain SHARED-FAILURE. Do not re-attempt without a new user decision. |
 | 4 | `\CJKaddEncHook` (12) + `luatexja-core` (5) + `\dhucs@hu` | CJK ecosystem | CJK raw interpretation — catalog under DIFFICULT_CASES (encoding-hook machinery). |
 | 5 | `\PkgInfo` (10) | oberdiek family | hobsub/pdftexcmds generation-era `\PkgInfo` — kernel-adjacent, likely small. |
 | 6 | `Error:latex:(etoolbox)` (9) | hep-acronym | etoolbox binding raises GenericError on patch failure classes. |
