@@ -76,6 +76,15 @@ LoadDefinitions!({
   });
 
   DefParameterType!(DefPlain, sub[inner, _extra] {
+    // OXIDIZED_DESIGN #161 (surpass-Perl, approved 2026-08-31): skip blanks
+    // before the required `{`. Real TeX skips blank space tokens when
+    // grabbing an undelimited argument (tex.web `macro_call`), and LaTeXML's
+    // own `{}` reader (`readArg` → `readNonSpace`) does too — Perl 0.8.8's
+    // bare `readBalanced(0,1,1)` alone errors "Expected opening '{'" when a
+    // `\lstnewenvironment{x}[1][]` body sits on the NEXT line (the standard
+    // doc style; ~148 TL-doc manuals). `\def`/`\gdef` reach here after
+    // `UntilBrace`, where the skip is a no-op.
+    skip_spaces()?;
     let mut value = ArgWrap::Tokens(read_balanced(ExpansionLevel::Off, true, true)?);
     if let Some(inner_ps) = inner {
       value = inner_ps.reparse_argument( value)?.remove(0);

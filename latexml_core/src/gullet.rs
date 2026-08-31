@@ -1219,6 +1219,27 @@ pub fn read_x_token(
 
 /// Read the next raw line (string);
 /// primarily to read from the Mouth, but keep any unread input!
+/// Whether the gullet's unread (pushed-back) tokens include a non-space token.
+///
+/// Raw-line readers need this to interpret their FIRST [`read_raw_line`]
+/// call. A `read_non_space` argument probe that found no `[` has crossed the
+/// newline after `\begin{env}` and unread the BODY's first non-space
+/// character — the "first raw line" is then real content, not the leftover of
+/// the `\begin` line. A benign probe (`if_next` via `read_token`) unreads at
+/// most the end-of-line SPACE token, so space-only pushback still means "the
+/// first raw line is `\begin`-line leftover, discard it". See
+/// `listings_sty::listings_read_raw_lines` (OXIDIZED_DESIGN #162).
+pub fn pushback_holds_nonspace() -> bool {
+  let gullet = gullet!();
+  match gullet.runtime {
+    Some(ref runtime) => runtime
+      .pushback
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE),
+    None => false,
+  }
+}
+
 pub fn read_raw_line() -> Option<String> {
   // If we've got unread tokens, they presumably should come before the Mouth's raw data
   // but we'll convert them back to string.

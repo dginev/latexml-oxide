@@ -90,7 +90,19 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 /// as Perl already does for the trailing part.
 pub fn listings_read_raw_lines(environment: &str) -> String {
   let mut lines = Vec::new();
-  read_raw_line(); // Ignore 1st line (following \begin{...})
+  // Ignore the remainder of the `\begin{...}` line — real listings drops it —
+  // UNLESS the pushback holds a non-space token. An optional-argument probe
+  // (`\lstnewenvironment{x}[1][]` → `[Default:]` → `read_non_space`) crosses
+  // the newline after `\begin{x}` and unreads the body's first NON-SPACE
+  // character; `read_raw_line` then returns pushback + line remainder = the
+  // body's REAL first line, and discarding it swallowed line 1 of every such
+  // environment (Perl 0.8.8 shares the bug — same-host verified; ~148 TL doc
+  // manuals define example environments this way). Space-only pushback (the
+  // built-in lstlisting's `if_next` probe unreads the end-of-line SPACE) still
+  // means the first raw line is `\begin`-line leftover. OXIDIZED_DESIGN #162.
+  if !pushback_holds_nonspace() {
+    read_raw_line(); // leftover of the \begin line — not content
+  }
   let end_re = Regex::new(&format!("\\\\end\\{{{}\\}}", regex::escape(environment))).unwrap();
   while let Some(line) = read_raw_line() {
     if let Some(m) = end_re.find(&line) {
