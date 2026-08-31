@@ -52,4 +52,17 @@ LoadDefinitions!({
   // structural meaning in the XML tree, so render the body transparently.
   RawTeX!(r"\newenvironment{addmargin}[2][]{}{}");
   RawTeX!(r"\newenvironment{addmargin*}[2][]{}{}");
+
+  // KOMA user-level structure commands (TL doc corpus: \minisec 17 bundles,
+  // {labeling} 11). These carry CONTENT, so they get semantic mappings, not
+  // stubs (policy 2026-08-31: stubs only for clearly out-of-scope features):
+  // \minisec{title} — an unnumbered freestanding mini-heading → the starred
+  // paragraph heading, preserving the title as <ltx:paragraph><ltx:title>.
+  // {labeling}[delim]{widest} — a description list with fixed label width →
+  // {description}; only the label-width/delimiter PRESENTATION args are
+  // dropped (print-layout, out of scope). The \begin-in-body alias idiom
+  // keeps the environment stack balanced.
+  DefMacro!("\\minisec{}", "\\paragraph*{#1}");
+  DefMacro!("\\labeling[]{}", "\\begin{description}");
+  DefMacro!("\\endlabeling", "\\end{description}");
 });
