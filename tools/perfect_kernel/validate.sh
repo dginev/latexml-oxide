@@ -10,10 +10,19 @@ set -uo pipefail
 OUTROOT="${1:-$HOME/data/perfect_kernel}"
 JOBS="${JOBS:-12}"
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-RNG="$REPO/latexml_core/resources/RelaxNG/LaTeXML.rng"
 V="$OUTROOT/validate_verdicts.tsv"
-export RNG
 : >"$V"
+
+# jing can't resolve the schema's `urn:x-LaTeXML:RelaxNG:*` includes — build a
+# temp copy of the whole RelaxNG directory with those rewritten to relative
+# sibling hrefs.
+RNGSRC="$REPO/latexml_core/resources/RelaxNG"
+RNGDIR="$(mktemp -d)"
+cp "$RNGSRC"/*.rng "$RNGDIR"/
+sed -i 's|urn:x-LaTeXML:RelaxNG:||g' "$RNGDIR"/*.rng
+RNG="$RNGDIR/LaTeXML.rng"
+export RNG
+trap 'rm -rf "$RNGDIR"' EXIT
 
 validate_one() {
   local xml="$1"

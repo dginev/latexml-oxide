@@ -20,6 +20,7 @@ TL — e.g. a4wide.tex vs siunitx v3), 25 timeout. **The S1 bar applies to the
 | 2026-08-31 #2 | 9e347a3f15+161 release | 2374 | 120s | 34/10/0 | 1451 | 399 | 480 | fresh TL2025-pinned dump + OXIDIZED_DESIGN #161 DefPlain fix. Total error mass 145,375. **Oracle-clean slice (1548 docs): 424 clean + 310 warn-only (47%), 770 status-2, 8 fatal, 1 timeout; 58k error mass.** |
 | 2026-08-31 #3 | +163/164/silence release | 2374 | 120s | 31/12/0 | 1449 | 400 | 482 | #163 makeindex, #164 raw-opt record, silence `\sl@StoreMessage` |
 | 2026-08-31 #4 | 7ce3bb8005 release | 2374 | 120s | 28/16/0 | 1402 | 443 | 485 | + #165 `\@currsize`, beamer-hyperref parity, `\Hy@MakeCurrentHref`, KOMA minisec/labeling, memoir geometry, l3backend at begin-document. **Error-free 928 (39.1%), up from 822 baseline.** (Binary predates ltxdockit binding + `\@raw@classoptionslist`.) |
+| 2026-08-31 #5 | b2ff296e4b release | 2374 | 120s | 38/7/0 | 1382 | 456 | 491 | + ltxdockit_cls.rs, `\@raw@classoptionslist`. **Error-free 947 (39.9%).** Fatal count noisy across sweeps (a concurrent test-suite run contended for CPU/RAM); timeouts likewise. Binary predates `\BreakableUnderscore` + `\glossary` schema guard (sweep 6 material). |
 
 ## Fix log
 
