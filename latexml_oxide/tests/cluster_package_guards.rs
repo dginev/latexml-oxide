@@ -656,6 +656,60 @@ mod defplain_skips_blanks_before_brace {
   }
 }
 
+mod process_key_options_sees_load_options {
+  //! OXIDIZED_DESIGN #164: the loader must record `\@raw@opt@<name>.<ext>` —
+  //! the ONLY thing the modern kernel's `\ProcessKeyOptions` reads
+  //! (latex.ltx L19398). Without it every ltkeys key-option package silently
+  //! drops its load-time options (Perl 0.8.8 shares the miss).
+
+  use std::{path::Path, process::Command};
+
+  const STY: &str = "\\NeedsTeXFormat{LaTeX2e}\n\
+    \\ProvidesPackage{pkoguard}\n\
+    \\RequirePackage{expl3}\n\
+    \\ExplSyntaxOn\n\
+    \\keys_define:nn {pkoguard}\n\
+    \x20 {\n\
+    \x20   flag .bool_set:N = \\l_pkoguard_flag_bool ,\n\
+    \x20   flag .default:n  = {true} ,\n\
+    \x20 }\n\
+    \\ProcessKeyOptions [pkoguard]\n\
+    \\bool_if:NT \\l_pkoguard_flag_bool { \\def\\FLAGON{yes} }\n\
+    \\ExplSyntaxOff\n";
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage[flag]{pkoguard}\n\
+    \\begin{document}\n\
+    flag=\\ifdefined\\FLAGON ON\\else OFF\\fi\n\
+    \\end{document}\n";
+
+  #[test]
+  fn key_option_reaches_process_key_options() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("pkoguard.sty"), STY).expect("write sty");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--preload=[rawstyles]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("flag=ON"),
+      "\\ProcessKeyOptions must see the [flag] load option:\n{xml}\n{stderr}",
+    );
+  }
+}
+
 mod makeindex_allocates_indexfile {
   //! OXIDIZED_DESIGN #163: `\makeindex` allocates the `\@indexfile` write
   //! stream (real latex.ltx contract) while staying otherwise nooped, so raw

@@ -6189,3 +6189,27 @@ postnotes, …) clear their first-error.
 robustindex/robustmanual. Guard: `cluster_package_guards::makeindex_allocates_indexfile`.
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161/#162).
+
+### 164. `\usepackage`/`\documentclass` record the kernel's `\@raw@opt@<name>.<ext>` raw-option list
+
+**Perl behavior**: the binding-level package loader handles options internally and
+never mirrors the modern kernel's raw-option record. `\ProcessKeyOptions` (ltkeys,
+kernel 2022+) reads EXACTLY `\@raw@opt@\@currname.\@currext` (latex.ltx L19398) —
+finding it free, it processes nothing, so every key-option package silently loses
+its load-time options (verified same-host on Perl 0.8.8: `[flag]` bool option
+stays false).
+
+**Rust behavior**: `input_definitions` (handleoptions path) globally defines
+`\@raw@opt@<name>.<ext>` to the comma-joined raw options, appending when already
+present — mirroring latex.ltx L18521-18525.
+
+**Why**: kernel-contract restoration for the growing class of `\ProcessKeyOptions`
+packages. Minimal 12-line repro: a local .sty with `\keys_define:nn` +
+`\ProcessKeyOptions` loaded `[flag]` — flag=OFF before, ON after (matching
+pdflatex).
+
+**Witnesses**: codedescribe manual (`[strict,infograb]` → `\PkgInfo` alias never
+installed; 10 TL-doc bundles' first error). Guard:
+`cluster_package_guards::process_key_options_sees_load_options`.
+
+**Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#163).

@@ -446,6 +446,39 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       options.after,
       None,
     )?;
+    // OXIDIZED_DESIGN #164: record the raw option list as the kernel does.
+    // latex.ltx (ltkeys era, 2022+) stores every load's UNPROCESSED options
+    // in `\@raw@opt@<name>.<ext>` (L18521-18525 `\@pass@ptions`, and the
+    // `\@onefilewithoptions` load path), and `\ProcessKeyOptions` reads that
+    // clist (L19398 `\cs_if_free:cF {@raw@opt@\@currname.\@currext}`) —
+    // nothing else. LaTeXML's binding-level \usepackage bypasses the raw
+    // kernel loader, so the record was never made and EVERY
+    // `\ProcessKeyOptions` package silently dropped its options (both
+    // engines: Perl 0.8.8 verified same-host; witness codedescribe's
+    // `[strict,infograb]` → `\PkgInfo` never aliased, 10 TL-doc bundles).
+    // Append-if-defined mirrors the kernel's `\g@addto@macro` accumulation
+    // from `\PassOptionsToPackage`.
+    if !options.options.is_empty() {
+      let raw_opt_cs = T_CS!(s!("\\@raw@opt@{}", filename));
+      let joined = options.options.join(",");
+      let body = if lookup_definition(&raw_opt_cs)?.is_some() {
+        let mut toks = do_expand(raw_opt_cs)?.unlist();
+        toks.push(T_OTHER!(","));
+        toks.extend(ExplodeText!(&joined));
+        Tokens::new(toks)
+      } else {
+        Tokens!(Explode!(joined))
+      };
+      def_macro(
+        raw_opt_cs,
+        None,
+        body,
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
+      )?;
+    }
   }
   // No `else` branch: Perl Package.pm L2580-2611 only mutates
   // \@currname/\@currext inside the handleoptions=true block. The
