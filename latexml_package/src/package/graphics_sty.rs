@@ -521,7 +521,21 @@ LoadDefinitions!({
   DefMacro!("\\Gin@exclamation", "!");
   Let!("\\Gin@page", "\\@empty");
   DefMacro!("\\Gin@pagebox", "cropbox");
-  DefConditional!("\\ifGin@interpolate");
+  // Real graphics.sty boolean state, ported as the actual \newif lines so
+  // the \Gin@<name>true/false setters exist — raw packages drive them
+  // directly and through graphicx's \Gin@boolkey dispatcher (sweep-11
+  // clusters: `\Gin@boolkey` 34 docs incl. hvfloat.sty L411
+  // `\Gin@boolkey{true}{iso}`; `\Gin@draftfalse` 9 docs, e.g. bohr,
+  // pagelayout). Sources: graphics.sty L55 (draft), L63 (setpagesize,
+  // default true), L253 (Gread@, default true), L307 (interpolate),
+  // L319 (bbox), L579 (iso). Guard:
+  // cluster_package_guards::graphicx_internals.
+  RawTeX!(r"\newif\ifGin@draft");
+  RawTeX!(r"\newif\ifGin@setpagesize\Gin@setpagesizetrue");
+  RawTeX!(r"\newif\ifGread@\Gread@true");
+  RawTeX!(r"\newif\ifGin@interpolate");
+  RawTeX!(r"\newif\ifGin@bbox");
+  RawTeX!(r"\newif\ifGin@iso");
   Let!("\\Gin@log", "\\wlog");
   Let!("\\Gin@req@sizes", "\\relax");
   DefMacro!("\\Gin@scalex", "1");
@@ -533,8 +547,9 @@ LoadDefinitions!({
   Let!("\\Gin@req@width", "\\Gin@nat@width");
   Let!("\\Gin@viewport@code", "\\relax");
 
-  // Perl: DefConditional('\ifGin@clip');
-  DefConditional!("\\ifGin@clip");
+  // graphics.sty L115 (\newif form, so \Gin@cliptrue/false exist too;
+  // was DefConditional per Perl, which lacks the setters raw code calls).
+  RawTeX!(r"\newif\ifGin@clip");
   // Perl: DefMacro('\Gin@i [][]{}', '');
   def_macro_noop("\\Gin@i[][]{}")?;
 

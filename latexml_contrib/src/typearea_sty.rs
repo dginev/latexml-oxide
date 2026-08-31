@@ -26,4 +26,15 @@ LoadDefinitions!({
   // Witness: 1502.06768 uses `\areaset{...}{...}` to manually pin the
   // typearea instead of using `DIV=...`.
   def_macro_noop("\\areaset[]{}{}")?;
+
+  // `\typearea[BCOR]{DIV}` — recompute the type area (typearea.sty user
+  // command); `\recalctypearea` ≡ `\typearea[current]{last}` (typearea.sty
+  // L1596, an \AtEndOfPackage \newcommand*). Both are print-geometry
+  // recomputation with no XML-output meaning — same justified class as the
+  // memoir geometry stubs. Sweep-11 cluster: `\recalctypearea` first-error
+  // in 26 doc-corpus manuals (witness bohr/bohr_en, KOMA classes calling it
+  // after font-size changes). Keep the real delegation shape so a document
+  // redefining \typearea still controls \recalctypearea.
+  def_macro_noop("\\typearea[]{}")?;
+  DefMacro!("\\recalctypearea", "\\typearea[current]{last}");
 });

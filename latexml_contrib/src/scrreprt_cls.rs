@@ -19,6 +19,11 @@ LoadDefinitions!({
   // Mirror scrbook_cls.rs: the real KOMA chain transitively loads iftex, which
   // OmniBus does not, so pull it in for `\ifpdf` / engine-detection authors.
   RequirePackage!("iftex");
+  // Real KOMA classes always load typearea (scrartcl.cls L2593
+  // \RequirePackage{typearea}[\KOMAScriptVersion]) — its binding carries
+  // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
+  // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
+  RequirePackage!("typearea");
 
   // KOMA section-font hooks — see scrbook_cls.rs for the full rationale (tocloft
   // expands `\sectfont` / `\size@chapter` when a KOMA class is detected; as a

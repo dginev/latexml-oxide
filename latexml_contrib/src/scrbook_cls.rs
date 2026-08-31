@@ -13,6 +13,11 @@ LoadDefinitions!({
   // that way; our OmniBus stub intercepts it. Mirror the dependency (same
   // rationale as scrartcl_cls.rs, witness 1802.07175).
   RequirePackage!("iftex");
+  // Real KOMA classes always load typearea (scrartcl.cls L2593
+  // \RequirePackage{typearea}[\KOMAScriptVersion]) — its binding carries
+  // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
+  // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
+  RequirePackage!("typearea");
   // KOMA section-font hooks (`\sectfont` + empty `\size@<unit>` family) — see
   // scrartcl_cls.rs for the full rationale. tocloft expands these in
   // `\cfttoctitlefont` when a KOMA class is detected; as a chapter class

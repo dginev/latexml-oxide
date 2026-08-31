@@ -33,6 +33,13 @@ LoadDefinitions!({
   }
   RequirePackage!("graphics");
 
+  // graphicx.sty L137: the boolean-key dispatcher raw packages call
+  // directly (hvfloat.sty L411 `\Gin@boolkey{true}{iso}`; sweep-11 cluster
+  // of 34 docs). Empty/`\relax` first arg means "true", per the real
+  // definition. The `\ifGin@*` newifs it drives live in graphics_sty.rs.
+  // Guard: cluster_package_guards::graphicx_internals.
+  RawTeX!(r"\def\Gin@boolkey#1#2{\csname Gin@#2\ifx\relax#1\relax true\else#1\fi\endcsname}");
+
   // Perl L24-27: internal length / dimension macros.
   def_macro_noop("\\Gin@ewidth")?;
   def_macro_noop("\\Gin@eheight")?;
