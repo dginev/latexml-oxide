@@ -151,6 +151,21 @@ LoadDefinitions!({
   // commands for bibliography, indices
   // \end{document}
 
+  // Kernel contract (real book.cls L~380): `\newif\if@mainmatter`, default
+  // true; `\frontmatter`/`\backmatter` set it false, `\mainmatter` true.
+  // Neither Perl's book.cls.ltxml nor this binding established the
+  // conditional, so book-family raw classes/docs poking it directly
+  // (`\@mainmatterfalse` in amsdtx/amsldoc, tufte-book, ryethesis — 4 TL doc
+  // bundles) errored `undefined`. Wrap the number-toggling primitives above
+  // so the flag tracks the matter, exactly as real book.cls couples them.
+  RawTeX!(r"\newif\if@mainmatter \@mainmattertrue");
+  Let!("\\lx@book@frontmatter", "\\frontmatter");
+  Let!("\\lx@book@mainmatter", "\\mainmatter");
+  Let!("\\lx@book@backmatter", "\\backmatter");
+  DefMacro!("\\frontmatter", "\\lx@book@frontmatter\\@mainmatterfalse");
+  DefMacro!("\\mainmatter", "\\lx@book@mainmatter\\@mainmattertrue");
+  DefMacro!("\\backmatter", "\\lx@book@backmatter\\@mainmatterfalse");
+
   DefPrimitive!("\\tiny",         None, font => {size => 5 });
   DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
   DefPrimitive!("\\footnotesize", None, font => {size => 8 });
