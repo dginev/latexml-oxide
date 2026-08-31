@@ -147,6 +147,24 @@ LoadDefinitions!({
     DefRegister!("\\luacopyinputnodes"    => Number::new(0));
     DefRegister!("\\matheqnogapstep"      => Number::new(1000));
     DefRegister!("\\breakafterdirmode"    => Number::new(0));
+    // luapstricks: under this profile pstricks.tex (L443-471) takes its
+    // LuaTeX branch, routing `\pstverb`/`\pstVerb`/`\pstheader`/
+    // `\c@lor@to@ps` through tokens that luapstricks.lua creates via
+    // `token.set_lua` (L4212/4255/4259/4300) — a node-layer module our
+    // bridge cannot run. Absorb the 4-token surface (optional keywords up
+    // to the brace group; `\luaPSTbox` voids the box it scans). Raw
+    // pstricks.sty loads dominate, so these live HERE, not in the
+    // pstricks_tex binding. Sweep-11: 13 oracle-clean docs, 8 with
+    // `\luaPST` as sole error — witnesses bardiag/bardiag1, psgo/psgomanual.
+    DefMacro!("\\luaPST UntilBrace {}", "");
+    DefMacro!("\\luaPSTheader UntilBrace {}", "");
+    DefMacro!("\\luaPSTcolor UntilBrace {}", "");
+    RawTeX!(r"\def\luaPSTbox{\setbox\voidb@x}");
+    // XeTeX/LuaTeX: `\suppressfontnotfounderror=1` silences font-not-found.
+    // Written by luatexja-preset.sty:501, iffont.sty:45-73, and
+    // fontspec-luatex.sty:486. Engine knob, no XML meaning — but it must be
+    // a REGISTER: a macro stub would leave the trailing `=1` to typeset.
+    DefRegister!("\\suppressfontnotfounderror" => Number::new(0));
     // Direction primitives (LuaTeX §6): `\textdir TLT` etc. are PRIMITIVES
     // consuming a three-letter direction keyword — not macros producing one
     // (defining them as `{TLT}` typeset the keyword: `TLTTLT` text leaked

@@ -18,6 +18,7 @@ LoadDefinitions!({
   // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
   // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
   RequirePackage!("typearea");
+  RequirePackage!("scrlfile");
   // KOMA section-font hooks (`\sectfont` + empty `\size@<unit>` family) — see
   // scrartcl_cls.rs for the full rationale. tocloft expands these in
   // `\cfttoctitlefont` when a KOMA class is detected; as a chapter class

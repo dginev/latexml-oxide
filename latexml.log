@@ -1,0 +1,19 @@
+latexml_oxide (latexml-oxide 0.7.6; revision 1ef264a2bb) started 2026-08-31 17:38:01 -0400
+(Digesting Anonymous String...
+(Processing content Anonymous String...
+Info:dump_reader:loaded Loaded 23641 entries from /home/deyan/git/latexml-oxide/latexml_engine/../resources/dumps/latex.2025.dump.txt (549 skipped, 0 errors)
+	at locator; line 34 col 20 - line 35 col 20
+	In latexml_core/src/dump_reader.rs:181:3
+(Processing definitions /usr/local/texlive/2025/texmf-dist/tex/latex/base/ts1enc.dfu... )
+(Loading textcomp_sty.rs... )
+(Loading LaTeX.pool... )
+(Loading article_cls.rs... )
+(Processing definitions /usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-dvips.def... )
+> \u=\protected macro:#1->\lx@applyaccent \ŭ˘{#1}
+locator; line 34 col 20 - line 35 col 20
+ ) )
+(Building... )
+(Rewriting... )
+(Finalizing... )
+Conversion complete: No obvious problems
+Status:conversion:0

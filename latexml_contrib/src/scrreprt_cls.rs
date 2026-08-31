@@ -24,6 +24,7 @@ LoadDefinitions!({
   // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
   // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
   RequirePackage!("typearea");
+  RequirePackage!("scrlfile");
 
   // KOMA section-font hooks — see scrbook_cls.rs for the full rationale (tocloft
   // expands `\sectfont` / `\size@chapter` when a KOMA class is detected; as a

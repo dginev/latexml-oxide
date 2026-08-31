@@ -971,10 +971,41 @@ mod pgfmath_grammar {
       }
       sb(i);
       eat(i, b')');
+      set_int_result_for_fn(i, name);
       return Ok(pgfmath_apply_fn(name, &args));
     }
     let arg = simplefactor(i)?;
+    set_int_result_for_fn(i, name);
     Ok(pgfmath_apply_fn(name, &[arg]))
+  }
+
+  /// Real pgfmath returns BARE integers from the comparison/logic function
+  /// forms — probed against pdflatex/pgf TL2025 (2026-08-31): `notless(5,3)`
+  /// → `1`, `equal(2,2)` → `1`, `and(1,1)` → `1`, `not(1)` → `0`,
+  /// `int(5/2)` → `2` — while arithmetic keeps the fixed-point `.0`
+  /// (`2*3` → `6.0`). Without this, `\edef`'d results like `1.0` broke every
+  /// downstream `\ifnum\pgfmathresult=1` (pgf-spectra.sty L490/L503 spectral
+  /// loop: 7k `expected:<relationaltoken>` errors PER DOC, ~18k corpus-wide;
+  /// witnesses pgf-spectra/pgf-spectraManual, *PreviewDataLSE, *PreviewDataNIST).
+  /// Same flag the infix comparison path sets; surrounding arithmetic still
+  /// clears it (`2+(equal(1,1))` → `3.0`). `ifthenelse` is value-returning
+  /// (real gives `7` for `ifthenelse(1,7,9)`) and stays unhandled here.
+  fn set_int_result_for_fn(i: &mut In, name: &str) {
+    if matches!(
+      name,
+      "equal"
+        | "greater"
+        | "less"
+        | "notequal"
+        | "notgreater"
+        | "notless"
+        | "and"
+        | "or"
+        | "not"
+        | "int"
+    ) {
+      i.state.int_result = true;
+    }
   }
 
   /// `(\d+\.?[\d.]*|\d*\.?\d+)([eE][+-]?\d+)?` with hex/binary forms and
@@ -1829,5 +1860,31 @@ mod pgfmath_golden_tests {
     assert_eq!(super::pgfmathparse_eval("5*(3<2)"), "0.0");
     // Plain arithmetic is unaffected (no comparison anywhere).
     assert_eq!(super::pgfmathparse_eval("1+1"), "2.0");
+  }
+
+  /// Comparison/logic FUNCTION forms return bare integers, matching live
+  /// pgfmath probes (pdflatex/pgf TL2025, 2026-08-31). The `1.0`-vs-`1`
+  /// mismatch broke `\ifnum\pgfmathresult=1` in pgf-spectra's spectral
+  /// loop — ~7k `expected:<relationaltoken>` errors per manual (witnesses
+  /// pgf-spectra/pgf-spectraManual, *PreviewDataLSE, *PreviewDataNIST).
+  #[test]
+  fn boolean_function_forms_return_bare_integers() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    assert_eq!(super::pgfmathparse_eval("notless(5,3)"), "1");
+    assert_eq!(super::pgfmathparse_eval("notless(1,3)"), "0");
+    assert_eq!(super::pgfmathparse_eval("notgreater(5,3)"), "0");
+    assert_eq!(super::pgfmathparse_eval("equal(2,2)"), "1");
+    assert_eq!(super::pgfmathparse_eval("greater(5,3)"), "1");
+    assert_eq!(super::pgfmathparse_eval("less(5,3)"), "0");
+    assert_eq!(super::pgfmathparse_eval("and(1,1)"), "1");
+    assert_eq!(super::pgfmathparse_eval("or(0,0)"), "0");
+    assert_eq!(super::pgfmathparse_eval("not(1)"), "0");
+    assert_eq!(super::pgfmathparse_eval("int(5/2)"), "2");
+    // Arithmetic over a boolean function demotes to real, same as infix.
+    assert_eq!(super::pgfmathparse_eval("2*equal(1,1)"), "2.0");
+    // Arithmetic keeps its fixed-point .0 (probed: 2*3 → 6.0).
+    assert_eq!(super::pgfmathparse_eval("2*3"), "6.0");
   }
 }

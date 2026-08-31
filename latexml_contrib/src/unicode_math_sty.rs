@@ -25,4 +25,16 @@ LoadDefinitions!({
   DefMacro!("\\symfrak{}", "\\mathfrak{#1}");
   DefMacro!("\\symrm{}", "\\mathrm{#1}");
   DefMacro!("\\symnormal{}", "#1");
+  DefMacro!("\\symup{}", "\\mathrm{#1}");
+  // Bold-italic: prefer \boldsymbol when a loaded package provides it
+  // (keeps the italic), else plain bold. Witnesses: numbersets-doc,
+  // physics2-legacy (\symbfit); shtthesis-user-guide (\symbfsf);
+  // rec-thy (\symbffrak); intexgral/xfakebold/yquant docs (\symup).
+  DefMacro!(
+    "\\symbfit{}",
+    "\\ifdefined\\boldsymbol\\boldsymbol{#1}\\else\\mathbf{#1}\\fi"
+  );
+  DefMacro!("\\symbfup{}", "\\mathbf{#1}");
+  DefMacro!("\\symbfsf{}", "\\mathsf{#1}");
+  DefMacro!("\\symbffrak{}", "\\mathfrak{#1}");
 });

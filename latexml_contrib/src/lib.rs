@@ -200,6 +200,7 @@ pub mod savetrees_sty;
 pub mod scicite_sty;
 pub mod scrartcl_cls;
 pub mod scrbook_cls;
+pub mod scrlfile_sty;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod scrreprt_cls;
@@ -330,6 +331,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
+  ("scrlfile", "sty", scrlfile_sty::load_definitions),
   ("scrpage", "sty", scrpage_sty::load_definitions),
   ("scrpage2", "sty", scrpage2_sty::load_definitions),
   ("stix2", "sty", stix2_sty::load_definitions),

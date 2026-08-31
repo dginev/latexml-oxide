@@ -28,6 +28,7 @@ LoadDefinitions!({
   // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
   // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
   RequirePackage!("typearea");
+  RequirePackage!("scrlfile");
   // KOMA section-font hooks. scrartcl.cls L170-201 defines `\sectfont` (the
   // heading font = `\normalcolor\maybesffamily\bfseries`) plus an empty
   // `\size@<unit>` selector family. tocloft keys on these whenever it detects a
