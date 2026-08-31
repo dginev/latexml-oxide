@@ -89,4 +89,12 @@ LoadDefinitions!({
   // L495-519
   def_macro_noop("\\ErrorsOn []")?;
   def_macro_noop("\\ErrorsOff OptionalMatch:* []")?;
+
+  // L362 `\def\sl@StoreMessage#1{…}` — the internal message-bank writer.
+  // Third parties patch it (hep-font.sty L110 `\robustify\sl@StoreMessage`,
+  // then `\pretocmd`), and with the internals absent etoolbox raises
+  // `\sl@StoreMessage undefined` (perfect-kernel corpus: the hep-*
+  // documentation family, 5+ TL doc bundles). Same one-arg noop as the
+  // public surface — there is no message bank to store into.
+  def_macro_noop("\\sl@StoreMessage {}")?;
 });
