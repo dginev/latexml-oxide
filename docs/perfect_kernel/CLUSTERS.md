@@ -39,6 +39,14 @@ NOTE: several exceed the nominal error cap — cap behavior itself worth a look.
 | CJK/Japanese (`\CJKaddEncHook` 12, luatexja, pTeX prims `\kanjiskip`/`\prebreakpenalty`/`\西`) | DIFFICULT_CASES — pTeX/upTeX engine primitives out of pdfTeX-model scope; catalog, don't chase. |
 | fontspec surface (`\setmathfont` 8, `\fontspec_if_language:nT` 5, `\defaultfontfeatures`/`\addfontfeature` 4+4) | D6 LuaLaTeX-only docs (oracle passes them via lualatex fallback); policy decision needed on modeling fontspec under pdfTeX-model engine. |
 
+### nicematrix exemplar residual (2026-08-31, session 2)
+
+One error left: `\cmidrule(rl){2-4}` inside `{NiceTabular}{lSSSS}` with a
+`\Block{2-1}` in the same row → `\noalign cannot be used here`
+(tex_tables.rs:224) — the Block/multicolumn row leaves the alignment
+mid-cell when the rule's `\noalign` arrives. Alignment-family (overlaps the
+parked R9 mode/alignment work); single instance in the manual.
+
 ## Retired clusters (this mission)
 
 | Signature | Resolution | Guard |
