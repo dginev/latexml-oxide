@@ -20,6 +20,11 @@ LoadDefinitions!({
   def_macro_noop("\\TestAppExists{}")?;
   DefConditional!("\\ifAppExists");
 
+  // minted.sty L273: the cache/output directory, empty by default. Poked
+  // by tcolorbox's minted listing engine and by docs configuring caches
+  // (sweep-11 cluster: 18 doc-corpus manuals, witness csvsimple/csvsimple).
+  DefMacro!("\\minted@outputdir", "");
+
   // `\minted@def@optcl[default]{name}{cmdline}{value}` — minted's
   // internal option-class registry (TL minted.sty L260+). Used by
   // tcolorbox's tcbminted.code.tex to register tcb's minted-options

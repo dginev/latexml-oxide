@@ -57,6 +57,16 @@ parked R9 mode/alignment work); single instance in the manual.
 | `Error:undefined:\newunit` (a4wide etc.) | DOCUMENT-STALE — oracle pass excludes (801 stale docs) | `oracle_verdicts.tsv` |
 | babel Lua layer dead under luatex profile: EVERY profiled doc logged `attempt to index a nil value (field 'locale_props')`; chunks silently branched on `tex.count` stub zeros; `require` of texmf Lua modules failed (witnesses: derivative, abntexto, abntexto-uece, newpax — [LUA_REBINDING.md](LUA_REBINDING.md)) | Rebind-as-we-emulate landing: `\lx@directlua` double-`Expand!` removed + `\par` filtered (real-luatex probes as oracle), live register mirror, absorb shims, kpse+lualibs require, `\bbl@luapatterns` format parity, direction-keyword eaters | `luatex_babel_api::babel_lua_api_layer_initializes`, `lua_state_mirror::directlua_reads_and_writes_live_registers`, `rebound_engine_intents_absorb_and_resolve` |
 
+### Sweep-11 sampled, still open (2026-08-31)
+
+| Signature (bundles) | Sample verdict |
+|---|---|
+| `undefined:\bool` (10, create-theorem/einfart family) | expl3 catcode regime lost mid-raw-load: einfart.cls L155 `\bool_if:NT` tokenized as `\bool`+`_if:NT` — the `[[project_explsyntax_midload]]` family, not a missing macro. |
+| `Error:latex:(doc) Character table corrupted` (11, frankenstein) | doc.sty's catcode-table self-check fails under our engine — catcode introspection parity, needs its own min-repro session. |
+| `misdefined:#` (17, adtrees) | PARAM token reaching Stomach from an Anonymous String after microtype — engine-level, min-repro session needed. |
+| `undefined:\luaPST` (12, bardiag) | PSTricks-Lua surface; sample against D6 tiers before deciding. |
+| fontspec surface (`\fontspec_if_language:nT` 17, `\setmonofont` 16) | D6 clean-lua slice — the declared next worklist. |
+
 ### Clean-lua slice — remaining (2026-08-31, post-rebinding)
 
 The 216-doc/50k-error clean-lualatex slice now has its Lua substrate working

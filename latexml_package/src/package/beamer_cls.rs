@@ -11,6 +11,14 @@ LoadDefinitions!({
   // Load article.cls as the base class (beamer builds on article).
   // Don't load raw beamer.cls — its expansion chains exceed the token limit.
   RequirePackage!("article");
+  // Perl beamer.cls.ltxml L30-32: "these packages probably aren't needed,
+  // but let's load them anyways!" — graphicx especially IS needed: real
+  // beamer's dependency chain provides \includegraphics, and theme demos
+  // use it bare (sweep-11 cluster: 9 docs `undefined:\includegraphics`,
+  // witness beamertheme-focus/focus-demo).
+  RequirePackage!("ifpdf");
+  RequirePackage!("keyval");
+  RequirePackage!("graphicx");
 
   // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
   // — declares `fragile` as a zero-argument key for the beamerframe keyset.
@@ -120,6 +128,14 @@ LoadDefinitions!({
 
   // Title page macros — Perl L1010-1035
   DefMacro!("\\institute OptionalAngled []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
+  // The constructor \institute expands into was never defined here — every
+  // beamer doc using \institute logged `undefined:\@@@affiliation` (sweep-11
+  // cluster: 16 docs, witness beamerthemeconcrete/demo-cbernoulli). Same
+  // ltx:contact form as elsart_support_core / cas_dc_cls.
+  DefConstructor!(
+    "\\@@@affiliation{}",
+    "^ <ltx:contact role='affiliation'>#1</ltx:contact>"
+  );
   // \logo{content} and \titlegraphic{content} typically wrap
   // \includegraphics or similar visual content. Surpass Perl
   // (which doesn't define them) by routing to ltx:note so any
