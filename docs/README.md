@@ -31,6 +31,7 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
 | [`release/WINDOWS_COMPATIBILITY_PLAN.md`](release/WINDOWS_COMPATIBILITY_PLAN.md) | Living worklist for the Windows port (`windows-compatibility` branch): MSVC + vcpkg-static toolchain, phased plan to `cargo test --release` green on `windows-latest` CI and a zipped `.exe` artifact. |
+| [`perfect_kernel/README.md`](perfect_kernel/README.md) | **Perfect-kernel mission** (branch `perfect_kernel`): raw-interpretation (`--preload=[rawstyles,rawclasses]latexml.sty`, no new bindings, no OmniBus) conversion of the ~2,400-manual TeX Live doc corpus; protocol + quality bars, with the living [ledger](perfect_kernel/LEDGER.md), [cluster worklist](perfect_kernel/CLUSTERS.md) and [difficult-cases catalog](perfect_kernel/DIFFICULT_CASES.md). |
 | [`AR5IV_DIAGNOSTICS.md`](AR5IV_DIAGNOSTICS.md) | The ar5iv issue-tracker sweep: every open "Improve article X" report screened against the current binary and classified vs same-host Perl, plus the ranked worklist. **Refresh before quoting any row** — a wrong main-file pick manufactures fake error counts. Re-measured 2026-07-20 on top of the 2026-07-18 snapshot. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
