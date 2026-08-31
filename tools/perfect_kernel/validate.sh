@@ -19,7 +19,12 @@ V="$OUTROOT/validate_verdicts.tsv"
 RNGSRC="$REPO/latexml_core/resources/RelaxNG"
 RNGDIR="$(mktemp -d)"
 cp "$RNGSRC"/*.rng "$RNGDIR"/
-sed -i 's|urn:x-LaTeXML:RelaxNG:||g' "$RNGDIR"/*.rng
+mkdir -p "$RNGDIR/svg"
+cp "$RNGSRC"/svg/*.rng "$RNGDIR/svg/"
+# Subdir-style urns first (urn:…:svg: → svg/ from the top dir, but plain
+# same-dir refs inside svg/ itself), then the flat ones.
+sed -i 's|urn:x-LaTeXML:RelaxNG:svg:|svg/|g; s|urn:x-LaTeXML:RelaxNG:||g' "$RNGDIR"/*.rng
+sed -i 's|urn:x-LaTeXML:RelaxNG:svg:||g; s|urn:x-LaTeXML:RelaxNG:||g' "$RNGDIR"/svg/*.rng
 RNG="$RNGDIR/LaTeXML.rng"
 export RNG
 trap 'rm -rf "$RNGDIR"' EXIT
