@@ -9296,8 +9296,26 @@ LoadDefinitions!({
   });
 
   def_primitive_noop("\\indexspace")?;
-  def_primitive_noop("\\makeindex")?;
-  def_primitive_noop("\\makeglossary")?;
+  // OXIDIZED_DESIGN #163: Perl noops `\makeindex`/`\makeglossary` entirely
+  // (latex_constructs.pool L4531-4532) — but real latex.ltx `\makeindex` also
+  // `\newwrite`s the `\@indexfile` stream, and raw doc.sty/l3doc.cls-style
+  // code then writes `\protected@write\@indexfile{…}` DIRECTLY. With the
+  // stream never allocated that raw write errors `undefined \@indexfile`
+  // (SHARED with Perl 0.8.8, same-host verified on l3doc's own saveenv.tex —
+  // Perl lands at 101 errors + fatal; 14 TL-doc bundles incl. l3kernel's own
+  // manuals). Allocate the stream (guarded, once) while keeping everything
+  // else nooped: no `\openout`, and crucially NO kernel-style redefinition of
+  // `\index` — the semantic `\index SanitizedVerbatim` above stays in charge.
+  // Writes to the allocated-but-unopened stream go to the log, as real TeX
+  // does when no file is open — harmless.
+  DefMacro!(
+    "\\makeindex",
+    "\\ifdefined\\@indexfile\\else\\csname newwrite\\endcsname\\@indexfile\\fi"
+  );
+  DefMacro!(
+    "\\makeglossary",
+    "\\ifdefined\\@glossaryfile\\else\\csname newwrite\\endcsname\\@glossaryfile\\fi"
+  );
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
   // Perl latex_constructs.pool.ltxml L4481-4493 — `\glossary{}` uses a
