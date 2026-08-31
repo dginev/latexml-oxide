@@ -8,6 +8,7 @@
   <section inlist="toc" xml:id="section1">
     <tags>
       <tag>1</tag>
+      <tag role="autoref">section 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">§1</tag>
     </tags>
@@ -45,6 +46,7 @@
   <section inlist="toc" xml:id="section2">
     <tags>
       <tag>2</tag>
+      <tag role="autoref">section 2</tag>
       <tag role="refnum">2</tag>
       <tag role="typerefnum">§2</tag>
     </tags>
@@ -94,6 +96,7 @@
   <section inlist="toc" xml:id="section3">
     <tags>
       <tag>3</tag>
+      <tag role="autoref">section 3</tag>
       <tag role="refnum">3</tag>
       <tag role="typerefnum">§3</tag>
     </tags>
@@ -122,6 +125,7 @@ Always</p>
   <section inlist="toc" xml:id="section4">
     <tags>
       <tag>4</tag>
+      <tag role="autoref">section 4</tag>
       <tag role="refnum">4</tag>
       <tag role="typerefnum">§4</tag>
     </tags>
@@ -188,6 +192,7 @@ This text is shown the same way as the text below.</p>
   <section inlist="toc" xml:id="section5">
     <tags>
       <tag>5</tag>
+      <tag role="autoref">section 5</tag>
       <tag role="refnum">5</tag>
       <tag role="typerefnum">§5</tag>
     </tags>
@@ -281,6 +286,7 @@ This text is shown the same way as the text below.</p>
   <section inlist="toc" xml:id="section6">
     <tags>
       <tag>6</tag>
+      <tag role="autoref">section 6</tag>
       <tag role="refnum">6</tag>
       <tag role="typerefnum">§6</tag>
     </tags>

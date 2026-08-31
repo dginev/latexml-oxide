@@ -599,6 +599,16 @@ LoadDefinitions!({
   // # Should leverage
   DefMacro!("\\phantomsection", None);
 
+  // Raw class/package code pokes this hyperref internal directly to create a
+  // named anchor and set `\@currentHref` (real hyperref: `\edef\@currentHref
+  // {#1}` + a raised `\hyper@anchor`). l3doc.cls L1126 calls it for every
+  // function-description block, so the entire l3doc-built manual family
+  // errored `undefined \Hy@MakeCurrentHref` (8 TL doc bundles; Perl 0.8.8
+  // shares the gap — it models `\@currentHref` nowhere either). LaTeXML
+  // creates its own anchors, so keeping `\@currentHref` current is all the
+  // internal needs to do here.
+  DefMacro!("\\Hy@MakeCurrentHref{}", "\\edef\\@currentHref{#1}");
+
   Let!("\\footref", "\\ref"); // ?
 
   DefConditional!("\\ifHy@stoppedearly");

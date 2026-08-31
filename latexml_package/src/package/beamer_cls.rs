@@ -210,6 +210,12 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
+  // Perl beamer.cls.ltxml L1311: beamer always loads hyperref (real beamer
+  // does too, via hyperref's kernel hooks). Without it `\url`/`\href` are
+  // undefined in every beamer document that doesn't load hyperref itself —
+  // the beamertheme-* TL doc corpus errored `undefined \url` en masse
+  // (perfect-kernel sweep 2026-08-31). Option list matches Perl's.
+  RequirePackage!("hyperref");
   // Perl beamer.cls.ltxml L1201-1239: theorem + German-compat envs.
   // `\translate{}` is an identity pass-through in Rust, so bare English
   // names match Perl's expansion.
