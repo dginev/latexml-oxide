@@ -1997,6 +1997,14 @@ LoadDefinitions!({
   // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
   DefRegister!("\\lositemsep" => Glue!("0pt"));
 
+  // \NewBibliographyString{key,key,…} — declares localization-string KEYS
+  // (biblatex.sty; real def registers each key in the lbx string bank and
+  // makes \bibstring{key} legal). This binding models no localization bank —
+  // strings render through the rebuilt \thebibliography — so registering is
+  // a declaration-only noop; the argument carries key names, not content.
+  // Style packages call it at load (hep-bibliography.sty L116).
+  def_macro_noop("\\NewBibliographyString{}")?;
+
   // Perl L553-604: 50 conditionals
   DefConditional!("\\ifandothers");
   DefConditional!("\\ifbibindex");

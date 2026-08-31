@@ -565,8 +565,15 @@ LoadDefinitions!({
   });
   Let!("\\renewlist", "\\newlist");
 
-  // \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221
-  DefPrimitive!("\\setlist Optional RequiredKeyVals:enumitem", sub[(names, kv)] {
+  // \setlist[names]{keyvals} — Perl: enumitem.sty.ltxml L210-221.
+  // Real enumitem also defines the starred form (enumitem.sty
+  // `\def\setlist{\@ifstar\enit@setlist@s\enit@setlist}`): `\setlist*`
+  // APPENDS to the stored key list where `\setlist` replaces it. Perl's
+  // binding omits the star, so `\setlist*[inlinelist,1]{…}` (hep-text.sty
+  // L74 and friends) errored "Missing keyval arguments" and leaked the `*`.
+  // Our storage records the given keys either way — the replace/append
+  // nuance collapses to the same store here — so the star is absorbed.
+  DefPrimitive!("\\setlist OptionalMatch:* Optional RequiredKeyVals:enumitem", sub[(_star, names, kv)] {
     if let Some(ref names_toks) = names {
       let names_str = names_toks.to_string();
       let parts: Vec<&str> = names_str.split(',').map(|s| s.trim()).collect();

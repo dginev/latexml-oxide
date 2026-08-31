@@ -107,10 +107,69 @@ LoadDefinitions!({
   def_macro_noop("\\pdfincludechars Token {}")?;
   def_macro_noop("\\leftmarginkern Number")?;
   def_macro_noop("\\rightmarginkern Number")?;
-  def_macro_noop("\\pdfescapestring {}")?;
-  def_macro_noop("\\pdfescapename {}")?;
-  def_macro_noop("\\pdfescapehex {}")?;
-  def_macro_noop("\\pdfunescapehex {}")?;
+  // pdfTeX escape primitives — real implementations, output format verified
+  // against live pdfTeX (TL2025, 2026-08-31):
+  //   \pdfescapehex{Hello z}   → 48656C6C6F207A        (UPPERCASE hex)
+  //   \pdfunescapehex{48656C6C6F} → Hello
+  //   \pdfescapestring{a(b)c\ d} → a\(b\)c\\\040d      ((, ), \ backslashed;
+  //                                 bytes <33 or >126 as \nnn octal)
+  //   \pdfescapename{a b/c#d}  → a#20b#2Fc#23d         (#XX uppercase hex for
+  //                                 bytes outside !..~ and PDF delimiters)
+  DefMacro!("\\pdfescapehex {}", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len() * 2);
+    for b in s.bytes() {
+      out.push_str(&format!("{b:02X}"));
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfunescapehex {}", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let hex: Vec<u8> = s.bytes().filter(u8::is_ascii_hexdigit).collect();
+    let mut out = String::with_capacity(hex.len() / 2);
+    for pair in hex.chunks(2) {
+      // pdfTeX pads a trailing lone digit with 0 (low nibble).
+      let hi = (pair[0] as char).to_digit(16).unwrap_or(0);
+      let lo = if pair.len() > 1 {
+        (pair[1] as char).to_digit(16).unwrap_or(0)
+      } else {
+        0
+      };
+      out.push(char::from((hi * 16 + lo) as u8));
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfescapestring {}", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+      match b {
+        b'(' | b')' | b'\\' => {
+          out.push('\\');
+          out.push(char::from(b));
+        },
+        33..=126 => out.push(char::from(b)),
+        _ => out.push_str(&format!("\\{b:03o}")),
+      }
+    }
+    Tokens!(Explode!(out))
+  });
+  DefMacro!("\\pdfescapename {}", sub[(arg)] {
+    let s = Expand!(arg).to_string();
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+      let is_delim = matches!(
+        b,
+        b'#' | b'/' | b'%' | b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}'
+      );
+      if (33..=126).contains(&b) && !is_delim {
+        out.push(char::from(b));
+      } else {
+        out.push_str(&format!("#{b:02X}"));
+      }
+    }
+    Tokens!(Explode!(out))
+  });
   // DefMacro!("\\ifpdfprimitive {}",None);
   // DefMacro!("\\ifpdfabsnum Number"",None);
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
@@ -119,16 +178,25 @@ LoadDefinitions!({
   // pdfTeX \pdfmdfivesum syntax:
   //   \pdfmdfivesum <general text>      (MD5 of literal string)
   //   \pdfmdfivesum file <general text> (MD5 of file contents)
-  // The Perl port's `Number {}` signature was wrong — there is NO
-  // leading number argument. Use `OptionalMatch:file` instead so the
-  // optional `file` keyword is consumed properly and the brace arg
-  // works in both forms. We are not producing PDF/X output, so the
-  // gobbled-and-discarded behaviour is acceptable downstream.
-  // Witness 2407.02288 (pdfx.sty's `\edef\xmp@docid{\pdfx@mdfivesum
-  // {\jobname}}` raw-load cascade).
-  def_macro_noop("\\pdfmdfivesum OptionalMatch:file {}")?;
-  def_macro_noop("\\pdf@mdfivesum OptionalMatch:file {}")?;
-  def_macro_noop("\\pdf@filemdfivesum {}")?;
+  // (The Perl port's `Number {}` signature was wrong — there is NO leading
+  // number argument.) REAL implementation (inline RFC 1321, unit-tested
+  // against the standard vectors): live pdfTeX prints the digest as
+  // UPPERCASE hex (`\pdfmdfivesum{abc}` → 900150983CD24FB0D6963F7D28E17F72,
+  // verified TL2025 2026-08-31). Witness 2407.02288 (pdfx.sty's
+  // `\edef\xmp@docid{\pdfx@mdfivesum{\jobname}}`).
+  DefMacro!("\\pdfmdfivesum OptionalMatch:file {}", sub[(file_kw, arg)] {
+    let text = Expand!(arg).to_string();
+    let digest = if file_kw.is_some() {
+      match find_file(&text, None).and_then(|p| std::fs::read(&p).ok()) {
+        Some(bytes) => md5_hex_upper(&bytes),
+        // pdfTeX yields the empty string for an unreadable file.
+        None => String::new(),
+      }
+    } else {
+      md5_hex_upper(text.as_bytes())
+    };
+    Tokens!(Explode!(digest))
+  });
   DefMacro!("\\pdffilesize{}", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
@@ -139,7 +207,25 @@ LoadDefinitions!({
       }
     } else {
       Vec::new() } });
-  def_macro_noop("\\pdffilemoddate {}")?;
+  // `D:YYYYMMDDhhmmss±hh'mm'` in LOCAL time — verified against live pdfTeX
+  // (TL2025 2026-08-31: `D:20260831120047-04'00'`). Empty expansion for a
+  // file that does not resolve, matching pdfTeX.
+  DefMacro!("\\pdffilemoddate {}", sub[(file)] {
+    use chrono::{DateTime, Local};
+    let filepath = Expand!(file).to_string();
+    let formatted = find_file(&filepath, None)
+      .and_then(|p| std::fs::metadata(&p).ok())
+      .and_then(|m| m.modified().ok())
+      .map(|t| {
+        let dt: DateTime<Local> = t.into();
+        // %z gives ±hhmm; pdfTeX writes ±hh'mm'
+        let z = dt.format("%z").to_string();
+        let (zh, zm) = z.split_at(3);
+        format!("{}{}'{}'", dt.format("D:%Y%m%d%H%M%S"), zh, zm)
+      })
+      .unwrap_or_default();
+    Tokens!(Explode!(formatted))
+  });
   def_macro_noop("\\pdffiledump {}")?;
   // DefMacro(""\pdfcolorstackinit {}",None);
 
@@ -365,3 +451,89 @@ LoadDefinitions!({
   });
   def_macro_noop("\\pdfglyphtounicode{}{}")?;
 });
+
+/// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's
+/// `\pdfmdfivesum` prints (verified against live pdfTeX TL2025). Inline
+/// implementation: 64-entry sine table generated exactly as the RFC defines
+/// it (`floor(2^32 · |sin(i+1)|)`), guarded below by the RFC's own test
+/// vectors.
+fn md5_hex_upper(data: &[u8]) -> String {
+  const S: [u32; 64] = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, //
+    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, //
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, //
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+  ];
+  let mut k = [0u32; 64];
+  for (i, ki) in k.iter_mut().enumerate() {
+    *ki = (((i as f64) + 1.0).sin().abs() * 4294967296.0) as u32;
+  }
+  let (mut a0, mut b0, mut c0, mut d0) =
+    (0x67452301u32, 0xefcdab89u32, 0x98badcfeu32, 0x10325476u32);
+  let mut m = data.to_vec();
+  let bitlen = (data.len() as u64).wrapping_mul(8);
+  m.push(0x80);
+  while m.len() % 64 != 56 {
+    m.push(0);
+  }
+  m.extend_from_slice(&bitlen.to_le_bytes());
+  for chunk in m.as_chunks::<64>().0 {
+    let mut w = [0u32; 16];
+    for (j, wj) in w.iter_mut().enumerate() {
+      *wj = u32::from_le_bytes(chunk[4 * j..4 * j + 4].try_into().unwrap());
+    }
+    let (mut a, mut b, mut c, mut d) = (a0, b0, c0, d0);
+    for i in 0..64 {
+      let (f, g) = match i / 16 {
+        0 => ((b & c) | (!b & d), i),
+        1 => ((d & b) | (!d & c), (5 * i + 1) % 16),
+        2 => (b ^ c ^ d, (3 * i + 5) % 16),
+        _ => (c ^ (b | !d), (7 * i) % 16),
+      };
+      let tmp = d;
+      d = c;
+      c = b;
+      b = b.wrapping_add(
+        a.wrapping_add(f)
+          .wrapping_add(k[i])
+          .wrapping_add(w[g])
+          .rotate_left(S[i]),
+      );
+      a = tmp;
+    }
+    a0 = a0.wrapping_add(a);
+    b0 = b0.wrapping_add(b);
+    c0 = c0.wrapping_add(c);
+    d0 = d0.wrapping_add(d);
+  }
+  let mut out = String::with_capacity(32);
+  for word in [a0, b0, c0, d0] {
+    for byte in word.to_le_bytes() {
+      out.push_str(&format!("{byte:02X}"));
+    }
+  }
+  out
+}
+
+#[cfg(test)]
+mod md5_tests {
+  use super::md5_hex_upper;
+
+  /// RFC 1321 appendix A.5 test vectors (uppercased to pdfTeX's format).
+  #[test]
+  fn rfc1321_vectors() {
+    assert_eq!(md5_hex_upper(b""), "D41D8CD98F00B204E9800998ECF8427E");
+    assert_eq!(md5_hex_upper(b"abc"), "900150983CD24FB0D6963F7D28E17F72");
+    assert_eq!(
+      md5_hex_upper(b"message digest"),
+      "F96B697D7CB7938D525A2F31AAF161D0"
+    );
+    // A >64-byte message exercises the multi-chunk path.
+    assert_eq!(
+      md5_hex_upper(
+        b"12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+      ),
+      "57EDF4A22BE3C955AC49DA2E2107B67A"
+    );
+  }
+}
