@@ -50,7 +50,11 @@ fi
 # and \directlua runs through the texlua bridge.
 PRELOAD='[rawstyles,rawclasses]latexml.sty'
 ORACLE="$OUTROOT/oracle_verdicts.tsv"
-if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t" "$ORACLE"; then
+# Gate on a CLEAN lualatex oracle (exit 0, zero errors): the oracle records
+# engine=lualatex for every pdflatex-failure FALLBACK too, and profiling
+# those (mostly pdfLaTeX-authored stale docs) under a LuaTeX identity
+# regressed the whole corpus (+78k error mass, sweep 9 first run).
+if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t0\t0$" "$ORACLE"; then
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
 fi
 
