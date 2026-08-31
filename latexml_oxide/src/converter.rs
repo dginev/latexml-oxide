@@ -92,6 +92,11 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
 ///   2. the `extra` dispatcher (`latexml_contrib` for our binaries) — consulted
 ///      before `latexml_package` to preserve the prior external-before-internal
 ///      order; the two registries are disjoint, so the order is immaterial.
+///      Compiled `.rs` bindings keep precedence even under the raw-
+///      interpretation preloads (`rawstyles`/`rawclasses`) — user directive
+///      2026-08-31 (perfect-kernel mission): raw mode governs what happens for
+///      names with NO binding (raw-load instead of the OmniBus fallback), it
+///      never demotes an existing binding.
 ///   3. `latexml_package` — core compiled engine bindings.
 ///   4. a `<request>.rhai` on the host TeX tree (`$TEXINPUTS`, via kpsewhich) —
 ///      a binding *distributed* with a package, so it FILLS A GAP rather than

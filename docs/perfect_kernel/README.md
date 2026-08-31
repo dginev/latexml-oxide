@@ -5,13 +5,19 @@ latexml-oxide **kernel** support until package-documentation manuals shipped wit
 TeX Live convert to high-quality core XML — schema-healthy markup, all content
 preserved (auditable against the golden PDF sitting next to each manual).
 
-The defining constraint: **raw interpretation**. Every `.sty` and `.cls` the
-manual uses is read as real TeX source through the engine, via
-`--preload=[rawstyles,rawclasses]latexml.sty`. We do **not** write new binding
-files (`*_sty.rs` / `*_cls.rs`) for the packages under test, and we do **not**
-lean on OmniBus for unknown classes — the point is to make the TeX kernel
-emulation strong enough that the packages *just work*. Improving the
-pre-compiled kernel-dump coverage is in scope; per-package shims are not.
+The defining constraint: **raw interpretation for the uncovered long tail**.
+Conversions run with `--preload=[rawstyles,rawclasses]latexml.sty`, so any
+`.sty`/`.cls` **without** a compiled `.rs` binding is read as real TeX source
+through the engine. Compiled bindings — contrib included, OmniBus-delegating
+ones too — **always keep precedence** (user directive 2026-08-31); raw mode
+never demotes them. What raw mode changes is the bindingless case: a class
+with no binding raw-loads instead of falling to the OmniBus unknown-class
+fallback (guard: `cluster_package_guards::rawclasses_binding_precedence_and_no_omnibus`).
+We do **not** write new binding files for the packages under test — the point
+is to make the TeX kernel emulation strong enough that they *just work* raw.
+Improving the pre-compiled kernel-dump coverage is in scope; per-package shims
+are not. Corpus work therefore focuses on manuals whose packages/classes have
+**no `.rs` binding yet**.
 
 ## Why this corpus
 

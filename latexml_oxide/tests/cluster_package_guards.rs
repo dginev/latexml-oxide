@@ -508,6 +508,94 @@ mod subdir_dispatch_no_strip {
   }
 }
 
+mod rawclasses_binding_precedence_and_no_omnibus {
+  //! Guards for the raw-interpretation preload technique
+  //! (`--preload=[rawstyles,rawclasses]latexml.sty`, the perfect-kernel
+  //! protocol — `docs/perfect_kernel/README.md`). User directive 2026-08-31:
+  //!
+  //! 1. A compiled `.rs` binding ALWAYS takes precedence, raw mode included —
+  //!    `rawstyles`/`rawclasses` never demote an existing binding.
+  //! 2. For a class with NO binding, `rawclasses` raw-loads the `.cls`
+  //!    through the TeX engine and the OmniBus fallback must NOT fire.
+  //!
+  //! Exercised with workdir-local class files, so the test needs no host
+  //! texmf packages: `scrartcl` (contrib-bound name) for precedence,
+  //! `pkzzz` (no binding anywhere) for the no-OmniBus raw load.
+
+  use std::{path::Path, process::Command};
+
+  fn convert(class: &str, cls_body: &str, preload: Option<&str>) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join(format!("{class}.cls")), cls_body).expect("write cls");
+    let tex = format!(
+      "\\documentclass{{{class}}}\n\\begin{{document}}\n\
+       \\ifdefined\\rawmarker\\rawmarker\\else NOMARKER\\fi\n\\end{{document}}\n"
+    );
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let mut cmd = Command::new(bin);
+    cmd.args(["t.tex", "--dest", "t.xml", "--nocomments"]);
+    if let Some(spec) = preload {
+      cmd.arg(format!("--preload={spec}"));
+    }
+    let output = cmd
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{}",
+      output.status.code(),
+      String::from_utf8_lossy(&output.stderr),
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    (xml, stderr)
+  }
+
+  const RAW_CLS: &str = "\\ProvidesClass{whatever}\n\
+    \\LoadClass{article}\n\
+    \\newcommand{\\rawmarker}{RAWCLSLOADED}\n";
+
+  /// Directive 1: the contrib `scrartcl` binding wins even under rawclasses —
+  /// the local raw `.cls`'s marker must NOT appear.
+  #[test]
+  fn contrib_binding_keeps_precedence_under_rawclasses() {
+    let (xml, _stderr) = convert("scrartcl", RAW_CLS, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert!(
+      xml.contains("NOMARKER") && !xml.contains("RAWCLSLOADED"),
+      "compiled scrartcl binding must outrank the raw .cls under rawclasses:\n{xml}",
+    );
+  }
+
+  /// Directive 2: a bindingless class raw-loads under rawclasses; OmniBus
+  /// stays out of the conversion entirely.
+  #[test]
+  fn bindingless_class_raw_loads_without_omnibus() {
+    let (xml, stderr) = convert("pkzzz", RAW_CLS, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert!(
+      xml.contains("RAWCLSLOADED"),
+      "bindingless pkzzz.cls should raw-load under rawclasses:\n{xml}\nstderr:\n{stderr}",
+    );
+    assert!(
+      !stderr.contains("OmniBus"),
+      "OmniBus must not fire for a raw-loaded bindingless class:\n{stderr}",
+    );
+  }
+
+  /// Control: without rawclasses the same bindingless class falls back to
+  /// OmniBus (the pre-existing default behavior, unchanged by the mission).
+  #[test]
+  fn bindingless_class_defaults_to_omnibus_without_rawclasses() {
+    let (xml, stderr) = convert("pkzzz", RAW_CLS, None);
+    assert!(
+      xml.contains("NOMARKER") && stderr.contains("OmniBus"),
+      "default mode should keep the OmniBus fallback for unknown classes:\n{stderr}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).

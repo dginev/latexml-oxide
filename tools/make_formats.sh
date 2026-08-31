@@ -81,6 +81,25 @@ if [ -z "$TL_YEAR" ]; then
   exit 3
 fi
 
+# Pin the binary's kpathsea to the SAME TeX Live the year was detected from.
+# The binary prefers a linked (in-process) libkpathsea, which anchors on its
+# compile-time distro tree — on a dual-TL host (vendor TL on PATH + distro TL
+# in /usr/share/texlive) the year above says e.g. "2025" while latex.ltx /
+# expl3-code.tex silently raw-load from the OLDER distro tree. That schism
+# shipped a latex.2025.dump.txt whose expl3 was dated 2024-01-22 (TL2023
+# vintage) while TL2025 ships 2025-11-06 — every post-2024 kernel API
+# (\prop_gput_if_not_in:Nnn, tagging sockets, \IfPackageLoadedF, …) came out
+# undefined (caught 2026-08-31 by the perfect-kernel corpus baseline).
+# kpathsea honors TEXMF* env overrides in-process, so derive them from the
+# ambient kpsewhich's own root when it has a texmf-dist.
+TL_ROOT="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null)"
+if [ -n "$TL_ROOT" ] && [ -d "$TL_ROOT/texmf-dist" ]; then
+  export TEXMFROOT="$TL_ROOT"
+  export TEXMFDIST="$TL_ROOT/texmf-dist"
+  export TEXMFCNF="$TL_ROOT/texmf-dist/web2c"
+  echo "[make_formats] pinned TEXMFROOT=$TL_ROOT (dual-TL guard)"
+fi
+
 echo "[make_formats] generating plain.${TL_YEAR}.dump.txt (--init=plain.tex)..."
 "$BIN" --init=plain.tex
 

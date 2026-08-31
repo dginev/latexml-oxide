@@ -30,6 +30,21 @@ mkdir -p "$out"
 # RAM guard (see feedback_sandbox_ram_guard): 6 GiB virtual.
 ulimit -v 6291456
 
+# Pin kpathsea to the SAME TeX Live the corpus comes from. The binary's linked
+# (in-process) libkpathsea anchors on its compile-time distro tree — on a host
+# with both a distro TL (/usr/share/texlive) and a vendor TL, raw styles would
+# silently resolve against the WRONG (older) tree while the manuals under test
+# ship with the vendor one (caught 2026-08-31: keyval.sty loading from
+# /usr/share/texlive during a /usr/local/texlive/2025 corpus sweep). kpathsea
+# honors TEXMF* env overrides in-process, so derive them from the ambient
+# kpsewhich on PATH.
+TL_ROOT="${TL_ROOT:-$(dirname "$(dirname "$(dirname "$(command -v kpsewhich)")")")}"
+if [[ -d "$TL_ROOT/texmf-dist" ]]; then
+  export TEXMFROOT="$TL_ROOT"
+  export TEXMFDIST="$TL_ROOT/texmf-dist"
+  export TEXMFCNF="$TL_ROOT/texmf-dist/web2c"
+fi
+
 start=$(date +%s.%N)
 timeout "$TIMEOUT_S" "$BIN" \
   --preload='[rawstyles,rawclasses]latexml.sty' \
