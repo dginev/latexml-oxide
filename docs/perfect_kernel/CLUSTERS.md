@@ -27,6 +27,18 @@ Error-mass hotspots (oracle-clean, errors per doc): gckanbun 12,566×2 (vertical
 kanbun), panda-doc 3,600, xcolor2 2,280, kksymbols 1,003, atableau/pmdraw 1,001.
 NOTE: several exceed the nominal error cap — cap behavior itself worth a look.
 
+### Post-sweep-4 top clusters (2026-08-31, later session)
+
+| Signature (bundles) | Status |
+|---|---|
+| `Error:expected:\fi` (13; hep-* family ≈10 of them, + pythontex=D7, misc) | OPEN — 5-line repro: `\usepackage{hep-font}` under the raw preload → `Missing \fi or \else, conditional fell off end` attributed to hep-font EOF (line 193). NOT the xpatch `{\else#1}` block (removing it doesn't help; standalone xpatch repros are clean). Error appears right after xparse/expl3 mid-preamble raw loading; INTERMITTENT w.r.t. load path (local-searchpath copy was clean in one run, errored in another) — suspect conditional-stack bookkeeping across file/mouth boundaries during nested raw loads. Needs a focused session with conditional-stack tracing. |
+| `Error:unexpected:&` (12) | mode/alignment family — overlaps parked R9 mode-frame; sample before attempting. |
+| `\ltd@title@title` (12) | expected to clear in sweep 5 (ltxdockit_cls.rs landed after the sweep-4 binary). |
+| `malformed:ltx:glossaryphrase` (9, abntex2 family) | OPEN — glossary entries emitted at #Document root; simple glossaries flow is clean, abntex2's path differs. |
+| `\BreakableUnderscore` (6) | l3doc/underscore interplay, surfaced once earlier errors cleared. |
+| CJK/Japanese (`\CJKaddEncHook` 12, luatexja, pTeX prims `\kanjiskip`/`\prebreakpenalty`/`\西`) | DIFFICULT_CASES — pTeX/upTeX engine primitives out of pdfTeX-model scope; catalog, don't chase. |
+| fontspec surface (`\setmathfont` 8, `\fontspec_if_language:nT` 5, `\defaultfontfeatures`/`\addfontfeature` 4+4) | D6 LuaLaTeX-only docs (oracle passes them via lualatex fallback); policy decision needed on modeling fontspec under pdfTeX-model engine. |
+
 ## Retired clusters (this mission)
 
 | Signature | Resolution | Guard |
