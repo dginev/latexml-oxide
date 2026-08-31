@@ -12,6 +12,12 @@ lualatex), 801 DOCUMENT-STALE (the shipped .tex no longer compiles on this
 TL — e.g. a4wide.tex vs siunitx v3), 25 timeout. **The S1 bar applies to the
 1548 oracle-clean docs only.**
 
+## S2 schema-validation baseline (sweep-5 XMLs)
+
+2026-08-31, `tools/perfect_kernel/validate.sh` (jing, urn-resolved schema):
+**1,409 / 2,329 produced core XMLs are RelaxNG-valid (60.5%)**; 10,899
+validation error lines across the remainder (`validate_verdicts.tsv`).
+
 ## Sweep history
 
 | Date | Binary (commit, profile) | Corpus | Timeout | status 3/124/137 | status 2 | status 1 | status 0 | Notes |
