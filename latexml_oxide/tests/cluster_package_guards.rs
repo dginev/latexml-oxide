@@ -745,6 +745,42 @@ mod currsize_default {
   }
 }
 
+mod raw_classoptionslist_recorded {
+  //! OXIDIZED_DESIGN #164 (class half): the kernel records the raw
+  //! `\documentclass` option text in `\@raw@classoptionslist` (latex.ltx
+  //! L18718, first class only). Modern babel reads exactly that list for
+  //! global language options (babel.sty L4199) — without it
+  //! `[french]{article}` + babel loads nil.ldf and `\og`/`\fg` are
+  //! undefined. Babel isn't needed to guard the record itself.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass[french,11pt]{article}\n\
+    \\begin{document}\n\
+    raw=[\\makeatletter\\@raw@classoptionslist\\makeatother]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn documentclass_options_recorded_raw() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("raw=[french,11pt]"),
+      "\\@raw@classoptionslist must carry the raw \\documentclass options:\n{xml}",
+    );
+  }
+}
+
 mod makeindex_allocates_indexfile {
   //! OXIDIZED_DESIGN #163: `\makeindex` allocates the `\@indexfile` write
   //! stream (real latex.ltx contract) while staying otherwise nooped, so raw

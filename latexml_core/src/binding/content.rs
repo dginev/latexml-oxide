@@ -250,8 +250,36 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       def_macro(
         T_CS!("\\@classoptionslist"),
         None,
-        Tokens!(Explode!(class_opts_str)),
+        Tokens!(Explode!(&class_opts_str)),
         None,
+      )?;
+    }
+    // OXIDIZED_DESIGN #164 (class half): the kernel ALSO records the raw,
+    // unprocessed option text of the DOCUMENT class in
+    // `\@raw@classoptionslist` (latex.ltx L18718, guarded to the first
+    // `\documentclass` via `\ifx\@classoptionslist\relax`). Modern babel
+    // (babel.sty L4199 `\bbl@foreach\@raw@classoptionslist`) reads THAT — not
+    // `\@classoptionslist` — to pick up global language options, so without
+    // it `\documentclass[french]{article}` + `\usepackage{babel}` loads
+    // nil.ldf and every French shorthand (`\og`/`\fg`) is undefined (TL doc
+    // corpus: 4+ French bundles; Perl 0.8.8 records it nowhere either).
+    // (`class_options` was pushed just above, so `have_recorded_opts` cannot
+    // gate this — use a dedicated once-flag for the kernel's
+    // first-`\documentclass`-only semantics.)
+    if options.handleoptions && !lookup_bool("@raw@classoptionslist_recorded") {
+      assign_value(
+        "@raw@classoptionslist_recorded",
+        true,
+        Some(Scope::Global),
+      );
+      def_macro(
+        T_CS!("\\@raw@classoptionslist"),
+        None,
+        Tokens!(Explode!(class_opts_str)),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
       )?;
     }
   }

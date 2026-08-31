@@ -6214,6 +6214,15 @@ installed; 10 TL-doc bundles' first error). Guard:
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#163).
 
+**Class half (same entry)**: the kernel likewise records the raw `\documentclass`
+option text in `\@raw@classoptionslist` (latex.ltx L18718, first class only —
+`\ifx\@classoptionslist\relax` guard). Modern babel reads THAT list for global
+language options (babel.sty L4199 `\bbl@foreach\@raw@classoptionslist`);
+without it `[french]{article}` + `\usepackage{babel}` silently loads nil.ldf
+(`\og`/`\fg` undefined — 4+ French TL doc bundles; Perl identical). Recorded in
+the same `input_definitions` cls block, gated by a `@raw@classoptionslist_recorded`
+once-flag. Guard: `cluster_package_guards::raw_classoptionslist_recorded`.
+
 ### 165. `\@currsize` defaults to `\normalsize` (begin-document invariant)
 
 **Perl behavior**: class bindings define `\normalsize`/`\small`/… as font
