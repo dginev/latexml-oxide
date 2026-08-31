@@ -450,6 +450,12 @@ LoadDefinitions!({
     }
   });
   def_macro_noop("\\pdfglyphtounicode{}{}")?;
+
+  // LuaTeX integer parameter (LuaTeX manual §2.5: hyphenation behaviour for
+  // words with explicit hyphens/automatic discretionaries; a line-breaking
+  // knob with no XML-content meaning). LuaLaTeX-authored manuals set it in
+  // their preamble (nicematrix.tex L303).
+  DefRegister!("\\automatichyphenmode" => Number::new(0));
 });
 
 /// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's

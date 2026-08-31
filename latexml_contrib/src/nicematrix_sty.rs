@@ -2,7 +2,6 @@ use std::cell::{Cell, RefCell};
 
 use latexml_package::{package::color_sty::parse_color, prelude::*};
 
-use crate::discard_env::discard_env_body;
 
 /// A rectangle of cells to fill, in nicematrix's 1-based MAIN-matrix
 /// coordinates (the `first-row`/`first-col` label line is excluded). `r2`/`c2`
@@ -129,6 +128,28 @@ LoadDefinitions!({
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
   RequirePackage!("array");
+  // nicematrix.sty L21-22 defines its own `\myfileversion`/`\myfiledate`
+  // (its manual typesets them on the title page). The binding shadows the
+  // raw load, so read the REAL values from the installed .sty rather than
+  // hardcoding a copy that drifts with the TL version.
+  if let Some(path) = find_file("nicematrix.sty", None)
+    && let Ok(src) = std::fs::read_to_string(&path)
+  {
+    for name in ["myfileversion", "myfiledate"] {
+      let needle = s!("\\def\\{name}{{");
+      if let Some(pos) = src.find(&needle)
+        && let Some(end) = src[pos + needle.len()..].find('}')
+      {
+        let val = &src[pos + needle.len()..pos + needle.len() + end];
+        def_macro(
+          T_CS!(s!("\\{name}")),
+          None,
+          Tokens!(Explode!(val)),
+          None,
+        )?;
+      }
+    }
+  }
   Warn!(
     "missing_file",
     "nicematrix.sty",
@@ -383,53 +404,119 @@ LoadDefinitions!({
     locked => true);
   DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
 
-  // The ARRAY family (`\NiceArray`/`pNiceArray`/…/`NiceArrayWithDelims`/
-  // `NiceTabular*`/`NiceTabularX`) takes a `{colspec}` and stays a placeholder
-  // stub for now (no faithful colspec reduction yet).
-  DefConstructor!(T_CS!("\\begin{NiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceArrayWithDelims}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceArrayWithDelims (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceArrayWithDelims", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceArrayWithDelims", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceTabular*}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceTabular* (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceTabular*", "nicematrix.sty.ltxml")?; });
-  DefConstructor!(T_CS!("\\begin{pNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">pNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("pNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endpNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceTabularX}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceTabularX (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceTabularX", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceTabularX", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{bNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">bNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("bNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endbNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{BNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">BNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("BNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endBNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{vNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">vNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("vNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endvNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{VNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">VNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("VNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endVNiceArray", "\\relax", locked => true);
+  // The ARRAY family — REAL reductions (policy 2026-08-31: content must
+  // survive; the former placeholders DISCARDED every body). First principles
+  // from nicematrix.sty: `\begin{<x>NiceArray}{colspec}[opts]` is an
+  // array-with-delimiters — nicematrix builds every one of them on
+  // `{NiceArrayWithDelims}{l}{r}{colspec}` (nicematrix.sty v6:
+  // `\NewDocumentEnvironment{pNiceArray}… {NiceArrayWithDelims}{(}{)}`),
+  // which is itself a math `{array}` wrapped in `\left l … \right r`.
+  // Reduce exactly that way, through the SAME `\CodeBefore … \Body`
+  // pre-layer grabber and post-paint hook as the matrix family, so cell
+  // colors work identically.
+  RawTeX!(concat!(
+    r"\def\lx@nice@array@begin#1{",
+      r"\@ifnextchar\CodeBefore{\lx@nice@grabcode@arr{#1}}{#1}}",
+    r"\long\def\lx@nice@grabcode@arr#1#2\Body{",
+      r"\begingroup",
+        r"\let\rectanglecolor\lx@nice@rectanglecolor",
+        r"\let\cellcolor\lx@nice@cellcolor",
+        r"\let\rowcolor\lx@nice@rowcolor",
+        r"\let\columncolor\lx@nice@columncolor",
+        r"\let\arraycolor\lx@nice@arraycolor",
+        r"\let\chessboardcolors\lx@nice@chessboardcolors",
+        r"\let\rowlistcolors\lx@nice@rowlistcolors",
+        r"#2",
+      r"\endgroup",
+      r"#1}"
+  ));
+  DefMacro!("\\NiceArray{}[]", "\\NiceArrayWithDelims.{.}{#1}[#2]", locked => true);
+  DefMacro!("\\endNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  // Closure form: `[first-col]`/`[last-col]` add LABEL cells to every source
+  // row, so the colspec must grow a `c` on that side or each row overflows
+  // the template ("Extra alignment tab"). first-row needs no preamble change
+  // (row count is unconstrained). nicematrix.sty does the analogue in its
+  // preamble parser.
+  DefMacro!("\\NiceArrayWithDelims{}{}{}[]", sub[(l, r, pream, opts)] {
+    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+    let opts_str = opts_toks.to_string();
+    let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\def"));
+    out.push(T_CS!("\\lx@nice@awd@right"));
+    out.push(T_BEGIN!());
+    out.extend(r.revert());
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@nice@setopts"));
+    out.push(T_BEGIN!());
+    out.extend(opts_toks.unlist());
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@nice@array@begin"));
+    out.push(T_BEGIN!());
+    out.push(T_CS!("\\left"));
+    out.extend(l.revert());
+    out.push(T_CS!("\\array"));
+    out.push(T_BEGIN!());
+    if nice_opts_has(&opts_str, "first-col") {
+      out.push(T_LETTER!("c"));
+    }
+    out.extend(pream.revert());
+    if nice_opts_has(&opts_str, "last-col") {
+      out.push(T_LETTER!("c"));
+    }
+    out.push(T_END!());
+    out.push(T_END!());
+    Tokens::new(out)
+  }, locked => true);
+  DefMacro!("\\endNiceArrayWithDelims",
+    "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\pNiceArray{}[]", "\\NiceArrayWithDelims({)}{#1}[#2]", locked => true);
+  DefMacro!("\\endpNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\bNiceArray{}[]", "\\NiceArrayWithDelims[{]}{#1}[#2]", locked => true);
+  DefMacro!("\\endbNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\BNiceArray{}[]", "\\NiceArrayWithDelims\\{{\\}}{#1}[#2]", locked => true);
+  DefMacro!("\\endBNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\vNiceArray{}[]", "\\NiceArrayWithDelims|{|}{#1}[#2]", locked => true);
+  DefMacro!("\\endvNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\VNiceArray{}[]", "\\NiceArrayWithDelims\\|{\\|}{#1}[#2]", locked => true);
+  DefMacro!("\\endVNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  // NiceTabular* {width}[opts]{colspec} / NiceTabularX {width}[opts]{colspec}:
+  // text-mode tabulars; the fixed total width is print layout — the columns
+  // and their CONTENT reduce to the ordinary tabular engine, like
+  // \NiceTabular above.
+  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}",
+    "\\lx@nice@setopts{#2}\\tabular{#3}");
+  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular");
+  DefMacro!("\\NiceTabularX{}[]{}",
+    "\\lx@nice@setopts{#2}\\tabular{#3}", locked => true);
+  DefMacro!("\\endNiceTabularX", "\\endtabular", locked => true);
+
+  // In-tabular decoration commands the manuals use pervasively.
+  // \Block[opts]{i-j}{content}: nicematrix paints `content` OVER an i×j cell
+  // rectangle whose other source cells are empty. The logical position of the
+  // content is the anchor cell, so emitting it in place preserves content and
+  // reading order; the visual spanning overlay is print styling (a
+  // \multicolumn/rowspan rewrite would break the row's cell count, since the
+  // covered cells are still present in the source). The starred form and
+  // math-mode `$`-wrapped bodies pass through unchanged.
+  DefMacro!("\\Block OptionalMatch:* []{}{}", "#4", locked => true);
+  // \Hline[opts]: nicematrix's own \hline that survives its internal
+  // machinery; opts (color=, thickness=) are rule styling. Reduce to \hline.
+  DefMacro!("\\Hline []", "\\hline", locked => true);
+  // \rotate: rotates the CELL CONTENT 90° in print — pure presentation, the
+  // content itself follows. Justified noop.
+  def_macro_noop("\\rotate")?;
+
+  // Continuous-dots commands (nicematrix's \\Cdots family draws dotted lines
+  // ACROSS cells). Semantically these are the amsmath ellipses in the anchor
+  // cell; the cross-cell line extension is drawing-layer presentation.
+  // Optional [line-style] args are styling.
+  DefMacro!("\\Cdots []", "\\cdots", locked => true);
+  DefMacro!("\\Ldots []", "\\ldots", locked => true);
+  DefMacro!("\\Vdots []", "\\vdots", locked => true);
+  DefMacro!("\\Ddots []", "\\ddots", locked => true);
+  DefMacro!("\\Iddots []", "\\ddots", locked => true);
+  DefMacro!("\\Hdotsfor{}", "\\hdotsfor{#1}", locked => true);
+
   // Configuration entry-points — `\NiceMatrixOptions{...}` /
   // `\NewCollectionOfColumnsType{...}` etc. set internal styling keys that are
   // visually irrelevant to our rendering. No-op stubs prevent Error:undefined for
