@@ -1049,6 +1049,135 @@ mod accent_meaning_robust_shape {
   }
 }
 
+mod openright_kernel_contract {
+  //! book.cls L52/L98/L119 and report.cls L52/L98-99/L117: `\newif
+  //! \if@openright` with true/false defaults respectively, driven by the
+  //! openright/openany class options. Derived classes and docs poke the
+  //! switch directly (toptesi.sty L329-342, amscls-doc handbooks) — the
+  //! sweep-12 `\if@openright` cluster. Same kernel-contract precedent as
+  //! `\if@mainmatter` (commit dba2a7eab0).
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass[openright]{report}\n\
+    \\makeatletter\n\
+    \\begin{document}\n\
+    A[\\if@openright OR\\else OA\\fi]\n\
+    \\@openrightfalse B[\\if@openright OR\\else OA\\fi]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn openright_switch_and_options_work() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "openright contract must digest:\n{stderr}"
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("A[OR]") && xml.contains("B[OA]"),
+      "option must set the switch and the setter must flip it:\n{xml}",
+    );
+  }
+}
+
+mod unicode_caret_notation {
+  //! XeTeX/LuaTeX extended caret notation: `^^^^hhhh` (and `^^^^^^hhhhhh`)
+  //! produce one Unicode scalar. Packages PROBE for a Unicode engine with
+  //! it — newunicodechar.sty L52-56 `\edef\next{\@gobble^^^^0021}` fell
+  //! into its 8-bit branch without it and raised "ASCII character
+  //! requested" for EVERY \newunicodechar call (9-doc cluster: eigo,
+  //! verifica ×5, tikz-trackschematic ×2, uspace). Unicode-native-engine
+  //! precedent: same as providing \Ucharcat.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{newunicodechar}\n\
+    \\newunicodechar{\u{00D7}}{x}\n\
+    \\begin{document}\n\
+    C[^^^^0041] U[3\u{00D7}4] S[^^^^^^01d49e]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn four_and_six_caret_forms_scan() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--preload=[rawstyles]latexml.sty",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "newunicodechar must take its Unicode branch:\n{stderr}"
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("C[A]") && xml.contains("U[3x4]") && xml.contains("S[\u{1D49E}]"),
+      "caret forms must scan and the active-char mapping must fire:\n{xml}",
+    );
+  }
+}
+
+mod memoir_output_streams {
+  //! memoir.cls output streams (L10965-11063) are CONTENT-BEARING: docs
+  //! write body fragments to \jobname.<ext> and \input them back
+  //! (dlfltxbmarkup-showkeys routes its whole body that way). Our memoir
+  //! binding delegates to REAL TeX write streams so the round-trip works.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{memoir}\n\
+    \\begin{document}\n\
+    \\newoutputstream{keys}\n\
+    \\openoutputfile{\\jobname.keys}{keys}\n\
+    \\addtostream{keys}{ROUNDTRIP}\n\
+    \\closeoutputstream{keys}\n\
+    K[\\input{\\jobname.keys}]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn stream_write_and_readback() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("K[ROUNDTRIP"),
+      "stream content must round-trip through the aux file:\n{xml}\n{stderr}",
+    );
+  }
+}
+
 mod graphicx_internals {
   //! Raw packages poke graphicx/graphics INTERNALS our bindings reimplement
   //! around (`wisdom_latexml_reimpl_internal_name_mismatch` shape): hvfloat

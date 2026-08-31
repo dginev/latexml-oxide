@@ -14,6 +14,23 @@ LoadDefinitions!({
   def_macro_noop("\\automark[]{}")?;
   def_macro_noop("\\automark*[]{}")?;
   def_macro_noop("\\clearpairofpagestyles")?;
+  // Page-style DEFINITION family. scrlayer-scrpage.sty L1304/1489/1517/1543
+  // are all `[opt]{name}{layer-definition}`; L879 \defpagestyle is {3};
+  // scrlayer.sty L1124/1150/1717/1991 are the raw layer primitives. Every
+  // argument is header/footer geometry — no document content — so absorb.
+  // Sweep-12 cluster: 13 docs, witnesses bfh-ci/DEMO-BFHLetter,
+  // neoschool, tuda-ci, zugferd, urcls, makelabels, ijsra.
+  def_macro_noop("\\newpairofpagestyles[]{}{}")?;
+  def_macro_noop("\\renewpairofpagestyles[]{}{}")?;
+  def_macro_noop("\\providepairofpagestyles[]{}{}")?;
+  def_macro_noop("\\defpairofpagestyles[]{}{}")?;
+  def_macro_noop("\\defpagestyle{}{}{}")?;
+  def_macro_noop("\\deftriplepagestyle{}{}{}{}")?;
+  def_macro_noop("\\DeclareNewLayer[]{}")?;
+  def_macro_noop("\\ModifyLayer[]{}")?;
+  def_macro_noop("\\DeclareNewPageStyleByLayers[]{}")?;
+  def_macro_noop("\\DeclarePageStyleAlias{}{}")?;
+  DefMacro!("\\sls@hfline@adjust", "0");
   def_macro_noop("\\clearscrheadfoot")?;
   def_macro_noop("\\clearscrheadings")?;
   def_macro_noop("\\clearscrplain")?;

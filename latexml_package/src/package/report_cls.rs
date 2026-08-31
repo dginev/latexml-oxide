@@ -19,8 +19,6 @@ LoadDefinitions!({
     "draft",
     "oneside",
     "twoside",
-    "openright",
-    "openany",
     "notitlepage",
     "titlepage",
   ] {
@@ -44,6 +42,13 @@ LoadDefinitions!({
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+
+  // Kernel contract (report.cls L52/L98-99/L117): `\newif\if@openright`,
+  // default FALSE (\ExecuteOptions{...,openany}). Same cluster + precedent
+  // as book_cls.rs.
+  RawTeX!(r"\newif\if@openright");
+  DeclareOption!("openright", r"\@openrighttrue");
+  DeclareOption!("openany", r"\@openrightfalse");
 
   ProcessOptions!();
 

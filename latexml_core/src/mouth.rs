@@ -692,6 +692,41 @@ impl Mouth {
         && self.colno + 1 < self.nchars
         && Some(&ch) == self.chars.get(self.colno)
       {
+        // XeTeX/LuaTeX extended caret notation, longest-match-first:
+        // ^^^^^^hhhhhh (6 hex) and ^^^^hhhh (4 hex) produce one Unicode
+        // scalar. This engine is Unicode-native (same precedent as
+        // providing \Ucharcat despite pdfTeX lacking it), and packages
+        // PROBE for a Unicode engine with exactly this notation —
+        // newunicodechar.sty L52-56 `\edef\next{\@gobble^^^^0021}` takes
+        // its broken 8-bit branch without it (9-doc corpus cluster,
+        // witnesses eigo, verifica, tikz-trackschematic, uspace).
+        let is_lowerhex_c = |c: char| -> bool { matches!(c, '0'..='9' | 'a'..='f') };
+        for (extra_carets, ndigits) in [(4usize, 6usize), (2, 4)] {
+          // self.colno-1 is the first ^; require extra ^s then ndigits hex.
+          let carets_ok =
+            (0..extra_carets).all(|k| self.chars.get(self.colno + 1 + k) == Some(&ch));
+          let dig_start = self.colno + 1 + extra_carets;
+          if carets_ok
+            && dig_start + ndigits <= self.nchars
+            && (0..ndigits).all(|k| {
+              self
+                .chars
+                .get(dig_start + k)
+                .is_some_and(|c| is_lowerhex_c(*c))
+            })
+          {
+            let hex: String = (0..ndigits)
+              .filter_map(|k| self.chars.get(dig_start + k))
+              .collect();
+            if let Some(newch) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+              let removed = 2 + extra_carets + ndigits;
+              self.splice(self.colno - 1..self.colno - 1 + removed, &[newch]);
+              self.nchars -= removed - 1;
+              let cc2 = self.catcode_of(newch);
+              return Some((newch, cc2));
+            }
+          }
+        }
         let c1_opt = self.chars.get(self.colno + 1);
         let c2_opt = self.chars.get(self.colno + 2);
         let mut two_hex = false;

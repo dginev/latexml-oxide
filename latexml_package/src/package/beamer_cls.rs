@@ -143,7 +143,25 @@ LoadDefinitions!({
   DefMacro!("\\logo{}", "\\@add@frontmatter{ltx:note}[role=logo]{#1}");
   DefMacro!("\\titlegraphic{}",
     "\\@add@frontmatter{ltx:note}[role=titlegraphic]{#1}");
-  DefMacro!("\\titlepage", "\\maketitle");
+  // Beamer's \titlepage lives INSIDE a frame (ltx:subsection with
+  // _noautoclose), where the schema forbids ltx:subtitle/ltx:date — plain
+  // \maketitle flushed the frontmatter "here" and produced the sweep-12
+  // `malformed:ltx:subtitle` cluster (12 docs; witnesses
+  // beamerthemecelestia demos, beamerthemeNord, beamertheme-simpleplus).
+  // Route through the document-top fallback placement (legal for the full
+  // FrontMatter group) instead. The faithful Perl frame model (ltx:slide in
+  // ltx:slidesequence) is the tracked follow-up in CLUSTERS.md.
+  DefMacro!("\\titlepage", "\\lx@frontmatter@fallback");
+  // Beamer docs call \maketitle inside frames too (the Celestia demos'
+  // `\begin{frame}\maketitle\end{frame}`) — route it the same way.
+  DefMacro!("\\maketitle", "\\lx@frontmatter@fallback");
+  // beamerbasetitle.sty L31-32: divider-slide templates
+  // (beamerinnerthemedefault.sty L114-140 render the section name).
+  // SHARED-FAILURE with Perl (no definition there either); absorb for now —
+  // semantic \insertsection mapping is the follow-up. 9-doc cluster,
+  // witnesses beamerauxtheme examples, bfh-ci DEMO-BFHBeamer.
+  def_macro_noop("\\sectionpage")?;
+  def_macro_noop("\\subsectionpage")?;
   def_macro_noop("\\insertauthor")?;
   def_macro_noop("\\inserttitle")?;
   def_macro_noop("\\insertsubtitle")?;

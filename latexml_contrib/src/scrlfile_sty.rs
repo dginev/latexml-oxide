@@ -54,4 +54,14 @@ LoadDefinitions!({
   );
   def_macro_noop("\\BeforePackage{}[]{}")?;
   def_macro_noop("\\BeforeClass{}[]{}")?;
+  // scrlfile-hook.sty L296/L309: `{o m}` — optional hook label + code
+  // deferred to `enddocument/afterlastpage` / `enddocument/afteraux`. Both
+  // corpus bodies are pure .aux/.toc write-back (tocbasic.sty L620 writes
+  // the toc-file end marker; L2992 writes scr@dte@…maxnumwidth into
+  // \@mainaux) — no document content survives into XML, so absorb (same
+  // call the atveryend binding makes for \AfterLastShipout). Witness: the
+  // 12 toptesi docs via toptesi.sty L50 \RequirePackage{scrextend} →
+  // tocbasic.
+  def_macro_noop("\\BeforeClosingMainAux[]{}")?;
+  def_macro_noop("\\AfterReadingMainAux[]{}")?;
 });

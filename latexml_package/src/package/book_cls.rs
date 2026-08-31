@@ -19,8 +19,6 @@ LoadDefinitions!({
     "draft",
     "oneside",
     "twoside",
-    "openright",
-    "openany",
     "notitlepage",
     "titlepage",
   ] {
@@ -44,6 +42,17 @@ LoadDefinitions!({
   });
   DeclareOption!("leqno", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_leqno" => true); });
   DeclareOption!("fleqn", sub { AssignMapping!("DOCUMENT_CLASSES", "ltx_fleqn" => true); });
+  // Kernel contract (book.cls L52/L98/L119): `\newif\if@openright`, default
+  // TRUE via \ExecuteOptions{...,openright}. Neither Perl's book.cls.ltxml
+  // nor report.cls.ltxml declare the switch, but derived classes and docs
+  // poke it directly (toptesi.sty L329-342 front/main/backmatter; the
+  // amscls-doc Author_Handbooks read it at body L49/L60/L170) — the
+  // sweep-11/12 `\if@openright` cluster. Same `\if@mainmatter` precedent
+  // as commit dba2a7eab0. Declared BEFORE ProcessOptions so the class
+  // options actually run.
+  RawTeX!(r"\newif\if@openright \@openrighttrue");
+  DeclareOption!("openright", r"\@openrighttrue");
+  DeclareOption!("openany", r"\@openrightfalse");
 
   ProcessOptions!();
 
@@ -70,7 +79,6 @@ LoadDefinitions!({
 \newif\if@titlepage
 \@titlepagefalse"
   );
-
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm
   // but the counter setup, etc, depends on article
