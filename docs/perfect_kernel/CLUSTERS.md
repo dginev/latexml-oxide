@@ -5,14 +5,36 @@ first-error extraction. Discipline: cluster by first-error signature, sample
 2–3 representatives before believing a cluster, count *clusters* fixed, not
 documents.
 
-## Current clusters
+## Current clusters — sweep #2 (2026-08-31, fresh dump + #161)
 
-_(baseline sweep in progress; pre-sweep findings below)_
+Ranked by **distinct bundles** among oracle-clean docs with errors (first-error
+signature). 770 oracle-clean docs still carry errors; 8 fatal; 1 timeout.
 
-| Rank | Signature | Docs | Representative | Verdict / plan |
-|---|---|---|---|---|
-| — | `Error:expected:{ Expected opening '{'` from `DefPlain`/required-brace args when the `{...}` body sits on the next line | TBD (sweep) | abraces-doc (via raw `ltxdockit.sty` `\lstnewenvironment`); 10-line repro: `\lstnewenvironment{x}[1][]` + body on next line | **SHARED with Perl 0.8.8** (verified same-host). Real TeX skips blanks before an undelimited argument (tex.web macro_call), so both engines are wrong vs the kernel. Candidate **surpass-perl** divergence: make `readBalanced(require_open)` skip spaces/comments before the `{`. Qualifies on tests 1 (catcode/argument-scanning quality) and 3 (Perl benefits identically); awaiting witness count ≥5 from sweep + user approval per protocol. |
-| — | `Error:undefined:\newunit` etc. in a4wide | n/a | a4wide | **DOCUMENT-STALE**: manual written against siunitx v1; TL2025 pdflatex fails with 39 errors. Excluded from S1 bar via oracle pass. |
+| Rank | Signature (bundles) | Representative | Verdict / plan |
+|---|---|---|---|
+| 1 | `\minisec` (17) + `{labeling}` (11) + `\addsec`-family | beamerposter | KOMA surface missing from the OmniBus-backed scr* bindings. Extend the existing contrib scr* bindings (no new files) or improve OmniBus's KOMA vocabulary. |
+| 2 | `\@indexfile` (14) | arydshln-man | index machinery (`\makeindex`/`theindex` raw path writes `\@indexfile`). Kernel gap — root-cause next. |
+| 3 | `\ltd@title@title` (12) | abraces-doc | ltxdockit.cls's `\renewrobustcmd*{\titlepage}` is refused — `\titlepage` is a LOCKED kernel CS; the keyval title setters never run. **SHARED with Perl** (same-host verified: 7 identical errors + "not-well-structured titlepage"). Future surpass candidate: locked-CS yield for raw-class redefinitions (the surpass-perl skill's own qualifying example). Needs user approval — heavier lock-semantics change. |
+| 4 | `\CJKaddEncHook` (12) + `luatexja-core` (5) + `\dhucs@hu` | CJK ecosystem | CJK raw interpretation — catalog under DIFFICULT_CASES (encoding-hook machinery). |
+| 5 | `\PkgInfo` (10) | oberdiek family | hobsub/pdftexcmds generation-era `\PkgInfo` — kernel-adjacent, likely small. |
+| 6 | `Error:latex:(etoolbox)` (9) | hep-acronym | etoolbox binding raises GenericError on patch failure classes. |
+| 7 | `\subtitle` (8) | beamerposter themes | beamer `\subtitle` in non-beamer classes / theme frontmatter. |
+| 8 | `\setmathfont` (8) + `\fontspec_if_language:nT` (5) + `\defaultfontfeatures` (4) | unicode-math / fontspec | LuaLaTeX font-selection surface; extend existing fontspec binding noops (D6 policy). |
+| 9 | `\Hy@MakeCurrentHref` (8) | hyperref internals | raw packages poking hyperref internals our binding doesn't expose. |
+| 10 | `malformed:ltx:glossaryphrase` (7) | abntex2 | glossaries schema-shape bug — S2-relevant. |
+
+Error-mass hotspots (oracle-clean, errors per doc): gckanbun 12,566×2 (vertical
+kanbun), panda-doc 3,600, xcolor2 2,280, kksymbols 1,003, atableau/pmdraw 1,001.
+NOTE: several exceed the nominal error cap — cap behavior itself worth a look.
+
+## Retired clusters (this mission)
+
+| Signature | Resolution | Guard |
+|---|---|---|
+| `\prop_gput_if_not_in:*`(124 docs) / `\UseTaggingSocket` (74) / `\sys_if_*` (66+28) / `\prop_new_linked:*` (50) / `\IfPackageLoaded*`+`\IfFormatAtLeast*` | Stale dual-TL dump — `make_formats.sh` TEXMF* pin + regenerated TL2025 dump; engine-side backend agreement check (`choose_kpaths` `same_tree_as_ambient`) | `ambient_tree_mismatch_falls_back_to_subprocess`; zero-error `--init` gate |
+| `Error:expected:{` from `\lstnewenvironment` bodies on next line (~148 docs) | OXIDIZED_DESIGN #161 `DefPlain` skips blanks (surpass-Perl, approved) | `defplain_skips_blanks_before_brace` |
+| First listing body line silently lost in `\lstnewenvironment[1][]` envs | OXIDIZED_DESIGN #162 pushback-aware raw-line capture | same guard, data-attr assertion |
+| `Error:undefined:\newunit` (a4wide etc.) | DOCUMENT-STALE — oracle pass excludes (801 stale docs) | `oracle_verdicts.tsv` |
 
 Settled protocol point (user directive 2026-08-31): compiled `.rs` bindings
 keep precedence under rawclasses/rawstyles; an experiment demoting the contrib

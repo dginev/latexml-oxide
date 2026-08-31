@@ -6110,3 +6110,82 @@ Guardrails that must NOT regress: 2608.11332 (shared `\email` under `\inst{1}`),
 **Upstream**: the ar5iv CSS comment already anticipates this ("Ideally latexml's schema should
 evolve to handle this via differently organized markup") — the trailing-creator normalization is
 that markup.
+
+### 161. `DefPlain` skips blanks before its required `{` (undelimited-argument scanning)
+
+**Perl behavior**: the `DefPlain` parameter type calls `readBalanced(0,1,1)` bare
+(`Base_ParameterTypes.pool.ltxml` L34, `Gullet.pm` L441-452), whose `require_open`
+branch reads ONE raw token — a space/newline before the brace errors
+`Expected opening '{'` and the body braces then execute inline. Bites every
+`\lstnewenvironment{x}[1][]` whose `{begin}{end}` bodies sit on following lines —
+the standard documentation style (~148 TeX Live doc manuals; witnesses:
+`ltxdockit.sty` L561/L565 via abraces-doc, `cnltx-example.sty` L1015 via
+snotez/elements/carbohydrates manuals).
+
+**Rust behavior**: `DefPlain` (`latexml_engine/src/base_parameter_types.rs`) runs
+`skip_spaces()` before the balanced read.
+
+**Why**: real TeX skips blank space tokens when grabbing an undelimited argument
+(tex.web `macro_call`), and LaTeXML's own `{}` reader (`readArg` → `readNonSpace`)
+skips them too — the bare `readBalanced(require_open)` in `DefPlain` is internally
+inconsistent, not a defensible alternative semantic. `\def`/`\gdef` reach `DefPlain`
+after `UntilBrace`, where the skip is a no-op, so `\def`-family semantics are
+untouched.
+
+**Witnesses**: TL2025 doc corpus — abraces-doc (10→? errors), snotez-manual,
+elements-manual, carbohydrates_en, flashmovie/test-beamer-0. 10-line repro in the
+guard test.
+
+**Upstream**: approved 2026-08-31 as branch-contained (perfect_kernel); upstream
+filing deferred by user directive ("contain all work to this branch only").
+
+### 162. Listings raw-line capture keeps the first body line after a line-crossing argument probe
+
+**Perl behavior**: `readListingsLines`-style capture (`listings.sty.ltxml`) discards its first
+`readRawLine` unconditionally as "the remainder of the `\begin{…}` line". When the environment
+was defined with an optional argument (`\lstnewenvironment{x}[1][]`) and none is given, the
+`Optional` probe (`readNonSpace`) crosses the newline after `\begin{x}` and unreads the body's
+first character — the "first line" then IS the body's first line, and Perl swallows it. Verified
+same-host on Perl 0.8.8: a two-line body comes back holding only line two.
+
+**Rust behavior**: `listings_read_raw_lines` (`listings_sty.rs`) discards the first raw line
+only when the gullet pushback is empty (`gullet::pushback_is_empty`) — pushback pending means an
+argument probe already advanced into the body, so the first raw line (pushback + line remainder)
+is real content and is kept.
+
+**Why**: content preservation — real listings drops only the `\begin`-line remainder; the first
+body line is typeset. Every `\lstnewenvironment`-defined example environment in the TL doc corpus
+(cnltx, ltxdockit, … — the standard "define an example env, body on following lines" style) lost
+its first line in both engines. Known residual: `\begin{env} same-line-junk` (no optional given)
+now keeps the junk as body line 1 instead of dropping it — pathological input real listings warns
+about; accepted.
+
+**Witnesses**: TL2025 doc corpus manuals via cnltx-example.sty / ltxdockit.sty; 10-line repro in
+`cluster_package_guards::defplain_skips_blanks_before_brace` (guards #161 + #162 together).
+
+**Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161).
+
+### 163. `\makeindex` allocates the `\@indexfile` write stream (kernel contract subset)
+
+**Perl behavior**: `\makeindex` / `\makeglossary` are full no-ops
+(`latex_constructs.pool.ltxml` L4531-4532). Real latex.ltx `\makeindex` also
+`\newwrite`s `\@indexfile`, and raw doc.sty / l3doc.cls-style code then writes
+`\protected@write\@indexfile{…}` directly — with the stream never allocated, every
+such write errors `undefined \@indexfile` (and cascades: Perl 0.8.8 lands at 101
+errors + 1 fatal on l3kernel's own `saveenv.tex`, same-host verified).
+
+**Rust behavior**: `\makeindex` → `\ifdefined\@indexfile\else\newwrite\@indexfile\fi`
+(`\makeglossary` likewise for `\@glossaryfile`). Everything else stays nooped: no
+`\openout`, and NO kernel-style redefinition of `\index` — the semantic
+`\index SanitizedVerbatim` constructor remains in charge. Writes to the
+allocated-but-unopened stream go to the log, exactly as real TeX behaves with no
+file open.
+
+**Why**: kernel-contract subset restoration; content untouched (the write's payload
+was never document content). 14 TL-doc bundles (l3kernel manuals, robustindex,
+postnotes, …) clear their first-error.
+
+**Witnesses**: saveenv/saveenv (2 errors → 1), l3kernel/l3styleguide,
+robustindex/robustmanual. Guard: `cluster_package_guards::makeindex_allocates_indexfile`.
+
+**Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161/#162).

@@ -596,6 +596,114 @@ mod rawclasses_binding_precedence_and_no_omnibus {
   }
 }
 
+mod defplain_skips_blanks_before_brace {
+  //! OXIDIZED_DESIGN #161 (surpass-Perl, approved 2026-08-31): the `DefPlain`
+  //! parameter type must skip blanks before its required `{`, like real TeX's
+  //! undelimited-argument scanning (tex.web `macro_call`) and LaTeXML's own
+  //! `{}` reader. Perl 0.8.8 errors `Expected opening '{'` when a
+  //! `\lstnewenvironment{x}[1][]` body sits on the NEXT line — the standard
+  //! documentation style (~148 TL doc manuals; ltxdockit.sty, cnltx-example.sty).
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{listings}\n\
+    \\lstnewenvironment{ltxcode}[1][]\n\
+    \x20 {\\lstset{#1}}\n\
+    \x20 {}\n\
+    \\begin{document}\n\
+    \\begin{ltxcode}\n\
+    hello code\n\
+    \\end{ltxcode}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn lstnewenvironment_body_on_next_line_defines_cleanly() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Expected opening '{'"),
+      "DefPlain must skip the newline before the body brace:\n{stderr}",
+    );
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Fatal:"),
+      "the definition and its use must digest cleanly:\n{stderr}",
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("<listing"),
+      "\\begin{{ltxcode}} should produce an ltx:listing:\n{xml}",
+    );
+    // OXIDIZED_DESIGN #162: the body's FIRST line must survive. The
+    // optional-arg probe crosses the newline after `\begin{ltxcode}` and
+    // unreads the body's first char; the raw-line reader must not then
+    // discard that line as "leftover of the \begin line" (Perl 0.8.8 drops
+    // it — base64 `data` came back holding only the later lines).
+    // "aGVsbG8gY29kZQ==" = base64("hello code").
+    assert!(
+      xml.contains("data=\"aGVsbG8gY29kZQ==\""),
+      "the listing body (incl. first line) must survive as data:\n{xml}",
+    );
+  }
+}
+
+mod makeindex_allocates_indexfile {
+  //! OXIDIZED_DESIGN #163: `\makeindex` allocates the `\@indexfile` write
+  //! stream (real latex.ltx contract) while staying otherwise nooped, so raw
+  //! doc.sty/l3doc-style `\protected@write\@indexfile{…}` works instead of
+  //! erroring `undefined \@indexfile` (Perl noops it entirely and fatals on
+  //! l3kernel's own manuals). The semantic `\index` constructor must remain
+  //! in charge — \makeindex must NOT restore the kernel's raw `\index`.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\makeindex\n\
+    \\begin{document}\n\
+    body\\index{alpha}\n\
+    \\makeatletter\n\
+    \\ifdefined\\@indexfile STREAMDEFINED\\else STREAMMISSING\\fi\n\
+    \\protected@write\\@indexfile{}{raw-write-payload}\n\
+    \\makeatother\n\
+    \\end{document}\n";
+
+  #[test]
+  fn stream_allocated_semantic_index_intact() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "\\makeindex + raw \\@indexfile write must be error-free:\n{stderr}",
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(xml.contains("STREAMDEFINED"), "\\@indexfile not allocated:\n{xml}");
+    // Semantic \index survived — an indexmark, and the raw payload is NOT
+    // typeset into the document.
+    assert!(
+      xml.contains("indexmark") && !xml.contains("raw-write-payload"),
+      "semantic \\index must stay in charge and raw writes must not leak:\n{xml}",
+    );
+  }
+}
+
 mod newtcblisting_verbatim {
   //! Regression test: a `\newtcblisting`-defined code box captures its body
   //! verbatim and CLOSES at `\end{name}` (ar5iv #504 / #569 / #570).

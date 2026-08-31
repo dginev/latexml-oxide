@@ -4,11 +4,20 @@ Protocol and status legend: [README.md](README.md). Newest sweep first.
 Per-document artifacts live under `~/data/perfect_kernel/<bundle>/<name>/`
 (out of repo); the sweep tally file is `~/data/perfect_kernel/sweep_verdicts.tsv`.
 
+## Oracle pass (same-TL ground truth)
+
+2026-08-31, TL2025, `tools/perfect_kernel/oracle.sh` (pdflatex, lualatex
+fallback/detection, 90s): **1548 / 2374 oracle-clean** (1248 pdflatex + 300
+lualatex), 801 DOCUMENT-STALE (the shipped .tex no longer compiles on this
+TL — e.g. a4wide.tex vs siunitx v3), 25 timeout. **The S1 bar applies to the
+1548 oracle-clean docs only.**
+
 ## Sweep history
 
-| Date | Binary (commit, profile) | Corpus | Timeout | S0 fail (3/124/137) | status 2 | status 1 | status 0 | Notes |
+| Date | Binary (commit, profile) | Corpus | Timeout | status 3/124/137 | status 2 | status 1 | status 0 | Notes |
 |---|---|---|---|---|---|---|---|---|
-| _pending_ | | 2374 docs (TL2025) | 120s | | | | | baseline sweep |
+| 2026-08-31 #1 | 1ef264a2bb release | 2374 | 120s | 40/5/0 | 1507 | 363 | 459 | **INVALIDATED** — run against the stale dual-TL dump (TL2023-vintage latex.ltx/expl3 labeled "2025"); kept for the before/after delta only |
+| 2026-08-31 #2 | 9e347a3f15+161 release | 2374 | 120s | 34/10/0 | 1451 | 399 | 480 | fresh TL2025-pinned dump + OXIDIZED_DESIGN #161 DefPlain fix. Total error mass 145,375. **Oracle-clean slice (1548 docs): 424 clean + 310 warn-only (47%), 770 status-2, 8 fatal, 1 timeout; 58k error mass.** |
 
 ## Fix log
 
@@ -17,7 +26,10 @@ names are the durable part.
 
 | Date | Fix | Cluster addressed | Guard test |
 |---|---|---|---|
-| | | | |
+| 2026-08-31 | `tools/make_formats.sh` pins TEXMF* to the ambient kpsewhich's TL root (dual-TL schism poisoned the dump: "2025" dump carried expl3 2024-01-22) | expl3 props 124 docs, tagging sockets 74, l3sys 66+28, `\prop_new_linked` 36+14, `\IfPackageLoaded*`/`\IfFormatAtLeast*` — representatives collapsed 124→2, 74→1, 66→7, 36→6 | zero-`Error:` `--init=latex.ltx` gate; re-sweep delta |
+| 2026-08-31 | OXIDIZED_DESIGN #161: `DefPlain` skips blanks before its required `{` (surpass-Perl, user-approved, branch-contained) | `Expected opening '{'` — `\lstnewenvironment` bodies on following lines (~148 docs incl. ltxdockit/cnltx families) | `cluster_package_guards::defplain_skips_blanks_before_brace` |
+| 2026-08-31 | OXIDIZED_DESIGN #162: listings raw-line capture keeps the first body line when an argument probe crossed the newline (`gullet::pushback_is_empty`) | First body line silently lost in every `\lstnewenvironment[1][]`-style example env (content-loss, shared with Perl) | same guard (data-attr assertion) |
+| 2026-08-31 | rawclasses protocol guards (no code change — verified existing behavior) | binding precedence + bindingless-class raw load without OmniBus | `cluster_package_guards::rawclasses_binding_precedence_and_no_omnibus` (3 tests) |
 
 ## Named exemplar: nicematrix (the mission's reference bundle)
 
