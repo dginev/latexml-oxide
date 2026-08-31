@@ -28,7 +28,7 @@
 //! 1706.09226, 1701.01402, 1812.06820, 1801.01025, 1806.10927,
 //! 2001.08314, 2002.09910, 1901.08750.
 
-use crate::prelude::*;
+use crate::{package::listings_sty::{listings_read_raw_lines, lst_process_display}, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -39,11 +39,31 @@ LoadDefinitions!({
   RequirePackage!("refcount");
   RequirePackage!("varwidth");
   RequirePackage!("float");
-  // User-facing showexpl API — no-op (these display code+result side by
-  // side, which our XML output models as plain listings; no paper in
-  // the observed cluster uses them, so a no-op is safe and matches
-  // Perl's missing-file skip).
-  def_macro_noop("\\LTXinputExample[]{}{}")?;
+  // {LTXexample}[keys] — showexpl's whole point: typeset the SOURCE as a
+  // listing AND its RESULT (real showexpl routes the body through listings'
+  // write-file layer into \jobname.tmp and \input's it back). Reproduce that
+  // semantic directly: capture the body raw, emit the code listing through
+  // the listings display engine, then re-tokenize the body so it EXECUTES
+  // as the result. `[pos=…]`-style keys arrange the two blocks on the page —
+  // presentation. (The TL doc corpus — koma/babel/gauss manuals — uses this
+  // env heavily; the earlier noop stub predates OXIDIZED_DESIGN #161, whose
+  // DefPlain fix unblocked raw showexpl parsing, and dropped example bodies
+  // entirely.)
+  DefPrimitive!(T_CS!("\\LTXexample"), None, {
+    let _keys = read_optional(None)?;
+    // Same group discipline as the built-in lstlisting closure: the display
+    // constructor's token stream closes a box group it expects opened here.
+    bgroup();
+    let text = listings_read_raw_lines("LTXexample");
+    // unread stack: LAST unread reads FIRST → reading order is
+    // listing, result-body, \end{LTXexample}.
+    unread(Tokenize!(TeXString::assembled("\\end{LTXexample}".to_string())));
+    unread(Tokenize!(TeXString::assembled(text.clone())));
+    unread(Tokens::new(lst_process_display(None, &text)));
+  });
+  def_macro_noop("\\endLTXexample")?;
+  // \LTXinputExample[keys]{file}: same idea from a file — listing + \input.
+  DefMacro!("\\LTXinputExample[]{}", "\\lstinputlisting{#2}\\input{#2}");
   def_macro_noop("\\setupSXfiles")?;
   def_macro_noop("\\setupLZfiles")?;
 });
