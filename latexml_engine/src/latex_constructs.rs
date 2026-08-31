@@ -3648,6 +3648,19 @@ LoadDefinitions!({
         T_END!()
       ))?);
     }
+    // latex.ltx `\document` L9472: right after begindocument/before, the
+    // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
+    // `\sys_load_backend:n {}` unless one was chosen — raw-inputting
+    // `l3backend-<driver>.def`, which defines the `\__color_backend_*` /
+    // `\__pdf_backend_*` function families that l3color / l3pdf / raw
+    // package code call at runtime. The embedded dump cannot carry these:
+    // backend selection is a job-start decision (exactly why the kernel
+    // defers it to `\document`), so without this firing every dump-mode
+    // conversion left them undefined (witnesses: prettytok / spath3 manuals,
+    // `Error:undefined:\__color_backend_reset:`; TL doc corpus 2026-08-31).
+    if lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
+      boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
+    }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
     // is STILL 1 here (we leave the preamble only after this block), so a deferred
     // `\RequirePackage`/`\usepackage` remains legal (corpus witnesses
