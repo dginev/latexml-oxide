@@ -155,6 +155,7 @@ pub mod lipics_cls;
 pub mod lmcs_cls;
 pub mod ltablex_sty;
 pub mod ltluatex_tex;
+pub mod ltxdockit_cls;
 pub mod luatexbase_sty;
 pub mod mathpartir_sty;
 pub mod mciteplus_sty;
@@ -316,6 +317,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("latexmlman", "sty", latexmlman_sty::load_definitions),
   ("letltxmacro", "sty", letltxmacro_sty::load_definitions),
   ("ltluatex", "tex", ltluatex_tex::load_definitions),
+  ("ltxdockit", "cls", ltxdockit_cls::load_definitions),
   ("luatexbase", "sty", luatexbase_sty::load_definitions),
   ("needspace", "sty", needspace_sty::load_definitions),
   ("phyzzx", "plus", phyzzx_plus::load_definitions),
