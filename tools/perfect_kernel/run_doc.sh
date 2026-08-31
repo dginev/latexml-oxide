@@ -45,9 +45,18 @@ if [[ -d "$TL_ROOT/texmf-dist" ]]; then
   export TEXMFCNF="$TL_ROOT/texmf-dist/web2c"
 fi
 
+# LuaLaTeX-authored docs (oracle needed lualatex) opt into the `luatex`
+# latexml.sty profile (user decision 2026-08-31): engine probes read LuaTeX
+# and \directlua runs through the texlua bridge.
+PRELOAD='[rawstyles,rawclasses]latexml.sty'
+ORACLE="$OUTROOT/oracle_verdicts.tsv"
+if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t" "$ORACLE"; then
+  PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
+fi
+
 start=$(date +%s.%N)
 timeout "$TIMEOUT_S" "$BIN" \
-  --preload='[rawstyles,rawclasses]latexml.sty' \
+  --preload="$PRELOAD" \
   --xml \
   --timeout="$TIMEOUT_S" \
   --max-memory=6144 \

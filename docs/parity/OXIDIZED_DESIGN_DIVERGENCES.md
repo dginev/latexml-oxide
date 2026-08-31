@@ -6289,3 +6289,25 @@ al.), and claiming them flips package ecosystems onto luatex code paths
 full 8,334 lines convert), luacode/showexpl guard tests.
 
 **Upstream**: branch-contained per user directive (perfect_kernel).
+
+### 168. Opt-in `luatex` profile (`\usepackage[luatex]{latexml}`)
+
+**Perl behavior**: one fixed engine identity (pdfTeX-model); LuaLaTeX-authored
+documents take dead branches (engine probes false, `\directlua` undefined,
+fontspec surface unreachable).
+
+**Rust behavior** (user decision 2026-08-31): the Rust-only latexml.sty option
+`luatex` declares the DOCUMENT LuaLaTeX-authored for this conversion:
+iftex-level probes (`\iftutex`/`\ifluatex`/`\ifpdftex`… — state-consulting
+conditionals, so load order doesn't matter), `\directlua`/`\luaescapestring`
+under their REAL names (bridged to texlua), `\luatexversion`, the common
+LuaTeX parameter surface (`\hyphenationmin`, `\outputmode`, `\suppress*error`,
+…) and TLT direction primitives. The default identity is untouched without the
+option; the perfect-kernel harness auto-selects it for docs whose LaTeX oracle
+required lualatex. fontspec gains v2 post-optional signatures; a minimal
+unicode-math binding absorbs math-font selection (both presentation).
+
+**Witnesses**: hvfloat corpus preambles (`\setmonofont{…}[…]` bare after
+libertinus→otf), TL doc bundles oracle-classified lualatex (~300).
+
+**Upstream**: branch-contained per user directive (perfect_kernel).

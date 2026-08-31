@@ -122,6 +122,33 @@ LoadDefinitions!({
     AssignValue!("INCLUDE_CLASSES" => false, Scope::Global);
   });
 
+  // Opt-in LuaTeX profile (user decision 2026-08-31, perfect-kernel
+  // mission): `\usepackage[luatex]{latexml}` declares the DOCUMENT as
+  // LuaLaTeX-authored. Engine-detection probes flip to LuaTeX and the
+  // `\directlua` escape becomes available under its REAL name (elsewhere
+  // deliberately absent — it is the detection probe babel & friends use).
+  // The default engine identity (pdfTeX-model) is untouched without this
+  // option. Rust-only option; divergence documented as OXIDIZED_DESIGN #168.
+  DeclareOption!("luatex", {
+    AssignValue!("LUATEX_PROFILE" => true, Scope::Global);
+    RawTeX!(r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse");
+    RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
+    RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // The LuaTeX parameter surface documents commonly poke once they take
+    // the LuaTeX branch (LuaTeX manual §2.6/§3): line-breaking and error-
+    // suppression knobs — engine tuning with no XML-content meaning.
+    DefRegister!("\\hyphenationmin"       => Number::new(-1));
+    DefRegister!("\\outputmode"           => Number::new(1));
+    DefRegister!("\\suppresslongerror"    => Number::new(0));
+    DefRegister!("\\suppressoutererror"   => Number::new(0));
+    DefRegister!("\\suppressmathparerror" => Number::new(0));
+    DefRegister!("\\luacopyinputnodes"    => Number::new(0));
+    DefRegister!("\\matheqnogapstep"      => Number::new(1000));
+    // Direction primitives (LuaTeX §6): reading/typesetting direction state.
+    // TLT (left-to-right) is the only direction this engine models.
+    RawTeX!(r"\def\pagedir{TLT} \def\bodydir{TLT} \def\pardir{TLT} \def\textdir{TLT} \def\mathdir{TLT} \def\linedir{TLT}");
+  });
+
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
   // a TRACING bitmap via TRACE_ALL / TRACE_PROFILE constants. Rust hasn't
   // wired the bitmap constants (no TRACE_ALL/TRACE_PROFILE symbols in the

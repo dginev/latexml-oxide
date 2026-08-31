@@ -580,7 +580,9 @@ LoadDefinitions!({
   // overlay-drawing layer (\line, \SubMatrix, \tikz over the built grid) —
   // drawing-only, no document content; grab and drop, keeping the \end so
   // the environment closes normally.
-  DefMacro!("\\CodeAfter XUntil:\\end", "\\end");
+  // (Plain `Until` — unexpanded scan. `XUntil` EXPANDS while scanning, which
+  // would EXECUTE the overlay's \begin{tikzpicture}/\SubMatrix mid-grab.)
+  DefMacro!("\\CodeAfter Until:\\end", "\\end");
   // Decoration/rule commands usable in cells and preambles: dotted/double
   // rules are rule styling (reduce to \hline / nothing); \RowStyle sets
   // per-row styling keys.

@@ -3,17 +3,23 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // eTeX and pdfTeX are considered "true" for LaTeXML
+  // eTeX is always "true" for LaTeXML; the pdfTeX/LuaTeX pair follows the
+  // opt-in `luatex` latexml.sty profile (user decision 2026-08-31): a
+  // LuaLaTeX-authored document converted with
+  // `--preload=[…,luatex]latexml.sty` identifies as LuaTeX so its
+  // engine-detection branches run; everything else stays the pdfTeX model.
+  // Consulting the state value HERE (not a load-time constant) matters
+  // because this binding may load after latexml.sty processed its options.
   DefConditional!("\\ifetex", { true });
   DefConditional!("\\ifeTeX", { true });
-  DefConditional!("\\ifpdftex", { true });
-  DefConditional!("\\ifPDFTeX", { true });
+  DefConditional!("\\ifpdftex", { !lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\ifPDFTeX", { !lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\ifluatex", { lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\ifLuaTeX", { lookup_bool("LUATEX_PROFILE") });
   // All others are false
   DefConditional!("\\ifpdf");
   DefConditional!("\\ifxetex");
   DefConditional!("\\ifXeTeX");
-  DefConditional!("\\ifluatex");
-  DefConditional!("\\ifLuaTeX");
   DefConditional!("\\ifluahbtex");
   DefConditional!("\\ifLuaHBTeX");
   DefConditional!("\\ifptex");
@@ -26,8 +32,8 @@ LoadDefinitions!({
   DefConditional!("\\ifVTeX");
   DefConditional!("\\ifalephtex");
   DefConditional!("\\ifAlephTeX");
-  DefConditional!("\\iftutex");
-  DefConditional!("\\ifTUTeX");
+  DefConditional!("\\iftutex", { lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\ifTUTeX", { lookup_bool("LUATEX_PROFILE") });
   DefConditional!("\\iftexpadtex");
   DefConditional!("\\ifTexpadTeX");
   DefConditional!("\\ifhint");
