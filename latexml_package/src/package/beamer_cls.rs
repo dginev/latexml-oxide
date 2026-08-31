@@ -68,9 +68,9 @@ LoadDefinitions!({
   DefConstructor!("\\beamer@alerted@end",   "</ltx:inline-block>");
 
   // Frame structure
-  DefMacro!("\\frametitle OptionalMatch:<> []{}",
+  DefMacro!("\\frametitle OptionalAngled []{}",
     "\\par\\textbf{#3}\\par");
-  def_macro_noop("\\framesubtitle OptionalMatch:<> {}")?;
+  def_macro_noop("\\framesubtitle OptionalAngled {}")?;
 
   // Perl beamer.cls.ltxml L961-963: internal frame title constructors
   // that \frame@ / \beamer@frame@replay invoke to lift title/subtitle
@@ -106,20 +106,20 @@ LoadDefinitions!({
   DefEnvironment!("{overprint}", "#body");
 
   // Block environments — Perl L1189 beamerbaseblocks.sty
-  DefEnvironment!("{block} OptionalMatch:<> {}",
+  DefEnvironment!("{block} OptionalAngled {}",
     "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
-  DefEnvironment!("{alertblock} OptionalMatch:<> {}",
+  DefEnvironment!("{alertblock} OptionalAngled {}",
     "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
-  DefEnvironment!("{exampleblock} OptionalMatch:<> {}",
+  DefEnvironment!("{exampleblock} OptionalAngled {}",
     "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
 
   // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
-  DefEnvironment!("{columns} OptionalMatch:<> []", "#body");
-  DefEnvironment!("{column} OptionalMatch:<> {}", "#body");
-  def_macro_noop("\\column OptionalMatch:<> {}")?;
+  DefEnvironment!("{columns} OptionalAngled []", "#body");
+  DefEnvironment!("{column} OptionalAngled {}", "#body");
+  def_macro_noop("\\column OptionalAngled {}")?;
 
   // Title page macros — Perl L1010-1035
-  DefMacro!("\\institute OptionalMatch:<> []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
+  DefMacro!("\\institute OptionalAngled []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
   // \logo{content} and \titlegraphic{content} typically wrap
   // \includegraphics or similar visual content. Surpass Perl
   // (which doesn't define them) by routing to ltx:note so any
@@ -191,17 +191,17 @@ LoadDefinitions!({
   def_macro_noop("\\hypersetup{}")?;
 
   // Beamer list environments — Perl L1160-1179
-  DefEnvironment!("{itemize} OptionalMatch:<>",
+  DefEnvironment!("{itemize} OptionalAngled",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     mode => "internal_vertical", locked => true);
-  DefEnvironment!("{enumerate} OptionalMatch:<> []",
+  DefEnvironment!("{enumerate} OptionalAngled []",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     mode => "internal_vertical");
   // Perl beamer.cls.ltxml L1174-1179: description's \item[label] renders
   // labels via \makelabel which beamer rebinds to \descriptionlabel
   // (defined in ams_support_sty:188 as bold+space). Same pattern
   // enumitem_sty:444 and ieeetran_cls:287 use.
-  DefEnvironment!("{description} OptionalMatch:<>",
+  DefEnvironment!("{description} OptionalAngled",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     mode => "internal_vertical", locked => true);
@@ -281,19 +281,25 @@ LoadDefinitions!({
   // above). Routing through those requires BeamerAngled overlay parsing
   // (unported), so keep the \textbf fallback — the markers remain defined
   // and usable directly by styles that invoke them without angle-spec.
-  DefMacro!("\\alert OptionalMatch:<> {}", "\\textbf{#2}");
-  DefMacro!("\\structure OptionalMatch:<> {}", "#2");
-  DefMacro!("\\emph OptionalMatch:<> {}", "\\textit{#2}");
+  DefMacro!("\\alert OptionalAngled {}", "\\textbf{#2}");
+  DefMacro!("\\structure OptionalAngled {}", "#2");
+  DefMacro!("\\emph OptionalAngled {}", "\\textit{#2}");
   def_macro_noop("\\AtBeginSection[]{}")?;
   def_macro_noop("\\AtBeginSubsection[]{}")?;
   def_macro_noop("\\AtBeginPart[]{}")?;
+  // \subtitle<overlay>[short]{subtitle} — document-level frontmatter
+  // (beamer beamerbasetitle.sty). Perl's binding never defined it (only the
+  // per-frame `\framesubtitle`), so every beamer THEME demo erred
+  // `undefined \subtitle` (8 TL doc bundles, 2026-08-31 corpus). Standard
+  // `\lx@add@subtitle` idiom → real <ltx:subtitle> frontmatter.
+  DefMacro!("\\subtitle OptionalAngled []{}", "\\lx@add@subtitle{#3}");
   // \lecture{title}{shortname} — beamer lecture frontmatter; preserve
   // the title text as ltx:note frontmatter rather than dropping it.
   DefMacro!("\\lecture{}{}",
     "\\@add@frontmatter{ltx:note}[role=lecture]{#1}");
-  def_macro_noop("\\againframe OptionalMatch:<> []{}")?;
+  def_macro_noop("\\againframe OptionalAngled []{}")?;
   def_macro_noop("\\appendix")?;
-  def_macro_noop("\\note OptionalMatch:<> []{}")?;
+  def_macro_noop("\\note OptionalAngled []{}")?;
   def_macro_noop("\\beamerdefaultoverlayspecification{}")?;
 
   // Translation stubs

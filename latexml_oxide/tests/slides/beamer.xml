@@ -229,11 +229,10 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection>
       <para xml:id="section5.p8">
-        <p><text font="bold">¡</text></p>
+        <p><text font="bold">Title</text></p>
       </para>
       <para xml:id="section5.p9">
-        <p>2¿Title
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -241,11 +240,10 @@ This text is shown the same way as the text below.</p>
         <p>Title Default</p>
       </para>
       <para xml:id="section5.p11">
-        <p><text font="bold">¡</text></p>
+        <p><text font="bold">Second Title</text></p>
       </para>
       <para xml:id="section5.p12">
-        <p>2¿Second Title
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -253,24 +251,23 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Title Default</text></p>
       </para>
       <para xml:id="section5.p14">
-        <p><text font="bold">¡</text></p>
+        <p><text font="bold">Second Title</text></p>
       </para>
       <para xml:id="section5.p15">
-        <p>2¿Second Title
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section5.p16">
         <p>Title
-2¿Subtitle
+
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section5.p17">
         <p>TitleSubtitle
-2¿Second Subtitle
+
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
@@ -278,7 +275,7 @@ This text is shown the same way as the text below.</p>
       <para xml:id="section5.p18">
         <p>Title
 
-2¿Second Subtitle
+
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
