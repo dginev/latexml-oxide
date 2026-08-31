@@ -25,8 +25,11 @@ pdf="$DOCROOT/$DOC.pdf"
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 pdftotext -q "$pdf" "$tmp/pdf.txt"
-# Strip tags; entities decode via xmllint.
-xmllint --xpath 'string(/)' "$xml" > "$tmp/xml.txt" 2>/dev/null
+# Tag-strip with a SPACE per tag (a bare string(/) glues text across element
+# boundaries — `Wolczko<break/>mario` read as "wolczkomario" and produced a
+# false missing-word). Entities are then decoded by xmllint on the wrapped
+# remainder.
+sed 's/<[^>]*>/ /g' "$xml" > "$tmp/xml.txt" 2>/dev/null
 
 words() {
   tr -cs '[:alpha:]' '\n' < "$1" | tr '[:upper:]' '[:lower:]' |
