@@ -62,6 +62,7 @@ pub mod tex_tables; // Perl: TeX_Tables.pool.ltxml
 
 // eTeX + pdfTeX extensions
 pub mod etex; // Perl: eTeX.pool.ltxml
+pub mod lua_bridge;
 pub mod pdftex; // Perl: pdfTeX.pool.ltxml
 
 // plain TeX format — LoadFormat('plain') chain called by tex.rs

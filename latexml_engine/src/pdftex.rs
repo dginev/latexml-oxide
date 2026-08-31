@@ -75,6 +75,49 @@ LoadDefinitions!({
   DefRegister!("\\pdfpageresources" => Tokens!());
   DefRegister!("\\pdfpkmode"        => Tokens!());
 
+  // \lx@directlua — the LuaTeX escape, evaluated in a persistent external
+  // `texlua` (see `lua_bridge.rs`; user directive 2026-08-31: a Lua
+  // interpreter may be assumed wherever TeX Live is installed). LuaTeX
+  // manual §2.1/§10.3 semantics: the general text is EXPANDED, executed as
+  // one chunk in the job-persistent Lua state, and whatever it
+  // `tex.print`/`tex.sprint`s is inserted back into the input and read with
+  // CURRENT catcodes. A Lua error, or a host without texlua, degrades to an
+  // empty expansion with an Info — the content-carrying uses (compute +
+  // print) work; node/callback-layer uses are out of scope (bridge docs).
+  // Deliberately NOT exposed as `\directlua`: that name's mere EXISTENCE is
+  // the LuaTeX-detection probe for babel and friends (`\ifx\directlua
+  // \@undefined`), and defining it flipped 26 suite tests onto luatex code
+  // paths. Consumers (luacode.sty binding, future opt-ins) use the `\lx@`
+  // name; the engine keeps its pdfTeX-model identity.
+  DefMacro!("\\lx@directlua XGeneralText", sub[(body)] {
+    let chunk = Expand!(body).to_string();
+    match crate::lua_bridge::lua_exec(&chunk) {
+      Ok(out) if out.is_empty() => Tokens!(),
+      Ok(out) => Tokenize!(TeXString::assembled(out)),
+      Err(msg) => {
+        Info!("lua", "directlua", s!("\\directlua chunk not evaluated: {msg}"));
+        Tokens!()
+      },
+    }
+  });
+  // \luaescapestring <general text> — escape the text for inclusion inside a
+  // Lua string literal (LuaTeX manual: precedes \ " ' and newline with \).
+  DefMacro!("\\lx@luaescapestring XGeneralText", sub[(body)] {
+    let s = Expand!(body).to_string();
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+      match c {
+        '\\' | '"' | '\'' => {
+          out.push('\\');
+          out.push(c);
+        },
+        '\n' => out.push_str("\\n"),
+        _ => out.push(c),
+      }
+    }
+    Tokens!(Explode!(out))
+  });
+
   // \Ucharcat <charcode> <catcode> — XeTeX/LuaTeX Unicode-engine primitive that
   // builds a single char token of the given Unicode scalar + catcode. LaTeXML is
   // Unicode-native, so we provide it (real pdfTeX lacks it). Defining it flips
@@ -86,6 +129,7 @@ LoadDefinitions!({
   // for combining marks like U+0300) — to the direct charcode+catcode path.
   // Blast radius is tiny: `\Ucharcat` appears only in `\char_generate` across all
   // of expl3 (3 mentions, all there).
+
   DefMacro!(T_CS!("\\Ucharcat"), None, {
     let charcode = read_number()?.value_of();
     let catcode = read_number()?.value_of();
