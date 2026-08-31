@@ -528,11 +528,39 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
   // \@addtofilelist before reading the file, so \@filelist is available inside)
+  //
+  // OXIDIZED_DESIGN #166: the kernel stores filelist names through
+  // `\string@makeletter` (latex.ltx L1784-1789), whose `\char@if@alph`
+  // (L1790-1795) tests the ASCII ranges A-Z / a-z ONLY: those characters get
+  // catcode LETTER (`\@expl@char@generate@@nn{`#1}{11}`), everything else —
+  // dots, digits, commas, and non-ASCII alike — keeps its `\string` catcode
+  // (OTHER). Reproduce that rule exactly (NOT `ExplodeText!`, whose
+  // Unicode-`is_alphabetic` letters more than the kernel does).
+  // All-OTHER tokens (`Explode!`) broke every delimited parse of
+  // `\@filelist` whose delimiter is source-typed letters: hep-font.sty's
+  // `\def\hepfont@get@class#1.cls#2\relax` matched nothing (letter `cls`
+  // vs other `cls`), and the resulting empty/mis-split arguments corrupted
+  // the surrounding conditional bookkeeping — the 13-bundle
+  // `expected:\fi` hep-* cluster (2026-08-31 corpus).
   if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
+    let name_tokens: Vec<Token> = filename
+      .chars()
+      .map(|c| {
+        let mut tmp = [0u8; 4];
+        let s = c.encode_utf8(&mut tmp);
+        if c.is_ascii_alphabetic() {
+          T_LETTER!(s)
+        } else if c == ' ' {
+          T_SPACE!()
+        } else {
+          T_OTHER!(s)
+        }
+      })
+      .collect();
     digest(Tokens!(
       T_CS!("\\@addtofilelist"),
       T_BEGIN!(),
-      Explode!(filename),
+      name_tokens,
       T_END!()
     ))?;
   }

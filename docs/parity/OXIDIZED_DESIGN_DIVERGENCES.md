@@ -6242,3 +6242,25 @@ default still reads `\normalsize` (our size primitives don't update it — neith
 does Perl). Witness: linguex-doc converts 6 errors → **0 errors, 0 warnings**.
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#164).
+
+### 166. `\@filelist` entries carry kernel catcodes (letters as LETTER)
+
+**Perl behavior**: filelist names are exploded all-catcode-OTHER, so a
+source-level delimited parse over `\@filelist` whose delimiter was typed as
+letters never matches — hep-font.sty's
+`\def\hepfont@get@class#1.cls#2\relax` + `\expandafter…\@filelist\relax`
+class-detection idiom yields an EMPTY #1, and the mis-split desyncs the
+surrounding conditional bookkeeping ("Missing \fi or \else, conditional fell
+off end" at the .sty's EOF — the 13-bundle hep-* `expected:\fi` cluster).
+
+**Rust behavior**: `\@addtofilelist` receives `ExplodeText!` tokens —
+alphabetic chars catcode LETTER, the rest OTHER — exactly latex.ltx's
+`\string@makeletter` (L1784-1789) storage rule.
+
+**Why**: kernel-contract restoration. hep-font.sty: first-error cluster →
+**0 errors**; hep-paper manual 370-warning cascade collapses to 2 unrelated
+errors. Residual noted: a FAILED delimited match should raise TeX's "use does
+not match its definition" instead of silently returning empty arguments —
+separate hardening, tracked in perfect_kernel/CLUSTERS.md.
+
+**Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#165).
