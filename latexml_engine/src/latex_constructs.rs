@@ -9350,7 +9350,15 @@ LoadDefinitions!({
         with(get_node_qname(&p), |s| s.to_string())
       } _ => { current_name }}
     } else { current_name };
-    let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
+    // Beyond the ltx:p/ltx:text guard, verify the SCHEMA actually admits a
+    // glossaryphrase here. The doc-family `\changes`→`\glossary` path fires
+    // at DOCUMENT level (between sections, during Building), where the
+    // static check passed but insertion still produced
+    // `malformed:ltx:glossaryphrase isn't allowed in <ltx:document>` —
+    // 9 TL doc bundles (abntex2, the biblatex-* style manuals, pixelart…).
+    let in_flow = parent_name.starts_with("ltx:p")
+      || parent_name == "ltx:text"
+      || !document.is_openable("ltx:glossaryphrase");
     if in_flow {
       Warn!("unexpected", "glossary",
         "glossary support is not yet ready for use in the main text flow.");
