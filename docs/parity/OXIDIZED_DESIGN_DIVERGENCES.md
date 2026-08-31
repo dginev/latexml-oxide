@@ -6213,3 +6213,23 @@ installed; 10 TL-doc bundles' first error). Guard:
 `cluster_package_guards::process_key_options_sees_load_options`.
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#163).
+
+### 165. `\@currsize` defaults to `\normalsize` (begin-document invariant)
+
+**Perl behavior**: class bindings define `\normalsize`/`\small`/… as font
+primitives that never route through `\@setfontsize`, so `\@currsize` — which real
+LaTeX guarantees is set once `\begin{document}` has run `\normalsize` — stays
+permanently undefined (verified same-host, Perl 0.8.8). Raw packages restoring
+the surrounding size via `\@currsize` error `undefined` (linguistics doc family:
+linguex, covington, philex, drs, movement-arrows).
+
+**Rust behavior**: `\@currsize` is pre-defined as the expansion indirection
+`\normalsize` beside `\@setfontsize` (`latex_constructs.rs`); a class that does
+route through `\@setfontsize` overwrites it with the exact size command, exactly
+as in real LaTeX.
+
+**Why**: kernel-invariant restoration; known residual: inside `\small` etc. the
+default still reads `\normalsize` (our size primitives don't update it — neither
+does Perl). Witness: linguex-doc converts 6 errors → **0 errors, 0 warnings**.
+
+**Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#164).

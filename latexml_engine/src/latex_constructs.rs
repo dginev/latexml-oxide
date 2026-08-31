@@ -11655,6 +11655,17 @@ LoadDefinitions!({
   def_macro_noop("\\check@mathfonts")?;
   def_macro_noop("\\fontsize{}{}")?;
   DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+  // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
+  // `\begin{document}` has run `\normalsize` (whose class definition routes
+  // through `\@setfontsize`). Our class bindings define the size commands as
+  // font primitives that never call `\@setfontsize`, so `\@currsize` stayed
+  // permanently undefined (Perl 0.8.8 identical, same-host verified) and raw
+  // packages that restore the surrounding size via `\@currsize` errored —
+  // linguistics doc family (linguex, covington, philex, drs,
+  // movement-arrows; 5 TL doc bundles). Provide the invariant as an
+  // expansion-indirection default; a class that DOES route through
+  // `\@setfontsize` overwrites it with the exact size command.
+  DefMacro!("\\@currsize", "\\normalsize");
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.

@@ -710,6 +710,41 @@ mod process_key_options_sees_load_options {
   }
 }
 
+mod currsize_default {
+  //! OXIDIZED_DESIGN #165: `\@currsize` must be defined (default
+  //! `\normalsize`) — real LaTeX's begin-document invariant, which our font
+  //! primitives (and Perl's) never establish via `\@setfontsize`. Raw
+  //! packages (linguex family) call `{\@currsize …}` to restore text size.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\begin{document}\n\
+    x{\\makeatletter\\@currsize\\makeatother restored}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn currsize_is_defined_and_usable() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "\\@currsize must be defined (begin-document invariant):\n{stderr}",
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(xml.contains("restored"), "content after \\@currsize lost:\n{xml}");
+  }
+}
+
 mod makeindex_allocates_indexfile {
   //! OXIDIZED_DESIGN #163: `\makeindex` allocates the `\@indexfile` write
   //! stream (real latex.ltx contract) while staying otherwise nooped, so raw
