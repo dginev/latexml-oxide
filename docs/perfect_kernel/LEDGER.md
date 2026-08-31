@@ -49,3 +49,4 @@ tcolorbox, enumitem, fancyvrb, titlesec, varwidth, adjustbox…).
 | Date | Binary | status | errors | fatals | warnings | secs | Note |
 |---|---|---|---|---|---|---|---|
 | 2026-08-31 | 1ef264a2bb test | 2 | 102 (capped) | 0 | 79,166 | 8.5 | first baseline; dominant noise: `Unrecognized tabular template` from `{NiceTabular}`-family preambles hitting the alignment template reader (`alignment.rs:997`); error heads: `Extra alignment tab '&'` ×26, `\noalign cannot be used here` ×11, nested-sectioning schema errors |
+| 2026-08-31 (end of session 1) | 42dee14566 test | 2 | **8** | 0 | **3** | 31.7 | after the dual-TL dump fix + session fixes the 79k-warning template noise and the `&`-cascades are GONE. Residual: nicematrix STUB binding limits (`\Block`, `{bNiceArray}` "no support … stub binding"), LuaTeX-only bits (`\automatichyphenmode`, luacode), own-dtx `\myfileversion`. Next lever = complete the nicematrix binding (bindings outrank raw by policy). |
