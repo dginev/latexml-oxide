@@ -6264,3 +6264,28 @@ not match its definition" instead of silently returning empty arguments —
 separate hardening, tracked in perfect_kernel/CLUSTERS.md.
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#165).
+
+### 167. LuaTeX-only packages get first-class treatment (texlua bridge + piton/luacode/showexpl bindings)
+
+**Perl behavior**: no `\directlua` support and no bindings for luacode, piton,
+or a content-bearing showexpl — LuaTeX-only packages either abort fatally
+(piton: "LuaLaTeX is mandatory", killing the rest of the document) or lose
+their bodies (showexpl's noop stub).
+
+**Rust behavior** (user directive 2026-08-31): `latexml_engine::lua_bridge`
+runs a persistent per-conversion `texlua` (assumed present with TeX Live);
+`\lx@directlua` evaluates chunks with LuaTeX-manual semantics and
+`tex.print`/`sprint` output re-enters the input stream. luacode.sty maps its
+whole API onto it ({luacode} bodies EXECUTE); piton.sty's environments render
+their bodies as listings (coloring is presentation; running piton.lua's LPEG
+highlighter through the bridge is a possible refinement); showexpl's
+{LTXexample} emits the code listing AND executes the body as the result.
+CRITICAL constraint: the engine never defines `\directlua`/`\luatexversion`
+under their real names — those are the LuaTeX-detection probes (babel et
+al.), and claiming them flips package ecosystems onto luatex code paths
+(measured: 26 suite tests red).
+
+**Witnesses**: nicematrix manual (piton fatal truncated it at ~4% depth; now
+full 8,334 lines convert), luacode/showexpl guard tests.
+
+**Upstream**: branch-contained per user directive (perfect_kernel).
