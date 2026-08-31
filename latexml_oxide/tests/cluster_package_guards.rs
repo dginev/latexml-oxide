@@ -745,6 +745,57 @@ mod currsize_default {
   }
 }
 
+mod luatex_profile {
+  //! OXIDIZED_DESIGN #168: the opt-in `luatex` latexml.sty option flips the
+  //! document to LuaTeX identity — iftex probes consult LUATEX_PROFILE state
+  //! (immune to load order), and `\directlua` exists under its REAL name for
+  //! that conversion only. Without the option the pdfTeX-model identity is
+  //! untouched (defining \directlua by default flipped 26 tests onto luatex
+  //! paths — the regression this guard pins).
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{iftex}\n\
+    \\begin{document}\n\
+    engine:\\iftutex LUA\\else PDF\\fi. \
+    dl:\\ifdefined\\directlua DEF\\else UNDEF\\fi.\n\
+    \\end{document}\n";
+
+  fn convert(preload: &str) -> String {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .arg(format!("--preload={preload}"))
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      output.status.success(),
+      "binary exited: {}",
+      String::from_utf8_lossy(&output.stderr)
+    );
+    std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml")
+  }
+
+  #[test]
+  fn profile_flips_identity_only_when_opted_in() {
+    let on = convert("[rawstyles,rawclasses,luatex]latexml.sty");
+    assert!(
+      on.contains("engine:LUA") && on.contains("dl:DEF"),
+      "[luatex] must flip iftex probes and expose \\directlua:\n{on}",
+    );
+    let off = convert("[rawstyles,rawclasses]latexml.sty");
+    assert!(
+      off.contains("engine:PDF") && off.contains("dl:UNDEF"),
+      "without [luatex] the pdfTeX identity must be untouched:\n{off}",
+    );
+  }
+}
+
 mod luacode_bridge {
   //! The texlua bridge (`latexml_engine::lua_bridge`) + luacode.sty binding:
   //! `{luacode}` bodies and `\luaexec` chunks execute in a persistent
