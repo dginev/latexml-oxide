@@ -267,11 +267,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // gate this — use a dedicated once-flag for the kernel's
     // first-`\documentclass`-only semantics.)
     if options.handleoptions && !lookup_bool("@raw@classoptionslist_recorded") {
-      assign_value(
-        "@raw@classoptionslist_recorded",
-        true,
-        Some(Scope::Global),
-      );
+      assign_value("@raw@classoptionslist_recorded", true, Some(Scope::Global));
       def_macro(
         T_CS!("\\@raw@classoptionslist"),
         None,

@@ -24,7 +24,10 @@ LoadDefinitions!({
   // All three reduce to "…escaped…" via the engine's \luaescapestring.
   DefMacro!("\\luastring{}", "\"\\lx@luaescapestring{#1}\"");
   DefMacro!("\\luastringO{}", "\"\\lx@luaescapestring{#1}\"");
-  DefMacro!("\\luastringN{}", "\"\\lx@luaescapestring{\\detokenize{#1}}\"");
+  DefMacro!(
+    "\\luastringN{}",
+    "\"\\lx@luaescapestring{\\detokenize{#1}}\""
+  );
 
   // Debug-log toggles: affect console tracing only.
   def_macro_noop("\\LuaCodeDebugOn")?;

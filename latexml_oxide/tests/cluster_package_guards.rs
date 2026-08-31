@@ -562,7 +562,11 @@ mod rawclasses_binding_precedence_and_no_omnibus {
   /// the local raw `.cls`'s marker must NOT appear.
   #[test]
   fn contrib_binding_keeps_precedence_under_rawclasses() {
-    let (xml, _stderr) = convert("scrartcl", RAW_CLS, Some("[rawstyles,rawclasses]latexml.sty"));
+    let (xml, _stderr) = convert(
+      "scrartcl",
+      RAW_CLS,
+      Some("[rawstyles,rawclasses]latexml.sty"),
+    );
     assert!(
       xml.contains("NOMARKER") && !xml.contains("RAWCLSLOADED"),
       "compiled scrartcl binding must outrank the raw .cls under rawclasses:\n{xml}",
@@ -741,7 +745,10 @@ mod currsize_default {
       "\\@currsize must be defined (begin-document invariant):\n{stderr}",
     );
     let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
-    assert!(xml.contains("restored"), "content after \\@currsize lost:\n{xml}");
+    assert!(
+      xml.contains("restored"),
+      "content after \\@currsize lost:\n{xml}"
+    );
   }
 }
 
@@ -837,11 +844,124 @@ mod luacode_bridge {
       .expect("spawn latexml_oxide");
     let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
     assert!(output.status.success(), "binary exited: {stderr}");
-    assert!(!stderr.contains("Error:"), "luacode must digest cleanly:\n{stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "luacode must digest cleanly:\n{stderr}"
+    );
     let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("E:7") && xml.contains("Sum: 55") && xml.contains("after"),
       "lua output and following content must both survive:\n{xml}",
+    );
+  }
+}
+
+mod lua_state_mirror {
+  //! `tex.count`/`tex.dimen` reads AND writes inside `\directlua` chunks are
+  //! LIVE against engine State, via the bridge's query protocol. This is the
+  //! "rebind-as-we-emulate" seam (docs/perfect_kernel/LUA_REBINDING.md):
+  //! texlua has no engine, so any tex-state access a chunk makes must
+  //! round-trip to OUR State — the previous stub returned zeros, which made
+  //! every register-branching Lua chunk take the wrong path silently.
+  //! Systemic witness class: babel's luababel.def chunks under the `luatex`
+  //! profile (every profiled doc logged `attempt to index a nil value
+  //! (field 'locale_props')` — chunks die mid-sequence, later chunks see
+  //! missing state). Self-skips without a host texlua.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\makeatletter\n\
+    \\begin{document}\n\
+    \\count255=7 \\dimen0=2pt\n\
+    \\lx@directlua{tex.count[100] = tex.getcount(255) + 35\n\
+      tex.sprint('C' .. tex.count[255] .. 'D' .. tex.dimen[0])}\n\
+    E\\the\\count100.\n\
+    \\end{document}\n";
+
+  #[test]
+  fn directlua_reads_and_writes_live_registers() {
+    if !Command::new("texlua")
+      .arg("--version")
+      .output()
+      .is_ok_and(|o| o.status.success())
+    {
+      return; // no texlua on this host
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    // \count255=7 read back; \dimen0=2pt as 131072 sp (LuaTeX convention:
+    // tex.dimen reads in scaled points); the Lua-side write of count 100
+    // visible to the following \the.
+    assert!(
+      xml.contains("C7D131072") && xml.contains("E42."),
+      "live register mirror must round-trip both directions:\n{xml}",
+    );
+  }
+}
+
+mod luatex_babel_api {
+  //! Under the `luatex` profile, babel's Lua API layer (luababel.def L196+,
+  //! creating `Babel.locale_props`, `Babel.lua_error`, …) must actually run.
+  //! In a real lualatex job `\bbl@luapatterns` lives in the FORMAT, so
+  //! babel.def L1135 skips the patterns-only first `\input luababel.def`
+  //! and the single in-document load (babel.def L2285) takes the API
+  //! branch. Without that format fact, the patterns-only load ran first,
+  //! `\endinput`ed at luababel.def L195, and the loaded-flag suppressed the
+  //! second `\input` — so every later `Babel.locale_props[...]` chunk died.
+  //! Systemic witnesses: every profiled clean-lualatex corpus doc logged
+  //! `attempt to index a nil value (field 'locale_props')` (abntexto,
+  //! abntexto-uece, derivative, newpax). Self-skips without texlua.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage[english]{babel}\n\
+    \\makeatletter\n\
+    \\begin{document}\n\
+    \\lx@directlua{tex.sprint(Babel and Babel.locale_props and 'BOK' or 'BNO')}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn babel_lua_api_layer_initializes() {
+    if !Command::new("texlua")
+      .arg("--version")
+      .output()
+      .is_ok_and(|o| o.status.success())
+    {
+      return; // no texlua on this host
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--preload=[luatex]latexml.sty",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("BOK"),
+      "Babel.locale_props must exist after babel loads under the luatex profile:\n{xml}\n{stderr}",
     );
   }
 }
@@ -962,7 +1082,10 @@ mod makeindex_allocates_indexfile {
       "\\makeindex + raw \\@indexfile write must be error-free:\n{stderr}",
     );
     let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
-    assert!(xml.contains("STREAMDEFINED"), "\\@indexfile not allocated:\n{xml}");
+    assert!(
+      xml.contains("STREAMDEFINED"),
+      "\\@indexfile not allocated:\n{xml}"
+    );
     // Semantic \index survived — an indexmark, and the raw payload is NOT
     // typeset into the document.
     assert!(

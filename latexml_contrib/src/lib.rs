@@ -157,8 +157,6 @@ pub mod ltablex_sty;
 pub mod ltluatex_tex;
 pub mod ltxdockit_cls;
 pub mod luacode_sty;
-pub mod piton_sty;
-pub mod unicode_math_sty;
 pub mod luatexbase_sty;
 pub mod mathpartir_sty;
 pub mod mciteplus_sty;
@@ -188,6 +186,7 @@ pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
+pub mod piton_sty;
 pub mod primearxiv_sty;
 pub mod program_sty;
 pub mod pst_all_sty;
@@ -211,6 +210,7 @@ pub mod tac_cls;
 pub mod tgpagella_sty;
 pub mod titleref_sty;
 pub mod typearea_sty;
+pub mod unicode_math_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
 pub mod catoptions_sty;

@@ -90,12 +90,36 @@ LoadDefinitions!({
   // paths. Consumers (luacode.sty binding, future opt-ins) use the `\lx@`
   // name; the engine keeps its pdfTeX-model identity.
   DefMacro!("\\lx@directlua XGeneralText", sub[(body)] {
-    let chunk = Expand!(body).to_string();
+    // XGeneralText already performed the \edef-like PARTIAL expansion while
+    // scanning, honoring \noexpand — a second Expand! here re-expanded the
+    // no-longer-protected \csname in babel's `[[\noexpand\csname
+    // bbl@error\endcsname{]]` idiom, and the resulting macro call ate the
+    // Lua text mid-chunk ("unfinished long string", luababel.def L204).
+    // Real-engine ground truth (luatex 1.22 probe, 2026-08-31): a \par
+    // token in the body (e.g. a blank line inside the chunk) contributes
+    // NOTHING to the string Lua receives — `\directlua{ local x = 1 \par
+    // @@@ }` errors near '@', not near '\' — while other unexpandable CSes
+    // keep their backslash form (`\relax` errors near '\').
+    let par = T_CS!("\\par");
+    let kept: Vec<Token> = body
+      .unlist()
+      .into_iter()
+      .filter(|t| t != &par)
+      .collect();
+    let chunk = Tokens::new(kept).to_string();
     match crate::lua_bridge::lua_exec(&chunk) {
       Ok(out) if out.is_empty() => Tokens!(),
       Ok(out) => Tokenize!(TeXString::assembled(out)),
       Err(msg) => {
-        Info!("lua", "directlua", s!("\\directlua chunk not evaluated: {msg}"));
+        // Include the (expanded) chunk head: "not evaluated" without the
+        // text we actually sent is undiagnosable — Lua's own [string "…"]
+        // excerpt shows the SOURCE author's text, not our expansion of it.
+        let head: String = chunk.chars().take(160).collect();
+        Info!(
+          "lua",
+          "directlua",
+          s!("\\directlua chunk not evaluated: {msg} | chunk head: {head}")
+        );
         Tokens!()
       },
     }

@@ -2,7 +2,6 @@ use std::cell::{Cell, RefCell};
 
 use latexml_package::{package::color_sty::parse_color, prelude::*};
 
-
 /// A rectangle of cells to fill, in nicematrix's 1-based MAIN-matrix
 /// coordinates (the `first-row`/`first-col` label line is excluded). `r2`/`c2`
 /// may be `i32::MAX` to mean "through the last row/column" (`\rowcolor`,
@@ -123,7 +122,6 @@ fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
   (fr, fc, rects)
 }
 
-
 /// Strip nicematrix's rule-option brackets from a colspec token stream:
 /// `|[color=blue,start=2]` → `|` (nicematrix.sty attaches an optional
 /// `[keys]` to the `|` specifier for rule color/thickness — styling the
@@ -145,7 +143,9 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
     {
       // skip to the matching ]
       let mut j = i + 2;
-      while j < toks.len() && !(toks[j].get_catcode() != Catcode::CS && toks[j].with_str(|s| s == "]")) {
+      while j < toks.len()
+        && !(toks[j].get_catcode() != Catcode::CS && toks[j].with_str(|s| s == "]"))
+      {
         j += 1;
       }
       i = j + 1;

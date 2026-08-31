@@ -12,8 +12,10 @@
 //! itself through the texlua bridge — it is pure LPEG, which texlua ships —
 //! and consume its `tex.sprint` stream; tracked in
 //! docs/perfect_kernel/CLUSTERS.md).
-use latexml_package::prelude::*;
-use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
+use latexml_package::{
+  package::listings_sty::{listings_read_raw_lines, lst_process_display},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({

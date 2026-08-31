@@ -55,6 +55,16 @@ parked R9 mode/alignment work); single instance in the manual.
 | `Error:expected:{` from `\lstnewenvironment` bodies on next line (~148 docs) | OXIDIZED_DESIGN #161 `DefPlain` skips blanks (surpass-Perl, approved) | `defplain_skips_blanks_before_brace` |
 | First listing body line silently lost in `\lstnewenvironment[1][]` envs | OXIDIZED_DESIGN #162 pushback-aware raw-line capture | same guard, data-attr assertion |
 | `Error:undefined:\newunit` (a4wide etc.) | DOCUMENT-STALE — oracle pass excludes (801 stale docs) | `oracle_verdicts.tsv` |
+| babel Lua layer dead under luatex profile: EVERY profiled doc logged `attempt to index a nil value (field 'locale_props')`; chunks silently branched on `tex.count` stub zeros; `require` of texmf Lua modules failed (witnesses: derivative, abntexto, abntexto-uece, newpax — [LUA_REBINDING.md](LUA_REBINDING.md)) | Rebind-as-we-emulate landing: `\lx@directlua` double-`Expand!` removed + `\par` filtered (real-luatex probes as oracle), live register mirror, absorb shims, kpse+lualibs require, `\bbl@luapatterns` format parity, direction-keyword eaters | `luatex_babel_api::babel_lua_api_layer_initializes`, `lua_state_mirror::directlua_reads_and_writes_live_registers`, `rebound_engine_intents_absorb_and_resolve` |
+
+### Clean-lua slice — remaining (2026-08-31, post-rebinding)
+
+The 216-doc/50k-error clean-lualatex slice now has its Lua substrate working
+(babel Lua API up, mirrors live). Remaining mass is expected to be dominated
+by the fontspec/unicode-math surface and ordinary (non-Lua) clusters — re-rank
+after sweep 11 banks the rebinding fixes corpus-wide. Residual Lua witnesses:
+newpax write-side (`.newpax` into the root-owned TL tree — real lualatex
+fails there too; degrades to `Info:lua`).
 
 Settled protocol point (user directive 2026-08-31): compiled `.rs` bindings
 keep precedence under rawclasses/rawstyles; an experiment demoting the contrib

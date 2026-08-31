@@ -1134,8 +1134,13 @@ mod tests {
 
     #[test]
     fn no_constructible_backend_reports_unavailable() {
-      let (kpse, backend, why) =
-        choose_kpaths(None, || Err("no lib"), || Err("no kpsewhich"), |_| true, |_| true);
+      let (kpse, backend, why) = choose_kpaths(
+        None,
+        || Err("no lib"),
+        || Err("no kpsewhich"),
+        |_| true,
+        |_| true,
+      );
       assert!(kpse.is_none());
       assert_eq!(backend, KpathseaBackend::Unavailable);
       assert!(
@@ -1187,8 +1192,13 @@ mod tests {
       if primary.is_in_process() {
         return; // this branch only fires for an in-process primary
       }
-      let (kpse, backend, _) =
-        choose_kpaths(None, Kpaths::new, Kpaths::new_subprocess, |_| false, |_| true);
+      let (kpse, backend, _) = choose_kpaths(
+        None,
+        Kpaths::new,
+        Kpaths::new_subprocess,
+        |_| false,
+        |_| true,
+      );
       assert!(kpse.is_some());
       assert_eq!(backend, KpathseaBackend::Subprocess);
     }
@@ -1203,8 +1213,13 @@ mod tests {
       if primary.is_in_process() {
         return; // this branch only fires for an in-process primary
       }
-      let (kpse, backend, why) =
-        choose_kpaths(None, Kpaths::new, Kpaths::new_subprocess, |_| true, |_| false);
+      let (kpse, backend, why) = choose_kpaths(
+        None,
+        Kpaths::new,
+        Kpaths::new_subprocess,
+        |_| true,
+        |_| false,
+      );
       assert!(kpse.is_some());
       assert_eq!(backend, KpathseaBackend::Subprocess);
       assert!(why.contains("different TeX tree"), "why = {why}");

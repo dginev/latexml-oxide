@@ -58,9 +58,14 @@ persistent per-conversion texlua; `\lx@directlua` evaluates chunks with
 LuaTeX-manual semantics (job-persistent state, `tex.print`/`tex.sprint`
 re-entering the input with current catcodes), and the luacode.sty binding
 maps `\luadirect`/`\luaexec`/`\luastring*`/`{luacode}`(`*`) onto it.
-Boundaries that remain out of scope: the node/font/callback layers (print-
-shaping of typeset output) and live TeX-state reads from Lua (`tex.count`
-mirrors are stub zeros — future work). The engine deliberately does NOT
+The strategy question — native emulation vs rebinding into our XML model —
+is settled in [`LUA_REBINDING.md`](LUA_REBINDING.md) (2026-08-31): texlua has
+no engine, so every `tex.*` touchpoint is our shim by construction; shims are
+tiered translate / mirror / absorb. `tex.count`/`tex.dimen` reads AND writes
+now mirror the live Rust State over the pipe (no more stub zeros); `require`
+resolves texmf Lua modules via kpse + lualibs. Out of scope remains only the
+node/font/callback layer (typesetter internals — binding territory when a
+package's node output carries content). The engine deliberately does NOT
 define `\directlua` itself: that name is the LuaTeX-detection probe for
 babel & friends, and claiming it flips whole package ecosystems onto luatex
 code paths (26 suite tests red). fontspec-style font selection remains

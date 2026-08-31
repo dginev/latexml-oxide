@@ -131,7 +131,9 @@ LoadDefinitions!({
   // option. Rust-only option; divergence documented as OXIDIZED_DESIGN #168.
   DeclareOption!("luatex", {
     AssignValue!("LUATEX_PROFILE" => true, Scope::Global);
-    RawTeX!(r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse");
+    RawTeX!(
+      r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse"
+    );
     RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
     // The LuaTeX parameter surface documents commonly poke once they take
@@ -144,9 +146,24 @@ LoadDefinitions!({
     DefRegister!("\\suppressmathparerror" => Number::new(0));
     DefRegister!("\\luacopyinputnodes"    => Number::new(0));
     DefRegister!("\\matheqnogapstep"      => Number::new(1000));
-    // Direction primitives (LuaTeX §6): reading/typesetting direction state.
-    // TLT (left-to-right) is the only direction this engine models.
-    RawTeX!(r"\def\pagedir{TLT} \def\bodydir{TLT} \def\pardir{TLT} \def\textdir{TLT} \def\mathdir{TLT} \def\linedir{TLT}");
+    DefRegister!("\\breakafterdirmode"    => Number::new(0));
+    // Direction primitives (LuaTeX §6): `\textdir TLT` etc. are PRIMITIVES
+    // consuming a three-letter direction keyword — not macros producing one
+    // (defining them as `{TLT}` typeset the keyword: `TLTTLT` text leaked
+    // into the babel guard-test paragraph). TLT (left-to-right) is the only
+    // direction this engine models → absorb the keyword, emit nothing.
+    RawTeX!(
+      r"\def\pagedir#1#2#3{} \def\bodydir#1#2#3{} \def\pardir#1#2#3{} \def\textdir#1#2#3{} \def\mathdir#1#2#3{} \def\linedir#1#2#3{}"
+    );
+    // Format parity: the lualatex FORMAT ships hyphenation patterns, so
+    // `\bbl@luapatterns` is already defined when babel.def loads. That makes
+    // babel.def L1135 skip the patterns-only first `\input luababel.def`
+    // (which `\endinput`s at L195, and whose loaded-flag would suppress the
+    // real second input at babel.def L2285) — so the single in-document
+    // load runs luababel's Lua API part (L196+, `Babel.locale_props` &co).
+    // Patterns are engine hyphenation state with no XML meaning → no-op
+    // body. Guard: cluster_package_guards::luatex_babel_api.
+    DefMacro!("\\bbl@luapatterns{}{}", "");
   });
 
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate

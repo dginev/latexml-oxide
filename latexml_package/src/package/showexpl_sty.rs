@@ -28,7 +28,10 @@
 //! 1706.09226, 1701.01402, 1812.06820, 1801.01025, 1806.10927,
 //! 2001.08314, 2002.09910, 1901.08750.
 
-use crate::{package::listings_sty::{listings_read_raw_lines, lst_process_display}, prelude::*};
+use crate::{
+  package::listings_sty::{listings_read_raw_lines, lst_process_display},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({

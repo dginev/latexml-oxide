@@ -99,6 +99,7 @@ semantics, side-notes …) are cataloged in
 | [LEDGER.md](LEDGER.md) | Living progress ledger: sweep tallies, tier status, fix log |
 | [CLUSTERS.md](CLUSTERS.md) | Living failure-cluster worklist from the latest sweep |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
+| [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch; not pushed
 until the work is complete.
