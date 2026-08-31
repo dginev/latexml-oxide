@@ -123,11 +123,45 @@ fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
   (fr, fc, rects)
 }
 
+
+/// Strip nicematrix's rule-option brackets from a colspec token stream:
+/// `|[color=blue,start=2]` → `|` (nicematrix.sty attaches an optional
+/// `[keys]` to the `|` specifier for rule color/thickness — styling the
+/// standard template reader must not see, or every following letter of the
+/// key text is miscounted as a column and the whole tabular desyncs — the
+/// nicematrix manual's ×54 `Extra alignment tab` cascade + a readBalanced
+/// runaway to EOF).
+fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i];
+    out.push(t);
+    let is_bar = t.get_catcode() != Catcode::CS && t.with_str(|s| s == "|");
+    if is_bar
+      && let Some(next) = toks.get(i + 1)
+      && next.get_catcode() != Catcode::CS
+      && next.with_str(|s| s == "[")
+    {
+      // skip to the matching ]
+      let mut j = i + 2;
+      while j < toks.len() && !(toks[j].get_catcode() != Catcode::CS && toks[j].with_str(|s| s == "]")) {
+        j += 1;
+      }
+      i = j + 1;
+      continue;
+    }
+    i += 1;
+  }
+  out
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
   RequirePackage!("array");
+  RequirePackage!("colortbl");
   // nicematrix.sty L21-22 defines its own `\myfileversion`/`\myfiledate`
   // (its manual typesets them on the title page). The binding shadows the
   // raw load, so read the REAL values from the installed .sty rather than
@@ -165,7 +199,28 @@ LoadDefinitions!({
   // 2605.08776, 2605.13835, 2605.18423) instead of discarding the body +
   // Error:undefined. Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors
   // here; mirror this upgrade there for strict Rust<->ar5iv parity.
-  DefMacro!("\\NiceTabular[]{}[]", "\\tabular{#2}", locked => true);
+  // Routed through the same `\CodeBefore … \Body` grabber as the matrix
+  // family: executed INLINE, nicematrix's 2-arg `\rowcolor{color}{rows}`
+  // (vs colortbl's 1-arg) desyncs the tabular's cell counting and a later
+  // `\cmidrule` lands mid-cell ("\noalign cannot be used here" — the
+  // exemplar manual's last error). Recorded rects are simply not painted for
+  // text tabulars (color overlay is styling; the content is what matters).
+  DefMacro!("\\NiceTabular[]{}[]", sub[(opts, pream, _post)] {
+    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+    let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\lx@nice@setopts"));
+    out.push(T_BEGIN!());
+    out.extend(opts_toks.unlist());
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@nice@array@begin"));
+    out.push(T_BEGIN!());
+    out.push(T_CS!("\\tabular"));
+    out.push(T_BEGIN!());
+    out.extend(nice_strip_rule_opts(pream.revert()));
+    out.push(T_END!());
+    out.push(T_END!());
+    Tokens::new(out)
+  }, locked => true);
   DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
 
   //======================================================================
@@ -459,7 +514,7 @@ LoadDefinitions!({
     if nice_opts_has(&opts_str, "first-col") {
       out.push(T_LETTER!("c"));
     }
-    out.extend(pream.revert());
+    out.extend(nice_strip_rule_opts(pream.revert()));
     if nice_opts_has(&opts_str, "last-col") {
       out.push(T_LETTER!("c"));
     }
@@ -516,6 +571,27 @@ LoadDefinitions!({
   DefMacro!("\\Ddots []", "\\ddots", locked => true);
   DefMacro!("\\Iddots []", "\\ddots", locked => true);
   DefMacro!("\\Hdotsfor{}", "\\hdotsfor{#1}", locked => true);
+
+  // {NiceMatrixBlock}[opts]: a grouping wrapper that equalizes column widths
+  // across the matrices INSIDE it — layout-only; the content flows through.
+  DefMacro!("\\NiceMatrixBlock []", "", locked => true);
+  DefMacro!("\\endNiceMatrixBlock", "", locked => true);
+  // \CodeAfter: everything from here to the environment's \end is an
+  // overlay-drawing layer (\line, \SubMatrix, \tikz over the built grid) —
+  // drawing-only, no document content; grab and drop, keeping the \end so
+  // the environment closes normally.
+  DefMacro!("\\CodeAfter XUntil:\\end", "\\end");
+  // Decoration/rule commands usable in cells and preambles: dotted/double
+  // rules are rule styling (reduce to \hline / nothing); \RowStyle sets
+  // per-row styling keys.
+  DefMacro!("\\hdottedline", "\\hline", locked => true);
+  DefMacro!("\\cdottedline{}", "\\hline", locked => true);
+  def_macro_noop("\\DoubleRule")?;
+  def_macro_noop("\\RowStyle[]{}")?;
+  def_macro_noop("\\rowlistcolors[]{}{}")?;
+  // \diagbox{lower}{upper} (diagbox-style split cell): both texts are
+  // content — keep them, separator as a slash.
+  DefMacro!("\\diagbox{}{}", "#1/#2", locked => true);
 
   // Configuration entry-points — `\NiceMatrixOptions{...}` /
   // `\NewCollectionOfColumnsType{...}` etc. set internal styling keys that are
