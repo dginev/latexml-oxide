@@ -923,11 +923,27 @@ macro_rules! DefAccent {
       name: pin!("Plain"), spec: pin!("{}"), ..Parameter::default()
       }.init()?
     ]));
-    def_macro(T_CS!($accent), plain_param, ExpansionBody::Tokens(Tokens!(
+    // OXIDIZED_DESIGN #170 (surpass-Perl, user-approved 2026-08-31): text
+    // accents are TWO-LEVEL — the real (protected) accent lives in the
+    // space-suffixed CS, and the user-facing name is a plain macro that
+    // expands straight to it. pdflatex ground truth (probed 2026-08-31):
+    // `\meaning\u` = `macro:->\T1-cmd \u \T1\u ` — a MACRO (so tikzmath's
+    // 4-char meaning sniff, tikzlibrarymath.code.tex L22-46, classifies an
+    // accent-CS `\tikzmath` variable correctly; 11-doc cluster, witnesses
+    // cahierprof-doc, sunpath, colorblind_doc) that stays EXPANDABLE inside
+    // `\csname` (the kernel's `\<enc>-cmd` dispatch; our historical
+    // csname-accent behavior, guarded by cluster_csname_accent's twemoji
+    // fixture, which a literal `\protect` token here broke — the suite
+    // caught it). Perl's protected-primitive accents fail the tikzmath
+    // half. Guard: cluster_package_guards::accent_meaning_robust_shape.
+    let inner_cs = T_CS!(concat!($accent, " "));
+    def_macro(inner_cs.clone(), plain_param, ExpansionBody::Tokens(Tokens!(
         T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
         T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),
         T_BEGIN!(), T_ARG!(1), T_END!())),
       Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}))?;
+    def_macro(T_CS!($accent), None, ExpansionBody::Tokens(Tokens!(inner_cs)),
+      None)?;
   }};
 }
 

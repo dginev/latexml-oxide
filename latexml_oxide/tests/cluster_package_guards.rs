@@ -910,6 +910,145 @@ mod lua_state_mirror {
   }
 }
 
+mod expanded_protected_brace_hunt {
+  //! TeX's `scan_left_brace` (tex.web) uses plain `get_x_token`, so a
+  //! `\protected` macro EXPANDS while hunting the required `{` of a
+  //! <general text>; protection inhibits expansion only during body
+  //! absorption. Live-probed (pdflatex 2026-08-31): `\protected\def\pp
+  //! {{abc}}\expanded\pp` typesets abc. Our read_balanced brace hunt read
+  //! with fully_expand=false, erroring `Expected opening '{'` — one error
+  //! per `\xinttheexpr` (its `\expanded\csname XINTexprprint…` lands on a
+  //! \protected macro), the sweep-11 `expected:{` cluster (~16 xint docs;
+  //! witnesses sim-os-menus-doc, ipsum-doc, tikz-bagua-en). Same
+  //! argument-scanning-fidelity family as OXIDIZED_DESIGN #161.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\protected\\def\\pp{{abc}}\n\
+    \\begin{document}\n\
+    X\\expanded\\pp Y\n\
+    \\end{document}\n";
+
+  #[test]
+  fn brace_hunt_expands_protected_macros() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "protected macro must expand in the brace hunt:\n{stderr}"
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(xml.contains("XabcY"), "expanded body must survive:\n{xml}");
+  }
+}
+
+mod raw_provides_version_survives {
+  //! OXIDIZED_DESIGN #169 (surpass-Perl, user-approved 2026-08-31): the
+  //! raw-TeX loader must NOT clobber `\ver@<file>` with `\fmtversion` when
+  //! the file's own `\ProvidesPackage` already recorded its version — real
+  //! LaTeX keeps the declared string, and date guards (`\GetFileInfo`,
+  //! toptesi.cls L44-73's version comparison) read it. Perl shares the
+  //! clobber (Package.pm L2393). Witness cluster: all 12 toptesi manuals
+  //! abort with "the sty file you are using has a date of <empty>".
+
+  use std::{path::Path, process::Command};
+
+  const STY: &str = "\\ProvidesPackage{vguard}[2001/01/01 v9.9 Version guard fixture]\n\
+    \\endinput\n";
+  const TEX: &str = "\\documentclass{article}\n\
+    \\usepackage{vguard}\n\
+    \\begin{document}\n\
+    V[\\expandafter\\meaning\\csname ver@vguard.sty\\endcsname]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn provides_package_version_not_clobbered() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("vguard.sty"), STY).expect("write sty");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--preload=[rawstyles]latexml.sty",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("2001/01/01 v9.9 Version guard fixture"),
+      "\\ver@vguard.sty must keep the ProvidesPackage string:\n{xml}",
+    );
+  }
+}
+
+mod accent_meaning_robust_shape {
+  //! OXIDIZED_DESIGN #170 (surpass-Perl, user-approved 2026-08-31): text
+  //! accents carry the LaTeX kernel's ROBUST structure — `\u` is a plain
+  //! macro `\protect \u␣` with the real accent in the space-suffixed CS —
+  //! so `\meaning\u` starts with `macro:`, as in real LaTeX. Both Perl
+  //! (protected primitive) and our previous eTeX-protected macro made
+  //! `\meaning` start with `\protected`, and tikzmath's 4-char meaning
+  //! sniff (tikzlibrarymath.code.tex L22-46) then misclassified accent-CS
+  //! variables (`\tikzmath{\u=int(...);}`) as keywords — the 11-doc
+  //! `Error:latex:(tikz) Unknown function or keyword '\lx@applyaccent…'`
+  //! cluster (witnesses cahierprof-doc, tikz-mirror-lens, colorblind_doc,
+  //! sunpath.track). The accent must still typeset.
+
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\\documentclass{article}\n\
+    \\begin{document}\n\
+    M[\\meaning\\u]\n\
+    A[\\u{o}]\n\
+    \\end{document}\n";
+
+  #[test]
+  fn accent_meaning_is_kernel_robust() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    // Typeset \meaning output font-decodes `\`/`>` via OT1 (“/-¿ glyphs;
+    // wisdom_ot1_angle_brackets_inverted), so assert the discriminating
+    // prefix: `macro:` — NOT `\protected macro:` — is what tikzmath's
+    // meaning sniff reads.
+    assert!(
+      xml.contains("M[macro:-") && !xml.contains("protected macro"),
+      "\\meaning of a text accent must have the kernel robust shape:\n{xml}",
+    );
+    assert!(
+      xml.contains("A[\u{014F}]") || xml.contains("A[o\u{0306}]"),
+      "the accent must still typeset o-breve:\n{xml}",
+    );
+  }
+}
+
 mod graphicx_internals {
   //! Raw packages poke graphicx/graphics INTERNALS our bindings reimplement
   //! around (`wisdom_latexml_reimpl_internal_name_mismatch` shape): hvfloat

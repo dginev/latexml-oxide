@@ -1339,7 +1339,15 @@ pub fn read_balanced(
   // Do we need to expand to get the { ???
   if require_open {
     let token_opt = if expansion_level != Off {
-      read_x_token(Some(false), false, None)?
+      // TeX's scan_left_brace uses plain get_x_token: \protected macros
+      // EXPAND while hunting the required `{` — protection inhibits
+      // expansion only during body absorption (live-probed pdflatex
+      // 2026-08-31: `\protected\def\pp{{abc}}\expanded\pp` typesets abc).
+      // With the default (toplevel) expansion this errored on every
+      // `\xinttheexpr` (`\expanded\csname XINTexprprint…` is \protected) —
+      // the ~16-doc `expected:{` xint cluster. #161-family fidelity fix.
+      // Guard: cluster_package_guards::expanded_protected_brace_hunt.
+      read_x_token(Some(false), false, Some(true))?
     } else {
       read_token()?
     };

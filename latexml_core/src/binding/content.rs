@@ -1581,13 +1581,21 @@ fn load_tex_definitions(
   assign_value("INCLUDE_STYLES", was_including_styles, None);
   expire_state_unlocked();
 
-  // Perl Package.pm L2376: Let(T_CS('\ver@'.$request), T_CS('\fmtversion'), 'global');
-  // Mark the raw .sty/.tex as loaded so LaTeX's `\@ifpackageloaded` and
-  // `\RequirePackage` date-version guards work after a raw TeX load. Perl
-  // unconditionally Lets here (in contrast to the LTXML loader at line 339,
-  // which only Lets when undefined).
+  // Perl Package.pm L2376/L2393 Lets \ver@<file> to \fmtversion
+  // UNCONDITIONALLY — clobbering the version string the file's own
+  // \ProvidesPackage just recorded, so every date guard downstream
+  // (\GetFileInfo, \@ifpackagelater, toptesi.cls L44-73's version
+  // comparison) reads the format date instead of the package's. Real LaTeX
+  // keeps the declared string. OXIDIZED_DESIGN #169 (surpass-Perl,
+  // user-approved 2026-08-31): apply \fmtversion only as a FALLBACK when
+  // the file declared nothing — the same guarded idiom the LTXML-binding
+  // loader above already uses. Witnesses: the 12-doc toptesi cluster
+  // ("the sty file you are using has a date of <empty>" abort). Guard:
+  // cluster_package_guards::raw_provides_version_survives.
   let ver_cs = T_CS!(s!("\\ver@{}", request));
-  let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
+  if lookup_definition(&ver_cs).ok().flatten().is_none() {
+    let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
+  }
 
   Ok(())
 }

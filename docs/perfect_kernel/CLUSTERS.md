@@ -57,6 +57,16 @@ parked R9 mode/alignment work); single instance in the manual.
 | `Error:undefined:\newunit` (a4wide etc.) | DOCUMENT-STALE — oracle pass excludes (801 stale docs) | `oracle_verdicts.tsv` |
 | babel Lua layer dead under luatex profile: EVERY profiled doc logged `attempt to index a nil value (field 'locale_props')`; chunks silently branched on `tex.count` stub zeros; `require` of texmf Lua modules failed (witnesses: derivative, abntexto, abntexto-uece, newpax — [LUA_REBINDING.md](LUA_REBINDING.md)) | Rebind-as-we-emulate landing: `\lx@directlua` double-`Expand!` removed + `\par` filtered (real-luatex probes as oracle), live register mirror, absorb shims, kpse+lualibs require, `\bbl@luapatterns` format parity, direction-keyword eaters | `luatex_babel_api::babel_lua_api_layer_initializes`, `lua_state_mirror::directlua_reads_and_writes_live_registers`, `rebound_engine_intents_absorb_and_resolve` |
 
+### Post-batch residual clusters (2026-08-31, from witness re-runs)
+
+| Signature | Note |
+|---|---|
+| `undefined:\@openrightfalse` + `\if@openright` (6+ docs, toptesi residual) | class-context newif; toptesi now passes its version check (was aborting) and exposes this. |
+| `undefined:\BeforeClosingMainAux` (toptesi) | atveryend surface. |
+| math-symbol CS as tikzmath variable (`\angle`, sunpath 1001 errs) | same meaning-shape family as #170 but for math chars — separate fix. |
+| pgf-spectra manuals TIMEOUT under debug 120s | legitimately heavy spectral compute now runs (witness call solo: 9s clean, 0 err); re-check at release-profile sweep. |
+| `\AlegreyaSans`/`\Alegreya` (parnotes 2 errs) | font-package family macros behind further engine branches. |
+
 ### Sweep-11 sampled, still open (2026-08-31)
 
 | Signature (bundles) | Sample verdict |

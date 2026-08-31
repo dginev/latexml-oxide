@@ -6311,3 +6311,73 @@ unicode-math binding absorbs math-font selection (both presentation).
 libertinus→otf), TL doc bundles oracle-classified lualatex (~300).
 
 **Upstream**: branch-contained per user directive (perfect_kernel).
+
+### 169. Raw loader keeps `\ProvidesPackage`'s `\ver@<file>` (fallback-only `\fmtversion`)
+
+**Perl behavior**: `Package.pm` L2393 (raw loadTeXDefinitions) unconditionally
+`Let`s `\ver@<file>` to `\fmtversion` after the load — clobbering the version
+string the file's own `\ProvidesPackage` just recorded. Every downstream date
+guard (`\GetFileInfo`, `\@ifpackagelater`, toptesi.cls L44-73's version
+comparison) then reads the format date.
+
+**Rust behavior**: `\fmtversion` is applied only as a FALLBACK when the file
+declared nothing — the guarded idiom Perl itself uses in the ltxml-binding
+branch (and we already used at `content.rs` L652-660). Real LaTeX keeps the
+declared string.
+
+**Why**: kernel-quality — real LaTeX semantics; unlocks every version guard,
+not one package.
+
+**Witnesses**: 12-doc toptesi cluster ("the sty file you are using has a date
+of <empty>" abort → gone). Guard:
+`cluster_package_guards::raw_provides_version_survives`.
+
+**Upstream**: branch-contained per user directive (perfect_kernel);
+Perl-filing candidate.
+
+### 170. Text accents carry the kernel's ROBUST `\meaning` shape
+
+**Perl behavior**: `DefAccent` (TeX_Character.pool.ltxml L92-100) makes `\u`
+et al. protected primitives, so `\meaning\u` renders as `\protected …` (or the
+bare CS). tikzmath's 4-character meaning sniff
+(tikzlibrarymath.code.tex L22-46) then classifies an accent CS used as a
+`\tikzmath` variable (`\tikzmath{\u=int(…);}`) as a KEYWORD and errors.
+
+**Rust behavior**: `DefAccent!` builds a two-level structure — the real
+(protected) accent in the space-suffixed CS, the user name a plain macro
+expanding straight to it — so `\meaning\u` starts with `macro:` (pdflatex
+ground truth: `macro:->\T1-cmd \u \T1\u `, a macro via the `\<enc>-cmd`
+dispatch) AND the accent stays expandable inside `\csname` (the twemoji
+`\@namedef{…\'e…}` idiom, guarded by `cluster_csname_accent` — a literal
+`\protect` token in the body broke it; the suite caught the first attempt).
+
+**Why**: kernel-fidelity to latex.ltx's `\DeclareTextAccent`/robust-command
+shape; fixes the whole meaning-sniffing class, not tikzmath alone.
+
+**Witnesses**: cahierprof-doc 501→0 errors, ipsum-doc 103→0,
+colorblind_doc 502→19, tikz-mirror-lens 502→38. Guard:
+`cluster_package_guards::accent_meaning_robust_shape`. Residual: math-symbol
+CSes as tikzmath variables (`\angle`, sunpath) are a separate meaning-shape
+family.
+
+**Upstream**: branch-contained per user directive (perfect_kernel);
+Perl-filing candidate.
+
+### 171. Required-brace hunt expands `\protected` macros (scan_left_brace fidelity)
+
+**Perl/previous Rust behavior**: while hunting the required `{` of a
+<general text> (`\expanded`, `\write`, …), protected macros were not expanded
+— `\expanded\pp` with `\protected\def\pp{{abc}}` errored `Expected opening
+'{'`. Every `\xinttheexpr` (whose `\expanded\csname XINTexprprint…` lands on a
+\protected macro) emitted one such error.
+
+**Rust behavior**: the brace hunt fully expands, matching TeX's
+`scan_left_brace` (plain `get_x_token`; protection inhibits expansion only
+during body absorption). Live-probed: pdflatex typesets `abc` for the case
+above. Same argument-scanning-fidelity family as #161.
+
+**Witnesses**: ~16-doc xint cluster — sim-os-menus-doc, ipsum-doc,
+tikz-bagua-en, commalists-tools-doc. Guard:
+`cluster_package_guards::expanded_protected_brace_hunt`.
+
+**Upstream**: branch-contained per user directive (perfect_kernel).
