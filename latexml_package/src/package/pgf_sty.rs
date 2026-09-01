@@ -45,6 +45,7 @@ LoadDefinitions!({
   def_macro_noop("\\beginpgfgraphicnamed{}")?;
   def_macro_noop("\\endpgfgraphicnamed")?;
 
+
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   at_begin_document(TokenizeInternal!(
     r"\expandafter\def\expandafter\pgfpicture\expandafter{\expandafter\lxSVG@picture\pgfpicture}\expandafter\def\expandafter\endpgfpicture\expandafter{\endpgfpicture\endlxSVG@picture}"

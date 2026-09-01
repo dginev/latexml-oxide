@@ -6,6 +6,131 @@
 //! support requires porting the complete Perl binding.
 use crate::prelude::*;
 
+// ---------------------------------------------------------------------------
+// beamerbasecolor.sty color model (Perl beamer.cls.ltxml L1051: a TODO stub).
+// `\setbeamercolor{name}{fg=…,bg=…,parent=…,use=…}` stores the palette and
+// registers the xcolor-visible names `<name>.fg` / `<name>.bg` that themes
+// and documents reference directly (real beamer registers them inside
+// `\usebeamercolor`, which its templates run; we register eagerly at set
+// time since we do not execute templates — same observable names). Witnesses:
+// beamertheme-metropolis demo (`\def\couleur{alerted text.fg}`, 41 errs),
+// beamertheme-gotham examples, beamertheme-epyt, beamer-amurmaple.
+fn beamer_color_key(name: &str, field: &str) -> String { s!("beamer@color@{name}@{field}") }
+
+fn beamer_color_lookup(name: &str, field: &str) -> Option<String> {
+  match lookup_value(&beamer_color_key(name, field)) {
+    Some(Stored::String(sym)) => Some(with(sym, |v| v.to_string())),
+    _ => None,
+  }
+}
+
+/// Follow beamerbasecolor's inheritance: an empty/absent fg (bg) falls back
+/// to the first parent that yields one.
+fn beamer_resolve(name: &str, field: &str, depth: usize) -> Option<String> {
+  if depth > 16 {
+    return None;
+  }
+  if let Some(v) = beamer_color_lookup(name, field)
+    && !v.is_empty()
+  {
+    return Some(v);
+  }
+  if let Some(parents) = beamer_color_lookup(name, "parent") {
+    for parent in parents.split(',') {
+      let parent = parent.trim().trim_matches(['{', '}']).trim();
+      if !parent.is_empty()
+        && let Some(v) = beamer_resolve(parent, field, depth + 1)
+      {
+        return Some(v);
+      }
+    }
+  }
+  None
+}
+
+/// Quiet probe: is `name` a defined color? (State `color_<name>` from
+/// color/xcolor, or raw xcolor storage `\color@<name>` — the
+/// `wisdom_xcolor_internal_storage_interop` shape.)
+fn beamer_color_known(name: &str) -> bool {
+  let name = name.trim();
+  lookup_value(&s!("color_{name}")).is_some()
+    || lookup_meaning(&T_CS!(s!("\\color@{name}"))).is_some()
+}
+
+/// A color EXPR (`A!30!B`, `-A`, `A`) is registrable when every base name it
+/// references is already defined; otherwise defer (a later \setbeamercolor
+/// or \usebeamercolor retries).
+fn beamer_expr_defined(expr: &str) -> bool {
+  let expr = expr.trim();
+  if expr.is_empty() {
+    return false;
+  }
+  for segment in expr.split('!') {
+    let segment = segment.trim().trim_start_matches('-').trim();
+    if segment.is_empty() || segment.chars().all(|c| c.is_ascii_digit() || c == '.') {
+      continue; // mix percentage
+    }
+    if !beamer_color_known(segment) {
+      return false;
+    }
+  }
+  true
+}
+
+/// (Re)register the xcolor names `<name>.fg` / `<name>.bg` from the stored
+/// palette, when their expressions resolve. Global, like a theme's palette.
+fn beamer_register_color(name: &str) -> Result<()> {
+  for field in ["fg", "bg"] {
+    if let Some(expr) = beamer_resolve(name, field, 0)
+      && beamer_expr_defined(&expr)
+    {
+      digest(Tokenize!(TeXString::assembled(format!(
+        "\\xglobal\\colorlet{{{name}.{field}}}{{{expr}}}"
+      ))))?;
+    }
+  }
+  Ok(())
+}
+
+/// Split a beamer color-option list at top-level commas into (key, value).
+fn beamer_color_opts(opts: &str) -> Vec<(String, String)> {
+  let mut out = Vec::new();
+  let mut depth = 0usize;
+  let mut current = String::new();
+  let mut parts = Vec::new();
+  for c in opts.chars() {
+    match c {
+      '{' => {
+        depth += 1;
+        current.push(c);
+      },
+      '}' => {
+        depth = depth.saturating_sub(1);
+        current.push(c);
+      },
+      ',' if depth == 0 => {
+        parts.push(std::mem::take(&mut current));
+      },
+      _ => current.push(c),
+    }
+  }
+  parts.push(current);
+  for part in parts {
+    let part = part.trim();
+    if part.is_empty() {
+      continue;
+    }
+    match part.split_once('=') {
+      Some((k, v)) => out.push((
+        k.trim().to_string(),
+        v.trim().trim_matches(['{', '}']).trim().to_string(),
+      )),
+      None => out.push((part.to_string(), String::new())),
+    }
+  }
+  out
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Load article.cls as the base class (beamer builds on article).
@@ -19,6 +144,11 @@ LoadDefinitions!({
   RequirePackage!("ifpdf");
   RequirePackage!("keyval");
   RequirePackage!("graphicx");
+  // Real beamer requires pgfcore (beamer.cls → beamerbasemodes → pgfcore);
+  // themes then use shadings/pictures directly (epyt's
+  // \pgfdeclareverticalshading, gotham). Load our pgf binding so that raw
+  // theme surface resolves against the real implementations.
+  RequirePackage!("pgf");
 
   // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
   // — declares `fragile` as a zero-argument key for the beamerframe keyset.
@@ -212,20 +342,114 @@ LoadDefinitions!({
   def_macro_noop("\\insertdocumentstartpage")?;
   def_macro_noop("\\insertdocumentendpage")?;
 
-  // Theme commands — Perl L1246-1253
-  def_macro_noop("\\usetheme[]{}")?;
-  def_macro_noop("\\usecolortheme[]{}")?;
+  // Theme commands — Perl L1246-1253 noops them (beamerTODO). With the
+  // color model above, raw theme files load usefully: their palette
+  // (\setbeamercolor) and \definecolor calls register the very names the
+  // demo documents reference (epyt acolor1-5, amurmaple AmurmapleRed,
+  // gotham/metropolis structure colors). Template/geometry internals in the
+  // themes are absorbed by the surface noops below.
+  DefPrimitive!("\\usetheme[]{}", sub[(_opts, names)] {
+    for name in do_expand(names)?.to_string().split(',') {
+      let name = name.trim();
+      if !name.is_empty() {
+        let _ = require_package(
+          &s!("beamertheme{name}"),
+          RequireOptions::default(),
+        );
+      }
+    }
+  });
+  DefPrimitive!("\\usecolortheme[]{}", sub[(_opts, names)] {
+    for name in do_expand(names)?.to_string().split(',') {
+      let name = name.trim();
+      if !name.is_empty() {
+        let _ = require_package(
+          &s!("beamercolortheme{name}"),
+          RequireOptions::default(),
+        );
+      }
+    }
+  });
   def_macro_noop("\\usefonttheme[]{}")?;
-  def_macro_noop("\\useinnertheme[]{}")?;
-  def_macro_noop("\\useoutertheme[]{}")?;
+  DefPrimitive!("\\useinnertheme[]{}", sub[(_opts, names)] {
+    for name in do_expand(names)?.to_string().split(',') {
+      let name = name.trim();
+      if !name.is_empty() {
+        let _ = require_package(
+          &s!("beamerinnertheme{name}"),
+          RequireOptions::default(),
+        );
+      }
+    }
+  });
+  DefPrimitive!("\\useoutertheme[]{}", sub[(_opts, names)] {
+    for name in do_expand(names)?.to_string().split(',') {
+      let name = name.trim();
+      if !name.is_empty() {
+        let _ = require_package(
+          &s!("beameroutertheme{name}"),
+          RequireOptions::default(),
+        );
+      }
+    }
+  });
+  // Theme-file surface the raw loads touch.
+  def_macro_noop("\\ProcessOptionsBeamer")?;
+  def_macro_noop("\\usebeamertemplate OptionalMatch:* OptionalMatch:* OptionalMatch:* {}")?;
+  def_macro_noop("\\usebeamerfont OptionalMatch:* {}")?;
   def_macro_noop("\\setbeamertemplate{}{}")?;
-  def_macro_noop("\\setbeamercolor OptionalMatch:* {}{}")?;
+  DefPrimitive!("\\setbeamercolor OptionalMatch:* {}{}", sub[(star, name, opts)] {
+    let name = do_expand(name)?.to_string().trim().to_string();
+    let opts = do_expand(opts)?.to_string();
+    if star.is_some() {
+      // Starred form RESETS the entry before applying (beamerbasecolor).
+      for field in ["fg", "bg", "parent"] {
+        assign_value(&beamer_color_key(&name, field), Stored::String(pin("")), Some(Scope::Global));
+      }
+    }
+    for (key, val) in beamer_color_opts(&opts) {
+      match key.as_str() {
+        "fg" | "bg" | "parent" => {
+          assign_value(&beamer_color_key(&name, &key), Stored::String(pin(&val)), Some(Scope::Global));
+        },
+        // `use=` ensures the referenced palette entries are computed before
+        // this one's expressions are evaluated.
+        "use" => {
+          for used in val.split(',') {
+            let used = used.trim().trim_matches(['{', '}']).trim();
+            if !used.is_empty() {
+              beamer_register_color(used)?;
+            }
+          }
+        },
+        _ => {},
+      }
+    }
+    beamer_register_color(&name)?;
+  });
   def_macro_noop("\\setbeamerfont{}{}")?;
   def_macro_noop("\\setbeamersize{}")?;
   def_macro_noop("\\setbeamercovered{}")?;
   def_macro_noop("\\addtobeamertemplate{}{}{}")?;
-  def_macro_noop("\\defbeamertemplate OptionalMatch:* {}{}{}")?;
+  // `\defbeamertemplate*{name}{option}[args]...{body}`: we do not execute
+  // templates, but the DECLARATION must register beamer's existence marker
+  // `\beamer@@tmpop@<name>@<option>` (beamerbasetemplates.sty L59) — themes
+  // (gotham) probe it from `\setbeamertemplate{name}[option]` and error
+  // "template ... does not exist" otherwise.
+  DefPrimitive!("\\defbeamertemplate OptionalMatch:* {}{}[][]{}", sub[(_star, name, option, _n, _od, _body)] {
+    let name = do_expand(name)?.to_string().trim().to_string();
+    let option = do_expand(option)?.to_string().trim().to_string();
+    let marker = T_CS!(s!("\\beamer@@tmpop@{name}@{option}"));
+    if lookup_meaning(&marker).is_none() {
+      def_macro(marker, None, ExpansionBody::Tokens(Tokens!()), None)?;
+    }
+  });
+  DefConditional!("\\ifbeamer@inframe");
 
+  // The default palette: real beamer's beamercolorthemedefault.sty is plain
+  // `\setbeamercolor` calls — raw-load it through our implementation above so
+  // `normal text.fg`, `alerted text.fg`, `structure.fg`, … exist exactly as
+  // beamer defines them (beamer.cls defines beamer@blendedblue first).
   // Navigation/footline/headline — no-ops
   def_macro_noop("\\beamertemplatenavigationsymbolsempty")?;
   DefMacro!("\\beamergotobutton{}", "#1");
@@ -473,10 +697,61 @@ LoadDefinitions!({
   // Translation stubs
   def_macro_identity("\\translate{}")?;
 
-  // Color-related
-  def_macro_noop("\\usebeamercolor OptionalMatch:* {}")?;
+  // Color-related. `\usebeamercolor*[fg|bg]{name}` (re)computes the palette
+  // entry, registers `<name>.fg`/`.bg`, defines the local colors `fg`/`bg`
+  // templates reference, and with an optional applies that color.
+  DefPrimitive!("\\usebeamercolor OptionalMatch:* []{}", sub[(_star, opt, name)] {
+    let name = do_expand(name)?.to_string().trim().to_string();
+    beamer_register_color(&name)?;
+    for field in ["fg", "bg"] {
+      if let Some(expr) = beamer_resolve(&name, field, 0)
+        && beamer_expr_defined(&expr)
+      {
+        digest(Tokenize!(TeXString::assembled(format!("\\colorlet{{{field}}}{{{expr}}}"))))?;
+      }
+    }
+    if let Some(which) = opt {
+      let which = do_expand(which)?.to_string();
+      let which = which.trim();
+      if (which == "fg" || which == "bg")
+        && let Some(expr) = beamer_resolve(&name, which, 0)
+        && beamer_expr_defined(&expr)
+      {
+        digest(Tokenize!(TeXString::assembled(format!("\\color{{{name}.{which}}}"))))?;
+      }
+    }
+  });
+  // `\ifbeamercolorempty[fg|bg]{name}{true}{false}` — themes branch on it.
+  DefMacro!("\\ifbeamercolorempty[]{}", sub[(opt, name)] {
+    let name = do_expand(name)?.to_string().trim().to_string();
+    let field = opt.map(|o| o.to_string()).unwrap_or_else(|| "fg".to_string());
+    let empty = beamer_resolve(&name, field.trim(), 0).map(|e| e.is_empty()).unwrap_or(true);
+    if empty { Tokens!(T_CS!("\\@firstoftwo")) } else { Tokens!(T_CS!("\\@secondoftwo")) }
+  });
 
   // Hyperlink
   DefMacro!("\\hyperlink{}{}", "#2");
   DefMacro!("\\hypertarget{}{}", "#2");
+
+  // The default palette LAST (needs xcolor's \definecolor and our \mode /
+  // \setbeamercolor above): real beamer's beamercolorthemedefault.sty is
+  // plain `\setbeamercolor` calls — raw-load it through our implementation
+  // so `normal text.fg`, `alerted text.fg`, `structure.fg`, … exist exactly
+  // as beamer defines them (beamer.cls defines beamer@blendedblue first).
+  digest(Tokenize!(TeXString::assembled(
+    "\\definecolor{beamer@blendedblue}{rgb}{0.2,0.2,0.7}".to_string()
+  )))?;
+  InputDefinitions!("beamercolorthemedefault", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // beamerbasecolor.sty L387-388: plain `structure`/`beamerstructure` are
+  // xcolor aliases of `structure.fg` (themes write `\textcolor{structure}`).
+  digest(Tokenize!(TeXString::assembled(
+    "\\colorlet{structure}{structure.fg}\\colorlet{beamerstructure}{structure.fg}".to_string()
+  )))?;
+  // Baseline current-color pair: templates reference `fg`/`bg` (and
+  // `parent.fg`/`parent.bg`) outside any \usebeamercolor context; beamer
+  // always has SOME current pair (normal text's black-on-white default).
+  digest(Tokenize!(TeXString::assembled(
+    "\\colorlet{fg}{black}\\colorlet{bg}{white}\\colorlet{parent.fg}{black}\\colorlet{parent.bg}{white}"
+      .to_string()
+  )))?;
 });

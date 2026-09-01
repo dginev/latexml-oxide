@@ -1053,6 +1053,21 @@ fn find_first_via(kpse: &Kpaths, candidates: &[&str]) -> Option<String> {
     if let Ok(Some(path)) = result {
       return Some(path);
     }
+    // Extension-guessed lookup missed. The ENGINE's `\input`/`\openin`
+    // always search the TEX format (TEXINPUTS includes `texmf-dist/tex//`),
+    // regardless of extension — the guess-from-filename is a kpsewhich-CLI
+    // convenience, not engine behavior. Retry with the explicit TEX format
+    // so e.g. pgfornament's `\@@input vectorian46.pgf` resolves
+    // (tex/generic/pgfornament/vectorian/; plain `kpsewhich` misses it,
+    // `kpsewhich -format=tex` finds it). Perl reaches the same files via
+    // its ls-R basename cache (Pathname.pm build_kpse_cache). Witness:
+    // pgfornament/ornaments (291 missing_file errors) + pgfornament-han.
+    let retry = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+      kpse.find_file_with_format(candidate, kpathsea::formats::TEX)
+    }));
+    if let Ok(Some(path)) = retry {
+      return Some(path);
+    }
   }
   None
 }
