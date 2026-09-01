@@ -135,6 +135,26 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
     Stored::String(pin(package)),
     Some(Scope::Global),
   );
+  // Also snapshot the trigger's own definition identity. The `:autoload`
+  // flag alone goes STALE when something other than the package load
+  // redefines the CS — the KERNEL DUMP does exactly that for
+  // `\ProvidesExplPackage`/`\ProvidesExplClass`/`\ExplSyntaxOn` (defined
+  // both here pre-dump as triggers and by latex.ltx itself). Readers
+  // (`\lx@ifundefined`) treat the CS as an unfired trigger only while it
+  // still HOLDS this definition (Rc identity), so a dump-provided real
+  // definition reads as DEFINED. Witness: updatemarks-nums.sty's
+  // `\@ifundefined{ProvidesExplPackage}{\RequirePackage{expl3}}` (a
+  // single-branch call) wrongly took the "undefined" branch and swallowed
+  // the following `\ProvidesExplPackage` as the phantom second branch —
+  // expl3 catcodes never turned on, 89 cascade errors (21-doc
+  // `unexpected:_` cluster).
+  if let Some(trigger_meaning) = lookup_meaning(&cs_tok) {
+    assign_value(
+      &s!("{cs_name}:autoload_trigger"),
+      trigger_meaning,
+      Some(Scope::Global),
+    );
+  }
   Ok(())
 }
 

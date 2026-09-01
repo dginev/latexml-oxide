@@ -498,6 +498,18 @@ LoadDefinitions!({
     has_meaning(&t)
   });
 
+  // \iffontchar <font><charcode> — eTeX: true iff the character exists in
+  // the font. Perl eTeX.pool.ltxml L335 leaves this as a COMMENT (undefined),
+  // which breaks every kernel consumer: the dump's `\tex_iffontchar:D` LETs
+  // to it and records `N` (undefined), so l3text/unicodefonttable code hits
+  // an undefined-CS stub mid-conditional and the \else/\fi structure
+  // desyncs (unicodefonttable-samples: 100-error cascade). We consume the
+  // arguments faithfully and approximate the test as TRUE — our font model
+  // has no per-glyph TFM coverage table; fonts under test overwhelmingly
+  // contain the probed slots, and a wrong TRUE renders an empty glyph cell
+  // rather than derailing the conditional nesting.
+  DefConditional!("\\iffontchar Token Number", sub[(_font, _code)] { true });
+
   // \ifincsname — eTeX (TeX §506-507): true when expansion is happening
   // inside a `\csname...\endcsname` construction. LaTeXML does not have
   // a separate "inside csname" mode (it expands eagerly), so this is

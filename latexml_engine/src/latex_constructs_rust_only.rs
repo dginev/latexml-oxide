@@ -96,6 +96,30 @@ LoadDefinitions!({
   def_macro_noop("\\tag_tool:n{}")?;
   def_macro_noop("\\tag_get:n{}")?;
 
+  // Unicode-engine math-code primitives (LuaTeX/XeTeX; LuaTeX manual §7.3).
+  // Raw font-setup files probe-and-set them when the engine claims Unicode
+  // support (fontsetup's fspdefault.tex under unicode-math; keytheorems/
+  // elpres manuals — sweep-16 tail, 4 bundles). Assignments are engine
+  // font-table bookkeeping with no XML meaning: absorb the full assignment
+  // syntax faithfully so the token stream stays balanced.
+  //
+  // Defined HERE (post-dump), NOT in pdftex.rs (pre-format): latex.ltx
+  // PROBES `\ifx\Umathcode\@undefined` to pick the TU/Unicode branch
+  // (L14662), so a pre-format definition makes the FORMAT BUILD masquerade
+  // as a Unicode engine — the dump then bakes `\UnicodeEncodingName`=TU and
+  // babel-greek raw-loads tuenc-greek.def instead of LGR (greek_test).
+  // Same probe-safety class as the \directlua prohibition
+  // (project_lua_bridge_directive).
+  //   \Umathcode <num>[=]<class><fam><ucode>  /  \Umathchardef <cs>[=]<c><f><u>
+  DefPrimitive!("\\Umathcode Number SkipMatch:= Number Number Number", sub[(_a,_b,_c,_d)] {});
+  DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipMatch:= Number Number Number", sub[(cs,_c,_f,_u)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Umathcharnumdef DefToken SkipSpaces SkipMatch:= Number", sub[(cs,_n)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Udelcode Number SkipMatch:= Number Number", sub[(_a,_b,_c)] {});
+
   //======================================================================
   // 2. LaTeXML-internal helpers
   //======================================================================

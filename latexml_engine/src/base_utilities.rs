@@ -78,7 +78,7 @@ LoadDefinitions!({
     // (fixes `\@ifundefined{align}` after `\usepackage{amsmath}`). `.pool`
     // triggers keep the legacy Bool form and stay "undefined until used".
     let is_autoload = cs.with_cs_name(|cs_name| {
-      match lookup_value(&s!("{cs_name}:autoload")) {
+      let flagged = match lookup_value(&s!("{cs_name}:autoload")) {
         Some(Stored::String(pkg_sym)) => {
           let pkg = with(pkg_sym, |s| s.to_string());
           !lookup_bool(&s!("{pkg}.sty_loaded"))
@@ -86,7 +86,23 @@ LoadDefinitions!({
         },
         Some(Stored::Bool(b)) => b,
         _ => false,
-      }
+      };
+      // The flag is only meaningful while the CS still HOLDS the trigger
+      // definition. The kernel dump redefines some trigger CSes itself
+      // (`\ProvidesExplPackage` et al. are real latex.ltx macros) — then
+      // the CS is genuinely defined regardless of the package flag. Compare
+      // definition identity against the snapshot def_autoload stored.
+      flagged
+        && match (
+          lookup_meaning(&cs),
+          lookup_value(&s!("{cs_name}:autoload_trigger")),
+        ) {
+          (Some(Stored::Expandable(current)), Some(Stored::Expandable(trigger))) => {
+            Rc::ptr_eq(&current, &trigger)
+          },
+          (_, None) => true, // legacy trigger without snapshot: old behavior
+          _ => false,
+        }
     });
     if IsDefined!(&cs) && !is_autoload {
       Ok(else_token)

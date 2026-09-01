@@ -1999,6 +1999,14 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Real listings.sty L93-95 boolean plumbing — raw add-on styles
+  // (lstfiracode, matlab-prettifier, showexpl, asciilist) call these
+  // internals directly; without them their `\ifx…\lst@true…\fi` chains
+  // desync and cascade `Extra \else` / `unexpected \fi` (rbt-mathnotes 96
+  // errs). The `wisdom_latexml_reimpl_internal_name_mismatch` shape.
+  DefMacro!("\\lst@true", None, r"\let\lst@if\iftrue");
+  DefMacro!("\\lst@false", None, r"\let\lst@if\iffalse");
+  Let!("\\lst@if", "\\iffalse");
   //======================================================================
   // Region 1: Preamble (Perl lines 1-33)
   //======================================================================
