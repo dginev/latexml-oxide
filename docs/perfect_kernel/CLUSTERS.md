@@ -81,6 +81,8 @@ timeouts. Top actionable items:
 
 | ctex family `\c_parameter_token` in `\csname __hook package/…` (50-doc `expected:variable` cluster: hfutexam ×4=1001 errs each, beautybook; min-repro = bare `\documentclass{ctexart}` → 2 errs) | Root-cause trail (2026-09-01): ctexhook.sty L129-140 `\cs_new_protected:Npx \ctex_gadd_package_hook:nnn` → `\hook_gput_code:nnn {package/#2/#1} {\c_novalue_tl}` → lthooks label parsing (`\__hook_parse_label_default:nN` visible in stream) uses **`\c_parameter_token`-DELIMITED macros** (ltcmdhooks generic-cmd probes); the delimiter CS leaks into the `\csname __hook …\endcsname` assembly. env-gated `LATEXML_CSNAME_TRACE=1` dumps the stream at both csname error sites (gullet.rs). Needs a lthooks/delimited-param session; downstream of it: pgfmath load desync (`expected:<relationaltoken>` at pgfmathfunctions.misc L46) and the 218-err `expected:variable` mass. |
 
+| ctex family part 2: full expl3 state leaks past `\documentclass{ctexart}` (space=9, `:`=11, `_`=11 at document level) → pgfutil-common's `\def\: {…}` space-trick garbles → `\pgfutil@xifnch` undefined → 1001-err pgfmath cascade (ctexart+tikz min-repro; hfutexam ×4, beautybook, gckanbun tails) | env-gated `LATEXML_EXPL_TRACE=1` shows the mechanism: the batch-12 one-directional `\ExplSyntaxOff` exit cleanup fires per SUB-FILE with entry-time-stale `grandparent_in_expl3` flags (ctex-engine-pdftex.def reads grandparent=false though ctexart turned expl ON mid-file via `\ProvidesExplClass`), corrupting the expl status stack. DEEP FIX (own session): route raw-load boundaries through the DUMP's real `\@pushfilename`/`\@popfilename` (latex.ltx L15518 order, expl3's own push/pop hooks) and retire the flag machinery. |
+
 ### Sweep-16 tail notes (2026-09-01)
 
 | Item | Note |

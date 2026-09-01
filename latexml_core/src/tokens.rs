@@ -659,7 +659,26 @@ impl Tokens {
     // `VecDeque::from(Vec)` reuses the Vec's heap buffer directly (no
     // second allocation), unlike `into_iter().collect()` which copies.
     let mut toks: VecDeque<Token> = VecDeque::from(self.unlist());
-    while let Some(t) = toks.pop_front() {
+    // tex.web resolves tokens by MEANING during macro-definition scanning
+    // (get_next assigns cur_cmd=mac_param for a CS `\let` to a catcode-6
+    // `#`), so an IMPLICIT parameter token participates in `#1`/`##`
+    // pairing exactly like a literal `#`. Generated code relies on it:
+    // ctexart.cls L1194 `\cs_new_protected:Npn \__ctex_patch_toc_width:n
+    // \c_parameter_token 1 { … \c_parameter_token 1 … }` (docstrip writes
+    // the CS spelling to survive catcode changes) — without this, the CS
+    // leaks literally into hook names → `\csname __hook package/#…` errors
+    // across the 50-doc ctex family.
+    let is_param_tok = |t: &Token| {
+      t.get_catcode() == Catcode::PARAM
+        || (t.get_catcode().is_active_or_cs()
+          && matches!(crate::state::lookup_meaning(t),
+                      Some(crate::common::store::Stored::Token(l))
+                        if l.get_catcode() == Catcode::PARAM))
+    };
+    while let Some(mut t) = toks.pop_front() {
+      if t.get_catcode() != Catcode::PARAM && is_param_tok(&t) {
+        t = T_PARAM!();
+      }
       if t.get_catcode() == Catcode::PARAM && !toks.is_empty() {
         let next_t = toks.pop_front();
         let next_cc = next_t.as_ref().map(|t| t.get_catcode());
@@ -671,7 +690,9 @@ impl Tokens {
             #[cfg(feature = "token-locators")]
             loc: 0,
           });
-        } else if next_cc == Some(Catcode::PARAM) {
+        } else if next_cc == Some(Catcode::PARAM)
+          || next_t.as_ref().map(&is_param_tok) == Some(true)
+        {
           rescanned.push(t);
         } else {
           // A PARAM (`#`) followed by neither a digit nor another `#` is, in

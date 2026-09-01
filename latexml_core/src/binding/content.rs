@@ -1590,6 +1590,13 @@ fn load_tex_definitions(
     // `\@pushfilename` expl3 hook runs BEFORE our entry snapshot, so a
     // bidirectional entry/exit restore mis-reads a grandparent-ON chain as
     // OFF and re-breaks the xsavebox witness):
+    if std::env::var("LATEXML_EXPL_TRACE").is_ok() {
+      eprintln!(
+        "EXPL-EXIT request={request:?} is_core={is_expl3_core} grandparent={grandparent_in_expl3} us_letter={} off_defined={}",
+        lookup_catcode('_') == Some(Catcode::LETTER),
+        lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
+      );
+    }
     if !is_expl3_core
       && !grandparent_in_expl3
       && lookup_catcode('_') == Some(Catcode::LETTER)
