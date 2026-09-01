@@ -113,6 +113,20 @@ LoadDefinitions!({
   // \hangfrom{arg} (L4534) and \chapterprecis{arg} (L7488) TYPESET their
   // argument — identity/paragraph, never noop (content!).
   def_macro_identity("\\hangfrom{}")?;
+  // memoir has titling built in: \title/\author/\date immediately set
+  // \thetitle/\theauthor/\thedate (memoir.cls; used in custom titlepages
+  // BEFORE \maketitle — biblatex-oxref manuals L272 `\LARGE\thetitle`).
+  RawTeX!(
+    r"\let\lx@memoir@title\title
+\renewcommand\title[1]{\lx@memoir@title{#1}\gdef\thetitle{#1}}
+\let\lx@memoir@author\author
+\renewcommand\author[1]{\lx@memoir@author{#1}\gdef\theauthor{#1}}
+\let\lx@memoir@date\date
+\renewcommand\date[1]{\lx@memoir@date{#1}\gdef\thedate{#1}}
+\def\thetitle{}\def\theauthor{}\def\thedate{}
+\def\pretitle#1{}\def\posttitle#1{}\def\preauthor#1{}\def\postauthor#1{}
+\def\predate#1{}\def\postdate#1{}"
+  );
   DefMacro!("\\chapterprecis{}", "\\par #1\\par");
   DefMacro!("\\sidepar[]{}", "\\marginpar{#2}"); // L8466 margin note
 
