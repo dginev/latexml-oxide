@@ -148,7 +148,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2", "
 # 2.14.0 had moved to hashbrown 0.17 and duplicated against string-
 # interner 0.20's 0.16 pin. The dep tree is now compatible — leave the
 # exact pin so all crates resolve to a single indexmap version.
-indexmap = "=2.14.0"
+indexmap = "=2.14.1"
 tempfile = "3"
 log = "0.4"
 libxml = "0.3.21"
