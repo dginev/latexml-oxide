@@ -59,6 +59,8 @@ LoadDefinitions!({
   // KOMA logo macros (scrkbase).
   DefMacro!("\\KOMAScript", "KOMA-Script");
   DefMacro!("\\KOMA", "KOMA");
+  def_macro_noop("\\newkomafont{}{}")?;
+  def_macro_noop("\\addtokomafont{}{}")?;
 
   // KOMA `addmargin` environment: `\begin{addmargin}[innermargin]{outermargin}`
   // (or `{both}`) indents a block. The margin is a visual-layout concern with no

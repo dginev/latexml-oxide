@@ -60,6 +60,8 @@ LoadDefinitions!({
   // KOMA logo macros (scrkbase).
   DefMacro!("\\KOMAScript", "KOMA-Script");
   DefMacro!("\\KOMA", "KOMA");
+  def_macro_noop("\\newkomafont{}{}")?;
+  def_macro_noop("\\addtokomafont{}{}")?;
   DefMacro!("\\labeling[]{}", "\\begin{description}");
   DefMacro!("\\endlabeling", "\\end{description}");
 });

@@ -627,6 +627,11 @@ LoadDefinitions!({
   def_macro_noop("\\SetEnumitemValue{}{}{}")?;
   def_macro_noop("\\SetEnumitemSize{}{}")?;
   def_macro_noop("\\AddEnumerateCounter{}{}{}")?;
+
+  // enumitem `\setlistdepth{n}` + the deep-list companions (inline lists
+  // package layer): list-depth budget is presentation-only for XML.
+  def_macro_noop("\\setlistdepth{}")?;
+  def_macro_noop("\\renewlist{}{}{}")?;
 });
 
 #[cfg(test)]

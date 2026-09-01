@@ -68,6 +68,16 @@ LoadDefinitions!({
   // The kvopts inside are PDF-only and semantically irrelevant for XML
   // output — gobble the brace group. Witness 2305.08034.
   def_macro_noop("\\DocumentMetadata{}")?;
+  // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
+  // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
+  // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is
+  // the accessible structure — absorb here at kernel level, mirroring the
+  // tagpdf_sty.rs binding.
+  def_macro_noop("\\tagpdfsetup{}")?;
+  def_macro_noop("\\tagstructbegin{}")?;
+  def_macro_noop("\\tagstructend")?;
+  def_macro_noop("\\tagmcbegin{}")?;
+  def_macro_noop("\\tagmcend")?;
 
   //======================================================================
   // 2. LaTeXML-internal helpers
