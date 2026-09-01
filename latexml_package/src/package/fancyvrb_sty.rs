@@ -101,4 +101,47 @@ LoadDefinitions!({
       Ok(Vec::new())
     });
   DefConstructor!("\\lx@fancyvrb@endframe", "</ltx:text>");
+
+  // {VerbatimOut}{file}: capture the body VERBATIM into the in-memory
+  // filecontents cache under `file`, so a later `\input{file}`/`\VerbatimInput`
+  // replays it — the fancyvrb write-out/read-back idiom (fancybox-doc writes
+  // `\jobname.ex1` demos then re-inputs them; raw fancyvrb's real \write
+  // needs an openout stream our model doesn't run). Same raw-line capture as
+  // the `{filecontents}` engine impl, without the LaTeX2e header lines.
+  DefPrimitive!("\\lx@fancyvrb@VerbatimOut", {
+    skip_spaces()?;
+    let filename_toks = read_arg(ExpansionLevel::Full)?;
+    let filename = filename_toks.to_string();
+    // `\VerbatimEnvironment` (below) redirects the end-scan to the WRAPPING
+    // environment's `\end{...}` — the fancyvrb idiom for user-defined
+    // verbatim-writing environments (fancybox-doc's {example} wraps
+    // {VerbatimOut}{\jobname.tmp} and the author writes \end{example}).
+    let end_env = match lookup_value("lx@verbatimout@envname") {
+      Some(Stored::String(sym)) => with(sym, |v| v.to_string()),
+      _ => "VerbatimOut".to_string(),
+    };
+    assign_value("lx@verbatimout@envname", Stored::None, Some(Scope::Global));
+    let end_marker = s!("\\end{{{end_env}}}");
+    read_raw_line(); // discard remainder of the \begin line
+    let mut lines: Vec<String> = Vec::new();
+    loop {
+      // fancyvrb's end check matches a line that IS `\end{<name>}` (leading
+      // whitespace allowed, trailing content defeats it — fancybox-doc
+      // deliberately writes `\end{VerbatimOut}%.` INSIDE a captured body).
+      match read_raw_line() {
+        Some(line) if line.trim() != end_marker.as_str() => lines.push(line),
+        _ => break,
+      }
+    }
+    let n = lines.len();
+    Info!("note", "filecontents", s!("Cached VerbatimOut for {filename} ({n} lines)"));
+    assign_value(&s!("{filename}_contents"), Stored::from(lines.join("\n")), Some(Scope::Global));
+    endgroup()?;
+  });
+  assign_meaning(
+    &T_CS!("\\VerbatimOut"),
+    lookup_meaning(&T_CS!("\\lx@fancyvrb@VerbatimOut")).unwrap_or(Stored::None),
+    Some(Scope::Global),
+  );
+  def_macro_noop("\\endVerbatimOut")?;
 });

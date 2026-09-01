@@ -133,6 +133,24 @@ LoadDefinitions!({
   // //======================================================================
   // // Read verbatim material from file.
   DefMacro!("\\verbatiminput {}", sub[(file)] {
+    // Expand the argument (`\verbatiminput{\jobname.tmp}`) and serve
+    // in-memory filecontents/VerbatimOut captures before touching disk.
+    let name = do_expand(file)?.to_string();
+    if let Some(Stored::String(sym)) = lookup_value(&s!("{name}_contents")) {
+      let content = with(sym, |v| v.to_string());
+      let mut tokens = Vec::new();
+      for line in content.lines() {
+        tokens.push(T_CS!("\\verbatim@startline"));
+        tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"),
+          vec![Tokens::new(ExplodeText!(line.to_string()))]).unlist());
+        tokens.push(T_CS!("\\verbatim@processline"));
+      }
+      return Ok(Tokens!(
+        T_CS!("\\begingroup"), T_CS!("\\@verbatim"),
+        T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
+        T_CS!("\\lx@verbatim@"), Tokens::new(tokens), T_CS!("\\lx@end@verbatim@"), T_CS!("\\endgroup")));
+    }
+    let file = Tokens!(ExplodeText!(name));
     if let Some(path) = find_file(&file.to_string(), None) {
       reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
             || -> Result<Tokens> {

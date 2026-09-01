@@ -39,4 +39,61 @@ LoadDefinitions!({
       return Ok(vec![body]);
     }
   });
+
+  // fancybox ships its own verbatim layer (fancybox.sty "Verbatim" section);
+  // {VerbatimOut}{file} captures its body verbatim to a file that demos
+  // re-\input (fancybox-doc writes \jobname.ex1…). Store into the in-memory
+  // filecontents cache instead of a real \write stream.
+  DefPrimitive!("\\lx@fancybox@VerbatimOut", {
+    skip_spaces()?;
+    let filename_toks = read_arg(ExpansionLevel::Full)?;
+    let filename = filename_toks.to_string();
+    // `\VerbatimEnvironment` (below) redirects the end-scan to the WRAPPING
+    // environment's `\end{...}` — the fancyvrb idiom for user-defined
+    // verbatim-writing environments (fancybox-doc's {example} wraps
+    // {VerbatimOut}{\jobname.tmp} and the author writes \end{example}).
+    let end_env = match lookup_value("lx@verbatimout@envname") {
+      Some(Stored::String(sym)) => with(sym, |v| v.to_string()),
+      _ => "VerbatimOut".to_string(),
+    };
+    assign_value("lx@verbatimout@envname", Stored::None, Some(Scope::Global));
+    let end_marker = s!("\\end{{{end_env}}}");
+    read_raw_line(); // discard remainder of the \begin line
+    let mut lines: Vec<String> = Vec::new();
+    loop {
+      // fancyvrb's end check matches a line that IS `\end{<name>}` (leading
+      // whitespace allowed, trailing content defeats it — fancybox-doc
+      // deliberately writes `\end{VerbatimOut}%.` INSIDE a captured body).
+      match read_raw_line() {
+        Some(line) if line.trim() != end_marker.as_str() => lines.push(line),
+        _ => break,
+      }
+    }
+    let n = lines.len();
+    Info!("note", "filecontents", s!("Cached VerbatimOut for {filename} ({n} lines)"));
+    assign_value(&s!("{filename}_contents"), Stored::from(lines.join("\n")), Some(Scope::Global));
+    endgroup()?;
+  });
+  assign_meaning(
+    &T_CS!("\\VerbatimOut"),
+    lookup_meaning(&T_CS!("\\lx@fancybox@VerbatimOut")).unwrap_or(Stored::None),
+    Some(Scope::Global),
+  );
+  def_macro_noop("\\endVerbatimOut")?;
+  // Verbatim-in-footnotes toggle — presentational, no-op.
+  def_macro_noop("\\VerbatimFootnotes")?;
+  // `\VerbatimEnvironment`: record the CURRENT environment name so the
+  // VerbatimOut scanner above stops at ITS \end (fancyvrb semantics).
+  DefPrimitive!("\\VerbatimEnvironment", {
+    let env = do_expand(Tokens!(T_CS!("\\@currenvir")))?.to_string();
+    if !env.is_empty() {
+      assign_value("lx@verbatimout@envname", Stored::String(pin(&env)), Some(Scope::Global));
+    }
+  });
+  // \LVerbatimInput{file}: fancybox's LR-mode verbatim file input — route
+  // through verbatim.sty's reader (the demos input what {VerbatimOut} wrote).
+  RequirePackage!("verbatim");
+  DefMacro!("\\LVerbatimInput{}", "\\verbatiminput{#1}");
+  DefMacro!("\\BVerbatimInput{}", "\\verbatiminput{#1}");
+  DefMacro!("\\VerbatimInput{}", "\\verbatiminput{#1}");
 });

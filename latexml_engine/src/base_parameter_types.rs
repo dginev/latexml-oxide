@@ -270,6 +270,18 @@ LoadDefinitions!({
       read_float()
     }
     let _ = skip_spaces();
+    // Kernel picture trampoline (latex.ltx L16768): `\long\def\picture#1
+    // {\pictur@#1}` strips ONE brace group before the `(`-scan, so the
+    // braced form `\begin{axopicture}{(90,140)(-10,0)}` (axodraw2-man,
+    // 101 errs) works exactly like the plain form. Mirror it here: a BEGIN
+    // group ahead of a Pair is unwrapped and its content re-scanned. Perl's
+    // ReadPair lacks this (shared failure with the braced form).
+    if if_next(T_BEGIN!())? {
+      read_token()?; // consume {  (counted; the group read below balances)
+      let group = read_balanced(ExpansionLevel::Off, false, false)?;
+      unread(group);
+      let _ = skip_spaces();
+    }
     if if_next(T_OTHER!("("))? {
       read_token()?; // consume (
       let _ = skip_spaces();
