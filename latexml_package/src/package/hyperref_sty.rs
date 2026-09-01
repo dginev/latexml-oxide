@@ -946,6 +946,98 @@ LoadDefinitions!({
   // \MakeCheckField{width}{height}
   // \MakeChoiceField{width}{height}
   // \MakeButtonField{text}
+  // Perl hyperref.sty.ltxml L442-451 leaves the whole family as comments
+  // (shared gap). Render fields as readable placeholders: the label plus a
+  // blank rule / checkbox glyph — our XML has no form model, but the text
+  // must not error (hyperbar example: 60 errs from \TextField and the
+  // \Fld@ dimens its options machinery pokes).
+  DefMacro!("\\TextField[]{}", "#2~\\rule{6em}{0.4pt}");
+  DefMacro!("\\CheckBox[]{}", "[~]~#2");
+  DefMacro!("\\ChoiceMenu[]{}{}", "#2:~#3");
+  DefMacro!("\\PushButton[]{}", "[#2]");
+  DefMacro!("\\Submit[]{}", "[#2]");
+  DefMacro!("\\Reset[]{}", "[#2]");
+  DefMacro!("\\LayoutTextField{}{}", "#1~#2");
+  DefMacro!("\\LayoutChoiceField{}{}", "#1~#2");
+  DefMacro!("\\LayoutCheckField{}{}", "#1~#2");
+  DefRegister!("\\Fld@charsize", Dimension!("10pt"));
+  // The `Field` keyval family real hyperref declares for the form-field
+  // options (hpdftex.def \define@key{Field}{…} block) — declare them as
+  // value-absorbing no-ops so raw styles' \kvsetkeys{Field}{…} passes.
+  // Driver-level internals raw form code pokes when it takes over field
+  // rendering (hpdftex.def surface) — inert stubs.
+  def_macro_noop("\\PDFForm@Name{}")?;
+  def_macro_noop("\\HyField@FlagsAnnot{}")?;
+  def_macro_noop("\\HyField@FlagsText{}")?;
+  def_macro_noop("\\HyField@FlagsCheckBox{}")?;
+  def_macro_noop("\\HyField@FlagsChoice{}")?;
+  def_macro_noop("\\HyField@FlagsPushButton{}")?;
+  def_macro_noop("\\HyField@AddToFields{}")?;
+  def_macro_identity("\\Hy@escapeform{}")?;
+  def_macro_noop("\\HyAnn@AbsPageLabel")?;
+  def_macro_noop("\\Fld@pageobjref")?;
+  def_macro_identity("\\Hy@escapestring{}")?;
+  DefConditional!("\\ifFld@hidden");
+  DefConditional!("\\ifFld@multiline");
+  DefConditional!("\\ifFld@readonly");
+  DefConditional!("\\ifFld@checked");
+  DefConditional!("\\ifFld@comb");
+  // Real hyperref's Field keys store into `\Fld@<key>` macros the field
+  // renderers read back (`\ifnum\Fld@rotation=90`, …). Define each key as
+  // exactly that, with `[true]` valueless default, plus the numeric
+  // defaults hyperref initializes.
+  for field_key in [
+    "readonly",
+    "noexport",
+    "multiline",
+    "password",
+    "radio",
+    "hidden",
+    "format",
+    "validate",
+    "calculate",
+    "keystroke",
+    "onfocus",
+    "onblur",
+    "onclick",
+    "name",
+    "width",
+    "height",
+    "maxlen",
+    "menulength",
+    "combo",
+    "popdown",
+    "radiosymbol",
+    "bordercolor",
+    "backgroundcolor",
+    "bordersep",
+    "borderwidth",
+    "color",
+    "value",
+    "default",
+    "align",
+    "accesskey",
+    "tabkey",
+    "rotation",
+    "checkboxsymbol",
+    "checked",
+    "disabled",
+    "altname",
+    "mappingname",
+    "donotspellcheck",
+    "donotscroll",
+    "comb",
+    "print",
+    "export",
+  ] {
+    digest(TokenizeInternal!(TeXString::assembled(format!(
+      "\\define@key{{Field}}{{{field_key}}}[true]{{\\def\\Fld@{field_key}{{#1}}}}"
+    ))))?;
+  }
+  digest(TokenizeInternal!(TeXString::assembled(
+    "\\def\\Fld@rotation{0}\\def\\Fld@maxlen{0}\\def\\Fld@menulength{4}\\def\\Fld@align{0}\\def\\Fld@borderwidth{1}\\def\\Fld@flags{}\\def\\Fld@color{}\\def\\Fld@borderstyle{S}\\def\\Fld@bordercolor{}\\def\\Fld@bordersep{1}\\def\\Fld@backgroundcolor{}\\def\\Fld@annotflags{}\\def\\Fld@annotnames{}\\def\\Fld@bcolor{}\\def\\Fld@additionalactions{}"
+      .to_string()
+  )))?;
 
   //======================================================================
   // 6.1 Forms environment parameters
