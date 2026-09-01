@@ -37,4 +37,5 @@ LoadDefinitions!({
   // redefining \typearea still controls \recalctypearea.
   def_macro_noop("\\typearea[]{}")?;
   DefMacro!("\\recalctypearea", "\\typearea[current]{last}");
+  def_macro_noop("\\ProvideUnknownPaperSizeError")?;
 });

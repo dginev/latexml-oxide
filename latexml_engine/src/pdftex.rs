@@ -524,6 +524,22 @@ LoadDefinitions!({
   // knob with no XML-content meaning). LuaLaTeX-authored manuals set it in
   // their preamble (nicematrix.tex L303).
   DefRegister!("\\automatichyphenmode" => Number::new(0));
+
+  // Unicode-engine math-code primitives (LuaTeX/XeTeX; LuaTeX manual §7.3).
+  // Raw font-setup files probe-and-set them when the engine claims Unicode
+  // support (fontsetup's fspdefault.tex under unicode-math; keytheorems/
+  // elpres manuals — sweep-16 tail, 4 bundles). Assignments are engine
+  // font-table bookkeeping with no XML meaning: absorb the full assignment
+  // syntax faithfully so the token stream stays balanced.
+  //   \Umathcode <num>[=]<class><fam><ucode>  /  \Umathchardef <cs>[=]<c><f><u>
+  DefPrimitive!("\\Umathcode Number SkipMatch:= Number Number Number", sub[(_a,_b,_c,_d)] {});
+  DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipMatch:= Number Number Number", sub[(cs,_c,_f,_u)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Umathcharnumdef DefToken SkipSpaces SkipMatch:= Number", sub[(cs,_n)] {
+    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+  });
+  DefPrimitive!("\\Udelcode Number SkipMatch:= Number Number", sub[(_a,_b,_c)] {});
 });
 
 /// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's

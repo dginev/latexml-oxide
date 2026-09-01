@@ -2396,6 +2396,23 @@ LoadDefinitions!({
   DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
   DefMacro!("\\mkbibparens{}", "(#1)");
   DefMacro!("\\mkbibbrackets{}", "[#1]");
+  // `\blx@inputonce{file}` — biblatex's guarded input; style .def files
+  // call it directly (sbl.bbx L1 → biblatex-sbl.def; biblatex-software).
+  DefPrimitive!("\\blx@inputonce{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    let f = f.trim();
+    let (stem, ext) = f.rsplit_once('.').unwrap_or((f, "def"));
+    let guard = s!("blx@inputonce@{f}");
+    if lookup_value(&guard).is_none() {
+      assign_value(&guard, Stored::from(true), Some(Scope::Global));
+      let _ = input_definitions(stem, InputDefinitionOptions {
+        extension: Some(Cow::Owned(ext.to_string())),
+        noltxml: true,
+        noerror: true,
+        ..InputDefinitionOptions::default()
+      });
+    }
+  });
   // \RequireBibliographyStyle / \RequireCitationStyle — raw-load the file
   // once (mirrors \blx@inputonce).
   DefPrimitive!("\\RequireBibliographyStyle{}", sub[(style)] {

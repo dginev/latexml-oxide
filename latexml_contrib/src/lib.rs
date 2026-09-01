@@ -211,6 +211,7 @@ pub mod sourcecodepro_sty;
 pub mod spconf_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
+pub mod tagpdf_sty;
 pub mod tgpagella_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
@@ -412,6 +413,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("assoccnt", "sty", assoccnt_sty::load_definitions),
   ("hvfloat", "sty", hvfloat_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
+  ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),

@@ -228,6 +228,9 @@ LoadDefinitions!({
 
   // Navigation/footline/headline — no-ops
   def_macro_noop("\\beamertemplatenavigationsymbolsempty")?;
+  DefMacro!("\\beamergotobutton{}", "#1");
+  DefMacro!("\\beamerskipbutton{}", "#1");
+  DefMacro!("\\beamerreturnbutton{}", "#1");
   def_macro_noop("\\hypersetup{}")?;
 
   // Beamer list environments — Perl L1160-1179
