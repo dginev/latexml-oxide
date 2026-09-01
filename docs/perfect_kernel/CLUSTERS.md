@@ -83,6 +83,10 @@ timeouts. Top actionable items:
 
 | ctex family part 2: full expl3 state leaks past `\documentclass{ctexart}` (space=9, `:`=11, `_`=11 at document level) → pgfutil-common's `\def\: {…}` space-trick garbles → `\pgfutil@xifnch` undefined → 1001-err pgfmath cascade (ctexart+tikz min-repro; hfutexam ×4, beautybook, gckanbun tails) | env-gated `LATEXML_EXPL_TRACE=1` shows the mechanism: the batch-12 one-directional `\ExplSyntaxOff` exit cleanup fires per SUB-FILE with entry-time-stale `grandparent_in_expl3` flags (ctex-engine-pdftex.def reads grandparent=false though ctexart turned expl ON mid-file via `\ProvidesExplClass`), corrupting the expl status stack. DEEP FIX (own session): route raw-load boundaries through the DUMP's real `\@pushfilename`/`\@popfilename` (latex.ltx L15518 order, expl3's own push/pop hooks) and retire the flag machinery. |
 
+| numerica.tex 101+F (93 `malformed:ltx:XMApp`, Stomach:Recursion with ~200 stacked `\lx@dual`) | Math XMDual nesting blowup on numerica's huge computed expressions — a MATH-parser subsystem session (packdoc/index part fixed; this is the residual). |
+
+| amsldoc-it/-vn family (itamsldoc 101: 44 `\lx@end@inline@math`, `\ifnum…=\bslchar` relational errors) | amsldoc.cls L105-109 `\@nobslash` chardef comparison fails only in the full-doc context (chardef-as-number probe is green in isolation; babel-italian active `"` + `\cs` machinery involved) — math-mode desync downstream. Own dig. |
+
 ### Sweep-16 tail notes (2026-09-01)
 
 | Item | Note |
