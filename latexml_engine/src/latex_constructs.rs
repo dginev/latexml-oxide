@@ -4491,7 +4491,16 @@ LoadDefinitions!({
   //======================================================================
   // Insert stubs that will be filled in during post processing.
   // \contentsname lives in `latex_constructs_rust_only.rs` section 8.
-  DefConstructor!("\\tableofcontents",
+  // Real latex.ltx defines `\tableofcontents` (and the \listof* pair) as
+  // MACROS; packages patch them (`\appto{\tableofcontents}{\bigskip}`,
+  // algxpar-doc via packdoc). Both engines historically bound the
+  // constructor to the user name directly, so etoolbox's `\expandonce`
+  // (= expand once) got the UNEXPANDABLE constructor token back and built
+  // a self-recursive def ("expands into itself", TOC lost; Perl shares).
+  // Layer: user name = macro delegating to the internal constructor, so
+  // one-step expansion yields a patchable body — the real kernel shape.
+  DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents");
+  DefConstructor!("\\lx@kernel@tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
       let s  = ["ltx:part", "ltx:chapter", "ltx:section", "ltx:subsection", "ltx:subsubsection",
@@ -4527,11 +4536,13 @@ LoadDefinitions!({
   });
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
-  DefConstructor!("\\listoffigures",
+  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures");
+  DefConstructor!("\\lx@kernel@listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\listfigurename"))?)) });
 
-  DefConstructor!("\\listoftables",
+  DefMacro!("\\listoftables", "\\lx@kernel@listoftables");
+  DefConstructor!("\\lx@kernel@listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\listtablename"))?)) });
 
