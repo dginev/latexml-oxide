@@ -301,14 +301,24 @@ impl Parameter {
     })
   }
 
+  /// ExpandedSemiverbatim wants the semiverbatim DIGESTION protection
+  /// (Parameter::digest's neutralize-under-ASCII branch — without it an
+  /// OTHER `_` font-decodes to the OT1 dot-above in the constructor's
+  /// output) but must NOT flip catcodes at READ time: its whole point is
+  /// tokenizing the argument at the CALLER's catcodes so an expl3
+  /// `\l_..._tl` file name stays one control sequence.
+  fn semiverbatim_read_setup(&self) -> bool {
+    self.semiverbatim.is_some() && !arena::with(self.name, |n| n == "ExpandedSemiverbatim")
+  }
+
   pub fn setup_catcodes(&self) {
-    if self.semiverbatim.is_some() {
+    if self.semiverbatim_read_setup() {
       begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
   pub fn revert_catcodes(&self) -> Result<()> {
-    if self.semiverbatim.is_some() {
+    if self.semiverbatim_read_setup() {
       end_semiverbatim()?;
     }
     Ok(())
@@ -383,7 +393,10 @@ impl Parameter {
     let mode = lookup_string_from_sym(crate::pin!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
-      self.setup_catcodes();
+      // Digest-time protection applies to ExpandedSemiverbatim too (its
+      // read-time carve-out lives in semiverbatim_read_setup) — use the
+      // raw begin, not setup_catcodes.
+      begin_semiverbatim(self.semiverbatim.as_deref());
       if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
           let neutralized = gullet::reading_from_mouth(Mouth::default(), move || {
@@ -438,7 +451,10 @@ impl Parameter {
       post(&mut w)?; // maybe pass extras?
     }
 
-    self.revert_catcodes()?;
+    // Pairs with the raw begin_semiverbatim at the top of digest().
+    if self.semiverbatim.is_some() {
+      end_semiverbatim()?;
+    }
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
     let newmode = lookup_string_from_sym(crate::pin!("MODE"));

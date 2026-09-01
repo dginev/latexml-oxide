@@ -3061,7 +3061,7 @@ LoadDefinitions!({
   Let!("\\@arrayright", "\\@empty");
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
-  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
+  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces ExpandedSemiverbatim []",
                   "<?latexml class='#2' ?#1(options='#1')?>",
     after_digest => sub[whatsit] {
       // Now that we know we're a LaTeX document, undefine `\magnification`
@@ -4533,7 +4533,7 @@ LoadDefinitions!({
   def_macro_noop("\\@curroptions")?;
   def_macro_noop("\\@unusedoptionlist")?;
 
-  DefConstructor!("\\usepackage OptionalSemiverbatim Semiverbatim []",
+  DefConstructor!("\\usepackage OptionalSemiverbatim ExpandedSemiverbatim []",
                   "<?latexml package='#2' ?#1(options='#1')?>",
     before_digest => { only_preamble("\\usepackage") },
     after_digest => sub[whatsit] {
@@ -4569,7 +4569,7 @@ LoadDefinitions!({
     }
   );
 
-  DefConstructor!("\\RequirePackage OptionalSemiverbatim Semiverbatim []",
+  DefConstructor!("\\RequirePackage OptionalSemiverbatim ExpandedSemiverbatim []",
   "<?latexml package='#2' ?#1(options='#1')?>",
   before_digest =>  { only_preamble("\\RequirePackage") },
   after_digest => sub[whatsit] {
@@ -4599,7 +4599,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  DefConstructor!("\\LoadClass OptionalSemiverbatim Semiverbatim []",
+  DefConstructor!("\\LoadClass OptionalSemiverbatim ExpandedSemiverbatim []",
     "<?latexml class='#2' ?#1(options='#1')?>",
     before_digest => { only_preamble("\\LoadClass") }
     after_digest => sub[whatsit] {

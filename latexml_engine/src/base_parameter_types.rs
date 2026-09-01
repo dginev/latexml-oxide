@@ -444,6 +444,56 @@ LoadDefinitions!({
     },
     semiverbatim => Some(Vec::new()));
 
+  // Semiverbatim variant for FILE-NAME arguments that may arrive as
+  // expandable tokens: tokenize PLAIN at the CURRENT catcodes (so an expl3
+  // `\l_..._tl` class name stays ONE control sequence — the real kernel's
+  // `\LoadClass` grabs a plain `{}` arg; Semiverbatim-at-tokenize split it
+  // into `\l`+`_my`+… and einfart-family classes fell to OmniBus with a
+  // garbage name, losing the expl3 regime; Perl's SPECIALS include `_` so
+  // Perl shares the failure), THEN expand fully and re-emit the string as
+  // all-OTHER character tokens so digestion stays as neutral as
+  // Semiverbatim's.
+  DefParameterType!(ExpandedSemiverbatim,
+  sub[_inner, _extra] {
+    let tks = read_arg(ExpansionLevel::Off)?;
+    // Expand ONLY when the argument contains a control sequence (the expl3
+    // `\l_..._tl` class-name case). A plain name like `neurips_2026` must
+    // NOT pass through do_expand: at document catcodes its `_` is the
+    // math-active SUB token whose EXPANSION is the subscript machinery —
+    // the name came back with a display glyph and the binding lookup
+    // missed (neurips guard).
+    let has_cs = tks
+      .unlist_ref()
+      .iter()
+      .any(|t| t.get_catcode() == Catcode::CS);
+    let expanded = if has_cs { do_expand(tks)? } else { tks };
+    // Build the name from RAW token characters — `to_string` renders by
+    // catcode (a document-catcode SUB `_` in `neurips_2026` became its
+    // display glyph and the binding lookup missed).
+    let mut name = String::new();
+    for t in expanded.unlist() {
+      if t.get_catcode() == Catcode::CS {
+        // A fully-expanded file name should not contain CS tokens; keep
+        // the printable form so an error names something greppable.
+        name.push_str(&t.to_string());
+      } else {
+        with(t.get_sym(), |c| name.push_str(c));
+      }
+    }
+    Ok(ArgWrap::Tokens(Tokens::new(Explode!(name.trim()))))
+  },
+  reversion => sub[arg, inner, _extra] {
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(if let Some(inner_ps) = inner {
+      inner_ps.revert_arguments(vec![Some(Tokens::new(arg))])?
+    } else {
+      arg.iter().map(|t| t.revert()).collect()
+    });
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  },
+  semiverbatim => Some(Vec::new()));
+
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!(OptionalSemiverbatim,
     sub[_inner, _extra] { read_optional(None) },
