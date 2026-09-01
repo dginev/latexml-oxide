@@ -59,6 +59,17 @@ parked R9 mode/alignment work); single instance in the manual.
 
 | xkeyval-internals cluster E (`\XKV@testopta`/`\XKV@s@tkeys`/… undefined — chessboard ×3, xskak ×2, xkeymask) + `\Xskakthe package…` 1000-error csname cascades + `\define@cmdkey` `misdefined:#` | Batch-5 xkeyval deep port: verbatim front-end scaffolding + `\XKV@s@tkeys` shim onto private `\lx@xkv@setkeys`; real pointer system (`\savekeys`/`\savevalue`/`\usevalue` + `\XKV@<header><key>@value` store); KNOWN_PERL_ERRORS #80 cmdkey fix; token-form key defaults (the cascade's root: `[\xskak@val@defaultid]` split by string round-trip); xkeymask_sty.rs binding. xkeymask 7→0/0/0, xskak 1001+fatal→5, chessboard 1001-truncated→1 | `xkeyval_internals::*` (2 tests) |
 
+## Sweep-16 oracle-clean ranking (2026-09-01)
+
+638 oracle-clean docs still error (down from 770 at sweep 2); 6 fatals, 3
+timeouts. Top actionable items:
+
+| Signature | Scope | Status |
+|---|---|---|
+| `malformed:ltx:toccaption`/`ltx:caption` in `<ltx:block>` (43 docs / hvfloat family) | `\hvFloat` builds its float manually via boxes with `\@captype` set; our `\caption` constructor requires a float ANCESTOR, real LaTeX only requires `\@captype`. hvfloat docs now 4 errors each (2 caption + 2 toccaption), everything else clean. | S2-relevant design fix: caption-without-float-ancestor should synthesize/attach the float wrapper. Own session. |
+| `Fatal:oom:alloc_failed` ×6 (titlecaps, quiver-doc, eledform, spath3/knots, srdp-mathematik, msc) | Runaway gullet-pushback growth to 2-4GB. titlecaps root: upstream typo `\let\sv@huge\Huge` (L460, should be `\sv@Huge`) leaves `\sv@Huge` undefined; REAL TeX tolerates (only \ifx-compared / never invoked), our flow EXPANDS it during `\titlecap` scanning → error-recovery def → scanner loop → OOM. | Agent dispatched 2026-09-01. |
+| `expected:Match` (7 bundles, tkz-doc) | = the batch-15 star-prototype collisions (sweep-16 binary predates the fix); global prototype audit now clean. | FIXED batch 15, verify sweep 17. |
+
 ### Post-batch residual clusters (2026-08-31, from witness re-runs)
 
 | Signature | Note |
