@@ -1388,10 +1388,26 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
           .strip_suffix(&format!(".{}", ext))
           .unwrap_or(&clean_req)
           .to_string();
+        // `notex: true` — only BINDING dispatch here (compiled, external,
+        // version-strip fallback). A raw on-disk file must instead fall
+        // through to the content path below, which reads it under the
+        // CURRENT catcodes like real TeX's `\input`. The definitions
+        // mouth forces `@`=letter (mouth.rs at_letter), which corrupted
+        // doc.sty's `\CharacterTable` self-check on every
+        // `\DocInput{<name>.sty}` re-read: the stored table (built after
+        // doc.sty L834 \makeatother) has `\@` as control SYMBOL + space,
+        // the @-letter re-read tokenizes `\@` as a control WORD that
+        // swallows the spaces, and the L827 \ifx fails — "Character
+        // table corrupted" ×11 docs (frankenstein bundle, pkgloader,
+        // whose own log had the A/B: definitions-path load corrupted,
+        // content-path load of the SAME file correct). Perl passes only
+        // by skipping the re-read entirely (Package.pm L2265
+        // reloadable=false) and thereby drops the documentation body.
         let result = input_definitions(&name, InputDefinitionOptions {
           extension: Some(Cow::Owned(ext.to_string())),
           noerror: true,
           reloadable: true,
+          notex: true,
           ..InputDefinitionOptions::default()
         });
         // input_definitions returns Err on not-found with noerror=true;

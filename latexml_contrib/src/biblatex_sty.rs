@@ -2321,4 +2321,110 @@ LoadDefinitions!({
   def_macro_noop("\\bibrangessep")?;
   DefMacro!("\\bibdaterangesep", "\u{2013}");
   DefMacro!("\\bibtimerangesep", "\u{2013}");
+
+  //
+  // .bbx / .cbx style-file loading (biblatex.sty L2256-2258 / L11428-11435).
+  //
+  // The binding replaces biblatex.sty, so a `style=`/`bibstyle=`/`citestyle=`
+  // option previously only picked author-year-vs-numeric — the style FILES
+  // never loaded, and every toggle/macro they allocate stayed undefined
+  // (windycity.bbx L51-129 `\providetoggle{short}…`, ext-standard.bbx L15-18,
+  // fiwi.cbx L57-63, sbl.bbx→biblatex-sbl.def L205; 77 errors over 4 bundles;
+  // Perl has no biblatex binding and raw-loads the whole chain). Declaration
+  // surface first (argument gobblers — without them a raw .bbx errors on
+  // every `\Declare*Option`), then the guarded raw load.
+  //
+  // {<scopes>}[<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7241.
+  def_macro_noop("\\DeclareBiblatexOption{}[]{}[]{}")?;
+  // [<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7226-7228.
+  def_macro_noop("\\DeclareBibliographyOption[]{}[]{}")?;
+  def_macro_noop("\\DeclareTypeOption[]{}[]{}")?;
+  def_macro_noop("\\DeclareEntryOption[]{}[]{}")?;
+  // Hook appenders (biblatex.sty L2265/L11437) — presentational init code.
+  def_macro_noop("\\InitializeBibliographyStyle{}")?;
+  def_macro_noop("\\InitializeCitationStyle{}")?;
+  // Per-citation hooks and reset commands the style-driven docs use
+  // (windycity manual). Real `\AtNextCitekey` defers its code to the next
+  // citation; our cite pipeline is native, so run the code in place — the
+  // idiomatic use (`\AtNextCitekey{\toggletrue{short}}\cite{x}`) sets the
+  // toggle just before the citation either way.
+  DefMacro!("\\AtNextCitekey{}", "#1");
+  DefMacro!("\\AtNextMultiCite{}", "#1");
+  def_macro_noop("\\citereset")?;
+  def_macro_noop("\\newrefsegment")?;
+  def_macro_noop("\\endrefsegment")?;
+  def_macro_noop("\\printbiblist[]{}")?;
+  DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
+  DefMacro!("\\mkbibparens{}", "(#1)");
+  DefMacro!("\\mkbibbrackets{}", "[#1]");
+  // \RequireBibliographyStyle / \RequireCitationStyle — raw-load the file
+  // once (mirrors \blx@inputonce).
+  DefPrimitive!("\\RequireBibliographyStyle{}", sub[(style)] {
+    blx_load_style_file(&do_expand(style)?.to_string(), "bbx");
+  });
+  DefPrimitive!("\\RequireCitationStyle{}", sub[(style)] {
+    blx_load_style_file(&do_expand(style)?.to_string(), "cbx");
+  });
+  // Drive the load from the package options, like real biblatex's end-of-
+  // package style load: `style=<s>` sets both; `bibstyle=`/`citestyle=`
+  // individually. cbx first, then bbx (real order: bbx via cite-style's
+  // \RequireBibliographyStyle chain; standalone bbx also chains).
+  let mut bibstyle: Option<String> = None;
+  let mut citestyle_name: Option<String> = None;
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      let opt_str = opt_str.trim();
+      let val = |v: &str| v.trim().trim_start_matches('{').trim_end_matches('}').to_string();
+      if let Some(v) = opt_str.strip_prefix("style=") {
+        bibstyle = Some(val(v));
+        citestyle_name = Some(val(v));
+      } else if let Some(v) = opt_str.strip_prefix("bibstyle=") {
+        bibstyle = Some(val(v));
+      } else if let Some(v) = opt_str.strip_prefix("citestyle=") {
+        citestyle_name = Some(val(v));
+      }
+    }
+  }
+  if let Some(s) = &citestyle_name {
+    blx_load_style_file(s, "cbx");
+  }
+  if let Some(s) = &bibstyle {
+    blx_load_style_file(s, "bbx");
+  }
 });
+
+/// Raw-load `<name>.bbx` / `<name>.cbx` once (biblatex.sty `\blx@inputonce`,
+/// L2256-2258 / L11428-11435). Style files chain (`sbl.bbx` L1 inputs
+/// `biblatex-sbl.def`; ext-*.bbx `\RequireBibliographyStyle{standard}`), so
+/// the once-guard is essential. Missing file → silent (noerror), matching the
+/// binding's defensive posture; the built-in styles that our native pipeline
+/// already models (numeric*, alphabetic*, authoryear*, authortitle*, verbose*,
+/// draft, debug, reading) are SKIPPED — their raw internals would fight the
+/// native cite/bibliography closures for no gain.
+fn blx_load_style_file(name: &str, ext: &str) {
+  const NATIVE_STYLES: &[&str] = &[
+    "numeric", "numeric-comp", "numeric-verb", "alphabetic", "alphabetic-verb",
+    "authoryear", "authoryear-comp", "authoryear-ibid", "authoryear-icomp",
+    "authortitle", "authortitle-comp", "authortitle-ibid", "authortitle-icomp",
+    "authortitle-terse", "authortitle-tcomp", "authortitle-ticomp",
+    "verbose", "verbose-ibid", "verbose-note", "verbose-inote",
+    "verbose-trad1", "verbose-trad2", "verbose-trad3",
+    "draft", "debug", "reading", "standard",
+  ];
+  let name = name.trim();
+  if name.is_empty() || NATIVE_STYLES.contains(&name) {
+    return;
+  }
+  let guard = s!("blx@styleloaded@{name}.{ext}");
+  if lookup_value(&guard).is_some() {
+    return;
+  }
+  assign_value(&guard, Stored::from(true), Some(Scope::Global));
+  let _ = input_definitions(name, InputDefinitionOptions {
+    extension: Some(Cow::Owned(ext.to_string())),
+    noltxml: true,
+    noerror: true,
+    ..InputDefinitionOptions::default()
+  });
+}

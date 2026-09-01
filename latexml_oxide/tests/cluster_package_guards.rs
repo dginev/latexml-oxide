@@ -3241,3 +3241,83 @@ mod kernel_language_and_part_contracts {
     );
   }
 }
+
+mod input_routing_and_bbx {
+  //! Batch-7 contracts: (1) a document-position `\input{<name>.sty}` with no
+  //! binding reads the raw file as CONTENT under the current catcodes (real
+  //! TeX semantics) — the definitions mouth's forced `@`=letter corrupted
+  //! doc.sty's `\CharacterTable` self-check on every `\DocInput` re-read
+  //! (frankenstein bundle ×10 + pkgloader); (2) biblatex's
+  //! `style=`/`bibstyle=`/`citestyle=` options load the raw `.bbx`/`.cbx`
+  //! style files (biblatex.sty L2256/L11428), whose `\newtoggle`s etc. were
+  //! undefined corpus-wide (windycity, biblatex-ext/-fiwi/-sbl).
+
+  use std::{path::Path, process::Command};
+
+  #[test]
+  fn document_body_sty_input_is_content_catcodes() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("vguardcat.sty"),
+      "\\edef\\guardcat{\\the\\catcode`\\@}\n",
+    )
+    .expect("write vguardcat.sty");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\
+       \\input{vguardcat.sty}\n[cat:\\guardcat]\n\\end{document}\n",
+    )
+    .expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("[cat:12]"),
+      "document-body \\input{{x.sty}} must read at current catcodes (@=12), got:\n{xml}"
+    );
+  }
+
+  #[test]
+  fn biblatex_style_option_loads_bbx() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("lxguardstyle.bbx"),
+      "\\newtoggle{lxguardtoggle}\\toggletrue{lxguardtoggle}\n\
+       \\DeclareBibliographyOption[boolean]{lxguardopt}[true]{}\n",
+    )
+    .expect("write lxguardstyle.bbx");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage[style=lxguardstyle]{biblatex}\n\
+       \\begin{document}\n\
+       \\iftoggle{lxguardtoggle}{[BBX-LOADED]}{[BBX-FALSE]}\n\
+       \\end{document}\n",
+    )
+    .expect("write t.tex");
+    let output = Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert!(output.status.success(), "binary exited: {stderr}");
+    assert!(
+      !stderr.contains("Error:"),
+      "style-file load must digest cleanly:\n{stderr}"
+    );
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    assert!(
+      xml.contains("[BBX-LOADED]"),
+      ".bbx toggle not allocated — style file not loaded:\n{xml}"
+    );
+  }
+}
