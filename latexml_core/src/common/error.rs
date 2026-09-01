@@ -165,6 +165,18 @@ pub fn note_consecutive_error(key: &str) -> usize {
 /// count it a second time.
 pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   let _diag_guard = macro_diag_guard();
+  // After a `TooManyErrors` Fatal has latched, drop further Error-level
+  // records entirely (don't log, don't count). Perl dies at the Fatal so
+  // nothing ever logs past it; our recovery machinery keeps converting, and
+  // paths that swallow the `Error!` macro's Err (e.g. tex_logic::compare
+  // inside a bool-returning conditional) otherwise churn tens of thousands
+  // of post-cap records — gckanbun 12.8k, panda-doc 3.6k, past the tikz
+  // 1000-cap (perfect-kernel sweep 13). Only the too-many-errors latch
+  // gates this: a Timeout/other Fatal still reports the trailing errors
+  // that explain it.
+  if matches!(status, LogStatus::Error) && too_many_errors_latched() {
+    return;
+  }
   let level = match status {
     LogStatus::Debug => log::Level::Debug,
     LogStatus::Info => log::Level::Info,
@@ -226,6 +238,7 @@ pub fn emit_error(category: &str, object: &str, message: &str) {
   if (over_total && get_status(LogStatus::Error) == maxerrors + 1)
     || (over_consec && consec == MAX_CONSECUTIVE_ERRORS + 1)
   {
+    latch_too_many_errors();
     emit_fatal(
       "TooManyErrors",
       "MaxLimit",
@@ -258,7 +271,19 @@ pub fn emit_fatal(category: &str, object: &str, message: &str) {
 fn reset_consecutive_error_tracker() {
   *LAST_ERROR_KEY.borrow_mut() = None;
   CONSECUTIVE_ERROR_COUNT.set(0);
+  TOO_MANY_ERRORS_LATCHED.set(false);
 }
+
+#[thread_local]
+static TOO_MANY_ERRORS_LATCHED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// Latch the too-many-errors state: `emit_record` drops further Error-level
+/// records until the next conversion resets the report. Set by the
+/// `TooManyErrors` Fatal paths (the `Error!` macro cap and `emit_error`'s
+/// latch); cleared in `reset_consecutive_error_tracker`.
+pub fn latch_too_many_errors() { TOO_MANY_ERRORS_LATCHED.set(true); }
+/// Whether the too-many-errors latch is set (see `latch_too_many_errors`).
+pub fn too_many_errors_latched() -> bool { TOO_MANY_ERRORS_LATCHED.get() }
 #[macro_export]
 macro_rules! report {
   () => {
@@ -755,6 +780,7 @@ macro_rules! Error {
       Some(_) => 100,
     };
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
+      $crate::common::error::latch_too_many_errors();
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
     }
     // Runaway-loop early-bail: if the same error signature has fired
