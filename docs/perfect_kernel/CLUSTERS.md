@@ -70,6 +70,14 @@ timeouts. Top actionable items:
 | `Fatal:oom:alloc_failed` ×6 (titlecaps, quiver-doc, eledform, spath3/knots, srdp-mathematik, msc) | Runaway gullet-pushback growth to 2-4GB. titlecaps root: upstream typo `\let\sv@huge\Huge` (L460, should be `\sv@Huge`) leaves `\sv@Huge` undefined; REAL TeX tolerates (only \ifx-compared / never invoked), our flow EXPANDS it during `\titlecap` scanning → error-recovery def → scanner loop → OOM. | Agent dispatched 2026-09-01. |
 | `expected:Match` (7 bundles, tkz-doc) | = the batch-15 star-prototype collisions (sweep-16 binary predates the fix); global prototype audit now clean. | FIXED batch 15, verify sweep 17. |
 
+### Sweep-16 tail notes (2026-09-01)
+
+| Item | Note |
+|---|---|
+| `undefined:\strippedat@` (pgfmanual-en-macros family: pdfmarginpar, tikz-cd, tikz-dependency) | The macros file sets `\catcode`\@=12` and uses `\index{\strippedat @…}`; the merged NAME `\strippedat@` appears after an index/string round-trip — suspect `untex` omitting the CS-name/space separator before `@` when re-tokenized at @=letter (at_in_cs_round_trip family). Min-repro next session. |
+| `undefined:\g` (bfh-ci ×7), `\enitkv@key` (verifica ×5), `\field` (amsldoc ×3), `\thetitle` (biblatex-oxref) | small single-bundle items, sample after sweep 17. |
+| dlfltxb `\xpretocmd` (4) | self-resolved on the batch-17 binary (memoir+hyperref min-repro clean) — verify sweep 17. |
+
 ### Post-batch residual clusters (2026-08-31, from witness re-runs)
 
 | Signature | Note |
