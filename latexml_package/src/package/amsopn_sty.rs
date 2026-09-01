@@ -20,8 +20,17 @@ LoadDefinitions!({
   // Fixes sandbox papers 0806.2705 (`\rmTr`) and 0808.0535 (`\rmAut`/
   // `\rmSpan`) whose `\DeclareMathOperator{\X}{{\rm X}}` patterns would
   // otherwise produce undefined `\rmX` errors.
+  //
+  // The text is EXPANDED before stringifying. Perl's Tokens reach DefMathI
+  // unexpanded and expand at digest time inside the defining catcode regime;
+  // the stringify round-trip instead re-tokenizes under `tokenize_internal`'s
+  // sty-state catcodes (dialect.rs:478, mouth.rs:1292), so an expl3 name like
+  // `\cs_to_str:N \asinh` (numerica.sty:50-51, manual numerica.tex:148)
+  // shatters into `\cs_to_str` `_` `:N` … at every use — 100 malformed:ltx +
+  // a Stomach:Recursion Fatal. Expanding first yields the plain letters the
+  // author meant; unexpandable font switches (`\rm`, `\mathrm`) survive intact.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
-    let text_str = text.untex();
+    let text_str = do_expand(text)?.untex();
     let has_star = star.is_some();
     // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
     // gets dynamic mid/post from current display style; bare form is always 'post'.

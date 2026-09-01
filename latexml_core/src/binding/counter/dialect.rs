@@ -817,6 +817,21 @@ pub fn begin_itemize(
     Tokens!(Explode!(usecounter)),
     None,
   )?;
+  // latex.ltx:16057 `\enumerate` also does
+  // `\edef\@enumctr{enum\romannumeral\the\@enumdepth}`; packages that reuse
+  // the kernel enumerate read it back (bullenum.sty:58/61
+  // `\csname the\@enumctr\endcsname`). `usecounter` is already
+  // `enum` + roman(level), so this is the same value; enumerate-only, as in
+  // the kernel. Perl's beginItemize (pool:1314) omits it (SHARED).
+  // Witness: bullcntr/bullcntr-man (100-error cascade).
+  if itype == "enumerate" {
+    def_macro(
+      T_CS!("\\@enumctr"),
+      None,
+      Tokens!(Explode!(usecounter)),
+      None,
+    )?;
+  }
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
   assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);

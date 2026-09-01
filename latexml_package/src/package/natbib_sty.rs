@@ -762,6 +762,17 @@ LoadDefinitions!({
   RawTeX!("\\newif\\ifNAT@numbers");
   RawTeX!("\\newif\\ifNAT@longnamesfirst");
   RawTeX!("\\newif\\ifNAT@swa");
+  // The rest of natbib.sty's `\newif` surface: @longnames (:284),
+  // @openbib (:264), @par (:603), @full (:683), @stdbst (:964). nmbib.sty
+  // rebuilds natbib's citation formatter on these internals
+  // (`\citeall` :343 → `\NAT@fulltrue`, `\@citeall` :267 `\ifNAT@full`);
+  // an undefined `\ifNAT@full` inside a skipped branch orphaned its `\fi`.
+  // Witness: nmbib/nmbib-sample.
+  RawTeX!("\\newif\\ifNAT@longnames");
+  RawTeX!("\\newif\\ifNAT@openbib");
+  RawTeX!("\\newif\\ifNAT@par");
+  RawTeX!("\\newif\\ifNAT@full");
+  RawTeX!("\\newif\\ifNAT@stdbst");
 
   // 2.17 Long Author List on First Citation
   def_macro_noop("\\shortcites Semiverbatim")?;

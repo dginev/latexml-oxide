@@ -3523,11 +3523,18 @@ mod perfect_kernel_batch40_43 {
 
   /// Convert an inline snippet in a tempdir under the perfect-kernel preload;
   /// return (ANSI-stripped stderr, XML string).
-  fn convert(tex: &str) -> (String, String) {
+  fn convert(tex: &str) -> (String, String) { convert_with_files(tex, &[]) }
+
+  /// Like `convert`, with sibling files (`.cls`/`.sty` under test) written
+  /// next to `t.tex` and reachable through `TEXINPUTS`.
+  fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
     let workdir = tempfile::tempdir().expect("create tempdir");
     std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    for (name, body) in files {
+      std::fs::write(workdir.path().join(name), body).expect("write sibling file");
+    }
     let output = Command::new(bin)
       .args([
         "t.tex",
@@ -3893,6 +3900,153 @@ x\indc{gradetable[v]} y\index{plain}\index{sorted@\textbf{shown}}
     assert!(
       !stderr.contains("expected:Pair"),
       "pair-less \\pscircle regressed:\n{stderr}"
+    );
+  }
+
+  /// Batch 45: `\DeclareMathOperator`'s text is expanded before the
+  /// String round-trip into `def_math`. RED: numerica.sty:50-51 declares
+  /// `\DeclareMathOperator{\asinh}{\cs_to_str:N \asinh}` under expl3
+  /// catcodes; the stringified body re-tokenized as `\cs_to_str` `_` `:N`
+  /// at every use → 100 malformed:ltx + Fatal Stomach:Recursion. Witness:
+  /// numerica/numerica (manual line 148).
+  #[test]
+  fn declaremathoperator_expands_expl3_name() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{amsmath}
+\ExplSyntaxOn
+\DeclareMathOperator{\asinh}{\cs_to_str:N \asinh}
+\ExplSyntaxOff
+\begin{document}
+$\asinh$
+\end{document}
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<XMTok role="OPFUNCTION" scriptpos="post">asinh</XMTok>"#),
+      "expl3-named operator did not resolve to plain letters:\n{xml}"
+    );
+  }
+
+  /// Batch 45: `\PassOptionsToPackage`/`\PassOptionsToClass` store one
+  /// `Stored::String` per option (Perl Package.pm:2435 spreads). RED: the
+  /// whole list landed as ONE nested element, which the `\opt@<file>`
+  /// rebuild skips, so options routed through the primitives read back
+  /// EMPTY — a kvoptions class forwarding `\CurrentOption` to its own .sty
+  /// after `\LoadClass[12pt]` (which clobbers `\@classoptionslist`) never
+  /// saw `scheme`. Witness: brandeis-problemset/example (87 → tabu residual).
+  #[test]
+  fn passoptions_spreads_options() {
+    let (stderr, xml) = convert_with_files(
+      r"\documentclass[scheme]{pod}
+\begin{document}\begin{scheme}hi\end{scheme}\end{document}
+",
+      &[
+        (
+          "pod.cls",
+          r"\ProvidesClass{pod}
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=po,prefix=po@}
+\DeclareVoidOption{scheme}{\PassOptionsToPackage{\CurrentOption}{pod}}
+\ProcessKeyvalOptions*
+\LoadClass[12pt]{article}
+\RequirePackage{pod}
+",
+        ),
+        (
+          "pod.sty",
+          r"\ProvidesPackage{pod}
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=po,prefix=po@}
+\DeclareBoolOption{scheme}
+\ProcessKeyvalOptions*
+\ifpo@scheme\newenvironment{scheme}{}{}\fi
+",
+        ),
+      ],
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("hi") && !xml.contains("ERROR"),
+      "option passed via \\PassOptionsToPackage was lost:\n{xml}"
+    );
+  }
+
+  /// Batch 45: amsmath's `\newif\if@display` (amsmath.sty:649) exists.
+  /// RED: gaceta.cls:1666 redefines `\mod` with amsmath's own
+  /// `\if@display…\else…\fi` body via babel's `\addto`; the undefined
+  /// conditional orphaned 2×`\else`, 2×`\fi` and leaked `#1`
+  /// (`misdefined:#`). SHARED with Perl. Witnesses: gaceta
+  /// plantilla-articulo-suelto / -de-seccion (10 → 0 each).
+  #[test]
+  fn amsmath_if_display_defined() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{amsmath}
+\usepackage[spanish]{babel}
+\makeatletter
+\addto\es@operators{%
+  \renewcommand{\mod}[1]{\allowbreak\if@display\mkern18mu
+  \else\mkern12mu\fi{\operator@font mod}\,\,#1}%
+}
+\makeatother
+\begin{document}x $a \mod b$\end{document}
+",
+    );
+    assert!(
+      !stderr.contains("unexpected:fi") && !stderr.contains("misdefined"),
+      "\\if@display went missing again:\n{stderr}"
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("mod"), "\\mod body did not digest:\n{xml}");
+  }
+
+  /// Batch 45: natbib's full `\newif` surface (`\ifNAT@full` :683,
+  /// `\ifNAT@longnames` :284, …). RED: nmbib.sty:267 `\ifNAT@full` was
+  /// undefined, so the `\fi` of its skipped branch closed the outer
+  /// conditional (`unexpected:fi`). SHARED with Perl. Witness:
+  /// nmbib/nmbib-sample (4 fi lines; the doc keeps a SHARED residual on
+  /// ~20 other natbib internals).
+  #[test]
+  fn natbib_newif_surface_complete() {
+    let (stderr, _xml) = convert(
+      r"\documentclass{article}
+\usepackage{nmbib}
+\begin{document}
+\citeall{X}
+\end{document}
+",
+    );
+    assert!(
+      !stderr.contains("unexpected:fi") && !stderr.contains("undefined:\\ifNAT@"),
+      "natbib \\newif surface regressed:\n{stderr}"
+    );
+  }
+
+  /// Batch 45: `\@enumctr` is defined by enumerate lists (latex.ltx:16057
+  /// `\edef\@enumctr{enum\romannumeral\the\@enumdepth}`). RED: beginItemize
+  /// (Perl pool:1314, SHARED) only defined `\@listctr`; bullenum.sty:58/61
+  /// `\csname the\@enumctr\endcsname` cascaded to the 100-error cap.
+  /// Witness: bullcntr/bullcntr-man.
+  #[test]
+  fn enumerate_defines_enumctr() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{bullenum}
+\begin{document}
+\begin{bullenum}
+\item First
+\item Second
+\end{bullenum}
+\end{document}
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("<item").count(),
+      2,
+      "bullenum items did not materialize:\n{xml}"
     );
   }
 }

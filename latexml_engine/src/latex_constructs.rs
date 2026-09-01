@@ -4774,6 +4774,16 @@ LoadDefinitions!({
   });
 
   // Perl: latex_constructs.pool.ltxml lines 868-878
+  //
+  // Options are pushed ONE PER ELEMENT via `pass_options` (Perl
+  // Package.pm:2435 `PushValue('opt@…', map { ToString($_) } @options)`
+  // spreads the list). Pushing the whole `Vec<String>` stored it as a single
+  // nested `Stored::Strings`, which the `\opt@<file>` rebuild
+  // (content.rs, `Stored::String` singulars) skipped — so every option routed
+  // through these primitives read back EMPTY. Witness: brandeis-problemset
+  // example.tex (the class forwards `\CurrentOption` to its own .sty, then
+  // `\LoadClass[12pt]` clobbers `\@classoptionslist`, leaving `\opt@` as the
+  // only channel; 87-error math-in-title storm).
   DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
     let opts_str = Expand!(options).to_string();
@@ -4782,7 +4792,7 @@ LoadDefinitions!({
       .map(|s| s.trim().to_string())
       .filter(|s| !s.is_empty())
       .collect();
-    push_value(&s!("opt@{}.sty", name_str), opts)?;
+    pass_options(&name_str, "sty", opts)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
@@ -4793,7 +4803,7 @@ LoadDefinitions!({
       .map(|s| s.trim().to_string())
       .filter(|s| !s.is_empty())
       .collect();
-    push_value(&s!("opt@{}.cls", name_str), opts)?;
+    pass_options(&name_str, "cls", opts)?;
   });
 
   // Perl `latex_constructs.pool.ltxml`:

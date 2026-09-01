@@ -289,6 +289,15 @@ LoadDefinitions!({
   // option below can `\Let` it to `\iftrue`. Drives multline's default row
   // alignment (center normally, left under fleqn).
   DefConditional!("\\if@fleqn");
+  // amsmath.sty:649 `\newif\if@display` (set true by amsmath's
+  // `\everydisplay`, :650). Read by user/class redefinitions of `\mod`/
+  // `\pmod`/`\pod` that copy amsmath's own bodies — gaceta.cls:1666
+  // `\addto\es@operators{\renewcommand\mod…\if@display…\else…\fi}`
+  // orphaned its `\else`/`\fi` (+ `misdefined:#`) while this was undefined.
+  // Stays false: the binding does not model `\everydisplay`, and outside a
+  // display false is the right answer. Witnesses: gaceta
+  // plantilla-articulo-suelto / -de-seccion.
+  DefConditional!("\\if@display");
 
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::None));
