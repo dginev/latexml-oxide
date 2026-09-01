@@ -459,7 +459,11 @@ LoadDefinitions!({
   // with numbered ones). Fixing this + the matching \endIEEEeqnarray*
   // should recover the ~3-equation drift between Rust and the
   // IEEE.xml reference under TL2025.
-  DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
+  // Starred ENV handler: the CS name must literally be `\IEEEeqnarray*`
+  // (env-begin csname lookup); the string prototype form would parse the
+  // `*` as a literal PARAMETER and clobber the unstarred definition
+  // ([[feedback_defmacro_starred]]).
+  DefMacro!(T_CS!("\\IEEEeqnarray*"), Some(parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?.unwrap()), Some(ExpansionBody::Tokens(Tokenize!(TeXString::assembled(r"\eqnarray*".to_string())))));
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   def_macro_noop("\\IEEEeqnarraynumspace")?;
   // IEEEeqnarraybox — faithful port of Perl IEEEtran.cls.ltxml L315-332.

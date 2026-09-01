@@ -28,7 +28,11 @@ LoadDefinitions!({
   // note); the at-begin-document \def is the proven-working override.
   DefMacro!("\\IEEEeqnarray{}", "\\eqnarray");
   DefMacro!("\\endIEEEeqnarray", "\\endeqnarray");
-  DefMacro!("\\IEEEeqnarray*{}", "\\eqnarray*");
+  // Starred ENV handler: the CS name must literally be `\IEEEeqnarray*`
+  // (env-begin csname lookup); the string prototype form would parse the
+  // `*` as a literal PARAMETER and clobber the unstarred definition
+  // ([[feedback_defmacro_starred]]).
+  DefMacro!(T_CS!("\\IEEEeqnarray*"), Some(parse_parameters("{}", &T_CS!("\\IEEEeqnarray*"), true)?.unwrap()), Some(ExpansionBody::Tokens(Tokenize!(TeXString::assembled(r"\eqnarray*".to_string())))));
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   at_begin_document(TokenizeInternal!(
     r"\def\IEEEeqnarray#1{\eqnarray}\def\endIEEEeqnarray{\endeqnarray}\expandafter\def\csname IEEEeqnarray*\endcsname#1{\csname eqnarray*\endcsname}\expandafter\def\csname endIEEEeqnarray*\endcsname{\csname endeqnarray*\endcsname}"

@@ -11,8 +11,7 @@ LoadDefinitions!({
   // Public scrlayer-scrpage commands (visual-only, gobble silently)
   def_macro_noop("\\pagestyle{}")?;
   def_macro_noop("\\thispagestyle{}")?;
-  def_macro_noop("\\automark[]{}")?;
-  def_macro_noop("\\automark*[]{}")?;
+  def_macro_noop("\\automark OptionalMatch:* []{}")?;
   def_macro_noop("\\clearpairofpagestyles")?;
   // Page-style DEFINITION family. scrlayer-scrpage.sty L1304/1489/1517/1543
   // are all `[opt]{name}{layer-definition}`; L879 \defpagestyle is {3};
@@ -44,7 +43,7 @@ LoadDefinitions!({
   def_macro_noop("\\rehead[]{}")?;
   def_macro_noop("\\lohead[]{}")?;
   def_macro_noop("\\cohead[]{}")?;
-  def_macro_noop("\\rohead[]{}")?;
+  def_macro_noop("\\rohead OptionalMatch:* []{}")?;
   def_macro_noop("\\lefoot[]{}")?;
   def_macro_noop("\\cefoot[]{}")?;
   def_macro_noop("\\refoot[]{}")?;
@@ -57,7 +56,6 @@ LoadDefinitions!({
   def_macro_noop("\\ifoot[]{}")?;
   def_macro_noop("\\cfoot[]{}")?;
   def_macro_noop("\\ofoot[]{}")?;
-  def_macro_noop("\\rohead*{}")?;
   // Options
   DeclareOption!(None, {});
   ProcessOptions!();

@@ -219,7 +219,7 @@ LoadDefinitions!({
   def_macro_noop("\\useinnertheme[]{}")?;
   def_macro_noop("\\useoutertheme[]{}")?;
   def_macro_noop("\\setbeamertemplate{}{}")?;
-  def_macro_noop("\\setbeamercolor{}{}")?;
+  def_macro_noop("\\setbeamercolor OptionalMatch:* {}{}")?;
   def_macro_noop("\\setbeamerfont{}{}")?;
   def_macro_noop("\\setbeamersize{}")?;
   def_macro_noop("\\setbeamercovered{}")?;
@@ -228,7 +228,6 @@ LoadDefinitions!({
 
   // Navigation/footline/headline — no-ops
   def_macro_noop("\\beamertemplatenavigationsymbolsempty")?;
-  def_macro_noop("\\setbeamercolor*{}{}")?;
   def_macro_noop("\\hypersetup{}")?;
 
   // Beamer list environments — Perl L1160-1179
@@ -248,6 +247,10 @@ LoadDefinitions!({
     mode => "internal_vertical", locked => true);
 
   // Theorems — Perl L1193-1230
+  // Perl L412/L1054 parity: etoolbox + xcolor (beamer really uses xxcolor;
+  // xcolor supplies \colorlet etc. — cursolatex witness).
+  RequirePackage!("etoolbox");
+  RequirePackage!("xcolor");
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
@@ -292,6 +295,102 @@ LoadDefinitions!({
   def_macro_noop("\\pushQED{}")?;
   def_macro_noop("\\popQED")?;
   def_macro_noop("\\qedhere")?;
+
+  // beamer overlay-aware definition forms (beamerbasemodes.sty):
+  // `\newcommand<>{\cmd}[n]{body}` defines \cmd taking an optional
+  // <overlay> whose spec body refers to as #(n+1). Our simplified overlay
+  // policy (always-true branch) maps the overlay to EMPTY: \cmd =
+  // OptionalAngled + n args; body's declared #k shift to #(k+1), #(n+1)
+  // refs are dropped. Witness cursolatex L50
+  // (`\newcommand<>{\aalert}[1]{\begin{alertenv}#2…#1…}` — 31
+  // misdefined:# when the un-supported `<>` broke the definition).
+  DefPrimitive!("\\lx@beamer@defcmd@angle {}[][]{}", sub[(cmd_tks, nargs_opt, default_opt, body)] {
+    let cmd = cmd_tks.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS);
+    let Some(cmd) = cmd else { return Ok(Vec::new()); };
+    let n: usize = nargs_opt
+      .map(|t: Tokens| t.to_string().trim().parse().unwrap_or(0))
+      .unwrap_or(0);
+    if default_opt.is_some() {
+      Info!("unexpected", "beamer",
+        "\\newcommand<> with an optional-default arg: overlay dropped, default unsupported");
+    }
+    // Remap body ARG indices: declared #k -> #(k+1); overlay #(n+1) -> drop.
+    let mut newbody = Vec::new();
+    for t in body.unlist() {
+      if t.get_catcode() == Catcode::ARG {
+        let idx: usize = with(t.get_sym(), |s| s.parse().unwrap_or(0));
+        if idx == n + 1 {
+          continue; // overlay ref -> empty
+        }
+        newbody.push(Token {
+          text: pin((idx + 1).to_string()),
+          code: Catcode::ARG,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
+        });
+      } else {
+        newbody.push(t);
+      }
+    }
+    let proto = s!("OptionalAngled{}", " {}".repeat(n));
+    let params = parse_parameters(&proto, &cmd, true)?;
+    def_macro(cmd, params, ExpansionBody::Tokens(Tokens::new(newbody)), None)?;
+    Ok(Vec::new())
+  });
+  RawTeX!(
+    r"\let\lx@beamer@plainnewcommand\newcommand
+\def\newcommand{\@ifnextchar<{\lx@beamer@newcommand@o}{\lx@beamer@plainnewcommand}}
+\def\lx@beamer@newcommand@o<>{\lx@beamer@defcmd@angle}
+\let\lx@beamer@plainrenewcommand\renewcommand
+\def\renewcommand{\@ifnextchar<{\lx@beamer@renewcommand@o}{\lx@beamer@plainrenewcommand}}
+\def\lx@beamer@renewcommand@o<>{\lx@beamer@defcmd@angle}
+\let\lx@beamer@plainnewenvironment\newenvironment
+\def\newenvironment{\@ifnextchar<{\lx@beamer@newenv@o}{\lx@beamer@plainnewenvironment}}
+\def\lx@beamer@newenv@o<>{\lx@beamer@defenv@angle}
+\let\lx@beamer@plainrenewenvironment\renewenvironment
+\def\renewenvironment{\@ifnextchar<{\lx@beamer@renewenv@o}{\lx@beamer@plainrenewenvironment}}
+\def\lx@beamer@renewenv@o<>{\lx@beamer@defenv@angle}"
+  );
+  // `\newenvironment<>{name}[n][default]{begin}{end}` — same overlay policy
+  // for the environment flavor (cursolatex L81
+  // `\newenvironment<>{LaTeXoutput}[1][]{\begin{actionenv}#2…}`).
+  DefPrimitive!("\\lx@beamer@defenv@angle {}[][]{}{}", sub[(name_tks, nargs_opt, default_opt, beg, end)] {
+    let name = name_tks.to_string().trim().to_string();
+    let n: usize = nargs_opt
+      .map(|t: Tokens| t.to_string().trim().parse().unwrap_or(0))
+      .unwrap_or(0);
+    let has_default = default_opt.is_some();
+    let mut newbeg = Vec::new();
+    for t in beg.unlist() {
+      if t.get_catcode() == Catcode::ARG {
+        let idx: usize = with(t.get_sym(), |s| s.parse().unwrap_or(0));
+        if idx == n + 1 {
+          continue;
+        }
+        newbeg.push(Token {
+          text: pin((idx + 1).to_string()),
+          code: Catcode::ARG,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
+        });
+      } else {
+        newbeg.push(t);
+      }
+    }
+    let mut proto = String::from("OptionalAngled");
+    let plain = n.saturating_sub(usize::from(has_default));
+    if has_default {
+      proto.push_str(" []");
+    }
+    for _ in 0..plain {
+      proto.push_str(" {}");
+    }
+    let cs = T_CS!(s!("\\{name}"));
+    let params = parse_parameters(&proto, &cs, true)?;
+    def_macro(cs, params, ExpansionBody::Tokens(Tokens::new(newbeg)), None)?;
+    def_macro(T_CS!(s!("\\end{name}")), None, ExpansionBody::Tokens(end), None)?;
+    Ok(Vec::new())
+  });
 
   // Mode commands — Perl L448-476. The old `\mode<>{}` prototype hit the
   // def_parser literal-char fallback whose `Token` reader eats one ARBITRARY
