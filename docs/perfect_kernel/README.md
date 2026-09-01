@@ -19,6 +19,22 @@ Improving the pre-compiled kernel-dump coverage is in scope; per-package shims
 are not. Corpus work therefore focuses on manuals whose packages/classes have
 **no `.rs` binding yet**.
 
+**Recorded exceptions to "no new bindings" (all user-precedented):** the
+mission text predates three user amendments — locked-CS conflicts resolve via a
+new class binding (ltxdockit precedent), bindings always outrank raw, and
+complete support beats stubs. Under those, this mission has added bindings
+ONLY where raw interpretation is structurally impossible or out of scope, each
+with the justification in the file header: `xkeymask_sty.rs` (raw package
+depends on a genuinely self-referential macro that only real TeX's
+single-level expansion tolerates — our/Perl recursion guard is load-bearing),
+`assoccnt_sty.rs` (raw package wraps kernel counter commands, which our engine
+also invokes at CONSTRUCTION time inside elements — the wrapper leaks tokens
+into the DOM), `titleps_sty.rs`/`schooldocs_sty.rs` (purely presentational
+page-style surfaces with no XML counterpart; schooldocs hides its one semantic
+command inside a `\fancypagestyle` body both engines discard). A raw-first
+attempt is still the default for every new cluster; a new binding requires a
+justification of this kind in the file header.
+
 ## Why this corpus
 
 Every TeX Live package ships its manual as `doc/latex/<bundle>/<name>.tex`
