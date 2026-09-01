@@ -10,7 +10,8 @@ LoadDefinitions!({
   DefPrimitive!("\\define@key{}{}[]{}", sub[(keyset_tks, key_tks, default_opt, code)] {
     let keyset = do_expand(keyset_tks)?.to_string();
     let key = do_expand(key_tks)?.to_string();
-    let default = default_opt.map(|d: Tokens| d.to_string());
+    let default_tks_cfg: Option<Tokens> = default_opt;
+    let default = default_tks_cfg.clone().map(|d| d.to_string());
 
     keyval::define(KeyvalConfig {
       prefix: "KV",
@@ -18,6 +19,7 @@ LoadDefinitions!({
       key: &key,
       vtype: "",
       default: default.as_deref(),
+      default_tks: default_tks_cfg.clone(),
       code: Some(ExpansionBody::Tokens(code)),
       ..KeyvalConfig::default()
     })?;

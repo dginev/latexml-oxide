@@ -246,6 +246,7 @@ pub mod wileynjd_cls;
 pub mod wlpeerj_cls;
 pub mod ws_journal_cls;
 pub mod ws_p8_50x6_00_cls;
+pub mod xkeymask_sty;
 pub mod xltabular_sty;
 pub mod xr_sty;
 pub mod xwatermark_sty;
@@ -406,6 +407,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
+  ("xkeymask", "sty", xkeymask_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),

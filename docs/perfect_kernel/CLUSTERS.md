@@ -57,10 +57,15 @@ parked R9 mode/alignment work); single instance in the manual.
 | `Error:undefined:\newunit` (a4wide etc.) | DOCUMENT-STALE — oracle pass excludes (801 stale docs) | `oracle_verdicts.tsv` |
 | babel Lua layer dead under luatex profile: EVERY profiled doc logged `attempt to index a nil value (field 'locale_props')`; chunks silently branched on `tex.count` stub zeros; `require` of texmf Lua modules failed (witnesses: derivative, abntexto, abntexto-uece, newpax — [LUA_REBINDING.md](LUA_REBINDING.md)) | Rebind-as-we-emulate landing: `\lx@directlua` double-`Expand!` removed + `\par` filtered (real-luatex probes as oracle), live register mirror, absorb shims, kpse+lualibs require, `\bbl@luapatterns` format parity, direction-keyword eaters | `luatex_babel_api::babel_lua_api_layer_initializes`, `lua_state_mirror::directlua_reads_and_writes_live_registers`, `rebound_engine_intents_absorb_and_resolve` |
 
+| xkeyval-internals cluster E (`\XKV@testopta`/`\XKV@s@tkeys`/… undefined — chessboard ×3, xskak ×2, xkeymask) + `\Xskakthe package…` 1000-error csname cascades + `\define@cmdkey` `misdefined:#` | Batch-5 xkeyval deep port: verbatim front-end scaffolding + `\XKV@s@tkeys` shim onto private `\lx@xkv@setkeys`; real pointer system (`\savekeys`/`\savevalue`/`\usevalue` + `\XKV@<header><key>@value` store); KNOWN_PERL_ERRORS #80 cmdkey fix; token-form key defaults (the cascade's root: `[\xskak@val@defaultid]` split by string round-trip); xkeymask_sty.rs binding. xkeymask 7→0/0/0, xskak 1001+fatal→5, chessboard 1001-truncated→1 | `xkeyval_internals::*` (2 tests) |
+
 ### Post-batch residual clusters (2026-08-31, from witness re-runs)
 
 | Signature | Note |
 |---|---|
+| chessboard.tex `\chessboard[boardfontencoding=LSBC4]` → 400M-token churn (doc L1627; LSBC4 falls back to OT1 first) | Doc now renders to L1627/2049 with 1 error after the batch-5 xkeyval port; a single board render under the missing-encoding fallback loops. Font-encoding-dependent raw drawing — needs its own min-repro session. |
+| `misdefined:#` (17, adtrees) — RE-CHECK after KNOWN_PERL_ERRORS #80 | the `\define@cmdkey` stray-PARAM fix may cover part of this cluster; re-sample in sweep 13 before a dedicated session. |
+| xskak residual 5 errs: `\usepackage` post-preamble (doc-driven filecontents flow), `\csq@hook@{multilang,hyperref}`, `\board` | small distinct items, re-rank in sweep 13. |
 | `undefined:\@openrightfalse` + `\if@openright` (6+ docs, toptesi residual) | class-context newif; toptesi now passes its version check (was aborting) and exposes this. |
 | `undefined:\BeforeClosingMainAux` (toptesi) | atveryend surface. |
 | math-symbol CS as tikzmath variable (`\angle`, sunpath 1001 errs) | same meaning-shape family as #170 but for math chars — separate fix. |

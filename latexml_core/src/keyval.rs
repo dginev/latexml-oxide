@@ -114,6 +114,13 @@ pub struct KeyvalConfig<'a> {
   pub key:         &'a str,
   pub vtype:       &'a str,
   pub default:     Option<&'a str>,
+  /// Token-form default, preferred over `default` when set: real xkeyval
+  /// stores the default's raw TOKENS (`\XKV@define@default`), while the
+  /// string path below re-tokenizes under the STANDARD cattable, splitting
+  /// internal names (`[\xskak@val@defaultid]` → `\xskak` + `@val@defaultid`
+  /// — xskak-keys.sty L25, the xskak/chessboard manuals' 1000-error csname
+  /// cascade). Perl shares the stringify bug (Package.pm DefKeyVal ToString).
+  pub default_tks: Option<Tokens>,
   pub kind:        Option<&'a str>,
   pub code:        Option<ExpansionBody>,
   pub macroprefix: Option<&'a str>,
@@ -240,6 +247,7 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
     key,
     vtype,
     default,
+    default_tks,
     kind,
     code,
     macroprefix,
@@ -315,8 +323,9 @@ pub fn define(options: KeyvalConfig) -> Result<()> {
   };
   // set the default
   // Question: Why was $default converted ToString ???
-  if let Some(default_str) = default {
-    let default_tks = tokenize(TeXString::assembled(default_str.to_string()));
+  let default_tokens = default_tks
+    .or_else(|| default.map(|default_str| tokenize(TeXString::assembled(default_str.to_string()))));
+  if let Some(default_tks) = default_tokens {
     keyval_set(&qname, "default", Stored::Tokens(default_tks.clone()));
     def_macro(
       T_CS!(s!("\\{qname}@default")),
@@ -399,7 +408,13 @@ fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> 
           .unwrap_or_default()
       })
       .collect();
-    // $value !?!??! Is it a number 1--9 ???)
+    // Perl KeyVal.pm L131 emits `T_PARAM, $value` here (with the author's own
+    // "!?!??!" comment), so the key code's argument arrives as `#<value>` and
+    // the stray PARAM token reaches the stomach: `Error:misdefined:#` on every
+    // \define@cmdkey use, and `#1` in the code body never sees the value.
+    // Real xkeyval (xkeyval.tex `\XKV@define@cmdkey`) runs the code with `#1`
+    // = the bare value — KNOWN_PERL_ERRORS #80; witness
+    // doc/latex/xkeymask/xkeymask.tex. Emit the bare value.
     Ok(Tokens!(
       T_CS!("\\def"),
       T_CS!(&macroname_cs),
@@ -408,7 +423,6 @@ fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> 
       T_END!(),
       T_CS!(&orig),
       T_BEGIN!(),
-      T_PARAM!(),
       value_tks,
       T_END!()
     ))

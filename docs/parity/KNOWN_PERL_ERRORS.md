@@ -4247,3 +4247,26 @@ Perl LaTeXML.
 bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the phantom. A real
 `\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
 #155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.
+
+## 80. `\define@cmdkey` code never sees its value; stray `#` reaches the stomach (Rust fixes)
+
+Perl `Core/KeyVal.pm:defineCommand` L124-133 emits the key code's invocation as
+`\ltxml@orig@<qname>{#<value>}` — a literal `T_PARAM` before the value, flagged by the
+author's own `# $value !?!??! Is it a number 1--9 ???` comment. Every `\define@cmdkey`
+use then raises `Error:misdefined:# The token T_PARAM[#] should never reach Stomach!`
+and the code body's `#1` expands to `#<value>` junk instead of the value. Real xkeyval
+(`xkeyval.tex` command-key definer) runs the code with `#1` = the bare value, and also
+`\def`s `\cmd<header><key>` to it.
+
+Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{xkeyval}
+\makeatletter\define@cmdkey{fam}{ka}{(A:#1)}\makeatother
+\begin{document}\setkeys{fam}{ka=x}\end{document}
+```
+
+Same-host Perl 0.8.8 errors identically (`misdefined:#`, code sees `#x`). Perl-origin,
+unreported upstream. Rust fixes: `latexml_core/src/keyval.rs:define_command` emits the
+bare value (guard `cluster_package_guards::xkeyval_internals`; witness
+`doc/latex/xkeymask/xkeymask.tex`, perfect-kernel sweep 12).

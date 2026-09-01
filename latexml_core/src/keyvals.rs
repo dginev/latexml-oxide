@@ -7,17 +7,18 @@ use rustc_hash::FxHashMap as HashMap;
 use super::keyval::{has_keyval, keyval_get, keyval_qname};
 use crate::{
   BoxOps, Digested, NO_PROPERTIES,
+  binding::def::dialect::def_macro,
   common::{
-    arena::SymHashMap,
+    arena::{self, SymHashMap},
     error::{emit_warn, *},
     font::Font,
     object::Object,
     store::Stored,
   },
-  definition::argument::ArgWrap,
+  definition::{ExpansionBody, argument::ArgWrap, expandable::ExpandableOptions},
   document::Document,
   gullet::{self, ExpansionLevel},
-  state,
+  state::{self, Scope},
   token::{Catcode, Token},
   tokens::Tokens,
 };
@@ -871,6 +872,47 @@ impl KeyVals {
   // This method reads the keyval pairs INCLUDING the delimiters, (rather than
   // parsing after the fact), since some values may have special catcode needs.
 
+  /// xkeyval `\savekeys` membership: the save list for `<prefix>@<keyset>@`
+  /// lives in `\XKV@<prefix>@<keyset>@save` (xkeyval.tex L407-415, maintained
+  /// by the verbatim `\XKV@savekeys` port in xkeyval_sty.rs); entries are key
+  /// names, optionally wrapped as `\global{key}` for a global save. Returns
+  /// `Some(global)` when `key` is listed.
+  fn save_listed(&self, keyset: &str, key: &str) -> Option<bool> {
+    let cs = T_CS!(s!("\\XKV@{}", keyval_qname(&self.prefix, keyset, "save")));
+    state::lookup_meaning(&cs)?;
+    let body = gullet::do_expand(Tokens!(cs)).ok()?.to_string();
+    for entry in body.split(',') {
+      let e = entry.trim();
+      let (global, name) = match e.strip_prefix("\\global") {
+        Some(rest) => (true, rest),
+        None => (false, e),
+      };
+      let name = name
+        .trim()
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .trim();
+      if name == key {
+        return Some(global);
+      }
+    }
+    None
+  }
+
+  /// Store a saved key value as `\XKV@<prefix>@<keyset>@<key>@value`
+  /// (xkeyval.tex L521-528).
+  fn store_saved_value(&self, keyset: &str, key: &str, value: Tokens, global: bool) -> Result<()> {
+    let cs = T_CS!(s!(
+      "\\XKV@{}@value",
+      keyval_qname(&self.prefix, keyset, key)
+    ));
+    let options = global.then(|| ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    });
+    def_macro(cs, None, ExpansionBody::Tokens(value), options)
+  }
+
   pub fn read_from(&mut self, until: Token, silence_missing: bool) -> Result<()> {
     // if we want to force skip_missing keys, we set it up here
     let skip_missing = self.skip_missing.clone();
@@ -885,6 +927,21 @@ impl KeyVals {
     let startloc = gullet::get_locator();
     // set and read tokens
     let _open = gullet::read_token()?;
+
+    // xkeyval pointer system (\savevalue/\usevalue/\savekeys — xkeyval.tex
+    // L405-436, L518-533, L560-583): record the active prefix/keysets so the
+    // \usevalue closure (xkeyval_sty.rs) can resolve the
+    // `\XKV@<header><key>@value` stores this read creates below.
+    state::assign_value(
+      "XKV@ptr@prefix",
+      Stored::String(arena::pin(&self.prefix)),
+      None,
+    );
+    state::assign_value(
+      "XKV@ptr@keysets",
+      Stored::String(arena::pin(self.keysets.join(","))),
+      None,
+    );
 
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until);
@@ -980,6 +1037,28 @@ impl KeyVals {
           // and cleanup
           if let Some(Stored::Parameter(ref keydef)) = keytype_opt {
             keydef.revert_catcodes()?;
+          }
+          // xkeyval pointer system: `\savevalue{key}` latched the pending
+          // flags while the key portion expanded (closure in xkeyval_sty.rs),
+          // and a `\savekeys` list can mark the key persistently (entries may
+          // be `\global{key}`). Mirror xkeyval.tex L521-528: store the value
+          // as `\XKV@<prefix>@<keyset>@<key>@value` so raw packages can read
+          // it back (chessboard.sty L1221-1229
+          // `\boolean{\XKV@UFCB@locset@psset@value}`, xskak.sty L415).
+          let pending_rkv = state::lookup_bool("XKV@ptr@rkv");
+          let pending_sg = state::lookup_bool("XKV@ptr@sg");
+          if pending_rkv || pending_sg {
+            state::assign_value("XKV@ptr@rkv", Stored::from(false), None);
+            state::assign_value("XKV@ptr@sg", Stored::from(false), None);
+          }
+          let save_global = if pending_rkv {
+            Some(pending_sg)
+          } else {
+            self.save_listed(keyset, key)
+          };
+          if let Some(global) = save_global {
+            let value_tks = value.clone().owned_tokens().unwrap_or_default();
+            self.store_saved_value(keyset, key, value_tks, global)?;
           }
         }
         // and store our value please
