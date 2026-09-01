@@ -47,7 +47,17 @@ session's landed shapes against that bar, and the generalizations owed:
 3. **`\iffontchar` truth (LOW).** Currently always-true (args faithfully
    consumed). General model needs per-font glyph coverage (TFM bc/ec +
    existence) in the metrics layer.
-4. **expl3 file-boundary state (MEDIUM-HIGH).** batch 31 narrowed the
+4. **`\everyeof` + artificial mouth ends (MEDIUM-HIGH).** The eTeX
+   mechanism is implemented (MouthRuntime::insert_everyeof, close-time
+   token-identity insertion, read_token transparency for marked mouths)
+   but UNWIRED: enabling it makes `\tl_set_rescan` exact (stop quarks
+   delivered) yet loops spath3/litetable/zref in 5-token expansion cycles
+   — an unresolved interaction to root-cause (suspect: repeated insertion
+   or crossing order vs l3tl's grouped everyeof discipline). Related
+   insight: our isolated argument mouths create ARTIFICIAL EOFs that real
+   TeX doesn't have — the deep model is fewer isolated mouths, not more
+   EOF patches.
+5. **expl3 file-boundary state (MEDIUM-HIGH).** batch 31 narrowed the
    ad-hoc exit-Off to kernel-managed frames; the principled model is
    routing ALL load boundaries through the dump's real `\@pushfilename`/
    `\@popfilename` (their expl3 hooks) and deleting the flag machinery

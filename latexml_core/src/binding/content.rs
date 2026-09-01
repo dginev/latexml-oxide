@@ -1529,7 +1529,7 @@ fn load_tex_definitions(
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
   local_state_unlocked(false);
-  let content_str = lookup_string(&s!("{pathname}_contents"));
+  let content_str = crate::binding::virtual_files::vfs_read(pathname).unwrap_or_default();
   let content = if content_str.is_empty() {
     None
   } else {
@@ -1662,7 +1662,7 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   };
 
   // Open a mouth for that TeX content
-  let cached = lookup_string(&s!("{path}_contents"));
+  let cached = crate::binding::virtual_files::vfs_read(path).unwrap_or_default();
   let cached_opt = if cached.is_empty() {
     None
   } else {
@@ -2235,7 +2235,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // their .cls inline via filecontents miss the dep-scan and downstream
   // CSes that the (now-cached) cls would have hand-loaded stay
   // undefined. Witness: arXiv:2604.09738.
-  let cached = lookup_string(&s!("{}_contents", path));
+  let cached = crate::binding::virtual_files::vfs_read(&path).unwrap_or_default();
   let code = if !cached.is_empty() {
     cached
   } else {
@@ -3011,7 +3011,7 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
 
 fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // If cached, return simple path (it's a key into the cache)
-  let cached = lookup_string(&s!("{}_contents", file));
+  let cached = crate::binding::virtual_files::vfs_read(file).unwrap_or_default();
   if !cached.is_empty() {
     return Some(file.to_string());
   }

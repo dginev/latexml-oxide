@@ -1,4 +1,5 @@
 pub mod content;
+pub mod virtual_files;
 #[macro_use]
 pub mod def;
 pub mod counter;

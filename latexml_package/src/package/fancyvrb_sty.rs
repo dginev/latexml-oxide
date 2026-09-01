@@ -123,19 +123,10 @@ LoadDefinitions!({
     assign_value("lx@verbatimout@envname", Stored::None, Some(Scope::Global));
     let end_marker = s!("\\end{{{end_env}}}");
     read_raw_line(); // discard remainder of the \begin line
-    let mut lines: Vec<String> = Vec::new();
-    loop {
-      // fancyvrb's end check matches a line that IS `\end{<name>}` (leading
-      // whitespace allowed, trailing content defeats it — fancybox-doc
-      // deliberately writes `\end{VerbatimOut}%.` INSIDE a captured body).
-      match read_raw_line() {
-        Some(line) if line.trim() != end_marker.as_str() => lines.push(line),
-        _ => break,
-      }
-    }
+    let (lines, _terminator) = capture_raw_lines_until(&[end_marker.as_str()]);
     let n = lines.len();
     Info!("note", "filecontents", s!("Cached VerbatimOut for {filename} ({n} lines)"));
-    assign_value(&s!("{filename}_contents"), Stored::from(lines.join("\n")), Some(Scope::Global));
+    vfs_store(&filename, &lines.join("\n"));
     endgroup()?;
   });
   assign_meaning(

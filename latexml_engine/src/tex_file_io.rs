@@ -59,7 +59,7 @@ LoadDefinitions!({
     // Perl: NOT noltxml! \openin is often used to check file existence,
     // and we SHOULD find .ltxml (binding) versions too.
     if let Some(path) = find_file(&filename, None) {
-      let content_str = LookupString!(&s!("{}_contents",path));
+      let content_str = vfs_read(&path).unwrap_or_default();
       let content = if content_str.is_empty() {
         None
       } else {
@@ -160,9 +160,8 @@ LoadDefinitions!({
     sub[(port, filename)] {
     let port = port.to_string();
     let filename = filename.to_string();
-    let contents_key = &s!("{}_contents",filename);
-    AssignValue!(&s!("output_file:{}",port)  => filename,  Some(Scope::Global));
-    AssignValue!(contents_key => "",  Some(Scope::Global));
+    AssignValue!(&s!("output_file:{}",port)  => filename.clone(),  Some(Scope::Global));
+    vfs_store(&filename, "");
   });
 
   DefPrimitive!("\\closeout Number", sub[(port)] {
@@ -178,15 +177,12 @@ LoadDefinitions!({
   // (harvmac `\listrefs`) triggered this.
   DefPrimitive!("\\write Number XGeneralText", sub[(port_n, tokens)] {
     let port = port_n.value_of();
-    let handle = with_value(&s!("output_file:{}", port), |val_opt|
+    let target = with_value(&s!("output_file:{}", port), |val_opt|
     if let Some(filename) = val_opt {
-       s!("{}_contents",filename)
+       filename.to_string()
     } else { String::new() });
-    if !handle.is_empty() {
-      let mut contents : String = LookupString!(&handle);
-      contents.push_str(&tokens.untex());
-      contents.push('\n');
-      AssignValue!(&handle => contents, Some(Scope::Global));
+    if !target.is_empty() {
+      vfs_append_line(&target, &tokens.untex());
     } else if port < 0 {
       NoteLog!(tokens.untex());
     } else {

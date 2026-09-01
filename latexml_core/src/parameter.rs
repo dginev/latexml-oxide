@@ -364,26 +364,28 @@ impl Parameter {
 
     let checked_value =
       if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
-        // `Until:` readers now return a DISTINGUISHABLE EOF (read_until →
-        // None when the delimiter never appeared; a matched-but-empty arg
-        // is Some(empty) and never lands here), so the Perl-faithful
-        // "Missing argument" Error fires for Until too — Perl
-        // Parameter.pm L93-97 errors per iteration and its MAX_ERRORS
-        // latch terminates zero-progress delimited-scan loops (fancyvrb
-        // \FancyVerbGetLine rescanning a replayed tail: willowtreebook)
-        // that our silent-empty previously spun into the 50k-box
-        // Stomach:Recursion fatal.
-        let _ = is_until;
-        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
-        Error!(
-          "expected",
-          self,
-          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
-        );
-        if is_until {
-          value_arg
-        } else {
+        // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
+        // when the delimiter never appeared; a matched-but-empty arg is
+        // Some(empty)). Real TeX's runaway-argument ERROR applies to REAL
+        // file ends — but many of our mouth ends are ARTIFICIAL (isolated
+        // constructor-argument mouths, reading_from_mouth), where real TeX
+        // would keep scanning the enclosing stream and find the delimiter
+        // (l3tl replace sentinels: spath3/litetable/zref-check — a
+        // per-iteration Error here regressed 63 corpus docs, sweep 23).
+        // So: stay QUIET for Until misses; zero-progress delimited-scan
+        // loops terminate via the stomach cycle guard instead. Perl errors
+        // here (Parameter.pm L93-97) and equally mis-fires on the
+        // artificial-EOF shapes.
+        if !is_until {
+          let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
+          Error!(
+            "expected",
+            self,
+            s!("Missing argument {} for {}", self.stringify(), fordefn_str)
+          );
           ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+        } else {
+          value_arg
         }
       } else {
         value_arg

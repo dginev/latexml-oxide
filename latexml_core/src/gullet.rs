@@ -116,11 +116,17 @@ pub enum BalancedBoundary {
 
 #[derive(PartialEq, Debug)]
 pub struct MouthRuntime {
-  pub autoclose: bool,
-  pub mouth:     Mouth,
+  pub autoclose:       bool,
+  pub mouth:           Mouth,
+  /// eTeX `\everyeof`: when this mouth (a `\scantokens` pseudo-file) is
+  /// exhausted, the CURRENT `\everyeof` register tokens are inserted as
+  /// TOKENS (not retokenized text — l3tl's rescan quarks and xint's
+  /// captures depend on their token identity). Read at CLOSE time, per
+  /// eTeX's file-end evaluation.
+  pub insert_everyeof: bool,
   /// See [`BalancedBoundary`]. Only consulted when `autoclose` is set and the
   /// mouth is not a file.
-  pub boundary:  BalancedBoundary,
+  pub boundary:        BalancedBoundary,
   /// Pushback LIFO stack: the "next to read" token is at `pushback.last()`.
   /// Invariant: reading pops from the back; `unread_one` pushes to the back;
   /// `unread_vec` iterates its input in reverse and pushes each — so the
@@ -131,7 +137,7 @@ pub struct MouthRuntime {
   /// hot-path is pure LIFO and VecDeque's push_front/pop_front machinery
   /// (head-pointer + wrap arithmetic) showed up at ~3.3% of total Ir in
   /// callgrind on siunitx-heavy fixtures.
-  pub pushback:  Vec<Token>,
+  pub pushback:        Vec<Token>,
 }
 
 #[derive(Debug, Default)]
@@ -491,8 +497,17 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
     mouth,
     autoclose,
     boundary,
+    insert_everyeof: false,
     pushback: Vec::with_capacity(128),
   });
+}
+
+/// Mark the CURRENT mouth as an eTeX pseudo-file whose end inserts the
+/// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]).
+pub fn mark_everyeof_mouth() {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.insert_everyeof = true;
+  }
 }
 
 pub fn close_mouth(forced: bool) -> Result<()> {
@@ -512,13 +527,26 @@ pub fn close_mouth(forced: bool) -> Result<()> {
     let message = s!("Closing mouth with input remaining '{}'", next);
     Error!("unexpected", next, message);
   }
-  let mut gullet = gullet_mut!();
-  if let Some(ref mut runtime) = gullet.runtime {
-    runtime.mouth.finish();
-    shift_from_mouthstack = true;
+  let mut wants_everyeof = false;
+  {
+    let mut gullet = gullet_mut!();
+    if let Some(ref mut runtime) = gullet.runtime {
+      runtime.mouth.finish();
+      wants_everyeof = runtime.insert_everyeof;
+      shift_from_mouthstack = true;
+    }
+    if shift_from_mouthstack {
+      gullet.runtime = gullet.mouthstack.pop_front();
+    }
   }
-  if shift_from_mouthstack {
-    gullet.runtime = gullet.mouthstack.pop_front();
+  // eTeX file-end: insert the CURRENT `\everyeof` token list where reading
+  // continues (the parent stream). Token-identity preserved — expansion
+  // flavor push (the tokens were never scanned).
+  if wants_everyeof
+    && let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
+    && !eof_toks.is_empty()
+  {
+    unread_expansion(eof_toks);
   }
   Ok(())
 }
@@ -901,7 +929,25 @@ pub fn read_token() -> Result<Option<Token>> {
     // Combined checkpoint + raw read + cycle fingerprint, one borrow.
     next_token = match read_internal_token_checked(CommentSink::Pending)? {
       CheckedRead::NoRuntime => return Ok(None),
-      CheckedRead::Exhausted => None,
+      CheckedRead::Exhausted => {
+        // eTeX `\scantokens` inserts its tokens INTO the input stream —
+        // its pseudo-file end is invisible to every reader (tex.web get_next
+        // §360 pops the input level and restarts), inserting `\everyeof`
+        // on the way out. Cross ONLY these marked mouths here; ordinary
+        // autoclose FILE mouths keep returning None so file-processing
+        // loops still see their own end. Witness: l3tl `\tl_set_rescan`
+        // delivers its `\s__tl_stop` quark via `\everyeof`, and its
+        // `Until:\s__tl_stop` scan reads through THIS reader.
+        let cross = runtime!()
+          .as_ref()
+          .map(|r| r.autoclose && r.insert_everyeof)
+          .unwrap_or(false);
+        if cross {
+          close_mouth(false)?;
+          continue;
+        }
+        None
+      },
       CheckedRead::Tok(t) => Some(t),
     };
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
@@ -3322,10 +3368,11 @@ pub fn flush() {
     }
   }
   g.runtime = Some(MouthRuntime {
-    mouth:     Mouth::default(),
-    pushback:  Vec::with_capacity(128),
-    autoclose: true,
-    boundary:  BalancedBoundary::Transparent,
+    mouth:           Mouth::default(),
+    pushback:        Vec::with_capacity(128),
+    autoclose:       true,
+    boundary:        BalancedBoundary::Transparent,
+    insert_everyeof: false,
   });
   g.mouthstack = VecDeque::new();
 }

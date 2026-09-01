@@ -1165,7 +1165,7 @@ LoadDefinitions!({
   );
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
-    read_until(&until[0]) },
+    Ok(ArgWrap::Tokens(read_until(&until[0])?.unwrap_or_default())) },
   before_digest => {
     bgroup();
     MergeFont!(mathstyle => "script");

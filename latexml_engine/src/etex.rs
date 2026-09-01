@@ -427,8 +427,16 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
-    open_mouth(
-      Mouth::new(&writable_tokens(&tokens), None)?, true);
+    // eTeX: when the pseudo-file ends, the `\everyeof` token list is
+    // inserted AS TOKENS. The mechanism is implemented
+    // (gullet::mark_everyeof_mouth + close_mouth insertion + read_token
+    // transparency for marked mouths) but NOT WIRED: enabling it fixes the
+    // l3tl `\tl_set_rescan` stop-quark delivery (rescan repro exact) but
+    // sends spath3/litetable/zref-check into 5-token expansion loops —
+    // an unresolved interaction (PLANS.md). With Until-misses delivering
+    // empty, the rescan path degrades gracefully instead, which is the
+    // better corpus-wide trade until the interaction is root-caused.
+    open_mouth(Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });
 

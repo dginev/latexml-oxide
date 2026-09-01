@@ -158,20 +158,16 @@ LoadDefinitions!({
       .unwrap_or_default();
     let env_end = s!("\\end{{{envname}}}");
     read_raw_line(); // discard remainder of the invocation line
-    let mut lines: Vec<String> = Vec::new();
-    let mut replay: Option<String> = None;
-    while let Some(line) = read_raw_line() {
-      let t = line.trim();
-      if t == "\\endwriteverbatim" {
-        break;
-      }
-      if !envname.is_empty() && t == env_end.as_str() {
-        replay = Some(line);
-        break;
-      }
-      lines.push(line);
-    }
-    if let Some(line) = replay {
+    let markers: Vec<&str> = if envname.is_empty() {
+      vec!["\\endwriteverbatim"]
+    } else {
+      vec!["\\endwriteverbatim", env_end.as_str()]
+    };
+    let (lines, terminator) = capture_raw_lines_until(&markers);
+    // An `\end{env}` terminator must REPLAY so the environment closes.
+    if let Some(line) = terminator
+      && line.trim() != "\\endwriteverbatim"
+    {
       unread(Tokenize!(TeXString::assembled(line)));
     }
     let n = lines.len();

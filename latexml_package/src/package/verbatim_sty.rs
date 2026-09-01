@@ -136,8 +136,7 @@ LoadDefinitions!({
     // Expand the argument (`\verbatiminput{\jobname.tmp}`) and serve
     // in-memory filecontents/VerbatimOut captures before touching disk.
     let name = do_expand(file)?.to_string();
-    if let Some(Stored::String(sym)) = lookup_value(&s!("{name}_contents")) {
-      let content = with(sym, |v| v.to_string());
+    if let Some(content) = vfs_read(&name) {
       let mut tokens = Vec::new();
       for line in content.lines() {
         tokens.push(T_CS!("\\verbatim@startline"));

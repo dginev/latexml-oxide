@@ -427,17 +427,13 @@ LoadDefinitions!({
     if !header_star { lines.push("%%".to_string()); }
     // Discard remainder of \begin{filecontents} line
     read_raw_line();
-    // Read raw lines until end marker
-    loop {
-      match read_raw_line() {
-        Some(line) if !line.contains(end_marker) => lines.push(line),
-        _ => break,
-      }
-    }
+    // Read raw lines until the end marker (whole-line match; see
+    // capture_raw_lines_until).
+    let (captured, _terminator) = capture_raw_lines_until(&[end_marker]);
+    lines.extend(captured);
     let n = lines.len();
-    let content = lines.join("\n");
     Info!("note", "filecontents", s!("Cached filecontents for {filename} ({n} lines)"));
-    assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
+    vfs_store(&filename, &lines.join("\n"));
     Ok(())
   }
   // The \filecontents primitive reads filename + raw lines until \end{filecontents}.

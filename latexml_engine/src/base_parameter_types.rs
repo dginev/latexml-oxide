@@ -145,8 +145,14 @@ LoadDefinitions!({
   });
 
   DefParameterType!(Until, sub[_inner, until_extra] {
-    // TODO: how many tokens are in extra?
-    read_until(&until_extra[0])
+    // A ran-out scan (read_until → None) delivers an EMPTY argument, not a
+    // missing one: many of our mouth ends are ARTIFICIAL (isolated
+    // constructor-arg mouths) where real TeX would find the delimiter in
+    // the enclosing stream — l3tl replace sentinels (spath3/litetable/
+    // zref-check) mis-looped on a None arg, and a per-iteration Error
+    // regressed 63 corpus docs (sweep 23). Zero-progress delimited-scan
+    // loops terminate via the stomach cycle guard.
+    Ok(ArgWrap::Tokens(read_until(&until_extra[0])?.unwrap_or_default()))
   },
   reversion => sub[arg, _inner, until] {
     let mut rev = Vec::new();
