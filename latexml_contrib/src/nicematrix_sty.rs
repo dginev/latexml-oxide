@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell as StdCell, RefCell};
 
 use latexml_package::{package::color_sty::parse_color, prelude::*};
 
@@ -23,8 +23,8 @@ thread_local! {
   static NICE_RECTS: RefCell<Vec<NiceRect>> = const { RefCell::new(Vec::new()) };
   /// Whether the current matrix declared `first-row` / `first-col`: shifts the
   /// coordinate origin by one and marks the label line `thead`.
-  static NICE_FIRST_ROW: Cell<bool> = const { Cell::new(false) };
-  static NICE_FIRST_COL: Cell<bool> = const { Cell::new(false) };
+  static NICE_FIRST_ROW: StdCell<bool> = const { StdCell::new(false) };
+  static NICE_FIRST_COL: StdCell<bool> = const { StdCell::new(false) };
 }
 
 /// Parse an `i-j` cell coordinate ("row-col").
@@ -156,10 +156,32 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
   out
 }
 
-/// `\begin{NiceTabular…}[opts]{colspec}` → `\lx@nice@setopts{opts}
+/// Merge the two optional key lists of a `[opts]{colspec}[opts]` signature
+/// (nicematrix.sty:2007 keys are set from both) into one comma list.
+fn nice_merge_opts(a: Option<Tokens>, b: Option<Tokens>) -> Tokens {
+  let mut out: Vec<Token> = Vec::new();
+  for o in [a, b].into_iter().flatten() {
+    let toks = o.unlist();
+    if toks.is_empty() {
+      continue;
+    }
+    if !out.is_empty() {
+      out.push(T_OTHER!(","));
+    }
+    out.extend(toks);
+  }
+  Tokens::new(out)
+}
+
+/// `\begin{NiceTabular…}[opts]{colspec}[opts]` → `\lx@nice@setopts{opts}
 /// \lx@nice@array@begin{<starter>{colspec'}}` with the rule-only column
-/// options stripped from the colspec (see `\NiceTabular` below).
+/// options stripped from the colspec (see `\NiceTabular` below), and a `c`
+/// grown on the side of `first-col`/`last-col` (the label column every
+/// source row then carries — nicematrix.tex:2569/2617; without it each row
+/// overflows the template: "Extra alignment tab"). Same growth as the array
+/// family's `\NiceArrayWithDelims`.
 fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Token>) -> Tokens {
+  let opts_str = opts_toks.to_string();
   let mut out: Vec<Token> = Vec::new();
   out.push(T_CS!("\\lx@nice@setopts"));
   out.push(T_BEGIN!());
@@ -169,7 +191,13 @@ fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Tok
   out.push(T_BEGIN!());
   out.extend(starter);
   out.push(T_BEGIN!());
+  if nice_opts_has(&opts_str, "first-col") {
+    out.push(T_LETTER!("c"));
+  }
   out.extend(nice_strip_rule_opts(pream));
+  if nice_opts_has(&opts_str, "last-col") {
+    out.push(T_LETTER!("c"));
+  }
   out.push(T_END!());
   out.push(T_END!());
   Tokens::new(out)
@@ -180,6 +208,29 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("array");
   RequirePackage!("colortbl");
+  // nicematrix's own preamble parser accepts `V{width}` (nicematrix.sty:2541:
+  // a varwidth[t] cell when varwidth is loaded — varwidth.sty:308-313 only
+  // registers its `\newcolumntype{V}` when array preceded it, which is the
+  // uncommon order). Model it as the top-attached paragraph column `p{width}`
+  // (tex_tables.rs `\lx@tabular@p t`): natural-width-up-to is print layout.
+  // Unregistered, the reader's "safety valve" re-read `3cm` as columns and
+  // `m` consumed the template's closing brace — nicematrix/nicematrix
+  // exemplar 109 → 1002 errors + Fatal after b33.
+  DefColumnType!("V{Dimension}", sub[(width)] {
+    let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
+    before.extend(width.revert()?.unlist());
+    before.push(T_END!());
+    before.push(T_BEGIN!());
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(Cell {
+        before: Some(Tokens::new(before)),
+        after: Some(Tokens!(T_END!())),
+        align: Some(Align::Justify),
+        vattach: Some("top".to_string()),
+        ..Default::default()
+      })
+    });
+  });
   // nicematrix.sty L21-22 defines its own `\myfileversion`/`\myfiledate`
   // (its manual typesets them on the title page). The binding shadows the
   // raw load, so read the REAL values from the installed .sty rather than
@@ -213,8 +264,8 @@ LoadDefinitions!({
   // `\cmidrule` lands mid-cell ("\noalign cannot be used here" — the
   // exemplar manual's last error). Recorded rects are simply not painted for
   // text tabulars (color overlay is styling; the content is what matters).
-  DefMacro!("\\NiceTabular[]{}[]", sub[(opts, pream, _post)] {
-    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+  DefMacro!("\\NiceTabular[]{}[]", sub[(opts, pream, post)] {
+    let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")])
   }, locked => true);
   DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
@@ -225,19 +276,22 @@ LoadDefinitions!({
   // witness nicematrix.tex `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`)
   // and `NiceTabular*` a `\tabular*` — the fixed total width is print layout.
   RequirePackage!("tabularx");
-  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}[]", sub[(width, opts, pream, _post)] {
+  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}[]", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabular*"), T_BEGIN!()];
     starter.extend(width.revert()?.unlist());
     starter.push(T_END!());
-    let opts_toks = if opts.is_some() { opts.revert()? } else { Tokens!() };
+    let opts_toks = nice_merge_opts(
+      if opts.is_some() { Some(opts.revert()?) } else { None },
+      if post.is_some() { Some(post.revert()?) } else { None },
+    );
     nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
   });
   DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*");
-  DefMacro!("\\NiceTabularX{}[]{}[]", sub[(width, opts, pream, _post)] {
+  DefMacro!("\\NiceTabularX{}[]{}[]", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
     starter.extend(width.revert());
     starter.push(T_END!());
-    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+    let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), starter)
   }, locked => true);
   DefMacro!("\\endNiceTabularX", "\\endtabularx", locked => true);
@@ -326,6 +380,19 @@ LoadDefinitions!({
   // paper using them keeps rendering instead of erroring. nicematrix.sty:
   // \chessboardcolors, \rowlistcolors.
   DefMacro!("\\lx@nice@chessboardcolors[]{}{}", "", locked => true);
+  // The rest of the `\CodeBefore`-scoped surface (nicematrix.sty:1790-1809,
+  // `\cs_set_eq:NN` inside `\__nicematrix_exec_code_before:`): `\EmptyColumn{j}`
+  // / `\EmptyRow{i}` (:6020/6029 — mark a column/row as empty for the
+  // `corners` key; witness nicematrix.tex:2716 was `undefined`),
+  // `\roundedrectanglecolor[model]{color}{i-j}{k-l}`, `\rowcolors[model]
+  // {i}{c1}{c2}`, `\SubMatrix(…)` / `\ShowCellNames` / `\TikzEveryCell{…}`
+  // (TikZ overlays). All print styling: gobble arguments, emit nothing.
+  DefMacro!("\\lx@nice@emptycolumn{}", "", locked => true);
+  DefMacro!("\\lx@nice@emptyrow{}", "", locked => true);
+  DefMacro!("\\lx@nice@roundedrectanglecolor[]{}{}{}", "", locked => true);
+  DefMacro!("\\lx@nice@rowcolors[]{}{}{}", "", locked => true);
+  DefMacro!("\\lx@nice@showcellnames", "", locked => true);
+  DefMacro!("\\lx@nice@tikzeverycell[]{}", "", locked => true);
   DefMacro!("\\lx@nice@rowlistcolors[]{}{}", "", locked => true);
 
   // Paint the recorded \CodeBefore rectangles onto the just-built XMArray, and mark
@@ -445,6 +512,12 @@ LoadDefinitions!({
     r"\let\arraycolor\lx@nice@arraycolor",
     r"\let\chessboardcolors\lx@nice@chessboardcolors",
     r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"\let\EmptyColumn\lx@nice@emptycolumn",
+    r"\let\EmptyRow\lx@nice@emptyrow",
+    r"\let\roundedrectanglecolor\lx@nice@roundedrectanglecolor",
+    r"\let\rowcolors\lx@nice@rowcolors",
+    r"\let\ShowCellNames\lx@nice@showcellnames",
+    r"\let\TikzEveryCell\lx@nice@tikzeverycell",
     r"#2",
     r"\endgroup",
     r"\lx@ams@matrix{#1}}"
@@ -500,6 +573,12 @@ LoadDefinitions!({
     r"\let\arraycolor\lx@nice@arraycolor",
     r"\let\chessboardcolors\lx@nice@chessboardcolors",
     r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"\let\EmptyColumn\lx@nice@emptycolumn",
+    r"\let\EmptyRow\lx@nice@emptyrow",
+    r"\let\roundedrectanglecolor\lx@nice@roundedrectanglecolor",
+    r"\let\rowcolors\lx@nice@rowcolors",
+    r"\let\ShowCellNames\lx@nice@showcellnames",
+    r"\let\TikzEveryCell\lx@nice@tikzeverycell",
     r"#2",
     r"\endgroup",
     r"#1}"

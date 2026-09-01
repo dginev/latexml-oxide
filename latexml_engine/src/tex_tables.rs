@@ -1374,33 +1374,34 @@ pub fn extract_alignment_column(
 //  As if: \lx@alignment@newline OptionalMatch:* [Dimension]
 // Read arguments for \\, namely * and/or [Dimension]
 // BUT optionally do it while skipping spaces (latex style) or not (ams style)
+// Perl pool:557-571 looks `Alignment` up but never uses it: `\\` outside
+// any alignment still reads its `*`/`[dim]` and expands to nothing harmful.
+// A former Rust-only `Err` here fired for every `\nl`/`\\` inside a
+// not-yet-open table body (aguplus `planotable` collects `\tablehead{… & …}`
+// and `\nl` rows before its `\halign` opens — witness aguplus/plano).
 fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
-  if lookup_alignment().is_some() {
-    local_align_group_count(1000000);
+  local_align_group_count(1000000);
+  if skipspaces {
+    skip_spaces()?;
+  }
+  let (mut star, mut optional) = (false, None);
+  let mut next_opt = read_token()?;
+  if next_opt == Some(T_OTHER!("*")) {
+    star = true;
     if skipspaces {
       skip_spaces()?;
     }
-    let (mut star, mut optional) = (false, None);
-    let mut next_opt = read_token()?;
-    if next_opt == Some(T_OTHER!("*")) {
-      star = true;
-      if skipspaces {
-        skip_spaces()?;
-      }
-      next_opt = read_token()?;
-    }
-    if next_opt == Some(T_OTHER!("[")) {
-      optional = Some(read_until(&Tokens!(T_OTHER!("]")))?.unwrap_or_default());
-      next_opt = None;
-    }
-    if let Some(next) = next_opt {
-      unread_one(next);
-    }
-    expire_align_group_count();
-    Ok((star, optional))
-  } else {
-    Err("read_newline_args should only be called with a proper 'Alignment' active in state".into())
+    next_opt = read_token()?;
   }
+  if next_opt == Some(T_OTHER!("[")) {
+    optional = Some(read_until(&Tokens!(T_OTHER!("]")))?.unwrap_or_default());
+    next_opt = None;
+  }
+  if let Some(next) = next_opt {
+    unread_one(next);
+  }
+  expire_align_group_count();
+  Ok((star, optional))
 }
 
 // Recognise "implicit alignment tab" CS tokens, i.e. `\let\amp=&`.

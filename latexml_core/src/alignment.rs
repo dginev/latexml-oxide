@@ -38,6 +38,7 @@ use crate::{
   common::{
     arena::SymHashMap, dimension::Dimension, error::*, numeric_ops::NumericOps, object::Object,
   },
+  definition::ExpansionBody,
   digested::Digested,
   document::{Document, get_node_qname, with_node_qname},
   gullet::{self, ExpansionLevel},
@@ -995,6 +996,14 @@ pub fn read_alignment_template() -> Result<Template> {
             }
           } else if cc.is_active_or_cs()
             && let Some(defn) = lookup_expandable(&op, Some(false))?
+            // Token-bodied macros only. A primitive expandable reached here
+            // (`\csname`, `\expandafter`, `\the`…) is almost always the
+            // "safety valve" below having over-read past an unknown column's
+            // `{arg}` (Perl Alignment.pm:906 shares the over-read); invoking
+            // `\csname` then scans for an `\endcsname` far outside the
+            // template — nicematrix/nicematrix 109 → 1002 errors + Fatal
+            // (`V{3cm}` before the binding registered `V`).
+            && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_)))
           {
             // Macro-valued column specs: real `\@mkpream` FULLY edef-expands
             // the preamble before classification (latex.ltx L16610-16644,

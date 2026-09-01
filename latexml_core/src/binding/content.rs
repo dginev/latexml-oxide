@@ -1529,12 +1529,10 @@ fn load_tex_definitions(
   // but loading of sources & bindings is typically done in before/after methods of constructors!
   // This re-locks defns during reading of TeX packages.
   local_state_unlocked(false);
-  let content_str = crate::binding::virtual_files::vfs_read(pathname).unwrap_or_default();
-  let content = if content_str.is_empty() {
-    None
-  } else {
-    Some(content_str)
-  };
+  // An EMPTY virtual file still exists (`\tcbwritetemp` over an empty
+  // `posterboxenv` body, tcbposter.code.tex:168-171) — `Some("")` keeps the
+  // mouth off the disk; only `None` falls through to a real file.
+  let content = crate::binding::virtual_files::vfs_read(pathname);
   let pathname_mouth = Mouth::create(pathname, MouthOptions {
     fordefinitions: true,
     at_letter,
@@ -1662,12 +1660,8 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   };
 
   // Open a mouth for that TeX content
-  let cached = crate::binding::virtual_files::vfs_read(path).unwrap_or_default();
-  let cached_opt = if cached.is_empty() {
-    None
-  } else {
-    Some(cached)
-  };
+  // Empty virtual files exist too (see load_definitions above).
+  let cached_opt = crate::binding::virtual_files::vfs_read(path);
   gullet::open_mouth(
     Mouth::create(path, MouthOptions {
       notes: true,
@@ -2235,8 +2229,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // their .cls inline via filecontents miss the dep-scan and downstream
   // CSes that the (now-cached) cls would have hand-loaded stay
   // undefined. Witness: arXiv:2604.09738.
-  let cached = crate::binding::virtual_files::vfs_read(&path).unwrap_or_default();
-  let code = if !cached.is_empty() {
+  let code = if let Some(cached) = crate::binding::virtual_files::vfs_read(&path) {
     cached
   } else {
     // Use read (bytes) + UTF-8 conversion so non-UTF-8 cls/sty files
@@ -3010,9 +3003,12 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
 }
 
 fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
-  // If cached, return simple path (it's a key into the cache)
-  let cached = crate::binding::virtual_files::vfs_read(file).unwrap_or_default();
-  if !cached.is_empty() {
+  // If cached, return simple path (it's a key into the cache). An empty
+  // virtual file is still a file: tcolorbox's `\tcbwritetemp` over an empty
+  // `posterboxenv` body stores "" and `\tcbusetemp` then `\input`s it —
+  // falling through to disk raised `missing_file:<job>.tcbtemp` ×7 on
+  // tcolorbox/tcolorbox-tutorial-poster (+ the bfh-ci/tuda-ci poster demos).
+  if crate::binding::virtual_files::vfs_exists(file) {
     return Some(file.to_string());
   }
   if pathname::is_absolute(file) {
