@@ -51,10 +51,11 @@ LoadDefinitions!({
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
   DefMacro!("\\newtcblisting[]{}[][]{}", sub[(init, name, n, default, opts)] {
-    let (start, end) = tcb_listing_startend(init.as_ref(), &opts);
+    let env_name = name.to_string().trim().to_string();
+    let (start, end) = tcb_listing_startend(&env_name, init.as_ref(), &opts);
     Ok(Tokenize!(TeXString::assembled(format!(
       "\\lstnewenvironment{{{}}}[{}][{}]{{{}}}{{{}}}",
-      name.to_string().trim(),
+      env_name,
       n.map(|t| t.to_string()).unwrap_or_default(),
       default.map(|t| t.to_string()).unwrap_or_default(),
       start,
@@ -159,6 +160,102 @@ LoadDefinitions!({
     tcb_xparse_listing(name, sig, init.as_ref(), &opts)
   });
 
+  // \newtcbinputlisting[init]{\cmd}[n][default]{options} — defines \cmd to
+  // INPUT a listing file into a listing box at each use
+  // (tcblistingscore.code.tex L355-378: \cmd = \tcbinputlisting{options}).
+  // Semantic core honored: `use counter from=<env>` steps the counter
+  // recorded for <env> (see tcb_listing_startend) and exposes
+  // \thetcbcounter; `listing file=F` — with the call's #-arguments
+  // substituted and expanded — is read (VFS first, then disk) and displayed
+  // as a listing. Witness: incgraph-doc.sty L128 `\newtcbinputlisting[use
+  // counter from=texexptitled]{\inputexamplelisting}[3][]{…listing
+  // file={#2}…}`.
+  DefPrimitive!("\\newtcbinputlisting []{}[Number][] DefPlain", sub[(_init, cmd, n, default, opts)] {
+    let cmd_tok = cmd
+      .unlist_ref()
+      .iter()
+      .find(|t| t.code == Catcode::CS)
+      .copied();
+    let Some(cmd_tok) = cmd_tok else {
+      return Ok(Vec::new());
+    };
+    let n: usize = n.value_of() as usize;
+    let mut param_spec = String::new();
+    if let Some(ref d) = default {
+      param_spec.push_str(&format!("[Default:{d}]"));
+      for _ in 1..n {
+        param_spec.push_str("{}");
+      }
+    } else {
+      for _ in 0..n {
+        param_spec.push_str("{}");
+      }
+    }
+    let params = if param_spec.is_empty() {
+      None
+    } else {
+      parse_parameters(&param_spec, &cmd_tok, true)?
+    };
+    // Same shape as \lstinputlisting (listings_sty.rs): a MACRO whose
+    // expansion opens the listing group (`bgroup()`) and yields the display
+    // tokens; the display's own trailer closes it. A primitive that unread
+    // the display, or a bare expansion without the bgroup, tripped
+    // "close a group that switched to mode internal_vertical".
+    let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        use latexml_core::keyval::split_keyval_source;
+        let sub_args: Vec<Option<Cow<Tokens>>> = args
+          .iter()
+          .map(|a| match a {
+            ArgWrap::None => None,
+            ArgWrap::Tokens(t) => Some(Cow::Borrowed(t)),
+            ArgWrap::Token(t) => Some(Cow::Owned(Tokens::new(vec![*t]))),
+            other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
+          })
+          .collect();
+        let opts_subst = opts.substitute_parameters(&sub_args);
+        let mut counter: Option<String> = None;
+        let mut file: Option<String> = None;
+        for (key, val) in split_keyval_source(&opts_subst.to_string()) {
+          let val = val.trim().trim_matches(['{', '}']).trim();
+          match key.trim() {
+            "use counter from" if !val.is_empty() => {
+              if let Some(Stored::String(sym)) =
+                lookup_value(&format!("tcb_env_counter_{val}"))
+              {
+                counter = Some(with(sym, |c| c.to_string()));
+              }
+            },
+            "listing file" if !val.is_empty() => file = Some(val.to_string()),
+            _ => {},
+          }
+        }
+        if let Some(counter) = counter {
+          digest(Tokenize!(TeXString::assembled(format!(
+            "\\refstepcounter{{{counter}}}\\def\\thetcbcounter{{\\csname the{counter}\\endcsname}}"
+          ))))?;
+        }
+        let Some(file) = file else {
+          return Ok(Tokens!());
+        };
+        let file = do_expand(Tokenize!(TeXString::assembled(file)))
+          .map(|t| t.to_string())
+          .unwrap_or_default();
+        let file = file.trim();
+        let text = vfs_read(file)
+          .or_else(|| std::fs::read_to_string(file).ok())
+          .unwrap_or_default();
+        bgroup();
+        Ok(Tokens::new(lst_process_display(
+          Some(Tokens::new(ExplodeText!(file))),
+          &text,
+        )))
+      },
+    )));
+    def_macro(cmd_tok, params, expansion, None)?;
+  }, locked => true);
+  DefMacro!("\\renewtcbinputlisting", "\\newtcbinputlisting", locked => true);
+
   DefPrimitive!(T_CS!("\\dispListing"), None, {
     bgroup();
     let text = listings_read_raw_lines("dispListing");
@@ -189,14 +286,11 @@ fn tcb_xparse_listing(
     .chars()
     .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D'))
     .count();
-  let name_str = name.to_string();
-  let (start, end) = tcb_listing_startend(init, opts);
+  let name_str = name.to_string().trim().to_string();
+  let (start, end) = tcb_listing_startend(&name_str, init, opts);
   Ok(Tokenize!(TeXString::assembled(format!(
     "\\lstnewenvironment{{{}}}[{}][]{{{}}}{{{}}}",
-    name_str.trim(),
-    nargs,
-    start,
-    end
+    name_str, nargs, start, end
   ))))
 }
 
@@ -209,7 +303,7 @@ fn tcb_xparse_listing(
 /// USE time so `\jobname.\thetcbcounter.listing` names follow the counter —
 /// witness incgraph.tex L857 `\inputlisting{\n}` reading 12 such files).
 /// Everything else remains presentation-only and is dropped.
-fn tcb_listing_startend(init: Option<&Tokens>, opts: &Tokens) -> (String, String) {
+fn tcb_listing_startend(env_name: &str, init: Option<&Tokens>, opts: &Tokens) -> (String, String) {
   use latexml_core::keyval::split_keyval_source;
   let mut start = String::new();
   let mut end = String::new();
@@ -222,6 +316,13 @@ fn tcb_listing_startend(init: Option<&Tokens>, opts: &Tokens) -> (String, String
     let val = val.trim().trim_matches(['{', '}']).trim();
     match key.trim() {
       "use counter" if !val.is_empty() => {
+        // Record which LaTeX counter this env drives so
+        // `use counter from=<env>` (\newtcbinputlisting) can share it.
+        assign_value(
+          &format!("tcb_env_counter_{env_name}"),
+          Stored::String(pin(val)),
+          Some(Scope::Global),
+        );
         start.insert_str(
           0,
           &format!("\\refstepcounter{{{val}}}\\def\\thetcbcounter{{\\csname the{val}\\endcsname}}"),

@@ -3737,6 +3737,36 @@ replayed\_marker
     );
   }
 
+  /// Batch 44: `\newtcbinputlisting` — the defined command INPUTS its
+  /// `listing file=` (after #-substitution) as a listing and shares the
+  /// referenced env's counter via `use counter from=`. RED: the command was
+  /// undefined; incgraph's `\inputexamplelisting` cascaded
+  /// (`\tcb@cnt@texexptitled` csname errors ×15). Witness:
+  /// incgraph/incgraph.
+  #[test]
+  fn tcbinputlisting_inputs_file() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newcounter{texexp}
+\newtcblisting[use counter=texexp]{texexptitled}[2][]{listing file={\jobname.\thetcbcounter.listing}}
+\newtcbinputlisting[use counter from=texexptitled]{\inputexamplelisting}[3][]{listing file={#2}}
+\begin{document}
+\begin{texexptitled}{t}{l}
+roundtrip\_marker
+\end{texexptitled}
+\inputexamplelisting{t.1.listing}{lbl}
+\end{document}
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.matches("roundtrip").count() >= 2,
+      "\\inputexamplelisting did not display the recorded listing:\n{xml}"
+    );
+  }
+
   /// Batch 42: pgfmath `array({e0,e1,…}, i)` — brace-list first argument
   /// parsed in place, 0-based select. RED: "Unimplemented pgfmath operator
   /// 'array'" (Perl silently no-ops). Witness: colorblind/colorblind_doc
