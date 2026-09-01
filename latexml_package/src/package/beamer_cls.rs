@@ -38,11 +38,18 @@ LoadDefinitions!({
   // "always-true" branch (first arg, or body) — faithful to what a
   // reader expects from beamer slides printed as a continuous
   // document. See Perl L793-834 for the full overlay/pause machinery.
-  def_macro_identity("\\only{}")?;
+  // \only<spec>{stuff} — the leading angle-spec must be CONSUMED (the old
+  // `\only{}` identity ate `{stuff}` but left `<handout>` to typeset AND
+  // execute never-taken branches: beamerswitch.cls L226's
+  // `\only<handout>{\pgfpagesuselayout…}` ran its pgfpages payload and
+  // printed `¡handout¿`; Perl routes through \beamer@ifnextcharospec,
+  // beamer.cls.ltxml L745). The trailing-spec form `\only{stuff}<spec>` is
+  // absorbed by the OptionalAngled tail.
+  DefMacro!("\\only OptionalAngled {} OptionalAngled", "#2");
   def_macro_noop("\\onslide")?;
-  DefMacro!("\\temporal{}{}{}", "#2");
+  DefMacro!("\\temporal OptionalAngled {}{}{}", "#3");
   def_macro_noop("\\pause")?;
-  def_macro_identity("\\alt{}{}")?;
+  DefMacro!("\\alt OptionalAngled {}{} OptionalAngled", "#2");
 
   // Perl beamer.cls.ltxml L796-798 dispatches \visible/\uncover/
   // \invisible via \alt to the \beamer@{visible,uncovered,…}
@@ -51,9 +58,9 @@ LoadDefinitions!({
   // hasn't ported. Keep the body-passthrough stubs for now — the
   // markers below are still defined and usable directly by advanced
   // beamer styles that invoke them without angle-spec preprocessing.
-  def_macro_identity("\\visible{}")?;
-  def_macro_identity("\\uncover{}")?;
-  def_macro_identity("\\invisible{}")?;
+  DefMacro!("\\visible OptionalAngled {}", "#2");
+  DefMacro!("\\uncover OptionalAngled {}", "#2");
+  DefMacro!("\\invisible OptionalAngled {}", "");
 
   DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
   DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
@@ -286,9 +293,34 @@ LoadDefinitions!({
   def_macro_noop("\\popQED")?;
   def_macro_noop("\\qedhere")?;
 
-  // Mode commands — Perl L448-460
-  def_macro_noop("\\mode OptionalMatch:* {}")?;
-  def_macro_noop("\\mode<>{}")?;
+  // Mode commands — Perl L448-476. The old `\mode<>{}` prototype hit the
+  // def_parser literal-char fallback whose `Token` reader eats one ARBITRARY
+  // token per literal: `\mode<presentation>{X}` consumed exactly `<pr` and
+  // leaked `esentation>{X}` into the document (beamerswitch witness; agent
+  // probe `\meaning\mode` = `macro:#1#2#3->`). Faithful shape: star form
+  // no-op (Perl L455), angle-spec + brace body = run body when the spec
+  // matches the presentation mode (Perl matchesCurrentMode), angle-spec
+  // alone = switchmode (mode-blind noop here — the till-next-\mode gobble
+  // needs the processline machinery; specs that would DISABLE text in
+  // presentation mode are the rare case).
+  RawTeX!(
+    r"\def\mode{\@ifstar\lx@beamer@modeoutsideframe\lx@beamer@mode@}
+\def\lx@beamer@modeoutsideframe{}
+\def\lx@beamer@mode@<#1>{\@ifnextchar\bgroup{\lx@beamer@modeinline<#1>}{\lx@beamer@switchmode<#1>}}
+\long\def\lx@beamer@modeinline<#1>#2{\lx@beamer@ifpresmode{#1}{#2}{}}
+\def\lx@beamer@switchmode<#1>{}"
+  );
+  // {spec}{yes}{no}: yes when the spec names the presentation-family mode
+  // (presentation / beamer / all / second) — beamer_cls IS the presentation
+  // context, mirroring Perl matchesCurrentMode(getCurrentMode()).
+  DefMacro!("\\lx@beamer@ifpresmode{}{}{}", sub[(spec, yes, no)] {
+    let spec_str = spec.to_string().to_lowercase();
+    let matches = spec_str.contains("presentation")
+      || spec_str.contains("beamer")
+      || spec_str.contains("all")
+      || spec_str.trim().is_empty();
+    Ok(if matches { yes } else { no })
+  });
   // Perl L493-495: \presentation / \article / \common route to
   // \mode<…>. Since the Rust \mode dispatcher is already a no-op for
   // all overlay modes, the three become empty stubs. Including them

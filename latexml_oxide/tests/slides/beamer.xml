@@ -27,19 +27,18 @@
     </subsection>
     <subsection>
       <para xml:id="section1.p3">
-        <p>This is on every slide. 
-¡2¿This is on the second slide.</p>
+        <p>This is on every slide. This is on the second slide.</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section1.p4">
-        <p>2Before second slideon second slideafter second slide</p>
+        <p>on second slide</p>
       </para>
       <para xml:id="section1.p5">
-        <p>¡1,3¿On slides 1 and 3</p>
+        <p>On slides 1 and 3</p>
       </para>
       <para xml:id="section1.p6">
-        <p>¡2-¿On slide 2 onwards</p>
+        <p>On slide 2 onwards</p>
       </para>
     </subsection>
   </section>
@@ -53,43 +52,43 @@
     <title><tag close=" ">2</tag>Counting of Frames</title>
     <subsection>
       <para xml:id="section2.p1">
-        <p>¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+        <p>Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p2">
         <p>¡1¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p3">
         <p>¡2¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p4">
         <p>¡3¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p5">
         <p>¡4¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p6">
         <p>¡2-¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section2.p7">
         <p>¡-2¿
-¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
+Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
   </section>
@@ -116,9 +115,9 @@ Always</p>
     </subsection>
     <subsection>
       <para xml:id="section3.p3">
-        <p>¡2-¿ Visible on Slide 2 onwards
-¡2-¿ Invisible on Slide 2 onwards 
-¡2-¿Uncovered on Slide 2</p>
+        <p>Visible on Slide 2 onwards
+
+Uncovered on Slide 2</p>
       </para>
     </subsection>
   </section>
@@ -202,7 +201,7 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Title</text></p>
       </para>
       <para xml:id="section5.p2">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -210,7 +209,7 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Title</text></p>
       </para>
       <para xml:id="section5.p4">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -218,13 +217,13 @@ This text is shown the same way as the text below.</p>
         <p>Title</p>
       </para>
       <para xml:id="section5.p6">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section5.p7">
         <p>TitleSubtitle
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -232,7 +231,7 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Title</text></p>
       </para>
       <para xml:id="section5.p9">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -243,7 +242,7 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Second Title</text></p>
       </para>
       <para xml:id="section5.p12">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -254,21 +253,21 @@ This text is shown the same way as the text below.</p>
         <p><text font="bold">Second Title</text></p>
       </para>
       <para xml:id="section5.p15">
-        <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
+        <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section5.p16">
         <p>Title
 
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
       <para xml:id="section5.p17">
         <p>TitleSubtitle
 
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
@@ -276,7 +275,7 @@ This text is shown the same way as the text below.</p>
         <p>Title
 
 
-¡1¿Slide 1¡2¿Slide 2<break/></p>
+Slide 1Slide 2<break/></p>
       </para>
     </subsection>
   </section>

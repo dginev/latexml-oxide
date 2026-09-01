@@ -237,9 +237,16 @@ pub fn parse_parameters(
                   },
                 )?;
                 let ch_token = CharToken!(ch, Catcode::OTHER);
+                // "Match", not "Token": the Match reader consumes the literal
+                // from `extra` (or yields None), while the Token reader
+                // IGNORES extra and swallows one ARBITRARY token — a
+                // prototype like `\mode<>{}` then silently ate `<`+`p`+`r`
+                // of `\mode<presentation>` (beamerswitch witness; Perl's
+                // parseParameters has no such fallback at all, so no Perl
+                // binding can express these prototypes).
                 Parameter {
-                  name: pin!("Token"),
-                  spec: pin!("Token"),
+                  name: pin!("Match"),
+                  spec: pin!("Match"),
                   extra: vec![Tokens::new(vec![ch_token])],
                   ..Parameter::default()
                 }
@@ -291,6 +298,12 @@ mod golden_tests {
   /// Golden corpus pinning the prototype grammar's behavior (captured from
   /// the regex implementation 2026-06-10) — the gate for the winnow rewrite:
   /// any divergence here is a semantics change, not a refactor.
+  ///
+  /// DELIBERATE semantics change 2026-08-31: literal-char fallbacks are
+  /// `Match` parameters (consume that literal, or None) instead of `Token`
+  /// (consume one ARBITRARY token, ignoring the literal) — identical on
+  /// well-formed input, no longer silently eats unrelated tokens on
+  /// mismatch (`\mode<>{}` ate `<pr` of `<presentation>`; beamerswitch).
   #[test]
   fn golden_prototype_corpus() {
     crate::state::set_state(crate::state::State::new(
@@ -337,25 +350,25 @@ mod golden_tests {
       ("DigestedBody", "DigestedBody:DigestedBody/x0/i0"),
       (
         "(){}",
-        "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{}/x0/i0",
+        "Match:Match/x1/i0 | Match:Match/x1/i0 | Plain:{}/x0/i0",
       ),
       (
         "( {Float} , {Float} )",
-        "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0 | \
-         Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0",
+        "Match:Match/x1/i0 | Match:Match/x1/i0 | Plain:{Float}/x0/i1 | Match:Match/x1/i0 | \
+         Match:Match/x1/i0 | Plain:{Float}/x0/i1 | Match:Match/x1/i0",
       ),
       ("Optional:=Default:9", "Optional:Optional:=Default:9/x1/i0"),
       ("{Until:;}", "Plain:{Until:;}/x0/i1"),
-      ("+", "Token:Token/x1/i0"),
+      ("+", "Match:Match/x1/i0"),
       ("Match:- {}", "Match:Match:-/x1/i0 | Plain:{}/x0/i0"),
       // pst_all_sty shapes: non-nesting braced inner ("{{}}" -> Plain with a
       // lone "{" inner Token, then a dangling "}" Token) — regex-faithful.
       (
         "OptionalMatch:* {{}} [] {}",
-        "OptionalMatch:OptionalMatch:*/x1/i0 | Plain:{{}/x0/i1 | Token:Token/x1/i0 | Token:Token/x1/i0 | \
+        "OptionalMatch:OptionalMatch:*/x1/i0 | Plain:{{}/x0/i1 | Match:Match/x1/i0 | Match:Match/x1/i0 | \
          Optional:[]/x0/i0 | Plain:{}/x0/i0",
       ),
-      ("{", "Token:Token/x1/i0"),
+      ("{", "Match:Match/x1/i0"),
     ];
     for (proto, expected) in golden {
       let expected = expected.split_whitespace().collect::<Vec<_>>().join(" ");

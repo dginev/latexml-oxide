@@ -2643,7 +2643,21 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // Perl's load order in this branch: warn missing-binding → load
   // alternate (OmniBus) → deps-scan pulls natbib LAST → natbib's Let
   // overrides OmniBus correctly.
-  if !lookup_bool(&s!("{name}.cls.ltxml_loaded")) && !will_fallback {
+  // ALSO skip the deps-scan after a SUCCESSFUL raw .cls load: Perl only ever
+  // scans in the missing-binding branch, after loading the ALTERNATE
+  // (Package.pm L2731-2733; a successful InputDefinitions returns at L2713-14
+  // with no scan). An executed raw `\RequirePackage` triggers our binding
+  // loaders directly (verified: bundled myclass.cls → caption_sty.rs loads,
+  // \captionsetup/\eqref clean), so the scan only ADDS the harvest of
+  // `\LoadClass`/`\RequirePackage` lines from UNEXECUTED branches — the
+  // beamerswitch witness: its article branch ran, but the scan saw the three
+  // `\LoadClass{beamer}` in never-taken branches and loaded beamer_cls.rs
+  // AFTER raw beamerarticle, clobbering the correct raw `\mode`/`\only`
+  // (perfect-kernel; Perl converts the same doc with 0 errors).
+  if !lookup_bool(&s!("{name}.cls.ltxml_loaded"))
+    && !lookup_bool(&s!("{name}.cls_raw_loaded"))
+    && !will_fallback
+  {
     maybe_require_dependencies(name, "cls");
   }
   if will_fallback {
