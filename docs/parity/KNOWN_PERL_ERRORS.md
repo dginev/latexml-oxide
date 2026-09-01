@@ -4376,3 +4376,48 @@ on `\vbox{\maketitle}`: 4 errors + 1 warning). Witnesses ltx-talk ×2,
 milsymb, unifront. Surpass shape (fall back to the document-level
 `\lx@frontmatter@fallback` insertion point) needs approval — PLANS P16.
 
+
+## 111. xcolor `\definecolor[ps]{…}` dropped entirely; later `\color{name}` undefined (Rust fixes)
+
+`xcolor.sty.ltxml` L403-409 `checkNoPostscript` returns before `DefColor`, so a
+PostScript-typed color is never registered. Real xcolor.sty L531-533 registers
+it with the raw PostScript as its driver spec and the MODEL'S WHITE
+(`\XC@clr@<model>@white`, L510-516) as its ordinary value, so every
+non-PostScript driver renders it white. Witness: TL doc xcolor/xcolor2
+(xcolor2.tex:143 defines `lambda`, :134 uses it under `\multiput` ×2280) —
+Perl fatals earlier on figure 3, Rust reached this and produced 101
+`Can't find color named 'lambda'` + `Fatal:TooManyErrors`. Rust
+(`xcolor_sty.rs` `\XC@definecolor`/`\providecolor`) now keeps the
+`Info:ignored` line and registers white; `\colorlet`/`\definecolorset` still
+skip like Perl (no model to fall back on). Guard
+`perfect_kernel_batch49::xcolor_ps_color_registers_as_model_white`.
+
+```latex
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\definecolor[ps]{lambda}{rgb}{Red Corr Green Corr Blue Corr}
+\textcolor{lambda}{hello}
+\end{document}
+```
+
+## 112. CJK binding omits `\CJK@uniPunct`/`\CJK@punctchar`; raw CJKpunct errors on every curly quote (Rust fixes)
+
+ctex's pdfTeX layer requires CJKpunct (ctex-engine-pdftex.def:122). Raw
+CJKpunct.sty:442-450 routes U+2018/2019/201C/201D/2014/2026 through
+`\CJKpunct@utfasymbol` → `\CJK@punctchar{\CJK@uniPunct}{0}{"80}{byte}` once
+`\punctstyle{quanjiao}` fires at `\begin{document}` (:389, :372). Real CJK
+supplies them from CJK.enc:291 and a lazily-input `*.chr`; the CJK.sty.ltxml
+binding (ar5iv-bindings) never loads either, so both engines emit 2
+`undefined` per document (18 TL ctex manuals; jnuexam/jnuexam has nothing
+else). Rust `cjk_sty.rs` defines both, mapping the low byte to the Unicode
+punctuation (the reduction of CJKpunct.sty:451-474's `plain` branch). Guard
+`perfect_kernel_batch49::ctex_cjkpunct_unicode_punctuation`.
+
+```latex
+\documentclass{article}
+\usepackage[scheme=plain]{ctex}
+\begin{document}
+A“B”C—D…E‘F’G
+\end{document}
+```

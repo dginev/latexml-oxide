@@ -467,9 +467,11 @@ fn index_color_series(name: &str, p: usize) -> Color {
 }
 
 /// Perl xcolor.sty.ltxml L403-409: if the optional `[type]` argument
-/// equals "ps", emit an Info and return false so the caller skips the
-/// definition. Otherwise return true. Non-"ps" types (empty, "named",
-/// "ful", ...) all pass through.
+/// equals "ps", emit an Info and return false. `\colorlet`/`\definecolorset`
+/// then skip the definition as Perl does; `\XC@definecolor`/`\providecolor`
+/// instead register the model-white fallback real xcolor keeps
+/// (xcolor.sty:531-533). Non-"ps" types (empty, "named", "ful", ...) all
+/// pass through.
 fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<bool> {
   if let Some(t) = type_opt {
     let s = do_expand(t)?.to_string();
@@ -693,11 +695,21 @@ LoadDefinitions!({
 
   // Perl: DefPrimitive('\XC@definecolor[]{}[]{}{}', sub { ... });
   DefPrimitive!("\\XC@definecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
-    if !check_no_postscript(type_opt, "\\XC@definecolor")? { return Ok(Vec::new()); }
+    let is_ps = !check_no_postscript(type_opt, "\\XC@definecolor")?;
     let name_str = do_expand(name)?.to_string();
-    let models_str = do_expand(models)?.to_string();
-    let specs_str = do_expand(specs)?.to_string();
-    let color = parse_xcolor(Some(&models_str), &specs_str, None);
+    // xcolor.sty:531-533: a `ps` color still REGISTERS — its driver spec is
+    // the raw PostScript, and its ordinary color value is the model's white
+    // (`\XC@clr@<model>@white`, :510-516 — white in every model). Perl's
+    // binding drops the definition altogether, so `\color{lambda}` later
+    // errors 101× → Fatal (xcolor/xcolor2 figure 5, xcolor2.tex:143/134;
+    // KNOWN_PERL_ERRORS #111).
+    let color = if is_ps {
+      WHITE
+    } else {
+      let models_str = do_expand(models)?.to_string();
+      let specs_str = do_expand(specs)?.to_string();
+      parse_xcolor(Some(&models_str), &specs_str, None)
+    };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
@@ -713,15 +725,20 @@ LoadDefinitions!({
   // primitive. Rust collapses directly to the primitive (WISDOM #40 —
   // direct-call simplification of an expand-to-alias indirection).
   DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
-    if !check_no_postscript(type_opt, "\\XC@providecolor")? { return Ok(Vec::new()); }
+    let is_ps = !check_no_postscript(type_opt, "\\XC@providecolor")?;
     let name_str = do_expand(name)?.to_string();
     let key = s!("color_{name_str}");
     if with_value(&key, |v| v.is_some()) {
       return Ok(Vec::new()); // Already defined
     }
-    let models_str = do_expand(models)?.to_string();
-    let specs_str = do_expand(specs)?.to_string();
-    let color = parse_xcolor(Some(&models_str), &specs_str, None);
+    // `ps` → model white, as in \XC@definecolor above (xcolor.sty:531-533).
+    let color = if is_ps {
+      WHITE
+    } else {
+      let models_str = do_expand(models)?.to_string();
+      let specs_str = do_expand(specs)?.to_string();
+      parse_xcolor(Some(&models_str), &specs_str, None)
+    };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));

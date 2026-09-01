@@ -1190,11 +1190,17 @@ pub fn def_environment(
   let env_name = name.clone();
   let current_environment_closure = before_digest_simple!({
     assign_value_sym(crate::pin!("current_environment"), env_name.clone(), None);
-    let body = T_LETTER!(env_name.clone());
+    // Perl Package.pm:1927 `DefMacroI('\@currenvir', undef, $name)` — the
+    // string body is TokenizeInternal'd into CHARACTER tokens (= latex.ltx:15350
+    // `\def\@currenvir{#1}`), so `\ifx\reserved@a\@currenvir` comparisons
+    // (`\@checkend` latex.ltx:15394, collectbox:208, storebox:36, nag:258,
+    // powerdot:529 …) see the same token list as a `\def\reserved@a{center}`.
+    // A single multi-char T_LETTER stringified right but never `\ifx`-matched.
+    let body = mouth::tokenize_internal(TeXString::assembled(env_name.clone()));
     def_macro(
       T_CS!("\\@currenvir"),
       None,
-      Some(ExpansionBody::Tokens(Tokens!(body))),
+      Some(ExpansionBody::Tokens(body)),
       None,
     )?;
   });

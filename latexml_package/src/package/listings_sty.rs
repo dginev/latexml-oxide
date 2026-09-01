@@ -2218,7 +2218,7 @@ LoadDefinitions!({
         let kv = args.into_iter().next().unwrap_or_default();
         bgroup();
         assign_value("current_environment", Stored::String(pin("lstlisting")), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
+        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled("lstlisting".into())), None)?;
         let text = listings_read_raw_lines("lstinline");
         let _ = &kv; // lstActivate placeholder
         // Perl #2824: mark inline (local to the bgroup) so frame/bg are skipped.
@@ -2247,7 +2247,7 @@ LoadDefinitions!({
         let kv: Option<KeyVals> = args.into_iter().next().unwrap_or_default().into();
         bgroup();
         assign_value("current_environment", Stored::String(pin("lstlisting")), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
+        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled("lstlisting".into())), None)?;
         // Activate key-value options (language, style, etc.)
         lst_activate(kv.as_ref());
         let text = listings_read_raw_lines("lstlisting");
@@ -2324,7 +2324,7 @@ LoadDefinitions!({
       move |args: Vec<ArgWrap>| {
         bgroup();
         assign_value("current_environment", Stored::String(pin(&env_name)), None);
-        def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_name)), None)?;
+        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled(env_name.clone())), None)?;
         // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
