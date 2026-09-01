@@ -33,7 +33,17 @@ LoadDefinitions!({
   DefRegister!("\\maxdepth", Dimension!("4pt"));
   DefRegister!("\\vsize", Dimension!("8.9in"));
 
-  DefRegister!("\\pagegoal", Dimension::new(0));
+  // tex.web §982/§987: while the current page is EMPTY, `page_goal` is
+  // `max_dimen` (it becomes `\vsize` only when the page builder first
+  // contributes a box — which our model never does, so the page is
+  // permanently empty and max_dimen is the faithful standing value).
+  // Perl uses Dimension(0), which makes "free space on page" probes
+  // compute 0−0=0 and loop: fullwidth.sty's `\fwd@freepagevspace`
+  // retried `\vfill\eject` forever ("Not enough space on this page"
+  // ×∞ → Stomach:Recursion fatal). With max_dimen it takes its
+  // `\ifdimequal{\pagegoal}{\maxdimen}` empty-page branch and uses
+  // `\vsize`, as under real TeX at page start.
+  DefRegister!("\\pagegoal", Dimension::new(0x3FFF_FFFF));
   DefRegister!("\\pagestretch", Dimension::new(0));
   DefRegister!("\\pagefilstretch", Dimension::new(0));
   DefRegister!("\\pagefillstretch", Dimension::new(0));

@@ -395,6 +395,14 @@ LoadDefinitions!({
   });
   // Theme-file surface the raw loads touch.
   def_macro_noop("\\ProcessOptionsBeamer")?;
+  // `\DeclareOptionBeamer{key}[default]{code}` — absorb the whole
+  // declaration (the code body may contain `#1`; leaving the CS undefined
+  // spilled that body into the document: "Can't find color named '#1'").
+  def_macro_noop("\\DeclareOptionBeamer{}[]{}")?;
+  def_macro_noop("\\ExecuteOptionsBeamer{}")?;
+  def_macro_noop("\\defbeamertemplateparent{}[]{}[]")?;
+  def_macro_noop("\\defbeamertemplatealias{}{}{}")?;
+  DefConditional!("\\ifbeamer@compress");
   def_macro_noop("\\usebeamertemplate OptionalMatch:* OptionalMatch:* OptionalMatch:* {}")?;
   def_macro_noop("\\usebeamerfont OptionalMatch:* {}")?;
   def_macro_noop("\\setbeamertemplate{}{}")?;
@@ -678,6 +686,7 @@ LoadDefinitions!({
   DefMacro!("\\emph OptionalAngled {}", "\\textit{#2}");
   def_macro_noop("\\AtBeginSection[]{}")?;
   def_macro_noop("\\AtBeginSubsection[]{}")?;
+  def_macro_noop("\\AtBeginSubsubsection[]{}")?;
   def_macro_noop("\\AtBeginPart[]{}")?;
   // \subtitle<overlay>[short]{subtitle} — document-level frontmatter
   // (beamer beamerbasetitle.sty). Perl's binding never defined it (only the

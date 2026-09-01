@@ -70,6 +70,15 @@ timeouts. Top actionable items:
 | `Fatal:oom:alloc_failed` ×6 (titlecaps, quiver-doc, eledform, spath3/knots, srdp-mathematik, msc) | Runaway gullet-pushback growth to 2-4GB. titlecaps root: upstream typo `\let\sv@huge\Huge` (L460, should be `\sv@Huge`) leaves `\sv@Huge` undefined; REAL TeX tolerates (only \ifx-compared / never invoked), our flow EXPANDS it during `\titlecap` scanning → error-recovery def → scanner loop → OOM. | Agent dispatched 2026-09-01. |
 | `expected:Match` (7 bundles, tkz-doc) | = the batch-15 star-prototype collisions (sweep-16 binary predates the fix); global prototype audit now clean. | FIXED batch 15, verify sweep 17. |
 
+### Sweep-20 residuals (2026-09-01)
+
+| Signature | Verdict |
+|---|---|
+| `malformed:ltx:indexphrase` in `<ltx:item>` (algxpar-doc 314, numerica ~100 malformed family) | Min-context found: `\index` phrases inside an itemize nested in a TIKZ NODE (`<svg:g><ltx:_CaptureBlock_><ltx:itemize>`) — the `indexmark` wrapper is dropped in the SVG-capture path, orphaning phrases. Plain index-in-item is clean. Needs an svg-capture/indexmark session. |
+| biblatex + droit-fr `expected:expandafter` (96+101) | Cascade rooted in a csquotes punctuation-tracker error under fontspec ("No space factor codes for 'ASCII' encoding"); min-repro attempts (fontspec+babel+csquotes+MakeAutoQuote) stay clean — needs doc-bisection session. Perl: 4 errors, no cascade (GENUINE-RUST-ONLY). |
+| aomart `\[ \]` display-math broken (40 `_` + 30 `^` + 19 `\lx@end@display@math`, aomsample×2) | `\[` fails to enter math mode in aomart context — root untraced (class binding + earlier `\HSelect` undefined). Own session. |
+| residual stray-`&` 25 docs (ProfSio 12, PanneauxRoute 9 …) | Follows `\@@tabular` mode errors — the USER-PARKED mode-frame family, not the l3doc ledger class. |
+
 ### Sweep-16 tail notes (2026-09-01)
 
 | Item | Note |
