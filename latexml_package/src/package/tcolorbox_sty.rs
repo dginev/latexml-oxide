@@ -50,11 +50,17 @@ LoadDefinitions!({
   // "Script can only appear in math mode" (Perl raw-loads the real macro and is
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
-  DefMacro!(
-    "\\newtcblisting[]{}[][]{}",
-    "\\lstnewenvironment{#2}[#3][#4]{}{}",
-    locked => true
-  );
+  DefMacro!("\\newtcblisting[]{}[][]{}", sub[(init, name, n, default, opts)] {
+    let (start, end) = tcb_listing_startend(init.as_ref(), &opts);
+    Ok(Tokenize!(TeXString::assembled(format!(
+      "\\lstnewenvironment{{{}}}[{}][{}]{{{}}}{{{}}}",
+      name.to_string().trim(),
+      n.map(|t| t.to_string()).unwrap_or_default(),
+      default.map(|t| t.to_string()).unwrap_or_default(),
+      start,
+      end
+    ))))
+  }, locked => true);
 
   // tcolorbox `documentation` library (tcbdocumentation.code.tex L242-255):
   // {dispExample} routes its body through `\tcbwritetemp` (verbatim write to
@@ -111,6 +117,7 @@ LoadDefinitions!({
     if let Ok(mut fh) = std::fs::File::create(format!("{}.tcbtemp", jobname.trim())) {
       let _ = write!(fh, "{text}");
     }
+    vfs_store(&format!("{}.tcbtemp", jobname.trim()), &text);
     unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
   }, locked => true);
   DefMacro!(T_CS!("\\endtcbwritetemp"), None, "", locked => true);
@@ -139,22 +146,30 @@ LoadDefinitions!({
   // `u`, `s` and the options body digests raw: misdefined:# storm).
   // Known residual: the `s` star specifier is not expressible via
   // \lstnewenvironment, so a starred `\begin{example}*` call mis-grabs `*`.
-  DefMacro!("\\NewTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
-    tcb_xparse_listing(name, sig)
+  DefMacro!("\\NewTCBListing[]{}{}{}", sub[(init, name, sig, opts)] {
+    tcb_xparse_listing(name, sig, init.as_ref(), &opts)
   });
-  DefMacro!("\\DeclareTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
-    tcb_xparse_listing(name, sig)
+  DefMacro!("\\DeclareTCBListing[]{}{}{}", sub[(init, name, sig, opts)] {
+    tcb_xparse_listing(name, sig, init.as_ref(), &opts)
   });
-  DefMacro!("\\RenewTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
-    tcb_xparse_listing(name, sig)
+  DefMacro!("\\RenewTCBListing[]{}{}{}", sub[(init, name, sig, opts)] {
+    tcb_xparse_listing(name, sig, init.as_ref(), &opts)
   });
-  DefMacro!("\\ProvideTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
-    tcb_xparse_listing(name, sig)
+  DefMacro!("\\ProvideTCBListing[]{}{}{}", sub[(init, name, sig, opts)] {
+    tcb_xparse_listing(name, sig, init.as_ref(), &opts)
   });
 
   DefPrimitive!(T_CS!("\\dispListing"), None, {
     bgroup();
     let text = listings_read_raw_lines("dispListing");
+    // Like \tcbwritetemp, dispListing RECORDS the example: consumers follow
+    // it with `\tcbusetemp` (= `\input{\jobname.tcbtemp}`, raw tcolorbox) to
+    // execute the source just displayed — witness incgraph.tex L722.
+    assign_value("TCB@templisting", Stored::String(pin(&text)), Some(Scope::Global));
+    let jobname = do_expand(Tokens!(T_CS!("\\jobname")))
+      .map(|t| t.to_string())
+      .unwrap_or_else(|_| String::from("texput"));
+    vfs_store(&format!("{}.tcbtemp", jobname.trim()), &text);
     unread(Tokenize!(TeXString::assembled("\\end{dispListing}".to_string())));
     unread(Tokens::new(lst_process_display(None, &text)));
   }, locked => true);
@@ -162,17 +177,62 @@ LoadDefinitions!({
 });
 
 /// Delegate an xparse-signature TCB listing declaration to
-/// `\lstnewenvironment{name}[n][]{}{}` using the specifier COUNT.
-fn tcb_xparse_listing(name: Tokens, sig: Tokens) -> Result<Tokens> {
+/// `\lstnewenvironment{name}[n][]{start}{end}` using the specifier COUNT.
+fn tcb_xparse_listing(
+  name: Tokens,
+  sig: Tokens,
+  init: Option<&Tokens>,
+  opts: &Tokens,
+) -> Result<Tokens> {
   let sig_str = sig.to_string();
   let nargs = sig_str
     .chars()
     .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D'))
     .count();
   let name_str = name.to_string();
+  let (start, end) = tcb_listing_startend(init, opts);
   Ok(Tokenize!(TeXString::assembled(format!(
-    "\\lstnewenvironment{{{}}}[{}][]{{}}{{}}",
+    "\\lstnewenvironment{{{}}}[{}][]{{{}}}{{{}}}",
     name_str.trim(),
-    nargs
+    nargs,
+    start,
+    end
   ))))
+}
+
+/// Distill the per-use side effects a tcb listing environment owes from its
+/// `[init-options]` + `{options}` — the pieces of the tcolorbox option
+/// machinery with document-visible consequences. Currently honored:
+/// `use counter=N` (each use steps N and exposes `\thetcbcounter`,
+/// tcbcounter.code.tex) and `listing file=F` (each use records the raw body
+/// to F for `\input`-back, tcblistingscore `listing file`; F is expanded at
+/// USE time so `\jobname.\thetcbcounter.listing` names follow the counter —
+/// witness incgraph.tex L857 `\inputlisting{\n}` reading 12 such files).
+/// Everything else remains presentation-only and is dropped.
+fn tcb_listing_startend(init: Option<&Tokens>, opts: &Tokens) -> (String, String) {
+  use latexml_core::keyval::split_keyval_source;
+  let mut start = String::new();
+  let mut end = String::new();
+  let source = format!(
+    "{},{}",
+    init.map(|t| t.to_string()).unwrap_or_default(),
+    opts
+  );
+  for (key, val) in split_keyval_source(&source) {
+    let val = val.trim().trim_matches(['{', '}']).trim();
+    match key.trim() {
+      "use counter" if !val.is_empty() => {
+        start.insert_str(
+          0,
+          &format!("\\refstepcounter{{{val}}}\\def\\thetcbcounter{{\\csname the{val}\\endcsname}}"),
+        );
+      },
+      "listing file" if !val.is_empty() => {
+        start.push_str(&format!("\\lst@BeginAlsoWriteFile{{{val}}}"));
+        end.push_str("\\lst@EndWriteFile");
+      },
+      _ => {},
+    }
+  }
+  (start, end)
 }

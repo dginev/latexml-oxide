@@ -3500,5 +3500,12 @@ fn lst_writefile_tee(text: &str) -> bool {
   {
     let _ = writeln!(fh, "{text}");
   }
+  // Mirror into the virtual file store so `\input`-back consumers resolve
+  // the written example without touching disk (self-contained design;
+  // find_file consults the VFS first). Append-shape matches the disk tee.
+  let mut mirrored = vfs_read(&file).unwrap_or_default();
+  mirrored.push_str(text);
+  mirrored.push('\n');
+  vfs_store(&file, &mirrored);
   lookup_bool("LST@WF@also")
 }

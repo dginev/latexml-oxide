@@ -270,6 +270,7 @@ fn is_builtin_function(name: &str) -> bool {
     name,
     "abs"
       | "acos"
+      | "array"
       | "asin"
       | "atan2"
       | "atan"
@@ -951,6 +952,43 @@ mod pgfmath_grammar {
   /// FUNCTION '(' formula (',' formula)* ')' | FUNCTION simplefactor
   fn function_call(i: &mut In, name: &str) -> ModalResult<f64> {
     sb(i);
+    // `array({e0,e1,…}, index)` — the one builtin whose FIRST argument is a
+    // brace-delimited expression list, not a formula (pgfmathfunctions.code
+    // `\pgfmatharray@`). Parse the elements in place with the shared parser,
+    // then select by the (0-based) index; out-of-bounds yields 0 like an
+    // empty result. Witness colorblind.sty L433-449
+    // `round(255*array({\colorspec},0))`.
+    if name == "array" && first(i) == Some(b'(') {
+      bump(i, 1);
+      sb(i);
+      let mut elems: Vec<f64> = Vec::new();
+      if eat(i, b'{') {
+        loop {
+          match formula(i) {
+            Ok(v) => elems.push(v),
+            _ => break,
+          }
+          sb(i);
+          if !eat(i, b',') {
+            break;
+          }
+        }
+        sb(i);
+        eat(i, b'}');
+      }
+      sb(i);
+      eat(i, b',');
+      let idx = formula(i)?;
+      sb(i);
+      eat(i, b')');
+      let idx = idx.round();
+      let val = if idx >= 0.0 {
+        elems.get(idx as usize).copied().unwrap_or(0.0)
+      } else {
+        0.0
+      };
+      return Ok(val);
+    }
     if first(i) == Some(b'(') {
       bump(i, 1);
       let mut args = vec![formula(i)?];
