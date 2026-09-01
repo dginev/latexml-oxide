@@ -153,6 +153,19 @@ LoadDefinitions!({
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
+    // babel.sty L1136-1142 (\main@language) → L828 (\bbl@patterns):
+    // real babel assigns `\language=\l@<main>` DURING package load, so a
+    // preamble `\iflanguage{english}{..}{..}` under `[italian]` takes the
+    // FALSE branch (\language=\l@italian ≠ \l@english=0). We never set
+    // \language, so every non-English doc mis-branched preamble language
+    // tests (toptesi topfront manuals: 34 undefined-CS errors from an
+    // \iflanguage{english} block real LaTeX skips). Allocate \l@<lang> if
+    // missing, then assign.
+    unread(Tokenize!(TeXString::assembled(s!(
+      "\\ifcsname l@{lang}\\endcsname\\else\
+       \\expandafter\\newlanguage\\csname l@{lang}\\endcsname\\fi\
+       \\language=\\csname l@{lang}\\endcsname\\relax"
+    ))));
   });
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it).

@@ -110,4 +110,16 @@ LoadDefinitions!({
   def_macro_noop("\\subparagraphbreak")?;
 
   def_macro_noop("\\titleclass{}[]{} []")?;
+
+  // titlesec.sty L1178 + L1385-1422: the `pagestyles` option (also the
+  // deprecated `psfloats`/`pagegrids` aliases) makes titlesec
+  // `\input{titleps.sty}` at the end of its load. Mirror that with the
+  // titleps binding. Witness: ufrgscca-abnt.sty L133
+  // `\RequirePackage[pagestyles,clearempty]{titlesec}` (perfect-kernel).
+  let titlesec_opts = do_expand(Tokenize!(r"\csname opt@titlesec.sty\endcsname"))
+    .map(|t| t.to_string())
+    .unwrap_or_default();
+  if titlesec_opts.contains("pagestyles") || titlesec_opts.contains("pagegrids") {
+    RequirePackage!("titleps");
+  }
 });

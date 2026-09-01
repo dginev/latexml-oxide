@@ -197,6 +197,7 @@ pub mod rotfloat_sty;
 pub mod rsphrase_sty;
 pub mod sagej_cls;
 pub mod savetrees_sty;
+pub mod schooldocs_sty;
 pub mod scicite_sty;
 pub mod scrartcl_cls;
 pub mod scrbook_cls;
@@ -209,6 +210,7 @@ pub mod spconf_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
 pub mod tgpagella_sty;
+pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod typearea_sty;
 pub mod unicode_math_sty;
@@ -407,6 +409,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
+  ("schooldocs", "sty", schooldocs_sty::load_definitions),
+  ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),

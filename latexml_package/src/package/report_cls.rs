@@ -51,6 +51,14 @@ LoadDefinitions!({
   DeclareOption!("openany", r"\@openrightfalse");
 
   ProcessOptions!();
+  // report.cls L318-327: \@endpart, called by \@part/\@spart — raw classes built on
+  // this class invoke it directly (toptesi.sty L448; witness toptesi-example
+  // L265 \part). Page-break body is inert in XML flow but must be defined.
+  RawTeX!(
+    r"\def\@endpart{\vfil\newpage
+  \if@twoside\if@openright\null\thispagestyle{empty}\newpage\fi\fi
+  \if@tempswa\twocolumn\fi}"
+  );
 
   //**********************************************************************
   // Document structure.

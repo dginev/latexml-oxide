@@ -1830,7 +1830,11 @@ LoadDefinitions!({
   // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
   // Native bindings are already robust, so the faithful behavior is to leave them
   // untouched. `\lx@ifnativecmd` mirrors etoolbox's own \ifdefmacro \meaning-split
-  // idiom, using "CODE(" as the sentinel.
+  // idiom, using "CODE(" as the sentinel. `\lx@ifnativecmdb` adds a second
+  // sentinel "Stored[" — DefMath/constructor natives render that way (e.g.
+  // \bmod = DefMath in math_common.rs, whose real latex.ltx L15556 body IS a
+  // robust macro, so real \robustify succeeds; ours must no-op, not error
+  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`).
   RawTeX!(
     r"
 \newcommand{\lx@ifnativecmd}{}
@@ -1840,8 +1844,16 @@ LoadDefinitions!({
 \edef\lx@etb@ifnativecmd{%
   \def\noexpand\lx@etb@ifnativecmd##1\detokenize{CODE(}##2&}
 \lx@etb@ifnativecmd{\notblank{#2}}
+\newcommand{\lx@ifnativecmdb}{}
+\long\edef\lx@ifnativecmdb#1{%
+  \noexpand\expandafter\noexpand\lx@etb@ifnativecmdb
+  \noexpand\meaning#1\detokenize{Stored[}&}
+\edef\lx@etb@ifnativecmdb{%
+  \def\noexpand\lx@etb@ifnativecmdb##1\detokenize{Stored[}##2&}
+\lx@etb@ifnativecmdb{\notblank{#2}}
 \let\lx@saved@robustify\robustify
-\protected\def\robustify#1{\lx@ifnativecmd{#1}{}{\lx@saved@robustify{#1}}}
+\protected\def\robustify#1{%
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#1}}}}
 "
   );
 });
