@@ -2439,7 +2439,14 @@ LoadDefinitions!({
     six_setup(&kv_arg);
   });
 
-  def_macro_noop("\\ProvidesExplFile{}{}{}{}")?;
+  // Perl siunitx.sty.ltxml L110 stubs `\ProvidesExplFile` to NOTHING — but
+  // the real macro (expl3.sty L33-47) ends in `\ExplSyntaxOn`: it is the
+  // switch that puts an expl3 FILE into expl3 syntax. With the empty stub,
+  // every later raw expl3 file (numerica-tables.sty …) read `\cs_new…` as
+  // `\cs` + junk and leaked `#1` to the stomach (latex-via-exemplos, 186
+  // errors; Perl fails identically — Perl-origin, fixed here per the
+  // KNOWN_PERL_ERRORS protocol).
+  DefMacro!("\\ProvidesExplFile{}{}{}{}", "\\ExplSyntaxOn");
 
   //======================================================================
   // \lx@six@initialize

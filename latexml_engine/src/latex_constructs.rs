@@ -11697,7 +11697,18 @@ LoadDefinitions!({
       None => XEquals!(&token, &*TOKEN_END)
     };
     let which = if next_test { t_if } else { t_else };
-    let mut result = which.substitute_parameters(&[]).unlist();
+    // Real \@ifnextchar re-scans BOTH branches as macro bodies
+    // (`\def\reserved@a{#2}`, latex.ltx L1756-1760), which collapses `##`
+    // to `#`. `substitute_parameters` passes PARAM tokens through
+    // untouched (Perl Tokens.pm substituteParameters likewise — its
+    // L5639 pool comment "collapsing ## pairs" is stale), so a branch
+    // like `{\def\ATleftbranch##1##2{…}}` replayed the doubled params
+    // and the later \def leaked `#` to the stomach (adtreesdoc ×2,
+    // misdefined:# family; pdflatex clean, Perl shares the bug).
+    let mut result = which
+      .substitute_parameters(&[])
+      .pack_parameters()?
+      .unlist();
     if let Some(t_next) = next {
       result.push(t_next);
     }

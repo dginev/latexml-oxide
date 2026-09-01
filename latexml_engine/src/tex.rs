@@ -252,6 +252,10 @@ LoadDefinitions!({
     "\\ExplSyntaxOn",
     "\\ProvidesExplClass",
     "\\ProvidesExplPackage",
+    // Missing from Perl TeX.pool.ltxml L42-48 too: an expl3 FILE loaded
+    // before any package/class trigger (e.g. `\input{x}` of an
+    // ProvidesExplFile source) must also pull expl3.
+    "\\ProvidesExplFile",
   ] {
     def_autoload(ltx3trigger, "expl3")?;
   }

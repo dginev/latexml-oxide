@@ -1493,6 +1493,13 @@ fn load_tex_definitions(
   // 2604.22630, 2604.23234, 2604.22528 (tasks.sty + expl3 cluster,
   // Task #20).
   let entered_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
+  // Caller's expl3-syntax status at file entry — either marker suffices
+  // (`\ExplSyntaxOn` sets `_`,`:` letter AND space ignored; a PARTIAL
+  // leak can leave only one flipped). Restored at exit, mirroring the
+  // real `\@expl@push@filename@@`/`\@expl@pop@filename@@` hooks
+  // (expl3.sty L179-217).
+  let expl3_on_entry =
+    lookup_catcode('_') == Some(Catcode::LETTER) || lookup_catcode(' ') == Some(Catcode::IGNORE);
 
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!
@@ -1579,6 +1586,10 @@ fn load_tex_definitions(
     // Witness: `\usepackage{xsavebox}` minimal repro (xsavebox →
     // sys_load_backend → l3backend-dvips.def); arXiv:2509.05997/.07893/
     // .02344, 2510.13206/.13942/.17317.
+    // One-directional cleanup (grandparent-guarded, as before — the real
+    // `\@pushfilename` expl3 hook runs BEFORE our entry snapshot, so a
+    // bidirectional entry/exit restore mis-reads a grandparent-ON chain as
+    // OFF and re-breaks the xsavebox witness):
     if !is_expl3_core
       && !grandparent_in_expl3
       && lookup_catcode('_') == Some(Catcode::LETTER)
@@ -1586,7 +1597,21 @@ fn load_tex_definitions(
     {
       let _ = invoke_token(&T_CS!("\\ExplSyntaxOff"));
     }
-    let _ = entered_expl3; // kept for historical context
+    // PARTIAL-leak normalization: space=catcode 9 (ignored) while `_` is
+    // NOT a letter is an invalid half-ExplSyntax state no legitimate flow
+    // produces (`\ExplSyntaxOn` sets both, `Off` clears both). l3backend-
+    // *.def loaded nested under a raw class (jlreq/ctex → expl3.sty →
+    // l3backend) left exactly this state, and every later raw file then
+    // lost its space tokens: pgfkeys' space-delimited `\def\: {…}` idiom
+    // broke and its .code/.style handler bodies EXECUTED, leaking `#1`
+    // to the stomach (misdefined:# — gckanbun/ctex/jlreq tail; Perl
+    // clean; ctex+tikz min-repro 1001→101 errors with this fix).
+    if lookup_catcode(' ') == Some(Catcode::IGNORE) && lookup_catcode('_') != Some(Catcode::LETTER)
+    {
+      assign_catcode(' ', Catcode::SPACE, None);
+    }
+    let _ = expl3_on_entry;
+    let _ = (entered_expl3, grandparent_in_expl3); // kept for historical context
   }
 
   assign_value_sym(
