@@ -1246,6 +1246,87 @@ LoadDefinitions!({
     "}"
   ));
   RawTeX!(r"\long\def\XKV@for@break #1\@nil,{\fi}");
+
+  // \XKV@checkchoice — the choice-key checker style authors call directly
+  // (regulatory.sty, glossaries-extra, keyreader). Verbatim from
+  // xkeyval.tex L249-321; all its internals (\XKV@afterfi/\XKV@toks/
+  // \ifXKV@st/\ifXKV@pl/\XKV@err/\XKV@addtomacro@n) exist above.
+  RawTeX!(
+    r"\def\XKV@checkchoice[#1]#2#3{%
+  \def\XKV@tempa{#1}%
+  \ifXKV@st\lowercase{\fi
+  \ifx\XKV@tempa\@empty
+    \def\XKV@tempa{\XKV@ch@ckch@ice\@nil{#2}{#3}}%
+  \else
+    \def\XKV@tempa{\XKV@ch@ckchoice#1\@nil{#2}{#3}}%
+  \fi
+  \ifXKV@st}\fi\XKV@tempa
+}
+\def\XKV@ch@ckchoice#1#2\@nil#3#4{%
+  \def\XKV@tempa{#2}%
+  \ifx\XKV@tempa\@empty\XKV@afterelsefi
+    \XKV@ch@ckch@ice#1{#3}{#4}%
+  \else\XKV@afterfi
+    \XKV@@ch@ckchoice#1#2{#3}{#4}%
+  \fi
+}
+\def\XKV@ch@ckch@ice#1#2#3{%
+  \def\XKV@tempa{#1}%
+  \ifx\XKV@tempa\@nnil\let\XKV@tempa\@empty\else
+    \def\XKV@tempa{\def#1{#2}}%
+  \fi
+  \in@{,#2,}{,#3,}%
+  \ifin@
+    \ifXKV@pl
+      \XKV@addtomacro@n\XKV@tempa\@firstoftwo
+    \else
+      \XKV@addtomacro@n\XKV@tempa\@firstofone
+    \fi
+  \else
+    \ifXKV@pl
+      \XKV@addtomacro@n\XKV@tempa\@secondoftwo
+    \else
+      \XKV@toks{#2}%
+      \XKV@err{value `\the\XKV@toks' is not allowed}%
+      \XKV@addtomacro@n\XKV@tempa\@gobble
+    \fi
+  \fi
+  \XKV@tempa
+}
+\def\XKV@@ch@ckchoice#1#2#3#4{%
+  \edef\XKV@tempa{\the\count@}\count@\z@
+  \def\XKV@tempb{#3}%
+  \def\XKV@tempc##1,{%
+    \def#1{##1}%
+    \ifx#1\@nnil
+      \def#1{#3}\def#2{-1}\count@\XKV@tempa
+      \ifXKV@pl
+        \let\XKV@tempd\@secondoftwo
+      \else
+        \XKV@toks{#3}%
+        \XKV@err{value `\the\XKV@toks' is not allowed}%
+        \let\XKV@tempd\@gobble
+      \fi
+    \else
+      \ifx#1\XKV@tempb
+        \edef#2{\the\count@}\count@\XKV@tempa
+        \ifXKV@pl
+          \let\XKV@tempd\XKV@@ch@ckch@ice
+        \else
+          \let\XKV@tempd\XKV@@ch@ckch@ic@
+        \fi
+      \else
+        \advance\count@\@ne
+        \let\XKV@tempd\XKV@tempc
+      \fi
+    \fi
+    \XKV@tempd
+  }%
+  \XKV@tempc#4,\@nil,%
+}
+\def\XKV@@ch@ckch@ice#1\@nil,{\@firstoftwo}
+\def\XKV@@ch@ckch@ic@#1\@nil,{\@firstofone}"
+  );
 });
 
 // Helper: get the current filename from \@currname.\@currext
