@@ -52,6 +52,28 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 pub static TRACE_GROUP_END: Lazy<bool> =
   Lazy::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
 
+/// Cached `LATEXML_CSNAME_TRACE` flag + the shared lookahead dump used by
+/// both csname-assembly error sites: reads up to 40 tokens, prints them,
+/// and puts them back (a counted-read/retracting-unread round trip — align
+/// ledger symmetric).
+pub static CSNAME_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_CSNAME_TRACE").is_ok());
+
+fn csname_trace_lookahead(tag: &str, cs: &str, bad: &Token) -> Result<()> {
+  let mut ahead = Vec::new();
+  for _ in 0..40 {
+    match read_token()? {
+      Some(t) => ahead.push(t),
+      None => break,
+    }
+  }
+  eprintln!(
+    "CSNAME-TRACE({tag}) partial={cs:?} bad={bad} ahead={}",
+    Tokens::new(ahead.clone())
+  );
+  unread_vec(ahead);
+  Ok(())
+}
+
 // `\noexpand`'d tokens are represented per-token by the `\special_relax` family
 // (`Token::is_noexpand_family` / `token::noexpand_family`): the shadowed token's
 // identity is encoded in the CS name, so it survives storage and dumps without a
@@ -2042,19 +2064,8 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   letted.with_str(|s| cs.push_str(s));
                 }
               } else if !quiet {
-                if std::env::var("LATEXML_CSNAME_TRACE").is_ok() {
-                  let mut ahead = Vec::new();
-                  for _ in 0..40 {
-                    match read_token()? {
-                      Some(t) => ahead.push(t),
-                      None => break,
-                    }
-                  }
-                  eprintln!(
-                    "CSNAME-TRACE(let) partial={cs:?} bad={token} ahead={}",
-                    Tokens::new(ahead.clone())
-                  );
-                  unread_vec(ahead);
+                if *CSNAME_TRACE {
+                  csname_trace_lookahead("let", &cs, &token)?;
                 }
                 let message = s!(
                   "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
@@ -2067,19 +2078,8 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
             _ => {
               if !quiet {
                 if lookup_definition(&token)?.is_some() {
-                  if std::env::var("LATEXML_CSNAME_TRACE").is_ok() {
-                    let mut ahead = Vec::new();
-                    for _ in 0..40 {
-                      match read_token()? {
-                        Some(t) => ahead.push(t),
-                        None => break,
-                      }
-                    }
-                    eprintln!(
-                      "CSNAME-TRACE partial={cs:?} bad={token} ahead={}",
-                      Tokens::new(ahead.clone())
-                    );
-                    unread_vec(ahead);
+                  if *CSNAME_TRACE {
+                    csname_trace_lookahead("def", &cs, &token)?;
                   }
                   let message = s!(
                     "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
