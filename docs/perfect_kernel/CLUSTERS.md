@@ -140,3 +140,25 @@ bindingless classes and is guarded by
 | Signature | Resolution | Guard |
 |---|---|---|
 | | | |
+
+## Sweep-25 residual map (2026-09-01)
+
+Oracle-clean residual collapsed to **1,551 error lines / 22 signatures**;
+top-2 clusters carry 87%. Fan-out root-cause agents dispatched over: atableau
+color/def storm (795, 1 doc — NOTE: `article`+`atableau` standalone load is
+CLEAN, first errors are `misdefined:#` at cs_new bodies + `\thetcbcounter`,
+so the storm needs a doc-context co-factor, likely tcolorbox machinery),
+malformed:ltx nesting family (549/50 docs — must be split into mode-coupled
+[USER-PARKED] vs independent sub-families), `unexpected:_` amsldoc family
+(124/13), beamerthemecelestia orphan-`\fi` (30/14), curve2e/dsptricks
+picture Pair/Match readers (15/2), incgraph/askmaps/colorblind/albi singles.
+
+**Japanese-engine family (jlreq/pTeX) SETTLED as D9-parked:** the surviving
+`expected:<variable>` docs (asternote, bxbase-ja, bxjaprnind, chemobabel,
+gckanbun…) are (u)pLaTeX/LuaLaTeX-native docs whose classes invoke real
+e-pTeX primitives (`\epTeXinputencoding`, `\pdfvariable` LuaTeX branch);
+first error = `undefined:\epTeXinputencoding`. Oracle passed them via
+lualatex + luatexja. Not reachable under our pdfTeX model without the D9
+CJK/ja engine surface. The former pgfmath `expected:<variable>` hypothesis is
+retired — the ctex fixes (batches 30/31) killed the `c_parameter_token`
+family corpus-wide (0 hits in sweep 25).
