@@ -156,7 +156,25 @@ fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
   out
 }
 
-#[rustfmt::skip]
+/// `\begin{NiceTabular…}[opts]{colspec}` → `\lx@nice@setopts{opts}
+/// \lx@nice@array@begin{<starter>{colspec'}}` with the rule-only column
+/// options stripped from the colspec (see `\NiceTabular` below).
+fn nice_tabular_expansion(opts_toks: Tokens, pream: Vec<Token>, starter: Vec<Token>) -> Tokens {
+  let mut out: Vec<Token> = Vec::new();
+  out.push(T_CS!("\\lx@nice@setopts"));
+  out.push(T_BEGIN!());
+  out.extend(opts_toks.unlist());
+  out.push(T_END!());
+  out.push(T_CS!("\\lx@nice@array@begin"));
+  out.push(T_BEGIN!());
+  out.extend(starter);
+  out.push(T_BEGIN!());
+  out.extend(nice_strip_rule_opts(pream));
+  out.push(T_END!());
+  out.push(T_END!());
+  Tokens::new(out)
+}
+
 LoadDefinitions!({
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
@@ -175,20 +193,10 @@ LoadDefinitions!({
         && let Some(end) = src[pos + needle.len()..].find('}')
       {
         let val = &src[pos + needle.len()..pos + needle.len() + end];
-        def_macro(
-          T_CS!(s!("\\{name}")),
-          None,
-          Tokens!(Explode!(val)),
-          None,
-        )?;
+        def_macro(T_CS!(s!("\\{name}")), None, Tokens!(Explode!(val)), None)?;
       }
     }
   }
-  Warn!(
-    "missing_file",
-    "nicematrix.sty",
-    "nicematrix.sty is not implemented and will not be interpreted raw."
-  );
 
   // The tabular-like environments (`\NiceTabular`, `\NiceArray`, …) still degrade
   // to a placeholder-or-\tabular; the math Nice* MATRIX family below renders as a
@@ -207,21 +215,32 @@ LoadDefinitions!({
   // text tabulars (color overlay is styling; the content is what matters).
   DefMacro!("\\NiceTabular[]{}[]", sub[(opts, pream, _post)] {
     let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
-    let mut out: Vec<Token> = Vec::new();
-    out.push(T_CS!("\\lx@nice@setopts"));
-    out.push(T_BEGIN!());
-    out.extend(opts_toks.unlist());
-    out.push(T_END!());
-    out.push(T_CS!("\\lx@nice@array@begin"));
-    out.push(T_BEGIN!());
-    out.push(T_CS!("\\tabular"));
-    out.push(T_BEGIN!());
-    out.extend(nice_strip_rule_opts(pream.revert()));
-    out.push(T_END!());
-    out.push(T_END!());
-    Tokens::new(out)
+    nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")])
   }, locked => true);
   DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
+  // NiceTabular* {width}[opts]{colspec}[opts] / NiceTabularX {width}[opts]
+  // {colspec}[opts] (nicematrix.sty:3788/3801 `{ m O{} m !O{} }`): the SAME
+  // reduction; `NiceTabularX` is a tabularx (its `X` columns need the
+  // tabularx column engine — `\tabular{l||*{3}{X}}` had dropped every X cell,
+  // witness nicematrix.tex `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`)
+  // and `NiceTabular*` a `\tabular*` — the fixed total width is print layout.
+  RequirePackage!("tabularx");
+  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}[]", sub[(width, opts, pream, _post)] {
+    let mut starter = vec![T_CS!("\\tabular*"), T_BEGIN!()];
+    starter.extend(width.revert()?.unlist());
+    starter.push(T_END!());
+    let opts_toks = if opts.is_some() { opts.revert()? } else { Tokens!() };
+    nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
+  });
+  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*");
+  DefMacro!("\\NiceTabularX{}[]{}[]", sub[(width, opts, pream, _post)] {
+    let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
+    starter.extend(width.revert());
+    starter.push(T_END!());
+    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+    nice_tabular_expansion(opts_toks, pream.revert(), starter)
+  }, locked => true);
+  DefMacro!("\\endNiceTabularX", "\\endtabularx", locked => true);
 
   //======================================================================
   // #6569: the math Nice* MATRIX family renders as real bracketed math arrays,
@@ -416,19 +435,19 @@ LoadDefinitions!({
   Let!("\\Body", "\\relax");
   RawTeX!(concat!(
     r"\def\lx@nice@matrix@begin#1{",
-      r"\@ifnextchar\CodeBefore{\lx@nice@grabcode{#1}}{\lx@ams@matrix{#1}}}",
+    r"\@ifnextchar\CodeBefore{\lx@nice@grabcode{#1}}{\lx@ams@matrix{#1}}}",
     r"\long\def\lx@nice@grabcode#1#2\Body{",
-      r"\begingroup",
-        r"\let\rectanglecolor\lx@nice@rectanglecolor",
-        r"\let\cellcolor\lx@nice@cellcolor",
-        r"\let\rowcolor\lx@nice@rowcolor",
-        r"\let\columncolor\lx@nice@columncolor",
-        r"\let\arraycolor\lx@nice@arraycolor",
-        r"\let\chessboardcolors\lx@nice@chessboardcolors",
-        r"\let\rowlistcolors\lx@nice@rowlistcolors",
-        r"#2",
-      r"\endgroup",
-      r"\lx@ams@matrix{#1}}"
+    r"\begingroup",
+    r"\let\rectanglecolor\lx@nice@rectanglecolor",
+    r"\let\cellcolor\lx@nice@cellcolor",
+    r"\let\rowcolor\lx@nice@rowcolor",
+    r"\let\columncolor\lx@nice@columncolor",
+    r"\let\arraycolor\lx@nice@arraycolor",
+    r"\let\chessboardcolors\lx@nice@chessboardcolors",
+    r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"#2",
+    r"\endgroup",
+    r"\lx@ams@matrix{#1}}"
   ));
 
   // The MATRIX family: `\<x>NiceMatrix[opts]` → set opts, then reduce to the
@@ -471,19 +490,19 @@ LoadDefinitions!({
   // colors work identically.
   RawTeX!(concat!(
     r"\def\lx@nice@array@begin#1{",
-      r"\@ifnextchar\CodeBefore{\lx@nice@grabcode@arr{#1}}{#1}}",
+    r"\@ifnextchar\CodeBefore{\lx@nice@grabcode@arr{#1}}{#1}}",
     r"\long\def\lx@nice@grabcode@arr#1#2\Body{",
-      r"\begingroup",
-        r"\let\rectanglecolor\lx@nice@rectanglecolor",
-        r"\let\cellcolor\lx@nice@cellcolor",
-        r"\let\rowcolor\lx@nice@rowcolor",
-        r"\let\columncolor\lx@nice@columncolor",
-        r"\let\arraycolor\lx@nice@arraycolor",
-        r"\let\chessboardcolors\lx@nice@chessboardcolors",
-        r"\let\rowlistcolors\lx@nice@rowlistcolors",
-        r"#2",
-      r"\endgroup",
-      r"#1}"
+    r"\begingroup",
+    r"\let\rectanglecolor\lx@nice@rectanglecolor",
+    r"\let\cellcolor\lx@nice@cellcolor",
+    r"\let\rowcolor\lx@nice@rowcolor",
+    r"\let\columncolor\lx@nice@columncolor",
+    r"\let\arraycolor\lx@nice@arraycolor",
+    r"\let\chessboardcolors\lx@nice@chessboardcolors",
+    r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"#2",
+    r"\endgroup",
+    r"#1}"
   ));
   DefMacro!("\\NiceArray{}[]", "\\NiceArrayWithDelims.{.}{#1}[#2]", locked => true);
   DefMacro!("\\endNiceArray", "\\endNiceArrayWithDelims", locked => true);
@@ -534,16 +553,6 @@ LoadDefinitions!({
   DefMacro!("\\endvNiceArray", "\\endNiceArrayWithDelims", locked => true);
   DefMacro!("\\VNiceArray{}[]", "\\NiceArrayWithDelims\\|{\\|}{#1}[#2]", locked => true);
   DefMacro!("\\endVNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  // NiceTabular* {width}[opts]{colspec} / NiceTabularX {width}[opts]{colspec}:
-  // text-mode tabulars; the fixed total width is print layout — the columns
-  // and their CONTENT reduce to the ordinary tabular engine, like
-  // \NiceTabular above.
-  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}",
-    "\\lx@nice@setopts{#2}\\tabular{#3}");
-  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular");
-  DefMacro!("\\NiceTabularX{}[]{}",
-    "\\lx@nice@setopts{#2}\\tabular{#3}", locked => true);
-  DefMacro!("\\endNiceTabularX", "\\endtabular", locked => true);
 
   // In-tabular decoration commands the manuals use pervasively.
   // \Block[opts]{i-j}{content}: nicematrix paints `content` OVER an i×j cell

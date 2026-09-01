@@ -2654,11 +2654,86 @@ fn clean_index_key(key: &str) -> String {
 /// \@index{\@indexphrase{a}\@indexphrase[c]{b}} etc.
 ///
 /// Port of latex_constructs.pool.ltxml L4528-4591
+/// #354 surpass (OXIDIZED_DESIGN #119): a `\verb`/`\verb*` inside `\index`.
+/// `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
+/// collapsing `\verb`'s raw body back into control sequences (`\delta`, not
+/// `\`,`d`,…) and leaving `\verb` with no mouth to scan a delimiter from. In
+/// both engines this yielded an empty `<verbatim/>` with the body leaking out
+/// mis-tokenized, and a `|` delimiter additionally collided with the makeindex
+/// encap separator. Consume each whole `\verb<D>body<D>` run HERE — before
+/// expansion and before the `!`/`@`/`|` split can see the delimiter — and emit
+/// `\@internal@text@verb{star}{D}{body}` (a non-expandable constructor, so the
+/// run also survives the `\protected@write` expansion below) so the body
+/// renders as typewriter.
+fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let tok = toks[i];
+    i += 1;
+    if tok != T_CS!("\\verb") {
+      out.push(tok);
+      continue;
+    }
+    let mut starred = false;
+    if i < toks.len() && toks[i] == T_OTHER!("*") {
+      starred = true;
+      i += 1;
+    }
+    if i >= toks.len() {
+      out.push(tok);
+      continue;
+    }
+    let delim = toks[i];
+    let delim_s = delim.with_str(|d| d.to_string());
+    i += 1;
+    let body_start = i;
+    while i < toks.len() && toks[i].with_str(|d| d != delim_s.as_str()) {
+      i += 1;
+    }
+    // The re-tokenized body collapsed `\verb`'s raw chars back into control
+    // sequences; `untex` + `Explode!` restores them to catcode-OTHER literals
+    // so the digested `#3` renders as typewriter text instead of re-expanding
+    // (which is exactly the `\delta`→math-δ leak this fixes).
+    let body_str = Tokens::new(toks[body_start..i].to_vec()).untex();
+    if i < toks.len() {
+      i += 1; // consume the closing delimiter
+    }
+    out.push(T_CS!("\\@internal@text@verb"));
+    out.push(T_BEGIN!());
+    if starred {
+      out.push(T_OTHER!("*"));
+    }
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.push(delim);
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(Explode!(body_str));
+    out.push(T_END!());
+  }
+  out
+}
+
 fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   let token_list = tokens.unlist();
   if token_list.is_empty() {
     return Ok(Tokens::new(vec![]));
   }
+  // Real `\index` (latex.ltx:17720-17725 `\@wrindex`) writes the entry with
+  // `\protected@write`, i.e. the argument is EXPANDED (robust/`\protected`
+  // commands deferred) before makeindex ever sees the `@`/`!`/`|` separators.
+  // Packages build entries out of macros — tcolorbox's documentation library
+  // writes `\kvtcb@doc@sortindex\idx@actual\tcbIndexPrintComC{…}` where
+  // `\idx@actual` IS the `@` (tcbdocumentation.code.tex:147/495) — so a split
+  // over unexpanded tokens sees no separator, digests the sort key as text,
+  // and every `_` in it becomes `Script _ can only appear in math mode`
+  // (tagpdf manual: 92 lines; perfect-kernel repro `\begin{docCommand}
+  // {tag_if_active:TF}{}`). Perl's process_index_phrases (pool:4376-4397)
+  // shares the omission; expanding is the faithful `\@wrindex` behaviour.
+  // The `\verb` runs are absorbed first so their bodies stay verbatim.
+  let toks = absorb_index_verb_runs(&token_list);
+  let token_list = do_expand_partially(Tokens::new(toks))?.unlist();
   // Add terminal ! if not present
   let mut toks = token_list;
   if toks
@@ -2699,52 +2774,6 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
     }
     let s = tok.with_str(|s| s.to_string());
     i += 1;
-    // #354 surpass (OXIDIZED_DESIGN #119): a `\verb`/`\verb*` inside `\index`.
-    // `\index` reads its argument `SanitizedVerbatim`, which re-tokenizes it —
-    // collapsing `\verb`'s raw body back into control sequences (`\delta`, not
-    // `\`,`d`,…) and leaving `\verb` with no mouth to scan a delimiter from. In
-    // both engines this yielded an empty `<verbatim/>` with the body leaking out
-    // mis-tokenized, and a `|` delimiter additionally collided with the makeindex
-    // encap separator handled below. Consume the whole `\verb<D>body<D>` run HERE
-    // — before the `!`/`@`/`|` split can see the delimiter — and emit
-    // `\@internal@text@verb{star}{D}{body}` so the body renders as typewriter.
-    if tok == T_CS!("\\verb") {
-      let mut starred = false;
-      if i < toks.len() && toks[i] == T_OTHER!("*") {
-        starred = true;
-        i += 1;
-      }
-      if i < toks.len() {
-        let delim = toks[i];
-        let delim_s = delim.with_str(|d| d.to_string());
-        i += 1;
-        let body_start = i;
-        while i < toks.len() && toks[i].with_str(|d| d != delim_s.as_str()) {
-          i += 1;
-        }
-        // The re-tokenized body collapsed `\verb`'s raw chars back into control
-        // sequences; `untex` + `Explode!` restores them to catcode-OTHER literals
-        // so the digested `#3` renders as typewriter text instead of re-expanding
-        // (which is exactly the `\delta`→math-δ leak this fixes).
-        let body_str = Tokens::new(toks[body_start..i].to_vec()).untex();
-        if i < toks.len() {
-          i += 1; // consume the closing delimiter
-        }
-        phrase.push(T_CS!("\\@internal@text@verb"));
-        phrase.push(T_BEGIN!());
-        if starred {
-          phrase.push(T_OTHER!("*"));
-        }
-        phrase.push(T_END!());
-        phrase.push(T_BEGIN!());
-        phrase.push(delim);
-        phrase.push(T_END!());
-        phrase.push(T_BEGIN!());
-        phrase.extend(Explode!(body_str));
-        phrase.push(T_END!());
-      }
-      continue;
-    }
     if s == "\"" && i < toks.len() {
       // Escaped character: take next token literally
       phrase.push(toks[i]);
@@ -2758,8 +2787,25 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       {
         phrase.pop();
       }
-      sortas = phrase;
-      phrase = Vec::new();
+      // The sort key is a makeindex STRING: real `\index` reads it under
+      // `\@sanitize` (latex.ltx:17705-17711) and it is never typeset, so
+      // `_`/`^`/`&`/`#`/`$`/`~` in it are literal characters (tcolorbox
+      // `docCommand{tag_if_active:TF}` → sortindex `tag_if_active:TF`;
+      // `\index{a_b@\texttt{a\_b}}`). Digesting the key with their live
+      // catcodes raised `Script _ can only appear in math mode`; Perl
+      // (`\@indexphrase[]` digests too) shares that. Neutralize them here.
+      sortas = phrase
+        .drain(..)
+        .map(|t| match t.get_catcode() {
+          Catcode::MATH
+          | Catcode::ALIGN
+          | Catcode::PARAM
+          | Catcode::SUPER
+          | Catcode::SUB
+          | Catcode::ACTIVE => T_OTHER!(t.with_str(|s| s.to_string())),
+          _ => t,
+        })
+        .collect();
     } else if s == "!" || s == "|" {
       // End of phrase
       while phrase
@@ -9333,8 +9379,23 @@ LoadDefinitions!({
   // \@indexphrase[sortkey]{phrase} → <ltx:indexphrase>
   DefConstructor!("\\@indexphrase[]{}", "<ltx:indexphrase key='#key' _standalone_font='true'>#2</ltx:indexphrase>",
     properties => sub[args] {
+      // Perl (CleanIndexKey($_[1])) keys off the DIGESTED sort key, which is
+      // right for `\index{LaTeX@\LaTeX}`-style keys but renders a literal
+      // `_` (catcode-OTHER, from process_index_phrases' `\@sanitize`
+      // neutralization) through the OT1 slot 0x5F as `˙` — the chapterbib
+      // `lists=` trap (see `\@bibliography` above, 2605.15421). A sort key
+      // holding one of the sanitized specials is a plain makeindex string
+      // (tcolorbox `tag_if_active:TF`), so key it off the SOURCE tokens then.
       let key = args[0].as_ref()
-        .map(|a| clean_index_key(&a.to_string()))
+        .map(|a| {
+          let reverted = a.revert().unwrap_or_default();
+          let has_sanitized_special = reverted.unlist_ref().iter().any(|t| {
+            t.get_catcode() == Catcode::OTHER
+              && t.with_str(|s| matches!(s, "_" | "^" | "&" | "#" | "$" | "~"))
+          });
+          let raw = if has_sanitized_special { reverted.to_string() } else { a.to_string() };
+          clean_index_key(&raw)
+        })
         .unwrap_or_default();
       if key.is_empty() {
         Ok(stored_map!())

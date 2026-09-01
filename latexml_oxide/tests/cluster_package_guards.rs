@@ -4050,3 +4050,183 @@ $\asinh$
     );
   }
 }
+
+mod perfect_kernel_batch46 {
+  //! Red/green guards for perfect-kernel batch 46 (PLANS P27/P28/P29/P23/P24).
+  //! Each test is the minimal reproduction distilled during triage; the
+  //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus,
+  //! `bundle/doc`) whose larger conversion was vetted separately.
+  use std::{path::Path, process::Command};
+
+  /// Convert an inline snippet in a tempdir; `raw` selects the perfect-kernel
+  /// preload, otherwise the default (arXiv) configuration. Returns
+  /// (ANSI-stripped stderr, XML string).
+  fn convert(tex: &str, raw: bool) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let mut args = vec!["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=110"];
+    if raw {
+      args.push("--preload=[rawstyles,rawclasses]latexml.sty");
+    }
+    let output = Command::new(bin)
+      .args(&args)
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
+  fn error_count(stderr: &str) -> usize {
+    stderr.lines().filter(|l| l.starts_with("Error:")).count()
+  }
+
+  const MEMOIR: &str = r"\documentclass{memoir}
+\begin{document}
+\chapter{C}
+\onelineskip
+\section{S}
+Body.
+\end{document}
+";
+
+  /// P27: memoir.cls is raw-interpreted through the engine (the binding is a
+  /// raw-load shim, tlp/czjphys precedent). RED: the former stub hid the real
+  /// class — `\onelineskip` and every memoir-only macro undefined. Witnesses:
+  /// titlepages/titlepages (4→0), dlfltxb/dlfltxbmarkup (3→0), memexsupp.
+  /// Both preload modes must agree, since the binding is what makes the
+  /// class raw-load under the default arXiv configuration too.
+  #[test]
+  fn memoir_raw_loads_in_both_modes() {
+    for raw in [true, false] {
+      let (stderr, xml) = convert(MEMOIR, raw);
+      assert_eq!(error_count(&stderr), 0, "raw={raw}:\n{stderr}");
+      assert!(
+        xml.contains("<chapter") && xml.contains("<section"),
+        "raw={raw}:\n{xml}"
+      );
+    }
+  }
+
+  /// P28: nicematrix.sty / tabularray.sty ARE implemented — the stale
+  /// `missing_file` "not implemented and will not be interpreted raw"
+  /// warnings misreported every document using them.
+  #[test]
+  fn nicematrix_tabularray_no_stale_missing_file_warning() {
+    let (stderr, _xml) = convert(
+      r"\documentclass{article}
+\usepackage{nicematrix,tabularray}
+\begin{document}
+\begin{NiceTabular}{cc} a & b \\ \end{NiceTabular}
+\begin{tblr}{cc} a & b \\ \end{tblr}
+\end{document}
+",
+      true,
+    );
+    assert!(
+      !stderr.contains("missing_file:nicematrix") && !stderr.contains("missing_file:tabularray"),
+      "stale missing_file warning is back:\n{stderr}"
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// P29: `\index` expands its entry before splitting on `@`/`!`/`|`, as
+  /// real `\@wrindex` writes it via `\protected@write` (latex.ltx:17720),
+  /// and a sort key holding sanitized specials is a plain makeindex string.
+  /// RED: macro-built entries never met their `@` (tcolorbox documentation
+  /// library `\kvtcb@doc@sortindex\idx@actual…`), so the sort key was
+  /// digested as text and every `_` in it errored; a literal `a_b@…` key
+  /// errored too and rendered `˙`. Witness: tagpdf/tagpdf (113→21).
+  #[test]
+  fn index_entry_expands_and_keys_sanitized_specials() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\makeindex
+\begin{document}
+\def\key{x_y}\def\show{\texttt{x\_y}}
+A\index{a_b@\texttt{a\_b}}
+B\index{\key @\show}
+D\index{plain}\index{p|see{plain}}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for key in ["key=\"a_b\"", "key=\"x_y\"", "key=\"plain\""] {
+      assert!(xml.contains(key), "missing {key}:\n{xml}");
+    }
+    assert!(!xml.contains('˙'), "sort key rendered through OT1:\n{xml}");
+  }
+
+  /// P29 witness shape: tcolorbox `docCommand{tag_if_active:TF}` writes
+  /// `\index{\kvtcb@doc@sortindex\idx@actual\tcbIndexPrintComC{…}}`
+  /// (tcbdocumentation.code.tex:495). RED: 4 `Script _` errors per entry.
+  #[test]
+  fn tcolorbox_doccommand_index_key_expands() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage[documentation]{tcolorbox}
+\begin{document}
+\begin{docCommand}{tag_if_active:TF}{}\end{docCommand}
+Text.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("key=\"tag_if_active:TF\""), "{xml}");
+  }
+
+  /// P23: `NiceTabularX{width}[opts]{colspec}[opts]` (nicematrix.sty:3788)
+  /// is a tabularx — its `X` columns need the tabularx column engine. RED:
+  /// the reduction to `\tabular` dropped every X cell ("Unrecognized tabular
+  /// template X" + "Extra alignment tab"). Witness: nicematrix/nicematrix
+  /// `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`.
+  #[test]
+  fn nicetabularx_is_a_tabularx() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{nicematrix}
+\newcommand\LastDay{3}
+\begin{document}
+\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}[hvlines]
+a & b & c & d \\
+\end{NiceTabularX}
+\begin{NiceTabular*}{\linewidth}[hvlines]{cc}
+e & f \\
+\end{NiceTabular*}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("Unrecognized tabular template"),
+      "{stderr}"
+    );
+    assert_eq!(xml.matches("<td").count(), 6, "{xml}");
+  }
+
+  /// P24: tabularray's template API — `\DeclareTblrTemplate` (:5673; the
+  /// bound `\DefTblrTemplate` is only its alias), `\UseTblrTemplate`,
+  /// `\MapTblrRemarks`, `\InsertTblrRemarkTag`. Witness: tabularray-abnt.
+  #[test]
+  fn tabularray_template_api_defined() {
+    let (stderr, _xml) = convert(
+      r"\documentclass{article}
+\usepackage{tabularray}
+\DeclareTblrTemplate{remark-tag}{x}{\InsertTblrRemarkTag}
+\SetTblrTemplate{remark-tag}{x}
+\begin{document}
+\UseTblrTemplate{remark-tag}{x}\MapTblrRemarks{\InsertTblrRemarkTag}
+\begin{tblr}{cc} a & b \\ \end{tblr}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+}

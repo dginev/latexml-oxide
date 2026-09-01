@@ -320,11 +320,6 @@ mod tests {
 }
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "tabularray.sty",
-    "tabularray.sty is not implemented and will not be interpreted raw."
-  );
   RequirePackage!("booktabs");
   // `\tblr` maps to `\tabular`, but tabularray's argument is a key-value inner
   // spec (`colspec={Q[c]Q[c]},hlines,…`), NOT a classic column template. Parse
@@ -351,6 +346,32 @@ LoadDefinitions!({
   def_macro_noop("\\NewTblrEnviron{}")?;
   def_macro_noop("\\NewColumnType{}[]{}")?;
   def_macro_noop("\\NewTblrTheme{}{}")?;
+  // Template API (tabularray.sty:5673-5807): `\DeclareTblrTemplate` is the
+  // primary and `\DefTblrTemplate` its alias (:5680); `\UseTblrTemplate`
+  // (:5783) expands a stored template, `\MapTblrNotes`/`\MapTblrRemarks`
+  // (:5792/:5802) iterate the collected notes/remarks binding the
+  // `\InsertTblr…Tag`/`…Text` token lists. Templates are print layout the
+  // tabular reduction has no slot for, so the whole family is inert here —
+  // including the map iterators (nothing is collected) and the `\lTblr…Tl`
+  // caption/entry/label lists (:6387-6425). Witness tabularray-abnt
+  // (`\DeclareTblrTemplate`/`\UseTblrTemplate`/`\MapTblrRemarks`/
+  // `\InsertTblrRemarkTag` undefined); `\NewTblrLibrary` (:8030).
+  def_macro_noop("\\DeclareTblrTemplate{}{}{}")?;
   def_macro_noop("\\DefTblrTemplate{}{}{}")?;
   def_macro_noop("\\SetTblrTemplate{}{}")?;
+  def_macro_noop("\\UseTblrTemplate{}{}")?;
+  def_macro_noop("\\MapTblrNotes{}")?;
+  def_macro_noop("\\MapTblrRemarks{}")?;
+  def_macro_noop("\\NewTblrLibrary{}{}")?;
+  for cs in [
+    "\\InsertTblrNoteTag",
+    "\\InsertTblrNoteText",
+    "\\InsertTblrRemarkTag",
+    "\\InsertTblrRemarkText",
+    "\\lTblrCaptionTl",
+    "\\lTblrEntryTl",
+    "\\lTblrLabelTl",
+  ] {
+    def_macro_noop(cs)?;
+  }
 });
