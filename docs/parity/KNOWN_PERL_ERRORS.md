@@ -4270,3 +4270,39 @@ Same-host Perl 0.8.8 errors identically (`misdefined:#`, code sees `#x`). Perl-o
 unreported upstream. Rust fixes: `latexml_core/src/keyval.rs:define_command` emits the
 bare value (guard `cluster_package_guards::xkeyval_internals`; witness
 `doc/latex/xkeymask/xkeymask.tex`, perfect-kernel sweep 12).
+
+## 81. ALIGN_STATE drifts on expl3 brace-tricks; l3doc manuals emit stray-`&` (Rust fixes)
+
+Perl's `$LaTeXML::ALIGN_STATE` retracts braces on every `unread`
+(Gullet.pm L343-358) including expansion output that was never scanned, and
+`readBalanced` localizes the state to 1000000 with an entry decrement. l3tl's
+delimited replace machinery pushes net-unbalanced fragments (`\if_true: {
+\else: } \fi:` halves), whose kept `{` gets retracted at pushback but
+compensated (not counted) when later consumed as an argument opener — the
+ledger lands at -1 and the next cell-top `&` errors `Stray alignment "&"`.
+One error per l3doc `{function}` block; every l3doc manual affected.
+
+Minimal trigger (Perl errors, pdflatex clean):
+
+```tex
+\documentclass{article}
+\ExplSyntaxOn
+\tl_new:N \g_my_tl
+\cs_new_protected:Npn \my_amp: { & }
+\cs_new_protected:Npn \my_row:
+  {
+    \tl_gset:Nn \g_my_tl { a~b }
+    \tl_greplace_all:Nnn \g_my_tl { ~ } { x }
+    name \my_amp: e \\
+  }
+\ExplSyntaxOff
+\begin{document}
+\begin{tabular}{lr}
+\ExplSyntaxOn \my_row: \ExplSyntaxOff
+\end{tabular}
+\end{document}
+```
+
+Rust fix: tex.web align_state protocol (scan-count §342/§357, back_input
+retract §325, begin_token_list no-adjust; scan_toks doesn't localize) — see
+OXIDIZED_DESIGN #172.

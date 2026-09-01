@@ -1696,6 +1696,11 @@ LoadDefinitions!({
         || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
       // This seems needed within AmSTeX environs
       {
+        // `stuff` and `t` were read (brace-counted) and re-enter via our
+        // expansion: retract (tex.web back_input flavor; a lone `}` can
+        // land in `stuff` through the else-push below).
+        retract_scanned_braces(&stuff);
+        retract_scanned_braces(std::slice::from_ref(&t));
         let mut invoked = Invocation!(T_CS!("\\lx@eqno"), vec![Tokens::new(stuff)]).unlist();
         invoked.push(t);
         return Ok(Tokens::new(invoked));
@@ -1709,6 +1714,7 @@ LoadDefinitions!({
       "Fell of the end reading tag for \\eqno!"
     );
     // s!("started {locator}"));
+    retract_scanned_braces(&stuff);
     Tokens::new(stuff)
   });
 

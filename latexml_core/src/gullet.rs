@@ -401,8 +401,59 @@ pub fn unread_one(token: Token) {
     runtime.pushback.push(token);
   };
 }
+/// Push EXPANSION OUTPUT (macro bodies, conditional-branch replays, `\the`
+/// results) to the start of the token stream WITHOUT touching the alignment
+/// brace ledger.
+///
+/// tex.web distinguishes two insertion flavors: `back_input` (§325) RETRACTS
+/// `align_state` for a brace token because that token was already counted
+/// when scanned (`get_next` §342-344 counts every scanned brace, token lists
+/// included §357); `begin_token_list` — how an expansion enters the input —
+/// adjusts NOTHING, because expansion output was never scanned and its braces
+/// will be counted when they are. Retracting never-scanned braces here is not
+/// merely a transient skew: expl3 brace-tricks (`\if… { \else: } \fi:` under
+/// `\exp_after:wN`, the l3tl replace machinery) legitimately push UNBALANCED
+/// fragments whose skipped half was counted by the conditional skipper — the
+/// Perl-style retract-everything protocol (Gullet.pm L343-358, which Perl
+/// LaTeXML still has) then drifts `ALIGN_STATE` permanently negative and every
+/// later `&` in the alignment goes stray (l3doc `{function}` manuals; repro:
+/// `\tl_greplace_all:Nnn` + a protected macro emitting `&` inside a tabular
+/// cell). See `cluster_package_guards::alignment_ledger_expansion_pushback`.
+pub fn unread_expansion(tokens: Tokens) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let tokens = tokens.unlist();
+    runtime.pushback.reserve(tokens.len());
+    for token in tokens.into_iter().rev() {
+      runtime.pushback.push(token);
+    }
+  }
+}
+
+/// `back_input`-style ledger retraction WITHOUT pushing anything: apply to
+/// tokens that were READ through a counting reader and are about to be
+/// RE-EMITTED as part of an expansion result (so they will be counted again
+/// when rescanned). tex.web §368: `\expandafter` saves its first token and
+/// `back_input`s it (§325 retracts a scanned brace) around the one-step
+/// expansion, which enters as an unadjusted token list. A closure-style
+/// expandable that returns previously-read tokens inside its expansion must
+/// call this on that re-emitted portion, or every `{`/`}` passed through it
+/// is double-counted (l3's `\exp_after:wN {` idiom drove the alignment
+/// ledger positive and `&` went stray — see [`unread_expansion`]).
+pub fn retract_scanned_braces(tokens: &[Token]) {
+  for token in tokens {
+    match token.get_catcode() {
+      Catcode::BEGIN => decrement_align_group_count(),
+      Catcode::END => increment_align_group_count(),
+      _ => {},
+    }
+  }
+}
+
 /// Unreads a `Vec<Token>` to the start of the token stream
-/// Perl: also adjusts ALIGN_STATE by retracting scanned braces (Gullet.pm lines 343-358)
+/// Perl: also adjusts ALIGN_STATE by retracting scanned braces (Gullet.pm lines 343-358).
+/// Correct ONLY for tokens that were previously READ (and hence counted) —
+/// for expansion output use [`unread_expansion`] (tex.web `begin_token_list`
+/// flavor, which adjusts nothing).
 pub fn unread_vec(tokens: Vec<Token>) {
   let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
@@ -1229,7 +1280,7 @@ pub fn read_x_token(
               );
             }
           }
-          unread(invoked);
+          unread_expansion(invoked);
           expire_current_token();
           continue;
         },
@@ -1360,10 +1411,19 @@ pub fn read_balanced(
   require_open: bool,
 ) -> Result<Tokens> {
   use ExpansionLevel::*;
-  if !require_open {
-    decrement_align_group_count();
-  }
-  local_align_group_count(1000000);
+  // NOTE: no align-ledger localization and no entry compensator here.
+  // tex.web's `scan_toks` (§473-482) does NOT touch `align_state`: every
+  // scanned brace counts on the live ledger, and the opening `{` of the
+  // balanced text (counted by the caller for `require_open=false`, or by
+  // the read below) is itself what keeps the ledger ≥1 inside, so `&`
+  // cannot fire the alignment interrupt mid-argument. Perl instead
+  // localizes ALIGN_STATE to 1000000 with an entry `--` compensator
+  // (Gullet.pm readBalanced); that ERASES the interior net effect, so
+  // expl3 brace-tricks (`\if_true: { \else: } \fi:` pairs whose halves
+  // travel through different reads) drift the ledger permanently and a
+  // later cell-top `&` goes stray (Perl shares that failure; l3doc
+  // `{function}` repro). See [`unread_expansion`] for the pushback half
+  // of the same protocol.
   // let startloc = if lookup_verbosity() > 0 { Some(get_locator()) } else { None };
   // Do we need to expand to get the { ???
   if require_open {
@@ -1563,7 +1623,7 @@ pub fn read_balanced(
                   }
                 } else {
                   // otherwise, prepend to pushback to be expanded further.
-                  unread(expansion);
+                  unread_expansion(expansion);
                 }
                 expire_current_token();
                 continue;
@@ -1604,7 +1664,6 @@ pub fn read_balanced(
       "Gullet->readBalanced ran out of input in an unbalanced state"
     );
   }
-  expire_align_group_count();
   if tokens.is_empty() {
     Ok(Tokens!())
   } else {
@@ -2850,7 +2909,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
                 if defn.is_expandable() {
                   let x = defn.invoke(false)?;
                   if !x.is_empty() {
-                    unread(x);
+                    unread_expansion(x);
                   }
                   read_tokens_value()
                 } else {

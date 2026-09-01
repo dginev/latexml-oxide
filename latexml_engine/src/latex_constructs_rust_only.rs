@@ -84,6 +84,17 @@ LoadDefinitions!({
   def_macro_noop("\\tagstructend")?;
   def_macro_noop("\\tagmcbegin{}")?;
   def_macro_noop("\\tagmcend")?;
+  // The expl3 layer of the same API — classes written for the tagging
+  // project call these directly (ltx-talk.cls uses struct/mc pairs,
+  // suspend/resume, tool, get).
+  def_macro_noop("\\tag_struct_begin:n{}")?;
+  def_macro_noop("\\tag_struct_end:")?;
+  def_macro_noop("\\tag_mc_begin:n{}")?;
+  def_macro_noop("\\tag_mc_end:")?;
+  def_macro_noop("\\tag_suspend:n{}")?;
+  def_macro_noop("\\tag_resume:n{}")?;
+  def_macro_noop("\\tag_tool:n{}")?;
+  def_macro_noop("\\tag_get:n{}")?;
 
   //======================================================================
   // 2. LaTeXML-internal helpers

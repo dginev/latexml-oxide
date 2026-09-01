@@ -11306,6 +11306,9 @@ LoadDefinitions!({
     } else {
       else_toks.unlist()
     };
+    // The matched/peeked tokens were read (brace-counted) and re-enter via
+    // our expansion: retract (tex.web back_input flavor).
+    retract_scanned_braces(&read);
     result.extend(read);
     Ok(Tokens::new(result))
   });
@@ -11317,6 +11320,9 @@ LoadDefinitions!({
     } else {
       let mut result = else_toks.unlist();
       if let Some(next) = next_opt {
+        // `next` was read (brace-counted) and re-enters via our expansion:
+        // retract, tex.web back_input flavor (see gullet::retract_scanned_braces).
+        retract_scanned_braces(std::slice::from_ref(&next));
         result.push(next);
       }
       Ok(Tokens::new(result))
@@ -11710,6 +11716,9 @@ LoadDefinitions!({
       .pack_parameters()?
       .unlist();
     if let Some(t_next) = next {
+      // Read token re-enters via our expansion: retract its brace count
+      // (tex.web back_input flavor; see gullet::retract_scanned_braces).
+      retract_scanned_braces(std::slice::from_ref(&t_next));
       result.push(t_next);
     }
     result

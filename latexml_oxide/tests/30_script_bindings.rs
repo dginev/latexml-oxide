@@ -213,7 +213,7 @@ const SAMPLE: &str = r##"
   DefEnvironment("{rproof}[]",
     "<ltx:proof class=\"ltx_proof\"><ltx:title font=\"#font\">#title</ltx:title>#body</ltx:proof>", #{
     mode: "internal_vertical",
-    properties: |_a| {
+    properties: |args| {
       let title = DigestText("{\\bfseries Proof:}");
       #{ title: title, font: title }
     }
@@ -243,7 +243,7 @@ const SAMPLE: &str = r##"
   // COMPUTES from the numeric args (the dual properties/afterDigest pattern).
   DefConstructor("\\gsbox {Float}{Float} {}",
     "<ltx:inline-block class=\"gs\" xscale=\"#xscale\" yscale=\"#yscale\">#3</ltx:inline-block>", #{
-    properties: |xs, ys, _box| #{ xscale: xs, yscale: ys }
+    properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
   });
 
   // listings/siunitx-style OptionalKeyVals: the keyval dict arrives as the
@@ -1137,7 +1137,7 @@ const THROW_SAMPLE: &str = r##"
   });
   DefConditional("\\ifthrcond", || { throw "conditional boom"; });
   DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |_x| { throw "properties boom"; }
+    properties: |x| { throw "properties boom"; }
   });
   DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
     beforeDigest: || { throw "beforeDigest boom"; }

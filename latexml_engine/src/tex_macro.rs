@@ -168,6 +168,13 @@ LoadDefinitions!({
         Error!("expected", "expandafter", "\\expandafter wrongly used without 2 arguments.");
       }
     }
+    // The saved tokens were READ (and brace-counted); they re-enter the
+    // stream inside our expansion result, so retract them now — tex.web
+    // §368 `back_input`s the saved token around the one-step expansion
+    // (§325 retracts a scanned brace). Without this, every `\expandafter {`
+    // (l3's `\exp_after:wN {` idiom) double-counts and the alignment
+    // ledger drifts positive.
+    retract_scanned_braces(&skipped);
     match lookup_expandable(&xtok, None)? { Some(defn) => {
       local_current_token(xtok);
       let invoked = defn.invoke(true)?;
@@ -180,8 +187,12 @@ LoadDefinitions!({
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
       generate_error_stub(&xtok)?;
+      retract_scanned_braces(std::slice::from_ref(&xtok));
       skipped.push(xtok);
     } else {
+      // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
+      // counted, and re-enters via our expansion — retract like the prefix.
+      retract_scanned_braces(std::slice::from_ref(&xtok));
       skipped.push(xtok);
     }};
     Ok(Tokens::new(skipped))
@@ -201,6 +212,9 @@ LoadDefinitions!({
       if matches!(cc, Catcode::CS | Catcode::ACTIVE) && is_dont_expandable(&token) {
         vec![T_CS!("\\dont_expand"), token]
       } else {
+        // `\noexpand{`: the brace was read (counted) and re-enters via our
+        // expansion — retract, tex.web §369 back_input flavor.
+        retract_scanned_braces(std::slice::from_ref(&token));
         vec![token]
       }
     } else {

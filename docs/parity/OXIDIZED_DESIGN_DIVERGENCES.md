@@ -6381,3 +6381,46 @@ tikz-bagua-en, commalists-tools-doc. Guard:
 `cluster_package_guards::expanded_protected_brace_hunt`.
 
 **Upstream**: branch-contained per user directive (perfect_kernel).
+
+### 172. Alignment brace ledger follows tex.web, not Perl's retract-on-unread
+
+**Perl/previous Rust behavior**: `$LaTeXML::ALIGN_STATE` bookkeeping retracts
+braces on EVERY pushback (Gullet.pm L343-358) and `readBalanced` localizes the
+ledger to 1000000 with an entry `--` compensator. Self-consistent for balanced
+token flows, but expl3 brace-tricks — `\if_true: { \else: } \fi:` pairs whose
+halves travel through different reads, as l3tl's delimited replace machinery
+(`\tl_greplace_all:Nnn`) generates — drift the ledger permanently: a kept `{`
+pushed back (retracted) is later consumed as an arg opener (compensated), so
+the retraction never cancels. A later cell-top `&` then misses the column-end
+check and errors `Stray alignment "&"` — one per l3doc `{function}` block,
+across every l3doc manual (17+ bundles). **Perl shares the failure** (verified
+2026-09-01 on the shrunk repro).
+
+**Rust behavior**: tex.web's protocol exactly. Braces count when SCANNED
+(get_next §342-344, token lists included §357); pushback of previously-scanned
+tokens retracts (back_input §325 — `unread_one`/`unread_vec`); expansion
+output enters with NO adjustment (`begin_token_list` — new
+`gullet::unread_expansion`, used by the read-loop invoke pushes); a
+closure-backed expandable that re-emits tokens it READ pre-retracts them
+(`gullet::retract_scanned_braces`, tex.web §368's back_input around
+`\expandafter` — applied to `\expandafter`, `\noexpand`, `\@ifstar`,
+`\@ifnextchar`, `\@ifnext@n`, `\eqno`, `\cprotect`); and `read_balanced` no
+longer localizes or compensates — scan_toks §473-482 touches nothing, the
+already-counted opening `{` itself keeps the ledger ≥1 inside a balanced text
+so `&` cannot fire mid-argument. Alignment-machinery resets stay (template
+insert 1000000 ≈ §7099; cell-start 0; per-alignment save/restore ≈ §15289/
+§15300 via the `digest_alignment_body` ledger frame).
+
+**Why**: kernel-quality; pdflatex converts every affected manual cleanly.
+First-principles directive (user, 2026-09-01): root causes from tex.web over
+Perl emulation.
+
+**Witnesses**: l3doc `{function}`+`{syntax}` 6-line repro (CLUSTERS.md);
+gotham-user-cmds (101 strays), se2thesis (52), citation-style-language-doc
+(31), unicode-math-input (30), zref-check-code (25). Guards:
+`cluster_package_guards::alignment_ledger_expansion_pushback::*` (both
+directions: the l3 drift AND the `\@ifstar` re-emission that a naive
+no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
+
+**Upstream**: branch-contained per user directive (perfect_kernel); Perl
+issue-worthy (KNOWN_PERL_ERRORS #81).
