@@ -2,6 +2,17 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Load the real fancybox.sty first (pure LaTeX/TeX box code: \shadowsize,
+  // \VerbBox, the B-environments {Bcenter}…{Beqnarray*}, \boxput, \fancyoval,
+  // \fancypage/\fancyput/\Landscape, and its verbatim layer \Verb/{Verbatim}/
+  // \SaveVerb/\UseVerb…). Perl's fancybox.sty.ltxml covers only the four
+  // frame boxes + {Sbox}; the TL doc corpus witness fancybox/fancybox-doc
+  // exercises the whole API in {example} demos (which write \jobname.tmp
+  // through {VerbatimOut} and re-input it), so every unbound command was an
+  // `undefined` error once those demos actually executed. The Perl-shaped
+  // overrides below are applied AFTER the raw load, so they win.
+  InputDefinitions!("fancybox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
   // These could be made to depend on \fboxsep, \fboxrule, \cornersize
   DefMacro!("\\cornersize OptionalMatch:* {}", None);
 
@@ -40,51 +51,9 @@ LoadDefinitions!({
     }
   });
 
-  // fancybox ships its own verbatim layer (fancybox.sty "Verbatim" section);
-  // {VerbatimOut}{file} captures its body verbatim to a file that demos
-  // re-\input (fancybox-doc writes \jobname.ex1…). Store into the in-memory
-  // filecontents cache instead of a real \write stream.
-  DefPrimitive!("\\lx@fancybox@VerbatimOut", {
-    skip_spaces()?;
-    let filename_toks = read_arg(ExpansionLevel::Full)?;
-    let filename = filename_toks.to_string();
-    // `\VerbatimEnvironment` (below) redirects the end-scan to the WRAPPING
-    // environment's `\end{...}` — the fancyvrb idiom for user-defined
-    // verbatim-writing environments (fancybox-doc's {example} wraps
-    // {VerbatimOut}{\jobname.tmp} and the author writes \end{example}).
-    let end_env = match lookup_value("lx@verbatimout@envname") {
-      Some(Stored::String(sym)) => with(sym, |v| v.to_string()),
-      _ => "VerbatimOut".to_string(),
-    };
-    assign_value("lx@verbatimout@envname", Stored::None, Some(Scope::Global));
-    let end_marker = s!("\\end{{{end_env}}}");
-    read_raw_line(); // discard remainder of the \begin line
-    let (lines, _terminator) = capture_raw_lines_until(&[end_marker.as_str()]);
-    let n = lines.len();
-    Info!("note", "filecontents", s!("Cached VerbatimOut for {filename} ({n} lines)"));
-    vfs_store(&filename, &lines.join("\n"));
-    endgroup()?;
-  });
-  assign_meaning(
-    &T_CS!("\\VerbatimOut"),
-    lookup_meaning(&T_CS!("\\lx@fancybox@VerbatimOut")).unwrap_or(Stored::None),
-    Some(Scope::Global),
-  );
-  def_macro_noop("\\endVerbatimOut")?;
-  // Verbatim-in-footnotes toggle — presentational, no-op.
+  // fancybox.sty:647 `\VerbatimFootnotes` swaps `\@footnotetext` for an
+  // `\insert\footins` variant (:649-668). `\footnote` here is a constructor
+  // that never calls `\@footnotetext`, so the raw swap would be inert at best
+  // and a stray `\insert` at worst — keep it a no-op.
   def_macro_noop("\\VerbatimFootnotes")?;
-  // `\VerbatimEnvironment`: record the CURRENT environment name so the
-  // VerbatimOut scanner above stops at ITS \end (fancyvrb semantics).
-  DefPrimitive!("\\VerbatimEnvironment", {
-    let env = do_expand(Tokens!(T_CS!("\\@currenvir")))?.to_string();
-    if !env.is_empty() {
-      assign_value("lx@verbatimout@envname", Stored::String(pin(&env)), Some(Scope::Global));
-    }
-  });
-  // \LVerbatimInput{file}: fancybox's LR-mode verbatim file input — route
-  // through verbatim.sty's reader (the demos input what {VerbatimOut} wrote).
-  RequirePackage!("verbatim");
-  DefMacro!("\\LVerbatimInput{}", "\\verbatiminput{#1}");
-  DefMacro!("\\BVerbatimInput{}", "\\verbatiminput{#1}");
-  DefMacro!("\\VerbatimInput{}", "\\verbatiminput{#1}");
 });

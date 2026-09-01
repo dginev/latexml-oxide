@@ -1792,6 +1792,17 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 /// distinguishable EOF the TooManyErrors latch ends them like Perl's
 /// MAX_ERRORS does, naming the looping macro. A MATCHED delimiter with empty
 /// content stays `Some(empty)` — legitimate `\def\foo#1;{…}\foo;` args.
+/// Is the gullet at the TRUE end of all input — no mouth left beneath the
+/// current one and no `reading_from_mouth` context open? A delimited read
+/// that misses its delimiter here has really run off the end of the
+/// document (tex.web §338 "File ended while scanning use of"), as opposed
+/// to the artificial end of an isolated reading context, where the
+/// enclosing stream would still hold the delimiter.
+pub fn at_end_of_all_input() -> bool {
+  let g = gullet!();
+  g.mouthstack.is_empty() && g.ctx_stack.is_empty()
+}
+
 /// If the CURRENT mouth is a marked eTeX pseudo-file (autoclose +
 /// `insert_everyeof`), close it — which inserts the `\everyeof` payload into
 /// the parent stream — and return the payload's token count as a scan

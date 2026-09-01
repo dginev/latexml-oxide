@@ -152,7 +152,26 @@ LoadDefinitions!({
     // zref-check) mis-looped on a None arg, and a per-iteration Error
     // regressed 63 corpus docs (sweep 23). Zero-progress delimited-scan
     // loops terminate via the stomach cycle guard.
-    Ok(ArgWrap::Tokens(read_until(&until_extra[0])?.unwrap_or_default()))
+    //
+    // EXCEPT at the TRUE end of all input (`gullet::at_end_of_all_input`:
+    // no mouth beneath, no `reading_from_mouth` open): that miss IS tex.web
+    // §338's "File ended while scanning use of" runaway argument and is
+    // reported like Perl (Parameter.pm L93-97). Without it a per-line
+    // `\write` loop such as fancyvrb `\FV@Scan` over a `{VerbatimOut}` left
+    // open at end of file makes progress forever — each empty read still
+    // writes a line — which no zero-progress guard sees; Perl's 100 `Missing
+    // argument` errors → `too_many_errors` Fatal is the parity outcome
+    // (witness: fancyvrb/fancyvrb-doc cut mid-`{SideBySideExample}`,
+    // batch-48 guard `until_miss_at_true_eof_errors_like_perl`).
+    match read_until(&until_extra[0])? {
+      Some(tokens) => Ok(ArgWrap::Tokens(tokens)),
+      None => {
+        if at_end_of_all_input() {
+          Error!("expected", "Until:", s!("Missing argument Until:{} at end of input", until_extra[0]));
+        }
+        Ok(ArgWrap::Tokens(Tokens::default()))
+      },
+    }
   },
   reversion => sub[arg, _inner, until] {
     let mut rev = Vec::new();

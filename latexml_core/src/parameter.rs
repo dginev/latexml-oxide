@@ -375,7 +375,9 @@ impl Parameter {
         // So: stay QUIET for Until misses; zero-progress delimited-scan
         // loops terminate via the stomach cycle guard instead. Perl errors
         // here (Parameter.pm L93-97) and equally mis-fires on the
-        // artificial-EOF shapes.
+        // artificial-EOF shapes. (The `Until` reader itself never yields
+        // None — it maps a miss to an empty argument, and reports the one
+        // REAL runaway, a miss at `gullet::at_end_of_all_input`, itself.)
         if !is_until {
           let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
           Error!(

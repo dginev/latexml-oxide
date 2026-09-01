@@ -12,26 +12,26 @@ LoadDefinitions!({
   // the raw-sty redefinition replaces our always-true stub.
   DefMacro!("\\filehook@cmp{}{}", "\\@firstoftwo", locked => true);
 
-  // Defensive stubs for filehook-2020/filehook-2019 commands. The raw
-  // filehook.sty selects one of these sub-files via
-  // `\@ifl@t@r\fmtversion{2020/10/01}{...filehook-2020}{...filehook-2019}`.
-  // Our search-paths-only find_file can't locate the versioned sub-files
-  // in TL (they're not in user paths), so the load falls back to
-  // filehook.sty itself — leaving the hooks undefined. Pre-define them
-  // as no-ops so downstream packages (pbalance, etc.) don't crash.
-  // Witnesses: 2405.18977, 2406.01136, 2406.01832 (all use pbalance).
-  def_macro_noop("\\AtEndOfPackageFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtBeginOfPackageFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtEndOfClassFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtBeginOfClassFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtBeginOfEveryFile{}")?;
-  def_macro_noop("\\AtEndOfEveryFile{}")?;
-  def_macro_noop("\\AtBeginOfFiles{}")?;
-  def_macro_noop("\\AtEndOfFiles{}")?;
-  def_macro_noop("\\AtBeginOfInputFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtEndOfInputFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtBeginOfIncludeFile OptionalMatch:* {}{}")?;
-  def_macro_noop("\\AtEndOfIncludeFile OptionalMatch:* {}{}")?;
+  // The raw filehook.sty:27 is a 1-line dispatcher:
+  //   \@ifl@t@r\fmtversion{2020/10/01}{\RequirePackage{filehook-2020}}
+  //                                   {\RequirePackage{filehook-2019}}
+  // and ALL the hook internals (`\filehook@every@atbegin`,
+  // `\filehook@prefixwarg`, `\filehook@appendwarg`, `\filehook@every@atend`
+  // — used by raw currfile.sty:68-73 — plus the `\AtBeginOfPackageFile`
+  // family) live in the versioned sub-file. Without this registration
+  // the version-suffix fallback (Perl Package.pm:2118-2121, mirrored in
+  // `content.rs` Step 3) strips `filehook-2020` → `filehook`, re-enters
+  // this binding (`Warning:recursion`) and the sub-file is never loaded,
+  // leaving every hook undefined. Perl shares that misfire
+  // (`Info:fallback:filehook-2020`). Registering the sub-files as
+  // INTERPRETABLE_SOURCES (Perl FindFile_aux L2107) makes the raw load
+  // find them directly — the same shape xparse.sty.ltxml uses for its
+  // `xparse-2018-04-12.sty` rollback file. Witnesses: TL doc corpus
+  // currfile/currfile (`\ifcurrfilename` swallowed the document),
+  // pythontex/pythontex (loads currfile); arXiv 2405.18977, 2406.01136,
+  // 2406.01832 (pbalance, formerly served by no-op hook stubs here).
+  AssignMapping!("INTERPRETABLE_SOURCES", "filehook-2020.sty" => 1);
+  AssignMapping!("INTERPRETABLE_SOURCES", "filehook-2019.sty" => 1);
 
   InputDefinitions!("filehook", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });
