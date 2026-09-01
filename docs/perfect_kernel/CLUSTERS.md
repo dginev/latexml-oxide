@@ -32,7 +32,7 @@ NOTE: several exceed the nominal error cap — cap behavior itself worth a look.
 | Signature (bundles) | Status |
 |---|---|
 | `Error:expected:\fi` (was 13; hep-* family) | **DISSOLVED by sweep 13** (an intervening batch — likely #171 brace-hunt or the DocInput routing): the hep-font min-repro is 3/3 clean, hep-* family 7/9 at 0 errors. Residual: hep-math 43 (36 = parked R9 mode-frame family + 2 `\fi` + exfontsize internals), hep-paper FIXED batch 8 (alphabeta `\math<greek>` aliases). |
-| `Error:unexpected:&` (12) | mode/alignment family — overlaps parked R9 mode-frame; sample before attempting. |
+| `Error:unexpected:&` Stray alignment (17 bundles, annee-scolaire…) | **Min-repro'd 2026-08-31**: one stray `&` per l3doc `{function}`+`{syntax}` block — 6-line repro: `\documentclass{l3doc}` + `\begin{function}{\cmd}\begin{syntax}\cs{cmd}\oarg{x}\end{syntax}\end{function}` → 1 stray at Building/Anonymous String. Source = l3doc's l3coffins layout (`\vcoffin_set` L1077 / `\coffin_typeset` L1100). Wide reach (every l3doc manual); needs a coffin-internals session. |
 | `\ltd@title@title` (12) | expected to clear in sweep 5 (ltxdockit_cls.rs landed after the sweep-4 binary). |
 | `malformed:ltx:glossaryphrase` (9, abntex2 family) | OPEN — glossary entries emitted at #Document root; simple glossaries flow is clean, abntex2's path differs. |
 | `\BreakableUnderscore` (6) | l3doc/underscore interplay, surfaced once earlier errors cleared. |
