@@ -35,4 +35,11 @@ LoadDefinitions!({
   def_macro_noop("\\newCJKfontfamily DefToken []{}[]")?;
   def_macro_noop("\\CJKsetecglue{}")?;
   def_macro_noop("\\punctstyle{}")?;
+  // xeCJK expl3-layer surface raw fntef/underline code invokes directly
+  // (XeTeX-engine territory — D9 out-of-scope; the noops keep pdfTeX-model
+  // digestion progressing instead of looping on error stubs, fixdif-zh-cn).
+  def_macro_noop("\\xeCJK_no_break:")?;
+  def_macro_noop("\\xeCJK_allow_break:")?;
+  def_macro_noop("\\CJKsymbol{}")?;
+  def_macro_noop("\\CJKpunctsymbol{}")?;
 });

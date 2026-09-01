@@ -33,6 +33,24 @@ LoadDefinitions!({
   DefRegister!("\\ULthickness" => Dimension!("0.4pt"));
   DefRegister!("\\UL@height" => Dimension!("0pt"));
 
+  // Real-ulem word-machinery internals: our high-level constructors never
+  // call them, but RAW add-on code wires into them by name — xeCJKfntef.sty
+  // L102-134 installs `\xeCJK_ulem_word:nw` over `\UL@word` and probes
+  // `\UL@stop`/`\UL@hook`/`\UL@end`/`\UL@start` (the
+  // `wisdom_latexml_reimpl_internal_name_mismatch` shape; fixdif-zh-cn's
+  // digestion loop). Provide the surface inertly: identity word processor,
+  // no-op start/stop, the real `\UL@end *` delimited shape (ulem.sty L59).
+  DefRegister!("\\UL@hook", Tokens!());
+  def_macro_noop("\\UL@start")?;
+  def_macro_noop("\\UL@stop")?;
+  def_macro_noop("\\UL@putbox")?;
+  def_macro_noop("\\UL@ender")?;
+  def_macro_noop("\\UL@end OptionalMatch:*")?;
+  def_macro_identity("\\UL@word{}")?;
+  def_macro_identity("\\UL@on{}")?;
+  def_macro_identity("\\UL@onin{}")?;
+  DefMacro!("\\UL@spfactor", None, "1000");
+
   // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and
   // `argcmd` to forms that apply `ucmd{...}` to content. We \let both
   // straight to `ucmd` so `\ul{foo}` -> `\uline{foo}` works. Empty
