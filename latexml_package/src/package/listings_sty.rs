@@ -2577,6 +2577,13 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lst@EndWriteFile"), None, {
     assign_value("LST@WF@file", Stored::String(pin("")), Some(Scope::Global));
   });
+  // Catcode-robust aliases for injection into GENERATED env start/end code
+  // that gets tokenized under DOCUMENT catcodes (tcolorbox
+  // tcb_listing_startend): at a document-level `\newtcblisting` call `@` is
+  // OTHER, which would split `\lst@BeginAlsoWriteFile` into `\lst` + text
+  // (witness: doc-level `use counter`/`listing file` min-repro).
+  DefMacro!("\\lxlstbeginwritefile{}", "\\lst@BeginAlsoWriteFile{#1}");
+  DefMacro!("\\lxlstendwritefile", "\\lst@EndWriteFile");
   DefKeyVal!("LST", "resetmargins", "");
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");
@@ -3492,17 +3499,11 @@ fn lst_writefile_tee(text: &str) -> bool {
   if file.is_empty() {
     return true;
   }
-  use std::io::Write;
-  if let Ok(mut fh) = std::fs::OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open(&file)
-  {
-    let _ = writeln!(fh, "{text}");
-  }
-  // Mirror into the virtual file store so `\input`-back consumers resolve
-  // the written example without touching disk (self-contained design;
-  // find_file consults the VFS first). Append-shape matches the disk tee.
+  // Virtual store only — `\input`-back consumers (cnltx, incgraph) resolve
+  // the written example via the VFS (find_file consults it first). A disk
+  // write here landed in the process CWD, not the destination directory
+  // (repo-root leakage from test runs). Append-shape kept: real listings
+  // writefile appends across multiple env uses.
   let mut mirrored = vfs_read(&file).unwrap_or_default();
   mirrored.push_str(text);
   mirrored.push('\n');

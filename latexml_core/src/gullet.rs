@@ -554,7 +554,10 @@ pub fn close_mouth(forced: bool) -> Result<()> {
     let mut gullet = gullet_mut!();
     if let Some(ref mut runtime) = gullet.runtime {
       runtime.mouth.finish();
-      wants_everyeof = runtime.insert_everyeof;
+      // A FORCED close is error-recovery/cleanup (`reading_from_mouth`
+      // teardown) — never a file end, so it must not inject the payload
+      // into a recovery stream.
+      wants_everyeof = runtime.insert_everyeof && !forced;
       shift_from_mouthstack = true;
     }
     if shift_from_mouthstack {
@@ -951,25 +954,18 @@ pub fn read_token() -> Result<Option<Token>> {
     // Combined checkpoint + raw read + cycle fingerprint, one borrow.
     next_token = match read_internal_token_checked(CommentSink::Pending)? {
       CheckedRead::NoRuntime => return Ok(None),
-      CheckedRead::Exhausted => {
-        // eTeX `\scantokens` inserts its tokens INTO the input stream —
-        // its pseudo-file end is invisible to every reader (tex.web get_next
-        // §360 pops the input level and restarts), inserting `\everyeof`
-        // on the way out. Cross ONLY these marked mouths here; ordinary
-        // autoclose FILE mouths keep returning None so file-processing
-        // loops still see their own end. Witness: l3tl `\tl_set_rescan`
-        // delivers its `\s__tl_stop` quark via `\everyeof`, and its
-        // `Until:\s__tl_stop` scan reads through THIS reader.
-        let cross = runtime!()
-          .as_ref()
-          .map(|r| r.autoclose && r.insert_everyeof)
-          .unwrap_or(false);
-        if cross {
-          close_mouth(false)?;
-          continue;
-        }
-        None
-      },
+      // A marked eTeX pseudo-file (`\scantokens`) end is NOT crossed here:
+      // an unbounded read_token-level cross lets a delimited scan whose
+      // marker misses escape into the enclosing LIVE stream — inside an
+      // alignment cell the scan then swallows the column-after program as
+      // data and poisons l3tl rescan results (l3doc `\tl_replace_all`
+      // 5-token loop, witnesses spath3/litetable-zh/zref-check; settled
+      // dead-end, tried 3× 2026-09-01 under both Until policies). The
+      // delimited readers cross it themselves, BOUNDED by the inserted
+      // `\everyeof` payload (`cross_marked_mouth`), and plain execution
+      // crosses via read_x_token's autoclose drain, which close-time
+      // insertion serves equally (tex.web §360 semantics).
+      CheckedRead::Exhausted => None,
       CheckedRead::Tok(t) => Some(t),
     };
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
@@ -1796,6 +1792,31 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 /// distinguishable EOF the TooManyErrors latch ends them like Perl's
 /// MAX_ERRORS does, naming the looping macro. A MATCHED delimiter with empty
 /// content stays `Some(empty)` — legitimate `\def\foo#1;{…}\foo;` args.
+/// If the CURRENT mouth is a marked eTeX pseudo-file (autoclose +
+/// `insert_everyeof`), close it — which inserts the `\everyeof` payload into
+/// the parent stream — and return the payload's token count as a scan
+/// BUDGET. The delimited readers use this to continue a scan across the
+/// pseudo-file end (tex.web §360: the end is invisible, `\everyeof` is the
+/// only extra input) without escaping into the enclosing live stream when
+/// the delimiter never matches: at budget 0 the scan declares EOF exactly as
+/// if the mouth had ended. `None` = the current mouth is not a marked
+/// pseudo-file (a real EOF for this reader).
+fn cross_marked_mouth() -> Result<Option<usize>> {
+  let marked = runtime!()
+    .as_ref()
+    .map(|r| r.autoclose && r.insert_everyeof)
+    .unwrap_or(false);
+  if !marked {
+    return Ok(None);
+  }
+  let count = match lookup_register("\\everyeof", Vec::new()) {
+    Ok(Some(RegisterValue::Tokens(toks))) => toks.len(),
+    _ => 0,
+  };
+  close_mouth(false)?;
+  Ok(Some(count))
+}
+
 pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   // Pre-size like `read_balanced`: the accumulator is grown one token at a time
   // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
@@ -1807,17 +1828,36 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   let ntomatch = want.len();
   let mut has_matched;
 
+  // Scan budget after crossing a marked `\scantokens` pseudo-file end: the
+  // `\everyeof` payload is all the extra input the scan may legally consume
+  // (see `cross_marked_mouth`). `None` until a cross happens.
+  let mut budget: Option<usize> = None;
+
   if ntomatch == 1 {
     let want = &want[0];
     loop {
+      if budget == Some(0) {
+        // Payload spent without the delimiter — the pseudo-file's true end.
+        unread(Tokens::new(tokens));
+        return Ok(None);
+      }
       let token = match read_token()? {
         Some(t) => t,
-        None => {
-          // Ran out! Unread and report the distinguishable EOF.
-          unread(Tokens::new(tokens));
-          return Ok(None);
+        None => match cross_marked_mouth()? {
+          Some(n) if n > 0 => {
+            budget = Some(n);
+            continue;
+          },
+          _ => {
+            // Ran out! Unread and report the distinguishable EOF.
+            unread(Tokens::new(tokens));
+            return Ok(None);
+          },
         },
       };
+      if let Some(b) = budget.as_mut() {
+        *b = b.saturating_sub(1);
+      }
       // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
       if token == *want || special_relax_matches(&token, want) {
         break;
@@ -1832,6 +1872,11 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           nbraces += 1;
           tokens.push(token);
           let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          if let Some(b) = budget.as_mut() {
+            // The balanced group's tokens (plus its closing END) came off
+            // the same stream — they count wholly against the payload.
+            *b = b.saturating_sub(balanced_arg.len() + 1);
+          }
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -1847,14 +1892,33 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
     loop {
       // prefill the required number of tokens
       while ring.len() < ntomatch {
+        if budget == Some(0) {
+          // Payload spent without the delimiter — the pseudo-file's true
+          // end (partial ring dropped, matching the ran-out arm below).
+          unread(Tokens::new(tokens));
+          return Ok(None);
+        }
         let token = match read_token()? {
           Some(t) => t,
-          None => {
-            // Ran out! Unread and report the distinguishable EOF.
-            unread(Tokens::new(tokens));
-            return Ok(None);
+          None => match cross_marked_mouth()? {
+            Some(n) if n > 0 => {
+              budget = Some(n);
+              continue;
+            },
+            _ => {
+              // Ran out! Unread and report the distinguishable EOF.
+              // The partial ring is DROPPED, not unread — replaying a
+              // half-matched delimiter prefix into the stream re-tokenizes
+              // it under current catcodes (l3doc `_`-laden names became
+              // double-subscript cascades: spath3 1→1001, 2026-09-01).
+              unread(Tokens::new(tokens));
+              return Ok(None);
+            },
           },
         };
+        if let Some(b) = budget.as_mut() {
+          *b = b.saturating_sub(1);
+        }
         // Perl: $$token[1] == CC_BEGIN — direct catcode check
         if token.get_catcode() == Catcode::BEGIN {
           // read balanced, and refill ring.
@@ -1864,6 +1928,9 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           }
           tokens.push(token);
           let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          if let Some(b) = budget.as_mut() {
+            *b = b.saturating_sub(balanced_arg.len() + 1);
+          }
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }

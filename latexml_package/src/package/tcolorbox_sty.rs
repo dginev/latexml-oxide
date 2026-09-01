@@ -113,10 +113,10 @@ LoadDefinitions!({
     let jobname = do_expand(Tokens!(T_CS!("\\jobname")))
       .map(|t| t.to_string())
       .unwrap_or_else(|_| String::from("texput"));
-    use std::io::Write;
-    if let Ok(mut fh) = std::fs::File::create(format!("{}.tcbtemp", jobname.trim())) {
-      let _ = write!(fh, "{text}");
-    }
+    // Virtual store only — the `\input`-back consumer resolves it via the
+    // VFS (find_file consults it first); a disk write here would land in
+    // the process CWD, not the destination directory (a stray
+    // `<jobname>.tcbtemp` once leaked into the repo root from a test run).
     vfs_store(&format!("{}.tcbtemp", jobname.trim()), &text);
     unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
   }, locked => true);
@@ -228,8 +228,8 @@ fn tcb_listing_startend(init: Option<&Tokens>, opts: &Tokens) -> (String, String
         );
       },
       "listing file" if !val.is_empty() => {
-        start.push_str(&format!("\\lst@BeginAlsoWriteFile{{{val}}}"));
-        end.push_str("\\lst@EndWriteFile");
+        start.push_str(&format!("\\lxlstbeginwritefile{{{val}}}"));
+        end.push_str("\\lxlstendwritefile");
       },
       _ => {},
     }

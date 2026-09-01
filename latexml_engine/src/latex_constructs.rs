@@ -2628,8 +2628,26 @@ fn do_index_item(document: &mut Document, level: i64) -> Result<()> {
 }
 
 /// Perl: CleanIndexKey — trim whitespace, remove trailing punctuation.
+/// Additionally strips ONE outer brace pair spanning the whole key — the
+/// wrapper process_index_phrases adds to protect `]`-bearing sort keys
+/// (never strips a pair that closes mid-string, so `{a}{b}` survives).
 fn clean_index_key(key: &str) -> String {
-  let key = key.trim();
+  let mut key = key.trim();
+  if key.len() >= 2 && key.starts_with('{') && key.ends_with('}') {
+    let inner = &key[1..key.len() - 1];
+    let mut depth = 0i32;
+    if inner.chars().all(|c| {
+      match c {
+        '{' => depth += 1,
+        '}' => depth -= 1,
+        _ => {},
+      }
+      depth >= 0
+    }) && depth == 0
+    {
+      key = inner.trim();
+    }
+  }
   key.trim_end_matches(['.', ',', ';']).to_string()
 }
 /// Perl: process_index_phrases — expand \index{a!b@c|see{d}} into
@@ -2754,8 +2772,16 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       if !phrase.is_empty() {
         expansion.push(T_CS!("\\@indexphrase"));
         if !sortas.is_empty() {
+          // Brace-protect the sort key: a raw `]` inside it (examdoc
+          // `\indc{gradetable[v]}`, pgfornament `pgfornament[<options>]`)
+          // truncates the constructor's `[]` re-parse at the first `]`,
+          // spilling the display phrase as illegal <ltx:indexmark> children
+          // (Perl shares the flat re-parse — KNOWN_PERL_ERRORS #83 sibling).
+          // clean_index_key strips the one wrapping pair symmetrically.
           expansion.push(T_OTHER!("["));
+          expansion.push(T_BEGIN!());
           expansion.append(&mut sortas);
+          expansion.push(T_END!());
           expansion.push(T_OTHER!("]"));
         }
         expansion.push(T_BEGIN!());

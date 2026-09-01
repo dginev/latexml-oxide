@@ -4331,3 +4331,48 @@ out-of-band .idx string where imbalance cannot corrupt the document.
 Rust honors brace depth (separators at depth 0 only).
 
 Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `\csdef{r@e@m}{}` + itemize item `\myInd{x}`.
+
+## 84. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid)
+
+Perl's glossaries.sty.ltxml (L26-37) rewires `\@gls@link` through a text-level
+`ltx:glossaryref` wrapper that is not math-mode aware: fired inside math
+(glosmathtools wraps every symbol entry in `\ensuremath`, sty L59-100), the
+content digests in math mode and bare `ltx:XMTok`/`ltx:XMApp` land as
+glossaryref children — `glossaryref_model = Inline.model` rejects them. Both
+engines insert anyway and the math parser still produces a correct
+POSTSUBSCRIPT parse, so the errors are schema-validity noise. Byte-identical
+Rust=Perl on the min-repro; on the full glosmathtools manuals Perl dies at
+MAX_ERRORS=100 while Rust completes (status 2).
+
+Minimal trigger:
+```tex
+\documentclass{article}
+\usepackage{glossaries}
+\newglossaryentry{k}{name={\ensuremath{k}},description={t}}
+\newglossaryentry{sub.v}{name={\ensuremath{\mathrm{v}}},description={v}}
+\begin{document}
+\ensuremath{\glsdisp{k}{\ensuremath{k}_{\gls{sub.v}}}}
+\end{document}
+```
+Fix would be a math-aware `\lx@glossaries@gls@link` (drop the wrapper in math
+mode) — a surpass needing its own approval (PLANS P16).
+
+## 85. lstlisting inside tabular cells rejected by `td_model = Inline.model`
+
+Legal LaTeX (lexref.tex L305-320, engtlc, expex-glossonly) puts
+`\lstnewenvironment` environments inside tabular cells; the schema's
+`td_model` (LaTeXML-tabular.rnc L142) excludes block-level `ltx:listing`, so
+both engines report `malformed:ltx:listing` and insert anyway (content
+survives in the output). Upstream schema question — admit a small Block
+subset into td — tracked, not patched locally (two-load-path rule:
+LaTeXML.model would need the same edit).
+
+## 86. `\maketitle` inside box captures scatters frontmatter into `_CaptureBlock_`
+
+`insertFrontMatter` (Base_Utility.pool.ltxml L824/L918) opens
+`ltx:title`/`ltx:creator` at the CURRENT insertion point; inside a
+`\vbox`/minipage/td capture the schema rejects them (byte-identical Rust=Perl
+on `\vbox{\maketitle}`: 4 errors + 1 warning). Witnesses ltx-talk ×2,
+milsymb, unifront. Surpass shape (fall back to the document-level
+`\lx@frontmatter@fallback` insertion point) needs approval — PLANS P16.
+

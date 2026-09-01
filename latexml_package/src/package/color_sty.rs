@@ -5,12 +5,29 @@ use latexml_core::common::{
 
 use crate::prelude::*;
 
+/// Perl-faithful spec trim (color.sty.ltxml ParseColor L36-39): strip ONE
+/// balanced outer `{…}` pair — only when the spec both starts with `{` AND
+/// ends with `}` — then whitespace. The former `trim_matches('{','}')`
+/// stripped any number of braces from EITHER end independently, so a color
+/// NAME whose mangled form ends in `}` (T1 active `é` → `…\lx@applyaccent…{e}`,
+/// witness couleurs-fr-doc `xFuchsiaFoncé`) lost its tail at LOOKUP while the
+/// DEFINE side stored it intact — a define/lookup key asymmetry. Both sides
+/// must be the same pure function of the name tokens.
+pub(crate) fn trim_color_spec(spec: &str) -> &str {
+  let spec = spec.trim();
+  if spec.len() >= 2 && spec.starts_with('{') && spec.ends_with('}') {
+    spec[1..spec.len() - 1].trim()
+  } else {
+    spec
+  }
+}
+
 /// Parse a color from an optional model name and a spec string.
 /// If model is given, constructs the Color directly.
 /// If no model, looks up the named color from state.
 /// Perl: ParseColor($model, $spec) in color.sty.ltxml
 pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
-  let spec = spec.trim().trim_matches(|c| c == '{' || c == '}').trim();
+  let spec = trim_color_spec(spec);
   if let Some(model) = model {
     let model_lc = model.to_lowercase();
     if model_lc == "named" {

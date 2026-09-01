@@ -97,7 +97,11 @@ LoadDefinitions!({
     keyvals.read_from(T_END!(), false)?;
     Ok(keyvals.set_keys_expansion())
   });
-  RawTeX!(r"\let\setkeys\lx@xkv@setkeys");
+  // Public `\setkeys` takes the real xkeyval front-end (xkeyval.tex L437) so
+  // the preset hooks in \XKV@setkeys fire; the chain still lands in the Rust
+  // reader via the \XKV@s@tkeys shim. Internal re-entry points (\setrmkeys,
+  // \XKV@s@tkeys) keep targeting \lx@xkv@setkeys directly (anti-loop).
+  RawTeX!(r"\def\setkeys{\XKV@testopta{\XKV@testoptc\XKV@setkeys}}");
 
   // \setrmkeys[*][prefix]{keyset}[na]
   DefMacro!("\\setrmkeys OptionalMatch:* []{}[]", sub[(star, prefix_opt, keysets_tks, na_opt)] {    
@@ -999,9 +1003,9 @@ LoadDefinitions!({
     \endcsname\expandafter{\csname\XKV@header#1\endcsname{#2}}%
 }"
   );
-  // xkeyval.tex L438-463: `\XKV@setkeys` + preset hooks (presets are
-  // unsupported in the binding, so `\XKV@ifundefined{XKV@…preseth}` always
-  // takes the empty branch — faithful noop).
+  // xkeyval.tex L438-463: `\XKV@setkeys` + preset hooks — LIVE now that the
+  // preset store is implemented above (the `\XKV@ifundefined{XKV@…preseth}`
+  // branch finds the stored list and applies it, excluding user-passed keys).
   RawTeX!(
     r"\long\def\XKV@setkeys[#1]#2{%
   \XKV@checksanitizea{#2}\XKV@resb
@@ -1180,44 +1184,60 @@ LoadDefinitions!({
   });
 
   //
-  // Presetting keys (Unsupported)
-  //
-
-  DefMacro!("\\presetkeys[]{}{}{}", sub[_args] {
-    Warn!("unexpected", "\\presetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
-
-  DefMacro!("\\gpresetkeys[]{}{}{}", sub[_args] {
-    Warn!("unexpected", "\\gpresetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
-
-  DefMacro!("\\delpresetkeys[]{}{}{}", sub[_args] {
-    Warn!("unexpected", "\\delpresetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
-
-  DefMacro!("\\gdelpresetkeys[]{}{}{}", sub[_args] {
-    Warn!("unexpected", "\\gdelpresetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
-
-  DefMacro!("\\unpresetkeys[]{}", sub[_args] {
-    Warn!("unexpected", "\\unpresetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
-
-  DefMacro!("\\gunpresetkeys[]{}", sub[_args] {
-    Warn!("unexpected", "\\gunpresetkeys",
-      "Presetting keys is currently not supported. ");
-    Ok(Tokens!())
-  });
+  // Presetting keys — verbatim xkeyval.tex L363-403. Every `\setkeys` first
+  // applies the family's head presets and then its tail presets for keys the
+  // user didn't pass (\XKV@setkeys → \XKV@usepresetkeys, already present
+  // verbatim below); cntperchap's `\gdef\@cps@@keymacro@@tracklevel` only
+  // ever runs from a preset (cntperchap.sty L75-79), so the former
+  // warn-stubs left it undefined ("section level … is unknown"). Perl
+  // LaTeXML stubs these too (xkeyval.sty.ltxml L452-475) — beyond-Perl,
+  // oracle = xkeyval.tex + pdflatex. All dependencies (\XKV@testoptb,
+  // \XKV@ifundefined, \XKV@checksanitizea, \XKV@merge, \XKV@delete,
+  // \XKV@getkeyname, \ifXKV@st) are already defined in this binding.
+  RawTeX!(
+    r"\def\presetkeys{\XKV@stfalse\XKV@testoptb\XKV@presetkeys}
+\def\gpresetkeys{\XKV@sttrue\XKV@testoptb\XKV@presetkeys}
+\def\XKV@presetkeys#1#2{%
+  \XKV@pr@setkeys{#1}{preseth}%
+  \XKV@pr@setkeys{#2}{presett}%
+}
+\def\XKV@pr@setkeys#1#2{%
+  \XKV@ifundefined{XKV@\XKV@header#2}{%
+    \XKV@checksanitizea{#1}\XKV@tempa
+    \ifXKV@st\expandafter\global\fi\expandafter\def\csname
+      XKV@\XKV@header#2\expandafter\endcsname\expandafter{\XKV@tempa}%
+  }{%
+    \expandafter\XKV@merge\csname XKV@\XKV@header
+      #2\endcsname{#1}\XKV@getkeyname
+  }%
+}
+\def\delpresetkeys{\XKV@stfalse\XKV@testoptb\XKV@delpresetkeys}
+\def\gdelpresetkeys{\XKV@sttrue\XKV@testoptb\XKV@delpresetkeys}
+\def\XKV@delpresetkeys#1#2{%
+  \XKV@d@lpresetkeys{#1}{preseth}%
+  \XKV@d@lpresetkeys{#2}{presett}%
+}
+\def\XKV@d@lpresetkeys#1#2{%
+  \XKV@ifundefined{XKV@\XKV@header#2}{%
+    \XKV@err{no presets defined for `\XKV@header'}%
+  }{%
+    \expandafter\XKV@delete\csname XKV@\XKV@header
+      #2\endcsname{#1}\XKV@getkeyname
+  }%
+}
+\def\unpresetkeys{\XKV@stfalse\XKV@testoptb\XKV@unpresetkeys}
+\def\gunpresetkeys{\XKV@sttrue\XKV@testoptb\XKV@unpresetkeys}
+\def\XKV@unpresetkeys{%
+  \XKV@ifundefined{XKV@\XKV@header preseth}{%
+    \XKV@err{no presets defined for `\XKV@header'}%
+  }{%
+    \ifXKV@st\expandafter\global\fi\expandafter\let
+      \csname XKV@\XKV@header preseth\endcsname\@undefined
+    \ifXKV@st\expandafter\global\fi\expandafter\let
+      \csname XKV@\XKV@header presett\endcsname\@undefined
+  }%
+}"
+  );
 
   //
   // RawTeX block: \XKV@for@n, \XKV@f@r, \XKV@for@break

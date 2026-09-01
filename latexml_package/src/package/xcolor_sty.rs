@@ -2,7 +2,10 @@ use latexml_core::common::color::{
   BLACK, Color, WHITE, color_from_model_spec, from_model_components,
 };
 
-use crate::{package::color_sty::lookup_color_obj, prelude::*};
+use crate::{
+  package::color_sty::{lookup_color_obj, trim_color_spec},
+  prelude::*,
+};
 
 /// Perl: sub delta { my ($v, $n) = @_; ($v <= ($n+1)/2 ? $v/($n+1) : ($v+1)/($n+1)) }
 fn delta(v: f64, n: f64) -> f64 {
@@ -484,7 +487,9 @@ fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<boo
 
 /// Perl: ParseXColor($models, $specs, $tomodel)
 fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
-  let specs = specs.trim().trim_matches(|c| c == '{' || c == '}').trim();
+  // Perl ParseXColor (xcolor.sty.ltxml L218-241) has NO entry trim at all;
+  // keep only whitespace normalization here.
+  let specs = specs.trim();
   let color = if let Some(models_str) = models {
     let models_str = models_str.trim();
     if models_str.is_empty() {
@@ -519,10 +524,8 @@ fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Col
       }
       // Choose first model (target model matching is TODO)
       let model = model_list[0].trim();
-      let spec = spec_list[0]
-        .trim()
-        .trim_matches(|c| c == '{' || c == '}')
-        .trim();
+      // Perl L240-242: balanced-pair trim only (see trim_color_spec).
+      let spec = trim_color_spec(spec_list[0]);
       let mut c = if model == "named" {
         lookup_color_obj(spec)
       } else {

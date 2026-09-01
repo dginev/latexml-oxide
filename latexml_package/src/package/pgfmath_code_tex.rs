@@ -977,8 +977,27 @@ mod pgfmath_grammar {
         eat(i, b'}');
       }
       sb(i);
-      eat(i, b',');
-      let idx = formula(i)?;
+      let idx = if eat(i, b',') {
+        formula(i)?
+      } else if elems.is_empty() {
+        // Brace-less form: pgfmath's own macro layers can strip the list
+        // braces before the expression reaches this evaluator, leaving
+        // `array(3,7,5,1)` — the LAST value is the index, the rest the
+        // elements.
+        loop {
+          match formula(i) {
+            Ok(v) => elems.push(v),
+            _ => break,
+          }
+          sb(i);
+          if !eat(i, b',') {
+            break;
+          }
+        }
+        elems.pop().unwrap_or(0.0)
+      } else {
+        0.0
+      };
       sb(i);
       eat(i, b')');
       let idx = idx.round();

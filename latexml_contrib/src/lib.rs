@@ -41,6 +41,8 @@ pub mod aistats2026_sty;
 pub mod alegreyasans_sty;
 pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
+pub mod amsdtx_cls;
+pub mod amsldoc_cls;
 pub mod aomart_cls;
 pub mod apacite_sty;
 pub mod apxproof_sty;
@@ -453,6 +455,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
+  ("amsdtx", "cls", amsdtx_cls::load_definitions),
+  ("amsldoc", "cls", amsldoc_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
   (
     "agujournal2019",

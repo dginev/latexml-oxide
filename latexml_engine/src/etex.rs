@@ -428,14 +428,23 @@ LoadDefinitions!({
 
   DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
     // eTeX: when the pseudo-file ends, the `\everyeof` token list is
-    // inserted AS TOKENS. The mechanism is implemented
-    // (gullet::mark_everyeof_mouth + close_mouth insertion + read_token
-    // transparency for marked mouths) but NOT WIRED: enabling it fixes the
-    // l3tl `\tl_set_rescan` stop-quark delivery (rescan repro exact) but
-    // sends spath3/litetable/zref-check into 5-token expansion loops —
-    // an unresolved interaction (PLANS.md). With Until-misses delivering
-    // empty, the rescan path degrades gracefully instead, which is the
-    // better corpus-wide trade until the interaction is root-caused.
+    // inserted AS TOKENS (tex.web §360 + eTeX everyeof). The mechanism is
+    // implemented (gullet::mark_everyeof_mouth + close-time insertion +
+    // the payload-BOUNDED delimited-reader cross gullet::cross_marked_mouth)
+    // but stays UNWIRED: two designs both regress the l3doc family
+    // (spath3/litetable/zref, clean → 5-token-loop fatal). (1) unbounded
+    // read_token-level crossing — marker miss escapes into the live
+    // alignment stream, poisoning l3tl rescan results (tried 3×,
+    // 2026-09-01). (2) payload-bounded crossing in read_until — a NESTED
+    // delimited scan running inside the pseudo-file (the `\verb` reader
+    // expanded during a DefExpanded body) hits the file end first and
+    // consumes the close + payload that belonged to the ENCLOSING rescan
+    // protocol; the loop then reproduces with window
+    // `{ } \fi \lx@hidden@egroup }` (also 2026-09-01). Real eTeX has the
+    // same one-payload-any-consumer shape but never expands `\verb` there —
+    // the next design must first stop expandable-\verb from scanning at
+    // all inside edef-style bodies (PLANS P15). With Until-misses
+    // delivering empty, the rescan path degrades gracefully meanwhile.
     open_mouth(Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });

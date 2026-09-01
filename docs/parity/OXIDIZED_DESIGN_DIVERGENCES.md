@@ -6424,3 +6424,18 @@ no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 
 **Upstream**: branch-contained per user directive (perfect_kernel); Perl
 issue-worthy (KNOWN_PERL_ERRORS #81).
+
+### 173. xkeyval key presets implemented (Perl stubs them)
+
+**Perl behavior**: `\presetkeys`/`\gpresetkeys`/`\delpresetkeys`/`\gdelpresetkeys`/`\unpresetkeys`/`\gunpresetkeys` are warn-stubs ("Presetting keys is currently not supported.", xkeyval.sty.ltxml L452-475); no `\setkeys` call ever applies presets.
+**Rust behavior**: the six front-ends are verbatim xkeyval.tex L363-403 (`RawTeX!` in `xkeyval_sty.rs`), and public `\setkeys` takes the real front-end (`\XKV@testopta{\XKV@testoptc\XKV@setkeys}`, xkeyval.tex L437) so the already-present `\XKV@usepresetkeys` hooks fire — every `\setkeys` applies the family's head presets before and tail presets after the user keys, excluding user-passed names.
+**Why**: complete support over stubs; packages run key code only from presets (cntperchap.sty L75-79 `\gdef\@cps@@keymacro@@tracklevel` — "section level … is unknown" without it). Oracle = xkeyval.tex + pdflatex.
+**Witnesses**: cntperchap_doc 6→3, cntperchap_example (TeX Live doc corpus).
+**Residual**: `\XKV@s@tkeys` passes the full `\XKV@fams` list rather than per-family `\XKV@tfam` inside the preset loop — a multi-family `\setkeys` whose preset key name exists in an earlier family could dispatch there (single-family callers unaffected).
+
+### 174. `\index` sort keys are brace-protected through the `\@indexphrase` re-parse (Perl truncates at `]`)
+
+**Perl behavior**: `process_index_phrases` emits `\@indexphrase[<sortas>]{<phrase>}` with the sort key raw between `[`/`]` (latex_constructs.pool.ltxml L4351-4353); a `]` INSIDE the sort key (examdoc `\indc{gradetable[v]}` → `\index{gradetable[v]@…}`) truncates the constructor's optional-arg re-parse at the first `]` — key attribute cut short and the display phrase spilled as illegal `<ltx:indexmark>` children (`malformed:ltx:text`).
+**Rust behavior**: the emitted expansion wraps the sort key in a brace group (`[{<sortas>}]`), which the optional reader treats as opaque; `clean_index_key` strips exactly one whole-span outer pair.
+**Why**: KNOWN_PERL_ERRORS #83 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
+**Witnesses**: exam/examdoc 39-error family → 0; pgfornament docs.
