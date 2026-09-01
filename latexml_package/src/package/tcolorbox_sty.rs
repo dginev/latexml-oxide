@@ -1,6 +1,9 @@
 //! tcolorbox.sty — colored and framed text boxes
 //! Perl: tcolorbox.sty.ltxml
-use crate::prelude::*;
+use crate::{
+  package::listings_sty::{listings_read_raw_lines, lst_process_display},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -52,4 +55,46 @@ LoadDefinitions!({
     "\\lstnewenvironment{#2}[#3][#4]{}{}",
     locked => true
   );
+
+  // tcolorbox `documentation` library (tcbdocumentation.code.tex L242-255):
+  // {dispExample} routes its body through `\tcbwritetemp` (verbatim write to
+  // \jobname.tcbtemp, re-input as listing + executed). Our engine cannot
+  // close that raw verbatim capture, so the environment leaked an OPEN
+  // <ltx:verbatim> that swallowed the rest of the document (assoccnt manual:
+  // 28 malformed-in-verbatim errors; perfect-kernel "malformed ltx:* in
+  // verbatim" cluster). Reproduce the semantic directly, showexpl-style
+  // (showexpl_sty.rs precedent): capture raw, emit the code listing, then
+  // re-tokenize the body so it EXECUTES as the preview. `locked` so the raw
+  // library load cannot restore the \tcbwritetemp path.
+  DefPrimitive!(T_CS!("\\dispExample"), None, {
+    bgroup();
+    let text = listings_read_raw_lines("dispExample");
+    unread(Tokenize!(TeXString::assembled("\\end{dispExample}".to_string())));
+    unread(Tokenize!(TeXString::assembled(text.clone())));
+    unread(Tokens::new(lst_process_display(None, &text)));
+  }, locked => true);
+  // The raw library redefines the END macros too (\enddispExample =
+  // \endtcbwritetemp\endgroup…, tcbdocumentation.code.tex L244-251) — every
+  // piece of the family must be locked or the raw load re-wires it back into
+  // the write-temp machinery (witnessed as `t.tcbtemp` missing-file +
+  // \endgroup mode errors).
+  DefMacro!("\\enddispExample", "", locked => true);
+  // {dispExample*}{options} — same, options are presentational.
+  DefPrimitive!("\\lx@dispExampleStar{}", sub[(_opts)] {
+    bgroup();
+    let text = listings_read_raw_lines("dispExample*");
+    unread(Tokenize!(TeXString::assembled("\\end{dispExample*}".to_string())));
+    unread(Tokenize!(TeXString::assembled(text.clone())));
+    unread(Tokens::new(lst_process_display(None, &text)));
+  });
+  DefMacro!(T_CS!("\\dispExample*"), None, "\\lx@dispExampleStar", locked => true);
+  DefMacro!(T_CS!("\\enddispExample*"), None, "", locked => true);
+  // {dispListing} — listing only, no preview.
+  DefPrimitive!(T_CS!("\\dispListing"), None, {
+    bgroup();
+    let text = listings_read_raw_lines("dispListing");
+    unread(Tokenize!(TeXString::assembled("\\end{dispListing}".to_string())));
+    unread(Tokens::new(lst_process_display(None, &text)));
+  }, locked => true);
+  DefMacro!("\\enddispListing", "", locked => true);
 });

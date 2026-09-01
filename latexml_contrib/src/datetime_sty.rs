@@ -31,6 +31,24 @@ LoadDefinitions!({
   \ifcase#1\or Jan\or Feb\or Mar\or Apr\or May\or Jun\or
   Jul\or Aug\or Sep\or Oct\or Nov\or Dec\fi}"
   );
+  // datetime.sty L80-150 format selectors: each redefines \formatdate's
+  // field order (faithful order, simplified separators). Witness assoccnt
+  // manual (`\mmddyyyydate`; perfect-kernel 4-bundle cluster).
+  RawTeX!(
+    r"\def\mmddyyyydate{\def\formatdate##1##2##3{##2/##1/##3}}
+\def\mdyyyydate{\def\formatdate##1##2##3{##2/##1/##3}}
+\def\mmddyydate{\def\formatdate##1##2##3{##2/##1/##3}}
+\def\mdyydate{\def\formatdate##1##2##3{##2/##1/##3}}
+\def\ddmmyyyydate{\def\formatdate##1##2##3{##1/##2/##3}}
+\def\dmyyyydate{\def\formatdate##1##2##3{##1/##2/##3}}
+\def\ddmmyydate{\def\formatdate##1##2##3{##1/##2/##3}}
+\def\dmyydate{\def\formatdate##1##2##3{##1/##2/##3}}
+\def\yyyymmdddate{\def\formatdate##1##2##3{##3/##2/##1}}
+\def\usdate{\def\formatdate##1##2##3{\monthname[##2] ##1, ##3}}
+\def\textdate{\def\formatdate##1##2##3{##1 \monthname[##2] ##3}}
+\def\longdate{\def\formatdate##1##2##3{\monthname[##2] ##1, ##3}}
+\def\shortdate{\def\formatdate##1##2##3{\shortmonthname[##2] ##1, ##3}}"
+  );
 
   // datetime.sty L260+ `\newdate{name}{day}{month}{year}` declares a
   // named date that `\displaydate{name}` later prints. Real package

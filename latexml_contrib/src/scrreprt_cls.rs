@@ -52,6 +52,13 @@ LoadDefinitions!({
   // `\subparagraph`. Map to the closest standard structural heading so it lands
   // as `ltx:paragraph` rather than erroring.
   DefMacro!("\\minisec{}", "\\paragraph*{#1}");
+  // KOMA \ifpdfoutput{then}{else} (scrkbase; deprecated KOMA compat) tests
+  // \pdfoutput>0 — always TRUE in our pdftex model. Witness l2tabu/l2tabuen
+  // L43 (perfect-kernel).
+  DefMacro!("\\ifpdfoutput{}{}", "#1");
+  // KOMA logo macros (scrkbase).
+  DefMacro!("\\KOMAScript", "KOMA-Script");
+  DefMacro!("\\KOMA", "KOMA");
 
   // KOMA `addmargin` environment: `\begin{addmargin}[innermargin]{outermargin}`
   // (or `{both}`) indents a block. The margin is a visual-layout concern with no

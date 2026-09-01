@@ -31,7 +31,7 @@ NOTE: several exceed the nominal error cap — cap behavior itself worth a look.
 
 | Signature (bundles) | Status |
 |---|---|
-| `Error:expected:\fi` (13; hep-* family ≈10 of them, + pythontex=D7, misc) | OPEN — 5-line repro: `\usepackage{hep-font}` under the raw preload → `Missing \fi or \else, conditional fell off end` attributed to hep-font EOF (line 193). NOT the xpatch `{\else#1}` block (removing it doesn't help; standalone xpatch repros are clean). Error appears right after xparse/expl3 mid-preamble raw loading; INTERMITTENT w.r.t. load path (local-searchpath copy was clean in one run, errored in another) — suspect conditional-stack bookkeeping across file/mouth boundaries during nested raw loads. Needs a focused session with conditional-stack tracing. |
+| `Error:expected:\fi` (was 13; hep-* family) | **DISSOLVED by sweep 13** (an intervening batch — likely #171 brace-hunt or the DocInput routing): the hep-font min-repro is 3/3 clean, hep-* family 7/9 at 0 errors. Residual: hep-math 43 (36 = parked R9 mode-frame family + 2 `\fi` + exfontsize internals), hep-paper FIXED batch 8 (alphabeta `\math<greek>` aliases). |
 | `Error:unexpected:&` (12) | mode/alignment family — overlaps parked R9 mode-frame; sample before attempting. |
 | `\ltd@title@title` (12) | expected to clear in sweep 5 (ltxdockit_cls.rs landed after the sweep-4 binary). |
 | `malformed:ltx:glossaryphrase` (9, abntex2 family) | OPEN — glossary entries emitted at #Document root; simple glossaries flow is clean, abntex2's path differs. |

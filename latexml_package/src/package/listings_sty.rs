@@ -1725,13 +1725,13 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
       ctx.listing = ctx.listing[m.end()..].to_string();
       if ctx.mode != "inline" {
         lst_process_end_line(ctx);
-        if let Ok(inv) = (|| -> Result<Tokens> {
-          Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!(
-            "lstnumber"
-          )]))
-        })() {
-          ctx.lsttokens.extend(inv.unlist());
-        }
+        // Emit the LOCKED internal step (defined in LoadDefinitions below),
+        // not user-level \stepcounter: real listings advances \c@lstnumber
+        // at the internals level, so a package wrapping \stepcounter
+        // (assoccnt.sty L69 wraps it for associated counters) must NOT see
+        // line stepping — its raw wrapper expanding inside the listing
+        // constructor leaked #PCDATA into <ltx:listing> (assoccnt manual).
+        ctx.lsttokens.push(T_CS!("\\lx@lst@stepnumber"));
         ctx.linenum += 1;
         ctx.colnum = 0;
         // Perl: while ($listing ne '' && !&$linetest($linenum)) { skip lines }
@@ -1742,13 +1742,7 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
           } else {
             ctx.listing = String::new();
           }
-          if let Ok(inv) = (|| -> Result<Tokens> {
-            Ok(Invocation!(T_CS!("\\stepcounter"), vec![T_OTHER!(
-              "lstnumber"
-            )]))
-          })() {
-            ctx.lsttokens.extend(inv.unlist());
-          }
+          ctx.lsttokens.push(T_CS!("\\lx@lst@stepnumber"));
           ctx.linenum += 1;
         }
         // Handle gobble
@@ -2537,6 +2531,15 @@ LoadDefinitions!({
   DefKeyVal!("LST", "linewidth", "Dimension");
   DefKeyVal!("LST", "xleftmargin", "Dimension");
   DefKeyVal!("LST", "xrightmargin", "Dimension");
+  // Real \lst@Key{xleftmargin} stores the value as \lst@xleftmargin; raw
+  // styles read it directly (bohr/cntformats family, 8 bundles). Default 0pt.
+  RawTeX!(r"\def\lst@xleftmargin{0pt}\def\lst@xrightmargin{0pt}");
+  // Internal line-number step for the display constructor stream — locked so
+  // user-level \stepcounter wrappers can't intercept it (see the emitter in
+  // lst_process_display's newline handling).
+  DefPrimitive!(T_CS!("\\lx@lst@stepnumber"), None, {
+    let _ = step_counter("lstnumber", true);
+  }, locked => true);
   DefKeyVal!("LST", "resetmargins", "");
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");

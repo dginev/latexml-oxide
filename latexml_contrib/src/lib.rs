@@ -129,6 +129,7 @@ pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod ifacconf_cls;
 // ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
+pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
 pub mod czipreprint_cls;
 pub mod ieeetj_cls;
@@ -409,6 +410,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
+  ("assoccnt", "sty", assoccnt_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),

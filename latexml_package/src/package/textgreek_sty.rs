@@ -138,6 +138,30 @@ LoadDefinitions!({
   DefPrimitive!("\\betasymbol",    "\u{03D0}");
   DefPrimitive!("\\epsilonsymbol", "\u{03F5}");
 
+  // alphabeta.sty L109-160: `\math<letter>` aliases saving the ORIGINAL math
+  // meanings before alphabeta re-declares the bare names as
+  // `\TextOrMath{\text<x>}{\math<x>}`. Packages built on alphabeta call these
+  // directly: hep-math-font.sty L146-186 (`\hep@greek{\textdelta}{\mathdelta}`).
+  // Since `alphabeta` maps to THIS binding (lib.rs), the raw let-block never
+  // runs — port it verbatim. Witness: hep-paper manual (perfect-kernel,
+  // \mathdelta/\mathmu/\mathphi undefined).
+  RawTeX!(
+    r"\let\mathGamma\Gamma \let\mathDelta\Delta \let\mathTheta\Theta
+\let\mathLambda\Lambda \let\mathXi\Xi \let\mathPi\Pi
+\let\mathSigma\Sigma \let\mathUpsilon\Upsilon \let\mathPhi\Phi
+\let\mathPsi\Psi \let\mathOmega\Omega
+\let\mathalpha\alpha \let\mathbeta\beta \let\mathgamma\gamma
+\let\mathdelta\delta \let\mathepsilon\epsilon \let\mathvarepsilon\varepsilon
+\let\mathzeta\zeta \let\matheta\eta \let\maththeta\theta
+\let\mathvartheta\vartheta \let\mathiota\iota \let\mathkappa\kappa
+\let\mathlambda\lambda \let\mathmu\mu \let\mathnu\nu
+\let\mathxi\xi \let\mathpi\pi \let\mathvarpi\varpi
+\let\mathrho\rho \let\mathvarrho\varrho \let\mathsigma\sigma
+\let\mathvarsigma\varsigma \let\mathtau\tau \let\mathupsilon\upsilon
+\let\mathphi\phi \let\mathvarphi\varphi \let\mathchi\chi
+\let\mathpsi\psi \let\mathomega\omega"
+  );
+
   // greek-fontenc accent commands (lgrenc.def L439ff \DeclareTextAccent —
   // our \DeclareTextAccent is a no-op, as in Perl). Bounded surpass: map
   // each to its Unicode COMBINING mark placed after the argument's first

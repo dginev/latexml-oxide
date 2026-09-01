@@ -106,6 +106,13 @@ LoadDefinitions!({
   // dropped (print-layout, out of scope). The \begin-in-body alias idiom
   // keeps the environment stack balanced.
   DefMacro!("\\minisec{}", "\\paragraph*{#1}");
+  // KOMA \ifpdfoutput{then}{else} (scrkbase; deprecated KOMA compat) tests
+  // \pdfoutput>0 — always TRUE in our pdftex model. Witness l2tabu/l2tabuen
+  // L43 (perfect-kernel).
+  DefMacro!("\\ifpdfoutput{}{}", "#1");
+  // KOMA logo macros (scrkbase).
+  DefMacro!("\\KOMAScript", "KOMA-Script");
+  DefMacro!("\\KOMA", "KOMA");
   DefMacro!("\\labeling[]{}", "\\begin{description}");
   DefMacro!("\\endlabeling", "\\end{description}");
 });

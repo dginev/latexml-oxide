@@ -1937,7 +1937,14 @@ LoadDefinitions!({
   // to itself and is harmless.
   DefMacro!("\\DeclareCiteCommand OptionalMatch:* {}[]{}{}{}{}",
   sub[(_star, target, _wrapper, _precode, _loopcode, _sepcode, _postcode)] {
-    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) {
+    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS)
+      // Only give a NEW command the \cite fallback. A redeclaration of an
+      // EXISTING command is a restyling — keep our native pipeline's version
+      // (a raw .cbx's `\DeclareCiteCommand{\parencite}…` was aliasing
+      // \parencite to plain \cite, dropping the parentheses; guard
+      // `cluster_biblatex_authoryear*`).
+      && lookup_meaning(&tok).is_none()
+    {
       Let!(tok, T_CS!("\\cite"));
     }
     Ok(Tokens!())
@@ -2336,6 +2343,31 @@ LoadDefinitions!({
   //
   // {<scopes>}[<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7241.
   def_macro_noop("\\DeclareBiblatexOption{}[]{}[]{}")?;
+  // Style-author API used by complex third-party styles (apa.bbx/cbx was the
+  // regression witness — 27 undefined-CS errors when the raw style loaded):
+  // declaration bodies must be SWALLOWED (their `\keypart`/`\regexp`/`\A`
+  // sub-language is biber sorting spec, not TeX to execute), hooks are
+  // presentational noops, punctuation gets its literal.
+  def_macro_noop("\\DeclareDelimFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareDelimAlias OptionalMatch:* {}[]{}")?;
+  def_macro_noop("\\DeclareLabelname OptionalMatch:* []{}")?;
+  def_macro_noop("\\DeclareNosort{}")?;
+  def_macro_noop("\\DeclareSortExclusion{}{}")?;
+  def_macro_noop("\\DeclareSortInclusion{}{}")?;
+  def_macro_noop("\\DeclareSortingNamekeyTemplate[]{}")?;
+  def_macro_noop("\\DeclareUniquenameTemplate[]{}")?;
+  def_macro_noop("\\DeclareMultiCiteCommand{}[]{}{}")?;
+  def_macro_noop("\\DeclareBibliographyExtras{}")?;
+  def_macro_noop("\\GenRefcontextData{}{}")?;
+  def_macro_noop("\\AtEveryCite{}")?;
+  def_macro_noop("\\AtBeginRefsection{}")?;
+  def_macro_noop("\\AtEveryCitekey{}")?;
+  def_macro_noop("\\RequireBiber[]")?;
+  def_macro_noop("\\localrefcontext[]{}")?;
+  DefMacro!("\\addsemicolon", ";");
+  DefMacro!("\\addcolon", ":");
+  DefMacro!("\\newunitpunct", ". ");
+  DefMacro!("\\bibstring{}", "#1");
   // [<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7226-7228.
   def_macro_noop("\\DeclareBibliographyOption[]{}[]{}")?;
   def_macro_noop("\\DeclareTypeOption[]{}[]{}")?;
@@ -2354,6 +2386,13 @@ LoadDefinitions!({
   def_macro_noop("\\newrefsegment")?;
   def_macro_noop("\\endrefsegment")?;
   def_macro_noop("\\printbiblist[]{}")?;
+  // Bibliography categories (biblatex ~L2900): filtering machinery with no
+  // XML counterpart in the native pipeline — declare/assign as noops, test
+  // takes the false branch. 6-bundle cluster (biblatex-abnt/-juradiss …).
+  def_macro_noop("\\DeclareBibliographyCategory{}")?;
+  def_macro_noop("\\addtocategory{}{}")?;
+  DefMacro!("\\ifcategory{}{}{}", "#3");
+  DefMacro!("\\ifentrycategory{}{}{}", "#3");
   DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
   DefMacro!("\\mkbibparens{}", "(#1)");
   DefMacro!("\\mkbibbrackets{}", "[#1]");
@@ -2404,13 +2443,33 @@ LoadDefinitions!({
 /// native cite/bibliography closures for no gain.
 fn blx_load_style_file(name: &str, ext: &str) {
   const NATIVE_STYLES: &[&str] = &[
-    "numeric", "numeric-comp", "numeric-verb", "alphabetic", "alphabetic-verb",
-    "authoryear", "authoryear-comp", "authoryear-ibid", "authoryear-icomp",
-    "authortitle", "authortitle-comp", "authortitle-ibid", "authortitle-icomp",
-    "authortitle-terse", "authortitle-tcomp", "authortitle-ticomp",
-    "verbose", "verbose-ibid", "verbose-note", "verbose-inote",
-    "verbose-trad1", "verbose-trad2", "verbose-trad3",
-    "draft", "debug", "reading", "standard",
+    "numeric",
+    "numeric-comp",
+    "numeric-verb",
+    "alphabetic",
+    "alphabetic-verb",
+    "authoryear",
+    "authoryear-comp",
+    "authoryear-ibid",
+    "authoryear-icomp",
+    "authortitle",
+    "authortitle-comp",
+    "authortitle-ibid",
+    "authortitle-icomp",
+    "authortitle-terse",
+    "authortitle-tcomp",
+    "authortitle-ticomp",
+    "verbose",
+    "verbose-ibid",
+    "verbose-note",
+    "verbose-inote",
+    "verbose-trad1",
+    "verbose-trad2",
+    "verbose-trad3",
+    "draft",
+    "debug",
+    "reading",
+    "standard",
   ];
   let name = name.trim();
   if name.is_empty() || NATIVE_STYLES.contains(&name) {

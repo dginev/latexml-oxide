@@ -157,6 +157,33 @@ pub fn lookup_color_obj(name: &str) -> Color {
           }
         }
       }
+      // Raw-interop fallback: real xcolor stores colors as
+      // `\csname\string\color@<name>\endcsname` → `\xcolor@{}{}{<model>}{<spec>}`,
+      // and raw packages create colors by defining that macro DIRECTLY —
+      // ydoc-desc.sty L22-24 defines `\color@none` = `\xcolor@{}{}{}{}` (an
+      // intentionally EMPTY color, so `\colorlet{cls}{none}` "uncolors")
+      // — the `wisdom_latexml_reimpl_internal_name_mismatch` shape. Read the
+      // raw storage before assuming Black (5-bundle `'none'` cluster,
+      // macros2e/ydoc family; real pdflatex is clean on these docs).
+      let storage_cs = T_CS!(s!("\\\\color@{name}"));
+      if lookup_meaning(&storage_cs).is_some()
+        && let Ok(payload) = do_expand(Tokens!(storage_cs))
+      {
+        // Payload shape: `\xcolor@ {}{}{<model>}{<spec>}` — grab the last
+        // two braced groups textually.
+        let text = payload.to_string();
+        let parts: Vec<&str> = text.split('{').collect();
+        if parts.len() >= 5 {
+          let model = parts[parts.len() - 2].trim_end_matches('}').trim();
+          let spec = parts[parts.len() - 1].trim_end_matches('}').trim();
+          if model.is_empty() && spec.is_empty() {
+            // Empty color = "no color": inherit (render as default ink),
+            // silently — matching real xcolor's behavior for this storage.
+            return color::BLACK;
+          }
+          return color_from_model_spec(model, spec);
+        }
+      }
       // Perl color.sty.ltxml L50-53:
       //   AssignValue('color_'.$spec => Black);
       //   Error('unexpected', $spec, $STATE->getStomach,
