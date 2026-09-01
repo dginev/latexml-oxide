@@ -91,6 +91,22 @@ A document is *converted perfectly* when, in order of increasing strictness:
 The sweep measures S0–S1 mechanically; S2 is a validation pass over surviving
 XML; S3 is per-document audit work, sampled.
 
+**The headline number is S0∧S1 on the oracle-clean slice** — COMPLETED with
+zero `Error:` lines — computed by `tools/perfect_kernel/tally.sh`. A 0-error
+timeout is not a win (it truncated the document), and the legacy "zero-error"
+count included them: sweep 26 reported 1,276 zero-error / 1,049 slice while
+its honest S0∧S1 was 1,163 / 981 — it ran under 8-agent + build contention
+and timed out 266 docs (111 with 0 errors) against sweep 25's 19. Rules that
+follow: (1) sweeps run on a **quiet machine** (no builds, ≤ 2 subagents) or
+their timeouts are re-run solo before tallying (`delete verdict.tsv` for
+status-124 docs, re-invoke `sweep.sh` at `JOBS=6`); (2) `tally.sh` diffs the
+previous sweep by **per-document error-count delta** (Δ ≥ 5 or status
+worsening), not by zero-error flips — the nicematrix exemplar sat at
+108 → 1001 for four sweeps unnoticed by a flip-only diff; (3) the exemplar
+rows are printed in every tally and the LEDGER exemplar table gets a row per
+sweep; (4) S2 (`validate.sh`) and S3 word-recall (`s3_audit.sh`) are re-measured
+over the S0∧S1 slice every few sweeps — zero errors is not correctness.
+
 ## Working method
 
 1. **Sweep** the corpus (or the current tier) → `sweep_verdicts.tsv`.
