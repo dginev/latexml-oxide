@@ -635,6 +635,21 @@ impl Definition for Register {
     // A dilemma: If the \chardef were in a style file, you're prefer to revert to the $cs
     // but if defined in the document source, better to use \char ###\relax, so it still "works"
     if matches!(self.register_type, RegisterType::CharDef) {
+      // Perl CharDef.pm L52-55: a \chardef from a STYLE/BINDING (or the
+      // dump / engine files, which have no meaningful source) reverts as
+      // its own CS; only a document-source \chardef reverts as
+      // `\char N\relax` so it "still works" standalone. Without this,
+      // restoring `\&`/`\#` as chardefs turned every `tex=` reversion
+      // into `\char 38\relax` (ifthen golden).
+      let local = {
+        let src = arena::with(self.locator.source, |s| s.to_string());
+        !src.is_empty()
+          && !src.contains(".sty")
+          && !src.contains(".ltxml")
+          && !src.contains(".rs")
+          && !src.contains("Anonymous")
+          && !src.contains("literal")
+      };
       let mut props = HashMap::default();
       if let Some(role) = self.role {
         props.insert("role", Stored::String(role));
@@ -688,24 +703,57 @@ impl Definition for Register {
             arena::pin_char(mathglyph),
             None,
             None,
-            Tokens!(
-              T_CS!("\\mathchar"),
-              self.value.as_ref().unwrap().revert()?,
-              T_CS!("\\relax")
-            ),
+            if local {
+              Tokens!(
+                T_CS!("\\mathchar"),
+                self.value.as_ref().unwrap().revert()?,
+                T_CS!("\\relax")
+              )
+            } else {
+              Tokens!(self.cs)
+            },
             props,
           )
         } else {
+          let glyph = font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
+            .unwrap_or_else(|| pin!(""));
+          // Perl CharDef.pm L61-62: a TEXT \chardef invoked IN math still
+          // gets its unicode math properties, so the dump's `\&` (CD 38)
+          // in `$\&\&$` carries role/meaning instead of injecting a bare
+          // `&` the math parser reads as an alignment tab. Required for
+          // dropping the plain_constructs `\#`/`\&`/… overrides that
+          // shadowed the dump CharDefs (and with them the numeric value —
+          // `\catcode\#14` read 0; varindex family, misdefined:# cluster).
+          if state::lookup_bool("IN_MATH") {
+            let glyph_char = arena::with(glyph, |g| g.chars().next());
+            if let Some(c) = glyph_char
+              && let Some(info) = crate::common::mathchar::unicode_math_properties(c)
+            {
+              if let Some(role) = info.role
+                && !props.contains_key("role")
+              {
+                props.insert("role", Stored::String(arena::pin(role)));
+              }
+              if let Some(meaning) = info.meaning
+                && !props.contains_key("meaning")
+              {
+                props.insert("meaning", Stored::String(arena::pin(meaning)));
+              }
+            }
+          }
           Tbox::new(
-            font::decode_str(self.value.clone().unwrap().value_of() as u8, None, false)
-              .unwrap_or_else(|| pin!("")),
+            glyph,
             None,
             None,
-            Tokens!(
-              T_CS!("\\char"),
-              self.value.as_ref().unwrap().revert()?,
-              T_CS!("\\relax")
-            ),
+            if local {
+              Tokens!(
+                T_CS!("\\char"),
+                self.value.as_ref().unwrap().revert()?,
+                T_CS!("\\relax")
+              )
+            } else {
+              Tokens!(self.cs)
+            },
             props,
           )
         },

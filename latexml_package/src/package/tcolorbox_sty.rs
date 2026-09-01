@@ -90,6 +90,57 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\dispExample*"), None, "\\lx@dispExampleStar", locked => true);
   DefMacro!(T_CS!("\\enddispExample*"), None, "", locked => true);
   // {dispListing} — listing only, no preview.
+  // Bare `\tcbwritetemp` … `\endtcbwritetemp` — tcolorbox's verbatim
+  // record-to-\jobname.tcbtemp, invoked from OTHER environments' begin/end
+  // hooks (keytheorems-doc L157-162 `{codepreamble}` = `\tcbset{mark
+  // preamble}\tcbwritetemp` … `\endtcbwritetemp`). The real scanner reads
+  // until the SURROUNDING environment's \end line; capture the same way,
+  // store for `\tcbusetemplisting`, write the file for `\input`-back
+  // consumers, and re-emit the `\end{env}` so the wrapper closes normally.
+  DefPrimitive!(T_CS!("\\tcbwritetemp"), None, {
+    let env = match lookup_value("current_environment") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::from("tcbwritetemp"),
+    };
+    let text = listings_read_raw_lines(&env);
+    assign_value("TCB@templisting", Stored::String(pin(&text)), Some(Scope::Global));
+    let jobname = do_expand(Tokens!(T_CS!("\\jobname")))
+      .map(|t| t.to_string())
+      .unwrap_or_else(|_| String::from("texput"));
+    use std::io::Write;
+    if let Ok(mut fh) = std::fs::File::create(format!("{}.tcbtemp", jobname.trim())) {
+      let _ = write!(fh, "{text}");
+    }
+    unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
+  }, locked => true);
+  DefMacro!(T_CS!("\\endtcbwritetemp"), None, "", locked => true);
+  // Emit the recorded text as a listing (tcolorbox `\tcbusetemplisting`).
+  DefPrimitive!(T_CS!("\\tcbusetemplisting"), None, {
+    let text = match lookup_value("TCB@templisting") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::new(),
+    };
+    if !text.is_empty() {
+      unread(Tokens::new(lst_process_display(None, &text)));
+    }
+  }, locked => true);
+
+  // \NewTCBListing / \DeclareTCBListing / \ReNewTCBListing
+  // {name}{xparse-sig}{options}: the xparse-signature flavor of
+  // \newtcblisting (tcbxparse library). Approximate the signature by its
+  // argument COUNT (O/o/m/d specifiers) and delegate to
+  // \lstnewenvironment like the plain form. Witness keytheorems-doc L165
+  // `\NewTCBListing{keythmscode}{ !O{} }{…}` (31 uses in that manual).
+  DefMacro!("\\NewTCBListing{}{}{}", sub[(name, sig, _opts)] {
+    tcb_xparse_listing(name, sig)
+  });
+  DefMacro!("\\DeclareTCBListing{}{}{}", sub[(name, sig, _opts)] {
+    tcb_xparse_listing(name, sig)
+  });
+  DefMacro!("\\ReNewTCBListing{}{}{}", sub[(name, sig, _opts)] {
+    tcb_xparse_listing(name, sig)
+  });
+
   DefPrimitive!(T_CS!("\\dispListing"), None, {
     bgroup();
     let text = listings_read_raw_lines("dispListing");
@@ -98,3 +149,19 @@ LoadDefinitions!({
   }, locked => true);
   DefMacro!("\\enddispListing", "", locked => true);
 });
+
+/// Delegate an xparse-signature TCB listing declaration to
+/// `\lstnewenvironment{name}[n][]{}{}` using the specifier COUNT.
+fn tcb_xparse_listing(name: Tokens, sig: Tokens) -> Result<Tokens> {
+  let sig_str = sig.to_string();
+  let nargs = sig_str
+    .chars()
+    .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D'))
+    .count();
+  let name_str = name.to_string();
+  Ok(Tokenize!(TeXString::assembled(format!(
+    "\\lstnewenvironment{{{}}}[{}][]{{}}{{}}",
+    name_str.trim(),
+    nargs
+  ))))
+}

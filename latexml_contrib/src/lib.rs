@@ -217,7 +217,6 @@ pub mod typearea_sty;
 pub mod unicode_math_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
-pub mod catoptions_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
@@ -402,7 +401,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tabularray", "sty", tabularray_sty::load_definitions),
   ("widetext", "sty", widetext_sty::load_definitions),
   ("xwatermark", "sty", xwatermark_sty::load_definitions),
-  ("catoptions", "sty", catoptions_sty::load_definitions),
   (
     "scrlayer-scrpage",
     "sty",

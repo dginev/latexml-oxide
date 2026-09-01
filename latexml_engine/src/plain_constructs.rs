@@ -43,27 +43,25 @@ LoadDefinitions!({
   // Routes by IN_MATH to the existing math/text helpers at digest time,
   // preserving rendering (and avoiding the dump CharDef's dropped-`#` in math).
   // Witness 1811.00200 (llncs + algochl.sty). WISDOM #44.
-  DefPrimitive!("\\#", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@hash") } else { T_CS!("\\lx@text@hash") };
-    digest(Tokens!(target))?
-  });
-  // Same single-primitive treatment for the rest of the family (see `\#` above):
-  // non-expandable + `\ifx`-stable, dispatching to the existing math/text
-  // helpers by IN_MATH at digest time. (The math helpers carry the proper
-  // role/meaning, so math-mode `$\&\&$` still routes through `\lx@math@amp`
-  // rather than injecting a catcode-4 `&` — the breakage the prior override
-  // guarded against.)
-  DefPrimitive!("\\&", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@amp") } else { T_CS!("\\lx@text@amp") };
-    digest(Tokens!(target))?
-  });
-  DefPrimitive!("\\%", {
-    let target = if lookup_bool_sym(pin!("IN_MATH")) {
-      T_CS!("\\lx@math@percent") } else { T_CS!("\\lx@text@percent") };
-    digest(Tokens!(target))?
-  });
+  // `\#`, `\&`, `\%` are latex.ltx L626-628 CHARDEFS. The former
+  // IN_MATH-dispatching DefPrimitives preserved rendering but destroyed the
+  // numeric \chardef value: `\catcode\#14` read 0 and silently failed, so
+  // varindex.dtx's `#`-as-comment doc block leaked PARAM tokens to the
+  // stomach (62 misdefined:# — Rust-only; Perl keeps the dump CharDef and
+  // its CharDef.pm invoke is mode-aware). The Rust CharDef invoke is now
+  // mode-aware too (register.rs: text \chardef IN math attaches unicode
+  // math properties — the `$\&\&$` alignment-leak the old override guarded
+  // against), so install the faithful CharDefs. Non-expandable → the
+  // harvmac `\write` round-trip (at_in_cs_round_trip golden) and algochl's
+  // `\ifx`-sentinel stability (1811.00200) hold as before.
+  for (cs, code) in [("\\#", 35i64), ("\\&", 38), ("\\%", 37)] {
+    let mut reg =
+      Register::new_chardef(T_CS!(cs), Some(Number::new(code).into()), None, None);
+    // Engine-installed: no source locator, so the CharDef reverts as its CS
+    // (`tex="\&"`), not `\char 38\relax` (Perl CharDef.pm L52-55 "local").
+    reg.locator = Locator::default();
+    install_definition(reg, None);
+  }
   DefPrimitive!("\\$", {
     let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@dollar") } else { T_CS!("\\lx@text@dollar") };
