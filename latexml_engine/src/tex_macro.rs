@@ -162,10 +162,23 @@ LoadDefinitions!({
         if let Some(nxtok) = read_token()? {
           xtok = nxtok;
         } else {
+          // Stream ended mid-chain (an isolated argument mouth ran out —
+          // csquotes' `\csq@fixkern` 7-chain firing on a quote char that
+          // was the LAST token of a constructor argument, biblatex.tex
+          // L6575). Leaving `xtok` = \expandafter here spun this while
+          // loop against the exhausted mouth, one Error per lap to the
+          // TooManyErrors cap (~96 phantom errors + Fatal). Emit ONE
+          // error and stop — the missing-token recovery mirrors the
+          // undefined-`xtok` stub arm below. (Perl instead crashes:
+          // "Can't call defined_as on undefined", TeX_Macro.pool L207.)
           Error!("expected","expandafter", "\\expandafter wrongly used without 2 arguments.");
+          retract_scanned_braces(&skipped);
+          return Ok(Tokens::new(skipped));
         }
       } else {
         Error!("expected", "expandafter", "\\expandafter wrongly used without 2 arguments.");
+        retract_scanned_braces(&skipped);
+        return Ok(Tokens::new(skipped));
       }
     }
     // The saved tokens were READ (and brace-counted); they re-enter the

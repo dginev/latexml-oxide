@@ -1494,14 +1494,6 @@ fn load_tex_definitions(
   // Witness for this exact failure: arXiv:2602.21210, 2604.21347,
   // 2604.22630, 2604.23234, 2604.22528 (tasks.sty + expl3 cluster,
   // Task #20).
-  let entered_expl3 = lookup_catcode('_') == Some(Catcode::LETTER);
-  // Caller's expl3-syntax status at file entry — either marker suffices
-  // (`\ExplSyntaxOn` sets `_`,`:` letter AND space ignored; a PARTIAL
-  // leak can leave only one flipped). Restored at exit, mirroring the
-  // real `\@expl@push@filename@@`/`\@expl@pop@filename@@` hooks
-  // (expl3.sty L179-217).
-  let expl3_on_entry =
-    lookup_catcode('_') == Some(Catcode::LETTER) || lookup_catcode(' ') == Some(Catcode::IGNORE);
 
   if !pathname::is_literaldata(pathname) {
     // We can't analyze literal data's pathnames!

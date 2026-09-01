@@ -1390,7 +1390,7 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
       next_opt = read_token()?;
     }
     if next_opt == Some(T_OTHER!("[")) {
-      optional = Some(read_until(&Tokens!(T_OTHER!("]")))?);
+      optional = Some(read_until(&Tokens!(T_OTHER!("]")))?.unwrap_or_default());
       next_opt = None;
     }
     if let Some(next) = next_opt {

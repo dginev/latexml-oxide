@@ -364,19 +364,26 @@ impl Parameter {
 
     let checked_value =
       if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
-        // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
-        // in the long-run        Until *may* have a value, but it also may *not*, both OK.
-        // So... except it from the error message here
-        if !is_until {
-          let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
-          Error!(
-            "expected",
-            self,
-            s!("Missing argument {} for {}", self.stringify(), fordefn_str)
-          );
-          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
-        } else {
+        // `Until:` readers now return a DISTINGUISHABLE EOF (read_until →
+        // None when the delimiter never appeared; a matched-but-empty arg
+        // is Some(empty) and never lands here), so the Perl-faithful
+        // "Missing argument" Error fires for Until too — Perl
+        // Parameter.pm L93-97 errors per iteration and its MAX_ERRORS
+        // latch terminates zero-progress delimited-scan loops (fancyvrb
+        // \FancyVerbGetLine rescanning a replayed tail: willowtreebook)
+        // that our silent-empty previously spun into the 50k-box
+        // Stomach:Recursion fatal.
+        let _ = is_until;
+        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
+        Error!(
+          "expected",
+          self,
+          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
+        );
+        if is_until {
           value_arg
+        } else {
+          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
         }
       } else {
         value_arg

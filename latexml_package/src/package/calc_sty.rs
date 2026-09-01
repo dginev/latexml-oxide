@@ -361,8 +361,8 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // Parenthesized subexpression: ( <expression> )
   if peek == T_OTHER!("(") {
-    let inner = read_until(&Tokens!(T_OTHER!(")")));
-    return Ok(CalcValue::Reg(read_expression(expr_type, inner?)?));
+    let inner = read_until(&Tokens!(T_OTHER!(")")))?.unwrap_or_default();
+    return Ok(CalcValue::Reg(read_expression(expr_type, inner)?));
   }
   // Else: literal value — put back token and read normally
   unread_one(peek);

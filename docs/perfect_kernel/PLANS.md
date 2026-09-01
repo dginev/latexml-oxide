@@ -11,14 +11,49 @@ batch number. Keep the conclusion, not the play-by-play
 
 | # | Target (mass) | Status | Plan summary |
 |---|---|---|---|
-| P1 | aomart display-math break (aomsample ×2, ~80 errs) | INVESTIGATING | `\[` fails to enter display math only in the full doc (bare-class repro clean); bisect + class-source root-cause pending. |
-| P2 | biblatex + droit-fr `expected:expandafter` cascade (197 errs, GENUINE-RUST-ONLY — Perl: 4 errs) | INVESTIGATING | Cascade roots in csquotes "No space factor codes for 'ASCII' encoding"; synthetic csquotes repros clean; doc-bisect pending. |
-| P3 | xint `\XINT_div_start_c_<roman…>` infinite csname loop (tkz-grapheur ×4, xint-regression; survives depth 200k) | INVESTIGATING | Roman-numeral-accreting csname loop = a termination conditional we mis-evaluate; xint-source + tex.web comparison pending. |
-| P4 | packdoc element rendering (algxpar-doc 315, numerica ~100) | INVESTIGATING | Per-`\OptionInd` mode error + orphaned `ltx:indexphrase`; verdict needed: parked mode-frame family vs independent fix. |
-| P5 | Session-diff refactor pass (batches 24-32) | INVESTIGATING | DRY (duplicated VerbatimOut capture, beamer theme-load loops), idiom, perf (pack_parameters meaning-lookup, vsplit cloning), comment hygiene. |
-| P6 | elsdoc regression 0→14 (sweep 22) | INVESTIGATING | Verbatim element never closes; suspects narrowed to batch-28 vsplit-voiding vs batch-29 verbatiminput changes (batch 30 + pagegoal A/B-cleared). |
-| P7 | dijkstra-fr tabular-template macro expansion (7 errs) | INVESTIGATING | `\dijk_last_col_type` unexpanded in column spec; real `\@mkpream` fully expands preambles — our template reader doesn't; Perl-share check pending. |
-| P8 | Post-undefined "window of 2 boxes" digestion loops (willowtreebook, fixdif, zx-calculus, knowledge, robust-externalize) | INVESTIGATING | One error-recovery mechanism suspected: error-stubbed CS breaks an `\ifx`-sentinel loop's termination; engine-level fix sought. |
+| P1 | aomart display-math break | **DONE b33** | Root: locked `\newtheorem` grabbed the class's leading style-optional `[` as the theorem NAME; its csname form clobbered `\[`. Fix: signature absorbs+discards the optional (aomart.cls's own semantics). aomsample 101→10. KPE #82. |
+| P2 | biblatex/droit-fr expandafter cascade | **DONE b34** | Root: an active csquotes quote char inside `\verb` (semiverbatim ignored `\dospecials`) fired `\csq@fixkern`'s \expandafter 7-chain at an argument-mouth end; our \expandafter loop then spun per-lap errors. Fixes: (F1) loop terminates on EOF with ONE error; (F2) verb applies `\dospecials` (models the real kernel registration mechanism). biblatex 101+F→6. |
+| P3 | xint roman-csname recursion | **DONE b34** | Root: `\scantokens`/`writable_tokens` hardcoded `\` instead of honoring `\escapechar` (tex.web §1594 print_esc; Perl shares) — xint's two-stage capture executed live primitives inside its edef. Fix: escapechar-aware writable_tokens + §262 space rule. tkz-grapheur fatals→0; esc3 twin pdflatex-identical. |
+| P4 | packdoc index shredding | **DONE b33** | Root: index-phrase splitter cut through brace groups (Perl flat scan). Fix: separators act at depth 0 only. algxpar 315→1. KPE #83. |
+| P5 | Session refactor pass | **DONE b33 (SAFE-NOW set)** | with_meaning swaps, unread_mut deleted, retract_scanned_brace helper, dead expl3 locals, log hygiene. Deferred (measure-first): vsplit split-index-then-materialize, kpse negative-memo. Open: VerbatimOut dedup → superseded by the VFS abstraction below. |
+| P6 | elsdoc "regression" | **DONE b34** | Verdict: sweep-21 "0" was fatal-masked (Status:3 with zero Error lines — the CLAUDE.md signal-integrity trap). Root: `\verbatim@start` baked the element-open into the line pump; raw write-pumps (moreverb) never close it. Fix: env macros own the element, `\verbatim@start` is a pure pump (real verbatim.sty division of labor). elsdoc→0. |
+| P7 | dijkstra template gap | **DONE b33** | Root: template reader never expanded macro-valued column ops; real `\@mkpream` edef-expands the whole preamble. Fix: expand unprotected expandables in the fallback arm (protected filter = `\@unexpandable@protect` analogue). |
+| P8 | Post-undefined digestion loops | **DONE b34 (family a + memoir ticket)** | Family (a): `read_until` returns distinguishable EOF (`Option`, Perl's undef) and `Until:` params raise the per-iteration Missing-argument Error — the TooManyErrors latch now ends zero-progress delimited scans naming the loop (willowtreebook 511+F→8 with the memoir line-capture). Families (b)/(c) correctly stay on the cycle guard (a surpass — Perl hangs). Open ticket: ulem internals for xeCJKfntef (fixdif). |
+
+## Architectural queue — principled abstractions over per-package scanners
+
+User directive (2026-09-01): no stopgap guards / one-off defensive logic;
+model the kernel's underlying mechanics generally. Assessment of the
+session's landed shapes against that bar, and the generalizations owed:
+
+1. **TeX file I/O as a virtual file store (HIGH).** The `{name}_contents`
+   cache is already a de-facto VFS, but it has FOUR ad-hoc writers
+   (filecontents env, fancyvrb VerbatimOut, fancybox VerbatimOut, memoir
+   writeverbatim line-capture) and ad-hoc readers (verbatiminput cache
+   check, find_file slurp path). The kernel mechanics being modeled are
+   exactly `\openout`/`\write`/`\closeout` → `\input`/`\openin`/
+   `\IfFileExists` round-trips. The general abstraction: one virtual
+   file-store module (latexml_core) that ALL \write-to-stream output lands
+   in and ALL file reads consult first; verbatim WRITING environments
+   become one shared "raw-line capture until end-marker (with
+   `\VerbatimEnvironment`-style env redirect)" facility parameterized by
+   terminator + sink. Retires the three duplicated scanners and makes
+   every future write-out/read-back package (dry.sty, answers.sty,
+   exercisebank, tutodoc "examples") work without per-package code.
+2. **Beamer template/option execution (MEDIUM).** The color model now
+   mirrors beamerbasecolor's mechanics; templates and `\DeclareOptionBeamer`
+   remain absorbing no-ops. General model = actually storing template
+   bodies + executing the beamer option processor against declared keys.
+3. **`\iffontchar` truth (LOW).** Currently always-true (args faithfully
+   consumed). General model needs per-font glyph coverage (TFM bc/ec +
+   existence) in the metrics layer.
+4. **expl3 file-boundary state (MEDIUM-HIGH).** batch 31 narrowed the
+   ad-hoc exit-Off to kernel-managed frames; the principled model is
+   routing ALL load boundaries through the dump's real `\@pushfilename`/
+   `\@popfilename` (their expl3 hooks) and deleting the flag machinery
+   (CLUSTERS ctex part-2 row).
+
+## Standing execution queue (main session)
 
 ## Standing execution queue (main session)
 

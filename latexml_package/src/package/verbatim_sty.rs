@@ -57,12 +57,12 @@ LoadDefinitions!({
   //
   DefMacro!(
     "\\verbatim",
-    "\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\verbatim@start"
+    "\\begingroup\\@verbatim\\frenchspacing\\@vobeyspaces\\lx@verbatim@\\verbatim@start"
   );
   DefMacro!(
     T_CS!("\\verbatim*"),
     None,
-    TokenizeInternal!("\\begingroup\\@verbatim\\verbatim@start")
+    TokenizeInternal!("\\begingroup\\@verbatim\\lx@verbatim@\\verbatim@start")
   );
   DefMacro!("\\endverbatim", "\\lx@end@verbatim@\\endgroup");
   DefMacro!(
@@ -81,7 +81,7 @@ LoadDefinitions!({
   );
   def_macro_noop("\\endcomment")?;
 
-  DefMacro!("\\verbatim@start", "\\lx@verbatim@\\verbatim@");
+  DefMacro!("\\verbatim@start", "\\verbatim@");
 
   //======================================================================
   // Here's the interesting bit.

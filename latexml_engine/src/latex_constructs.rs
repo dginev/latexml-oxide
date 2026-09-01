@@ -652,8 +652,46 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
   Ok(())
 }
 
+/// Real LaTeX's `\verb`/`{verbatim}` do `\let\do\@makeother\dospecials`:
+/// every char REGISTERED in `\dospecials` — including chars packages like
+/// csquotes/babel/underscore made ACTIVE and added exactly so verbatim
+/// neutralizes them (csquotes.sty L1521-1524) — becomes catcode OTHER.
+/// LaTeXML's static SPECIALS list misses those dynamic registrations, so an
+/// active auto-quote char inside a `\verb` body FIRED its csquotes meaning
+/// (biblatex.tex L6575 `\verb|<|` → `\csq@qopen` → sfcodes probe + a
+/// truncated `\csq@fixkern` \expandafter chain; 94 errors; Perl shares —
+/// pdflatex clean). Expand `\dospecials` and de-fang each listed char.
+fn apply_dospecials() {
+  // ONE-level expansion: the list body is `\do \<char>` pairs; full
+  // expansion would invoke `\do` itself with whatever meaning it holds.
+  let expansion = match lookup_expandable(&T_CS!("\\dospecials"), None) {
+    Ok(Some(defn)) => defn.invoke(true),
+    _ => return,
+  };
+  if let Ok(expansion) = expansion {
+    for t in expansion.unlist_ref().iter() {
+      if !t.get_catcode().is_active_or_cs() {
+        continue;
+      }
+      // The list alternates `\do` and single-char tokens (`\do\ \do\\…`);
+      // chars appear as single-char CS or ACTIVE tokens.
+      t.with_cs_name(|name| {
+        // The stored CS text keeps its leading escape char (`\<` → "\\<").
+        let name = name.strip_prefix('\\').unwrap_or(name);
+        let mut chars = name.chars();
+        if let Some(c) = chars.next()
+          && chars.next().is_none()
+        {
+          assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+        }
+      });
+    }
+  }
+}
+
 fn before_digest_verbatim() -> Result<Vec<Digested>> {
   bgroup();
+  apply_dospecials();
   let mut stuff = Vec::new();
   if let Some(b) = lookup_tokens("@environment@verbatim@atbegin") {
     stuff.push(digest(b.unlist())?);
@@ -6000,6 +6038,7 @@ LoadDefinitions!({
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", {
     begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+    apply_dospecials();
     // Do NOT (necessarily) skip spaces after \verb!!!
     assign_catcode(' ', Catcode::ACTIVE, None);
     let mut init = None;
@@ -6032,7 +6071,7 @@ LoadDefinitions!({
       let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
       assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = read_until(&delim)?;
+      let body = read_until(&delim)?.unwrap_or_default();
       end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\lx@hidden@bgroup")];

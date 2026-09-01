@@ -1063,7 +1063,7 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::gullet::read_until(&mouth::tokenize_internal(TeXString::assembled(
         delim.to_string(),
       )))
-      .map(|t| t.untex())
+      .map(|t| t.unwrap_or_default().untex())
       .map_err(rhai_err)
     },
   );

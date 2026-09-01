@@ -143,10 +143,47 @@ LoadDefinitions!({
 \newcommand\addtostream[2]{\immediate\write\csname stream@#1\endcsname{#2}}
 \newcommand\IfStreamOpen[3]{\ifnum0\@nameuse{streamopen@#1}=1 #2\else#3\fi}"
   );
-  DefMacro!(
-    "\\writeverbatim{} Until:\\endwriteverbatim",
-    "\\addtostream{#1}{\\detokenize{#2}}"
-  );
+  // `\writeverbatim{stream}` captures the following lines VERBATIM into
+  // the stream. The old `Until:\endwriteverbatim` stub could not work when
+  // a class wraps the pair in an environment (willowtreebook's `answer`:
+  // the sentinel lives inside the env's END macro, which an unexpanding
+  // Until scan never sees — it ran off the end and looped). Capture raw
+  // LINES like the fancyvrb scanners: stop at a line that IS
+  // `\endwriteverbatim` or the wrapping environment's `\end{...}`
+  // (unread the latter so the environment closes normally).
+  DefPrimitive!("\\writeverbatim{}", sub[(stream)] {
+    let stream = do_expand(stream)?.to_string();
+    let envname = do_expand(Tokens!(T_CS!("\\@currenvir")))
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    let env_end = s!("\\end{{{envname}}}");
+    read_raw_line(); // discard remainder of the invocation line
+    let mut lines: Vec<String> = Vec::new();
+    let mut replay: Option<String> = None;
+    while let Some(line) = read_raw_line() {
+      let t = line.trim();
+      if t == "\\endwriteverbatim" {
+        break;
+      }
+      if !envname.is_empty() && t == env_end.as_str() {
+        replay = Some(line);
+        break;
+      }
+      lines.push(line);
+    }
+    if let Some(line) = replay {
+      unread(Tokenize!(TeXString::assembled(line)));
+    }
+    let n = lines.len();
+    Info!("note", "filecontents", s!("Captured writeverbatim for stream {stream} ({n} lines)"));
+    // Deliver through the same stream plumbing addtostream uses.
+    for line in lines {
+      digest(TokenizeInternal!(TeXString::assembled(format!(
+        "\\addtostream{{{stream}}}{{\\detokenize{{{line}}}}}"
+      ))))?;
+    }
+  });
+  def_macro_noop("\\endwriteverbatim")?;
 
   // External-file glossary plumbing — .gls round-trip out of scope here.
   def_macro_noop("\\printglossary[]")?;

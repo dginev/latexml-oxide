@@ -5090,41 +5090,55 @@ enum AuthorLineKind {
 /// in the spirit of the B Book, "show_token_list" routine, in 292.
 /// [This could be a $tokens->unpackParameters, but for the curious space treatment]
 pub fn writable_tokens(tokens: &Tokens) -> String {
-  let mut wv = Vec::new();
+  // Control sequences are written with the CURRENT `\escapechar`
+  // (tex.web §1594 print_esc / eTeX: `\scantokens` writes as `\write`
+  // would) — NOT a hardcoded backslash. xint's `\XINT_NewExpr` capture
+  // (xintexpr.sty L4713-4740) relies on this: stage 1 sets
+  // `\escapechar 126` with active `~` so re-scanned CS names become
+  // inert `$noexpand$name` text; our old hardcoded `\` let `\the`/
+  // `\romannumeral` EXECUTE inside the capturing edef, corrupting every
+  // user-defined xint function body (tkz-grapheur ×4 recursion fatals,
+  // the roman-numeral csname monster). Perl shares the hardcode
+  // (TeX_Debugging.pool L52) and dies the same way — pdflatex is the
+  // oracle. `escapechar()` reads the live register per call: xint flips
+  // it between capture stages.
+  let esc = escapechar();
+  let mut out = String::new();
   for t in tokens.unlist_ref().iter() {
     match t.code {
       Catcode::CS => {
-        wv.push(*t);
-        // Perl: add space after CS unless it's a single non-alpha char CS (like \{, \\, \#)
-        // i.e. skip space only for "\X" where X is exactly one non-[a-zA-Z] character
-        let is_single_nonalpha_cs = with(t.text, |s| {
-          s.starts_with('\\') && {
-            let rest = &s[1..];
-            rest.chars().count() == 1 && !rest.chars().next().unwrap_or(' ').is_ascii_alphabetic()
+        with(t.text, |s| {
+          let name = s.strip_prefix('\\').unwrap_or(s);
+          out.push_str(&esc);
+          out.push_str(name);
+          // tex.web §262 print_cs: multi-letter names get a trailing
+          // space; a single-char name gets one iff that char's CURRENT
+          // catcode is LETTER.
+          let mut chars = name.chars();
+          let first = chars.next();
+          if chars.next().is_some() {
+            out.push(' ');
+          } else if let Some(c) = first
+            && lookup_catcode(c) == Some(Catcode::LETTER)
+          {
+            out.push(' ');
           }
         });
-        if !is_single_nonalpha_cs {
-          wv.push(T_SPACE!());
-        }
       },
-      Catcode::SPACE => {
-        wv.push(T_SPACE!());
-      },
-      Catcode::PARAM => {
-        wv.push(*t);
-        wv.push(*t);
-      },
+      Catcode::SPACE => out.push(' '),
+      Catcode::PARAM => t.with_str(|ts| {
+        out.push_str(ts);
+        out.push_str(ts);
+      }),
       Catcode::ARG => {
         // B Book, 294. Reduce to param+integer
-        wv.push(T_PARAM!());
-        wv.push(t.as_other());
+        out.push('#');
+        t.with_str(|ts| out.push_str(ts));
       },
-      _ => {
-        wv.push(*t);
-      },
+      _ => t.with_str(|ts| out.push_str(ts)),
     }
   }
-  Tokens::new(wv).untex()
+  out
 }
 
 /// Support for Key / Value arguments.

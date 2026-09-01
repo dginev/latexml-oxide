@@ -1717,7 +1717,18 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 /// Note that Braces on input hides the contents from matching,
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
-pub fn read_until(delim: &Tokens) -> Result<Tokens> {
+/// Reads until the delimiter tokens match. Returns `None` when input RAN OUT
+/// before the delimiter appeared (everything consumed is unread first) —
+/// mirroring Perl `Gullet::readUntil`'s undef (Gullet.pm L683-685), so an
+/// `Until:` parameter can raise the Perl-faithful per-iteration "Missing
+/// argument" Error instead of silently yielding empty. The silent empty made
+/// zero-progress delimited-scan loops (fancyvrb `\FancyVerbGetLine#1^^M`
+/// rescanning a replayed tail after an error stub swallowed its sentinel —
+/// willowtreebook) spin to the 50k-box Stomach:Recursion fatal; with the
+/// distinguishable EOF the TooManyErrors latch ends them like Perl's
+/// MAX_ERRORS does, naming the looping macro. A MATCHED delimiter with empty
+/// content stays `Some(empty)` — legitimate `\def\foo#1;{…}\foo;` args.
+pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   // Pre-size like `read_balanced`: the accumulator is grown one token at a time
   // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
   // reallocations on every call. 16 covers the common short delimited read in a
@@ -1734,9 +1745,9 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
       let token = match read_token()? {
         Some(t) => t,
         None => {
-          // Ran out!
+          // Ran out! Unread and report the distinguishable EOF.
           unread(Tokens::new(tokens));
-          return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+          return Ok(None);
         },
       };
       // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
@@ -1771,9 +1782,9 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
         let token = match read_token()? {
           Some(t) => t,
           None => {
-            // Ran out!
+            // Ran out! Unread and report the distinguishable EOF.
             unread(Tokens::new(tokens));
-            return Ok(Tokens!()); // Not more correct, but maybe less confusing?
+            return Ok(None);
           },
         };
         // Perl: $$token[1] == CC_BEGIN — direct catcode check
@@ -1813,12 +1824,14 @@ pub fn read_until(delim: &Tokens) -> Result<Tokens> {
     tokens.remove(0);
     tokens.pop();
   }
-  Ok(Tokens::new(tokens))
+  Ok(Some(Tokens::new(tokens)))
 }
 
-/// Convenience method wrapping around `read_until`
-/// TODO: This seems to be the wrong Rust type interface, we need to rework...
-pub fn read_until_token(t: Token) -> Result<Tokens> { read_until(&Tokens!(t)) }
+/// Convenience method wrapping around `read_until` — EOF degrades to empty
+/// (callers that need to distinguish use `read_until` directly).
+pub fn read_until_token(t: Token) -> Result<Tokens> {
+  Ok(read_until(&Tokens!(t))?.unwrap_or_default())
+}
 /// reads until it encounters a Catcode::BEGIN token
 /// Note: Perl uses `$$token[1] == CC_BEGIN` (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
@@ -2194,7 +2207,9 @@ fn read_optional_delimited(
     // the delimiters need.
     Some(t) => {
       if t == open {
-        Ok(Some(read_until(&Tokens!(close))?))
+        // Optional-content EOF degrades to empty (prior behavior): the
+        // Missing-argument discipline belongs to REQUIRED Until params.
+        Ok(Some(read_until(&Tokens!(close))?.unwrap_or_default()))
       } else {
         unread_one(t);
         Ok(default)
