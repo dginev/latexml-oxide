@@ -54,6 +54,58 @@ LoadDefinitions!({
     bounded => true, require_math => true,
     font => { family => "serif", series => "medium", shape => "upright" });
 
+  // Real amsopn.sty L56-89 UNCONDITIONALLY re-asserts every classic log-like
+  // operator (`\protected\def\arg{\qopname\relax o{arg}}` …). That matters:
+  // documentation classes clobber some of them before amsmath loads
+  // (amsldoc.cls L205 makes `\arg{1}` doc-markup for a macro parameter), and
+  // real LaTeX gets the operator back here. Perl's amsopn.sty.ltxml SHARES
+  // the omission (relies on the kernel defs) — witness amsmath/amsldoc:
+  // `$\arg$` ate its closing `$` and cascaded to 101 errors; pdflatex is the
+  // oracle. Table mirrors latexml_engine/src/math_common.rs L1188-1235
+  // exactly (roles/meanings/scriptpos) — keep the two in sync.
+  DefMath!("\\arccos", "arccos", role => "OPFUNCTION", meaning => "inverse-cosine");
+  DefMath!("\\arcsin", "arcsin", role => "OPFUNCTION", meaning => "inverse-sine");
+  DefMath!("\\arctan", "arctan", role => "OPFUNCTION", meaning => "inverse-tangent");
+  DefMath!("\\arg", "arg", role => "OPFUNCTION", meaning => "argument");
+  DefMath!("\\cos", "cos", role => "TRIGFUNCTION", meaning => "cosine");
+  DefMath!("\\cosh", "cosh", role => "TRIGFUNCTION", meaning => "hyperbolic-cosine");
+  DefMath!("\\cot", "cot", role => "TRIGFUNCTION", meaning => "cotangent");
+  DefMath!("\\coth", "coth", role => "TRIGFUNCTION", meaning => "hyperbolic-cotangent");
+  DefMath!("\\csc", "csc", role => "TRIGFUNCTION", meaning => "cosecant");
+  DefMath!("\\deg", "deg", role => "OPFUNCTION", meaning => "degree");
+  DefMath!("\\det", None, "det", role => "LIMITOP", meaning => "determinant",
+    dynamic_scriptpos => true);
+  DefMath!("\\dim", "dim", role => "LIMITOP", meaning => "dimension");
+  DefMath!("\\exp", "exp", role => "OPFUNCTION", meaning => "exponential");
+  DefMath!("\\gcd", None, "gcd", role => "OPFUNCTION", meaning => "gcd",
+    dynamic_scriptpos => true);
+  DefMath!("\\hom", "hom", role => "OPFUNCTION");
+  DefMath!("\\inf", None, "inf", role => "LIMITOP", meaning => "infimum",
+    dynamic_scriptpos => true);
+  DefMath!("\\ker", "ker", role => "OPFUNCTION", meaning => "kernel");
+  DefMath!("\\lg", "lg", role => "OPFUNCTION");
+  DefMath!("\\lim", None, "lim", role => "LIMITOP", meaning => "limit",
+    dynamic_scriptpos => true);
+  DefMath!("\\liminf", None, "lim inf", role => "LIMITOP", meaning => "limit-infimum",
+    dynamic_scriptpos => true);
+  DefMath!("\\limsup", None, "lim sup", role => "LIMITOP", meaning => "limit-supremum",
+    dynamic_scriptpos => true);
+  DefMath!("\\ln", "ln", role => "OPFUNCTION", meaning => "natural-logarithm");
+  DefMath!("\\log", "log", role => "OPFUNCTION", meaning => "logarithm");
+  DefMath!("\\max", None, "max", role => "OPFUNCTION", meaning => "maximum",
+    dynamic_scriptpos => true);
+  DefMath!("\\min", None, "min", role => "OPFUNCTION", meaning => "minimum",
+    dynamic_scriptpos => true);
+  DefMath!("\\Pr", None, "Pr", role => "OPFUNCTION",
+    dynamic_scriptpos => true);
+  DefMath!("\\sec", "sec", role => "TRIGFUNCTION", meaning => "secant");
+  DefMath!("\\sin", "sin", role => "TRIGFUNCTION", meaning => "sine");
+  DefMath!("\\sinh", "sinh", role => "TRIGFUNCTION", meaning => "hyperbolic-sine");
+  DefMath!("\\sup", None, "sup", role => "LIMITOP", meaning => "supremum",
+    dynamic_scriptpos => true);
+  DefMath!("\\tan", "tan", role => "TRIGFUNCTION", meaning => "tangent");
+  DefMath!("\\tanh", "tanh", role => "TRIGFUNCTION", meaning => "hyperbolic-tangent");
+
   // Operator variants — Perl L33-38 ships scriptpos => \&doScriptpos so the
   // operators sit mid (under/over) in display style and post (sub/super) in
   // inline. Without it, Rust statically rendered everything as 'post', giving

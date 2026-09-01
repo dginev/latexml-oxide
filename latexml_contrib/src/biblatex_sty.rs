@@ -995,6 +995,24 @@ LoadDefinitions!({
   // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
   def_macro_noop("\\DeclareLabeldate {}")?;
 
+  // Datamodel-declaration family (biblatex.sty L16639-16642 renews these to
+  // warn-only outside the datamodel read; no XML consequence) plus internals
+  // that raw-loaded style files reach for (witness biblatex-abnt abnt.bbx:
+  // abntexto-exemplo). \abx@classtype is read as `\ifcase\abx@classtype`
+  // (abnt.bbx L1264), so it must be a number source, not a macro noop.
+  def_macro_noop("\\DeclareDatamodelFields[]{}")?;
+  def_macro_noop("\\DeclareDatamodelEntryfields[]{}")?;
+  def_macro_noop("\\DeclareDatamodelEntrytypes[]{}")?;
+  def_macro_noop("\\DeclareDatamodelConstant[]{}{}")?;
+  // \DeclareBibliographyAlias{alias}{entrytype} (biblatex.sty L2297).
+  def_macro_noop("\\DeclareBibliographyAlias{}{}")?;
+  def_macro_noop("\\DeclareNumChars OptionalMatch:* {}")?;
+  // \blx@regimcs{\csa\csb…} registers "imc" wrappers (biblatex.sty L1137).
+  def_macro_noop("\\blx@regimcs{}")?;
+  RawTeX!(r"\chardef\abx@classtype=0 ");
+  // nameref internal the abnt style patches into sectioning.
+  def_macro_noop("\\NR@gettitle{}")?;
+
   // Perl L64-67: passthroughs
   DefMacro!("\\unspace", "\\relax");
   DefMacro!("\\blx@imc@resetpunctfont", "\\relax");

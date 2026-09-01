@@ -24,6 +24,19 @@ LoadDefinitions!({
     "curve2e.sty is minimally stubbed — Bezier curve / vector picture extensions are no-ops."
   );
 
+  // Register the version string a real load's \ProvidesPackage would have
+  // stored. Documents run `\GetFileInfo{curve2e.sty}` (curve2e-manual L161),
+  // whose `\@tempb` scans `\ver@curve2e.sty` for the delimited ` v.` pattern;
+  // with it undefined the Until-scan runs away and poisons the whole
+  // document (locator-less pushback, shortverb regions executing raw —
+  // witness curve2e-manual 88 errors + fatal). ANY stub replacing a raw
+  // .sty a document may \GetFileInfo must register its \ver@<file> —
+  // and it must carry the real ` v.` pattern; an empty string still
+  // runs away. Real string: curve2e.sty L14-15.
+  RawTeX!(
+    r"\expandafter\def\csname ver@curve2e.sty\endcsname{2024-11-13 v.2.6.0 Extension package for pict2e}"
+  );
+
   // curve2e.sty L16: `\RequirePackage{graphicx,color}` — these are the
   // package's *unconditional* hard dependencies (the curve/vector
   // machinery on lines 17-21 is what we stub out as no-ops below, but

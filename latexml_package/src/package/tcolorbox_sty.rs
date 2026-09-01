@@ -125,19 +125,30 @@ LoadDefinitions!({
     }
   }, locked => true);
 
-  // \NewTCBListing / \DeclareTCBListing / \ReNewTCBListing
-  // {name}{xparse-sig}{options}: the xparse-signature flavor of
-  // \newtcblisting (tcbxparse library). Approximate the signature by its
-  // argument COUNT (O/o/m/d specifiers) and delegate to
-  // \lstnewenvironment like the plain form. Witness keytheorems-doc L165
-  // `\NewTCBListing{keythmscode}{ !O{} }{…}` (31 uses in that manual).
-  DefMacro!("\\NewTCBListing{}{}{}", sub[(name, sig, _opts)] {
+  // \NewTCBListing / \DeclareTCBListing / \RenewTCBListing / \ProvideTCBListing
+  // [init-options]{name}{xparse-sig}{options}: the xparse-signature flavor of
+  // \newtcblisting (tcbxparse library; tcblistingscore.code.tex:329-355 —
+  // `\__tcobox_new_TCBListing:w { m +O{} >{\TrimSpaces} m +m +m }`, so the
+  // user shape carries a LEADING optional, same as the plain `\newtcblisting`
+  // fix above). Approximate the signature by its argument COUNT (O/o/m/d
+  // specifiers) and delegate to \lstnewenvironment like the plain form.
+  // Witnesses: keytheorems-doc L165 `\NewTCBListing{keythmscode}{ !O{} }{…}`
+  // (31 uses, no leading optional); atableau.tex L655
+  // `\NewTCBListing[use counter=example, …]{example}{ O{} s m }{…#1…#3…}`
+  // (leading optional — without absorbing it the three `{}` args grab `[`,
+  // `u`, `s` and the options body digests raw: misdefined:# storm).
+  // Known residual: the `s` star specifier is not expressible via
+  // \lstnewenvironment, so a starred `\begin{example}*` call mis-grabs `*`.
+  DefMacro!("\\NewTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
     tcb_xparse_listing(name, sig)
   });
-  DefMacro!("\\DeclareTCBListing{}{}{}", sub[(name, sig, _opts)] {
+  DefMacro!("\\DeclareTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
     tcb_xparse_listing(name, sig)
   });
-  DefMacro!("\\ReNewTCBListing{}{}{}", sub[(name, sig, _opts)] {
+  DefMacro!("\\RenewTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
+    tcb_xparse_listing(name, sig)
+  });
+  DefMacro!("\\ProvideTCBListing[]{}{}{}", sub[(_init, name, sig, _opts)] {
     tcb_xparse_listing(name, sig)
   });
 

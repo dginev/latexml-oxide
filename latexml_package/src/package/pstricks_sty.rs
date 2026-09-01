@@ -109,8 +109,11 @@ LoadDefinitions!({
   DefMacro!("\\psline OptionalMatch:* []", "\\lx@psgobble@shape");
   DefMacro!("\\psframe OptionalMatch:* []", "\\lx@psgobble@shape");
   // \pscircle[par](x,y){radius}: one coord pair + braced radius (real pstricks
-  // `\def\pscircle(#1){#2}` style). Pair reads `(x,y)`, `{}` the radius.
-  DefMacro!("\\pscircle OptionalMatch:* [] Pair {}", "\\lx@psgobble@parens");
+  // `\def\pscircle(#1){#2}` style). The coordinate pair is OPTIONAL, default
+  // (0,0) — Perl pstricks_support.sty.ltxml:700 `ZeroPSCoord` = ReadPSCoord
+  // || ZeroPair; dsptricks.sty L535 calls `\pscircle[…]{\PZCROC\dspUnitX}`
+  // with no pair (witness dspTricksManual expected:Pair).
+  DefMacro!("\\pscircle OptionalMatch:* [] OptionalPair {}", "\\lx@psgobble@parens");
   DefMacro!("\\psarc OptionalMatch:* []{}{}{}{}", "\\lx@psgobble@parens");
   DefMacro!("\\psbezier OptionalMatch:* []", "\\lx@psgobble@shape");
   DefMacro!("\\pscurve OptionalMatch:* []", "\\lx@psgobble@shape");

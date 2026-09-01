@@ -50,7 +50,6 @@ pub mod arxiv_sty;
 pub mod arydshln_sty;
 pub mod ascmac_sty;
 pub mod asme2ej_cls;
-pub mod atableau_sty;
 pub mod autart_cls;
 pub mod autofe_sty;
 pub mod axessibility_sty;
@@ -288,7 +287,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).
   ("apxproof", "sty", apxproof_sty::load_definitions),
   ("ascmac", "sty", ascmac_sty::load_definitions),
-  ("atableau", "sty", atableau_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
   ("capt-of", "sty", capt_of_sty::load_definitions),
   ("chngpage", "sty", chngpage_sty::load_definitions),

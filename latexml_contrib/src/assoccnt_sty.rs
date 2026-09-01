@@ -2,6 +2,14 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // The real assoccnt.sty pulls in xcolor/etoolbox/xkeyval/xstring
+  // (assoccnt.sty L21-24); packages raw-loaded ON TOP of this binding
+  // (cntperchap.sty) rely on that transitive surface (\define@boolkey,
+  // \presetkeys, \DeclareOptionX from xkeyval — witness cntperchap docs).
+  RequirePackage!("xcolor");
+  RequirePackage!("etoolbox");
+  RequirePackage!("xkeyval");
+  RequirePackage!("xstring");
   // assoccnt.sty (Christian Hupfer) — "associated counters" stepped alongside
   // driver counters. The raw package WRAPS the kernel counter commands
   // (\stepcounter/\addtocounter/\refstepcounter/\setcounter, assoccnt.sty

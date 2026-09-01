@@ -162,6 +162,18 @@ LoadDefinitions!({
   // Perl: DefEnvironment('{frame}[][]', '<ltx:slide...>...</ltx:slide>');
   DefEnvironment!("{frame}[][]",
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>");
+  // Beamer's COMMAND form `\frame<overlays>[<default>][options]{contents}`
+  // (beamerbaseframe.sty). DefEnvironment also installs a bare `\frame` CS,
+  // but that one opens the subsection and waits for an `\end{frame}` that
+  // never comes — the dangling `_noautoclose` subsection then swallows every
+  // later `\section`/`\subsection` (malformed:ltx beamer-sectioning family,
+  // 185 errors / 40 oracle-clean docs; min-repro
+  // `\section{S}\frame{f}\section{T}`). Route the braced short form through
+  // the environment so the subsection closes.
+  DefMacro!(
+    "\\frame OptionalAngled [][] {}",
+    "\\begin{frame}[#2][#3]#4\\end{frame}"
+  );
 
   // Overlay specification commands — stub as no-ops
   // Rust's \alt{}{}/\only/\onslide/\temporal/\pause take the
@@ -403,6 +415,47 @@ LoadDefinitions!({
   def_macro_noop("\\defbeamertemplateparent{}[]{}[]")?;
   def_macro_noop("\\defbeamertemplatealias{}{}{}")?;
   DefConditional!("\\ifbeamer@compress");
+  // Beamer's full `\newif` surface (grep `\newif\if…` over the real beamer
+  // sources). Third-party themes read these inside skipped conditional
+  // branches; an UNDEFINED `\if…` there is invisible to the meaning-counting
+  // body skipper (tex.web §366 semantics, Conditional.pm:117), so its paired
+  // `\fi` closes the OUTER frame early and the real `\else`/`\fi` surface as
+  // orphans (beamerthemeCelestia.sty L467 `\ifbeamer@plainframe`, witness
+  // Celestia-demo-*). Initial states mirror beamer's own: `\newif` = false,
+  // then the true-setters beamer runs unconditionally (beamerbasemodes.sty
+  // L19-21 blocks/ams/amssymb + keywords, L47 inpresentation;
+  // beamerbasesection.sty L32 inlecture; beamer.cls L106 notesnormals;
+  // presentation-mode suppressreplacements).
+  RawTeX!(
+    r"\newif\ifbeamer@altmode \newif\ifbeamer@ams \newif\ifbeamer@amssymb
+      \newif\ifbeamer@anotherslide \newif\ifbeamer@articleactive
+      \newif\ifbeamer@articlehyperref \newif\ifbeamer@articleutf
+      \newif\ifbeamer@articlexcolor \newif\ifbeamer@autobreak
+      \newif\ifbeamer@autopdfinfo \newif\ifbeamer@blocks
+      \newif\ifbeamer@centered \newif\ifbeamer@colbox@ignorebg
+      \newif\ifbeamer@colbox@rounded \newif\ifbeamer@colheight
+      \newif\ifbeamer@containsverbatim \newif\ifbeamer@countsect
+      \newif\ifbeamer@dogeometry \newif\ifbeamer@dosecondmode
+      \newif\ifbeamer@draftmode \newif\ifbeamer@frameswithnotesonly
+      \newif\ifbeamer@ignorenonframe \newif\ifbeamer@inappendix
+      \newif\ifbeamer@inlecture \newif\ifbeamer@inpresentation
+      \newif\ifbeamer@isfragile \newif\ifbeamer@keywords
+      \newif\ifbeamer@localanotherslide \newif\ifbeamer@noframenumbering
+      \newif\ifbeamer@notes \newif\ifbeamer@notesnormals
+      \newif\ifbeamer@onlytextwidth \newif\ifbeamer@pausesections
+      \newif\ifbeamer@pausesubsections \newif\ifbeamer@plainframe
+      \newif\ifbeamer@plusencountered \newif\ifbeamer@sansmath
+      \newif\ifbeamer@sb@subsection \newif\ifbeamer@sbt
+      \newif\ifbeamer@secheader \newif\ifbeamer@shrink
+      \newif\ifbeamer@sidebardark \newif\ifbeamer@sidebartab
+      \newif\ifbeamer@slidehaszoom \newif\ifbeamer@suppressreplacements
+      \newif\ifbeamer@theme@subsection \newif\ifbeamer@tree@showhooks
+      \newif\ifbeamer@twoscreensnotes \newif\ifbeamer@twoscreenstext
+      \beamer@blockstrue \beamer@amstrue \beamer@amssymbtrue
+      \beamer@keywordstrue \beamer@inpresentationtrue \beamer@inlecturetrue
+      \beamer@notesnormalstrue \beamer@suppressreplacementstrue
+      \beamer@theme@subsectiontrue"
+  );
   def_macro_noop("\\usebeamertemplate OptionalMatch:* OptionalMatch:* OptionalMatch:* {}")?;
   def_macro_noop("\\usebeamerfont OptionalMatch:* {}")?;
   def_macro_noop("\\setbeamertemplate{}{}")?;
