@@ -2243,6 +2243,9 @@ LoadDefinitions!({
         // Activate key-value options (language, style, etc.)
         lst_activate(kv.as_ref());
         let text = listings_read_raw_lines("lstlisting");
+        if !lst_writefile_tee(&text) {
+          return Ok(Tokens!());
+        }
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
         let result = lst_process_display(name_opt, &text);
@@ -2335,6 +2338,9 @@ LoadDefinitions!({
           let _digested = digest(start_subst)?;
         }
         let text = listings_read_raw_lines(&env_name);
+        if !lst_writefile_tee(&text) {
+          return Ok(Tokens!());
+        }
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
         let result = lst_process_display(name_opt, &text);
@@ -2540,6 +2546,29 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@lst@stepnumber"), None, {
     let _ = step_counter("lstnumber", true);
   }, locked => true);
+
+  // listings write-file aspect (lstmisc.sty L30-70): `\lst@BeginWriteFile
+  // {file}` / `\lst@BeginAlsoWriteFile{file}` tee the NEXT listing bodies
+  // into <file> until `\lst@EndWriteFile`. The real implementation hooks the
+  // token-scanner (`\lst@Append`); ours tees the captured raw text at
+  // display time (see the lstlisting/lstnewenvironment capture sites).
+  // Consumers write the example then `\input` it back to EXECUTE it —
+  // cnltx-example.sty L702-718 (`\cnltx@source@input@start{\jobname.tmp}`),
+  // the bohr/cnltx manual family (32 docs, `\endmdframed` cascade rooted in
+  // `undefined:\lst@BeginAlsoWriteFile`).
+  DefPrimitive!("\\lst@BeginWriteFile{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    assign_value("LST@WF@file", Stored::String(pin(f.trim())), Some(Scope::Global));
+    assign_value("LST@WF@also", Stored::from(false), Some(Scope::Global));
+  });
+  DefPrimitive!("\\lst@BeginAlsoWriteFile{}", sub[(file)] {
+    let f = do_expand(file)?.to_string();
+    assign_value("LST@WF@file", Stored::String(pin(f.trim())), Some(Scope::Global));
+    assign_value("LST@WF@also", Stored::from(true), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\lst@EndWriteFile"), None, {
+    assign_value("LST@WF@file", Stored::String(pin("")), Some(Scope::Global));
+  });
   DefKeyVal!("LST", "resetmargins", "");
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");
@@ -3441,4 +3470,27 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
       _ => {},
     }
   }
+}
+
+/// Write-file tee (lstmisc.sty aspect): when `\lst@BeginWriteFile`/
+/// `\lst@BeginAlsoWriteFile` armed a target, append the captured listing
+/// text to it. Returns false when the listing should NOT also display
+/// (`\lst@BeginWriteFile`, the `\@gobble` output-box variant).
+fn lst_writefile_tee(text: &str) -> bool {
+  let file = match lookup_value("LST@WF@file") {
+    Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+    _ => String::new(),
+  };
+  if file.is_empty() {
+    return true;
+  }
+  use std::io::Write;
+  if let Ok(mut fh) = std::fs::OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(&file)
+  {
+    let _ = writeln!(fh, "{text}");
+  }
+  lookup_bool("LST@WF@also")
 }
