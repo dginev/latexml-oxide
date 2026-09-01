@@ -63,6 +63,7 @@ parked R9 mode/alignment work); single instance in the manual.
 
 | Signature | Note |
 |---|---|
+| `undefined:\color` (5 bundles: callouts, chs-physics-report…) | Root-caused 2026-08-31: doc does `\lstset{backgroundcolor=\color{cyan!10}}` BEFORE any color package loads; real listings stores the value unexpanded and only uses it at render (by which time tikz→xcolor is loaded). Our LST keyval path expands the value at \lstset time → undefined. Fix = defer expansion of listings' command-valued keys (backgroundcolor/rulecolor/…); 1 err/doc. |
 | chessboard.tex `\chessboard[boardfontencoding=LSBC4]` → 400M-token churn (doc L1627; LSBC4 falls back to OT1 first) | Doc now renders to L1627/2049 with 1 error after the batch-5 xkeyval port; a single board render under the missing-encoding fallback loops. Font-encoding-dependent raw drawing — needs its own min-repro session. |
 | `misdefined:#` (adtrees 17→**2** after KNOWN_PERL_ERRORS #80) | cmdkey fix cleared 15/17; residual pair fires at an Anonymous String near begin-document (l3backend load) and does NOT reproduce with the full preamble + frontmatter alone (m4/m5 probes clean) — body-driven, needs its own bisect session. |
 | xskak residual 5 errs: `\usepackage` post-preamble (doc-driven filecontents flow), `\csq@hook@{multilang,hyperref}`, `\board` | small distinct items, re-rank in sweep 13. |
