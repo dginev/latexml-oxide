@@ -837,6 +837,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         options.reloadable,
         options.at_letter,
         grandparent_in_expl3,
+        options.handleoptions,
       )?;
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
@@ -1473,6 +1474,7 @@ fn load_tex_definitions(
   reloadable: bool,
   at_letter: bool,
   grandparent_in_expl3: bool,
+  handleoptions: bool,
 ) -> Result<()> {
   // Perl Package.pm L2334: $STATE->getStomach->leaveHorizontal_internal;
   // Defensive cleanup before reading definitions — if we're somehow in
@@ -1592,12 +1594,23 @@ fn load_tex_definitions(
     // OFF and re-breaks the xsavebox witness):
     if std::env::var("LATEXML_EXPL_TRACE").is_ok() {
       eprintln!(
-        "EXPL-EXIT request={request:?} is_core={is_expl3_core} grandparent={grandparent_in_expl3} us_letter={} off_defined={}",
+        "EXPL-EXIT request={request:?} is_core={is_expl3_core} grandparent={grandparent_in_expl3} handleopts={handleoptions} us_letter={} off_defined={}",
         lookup_catcode('_') == Some(Catcode::LETTER),
         lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
       );
     }
+    // Fire ONLY for handleoptions frames (\usepackage/\documentclass —
+    // where the real kernel's \@popfilename restores the expl status).
+    // A PLAIN \input (handleoptions=false: ctex's `\file_input:n` of
+    // ctex-engine-pdftex.def, .cfg, .spa sub-files) restores NOTHING in
+    // real TeX — the loading code manages its own state (ctexhook's
+    // \ctex_push_file:/\ctex_pop_file: expl-status stack). Firing here
+    // mid-class fought that machinery and leaked FULL expl3 state past
+    // `\documentclass{ctexart}` (space=9/`:`=11/`_`=11 at document
+    // level), garbling pgfutil-common's space-trick and cascading 1001
+    // errors in every ctex+tikz doc (hfutexam ×4, beautybook, gckanbun).
     if !is_expl3_core
+      && handleoptions
       && !grandparent_in_expl3
       && lookup_catcode('_') == Some(Catcode::LETTER)
       && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
