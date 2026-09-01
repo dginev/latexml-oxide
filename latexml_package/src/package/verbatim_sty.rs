@@ -81,7 +81,30 @@ LoadDefinitions!({
   );
   def_macro_noop("\\endcomment")?;
 
-  DefMacro!("\\verbatim@start", "\\verbatim@");
+  // verbatim.sty:107-112 `\verbatim@start#1` consumes the token that
+  // follows it when `\if\noexpand#1\noexpand~` holds — the active `^^M`
+  // ending the `\begin{…}` line in the normal case, but ANY control
+  // sequence too (`\noexpand` renders it `\relax`-like, char code 256 on
+  // both sides). That is the documented idiom `\verbatim@start\relax` for
+  // starting a capture from inside a macro body (curve2e-manual.tex:95
+  // `{Esempio}`, memoir, digiconfigs): the `\relax` stands in for the
+  // line end. Perl's `\verbatim@start` = `\lx@verbatim@\verbatim@` (:76)
+  // never looks, so `read_raw_line` serialised the pending `\relax` (gullet
+  // pushback + line remainder) as the FIRST captured line. Only the PUSHBACK
+  // is inspected: a `\relax` from a macro body lives there, while the mouth's
+  // line remainder after `\begin{verbatim}` must stay unread — Perl's first
+  // raw line is that (empty) remainder, which is the leading newline every
+  // `<ltx:verbatim>` golden carries (`tests/tokenize/verbata.xml`). Guard
+  // `perfect_kernel_batch50::verbatim_start_relax_idiom`.
+  DefMacro!("\\verbatim@start", {
+    if pushback_holds_nonspace()
+      && let Some(t) = read_token()?
+      && t.get_catcode() != Catcode::CS
+    {
+      unread_one(t);
+    }
+    Ok(Tokens!(T_CS!("\\verbatim@")))
+  });
 
   //======================================================================
   // Here's the interesting bit.

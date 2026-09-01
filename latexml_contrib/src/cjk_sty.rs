@@ -55,13 +55,15 @@ LoadDefinitions!({
   // `plain` style's own rendering of the same low bytes); the glyph spacing
   // quanjiao adds is an 8-bit-font concern with no Unicode-output meaning.
   RawTeX!(concat!(
-    r"\xdef\CJK@uniPunct{30, fe, ff}", "\n",
+    r"\xdef\CJK@uniPunct{30, fe, ff}",
+    "\n",
     r"\def\CJK@punctchar#1#2#3#4{",
     r"\ifnum#4=148 \textemdash\else",
     r"\ifnum#4=166 \textellipsis\else",
     r"\ifnum#4=152 \textquoteleft\else",
     r"\ifnum#4=153 \textquoteright\else",
     r"\ifnum#4=156 \textquotedblleft\else",
-    r"\ifnum#4=157 \textquotedblright\fi\fi\fi\fi\fi\fi}", "\n",
+    r"\ifnum#4=157 \textquotedblright\fi\fi\fi\fi\fi\fi}",
+    "\n",
   ));
 });

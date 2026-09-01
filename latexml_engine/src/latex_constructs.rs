@@ -5057,21 +5057,44 @@ LoadDefinitions!({
 
   //======================================================================
   // Somewhat related I/O stuff
-  DefMacro!("\\filename@parse{}", sub[(pathname)] {
-    let (mut dir, name, ext) = pathname::split(&Expand!(pathname).to_string());
-    if !dir.is_empty() {
-      dir.push('/');
-    }
-    let dir_tokens = Tokens!(ExplodeText!(dir));
-    DefMacro!("\\filename@area", None, dir_tokens);
-    let name_tokens = Tokens!(ExplodeText!(name));
-    DefMacro!("\\filename@base", None, name_tokens);
-    let ext_tokens = if !ext.is_empty() {
-      Tokens!(ExplodeText!(ext))
-    } else { Tokens!(T_CS!("\\relax")) };
-    DefMacro!("\\filename@ext", None, ext_tokens);
-    Vec::new()
-  });
+  // latex.ltx:228-281, the UNIX/DOS-style parser (`\@currdir` = `./`), taken
+  // verbatim. Perl (pool:980) instead fully expands the argument, runs
+  // `pathname_split` and re-tokenizes the pieces with `ExplodeText` — which
+  // re-LETTERS them, so a caller that `\@onelevel@sanitize`s its argument
+  // first (currfile.sty:78-85, then `\ifx\@tempa\currfilename` against
+  // another sanitized string; import.sty; docstrip) sees a catcode mismatch
+  // that real LaTeX never has. The raw macro keeps the argument's own tokens
+  // in `\filename@area/base/ext`, exactly like latex.ltx. Perfect-kernel P50;
+  // guard `perfect_kernel_batch50::filename_parse_keeps_argument_catcodes`.
+  TeX!(
+    r###"
+  \def\filename@parse#1{%
+    \let\filename@area\@empty
+    \expandafter\filename@path#1/\\}
+  \def\filename@path#1/#2\\{%
+    \ifx\\#2\\%
+       \def\reserved@a{\filename@simple#1.\\}%
+    \else
+       \edef\filename@area{\filename@area#1/}%
+       \def\reserved@a{\filename@path#2\\}%
+    \fi
+    \reserved@a}
+  \def\filename@simple#1.#2\\{%
+    \ifx\\#2\\%
+      \let\filename@ext\relax
+      \edef\filename@base{#1}%
+    \else
+      \filename@dots{#1}#2\\%
+    \fi}
+  \def\filename@dots#1#2.#3\\{%
+    \ifx\\#3\\%
+      \def\filename@ext{#2}%
+      \edef\filename@base{#1}%
+    \else
+      \filename@dots{#1.#2}#3\\%
+    \fi}
+  \def\filename@dot#1.\\{#1}"###
+  );
 
   // latex.ltx initializes \@filelist to \@gobble, which eats the leading comma
   // from the first \@addtofilelist call. We replicate this by using \@gobble.

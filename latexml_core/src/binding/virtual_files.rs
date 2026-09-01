@@ -41,7 +41,11 @@ fn with_vfs_mut<R>(f: impl FnOnce(&mut HashMap<String, String>) -> R) -> R {
     Some(_) | None => {
       // Not yet assigned (or a foreign value under our key): establish the
       // map globally so a later checkin has a slot to land in.
-      assign_value(VFS_KEY, Stored::HashString(HashMap::default()), Some(Scope::Global));
+      assign_value(
+        VFS_KEY,
+        Stored::HashString(HashMap::default()),
+        Some(Scope::Global),
+      );
       match checkout_value(VFS_KEY) {
         Some(Stored::HashString(map)) => map,
         _ => HashMap::default(),

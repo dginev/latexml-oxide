@@ -241,6 +241,23 @@ mod tests {
   }
 }
 
+/// Perl calc.sty.ltxml:140-155 measures every `\widthof`/`\heightof`/
+/// `\depthof`/`\totalheightof` argument via
+/// `readBoxContents($gullet, undef, 'restricted_horizontal')` — a fresh
+/// box mode. The mode matters: mhchem's `\mhchem@minispace` (mhchem.sty:
+/// 2898-2904) runs `\setlength{…}{…\widthof{${}^8_8$}…}` INSIDE an open
+/// `\ensuremath` (:2781, prescripts `\ce{^{227}Th}`), and a bare `digest`
+/// inherits the ambient `IN_MATH`, so the argument's own `$` tried to close
+/// the ENCLOSING math frame (`\lx@end@inline@math … Attempt to end mode
+/// math`, ×54 in mhchem/mhchem). Witness: mhchem/mhchem 67 → 13; guard
+/// `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box`.
+fn digest_measured_box(arg: Tokens) -> Result<Digested> {
+  begin_mode("restricted_horizontal")?;
+  let result = digest(arg);
+  end_mode("restricted_horizontal")?;
+  result
+}
+
 fn read_value(expr_type: &str) -> Result<CalcValue> {
   skip_spaces()?;
   let peek = read_x_token(None, false, None)?;
@@ -257,7 +274,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \widthof{...} — Perl calc.sty.ltxml L139-143
   if peek == T_CS!("\\widthof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -273,7 +290,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \heightof{...} — Perl calc.sty.ltxml L144-148
   if peek == T_CS!("\\heightof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -289,7 +306,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \depthof{...} — Perl calc.sty.ltxml L149-153
   if peek == T_CS!("\\depthof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -305,7 +322,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \totalheightof{...} — Perl calc.sty.ltxml L154-158
   if peek == T_CS!("\\totalheightof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
