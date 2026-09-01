@@ -1385,13 +1385,22 @@ fn custom_alloc_error_hook(layout: Layout) {
   // `ErrorTarget`/`ErrorCategory` because we can't construct those
   // here without an `arena`/allocator round-trip; using the same shape
   // string is enough for the harness.
+  // Attribute by alignment: the gullet pushback is a Vec<Token> (4-byte
+  // items); align 8 = a Vec of boxes/pointers, align 1 = a string buffer —
+  // blaming pushback unconditionally misled the sweep-16 OOM triage
+  // (quiver/eledform).
+  let site = if layout.align() == 4 {
+    "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
+  } else {
+    "allocation site unknown for this alignment — rerun with RUST_BACKTRACE=1"
+  };
   eprintln!(
-    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
-     likely runaway macro expansion (gullet pushback Vec growth past \
-     worker memory budget). Witness: paper 2305.16331 + `\\u\\i` under \
-     `mathtext + T2A`. Exiting with code 137.",
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
+     Witness: paper 2305.16331 + `\\u\\i` under `mathtext + T2A`. \
+     Exiting with code 137.",
     layout.size(),
-    layout.align()
+    layout.align(),
+    site
   );
   // When `RUST_BACKTRACE=1` is set, print the captured backtrace too.
   // Helps localise the call site of the failing allocation. The
@@ -1425,9 +1434,11 @@ fn main() -> Result<(), Box<dyn Error>> {
   // the 6 GB ulimit headroom and large enough that real
   // documents never reach it (witness wp5: median pushback
   // peaks well under 100k tokens).
-  if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
-    latexml_core::gullet::set_pushback_limit(Some(5_000_000));
-  }
+  // NOTE: the limit is set INSIDE the worker closure below — the gullet is
+  // thread-local, so setting it here (main thread) before the spawn was a
+  // NO-OP for the actual conversion thread (found during the sweep-16 OOM
+  // triage; the keyval path worked only because it runs mid-conversion on
+  // the right thread).
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees (XMApp(op, [XMApp(...)]) chains in grammar-
@@ -1437,7 +1448,12 @@ fn main() -> Result<(), Box<dyn Error>> {
   // `ulimit -s unlimited` (959 maths, Status:conversion:1).
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
-    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .spawn(|| {
+      if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+        latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+      }
+      real_main().map_err(|e| e.to_string())
+    })
     .expect("spawn worker thread")
     .join()
     .expect("worker thread panicked")

@@ -447,12 +447,22 @@ struct Cli {
 /// exits with code 137. See `cortex_worker.rs::custom_alloc_error_hook`
 /// for full rationale + witness paper.
 fn custom_alloc_error_hook(layout: Layout) {
+  // Attribute by alignment: the gullet pushback is a Vec<Token> (4-byte
+  // items); any other alignment is a DIFFERENT runaway (align 8 = Vec of
+  // boxes/pointers — e.g. nested-pgfmatrix churn; align 1 = a string
+  // buffer). Blaming pushback unconditionally cost real triage time
+  // (quiver/eledform, perfect-kernel sweep 16).
+  let site = if layout.align() == 4 {
+    "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
+  } else {
+    "allocation site unknown for this alignment — rerun with RUST_BACKTRACE=1"
+  };
   eprintln!(
-    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; \
-     likely runaway macro expansion (gullet pushback Vec growth past \
-     worker memory budget). Exiting with code 137.",
+    "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
+     Exiting with code 137.",
     layout.size(),
-    layout.align()
+    layout.align(),
+    site
   );
   process::exit(137);
 }
@@ -744,7 +754,20 @@ fn main() -> Result<(), Box<dyn Error>> {
   // full rationale (sandbox 0711.4787 et al, #17).
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
-    .spawn(|| real_main().map_err(|e| e.to_string()))
+    .spawn(|| {
+      // Default pushback cap ON THE WORKER THREAD (the gullet is
+      // thread-local — setting it before spawn lands on the wrong
+      // thread's gullet). Converts unbounded pushback growth (4 of the
+      // 6 sweep-16 oracle-clean OOM deaths: titlecaps, msc,
+      // spath3/knots, srdp-mathematik) into a recoverable
+      // Fatal:Timeout:PushbackLimit that still writes the document.
+      // ~50× above the healthy peak (<100k, see cortex_worker), 20 MB
+      // at trip. Escape hatch mirrors the token limit's.
+      if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+        latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+      }
+      real_main().map_err(|e| e.to_string())
+    })
     .expect("spawn worker thread")
     .join()
     .expect("worker thread panicked")

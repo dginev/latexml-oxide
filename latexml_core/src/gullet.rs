@@ -994,6 +994,32 @@ impl Drop for ExpandDepthGuard {
   fn drop(&mut self) { EXPAND_DEPTH.set(EXPAND_DEPTH.get().saturating_sub(1)); }
 }
 
+/// Real LaTeX defines every optional-argument `\newcommand` through
+/// `\@protected@testopt`: under a non-typesetting `\protect` regime
+/// (`\protected@edef`/`\protected@write`) the command emits
+/// `\protect\cs` UNEXPANDED. Our binding-level `\newcommand` builds a
+/// bare `Optional` parameter with no such indirection, so a recursive
+/// optional-arg macro (titlecaps' `\textnc` → `\titlecap[s]{…}` chain)
+/// expanded forever under `\protected@edef` — 2 GB pushback OOM
+/// (perfect-kernel sweep 16; real LaTeX and Perl-with-real-latex.ltx are
+/// clean). Treat a leading-Optional definition as protected exactly when
+/// `\protect` is not `\@typeset@protect` — literally
+/// `\@protected@testopt`'s test. Cheap: the parameter check is a slice
+/// peek; the state lookups run only for leading-Optional definitions
+/// under partial expansion.
+fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
+  match defn.get_parameters() {
+    Some(params) => match params.get_parameters().first() {
+      Some(p) => {
+        arena::with(p.name, |n| n == "Optional")
+          && !super::definition::expandable::protect_is_typeset()
+      },
+      None => false,
+    },
+    None => false,
+  }
+}
+
 /// Read the next non-expandable token, expanding until one appears. Hot path —
 /// `read_token` is folded in. `toplevel` (default true): on mouth exhaustion,
 /// step to the containing mouth. `fully_expand` (default = toplevel): expand
@@ -1109,7 +1135,10 @@ pub fn read_x_token(
         Some(Stored::None) | None => Outcome::Undefined,
         Some(other) => match other.to_definition() {
           Some(defn) => {
-            if !defn.is_expandable() || (defn.is_protected() && !fully_expand) {
+            if !defn.is_expandable()
+              || (defn.is_protected() && !fully_expand)
+              || (!fully_expand && optional_arg_protected(&defn))
+            {
               Outcome::NonExpandable
             } else {
               Outcome::Invoke(defn)
@@ -1493,7 +1522,10 @@ pub fn read_balanced(
             let (has_meaning, defn_opt) =
               with_meaning(&token, |m| (m.is_some(), m.and_then(|s| s.to_definition())));
             if let Some(defn) = defn_opt {
-              if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
+              if defn.is_expandable()
+                && (!defn.is_protected() || expansion_level == Full)
+                && (expansion_level == Full || !optional_arg_protected(&defn))
+              {
                 local_current_token(token);
                 let expansion = defn.invoke(false)?;
                 if expansion.is_empty() {

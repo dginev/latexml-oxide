@@ -16,6 +16,26 @@ use crate::{
 /// definitions under safe (`\@unexpandable@protect`/`\string`/…)
 /// vs. unsafe (`\relax`/undefined) `\protect` regimes. Only the
 /// unsafe regime actually runaways at full expansion.
+/// True when `\protect` currently means `\@typeset@protect` — i.e. normal
+/// typesetting, where real LaTeX's `\@protected@testopt` DOES expand an
+/// optional-argument `\newcommand`. Under any other regime
+/// (`\protected@edef` sets `\@unexpandable@protect`, `\protected@write`
+/// sets `\@unexpandable@protect`, etc.) the real macro emits
+/// `\protect\cs` unexpanded. Used by the gullet's partial-expansion gate
+/// for binding-defined optional-argument macros (see
+/// `wisdom_replayed_tokens_param_packing` sibling entry; titlecaps OOM,
+/// perfect-kernel sweep 16).
+pub fn protect_is_typeset() -> bool {
+  let protect = lookup_meaning(&T_CS!("\\protect"));
+  let typeset = lookup_meaning(&T_CS!("\\@typeset@protect"));
+  match (protect, typeset) {
+    (Some(p), Some(t)) => p == t,
+    // No \protect regime established yet (early bootstrap): behave as
+    // typesetting (expand), the historical behavior.
+    _ => true,
+  }
+}
+
 pub(crate) fn protect_is_relax_or_undefined() -> bool {
   let protect = T_CS!("\\protect");
   match lookup_meaning(&protect) {
