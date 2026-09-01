@@ -77,4 +77,39 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
   );
   DefMacro!("\\formatdate{}", "#1");
+
+  // Manuscript-review surface (aomart.cls L712-744): outside manuscript
+  // mode the real class makes these no-ops or plain passthroughs —
+  // `\HSelect`/`\ECSelect` only `\gdef` under `\if@aom@manuscript@mode`,
+  // `\Highlight` falls through to its content. aomsample witnesses.
+  def_macro_noop("\\HSelect[]{}")?;
+  def_macro_noop("\\ECSelect[]{}")?;
+  DefMacro!("\\Highlight[]{}", "#2");
+  def_macro_noop("\\EditorialComment[]{}")?;
+  // Review-metadata gobbles (aomart.cls L430-433 `\let\proposed\@gobble` …).
+  def_macro_noop("\\proposed{}")?;
+  def_macro_noop("\\seconded{}")?;
+  def_macro_noop("\\corresponding{}")?;
+  // AMS-style contact fields (aomart.cls L306, L340).
+  DefMacro!(
+    "\\urladdr[]{}",
+    "\\@add@frontmatter{ltx:note}[role=urladdr]{#2}"
+  );
+  DefMacro!(
+    "\\contrib[]{}",
+    "\\@add@frontmatter{ltx:note}[role=contributor]{#2}"
+  );
+  // Cross-ref sugar (aomart.cls L745-750): `\fullref{Theorem}{lbl}` →
+  // "Theorem~\ref{lbl}" (hyperref'd in the class; \ref suffices here).
+  DefMacro!("\\fullref{}{}", "#1~\\ref{#2}");
+  DefMacro!("\\pfullref{}{}", "#1~(\\ref{#2})");
+  DefMacro!("\\bfullref{}{}", "#1~[\\ref{#2}]");
+  DefMacro!("\\eqfullref{}{}", "#1~\\ref{#2}");
+  DefMacro!("\\fullpageref[]{}", "#1~\\pageref{#2}");
+  // `\funding[text]{sponsor}{grantid}` (aomart.cls L778): records sponsor
+  // metadata; the optional is display text printed in place.
+  DefMacro!(
+    "\\funding[]{}{}",
+    "#1\\@add@frontmatter{ltx:note}[role=funding]{#2 #3}"
+  );
 });
