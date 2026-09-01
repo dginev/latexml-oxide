@@ -918,6 +918,16 @@ LoadDefinitions!({
 
   //----------------------------------------------------------------------
   // Fields:
+  // hycolor.sty internals raw packages poke (pdfcomment): color-spec
+  // converters for PDF annotation keys — 4-arg absorbers (hycolor.sty
+  // L332/L405 \HyColor@XZeroOneThreeFour + its \HyColor@Field* aliases).
+  def_macro_noop("\\HyColor@XZeroOneThreeFour{}{}{}{}")?;
+  def_macro_noop("\\HyColor@FieldColor{}{}{}{}")?;
+  def_macro_noop("\\HyColor@FieldBColor{}{}{}{}")?;
+  def_macro_noop("\\HyColor@HyperrefColor{}{}{}{}")?;
+  // {Form} — hyperref's PDF-form wrapper environment (one per document);
+  // fields inside render via the \TextField family below. Transparent.
+  DefEnvironment!("{Form}[]", "#body");
   // \TextField[parameters]{label}
   // \CheckBox[parameters]{label}
   // \ChoiceMenu[parameters]{label}{choices}

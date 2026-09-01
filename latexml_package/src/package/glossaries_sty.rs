@@ -174,4 +174,10 @@ longplural=\\@glo@longpl\
       adjust_backmatter_element(doc, whatsit)?;
     }
   );
+
+  // glossaries-extra label-prefix management (glossaries-extra.sty) —
+  // raw-loaded extra layers call these (mfirstuc/glossaries manuals).
+  def_macro_noop("\\glsxtraddlabelprefix{}")?;
+  def_macro_noop("\\glsxtrprependlabelprefix{}")?;
+  def_macro_noop("\\glsxtrclearlabelprefixes")?;
 });

@@ -2343,6 +2343,13 @@ LoadDefinitions!({
   //
   // {<scopes>}[<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7241.
   def_macro_noop("\\DeclareBiblatexOption{}[]{}[]{}")?;
+  // biblatex's keyval-layer aliases (biblatex.sty L76-90): loaded .bbx/.cbx
+  // styles call them directly (philosophy-standard.bbx; sidenotes chain).
+  RawTeX!(
+    r"\providecommand*{\blx@kv@defkey}{\define@key}
+\providecommand*{\blx@kv@setkeys}{\setkeys}"
+  );
+  def_macro_noop("\\blx@kv@gdefkey{}{}[]{}")?;
   // Style-author API used by complex third-party styles (apa.bbx/cbx was the
   // regression witness — 27 undefined-CS errors when the raw style loaded):
   // declaration bodies must be SWALLOWED (their `\keypart`/`\regexp`/`\A`
