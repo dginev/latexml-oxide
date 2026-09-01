@@ -55,8 +55,6 @@ session's landed shapes against that bar, and the generalizations owed:
 
 ## Standing execution queue (main session)
 
-## Standing execution queue (main session)
-
 1. Execute FINAL plans in ascending risk order; batch 3-5 per suite run
    (feedback_batch_fixes_parallel_rootcause).
 2. Every executed plan: guard test or witness re-run + LEDGER batch row.
