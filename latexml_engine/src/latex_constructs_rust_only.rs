@@ -67,7 +67,13 @@ LoadDefinitions!({
   // undefined CS so this stub is in place by the time it is expanded.
   // The kvopts inside are PDF-only and semantically irrelevant for XML
   // output — gobble the brace group. Witness 2305.08034.
-  def_macro_noop("\\DocumentMetadata{}")?;
+  // Absorb the metadata keyvals but FLIP the kernel's declared flag
+  // (latex.ltx L9167/L9173: `\IfDocumentMetadataTF` starts as
+  // `\@secondoftwo`, `\DocumentMetadata` lets it to `\@firstoftwo`) —
+  // classes guard on it (`\NeedsDocumentMetadata`, ltx-talk.cls L32:
+  // "This file needs \DocumentMetadata" ×12 docs).
+  DefMacro!("\\DocumentMetadata{}",
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble");
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
   // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is
