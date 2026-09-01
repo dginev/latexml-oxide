@@ -187,12 +187,12 @@ LoadDefinitions!({
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
       generate_error_stub(&xtok)?;
-      retract_scanned_braces(std::slice::from_ref(&xtok));
+      retract_scanned_brace(&xtok);
       skipped.push(xtok);
     } else {
       // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
       // counted, and re-enters via our expansion — retract like the prefix.
-      retract_scanned_braces(std::slice::from_ref(&xtok));
+      retract_scanned_brace(&xtok);
       skipped.push(xtok);
     }};
     Ok(Tokens::new(skipped))
@@ -214,7 +214,7 @@ LoadDefinitions!({
       } else {
         // `\noexpand{`: the brace was read (counted) and re-enters via our
         // expansion — retract, tex.web §369 back_input flavor.
-        retract_scanned_braces(std::slice::from_ref(&token));
+        retract_scanned_brace(&token);
         vec![token]
       }
     } else {

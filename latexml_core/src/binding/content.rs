@@ -1630,8 +1630,6 @@ fn load_tex_definitions(
     {
       assign_catcode(' ', Catcode::SPACE, None);
     }
-    let _ = expl3_on_entry;
-    let _ = (entered_expl3, grandparent_in_expl3); // kept for historical context
   }
 
   assign_value_sym(

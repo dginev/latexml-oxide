@@ -993,6 +993,22 @@ pub fn read_alignment_template() -> Result<Template> {
             if !balanced_arg.is_empty() {
               gullet::unread(balanced_arg);
             }
+          } else if cc.is_active_or_cs()
+            && let Some(defn) = lookup_expandable(&op, Some(false))?
+          {
+            // Macro-valued column specs: real `\@mkpream` FULLY edef-expands
+            // the preamble before classification (latex.ltx L16610-16644,
+            // `\@xexpast`'s `\edef\reserved@a{#1}` under
+            // `\let\protect\@unexpandable@protect`), so
+            // `\begin{tabular}{|l|\mycol|}` with `\def\mycol{c|}` is valid
+            // LaTeX. `Some(false)` filters protected defs — the exact
+            // analogue of the `\@unexpandable@protect` shield. Perl's
+            // ReadAlignmentTemplate (Alignment.pm L895-921) reads unexpanded
+            // and drops the CS (shared failure; pdflatex clean). Witness:
+            // dijkstra-fr `\dijk_last_col_type` (noexpand-protected by
+            // design in dijkstra.sty's `\edef\dijk_tab`, L245-258) — 7
+            // extra-`&` errors. Iterated re-read = full edef semantics.
+            gullet::unread(defn.invoke(true)?);
           } else {
             Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
           }

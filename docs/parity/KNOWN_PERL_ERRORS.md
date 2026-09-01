@@ -4306,3 +4306,28 @@ Minimal trigger (Perl errors, pdflatex clean):
 Rust fix: tex.web align_state protocol (scan-count §342/§357, back_input
 retract §325, begin_token_list no-adjust; scan_toks doesn't localize) — see
 OXIDIZED_DESIGN #172.
+
+## 82. Locked `\newtheorem` mis-parses class-provided leading optional; `\[` clobbered (Rust fixes)
+
+aomart.cls L676-679 wraps `\newtheorem` to accept-and-discard a leading style
+optional (`\newtheorem[{}\it]{thm}{Theorem}[section]`). Both engines lock
+`\newtheorem` (pool L2835), so the wrapper is a no-op and the pool signature
+grabs `[` as the theorem NAME — defining an environment named `[` whose
+csname form clobbers `\[`; every later display math opens a spurious
+theorem (aomsample: 89 of 101 errors). pdflatex clean. Rust extends the
+signature with a discarded leading `[]` (the class's own semantics).
+
+Minimal trigger: `\documentclass{aomart}` + `\newtheorem[{}\it]{thm}{Theorem}[section]` + `\[ x \]`.
+
+## 83. `\index` phrase splitter ignores brace depth; separators inside groups shred the token stream (Rust fixes)
+
+Perl `process_index_phrases` (latex_constructs.pool.ltxml L4326-4350) splits
+on `@`/`!`/`|`/`"` with a flat scan. packdoc.sty L328/L331 writes
+`\index{#2@\PDElement{#1}{#2}\csuse{packdoc@#1@IndexRemark}}` — the
+in-group `@`s cut through the braces, emitting UNBALANCED braces into the
+live stream: one mode error + one orphaned `ltx:indexphrase` per use
+(algxpar-doc 162+149 errors; numerica). Real makeindex splits the
+out-of-band .idx string where imbalance cannot corrupt the document.
+Rust honors brace depth (separators at depth 0 only).
+
+Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `\csdef{r@e@m}{}` + itemize item `\myInd{x}`.

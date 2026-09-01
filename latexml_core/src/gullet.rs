@@ -378,17 +378,6 @@ pub fn mouth_is_open(mouth: &Mouth) -> bool {
 
 /// Push the `tokens` back into the input stream to be re-read.
 pub fn unread(tokens: Tokens) { unread_vec(tokens.unlist()); }
-/// Variant of `unread`, but drains the contents of `tokens` without taking ownership.
-pub fn unread_mut(tokens: &mut Tokens) {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
-    // Iterate in reverse and push to the stack top — the first element
-    // of `tokens` ends up on top (= next to read). Same semantics as
-    // the old VecDeque push_front pattern.
-    for token in tokens.unlist_mut().drain(..).rev() {
-      runtime.pushback.push(token);
-    }
-  };
-}
 /// Unreads a single `Token` to the start of the token stream.
 /// Perl: unread() always adjusts $ALIGN_STATE when unreading { or } tokens.
 pub fn unread_one(token: Token) {
@@ -439,6 +428,8 @@ pub fn unread_expansion(tokens: Tokens) {
 /// call this on that re-emitted portion, or every `{`/`}` passed through it
 /// is double-counted (l3's `\exp_after:wN {` idiom drove the alignment
 /// ledger positive and `&` went stray — see [`unread_expansion`]).
+pub fn retract_scanned_brace(token: &Token) { retract_scanned_braces(std::slice::from_ref(token)); }
+
 pub fn retract_scanned_braces(tokens: &[Token]) {
   for token in tokens {
     match token.get_catcode() {

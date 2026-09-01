@@ -202,7 +202,7 @@ LoadDefinitions!({
     };
     // `command` was read (brace-counted) and re-enters via our expansion:
     // retract (tex.web back_input flavor).
-    retract_scanned_braces(std::slice::from_ref(&command));
+    retract_scanned_brace(&command);
     let mut out = vec![command];
     for arg_kind in argsig.chars() {
       match arg_kind {
@@ -224,7 +224,7 @@ LoadDefinitions!({
           },
           Some(token) => {
             // Same back_input retraction: a read `}` may be passed through.
-            retract_scanned_braces(std::slice::from_ref(&token));
+            retract_scanned_brace(&token);
             out.push(token);
           },
           None => break,

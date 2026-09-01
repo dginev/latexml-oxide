@@ -671,9 +671,10 @@ impl Tokens {
     let is_param_tok = |t: &Token| {
       t.get_catcode() == Catcode::PARAM
         || (t.get_catcode().is_active_or_cs()
-          && matches!(crate::state::lookup_meaning(t),
-                      Some(crate::common::store::Stored::Token(l))
-                        if l.get_catcode() == Catcode::PARAM))
+          && crate::state::with_meaning(t, |m| {
+            matches!(m, Some(crate::common::store::Stored::Token(l))
+                        if l.get_catcode() == Catcode::PARAM)
+          }))
     };
     while let Some(mut t) = toks.pop_front() {
       if t.get_catcode() != Catcode::PARAM && is_param_tok(&t) {

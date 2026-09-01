@@ -104,3 +104,4 @@ background/
 latexml_oxide/tests/browser/node_modules/
 latexml_oxide/tests/browser/package-lock.json
 scratchpad/
+latexml.log

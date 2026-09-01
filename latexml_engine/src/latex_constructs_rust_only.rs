@@ -403,6 +403,11 @@ LoadDefinitions!({
     // entries it defines (glossaries acronyms, etc.) undefined. Witness
     // 1905.05350 (`\begin{filecontents}{\jobname-acro.tex}` …
     // `\loadglsentries[\acronymtype]{\jobname-acro}`).
+    // filecontents 2019+ takes a leading optional (`[overwrite, nosearch,
+    // noheader]{file}` — algxpar-doc L18); without skipping it the CACHE KEY
+    // became "[" and the payload was lost. Absorb it before the filename.
+    let _opts = read_optional(None)?;
+    skip_spaces()?;
     let filename_toks = read_arg(ExpansionLevel::Full)?;
     let filename = filename_toks.to_string();
     // Perl latex_constructs L4316-4353: header comments match Perl's

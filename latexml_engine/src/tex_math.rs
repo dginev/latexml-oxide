@@ -1700,7 +1700,7 @@ LoadDefinitions!({
         // expansion: retract (tex.web back_input flavor; a lone `}` can
         // land in `stuff` through the else-push below).
         retract_scanned_braces(&stuff);
-        retract_scanned_braces(std::slice::from_ref(&t));
+        retract_scanned_brace(&t);
         let mut invoked = Invocation!(T_CS!("\\lx@eqno"), vec![Tokens::new(stuff)]).unlist();
         invoked.push(t);
         return Ok(Tokens::new(invoked));

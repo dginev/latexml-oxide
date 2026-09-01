@@ -2617,8 +2617,30 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   let mut sortas: Vec<Token> = Vec::new();
   let mut style: Option<String> = None;
   let mut i = 0;
+  // Separator chars (`"`/`@`/`!`/`|`) act ONLY at brace depth 0. A flat
+  // scan (Perl latex_constructs.pool.ltxml L4326-4350 — Perl shares this
+  // byte-identically) cuts through nested groups: packdoc.sty L328/L331
+  // writes `\index{#2@\PDElement{#1}{#2}\csuse{packdoc@#1@IndexRemark}}`,
+  // whose in-group `@`s shredded the phrase and emitted UNBALANCED braces
+  // into the live stream — one mode error + one orphaned indexphrase per
+  // `\OptionInd` (algxpar-doc 162+149 errs, numerica; pdflatex clean —
+  // real makeindex splits the out-of-band .idx STRING where imbalance
+  // cannot corrupt the document). KNOWN_PERL_ERRORS #83.
+  let mut depth: i32 = 0;
   while i < toks.len() {
     let tok = toks[i];
+    match tok.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth > 0 || tok.get_catcode() == Catcode::END && depth == 0 {
+      // Inside a group (or the closing brace returning to depth 0):
+      // plain phrase material, never a separator.
+      phrase.push(tok);
+      i += 1;
+      continue;
+    }
     let s = tok.with_str(|s| s.to_string());
     i += 1;
     // #354 surpass (OXIDIZED_DESIGN #119): a `\verb`/`\verb*` inside `\index`.
@@ -7540,7 +7562,18 @@ LoadDefinitions!({
   Tag!("ltx:theorem", auto_close => true);
   Tag!("ltx:proof",   auto_close => true);
 
-  DefPrimitive!("\\newtheorem OptionalMatch:* {}[]{}[]", sub[(flag, thmset, otherthmset, typ, reset)] {
+  // The extra leading `[]` absorbs (and DISCARDS) a style optional some
+  // classes accept there — aomart.cls L676-679 rewraps \newtheorem so
+  // `\newtheorem[{}\it]{thm}{Theorem}[section]` is valid input, but its
+  // wrapper is a no-op on a LOCKED CS in both engines, so our unmodified
+  // signature grabbed `[` as the theorem NAME, defining an environment
+  // called `[` whose csname form clobbered `\[` — every later display
+  // math opened a spurious theorem (aomsample ×2, 89 of 101 errs; Perl
+  // 0.8.8 shares byte-identically; pdflatex clean). The class's own
+  // handler discards the optional (`\@aom@newthm@[#1]{\@xnthm\relax}`),
+  // so discarding is the ground truth. Standard forms start with `{` and
+  // never match the optional. KNOWN_PERL_ERRORS #82.
+  DefPrimitive!("\\newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, _style_opt, thmset, otherthmset, typ, reset)] {
     define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
@@ -11322,7 +11355,7 @@ LoadDefinitions!({
       if let Some(next) = next_opt {
         // `next` was read (brace-counted) and re-enters via our expansion:
         // retract, tex.web back_input flavor (see gullet::retract_scanned_braces).
-        retract_scanned_braces(std::slice::from_ref(&next));
+        retract_scanned_brace(&next);
         result.push(next);
       }
       Ok(Tokens::new(result))
@@ -11718,7 +11751,7 @@ LoadDefinitions!({
     if let Some(t_next) = next {
       // Read token re-enters via our expansion: retract its brace count
       // (tex.web back_input flavor; see gullet::retract_scanned_braces).
-      retract_scanned_braces(std::slice::from_ref(&t_next));
+      retract_scanned_brace(&t_next);
       result.push(t_next);
     }
     result

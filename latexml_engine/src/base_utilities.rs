@@ -93,14 +93,11 @@ LoadDefinitions!({
       // the CS is genuinely defined regardless of the package flag. Compare
       // definition identity against the snapshot def_autoload stored.
       flagged
-        && match (
-          lookup_meaning(&cs),
-          lookup_value(&s!("{cs_name}:autoload_trigger")),
-        ) {
-          (Some(Stored::Expandable(current)), Some(Stored::Expandable(trigger))) => {
-            Rc::ptr_eq(&current, &trigger)
-          },
-          (_, None) => true, // legacy trigger without snapshot: old behavior
+        && match lookup_value(&s!("{cs_name}:autoload_trigger")) {
+          Some(Stored::Expandable(trigger)) => with_meaning(&cs, |m| {
+            matches!(m, Some(Stored::Expandable(current)) if Rc::ptr_eq(current, &trigger))
+          }),
+          None => true, // legacy trigger without snapshot: old behavior
           _ => false,
         }
     });
