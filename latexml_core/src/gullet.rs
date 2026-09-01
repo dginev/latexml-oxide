@@ -1992,6 +1992,20 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   letted.with_str(|s| cs.push_str(s));
                 }
               } else if !quiet {
+                if std::env::var("LATEXML_CSNAME_TRACE").is_ok() {
+                  let mut ahead = Vec::new();
+                  for _ in 0..40 {
+                    match read_token()? {
+                      Some(t) => ahead.push(t),
+                      None => break,
+                    }
+                  }
+                  eprintln!(
+                    "CSNAME-TRACE(let) partial={cs:?} bad={token} ahead={}",
+                    Tokens::new(ahead.clone())
+                  );
+                  unread_vec(ahead);
+                }
                 let message = s!(
                   "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
                   token,
@@ -2003,6 +2017,20 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
             _ => {
               if !quiet {
                 if lookup_definition(&token)?.is_some() {
+                  if std::env::var("LATEXML_CSNAME_TRACE").is_ok() {
+                    let mut ahead = Vec::new();
+                    for _ in 0..40 {
+                      match read_token()? {
+                        Some(t) => ahead.push(t),
+                        None => break,
+                      }
+                    }
+                    eprintln!(
+                      "CSNAME-TRACE partial={cs:?} bad={token} ahead={}",
+                      Tokens::new(ahead.clone())
+                    );
+                    unread_vec(ahead);
+                  }
                   let message = s!(
                     "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
                     token,

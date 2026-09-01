@@ -79,6 +79,8 @@ timeouts. Top actionable items:
 | aomart `\[ \]` display-math broken (40 `_` + 30 `^` + 19 `\lx@end@display@math`, aomsample×2) | `\[` fails to enter math mode in aomart context — root untraced (class binding + earlier `\HSelect` undefined). Own session. |
 | residual stray-`&` 25 docs (ProfSio 12, PanneauxRoute 9 …) | Follows `\@@tabular` mode errors — the USER-PARKED mode-frame family, not the l3doc ledger class. |
 
+| ctex family `\c_parameter_token` in `\csname __hook package/…` (50-doc `expected:variable` cluster: hfutexam ×4=1001 errs each, beautybook; min-repro = bare `\documentclass{ctexart}` → 2 errs) | Root-cause trail (2026-09-01): ctexhook.sty L129-140 `\cs_new_protected:Npx \ctex_gadd_package_hook:nnn` → `\hook_gput_code:nnn {package/#2/#1} {\c_novalue_tl}` → lthooks label parsing (`\__hook_parse_label_default:nN` visible in stream) uses **`\c_parameter_token`-DELIMITED macros** (ltcmdhooks generic-cmd probes); the delimiter CS leaks into the `\csname __hook …\endcsname` assembly. env-gated `LATEXML_CSNAME_TRACE=1` dumps the stream at both csname error sites (gullet.rs). Needs a lthooks/delimited-param session; downstream of it: pgfmath load desync (`expected:<relationaltoken>` at pgfmathfunctions.misc L46) and the 218-err `expected:variable` mass. |
+
 ### Sweep-16 tail notes (2026-09-01)
 
 | Item | Note |
