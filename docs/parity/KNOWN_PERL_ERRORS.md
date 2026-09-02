@@ -4667,3 +4667,36 @@ Rust: `def_macro_noop` (expandable empty macro, page style still ignored) for
 \pagestyle{plain}
 x\end{document}
 ```
+## 122. xkeyval's `\DeclareOptionX*` handler ignored by non-star `\ProcessOptionsX`
+
+xkeyval.tex L496-502: inside `\ProcessOptionsX` (`\ifXKV@inpox`), an option
+that matches no key runs `\XKV@doxs` — the `\DeclareOptionX*` handler — when
+one is defined, else `\@unknownoptionerror` (packages only). The star form
+only adds the class options to the scan. `xkeyval.sty.ltxml` L355-356 arms
+the hook with `if ((defined $star) && …)`, so a package whose `\ProcessOptionsX`
+has no star silently drops every undeclared option (Rust additionally warned
+"unknown KeyVals key"); the handler never sees `\CurrentOption`. pdflatex:
+`E=[[english][foo=bar]] W=[3cm]`.
+
+Rust: `xkeyval_sty.rs` `\ProcessOptionsX@int` arms `hook_missing` whenever
+`\XKV@doxs` has a meaning; guard
+`perfect_kernel_batch53::processoptionsx_unknown_option_reaches_star_handler`.
+Trigger (`mypk.sty` + document):
+
+```latex
+\ProvidesPackage{mypk}
+\RequirePackage{xkeyval}
+\def\my@extra{}
+\define@key{mypk.sty}{width}{\def\my@width{#1}}
+\DeclareOptionX*{\edef\my@extra{\my@extra[\CurrentOption]}}
+\ProcessOptionsX
+```
+
+```latex
+\documentclass{article}
+\usepackage[english,width=3cm,foo=bar]{mypk}
+\makeatletter
+\begin{document}
+E=[\my@extra] W=[\my@width]
+\end{document}
+```

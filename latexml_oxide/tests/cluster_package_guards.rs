@@ -6043,4 +6043,35 @@ B=[\@pdfauthor/\@pdftitle/\@pdfcreator]
       "{xml}"
     );
   }
+
+  /// xkeyval.tex:496-502: in `\ProcessOptionsX` — star or not — an unknown
+  /// option runs the `\DeclareOptionX*` handler `\XKV@doxs` when one is
+  /// defined; the star only adds the class options to the scan. The binding
+  /// (like Perl xkeyval.sty.ltxml:355, KNOWN_PERL_ERRORS #122) armed the
+  /// handler for `\ProcessOptionsX*` only, so the non-star form dropped
+  /// `english`/`foo=bar` with two "unknown KeyVals key" warnings. pdflatex:
+  /// `E=[[english][foo=bar]] W=[3cm]`.
+  #[test]
+  fn processoptionsx_unknown_option_reaches_star_handler() {
+    let (stderr, xml) = convert_with_sty(
+      r"\documentclass{article}
+\usepackage[english,width=3cm,foo=bar]{mypk}
+\makeatletter
+\begin{document}
+E=[\my@extra] W=[\my@width]
+\end{document}
+",
+      "mypk.sty",
+      r"\ProvidesPackage{mypk}
+\RequirePackage{xkeyval}
+\def\my@extra{}
+\define@key{mypk.sty}{width}{\def\my@width{#1}}
+\DeclareOptionX*{\edef\my@extra{\my@extra[\CurrentOption]}}
+\ProcessOptionsX
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("unknown KeyVals key"), "{stderr}");
+    assert!(xml.contains("E=[[english][foo=bar]] W=[3cm]"), "{xml}");
+  }
 }

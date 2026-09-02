@@ -666,8 +666,16 @@ LoadDefinitions!({
 
   // \ProcessOptionsX@int [*] [prefix]{keysets}[na]
   DefMacro!("\\ProcessOptionsX@int OptionalMatch:* [] {} []", sub[(star, prefix_opt, keysets_tks, skip_opt)] {
-    // store the missing macros if defined
-    let hook_missing = if star.is_some() && has_meaning(&T_CS!("\\XKV@doxs")) {
+    // store the missing macros if defined. The `\DeclareOptionX*` handler
+    // fires for an unknown key in BOTH `\ProcessOptionsX` and
+    // `\ProcessOptionsX*` (xkeyval.tex:496-502 `\ifXKV@inpox \ifx\XKV@doxs
+    // \relax …\@unknownoptionerror… \else\XKV@doxs\fi`): the star only
+    // decides whether the class options are read too. Perl
+    // xkeyval.sty.ltxml:355 gates the hook on `defined $star` and so drops
+    // every unknown option of a non-star `\ProcessOptionsX` — KNOWN_PERL_
+    // ERRORS #122. Guard: `perfect_kernel_batch53::
+    // processoptionsx_unknown_option_reaches_star_handler`.
+    let hook_missing = if has_meaning(&T_CS!("\\XKV@doxs")) {
       Some(T_CS!("\\XKV@doxs"))
     } else {
       None
