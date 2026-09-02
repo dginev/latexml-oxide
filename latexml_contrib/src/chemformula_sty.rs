@@ -32,8 +32,11 @@ LoadDefinitions!({
   RequirePackage!("tikz");
   RequirePackage!("xfrac");
   RequirePackage!("nicefrac");
-  Let!("\\ch", "\\ce");
-  Let!("\\chcpd", "\\ce");
+  // chemformula.sty `\NewDocumentCommand \ch { O{} m }` / `\chcpd { O{} m }`:
+  // the option list (`\ch[frac-style=xfrac]{1_1/2}`, chemformula manual)
+  // is absorbed; a bare `\ce` alias left it as text.
+  DefMacro!("\\ch[]{}", "\\ce{#2}");
+  DefMacro!("\\chcpd[]{}", "\\ce{#2}");
   def_macro_noop("\\chsetup{}")?;
   def_macro_noop("\\setchemformula{}")?;
   // The expl3 API chemmacros.sty:1358-1366 wires its `formula=chemformula`
