@@ -343,7 +343,19 @@ LoadDefinitions!({
   def_macro_noop("\\SetTblrInner[]{}")?;
   def_macro_noop("\\SetTblrOuter[]{}")?;
   def_macro_noop("\\SetTblrStyle{}{}")?;
-  def_macro_noop("\\NewTblrEnviron{}")?;
+  // tabularray.sty:3461-3470: every tblr-family environment is built by one
+  // factory (`\NewDocumentEnvironment{#1}{O{c} m +b}{\__tblr_environ_code…}`),
+  // so a user environment is the same thing as `tblr` under another name.
+  // ProfSio.sty:98 `\NewTblrEnviron{MPMtache}` then `\begin{MPMtache}{…}`
+  // inside tikz pics (:105-134) — as a no-op the env was undefined and its
+  // `&`/`\\` cascaded into 396 mode errors. Skip a name that already has a
+  // meaning (the base `tblr`/`longtblr` the real package would create).
+  DefMacro!("\\NewTblrEnviron{}", sub[(name)] {
+    let n = name.to_string();
+    // TokenizeInternal!: `\@ifundefined` needs `@` as a letter.
+    Ok(TokenizeInternal!(TeXString::assembled(format!(
+      "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\tblr}}{{\\endtblr}}}}{{}}"))))
+  });
   def_macro_noop("\\NewColumnType{}[]{}")?;
   def_macro_noop("\\NewTblrTheme{}{}")?;
   // Template API (tabularray.sty:5673-5807): `\DeclareTblrTemplate` is the

@@ -6452,6 +6452,7 @@ C[\number`\\]D[\number`\a]E[\number`a]
     assert!(!stderr.contains("Fatal"), "{stderr}");
     assert!(xml.contains("[1]\n[0]"), "{xml}");
   }
+
   /// OXIDIZED_DESIGN #170's named residual: `\angle` as a `\tikzmath`
   /// variable (sunpath.sty L44-47). Real LaTeX's `\angle` is a robust
   /// command, so `\meaning` starts with `macro:` and tikzmath's sniff
@@ -6500,4 +6501,25 @@ Second line
     assert_eq!(xml.matches("<listingline").count(), 2, "{xml}");
   }
 
+  /// tabularray.sty:3461-3470 `\NewTblrEnviron{name}` creates a `tblr`-alias
+  /// environment; the binding had it as a no-op so `\begin{MPMtache}` was
+  /// undefined. Witness: profsio ProfSio-doc-fr (ProfSio.sty:98).
+  #[test]
+  fn tabularray_newtblrenviron_defines_environment() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\NewTblrEnviron{MPMtache}
+\SetTblrInner[MPMtache]{colspec={Q[c]Q[c]}}
+\begin{document}
+\begin{MPMtache}{hlines={wd=1pt},vlines={wd=1pt}}
+\SetCell[c=2]{c} {X} & \\
+a & b \\
+\end{MPMtache}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.matches("<tr").count() >= 2, "{xml}");
+  }
 }
