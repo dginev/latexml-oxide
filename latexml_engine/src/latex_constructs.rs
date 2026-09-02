@@ -9820,8 +9820,23 @@ LoadDefinitions!({
   // UNCONDITIONALLY. `Note!` does the log-always / stderr-if-`$VERBOSITY>=0` split
   // itself, so no `current_verbosity()` guard here — the old guard dropped
   // `\typeout` from the log under `--quiet` (the #763 log-floor bug).
+  //
+  // latex.ltx L1185-1188: the argument is written under
+  // `\set@display@protect` (L1438 `\let\protect\string`), so a robust
+  // command in it is written by NAME, never run. Expanding it with
+  // `\protect`=`\relax` (as `make_generic_message` once did, and as Perl's
+  // primitive-`\small` world never notices) walked into raw KOMA's
+  // `\DeclareRobustCommand\small` (scrsize10pt.clo:62-72) — whose
+  // `\@setfontsize\small…` re-expands `\small` forever; pdflatex's
+  // `\edef\x{\small}` overflows the same way — from hvextern.sty:325
+  // `\hv@ex@typeout{Running BodyVerbatim with fontsize=\small,…}`
+  // (witness hvextern manual, `Fatal:Timeout:PushbackLimit`). Guard:
+  // `perfect_kernel_batch53::typeout_writes_robust_commands_by_name`.
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
+    bgroup();
+    let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
     let content = Expand!(stuff);
+    egroup()?;
     Note!(s!("{content}"));
   });
   def_primitive_noop("\\typein[]{}")?;

@@ -5969,6 +5969,35 @@ inner
     assert!(xml.contains("u2"), "{xml}");
   }
 
+  /// latex.ltx L1185-1188: `\typeout` writes its argument under
+  /// `\set@display@protect` (L1438 `\let\protect\string`), so a robust
+  /// command is written by NAME. Expanding it with `\protect`=`\relax`
+  /// entered raw KOMA's `\DeclareRobustCommand\small` (scrsize10pt.clo:62),
+  /// whose `\@setfontsize\small…` re-expands `\small` without end — the same
+  /// overflow pdflatex gives `\edef\x{\small}` — from hvextern.sty:325
+  /// `\hv@ex@typeout{Running BodyVerbatim with fontsize=\small,…}`
+  /// (witness hvextern manual: `Fatal:Timeout:PushbackLimit`; Perl 0, its
+  /// `\small` being a primitive). pdflatex writes exactly
+  /// `SIZE:[fontsize=\small \add@extra@listi{sml},fontfamily=tt]`.
+  #[test]
+  fn typeout_writes_robust_commands_by_name() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrartcl}
+\begin{document}
+\typeout{SIZE:[fontsize=\small,fontfamily=tt]}
+x
+\end{document}
+",
+      true,
+    );
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(
+      stderr.contains("SIZE:[fontsize=\\small \\add@extra@listi{sml},fontfamily=tt]"),
+      "{stderr}"
+    );
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
   /// siunitx.sty:5014-5016 loads translations.sty when it exists, and
   /// translations.sty:36 loads etoolbox — that is how a class using siunitx
   /// early has `\AtEndPreamble` (neoschool.cls:1123). The binding required
