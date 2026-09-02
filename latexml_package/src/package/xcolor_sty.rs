@@ -659,11 +659,15 @@ LoadDefinitions!({
   DefRegister!("\\tracingcolors", Number!(0));
   DefMacro!("\\XC@tracing", "0");
 
-  // Current color
-  {
-    let black = BLACK;
-    assign_value("color_.", Stored::String(pin(black.to_stored())), Some(Scope::Global));
-  }
+  // Current color. xcolor.sty L1461 ends its load with `\color{black}`, whose
+  // `\XC@display` (L1010) materializes `\color@.` — so in real LaTeX the
+  // current-color CS exists from document start. pgf's `/tikz/.unknown`
+  // handler probes `\csname\string\color@.\endcsname` (pgfutil-latex.def
+  // L52) for the bare `.` "current color" key (twoxtwogame.sty L493
+  // `row player color=.` → `\draw[…,.,]`, 417 "I do not know the key
+  // '/tikz/.'" errors), so define it here, not only on the first explicit
+  // `\color{…}`. Perl leaves it undefined until then (SHARED failure).
+  def_color(".", &BLACK, Some(Scope::Global))?;
 
   // Color model ranges
   DefMacro!("\\rangeRGB", "255");

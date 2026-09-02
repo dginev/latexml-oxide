@@ -6522,4 +6522,21 @@ a & b \\
     assert!(xml.contains("<tabular"), "{xml}");
     assert!(xml.matches("<tr").count() >= 2, "{xml}");
   }
+  /// xcolor.sty L1461 runs `\color{black}` at load, which defines the current
+  /// color `.` (`\color@.`); `\draw[.]` resolves via tikz's colour fallback.
+  /// Witness: twoxtwogame_doc (twoxtwogame.sty:493 `row player color=.`).
+  #[test]
+  fn xcolor_current_color_dot_defined_at_load() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\draw[line width=1pt, ., ] (0,0) -- (1,1);
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:path"), "{xml}");
+  }
 }
