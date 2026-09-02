@@ -166,7 +166,21 @@ LoadDefinitions!({
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
   def_macro_noop("\\pdftexbanner")?;
-  def_macro_noop("\\pdfcreationdate")?;
+  // pdfTeX manual §8.11: `\pdfcreationdate` expands to the PDF date string
+  // `D:YYYYMMDDhhmmss±hh'mm'` of the job start. datetime2.sty:46-48 seeds
+  // `\dtm@pdfcreationdate` from it and its `\@dtm@parsepdfdate` splits the
+  // fixed-width fields (L1500+); an empty expansion (the old no-op) left
+  // `\@dtm@currentminute`… undefined and `\DTMnow` erroring (chemformula /
+  // cnltx manuals). Same clock as `\year`/`\time` (SOURCE_DATE_EPOCH honored).
+  DefMacro!("\\pdfcreationdate", sub[_args] {
+    let year = lookup_register("\\year", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
+    let month = lookup_register("\\month", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
+    let day = lookup_register("\\day", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
+    let time = lookup_register("\\time", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
+    let (hh, mm) = (time / 60, time % 60);
+    let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
+    Ok(Tokens::new(ExplodeText!(&stamp)))
+  });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
   def_macro_noop("\\pdffontname Token")?;

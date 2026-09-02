@@ -7754,4 +7754,23 @@ Done [\thepage].
     assert!(xml.contains("<Math"), "{xml}");
     assert!(xml.contains("NMR"), "{xml}");
   }
+
+  /// datetime2 raw-loads (the stub left `\DTMsetup`/`\DTMdate` undefined —
+  /// cnltx/chemformula manuals) once `\pdfcreationdate` is pdfTeX's
+  /// `D:YYYYMMDD…` stamp (pdfTeX manual §8.11; datetime2.sty:46-48).
+  #[test]
+  fn datetime2_raw_dates_render() {
+    let tex = r"\documentclass{article}
+\usepackage[en-GB]{datetime2}
+\begin{document}
+\DTMsetup{datesep=/}[\DTMdate{2026-09-02}][\DTMdisplaydate{2020}{3}{7}{-1}][\DTMsetdatestyle{iso}\DTMdate{2026-09-02}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("[2nd September 2026][7th March 2020][2026-09-02]"),
+      "{xml}"
+    );
+  }
 }
