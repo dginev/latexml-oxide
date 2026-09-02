@@ -7186,4 +7186,25 @@ Text after list. $x$
     assert!(xml.contains("XYZ") && xml.contains("second"), "{xml}");
     assert_eq!(xml.matches("<description").count(), 1, "{xml}");
   }
+
+  /// tex.web §370: an UNDEFINED control sequence met inside `\csname…\endcsname`
+  /// is reported and discarded; the name scan continues to `\endcsname`. The
+  /// error stub made it look defined, so the §373 `back_error` path ended the
+  /// name early and the real `\endcsname` went stray ("Extra \endcsname":
+  /// 1693 lines / 65 manuals — beamer2thesis's babel `\csname l@\beamer@…`,
+  /// gckanbun's pgf arrow declarations). One error, like pdflatex.
+  #[test]
+  fn csname_discards_an_undefined_cs_and_keeps_scanning() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+A\csname l@\beamer@torinoth@language\endcsname B
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(!stderr.contains("Extra \\endcsname"), "{stderr}");
+    assert!(!stderr.contains("should not appear"), "{stderr}");
+    assert!(xml.contains("A") && xml.contains("B"), "{xml}");
+  }
 }

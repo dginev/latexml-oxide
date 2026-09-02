@@ -1305,8 +1305,33 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       //TODO: sizer => "X"),
       Some(Scope::Global),
     );
+    LAST_ERROR_STUB.with(|c| c.set(Some(*token)));
   }
   Ok(*token)
+}
+
+thread_local! {
+  /// The token most recently stubbed as `<ltx:ERROR/>` by
+  /// [`generate_error_stub`]. tex.web §370: an UNDEFINED control sequence met
+  /// while scanning a `\csname` name is reported and discarded (the scan
+  /// continues to `\endcsname`), whereas a defined non-expandable one takes
+  /// the §373 `back_error` path. Our stub installs a global definition
+  /// before the csname loop can tell the two apart, so the loop consults this
+  /// one-shot cell — see `gullet::read_cs_name_inner`.
+  static LAST_ERROR_STUB: std::cell::Cell<Option<Token>> = const { std::cell::Cell::new(None) };
+}
+
+/// Take (and clear) the token last stubbed by [`generate_error_stub`] if it
+/// is `token`.
+pub fn take_error_stub_if(token: &Token) -> bool {
+  LAST_ERROR_STUB.with(|c| {
+    if c.get().as_ref() == Some(token) {
+      c.set(None);
+      true
+    } else {
+      false
+    }
+  })
 }
 
 /// Install a `Constructor` for `token` whose sole effect at digestion time is to

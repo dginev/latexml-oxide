@@ -2045,6 +2045,18 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     if token.defined_as(&TOKEN_ENDCSNAME) {
       break;
     }
+    // tex.web §370: an undefined control sequence inside `\csname…\endcsname`
+    // is reported by `expand` and DISCARDED — the name scan continues. The
+    // `read_x_token` above just stubbed it (`generate_error_stub`, error
+    // emitted), so without this check it read as a defined non-expandable
+    // token and took the §373 `back_error` path, ending the name early and
+    // leaving the real `\endcsname` stray ("Extra \endcsname" ×1693 lines /
+    // 65 manuals: babel's `\csname l@\beamer@torinoth@language\endcsname`
+    // in beamer2thesis, gckanbun's pgf arrow declarations …). Perl consumes
+    // the `\endcsname` but also emits a second error; pdflatex emits one.
+    if token.get_catcode() == Catcode::CS && take_error_stub_if(&token) {
+      continue;
+    }
     if cs.len() > MAX_CS_NAME_BYTES {
       Error!(
         "runaway",
