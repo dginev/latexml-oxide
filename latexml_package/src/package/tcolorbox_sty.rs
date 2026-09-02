@@ -138,8 +138,9 @@ LoadDefinitions!({
   // \newtcblisting (tcbxparse library; tcblistingscore.code.tex:329-355 —
   // `\__tcobox_new_TCBListing:w { m +O{} >{\TrimSpaces} m +m +m }`, so the
   // user shape carries a LEADING optional, same as the plain `\newtcblisting`
-  // fix above). Approximate the signature by its argument COUNT (O/o/m/d
-  // specifiers) and delegate to \lstnewenvironment like the plain form.
+  // fix above). Map the signature to a \lstnewenvironment shape (mandatory
+  // count + one leading optional, see `tcb_xparse_listing`) and delegate like
+  // the plain form.
   // Witnesses: keytheorems-doc L165 `\NewTCBListing{keythmscode}{ !O{} }{…}`
   // (31 uses, no leading optional); atableau.tex L655
   // `\NewTCBListing[use counter=example, …]{example}{ O{} s m }{…#1…#3…}`
@@ -274,7 +275,22 @@ LoadDefinitions!({
 });
 
 /// Delegate an xparse-signature TCB listing declaration to
-/// `\lstnewenvironment{name}[n][]{start}{end}` using the specifier COUNT.
+/// `\lstnewenvironment{name}[n][]{start}{end}`.
+///
+/// Only the MANDATORY specifiers (`m`/`r`/`R`) count as `\lstnewenvironment`
+/// mandatory arguments, plus one optional slot when the signature LEADS with
+/// an optional (`O`/`o`/`D`/`d`, after any `!`/`+` prefix). Counting every
+/// specifier as mandatory turned neoschool.cls:5168
+/// `\NewTCBListing{code}{ O{} m !O{} !O{..} !O{..} }` into
+/// `\lstnewenvironment{code}[5][]`, so a bare `\begin{code}{latex}` grabbed
+/// three body tokens including its own `\end`, the verbatim scan ran on to
+/// the NEXT `\end{code}` and swallowed the `\begin{sidebyside}` in between —
+/// tcolorbox's global `\c@tcblayer` (tcolorbox.sty:1411/1491 `\tcb@layer@inc`
+/// only at the swallowed begin, `\tcb@layer@dec` at the surviving end) went
+/// negative and every later box errored `every box on layer 0/-N` (251 of
+/// neoschool's 273 errors; Perl 0). Trailing optionals are box styling
+/// (tcbxparse absorbs them only when a `[` is present) and are dropped.
+/// Guard: `perfect_kernel_batch53::tcb_listing_trailing_optionals_not_mandatory`.
 fn tcb_xparse_listing(
   name: Tokens,
   sig: Tokens,
@@ -282,15 +298,27 @@ fn tcb_xparse_listing(
   opts: &Tokens,
 ) -> Result<Tokens> {
   let sig_str = sig.to_string();
-  let nargs = sig_str
+  let specs: Vec<char> = sig_str
     .chars()
-    .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D'))
+    .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D' | 'r' | 'R'))
+    .collect();
+  let mandatory = specs
+    .iter()
+    .filter(|c| matches!(c, 'm' | 'r' | 'R'))
     .count();
+  let leading_optional = specs
+    .first()
+    .is_some_and(|c| matches!(c, 'O' | 'o' | 'd' | 'D'));
   let name_str = name.to_string().trim().to_string();
   let (start, end) = tcb_listing_startend(&name_str, init, opts);
+  let arity = if leading_optional {
+    format!("[{}][]", mandatory + 1)
+  } else {
+    format!("[{}]", mandatory)
+  };
   Ok(Tokenize!(TeXString::assembled(format!(
-    "\\lstnewenvironment{{{}}}[{}][]{{{}}}{{{}}}",
-    name_str, nargs, start, end
+    "\\lstnewenvironment{{{}}}{}{{{}}}{{{}}}",
+    name_str, arity, start, end
   ))))
 }
 

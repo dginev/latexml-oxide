@@ -5926,4 +5926,46 @@ I=[\csname my@items\endcsname] T=[\csname g_my_thesis_tl\endcsname]
       "{xml}"
     );
   }
+
+  /// tcbxparse's `\NewTCBListing{code}{ O{} m !O{} !O{x} !O{y} }`
+  /// (neoschool.cls:5168) takes ONE mandatory argument and, absent a `[`,
+  /// no optionals; our delegate counted every specifier as a mandatory
+  /// `\lstnewenvironment` argument, so a bare `\begin{code}{latex}` grabbed
+  /// body tokens through its own `\end`, the verbatim scan ran to the NEXT
+  /// `\end{code}` and swallowed the `\begin{sidebyside}` in between —
+  /// tcolorbox's global layer counter (tcolorbox.sty:1411 `\tcb@layer@inc`
+  /// never run for the eaten begin, `\tcb@layer@dec` run at its end) went
+  /// negative and every later box errored `every box on layer 0/-N`
+  /// (witness neoschool, 251 of 273 errors; Perl 0; pdflatex clean).
+  #[test]
+  fn tcb_listing_trailing_optionals_not_mandatory() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage[most]{tcolorbox}\usepackage{listings}
+\NewTCBListing{code}{ O{} m !O{} !O{x} !O{y} }{listing only}
+\newtcolorbox{sidebyside}[1][]{sidebyside,enhanced,bicolor,#1}
+\begin{document}
+\begin{code}{latex}
+xx
+\end{code}
+\begin{sidebyside}[righthand width=.5\linewidth]
+\begin{code}[numbers=none]{latex}
+inner
+\end{code}
+\tcblower l\end{sidebyside}
+\begin{sidebyside}u2\tcblower l2\end{sidebyside}
+\end{document}
+",
+      false,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("every box on layer"), "{stderr}");
+    // Two separate listings: the first one ends at ITS `\end{code}`.
+    assert_eq!(xml.matches("<listing ").count(), 2, "{xml}");
+    assert!(
+      !xml.contains("begin{sidebyside}"),
+      "listing swallowed the box: {xml}"
+    );
+    assert!(xml.contains("u2"), "{xml}");
+  }
 }
