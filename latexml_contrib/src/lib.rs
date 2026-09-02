@@ -135,6 +135,7 @@ pub mod atlasdoc_cls;
 pub mod czipreprint_cls;
 pub mod hvfloat_sty;
 pub mod ieeetj_cls;
+pub mod ifoddpage_sty;
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;

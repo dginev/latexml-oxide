@@ -35,6 +35,8 @@ LoadDefinitions!({
 \newdimen\Gm@t \newdimen\Gm@b              % top/bottom margins
 \newdimen\Gm@tw \newdimen\Gm@th            % computed text width/height (SVG scope)
 \newdimen\Gm@doctw                         % class-default \textwidth (the full column)
+\newdimen\Gm@bindingoffset                 % geometry.sty L51; read by classes
+                                           % (tudapub.cls L506 \g_ptxcd_headwidth_dim)
 \newif\ifGm@lset \newif\ifGm@rset \newif\ifGm@tset \newif\ifGm@bset
 \newif\ifGm@twset \newif\ifGm@thset
 \Gm@pw=\paperwidth \Gm@ph=\paperheight
@@ -69,6 +71,7 @@ LoadDefinitions!({
 \define@key{Gm}{top}{\Gm@t=#1\relax\Gm@tsettrue}
 \define@key{Gm}{tmargin}{\Gm@t=#1\relax\Gm@tsettrue}
 \define@key{Gm}{bottom}{\Gm@b=#1\relax\Gm@bsettrue}
+\define@key{Gm}{bindingoffset}{\Gm@bindingoffset=#1\relax}
 \define@key{Gm}{bmargin}{\Gm@b=#1\relax\Gm@bsettrue}
 % margin={h,v}: h -> left+right, v -> top+bottom (scalar -> all four)
 \define@key{Gm}{margin}{\Gm@pair{#1}%
@@ -96,6 +99,7 @@ LoadDefinitions!({
   \ifGm@twset\else
     \ifGm@lset\ifGm@rset
       \Gm@tw=\Gm@pw \advance\Gm@tw-\Gm@l \advance\Gm@tw-\Gm@r
+      \advance\Gm@tw-\Gm@bindingoffset
     \fi\fi
   \fi
   \ifGm@thset\else

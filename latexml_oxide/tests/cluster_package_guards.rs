@@ -5745,6 +5745,96 @@ Hello\end{document}
     assert!(xml.contains(">Hello<"), "{xml}");
   }
 
+  /// xltabular.sty L86-96: the environment restores longtable's
+  /// `\caption`/`\endhead`/`\endfirsthead`/`\endfoot`/`\endlastfoot` and runs
+  /// `\expandafter\longtable\the\toks@\endlongtable` — it IS a longtable with
+  /// `X` columns. RED: the binding aliased `\xltabular` to `\tabularx`, so the
+  /// class `\caption` ran inside a tabularx (`Use of \caption outside any
+  /// known float`); under raw KOMA the tocbasic expl3 `\caption` then read an
+  /// undefined `\@captype` and cascaded into a `TooManyErrors` fatal
+  /// (witnesses xltabular-doc 36→101 errors + fatal, hvfloat 27→90). GREEN:
+  /// one `<ltx:table>` carrying the caption, a `<thead>` from `\endfirsthead`
+  /// and the body rows.
+  #[test]
+  fn xltabular_is_a_longtable() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrartcl}
+\usepackage{booktabs,xltabular}
+\begin{document}
+\begin{xltabular}{\textwidth}{@{} l>{\small\ttfamily}cX @{}}
+\caption{The optional keywords}\label{tab:options}\\\toprule
+Keyword & Default & Description\\\midrule
+\endfirsthead
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\endlastfoot
+onlyText & false & Only the text \\
+capPos & b & caption position\\
+\end{xltabular}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(
+      xml.contains("<table inlist=\"lot\" labels=\"LABEL:tab:options\""),
+      "{xml}"
+    );
+    assert!(xml.contains("The optional keywords</caption>"), "{xml}");
+    assert!(xml.contains("<thead>"), "{xml}");
+    assert!(xml.contains(">caption position<"), "{xml}");
+  }
+
+  /// hvfloat surface the manual exercises (witness hvfloat manual, 79→7
+  /// errors; the 7 left are the SHARED `\endflushleft`-in-group mode-frame
+  /// family and a SHARED eager `backgroundcolor=\color` evaluation in the
+  /// listings binding). hvfloat.sty L630-636: an EMPTY float type is
+  /// `nonFloat,onlyText` — object and caption as plain text, no float, no
+  /// counter (was `undefined:{}` and a `\caption` outside any float);
+  /// L1264-1266 `hvFloatEnv` is a minipage; L24-36 `[fbox,hyperref]` options
+  /// are `\newif` switches; L306-307 `\hvDefFloatStyle` = `\defhvstyle`;
+  /// L55 `\RequirePackage{ifoddpage}` — pure kernel TeX that now loads raw
+  /// in both preload modes (`\checkoddpage`/`\ifoddpage` were `undefined`).
+  #[test]
+  fn hvfloat_only_text_env_options_and_ifoddpage() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage[fbox,hyperref]{hvfloat}
+\begin{document}
+\hvDefFloatStyle{main}{capPos=r}
+\checkoddpage\ifoddpage odd\else even\fi
+\hvFloat[onlyText=true]{}{\rule{2cm}{1cm}}{Only text, no float}{txt:only}
+\begin{hvFloatEnv}
+\rule{1cm}{1cm}
+\captionof{figure}{Inside the env}\label{fig:env}
+\end{hvFloatEnv}
+\hvFloat{figure}{\rule{1cm}{1cm}}[Short]{A real figure}{fig:real}
+\makeatletter\hv@fboxfalse\makeatother
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(!stderr.contains("missing_file"), "{stderr}");
+    assert!(xml.contains(">odd<") || xml.contains("odd\n"), "{xml}");
+    assert!(xml.contains("Only text, no float"), "{xml}");
+    assert!(
+      xml.contains("<figure inlist=\"lof\" labels=\"LABEL:fig:env\""),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<figure inlist=\"lof\" labels=\"LABEL:fig:real\""),
+      "{xml}"
+    );
+    assert!(xml.contains("A real figure</caption>"), "{xml}");
+    // The onlyText form opens no float: exactly the two real figures.
+    assert_eq!(xml.matches("<figure ").count(), 2, "{xml}");
+  }
+
   /// The `\opt@<file>` macro (latex.ltx `\@pass@ptions`, `\@ptionlist`)
   /// holds the ARGUMENT tokens of `\usepackage[...]`, so `{`/`}` group. Ours
   /// was rebuilt with `ExplodeText!` (braces OTHER), and every brace-aware
