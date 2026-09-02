@@ -1051,6 +1051,20 @@ LoadDefinitions!({
   // all-empty prefix maps to the Rust default "KV" (keyval_qname), matching
   // the `{KV}` \@testopt default — bare `[]` empty-prefix headers (`fam@`
   // without prefix) are not distinguished by the Rust path.
+  //
+  // Real `\XKV@s@tkeys` never mutates `\XKV@fams`/`\XKV@prefix` — only the
+  // per-key code is wrapped in the depth-stacked `\XKV@srstate` save/restore
+  // (xkeyval.tex L89-96, L538-541). The Rust reader, faithful to Perl
+  // `KeyVals.pm::setKeysExpansion` L389-400, `\def`s both to empty on exit.
+  // Harmless for Perl (it stubs `\presetkeys`, so the reader is never nested),
+  // but `\XKV@setkeys` above runs the reader once per `preseth` hook BEFORE the
+  // main list: without a save/restore the main call is reconstructed from an
+  // empty family list → keyset `_anonymous_` → every real key "unknown" →
+  // `\define@cmdkey`'s `\cmd<pfx>@<fam>@<key>` never defined. Witness:
+  // tikz-network.sty L400 `\presetkeys[NW]{vertex}{Network=false,}` +
+  // L414-433 `\setkeys[NW]{vertex}{x={0},…}` (1001 errors, all
+  // `\cmdNW@vertex@*`). `\XKV@na` is NOT restored — real `\XKV@s@tkeys` sets
+  // it from `#2` (guard `xkeyval_preset_hook_keeps_family_for_main_list`).
   RawTeX!(
     r"\def\XKV@pf@strip#1@#2\@nil{#1}
 \long\def\XKV@s@tkeys#1#2{%
@@ -1059,7 +1073,11 @@ LoadDefinitions!({
     \ifXKV@st*\fi\ifXKV@pl+\fi
     [\expandafter\XKV@pf@strip\XKV@prefix @\@nil]{\XKV@fams}%
     [#2]{\the\XKV@toks}}%
+  \let\XKV@fams@save\XKV@fams
+  \let\XKV@prefix@save\XKV@prefix
   \XKV@tempb
+  \let\XKV@fams\XKV@fams@save
+  \let\XKV@prefix\XKV@prefix@save
 }"
   );
 

@@ -6163,6 +6163,7 @@ V=\hobbyVersion\ from \hobbyDate.
     assert!(!stderr.contains("hobby.code.tex is not implemented"), "{stderr}");
     assert!(xml.contains("V=1.12 from 2023-09-01."), "{xml}");
   }
+
   /// tex.web §373: a non-character CS inside `\csname…\endcsname` is
   /// "Missing \endcsname inserted" via `back_error` — the name ENDS there and
   /// the offending token is re-read after the constructed CS. The gullet
@@ -6376,6 +6377,34 @@ c & \NotEmpty \\
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!xml.contains("<ERROR"), "{xml}");
     assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+  }
+
+  /// tikz-network.sty L400 presets `Network=false` on family `[NW]{vertex}`,
+  /// then `\@vertex` (L414-433) sets every key explicitly. Our beyond-Perl
+  /// `\XKV@setkeys` runs the Rust reader once per `preseth` hook before the
+  /// main list; the reader wipes `\XKV@fams`/`\XKV@prefix` on exit (faithful
+  /// to Perl KeyVals.pm L389-400), so the main call used to be rebuilt from an
+  /// empty family list and every real key became "unknown" (1001 errors on
+  /// tikz-network.tex, all `\cmdNW@vertex@*`). Real `\XKV@s@tkeys` never
+  /// mutates them (xkeyval.tex L464-469); the shim now saves/restores both.
+  #[test]
+  fn xkeyval_preset_hook_keeps_family_for_main_list() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\define@cmdkey  [NW] {vertex} {color}{}
+\define@cmdkey  [NW] {vertex} {fontcolor}{}
+\define@boolkey [NW] {vertex} {Network}[true]{}
+\presetkeys     [NW] {vertex} {Network = false,}{}
+\begin{document}
+\setkeys[NW]{vertex}{color={red}, fontcolor={blue}}
+C=[\cmdNW@vertex@color] F=[\cmdNW@vertex@fontcolor]
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("C=[red] F=[blue]"), "{xml}");
   }
 
 }
