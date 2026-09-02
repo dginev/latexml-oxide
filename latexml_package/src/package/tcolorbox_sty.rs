@@ -340,20 +340,43 @@ fn tcb_listing_startend(env_name: &str, init: Option<&Tokens>, opts: &Tokens) ->
     init.map(|t| t.to_string()).unwrap_or_default(),
     opts
   );
+  // The counter keys run through tcolorbox's OWN init processor
+  // (tcolorbox.sty:2339 `\tcb@proc@options@init{init}{env}` → `auto counter`
+  // / `use counter` / `use counter from` / `number within` …, :2254-2262 and
+  // :2297-2333), so `\tcb@cnt@<env>` and `\thetcb@cnt@<env>` exist for a
+  // later `\newtcolorbox[use counter from=<env>]` (tcolorbox manual's
+  // preamble D: `texexptitledspec` from `texexptitled` — "Extra \endcsname"
+  // + `\the\tcb@cnt@texexptitled` undefined when the native listing env
+  // dropped its init). Each use then steps the recorded counter the way
+  // `\tcb@new@colopt`'s `code=` does (:2311).
+  if init.is_some_and(|t| !t.to_string().trim().is_empty()) {
+    let init_src = init.map(|t| t.to_string()).unwrap_or_default();
+    let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
+      "\\tcb@proc@options@init{{{init_src}}}{{{env_name}}}"
+    ))));
+    start.insert_str(
+      0,
+      &format!(
+        "\\ifcsdef{{tcb@cnt@{env_name}}}{{\\letcs\\tcbcounter{{tcb@cnt@{env_name}}}\
+         \\letcs\\thetcbcounter{{thetcb@cnt@{env_name}}}\\refstepcounter{{\\tcbcounter}}}}{{}}"
+      ),
+    );
+  }
   for (key, val) in split_keyval_source(&source) {
     let val = val.trim().trim_matches(['{', '}']).trim();
     match key.trim() {
-      "use counter" if !val.is_empty() => {
+      "use counter" | "auto counter" => {
         // Record which LaTeX counter this env drives so
         // `use counter from=<env>` (\newtcbinputlisting) can share it.
+        let counter = if key.trim() == "auto counter" || val.is_empty() {
+          format!("tcb@cnt@{env_name}")
+        } else {
+          val.to_string()
+        };
         assign_value(
           &format!("tcb_env_counter_{env_name}"),
-          Stored::String(pin(val)),
+          Stored::String(pin(&counter)),
           Some(Scope::Global),
-        );
-        start.insert_str(
-          0,
-          &format!("\\refstepcounter{{{val}}}\\def\\thetcbcounter{{\\csname the{val}\\endcsname}}"),
         );
       },
       "listing file" if !val.is_empty() => {
