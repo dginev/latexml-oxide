@@ -6163,4 +6163,28 @@ V=\hobbyVersion\ from \hobbyDate.
     assert!(!stderr.contains("hobby.code.tex is not implemented"), "{stderr}");
     assert!(xml.contains("V=1.12 from 2023-09-01."), "{xml}");
   }
+  /// tex.web §373: a non-character CS inside `\csname…\endcsname` is
+  /// "Missing \endcsname inserted" via `back_error` — the name ENDS there and
+  /// the offending token is re-read after the constructed CS. The gullet
+  /// reported the error but kept scanning to the real `\endcsname`, so every
+  /// token in between was lost (witness tikzpingus-doc: `\csname …\relax…`
+  /// style key builders dropped their content). Two errors remain, exactly
+  /// real TeX's: "Missing \endcsname inserted" then "Extra \endcsname"
+  /// (tex.web §1135) for the orphaned closer.
+  #[test]
+  fn csname_missing_endcsname_reinserts_after_offender() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\begin{document}
+X\csname foo\relax bar\endcsname Y
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 2, "{stderr}");
+    assert!(stderr.contains("Extra \\endcsname"), "{stderr}");
+    assert!(xml.contains("bar"), "{xml}");
+    assert!(xml.contains("Y"), "{xml}");
+  }
+
 }

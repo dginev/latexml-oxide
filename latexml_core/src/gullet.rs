@@ -2174,6 +2174,13 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   cs
                 );
                 Error!("unexpected", token, message);
+                // tex.web §373 `back_error`: "Missing \endcsname inserted" —
+                // the csname ENDS here and the offending token is re-read
+                // AFTER the constructed CS. Swallowing it instead lost every
+                // token up to the real `\endcsname` (tikzpingus-doc:
+                // `\csname foo\relax bar\endcsname` must typeset "bar").
+                unread_one(token);
+                break;
               }
             },
             _ => {
@@ -2192,6 +2199,9 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
                   let message = s!("The token {:?} is not defined", token);
                   Error!("undefined", token, message);
                 }
+                // §373 back_error recovery, as above.
+                unread_one(token);
+                break;
               }
             },
           }
