@@ -7536,4 +7536,39 @@ After.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[ONE]"), "{xml}");
   }
+
+  /// catchfile.sty:264-296: `\CatchFileDef\cs{file}{setup}` runs `setup`
+  /// inside a group and reads the file's tokens under the catcodes it left —
+  /// `\catcode`\#=12` (codehigh/fontscale `\dochighinput` reads a .sty whose
+  /// `#` would otherwise be a parameter token) and `\endlinechar=-1` — while
+  /// `\CatchFileEdef` expands the contents. Both define the target at the
+  /// outer level (`\let#1` after `\endgroup`). Witnesses: fontscale-code,
+  /// cistercian manuals (codehigh); arXiv 2210.08043, 1611.01359.
+  #[test]
+  fn catchfiledef_reads_under_setup_catcodes_and_edef_expands() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("caught.txt"), "A#1\\foo B\nC\n").expect("write txt");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{article}\\usepackage{catchfile}\n\
+       \\def\\foo{FOO}\n\
+       \\begin{document}\n\
+       \\CatchFileDef\\raw{caught.txt}{\\catcode`\\#=12 \\endlinechar=-1 }\n\
+       \\CatchFileEdef\\exp{caught.txt}{\\catcode`\\#=12 \\endlinechar=-1 }\n\
+       [\\detokenize\\expandafter{\\raw}][\\detokenize\\expandafter{\\exp}]\n\
+       \\end{document}\n",
+    )
+    .expect("write tex");
+    let output = std::process::Command::new(bin)
+      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // `\detokenize`'s backslash renders through OT1 as `“`.
+    assert!(xml.contains("[A#1“foo BC][A#1FOOBC ]"), "{xml}");
+  }
 }
