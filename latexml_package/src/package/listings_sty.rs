@@ -2113,6 +2113,21 @@ LoadDefinitions!({
     let until = init.as_ref().map(|t| {
       if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
+    // Alignment-ledger transparency. `read_token` counts a BEGIN delimiter
+    // into `align_group_count` (Gullet.pm:421 / gullet.rs), but this `{` is a
+    // verbatim delimiter whose `}` is consumed by the raw reader below, never
+    // by the gullet — so undo the increment. Together with the
+    // `\lx@hidden@egroup` closer (instead of a raw `T_END`, which the gullet
+    // would count as −1 without a matching +1 from the direct `bgroup()`)
+    // the inline listing leaves the ledger untouched for EVERY delimiter.
+    // Otherwise `\lstinline|…|` inside a `p{}` cell left the count at −1 and
+    // the row's `\\` was never recognised (bibleref-parse.tex L172: 28-error
+    // unclosed-tabular cascade; `\verb` already used the hidden pair). Perl
+    // listings.sty.ltxml:55-68 shares the leak. Guard:
+    // `perfect_kernel_batch54::lstinline_pipe_in_p_column`.
+    if init.as_ref().is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      decrement_align_group_count();
+    }
     // Switch to verbatim catcodes BEFORE reading the body, so e.g.
     // `\lstinline![ %rcx { 0 } ] = ... ->!` reads its `%` as OTHER
     // rather than as a comment-trigger that drops the rest of the
@@ -2150,7 +2165,7 @@ LoadDefinitions!({
     if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
       result.extend(post.unlist());
     }
-    result.push(T_END!()); // balance bgroup
+    result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (see above)
     Ok(Tokens::new(result))
   });
 
@@ -2231,7 +2246,7 @@ LoadDefinitions!({
         if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
           result.extend(post.unlist());
         }
-        result.push(T_END!()); // balance bgroup
+        result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (as \lx@lstinline)
         Ok(Tokens::new(result))
       }
     )));
@@ -2283,6 +2298,18 @@ LoadDefinitions!({
   NewCounter!("lstnumber");
   DefMacro!("\\thelstnumber", "\\arabic{lstnumber}");
   DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
+
+  // listings.sty:320 `\let\lst@UserCommand\gdef` — the definer listings'
+  // own `\lst@…` user-command declarations and third-party patches use
+  // (`\lst@UserCommand\lstrenewenvironment#1#2#{…}`, tagpdfdocu-patches.sty:65).
+  // The binding reimplements listings, so without it the raw patch's
+  // `#1#2#` PARAM tokens leaked into digestion (tagpdf manual: 7×
+  // "should never reach Stomach" + 6 undefined). Perl listings.sty.ltxml
+  // omits it too. Deliberately NOT adding `\lst@XConvert`/`\lstnewenvironment@`
+  // /`\lst@TestEOLChar`: letting that patch succeed would rebind lstlisting
+  // to latex-lab's unimplemented `blockenv` template. Guard:
+  // `perfect_kernel_batch54::lst_usercommand_is_gdef`.
+  Let!("\\lst@UserCommand", "\\gdef");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })

@@ -6277,4 +6277,52 @@ D
     assert!(xml.contains("G\n0</p>"), "{xml}");
   }
 
+  /// listings.sty:320 `\let\lst@UserCommand\gdef`; patches such as
+  /// tagpdfdocu-patches.sty:65 `\lst@UserCommand\lstrenewenvironment#1#2#{…}`
+  /// otherwise leaked their `#` PARAM tokens into digestion (tagpdf manual:
+  /// 7× "should never reach Stomach").
+  #[test]
+  fn lst_usercommand_is_gdef() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\lst@UserCommand\lst@mytest#1#2#{[#1/#2]}
+\makeatother
+\begin{document}
+\makeatletter\lst@mytest ab{x}\makeatother DONE
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("misdefined"), "{stderr}");
+    assert!(xml.contains("[a/b]xDONE") || xml.contains("[a/b]x DONE"), "{xml}");
+  }
+
+  /// `\lx@lstinline` opened its group with a direct `bgroup()` but closed it
+  /// with a raw `T_END`, which the gullet counts as −1 on the alignment
+  /// ledger; with a non-brace delimiter nothing compensated, so inside a
+  /// `p{}` cell the row's `\\` was never recognised and the tabular never
+  /// closed (witness bibleref-parse L172: 28-error cascade).
+  #[test]
+  fn lstinline_pipe_in_p_column() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{tabular}{p{3cm}p{3cm}}
+A & \lstinline|\foo| here\\
+C & \lstinline{\bar} third\\
+\end{tabular}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    assert!(xml.contains("ltx_lst_identifier\">foo"), "{xml}");
+    assert!(xml.contains("third"), "{xml}");
+  }
+
 }
