@@ -12072,7 +12072,14 @@ LoadDefinitions!({
   // `_constructs.rs`).
   def_macro_noop("\\check@mathfonts")?;
   def_macro_noop("\\fontsize{}{}")?;
-  DefMacro!("\\@setfontsize{}{}{}", "\\let\\@currsize#1");
+  // latex.ltx:14103-14107 guards the `\let` with `\ifx\protect\@typeset@protect`
+  // so `\@setfontsize` is a no-op inside `\protected@edef`; unguarded (Perl
+  // latex_constructs.pool:5622 identical, OOMs same-host) a raw class whose
+  // size commands route through it (tufte-common.def:368-405) re-expanded
+  // `\@currsize`→`\normalsize`→`\@setfontsize\normalsize…` without bound
+  // when pgf edef'd a `font=\normalsize` label — tikz-network manual
+  // PushbackLimit Fatal. `\@nomath`/`\fontsize…\selectfont` stay dropped.
+  DefMacro!("\\@setfontsize{}{}{}", "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fi");
   // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
   // `\begin{document}` has run `\normalsize` (whose class definition routes
   // through `\@setfontsize`). Our class bindings define the size commands as

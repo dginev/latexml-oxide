@@ -6736,4 +6736,29 @@ A\forest [root [w=\frac{1}{3}] [b]]\endforest B
     assert!(!xml.contains("XMApp"), "tree body leaked: {xml}");
     assert!(xml.contains("A") && xml.contains("B"), "{xml}");
   }
+
+  /// latex.ltx:14103-14107 `\@setfontsize` only `\let\@currsize#1` under
+  /// `\ifx\protect\@typeset@protect`, so it is inert inside `\protected@edef`.
+  /// Our binding (and Perl latex_constructs.pool:5622, which OOMs same-host)
+  /// dropped the guard: a raw class routing its size commands through
+  /// `\@setfontsize` (tufte-common.def:368-405) re-expanded
+  /// `\@currsize`→`\normalsize`→`\@setfontsize\normalsize…` without bound
+  /// once pgf edef'd tikz-network's `font=\normalsize` label. Witness:
+  /// tikz-network manual (PushbackLimit Fatal, no output).
+  #[test]
+  fn setfontsize_is_inert_inside_protected_edef() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\renewcommand\normalsize{\@setfontsize\normalsize\@xpt{14}}
+\protected@edef\lx@probe{\normalsize}
+\makeatother
+\begin{document}
+probe ok
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("PushbackLimit"), "{stderr}");
+    assert!(xml.contains("<p>probe ok</p>"), "{xml}");
+  }
 }
