@@ -4537,4 +4537,36 @@ Guard `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
 \definecolor{dst}{\m}{\s}
 \textcolor{dst}{X}
 \end{document}
+```## 119. `\def` parameter text collapses adjacent space tokens in a delimiter (Rust keeps them)
+
+`TeX_Macro.pool.ltxml` L127 builds a macro's delimited-parameter (`Until:`)
+delimiter with `push(@delim, $d) unless $pc == CC_SPACE && $inner_cc == CC_SPACE;
+# BUT collapse whitespace!`. tex.web §473-476 (`scan_toks` for a parameter
+text) reads with `get_token` and keeps every token; the only space folding is
+the tokenizer's `skip_blanks` state, which has already run for file-sourced
+text. So the collapse is dead for a `\def` read from a file and wrong for a
+parameter text built by expansion. expkv.tex L709-712 `\ekv@set@was@blank`
+defines a `#1` delimiter `…\ekv@mark␣␣\ekv@nil…` with TWO real spaces (`{ }`
+pushed through `\ekv@strip@key` twice); Perl's one-space delimiter never
+matches, the marker dance derails (`\ekv@stop`/`\ekv@nil`/`\ekv@mark`
+"undefined", then 100 errors → `too_many_errors`), and in Rust the re-scanned
+tail ran to `Fatal:Timeout:TokenLimit`. Triggered by any empty/blank expkv
+entry — clrstrip.sty L49-77 `\colorstripSet` → `\ekvset{clrstrip}{}` (witness
+tutodoc-en/fr, `examples-showcase-input-stripe` line 15).
+
+Rust keeps every delimiter token (`base_utilities.rs` `parse_def_parameters`);
+guards `perfect_kernel_batch53::def_delimiter_keeps_adjacent_spaces`,
+`expkv_blank_entry_does_not_leak_markers`. Package-free trigger (pdflatex 0
+errors; Perl 1 error):
+
+```latex
+\documentclass{article}
+\makeatletter
+\def\A{}\def\B{}\def\SP{ }
+\protected@edef\deltoks{\noexpand\A\SP\SP\noexpand\B}
+\expandafter\def\expandafter\x\expandafter#\expandafter1\deltoks{[GOT:#1]OK}
+\makeatother
+\begin{document}
+\expandafter\x\expandafter Q\deltoks  % Perl: Missing argument Until:\A \B
+\end{document}
 ```

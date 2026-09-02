@@ -5290,4 +5290,31 @@ B=\IfFormatAtLeastTF{2020/01/01}{Y}{N}.
     assert!(xml.contains("A=N."), "{xml}");
     assert!(xml.contains("B=Y."), "{xml}");
   }
+
+  /// tutodoc-en/fr: a `\def` parameter text built by expansion keeps BOTH of
+  /// two adjacent space tokens in its delimiter (tex.web §473-476); Perl
+  /// TeX_Macro.pool.ltxml L127 collapsed them (KNOWN_PERL_ERRORS #119), so
+  /// expkv's `\ekv@set@was@blank` delimiter (two real spaces) never matched
+  /// and `\ekvset{clrstrip}{}` ran away to `Timeout:TokenLimit`.
+  #[test]
+  fn def_delimiter_keeps_adjacent_spaces() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\makeatletter
+\def\A{}\def\B{}\def\SP{ }
+\protected@edef\deltoks{\noexpand\A\SP\SP\noexpand\B}
+\expandafter\def\expandafter\x\expandafter#\expandafter1\deltoks{[GOT:#1]OK}
+\makeatother
+\begin{document}
+Before.
+\expandafter\x\expandafter Q\deltoks
+After.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("[GOT:Q]OK"), "{xml}");
+  }
 }

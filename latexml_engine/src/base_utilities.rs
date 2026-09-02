@@ -3281,19 +3281,27 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
         }
       }
       // Check for delimiting text following the parameter #n
+      // Every token of the delimiter is kept, consecutive SPACE tokens
+      // included (tex.web §473-476 `scan_toks` reads the parameter text with
+      // `get_token`, no collapsing; the tokenizer's `skip_blanks` state has
+      // already folded file-sourced runs before they get here). Perl
+      // TeX_Macro.pool.ltxml L127 drops the second of two adjacent spaces
+      // ("BUT collapse whitespace!"), which only ever bites an
+      // expansion-built parameter text: expkv.tex L709-712
+      // `\ekv@set@was@blank`'s `#1` delimiter carries TWO real spaces
+      // (`{ }` through `\ekv@strip@key` twice), so the collapsed `Until:`
+      // never matched, the marker dance derailed (`\ekv@stop`/`\ekv@nil`
+      // undefined) and the re-scanned tail ran to `Timeout:TokenLimit`
+      // (witness tutodoc-en/fr via clrstrip's `\ekvset{clrstrip}{}`;
+      // KNOWN_PERL_ERRORS #119; guard
+      // `perfect_kernel_batch53::def_delimiter_keeps_adjacent_spaces`).
       let mut delim = Vec::new();
-      let mut pc = Catcode::MARKER; // throwaway initial val
       while !tokens.is_empty() {
         let inner_cc = tokens.front().unwrap().get_catcode();
         if inner_cc == Catcode::PARAM || inner_cc == Catcode::ARG {
           break;
         }
-        let d = tokens.pop_front().unwrap();
-        if !(pc == Catcode::SPACE && inner_cc == Catcode::SPACE) {
-          // BUT collapse whitespace!
-          delim.push(d);
-        }
-        pc = inner_cc;
+        delim.push(tokens.pop_front().unwrap());
       }
       // Found text that marks the end of the parameter
       if !delim.is_empty() {
