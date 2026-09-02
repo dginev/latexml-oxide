@@ -211,6 +211,50 @@ LoadDefinitions!({
   // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).
   Let!("\\@listI", "\\@listi");
 
+  // expl3 `\tl_set_rescan:Nnn` core (expl3-code.tex:3758-3790): real eTeX
+  // sets `\everyeof` to a marker, `\scantokens` the string, and lets
+  // `\__tl_rescan:NNw #1#2#3 <marker>` capture EVERYTHING the pseudo-file
+  // yielded as a delimited argument — PARAM tokens included — before
+  // `\group_end:` and `#1 #2 {#3}`. Our `\scantokens` cannot insert the
+  // `\everyeof` payload (wiring it loops the l3doc family — settled dead-end,
+  // PLANS P15 / etex.rs), so the delimited scan ran to the pseudo-file end,
+  // `read_until` unread the collected tokens and a rescanned macro MEANING
+  // (`\cs_meaning:N` → `\long macro:#1#2#3->…`) leaked its `#`s into
+  // digestion: substances.sty:452 `\tl_set_rescan:Nnx … {\cs_meaning:N #1}`
+  // (substances manual, 720 `misdefined:#`). Perl identical (eTeX.pool
+  // `\everyeof` unused; Gullet.pm:683 unread-on-miss). Do the rescan
+  // atomically instead: tokenize the string under the CURRENT (group-local,
+  // caller-configured) catcodes exactly as the pseudo-file would, and hand
+  // the tokens to the unchanged `\__tl_rescan:NNw` protocol with the
+  // marker appended — no mouth, no EOF, nothing for a nested scan to cross.
+  // `\prg_do_nothing:` stays in front: `\tl_set:No` o-expands it away.
+  // The dispatcher's own rule (:3782-3790): content without the
+  // `\newlinechar` character is single-line and rescans under
+  // `\endlinechar=-1` (no trailing end-of-line token) — a local assignment
+  // inside the caller's group, as in expl3.
+  DefMacro!("\\__tl_set_rescan:nNN {} Token Token", sub[(content, setter, target)] {
+    let text = writable_tokens(&content);
+    let register_int = |cs: &str| -> i64 {
+      lookup_definition(&T_CS!(cs)).ok().flatten()
+        .and_then(|d| d.value_of(Vec::new()))
+        .map(|v| v.value_of()).unwrap_or(-1)
+    };
+    let newline = register_int("\\newlinechar");
+    let multi = (0..=255).contains(&newline) && text.contains(newline as u8 as char);
+    if !multi {
+      assign_register("\\endlinechar", RegisterValue::Number(Number::new(-1)), None, Vec::new())?;
+    }
+    let mut mouth = Mouth::new(&text, None)?;
+    let mut toks = vec![T_CS!("\\__tl_rescan:NNw"), setter, target, T_CS!("\\prg_do_nothing:")];
+    while let Some(t) = mouth.read_token() {
+      if t.get_catcode() != Catcode::COMMENT {
+        toks.push(t);
+      }
+    }
+    toks.extend(do_expand(T_CS!("\\c__tl_rescan_marker_tl"))?.unlist());
+    Tokens::new(toks)
+  });
+
   //======================================================================
   // 4. Misc Rust-side stubs
   //======================================================================

@@ -6921,4 +6921,35 @@ x & y \\
     assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
     assert_eq!(xml.matches("<tr").count(), 3, "{xml}");
   }
+
+  /// expl3-code.tex:3758-3790: `\tl_set_rescan:Nnn` captures the WHOLE
+  /// `\scantokens` output (PARAM tokens included) through `\everyeof` +
+  /// `\__tl_rescan:NNw`'s delimited scan. Our `\scantokens` cannot carry the
+  /// `\everyeof` payload (P15 dead-end), so the scan ran to EOF and a
+  /// rescanned macro MEANING leaked its `#`s to digestion — substances.sty:452
+  /// (substances manual, 720 `misdefined:#`; Perl identical). The core now
+  /// rescans atomically under the caller's catcodes.
+  #[test]
+  fn tl_set_rescan_captures_param_tokens() {
+    let tex = r"\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \FooEntry #1#2#3 { #1@#3|see{#2} }
+\cs_new_protected:Npn \contains_see:N #1
+  {
+    \tl_set_rescan:Nnx \l_tmpa_tl {} {\cs_meaning:N #1 }
+    \tl_if_in:VnT \l_tmpa_tl { |see } { YESSEE }
+  }
+\tl_set_rescan:Nnn \l_tmpb_tl { \char_set_catcode_other:N \\ } { A\B }
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn \contains_see:N \FooEntry [\tl_use:N \l_tmpb_tl] \ExplSyntaxOff
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("misdefined"), "{stderr}");
+    assert!(xml.contains("YESSEE"), "rescan lost the meaning: {xml}");
+    // the caller's catcode setup governs the rescan: `\` as OTHER is text
+    assert!(xml.contains("[A") && xml.contains("B]"), "{xml}");
+  }
 }
