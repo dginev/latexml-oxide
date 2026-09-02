@@ -6,6 +6,12 @@ use crate::discard_env::discard_env_body;
 LoadDefinitions!({
   RequirePackage!("tikz");
   RequirePackage!("etoolbox");
+  // Register the load the way the real forest.sty:1 `\ProvidesPackage` does,
+  // so `\@ifpackageloaded{forest}` / `\@ifpackagelater{forest}{…}` in
+  // dependants (forest-doc's own preamble, neoschool.cls) take the loaded
+  // branch instead of concluding forest is absent. Guard:
+  // `perfect_kernel_batch54::forest_binding_registers_as_loaded`.
+  RawTeX!(r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]");
   Warn!(
     "missing_file",
     "forest.sty",

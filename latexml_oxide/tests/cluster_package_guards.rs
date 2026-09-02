@@ -6187,4 +6187,22 @@ X\csname foo\relax bar\endcsname Y
     assert!(xml.contains("Y"), "{xml}");
   }
 
+  /// The forest binding replaces the raw forest.sty, whose :1
+  /// `\ProvidesPackage{forest}` is what `\@ifpackageloaded{forest}` in
+  /// dependants keys on (forest-doc preamble, neoschool.cls).
+  #[test]
+  fn forest_binding_registers_as_loaded() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{forest}
+\begin{document}
+\makeatletter\@ifpackageloaded{forest}{LOADED}{ABSENT}\makeatother
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("LOADED") && !xml.contains("ABSENT"), "{xml}");
+  }
+
 }
