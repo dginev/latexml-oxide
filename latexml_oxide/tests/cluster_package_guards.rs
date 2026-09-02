@@ -7423,4 +7423,47 @@ After.
     assert!(frame < first_listing, "{xml}");
     assert!(xml.contains("<p>After.</p>"), "{xml}");
   }
+
+  /// tex.web §982/§987: `\pagegoal` is `\vsize` once the page has content;
+  /// with no page builder the standing value must serve every "free space"
+  /// probe — Perl's 0 loops fullwidth.sty:243-273, `\maxdimen` sent
+  /// fillwith.sty:319's coffin stacking after a 16384pt goal (TokenLimit).
+  /// `\strutbox` is the real latex.ltx:12596 strut (.7/.3 `\baselineskip`),
+  /// not void, so `\strut`-based line heights are honest.
+  #[test]
+  fn pagegoal_is_vsize_and_strutbox_is_real() {
+    let tex = r"\documentclass{article}
+\begin{document}
+[\the\pagegoal][\the\vsize][\the\ht\strutbox,\the\dp\strutbox]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[1000.0pt][1000.0pt]"), "{xml}");
+    assert!(xml.contains("[8.39996pt,3.60004pt]"), "{xml}");
+  }
+
+  /// fullwidth.sty:243-273 `\fwd@freepagevspace` retries `\vfill\eject` while
+  /// `\pagegoal - \pagetotal < 2\baselineskip`; with `\pagegoal=\vsize` the
+  /// frame is placed at once (Perl's `\pagegoal=0` loops).
+  #[test]
+  fn fullwidth_frame_does_not_retry_forever() {
+    let tex = r"\documentclass{article}
+\usepackage{fullwidth}
+\begin{document}
+Before.
+\begin{fullwidth}
+Wide text.
+\end{fullwidth}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Not enough space"), "{stderr}");
+    assert!(
+      xml.contains("Wide text.") && xml.contains("After."),
+      "{xml}"
+    );
+  }
 }

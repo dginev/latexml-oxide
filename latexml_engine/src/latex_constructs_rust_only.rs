@@ -217,6 +217,12 @@ LoadDefinitions!({
   // size commands restore (`\let\@listi\@listI`, size10.clo:53,
   // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).
   Let!("\\@listI", "\\@listi");
+  // `\strutbox` (latex.ltx:12596-12599, rebuilt by `\set@fontsize` from
+  // `\baselineskip`): box registers do not survive the dump and our size
+  // commands are primitives, so give the 10pt default here — `.7`/`.3` of
+  // the 12pt `\baselineskip`. Left void, every `\strut`-based height was 0
+  // (fillwith stacked ~200 line coffins instead of ~50 → TokenLimit).
+  RawTeX!(r"\setbox\strutbox\hbox{\vrule\@height.7\baselineskip\@depth.3\baselineskip\@width\z@}");
 
   // expl3 `\tl_set_rescan:Nnn` core (expl3-code.tex:3758-3790): real eTeX
   // sets `\everyeof` to a marker, `\scantokens` the string, and lets

@@ -600,9 +600,15 @@ LoadDefinitions!({
   // kernel. Faithful literal port. \z@/\m@th/\nulldelimiterspace all exist.
   DefMacro!("\\n@space", r"\nulldelimiterspace\z@ \m@th");
 
-  // \strutbox
+  // \strutbox — plain.tex:587-588 sets the box at format time (latex.ltx
+  // rebuilds it from `\baselineskip` in `\set@fontsize`, :12596-12599, see
+  // `\@setfontsize`). Left void it made every `\strut`-based height 0:
+  // fillwith's `\fillwithnolines` (fillwith.sty:319) stacked ~200 line
+  // coffins instead of ~50 to reach the page goal and l3coffins' quadratic
+  // corner-name growth ran to the TokenLimit (fillwith manual). `\strut`
+  // itself stays inert in text.
   def_macro_noop("\\strut")?;
-  TeX!("\\newbox\\strutbox");
+  TeX!("\\newbox\\strutbox\\setbox\\strutbox=\\hbox{\\vrule height8.5pt depth3.5pt width\\z@}");
   //======================================================================
   // TeX Book, Appendix B. p. 354
 

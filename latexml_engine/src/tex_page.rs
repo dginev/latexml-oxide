@@ -33,17 +33,34 @@ LoadDefinitions!({
   DefRegister!("\\maxdepth", Dimension!("4pt"));
   DefRegister!("\\vsize", Dimension!("8.9in"));
 
-  // tex.web §982/§987: while the current page is EMPTY, `page_goal` is
-  // `max_dimen` (it becomes `\vsize` only when the page builder first
-  // contributes a box — which our model never does, so the page is
-  // permanently empty and max_dimen is the faithful standing value).
-  // Perl uses Dimension(0), which makes "free space on page" probes
-  // compute 0−0=0 and loop: fullwidth.sty's `\fwd@freepagevspace`
-  // retried `\vfill\eject` forever ("Not enough space on this page"
-  // ×∞ → Stomach:Recursion fatal). With max_dimen it takes its
-  // `\ifdimequal{\pagegoal}{\maxdimen}` empty-page branch and uses
-  // `\vsize`, as under real TeX at page start.
-  DefRegister!("\\pagegoal", Dimension::new(0x3FFF_FFFF));
+  // tex.web §982/§987: `page_goal` is `max_dimen` only while the current
+  // page is EMPTY; the moment the page builder contributes a box it becomes
+  // `\vsize` (minus insertions). Our model has no page builder, so a single
+  // standing value must serve every "free space on this page" probe: Perl
+  // uses Dimension(0) (fullwidth.sty:243-273 `\fwd@freepagevspace` computes
+  // 0−0 and retries `\vfill\eject` forever — SHARED loop), batch 28 used
+  // `\maxdimen` (fullwidth's `\ifdimequal{\pagegoal}{\maxdimen}` branch
+  // then took `\vsize`, but fillwith.sty:319 `\dim_until_do … \pagegoal -
+  // \footskip - \pagetotal …` stacked ~1300 line coffins toward a 16384pt
+  // goal and l3coffins' quadratic corner naming ran to the TokenLimit).
+  // `\vsize` — the mid-page value — satisfies both: fullwidth's free space
+  // is `\vsize − \pagetotal`, fillwith fills one page (~50 coffins with a
+  // real `\strutbox`, latex_constructs_rust_only.rs). Guard:
+  // `perfect_kernel_batch54::pagegoal_is_vsize_and_strutbox_is_real`.
+  DefRegister!("\\pagegoal", Dimension!("8.9in"),
+  getter => sub[_args] {
+    // Follow `\vsize` (classes set it) unless the document assigned
+    // `\pagegoal` itself.
+    match lookup_value("pagegoal_assigned") {
+      Some(Stored::Dimension(d)) => Some(RegisterValue::Dimension(d)),
+      _ => lookup_dimension_cs("\\vsize", true).map(RegisterValue::Dimension),
+    }
+  },
+  setter => sub[value, scope, _args] {
+    if let RegisterValue::Dimension(d) = value {
+      assign_value("pagegoal_assigned", Stored::Dimension(d), scope);
+    }
+  });
   DefRegister!("\\pagestretch", Dimension::new(0));
   DefRegister!("\\pagefilstretch", Dimension::new(0));
   DefRegister!("\\pagefillstretch", Dimension::new(0));

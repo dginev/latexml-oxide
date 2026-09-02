@@ -12108,9 +12108,13 @@ LoadDefinitions!({
   // `\@currsize`→`\normalsize`→`\@setfontsize\normalsize…` without bound
   // when pgf edef'd a `font=\normalsize` label — tikz-network manual
   // PushbackLimit Fatal. `\@nomath`/`\fontsize…\selectfont` stay dropped.
+  // …and `\set@fontsize` (latex.ltx:12580-12599) sets `\baselineskip` from
+  // `#3` and rebuilds `\strutbox` as `.7\baselineskip`/`.3\baselineskip` —
+  // the part that keeps `\strut`-based measurements honest (fillwith's line
+  // coffins, see plain_base.rs `\strutbox`).
   DefMacro!(
     "\\@setfontsize{}{}{}",
-    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fi"
+    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\baselineskip#3\\relax\\setbox\\strutbox\\hbox{\\vrule\\@height.7\\baselineskip\\@depth.3\\baselineskip\\@width\\z@}\\fi"
   );
   // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
   // `\begin{document}` has run `\normalsize` (whose class definition routes
