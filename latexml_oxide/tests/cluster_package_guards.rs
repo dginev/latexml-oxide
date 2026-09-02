@@ -6588,6 +6588,17 @@ F[\fp_eval:n { 800 - 0 * 3 }][\fp_eval:n { (0*3) + 800 }][\fp_eval:n { -0 * 3 }]
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("K[-1][1][-2][-4][4][3][-3]"), "{xml}");
     assert!(xml.contains("F[800][800][-0]"), "{xml}");
+    // `\dimexpr` shares `quotient` (pdflatex-probed 2026-09-02; the xy
+    // `\dimexpr(\X@p+2\A@)/3` curve-control shape, xytest golden re-blessed).
+    let tex = r"\documentclass{article}
+\begin{document}
+\newdimen\A \A=-107.6pt
+D[\the\dimexpr -1sp/2\relax][\the\dimexpr 1sp/2\relax][\the\dimexpr -3sp/2\relax][\number\dimexpr\A/3\relax][\number\dimexpr(-1pt+2\A)/3\relax]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("D[-0.00002pt][0.00002pt][-0.00003pt][-2350558][-4722961]"), "{xml}");
   }
 
   /// `\read` past end-of-file reads the synthetic empty line + `\endlinechar`
@@ -6646,4 +6657,5 @@ X\lb X\la X
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[42]"), "{xml}");
   }
+
 }

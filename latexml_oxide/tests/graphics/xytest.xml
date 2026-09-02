@@ -54,7 +54,7 @@
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -3.8 6.41" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.17 2.02" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 0 0 C 14.793466726608983 -35.86919670268611 38.190487758308684 -64.77314785537308 70.19102086792583 -86.71181123088765" fill="none" stroke="#000000"/>
+          <svg:path d="M 0 0 C 14.793466726608983 -35.869217816272744 38.190487758308684 -64.77316896895972 70.19102086792583 -86.71181123088765" fill="none" stroke="#000000"/>
           <svg:path d="M 9.629189003152241 -5.943010139386156 L 9.650830429455082 -5.97791089809698" fill="none" stroke="#000000"/>
           <svg:g transform="translate(53.77,0) translate(0,-33.21)">
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.43 5.99" fill="none" stroke="#000000"/>
@@ -73,7 +73,7 @@
             <svg:path d="M 0 0 A 13.84 13.84 45 0 0 -4.82 5.68" fill="none" stroke="#000000"/>
             <svg:path d="M 0 0 A 13.84 13.84 45 0 1 -7.41 0.78" fill="none" stroke="#000000"/>
           </svg:g>
-          <svg:path d="M 0 0 C 50.30478813579935 -3.8688113881754185 97.36433355115798 -18.32076585093227 141.1786362460759 -43.355905615443824" fill="none" stroke="#000000"/>
+          <svg:path d="M 0 0 C 50.30478813579935 -3.8688325017620553 97.36433355115798 -18.320786964518906 141.1786362460759 -43.355905615443824" fill="none" stroke="#000000"/>
           <svg:g transform="translate(42.84,0) translate(0,-43.36) translate(4.15,0) translate(0,-3.46)">
             <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:3.35em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="46.4"><Math mode="inline" tex="\textstyle{X\times_{Z}Y\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces\ignorespaces}" text="(* _ Z)@(X, Y)" xml:id="p2.pic1.m5">
                 <XMath>
