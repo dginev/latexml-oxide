@@ -1798,8 +1798,14 @@ LoadDefinitions!({
   } else {
     arg
   }});
-  DefMacro!("\\AtEndPreamble[]{}", sub[(_label, arg)] {
-  push_value("@document@preamble@atend", arg.unlist())?; });
+  // `\AtEndPreamble` is literally `\AddToHook{begindocument/before}`
+  // (etoolbox.sty:1743), so its code runs IN ORDER with the other
+  // `begindocument/before` chunks: doc.sty:907-910 loads hypdoc (→ hyperref)
+  // from that hook, and liftarm.tex:39 / wheelchart.tex:128 `\AtEndPreamble
+  // {\hypersetup{…}}` under ltxdoc rely on being queued after it. The
+  // private `@document@preamble@atend` list fires BEFORE the L3 hook
+  // (latex_constructs.rs `\document`), so `\hypersetup` was still undefined.
+  DefMacro!("\\AtEndPreamble", r"\AddToHook{begindocument/before}");
   DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
   push_value("@document@preamble@afterend", arg.unlist())?; });
   DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {

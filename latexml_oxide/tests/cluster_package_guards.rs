@@ -6829,4 +6829,23 @@ $\begin{array}{c} p \\ q \end{array}$
     assert!(xml.contains(r#"role="OPEN">(</XMTok>"#) || xml.contains(r#">(</XMTok>"#), "{xml}");
     assert!(xml.contains(r#">{</XMTok>"#), "{xml}");
   }
+
+  /// etoolbox.sty:1743: `\AtEndPreamble` IS `\AddToHook{begindocument/before}`,
+  /// so it queues in order with doc.sty:907-910's chunk that loads hypdoc
+  /// (→ hyperref) at `\begin{document}`; a private list that fired before
+  /// the L3 hook saw `\hypersetup` undefined. Witnesses: liftarm.tex:39,
+  /// wheelchart.tex:128 (ltxdoc manuals; SHARED with Perl).
+  #[test]
+  fn etoolbox_atendpreamble_runs_after_earlier_begindocument_before_chunks() {
+    let tex = r"\documentclass{ltxdoc}
+\usepackage{etoolbox}
+\AtEndPreamble{\hypersetup{colorlinks=true}}
+\begin{document}
+Hello.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hello.</p>"), "{xml}");
+  }
 }
