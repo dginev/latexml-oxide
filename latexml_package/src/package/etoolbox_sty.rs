@@ -1785,18 +1785,24 @@ LoadDefinitions!({
   // \AtEndPreamble
   // \AfterEndPreamble
   // \AfterEndDocument
-  DefMacro!("\\AfterPreamble{}", sub[(arg)] {
+  // Under a 2020-10+ format these are `\AddToHook{begindocument/before}` etc.
+  // (etoolbox.sty:1740-1746), so they accept the hook system's optional
+  // `[label]` — tcbdocumentation.code.tex:69 `\AtEndPreamble[tcolorbox]{…}`
+  // defines `\meta`; without the `[]` the label was read as the code and the
+  // real code executed at once (witness: xassoccnt_doc `undefined:\meta`).
+  // Same treatment as `\AtBeginDocument[]{}` (Perl 93f875a6).
+  DefMacro!("\\AfterPreamble[]{}", sub[(_label, arg)] {
   if lookup_bool_sym(pin!("inPreamble")) {
     push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {
     arg
   }});
-  DefMacro!("\\AtEndPreamble{}", sub[(arg)] {
+  DefMacro!("\\AtEndPreamble[]{}", sub[(_label, arg)] {
   push_value("@document@preamble@atend", arg.unlist())?; });
-  DefMacro!("\\AfterEndPreamble{}", sub[(arg)] {
+  DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
   push_value("@document@preamble@afterend", arg.unlist())?; });
-  DefMacro!("\\AfterEndDocument{}", sub[(arg)] {
+  DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
   push_value("@after@end@document", arg.unlist())?; });
 
   at_end_document(TokenizeInternal!(r"\let\AfterEndPreamble\@gobble"))?;

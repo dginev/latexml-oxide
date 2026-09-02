@@ -6693,4 +6693,22 @@ hello world
     assert!(xml.contains("[hello world"), "{xml}");
     assert_eq!(xml.matches("foo").count(), 1, "stale first write re-input: {xml}");
   }
+  /// etoolbox.sty:1740-1746: under a 2020-10+ format `\AtEndPreamble` IS
+  /// `\AddToHook{begindocument/before}`, so it takes the hook system's
+  /// optional `[label]`. tcbdocumentation.code.tex:69 defines `\meta`
+  /// inside `\AtEndPreamble[tcolorbox]{…}`; the binding read `[tcolorbox]`
+  /// as the hook code. Witness: xassoccnt_doc (`undefined:\meta`).
+  #[test]
+  fn etoolbox_atendpreamble_accepts_hook_label() {
+    let tex = r"\documentclass{article}
+\usepackage[most,documentation]{tcolorbox}
+\begin{document}
+Syntax: \meta{true,false}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("true,false"), "{xml}");
+    assert!(!xml.contains("tcolorbox]"), "label leaked as text: {xml}");
+  }
 }
