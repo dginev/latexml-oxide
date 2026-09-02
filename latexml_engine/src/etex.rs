@@ -589,31 +589,14 @@ LoadDefinitions!({
   DefRegister!("\\synctex", Number::new(0));
   def_macro_noop("\\reserveinserts{}")?;
 
-  //======================================================================
-  // etex.sty register-allocator macros (etex.sty L332-348). Real defs
-  // use `\et@xglob`/`\et@xloc` to allocate from extended register
-  // pools (Numbers 256+ for count/dimen/etc.). For our purposes the
-  // semantic is "allocate a new register"; forward to LaTeX's
-  // `\newcount`/`\newdimen`/etc. which already exist.
-  //
-  // Glob* variants allocate globally; loc* variants locally.
-  // In LaTeXML's flat-state model these are effectively equivalent.
-  //
-  // Witness: arXiv:2506.16610 / .16657 / .20642 (papers via etex.sty
-  // raw-load + linegoal.sty / etextools / similar). Rust 2 → 0
-  // expected, beating Perl=3.
-  DefMacro!("\\globcount", "\\newcount");
-  DefMacro!("\\loccount", "\\newcount");
-  DefMacro!("\\globdimen", "\\newdimen");
-  DefMacro!("\\locdimen", "\\newdimen");
-  DefMacro!("\\globskip", "\\newskip");
-  DefMacro!("\\locskip", "\\newskip");
-  DefMacro!("\\globmuskip", "\\newmuskip");
-  DefMacro!("\\locmuskip", "\\newmuskip");
-  DefMacro!("\\globbox", "\\newbox");
-  DefMacro!("\\locbox", "\\newbox");
-  DefMacro!("\\globtoks", "\\newtoks");
-  DefMacro!("\\loctoks", "\\newtoks");
-  DefMacro!("\\globmarks", "\\newmarks");
-  DefMacro!("\\locmarks", "\\newmarks");
+  // The etex.sty register-allocator macros (`\globcount` … `\loctoks` …)
+  // live in `etex_sty.rs`: they are PACKAGE macros (etex.sty:332-348), not
+  // eTeX-format primitives, and Perl's eTeX.pool.ltxml defines none of them.
+  // Defining them in the always-on pool made expl3's l3sort freeze the
+  // `\cs_if_exist:NT \loctoks` branch of `\__sort_compute_range:`
+  // (expl3-code.tex:23356-23364, `\count265`/`\count275` bounds) into the
+  // dump instead of the base `\count15` branch (Perl latex_dump.pool:8589),
+  // and once a package load left `\count265` > 0 every `\seq_sort`/`\clist_sort`
+  // ran an inverted range to the TokenLimit (spath3, tabularray, testidx,
+  // randintlist-l3, cistercian, circularglyphs … manuals).
 });

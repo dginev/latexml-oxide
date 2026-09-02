@@ -7207,4 +7207,44 @@ A\csname l@\beamer@torinoth@language\endcsname B
     assert!(!stderr.contains("should not appear"), "{stderr}");
     assert!(xml.contains("A") && xml.contains("B"), "{xml}");
   }
+
+  /// etex.sty's register allocators (`\globcount`…`\loctoks`…, etex.sty:332-348)
+  /// are PACKAGE macros; Perl's eTeX pool defines none. In the always-on pool
+  /// they made l3sort freeze the `\cs_if_exist:NT \loctoks` branch of
+  /// `\__sort_compute_range:` (expl3-code.tex:23356-23364, `\count265`/
+  /// `\count275`) into the dump, and once a package load left `\count265` > 0
+  /// every `\seq_sort` ran an inverted range to the TokenLimit (spath3
+  /// `insert gaps after components`, tabularray/testidx/cistercian manuals).
+  /// Needs the regenerated dump (base `\count15` branch, Perl
+  /// latex_dump.pool:8589).
+  #[test]
+  fn l3sort_after_package_registers_terminates() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{spath3}
+\begin{document}
+\ExplSyntaxOn
+\seq_set_from_clist:Nn \l_tmpa_seq { 3 , 1 , 2 }
+\seq_sort:Nn \l_tmpa_seq { \int_compare:nNnTF {#1} < {#2} { \sort_return_same: } { \sort_return_swapped: } }
+[\seq_use:Nn \l_tmpa_seq { - }]
+\ExplSyntaxOff
+\begin{tikzpicture}
+\draw[spath/save=p] (0,0) -- (1,0) (2,0) -- (3,0);
+\tikzset{spath/.cd, insert gaps after components={p}{10pt}{1}}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("TokenLimit"), "{stderr}");
+    assert!(xml.contains("[1-2-3]"), "{xml}");
+    assert!(xml.contains("<svg:path"), "{xml}");
+    // no etex.sty loaded: the allocators stay undefined, like Perl/LaTeX
+    let (stderr2, xml2) = convert(
+      r"\documentclass{article}\begin{document}[\ifdefined\loctoks Y\else N\fi]\end{document}",
+      false,
+    );
+    assert_eq!(error_count(&stderr2), 0, "{stderr2}");
+    assert!(xml2.contains("[N]"), "{xml2}");
+  }
 }
