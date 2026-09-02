@@ -333,6 +333,14 @@ LoadDefinitions!({
     Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}}}"))))
   });
   DefMacro!("\\endtblr", "\\endtabular");
+  // tabularray.sty:3472-3477 creates `longtblr`/`talltblr` with the same
+  // factory (`long`/`tall` outer specs add page-breaking + caption/notes
+  // layout the tabular reduction has no slot for). Witness: panda manual
+  // (`{longtblr}` undefined → 149 relational-token errors + EoF Fatal).
+  DefMacro!("\\longtblr []{}", "\\tblr[#1]{#2}");
+  DefMacro!("\\endlongtblr", "\\endtblr");
+  DefMacro!("\\talltblr []{}", "\\tblr[#1]{#2}");
+  DefMacro!("\\endtalltblr", "\\endtblr");
   DefMacro!("\\booktabs", "\\tabular");
   DefMacro!("\\endbooktabs", "\\endtabular");
   DefMacro!("\\UseTblrLibrary", "\\usepackage");

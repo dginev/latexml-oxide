@@ -6897,4 +6897,28 @@ Hello.
     assert!(!stderr.contains("Until:@"), "{stderr}");
     assert!(xml.contains(r#"d="M 0 0 C "#), "no Hobby cubic: {xml}");
   }
+
+  /// tabularray.sty:3472-3477 builds `longtblr`/`talltblr` with the same
+  /// factory as `tblr`; the binding knew only `tblr`, so `{longtblr}` was an
+  /// undefined environment whose body cascaded (panda manual: 149
+  /// `<relationaltoken>` errors + `Until:` EoF Fatal).
+  #[test]
+  fn tabularray_longtblr_and_talltblr_are_tblr() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{longtblr}[theme=naked]{colspec={Xll}, rowhead=1}
+A & B & C \\
+1 & 2 & 3 \\
+\end{longtblr}
+\begin{talltblr}{colspec={cc}}
+x & y \\
+\end{talltblr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
+    assert_eq!(xml.matches("<tr").count(), 3, "{xml}");
+  }
 }
