@@ -6761,4 +6761,29 @@ probe ok
     assert!(!stderr.contains("PushbackLimit"), "{stderr}");
     assert!(xml.contains("<p>probe ok</p>"), "{xml}");
   }
+  /// xkeyval.tex:569 `\XKV@ifundefined{XKV@<header><key>@value}` tests
+  /// DEFINEDNESS: a key saved with an EMPTY value (`\savevalue{k}={}`, L525-527)
+  /// is `\let` to an empty-bodied macro and `\usevalue{k}` splices nothing.
+  /// `replace_pointers` read `get_expansion()`, which is `None` for an empty
+  /// body, and reported "no value recorded". Witness: pmdraw
+  /// (pmdraw.sty:2191-2264 sets 16 defaults to `{}` — 501 errors + cap).
+  #[test]
+  fn xkeyval_usevalue_of_empty_saved_value_is_empty() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\define@key{fam}{k}{\def\myval{#1}}
+\define@key{famDefault}{k}{\setkeys{fam}{\savevalue{k}=#1}}
+\setkeys{famDefault}{k={}}
+\setkeys{fam}{k=\usevalue{k}}
+\makeatother
+\begin{document}
+START\myval END
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("START END") || xml.contains("STARTEND"), "{xml}");
+  }
+
 }

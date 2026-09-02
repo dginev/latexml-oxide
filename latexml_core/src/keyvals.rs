@@ -959,11 +959,17 @@ impl KeyVals {
         "\\XKV@{}@value",
         keyval_qname(&self.prefix, keyset, &key)
       ));
+      // xkeyval.tex L569 `\XKV@ifundefined` tests DEFINEDNESS, not the body:
+      // a key saved with an empty value (pmdraw.sty:2191-2264 `tikz={}`,
+      // `label node={}` …) is `\let` to an empty-bodied macro (L525-527) and
+      // replaces to nothing. `Expandable::new` collapses an empty Tokens body
+      // to `expansion = None`, so `get_expansion()` alone reads it as
+      // unrecorded — pmdraw manual, 501 `no value recorded` errors + cap.
       let body = match state::lookup_definition(&cs) {
-        Ok(Some(defn)) => match defn.get_expansion() {
-          Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
-          _ => None,
-        },
+        Ok(Some(defn)) => Some(match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => body.clone(),
+          _ => Tokens::new(Vec::new()),
+        }),
         _ => None,
       };
       match body {
