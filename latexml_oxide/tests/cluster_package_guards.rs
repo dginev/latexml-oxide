@@ -519,8 +519,10 @@ mod rawclasses_binding_precedence_and_no_omnibus {
   //!    through the TeX engine and the OmniBus fallback must NOT fire.
   //!
   //! Exercised with workdir-local class files, so the test needs no host
-  //! texmf packages: `scrartcl` (contrib-bound name) for precedence,
-  //! `pkzzz` (no binding anywhere) for the no-OmniBus raw load.
+  //! texmf packages: `daj` (contrib-bound name whose binding is a compiled
+  //! article-based definition set — `scrartcl` served here until batch 53
+  //! made its binding a raw shim that itself `\input`s the `.cls`) for
+  //! precedence, `pkzzz` (no binding anywhere) for the no-OmniBus raw load.
 
   use std::{path::Path, process::Command};
 
@@ -558,18 +560,14 @@ mod rawclasses_binding_precedence_and_no_omnibus {
     \\LoadClass{article}\n\
     \\newcommand{\\rawmarker}{RAWCLSLOADED}\n";
 
-  /// Directive 1: the contrib `scrartcl` binding wins even under rawclasses —
+  /// Directive 1: the contrib `daj` binding wins even under rawclasses —
   /// the local raw `.cls`'s marker must NOT appear.
   #[test]
   fn contrib_binding_keeps_precedence_under_rawclasses() {
-    let (xml, _stderr) = convert(
-      "scrartcl",
-      RAW_CLS,
-      Some("[rawstyles,rawclasses]latexml.sty"),
-    );
+    let (xml, _stderr) = convert("daj", RAW_CLS, Some("[rawstyles,rawclasses]latexml.sty"));
     assert!(
       xml.contains("NOMARKER") && !xml.contains("RAWCLSLOADED"),
-      "compiled scrartcl binding must outrank the raw .cls under rawclasses:\n{xml}",
+      "compiled daj binding must outrank the raw .cls under rawclasses:\n{xml}",
     );
   }
 
@@ -5348,6 +5346,140 @@ Body.
 \end{document}
 ";
 
+  /// Raw scrartcl (host TeX Live; the class binding is a raw shim since
+  /// batch 53, `scrartcl_cls.rs`): `\DeclareNewSectionCommand[level=2]{task}`
+  /// opens a `<subsection>` and the raw class's `\paragraph` is unnumbered.
+  /// Witness: tudaexercise (DEMO-TUDaExercise), tikzlings-doc.
+  #[test]
+  fn koma_declaresectioncommand_heading_is_a_subsection() {
+    let (stderr, xml) = convert(KOMA_TASK, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("malformed"), "{stderr}");
+    assert!(
+      xml.contains(r#"<subsection inlist="toc" xml:id="task1">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<title><tag close=" ">1.1</tag>A task</title>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        r#"<paragraph inlist="toc" xml:id="section1.subsection1.subsubsection0.paragraphx1">"#
+      ),
+      "{xml}"
+    );
+    assert!(xml.contains("<title>Para</title>"), "{xml}");
+  }
+
+  /// Raw scrkbase font-element API (scrkbase.sty L452-670): `\newkomafont`
+  /// registers the element, `\usekomafont` EXPANDS to its switches; a later
+  /// `\usepackage{scrlayer-scrpage}` (→ scrlayer.sty L81 `\RequirePackage
+  /// {scrkbase}`) must not re-load anything that forgets the element. RED:
+  /// the scrartcl stub's no-op `\newkomafont` registered nothing, so the
+  /// real `\usekomafont` died with "font element myel not defined"
+  /// (witness contract-example-de/en).
+  #[test]
+  fn newkomafont_survives_scrlayer_scrpage_and_usekomafont_expands() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrartcl}
+\newkomafont{myel}{\itshape}
+\setkomafont{section}{\Large\bfseries}
+\addtokomafont{title}{\rmfamily}
+\usepackage{scrlayer-scrpage}
+\begin{document}
+Text {\usekomafont{myel}elem} plain.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text font="italic">elem</text> plain."#),
+      "{xml}"
+    );
+  }
+
+  /// KOMA title-page pieces (scrartcl.cls L2768-2803) are stored for the
+  /// class's own `\maketitle` (L2815), which is a locked constructor here;
+  /// `koma_script.rs` re-targets them at the frontmatter (witness 2305.01582
+  /// `\titlehead`; ar5iv #498).
+  #[test]
+  fn koma_title_pieces_reach_frontmatter() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrartcl}
+\titlehead{Head}\subject{Subj}\subtitle{Sub}\title{Title}\author{A. U. Thor}\date{2026}\publishers{Pub}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<subtitle>Sub</subtitle>"), "{xml}");
+    assert!(
+      xml.contains(r#"<note role="titlehead">Head</note>"#),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"<note role="subject">Subj</note>"#), "{xml}");
+    assert!(
+      xml.contains(r#"<note role="publishers">Pub</note>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("<title>Title</title>"), "{xml}");
+  }
+
+  /// Raw typearea (`typearea_sty.rs` is a raw shim since batch 53). RED: the
+  /// former typearea STUB left `\if@areasetadvanced` undefined, and
+  /// scrartcl.cls L2594-2628 tests it inside a skipped `\if…\else…\fi` branch
+  /// — tex.web `pass_text` only counts `if_test` commands, so an undefined
+  /// `\if@…` in the skipped text is not a conditional and its `\else`
+  /// terminated the OUTER skip ("Too many }'s" / "Extra \fi", exactly as
+  /// pdftex does with the same undefined `\if`). `\recalctypearea` /
+  /// `\areaset` exercised the same class code at body time (witness
+  /// bohr/bohr_en; arXiv 1502.06768, 1504.00554, 1504.00666).
+  #[test]
+  fn raw_typearea_defines_areaset_conditionals() {
+    let (stderr, xml) = convert(
+      r"\documentclass[11pt,DIV=12]{scrartcl}
+\begin{document}
+A\recalctypearea B\areaset{10cm}{20cm}C
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("unexpected:"), "{stderr}");
+    assert!(
+      xml.contains("A") && xml.contains("B") && xml.contains("C"),
+      "{xml}"
+    );
+  }
+
+  /// tikzlings-doc: `\RedeclareSectionCommand` + tocbasic's `\deftocheading`
+  /// on a raw scrartcl (both `undefined:` under the former stub).
+  #[test]
+  fn koma_redeclaresectioncommand_and_deftocheading() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrartcl}
+\RedeclareSectionCommand[beforeskip=1ex,afterskip=1ex]{section}
+\deftocheading{toc}{\section*{##1}}
+\begin{document}
+\tableofcontents
+\section{One}
+Body.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<title><tag close=" ">1</tag>One</title>"#),
+      "{xml}"
+    );
+  }
+
   /// l2tabu/l2tabuen: `\@declaredoptions` must expand to the declared option
   /// list (latex.ltx L18536 `\xdef\@declaredoptions{\@declaredoptions,#1}`;
   /// the Perl pool L784 binds it EMPTY). scrbase.sty L365 walks it after
@@ -5576,6 +5708,34 @@ done\end{document}
 \makeatother
 \begin{document}
 \pagestyle{plain}\thispagestyle{empty}
+Hello\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains(">Hello<"), "{xml}");
+  }
+
+  /// Raw `scrlayer-scrpage` on top of raw `scrlayer`/scrkbase: the former
+  /// stub defined no KOMA option keys, so a class's
+  /// `\KOMAoptions{headwidth=text,footsepline=…}` raised `unknown option`
+  /// and `\RedeclareLayer`/`\layerwidth`/`\DeclarePageStyleByLayers` were
+  /// undefined (witness DEMO-TUDaPhD, DEMO-TUDaThesis, neoschool, bfh-ci).
+  /// Structural: the body paragraph survives `\begin{document}` (where the
+  /// old raw load died with `PushbackLimit`).
+  #[test]
+  fn raw_scrlayer_scrpage_loads_and_sets_keys() {
+    let (stderr, xml) = convert(
+      r"\documentclass{scrbook}
+\usepackage[automark]{scrlayer-scrpage}
+\KOMAoptions{headwidth=text,footsepline=.5pt}
+\DeclareNewLayer[background,contents={\layerwidth}]{mylayer}
+\DeclareNewPageStyleByLayers{mystyle}{mylayer}
+\RedeclareLayer[foreground]{mylayer}
+\pagestyle{mystyle}
+\begin{document}
+\chapter{One}
 Hello\end{document}
 ",
       true,

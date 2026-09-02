@@ -1,83 +1,10 @@
-//! scrreprt.cls — the KOMA-Script report class (chapter-based, like `report` /
-//! `scrbook`).
-//!
-//! Raw-loading a real `.cls` is not yet reliable in latexml-oxide (the class
-//! bootstrap infrastructure is a long-term goal), so — exactly like
-//! `scrbook_cls` / `scrartcl_cls` — this binding maps scrreprt onto the
-//! `OmniBus` fallback class and stubs the KOMA-specific commands a typical
-//! document touches. Perl LaTeXML has no `scrreprt.cls.ltxml` and (lacking the
-//! same raw-`.cls` support) behaves equivalently.
+//! scrreprt.cls — the KOMA-Script report class, raw-interpreted through the
+//! engine. Same shape and rationale as `scrartcl_cls.rs` (the former
+//! OmniBus stub is at git history 3c9baade57^); the shared post-load
+//! patches live in `koma_script.rs`.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "scrreprt.cls",
-    "scrreprt.cls is only minimally stubbed and will not be interpreted raw."
-  );
-  LoadClass!("OmniBus");
-  // Mirror scrbook_cls.rs: the real KOMA chain transitively loads iftex, which
-  // OmniBus does not, so pull it in for `\ifpdf` / engine-detection authors.
-  RequirePackage!("iftex");
-  // Real KOMA classes always load typearea (scrartcl.cls L2593
-  // \RequirePackage{typearea}[\KOMAScriptVersion]) — its binding carries
-  // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
-  // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
-  RequirePackage!("typearea");
-  RequirePackage!("scrlfile");
-
-  // KOMA section-font hooks — see scrbook_cls.rs for the full rationale (tocloft
-  // expands `\sectfont` / `\size@chapter` when a KOMA class is detected; as a
-  // chapter class scrreprt uses the `\size@chapter` form).
-  def_macro_noop("\\maybesffamily")?;
-  DefMacro!("\\sectfont", "\\normalcolor\\maybesffamily\\bfseries");
-  def_macro_noop("\\size@part")?;
-  def_macro_noop("\\size@partnumber")?;
-  def_macro_noop("\\size@chapter")?;
-  def_macro_noop("\\size@section")?;
-  def_macro_noop("\\size@subsection")?;
-  def_macro_noop("\\size@subsubsection")?;
-  def_macro_noop("\\size@paragraph")?;
-  def_macro_noop("\\size@subparagraph")?;
-  def_macro_noop("\\setkomafont{}{}")?;
-  def_macro_noop("\\addtokomafont{}{}")?;
-  def_macro_noop("\\setcapindent{}")?;
-  def_macro_noop("\\deffootnote[]{}{}{}")?;
-  def_macro_noop("\\deffootnotemark{}")?;
-  // KOMA page-style marks — see scrartcl_cls.rs.
-  def_macro_noop("\\headmark")?;
-  def_macro_noop("\\pagemark")?;
-
-  // KOMA `\minisec{title}`: an unnumbered, un-TOC'd run-in-ish heading below
-  // `\subparagraph`. Map to the closest standard structural heading so it lands
-  // as `ltx:paragraph` rather than erroring.
-  DefMacro!("\\minisec{}", "\\paragraph*{#1}");
-  // KOMA \ifpdfoutput{then}{else} (scrkbase; deprecated KOMA compat) tests
-  // \pdfoutput>0 — always TRUE in our pdftex model. Witness l2tabu/l2tabuen
-  // L43 (perfect-kernel).
-  DefMacro!("\\ifpdfoutput{}{}", "#1");
-  // KOMA logo macros (scrkbase).
-  DefMacro!("\\KOMAScript", "KOMA-Script");
-  DefMacro!("\\KOMA", "KOMA");
-  def_macro_noop("\\newkomafont{}{}")?;
-  def_macro_noop("\\addtokomafont{}{}")?;
-
-  // KOMA `addmargin` environment: `\begin{addmargin}[innermargin]{outermargin}`
-  // (or `{both}`) indents a block. The margin is a visual-layout concern with no
-  // structural meaning in the XML tree, so render the body transparently.
-  RawTeX!(r"\newenvironment{addmargin}[2][]{}{}");
-  RawTeX!(r"\newenvironment{addmargin*}[2][]{}{}");
-
-  // KOMA user-level structure commands (TL doc corpus: \minisec 17 bundles,
-  // {labeling} 11). These carry CONTENT, so they get semantic mappings, not
-  // stubs (policy 2026-08-31: stubs only for clearly out-of-scope features):
-  // \minisec{title} — an unnumbered freestanding mini-heading → the starred
-  // paragraph heading, preserving the title as <ltx:paragraph><ltx:title>.
-  // {labeling}[delim]{widest} — a description list with fixed label width →
-  // {description}; only the label-width/delimiter PRESENTATION args are
-  // dropped (print-layout, out of scope). The \begin-in-body alias idiom
-  // keeps the environment stack balanced.
-  DefMacro!("\\minisec{}", "\\paragraph*{#1}");
-  DefMacro!("\\labeling[]{}", "\\begin{description}");
-  DefMacro!("\\endlabeling", "\\end{description}");
+  InputDefinitions!("scrreprt", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  crate::koma_script::koma_post_load()?;
 });

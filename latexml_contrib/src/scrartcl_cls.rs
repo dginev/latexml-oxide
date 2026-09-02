@@ -1,120 +1,32 @@
-//! Stub for KOMA-Script `scrartcl` class.
+//! scrartcl.cls — the KOMA-Script article class, raw-interpreted through the
+//! engine (memoir precedent, `memoir_cls.rs`).
 //!
-//! Article variant of scrbook (KOMA's typographically refined article).
-//! We don't replay KOMA's typographic engine — fall back to OmniBus and
-//! stub the most common configuration macros so author preamble doesn't
-//! trip undefined-macro errors. Same pattern as scrbook_cls.
+//! The former stub (`LoadClass!("OmniBus")` + ~30 no-ops, git history
+//! 3c9baade57^) hid the real class: `\DeclareSectionCommand`-defined
+//! headings, `\RedeclareSectionCommand`, `\usekomafont` (which must EXPAND
+//! to the font switches the author put into `\setkomafont`/`\newkomafont`),
+//! `\KOMAoptions`, `\deftocheading`, tocbasic's `\DeclareTOCStyleEntry`
+//! family, `\Ifstr`/`\Ifthispageodd`, `\labeling`, `\dictum`, `\addmargin`,
+//! `\captionabove`, `\captionof`, `\Ifpdfoutput` … — every one an
+//! `undefined:` error or a silently swallowed argument under the stub, and
+//! `\newkomafont{x}{…}` followed by a real `\usekomafont{x}` (loaded later
+//! by a raw scrkbase) died with "font element x not defined" because the
+//! stub's `\newkomafont` never registered anything (witness
+//! contract-example-de/en). The real class raw-loads cleanly under the
+//! engine and yields the correct `<section>`/`<subsection>` structure. Perl
+//! LaTeXML ships no KOMA bindings; it raw-loads the class the same way.
+//! Keeping this binding (rather than deleting the file) makes scrartcl
+//! raw-load under BOTH `[rawclasses]` and the default arXiv configuration.
+//!
+//! Witnesses (perfect-kernel corpus): tikzlings-doc, tikzpingus-doc,
+//! shadethm-doc, fnpara-doc, glossaries-user, LaTeX_RefSheet, easybook,
+//! tutodoc, neoschool, contract-example-de/en, DEMO-TUDa*, tudaexercise
+//! (`\DeclareNewSectionCommand{task}`), bohr/bohr_en (`\recalctypearea`),
+//! arXiv 1802.07175 (`\ifpdf` via scrbase → iftex), 2305.01582
+//! (`\titlehead`), 1702.04336 (scrartcl + tocloft `\sectfont`).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "scrartcl.cls",
-    "scrartcl.cls is only minimally stubbed and will not be interpreted raw."
-  );
-  LoadClass!("OmniBus");
-  // Real scrartcl.cls pulls in the KOMA dependency chain (scrkbase, tocbasic,
-  // scrlayer-scrpage, bookmark, typearea, xpatch, scrlogo, auxhook), which
-  // transitively loads `iftex` — so `\ifpdf`/`\ifpdftex`/`\ifluatex`/… are
-  // defined for author preamble doing engine/driver detection
-  // (`\ifpdf \DeclareGraphicsExtensions{.eps,.pdf,…} \else …`). Perl ships no
-  // scrartcl binding and raw-loads the .cls, picking up iftex that way (its
-  // dependency-scan loads iftex.sty.ltxml). Our OmniBus stub intercepts the
-  // class, so without this `\ifpdf` is undefined where Perl is clean. Mirror
-  // the real class's dependency. Witness 1802.07175.
-  RequirePackage!("iftex");
-  // Real KOMA classes always load typearea (scrartcl.cls L2593
-  // \RequirePackage{typearea}[\KOMAScriptVersion]) — its binding carries
-  // \typearea/\recalctypearea/\areaset (sweep-11 `\recalctypearea`
-  // cluster, 26 docs, witness bohr/bohr_en via cnltx-doc.cls L190).
-  RequirePackage!("typearea");
-  RequirePackage!("scrlfile");
-  // KOMA section-font hooks. scrartcl.cls L170-201 defines `\sectfont` (the
-  // heading font = `\normalcolor\maybesffamily\bfseries`) plus an empty
-  // `\size@<unit>` selector family. tocloft keys on these whenever it detects a
-  // KOMA class: `\cfttoctitlefont` becomes `\size@chapter\sectfont` (chapter
-  // classes) or `\size@section\sectfont` (article), tocloft.sty L169/L172 — so
-  // `\tableofcontents` under scrartcl+tocloft expands them. Our OmniBus stub
-  // intercepts scrartcl and omitted them, so they were undefined where Perl
-  // (raw-loads scrartcl) is clean. Mirror koma's definitions. `\maybesffamily`
-  // is empty (scrartcl's `\if@sfdefaults` is false by default → serif). We also
-  // provide the empty `\size@chapter`: OmniBus defines `\chapter`, so tocloft's
-  // `\if@cfthaschapter` branch fires and references the chapter form — the
-  // spacing it selects is layout-only and invisible in our output.
-  // Witness 1702.04336 (scrartcl + tocloft + \tableofcontents).
-  def_macro_noop("\\maybesffamily")?;
-  DefMacro!("\\sectfont", "\\normalcolor\\maybesffamily\\bfseries");
-  def_macro_noop("\\size@part")?;
-  def_macro_noop("\\size@partnumber")?;
-  def_macro_noop("\\size@chapter")?;
-  def_macro_noop("\\size@section")?;
-  def_macro_noop("\\size@subsection")?;
-  def_macro_noop("\\size@subsubsection")?;
-  def_macro_noop("\\size@paragraph")?;
-  def_macro_noop("\\size@subparagraph")?;
-  // KOMA configuration knobs — layout/typography only, no body content.
-  def_macro_noop("\\setkomafont{}{}")?;
-  def_macro_noop("\\addtokomafont{}{}")?;
-  def_macro_noop("\\setcapindent{}")?;
-  def_macro_noop("\\deffootnote[]{}{}{}")?;
-  def_macro_noop("\\deffootnotemark{}")?;
-  // \KOMAoptions{key=val,...} — runtime option setter, no body content.
-  def_macro_noop("\\KOMAoptions{}")?;
-  // KOMA page-style commands `\headmark` / `\pagemark`. Defined by
-  // KOMA classes (or scrlayer-scrpage) for use in custom page-style
-  // declarations as the current chapter/section mark / page number.
-  // Since we OmniBus-fall back for scrartcl rather than reading the
-  // .cls, these stay undefined and any author preamble using
-  // `\usepackage{scrlayer-scrpage}` or scrpage2 page-style hooks
-  // triggers `Error:undefined`. Stub as no-ops — running heads/feet
-  // are typesetting-only concerns; our HTML output doesn't render
-  // them. Witness: 11 papers in R-stages for each.
-  def_macro_noop("\\headmark")?;
-  def_macro_noop("\\pagemark")?;
-  // \titlehead{}, \subject{}, \dictum{}, \uppertitleback{},
-  // \lowertitleback{}, \publishers{} — KOMA frontmatter pieces that DO carry
-  // author content. Preserve as ltx:note frontmatter so the text reaches the
-  // XML (rather than silently gobbling). Neither Perl nor upstream LaTeXML
-  // binds these (no scrartcl.cls.ltxml) — surpass-Perl content recovery.
-  // \titlehead renders a full-width header ABOVE the title in KOMA's
-  // \maketitle; capture it as a note. Witness 2305.01582 (ar5iv #498): a
-  // \titlehead banner with the software name + \giturl was dropped + errored.
-  DefMacro!(
-    "\\titlehead{}",
-    "\\@add@frontmatter{ltx:note}[role=titlehead]{#1}"
-  );
-  DefMacro!(
-    "\\subject{}",
-    "\\@add@frontmatter{ltx:note}[role=subject]{#1}"
-  );
-  DefMacro!(
-    "\\dictum[]{}",
-    "\\@add@frontmatter{ltx:note}[role=dictum]{#2}"
-  );
-  DefMacro!(
-    "\\publishers{}",
-    "\\@add@frontmatter{ltx:note}[role=publishers]{#1}"
-  );
-
-  // KOMA user-level structure commands (TL doc corpus: \minisec 17 bundles,
-  // {labeling} 11). These carry CONTENT, so they get semantic mappings, not
-  // stubs (policy 2026-08-31: stubs only for clearly out-of-scope features):
-  // \minisec{title} — an unnumbered freestanding mini-heading → the starred
-  // paragraph heading, preserving the title as <ltx:paragraph><ltx:title>.
-  // {labeling}[delim]{widest} — a description list with fixed label width →
-  // {description}; only the label-width/delimiter PRESENTATION args are
-  // dropped (print-layout, out of scope). The \begin-in-body alias idiom
-  // keeps the environment stack balanced.
-  DefMacro!("\\minisec{}", "\\paragraph*{#1}");
-  // KOMA \ifpdfoutput{then}{else} (scrkbase; deprecated KOMA compat) tests
-  // \pdfoutput>0 — always TRUE in our pdftex model. Witness l2tabu/l2tabuen
-  // L43 (perfect-kernel).
-  DefMacro!("\\ifpdfoutput{}{}", "#1");
-  // KOMA logo macros (scrkbase).
-  DefMacro!("\\KOMAScript", "KOMA-Script");
-  DefMacro!("\\KOMA", "KOMA");
-  def_macro_noop("\\newkomafont{}{}")?;
-  def_macro_noop("\\addtokomafont{}{}")?;
-  DefMacro!("\\labeling[]{}", "\\begin{description}");
-  DefMacro!("\\endlabeling", "\\end{description}");
+  InputDefinitions!("scrartcl", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  crate::koma_script::koma_post_load()?;
 });

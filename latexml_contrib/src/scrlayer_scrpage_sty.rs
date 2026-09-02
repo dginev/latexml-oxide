@@ -1,62 +1,16 @@
-//! Stub for scrlayer-scrpage.sty (KOMA-Script page-layer / header-footer).
+//! scrlayer-scrpage.sty — KOMA-Script header/footer package, raw-interpreted
+//! on top of the raw `scrlayer` (`scrlayer_sty.rs`) / scrkbase / scrbase chain.
 //!
-//! scrlayer-scrpage and its base scrlayer/scrbase/scrkbase chain through
-//! several thousand lines of KOMA macros, much of it page-layout for
-//! print output. For XML/HTML conversion the layout is invisible; raw-
-//! loading the chain triggers a token-limit runaway (100M tokens, 16GB
-//! RAM in 40s on 2110.09330). Stub the user-facing API instead.
+//! The former stub (git history: ~60 `def_macro_noop`s) defined no KOMA
+//! option keys, so every `\KOMAoptions{headwidth=…,footsepline=…}` and
+//! `\RedeclareLayer`/`\layerwidth`/`\DeclarePageStyleByLayers` a class issued
+//! raised `unknown option` / `undefined:` errors (witness DEMO-TUDaPhD,
+//! DEMO-TUDaThesis, neoschool, bfh-ci/DEMO-BFHLetter, zugferd, urcls,
+//! makelabels, ijsra; original runaway witness arXiv 2110.09330). Header and
+//! footer content is never shipped out, so the real package costs only its
+//! load time.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  // Public scrlayer-scrpage commands (visual-only, gobble silently)
-  def_macro_noop("\\pagestyle{}")?;
-  def_macro_noop("\\thispagestyle{}")?;
-  def_macro_noop("\\automark OptionalMatch:* []{}")?;
-  def_macro_noop("\\clearpairofpagestyles")?;
-  // Page-style DEFINITION family. scrlayer-scrpage.sty L1304/1489/1517/1543
-  // are all `[opt]{name}{layer-definition}`; L879 \defpagestyle is {3};
-  // scrlayer.sty L1124/1150/1717/1991 are the raw layer primitives. Every
-  // argument is header/footer geometry — no document content — so absorb.
-  // Sweep-12 cluster: 13 docs, witnesses bfh-ci/DEMO-BFHLetter,
-  // neoschool, tuda-ci, zugferd, urcls, makelabels, ijsra.
-  def_macro_noop("\\newpairofpagestyles[]{}{}")?;
-  def_macro_noop("\\renewpairofpagestyles[]{}{}")?;
-  def_macro_noop("\\providepairofpagestyles[]{}{}")?;
-  def_macro_noop("\\defpairofpagestyles[]{}{}")?;
-  def_macro_noop("\\defpagestyle{}{}{}")?;
-  def_macro_noop("\\deftriplepagestyle{}{}{}{}")?;
-  def_macro_noop("\\DeclareNewLayer[]{}")?;
-  def_macro_noop("\\ModifyLayer[]{}")?;
-  def_macro_noop("\\DeclareNewPageStyleByLayers[]{}")?;
-  def_macro_noop("\\DeclarePageStyleAlias{}{}")?;
-  DefMacro!("\\sls@hfline@adjust", "0");
-  def_macro_noop("\\clearscrheadfoot")?;
-  def_macro_noop("\\clearscrheadings")?;
-  def_macro_noop("\\clearscrplain")?;
-  def_macro_noop("\\setkomafont{}{}")?;
-  def_macro_noop("\\addtokomafont{}{}")?;
-  def_macro_noop("\\KOMAoptions{}")?;
-  def_macro_noop("\\setuphead{}{}")?;
-  def_macro_noop("\\setupfoot{}{}")?;
-  def_macro_noop("\\lehead[]{}")?;
-  def_macro_noop("\\cehead[]{}")?;
-  def_macro_noop("\\rehead[]{}")?;
-  def_macro_noop("\\lohead[]{}")?;
-  def_macro_noop("\\cohead[]{}")?;
-  def_macro_noop("\\rohead OptionalMatch:* []{}")?;
-  def_macro_noop("\\lefoot[]{}")?;
-  def_macro_noop("\\cefoot[]{}")?;
-  def_macro_noop("\\refoot[]{}")?;
-  def_macro_noop("\\lofoot[]{}")?;
-  def_macro_noop("\\cofoot[]{}")?;
-  def_macro_noop("\\rofoot[]{}")?;
-  def_macro_noop("\\ihead[]{}")?;
-  def_macro_noop("\\chead[]{}")?;
-  def_macro_noop("\\ohead[]{}")?;
-  def_macro_noop("\\ifoot[]{}")?;
-  def_macro_noop("\\cfoot[]{}")?;
-  def_macro_noop("\\ofoot[]{}")?;
-  // Options
-  DeclareOption!(None, {});
-  ProcessOptions!();
+  InputDefinitions!("scrlayer-scrpage", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });

@@ -146,6 +146,7 @@ pub mod jgcc_cls;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod jpc_sty;
+pub mod koma_script;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
 pub mod lanlmac_tex;
@@ -203,8 +204,11 @@ pub mod savetrees_sty;
 pub mod schooldocs_sty;
 pub mod scicite_sty;
 pub mod scrartcl_cls;
+pub mod scrbase_sty;
 pub mod scrbook_cls;
+pub mod scrkbase_sty;
 pub mod scrlfile_sty;
+pub mod scrlogo_sty;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
 pub mod scrreprt_cls;
@@ -216,6 +220,7 @@ pub mod tagpdf_sty;
 pub mod tgpagella_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
+pub mod tocbasic_sty;
 pub mod typearea_sty;
 pub mod unicode_math_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
@@ -223,6 +228,7 @@ pub mod unicode_math_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
+pub mod scrlayer_sty;
 pub mod selfevolagent_cls;
 pub mod semantic_sty;
 pub mod siamart_cls;
@@ -337,6 +343,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
   ("scrlfile", "sty", scrlfile_sty::load_definitions),
+  ("scrbase", "sty", scrbase_sty::load_definitions),
+  ("scrkbase", "sty", scrkbase_sty::load_definitions),
+  ("scrlogo", "sty", scrlogo_sty::load_definitions),
+  ("tocbasic", "sty", tocbasic_sty::load_definitions),
   ("scrpage", "sty", scrpage_sty::load_definitions),
   ("scrpage2", "sty", scrpage2_sty::load_definitions),
   ("stix2", "sty", stix2_sty::load_definitions),
@@ -408,10 +418,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     scrlayer_scrpage_sty::load_definitions,
   ),
-  ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
+  ("scrlayer", "sty", scrlayer_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
   ("assoccnt", "sty", assoccnt_sty::load_definitions),
   ("hvfloat", "sty", hvfloat_sty::load_definitions),
+  ("ifoddpage", "sty", ifoddpage_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
