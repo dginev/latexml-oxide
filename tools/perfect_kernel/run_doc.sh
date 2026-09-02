@@ -49,7 +49,12 @@ fi
 # latexml.sty profile (user decision 2026-08-31): engine probes read LuaTeX
 # and \directlua runs through the texlua bridge.
 PRELOAD='[rawstyles,rawclasses]latexml.sty'
-ORACLE="$OUTROOT/oracle_verdicts.tsv"
+# The oracle lives with the corpus (~/data/perfect_kernel), not with each
+# sweep's outroot: a fresh outroot (perfect_kernel_s14) silently ran the 264
+# clean-lualatex docs as pdfTeX (cartonaugh/ukbill/elpres/fontsetup 0→N
+# "regressions", sweep 28) because the gate looked for the oracle next to it.
+ORACLE="${ORACLE:-$HOME/data/perfect_kernel/oracle_verdicts.tsv}"
+[[ -f "$ORACLE" ]] || ORACLE="$OUTROOT/oracle_verdicts.tsv"
 # Gate on a CLEAN lualatex oracle (exit 0, zero errors): the oracle records
 # engine=lualatex for every pdflatex-failure FALLBACK too, and profiling
 # those (mostly pdfLaTeX-authored stale docs) under a LuaTeX identity
@@ -76,7 +81,11 @@ rm -f "$out/$name.raw.log"
 
 # Strict error grep (feedback_strict_vs_lax_error_grep).
 errors=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
-fatals=$(grep -c '^Fatal:[a-z]' "$out/$name.log" || true)
+# Fatal TARGETS are capitalized (`Fatal:Timeout:TokenLimit`,
+# `Fatal:TooManyErrors:MaxLimit`, `Fatal:Mouth:EoF`); only `Fatal:oom:` is
+# lowercase, so a `[a-z]` class here counted 25 of sweep 28's ~290 fatals
+# (status stayed right only via the exit code). Match any target letter.
+fatals=$(grep -c '^Fatal:[A-Za-z]' "$out/$name.log" || true)
 warnings=$(grep -c '^Warning:[a-z]' "$out/$name.log" || true)
 
 if [[ $exit_code == 124 ]]; then
