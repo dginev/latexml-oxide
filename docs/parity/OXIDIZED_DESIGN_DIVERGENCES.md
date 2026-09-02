@@ -6475,3 +6475,21 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: knowledge manual (P47), any `\null\clearpage` fill loop.
 **Guard**: `perfect_kernel_batch54::clearpage_advances_the_page_counter`.
 **Upstream**: not filed.
+
+### 179. `\chapter` exists only where the class made a chapter counter (Perl defines it in every class)
+
+**Perl behavior**: `DefMacroI('\chapter', undef, '\@startsection{chapter}…', locked => 1)` in the kernel pool (latex_constructs.pool.ltxml:557), so `\@ifundefined{chapter}` is FALSE under article/scrartcl. blindtext.sty:243 `\blinddocument`, hvfloat's 50 test documents, coseoul, xassoccnt take the chapter branch and error `undefined:\thechapter` (53 docs, sweep 30).
+**Rust behavior**: after `\documentclass` loads its class, `\chapter` is `\let` undefined when `\c@chapter` is undefined (Perl's own "has chapters" probe, pool:690) — except under the OmniBus fallback for an unknown class, which may have chapters (it autoloads book.cls on `\thechapter`, arXiv:2602.10407).
+**Why**: latex.ltx defines no `\chapter`; only report/book-like classes do. An arXiv paper never uses `\chapter` in a chapterless class (pdflatex would refuse to compile it).
+**Witnesses**: coseoul/cosexamp, hvfloat ×50, modular, sillypage, xassoccnt_totalcounters_example.
+**Guard**: `perfect_kernel_batch54::chapter_is_undefined_in_a_chapterless_class`, `06_cluster_regressions::cluster_omnibus_chapter_book_autoload`.
+**Upstream**: not filed.
+
+### 180. `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38
+
+**Perl behavior**: `DefMacro('\@trivlist', '\relax', locked => 1)` (pool:1732), so a raw class or package that redefines `\list` alone — memoir.cls:4580 (latex.ltx:15848 verbatim; its `adjustwidth` is `\begin{list}`), autolist.sty:37-109 — opens nothing, while `\endlist` → `\endlx@list` expects the `\lx@list` frame: "Attempt to end mode internal_vertical" on every such list (digiconfigs, memman, memexsupp, MemoirChapStyles, dlfltxb ×3, biblatex-oxref ×4, shipunov autolist ×2, … 28 docs, sweep 30).
+**Rust behavior**: `\@trivlist` = `\lx@trivlist@setup\lx@list`: starts the itemization unless the list's setup already ran `\usecounter` (which binds `itemcounter` in the current frame), then opens the `\lx@list` itemize+frame; `\endtrivlist` pops an `\lx@list` frame when it is on top (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207 `mathtrivlist` pairs `\@trivlist` with `\endtrivlist`). The kernel `\@trivlist`'s `\@noitemerr` paths are not reproduced.
+**Why**: kernel-quality: the two closers now close what the kernel's own opener opened; our `\list`/`\trivlist` bindings are unchanged.
+**Witnesses**: digiconfigs 5→0 errors, memman 211→104.
+**Guard**: `perfect_kernel_batch54::raw_list_opens_through_trivlist`.
+**Upstream**: not filed.

@@ -3307,7 +3307,24 @@ LoadDefinitions!({
         .collect();
       load_class(&class_name,
                 class_opts,
-                Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))
+                Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;
+      // OXIDIZED_DESIGN #179: `\chapter` exists only where the class made a
+      // chapter counter. latex.ltx defines no `\chapter`; article/scrartcl
+      // never do, so `\@ifundefined{chapter}` is how packages decide
+      // (blindtext.sty:243 `\blinddocument`, hvfloat's 50 test docs,
+      // coseoul, xassoccnt: the kernel-level `\chapter` — Perl pool:557,
+      // locked — took the chapter branch and every doc errored
+      // `undefined:\thechapter`). The `\c@chapter` probe is Perl's own
+      // "has chapters" test (pool:690). An unknown class (OmniBus fallback)
+      // may well have chapters — OmniBus autoloads book.cls on `\thechapter`
+      // (arXiv:2602.10407) — so it keeps the kernel `\chapter`.
+      if lookup_definition(&T_CS!("\\c@chapter"))?.is_none()
+        && !lookup_bool("OmniBus.cls_loaded")
+        && !lookup_bool("OmniBus.cls.ltxml_loaded")
+      {
+        let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
+      }
+      Ok(())
   });
 
   AssignValue!("@unusedoptionlist", Stored::Strings(Rc::new([])));
@@ -6217,17 +6234,41 @@ LoadDefinitions!({
     sub[document, _args, _props] {
       document.maybe_close_element("ltx:itemize")?;
     },
-    before_digest => { Digest!("\\par")?; }
+    before_digest => {
+      Digest!("\\par")?;
+      // A list opened through `\@trivlist` (OXIDIZED_DESIGN #180 below) owns
+      // an `\lx@list` frame; `\endtrivlist` is its kernel closer
+      // (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207
+      // `mathtrivlist` pairs `\@trivlist` with `\endtrivlist` directly).
+      // Our own `\trivlist` opens no frame, so the pop is conditional.
+      if is_value_bound("groupInitiator", Some(0))
+        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"))
+      {
+        egroup()?;
+      }
+    }
   );
 
-  // Perl latex_constructs.pool.ltxml L1732: `DefMacro('\@trivlist', '\relax', locked => 1)`.
-  // Neutralizes the LaTeX kernel's complex `\@trivlist` body (which calls
-  // `\@noitemerr` under various edge conditions, e.g. `\if@newlist` true on
-  // entry). Without this override the dump's full kernel macro runs when
-  // user packages invoke `\@trivlist` directly (witness: 0802.2207 spr-astr-addons
-  // `\renewcommand\[{\begin{mathtrivlist}…}` where `mathtrivlist` calls
-  // `\@trivlist`, raising 3 spurious "missing \item" errors).
-  DefMacro!("\\@trivlist", "\\relax");
+  // OXIDIZED_DESIGN #180 (PLANS P38): `\@trivlist` is the shared list opener.
+  // latex.ltx:15848/15871/15903 — `\list` and `\trivlist` both end in
+  // `\@trivlist`, and `\endlist` is `\endtrivlist`. Perl neutralizes it
+  // (`DefMacro('\@trivlist', '\relax', locked => 1)`, pool:1732), so a raw
+  // class or package that redefines `\list` alone (memoir.cls:4580 =
+  // latex.ltx's `\list` verbatim; memoir's `adjustwidth` = `\begin{list}`,
+  // used by digiconfigs/memman/memexsupp/MemoirChapStyles; autolist.sty:37-109
+  // `\Sublist`) opened no list at all while OUR `\endlist`/`\endlx@list`
+  // still expected the `\lx@list` frame — "Attempt to end mode
+  // internal_vertical" on every such list (28 docs, sweep 30). Now
+  // `\@trivlist` starts the itemization (unless the list's setup already
+  // ran `\usecounter`, which binds `itemcounter` in this frame) and opens
+  // `\lx@list`. The kernel body's `\@noitemerr` paths are not reproduced
+  // (a bare `\@trivlist` before any `\item` is fine).
+  DefPrimitive!("\\lx@trivlist@setup", {
+    if !is_value_bound("itemcounter", Some(0)) {
+      begin_itemize("list", None, BeginItemizeOptions::default())?;
+    }
+  });
+  DefMacro!("\\@trivlist", "\\lx@trivlist@setup\\lx@list");
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",

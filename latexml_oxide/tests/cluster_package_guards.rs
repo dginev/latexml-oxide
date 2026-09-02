@@ -4959,16 +4959,16 @@ After.
 ",
       true,
     );
-    // Perl's shape: exactly one "Attempt to end mode" per list, no pop, no
-    // cascade; the items are plain paragraphs until P38 gives raw
-    // `\list`/`\@trivlist` list semantics.
+    // OXIDIZED_DESIGN #180 (P38): `\@trivlist` now opens the list the raw
+    // `\list` asked for, so the items are real items and nothing cascades
+    // (before P38 this was Perl's one "Attempt to end mode" per list).
     assert!(!stderr.contains("Attempt to close"), "{stderr}");
-    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(
-      stderr.contains("Attempt to end mode internal_vertical"),
-      "{stderr}"
+      xml.contains("<itemize") && xml.matches("<item ").count() == 2,
+      "{xml}"
     );
-    assert!(xml.contains("<p>one</p>") && xml.contains("two"), "{xml}");
+    assert!(xml.contains("one") && xml.contains("two"), "{xml}");
     assert!(xml.contains("After."), "{xml}");
   }
 }
@@ -6288,7 +6288,9 @@ D
     );
     assert!(!stderr.contains("Too deeply nested"), "{stderr}");
     assert!(xml.contains("G"), "{xml}");
-    assert!(xml.contains("G\n0</p>"), "{xml}");
+    // The lists are real lists since OXIDIZED_DESIGN #180; the depth
+    // reads 0 after the seventh has closed.
+    assert!(xml.contains("<p>0</p>"), "{xml}");
   }
 
   /// listings.sty:320 `\let\lst@UserCommand\gdef`; patches such as
@@ -7772,5 +7774,99 @@ Done [\thepage].
       xml.contains("[2nd September 2026][7th March 2020][2026-09-02]"),
       "{xml}"
     );
+  }
+
+  /// OXIDIZED_DESIGN #179: a chapterless class leaves `\chapter` undefined
+  /// (latex.ltx/article define none), so `\@ifundefined{chapter}` takes the
+  /// article branch — blindtext.sty:243 `\blinddocument` under scrartcl
+  /// (hvfloat ×50, coseoul, xassoccnt: `undefined:\thechapter`). A class
+  /// with a chapter counter keeps it.
+  #[test]
+  fn chapter_is_undefined_in_a_chapterless_class() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\makeatletter[\@ifundefined{chapter}{NOCHAP}{CHAP}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[NOCHAP]"), "{xml}");
+    let tex = r"\documentclass{report}
+\begin{document}
+\makeatletter[\@ifundefined{chapter}{NOCHAP}{CHAP}]
+\chapter{One}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[CHAP]") && xml.contains("<chapter"), "{xml}");
+    let tex = r"\documentclass{scrartcl}
+\usepackage{blindtext}
+\begin{document}
+\blinddocument
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<section"), "{xml}");
+  }
+
+  /// OXIDIZED_DESIGN #180 (P38): a raw `\list` (latex.ltx:15848 verbatim, as
+  /// memoir.cls:4580 redefines it) ends in `\@trivlist`, which now opens the
+  /// list our `\endlist` closes — memoir `adjustwidth` (digiconfigs, memman)
+  /// and hand-rolled `\@trivlist`…`\endtrivlist` pairs (0802.2207
+  /// `mathtrivlist`) both nest cleanly.
+  #[test]
+  fn raw_list_opens_through_trivlist() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\renewcommand*{\list}[2]{\ifnum\@listdepth>5\relax\@toodeep\else\global\advance\@listdepth\@ne\fi
+  \rightmargin\z@\listparindent\z@\itemindent\z@
+  \csname @list\romannumeral\the\@listdepth\endcsname\def\@itemlabel{#1}\let\makelabel\@mklab
+  \@nmbrlistfalse#2\@trivlist\parskip\parsep\parindent\listparindent\advance\linewidth-\rightmargin
+  \advance\linewidth-\leftmargin\advance\@totalleftmargin\leftmargin\parshape\@ne\@totalleftmargin\linewidth\ignorespaces}
+\newenvironment{adjw}[2]{\begin{list}{}{\topsep\z@}\item[]}{\end{list}}
+\newenvironment{mtl}{\@trivlist\item[]}{\endtrivlist}
+\makeatother
+\begin{document}
+\begin{adjw}{1em}{0pt}Inside A\end{adjw}
+\begin{mtl}Inside B\end{mtl}
+\begin{enumerate}\item one\end{enumerate}
+After
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<itemize").count(), 2, "{xml}");
+    assert!(
+      xml.contains("Inside A") && xml.contains("Inside B") && xml.contains("<enumerate"),
+      "{xml}"
+    );
+  }
+
+  /// tcolorbox.sty:2339 `\tcb@proc@options@init` processes a listing env's
+  /// `[init]` (`auto counter`, `number within`), so a later
+  /// `\newtcolorbox[use counter from=<env>]` finds `\tcb@cnt@<env>`
+  /// (tcolorbox manual preamble D: `texexptitledspec` from `texexptitled`).
+  #[test]
+  fn tcblisting_init_counter_is_shared_by_use_counter_from() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}\tcbuselibrary{listings}
+\tcbset{example/.style 2 args={title={Example \thetcbcounter: #1},label={#2}}}
+\newtcblisting[auto counter,number within=section]{texexptitled}[3][]{example={#2}{#3},#1}
+\newtcolorbox[use counter from=texexptitled]{texexptitledspec}[3][]{example={#2}{#3},#1}
+\begin{document}
+\section{S}
+\begin{texexptitled}{T1}{l1}
+x
+\end{texexptitled}
+\begin{texexptitledspec}{T2}{l2}y\end{texexptitledspec}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The listing box renders no title (presentation-only in the native env);
+    // the shared counter stepped once for it, so the tcolorbox is 1.2.
+    assert!(xml.contains("Example 1.2"), "{xml}");
   }
 }
