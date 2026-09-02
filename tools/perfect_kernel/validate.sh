@@ -8,7 +8,7 @@
 set -uo pipefail
 
 OUTROOT="${1:-$HOME/data/perfect_kernel}"
-JOBS="${JOBS:-12}"
+JOBS="${JOBS:-8}"  # docs/THERMALS.md: 8 alone, 4 beside anything else
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 V="$OUTROOT/validate_verdicts.tsv"
 : >"$V"

@@ -20,7 +20,7 @@ set -uo pipefail
 
 CORPUS="$1"
 OUTROOT="${2:-$HOME/data/perfect_kernel}"
-JOBS="${JOBS:-12}"
+JOBS="${JOBS:-8}"  # docs/THERMALS.md: 8 alone, 4 beside anything else
 export TIMEOUT_S="${TIMEOUT_S:-90}"
 V="$OUTROOT/oracle_verdicts.tsv"
 export V OUTROOT

@@ -5,14 +5,14 @@
 #   corpus.tsv: output of enumerate_corpus.sh (bundle \t tex \t pdf \t lines)
 #   outroot defaults to ~/data/perfect_kernel
 #
-# Env: JOBS (default 12), TIMEOUT_S (default 120), WORKER_BIN.
+# Env: JOBS (default 8 — docs/THERMALS.md), TIMEOUT_S (default 120), WORKER_BIN.
 # Skips documents that already have a verdict.tsv (delete it to re-run).
 # Writes <outroot>/sweep_verdicts.tsv (rebuilt from all verdict.tsv at the end).
 set -uo pipefail
 
 CORPUS="$1"
 OUTROOT="${2:-$HOME/data/perfect_kernel}"
-JOBS="${JOBS:-12}"
+JOBS="${JOBS:-8}"  # docs/THERMALS.md: 8 alone, 4 beside anything else
 export TIMEOUT_S="${TIMEOUT_S:-120}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 export OUTROOT HERE
