@@ -107,6 +107,38 @@ impl Default for InputDefinitionOptions {
   }
 }
 
+/// PLANS P16 xii: fire the kernel's generic package/class load hooks around a
+/// load that bypasses `\@onefilewithoptions` (a binding or a raw read).
+/// latex.ltx:18843-18850 runs `\UseHook{package/before}` +
+/// `\UseOneTimeHook{package/<name>/before}` (or `class/…`) before the file
+/// and :18867-18875 `\UseOneTimeHook{package/<name>/after}` +
+/// `\UseHook{package/after}` after its `-h@@k`; `\InputIfFileExists`'
+/// `\@input@file@exists@with@hooks` adds `file/<name>.<ext>/before|after`
+/// and `file/before|after`. Perl fires none of them (Package.pm L2620-2655),
+/// so `\AddToHook{class/scrbook/after}{…}` (tudapub.cls hooking scrbook's
+/// `\addchap`, DEMO-TUDaPhD) never ran. Only when lthooks is loaded
+/// (`\UseHook` defined) and only for package/class loads. Guard:
+/// `perfect_kernel_batch54::package_after_hook_fires_for_a_binding_load`.
+fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
+  if lookup_definition(&T_CS!("\\UseHook"))?.is_none() {
+    return Ok(());
+  }
+  let kind = if as_type == "cls" { "class" } else { "package" };
+  let code = if when == "before" {
+    s!(
+      "\\UseHook{{{kind}/before}}\\UseOneTimeHook{{{kind}/{name}/before}}\
+       \\UseHook{{file/before}}\\UseOneTimeHook{{file/{name}.{as_type}/before}}"
+    )
+  } else {
+    s!(
+      "\\UseOneTimeHook{{file/{name}.{as_type}/after}}\\UseHook{{file/after}}\
+       \\UseOneTimeHook{{{kind}/{name}/after}}\\UseHook{{{kind}/after}}"
+    )
+  };
+  digest(crate::mouth::tokenize_internal(TeXString::assembled(code)))?;
+  Ok(())
+}
+
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
 pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
   let trimmed = raw_file.trim();
@@ -539,6 +571,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         }),
       )?;
     }
+    use_load_hooks(name, &as_type, "before")?;
   }
   // No `else` branch: Perl Package.pm L2580-2611 only mutates
   // \@currname/\@currext inside the handleoptions=true block. The
@@ -970,7 +1003,8 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       // Guard: `perfect_kernel_batch54::at_end_of_package_hook_runs_with_at_letter`.
       let saved_at = lookup_catcode('@');
       assign_catcode('@', Catcode::LETTER, None);
-      let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")));
+      let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))
+        .and_then(|_| use_load_hooks(name, &as_type, "after"));
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
       hook?;
     }

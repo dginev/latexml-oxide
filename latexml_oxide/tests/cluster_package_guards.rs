@@ -7692,4 +7692,47 @@ Done [\thepage].
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("abcdef[BODY]"), "{xml}");
   }
+
+  /// latex.ltx:18843-18875: `package/<name>/before|after` (and the
+  /// `file/<name>.sty/after` form) fire around a package load whichever way
+  /// it loads — binding (xspace) or raw (a local .sty). tudapub.cls hooks
+  /// scrbook's `\addchap` via `class/scrbook/after` (DEMO-TUDaPhD).
+  #[test]
+  fn package_after_hook_fires_for_a_binding_load() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("rawpkg.sty"),
+      "\\ProvidesPackage{rawpkg}\\newcommand\\rawmark{RAW}\n",
+    )
+    .expect("write sty");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{article}\n\
+       \\AddToHook{package/xspace/after}{\\def\\afterx{AX}}\n\
+       \\AddToHook{package/xspace/before}{\\def\\beforex{BX}}\n\
+       \\AddToHook{file/rawpkg.sty/after}{\\def\\afterraw{AR}}\n\
+       \\AddToHook{package/rawpkg/after}{\\let\\rawmarktwo\\rawmark}\n\
+       \\usepackage{xspace}\\usepackage{rawpkg}\n\
+       \\begin{document}\n\
+       [\\beforex\\afterx\\afterraw\\rawmarktwo]\n\
+       \\end{document}\n",
+    )
+    .expect("write tex");
+    let output = std::process::Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--preload=[rawstyles,rawclasses]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BXAXARRAW]"), "{xml}");
+  }
 }
