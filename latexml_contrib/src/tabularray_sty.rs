@@ -327,20 +327,59 @@ LoadDefinitions!({
   // fall back to the bare inner spec (the historical stub behaviour) for specs
   // we don't fully translate. `[]{}` captures the optional outer spec (ignored,
   // as before) + the mandatory inner spec. See `translate_tblr_colspec`.
-  DefMacro!("\\tblr []{}", sub[(_outer, inner)] {
+  // Every tblr-family environment funnels through `\lx@tblr@env{<env>}[outer]
+  // {inner}`: the per-environment defaults recorded by `\SetTblrInner[<env>]`
+  // (tabularray.sty:3444, `O{tblr} m` — the optional lists the environments,
+  // default `tblr`) are prepended to the inner spec, `colspec` is translated,
+  // and when NO colspec exists anywhere the column count is inferred from the
+  // rows (tabularray's own rule) — the alignment already normalizes every row
+  // to the widest one, so a wide `l` template reproduces that. Witness:
+  // pegmatch (`\NewTblrEnviron{spectblr}` + `\SetTblrInner[spectblr]{hlines…}`
+  // + `\begin{spectblr}[caption=…]{}` — the empty inner spec became a
+  // zero-column template, 52 "Extra alignment tab").
+  DefMacro!("\\lx@tblr@env{} []{}", sub[(env, _outer, inner)] {
+    let env = env.to_string();
+    let stored = lookup_definition(&T_CS!(s!("\\lx@tblr@inner@{env}")))?
+      .and_then(|d| d.get_expansion().cloned())
+      .map(|b| match b { ExpansionBody::Tokens(t) => t.to_string(), _ => String::new() })
+      .unwrap_or_default();
     let inner_str = inner.to_string();
-    let cols = translate_tblr_colspec(&inner_str).unwrap_or(inner_str);
+    let combined = if stored.trim().is_empty() {
+      inner_str.clone()
+    } else {
+      format!("{stored},{inner_str}")
+    };
+    let cols = match translate_tblr_colspec(&combined) {
+      Some(c) => c,
+      None if extract_colspec_value(&combined).is_none() => String::from("*{32}{l}"),
+      None => inner_str,
+    };
     Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}}}"))))
   });
+  DefMacro!("\\tblr", "\\lx@tblr@env{tblr}");
   DefMacro!("\\endtblr", "\\endtabular");
   // tabularray.sty:3472-3477 creates `longtblr`/`talltblr` with the same
   // factory (`long`/`tall` outer specs add page-breaking + caption/notes
   // layout the tabular reduction has no slot for). Witness: panda manual
   // (`{longtblr}` undefined → 149 relational-token errors + EoF Fatal).
-  DefMacro!("\\longtblr []{}", "\\tblr[#1]{#2}");
-  DefMacro!("\\endlongtblr", "\\endtblr");
-  DefMacro!("\\talltblr []{}", "\\tblr[#1]{#2}");
-  DefMacro!("\\endtalltblr", "\\endtblr");
+  DefMacro!("\\longtblr", "\\lx@tblr@env{longtblr}");
+  DefMacro!("\\endlongtblr", "\\endtabular");
+  DefMacro!("\\talltblr", "\\lx@tblr@env{talltblr}");
+  DefMacro!("\\endtalltblr", "\\endtabular");
+  DefMacro!("\\SetTblrInner []{}", sub[(envs, keys)] {
+    let envs = envs.map(|e| e.to_string()).unwrap_or_else(|| String::from("tblr"));
+    let keys = keys.to_string();
+    for env in envs.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+      let cs = T_CS!(s!("\\lx@tblr@inner@{env}"));
+      let prev = lookup_definition(&cs)?
+        .and_then(|d| d.get_expansion().cloned())
+        .map(|b| match b { ExpansionBody::Tokens(t) => t.to_string(), _ => String::new() })
+        .unwrap_or_default();
+      let merged = if prev.trim().is_empty() { keys.clone() } else { format!("{prev},{keys}") };
+      def_macro(cs, None, ExpansionBody::Tokens(Tokenize!(TeXString::assembled(merged))), None)?;
+    }
+    Ok(Tokens!())
+  });
   DefMacro!("\\booktabs", "\\tabular");
   DefMacro!("\\endbooktabs", "\\endtabular");
   DefMacro!("\\UseTblrLibrary", "\\usepackage");
@@ -348,7 +387,6 @@ LoadDefinitions!({
   def_macro_noop("\\SetCells[]{}")?;
   // tabularray styling primitives — no-op stubs.
   // Witness 2406.00523 (\SetTblrInner).
-  def_macro_noop("\\SetTblrInner[]{}")?;
   def_macro_noop("\\SetTblrOuter[]{}")?;
   def_macro_noop("\\SetTblrStyle{}{}")?;
   // tabularray.sty:3461-3470: every tblr-family environment is built by one
@@ -362,7 +400,7 @@ LoadDefinitions!({
     let n = name.to_string();
     // TokenizeInternal!: `\@ifundefined` needs `@` as a letter.
     Ok(TokenizeInternal!(TeXString::assembled(format!(
-      "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\tblr}}{{\\endtblr}}}}{{}}"))))
+      "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\lx@tblr@env{{{n}}}}}{{\\endtabular}}}}{{}}"))))
   });
   def_macro_noop("\\NewColumnType{}[]{}")?;
   def_macro_noop("\\NewTblrTheme{}{}")?;

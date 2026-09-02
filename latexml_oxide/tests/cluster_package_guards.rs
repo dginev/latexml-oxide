@@ -7054,4 +7054,37 @@ Typesets \meta{text}.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<svg:path"), "{xml}");
   }
+
+  /// tabularray.sty:3444 `\SetTblrInner[<envs>]{keys}` records per-environment
+  /// inner defaults that every `\begin{<env>}` prepends, and a table with no
+  /// colspec anywhere takes its column count from the rows. `\NewTblrEnviron`
+  /// + `\SetTblrInner[spectblr]{hlines…}` + `\begin{spectblr}[…]{}` had become
+  /// a zero-column template (pegmatch manual: 52 "Extra alignment tab").
+  #[test]
+  fn tabularray_settblrinner_defaults_and_inferred_columns() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\NewTblrEnviron{spectblr}
+\SetTblrInner[spectblr]{hlines, rowhead=1}
+\SetTblrInner[tblr]{colspec={lc}}
+\begin{document}
+\begin{spectblr}[caption=Basic]{}
+Command & Description & More \\
+a & b & c \\
+\end{spectblr}
+\begin{tblr}{}
+x & y \\
+\end{tblr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
+    assert_eq!(xml.matches("<tr").count(), 3, "{xml}");
+    assert_eq!(xml.matches("<td").count(), 8, "{xml}");
+    assert!(
+      xml.contains(r#"align="center""#),
+      "stored colspec lost: {xml}"
+    );
+  }
 }
