@@ -140,7 +140,6 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    bump_expansion_epoch();
     // Perl shortcut for "trivial" macros that were tracing- or
     // profiling-aware. Neither tracing nor profiling is implemented
     // in the Rust port (the returned `_tracing` / `_profiled` values

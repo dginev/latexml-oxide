@@ -1408,7 +1408,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
       }
     }
     let fp = d.cycle_fingerprint();
-    if let Some(period) = st.cycle_guard.push(fp, expansion_epoch()) {
+    if let Some(period) = st.cycle_guard.push(fp, 0) {
       st.pending_cycle_fatal = Some((
         ErrorCategory::Recursion,
         s!(

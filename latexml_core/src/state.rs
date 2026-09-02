@@ -3963,22 +3963,3 @@ mod reentrancy_tests {
     );
   }
 }
-
-thread_local! {
-  /// Count of macro expansions (every `Expandable::invoke`). The cycle
-  /// guards read it: a fingerprint window that repeats while NO expansion
-  /// happens is data being consumed, not a loop — `\prg_replicate:nn
-  /// {10000} {<body>}` unpacks l3intarray's `\intarray_gzero:N` body 10 000×
-  /// into the pushback and the gullet then reads that stream token by token
-  /// (maze manual: a 6-token window, 100+ repeats, no expansion in between —
-  /// a cycle-guard Fatal on a finite construct). A genuine cycle re-expands
-  /// every period.
-  static EXPANSION_EPOCH: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
-}
-
-/// Current expansion epoch (see `EXPANSION_EPOCH`).
-pub fn expansion_epoch() -> u64 { EXPANSION_EPOCH.with(|c| c.get()) }
-
-/// Advance the expansion epoch (called once per `Expandable::invoke`).
-#[inline]
-pub fn bump_expansion_epoch() { EXPANSION_EPOCH.with(|c| c.set(c.get().wrapping_add(1))); }
