@@ -2073,7 +2073,35 @@ impl Default for RequireOptions {
 /// the standard texmf directories.  Maybe even use kpsewhich itself (INSTEAD of `pathname_find`
 /// ???) Another potentially useful option might be that if we are reading a raw file,
 /// perhaps it should just get digested immediately, since it shouldn't contribute any boxes.
+/// OXIDIZED_DESIGN #177: a package requested by a source-tree relative path
+/// (`\usepackage{../tex/tikzpingus}` — the CTAN layout where `doc/` and
+/// `tex/` are siblings; 61 TL doc manuals) falls back to its basename when
+/// the literal path resolves nowhere but the basename does. pdflatex and
+/// Perl both fail in the installed tree (kpathsea misses `../tex/`), and the
+/// whole manual's error mass follows from the package never loading. Only a
+/// MISS is rerouted: a path that resolves (a paper's own `./mypkg`,
+/// arXiv 0906.3507) still loads the local file. Guard:
+/// `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`.
+fn source_tree_basename<'a>(name: &'a str, ext: &str) -> Cow<'a, str> {
+  if !name.contains('/') || find_file(&s!("{name}.{ext}"), None).is_some() {
+    return Cow::Borrowed(name);
+  }
+  let base = name.rsplit('/').next().unwrap_or(name);
+  if base.is_empty() || find_file(&s!("{base}.{ext}"), None).is_none() {
+    return Cow::Borrowed(name);
+  }
+  Info!(
+    "loading",
+    name,
+    s!("'{name}.{ext}' is not on disk; loading the installed '{base}.{ext}' instead")
+  );
+  Cow::Owned(base.to_string())
+}
+
 pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
+  let ext = options.extension.as_deref().unwrap_or("sty").to_string();
+  let name = source_tree_basename(name, &ext);
+  let name = name.as_ref();
   // Perl Package.pm L2671-2672: notex defaults to true unless the user
   // explicitly set it, or INCLUDE_STYLES is true, or noltxml was passed
   // (a raw-only load explicitly requests raw TeX).

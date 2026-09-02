@@ -7571,4 +7571,46 @@ After.
     // `\detokenize`'s backslash renders through OT1 as `“`.
     assert!(xml.contains("[A#1“foo BC][A#1FOOBC ]"), "{xml}");
   }
+
+  /// OXIDIZED_DESIGN #177: `\usepackage{../tex/pkg}` (CTAN source layout,
+  /// tikzpingus-doc.tex:16 and 60 more manuals) resolves nowhere in the
+  /// installed tree; the basename does, so it is loaded instead. A relative
+  /// path that DOES resolve still loads the local file.
+  #[test]
+  fn relative_package_path_falls_back_to_basename() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::create_dir_all(workdir.path().join("local")).expect("mkdir");
+    std::fs::write(
+      workdir.path().join("local/xspace.sty"),
+      "\\ProvidesPackage{xspace}\\newcommand\\localmarker{LOCALXSPACE}\n",
+    )
+    .expect("write local sty");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{article}\n\
+       \\usepackage{../tex/xcolor}\n\
+       \\usepackage{./local/xspace}\n\
+       \\begin{document}\n\
+       \\textcolor{red}{R}\\localmarker\n\
+       \\end{document}\n",
+    )
+    .expect("write tex");
+    let output = std::process::Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--preload=[rawstyles,rawclasses]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
+    assert!(xml.contains("LOCALXSPACE"), "{xml}");
+  }
 }

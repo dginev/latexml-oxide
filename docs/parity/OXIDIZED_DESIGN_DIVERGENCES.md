@@ -6457,3 +6457,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: halignatt.tex (TeXbook p.247 table), TL doc corpus fillwith/fullwidth manuals.
 **Guard**: `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`, `53_alignment::halignatt_test`, `cells_test` (makecell `\null` opacity).
 **Upstream**: not yet filed. KNOWN_PERL_ERRORS #131.
+
+### 177. A source-tree relative package path falls back to its basename (Perl fails the load)
+
+**Perl behavior**: `\usepackage{../tex/tikzpingus}` (tikzpingus-doc.tex:16 — the CTAN source layout where `doc/` and `tex/` are siblings) is looked up literally; in the installed TeX Live tree `../tex/` does not exist, so the package never loads and the manual's whole shape/layer error mass (354 lines) follows. pdflatex fails identically there.
+**Rust behavior**: `require_package` (`binding/content.rs::source_tree_basename`) reroutes a request containing a directory separator to its basename when the literal path resolves nowhere AND the basename does (kpathsea), with an `Info:loading` note. A relative path that resolves (a paper's own `./mypkg`) still loads the local file.
+**Why**: build-environment mismatch, not TeX semantics; the manual's intent is the installed package. Gated on a miss so arXiv-local packages (memory 0906.3507) are untouched.
+**Witnesses**: 61 TL doc/latex manuals with `\usepackage{../…}` (tikzpingus, classicthesis, pgf-go, cora-macs …).
+**Guard**: `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`.
+**Upstream**: not filed (environment-specific).
