@@ -104,5 +104,13 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$bundle" "$name" "$status" "$exit_code" "$errors" "$fatals" "$warnings" "$secs" \
   | tee "$out/verdict.tsv"
 
+# Error-storm logs run to 1.4 GB (quran/texnegar under a 1001-error cascade):
+# 2026-09-02 a sweep filled /home mid-run and its verdicts were lost. The
+# counts above are already taken; keep the head and tail for triage.
+if [[ $(stat -c %s "$out/$name.log") -gt 52428800 ]]; then
+  { head -c 20971520 "$out/$name.log"; printf '\n[... log truncated by run_doc.sh (>50 MB) ...]\n'; tail -c 1048576 "$out/$name.log"; } >"$out/$name.log.trunc"
+  mv "$out/$name.log.trunc" "$out/$name.log"
+fi
+
 [[ $status -le 1 ]] && exit 0
 exit "$status"

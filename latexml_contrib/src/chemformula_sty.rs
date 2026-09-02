@@ -36,4 +36,19 @@ LoadDefinitions!({
   Let!("\\chcpd", "\\ce");
   def_macro_noop("\\chsetup{}")?;
   def_macro_noop("\\setchemformula{}")?;
+  // The expl3 API chemmacros.sty:1358-1366 wires its `formula=chemformula`
+  // method to (`\chemmacros_formula:n` → `\chemformula_chcpd:nn {} {#1}`,
+  // `\chemmacros_reaction:n` → `\chemformula_ch:nn {} {#1}`), and the charge
+  // signs (chemformula.sty:626-735) its `\ox`/`\pH` output uses. Perl has no
+  // chemformula binding; the raw chemmacros load left `\chemformula_chcpd:nn`
+  // undefined for every `\ox{…}` (chemmacros manual). The optional-argument
+  // slot is the `\ch[options]` list, which the mhchem alias has no use for.
+  DefMacro!("\\chemformula_ch:nn{}{}", "\\ce{#2}");
+  DefMacro!("\\chemformula_chcpd:nn{}{}", "\\ce{#2}");
+  DefMacro!("\\chemformula_plus:", "\\ensuremath{+}");
+  DefMacro!("\\chemformula_minus:", "\\ensuremath{-}");
+  DefMacro!("\\chemformula_formal_plus:", "\\ensuremath{\\oplus}");
+  DefMacro!("\\chemformula_formal_minus:", "\\ensuremath{\\ominus}");
+  DefMacro!("\\chemformula_fplus:", "\\ensuremath{\\oplus}");
+  DefMacro!("\\chemformula_fminus:", "\\ensuremath{\\ominus}");
 });

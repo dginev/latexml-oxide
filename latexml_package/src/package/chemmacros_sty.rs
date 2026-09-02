@@ -1,30 +1,19 @@
 //! chemmacros.sty — chemistry typesetting (expl3-based).
 //!
-//! chemmacros.sty is a large expl3 package providing \ch{}, \ox{},
-//! \state{}, etc. Its raw-load triggers ~1000 cascading errors per
-//! paper because our expl3 emulation can't fully resolve namespaced
-//! CSes inside `\ProvidesExplPackage` bodies (chemmacros.sty L1240+
-//! uses `\cs_new_protected:Npn`).
-//!
-//! Perl LaTeXML has no chemmacros binding and skips it via
-//! INCLUDE_STYLES=false. Match that with a no-op binding. The user
-//! paper's `\ch{...}` will end up as ERROR, but the cascade of 1000
-//! collateral errors disappears.
-//!
-//! Witness 2407.06385, 2408.16742, 2408.16711 — and similar.
+//! Raw-loaded: chemmacros.sty is a large expl3 package (`\ch` via
+//! chemformula/mhchem, `\ox`, `\state`, `\NMR`, `\iupac`, …) and the real
+//! file runs cleanly on the batch-54 kernel (chemmacros manual; the earlier
+//! stub's `\ch` → `\ensuremath{\mathrm{#1}}` overrode chemformula's `\ch`
+//! whenever both were loaded — chemformula manual: 59 `\lx@end@inline@math`
+//! + 32 malformed `ltx:text` errors from `\ch{CrO4^2-}` typeset as math).
+//! Perl LaTeXML has no chemmacros binding and skips it under
+//! INCLUDE_STYLES=false; the 2024 stub rationale (~1000 cascading expl3
+//! errors per paper, witnesses 2407.06385, 2408.16742, 2408.16711) no longer
+//! holds. Its `formula=chemformula` method needs the chemformula l3 API,
+//! which the chemformula binding provides (`\chemformula_chcpd:nn` …).
+//! Guard: `perfect_kernel_batch54::chemmacros_raw_load_keeps_chemformula_ch`.
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // Intentionally empty: chemmacros' expl3 chain doesn't survive
-  // our raw-load. Skipping matches Perl LaTeXML's INCLUDE_STYLES=false
-  // default behaviour.
-  //
-  // Minimal user-facing stubs so the paper renders something (rather
-  // than just \ch undefined): expose \ch as gobble that emits its arg.
-  DefMacro!("\\ch{}", "\\ensuremath{\\mathrm{#1}}");
-  DefMacro!("\\Ch{}", "\\ensuremath{\\mathrm{#1}}");
-  DefMacro!("\\state{}", "#1");
-  def_macro_noop("\\transitionstatesymbol")?;
-  def_macro_noop("\\changestate")?;
-  def_macro_noop("\\setchemnum{}")?;
+  InputDefinitions!("chemmacros", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });

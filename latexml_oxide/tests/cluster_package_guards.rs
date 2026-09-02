@@ -7735,4 +7735,23 @@ Done [\thepage].
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[BXAXARRAW]"), "{xml}");
   }
+
+  /// chemmacros raw-loads (its stub's `\ch` → `\ensuremath{\mathrm{#1}}`
+  /// overrode chemformula's `\ch`: chemformula manual, 90+ errors) and its
+  /// `formula=chemformula` method finds the chemformula l3 API
+  /// (chemmacros.sty:1358-1366 → `\chemformula_chcpd:nn`).
+  #[test]
+  fn chemmacros_raw_load_keeps_chemformula_ch() {
+    let tex = r"\documentclass{article}
+\usepackage{chemformula}
+\usepackage{chemmacros}
+\begin{document}
+\ch{CrO4^2-} \ox{+1,Na} \NMR{1,H} \pH
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<Math"), "{xml}");
+    assert!(xml.contains("NMR"), "{xml}");
+  }
 }
