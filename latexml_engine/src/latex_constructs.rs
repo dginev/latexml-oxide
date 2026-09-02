@@ -3523,6 +3523,16 @@ LoadDefinitions!({
     }
   });
 
+  // latex.ltx:15384-15393 `\end` ends with the epilogue
+  // `\if@ignore\@ignorefalse\ignorespaces\fi` AFTER the `env/#1/after` hook.
+  // Perl (latex_constructs.pool.ltxml:216-231) drops it; noindentafter.sty:44
+  // `\def\nia@afterendenv#1\ignorespaces\fi{…}` — installed by
+  // `\NoIndentAfterEnv` through `\AfterEndEnvironment` — is DELIMITED by
+  // exactly those two tokens and otherwise scans away the rest of the
+  // document (pkgloader manual: `\NoIndentAfterEnv{itemize}` swallowed the
+  // `\DocInput` macrocode, 72 `misdefined:#` + Fatal; Perl fails the same
+  // way). `\if@ignore` is false except after display math, so the group is
+  // normally skipped whole.
   DefMacro!("\\end {}", sub[(env)]{
     let name = Expand!(env).to_string();
     let before = lookup_tokens(&s!("@environment@{name}@atend"));
@@ -3546,6 +3556,12 @@ LoadDefinitions!({
         out_tokens.extend(afterend_toks.unlist())
       }
     }
+    out_tokens.extend([
+      T_CS!("\\if@ignore"),
+      T_CS!("\\@ignorefalse"),
+      T_CS!("\\ignorespaces"),
+      T_CS!("\\fi"),
+    ]);
     Ok(Tokens::new(out_tokens))
   });
 

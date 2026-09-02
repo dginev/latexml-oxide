@@ -45,7 +45,16 @@ LoadDefinitions!({
   // token is reached. \noboundary             c  if present, breaks ligatures and kerns.
   // \vadjust                c  inserts a vertical list between two lines in a paragraph.
 
-  def_primitive_noop("\\ignorespaces SkipSpaces")?;
+  // tex.web §1045: `\ignorespaces` runs `get_x_token` until a non-space —
+  // it EXPANDS what follows (Perl `SkipSpaces` peeks unexpanded, so
+  // `\ignorespaces\if@ignore…\fi <space>` — latex.ltx:15392's `\end`
+  // epilogue behind comment.sty's `\end{Included}`→`\ignorespaces` — left
+  // the end-of-line space in the paragraph; pdflatex eats it).
+  DefPrimitive!("\\ignorespaces", {
+    if let Some(t) = read_x_non_space()? {
+      unread_one(t);
+    }
+  });
   def_primitive_noop("\\noboundary")?;
   // \vadjust<filler>{<vertical mode material>}
   // Note: \vadjust ignores in vertical mode...

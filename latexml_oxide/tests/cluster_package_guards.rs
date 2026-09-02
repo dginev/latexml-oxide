@@ -7138,4 +7138,28 @@ d & e & f \\
     assert_eq!(xml.matches("<caption").count(), 2, "{xml}");
     assert!(xml.contains("cormorant color theme"), "{xml}");
   }
+
+  /// latex.ltx:15392 `\end` ends with `\if@ignore\@ignorefalse\ignorespaces\fi`
+  /// after the `env/<name>/after` hook; noindentafter.sty:44
+  /// `\nia@afterendenv#1\ignorespaces\fi` is delimited by those tokens and
+  /// otherwise scans to EOF (pkgloader manual, 102 errors; Perl identical).
+  #[test]
+  fn end_environment_emits_the_ignorespaces_epilogue() {
+    let tex = r"\documentclass{article}
+\usepackage{noindentafter}
+\NoIndentAfterEnv{itemize}
+\begin{document}
+\begin{itemize}\item a\end{itemize}
+Text after list. $x$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Until:"), "{stderr}");
+    assert!(xml.contains("<itemize"), "{xml}");
+    assert!(
+      xml.contains("Text after list.") && xml.contains("<Math"),
+      "{xml}"
+    );
+  }
 }
