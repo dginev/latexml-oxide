@@ -7247,4 +7247,30 @@ A\csname l@\beamer@torinoth@language\endcsname B
     assert_eq!(error_count(&stderr2), 0, "{stderr2}");
     assert!(xml2.contains("[N]"), "{xml2}");
   }
+
+  /// A `fnum@font@<type>` value wraps the number as a braced argument
+  /// (enumitem.sty:451/1478 `\enit@format{<label>}`); as a bare prefix an
+  /// argument-taking font command grabbed the following `\@ifundefined`
+  /// (non-decimal-units manual: `\setlist[description]{font=\docAuxKey}`,
+  /// 40 errors; Perl Base_Utility.pool:1041 identical).
+  #[test]
+  fn enumitem_font_wraps_the_item_tag() {
+    let tex = r"\documentclass{article}
+\usepackage{enumitem}
+\setlist[description]{font=\textbf}
+\begin{document}
+\begin{description}
+\item[british] Currencies
+\item[danish] Areas
+\end{description}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("british") && xml.contains("danish"), "{xml}");
+    assert!(
+      xml.contains(r#"font="bold""#),
+      "font not applied to the tag: {xml}"
+    );
+  }
 }

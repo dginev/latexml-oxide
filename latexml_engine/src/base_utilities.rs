@@ -1628,9 +1628,16 @@ LoadDefinitions!({
   // harmless to consume and is inert for the 0-arg hooks that are the normal
   // case. The `\lx@@fnum@@` branch below — what fires when no `\fnum@<type>`
   // exists at all, i.e. for nearly every caption — is untouched.
+  // The `fnum@font@<type>` value WRAPS the number as a braced argument
+  // (real enumitem: `\enit@format{<label>}`, enumitem.sty:451/1478) — a bare
+  // prefix let an argument-taking font command (`\textbf`, `\meta`,
+  // tcbdocumentation's `\docAuxKey`; `\setlist[description]{font=…}`) grab
+  // the following `\@ifundefined` instead (non-decimal-units manual, 40
+  // LR-mode/boxing errors; Perl Base_Utility.pool:1041 shares the bare
+  // prefix). The group is transparent for the declaration-style values.
   DefMacro!(
     r"\lx@fnum@@{}",
-    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname{}}}"
+    r"{\normalfont\@ifundefined{fnum@font@#1}{}{\csname fnum@font@#1\endcsname}{\@ifundefined{fnum@#1}{\lx@@fnum@@{#1}}{\csname fnum@#1\endcsname{}}}}"
   );
 
   // Really seems like <type>name should take precedence over \lx@name@<type>,
@@ -1655,7 +1662,7 @@ LoadDefinitions!({
   // pdflatex compatibility, and that argument does not reach this one.)
   DefMacro!(
     r"\lx@fnum@toc@@{}",
-    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname{}}}"
+    r"{\normalfont\@ifundefined{fnum@tocfont@#1}{}{\csname fnum@tocfont@#1\endcsname}{\@ifundefined{fnum@toc@#1}{\lx@the@@{#1}}{\csname fnum@toc@#1\endcsname{}}}}"
   );
 
   //----------------------------------------------------------------------
@@ -1665,7 +1672,7 @@ LoadDefinitions!({
   // \\the<counter>
   DefMacro!(
     "\\lx@typerefnum@@{}",
-    r"{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}"
+    r"{\normalfont\@ifundefined{typerefnum@font@#1}{}{\csname typerefnum@font@#1\endcsname}{\@ifundefined{typerefnum@#1}{\lx@@typerefnum@@{#1}}{\csname typerefnum@#1\endcsname}}}"
   );
 
   DefMacro!(
