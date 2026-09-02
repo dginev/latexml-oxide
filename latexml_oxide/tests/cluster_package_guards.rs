@@ -6205,4 +6205,22 @@ X\csname foo\relax bar\endcsname Y
     assert!(xml.contains("LOADED") && !xml.contains("ABSENT"), "{xml}");
   }
 
+  /// xltabular.sty:19-21 user toggles `\normalLTpagebreak`/`\specialLTpagebreak`
+  /// (page-break policy only) were dropped by the binding that replaces the
+  /// raw .sty (witness xltabular-doc: 2 undefined).
+  #[test]
+  fn xltabular_pagebreak_toggles() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{xltabular}
+\begin{document}
+Special: \specialLTpagebreak Normal: \normalLTpagebreak Done.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Special: Normal: Done."), "{xml}");
+  }
+
 }

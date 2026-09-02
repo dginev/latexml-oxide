@@ -28,4 +28,12 @@ LoadDefinitions!({
     r"\lx@longtable@bindings{#4}\@@longtable[#1]{#4}\lx@begin@alignment"
   );
   DefMacro!("\\endxltabular", r"\lx@end@alignment\@end@tabular");
+  // xltabular.sty:19-21 — `\newif\ifXLT@normalPB` plus the two user toggles
+  // that flip it; the boolean only steers longtable's page-break patches
+  // (L103-104), which have no XML counterpart. The binding replaces the raw
+  // .sty, so it must carry the user surface (witness: xltabular-doc, 2
+  // `undefined` errors). Guard: `perfect_kernel_batch54::xltabular_pagebreak_toggles`.
+  RawTeX!(r"\newif\ifXLT@normalPB \XLT@normalPBtrue");
+  DefMacro!("\\normalLTpagebreak", r"\global\XLT@normalPBtrue");
+  DefMacro!("\\specialLTpagebreak", r"\global\XLT@normalPBfalse");
 });
