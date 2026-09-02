@@ -7613,4 +7613,27 @@ After.
     assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
     assert!(xml.contains("LOCALXSPACE"), "{xml}");
   }
+
+  /// OXIDIZED_DESIGN #178: `\clearpage`/`\newpage` advance `\c@page`
+  /// (latex.ltx:15271), so knowledge.tex:803-809's pad-to-page loop
+  /// terminates — Perl hangs, Rust's box-cycle guard fataled.
+  #[test]
+  fn clearpage_advances_the_page_counter() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\newcommand{\filluptopage}[1]{\clearpage\loop\ifnum\value{page}<#1\relax\null\clearpage\repeat}
+\filluptopage{4}
+Done [\thepage].
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert_eq!(
+      xml.matches("<pagination role=\"newpage\"").count(),
+      3,
+      "{xml}"
+    );
+    assert!(xml.contains("Done [4]."), "{xml}");
+  }
 }

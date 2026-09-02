@@ -6466,3 +6466,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: 61 TL doc/latex manuals with `\usepackage{../…}` (tikzpingus, classicthesis, pgf-go, cora-macs …).
 **Guard**: `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`.
 **Upstream**: not filed (environment-specific).
+
+### 178. A shipped page advances `\c@page` (Perl leaves it at 1 forever)
+
+**Perl behavior**: `\lx@newpage` is a bare `<ltx:pagination>` marker (TeX_Page.pool.ltxml:55); no output routine ever runs latex.ltx:15271's `\global\advance\c@page\@ne`, so `\value{page}` is 1 for the whole document and the standard pad-to-page idiom `\loop\ifnum\value{page}<N \null\clearpage\repeat` (knowledge.tex:803-809) never terminates (Perl hangs; Rust's box-cycle guard made it `Fatal:Stomach:Recursion`).
+**Rust behavior**: `\lx@newpage` (tex_page.rs) emits the marker and then `\global\advance\c@page\@ne` — every `\clearpage`/`\cleardoublepage`/`\newpage`/`\eject`/`\supereject` counts a page, as `\@outputpage` does.
+**Why**: counting the page markers is the honest page model available without a page builder; documents with no page break keep page 1, so output changes only where a break was written. Pairs with `\pagegoal`=`\vsize` (batch 54).
+**Witnesses**: knowledge manual (P47), any `\null\clearpage` fill loop.
+**Guard**: `perfect_kernel_batch54::clearpage_advances_the_page_counter`.
+**Upstream**: not filed.

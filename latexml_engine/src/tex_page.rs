@@ -69,5 +69,18 @@ LoadDefinitions!({
 
   //======================================================================
   // Usable for things line \clearpage, etc.
-  DefConstructor!("\\lx@newpage", "^<ltx:pagination role='newpage'/>");
+  //
+  // OXIDIZED_DESIGN #178: a shipped page advances `\c@page` (latex.ltx:15271
+  // `\@outputpage`'s `\global\advance\c@page\@ne`; plain.tex `\advancepageno`).
+  // Neither engine has an output routine, and Perl's marker leaves the counter
+  // at 1 forever, so the standard "pad to page N" idiom
+  // `\loop\ifnum\value{page}<N \null\clearpage\repeat` (knowledge.tex:803-809)
+  // never ends (Perl hangs; Rust's box-cycle guard made it a Fatal). Counting
+  // the page markers is the honest model of a page count. Guard:
+  // `perfect_kernel_batch54::clearpage_advances_the_page_counter`.
+  DefMacro!(
+    "\\lx@newpage",
+    "\\lx@newpage@mark\\global\\advance\\c@page\\@ne"
+  );
+  DefConstructor!("\\lx@newpage@mark", "^<ltx:pagination role='newpage'/>");
 });
