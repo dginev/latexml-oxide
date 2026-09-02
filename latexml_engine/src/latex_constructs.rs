@@ -5789,20 +5789,33 @@ LoadDefinitions!({
   // create a node! or even a whatsit!)
   // Perl: setupAligningContext saves [node, node.lastChild] to ALIGNING_NODE.
   // applyAligningContext then only applies class to children AFTER the saved lastChild.
-  DefConstructor!("\\centering", sub[doc,_args] {
+  // `\centering`/`\raggedright`/`\raggedleft` are MACROS in latex.ltx
+  // (`\def\centering{\let\\\@centercr …}`, :16419-16433) — expandable — over
+  // constructor cores. That matters for expl3's V-type expansion:
+  // `\__exp_eval_register:N` (expl3-code.tex:2507-2517) tells a register
+  // from a macro with `\exp_after:wN\if_meaning:w\exp_not:N #1 #1`, so a
+  // NON-expandable `\let\raggedsignature=\centering` (DIN.lco:130) was taken
+  // for a register and `\the`'d — scrlttr2.cls:5095 `\tl_if_in:nVTF {…}
+  // \raggedsignature` in `\closing`: "You can't use \raggedsignature after
+  // \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy; Perl's
+  // constructors fail identically, pool:1237-1240).
+  DefMacro!("\\centering", "\\lx@do@centering");
+  DefMacro!("\\raggedright", "\\lx@do@raggedright");
+  DefMacro!("\\raggedleft", "\\lx@do@raggedleft");
+  DefConstructor!("\\lx@do@centering", sub[doc,_args] {
     setup_aligning_context(doc);
   },
   before_digest => {
     unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
   });
   // Perl: latex_constructs.pool.ltxml lines 1299-1302
-  DefConstructor!("\\raggedright", sub[doc,_args] {
+  DefConstructor!("\\lx@do@raggedright", sub[doc,_args] {
     setup_aligning_context(doc);
   },
     before_digest => {
       unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@raggedright")]);
     });
-  DefConstructor!("\\raggedleft", sub[doc,_args] {
+  DefConstructor!("\\lx@do@raggedleft", sub[doc,_args] {
     setup_aligning_context(doc);
   },
     before_digest => {

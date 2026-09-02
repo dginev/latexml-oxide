@@ -5054,3 +5054,15 @@ listings.sty.ltxml:281 ("does NOT balance groups") stops at the first `}`,
 leaking the real closer (coolfn `\mintinline{latex}{\renewcommand{\fnindent}{1.25em}}`,
 tikz-shields). Rust tracks brace depth for the `{` delimiter only. Guard:
 `perfect_kernel_batch54::lstinline_brace_delimiter_is_balanced`.
+
+## 139. `\centering`/`\raggedright`/`\raggedleft` are constructors, so expl3 V-expansion `\the`s them (Rust fixes)
+
+latex.ltx:16419-16433 defines the three as macros; the bindings (pool:1237-1240,
+Rust likewise) are non-expandable constructors, and expl3's
+`\__exp_eval_register:N` (expl3-code.tex:2507-2517 `\exp_after:wN\if_meaning:w
+\exp_not:N #1 #1`) then takes a `\let\raggedsignature=\centering` (DIN.lco:130)
+for a register and applies `\tex_the:D` — scrlttr2.cls:5095 `\closing`'s
+`\tl_if_in:nVTF {…} \raggedsignature`: "You can't use \raggedsignature after
+\the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy). Rust: the three
+are macros over `\lx@do@…` constructors. Guard:
+`perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`.

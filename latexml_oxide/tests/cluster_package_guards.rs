@@ -8142,4 +8142,30 @@ content
     assert!(xml.contains("fnindent</text>}{1.25"), "{xml}");
     assert!(xml.contains("a</text>{<text"), "{xml}");
   }
+
+  /// `\centering`/`\raggedright` are macros (latex.ltx:16419-16433): expl3's
+  /// V-expansion register test (expl3-code.tex:2507-2517) must not `\the` a
+  /// `\let\raggedsignature=\centering` (DIN.lco:130; scrlttr2.cls:5095
+  /// `\closing`: KOMA letters ×5).
+  #[test]
+  fn centering_is_expandable_for_expl3_v_expansion() {
+    let tex = r"\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\let\raggedsignature=\centering
+\tl_if_in:nVTF { \raggedright\LaTeXraggedright } \raggedsignature
+  { \def\got{L} } { \def\got{NOTL} }
+\ExplSyntaxOff
+\begin{document}
+[\got]\begin{center}c\end{center}{\raggedleft r\par}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[NOTL]"), "{xml}");
+    assert!(
+      xml.contains(r#"align="center""#) && xml.contains("ltx_align_right"),
+      "{xml}"
+    );
+  }
 }
