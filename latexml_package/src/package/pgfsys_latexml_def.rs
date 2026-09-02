@@ -1032,6 +1032,18 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@color@cmy{}{}{}",
     "\\ifpgfpicture\\pgfsys@color@cmy@stroke{#1}{#2}{#3}\\pgfsys@color@cmy@fill{#1}{#2}{#3}\\fi",
     locked => true);
+  // `hsb` is a driver CORE model for xcolor: `\XC@coremodel` (xcolor.sty
+  // L1121-1132) folds Hsb/HSB/tHsb/wave to it and passes it to pgf unchanged,
+  // and LaTeXML routes EVERY `\color` through `\pgfsetcolor{.}` (the
+  // `\XC@mcolor` hook, pgf_sty.rs; Perl pgf.sty.ltxml L43) → real pgf's
+  // `\pgf@setcolor` (pgfcoregraphicstate.code.tex L195-202) looks up
+  // `\pgfsys@color@hsb` and errors "Unsupported color model" when absent.
+  // tikz-3dplot.sty L731/787 `\definecolor{tdplotfillcolor}{hsb}{…}` hit the
+  // 500-error cap on tikz-3dplot_documentation (Perl SHARED). Only hsb is
+  // needed; every other xcolor model reaches pgf as rgb/gray/cmy/cmyk/hsb.
+  DefMacro!("\\pgfsys@color@hsb{}{}{}",
+    "\\ifpgfpicture\\pgfsys@color@hsb@stroke{#1}{#2}{#3}\\pgfsys@color@hsb@fill{#1}{#2}{#3}\\fi",
+    locked => true);
 
   // Perl: DefMacro('\lxSVG@RGB{}{}{}', sub { Explode(Color('rgb', $_[1], $_[2], $_[3])->toHex); });
   // Use plain {} parameters (not {Float}) so these macros expand correctly
@@ -1058,6 +1070,14 @@ LoadDefinitions!({
     color_to_hex_tokens((1.0-c)*(1.0-k), (1.0-m)*(1.0-k), (1.0-y)*(1.0-k))
   });
 
+  DefMacro!("\\lxSVG@HSB{}{}{}", sub[args] {
+    let h: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let s: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let b: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let c = latexml_core::common::color::Color::Hsb(h, s, b).to_rgb().components();
+    color_to_hex_tokens(c[0], c[1], c[2])
+  });
+
   DefMacro!("\\lxSVG@CMY{}{}{}", sub[args] {
     let c: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     let m: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
@@ -1080,6 +1100,10 @@ LoadDefinitions!({
     "\\lxSVG@color@cmy@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@cmy@fill{}{}{}",
     "\\lxSVG@color@cmy@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
+  DefMacro!("\\pgfsys@color@hsb@stroke{}{}{}",
+    "\\lxSVG@color@hsb@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@HSB{#1}{#2}{#3}}", locked => true);
+  DefMacro!("\\pgfsys@color@hsb@fill{}{}{}",
+    "\\lxSVG@color@hsb@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@HSB{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@stroke{}",
     "\\lxSVG@color@gray@stroke{#1}\\lxSVG@begingroup{stroke=\\lxSVG@GRAY{#1}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@fill{}",
@@ -1111,6 +1135,13 @@ LoadDefinitions!({
     let k: f64 = args[3].to_string().trim().parse().unwrap_or(0.0);
     format!("#{:02X}{:02X}{:02X}",
       channel_to_u8((1.0-c)*(1.0-k)), channel_to_u8((1.0-m)*(1.0-k)), channel_to_u8((1.0-y)*(1.0-k)))
+  }
+  fn hsb_hex(args: &[&ArgWrap]) -> String {
+    let h: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    let s: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
+    let b: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
+    let c = latexml_core::common::color::Color::Hsb(h, s, b).to_rgb().components();
+    format!("#{:02X}{:02X}{:02X}", channel_to_u8(c[0]), channel_to_u8(c[1]), channel_to_u8(c[2]))
   }
   fn cmy_hex(args: &[&ArgWrap]) -> String {
     let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
@@ -1147,6 +1178,14 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lxSVG@color@cmy@fill{}{}{}", sub[args] {
     let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@hsb@stroke{}{}{}", sub[args] {
+    let hex = hsb_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@hsb@fill{}{}{}", sub[args] {
+    let hex = hsb_hex(&[&args[0], &args[1], &args[2]]);
     assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@gray@stroke{}", sub[args] {

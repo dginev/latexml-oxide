@@ -6539,4 +6539,25 @@ a & b \\
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<svg:path"), "{xml}");
   }
+  /// pgf driver handler for xcolor's core model `hsb` (xcolor.sty L1121-1132
+  /// folds Hsb/HSB/tHsb/wave into it); pgfcoregraphicstate.code.tex L195-202
+  /// errors "Unsupported color model" when `\pgfsys@color@hsb` is missing.
+  /// Witness: tikz-3dplot_documentation (tikz-3dplot.sty:731).
+  #[test]
+  fn pgfsys_hsb_color_model_supported() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\definecolor{tdplotfillcolor}{hsb}{0.5, 1, 1}
+\fill[tdplotfillcolor] (0,0) rectangle (1,1);
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Unsupported color model"), "{stderr}");
+    assert!(xml.contains("#00FFFF"), "{xml}");
+  }
+
 }
