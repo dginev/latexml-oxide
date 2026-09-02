@@ -2749,7 +2749,23 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         // (witness bibleref-parse.sty L481-486 `\brp@ifcs`).
         let (mut s, is_cs) = match read_token()? {
           None => (String::new(), false),
-          Some(next) => (next.to_string(), next.get_catcode() == Catcode::CS),
+          Some(next) => {
+            // tex.web §442: a brace read as a character constant is NOT a
+            // group for ALIGN_STATE — `get_token` counted it, so undo that.
+            // This is what makes the `\iffalse{\fi\ifnum0=`}\fi` idiom
+            // (expl3 `\group_align_safe_begin:`, amsmath) leave align_state
+            // +1 with no group open, so an alignment-catcode token inside
+            // a delimited-macro definition in a tabular cell (l3tl
+            // `\tl_replace_all` with a rescanned `_`(4), l3doc `\marg` in
+            // `syntax`) is not mistaken for the cell end. Perl Gullet.pm:926
+            // omits the undo (SHARED).
+            match next.get_catcode() {
+              Catcode::BEGIN => decrement_align_group_count(),
+              Catcode::END => increment_align_group_count(),
+              _ => {},
+            }
+            (next.to_string(), next.get_catcode() == Catcode::CS)
+          },
         };
         if is_cs && s.starts_with('\\') {
           s.remove(0);

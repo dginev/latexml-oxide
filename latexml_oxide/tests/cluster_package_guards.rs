@@ -6952,4 +6952,57 @@ x & y \\
     // the caller's catcode setup governs the rescan: `\` as OTHER is text
     assert!(xml.contains("[A") && xml.contains("B]"), "{xml}");
   }
+
+  /// tex.web §442: a brace read as a character constant (`` `} ``) undoes the
+  /// `align_state` step `get_token` applied, so `\iffalse{\fi\ifnum0=`}\fi`
+  /// (expl3 `\group_align_safe_begin:`, amsmath) leaves ALIGN_STATE +1 with no
+  /// group open. Without the undo the idiom netted 0 and an alignment-catcode
+  /// token in a delimited-macro definition inside a cell — l3tl
+  /// `\tl_replace_all` with a rescanned `_`(4), l3doc `\marg` inside `syntax`
+  /// (every l3doc manual) — was taken as the cell end (`Until:…@after_` EoF
+  /// Fatal). Perl Gullet.pm:926 shares the gap.
+  #[test]
+  fn backquote_brace_charcode_keeps_align_state() {
+    let tex = r"\documentclass{article}
+\usepackage{expl3}
+\begin{document}
+\begin{tabular}{l}
+\begin{minipage}{3cm}
+\ExplSyntaxOn
+\tl_set_rescan:Nnn \l_tmpa_tl { \char_set_catcode:nn { `_ } {4} } { _ }
+\tl_set:Nn \l_tmpb_tl { a_b }
+\tl_replace_all:NVn \l_tmpb_tl \l_tmpa_tl { X }
+[\tl_use:N \l_tmpb_tl]
+\ExplSyntaxOff
+\end{minipage}
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Until:"), "{stderr}");
+    // the letter-catcode `_` in `a_b` is not the catcode-4 pattern: untouched
+    assert!(xml.contains("[a") && xml.contains("b]"), "{xml}");
+    assert_eq!(xml.matches("<td").count(), 1, "{xml}");
+  }
+
+  /// l3doc `\marg`/`\oarg` inside `{syntax}` (a tabular+minipage) — the
+  /// corpus-wide face of `backquote_brace_charcode_keeps_align_state`
+  /// once `\tl_set_rescan` captures alignment-catcode tokens.
+  #[test]
+  fn l3doc_marg_inside_syntax_env() {
+    let tex = r"\documentclass{l3doc}
+\begin{document}
+\begin{function}{\zcheck}
+\begin{syntax}
+\cs{zcheck} \oarg{options} \marg{labels}
+\end{syntax}
+Typesets \meta{text}.
+\end{function}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("labels"), "{xml}");
+  }
 }
