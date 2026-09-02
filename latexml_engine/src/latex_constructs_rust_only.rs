@@ -92,6 +92,13 @@ LoadDefinitions!({
   // the accessible structure — absorb here at kernel level, mirroring the
   // tagpdf_sty.rs binding.
   def_macro_noop("\\tagpdfsetup{}")?;
+  // tagpdf.sty `\tagtool{<keyvals>}` (per-structure tagging tweaks) and
+  // latex-lab-testphase-block's `\DebugBlocksOn/Off` (debug output for the
+  // block tagging code) — both PDF-structure-only, like `\tagpdfsetup`.
+  // Witness: tagpdf manual (tagpdf.tex:18,127).
+  def_macro_noop("\\tagtool{}")?;
+  def_macro_noop("\\DebugBlocksOn")?;
+  def_macro_noop("\\DebugBlocksOff")?;
   def_macro_noop("\\tagstructbegin{}")?;
   def_macro_noop("\\tagstructend")?;
   def_macro_noop("\\tagmcbegin{}")?;

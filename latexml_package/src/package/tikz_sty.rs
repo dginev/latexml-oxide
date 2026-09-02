@@ -23,6 +23,19 @@ LoadDefinitions!({
   DefMacro!("\\pgfmathresult", "0.0");
   DefMacro!("\\tikz@align@temp", "\\pgfmathresult");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // latex-lab-testphase-tikz.sty:228-260 (loaded by every `\DocumentMetadata`
+  // through latex-lab-testphase-latest.sty:39-58) adds the accessibility keys
+  // `alt`, `actualtext`, `artifact`, `tagging-setup` to `/tikz` from the
+  // `package/tikz/after` hook. Their socket plugs write PDF structure (a
+  // Figure/Span with the purified text); the XML has no slot for it yet, so
+  // the values are only recorded (`\lx@tikz@alt`/`\lx@tikz@actualtext`).
+  // Witness: tagpdf manual (`\begin{tikzpicture}[alt={…}]` ×9 "I do not know
+  // the key '/tikz/alt'"). Gated like the real chain on `\DocumentMetadata`.
+  RawTeX!(r"\IfDocumentMetadataTF{\tikzset{
+    alt/.code={\def\lx@tikz@alt{#1}},
+    actualtext/.code={\def\lx@tikz@actualtext{#1}},
+    artifact/.code={},
+    tagging-setup/.code={}}}{}");
   // Perl L35-52: \use@@tikzlibrary — loads tikz/pgf library files
   // Makes sure libraries are loaded as definitions (InputDefinitions) rather than
   // content, with catcode management for | character.

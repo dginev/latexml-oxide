@@ -7032,4 +7032,26 @@ Typesets \meta{text}.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("labels"), "{xml}");
   }
+
+  /// latex-lab-testphase-tikz.sty:228-260 adds `/tikz/alt` and friends when
+  /// `\DocumentMetadata` is active; the picture's alt text is recorded (no
+  /// XML slot yet) and `\tagtool`/`\DebugBlocksOff` are PDF-structure-only.
+  /// Witness: tagpdf manual (9× "I do not know the key '/tikz/alt'").
+  #[test]
+  fn documentmetadata_tikz_alt_key_and_tagging_tools() {
+    let tex = r"\DocumentMetadata{tagging=on}
+\documentclass{article}
+\usepackage{tikz}
+\DebugBlocksOff
+\begin{document}
+\tagtool{para/tag=P}
+\begin{tikzpicture}[alt={A red circle}]
+\fill[red] (0,0) circle (2pt);
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:path"), "{xml}");
+  }
 }
