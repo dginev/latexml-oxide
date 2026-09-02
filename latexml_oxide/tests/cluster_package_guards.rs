@@ -6693,6 +6693,7 @@ hello world
     assert!(xml.contains("[hello world"), "{xml}");
     assert_eq!(xml.matches("foo").count(), 1, "stale first write re-input: {xml}");
   }
+
   /// etoolbox.sty:1740-1746: under a 2020-10+ format `\AtEndPreamble` IS
   /// `\AddToHook{begindocument/before}`, so it takes the hook system's
   /// optional `[label]`. tcbdocumentation.code.tex:69 defines `\meta`
@@ -6710,5 +6711,29 @@ Syntax: \meta{true,false}
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("true,false"), "{xml}");
     assert!(!xml.contains("tcolorbox]"), "label leaked as text: {xml}");
+  }
+
+  /// forest.sty:8506 `\NewDocumentEnvironment{forest}{D(){}}` also defines
+  /// the bare `\forest … \endforest` pair, and :1413 `\bracketset`;
+  /// neoschool.cls:8567-8581 builds `neotree` on the bare form and calls
+  /// `\bracketset{action character=@}` at load. The stub knew only
+  /// `\begin{forest}`, so the tree body (`w=\frac{1}{3}`) leaked into text
+  /// as XMApp errors. Witness: neoschool (4 errors). The stub's own
+  /// one-per-kind report is the single expected error.
+  #[test]
+  fn forest_bare_cs_form_discards_body() {
+    let tex = r"\documentclass{article}
+\usepackage{forest}
+\bracketset{action character=@}
+\begin{document}
+A\forest [root [w=\frac{1}{3}] [b]]\endforest B
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(!stderr.contains("undefined:\\forest "), "{stderr}");
+    assert!(!stderr.contains("bracketset"), "{stderr}");
+    assert!(!xml.contains("XMApp"), "tree body leaked: {xml}");
+    assert!(xml.contains("A") && xml.contains("B"), "{xml}");
   }
 }

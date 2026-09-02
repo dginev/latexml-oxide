@@ -37,6 +37,27 @@ thread_local! {
 /// invocation per `kind`.
 pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
   bgroup();
+  report_stub_once(kind, source)?;
+  let end_delim = Tokens!(T_CS!("\\end"));
+  loop {
+    let _upto_end = read_until(&end_delim)?;
+    let _drop_open = read_token()?;
+    // require_open=false because `_drop_open` just consumed the `{` —
+    // read_balanced should read the inside, not a second `{`. Mirrors
+    // Perl's argless `$gullet->readBalanced` which assumes the `{` is
+    // already open. Driver: 2402.09676 + nicematrix stub cascaded
+    // "Expected opening '{'" because of the spurious require_open.
+    let env = read_balanced(ExpansionLevel::Off, false, false)?;
+    if env.to_string() == kind {
+      break;
+    }
+  }
+  egroup()?;
+  Ok(())
+}
+
+/// The one-per-kind stub diagnostic shared by the discard helpers.
+fn report_stub_once(kind: &str, source: &str) -> Result<()> {
   let first_time = REPORTED.with(|cell| {
     let mut set = cell.borrow_mut();
     if set.contains(kind) {
@@ -54,20 +75,17 @@ pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
     );
     Error!("undefined", &obj, msg);
   }
-  let end_delim = Tokens!(T_CS!("\\end"));
-  loop {
-    let _upto_end = read_until(&end_delim)?;
-    let _drop_open = read_token()?;
-    // require_open=false because `_drop_open` just consumed the `{` —
-    // read_balanced should read the inside, not a second `{`. Mirrors
-    // Perl's argless `$gullet->readBalanced` which assumes the `{` is
-    // already open. Driver: 2402.09676 + nicematrix stub cascaded
-    // "Expected opening '{'" because of the spurious require_open.
-    let env = read_balanced(ExpansionLevel::Off, false, false)?;
-    if env.to_string() == kind {
-      break;
-    }
-  }
+  Ok(())
+}
+
+/// Discard the body of the BARE-CS environment form `\<kind> … \end<kind>`
+/// (what `\NewDocumentEnvironment` defines alongside `\begin{<kind>}`):
+/// raw, non-expanding scan up to the `end_cs` token, sharing the
+/// one-per-kind stub report with [`discard_env_body`].
+pub fn discard_body_until_cs(kind: &str, end_cs: &str, source: &str) -> Result<()> {
+  bgroup();
+  report_stub_once(kind, source)?;
+  let _body = read_until(&Tokens!(T_CS!(end_cs)))?;
   egroup()?;
   Ok(())
 }

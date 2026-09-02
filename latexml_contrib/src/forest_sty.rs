@@ -1,6 +1,6 @@
 use latexml_package::prelude::*;
 
-use crate::discard_env::discard_env_body;
+use crate::discard_env::{discard_body_until_cs, discard_env_body};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -27,7 +27,23 @@ LoadDefinitions!({
     locked  => true,
     before_digest => { discard_env_body("forest", "forest.sty.ltxml")?; }
   );
+  // The bare-CS form `\forest … \endforest` that `\NewDocumentEnvironment
+  // {forest}{D(){}}` (forest.sty:8506) also defines — neoschool.cls:8567-8581
+  // builds its `neotree` env on it; without it `\forest` was undefined and
+  // the tree body leaked as text (`\frac` XMApp errors). Guard:
+  // `perfect_kernel_batch54::forest_bare_cs_form_discards_body`.
+  DefConstructor!(
+    T_CS!("\\forest"), None,
+    "<ltx:ERROR>{forest}</ltx:ERROR>",
+    bounded => true,
+    mode    => "text",
+    locked  => true,
+    before_digest => { discard_body_until_cs("forest", "\\endforest", "forest.sty.ltxml")?; }
+  );
   DefMacro!("\\endforest", "\\relax");
+  // forest.sty:1413 bracket-parser configuration (neoschool.cls:8568
+  // `\bracketset{action character=@}`); nothing to configure in a stub.
+  DefMacro!("\\bracketset{}", "\\relax");
   DefMacro!("\\forestset{}", "\\relax");
   DefMacro!("\\forestoption{}", "\\relax");
   DefMacro!("\\foresteoption{}", "\\relax");
