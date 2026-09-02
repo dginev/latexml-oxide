@@ -27,7 +27,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("array");
   // delarray.sty:43-44 — `\@tabarray`/`\@@array[pos]` peek for a brace.
-  DefMacro!("\\array", r"\@ifnextchar[{\lx@delarray@pos}{\lx@delarray@pos[c]}");
+  DefMacro!(
+    "\\array",
+    r"\@ifnextchar[{\lx@delarray@pos}{\lx@delarray@pos[c]}"
+  );
   DefMacro!(
     "\\lx@delarray@pos[]",
     r"\@ifnextchar\bgroup{\let\@arrayright\relax\lx@delarray@plain[#1]}{\lx@delarray@del[#1]}"
@@ -41,6 +44,10 @@ LoadDefinitions!({
     "\\lx@delarray@del[] Token {} Token",
     r"\def\@arrayright{\right#4}\left#2\lx@delarray@plain[#1]{#3}"
   );
-  DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array\@arrayright");
+  DefMacro!(
+    "\\endarray",
+    None,
+    r"\lx@end@alignment\@end@array\@arrayright"
+  );
   DefMacro!("\\@arrayright", None, r"\relax");
 });

@@ -12079,7 +12079,10 @@ LoadDefinitions!({
   // `\@currsize`→`\normalsize`→`\@setfontsize\normalsize…` without bound
   // when pgf edef'd a `font=\normalsize` label — tikz-network manual
   // PushbackLimit Fatal. `\@nomath`/`\fontsize…\selectfont` stay dropped.
-  DefMacro!("\\@setfontsize{}{}{}", "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fi");
+  DefMacro!(
+    "\\@setfontsize{}{}{}",
+    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fi"
+  );
   // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
   // `\begin{document}` has run `\normalsize` (whose class definition routes
   // through `\@setfontsize`). Our class bindings define the size commands as

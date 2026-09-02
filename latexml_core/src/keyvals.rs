@@ -974,13 +974,19 @@ impl KeyVals {
       };
       match body {
         None => {
-          Error!("undefined", "\\usevalue",
-            s!("no value recorded for key `{key}'; ignored"));
+          Error!(
+            "undefined",
+            "\\usevalue",
+            s!("no value recorded for key `{key}'; ignored")
+          );
           toks.drain(i..j);
         },
         Some(_) if seen.contains(&key) => {
-          Error!("unexpected", "\\usevalue",
-            "back linking pointers; pointer replacement canceled");
+          Error!(
+            "unexpected",
+            "\\usevalue",
+            "back linking pointers; pointer replacement canceled"
+          );
           toks.drain(i..j);
         },
         Some(body) => {
@@ -1155,8 +1161,8 @@ impl KeyVals {
             self.save_listed(keyset, key)
           };
           if let Some(global) = save_global {
-            let value_tks = raw_value_tks
-              .unwrap_or_else(|| value.clone().owned_tokens().unwrap_or_default());
+            let value_tks =
+              raw_value_tks.unwrap_or_else(|| value.clone().owned_tokens().unwrap_or_default());
             self.store_saved_value(keyset, key, value_tks, global)?;
           }
         }

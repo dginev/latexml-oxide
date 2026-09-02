@@ -1280,9 +1280,11 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     // packages wrap (xassoccnt.sty L2553 → its expl3 body runs away into the
     // following `\@lst@startline` at construction time; 518 malformed errors
     // on xassoccnt_doc). Sibling of the `\lx@lst@stepnumber` newline emitter.
-    ctx.lsttokens.extend(invoke(T_CS!("\\lx@lst@setnumber"), vec![
-      Tokens::new(ExplodeText!(&ctx.linenum.to_string())),
-    ]));
+    ctx
+      .lsttokens
+      .extend(invoke(T_CS!("\\lx@lst@setnumber"), vec![Tokens::new(
+        ExplodeText!(&ctx.linenum.to_string()),
+      )]));
     lst_process_start_line(&mut ctx);
   }
 
@@ -3538,7 +3540,11 @@ fn lst_writefile_open(file: &str) {
   if !open {
     vfs_store(file, "");
   }
-  assign_value("LST@WF@file", Stored::String(pin(file)), Some(Scope::Global));
+  assign_value(
+    "LST@WF@file",
+    Stored::String(pin(file)),
+    Some(Scope::Global),
+  );
 }
 
 /// Write-file tee (lstmisc.sty aspect): when `\lst@BeginWriteFile`/

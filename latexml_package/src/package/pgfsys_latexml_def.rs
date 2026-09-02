@@ -116,10 +116,14 @@ fn ensure_svg_context(document: &mut Document) -> Result<()> {
   let current = document.get_node().clone();
   let qname = document::get_node_qname(&current);
   if with(qname, |s| s.starts_with("ltx:")) {
-    document.open_element("svg:svg", Some(string_map!(
-      "_autoopened" => "1".to_string(),
-      "_autoclose" => "1".to_string()
-    )), None)?;
+    document.open_element(
+      "svg:svg",
+      Some(string_map!(
+        "_autoopened" => "1".to_string(),
+        "_autoclose" => "1".to_string()
+      )),
+      None,
+    )?;
   }
   Ok(())
 }

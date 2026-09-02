@@ -6112,7 +6112,10 @@ Hello.\usebibmacro*{index:entry}
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("misdefined"), "{stderr}");
-    assert!(!xml.contains("ltx:ERROR") && !xml.contains("<ERROR"), "{xml}");
+    assert!(
+      !xml.contains("ltx:ERROR") && !xml.contains("<ERROR"),
+      "{xml}"
+    );
     assert!(!xml.contains("[package]title"), "{xml}");
     assert!(xml.contains("<p>Hello.</p>"), "{xml}");
   }
@@ -6163,7 +6166,10 @@ V=\hobbyVersion\ from \hobbyDate.
       true,
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(!stderr.contains("hobby.code.tex is not implemented"), "{stderr}");
+    assert!(
+      !stderr.contains("hobby.code.tex is not implemented"),
+      "{stderr}"
+    );
     assert!(xml.contains("V=1.12 from 2023-09-01."), "{xml}");
   }
 
@@ -6301,7 +6307,10 @@ D
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("misdefined"), "{stderr}");
-    assert!(xml.contains("[a/b]xDONE") || xml.contains("[a/b]x DONE"), "{xml}");
+    assert!(
+      xml.contains("[a/b]xDONE") || xml.contains("[a/b]x DONE"),
+      "{xml}"
+    );
   }
 
   /// `\lx@lstinline` opened its group with a direct `bgroup()` but closed it
@@ -6598,7 +6607,10 @@ D[\the\dimexpr -1sp/2\relax][\the\dimexpr 1sp/2\relax][\the\dimexpr -3sp/2\relax
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("D[-0.00002pt][0.00002pt][-0.00003pt][-2350558][-4722961]"), "{xml}");
+    assert!(
+      xml.contains("D[-0.00002pt][0.00002pt][-0.00003pt][-2350558][-4722961]"),
+      "{xml}"
+    );
   }
 
   /// `\read` past end-of-file reads the synthetic empty line + `\endlinechar`
@@ -6691,7 +6703,11 @@ hello world
     // The displayed listings still show both bodies (AlsoWriteFile); the
     // `\input`-back must see only the second span.
     assert!(xml.contains("[hello world"), "{xml}");
-    assert_eq!(xml.matches("foo").count(), 1, "stale first write re-input: {xml}");
+    assert_eq!(
+      xml.matches("foo").count(),
+      1,
+      "stale first write re-input: {xml}"
+    );
   }
 
   /// etoolbox.sty:1740-1746: under a 2020-10+ format `\AtEndPreamble` IS
@@ -6784,7 +6800,10 @@ START\myval END
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("START END") || xml.contains("STARTEND"), "{xml}");
+    assert!(
+      xml.contains("START END") || xml.contains("STARTEND"),
+      "{xml}"
+    );
   }
 
   /// Perl TeX_Debugging.pool.ltxml:110-113 reduces a primitive / conditional /
@@ -6826,7 +6845,10 @@ $\begin{array}{c} p \\ q \end{array}$
     assert!(!stderr.contains("Extra alignment tab"), "{stderr}");
     assert_eq!(xml.matches("<XMArray").count(), 3, "{xml}");
     // the delimiters survive as fence tokens around the arrays
-    assert!(xml.contains(r#"role="OPEN">(</XMTok>"#) || xml.contains(r#">(</XMTok>"#), "{xml}");
+    assert!(
+      xml.contains(r#"role="OPEN">(</XMTok>"#) || xml.contains(r#">(</XMTok>"#),
+      "{xml}"
+    );
     assert!(xml.contains(r#">{</XMTok>"#), "{xml}");
   }
 
@@ -6869,10 +6891,15 @@ Hello.
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     // the phantom's drawing nests inside its own foreignObject box
-    let fo = xml.find("<svg:foreignObject").expect("phantom foreignObject");
+    let fo = xml
+      .find("<svg:foreignObject")
+      .expect("phantom foreignObject");
     let after = &xml[fo..];
     let close = after.find("</svg:foreignObject>").unwrap();
-    assert!(after[..close].contains("<svg:path"), "phantom path escaped its box: {xml}");
+    assert!(
+      after[..close].contains("<svg:path"),
+      "phantom path escaped its box: {xml}"
+    );
     assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
   }
 
