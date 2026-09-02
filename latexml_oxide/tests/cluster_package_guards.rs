@@ -6658,4 +6658,39 @@ X\lb X\la X
     assert!(xml.contains("[42]"), "{xml}");
   }
 
+  /// lstmisc.sty:60-64 `\lst@WFBegin` runs `\immediate\openout\lst@WF=#2`
+  /// on every FRESH `\lst@BeginWriteFile`/`\lst@BeginAlsoWriteFile`, so the
+  /// file is truncated per begin/end span (pdflatex: only the second write
+  /// survives). The display-time tee appended across spans, so
+  /// forest-doc.sty:59's per-example `\jobname.tmp` kept a stale
+  /// `\usepackage[linguistics]{forest}` line that every later
+  /// `\lst@sampleInput` re-`\input` — 440 "can only appear in the preamble"
+  /// errors. Witness: forest-doc (1001 errors + TooManyErrors).
+  #[test]
+  fn listings_writefile_truncates_on_fresh_begin() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\makeatletter
+\lst@BeginAlsoWriteFile{\jobname.tmp}
+\begin{lstlisting}
+\usepackage[foo]{bar}
+\end{lstlisting}
+\lst@EndWriteFile
+\lst@BeginAlsoWriteFile{\jobname.tmp}
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\lst@EndWriteFile
+\makeatother
+[\input{\jobname.tmp}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The displayed listings still show both bodies (AlsoWriteFile); the
+    // `\input`-back must see only the second span.
+    assert!(xml.contains("[hello world"), "{xml}");
+    assert_eq!(xml.matches("foo").count(), 1, "stale first write re-input: {xml}");
+  }
 }

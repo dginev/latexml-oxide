@@ -2600,14 +2600,20 @@ LoadDefinitions!({
   // cnltx-example.sty L702-718 (`\cnltx@source@input@start{\jobname.tmp}`),
   // the bohr/cnltx manual family (32 docs, `\endmdframed` cascade rooted in
   // `undefined:\lst@BeginAlsoWriteFile`).
+  // `\lst@WFBegin` (lstmisc.sty L60-64) runs `\immediate\openout\lst@WF=#2`
+  // unless `\lst@WFifopen` — every FRESH begin truncates the file, and only
+  // the listings within one begin/end span accumulate. forest-doc.sty:59
+  // re-begins `\jobname.tmp` per example; without the truncation a frozen
+  // `\usepackage[linguistics]{forest}` line was re-`\input` 440× (witness:
+  // forest-doc, 1001 errors + TooManyErrors).
   DefPrimitive!("\\lst@BeginWriteFile{}", sub[(file)] {
     let f = do_expand(file)?.to_string();
-    assign_value("LST@WF@file", Stored::String(pin(f.trim())), Some(Scope::Global));
+    lst_writefile_open(f.trim());
     assign_value("LST@WF@also", Stored::from(false), Some(Scope::Global));
   });
   DefPrimitive!("\\lst@BeginAlsoWriteFile{}", sub[(file)] {
     let f = do_expand(file)?.to_string();
-    assign_value("LST@WF@file", Stored::String(pin(f.trim())), Some(Scope::Global));
+    lst_writefile_open(f.trim());
     assign_value("LST@WF@also", Stored::from(true), Some(Scope::Global));
   });
   DefPrimitive!(T_CS!("\\lst@EndWriteFile"), None, {
@@ -3523,6 +3529,18 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
   }
 }
 
+/// `\lst@WFBegin`'s `\immediate\openout` (lstmisc.sty L60-64): arm `file` as
+/// the write-file target and truncate it unless a target is already open
+/// (`\lst@WFifopen`, cleared by `\lst@EndWriteFile`).
+fn lst_writefile_open(file: &str) {
+  let open = matches!(lookup_value("LST@WF@file"),
+    Some(Stored::String(sym)) if with(sym, |s| !s.is_empty()));
+  if !open {
+    vfs_store(file, "");
+  }
+  assign_value("LST@WF@file", Stored::String(pin(file)), Some(Scope::Global));
+}
+
 /// Write-file tee (lstmisc.sty aspect): when `\lst@BeginWriteFile`/
 /// `\lst@BeginAlsoWriteFile` armed a target, append the captured listing
 /// text to it. Returns false when the listing should NOT also display
@@ -3538,8 +3556,8 @@ fn lst_writefile_tee(text: &str) -> bool {
   // Virtual store only — `\input`-back consumers (cnltx, incgraph) resolve
   // the written example via the VFS (find_file consults it first). A disk
   // write here landed in the process CWD, not the destination directory
-  // (repo-root leakage from test runs). Append-shape kept: real listings
-  // writefile appends across multiple env uses.
+  // (repo-root leakage from test runs). Appends within one begin/end span
+  // (`\lst@WFAppend`); `lst_writefile_open` truncates on each fresh begin.
   let mut mirrored = vfs_read(&file).unwrap_or_default();
   mirrored.push_str(text);
   mirrored.push('\n');
