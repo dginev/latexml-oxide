@@ -4736,3 +4736,35 @@ Trigger:
 ```
 
 Expected `[92]`; Perl `[0]` (with "Missing number" warning).
+
+## 124. `\numexpr` division truncates toward zero for negative quotients (Rust fixes)
+
+`Number.pm` `divideround` computes `int(0.5 + $n/$d)`: correct for positive
+quotients, but `int` truncates toward zero, so `\numexpr -1/2` gives 0 and
+`-7/2` gives -3. eTeX's `quotient` (etex.ch, the `scan_expr` subprocedures)
+works on magnitudes and rounds half **away** from zero: -1, -4
+(pdflatex-probed). l3fp's multiplication dispatcher
+`\__fp_mul_cases_o:NnNnww` (expl3-code.tex:18724-18760) selects its case by
+`(#5 #2 #8) / 2 * 2 + 7` and needs `-1/2 = -1` for the `0 × normal` case; with
+the truncating quotient a zero LEFT operand of `*` routes to the
+`invalid_operation` arm and every enclosing `+`/`-` expression collapses to
+0: `\fp_eval:n { 800 - 0 * 3 }` = 0 (pdflatex: 800). Witness wheelchart
+(wheelchart.sty:2423 `\pgf@yy * \pgf@xx - \pgf@yx * \pgf@xy` — the shear
+registers are 0pt, the transform determinant becomes 0, its inversion
+desyncs l3fp: 1001 errors, cap fatal). Perl fails identically on the
+kernel repro.
+
+Rust: `numeric_ops.rs` `divideround` is the etex.ch `quotient`; guard
+`perfect_kernel_batch54::numexpr_division_rounds_half_away_from_zero`.
+Trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+[\the\numexpr -1/2\relax][\the\numexpr -7/2\relax]
+\ExplSyntaxOn [\fp_eval:n { 800 - 0 * 3 }] \ExplSyntaxOff
+\end{document}
+```
+
+Expected `[-1][-4] [800]`; Perl `[0][-3] [0]`.
+

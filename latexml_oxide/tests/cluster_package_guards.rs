@@ -5581,7 +5581,7 @@ X\ekvset{foo}{}Y\ekvset{foo}{bar=1, ,}Z
 
   /// Convert `t.tex` next to a sidecar package file under the perfect-kernel
   /// preload; `--includestyles --path .` makes the sidecar raw-loadable.
-  fn convert_with_sty(tex: &str, sty_name: &str, sty_body: &str) -> (String, String) {
+  pub(super) fn convert_with_sty(tex: &str, sty_name: &str, sty_body: &str) -> (String, String) {
     use std::{path::Path, process::Command};
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
@@ -6082,7 +6082,10 @@ mod perfect_kernel_batch54 {
   //! reproduction distilled during triage; the doc-comment names the
   //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
   //! was vetted separately.
-  use super::perfect_kernel_batch46::{convert, error_count};
+  use super::{
+    perfect_kernel_batch46::{convert, error_count},
+    perfect_kernel_batch53::convert_with_sty,
+  };
 
   /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
   /// through the same `\blx@defformat` as their non-Index siblings, and
@@ -6522,6 +6525,7 @@ a & b \\
     assert!(xml.contains("<tabular"), "{xml}");
     assert!(xml.matches("<tr").count() >= 2, "{xml}");
   }
+
   /// xcolor.sty L1461 runs `\color{black}` at load, which defines the current
   /// color `.` (`\color@.`); `\draw[.]` resolves via tikz's colour fallback.
   /// Witness: twoxtwogame_doc (twoxtwogame.sty:493 `row player color=.`).
@@ -6539,6 +6543,7 @@ a & b \\
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<svg:path"), "{xml}");
   }
+
   /// pgf driver handler for xcolor's core model `hsb` (xcolor.sty L1121-1132
   /// folds Hsb/HSB/tHsb/wave into it); pgfcoregraphicstate.code.tex L195-202
   /// errors "Unsupported color model" when `\pgfsys@color@hsb` is missing.
@@ -6560,4 +6565,28 @@ a & b \\
     assert!(xml.contains("#00FFFF"), "{xml}");
   }
 
+  /// eTeX `quotient` (etex.ch, `scan_expr`) rounds half AWAY from zero on
+  /// magnitudes: `\numexpr -1/2` = -1, `-7/2` = -4 (pdflatex-probed). Perl
+  /// Number.pm `int(0.5 + n/d)` truncates toward zero (KNOWN_PERL_ERRORS
+  /// #124), and l3fp's `\__fp_mul_cases_o:NnNnww` case index
+  /// (expl3-code.tex:18724-18760) relies on the TeX rounding — with the
+  /// Perl rounding `0 * x` inside a `+`/`-` expression collapsed the whole
+  /// `\fp_eval:n` to 0. Witness: wheelchart (wheelchart.sty:2423 transform
+  /// determinant → 1001 errors).
+  #[test]
+  fn numexpr_division_rounds_half_away_from_zero() {
+    let tex = r"\documentclass{article}
+\begin{document}
+K[\the\numexpr -1/2\relax][\the\numexpr 1/2\relax][\the\numexpr -3/2\relax][\the\numexpr -7/2\relax][\the\numexpr 7/2\relax][\the\numexpr -5/-2\relax][\the\numexpr 5/-2\relax]
+
+\ExplSyntaxOn
+F[\fp_eval:n { 800 - 0 * 3 }][\fp_eval:n { (0*3) + 800 }][\fp_eval:n { -0 * 3 }]
+\ExplSyntaxOff
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("K[-1][1][-2][-4][4][3][-3]"), "{xml}");
+    assert!(xml.contains("F[800][800][-0]"), "{xml}");
+  }
 }

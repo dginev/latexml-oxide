@@ -1074,7 +1074,7 @@ LoadDefinitions!({
     let h: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     let s: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     let b: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-    let c = latexml_core::common::color::Color::Hsb(h, s, b).to_rgb().components();
+    let c = common::color::Color::Hsb(h, s, b).to_rgb().components();
     color_to_hex_tokens(c[0], c[1], c[2])
   });
 
@@ -1140,7 +1140,7 @@ LoadDefinitions!({
     let h: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
     let s: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
     let b: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
-    let c = latexml_core::common::color::Color::Hsb(h, s, b).to_rgb().components();
+    let c = common::color::Color::Hsb(h, s, b).to_rgb().components();
     format!("#{:02X}{:02X}{:02X}", channel_to_u8(c[0]), channel_to_u8(c[1]), channel_to_u8(c[2]))
   }
   fn cmy_hex(args: &[&ArgWrap]) -> String {

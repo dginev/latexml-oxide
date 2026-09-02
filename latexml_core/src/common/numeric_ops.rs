@@ -145,14 +145,37 @@ pub trait NumericOps {
     Self::new((self.value_of() as f64 / other_value).trunc() as i64)
   }
 
-  /// Rounding division
+  /// Rounding division — eTeX's `quotient(n,d)` (etex.ch "Declare
+  /// subprocedures for scan_expr"): work on magnitudes and round half AWAY
+  /// from zero, so `\numexpr -1/2` = -1 and `-7/2` = -4 (pdflatex-probed).
+  /// Perl Number.pm `int(0.5 + n/d)` truncates toward zero and yields 0 / -3
+  /// (KNOWN_PERL_ERRORS #124); l3fp's `\__fp_mul_cases_o:NnNnww` case index
+  /// `(#5 #2 #8) / 2 * 2 + 7` (expl3-code.tex:18724-18760) relies on the TeX
+  /// rounding, so `0 * x` inside a `+`/`-` expression collapsed the whole
+  /// `\fp_eval:n` to 0 (wheelchart's tikz transform determinant,
+  /// wheelchart.sty:2423). A zero divisor is TeX's arith_error → 0.
   fn divideround<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
-    let mut other_value: f64 = other.value_of() as f64;
-    if other_value == 0.0 {
-      other_value = EPSILON; // avoid dividing by zero
+    let mut n = self.value_of();
+    let mut d = other.value_of();
+    if d == 0 {
+      return Self::new(0);
     }
-    Self::new((0.5 + self.value_of() as f64 / other_value).trunc() as i64)
+    let mut negative = false;
+    if d < 0 {
+      d = -d;
+      negative = !negative;
+    }
+    if n < 0 {
+      n = -n;
+      negative = !negative;
+    }
+    let mut a = n / d;
+    let r = n - a * d;
+    if r - d + r >= 0 {
+      a += 1;
+    }
+    Self::new(if negative { -a } else { a })
   }
 
   fn smaller<T: NumericOps>(self, other: T) -> Self
