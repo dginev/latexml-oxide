@@ -95,7 +95,13 @@ LoadDefinitions!({
     let rows: Vec<Vec<Tokens>> = (0..nrows)
       .map(|r| {
         (0..cols)
-          .map(|c| if r < heights[c] { items[offsets[c] + r].clone() } else { Tokens::new(Vec::new()) })
+          .map(|c| {
+            if r < heights[c] {
+              items[offsets[c] + r].clone()
+            } else {
+              Tokens::new(Vec::new())
+            }
+          })
           .collect()
       })
       .collect();

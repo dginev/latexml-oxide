@@ -641,7 +641,8 @@ mod md5_tests {
 thread_local! {
   /// pdfTeX random-number state (xorshift64*), reset per conversion by the
   /// engine's thread-state reset through [`pdftex_random_seed`].
-  static PDFTEX_RANDOM: std::cell::Cell<u64> = const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+  static PDFTEX_RANDOM: std::cell::Cell<u64> =
+    const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
 }
 
 /// Re-seed the pdfTeX generator (`\pdfsetrandomseed`; 0 selects the default
