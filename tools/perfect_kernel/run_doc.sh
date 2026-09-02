@@ -27,7 +27,7 @@ bundle=$(basename "$(dirname "$TEX")")
 out="$OUTROOT/$bundle/$name"
 mkdir -p "$out"
 
-# RAM guard (see feedback_sandbox_ram_guard): 6 GiB virtual.
+# RAM guard (see memory feedback_sandbox_run_discipline § feedback_sandbox_ram_guard): 6 GiB virtual.
 ulimit -v 6291456
 
 # Pin kpathsea to the SAME TeX Live the corpus comes from. The binary's linked
