@@ -6804,4 +6804,29 @@ START\myval END
     assert!(xml.contains("forall][") && xml.contains("infty]"), "{xml}");
     assert!(!xml.contains("Stored["), "{xml}");
   }
+
+  /// delarray.sty:43-58 — `\@@array[pos]` peeks with `\@ifnextchar\bgroup`;
+  /// a non-brace is a delimiter pair around the column spec,
+  /// `\begin{array}({cc})…\end{array}` = `\left(` array `\right)`. Both
+  /// engines' own `\array[]{}` read `(` as the template, so every `&`
+  /// reported "Extra alignment tab" (memoir manual, memoir.cls:5468
+  /// `\RequirePackage{delarray}`: 33 errors; SHARED). pdflatex clean.
+  #[test]
+  fn delarray_delimited_array_form() {
+    let tex = r"\documentclass{article}
+\usepackage{delarray}
+\begin{document}
+$\begin{array}({cc}) a & b \\ c & d \end{array}$
+$\begin{array}[t]\{{lL}. x \\ y \end{array}$
+$\begin{array}{c} p \\ q \end{array}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Extra alignment tab"), "{stderr}");
+    assert_eq!(xml.matches("<XMArray").count(), 3, "{xml}");
+    // the delimiters survive as fence tokens around the arrays
+    assert!(xml.contains(r#"role="OPEN">(</XMTok>"#) || xml.contains(r#">(</XMTok>"#), "{xml}");
+    assert!(xml.contains(r#">{</XMTok>"#), "{xml}");
+  }
 }
