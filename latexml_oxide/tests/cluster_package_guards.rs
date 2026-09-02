@@ -5835,6 +5835,53 @@ capPos & b & caption position\\
     assert_eq!(xml.matches("<figure ").count(), 2, "{xml}");
   }
 
+  /// collcell binding (witness onedown-ref.tex:469 `\begin{bidding}`,
+  /// onedown.sty:1326 `>{\collectcell\ODw@BTfer}c<{\endcollectcell}`): the
+  /// raw `\collectcell#1#2\ignorespaces` (collcell.sty:76) is delimited by the
+  /// kernel cell template's `\ignorespaces` (latex.ltx:16671-16675), which
+  /// LaTeXML's alignment never inserts — the scan ran to end of input and
+  /// Rust's Until-at-EOF Fatal lost the whole 500-line manual (39-byte XML;
+  /// Perl: 6 errors, completes). The binding collects the cell unexpanded like
+  /// `\collect@cell@look`, letting a `\\`/`\tabularnewline` row end expand so
+  /// the `<{\endcollectcell}` column-after template fires (a plain
+  /// `Until:\endcollectcell` swallowed the rest of the document whenever the
+  /// collected column was the LAST of the row); `\cci{…}` is skipped
+  /// (onedown.sty:1338 bidding headers).
+  #[test]
+  fn collcell_hands_cell_to_macro() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{array}
+\usepackage{collcell}
+\newcommand\Xfer[1]{[#1]}
+\newcolumntype{B}{>{\collectcell\Xfer}c<{\endcollectcell}}
+\begin{document}
+\begin{tabular}{BB}
+\cci{ West} & \cci{ North} \\
+1S & 2 H \\[2pt]
+{pass} \textbf{x} & 3NT \tabularnewline
+a & b \cr
+\end{tabular}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    // `\cci{ West}` hands the macro the braced group as is, space included
+    // (onedown's "there MUST be a ' '" first-token probe relies on it).
+    for cell in [
+      "[ West]", "[ North]", "[1S]", "[2 H]", "[3NT]", "[a]", "[b]",
+    ] {
+      assert!(xml.contains(&format!(">{cell}</td>")), "{cell}: {xml}");
+    }
+    assert!(
+      xml.contains(">[pass <text font=\"bold\">x</text>]</td>"),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<td ").count(), 8, "{xml}");
+  }
+
   /// The `\opt@<file>` macro (latex.ltx `\@pass@ptions`, `\@ptionlist`)
   /// holds the ARGUMENT tokens of `\usepackage[...]`, so `{`/`}` group. Ours
   /// was rebuilt with `ExplodeText!` (braces OTHER), and every brace-aware
