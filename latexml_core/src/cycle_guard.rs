@@ -28,6 +28,13 @@
 /// Largest cycle period (in items) we look for.
 pub const MAX_WINDOW: usize = 10;
 /// How many consecutive repetitions of a window constitute "infinite".
+///
+/// Stays at 100 (not thousands): the gullet fingerprints only a
+/// `CYCLE_GUARD_DUTY_ON` = 2 048-token window per duty period, so
+/// `MAX_WINDOW * REPEAT` must fit inside it. Finite constructs that emit a
+/// short window thousands of times (`\prg_replicate:nn {10000} {…}`,
+/// maze manual) are told apart by the expansion-epoch gate in [`CycleGuard::push`],
+/// not by a larger count.
 pub const REPEAT: usize = 100;
 /// Ring-buffer capacity: enough to hold `MAX_WINDOW` repeated `REPEAT` times.
 const CAP: usize = MAX_WINDOW * REPEAT;
@@ -35,14 +42,23 @@ const CAP: usize = MAX_WINDOW * REPEAT;
 const CHECK_EVERY: usize = 256;
 
 /// A windowed cycle detector over a stream of `u64` fingerprints.
+/// Number of check points (every [`CHECK_EVERY`] pushes) whose
+/// mutation-epoch samples are kept — enough to cover the largest window
+/// (`MAX_WINDOW * REPEAT` items) plus one.
+const EPOCH_SAMPLES: usize = CAP / CHECK_EVERY + 2;
+
 pub struct CycleGuard {
-  buf:   Box<[u64; CAP]>,
+  /// State-mutation epochs sampled at the last `EPOCH_SAMPLES` checks
+  /// (newest last).
+  epochs:     [u64; EPOCH_SAMPLES],
+  epoch_head: usize,
+  buf:        Box<[u64; CAP]>,
   /// next write position (ring)
-  head:  usize,
+  head:       usize,
   /// number of valid entries (saturates at CAP)
-  len:   usize,
+  len:        usize,
   /// throttle counter
-  since: usize,
+  since:      usize,
 }
 
 impl Default for CycleGuard {
@@ -62,10 +78,12 @@ impl std::fmt::Debug for CycleGuard {
 impl CycleGuard {
   pub fn new() -> Self {
     CycleGuard {
-      buf:   Box::new([0u64; CAP]),
-      head:  0,
-      len:   0,
-      since: 0,
+      buf:        Box::new([0u64; CAP]),
+      head:       0,
+      len:        0,
+      since:      0,
+      epochs:     [u64::MAX; EPOCH_SAMPLES],
+      epoch_head: 0,
     }
   }
 
@@ -74,12 +92,23 @@ impl CycleGuard {
     self.head = 0;
     self.len = 0;
     self.since = 0;
+    self.epochs = [u64::MAX; EPOCH_SAMPLES];
+    self.epoch_head = 0;
   }
 
   /// Record one fingerprint. Returns `Some(period)` if the recent stream is a
   /// window of `period` items repeated at least [`REPEAT`] times.
+  ///
+  /// `epoch` is the expansion epoch at this push
+  /// ([`crate::state::expansion_epoch`], sampled only at check points). A
+  /// detected period is reported only when at least one macro expansion
+  /// happened across the repeated span: a genuine cycle re-expands every
+  /// period, while a periodic stream with no expansion is pre-built data
+  /// being consumed (`\prg_replicate:nn {10000} {<body>}` unpacking
+  /// l3intarray's `\intarray_gzero:N` body — maze manual, a cycle-guard
+  /// Fatal on a finite construct).
   #[inline]
-  pub fn push(&mut self, fp: u64) -> Option<usize> {
+  pub fn push(&mut self, fp: u64, epoch: u64) -> Option<usize> {
     self.buf[self.head] = fp;
     self.head = if self.head + 1 == CAP {
       0
@@ -92,9 +121,25 @@ impl CycleGuard {
     self.since += 1;
     if self.since >= CHECK_EVERY {
       self.since = 0;
-      return self.detect();
+      self.epochs[self.epoch_head] = epoch;
+      self.epoch_head = (self.epoch_head + 1) % EPOCH_SAMPLES;
+      return self
+        .detect()
+        .filter(|&period| self.epoch_advanced(period * REPEAT));
     }
     None
+  }
+
+  /// True when the expansion epoch changed over the last `span` pushes
+  /// (judged at check-point granularity, rounded up). Samples not yet
+  /// filled since the last [`reset`](Self::reset) are ignored.
+  fn epoch_advanced(&self, span: usize) -> bool {
+    let checks = span.div_ceil(CHECK_EVERY) + 1;
+    let newest = self.epochs[(self.epoch_head + EPOCH_SAMPLES - 1) % EPOCH_SAMPLES];
+    (1..checks.min(EPOCH_SAMPLES)).any(|k| {
+      let sample = self.epochs[(self.epoch_head + EPOCH_SAMPLES - 1 - k) % EPOCH_SAMPLES];
+      sample != u64::MAX && sample != newest
+    })
   }
 
   /// The `k`-th most recently pushed item (`k = 0` is newest).
@@ -151,13 +196,23 @@ mod tests {
   fn run(stream: &[u64]) -> Option<usize> {
     let mut g = CycleGuard::new();
     let mut hit = None;
-    for &x in stream {
-      if let Some(p) = g.push(x) {
+    // Every push is "an expansion": the guard's core periodicity contract.
+    for (i, &x) in stream.iter().enumerate() {
+      if let Some(p) = g.push(x, i as u64) {
         hit = Some(p);
         break;
       }
     }
     hit
+  }
+
+  #[test]
+  fn periodic_stream_without_expansions_is_data() {
+    // A perfect period-2 stream consumed with the expansion epoch frozen is
+    // pre-built data (`\prg_replicate` output), not a loop.
+    let mut g = CycleGuard::new();
+    let hit = (0..9 * REPEAT).find_map(|i| g.push((i % 2) as u64, 0));
+    assert_eq!(hit, None);
   }
 
   #[test]
@@ -168,7 +223,7 @@ mod tests {
     // tokens (`\def\x{a\x}` → a, \x, a, \x …), and a pure single-token
     // self-expansion is caught by the Expandable self-recursion error
     // before any guard. PR #249 review P1-3.
-    let s: Vec<u64> = std::iter::repeat_n(7, 2000).collect();
+    let s: Vec<u64> = std::iter::repeat_n(7, 20 * REPEAT).collect();
     assert_eq!(run(&s), None);
   }
 
@@ -176,41 +231,41 @@ mod tests {
   fn alternating_pair_still_fires() {
     // `\def\x{a\x}` shape: two distinct fingerprints alternating — the
     // canonical real loop must still be detected (as period 2).
-    let s: Vec<u64> = (0..900).map(|i| (i % 2) as u64).collect();
+    let s: Vec<u64> = (0..9 * REPEAT).map(|i| (i % 2) as u64).collect();
     assert_eq!(run(&s), Some(2));
   }
 
   #[test]
   fn detects_period_three() {
     // Stream must outlast the first throttled scan that sees >= 3*REPEAT items.
-    let s: Vec<u64> = (0..900).map(|i| (i % 3) as u64).collect();
+    let s: Vec<u64> = (0..9 * REPEAT).map(|i| (i % 3) as u64).collect();
     assert_eq!(run(&s), Some(3));
   }
 
   #[test]
   fn detects_period_ten() {
-    let s: Vec<u64> = (0..2000).map(|i| (i % 10) as u64).collect();
+    let s: Vec<u64> = (0..20 * REPEAT).map(|i| (i % 10) as u64).collect();
     assert_eq!(run(&s), Some(10));
   }
 
   #[test]
   fn ignores_non_cycle() {
     // Strictly increasing — never periodic.
-    let s: Vec<u64> = (0..5000).collect();
+    let s: Vec<u64> = (0..(50 * REPEAT) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
   #[test]
   fn ignores_short_repeat() {
     // A window repeated only 50 times (< REPEAT) must NOT fire.
-    let s: Vec<u64> = (0..50 * 4).map(|i| (i % 4) as u64).collect();
+    let s: Vec<u64> = (0..REPEAT / 2 * 4).map(|i| (i % 4) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
   #[test]
   fn ignores_period_over_max_window() {
     // Period 11 (> MAX_WINDOW) repeated many times must NOT fire.
-    let s: Vec<u64> = (0..11 * 300).map(|i| (i % 11) as u64).collect();
+    let s: Vec<u64> = (0..11 * 3 * REPEAT).map(|i| (i % 11) as u64).collect();
     assert_eq!(run(&s), None);
   }
 
@@ -218,13 +273,13 @@ mod tests {
   fn reset_clears_history() {
     let mut g = CycleGuard::new();
     for _ in 0..150 {
-      g.push(1);
+      g.push(1, 0);
     }
     g.reset();
     // After reset, a fresh non-cyclic stream must not immediately fire.
     let mut hit = None;
     for i in 0..50 {
-      if let Some(p) = g.push(i) {
+      if let Some(p) = g.push(i, 0) {
         hit = Some(p);
       }
     }

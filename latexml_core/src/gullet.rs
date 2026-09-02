@@ -852,7 +852,7 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           // spreads the serial across the hash bits (splitmix64's odd
           // constant).
           let fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
-          if let Some(period) = g.cycle_guard.push(fp) {
+          if let Some(period) = g.cycle_guard.push(fp, expansion_epoch()) {
             breach = Some(Breach::Cycle(period, token));
           }
         }
