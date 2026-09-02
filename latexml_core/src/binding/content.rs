@@ -246,11 +246,21 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     let have_recorded_opts = lookup_vecdeque("class_options")
       .map(|v| !v.is_empty())
       .unwrap_or(false);
+    // Both lists are STRING-tokenized with standard catcodes (letters 11),
+    // as Perl's `DefMacroI('\@classoptionslist', undef, join(',', …))`
+    // (Package.pm L2564 → TokenizeInternal) and as `\documentclass`'s real
+    // argument read. `Explode!` (every char OTHER) broke every `\ifx` value
+    // match downstream: tudapub.cls L173/L358 forwards an unknown class
+    // option (`parskip=half-`) verbatim to `\KOMAoption`, and scrbase.sty
+    // L2354 `\FamilySetNumerical` `\ifx`-compares it against the literal
+    // `half-` from scrbook.cls L825 → "unknown value" (witness
+    // DEMO-TUDaPhD/TUDaThesis; guard
+    // `perfect_kernel_batch53::classoptionslist_has_letter_catcodes`).
     if !class_opts_str.is_empty() || !have_recorded_opts {
       def_macro(
         T_CS!("\\@classoptionslist"),
         None,
-        Tokens!(Explode!(&class_opts_str)),
+        crate::mouth::tokenize_internal(TeXString::assembled(class_opts_str.clone())),
         None,
       )?;
     }
@@ -271,7 +281,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       def_macro(
         T_CS!("\\@raw@classoptionslist"),
         None,
-        Tokens!(Explode!(class_opts_str)),
+        crate::mouth::tokenize_internal(TeXString::assembled(class_opts_str.clone())),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -480,19 +490,45 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // `\ProcessKeyOptions` package silently dropped its options (both
     // engines: Perl 0.8.8 verified same-host; witness codedescribe's
     // `[strict,infograb]` → `\PkgInfo` never aliased, 10 TL-doc bundles).
-    // Append-if-defined mirrors the kernel's `\g@addto@macro` accumulation
-    // from `\PassOptionsToPackage`.
-    if !options.options.is_empty() {
+    // The kernel's `\@pass@ptions` (L18509-18526) is the SINGLE writer of
+    // that record and is reached both from `\PassOptionsToPackage` /
+    // `\PassOptionsToClass` (L18528-18529) and from `\@onefilewithoptions`
+    // (L18832) for the explicit `[…]` list — so `\@raw@opt@` accumulates
+    // passed-then-explicit options in load order, exactly the merged
+    // `opt@<name>.<ext>` value list `before_input_handle_options` just
+    // finished building (`\opt@<file>` is defined from the same list). Read
+    // that list rather than only `options.options`: with the explicit list
+    // alone, every option routed through `\PassOptionsToPackage` was
+    // invisible to `\ProcessKeyOptions` (witness tudapub.cls L194
+    // `\exp_args:Nx \PassOptionsToPackage{paper=…}{tudarules}` → tudarules
+    // `\ProcessKeyOptions[ptxcd/rules]` never ran `paper/a4`, leaving
+    // `\c_ptxcd_{large,small}rule_dim`/`\c_ptxcd_rulesep_dim` undefined in
+    // DEMO-TUDaPhD/TUDaThesis). Guard:
+    // `perfect_kernel_batch53::process_key_options_sees_passed_options`.
+    let merged_opts: Vec<String> = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq| {
+      let mut out = Vec::new();
+      if let Some(vdq) = vdq {
+        for x in vdq.iter() {
+          match x {
+            Stored::String(val) => out.push(arena::with(*val, |s| s.to_string())),
+            Stored::Strings(vals) => {
+              out.extend(vals.iter().map(|val| arena::with(*val, |s| s.to_string())))
+            },
+            _ => {},
+          }
+        }
+      }
+      out
+    });
+    if !merged_opts.is_empty() {
       let raw_opt_cs = T_CS!(s!("\\@raw@opt@{}", filename));
-      let joined = options.options.join(",");
-      let body = if lookup_definition(&raw_opt_cs)?.is_some() {
-        let mut toks = do_expand(raw_opt_cs)?.unlist();
-        toks.push(T_OTHER!(","));
-        toks.extend(ExplodeText!(&joined));
-        Tokens::new(toks)
-      } else {
-        Tokens!(Explode!(joined))
-      };
+      let joined = merged_opts.join(",");
+      // Standard-catcode tokenization (as `\@classoptionslist` above): the
+      // kernel stores the ARGUMENT tokens, so `{`/`}` group and letters are
+      // letters — `Explode!` (all OTHER) made `thesis={type=dr,dr=rernat}`
+      // split at its inner comma and every downstream `\ifx` value match
+      // fail (witness DEMO-TUDaPhD).
+      let body = crate::mouth::tokenize_internal(TeXString::assembled(joined));
       def_macro(
         raw_opt_cs,
         None,
@@ -1227,20 +1263,28 @@ fn before_input_handle_options(
     },
     None => String::new(),
   });
-  // Use letter-catcode (`ExplodeText`) for the stored option list, same
-  // reason as `\@currname`/`\@currext` above: real LaTeX stores the
-  // `\usepackage[...]` option tokens with alphabetic chars as LETTER
-  // (catcode 11). kvoptions/keyval `\setkeys` then binds a `\DeclareString-
-  // Option` value (e.g. `\axp@bibliography`) from these tokens, and packages
-  // validate it with the catcode-SENSITIVE `ifthen` `\equal` (or `\ifx`).
-  // The previous `Explode!` produced OTHER (catcode 12) letters, so
-  // `\equal{\axp@bibliography}{common}` spuriously failed and apxproof
-  // raised `unsupported option bibliography=common`. Witness:
-  // docs/known_crashes — gdsm.tex (apxproof + biblatex).
+  // Standard-catcode tokenization for the stored option list (as the
+  // `\@raw@opt@` sibling above): real LaTeX stores the `\usepackage[...]`
+  // ARGUMENT tokens, so alphabetic chars are LETTER (catcode 11) and `{`/`}`
+  // group. kvoptions/keyval `\setkeys` then binds a `\DeclareString-Option`
+  // value (e.g. `\axp@bibliography`) from these tokens, and packages
+  // validate it with the catcode-SENSITIVE `ifthen` `\equal` (or `\ifx`):
+  // `Explode!` (all OTHER) made `\equal{\axp@bibliography}{common}`
+  // spuriously fail and apxproof raised `unsupported option
+  // bibliography=common` (witness docs/known_crashes — gdsm.tex, apxproof +
+  // biblatex). `ExplodeText!` fixed the letters but left `{`/`}` as OTHER,
+  // so a braced value with commas fell apart in every brace-aware consumer:
+  // l3clist split `thesis={type=dr,dr=rernat}` at its inner comma
+  // (URspecialopts `\clist_set:cx {…}{\@ptionlist{…}}`; witness
+  // DEMO-TUDaPhD, `\department`/`\affidavit` undefined because
+  // tudathesis.cfg was never input) and xkeyval's `\ProcessOptionsX` read
+  // `stylemods={mcols,bookindex}` as the style `glossary-{mcols.sty`
+  // (glossaries-extra.sty:811 `\@for`; witness glossaries-user). Guard:
+  // `perfect_kernel_batch53::opt_macro_keeps_braced_option_values`.
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
-    Tokens!(ExplodeText!(current_opt_val)),
+    crate::mouth::tokenize_internal(TeXString::assembled(current_opt_val)),
     None,
   )?;
   Ok(())

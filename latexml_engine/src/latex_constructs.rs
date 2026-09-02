@@ -54,12 +54,28 @@ static AUTOMATH_ALREADY_MATH: Lazy<Regex> =
 // Witness: 2210.07776 (`\documentclass[ amsmath,amssymb,...]
 // {revtex4-1}` — leading space prevented amsmath option from firing,
 // so amsmath/amsbsy never loaded, so `\boldsymbol` was undefined).
+// Only brace-depth-0 commas split, as LaTeX's own `\@for` walk of
+// `\@classoptionslist` (latex.ltx `\@process@ptions`) and l3keys' clist
+// parsing do: `thesis={type=dr,dr=rernat}` is ONE option (DEMO-TUDaPhD;
+// Perl's `split(/\s*,\s*/)` cuts it in two — a Perl-only defect).
 fn split_trim_options(s: &str) -> Vec<String> {
-  OPTS_REGEX
-    .split(s)
-    .map(|s| s.trim().to_string())
-    .filter(|s| !s.is_empty())
-    .collect()
+  let mut out = Vec::new();
+  let mut depth = 0usize;
+  let mut start = 0;
+  for (i, c) in s.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      ',' if depth == 0 => {
+        out.push(s[start..i].trim().to_string());
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  out.push(s[start..].trim().to_string());
+  out.retain(|o| !o.is_empty());
+  out
 }
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
 static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
@@ -3203,9 +3219,14 @@ LoadDefinitions!({
       if let Some(undef_meaning) = lookup_meaning(&T_CS!("\\@undefined")) {
         assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
       }
+      // Revert the digested option list rather than `to_string` it: the
+      // digested form drops the braces of a braced key value, so
+      // `thesis={type=dr,dr=rernat}` (DEMO-TUDaPhD) came out as
+      // `thesis=type=dr,dr=rernat` — split at its inner comma and, once
+      // recorded in `\@raw@classoptionslist`, mis-parsed by l3keys.
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
-        Some(opts) => split_trim_options(&opts.to_string()),
+        Some(opts) => split_trim_options(&opts.untex()?),
         None => Vec::new(),
       };
       // Perl LaTeX.pool.ltxml:57 — `$class =~ s/\s+//g;`. Strip ALL
@@ -4672,7 +4693,32 @@ LoadDefinitions!({
   Let!("\\@currname", "\\@empty");
   Let!("\\@classoptionslist", "\\relax");
   Let!("\\@raw@classoptionslist", "\\relax");
-  def_macro_noop("\\@declaredoptions")?;
+  // `\@declaredoptions` is the comma list of the options the loading
+  // class/package has `\DeclareOption`ed (latex.ltx L18536 `\xdef
+  // \@declaredoptions{\@declaredoptions,#1}`, reset per file at L18890). The
+  // native `\DeclareOption`/`\ProcessOptions` keep it in the `@declaredoptions`
+  // State list (Package.pm L2405/L2511), so the macro renders that list —
+  // one source of truth. Perl binds it EMPTY (pool L784); a raw option
+  // processor that iterates it itself — scrbase.sty L323/L365 `\@for
+  // \CurrentOption:=\@declaredoptions\do{\let\ds@…\relax}` — then never
+  // retired the class's `\ds@<opt>` handlers, so the next KOMA member's
+  // `\FamilyProcessOptions` re-ran the class's deprecated-option `\ds@`
+  // (`tablecaptionabove` → `\KOMAExecuteOptions{captions=tableheading}` under
+  // `\@currname`=typearea: "Member `.typearea.sty' … cannot handle option",
+  // witness l2tabu/l2tabuen; pdflatex warns only). Guard
+  // `perfect_kernel_batch53::declaredoptions_lists_declared_options`.
+  DefMacro!("\\@declaredoptions", sub[_args] {
+    let declared: Vec<String> = lookup_vecdeque("@declaredoptions")
+      .unwrap_or_default()
+      .iter()
+      .flat_map(|item| match item {
+        Stored::String(s) => vec![with(*s, |s| s.to_string())],
+        Stored::Strings(ss) => ss.iter().map(|s| with(*s, |s| s.to_string())).collect(),
+        _ => Vec::new(),
+      })
+      .collect();
+    Ok(Tokens::new(Explode!(declared.join(","))))
+  });
   def_macro_noop("\\@curroptions")?;
   def_macro_noop("\\@unusedoptionlist")?;
 
@@ -4691,8 +4737,9 @@ LoadDefinitions!({
           .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
         None => Vec::new(),
       };
+      // `untex` (reversion) keeps a braced value's braces — see `\documentclass`.
       let options_list = match options {
-        Some(opts) => split_trim_options(&opts.to_string()),
+        Some(opts) => split_trim_options(&opts.untex()?),
         None => Vec::new(),
       };
       for package in package_list {
@@ -4727,7 +4774,7 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
-      Some(opts) => split_trim_options(&opts.to_string()),
+      Some(opts) => split_trim_options(&opts.untex()?),
       None => Vec::new(),
     };
     for package in package_list {
@@ -4830,25 +4877,21 @@ LoadDefinitions!({
   // example.tex (the class forwards `\CurrentOption` to its own .sty, then
   // `\LoadClass[12pt]` clobbers `\@classoptionslist`, leaving `\opt@` as the
   // only channel; 87-error math-in-title storm).
+  //
+  // Split brace-aware on the REVERSION (`untex`, braces kept), as
+  // `\documentclass`/`\usepackage` do above: the kernel's `\@pass@ptions`
+  // (latex.ltx L18509-18526) stores the argument tokens, so
+  // `\PassOptionsToPackage{paper={a4},x}{p}` is two options, not three, and
+  // `\ProcessKeyOptions` reads them back with their braces intact.
   DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
-    let opts_str = Expand!(options).to_string();
-    let opts: Vec<String> = opts_str
-      .split(',')
-      .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
-      .collect();
+    let opts = split_trim_options(&Expand!(options).untex());
     pass_options(&name_str, "sty", opts)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
-    let opts_str = Expand!(options).to_string();
-    let opts: Vec<String> = opts_str
-      .split(',')
-      .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
-      .collect();
+    let opts = split_trim_options(&Expand!(options).untex());
     pass_options(&name_str, "cls", opts)?;
   });
 

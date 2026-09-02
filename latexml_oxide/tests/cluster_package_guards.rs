@@ -5291,6 +5291,59 @@ B=\IfFormatAtLeastTF{2020/01/01}{Y}{N}.
     assert!(xml.contains("B=Y."), "{xml}");
   }
 
+  /// l2tabu/l2tabuen: `\@declaredoptions` must expand to the declared option
+  /// list (latex.ltx L18536 `\xdef\@declaredoptions{\@declaredoptions,#1}`;
+  /// the Perl pool L784 binds it EMPTY). scrbase.sty L365 walks it after
+  /// `\FamilyProcessOptions` to retire every `\ds@<opt>`; with an empty list
+  /// the `\ds@` of a KOMA deprecated option (scrkbase.sty L365-407
+  /// `\KOMA@DeclareDeprecatedOption`) survived into typearea's own
+  /// `\KOMAProcessOptions` (typearea.sty L1053), which re-ran it as
+  /// "unknown option `captions=tableheading'".
+  #[test]
+  fn declaredoptions_lists_declared_options() {
+    let (stderr, xml) = convert(
+      r"\documentclass[tablecaptionabove]{scrartcl}
+\makeatletter
+\DeclareOption{alpha}{}\DeclareOption{beta}{}
+\edef\x{\@declaredoptions}
+\makeatother
+\begin{document}
+[\x]
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("unknown option"), "{stderr}");
+    assert!(xml.contains("alpha,beta]"), "{xml}");
+  }
+
+  /// DEMO-TUDaPhD/TUDaThesis: `\@classoptionslist` / `\@raw@classoptionslist`
+  /// / `\@raw@opt@<file>` carry standard catcodes (Perl Package.pm L2564
+  /// `DefMacroI` string body → TokenizeInternal; the kernel stores the real
+  /// argument tokens). With every character OTHER, tudapub.cls L173/L358
+  /// forwarded an unknown option value to `\KOMAoption{parskip}{half-}` and
+  /// scrbase.sty L2354 `\FamilySetNumerical`'s `\ifx` against scrbook.cls
+  /// L825's literal `half-` failed ("unknown value"). The `\ifx` here is the
+  /// same comparison; the braced value checks that `{`/`}` group.
+  #[test]
+  fn classoptionslist_has_letter_catcodes() {
+    let (stderr, xml) = convert(
+      r"\documentclass[parskip=half-,thesis={type=dr,dr=rernat}]{article}
+\begin{document}
+\makeatletter
+\def\lit{parskip=half-,thesis={type=dr,dr=rernat}}
+\ifx\lit\@classoptionslist [same]\else [DIFFERENT]\fi
+\ifx\lit\@raw@classoptionslist [rawsame]\else [rawDIFFERENT]\fi
+\makeatother
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[same]") && xml.contains("[rawsame]"), "{xml}");
+  }
+
   /// tutodoc-en/fr: a `\def` parameter text built by expansion keeps BOTH of
   /// two adjacent space tokens in its delimiter (tex.web §473-476); Perl
   /// TeX_Macro.pool.ltxml L127 collapsed them (KNOWN_PERL_ERRORS #119), so
@@ -5316,5 +5369,145 @@ After.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("Fatal:"), "{stderr}");
     assert!(xml.contains("[GOT:Q]OK"), "{xml}");
+  }
+
+  /// The expkv shape of the same defect: an EMPTY key list goes through
+  /// `\ekv@set@was@blank` (expkv.tex L709-712).
+  #[test]
+  fn expkv_blank_entry_does_not_leak_markers() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{expkv}
+\ekvdef{foo}{bar}{[V=#1]}
+\begin{document}
+X\ekvset{foo}{}Y\ekvset{foo}{bar=1, ,}Z
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("XY[V=1]Z"), "{xml}");
+  }
+
+  /// Convert `t.tex` next to a sidecar package file under the perfect-kernel
+  /// preload; `--includestyles --path .` makes the sidecar raw-loadable.
+  fn convert_with_sty(tex: &str, sty_name: &str, sty_body: &str) -> (String, String) {
+    use std::{path::Path, process::Command};
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    std::fs::write(workdir.path().join(sty_name), sty_body).expect("write sidecar sty");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--timeout=110",
+        "--includestyles",
+        "--path",
+        ".",
+        "--preload=[rawstyles,rawclasses]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
+  /// latex.ltx `\@pass@ptions` (L18509-18526) is the single writer of
+  /// `\@raw@opt@<name>.<ext>`, reached from `\PassOptionsToPackage` AND from
+  /// `\@onefilewithoptions` for the explicit `[…]` list; ltkeys'
+  /// `\ProcessKeyOptions` reads only that record (`\__keys_options_local:`,
+  /// L19457-19470). RED: the record was built from the explicit list alone,
+  /// so tudapub.cls L194 `\exp_args:Nx \PassOptionsToPackage{paper=…}
+  /// {tudarules}` never reached tudarules' `\ProcessKeyOptions[ptxcd/rules]`
+  /// and `\c_ptxcd_{large,small}rule_dim` stayed undefined (witness
+  /// DEMO-TUDaPhD, DEMO-TUDaThesis). pdflatex: `P=[A5]`.
+  #[test]
+  fn process_key_options_sees_passed_options() {
+    let (stderr, xml) = convert_with_sty(
+      r"\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\keys_define:nn {my/cls} {
+  paper .choices:nn = { a4,a5 } {
+    \exp_args:Nx \PassOptionsToPackage{paper=\l_keys_choice_tl}{mypk}
+  },
+}
+\keys_set:nn {my/cls} {paper=a5}
+\ExplSyntaxOff
+\usepackage{mypk}
+\begin{document}
+P=[\csname g_my_paper_tl\endcsname] C=[\csname g_my_color_tl\endcsname]
+\end{document}
+",
+      "mypk.sty",
+      r"\ProvidesPackage{mypk}
+\RequirePackage{expl3}
+\ExplSyntaxOn
+\tl_new:N \g_my_paper_tl
+\keys_define:nn {my/rules} {
+  paper .choice:,
+  paper/a4 .code:n = { \tl_gset:Nn \g_my_paper_tl {A4} },
+  paper/a5 .code:n = { \tl_gset:Nn \g_my_paper_tl {A5} },
+  color .tl_gset:N = \g_my_color_tl,
+  color .initial:n = black,
+}
+\ProcessKeyOptions[my/rules]
+\ExplSyntaxOff
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("P=[A5] C=[black]"), "{xml}");
+  }
+
+  /// The `\opt@<file>` macro (latex.ltx `\@pass@ptions`, `\@ptionlist`)
+  /// holds the ARGUMENT tokens of `\usepackage[...]`, so `{`/`}` group. Ours
+  /// was rebuilt with `ExplodeText!` (braces OTHER), and every brace-aware
+  /// consumer of `\@ptionlist` split a braced value at its inner comma:
+  /// l3clist (`\clist_set:cx {…}{\@ptionlist{…}}`, URspecialopts → tudapub
+  /// lost `thesis={type=dr,dr=rernat}`, so DEMO-TUDaPhD never input
+  /// tudathesis.cfg: `\department`/`\affidavit` undefined) and xkeyval's
+  /// `\ProcessOptionsX` (glossaries-extra.sty:811 `\@for` read
+  /// `stylemods={mcols,bookindex}` as the style file `glossary-{mcols.sty`;
+  /// witness glossaries-user). Perl: 0 errors. pdflatex: `I=[mcols][bookindex]
+  /// T=[type=dr,dr=rernat]`.
+  #[test]
+  fn opt_macro_keeps_braced_option_values() {
+    let (stderr, xml) = convert_with_sty(
+      r"\documentclass{article}
+\usepackage[english,stylemods={mcols,bookindex},thesis={type=dr,dr=rernat}]{mypk}
+\begin{document}
+I=[\csname my@items\endcsname] T=[\csname g_my_thesis_tl\endcsname]
+\end{document}
+",
+      "mypk.sty",
+      r"\ProvidesPackage{mypk}
+\RequirePackage{expl3,xkeyval}
+\ExplSyntaxOn
+\tl_new:N \g_my_thesis_tl
+\cs_new:Npn \my_kv:nn #1#2 { \tl_gset:Nn \g_my_thesis_tl {#2} }
+\clist_set:Nx \l_tmpa_clist {\@ptionlist{mypk.sty}}
+\clist_map_inline:Nn \l_tmpa_clist {
+  \tl_if_in:nnT {#1} {thesis=} { \keyval_parse:NNn \use_none:n \my_kv:nn {#1} }
+}
+\ExplSyntaxOff
+\def\my@items{}
+\define@key{mypk.sty}{stylemods}{\@for\my@tmp:=#1\do{\edef\my@items{\my@items[\my@tmp]}}}
+\define@key{mypk.sty}{thesis}{}
+\define@key{mypk.sty}{english}[]{}
+\ProcessOptionsX
+",
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("I=[[mcols][bookindex]] T=[type=dr,dr=rernat]"),
+      "{xml}"
+    );
   }
 }
