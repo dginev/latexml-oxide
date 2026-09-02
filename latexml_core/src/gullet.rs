@@ -2741,11 +2741,17 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         Ok(Some(Number::new(decimal)))
       } else if token == T_OTHER!("`") {
         //  Read Charcode: `<character token><one optional space>
-        let mut s = match read_token()? {
-          None => String::new(),
-          Some(next) => next.to_string(),
+        // The leading `\` is stripped only from a control-sequence token
+        // (`\a` → 'a', `\\` → '\'). Perl (Gullet.pm L926 `s/^\\//`) strips
+        // it from a catcode-12 backslash *character* too, so `` `\ `` after
+        // `\detokenize`/`\string` reads as 0 instead of TeX's 92 — see
+        // KNOWN_PERL_ERRORS "backquote charcode of a detokenized backslash"
+        // (witness bibleref-parse.sty L481-486 `\brp@ifcs`).
+        let (mut s, is_cs) = match read_token()? {
+          None => (String::new(), false),
+          Some(next) => (next.to_string(), next.get_catcode() == Catcode::CS),
         };
-        if s.starts_with('\\') {
+        if is_cs && s.starts_with('\\') {
           s.remove(0);
         }
         let s_char = s.chars().next().unwrap_or('\0');

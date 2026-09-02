@@ -4700,3 +4700,39 @@ Trigger (`mypk.sty` + document):
 E=[\my@extra] W=[\my@width]
 \end{document}
 ```
+
+## 123. Backquote charcode of a detokenized backslash reads as 0 (Rust fixes)
+
+`Gullet.pm` L923-928 (`readNumber`, the `` ` `` arm) does `$s =~ s/^\\//`
+on the *string* of the next token, then `ord($s)`. For a control sequence
+that yields TeX's single-character charcode (`` `\a `` = 97, `` `\\ `` = 92),
+but for a **catcode-12 backslash character** — what `\detokenize{\foo}` or
+`\string\foo` puts in the stream — the strip empties the string and
+`ord("")` is 0. TeX (tex.web §442) takes the character code of any character
+token directly: 92. Every "is this a control sequence?" test written as
+`\expandafter\test\detokenize{#1}…` + `\ifnum`#1=92` misfires; witness
+bibleref-parse.sty L481-486 `\brp@ifcs`, so `\bibleverse{\name}` with a
+`\foreach` variable never expands the variable and every such book name is
+"unknown" (bibleref-parse.tex, 70+ errors, 100-cap fatal). The same root
+aborts every `\fpeval{\dimen0 > \dimen1}` (right operand a bare register
+under `>`/`<`/`=`): l3fp's comparison chain-detect (expl3-code.tex
+L17662-17673) routes `\if_case:w` on `` ` \token_to_str:N <register> `` →
+arm 0 instead of the default → the `@` sentinel of `\__fp_parse_after:ww`
+is never emitted → `Missing argument Until:@` + Fatal EoF (Perl: 102 errors,
+`too_many_errors`). Witness swfigure `\fptest`/`\DFscalefactor`.
+
+Rust: `gullet.rs` `read_normal_integer` strips the `\` only when the token's
+catcode is CS; guards `perfect_kernel_batch54::backquote_charcode_of_other_backslash`
+and `::fpeval_register_right_operand_of_comparison`.
+Trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+\def\name{x}
+\def\first#1#2\end{[\number`#1]}
+\expandafter\first\detokenize{\name}aa\end
+\end{document}
+```
+
+Expected `[92]`; Perl `[0]` (with "Missing number" warning).

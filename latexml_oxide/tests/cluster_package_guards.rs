@@ -6407,4 +6407,50 @@ C=[\cmdNW@vertex@color] F=[\cmdNW@vertex@fontcolor]
     assert!(xml.contains("C=[red] F=[blue]"), "{xml}");
   }
 
+  /// KNOWN_PERL_ERRORS #123: `` `<char> `` must take the character code of
+  /// any character token (tex.web §442). Perl strips a leading `\` from the
+  /// token *string* — fine for `\a`, but a catcode-12 backslash (what
+  /// `\detokenize`/`\string` produce) becomes "" → 0. Witness
+  /// bibleref-parse.sty L481-486 `\brp@ifcs` (backslash test → every
+  /// `\foreach`-variable book name "unknown"). Same root aborts every
+  /// `\fpeval{\dimen0 > \dimen1}`: l3fp's comparison chain-detect
+  /// (expl3-code.tex L17662-17673) routes `\if_case:w` on
+  /// `` ` \token_to_str:N <register> `` → 0 instead of 92 → the `@` sentinel
+  /// is never emitted → `Missing argument Until:@` + Fatal EoF (witness
+  /// swfigure `\fptest`/`\DFscalefactor`).
+  #[test]
+  fn backquote_charcode_of_other_backslash() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\def\name{x}
+\def\first#1#2\end{[\number`#1]}
+A\expandafter\first\detokenize{\name}aa\end
+B\expandafter\first\string\name aa\end
+C[\number`\\]D[\number`\a]E[\number`a]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Missing number"), "{stderr}");
+    assert!(xml.contains("A[92]"), "{xml}");
+    assert!(xml.contains("B[92]"), "{xml}");
+    assert!(xml.contains("C[92]D[97]E[97]"), "{xml}");
+  }
+
+  #[test]
+  fn fpeval_register_right_operand_of_comparison() {
+    let tex = r"\documentclass{book}
+\usepackage{xfp}
+\newdimen\Ah\newdimen\Bt\Ah=10pt\Bt=5pt
+\begin{document}
+\edef\x{\fpeval{\Ah > \Bt}}[\x]
+\edef\y{\fpeval{\Ah < \Bt}}[\y]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert!(xml.contains("[1]\n[0]"), "{xml}");
+  }
+
 }
