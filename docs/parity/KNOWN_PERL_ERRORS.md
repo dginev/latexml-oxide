@@ -4768,3 +4768,35 @@ Trigger:
 
 Expected `[-1][-4] [800]`; Perl `[0][-3] [0]`.
 
+## 125. `\read` past end-of-file emits an IGNORE-catcode `\endlinechar` token (Rust fixes)
+
+`Mouth.pm` L303-307 builds the end-of-file token for `\read` as
+`$eolcc == CC_EOL ? T_CS('\par') : Token($eolch, $eolcc)`, so when
+`\catcode`\^^M=9` is in force the synthetic final line yields a catcode-9
+`^^M` token, which later reaches the Stomach as `misdefined: The token
+T_IGNORE[U+000d/CR] should never reach Stomach!`. TeX reads that synthetic
+empty line in state N like any other line (tex.web §345-349): an IGNORE
+(or SPACE) character is skipped and can never become a token. Witness
+liftarm: pgfmanual-en-macros.tex:1745-1748 (`codeexample`) sets
+`\catcode`\^^M=9` around `\scantokens{\code@temp}`, inside which
+`\liftarmanimate` (liftarm.sty:680-728) drives animate.sty's
+`\@anim@buildtmln` (animate.sty:2560-2650), a `\whiledo` `\read` loop that
+runs to EOF — 501 errors, cap fatal. Perl: 1 error per animation on the
+repro.
+
+Rust: `mouth.rs` `read_token` EOF branch drops SPACE/IGNORE endline chars;
+guard `perfect_kernel_batch54::read_at_eof_drops_ignored_endlinechar`.
+Trigger (`rdtest.dat` = one line `lineone`):
+
+```latex
+\documentclass{article}
+\begin{document}
+\newread\myr \openin\myr=rdtest.dat
+\catcode`\^^M=9\relax
+\read\myr to \la \read\myr to \lb
+\catcode`\^^M=5\relax \closein\myr
+X\lb X
+\end{document}
+```
+
+Expected `XX` with no error; Perl errors `misdefined` on the `^^M` token.

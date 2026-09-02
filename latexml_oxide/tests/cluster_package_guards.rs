@@ -6589,4 +6589,30 @@ F[\fp_eval:n { 800 - 0 * 3 }][\fp_eval:n { (0*3) + 800 }][\fp_eval:n { -0 * 3 }]
     assert!(xml.contains("K[-1][1][-2][-4][4][3][-3]"), "{xml}");
     assert!(xml.contains("F[800][800][-0]"), "{xml}");
   }
+  /// `\read` past end-of-file reads the synthetic empty line + `\endlinechar`
+  /// in state N (tex.web §345-349): an IGNORE (catcode 9) endline char can
+  /// never become a token. Perl Mouth.pm:303-307 emits it and the Stomach
+  /// reports `misdefined` (KNOWN_PERL_ERRORS #125). Witness: liftarm
+  /// (pgfmanual `codeexample` sets `\catcode`\^^M=9` around `\scantokens`,
+  /// animate.sty `\@anim@buildtmln` `\read`s the timeline to EOF — 501
+  /// errors capped).
+  #[test]
+  fn read_at_eof_drops_ignored_endlinechar() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\newread\myr
+\openin\myr=rdtest.dat
+\catcode`\^^M=9\relax
+\read\myr to \la
+\read\myr to \lb
+\catcode`\^^M=5\relax
+\closein\myr
+X\lb X\la X
+\end{document}
+";
+    let (stderr, xml) = convert_with_sty(tex, "rdtest.dat", "lineone\n");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("should never reach Stomach"), "{stderr}");
+    assert!(xml.contains("XXlineoneX"), "{xml}");
+  }
 }

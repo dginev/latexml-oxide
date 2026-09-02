@@ -839,10 +839,20 @@ impl Mouth {
           };
           let eoftoken = if let Some(eolch_content) = eolch {
             if read_mode && !self.at_eof && !self.source.is_empty() {
-              if eolcc == Catcode::EOL {
-                Some(T_CS!("\\par"))
-              } else {
-                Some(CharToken!(eolch_content, eolcc))
+              // The synthetic final line is empty + `\endlinechar`, read in
+              // state N like any other line (tex.web §345-349): an EOL char
+              // is `\par`, a SPACE or IGNORE char is dropped (§349 "goto
+              // switch" — it can never become a token), anything else is a
+              // char token. Perl Mouth.pm:303-307 emits the IGNORE char and
+              // it reaches the Stomach as `misdefined` (KNOWN_PERL_ERRORS
+              // #125); witness liftarm (pgfmanual `codeexample` sets
+              // `\catcode`\^^M=9` around `\scantokens`, and animate.sty's
+              // `\@anim@buildtmln` `\read`s the timeline to EOF inside it —
+              // 501 errors capped).
+              match eolcc {
+                Catcode::EOL => Some(T_CS!("\\par")),
+                Catcode::SPACE | Catcode::IGNORE => None,
+                _ => Some(CharToken!(eolch_content, eolcc)),
               }
             } else {
               None
