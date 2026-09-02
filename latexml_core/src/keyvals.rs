@@ -899,6 +899,93 @@ impl KeyVals {
     None
   }
 
+  /// xkeyval.tex L560-583 `\XKV@replacepointers`: splice every
+  /// `\usevalue{X}` in a value with the stored `\XKV@<header>X@value` body
+  /// (one macro level, re-scanned so a stored value may itself point on),
+  /// EAGERLY at `\setkeys` time under the key's own header. The key code
+  /// then receives the literal value, so a value it stores for later
+  /// (pmdraw.sty:1704-1706 `\renewcommand{\pmdraw@tikz}{#1}`, consumed inside
+  /// the tikzpicture at :1857-1860) never carries an unresolved pointer into
+  /// a context whose active `\setkeys` header differs — the lazy `\usevalue`
+  /// macro (xkeyval_sty.rs) produced 501 "no value recorded" errors on
+  /// pmdraw. A missing store errors and drops the pointer (L570-571); a
+  /// back-linking pointer cancels the replacement (L573-576).
+  fn replace_pointers(&self, keyset: &str, value: Tokens) -> Result<Tokens> {
+    let usevalue = T_CS!("\\usevalue");
+    if !value.unlist_ref().contains(&usevalue) {
+      return Ok(value);
+    }
+    let mut toks: Vec<Token> = value.unlist();
+    let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+    let mut seen: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < toks.len() {
+      if toks[i] != usevalue {
+        out.push(toks[i]);
+        i += 1;
+        continue;
+      }
+      // the pointer's key: a braced group or the single next token
+      let mut j = i + 1;
+      let key = if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+        let mut depth = 0;
+        let mut inner = Vec::new();
+        while j < toks.len() {
+          match toks[j].get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => {
+              depth -= 1;
+              if depth == 0 {
+                j += 1;
+                break;
+              }
+            },
+            _ => {},
+          }
+          if depth > 1 || toks[j].get_catcode() != Catcode::BEGIN {
+            inner.push(toks[j]);
+          }
+          j += 1;
+        }
+        Tokens::new(inner).to_string()
+      } else if j < toks.len() {
+        j += 1;
+        toks[j - 1].to_string()
+      } else {
+        String::new()
+      };
+      let key = key.trim().to_string();
+      let cs = T_CS!(s!(
+        "\\XKV@{}@value",
+        keyval_qname(&self.prefix, keyset, &key)
+      ));
+      let body = match state::lookup_definition(&cs) {
+        Ok(Some(defn)) => match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+          _ => None,
+        },
+        _ => None,
+      };
+      match body {
+        None => {
+          Error!("undefined", "\\usevalue",
+            s!("no value recorded for key `{key}'; ignored"));
+          toks.drain(i..j);
+        },
+        Some(_) if seen.contains(&key) => {
+          Error!("unexpected", "\\usevalue",
+            "back linking pointers; pointer replacement canceled");
+          toks.drain(i..j);
+        },
+        Some(body) => {
+          seen.push(key);
+          toks.splice(i..j, body.unlist());
+        },
+      }
+    }
+    Ok(Tokens::new(out))
+  }
+
   /// Store a saved key value as `\XKV@<prefix>@<keyset>@<key>@value`
   /// (xkeyval.tex L521-528).
   fn store_saved_value(&self, keyset: &str, key: &str, value: Tokens, global: bool) -> Result<()> {
@@ -1010,8 +1097,13 @@ impl KeyVals {
             }
           }
           // reparse (and expand) the tokens representing the value
+          let mut raw_value_tks: Option<Tokens> = None;
           if !toks.is_empty() {
-            let stripped_toks = Tokens::new(toks).strip_braces_n(2);
+            // xkeyval.tex L525-528 saves the RAW value (pointers unresolved)
+            // before L529 replaces the pointers for the key code.
+            let raw_toks = Tokens::new(toks).strip_braces_n(2);
+            raw_value_tks = Some(raw_toks.clone());
+            let stripped_toks = self.replace_pointers(keyset, raw_toks)?;
             if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
                 value = keytype.reparse(stripped_toks)?;
@@ -1057,7 +1149,8 @@ impl KeyVals {
             self.save_listed(keyset, key)
           };
           if let Some(global) = save_global {
-            let value_tks = value.clone().owned_tokens().unwrap_or_default();
+            let value_tks = raw_value_tks
+              .unwrap_or_else(|| value.clone().owned_tokens().unwrap_or_default());
             self.store_saved_value(keyset, key, value_tks, global)?;
           }
         }

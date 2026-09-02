@@ -6589,6 +6589,7 @@ F[\fp_eval:n { 800 - 0 * 3 }][\fp_eval:n { (0*3) + 800 }][\fp_eval:n { -0 * 3 }]
     assert!(xml.contains("K[-1][1][-2][-4][4][3][-3]"), "{xml}");
     assert!(xml.contains("F[800][800][-0]"), "{xml}");
   }
+
   /// `\read` past end-of-file reads the synthetic empty line + `\endlinechar`
   /// in state N (tex.web §345-349): an IGNORE (catcode 9) endline char can
   /// never become a token. Perl Mouth.pm:303-307 emits it and the Stomach
@@ -6614,5 +6615,35 @@ X\lb X\la X
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("should never reach Stomach"), "{stderr}");
     assert!(xml.contains("XXlineoneX"), "{xml}");
+  }
+
+  /// xkeyval.tex:518-529 + 560-583: `\XKV@s@tk@ys@` saves the raw value and
+  /// then `\XKV@replacepointers` splices every `\usevalue{X}` EAGERLY, under
+  /// the key's own header, before the key code runs. The binding resolved
+  /// `\usevalue` lazily at expansion time, so a value stored by the key code
+  /// and expanded later (inside another `\setkeys`) looked the pointer up
+  /// under the wrong family. Witness: pmdraw (pmdraw.sty:1704-1706 stores
+  /// `\pmdraw@tikz`, consumed at :1857-1860 — 501 errors capped). Perl
+  /// stubs the pointer system outright (xkeyval.sty.ltxml:397-432).
+  #[test]
+  fn xkeyval_usevalue_is_replaced_eagerly_at_setkeys() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\define@key{d}{v}{\def\stored{#1}}
+\define@key{dDefault}{v}{\setkeys{d}{\savevalue{v}=#1}}
+\makeatother
+\begin{document}
+\makeatletter
+\setkeys{dDefault}{v=42}
+\setkeys{d}{v=\usevalue{v}}
+\setkeys{e}{whatever}
+[\stored]
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[42]"), "{xml}");
   }
 }
