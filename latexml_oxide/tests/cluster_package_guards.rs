@@ -8168,4 +8168,470 @@ content
       "{xml}"
     );
   }
+
+  /// OXIDIZED_DESIGN #182: a `\caption` with `\@captype` set inside an `lrbox`
+  /// minipage (tufte-common.def:1110-1133 `marginfigure`: pgfornament 40+40,
+  /// memman 46+46 errors) has no float ancestor; it degrades to the inline
+  /// `ltx_caption` text instead of `<ltx:caption> isn't allowed in <ltx:block>`.
+  /// A real `figure` keeps the tagged `ltx:caption` + `ltx:toccaption`.
+  #[test]
+  fn caption_without_a_float_ancestor_degrades_to_text() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\newsavebox\mybox
+\newenvironment{marginfig}{\begin{lrbox}{\mybox}\begin{minipage}{3cm}\def\@captype{figure}}{\end{minipage}\end{lrbox}\marginpar{\usebox{\mybox}}}
+\makeatother
+\begin{document}
+\begin{marginfig}
+X
+\caption{A caption}
+\end{marginfig}
+\begin{figure}\centering Y\caption{Real float}\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text class="ltx_caption">A caption</text>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        r#"<caption class="ltx_centering"><tag close=": ">Figure 2</tag>Real float</caption>"#
+      ),
+      "{xml}"
+    );
+    assert!(xml.contains("<toccaption"), "{xml}");
+  }
+
+  /// KNOWN_PERL_ERRORS #140: `\index{packages!#1@\texttt{#1}}` with `#1` =
+  /// `\TIKZ` (pgfornament usefulcommands.tex:93) must re-read as `\TIKZ` + `@`
+  /// (the `.idx` `\write` form), not the undefined `\TIKZ@`.
+  #[test]
+  fn index_control_word_before_at_is_not_glued() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\newcommand*{\TIKZ}{Ti\emph{k}Z}
+\newcommand{\docpkg}[1]{\texttt{#1}\index{#1 package@\texttt{#1} package}\index{packages!#1@\texttt{#1}}}
+\begin{document}
+Uses \docpkg{\TIKZ} here.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<indexphrase key="packages">packages</indexphrase>"#),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"<indexphrase key="Ti\emph{k}Z">"#), "{xml}");
+  }
+
+  /// KNOWN_PERL_ERRORS #141: `\renewcommand\part{\secdef\@part\@spart}` and a
+  /// document-made `\chapter` (source3body.tex:96-123: l3kernel interface3 +
+  /// source3, 2 → 101 errors) find the class-level workers and an unlocked
+  /// `\chapter` in a chapterless class.
+  #[test]
+  fn secdef_part_and_chapter_workers_exist() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\renewcommand\part{\par\secdef\@part\@spart}
+\newcounter{chapter}
+\renewcommand\thesection{\thechapter.\@arabic\c@section}
+\newcommand\chapter{\clearpage\secdef\@chapter\@schapter}
+\makeatother
+\begin{document}
+\part{First part}
+\chapter{A chapter}
+\section{A section}
+\chapter*{Unnumbered}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<part inlist="toc" xml:id="Pt1">"#), "{xml}");
+    assert!(
+      xml.contains(r#"<chapter inlist="toc" xml:id="chapter1">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<tag close=" ">1.1</tag>A section"#),
+      "{xml}"
+    );
+    assert!(xml.contains("<title>Unnumbered</title>"), "{xml}");
+  }
+
+  /// The German `"` shorthands belong to babel's German, not only to
+  /// `\usepackage{german}`: `\usepackage[ngerman]{babel}` (80 TL manuals)
+  /// rendered `Sch"one` as `Sch”one`, and `\mdqon` errored `T_ACTIVE["]`.
+  /// Non-shorthand follow-characters print the quote itself
+  /// (pdflatex `A "x" B "1"` → `A "x" B "1"`), `"ck`/`"ff` the letter.
+  #[test]
+  fn babel_ngerman_umlaut_shorthands() {
+    let tex = r#"\documentclass{article}
+\usepackage[ngerman]{babel}
+\begin{document}
+Sch"one Gr"u"se "`Zitat"' A "x" B "1" C "ck D "ff E {\mdqoff "y"} \mdqon "a
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Schöne Grüße „Zitat“ A \"x\" B \"1\" C ck D ff E ”y” ä"),
+      "{xml}"
+    );
+  }
+
+  /// german.sty's `\germanTeX` (german.sty:666-671) — run by the kernel first
+  /// aid `file/german.sty/after` (latex2e-first-aid-for-external-files.ltx:160)
+  /// and by documents written for german.sty (a0poster a0/a0_eng, adrconv,
+  /// akletter … 16 TL manuals with `\ngermanTeX`).
+  #[test]
+  fn german_sty_germantex_switch_is_defined() {
+    let tex = r#"\documentclass{article}
+\usepackage{german}
+\begin{document}
+Sch"one \germanTeX Gr"u"se
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Schöne Grüße"), "{xml}");
+    let tex = tex
+      .replace("{german}", "{ngerman}")
+      .replace(r"\germanTeX", r"\ngermanTeX");
+    let (stderr, xml) = convert(&tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Schöne Grüße"), "{xml}");
+  }
+
+  /// beamer builds on article (Perl beamer.cls.ltxml:1361 `LoadClass`); the
+  /// binding's `RequirePackage!("article")` missed silently, leaving
+  /// `\subsection` with `undefined:\thesubsection` (bfh-ci DEMO-BFHBeamer,
+  /// metropolis/gotham demos).
+  #[test]
+  fn beamer_has_article_sectioning_counters() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\section{Introduction}
+\begin{frame}{A}x\end{frame}
+\subsection{Sub}
+\begin{frame}{B}y\end{frame}
+\section{Second}
+\subsection{Sub two}
+\begin{frame}{C}z\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<subsection inlist="toc" xml:id="S1.SS1">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<subsection inlist="toc" xml:id="S2.SS1">"#),
+      "{xml}"
+    );
+  }
+
+  /// A `\bibliography` inside a beamer frame (metropolis demo, simpleplus /
+  /// simpledarkblue / pure-minimalistic samples): the frame's `ltx:subsection`
+  /// never auto-closes, so placing the bibliography "as an `ltx:section`" erred
+  /// `<ltx:section> isn't allowed in <ltx:p>` and left it inside the `<p>`.
+  /// The subsection may hold an `ltx:bibliography`, which is where beamer
+  /// typesets it (`backmatter_insertion_target`).
+  #[test]
+  fn bibliography_inside_a_beamer_frame_stays_in_the_frame() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\section{Intro}
+\begin{frame}{A}x\end{frame}
+\begin{frame}{References}
+  \bibliography{nonexistent}
+  \bibliographystyle{abbrv}
+\end{frame}
+\begin{frame}{After}z\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("</p>\n      </para>\n      <bibliography"),
+      "{xml}"
+    );
+    assert!(xml.contains("</bibliography>\n    </subsection>"), "{xml}");
+  }
+
+  /// nameref.sty:189-192 `\NR@gettitle` (memoir.cls:7025 routes `\M@gettitle`
+  /// — heads, `\PoemTitle` — through it; srbook-mem Test/TestLight/
+  /// SerbianBookMem, serbian-apostrophe ×2: sole error).
+  #[test]
+  fn nameref_gettitle_records_the_title() {
+    let tex = r"\documentclass{article}
+\usepackage{nameref}
+\begin{document}
+\makeatletter
+\NR@gettitle{Guarded Title}[\@currentlabelname]
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[Guarded Title]"), "{xml}");
+  }
+
+  /// fancyhdr.sty:577-608 `\f@nch@initialise` — executed by ctex's
+  /// end-of-package hook (ctex-heading-article.def:686; inkpaper, sduthesis,
+  /// shtthesis, caspervector) after patching it.
+  #[test]
+  fn fancyhdr_initialise_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\makeatletter
+\f@nch@initialise
+\makeatother
+\begin{document}
+\section{One}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
+  /// biblatex.sty:16439-16440 loads the bbx before the cbx (oxref.bbx:489
+  /// `\newtoggle` vs oxnum.cbx:26 `\providetoggle`), and the raw style chain's
+  /// declaration-only commands (`\DeclareDataInheritance`, `\NumCheckSetup`,
+  /// `\defbibfilter`, `\defbibnote` …) are accepted (biblatex-oxref ×4,
+  /// biblatex-cse-doc, biblatex-musuos).
+  #[test]
+  fn biblatex_loads_bbx_before_cbx() {
+    let tex = r"\documentclass{article}
+\usepackage[style=oxnum]{biblatex}
+\defbibfilter{books}{type=book}
+\defbibnote{pre}{A note.}
+\begin{document}
+Hello.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hello.</p>"), "{xml}");
+  }
+
+  /// titlesec.sty:112-165 `\titleclass` defines a NEW heading command
+  /// (regulatory.sty:116/121 `\article`/`\para`; regulatory example1/2 ×4).
+  #[test]
+  fn titleclass_defines_a_new_heading_command() {
+    let tex = r"\documentclass{article}
+\usepackage{titlesec}
+\newcounter{article}
+\titleclass{\article}[0]{straight}
+\newcounter{para}
+\titleclass{\para}{straight}[\article]
+\begin{document}
+\article{Hello}
+\para{World}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<section"), "{xml}");
+    assert!(xml.contains("Hello</title>"), "{xml}");
+    assert!(xml.contains("<subsection"), "{xml}");
+    assert!(xml.contains("World</title>"), "{xml}");
+  }
+
+  /// caption3.sty:1753 `\DeclareCaptionType` lazy-loads newfloat and delegates,
+  /// and newfloat.sty:117-125 reads the trailing `[singular][listname]`
+  /// (pygmentex.sty:23; pygmentex ×2, hvpygmentex).
+  #[test]
+  fn declare_caption_type_makes_a_float() {
+    let tex = r"\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionType{pygcode}[Listagem][Lista de listagens]
+\begin{document}
+\begin{pygcode}code\caption{A code listing}\end{pygcode}
+[\pygcodename/\listpygcodename]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<float class="ltx_float_pygcode""#), "{xml}");
+    assert!(xml.contains("[Listagem/Lista de listagens]"), "{xml}");
+    assert!(!xml.contains("[Listagem][Lista"), "{xml}");
+  }
+
+  /// KNOWN_PERL_ERRORS #142: `\valign{…}` consumes its alignment
+  /// (fancyvrb.sty:570 `\FancyVerbTab`: one `#`-reaches-stomach error per
+  /// tab-bearing `Verbatim` line under `showtabs`, pygmentex_demo).
+  #[test]
+  fn valign_swallows_its_alignment() {
+    let tex = "\\documentclass{article}
+\\usepackage{fancyvrb}
+\\begin{document}
+\\begin{Verbatim}[showtabs,tabsize=1]
+A\tB
+\\end{Verbatim}
+\\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"class="ltx_verbatim""#) && xml.contains("A<text"),
+      "{xml}"
+    );
+  }
+
+  /// The `@`-is-a-letter sibling of KNOWN_PERL_ERRORS #140 (pgfmanual-en-macros
+  /// .tex:281 `\index{Internals!\strippedat @…}` under `\makeatletter`:
+  /// tikz-cd-doc, tikz-dependency-doc, pdfmarginpar): the print_cs space must
+  /// not depend on `@`'s catcode.
+  #[test]
+  fn index_control_word_before_letter_at_is_not_glued() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\makeatletter
+\def\strippedat{foo}
+\def\extractinternalcommand{\index{Internals!\strippedat @\protect\texttt{\strippedat}}}
+\makeatother
+\begin{document}
+\extractinternalcommand Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<indexphrase key="foo">"#), "{xml}");
+  }
+
+  /// latex.ltx:9512/9537: `\document` is preamble-only and its hooks one-time —
+  /// a second `\begin{document}` (ltnews.tex:236/296, l3news.tex:109/177
+  /// `\renewenvironment{document}` + per-issue `\input`) re-fired csquotes'
+  /// end-preamble block whose hooks are `\undef`ed after use (csquotes.sty:2434-2446).
+  #[test]
+  fn second_begin_document_fires_no_hooks() {
+    let tex = r"\documentclass{article}
+\usepackage{csquotes}
+\usepackage{hyperref}
+\begin{document}
+Hello \enquote{world}.
+\begin{document}
+Second begin.
+\end{document}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Second begin."), "{xml}");
+    assert_eq!(xml.matches("<document ").count(), 1, "{xml}");
+  }
+
+  /// pdfcomment annotations become `ltx:note`s (pdfcomment example ×3: raw
+  /// pdfcomment.sty took the dvips `\pdfmark` branch and dumped PDF
+  /// dictionaries into the text); `\pdfstringdef` is global (hyperref.sty:386).
+  #[test]
+  fn pdfcomment_annotations_are_notes() {
+    let tex = r"\documentclass{article}
+\usepackage[author={Me}]{pdfcomment}
+\begin{document}
+A\pdfcomment[color=red,subject={S},deadline={2009/11/11}]{Hello comment.} B
+\pdftooltip{visible}{tip text} $x\pdftooltip{y}{math tip}$
+\pdfmarkupcomment[markup=Highlight]{marked}{note}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<note role="pdfcomment">Hello comment.</note>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"visible<note role="tooltip">tip text</note>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"marked<note role="pdfmarkupcomment">note</note>"#),
+      "{xml}"
+    );
+    assert!(!xml.contains("pdfmark="), "{xml}");
+  }
+
+  /// memoir.cls:2640-2672 patches `\title`/`\author` to set `\thetitle`/
+  /// `\theauthor` (biblatex-oxref docs typeset them on their own title page).
+  #[test]
+  fn memoir_title_defines_thetitle() {
+    let tex = r"\documentclass{memoir}
+\title{My Title\thanks{T}}\author{An Author}
+\begin{document}
+[\thetitle/\theauthor]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[My Title/An Author]"), "{xml}");
+  }
+
+  /// mathtools.sty:1576 `\mathmakebox[<width>]`: the width is a <dimen>
+  /// (`\widthof{$x$}` measured), not content (optidef `\bodySubjectTo` in
+  /// `align*`, 58 errors).
+  #[test]
+  fn mathmakebox_width_is_measured_not_typeset() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath,mathtools,calc}
+\begin{document}
+\begin{align*}
+a &= \mathmakebox[\widthof{$x$}][c]{y} b \\
+c &= \mathmakebox[2em]{d} \mathmakebox[][c]{e}
+\end{align*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(">y<") && xml.contains(">d<") && xml.contains(">e<"),
+      "{xml}"
+    );
+  }
+
+  /// scrlfile.sty raw: `\BeforePackage`/`\AfterPackage` are the kernel file
+  /// hooks (scrlfile-hook.sty:85-230). scrbook.cls:5466-5477 pairs them to
+  /// save/restore `\@addchap` around hyperref — the absorbed "before" left
+  /// `\addchap` undefined after `\usepackage{hyperref}` (cleanthesis, bfh-ci).
+  #[test]
+  fn scrlfile_before_and_after_package_hooks_fire() {
+    let tex = r"\documentclass{article}
+\usepackage{scrlfile}
+\makeatletter
+\BeforePackage{hyperref}{\def\before@ran{yes}}
+\AfterPackage{hyperref}{\def\after@ran{yes}}
+\AfterPackage*{hyperref}{\def\afterstar@early{yes}}
+\makeatother
+\usepackage{hyperref}
+\makeatletter
+\AfterPackage*{hyperref}{\def\afterstar@late{yes}}
+\makeatother
+\begin{document}
+\makeatletter
+[\before@ran/\after@ran/\afterstar@early/\afterstar@late]
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[yes/yes/yes/yes]"), "{xml}");
+    let tex = r"\documentclass{scrbook}
+\usepackage{hyperref}
+\begin{document}
+\addchap{Declaration}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<title>Declaration</title>"), "{xml}");
+  }
 }

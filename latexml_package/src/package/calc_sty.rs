@@ -411,7 +411,10 @@ enum BoxDim {
 /// Surpass-perl: OXIDIZED_DESIGN #115.
 fn measure_box_dim(toks: Tokens, kind: BoxDim) -> RegisterValue {
   let zero = || RegisterValue::Dimension(Dimension::new(0));
-  let box_result = match digest(toks) {
+  // Measured in its own box mode, like `digest_measured_box` above: from a
+  // `<dimen>` read inside `align*` (mathtools `\mathmakebox[\widthof{$x$}]`,
+  // optidef) a bare digest's `$` closed the ENCLOSING math.
+  let box_result = match digest_measured_box(toks) {
     Ok(b) => b,
     Err(_) => return zero(),
   };

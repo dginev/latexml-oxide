@@ -107,6 +107,30 @@ LoadDefinitions!({
       .collect();
     Ok(auto_table(cols, style.into_tokens_result()?, rows))
   });
+
+  // memoir.cls:2640-2672 `\xapptocmd\title{…\protected@xdef\thetitle{#1}…}` and
+  // the `\author`/`\theauthor` twin: the patches target LaTeX's plain `\def`
+  // `\title`, but ours is a locked frontmatter macro, so they failed silently
+  // ("patch 2 to \title failed") and a title page that typesets `\thetitle`
+  // / `\theauthor` itself (biblatex-oxref oxnum/oxalph/oxyear/oxnotes-doc:272)
+  // erred `undefined`. Wrap the locked macros the way the patches do, with the
+  // same thanks-stripping group. Guard:
+  // `perfect_kernel_batch54::memoir_title_defines_thetitle`.
+  Let!("\\lx@memoir@title", "\\title");
+  Let!("\\lx@memoir@author", "\\author");
+  DefMacro!(
+    "\\title[]{}",
+    r"\lx@memoir@title[#1]{#2}\begingroup\let\footnote\@gobble\renewcommand{\thanks}[1]{}%
+      \renewcommand{\thanksmark}[1]{}\renewcommand{\thanksgap}[1]{}%
+      \protected@xdef\thetitle{#2}\endgroup"
+  );
+  DefMacro!(
+    "\\author[]{}",
+    r"\lx@memoir@author[#1]{#2}\begingroup\let\footnote\@gobble\renewcommand{\thanks}[1]{}%
+      \renewcommand{\and}{\unskip, }\renewcommand{\andnext}{\unskip, }%
+      \renewcommand{\thanksmark}[1]{}\renewcommand{\thanksgap}[1]{}%
+      \protected@xdef\theauthor{#2}\endgroup"
+  );
 });
 
 /// Split a brace-aware comma list into its items (top-level catcode-OTHER

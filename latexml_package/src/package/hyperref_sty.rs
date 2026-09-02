@@ -907,9 +907,12 @@ LoadDefinitions!({
   // \ref*{label}
   // \pageref*{label}
 
-  // I wonder if this is good enough for our context?
-  // \pdfstringdef{macroname}{texstring}
-  DefMacro!("\\pdfstringdef{Token}{}", "\\def#1{#2}");
+  // \pdfstringdef{macroname}{texstring} — hyperref.sty:386/619 defines the
+  // macro GLOBALLY (`\begingroup…\xdef#1`), so a definition made inside a
+  // box survives: pdfcomment.sty:2566/2820-2833 runs `\pdfstringdef` in a
+  // `\setbox\hbox{…}` and reads `\pc@pdfenc@author` afterwards (math
+  // tooltips). The string is kept unexpanded, as before.
+  DefMacro!("\\pdfstringdef{Token}{}", "\\gdef#1{#2}");
   // Hopefully noop is sufficient for PDF-specific uses?
   def_macro_noop("\\pdfstringdefDisableCommands")?;
   def_macro_noop("\\pdfbookmark[]{}{}")?;
@@ -968,7 +971,10 @@ LoadDefinitions!({
   // hycolor.sty internals raw packages poke (pdfcomment): color-spec
   // converters for PDF annotation keys — 4-arg absorbers (hycolor.sty
   // L332/L405 \HyColor@XZeroOneThreeFour + its \HyColor@Field* aliases).
-  def_macro_noop("\\HyColor@XZeroOneThreeFour{}{}{}{}")?;
+  // hycolor.sty:332 DEFINES its second argument (the normalized PDF color
+  // spec) — pdfcomment.sty:2815-2817 then reads `\pc@hyenc@color`; a pure
+  // absorber left it undefined.
+  DefMacro!("\\HyColor@XZeroOneThreeFour{}{Token}{}{}", "\\def#2{#1}");
   def_macro_noop("\\HyColor@FieldColor{}{}{}{}")?;
   def_macro_noop("\\HyColor@FieldBColor{}{}{}{}")?;
   def_macro_noop("\\HyColor@HyperrefColor{}{}{}{}")?;

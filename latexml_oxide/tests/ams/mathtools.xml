@@ -7335,14 +7335,14 @@ Then a switch of tag forms.</p>
         </equation>
         <equation xml:id="S12.Ex87">
           <MathFork>
-            <Math tex="\displaystyle\mathmakebox[\widthof{{}={}}][c]{\vdots}" text="vdots" xml:id="S12.Ex87.m2">
+            <Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S12.Ex87.m2">
               <XMath>
                 <XMTok name="vdots" role="ID">⋮</XMTok>
               </XMath>
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle\mathmakebox[\widthof{{}={}}][c]{\vdots}" text="vdots" xml:id="S12.Ex87.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S12.Ex87.m1">
                   <XMath>
                     <XMTok name="vdots" role="ID">⋮</XMTok>
                   </XMath>
@@ -7377,14 +7377,14 @@ Then a switch of tag forms.</p>
         </equation>
         <equation xml:id="S12.Ex90">
           <MathFork>
-            <Math tex="\displaystyle\mathmakebox[\widthof{{}={}}][c]{\vdots}" text="vdots" xml:id="S12.Ex90.m2">
+            <Math tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S12.Ex90.m2">
               <XMath>
                 <XMTok name="vdots" role="ID">⋮</XMTok>
               </XMath>
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle\mathmakebox[\widthof{{}={}}][c]{\vdots}" text="vdots" xml:id="S12.Ex90.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle\mathmakebox[7.7778pt][c]{\vdots}" text="vdots" xml:id="S12.Ex90.m1">
                   <XMath>
                     <XMTok name="vdots" role="ID">⋮</XMTok>
                   </XMath>

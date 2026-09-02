@@ -5066,3 +5066,88 @@ for a register and applies `\tex_the:D` — scrlttr2.cls:5095 `\closing`'s
 \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy). Rust: the three
 are macros over `\lx@do@…` constructors. Guard:
 `perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`.
+
+## 140. `\index` re-tokenizes an UnTeX string that glues a control word to a following non-letter (Rust fixes)
+
+`SanitizedVerbatim` (pool:4376-4394) rebuilds the `\index` argument as
+`TokenizeInternal(UnTeX($arg))`; UnTeX inserts a space after a control word
+only before a LETTER/digit, so a macro-assembled entry `\index{packages!#1@\texttt{#1}}`
+with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93 `\docpkg`, :102 `\docStyle`)
+re-reads as the undefined `\TIKZ@` ("Error:undefined:\TIKZ@", pgfornament
+ornaments, tikzrput). Minimal trigger:
+
+```latex
+\newcommand*{\TIKZ}{Ti\emph{k}Z}
+\newcommand{\docpkg}[1]{\texttt{#1}\index{packages!#1@\texttt{#1}}}
+\docpkg{\TIKZ}
+```
+
+Rust: the argument is stringified the way `\@wrindex`'s `\write` puts it in
+the `.idx` file (`writable_tokens`, tex.web §262 print_cs: a space after every
+control word). Guard: `perfect_kernel_batch54::index_control_word_before_at_is_not_glued`.
+
+## 141. `\secdef\@part\@spart` / `\@chapter` workers and the locked `\chapter` (Rust fixes)
+
+latex.ltx defines none of `\@part`/`\@spart`/`\@chapter`/`\@schapter`
+(article.cls:281-311, book.cls:439-475 do), the class bindings that replace
+those files never did, and `\@sect` is a no-op stub (latex_base). A document
+that rebuilds its sectioning the way the classes write it —
+source3body.tex:96-123 (`\renewcommand\part{…\secdef\@part\@spart}`,
+`\newcounter{chapter}`, `\newcommand\chapter{…\secdef\@chapter\@schapter}`:
+l3kernel interface3 + source3; frankenstein lips) errors `undefined:\@part`
+and, with the kernel `\chapter` locked, "Ignoring redefinition of \chapter" →
+`undefined:\chapter` per chapter (2 → 101 errors, fatal). Minimal trigger:
+
+```latex
+\documentclass{article}\makeatletter
+\renewcommand\part{\secdef\@part\@spart}
+\newcounter{chapter}\newcommand\chapter{\secdef\@chapter\@schapter}
+\makeatother\begin{document}\part{P}\chapter{C}\section{S}\end{document}
+```
+
+Rust: the four workers and a real `\@sect` route to the `\@startsection`
+dispatcher (latex_constructs_rust_only.rs §9), and OXIDIZED_DESIGN #179's
+undefine of `\chapter` also unlocks it. Guard:
+`perfect_kernel_batch54::secdef_part_and_chapter_workers_exist`.
+
+## 142. `\valign` is an empty macro, leaving its alignment template in the stream (Rust fixes)
+
+TeX_Tables.pool.ltxml:555 `DefMacro('\valign','')` drops the primitive but not
+its `{<alignment>}` material, whose template `#` then reaches the stomach:
+fancyvrb.sty:566-575 `showtabs` renders each tab through `\FancyVerbTab` =
+`\valign{\vfil##\vfil\cr…}` — one "The token # should never reach Stomach"
+per displayed `Verbatim` line containing a tab (pygmentex_demo ×3). Trigger:
+`\begin{Verbatim}[showtabs,tabsize=1]` with a literal tab in a line. Rust:
+`\valign BoxSpecification {}` reads and discards the alignment (tex.web
+§768). Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`.
+
+## 143. A second `\begin{document}` re-fires the begin-document hooks (Rust fixes)
+
+`\document` is `\@onlypreamble` and its hooks are `\UseOneTimeHook`s
+(latex.ltx:9512/9537), so an inner `\begin{document}` fires nothing;
+latex_constructs.pool.ltxml:304-335 re-runs `@at@begin@document` on every
+`\begin{document}`. ltnews.tex:236/296 and l3news.tex:109/177
+`\renewenvironment{document}{}{}` and `\input` every issue file (each with
+its own `\begin{document}`), so csquotes' end-preamble block ran twice and
+its hooks — `\undef`ed after the first use (csquotes.sty:2434-2446) — erred
+`undefined:\csq@hook@nomultilang`, `\csq@hook@hyperref`. Trigger:
+
+```latex
+\usepackage{csquotes}\usepackage{hyperref}
+\begin{document}A\begin{document}B\end{document}\end{document}
+```
+
+Rust: the hook sequence runs only while `inPreamble` is still set (the first
+`\begin{document}`). Guard: `perfect_kernel_batch54::second_begin_document_fires_no_hooks`.
+
+## 144. newfloat's `\DeclareFloatingEnvironment` names the float after its LIST (Rust fixes)
+
+newfloat.sty.ltxml:47-80 defines `\<type>name` from the `listname` option
+(default "List of <type>s"), so `\DeclareFloatingEnvironment{floppy}` captions
+read "List of floppys 1" (Perl's own t/structure/floatnames.xml golden shows
+it). newfloat.sty:87-111: `name=` → `\<type>name`, default the capitalized
+type ("Floppy"); `listname=` → `\list<type>name`, default "List of <Type>s";
+pdflatex captions "Floppy 1". Rust: the two macros are set separately (and the
+trailing `[singular][listname]` optionals, newfloat.sty:117-125, are read);
+`50_structure/floatnames.xml` re-blessed to "Floppy 1". Guard:
+`perfect_kernel_batch54::declare_caption_type_makes_a_float`.

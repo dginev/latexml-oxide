@@ -119,7 +119,14 @@ LoadDefinitions!({
     });
 
   DefConstructor!("\\clap{}", "#1");
-  DefConstructor!("\\mathmakebox[][]{}", "#3");
+  // mathtools.sty:1576 reads the width with `\setlength\@tempdima{#1}`, i.e. as
+  // a <dimen>: `\widthof{$…$}` (calc) is MEASURED, never typeset. Reading it
+  // as content digested the inner `$…$` inline in the ambient math, ending
+  // math from inside the width's brace group (optidef.sty:106-144
+  // `\bodySubjectTo` = `\mathmakebox[\widthof{$\underset…$}]…` in `align*`:
+  // 58 mode errors; Perl mathtools.sty.ltxml:99 shares the `[]` reader).
+  // Guard: `perfect_kernel_batch54::mathmakebox_width_is_measured_not_typeset`.
+  DefConstructor!("\\mathmakebox[Dimension][]{}", "#3");
   // Ignoring cramped, for now
   DefConstructor!("\\cramped[]{}", "#2");
 

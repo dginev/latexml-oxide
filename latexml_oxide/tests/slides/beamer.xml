@@ -4,8 +4,9 @@
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-listings.css" type="text/css"/>
-  <section inlist="toc" xml:id="section1">
+  <section inlist="toc" xml:id="S1">
     <tags>
       <tag>1</tag>
       <tag role="autoref">section 1</tag>
@@ -14,35 +15,35 @@
     </tags>
     <title><tag close=" ">1</tag>Frames</title>
     <subsection>
-      <para xml:id="section1.p1">
+      <para xml:id="S1.p1">
         <p>This frame has exactly one slide.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section1.p2">
+      <para xml:id="S1.p2">
         <listing class="ltx_lstlisting" data="ICAgICAgICBJIGNoYW5nZWQgc29tZSBjYXRjb2RlcyBhcm91bmQgYW5kIHN0aWxsIHdvcmsh" dataencoding="base64" datamimetype="text/plain">
           <listingline xml:id="lstnumberx1"><text class="ltx_lst_space">        </text><text class="ltx_lst_identifier">I</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">changed</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">some</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">catcodes</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">around</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">still</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">work</text>!</listingline>
         </listing>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section1.p3">
+      <para xml:id="S1.p3">
         <p>This is on every slide. This is on the second slide.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section1.p4">
+      <para xml:id="S1.p4">
         <p>on second slide</p>
       </para>
-      <para xml:id="section1.p5">
+      <para xml:id="S1.p5">
         <p>On slides 1 and 3</p>
       </para>
-      <para xml:id="section1.p6">
+      <para xml:id="S1.p6">
         <p>On slide 2 onwards</p>
       </para>
     </subsection>
   </section>
-  <section inlist="toc" xml:id="section2">
+  <section inlist="toc" xml:id="S2">
     <tags>
       <tag>2</tag>
       <tag role="autoref">section 2</tag>
@@ -51,48 +52,48 @@
     </tags>
     <title><tag close=" ">2</tag>Counting of Frames</title>
     <subsection>
-      <para xml:id="section2.p1">
+      <para xml:id="S2.p1">
         <p>Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p2">
+      <para xml:id="S2.p2">
         <p>¡1¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p3">
+      <para xml:id="S2.p3">
         <p>¡2¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p4">
+      <para xml:id="S2.p4">
         <p>¡3¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p5">
+      <para xml:id="S2.p5">
         <p>¡4¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p6">
+      <para xml:id="S2.p6">
         <p>¡2-¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section2.p7">
+      <para xml:id="S2.p7">
         <p>¡-2¿
 Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
       </para>
     </subsection>
   </section>
-  <section inlist="toc" xml:id="section3">
+  <section inlist="toc" xml:id="S3">
     <tags>
       <tag>3</tag>
       <tag role="autoref">section 3</tag>
@@ -101,7 +102,7 @@ Slide 1Slide 2Slide 3Slide 4<break/>,,,</p>
     </tags>
     <title><tag close=" ">3</tag>Overlays</title>
     <subsection>
-      <para xml:id="section3.p1">
+      <para xml:id="S3.p1">
         <p>Always
 ¡2-¿
 Onslide 2
@@ -109,19 +110,19 @@ Always</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section3.p2">
+      <para xml:id="S3.p2">
         <p>Hello I am uncovered One-by-one.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section3.p3">
+      <para xml:id="S3.p3">
         <p>Visible on Slide 2 onwards
 
 Uncovered on Slide 2</p>
       </para>
     </subsection>
   </section>
-  <section inlist="toc" xml:id="section4">
+  <section inlist="toc" xml:id="S4">
     <tags>
       <tag>4</tag>
       <tag role="autoref">section 4</tag>
@@ -130,7 +131,7 @@ Uncovered on Slide 2</p>
     </tags>
     <title><tag close=" ">4</tag>Overlay Environments</title>
     <subsection>
-      <para xml:id="section4.p1">
+      <para xml:id="S4.p1">
         <p>This
 )[]
 word
@@ -139,48 +140,48 @@ is in round brackets on slide 2 and in square brackets on slide 1.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p2">
+      <para xml:id="S4.p2">
         <p>We are on slide 1 or 2.
 ¡2¿
 We are on slide 2.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p3">
+      <para xml:id="S4.p3">
         <p>¡2¿
 I’m uncovered on slide 2</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p4">
+      <para xml:id="S4.p4">
         <p>¡2¿
 I’m alerted on slide 2</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p5">
+      <para xml:id="S4.p5">
         <p>¡2-¿
 ¡3-4,6¿
 This text is shown the same way as the text above.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p6">
+      <para xml:id="S4.p6">
         <p>¡3-—alert@3-4,6¿
 This text is shown the same way as the text below.</p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section4.p7">
+      <para xml:id="S4.p7">
         <itemize>
           <item>
-            <para xml:id="section4.p7.p1">
+            <para xml:id="S4.p7.p1">
               <p>First</p>
             </para>
-            <para xml:id="section4.p7.p2">
+            <para xml:id="S4.p7.p2">
               <p>¡2-—alert@3¿Second</p>
             </para>
-            <para xml:id="section4.p7.p3">
+            <para xml:id="S4.p7.p3">
               <p>Third</p>
             </para>
           </item>
@@ -188,7 +189,7 @@ This text is shown the same way as the text below.</p>
       </para>
     </subsection>
   </section>
-  <section inlist="toc" xml:id="section5">
+  <section inlist="toc" xml:id="S5">
     <tags>
       <tag>5</tag>
       <tag role="autoref">section 5</tag>
@@ -197,81 +198,81 @@ This text is shown the same way as the text below.</p>
     </tags>
     <title><tag close=" ">5</tag>Titles</title>
     <subsection>
-      <para xml:id="section5.p1">
+      <para xml:id="S5.p1">
         <p><text font="bold">Title</text></p>
       </para>
-      <para xml:id="section5.p2">
+      <para xml:id="S5.p2">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p3">
+      <para xml:id="S5.p3">
         <p><text font="bold">Title</text></p>
       </para>
-      <para xml:id="section5.p4">
+      <para xml:id="S5.p4">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p5">
+      <para xml:id="S5.p5">
         <p>Title</p>
       </para>
-      <para xml:id="section5.p6">
+      <para xml:id="S5.p6">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p7">
+      <para xml:id="S5.p7">
         <p>TitleSubtitle
 Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p8">
+      <para xml:id="S5.p8">
         <p><text font="bold">Title</text></p>
       </para>
-      <para xml:id="section5.p9">
+      <para xml:id="S5.p9">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p10">
+      <para xml:id="S5.p10">
         <p>Title Default</p>
       </para>
-      <para xml:id="section5.p11">
+      <para xml:id="S5.p11">
         <p><text font="bold">Second Title</text></p>
       </para>
-      <para xml:id="section5.p12">
+      <para xml:id="S5.p12">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p13">
+      <para xml:id="S5.p13">
         <p><text font="bold">Title Default</text></p>
       </para>
-      <para xml:id="section5.p14">
+      <para xml:id="S5.p14">
         <p><text font="bold">Second Title</text></p>
       </para>
-      <para xml:id="section5.p15">
+      <para xml:id="S5.p15">
         <p>Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p16">
+      <para xml:id="S5.p16">
         <p>Title
 
 Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p17">
+      <para xml:id="S5.p17">
         <p>TitleSubtitle
 
 Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section5.p18">
+      <para xml:id="S5.p18">
         <p>Title
 
 
@@ -279,7 +280,7 @@ Slide 1Slide 2<break/></p>
       </para>
     </subsection>
   </section>
-  <section inlist="toc" xml:id="section6">
+  <section inlist="toc" xml:id="S6">
     <tags>
       <tag>6</tag>
       <tag role="autoref">section 6</tag>
@@ -288,16 +289,16 @@ Slide 1Slide 2<break/></p>
     </tags>
     <title><tag close=" ">6</tag>Enumerate</title>
     <subsection>
-      <para xml:id="section6.p1">
+      <para xml:id="S6.p1">
         <enumerate>
           <item>
-            <para xml:id="section6.p1.p1">
+            <para xml:id="S6.p1.p1">
               <p>First</p>
             </para>
-            <para xml:id="section6.p1.p2">
+            <para xml:id="S6.p1.p2">
               <p>First also</p>
             </para>
-            <para xml:id="section6.p1.p3">
+            <para xml:id="S6.p1.p3">
               <p>And another first</p>
             </para>
           </item>
@@ -305,16 +306,16 @@ Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section6.p2">
+      <para xml:id="S6.p2">
         <enumerate>
           <item>
-            <para xml:id="section6.p2.p1">
+            <para xml:id="S6.p2.p1">
               <p>First</p>
             </para>
-            <para xml:id="section6.p2.p2">
+            <para xml:id="S6.p2.p2">
               <p>Second</p>
             </para>
-            <para xml:id="section6.p2.p3">
+            <para xml:id="S6.p2.p3">
               <p>Third</p>
             </para>
           </item>
@@ -322,16 +323,16 @@ Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section6.p3">
+      <para xml:id="S6.p3">
         <enumerate>
           <item>
-            <para xml:id="section6.p3.p1">
+            <para xml:id="S6.p3.p1">
               <p>First</p>
             </para>
-            <para xml:id="section6.p3.p2">
+            <para xml:id="S6.p3.p2">
               <p>First also</p>
             </para>
-            <para xml:id="section6.p3.p3">
+            <para xml:id="S6.p3.p3">
               <p>¡2¿ Second</p>
             </para>
           </item>
@@ -339,31 +340,31 @@ Slide 1Slide 2<break/></p>
       </para>
     </subsection>
     <subsection>
-      <para xml:id="section6.p4">
+      <para xml:id="S6.p4">
         <enumerate>
           <item>
-            <para xml:id="section6.p4.p1">
+            <para xml:id="S6.p4.p1">
               <p>First</p>
             </para>
-            <para xml:id="section6.p4.p2">
+            <para xml:id="S6.p4.p2">
               <p>Second</p>
             </para>
-            <para xml:id="section6.p4.p3">
+            <para xml:id="S6.p4.p3">
               <p>¡4-¿ Fourth</p>
             </para>
           </item>
         </enumerate>
       </para>
-      <para xml:id="section6.p5">
+      <para xml:id="S6.p5">
         <enumerate>
           <item>
-            <para xml:id="section6.p5.p1">
+            <para xml:id="S6.p5.p1">
               <p>Third</p>
             </para>
-            <para xml:id="section6.p5.p2">
+            <para xml:id="S6.p5.p2">
               <p>Also Third</p>
             </para>
-            <para xml:id="section6.p5.p3">
+            <para xml:id="S6.p5.p3">
               <p>¡4-¿ Also Fouth</p>
             </para>
           </item>

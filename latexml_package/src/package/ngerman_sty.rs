@@ -37,4 +37,12 @@ LoadDefinitions!({
   // matching note in german_sty.rs). [ngerman,english] babel loads this path
   // (not german_sty.rs), so define it here too. Witness 1804.06196.
   RawTeX!(r"\providecommand\dq{\textquotedbl}");
+  // ngerman.sty:314-319, 662-671 (see german_sty.rs): `\ngermanTeX` is run by
+  // the kernel first aid (latex2e-first-aid-for-external-files.ltx:168-174)
+  // after the load, and by documents written for ngerman.sty (bibarts,
+  // flacards, gu, labbook, mceinleger). The `"` shorthands come from babel's
+  // ngerman here, so `\mdqon`/`\mdqoff` are its shorthand switches.
+  RawTeX!(r#"\providecommand\mdqon{\shorthandon{"}}\providecommand\mdqoff{\shorthandoff{"}}"#);
+  RawTeX!(r"\providecommand\umlautlow{}\providecommand\umlauthigh{}");
+  RawTeX!(r"\providecommand\ngermanTeX{\mdqon\selectlanguage{ngerman}}");
 });

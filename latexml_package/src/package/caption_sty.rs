@@ -86,6 +86,12 @@ LoadDefinitions!({
     }
   });
   def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
+  // caption3.sty:1753-1756: the public float-type API lazy-loads newfloat and
+  // delegates (`\DeclareCaptionType[opts]{type}[singular][listname]`);
+  // pygmentex.sty:23 `\DeclareCaptionType{pygcode}[Listagem][Lista de
+  // listagens]` (pygmentex ×2, hvpygmentex). Perl's caption.sty.ltxml omits it.
+  // Guard: `perfect_kernel_batch54::declare_caption_type_makes_a_float`.
+  RawTeX!(r"\newcommand\DeclareCaptionType{\RequirePackage{newfloat}\DeclareFloatingEnvironment}");
   def_macro_noop("\\DeclareCaptionLabelFormat{}{}")?;
   // `\DeclareCaptionLabelSeparator{name}{body}` — caption3.sty L289 stores
   // body in `\caption@lsep@<name>`. floatrow.sty L1185 lets its

@@ -30,4 +30,16 @@ LoadDefinitions!({
   DefMacro!("\\slabel", "\\label");
   // We can improve if we had \vpageref
   DefMacro!("\\vnameref", "\\nameref");
+  // nameref.sty:189-192, defined unconditionally: the title-capture hook. The
+  // binding (Perl nameref.sty.ltxml too) reimplements `\nameref` and never
+  // defined it, but memoir.cls:7020-7026 sets `\NR@nopatch@sectioning`,
+  // requires nameref, and routes its own `\M@gettitle` (heads, `\PoemTitle`,
+  // memoir.cls:3079/3147/3754/5376) through `\NR@gettitle` — srbook-mem ×3,
+  // serbian-apostrophe ×2 had it as their sole error. Guard:
+  // `perfect_kernel_batch54::nameref_gettitle_records_the_title`.
+  DefMacro!(
+    "\\NR@gettitle{}",
+    "\\GetTitleString{#1}\\let\\@currentlabelname\\GetTitleStringResult"
+  );
+  RawTeX!(r"\providecommand*{\@currentlabelname}{}");
 });

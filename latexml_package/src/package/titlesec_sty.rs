@@ -109,7 +109,46 @@ LoadDefinitions!({
   def_macro_noop("\\paragraphbreak")?;
   def_macro_noop("\\subparagraphbreak")?;
 
-  def_macro_noop("\\titleclass{}[]{} []")?;
+  // titlesec.sty:112-165 `\titleclass{\cmd}[level]{class}[parent]`: for a NEW
+  // command the class layer `\edef`s it (:138-139) and records its level in
+  // `\ttll@<name>` (:122, or parent's +1 through `\ttl@class@iv`). The
+  // former no-op left regulatory.sty:116/121 `\titleclass{\article}[0]
+  // {straight}` / `\titleclass{\para}{straight}[\article]` undefined
+  // (regulatory example1/2 -en/-nl; Perl titlesec.sty.ltxml:83 shares the
+  // no-op). A kernel sectioning command (locked) keeps its binding; a new
+  // one becomes an `\@startsection` heading at the titlesec level, shifted
+  // by one in a chapterless class (LaTeX's own level 0 is `\chapter`). Guard:
+  // `perfect_kernel_batch54::titleclass_defines_a_new_heading_command`.
+  DefPrimitive!("\\titleclass {} [] {} []", sub[(cmd, level, _class, parent)] {
+    let Some(cmd) = cmd.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS) else {
+      return Ok(vec![]);
+    };
+    let name = cmd.with_str(|s| s.trim_start_matches('\\').to_string());
+    let ttll: i64 = if let Some(level) = level.as_ref() {
+      level.to_string().trim().parse().unwrap_or(0)
+    } else if let Some(parent) = parent.as_ref() {
+      let pname = parent.to_string();
+      let pname = pname.trim().trim_start_matches('\\');
+      do_expand(Tokenize!(TeXString::assembled(s!("\\csname ttll@{pname}\\endcsname"))))
+        .map(|t| t.to_string().trim().parse::<i64>().unwrap_or(0) + 1)
+        .unwrap_or(1)
+    } else {
+      // an existing level's class change: nothing to (re)define here
+      return Ok(vec![]);
+    };
+    def_macro(T_CS!(s!("\\ttll@{name}")), None, Tokens::new(ExplodeText!(s!("{ttll}"))), None)?;
+    if lookup_meaning(&cmd).is_some() {
+      return Ok(vec![]); // \section & co keep their (locked) bindings
+    }
+    let shift = if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() { 1 } else { 0 };
+    def_macro(
+      cmd,
+      None,
+      mouth::tokenize_internal(TeXString::assembled(
+        s!("\\@startsection{{{name}}}{{{}}}{{}}{{}}{{}}{{}}", ttll + shift))),
+      None,
+    )?;
+  });
 
   // titlesec.sty L1178 + L1385-1422: the `pagestyles` option (also the
   // deprecated `psfloats`/`pagegrids` aliases) makes titlesec

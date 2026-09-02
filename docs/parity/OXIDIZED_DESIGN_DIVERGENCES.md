@@ -6502,3 +6502,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: profsio ProfSio-doc-fr (390 errors), annexe71/72/73.
 **Guard**: `perfect_kernel_batch54::newline_inside_a_cell_group_is_an_in_cell_break`.
 **Upstream**: not filed.
+
+### 182. A `\caption` with no float ancestor degrades to inline caption text (Perl errors twice per caption) — PLANS P16 ii
+
+**Perl behavior**: `\@@caption` / `\@@toccaption` are `^^<ltx:caption>` float-up constructors (latex_constructs.pool.ltxml:3423-3427). A `\caption` whose `\@captype` was set by hand in a box that is not a float — tufte-common.def:1110-1133 `marginfigure` (`\begin{lrbox}…\begin{minipage}…\def\@captype{figure}`, then `\marginpar{\usebox{…}}`), tocbasic's `\captionaboveof{table}` at top level — finds no ancestor able to hold the caption and errors `<ltx:caption> isn't allowed in <ltx:block>` plus the `ltx:toccaption` sibling (pgfornament ornaments 40+40, memman 46+46, xltabular).
+**Rust behavior**: `\@@caption` floats and opens `ltx:caption` only when an open ancestor can contain it, the walk stopping with "no" at a box capture (`ltx:_CaptureBlock_`, whose model admits every block element but whose content is used later, wherever `\usebox` puts it). Otherwise it emits the inline shape Perl's own no-`\@captype` path (`\@@generic@caption`) produces — `ltx:text class="ltx_caption"` holding the formatted title minus the `\lx@tag` pieces (no inline element may carry an `ltx:tag`) — and `\@@toccaption` emits nothing. The counter is still stepped by `\caption`'s `\refstepcounter`, as in pdflatex.
+**Why**: kernel-quality: the same document keeps its real `figure`/`table` captions tagged and toc-listed; only the caption that had nowhere to go is kept as text instead of dropped with two errors.
+**Witnesses**: pgfornament ornaments, memman, xltabular-doc.
+**Guard**: `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
+**Upstream**: not filed.

@@ -1024,6 +1024,27 @@ LoadDefinitions!({
   // \DeclareBibliographyAlias{alias}{entrytype} (biblatex.sty L2297).
   def_macro_noop("\\DeclareBibliographyAlias{}{}")?;
   def_macro_noop("\\DeclareNumChars OptionalMatch:* {}")?;
+  // Declaration-only biber/data-model and setup hooks reached by raw-loaded
+  // style chains (oxref.bbx, biblatex-sbl.def, chicago): they shape biber's
+  // data model or the number checks, which our config-driven bibliography
+  // never executes, so each swallows its body (biblatex.sty:14519
+  // `\DeclareDataInheritance[opt]{src}{tgt}{rules}` — `\inherit`/`\noinherit`
+  // live only inside its body; :3348 `\DeclareRangeChars*{}`; :3420
+  // `\NumCheckSetup{}`; :14571 `\DeclareBiblistFilter{}{}` with
+  // `\filter`/`\filteror` inside; :9372 `\defbibnote{}{}`; :9379
+  // `\defbibfilter{}{}` whose `\type`/`\keyword`/`\and`… are local to the
+  // body). `\ifbibmacroundef` (:2412) is `\ifcsundef{abx@macro@#1}` and our
+  // `\newbibmacro` records nothing, so the undefined branch is faithful.
+  // Witnesses: biblatex-oxref oxnum/oxalph/oxyear/oxnotes-doc, biblatex-cse-doc,
+  // biblatex-musuos. Guard: `perfect_kernel_batch54::biblatex_loads_bbx_before_cbx`.
+  def_macro_noop("\\DeclareDataInheritance[]{}{}{}")?;
+  def_macro_noop("\\DeclareRangeChars OptionalMatch:* {}")?;
+  def_macro_noop("\\NumCheckSetup{}")?;
+  def_macro_noop("\\NumsCheckSetup{}")?;
+  def_macro_noop("\\DeclareBiblistFilter{}{}")?;
+  def_macro_noop("\\defbibnote{}{}")?;
+  def_macro_noop("\\defbibfilter{}{}")?;
+  DefMacro!("\\ifbibmacroundef{}{}{}", "#2");
   // \blx@regimcs{\csa\csb…} registers "imc" wrappers (biblatex.sty L1137).
   def_macro_noop("\\blx@regimcs{}")?;
   RawTeX!(r"\chardef\abx@classtype=0 ");
@@ -2555,8 +2576,13 @@ LoadDefinitions!({
   });
   // Drive the load from the package options, like real biblatex's end-of-
   // package style load: `style=<s>` sets both; `bibstyle=`/`citestyle=`
-  // individually. cbx first, then bbx (real order: bbx via cite-style's
-  // \RequireBibliographyStyle chain; standalone bbx also chains).
+  // individually. bbx FIRST, then cbx — biblatex.sty:16439-16440
+  // `\RequireBibliographyStyle{\blx@bbxfile}\RequireCitationStyle{\blx@cbxfile}`.
+  // The oxref bundle depends on it: oxref.bbx:489-490 `\newtoggle`s
+  // `blx@ox@autoanon`/`abbranon` and every oxref cbx `\providetoggle`s them
+  // (oxnum.cbx:26); loading the cbx first made the bbx's `\newtoggle`
+  // "already defined" (biblatex-oxref ×4). Guard:
+  // `perfect_kernel_batch54::biblatex_loads_bbx_before_cbx`.
   let mut bibstyle: Option<String> = None;
   let mut citestyle_name: Option<String> = None;
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
@@ -2579,11 +2605,11 @@ LoadDefinitions!({
       }
     }
   }
-  if let Some(s) = &citestyle_name {
-    blx_load_style_file(s, "cbx");
-  }
   if let Some(s) = &bibstyle {
     blx_load_style_file(s, "bbx");
+  }
+  if let Some(s) = &citestyle_name {
+    blx_load_style_file(s, "cbx");
   }
 });
 

@@ -1,67 +1,34 @@
-//! scrlfile.sty — KOMA-Script's file-hook layer (`\AfterPackage`,
-//! `\AfterClass`, …), since 2021 a thin wrapper over `scrlfile-hook.sty`
-//! (scrlfile.sty L47-63 just requires it).
+//! scrlfile.sty — KOMA-Script's file-hook layer (`\BeforePackage`,
+//! `\AfterPackage`, `\AfterClass`, `\AfterAtEndOfPackage`, `\ReplaceInput`,
+//! `\BeforeClosingMainAux`, …), since 2021 a thin wrapper over
+//! `scrlfile-hook.sty` (scrlfile.sty:47-63), which maps everything onto the
+//! kernel's `file/<name>/before|after` and `package/…` hooks
+//! (scrlfile-hook.sty:85-230).
 //!
-//! Real signatures (scrlfile-hook.sty): `\AfterPackage s m o +m` (L209-226) —
-//! star = run NOW if the package is already loaded, else defer to its load
-//! hook; no star = always defer to the load hook. `\AfterClass` (L189-208)
-//! likewise with classes.
-//!
-//! Our approximation: the immediate star branch is exact
-//! (`\@ifpackageloaded`); the defer branch becomes a begin-document
-//! conditional — `\AtBeginDocument{\@ifpackageloaded{pkg}{code}{}}` — which
-//! preserves the load-gated semantics (code never runs when the package never
-//! loads) at the cost of running at begin-document rather than at load time.
-//! `\BeforePackage`/`\BeforeClass` cannot be honored retroactively and
-//! running their setup AFTER the load could double-patch, so they absorb
-//! their arguments.
-//!
-//! Sweep-11 root cause (36-doc `undefined:\AfterPackage` cluster): with
-//! `\AfterPackage` undefined, cnltx-doc.cls L728's `\AfterPackage!{hyperref}
-//! {…\RequirePackage{multicol,ragged2e}…}` degraded into a plain TeX group —
-//! the packages loaded INSIDE it, their definitions died at the closing
-//! brace while the global `_loaded` flags survived, and the one undefined
-//! hook avalanched into `{multicols}`/`\RaggedRight`/`\cnltx@tableofcontents`
-//! undefineds downstream (witness bohr/bohr_en log L354-541).
+//! Loaded RAW. The former approximation (`\AfterPackage` → an
+//! `\AtBeginDocument{\@ifpackageloaded…}` conditional, `\BeforePackage`
+//! absorbed) predates the load hooks firing around every package/class load
+//! (content.rs `use_load_hooks`, batch 54c); with those in place the real
+//! package works as written, and the approximation was wrong in both
+//! directions: scrbook.cls:5466-5477 pairs `\BeforePackage{hyperref}`
+//! (`\let\scr@orig@addchap\@addchap`) with `\AfterPackage{hyperref}`
+//! (`\let\@addchap\scr@orig@addchap`) — the absorbed "before" left the
+//! "after" restoring an UNDEFINED `\@addchap` (cleanthesis my-thesis,
+//! bfh-ci DEMO-BFHThesis: `undefined:\@addchap`), and cnltx-doc.cls:728's
+//! deprecated `\AfterPackage!{hyperref}{\RequirePackage{multicol,ragged2e}}`
+//! ran at begin-document — real scrlfile honours `!` only under its
+//! `withdeprecated` option (scrlfile.sty:64-92); without it xparse reads
+//! `!` as the package name and the body runs at once as a plain group, and
+//! pdflatex itself reports "Loading a class or package in a group" on
+//! cnltx_en (probed 2026-09-02). The 26 cnltx-doc manuals therefore gain
+//! their two `{multicols}`/`\RaggedRight` errors back — faithfully; none of
+//! them is oracle-clean. Keeping a binding (rather than no
+//! file) makes the raw load happen under the default arXiv configuration
+//! too, where a bindingless package is skipped. Guard:
+//! `perfect_kernel_batch54::scrlfile_before_and_after_package_hooks_fire`.
 
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  // Star and no-star coincide for an ALREADY-loaded target: the no-star
-  // form appends to the one-time `file/…/after` hook, and the kernel runs
-  // code added to an already-fired one-time hook immediately — same outcome
-  // as the star form's explicit `\@ifpackageloaded` NOW-branch. So one body
-  // serves both: run now if loaded, else the begin-document conditional.
-  // `!` and `+` are the DEPRECATED prefix forms (scrlfile.sty L65-92):
-  // real scrlfile emulates both via `\AfterAtEndOfPackage*` — the same
-  // run-when-loaded shape, so they fold into the one body here. cnltx's
-  // `\AfterPackage!{hyperref}{…}` (cnltx-doc.cls L728) is the corpus driver.
-  DefMacro!(
-    "\\AfterPackage OptionalMatch:* OptionalMatch:! OptionalMatch:+ {} [] {}",
-    "\\@ifpackageloaded{#4}{#6}{\\AtBeginDocument{\\@ifpackageloaded{#4}{#6}{}}}"
-  );
-  DefMacro!(
-    "\\AfterClass OptionalMatch:* OptionalMatch:! OptionalMatch:+ {} [] {}",
-    "\\@ifclassloaded{#4}{#6}{\\AtBeginDocument{\\@ifclassloaded{#4}{#6}{}}}"
-  );
-  DefMacro!(
-    "\\AfterAtEndOfPackage {} [] {}",
-    "\\AtBeginDocument{\\@ifpackageloaded{#1}{#3}{}}"
-  );
-  DefMacro!(
-    "\\AfterAtEndOfClass {} [] {}",
-    "\\AtBeginDocument{\\@ifclassloaded{#1}{#3}{}}"
-  );
-  def_macro_noop("\\BeforePackage{}[]{}")?;
-  def_macro_noop("\\BeforeClass{}[]{}")?;
-  // scrlfile-hook.sty L296/L309: `{o m}` — optional hook label + code
-  // deferred to `enddocument/afterlastpage` / `enddocument/afteraux`. Both
-  // corpus bodies are pure .aux/.toc write-back (tocbasic.sty L620 writes
-  // the toc-file end marker; L2992 writes scr@dte@…maxnumwidth into
-  // \@mainaux) — no document content survives into XML, so absorb (same
-  // call the atveryend binding makes for \AfterLastShipout). Witness: the
-  // 12 toptesi docs via toptesi.sty L50 \RequirePackage{scrextend} →
-  // tocbasic.
-  def_macro_noop("\\BeforeClosingMainAux[]{}")?;
-  def_macro_noop("\\AfterReadingMainAux[]{}")?;
+  InputDefinitions!("scrlfile", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });

@@ -45,13 +45,13 @@ Check: Macro flippyname is NOT defined.</p>
   </para>
   <float class="ltx_float_floppy" inlist="lofloppy" labels="LABEL:flp2" xml:id="floppy1">
     <tags>
-      <tag>List of floppys 1</tag>
+      <tag>Floppy 1</tag>
       <tag role="refnum">1</tag>
-      <tag role="typerefnum">List of floppys 1</tag>
+      <tag role="typerefnum">Floppy 1</tag>
     </tags>
     <p>A Floppy!</p>
     <toccaption><tag close=" ">1</tag>Something that flops</toccaption>
-    <caption><tag close=" ">List of floppys 1</tag>Something that flops</caption>
+    <caption><tag close=" ">Floppy 1</tag>Something that flops</caption>
   </float>
   <para xml:id="p2">
     <p>See the <ref labelref="LABEL:flp2"/>.

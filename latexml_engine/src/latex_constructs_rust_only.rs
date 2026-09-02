@@ -553,4 +553,29 @@ LoadDefinitions!({
   // 2605.11579 (17 uses) is covered by its `@preamble` and is unaffected.
   // See OXIDIZED_DESIGN #78 and `docs/parity/BIBLIOGRAPHY_WORKLIST.md`.
   //======================================================================
+
+  //======================================================================
+  // 9. The class-level sectioning workers a raw class or document reaches
+  // through `\secdef` (KNOWN_PERL_ERRORS #141). latex.ltx defines none of
+  // `\@part`/`\@spart`/`\@chapter`/`\@schapter` — article.cls:281-311 and
+  // book.cls:439-475 do — and the bindings that replace those classes never
+  // did, so a document that re-`\newcommand`s `\part`/`\chapter` the way the
+  // classes write them (`\secdef\@part\@spart`: source3body.tex:96/119 in
+  // interface3 + source3, then `\newcounter{chapter}` and its own `\chapter`)
+  // errored `undefined:\@part` + one `undefined:\chapter` per chapter (2 → 101
+  // errors, fatal). The kernel `\@sect` (latex.ltx:16205; Perl latex_base
+  // stubs it to nothing) is the same shape one level down. All route to our
+  // `\@startsection` dispatcher with the `[toc]{title}` / `*{title}` tail it
+  // reads. `\@ssect` cannot be given (it never sees the heading's name).
+  // Guard: `perfect_kernel_batch54::secdef_part_and_chapter_workers_exist`.
+  //======================================================================
+  TeX!(
+    r"
+    \def\@part[#1]#2{\@startsection{part}{-1}{}{}{}{}[#1]{#2}}
+    \def\@spart#1{\@startsection{part}{-1}{}{}{}{}*{#1}}
+    \def\@chapter[#1]#2{\@startsection{chapter}{0}{}{}{}{}[#1]{#2}}
+    \def\@schapter#1{\@startsection{chapter}{0}{}{}{}{}*{#1}}
+    \def\@sect#1#2#3#4#5#6[#7]#8{\@startsection{#1}{#2}{#3}{#4}{#5}{#6}[#7]{#8}}
+    "
+  );
 });

@@ -143,22 +143,27 @@ fn is_known_section_type(stype: &str) -> bool {
 /// tudaexercise — carry their level only there), so the heading opens the
 /// element of its level instead of a warned `ltx:section`.
 fn section_element_for_type(stype: &str, numbered: bool) -> String {
-  let candidate = s!("ltx:{stype}");
-  if is_known_section_type(stype) {
-    candidate
-  } else if stype == "app" {
-    "ltx:appendix".to_string()
-  } else if let Some(mapped) = lookup_mapping("SECTION_ELEMENT", stype) {
-    // OXIDIZED_DESIGN #175 (level-keyed element; KNOWN_PERL_ERRORS #118).
-    mapped.to_string()
-  } else {
+  section_element_for_type_maybe(stype).unwrap_or_else(|| {
     let kind = if numbered { "numbered" } else { "unnumbered" };
     Warn!(
       "malformed",
-      &candidate,
-      s!("Tried to open an unknown tag {candidate} for {kind} section")
+      s!("ltx:{stype}"),
+      s!("Tried to open an unknown tag ltx:{stype} for {kind} section")
     );
     "ltx:section".to_string()
+  })
+}
+
+/// `section_element_for_type` without the unknown-type warning: `None` when
+/// the type is unknown (the caller falls back to `ltx:section`).
+fn section_element_for_type_maybe(stype: &str) -> Option<String> {
+  if is_known_section_type(stype) {
+    Some(s!("ltx:{stype}"))
+  } else if stype == "app" {
+    Some("ltx:appendix".to_string())
+  } else {
+    // OXIDIZED_DESIGN #175 (level-keyed element; KNOWN_PERL_ERRORS #118).
+    lookup_mapping("SECTION_ELEMENT", stype).map(|m| m.to_string())
   }
 }
 
@@ -2423,6 +2428,28 @@ fn tabbing_bindings() -> Result<()> {
 pub fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
   if let Some(val) = lookup_mapping("BACKMATTER_ELEMENT", backelement) {
     whatsit.set_property("backmatterelement", val);
+    whatsit.set_property("backmatterself", pin(backelement));
+  }
+}
+
+/// Where a backmatter element (`ltx:bibliography`, `ltx:index`, a section
+/// declared backmatter) goes: at the point its `BACKMATTER_ELEMENT` stand-in
+/// (`ltx:section` by default) would be inserted — UNLESS no open node can
+/// reach that stand-in without closing a `_noautoclose` container, in which
+/// case the element is placed where IT is legal. A `\bibliography` inside a
+/// beamer frame (an `ltx:subsection` that never auto-closes) is the case:
+/// asking for `ltx:section` there erred `<ltx:section> isn't allowed in
+/// <ltx:p>` and left the bibliography inside the `<p>` (metropolis demo,
+/// simpleplus/simpledarkblue/pure-minimalistic samples, gotham), while the
+/// subsection itself may hold an `ltx:bibliography` — which is also what
+/// beamer typesets: the references on that slide. Perl's
+/// adjustBackmatterElement (pool:3843) has no fallback. Guard:
+/// `perfect_kernel_batch54::bibliography_inside_a_beamer_frame_stays_in_the_frame`.
+fn backmatter_insertion_target(document: &Document, asif: &str, element: &str) -> String {
+  if !document.is_openable(asif) && document.is_openable(element) {
+    element.to_string()
+  } else {
+    asif.to_string()
   }
 }
 
@@ -2434,8 +2461,13 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
   // Note: We allocate a string here, since
   // it looks like arena::with can deadlock with find_insertion_point
   // we may need a find_insertion_point_sym to avoid that...
+  let element = match whatsit.get_property("backmatterself").as_deref() {
+    Some(Stored::String(sym)) => to_string(*sym),
+    _ => "ltx:bibliography".to_string(),
+  };
   if let Some(asif) = asif_opt {
-    let point = document.find_insertion_point(&asif, None)?;
+    let target = backmatter_insertion_target(document, &asif, &element);
+    let point = document.find_insertion_point(&target, None)?;
     document.set_node(&point);
   }
   Ok(())
@@ -3323,6 +3355,13 @@ LoadDefinitions!({
         && !lookup_bool("OmniBus.cls.ltxml_loaded")
       {
         let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
+        // …and unlock it: the kernel `\chapter` is `locked`, and a lock
+        // outlives the definition, so a document that then builds its own
+        // (source3body.tex:100-123 `\newcounter{chapter}` +
+        // `\newcommand\chapter{…\secdef\@chapter\@schapter}`, l3kernel
+        // interface3/source3) was "Ignoring redefinition of \chapter" and
+        // errored on every chapter. KNOWN_PERL_ERRORS #141.
+        assign_value("\\chapter:locked", false, Some(Scope::Global));
       }
       Ok(())
   });
@@ -3839,7 +3878,17 @@ LoadDefinitions!({
     // loading \AtBeginDocument (reproducers atbegindocument_requirepackage.tex + the
     // #2754 book example; corpus witnesses arXiv:2605.00022 / 2605.00119).
     // KNOWN_PERL_ERRORS #43.
-    if let Some(ops) = lookup_tokens("@document@preamble@atend") {
+    // `\document` is `\@onlypreamble` and its hooks are `\UseOneTimeHook`s
+    // (latex.ltx:9512/9537): a SECOND `\begin{document}` — ltnews.tex:236/296
+    // and l3news.tex:109/177 `\renewenvironment{document}` then `\input` each
+    // issue file with its own `\begin{document}` — fires nothing. Re-firing
+    // ran csquotes' end-preamble block twice, whose hooks it `\undef`s after
+    // use (csquotes.sty:2434-2446 `\csq@hook@nomultilang`/`@hyperref`; Perl
+    // pool:304-335 re-fires too). Guard:
+    // `perfect_kernel_batch54::second_begin_document_fires_no_hooks`.
+    let first_begin = lookup_bool("inPreamble");
+    if first_begin
+      && let Some(ops) = lookup_tokens("@document@preamble@atend") {
       local_state_unlocked(false);
       let r = digest(ops);
       expire_state_unlocked();
@@ -3875,7 +3924,7 @@ LoadDefinitions!({
     // polyglossia.sty:1442-1456 `\cs_set:Npn \@caption #1 [#2] #3` in the
     // `begindocument` hook overrode our locked `\@caption` and its `[`-scan
     // overshot every figure (beamerdarkthemes guide, 101 caption errors).
-    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       local_state_unlocked(false);
       let r = digest(Tokens!(
         T_CS!("\\hook_use:n"),
@@ -3915,7 +3964,7 @@ LoadDefinitions!({
     // defers it to `\document`), so without this firing every dump-mode
     // conversion left them undefined (witnesses: prettytok / spath3 manuals,
     // `Error:undefined:\__color_backend_reset:`; TL doc corpus 2026-08-31).
-    if lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
+    if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
@@ -3927,13 +3976,13 @@ LoadDefinitions!({
     // run inside the `document` environment, so `\par` is active (only the RAW preamble,
     // where `document` is not yet on the env stack, no-ops it) regardless of
     // `inPreamble` (tex_paragraph.rs).
-    if let Some(ops) = lookup_tokens("@at@begin@document") {
+    if first_begin && let Some(ops) = lookup_tokens("@at@begin@document") {
       local_state_unlocked(false);
       let r = digest(ops);
       expire_state_unlocked();
       boxes.push(r?);
     }
-    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
       // catcode regime where `:` is OTHER (not LETTER), which would
       // truncate the CS to `\hook_use` and emit `:n` as plain text.
@@ -3989,7 +4038,8 @@ LoadDefinitions!({
     // @document@preamble@afterend runs after the \@preamblecmds point (both
     // inPreamble=0 and the hook window closed above), so onlyPreamble commands
     // here are already disabled — matching latex.ltx's begindocument/end.
-    if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
+    if first_begin
+      && let Some(ops) = lookup_tokens("@document@preamble@afterend") {
       boxes.push(digest(ops)?);
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
@@ -4474,8 +4524,10 @@ LoadDefinitions!({
       // intuitive level of:       let (x,y,z, ...) = @args;
       // If backmatter, find insertion point as if inserting the backmatter element type
       if let Some(asif) = props.get("backmatterelement") {
-        let asif_str = asif.to_string();
-        let point = document.find_insertion_point(&asif_str, None)?;
+        let target = backmatter_insertion_target(
+          document, &asif.to_string(),
+          &section_element_for_type_maybe(&stype).unwrap_or_else(|| "ltx:section".into()));
+        let point = document.find_insertion_point(&target, None)?;
         document.set_node(&point);
       }
       let clean_id = prop_string!(props,"id"); // TODO: CleanID($id);
@@ -4575,8 +4627,11 @@ LoadDefinitions!({
       let inlist = args[1].as_ref().unwrap();
       // If backmatter, find insertion point as if inserting the backmatter element type
       if let Some(asif) = props.get("backmatterelement") {
-        let asif_str = asif.to_string();
-        let point = document.find_insertion_point(&asif_str, None)?;
+        let target = backmatter_insertion_target(
+          document, &asif.to_string(),
+          &section_element_for_type_maybe(&strip_trailing_cs(&stype.to_string()))
+            .unwrap_or_else(|| "ltx:section".into()));
+        let point = document.find_insertion_point(&target, None)?;
         document.set_node(&point);
       }
       let id = props.get("id").unwrap().to_string();
@@ -8255,6 +8310,16 @@ LoadDefinitions!({
     let label = label.to_string();
     maybe_note_label(&label); });
 
+  // OXIDIZED_DESIGN #182 (PLANS P16 ii): a `\caption` whose `\@captype` is set
+  // but which sits in a box that is NOT a float — tufte-common.def:1110-1133
+  // `marginfigure` (`\marginpar{\usebox{…}}` around a minipage), raw tocbasic
+  // `\captionaboveof{table}` at top level — has no ancestor that can hold an
+  // `ltx:caption`, so the float+tag form errored once per caption
+  // (`<ltx:caption> isn't allowed in <ltx:block>` + the `ltx:toccaption`
+  // sibling: pgfornament ornaments 40+40, memman 46+46, xltabular). Degrade to
+  // the inline `\@@generic@caption` shape (an `ltx:text class="ltx_caption"`,
+  // no counter tag, no toc entry) — what Perl's own no-`\@captype` path emits.
+  // Guard: `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
   DefMacro!(
     "\\@caption@@@{}{}{}",
     r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}"
@@ -8317,12 +8382,56 @@ LoadDefinitions!({
   // # or they may need to close <p> or similar.
   // Perl: latex_constructs.pool.ltxml L3423-3427
   // ^^ prefix means "float up" in LaTeXML's document model
-  DefConstructor!("\\@@caption{}", "^^<ltx:caption>#1</ltx:caption>",
-    mode => "text");
-  DefConstructor!(
-    "\\@@toccaption{}",
-    "^^<ltx:toccaption>#1</ltx:toccaption>", //sizer => 0
-    mode => "text");
+  // OXIDIZED_DESIGN #182 (PLANS P16 ii): a `\caption` whose `\@captype` is set
+  // but which sits in a box that is NOT a float — tufte-common.def:1110-1133
+  // `marginfigure` (`\marginpar{\usebox{…}}` around a minipage), raw tocbasic
+  // `\captionaboveof{table}` at top level — has no ancestor that can hold an
+  // `ltx:caption`, so the float form errored once per caption
+  // (`<ltx:caption> isn't allowed in <ltx:block>`, plus its `ltx:toccaption`
+  // sibling and the `ltx:tag`: pgfornament ornaments 40+40, memman 46+46).
+  // Degrade to the inline shape Perl's own no-`\@captype` path emits — an
+  // `ltx:text class="ltx_caption"` holding the title, minus the counter tag
+  // (which no inline element may carry) — and drop the toc entry. Guard:
+  // `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
+  DefConstructor!("\\@@caption{}", sub[document, args] {
+    let body = args[0].clone();
+    if caption_can_float(document, "ltx:caption") {
+      // `^^`: float up, closing what can be closed on the way.
+      let save = document.float_to_element("ltx:caption", true)?;
+      document.open_element("ltx:caption", None, None)?;
+      if let Some(ref body) = body {
+        document.absorb(body, None)?;
+      }
+      document.close_element("ltx:caption")?;
+      if let Some(save) = save {
+        document.set_node(&save);
+      }
+    } else {
+      let node = document.open_element(
+        "ltx:text",
+        Some(string_map!("class" => "ltx_caption")),
+        None,
+      )?;
+      if let Some(ref body) = body {
+        absorb_without_tags(document, body)?;
+      }
+      document.maybe_close_node(&node)?;
+    }
+  }, mode => "text");
+  DefConstructor!("\\@@toccaption{}", sub[document, args] {
+    if caption_can_float(document, "ltx:toccaption") {
+      let body = args[0].clone();
+      let save = document.float_to_element("ltx:toccaption", true)?;
+      document.open_element("ltx:toccaption", None, None)?;
+      if let Some(ref body) = body {
+        document.absorb(body, None)?;
+      }
+      document.close_element("ltx:toccaption")?;
+      if let Some(save) = save {
+        document.set_node(&save);
+      }
+    }
+  }, mode => "text");
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
@@ -12278,4 +12387,53 @@ pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
     end_semiverbatim()?;
     Ok(None)
   }
+}
+
+/// True when some open ancestor can hold `qname` (`ltx:caption` /
+/// `ltx:toccaption`) — i.e. the caption really is inside a float. The
+/// transient capture wrappers (`ltx:_CaptureBlock_`, `insert_block`'s
+/// holder for a `{center}` body inside a figure; `ltx:_Capture_`) admit every
+/// block element and are unwrapped into their parent afterwards, so they
+/// neither count nor stop the walk: a `marginfigure` (`lrbox` + minipage,
+/// used from a `\marginpar`) reaches `ltx:note` → `ltx:p` → document and
+/// answers no; `{center}` inside `{figure}` reaches the figure. See
+/// OXIDIZED_DESIGN #182.
+fn caption_can_float(document: &Document, qname: &str) -> bool {
+  let Some(mut node) = document.get_element() else {
+    return false;
+  };
+  loop {
+    if !node.get_name().starts_with('_') && document::can_contain(&node, qname) {
+      return true;
+    }
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return false,
+    }
+  }
+}
+
+/// Absorb a formatted caption title without its `\lx@tag` pieces — the
+/// float's counter label, which only a float's `ltx:caption` may carry
+/// (OXIDIZED_DESIGN #182). Lists are walked so a tag nested beside the title
+/// text is dropped without losing the text.
+fn absorb_without_tags(document: &mut Document, piece: &Digested) -> Result<()> {
+  match piece.data() {
+    DigestedData::Whatsit(w) => {
+      if w.borrow().get_definition().get_cs_name().contains("lx@tag") {
+        return Ok(());
+      }
+      document.absorb(piece, None)?;
+    },
+    DigestedData::List(l) => {
+      let boxes = l.borrow().boxes.clone();
+      for inner in boxes {
+        absorb_without_tags(document, &inner)?;
+      }
+    },
+    _ => {
+      document.absorb(piece, None)?;
+    },
+  }
+  Ok(())
 }

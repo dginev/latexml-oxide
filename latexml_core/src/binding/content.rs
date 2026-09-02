@@ -123,6 +123,15 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
   if lookup_definition(&T_CS!("\\UseHook"))?.is_none() {
     return Ok(());
   }
+  // latex.ltx:18766-18827 runs no hooks for a file that does not exist
+  // (`\@missing@onefilewithoptions`); a request whose name is a control
+  // sequence (frankenstein lips/slemph/blkcntrl/achicago `\usepackage{…}`
+  // reached with `\aftergroup` as the name — already a `missing_file`
+  // error) would otherwise put that CS inside every `\csname __hook…` label,
+  // 12 more errors per document.
+  if name.contains('\\') {
+    return Ok(());
+  }
   let kind = if as_type == "cls" { "class" } else { "package" };
   let code = if when == "before" {
     s!(

@@ -354,9 +354,14 @@ LoadDefinitions!({
   // \valign           c  begins the vertical alignment of material (i.e., makes a table containing
   // columns).
 
-  // Implement ???
-  // DefMacro('\vrule','\relax');
-  def_macro_noop("\\valign")?;
+  // TeX §768-812: `\valign<box spec>{<alignment>}` — a vertical alignment
+  // renders nothing here, but it must CONSUME its alignment material: Perl's
+  // `DefMacro('\valign','')` (TeX_Tables.pool.ltxml:555) leaves the template
+  // group in the stream, whose bare `#` reaches the stomach — fancyvrb.sty:570
+  // `\FancyVerbTab` = `\valign{\vfil##\vfil\cr…}`, one error per displayed
+  // `Verbatim` line with a tab under `showtabs` (pygmentex_demo). KPE #142.
+  // Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`.
+  DefPrimitive!("\\valign BoxSpecification {}", {});
 
   // VERY tricky (and mostly Wrong).
   // The issue is for \\ to look ahead for * and [],

@@ -188,6 +188,7 @@ pub mod optica_article_cls;
 pub mod oup_authoring_template_cls;
 pub mod pax_sty;
 pub mod pb_diagram_sty;
+pub mod pdfcomment_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
@@ -466,6 +467,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("morefloats", "sty", morefloats_sty::load_definitions),
   ("nicematrix", "sty", nicematrix_sty::load_definitions),
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
+  ("pdfcomment", "sty", pdfcomment_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
   ("amsdtx", "cls", amsdtx_cls::load_definitions),
   ("amsldoc", "cls", amsldoc_cls::load_definitions),

@@ -133,9 +133,13 @@ fn beamer_color_opts(opts: &str) -> Vec<(String, String)> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Load article.cls as the base class (beamer builds on article).
+  // Load article.cls as the base class (beamer builds on article; Perl
+  // beamer.cls.ltxml:1361 `LoadClass('article')`). `RequirePackage!` looked
+  // for an `article.sty` and missed silently, so no sectioning counter below
+  // `section` existed: `\subsection` in a beamer deck was `undefined:
+  // \thesubsection` (bfh-ci DEMO-BFHBeamer, metropolis/gotham demos).
   // Don't load raw beamer.cls — its expansion chains exceed the token limit.
-  RequirePackage!("article");
+  LoadClass!("article");
   // Perl beamer.cls.ltxml L30-32: "these packages probably aren't needed,
   // but let's load them anyways!" — graphicx especially IS needed: real
   // beamer's dependency chain provides \includegraphics, and theme demos

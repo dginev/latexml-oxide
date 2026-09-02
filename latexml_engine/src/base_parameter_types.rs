@@ -612,7 +612,14 @@ LoadDefinitions!({
       // workflow requiring multiple conversion calls, alongside a call to the
       // `makeidx` binary, which we don't do in latexml. This parameter type
       // emulates one important aspect implied by those steps.
-      Ok(mouth::tokenize_internal(arg.untex_string()))
+      // The string is what `\@wrindex`'s `\write` would put in the `.idx`
+      // file (tex.web §262 print_cs: a space after every control word), so
+      // an argument assembled by a macro — `\index{packages!#1@\texttt{#1}}`
+      // with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93) — re-reads as
+      // `\TIKZ` + `@`, not the undefined `\TIKZ@`. Perl re-tokenizes its
+      // UnTeX string, which glues a control word to a following non-letter
+      // (KNOWN_PERL_ERRORS #140).
+      Ok(mouth::tokenize_internal(TeXString::assembled(writable_tokens(&arg))))
     },
     reversion => sub[arg, _inner, _extra] {
       let mut reverted = vec![T_BEGIN!()];

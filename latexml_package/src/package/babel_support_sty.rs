@@ -152,6 +152,75 @@ LoadDefinitions!({
   // Shutup about hyphenation patterns (Perl L45)
   def_macro_noop("\\@nopatterns{}")?;
 
+  // German `"` shorthand dispatch (babel-german.tex / germanb.ldf's
+  // `\declare@shorthand{german}{"a}…` table). The raw ldf's
+  // `\initiate@active@char{"}` never gives the active `"` a meaning here, so
+  // it applies to EVERY babel German document — `\usepackage[ngerman]{babel}`
+  // (80 TL manuals) rendered `Sch"one` as `Sch”one`, and once `\mdqon`
+  // activated the char it errored `T_ACTIVE["] is not defined`. It used to
+  // live in german_sty.rs, reaching only `\usepackage{german}` documents.
+  // Guard: `perfect_kernel_batch54::babel_ngerman_umlaut_shorthands`.
+  DefPrimitive!("\\lx@german@dq@dispatch", {
+    let tok = read_token()?;
+    let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
+    let expansion: &str = match ch.as_str() {
+      "a" => "\u{00E4}", "o" => "\u{00F6}", "u" => "\u{00FC}",
+      "e" => "\u{00EB}", "i" => "\u{00EF}",
+      "A" => "\u{00C4}", "O" => "\u{00D6}", "U" => "\u{00DC}",
+      "E" => "\u{00CB}", "I" => "\u{00CF}",
+      "s" | "z" => "\u{00DF}",
+      "S" => "SS", "Z" => "SZ",
+      "`" => "\u{201E}", "'" => "\u{201C}",
+      "<" => "\u{00AB}", ">" => "\u{00BB}",
+      "~" => "-", "=" => "-",
+      // german.sty:349-384 `"-` (soft hyphen), `""` (no-break point) and
+      // `"|` (ligature break) leave no glyph.
+      "-" | "\"" | "|" => "\u{200B}",
+      // consonants: `"ck`/`"ff`/`"ll`… print the letter (below)
+      "c" | "C" | "f" | "F" | "l" | "L" | "m" | "M" | "n" | "N" | "p" | "P"
+      | "r" | "R" | "t" | "T" => "",
+      // anything else is not a shorthand: german.sty prints the `"` itself
+      // and re-reads the token (pdflatex `A "x" B "1"` → `A "x" B "1"`).
+      _ => "\u{201D}",
+    };
+    match expansion {
+      "" => if let Some(t) = tok { unread(Tokens!(t)); },
+      "\u{200B}" => {},
+      "\u{201D}" => {
+        let mut toks = vec![T_CS!("\\textquotedbl")];
+        if let Some(t) = tok { toks.push(t); }
+        unread(Tokens::new(toks));
+      },
+      _ => unread(Tokenize!(expansion)),
+    }
+  });
+  DefPrimitive!("\\mdqon", {
+    assign_catcode('"', Catcode::ACTIVE, None);
+    if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+      assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+    }
+  });
+  DefPrimitive!("\\mdqoff", { assign_catcode('"', Catcode::OTHER, None); });
+  // Faithful to babel germanb.ldf's `\initiate@active@char{"}`, which binds
+  // the active-`"` MEANING when german is LOADED — independent of catcode and
+  // of which language is the document main. Bind it here too, so that if ANY
+  // package later flips `"` to catcode-13 ACTIVE (witness 1006.0641:
+  // `\usepackage[german,english]{babel}` + a package + `fabfeynmp`, whose
+  // `{\catcode`\"=11 …}` group + babel's deferred activation leave `"` active),
+  // the active `"` always has the dispatch meaning rather than erroring
+  // "T_ACTIVE["] is not defined" on the first bare `"` in the body. The
+  // `\selectlanguage{german}` hook below still (re)binds catcode+meaning
+  // together when german is actually selected. Only when a German variant is
+  // among babel's options (or german.sty/ngerman.sty asked for babel): other
+  // languages own their own `"` shorthands.
+  let opt_babel = do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
+    .map(|t| t.to_string()).unwrap_or_default();
+  if opt_babel.split(',').map(str::trim).any(|o| babel_language_to_iso(o)
+      .is_some_and(|c| c == "de" || c == "de-AT"))
+    && let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+    assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+  }
+
   // Hook into \select@language, \foreign@language, \bbl@switch
   // to set xml:lang attribute via MergeFont(language)
   Let!("\\ltx@save@bbl@switch", "\\bbl@switch");
