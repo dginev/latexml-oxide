@@ -132,6 +132,7 @@ semantics, side-notes …) are cataloged in
 | [CLUSTERS.md](CLUSTERS.md) | Living failure-cluster worklist from the latest sweep |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
+| [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch; not pushed
 until the work is complete.
