@@ -7929,4 +7929,70 @@ S & \\
       "{xml}"
     );
   }
+
+  /// latex.ltx:14060/14131: a `\newcommand` optional default passes through
+  /// two `\def` bodies, so `[########1]` reaches the macro as `##1`
+  /// (pdflatex-probed). etoolbox/biditools `\patchcmd` builds on it;
+  /// biditools' load errored `misdefined:#` (crbox, lineno, multiple-choice …).
+  #[test]
+  fn newcommand_default_halves_param_tokens_twice() {
+    let tex = r"\documentclass{article}
+\newcommand{\foo}[2][########1]{[\detokenize{#1}|#2]}
+\begin{document}
+\foo{A} \foo[x]{B}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // OT1 renders `|` as an em-dash.
+    assert!(xml.contains("[####1—A] [x—B]"), "{xml}");
+    let tex = r"\documentclass{article}
+\usepackage{biditools}
+\begin{document}
+x
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// A binding-loaded package exposes the installed file's
+  /// `\ProvidesPackage` version in `\ver@<name>.sty` (setspace-doc.tex:60-64
+  /// splits it at spaces with `\def\pkginfo#1 #2 #3\relax`; a space-free
+  /// `\fmtversion` ran to EOF).
+  #[test]
+  fn binding_ver_macro_carries_the_installed_provides_version() {
+    let tex = r"\documentclass{article}
+\usepackage{setspace}
+\makeatletter
+\def\pkginfo#1 #2 #3\relax{\def\filedate{#1}\def\fileversion{#2}}
+\expandafter\expandafter\expandafter\pkginfo\csname ver@setspace.sty\endcsname\relax
+\makeatother
+\begin{document}
+[\filedate][\fileversion]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[20") && xml.contains("][v"), "{xml}");
+  }
+
+  /// latex.ltx:16187 `\secdef#1#2` = `\@ifstar{#2}{\@dblarg{#1}}` (Perl drops
+  /// the `\@dblarg`; memoir.cls:2787 `\book` ran to EOF, srbook-mem ×3).
+  #[test]
+  fn secdef_doubles_the_title_for_the_unstarred_form() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\long\def\@bk[#1]#2{[BK:#1|#2]}
+\def\@sbk#1{[SBK:#1]}
+\newcommand*{\bk}{\secdef\@bk\@sbk}
+\makeatother
+\begin{document}
+\bk{Ovo} \bk[short]{Long} \bk*{Star}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BK:Ovo—Ovo] [BK:short—Long] [SBK:Star]"), "{xml}");
+  }
 }

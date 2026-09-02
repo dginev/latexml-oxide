@@ -4997,3 +4997,24 @@ restored). Guard: `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_l
 \newenvironment{mylist}{\list{}{\leftmargin=0pt}}{\endlist}
 \begin{document}\begin{mylist}\item one\end{mylist}\end{document}
 ```
+
+## 134. `\newcommand` optional defaults keep their `#` characters undoubled (Rust fixes)
+
+latex.ltx stores an optional default through two `\def` bodies —
+`\@xargdef` (L14060 `\def\foo{\@protected@testopt\foo\\foo{<default>}}`)
+and `\kernel@ifnextchar` (L14131 `\def\reserved@b{#3}`) — each reading
+`##` as one parameter character, so `\newcommand{\x}[4][########1]`
+hands `\\x` a default of `##1` (pdflatex-probed `\detokenize{#1}` =
+`####1`). Perl's `convertLaTeXArgs` (Package.pm) stores the default raw;
+etoolbox's `\patchcmd` idiom needs the halving — biditools.sty:769
+`\newcommand{\bidi@@patchcmd}[4][########1]` sends raw `#`s to the
+stomach (`misdefined:#`) in every biditools-loading manual (crbox, lineno
+ulineno, multiple-choice, jwjournal ×2, ghab, ucalgmthesis). Rust halves
+twice in `convert_latex_args`. Guard:
+`perfect_kernel_batch54::newcommand_default_halves_param_tokens_twice`.
+
+```latex
+\documentclass{article}
+\newcommand{\foo}[2][########1]{[\detokenize{#1}|#2]}
+\begin{document}\foo{A}\end{document}   % pdflatex: [####1|A]
+```

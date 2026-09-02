@@ -721,11 +721,32 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
+    // OXIDIZED_DESIGN #169 sibling: a BINDING declares no version, but the
+    // real file's `\ProvidesPackage{x}[<date> <version> <info>]` is what
+    // documents read back — setspace-doc.tex:60-64
+    // `\def\pkginfo#1 #2 #3\relax{…}` `\expandafter\pkginfo\csname
+    // ver@setspace.sty\endcsname\relax` splits it at spaces (a
+    // space-free `\fmtversion` ran to EOF: `Until:\relax`), `\@ifpackagelater`
+    // compares its date. Read it from the installed file when there is one
+    // (`provides_version_of`); `\fmtversion` stays the fallback.
     if options.handleoptions {
       let ver_cs = T_CS!(s!("\\ver@{}", filename));
       if lookup_definition(&ver_cs).ok().flatten().is_none() {
-        let fmtversion_cs = T_CS!("\\fmtversion");
-        let_i(&ver_cs, &fmtversion_cs, Some(Scope::Global));
+        match provides_version_of(&filename) {
+          Some(version) => def_macro(
+            ver_cs,
+            None,
+            crate::mouth::tokenize(TeXString::assembled(version)),
+            Some(ExpandableOptions {
+              scope: Some(Scope::Global),
+              ..ExpandableOptions::default()
+            }),
+          )?,
+          None => {
+            let fmtversion_cs = T_CS!("\\fmtversion");
+            let_i(&ver_cs, &fmtversion_cs, Some(Scope::Global));
+          },
+        }
       }
     }
   } else {
@@ -3670,6 +3691,75 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
   }
 }
 
+/// The `[<date> <version> <info>]` a package or class declares with
+/// `\ProvidesPackage{name}[…]` / `\ProvidesClass{name}[…]` (ltclass:
+/// `\ver@name.ext` is that text), read from the installed file so a binding
+/// exposes the same string as the raw file would; `None` when no file is on
+/// disk or it declares nothing.
+pub fn provides_version_of(filename: &str) -> Option<String> {
+  let path = find_file(filename, None)?;
+  let text = std::fs::read(&path).ok()?;
+  let text = String::from_utf8_lossy(&text);
+  let name = filename.rsplit_once('.').map_or(filename, |(n, _)| n);
+  let mut rest: &str = &text;
+  while let Some(idx) = rest.find("\\Provides") {
+    rest = &rest[idx + 9..];
+    let Some(kw) = ["ExplPackage", "ExplClass", "Package", "Class", "File"]
+      .into_iter()
+      .find(|k| rest.starts_with(k))
+    else {
+      continue;
+    };
+    let after = rest[kw.len()..].trim_start();
+    let Some(arg) = after.strip_prefix('{') else {
+      continue;
+    };
+    let Some(close) = arg.find('}') else { continue };
+    if arg[..close].trim() != name {
+      continue;
+    }
+    let tail = arg[close + 1..].trim_start();
+    let Some(bracket) = tail.strip_prefix('[') else {
+      return None;
+    };
+    let Some(end) = bracket.find(']') else {
+      return None;
+    };
+    let version: String = bracket[..end]
+      .lines()
+      .map(|l| l.split('%').next().unwrap_or("").trim())
+      .filter(|l| !l.is_empty())
+      .collect::<Vec<_>>()
+      .join(" ");
+    return if version.is_empty() {
+      None
+    } else {
+      Some(version)
+    };
+  }
+  None
+}
+
+/// One `\def`-body reading of a token list's parameter characters: `##`
+/// (two PARAM tokens) becomes one PARAM token; a lone PARAM before a digit is
+/// TeX's "Illegal parameter number" (kept as is here, no error).
+fn halve_param_tokens(tks: &Tokens) -> Tokens {
+  let toks = tks.clone().unlist();
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i].clone();
+    if t.code == Catcode::PARAM && i + 1 < toks.len() && toks[i + 1].code == Catcode::PARAM {
+      out.push(t);
+      i += 2;
+      continue;
+    }
+    out.push(t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
 /// Convert a LaTeX-style argument spec to our Package form.
 /// Ie. given $nargs and $optional, being the two optional arguments to
 /// something like \newcommand, convert it to the form we use
@@ -3679,6 +3769,18 @@ pub fn convert_latex_args(
 ) -> Result<Option<Parameters>> {
   let mut params = Vec::new();
   if let Some(tks) = optional {
+    // The kernel stores an optional default through TWO `\def` bodies —
+    // `\@xargdef`'s `\def\foo{\@protected@testopt\foo\\foo{<default>}}`
+    // (latex.ltx:14060) and `\kernel@ifnextchar`'s `\def\reserved@b{#3}`
+    // (:14131) — each of which reads `##` as one parameter character, so
+    // `\newcommand{\x}[4][########1]` hands `\\x` a default of `##1`
+    // (pdflatex-probed `\detokenize{#1}` = `####1`). etoolbox's
+    // `\patchcmd` idiom relies on exactly that (biditools.sty:769
+    // `\newcommand{\bidi@@patchcmd}[4][########1]` — the raw `#`s reached
+    // the stomach and every biditools-loading manual errored `misdefined:#`,
+    // 7 docs). Perl's convertLaTeXArgs stores the default raw (KNOWN_PERL_ERRORS
+    // #134). Guard: `perfect_kernel_batch54::newcommand_default_halves_param_tokens_twice`.
+    let tks = halve_param_tokens(&halve_param_tokens(&tks));
     params.push(
       Parameter {
         name: pin!("Optional"),
