@@ -75,8 +75,17 @@ LoadDefinitions!({
   // `\@secondoftwo`, `\DocumentMetadata` lets it to `\@firstoftwo`) —
   // classes guard on it (`\NeedsDocumentMetadata`, ltx-talk.cls L32:
   // "This file needs \DocumentMetadata" ×12 docs).
+  // Real `\DocumentMetadata` ALWAYS `\RequirePackage{latex-lab-testphase-latest}`
+  // (documentmetadata-support.ltx:72), which always `\RequirePackage{tagpdf}`
+  // (latex-lab-testphase-latest.sty:39) — the `tagging=` key only toggles
+  // activation, not loading. So load our tagpdf binding here too: its
+  // role-namespace props are document content (the tagpdf manual iterates
+  // `\g__tag_role_NS_pdf_prop`, tagpdf.tex:2163; on an undefined prop
+  // `\prop_map_inline:cn` loses its `\prg_break_point:Nn` and the trailing
+  // `\prop_map_break:` runs to EOF — 39-byte XML + Fatal). Guard:
+  // `perfect_kernel_batch54::documentmetadata_loads_tagpdf`.
   DefMacro!("\\DocumentMetadata{}",
-    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble");
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}");
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
   // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is

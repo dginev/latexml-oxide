@@ -6325,4 +6325,31 @@ C & \lstinline{\bar} third\\
     assert!(xml.contains("third"), "{xml}");
   }
 
+  /// Real `\DocumentMetadata` always loads tagpdf (documentmetadata-support
+  /// .ltx:72 → latex-lab-testphase-latest.sty:39); the tagpdf manual iterates
+  /// `\g__tag_role_NS_pdf_prop` (tagpdf.tex:2163) and an undefined prop turned
+  /// `\prop_map_inline:cn` into a `\prg_break_point:Nn` runaway to EOF.
+  #[test]
+  fn documentmetadata_loads_tagpdf() {
+    let (stderr, xml) = convert(
+      r"\DocumentMetadata{tagging=on}
+\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+\clist_clear:N \l_tmpa_clist
+\prop_map_inline:cn { g__tag_role_NS_pdf_prop }
+  { \clist_put_right:Nn \l_tmpa_clist {#1} }
+\clist_use:Nn \l_tmpa_clist {,}
+\ExplSyntaxOff
+DONE
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("StructTreeRoot"), "{xml}");
+    assert!(xml.contains("DONE"), "{xml}");
+  }
+
 }
