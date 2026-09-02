@@ -5968,4 +5968,24 @@ inner
     );
     assert!(xml.contains("u2"), "{xml}");
   }
+
+  /// siunitx.sty:5014-5016 loads translations.sty when it exists, and
+  /// translations.sty:36 loads etoolbox — that is how a class using siunitx
+  /// early has `\AtEndPreamble` (neoschool.cls:1123). The binding required
+  /// neither, so `\AtEndPreamble` was `undefined` (Perl 0, pdflatex clean).
+  #[test]
+  fn siunitx_loads_translations() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{siunitx}
+\AtEndPreamble{\def\marker{HOOKED}}
+\begin{document}
+\marker
+\end{document}
+",
+      false,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("HOOKED"), "{xml}");
+  }
 }

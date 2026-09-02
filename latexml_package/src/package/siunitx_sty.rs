@@ -2312,6 +2312,12 @@ LoadDefinitions!({
   // same reason: `\__siunitx_unit_set_symbolic:Npnn \cancel { ... }`.)
   // Witness: arXiv:2602.18218 `\SI{1}{\milli\electronvolt\per\cancel{c^2}}`.
   RequirePackage!("cancel");
+  // siunitx.sty:5014-5016 `\file_if_exist:nT { translations.sty }
+  // { \RequirePackage { translations } … }` — translations.sty:36 pulls in
+  // etoolbox, which is how a class that loads siunitx early gets
+  // `\AtEndPreamble` (neoschool.cls:1123; was `undefined:\AtEndPreamble`,
+  // Perl 0). Guard: `perfect_kernel_batch53::siunitx_loads_translations`.
+  RequirePackage!("translations");
 
   //======================================================================
   // Boolean SIX options. Perl siunitx.sty.ltxml L38-54:
