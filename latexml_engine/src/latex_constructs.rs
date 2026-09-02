@@ -5845,6 +5845,15 @@ LoadDefinitions!({
   // environment constructors and are unaffected.
   Let!("\\flushright", "\\raggedleft");
   Let!("\\flushleft", "\\raggedright");
+  // …and their `\end…` partners are no-ops: the declarations open no frame,
+  // while the kernel `\endflushleft` (latex.ltx `\endtrivlist`) would end a
+  // list that was never begun — comment.sty's doc `noverb` env
+  // (comment.tex:12-18 `\flushleft`…`\endflushleft`) and bidicode.sty:195/198
+  // `BDef` (tram-doc): "Attempt to end mode internal_vertical". Perl aliases
+  // only the openers (pool:1257-1258). `\begin{flushleft}` keeps its own
+  // environment constructor.
+  Let!("\\endflushright", "\\relax");
+  Let!("\\endflushleft", "\\relax");
 
   // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
   Let!("\\@block@cr", "\\lx@newline");

@@ -7993,6 +7993,153 @@ x
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("[BK:Ovo—Ovo] [BK:short—Long] [SBK:Star]"), "{xml}");
+    assert!(
+      xml.contains("[BK:Ovo—Ovo] [BK:short—Long] [SBK:Star]"),
+      "{xml}"
+    );
+  }
+
+  /// Real microtype.sty:80 defines only the `\microtypecontext{…}`
+  /// declaration — no environment, so `\endmicrotypecontext` is undefined
+  /// and synthslant.sty:302's `\ifcsdef{endmicrotypecontext}` takes the
+  /// false branch (a live env-end errored "Attempt to end mode", ×101 in
+  /// synthslant-gauge). The env form still works through `\begin`/`\end`.
+  #[test]
+  fn microtypecontext_is_a_declaration_not_an_environment() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{microtype}
+\NewDocumentEnvironment{slantenv}{}
+  {\ifcsdef{microtypecontext}{\microtypecontext{tracking=x}}{}}
+  {\ifcsdef{endmicrotypecontext}{\endmicrotypecontext}{}}
+\begin{document}
+\begin{slantenv}Hello\end{slantenv}
+\begin{microtypecontext}{tracking=y}World\end{microtypecontext}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello") && xml.contains("World"), "{xml}");
+  }
+
+  /// beamerbaseoptions.sty:34-38: theme options are keyval, and the themes'
+  /// internals come from `\ExecuteOptionsBeamer` defaults
+  /// (beamerouterthemesidebar.sty:30-32 `\beamer@sidebarside`,
+  /// beamerinnerthemerounded.sty:11-12 `\beamer@themerounded@shadow`);
+  /// beamerbaseframe.sty:730 creates the `framenumber` counter
+  /// (appendixnumberbeamer.sty:43).
+  #[test]
+  fn beamer_theme_option_defaults_define_their_internals() {
+    for theme in ["Berkeley", "Madrid"] {
+      let tex = format!(
+        "\\documentclass{{beamer}}\n\\usetheme{{{theme}}}\n\\begin{{document}}\n\\begin{{frame}}{{Title}}Hello \\theframenumber\\end{{frame}}\n\\end{{document}}\n"
+      );
+      let (stderr, xml) = convert(&tex, false);
+      assert_eq!(error_count(&stderr), 0, "{theme}: {stderr}");
+      assert!(xml.contains("Hello"), "{xml}");
+    }
+  }
+
+  /// numprint.sty:779 `\DeclareRobustCommand*\numprint`: a `\the\toks255`
+  /// register-number lookahead (tex.web §440-448) stops at `\protect`
+  /// instead of pre-expanding the `\ifmmode` dispatch into the stored list
+  /// (calctab.sty:334-335; calctab manual: 94 "Extra \or already saw \else").
+  #[test]
+  fn numprint_is_robust_under_a_the_toks_lookahead() {
+    let tex = r"\documentclass{article}
+\usepackage{numprint}
+\begin{document}
+\toks0={}\edef\r{\noexpand\numprint{12500.90}}
+\toks0=\expandafter\expandafter\expandafter{\expandafter\the\expandafter\toks0\r}
+[\the\toks0]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("ltx_number").count(), 1, "{xml}");
+  }
+
+  /// showexpl.sty:66-86 load-time state survives a document that rebuilds
+  /// `LTXexample` from the internals (lshort-german l2kurz.tex:73-100 —
+  /// `\def\SX@codefile{\SX@codefile}` "expands into itself" ×96).
+  #[test]
+  fn showexpl_internals_exist_for_rebuilt_ltxexample() {
+    let tex = r"\documentclass{article}
+\usepackage{showexpl}
+\makeatletter
+\begingroup
+\edef\x{\endgroup\def\noexpand\SX@codefile{\SX@codefile}}
+\x
+\begin{document}
+Codefile:[\SX@codefile]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(".tmp]"), "{xml}");
+  }
+
+  /// newverbs.sty:52-69: `\newverbcommand{\cverb}{before}{after}` wraps a
+  /// verbatim argument; the real command's extra `\bgroup` is closed by
+  /// `\verb@egroup`, which a native `\verb` never runs (homework.cls demos:
+  /// "Attempt to end mode internal_vertical" at the next `\end{…}`).
+  #[test]
+  fn newverbcommand_wraps_the_verb_body() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\usepackage{newverbs}
+\newverbcommand{\cverb}{\color{red}}{}
+\begin{document}
+\begin{quote}
+Use \cverb|\qedhere| here and \qverb|x|.
+\end{quote}
+done
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<quote"), "{xml}");
+    assert!(xml.contains(r"\qedhere") && xml.contains("done"), "{xml}");
+    assert!(xml.contains("color=\"#FF0000\""), "{xml}");
+  }
+
+  /// Bare `\flushleft`…`\endflushleft` (comment.tex:12-18 `noverb`,
+  /// bidicode.sty:195 `BDef`): the declaration opens no frame, so its
+  /// `\end…` partner is a no-op; `\begin{flushleft}` still aligns.
+  #[test]
+  fn bare_endflushleft_is_a_noop() {
+    let tex = r"\documentclass{article}
+\newenvironment*{noverb}{\flushleft}{\endflushleft}
+\begin{document}
+Text.
+\begin{noverb}
+content
+\end{noverb}
+\begin{flushleft}left\end{flushleft}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("content") && xml.contains(r#"<p align="left">left</p>"#),
+      "{xml}"
+    );
+  }
+
+  /// listings.sty:1968 `\lst@InlineG`: a `{`-delimited `\lstinline` ends at
+  /// the balanced `}` (coolfn `\mintinline{latex}{\renewcommand{\fnindent}{1.25em}}`).
+  #[test]
+  fn lstinline_brace_delimiter_is_balanced() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\lstinline{\renewcommand{\fnindent}{1.25em}}. Then \lstinline|a{b|.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The inline listing is token-marked-up; the group and the unit survive.
+    assert!(xml.contains("fnindent</text>}{1.25"), "{xml}");
+    assert!(xml.contains("a</text>{<text"), "{xml}");
   }
 }

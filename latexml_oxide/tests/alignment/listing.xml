@@ -36,7 +36,7 @@
     </para>
     <para xml:id="S2.p2">
       <p>Indirectly: <text class="ltx_lst_identifier ltx_lst_numbers_left ltx_lstlisting">a_word</text>;
-and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><text class="ltx_lst_identifier">foo</text><text class="ltx_lst_space"> </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bar</text></text>.</p>
+and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><text class="ltx_lst_identifier">foo</text><text class="ltx_lst_space"> </text>{<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">bar</text><text class="ltx_lst_space"> </text>}.%</text></p>
     </para>
     <para xml:id="S2.p3">
       <p>Careful with spacing/math/macros: <text class="ltx_lst_numbers_left ltx_lstlisting"><text class="ltx_lst_identifier">foo</text>(<Math mode="inline" tex="\langle X\rangle" text="delimited-⟨⟩@(X)" xml:id="S2.p3.m1">

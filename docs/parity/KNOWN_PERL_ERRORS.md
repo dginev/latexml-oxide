@@ -5018,3 +5018,39 @@ twice in `convert_latex_args`. Guard:
 \newcommand{\foo}[2][########1]{[\detokenize{#1}|#2]}
 \begin{document}\foo{A}\end{document}   % pdflatex: [####1|A]
 ```
+
+## 135. `\secdef` drops the `\@dblarg` (Rust fixes)
+
+latex.ltx:16187 `\def\secdef#1#2{\@ifstar{#2}{\@dblarg{#1}}}`; Perl's
+shortcut `DefMacro('\secdef {}{} OptionalMatch:*', sub { $_[3] ? $_[2] :
+$_[1] })` (latex_constructs.pool.ltxml:567) hands the unstarred form to `#1`
+without doubling the title into `[#1]`, so a raw `\long\def\@book[#1]#2`
+reached from memoir.cls:2787 `\secdef\@book\@sbook` scans to EOF for its `[`
+(srbook-mem Test/TestLight/SerbianBookMem: `Until:]`). Rust defines the
+real macro. Guard: `perfect_kernel_batch54::secdef_doubles_the_title_for_the_unstarred_form`.
+
+## 136. `\numprint` binding is not robust (Rust fixes)
+
+numprint.sty:779 `\DeclareRobustCommand*\numprint[2][\@empty]`; the binding
+(numprint.sty.ltxml:37, Rust mirror) is a plain macro, so the one-token
+lookahead of `\the\toks255` (tex.web §440-448) pre-expands its
+`\ifmmode…\else…\fi` dispatch into the stored token list — calctab.sty:334-335
+stashes `\numprint{…}` in `\toks255`: 94 "Extra \or already saw \else for
+\ifmmode" in the calctab manual. Rust: `robust => true`. Guard:
+`perfect_kernel_batch54::numprint_is_robust_under_a_the_toks_lookahead`.
+
+## 137. Bare `\endflushleft`/`\endflushright` end a list nobody opened (Rust fixes)
+
+Both engines alias `\flushleft`/`\flushright` to the frame-less
+`\raggedright`/`\raggedleft` (pool:1257-1258) but leave `\endflushleft` as
+latex.ltx's `\endtrivlist`: comment.tex:12-18 `noverb`, bidicode.sty:195
+`BDef` (tram-doc) → "Attempt to end mode". Rust: the `\end…` partners are
+`\relax`. Guard: `perfect_kernel_batch54::bare_endflushleft_is_a_noop`.
+
+## 138. `\lstinline{…}` stops at the first `}` (Rust fixes)
+
+listings.sty:1968 `\lst@InlineG` reads a balanced group for a `{` delimiter;
+listings.sty.ltxml:281 ("does NOT balance groups") stops at the first `}`,
+leaking the real closer (coolfn `\mintinline{latex}{\renewcommand{\fnindent}{1.25em}}`,
+tikz-shields). Rust tracks brace depth for the `{` delimiter only. Guard:
+`perfect_kernel_batch54::lstinline_brace_delimiter_is_balanced`.

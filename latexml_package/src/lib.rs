@@ -593,6 +593,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("multirow", "sty", package::multirow_sty::load_definitions),
   ("newclude", "sty", package::newclude_sty::load_definitions),
   ("newfloat", "sty", package::newfloat_sty::load_definitions),
+  ("newverbs", "sty", package::newverbs_sty::load_definitions),
   ("applemac", "def", package::applemac_def::load_definitions),
   ("cp852", "def", package::cp852_def::load_definitions),
   ("csquotes", "def", package::csquotes_def::load_definitions),

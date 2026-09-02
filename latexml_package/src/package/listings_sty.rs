@@ -190,6 +190,15 @@ pub fn listings_read_raw_string(
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
 
+  // A `{`-delimited inline listing (`\lstinline{…}`) ends at the BALANCED
+  // `}`: listings.sty:1968 `\lst@InlineG` tracks nesting, so
+  // `\lstinline{\renewcommand{\fnindent}{1.25em}}` (coolfn, tikz-shields
+  // `\mintinline{tex}{\usepackage[…]{…}}`) keeps its inner groups. Perl's
+  // reader stops at the first `}` (listings.sty.ltxml:281 "does NOT balance
+  // groups") and the trailing real `}` leaked to the stomach. A character
+  // delimiter (`|…|`) still matches its first occurrence.
+  let brace_delimited = until.is_some_and(|t| t.text == pin!("}"));
+  let mut depth: usize = 0;
   while let Ok(Some(token)) = read_token() {
     if let Some(until_tok) = until {
       // Perl `listings.sty.ltxml:291` matches by string only —
@@ -200,7 +209,13 @@ pub fn listings_read_raw_string(
       // trigger and the body greedily consumes input. Match on
       // interned text identity alone, mirroring Perl.
       if token.text == until_tok.text {
-        break;
+        if brace_delimited && depth > 0 && !inmath {
+          depth -= 1;
+        } else {
+          break;
+        }
+      } else if brace_delimited && !inmath && token.text == pin!("{") {
+        depth += 1;
       }
     }
     // Check for mathescape $ toggle. Perl `listings.sty.ltxml:292-293`:

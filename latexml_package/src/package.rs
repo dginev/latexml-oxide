@@ -318,6 +318,7 @@ pub mod newfloat_sty;
 pub mod newlfont_sty;
 pub mod newtxmath_sty;
 pub mod newtxtext_sty;
+pub mod newverbs_sty;
 pub mod ngerman_sty;
 pub mod nicefrac_sty;
 pub mod nil_ldf;
