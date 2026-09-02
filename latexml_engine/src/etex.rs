@@ -80,6 +80,17 @@ LoadDefinitions!({
       }
       i_value
     } else {
+      // etex.ch `scan_expr` ("Scan a factor f of type o or start a
+      // subexpression"): the `(` probe is `get_x_token` + `back_input`, and
+      // `back_input` re-inserts `cur_tok = cs_token_flag + cur_cs` — the PLAIN
+      // control sequence (tex.web §358 keeps `cur_cs` under `no_expand_flag`).
+      // So a `\noexpand`'d macro heading a factor loses its protection and the
+      // following `scan_int` expands it: `\edef…{\the\numexpr\noexpand\@nameuse
+      // {sectiontocdepth}+\@ne\relax}` (tocbasic.sty:2688) yields 2, not
+      // "Missing number" (pdfTeX-probed). Strip the `\special_relax` family
+      // back to the shadowed token before unreading. Guard:
+      // `perfect_kernel_batch53::numexpr_factor_reexpands_noexpanded_macro`.
+      let token = token.noexpand_shadowed().unwrap_or(token);
       unread_one(token);
       read_value(rtype)?
     };

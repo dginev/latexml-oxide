@@ -41,13 +41,16 @@ LoadDefinitions!({
   Let!("\\IfClassLoadedTF",    r"\@ifclassloaded");
   Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
   Let!("\\IfClassAtLeastTF",   r"\@ifclasslater");
-  // \IfFormatAtLeastTF{<date>}{<true>}{<false>}: alias to
-  // `\@ifl@t@r@released` — but that name isn't captured by the dump,
-  // so the Let creates a dangling alias and downstream usage errors
-  // (witness 2408.03197 — greek-fontenc.def probes the macro).
-  // Define directly as a 3-arg gobble that always takes the "true"
-  // branch (we don't model format dates). Witness 2408.03197, 2408.04893.
-  DefMacro!("\\IfFormatAtLeastTF{}{}{}", "#2");
+  // \IfFormatAtLeastTF is deliberately NOT redefined here. latex.ltx L18405
+  // defines it as `\@ifl@t@r\fmtversion`, and both halves survive the dump
+  // (`\@ifl@t@r` + `\@parse@version@`, `\fmtversion` = the real per-TL-year
+  // date, issue #739). The former always-true 3-arg stub (kept for witness
+  // 2408.03197 / 2408.04893, greek-fontenc.def probing the macro, back when
+  // the Let to `\@ifl@t@r@released` dangled) answered YES to any date, so
+  // KOMA's `\IfLTXAtLeastTF{<KOMA year+2>/…}` (scrartcl.cls L2028-2035 via
+  // scrbase.sty L127) warned "Your are using a KOMA-Script version, that has
+  // not been tested with LaTeX version" on every KOMA document. Guard:
+  // `perfect_kernel_batch53::ifformatatleast_compares_real_fmtversion`.
   Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
 
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS

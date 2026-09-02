@@ -5220,3 +5220,74 @@ A\input{mypkg.sty}B
     );
   }
 }
+
+mod perfect_kernel_batch53 {
+  //! Red/green guards for perfect-kernel batch 53 (sweep 28 KOMA cluster:
+  //! scrkbase font elements, `\DeclareSectionCommand` family, tocbasic).
+  //! Each test is the minimal reproduction distilled during triage; the
+  //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus)
+  //! whose larger conversion was vetted separately.
+  use super::perfect_kernel_batch46::{convert, error_count};
+
+  /// eTeX `\numexpr`/`\dimexpr`/`\glueexpr` factor scanning (etex.ch
+  /// `scan_expr`, "Scan a factor f of type o or start a subexpression")
+  /// reads the next non-blank token with `get_x_token` and `back_input`s it
+  /// unless it is `(`. `back_input` re-inserts `cur_tok = cs_token_flag +
+  /// cur_cs` — the PLAIN control sequence — so a `\noexpand`'d macro at the
+  /// head of a factor loses its `no_expand_flag` and IS expanded by the
+  /// following `scan_int` (pdfTeX-probed: `\count255=\numexpr\noexpand\one+1
+  /// \relax` → 2, while the plain `\count255=\noexpand\one` → "Missing
+  /// number"). tocbasic.sty:2688-2690 relies on this:
+  /// `\edef…{\the\numexpr \noexpand\@nameuse{sectiontocdepth}+\@ne\relax}`.
+  /// RED: the expression reader unread the `\special_relax`-family token
+  /// unchanged, so `\@nameuse` stayed noexpand'd and `\numexpr` warned
+  /// "Missing number, treated as zero" (witness: every raw-tocbasic manual —
+  /// tikzlings-doc, glossaries-user, the KOMA classes' `\DeclareTOCStyleEntries`
+  /// probe). Perl's `readXToken` returns a bare `\special_relax` and warns
+  /// the same way; this is the noexpand-identity fidelity refinement already
+  /// recorded at the `\dont_expand` site in gullet.rs.
+  #[test]
+  fn numexpr_factor_reexpands_noexpanded_macro() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\makeatletter
+\@namedef{sectiontocdepth}{1}
+\edef\x{\the\numexpr \noexpand\@nameuse{sectiontocdepth}+\@ne\relax}
+\def\one{1}
+\count255=\numexpr(\noexpand\one+1)*2\relax
+\dimen0=\dimexpr\noexpand\one pt+1pt\relax
+\makeatother
+\begin{document}
+A\x.B\the\count255.C\the\dimen0.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Missing number"), "{stderr}");
+    assert!(xml.contains("A2.B4.C2.0pt."), "{xml}");
+  }
+
+  /// `\IfFormatAtLeastTF` is a REAL definition in the latex.ltx dump
+  /// (`\@ifl@t@r\fmtversion`, latex.ltx L18405) — the always-true stub in
+  /// latex_constructs_rust_only.rs (issue #739, witnesses 2408.03197 /
+  /// 2408.04893, from before the dump carried it) shadowed it, so
+  /// scrbase.sty's `\IfLTXAtLeastTF{<KOMA year+2>/…}` (scrartcl.cls
+  /// L2028-2035) fired "Your are using a KOMA-Script version, that has not
+  /// been tested" on every KOMA document. RED: `{2099/01/01}` → Y.
+  #[test]
+  fn ifformatatleast_compares_real_fmtversion() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\begin{document}
+A=\IfFormatAtLeastTF{2099/01/01}{Y}{N}.
+B=\IfFormatAtLeastTF{2020/01/01}{Y}{N}.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("A=N."), "{xml}");
+    assert!(xml.contains("B=Y."), "{xml}");
+  }
+}
