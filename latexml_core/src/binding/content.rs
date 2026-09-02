@@ -1535,21 +1535,21 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   if binding_loaded {
     Ok(())
   } else if let Some(path) = find_file(&clean_req, None) {
-    // Found something plausible..
-    // let ftype = if pathname_is_literaldata(path) { "tex" } else {
-    //   pathname_type(path)
-    // };
-
-    //   // Should we be doing anything about options in the next 2 cases?..... I kinda think not,
-    // but?   if (ftype == "rs") {                  // it's a LaTeXML binding.
-    //     load_latexml(request, path);
-    //   }
-    //   // Else some sort of "known" definitions type file, but not simply 'tex'
-    //   else if (ftype != "tex") && (pathname_is_raw(path)) {
-    //     load_tex_definitions(request, path);
-    //   } else {
+    // Found something plausible. Perl Package.pm:2289-2302 routes a
+    // `pathname_is_raw` non-`.tex` file (sty/cls/def/…) to
+    // `loadTeXDefinitions` — `@`=letter, text suppressed and, because
+    // `\input` passes no `reloadable`, a SECOND `\input`/`\DocInput` of the
+    // same file is a no-op (its `_loaded` gate). Real TeX's `\input` always
+    // reads the file as CONTENT under the current catcodes, and that is what
+    // we do (batches 7/52): tikzlings-doc.tex:60-72 harvests each animal
+    // `.sty` line-by-line through `\tex_input:D` under `\c_other_cctab`, and
+    // doc.sty's `\DocInput{X.sty}` typesets X's documentation body — both
+    // are content in pdflatex and nothing in Perl. The frankenstein manuals'
+    // doc bodies (`\cs\attrib` examples, attrib.tex:43/63) do run here and
+    // still error (PLANS P66) where Perl skips the whole body. Guards:
+    // `input_routing_and_bbx::document_body_sty_input_is_content_catcodes`,
+    // `perfect_kernel_batch52::input_rereads_loaded_sty`.
     load_tex_content(&path, options)
-  //   }
   } else {
     // Perl heuristic: if the file has no directory, and is a .tex or no extension,
     // try loading it as definitions (which checks for binding dispatchers).

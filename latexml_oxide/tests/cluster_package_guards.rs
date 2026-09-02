@@ -3241,14 +3241,18 @@ mod kernel_language_and_part_contracts {
 }
 
 mod input_routing_and_bbx {
-  //! Batch-7 contracts: (1) a document-position `\input{<name>.sty}` with no
-  //! binding reads the raw file as CONTENT under the current catcodes (real
-  //! TeX semantics) — the definitions mouth's forced `@`=letter corrupted
-  //! doc.sty's `\CharacterTable` self-check on every `\DocInput` re-read
-  //! (frankenstein bundle ×10 + pkgloader); (2) biblatex's
-  //! `style=`/`bibstyle=`/`citestyle=` options load the raw `.bbx`/`.cbx`
-  //! style files (biblatex.sty L2256/L11428), whose `\newtoggle`s etc. were
-  //! undefined corpus-wide (windycity, biblatex-ext/-fiwi/-sbl).
+  //! (1) A document-position `\input{<name>.sty}` with no binding reads the
+  //! raw file as CONTENT under the current catcodes — real TeX's `\input`
+  //! (batch 7; re-read on every `\input`, batch 52). Perl (Package.pm:2289-2302)
+  //! instead loads it as definitions (`@`=letter, `[cat:11]`, text
+  //! suppressed) and SKIPS a second `\input`/`\DocInput` of the same file —
+  //! which is how it dodges doc.sty's `\CharacterTable` self-check and also
+  //! why it never typesets a `.sty`'s documentation body (frankenstein bundle;
+  //! the content route runs those bodies and still errors — PLANS P66).
+  //! (2) biblatex's `style=`/`bibstyle=`/`citestyle=` options load the raw
+  //! `.bbx`/`.cbx` style files (biblatex.sty L2256/L11428), whose
+  //! `\newtoggle`s etc. were undefined corpus-wide (windycity,
+  //! biblatex-ext/-fiwi/-sbl).
 
   use std::{path::Path, process::Command};
 
