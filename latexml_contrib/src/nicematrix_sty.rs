@@ -583,15 +583,21 @@ LoadDefinitions!({
     r"\endgroup",
     r"#1}"
   ));
-  DefMacro!("\\NiceArray{}[]", "\\NiceArrayWithDelims.{.}{#1}[#2]", locked => true);
+  // nicematrix.sty:1953 `NiceArrayWithDelims { m m O{} m !O{} t\CodeBefore }`
+  // and :3665-3672 `NiceArray` → `[opts1]{cols}[opts2]`: the preamble is
+  // flanked by TWO option lists (`\begin{NiceArray}[t]{lcccccc}[no-cell-nodes]`,
+  // nicematrix.tex:409). A signature without the leading one bound `[t]` as
+  // the preamble ("Unrecognized tabular template [", 57 extra `&` + the
+  // `Until:\Body` EOF fatal that aborted the rest of the manual).
+  DefMacro!("\\NiceArray[]{}[]", "\\NiceArrayWithDelims.{.}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endNiceArray", "\\endNiceArrayWithDelims", locked => true);
   // Closure form: `[first-col]`/`[last-col]` add LABEL cells to every source
   // row, so the colspec must grow a `c` on that side or each row overflows
   // the template ("Extra alignment tab"). first-row needs no preamble change
   // (row count is unconstrained). nicematrix.sty does the analogue in its
   // preamble parser.
-  DefMacro!("\\NiceArrayWithDelims{}{}{}[]", sub[(l, r, pream, opts)] {
-    let opts_toks = match opts { Some(o) => Tokens!(o.revert()), None => Tokens!() };
+  DefMacro!("\\NiceArrayWithDelims{}{}[]{}[]", sub[(l, r, opts1, pream, opts2)] {
+    let opts_toks = nice_merge_opts(opts1.map(|o| Tokens!(o.revert())), opts2.map(|o| Tokens!(o.revert())));
     let opts_str = opts_toks.to_string();
     let mut out: Vec<Token> = Vec::new();
     out.push(T_CS!("\\def"));
@@ -622,15 +628,15 @@ LoadDefinitions!({
   }, locked => true);
   DefMacro!("\\endNiceArrayWithDelims",
     "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\pNiceArray{}[]", "\\NiceArrayWithDelims({)}{#1}[#2]", locked => true);
+  DefMacro!("\\pNiceArray[]{}[]", "\\NiceArrayWithDelims({)}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endpNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\bNiceArray{}[]", "\\NiceArrayWithDelims[{]}{#1}[#2]", locked => true);
+  DefMacro!("\\bNiceArray[]{}[]", "\\NiceArrayWithDelims[{]}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endbNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\BNiceArray{}[]", "\\NiceArrayWithDelims\\{{\\}}{#1}[#2]", locked => true);
+  DefMacro!("\\BNiceArray[]{}[]", "\\NiceArrayWithDelims\\{{\\}}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endBNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\vNiceArray{}[]", "\\NiceArrayWithDelims|{|}{#1}[#2]", locked => true);
+  DefMacro!("\\vNiceArray[]{}[]", "\\NiceArrayWithDelims|{|}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endvNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\VNiceArray{}[]", "\\NiceArrayWithDelims\\|{\\|}{#1}[#2]", locked => true);
+  DefMacro!("\\VNiceArray[]{}[]", "\\NiceArrayWithDelims\\|{\\|}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endVNiceArray", "\\endNiceArrayWithDelims", locked => true);
 
   // In-tabular decoration commands the manuals use pervasively.

@@ -7869,4 +7869,25 @@ x
     // the shared counter stepped once for it, so the tcolorbox is 1.2.
     assert!(xml.contains("Example 1.2"), "{xml}");
   }
+
+  /// nicematrix.sty:1953/3665: `NiceArray` takes `[opts]{cols}[opts]`; the
+  /// leading optional was read as the preamble (nicematrix.tex:409 →
+  /// `Unrecognized tabular template "["`, 57 extra `&`, `Until:\Body` EOF).
+  #[test]
+  fn nicearray_takes_a_leading_option_list() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$\begin{NiceArray}[t]{lcc}[no-cell-nodes]
+n & 0 & 1 \\
+u & 2 & 3 \\
+\end{NiceArray}$
+$\begin{pNiceArray}{cc}[first-col] a & b \\ \end{pNiceArray}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Unrecognized tabular template"), "{stderr}");
+    assert_eq!(xml.matches("<XMArray").count(), 2, "{xml}");
+  }
 }
