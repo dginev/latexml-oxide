@@ -7061,9 +7061,10 @@ Typesets \meta{text}.
 
   /// tabularray.sty:3444 `\SetTblrInner[<envs>]{keys}` records per-environment
   /// inner defaults that every `\begin{<env>}` prepends, and a table with no
-  /// colspec anywhere takes its column count from the rows. `\NewTblrEnviron`
-  /// + `\SetTblrInner[spectblr]{hlines…}` + `\begin{spectblr}[…]{}` had become
-  /// a zero-column template (pegmatch manual: 52 "Extra alignment tab").
+  /// colspec anywhere takes its column count from the rows. The combination
+  /// `\NewTblrEnviron` with `\SetTblrInner[spectblr]{hlines…}` and
+  /// `\begin{spectblr}[…]{}` had become a zero-column template (pegmatch
+  /// manual: 52 "Extra alignment tab").
   #[test]
   fn tabularray_settblrinner_defaults_and_inferred_columns() {
     let tex = r"\documentclass{article}
