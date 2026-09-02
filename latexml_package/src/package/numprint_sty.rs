@@ -112,8 +112,15 @@ LoadDefinitions!({
   });
 
   Let!("\\ltx@orig@numprint", "\\numprint");
+  // numprint.sty:779 `\DeclareRobustCommand*\numprint[2][\@empty]`: robust,
+  // so a `\the\toks255` register-number lookahead (tex.web §440-448 reads one
+  // expanded token past the digits) stops at `\protect` instead of
+  // pre-expanding the `\ifmmode…\else…\fi` dispatch into a stored token list
+  // (calctab.sty:334-335 stashes `\numprint{…}` in `\toks255`: 94 "Extra \or
+  // already saw \else for \ifmmode" in the calctab manual; Perl's binding
+  // numprint.sty.ltxml:37 is a plain macro too).
   DefMacro!("\\numprint[]{}",
-    "\\ifx.#1.\\ltx@numprint@{#2}\\else\\ltx@numprint@@{#1}{#2}\\fi");
+    "\\ifx.#1.\\ltx@numprint@{#2}\\else\\ltx@numprint@@{#1}{#2}\\fi", robust => true);
   DefMacro!("\\ltx@numprint@{}",
     "\\ifmmode\\ltx@math@numprint@{#1}\\else\\ltx@text@numprint@{#1}\\fi");
   DefMacro!("\\ltx@numprint@@{}{}",

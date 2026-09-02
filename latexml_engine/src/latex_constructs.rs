@@ -4376,13 +4376,15 @@ LoadDefinitions!({
   // `ltx:item` as autoClose/autoOpen — container remains
   // explicit-close-only. Leaving these alone for now.
 
-  DefMacro!("\\secdef {}{} OptionalMatch:*", sub[(token1, token2, star)] {
-    if star.is_some() {
-      Ok(token2) // can't move out without clone, how to circumvent?
-    } else {
-      Ok(token1)
-    }
-  });
+  // latex.ltx:16187 `\def\secdef#1#2{\@ifstar{#2}{\@dblarg{#1}}}` — the
+  // unstarred form doubles the title into the `[#1]` slot. Perl's shortcut
+  // (`($_[3] ? $_[2] : $_[1])`, pool:567) drops the `\@dblarg`, so a raw
+  // `\long\def\@book[#1]#2` reached from memoir.cls:2787 `\secdef\@book\@sbook`
+  // (srbook-mem Test/TestLight/SerbianBookMem `\book{…}`) scanned to EOF for
+  // its `[` (`Until:]`). Only raw callers reach `\secdef` — our
+  // `\@startsection` dispatches natively. Guard:
+  // `perfect_kernel_batch54::secdef_doubles_the_title_for_the_unstarred_form`.
+  DefMacro!("\\secdef{}{}", "\\@ifstar{#2}{\\@dblarg{#1}}");
 
   def_macro_noop("\\@startsection@hook")?;
 
@@ -6391,70 +6393,14 @@ LoadDefinitions!({
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", {
-    begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
-    apply_dospecials();
-    // Do NOT (necessarily) skip spaces after \verb!!!
-    assign_catcode(' ', Catcode::ACTIVE, None);
-    let mut init = None;
-    let mut skipped_space = false;
-    // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
-    // but if we do skip spaces, * can be the delimiter
-    let space_sym = pin!(" ");
-    while let Some(maybe_init) = read_token()? {
-      if maybe_init.get_sym() == space_sym {
-        skipped_space = true;
-      } else {
-        init = Some(maybe_init);
-        break;
-      }
-    }
-    let mut starred = false;
-    if let Some(ref init_token) = init
-      && *init_token == T_OTHER!("*")
-      && !skipped_space
-    {
-      starred = true;
-      while let Some(maybe_init) = read_token()? {
-        if maybe_init.get_sym() != space_sym {
-          init = Some(maybe_init);
-          break;
-        }
-      }
-    }
-    if let Some(init_token) = init {
-      let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
-      assign_catcode(init_ch, Catcode::ACTIVE, None);
-      let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = read_until(&delim)?.unwrap_or_default();
-      end_semiverbatim()?;
-
-      let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
-      if starred {
-        result.push(T_CS!("\\lx@use@visiblespace"));
-      }
-      result.extend(
-        Invocation!(T_CS!("\\@internal@verb"), vec![
-          if starred {
-            Tokens!(T_OTHER!("*"))
-          } else {
-            Tokens!()
-          },
-          Tokens!(init_token),
-          body
-        ])
-        .unlist(),
-      );
-      result.push(T_CS!("\\lx@hidden@egroup"));
-      Ok(Tokens::new(result))
-    } else {
-      // typically something read too far got \verb and the content is somewhere else..?
-      Error!(
-        "expected",
-        "delimiter",
-        "Verbatim argument lost\n Bindings for preceding code is probably broken"
-      );
-      end_semiverbatim()?;
-      Ok(Tokens!())
+    match read_verb_invocation()? {
+      Some(inner) => {
+        let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
+        result.extend(inner);
+        result.push(T_CS!("\\lx@hidden@egroup"));
+        Ok(Tokens::new(result))
+      },
+      None => Ok(Tokens!()),
     }
   });
 
@@ -12238,3 +12184,76 @@ LoadDefinitions!({
   // bootstrap → dump → constructs flow, guarantees our impl wins.
   Let!("\\documentstyle", "\\lx@documentstyle@impl");
 });
+
+/// Read a `\verb`-style verbatim argument from the current input — the
+/// optional `*`, the delimiter, and the body up to the next delimiter — and
+/// return the tokens that typeset it: `[\lx@use@visiblespace]
+/// \@internal@verb{star}{delim}{body}`, WITHOUT the enclosing hidden group,
+/// so a wrapper (newverbs' `\newverbcommand{\cmd}{before}{after}`) can put
+/// its own tokens inside the same group. `None` when no delimiter was found
+/// (an `expected:delimiter` error has been reported).
+pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
+  begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+  apply_dospecials();
+  // Do NOT (necessarily) skip spaces after \verb!!!
+  assign_catcode(' ', Catcode::ACTIVE, None);
+  let mut init = None;
+  let mut skipped_space = false;
+  // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
+  // but if we do skip spaces, * can be the delimiter
+  let space_sym = pin!(" ");
+  while let Some(maybe_init) = read_token()? {
+    if maybe_init.get_sym() == space_sym {
+      skipped_space = true;
+    } else {
+      init = Some(maybe_init);
+      break;
+    }
+  }
+  let mut starred = false;
+  if let Some(ref init_token) = init
+    && *init_token == T_OTHER!("*")
+    && !skipped_space
+  {
+    starred = true;
+    while let Some(maybe_init) = read_token()? {
+      if maybe_init.get_sym() != space_sym {
+        init = Some(maybe_init);
+        break;
+      }
+    }
+  }
+  if let Some(init_token) = init {
+    let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
+    assign_catcode(init_ch, Catcode::ACTIVE, None);
+    let delim = Tokens!(T_ACTIVE!(init_ch));
+    let body = read_until(&delim)?.unwrap_or_default();
+    end_semiverbatim()?;
+    let mut result = Vec::new();
+    if starred {
+      result.push(T_CS!("\\lx@use@visiblespace"));
+    }
+    result.extend(
+      Invocation!(T_CS!("\\@internal@verb"), vec![
+        if starred {
+          Tokens!(T_OTHER!("*"))
+        } else {
+          Tokens!()
+        },
+        Tokens!(init_token),
+        body
+      ])
+      .unlist(),
+    );
+    Ok(Some(result))
+  } else {
+    // typically something read too far got \verb and the content is somewhere else..?
+    Error!(
+      "expected",
+      "delimiter",
+      "Verbatim argument lost\n Bindings for preceding code is probably broken"
+    );
+    end_semiverbatim()?;
+    Ok(None)
+  }
+}

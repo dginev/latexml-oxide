@@ -245,6 +245,14 @@ LoadDefinitions!({
   DefConstructor!("\\beamer@framesubtitle{}",
     "^<ltx:subtitle class='ltx_frame_subtitle'>#1</ltx:subtitle>");
 
+  // beamerbaseframe.sty:730 `\newcounter{framenumber}` (Perl beamer.cls.ltxml:933
+  // `NewCounter('framenumber')`): appendixnumberbeamer.sty:43 reads
+  // `\theframenumber`/`\value{framenumber}` (metropolis, gotham, pure-minimalistic
+  // demos). The stub frame never steps it, so `\insertframenumber` stays empty.
+  RawTeX!(r"\newcounter{framenumber}");
+  // beamerbasemisc.sty:25 `\headcommand` — navigation bookkeeping, not rendered
+  // (appendixnumberbeamer.sty:46 calls it directly; Perl errors too).
+  def_macro_noop("\\headcommand{}")?;
   // Insert counters
   def_macro_noop("\\insertframenumber")?;
   def_macro_noop("\\insertslidenumber")?;
@@ -407,11 +415,21 @@ LoadDefinitions!({
   });
   // Theme-file surface the raw loads touch.
   def_macro_noop("\\ProcessOptionsBeamer")?;
-  // `\DeclareOptionBeamer{key}[default]{code}` — absorb the whole
-  // declaration (the code body may contain `#1`; leaving the CS undefined
-  // spilled that body into the document: "Can't find color named '#1'").
-  def_macro_noop("\\DeclareOptionBeamer{}[]{}")?;
-  def_macro_noop("\\ExecuteOptionsBeamer{}")?;
+  // beamerbaseoptions.sty:34-38: the theme option layer is keyval —
+  // `\DeclareOptionBeamer{key}[default]{code}` → `\define@key{\@currname}`
+  // and `\ExecuteOptionsBeamer{…}` → `\setkeys{\@currname}`. The raw themes
+  // define their internals through the DEFAULTS: beamerouterthemesidebar.sty:30-32
+  // `\DeclareOptionBeamer{left}{\def\beamer@sidebarside{left}}` +
+  // `\ExecuteOptionsBeamer{left}`, beamerinnerthemerounded.sty:11-12
+  // (`\beamer@themerounded@shadow`); as no-ops, every Berkeley/Madrid/
+  // sidebar/rounded document errored `undefined:\beamer@sidebarside` (8 docs,
+  // sweep 30). `\ProcessOptionsBeamer` stays a no-op (`\usetheme` drops the
+  // user options). Perl no-ops `\usetheme` itself.
+  RawTeX!(concat!(
+    r"\def\DeclareOptionBeamer#1{\@ifnextchar[{\beamer@dokv{#1}}{\beamer@dokv{#1}[]}}",
+    r"\long\def\beamer@dokv#1[#2]#3{\define@key{\@currname}{#1}[{#2}]{#3}}",
+    r"\def\ExecuteOptionsBeamer#1{\setkeys{\@currname}{#1}}"
+  ));
   def_macro_noop("\\defbeamertemplateparent{}[]{}[]")?;
   def_macro_noop("\\defbeamertemplatealias{}{}{}")?;
   DefConditional!("\\ifbeamer@compress");
@@ -513,6 +531,7 @@ LoadDefinitions!({
   // beamer defines them (beamer.cls defines beamer@blendedblue first).
   // Navigation/footline/headline — no-ops
   def_macro_noop("\\beamertemplatenavigationsymbolsempty")?;
+  DefMacro!("\\beamerbutton{}", "#1");
   DefMacro!("\\beamergotobutton{}", "#1");
   DefMacro!("\\beamerskipbutton{}", "#1");
   DefMacro!("\\beamerreturnbutton{}", "#1");

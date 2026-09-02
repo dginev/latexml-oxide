@@ -69,4 +69,23 @@ LoadDefinitions!({
   DefMacro!("\\LTXinputExample[]{}", "\\lstinputlisting{#2}\\input{#2}");
   def_macro_noop("\\setupSXfiles")?;
   def_macro_noop("\\setupLZfiles")?;
+  // showexpl.sty:66-86 load-time state that documents rebuilding
+  // `LTXexample` from the internals read back (lshort-german l2kurz.tex:73-100
+  // `\edef\x{\endgroup\def\noexpand\SX@codefile{\SX@codefile}…}\x`: with the
+  // macros undefined the self-reference `\def\SX@codefile{\SX@codefile}`
+  // "expands into itself" 96 times). The counter is showexpl.sty:57.
+  RawTeX!(concat!(
+    r"\newcommand*\SX@graphicname{}\newcommand*\SX@graphicparam{}",
+    r"\newcommand\ResultBox{}\let\ResultBox=\fbox",
+    r"\newdimen\ResultBoxSep\ResultBoxSep=\fboxsep\newdimen\ResultBoxRule\ResultBoxRule=\fboxrule",
+    r"\newcommand*\SX@pos{}\newcommand*\SX@width{}\newcommand*\SX@hsep{}\newcommand*\SX@vsep{}",
+    r"\newcommand*\SX@overhang{}\newcommand*\SX@rframe{}\newcommand\SX@preset{}",
+    r"\newcommand*\SX@explpreset{}\newcommand*\SX@@explpreset{}",
+    r"\newcommand*\SX@codefile{}\edef\SX@codefile{\jobname.tmp}",
+    r"\newcommand*\SX@justification{\raggedright}",
+    r"\@ifundefined{c@ltxexample}{\newcounter{ltxexample}}{}"
+  ));
+  // showexpl.sty:208 `\SX@put@code@result`: typeset the listing written to
+  // `\SX@codefile` and run it as the result — the binding's own display path.
+  DefMacro!("\\SX@put@code@result", "\\lstinputlisting{\\SX@codefile}\\input{\\SX@codefile}");
 });

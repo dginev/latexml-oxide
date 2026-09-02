@@ -44,7 +44,14 @@ LoadDefinitions!({
   // `\microtypecontext{…}` resolves to the harmless declaration while
   // `\begin{microtypecontext}` still finds the environment (env lookup
   // is independent of the `\microtypecontext` CS). Witness 2007.06927.
-  DefEnvironment!("{microtypecontext}", "#body");
+  // No `{microtypecontext}` ENVIRONMENT: real microtype.sty:80 only defines
+  // the `\microtypecontext{…}` declaration, so `\endmicrotypecontext` stays
+  // undefined until a `\begin{microtypecontext}` resolves it on the fly —
+  // synthslant.sty:302 probes `\ifcsdef{endmicrotypecontext}` and calls it
+  // when TRUE (a live env-end here → "Attempt to end mode
+  // restricted_horizontal", 101 errors in synthslant-gauge). The generic
+  // `\begin`/`\end` path still handles the env form through the no-op
+  // declaration (2007.06927 `\begingroup\microtypecontext{…}\endgroup`).
   def_macro_noop("\\microtypecontext{}")?;
   DefMacro!("\\textmicrotypecontext{}{}", "#2");
   def_macro_noop("\\DeclareMicrotypeBabelHook{}{}")?;
