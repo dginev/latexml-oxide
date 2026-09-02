@@ -6017,4 +6017,30 @@ x
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("HOOKED"), "{xml}");
   }
+
+  /// hyperref.sty:3979-3992 defaults `\@pdftitle`/`\@pdfauthor`/… to
+  /// `\@empty` and each metadata key runs `\pdfstringdef\@pdf<key>{#1}`
+  /// (L3543-3596). nlctuserguide.sty:1630 reads `\@pdfauthor` directly
+  /// (witness glossaries-extra-manual.tex:48); Perl leaves it undefined.
+  #[test]
+  fn hypersetup_defines_pdf_info_macros() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+A=[\@pdfauthor]
+\hypersetup{pdfauthor={Nicola Talbot},pdftitle={The Title}}
+B=[\@pdfauthor/\@pdftitle/\@pdfcreator]
+\end{document}
+",
+      false,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("A=[]"), "{xml}");
+    assert!(
+      xml.contains("B=[Nicola Talbot/The Title/LaTeX with hyperref]"),
+      "{xml}"
+    );
+  }
 }

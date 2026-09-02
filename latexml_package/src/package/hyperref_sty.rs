@@ -253,6 +253,32 @@ LoadDefinitions!({
     DefKeyVal!("Hyp", key, "Semiverbatim");
   }
 
+  // The PDF info-string macros hyperref keeps beside the keyvals
+  // (hyperref.sty:3979-3992): `\pdfstringdef\@pdf<key>{…}` in each metadata
+  // key handler (L3543-3596, L3853 `\edef\@pdflang`), defaulting to `\@empty`.
+  // Downstream packages read them directly — nlctuserguide.sty:1630/1646
+  // `author={\@pdfauthor}` (glossaries-extra-manual.tex:48 `\hypersetup{
+  // pdfauthor={…}}`). Perl leaves them undefined. Guard:
+  // `perfect_kernel_batch53::hypersetup_defines_pdf_info_macros`.
+  for cs in [
+    "\\@pdftitle",
+    "\\@pdfauthor",
+    "\\@pdfcreationdate",
+    "\\@pdfmoddate",
+    "\\@pdfsubject",
+    "\\@pdfkeywords",
+    "\\@pdftrapped",
+    "\\@pdfpagescrop",
+    "\\@pdflang",
+  ] {
+    Let!(T_CS!(cs), "\\@empty");
+  }
+  Let!("\\@pdfproducer", "\\relax");
+  DefMacro!("\\@pdfcreator", "LaTeX with hyperref");
+  DefMacro!("\\@pdfstartview", "/Fit");
+  DefMacro!("\\@pdfremotestartview", "/Fit");
+  DefMacro!("\\@pdfstartpage", "1");
+
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //   hyperref_setoption($key, Digest($value)); });
@@ -269,6 +295,27 @@ LoadDefinitions!({
       assign_mapping("Hyperref_options", key, Some(value_str.clone()));
       if key == "baseurl" {
         AssignValue!("BASE_URL" => value_str);
+      }
+      // hyperref.sty:3543-3596 — `\pdfstringdef\@pdf<key>{#1}` (ours is a
+      // plain `\def`, see §4.1 below), `\edef\@pdflang{#1}` at L3853.
+      if matches!(
+        key.as_str(),
+        "pdftitle"
+          | "pdfauthor"
+          | "pdfproducer"
+          | "pdfcreator"
+          | "pdfsubject"
+          | "pdfkeywords"
+          | "pdfcreationdate"
+          | "pdfmoddate"
+          | "pdflang"
+      ) {
+        def_macro(
+          T_CS!(&format!("\\@{key}")),
+          None,
+          ExpansionBody::Tokens(value.revert()?),
+          None,
+        )?;
       }
     }
   });
@@ -1066,7 +1113,20 @@ LoadDefinitions!({
           RequirePackage!("color");
         } else if let Some(eq_pos) = option.find('=') {
           let key = option[..eq_pos].trim();
-          let value = option[eq_pos + 1..].trim();
+          let mut value = option[eq_pos + 1..].trim();
+          // `\usepackage[pdftitle={Test Hyperref Metadata}]{hyperref}`
+          // (hypertest.tex:5): the `opt@hyperref.sty` entry keeps the
+          // option text verbatim, as LaTeX's `\@classoptionslist` does, so
+          // the braces reach us. Perl digests `\usepackage`'s option arg
+          // (latex_constructs.pool.ltxml:793 DefConstructor digests
+          // `OptionalSemiverbatim`; ToString of the boxes drops the group
+          // braces) and its regex then sees `pdftitle=Test Hyperref
+          // Metadata`. keyval strips exactly one outer brace level
+          // (keyval.sty `\KV@@sp@def`), which is what pdflatex hands
+          // hyperref's kvoptions key handler.
+          if value.len() >= 2 && value.starts_with('{') && value.ends_with('}') {
+            value = value[1..value.len() - 1].trim();
+          }
           assign_mapping("Hyperref_options", key, Some(value.to_string()));
           if key == "baseurl" {
             AssignValue!("BASE_URL" => value.to_string());
