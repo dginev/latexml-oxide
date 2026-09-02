@@ -759,7 +759,8 @@ pub fn begingroup() {
   if *TRACE_BOUND_MODE {
     let depth = get_frame_depth();
     let loc = gullet::get_locator();
-    eprintln!("[trace] begingroup pre-depth={depth} at {}", loc);
+    let tok = get_current_token().unwrap_or_else(|| T_CS!("\\?"));
+    eprintln!("[trace] begingroup pre-depth={depth} tok={tok} at {}", loc);
   }
   push_stack_frame(true);
 }

@@ -168,6 +168,9 @@ pub struct Gullet {
   pub mouthstack:           VecDeque<MouthRuntime>,
   pub pending_comments:     VecDeque<Token>,
   pub token_limit:          Option<usize>,
+  /// Bytes of every source file opened so far this conversion — the basis
+  /// of [`scale_token_limit_to_source`].
+  pub source_bytes_total:   usize,
   pub pushback_limit:       Option<usize>,
   pub progress:             usize,
   /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
@@ -288,12 +291,17 @@ macro_rules! runtime {
 /// (scrartcl, ~250 raw-pgf animal pictures through tcolorbox listings,
 /// each box typeset twice) completes at a measured 444.5M
 /// (`Debug:gullet:progress`, 2026-09-01, 30 KB main source so the
-/// per-byte scaling never engaged). 1G = 2.25× that; raised, never
-/// lowered (a genuine loop is still bounded — by this ceiling, by the
-/// `--timeout` wall clock, and by the RSS cap). `LATEXML_TOKEN_LIMIT`
-/// overrides (0 disables). Book-scale sources raise it proportionally per
+/// per-byte scaling never engaged), and finite O(n²) macro work goes
+/// further still: circularglyphs-sample (xstring `\StrSubstitute` ×34 over
+/// 600-char phrases, ~2.5G) and source2e (l3doc crossrefs over 46k
+/// codelines, ~2G) both COMPLETE under `LATEXML_TOKEN_LIMIT=0` within the
+/// 300 s budget where Perl times out, yet died at the former 1G with a
+/// false "infinite loop?". 4G; raised, never lowered (a genuine loop is
+/// still bounded — by this ceiling, by the `--timeout` wall clock, by the
+/// cycle guards, and by the RSS cap). `LATEXML_TOKEN_LIMIT` overrides
+/// (0 disables). Book-scale sources raise it proportionally per
 /// conversion — see [`scale_token_limit_to_source`].
-pub const DEFAULT_TOKEN_LIMIT: usize = 1_000_000_000;
+pub const DEFAULT_TOKEN_LIMIT: usize = 4_000_000_000;
 
 /// Initialize the runaway-token backstop from the environment, falling back to
 /// [`DEFAULT_TOKEN_LIMIT`].
@@ -308,21 +316,30 @@ fn default_token_limit() -> Option<usize> {
   }
 }
 
-/// Scale the runaway-token backstop to the SOURCE size. The
-/// [`DEFAULT_TOKEN_LIMIT`] baseline is sized for arXiv-scale inputs; a
-/// book-scale source legitimately expands past it (witness: a 131 MB
-/// flat-index compilation died at the then-400M ceiling mid-digestion with
-/// no loop in sight, at a measured ~3+ tokens/byte and paper-class documents
-/// measured up to ~160 tokens/byte). ×200/byte keeps the ceiling finite — a
-/// true infinite loop still trips — while never LOWERING the baseline for
-/// small documents. An explicit `LATEXML_TOKEN_LIMIT` wins unchanged
-/// (including 0 = disabled).
+/// Scale the runaway-token backstop to the SOURCE size — cumulatively, over
+/// every file the conversion opens. The [`DEFAULT_TOKEN_LIMIT`] baseline is
+/// sized for arXiv-scale inputs; a book-scale source legitimately expands
+/// past it (witness: a 131 MB flat-index compilation died at the then-400M
+/// ceiling mid-digestion with no loop in sight, at a measured ~3+
+/// tokens/byte and paper-class documents measured up to ~160 tokens/byte;
+/// l3doc's crossref pass over source2e's `.dtx`s ~1000/byte). ×1000/byte
+/// keeps the ceiling finite — a true infinite loop still trips, and opens
+/// no new files while it spins — while never LOWERING the baseline for
+/// small documents. The bytes are summed over the main source AND
+/// everything it `\input`s/`\DocInclude`s (every `Mouth::open_file`):
+/// source2e.tex is a 15 KB driver over ~40 `.dtx` files (~2 MB), so the
+/// driver-only sizing never engaged. An explicit `LATEXML_TOKEN_LIMIT`
+/// wins unchanged (including 0 = disabled).
 pub fn scale_token_limit_to_source(source_bytes: usize) {
   if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
     return;
   }
-  let scaled = source_bytes.saturating_mul(200).max(DEFAULT_TOKEN_LIMIT);
   let mut gullet = gullet_mut!();
+  gullet.source_bytes_total = gullet.source_bytes_total.saturating_add(source_bytes);
+  let scaled = gullet
+    .source_bytes_total
+    .saturating_mul(1000)
+    .max(DEFAULT_TOKEN_LIMIT);
   if let Some(limit) = gullet.token_limit.as_mut() {
     *limit = (*limit).max(scaled);
   }
@@ -338,6 +355,7 @@ pub fn initialize_gullet() {
   // reused thread-local engine must not leak its scaled token limit into
   // the next document.
   gullet.token_limit = default_token_limit();
+  gullet.source_bytes_total = 0;
   // Fresh per-conversion progress + cycle-guard history (the engine is a
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
@@ -3539,4 +3557,28 @@ where FnR: FnOnce(Option<&mut Mouth>) -> R {
     Some(ref mut runtime) => Some(&mut runtime.mouth),
   };
   caller(mouth_opt)
+}
+
+#[cfg(test)]
+mod token_limit_tests {
+  use super::*;
+
+  /// The runaway backstop grows with the bytes of EVERY opened source, not
+  /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).
+  #[test]
+  fn token_limit_scales_with_cumulative_source_bytes() {
+    if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
+      return;
+    }
+    initialize_gullet();
+    scale_token_limit_to_source(15_000);
+    assert_eq!(GULLET.borrow().token_limit, Some(DEFAULT_TOKEN_LIMIT));
+    for _ in 0..40 {
+      scale_token_limit_to_source(500_000);
+    }
+    assert_eq!(GULLET.borrow().token_limit, Some(20_015_000 * 1000));
+    // A fresh conversion starts over.
+    initialize_gullet();
+    assert_eq!(GULLET.borrow().token_limit, Some(DEFAULT_TOKEN_LIMIT));
+  }
 }

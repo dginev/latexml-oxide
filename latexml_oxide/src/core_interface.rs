@@ -979,14 +979,11 @@ impl DigestionAPI for Core {
     // Book-scale sources legitimately expand past the arXiv-sized 1G
     // runaway-token backstop; scale it to the input (never lowers, env
     // override wins — see gullet::scale_token_limit_to_source).
-    let source_bytes = if pathname::is_literaldata(&request) {
-      request.len()
-    } else {
-      std::fs::metadata(&canonical_request)
-        .map(|m| m.len() as usize)
-        .unwrap_or(0)
-    };
-    gullet::scale_token_limit_to_source(source_bytes);
+    // A file source is counted when its Mouth opens it (`Mouth::open_file`);
+    // literal data has no file, so count it here.
+    if pathname::is_literaldata(&request) {
+      gullet::scale_token_limit_to_source(request.len());
+    }
     let digestion_note = s!("Digesting {}", name);
     note_begin(&digestion_note);
     // $self->initializestate::$mode . ".pool", @{ $$self{preload} || [] }) unless

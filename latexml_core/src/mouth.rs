@@ -387,6 +387,9 @@ impl Mouth {
           return Err(io::Error::new(e.kind(), e.to_string()).into());
         },
         Ok(meta) => {
+          // Every opened source file raises the runaway-token backstop in
+          // proportion (see `gullet::scale_token_limit_to_source`).
+          crate::gullet::scale_token_limit_to_source(meta.len() as usize);
           // Check for binary file (non-empty and appears binary)
           // Perl's -B heuristic: check first block for high proportion of non-text bytes
           if meta.len() > 0
