@@ -7887,7 +7887,46 @@ $\begin{pNiceArray}{cc}[first-col] a & b \\ \end{pNiceArray}$
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(!stderr.contains("Unrecognized tabular template"), "{stderr}");
+    assert!(
+      !stderr.contains("Unrecognized tabular template"),
+      "{stderr}"
+    );
     assert_eq!(xml.matches("<XMArray").count(), 2, "{xml}");
+  }
+
+  /// OXIDIZED_DESIGN #181: a `\\` inside a brace group of a cell is an
+  /// in-cell break, not a row end (latex.ltx:16583 `{\ifnum0=`}\fi` keeps
+  /// `\cr` from firing at align_state≠0; tabularray makes it a line break —
+  /// ProfSio.sty:2917 `\SetCell{l}{… \\ …}`). Ending the row misread the
+  /// cell's `}` as the alignment's `\egroup` (3 errors per cell; Perl
+  /// truncates the table). An empty cell before `\\` still ends the row.
+  #[test]
+  fn newline_inside_a_cell_group_is_an_in_cell_break() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={XQ[3cm]},hlines}
+\SetCell[c=2]{c}{S} & \\
+NOM : X & \SetCell{l}{A\\B} \\
+{Y \\} & C \\
+\end{tblr}
+\begin{tabular}{ll}
+S & \\
+{Y \\} & C \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("<tr>").count() + xml.matches("<tr ").count(),
+      5,
+      "{xml}"
+    );
+    assert!(xml.contains("A<break/>B"), "{xml}");
+    assert!(
+      xml.contains("Y <break/>") || xml.contains("Y<break/>"),
+      "{xml}"
+    );
   }
 }

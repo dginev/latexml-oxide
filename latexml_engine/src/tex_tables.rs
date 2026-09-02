@@ -371,6 +371,9 @@ LoadDefinitions!({
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
   DefMacro!("\\lx@alignment@newline", {
     let (_star, optional) = read_newline_args(true)?;
+    if inside_cell_group() {
+      return Ok(in_cell_newline(optional));
+    }
     let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
@@ -388,6 +391,9 @@ LoadDefinitions!({
   // AMS kindly avoids that, by using a special version of \\
   DefMacro!("\\lx@alignment@newline@noskip", {
     let (_star, optional) = read_newline_args(false)?;
+    if inside_cell_group() {
+      return Ok(in_cell_newline(optional));
+    }
     let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
     if let Some(opt_tks) = optional {
       tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
@@ -1381,6 +1387,30 @@ pub fn extract_alignment_column(
 // A former Rust-only `Err` here fired for every `\nl`/`\\` inside a
 // not-yet-open table body (aguplus `planotable` collects `\tablehead{… & …}`
 // and `\nl` rows before its `\halign` opens — witness aguplus/plano).
+/// A `\\` met inside a brace group within an alignment cell — real TeX's
+/// `{\ifnum0=`}\fi` guard (latex.ltx:16583-16594 `\@tabularcr`/`\@arraycr`)
+/// keeps the `\cr` from ending the row while `align_state ≠ 0`, and pdflatex
+/// then reports "Misplaced \cr" for a plain tabular. tabularray reads its
+/// body itself and makes such a `\\` a line break INSIDE the cell
+/// (ProfSio.sty:2917 `\SetCell{l}{… \\ …}` and `{Consignes\\ \\ …}` cells,
+/// ProfSio manuals). Ending the row here instead misread the cell's closing
+/// `}` as the alignment's `\egroup` ("Attempt to close non-boxing group",
+/// "Attempt to end mode restricted_horizontal", stray `&`) — Perl silently
+/// truncates the table. An in-cell break is the faithful reading for
+/// tabularray and the benign recovery for a plain tabular. The
+/// `[dim]` of `\\[dim]` is dropped with the row spacing.
+fn in_cell_newline(_optional: Option<Tokens>) -> Tokens { Tokens!(T_CS!("\\newline")) }
+
+/// True while the reader sits inside a user brace group of the current cell:
+/// a small positive `align_group_count`. The template-scanning mask parks the
+/// count at 1000000 (tex.web §789's own value) between a `&` and the next
+/// column's `before-column` marker, so a `\\` that follows an empty cell
+/// (`S & \\`) sees the mask, not a group.
+fn inside_cell_group() -> bool {
+  let c = align_group_count();
+  c > 0 && c < 500_000
+}
+
 fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
   local_align_group_count(1000000);
   if skipspaces {

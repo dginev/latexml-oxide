@@ -6493,3 +6493,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: digiconfigs 5→0 errors, memman 211→104.
 **Guard**: `perfect_kernel_batch54::raw_list_opens_through_trivlist`.
 **Upstream**: not filed.
+
+### 181. A `\\` inside a brace group of an alignment cell is an in-cell break (Perl ends the row and truncates the table)
+
+**Perl behavior**: `\lx@alignment@newline` (TeX_Tables.pool.ltxml:583-594, "VERY tricky (and mostly Wrong)") always emits the `\lx@hidden@cr` row terminator; real LaTeX's `{\ifnum0=`}\fi` guard (latex.ltx:16583-16594) is not modeled. `{Y \\} & C \\` ends the row inside the group, the cell's `}` is then read as the alignment's `\egroup`, the tabular is truncated to one cell (Perl: silently; Rust: "Attempt to close non-boxing group", "Attempt to end mode restricted_horizontal", stray `&` — 3 errors per such cell).
+**Rust behavior**: with a small positive `align_group_count` (a user brace group of the current cell; the template mask parks the count at 1000000 between a `&` and the next column's `before-column` marker, so `S & \\` after an EMPTY cell still ends the row) `\\` expands to `\newline` — a break inside the cell; the `[dim]` is dropped.
+**Why**: tabularray reads its body itself and makes exactly this `\\` a line break inside the cell (ProfSio.sty:2917 `\SetCell{l}{… \\ …}`, `{Consignes\\ \\ …}` cells — the ProfSio manuals, pdflatex-clean); for a plain tabular pdflatex errors "Misplaced \cr", and an in-cell break is the benign recovery. The row-ending path is untouched.
+**Witnesses**: profsio ProfSio-doc-fr (390 errors), annexe71/72/73.
+**Guard**: `perfect_kernel_batch54::newline_inside_a_cell_group_is_an_in_cell_break`.
+**Upstream**: not filed.
