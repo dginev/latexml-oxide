@@ -6874,4 +6874,27 @@ Hello.
     let close = after.find("</svg:foreignObject>").unwrap();
     assert!(after[..close].contains("<svg:path"), "phantom path escaped its box: {xml}");
     assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
-  }}
+  }
+
+  /// End-to-end hobby curve: the raw `hobby.code.tex` load (stub retired) plus
+  /// l3fp's comparison chain-detect (`\__fp_parse_compare_auxi:NNNNNNN`,
+  /// expl3-code.tex:17662 — the backquote of a detokenized backslash must
+  /// read 92, KPE #123) yield a Hobby-smoothed cubic. Witness: hobby manual
+  /// (373 paths, was ~empty + `Until:@` Fatal; Perl 101 errors + Fatal).
+  #[test]
+  fn hobby_shortcut_draws_a_cubic_path() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{hobby}
+\begin{document}
+\begin{tikzpicture}[use Hobby shortcut]
+\draw (0,0) .. (1,1) .. (2,0);
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Until:@"), "{stderr}");
+    assert!(xml.contains(r#"d="M 0 0 C "#), "no Hobby cubic: {xml}");
+  }
+}
