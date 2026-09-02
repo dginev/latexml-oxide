@@ -1952,8 +1952,13 @@ pub fn lst_process_display_with(
     body = new_body;
   }
 
-  body.extend(trailer);
-
+  // The trailer (the `\lstnewenvironment` end code + the `}` balancing the
+  // caller's bgroup) runs AFTER the `{…}` display wrapper below — at the
+  // environment's group level, as listings' `\newenvironment` does — so a
+  // mode-switching begin/end pair (`\mdframed`…`\endmdframed`, cnltx's
+  // `sourcecode`, `\begin{minipage}`…) meets its own frame, not the wrapper's
+  // `{` ("Attempt to end mode internal_vertical" ×900 in cnltx_en; Perl
+  // listings.sty.ltxml:205-212 puts it inside).
   let mut result = Vec::new();
   if numbered || has_caption {
     result.push(T_CS!("\\par"));
@@ -1982,6 +1987,7 @@ pub fn lst_process_display_with(
   }
 
   result.push(T_END!());
+  result.extend(trailer);
   result
 }
 
@@ -2353,12 +2359,21 @@ LoadDefinitions!({
     // Move start_code / end_code / env_name directly into the closure
     // capture — none are used outside, so three setup-time clones are
     // avoided per `\lstnewenvironment` definition.
+    // The begin macro returns TOKENS that run in the main stream — `{`,
+    // `\lx@setcurrenvir`, the substituted start code, then
+    // `\lx@lstenv@body{name}{end code}` — instead of digesting the start
+    // code in an isolated mouth (Perl listings.sty.ltxml `Digest($start…)`).
+    // A mode-switching start code (`\mdframed`, `\begin{minipage}`, cnltx's
+    // `sourcecode` frame) is a constructor whose body must extend over the
+    // listing that follows; digested in isolation it closed empty (the
+    // frame element vanished) and its end code then met the display
+    // wrapper's `{` ("Attempt to end mode internal_vertical" ×900 in
+    // cnltx_en, chemnum, pixelart, modiagram, tasks). `\lx@lstenv@body`
+    // captures the raw lines only after the start code has run, so
+    // `\lstset` keys in it still govern the display, and it pushes the
+    // postamble locally inside the `{` group.
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        bgroup();
-        assign_value("current_environment", Stored::String(pin(&env_name)), None);
-        def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled(env_name.clone())), None)?;
-        // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
             ArgWrap::None => None,
@@ -2367,28 +2382,40 @@ LoadDefinitions!({
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();
-        // Perl: lstPushValueLocally(LISTINGS_POSTAMBLE => $end->substituteParameters(@args))
-        if !end_code.is_empty() {
-          let end_subst = end_code.substitute_parameters(&sub_args);
-          lst_push_value_locally("LISTINGS_POSTAMBLE", end_subst.unlist());
-        }
-        // Perl: Digest($start->substituteParameters(@args))
-        // This executes \lstset{...} which activates language, styles, etc.
+        let mut out = vec![T_BEGIN!()];
+        out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokens::new(ExplodeText!(&env_name))]).unlist());
         if !start_code.is_empty() {
-          let start_subst = start_code.substitute_parameters(&sub_args);
-          let _digested = digest(start_subst)?;
+          out.extend(start_code.substitute_parameters(&sub_args).unlist());
         }
-        let text = listings_read_raw_lines(&env_name);
-        if !lst_writefile_tee(&text) {
-          return Ok(Tokens!());
-        }
-        let name = lst_get_tokens("name");
-        let name_opt = if name.is_empty() { None } else { Some(name) };
-        let result = lst_process_display(name_opt, &text);
-        Ok(Tokens::new(result))
+        let end_subst = if end_code.is_empty() {
+          Tokens::new(Vec::new())
+        } else {
+          end_code.substitute_parameters(&sub_args)
+        };
+        out.extend(Invocation!(T_CS!("\\lx@lstenv@body"),
+          vec![Tokens::new(ExplodeText!(&env_name)), end_subst]).unlist());
+        Ok(Tokens::new(out))
       }
     )));
     def_macro(cs, params, expansion, None)?;
+  });
+
+  // Second half of `\lstnewenvironment`'s begin: runs after the start code,
+  // inside the `{` group the begin macro opened. Reads the raw listing body,
+  // records the end code as the postamble (locally — undone at the `}`),
+  // and emits the display followed by that postamble and the closing `}`.
+  DefMacro!("\\lx@lstenv@body{}{}", sub[(name, end_code)] {
+    let env_name = name.to_string();
+    if !end_code.is_empty() {
+      lst_push_value_locally("LISTINGS_POSTAMBLE", end_code.unlist());
+    }
+    let text = listings_read_raw_lines(&env_name);
+    if !lst_writefile_tee(&text) {
+      return Ok(Tokens!(T_END!()));
+    }
+    let lname = lst_get_tokens("name");
+    let name_opt = if lname.is_empty() { None } else { Some(lname) };
+    Ok(Tokens::new(lst_process_display(name_opt, &text)))
   });
 
   //======================================================================

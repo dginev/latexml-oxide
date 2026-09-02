@@ -7383,4 +7383,44 @@ l & c & r \\
     );
     assert!(xml.contains("[42]"), "{xml}");
   }
+
+  /// listings `\lstnewenvironment{x}{<begin>}{<end>}`: the end code runs at
+  /// the environment's group level AFTER the listing (listings.sty
+  /// `\lst@EndProcess`/`\lstnewenvironment`→`\newenvironment`), so a
+  /// mode-switching begin/end pair (`\mdframed`…`\endmdframed`, cnltx's
+  /// `sourcecode` env, `\begin{minipage}`…) balances. The display wrapper
+  /// `{\def\lstname{…} <block>}` had the postamble INSIDE its braces, so
+  /// `\endmdframed` met the wrapper's `{` frame ("Attempt to end mode
+  /// internal_vertical" — cnltx_en 921×, chemnum 654×, pixelart 703×,
+  /// modiagram 896×, tasks 171×; Perl listings.sty.ltxml:205-212 identical).
+  #[test]
+  fn lstnewenvironment_end_code_runs_outside_the_listing_group() {
+    let tex = r"\documentclass{article}
+\usepackage{mdframed,listings}
+\lstnewenvironment{foo}{\mdframed}{\endmdframed}
+\lstnewenvironment{bar}{\begin{minipage}{3cm}}{\end{minipage}}
+\begin{document}
+Before.
+\begin{foo}
+code here
+\end{foo}
+\begin{bar}
+more code
+\end{bar}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<listing class").count(), 2, "{xml}");
+    assert!(
+      xml.contains("framed=\"rectangle\""),
+      "mdframed block lost: {xml}"
+    );
+    // the frame WRAPS the listing (the constructor body extends over it)
+    let frame = xml.find("framed=\"rectangle\"").unwrap();
+    let first_listing = xml.find("<listing class").unwrap();
+    assert!(frame < first_listing, "{xml}");
+    assert!(xml.contains("<p>After.</p>"), "{xml}");
+  }
 }
