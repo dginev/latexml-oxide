@@ -644,6 +644,11 @@ fn blx_split_ay_label(label: &str) -> Option<(String, String)> {
 }
 
 #[rustfmt::skip]
+/// The `.bbl` command set (biblatex.sty:8995-9024 `\\blx@bblstart`): saved
+/// and rebound around the `.bbl` input, restored after it.
+const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset";
+const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset";
+
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
   // (803 lines). All macro definitions, conditionals, registers, the
@@ -716,8 +721,11 @@ LoadDefinitions!({
   // OXIDIZED_DESIGN #62 — which also records the measurement trap: retiring this
   // moves ~1,167 papers out of `warning` for a LOGGING reason, so any corpus
   // `no_problem` delta straddling this commit is confounded.
-  Info!("bibliography", "biblatex",
-    "biblatex.sty is provided by a native binding, not interpreted raw.");
+  Info!(
+    "bibliography",
+    "biblatex",
+    "biblatex.sty is provided by a native binding, not interpreted raw."
+  );
 
   // Mark biblatex as provided, exactly as the real biblatex.sty's
   // `\ProvidesPackage{biblatex}[…]` does (latex_constructs `\ProvidesPackage`
@@ -754,13 +762,20 @@ LoadDefinitions!({
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       let opt_str = opt_str.trim();
-      if let Some(v) = opt_str.strip_prefix("style=")
-        .or_else(|| opt_str.strip_prefix("citestyle=")) {
+      if let Some(v) = opt_str
+        .strip_prefix("style=")
+        .or_else(|| opt_str.strip_prefix("citestyle="))
+      {
         blx_set_style(v.trim().trim_start_matches('{').trim_end_matches('}'));
       } else if let Some(v) = opt_str.strip_prefix("maxbibnames=")
-        && let Ok(n) = v.trim().trim_start_matches('{').trim_end_matches('}').parse::<i64>() {
-          bib_state_set_int("biblatex_maxbibnames", n);
-        }
+        && let Ok(n) = v
+          .trim()
+          .trim_start_matches('{')
+          .trim_end_matches('}')
+          .parse::<i64>()
+      {
+        bib_state_set_int("biblatex_maxbibnames", n);
+      }
     }
   }
 
@@ -993,7 +1008,9 @@ LoadDefinitions!({
   DefMacro!("\\citelist{}", "#1");
 
   // \DeclareLabeldate — biblatex datacommands declaration. No-op stub.
-  def_macro_noop("\\DeclareLabeldate {}")?;
+  // biblatex.sty:15020 `\newrobustcmd*{\DeclareLabeldate}[2][]` — the optional
+  // entrytype list (apa.bbx:337 `\DeclareLabeldate[constitution]{\field{date}}`).
+  def_macro_noop("\\DeclareLabeldate []{}")?;
 
   // Datamodel-declaration family (biblatex.sty L16639-16642 renews these to
   // warn-only outside the datamodel read; no XML consequence) plus internals
@@ -1026,38 +1043,38 @@ LoadDefinitions!({
   DefMacro!("\\autocap{}", "#1");
 
   // Perl L75-85
-  DefMacro!("\\addspace",        "\\space");
-  DefMacro!("\\addnbspace",      "\\space");
-  DefMacro!("\\addthinspace",    "\\space");
-  DefMacro!("\\addnbthinspace",  "\\space");
-  DefMacro!("\\addlowpenspace",  "\\space");
+  DefMacro!("\\addspace", "\\space");
+  DefMacro!("\\addnbspace", "\\space");
+  DefMacro!("\\addthinspace", "\\space");
+  DefMacro!("\\addnbthinspace", "\\space");
+  DefMacro!("\\addlowpenspace", "\\space");
   DefMacro!("\\addhighpenspace", "\\space");
-  DefMacro!("\\addlpthinspace",  "\\space");
-  DefMacro!("\\addhpthinspace",  "\\space");
-  DefMacro!("\\addabbrvspace",   "\\space");
-  DefMacro!("\\addabthinspace",  "\\space");
-  DefMacro!("\\adddotspace",     "\\unspace\\adddot\\space");
+  DefMacro!("\\addlpthinspace", "\\space");
+  DefMacro!("\\addhpthinspace", "\\space");
+  DefMacro!("\\addabbrvspace", "\\space");
+  DefMacro!("\\addabthinspace", "\\space");
+  DefMacro!("\\adddotspace", "\\unspace\\adddot\\space");
 
   // Perl L87-91
-  DefMacro!("\\noligature",   "\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\hyphen",       "\\nobreak-\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\nbhyphen",     "\\nobreak\\mbox{-}\\nobreak\\hskip\\z@skip");
-  DefMacro!("\\hyphenate",    "\\nobreak\\-\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\noligature", "\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\hyphen", "\\nobreak-\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\nbhyphen", "\\nobreak\\mbox{-}\\nobreak\\hskip\\z@skip");
+  DefMacro!("\\hyphenate", "\\nobreak\\-\\nobreak\\hskip\\z@skip");
   DefMacro!("\\allowhyphens", "\\nobreak\\hskip\\z@skip");
 
   // Perl L93-99
-  DefMacro!("\\bibinitperiod",      "\\adddot");
+  DefMacro!("\\bibinitperiod", "\\adddot");
   DefMacro!("\\bibinithyphendelim", ".\\mbox{-}");
-  DefMacro!("\\bibnamedelima",      "\\addhighpenspace");
-  DefMacro!("\\bibnamedelimb",      "\\addlowpenspace");
-  DefMacro!("\\bibnamedelimc",      "\\addhighpenspace");
-  DefMacro!("\\bibnamedelimd",      "\\addlowpenspace");
-  DefMacro!("\\bibnamedelimi",      "\\addnbspace");
+  DefMacro!("\\bibnamedelima", "\\addhighpenspace");
+  DefMacro!("\\bibnamedelimb", "\\addlowpenspace");
+  DefMacro!("\\bibnamedelimc", "\\addhighpenspace");
+  DefMacro!("\\bibnamedelimd", "\\addlowpenspace");
+  DefMacro!("\\bibnamedelimi", "\\addnbspace");
 
   // Perl L101-106: \datalist / \sortlist set the `biblatex_with_keyvals`
   // flag globally — Perl's `\name` closure (Cycle 9) reads it to choose
   // 3-arg vs 4-arg / keyval-vs-positional dispatch.
-  DefMacro!("\\datalist[]{}", sub[_args] {
+  DefMacro!("\\biblatex@bbl@datalist[]{}", sub[_args] {
     assign_value("biblatex_with_keyvals", Stored::from(1),
       Some(Scope::Global));
     Ok(Tokens::new(vec![]))
@@ -1128,7 +1145,7 @@ LoadDefinitions!({
   // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
   // emitted by repeated \endentry calls in `\thebibliography{count}…
   // \endthebibliography`.
-  DefMacro!("\\enddatalist", sub[_args] {
+  DefMacro!("\\biblatex@bbl@enddatalist", sub[_args] {
     Ok(bib_as_thebibliography())
   }, locked => true);
   DefMacro!("\\endsortlist", sub[_args] {
@@ -1149,39 +1166,39 @@ LoadDefinitions!({
   // author-year citations with phrase support. The schema model is
   // bibitem = (tags?, bibblock*): one tags element, first.
   DefConstructor!("\\blx@lbibitem Semiverbatim",
-    "<ltx:bibitem key='#key' xml:id='#id'>",
-    after_digest => sub[whatsit] {
-      let key = whatsit.get_arg(1)
-        .map(|a| clean_bib_key(&a.to_string()))
-        .unwrap_or_default();
-      let mut properties = RefStepID!("@bibitem")?;
-      properties.insert("key", key.into());
-      whatsit.set_properties(properties);
-    });
+  "<ltx:bibitem key='#key' xml:id='#id'>",
+  after_digest => sub[whatsit] {
+    let key = whatsit.get_arg(1)
+      .map(|a| clean_bib_key(&a.to_string()))
+      .unwrap_or_default();
+    let mut properties = RefStepID!("@bibitem")?;
+    properties.insert("key", key.into());
+    whatsit.set_properties(properties);
+  });
   // Perl `bounded => 1` + `beforeDigest => Let(T_ALIGN, '\&')`; like the
   // Rust NAT@@wrout port, the bgroup/soft-egroup pair replaces `bounded`
   // (whose egroup mode-frame check trips on inner mode switches) while
   // still scope-isolating the T_ALIGN Let to argument digestion.
   DefConstructor!("\\bbl@tags{}{}{}{}",
-    "<ltx:tags>\
-      ?#1(<ltx:tag role='year'>#1</ltx:tag>)\
-      ?#2(<ltx:tag role='authors'>#2</ltx:tag>)\
-      ?#3(<ltx:tag role='fullauthors'>#3</ltx:tag>)\
-      ?#4(<ltx:tag role='refnum'>#4</ltx:tag>)\
-    </ltx:tags>",
-    before_digest => {
-      bgroup();
-      Let!(T_ALIGN!(), T_CS!("\\&"));
-    },
-    after_digest => sub[_whatsit] {
-      pop_stack_frame(false)?;
-      Ok(Vec::new())
-    });
+  "<ltx:tags>\
+    ?#1(<ltx:tag role='year'>#1</ltx:tag>)\
+    ?#2(<ltx:tag role='authors'>#2</ltx:tag>)\
+    ?#3(<ltx:tag role='fullauthors'>#3</ltx:tag>)\
+    ?#4(<ltx:tag role='refnum'>#4</ltx:tag>)\
+  </ltx:tags>",
+  before_digest => {
+    bgroup();
+    Let!(T_ALIGN!(), T_CS!("\\&"));
+  },
+  after_digest => sub[_whatsit] {
+    pop_stack_frame(false)?;
+    Ok(Vec::new())
+  });
 
   // Perl L127-130: \entry{key}{type}{} initializes the entry hash so that the
   // following \field/\strng/\name/\list directives have a place to record
   // metadata. The 3rd arg is options (Perl ignores it).
-  DefMacro!("\\entry{}{}{}", sub[(key, ty, _opts)] {
+  DefMacro!("\\biblatex@bbl@entry{}{}{}", sub[(key, ty, _opts)] {
     let mut entry: SymHashMap<Stored> = SymHashMap::default();
     entry.insert("key", Stored::Tokens(key));
     entry.insert("type", Stored::Tokens(ty));
@@ -1196,7 +1213,7 @@ LoadDefinitions!({
   // by \name as plain "fullname" tokens), title, journal/booktitle, year,
   // pages, doi/url/eprint. Pre-typeset name strings (the `{names}` array
   // form) are emitted comma-joined.
-  DefMacro!("\\endentry", sub[_args] {
+  DefMacro!("\\biblatex@bbl@endentry", sub[_args] {
     let entry = bib_entry_get();
     assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
 
@@ -1493,18 +1510,18 @@ LoadDefinitions!({
 
   // BiblatexAuthor keyvals — extended (PR #21) with prefix/suffix/…-un
   // name parts so "van der Berg" / "King Jr." names parse correctly.
-  DefKeyVal!("BiblatexAuthor", "given",    "");
-  DefKeyVal!("BiblatexAuthor", "giveni",   "");
-  DefKeyVal!("BiblatexAuthor", "givenun",  "");
-  DefKeyVal!("BiblatexAuthor", "family",   "");
-  DefKeyVal!("BiblatexAuthor", "familyi",  "");
+  DefKeyVal!("BiblatexAuthor", "given", "");
+  DefKeyVal!("BiblatexAuthor", "giveni", "");
+  DefKeyVal!("BiblatexAuthor", "givenun", "");
+  DefKeyVal!("BiblatexAuthor", "family", "");
+  DefKeyVal!("BiblatexAuthor", "familyi", "");
   DefKeyVal!("BiblatexAuthor", "familyun", "");
-  DefKeyVal!("BiblatexAuthor", "prefix",   "");
-  DefKeyVal!("BiblatexAuthor", "prefixi",  "");
+  DefKeyVal!("BiblatexAuthor", "prefix", "");
+  DefKeyVal!("BiblatexAuthor", "prefixi", "");
   DefKeyVal!("BiblatexAuthor", "prefixun", "");
-  DefKeyVal!("BiblatexAuthor", "suffix",   "");
-  DefKeyVal!("BiblatexAuthor", "suffixi",  "");
-  DefKeyVal!("BiblatexAuthor", "nameun",   "");
+  DefKeyVal!("BiblatexAuthor", "suffix", "");
+  DefKeyVal!("BiblatexAuthor", "suffixi", "");
+  DefKeyVal!("BiblatexAuthor", "nameun", "");
 
   // Perl L270-346: \name{type}{count}{maybe-content} — biblatex's author
   // record. The TeX-2.5+ .bbl shape is `\name{author}{N}{}{ {{}{Family}…} }`
@@ -1516,7 +1533,7 @@ LoadDefinitions!({
   // given pairs into "Given Family" strings (no Perl-faithful keyval/hash
   // ordering yet) and stash them comma-joined under `authors_str` /
   // `editors_str` in the entry hash for `\endentry` to emit verbatim.
-  DefMacro!("\\name{}{}{}{}", sub[(ty, _count, _maybe, body)] {
+  DefMacro!("\\biblatex@bbl@name{}{}{}{}", sub[(ty, _count, _maybe, body)] {
     let type_str = ty.to_string();
     // The body's tokens start with `{` `{}` (empty hash) or `{hash=…}` then
     // `{family}{familyi}{given}{giveni}{}{}{}{}` repeated, separated by
@@ -1666,7 +1683,7 @@ LoadDefinitions!({
   // Perl L342-346: \list{name}{count}{value} — record value under `name` in
   // the entry hash. Perl ignores `count` for count==1 and notes "more
   // support needed" for >1. Same here.
-  DefMacro!("\\list{}{}{}", sub[(name, _count, val)] {
+  DefMacro!("\\biblatex@bbl@list{}{}{}", sub[(name, _count, val)] {
     let name_s = name.to_string();
     bib_entry_set_tokens(name_s.trim(), val);
     Ok(Tokens::default())
@@ -1676,12 +1693,12 @@ LoadDefinitions!({
   // under `name` in the entry hash. Perl uses DefPrimitive (immediate
   // side-effect, no expansion). DefMacro with sub gives equivalent behavior
   // at digestion time since the body is empty.
-  DefMacro!("\\field{}{}", sub[(name, val)] {
+  DefMacro!("\\biblatex@bbl@field{}{}", sub[(name, val)] {
     let name_s = name.to_string();
     bib_entry_set_tokens(name_s.trim(), val);
     Ok(Tokens::default())
   }, locked => true);
-  DefMacro!("\\strng{}{}", sub[(name, val)] {
+  DefMacro!("\\biblatex@bbl@strng{}{}", sub[(name, val)] {
     let name_s = name.to_string();
     bib_entry_set_tokens(name_s.trim(), val);
     Ok(Tokens::default())
@@ -1690,7 +1707,7 @@ LoadDefinitions!({
   // Perl L348-354
   def_macro_noop("\\AtEveryBibitem{}")?;
   def_macro_noop("\\AtEveryCitekey{}")?;
-  def_macro_noop("\\keyw{}")?;
+  def_macro_noop("\\biblatex@bbl@keyw{}")?;
   def_macro_noop("\\bibinitdelim")?;
   // biblatex.def L219 defines `\bibsetup` as a no-arg user-overridable
   // hook for low-level bibliography layout (interlinepenalty,
@@ -1707,12 +1724,12 @@ LoadDefinitions!({
   DefMacro!("\\bibnamedelimi", " ");
 
   // Perl L364
-  def_macro_noop("\\range{}{}")?;
+  def_macro_noop("\\biblatex@bbl@range{}{}")?;
 
   // Perl L367-369: \preamble{...} stashes the arg into biblatex_preamble
   // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
   // $_[1]) so the preamble is digested in the current context too.
-  DefMacro!("\\preamble{}", sub[(arg)] {
+  DefMacro!("\\biblatex@bbl@preamble{}", sub[(arg)] {
     assign_value("biblatex_preamble",
       Stored::Tokens(arg.clone()), Some(Scope::Global));
     Ok(arg)
@@ -1843,8 +1860,10 @@ LoadDefinitions!({
   });
   // Idempotent for the same double-init reason as \blx@saved@cite above: a bare
   // \let on a 2nd init would save the already-rebound \bibliography (=\addbibresource).
-  RawTeX!(r"\@ifundefined{biblatex@saved@bibliography}{\let\biblatex@saved@bibliography\bibliography}{}");
-  Let!("\\bibliography",                "\\addbibresource");
+  RawTeX!(
+    r"\@ifundefined{biblatex@saved@bibliography}{\let\biblatex@saved@bibliography\bibliography}{}"
+  );
+  Let!("\\bibliography", "\\addbibresource");
 
   // \printbibliography: biber's \jobname.bbl is ground truth when present
   // (read it directly through the \entry/\endentry rebuilder above);
@@ -1864,13 +1883,40 @@ LoadDefinitions!({
   // restores sit after `\InputIfFileExists` in the expansion, so they run once
   // the `.bbl` mouth is exhausted, like the `&` catcode restore already does.
   // Guard: `perfect_kernel_batch51::verb_survives_printbibliography`.
-  DefMacro!("\\printbibliography[]",
-    "\\let\\biblatex@saved@verb\\verb\\let\\biblatex@saved@endverb\\endverb\
-     \\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\
+  //
+  // The same scoping covers EVERY `.bbl` command: biblatex.sty:8995-9024
+  // `\blx@bblstart` `\let`s `\entry`, `\name`, `\list`, `\field`, `\strng`,
+  // `\range`, `\keyw`, `\preamble`, `\warn`, `\xref`, `\fakeset`,
+  // `\datalist`… to their `\blx@bbl@…` bodies only for the `.bbl` read. A
+  // document-wide `\list{}{}{}` (the ar5iv binding's shape, KNOWN_PERL_ERRORS
+  // #133) swallows LaTeX's `\list{label}{setup}` — every `\list`-built
+  // environment in a biblatex document (cnltx-doc `commands` under
+  // `add-bib`) then ended with `\endlx@list` "Attempt to end mode". The
+  // bodies live under `\biblatex@bbl@<name>` and `\biblatex@bblstart` /
+  // `\biblatex@bblend` bracket the input. Guard:
+  // `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_list`.
+  DefMacro!(
+    "\\printbibliography[]",
+    "\\biblatex@bblstart\
      \\catcode`\\&=12\\relax\
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
      \\catcode`\\&=4\\relax\
-     \\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb");
+     \\biblatex@bblend"
+  );
+  Let!("\\biblatex@bbl@verb", "\\biblatex@verb");
+  Let!("\\biblatex@bbl@endverb", "\\biblatex@endverb");
+  def_macro(
+    T_CS!("\\biblatex@bblstart"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(BBL_START.to_string())),
+    None,
+  )?;
+  def_macro(
+    T_CS!("\\biblatex@bblend"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(BBL_END.to_string())),
+    None,
+  )?;
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
@@ -1902,9 +1948,9 @@ LoadDefinitions!({
 
   // Perl L420-424. Round-34 surpass: \xref{key} is a cross-reference,
   // route to \ref so it resolves. \warn / \fakeset are internal.
-  def_macro_noop("\\warn{}")?;
-  DefMacro!("\\xref{}", "\\ref{#1}");
-  def_macro_noop("\\fakeset{}")?;
+  def_macro_noop("\\biblatex@bbl@warn{}")?;
+  DefMacro!("\\biblatex@bbl@xref{}", "\\ref{#1}");
+  def_macro_noop("\\biblatex@bbl@fakeset{}")?;
 
   // biblatex source-mapping API (a biber pre-processing stage LaTeXML does not
   // run): gobble the whole rule argument WITHOUT expanding it, so the nested
@@ -2137,8 +2183,10 @@ LoadDefinitions!({
   // leave that gobbled.
   def_macro_noop("\\key{}")?;
   // \keyw is already defined L348 (DefMacro empty, see above).
-  DefMacro!("\\keyword{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+  DefMacro!(
+    "\\keyword{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+  );
 
   // Perl L632-635
   DefMacro!("\\ppspace", "\\addnbspace");
@@ -2222,7 +2270,10 @@ LoadDefinitions!({
   def_macro_noop("\\mkbibendnotetext{}")?;
   DefMacro!("\\mkbibfootnote", "\\footnote");
   DefMacro!("\\mkbibfootnotetext", "\\footnotetext");
-  DefMacro!("\\mkbibbrackets{}", "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup");
+  DefMacro!(
+    "\\mkbibbrackets{}",
+    "\\begingroup\\bibopenbracket#1\\bibclosebracket\\endgroup"
+  );
   DefMacro!("\\bibopenparen", "\\bibleftparen");
   DefMacro!("\\bibcloseparen", "\\bibrightparen");
   DefMacro!("\\bibopenbracket", "\\bibleftbracket");
@@ -2237,10 +2288,14 @@ LoadDefinitions!({
 
   // Perl L707-708 gobble; surpass by preserving as endnote-style.
   // \pagenote{text} is author-typed marginal note.
-  DefMacro!("\\pagenote{}",
-    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}");
-  DefMacro!("\\pagenotetext{}",
-    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}");
+  DefMacro!(
+    "\\pagenote{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote]{#1}"
+  );
+  DefMacro!(
+    "\\pagenotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=pagenote-text]{#1}"
+  );
 
   // Perl L710-721
   DefMacro!("\\blx@uniquename", "false");
@@ -2292,7 +2347,8 @@ LoadDefinitions!({
   // stays faithful (Perl's `\newtoggle` never re-enters because Perl
   // can't find the bundled wrapper). Witness 2007.06815
   // (`\usepackage{mybiblatex}` → 55 toggle errors → 0).
-  RawTeX!(r#"
+  RawTeX!(
+    r#"
 \newbool{refcontextdefaults}
 \booltrue{refcontextdefaults}%
 \newbool{sourcemap}
@@ -2357,7 +2413,8 @@ LoadDefinitions!({
 \providetoggle{blx@uniqueprimaryauthor}
 \providetoggle{blx@uniquetitle}
 \providetoggle{blx@uniquework}
-"#);
+"#
+  );
 
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
@@ -2382,7 +2439,10 @@ LoadDefinitions!({
   // family F4(a). (`\begin{refcontext}` routes through `\refcontext` and
   // `\end{refcontext}` through `\endrefcontext`, so the environment form is
   // covered by these two.)
-  DefMacro!("\\lx@biblatex@refcontext[]", "\\@ifnextchar\\bgroup{\\@gobble}{}");
+  DefMacro!(
+    "\\lx@biblatex@refcontext[]",
+    "\\@ifnextchar\\bgroup{\\@gobble}{}"
+  );
   Let!("\\refcontext", "\\lx@biblatex@refcontext");
   Let!("\\newrefcontext", "\\lx@biblatex@refcontext");
 
@@ -2503,7 +2563,12 @@ LoadDefinitions!({
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       let opt_str = opt_str.trim();
-      let val = |v: &str| v.trim().trim_start_matches('{').trim_end_matches('}').to_string();
+      let val = |v: &str| {
+        v.trim()
+          .trim_start_matches('{')
+          .trim_end_matches('}')
+          .to_string()
+      };
       if let Some(v) = opt_str.strip_prefix("style=") {
         bibstyle = Some(val(v));
         citestyle_name = Some(val(v));

@@ -4978,3 +4978,22 @@ to letter around the hook digest (`binding/content.rs`). Guard:
 % hookcls.def:  \providecommand\hooktwo{[\hook@one]}
 % t.tex:  \documentclass{hookcls}\begin{document}\hooktwo\end{document}
 ```
+
+## 133. biblatex binding defines the `.bbl` commands document-wide, shadowing LaTeX's `\list` (Rust fixes)
+
+ar5iv-bindings biblatex.sty.ltxml:342 `DefMacro('\list{}{}{}', …)` (and
+`\name`, `\field`, `\strng`, `\entry`, …) are global, while
+biblatex.sty:8995-9024 `\blx@bblstart` `\let`s them to their `\blx@bbl@…`
+bodies only while the `.bbl` is read. LaTeX's `\list{label}{setup}` then
+takes three arguments in every biblatex document: `\begin{cnltxlist}`
+(cnltx-doc.cls:492 `\list{}{\cmltx@list@setup}`) ends with `\endlx@list`
+"Attempt to end mode internal_vertical" (cnltx_en manual under `add-bib`).
+Rust keeps the bodies under `\biblatex@bbl@<name>` and brackets the `.bbl`
+input with `\biblatex@bblstart`/`\biblatex@bblend` (saved meanings
+restored). Guard: `perfect_kernel_batch54::biblatex_bbl_commands_do_not_shadow_list`.
+
+```latex
+\documentclass{article}\usepackage{biblatex}
+\newenvironment{mylist}{\list{}{\leftmargin=0pt}}{\endlist}
+\begin{document}\begin{mylist}\item one\end{mylist}\end{document}
+```

@@ -7655,4 +7655,23 @@ Done [\thepage].
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[1]"), "{xml}");
   }
+
+  /// biblatex.sty:8995-9024 binds the `.bbl` commands (`\list`, `\name`,
+  /// `\field`…) only while the `.bbl` is read; a document-wide `\list{}{}{}`
+  /// (KNOWN_PERL_ERRORS #133) shadowed LaTeX's `\list{label}{setup}` for
+  /// every list environment (cnltx-doc `commands` under `add-bib`).
+  #[test]
+  fn biblatex_bbl_commands_do_not_shadow_list() {
+    let tex = r"\documentclass{article}
+\usepackage{biblatex}
+\newenvironment{mylist}{\list{}{\leftmargin=0pt}}{\endlist}
+\begin{document}
+\begin{mylist}\item one\end{mylist}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<itemize"), "{xml}");
+    assert!(xml.contains("<item"), "{xml}");
+  }
 }
