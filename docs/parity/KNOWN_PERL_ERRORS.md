@@ -4537,7 +4537,34 @@ Guard `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
 \definecolor{dst}{\m}{\s}
 \textcolor{dst}{X}
 \end{document}
-```## 119. `\def` parameter text collapses adjacent space tokens in a delimiter (Rust keeps them)
+```
+
+## 118. `\@startsection` string-coerces its level; `\numexpr` levels (every KOMA heading) read as 0 (Rust fixes)
+
+latex.ltx `\@sect` compares the level as a TeX <number>: `\ifnum #2>\c@secnumdepth`.
+Perl `latex_constructs.pool.ltxml:555-575` does `$level > CounterValue('secnumdepth')`
+on the ToString of the argument, which coerces anything non-literal to 0. The
+KOMA classes wrap EVERY level as `{\numexpr #2\relax}` (scrartcl.cls:3421/3425,
+`#2` = `\csname <name>numdepth\endcsname`), so under a raw KOMA class Perl numbers
+every heading down to `\subparagraph` (level 4/5 never exceeds `secnumdepth`), and
+a hand-rolled `\@startsection{x}{\numexpr…}` misbehaves the same way. Rust reads a
+non-literal level through a sub-mouth `read_number` (latex_constructs.rs
+`\@startsection`). Guard `perfect_kernel_batch53::startsection_level_is_a_tex_number`;
+witnesses: every raw-KOMA manual (tudaexercise, tikzlings-doc, contract-example-*).
+
+```latex
+\documentclass{article}
+\makeatletter
+\newcounter{deep}\def\deepnumdepth{4}
+\newcommand\deep{\@startsection{deep}{\numexpr\deepnumdepth\relax}{\z@}{1ex}{1ex}{\bfseries}}
+\makeatother
+\begin{document}
+\section{S}
+\deep{D} % must be UNNUMBERED (4 > secnumdepth 3); Perl numbers it
+\end{document}
+```
+
+## 119. `\def` parameter text collapses adjacent space tokens in a delimiter (Rust keeps them)
 
 `TeX_Macro.pool.ltxml` L127 builds a macro's delimited-parameter (`Until:`)
 delimiter with `push(@delim, $d) unless $pc == CC_SPACE && $inner_cc == CC_SPACE;
@@ -4569,4 +4596,74 @@ errors; Perl 1 error):
 \begin{document}
 \expandafter\x\expandafter Q\deltoks  % Perl: Missing argument Until:\A \B
 \end{document}
+```
+
+## 120. `\addcontentsline` digests its title (hangs on LaTeX's write-only `\protect` idiom)
+
+`latex_constructs.pool.ltxml` L749 `DefConstructor('\addcontentsline{}{}{}', …)`
+digests all three arguments and then discards the title (`$title` unused —
+only `$inlist` is read). latex.ltx L17351-17363 hands `#3` to
+`\protected@write`, where `\protect` is `\@unexpandable@protect`, and the text
+is written to the `.toc`, never typeset. That is what makes the self-`\protect`
+idiom `\def\appfmt#1{\protect\appfmt{#1}}` safe in real LaTeX
+(nlctuserguide.sty L1553 `\@loe@disable@cmds`, used by every Talbot manual's
+"list of examples"). Under digestion `\protect` is `\relax`, so the macro
+re-expands to itself forever: Perl 0.8.8 hangs (timeout, no output); Rust's
+cycle guard turned it into `Fatal:Timeout:Recursion` (`\protect\appfmt{xindy}`,
+9-token window) or `Fatal:Timeout:TokenLimit` (`…{makeindex}`, 13 tokens, past
+the guard's 10-token window). Witness glossaries-user examples `ex:xdy` /
+`ex:mkidx`; masked before batch 53 because the kernel `\numberline{}{}` 2-arg
+no-op swallowed `\example@title` — raw tocbasic's 1-arg `\numberline` exposed it.
+
+Rust: the title parameter is `Undigested` (`latex_constructs.rs`); guard
+`perfect_kernel_batch53::addcontentsline_title_is_not_digested`. Trigger
+(pdflatex 0 errors; Perl hangs):
+
+```latex
+\documentclass{article}
+\newcommand*{\appfmt}[1]{\texttt{#1}}
+\begin{document}
+\def\thetitle{uses \appfmt{xindy}}%
+\def\appfmt#1{\protect\appfmt{#1}}% \@loe@disable@cmds idiom
+\addcontentsline{toc}{section}{\thetitle}%
+done\end{document}
+```
+
+## 121. `\pagestyle` / `\thispagestyle` are non-expandable primitives (scrlayer's `\expandafter` freeze recurses)
+
+`latex_constructs.pool.ltxml` L997-998 (the "# Ignored" block) uses
+`DefPrimitive('\pagestyle{}', undef)`; latex.ltx L18297-18300 defines it as a
+plain `\def`. scrlayer.sty L2183-2196 redefines `\pagestyle` with the
+triple-`\expandafter` freeze
+`\expandafter\expandafter\expandafter\renewcommand … {\expandafter\reserved@a
+\pagestyle{#1}…}`, which inlines the OLD body at definition time. A primitive
+cannot be inlined, so the literal `\pagestyle{#1}` survives in the new body
+and `\AtBeginDocument{\pagestyle{test}}` (scrlayer.sty L2198-2213) recurses:
+Perl 0.8.8 hangs; Rust reported `Fatal:Timeout:PushbackLimit` (raw scrlayer)
+or `Fatal:Timeout:Recursion` (the 13-line freeze below). Reached by every
+document loading raw `scrlayer` / `scrlayer-scrpage` (KOMA header/footer;
+witnesses DEMO-TUDaPhD, DEMO-TUDaThesis, neoschool, bfh-ci, arXiv 2110.09330 —
+the original "runaway" that motivated the old stub). The same block makes
+`\markright`, `\markboth`, `\pagenumbering`, `\leftmark`, `\rightmark`
+primitives; no witness freezes those yet.
+
+Rust: `def_macro_noop` (expandable empty macro, page style still ignored) for
+`\pagestyle`/`\thispagestyle` in `latex_constructs.rs`; guard
+`perfect_kernel_batch53::pagestyle_expandafter_freeze_terminates`. Trigger
+(pdflatex 0 errors; Perl hangs):
+
+```latex
+\documentclass{article}
+\makeatletter
+\expandafter\expandafter\expandafter\renewcommand
+\expandafter\expandafter\expandafter*%
+\expandafter\expandafter\expandafter\pagestyle
+\expandafter\expandafter\expandafter[%
+\expandafter\expandafter\expandafter1%
+\expandafter\expandafter\expandafter]%
+\expandafter\expandafter\expandafter{\pagestyle{#1}}%
+\makeatother
+\begin{document}
+\pagestyle{plain}
+x\end{document}
 ```

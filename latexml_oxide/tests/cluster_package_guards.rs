@@ -5291,6 +5291,63 @@ B=\IfFormatAtLeastTF{2020/01/01}{Y}{N}.
     assert!(xml.contains("B=Y."), "{xml}");
   }
 
+  /// latex.ltx `\@sect` compares the `\@startsection` level with
+  /// `\ifnum #2>\c@secnumdepth` — a TeX <number>. scrartcl.cls L3421/L3425
+  /// pass every heading's level as `{\numexpr #2\relax}` (`#2` =
+  /// `\csname <name>numdepth\endcsname`). RED: the level was string-parsed
+  /// (Perl's `$level > …` coercion → 0), so `\paragraph` (level 4 >
+  /// secnumdepth 3) got NUMBERED under every raw KOMA class, and a
+  /// `\DeclareSectionCommand` heading with an unknown type opened a warned
+  /// `ltx:section` regardless of its level (witness tudaexercise
+  /// `\DeclareNewSectionCommand[level=2]{task}`: `<section xml:id="task1">`
+  /// plus `Warning:malformed:ltx:task`). The unknown type is now bound to
+  /// the element of its level (`SECTION_ELEMENT` mapping, OXIDIZED_DESIGN #175).
+  #[test]
+  fn startsection_level_is_a_tex_number() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\makeatletter
+\newcounter{deep}\def\deepnumdepth{4}
+\newcommand\deep{\@startsection{deep}{\numexpr\deepnumdepth\relax}{\z@}{1ex}{1ex}{\bfseries}}
+\newcounter{task}[section]\renewcommand\thetask{\thesection.\arabic{task}}
+\newcommand\task{\@startsection{task}{\numexpr 2\relax}{\z@}{1ex}{1ex}{\bfseries}}
+\makeatother
+\begin{document}
+\section{S}
+\task{T}
+\deep{D}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("malformed"), "{stderr}");
+    assert!(
+      xml.contains(r#"<subsection inlist="toc" xml:id="S1.task1">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<title><tag close=" ">1.1</tag>T</title>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<paragraph inlist="toc" xml:id="deepx1">"#),
+      "{xml}"
+    );
+    assert!(xml.contains("<title>D</title>"), "{xml}");
+  }
+
+  const KOMA_TASK: &str = r"\documentclass{scrartcl}
+\DeclareNewSectionCommand[style=section,level=2,counterwithin=section,tocstyle=section,indent=0pt,tocindent=1.5em,tocnumwidth=2.3em,beforeskip=1ex,afterskip=1ex,font=\bfseries]{task}
+\begin{document}
+\section{One}
+\subsection{Sub}
+\task{A task}
+Body.
+\paragraph{Para} text.
+\end{document}
+";
+
   /// l2tabu/l2tabuen: `\@declaredoptions` must expand to the declared option
   /// list (latex.ltx L18536 `\xdef\@declaredoptions{\@declaredoptions,#1}`;
   /// the Perl pool L784 binds it EMPTY). scrbase.sty L365 walks it after
@@ -5464,6 +5521,68 @@ P=[\csname g_my_paper_tl\endcsname] C=[\csname g_my_color_tl\endcsname]
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("P=[A5] C=[black]"), "{xml}");
+  }
+
+  /// TeX's `\addcontentsline` (latex.ltx L17351-17363) writes its title to
+  /// the .toc through `\protected@write`, never typesetting it, which is
+  /// what makes LaTeX's write-only self-`\protect` idiom
+  /// `\def\appfmt#1{\protect\appfmt{#1}}` (nlctuserguide.sty L1553
+  /// `\@loe@disable@cmds`) safe. RED: the constructor digested the (then
+  /// discarded) title with `\protect`=`\relax`, so the macro re-expanded to
+  /// itself — `Fatal:Timeout:Recursion` (9-token window) or `TokenLimit`
+  /// (13-token, past the cycle guard's window). Witness glossaries-user
+  /// examples `ex:xdy`/`ex:mkidx`; Perl 0.8.8 hangs on this repro
+  /// (KNOWN_PERL_ERRORS #120).
+  #[test]
+  fn addcontentsline_title_is_not_digested() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\newcommand*{\appfmt}[1]{\texttt{#1}}
+\makeatletter
+\begin{document}
+\def\thetitle{uses \appfmt{xindy}}%
+\def\appfmt#1{\protect\appfmt{#1}}% \@loe@disable@cmds idiom
+\addcontentsline{toc}{section}{\thetitle}%
+done\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains(">done<"), "{xml}");
+  }
+
+  /// latex.ltx L18297-18300 defines `\pagestyle` as a plain `\def`;
+  /// scrlayer.sty L2183-2196 redefines it with the triple-`\expandafter`
+  /// freeze that inlines the OLD body at definition time. RED: `\pagestyle`
+  /// was a non-expandable primitive no-op, so the literal `\pagestyle{#1}`
+  /// survived in the new body and every later call recursed
+  /// (`Fatal:Timeout:Recursion`; raw scrlayer: `PushbackLimit` at
+  /// `\begin{document}` from `\AtBeginDocument{\pagestyle{test}}`). Perl
+  /// 0.8.8 hangs the same way (KNOWN_PERL_ERRORS #121). Witnesses
+  /// DEMO-TUDaPhD/TUDaThesis, neoschool, bfh-ci (raw scrlayer-scrpage).
+  #[test]
+  fn pagestyle_expandafter_freeze_terminates() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\makeatletter
+\expandafter\expandafter\expandafter\renewcommand
+\expandafter\expandafter\expandafter*%
+\expandafter\expandafter\expandafter\pagestyle
+\expandafter\expandafter\expandafter[%
+\expandafter\expandafter\expandafter1%
+\expandafter\expandafter\expandafter]%
+\expandafter\expandafter\expandafter{\pagestyle{#1}}%
+\makeatother
+\begin{document}
+\pagestyle{plain}\thispagestyle{empty}
+Hello\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains(">Hello<"), "{xml}");
   }
 
   /// The `\opt@<file>` macro (latex.ltx `\@pass@ptions`, `\@ptionlist`)

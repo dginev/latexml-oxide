@@ -101,6 +101,67 @@ fn strip_trailing_cs(stype: &str) -> String {
   stype.to_string()
 }
 
+/// The standard sectioning element for a `\@startsection` level, per
+/// latex.ltx's class conventions (classes.dtx: part −1, chapter 0, section 1,
+/// subsection 2, subsubsection 3, paragraph 4, subparagraph 5).
+fn section_element_for_level(level: i64) -> &'static str {
+  match level {
+    i64::MIN..=-1 => "ltx:part",
+    0 => "ltx:chapter",
+    1 => "ltx:section",
+    2 => "ltx:subsection",
+    3 => "ltx:subsubsection",
+    4 => "ltx:paragraph",
+    _ => "ltx:subparagraph",
+  }
+}
+
+/// Is `stype` one of the sectioning tag names the LaTeXML schema knows?
+fn is_known_section_type(stype: &str) -> bool {
+  matches!(
+    stype,
+    "part"
+      | "chapter"
+      | "section"
+      | "subsection"
+      | "subsubsection"
+      | "paragraph"
+      | "subparagraph"
+      | "appendix"
+      | "bibliography"
+      | "index"
+  )
+}
+
+/// The element `\@@numbered@section` / `\@@unnumbered@section` open for a
+/// section type. Mirrors Perl `latex_constructs.pool.ltxml:599-607`: a known
+/// schema tag is used as-is, `app` → `ltx:appendix`; otherwise Perl warns
+/// `malformed` and falls back to `ltx:section`. Before that fallback we consult
+/// the `SECTION_ELEMENT` mapping `\@startsection` records for a type it does
+/// not know, keyed by the heading LEVEL (`\DeclareSectionCommand`-defined
+/// headings — KOMA `\DeclareNewSectionCommand[level=2,…]{task}`, witness
+/// tudaexercise — carry their level only there), so the heading opens the
+/// element of its level instead of a warned `ltx:section`.
+fn section_element_for_type(stype: &str, numbered: bool) -> String {
+  let candidate = s!("ltx:{stype}");
+  if is_known_section_type(stype) {
+    candidate
+  } else if stype == "app" {
+    "ltx:appendix".to_string()
+  } else if let Some(mapped) = lookup_mapping("SECTION_ELEMENT", stype) {
+    // OXIDIZED_DESIGN #175 (level-keyed element; KNOWN_PERL_ERRORS #118).
+    mapped.to_string()
+  } else {
+    let kind = if numbered { "numbered" } else { "unnumbered" };
+    Warn!(
+      "malformed",
+      &candidate,
+      s!("Tried to open an unknown tag {candidate} for {kind} section")
+    );
+    "ltx:section".to_string()
+  }
+}
+
 /// Mirror of Perl `latex_constructs.pool.ltxml:2569-2574`'s
 /// `getShortSource =~ /^plain/` check. Two locator shapes count as
 /// "from plain":
@@ -4294,11 +4355,36 @@ LoadDefinitions!({
           assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
-      // Main logic — Perl's `$level > ...` coerces non-numeric to 0 via
-      // implicit numeric context; match that with unwrap_or(0) rather than
-      // panicking when a caller passes a surprising value.
+      // Main logic. The level is a TeX <number> — latex.ltx `\@sect` compares
+      // it with `\ifnum #2>\c@secnumdepth` — so a non-literal level is READ as
+      // one: scrartcl.cls L3421/L3425 pass every heading's level as
+      // `{\numexpr #2\relax}` with `#2` = `\csname <name>numdepth\endcsname`.
+      // Perl's `$level > …` string-coerces that to 0, numbering every KOMA
+      // heading down to `\subparagraph` (witness tudaexercise / any raw KOMA
+      // class; guard `perfect_kernel_batch53::startsection_level_is_a_tex_number`).
+      // An empty or unreadable level still coerces to 0 as in Perl.
       let level = level_arg.to_string();
-      let level_int = level.trim().parse::<i64>().unwrap_or(0);
+      let level_int = match level.trim().parse::<i64>() {
+        Ok(n) => n,
+        Err(_) if level.trim().is_empty() => 0,
+        Err(_) => {
+          let level_tokens = level_arg.clone();
+          let mouth = Mouth::new("", None)?;
+          reading_from_mouth(mouth, move || {
+            unread(level_tokens);
+            read_number()
+          })
+          .map(|n| n.value_of())
+          .unwrap_or(0)
+        },
+      };
+      // A section type the schema does not know (`\DeclareSectionCommand`
+      // headings) is bound to the element of its level here — the only place
+      // the level is visible; see `section_element_for_type`.
+      let stype = strip_trailing_cs(type_tokens.to_string().trim());
+      if !stype.is_empty() && !is_known_section_type(&stype) && stype != "app" {
+        assign_mapping("SECTION_ELEMENT", &stype, Some(pin(section_element_for_level(level_int))));
+      }
       let mut tokens: Vec<Token>;
       if flag.is_some() { // No number, not in TOC
         tokens = vec![
@@ -4353,22 +4439,7 @@ LoadDefinitions!({
       // `\newcommand\Proof{\@startsection{Proof}{5}{...}}` (e.g.
       // mst-stylefile.sty in 1608.04650) opened `<ltx:Proof>` and cascaded
       // 1500+ malformed errors on every nested element.
-      let tagname = {
-        let candidate = s!("ltx:{stype}");
-        // Known sectioning tags in the LaTeXML schema:
-        let known = matches!(stype.as_str(),
-          "part" | "chapter" | "section" | "subsection" | "subsubsection"
-          | "paragraph" | "subparagraph" | "appendix" | "bibliography" | "index");
-        if known {
-          candidate
-        } else if stype == "app" {
-          "ltx:appendix".to_string()
-        } else {
-          Warn!("malformed", &candidate,
-            s!("Tried to open an unknown tag {} for numbered section", candidate));
-          "ltx:section".to_string()
-        }
-      };
+      let tagname = section_element_for_type(&stype, true);
       document.open_element(&tagname,
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
@@ -4464,21 +4535,7 @@ LoadDefinitions!({
       // Mirror the same schema sanitization as \@@numbered@section above.
       // Cluster A: strip trailing CS (e.g. \par) from stype.
       let stype_str = strip_trailing_cs(&stype.to_string());
-      let tagname = {
-        let candidate = s!("ltx:{stype_str}");
-        let known = matches!(stype_str.as_str(),
-          "part" | "chapter" | "section" | "subsection" | "subsubsection"
-          | "paragraph" | "subparagraph" | "appendix" | "bibliography" | "index");
-        if known {
-          candidate
-        } else if stype_str == "app" {
-          "ltx:appendix".to_string()
-        } else {
-          Warn!("malformed", &candidate,
-            s!("Tried to open an unknown tag {} for unnumbered section", candidate));
-          "ltx:section".to_string()
-        }
-      };
+      let tagname = section_element_for_type(&stype_str, false);
       document.open_element(&tagname,
         Some(string_map!(
           "xml:id" => clean_id(&id),
@@ -4642,7 +4699,19 @@ LoadDefinitions!({
   def_primitive_noop("\\numberline{}{}")?;
   def_primitive_noop("\\addtocontents{}{}")?;
 
-  DefConstructor!("\\addcontentsline{}{}{}", sub[document,args] {
+  // The title (#3) is `Undigested`: TeX's `\addcontentsline` (latex.ltx
+  // L17351-17363) hands #3 to `\protected@write`, where `\protect` is
+  // `\@unexpandable@protect` and the text is written to the .toc, NEVER
+  // typeset. Perl digests it (latex_constructs.pool.ltxml L749 `{}{}{}`) and
+  // discards the result — dead work that hangs on LaTeX's write-only
+  // self-`\protect` idiom `\def\appfmt#1{\protect\appfmt{#1}}`
+  // (nlctuserguide.sty L1553 `\@loe@disable@cmds`): `\protect`=`\relax`
+  // under digestion, so the macro re-expands to itself forever. Witness
+  // glossaries-user (Fatal:Timeout:Recursion / TokenLimit, reached once the
+  // raw KOMA `\numberline` became 1-arg and stopped swallowing the title).
+  // Perl hangs on the 8-line repro. KNOWN_PERL_ERRORS #120; guard
+  // `perfect_kernel_batch53::addcontentsline_title_is_not_digested`.
+  DefConstructor!("\\addcontentsline{}{} Undigested", sub[document,args] {
       if let [inlist,_vtype,_title @ ..] = args.as_slice() {
         // Note that the node can be inlist $inlist.
         // Could conceivably want to add $title as toctitle???
@@ -5223,8 +5292,21 @@ LoadDefinitions!({
   Let!("\\@leftmark", "\\@firstoftwo");
   Let!("\\@rightmark", "\\@secondoftwo");
 
-  def_primitive_noop("\\pagestyle{}")?;
-  def_primitive_noop("\\thispagestyle{}")?;
+  // Expandable no-op MACROS, not primitives (Perl latex_constructs.pool.ltxml
+  // L997-998 uses DefPrimitive). latex.ltx L18297-18300 defines `\pagestyle`
+  // as a plain `\def`, and scrlayer.sty L2183-2196 patches it with the
+  // triple-`\expandafter` freeze (`\renewcommand*\pagestyle[1]{\expandafter
+  // \reserved@a\pagestyle{#1}…}`) that inlines the OLD body at definition
+  // time. A non-expandable primitive cannot be inlined, so the literal
+  // `\pagestyle{#1}` survives in the new body and `\AtBeginDocument
+  // {\pagestyle{test}}` (scrlayer.sty L2198-2213) recurses forever
+  // (Fatal:Timeout:PushbackLimit / Recursion; Perl 0.8.8 hangs on the same
+  // 13-line freeze repro). The page style stays ignored either way — only
+  // gullet-expandability is restored. Witness DEMO-TUDaPhD/TUDaThesis,
+  // neoschool, bfh-ci (raw scrlayer-scrpage). KNOWN_PERL_ERRORS #121; guard
+  // `perfect_kernel_batch53::pagestyle_expandafter_freeze_terminates`.
+  def_macro_noop("\\pagestyle{}")?;
+  def_macro_noop("\\thispagestyle{}")?;
   def_primitive_noop("\\markright{}")?;
   def_primitive_noop("\\markboth{}{}")?;
   def_primitive_noop("\\leftmark")?;

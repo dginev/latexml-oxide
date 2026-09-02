@@ -6439,3 +6439,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Rust behavior**: the emitted expansion wraps the sort key in a brace group (`[{<sortas>}]`), which the optional reader treats as opaque; `clean_index_key` strips exactly one whole-span outer pair.
 **Why**: KNOWN_PERL_ERRORS #83 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
 **Witnesses**: exam/examdoc 39-error family → 0; pgfornament docs.
+
+### 175. Unknown section types open the element of their `\@startsection` LEVEL (Perl warns and opens `ltx:section`)
+
+**Perl behavior**: `\@@numbered@section`/`\@@unnumbered@section` sanitize the type name against the schema (latex_constructs.pool.ltxml:599-607): a name that is not a known sectioning tag (and not `app`) gets `Warn('malformed', …)` and falls back to `ltx:section`, whatever its level. `\DeclareSectionCommand`-defined headings (KOMA `\DeclareNewSectionCommand[level=2,…]{task}`, tudaexercise; `\newcommand\Proof{\@startsection{Proof}{5}…}`, 1608.04650) therefore all become warned `<ltx:section>`s, breaking the nesting of the real headings around them.
+**Rust behavior**: `\@startsection` — the only place the level is visible — records a `SECTION_ELEMENT` mapping for a type it does not know (part −1, chapter 0, section 1, subsection 2, subsubsection 3, paragraph 4, subparagraph ≥5, classes.dtx conventions); `section_element_for_type` consults it before Perl's warned fallback, which remains for a type that never went through `\@startsection`.
+**Why**: the fallback is Perl's own error-recovery path (a `malformed` warning is emitted), and the level is exactly the information LaTeX uses to place the heading — kernel-quality recovery, no TeX-semantics change; output changes only where Perl warned. Pairs with KNOWN_PERL_ERRORS #118 (the level is now read as a TeX <number>, so `\numexpr` levels work at all).
+**Witnesses**: tudaexercise (`\task` → `<subsection>`, `Warning:malformed:ltx:task` gone), 1608.04650 `\Proof` → `<subparagraph>`.
+**Guard**: `perfect_kernel_batch53::startsection_level_is_a_tex_number`, `koma_declaresectioncommand_heading_is_a_subsection`.
+**Upstream**: not yet filed.
