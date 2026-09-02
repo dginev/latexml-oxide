@@ -7492,4 +7492,48 @@ After.
     );
     assert_eq!(xml.matches("<td").count(), 2, "{xml}");
   }
+
+  /// latex.ltx:18856 runs the `-h@@k` before `\@popfilename` restores
+  /// `\catcode`\@`, so `\AtEndOfPackage` code reads `@`-names as single
+  /// control sequences: europecv.cls:27 inputs `ecven.def` from the hook and
+  /// its `\ecv@utf` split into `\ecv`+`@utf` looped the title row to the
+  /// pushback limit (KNOWN_PERL_ERRORS #132).
+  #[test]
+  fn at_end_of_package_hook_runs_with_at_letter() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("hookcls.cls"),
+      "\\ProvidesClass{hookcls}\n\
+       \\AtEndOfPackage{\\InputIfFileExists{hookcls.def}{}{}}\n\
+       \\newcommand\\hook@one{ONE}\n\
+       \\LoadClass{article}\n",
+    )
+    .expect("write cls");
+    std::fs::write(
+      workdir.path().join("hookcls.def"),
+      "\\providecommand\\hooktwo{[\\hook@one]}\n",
+    )
+    .expect("write def");
+    std::fs::write(
+      workdir.path().join("t.tex"),
+      "\\documentclass{hookcls}\n\\begin{document}\n\\hooktwo\n\\end{document}\n",
+    )
+    .expect("write tex");
+    let output = std::process::Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--preload=[rawstyles,rawclasses]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[ONE]"), "{xml}");
+  }
 }

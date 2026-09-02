@@ -960,7 +960,19 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
 
   if options.handleoptions {
     if is_binding || is_found_raw {
-      digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))?;
+      // latex.ltx:18856 runs `\<name>.<ext>-h@@k` inside `\@onefilewithoptions`,
+      // BEFORE `\@popfilename` (L18801) restores `\catcode`\@`, so
+      // `\AtEndOfPackage` code sees `@` as a letter: europecv.cls:27
+      // `\AtEndOfPackage{\InputIfFileExists{ecven.def}…}` reads `\ecv@utf`
+      // names from the .def, and a `\ecv` + `@utf` split loops the title
+      // row to the pushback limit (europecv manual, KNOWN_PERL_ERRORS #132 —
+      // Perl digests the hook after the raw Mouth's catcode restore too).
+      // Guard: `perfect_kernel_batch54::at_end_of_package_hook_runs_with_at_letter`.
+      let saved_at = lookup_catcode('@');
+      assign_catcode('@', Catcode::LETTER, None);
+      let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")));
+      assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
+      hook?;
     }
     // Always restore @currname/@currext and pop filename stack,
     // even when no binding was found, to keep the stack balanced.

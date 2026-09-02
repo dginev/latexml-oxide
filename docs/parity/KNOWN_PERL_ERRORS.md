@@ -4955,3 +4955,26 @@ before OXIDIZED_DESIGN #176, in Rust. Guard:
 \halign{\vrule height 12pt width 0pt#&\vrule#&#\cr &&a\cr}
 \end{document}
 ```
+
+## 132. `\AtEndOfPackage` code runs after `@`'s catcode is restored (Rust fixes)
+
+latex.ltx:18856 fires `\<name>.<ext>-h@@k` inside `\@onefilewithoptions`,
+before `\@popfilename` (L18801) restores `\catcode`\@`, so hook code sees `@`
+as a letter. Perl's `InputDefinitions` (Package.pm L2651) digests the hook
+after `loadTeXDefinitions` returns — the raw Mouth's `finish` (Mouth.pm L117)
+has already put `@` back to other — so a `.def` inputted from the hook is read
+with `@` other: europecv.cls:27 `\AtEndOfPackage{\InputIfFileExists{ecven.def}…}`
+splits `\ecv@utf` into `\ecv`+`@utf` and the title row loops to the pushback
+limit (europecv manual: Fatal; Rust now 0 errors in 3.9 s). Rust sets `@`
+to letter around the hook digest (`binding/content.rs`). Guard:
+`perfect_kernel_batch54::at_end_of_package_hook_runs_with_at_letter`.
+
+```latex
+% hookcls.cls
+\ProvidesClass{hookcls}
+\AtEndOfPackage{\InputIfFileExists{hookcls.def}{}{}}
+\newcommand\hook@one{ONE}
+\LoadClass{article}
+% hookcls.def:  \providecommand\hooktwo{[\hook@one]}
+% t.tex:  \documentclass{hookcls}\begin{document}\hooktwo\end{document}
+```
