@@ -6075,3 +6075,92 @@ E=[\my@extra] W=[\my@width]
     assert!(xml.contains("E=[[english][foo=bar]] W=[3cm]"), "{xml}");
   }
 }
+
+mod perfect_kernel_batch54 {
+  //! Red/green guards for perfect-kernel batch 54 (wave-4 root-causer
+  //! reports over the sweep-28 residuals). Each test is the minimal
+  //! reproduction distilled during triage; the doc-comment names the
+  //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
+  //! was vetted separately.
+  use super::perfect_kernel_batch46::{convert, error_count};
+
+  /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
+  /// through the same `\blx@defformat` as their non-Index siblings, and
+  /// :14133 `\DeclareDriverSourcemap[2][]`. The native binding no-ops the
+  /// siblings but omitted these, so an undefined-CS stub (zero args) left
+  /// each declaration BODY in the document: `#1` reached the Stomach
+  /// (`misdefined:#`) and `\nameparts`/`\usebibmacro`/`\actualoperator`/
+  /// `\map`/`\step` fired as undefined (cnltx.bbx:131-210; witnesses
+  /// cnltx_en, endiagram_en, chemformula-manual — 7 `#` + 11 undefined each).
+  #[test]
+  fn bbx_declaration_bodies_are_absorbed() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{biblatex}
+\DeclareIndexFieldFormat[package]{title}{#1}
+\DeclareIndexListFormat{cnltx}{#1}
+\DeclareIndexNameFormat{cnltx}{\nameparts{#1}\usebibmacro{index:entry}{#1}\actualoperator}
+\DeclareDriverSourcemap[datatype=bibtex]{\map{\step[fieldsource=info, fieldtarget=subtitle]}}
+\begin{document}
+Hello.\usebibmacro*{index:entry}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("misdefined"), "{stderr}");
+    assert!(!xml.contains("ltx:ERROR") && !xml.contains("<ERROR"), "{xml}");
+    assert!(!xml.contains("[package]title"), "{xml}");
+    assert!(xml.contains("<p>Hello.</p>"), "{xml}");
+  }
+
+  /// biblatex.sty:9436 `\defbibcheck[2]`, :7029 `\DeclareRedundantLanguages[2]`
+  /// and :9784 `\printbibheading` (one `\@ifnextchar[` optional). Undefined
+  /// `\defbibcheck` (arthistory-bonn.bbx:199) leaked its check body, whose
+  /// `\ifcsdef{\strfield{series}}` mis-nested into a live `\iffalse` that
+  /// scanned to the .bbx end of file (`expected:\fi`), eating the document's
+  /// `\printbibheading` (witness rub-kunstgeschichte-example: 4 errors → 0).
+  #[test]
+  fn biblatex_check_and_heading_commands_absorb_args() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{biblatex}
+\DeclareRedundantLanguages{german}{german,ngerman}
+\defbibcheck{shortseries}{\iffieldundef{series}{\skipentry}{\ifcsdef{\strfield{series}}{\skipentry}{}}}
+\begin{document}
+A.\printbibheading[title=Works]B.\printbibheading C.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("iffalse"), "{stderr}");
+    assert!(xml.contains("A.B.C."), "{xml}");
+  }
+
+  /// `\usetikzlibrary{hobby}` → tikzlibraryhobby.code.tex:16 → pgflibraryhobby
+  /// .code.tex:16 `\input{hobby.code.tex}`. A `Warn!`-only refusal stub
+  /// (`hobby_code_tex.rs`, added for arXiv 2111.02755 "until our LaTeX3 support
+  /// is ready") intercepted that `\input`, so `\hobbyVersion`/`\hobbyDate`
+  /// (hobby.code.tex:36/40) and `\hobbyinit` (:668) were undefined and the
+  /// zero-arg ERROR stub for `\hobbyinit` left `\curvethrough`'s
+  /// (tikzlibraryhobby.code.tex:210) `\relax`-delimited point scan to run to
+  /// end of input (witness hobby/hobby: 5 errors + EoF Fatal). The real file
+  /// (expl3 + pml3array) now raw-loads clean; the stub is retired.
+  #[test]
+  fn hobby_code_tex_raw_loads() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{hobby}
+\begin{document}
+V=\hobbyVersion\ from \hobbyDate.
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("hobby.code.tex is not implemented"), "{stderr}");
+    assert!(xml.contains("V=1.12 from 2023-09-01."), "{xml}");
+  }
+}

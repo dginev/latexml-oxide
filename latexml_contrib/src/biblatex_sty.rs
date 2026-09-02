@@ -1915,6 +1915,12 @@ LoadDefinitions!({
   // style-file sibling.
   def_macro_noop("\\DeclareSourcemap{}")?;
   def_macro_noop("\\DeclareStyleSourcemap{}")?;
+  // biblatex.sty:14133 `\newrobustcmd*{\DeclareDriverSourcemap}[2][]` — the
+  // driver-level sibling; cnltx.bbx:210 `\DeclareDriverSourcemap[datatype=bibtex]
+  // {\map{\step[…]}}`. Undefined, the `\map`/`\step` body leaked into the
+  // document (witnesses cnltx_en, endiagram_en, chemformula-manual). Guard:
+  // `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_macro_noop("\\DeclareDriverSourcemap[]{}")?;
 
   // Perl L429-434: language API (no-ops)
   def_macro_noop("\\DeclareLanguageMapping{}{}")?;
@@ -1928,6 +1934,16 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareNameFormat OptionalMatch:* []{}{}")?;
   def_macro_noop("\\DeclareListFormat OptionalMatch:* []{}{}")?;
   def_macro_noop("\\DeclareFieldFormat OptionalMatch:* []{}{}")?;
+  // biblatex.sty:4407-4425: the `\DeclareIndex{Name,List,Field}Format` forms
+  // share `\blx@defformat` (and thus the exact signature) with their
+  // non-Index siblings above. cnltx.bbx:131-163 declares six index field
+  // formats and one index name format whose `#1` bodies, left unabsorbed,
+  // reached the Stomach (`misdefined:#`) and fired `\nameparts`/`\usebibmacro`
+  // /`\actualoperator` as undefined (witnesses cnltx_en, endiagram_en,
+  // chemformula-manual). Guard: `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_macro_noop("\\DeclareIndexNameFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareIndexListFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareIndexFieldFormat OptionalMatch:* []{}{}")?;
 
   // Perl L440-458
   def_macro_noop("\\DeclareNameInputHandler{}{}")?;
@@ -2010,6 +2026,24 @@ LoadDefinitions!({
   def_macro_noop("\\newbibmacro OptionalMatch:* {}[][]{}")?;
   def_macro_noop("\\restorebibmacro OptionalMatch:* {}")?;
   def_macro_noop("\\savebibmacro OptionalMatch:* {}")?;
+  // biblatex.sty:2393 `\newrobustcmd*{\usebibmacro}` (`\@ifstar`, one
+  // mandatory arg). The binding never runs the bibmacros it stores as no-ops
+  // (the bibliography is rendered from the model), so a use is a no-op too;
+  // undefined, it fired inside every `.bbx` format body that reached the
+  // document (cnltx.bbx:164; rub-kunstgeschichte example). Guard:
+  // `perfect_kernel_batch54::bbx_declaration_bodies_are_absorbed`.
+  def_macro_noop("\\usebibmacro OptionalMatch:* {}")?;
+  // biblatex.sty:9436 `\newrobustcmd*{\defbibcheck}[2]` and :7029
+  // `\newrobustcmd*{\DeclareRedundantLanguages}[2]`: arthistory-bonn.bbx:159/199.
+  // Undefined `\defbibcheck` leaked its check body, whose `\ifcsdef{\strfield…}`
+  // mis-nested into a live `\iffalse` that scanned to the .bbx EOF (witness
+  // rub-kunstgeschichte-example: 3 undefined → 4 errors). :9784
+  // `\printbibheading` takes one `\@ifnextchar[` optional (the standalone
+  // heading; `\printbibliography` renders the list natively). Guard:
+  // `perfect_kernel_batch54::biblatex_check_and_heading_commands_absorb_args`.
+  def_macro_noop("\\defbibcheck{}{}")?;
+  def_macro_noop("\\DeclareRedundantLanguages{}{}")?;
+  def_macro_noop("\\printbibheading[]")?;
   def_macro_noop("\\defbibheading OptionalMatch:* {}[]{}")?;
   def_macro_noop("\\defbibenvironment OptionalMatch:* {}{}{}{}")?;
   def_macro_noop("\\restorecommand OptionalMatch:* {}")?;
