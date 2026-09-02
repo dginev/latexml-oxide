@@ -241,8 +241,30 @@ LoadDefinitions!({
   // DefMacro!("\\ifpdfprimitive {}",None);
   // DefMacro!("\\ifpdfabsnum Number"",None);
   // DefMacro!("\\ifpdfabsdim Dimension"",None);
-  def_macro_noop("\\pdfuniformdeviate Number Token")?;
-  def_macro_noop("\\pdfnormaldeviate Token")?;
+  // pdfTeX §"random numbers": `\pdfuniformdeviate <number>` expands to a
+  // pseudo-random integer in [0, number) (negative bounds mirror), and
+  // `\pdfnormaldeviate` to a normal deviate scaled by 2^16, both from a
+  // generator seeded by `\pdfsetrandomseed`/`\pdfrandomseed`. Perl
+  // (pdfTeX.pool:110-111) makes them empty macros that also EAT the next
+  // token — expl3's `\int_rand:nn` (`\tex_uniformdeviate:D 268435456
+  // \__fp_sep:`, expl3-code.tex:21876) lost its `\__fp_sep:` and every random
+  // integer collapsed to the midpoint, so rejection-sampling loops ("draw
+  // until distinct": randintlist-l3 manual, `\randintlist`) never terminate
+  // (TokenLimit). A deterministic generator (fixed seed unless the document
+  // sets one) keeps conversions reproducible while giving real distributions.
+  DefMacro!("\\pdfuniformdeviate Number", sub[(n)] {
+    let n = n.value_of();
+    let r = pdftex_random_next();
+    let v = if n == 0 { 0 } else { (r % n.unsigned_abs()) as i64 * n.signum() };
+    Tokens!(Explode!(v.to_string()))
+  });
+  DefMacro!("\\pdfnormaldeviate", sub[_args] {
+    // Box-Muller on two uniforms, scaled like pdfTeX (mean 0, sd 65536).
+    let u1 = (pdftex_random_next() % 1_000_000 + 1) as f64 / 1_000_001.0;
+    let u2 = (pdftex_random_next() % 1_000_000) as f64 / 1_000_000.0;
+    let z = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
+    Tokens!(Explode!(((z * 65536.0) as i64).to_string()))
+  });
   // pdfTeX \pdfmdfivesum syntax:
   //   \pdfmdfivesum <general text>      (MD5 of literal string)
   //   \pdfmdfivesum file <general text> (MD5 of file contents)
@@ -410,7 +432,11 @@ LoadDefinitions!({
   def_primitive_noop("\\pdfresettimer")?;
   def_primitive_noop("\\pdfresettimerresettimer")?;
   // \pdfsetrandomseed number
-  def_primitive_noop("\\pdfsetrandomseed Number")?;
+  DefPrimitive!("\\pdfsetrandomseed Number", sub[(seed)] {
+    let seed = seed.value_of();
+    assign_register("\\pdfrandomseed", RegisterValue::Number(Number::new(seed)), Some(Scope::Global), Vec::new())?;
+    pdftex_random_seed(seed);
+  });
   // \pdfnoligatures font (really a Token, but at this stub level we
   // just need to consume a single token argument)
   def_primitive_noop("\\pdfnoligatures Token")?;
@@ -610,4 +636,33 @@ mod md5_tests {
       "57EDF4A22BE3C955AC49DA2E2107B67A"
     );
   }
+}
+
+thread_local! {
+  /// pdfTeX random-number state (xorshift64*), reset per conversion by the
+  /// engine's thread-state reset through [`pdftex_random_seed`].
+  static PDFTEX_RANDOM: std::cell::Cell<u64> = const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+}
+
+/// Re-seed the pdfTeX generator (`\pdfsetrandomseed`; 0 selects the default
+/// fixed seed so an unseeded document converts reproducibly).
+pub fn pdftex_random_seed(seed: i64) {
+  let s = if seed == 0 {
+    0x9E37_79B9_7F4A_7C15
+  } else {
+    (seed as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1
+  };
+  PDFTEX_RANDOM.with(|c| c.set(s));
+}
+
+/// Next 63-bit pseudo-random value (xorshift64*).
+fn pdftex_random_next() -> u64 {
+  PDFTEX_RANDOM.with(|c| {
+    let mut x = c.get();
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    c.set(x);
+    x.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 1
+  })
 }

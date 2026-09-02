@@ -7338,4 +7338,49 @@ l & c & r \\
     );
     assert_eq!(cells(rows[6]), ["LEFT", "CENTER", "RIGHT"], "{xml}");
   }
+
+  /// pdfTeX `\pdfuniformdeviate <n>` expands to a random integer in [0,n);
+  /// the empty macro (Perl pdfTeX.pool:110) also ate the next token, so expl3's
+  /// `\int_rand:nn` (`\tex_uniformdeviate:D 268435456 \__fp_sep:`) lost its
+  /// separator and returned the midpoint — rejection-sampling loops never
+  /// terminated (randintlist-l3 manual, TokenLimit). Deterministic seed:
+  /// the same document converts identically; `\pdfsetrandomseed` re-seeds.
+  #[test]
+  fn pdfuniformdeviate_is_a_random_integer() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+[\int_rand:nn{1}{1000},\int_rand:nn{1}{1000},\int_rand:nn{1}{1000},\int_rand:nn{1}{1000}]
+[\pdfuniformdeviate 10 ,\pdfuniformdeviate 10 ,\pdfuniformdeviate 10 ,\pdfuniformdeviate 10 ,\pdfuniformdeviate 10 ,\pdfuniformdeviate 10 ]
+\pdfsetrandomseed 42 [\the\pdfrandomseed]
+\ExplSyntaxOff
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let (_, xml2) = convert(tex, false);
+    assert_eq!(
+      xml, xml2,
+      "random stream must be deterministic per conversion"
+    );
+    let first = xml.split('[').nth(1).unwrap().split(']').next().unwrap();
+    let vals: Vec<i64> = first
+      .split(',')
+      .map(|v| v.trim().parse().unwrap())
+      .collect();
+    assert_eq!(vals.len(), 4, "{xml}");
+    assert!(vals.iter().all(|&v| (1..=1000).contains(&v)), "{xml}");
+    assert!(
+      vals.windows(2).any(|w| w[0] != w[1]),
+      "constant stream: {xml}"
+    );
+    let second = xml.split('[').nth(2).unwrap().split(']').next().unwrap();
+    assert!(
+      second
+        .split(',')
+        .all(|v| (0..10).contains(&v.trim().parse::<i64>().unwrap())),
+      "{xml}"
+    );
+    assert!(xml.contains("[42]"), "{xml}");
+  }
 }
