@@ -7466,4 +7466,30 @@ After.
       "{xml}"
     );
   }
+
+  /// OXIDIZED_DESIGN #176 / KNOWN_PERL_ERRORS #131: a zero-width `\vrule` is a
+  /// strut, not a column rule — with the real `\strutbox` every TeXbook
+  /// `\halign{\strut#&\vrule#&…}` template (halignatt.tex) otherwise grew an
+  /// empty bordered cell per row, and Perl marks the explicit idiom
+  /// `border="ll"`.
+  #[test]
+  fn zero_width_vrule_is_a_strut_not_a_border() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\halign{\vrule height 12pt width 0pt#&\vrule#&#\cr &&a\cr}
+\halign{\strut#&\vrule#&#\cr &&b\cr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<td align="left" border="l" class="ltx_nopad_l ltx_nopad_r">a</td>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<td align="left" border="l" class="ltx_nopad_l ltx_nopad_r">b</td>"#),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<td").count(), 2, "{xml}");
+  }
 }

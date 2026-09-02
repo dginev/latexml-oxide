@@ -4939,3 +4939,19 @@ Trigger:
 \end{minipage}\end{minipage}\end{center}
 \end{document}
 ```
+
+## 131. A zero-width `\vrule` strut inside an alignment becomes a cell border (Rust fixes)
+
+TeX_Box.pool.ltxml L811-814 tests the alignment branch first: any
+`\vrule` with `h > 3 * w` is `isVerticalRule`, so the standard strut
+`\vrule height 12pt width 0pt` (and a real `\strutbox`, if a class ever
+sets one) is a column rule — `border="ll"` on the cell below in Perl and,
+before OXIDIZED_DESIGN #176, in Rust. Guard:
+`perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`.
+
+```latex
+\documentclass{article}
+\begin{document}
+\halign{\vrule height 12pt width 0pt#&\vrule#&#\cr &&a\cr}
+\end{document}
+```

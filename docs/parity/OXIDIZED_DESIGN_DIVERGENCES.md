@@ -6448,3 +6448,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: tudaexercise (`\task` → `<subsection>`, `Warning:malformed:ltx:task` gone), 1608.04650 `\Proof` → `<subparagraph>`.
 **Guard**: `perfect_kernel_batch53::startsection_level_is_a_tex_number`, `koma_declaresectioncommand_heading_is_a_subsection`.
 **Upstream**: not yet filed.
+
+### 176. A zero-width `\vrule` is a strut, never an alignment border (Perl marks it a column rule)
+
+**Perl behavior**: `\vrule` inside an alignment sets `isVerticalRule` whenever `h > 3 * w` (TeX_Box.pool.ltxml L811-814), so `\vrule height 12pt width 0pt` — the strut idiom — becomes a cell `border` (`border="ll"` on `\halign{\vrule height 12pt width 0pt#&\vrule#&#\cr &&a\cr}`); the `w == 0 → invisible` branch only runs outside alignments. Perl never meets the case through `\strut` because its `\strutbox` is void.
+**Rust behavior**: `w == 0` is `invisible` + `alignmentSkippable` everywhere (tex_box.rs); the alignment peel and the normalize `isrule` test treat a box holding only struts as a strut (`Digested::is_strut`, `\hbox{\vrule … width\z@}` = latex.ltx:12596's `\strutbox`, which `\strut` `\unhcopy`s into every TeXbook `\halign{\strut#&…}` template cell). `\null` (`\hbox{}`) is NOT a strut and stays opaque to the peel, as in Perl.
+**Why**: a zero-width rule has nothing to draw; with the real `\strutbox` (needed by fillwith/fullwidth coffins) every strutted halign row grew an empty bordered cell (halignatt.tex). Kernel-quality, engine-level, Perl would take the same fix.
+**Witnesses**: halignatt.tex (TeXbook p.247 table), TL doc corpus fillwith/fullwidth manuals.
+**Guard**: `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`, `53_alignment::halignatt_test`, `cells_test` (makecell `\null` opacity).
+**Upstream**: not yet filed. KNOWN_PERL_ERRORS #131.

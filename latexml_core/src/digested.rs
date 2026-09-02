@@ -789,6 +789,40 @@ impl Digested {
     })
   }
 
+  /// A strut: something that occupies height but leaves no ink — an
+  /// `invisible` zero-width `\vrule`, or an `\hbox`/`\vbox` whatsit whose
+  /// `content_box` holds only struts and skippable material (latex.ltx:12596's
+  /// `\strutbox`, which `\strut` `\unhcopy`s into every TeXbook
+  /// `\halign{\strut#&…}` template cell — halignatt.tex). An alignment treats
+  /// a strut-only cell as empty (Perl's `isrule` test, Alignment.pm L459-462,
+  /// extended; its `isSkippable` L514 already looks through `content_box`).
+  /// Guard: `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`.
+  pub fn is_strut(&self) -> bool {
+    let DigestedData::Whatsit(w) = self.data() else {
+      return false;
+    };
+    let w = w.borrow();
+    if w.get_property_bool("alignmentPreserve") {
+      return false;
+    }
+    if w.get_property_bool("invisible") {
+      return true;
+    }
+    // A box counts only when it actually holds a strut: `\null` (`\hbox{}`)
+    // stays what Perl's peel sees, an opaque box.
+    match w.get_property("content_box") {
+      Some(prop) => matches!(
+        &*prop,
+        Stored::Digested(cb) if {
+          let inner = cb.unlist_ref();
+          inner.iter().any(|b| b.is_strut())
+            && inner.iter().all(|b| b.is_strut() || b.is_skippable())
+        }
+      ),
+      None => false,
+    }
+  }
+
   /// Check if all items are "empty" or only spaces or otherwise skippable in a table cell.
   /// Perl: isSkippable (Alignment.pm L484-508)
   pub fn is_skippable(&self) -> bool {

@@ -1254,7 +1254,8 @@ pub fn extract_alignment_column(
         if front_box.get_property("isHorizontalRule").is_some()
           || front_box.get_property("alignmentSkippable").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || front_box.is_empty()? =>
+          || front_box.is_empty()?
+          || front_box.is_strut() =>
       {
         saveleft.push_front(front_box)
       },
@@ -1290,7 +1291,8 @@ pub fn extract_alignment_column(
         if last_box.get_property("isHorizontalRule").is_some()
           || last_box.get_property("alignmentSkippable").is_some()
           || matches!(item, DigestedData::Comment(_))
-          || last_box.is_empty()? =>
+          || last_box.is_empty()?
+          || last_box.is_strut() =>
       {
         saveright.push_front(last_box);
       },

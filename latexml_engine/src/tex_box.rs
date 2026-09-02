@@ -1303,7 +1303,18 @@ LoadDefinitions!({
     let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
     let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
-    match lookup_alignment() { Some(_alignment) => {
+    // OXIDIZED_DESIGN #176: a zero-width rule has nothing to draw anywhere —
+    // it is the standard strut (`\vrule height 12pt width 0pt`, and
+    // latex.ltx:12596's `\strutbox`, which `\strut` `\unhcopy`s into every
+    // TeXbook `\halign{\strut#&…}` template) — so it is `invisible` even in
+    // an alignment. Perl tests the alignment branch first and its
+    // `h > 3 * w` reads any positive height as a column rule (`border="ll"`
+    // on the strutted cell; KNOWN_PERL_ERRORS #131). Guard:
+    // `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`.
+    if w_pt == Some(0.0) {
+      whatsit.set_property("invisible", true);
+      whatsit.set_property("alignmentSkippable", true);
+    } else if lookup_alignment().is_some() {
       // Perl: set isVerticalRule only if dimensions suggest a real rule
       let dominated_by_height = match (h_pt, w_pt) {
         (None, None) => true,
@@ -1314,9 +1325,7 @@ LoadDefinitions!({
       if dominated_by_height {
         whatsit.set_property("isVerticalRule", true);
       }
-    } _ => if w_pt == Some(0.0) {
-      whatsit.set_property("invisible", true);
-    }}
+    }
     // Set color from current font (Perl: only if NOT black)
     if let Some(font) = lookup_font()
       && let Some(color) = font.color

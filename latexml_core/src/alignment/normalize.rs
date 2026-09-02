@@ -109,6 +109,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
               || b.get_property_bool("isVerticalRule")
               || b.get_property_bool("alignmentSkippable")
               || b.is_comment()
+              || b.is_strut()
           });
         // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved
         let empty = ((fullw.value_of() < 1 && (ch.value_of() < 1 && cd.value_of() < 1)) || isrule)
