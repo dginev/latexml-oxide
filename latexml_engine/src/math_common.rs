@@ -406,8 +406,10 @@ LoadDefinitions!({
   // primitive meaning → keyword path → `\csname pgfmath\angle\endcsname`
   // loops to the error cap. Two-level: the U+2220 atom lives in the
   // space-suffixed CS, the user name is a plain macro expanding to it.
+  // The `alias` keeps the reversion (`tex="\angle"`) and the XMTok `name`
+  // at the user-facing name (guard: 22_fonts abxtest golden).
   // Guard: cluster_package_guards::angle_tikzmath_variable.
-  def_math_atom("\\angle ", "\u{2220}", None, None)?;
+  DefMath!("\\angle ", None, "\u{2220}", alias => "\\angle");
   def_macro(T_CS!("\\angle"), None, ExpansionBody::Tokens(Tokens!(T_CS!("\\angle "))), None)?;
 
   // NOTE: This is probably the wrong role.
