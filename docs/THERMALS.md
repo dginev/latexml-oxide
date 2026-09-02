@@ -36,7 +36,9 @@ the memory pressure came from the sweep, which nextest knows nothing about.
    10-wide sweep alone already fills the machine.
 2. **Sweeps, oracle, validate:** `sweep.sh`, `oracle.sh` and `validate.sh`
    all read `JOBS` (default 8 since 2026-09-02). On this laptop:
-   - alone: `JOBS=8` is the practical ceiling. `JOBS=12` will throttle and
+   - alone: `JOBS=8` is the practical ceiling — and still throttles: sweep #32
+     (2026-09-02, `JOBS=8`, nothing else running) sat at 95 °C with ~700
+     package-throttle events per 5 s; `JOBS=6` is the quiet setting. `JOBS=12` will throttle and
      can exhaust swap because 12 × 6 GB > 31 GB + 8 GB.
    - alongside anything else: `JOBS=4`.
 3. **nextest:** `-j 8` is fine alone. Use `-j 4` if a sweep is running,
