@@ -38,7 +38,17 @@ LoadDefinitions!({
     let box_key   = s!("box{}", number.value_of());
     match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       adjust_box_color(&stuff)?;
+      // tex.web §977: `box(n):=null` / `box(n):=vpack(q)` store at the
+      // register's EXISTING eq_level ("the eq_level of the box stays the
+      // same") — no save-stack entry, so the drain survives the caller's
+      // group. eledmac.sty:1363-1369 `\do@line` splits one line per pass
+      // inside `{…\global\setbox\one@line=\vsplit\raw@text to\baselineskip}`
+      // and its `\loop\ifvbox\raw@text` (L1304) ends only when the register
+      // goes void; a local store was undone by the `}` every pass (eledform
+      // example: box-list memory runaway). `Scope::InPlace` is the analog.
+      // Guard: `perfect_kernel_batch54::vsplit_drain_survives_the_enclosing_group`.
       if stuff.is_empty()? {
+        assign_value(&box_key, Stored::None, Some(Scope::InPlace));
         Digested::from(List::default())
       } else {
         let target = dimension.value_of();
@@ -67,12 +77,12 @@ LoadDefinitions!({
           }
         }
         if rest.is_empty() {
-          assign_value(&box_key, Stored::None, None);
+          assign_value(&box_key, Stored::None, Some(Scope::InPlace));
         } else {
           assign_value(
             &box_key,
             Stored::Digested(Digested::from(List::new(rest))),
-            None,
+            Some(Scope::InPlace),
           );
         }
         Digested::from(List::new(split_off))

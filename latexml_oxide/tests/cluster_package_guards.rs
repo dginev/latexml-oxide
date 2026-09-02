@@ -7636,4 +7636,23 @@ Done [\thepage].
     );
     assert!(xml.contains("Done [4]."), "{xml}");
   }
+
+  /// tex.web §977: `\vsplit` stores the remainder at the register's existing
+  /// eq_level, so a drain inside `{…}` survives the group — eledmac.sty:1363
+  /// `\do@line` relies on it (eledform example: box-list runaway). The
+  /// `\ifnum>50` cap turns a regression into a failed assertion, not a hang.
+  #[test]
+  fn vsplit_drain_survives_the_enclosing_group() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\newbox\rawt\setbox\rawt=\vbox{a\par b\par c}\count255=0
+\loop\ifvbox\rawt {\global\setbox0=\vsplit\rawt to 100pt}\advance\count255 by1
+  \ifnum\count255>50 \global\setbox\rawt=\box\voidb@x\fi\repeat
+[\the\count255]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[1]"), "{xml}");
+  }
 }
