@@ -119,7 +119,6 @@ pub mod gretsi_cls;
 pub mod harvmac_tex;
 pub mod hepnames_sty;
 pub mod hepparticles_sty;
-pub mod hobby_code_tex;
 pub mod hpstatement_sty;
 pub mod hyphenat_sty;
 pub mod iccv_sty;
@@ -368,7 +367,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("datetime2", "sty", datetime2_sty::load_definitions),
   ("datetime", "sty", datetime_sty::load_definitions),
   ("emlines", "sty", emlines_sty::load_definitions),
-  ("hobby", "code.tex", hobby_code_tex::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
   ("l3draw", "sty", l3draw_sty::load_definitions),
   ("lettrine", "sty", lettrine_sty::load_definitions),
@@ -631,11 +629,13 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ws-procs961x669", "cls", ws_journal_cls::load_definitions),
 ];
 
-/// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`,
-/// `"hobby.code.tex"`) through its compiled `load_definitions` fn, or return
-/// `None` when the filename has no registered binding. Splits on the *first*
-/// `.` so `("hobby", "code.tex", …)` matches correctly — mirrors
-/// `latexml_package::dispatch`.
+/// Runtime lookup: route `filename` (e.g. `"MnSymbol.sty"`) through its
+/// compiled `load_definitions` fn, or return `None` when the filename has no
+/// registered binding. Splits on the *first* `.` so a multi-part extension
+/// like `("foo", "code.tex", …)` matches correctly — mirrors
+/// `latexml_package::dispatch`. (The former `hobby.code.tex` refusal stub was
+/// retired in perfect-kernel batch 54: the real file raw-loads with 0 errors;
+/// guard `perfect_kernel_batch54::hobby_code_tex_raw_loads`.)
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
   let (base, ext) = filename.split_once('.')?;
   // Strip directory prefix: `\documentclass{Definitions/mdpi}` →
