@@ -6223,4 +6223,32 @@ Special: \specialLTpagebreak Normal: \normalLTpagebreak Done.
     assert!(xml.contains("Special: Normal: Done."), "{xml}");
   }
 
+  /// memoir.cls:8811 redefines only `\endminipage` (raw latex.ltx closer);
+  /// tcolorbox `\let\endtcb@lrbox=\endminipage` (tcolorbox.sty:1118) then
+  /// closed our NATIVE minipage with it: the live dump `\@iiiparbox` got an
+  /// undefined `\@mpargs` and its `Until:[` scan ate the next box's option
+  /// list (witness biblatex-oxref/oxalph-doc: 983× `\csname bm@bicolor,…`
+  /// + Fatal TooManyErrors). The binding now keeps the native pair paired.
+  #[test]
+  fn memoir_keeps_native_endminipage() {
+    let (stderr, xml) = convert(
+      r"\documentclass[oneside]{memoir}
+\usepackage{tcolorbox}
+\begin{document}
+\begin{tcolorbox}[colframe=red]
+A\par B\tcblower C
+\end{tcolorbox}
+\begin{tcolorbox}[colframe=blue]
+D
+\end{tcolorbox}
+\end{document}
+",
+      true,
+    );
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(!stderr.contains("bm@"), "{stderr}");
+    assert!(xml.contains("ltx_minipage"), "{xml}");
+    assert!(xml.contains(">D<") || xml.contains("D\n"), "{xml}");
+  }
+
 }

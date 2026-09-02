@@ -18,5 +18,19 @@ use latexml_package::prelude::*;
 // bindingless class would otherwise fall to the OmniBus article base.
 // Perl LaTeXML ships no memoir.cls.ltxml.
 LoadDefinitions!({
+  // memoir.cls:8811 redefines ONLY `\endminipage` (the classic latex.ltx box
+  // closer plus minipage-footnote flushing), never `\minipage`. Our minipage
+  // is a native constructor pair (latex_constructs.rs `\minipage`/`\endminipage`;
+  // Perl latex_constructs.pool.ltxml:4771) whose begin sets no `\@mpargs`, so
+  // the raw closer would `\egroup` the native mode frame and hand the still-live
+  // dump `\@iiiparbox` (latex.ltx:16309) an undefined `\@mpargs` — its `Until:[`
+  // scan then swallows the NEXT `[…]` in the document (tcolorbox captures the
+  // closer via `\let\endtcb@lrbox=\endminipage`, tcolorbox.sty:1118 — witness
+  // biblatex-oxref/oxalph-doc: 983× `\csname bm@bicolor ,colframe = …` + Fatal
+  // TooManyErrors; Perl has no `\@iiiparbox` at all and merely errors). Keep
+  // the native pair paired: save the closer around the raw class load and
+  // restore it. Guard: `perfect_kernel_batch54::memoir_keeps_native_endminipage`.
+  Let!("\\lx@memoir@saved@endminipage", "\\endminipage");
   InputDefinitions!("memoir", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  Let!("\\endminipage", "\\lx@memoir@saved@endminipage");
 });
