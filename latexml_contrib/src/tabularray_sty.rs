@@ -196,6 +196,37 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
           cols.push_str(&sub_cols);
         }
       },
+      // Inter-column material `@{…}`/`!{…}` and the array.sty hooks `>{…}`/
+      // `<{…}`: not columns — copy verbatim (classic understands them). A
+      // `colspec={@{}Xll@{}}` that bailed here left the WHOLE inner spec as
+      // the template, whose `cell{…}={cmd={\BusyPanda…}}` value was then
+      // edef-expanded in the alignment preamble and ran an l3fp delimited
+      // scan to EOF (panda manual, `Until:\__fp_sep:` Fatal).
+      '@' | '!' | '>' | '<' => {
+        let start = i;
+        i += 1;
+        if i < b.len() && b[i] == b'{' {
+          let mut depth = 0usize;
+          while i < b.len() {
+            if b[i] == b'{' {
+              depth += 1;
+            } else if b[i] == b'}' {
+              depth -= 1;
+              if depth == 0 {
+                i += 1;
+                break;
+              }
+            }
+            i += 1;
+          }
+          if depth != 0 {
+            return None;
+          }
+          cols.push_str(&spec[start..i]);
+        } else {
+          return None;
+        }
+      },
       _ => return None, // unknown column type → bail to the stub
     }
   }
@@ -308,6 +339,15 @@ mod tests {
     assert_eq!(
       translate_tblr_colspec("hlines,colspec={cc}").as_deref(),
       Some("cc")
+    );
+    // Inter-column material is copied through and never counts as a column.
+    assert_eq!(
+      translate_tblr_colspec("colspec={@{}Xll@{}}").as_deref(),
+      Some("@{}lll@{}")
+    );
+    assert_eq!(
+      translate_tblr_colspec("colspec={>{\\bfseries}l!{\\vrule}c}").as_deref(),
+      Some(">{\\bfseries}l!{\\vrule}c")
     );
     // Bail (→ None → caller keeps the stub behaviour) on unhandled constructs.
     assert_eq!(

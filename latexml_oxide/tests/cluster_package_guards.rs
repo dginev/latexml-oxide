@@ -7087,4 +7087,26 @@ x & y \\
       "stored colspec lost: {xml}"
     );
   }
+
+  /// tabularray colspec inter-column material `@{…}`/`!{…}` translates through
+  /// (not a column). A bailed `colspec={@{}Xll@{}}` made the WHOLE inner spec
+  /// the tabular template, whose `cell{…}={cmd={…}}` value was edef-expanded
+  /// in the preamble — panda manual (`\BusyPanda` fp → `Until:\__fp_sep:`
+  /// EoF Fatal).
+  #[test]
+  fn tabularray_colspec_intercolumn_material() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={@{}Xll@{}}, cell{2-Z}{2}={cmd={\textbf}}}
+a & b & c \\
+d & e & f \\
+\end{tblr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    assert_eq!(xml.matches("<td").count(), 6, "{xml}");
+  }
 }
