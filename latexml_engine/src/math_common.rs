@@ -396,7 +396,19 @@ LoadDefinitions!({
   def_math_atom("\\bot", "\u{22A5}", Some("ADDOP"), Some("bottom"))?;
   DefMath!("\\|", None, "\u{2225}", role => "VERTBAR", name => "||");
   // should get meaning => "parallel"to' when used as infix, but NOT when for OPEN|CLOSE
-  def_math_atom("\\angle", "\u{2220}", None, None)?;
+  // OXIDIZED_DESIGN #170 shape (surpass-Perl, user-approved 2026-08-31),
+  // extended to the one math symbol it named as residual: real LaTeX's
+  // `\angle` is `\DeclareRobustCommand` (fontmath.ltx L243), so
+  // `\meaning\angle` starts with `macro:` and tikzmath's meaning sniff
+  // (tikzlibrarymath.code.tex L22-46, L181-217) accepts it as a VARIABLE —
+  // `\tikzmath{\angle = aziangle(\tikz@cs@azi);}` (sunpath.sty L44-47,
+  // 6-manual cluster, 990/1001 errors each). Perl's math atom gives a
+  // primitive meaning → keyword path → `\csname pgfmath\angle\endcsname`
+  // loops to the error cap. Two-level: the U+2220 atom lives in the
+  // space-suffixed CS, the user name is a plain macro expanding to it.
+  // Guard: cluster_package_guards::angle_tikzmath_variable.
+  def_math_atom("\\angle ", "\u{2220}", None, None)?;
+  def_macro(T_CS!("\\angle"), None, ExpansionBody::Tokens(Tokens!(T_CS!("\\angle "))), None)?;
 
   // NOTE: This is probably the wrong role.
   // Also, should probably carry info about Binding for OpenMath

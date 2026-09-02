@@ -6452,5 +6452,28 @@ C[\number`\\]D[\number`\a]E[\number`a]
     assert!(!stderr.contains("Fatal"), "{stderr}");
     assert!(xml.contains("[1]\n[0]"), "{xml}");
   }
+  /// OXIDIZED_DESIGN #170's named residual: `\angle` as a `\tikzmath`
+  /// variable (sunpath.sty L44-47). Real LaTeX's `\angle` is a robust
+  /// command, so `\meaning` starts with `macro:` and tikzmath's sniff
+  /// (tikzlibrarymath.code.tex L22-46) treats it as assignable; a primitive
+  /// math atom hits the keyword path and `\csname pgfmath\angle\endcsname`
+  /// loops to the error cap (Rust 1001, Perl 101). The math meaning must
+  /// survive in the space-suffixed inner CS.
+  #[test]
+  fn angle_tikzmath_variable() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{math}
+\begin{document}
+$\angle ABC$
+\tikzmath{ \angle = 90 - 30; }
+V=[\angle]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">\u{2220}</XMTok>"), "{xml}");
+    assert!(xml.contains("V=[60.0]"), "{xml}");
+  }
 
 }
