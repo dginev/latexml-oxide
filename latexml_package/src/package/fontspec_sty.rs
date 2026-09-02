@@ -17,8 +17,39 @@ LoadDefinitions!({
   def_macro_noop("\\setmainfont[]{}[]")?;
   def_macro_noop("\\setsansfont[]{}[]")?;
   def_macro_noop("\\setmonofont[]{}[]")?;
-  def_macro_noop("\\newfontfamily DefToken []{}[]")?;
-  def_macro_noop("\\newfontface DefToken []{}[]")?;
+  // The face/family definers (fontspec-xetex.sty:575-605, all `{ m O{} m
+  // O{} }`) DEFINE their target: `\__fontspec_main_newfontfamily:NnnN`
+  // (L755-767) issues `\NewDocumentCommand #1 {} {\fontfamily{…}
+  // \fontencoding{…}\selectfont}` — a robust, non-empty font switch. A
+  // no-op that merely reads the token left every `\newfontfamily\Foo{…}`
+  // …`{\Foo text}` document with `Error:undefined:\Foo` (papiergurvan
+  // `\BelleAllureGras`), and unicodefonttable.sty:257's
+  // `\tl_if_empty:NF \l__fmuft_compare_font_tl` (its `\setfontface`
+  // target) needs the non-empty body to take the compare branch. No
+  // OpenType font resolves here, so the switch keeps the current family
+  // (`\selectfont`). Perl (fontspec.sty.ltxml:35-36) shares the no-op.
+  // Guard: `perfect_kernel_batch54::fontspec_definers_define_a_font_switch`.
+  DefMacro!("\\lx@fontspec@definer DefToken []{}[]", sub[(cs, _pre, _font, _post)] {
+    def_macro(
+      cs,
+      None,
+      Tokens!(T_CS!("\\selectfont")),
+      Some(ExpandableOptions { protected: true, ..Default::default() }),
+    )?;
+    Ok(Tokens::default())
+  });
+  for definer in [
+    "\\newfontfamily",
+    "\\newfontface",
+    "\\renewfontfamily",
+    "\\setfontfamily",
+    "\\providefontfamily",
+    "\\renewfontface",
+    "\\setfontface",
+    "\\providefontface",
+  ] {
+    Let!(&T_CS!(definer), "\\lx@fontspec@definer");
+  }
 
   def_macro_noop("\\setmathrm[]{}")?;
   def_macro_noop("\\setmathsf[]{}")?;
@@ -48,12 +79,8 @@ LoadDefinitions!({
   // :579-605). Witnesses: tkz-doc (\renewfontfamily), texnegar ×6
   // (\setfontfamily), hvarabic (\providefontfamily), emotion-doc
   // (\renewfontface).
-  def_macro_noop("\\renewfontfamily DefToken []{}[]")?;
-  def_macro_noop("\\setfontfamily DefToken []{}[]")?;
-  def_macro_noop("\\providefontfamily DefToken []{}[]")?;
-  def_macro_noop("\\renewfontface DefToken []{}[]")?;
-  def_macro_noop("\\setfontface DefToken []{}[]")?;
-  def_macro_noop("\\providefontface DefToken []{}[]")?;
+  // (`\renewfontfamily` … `\providefontface`: defined with `\newfontfamily`
+  // above.)
   // Feature-declaration surface (fontspec-xetex.sty:622-662) — pure font
   // configuration. Witness for \newopentypefeature: tkz-doc family via
   // fourier-otf.sty:87 and the *-otf math font packages.

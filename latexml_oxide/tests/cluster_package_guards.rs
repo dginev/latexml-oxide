@@ -7674,4 +7674,22 @@ Done [\thepage].
     assert!(xml.contains("<itemize"), "{xml}");
     assert!(xml.contains("<item"), "{xml}");
   }
+
+  /// fontspec-xetex.sty:755-767: `\newfontfamily\Foo{…}` DEFINES `\Foo` as a
+  /// robust font switch (papiergurvan `\BelleAllureGras`; unicodefonttable's
+  /// `\setfontface` target must be non-empty for `\tl_if_empty:NF`).
+  #[test]
+  fn fontspec_definers_define_a_font_switch() {
+    let tex = r"\documentclass{article}
+\usepackage{fontspec}
+\newfontfamily\Foo[Scale=1.1]{Belle Allure}[Ligatures=TeX]
+\setfontface\Bar{Some Font.otf}
+\begin{document}
+{\Foo abc}{\Bar def}[\ifx\Bar\empty EMPTY\else BODY\fi]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("abcdef[BODY]"), "{xml}");
+  }
 }
