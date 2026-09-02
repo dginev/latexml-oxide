@@ -3719,12 +3719,8 @@ pub fn provides_version_of(filename: &str) -> Option<String> {
       continue;
     }
     let tail = arg[close + 1..].trim_start();
-    let Some(bracket) = tail.strip_prefix('[') else {
-      return None;
-    };
-    let Some(end) = bracket.find(']') else {
-      return None;
-    };
+    let bracket = tail.strip_prefix('[')?;
+    let end = bracket.find(']')?;
     let version: String = bracket[..end]
       .lines()
       .map(|l| l.split('%').next().unwrap_or("").trim())
@@ -3748,7 +3744,7 @@ fn halve_param_tokens(tks: &Tokens) -> Tokens {
   let mut out: Vec<Token> = Vec::with_capacity(toks.len());
   let mut i = 0;
   while i < toks.len() {
-    let t = toks[i].clone();
+    let t = toks[i];
     if t.code == Catcode::PARAM && i + 1 < toks.len() && toks[i + 1].code == Catcode::PARAM {
       out.push(t);
       i += 2;
