@@ -6352,4 +6352,30 @@ DONE
     assert!(xml.contains("DONE"), "{xml}");
   }
 
+  /// nicematrix.sty:1644/3745 `\NotEmpty` (flags a cell for `hvlines`, no
+  /// content) and :394 public `\g_nicematrix_code_before_tl` were missing
+  /// from the binding that replaces the raw .sty (witness cahierprof.sty:619
+  /// and :519/531 — cahierprof-exemple 2 errors).
+  #[test]
+  fn nicematrix_notempty_and_code_before_hook() {
+    let (stderr, xml) = convert(
+      r"\documentclass{article}
+\usepackage{nicematrix}
+\ExplSyntaxOn
+\tl_gput_right:Nn \g_nicematrix_code_before_tl { x }
+\ExplSyntaxOff
+\begin{document}
+\begin{NiceTabular}{cc}
+a & b \\
+c & \NotEmpty \\
+\end{NiceTabular}
+\end{document}
+",
+      true,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+  }
+
 }

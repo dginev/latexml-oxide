@@ -679,6 +679,18 @@ LoadDefinitions!({
   def_macro_noop("\\DoubleRule")?;
   def_macro_noop("\\RowStyle[]{}")?;
   def_macro_noop("\\rowlistcolors[]{}{}")?;
+  // `\NotEmpty` (nicematrix.sty:1644 `\cs_set_eq:NN \NotEmpty
+  // \__nicematrix_NotEmpty:`, :3745) only flags the cell non-empty so
+  // `hvlines` draws its rules — no content. Witness cahierprof.sty:619
+  // `\replicate{\NbColonnes}{&\NotEmpty}`.
+  def_macro_noop("\\NotEmpty")?;
+  // Public CodeBefore hook (nicematrix.sty:394 `\tl_new:N
+  // \g_nicematrix_code_before_tl`) that user packages append tikz drawing
+  // to (cahierprof.sty:519/531 `\tl_gput_right:Nx`). The binding drops the
+  // CodeBefore drawing layer, so the accumulated content is never painted,
+  // but the variable must exist for the append to succeed. Guard:
+  // `perfect_kernel_batch54::nicematrix_notempty_and_code_before_hook`.
+  RawTeX!(r"\ExplSyntaxOn \tl_new:N \g_nicematrix_code_before_tl \ExplSyntaxOff");
   // \diagbox{lower}{upper} (diagbox-style split cell): both texts are
   // content — keep them, separator as a slash.
   DefMacro!("\\diagbox{}{}", "#1/#2", locked => true);
