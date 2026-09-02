@@ -164,7 +164,8 @@ Versioned filenames + a `build.rs`-generated manifest:
   (sorted descending). The manifest entries are populated via
   `include_str!`, so all bundled dumps live in the binary's `.rodata`.
 * `latexml_engine::dump_paths::detect_ambient_texlive_year()` reads
-  `kpsewhich -var-value=SELFAUTOPARENT` (last path component →
+  `kpsewhich -var-value=SELFAUTOPARENT` (last path component, leading-digit
+  parse so MacTeX's `2026basic` resolves to 2026; `pdflatex --version` is the fallback →
   4-digit year), with `pdflatex --version` as fallback.
 * Resolution chain (per `latex_dump.rs` and `plain_dump.rs`):
     1. `$LATEXML_NODUMP=1` → skip (Perl `LoadFormat` parity).

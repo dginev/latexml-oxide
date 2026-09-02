@@ -1,20 +1,14 @@
 ---
 name: perl-port
 description: >
-  Faithfully translate, fix, or ROOT-CAUSE a LaTeXML binding (macro / primitive /
-  constructor / column type / package) from the Perl source to Rust — including
-  why an existing binding still diverges from Perl or real LaTeX when it already
-  looks faithful to the `.pool` (LaTeXML's `.pool`/`.ltxml` is a reimplementation
-  that sometimes SIMPLIFIES the kernel — check `latex.ltx`/`<pkg>.sty` and
-  `tex.web`, not just LaTeXML). Use whenever you write, change, or debug
-  engine/package code that mirrors Perl LaTeXML — porting a `.pool` entry, binding
-  a package, aligning a definition to Perl semantics, or chasing a structural /
-  mode / paragraph-break divergence to its root. Enforces "read the Perl (and
-  kernel) source first" and the divergence policy. Invoke for "port \foo",
-  "translate this .pool entry", "bind package X", "make Y match Perl", "why does
-  Rust differ from Perl on \foo", "this construct is malformed / renders wrong vs
-  LaTeX", "a primitive isn't firing", "root-cause this parity divergence",
-  "/perl-port".
+  Faithfully translate, fix, or root-cause a LaTeXML binding (macro / primitive /
+  constructor / column type / package) from the Perl source to Rust, including
+  why a binding that looks faithful to the `.pool` still diverges (LaTeXML's
+  `.pool`/`.ltxml` sometimes simplifies the kernel — check `latex.ltx`,
+  `<pkg>.sty`, `tex.web` too). Use whenever you write, change, or debug engine or
+  package code that mirrors Perl LaTeXML: porting an entry, binding a package,
+  aligning a definition to Perl, or chasing a structural / mode / paragraph-break
+  divergence to its root. Enforces read-the-source-first and the divergence policy.
 ---
 
 > The Perl code is the **ground truth**. This is a translation project: preserve
@@ -107,9 +101,9 @@ approval, add the entry to `OXIDIZED_DESIGN.md` in the same change.
 
 ## 6 — Validate, then ship
 
-- `cargo test --tests --no-fail-fast` (true count; baseline ~1467/0 — see
-  `perf-check` for the RSS-fuse `MemoryBudget` cascade gotcha). New `.tex`/`.xml`
-  fixture ⇒ `cargo clean` first so the plugin rediscovers it.
+- `cargo nextest run --workspace` green (the current tally lives in
+  `docs/SYNC_STATUS.md`). New `.tex`/`.xml` fixture ⇒ `cargo clean` first so the
+  plugin rediscovers it.
 - `cargo +nightly clippy --workspace --all-targets -- -D warnings` and
   `cargo +nightly fmt --all` — the pre-push hook enforces both (it does NOT run
   tests, so run them yourself).

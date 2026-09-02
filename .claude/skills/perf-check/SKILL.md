@@ -16,7 +16,9 @@ description: >
 | `test` (default) | `cargo build` / `cargo test` / `cargo run` | **All day-to-day dev + triage.** Full debug info, debug-assertions, overflow-checks, fast incremental. Best diagnosability. |
 | `ci` | `cargo test --profile ci` | **GitHub runner only** (16 GB, fast compile). NOT what local dev should mimic. |
 | `release` | `cargo build --release` | **Sandbox sweeps + Perl-parity measurement.** Strong-optimized, thin-LTO. |
+| `bench` | `cargo build --profile bench` | **Wall-time benchmarks and profiling** (`perf`, flamegraph, callgrind). Inherits `release` but keeps `debug = "full"` and symbols. Built-in cargo profile, so the binary lands in **`target/release/`**, not `target/bench/`. |
 | `maxperf` | `cargo build --profile maxperf` | **Distribution artifact.** Fat-LTO, CGU=1, `panic=abort`. Slowest build; smallest+fastest binary. |
+| `maxperf-cortex` | `cargo build --profile maxperf-cortex --bin cortex_worker --features cortex` | **Fleet worker artifact.** `maxperf` for the cortex worker. |
 
 Distribution recipe (what `tools/make_release.sh` uses): `cargo build
 --no-default-features --features runtime-bindings --profile maxperf --bin
@@ -31,7 +33,7 @@ latexml_oxide`.
   and the hot path (branchy catcode/macro dispatch) is neither SIMD-amenable nor
   statically branch-skewed. Ship the portable `x86-64` baseline. Do not
   re-attempt without a major engine-architecture change.
-  (`pgo-isa-no-gain-2026-06-21` memory; `docs/performance/PERFORMANCE.md`.)
+  (memory `wisdom_pgo_isa_no_gain`; `docs/performance/PERFORMANCE.md`.)
 - **Startup floor (~161 ms): the ~50 ms dump-parse lever was declined.**
   Decomposed: proc init ~6 ms, bootstrap ~9 ms, **latex dump load ~85 ms**
   (60% text-parse), `_constructs`+digest+build+serialize ~80 ms. The clean lever
@@ -54,8 +56,10 @@ latexml_oxide`.
   methodology + Perl-parity baselines: `docs/performance/PERFORMANCE.md`. Witness papers for
   timeout/OOM/peak-RSS/hang regressions: `docs/performance/STABILITY_WITNESSES.md`.
 
-## Test-suite gotcha: `MemoryBudget` cascade ≠ code bug
+## Test-suite gotcha under `cargo test`: `MemoryBudget` cascade ≠ code bug
 
+`cargo nextest run --workspace` runs each test in its own process, so this cannot
+happen there. Under plain `cargo test`:
 A cascade of failures on *basic* documents (article/book/itemize) that **pass at
 `--test-threads=1`** is the **process-wide RSS fuse**
 (`stomach.rs::check_timeout`, `Fatal:Timeout:MemoryBudget RSS … > cap`), not a
@@ -64,10 +68,10 @@ regression. libtest runs one process with one thread per test, so on this
 the fuse. The default cap **stays 4.5 GB** (a parallel one-paper-per-process
 fleet would OOM at 9 GB); the test harness raises it to 9 GB via
 `init_test_rss_cap()`. **Diagnosis:** re-run with `-- --test-threads=1`; a
-non-`<Math>` fixture failing is another tell a MathML change is innocent. Always
-use `cargo test --workspace --tests --no-fail-fast` for the true count (default
-fail-fast stops at the first failing *binary*). (`cargo-test-rss-fuse-parallelism`
-memory.)
+non-`<Math>` fixture failing is another tell a MathML change is innocent. For the
+true count use `cargo nextest run --workspace` (or, under libtest, `cargo test
+--workspace --tests --no-fail-fast` — default fail-fast stops at the first failing
+*binary*).
 
 ## Self-contained-binary invariant (a correctness-of-distribution check)
 

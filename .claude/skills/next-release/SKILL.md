@@ -1,5 +1,6 @@
 ---
 name: next-release
+disable-model-invocation: true
 description: >
   Cut a new latexml-oxide release (RC or final) through the full validated,
   gated pipeline: bump the version, republish the crate graph, build the
@@ -42,10 +43,11 @@ crates.io is the LAST target and publishes only behind **both** gates on the FIN
 
 ### 0. Pre-flight
 - Green `main` (`cargo nextest run --workspace`, N/0).
-- **#512 toolchain pin:** the fat-LTO `maxperf` release build OOMs on regressed nightlies.
-  `rust-toolchain.toml` should pin a known-good dated nightly (e.g. `nightly-2026-07-27`);
-  CI + release resolve through this file (proven by the 0.7.0 pin). **Revert to floating
-  `channel = "nightly"` once #512 closes.** Confirm the pin is a good nightly before cutting.
+- **Toolchain check:** the fat-LTO `maxperf` release build OOMs on a nightly whose rustc
+  RSS has regressed (#512, closed). `rust-toolchain.toml` floats on `nightly`, and CI +
+  release resolve through it. Before cutting, confirm a cold `maxperf` build peaks in the
+  single-digit-GB range; if it doesn't, pin the last good dated nightly in that file (its
+  header comment gives the procedure) and reopen #512.
 
 ### 1. Subcrate version bumps (for the crates.io republish) — the easy-to-miss step
 crates.io is **immutable**: you cannot republish an existing version with new bytes. Every

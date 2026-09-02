@@ -64,21 +64,13 @@ Durable parity rules (the dump/format boundary):
    a parity gap, not a thing to suppress with caps.
 
 **Distribution model.** Per-TL-year dump files
-(`resources/dumps/{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version`) are **NOT
-committed to the repo**. They are generated at release time by
-`.github/workflows/release-dumps.yml` (called from `release.yml` on tag push, also
-dispatchable standalone) across a 5-year moving TL window, each year inside its
-pinned container (`ghcr.io/tkw1536/texlive-docker:YYYY`, the image family behind Perl
-LaTeXML's CI). Each `--init` runs under `LATEXML_INIT_DEBUG=1` behind a strict
-zero-`Error:`/`Fatal:` gate — **init output is suppressed otherwise, so naive grepping
-sees nothing**. The release build embeds the whole window at build time (gzip, DEP-12;
-`latexml_engine/build.rs` scans `resources/dumps/`). **Dev/CI generate their
-ambient-year dump via `tools/make_formats.sh`** — run it once after checkout, after a
-TL upgrade, or before test runs needing dumps (CI.yml does). Runtime resolves the
-ambient year via `kpsewhich -var-value=SELFAUTOPARENT` (leading-digit parse, so
-MacTeX's `2026basic` works) with a `pdflatex --version` fallback; `kpsewhich --version`
-returns the same kpathsea-library string on TL2023 and TL2025, so it is **not** a
-usable discriminator.
+(`resources/dumps/{plain,latex}.YYYY.dump.txt`) are **not committed**; releases
+generate a 5-year window inside pinned TL containers and embed it at build time.
+**Dev/CI generate the ambient-year dump via `tools/make_formats.sh`** — run it once
+after checkout, after a TL upgrade, or before test runs needing dumps. The `--init`
+runs are gated on zero `Error:`/`Fatal:` and **their output is suppressed otherwise,
+so naive grepping sees nothing**. Year resolution, the container matrix, and the
+`kpsewhich --version` non-discriminator: [`docs/parity/DUMP_DESIGN.md`](docs/parity/DUMP_DESIGN.md).
 
 ## Project Overview
 
@@ -119,11 +111,20 @@ squash-merges.
 - **Record the conclusion, not the play-by-play.** State the defect, its cause, the fix, and the guard test names — not how it was found or what was tried on which day. Keep what is expensive to re-derive: witness arXiv ids, `file:line` into the Perl source, minimal trigger examples, named guards, identifiers a reader would otherwise grep for, measured figures with their basis, and settled dead-ends (one line each, so they are not re-attempted). Cut connective tissue, not identifiers.
 - Keep **[`docs/README.md`](docs/README.md)** current — its themed TOC tables — when adding, renaming, merging, or archiving a doc.
 
-## Skills (`.claude/skills/`)
+## Skills and agents (`.claude/skills/`, `.claude/agents/`)
 
-`canvas-triage` (genuine Rust bug vs Perl parity) → `min-repro` (shrink it) →
-`perl-port` (faithful fix) is the standard chain, wrapped by `resolve-issue` for
-a public GitHub issue. `perf-check` governs measurement.
+`cluster-classify` (group a sweep's failures) → `canvas-triage` (genuine Rust bug
+vs Perl parity) → `min-repro` (shrink it) → `perl-port` (faithful fix) is the
+standard chain, wrapped by `resolve-issue` for a public GitHub issue.
+`surpass-perl` governs the rare intentional divergence, `dump-debug` the
+dump-vs-NODUMP branch, `perf-check` measurement, `next-release` shipping.
+
+Delegate read-only root-causing of a witness to the `root-causer` agent (pinned
+to Opus 4.8 at xhigh by user directive; up to ~5 in parallel on independent
+witnesses) and log tallying to `log-scanner`. Edits, builds, and test runs stay
+in the main session, which owns the tree. Brief agents with the main checkout,
+not a worktree: `LaTeXML/` (the Perl oracle) is gitignored and absent from
+every worktree, so a worktree agent greps nothing and reports "no gaps".
 
 ## Build & Test
 
