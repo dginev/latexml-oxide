@@ -6761,6 +6761,7 @@ probe ok
     assert!(!stderr.contains("PushbackLimit"), "{stderr}");
     assert!(xml.contains("<p>probe ok</p>"), "{xml}");
   }
+
   /// xkeyval.tex:569 `\XKV@ifundefined{XKV@<header><key>@value}` tests
   /// DEFINEDNESS: a key saved with an EMPTY value (`\savevalue{k}={}`, L525-527)
   /// is `\let` to an empty-bodied macro and `\usevalue{k}` splices nothing.
@@ -6785,5 +6786,4 @@ START\myval END
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("START END") || xml.contains("STARTEND"), "{xml}");
   }
-
 }

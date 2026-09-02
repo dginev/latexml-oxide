@@ -206,6 +206,10 @@ LoadDefinitions!({
   def_macro_noop("\\@listiv")?;
   def_macro_noop("\\@listv")?;
   def_macro_noop("\\@listvi")?;
+  // size1x.clo:220 `\let\@listI\@listi` — the pristine copy that a class's
+  // size commands restore (`\let\@listi\@listI`, size10.clo:53,
+  // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).
+  Let!("\\@listI", "\\@listi");
 
   //======================================================================
   // 4. Misc Rust-side stubs
