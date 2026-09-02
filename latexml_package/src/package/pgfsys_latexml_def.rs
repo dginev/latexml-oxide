@@ -99,6 +99,31 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
 // Defined in Perl but never used as a parameter type anywhere in the codebase.
 // Omitted from Rust; add if a use site is discovered.
 
+/// Perl L392-398 (`\lxSVG@begingroup@`): when pgf output lands while the
+/// current node is an `ltx:` element inside a picture — a
+/// `\phantom`/`\hbox`/node-label `svg:foreignObject` — open a self-contained
+/// `svg:svg` (`_autoopened`, `_autoclose`) so the content nests there and
+/// unwinds with the box, instead of auto-relocating up to the picture's main
+/// group and desyncing every later close. Perl guards only the group opener;
+/// a BARE-style `\draw`/`\fill` (no dash/color → no `\lxSVG@begingroup`)
+/// reaches `\lxSVG@drawpath@*` unguarded and both engines cascade (`Closing
+/// tag "ltx:text" whose open descendents do not auto-close` … `svg:g isn't
+/// allowed in ltx:block`). The same guard on the path emitters closes that
+/// gap — pmdraw manual (`vertices top phantom`, pmdraw.sty:56-66
+/// `\phantom{\draw …}`): 64 errors → 0. The opened `svg:svg` is not closed
+/// by the caller (`_autoclose`).
+fn ensure_svg_context(document: &mut Document) -> Result<()> {
+  let current = document.get_node().clone();
+  let qname = document::get_node_qname(&current);
+  if with(qname, |s| s.starts_with("ltx:")) {
+    document.open_element("svg:svg", Some(string_map!(
+      "_autoopened" => "1".to_string(),
+      "_autoclose" => "1".to_string()
+    )), None)?;
+  }
+  Ok(())
+}
+
 /// Perl L161-169: foreignObjectCheck
 /// Check whether an svg:foreignObject is open in the ancestor chain,
 /// but don't check beyond an svg:svg node (in case we're nested).
@@ -717,6 +742,7 @@ LoadDefinitions!({
     sub[document, args, props] {
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       if !d.is_empty() {
+        ensure_svg_context(document)?;
         let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
 
         // Read per-path colors from properties (captured during digestion via properties closure)
@@ -785,6 +811,7 @@ LoadDefinitions!({
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
+      ensure_svg_context(document)?;
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
@@ -830,6 +857,7 @@ LoadDefinitions!({
     sub[document, args, props] {
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
+      ensure_svg_context(document)?;
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
@@ -858,15 +886,7 @@ LoadDefinitions!({
   // Perl L387-395: \lxSVG@begingroup@ — opens svg:g with RequiredKeyVals
   DefConstructor!("\\lxSVG@begingroup@ RequiredKeyVals",
     sub[document, args, _props] {
-      let current = document.get_node().clone();
-      let qname = document::get_node_qname(&current);
-      let is_ltx = with(qname, |s| s.starts_with("ltx:"));
-      if is_ltx {
-        document.open_element("svg:svg", Some(string_map!(
-          "_autoopened" => "1".to_string(),
-          "_autoclose" => "1".to_string()
-        )), None)?;
-      }
+      ensure_svg_context(document)?;
       let mut attrs = string_map!("_autoclose" => "1".to_string());
       if let Some(Some(kv_arg)) = args.first() {
         // Perl: $doc->openElement('svg:g', $kv->getHash, _autoclose => 1);

@@ -6848,4 +6848,30 @@ Hello.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>Hello.</p>"), "{xml}");
   }
-}
+
+  /// pgfsys-latexml.def.ltxml:392-398 opens a self-contained `svg:svg` when
+  /// `\lxSVG@begingroup@` fires inside an `ltx:` box within a picture; a
+  /// BARE-style path (no dash/color) never passes through the group opener,
+  /// so `\phantom{\draw …}` inside a tikzpicture relocated its `svg:path` up
+  /// to the picture group and desynced every later close — pmdraw manual
+  /// (`vertices top phantom`, pmdraw.sty:56-66): 64 errors. SHARED (Perl 7 on
+  /// this repro); `ensure_svg_context` now guards the path emitters too.
+  #[test]
+  fn pgf_bare_path_inside_phantom_stays_in_its_box() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{center}\begin{minipage}{0.85\textwidth}\begin{minipage}[c]{0.4\linewidth}
+\raisebox{0.5cm}{\begin{tikzpicture}\phantom{\draw (0,0)--(1,1);}\draw (0,0)--(2,0);\end{tikzpicture}}
+\end{minipage}\end{minipage}\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // the phantom's drawing nests inside its own foreignObject box
+    let fo = xml.find("<svg:foreignObject").expect("phantom foreignObject");
+    let after = &xml[fo..];
+    let close = after.find("</svg:foreignObject>").unwrap();
+    assert!(after[..close].contains("<svg:path"), "phantom path escaped its box: {xml}");
+    assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
+  }}
