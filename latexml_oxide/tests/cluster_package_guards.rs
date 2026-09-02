@@ -6251,4 +6251,30 @@ D
     assert!(xml.contains(">D<") || xml.contains("D\n"), "{xml}");
   }
 
+  /// latex.ltx:15913 `\endlist` decrements `\@listdepth`; our `\endlist`
+  /// never did, so a raw class whose `\list` is latex.ltx's (memoir.cls:4580,
+  /// with the `>5 → \@toodeep` check) hit "Too deeply nested" on the seventh
+  /// list (witness memman: 88 errors from `adjustwidth`, memoir.cls:11268).
+  #[test]
+  fn endlist_decrements_listdepth() {
+    let (stderr, xml) = convert(
+      r"\documentclass{memoir}
+\begin{document}
+\begin{adjustwidth}{1em}{1em}A\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}B\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}C\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}D\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}E\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}F\end{adjustwidth}
+\begin{adjustwidth}{1em}{1em}G\end{adjustwidth}
+\makeatletter\the\@listdepth\makeatother
+\end{document}
+",
+      true,
+    );
+    assert!(!stderr.contains("Too deeply nested"), "{stderr}");
+    assert!(xml.contains("G"), "{xml}");
+    assert!(xml.contains("G\n0</p>"), "{xml}");
+  }
+
 }

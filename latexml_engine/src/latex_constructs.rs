@@ -6112,11 +6112,21 @@ LoadDefinitions!({
       ..BeginItemizeOptions::default() })?;
   });
 
+  // `\@listdepth` accounting mirrors latex.ltx:15852 (`\list` … `\global
+  // \advance\@listdepth\@ne`) and :15913 (`\endlist` … `\global\advance
+  // \@listdepth\m@ne`). The closer's decrement is load-bearing even though the
+  // native list never consults the depth: a raw class that redefines `\list`
+  // alone (memoir.cls:4580 is latex.ltx's `\list` verbatim, with the `>5 →
+  // \@toodeep` check) keeps our `\endlist`, so without the decrement the depth
+  // climbed monotonically and every list after the sixth raised "Too deeply
+  // nested" (memman: 88 errors from `adjustwidth`, memoir.cls:11268). Perl
+  // (latex_constructs.pool.ltxml:1644/1651) shares the leak. Guard:
+  // `perfect_kernel_batch54::endlist_decrements_listdepth`.
   DefMacro!(
     r"\list{}{}",
-    r"\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list"
+    r"\global\advance\@listdepth\@ne\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list"
   );
-  DefMacro!("\\endlist", "\\endlx@list");
+  DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
 
   // Start an anonymous list (often misused)
   DefConstructor!("\\lx@list",
