@@ -45,10 +45,24 @@ LoadDefinitions!({
   def_macro_noop("\\UL@stop")?;
   def_macro_noop("\\UL@putbox")?;
   def_macro_noop("\\UL@ender")?;
-  def_macro_noop("\\UL@end OptionalMatch:*")?;
   def_macro_identity("\\UL@word{}")?;
-  def_macro_identity("\\UL@on{}")?;
-  def_macro_identity("\\UL@onin{}")?;
+  // ulem's documented extension contract (ulem.sty:232-233): a special
+  // underline is `\def\command{\bgroup \markoverwith{<leader>} \ULon}`, and
+  // the `\bgroup` is closed by the word machinery — `\UL@on#1` ends in
+  // `\UL@end *` whose real body (:59) closes the group, `\UL@onin`/`\UL@onmath`
+  // (:90-102) end in `\egroup`. Keep that contract with the identity word
+  // processor: CJKfntef.sty:258-283 `\CJK@UL` (`\CJKunderline`, raw) left the
+  // group open and unbalanced the enclosing list (jnuexam exam sheets, 8
+  // CJKfntef manuals). `\markoverwith` only builds the leader box.
+  def_macro_noop("\\markoverwith{}")?;
+  DefMacro!(
+    "\\ULon",
+    r"\ifmmode\expandafter\UL@onmath\else\expandafter\UL@on\fi"
+  );
+  DefMacro!("\\UL@on{}", r"#1\UL@end *");
+  DefMacro!("\\UL@onin{}", r"#1\egroup");
+  DefMacro!("\\UL@onmath{}", r"#1\egroup");
+  DefMacro!("\\UL@end OptionalMatch:*", r"\egroup");
   DefMacro!("\\UL@spfactor", None, "1000");
 
   // ulem.sty L286: \useunder{ucmd}{decl}{argcmd} aliases `decl` and

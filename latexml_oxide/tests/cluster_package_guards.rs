@@ -7162,4 +7162,28 @@ Text after list. $x$
       "{xml}"
     );
   }
+
+  /// ulem.sty:232-233 extension contract: `\bgroup\markoverwith{…}\ULon{text}`
+  /// — the word machinery closes the group (`\UL@end *`, :59). The binding's
+  /// inert internals lacked `\markoverwith`/`\ULon` and never closed it, so
+  /// CJKfntef's `\CJKunderline` (CJKfntef.sty:258-283) unbalanced the
+  /// enclosing list. Witness: jnuexam examfc-a-answer (+8 CJKfntef manuals).
+  #[test]
+  fn ulem_markoverwith_ulon_contract_closes_its_group() {
+    let tex = r"\documentclass{article}
+\usepackage{ulem}
+\makeatletter
+\def\myul{\bgroup\markoverwith{\hbox{x}}\ULon}
+\makeatother
+\begin{document}
+\begin{description}
+\item[A] before \myul{XYZ} after \myul{second}.
+\end{description}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("XYZ") && xml.contains("second"), "{xml}");
+    assert_eq!(xml.matches("<description").count(), 1, "{xml}");
+  }
 }
