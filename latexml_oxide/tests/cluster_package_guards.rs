@@ -6786,4 +6786,22 @@ START\myval END
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("START END") || xml.contains("STARTEND"), "{xml}");
   }
+
+  /// Perl TeX_Debugging.pool.ltxml:110-113 reduces a primitive / conditional /
+  /// constructor to its cs-or-alias token before rendering `\meaning`; our
+  /// `DefMath` atoms are a separate `Stored::MathPrimitive` and fell to the
+  /// catch-all `Stored[??]`. Witness: sunpath (tikzmath `\meaning` sniffing).
+  #[test]
+  fn meaning_of_defmath_atom_is_its_cs() {
+    let tex = r"\documentclass{article}
+\begin{document}
+[\expandafter\detokenize\expandafter{\meaning\forall}][\expandafter\detokenize\expandafter{\meaning\infty}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // (the backslash itself is OT1-decoded in text; the names are the signal)
+    assert!(xml.contains("forall][") && xml.contains("infty]"), "{xml}");
+    assert!(!xml.contains("Stored["), "{xml}");
+  }
 }

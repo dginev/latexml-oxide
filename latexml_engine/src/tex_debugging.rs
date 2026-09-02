@@ -110,6 +110,12 @@ LoadDefinitions!({
           Stored::Token(constructor.get_cs_or_alias().into_owned()),
         Stored::Conditional(cond) =>
           Stored::Token(cond.get_cs_or_alias().into_owned()),
+        // `DefMath` atoms are constructors in Perl, so they take the same
+        // reduction; the catch-all rendered them as `Stored[??]`, which
+        // `\meaning`-sniffing packages (tikzlibrarymath.code.tex:22-46
+        // `\tikz@math@@getmeaning`) then misparse. Witness: sunpath.
+        Stored::MathPrimitive(m) =>
+          Stored::Token(m.get_cs_or_alias().into_owned()),
         other => other
       };
 
