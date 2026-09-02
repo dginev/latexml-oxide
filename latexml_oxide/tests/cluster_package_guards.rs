@@ -7274,4 +7274,68 @@ A\csname l@\beamer@torinoth@language\endcsname B
       "font not applied to the tag: {xml}"
     );
   }
+
+  /// memoir.cls:5477-5719 auto-tables reduce to `\tabular`: `\autorows` fills
+  /// `num` columns row-major, `\autocols` column-major with the `\linespercol`
+  /// heights (:5665-5675, greedy ceil — column 0 tallest; the manual's own
+  /// `\showit` mock is wrong), `{ctabular}`'s `[pos]` is horizontal. The raw
+  /// code drives `\valign`/`\@mkpream` internals the engine never provides
+  /// (memman: ~157 errors; SHARED).
+  #[test]
+  fn memoir_auto_tables_reduce_to_tabular() {
+    let tex = r"\documentclass{memoir}
+\begin{document}
+\autorows{c}{5}{c}{one, two, three, four, five, six, seven, eight, nine, ten,
+eleven, twelve, thirteen, fourteen}
+\autocols{c}{5}{l}{one, two, three, four, five, six, seven, eight, nine, ten,
+eleven, twelve, thirteen, fourteen}
+\begin{ctabular}[l]{lcr}
+LEFT & CENTER & RIGHT \\
+l & c & r \\
+\end{ctabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tabular").count(), 3, "{xml}");
+    assert_eq!(xml.matches("<tr").count(), 8, "{xml}");
+    // autorows: first row one…five; autocols: first row one,four,seven,ten,thirteen
+    let rows: Vec<&str> = xml.split("<tr").skip(1).collect();
+    let cells = |r: &str| -> Vec<String> {
+      r.split("<td")
+        .skip(1)
+        .map(|c| {
+          c.split('>')
+            .nth(1)
+            .unwrap_or("")
+            .split('<')
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_string()
+        })
+        .collect()
+    };
+    assert_eq!(
+      cells(rows[0]),
+      ["one", "two", "three", "four", "five"],
+      "{xml}"
+    );
+    assert_eq!(
+      cells(rows[2])[..4],
+      ["eleven", "twelve", "thirteen", "fourteen"],
+      "{xml}"
+    );
+    assert_eq!(
+      cells(rows[3]),
+      ["one", "four", "seven", "ten", "thirteen"],
+      "{xml}"
+    );
+    assert_eq!(
+      cells(rows[5])[..4],
+      ["three", "six", "nine", "twelve"],
+      "{xml}"
+    );
+    assert_eq!(cells(rows[6]), ["LEFT", "CENTER", "RIGHT"], "{xml}");
+  }
 }
