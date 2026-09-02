@@ -5,7 +5,7 @@
 //! file runs cleanly on the batch-54 kernel (chemmacros manual; the earlier
 //! stub's `\ch` → `\ensuremath{\mathrm{#1}}` overrode chemformula's `\ch`
 //! whenever both were loaded — chemformula manual: 59 `\lx@end@inline@math`
-//! + 32 malformed `ltx:text` errors from `\ch{CrO4^2-}` typeset as math).
+//! and 32 malformed `ltx:text` errors from `\ch{CrO4^2-}` typeset as math).
 //! Perl LaTeXML has no chemmacros binding and skips it under
 //! INCLUDE_STYLES=false; the 2024 stub rationale (~1000 cascading expl3
 //! errors per paper, witnesses 2407.06385, 2408.16742, 2408.16711) no longer
