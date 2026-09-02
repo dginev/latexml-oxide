@@ -4064,13 +4064,25 @@ pub(crate) mod perfect_kernel_batch46 {
   /// preload, otherwise the default (arXiv) configuration. Returns
   /// (ANSI-stripped stderr, XML string).
   pub(crate) fn convert(tex: &str, raw: bool) -> (String, String) {
+    convert_with(
+      tex,
+      if raw {
+        Some("[rawstyles,rawclasses]latexml.sty")
+      } else {
+        None
+      },
+    )
+  }
+
+  pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
     let workdir = tempfile::tempdir().expect("create tempdir");
     std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
     let mut args = vec!["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=110"];
-    if raw {
-      args.push("--preload=[rawstyles,rawclasses]latexml.sty");
+    let preload_arg = preload.map(|p| format!("--preload={p}"));
+    if let Some(ref p) = preload_arg {
+      args.push(p);
     }
     let output = Command::new(bin)
       .args(&args)
@@ -6087,7 +6099,7 @@ mod perfect_kernel_batch54 {
   //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
   //! was vetted separately.
   use super::{
-    perfect_kernel_batch46::{convert, error_count},
+    perfect_kernel_batch46::{convert, convert_with, error_count},
     perfect_kernel_batch53::convert_with_sty,
   };
 
@@ -8633,5 +8645,249 @@ Text.
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<title>Declaration</title>"), "{xml}");
+  }
+
+  /// makeidx.sty defines no `\makeindex` (makeidx.sty:44-51); the binding's
+  /// no-op clobbered the kernel's `\@indexfile` allocation that manyind /
+  /// robustindex write to (mindsample, robustmanual, multisample).
+  #[test]
+  fn makeidx_keeps_the_allocating_makeindex() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+\makeatletter
+\protected@write\@indexfile{}{payload}%
+\ifdefined\@indexfile STREAMDEFINED\fi
+\makeatother
+\index{alpha}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("STREAMDEFINED"), "{xml}");
+    assert!(xml.contains(r#"<indexphrase key="alpha">"#), "{xml}");
+    assert!(!xml.contains("payload"), "{xml}");
+  }
+
+  /// PLANS P37: a `{lstlisting}` in a tabbing field / `l` cell is wrapped in
+  /// an auto-opened `ltx:inline-block` (the `p{}`-column shape) instead of
+  /// `<ltx:listing> isn't allowed in <ltx:td>` (engtlc ×2, lexref,
+  /// expex-glossonly).
+  #[test]
+  fn listing_in_a_tabular_cell_gets_an_inline_block() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{tabbing}
+\hspace{3cm}\=\kill
+\begin{lstlisting}
+$x$
+\end{lstlisting} \> value
+\end{tabbing}
+\begin{tabular}{ll}
+\begin{lstlisting}
+code
+\end{lstlisting} & right \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<inline-block").count(), 2, "{xml}");
+    assert!(
+      xml.contains("<inline-block>\n            <listing")
+        || xml.contains("<inline-block><listing"),
+      "{xml}"
+    );
+  }
+
+  /// tex.web §1211: the register reader skips spaces/`\relax` and absorbs
+  /// `\global` (a0poster.cls.ltxml `\setlength { \paperwidth }{…}`:
+  /// modernposter; xtab.sty:146 `\setlength{\global\ST@toadd}{#1}`: rec-thy,
+  /// altverse).
+  #[test]
+  fn variable_reader_skips_spaces_and_takes_prefixes() {
+    let tex = r"\documentclass{article}
+\usepackage{xtab}
+\newlength{\mylen}
+\begin{document}
+\setlength { \mylen }{ 5pt }%
+{\setlength{\global\mylen}{7pt}}[\the\mylen]
+\begin{xtabular}{l}a\\[6pt]b\\ \end{xtabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[7.0pt]"), "{xml}");
+    assert_eq!(xml.matches("<tr>").count(), 2, "{xml}");
+  }
+
+  /// beamerbasetitle.sty:148/169/233/238: `\inst{n}` is `\textsuperscript{n}`
+  /// (detlevcm, beamerstructure2), `\partpage` (beamerbasetitle.sty:30) re-shows
+  /// the part page, and beamer.cls:32-49 declares the sidebar/margin dimension
+  /// family themes read (beamerthemeVerona.sty:287).
+  #[test]
+  fn beamer_inst_partpage_and_sidebar_dimens() {
+    let tex = r"\documentclass{beamer}
+\title{T}
+\author{Alice\inst{1} \and Bob\inst{2}}
+\institute{\inst{1}Univ A \and \inst{2}Univ B}
+\makeatletter
+\newlength{\myx}
+\setlength{\myx}{\dimexpr(\paperwidth-\beamer@rightsidebar-2mm)}
+\makeatother
+\begin{document}
+\begin{frame}\titlepage\end{frame}
+\part{Background}
+\begin{frame}\partpage\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<sup>1</sup>Univ A"), "{xml}");
+    assert!(xml.contains("<tag>Part I</tag>"), "{xml}");
+  }
+
+  /// tabu.sty:6-8 `\begin{tabu} to <dimen>{cols}`: the `to` prefix and `X`
+  /// columns (brandeis-problemset example.tex:228, 41 errors).
+  #[test]
+  fn tabu_to_width_and_x_columns() {
+    let tex = r"\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu} to 0.25\linewidth{X[1,$]rr}
+a & b & c \\
+\end{tabu}
+\begin{tabu}{lX}
+d & e \\
+\end{tabu}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 5, "{xml}");
+  }
+
+  /// xkeyval.tex:38 `\let\XKeyValLoaded\endinput`: expex.tex:65 must not
+  /// re-input raw xkeyval over the binding (fragoli, rainbowbrackets:
+  /// `undefined:\ep@preambleanchor` on a `\pex` with preamble text).
+  #[test]
+  fn xkeyval_sets_the_loaded_sentinel() {
+    let tex = r"\documentclass{article}
+\usepackage{expex}
+\begin{document}
+\pex
+This is a preamble.
+\a First item.
+\b Second item.
+\xe
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("This is a preamble."), "{xml}");
+    assert!(xml.contains("First item."), "{xml}");
+  }
+
+  /// biblatex.sty:809-870 declares its counters with `\newcounter` (fiwi.bbx:59
+  /// `\defcounter{lownamepenalty}` → "No counter defined"; biblatex-fiwi ×3);
+  /// blx-compat.def:155 `\AtBeginShorthands` (philosophy/windycity styles);
+  /// hyperref.sty:237 `\Hy@AtBeginDocument` (biblatex2bibitem ×2).
+  #[test]
+  fn biblatex_counters_hooks_and_hy_atbegindocument() {
+    let tex = r"\documentclass{article}
+\usepackage[colorlinks]{hyperref}
+\usepackage{biblatex}
+\AtBeginShorthands{\relax}
+\makeatletter
+\defcounter{lownamepenalty}{0}
+\Hy@AtBeginDocument{\def\@pdfborder{0 0 1}}
+\makeatother
+\setcounter{lownamepenalty}{5}
+\begin{document}
+[\arabic{lownamepenalty}/\arabic{maxnames}] \href{http://x}{y}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[5/3]"), "{xml}");
+    assert!(xml.contains(r#"href="http://x""#), "{xml}");
+  }
+
+  /// KNOWN_PERL_ERRORS #145: the frontmatter copy of `\title`/`\author`/`\date`
+  /// comes from the stored (once-halved) macro — the RCS-keyword idiom
+  /// `\date{\def\$##1: ##2 ##3${##2}…}` (ulineno.tex:16) put a literal `#`
+  /// in the stomach.
+  #[test]
+  fn frontmatter_copies_the_halved_macro() {
+    let tex = r"\documentclass{article}
+\date{\def\$##1: ##2 ##3${##2}%$
+   Version \$Revision: 3.1 $, \$Date: 2001/08/03 03:29:19 $
+}
+\title{T\def\x##1{##1}\x{ok}}\author{A \and B\thanks{t}}
+\begin{document}
+\maketitle
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Version 3.1, 2001/08/03"), "{xml}");
+    assert!(xml.contains("<title>Tok</title>"), "{xml}");
+    assert_eq!(xml.matches("<personname>").count(), 2, "{xml}");
+  }
+
+  /// pgfplotscore.code.tex:74-89 `\pgfplotsenablelua{0}`: under the `[luatex]`
+  /// profile `\directlua` exists but pgfplots' Lua bootstrap cannot run here
+  /// (colorblind_doc: `\pgfplotsglobalretval`, `\pgfplotsutil@savecatcodetable`).
+  #[test]
+  fn pgfplots_lua_backend_is_off_under_luatex_profile() {
+    let tex = r"\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}\begin{axis}\addplot {x^2};\end{axis}\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg"), "{xml}");
+  }
+
+  /// url.sty:84: `\` is literal inside `\url`/`\path` (latex4wp.tex:451
+  /// `\path{C:\localtexmf\tex\}` swallowed the rest of the manual).
+  #[test]
+  fn url_backslash_is_literal() {
+    let tex = r"\documentclass{article}
+\usepackage{url}
+\begin{document}
+See the path \path{C:\localtexmf\tex\} here. \url{http://x/a_b#c\}
+More text after it.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r"C:\localtexmf\tex\</text>") || xml.contains(r"C:\localtexmf\tex\<"),
+      "{xml}"
+    );
+    assert!(xml.contains("More text after it."), "{xml}");
+  }
+
+  /// `\index{foo@\string\verb\string"bar}` (amsldoc.cls `\cs`; amsldoc-it/-vn):
+  /// a `\verb` "delimited" by a control sequence is index text, not verbatim.
+  #[test]
+  fn index_verb_followed_by_cs_is_text() {
+    let tex = r#"\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+Text\index{foo@\string\verb\string"bar}. More text here.
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<indexmark"), "{xml}");
+    assert!(xml.contains("More text here."), "{xml}");
   }
 }

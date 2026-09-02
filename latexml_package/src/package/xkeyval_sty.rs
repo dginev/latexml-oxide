@@ -25,6 +25,16 @@ LoadDefinitions!({
   // `keyval.sty_loaded`, so a later `\RequirePackage{keyval}` stays a no-op and
   // xkeyval keeps the last word, exactly as the pretense intended.
   RequirePackage!("keyval");
+  // xkeyval.tex:37-38 `\let\XKeyValLoaded\endinput` — the re-entry sentinel
+  // every piggy-backing package tests (`\ifx\XKeyValLoaded\endinput\else
+  // \input xkeyval\fi`: expex.tex:65-66, keyreader.sty, pst-xkey.tex,
+  // pst-2dplot.sty). Without it expex re-inputs the RAW xkeyval.tex over
+  // this binding's `\define@choicekey`, whose optional `[bin]` on a
+  // continuation line (expex.tex:305-306 `preambleanchor`) is then lost —
+  // `undefined:\ep@preambleanchor` on every `\pex` with preamble text
+  // (fragoli, rainbowbrackets; Perl xkeyval.sty.ltxml shares the gap).
+  // Guard: `perfect_kernel_batch54::xkeyval_sets_the_loaded_sentinel`.
+  TeX!(r"\let\XKeyValLoaded\endinput");
 
   // `\XKV@ifundefined{<csname>}{<undefined>}{<defined>}` — xkeyval's group-safe
   // existence test (xkvutils.tex L59, e-TeX branch). Our binding REPLACES

@@ -3084,6 +3084,31 @@ impl Document {
         if is_sectioning_unit && is_lenient_container {
           return Ok(self.node.clone());
         }
+        // Block content in an inline container that cannot auto-close —
+        // a `{lstlisting}` in an `l`/`c`/`r` tabular cell or a `{tabbing}`
+        // field (engtlc, lexref, expex-glossonly: `<ltx:listing> isn't
+        // allowed in <ltx:td>`) — takes the shape the `p{}` column already
+        // gives cell blocks (`insert_block`): an auto-opened
+        // `ltx:inline-block`, legal here and holding the child. Only when
+        // every direct, auto-open and auto-close route above is exhausted,
+        // so a display equation in a paragraph still closes the `ltx:p`.
+        // Perl shares the error (Document.pm:1008; `inline-block` is not an
+        // autoOpen tag, and making it one globally would wrap equations
+        // instead of closing paragraphs). PLANS P37. Guard:
+        // `perfect_kernel_batch54::listing_in_a_tabular_cell_gets_an_inline_block`.
+        let inline_block = pin!("ltx:inline-block");
+        if qsym != inline_block
+          && can_contain_qsym(cur_qname, inline_block)
+          && can_contain_qsym(inline_block, qsym)
+        {
+          let node_font = self.get_node_font(&self.node).clone();
+          self.open_element(
+            "ltx:inline-block",
+            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
+            Some(&node_font),
+          )?;
+          return self.find_insertion_point_qsym(qsym, Some(inline_block));
+        }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
         // (a bare qname for #PCDATA), with "Currently in <insertion

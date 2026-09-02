@@ -5151,3 +5151,19 @@ pdflatex captions "Floppy 1". Rust: the two macros are set separately (and the
 trailing `[singular][listname]` optionals, newfloat.sty:117-125, are read);
 `50_structure/floatnames.xml` re-blessed to "Floppy 1". Guard:
 `perfect_kernel_batch54::declare_caption_type_makes_a_float`.
+
+## 145. `\title`/`\author`/`\date` copy the RAW argument into the frontmatter (Rust fixes)
+
+latex_constructs.pool.ltxml:1066-1069 `\date` = `\def\@date{#1}\lx@add@date[…]{#1}`
+(and `\title`/`\author` alike): the stored macro halves `##` once (latex.ltx:17214
+`\gdef\@date{#1}`), but an ARGUMENT position never halves, so the frontmatter copy
+digests `\def\$##1: ##2 ##3${##2}` with doubled hashes and a literal `#` reaches
+the stomach — the RCS-keyword idiom, ulineno.tex:16 (2 errors). Trigger:
+
+```latex
+\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}
+```
+
+Rust: the frontmatter copy is `\expandafter\lx@add@date@halved\expandafter{\@date}`
+(likewise `\@title`, `\@author`). Guard:
+`perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.

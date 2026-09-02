@@ -749,8 +749,34 @@ LoadDefinitions!({
   DefRegister!("\\lx@DUMMY@REGISTER", Tokens!());
 
   // Read a variable, ie. a token (after expansion) that is a writable register.
+  // tex.web §1211 `prefixed_command`: before the register, TeX skips spaces
+  // and `\relax` (§404) and absorbs any `\global`/`\long`/`\outer` prefixes.
+  // A braced `{Variable}` (`\setlength`, `\addtolength`) hands the reader its
+  // first token, so `\setlength { \paperwidth }{…}` (a0poster.cls.ltxml:41-77
+  // — modernposter ×10) and xtab.sty:146/150 `\setlength{\global\ST@toadd}
+  // {#1}` (every `xtabular` `\\[<len>]`: rec-thy ×20, altverse) erred
+  // "A <variable> was supposed to be here" in both engines (Perl
+  // Base_ParameterTypes.pool.ltxml:271 reads one token too). Guard:
+  // `perfect_kernel_batch54::variable_reader_skips_spaces_and_takes_prefixes`.
   DefParameterType!(Variable, sub[_inner, _extra] {
-    let token_opt = read_x_token(None, false, None)?;
+    let mut token_opt = read_x_token(None, false, None)?;
+    while let Some(token) = token_opt {
+      if token.get_catcode() == Catcode::SPACE || token == T_CS!("\\relax") {
+        token_opt = read_x_token(None, false, None)?;
+        continue;
+      }
+      if token.get_catcode().is_active_or_cs()
+        && let Some(defn) = lookup_definition(&token)?
+        && defn.is_prefix()
+      {
+        // `\global` etc.: run the prefix primitive itself (it records the
+        // prefix for the assignment that follows), then read on.
+        digest(Tokens!(token))?;
+        token_opt = read_x_token(None, false, None)?;
+        continue;
+      }
+      break;
+    }
     let defn_opt = match token_opt {
       Some(ref token) => lookup_register_definition(token),
       None => None

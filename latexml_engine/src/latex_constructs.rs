@@ -2794,6 +2794,20 @@ fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
       continue;
     }
     let delim = toks[i];
+    // A `\verb` whose "delimiter" is a control sequence is not a verbatim
+    // invocation but makeindex TEXT — `\index{foo@\string\verb\string"bar}`
+    // (amsldoc.cls:87-114 `\cs`/`\@indexcs`; amsldoc-it/-vn) round-trips
+    // through the sanitized re-tokenization as the command `\verb` followed
+    // by `\string`. Expanding it scanned for a `"` past the end of the entry
+    // (`readBalanced ran out of input`); Perl never expands the entry. Keep it
+    // as the literal characters `\verb`.
+    if delim.get_catcode() == Catcode::CS {
+      out.extend(Explode!("\\verb"));
+      if starred {
+        out.push(T_OTHER!("*"));
+      }
+      continue;
+    }
     let delim_s = delim.with_str(|d| d.to_string());
     i += 1;
     let body_start = i;
@@ -5477,12 +5491,24 @@ LoadDefinitions!({
   // a literal backslash + end-of-line = a spurious CONTROL-SPACE `\ ` in the
   // body (see the \maketitle note above; driver 1708.07027).
   DefMacro!("\\title[]{}",
-    r"\gdef\@shorttitle{#1}\gdef\shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}",
+    // The frontmatter copy is taken from the STORED macro (`\expandafter…
+    // {\@title}`), not the raw `#2`: a `\def` inside the argument writes
+    // `##` (latex.ltx:17214 `\gdef\@title{#1}` halves it once), and an
+    // argument position does not halve, so the raw copy digested `\def\$##1…
+    // {##2}` and a literal `#` reached the stomach — the RCS-keyword idiom
+    // `\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}` (ulineno.tex:16, 2
+    // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
+    // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
+    r"\gdef\@shorttitle{#1}\gdef\shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}",
     locked => true);
   DefMacro!("\\@date", "\\@empty");
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\lx@add@date[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
+    r"\def\@date{#1}\expandafter\lx@add@date@halved\expandafter{\@date}"
+  );
+  DefMacro!(
+    "\\lx@add@date@halved{}",
+    r"\lx@add@date[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
   // Conference-template "equal contribution" markers used inside \author{...}
   // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
@@ -5556,7 +5582,7 @@ LoadDefinitions!({
   // Rust-only: also \gdef the non-@ \shortauthor for user-style references
   // (see note above; our \author is locked so renewcommand can't add it).
   DefMacro!("\\author[]{}",
-    r"\def\@shortauthor{#1}\gdef\shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}",
+    r"\def\@shortauthor{#1}\gdef\shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors\expandafter{\@author}",
     locked => true);
 
   DefPrimitive!("\\lx@authors@oneline", {

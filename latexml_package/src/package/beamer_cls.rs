@@ -153,6 +153,23 @@ LoadDefinitions!({
   // \pgfdeclareverticalshading, gotham). Load our pgf binding so that raw
   // theme surface resolves against the real implementations.
   RequirePackage!("pgf");
+  // beamer.cls:32-49 + beamerbaseframecomponents.sty:22-23: the dimension
+  // registers themes read (`\beamer@rightsidebar` unconditionally at
+  // beamerthemeVerona.sty:287 → `Missing close parenthesis in Dimension
+  // expr`; sidebar/inmargin outer themes, boxes). Real themes raw-load here
+  // (beyond Perl, which no-ops `\usetheme`), so beamer.cls's own state must
+  // exist. Defaults as in beamer.cls (0pt; margins 1cm).
+  RawTeX!(r"\newdimen\headdp \newdimen\footheight \newdimen\sidebarheight
+\newdimen\beamer@tempdim \newdimen\beamer@finalheight
+\newdimen\beamer@animht \newdimen\beamer@animdp \newdimen\beamer@animwd
+\newdimen\beamer@leftmargin \newdimen\beamer@rightmargin
+\newdimen\beamer@leftsidebar \newdimen\beamer@rightsidebar
+\newdimen\beamer@boxsize \newdimen\beamer@vboxoffset
+\newdimen\beamer@descdefault \newdimen\beamer@descriptionwidth
+\newdimen\beamer@sidebarwidth \newdimen\beamer@headheight
+\newdimen\beamer@frametextheight \newdimen\beamer@boxheadheight
+\newdimen\beamer@blockheadheight
+\beamer@leftmargin=1cm \beamer@rightmargin=1cm");
 
   // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
   // — declares `fragile` as a zero-argument key for the beamerframe keyset.
@@ -289,6 +306,11 @@ LoadDefinitions!({
 
   // Title page macros — Perl L1010-1035
   DefMacro!("\\institute OptionalAngled []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
+  // beamerbasetitle.sty:148/169 and :233/238: `\inst{n}` is defined locally
+  // inside `\insertauthor`/`\insertinstitute` as the superscript affiliation
+  // mark; our `\author`/`\institute` digest their argument at once, where it
+  // was `undefined:\inst` (beamertheme-detlevcm, beamerstructure2; Perl too).
+  DefMacro!("\\inst{}", "\\textsuperscript{#1}");
   // The constructor \institute expands into was never defined here — every
   // beamer doc using \institute logged `undefined:\@@@affiliation` (sweep-11
   // cluster: 16 docs, witness beamerthemeconcrete/demo-cbernoulli). Same
@@ -322,6 +344,7 @@ LoadDefinitions!({
   // semantic \insertsection mapping is the follow-up. 9-doc cluster,
   // witnesses beamerauxtheme examples, bfh-ci DEMO-BFHBeamer.
   def_macro_noop("\\sectionpage")?;
+  def_macro_noop("\\partpage")?; // beamerbasetitle.sty:30 — the part is already emitted by \part
   def_macro_noop("\\subsectionpage")?;
   def_macro_noop("\\insertauthor")?;
   def_macro_noop("\\inserttitle")?;

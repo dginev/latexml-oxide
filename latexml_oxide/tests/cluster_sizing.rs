@@ -89,15 +89,13 @@ mod delimiter_size_nominal_font {
 
   #[test]
   fn sized_delimiters_scale_to_the_nominal_font_size() {
-    // NOTE the expected-error count. `a0poster` currently emits 4
-    // `Error:expected:<variable>` in Rust and ZERO in Perl 0.8.8 on this exact
-    // input — a Rust-only defect in the class binding, unrelated to delimiter
-    // sizing and tracked separately. It is pinned rather than tolerated: when
-    // that bug is fixed this assertion fails, which is the intended prompt to
-    // drop the count back to 0. Do not "fix" this by loosening the check.
+    // `a0poster` used to emit 4 `Error:expected:<variable>` here (its binding's
+    // `\setlength { \paperwidth }{…}` with spaces — Perl skipped them, we did
+    // not); the `Variable` reader now follows tex.web §1211 (batch 54f), so
+    // the pinned count is 0. Keep it pinned, never tolerated.
     let xml = convert_expecting_errors(
       "tests/cluster_regressions/delimiter_size_nominal_font.tex",
-      4,
+      0,
     );
     let got = sizes(&xml);
     for want in ["120%", "160%"] {
@@ -130,12 +128,11 @@ mod delimiter_size_nominal_font {
   #[test]
   fn nominal_font_size_persisted_as_pi_only_when_non_default() {
     use crate::cluster::{convert_expecting_errors, convert_to_xml};
-    // a0poster sets NOMINAL_FONT_SIZE=25 → the PI carries it. The 4 errors are
-    // a0poster's unrelated class-binding defect (pinned by the sibling delimiter
-    // test); tolerate them here — they are orthogonal to the PI.
+    // a0poster sets NOMINAL_FONT_SIZE=25 → the PI carries it (its former 4
+    // `<variable>` errors are gone — see the sibling delimiter test).
     let a0 = convert_expecting_errors(
       "tests/cluster_regressions/delimiter_size_nominal_font.tex",
-      4,
+      0,
     );
     assert!(
       a0.contains("<?latexml nominal-font-size=\"25\"?>"),

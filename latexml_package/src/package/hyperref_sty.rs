@@ -655,6 +655,13 @@ LoadDefinitions!({
   // creates its own anchors, so keeping `\@currentHref` current is all the
   // internal needs to do here.
   DefMacro!("\\Hy@MakeCurrentHref{}", "\\edef\\@currentHref{#1}");
+  // hyperref.sty:237-242: `\Hy@AtBeginDocument{code}` appends to a hook run
+  // once after `\begin{document}` (`\AfterBeginDocument`, :248-251);
+  // `\Hy@AtEndOfPackage` likewise at end of package. Documents poke them
+  // directly (biblatex2bibitem-hyperref.tex:12 `\Hy@AtBeginDocument{\def
+  // \@pdfborder{0 0 1}}`; Perl errors too).
+  DefMacro!("\\Hy@AtBeginDocument{}", "\\AtBeginDocument{#1}");
+  DefMacro!("\\Hy@AtEndOfPackage{}", "\\AtEndOfPackage{#1}");
 
   Let!("\\footref", "\\ref"); // ?
 

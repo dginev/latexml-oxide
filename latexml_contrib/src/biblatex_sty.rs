@@ -1055,7 +1055,65 @@ LoadDefinitions!({
   DefMacro!("\\unspace", "\\relax");
   DefMacro!("\\blx@imc@resetpunctfont", "\\relax");
   DefMacro!("\\blx@postpunct", "\\@empty");
-  DefRegister!("\\c@highnamepenalty" => Number(0));
+  // biblatex.sty:809-870/3488-3492 + biblatex.def:160-168/267-271/2175 declare
+  // the counters with `\newcounter`, so `\defcounter`/`\setcounter`/`\value`
+  // on them resolve (fiwi.bbx:59 `\defcounter{lownamepenalty}{0}` — "No
+  // counter defined", biblatex-fiwi ×3; the biburl*/maxnames "not a register"
+  // warnings on every biblatex doc). Defaults from :16390 `maxnames=3,
+  // minnames=1` and :862-868 (penalties 0). `\the<counter>` is the arabic value.
+  for name in [
+    "tabx@nest",
+    "listtotal",
+    "listcount",
+    "liststart",
+    "liststop",
+    "citecount",
+    "citetotal",
+    "multicitecount",
+    "multicitetotal",
+    "instcount",
+    "maxnames",
+    "minnames",
+    "maxitems",
+    "minitems",
+    "citecounter",
+    "maxcitecounter",
+    "savedcitecounter",
+    "uniquelist",
+    "uniquename",
+    "refsection",
+    "refsegment",
+    "maxextratitle",
+    "maxextratitleyear",
+    "maxextraname",
+    "maxextradate",
+    "maxextraalpha",
+    "abbrvpenalty",
+    "highnamepenalty",
+    "lownamepenalty",
+    "maxparens",
+    "parenlevel",
+    "mincomprange",
+    "maxcomprange",
+    "mincompwidth",
+    "textcitecount",
+    "textcitetotal",
+    "textcitemaxnames",
+    "biburlbigbreakpenalty",
+    "biburlbreakpenalty",
+    "biburlnumpenalty",
+    "biburlucpenalty",
+    "biburllcpenalty",
+    "smartand",
+  ] {
+    NewCounter!(name);
+  }
+  SetCounter!("maxnames", Number::new(3));
+  SetCounter!("minnames", Number::new(1));
+  SetCounter!("maxitems", Number::new(3));
+  SetCounter!("minitems", Number::new(1));
+  SetCounter!("maxparens", Number::new(3));
+  SetCounter!("smartand", Number::new(1));
 
   // Perl L69-72
   DefMacro!("\\addslash", "/\\hskip\\z@skip");
@@ -2241,32 +2299,8 @@ LoadDefinitions!({
   // itself uses `\type`; our binding doesn't process filter bodies, so nothing
   // here needs the global stub.)
   //
-  // Perl L648-671: \the* counter-readouts (all empty, argument-less — safe to
-  // keep global).
-  def_macro_noop("\\theparenlevel")?;
-  def_macro_noop("\\therefsection")?;
-  def_macro_noop("\\therefsegment")?;
-  def_macro_noop("\\theuniquelist")?;
-  def_macro_noop("\\theuniquename")?;
-  def_macro_noop("\\themulticitecount")?;
-  def_macro_noop("\\themulticitetotal")?;
-  def_macro_noop("\\thelownamepenalty")?;
-  def_macro_noop("\\themaxextraalpha")?;
-  def_macro_noop("\\themaxextrayear")?;
-  def_macro_noop("\\themaxitems")?;
-  def_macro_noop("\\themaxnames")?;
-  def_macro_noop("\\themaxparens")?;
-  def_macro_noop("\\theminitems")?;
-  def_macro_noop("\\theminnames")?;
-  def_macro_noop("\\theabbrvpenalty")?;
-  def_macro_noop("\\thecitecount")?;
-  def_macro_noop("\\thecitetotal")?;
-  def_macro_noop("\\thehighnamepenalty")?;
-  def_macro_noop("\\theinstcount")?;
-  def_macro_noop("\\thelistcount")?;
-  def_macro_noop("\\theliststart")?;
-  def_macro_noop("\\theliststop")?;
-  def_macro_noop("\\thelisttotal")?;
+  // Perl L648-671 made every `\the<counter>` empty; the counters above
+  // (`NewCounter!`) give them their arabic value, as biblatex.sty:812-868 does.
 
   // Perl L673-688: print*/index*/entry* (all empty)
   def_macro_noop("\\printtext[]{}")?;
@@ -2514,6 +2548,20 @@ LoadDefinitions!({
   def_macro_noop("\\GenRefcontextData{}{}")?;
   def_macro_noop("\\AtEveryCite{}")?;
   def_macro_noop("\\AtBeginRefsection{}")?;
+  // The rest of the hook family (biblatex.sty:10188/10381-10382/10741/11380-
+  // 11397; blx-compat.def:155-156 `\AtBeginShorthands`/`\AtEveryLositem`),
+  // reached by raw styles (philosophy-*.bbx:159/213, windycity.bbx;
+  // arsclassica, sidenotes caesar_example). `\AtBeginBiblist`/
+  // `\AtEveryBiblistitem` take the list name AND the body.
+  def_macro_noop("\\AtBeginShorthands{}")?;
+  def_macro_noop("\\AtEveryLositem{}")?;
+  def_macro_noop("\\AtBeginBiblist{}{}")?;
+  def_macro_noop("\\AtEveryBiblistitem{}{}")?;
+  def_macro_noop("\\AtNextBibliography{}")?;
+  def_macro_noop("\\AtEveryMultiCite{}")?;
+  def_macro_noop("\\AtEachCitekey{}")?;
+  def_macro_noop("\\AtNextCite{}")?;
+  def_macro_noop("\\AtNextRefsection{}")?;
   def_macro_noop("\\AtEveryCitekey{}")?;
   def_macro_noop("\\RequireBiber[]")?;
   def_macro_noop("\\localrefcontext[]{}")?;

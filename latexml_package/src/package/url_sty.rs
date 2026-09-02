@@ -59,8 +59,15 @@ LoadDefinitions!({
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
   DefMacro!("\\lx@url@url Token", sub[(cmd)] {
-    let perc = vec!['%'];
-   begin_semiverbatim(Some(&perc));
+    // url.sty:84 `\let\do\@makeother\dospecials` — every special, `\` first,
+    // is literal inside a url (only `{`/`}` stay delimiters, :85). Perl's
+    // `StartSemiverbatim('%')` (url.sty.ltxml:50) left `\` an escape, so
+    // `\path{C:\localtexmf\tex\}` read `\}` as a control symbol and the
+    // balanced read ran to the END OF THE FILE — latex4wp.tex:451 swallowed
+    // 87% of the manual into one url. Guard:
+    // `perfect_kernel_batch54::url_backslash_is_literal`.
+    let specials = vec!['%', '\\', '$', '&', '#', '^', '_', '~'];
+    begin_semiverbatim(Some(&specials));
     // `\url`/`\path` requires a following delimiter/argument token; on
     // input-exhaustion `read_token_required` emits the parity "file ended while
     // scanning use of \url" error. Don't panic — unwind the semiverbatim frame
