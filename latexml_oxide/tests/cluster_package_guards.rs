@@ -7113,4 +7113,29 @@ d & e & f \\
     assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
     assert_eq!(xml.matches("<td").count(), 6, "{xml}");
   }
+
+  /// Begin-document hook code runs RE-LOCKED (Perl State.pm:502-514 ignores a
+  /// redefinition of a `:locked` cs under `$UNLOCKED=0`; Perl never fires the
+  /// L3 `begindocument` hook at all). Our `\hook_use:n{begindocument}` digest
+  /// ran unlocked, so polyglossia.sty:1442-1456's `\cs_set:Npn \@caption
+  /// #1[#2]#3` replaced the locked `\@caption` and its `[`-scan overshot every
+  /// figure. Witness: beamerdarkthemes user guide (101 caption errors).
+  #[test]
+  fn begindocument_hook_code_cannot_redefine_locked_caption() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\AddToHook{begindocument}{%
+  \let\xpgsave\@caption
+  \long\def\@caption#1[#2]#3{\xpgsave{#1}[{\ignorespaces#2}]{#3}}}
+\makeatother
+\begin{document}
+\begin{figure}\caption{cormorant color theme}\label{fig:a}\end{figure}
+\begin{figure}[p]\caption{magpie}\label{fig:b}\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<caption").count(), 2, "{xml}");
+    assert!(xml.contains("cormorant color theme"), "{xml}");
+  }
 }

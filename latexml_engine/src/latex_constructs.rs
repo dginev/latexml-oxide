@@ -3835,8 +3835,16 @@ LoadDefinitions!({
     // real hook code against it. Keep until the kernel-parity direction
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
+    // Hook code runs RE-LOCKED like the sibling lists above: Perl runs every
+    // begin-document hook under `$UNLOCKED=0` (State.pm:502-514 ignores a
+    // redefinition of a `:locked` cs) and never fires the L3 hook at all, so a
+    // binding-locked kernel macro must not be replaceable from here —
+    // polyglossia.sty:1442-1456 `\cs_set:Npn \@caption #1 [#2] #3` in the
+    // `begindocument` hook overrode our locked `\@caption` and its `[`-scan
+    // overshot every figure (beamerdarkthemes guide, 101 caption errors).
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      boxes.push(digest(Tokens!(
+      local_state_unlocked(false);
+      let r = digest(Tokens!(
         T_CS!("\\hook_use:n"),
         T_BEGIN!(),
         T_LETTER!("b"),
@@ -3860,7 +3868,9 @@ LoadDefinitions!({
         T_LETTER!("r"),
         T_LETTER!("e"),
         T_END!()
-      ))?);
+      ));
+      expire_state_unlocked();
+      boxes.push(r?);
     }
     // latex.ltx `\document` L9472: right after begindocument/before, the
     // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
@@ -3895,7 +3905,8 @@ LoadDefinitions!({
       // catcode regime where `:` is OTHER (not LETTER), which would
       // truncate the CS to `\hook_use` and emit `:n` as plain text.
       // That leaks `_use:n` + arg-text into the document body.
-      boxes.push(digest(Tokens!(
+      local_state_unlocked(false); // see the begindocument/before block
+      let r = digest(Tokens!(
         T_CS!("\\hook_use:n"),
         T_BEGIN!(),
         T_LETTER!("b"),
@@ -3912,7 +3923,9 @@ LoadDefinitions!({
         T_LETTER!("n"),
         T_LETTER!("t"),
         T_END!()
-      ))?);
+      ));
+      expire_state_unlocked();
+      boxes.push(r?);
     }
     // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
     // point, latex.ltx L9522). This single transition both (a) disables the
