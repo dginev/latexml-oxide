@@ -4800,3 +4800,142 @@ X\lb X
 ```
 
 Expected `XX` with no error; Perl errors `misdefined` on the `^^M` token.
+
+## 126. A brace read as a backquote charcode is not un-counted for ALIGN_STATE (Rust fixes)
+
+tex.web §442: after `get_token` fetches the character following a backquote
+(`` `} ``), TeX undoes the `align_state` step that `get_next` applied to the
+brace ("if cur_cmd=right_brace then incr(align_state) else decr"). That is
+what makes `\iffalse{\fi\ifnum0=`}\fi` — expl3's `\group_align_safe_begin:`
+(expl3-code.tex, used by `\tl_replace_all`, `\tl_if_in`, `\seq` splitting…)
+and amsmath — leave `align_state` +1 with no group open. `Gullet.pm` L926
+`readNumber`'s backquote arm reads the token and returns its code without
+the undo, so the idiom nets 0 and a tab-catcode token inside a delimited
+macro definition in a tabular cell (l3tl's search pattern, a rescanned
+`_` of catcode 4 from l3doc's `\__codedoc_meta:n`) triggers the outer
+alignment's column-end program, which is spliced into the parameter text
+(`Until:\lx@column@trimright\hfil\lx@alignment@column@after_` runaway).
+Masked in Perl only by #127 (its rescan yields an empty pattern).
+
+Rust: `gullet.rs` `read_normal_integer` backquote arm mirrors §442; guard
+`perfect_kernel_batch54::backquote_brace_charcode_keeps_align_state`
+(pdflatex-probed). Trigger:
+
+```latex
+\documentclass{article}\usepackage{expl3}
+\begin{document}
+\begin{tabular}{l}\begin{minipage}{3cm}
+\ExplSyntaxOn
+\tl_set_rescan:Nnn \l_tmpa_tl { \char_set_catcode:nn { `_ } {4} } { _ }
+\tl_set:Nn \l_tmpb_tl { a_b }
+\tl_replace_all:NVn \l_tmpb_tl \l_tmpa_tl { X }
+[\tl_use:N \l_tmpb_tl]
+\ExplSyntaxOff
+\end{minipage}\end{tabular}
+\end{document}
+```
+
+Expected `[a_b]` in one cell (pdflatex agrees); Perl (given a working
+rescan) splices the column template into `\__tl_replace_wrap:w`'s delimiter.
+
+## 127. `\tl_set_rescan` leaks the rescanned tokens — `\everyeof` is never inserted (Rust fixes)
+
+`eTeX.pool.ltxml` L251-258 defines `\everyeof` as a register whose tokens
+"are NOT used anywhere (yet?)", and `\scantokens` (`openMouth(writableTokens)`)
+never inserts them at the pseudo-file's end. expl3's rescan protocol
+(expl3-code.tex:3758-3790) relies on exactly that: `\everyeof{::}` then
+`\__tl_rescan:NNw #1#2#3 ::` captures the whole `\scantokens` output as a
+delimited argument, PARAM tokens included. Without the marker the delimited
+read runs to the pseudo-file end, `Gullet.pm` L683-685 `readUntil` unreads
+the collected tokens on the miss, and a rescanned macro MEANING
+(`\cs_meaning:N` → `\long macro:#1#2#3->…`) reaches the Stomach as
+`misdefined:#` (substances.sty:452 `\substances_contains_see:NT` — 720
+errors on the substances manual; Perl 6 per call).
+
+Rust: `latex_constructs_rust_only.rs` overrides `\__tl_set_rescan:nNN` to
+tokenize the string itself under the caller's catcodes and feed the
+unchanged `\__tl_rescan:NNw` protocol with the marker appended (the
+`\scantokens` side stays unmarked — PLANS P15); guard
+`perfect_kernel_batch54::tl_set_rescan_captures_param_tokens`. Trigger:
+
+```latex
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \FooEntry #1#2#3 { #1@#3|see{#2} }
+\cs_new_protected:Npn \contains_see:N #1
+  { \tl_set_rescan:Nnx \l_tmpa_tl {} {\cs_meaning:N #1}
+    \tl_if_in:VnT \l_tmpa_tl { |see } { YESSEE } }
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn \contains_see:N \FooEntry \ExplSyntaxOff
+\end{document}
+```
+
+Expected `YESSEE`; Perl emits 6× `misdefined:#` and prints the meaning.
+
+## 128. `\@setfontsize` is unguarded inside `\protected@edef` (Rust fixes)
+
+latex.ltx:14103-14107 `\@setfontsize#1#2#3{\@nomath#1 \ifx\protect\@typeset@protect
+\let\@currsize#1\fi \fontsize{#2}{#3}\selectfont}` — the `\ifx` makes it
+inert while `\protect` is `\@unexpandable@protect`. `latex_constructs.pool.ltxml`
+L5622 `DefMacro('\@setfontsize{}{}{}', '\let\@currsize#1')` drops the guard,
+so a raw class that routes its size commands through `\@setfontsize`
+(tufte-common.def:368-405) re-expands `\@currsize`→`\normalsize`→
+`\@setfontsize\normalsize…` without bound once pgf `\protected@edef`s a
+`font=\normalsize` label (tikz-network manual, `\Vertex[fontsize=…]`). Perl
+runs out of memory on the repro; Rust hit its PushbackLimit.
+
+Rust: `latex_constructs.rs` mirrors the guard (the `\@nomath`/`\fontsize…
+\selectfont` halves stay dropped); guard
+`perfect_kernel_batch54::setfontsize_is_inert_inside_protected_edef`. Trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\renewcommand\normalsize{\@setfontsize\normalsize\@xpt{14}}
+\protected@edef\lx@probe{\normalsize}
+\makeatother
+\begin{document}probe ok\end{document}
+```
+
+## 129. `\AtEndPreamble` code runs before the `begindocument/before` hook (Rust fixes)
+
+etoolbox.sty:1743 (2020-10+ formats) makes `\AtEndPreamble` literally
+`\AddToHook{begindocument/before}`, so its code is queued IN ORDER with the
+other chunks of that hook — in particular after doc.sty:907-910's chunk that
+loads hypdoc (→ hyperref) at `\begin{document}`. LaTeXML keeps a private
+end-of-preamble list that fires before the L3 hook, so under `ltxdoc`
+`\AtEndPreamble{\hypersetup{…}}` (liftarm.tex:39, wheelchart.tex:128) sees
+`\hypersetup` undefined in both engines (Perl 1 error, same repro).
+
+Rust: etoolbox_sty.rs routes `\AtEndPreamble` through `\AddToHook`; guard
+`perfect_kernel_batch54::etoolbox_atendpreamble_runs_after_earlier_begindocument_before_chunks`.
+Trigger: `\documentclass{ltxdoc}\usepackage{etoolbox}\AtEndPreamble{\hypersetup{colorlinks=true}}\begin{document}Hello.\end{document}`.
+
+## 130. A bare-style pgf path drawn inside an `ltx:` box in a picture escapes it (Rust fixes)
+
+`pgfsys-latexml.def.ltxml` L392-398 opens a self-contained `svg:svg`
+(`_autoopened`, `_autoclose`) when `\lxSVG@begingroup@` fires while the
+current node is an `ltx:` element inside a picture (a `\phantom`/node-label
+`svg:foreignObject`). Only the group opener is guarded: a `\draw`/`\fill`
+with no dash or color option never passes through `\lxSVG@begingroup` and
+reaches `\lxSVG@drawpath@unclipped` (L337-339), which inserts the `svg:path`
+directly; the document then relocates it up to the picture's main group,
+the phantom's `ltx:text` is left open, and every later close desyncs
+(`Closing tag "ltx:text" whose open descendents do not auto-close` …
+`svg:g isn't allowed in ltx:block`). pmdraw.sty:56-66 wraps whole drawing
+loops in `\phantom{\draw …}` (pmdraw manual: 64 errors; Perl 7 on the repro).
+
+Rust: `pgfsys_latexml_def.rs` `ensure_svg_context` fronts the group opener
+and the three path/clip emitters; guard
+`perfect_kernel_batch54::pgf_bare_path_inside_phantom_stays_in_its_box`.
+Trigger:
+
+```latex
+\documentclass{article}\usepackage{tikz}
+\begin{document}
+\begin{center}\begin{minipage}{0.85\textwidth}\begin{minipage}[c]{0.4\linewidth}
+\raisebox{0.5cm}{\begin{tikzpicture}\phantom{\draw (0,0)--(1,1);}\draw (0,0)--(2,0);\end{tikzpicture}}
+\end{minipage}\end{minipage}\end{center}
+\end{document}
+```
