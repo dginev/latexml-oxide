@@ -6476,4 +6476,28 @@ V=[\angle]
     assert!(xml.contains("V=[60.0]"), "{xml}");
   }
 
+  /// Real listings sets its line counter at register level
+  /// (listings.sty L1516 `\global\c@lstnumber\lst@firstnumber`), never via
+  /// `\setcounter`; our block emitter used user-level `\setcounter`, which
+  /// xassoccnt.sty L2553 wraps in an expl3 body that (under our engine) runs
+  /// away into the following `\@lst@startline` → the first line leaks as
+  /// loose text under `<ltx:listing>` (518 malformed errors, xassoccnt_doc).
+  #[test]
+  fn listings_line_counter_init_is_register_level() {
+    let tex = r"\documentclass{article}
+\usepackage{xassoccnt}
+\usepackage{listings}
+\begin{document}
+\section{S}
+\begin{lstlisting}
+Hello world
+Second line
+\end{lstlisting}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<listingline").count(), 2, "{xml}");
+  }
+
 }

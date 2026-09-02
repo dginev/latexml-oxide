@@ -1275,8 +1275,12 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   }
 
   if mode != "inline" {
-    ctx.lsttokens.extend(invoke(T_CS!("\\setcounter"), vec![
-      Tokens!(T_OTHER!("lstnumber")),
+    // Register-level like real listings (`\global\c@lstnumber\lst@firstnumber`,
+    // listings.sty L1516) — NOT user-level `\setcounter`, which counter
+    // packages wrap (xassoccnt.sty L2553 → its expl3 body runs away into the
+    // following `\@lst@startline` at construction time; 518 malformed errors
+    // on xassoccnt_doc). Sibling of the `\lx@lst@stepnumber` newline emitter.
+    ctx.lsttokens.extend(invoke(T_CS!("\\lx@lst@setnumber"), vec![
       Tokens::new(ExplodeText!(&ctx.linenum.to_string())),
     ]));
     lst_process_start_line(&mut ctx);
@@ -2580,6 +2584,11 @@ LoadDefinitions!({
   // lst_process_display's newline handling).
   DefPrimitive!(T_CS!("\\lx@lst@stepnumber"), None, {
     let _ = step_counter("lstnumber", true);
+  }, locked => true);
+  // Its initializer twin (listings.sty L1516 `\global\c@lstnumber=…`), emitted
+  // at the head of every block listing by `lst_process`.
+  DefPrimitive!("\\lx@lst@setnumber{Number}", sub[(n)] {
+    SetCounter!("lstnumber", n);
   }, locked => true);
 
   // listings write-file aspect (lstmisc.sty L30-70): `\lst@BeginWriteFile
