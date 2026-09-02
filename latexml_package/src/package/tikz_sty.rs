@@ -15,7 +15,7 @@ LoadDefinitions!({
   AssignValue!("MAX_ERRORS" => Stored::Int(1000));
   // TikZ healthily expands to 100M+ tokens (measured: 1805.03265 tikz-cd ~155M),
   // far above the default 20M cycle-guard floor — lift it so the healthy stream
-  // skips the per-token loop-fingerprint cost. 400M token_limit stays the hard
+  // skips the per-token loop-fingerprint cost. 1G token_limit stays the hard
   // backstop; reset per-conversion in initialize_gullet. (tikz also loads pgf,
   // which raises the same floor — the setter only ever raises, so this is idempotent.)
   raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);

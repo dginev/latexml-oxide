@@ -19,6 +19,16 @@ LoadDefinitions!({
       if matches!(cc, Catcode::BEGIN | Catcode::END) {
         return true;
       }
+      // A PENDING SPACE TOKEN suppresses too — xspace.sty:49 lists `\@sptoken`
+      // (LaTeX's `\let` alias of a catcode-10 space) among the exceptions, so
+      // `\bazA[x] and` (space token survives after a `]`-delimited argument, or
+      // after amsgen's non-space-skipping `\new@ifnextchar`) gets ONE space.
+      // Perl's @XSPACES compares against the literal CS `\@sptoken`, never a
+      // space token, so it doubles the space (pdflatex-probed: single space).
+      // Witness: glossaries `\gls{potato} and` (structure/glossary golden).
+      if cc == Catcode::SPACE {
+        return true;
+      }
       // CS tokens: \/, \ , \xspace, \space, \@sptoken, \@xobeysp
       if cc == Catcode::CS {
         return t.with_str(|s| matches!(s,

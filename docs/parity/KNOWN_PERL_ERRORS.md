@@ -4421,3 +4421,120 @@ punctuation (the reduction of CJKpunct.sty:451-474's `plain` branch). Guard
 A“B”C—D…E‘F’G
 \end{document}
 ```
+
+## 113. amsgen binding Lets `\new@ifnextchar` to the space-skipping `\@ifnextchar` (Rust fixes)
+
+amsgen.sty:54-62 `\new@ifnextchar` is `\@ifnextchar` WITHOUT the space skip
+— that is its whole reason to exist. Perl amsgen.sty.ltxml:42 ("Do we need
+to worry about the skip space issues...?") Lets it to `\@ifnextchar`.
+bibleref.sty:969 `\bibleverse{book}` uses it to look for an
+immediately-following `(chapter:verse)`; with the space skipped, a book
+name followed by a space and a parenthesised remark opens
+`\@bibleverse(#1:` and the `Until::` scan runs to the end of the document
+(en/de-bibleref-german, bibleref-german-preamble.tex:120, 12 misses each).
+Rust `amsgen_sty.rs` defines the real macro from amsgen.sty. Guard
+`perfect_kernel_batch51::new_ifnextchar_keeps_space`.
+
+```latex
+\documentclass{article}
+\usepackage{bibleref}
+\begin{document}
+\bibleverse{Psalms} (singular) and \bibleverse{Psalms}(23:1).
+\end{document}
+```
+
+## 114. biblatex binding leaves `\verb` rebound after `\printbibliography` (Rust fixes)
+
+ar5iv-bindings biblatex.sty.ltxml:410 rebinds `\verb` to the `.bbl`
+reader `\biblatex@verb{} Until:\endverb` around `\InputIfFileExists
+{\jobname.bbl}` and never restores it; every `\verb+x+` after the first
+`\printbibliography` then scans for `\endverb` to the end of the document
+(docsurvey.tex:2876-2898: 7 `\verb+.dtx+` after the bibliographies, ~500
+lines of body lost; rub-kunstgeschichte-example). Rust `biblatex_sty.rs`
+saves and restores `\verb`/`\endverb` around the `.bbl` read. Guard
+`perfect_kernel_batch51::verb_survives_printbibliography`.
+
+```latex
+\documentclass{article}
+\usepackage{filecontents}
+\begin{filecontents}{t.bib}
+@book{knuth84, author={Donald Knuth}, title={The TeXbook}, year={1984}, publisher={Addison-Wesley}}
+\end{filecontents}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{t.bib}
+\begin{document}
+Cite \cite{knuth84}.
+\printbibliography
+Files: \verb+foo.dtx+ and \verb|bar.ins| here.
+\end{document}
+```
+
+## 115. `\@currbox` is an empty macro, not a box register; dpfloat's per-box `\csname` store scans to end of document (Rust fixes)
+
+latex.ltx:17443 takes `\@currbox` from `\@freelist` (`\@next\@currbox
+\@freelist`), a list of `\newbox` registers (:424/442), so
+`\string\@currbox` is `\bx@A`…`\bx@M`. Perl latex_constructs.pool.ltxml:1025
+defines `\@currbox` as an EMPTY macro; dpfloat.sty:82-88 keys its
+per-float store on `\@namedef{LP:\expandafter\string\@currbox}`, which
+then `\string`s the empty expansion, `\@namedef` finds nothing between
+`\csname` and `\endcsname`, and the float body plus everything after it is
+absorbed by the `\csname` scan (memoir/memman via `\newfloat`, oxref ×4:
+1001 errors each). Rust `latex_constructs.rs` declares `\newbox\@currbox`.
+Guard `perfect_kernel_batch52::currbox_is_a_box_register`.
+
+```latex
+\documentclass{memoir}
+\usepackage{dpfloat}
+\newfloat[chapter]{tegresult}{loe}{Typeset Example}
+\begin{document}
+Before float.
+\begin{tegresult}
+Inside custom float.
+\end{tegresult}
+SWALLOWED text one. SWALLOWED text two. SWALLOWED text three.
+\end{document}
+```
+
+## 116. xspace omits the pending-space exception; `\foo[x] and` gets two spaces (Rust fixes)
+
+xspace.sty:49 lists `\@sptoken` — LaTeX's `\let` alias of a catcode-10
+space, i.e. a pending SPACE token — among the exceptions, so `\xspace`
+followed by a surviving space (after a `]`-delimited argument, or after
+amsgen's non-space-skipping `\new@ifnextchar`) inserts nothing. Perl
+xspace.sty.ltxml's `@XSPACES` compares the literal CS `\@sptoken`, never a
+space token, so it inserts a second space (pdflatex: one). Rust
+`xspace_sty.rs` treats a `Catcode::SPACE` next token as an exception.
+Guard `perfect_kernel_batch52::xspace_pending_space_token_is_an_exception`;
+witness glossaries `\gls{potato} and` (structure/glossary golden).
+
+```latex
+\documentclass{article}
+\usepackage{xspace}
+\def\bazA[#1]{baz#1\xspace}
+\begin{document}
+D \bazA[x] and E.
+\end{document}
+```
+
+## 117. `\extractcolorspecs` braces the spec; `\definecolor{x}{\m}{\s}` round-trip fails (Rust fixes)
+
+xcolor.sty:1033-1036 defines the plural `\extractcolorspecs{c}{\m}{\s}`
+to store the BARE spec (`0.5,0.25,0`), unlike the singular
+`\extractcolorspec{c}{\cmd}` which stores `{rgb}{0.5,0.25,0}`. Perl
+xcolor.sty.ltxml:808 braces the plural spec too, so a re-defined color
+`\definecolor{dst}{\m}{\s}` (pgf-PeriodicTable's `\pgfPT@set@rgb@fill`,
+witness pgfPT.colorSchemes.info) parses `{0.5,0.25,0}` as a component and
+fails. Rust `xcolor_sty.rs` `\extractcolorspecs` stores the unbraced spec.
+Guard `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
+
+```latex
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\definecolor{src}{rgb}{0.5,0.25,0}
+\extractcolorspecs{src}{\m}{\s}
+[\m;\s]
+\definecolor{dst}{\m}{\s}
+\textcolor{dst}{X}
+\end{document}
+```

@@ -299,7 +299,7 @@ struct Cli {
   streaming: Option<bool>,
 
   /// Abort after processing this many tokens — guards against runaway macro
-  /// expansion (default: 400M; env `LATEXML_TOKEN_LIMIT`, 0 disables).
+  /// expansion (default: 1G; env `LATEXML_TOKEN_LIMIT`, 0 disables).
   #[arg(long, value_name = "N")]
   token_limit: Option<usize>,
 

@@ -174,7 +174,7 @@ pub struct Gullet {
   /// engages. Defaults to `CYCLE_GUARD_ACTIVATE` (20M). Graphics packages
   /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
   /// raise it via [`raise_cycle_guard_activate`] so their streams stay out of
-  /// the per-token fingerprint regime; the 400M `token_limit` remains the hard
+  /// the per-token fingerprint regime; the 1G `token_limit` remains the hard
   /// backstop. `#[derive(Default)]` would zero this (guard-always-on), so it is
   /// set explicitly in the constructor and the per-conversion reset.
   pub cycle_guard_activate: usize,
@@ -278,15 +278,25 @@ macro_rules! runtime {
   };
 }
 
-/// Initialize (or reset, if reentrant) a Gullet to its default empty state
 /// The runaway-token BACKSTOP's baseline: real runaways are cut far earlier
 /// by the cycle guards / pushback limit / byte budget, so erring high costs
-/// no detection latency. 400M = 5× the heaviest measured legit arXiv paper
-/// (math0402448, amsart + xy-pic, 80.2M end-of-run progress under the
+/// no detection latency. The heaviest measured legit arXiv paper is
+/// math0402448 (amsart + xy-pic, 80.2M end-of-run progress under the
 /// 2026-06-10 all-three-reader-loop accounting; the old "80M" figure
-/// predated that multi-counting). `LATEXML_TOKEN_LIMIT` overrides
-/// (0 disables). Book-scale sources raise it proportionally per conversion
-/// — see [`scale_token_limit_to_source`].
+/// predated that multi-counting) and the former 400M ceiling was 5× that —
+/// but the TeX Live doc corpus goes higher with NO loop: tikzlings-doc
+/// (scrartcl, ~250 raw-pgf animal pictures through tcolorbox listings,
+/// each box typeset twice) completes at a measured 444.5M
+/// (`Debug:gullet:progress`, 2026-09-01, 30 KB main source so the
+/// per-byte scaling never engaged). 1G = 2.25× that; raised, never
+/// lowered (a genuine loop is still bounded — by this ceiling, by the
+/// `--timeout` wall clock, and by the RSS cap). `LATEXML_TOKEN_LIMIT`
+/// overrides (0 disables). Book-scale sources raise it proportionally per
+/// conversion — see [`scale_token_limit_to_source`].
+pub const DEFAULT_TOKEN_LIMIT: usize = 1_000_000_000;
+
+/// Initialize the runaway-token backstop from the environment, falling back to
+/// [`DEFAULT_TOKEN_LIMIT`].
 fn default_token_limit() -> Option<usize> {
   match std::env::var("LATEXML_TOKEN_LIMIT")
     .ok()
@@ -294,29 +304,31 @@ fn default_token_limit() -> Option<usize> {
   {
     Some(0) => None,
     Some(n) => Some(n),
-    None => Some(400_000_000),
+    None => Some(DEFAULT_TOKEN_LIMIT),
   }
 }
 
-/// Scale the runaway-token backstop to the SOURCE size. The 400M baseline is
-/// sized for arXiv-scale inputs; a book-scale source legitimately expands
-/// past it (witness: a 131 MB flat-index compilation died at 400M
-/// mid-digestion with no loop in sight, at a measured ~3+ tokens/byte and
-/// paper-class documents measured up to ~160 tokens/byte). ×200/byte keeps
-/// the ceiling finite — a true infinite loop still trips — while never
-/// LOWERING the baseline for small documents. An explicit
-/// `LATEXML_TOKEN_LIMIT` wins unchanged (including 0 = disabled).
+/// Scale the runaway-token backstop to the SOURCE size. The
+/// [`DEFAULT_TOKEN_LIMIT`] baseline is sized for arXiv-scale inputs; a
+/// book-scale source legitimately expands past it (witness: a 131 MB
+/// flat-index compilation died at the then-400M ceiling mid-digestion with
+/// no loop in sight, at a measured ~3+ tokens/byte and paper-class documents
+/// measured up to ~160 tokens/byte). ×200/byte keeps the ceiling finite — a
+/// true infinite loop still trips — while never LOWERING the baseline for
+/// small documents. An explicit `LATEXML_TOKEN_LIMIT` wins unchanged
+/// (including 0 = disabled).
 pub fn scale_token_limit_to_source(source_bytes: usize) {
   if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {
     return;
   }
-  let scaled = source_bytes.saturating_mul(200).max(400_000_000);
+  let scaled = source_bytes.saturating_mul(200).max(DEFAULT_TOKEN_LIMIT);
   let mut gullet = gullet_mut!();
   if let Some(limit) = gullet.token_limit.as_mut() {
     *limit = (*limit).max(scaled);
   }
 }
 
+/// Initialize (or reset, if reentrant) a Gullet to its default empty state.
 pub fn initialize_gullet() {
   let mut gullet = gullet_mut!();
   gullet.runtime = None;
@@ -524,8 +536,11 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
   });
 }
 
-/// Mark the CURRENT mouth as an eTeX pseudo-file whose end inserts the
-/// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]).
+/// Mark the CURRENT mouth as an eTeX file level whose end inserts the
+/// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]). Every
+/// `\input` file mouth is marked (`content.rs::load_tex_content`); the
+/// `\scantokens` pseudo-file stays unmarked (settled dead-ends at its
+/// definition in `etex.rs`).
 pub fn mark_everyeof_mouth() {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     runtime.insert_everyeof = true;
@@ -681,7 +696,7 @@ enum CheckedRead {
 /// [`CYCLE_GUARD_DUTY_PERIOD`] tokens. A genuine infinite expansion loop is
 /// *persistent*, so scanning periodic windows still detects it — worst case
 /// one duty period plus a ring fill later (~17k tokens), four orders of
-/// magnitude before the 400M `token_limit` backstop — while a legitimately
+/// magnitude before the 1G `token_limit` backstop — while a legitimately
 /// huge healthy stream (pgfplots data plots routinely read 200M+ tokens, past
 /// even the raised graphics floor) stops paying a per-token fingerprint tax
 /// for the whole remainder of the run (`cycle_guard_checkpoint` was 6.07% of
@@ -1019,19 +1034,19 @@ pub fn read_token() -> Result<Option<Token>> {
 /// Engage the expansion-stream cycle guard only after this many tokens — above
 /// the ordinary range (measured known-good papers 0.6–7.5M under the 2026-06-10
 /// all-three-loop accounting; 20M keeps them fingerprint-free with ~2.7×
-/// headroom), so only a runaway (heading for the 400M `token_limit` / RSS cap)
+/// headroom), so only a runaway (heading for the 1G `token_limit` / RSS cap)
 /// records fingerprints, cut off in O(window) tokens (false positives guarded by
 /// the period-`REPEAT` requirement, not this bound). DEFAULT floor; graphics-heavy
 /// packages legitimately reach ~100–155M (math0402448 xy-pic, 1805.03265 tikz-cd)
 /// and raise it to [`CYCLE_GUARD_ACTIVATE_GRAPHICS`] at load via
-/// [`raise_cycle_guard_activate`], the 400M `token_limit` staying the backstop.
+/// [`raise_cycle_guard_activate`], the 1G `token_limit` staying the backstop.
 const CYCLE_GUARD_ACTIVATE: usize = 20_000_000;
 
 /// Cycle-guard activation floor for graphics-heavy bindings (pgf/tikz/xy).
 /// These packages legitimately expand 100M+ tokens; this floor sits above the
 /// heaviest measured healthy graphics doc (1805.03265 tikz-cd ~155M) so they
 /// stay out of the per-token fingerprint regime, while remaining far below the
-/// 400M `token_limit` backstop. Raised — never lowered — per [`raise_cycle_guard_activate`].
+/// 1G `token_limit` backstop. Raised — never lowered — per [`raise_cycle_guard_activate`].
 pub const CYCLE_GUARD_ACTIVATE_GRAPHICS: usize = 150_000_000;
 
 /// Raise the cycle-guard activation floor for the current (thread-local) gullet,
@@ -1824,6 +1839,14 @@ fn cross_marked_mouth() -> Result<Option<usize>> {
     Ok(Some(RegisterValue::Tokens(toks))) => toks.len(),
     _ => 0,
   };
+  // Every `\input` file mouth is marked (`load_tex_content`), and the register
+  // is empty for nearly all of them: an empty payload gives the scan nothing
+  // to continue on, so leave the exhausted mouth to its owner exactly as an
+  // unmarked one — closing it here would only shift the reader's
+  // `at_end_of_all_input` verdict onto the parent stream.
+  if count == 0 {
+    return Ok(None);
+  }
   close_mouth(false)?;
   Ok(Some(count))
 }

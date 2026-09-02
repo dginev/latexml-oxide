@@ -8,7 +8,7 @@ LoadDefinitions!({
 
   // xy-pic healthily expands 100M+ tokens (measured: math0402448 ~100M), far
   // above the default 20M cycle-guard floor — lift it so the healthy stream skips
-  // the per-token loop-fingerprint cost. 400M token_limit stays the hard backstop;
+  // the per-token loop-fingerprint cost. 1G token_limit stays the hard backstop;
   // reset per-conversion in initialize_gullet.
   raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
 

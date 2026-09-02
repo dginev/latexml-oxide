@@ -976,7 +976,7 @@ impl DigestionAPI for Core {
     //   $self->withState(sub {
     //       Fatal('missing_file', $request, undef, "Can't find $mode file $request"); }); } }
     // };
-    // Book-scale sources legitimately expand past the arXiv-sized 400M
+    // Book-scale sources legitimately expand past the arXiv-sized 1G
     // runaway-token backstop; scale it to the input (never lowers, env
     // override wins — see gullet::scale_token_limit_to_source).
     let source_bytes = if pathname::is_literaldata(&request) {

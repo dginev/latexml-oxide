@@ -5117,7 +5117,17 @@ LoadDefinitions!({
   TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
   Let!("\\@elt", "\\relax");
   def_macro_noop("\\@freelist")?;
-  def_macro_noop("\\@currbox")?;
+  // `\@currbox` is NOT a list: real LaTeX `\let`s it to an unexpandable box
+  // register (`\@next\@currbox\@freelist` in `\@xfloat`, latex.ltx:17443; the
+  // freelist boxes come from `\newbox`, :424/442) and code uses it as one —
+  // `\setbox\@currbox`, `\ht\@currbox`, `\string\@currbox`. Perl's empty
+  // macro (latex_constructs.pool.ltxml:1025) makes dpfloat.sty:83-85
+  // `\@namedef{LP:\expandafter\string\@currbox}` expand `\@currbox` to
+  // NOTHING, so `\string` eats the `\endcsname` and the `\csname` scan runs
+  // to the end of the document (memman 995/1001 errors, KNOWN_PERL_ERRORS
+  // #115). A box register is what the kernel has. Guard:
+  // `perfect_kernel_batch52::currbox_is_a_box_register`.
+  TeX!(r"\newbox\@currbox");
   def_macro_noop("\\@toplist")?;
   def_macro_noop("\\@botlist")?;
   def_macro_noop("\\@midlist")?;
@@ -5988,9 +5998,32 @@ LoadDefinitions!({
     "<ltx:itemize>",
     before_digest => { bgroup(); });
   // Close the anonymous list if we're still within one.
+  //
+  // The egroup pairs with `\lx@list`'s bgroup, so pop only a frame that
+  // `\lx@list` opened (groupInitiator). Perl's `\endlx@list` is
+  // `endMode('internal_vertical')` (Stomach.pm:524-531): when the top frame
+  // is not the list's own it Errors "Attempt to end mode" and does NOT pop
+  // — "maybe we'll recover?". A raw class can redefine `\list` alone —
+  // memoir.cls:4580 `\renewcommand*{\list}[2]` is latex.ltx's `\list`
+  // verbatim, ending in `\@trivlist` (no group here) — while `\endlist` stays
+  // `\endlx@list`; the unconditional egroup then popped the ENCLOSING frame
+  // whenever it was a plain `{` group, and every later `\global`/`\let`/
+  // `\csname` in the document cascaded (memman 144→1001, biblatex-oxref ×4
+  // 19→1001, verbatimcopy, dlfltxb; sweep 28). Perl's one-error-per-list
+  // shape is kept; giving raw `\list`/`\@trivlist` real list semantics is
+  // PLANS P38. Guard: `perfect_kernel_batch51::endlist_without_lx_list_frame`.
   DefConstructor!("\\endlx@list", sub[document] {
-    document.maybe_close_element("ltx:itemize")?; },
-    before_digest => { egroup()?; });
+  document.maybe_close_element("ltx:itemize")?; },
+  before_digest => {
+    let opened_by_list = is_value_bound("groupInitiator", Some(0))
+      && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"));
+    if opened_by_list {
+      egroup()?;
+    } else {
+      Error!("unexpected", get_current_token().unwrap_or_else(|| T_CS!("\\endlx@list")),
+        "Attempt to end mode internal_vertical", current_frame_message());
+    }
+  });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
@@ -11569,6 +11602,8 @@ LoadDefinitions!({
 
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_string = Expand!(file).to_string();
+    // latex.ltx:19794 file substitution applies before the existence test.
+    let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
     // Disk-search variant first (matches Perl FindFile default).
     let found = find_file(&file_string, None).is_some()
       // Then binding-only fallback (notex=true): pgf's
@@ -11597,6 +11632,9 @@ LoadDefinitions!({
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = Expand!(file);
     let file_string = file_tks.to_string();
+    // latex.ltx:19794 file substitution applies before the existence test;
+    // `input()` re-applies it to the name we hand `\ltx@input`.
+    let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
     // Disk-search first (matches Perl FindFile default), then
     // binding-only fallback (notex=true) so registered .ldf / .def
     // bindings shipped via latexml_package are discoverable. Without

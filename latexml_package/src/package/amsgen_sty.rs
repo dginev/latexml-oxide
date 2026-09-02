@@ -23,8 +23,26 @@ LoadDefinitions!({
   DefMacro!("\\boxz@", "\\box\\z@");
   DefMacro!("\\relaxnext@", "\\let\\@let@token\\relax");
 
-  // Do we need to worry about the skip space issues...?
-  Let!("\\new@ifnextchar", "\\@ifnextchar");
+  // Perl (amsgen.sty.ltxml:42 "Do we need to worry about the skip space
+  // issues...?") Lets this to `\@ifnextchar`, which SKIPS spaces; the real
+  // `\new@ifnextchar` (amsgen.sty:54-62) does not — that is its whole point.
+  // bibleref.sty:969 `\bibleverse{Psalm} (Einzahl)` then took the `(` after
+  // the space as its `(chapter:verse)` opener and `\@bibleverse(#1:` scanned
+  // to the end of the document (en/de-bibleref-german, 12 `Until::` misses
+  // each, sweep 28). KNOWN_PERL_ERRORS #113. Guard:
+  // `perfect_kernel_batch51::new_ifnextchar_keeps_space`.
+  TeX!(
+    r"
+  \long\def\new@ifnextchar#1#2#3{%
+    \let\reserved@d= #1%
+    \def\reserved@a{#2}\def\reserved@b{#3}%
+    \futurelet\@let@token\new@ifnch
+  }
+  \def\new@ifnch{%
+    \ifx\@let@token\reserved@d \let\reserved@b\reserved@a \fi
+    \reserved@b
+  }"
+  );
   // \@ifstar already in LaTeX.pool
   DefRegister!("\\ex@" => Dimension::from_str("1pt")?);
   // Just fake it...

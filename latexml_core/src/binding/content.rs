@@ -839,6 +839,24 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         grandparent_in_expl3,
         options.handleoptions,
       )?;
+    } else if options.reloadable
+      && options.notex
+      && options.noerror
+      && !lookup_bool(&s!("{filename}_loaded"))
+    {
+      // A binding-only (`notex`) RELOADABLE probe that loaded nothing in THIS
+      // call: the file is `_raw_loaded` from an earlier `\usepackage`, so the
+      // not-loaded branch below is skipped (a Step-3 fallback binding loaded
+      // in this call sets `_loaded`, so it is excluded) — but a silent `Ok` made
+      // `\input{pkg.sty}` (`input()`, the only such caller) a no-op for any
+      // already-loaded package, where real TeX's `\input` always reads the
+      // file and Perl (Package.pm:2270 `loadTeXDefinitions(reloadable=>1)`)
+      // re-reads it too. tikzlings-doc.tex:69-70 `\tex_input:D` re-reads each
+      // animal `.sty` under `\c_other_cctab` to harvest its comment lines;
+      // the skipped read left `\__tikzlings_process_line:w #1^^M` scanning
+      // the enclosing document to its end. Guard:
+      // `perfect_kernel_batch52::input_rereads_loaded_sty`.
+      return Err(s!("Not loaded by this call: {}", filename).into());
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
@@ -1270,6 +1288,51 @@ pub fn input_content(request: &str, options: InputOptions) -> Result<()> {
   }
 }
 
+/// LaTeX file substitution (latex.ltx:19677-19716 `\declare@file@substitution`,
+/// applied by `\set@curr@file` → `\__filehook_file_subst_begin:nnn`,
+/// latex.ltx:19785-19810): `\input`, `\InputIfFileExists` and friends read
+/// the REPLACEMENT when a `\@file-subst@<name><ext>` macro exists. The key
+/// is the request's basename (the directory is dropped on both sides,
+/// `\use_ii_iii:nnn`) with `.tex` supplied for a missing extension
+/// (`\__filehook_subst_empty_name_chk:NN`); the value is the composed
+/// replacement name. Chains are followed with the same bound as the
+/// kernel's tortoise/hare loop. Perl has no such step (its `\input` binding
+/// bypasses `\set@curr@file`, Package.pm:2248-2270), so it re-reads the
+/// ORIGINAL file: tikzlings-doc.tex:73-75 substitutes each animal `.sty` by
+/// the `\jobname.cif` its comment harvester just wrote and `\input`s it —
+/// without the substitution the raw `.sty` re-executes in the document body
+/// (`\RequirePackage` "only in the preamble", `@threeD` text leaks) and the
+/// per-animal documentation is lost. Guard:
+/// `perfect_kernel_batch52::input_honors_file_substitution`.
+pub fn substitute_file_request(request: &str) -> Option<String> {
+  let mut current = request.to_string();
+  let mut result = None;
+  for _ in 0..8 {
+    let base = current
+      .rsplit(['/', '\\'])
+      .next()
+      .unwrap_or(&current)
+      .to_string();
+    let key = if base.contains('.') {
+      base
+    } else {
+      s!("{base}.tex")
+    };
+    let cs = T_CS!(s!("\\@file-subst@{key}"));
+    if lookup_definition(&cs).ok().flatten().is_none() {
+      break;
+    }
+    let Ok(next) = do_expand(cs) else { break };
+    let next = next.to_string().trim().to_string();
+    if next.is_empty() || next == current {
+      break;
+    }
+    current = next.clone();
+    result = Some(next);
+  }
+  result
+}
+
 /// This is essentially the `\input` equivalent
 ///
 /// we are most likely expecting to get actual content,
@@ -1285,6 +1348,10 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // the unchanged `request`, which spun forever on any quoted input
   // since the replacement only touches `clean_req`.
   let clean_req = QUOTE_WRAPPED.replace(request, "$1");
+  let clean_req: Cow<str> = match substitute_file_request(&clean_req) {
+    Some(subst) => Cow::Owned(subst),
+    None => clean_req,
+  };
   // HEURISTIC! First check if equivalent style file, but only under very specific circumstances
   // if pathname_is_literaldata(request) {
   //   let (dir, name, ftype) = pathname_split(request);
@@ -1670,6 +1737,18 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
     })?,
     true,
   );
+  // eTeX inserts the CURRENT `\everyeof` token list at the end of EVERY
+  // `\input` file, not only a `\scantokens` pseudo-file (etex.web §362: the
+  // list is begun before `end_file_reading`, so a delimited scan may consume
+  // it and no more). Line-reader idioms depend on that terminator: tikzlings'
+  // `\CommentInput` (tikzmarmots-doc.tex:44-105, `\tex_everyeof:D{\q_nil^^M}`
+  // + `\tex_input:D`, one `\__tikzlings_process_line:w #1^^M` per line),
+  // stex.sty:2633 smsmode, expl3 `\file_get:nnN` (expl3-code.tex:12530-12551,
+  // `\__file_get_do:Nw #1#2 \c__file_marker_tl` scanning across the file).
+  // Without the mark the reader ran into the enclosing document and looped at
+  // its true end (tikzmarmots-doc 0→501 errors + Fatal, tikzlings-doc 35→536,
+  // sweep 28). Guard: `perfect_kernel_batch51::input_file_end_inserts_everyeof`.
+  gullet::mark_everyeof_mouth();
   Ok(())
 }
 

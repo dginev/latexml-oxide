@@ -163,11 +163,24 @@ LoadDefinitions!({
     // argument` errors → `too_many_errors` Fatal is the parity outcome
     // (witness: fancyvrb/fancyvrb-doc cut mid-`{SideBySideExample}`,
     // batch-48 guard `until_miss_at_true_eof_errors_like_perl`).
+    //
+    // The report is followed by a FATAL, not by the empty argument: tex.web
+    // §338 abandons the macro call after the runaway report and, the input
+    // being exhausted, §360 ends the job (`*** (job aborted, no legal \end
+    // found)`) — pdflatex stops at the first miss. Perl delivers the empty
+    // argument and re-runs the caller, so a self-recursive scanner such as
+    // l3prg `\prg_map_break:Nn` (expl3-code.tex:2452-2458, reached when
+    // `\prop_map_inline:cn` names an undefined prop — stex/stex-doc, 513
+    // errors under the tikz-raised `MAX_ERRORS`, Perl 100 → too_many_errors)
+    // re-misses until the error cap; same Fatal outcome, one report instead
+    // of hundreds. Guard: `perfect_kernel_batch52::until_miss_at_eof_is_fatal_once`.
     match read_until(&until_extra[0])? {
       Some(tokens) => Ok(ArgWrap::Tokens(tokens)),
       None => {
         if at_end_of_all_input() {
           Error!("expected", "Until:", s!("Missing argument Until:{} at end of input", until_extra[0]));
+          latch_too_many_errors();
+          Fatal!(Mouth, EoF, s!("File ended while scanning use of a Until:{} argument (job aborted, no legal \\end found)", until_extra[0]));
         }
         Ok(ArgWrap::Tokens(Tokens::default()))
       },

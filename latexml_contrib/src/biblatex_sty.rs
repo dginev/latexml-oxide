@@ -1853,11 +1853,24 @@ LoadDefinitions!({
   // machinery. The `&` catcode change lets literal ampersands in .bbl
   // author/publisher names through (restored to alignment after).
   // The optional argument ([heading=bibintoc] etc.) is consumed+ignored.
+  //
+  // The `\verb`/`\endverb` rebinding is for the `.bbl` only and must NOT
+  // outlive it: Perl (ar5iv-bindings biblatex.sty.ltxml:410) `\let`s them
+  // unscoped, so every later `\verb+.dtx+` in the body became
+  // `\biblatex@verb{} Until:\endverb` and swallowed the rest of the document
+  // (docsurvey.tex:2876-2898 — 7 `\verb` after the bibliographies, ~500 lines
+  // of content lost; rub-kunstgeschichte-example likewise; sweep 28).
+  // KNOWN_PERL_ERRORS #114. Restore the saved meanings after the input — the
+  // restores sit after `\InputIfFileExists` in the expansion, so they run once
+  // the `.bbl` mouth is exhausted, like the `&` catcode restore already does.
+  // Guard: `perfect_kernel_batch51::verb_survives_printbibliography`.
   DefMacro!("\\printbibliography[]",
-    "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\
+    "\\let\\biblatex@saved@verb\\verb\\let\\biblatex@saved@endverb\\endverb\
+     \\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\
      \\catcode`\\&=12\\relax\
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
-     \\catcode`\\&=4\\relax");
+     \\catcode`\\&=4\\relax\
+     \\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb");
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares

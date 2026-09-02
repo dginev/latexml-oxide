@@ -487,6 +487,24 @@ fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<boo
   Ok(true)
 }
 
+/// xcolor.sty:535-537 — when a non-`natural` target model is selected
+/// (`\ifconvertcolorsD`), a color being DEFINED is converted to
+/// `\XC@tgt@mod{<its model>}` before it is stored. `\XC@tgt@mod` is the
+/// identity for `natural` and a constant otherwise (xcolor.sty:141/145), so
+/// expanding it on the color's own model yields the model to store. See the
+/// `\selectcolormodel` definition for the pgf witness.
+fn convert_to_target_model(color: Color) -> Result<Color> {
+  if if_condition(&T_CS!("\\ifconvertcolorsD"))? != Some(true) {
+    return Ok(color);
+  }
+  let target = do_expand(mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\XC@tgt@mod{{{}}}",
+    color.model()
+  ))))?
+  .to_string();
+  Ok(color.convert(target.trim()))
+}
+
 /// Perl: ParseXColor($models, $specs, $tomodel)
 fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
   // Perl ParseXColor (xcolor.sty.ltxml L218-241) has NO entry trim at all;
@@ -596,9 +614,14 @@ LoadDefinitions!({
   // math). Witness 2402.00349.
   DefMacro!("\\mathcolor[]{}{}", "{\\color[#1]{#2}#3}");
 
+  // Target-model options — xcolor.sty:149-153 declares one option per core /
+  // extended model whose code is `\selectcolormodel{<model>}` (below).
+  for model in &["natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray"] {
+    let select = Tokenize!(TeXString::assembled(s!("\\selectcolormodel{{{model}}}")));
+    DeclareOption!(*model, select);
+  }
   // Ignorable options
   for option in &[
-    "natural", "rgb", "cmy", "cmyk", "hsb", "gray", "RGB", "HTML", "HSB", "Gray",
     "monochrome", "showerrors", "hideerrors", "fixpdftex", "prologue", "epilogue",
     "noprologue", "kernelfbox", "xcdraw", "noxcdraw", "fixinclude",
     "dviwindo", "oztex", "xdvi", "usenames",
@@ -651,9 +674,36 @@ LoadDefinitions!({
   DefMacro!("\\adjustUCRBG", "1,1,1,1");
   DefMacro!("\\paperquality", "1");
 
-  // Selecting color model (stubs)
-  def_macro_noop("\\selectcolormodel{}")?;
-  DefMacro!("\\XC@tgt@mod {}", "#1");
+  // Selecting the target color model — xcolor.sty:137-150 verbatim. A
+  // non-`natural` target sets `\ifconvertcolorsD` so every `\definecolor`
+  // (and `\colorlet`/`\providecolor`, which share the definition path) is
+  // converted to `\XC@tgt@mod{<model>}` BEFORE it is stored (xcolor.sty:535-537,
+  // `convert_to_target_model` below); `\extractcolorspec` then reports the
+  // target model. Perl stubs this as a no-op (its colors are opaque objects, so
+  // the model only surfaces through `\extractcolorspec`). pgf's stroke/fill
+  // setters accept only rgb/cmy/cmyk/gray (`\pgfsys@color@<model>@stroke`,
+  // pgfsys-common-pdf.def:58-61; pgfcoregraphicstate.code.tex:133-137 errors
+  // "Unsupported color model" otherwise), so tikzlings-doc.tex:36
+  // `\selectcolormodel{rgb}` is exactly what lets tikzlings-bears.sty:124
+  // `\definecolor{bear@bright}{hsb}{…}` reach pgf as rgb — pdflatex-probed:
+  // the same document WITHOUT `\selectcolormodel{rgb}` errors in pdflatex too.
+  // Witness tikzlings-doc (29× "Unsupported color model `hsb'", sweep 28).
+  // Guard: `perfect_kernel_batch52::selectcolormodel_converts_definecolor`.
+  // `\c@lor@error` is color.sty:41-42.
+  TeX!(r"
+  \def\c@lor@error#1{\@latex@error{Undefined color #1}\@ehd}
+  \def\selectcolormodel#1{\@ifundefined{XC@mod@#1}%
+    {\c@lor@error{target model `#1'}}%
+    {\expandafter\ifx\csname XC@mod@#1\endcsname\XC@mod@natural
+       \def\XC@tgt@mod##1{##1}\convertcolorsDfalse\convertcolorsUfalse
+     \else\expandafter\ifx\csname XC@mod@#1\endcsname\XC@mod@named
+       \c@lor@error{target model `#1'}%
+     \else
+       \edef\XC@tgt@mod##1{#1}\convertcolorsDtrue\convertcolorsUtrue
+     \fi\fi}}
+  \@tfor\@@tmp:={Hsb}{tHsb}{ignore}{named}{ps}{wave}{natural}{rgb}{cmy}{cmyk}{hsb}{gray}{RGB}{HTML}{HSB}{Gray}\do
+    {\expandafter\edef\csname XC@mod@\@@tmp\endcsname{\@@tmp}}
+  \def\XC@tgt@mod#1{#1}\convertcolorsDfalse\convertcolorsUfalse");
   def_macro_noop("\\substitutecolormodel{}{}")?;
 
   // \xglobal@list and \xglobal mechanism
@@ -708,7 +758,7 @@ LoadDefinitions!({
     } else {
       let models_str = do_expand(models)?.to_string();
       let specs_str = do_expand(specs)?.to_string();
-      parse_xcolor(Some(&models_str), &specs_str, None)
+      convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?
     };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
@@ -737,7 +787,7 @@ LoadDefinitions!({
     } else {
       let models_str = do_expand(models)?.to_string();
       let specs_str = do_expand(specs)?.to_string();
-      parse_xcolor(Some(&models_str), &specs_str, None)
+      convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?
     };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
@@ -755,7 +805,9 @@ LoadDefinitions!({
     let name_str = do_expand(name)?.to_string();
     let colordesc_str = do_expand(colordesc)?.to_string();
     let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let color = parse_xcolor(None, &colordesc_str, tomodel_str.as_deref());
+    // xcolor.sty:625-628: a `\colorlet` that is not a plain alias re-enters
+    // `\XC@definecolor`, so the target-model conversion applies here too.
+    let color = convert_to_target_model(parse_xcolor(None, &colordesc_str, tomodel_str.as_deref()))?;
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
@@ -1230,7 +1282,13 @@ LoadDefinitions!({
     let model = color.model();
     let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
     def_macro(T_CS!(modelcmd_str), None, Some(ExpansionBody::from(model)), None)?;
-    let spec_val = s!("{{{}}}", comps.join(","));
+    // xcolor.sty:1033-1036 `\extractcolorspecs` stores the BARE spec
+    // (`0.5,0.2,0.1`), unlike the singular `\extractcolorspec`, which stores
+    // `{model}{spec}`. Perl xcolor.sty.ltxml:808 wraps the plural spec in
+    // braces too, so `\definecolor{x}{\mod}{\spec}` on a re-extracted color
+    // fails to parse (pgfPT.colorSchemes.info, KNOWN_PERL_ERRORS #117). Guard:
+    // `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
+    let spec_val = comps.join(",");
     def_macro(T_CS!(speccmd_str), None, Some(ExpansionBody::from(spec_val.as_str())), None)?;
     Ok(())
   });
