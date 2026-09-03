@@ -1,0 +1,18 @@
+% witness: same mechanism; documents the boundary — WITHOUT marginnote's real macro
+%   depth, `####1` is genuinely too many hashes and pdflatex ITSELF rejects it.
+% oracle:  pdflatex 2 errors ("You can't use `macro parameter character #' ...")
+% engines: rust=2 perl=? (2026-09-03) -- both must keep erroring
+% expect:  >=1 error (####1 is only legal at marginnote's real macro-arg depth;
+%   a bare \DeclareDocumentCommand+\clist_map_inline needs ##1, not ####1)
+% status:  CONTROL
+\documentclass{article}
+\usepackage{xparse}
+\ExplSyntaxOn
+\DeclareDocumentCommand\Options{m}{
+  \clist_set:Nn\l_tmpa_clist{#1}
+  \clist_map_inline:Nn\l_tmpa_clist{ [####1] }
+}
+\ExplSyntaxOff
+\begin{document}
+Body.\Options{alpha,beta}
+\end{document}

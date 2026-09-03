@@ -1,0 +1,9 @@
+% CONTROL: non-periodic preamble (#&#), over-long row (3 cells) is a GENUINE error.
+% oracle: pdflatex 1 !  "! Extra alignment tab has been changed to \cr"  engines: pdftex
+% expect: 1 Error  "Extra alignment tab '&'"  — b54y MATCHES pdflatex (faithful)
+% status: RED-by-design (the error is correct; must NOT be silenced by any core tolerance)
+% mechanism: tex.web §792 — preamble exhausted, cur_loop null → error.
+\documentclass{article}
+\begin{document}
+\halign{#&#\cr a&b&c\cr}
+\end{document}

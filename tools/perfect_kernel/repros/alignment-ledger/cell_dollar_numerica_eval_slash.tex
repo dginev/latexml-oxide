@@ -1,0 +1,20 @@
+% witness: numerica/numerica (numerica.tex:898)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=6 (2026-09-03, b54r)
+% expect:  0 errors; cell Math contains XMTok 0.125
+% status:  RED
+% mechanism: numerica's \eval SLASH path (\__nmc_fpify_slash: numerica.sty:1748 -> the
+%   \__nmc_delim_arg: re-grab loop numerica.sty:2569) drifts the GLOBAL align_group_count
+%   (latexml_core/common/local_assignments.rs) NEGATIVE while brace-nested, via the l3fp/
+%   l3regex pushback (\__regex_toks_set:Nn unread_vec, gullet.rs:506-526). It reaches 0
+%   while numerica's stored catcode-4 & (numerica.sty:231, a COMPARE-only delimiter) is
+%   being scanned, so read_token's tab interrupt (gullet.rs:1250-1267, tex.web get_next
+%   S342/L7264) misfires handle_template (gullet.rs:659), inserting amsmath's after-$ (v_j)
+%   mid-cell -> the before-$ \lx@begin@inline@math frame is left open -> \lx@begin@alignment
+%   hits it (stomach "close group switched to mode math").
+\documentclass{article}\usepackage{amsmath}\usepackage{numerica}
+\begin{document}
+\begin{align*}
+a & =\eval{1/8}
+\end{align*}
+\end{document}

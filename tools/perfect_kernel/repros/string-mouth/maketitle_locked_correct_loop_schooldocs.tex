@@ -1,0 +1,37 @@
+% witness: schooldocs/schooldocs-examples (schooldocs.sty; \makesmalltitle at examples.tex:294 after \pagestyle{exam}+\correct)
+% oracle:  pdflatex 0 errors
+% engines: rust=Fatal:Timeout:PushbackLimit (infinite loop) perl=n/a (2026-09-03, b54y)
+% expect:  no Fatal; body renders a title; \@originaltitle NOT self-referential
+% status:  RED (Fatal:Timeout:PushbackLimit — infinite \{ begin-group recursion)
+% mechanism: Rust defines \maketitle with `locked => true` (latex_constructs/sect05.rs:807-811),
+%   so schooldocs' \renewcommand{\maketitle} (schooldocs.sty:136, which OMITS the standard cleanup)
+%   is IGNORED; Rust's locked \maketitle runs `\global\let\@title\@empty\global\let\title\relax`
+%   (the latex.ltx \maketitle cleanup). \title is likewise locked (sect05.rs:655), so schooldocs'
+%   \renewcommand{\title}[2][] (schooldocs.sty:70) is also ignored. After the FIRST \maketitle,
+%   \title=\relax -> every later \title{...} is a no-op and cannot reset \@title. schooldocs'
+%   \correct (schooldocs.sty:168-178) does `\let\@originaltitle\@title \def\@title{\@originaltitle
+%   ~--~\correctname}`; a SECOND \correct then does `\let\@originaltitle\@title` while \@title is
+%   still the first \correct's value -> \@originaltitle := `\@originaltitle ~--~\correctname`
+%   = SELF-REFERENTIAL (verified via \meaning). \makesmalltitle (schooldocs.sty:158
+%   `{\titlestyle{\@title}}`) then expands \@title -> \@originaltitle -> ... infinitely, driving the
+%   `{` begin-group primitive (latexml_engine/src/tex_box.rs:361, digest_next_body :385) into
+%   unbounded recursion -> Fatal:Timeout:PushbackLimit. pdflatex clean: real LaTeX honors
+%   schooldocs' \renewcommand{\maketitle}/\title (no cleanup), so \title survives and resets work.
+% classify: RUST-ONLY (pdflatex 0; the divergence is the locked, non-overridable \maketitle/\title).
+% fix: make \maketitle and \title overridable by a class/package \renewcommand (drop `locked=>true`
+%   at sect05.rs:807-811 and the \title def, or have the lock yield to a raw \renewcommand), so
+%   schooldocs' non-cleanup \maketitle runs. Guard: this repro 0 Fatal + \@originaltitle not self-ref.
+\documentclass{article}
+\usepackage{schooldocs}
+\begin{document}
+\schooldocstitles
+\title{Standard}
+\maketitle
+\correct
+\title{Exam}
+\maketitle
+\correct
+\title{Small}
+\schooldocstitles
+\makesmalltitle
+\end{document}

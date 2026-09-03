@@ -1,0 +1,16 @@
+% witness: circularglyphs/circularglyphs-doc (circularglyphs-doc.tex:196)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-03)   <- RUST-ONLY (Perl converts clean)
+% expect:  0 errors; tblr row "Null" present (one ltx:td with "Null")
+% status:  RED
+% mechanism: tabularray {tblr} collects & counts its own body; a row with MORE
+%   cells than colspec must extend, not error. Rust delegates tblr to the kernel
+%   \halign template (fixed 13 cols) so the 14-cell "Null&&&...&&\\" row raises
+%   "Extra alignment tab '&'". Fix site: latexml_contrib/src/tabularray_sty.rs.
+\documentclass{article}\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={*{13}{c}}}
+a&b&c&d&e&f&g&h&i&j&k&l&m\\
+Null&&&&&&&&&&&&&\\
+\end{tblr}
+\end{document}

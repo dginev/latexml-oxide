@@ -1,0 +1,26 @@
+% witness: modernposter/demo (regression 5->16 errors, sweep #35 86e764fda4 -> #36 46406f33c2)
+% oracle:  lualatex/pdflatex 0 errors (demo.pdf ships)
+% engines: b54y=16 b54l=5 (2026-09-03)  [+11 NEW mode-switch errors = the regression]
+% expect:  b54y-only: 0 "close a group that switched to mode restricted_horizontal"
+% status:  RED (b54y regression). NOT self-containable below modernposter.cls (bare tikz
+%          nodes/scopes/nested-pics all clean under both binaries — needs the class's
+%          nested-pgf node theme).
+% mechanism: NEW errors are \endgroup/\egroup/\lxSVG@endscope "close a group that switched to
+%   mode restricted_horizontal", frame owner \hbox. \lxSVG@endscope=endgroup() closes a pgf
+%   SVG scope (\pgfsys@endscope, pgfsys_latexml_def.rs:1452); pgf schedules scope teardown via
+%   \aftergroup (pgfcorescopes.code.tex:165). RULED OUT: cell-\aftergroup digestion
+%   (alignment.rs end_column) — the modernposter trace has ZERO alignment activity, so no cell
+%   exists; \g@addto@macro (54q, direct test clean); \expandafter retraction (54o/54p, align-
+%   ledger-only). Narrowed to the \hbox restricted_horizontal body reader (batch 54m one-frame
+%   hbox reader / 54n HBoxContents OD #188) leaving the \hbox mode-frame open across pgf's SVG
+%   scope \begingroup..\endgroup, so the scope \endgroup hits the \hbox frame.
+\documentclass{modernposter}
+\title{Demo}
+\author{A}
+\email{a@b.com}
+\begin{document}
+\maketitle
+\begin{postercolumn}
+  \posterbox{Intro}{Lorem ipsum dolor sit amet.}
+\end{postercolumn}
+\end{document}

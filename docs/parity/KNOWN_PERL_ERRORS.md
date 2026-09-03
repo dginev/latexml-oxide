@@ -5626,3 +5626,22 @@ fancyqr). Trigger: `\makeatletter{\@declaredcolor{red}x}`. Rust: both
 branches defined over `\color`. Guard:
 `perfect_kernel_batch54::color_switch_branches_are_defined`.
 
+
+## 178. siunitx `S`/`s` cells are scanned with full expansion (Rust fixes)
+
+siunitx.sty.ltxml L1414 reads the `S` cell with `XUntil:\lx@si@column@end`
+(an `\edef`-strength scan). Real siunitx collects the cell unexpanded
+(`\__siunitx_table_collect_begin:`), and a raw class's size command cannot
+survive an unprotected full expansion: `\@setfontsize` (latex.ltx:14103)
+tests `\ifx\protect\@typeset@protect` and its true branch reaches
+`\@currsize` → `\normalsize` → `\@setfontsize` again — pdflatex's
+`\edef\x{\small}` overflows the same way. Perl's primitive `\small` hides
+it; under `rawclasses` (KOMA `\DeclareRobustCommand\small{\@setfontsize
+\small…}`) a cell opening with an unbraced `\small` looped
+(zugferd-invoice.sty:113, scrartcl: `PushbackLimit`). Trigger:
+`\documentclass{scrartcl}\usepackage{siunitx}\begin{tabular}{S}\small a\\
+\end{tabular}` with raw classes. Rust: the scan runs under LaTeX's
+`\protected@edef` context (`\protect` = `\@unexpandable@protect`,
+latex.ltx:1384) so robust commands stay `\protect\cs ` (`read_x_until_
+protected`), and the cell is emitted as one group as LaTeX's column template
+does. Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.

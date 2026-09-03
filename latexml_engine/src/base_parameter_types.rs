@@ -376,38 +376,27 @@ LoadDefinitions!({
       return Ok(ArgWrap::Tokens(Tokens!()));
     };
     let until : Token = until_tks.into();
-    let mut tokens : Vec<Token> = Vec::new();
-    while let Some(token) = read_x_token(Some(false), false, None)? {
-      if token == until {
-        break;
-      } else if token.get_catcode() == Catcode::BEGIN {
-        tokens.push(token);
-        tokens.extend(read_balanced(ExpansionLevel::Off,false,false)?.unlist());
-        tokens.push(T_END!());
-      } else {
-        // Perl PR #2767 ("ParameterType XUntil should only expand, not
-        // digest") removed the LookupDefinition → Invocation(readArguments)
-        // clause that used to live here: "This clause tends to digest, not
-        // only expand; Why was it felt needed???". We follow: with the
-        // clause gone, a bare token push is all that remains.
-        //
-        // NOTE: the witnessed Rust workaround family that lived here
-        // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
-        // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
-        // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
-        // pure-expand. #3-#6 still route through XUntil — elsart
-        // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
-        // XUntil:\@end@bibfield` are unchanged by the PR (only the base
-        // engine's abstract/keywords environments moved to
-        // digestNextBody) — and are NOT yet re-verified. Tracked in
-        // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
-        // next sandbox sweep covering elsart papers, fixing any re-break
-        // at its root cause (href self-marker, \edef/\let reversion)
-        // rather than re-adding branches here (plan Appendix A.4).
-        tokens.push(token);
-      }
-    }
-    Ok(Tokens::new(tokens))
+    // Perl PR #2767 ("ParameterType XUntil should only expand, not
+    // digest") removed the LookupDefinition → Invocation(readArguments)
+    // clause that used to live here: "This clause tends to digest, not
+    // only expand; Why was it felt needed???". We follow: with the
+    // clause gone, a bare token push is all that remains
+    // (`gullet::read_x_until`).
+    //
+    // NOTE: the witnessed Rust workaround family that lived here
+    // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
+    // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
+    // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
+    // pure-expand. #3-#6 still route through XUntil — elsart
+    // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
+    // XUntil:\@end@bibfield` are unchanged by the PR (only the base
+    // engine's abstract/keywords environments moved to
+    // digestNextBody) — and are NOT yet re-verified. Tracked in
+    // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
+    // next sandbox sweep covering elsart papers, fixing any re-break
+    // at its root cause (href self-marker, \edef/\let reversion)
+    // rather than re-adding branches here (plan Appendix A.4).
+    Ok(read_x_until(&until)?)
   });
 
   //  This reads a braced tokens list, expanding as it goes,

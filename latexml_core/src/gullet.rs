@@ -2024,6 +2024,32 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
 
 /// Convenience method wrapping around `read_until` — EOF degrades to empty
 /// (callers that need to distinguish use `read_until` directly).
+/// Expanding delimited scan: read tokens with full expansion up to (and
+/// consuming) `until`, copying brace groups unexpanded once opened. The
+/// `XUntil:` parameter type's reader (Perl `Parameters.pm` `XUntil`, after
+/// PR #2767 "should only expand, not digest": a bare token push is all that
+/// remains). A `\noexpand`'d token collected here reverts to its plain
+/// shadowed identity, as in `read_balanced`: TeX's no_expand_flag is
+/// transient (tex.web §1149-1153), so a `\protect\cs ` pair produced under
+/// `\@unexpandable@protect` is stored as the plain pair, not relax markers.
+pub fn read_x_until(until: &Token) -> Result<Tokens> {
+  let mut tokens: Vec<Token> = Vec::new();
+  while let Some(token) = read_x_token(Some(false), false, None)? {
+    if token == *until {
+      break;
+    } else if token.get_catcode() == Catcode::BEGIN {
+      tokens.push(token);
+      tokens.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+      tokens.push(T_END!());
+    } else if token.get_catcode().is_active_or_cs() {
+      tokens.push(token.noexpand_shadowed().unwrap_or(token));
+    } else {
+      tokens.push(token);
+    }
+  }
+  Ok(Tokens::new(tokens))
+}
+
 pub fn read_until_token(t: Token) -> Result<Tokens> {
   Ok(read_until(&Tokens!(t))?.unwrap_or_default())
 }

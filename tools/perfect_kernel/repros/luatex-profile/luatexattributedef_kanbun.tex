@@ -1,0 +1,20 @@
+% witness: kanbun/kanbun-example (ltj-base.sty:30 \luatexattributedef\ltj@@attr@zero=0)
+% also: bxcoloremoji-ja(100) bxjscls-manual(61) bxjaprnind(44) bxcjkvert-ja(44) bxcjkjatype-ja(44)
+% oracle:  lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=2 perl=N/A (Perl has no luatex profile) (2026-09-03)
+% expect:  0 errors; \the\ltj@@attr@zero yields 0  (alias then used as \attributedef)
+% status:  RED
+% mechanism: luatexbase.sty:288-300 \let-aliases the \luatex* compat spellings to the
+%   modern LuaTeX primitives (:295 \let\luatexattributedef\attributedef). The
+%   luatexbase_sty.rs binding omits that alias block, so \luatexattributedef is undefined.
+%   NOTE: gain=0 for these 6 docs (all luatexja/bxcjk = PARKED family; the alias only
+%   clears the FIRST error, then luatexja's node surface cascades). Completeness fix.
+\documentclass{article}
+\usepackage{luatexbase}
+\makeatletter
+\luatexattributedef\ltj@@attr@zero=0
+\makeatother
+\begin{document}
+attr=\the\ltj@@attr@zero
+\end{document}

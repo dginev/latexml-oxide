@@ -1,0 +1,27 @@
+% witness: tikzcodeblocks/tikzcodeblocks-documentation (…-documentation.tex:735-741, 679-682)
+% oracle:  pdflatex 0 errors
+% engines: rust=7 perl=? (2026-09-03)
+% expect:  0 errors; an ltx:listing (or verbatim) containing "node" inside the 2nd cell
+% status:  RED
+% mechanism: a listings {lstlisting} BLOCK env (or \lstinputlisting) inside a p{} column.
+%   The p-column reads its cell body as VBoxContents = an internal_vertical box
+%   (tex_tables.rs:154, DefColumnType "p" :123-134 -> Cell.after=T_END :130).
+%   \begin{lstlisting} opens a bgroup() (listings_sty.rs:2289) then emits
+%   { \@@listings@block{…} } + trailer (lst_process_display_with :1977-2005);
+%   \@@listings@block has mode=>"internal_vertical" (:2512). Inside the p-cell's
+%   own internal_vertical VBox frame this leaves the group/mode stack off by one,
+%   so the cell's closing } (Cell.after) closes the listings leftover group instead
+%   of the p-column VBox -> \lx@tabular@p@'s internal_vertical frame is still open
+%   at \endtabular/\@end@tabular ("Attempt to close a group that switched to mode
+%   internal_vertical", stomach.rs:733/826). l-columns, \lstinline inline, plain
+%   {verbatim}, and standalone \vtop/\parbox/\mbox are ALL clean -> the p-column
+%   cell + listings-block choreography is the exact interaction.
+\documentclass{article}\usepackage{listings}
+\begin{document}
+\begin{tabular}{p{0.1\textwidth}p{0.9\textwidth}}
+a & text
+\begin{lstlisting}
+\node{a};
+\end{lstlisting}
+\end{tabular}
+\end{document}

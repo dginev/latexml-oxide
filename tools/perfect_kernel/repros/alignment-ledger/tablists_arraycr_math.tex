@@ -1,0 +1,18 @@
+% witness: tablists/tablists-rus (tablists-rus.tex:136-164)
+% oracle:  pdflatex 0 errors
+% engines: rust=9 (b54w); pdflatex=0
+% expect:  0 errors; equationgroup/inline math per cell, none left open
+% status:  RED
+% mechanism: same root as tablists_arraycr_backslash — \TeXr@arraycr array-style \\
+%   in a raw \halign; here cells carry explicit $...$ so the leftover open math frame
+%   also yields `\lx@end@inline@math Attempt to end mode math'.
+\documentclass{article}
+\usepackage{tablists}
+\begin{document}
+\begin{tabenum}[\bfseries1)]
+\tabenumitem $z=\displaystyle\frac xy$;
+\tabenumitem $2^x=9;$\cr
+\tabenumitem $v=gt+\displaystyle\frac{g}{4}t$;\\[1ex]
+\tabenumitem $u=2^{5x-3y+z}$;
+\end{tabenum}
+\end{document}

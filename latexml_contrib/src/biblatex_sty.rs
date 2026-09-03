@@ -1999,6 +1999,30 @@ LoadDefinitions!({
      \\catcode`\\&=4\\relax\
      \\biblatex@bblend"
   );
+  // A raw style `.def` can REPLACE `\printbibliography` with a copy of
+  // biblatex's real one — biblatex-sbl.def:663 `\renewrobustcmd*
+  // {\printbibliography}{\begingroup\blx@key@bibcheck{bibliography}…
+  // \@ifnextchar[{\blx@printbibliography}{\blx@printbibliography[]}}` — which
+  // reaches two biblatex.sty internals: the `check=` handler
+  // `\blx@key@bibcheck` (biblatex.sty:9643) and the render worker
+  // `\blx@printbibliography[#1]` (:9820, ends with the matching `\endgroup`).
+  // Perl raw-loads biblatex.sty and has both; the binding stands in for the
+  // package (RUST-ONLY), so it defines them: the check handler `\let`s
+  // `\blx@bibcheck` to a defined `\blx@bibcheck@<name>` (`\defbibcheck` is a
+  // no-op here, so the miss branch is silent), and the worker routes to the
+  // binding's own `\printbibliography` body then closes the style's group.
+  // Witness biblatex-sbl/sbl-paper (`\printbibliography[heading=bibintoc]`,
+  // 2 errors; also biblatex-sbl.tex, biblatex-sbl-ibid). Guard:
+  // `perfect_kernel_batch54::style_def_printbibliography_override_routes_to_binding`.
+  DefMacro!(
+    "\\blx@key@bibcheck{}",
+    "\\@ifundefined{blx@bibcheck@#1}{}{\\expandafter\\let\\expandafter\\blx@bibcheck\\csname blx@bibcheck@#1\\endcsname}"
+  );
+  DefMacro!(
+    "\\blx@printbibliography[]",
+    "\\biblatex@sty@printbibliography[#1]\\endgroup"
+  );
+  Let!("\\biblatex@sty@printbibliography", "\\printbibliography");
   Let!("\\biblatex@bbl@verb", "\\biblatex@verb");
   Let!("\\biblatex@bbl@endverb", "\\biblatex@endverb");
   def_macro(

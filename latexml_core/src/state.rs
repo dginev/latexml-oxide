@@ -1235,6 +1235,16 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         }
       }
     }
+    // Record that a redefinition was dropped: a locked binding may consult
+    // `<cs>:redefined` to yield the parts of its behaviour the class took
+    // over (see `\lx@maketitle@cleanup`).
+    let redefined_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined")));
+    state_mut!().assign_internal(
+      TableName::Value,
+      redefined_key,
+      Stored::Bool(true),
+      Some(Scope::Global),
+    );
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {

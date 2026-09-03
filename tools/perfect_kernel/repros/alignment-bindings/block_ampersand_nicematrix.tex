@@ -1,0 +1,16 @@
+% witness: nicematrix/nicematrix (nicematrix.tex:1152)   [oracle engine lualatex; pdflatex also clean]
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=blocked(pgfsys) (2026-09-03)   <- pdflatex-clean; Perl dies earlier on pgf driver
+% expect:  0 errors; NiceTabular row 1 cell 2 contains literal "one two three"
+% status:  RED
+% mechanism: with option [ampersand-in-blocks], the & inside \Block{}{one & two}
+%   is LITERAL block content, not a column separator. Rust's nicematrix binding
+%   lets the inner & reach the kernel alignment -> "Extra alignment tab '&'".
+%   Fix site: latexml_contrib/src/nicematrix_sty.rs (\Block body handling).
+\documentclass{article}\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{ll}[ampersand-in-blocks]
+1 & \Block{}{one & two & three} \\
+2 & \Block{}{one & two} \\
+\end{NiceTabular}
+\end{document}

@@ -1,0 +1,26 @@
+% witness: tufte-latex/sample-book, sample-handout (tufte-common.def:934
+%          \@tufte@print@citations -> \marginpar{ \@for\@temp@bibkeyx:=\@tufte@citations
+%          \do{ ... \bibentry{\@temp@bibkeyx} } }; bibentry.sty:64 \bibentry -> \nocite{#1})
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=1 perl=? (2026-09-03) -- SHARED design (Perl latex_constructs.pool.ltxml:4214
+%          also PushValues the RAW unexpanded $_[1]); the error is Rust-manifested. pdflatex
+%          expands the keys when writing \citation to .aux -> the fix surpasses both.
+% expect:  0 errors; the deferred cite carries the EXPANDED key: <ltx:bibref bibrefs="key1">
+% status:  RED
+% mechanism: \nocite{} (latex_constructs.rs:10016) captures its key via .revert() (UNEXPANDED)
+%   and defers \lx@mark@nocite{<raw key>} onto @at@end@document. When the key is a transient
+%   \@for loop variable (\@temp@bibkeyx), it is out of scope by the time the deferred token is
+%   processed -- and inside a \marginpar (tufte redefines \@footnotetext to \marginpar) the
+%   digestion timing makes the deferred token get expanded -> "\@temp@bibkeyx is not defined".
+%   Real TeX's \nocite writes \citation{#1} via \protected@write\@auxout, EXPANDING the key at
+%   the call site (while \@temp@bibkeyx is still key1). Validated: \expandafter\nocite\expandafter
+%   {\@temp@bibkeyx} -> clean, bibrefs="key1"; and overriding \nocite to \edef its key drops the
+%   full tufte doc 1->0.
+% fix: latexml_engine/src/latex_constructs.rs \nocite DefMacro (L10016): expand the key
+%   argument (protected expansion, matching \protected@write\@auxout) BEFORE pushing
+%   \lx@mark@nocite{<keys>} onto @at@end@document, instead of deferring the raw .revert()ed token.
+\documentclass{article}
+\makeatletter
+\begin{document}
+Text.\marginpar{\@for\@temp@bibkeyx:=key1\do{\nocite{\@temp@bibkeyx}}}
+\end{document}

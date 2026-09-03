@@ -10951,4 +10951,92 @@ $\begin{pNiceMatrix}
     assert!(xml.contains(r##"color="#9E1D1C">Hello"##), "{xml}");
     assert!(xml.contains(r##"color="#0000FF">Blue"##), "{xml}");
   }
+
+  /// A raw biblatex style `.def` (biblatex-sbl.def:663) replaces
+  /// `\printbibliography` with biblatex's real body, which reaches the
+  /// `\blx@key@bibcheck` / `\blx@printbibliography` internals the binding
+  /// stands in for (biblatex.sty:9643/:9820). Witness biblatex-sbl/sbl-paper.
+  #[test]
+  fn style_def_printbibliography_override_routes_to_binding() {
+    let tex = r"\documentclass{article}
+\usepackage[style=sbl,backend=biber]{biblatex}
+\begin{document}
+Text.
+\printbibliography[heading=bibintoc]
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// The siunitx `S`/`s` cell is read with expansion under LaTeX's
+  /// `\protected@edef` context (`\protect` = `\@unexpandable@protect`,
+  /// latex.ltx:1384): a raw class's size command then stays `\protect\small `
+  /// instead of expanding — `\@setfontsize` (latex.ltx:14103) reaches
+  /// `\@currsize` → `\normalsize` → itself under `\@typeset@protect`, the same
+  /// overflow as pdflatex's `\edef\x{\small}`. The cell is emitted as ONE
+  /// GROUP (LaTeX's column template wraps every entry in `{…}`) so the size
+  /// stays scoped to the cell. Witness zugferd-invoice.sty:113 `\small\emph
+  /// {Pos.}&…` in an `S` column under scrartcl (`PushbackLimit`; pdflatex
+  /// clean). The number still parses; under article the size is applied.
+  #[test]
+  fn s_column_unbraced_size_command_is_scoped() {
+    let tex = r"\documentclass{scrartcl}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{S}
+\small a \\
+1.5 \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<Math mode="inline" tex="1.5""#), "{xml}");
+    let article = tex.replace("scrartcl", "article");
+    let (stderr, xml) = convert(&article, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<text fontsize="90%">a</text>"#), "{xml}");
+    assert!(xml.contains(r#"<Math mode="inline" tex="1.5""#), "{xml}");
+  }
+
+  /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
+  /// class that `\renewcommand`s `\maketitle` without that cleanup
+  /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the
+  /// redefinition dropped by the lock and the kernel cleanup made later
+  /// `\title`s no-ops, so the second `\correct` built a self-referential
+  /// `\@originaltitle` (`PushbackLimit`; schooldocs-examples). The
+  /// self-disabling half now yields when the class took `\maketitle` over.
+  #[test]
+  fn maketitle_cleanup_yields_to_a_class_redefinition() {
+    let tex = r"\documentclass{article}
+\usepackage{schooldocs}
+\begin{document}
+\schooldocstitles
+\title{Standard}
+\maketitle
+\correct
+\title{Exam}
+\maketitle
+\correct
+\title{Small}
+\schooldocstitles
+\makesmalltitle
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Small"), "{xml}");
+    // Without a class redefinition the standard cleanup still applies.
+    let tex = r"\documentclass{article}
+\title{T}\author{A}
+\begin{document}
+\maketitle
+\title{Again}\makeatletter[\@title]\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[]"), "{xml}");
+  }
 }

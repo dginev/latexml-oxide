@@ -1,0 +1,21 @@
+% witness: zugferd/DEMO-rechnung-zugferd (\PrintInvoiceTabular, zugferd-invoice.sty:113
+%          header row `\small\emph{...}&...` in the siunitx S/P columns of an xltabular)
+% oracle:  pdflatex/lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty  (article/pdflatex also loops)
+% engines: rust=Fatal(Timeout:PushbackLimit, \@setfontsize loop) pdflatex=0 (b54y 2026-09-03)
+% expect:  0 errors; <ltx:tabular> with the cell
+% status:  RED
+% mechanism: an UNBRACED KOMA size command (\small, => \@setfontsize\small\@ixpt{..}) as the
+%   leading token of a siunitx S-column cell. \lx@SI@column@parse (siunitx_sty.rs:3027) peels
+%   leading formatting CSes (\small) into `pre` (:3040-3046) and re-emits `pre + parsed`;
+%   because \small is unscoped, the KOMA size command (\normalsize\@xipt{13.6}, scrsize11pt.clo:54)
+%   is re-invoked unboundedly (\@setfontsize loops 87k+, pushback grows past 5,000,000).
+%   BRACING it (`{\small a}`) scopes the size change and is CLEAN => the unscoped size-in-S-cell
+%   is the trigger. Reduced from zugferd (bare xltabular/siunitx/longtable are individually clean).
+\documentclass{scrartcl}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{S}
+\small a \\
+\end{tabular}
+\end{document}

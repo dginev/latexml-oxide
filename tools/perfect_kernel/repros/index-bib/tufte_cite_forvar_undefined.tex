@@ -1,0 +1,18 @@
+% witness: tufte-latex/sample-book, sample-handout
+%          (tufte-common.def:898 \@for\@temp@bibkeyx:=#2\do{...} inside \sidenote)
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=1 perl=? (2026-09-03)
+% expect:  0 errors; the \cite renders a <ltx:cite>/<ltx:bibref> in the sidenote note
+% status:  RED
+% mechanism: tufte \cite -> \@tufte@normal@cite (tufte-common.def:889) ->
+%   \sidenote[][..]{ ... \@for\@temp@bibkeyx:=#2\do{ \ifthenelse{\equal{..}{\@temp@bibkeyx}}
+%   ... \bibentry{\@temp@bibkeyx} } }. \sidenote = \optparams{\@tufte@sidenote}{[][0pt]}
+%   (tufte-common.def:1081) -> \@footnotetext{#3}. The \@for loop variable
+%   \@temp@bibkeyx is undefined when the deferred sidenote body is processed.
+%   NOT the broad footnote/\@for path: a plain \footnote{\@for\x:=a,b\do{[\x]}}
+%   works; divergence is in \optparams / \@tufte@sidenote arg handling or a
+%   re-expansion of the deferred footnote body. Fix site TBD (Checkpoint N).
+\documentclass{tufte-handout}
+\begin{document}
+Text.\cite{key1}
+\end{document}

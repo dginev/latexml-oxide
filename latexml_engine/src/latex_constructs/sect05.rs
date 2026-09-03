@@ -806,9 +806,29 @@ pub(crate) fn load() -> Result<()> {
   // `\@maketitle` still holds its content).
   DefMacro!(
     "\\maketitle",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\maketitle\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\global\let\author\relax\global\let\date\relax\global\let\and\relax",
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\and\relax\lx@maketitle@cleanup",
     locked => true
   );
+  // article.cls's `\maketitle` ends by disabling itself and the setters
+  // (`\global\let\title\relax` …). A class that `\renewcommand`s `\maketitle`
+  // WITHOUT that cleanup (schooldocs.sty:136 — it re-runs `\title`/
+  // `\maketitle` per exam variant, :168-178 `\correct` chains `\@title`
+  // through `\@originaltitle`) had its redefinition dropped by the lock, and
+  // the kernel cleanup then made every later `\title` a no-op, so the second
+  // `\correct` captured a self-referential `\@originaltitle` and
+  // `\makesmalltitle` recursed without end (`PushbackLimit`; schooldocs-
+  // examples; pdflatex clean). The locked binding stays the semantic source;
+  // only the self-disabling half yields when the class took `\maketitle`
+  // over (`\maketitle:redefined`, recorded at the locked drop, state.rs).
+  // Guard: `perfect_kernel_batch54::maketitle_cleanup_yields_to_a_class_redefinition`.
+  DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
+    if !lookup_bool("\\maketitle:redefined") {
+      for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
+        let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
+      }
+    }
+    Ok(())
+  });
   // In case \maketitle isn't used in the document, let's check for it.
   AddToMacro!("\\@startsection@hook", "\\lx@frontmatter@fallback");
   // in cases such as titlepage, the document end is the last fallback.

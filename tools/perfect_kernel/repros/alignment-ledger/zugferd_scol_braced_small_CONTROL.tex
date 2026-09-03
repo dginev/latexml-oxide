@@ -1,0 +1,12 @@
+% witness: (none) — boundary control for the unbraced-size-in-S-cell loop
+% oracle:  pdflatex 0 errors
+% engines: rust=0 pdflatex=0 (b54y 2026-09-03)
+% expect:  0 errors (CLEAN) — bracing the size command scopes it, no loop
+% status:  CONTROL
+\documentclass{scrartcl}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{S}
+{\small a} \\
+\end{tabular}
+\end{document}

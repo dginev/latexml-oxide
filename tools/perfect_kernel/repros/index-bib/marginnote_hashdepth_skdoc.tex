@@ -1,0 +1,39 @@
+% witness: iodhbwm/iodhbwm (skdoc.cls:617 \Options -> \marginnote{ \clist_map_inline:Nn
+%          \l_tmpa_clist{ \index@option*{####1} ... } }; iodhbwm.tex:222 \Option{load-preamble})
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=2 perl=? (2026-09-03) -- SHARED (Perl marginnote.sty.ltxml L37-40 also
+%          shortcuts \marginnote -> \marginpar, so it drops the same macro-arg layer)
+% expect:  0 errors; the two clist items render as [alpha][beta] (no literal '#'),
+%          i.e. no "# (catcode PARAM) should never reach Stomach"
+% status:  RED
+% mechanism: real marginnote.sty (marginnote.sty:319-343) routes the note body through
+%   \marginnote -> \@dblarg\@mn@marginnote -> \@ifnextchar[ -> \@mn@@marginnote ->
+%   \@mn@@@marginnote -> the typeset box; that chain passes the body through one more
+%   macro-argument layer than a direct \marginpar. skdoc calibrates its inline body
+%   with `####1` (FOUR hashes) to that real depth. Our binding
+%   (marginnote_sty.rs:38-73) expands \marginnote DIRECTLY to \marginpar and stubs
+%   \@mn@marginnote/\@mn@@marginnote/\@mn@@@marginnote as noops, so the body is one
+%   layer short: after xparse halves ####1->##1, a literal `#1` PARAM leaks into
+%   \clist_map_inline's item body -> reaches the Stomach, AND skdoc's
+%   \@index@@ (skdoc.cls:921) then does \newglossaryentry{index-#1-opt}, defining the
+%   entry under the wrong (leaked-#) name so every later \gls{index-<opt>-opt} is
+%   "Glossary entry ... has not been defined" (iodhbwm: 96 not-defined + 48 PARAM).
+% fix: latexml_package/src/package/marginnote_sty.rs -- define \marginnote =
+%   \@dblarg\@mn@marginnote and give \@mn@marginnote/\@mn@@marginnote/\@mn@@@marginnote
+%   the real passthrough chain (marginnote.sty:319-343), ending in \marginpar with the
+%   existing font/[left] wrapping. Validated: overriding \marginnote with that chain in
+%   the doc drops rust 2->0 here and 6->0 (glossaries) on the skdoc doc.
+\documentclass{article}
+\usepackage{marginnote}
+\usepackage{xparse}
+\ExplSyntaxOn
+\DeclareDocumentCommand\Options{m}{
+  \clist_set:Nn\l_tmpa_clist{#1}
+  \marginnote{
+    \clist_map_inline:Nn\l_tmpa_clist{ [####1] }
+  }
+}
+\ExplSyntaxOff
+\begin{document}
+Body.\Options{alpha,beta}
+\end{document}

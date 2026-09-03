@@ -1,0 +1,12 @@
+% witness: metre/demo (raw \halign), tex.web §792 cur_loop / periodic `&&`
+% oracle: pdflatex CLEAN (0 !)   engines: pdftex
+% expect: 0 Error/Fatal — legal TeX, periodic part repeats for cells 3,4
+% status: GREEN in b54y (kernel already implements tex.web §792 periodic repeat)
+% mechanism: leading `&` in preamble = `&&` → repeated part; Template::get_column_mut
+%   (template.rs:393-410) re-instantiates it; next_column errors ONLY when no
+%   column AND no periodic part. Perl parity: Template.pm:142-151 `column`.
+\catcode`\@=11
+\documentclass{article}
+\begin{document}
+\halign{#\tabskip1pt&&#\cr a&b&c&d\cr}
+\end{document}

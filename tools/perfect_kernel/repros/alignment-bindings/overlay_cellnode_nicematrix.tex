@@ -1,0 +1,20 @@
+% witness: nicematrix/nicematrix-french (nicematrix-french.tex:5986)
+% oracle:  pdflatex 0 errors (2 runs)
+% engines: rust=1 perl=blocked(pgfsys) (2026-09-03)
+% expect:  0 errors; the pNiceMatrix array with "5" present
+% status:  RED
+% mechanism: a STANDALONE \tikz[remember picture,overlay]\draw (name-i-j)... after
+%   a \begin{pNiceMatrix}[name=..] references the matrix cell node by name. Outside
+%   the env, so the binding cannot grab it. The binding never materialises the pgf
+%   cell nodes, so raw pgf shape lookup raises "No shape named `name-2-2'". Fix (not
+%   nicematrix-local): the pgf/tikz binding shape-anchor lookup should tolerate an
+%   undefined named shape (warn->origin) since LaTeXML cannot position pgf nodes.
+%   Site: pgfsys_latexml_def.rs / pgf_sty.rs shape lookup.
+\documentclass{article}
+\usepackage{nicematrix,tikz}
+\begin{document}
+$\begin{pNiceMatrix}[name=ma-matrice]
+1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9
+\end{pNiceMatrix}$
+\tikz[remember picture,overlay] \draw (ma-matrice-2-2) circle (2mm) ;
+\end{document}

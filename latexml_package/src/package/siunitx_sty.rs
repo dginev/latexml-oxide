@@ -1465,6 +1465,31 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
 }
 
+/// Read an `S`/`s` cell up to `\lx@si@column@end` with expansion (Perl's
+/// `XUntil:` reader), under LaTeX's `\protected@edef` context: `\protect`
+/// is `\@unexpandable@protect` (latex.ltx:1384 `\noexpand\protect\noexpand`)
+/// for the duration of the scan, so a robust command in the cell survives as
+/// `\protect\cs ` instead of expanding. A fully expanding scan of a raw
+/// class's size command loops exactly as pdflatex's `\edef\x{\small}`
+/// overflows — `\@setfontsize` (latex.ltx:14103) tests
+/// `\ifx\protect\@typeset@protect` and its true branch reaches `\@currsize`
+/// → `\normalsize` → `\@setfontsize` again — while the protected context
+/// takes the false branch and leaves `\fontsize`/`\selectfont` unexpanded.
+/// Witness zugferd-invoice.sty:113 `\small\emph{Pos.}&…` in an `S` column
+/// under scrartcl (`PushbackLimit`; pdflatex clean). Guard
+/// `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.
+fn read_x_until_protected(until: &Token) -> Result<Tokens> {
+  let protect = T_CS!("\\protect");
+  let saved = lookup_meaning(&protect);
+  let_i(&protect, &T_CS!("\\@unexpandable@protect"), None);
+  let result = read_x_until(until);
+  match saved {
+    Some(m) => assign_meaning(&protect, m, None),
+    None => assign_meaning(&protect, Stored::None, None),
+  }
+  result
+}
+
 /// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
 /// an alignment column whose `before`/`after` wrap each cell as
 /// `{ \lx@si@column@prep[kv] <parse> <cell> \lx@si@column@end }`, routing the
@@ -3024,9 +3049,9 @@ LoadDefinitions!({
   // number (NO error on leftover, UNLIKE `\num`), then emit
   // `pre + {\color{…}}?six_wrap(result) + post`. A leading `\color` cancels
   // the column's auto-color (Perl L1429).
-  DefMacro!("\\lx@SI@column@parse XUntil:\\lx@si@column@end", sub[args] {
+  DefMacro!("\\lx@SI@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_x_until_protected(&T_CS!("\\lx@si@column@end"))?.unlist();
     let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
     let mut color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
@@ -3081,11 +3106,21 @@ LoadDefinitions!({
       post.insert(0, T_END!());
     }
     six_end_processing();
-    let mut out: Vec<Token> = pre;
+    // The cell content is emitted as ONE GROUP: LaTeX's column template wraps
+    // every entry in `{…}` (latex.ltx `\@classz`), so an unbraced `\small`
+    // peeled into `pre` is scoped to the cell. Emitted bare under a KOMA
+    // class, `\small` (→ `\@setfontsize`) leaked past the cell and the
+    // font restore re-ran KOMA's `\normalsize` without end (87,713
+    // `\@setfontsize\normalsize` iterations → `PushbackLimit`; zugferd-
+    // invoice.sty:113 `\small\emph{Pos.}&…` in an `S` column, scrartcl).
+    // Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.
+    let mut out: Vec<Token> = vec![T_BEGIN!()];
+    out.extend(pre);
     if !result.is_empty() {
       out.extend(six_wrap(result).unlist());
     }
     out.extend(post);
+    out.push(T_END!());
     Ok(Tokens::new(out))
   });
   // Perl L1454-1485 `\lx@si@column@parse` (the lowercase `s`, UNIT column):
@@ -3093,9 +3128,9 @@ LoadDefinitions!({
   // as UNITS (`six_convertUnits`/`six_parse_units`/`six_format_units`, via the
   // shared `six_process_units` used by `\si`) rather than as a number. Color
   // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
-  DefMacro!("\\lx@si@column@parse XUntil:\\lx@si@column@end", sub[args] {
+  DefMacro!("\\lx@si@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let mut tokens: Vec<Token> = read_x_until_protected(&T_CS!("\\lx@si@column@end"))?.unlist();
     let color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
     loop {

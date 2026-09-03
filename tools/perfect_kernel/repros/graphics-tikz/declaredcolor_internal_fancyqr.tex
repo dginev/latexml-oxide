@@ -1,0 +1,23 @@
+% witness: fancyqr/fancyqr-doc (fancyqr.sty:20-22  \@declaredcolor{<expr>}{#1})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03); real doc rust=5 (\@declaredcolor + 4 pict2e path prims)
+% expect:  0 errors; Hello carries color="#9E1D1C" (the tl!50!br mix)
+% status:  RED
+% mechanism: color/xcolor define \color = \@ifnextchar[\@undeclaredcolor\@declaredcolor
+%   (xcolor.sty:762-763). \@declaredcolor#1 (xcolor.sty:792) is the NAMED-color switch branch;
+%   \@undeclaredcolor[#1]#2 (xcolor.sty:764) the modelled branch. fancyqr calls \@declaredcolor
+%   DIRECTLY (fancyqr.sty:20-22), bypassing \color. Rust binds \color as a monolithic DefPrimitive
+%   (color_sty.rs:354) and never defines \@declaredcolor/\@undeclaredcolor, so raw callers find them
+%   undefined. Semantically \@declaredcolor{name} == \color{name}; \@undeclaredcolor[m]{s} == \color[m]{s}.
+% classification: SHARED — Perl also binds \color as a primitive and lacks \@declaredcolor
+%   (color.sty.ltxml / xcolor.sty.ltxml), so same-host Perl errors identically undefined. pdflatex
+%   clean => in-scope surpass.
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{tl}{HTML}{3E3A38}
+\definecolor{br}{HTML}{FF0000}
+\begin{document}
+\makeatletter
+{\@declaredcolor{tl!50!br}Hello} plain
+\makeatother
+\end{document}
