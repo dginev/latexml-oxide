@@ -13,8 +13,10 @@ LoadDefinitions!({
     None,       None,       '\u{03DE}', '\u{03D9}', None,       '\u{03DA}', None,       '\u{03E0}',
     // 0x18-0x1F
     '\u{20AC}', '\u{2030}', '\u{018F}', '\u{03E1}', '\u{2018}', '\u{2019}', '\u{02D8}', '\u{00AF}',
-    // 0x20-0x27
-    '\u{1FC1}', '!',        '\u{1FBD}', '\u{1FEE}', '\u{1FED}', '%',        '.',        '\u{1FFD}',
+    // 0x20-0x27 — slot 0x22 `"` is the dialytika (lgrenc.def:434
+    // `\DeclareTextAccent{\accdialytika}{LGR}{34}`), not the psili Perl's map
+    // put there (KPE #148).
+    '\u{1FC1}', '!',        '\u{00A8}', '\u{1FEE}', '\u{1FED}', '%',        '.',        '\u{1FFD}',
     // 0x28-0x2F
     '(',        ')',        '*',        '+',        ',',        '-',        '.',        '/',
     // 0x30-0x37
@@ -85,13 +87,13 @@ LoadDefinitions!({
   DefLigature!("\u{03B1}\u{1FBE}", "\u{1FB3}");
   DefLigature!("\u{03B7}\u{1FBE}", "\u{1FC3}");
   DefLigature!("\u{03C9}\u{1FBE}", "\u{1FF3}");
-  DefLigature!("\u{1FBD}\u{0399}", "\u{03AA}");
-  DefLigature!("\u{1FBD}\u{03B9}", "\u{03CA}");
-  DefLigature!("\u{1FBD}\u{03C5}", "\u{03CB}");
-  DefLigature!("\u{1FBD}\u{03D2}", "\u{03D4}");
-  DefLigature!("\u{1FBD}\u{1FC0}", "\u{1FC1}");
-  DefLigature!("\u{1FBD}\u{1FEF}", "\u{1FED}");
-  DefLigature!("\u{1FBD}\u{1FFD}", "\u{1FEE}");
+  DefLigature!("\u{00A8}\u{0399}", "\u{03AA}");
+  DefLigature!("\u{00A8}\u{03B9}", "\u{03CA}");
+  DefLigature!("\u{00A8}\u{03C5}", "\u{03CB}");
+  DefLigature!("\u{00A8}\u{03D2}", "\u{03D4}");
+  DefLigature!("\u{00A8}\u{1FC0}", "\u{1FC1}");
+  DefLigature!("\u{00A8}\u{1FEF}", "\u{1FED}");
+  DefLigature!("\u{00A8}\u{1FFD}", "\u{1FEE}");
   DefLigature!("\u{1FC0}\u{03B1}", "\u{1FB6}");
   DefLigature!("\u{1FC0}\u{03B7}", "\u{1FC6}");
   DefLigature!("\u{1FC0}\u{03B9}", "\u{1FD6}");
@@ -126,18 +128,18 @@ LoadDefinitions!({
   DefLigature!("\u{201B}\u{1FFD}", "\u{1FDE}");
 
   // 3-char ligatures
-  DefLigature!("\u{1FBD}\u{1FC0}\u{03B9}", "\u{1FD7}");
-  DefLigature!("\u{1FBD}\u{1FC0}\u{03C5}", "\u{1FE7}");
-  DefLigature!("\u{1FBD}\u{1FEF}\u{03B9}", "\u{1FD2}");
-  DefLigature!("\u{1FBD}\u{1FEF}\u{03C5}", "\u{1FE2}");
-  DefLigature!("\u{1FBD}\u{1FFD}\u{03B9}", "\u{1FD3}");
-  DefLigature!("\u{1FBD}\u{1FFD}\u{03C5}", "\u{1FE3}");
+  DefLigature!("\u{00A8}\u{1FC0}\u{03B9}", "\u{1FD7}");
+  DefLigature!("\u{00A8}\u{1FC0}\u{03C5}", "\u{1FE7}");
+  DefLigature!("\u{00A8}\u{1FEF}\u{03B9}", "\u{1FD2}");
+  DefLigature!("\u{00A8}\u{1FEF}\u{03C5}", "\u{1FE2}");
+  DefLigature!("\u{00A8}\u{1FFD}\u{03B9}", "\u{1FD3}");
+  DefLigature!("\u{00A8}\u{1FFD}\u{03C5}", "\u{1FE3}");
   DefLigature!("\u{1FC0}\u{03B1}\u{1FBE}", "\u{1FB7}");
   DefLigature!("\u{1FC0}\u{03B7}\u{1FBE}", "\u{1FC7}");
   DefLigature!("\u{1FC0}\u{03C5}\u{1FBE}", "\u{1FE6}");
   DefLigature!("\u{1FC0}\u{03C9}\u{1FBE}", "\u{1FF7}");
-  DefLigature!("\u{1FC0}\u{1FBD}\u{03B9}", "\u{1FD7}");
-  DefLigature!("\u{1FC0}\u{1FBD}\u{03C5}", "\u{1FE7}");
+  DefLigature!("\u{1FC0}\u{00A8}\u{03B9}", "\u{1FD7}");
+  DefLigature!("\u{1FC0}\u{00A8}\u{03C5}", "\u{1FE7}");
   DefLigature!("\u{1FC0}\u{2019}\u{03B1}", "\u{1F06}");
   DefLigature!("\u{1FC0}\u{2019}\u{03B7}", "\u{1F26}");
   DefLigature!("\u{1FC0}\u{2019}\u{03B9}", "\u{1F36}");
@@ -151,8 +153,8 @@ LoadDefinitions!({
   DefLigature!("\u{1FEF}\u{03BF}\u{1FBE}", "\u{1F78}");
   DefLigature!("\u{1FEF}\u{03C5}\u{1FBE}", "\u{1F7A}");
   DefLigature!("\u{1FEF}\u{03C9}\u{1FBE}", "\u{1FF2}");
-  DefLigature!("\u{1FEF}\u{1FBD}\u{03B9}", "\u{1FD2}");
-  DefLigature!("\u{1FEF}\u{1FBD}\u{03C5}", "\u{1FE2}");
+  DefLigature!("\u{1FEF}\u{00A8}\u{03B9}", "\u{1FD2}");
+  DefLigature!("\u{1FEF}\u{00A8}\u{03C5}", "\u{1FE2}");
   DefLigature!("\u{1FEF}\u{2019}\u{03B1}", "\u{1F02}");
   DefLigature!("\u{1FEF}\u{2019}\u{03B5}", "\u{1F12}");
   DefLigature!("\u{1FEF}\u{2019}\u{03B7}", "\u{1F22}");
@@ -168,8 +170,8 @@ LoadDefinitions!({
   DefLigature!("\u{1FFD}\u{03BF}\u{1FBE}", "\u{1F79}");
   DefLigature!("\u{1FFD}\u{03C5}\u{1FBE}", "\u{1F7B}");
   DefLigature!("\u{1FFD}\u{03C9}\u{1FBE}", "\u{1FF4}");
-  DefLigature!("\u{1FFD}\u{1FBD}\u{03B9}", "\u{1FD3}");
-  DefLigature!("\u{1FFD}\u{1FBD}\u{03C5}", "\u{1FE3}");
+  DefLigature!("\u{1FFD}\u{00A8}\u{03B9}", "\u{1FD3}");
+  DefLigature!("\u{1FFD}\u{00A8}\u{03C5}", "\u{1FE3}");
   DefLigature!("\u{1FFD}\u{2019}\u{03B1}", "\u{1F04}");
   DefLigature!("\u{1FFD}\u{2019}\u{03B5}", "\u{1F14}");
   DefLigature!("\u{1FFD}\u{2019}\u{03B7}", "\u{1F24}");

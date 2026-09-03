@@ -89,6 +89,20 @@ static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unw
 /// (`section`, `subsection`, `appendix` …); strip a single trailing CS if
 /// present so downstream `\csname @<type>...@ID\endcsname`-style construction
 /// stays well-formed.
+/// The section-type NAME of a digested `{}` argument: its reverted tokens,
+/// not its typeset string. Digestion decodes letters through the current
+/// font encoding, so under LGR (babel greek, textalpha) the digested `section`
+/// read back as `σεςτιον` and `\csname the…\endcsname` built `\theσεςτιον`
+/// (greek-fontenc manuals, teubner, toptesi-it: 56 nested-section errors per
+/// doc). Guard: `perfect_kernel_batch54::section_type_name_is_not_font_decoded`.
+fn section_type_name(stype: &Digested) -> String {
+  let name = stype
+    .revert()
+    .map(|t| t.to_string())
+    .unwrap_or_else(|_| stype.to_string());
+  strip_trailing_cs(name.trim())
+}
+
 fn strip_trailing_cs(stype: &str) -> String {
   // Detect a trailing `\<letters>` token attached to the identifier. We strip
   // exactly the well-known CS sentinels so we don't mis-mangle exotic but
@@ -4552,7 +4566,7 @@ LoadDefinitions!({
       // up a trailing \par token that pollutes the section type identifier.
       // \par should never appear inside a section type; strip any trailing
       // backslash-prefixed CS to recover the bare identifier.
-      let stype = strip_trailing_cs(&args[0].as_ref().unwrap().to_string());
+      let stype = section_type_name(args[0].as_ref().unwrap());
       let inlist = args[1].as_ref().unwrap().to_string();
       // TODO: This bizarre argument API interaction needs to be simplified down to Perl's
       // intuitive level of:       let (x,y,z, ...) = @args;
@@ -4619,7 +4633,7 @@ LoadDefinitions!({
 
       maybe_peek_label()?;
       // See Cluster A note in the body closure above; sanitize identical here.
-      let stype_str = strip_trailing_cs(&stype.to_string());
+      let stype_str = section_type_name(stype);
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
@@ -4663,7 +4677,7 @@ LoadDefinitions!({
       if let Some(asif) = props.get("backmatterelement") {
         let target = backmatter_insertion_target(
           document, &asif.to_string(),
-          &section_element_for_type_maybe(&strip_trailing_cs(&stype.to_string()))
+          &section_element_for_type_maybe(&section_type_name(stype))
             .unwrap_or_else(|| "ltx:section".into()));
         let point = document.find_insertion_point(&target, None)?;
         document.set_node(&point);
@@ -4671,7 +4685,7 @@ LoadDefinitions!({
       let id = props.get("id").unwrap().to_string();
       // Mirror the same schema sanitization as \@@numbered@section above.
       // Cluster A: strip trailing CS (e.g. \par) from stype.
-      let stype_str = strip_trailing_cs(&stype.to_string());
+      let stype_str = section_type_name(stype);
       let tagname = section_element_for_type(&stype_str, false);
       document.open_element(&tagname,
         Some(string_map!(
@@ -4694,7 +4708,7 @@ LoadDefinitions!({
       let title = args[3].as_ref().unwrap();
       maybe_peek_label()?;
       // Cluster A sanitization (see \@@numbered@section).
-      let stype_str = strip_trailing_cs(&stype.to_string());
+      let stype_str = section_type_name(stype);
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
@@ -7277,9 +7291,29 @@ LoadDefinitions!({
   // available" ×~200 across the greek-fontenc manuals (char-list,
   // hyperref-with-greek, alphabeta-doc). Guard:
   // `perfect_kernel_batch54::provide_text_command_dispatches_on_encoding`.
+  // `\fi`-free: the chosen command must see its ARGUMENT next. With Perl's
+  // `…\else\csname…\endcsname\fi` shape an argument-taking text command
+  // (`\accperispomeni{a}`) read the `\fi` as its argument and the real
+  // `{a}` followed the mark ("͂α" — the mark BEFORE the letter).
+  // Perl keeps an existing bare definition (a hand-written macro must win,
+  // and the kernel's Unicode glyph primitives `\textdegree` … beat a fontmap
+  // slot lookup — the whole 30_encoding family depends on that); real
+  // `\DeclareTextCommand` always redefines. One carve-out: a CONTROL SYMBOL
+  // (`\<`, `\>`) that is a non-expandable primitive gives way —
+  // textalpha.sty:187-188 declares the breathings on `\<`/`\>`, and `\>` is
+  // otherwise the math `\mskip` primitive, which in text turned
+  // `\>'\textalpha` into a space + `'`.
+  fn text_command_may_define(cs: &Token) -> Result<bool> {
+    let is_control_symbol =
+      cs.with_str(|s| s.len() == 2 && !s.ends_with(|c: char| c.is_alphabetic()));
+    Ok(match lookup_definition(cs)? {
+      None => true,
+      Some(defn) => is_control_symbol && !defn.is_expandable(),
+    })
+  }
   fn def_text_command_dispatcher(cs: &Token, cs_str: &str) -> Result<()> {
     DefMacro!(*cs, None, Some(s!(
-      r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"
+      r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{{\csname?\string{cs_str}\endcsname}}{{\csname\cf@encoding\string{cs_str}\endcsname}}"
     ).into()));
     Ok(())
   }
@@ -7306,7 +7340,7 @@ LoadDefinitions!({
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     let ecs_args = convert_latex_args(nargs, opts)?;
     DefMacro!(ecs, ecs_args, expansion);
-    if !IsDefined!(&cs) {    // If not already defined...
+    if text_command_may_define(&cs)? {
       def_text_command_dispatcher(&cs, &cs_str)?;
     }
   }, locked => true);
@@ -7326,7 +7360,7 @@ LoadDefinitions!({
       let ecs_args = convert_latex_args(nargs, opts.clone())?;
       DefMacro!(ecs, ecs_args, expansion.clone());
     }
-    if IsDefinable!(&cs) { // If not already defined...
+    if IsDefinable!(&cs) || text_command_may_define(&cs)? {
       def_text_command_dispatcher(&cs, &cs_str)?;
     }
   }, locked => true);
@@ -7427,7 +7461,68 @@ LoadDefinitions!({
   }, locked => true);
 
   //------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", None, locked => true);
+  // `\DeclareTextAccent{\cs}{enc}{slot}` — Perl ignores it (Base_Utility
+  // `ignoredDefinition`), which left greek-fontenc's breathings and accents
+  // (lgrenc.def:439-470 `\accdasia`, `\accperispomeni`, …) undefined:
+  // teubner.sty:165 `\let\~\accperispomeni` then made `\~` itself undefined
+  // (teubner-doc 1→87), textalpha's breathings `\<`/`\>` errored. OXIDIZED_DESIGN
+  // #184: the encoding-specific command appends the COMBINING mark(s) the
+  // slot's standalone glyph stands for (the kernel's own accent combiner map,
+  // plus the Greek diacritics table below); the bare command becomes the
+  // encoding dispatcher. A bare command that already exists (the kernel
+  // accents `\'`, `\"`, `\~` …, `\DefAccent`'d natively) is left alone, as is
+  // its encoding-specific slot, so the native accent path with its dotless-i
+  // and typewriter rules stays in charge. Guard:
+  // `perfect_kernel_batch54::declare_text_accent_defines_greek_diacritics`.
+  DefPrimitive!("\\DeclareTextAccent DefToken {}{Number}", sub[(cs, encoding, code)] {
+    if IsDefined!(&cs) {
+      return Ok(vec![]);
+    }
+    let cs_str = cs.to_string();
+    let encoding_str = Expand!(encoding).to_string();
+    let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    let standalone = u8::try_from(code.value_of()).ok()
+      .and_then(|c| font::decode_str(c, Some(encoding_str.clone()), false))
+      .map(|sym| with(sym, |s| s.to_string()))
+      .unwrap_or_default();
+    let combining: Option<&str> = match standalone.as_str() {
+      // Greek diacritics (LGR standalone glyph → combining sequence)
+      "\u{1FEF}" => Some("\u{0300}"),          // varia
+      "\u{1FFD}" | "\u{0384}" => Some("\u{0301}"), // oxia / tonos
+      "\u{1FC0}" => Some("\u{0342}"),          // perispomeni
+      "\u{00A8}" => Some("\u{0308}"),          // dialytika
+      "\u{1FBF}" | "\u{2019}" => Some("\u{0313}"), // psili (`>`, slot 62)
+      "\u{1FFE}" | "\u{201B}" => Some("\u{0314}"), // dasia (`<`, slot 60)
+      "\u{1FCE}" => Some("\u{0313}\u{0301}"), // psili oxia
+      "\u{1FCD}" => Some("\u{0313}\u{0300}"), // psili varia
+      "\u{1FCF}" => Some("\u{0313}\u{0342}"), // psili perispomeni
+      "\u{1FDE}" => Some("\u{0314}\u{0301}"), // dasia oxia
+      "\u{1FDD}" => Some("\u{0314}\u{0300}"), // dasia varia
+      "\u{1FDF}" => Some("\u{0314}\u{0342}"), // dasia perispomeni
+      "\u{0385}" | "\u{1FEE}" => Some("\u{0308}\u{0301}"), // dialytika tonos / oxia
+      "\u{1FED}" => Some("\u{0308}\u{0300}"), // dialytika varia
+      "\u{1FC1}" => Some("\u{0308}\u{0342}"), // dialytika perispomeni
+      "\u{02D8}" => Some("\u{0306}"),          // vrachy (breve)
+      "\u{00AF}" => Some("\u{0304}"),          // macron
+      _ => None,
+    };
+    let combining: Option<String> = combining.map(str::to_owned).or_else(|| {
+      lookup_mapping("accent_combiner_above", &standalone)
+        .or_else(|| lookup_mapping("accent_combiner_below", &standalone))
+        .map(|v| v.to_string())
+    });
+    let marks = match combining {
+      Some(marks) => marks,
+      None => {
+        Info!("unexpected", "DeclareTextAccent",
+          s!("No combining form for accent {cs_str} in {encoding_str} (slot {}); it is dropped", code.value_of()));
+        String::new()
+      },
+    };
+    let body = mouth::tokenize_internal(TeXString::assembled(s!("#1{marks}")));
+    def_macro(ecs, parse_parameters("{}", &ecs, true)?, ExpansionBody::Tokens(body), None)?;
+    def_text_command_dispatcher(&cs, &cs_str)?;
+  }, locked => true);
   DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
 
   // TL2023+ kernel per-codepoint case-mapping declarations (ltmiscen:
@@ -7500,10 +7595,53 @@ LoadDefinitions!({
   });
 
   // #------------------------------------------------------------
-  DefPrimitive!("\\DeclareTextComposite{}{}{}{}", None, locked => true);
-  // sub { ignoredDefinition("DeclareTextComposite", $_[1]); });
-  DefPrimitive!("\\DeclareTextCompositeCommand{}{}{}{}", None, locked => true);
-  // sub { ignoredDefinition("DeclareTextCompositeCommand", $_[1]); });
+  // ltoutenc.dtx `\@text@composite`: an accent applied to a declared
+  // argument uses the composite (`\<enc>\cs-<char>`) instead of the generic
+  // mark — lgrenc.def:530-700 (`\DeclareTextComposite{\accdasia}{LGR}{a}
+  // {129}`, `\DeclareTextCompositeCommand{\>}{LGR}{'}{\accpsilioxia}` from
+  // textalpha.sty:189-194). Perl ignores both; the accent bodies installed by
+  // `\DeclareTextAccent` above consult the composite first (OXIDIZED_DESIGN
+  // #184). The key is `\string` of the argument's first token, as in the
+  // kernel (`\csname\string#1-\string#2\endcsname`).
+  // The first composite declared for `\<enc>\cs` wraps it (ltoutenc.dtx
+  // `\@text@composite`): the original body moves to `\<enc>\cs@orig`, and
+  // `\<enc>\cs{#1}` takes the composite when one exists for `#1`.
+  fn wrap_text_command_for_composites(encoding_str: &str, cs_str: &str) -> Result<()> {
+    let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
+    let orig = T_CS!(s!("\\{encoding_str}{cs_str}@orig"));
+    if IsDefined!(&orig) || !IsDefined!(&ecs) {
+      return Ok(());
+    }
+    Let!(orig, ecs);
+    let body = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\expandafter\\ifx\\csname {encoding_str}\\string{cs_str}-\\string#1\\endcsname\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{{\\csname {encoding_str}\\string{cs_str}@orig\\endcsname{{#1}}}}{{\\csname {encoding_str}\\string{cs_str}-\\string#1\\endcsname}}"
+    )));
+    def_macro(
+      ecs,
+      parse_parameters("{}", &ecs, true)?,
+      ExpansionBody::Tokens(body),
+      None,
+    )?;
+    Ok(())
+  }
+  DefPrimitive!("\\DeclareTextComposite DefToken {} Undigested {Number}", sub[(cs, encoding, ch, code)] {
+    let encoding_str = Expand!(encoding).to_string();
+    let cs_str = cs.to_string();
+    let key = T_CS!(s!("\\{encoding_str}{cs_str}-{}", ch.to_string()));
+    if let Some(glyph) = u8::try_from(code.value_of()).ok()
+      .and_then(|c| font::decode_str(c, Some(encoding_str.clone()), false))
+    {
+      def_primitive(key, None, Some(PrimitiveBody::String(glyph)), PrimitiveOptions::default())?;
+      wrap_text_command_for_composites(&encoding_str, &cs_str)?;
+    }
+  }, locked => true);
+  DefPrimitive!("\\DeclareTextCompositeCommand DefToken {} Undigested Undigested", sub[(cs, encoding, ch, cmd)] {
+    let encoding_str = Expand!(encoding).to_string();
+    let cs_str = cs.to_string();
+    let key = T_CS!(s!("\\{encoding_str}{cs_str}-{}", ch.to_string()));
+    def_macro(key, None, ExpansionBody::Tokens(cmd), None)?;
+    wrap_text_command_for_composites(&encoding_str, &cs_str)?;
+  }, locked => true);
 
   def_primitive_noop("\\UndeclareTextCommand{}{}")?;
   // Perl `latex_constructs.pool.ltxml:2642`:

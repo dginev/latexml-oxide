@@ -5215,7 +5215,10 @@ express. Every mid-word sigma in LGR text (`\textsigma`, `s` under
 \textsigma
 ```
 
-Rust: `lgr_fontmap.rs` slot 0x73 = U+03C3. Guard:
+Slot 0x22 (`"`) likewise holds the psili U+1FBD where lgrenc.def:434 declares the
+dialytika (¨, U+00A8).
+
+Rust: `lgr_fontmap.rs` slots 0x73 = U+03C3, 0x22 = U+00A8. Guard:
 `perfect_kernel_batch54::provide_text_command_dispatches_on_encoding`.
 
 ## 149. The refnum formatter cannot take an argument-taking `\p@<ctr>` (ctex) (Rust fixes)

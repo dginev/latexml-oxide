@@ -9370,4 +9370,29 @@ Body.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[7]"), "{xml}");
   }
+
+  /// OXIDIZED_DESIGN #184: `\DeclareTextAccent` (lgrenc.def:439-470) defines
+  /// the Greek diacritics as combining-mark accents with an encoding
+  /// dispatcher (Perl ignores it: teubner.sty:165 `\let\~\accperispomeni`
+  /// then made `\~` undefined; textalpha's `\<`/`\>` breathings errored);
+  /// the dispatcher is `\fi`-free so an argument-taking text command sees
+  /// its argument. Also the section-type name of `\@@numbered@section` is
+  /// taken from the reverted tokens, not the LGR-decoded text
+  /// (`\theσεςτιον`).
+  #[test]
+  fn declare_text_accent_defines_greek_diacritics() {
+    let tex = r"\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage{textalpha}
+\begin{document}
+\fontencoding{LGR}\selectfont
+\section{A}
+[\<a][\accperispomeni{a}][\>'\textalpha][\accdialytika{i}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[ἁ][ᾶ][ἄ][ϊ]"), "{xml}");
+    assert!(xml.contains(r#"<tag role="refnum">1</tag>"#), "{xml}");
+  }
 }

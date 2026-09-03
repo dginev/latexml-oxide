@@ -6520,3 +6520,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: crbox/crbox-doc, ghab/ghab-doc (perfect-kernel corpus).
 **Guard**: `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
 **Upstream**: not filed.
+
+### 184. `\DeclareTextAccent` defines the accent (Perl ignores it)
+
+**Perl behavior**: `\DeclareTextAccent{\cs}{enc}{slot}` is `ignoredDefinition` (Base_Utility), so greek-fontenc's `\accdasia`/`\accperispomeni`/… (lgrenc.def:439-470) never exist: teubner.sty:165 `\let\~\accperispomeni` makes `\~` undefined (teubner-doc 1→87 errors once the encoding is live), textalpha's breathings `\<`/`\>` error.
+**Rust behavior**: `\<enc>\cs{#1}` appends the combining mark(s) the slot's standalone glyph stands for (the kernel accent combiner map plus a Greek diacritics table: varia, oxia/tonos, perispomeni, dialytika, psili, dasia and their composites); the bare `\cs` becomes the `\fi`-free encoding dispatcher. A bare command that already exists (the kernel accents, `DefAccent`'d natively) and its encoding slot are left alone, so the native accent path keeps its dotless-i and typewriter rules. The dispatcher shape shared with `\DeclareTextCommand`/`\ProvideTextCommand`/`\DeclareTextSymbol` is `…\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}`: Perl's `…\else…\fi` shape hands the trailing `\fi` to an argument-taking text command as its argument.
+**Why**: kernel-quality: LGR/Greek documents get their accents instead of an undefined-CS cascade; no output changes for documents whose accents come from the kernel.
+**Witnesses**: teubner/teubner-doc, greek-fontenc (char-list, textalpha-doc), any babel-greek + polytonic text.
+**Guard**: `perfect_kernel_batch54::declare_text_accent_defines_greek_diacritics`.
+**Upstream**: not filed.
