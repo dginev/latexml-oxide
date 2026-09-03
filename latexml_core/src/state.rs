@@ -1220,7 +1220,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
           && target.get_catcode() == Catcode::CS
           && lookup_meaning(target).is_none()
           && let Ok(empty) = Expandable::new(
-            target.clone(),
+            *target,
             None,
             Some(ExpansionBody::Tokens(Tokens::new(Vec::new()))),
             None,
