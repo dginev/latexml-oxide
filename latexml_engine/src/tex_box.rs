@@ -1383,11 +1383,15 @@ LoadDefinitions!({
 
     if let Some(_alignment) = lookup_alignment() {
       // Perl: set isHorizontalRule only if dimensions suggest a real rule
+      // A full-width (default) rule with an explicit height is a horizontal
+      // rule too — `\noalign{\hrule height 1pt}` fell through the former
+      // `_ => false` and was neither rendered nor a border (Perl
+      // TeX_Box.pool:851 shares the heuristic). Guard:
+      // `perfect_kernel_batch54::noalign_rule_with_height_is_a_border`.
       let dominated_by_width = match (h_pt, w_pt) {
-        (None, None) => true,
+        (None, None) | (Some(_), None) => true,
         (None, Some(w)) => w > 20.0,
         (Some(h), Some(w)) => w > 3.0 * h,
-        _ => false,
       };
       if dominated_by_width {
         _alignment.alignment_cell().unwrap().borrow_mut()

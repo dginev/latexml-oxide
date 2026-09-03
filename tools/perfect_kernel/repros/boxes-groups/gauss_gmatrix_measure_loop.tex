@@ -1,0 +1,15 @@
+% witness: gauss/gauss-ex (Fatal:Timeout:PushbackLimit, s36). MINIMAL: any \begin{gmatrix}…
+% \end{gmatrix} (even 1x1, no \rowops) infinite-loops. oracle: pdflatex 0 (gauss-ex.pdf ships).
+% status: b54x = Convert timeout (loop); Perl 0.8.8 ALSO loops (60s timeout) => SHARED.
+% mechanism: gmatrix (gauss.sty:1678) -> g@matrix collects cells into \g@matrixbox via raw \ialign;
+% \g@endmatrix (gauss.sty:1733) then MEASURES it with \g@measureRows (:966) + \g@measureCols (:1011):
+% recursive \lastbox box-decomposition. \g@measureCols terminates ONLY on \ifdim\wd\g@trash=100cm
+% (the physical-width sentinel \hbox to 100cm{.\hfill.}, gauss.sty:1755). LaTeXML (Perl+Rust) does NO
+% TeX box LAYOUT, so \wd is never 100cm and \lastbox doesn't shrink a real box list => infinite
+% recursion. Neutering \g@measureCols/\g@measureRows (\def…{}) makes gmatrix convert clean (CONTROL).
+% NOT a finite giant, NOT a Rust-only primitive cycle: a box-GEOMETRY-dependent loop LaTeXML cannot
+% satisfy. pdflatex does real layout -> the sentinel fires -> finite.
+\documentclass{article}\usepackage{amsmath,gauss}
+\begin{document}
+$\begin{gmatrix}[p]1\end{gmatrix}$
+\end{document}

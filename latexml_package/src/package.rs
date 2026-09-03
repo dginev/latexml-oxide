@@ -374,6 +374,7 @@ pub mod pstricks_tex;
 pub mod pxfonts_sty;
 pub mod pzd_fontmap;
 pub mod quantumarticle_cls;
+pub mod quantumview_cls;
 pub mod ragged2e_sty;
 pub mod refcount_sty;
 pub mod relsize_sty;

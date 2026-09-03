@@ -1,0 +1,9 @@
+% CONTROL: the identical \ifnum0=`}...\ifnum0=`{ brace hack in a PLAIN group is clean
+%   (0 errors, balanced) — proves the boldline failure is the \noalign digest_next_body path,
+%   not the \ifnum backtick or the char-code braces themselves.
+% oracle:  pdflatex 0 ; rust 0 (must STAY clean)
+% status:  CONTROL
+\documentclass{article}\makeatletter
+\begin{document}
+{\ifnum0=`}\fi ZZ \ifnum0=`{\fi}
+\end{document}

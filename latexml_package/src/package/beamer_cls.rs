@@ -133,6 +133,20 @@ fn beamer_color_opts(opts: &str) -> Vec<(String, String)> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // beamerbasetemplates.sty:24-30: `\ifbeamertemplateempty{name}{empty}
+  // {nonempty}` gates control flow on whether `\beamer@@tmpl@<name>` is
+  // undefined or `\beamer@@empty`; themes test it (beamerthemeAlbi.sty:224,
+  // 301, 689 — 43 `\fi` cascade errors). The binding stands in for beamer
+  // and had no templates surface here; real body, since it gates flow. Guard:
+  // `perfect_kernel_batch54::beamer_template_empty_test_is_defined`.
+  RawTeX!(r"\long\def\beamer@@empty{}
+\def\expandbeamertemplate#1{\csname beamer@@tmpl@#1\endcsname}
+\def\ifbeamertemplateempty#1#2#3{%
+  \def\beamer@ifdo{#3}%
+  \expandafter\ifx\csname beamer@@tmpl@#1\endcsname\relax\def\beamer@ifdo{#2}\fi%
+  \expandafter\ifx\csname beamer@@tmpl@#1\endcsname\beamer@@empty\def\beamer@ifdo{#2}\fi%
+  \beamer@ifdo}");
+
   // Load article.cls as the base class (beamer builds on article; Perl
   // beamer.cls.ltxml:1361 `LoadClass('article')`). `RequirePackage!` looked
   // for an `article.sty` and missed silently, so no sectioning counter below

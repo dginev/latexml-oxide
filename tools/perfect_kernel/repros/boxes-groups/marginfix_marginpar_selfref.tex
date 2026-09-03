@@ -1,0 +1,16 @@
+% witness: sidenotes/caesar_example (caesar_book.cls -> marginfix). Fatal:Stomach:MemoryBudget
+% Box-list runaway 1999934 boxes. MINIMAL: marginfix's \marginpar patch on LaTeXML's Constructor
+% \marginpar -> self-reference. oracle pdflatex 0 (caesar_example.pdf ships). Perl 0.8.8 SHARED (loops).
+% mechanism: marginfix.sty:91-94 \edef\marginpar{\unexpanded{\setbox\@tempboxa\hbox{\strut}...}%
+%   \expandafter\unexpanded\expandafter{\marginpar}} prepends a strut-measure to the OLD \marginpar
+%   by EXPANDING \marginpar once to capture its body — needs \marginpar to be an expandable MACRO
+%   (real latex: \def\marginpar{\@ifnextchar[...}). LaTeXML defines \marginpar as a non-expandable
+%   DefConstructor (sect09.rs:338 / Perl latex_constructs.pool:3487), so \expandafter{\marginpar}
+%   does NOT expand; \unexpanded captures the literal \marginpar token => the patched \marginpar is
+%   SELF-REFERENTIAL and loops, each pass adding one \hbox{\strut} box => Box-list runaway.
+\documentclass{article}\makeatletter
+\edef\marginpar{\unexpanded{\setbox\@tempboxa\hbox{X}}\expandafter\unexpanded\expandafter{\marginpar}}
+\makeatother
+\begin{document}
+Text.\marginpar{a note} more.
+\end{document}

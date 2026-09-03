@@ -1,0 +1,20 @@
+% witness: quantumview-template (quantumarticle bundle) — sweep36 (8 errs)
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% class: SHARED (quantumview is raw; quantumarticle_cls.rs overrides \author)
+% expect: 0 Error; author-group list initialized so \maketitle affiliation loop runs
+% status: RED with b54x (\@authorgroup undefined + \csname cascade)
+% mechanism: quantumview.cls (raw, derived from quantumarticle) builds an author-group
+%   list \@authorgroup via \internal@elseauthor: \ifcsdef{@authorgroup}{}{\csdef{@authorgroup}{}}
+%   then \listxadd{\@authorgroup}{..} (quantumview.cls:678-690; quantumarticle.cls:1093-1095),
+%   consumed by \maketitle's \forlistloop{..}{\@authorgroup} (quantumarticle.cls:1169). The
+%   quantumarticle_cls.rs binding overrides \author (->\lx@add@creator), so the raw init never
+%   runs and the raw \maketitle affiliation loop hits an undefined \@authorgroup.
+\documentclass{quantumview}
+\title{T}
+\author{Alice}
+\affiliation{Uni}
+\begin{document}
+\maketitle
+Body.
+\end{document}

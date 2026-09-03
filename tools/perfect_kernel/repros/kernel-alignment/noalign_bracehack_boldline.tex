@@ -1,0 +1,24 @@
+% witness: shipunov/boldline-ex-en (boldline-ex-en.tex:17-21, tabular \hlineB{2.7})
+% oracle:  pdflatex 0 errors
+% engines: rust=1-2 pdflatex=0 (2026-09-03, b54x)
+% expect:  0 errors; <ltx:tabular> with the 2 data rows, first row a (bold) top border
+% status:  RED
+% mechanism: boldline.sty:13 \hlineB#1 = \noalign{\ifnum0=`}\fi\hrule\@height#1\arrayrulewidth
+%   \futurelet\reserved@a\@xhlineB{#1}} with \@xhlineB ending \ifnum0=`{\fi}. The latex.ltx
+%   brace hack: \noalign{ is matched at DEFINITION by \ifnum0=`}'s } (a code at execution);
+%   the closing \ifnum0=`{\fi}'s } closes the group. This hack balances in a PLAIN group and in
+%   \hbox (0 errors, balanced frames) but DESYNCS the boxing level in the section-1206 \noalign
+%   digest_next_body path (tex_tables.rs:1011-1017): \@@tabular is pushed twice / popped once,
+%   so \@end@tabular meets the env \begingroup (non-boxing) -> "Attempt to close boxing group".
+%   batch 54y fixed the OPENING \ifnum0=`} (execute the body); the CLOSING \ifnum0=`{ is the residual.
+\documentclass{article}\makeatletter
+\def\myhlineB#1{\noalign{\ifnum0=`}\fi\hrule\@height#1\arrayrulewidth
+  \futurelet\reserved@a\@myxhlineB{#1}}
+\def\@myxhlineB#1{\ifnum0=`{\fi}}
+\makeatother
+\begin{document}
+\begin{tabular}{cc}\myhlineB{2.5}
+a & b \\
+c & d \\
+\end{tabular}
+\end{document}

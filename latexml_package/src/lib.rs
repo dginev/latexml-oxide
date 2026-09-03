@@ -590,6 +590,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::adjmulticol_sty::load_definitions,
   ),
   ("isorot", "sty", package::isorot_sty::load_definitions),
+  (
+    "quantumview",
+    "cls",
+    package::quantumview_cls::load_definitions,
+  ),
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),
   ("newclude", "sty", package::newclude_sty::load_definitions),

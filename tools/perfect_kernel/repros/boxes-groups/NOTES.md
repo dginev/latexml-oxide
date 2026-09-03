@@ -753,3 +753,290 @@ Expected gain: shipunov/boldline-ex-en (4) + any brace-hack-rule package.
 - boldline `V{}` column and `\clineB`: CLEAN — only `\hlineB` (brace-hack `\noalign`). `\hlineB`
   position (top/mid/bottom) irrelevant — a single one breaks. The `{#1}` width arg is NOT the
   trigger (the arg-less real `\hline` brace-hack, bl_rawhline_bracehack, breaks identically).
+
+## Checkpoint N (wave-15) — ROOT 3c: screenplay-pkg `\abstract{…}` sections-in-abstract
+
+Witness: screenplay-pkg/screenplay-pkg (6 err). Repro (RED b54x=4, pdflatex 0):
+screenplay_abstract_unclosed.tex. First frame error `\lx@add@frontmatter@until Attempt to close a
+group that switched to mode internal_vertical` (LXML_TRACE_FRAMES last op: `pop … at } (bound_mode=
+internal_vertical)`), + `<ltx:section> isn't allowed in <ltx:abstract>/<ltx:section>` cascade +
+`<ltx:abstract>`/`<ltx:document>` close mismatch.
+
+### Construct (file:line)
+screenplay-pkg.tex:67 uses `\abstract{\noindent\begin{quote}…\end{quote}` then `\section{…}`
+(lines 69+) — article's `abstract` ENVIRONMENT (article.cls:377 `\newenvironment{abstract}{…\small
+\begin{center}…\end{center}\quotation}{\endquotation}`) MISUSED as a braced command, the `{` group
+wrapping the whole body (all `\section`s) and closing far away / at doc end. pdflatex tolerant:
+sections typeset as headings inside the abstract's `\quotation`, group auto-closed at `\end{document}`.
+
+### Mechanism (Rust file:line)
+`\abstract` DefMacro (latex_constructs/sect05.rs:872): if next is `{` (T_BEGIN) → emits
+`\lx@begin@abstract`+`{`+`\aftergroup\lx@end@abstract` (sect05.rs:882-884) — ties the abstract-END to
+the GROUP's `}` via `\aftergroup`. `\lx@begin@abstract` = `\lx@clear@frontmatter{ltx:abstract}
+\lx@add@frontmatter@until{ltx:abstract}[..]{\lx@end@abstract}` (base_utilities.rs:816);
+`\lx@add@frontmatter@until` (base_utilities.rs:459, `bounded => true`) does
+`digest_next_body(Some(\lx@end@abstract))` = a BOUNDED internal_vertical frame collecting until
+`\lx@end@abstract`. Because the group wraps `\section`s, they digest INSIDE the bounded abstract
+frame → `<ltx:section>` in `<ltx:abstract>` (malformed), and the internal_vertical frame is closed by
+the wrong `}` (the group close / `\end{document}` teardown) rather than a clean `\lx@end@abstract` →
+`Attempt to close a group that switched to mode internal_vertical`.
+KEY GAP: the NO-brace `\abstract` path (sect05.rs:888-891) adds `\maybe@end@abstract`
+(=`\lx@end@abstract`, sect05.rs:901) to `\@startsection@hook` so the next `\section` CLOSES the
+abstract. The BRACED path does NOT register that hook, so a `\section` inside `\abstract{…}` cannot
+end the abstract — it nests instead.
+
+### latex.ltx / tex.web
+`abstract` (article.cls:377) = a `\quotation` list environment; `\section` inside just typesets a
+heading (no group/mode close). The abstract ends only at `\endabstract`(=`\endquotation`), never
+called here → auto-closed at `\end{document}`. TeX tolerates the unclosed `\abstract{` group
+(inserts `}` at end). No error in pdflatex. LaTeXML is strict (schema forbids section-in-abstract;
+the frontmatter-until bounded frame needs a real `\lx@end@abstract`).
+
+### Classification: SHARED
+Perl 0.8.8 same host/preload on the repro = 11 errors, SAME family (`\lx@add@frontmatter@now Attempt
+to close a group that switched to mode internal_vertical`, `<ltx:section> in <ltx:abstract>`,
+`readBalanced ran out of input`). pdflatex 0 (screenplay-pkg.pdf ships). In scope (surpass-Perl).
+
+### Fix — KERNEL `\abstract` braced branch (not a screenplay binding)
+Not screenplay-specific — any doc doing `\abstract{…\section…}` (article abstract env misused as a
+braced command) hits it. Fix site: latex_constructs/sect05.rs `\abstract` DefMacro braced branch
+(:874-885). Make the braced `\abstract{…}` ALSO register `\maybe@end@abstract` on `\@startsection@
+hook` (mirroring the no-brace branch :888-891) so a `\section` inside ends the abstract; and make the
+group-tied `\aftergroup\lx@end@abstract` idempotent with it — `\lx@end@abstract` is already a no-op
+primitive (base_utilities.rs:820), so a second one at the `}` is harmless, but the BOUNDED frame's
+`{` group (re-emitted, above the internal_vertical frame) must be handled so the section-triggered
+`\lx@end@abstract` can pop the abstract frame cleanly (main session: verify the frame nesting —
+possibly the braced case should NOT re-emit `{` as a boxing group above the bounded frame, or should
+use `\lx@add@frontmatter@now` semantics). The braced `\abstract{short}` P74 case (no section inside)
+must stay green (no section → hook never fires → abstract ends at `}` as today). Guard
+(screenplay_abstract_unclosed.tex): 0 Error/Fatal AND `<ltx:abstract>` closed before the first
+`<ltx:section>` (≥1 top-level `<ltx:section>` NOT nested in `<ltx:abstract>`). Mirror in Perl
+(TeX.pool `\abstract`) for parity. Risk: MED — touches `\abstract` (every article/report abstract);
+re-run abstract goldens + the char-list P74 braced-abstract witness. Gain: screenplay-pkg (6).
+
+### Dead ends
+- `\abstract{…\section…}` with ONE section then a CLOSING `}` (sp_r1): only `<ltx:section> in
+  <ltx:section>` (schema), NOT the frame error — the frame error needs the group to wrap sections and
+  close late/at doc end. Single `\section` + immediate `}` close: CLEAN.
+- titlesec/titling are NOT required (sp_r1 without them reproduces the section nesting).
+
+### ROOT 3c — frame-safe fix shape (design note, deferred)
+Two candidate shapes. (A) SECTION-HOOK EMITS `\egroup`, NOT `\lx@end@abstract`: the re-emitted `{`
+group sits ABOVE the bounded `\lx@add@frontmatter@until` internal_vertical frame, and its
+`\aftergroup\lx@end@abstract` is bound to THAT `{`. So `\maybe@end@abstract` (fired by the first
+`\section` via `\@startsection@hook`) should emit a single `\egroup` — closing the `{` inner-to-outer
+FIRES the bound `\aftergroup\lx@end@abstract`, which is exactly the terminal `digest_next_body`
+awaits, so both frames unwind in order with zero mode mismatch. The only residue is the SOURCE's
+eventual `}` (which now has no matching `{`): neutralise it by marking the abstract group closed and
+pushing a one-shot swallow (e.g. `\lx@begin@abstract` sets `\let\lx@abstract@rbrace\@empty` and the
+hook `\def`s an active `}`/sentinel that `\@gobble`s the next brace, or — cleaner — the braced branch
+re-emits not a bare `{` but `\bgroup…\egroup`-less `\lx@hidden@bgroup` whose reversion drops the
+brace so a dangling source `}` lands on a sentinel group). (B) DOCUMENT-LEVEL RELOCATION (mirrors
+section-in-item leniency, document.rs `is_lenient_sectioning_container`, OD #189): when a sectioning
+`qsym` arrives with `<ltx:abstract>` (a Block.model frontmatter that can't hold sections) as the open
+insertion element, auto-close `<ltx:abstract>` in `find_insertion_point_qsym` and place the section as
+its sibling — but this only fixes the `<ltx:section> in <ltx:abstract>` tree error, NOT the stomach
+`internal_vertical` frame close, so it must be paired with (A) or with making
+`\lx@add@frontmatter@until`'s bounded frame tolerant of a stray `}` (treat a `}` that meets the
+frontmatter mode frame as the terminal, not an error). Prefer (A): it is a pure kernel-macro change at
+sect05.rs:874-885 (emit the section-hook + arrange the swallow), keeps the P74 braced-abstract green
+(no section ⇒ hook never fires ⇒ `}` fires `\aftergroup\lx@end@abstract` as today), and needs no
+document-builder change.
+
+## Checkpoint N (wave-15) — RUNAWAY root: gauss `gmatrix` box-geometry measurement loop
+
+Witness: gauss/gauss-ex (Fatal:Timeout:PushbackLimit, s36). Repro (b54x loops / Convert timeout):
+gauss_gmatrix_measure_loop.tex = ANY `\begin{gmatrix}…\end{gmatrix}` (even 1x1, no `\rowops`).
+
+### Construct + loop (file:line)
+`gmatrix` (gauss.sty:1678) → inner `g@matrix` env collects cells into `\g@matrixbox` via a raw
+`\ialign\bgroup\g@prae##\g@post&&…\cr` (gauss.sty:1777-1790, `\g@prae`=`\hfil\mathstrut$\relax`).
+`\end{gmatrix}` → `\g@endmatrix` (gauss.sty:1733) which, after `\global\setbox\g@matrixbox\lastbox`,
+MEASURES the matrix with two RECURSIVE `\lastbox` box-decomposition passes:
+- `\g@measureRows` (gauss.sty:966): `\setbox\g@trash\lastbox` off `\unvcopy\g@matrixbox`, recurse,
+  terminate on `\ifnum\g@maxrow<0` (rows counted by the redefined `\\`=`…\global\advance\g@maxrow1`).
+- `\g@measureCols` (gauss.sty:1011): `\setbox\g@trash\lastbox` off `\unhbox\g@eastbox` preceded by a
+  SENTINEL `\hbox to 100cm{.\hfill.}` (gauss.sty:1755). Terminates ONLY on `\ifdim\wd\g@trash=100cm`.
+
+### Root: LaTeXML has no TeX box LAYOUT
+LaTeXML (Perl AND Rust) digests content into XML/whatsits and does NOT compute physical box geometry.
+So `\hbox to 100cm{…}` is not a box of width 100cm, `\lastbox` does not pop off a real horizontal
+list one glyph/box at a time, and `\wd`/`\ht` of the pieces are not TeX dimensions. `\g@measureCols`'s
+`\ifdim\wd\g@trash=100cm` sentinel NEVER matches and the `\else` branch (`\ifdim\ht=0pt` glue vs box)
+always recurses → **infinite recursion** (millions of pure-expansion steps, ~no frame ops — 229 frame
+lines in 8s). NOT a finite giant (no huge finite computation); NOT a Rust-only primitive-identity
+cycle. It is a box-GEOMETRY-dependent termination condition LaTeXML structurally cannot satisfy.
+
+### Classification: SHARED
+Perl 0.8.8 same host/preload on the 2x2 repro: also loops (killed at 60s). pdflatex finite/clean
+(gauss-ex.pdf ships) — real layout makes the 100cm sentinel fire. In scope (surpass-Perl; pdflatex
+oracle). CONTROL: `\def\g@measureCols{}\def\g@measureRows{}` before the doc → gmatrix converts CLEAN
+(0 err) — pins the two recursions as the loop. `\begin{pmatrix}\vcenter{\hbox{X}}\end{pmatrix}`,
+`\ialign{…$…$…&&…\cr}` in a box, `\lastbox`+`\ht` measurement: all CLEAN standalone.
+
+### Fix class: gauss contrib BINDING (native gmatrix, bypass \g@measure*)
+gmatrix's measurement is purely for VISUAL arrow/label positioning, which LaTeXML does not render
+anyway, and it fundamentally needs TeX box geometry. Add `latexml_contrib/src/gauss_sty.rs`
+reimplementing `gmatrix[delim]` as a native LaTeXML matrix with the amsmath delimiter map
+(`[p]`→pmatrix/`\left(…\right)`, `[b]`,`[v]`,`[V]`,`[B]`,`[]`) and mapping `\rowops`/`\colops` +
+`\add[m]{i}{j}`/`\mult{i}{f}`/`\swap{i}{j}` to lightweight annotations (or documented no-op —
+they are layout-drawn arrows), so `\g@endmatrix`/`\g@measureRows`/`\g@measureCols` are never
+reached. BINDINGS OUTRANK RAW and gauss is contributed with NO Perl binding (Perl raw-loads and
+loops) → a Rust binding SURPASSES Perl. A narrower kernel patch (make `\hbox to 100cm` carry
+`\wd=100cm` + `\lastbox` return void on exhaustion) is INSUFFICIENT: `\g@measureCols`/`Rows` need the
+full real-dimension box decomposition. Guard (gauss_gmatrix_measure_loop.tex): converts with 0
+Error/Fatal AND renders a matrix (≥1 `<ltx:XMArray>`/`<ltx:XMApp>` fenced matrix). Risk: LOW (new
+contrib binding, gauss-only). Gain: gauss/gauss-ex + any gmatrix doc (currently a hard timeout).
+
+### Sibling runaway docs (this family, not yet root-caused — separate reports)
+arsclassica (MemoryBudget, pdflatex), schooldocs-examples (PushbackLimit), sidenotes/caesar_example
+(Box-list runaway 1999934 boxes), testidx-manual (TokenLimit), unicodefonttable (MemoryBudget,
+lualatex). gauss is the PushbackLimit representative; the others need their own bisects.
+
+## gauss binding SPEC (texdoc gauss, v2003/01/14; user surface for latexml_contrib/src/gauss_sty.rs)
+
+All constructs below currently RED-by-loop (any gmatrix → `\g@measure*` infinite recursion). Repros:
+runaway/gauss_{delims,rowops,colops,starindex,newmatrix}.tex. Native target = amsmath matrix + a
+trailing annotation `<ltx:text>` (one line per operation, package's own semantics), since LaTeXML
+renders no arrows. Load order: `\RequirePackage{amsmath}` (gauss requires it; load gauss AFTER).
+
+### Environment `gmatrix[⟨delim⟩]`  (behaves like amsmath `matrix`; body = cells `&`/`\\`)
+| `[⟨delim⟩]` | native target env | delimiters |
+|---|---|---|
+| `[p]` | pmatrix | `( )` |
+| `[b]` | bmatrix | `[ ]` |
+| `[B]` | Bmatrix | `{ }` |
+| `[v]` | vmatrix | `\| \|` |
+| `[V]` | Vmatrix | `‖ ‖` |
+| `[]` or none | matrix | (none) |
+| `[X]` (1-char, via `\newmatrix`) | Xmatrix | user `\left⟨l⟩…\right⟨r⟩` |
+Body: matrix cells first (REQUIRED), then optional `\rowops` and/or `\colops` sections in ANY order.
+Trap door (gauss §1.5): the LAST row must NOT end with `\\`; the last row measures column widths.
+Nested gmatrix allowed. Rows counted top-down from 0, columns left-to-right from 0.
+
+### `\rowops` / `\colops`  — switch to the row / column operation section
+Native: end the matrix cells; begin collecting operations into the trailing annotation (row vs column
+wording). A gmatrix may contain a `\rowops` section, a `\colops` section, or both.
+
+### Operation commands (inside `\rowops`/`\colops`; `i,j` 0-based indices, `*` = all indices)
+| command | meaning (manual) | annotation notation (native target `<ltx:text>` line) |
+|---|---|---|
+| `\mult{i}{⟨f⟩}` | multiply row/col `i` by `⟨f⟩` (⟨f⟩ user math, e.g. `\cdot 7`) | `R_i ← ⟨f⟩ R_i` (col: `C_i ← ⟨f⟩ C_i`) |
+| `\add[⟨a⟩][⟨b⟩]{i}{j}` | add `⟨a⟩`-fold of row/col `i` to `j` (no-op if i=j); `[a]`=multiple, `[b]`=to-label (ignored by default) | `R_j ← R_j + ⟨a⟩ R_i` |
+| `\swap[⟨a⟩][⟨b⟩]{i}{j}` | swap row/col `i` and `j` (no-op if i=j); `[a][b]` end labels (ignored by default) | `R_i ↔ R_j` |
+`*` index: `\mult{*}{f}` = mult ALL rows by f (= `\mult0{f}…\mult{n-1}{f}`); `\add[x]{0}{*}` = add
+x·row0 to every row (self excluded). Native: expand `*` over 0..(rows-1)/(cols-1) into one line each,
+or a single line `R_* ← …`. Use `R`/`C` per section; indices 0-based (as the package) or +1 to match
+"R1" convention — pick 0-based to mirror the source and the manual's examples.
+
+### Presentational (documented NO-OP in the binding; arrow geometry / label fontifiers)
+Dimens: `\rowarrowsep \colarrowsep \opskip \labelskip \rowopminsize \colopminsize` (arrow spacing).
+Label macros: `\rowmultlabel`(`{|\,#1}`) `\colmultlabel` `\rowswapfromlabel`/`to` `\colswap…`
+`\rowaddfromlabel`(`{\scriptstyle#1}`) `\coladdfromlabel` `\rowaddtolabel`(`{\scriptscriptstyle +}`)
+`\coladdtolabel`. All are visual — accept+discard (keep them defined so user `\renewcommand`s don't error).
+
+### `\newmatrix{⟨l⟩}{⟨r⟩}{X}`  (public tool)
+Defines env `Xmatrix` = `\left⟨l⟩\begin{matrix}…\end{matrix}\right⟨r⟩` and enables `gmatrix[X]`.
+Suffix must be 1 char; `g`/`{g@}`/empty ⇒ no-op. Native: register `Xmatrix` (fenced matrix with the
+given delims) and add `X` to the gmatrix delimiter map.
+
+### Fix note
+The binding replaces the `gmatrix` env begin/end (bypassing `g@matrix`/`\g@endmatrix`/`\g@measureRows`
+/`\g@measureCols`) and `\rowops`/`\colops`/`\add`/`\mult`/`\swap`; it must NOT let the raw gauss.sty
+`\g@endmatrix` run (that is the loop). Keep `\newmatrix` and the label/dimen macros as thin
+accept-and-discard so user customisations still parse. Guard: gauss_rowops.tex converts 0-error with
+≥1 fenced `<ltx:XMArray>` AND a trailing `<ltx:text>` containing the three operations.
+
+## Checkpoint N (wave-15) — RUNAWAY root: marginfix `\marginpar` patch self-reference (sidenotes/caesar)
+
+Witness: sidenotes/caesar_example (Fatal:Stomach:MemoryBudget "Box-list runaway: 1999934 boxes").
+Chain: `\documentclass{caesar_book}` → `\RequirePackage{marginfix}` (caesar_book.cls:7). Repros:
+sn_marginfix_only.tex (article+marginfix+`\marginpar` → loop), marginfix_marginpar_selfref.tex
+(minimal kernel replica → loop). Bisect: sidenotes-only CLEAN, marginfix WITHOUT `\marginpar` CLEAN;
+marginfix + `\marginpar` LOOPS. So the trigger is marginfix's `\marginpar` patch invoked by a marginpar.
+
+### Mechanism (file:line)
+marginfix.sty:91-94: `\edef\marginpar{\unexpanded{\setbox\@tempboxa\hbox{\strut}\Mfx@strutheight
+\ht\@tempboxa}\expandafter\unexpanded\expandafter{\marginpar}}` — the classic "prepend to a macro"
+idiom: it EXPANDS `\marginpar` once (`\expandafter\unexpanded\expandafter{\marginpar}`) to splice the
+OLD body after the strut-measure. It REQUIRES `\marginpar` to be an expandable MACRO (real latex.ltx:
+`\long\def\marginpar{\@ifnextchar[\@xmpar{\@ympar}}`). LaTeXML (Perl AND Rust) defines `\marginpar`
+as a NON-EXPANDABLE DefConstructor (latex_constructs/sect09.rs:338; Perl latex_constructs.pool
+.ltxml:3487, building `<ltx:note role='margin'>`). So `\expandafter{\marginpar}` does not expand;
+`\unexpanded` captures the LITERAL `\marginpar` token, and after the `\edef` the patched `\marginpar`
+= strut-measure + `\marginpar` (SELF). Every `\marginpar` call then re-expands to itself, each pass
+`\setbox\@tempboxa\hbox{\strut}` adding one box → unbounded box list (1999933 cap) with "no
+detectable cycle" (it IS a cycle, but at digestion not gullet — the box-list fuse catches it).
+
+### Category / classification
+NOT a finite giant. It is the "macro re-expanding itself because a kernel primitive is a Constructor
+where the package assumed a macro" class. SHARED: Perl 0.8.8 also loops (killed 60s) — Perl's
+`\marginpar` is a Constructor too. pdflatex finite (caesar_example.pdf ships; real `\marginpar` is a
+macro so the patch captures its body). In scope (surpass-Perl; pdflatex oracle).
+
+### Fix class: marginfix contrib BINDING (primary) or kernel `\marginpar`-macro-wrapper (general)
+marginfix's whole function — margin-float positioning via the OUTPUT ROUTINE (`\@combinefloats` hook,
+`\mfx@marginlist`, `\@addmarginpar`, `\MFX@buildmargin`/`\MFX@attachmargin`) — is page LAYOUT that
+LaTeXML (no page breaking / output routine) never runs. Add `latexml_package/src/package/marginfix_sty
+.rs` that loads marginfix as a near-no-op: DO NOT apply the `\edef\marginpar` patch nor the
+`\@combinefloats`/`\@addmarginpar` output hooks (leave the kernel `\marginpar` Constructor so margin
+notes are still captured), and keep user-facing `\clearmargin`/`\softclearmargin`/`\marginskip`/
+`\forcemarginnote` as thin no-ops so user calls parse. Semantic content (the notes) survives via the
+plain `\marginpar`. GENERAL alternative (kernel): define `\marginpar` as a DefMacro that expands to a
+stable inner `\lx@marginpar` Constructor, so patch-by-expansion idioms (`\edef\marginpar{…\unexpanded
+{\marginpar}}`, used by marginfix, marginnote variants, snotez, …) capture `\lx@marginpar` (a single
+stable token) instead of self — fixes the whole class but changes the kernel `\marginpar` shape (MED
+risk; re-run marginpar/marginnote goldens). Prefer the binding (marginfix is layout-only, inapplicable)
+unless other packages show the same `\marginpar`-repatch loop. Guard (sn_marginfix_only.tex): converts
+0-error with ≥1 `<ltx:note role="margin">`. Risk (binding): LOW. Gain: sidenotes/caesar_example +
+any marginfix doc (currently a hard box-runaway).
+
+### Dead ends
+- sidenotes.sty alone: CLEAN. marginfix WITHOUT `\marginpar`: CLEAN. Trigger = marginfix's `\edef`
+  `\marginpar` patch + an actual `\marginpar`/`\sidenote` (sidenote → marginpar) call.
+
+## Checkpoint N (wave-15) — RUNAWAY root: shapepar `\heartpar` auto-scale loop (arsclassica)
+
+Witness: arsclassica/ArsClassica (s36 Fatal:Stomach:MemoryBudget, RSS 4833MB). Chain: the doc
+`\input`s FrontBackMatter/Acknowledgements.tex which calls `\heartpar{…}` (shapepar). Repros
+(b54x loop): shapepar_heartpar_scaleloop.tex (minimal `\heartpar`), sn via Acknowledgements.
+Isolation: full arsclassica preamble + trivial body CLEAN; Chapters/Fundamentals, Code, Titlepage,
+Titleback, Contents all CLEAN; ONLY Acknowledgements (= the `\heartpar`) loops.
+
+### Construct + loop (file:line)
+`\heartpar#1` = `\shapepar{\heartshape}#1\unskip\unskip\penalty-300` (shapepar.sty:1048). `\shapepar`
+auto-scaling (shapepar.sty:206-219, the `\ifdim\SH@scale>\z@ \else` automatic branch): `\@tempdima\z@
+… \expandafter\SH@measline\SH@spec\\\delimiter` measures the shape-spec AREA into `\@tempdima`, then
+`\SH@dscale=1.01\p@ \loop \if\AbsVal\@tempdima<\p@ \multiply\@tempdima\@cclvi \multiply\SH@dscale
+\sixt@@n \repeat` scales it up (×256 per pass) until `|\@tempdima|≥1pt`.
+
+### Root: shape area = 0 without box/font LAYOUT
+`\SH@measline` (shapepar.sty:229+) accumulates the shape's segment lengths — dimensions derived from
+the text box / font metrics that LaTeXML (no line-breaking, no glyph layout) does not compute, so
+`\@tempdima`=0. `\multiply\@tempdima\@cclvi` keeps it 0, `\if\AbsVal 0 <\p@` is always true → the
+`\loop` never terminates (memory grows via the `\loop`/`\iterate` re-expansion until the box/mem
+fuse fires; s36 hit MemoryBudget). `\squareshape` happens to reach the fixed-scale branch / a
+nonzero measure and converts; `\heartshape` measures 0. SAME class as gauss `\g@measureCols`
+(dimension/layout-dependent termination LaTeXML cannot satisfy). NOT a finite giant; NOT the
+Constructor-vs-macro patch class.
+
+### Classification: SHARED
+Perl 0.8.8 same host/preload on `\heartpar` also loops (killed 47s). pdflatex finite (ArsClassica.pdf
+ships; real layout → nonzero shape area → loop terminates). In scope (surpass-Perl; pdflatex oracle).
+
+### Fix class: shapepar contrib BINDING
+Shaped paragraphs (`\shapepar{⟨shape⟩}⟨text⟩`, and the ready shapes `\heartpar`/`\squarepar`/
+`\circlepar`/`\CutOut`/`\danger`… ) are pure VISUAL layout, meaningless in LaTeXML's semantic XML and
+fundamentally needing box/font geometry. Add `latexml_package/src/package/shapepar_sty.rs` (or
+contrib) that renders `\shapepar{#1}#2` and the `\⟨shape⟩par{#1}` wrappers as a PLAIN paragraph (gobble
+the shape spec, emit the text in a normal `<ltx:p>`), so `\SH@measline`/the auto-scale `\loop`/
+`\SH@tryparshape` are never reached. Keep shape-name macros (`\heartshape`,`\squareshape`,…) and
+`\shapepar`'s optional `[⟨scale⟩]`/`\CutOut` as thin accept-and-discard. Guard
+(shapepar_heartpar_scaleloop.tex): converts 0-error with ≥1 `<ltx:p>` containing the paragraph text.
+Risk: LOW (contrib, shapepar-only). Gain: arsclassica/ArsClassica + any shapepar doc (currently a
+hard runaway).
+
+### Dead ends
+- shapepar preamble alone / `\shapepar{\squareshape}…` : do not loop (square reaches a nonzero measure
+  or the fixed branch; converts with a minor `\vbox` mode note). Trigger = `\heartshape` (and any shape
+  whose `\SH@measline` area measures 0 under LaTeXML's no-layout model), via `\heartpar`.

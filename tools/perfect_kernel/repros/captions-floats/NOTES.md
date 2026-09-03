@@ -469,3 +469,98 @@ Dead ends:
   user minipage, is the box). The minipage in the doc is incidental.
 - Patching `\Statex` with `\algpx@endCodeCommand` in the binding — `\algpx@endCodeCommand` is
   algpseudocodex-only (absent in plain algorithmicx); fix belongs at the package-agnostic line-open.
+
+## FAMILY — class frontmatter internals reached by raw classes/packages
+
+Top-3 repros (by errors): frontmatter_ifbeamertemplateempty.tex (beamer, 43),
+frontmatter_authorgroup.tex (quantumview, 8), frontmatter_amsart_internals.tex (resphil, 4).
+All verified RED with b54x; same-host Perl run for classification.
+
+### GROUP beamer_cls.rs — \ifbeamertemplateempty — SHARED (43 err, 1 doc) — TOP
+Doc: beamer-theme-albi-doc. Caller: beamerthemeAlbi.sty:224,301,689
+`\ifbeamertemplateempty{name}{empty}{nonempty}`. Real def beamerbasetemplates.sty:26
+`\def\ifbeamertemplateempty#1#2#3{\def\beamer@ifdo{#3}\expandafter\ifx\csname beamer@@tmpl@#1\endcsname\relax\def\beamer@ifdo{#2}\fi\expandafter\ifx\csname beamer@@tmpl@#1\endcsname\beamer@@empty\def\beamer@ifdo{#2}\fi\beamer@ifdo}` —
+a CONTROL-FLOW gate: run #2 if template `\beamer@@tmpl@<name>` is undefined or empty, else #3.
+beamer_cls.rs stands in for beamer but omits this beamerbasetemplates internal. Perl beamer.cls.ltxml
+also omits it → SHARED (Perl 3 err on the repro).
+FIX (beamer_cls.rs): define `\ifbeamertemplateempty` with the REAL body (RawTeX/DefMacro, 3 args) —
+it gates flow, so a real body is required (not a no-op); ensure `\beamer@@empty` exists (beamer's
+`\def\beamer@@empty{}`). Guard: 0 err AND the frame body present (`//ltx:p` or a frame element),
+no `\fi` cascade.
+
+### GROUP ams_support_sty.rs — \author@andify / \@dedicatory / \@setabstract — RUST-ONLY (4 err, 1 doc)
+Doc: rpsample (resphilosophica). resphilosophica.cls:75 \LoadClass{amsart} -> amsart_cls.rs binding
+(loads ams_core, high-level `\lx@add@*` frontmatter; `\dedicatory`->`\lx@add@contact` at
+ams_support_sty.rs:126). resphilosophica then RAW-redefines \maketitle/\@maketitle (resphil.cls:331,352)
+which reach amsart's raw \maketitle internals — \author@andify\authors (:323), \ifx\@empty\@dedicatory /
+\@dedicatory (:358-361), \@setabstract (:259,364). Real amsart.cls defs: \author@andify :803 (andify
+the \authors list), \let\@dedicatory=\@empty :552, \@setabstract :856. The Rust binding omits all three.
+Perl gives 0 err (RUST-ONLY) — Perl also lacks the internals, so Perl's amsart/\maketitle path must not
+reach resphil's raw layout (locked/no-op maketitle); either way Rust must reach 0.
+FIX (ams_support_sty.rs, beside \dedicatory:126) — these are LAYOUT of already-captured frontmatter,
+so init/no-op:
+  Let!("\\@dedicatory", "\\@empty");    // amsart.cls:552 — \ifx\@empty\@dedicatory then takes empty branch
+  DefMacro!("\\author@andify", "");      // amsart.cls:803 — no-op; authors captured by \lx@add@creator
+  DefMacro!("\\@setabstract", "");       // amsart.cls:856 — non-relax no-op; resphil:259 \ifx\@setabstract\relax
+                                         //   is then FALSE so \@setabstracta is not needed; :364 no-op
+Frontmatter still emitted by the binding's \lx@add@* (author/dedicatory/abstract captured at their call
+sites); the raw \maketitle internals run inert (no duplication). Guard: 0 err AND
+//ltx:creator (author) present AND //ltx:abstract present, no double-render.
+
+### GROUP quantumarticle (quantumview) — \@authorgroup — SHARED (8 err, 1 doc)
+Doc: quantumview-template (class quantumview, RAW, self-contained — derived from quantumarticle, NOT
+\LoadClass). quantumview.cls:661 \renewcommand{\author}[2][]{…\internal@elseauthor{#1}{#2}}; :673-680
+\internal@elseauthor inits the author-group list `\ifcsdef{@authorgroup}{}{\csdef{@authorgroup}{}}` then
+`\listxadd{\@authorgroup}{\the@authorcounter}`, consumed by \maketitle's affiliation loop
+`\forlistloop{..}{\@authorgroup}` (quantumarticle.cls:1169). RED root: the etoolbox init `\csdef{@authorgroup}{}`
+does not leave `\@authorgroup` defined for `\listxadd`/`\forlistloop` (the `\csname author…\@authorgroup…
+\endcsname` cascade). Perl fails WORSE (33 err) → SHARED. This is an etoolbox author-LIST emulation gap
+(`\csdef`/`\ifcsdef`/`\listxadd`/`\forlistloop` on `\@authorgroup`/`\@authors`), NOT a single missing
+internal — needs an etoolbox-interaction fix (ensure `\csdef{cs}{}` defines `\cs` so `\listxadd{\cs}` works),
+or a quantumview shim initializing `\@authorgroup`/`\@authors` to empty lists. Lower priority; deeper than
+the other two. Guard: 0 err AND //ltx:creator present.
+
+### jourcl \@abstract — UNDER-INVESTIGATED (4 err, 1 doc)
+jourcl.cls:240 \def\abstract#1{\def\@abstract{#1}}, :241 \newcommand{\pabstract}{\@abstract}; doc uses
+\abstract{\lipsum[1]} (preamble) then \pabstract (body). Minimal repro (jourcl + \abstract{..} + \pabstract)
+is CLEAN in Rust — the doc's failure (\@abstract undefined + \else Extra cascades, log:222-247) has a trigger
+I could not isolate in <15 lines. Note for follow-up: likely \@abstract used in jourcl's cover-letter/\ifempty
+machinery before \abstract{} runs, or \abstract shadowed. Faithful direction: init \let\@abstract\@empty.
+
+## quantumview \@authorgroup — ROOT = locked \author, NOT an etoolbox bug — SHARED (8 err, 1 doc)
+
+Repros: frontmatter_authorgroup_locked_author.tex (RED), etoolbox_list_primitives.tex (GREEN guard).
+
+Investigation result: the etoolbox list primitives are CORRECT. Verified in isolation vs pdflatex
+(all 0-err, matching output): \csdef, \ifcsdef, \csundef, \listadd, \listgadd, \listxadd, \listcsadd,
+\listcsgadd, \forlistloop, \ifinlist — including \csdef{name}{} then \listxadd{\name} then \forlistloop
+(etoolbox.sty:877 \csdef, :1675 \listadd, :1683 \listxadd, :1690 \listcsadd, :1725 \ifinlist). The
+isolation doc etb_qview.tex that reproduces the failure differs by ONE thing: it goes through
+\renewcommand{\author}.
+
+REAL ROOT: the LaTeX kernel `\author` is `locked => true` in BOTH engines
+(latexml_engine/src/latex_constructs/sect05.rs:737-739
+`DefMacro!("\\author[]{}", r"\def\@shortauthor…\lx@add@authors…", locked => true)`; Perl
+latex_constructs.pool.ltxml:1079 `locked => 1`). sect05.rs:736 even comments "our \author is locked so
+renewcommand can't add it." quantumview.cls:661 `\renewcommand{\author}[2][]{…\internal@elseauthor…}`
+therefore does NOT take effect, so `\internal@elseauthor` (quantumview.cls:673-680) — which runs
+`\ifcsdef{@authorgroup}{}{\csdef{@authorgroup}{}}` + `\listxadd{\@authorgroup}{…}` — NEVER runs, and the
+raw `\maketitle` affiliation loop `\forlistloop{\@addaffiliation{…}}{\@authorgroup}`
+(quantumarticle.cls:1169) hits an undefined `\@authorgroup`. Proof: r_renew/r_def show `\renewcommand{\author}`
+/`\def\author` are inert; q_a/q_c/q_d show the etoolbox machinery works when reached directly.
+Perl fails WORSE (33 err) because its `\author` is likewise locked → SHARED, by design. pdflatex clean.
+
+FIX (validated, class-level — NOT etoolbox, NOT unlocking \author): unlocking `\author` is unsafe (the
+lock deliberately protects the frontmatter capture in both engines). Instead a `quantumview_cls.rs`
+binding (InputDefinitions the raw quantumview.cls) initializes the author-group lists empty so the raw
+`\maketitle` loop is a safe no-op, while the binding's locked `\author`->`\lx@add@creator` captures the
+authors. Validated: q_fix.tex = quantumview + `\csdef{@authorgroup}{}\csdef{@authors}{}` before \maketitle
+→ 0 errors, 3 `<ltx:creator>` still emitted. So the binding load should:
+  TeX!(r"\makeatletter \csdef{@authorgroup}{} \csdef{@authors}{} \makeatother");  // or Let! to \@empty
+(quantumarticle proper shares the machinery; if a doc uses `\documentclass{quantumarticle}` with the same
+author-group path, the same init belongs in quantumarticle_cls.rs.)
+Guard: etoolbox_list_primitives.tex stays GREEN (etoolbox correctness regression bar), AND
+frontmatter_authorgroup_locked_author.tex → 0 errors with //ltx:creator present.
+
+Dead end: an etoolbox `\csdef`/`\listxadd`/`\forlistloop` fix — the primitives are correct (guard proves it);
+the divergence is entirely the locked-`\author` override resistance.

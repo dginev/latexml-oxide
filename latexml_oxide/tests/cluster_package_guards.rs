@@ -11437,7 +11437,125 @@ xxx \= yyy \\
 "#;
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("ō") && xml.contains("é") && xml.contains("ü"), "{xml}");
+    assert!(
+      xml.contains("ō") && xml.contains("é") && xml.contains("ü"),
+      "{xml}"
+    );
+  }
+
+  /// beamerbasetemplates.sty:26 `\ifbeamertemplateempty` gates theme code on
+  /// whether a template is set (beamerthemeAlbi; 43-error `\fi` cascade).
+  #[test]
+  fn beamer_template_empty_test_is_defined() {
+    let tex = r"\documentclass{beamer}
+\makeatletter
+\ifbeamertemplateempty{logo}{EMPTY}{NONEMPTY}
+\makeatother
+\begin{document}
+\begin{frame}Hi\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("EMPTY") && !xml.contains("NONEMPTY"), "{xml}");
+  }
+
+  /// amsart's raw `\maketitle` internals reached by a derivative class that
+  /// redefines `\maketitle` over `\LoadClass{amsart}` (resphilosophica).
+  #[test]
+  fn amsart_maketitle_internals_are_defined() {
+    let tex = r"\documentclass{resphilosophica}
+\author{Alice}
+\title{T}
+\dedicatory{For X}
+\begin{document}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<creator") && xml.contains("<abstract"),
+      "{xml}"
+    );
+  }
+
+  /// quantumview's `\renewcommand{\author}` cannot override the locked
+  /// kernel `\author`, so its author-group list init never runs and the raw
+  /// `\maketitle` loop meets an undefined `\@authorgroup`; the class
+  /// binding initialises the lists (creators still captured).
+  #[test]
+  fn quantumview_author_group_lists_are_initialised() {
+    let tex = r"\documentclass{quantumview}
+\title{T}
+\author{Alice}
+\affiliation{Somewhere}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<creator"), "{xml}");
+  }
+
+  /// A full-width `\hrule` with an explicit height inside `\noalign` is a
+  /// horizontal rule → the next row's top border (it was silently dropped).
+  #[test]
+  fn noalign_rule_with_height_is_a_border() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+\noalign{\hrule height 1pt}
+a & b \\
+c & d \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    assert!(xml.contains(r#"border="t""#), "{xml}");
+  }
+
+  /// gauss `gmatrix`: the amsmath matrix its delimiter names plus the
+  /// row/column operations as a math annotation (raw gauss measures the box
+  /// with a `\lastbox` recursion whose termination is a physical width).
+  #[test]
+  fn gauss_gmatrix_renders_with_operation_lines() {
+    let tex = r"\documentclass{article}\usepackage{amsmath}\usepackage{gauss}
+\begin{document}
+\[ \begin{gmatrix}[p] 1 & 2 \\ 3 & 4
+\rowops \mult{0}{\cdot 2} \add[3]{0}{1} \swap{0}{1}
+\end{gmatrix} \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<XMArray"), "{xml}");
+    assert!(xml.contains("←") || xml.contains("&#8592;") || xml.contains("leftarrow"), "{xml}");
+  }
+
+  /// latex.ltx `\marginpar` is a macro (`\@ifnextchar[\@xmpar\@ympar`); a
+  /// package prepending to it by expansion (marginfix.sty:91) must capture
+  /// its body, not the bare token.
+  #[test]
+  fn marginpar_is_a_macro_over_its_constructor() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\edef\marginpar{\unexpanded{\typeout{pre}}\expandafter\unexpanded\expandafter{\marginpar}}
+\makeatother
+\begin{document}
+Text\marginpar{Note}\marginpar[L]{R} more.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<note role=\"margin\"").count(), 2, "{xml}");
+    assert!(xml.contains("ltx_marginpar_left"), "{xml}");
   }
 
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a

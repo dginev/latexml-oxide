@@ -1008,13 +1008,35 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
           },
           None => {},
         }
-        let depth_before = get_boxing_level();
+        // The one-frame reader shape of `predigest_box_contents_in_mode`:
+        // execute the material (so `\ifnum0=`}` consumes its char-constant
+        // `}` during expansion) and STOP at the `}` that closes the group
+        // without invoking it — the alignment's own cell machinery must not
+        // see it as a cell end.
         bgroup();
-        let body = digest_next_body(None)?;
-        if get_boxing_level() > depth_before {
-          egroup()?; // ran out of input before the closing `}`
+        let level = get_frame_depth();
+        new_local_box_list();
+        loop {
+          let next = match get_pending_comment() {
+            Some(comment) => Some(comment),
+            None => read_x_token(Some(true), false, None)?,
+          };
+          let Some(token) = next else { break };
+          if token.defined_as(&T_END!()) && level >= get_frame_depth() {
+            break;
+          }
+          check_timeout()?;
+          extend_box_list(invoke_token(&token)?);
         }
-        let r: Digested = List::new(body).into();
+        let mut body = expire_local_box_list();
+        egroup()?;
+        // As `digest` does: a single box stands alone (the rule-only
+        // `\noalign{\hrule}` becomes the next row's border via that shape).
+        let r: Digested = if body.len() == 1 {
+          body.pop().unwrap()
+        } else {
+          List::new(body).into()
+        };
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole

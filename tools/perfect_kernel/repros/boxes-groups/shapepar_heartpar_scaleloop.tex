@@ -1,0 +1,15 @@
+% witness: arsclassica/ArsClassica -> FrontBackMatter/Acknowledgements.tex -> \heartpar{...}
+% (shapepar). s36 Fatal:Stomach:MemoryBudget (RSS 4833MB). MINIMAL: any \heartpar{...}. oracle
+% pdflatex 0 (ArsClassica.pdf ships). Perl 0.8.8 SHARED (loops). Isolated: full preamble + trivial
+% body CLEAN; Fundamentals/Code/Titlepage/Contents CLEAN; only Acknowledgements (=\heartpar) loops.
+% mechanism: \heartpar=\shapepar{\heartshape}#1… (shapepar.sty:1048). \shapepar auto-scale
+% (shapepar.sty:206-219): \SH@measline measures the shape-spec AREA into \@tempdima, then
+%   \loop \if\AbsVal\@tempdima<\p@ \multiply\@tempdima\@cclvi \multiply\SH@dscale\sixt@@n \repeat
+% scales it up (*256) until |\@tempdima|>=1pt. In LaTeXML \SH@measline yields \@tempdima=0 (the
+% segment lengths depend on physical box/font LAYOUT LaTeXML does not compute), and 0*256=0 forever
+% => the \loop never terminates. SAME class as gauss \g@measureCols: a dimension/layout-dependent
+% loop LaTeXML structurally cannot satisfy (NOT a Constructor-vs-macro patch; NOT a finite giant).
+\documentclass{article}\usepackage{shapepar}
+\begin{document}
+\heartpar{This is a short paragraph shaped like a heart, with a few filler words to fill it out.}
+\end{document}

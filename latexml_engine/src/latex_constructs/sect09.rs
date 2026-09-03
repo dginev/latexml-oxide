@@ -335,8 +335,19 @@ pub(crate) fn load() -> Result<()> {
   // it (real pdflatex scopes it to the margin box — the leak is a LaTeXML bug,
   // shared by both engines). Mirrors `\mbox`'s `bounded => true`. Witness:
   // mhchem.tex `\marginpar{\Large !}` made the entire manual render at 144%.
-  DefConstructor!("\\marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
-    bounded => true);
+  // latex.ltx:11216 `\long\def\marginpar{\@ifnextchar[\@xmpar\@ympar}` — the
+  // TeX-visible MACRO shape packages patch by expansion (marginfix.sty:91
+  // `\edef\marginpar{…\expandafter\unexpanded\expandafter{\marginpar}}`,
+  // which with a Constructor here captured the bare `\marginpar` token and
+  // re-expanded itself without end: sidenotes/caesar_example, "Box-list
+  // runaway"; Perl's Constructor loops the same way; pdflatex clean). The
+  // constructor lives under `\lx@marginpar`. Guard:
+  // `perfect_kernel_batch54::marginpar_is_a_macro_over_its_constructor`.
+  DefMacro!("\\marginpar", "\\@ifnextchar[\\@xmpar\\@ympar");
+  DefMacro!("\\@xmpar[]{}", "\\lx@marginpar[#1]{#2}");
+  DefMacro!("\\@ympar{}", "\\lx@marginpar{#1}");
+  DefConstructor!("\\lx@marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
+    bounded => true, reversion => r"\marginpar[#1]{#2}");
 
   DefRegister!("\\marginparpush", Dimension::new(0));
 

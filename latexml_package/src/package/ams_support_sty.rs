@@ -124,6 +124,18 @@ LoadDefinitions!({
   DefMacro!("\\urladdr[]{}",
     "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{#2}");
   DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}");
+  // amsart's raw `\maketitle` internals, reached when a derivative class
+  // redefines `\maketitle`/`\@maketitle` on top of `\LoadClass{amsart}`
+  // (resphilosophica.cls:323 `\author@andify\authors`, :358 `\ifx\@empty
+  // \@dedicatory`, :259/:364 `\@setabstract`): amsart.cls:803 `\author@andify`
+  // (an and-joiner over the captured authors), :552 `\let\@dedicatory\@empty`,
+  // :856 `\@setabstract` (typesets the captured abstract). The frontmatter
+  // is already emitted by the `\lx@add@*` capture at the declaration sites,
+  // so these run inert (RUST-ONLY: Perl's amsart path never reaches the raw
+  // layout). Guard: `perfect_kernel_batch54::amsart_maketitle_internals_are_defined`.
+  Let!("\\@dedicatory", "\\@empty");
+  DefMacro!("\\author@andify{}", "");
+  DefMacro!("\\@setabstract", "");
   DefMacro!("\\dateposted{}",   "\\lx@add@date[role=posted]{#1}");
   DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}");
   DefMacro!("\\keywords{}",     "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");

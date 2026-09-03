@@ -5715,3 +5715,14 @@ coloredtheorem). Rust: a capture block is a completed box (tex.web box
 completeness) and closes its descendants silently. Guard:
 `perfect_kernel_batch54::capture_box_closes_its_descendants`.
 
+## 185. Kernel `\author` is locked against class redefinition (design; Rust binds the class)
+
+latex_constructs.pool.ltxml:1079 locks `\author` to keep the frontmatter
+capture, so a class whose author machinery lives in `\renewcommand{\author}`
+(quantumview.cls:661 → :673 `\internal@elseauthor` initialising the
+`\@authorgroup` list) never runs it and the raw `\maketitle` loop
+(quantumarticle.cls:1169 `\forlistloop`) meets an undefined list (quantumview
+8, Perl 33; pdflatex clean). Rust: a quantumview class binding initialises the
+lists; the lock stays. Guard:
+`perfect_kernel_batch54::quantumview_author_group_lists_are_initialised`.
+

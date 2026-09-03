@@ -472,3 +472,142 @@ tabu_rowfont_gap, tabu_extrarowsep_gap (RED, the only user-surface gaps).
   (\NC@list, \tabu@rewritefirst, \col@sep, \extratabsurround, \LT@bchunk Fatal). srdp is only
   winnable by implementing array.sty's preamble scanner (parked). Do NOT chase srdp under tabu;
   re-file it as "raw vendored-tabu copy (srdp-tables.sty) / array \@mkpream scanner (parked)".
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (a2)  tabbing \a<accent> -> \@tabbing@<char> undefined
+================================================================================
+Repros: tabbing_acc_macron.tex (\a=, encguide), tabbing_acc_dieresis.tex (\a", greek). Both
+RED (rust=1, pdflatex 0). Witnesses base/encguide (\@tabbing@=), greek-fontenc/test-lgrenc +
+textalpha-doc (\@tabbing@" + \@tabbing@<, lualatex).
+
+## CLASSIFICATION: PERL-ORIGIN. Perl latex_constructs.pool.ltxml:3547 `\@tabbing@accent{}` ->
+   `\@tabbing@<char>`, and :3572-3573 pre-saves ONLY `\@tabbing@'` and `\@tabbing@\`` with no
+   fallback. Perl fails identically (\@tabbing@= undefined, 1 error). pdflatex 0 -> surpass.
+
+## MECHANISM
+Inside tabbing, tabbing_bindings() (latex_constructs/mod.rs:2391) rebinds \= \< \> \' \` to
+tabbing ops (tabset/untab/nexttab/flushright/hfil). To still get accents, LaTeX uses \a<accent>
+where \a = \@tabacckludge (latex.ltx:10007). The Rust/Perl binding models \a as
+\@tabbing@accent{x} -> \@tabbing@<x> (sect10.rs:132 / pool:3547), and pre-saves \@tabbing@'
+<- \' and \@tabbing@` <- \` (mod.rs:2445-2446) — but NOT =, <, >. So:
+  \a=  -> \@tabbing@=  undefined   (encguide macron)
+  \a"  -> \@tabbing@"  undefined   (" is not rebound; needs a fallback to \")
+  \a<  -> \@tabbing@<  undefined   (greek breathing; < IS rebound -> needs pre-save)
+Real \@tabacckludge#1 = \@changed@cmd\csname\string#1\endcsname\relax (latex.ltx:10005):
+recovers the ENCODING-level accent \<char> by name, bypassing tabbing's rebinding — which is
+why \a= works in real LaTeX even though \= is the tab-set.
+
+## FIX (binding, faithful to \@tabacckludge)
+File: latexml_engine/src/latex_constructs/mod.rs `tabbing_bindings()` + sect10.rs `\@tabbing@accent`.
+1. In tabbing_bindings(), BEFORE rebinding, pre-save the rebound accent chars:
+   let_i(\@tabbing@=, \=), let_i(\@tabbing@<, \<), let_i(\@tabbing@>, \>)  (plus existing ',`).
+   (Order: the pre-save let_i must precede the corresponding rebind let_i.)
+2. Change \@tabbing@accent{x} (sect10.rs:132) to fall back when \@tabbing@<x> is undefined
+   (is_defined_token, dialect.rs:78): emit \<x> (T_CS "\\"+x) = the real accent (\", \., \^, \~,
+   \u, \v, \H, \c, \d, \b, \r, \t … — none of which tabbing rebinds). This mirrors
+   \@tabacckludge recovering \csname\string#1\endcsname.
+   Undefined accents still error (fallback \<x> undefined) — matches pdflatex (boundary).
+Mirror into Perl latex_constructs.pool.ltxml:3547/3572 for parity (both share the bug).
+Guard (perfect_kernel batch): tabbing_acc_macron.tex + tabbing_acc_dieresis.tex -> 0 errors AND
+//ltx:tabular[@class="ltx_tabbing"] present with the accented glyph. Risk: LOW (3 pre-saves +
+a defined-check fallback). Gain: encguide (1), test-lgrenc (3), textalpha-doc (3) = 3 docs.
+
+## SIDE NOTE (not this root)
+Bare \< in a non-greek tabbing: rust=0 (no-ops \@tabbing@untab) but pdflatex=1 — a separate
+OVER-tolerance (\@tabbing@untab/flushright/hfil/pushtabs/poptabs are all no-op stubs, sect10.rs
+:125-129; Perl pool:3583-3590 same "NOT handled"). Distinct from the accent root; leave.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (b)  Error:expected:Until at true EOF (DIAGNOSIS)
+================================================================================
+Docs: l3kernel/l3prefixes (Until:,), chessboard/chessboard_and_beamer (Until:.). (colorspace's
+first error is a colorspace latex "Unknown spot color"; Until:\@@ is secondary — not this root.)
+Repros: l3prefixes.tex + l3prefixes.csv (real, RED rust=2 b54x); until_eof_control.tex (CONTROL).
+
+## THE Until: READER ITSELF IS CORRECT — not the bug.
+base_parameter_types.rs:181 `Until` reader: a ran-out scan at TRUE end-of-all-input
+(gullet::at_end_of_all_input) reports "Missing argument Until:X at end of input" + a Fatal
+(tex.web S338 "File ended while scanning use of"). CONTROL until_eof_control.tex proves parity:
+`\def\grabdot#1.{}\grabdot no dot` -> pdflatex 3 errors ("File ended while scanning use of
+\grabdot"), rust 2. So the reader faithfully mirrors the runaway; do NOT soften it. The bug in
+each doc is UPSTREAM (the scan should never reach true EOF).
+
+## l3prefixes (Until:,) — SHARED (Perl fails too: 5 errors "Until:\" Missing argument").
+Caller: l3prefixes.tex:41 `\__prefix_readii:w #1 , #2 , #3 , #4 \q_stop` (and :35
+`\__prefix_readi:w #1 " #2 " #3 \q_stop`), a self-recursive CSV parser driven by
+`\ior_map_inline:Nn \l_tmpa_ior { \__prefix_readi:w ##1 " \q_nil " \q_stop }` (:66) over
+l3prefixes.csv. NOT a raw-load-path delimiter (`,` is a real char in the file) and NOT the
+`\ior` empty-line (a trailing empty line with a `,,,,` sentinel is safe; verified). It is a
+CUMULATIVE mouth/file-boundary interaction: a minimal readi/readii over the FULL 342-line csv
+reproduces `Until:,` at EOF, but NEITHER half (1-341, 51-342, 1-200, the 8 quote-lines alone)
+does — so it needs the full-file `\ior_map_inline` run. The quote-lines (l3prefixes.csv:40,58,
+151,155,239,277,296,327 = `"embedded,comma"` fields) take the readi RECURSION branch
+`\__prefix_readi:w #1 {#2} #3 \q_stop` (quark_if_nil FALSE); the leading hypothesis is a
+per-recursion `{#2}` group / mouth-state drift that only crosses a boundary after the full run,
+whereupon the last iteration's `,`-scan runs into true EOF. Root lives in the expl3 layer
+(`\ior_map_inline` line-mouth handling and/or the recursive quark-delimited scan), NOT kernel
+alignment or the Until reader. -> EXPL3 TOPIC. `\quark_if_nil:nTF {\q_nil}` alone is correct
+(ISNIL) — the drift is stateful/cumulative, needs expl3-internal tracing (LXML_TRACE_FRAMES).
+
+## chessboard (Until:.) — xskak RAW-LOAD, needs beamer-overlay context.
+xskak/skak/chessboard are NOT bound (raw-load). Caller: xskak move parser (\mainline ->
+\ExecuteMoves -> \xskak@do@parsemainline(#1 #2), xskak.sty:1055+), a `.`-delimited chess-move
+scan, triggered by `\mainline{2... Nc6}` (chessboard_and_beamer.tex:29) inside beamer
+`\only<>` overlays. Minimal `\newchessgame\hidemoves{...}\mainline{2... Nc6}` is CLEAN on b54x
+(rust=0), so the runaway needs the fuller beamer-overlay + `\chessboard` context (not reducible
+cheaply). -> xskak/beamer interaction, not kernel-alignment; separate root.
+
+## CONTROL
+until_eof_control.tex: delimited macro missing its delimiter at true EOF -> pdflatex 3 /
+rust 2. Must STAY erroring (it is tex.web S338). Bounds the Until-reader EOF policy.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (1)  \noalign+\hrule -> border (batch-54y aftermath)
+================================================================================
+Repros: noalign_hrule_height_border.tex (Root A, RED-dropped), noalign_bracehack_boldline.tex
+(Root B, RED err=1), bracehack_plaingroup_CONTROL.tex (CONTROL, 0/0). Witness shipunov/
+boldline-ex-en:17-21 (tabular \hlineB{2.7}). Two DISTINCT roots.
+
+## ROOT A — the rule->border mapping SPEC (a real, small gap; coordinator's ask)
+Most \noalign+\hrule ALREADY map to a border: `\hrule` after_digest (tex_box.rs:1346) inside an
+alignment sets isHorizontalRule + `add_line("t")` when `dominated_by_width`; the kernel's own
+`\hline` = `\noalign{\@@alignment@hline}` (tex_tables.rs:522) does the same via add_line("t")
+(:523-531). GAP: `dominated_by_width` (tex_box.rs:1387-1392) =
+  (None,None)=>true, (None,Some w)=>w>20, (Some h,Some w)=>w>3h, _=>false
+so `(Some h, None)` — explicit HEIGHT + DEFAULT (full) width — falls to `_=>false`: the rule is
+NEITHER rendered NOR a border (silently dropped; noalign_hrule_height_border.tex: 0 errors, 0
+border, 0 <ltx:rule>). A full-width \hrule with explicit height IS a horizontal rule.
+  FAITHFUL RULE (per coordinator): a \noalign whose digested body is only rule/kern/skip boxes
+  -> adjacent row's border; thickness -> border class or ignored; else keep the row. Concretely:
+  FIX tex_box.rs:1389 add arm `(Some(_h), None) => true` (explicit-height, full/default width =
+  horizontal rule). Perl TeX_Box.pool.ltxml:851 sets isHorizontalRule "if dimensions suggest a
+  real rule". The row-level border transfer already exists (TeX_Tables.pool.ltxml:501,520
+  isHorizontalRule -> saveleft/saveright, stripped from cell "meat"; Rust normalize.rs:104-114
+  `isrule` -> cell.empty/skippable). Risk LOW.
+  Guard: noalign_hrule_height_border.tex -> 0 errors AND first row border="t", td count = data
+  cells only (no rule <td>).
+
+## ROOT B — the boldline \hlineB WITNESS failure (a section-1206 digest_next_body bug)
+The latex.ltx brace hack `\noalign{\ifnum0=`}\fi ... \ifnum0=`{\fi}}` (boldline.sty:13-17
+\hlineB/\@xhlineB, and any raw rule macro on the hack) DESYNCS the boxing level in the
+section-1206 \noalign branch's digest_next_body path (tex_tables.rs:998-1017): the SAME hack is
+CLEAN in a plain group AND in \hbox (bracehack_plaingroup_CONTROL: rust 0, pdflatex 0; balanced
+frames) but yields `\@end@tabular Attempt to close boxing group` inside \noalign. LXML_TRACE_FRAMES
+shows `\@@tabular` pushed twice / popped once, so \@end@tabular meets the env `\begingroup`
+(nobox=true) on top. Isolation: `bracehack-only` (no \futurelet, no arg) already fails -> it is
+the brace hack, not the trailer. batch 54y fixed the OPENING `\ifnum0=`}` (execute the body per
+section-1206 vs the old read_arg pre-scan, guard noalign_body_is_executed_to_its_group_end); the
+CLOSING `\ifnum0=`{\fi}` is the residual: read_non_space consumes `\noalign{`'s `{` then
+bgroup() pushes the frame (tex_tables.rs:1011), but the char-code `{`/`}` of the closing hack are
+not accounted the way the NORMAL group-digest loop does, so digest_next_body's
+`init_depth > boxing.len()` termination (stomach.rs:1737) fires off-by-one.
+  Classification: SHARED (Perl noalign branch TeX_Tables.pool.ltxml:391 uses `digest(readArg)`,
+  whose token-level balanced read the `\ifnum0=`}` `}` also mis-closes; Perl identical pre-54y).
+  pdflatex 0 -> surpass. FIX site: the section-1206 \noalign branch group accounting
+  (tex_tables.rs:998-1017) — make bgroup()/digest_next_body/egroup mirror the plain-group
+  digest so the `\ifnum`-backtick char-code `{`/`}` balance identically in \noalign as in `{...}`.
+  Risk MED (mode/box-frame family). Guard: noalign_bracehack_boldline.tex -> 0 errors AND
+  <ltx:tabular> with 2 data rows; KEEP bracehack_plaingroup_CONTROL at 0 errors.
+
+## Expected gain: shipunov/boldline-ex-en (4 err) + any doc with a raw rule macro on the hline
+brace hack (A+B together). A alone also un-drops explicit-height rules cluster-wide.

@@ -183,6 +183,7 @@ pub mod newpxmath_sty;
 pub mod nicematrix_sty;
 pub mod nicseries_cls;
 pub mod nmbib_sty;
+pub mod gauss_sty;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
 pub mod openmoss_cls;
@@ -432,6 +433,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("hvfloat", "sty", hvfloat_sty::load_definitions),
   ("ifoddpage", "sty", ifoddpage_sty::load_definitions),
   ("nmbib", "sty", nmbib_sty::load_definitions),
+  ("gauss", "sty", gauss_sty::load_definitions),
   ("phy-ab.braket", "sty", phy_ab_braket_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),

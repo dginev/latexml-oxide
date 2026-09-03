@@ -1,0 +1,20 @@
+% witness: rpsample (resphilosophica) — sweep36 (4 errs)
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% class: SHARED — amsart binding omits amsart.cls's \maketitle internals
+% expect: 0 Error; \author@andify/\@dedicatory/\@setabstract defined (init/no-op)
+% status: RED with b54x (\author@andify, \@dedicatory, \@setabstract undefined)
+% mechanism: resphilosophica.cls:75 \LoadClass{amsart} -> amsart_cls.rs binding (loads
+%   ams_core, high-level \lx@add@* frontmatter). resphilosophica then raw-reuses amsart's
+%   \maketitle internals: \author@andify\authors (:323), \ifx\@empty\@dedicatory / \@dedicatory
+%   (:358-361), \@setabstract (:259,364) — defined in raw amsart.cls (author@andify :803,
+%   \let\@dedicatory=\@empty :552, \@setabstract :856) but NOT in the binding.
+\documentclass{resphilosophica}
+\author{Alice}
+\title{T}
+\dedicatory{For X}
+\begin{document}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,19 @@
+% witness: any raw \hrule with explicit height + DEFAULT (full) width in a \noalign
+% oracle:  pdflatex 0 errors
+% engines: rust=0-but-DROPPED pdflatex=0 (2026-09-03, b54x)
+% expect:  0 errors AND the first row carries border="t" (the rule is a top border)
+% status:  RED (silently dropped: neither <ltx:rule> nor border)
+% mechanism: \hrule after_digest `dominated_by_width` (tex_box.rs:1387-1392) matches
+%   (None,None)=>rule, (None,Some w)=>w>20, (Some h,Some w)=>w>3h, _=>false. A \hrule with
+%   explicit HEIGHT and DEFAULT (full) width is (Some h, None) -> _=>false -> NOT isHorizontalRule
+%   -> add_line("t") never called -> the rule box is neither rendered nor a border.
+%   Fix: (Some _, None) => true (explicit-height + full-width = a horizontal rule / border).
+%   Perl TeX_Box.pool.ltxml:851 sets isHorizontalRule "if dimensions suggest a real rule".
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+\noalign{\hrule height 1pt}
+a & b \\
+c & d \\
+\end{tabular}
+\end{document}

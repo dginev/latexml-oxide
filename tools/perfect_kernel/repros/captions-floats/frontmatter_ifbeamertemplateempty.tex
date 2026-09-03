@@ -1,0 +1,17 @@
+% witness: beamer-theme-albi-doc — sweep36 (43 errs)
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% class: SHARED — beamer_cls.rs omits the template-system internal
+% expect: 0 Error; \ifbeamertemplateempty gates control flow (empty vs non-empty)
+% status: RED with b54x (\ifbeamertemplateempty undefined + \fi cascade)
+% mechanism: beamerbasetemplates.sty:26 \def\ifbeamertemplateempty#1#2#3 tests
+%   \beamer@@tmpl@#1 vs \relax / \beamer@@empty and runs #2 (empty) or #3 (nonempty).
+%   beamerthemeAlbi.sty:224,301,689 \ifbeamertemplateempty{logo}{}{...}. beamer_cls.rs
+%   stands in for beamer but omits this beamerbasetemplates internal.
+\documentclass{beamer}
+\makeatletter
+\ifbeamertemplateempty{logo}{}{\relax}
+\makeatother
+\begin{document}
+\begin{frame}Hi\end{frame}
+\end{document}
