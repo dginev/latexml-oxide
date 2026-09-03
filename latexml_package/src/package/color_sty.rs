@@ -1,6 +1,9 @@
-use latexml_core::common::{
-  color::{self, Color, color_from_model_spec},
-  error::emit_error,
+use latexml_core::{
+  common::{
+    color::{self, Color, color_from_model_spec},
+    error::emit_error,
+  },
+  definition::ExpansionBody,
 };
 
 use crate::prelude::*;
@@ -183,8 +186,14 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // raw storage before assuming Black (5-bundle `'none'` cluster,
       // macros2e/ydoc family; real pdflatex is clean on these docs).
       let storage_cs = T_CS!(s!("\\\\color@{name}"));
-      if lookup_meaning(&storage_cs).is_some()
-        && let Ok(payload) = do_expand(Tokens!(storage_cs))
+      // The REPLACEMENT TEXT, not an expansion: `\xcolor@` is a real macro
+      // (xcolor.sty:603 `\def\xcolor@#1#2#3#4{#2}`, the "type" slot), so
+      // `do_expand` collapsed the payload to `#2` = "" and the textual guard
+      // below fell through to "Can't find color named 'none'" (iodhbwm 147
+      // errors, ydoc-desc.sty:22; Perl identical). Guard:
+      // `perfect_kernel_batch54::xcolor_storage_macro_is_read_as_a_body`.
+      if let Ok(Some(defn)) = lookup_definition(&storage_cs)
+        && let Some(ExpansionBody::Tokens(payload)) = defn.get_expansion()
       {
         // Payload shape: `\xcolor@ {}{}{<model>}{<spec>}` — grab the last
         // two braced groups textually.

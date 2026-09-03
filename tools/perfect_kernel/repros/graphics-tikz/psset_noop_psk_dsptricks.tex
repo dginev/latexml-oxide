@@ -1,0 +1,21 @@
+% witness: dsptricks/dspTricksManual (via \psmatrix[...emnode=R] in dspblocks.sty:117; reads
+%          \psk@mnodesize at pst-node.tex:1226). Oracle engine = lualatex (luapstricks).
+% oracle:  pdflatex 0 errors  (after pst-node load \psk@mnodesize is \let to \relax, a no-op)
+% engines: rust=1 perl=1 (2026-09-03); real doc rust=101
+% expect:  0 errors; \psk@mnodesize defined (\relax) so its invocation is a silent no-op
+% status:  RED
+% mechanism: pst-node.tex:1248 \define@key[psset]{pst-node}{mnodesize}[-1pt]{...} then :1257
+%   \psset[pst-node]{mnodesize=-1pt} initialises \psk@mnodesize (\let ...\relax since -1pt<0).
+%   Rust STUBS \psset to a no-op (pstricks_support_sty.rs:36 / pstricks_sty.rs:29
+%   def_macro_noop("\\psset{}")), so NO \psk@* storage macro is ever created; every psset key
+%   handler is dead. Perl instead has a full 557-line pst-node.sty.ltxml binding (no raw \psset).
+%   BINDINGS OUTRANK RAW: Rust raw-loads real pstricks but killed the \psset/\define@key key
+%   mechanism the raw code depends on. NOTE entangled: real doc also blocked by psmatrix `&`
+%   (alignment topic) and luapstricks \directlua (parked luatex).
+\documentclass{article}
+\usepackage{pstricks}
+\usepackage{pst-node}
+\makeatletter
+\psk@mnodesize
+\makeatother
+\begin{document}x\end{document}

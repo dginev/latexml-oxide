@@ -855,6 +855,7 @@ mod pgfmath_grammar {
         }
         bump(i, 1);
         let val = simplefactor(i)?;
+        i.state.int_result = true; // `!0` → `1` (live pgf), like `not(0)`
         return Ok(if val == 0.0 { 1.0 } else { 0.0 });
       },
       _ => {},
@@ -896,6 +897,7 @@ mod pgfmath_grammar {
         return function_call(i, &name);
       }
       if is_builtin_constant(&name) {
+        set_int_result_for_fn(i, &name);
         return Ok(pgfmath_apply_fn(&name, &[]));
       }
       if is_user_function(&name) {
@@ -1060,6 +1062,26 @@ mod pgfmath_grammar {
         | "or"
         | "not"
         | "int"
+        // Integer-literal results in pgf (`\def\pgfmathresult{1}`, no
+        // `\pgfmath@tonumber`): `sign` (pgfmathfunctions.basic.code.tex:312-
+        // 325), `iseven`/`isodd`/`isprime`/`gcd`/`div` (integerarithmetics),
+        // `scalar`, `true`/`false`. Probed against pdflatex/pgf TL2025
+        // (2026-09-03): `sign(-2.5)`=`-1`, `iseven(4)`=`1`, `gcd(12,18)`=`6`,
+        // `div(7,2)`=`3`, `scalar(3)`=`3`, `true`=`1` — while `floor`/`ceil`/
+        // `round`/`abs`/`max`/`min`/`factorial` keep the `.0`. tikzbricks.sty:
+        // 146-151 does `\ifnum\brick@sin<0` on `sign(sin(…))` and the former
+        // `-1.0` broke at the `.` ("Expected a relational token", tikzbricks
+        // doc 90 errors; Perl identical). Guard:
+        // `perfect_kernel_batch54::pgfmath_integer_functions_yield_integers`.
+        | "sign"
+        | "iseven"
+        | "isodd"
+        | "isprime"
+        | "gcd"
+        | "div"
+        | "scalar"
+        | "true"
+        | "false"
     ) {
       i.state.int_result = true;
     }
@@ -1827,8 +1849,10 @@ mod pgfmath_golden_tests {
       // than comparisons; our formula rule tries `?:` before CMP.
       ("3>2 ? 10 : 20", "1@-"),
       ("(1<2)&&(3<4)", "1@-"),
-      ("!1", "0.0@-"),
-      ("!0", "1.0@-"),
+      // `!` yields an integer literal in real pgf (`!0` → `1`), like `not()`;
+      // re-blessed 2026-09-03 against pdflatex/pgf TL2025 (batch 54o).
+      ("!1", "0@-"),
+      ("!0", "1@-"),
       ("sin(30)", "0.5@-"),
       ("cos(60)", "0.5@-"),
       ("tan(45)", "1.0@-"),

@@ -1,0 +1,24 @@
+% witness: glosmathtools/sample_glosmathtools_en, sample_glosmathtools_fr
+%          (glosmathtools.sty:61 \newglosentrymath -> name={\ensuremath{#2}};
+%           sample uses \glsdisp inside \ensuremath, glosmathtools.sty:74)
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=1 perl=? (2026-09-03) -- SHARED (only ltx:XMText is autoOpen in
+%          BOTH Perl TeX_Math.pool.ltxml:42 and Rust tex_math.rs:465; ltx:Math /
+%          ltx:XMath are autoOpen in neither, so Perl fails identically)
+% expect:  0 errors; the <ltx:glossaryref> holds a <ltx:Math>/<ltx:XMTok> (math k),
+%          NOT a bare <ltx:XMTok> child (which is schema-illegal)
+% status:  GREEN (b54t, batch 54o)
+% mechanism: a glossaryref (Inline.model) opened in math mode gets its display
+%   content (#3 = math token k) inserted as a bare <ltx:XMTok>; document.rs
+%   find_insertion_point_qsym (document.rs:2985/3135) can't auto-open the
+%   Math>XMath path (neither is autoOpen) and errors
+%   "<ltx:XMTok> isn't allowed in <ltx:glossaryref>". GENERAL: reproduces with
+%   $\hyperref[s]{b}$ too (<ltx:ref>). Fix site = latexml_core/src/document.rs.
+\documentclass{article}
+\usepackage{glossaries}
+\makeglossaries
+\newglossaryentry{k}{name={\ensuremath{k}},description={discrete time}}
+\begin{document}
+An equation \(a = \glsdisp{k}{k} + 1\).
+\printglossaries
+\end{document}

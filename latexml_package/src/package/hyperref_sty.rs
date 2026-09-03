@@ -784,6 +784,19 @@ LoadDefinitions!({
     Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
   });
 
+  // hyperref.sty:8183-8203 `\autopageref{label}` = `\hyperref[{label}]
+  // {\HyRef@autopagerefname\pageref*{label}}` — "page <n>" with the
+  // language's `\pageautorefname` (or `\pagename`). Absent in Perl's
+  // hyperref.sty.ltxml (KPE #164; abntex2cite.tex:1367). `\pageref` is the
+  // kernel's `\ref` alias, so the ref itself carries the link.
+  RawTeX!(
+    r"\def\HyRef@autopagerefname{\@ifundefined{pageautorefname}{\@ifundefined{pagename}{}{\pagename\nobreakspace}}{\pageautorefname\nobreakspace}}"
+  );
+  DefMacro!(
+    "\\autopageref OptionalMatch:* Semiverbatim",
+    "\\HyRef@autopagerefname\\pageref{#2}"
+  );
+
   // Surpass-perl: mirror real hyperref's `\HyRef@autosetref` /
   // `\HyRef@testreftype` (hyperref.sty:8211-8268) rather than Perl LaTeXML's
   // simplified `\lx@autorefnum@@` (hyperref.sty.ltxml:373-382). Real hyperref

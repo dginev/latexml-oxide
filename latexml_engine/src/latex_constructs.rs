@@ -813,16 +813,32 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     let mut exiting = false;
     if let Some((final_line, remaining)) = line.split_once(end) {
       line = final_line;
-      unread_one(T_CR!());
-      // `assembled`: `remaining` is a slice of the raw verbatim line — source
-      // text straight off the mouth, never a flattened `Tokens`.
-      unread(Tokenize!(TeXString::assembled(remaining.to_string())));
+      // The rest of the `\end{verbatim}` line is re-read LAZILY, as raw
+      // source, the way TeX does (latex.ltx:15438 `\@xverbatim` is delimited
+      // by the catcode-12 `\end{verbatim}` string and `\end` runs `\endgroup`
+      // BEFORE the remainder is tokenized, tex.web §332). Perl's
+      // latex_constructs.pool:1777 (and the former port) pre-tokenized it,
+      // which handed a `\verb` on that line frozen tokens: its reader
+      // (`read_verb_invocation`) activates the delimiter and scans raw chars,
+      // so the frozen `|` never matched, the scan ran off the end and
+      // re-tokenized the rest of the DOCUMENT under `\dospecials` (ddphonism
+      // :87 `\end{verbatim} produces the same as \verb|\dmatrix{…}|.` — every
+      // later `{`/`}`/`\` literal, three lists never closed; Perl identical,
+      // KPE #165). The lazy mouth supplies the line's own end-of-line.
+      // Guard: `perfect_kernel_batch54::verb_on_the_endverbatim_line_scans_raw`.
+      if remaining.trim().is_empty() {
+        unread_one(T_CR!());
+      } else {
+        open_mouth(Mouth::new(remaining, None)?, true);
+      }
       exiting = true;
     }
-    // The raw chars will still have to be decoded (but not space!!)
+    // The raw chars will still have to be decoded (but not space!!). A TAB
+    // keeps catcode 10 under `\dospecials` (^^I is not in the list), so it is
+    // a space in verbatim, not OT1 slot 9 `Ψ` (Perl :1773 decodes it; KPE #165).
     let mut decoded_line: String = String::new();
     for c in line.chars() {
-      if c == ' ' {
+      if c == ' ' || c == '\t' {
         decoded_line.push(space);
       } else {
         let decoded_c = font::decode_string(pin_char(c), Some("OT1_typewriter"), true);
@@ -8127,6 +8143,29 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\LastDeclaredEncoding", None, None);
+  // utf8.def:253-265 — the octet arithmetic behind `\DeclareUnicodeCharacter`,
+  // KERNEL macros since latex.ltx:22224 `\input{utf8.def}` at format time.
+  // The engine decodes UTF-8 natively, but packages that build their own UTF-8
+  // sequences `\let` these internals: paresse-utf8.sty:203-204
+  // `\global\let\GA@parse@UTFviii@a=\parse@UTFviii@a` (paresse-eng/-fra 3/6
+  // errors; Perl utf8.def.ltxml omits them too, KPE #163). Pure
+  // `\uccode`/`\count@` arithmetic, verbatim. Guard:
+  // `perfect_kernel_batch54::utf8_octet_parsers_are_defined`.
+  RawTeX!(
+    r##"\gdef\parse@UTFviii@a#1{%
+     \@tempcnta\count@
+     \divide\count@ 64
+     \@tempcntb\count@
+     \multiply\count@ 64
+     \advance\@tempcnta-\count@
+     \advance\@tempcnta 128
+     \uccode`#1\@tempcnta
+     \count@\@tempcntb}
+\gdef\parse@UTFviii@b#1#2#3#4{%
+     \advance\count@ "#10\relax
+     \uccode`#3\count@
+     \uppercase{\gdef\UTFviii@tmp{#2#3#4}}}"##
+  );
 
   // \DeclareUnicodeCharacter — from utf8.def / latex_constructs
   // Maps a hex codepoint to an expansion, making the character active.

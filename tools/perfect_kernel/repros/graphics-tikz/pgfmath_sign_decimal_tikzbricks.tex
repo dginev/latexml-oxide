@@ -1,0 +1,18 @@
+% witness: tikzbricks/tikzbricks-doc (tikzbricks-doc.tex:23 \brick[color=blue]{4}{2})
+% oracle:  pdflatex 0 errors  (\pgfmathparse{sign(sin(0))} -> \pgfmathresult = 0, integer)
+% engines: rust=2 perl=7 (2026-09-03); real doc rust=90
+% expect:  0 errors; a non-empty <ltx:picture> / SVG for the brick
+% status:  GREEN (b54t, batch 54o)
+% mechanism: tikzbricks.sty:146-151 does \pgfmathparse{sign(sin(\tdplotmainphi))};
+%   \let\brick@sin\pgfmathresult; \ifnum\brick@sin<0 . Real pgf's sign()
+%   (pgfmathfunctions.basic.code.tex:312-325) returns integer literals \def\pgfmathresult{1|0|-1};
+%   Rust pgfmath sign (pgfmath_code_tex.rs:387-395) returns f64 1.0/0.0/-1.0, formatted WITH a
+%   decimal point. \ifnum then reads the integer part, hits the '.', and the relational reader
+%   (tex_logic.rs:143-156 compare()) errors "Expected a relational token ... Got '.'".
+\documentclass{article}
+\usepackage{tikzbricks}
+\begin{document}
+\begin{tikzpicture}
+\brick[color=blue]{4}{2}
+\end{tikzpicture}
+\end{document}

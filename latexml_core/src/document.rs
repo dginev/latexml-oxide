@@ -3026,6 +3026,20 @@ impl Document {
           close_to = Some(node);
           break;
         }
+        // A sectioning unit that was leniently nested in a list item / figure
+        // (below) is CLOSED by the next sectioning unit, which becomes its
+        // sibling inside the item — latex.ltx's `\@startsection` ends the
+        // previous heading's scope but not the list (`\begin{itemize}\item A
+        // \subsection{X}… \subsection{Y}…`; ddphonism; Perl nests Y inside X
+        // with a second error). OD #189. Guard:
+        // `perfect_kernel_batch54::next_sectioning_unit_in_an_item_is_a_sibling`.
+        if is_lenient_sectioning_unit(qsym)
+          && is_lenient_sectioning_unit(get_node_qname(&node))
+          && is_lenient_sectioning_container(parent_name)
+        {
+          close_to = Some(node);
+          break;
+        }
         node = match parent_opt {
           Some(p) => p,
           None => break,
@@ -3070,7 +3084,16 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        let is_sectioning_unit = qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
+        // Widened (batch 54o) to the whole sectioning family inside a list
+        // item or a figure: LaTeX runs `\section`/`\paragraph` inside an
+        // `\item` or a float body (the heading is set in the list's
+        // indentation — ddphonism.tex, phonrule, prerex, pdfmarginpar; pdflatex
+        // clean), both engines build the nested `<ltx:item><ltx:subsection>`
+        // and only the diagnostic differed (Perl errors then inserts anyway,
+        // Document.pm openElement). Auto-closing the list was rejected: it
+        // would produce a structure neither engine emits. Guard:
+        // `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_is_lenient`.
+        let is_sectioning_unit = is_lenient_sectioning_unit(qsym);
         // Container is either a frontmatter block (abstract/acknowledgements,
         // Block.model — no sectioning units) OR another sectioning unit that
         // can't hold it (a 2nd `\paragraph` nests inside the 1st when the
@@ -3080,7 +3103,8 @@ impl Document {
         let is_lenient_container = cur_str == "ltx:abstract"
           || cur_str == "ltx:acknowledgements"
           || cur_str == "ltx:paragraph"
-          || cur_str == "ltx:subparagraph";
+          || cur_str == "ltx:subparagraph"
+          || is_lenient_sectioning_container(cur_qname);
         if is_sectioning_unit && is_lenient_container {
           return Ok(self.node.clone());
         }
@@ -3096,6 +3120,36 @@ impl Document {
         // autoOpen tag, and making it one globally would wrap equations
         // instead of closing paragraphs). PLANS P37. Guard:
         // `perfect_kernel_batch54::listing_in_a_tabular_cell_gets_an_inline_block`.
+        // A math node arriving in an INLINE-model element opened while in
+        // math mode — a `\hyperref[l]{b}`/`\glsdisp{k}{k}`/`\gls` ref whose
+        // content is math (glosmathtools.sty:74 `\ensuremath{\glsdisp…}`;
+        // `<ltx:XMTok> isn't allowed in <ltx:glossaryref>`, sample_glosmathtools
+        // ×2 53 errors; Perl TeX_Math.pool:42 autoOpens only XMText, so it
+        // shares the error) — takes the shape `\text{$k$}` already has: an
+        // auto-opened inline `ltx:Math`/`ltx:XMath` holding the leaves, closed
+        // with the ref. Restricted to containers that CAN hold `ltx:Math`
+        // (Inline.model) and are not the p/text/emph cascade cases above.
+        // Guard: `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
+        let ltx_math = pin!("ltx:Math");
+        let ltx_xmath = pin!("ltx:XMath");
+        let is_math_node = qsym_str.starts_with("ltx:XM");
+        if is_math_node
+          && can_contain_qsym(cur_qname, ltx_math)
+          && can_contain_qsym(ltx_xmath, qsym)
+        {
+          let node_font = self.get_node_font(&self.node).clone();
+          self.open_element(
+            "ltx:Math",
+            Some(string_map!("mode" => "inline", "_autoopened" => "true", "_autoclose" => "true")),
+            Some(&node_font),
+          )?;
+          self.open_element(
+            "ltx:XMath",
+            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
+            Some(&node_font),
+          )?;
+          return self.find_insertion_point_qsym(qsym, Some(ltx_xmath));
+        }
         let inline_block = pin!("ltx:inline-block");
         if qsym != inline_block
           && can_contain_qsym(cur_qname, inline_block)
@@ -6366,6 +6420,22 @@ pub fn sym_can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
 //  You can generically allow an element to autoClose using Tag.
 // OR you can indicate a specific node can autoClose, or forbid it, using
 // the _autoclose or _noautoclose attributes!
+/// The sectioning units the builder inserts leniently inside a list item or a
+/// figure (OD #189): the whole `\section`…`\subparagraph` family.
+fn is_lenient_sectioning_unit(qsym: SymStr) -> bool {
+  qsym == pin!("ltx:section")
+    || qsym == pin!("ltx:subsection")
+    || qsym == pin!("ltx:subsubsection")
+    || qsym == pin!("ltx:paragraph")
+    || qsym == pin!("ltx:subparagraph")
+}
+
+/// The containers LaTeX lets a sectioning command run inside without ending
+/// them: a list item and a float body (OD #189).
+fn is_lenient_sectioning_container(qsym: SymStr) -> bool {
+  qsym == pin!("ltx:item") || qsym == pin!("ltx:figure")
+}
+
 pub fn can_auto_close(node: &Node) -> bool {
   // text or comments auto close
   // otherwise must be element

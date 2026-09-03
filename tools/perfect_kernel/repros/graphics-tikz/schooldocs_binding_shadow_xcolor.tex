@@ -1,0 +1,19 @@
+% witness: schooldocs/schooldocs-examples (schooldocs-examples.tex:15 \definecolor{darkbrown}{rgb}{...})
+% oracle:  pdflatex 0 errors  (schooldocs.sty:32 \RequirePackage{xcolor} runs)
+% engines: rust=1 perl=0 (2026-09-03); real doc rust=17 (definecolor/subject/institute/seprule cascade)
+% expect:  0 errors; \definecolor usable => \textcolor{darkbrown}{x} yields color="#801A1A"
+% status:  GREEN (b54w, batch 54p)
+% mechanism: a contrib binding latexml_contrib/src/schooldocs_sty.rs (registered
+%   latexml_contrib/src/lib.rs:432 as ("schooldocs","sty")) SHADOWS the raw schooldocs.sty:
+%   a registered binding REPLACES the raw load (cf. assoccnt_sty.rs:9 must RequirePackage!
+%   manually). But this binding only adds \subtitle + 3 style noops (schooldocs_sty.rs:11-15)
+%   and never \RequirePackage!("xcolor") nor reproduces schooldocs's own defs, so schooldocs.sty:32
+%   \RequirePackage{xcolor} + :100 \definecolor{titlecolor} + \subject/\institute/\seprule are
+%   ALL skipped. Perl has NO schooldocs binding -> raw-loads schooldocs.sty -> clean.
+% classification: RUST-ONLY (Perl clean).
+\documentclass{article}
+\usepackage{schooldocs}
+\definecolor{darkbrown}{rgb}{0.5,0.1,0.1}
+\begin{document}
+\textcolor{darkbrown}{hi}
+\end{document}

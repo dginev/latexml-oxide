@@ -6618,3 +6618,39 @@ take the same change.
 hbox_reader_is_one_frame}`.
 **Upstream**: not filed.
 
+### 189. Sectioning units inside a list item or figure insert without a diagnostic (Perl: schema error)
+
+**Perl behavior**: `Document.pm` openElement errors `<ltx:subsection> isn't
+allowed in <ltx:item>` and inserts the nested node anyway.
+**Rust behavior**: the sectioning-in-frontmatter leniency (`document.rs`,
+witness 2311.06870) covers the whole sectioning family
+(`section`…`subparagraph`) inside `ltx:item` and `ltx:figure`; the structure
+is byte-identical to Perl's, without the error.
+**Why**: LaTeX runs `\section`/`\paragraph` inside an `\item` or a float
+body (the heading is set in the list's indentation), pdflatex is clean, and
+both engines already build the nested node. Auto-closing the list/figure was
+rejected: it produces a structure neither engine emits and mis-nests the
+following items.
+**Witnesses**: ddphonism/ddphonism, phonrule, prerex/prerex, pdfmarginpar
+(TeX Live doc corpus).
+**Guard**: `perfect_kernel_batch54::sectioning_unit_inside_item_or_figure_is_lenient`.
+**Upstream**: not filed.
+
+### 190. Math content in a ref-family element auto-opens an inline `ltx:Math` (Perl: schema error)
+
+**Perl behavior**: `TeX_Math.pool.ltxml:42` autoOpens only `ltx:XMText`, so a
+`\hyperref[l]{b}` or glossaries' `\glsdisp{k}{k}` reached in math mode
+(glosmathtools.sty:74 `\ensuremath{\glsdisp…}`) errors `<ltx:XMTok> isn't
+allowed in <ltx:glossaryref>` (sample_glosmathtools_en/fr 53 each).
+**Rust behavior**: `find_insertion_point_qsym` auto-opens `ltx:Math
+mode="inline"` + `ltx:XMath` (`_autoopened`/`_autoclose`) when a math node
+(`ltx:XM*`) arrives in an element that can hold `ltx:Math` (Inline.model)
+and is not one of the p/text/emph cascade cases — the shape `\text{$k$}`
+already has; the math post-pass gives it `tex`/`text`/`xml:id`.
+**Why**: kernel-quality: the content is math and the schema has the element
+for it; the same rule family as #186 (foreignObject) and the inline-block
+cell fallback.
+**Witnesses**: glosmathtools/sample_glosmathtools_en, _fr.
+**Guard**: `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
+**Upstream**: not filed.
+

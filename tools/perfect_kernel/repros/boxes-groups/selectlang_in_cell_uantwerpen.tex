@@ -1,0 +1,25 @@
+% witness: uantwerpendocs/uantwerpenexam-example2 (uantwerpenexam.cls:426 \engdut)
+% oracle:  pdflatex 0 errors (example2.pdf ships clean)
+% engines: rust=5 perl=3 (2026-09-03)
+% expect:  0 errors; the two-column tabular renders (>=1 <ltx:tabular> with <ltx:td> cells)
+% status:  GREEN (b54w, batch 54p)
+% mechanism: babel \selectlanguage (babel.def:738-742) does
+%   \bbl@push@language \aftergroup\bbl@pop@language \bbl@set@language{#1}.
+%   \engdut puts \selectlanguage{english}/\selectlanguage{dutch} as the first token
+%   of each cell of \begin{tabular}{ccc}. The \aftergroup\bbl@pop@language is scheduled
+%   to fire when the cell GROUP closes; LaTeXML's alignment cell model closes/opens the
+%   cell differently from a tex.web \halign template group (tex.web S1063 handle_right_brace),
+%   so \bbl@pop@language (-> \bbl@set@language -> \select@language, babel.def:716-720) and
+%   its \endgroup land on the \lx@begin@alignment boxing frame instead of a cell group:
+%   "\endgroup Attempt to close non-boxing group, current frame is boxing group due to
+%   \lx@begin@alignment". SHARED: Perl fails identically (\@@tabular Attempt to end mode
+%   restricted_horizontal). pdflatex 0.
+\documentclass{article}
+\usepackage[dutch,english]{babel}
+\begin{document}
+\begin{tabular}{ccc}%
+\selectlanguage{english}\begin{minipage}[t]{2cm}A\end{minipage}%
+&~~~&
+\selectlanguage{dutch}\begin{minipage}[t]{2cm}B\end{minipage}%
+\end{tabular}
+\end{document}

@@ -182,20 +182,28 @@ LoadDefinitions!({
       }
     }
     // The saved tokens were READ (and brace-counted); they re-enter the
-    // stream inside our expansion result, so retract them now — tex.web
-    // §368 `back_input`s the saved token around the one-step expansion
-    // (§325 retracts a scanned brace). Without this, every `\expandafter {`
-    // (l3's `\exp_after:wN {` idiom) double-counts and the alignment
-    // ledger drifts positive.
-    retract_scanned_braces(&skipped);
+    // stream inside our expansion result, so retract them — tex.web §368
+    // `expand`s the second token FIRST and only then `back_input`s the saved
+    // one (§325 retracts a scanned brace). The retraction must therefore
+    // follow the one-step expansion: `\exp_after:wN { \use_none:nn & …}`
+    // (numerica.sty:1748 `\__nmc_delim_arg:`, l3fp; mhchem, tablists-rus)
+    // has `\use_none:nn` READ the `&` while the saved `{` still counts, so
+    // the tab is brace-nested; retracting before the expansion put the
+    // ledger at 0 and the `&` fired the column template mid-cell (the
+    // 6-error "close a group that switched to mode math" cascade, numerica
+    // 83, tablists-rus 101, mhchem 14; Perl identical). Without any
+    // retraction the idiom double-counts and the ledger drifts positive.
+    // Guard: `perfect_kernel_batch54::argument_scan_is_align_state_neutral`.
     match lookup_expandable(&xtok, None)? { Some(defn) => {
       local_current_token(xtok);
       let invoked = defn.invoke(true)?;
+      expire_current_token();
+      retract_scanned_braces(&skipped);
       if !invoked.is_empty() {
         skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
       }
-      expire_current_token();
     } _ => if !has_meaning(&xtok) {
+      retract_scanned_braces(&skipped);
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
@@ -205,6 +213,7 @@ LoadDefinitions!({
     } else {
       // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
       // counted, and re-enters via our expansion — retract like the prefix.
+      retract_scanned_braces(&skipped);
       retract_scanned_brace(&xtok);
       skipped.push(xtok);
     }};

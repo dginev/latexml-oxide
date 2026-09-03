@@ -1,0 +1,18 @@
+% witness: numspell/numspell (numspell-english.sty:79-105 via numspell.sty:145 \numspell@)
+% oracle:  pdflatex 0 errors; output "twelve thousand"
+% engines: rust=WRONG perl=WRONG pdflatex=RIGHT (2026-09-03)  <- SHARED
+% expect:  RESULT=[] (false \ifnum branch must NOT run its \g@addto@macro body)
+% status:  RED
+% mechanism: \ifnum second-operand scan peeks one token past the digits (tex.web
+%   sec444 scan_int, get_x_token). That peek EXPANDS \g@addto@macro, which is a
+%   side-effecting expandable DefMacro (latex_constructs.rs:5384 AddToMacro!),
+%   so the global append fires even though 0>0 is FALSE and the branch is skipped.
+\documentclass{article}
+\makeatletter
+\def\out{}%
+\def\g{\ifnum0>0\g@addto@macro\out{WRONG}\fi}%
+\begin{document}
+\g
+\typeout{RESULT=[\out]}%
+x
+\end{document}

@@ -500,10 +500,28 @@ LoadDefinitions!({
   // sidebar/rounded document errored `undefined:\beamer@sidebarside` (8 docs,
   // sweep 30). `\ProcessOptionsBeamer` stays a no-op (`\usetheme` drops the
   // user options). Perl no-ops `\usetheme` itself.
+  // beamer.cls:144-156: `\beamer@size` = the size .clo the class inputs at
+  // :363; themes read it (beamerthemeAlbi.sty:192 `size/.expanded=\beamer@size`
+  // as a pgfkeys choice). The class options set it; here the default plus the
+  // same option keywords through the `\define@key` remap below. Guard:
+  // `perfect_kernel_batch54::beamer_size_option_is_recorded`.
+  RawTeX!(r"\def\beamer@size{{size11.clo}}");
   RawTeX!(concat!(
     r"\def\DeclareOptionBeamer#1{\@ifnextchar[{\beamer@dokv{#1}}{\beamer@dokv{#1}[]}}",
     r"\long\def\beamer@dokv#1[#2]#3{\define@key{\@currname}{#1}[{#2}]{#3}}",
     r"\def\ExecuteOptionsBeamer#1{\setkeys{\@currname}{#1}}"
+  ));
+  RawTeX!(concat!(
+    r"\DeclareOptionBeamer{bigger}{\def\beamer@size{{size12.clo}}}",
+    r"\DeclareOptionBeamer{smaller}{\def\beamer@size{{size10.clo}}}",
+    r"\DeclareOptionBeamer{8pt}{\def\beamer@size{{size8.clo}}}",
+    r"\DeclareOptionBeamer{9pt}{\def\beamer@size{{size9.clo}}}",
+    r"\DeclareOptionBeamer{10pt}{\def\beamer@size{{size10.clo}}}",
+    r"\DeclareOptionBeamer{11pt}{\def\beamer@size{{size11.clo}}}",
+    r"\DeclareOptionBeamer{12pt}{\def\beamer@size{{size12.clo}}}",
+    r"\DeclareOptionBeamer{14pt}{\def\beamer@size{{size14.clo}}}",
+    r"\DeclareOptionBeamer{17pt}{\def\beamer@size{{size17.clo}}}",
+    r"\DeclareOptionBeamer{20pt}{\def\beamer@size{{size20.clo}}}"
   ));
   def_macro_noop("\\defbeamertemplateparent{}[]{}[]")?;
   def_macro_noop("\\defbeamertemplatealias{}{}{}")?;
@@ -636,6 +654,22 @@ LoadDefinitions!({
   // tests its overlay spec with it).
   Let!("\\beamer@ifempty", "\\ifblank");
   RequirePackage!("xcolor");
+  // beamerbaseoverlay.sty:597 `\renewcommand<>{\color}{\alt#1{\beameroriginal
+  // {\color}}{\beamer@gobbleoptionalinsp}}` and the same wrapper for the
+  // `\text<font>` commands (:590-596): each takes an `<overlay>` spec first
+  // (Perl beamer.cls.ltxml:1345-1356 `%BEAMER_WRAPPED`). Without it `\color
+  // <2>{red}` read `<` as the color ("Can't find color named '<'",
+  // xskak_and_beamer 34 errors). The overlay is taken as always-active, as
+  // for `\only`. Guard: `perfect_kernel_batch54::beamer_color_and_text_commands_take_an_overlay`.
+  for cs in [
+    "color", "textbf", "textit", "textmd", "textnormal", "textrm", "textsc", "textsf",
+    "textsl", "texttt", "textup",
+  ] {
+    let orig = T_CS!(s!("\\beamer@original@{cs}"));
+    let_i(&orig, &T_CS!(s!("\\{cs}")), None);
+    let params = parse_parameters("OptionalAngled", &T_CS!(s!("\\{cs}")), true)?;
+    def_macro(T_CS!(s!("\\{cs}")), params, Tokens!(orig), None)?;
+  }
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");

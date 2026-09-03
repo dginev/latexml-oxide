@@ -1,0 +1,28 @@
+% witness: afthesis/usethesis (usethesis.tex:226 \titlepage, and :30 \flyleaf) — \auth@r undefined
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03) — SHARED (Rust already fixed the \cl@chapter Root-A the doc also hits)
+% expect:  0 errors; the title/fly page renders (an <ltx:title> present), no <ltx:ERROR/>
+% status:  RED
+% mechanism: afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}` builds the internal \auth@r that
+%   \flyleaf (afthesis.cls:637 `\centerline{\auth@r}`) and \titlepage (:688) typeset. LaTeXML's
+%   kernel \author is locked (latex_constructs.pool.ltxml:1076 `locked => 1`; Rust equivalent in
+%   latex_constructs.rs), so the class \def\author is IGNORED and \auth@r is never built.
+%   usethesis uses afthesis's own \flyleaf/\titlepage (NOT \maketitle), so neither engine gets
+%   the \maketitle `\let\@maketitle\relax` protection -> BOTH error (Root-B family, SHARED here,
+%   unlike the RUST-ONLY \maketitle cases). Fix: predefine \auth@r/\auth@rtwo empty near the
+%   locked kernel \author (same shape as ijmart \thankses), so the visual title collapses while
+%   the semantic <creator> from locked \author is the sole source.
+\documentclass[11pt]{afthesis}
+\author{First Author}
+\rank{Captain, USAF}
+\title{A Tale}
+\designator{AFIT/1}
+\degree{Master of Science}
+\address{WPAFB}
+\school{Engineering}
+\committee{Dr. Advisor\\Thesis Advisor}
+\begin{document}
+\flyleaf
+\disclaimerpage
+\titlepage
+\end{document}

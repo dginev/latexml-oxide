@@ -5424,3 +5424,106 @@ a `--preload='[a,b]pkg'` stores — skipping the latter left the macro EMPTY and
 silently turned `rawstyles` off). Guard:
 `perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`.
 
+## 162. `\pdfoutline`/`\pdfdest` are undefined (Rust fixes)
+
+`pdfTeX.pool.ltxml:179-180` only comments them. tools-overview.tex:93
+`\pdfoutline attr {/C[0 0 1]} user {<<…>>} {[#1]}` errors "undefined" and,
+worse, the spec words `attr`/`user` land in the text. Trigger: the line
+above in any document. Rust: `OutlineSpecification` (`[attr <text>] <action
+spec> [count N] <text>`, pdfTeX manual §8.13) and `DestSpecification`
+(`num N | name <text>` + `xyz [zoom N] | fitr <rule spec> | fit…`, §8.14)
+readers consume the specs; `read_action_spec` (`user`/`goto`/`thread` with
+`file`/`num`/`name`/`page`/`newwindow`) is shared. Guard:
+`perfect_kernel_batch54::pdfoutline_and_pdfdest_consume_their_specs`.
+
+## 163. `\parse@UTFviii@a`/`@b` are undefined (Rust fixes)
+
+utf8.def:253-265's octet arithmetic is a KERNEL internal (latex.ltx:22224
+inputs utf8.def at format time); `utf8.def.ltxml` reimplements
+`\DeclareUnicodeCharacter` natively and omits it. paresse-utf8.sty:203-204
+`\global\let\GA@parse@UTFviii@a=\parse@UTFviii@a` then calls it while
+building its own UTF-8 sequences (paresse-eng 3, paresse-fra 6 errors).
+Trigger: `\makeatletter\count@=233 \parse@UTFviii@a;`. Rust: the two macros
+are `RawTeX` verbatim in `latex_constructs.rs` beside
+`\DeclareUnicodeCharacter`. Guard:
+`perfect_kernel_batch54::utf8_octet_parsers_are_defined`.
+
+## 164. `\autopageref` is undefined (Rust fixes)
+
+`hyperref.sty.ltxml` defines `\autoref` (:367) but not hyperref.sty:8183's
+`\autopageref{label}` = `\hyperref[{label}]{\HyRef@autopagerefname
+\pageref*{label}}` (abntex2cite.tex:1367). Trigger: `\autopageref{s}`.
+Rust: `\HyRef@autopagerefname` (`\pageautorefname`/`\pagename` +
+`\nobreakspace`, :8196-8203) and the starred/unstarred macro over the
+kernel's `\pageref`. Guard: `perfect_kernel_batch54::autopageref_is_a_page_reference`.
+
+## 165. `\verb` on the `\end{verbatim}` line leaks verbatim catcodes; tabs in verbatim (Rust fixes)
+
+`latex_constructs.pool.ltxml:1777` pre-tokenizes the remainder of the
+`\end{verbatim}` line (`unread(Tokenize($remaining))`). latex.ltx:15438
+`\@xverbatim` is delimited by the catcode-12 string and `\end` runs
+`\endgroup` before the rest of the line is tokenized (tex.web §332), so a
+`\verb` there scans raw characters with restored catcodes; on frozen tokens
+`\verb`'s activated delimiter never matches and the scan re-tokenizes the
+rest of the DOCUMENT under `\dospecials` (ddphonism.tex:87 `\end{verbatim}
+produces the same as \verb|\dmatrix{…}|.` — every later `{`/`}`/`\` literal,
+three lists never closed, 9 errors). Also `:1773` decodes a TAB through
+`FontDecodeString(…'OT1_typewriter')` → slot 9 `Ψ`; `\dospecials` never
+touches `^^I`, so a tab is a space in verbatim. Trigger:
+`\begin{verbatim}\nx\n\end{verbatim} same \verb|z| y.`. Rust: the remainder
+is re-read from a lazy raw mouth; tabs become spaces. Guard:
+`perfect_kernel_batch54::verb_on_the_endverbatim_line_scans_raw`.
+
+## 166. `\marginnote` is one macro-argument layer short (Rust fixes)
+
+`marginnote.sty.ltxml:37-40` expands `\marginnote` straight to `\marginpar`;
+marginnote.sty:319-343 routes the body through `\@dblarg\@mn@marginnote` →
+`\@mn@@marginnote` → `\@mn@@@marginnote`. A body calibrated for that depth —
+skdoc.cls:631 `\marginnote{\clist_map_inline:Nn…{\index@option*{####1}}}` —
+then leaves a literal `#1` (`misdefined:#` ×48) and defines every glossary
+entry under the leaked key (`Glossary entry 'index-1-opt' has not been
+defined` ×96; iodhbwm). Trigger: the guard's `\DeclareDocumentCommand` +
+`\marginnote{\clist_map_inline:Nn…{[####1]}}`. Rust: the real chain, with
+`\@mn@@@marginnote` setting the note as `\marginpar`. Guard:
+`perfect_kernel_batch54::marginnote_body_rides_three_argument_layers`.
+
+## 167. soul's scanner surface (`\SOUL@setup`, `\SOUL@`) is undefined (Rust fixes)
+
+`soul.sty.ltxml` reimplements the public API only; highlightx.sty:193 and
+proofread.sty:74 run `\SOUL@setup` (soul-ori.sty:557-567), redefine the
+per-token hooks and hand text to the scanner `\SOUL@` (:131) — "undefined
+`\SOUL@setup`" (highlightx-doc, proofread/example). Trigger:
+`\makeatletter\SOUL@setup\SOUL@{text}`. Rust: the hooks as the redefinable
+macros they are, `\SOUL@setup` resetting them as :557-566, `\SOUL@`
+setting its argument as plain text. Guard:
+`perfect_kernel_batch54::soul_scanner_surface_is_defined`.
+
+## 168. `\aftergroup` in a tabular cell fires after the column ends (Rust fixes)
+
+LaTeX's entry template is a brace group (latex.ltx `\@classz`
+`{\hfil\hskip1sp\ignorespaces\@sharp\unskip\hfil}`), so `\aftergroup` in a
+cell fires at the entry's `}` — inside the cell, before `&`/`\cr` acts.
+Perl's cell frame (`Alignment.pm` `bgroup`/`egroup` around the column)
+unreads the tokens after the column has ended: babel.def:738-742
+`\selectlanguage` = `\aftergroup\bbl@pop@language…` in a non-first cell ran
+as the NEXT cell and, after the last cell, opened a spurious one
+("`\@end@tabular` Attempt to close boxing group"; uantwerpenexam.cls:426
+`\engdut`, uantwerpenexam-example2 41; derivative 101). Trigger:
+`\begin{tabular}{cc}\selectlanguage{english}A&\selectlanguage{dutch}B
+\end{tabular}`. Rust: `end_column` digests the cell frame's `\aftergroup`
+list inside the cell. Guard:
+`perfect_kernel_batch54::aftergroup_in_a_tabular_cell_fires_inside_the_cell`.
+
+## 169. `\expandafter` retracts its saved brace before the expansion (Rust fixes)
+
+tex.web §368 expands the second token FIRST and only then `back_input`s the
+saved one (§325 retracts a scanned brace from `align_state`). Both engines
+retracted first, so in `\exp_after:wN { \use_none:nn & …}` (numerica.sty:
+1748 `\__nmc_delim_arg:` on the slash path of `\eval{1/8}`; mhchem's `\ce`;
+tablists) the `&` was read at ledger 0 and fired the column template
+mid-cell — the 6-error "close a group that switched to mode math" cascade
+(numerica 83, tablists-rus 101, mhchem 14). Trigger (package-free):
+`\newcommand\doit{\exp_after:wN { \use_none:nn & Z } }` in an `align*`
+cell. Rust: retract after the one-step expansion. Guard:
+`perfect_kernel_batch54::argument_scan_is_align_state_neutral`.
+

@@ -1,0 +1,24 @@
+% witness: l3kernel/l3prefixes (l3prefixes.tex:90 \PrintTable -> \ior_map_inline over l3prefixes.csv)
+% oracle:  pdflatex 0 errors
+% engines: rust=FATAL(EoF, 39-byte xml) perl=1 err (recovers) (2026-09-03, b54r)
+% expect:  no Fatal; recovers like Perl; body contains "Prefix=foo" (a parsed row)
+% status:  RED
+% mechanism: \ior_map_inline:Nn feeds each CSV line to a ","-delimited macro
+%   (\readrow:w #1 , #2 , #3 \q_stop). In real TeX each line = "foo,foopkg,Alice" so the
+%   commas satisfy the delimiters. In Rust the line content reaching the delimited scan
+%   lacks the expected structure, so the ","-delimited argument runs past \q_stop to real
+%   EoF -> Error:expected:Until:, (base_parameter_types.rs:181) then Fatal:Mouth:EoF.
+%   SHARED root (Perl errors identically, 1) BUT Rust escalates to Fatal (Perl recovers)
+%   -> the Fatal-vs-recover is RUST-ONLY and kills the whole doc. Companion file: mini.csv.
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new_protected:Npn \readrow:w #1 , #2 , #3 \q_stop
+  { \par Prefix=#1 ; Module=#2 ; Reg=#3 }
+\ior_new:N \l_tmpa_ior
+\ior_open:Nn \l_tmpa_ior { mini.csv }
+\ior_get:NN \l_tmpa_ior \l_tmpa_tl
+\newcommand\PrintRows{\ior_map_inline:Nn \l_tmpa_ior { \readrow:w ##1 , \q_stop }}
+\ExplSyntaxOff
+\begin{document}
+\PrintRows
+\end{document}

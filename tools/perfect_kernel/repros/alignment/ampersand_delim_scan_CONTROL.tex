@@ -1,0 +1,23 @@
+% witness: (none) — package-free boundary control for the align_group_count drift
+% oracle:  pdflatex runaway/error (& delimiter fires the alignment interrupt at align_state 0)
+% engines: rust=6 (2026-09-03, b54r) — SAME 6-error signature as numerica, but NOT faithful
+% expect:  reproduces the Rust cascade; pdflatex NOT clean -> CONTROL, not the real root
+% status:  CONTROL
+% note: numerica's & is COMPARE-only (never a live delimiter), so its cell stays clean in
+%   real TeX; a bare catcode-4 & delimiter is a different (shared) failure. Package-free
+%   faithful minimisation needs numerica's l3fp-slash re-grab loop — deferred to Checkpoint N.
+\documentclass{article}\usepackage{amsmath}
+\ExplSyntaxOn
+\tl_new:N \l_my_tl \tl_set:Nn \l_my_tl { 1 & 2 }
+\cs_new_protected:Npn \mynext
+  { \exp_last_unbraced:NV \mynextw \l_my_tl \q_stop }
+\cs_new_protected:Npn \mynextw #1 & #2 \q_stop
+  { \group_begin: \tl_if_eq:nnTF {#1}{1}
+      { \exp_after:wN \group_end: \int_value:w 8 \group_begin: }{}
+    \group_end: }
+\ExplSyntaxOff
+\begin{document}
+\begin{align*}
+x &= \mynext
+\end{align*}
+\end{document}

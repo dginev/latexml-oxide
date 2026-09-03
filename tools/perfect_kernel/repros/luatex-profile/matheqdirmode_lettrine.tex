@@ -1,0 +1,15 @@
+% witness: lettrine/lettrine-demo-arabic (sets \matheqdirmode; sole error, 1)
+% oracle:  lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=1 perl=N/A(no luatex profile) (2026-09-03)
+% expect:  0 errors; body <ltx:p> with "x"
+% status:  GREEN (b54t, batch 54o)
+% mechanism: \matheqdirmode is a LuaTeX integer-parameter primitive (LuaTeX manual §6
+%   directions; minim-math.tex:19 "\matheqdirmode = 1"). The luatex profile
+%   (latexml_sty/mod.rs:374-381) DefRegisters its siblings (\matheqnogapstep,
+%   \breakafterdirmode, \outputmode, \hyphenationmin) but omits \matheqdirmode.
+\documentclass{article}
+\matheqdirmode=1
+\begin{document}
+x
+\end{document}

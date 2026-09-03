@@ -1,0 +1,20 @@
+% witness: pagelayout/example-template (example-template.tex:23 \template[gutter=5mm]{so-gs}{...})
+%          also pagelayout/example-text (same mechanism)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03); real doc rust=2 perl=2 (two \template calls)
+% expect:  0 errors; the template preview is one balanced <ltx:picture> (open+close paired)
+% status:  RED
+% mechanism: pagelayout.cls[draft] draws a page preview via \put(x,y){\begin{tikzpicture}...
+%   \end{tikzpicture}} (pagelayout.cls:1690-1721) nested in LaTeX picture \put at document/page
+%   scope. The <ltx:picture> OPEN (\begin{tikzpicture}, tikz_sty.rs) is lost in the class-internal
+%   \put boxing while the CLOSE (\end{tikzpicture}) still fires -> "Attempt to close </ltx:picture>,
+%   which isn't open. Currently in #document". tikz picture open/close must be balanced across the
+%   \put placement.
+% classification: SHARED (Perl also: malformed:ltx:picture "close ... which isn't open", + a benign
+%   \Gin@draftfalse undefined). pdflatex clean => in-scope surpass. Deeper than #1/#2; preliminary.
+\documentclass[draft]{pagelayout}
+\pagewidth=15cm
+\pageheight=15cm
+\begin{document}
+\template[gutter=5mm]{so-gs}{\text{Hi}}
+\end{document}

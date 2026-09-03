@@ -379,6 +379,10 @@ LoadDefinitions!({
     DefRegister!("\\luacopyinputnodes"    => Number::new(0));
     DefRegister!("\\matheqnogapstep"      => Number::new(1000));
     DefRegister!("\\breakafterdirmode"    => Number::new(0));
+    // `\matheqdirmode` (LuaTeX manual §6, math direction of equations):
+    // minim-math.tex:19 sets it (lettrine-demo-arabic). Guard:
+    // `perfect_kernel_batch54::luatex_profile_defines_matheqdirmode`.
+    DefRegister!("\\matheqdirmode"        => Number::new(0));
     // luapstricks: under this profile pstricks.tex (L443-471) takes its
     // LuaTeX branch, routing `\pstverb`/`\pstVerb`/`\pstheader`/
     // `\c@lor@to@ps` through tokens that luapstricks.lua creates via

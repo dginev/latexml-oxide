@@ -458,6 +458,9 @@ impl Alignment {
     // `&` storm in a malformed alignment, paper 1112.6246) actually
     // aborts rather than getting silently swallowed by `let _ =`.
     let _colspec = self.next_column()?;
+    // Mark the cell frame: its `\aftergroup` tokens are run at the cell's
+    // end (see `end_column`).
+    assign_value_sym(crate::pin!("alignCellGroup"), true, Some(Scope::Local));
     set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
@@ -465,6 +468,42 @@ impl Alignment {
 
   pub fn end_column(&mut self) -> Result<()> {
     if self.in_column {
+      // `\aftergroup` IN A CELL FIRES INSIDE THE CELL. LaTeX's tabular/array
+      // entry template wraps every entry in a brace group (latex.ltx
+      // `\@classz`: `{\hfil\hskip1sp\ignorespaces\@sharp\unskip\hfil}`), so an
+      // `\aftergroup` in the entry binds to THAT group and its tokens run at
+      // the entry's `}` — while the cell is still open, before `&`/`\cr` is
+      // acted on (tex.web §282 `unsave` back-inputs them; a bare `\halign`
+      // has no such group and the tokens would start the next cell/row).
+      // The cell frame here is that group, but `egroup` unread its tokens
+      // AFTER the column had ended, so they were read as the NEXT cell — and
+      // after the last cell they opened a spurious one: babel.def:738-742
+      // `\selectlanguage` = `\aftergroup\bbl@pop@language…` in a tabular
+      // cell (uantwerpenexam.cls:426 `\engdut`, uantwerpenexam-example2 41;
+      // derivative 101; Perl identical) ended with "`\@end@tabular` Attempt
+      // to close boxing group". So run the cell frame's `\aftergroup` list
+      // now, inside the cell. Guard:
+      // `perfect_kernel_batch54::aftergroup_in_a_tabular_cell_fires_inside_the_cell`.
+      if is_value_bound("alignCellGroup", Some(0))
+        && let Some(Stored::VecDequeStored(after)) = lookup_value("afterGroup")
+        && !after.is_empty()
+      {
+        assign_value(
+          "afterGroup",
+          Stored::VecDequeStored(VecDeque::new()),
+          Some(Scope::Local),
+        );
+        let mut toks: Vec<crate::token::Token> = Vec::new();
+        for entry in after {
+          match entry {
+            Stored::Tokens(t) => toks.extend(t.unlist()),
+            Stored::Token(t) => toks.push(t),
+            _ => {},
+          }
+        }
+        let digested = digest(Tokens::new(toks))?;
+        push_box_list(digested);
+      }
       egroup()?; // Grouping around CELL!
       self.in_column = false;
     }

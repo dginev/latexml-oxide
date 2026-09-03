@@ -9879,15 +9879,33 @@ $\mathup{\mu}+\mathbfit{x}+\symscr{S}$
     assert!(xml.contains(r#"tex="\mathrm{\mu}+"#), "{xml}");
   }
 
-  /// tex.web §394/§400: macro parameter scanning is `align_state`-neutral.
-  /// numerica.sty:2569's delimited-argument loop on the slash path of
-  /// `\eval{1/8}` drifted the ledger inside an `align*` cell, so the cell-ending
-  /// `&`/`\\` was never recognized and the amsmath template's after-`$` never
-  /// inserted (numerica, mhchem `\ce`, tablists; Perl shares it). The plain
-  /// `{$b$}` in a cell stays a TeX error (§1065 `off_save`).
+  /// tex.web §368: `\expandafter` expands the second token FIRST and only
+  /// then `back_input`s the saved one, so a saved `{` still counts in
+  /// `align_state` while the expansion reads its arguments. Rust retracted
+  /// the brace before the expansion: in `\exp_after:wN { \use_none:nn & …}`
+  /// (numerica.sty:1748 `\__nmc_delim_arg:` on the slash path of
+  /// `\eval{1/8}`) the `&` was read at ledger 0 and fired the cell template
+  /// mid-cell — the amsmath after-`$` inserted early, the before-`$` frame
+  /// left open (numerica 83, mhchem `\ce` 14, tablists-rus 101; Perl shares
+  /// it). The package-free shape is the second document. The plain `{$b$}`
+  /// in a cell stays a TeX error (§1065 `off_save`). NB tex.web `macro_call`
+  /// keeps `align_state` LIVE during parameter scanning — a freeze there
+  /// broke `columncolor_lbrack_cell_does_not_cascade_the_column_mode`.
   #[test]
-  #[ignore = "RED: numerica's align_state ledger drift is being bisected (alignment topic, wave 14; LXML_TRACE_ALIGN_STATE=1 traces the ledger). NB tex.web macro_call keeps align_state LIVE during parameter scanning — a freeze there broke columncolor_lbrack_cell_does_not_cascade_the_column_mode."]
   fn argument_scan_is_align_state_neutral() {
+    let tex = r"\documentclass{article}\usepackage{amsmath}
+\ExplSyntaxOn
+\newcommand\doit{\exp_after:wN { \use_none:nn & Z } }
+\ExplSyntaxOff
+\begin{document}
+\begin{align*}
+a &= 1 \doit + 2
+\end{align*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<equationgroup"), "{xml}");
     let tex = r"\documentclass{article}\usepackage{amsmath}\usepackage{numerica}
 \begin{document}
 \begin{align*}
@@ -10135,5 +10153,415 @@ X Y \ref{s}
       xml.contains(r#"<tag role="typerefnum">Theorem [T:1]</tag>"#),
       "{xml}"
     );
+  }
+
+  /// LuaTeX's `\matheqdirmode` integer parameter (LuaTeX manual §6) beside
+  /// its profile siblings (`\matheqnogapstep`, `\breakafterdirmode`);
+  /// minim-math.tex:19 sets it (lettrine-demo-arabic, 1 error).
+  #[test]
+  fn luatex_profile_defines_matheqdirmode() {
+    let tex = r"\documentclass{article}
+\matheqdirmode=1
+\begin{document}
+[\the\matheqdirmode]
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[1]"), "{xml}");
+  }
+
+  /// pdfTeX `\pdfoutline [attr spec] action spec [count N] general text` and
+  /// `\pdfdest <id> <dest type>` (manual §8.13-8.14) produce PDF navigation
+  /// only, but the specs must be CONSUMED: tools-overview.tex:93 `\pdfoutline
+  /// attr {…} user {…} {[#1]}` leaked `attr`/`user` into the text (Perl
+  /// pdfTeX.pool:179-180 only comments them, KPE #162).
+  #[test]
+  fn pdfoutline_and_pdfdest_consume_their_specs() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\pdfoutline attr {/C[0 0 1]} user {<< /S/GoToR /F(x.pdf) >>} {[Section 1]}\relax
+\pdfoutline goto name {sec1} count -2 {Sec}\pdfoutline goto file {o.pdf} page 3 {top} newwindow {Other}%
+\pdfdest name {sec1} xyz zoom 1000 \pdfdest num 7 fitr width 2cm height 1cm \pdfdest name {a} fith
+Body text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Body text.</p>"), "{xml}");
+    assert!(
+      !xml.contains("attr") && !xml.contains("user") && !xml.contains("zoom"),
+      "{xml}"
+    );
+  }
+
+  /// utf8.def:253-265 `\parse@UTFviii@a`/`@b` are KERNEL macros (latex.ltx:
+  /// 22224 inputs utf8.def at format time); paresse-utf8.sty:203-204 `\let`s
+  /// them to build its own UTF-8 sequences (paresse-eng 3, -fra 6 errors;
+  /// Perl utf8.def.ltxml omits them too, KPE #163).
+  #[test]
+  fn utf8_octet_parsers_are_defined() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\count@=233 \parse@UTFviii@a;\parse@UTFviii@b C\UTFviii@two@octets.;
+\edef\x{\expandafter\meaning\csname UTFviii@tmp\endcsname}
+\makeatother
+\begin{document}
+[\x]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // 233 = 0xE9 → octets C3 A9, uppercased to the bytes' glyphs.
+    assert!(xml.contains("UTFviii@two@octets Ã©"), "{xml}");
+  }
+
+  /// ltablex.sty makes `tabularx` a multi-page (longtable-driven) table and
+  /// defines `\keepXColumns`/`\convertXColumns` (:146-153) as toggles of
+  /// `\ifTX@convertX@`; the former stub defined neither (milsymb.tex, 44
+  /// errors; Perl raw-loads the file). `\endhead` is legal inside.
+  #[test]
+  fn ltablex_tabularx_is_a_longtable_with_toggles() {
+    let tex = r"\documentclass{article}
+\usepackage{ltablex}
+\keepXColumns
+\begin{document}
+\begin{tabularx}{\textwidth}{|c|l|X|}
+ h1 & h2 & h3 \\ \hline \endhead
+ a & b & c \\ \hline
+ d & e & f \\ \hline
+\end{tabularx}
+\makeatletter\ifTX@convertX@ [CONVERT]\else [KEEP]\fi\convertXColumns\ifTX@convertX@ [CONVERT]\fi\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<thead"), "{xml}");
+    assert!(xml.matches("<td").count() >= 9, "{xml}");
+    assert!(xml.contains("[KEEP]") && xml.contains("[CONVERT]"), "{xml}");
+  }
+
+  /// pgfmath functions that real pgf defines with an integer literal result
+  /// (`sign`, `iseven`/`isodd`/`isprime`, `gcd`, `div`, `scalar`, `true`/
+  /// `false`, `!`) must print without `.0`, because packages feed them to
+  /// `\ifnum`: tikzbricks.sty:146-151 `\ifnum\brick@sin<0` on `sign(sin(…))`
+  /// broke at the `.` ("Expected a relational token"; tikzbricks doc 90
+  /// errors, Perl identical). Probed against pdflatex/pgf TL2025.
+  #[test]
+  fn pgfmath_integer_functions_yield_integers() {
+    let tex = r"\documentclass{article}
+\usepackage{pgfmath}
+\begin{document}
+\def\P#1{\pgfmathparse{#1}[\pgfmathresult]}
+\P{sign(-2.5)}\P{sign(0)}\P{iseven(4)}\P{isodd(4)}\P{isprime(7)}\P{gcd(12,18)}\P{div(7,2)}\P{scalar(3)}\P{true}\P{false}\P{!0}%
+\P{floor(3.7)}\P{abs(-3)}\P{2+sign(1)}
+\pgfmathparse{sign(-3)}\let\s\pgfmathresult \ifnum\s<0 [NEG]\fi
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("[-1][0][1][0][1][6][3][3][1][0][1][3.0][3.0][3.0]"),
+      "{xml}"
+    );
+    assert!(xml.contains("[NEG]"), "{xml}");
+  }
+
+  /// xcolor's `\color@<name>` storage is `\xcolor@{}{}{model}{spec}` and
+  /// `\xcolor@` is a real macro (xcolor.sty:603 `\def\xcolor@#1#2#3#4{#2}`),
+  /// so the fallback lookup must read the REPLACEMENT TEXT, not an
+  /// expansion (which collapsed to ""): ydoc-desc.sty:22's empty `none`
+  /// color raised "Can't find color named 'none'" (iodhbwm; Perl identical).
+  #[test]
+  fn xcolor_storage_macro_is_read_as_a_body() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\expandafter\def\csname\string\color@none\endcsname{\xcolor@ {}{}{}{}}
+\expandafter\def\csname\string\color@myred\endcsname{\xcolor@ {}{}{rgb}{1,0,0}}
+\makeatother
+\colorlet{cls}{none}
+\begin{document}
+\textcolor{cls}{hello} \textcolor{myred}{red}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("hello"), "{xml}");
+    assert!(xml.contains(r##"color="#FF0000">red"##), "{xml}");
+  }
+
+  /// LaTeX runs `\section`/`\paragraph` inside an `\item` or a float body (the
+  /// heading is set in the list's indentation; ddphonism, phonrule, prerex,
+  /// pdfmarginpar — pdflatex clean). Both engines build the nested
+  /// `<ltx:item><ltx:subsection>`; Perl errors and inserts anyway
+  /// (Document.pm openElement), so only the diagnostic differed. The builder's
+  /// sectioning-in-frontmatter leniency now covers the whole sectioning
+  /// family inside `ltx:item`/`ltx:figure` (OD #189).
+  #[test]
+  fn sectioning_unit_inside_item_or_figure_is_lenient() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item First item.
+\subsection{Heading inside item}
+More text.
+\end{itemize}
+\begin{figure}
+Figure body text.
+\paragraph{Notes} inside the figure.
+\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<subsection"), "{xml}");
+    assert!(xml.contains("<paragraph"), "{xml}");
+    assert!(xml.contains("<figure"), "{xml}");
+  }
+
+  /// A math node arriving in an Inline-model element opened in math mode — a
+  /// `\hyperref[l]{b}` or glossaries' `\glsdisp{k}{k}` under `\ensuremath`
+  /// (glosmathtools.sty:74; `<ltx:XMTok> isn't allowed in <ltx:glossaryref>`,
+  /// sample_glosmathtools ×2 53 errors; Perl TeX_Math.pool:42 autoOpens only
+  /// XMText, so it shares the error) — takes the `\text{$k$}` shape: an
+  /// auto-opened inline `ltx:Math`/`ltx:XMath` inside the ref (OD #190).
+  #[test]
+  fn math_content_in_a_ref_gets_an_inline_math() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}
+\usepackage{glossaries}
+\newglossaryentry{k}{name={\ensuremath{k}},description={discrete time}}
+\begin{document}
+\label{s}$x+\hyperref[s]{b}$ and \(a = \glsdisp{k}{k} + 1\).
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<ref font="italic" labelref="LABEL:s"><Math mode="inline""#),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"key="k"><Math mode="inline""#), "{xml}");
+  }
+
+  /// hyperref.sty:8183-8203 `\autopageref{label}` = `\hyperref[{label}]
+  /// {\HyRef@autopagerefname\pageref*{label}}` — "page <n>" through the
+  /// language's `\pageautorefname`; absent in Perl's hyperref.sty.ltxml
+  /// (abntex2cite.tex:1367; KPE #164).
+  #[test]
+  fn autopageref_is_a_page_reference() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\section{A}\label{s}
+See \autopageref{s} and \autopageref*{s}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(
+        "See page\u{a0}<ref labelref=\"LABEL:s\"/> and page\u{a0}<ref labelref=\"LABEL:s\"/>."
+      ),
+      "{xml}"
+    );
+  }
+
+  /// LaTeX's tabular entry template is a brace group (latex.ltx `\@classz`:
+  /// `{\hfil\hskip1sp\ignorespaces\@sharp\unskip\hfil}`), so `\aftergroup`
+  /// in a cell fires at the entry's `}` — inside the cell, before `&`/`\cr`
+  /// is acted on. The cell frame's tokens used to be unread after the column
+  /// ended, so babel's `\selectlanguage` (`\aftergroup\bbl@pop@language`) in
+  /// a non-first cell ran as the NEXT cell and, after the last cell, opened a
+  /// spurious one ("`\@end@tabular` Attempt to close boxing group";
+  /// uantwerpenexam-example2 41, derivative 101; Perl identical).
+  #[test]
+  fn aftergroup_in_a_tabular_cell_fires_inside_the_cell() {
+    let tex = r"\documentclass{article}
+\usepackage[dutch,english]{babel}
+\def\foo{\gdef\fired{[FIRED]}}
+\begin{document}
+\begin{tabular}{cc}%
+\selectlanguage{english}A%
+&
+\selectlanguage{dutch}B%
+\end{tabular}
+\begin{tabular}{cc} a & \aftergroup\foo b \\ c & d \end{tabular}\fired
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
+    assert!(xml.matches("<td").count() >= 6, "{xml}");
+    assert!(xml.contains("[FIRED]"), "{xml}");
+  }
+
+  /// After a sectioning unit is leniently nested in a list item (OD #189),
+  /// the NEXT sectioning command closes it and becomes its SIBLING inside the
+  /// item — latex.ltx's `\@startsection` ends the previous heading's scope,
+  /// not the list; a `\section` after `\end{itemize}` is at the outer level
+  /// (ddphonism; Perl nests Y inside X with a second error).
+  #[test]
+  fn next_sectioning_unit_in_an_item_is_a_sibling() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item A \subsection{X} text \subsection{Y} more
+\end{itemize}
+\section{Z}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let x = xml
+      .find(r#"<subsection inlist="toc" xml:id="S0.SS1">"#)
+      .expect("X");
+    let x_end = xml[x..].find("</subsection>").expect("X end") + x;
+    let y = xml
+      .find(r#"<subsection inlist="toc" xml:id="S0.SS2">"#)
+      .expect("Y");
+    assert!(y > x_end, "Y must follow X's close as a sibling:\n{xml}");
+    let item_end = xml.find("</item>").expect("item end");
+    assert!(y < item_end, "Y stays inside the item:\n{xml}");
+    let z = xml
+      .find(r#"<section inlist="toc" xml:id="S1">"#)
+      .expect("Z");
+    assert!(z > xml.find("</itemize>").unwrap(), "{xml}");
+  }
+
+  /// beamer.cls:144-156 `\beamer@size` = the size .clo the class inputs (:363);
+  /// themes read it (beamerthemeAlbi.sty:192 `size/.expanded=\beamer@size`
+  /// as a pgfkeys choice). The binding's option remap never set it
+  /// (beamer-theme-albi-doc; Perl identical).
+  #[test]
+  fn beamer_size_option_is_recorded() {
+    let tex = r"\documentclass[14pt]{beamer}
+\makeatletter
+\def\showsize{[\expandafter\@firstofone\beamer@size]}
+\makeatother
+\begin{document}
+\begin{frame}\showsize\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("[size14.clo]") || xml.contains("[size11.clo]"),
+      "{xml}"
+    );
+  }
+
+  /// beamerbaseoverlay.sty:590-597 wraps `\color` and the `\text<font>`
+  /// commands with an `<overlay>` reader (Perl beamer.cls.ltxml:1345-1356
+  /// `%BEAMER_WRAPPED`); without it `\color<2>{red}` read `<` as the color
+  /// ("Can't find color named '<'", xskak_and_beamer 34 errors).
+  #[test]
+  fn beamer_color_and_text_commands_take_an_overlay() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}
+\color<2>{red}Hello \textbf<2->{bold} \textcolor{blue}{b}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
+    assert!(xml.contains(r#"font="bold">bold"#), "{xml}");
+  }
+
+  /// latex.ltx:15438 `\@xverbatim` is delimited by the catcode-12 string
+  /// `\end{verbatim}` and `\end` runs `\endgroup` BEFORE the rest of that
+  /// line is tokenized, so a `\verb` on the same line scans with restored
+  /// catcodes. The pre-tokenized remainder (Perl latex_constructs.pool:1777)
+  /// handed `\verb` frozen tokens: its delimiter never matched and the rest
+  /// of the DOCUMENT was re-read under `\dospecials` (ddphonism:87; KPE #165).
+  /// A TAB keeps catcode 10 in verbatim, so it is a space, not OT1 slot 9.
+  #[test]
+  fn verb_on_the_endverbatim_line_scans_raw() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{itemize}\n\\item A\n\\begin{verbatim}\n\tx\n\\end{verbatim} same \\verb|z| y.\n\\item B\n\\end{itemize}\n\\section{Next}\nT\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"same <verbatim font="typewriter">z</verbatim> y."#),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<item xml:id").count(), 2, "{xml}");
+    assert!(xml.contains("<section"), "{xml}");
+    assert!(!xml.contains('Ψ'), "{xml}");
+    assert!(
+      xml.contains("\n x\n") || xml.contains("\n\u{2423}x\n") || xml.contains(">\n x"),
+      "{xml}"
+    );
+  }
+
+  /// marginnote.sty:319-343 routes the note body through three macro-argument
+  /// layers (`\@dblarg\@mn@marginnote` → `\@mn@@marginnote` →
+  /// `\@mn@@@marginnote`); a binding that expands straight to `\marginpar`
+  /// (Perl marginnote.sty.ltxml:37-40) is one layer short, so skdoc.cls:631's
+  /// `\marginnote{…\clist_map_inline:Nn…{\index@option*{####1}}}` leaked a
+  /// literal `#1` and mis-keyed every glossary entry (iodhbwm 146 errors).
+  #[test]
+  fn marginnote_body_rides_three_argument_layers() {
+    let tex = r"\documentclass{article}
+\usepackage{marginnote}
+\usepackage{xparse}
+\ExplSyntaxOn
+\DeclareDocumentCommand\Options{m}{
+  \clist_set:Nn\l_tmpa_clist{#1}
+  \marginnote{
+    \clist_map_inline:Nn\l_tmpa_clist{ [####1] }
+  }
+}
+\ExplSyntaxOff
+\begin{document}
+Body.\Options{alpha,beta} \marginnote[L]{R}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[alpha]") && xml.contains("[beta]"), "{xml}");
+    assert!(!xml.contains("#1"), "{xml}");
+    assert!(xml.contains(">R<") || xml.contains("R</note>"), "{xml}");
+  }
+
+  /// A registered contrib binding REPLACES the raw file: the schooldocs
+  /// binding must load schooldocs.sty first (`\RequirePackage{xcolor}` :32,
+  /// `titlecolor` :100, `\subject`…) and patch on top (schooldocs-examples
+  /// 17 errors: `\definecolor` undefined; Perl raw-loads it clean).
+  #[test]
+  fn schooldocs_binding_loads_the_real_style() {
+    let tex = r"\documentclass{article}
+\usepackage{schooldocs}
+\definecolor{darkbrown}{rgb}{0.5,0.1,0.1}
+\begin{document}
+\textcolor{darkbrown}{y}\textcolor{titlecolor}{t}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"color="#801A1A">y"##), "{xml}");
+  }
+
+  /// soul-ori.sty:557-567 `\SOUL@setup` resets the scanner's redefinable
+  /// hooks; highlightx.sty:193 / proofread.sty:74 run it, redefine the hooks
+  /// and hand text to the scanner `\SOUL@` (:131). The binding has no
+  /// character scanner, so the hooks are plain macros and `\SOUL@` sets its
+  /// argument as text (Perl: `\SOUL@setup` undefined; KPE #167).
+  #[test]
+  fn soul_scanner_surface_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{soul}
+\makeatletter
+\begin{document}
+\SOUL@setup\def\SOUL@preamble{}\SOUL@{highlighted text} \SOUL@ X \so{spaced}
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("highlighted text"), "{xml}");
+    assert!(xml.contains("letter-spacing"), "{xml}");
   }
 }

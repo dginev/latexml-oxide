@@ -382,8 +382,48 @@ LoadDefinitions!({
   def_primitive_noop("\\pdfstartlink")?;
   // \pdfendlink (h, m)
   def_primitive_noop("\\pdfendlink")?;
-  // \pdfoutline outline spec (h, v, m)
-  // \pdfdest dest spec (h, v, m)
+  // \pdfoutline outline spec (h, v, m) — `[attr spec] action spec [count
+  // number] general text` (pdfTeX manual §8.13); `\pdfdest dest spec` is
+  // `name/num <spec> <dest kind>` (§8.14; kinds `xyz [zoom N]`, `fit`,
+  // `fith`, `fitv`, `fitb`, `fitbh`, `fitbv`, `fitr <rule spec>`). Both
+  // produce PDF navigation only, but the spec MUST be consumed — a bare
+  // no-op leaked `attr`/`user` into the text (tools-overview.tex:93
+  // `\pdfoutline attr {…} user {…} {[#1]}`; Perl pdfTeX.pool:179-180 only
+  // comments them, KPE #162). Guards:
+  // `perfect_kernel_batch54::pdfoutline_and_pdfdest_consume_their_specs`.
+  DefParameterType!(OutlineSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["attr"])?.is_some() {
+      skip_spaces()?;
+      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    }
+    read_action_spec()?;
+    if read_keyword(&["count"])?.is_some() {
+      let _ = read_number()?;
+    }
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+  }), optional => true);
+  def_primitive_noop("\\pdfoutline OutlineSpecification")?;
+  DefParameterType!(DestSpecification, reader => reader!(_args, _extra, {
+    if read_keyword(&["num"])?.is_some() {
+      let _ = read_number()?;
+    } else if read_keyword(&["name"])?.is_some() {
+      skip_spaces()?;
+      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    }
+    if read_keyword(&["xyz"])?.is_some() {
+      if read_keyword(&["zoom"])?.is_some() {
+        let _ = read_number()?;
+      }
+    } else if read_keyword(&["fitr"])?.is_some() {
+      while read_keyword(&["width", "height", "depth"])?.is_some() {
+        let _ = read_dimension()?;
+      }
+    } else {
+      let _ = read_keyword(&["fitbh", "fitbv", "fitb", "fith", "fitv", "fit"])?;
+    }
+  }), optional => true);
+  def_primitive_noop("\\pdfdest DestSpecification")?;
   // \pdfthread thread spec (h, v, m)
   // \pdfstartthread thread spec (v, m)
   // \pdfendthread (v, m)
@@ -580,6 +620,43 @@ LoadDefinitions!({
 /// implementation: 64-entry sine table generated exactly as the RFC defines
 /// it (`floor(2^32 · |sin(i+1)|)`), guarded below by the RFC's own test
 /// vectors.
+/// Consume a pdfTeX `action spec` (pdfTeX manual §8.11, and the grammar
+/// quoted above): `user <general text>` | `goto <goto-action spec>` |
+/// `thread <thread-action spec>`. The goto form is `[file <text>] num N` |
+/// `[file <text>] name <text> [newwindow|nonewwindow]` | `[file <text>]
+/// [page N] <general text> [newwindow|nonewwindow]`. Nothing is kept — the
+/// actions are PDF navigation — but every token of the spec must be eaten
+/// so it does not fall into the text. Shared by `\pdfoutline` and
+/// `\pdfstartlink`-style readers.
+fn read_action_spec() -> Result<()> {
+  let Some(kind) = read_keyword(&["user", "goto", "thread"])? else {
+    return Ok(());
+  };
+  skip_spaces()?;
+  if kind == "user" {
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    return Ok(());
+  }
+  if read_keyword(&["file"])?.is_some() {
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+  }
+  if read_keyword(&["num"])?.is_some() {
+    let _ = read_number()?;
+  } else if read_keyword(&["name"])?.is_some() {
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+  } else if kind == "goto" {
+    if read_keyword(&["page"])?.is_some() {
+      let _ = read_number()?;
+    }
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+  }
+  let _ = read_keyword(&["newwindow", "nonewwindow"])?;
+  Ok(())
+}
+
 fn md5_hex_upper(data: &[u8]) -> String {
   const S: [u32; 64] = [
     7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, //

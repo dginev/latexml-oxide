@@ -239,6 +239,40 @@ LoadDefinitions!({
   Let!("\\st", "\\textst");
   Let!("\\hl", "\\texthl");
 
+  // soul-ori's scanner surface (soul-ori.sty:114-115, 131-160, 545, 557-567).
+  // Packages that bypass the public API drive the scanner directly:
+  // highlightx.sty:193 / proofread.sty:74 run `\SOUL@setup`, redefine the
+  // per-token hooks (`\SOUL@preamble` = a tikz overlay, `\SOUL@everyhyphen`
+  // with `\SOUL@setkern\SOUL@hyphkern`…) and hand the text to `\SOUL@`.
+  // The binding has no character-by-character scanner, so the hooks are the
+  // redefinable macros they are (reset by `\SOUL@setup` exactly as :557-566)
+  // and `\SOUL@` degrades to setting its argument (a braced group or one
+  // token, `\SOUL@expand`'s `\ifcat\bgroup` test) as plain text — the hooks'
+  // box measurements have no meaning without the scan. Perl also lacks them
+  // (`\SOUL@setup` undefined: highlightx-doc, proofread; KPE #167). Guard:
+  // `perfect_kernel_batch54::soul_scanner_surface_is_defined`.
+  RawTeX!(
+    r"\newdimen\SOUL@charkern
+\newdimen\SOUL@hyphkern
+\let\SOUL@sethyphenchar\relax
+\def\SOUL@setkern#1{\ifdim#1=\z@\else\kern#1\fi}
+\def\SOUL@setup{%
+    \let\SOUL@preamble\relax
+    \let\SOUL@postamble\relax
+    \let\SOUL@everytoken\relax
+    \let\SOUL@everysyllable\relax
+    \def\SOUL@everyspace##1{##1\space}%
+    \let\SOUL@everyhyphen\relax
+    \def\SOUL@everyexhyphen##1{##1}%
+    \let\SOUL@everylowerthan\relax
+}
+\SOUL@setup
+\def\SOUL@{\futurelet\SOUL@@\SOUL@expand}
+\def\SOUL@expand{\ifcat\bgroup\noexpand\SOUL@@\expandafter\SOUL@start\else\expandafter\SOUL@start@one\fi}
+\long\def\SOUL@start#1{{#1}}
+\def\SOUL@start@one#1{{#1}}"
+  );
+
   // Ignorable commands
   DefMacro!("\\soulomit{}", "#1");
   def_macro_noop("\\soulaccent{}")?;

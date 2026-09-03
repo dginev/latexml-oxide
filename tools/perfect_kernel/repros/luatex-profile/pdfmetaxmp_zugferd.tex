@@ -1,0 +1,23 @@
+% witness: zugferd/DEMO-rechnung-zugferd (zugferd.sty:111 \pdfmeta_xmp_xmlns_new:nn)
+% also: zugferd/DEMO-rechnung-zugferd-Kleinunternehmen
+% oracle:  lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=RED(4 undef + Fatal loop) perl=N/A(no luatex profile) (2026-09-03)
+% expect:  0 errors; XMP block absorbed (no PDF metadata in LaTeXML output)
+% status:  RED
+% mechanism: l3pdfmeta's \pdfmeta_xmp_* family (pdfmanagement.ltx:2312+) builds the PDF
+%   XMP metadata packet. Our \DocumentMetadata (latex_constructs_rust_only.rs:87-88) does
+%   \RequirePackage{tagpdf} instead of activating pdfmanagement, so the public
+%   \pdfmeta_xmp_xmlns_new:nn / _schema_new:nnn / _property_new:nnnnn / _add:n are undefined.
+%   zugferd.sty:92 \cs_if_exist:NF fires its msg_error then :111 calls the undefined cmd.
+\documentclass{article}
+\ExplSyntaxOn
+\cs_if_exist:NF \pdfmeta_xmp_xmlns_new:nn { \typeout{XMP-ABSENT} }
+\pdfmeta_xmp_xmlns_new:nn {fx}{urn:factur-x}
+\pdfmeta_xmp_schema_new:nnn {Schema}{fx}{urn:factur-x}
+\pdfmeta_xmp_property_new:nnnnn {fx}{DocumentType}{Text}{external}{INVOICE}
+\exp_args:Ne \pdfmeta_xmp_add:n { <fx:DocumentType>INVOICE</fx:DocumentType> }
+\ExplSyntaxOff
+\begin{document}
+zugferd
+\end{document}

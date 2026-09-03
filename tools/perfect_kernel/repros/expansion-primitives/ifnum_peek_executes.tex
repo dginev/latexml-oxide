@@ -1,0 +1,16 @@
+% witness: same root as ifnum_lookahead (numspell)
+% oracle:  pdflatex ELSE-RESULT=[RIGHT]
+% engines: rust=[WRONGRIGHT] perl=[WRONGRIGHT] pdflatex=[RIGHT] (2026-09-03) <- SHARED
+% expect:  ELSE-RESULT=[RIGHT] (only the taken else-branch runs)
+% status:  RED
+% mechanism: proves the true-branch \g@addto@macro executes DURING the number peek
+%   (WRONG appears alongside the correctly-taken else-branch RIGHT).
+\documentclass{article}
+\makeatletter
+\def\out{}%
+\def\g{\ifnum0>0\g@addto@macro\out{WRONG}\else\g@addto@macro\out{RIGHT}\fi}%
+\begin{document}
+\g
+\typeout{ELSE-RESULT=[\out]}%
+x
+\end{document}
