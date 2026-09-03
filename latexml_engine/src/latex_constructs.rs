@@ -2793,35 +2793,52 @@ fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
       out.push(tok);
       continue;
     }
-    let delim = toks[i];
-    // A `\verb` whose "delimiter" is a control sequence is not a verbatim
-    // invocation but makeindex TEXT — `\index{foo@\string\verb\string"bar}`
-    // (amsldoc.cls:87-114 `\cs`/`\@indexcs`; amsldoc-it/-vn) round-trips
-    // through the sanitized re-tokenization as the command `\verb` followed
-    // by `\string`. Expanding it scanned for a `"` past the end of the entry
-    // (`readBalanced ran out of input`); Perl never expands the entry. Keep it
-    // as the literal characters `\verb`.
-    if delim.get_catcode() == Catcode::CS {
-      out.extend(Explode!("\\verb"));
-      if starred {
-        out.push(T_OTHER!("*"));
+    // A control sequence in the delimiter slot is expanded to the character
+    // it stands for, as `\verb`'s own delimiter scan (a `read_x_token`) would:
+    // doc.sty's `\SpecialMacroIndex` writes `\verb\verbatimchar…\verbatimchar`
+    // (l3doc.cls:2151 `\verbatimchar` = `&` — an unexpanded `&` in the phrase
+    // is a stray alignment tab; ltx-talk, postnotes, pythonimmediate), and
+    // amsldoc.cls:87-114 `\index{foo@\string\verb\string"bar}` reaches
+    // `\string"` = `"` with no closing `"` (amsldoc-it/-vn): the body then runs
+    // to the end of the ENTRY, never past it (`readBalanced ran out of input`
+    // when `\verb` itself was expanded; Perl never expands the entry).
+    let (delim, rest): (Token, Vec<Token>) = if toks[i].get_catcode() == Catcode::CS {
+      let tail = Tokens::new(toks[i..].to_vec());
+      let expanded: Result<(Option<Token>, Vec<Token>)> =
+        reading_from_mouth(Mouth::new("", None).expect("empty mouth"), move || {
+          unread(tail);
+          let first = read_x_token(None, false, None)?;
+          let mut remaining = Vec::new();
+          while let Some(t) = read_token()? {
+            remaining.push(t);
+          }
+          Ok((first, remaining))
+        });
+      match expanded {
+        Ok((Some(d), remaining)) => (d, remaining),
+        _ => {
+          // Not a verbatim invocation at all: keep `\verb` as index text.
+          out.extend(Explode!("\\verb"));
+          if starred {
+            out.push(T_OTHER!("*"));
+          }
+          continue;
+        },
       }
-      continue;
-    }
+    } else {
+      (toks[i], toks[i + 1..].to_vec())
+    };
     let delim_s = delim.with_str(|d| d.to_string());
-    i += 1;
-    let body_start = i;
-    while i < toks.len() && toks[i].with_str(|d| d != delim_s.as_str()) {
-      i += 1;
+    let mut j = 0;
+    while j < rest.len() && rest[j].with_str(|d| d != delim_s.as_str()) {
+      j += 1;
     }
     // The re-tokenized body collapsed `\verb`'s raw chars back into control
     // sequences; `untex` + `Explode!` restores them to catcode-OTHER literals
     // so the digested `#3` renders as typewriter text instead of re-expanding
     // (which is exactly the `\delta`→math-δ leak this fixes).
-    let body_str = Tokens::new(toks[body_start..i].to_vec()).untex();
-    if i < toks.len() {
-      i += 1; // consume the closing delimiter
-    }
+    let body_str = Tokens::new(rest[..j].to_vec()).untex();
+    let after = if j < rest.len() { j + 1 } else { j }; // consume the closing delimiter
     out.push(T_CS!("\\@internal@text@verb"));
     out.push(T_BEGIN!());
     if starred {
@@ -2834,6 +2851,9 @@ fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
     out.push(T_BEGIN!());
     out.extend(Explode!(body_str));
     out.push(T_END!());
+    // The remainder may hold further runs; it is a fresh slice now.
+    out.extend(absorb_index_verb_runs(&rest[after..]));
+    return out;
   }
   out
 }
