@@ -5642,6 +5642,6 @@ it; under `rawclasses` (KOMA `\DeclareRobustCommand\small{\@setfontsize
 `\documentclass{scrartcl}\usepackage{siunitx}\begin{tabular}{S}\small a\\
 \end{tabular}` with raw classes. Rust: the scan runs under LaTeX's
 `\protected@edef` context (`\protect` = `\@unexpandable@protect`,
-latex.ltx:1384) so robust commands stay `\protect\cs ` (`read_x_until_
-protected`), and the cell is emitted as one group as LaTeX's column template
-does. Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.
+latex.ltx:1384) so robust commands stay `\protect\cs ` (the `ProtectedXUntil`
+parameter type, OD #191), and the cell is emitted as one group as LaTeX's
+column template does. Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.

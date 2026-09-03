@@ -2,6 +2,14 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // mathtools.sty:1897-1907 `\xmathstrut{<depth>}` / `\xmathstrut[<dp>]{<ht>}`:
+  // `\vphantom{\mathpalette\xmathstrut@do{#2}}` — a math strut whose box is
+  // scaled by the arguments; here the strut's semantic content is the
+  // `\vphantom` of the height factor (the `\@dblarg` default makes the
+  // optional the same argument). numerica.tex:3431 in `\eval{\[ \frac … \]}`.
+  // Guard: `perfect_kernel_batch54::xmathstrut_is_a_vphantom`.
+  DefMacro!("\\xmathstrut[]{}", "\\vphantom{#2}");
+
   // Perl: mathtools.sty.ltxml
   // Options: fixamsmath, donotfixamsmathbugs, allowspaces, disallowspaces — all ignored
   for option in ["fixamsmath", "donotfixamsmathbugs", "allowspaces", "disallowspaces"].iter() {

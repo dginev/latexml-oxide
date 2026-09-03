@@ -95,6 +95,13 @@ LoadDefinitions!({
   DefMacro!("\\filinner",  "\\filleft");
   DefMacro!("\\filouter",  "\\filright");
   DefRegister!("\\wordsep", Dimension(0));
+  // titlesec.sty:1039-1041 `\newdimen\titlewidth`, `\titlewidthlast`,
+  // `\titlewidthfirst` — set by the `calcwidth` machinery and read in user
+  // title formats (titlesec.tex:1780 `\addtolength{\titlewidth}{2pc}`).
+  // Guard: `perfect_kernel_batch54::titlesec_title_width_registers_exist`.
+  DefRegister!("\\titlewidth", Dimension(0));
+  DefRegister!("\\titlewidthlast", Dimension(0));
+  DefRegister!("\\titlewidthfirst", Dimension(0));
 
   def_macro_noop("\\titleline[]{}")?;
   DefMacro!("\\titlerule", "\\@ifstar{\\lx@titlerule@star}{\\lx@titlerule}");

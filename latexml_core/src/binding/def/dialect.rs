@@ -401,10 +401,26 @@ pub fn def_primitive(
   }
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
+      // A pure size switch (`\small` … `\Huge`, `font => {size => N}` in the
+      // class bindings) is LaTeX's `\@setfontsize` (latex.ltx:14103), whose
+      // first act is `\let\@currsize#1`: the size command's identity is
+      // TeX-visible state that packages test with `\ifx\@currsize\small`
+      // (ltugboat's `\SMC` cascade in latex-doc-ptr.sty:203-215, otherwise
+      // falling through to `\TBWarning`; `\@currsize` restores in many
+      // others). With the primitive alone `\@currsize` stayed the kernel's
+      // `\normalsize` macro (OXIDIZED_DESIGN #165) and never `\ifx`-matched
+      // any size. Guard: `perfect_kernel_batch54::size_switch_lets_currsize`.
+      let is_size_switch = chosen_font.size.is_some()
+        && chosen_font.family.is_none()
+        && chosen_font.series.is_none()
+        && chosen_font.shape.is_none();
       // Perf: capture Rc<Font> directly; closure borrows through it.
       // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
       let merge_font_closure = before_digest_simple!({
         merge_font_ref(&chosen_font);
+        if is_size_switch {
+          let_i(&T_CS!("\\@currsize"), &cs, None);
+        }
       });
       before_digest_env.push(merge_font_closure);
     },

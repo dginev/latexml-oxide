@@ -54,6 +54,12 @@ LoadDefinitions!({
   DefRegister!("\\theorempostskipamount"        => Dimension::new(0));
   DefRegister!("\\theoremframepreskipamount"    => Dimension::new(0));
   DefRegister!("\\theoremframepostskipamount"   => Dimension::new(0));
+  // ntheorem.sty:714-715 `\newskip\thm@topsep \newskip\thm@topsepadd` —
+  // internals that packages copying ntheorem's theorem code reach
+  // (dlfltxbcodetips.sty:102-106 `\thm@topsepadd\theorempostskipamount`).
+  // Guard: `perfect_kernel_batch54::ntheorem_topsep_registers_exist`.
+  DefRegister!("\\thm@topsep"                   => Glue!("0pt"));
+  DefRegister!("\\thm@topsepadd"                => Glue!("0pt"));
   DefRegister!("\\theoreminframepreskipamount"  => Dimension::new(0));
   DefRegister!("\\theoreminframepostskipamount" => Dimension::new(0));
   def_macro_noop("\\theorempreskip{}")?;

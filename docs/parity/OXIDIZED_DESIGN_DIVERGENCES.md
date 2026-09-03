@@ -6251,9 +6251,14 @@ linguex, covington, philex, drs, movement-arrows).
 route through `\@setfontsize` overwrites it with the exact size command, exactly
 as in real LaTeX.
 
-**Why**: kernel-invariant restoration; known residual: inside `\small` etc. the
-default still reads `\normalsize` (our size primitives don't update it — neither
-does Perl). Witness: linguex-doc converts 6 errors → **0 errors, 0 warnings**.
+**Why**: kernel-invariant restoration. Witness: linguex-doc converts 6 errors →
+**0 errors, 0 warnings**. The former residual ("inside `\small` the default
+still reads `\normalsize`") is closed by batch 54v: a primitive whose font
+directive is a pure size switch (`font => {size => N}`, every class binding's
+`\tiny`…`\Huge`) `\let`s `\@currsize` to itself when it runs — latex.ltx:14103
+`\@setfontsize`'s first act — so `\ifx\@currsize\small` chains (ltugboat's
+`\SMC`, latex-doc-ptr.sty:203-215) see the identity as in real LaTeX
+(`def_primitive`, dialect.rs; guard `perfect_kernel_batch54::size_switch_lets_currsize`).
 
 **Upstream**: branch-contained per user directive 2026-08-31 (sibling of #161-#164).
 
@@ -6653,4 +6658,33 @@ cell fallback.
 **Witnesses**: glosmathtools/sample_glosmathtools_en, _fr.
 **Guard**: `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
 **Upstream**: not filed.
+
+### 191. `ProtectedXUntil` / `ProtectedExpanded` parameter types (Rust-only)
+
+**Perl behavior**: `Parameters.pm` offers `XUntil:` and `Expanded` (full
+expansion) and `ExpandedPartially` (e-TeX `\protected` deferred, `\the`
+once). None of them touches LaTeX's `\protect`, so a binding that scans user
+text with expansion (siunitx.sty.ltxml:1414 `\lx@SI@column@parse
+XUntil:\lx@si@column@end`) expands a raw `\DeclareRobustCommand` body; with
+Perl's primitive `\small` the loop never shows.
+**Rust behavior**: two additional types run the read under latex.ltx's
+`\protected@edef` regime (:1442-1454 `\let\protect\@unexpandable@protect`,
+:1384) — `ProtectedXUntil:<delim>` and `ProtectedExpanded` — via
+`state::with_let` (a temporary `\let` restored after the body) and
+`gullet::read_x_until`, collapsing `\noexpand`'d tokens to their identity when
+stored (tex.web §1149). Outside LaTeX the regime is absent and the read is
+plain. The Perl spec names stay the stable boundary; the new names are
+one-line aliases over the same readers, which are also callable from a binding
+body.
+**Why**: kernel-quality: an `\edef`-strength scan of LaTeX text without the
+`\protect` regime is a pdflatex overflow (`\edef\x{\small}`), not a Perl
+design choice; the reader must carry the regime, and the declared type keeps
+reversion (`tex=`), `LXML_TRACE_ARGS` and the delimited-scan EOF policy that a
+hand-rolled gullet loop in a `sub` body loses. KNOWN_PERL_ERRORS #178.
+**Witnesses**: zugferd/zugferd-invoice (`S` cell opening with an unbraced
+`\small` under scrartcl, `PushbackLimit`).
+**Guard**: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`,
+`state::reentrancy_tests::with_let_restores_the_prior_meaning`.
+**Upstream**: not filed (the Perl binding cannot loop with its primitive size
+commands).
 

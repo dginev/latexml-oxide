@@ -186,6 +186,12 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareCaptionBox{}{}")?;
   // caption3.sty L573: \DeclareCaptionListFormat{name}{body}
   def_macro_noop("\\DeclareCaptionListFormat{}{}")?;
+  // caption3.sty:1595 `\providecommand*\caption@prepareslc{}` — an empty
+  // hook that other packages extend (hep-bibliography.sty:108
+  // `\g@addto@macro\caption@prepareslc{…}` under `\AtBeginDocument`; the 9
+  // hep-* docs). The emulation stands in for caption3.sty, so it carries the
+  // hook. Guard: `perfect_kernel_batch54::caption_prepareslc_hook_is_defined`.
+  DefMacro!("\\caption@prepareslc", "");
 
   // caption3 internals used by raw-loaded sibling packages like
   // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
