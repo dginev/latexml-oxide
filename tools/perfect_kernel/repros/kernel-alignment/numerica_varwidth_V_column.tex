@@ -1,0 +1,21 @@
+% status: RED — Rust 2 err (Extra alignment tab) + Warning "Unrecognized tabular
+%         template 'V'". Fresh binary ~/data/pk_target2/debug/latexml_oxide.
+% witness: numerica (TL doc-manual), s36 = 28 err all "Extra alignment tab '&'";
+%          preamble {lccV{\linewidth}l} at numerica.tex:4466 and :7347.
+% oracle: pdflatex 0 err (V is defined by varwidth.sty:310). Perl LaTeXML emits the
+%         SAME "Unrecognized tabular template 'V'" + 2 Extra-tab -> SHARED binding gap.
+% root: varwidth.sty:308-314 defines \newcolumntype{V}[1]{>{\begin{varwidth}[t]{#1}
+%       \narrowragged\let\\\tabularnewline}l<{\@finalstrut\@arstrutbox\end{varwidth}}}
+%       but BOTH varwidth_sty.rs AND LaTeXML/.../varwidth.sty.ltxml OMIT it. Undefined
+%       V -> preamble parser does not consume its {width} arg -> {lccV{\linewidth}l}
+%       collapses from 5 cols to 4 -> the 5th cell's & is "Extra alignment tab".
+% class: SHARED (Perl identical). Binding-completeness fix (add V to varwidth binding).
+% assert (after fix): 0 err; tabular has exactly 2 <ltx:tr> and 10 <ltx:td> (5-col).
+\documentclass{article}
+\usepackage{array,varwidth,booktabs}
+\begin{document}
+\begin{tabular}{lccV{\linewidth}l}\toprule
+env & rem & eq & vv & sep\tabularnewline\midrule
+a & b & c & d & e\tabularnewline\bottomrule
+\end{tabular}
+\end{document}

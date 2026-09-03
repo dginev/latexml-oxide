@@ -414,6 +414,15 @@ pub(crate) fn load() -> Result<()> {
       MergeFont!(mathstyle => "text");
     }
     Let!("\\\\", "\\lx@alignment@newline");
+    // latex.ltx:16576 `\let\tabularnewline\\` in `\@array` — for `array` as
+    // for `tabular` (the text binding does it). Without it a column template
+    // that re-lets `\\` after opening a box (tabvar.sty:118 `>{\begin{varwidth}
+    // …\let\\=\TVtabularnewline $}` with `\TVtabularnewline` → `\tabularnewline`)
+    // got latex.ltx's top-level `\relax`, the row break vanished inside the
+    // last cell's box and every later `&` was an "Extra alignment tab" (tabvar
+    // demo ×80; KPE #192). Guard:
+    // `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.
+    Let!("\\tabularnewline", "\\\\");
     Let!("\\lx@intercol", "\\lx@math@intercol");
   });
 

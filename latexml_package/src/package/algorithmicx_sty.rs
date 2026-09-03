@@ -86,19 +86,48 @@ LoadDefinitions!({
     "\\@ifnextchar\\nointerlineskip{}{\\lx@algorithmicx@@item}"
   );
 
-  // This imitates \item; just opens the ltx:listingline, but somebody's got to close it.
-  DefConstructor!("\\lx@algorithmicx@@item",
-    "<ltx:listingline xml:id='#id' itemsep='#itemsep'>#tags",
+  // algpseudocodex.sty:185 wraps each code line in a `varwidth` box that only
+  // the NEXT `\State`/`\If`… ends (`\algpx@endCodeCommand`, :781-797);
+  // `\Statex` = `\item[]` (algorithmicx.sty:632) has no such hook, so in TeX
+  // its text is set INSIDE the previous line's box (pdflatex clean). When the
+  // line cannot be closed because that box is still open, the item is a line
+  // break within the open `ltx:listingline` rather than a nested one
+  // (`<ltx:listingline>` isn't allowed in `<ltx:p>`; algpseudocodex manual,
+  // coloredtheorem). Guard: `perfect_kernel_batch54::statex_continues_the_open_line_box`.
+  DefConstructor!("\\lx@algorithmicx@@item", sub[document, _args, props] {
+    let open_line = document.maybe_close_element("ltx:listingline")?.is_none() && {
+      let mut n = Some(document.get_node().clone());
+      let mut found = false;
+      while let Some(node) = n {
+        if document::get_node_qname(&node) == pin!("ltx:listingline") {
+          found = true;
+          break;
+        }
+        n = node.get_parent();
+      }
+      found
+    };
+    if open_line {
+      document.insert_element("ltx:break", Vec::new(), None)?;
+    } else {
+      let mut attrs: HashMap<String, String> = HashMap::default();
+      if let Some(id) = props.get("id") {
+        attrs.insert("xml:id".into(), id.to_string());
+      }
+      document.open_element("ltx:listingline", Some(attrs), None)?;
+      if let Some(tags) = props.get("tags") {
+        let digested: Option<Digested> = tags.into();
+        if let Some(ref d) = digested {
+          document.absorb(d, None)?;
+        }
+      }
+    }
+  },
     properties => sub[_args] {
-      // Perl: my $step = Digest(T_BEGIN, T_CS('\ALG@step'), T_END);
       let step = Digest!(Tokens::new(vec![
         T_BEGIN!(), T_CS!("\\ALG@step"), T_END!()
       ]))?;
-      // Perl: my $id = Digest(T_CS('\theALG@line@ID'));
       let id = Digest!(Tokens::new(vec![T_CS!("\\theALG@line@ID")]))?;
-      // Perl: my $tags = Digest(T_BEGIN,
-      //   T_CS('\def'), T_CS('\fnum@ALG@line'), T_BEGIN, Tokens(Revert($step)), T_END,
-      //   Invocation(T_CS('\lx@make@tags'), T_OTHER('ALG@line')), T_END);
       let step_revert = step.revert()?;
       let invocation = Invocation!("\\lx@make@tags", vec![Some(Tokens::new(vec![T_OTHER!("ALG@line")]))]);
       let mut tag_tokens = vec![T_BEGIN!(), T_CS!("\\def"), T_CS!("\\fnum@ALG@line"), T_BEGIN!()];
@@ -107,11 +136,7 @@ LoadDefinitions!({
       tag_tokens.extend(invocation.unlist());
       tag_tokens.push(T_END!());
       let tags = Digest!(Tokens::new(tag_tokens))?;
-
       Ok(stored_map!("id" => id, "tags" => tags))
-    },
-    before_construct => sub[document] {
-      document.maybe_close_element("ltx:listingline")?;
     }
   );
 

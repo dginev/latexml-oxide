@@ -1,0 +1,21 @@
+% SHARED (Perl fails identically — faithful insertBlock/find_insertion_point on
+% shared LaTeXML.model). Cluster root for rubik + coloredtheorem + xebaposter.
+% A preceding INLINE box (\framebox here; an SVG tcolorbox skin in colored-
+% theorem/xebaposter) keeps a paragraph open, so the following \parbox's
+% insert_block capture (_CaptureBlock_) sits in an INLINE context (<p>). Its
+% body \caption is legally captured (LaTeXML.model:109 _CaptureBlock_ allows
+% ltx:caption), but insert_block (base_utilities.rs:3927 / Perl TeX_Box.pool
+% :449) sees is_inline=true, tries only inline candidates (none hold a caption),
+% warns "Did not find a block-like candidate", renames the capture to a bare
+% ltx:block, and reinsert's find_insertion_point (document.rs:2987 / Perl
+% Document.pm) cannot escape the non-auto-closable block -> caption trapped.
+% Witness: rubikexamples.tex:295-304 (\parbox{0.8\textwidth}{\caption}).
+% Today: 2 err  (toccaption + caption isn't allowed in <ltx:block>).
+% Remove the \framebox (bare minipage) -> single-panel merge, 0 err.
+\documentclass[a4paper]{article}
+\begin{document}
+\begin{figure}[hbt]
+\framebox{\begin{minipage}{4.6cm}hi\end{minipage}}
+\parbox{0.8\textwidth}{\caption{Seq.}}
+\end{figure}
+\end{document}

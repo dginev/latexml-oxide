@@ -497,9 +497,14 @@ LoadDefinitions!({
   // rebound to the recording primitives inside a group (so colortbl's
   // \cellcolor/\rowcolor/\columncolor in text tabulars are untouched), the
   // CodeBefore block (#2) is executed to record its rectangles, then the matrix
-  // starts. `\CodeBefore`/`\Body` are \relax (harmless marker / delimiter).
-  Let!("\\CodeBefore", "\\relax");
-  Let!("\\Body", "\\relax");
+  // starts. `\CodeBefore`/`\Body` are harmless no-ops with UNIQUE meanings
+  // (nicematrix.sty:1642/1765 give them their own `\__nicematrix_…` bodies):
+  // `\let` to `\relax`, `\@ifnextchar\CodeBefore` — a meaning comparison —
+  // matched any `\relax`-meaning token at a matrix start and the
+  // `Until:\Body` grab ran to EoF (the nicematrix manual's Fatal). Guard:
+  // `perfect_kernel_batch54::nicematrix_relax_at_matrix_start_is_not_codebefore`.
+  DefPrimitive!("\\CodeBefore", {});
+  DefPrimitive!("\\Body", {});
   RawTeX!(concat!(
     r"\def\lx@nice@matrix@begin#1{",
     r"\@ifnextchar\CodeBefore{\lx@nice@grabcode{#1}}{\lx@ams@matrix{#1}}}",

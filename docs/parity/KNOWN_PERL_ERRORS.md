@@ -5799,3 +5799,17 @@ frames and the manual ended in a `\Body` runaway to EoF (Perl recovers by
 luck of its group model). tex.web §1128 `align_error`: "Misplaced \omit" is
 reported and nothing else happens. Trigger: `A{\multicolumn{1}{c}{B}}C`.
 Rust: error only. Guard: `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.
+
+## 192. `array` never lets `\tabularnewline` to the row break (Rust fixes)
+
+latex_constructs.pool.ltxml:3792-3809 (`\@array@bindings`) lets `\\` to the
+alignment newline but not `\tabularnewline`, which latex.ltx:16576 `\@array`
+sets for `array` and `tabular` alike; the text `tabular` binding does it, the
+math one did not, so `\tabularnewline` inside an `array` stayed latex.ltx's
+top-level `\relax`. tabvar.sty:117-122's `C` column opens a varwidth box in its
+`>{}` part and re-lets `\\` to `\TVtabularnewline` (→ `\tabularnewline`): the
+row break became `\relax`, the next row fused into the last cell's box and every
+following `&` was an "Extra alignment tab" (tabvar demo ×80; Perl identical).
+Trigger: `\newcolumntype{C}{>{\begin{varwidth}{3cm}\let\\=\tabularnewline$}c<{$\end{varwidth}}}`
+`\[\begin{array}{cC}a&b\\ c&d\end{array}\]`. Rust: `\@array@bindings` lets both.
+Guard: `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.

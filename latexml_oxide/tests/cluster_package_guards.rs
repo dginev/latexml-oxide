@@ -11865,6 +11865,101 @@ A{\multicolumn{1}{c}{B}}C
     assert_eq!(xml.matches("<td").count(), 2, "{xml}");
   }
 
+  /// latex.ltx:16576: `\@array` lets `\tabularnewline` to `\\` for `array`
+  /// too, so a column template that re-lets `\\` inside a box it opened
+  /// (tabvar's varwidth cells) still ends the row (tabvar demo).
+  #[test]
+  fn math_array_lets_tabularnewline_to_the_row_break() {
+    let tex = r"\documentclass{article}
+\usepackage{array,varwidth}
+\newcolumntype{C}{>{\begin{varwidth}{3cm}\let\\=\tabularnewline$}c<{$\end{varwidth}}}
+\begin{document}
+\[\begin{array}{cC}a&b\\ c&d\end{array}\]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<XMRow").count(), 2, "{xml}");
+  }
+
+  /// varwidth.sty:308-314 defines the `V{width}` column when array is
+  /// loaded; without it the template loses a column (numerica).
+  #[test]
+  fn varwidth_v_column_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{array,varwidth,booktabs}
+\begin{document}
+\begin{tabular}{lccV{\linewidth}l}\toprule
+env & rem & eq & vv & sep\tabularnewline\midrule
+a & b & c & d & e\tabularnewline\bottomrule
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    assert_eq!(xml.matches("<td").count(), 10, "{xml}");
+  }
+
+  /// algpseudocodex ends a line's varwidth box only at the next `\State`;
+  /// `\Statex` (= `\item[]`) sets its text inside the open box, so it is a
+  /// break within the open line, not a nested `listingline` (manual,
+  /// coloredtheorem; pdflatex clean).
+  #[test]
+  fn statex_continues_the_open_line_box() {
+    for wrap in [
+      ("", ""),
+      (r"\begin{minipage}[t]{0.45\textwidth}", r"\end{minipage}"),
+    ] {
+      let tex = format!(
+        r"\documentclass{{article}}
+\usepackage{{algpseudocodex}}
+\begin{{document}}
+{}
+\begin{{algorithmic}}[1]
+\State first line
+\Statex continuing line
+\State second line
+\end{{algorithmic}}
+{}
+\end{{document}}
+",
+        wrap.0, wrap.1
+      );
+      let (stderr, xml) = convert(&tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert_eq!(xml.matches("<listingline").count(), 2, "{xml}");
+      assert!(xml.contains("<break"), "{xml}");
+    }
+  }
+
+  /// nicematrix's `\CodeBefore`/`\Body` must carry unique meanings: `\let` to
+  /// `\relax`, `\@ifnextchar\CodeBefore` (meaning comparison) matched any
+  /// `\relax` at a matrix start and the `Until:\Body` grab ran to EoF
+  /// (nicematrix manual's Fatal). A genuine `\CodeBefore` still grabs.
+  #[test]
+  fn nicematrix_relax_at_matrix_start_is_not_codebefore() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$\begin{bNiceMatrix}\relax 9 & 17 \\ -2 & 5\end{bNiceMatrix}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert_eq!(xml.matches("<XMArray").count(), 1, "{xml}");
+    let control = r"\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$\begin{bNiceMatrix}\CodeBefore \rowcolor{blue!15}{1} \Body 9 & 17 \\ -2 & 5\end{bNiceMatrix}$
+\end{document}
+";
+    let (stderr, xml) = convert(control, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("backgroundcolor="), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

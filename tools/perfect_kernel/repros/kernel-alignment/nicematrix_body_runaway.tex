@@ -1,0 +1,18 @@
+% witness: nicematrix.tex (TL2025 doc manual) — Fatal:Mouth:EoF "...scanning use of a Until:\Body argument"
+%   26 errors + 1 Fatal on b55e; the manual reaches this via a \relax-meaning token landing at a
+%   nice-matrix body start (cumulative alignment corruption); all 26 real \CodeBefore grabbers pair OK.
+% oracle:  pdflatex rc=0, 0 errors — a leading \relax in a matrix body is a legal no-op.
+% engines: rust=1 fatal (2026-09-03, ~/data/pk_target2 b55e). Perl can't build nicematrix (pgf
+%   driver "pgfsys-" missing) -> environmental, no direct parity.
+% class:   RUST-ONLY (contrib binding: latexml_contrib/src/nicematrix_sty.rs)
+% expect:  0 errors, an <ltx:XMArray> matrix with rows 9,17 / -2,5.
+% status:  RED
+% mechanism: \begin{bNiceMatrix} -> \lx@nice@matrix@begin -> \@ifnextchar\CodeBefore ...
+%   \@ifnextchar compares by MEANING (x_equals, sect13.rs:1758-1763), and nicematrix_sty.rs:501
+%   \Let!("\CodeBefore","\relax"). So ANY \relax-meaning first-body token matches \CodeBefore,
+%   fires \lx@nice@grabcode (nicematrix_sty.rs:506), whose #2 Until:\Body scans to EOF (no \Body).
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+$\begin{bNiceMatrix}\relax 9 & 17 \\ -2 & 5\end{bNiceMatrix}$
+\end{document}
