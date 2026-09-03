@@ -5772,3 +5772,18 @@ beamerbaseoptions.sty:15 `\ProcessOptionsBeamer` = `\setkeys{\@currname}` over
 the passed options. Rust: both real bodies. Guard:
 `perfect_kernel_batch54::usetheme_options_reach_the_theme`.
 
+
+## 190. A float inside a Block container is malformed instead of floating up (Rust fixes)
+
+latex_constructs.pool.ltxml:3394 builds `figure`/`table` with a plain
+`<ltx:figure>` opener, no `^` float-up marker, so a float opened inside a Block
+container (`quote`, a list item, a box) is inserted there and rejected:
+`malformed:ltx:figure <ltx:figure> isn't allowed in <ltx:quote>` (isorot/rotman,
+bashful). LaTeX floats escape their environment to the page (pdflatex clean).
+Trigger: `\begin{quote}\begin{figure}\caption{X}\end{figure}\end{quote}`. Rust:
+the four float environments carry `^` (`floatToElement`), as do float.sty's
+custom floats (bashful's `program`), the listings `lol` wrappers
+(`\lstinputlisting` in minipage > quote, listings.sty.ltxml:239 identical),
+rotating's sideways floats and subfloat's, so the float lands beside the quote
+in the enclosing `ltx:para` (or inside the enclosing box). Guard:
+`perfect_kernel_batch54::floats_escape_block_containers`.

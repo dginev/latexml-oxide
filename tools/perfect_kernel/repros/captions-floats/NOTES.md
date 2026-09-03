@@ -788,3 +788,175 @@ internal_vertical/restricted_horizontal for boxes; `\ifinner` checks the latter.
 change; `\ifinner` has many callers — must keep box-interior true, e.g. isorot \@rotcaption, and the guard
 mathversion/box tests). Guard: ifinner_main_galley.tex → 0 err; `\par\ifinner` at body top → OUTER;
 `\parbox{}{...\ifinner...}` → INNER (unchanged). Unblocks every \begin{paracol} doc (tidyres + others).
+
+## REPORT (1) — beamer \usetheme[opts]{name} option routing — LANDABLE SPEC (Verona, 4 err)
+Real beamer: \usetheme[opts]{names} -> \beamer@calltheme{opts}{names}{beamertheme}
+(beamerbasethemes.sty:18-23) = `\@for name:=names\do{\usepackage[{opts}]{beamertheme<name>}}` — the
+options are ordinary PACKAGE options. \ProcessOptionsBeamer (beamerbaseoptions.sty:15-24) then does
+`\edef\@tempa{}\@for\CurrentOption:=\@classoptionslist\do{\@ifundefined{KV@\@currname @\CurrentOption}{}
+{\edef\@tempa{\@tempa,\CurrentOption,}}}\edef\@tempa{\noexpand\setkeys{\@currname}{\@tempa\@ptionlist{\@currname.\@currext}}}\@tempa`
+— it EDEF-EXPANDS the passed option list + matching class options, then `\setkeys{\@currname}{…}`.
+\DeclareOptionBeamer/\beamer@dokv/\ExecuteOptionsBeamer in Rust (beamer_cls.rs:524-526) already match
+(`\define@key{\@currname}`/`\setkeys{\@currname}`).
+
+Rust gaps (2): (i) \usetheme[]{} (beamer_cls.rs:446) + the four siblings (\usecolortheme/\usefonttheme/
+\useinnertheme/\useoutertheme, :458/:472/:484/:494) all DROP `_opts`; (ii) \ProcessOptionsBeamer (:506) is a no-op.
+
+FIX (beamer_cls.rs): (i) replace each `\use*theme` DefPrimitive with the real \beamer@calltheme routing so
+opts flow as package options — RawTeX:
+  \def\beamer@calltheme#1#2#3{\@for\beamer@themename:=#2\do{\usepackage[{#1}]{#3\beamer@themename}}}
+  \newcommand*\usetheme[2][]{\beamer@calltheme{#1}{#2}{beamertheme}}   (+ 4 siblings with
+  beamercolortheme/beamerfonttheme/beameroutertheme/beamerinnertheme). (Rust `\usepackage[opts]{pkg}` DOES
+  populate `\@ptionlist{pkg.sty}` — VERIFIED: probe showed \@currname=beamerthemeVerona, \@currext=sty,
+  \@ptionlist=sidebar.) (ii) replace \ProcessOptionsBeamer no-op with the real beamerbaseoptions.sty:15-24
+  body ABOVE (the \edef expansion is REQUIRED — a bare `\setkeys{\@currname}{\@ptionlist{…}}` fails because
+  \setkeys does not pre-expand \@ptionlist; VERIFIED: hardcoded `\setkeys{\@currname}{sidebar}` cleared the
+  error, unexpanded \@ptionlist did not, the \edef body did).
+VERIFIED end-to-end: \usetheme[sidebar]{Verona} + both fixes -> Verona `\sidegraphics` PackageError GONE
+(the real overlay \sidegraphics installs via the already-working \newcommand<>). Residual on the Verona repro
+is a SEPARATE parked pgf "No shape named `graphic'" (tikz remember-picture named node), not this root.
+CONTROL: \usetheme{Albi} (size options via pgfkeys, no matching \DeclareOptionBeamer key) — IDENTICAL 1 err
+(\ifbeamertemplateempty, a separate landing root) WITH and WITHOUT the fix -> unchanged. Perl no-ops \usetheme
+(beamer_cls.rs:516) -> SHARED; pdflatex clean.
+Guard: verona_sidebar_option.tex -> the "Command \sidegraphics ... 'sidebar' option" PackageError is gone
+(count 'Command .sidegraphics' = 0); Albi guard (beamer_size_option_is_recorded, and an Albi convert) unchanged.
+Risk MED (touches \usetheme routing for all themes; re-verify landed beamer witnesses: Albi, size options).
+
+## REPORT (2) — \ifinner mode-model DESIGN (plan, not a patch) — SHARED
+Sites that put the galley into a mode \ifinner mis-reads:
+- Init: MODE=BOUND_MODE=`vertical` (stomach.rs:512-513; Perl Stomach.pm:48-49) — the PREAMBLE (outer).
+- \begin{document}: `begin_mode_opt("internal_vertical", true)` (sect02.rs:54) = Perl
+  `beginMode('internal_vertical',1)` (latex_constructs.pool.ltxml:314) — the BODY galley, internal_vertical
+  WITHOUT a frame (noframe=true, level 0). This is the mode paracol.sty:1996 `\ifinner\@parmoderr` trips on.
+- Boxes: \hbox/\vbox/\parbox/minipage/math call begin_mode WITH a frame (noframe=false, stomach.rs:987
+  push_stack_frame). Plain `{...}` groups call bgroup()/push_stack_frame WITHOUT begin_mode (mode unchanged).
+The MODE STRINGS do not encode tex.web §211's outer/inner SIGN: `internal_vertical` serves BOTH the main
+galley (should be OUTER vmode) AND \vbox (INNER -vmode); `horizontal` serves BOTH the main galley AND box
+interiors (should be restricted_horizontal / -hmode). VERIFIED both errors: main-galley VERTICAL (after \par)
+-> \ifinner INNER (wrong; pdflatex OUTER); box-interior HORIZONTAL (\parbox{}{\par…}) -> \ifinner OUTER
+(wrong; pdflatex INNER). Plain `{...}` group -> OUTER (correct, both). \ifinner (tex_logic.rs:110) and Perl
+(TeX_Logic.pool.ltxml:127) share the identical MODE-string regex -> SHARED; pdflatex clean.
+
+PLAN — Shape A (box-frame depth; RECOMMENDED, LOW-MED): add a "box/math nesting depth" that increments in
+begin_mode_opt when `!noframe` sets a bound (inner) mode, decrements on the matching end_mode/egroup.
+`\ifinner` := depth>0 (this IS tex.web §211's sign, encoded as a depth). Document body (noframe) -> depth 0 ->
+OUTER (fixes paracol); \parbox/minipage/\hbox/\vbox/math (frame) -> depth>0 -> INNER (fixes box-interior);
+plain `{...}` groups (no begin_mode) -> depth unchanged -> correct. Does NOT touch mode strings, box-interior
+digestion, \par/paragraph handling, or the many `ends_with("vertical")` checks (stomach.rs:1755/1793,
+leave_horizontal, FRAGMENT_YIELD) — only the \ifinner predicate (and optionally an \ifhmode/\ifvmode refine,
+but those are already string-correct). Perl parity: same counter in Stomach.pm beginMode + TeX_Logic.pool.
+The signal already half-exists: begin_mode's noframe flag + BOUND_MODE local-binding frame level
+(`is_value_bound("BOUND_MODE", Some(0))`, stomach.rs) distinguishes the body's frameless bind from a box's
+framed bind — a counter formalizes it.
+Shape B (tex.web OUTER vertical/horizontal pair): give the body distinct outer `vertical`/`horizontal`,
+reserve internal_vertical/restricted_horizontal for boxes; \ifinner checks the inner forms. Faithful to
+§211 but HIGH risk: \begin{document} mode change + audit of every internal_vertical/ends_with("vertical")
+site (paragraph build in the body relies on internal_vertical semantics; FRAGMENT_YIELD:1793 gates on it).
+NOT recommended.
+Guard (either shape): ifinner_main_galley.tex (paracol) -> 0 err; `\par\ifinner` at body top -> OUTER;
+`{\par\ifinner}` group -> OUTER; `\parbox{}{\par\ifinner}` -> INNER; nondisplay `$\ifinner$` -> INNER.
+
+## b55c suite re-run + shifted first errors
+
+### repros.sh captions-floats --bin b55c — still-RED (real bugs), rest landed
+Landed (rust 0): adjmulticol, caption_isorot_sidewaystable, caption_prepareslc, frontmatter_amsart_internals,
+frontmatter_authorgroup(_locked), frontmatter_ifbeamertemplateempty, ifinner_main_galley, mathversion_declared,
+ntheorem_thm_topsepadd, numberedblock_verbatim_capture, singleton_doclicenseThis, singleton_ifSubfilesClassLoaded,
+threeparttable_caption_captype, titlesec_titlewidth. Still RED (as expected):
+- algpseudocodex_statex_line (1) + listingline_in_minipage (1) — algpseudocodex line box (parked to the binding).
+- caption_in_parbox_float (2) — rubik parbox-in-float capture (the deferred float_to_element-vs-capture root).
+- pagelayout_picture_close (1) — pagelayout multi=picture standalone binding (deferred).
+- verona_sidebar_option (4) — the Verona ROOT is FIXED (no more \sidegraphics stub); it SHIFTED to the parked
+  pgf "No shape named `graphic'" (tikz remember-picture named node).
+Intentional control (correctly RED): mathversion_undeclared_control (1, \mathversion{wobble}).
+(jourcl has no repro file — never seeded.)
+
+### Shifted first errors — NONE is a fancyhdr binding gap (the binding is complete)
+- thesis-gwu \fancyhf: NOT fancyhdr. thesis-gwu.cls:146 `\input{required-packages}` FAILS — `required-packages.tex`
+  is NOT shipped in the TL bundle (absent from the doc root and tex/; `kpsewhich required-packages.tex` = MISSING),
+  so pdflatex `\input` would ALSO fail. Cascades to \fancyhf/\fancyfoot/\fancypagestyle/\newglossarystyle/\sodef/
+  \cftchapnumwidth undefined (s36 log:26 "Can't find … 'required-packages'"). Broken/incomplete doc → SKIP (not a
+  Rust gap). fancyhdr_sty.rs already defines \fancyhf/\fancyhead/\fancyfoot/\fancypagestyle/\headrulewidth/… and
+  ports \f@nch@initialise (RawTeX :67-100).
+- fancyhdr surface completeness audit: the binding covers the public surface; the ONLY missing public commands
+  (none reached by these docs) are — `\fancycenter[][]{}{}{}` (4.0 centered h/f; faithful = no-op, header layout);
+  `\fancyhdrsettoheight[2]` (fancyhdr.sty:438, measures a header/foot box into length #1; faithful = `\setlength{#1}\z@`
+  or a def_macro_noop of `[2]`); `\fancypagestyleassign[2]` (fancyhdr.sty:753, 4.0 internal; no-op `{}{}`). Adding
+  these completes the surface but fixes no doc in this set.
+- codebox-doc-en \pkg/\url: NOT fancyhdr. `\documentclass{ctxdoc-en}` → ctxdoc-en.cls (shipped in doc/latex/codebox/)
+  → `\LoadClass{l3doc}`. l3doc.cls:565 `\DeclareRobustCommand\pkg{\textsf}` DEFINES \pkg. Undefined \pkg means the
+  ctxdoc-en/l3doc class chain didn't load in Rust (l3doc is a heavy expl3 doc-class; ctxdoc-en is a doc-dir cls) —
+  an l3doc/class-load issue, not a binding-surface gap. Needs an l3doc-load diagnosis (own root).
+- sduthesis-demo "inputencoding utf8": PARKED — oracle=lualatex, error trace is \luatexattributedef / \ltj@@attr@zero
+  / \luafunction / \primitive (luatexja engine primitives = the parked CJK/luatexja family). Out of scope.
+
+## FAMILY — pgf LuaTeX branch \pgfutil@luaescapestring — RUST-ONLY under [luatex] (4 docs)
+Docs: neoschool, neoschool-fr, beamerthemeCelestia, beamerthemeCelestia-fr (the \IfFontExistsTF witnesses;
+after that fix they progress to this error). Repro: pgf_luatex_graphdrawing.tex (RED [luatex]).
+Engine test: pgfutil-common.tex:867-882 `\let\pgfutil@ifluatex\iffalse ... \ifx\csname directlua\endcsname
+\relax\else\let\pgfutil@ifluatex\iftrue\fi`, then `\pgfutil@ifluatex \let\pgfutil@directlua\directlua
+\pgfutil@directlua{tex.enableprimitives('pgfutil@',{'luaescapestring'})} \else \def\pgfutil@directlua#1{}
+\def\pgfutil@luaescapestring#1{}\fi`. Under [luatex] \directlua is DEFINED (=\lx@directlua, engine identity)
+-> LUATEX branch -> the lua `tex.enableprimitives` that would define \pgfutil@luaescapestring is NOT evaluated
+(LaTeXML no-ops \directlua) -> \pgfutil@luaescapestring stays undefined. Reached by pgf's luamath/graphdrawing
+libraries (pgflibrarygraphdrawing.code.tex:146; pgflibraryluamath.code.tex:126) — neoschool.cls:1481
+`\usetikzlibrary{graphs,graphdrawing,...}` + a `\graph[..layout]`. In REAL lualatex the Lua runs and defines
+it -> clean; RUST-ONLY (Lua unavailable). Rust pgfutil_common_tex.rs (11 lines) just
+InputDefinitions('pgfutil-common', noltxml) — raw-loads the .tex, so the luatex branch runs and leaves it undefined.
+FIX (faithful, keeps the luatex identity — do NOT touch \directlua/\luatexversion): in pgfutil_common_tex.rs,
+AFTER the InputDefinitions, add pgf's OWN non-lua fallback:
+  RawTeX!(r"\def\pgfutil@luaescapestring#1{}");   // = pgfutil-common.tex:882 / pgflibraryluamath.code.tex:68
+This defines the lua entry point as its TeX equivalent for ALL pgf lua paths (shellescape, luamath, graphdrawing).
+VALIDATED: gd_use [luatex] 2 err -> 0 err + 2 <svg:svg> (the \graph renders as plain tikz; the lua layout is
+dropped, which is the expected LaTeXML limitation, not an error). Siblings `\pgfmath@usepgfmathlua`/
+`\pgfmathsetseed`/`\pgf@sys@luaimage…` are the same lua-branch pattern but are NOT reached by these witnesses
+(the single def clears all 4); add the same TeX no-op only if a future witness reaches them.
+CONTROL: under pdflatex preload \directlua is UNDEF, so pgf's `\else` branch already `\def`s
+\pgfutil@luaescapestring#1{} identically -> the binding's def is a redundant same no-op -> pdflatex unchanged.
+Guard: pgf_luatex_graphdrawing.tex ([luatex]) -> 0 errors AND an <svg:svg>; pdflatex-preload control unchanged.
+Risk LOW. Gain 4 docs.
+
+## s36 second-error + full-log mining — document-model/frontmatter/float/caption tally
+
+Docs (log files) per message class (of 2374 logs), MY lane:
+| docs | class | status |
+|------|-------|--------|
+| 153 | "Attempt to close" (group/box/mode) | KERNEL-ALIGNMENT lane (not mine) |
+|  52 | "isn't allowed in" (all) | see breakdown |
+|  22 | "Did not find a block-like" (_CaptureBlock_ repackage) | capture-box family (partly covered) |
+|  12 | malformed:ltx:caption / :toccaption | isorot/rubik caption-in-block (root 2, deferred) |
+|  12 | malformed:ltx:_CaptureBlock_ close | B close rule (LANDED 55c) |
+|  10 | @captype (caption context) | ⊂ caption-outside-float |
+|   8 | "Use of \caption outside any known float" | TOP UNCOVERED (7 beyond threeparttablex) |
+|   7 | malformed:ltx:section | screenplay + section-in-block (mode-frame/deferred) |
+|   4 | malformed:ltx:picture | pagelayout (deferred) |
+|   2 | float/figure isn't allowed in ltx:quote | UNCOVERED, coherent |
+| "isn't allowed in" pairs (occurrences): XMTok-in-item 893(2 docs), XMTok-in-abstract 67(1), toccaption/caption-in-block 64/64(12), float-in-quote 10(2), section-in-block 8(1), bibliography-in-block 5(xebaposter).
+
+### TOP class #1 — "Use of \caption outside any known float" — 8 docs — HETEROGENEOUS (not one root)
+Docs: achemso-demo, biblatex-gb7714-2015, frankenstein/lips, jmlr/pmlr-sample, oup-authoring-template,
+storecmd-guide, threeparttablex (LANDED), xtufts/sample-handout. The common caption contexts ALL WORK in
+b55c (verified minimally: caption in table / in {..}group-in-table / in minipage-in-table / longtable /
+ltablex-tabularx / float.sty \newfloat — all 0 err). Each remaining doc reaches the error via a
+class/doc-SPECIFIC float mechanism: achemso's `scheme` is an expl3 custom float (achemso.sty has no
+newfloat/@captype — the expl3 float declaration doesn't set \@captype in LaTeXML); storecmd/oup are
+Elsevier/journal-class tabular contexts. NOT a single root — each needs its own float-declaration
+investigation (per-doc). Reproduced: `\documentclass{achemso}` + `\begin{scheme}\caption{}` → 2 err.
+
+### TOP class #2 — "<ltx:figure> isn't allowed in <ltx:quote>" — 2 docs — COHERENT — ROOT-CAUSED
+Docs: isorot/rotman (the sidewaysfigure/figure-in-quote example), bashful/bashful. Repro: float_in_quote.tex.
+A figure/table float built inside a `quote` (or any Block container: list/box) lands in <ltx:quote>. Schema
+(LaTeXML.model): Block:=(…,ltx:quote) excludes floats, but Para:=(…,ltx:figure,ltx:float,…,ltx:table) — the
+quote's ancestor <ltx:para> CAN hold the float. Real LaTeX floats ESCAPE their environment to the page.
+Rust figure/table ctors (latex_engine/src/latex_constructs/sect09.rs:212/224/234/242) emit "<ltx:figure …>"
+/ "<ltx:table …>" with NO `^` float-up marker; Perl (latex_constructs.pool.ltxml:3394) is identical → the
+float is placed in the quote → schema error. SHARED (Perl builds the same <quote><figure> tree + same error);
+pdflatex clean → surpass.
+FIX: add the `^` (floatToElement, single caret = move-without-close) prefix to the figure/table/float
+DefEnvironment patterns — sect09.rs:212 "^<ltx:figure …>", :224 (figure*), :234/:242 (table/table*), and the
+float.sty `{float}` ctor; Perl parity in latex_constructs.pool.ltxml:3394+. floatToElement('ltx:figure') from
+inside <ltx:quote> walks quote(no)→para(yes) and relocates the float to the para (float-escape), then restores.
+Transparent for the normal case (a top-level figure's para already accepts it → no move). Guard:
+float_in_quote.tex → 0 err AND `//ltx:para/ltx:figure` (figure is a child of para, NOT of quote); CONTROL: a
+plain top-level `\begin{figure}\caption{}\end{figure}` → unchanged (0 err, figure in para). Risk MED (touches
+the core figure/table ctor — re-verify a figure-heavy doc's structure). Gain 2 docs + any float-in-list/box.

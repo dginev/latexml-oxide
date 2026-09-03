@@ -45,7 +45,7 @@ LoadDefinitions!({
   // (single-level subfigure with manual \subfigure marks) still works
   // with the basic before/after_float hooks added here.
   DefEnvironment!("{subfigures}",
-    "<ltx:figure xml:id='#id' inlist='#inlist'>#tags#body</ltx:figure>",
+    "^<ltx:figure xml:id='#id' inlist='#inlist'>#tags#body</ltx:figure>",
     before_digest => {
       Let!("\\themainfigure", "\\thefigure");
       before_float("figure", None);
@@ -54,7 +54,7 @@ LoadDefinitions!({
     mode => "internal_vertical"
   );
   DefEnvironment!("{subtables}",
-    "<ltx:table xml:id='#id' inlist='#inlist'>#tags#body</ltx:table>",
+    "^<ltx:table xml:id='#id' inlist='#inlist'>#tags#body</ltx:table>",
     before_digest => {
       Let!("\\themaintable", "\\thetable");
       before_float("table", None);

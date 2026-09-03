@@ -1,0 +1,20 @@
+% witness: isorot/rotman, bashful/bashful (2 docs) — s36 second-error/log mining.
+% oracle: pdflatex CLEAN (floats escape their container to the page).
+% engines: pdflatex.
+% class: SHARED — Perl figure ctor (latex_constructs.pool.ltxml:3394) has no float-up either;
+%   Perl builds the identical <quote><figure> tree and emits the same error.
+% expect: 0 Error; the <ltx:figure> relocates OUT of <ltx:quote> to the enclosing <ltx:para>.
+% status: RED with b55c (Error:malformed:ltx:figure <ltx:figure> isn't allowed in <ltx:quote>).
+% mechanism: a figure/table float built inside a quote (or any Block container) lands in
+%   <ltx:quote>; the schema (LaTeXML.model) has Block:=(…,ltx:quote) but Para:=(…,ltx:figure,
+%   ltx:float,…,ltx:table) — the quote's ancestor <ltx:para> CAN hold the float, the quote cannot.
+%   Rust figure/table ctors (sect09.rs:212/224/234/242) emit "<ltx:figure …>" with NO ^ float-up
+%   marker, so the float is not relocated. Real LaTeX floats escape their environment.
+\documentclass{article}
+\begin{document}
+\begin{quote}
+\begin{figure}
+\caption{X}
+\end{figure}
+\end{quote}
+\end{document}

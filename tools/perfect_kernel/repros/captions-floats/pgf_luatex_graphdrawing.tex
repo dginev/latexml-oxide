@@ -1,0 +1,21 @@
+% witness: neoschool, neoschool-fr, beamerthemeCelestia, beamerthemeCelestia-fr (4 docs)
+%   — the \IfFontExistsTF witnesses that now progress to \pgfutil@luaescapestring.
+% preload: [rawstyles,rawclasses,luatex] (these docs are oracle=lualatex).
+% class: RUST-ONLY under the luatex profile (real lualatex runs the Lua; LaTeXML no-ops \directlua).
+% expect: 0 Error + an <svg:svg> (the graph picture renders as plain tikz; the lua layout is dropped).
+% status: RED with b55c ([luatex] -> \pgfutil@luaescapestring undefined).
+% mechanism: pgfutil-common.tex:871 `\ifx\csname directlua\endcsname\relax` — under [luatex] \directlua
+%   is DEFINED, so pgf takes the LUATEX branch (:877-880) `\pgfutil@directlua{tex.enableprimitives(
+%   'pgfutil@',{'luaescapestring'})}`, which relies on Lua (tex.enableprimitives) to define
+%   \pgfutil@luaescapestring. LaTeXML no-ops \directlua (Lua not evaluated) -> it stays undefined; the pgf
+%   luamath/graphdrawing libraries (neoschool.cls:1481 \usetikzlibrary{graphdrawing}) then reach it
+%   (pgflibrarygraphdrawing.code.tex:146; a `\graph[..layout]` triggers the lua interface). pgf's OWN non-lua
+%   fallback is `\def\pgfutil@luaescapestring#1{}` (pgfutil-common.tex:882, pgflibraryluamath.code.tex:68) —
+%   taken under pdflatex (\directlua UNDEF) but NOT under [luatex].
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{graphdrawing,graphs}
+\usegdlibrary{trees}
+\begin{document}
+\tikz \graph[tree layout] { a -> {b, c} };
+\end{document}

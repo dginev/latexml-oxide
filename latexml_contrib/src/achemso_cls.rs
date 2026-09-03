@@ -27,6 +27,18 @@ LoadDefinitions!({
   // moot in the XML/HTML paradigm, but the CS must exist. Witness 2407.02650
   // (`\geometry{voffset=10pt,...}` → undefined without this; Perl: 0 errors).
   RequirePackage!("geometry");
+  // achemso.cls:311 `\RequirePackage{...,float,...}` and :1022-1030 — the
+  // class's own float types; without them `\begin{scheme}` is undefined and
+  // its `\caption` cascades into "outside any known float" (achemso-demo;
+  // Perl raw-loads the class). Guard:
+  // `perfect_kernel_batch54::achemso_declares_its_scheme_floats`.
+  RequirePackage!("float");
+  RawTeX!(
+    r"\newfloat{scheme}{htbp}{los}\floatname{scheme}{Scheme}
+\newfloat{chart}{htbp}{loc}\floatname{chart}{Chart}
+\newfloat{graph}{htbp}{loh}\floatname{graph}{Graph}
+\newcommand*\schemename{Scheme}\newcommand*\chartname{Chart}\newcommand*\graphname{Graph}"
+  );
 
   // ACS authorship primitives — preserve author content as ltx:note
   // frontmatter entries.

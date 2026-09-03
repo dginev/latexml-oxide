@@ -209,8 +209,16 @@ pub(crate) fn load() -> Result<()> {
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
+  // The floats carry the `^` float-up marker: a float built inside a Block
+  // container (`quote`, a list item, a box) escapes to the nearest ancestor
+  // that may hold it (the enclosing `ltx:para`; `float_to_element`, Perl
+  // `floatToElement`), as a LaTeX float escapes its environment to the page.
+  // Without it the float sat in `<ltx:quote>` ("`<ltx:figure>` isn't allowed
+  // in `<ltx:quote>`"; isorot/rotman, bashful; Perl pool:3394 identical,
+  // pdflatex clean). A top-level float's para already accepts it: no move.
+  // Guard: `perfect_kernel_batch54::floats_escape_block_containers`.
   DefEnvironment!("{figure}[]",
-    "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+    "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
     #tags\
     #body\
     </ltx:figure>",
@@ -221,7 +229,7 @@ pub(crate) fn load() -> Result<()> {
   );
   // Perl: latex_constructs.pool.ltxml line 3460
   DefEnvironment!("{figure*}[]",
-    "<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
+    "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
     #tags\
     #body\
     </ltx:figure>",
@@ -232,14 +240,14 @@ pub(crate) fn load() -> Result<()> {
   );
   // Perl: latex_constructs.pool.ltxml L3469-3477
   DefEnvironment!("{table}[]",
-    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
+    "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
     before_digest => { before_float("table", None); },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
   // Perl: latex_constructs.pool.ltxml line 3478
   DefEnvironment!("{table*}[]",
-    "<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
+    "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')>#tags#body</ltx:table>",
     properties   => { stored_map!("layout" => "vertical") },
     before_digest => { before_float_ex("table", None, true); }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },

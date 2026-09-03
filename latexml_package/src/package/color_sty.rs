@@ -239,6 +239,11 @@ pub fn lookup_color_obj(name: &str) -> Color {
 pub fn lookup_color(name: &str) -> String { lookup_color_obj(name).to_attribute() }
 
 LoadDefinitions!({
+  // color.sty:26 `\newif\ifcolors@ \colors@true` (the `monochrome` option
+  // clears it): raw packages test it (beamer themes under the luatex profile:
+  // neoschool, beamerthemeCelestia). The binding stands in for color.sty.
+  RawTeX!(r"\newif\ifcolors@ \colors@true");
+
   //======================================================================
   // Ignorable options (mostly drivers)
   for option in &[

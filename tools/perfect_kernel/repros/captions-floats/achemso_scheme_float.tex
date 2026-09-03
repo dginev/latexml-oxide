@@ -1,0 +1,23 @@
+% witness: achemso-demo (\caption outside float cluster) — first_errors36.tsv / s36 residue.
+% oracle: pdflatex CLEAN. engines: pdflatex.
+% class: RUST-ONLY — Perl raw-loads achemso.cls, runs \newfloat{scheme}, emits
+%   <ltx:float class="ltx_float_scheme"> with the caption (Perl's only error is an
+%   unrelated \ifNAT@super). The Rust achemso_cls.rs STUB omits the float declarations.
+% expect: 0 Error; the scheme float renders with its <ltx:caption>.
+% status: RED with b55c — "{scheme} The environment {scheme} is not defined" then the
+%   cascade "Use of \caption outside any known float".
+% mechanism: achemso.cls:309-311 \RequirePackage{caption,float,...}; :1022-1027
+%   \newfloat{scheme}{htbp}{los}\floatname{scheme}{Scheme} (+ chart, graph). The Rust
+%   binding latexml_contrib/src/achemso_cls.rs is a STUB (LoadClass!("OmniBus") + curated
+%   requires) that NEVER runs those \newfloat lines -> {scheme} undefined -> \caption inside
+%   has no \@captype -> \@@generic@caption "outside any known float". NOT the ^ float-up marker
+%   and NOT the \@captype path: the bound \newfloat (float_sty.rs) already sets \@captype (a
+%   standalone \usepackage{float}\newfloat{scheme}+\caption is 0 err) — the root is the missing
+%   float DECLARATION in the achemso stub.
+\documentclass{achemso}
+\author{A}\title{T}
+\begin{document}
+\begin{scheme}
+\caption{An example scheme}
+\end{scheme}
+\end{document}

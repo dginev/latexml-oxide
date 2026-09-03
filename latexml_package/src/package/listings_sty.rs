@@ -2538,9 +2538,12 @@ LoadDefinitions!({
     enter_horizontal => true,
     reversion => "\\lstinline{#1}");
 
-  // Numbered float form
+  // Numbered float form. `^` float-up as the kernel floats (KPE #190): a
+  // `\lstinputlisting` (always a `lol` float, Perl listings.sty.ltxml:131)
+  // inside `quote` escapes to the nearest float-bearing container (bashful:
+  // minipage > quote > listing).
   DefConstructor!("\\@listings {}",
-    "<ltx:float inlist='lol' xml:id='#id' class='ltx_lstlisting'>\
+    "^<ltx:float inlist='lol' xml:id='#id' class='ltx_lstlisting'>\
      #tags\
      #1\
      </ltx:float>",
@@ -2554,7 +2557,7 @@ LoadDefinitions!({
 
   // Unnumbered float form (with caption)
   DefConstructor!("\\@@listings {}",
-    "<ltx:float xml:id='#id' class='ltx_lstlisting'>\
+    "^<ltx:float xml:id='#id' class='ltx_lstlisting'>\
      #tags\
      #1\
      </ltx:float>",

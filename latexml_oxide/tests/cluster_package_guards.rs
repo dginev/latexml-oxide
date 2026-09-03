@@ -11724,6 +11724,90 @@ $\ifinner I4\else O4\fi$ \[\ifinner I5\else O5\fi\]
     }
   }
 
+  /// Under the `[luatex]` profile pgf takes its LuaTeX branch (keyed on
+  /// `\directlua`) and expects Lua to define `\pgfutil@luaescapestring`; the
+  /// binding supplies pgf's own TeX fallback (neoschool, beamerthemeCelestia).
+  #[test]
+  fn pgf_lua_entry_points_have_their_tex_fallback() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{graphdrawing,graphs}
+\usegdlibrary{trees}
+\begin{document}
+\tikz \graph[tree layout] { a -> {b, c} };
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:svg") || xml.contains("<svg"), "{xml}");
+  }
+
+  /// A float inside a Block container escapes to the enclosing `ltx:para`
+  /// (the `^` float-up marker), as LaTeX floats escape their environment
+  /// (isorot/rotman, bashful; Perl placed it in the quote).
+  #[test]
+  fn floats_escape_block_containers() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{quote}
+\begin{figure}
+\caption{X}
+\end{figure}
+\end{quote}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<figure") && !xml.contains("<quote>\n    <figure"),
+      "{xml}"
+    );
+    let plain = r"\documentclass{article}\begin{document}
+Text.
+\begin{figure}\caption{Y}\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(plain, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<figure"), "{xml}");
+    // float.sty custom floats (bashful's `program`) go the same way.
+    let custom = r"\documentclass{article}\usepackage{float}
+\newfloat{program}{tbp}{lop}
+\begin{document}
+\begin{itemize}\item
+\begin{program}\caption{Z}\end{program}
+\end{itemize}
+\end{document}
+";
+    let (stderr, xml) = convert(custom, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<float") && !xml.contains("<item>\n      <float"),
+      "{xml}"
+    );
+  }
+
+  /// achemso.cls:1022-1030 declares `scheme`/`chart`/`graph` floats through
+  /// float.sty; the binding must too, or `\caption` inside `scheme` cascades
+  /// (achemso-demo; RUST-ONLY, Perl raw-loads the class).
+  #[test]
+  fn achemso_declares_its_scheme_floats() {
+    let tex = r"\documentclass{achemso}
+\author{A}\title{T}
+\begin{document}
+\begin{scheme}
+\caption{An example scheme}
+\end{scheme}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("ltx_float_scheme") && xml.contains("<caption>"),
+      "{xml}"
+    );
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the
