@@ -1,0 +1,10 @@
+% witness: beautynote — sweep36 (6 errs). oracle: pdflatex CLEAN.
+% class: binding gap — doclicense_sty.rs omits \doclicenseThis.
+% status: RED with b54x (\doclicenseThis undefined).
+% mechanism: doclicense.sty:222 \newcommand{\doclicenseThis}{...center/minipage with
+%   \doclicenseImage + license text...} — LAYOUT. beautynote loads doclicense and calls it.
+\documentclass{article}
+\usepackage[type={CC},modifier={by-sa},version={4.0}]{doclicense}
+\begin{document}
+\doclicenseThis
+\end{document}

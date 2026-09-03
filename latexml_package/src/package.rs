@@ -395,6 +395,7 @@ pub mod scalefnt_sty;
 pub mod scalerel_sty;
 pub mod sectsty_sty;
 pub mod setspace_sty;
+pub mod shapepar_sty;
 pub mod shellesc_sty;
 pub mod showexpl_sty;
 pub mod showkeys_sty;

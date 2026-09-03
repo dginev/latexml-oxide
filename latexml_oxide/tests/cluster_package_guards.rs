@@ -11385,9 +11385,9 @@ program test
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    // the raw `\hrule` lands as a rule row between the two data rows
+    // the raw full-width `\hrule \@height…` is the next row's top border
     assert!(
-      xml.contains(">a") && xml.contains(">b") && xml.contains("<rule"),
+      xml.contains(">a") && xml.contains(">b") && xml.contains(r#"border="t""#),
       "{xml}"
     );
     let boldline = r"\documentclass{article}\usepackage{boldline}
@@ -11536,7 +11536,10 @@ c & d \\
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<XMArray"), "{xml}");
-    assert!(xml.contains("←") || xml.contains("&#8592;") || xml.contains("leftarrow"), "{xml}");
+    assert!(
+      xml.contains("←") || xml.contains("&#8592;") || xml.contains("leftarrow"),
+      "{xml}"
+    );
   }
 
   /// latex.ltx `\marginpar` is a macro (`\@ifnextchar[\@xmpar\@ympar`); a
@@ -11554,7 +11557,7 @@ Text\marginpar{Note}\marginpar[L]{R} more.
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert_eq!(xml.matches("<note role=\"margin\"").count(), 2, "{xml}");
+    assert_eq!(xml.matches(r#"role="margin""#).count(), 2, "{xml}");
     assert!(xml.contains("ltx_marginpar_left"), "{xml}");
   }
 
