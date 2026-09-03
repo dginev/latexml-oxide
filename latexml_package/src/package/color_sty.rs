@@ -377,6 +377,14 @@ LoadDefinitions!({
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
       reversion_tokens, SymHashMap::default()))])
   });
+  // xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`:
+  // the named-color branch `\@declaredcolor#1` (:792) and the modelled branch
+  // `\@undeclaredcolor[#1]#2` (:764) are called DIRECTLY by fancyqr.sty:20-22
+  // (`\@declaredcolor{tl!50!br}`); both engines bind `\color` monolithically
+  // and lacked them (KPE #177). Guard:
+  // `perfect_kernel_batch54::color_switch_branches_are_defined`.
+  DefMacro!("\\@declaredcolor{}", "\\color{#1}");
+  DefMacro!("\\@undeclaredcolor[]{}", "\\color[#1]{#2}");
 
   // \pagecolor[model]{spec}
   // Perl: returns Box(undef,undef,undef, Invocation(\pagecolor, $model, $spec))

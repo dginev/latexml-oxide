@@ -401,7 +401,9 @@ LoadDefinitions!({
     // short rows are padded — so a margin of fallback columns is inert on a
     // well-formed table and absorbs a ragged one. Guard:
     // `perfect_kernel_batch54::tblr_row_wider_than_the_colspec_is_tolerated`.
-    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}*{{16}}{{c}}}}"))))
+    // The margin continues the LAST column's alignment, as tabularray does.
+    let last = cols.trim_end().chars().last().filter(|c| c.is_ascii_alphabetic()).unwrap_or('c');
+    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}*{{16}}{{{last}}}}}"))))
   });
   DefMacro!("\\tblr", "\\lx@tblr@env{tblr}");
   DefMacro!("\\endtblr", "\\endtabular");

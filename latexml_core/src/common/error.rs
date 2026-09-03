@@ -1176,16 +1176,6 @@ impl From<ParseFloatError> for Error {
   }
 }
 
-impl From<marpa::error::Error> for Error {
-  fn from(err: marpa::error::Error) -> Error {
-    Error {
-      target:   ErrorTarget::MathParser,
-      category: ErrorCategory::FailedParse,
-      message:  err.to_string(),
-    }
-  }
-}
-
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Progress Reporting
 //**********************************************************************

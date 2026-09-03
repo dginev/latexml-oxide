@@ -2302,9 +2302,20 @@ impl MathParser {
       }
     } else {
       // Legacy path: Tree iteration with the 6 convergence caps.
+      // The marpa error is converted HERE (not by a `From` impl in
+      // latexml_core): the only marpa reference core had was that impl, and
+      // dropping it frees core/engine/package/contrib/post/codegen from
+      // compiling libmarpa when built or tested in isolation (WASM audit
+      // phase 4.0). The orphan rule forbids the impl in this crate, so the
+      // core `Error` is constructed directly.
       let parse_result = self
         .engine
-        .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+        .run_recognizer(ByteScanner::new(Cursor::new(input)))
+        .map_err(|e| Error {
+          target:   latexml_core::ErrorTarget::MathParser,
+          category: latexml_core::ErrorCategory::FailedParse,
+          message:  e.to_string(),
+        })?;
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }

@@ -570,7 +570,7 @@ LoadDefinitions!({
         continue;
       }
       if skip_depth == 0 {
-        kept.push(t.clone());
+        kept.push(*t);
       }
       i += 1;
     }

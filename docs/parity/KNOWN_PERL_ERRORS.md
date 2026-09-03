@@ -5616,3 +5616,13 @@ binding (nmbib-sample 22). Trigger: `\usepackage{nmbib}…\citeall{key}`.
 Rust: an nmbib binding raw-loads the style and emulates `\citeall` as
 `\citet*`. Guard: `perfect_kernel_batch54::nmbib_citeall_is_a_cite`.
 
+## 177. `\@declaredcolor`/`\@undeclaredcolor` are undefined (Rust fixes)
+
+xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`;
+fancyqr.sty:20-22 calls the named-color branch `\@declaredcolor{tl!50!br}`
+directly. Both engines bind `\color` as one primitive (`color.sty.ltxml`,
+`color_sty.rs`) and lack the branches ("`\@declaredcolor` undefined";
+fancyqr). Trigger: `\makeatletter{\@declaredcolor{red}x}`. Rust: both
+branches defined over `\color`. Guard:
+`perfect_kernel_batch54::color_switch_branches_are_defined`.
+

@@ -10933,4 +10933,22 @@ $\begin{pNiceMatrix}
     assert!(xml.contains("[][]"), "{xml}");
     assert!(xml.contains("First Author"), "{xml}");
   }
+
+  /// xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`;
+  /// fancyqr.sty:20-22 calls the named-color branch directly. Both engines
+  /// bind `\color` monolithically and lacked the branches (KPE #177).
+  #[test]
+  fn color_switch_branches_are_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\definecolor{tl}{HTML}{FF0000}\definecolor{br}{HTML}{3D3A38}
+\begin{document}
+\makeatletter{\@declaredcolor{tl!50!br}Hello} {\@undeclaredcolor[rgb]{0,0,1}Blue}\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"color="#9E1D1C">Hello"##), "{xml}");
+    assert!(xml.contains(r##"color="#0000FF">Blue"##), "{xml}");
+  }
 }
