@@ -1,0 +1,19 @@
+% witness: greek-fontenc/char-list-alphabeta (char-list-alphabeta.tex:88-103), greek-fontenc/char-list
+% oracle:  pdflatex 0 errors (verified 2026-09-03); doc oracle-engine lualatex
+% engines: rust=1 perl=1 (2026-09-03) — SHARED (identical \patch undefined)
+% expect:  0 errors; abstract body renders "patch-level" text, no \patch undefined
+% mechanism: LaTeXML's \abstract COMMAND form grabs the whole {...} as one pre-tokenized
+%   argument, so \patch@level inside is tokenized under @=OTHER (catcode 12) and splits into
+%   \patch + @level -> \patch undefined. Real \abstract is the ENVIRONMENT begin-code, whose
+%   body is read incrementally, so the inner \makeatletter takes effect BEFORE \patch@level is
+%   scanned. P74 fix: route braced \abstract{ to the environment path (latex_constructs.rs:5728-5740).
+% status:  RED
+\documentclass{article}
+\begin{document}
+\abstract{ \noindent Test.
+\makeatletter
+patch-level \patch@level{} here.
+\makeatother
+}
+Body text.
+\end{document}

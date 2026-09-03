@@ -1,0 +1,18 @@
+% witness: amsldoc-it/itamsldoc (itamsldoc.tex:829 \cn{\\*}), amsldoc-vn/amsldoc-vi
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=2 perl=2 (2026-09-03) — SHARED (Perl: 2x "Expected a relational token")
+% expect:  0 errors; index entry keeps a catcode-12 backslash-star, no \KV@tempa/readBalanced
+% status:  RED
+% mechanism: \cn{\\*} (amsldoc.cls:114 \cs -> \@indexcs, :84 \indexcs) writes an \index
+%   entry containing the STRINGED control symbol \\* (catcode-12 `\'+`*'). process_index_phrases
+%   re-tokenizes the entry (SanitizedVerbatim, base_parameter_types.rs:567-591 + do_expand_partially),
+%   and the cat-12 `\'+`*' REFORMS into the live control sequence \* (amsldoc.cls:213 \def\*#1{...}),
+%   which is expanded and reads its #1 off the END of the entry -> readBalanced ran out of input.
+%   guit (via xkeyval->keyval) is what makes the reformed \* path reach \setkeys/\KV@tempa.
+%   P29 fix (base_parameter_types.rs:622) should recatcode reformed control symbols to OTHER.
+\documentclass{amsldoc}
+\usepackage{guit}
+\usepackage{makeidx}\makeindex
+\begin{document}
+Il comando \cn{\\*} qui.
+\end{document}

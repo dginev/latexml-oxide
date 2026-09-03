@@ -1,0 +1,6 @@
+*.latexml.log
+*.xml
+*.log
+*.pdf
+*.aux
+*.stderr
