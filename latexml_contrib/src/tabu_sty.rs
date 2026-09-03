@@ -32,6 +32,48 @@ LoadDefinitions!({
     unread(Tokens::new(toks));
   });
   DefMacro!("\\endtabu", "\\endtabularx");
+  // tabu.sty:1058-1083 `X[<coef>,<align>,<$>,<p|m|b>]`: the bracket carries a
+  // width coefficient (not modelled), an alignment letter, `$` for a MATH
+  // column (`\tabu@Xm@th`, :1066 — the cell is wrapped in `$…$`, :1081/1083)
+  // and a vertical attachment. tabularx's plain `X` dropped the bracket as
+  // "Unrecognized tabular template", so `X[1,$]` cells digested `P_1` in text
+  // mode ("Script _ can only appear in math mode", brandeis-problemset
+  // example.tex:228, 5 per table). Guard:
+  // `perfect_kernel_batch54::tabu_math_x_column`.
+  DefColumnType!("X []", sub[(opt)] {
+    let mut align = Align::Justify;
+    let mut vattach: Option<String> = None;
+    let mut math = false;
+    if let Some(opt) = opt {
+      for tok in opt.unlist() {
+        match tok.to_string().as_str() {
+          "$" => math = true,
+          "l" => align = Align::Left,
+          "c" => align = Align::Center,
+          "r" => align = Align::Right,
+          "j" => align = Align::Justify,
+          "p" => vattach = Some("top".to_string()),
+          "m" => vattach = Some("middle".to_string()),
+          "b" => vattach = Some("bottom".to_string()),
+          _ => {},
+        }
+      }
+    }
+    let (before, after) = if math {
+      (Tokens!(T_CS!("\\lx@begin@inline@math")), Tokens!(T_CS!("\\lx@end@inline@math")))
+    } else {
+      (Tokens!(T_CS!("\\vtop"), T_BEGIN!()), Tokens!(T_END!()))
+    };
+    with_current_build_template(|template_opt| {
+      template_opt.unwrap().add_column(Cell {
+        before: Some(before),
+        after: Some(after),
+        align: Some(align),
+        vattach,
+        ..Cell::default()
+      })
+    });
+  });
   DefMacro!("\\longtabu", "\\lx@longtabu@start");
   DefPrimitive!("\\lx@longtabu@start", {
     if read_keyword(&["to", "spread"])?.is_some() {

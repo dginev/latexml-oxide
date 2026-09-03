@@ -444,6 +444,14 @@ LoadDefinitions!({
   });
   ProcessOptions!();
 
+  // enumitem.sty:108-117 `\enitkv@key{prefix}{key}[default]{code}` — the
+  // package's private keyval clone, used by classes to add list keys
+  // (verifica.cls:307 `\enitkv@key{}{fattorevf}{\fattorevf{#1}}`). The keys
+  // here live in keyval's `enumitem` set, so route it to `\define@key`
+  // (the `[default]{code}` tail is read by `\define@key` itself).
+  RequirePackage!("keyval");
+  DefMacro!("\\enitkv@key{}{}", "\\define@key{enumitem}{#2}");
+
   // KeyVals
   DefKeyVal!("enumitem", "label", "UndigestedKey");
   DefKeyVal!("enumitem", "label*", "UndigestedKey");
@@ -488,9 +496,12 @@ LoadDefinitions!({
   DefKeyVal!("enumitem", "first", "UndigestedKey");
   DefKeyVal!("enumitem", "first*", "UndigestedKey");
 
+  // Each list locally resets `\makelabel` (latex.ltx:16061/16072) — see the
+  // matching note on `{itemize}` in latex_constructs.rs.
   if !has_value("enumitem@loadonly") {
     DefEnvironment!("{itemize} OptionalKeyVals:enumitem",
       "<ltx:itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:itemize>",
+      before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("itemize", "@item", kv.as_ref())
@@ -501,6 +512,7 @@ LoadDefinitions!({
     );
     DefEnvironment!("{enumerate} OptionalKeyVals:enumitem",
       "<ltx:enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:enumerate>",
+      before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("enumerate", "enum", kv.as_ref())
@@ -525,6 +537,7 @@ LoadDefinitions!({
   if has_value("enumitem@inline") {
     DefEnvironment!("{itemize*} OptionalKeyVals:enumitem",
       "<ltx:inline-itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-itemize>",
+      before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("inline@itemize", "@item", kv.as_ref())
@@ -536,6 +549,7 @@ LoadDefinitions!({
     );
     DefEnvironment!("{enumerate*} OptionalKeyVals:enumitem",
       "<ltx:inline-enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-enumerate>",
+      before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
         let kv = extract_keyvals(args);
         begin_enum_itemize("inline@enumerate", "enum", kv.as_ref())

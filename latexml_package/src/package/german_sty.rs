@@ -39,6 +39,11 @@ LoadDefinitions!({
   RawTeX!(r"\providecommand\dategerman{}");
   RawTeX!(r"\providecommand\captionsngerman{\captionsgerman}");
   RawTeX!(r"\providecommand\datengerman{\dategerman}");
+  // germanb.ldf language hooks — see the matching note in ngerman_sty.rs.
+  RawTeX!(r#"\providecommand\extrasgerman{\@ifundefined{languageshorthands}{}{\languageshorthands{german}\bbl@activate{"}}}"#);
+  RawTeX!(r#"\providecommand\noextrasgerman{\@ifundefined{bbl@deactivate}{}{\bbl@deactivate{"}}}"#);
+  RawTeX!(r"\providecommand\extrasngerman{\extrasgerman}");
+  RawTeX!(r"\providecommand\noextrasngerman{\noextrasgerman}");
 
   // The `"` shorthand dispatch (`\lx@german@dq@dispatch`), `\mdqon` and
   // `\mdqoff` live in babel_support_sty.rs: they belong to babel's German

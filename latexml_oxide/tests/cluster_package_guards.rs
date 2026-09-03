@@ -8890,4 +8890,484 @@ Text\index{foo@\string\verb\string"bar}. More text here.
     assert!(xml.contains("<indexmark"), "{xml}");
     assert!(xml.contains("More text here."), "{xml}");
   }
+
+  /// physics2 is its own package, not "physics v2": the glued-suffix fallback
+  /// loaded the physics binding (`undefined:\usephysicsmodule`, every
+  /// `\ab`/`\bra`/`\ket`; physics2 manuals, whatsnote). Registered
+  /// INTERPRETABLE, it raw-loads even without `--includestyles`.
+  #[test]
+  fn physics2_is_not_a_version_of_physics() {
+    let tex = r"\documentclass{article}
+\usepackage{physics2}
+\usephysicsmodule{ab,braket}
+\begin{document}
+\[ \ab(x) \quad \bra{\psi}\ket{\phi} \braket{\psi}{\phi} \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"name="rangle""#), "{xml}");
+    assert!(xml.contains(r#"role="MIDDLE""#), "{xml}");
+    let (stderr, _) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// beamerbaseframe.sty:91 sets `\ifbeamer@inframe` inside a frame (the BFH
+  /// theme's `\sectionpage` otherwise nests a `\frame[plain]`: DEMO-BFHBeamer
+  /// ×2), and beamerbasesection.sty:45-93's lecture layer captures the
+  /// `\AtBeginLecture` body instead of running it (beamerthemeVerona.sty:354).
+  #[test]
+  fn beamer_inframe_flag_and_lecture_layer() {
+    let tex = r"\documentclass{beamer}
+\makeatletter
+\def\sectionpage{\ifbeamer@inframe\else\frame{X}\fi}
+\AtBeginLecture{\begin{frame}[plain]\thelecture.\quad \insertlecture\end{frame}}
+\makeatother
+\begin{document}
+\section{S}
+\frame{\sectionpage}
+\begin{frame}{T}x\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<subsection").count(), 2, "{xml}");
+    assert!(!xml.contains("plain"), "{xml}");
+  }
+
+  /// `\maketitle` inside a box capture (ltx-talk.cls:515 frames, unifront,
+  /// `\parbox{…}{\maketitle}`) degrades its frontmatter to `ltx:text`
+  /// elements instead of `<ltx:title> isn't allowed in <ltx:_CaptureBlock_>`.
+  #[test]
+  fn maketitle_inside_a_box_degrades_to_text() {
+    let tex = r"\documentclass{article}
+\title[Short]{My Title}
+\author{Alice}
+\begin{document}
+\parbox{\textwidth}{\maketitle}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<title>"), "{xml}");
+    assert!(
+      xml.contains(r#"<text class="ltx_title">My Title</text>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("Alice"), "{xml}");
+  }
+
+  /// keyval.sty reads each option as a delimited argument, so a `{…}` inside
+  /// a KEY is opaque (enumitem shortlabels expanding to a box: verifica.cls
+  /// `\setlist[test]{\@risp,leftmargin=*}`, 3 mode errors × 5 docs).
+  #[test]
+  fn keyval_key_is_brace_aware() {
+    let tex = r"\documentclass{article}
+\usepackage[shortlabels,inline]{enumitem}
+\makeatletter
+\newcommand{\labelbox}[1]{\fbox{\parbox[][.2cm][c]{.2cm}{#1}}}
+\def\@risp{\labelbox{\alph*}}
+\newlist{test}{enumerate}{1}
+\setlist[test]{\@risp,leftmargin=*}
+\setlist[esercizi]{\bfseries 1.,leftmargin=*}
+\makeatother
+\begin{document}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
+  /// ngermanb.ldf:123-127 / french.ldf: the babel `\extras<lang>` hooks must
+  /// exist, or cleveref's `\cref@addto` `\edef`s a self-referential hook that
+  /// loops at `\begin{document}` (homework-demo-de/-fr, jwjournal-demo-de).
+  #[test]
+  fn babel_extras_hooks_are_defined() {
+    for lang in ["ngerman", "french"] {
+      let tex = format!(
+        r#"\documentclass[{lang}]{{article}}
+\usepackage[{lang}]{{babel}}
+\usepackage{{cleveref}}
+\begin{{document}}
+\selectlanguage{{{lang}}}
+Sch\"one Gr\"u\ss e
+\end{{document}}
+"#
+      );
+      let (stderr, xml) = convert(&tex, false);
+      assert_eq!(error_count(&stderr), 0, "{lang}: {stderr}");
+      assert!(!stderr.contains("expands into itself"), "{lang}: {stderr}");
+      assert!(xml.contains("Schöne Grüße"), "{lang}: {xml}");
+    }
+  }
+
+  /// xkeyval.tex:497/618 fetch `\XKV@rm` one step: a leftover value may name
+  /// a macro defined only when its key code finally runs (chessboard.sty:1439
+  /// `trimarea=\board`, `\board` \edef'd at :1087 — chessboard-skakps).
+  #[test]
+  fn setrmkeys_keeps_leftover_values_unexpanded() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\define@key[p]{A}{k}{\def\got{#1}}
+\setkeys*[p]{B}{k=\m}
+\def\m{VAL}
+\setrmkeys[p]{A}
+\makeatother
+\begin{document}
+[\got]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[VAL]"), "{xml}");
+  }
+
+  /// amsopn.sty:90 `\operatorfont` (glosmathtools `\sbu`, ~54× per manual).
+  #[test]
+  fn amsopn_operatorfont_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\newcommand*{\sbu}[1]{_{\operatorfont{#1}}}
+\begin{document}
+$x\sbu{i}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<XMApp>") && xml.contains("i</XMTok>"),
+      "{xml}"
+    );
+  }
+
+  /// fontspec-luatex.sty:3980 `\strong`; under the `luatex` profile
+  /// nlctuserguide.sty:177 relies on fontspec for it (glossariesbegin,
+  /// mfirstuc-manual: their only error).
+  #[test]
+  fn fontspec_strong_is_bold() {
+    let tex = r"\documentclass{article}
+\usepackage{fontspec}
+\begin{document}
+\strong{hi} there
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<text font="bold">hi</text>"#), "{xml}");
+  }
+
+  /// scalerel.sty:56 loads graphicx; :152-186 is the documented low-level
+  /// API (`\ThisStyle`, `\SavedStyle`, `\@obj`, `\LMex`); `\@obj` re-enters
+  /// math so a math-mode `\scaleobj` keeps its scripts (scalerel.tex:422-508,
+  /// hwemoji, stackengine).
+  #[test]
+  fn scalerel_low_level_api_and_math_objects() {
+    let tex = r"\documentclass{article}
+\usepackage{scalerel}
+\begin{document}
+\scalebox{2}{X}
+\(\scaleobj{2}{\sum_{i=0}^{n}}\)
+\makeatletter
+$\ThisStyle{\hbox{\@obj{\LMex=1ex \SavedStyle x}}}$
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+    assert!(xml.contains(r#"xscale="2.0""#), "{xml}");
+    assert!(xml.contains("∑") && xml.contains("SUBSCRIPTOP"), "{xml}");
+  }
+
+  /// cas-common.sty:1560 `{graphicalabstract}` (cas-sc / cas-dc).
+  #[test]
+  fn cas_graphicalabstract_is_a_note() {
+    let tex = r"\documentclass{cas-sc}
+\begin{document}
+\begin{graphicalabstract}
+Some abstract figure.
+\end{graphicalabstract}
+Body text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<note role="graphicalabstract">"#), "{xml}");
+  }
+
+  /// spanish.ldf:680 `\deactivatetilden` (gaceta.cls:1612).
+  #[test]
+  fn babel_spanish_deactivatetilden_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage[spanish]{babel}
+\makeatletter
+\deactivatetilden
+\makeatother
+\begin{document}
+Espa\~nol
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Español"), "{xml}");
+  }
+
+  /// xcolor.sty:168 `\XC@@names`, called by xcolor-patches-tmp-ltx.sty:83
+  /// under pdfmanagement's `package/xcolor/after` hook (doc-use-newpax).
+  #[test]
+  fn xcolor_names_hook_is_defined() {
+    let tex = r"\RequirePackage{pdfmanagement}
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\textcolor{red}{hello}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
+  }
+
+  /// tabu.sty:1066/1081 `X[1,$]` is a MATH column (brandeis-problemset
+  /// example.tex:228).
+  #[test]
+  fn tabu_math_x_column() {
+    let tex = r"\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu} to 0.5\linewidth{X[1,$]rr}
+P_1 & 10 & 3 \\
+P_2 & 1 & 1 \\
+\end{tabu}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("SUBSCRIPTOP"), "{xml}");
+    assert!(xml.contains("<td") && xml.contains(">10</td>"), "{xml}");
+  }
+
+  /// biblatex.sty defines its `\if<test>` commands as BRANCH-SELECTING
+  /// macros (`\iffieldundef{f}{true}{false}`, :6205), not TeX conditionals;
+  /// plus the round-3 declarations (`\DeclareLabeltitle`, `\letbibmacro`,
+  /// `\uspunctuation`, `\footfullcite`).
+  #[test]
+  fn biblatex_tests_are_branch_macros() {
+    let tex = r"\documentclass{article}
+\usepackage{biblatex}
+\DeclareLabeltitle{\field{title}}
+\DeclareLabelalphaTemplate{\labelelement{\field{label}}}
+\letbibmacro{foo}{bar}
+\uspunctuation
+\begin{document}
+[\iffieldundef{title}{U}{D}]
+[\ifcitation{C}{N}]
+[\ifentrytype{book}{B}{N}]
+[\ifuseauthor{A}{N}]
+[\ifhyperref{H}{N}]
+\stdpunctuation
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[U]\n[N]\n[N]\n[A]\n[H]"), "{xml}");
+  }
+
+  /// biditools.sty:792 `\bidi@ifscanable` rebuilds a macro from its
+  /// `\meaning`; a native (closure) `\begin`/`\end` must fail that `\ifx`
+  /// round-trip as in Perl, or the patched `\begin` loses its `\begingroup`
+  /// (crbox-doc, ghab-doc: "close a group that switched to mode horizontal").
+  #[test]
+  fn biditools_env_patch_leaves_begin_end_intact() {
+    let tex = r"\documentclass{article}
+\usepackage{biditools}
+\begin{document}
+\begin{tabular}{ll}a & b\\\end{tabular}
+\begin{center}x\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">a</td>") && xml.contains(">b</td>"), "{xml}");
+    assert!(xml.contains(r#"<p align="center">x</p>"#), "{xml}");
+  }
+
+  /// enumitem.sty:108 `\enitkv@key` adds a list key (verifica.cls:307);
+  /// italian.ldf:155/179 `\setISOcompliance`, `\IntelligentComma`.
+  #[test]
+  fn enitkv_key_and_babel_italian_extras() {
+    let tex = r"\documentclass{article}
+\usepackage[italian]{babel}
+\usepackage{enumitem}
+\makeatletter
+\enitkv@key{}{mykey}{\gdef\gotkey{#1}}
+\makeatother
+\setISOcompliance
+\begin{document}
+\IntelligentComma
+\begin{enumerate}[mykey=7]
+\item a
+\end{enumerate}
+[\gotkey]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[7]"), "{xml}");
+  }
+
+  /// latex.ltx:16061/16072: itemize/enumerate locally reset `\makelabel`, so
+  /// a document's global 2-argument `\makelabel` (mathfont-user-guide.tex:85)
+  /// never receives the item labels (Perl errs the same way).
+  #[test]
+  fn global_makelabel_does_not_reach_list_items() {
+    let tex = r"\documentclass{article}
+\usepackage{enumitem}
+\makeatletter
+\def\makelabel#1#2{\expandafter\gdef\csname fig@#1\endcsname{#2}}
+\makeatother
+\begin{document}
+\begin{itemize}
+\item First bullet item.
+\item Second item.
+\end{itemize}
+\begin{enumerate}[label=(\alph*)]
+\item a
+\end{enumerate}
+\makelabel{x}{y}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<item ").count(), 3, "{xml}");
+  }
+
+  /// LuaTeX manual §7.3 `\Udelimiter`/`\Uradical`/`\Umathcodenum` +
+  /// `\mathnolimitsmode`/`\scantextokens` (mathfont.sty:670,1405,2818-2925;
+  /// mathfont-symbol-list).
+  #[test]
+  fn umath_delimiter_radical_and_codenum_under_luatex_profile() {
+    let tex = r"\documentclass{article}
+\mathnolimitsmode=4\relax
+\begin{document}
+$\Umathcharnumdef\myrel=\Umathcodenum`\- \relax$
+$\Udelimiter+4+0+123\relax$
+$\Uradical+0+8730\relax{x}$
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("{") && xml.contains("<XMApp"), "{xml}");
+  }
+
+  /// beamerbasethemes.sty:25 `\usefonttheme` loads its theme file (the
+  /// uantwerpen font theme carries `\usetikzlibrary{calc}`), and
+  /// beamerbasecompatibility.sty:309 `\beamer@ifempty` (graphbox's
+  /// `\includegraphics`). Witness beamerthemeuantwerpenuserguide.
+  #[test]
+  fn beamer_font_theme_loads_and_ifempty_is_defined() {
+    let tex = r"\documentclass{beamer}
+\usepackage{tikz}
+\usepackage{graphbox}
+\usefonttheme{serif}
+\makeatletter
+\begin{document}
+\begin{frame}
+\beamer@ifempty{}{EMPTY}{FULL}
+\includegraphics[width=1cm]{example-image}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("EMPTY"), "{xml}");
+    assert!(xml.contains("<graphics"), "{xml}");
+  }
+
+  /// italian.ldf:156-171: with ISO compliance on, `\unit` is the babel-italian
+  /// unit macro (verifica example4/5 `$25\unit{m}$`).
+  #[test]
+  fn babel_italian_unit_under_iso_compliance() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\AtBeginDocument{\setISOcompliance}
+\makeatother
+\usepackage[italian]{babel}
+\begin{document}
+$25\unit{m}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"font="upright""#) || xml.contains("mathrm"),
+      "{xml}"
+    );
+  }
+
+  /// latex_constructs.pool.ltxml:2588-2605: the bare text command is the
+  /// call-time encoding dispatcher, so textalpha's `normalize-symbols`
+  /// override of `\LGR\textbetasymbol` reaches `\textbetasymbol`
+  /// (greek-fontenc char-list, hyperref-with-greek); `\UseTextSymbol` runs
+  /// the encoding-specific body inside its encoding (`\textsigma` under T1
+  /// is σ, not a Latin `s`; KPE #148 slot 0x73).
+  #[test]
+  fn provide_text_command_dispatches_on_encoding() {
+    let tex = r"\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[normalize-symbols]{textalpha}
+\begin{document}
+X\textbetasymbol Y\textthetasymbol Z \textsigma\textalpha
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>XβYϑZ σα</p>"), "{xml}");
+  }
+
+  /// ctex-heading-article.def:747 makes `\p@section` argument-taking; the
+  /// refnum formatter must close its `\csname` first (KPE #149; caspervector,
+  /// sduthesis, tabular2, inkpaper-en).
+  #[test]
+  fn ctex_argument_taking_p_macro_keeps_the_refnum() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\p@section#1{\thesection}
+\makeatother
+\begin{document}
+\section{X}
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<tag role="refnum">1</tag>"#), "{xml}");
+  }
+
+  /// latex.ltx:107-110 + :896-1058: the lualatex format surface (attributes,
+  /// catcode tables, lua-function allocators, hyphenation chars) under the
+  /// `luatex` profile — luaotfload's `\input ltluatex`, luacolor's
+  /// `\setattribute`, tuenc.def's `\newprotectedluacmd`, babel's
+  /// `\prehyphenchar` (17 lualatex-oracle manuals).
+  #[test]
+  fn ltluatex_format_surface_under_luatex_profile() {
+    let tex = r"\documentclass{article}
+\usepackage{luaotfload}
+\usepackage[TU]{fontenc}
+\usepackage{luainputenc}
+\makeatletter
+\begin{document}
+\prehyphenchar=`\- \newattribute\myattr \setattribute\myattr{7}[\the\myattr]
+\newprotectedluacmd\mycmd \newcatcodetable\mytable \catcodetable\mytable
+[\the\e@alloc@attribute@count]
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[7]"), "{xml}");
+  }
 }

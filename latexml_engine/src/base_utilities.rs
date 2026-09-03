@@ -1596,9 +1596,17 @@ LoadDefinitions!({
     "\\lx@therefnum@@{}",
     "\\expandafter\\lx@@therefnum@@\\expandafter{\\lx@counterfor{#1}}"
   );
+  // `\expandafter` before the first `\endcsname`: ctex's `\labelformat`
+  // makes `\p@section` ARGUMENT-TAKING (`\p@section#1->\CTEX@thesection`,
+  // ctex-heading-article.def:747) and patches every kernel `\p@#1\the#1`
+  // site to that shape (:770-771) — a site it cannot reach here let
+  // `\p@section` swallow the following `\csname` ("Extra \endcsname" on
+  // every heading: caspervector 23, sduthesis 36, tabular2 28, inkpaper-en;
+  // Perl Base_Utility.pool.ltxml:1028 identical, KPE #149). Guard:
+  // `perfect_kernel_batch54::ctex_argument_taking_p_macro_keeps_the_refnum`.
   DefMacro!(
     "\\lx@@therefnum@@{}",
-    "{\\normalfont\\csname p@#1\\endcsname\\csname the#1\\endcsname}"
+    "{\\normalfont\\csname p@#1\\expandafter\\endcsname\\csname the#1\\endcsname}"
   );
 
   AssignMapping!("type_tag_formatter", "refnum" => "\\lx@therefnum@@");
@@ -2690,6 +2698,17 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     .collect();
   all_keys.extend(custom_keys);
 
+  // A `\maketitle` run inside a box capture — ltx-talk.cls:515 builds every
+  // frame in `\vbox_set:Nw`, unifront likewise, `\parbox{…}{\maketitle}` —
+  // has no ancestor that can hold frontmatter (the capture wrapper admits
+  // none; the title's `\lx@frontmatter@fallback` is cleared right after, so
+  // deferring would lose it). Degrade each element to the inline shape
+  // OXIDIZED_DESIGN #182 gives a caption without a float: `ltx:text
+  // class="ltx_<name>"` holding the content, toc-only entries dropped (both
+  // engines erred `<ltx:title> isn't allowed in <ltx:_CaptureBlock_>` ×5-6:
+  // footer-text, titlepage-styling, unifront-example). Guard:
+  // `perfect_kernel_batch54::maketitle_inside_a_box_degrades_to_text`.
+  let trapped = frontmatter_trapped_in_capture(document);
   for key in &all_keys {
     if let Some(list) = frontmatter.remove(key) {
       // Dubious, but assures that frontmatter appears in text mode...
@@ -2704,7 +2723,11 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
         .into(),
       );
       for item in list {
-        insert_frontmatter_entry(document, &item)?;
+        if trapped {
+          insert_frontmatter_entry_degraded(document, &item)?;
+        } else {
+          insert_frontmatter_entry(document, &item)?;
+        }
       }
       document.expire_box_to_absorb();
     }
@@ -2973,6 +2996,68 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   document.close_element(tag)?;
   // At this time, the frontmatter element should really carry the actual literal values intended.
   // (Perl PR #2767 disables the former empty-element pruning here.)
+  Ok(())
+}
+
+/// True when the insertion point sits inside a box capture (`ltx:_Capture_`
+/// / `ltx:_CaptureBlock_`) with no frontmatter-capable ancestor below it.
+fn frontmatter_trapped_in_capture(document: &Document) -> bool {
+  let Some(mut node) = document.get_element() else {
+    return false;
+  };
+  // A capture whose model admits the frontmatter is fine: the end-of-document
+  // path (`\end{document}` above) inserts through a temporary `ltx:_Capture_`
+  // placed under `ltx:document`, and an hbox capture likewise takes any
+  // element. Trapped is a capture that cannot hold it (`ltx:_CaptureBlock_`,
+  // blocks only): open_element cannot auto-close through a capture, so the
+  // insertion would fail there.
+  loop {
+    if document::can_contain(&node, "ltx:title") {
+      return false;
+    }
+    if node.get_name().starts_with('_') {
+      return true;
+    }
+    match node.get_parent() {
+      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
+      _ => return false,
+    }
+  }
+}
+
+/// The trapped form of `insert_frontmatter_entry`: an `ltx:text` carrying the
+/// element's local name as class; toc-only entries vanish.
+fn insert_frontmatter_entry_degraded(document: &mut Document, entry: &TagData) -> Result<()> {
+  let TagData { tag, content, .. } = entry;
+  let local = tag.strip_prefix("ltx:").unwrap_or(tag);
+  if local.starts_with("toc") {
+    return Ok(());
+  }
+  let node = document.open_element(
+    "ltx:text",
+    Some(string_map!("class" => s!("ltx_{local}"))),
+    None,
+  )?;
+  for item in content {
+    match item {
+      TagContent::Entry(inner) => insert_frontmatter_entry_degraded(document, inner)?,
+      // The content's own constructors (`\lx@author` → `ltx:personname`…)
+      // are frontmatter-only too: keep its TEXT.
+      TagContent::Box(digested) => {
+        let text = digested.to_string();
+        if !text.trim().is_empty() {
+          let font = digested
+            .get_font()?
+            .or_else(lookup_font)
+            .map(|f| (*f).clone())
+            .unwrap_or_default();
+          document.open_text(&text, &font)?;
+        }
+      },
+      _ => {},
+    }
+  }
+  document.maybe_close_node(&node)?;
   Ok(())
 }
 

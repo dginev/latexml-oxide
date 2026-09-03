@@ -57,7 +57,22 @@ fn install_lang_stub(lang: &str) -> Result<()> {
   Ok(())
 }
 
-pub fn load_italian() -> Result<()> { install_lang_stub("italian") }
+pub fn load_italian() -> Result<()> {
+  install_lang_stub("italian")?;
+  // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`
+  // (verifica.cls:66-70 turns compliance on; `$25\unit{m}$`), :179-180
+  // `\IntelligentComma`/`\NoIntelligentComma` (the math-active `,` for
+  // decimals is not modelled). Witness verifica example1-5.
+  raw_tex(
+    r"\newcount\it@ISOcompliance \it@ISOcompliance=\z@
+    \providecommand\setISOcompliance{\it@ISOcompliance=\@ne}
+    \providecommand\IntelligentComma{}\providecommand\NoIntelligentComma{}
+    \AtBeginDocument{\unless\ifnum\it@ISOcompliance=\z@
+      \DeclareRobustCommand*{\bbl@it@unit}[1]{\textormath{\,\textup{#1}}{\,\mathrm{#1}}}%
+      \@ifpackageloaded{units}{}{\@ifpackageloaded{siunitx}{}{\@ifpackageloaded{SIunits}{}{\let\unit\bbl@it@unit}}}\fi}",
+  )?;
+  Ok(())
+}
 // English-family stubs. babel-english.ldf uses `\@namedef{captions
 // \CurrentOption}` etc., so each variant gets its own
 // `\captions<variant>` / `\date<variant>`. When babel dispatches a
@@ -124,6 +139,8 @@ pub fn load_spanish() -> Result<()> {
   // `\cotg` / `\tg` / `\arcsen` cluster on `\usepackage[spanish]{babel}`.
   raw_tex(
     r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}
+    % spanish.ldf:680 \deactivatetilden (the ~n shorthand is not modelled; gaceta.cls:1612)
+    \providecommand\deactivatetilden{}\providecommand\activatetilden{}
     \providecommand\sen{\mathop{\mathrm{sen}}\nolimits}
     \providecommand\tg{\mathop{\mathrm{tg}}\nolimits}
     \providecommand\cotg{\mathop{\mathrm{cotg}}\nolimits}

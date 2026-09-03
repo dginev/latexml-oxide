@@ -136,6 +136,117 @@ LoadDefinitions!({
     );
     RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // The lualatex FORMAT surface: latex.ltx:107-110 enables the LuaTeX
+    // extra primitives and :896-1058 (= ltluatex.dtx `2ekernel`) defines the
+    // allocators every LuaTeX-branch package assumes — luaotfload.sty:38
+    // `\input ltluatex` (a plain \input, bypassing the binding registry),
+    // luacolor.sty:161-166 `\setattribute`, tuenc.def:77 `\newprotectedluacmd`,
+    // babel's `\prehyphenchar`. Without them the first such name was the
+    // first error of 17 lualatex-oracle manuals (sunpath ×2, highlightx,
+    // creationboites, tkz-bernoulli, tabularray-abnt, asmeconf, minted-code,
+    // abntexto ×2, homework-jp, DEMO-BFHSciPoster, beamer-amurmaple,
+    // mathfont-symbol-list, greek-fontenc ×2, biblatex-german-legal).
+    // Guard: `perfect_kernel_batch54::ltluatex_format_surface_under_luatex_profile`.
+    //
+    // Primitives (LuaTeX manual §3.4 attributes, §3.5 catcode tables, §5.2
+    // hyphenation): `\attributedef` allocates into a private `\attribute`
+    // bank (NOT `\count`: attributes 0,1,2… would alias the page registers);
+    // the catcode-table switches scan their <number> and do nothing (catcode
+    // tables are engine state with no XML meaning); `\luadef` binds a Lua
+    // function slot the bridge cannot run → the command is a no-op.
+    DefPrimitive!("\\attributedef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+      shorthand_def(cs, "\\attribute", Number::new(0).into())
+    });
+    DefPrimitive!("\\initcatcodetable Number", sub[(_n)] {});
+    DefPrimitive!("\\savecatcodetable Number", sub[(_n)] {});
+    DefPrimitive!("\\catcodetable Number", sub[(_n)] {});
+    DefPrimitive!("\\luadef SkipSpaces Token SkipSpaces SkipMatch:= Number", sub[(cs, _n)] {
+      clear_prefixes();
+      let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+    });
+    DefRegister!("\\prehyphenchar"     => Number::new(0));
+    DefRegister!("\\posthyphenchar"    => Number::new(0));
+    DefRegister!("\\preexhyphenchar"   => Number::new(0));
+    DefRegister!("\\postexhyphenchar"  => Number::new(0));
+    DefRegister!("\\hyphenationbounds" => Number::new(0));
+    // latex.ltx:896-1058 verbatim, minus the UnicodeData.txt letter-catcode
+    // loop (:946-996, a catcode-table fill) and the two `\directlua` calls
+    // (:1038 `lua.name[…]`, :1056 `require("ltluatex")`). The four kernel
+    // tables are `\chardef`'d directly: this option runs at preload time,
+    // before the LaTeX pool defines `\e@alloc`.
+    RawTeX!(
+      r#"\ifx\e@alloc@attribute@count\@undefined
+  \countdef\e@alloc@attribute@count=258
+  \e@alloc@attribute@count=\z@
+\fi
+\def\newattribute#1{%
+  \e@alloc\attribute\attributedef
+    \e@alloc@attribute@count\m@ne\e@alloc@top#1%
+}
+\def\setattribute#1#2{#1=\numexpr#2\relax}
+\def\unsetattribute#1{#1=-"7FFFFFFF\relax}
+\ifx\e@alloc@ccodetable@count\@undefined
+  \countdef\e@alloc@ccodetable@count=259
+  \e@alloc@ccodetable@count=\z@
+\fi
+\def\newcatcodetable#1{%
+  \e@alloc\catcodetable\chardef
+    \e@alloc@ccodetable@count\m@ne{"8000}#1%
+  \initcatcodetable\allocationnumber
+}
+\chardef\catcodetable@initex=1
+\chardef\catcodetable@string=2
+\chardef\catcodetable@latex=3
+\chardef\catcodetable@atletter=4
+\e@alloc@ccodetable@count=4
+\ifx\e@alloc@luafunction@count\@undefined
+  \countdef\e@alloc@luafunction@count=260
+  \e@alloc@luafunction@count=\z@
+\fi
+\def\newluafunction{%
+  \e@alloc\luafunction\e@alloc@chardef
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\def\newluacmd{%
+  \e@alloc\luafunction\luadef
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\def\newprotectedluacmd{%
+  \e@alloc\luafunction{\protected\luadef}
+    \e@alloc@luafunction@count\m@ne\e@alloc@top
+}
+\ifx\e@alloc@whatsit@count\@undefined
+  \countdef\e@alloc@whatsit@count=261
+  \e@alloc@whatsit@count=\z@
+\fi
+\def\newwhatsit#1{%
+  \e@alloc\whatsit\e@alloc@chardef
+    \e@alloc@whatsit@count\m@ne\e@alloc@top#1%
+}
+\ifx\e@alloc@bytecode@count\@undefined
+  \countdef\e@alloc@bytecode@count=262
+  \e@alloc@bytecode@count=\z@
+\fi
+\def\newluabytecode#1{%
+  \e@alloc\luabytecode\e@alloc@chardef
+    \e@alloc@bytecode@count\m@ne\e@alloc@top#1%
+}
+\ifx\e@alloc@luachunk@count\@undefined
+  \countdef\e@alloc@luachunk@count=263
+  \e@alloc@luachunk@count=\z@
+\fi
+\def\newluachunkname#1{%
+  \e@alloc\luachunk\e@alloc@chardef
+    \e@alloc@luachunk@count\m@ne\e@alloc@top#1%
+}
+\def\now@and@everyjob#1{%
+  \everyjob\expandafter{\the\everyjob
+    #1%
+  }%
+  #1%
+}
+\attributedef\attributezero=0 "#
+    );
     // The LuaTeX parameter surface documents commonly poke once they take
     // the LuaTeX branch (LuaTeX manual §2.6/§3): line-breaking and error-
     // suppression knobs — engine tuning with no XML-content meaning.

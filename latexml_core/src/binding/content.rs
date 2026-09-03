@@ -2169,9 +2169,17 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   // Perl Package.pm L2671-2672: notex defaults to true unless the user
   // explicitly set it, or INCLUDE_STYLES is true, or noltxml was passed
   // (a raw-only load explicitly requests raw TeX).
+  // A source registered in `INTERPRETABLE_SOURCES` is one a binding (or the
+  // kernel) has vouched for as safe to interpret — that is the point of the
+  // registration — so it is raw-loaded even without `--includestyles`
+  // (physics2.sty and its `phy-*` modules, fontawesome7.sty:
+  // latex_constructs_rust_only.rs §10; the alternative was the wrong
+  // glued-suffix fallback binding). Perl gates it on `notex` too, and so
+  // misloads physics2 under its default configuration.
   if options.notex.is_none()
     && !lookup_bool("INCLUDE_STYLES")
     && !matches!(options.noltxml, Some(true))
+    && lookup_mapping("INTERPRETABLE_SOURCES", &s!("{name}.{ext}")).is_none()
   {
     options.notex = Some(true);
   }

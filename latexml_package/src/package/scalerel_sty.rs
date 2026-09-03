@@ -28,10 +28,74 @@ LoadDefinitions!({
   // (default `99in`, i.e. unbounded) is accepted and dropped. The starred form
   // yields just the scaled object; the plain `\scalerel{obj}{ref}` appends `ref`
   // afterwards (scalerel.sty L84, `\scalerelplus`).
+  // scalerel.sty:55-57 loads calc, graphicx and etoolbox — `\scalebox`,
+  // `\resizebox` and `\ifdefstrequal` are what the documented low-level API
+  // and user code (the scalerel manual :502-508) reach for. The binding
+  // dropped the dependency, so `\includegraphics`/`\scalebox` were undefined
+  // in every document that only loaded scalerel (hwemoji, stackengine).
+  RequirePackage!("calc");
+  RequirePackage!("graphicx");
+  RequirePackage!("etoolbox");
+  // scalerel.sty:58-66, 152-220 — the low-level API, verbatim: the lengths,
+  // the style scale factors, `\@obj` (re-enters MATH around the object when
+  // called from math mode, so `\scaleobj{2}{\sum_{i=0}^{n}}` keeps its
+  // scripts instead of "Script _ can only appear in math mode"), `\SavedStyle`,
+  // `\ThisStyle` and `\Isnextbyte`. `\ThisStyle` is simplified from the
+  // four-way `\mathchoice` (:172-186) to an `\ifmmode` test with the text
+  // style: the engine's `\mathchoice` digests all four branches and this
+  // binding does not honour the scale anyway. Witness scalerel.tex:422-508.
+  // Guard: `perfect_kernel_batch54::scalerel_low_level_api_and_math_objects`.
+  RawTeX!(r"\global\newlength\thesrwidth
+\global\newlength\thesrheight
+\global\newlength\srblobheight
+\global\newlength\srblobdepth
+\global\newlength\mnxsrwidth
+\newlength\LMex
+\newlength\LMpt
+\def\scriptstyleScaleFactor{.7}
+\def\scriptscriptstyleScaleFactor{.5}
+\newcommand\@obj[1]{%
+  \if T\@mmode
+    \Isnextbyte[q]{$}{#1}%
+    \if F\theresult
+      $\SavedStyle#1$%
+    \else
+      $#1$%
+    \fi
+  \else
+    $#1$%
+  \fi
+}
+\def\@mstyleD{\displaystyle}
+\def\@mstyleT{\textstyle}
+\def\@mstyleS{\scriptstyle}
+\def\@mstyles{\scriptscriptstyle}
+\def\SavedStyle{\csname @mstyle\m@switch\endcsname}
+\newcommand\ThisStyle[1]{%
+  \ifmmode\def\@mmode{T}\else\def\@mmode{F}\fi
+  \edef\m@switch{T}\LMex=1ex\relax\LMpt=1pt\relax#1}
+\let\sv@ThisStyle\ThisStyle
+\newcommand\discernmathstyle{\let\ThisStyle\sv@ThisStyle}
+\newcommand\ignoremathstyle[1][T]{%
+  \renewcommand\ThisStyle[1]{%
+    \edef\m@switch{#1}\LMex=1ex\relax\LMpt=1pt\relax
+    \ifmmode\def\@mmode{T}\else\def\@mmode{F}\fi##1}%
+}
+\newcommand\Isnextbyte[3][v]{%
+  \def\SR@Letter@A{#2}%
+  \SR@nextbyte{\SR@Letter@B}#3\relax\relax\relax
+  \ifdefstrequal{\SR@Letter@A}{\SR@Letter@B}%
+    {\edef\theresult{T}}{\edef\theresult{F}}%
+  \if q#1\else\theresult\fi
+}
+\def\SR@nextbyte#1#2#3\relax{\def#1{#2}}");
   DefMacro!("\\scalerel", "\\@ifstar\\lx@scalerel@star\\lx@scalerel@plus");
   DefMacro!("\\lx@scalerel@star []{}{}", "\\lx@scalerel@obj{#2}");
   DefMacro!("\\lx@scalerel@plus []{}{}", "\\lx@scalerel@obj{#2}#3");
-  DefConstructor!("\\lx@scalerel@obj{}",
+  // The object goes through `\ThisStyle{\@obj{…}}` (scalerel.sty:152-163) so
+  // a math-mode call re-enters math inside the text-height block.
+  DefMacro!("\\lx@scalerel@obj{}", "\\ThisStyle{\\lx@scalerel@block{\\@obj{#1}}}");
+  DefConstructor!("\\lx@scalerel@block{}",
     "<ltx:inline-block class='ltx_scalerel'>#1</ltx:inline-block>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true);
   // `\stretchrel` stretches ignoring the aspect ratio; aspect-preserving is the
@@ -52,9 +116,11 @@ LoadDefinitions!({
   //   \vstretch      {factor}{obj} obj=#2  (scalerel.sty L141)
   DefMacro!("\\scaleto []{}{}",   "\\lx@scalerel@obj{#2}");
   DefMacro!("\\stretchto []{}{}", "\\lx@scalerel@obj{#2}");
-  DefMacro!("\\scaleobj {}{}",    "\\lx@scalerel@obj{#2}");
-  DefMacro!("\\hstretch {}{}",    "\\lx@scalerel@obj{#2}");
-  DefMacro!("\\vstretch {}{}",    "\\lx@scalerel@obj{#2}");
+  // The factor forms need no measurement: scalerel.sty:138-146, verbatim
+  // (`\scalebox` carries the explicit factor into the inline-block).
+  RawTeX!(r"\newcommand\hstretch[2]{\ThisStyle{\scalebox{#1}[1]{\@obj{#2}}}}
+\newcommand\vstretch[2]{\ThisStyle{\scalebox{1}[#1]{\@obj{#2}}}}
+\newcommand\scaleobj[2]{\ThisStyle{\scalebox{#1}{\@obj{#2}}}}");
   // `\scaleleftright`/`\stretchleftright` place a scaled left and right object around
   // a reference; both are built on `\scalerel`/`\stretchrel` (scalerel.sty L129-137),
   // and the `.`-sentinel `\ifx` skips an empty side.

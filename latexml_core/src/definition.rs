@@ -84,22 +84,21 @@ impl Default for ExpansionBody {
 
 impl PartialEq for ExpansionBody {
   fn eq(&self, other: &ExpansionBody) -> bool {
-    match self {
-      ExpansionBody::Closure(self_closure) => match other {
-        ExpansionBody::Closure(other_closure) => Rc::ptr_eq(self_closure, other_closure),
-        ExpansionBody::Tokens(other_tokens) => {
-          // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint
-          // appearing as Tokens and as the original Closure. if we do this carefully, we
-          // can get the two .to_string() variants to match...
-          format!("CODE({:p})", Rc::as_ptr(self_closure)) == other_tokens.to_string()
-        },
-      },
-      ExpansionBody::Tokens(self_tks) => match other {
-        ExpansionBody::Tokens(other_tks) => self_tks == other_tks,
-        ExpansionBody::Closure(other_closure) => {
-          format!("CODE({:p})", Rc::as_ptr(other_closure)) == self_tks.to_string()
-        },
-      },
+    // A closure body is never `\ifx`-equal to a token body — OXIDIZED_DESIGN
+    // #183. Perl `Common/Object.pm:80-95` `Equals` (and this port, until 2026-09)
+    // matched the closure's `CODE(0x…)` `\meaning` text against a token body so
+    // a `\meaning`→`\scantokens`→`\ifx` round-trip "reconstructed" native
+    // macros; biditools' patchcmd clone (`\bidi@ifscanable`, biditools.sty:792)
+    // then believed it could patch the native `\begin`/`\end` and replaced
+    // them with a body whose tail was the literal text `CODE(…)` — every later
+    // environment lost its `\begingroup` ("Attempt to close a group that
+    // switched to mode horizontal", crbox-doc, ghab-doc; Perl errs the same
+    // way, KNOWN_PERL_ERRORS #147). Guard:
+    // `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+    match (self, other) {
+      (ExpansionBody::Closure(a), ExpansionBody::Closure(b)) => Rc::ptr_eq(a, b),
+      (ExpansionBody::Tokens(a), ExpansionBody::Tokens(b)) => a == b,
+      _ => false,
     }
   }
 }

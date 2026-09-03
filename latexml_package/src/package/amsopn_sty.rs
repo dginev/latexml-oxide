@@ -135,6 +135,10 @@ LoadDefinitions!({
     role => "LIMITOP", meaning => "projective-limit");
 
   DefMacro!("\\nolimits@", "\\nolimits");
+  // amsopn.sty:90 `\def\operatorfont{\operator@font}` — the user-level name
+  // (glosmathtools.sty:54 `\sbu` uses it ~54× per manual). Perl's binding
+  // omits it too: KNOWN_PERL_ERRORS #146. Witness glosmathtools en/fr.
+  DefMacro!("\\operatorfont", "\\operator@font");
   DefMacro!("\\nmlimits@", "\\displaylimits");
   DefMacro!(
     "\\qopname{}{}{}",

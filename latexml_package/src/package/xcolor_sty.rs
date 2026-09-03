@@ -577,6 +577,10 @@ LoadDefinitions!({
   DefConditional!("\\ifmaskcolors");
   DefConditional!("\\ifxglobal@");
   RawTeX!("\\globalcolorsfalse\\definecolorstrue");
+  // xcolor.sty:168 `\let\XC@@names\relax` (and `\XC@names`): the name-list
+  // hook that `xcolor-patches-tmp-ltx.sty:83` (raw-loaded by pdfmanagement's
+  // `package/xcolor/after` first-aid hook) calls last. Witness doc-use-newpax.
+  RawTeX!("\\let\\XC@names\\relax\\let\\XC@@names\\relax");
 
   // Real xcolor is a STANDALONE color package: for
   // `\documentclass[dvipsnames]{article}` + `\usepackage{xcolor}`, pdflatex

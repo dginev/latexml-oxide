@@ -115,8 +115,18 @@ LoadDefinitions!({
 
   // \setrmkeys[*][prefix]{keyset}[na]
   DefMacro!("\\setrmkeys OptionalMatch:* []{}[]", sub[(star, prefix_opt, keysets_tks, na_opt)] {    
-    // expand and delete the list of tokens we need to work on
-    let rm_tokens = do_expand(Tokens!(T_CS!("\\XKV@rm")))?;
+    // Fetch the leftover list ONE STEP, as xkeyval.tex:616-619
+    // `\expandafter\XKV@tempa\expandafter{\XKV@rm}` does: a leftover value may
+    // name a macro that is only defined by the time its key code runs
+    // (chessboard.sty:1439 `trimarea=\board` saved at load time, `\board`
+    // \edef'd at :1087, dispatched at :1110). Full expansion here raised
+    // "undefined \board" before the key code (chessboard-skakps). Guard:
+    // `perfect_kernel_batch54::setrmkeys_keeps_leftover_values_unexpanded`.
+    let rm_cs = T_CS!("\\XKV@rm");
+    let rm_tokens = match lookup_expandable(&rm_cs, None)? {
+      Some(defn) => defn.invoke(true)?,
+      None => Tokens!(),
+    };
     DefMacro!(T_CS!("\\XKV@rm"), None, Some(ExpansionBody::Tokens(Tokens!())));
 
     let mut tokens = Vec::new();

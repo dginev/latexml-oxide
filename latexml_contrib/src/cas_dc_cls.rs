@@ -137,6 +137,11 @@ LoadDefinitions!({
   DefEnvironment!("{highlights}",
     "<ltx:note role='highlights'>#body</ltx:note>",
     mode => "internal_vertical");
+  // cas-common.sty:1560 `\DeclareDocumentEnvironment{graphicalabstract}
+  // {O{Graphical~Abstract}}`; same shape as elsarticle. Witness cas-sc/cas-dc.
+  DefEnvironment!("{graphicalabstract}[]",
+    "<ltx:note role='graphicalabstract'>#body</ltx:note>",
+    mode => "internal_vertical");
   DefEnvironment!("{bio}{}",
     "<ltx:note role='biography' name='#1'>#body</ltx:note>",
     mode => "internal_vertical");

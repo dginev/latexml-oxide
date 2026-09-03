@@ -112,6 +112,7 @@ pub use crate::{
     start_appendices, tabular_bindings,
   },
   tex_box::{FramedOptions, framed_properties},
+  tex_registers::shorthand_def,
 };
 // Note: `pub use crate::package::*` was here when the prelude lived in
 // latexml_package; it doesn't apply at the engine layer (engine has zero

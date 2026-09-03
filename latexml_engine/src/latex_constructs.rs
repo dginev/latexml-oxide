@@ -6092,14 +6092,23 @@ LoadDefinitions!({
   // boxes and the vertical sizer stacks each one as a 12pt line (952pt for
   // a 16-word item — witness 2605.02240's 12000pt-tall tcolorbox frames).
   // endMode does the repacking, exactly like Perl (Stomach.pm endMode L553).
+  // latex.ltx:15859 `\list` does `\let\makelabel\@mklab` and itemize /
+  // enumerate (:16072/:16061) `\def\makelabel##1{…}` locally, so a document's
+  // GLOBAL `\makelabel` (a 2-argument figure-label helper,
+  // mathfont-user-guide.tex:85) never sees the item labels. LaTeXML's
+  // `\fnum@@itemi` = `{\makelabel{\label@itemi}}` called the user's macro
+  // (Perl too: "\textbullet should not appear between \csname and
+  // \endcsname"). Guard: `perfect_kernel_batch54::global_makelabel_does_not_reach_list_items`.
   DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
     properties => { BeginItemize!("itemize", "@item") },
     locked => true,
     mode => "internal_vertical"
   );
   DefEnvironment!("{enumerate}",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
     properties => { BeginItemize!("enumerate", "enum") },
     locked => true,
     mode => "internal_vertical"
@@ -7258,6 +7267,22 @@ LoadDefinitions!({
   // We don't want to redefine control-sequence if it already has a definition:
   // It may be that we've already defined it to expand into the above conditional.
   // But more importantly, we don't want to override a hand-written definition (if any).
+  // Perl latex_constructs.pool.ltxml:2588-2591/2602-2605: the bare command
+  // is the CALL-TIME encoding dispatcher (`\<cf@encoding>\cs`, else `\?\cs`),
+  // exactly as `\DeclareTextSymbol` below installs it. The port froze the bare
+  // command to the FIRST encoding body instead, so lgrenc.def:278's
+  // `\ProvideTextCommand{\textbetasymbol}{LGR}{\LGR@TextSymbolUnavailable…}`
+  // stuck and textalpha's later `normalize-symbols` override of
+  // `\LGR\textbetasymbol` never reached it: "character beta symbol not
+  // available" ×~200 across the greek-fontenc manuals (char-list,
+  // hyperref-with-greek, alphabeta-doc). Guard:
+  // `perfect_kernel_batch54::provide_text_command_dispatches_on_encoding`.
+  fn def_text_command_dispatcher(cs: &Token, cs_str: &str) -> Result<()> {
+    DefMacro!(*cs, None, Some(s!(
+      r"\expandafter\ifx\csname\cf@encoding\string{cs_str}\endcsname\relax\csname?\string{cs_str}\endcsname\else\csname\cf@encoding\string{cs_str}\endcsname\fi"
+    ).into()));
+    Ok(())
+  }
   //------------------------------------------------------------
   // `locked => true` on the `\Declare...`/`\Provide...` text primitives
   // below: a raw-loaded package may `\def\DeclareTextSymbol{...}` to
@@ -7279,11 +7304,10 @@ LoadDefinitions!({
     let nargs = nargs.value_of() as usize;
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
-    let ecs_args = convert_latex_args(nargs, opts.clone())?;
-    DefMacro!(ecs, ecs_args, expansion.clone());
+    let ecs_args = convert_latex_args(nargs, opts)?;
+    DefMacro!(ecs, ecs_args, expansion);
     if !IsDefined!(&cs) {    // If not already defined...
-      let cs_args = convert_latex_args(nargs, opts)?;
-      DefMacro!(cs, cs_args, expansion);
+      def_text_command_dispatcher(&cs, &cs_str)?;
     }
   }, locked => true);
 
@@ -7303,9 +7327,7 @@ LoadDefinitions!({
       DefMacro!(ecs, ecs_args, expansion.clone());
     }
     if IsDefinable!(&cs) { // If not already defined...
-      // Define base command: use encoding-specific expansion directly
-      let cs_args = convert_latex_args(nargs, opts)?;
-      DefMacro!(cs, cs_args, expansion);
+      def_text_command_dispatcher(&cs, &cs_str)?;
     }
   }, locked => true);
 
@@ -7394,9 +7416,14 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareTextSymbolDefault DefToken {}", sub[(cs, encoding)] {
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
+    // ltoutenc.dtx: `\DeclareTextSymbolDefault{\cs}{enc}` is
+    // `\DeclareTextCommandDefault{\cs}{\UseTextSymbol{enc}\cs}` — the symbol
+    // is typeset IN that encoding. Perl's bare `\<enc>\cs` alias only works
+    // for numeric-slot symbols; lgrenc.def:190 `\DeclareTextCommand{\textsigma}
+    // {LGR}{s\noboundary}` needs the LGR fontmap active or it prints a Latin
+    // `s` (textalpha under T1; witnesses arXiv:2603.02703, 2604.09141).
     let alias_cs = T_CS!(s!("\\?{cs_str}"));
-    let target_cs = T_CS!(s!("\\{encoding_str}{cs_str}"));
-    DefMacro!(alias_cs, None, Some(target_cs.into()));
+    DefMacro!(alias_cs, None, Some(s!("\\UseTextSymbol{{{encoding_str}}}{{{cs_str}}}").into()));
   }, locked => true);
 
   //------------------------------------------------------------
@@ -7521,10 +7548,34 @@ LoadDefinitions!({
   // after. Also breaks the SHARED hang 2004.08143 — a surpass-Perl reliability
   // win, using the cure KNOWN_PERL_ERRORS "text-symbol CS in a Semiverbatim
   // argument" prescribes.
-  DefMacro!(
-    "\\UseTextSymbol{}{}",
-    r"\expandafter\ifx\csname #1\string#2\endcsname\relax{\fontencoding{#1}#2}\else\csname #1\string#2\endcsname\fi"
-  );
+  // The encoding-specific command runs INSIDE its encoding (ltoutenc.dtx
+  // `\UseTextSymbol` = `{\fontencoding{#1}\selectfont #2}`): a
+  // `\DeclareTextCommand` body of plain letters (`s\noboundary`) decodes
+  // through that fontmap. Resolving the encoding-specific CS directly (not
+  // `#2`) keeps the dispatcher from re-entering (the PushbackLimit above).
+  // A glyph primitive (`\DeclareTextSymbol`) is returned BARE — a `\cite`
+  // key or hyperref option is read as Semiverbatim, where a group would not
+  // be executed (fixture encoding/textsymbol_semiverbatim, 2606.11784).
+  DefMacro!("\\UseTextSymbol{}{}", sub[(enc, cs)] {
+    let enc_str = Expand!(enc).to_string();
+    let cs_str = cs.to_string();
+    let ecs = T_CS!(s!("\\{enc_str}{cs_str}"));
+    match lookup_definition(&ecs)? {
+      Some(defn) if defn.is_expandable() => Ok(Tokens!(
+        T_BEGIN!(), T_CS!("\\fontencoding"), T_BEGIN!(), Explode!(enc_str), T_END!(),
+        T_CS!("\\selectfont"), ecs, T_END!()
+      )),
+      Some(_) => Ok(Tokens!(ecs)),
+      None => {
+        let mut toks = vec![T_BEGIN!(), T_CS!("\\fontencoding"), T_BEGIN!()];
+        toks.extend(Explode!(enc_str));
+        toks.push(T_END!());
+        toks.extend(cs.unlist());
+        toks.push(T_END!());
+        Ok(Tokens::new(toks))
+      },
+    }
+  });
   DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
@@ -12463,7 +12514,7 @@ fn caption_can_float(document: &Document, qname: &str) -> bool {
 /// float's counter label, which only a float's `ltx:caption` may carry
 /// (OXIDIZED_DESIGN #182). Lists are walked so a tag nested beside the title
 /// text is dropped without losing the text.
-fn absorb_without_tags(document: &mut Document, piece: &Digested) -> Result<()> {
+pub(crate) fn absorb_without_tags(document: &mut Document, piece: &Digested) -> Result<()> {
   match piece.data() {
     DigestedData::Whatsit(w) => {
       if w.borrow().get_definition().get_cs_name().contains("lx@tag") {

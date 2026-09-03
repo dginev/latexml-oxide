@@ -547,29 +547,34 @@ LoadDefinitions!({
 
   // Perl L502-538: Starred small matrices — \@smallmatrix@star@tmp reads alignment
   // from optional arg or falls back to mathtoolsset smallmatrix-align option.
-  // We use \ifx/#1/ pattern to only pass alignment when explicitly given.
+  // `\lx@mt@smallmatrix{spec}{align}` passes `alignment=` only when the
+  // optional argument was given. The choice is made OUTSIDE the key list:
+  // keyval keys are read unexpanded (keyval.sty `\KV@do`, keyvals.rs
+  // read_keyword_from), so a `\ifx…\fi` in key position would be the key.
+  DefMacro!("\\lx@mt@smallmatrix{}{}",
+    "\\ifx/#2/\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{\\lx@ams@matrix{#1}}{\\lx@ams@matrix{#1,alignment=#2}}");
   DefMacro!("\\csname smallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=matrix,datameaning=matrix,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=matrix,datameaning=matrix,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname psmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right),style=\\scriptsize}{#1}");
   DefMacro!("\\csname endpsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=bmatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right],style=\\scriptsize}{#1}");
   DefMacro!("\\csname endbsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Bsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=Bmatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\},style=\\scriptsize}{#1}");
   DefMacro!("\\csname endBsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=vmatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endvsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   DefMacro!("\\csname Vsmallmatrix*\\endcsname[]",
-    "\\lx@ams@matrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize,\\ifx/#1/\\else alignment=#1,\\fi}");
+    "\\lx@mt@smallmatrix{name=Vmatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|,style=\\scriptsize}{#1}");
   DefMacro!("\\csname endVsmallmatrix*\\endcsname", "\\lx@end@ams@matrix");
 
   // Non-starred small matrices
@@ -625,8 +630,11 @@ LoadDefinitions!({
   );
   // Perl: \multlined[][] → \@multlined@tmp{name=multlined,...}\@@multlined\lx@begin@alignment
   // The \ifx/#1/ pattern: if #1 is empty, /==/ is true and vattach is omitted.
+  // The key list is assembled by `\edef` BEFORE the keyval read (keys are read
+  // unexpanded, keyvals.rs read_keyword_from), so the conditionals never sit
+  // in key position.
   DefMacro!("\\multlined[][]",
-    "\\@ams@multirow@bindings{name=multlined,\\ifx/#1/\\else vattach=#1,\\fi\\ifx/#2/\\else width=#2,\\fi}\\@@multlined\\lx@begin@alignment");
+    "\\edef\\lx@mt@multlined@keys{name=multlined,\\ifx/#1/\\else vattach=#1,\\fi\\ifx/#2/\\else width=#2,\\fi}\\expandafter\\@ams@multirow@bindings\\expandafter{\\lx@mt@multlined@keys}\\@@multlined\\lx@begin@alignment");
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 

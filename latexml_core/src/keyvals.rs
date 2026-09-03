@@ -349,20 +349,59 @@ impl KeyVals {
     gullet::skip_spaces()?;
 
     let mut last_token = None;
-    while let Some(token) = gullet::read_x_token(None, false, None)? {
+    // Real keyval reads each comma item as a delimited macro argument
+    // (keyval.sty `\KV@do#1,`, tex.web §392): the KEY is taken UNEXPANDED and
+    // a `{…}` inside it is opaque. Perl's readKeyWordFrom (KeyVals.pm:273-286)
+    // and this port expanded while scanning and ended the key at the first
+    // `}`/`,`/`=` — so an enumitem shortlabel macro, verifica.cls:245-252
+    // `\setlist[test]{\@risp,leftmargin=*}` with `\@risp` = `\fbox{…}`,
+    // was unfolded into its box code, cut at an inner `}`, and the tail of
+    // the option list plus the real closing `}` landed in the stream:
+    // "Attempt to close a group that switched to mode horizontal" ×3 per
+    // document (verifica example1-5). enumitem's shortlabel path receives
+    // the key `\@risp` itself, as real enumitem does. Guard:
+    // `perfect_kernel_batch54::keyval_key_is_brace_aware`.
+    let mut depth: usize = 0;
+    while let Some(token) = gullet::read_token()? {
       // skip to the next iteration if we have a paragraph
       if token == T_CS!("\\par") {
         continue;
       }
-      // if we have one of out delimiters, we end
+      // A brace inside the key is part of it; only an END at depth 0 can be
+      // the closing delimiter.
+      match token.get_catcode() {
+        Catcode::BEGIN => {
+          depth += 1;
+          tokens.push(token);
+          continue;
+        },
+        Catcode::END if depth > 0 => {
+          depth -= 1;
+          tokens.push(token);
+          continue;
+        },
+        _ => {},
+      }
+      // if we have one of out delimiters (outside any group), we end
       if delim.contains(&token) {
         last_token = Some(token);
         break;
       }
       tokens.push(token);
     }
+    let mut tokens = Tokens::new(tokens);
+    // xkeyval.tex L140-146 `\XKV@ifcmd`: a key may be wrapped as
+    // `\savevalue{key}` / `\gsavevalue{key}`. Real xkeyval detects the leading
+    // command on the unexpanded key and strips it; here the wrapper macros
+    // (xkeyval_sty.rs) latch the pending-save flags and expand to the bare
+    // key, so only a key that STARTS with one of them is expanded.
+    if let Some(first) = tokens.unlist_ref().first()
+      && (*first == T_CS!("\\savevalue") || *first == T_CS!("\\gsavevalue"))
+    {
+      tokens = gullet::do_expand(tokens)?;
+    }
     // return the tokens and the last token
-    Ok((Tokens::new(tokens), last_token))
+    Ok((tokens, last_token))
   }
 
   //======================================================================
@@ -459,13 +498,22 @@ impl KeyVals {
     };
     let hook_missing = self.hook_missing;
 
-    // Read existing tokens from rmmacro (if defined and has meaning)
+    // Read the existing leftover list from rmmacro ONE STEP (its body), as
+    // xkeyval.tex L497 `\XKV@addtolist@o\XKV@rm\XKV@tempa` does. Perl
+    // (KeyVals.pm:345-346) fully `Expand`s it — but a leftover VALUE may name a
+    // macro that is only defined by the time its key code runs:
+    // chessboard.sty:1439 saves `trimarea=\board` at load time, and `\board`
+    // is `\edef`'d inside `\chessboard` (:1087) just before the leftovers are
+    // dispatched (:1110); every intermediate `\setkeys*` re-read `\XKV@rm`
+    // and raised "undefined \board" (chessboard-skakps). Perl never reaches
+    // this: its xkeyval stub stops at `\XKV@testopta`. Guard:
+    // `perfect_kernel_batch54::setrmkeys_keeps_leftover_values_unexpanded`.
     let mut rmtokens: Vec<Token> = Vec::new();
     if let Some(rm) = rmmacro
-      && state::has_meaning(&rm)
-      && let Ok(expanded) = gullet::do_expand(Tokens!(rm))
+      && let Ok(Some(defn)) = state::lookup_expandable(&rm, None)
+      && let Ok(body) = defn.invoke(true)
     {
-      rmtokens = expanded.unlist();
+      rmtokens = body.unlist();
     }
 
     let mut tokens: Vec<Token> = Vec::new();

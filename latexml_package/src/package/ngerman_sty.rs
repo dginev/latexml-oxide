@@ -33,6 +33,14 @@ LoadDefinitions!({
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
   RawTeX!(r"\providecommand\datengerman{}");
+  // ngermanb.ldf:123-127,196: the babel language hooks. Left undefined, a
+  // later `\addto\extrasngerman{…}` / cleveref's `\cref@addto` (cleveref.sty
+  // :3832-3852, `\edef#1{\the\toks@…}` on a `\relax` target) made the hook
+  // expand into itself at `\begin{document}`: "Token \extrasngerman expands
+  // into itself!" (homework-demo-de, jwjournal-demo-de). Guard:
+  // `perfect_kernel_batch54::babel_extras_hooks_are_defined`.
+  RawTeX!(r#"\providecommand\extrasngerman{\@ifundefined{languageshorthands}{}{\languageshorthands{ngerman}\bbl@activate{"}}}"#);
+  RawTeX!(r#"\providecommand\noextrasngerman{\@ifundefined{bbl@deactivate}{}{\bbl@deactivate{"}}}"#);
   // ngermanb.ldf: `\def\dq{"}` — `\dq` yields a literal double-quote (see the
   // matching note in german_sty.rs). [ngerman,english] babel loads this path
   // (not german_sty.rs), so define it here too. Witness 1804.06196.

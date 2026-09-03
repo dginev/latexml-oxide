@@ -6511,3 +6511,12 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: pgfornament ornaments, memman, xltabular-doc.
 **Guard**: `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
 **Upstream**: not filed.
+
+### 183. A native (closure) macro is never `\ifx`-equal to a token macro (Perl's `Equals` matches its `CODE(0x…)` text)
+
+**Perl behavior**: `Common/Object.pm:80-95` `Equals` treats a CODE-ref expansion as equal to a token list whose string is the same `CODE(0x…)`, so a `\meaning` → `\scantokens` → `\ifx` round-trip (etoolbox's `\etb@ifscanable`, biditools.sty:792 `\bidi@ifscanable`) reports a native macro as reconstructable. `\ifpatchable*{\begin}` answers yes, and biditools' own patchcmd clone then `\def`s `\begin#1{…CODE(0x…)}` — a macro whose tail is the literal text `CODE(0x…)`; the `\begingroup` that `\begin` pushed is gone and the document errors ("Attempt to end mode internal_vertical" on a bare `x` body; crbox-doc/ghab-doc "close a group that switched to mode horizontal"). Rust carried the same hack (2023) in `ExpansionBody::PartialEq`.
+**Rust behavior**: cross-variant `\ifx` is `false`: `\ifpatchable*{\begin}` answers no, biditools leaves the native `\begin`/`\end` alone, and the environments keep their groups. The Perl-golden fixture `expansion/etoolbox` line "begin is patchable" is re-blessed to "begin is not patchable".
+**Why**: kernel-quality: a closure cannot be rebuilt from its `\meaning`; saying it can only lets patchers install broken macros. Same-shaped as the native etoolbox `\patchcmd` refusing closure bodies (etoolbox_sty.rs).
+**Witnesses**: crbox/crbox-doc, ghab/ghab-doc (perfect-kernel corpus).
+**Guard**: `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+**Upstream**: not filed.

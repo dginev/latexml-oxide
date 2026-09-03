@@ -8,31 +8,20 @@ LoadDefinitions!({
   // (sweep-16 tail: 8 bundles). The allocation surface is engine
   // bookkeeping with no XML content — absorb faithfully-shaped.
   //
-  // Catcode tables (luatexbase manual §2.3; ltluatex.dtx).
-  def_macro_noop("\\newcatcodetable DefToken")?;
-  def_macro_noop("\\initcatcodetable DefToken")?;
-  def_macro_noop("\\savecatcodetable DefToken")?;
-  def_macro_noop("\\setcatcodetable DefToken")?;
-  def_macro_noop("\\catcodetable DefToken")?;
-  // Attribute / whatsit / bytecode allocators.
-  def_macro_noop("\\newattribute DefToken")?;
-  def_macro_noop("\\newwhatsit DefToken")?;
-  def_macro_noop("\\newluatexregister DefToken")?;
-  def_macro_noop("\\newluabytecode DefToken")?;
-  def_macro_noop("\\newluachunkname DefToken")?;
-  def_macro_noop("\\newluafunction DefToken")?;
-  // \newluacmd / \newprotectedluacmd {\cs}{lua body}: define \cs to run lua.
-  // Under the pdfTeX-model default the lua body is inert — define the CS as
-  // a noop so later calls are absorbed; under the luatex profile \directlua
-  // exists and a full run-through would go via the bridge (out of scope
-  // here — these allocator-defined commands are formatting hooks in the
-  // witnesses: asmeconf, biblatex-gost, greek-fontenc).
-  DefPrimitive!("\\newluacmd DefToken {}", sub[(cs, _body)] {
-    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
-  });
-  DefPrimitive!("\\newprotectedluacmd DefToken {}", sub[(cs, _body)] {
-    let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
-  });
+  // The catcode-table / attribute / lua-function allocators are the lualatex
+  // FORMAT surface (latex.ltx:896-1058), provided by the `luatex` profile
+  // (latexml_sty/mod.rs). luatexbase.sty:20/293 adds only its own wrappers.
+  def_macro_noop("\\RequireLuaModule []{}")?;
+  RawTeX!(r"\let\luatexbase@ensure@primitive\@gobble");
+  // Under the pdfTeX-model default (no `luatex` option) nothing above
+  // exists; absorb the allocator surface so a document that loads
+  // luatexbase anyway keeps going.
+  RawTeX!(r"\ifx\newattribute\@undefined
+    \def\newcatcodetable#1{}\def\initcatcodetable#1{}\def\savecatcodetable#1{}\def\catcodetable#1{}
+    \def\newattribute#1{}\def\setattribute#1#2{}\def\unsetattribute#1{}
+    \def\newwhatsit#1{}\def\newluabytecode#1{}\def\newluachunkname#1{}\def\newluafunction#1{}
+    \def\newluacmd#1{\def#1{}}\def\newprotectedluacmd#1{\def#1{}}
+  \fi");
   // Callback management (lua-side) — absorb.
   def_macro_noop("\\luatexbase@directlua{}")?;
 });

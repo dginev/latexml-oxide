@@ -138,6 +138,29 @@ LoadDefinitions!({
     let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
   });
   DefPrimitive!("\\Udelcode Number SkipMatch:= Number Number", sub[(_a,_b,_c)] {});
+  // The siblings mathfont.sty reaches under the luatex profile (LuaTeX manual
+  // §7.3; mathfont-symbol-list, the mathfont examples):
+  //   \Udelimiter <class><fam><char>  — typesets the char (:2818-2838)
+  //   \Uradical <fam><char>{radicand}  — a radical (:2857) → `\sqrt`
+  //   \Umathcodenum <char>             — internal integer (:2924) → `0`
+  //   \mathnolimitsmode=<int>          — parameter (:1405)
+  //   \scantextokens                    — `\scantokens` variant (:670)
+  DefMacro!(T_CS!("\\Udelimiter"), None, {
+    let _class = read_number()?;
+    let _fam = read_number()?;
+    let code = read_number()?.value_of();
+    match char::from_u32(code as u32) {
+      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+      None => Vec::new(),
+    }
+  });
+  DefMacro!("\\Uradical Number Number", "\\sqrt");
+  DefMacro!(T_CS!("\\Umathcodenum"), None, {
+    let _code = read_number()?;
+    vec![T_OTHER!("0")]
+  });
+  DefRegister!("\\mathnolimitsmode" => Number::new(0));
+  Let!("\\scantextokens", "\\scantokens");
 
   //======================================================================
   // 2. LaTeXML-internal helpers
@@ -578,4 +601,25 @@ LoadDefinitions!({
     \def\@sect#1#2#3#4#5#6[#7]#8{\@startsection{#1}{#2}{#3}{#4}{#5}{#6}[#7]{#8}}
     "
   );
+
+  //======================================================================
+  // 10. Distinct packages whose names END IN A DIGIT and would otherwise be
+  // taken for a versioned spelling of a bound package by the glued-suffix
+  // fallback (content.rs `find_file_fallback`, Perl Package.pm:2178-2229:
+  // `physics2` → `physics`, `fontawesome7` → `fontawesome`) and so loaded the
+  // WRONG binding — `undefined:\usephysicsmodule`, every `\ab`/`\bra`/`\ket`
+  // of the physics2 module family (physics2 manuals, whatsnote; Perl too).
+  // `INTERPRETABLE_SOURCES` skips the fallback and raw-loads the real file
+  // (the mechanism xparse-2020-10-01.sty / filehook-2020.sty already use).
+  // physics2 is a self-contained expl3 package that interprets cleanly.
+  // Guard: `perfect_kernel_batch54::physics2_is_not_a_version_of_physics`.
+  //======================================================================
+  for name in [
+    "physics2.sty", "phy-ab.sty", "phy-braket.sty", "phy-ab.braket.sty",
+    "phy-diagmat.sty", "phy-doubleprod.sty", "phy-xmat.sty", "phy-ab.legacy.sty",
+    "phy-bm-um.legacy.sty", "phy-nabla.legacy.sty", "phy-op.legacy.sty",
+    "phy-qtext.legacy.sty", "fontawesome7.sty",
+  ] {
+    AssignMapping!("INTERPRETABLE_SOURCES", name => 1);
+  }
 });

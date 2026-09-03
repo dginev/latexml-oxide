@@ -867,6 +867,12 @@ LoadDefinitions!({
     let (star, pre, post, keys) = blx_cite_args(args);
     blx_cite_bare(star, pre, post, keys)
   }, locked => true);
+  // biblatex.sty:11066 `\footfullcite` — full citation in a footnote; bare
+  // inline like `\footcite` above.
+  DefMacro!("\\footfullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
   DefMacro!("\\footcitetext OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
     blx_cite_bare(star, pre, post, keys)
@@ -1011,6 +1017,17 @@ LoadDefinitions!({
   // biblatex.sty:15020 `\newrobustcmd*{\DeclareLabeldate}[2][]` — the optional
   // entrytype list (apa.bbx:337 `\DeclareLabeldate[constitution]{\field{date}}`).
   def_macro_noop("\\DeclareLabeldate []{}")?;
+  // biblatex.sty:15093 `\DeclareLabeltitle[types]{spec}` and :14853
+  // `\DeclareLabelalphaTemplate[types]{spec}` (biblatex-apa.bbx, ext-*.bbx).
+  def_macro_noop("\\DeclareLabeltitle []{}")?;
+  def_macro_noop("\\DeclareLabelalphaTemplate []{}")?;
+  // biblatex.sty:2694-2705 `\uspunctuation`/`\stdpunctuation` toggle the
+  // punctuation-inside-quotes tracker; no quote tracker here → no-ops.
+  def_macro_noop("\\uspunctuation")?;
+  def_macro_noop("\\stdpunctuation")?;
+  // biblatex.sty:5541 `\letbibmacro*{new}{old}` — the macro bank is not
+  // modelled (`\newbibmacro` is a declaration no-op), so aliasing is too.
+  def_macro_noop("\\letbibmacro OptionalMatch:* {}{}")?;
 
   // Datamodel-declaration family (biblatex.sty L16639-16642 renews these to
   // warn-only outside the datamodel read; no XML consequence) plus internals
@@ -2202,59 +2219,85 @@ LoadDefinitions!({
   // Style packages call it at load (hep-bibliography.sty L116).
   def_macro_noop("\\NewBibliographyString{}")?;
 
-  // Perl L553-604: 50 conditionals
-  DefConditional!("\\ifandothers");
-  DefConditional!("\\ifbibindex");
-  DefConditional!("\\ifbibliography");
-  DefConditional!("\\ifbibstring");
-  DefConditional!("\\ifcapital");
-  DefConditional!("\\ifcategory");
-  DefConditional!("\\ifcitation");
-  DefConditional!("\\ifciteibid");
-  DefConditional!("\\ifciteidem");
-  DefConditional!("\\ifciteindex");
-  DefConditional!("\\ifciteseen");
-  DefConditional!("\\ifcurrentfield");
-  DefConditional!("\\ifcurrentlist");
-  DefConditional!("\\ifcurrentname");
-  DefConditional!("\\ifentrycategory");
-  DefConditional!("\\ifentrykeyword");
-  DefConditional!("\\ifentryseen");
-  DefConditional!("\\ifentrytype");
-  DefConditional!("\\iffieldbibstring");
-  DefConditional!("\\iffieldequalcs");
-  DefConditional!("\\iffieldequals");
-  DefConditional!("\\iffieldequalstr");
-  DefConditional!("\\iffieldint");
-  DefConditional!("\\iffieldnum");
-  DefConditional!("\\iffieldnums");
-  DefConditional!("\\iffieldpages");
-  DefConditional!("\\iffieldsequal");
-  DefConditional!("\\iffieldundef");
-  DefConditional!("\\iffirstinits");
-  DefConditional!("\\iffirstonpage");
-  DefConditional!("\\iffootnote");
-  DefConditional!("\\ifhyperref");
-  DefConditional!("\\ifinteger");
-  DefConditional!("\\ifkeyword");
-  DefConditional!("\\ifloccit");
-  DefConditional!("\\ifmoreitems");
-  DefConditional!("\\ifmorenames");
-  DefConditional!("\\ifnameequalcs");
-  DefConditional!("\\ifnameequals");
-  DefConditional!("\\ifnamesequal");
-  DefConditional!("\\ifnameundef");
-  DefConditional!("\\ifnatbibmode");
-  DefConditional!("\\ifnumeral");
-  DefConditional!("\\ifnumerals");
-  DefConditional!("\\ifopcit");
-  DefConditional!("\\ifpages");
-  DefConditional!("\\ifsamepage");
-  DefConditional!("\\ifsingletitle");
-  DefConditional!("\\ifuseauthor");
-  DefConditional!("\\ifuseeditor");
-  DefConditional!("\\ifuseprefix");
-  DefConditional!("\\ifusetranslator");
+  // Perl L553-604 declares these 50 as `\newif`-style TeX conditionals, but
+  // biblatex.sty defines every one as a BRANCH-SELECTING MACRO —
+  // `\iffieldundef{field}{true}{false}` (biblatex.sty:6205), `\ifcitation
+  // {true}{false}` (:6003) — so a style/document calling them left the branch
+  // groups in the stream and swallowed text to a stray `\fi` (biblatex
+  // manuals: "Extra \fi", `\else` cascades). This binding models no data
+  // fields, so the *undef* tests take their true branch and every other
+  // predicate its false branch, except the `use<name>` toggles (default true,
+  // biblatex.sty:8931) and `\ifhyperref`, answered from the loaded package.
+  // Round 3 of the biblatex root-causing; guard:
+  // `perfect_kernel_batch54::biblatex_tests_are_branch_macros`.
+  {
+    // (name, number of test arguments, take-the-true-branch?)
+    let tests: &[(&str, usize, bool)] = &[
+      ("andothers", 1, false),
+      ("bibindex", 0, false),
+      ("bibliography", 0, false),
+      ("bibstring", 1, false),
+      ("capital", 0, false),
+      ("category", 1, false),
+      ("citation", 0, false),
+      ("citeibid", 0, false),
+      ("citeidem", 0, false),
+      ("citeindex", 0, false),
+      ("citeseen", 0, false),
+      ("currentfield", 1, false),
+      ("currentlist", 1, false),
+      ("currentname", 1, false),
+      ("entrycategory", 2, false),
+      ("entrykeyword", 2, false),
+      ("entryseen", 1, false),
+      ("entrytype", 1, false),
+      ("fieldbibstring", 1, false),
+      ("fieldequalcs", 2, false),
+      ("fieldequals", 2, false),
+      ("fieldequalstr", 2, false),
+      ("fieldint", 1, false),
+      ("fieldnum", 1, false),
+      ("fieldnums", 1, false),
+      ("fieldpages", 1, false),
+      ("fieldsequal", 2, false),
+      ("fieldundef", 1, true),
+      ("firstinits", 0, false),
+      ("firstonpage", 0, false),
+      ("footnote", 0, false),
+      ("integer", 1, false),
+      ("keyword", 1, false),
+      ("loccit", 0, false),
+      ("moreitems", 0, false),
+      ("morenames", 0, false),
+      ("nameequalcs", 2, false),
+      ("nameequals", 2, false),
+      ("namesequal", 2, false),
+      ("nameundef", 1, true),
+      ("natbibmode", 0, false),
+      ("numeral", 1, false),
+      ("numerals", 1, false),
+      ("opcit", 0, false),
+      ("pages", 1, false),
+      ("samepage", 2, false),
+      ("singletitle", 0, false),
+      ("useauthor", 0, true),
+      ("useeditor", 0, true),
+      ("useprefix", 0, false),
+      ("usetranslator", 0, true),
+    ];
+    for (name, nargs, take_true) in tests {
+      let proto = format!("\\if{name}{}{{}}{{}}", "{}".repeat(*nargs));
+      let body = format!("#{}", nargs + if *take_true { 1 } else { 2 });
+      let (cs_tok, params) = parse_prototype(&proto, true)?;
+      def_macro(
+        cs_tok,
+        params,
+        ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(body))),
+        None,
+      )?;
+    }
+    DefMacro!("\\ifhyperref{}{}", "\\@ifpackageloaded{hyperref}{#1}{#2}");
+  }
 
   // Perl L608-610 gobbles \key / \keyword silently. Round-34
   // surpass-Perl: preserve as classification tags so author keywords

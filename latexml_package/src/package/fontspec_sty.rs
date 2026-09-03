@@ -5,6 +5,14 @@ LoadDefinitions!({
   // Perl: fontspec.sty.ltxml
   // Preliminary support for xelatex
   RequirePackage!("xunicode");
+  // fontspec-luatex.sty:3980 `\DeclareTextFontCommand{\strong}{\strongenv}`;
+  // `\strongenv` cycles bold/upright. Under the `luatex` profile
+  // nlctuserguide.sty:177 loads fontspec instead of providing its own
+  // `\strong` (:174), so the missing command was every error of
+  // glossariesbegin and mfirstuc-manual.
+  RawTeX!(r"\providecommand\strongenv{\bfseries}
+\DeclareTextFontCommand{\strong}{\strongenv}
+\providecommand\strongfontdeclare[1]{}");
 
   // Most of this is probably ignorable... at least initially.
   // And when not ignorable, may need some font re-thinking...

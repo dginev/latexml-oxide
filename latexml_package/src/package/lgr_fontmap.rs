@@ -34,8 +34,10 @@ LoadDefinitions!({
     '\u{1FEF}', '\u{03B1}', '\u{03B2}', '\u{03C2}', '\u{03B4}', '\u{03B5}', '\u{03C6}', '\u{03B3}',
     // 0x68-0x6F
     '\u{03B7}', '\u{03B9}', '\u{03D1}', '\u{03F0}', '\u{03BB}', '\u{03BC}', '\u{03BD}', '\u{03BF}',
-    // 0x70-0x77
-    '\u{03C0}', '\u{03C7}', '\u{03C1}', '\u{03C2}', '\u{03C4}', '\u{03C5}', None,       '\u{03C9}',
+    // 0x70-0x77 — slot 0x73 `s` is σ (lgrenc.def:190-192 `\textsigma` =
+    // `s\noboundary`, final ς is slot 0x63 `c`; the LGR font's word-end
+    // ligature to ς is not modelled). Perl's map put ς here: KPE #148.
+    '\u{03C0}', '\u{03C7}', '\u{03C1}', '\u{03C3}', '\u{03C4}', '\u{03C5}', None,       '\u{03C9}',
     // 0x78-0x7F
     '\u{03BE}', '\u{03C8}', '\u{03B6}', '\u{00AB}', '\u{1FBE}', '\u{00BB}', '\u{1FC0}', '\u{2014}',
 

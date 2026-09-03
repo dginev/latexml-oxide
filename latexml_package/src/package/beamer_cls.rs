@@ -181,8 +181,15 @@ LoadDefinitions!({
   // Frame environment — the core beamer construct.
   // Absorbs optional overlay spec and optional title/subtitle args.
   // Perl: DefEnvironment('{frame}[][]', '<ltx:slide...>...</ltx:slide>');
+  // beamerbaseframe.sty:91 `\beamer@inframetrue` inside the frame body: the
+  // BFH inner theme's `\sectionpage` (beamerinnerthemeBFH.sty:438-448) opens
+  // a `\frame[plain]{…}` of its own unless `\ifbeamer@inframe` — a frame
+  // nested in the frame (`<ltx:subsection> isn't allowed in <ltx:subsection>`,
+  // DEMO-BFHBeamer ×2; Perl never loads themes). Local, so `\end{frame}`
+  // restores it.
   DefEnvironment!("{frame}[][]",
-    "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>");
+    "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>",
+    before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); });
   // Beamer's COMMAND form `\frame<overlays>[<default>][options]{contents}`
   // (beamerbaseframe.sty). DefEnvironment also installs a bare `\frame` CS,
   // but that one opens the subsection and waits for an `\end{frame}` that
@@ -417,7 +424,21 @@ LoadDefinitions!({
       }
     }
   });
-  def_macro_noop("\\usefonttheme[]{}")?;
+  // beamerbasethemes.sty:25: `\usefonttheme{X}` loads `beamerfonthemeX.sty`
+  // like the other three; a no-op skipped beamerfontthemeuantwerpen.sty:31's
+  // `\usetikzlibrary{calc}` — 10 "You need to say \usetikzlibrary{calc}"
+  // in beamerthemeuantwerpenuserguide.
+  DefPrimitive!("\\usefonttheme[]{}", sub[(_opts, names)] {
+    for name in do_expand(names)?.to_string().split(',') {
+      let name = name.trim();
+      if !name.is_empty() {
+        let _ = require_package(
+          &s!("beamerfonttheme{name}"),
+          RequireOptions::default(),
+        );
+      }
+    }
+  });
   DefPrimitive!("\\useinnertheme[]{}", sub[(_opts, names)] {
     for name in do_expand(names)?.to_string().split(',') {
       let name = name.trim();
@@ -584,6 +605,9 @@ LoadDefinitions!({
   // Perl L412/L1054 parity: etoolbox + xcolor (beamer really uses xxcolor;
   // xcolor supplies \colorlet etc. — cursolatex witness).
   RequirePackage!("etoolbox");
+  // beamerbasecompatibility.sty:309 (graphbox.sty:122 `\fibox@includegraphics`
+  // tests its overlay spec with it).
+  Let!("\\beamer@ifempty", "\\ifblank");
   RequirePackage!("xcolor");
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
@@ -793,10 +817,24 @@ LoadDefinitions!({
   // `undefined \subtitle` (8 TL doc bundles, 2026-08-31 corpus). Standard
   // `\lx@add@subtitle` idiom → real <ltx:subtitle> frontmatter.
   DefMacro!("\\subtitle OptionalAngled []{}", "\\lx@add@subtitle{#3}");
-  // \lecture{title}{shortname} — beamer lecture frontmatter; preserve
-  // the title text as ltx:note frontmatter rather than dropping it.
-  DefMacro!("\\lecture{}{}",
-    "\\@add@frontmatter{ltx:note}[role=lecture]{#1}");
+  // beamerbasesection.sty:45-93, the lecture layer: `\lecture<ov>[short]
+  // {title}{label}` (:48-66), the `lecture` counter (:45-47),
+  // `\AtBeginLecture{code}` CAPTURES its body into `\beamer@atbeginlecture`
+  // (:71-73; beamerthemeVerona.sty:354-362 registers a whole `[plain]` frame
+  // that must not run as document content), `\insertlecture`/
+  // `\insertshortlecture` (:83-88). The title stays frontmatter (an
+  // `ltx:note[role=lecture]`); the at-begin hook is not run (a structuring
+  // decision beyond this layer). Perl beamer.cls.ltxml:847 "TODO: Support me!".
+  RawTeX!(r"\newcounter{lecture}
+\renewcommand\thelecture{\@arabic\c@lecture}
+\let\insertlecturenumber\thelecture
+\newcommand\AtBeginLecture[1]{\def\beamer@atbeginlecture{#1}}
+\AtBeginLecture{}
+\def\beamer@lecturename{}\def\beamer@lectureshortname{}
+\newcommand*\insertlecture{\beamer@lecturename}
+\newcommand*\insertshortlecture{\beamer@lectureshortname}");
+  DefMacro!("\\lecture OptionalAngled []{}{}",
+    "\\stepcounter{lecture}\\def\\beamer@lecturename{#3}\\def\\beamer@lectureshortname{#2}\\@add@frontmatter{ltx:note}[role=lecture]{#3}");
   def_macro_noop("\\againframe OptionalAngled []{}")?;
   def_macro_noop("\\appendix")?;
   def_macro_noop("\\note OptionalAngled []{}")?;

@@ -327,6 +327,11 @@ LoadDefinitions!({
     \fi
     \expandafter\let\csname captionsfrenchb\expandafter\endcsname
                     \csname captionsfrench\endcsname
+    % french.ldf language hooks: define the BASE hook before aliasing it, so
+    % a later \addto\extrasfrench{…} appends to a macro rather than to \relax
+    % (self-expanding hook; see ngerman_sty.rs). Witness homework-demo-fr.
+    \providecommand\extrasfrench{\@ifundefined{languageshorthands}{}{\languageshorthands{french}}}
+    \providecommand\noextrasfrench{}
     \expandafter\let\csname extrasfrenchb\expandafter\endcsname
                     \csname extrasfrench\endcsname
     \expandafter\let\csname noextrasfrenchb\expandafter\endcsname

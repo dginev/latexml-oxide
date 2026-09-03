@@ -5167,3 +5167,73 @@ the stomach — the RCS-keyword idiom, ulineno.tex:16 (2 errors). Trigger:
 Rust: the frontmatter copy is `\expandafter\lx@add@date@halved\expandafter{\@date}`
 (likewise `\@title`, `\@author`). Guard:
 `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
+
+## 146. amsopn binding omits `\operatorfont` (Rust fixes)
+
+amsopn.sty:90 `\def\operatorfont{\operator@font}` is the user-level name;
+`amsopn.sty.ltxml` defines `\operator@font` only, so glosmathtools.sty:54
+`\newcommand*{\sbu}[1]{_{\operatorfont{#1}}}` errors on every use (~54 per
+manual, glosmathtools en/fr). Trigger:
+
+```latex
+\usepackage{amsmath}
+$x_{\operatorfont{i}}$
+```
+
+Rust: `DefMacro!("\\operatorfont", "\\operator@font")` in amsopn_sty.rs. Guard:
+`perfect_kernel_batch54::amsopn_operatorfont_is_defined`.
+
+## 147. `\ifx` reconstructs a native macro from its `\meaning` text (Rust fixes, OXIDIZED_DESIGN #183)
+
+`Common/Object.pm:80-95` `Equals` matches a CODE-ref expansion against a token
+list reading `CODE(0x…)`, so biditools.sty:792 `\bidi@ifscanable` (`\meaning` →
+`\scantokens` → `\ifx`) reports the native `\begin` as reconstructable and
+biditools' patchcmd clone replaces it with a body ending in the literal text
+`CODE(…)`; every later environment loses its `\begingroup` (Perl: "Attempt to end
+mode internal_vertical"; crbox-doc, ghab-doc: "Attempt to close a group that
+switched to mode horizontal"). Trigger:
+
+```latex
+\usepackage{biditools}
+\begin{tabular}{ll}a & b\\\end{tabular}
+```
+
+Rust: cross-variant equality is `false` (the same hack was removed from
+`ExpansionBody::PartialEq`). Guard:
+`perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+
+## 148. LGR fontmap slot 0x73 (`s`) is final sigma ς instead of σ
+
+`lgr.fontmap.ltxml:40` maps slot 115 to U+03C2 (ς); lgrenc.def:190-192 makes `s`
+the ordinary sigma σ (U+03C3, `\textsigma` = `s\noboundary`) and `c` (slot 99)
+the final ς — the LGR font's word-end ligature turns `s` into ς, which no map can
+express. Every mid-word sigma in LGR text (`\textsigma`, `s` under
+`\fontencoding{LGR}`) came out as ς. Trigger:
+
+```latex
+\usepackage[LGR,T1]{fontenc}\usepackage{textalpha}
+\textsigma
+```
+
+Rust: `lgr_fontmap.rs` slot 0x73 = U+03C3. Guard:
+`perfect_kernel_batch54::provide_text_command_dispatches_on_encoding`.
+
+## 149. The refnum formatter cannot take an argument-taking `\p@<ctr>` (ctex) (Rust fixes)
+
+`Base_Utility.pool.ltxml:1027-1028` `\lx@@therefnum@@` = `{\normalfont\csname
+p@#1\endcsname\csname the#1\endcsname}`. ctex's `\labelformat{section}
+{\CTEX@thesection}` (ctex-heading-article.def:747) redefines `\p@section` as
+`macro:#1->\CTEX@thesection` and patches every kernel `\p@#1\the#1` site to
+`\csname p@#1\expandafter\endcsname\csname the#1\endcsname` (:770-771); LaTeXML's
+own site is unpatched, so `\p@section` swallows the next `\csname` and the
+orphaned `\endcsname` errors on every heading (caspervector 23, sduthesis 36,
+tabular2 28, inkpaper-en 3). Trigger:
+
+```latex
+\documentclass[UTF8]{ctexart}
+\begin{document}\section{X}\end{document}
+```
+
+Rust: the `\expandafter` idiom in `\lx@@therefnum@@` (`\lx@@typerefnum@@` keeps the
+bare shape: bracing its refnum leaves an empty group that `\lx@refnum@compose` no
+longer sees as empty — a trailing space on unnumbered theorem tags). Guard: `perfect_kernel_batch54::ctex_argument_taking_p_macro_keeps_the_refnum`.
