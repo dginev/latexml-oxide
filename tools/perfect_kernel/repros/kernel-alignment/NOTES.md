@@ -700,3 +700,136 @@ Do NOT make read_optional nesting-aware — only xparse O{} and OptionalBalanced
   found. RECOMMENDATION: switch every option slot that MIRRORS an xparse O{} to OptionalBalanced
   (uniform + faithful); priority only where a package ships an unbraced nested `[model]{value}` in
   its docs. cleveref `[type]` and braced-value key-lists can stay `[]` safely.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: alignment-class LOG TALLY (all logs) + top-2 uncovered roots
+================================================================================
+Tally over /home/deyan/data/perfect_kernel_s36/*/*/*.log (ANSI-stripped, Error/Fatal, unique
+per doc), alignment-class messages, by distinct DOC COUNT:
+  18  \noalign cannot be used here
+  14  \endgroup Attempt to close ... internal_vertical      (54x p-cell listings family; partial)
+  14  } Attempt to close ... vertical                        (UNCOVERED — root #2 below)
+  13  & Extra alignment tab                                  (nicematrix nested-opt 54z; tabu parked; numerica)
+   9  \endgroup ... math      6 \lx@begin@alignment ... internal_vertical
+   5  \@@tabular ... restricted_horizontal   5 \@end@tabular close boxing   5 \@end@tabular ... internal_vertical
+   5  \@end@tabular ... horizontal   3 \halign ... restricted_horizontal   (+ tikz@pin/@label = NOT alignment)
+
+## TOP UNCOVERED ROOT #1: \omit/\noalign "cannot be used here" via array.sty \@mkpream/\ialign
+Docs whose FIRST (root) error is \omit/\noalign cannot: sgame (\omit), tabularcalc_doc_en/fr/vn
+(\noalign), tabvar/demo (\noalign), epslatex-fr/fepslatex (\noalign) — ~6 docs. (The other 12
+\noalign-anywhere docs are CASCADES from a different first error: csvsimple \csvline undefined,
+objectz oz math-version, polynom display_math egroup, topiclongtable \theLT@tables undefined,
+storecmd \caption-in-tabularx+colortbl, nicematrix nested-opt = 54z, harmony longtable = 54w,
+boldline = 54y — all already covered or non-alignment.)
+Mechanism: these packages BUILD their alignment via array.sty's char-class preamble scanner, not
+a plain \halign. sgame redefines \@array (sgame.sty:51-89): \@mkpream{#2} then
+`\edef\@preamble{\ialign\noexpand\@halignto\bgroup\@arstrut\@preamble\tabskip\z@skip\cr}` then
+executes \@preamble (:79-89). LaTeXML does NOT run array.sty \@mkpream/\@classz (it has a native
+DefColumnType/read_alignment_template reader), so the \ialign the package assembles is not a
+recognized LaTeXML alignment; \omit/\noalign/\cline inside (from \hline, \multicolumn, thick-rule
+tricks: sgame.sty:265/322 `\cr\noalign{\vskip-\arrayrulewidth}\cline{...}`) hit the "cannot be
+used here" guards (tex_tables.rs:224 noalign, :240 omit). SAME array-preamble-machinery gap that
+parked tabu/srdp (Round-2 tabu report). Fix = implement array.sty's \@mkpream char-class scanner
++ \ialign recognition in the kernel (large; PARKED effort), OR bind \@array/\@mkpream to LaTeXML's
+native alignment so a package's `\edef\@preamble{\ialign...}` funnels through \lx@begin@alignment.
+Repro (RED-ish; needs the package's exact args): \begin{game} matrix; a bare `\ialign{\@mkpream…}`
+is the kernel-level shape. Classification: needs verification vs Perl (Perl also lacks \@mkpream
+→ likely SHARED). Gain ~6 docs (sgame + tabularcalc×3 + tabvar + epslatex-fr).
+
+## TOP UNCOVERED ROOT #2: `}` Attempt to close a group that switched to mode vertical (14 docs)
+Docs: circledtext, codebox, joinbox, pascaltriangle, suanpan-l3 (all \ProvidesExplPackage /
+l3draw / l3coffins box builders), biblatex-caspervector×2, pst-exa (pspicture-in-tcolorbox),
+sduthesis, shtthesis, thesis-gwu, + CJK bxcjkjatype×2 / kanbun (may be parked). Signature is
+uniform: `current frame is mode-switch to vertical due to ` (EMPTY opener) at "Anonymous String"
+— a group inside a deep expl3/l3draw box construction (\vbox_set:Nn / \hcoffin_set:Nn / l3draw
+\draw path) switches to vertical mode and a `}` meets it. Mode-frame family (theme 1). Minimal
+\circledtext{A} / \joinbox... do NOT reproduce (need the l3draw/coffin path + real content), so
+not cheaply reducible; needs LXML_TRACE_FRAMES on a full witness (circledtext.tex with the CJK
+chars, or pascaltriangle) to pin which expl3 box primitive opens the unbalanced vertical frame.
+Classification: RUST-ONLY suspected (expl3 box-primitive mode handling). Distinct from 54x's
+internal_vertical p-cell family (that is a p-column box; this is a plain `vertical` mode-switch).
+
+## Dead ends
+- csvsimple \noalign is a cascade from \csvline undefined (a register-not-a-macro root, expl3 IO)
+  — not an alignment root.
+- Minimal \circledtext{A}/\csvautotabular{f.csv} are CLEAN — the failures need the full l3draw/
+  filter-option context.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT #1 root-caused — \@sharp cell placeholder in a raw \ialign
+================================================================================
+Repros: ialign_sharp_placeholder.tex (RED rust=5, pdflatex 0), noalign_outside_CONTROL.tex
+(CONTROL). Witnesses sgame, tabularcalc×3, tabvar/demo, epslatex-fr/fepslatex.
+
+## THE PRINCIPLED ROUTE (not "implement \@mkpream in Rust"): array.sty's \@mkpream ALREADY runs
+## raw and, with the \let\@classz\@tabclassz that \array/\@tabular do, builds a REAL template.
+## The only gap is the kernel's raw \halign reader not recognizing the \@sharp cell placeholder.
+
+## (1) Does the raw \@mkpream/\@classz chain run, or is it shadowed? — IT RUNS.
+sgame.sty:58 `\def\@array[#1]#2{…\@mkpream{#2}\edef\@preamble{\ialign…\@preamble…\cr}…}`
+OVERRODE the kernel's bound \@array (a plain DefMacro `\@array@bindings…\lx@begin@alignment`;
+`\def` replaces it — bindings did NOT outrank raw here, but that is fine). The game env → sgame
+`gtabular`/\@gtabular does `\let\@classz\@tabclassz` (sgame.sty:226) then `\@tabarray`→\@array→
+\@mkpream. Probe: \@mkpream/\@testpach/\@classi/\@addtopreamble are the real latex.ltx bodies;
+\@classz/\@classiv/\@acol/\insert@column/\@sharp/\prepnext@tok/\d@llarbegin/\d@llarend default to
+\relax at top level but are \let to the FUNCTIONAL \@tabclassz/\@arrayclassz/\@tabacol/… by
+\array/\@tabular (dump latex.2025:8278/15564).
+
+## (2) What \@preamble does \@mkpream build, and where does the reader stop?
+WITH `\let\@classz\@arrayclassz`, `\@mkpream{cc}` builds a REAL preamble (probe):
+  `\hskip\arraycolsep\hfil$\relax\@sharp$\hfil\hskip\arraycolsep & …`
+i.e. array.sty templates the cell as `\d@llarbegin \@sharp \d@llarend` where \@sharp is the `#`
+placeholder (a cs \let to #, array.sty:97/230; \d@llarbegin/end = $/$ or \begingroup/\endgroup).
+The kernel's raw \halign parser parse_halign_template (latexml_engine/src/tex_tables.rs:1548,
+slot check :1590 `else if cc == Catcode::PARAM`) tests the TOKEN'S OWN catcode. A literal `#`
+(catcode PARAM) passes; the cs \@sharp is catcode CS (meaning = #) so it FAILS the test, the slot
+is never marked, and the # meaning leaks to the stomach: "# (catcode PARAM) should never reach
+Stomach!". PROVEN minimal: `\let\@sharp=# ; \ialign{\hfil\@sharp\hfil&&\hfil\@sharp\hfil\cr a&b\cr}`
+-> rust 5 errors, td=4 (structure built, # leaks 5×); the LITERAL-# twin `\ialign{\hfil#\hfil…}`
+-> 0 errors.
+
+## (3) Do \omit/\noalign/\cline behave? — YES once the alignment is real.
+`\ialign{\hfil#\hfil&&\hfil#\hfil\cr a&b\cr \noalign{\hrule} \omit X&Y\cr}` -> 0 errors, 4 <td>.
+CONTROL noalign_outside_CONTROL.tex: `\noalign{\hrule}` OUTSIDE any alignment -> rust 1 / pdflatex
+1 (must STAY an error — tex_tables.rs:224 guard).
+
+## FIX (smallest kernel gap)
+File: latexml_engine/src/tex_tables.rs, parse_halign_template :1590. Broaden the slot test:
+  `else if cc == Catcode::PARAM || meaning_is_param(&t)`
+where meaning_is_param resolves the token's \let-meaning and returns true iff it is a catcode-
+PARAM `#` (array.sty's \@sharp). (Mirror in read_alignment_template alignment.rs:990 if a package
+routes a #-template through the LaTeX-preamble path.) This lets a package-assembled \ialign
+preamble (\@sharp cell slot) parse as a proper template -> \lx@begin@alignment, and \omit/\noalign
+/\cline/& then work. NOT "implement \@mkpream in Rust" — \@mkpream already runs and builds the
+template; only the placeholder recognition is missing.
+Guard: ialign_sharp_placeholder.tex -> 0 errors + <ltx:tabular> with cells a,b,c,d;
+noalign_outside_CONTROL.tex -> keeps >=1 error; the literal-# \ialign stays working.
+Risk: LOW-MED (broadens PARAM recognition to \let-to-# cs; literal # still matches; \@sharp is
+specifically the array.sty placeholder). Gain: sgame + tabularcalc×3 + tabvar + epslatex-fr (~6
+docs) AND advances the parked tabu/srdp effort (their \@mkpream-built \@sharp templates become
+readable — the "principled route" the tabu report deferred).
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: `}` "switched to mode vertical" family — DRAINED on b54x
+================================================================================
+The 14-doc `} Attempt to close a group that switched to mode vertical` family from the s36
+(b54q) residue is RESOLVED / cascade-only on b54x — the landed 54x-54z mode-frame batches
+drained the expl3-box root. Per-doc re-verification (b54x):
+  CLEAN (0 errors):        pascaltriangle, circledtext, joinbox, biblatex-caspervector
+  `}`-vertical GONE, shifted to unrelated undefined-macro/encoding errors:
+     codebox-doc-en (now \pkg/\url undefined), sduthesis-demo (now inputencoding utf8)
+  CASCADE, not a genuine root:
+     pst-exa-doc: the `}`-vertical is at \begin{pspicture} (line 116) but is a CASCADE from a
+       MISSING INCLUDE `Can't find TeX file pst-exa-doc.inc` (first error) that corrupts state;
+       a minimal `\begin{pspicture}[showgrid](4,4)…\end{pspicture}` is CLEAN (0 errors). Not an
+       expl3-box / mode-frame root — it is a missing-file cascade (pstricks graphics lane).
+  PARKED / other-root first errors (the `}`-vertical is a downstream cascade):
+     shtthesis-user-guide, suanpan-l3: FIRST error `\luatexattributedef`/`\ltj@@attr@zero` =
+       luatexja (CJK) PARKED family. thesis-gwu/thesis-sample: FIRST error `\fancyhf` undefined
+       (fancyhdr, an undefined-macro root, not alignment).
+Grep of every b54x run stderr: ONLY pst-exa-doc still emits `switched to mode vertical` (1×, the
+cascade above). NO live expl3-box `vbox_set:Nn`/`hcoffin_set:Nn`/l3draw `\draw_begin:` vertical-
+mode-frame root remains — do NOT re-open this family; its residue was b54q-stale.
+Recommendation: retire this family from the alignment lane. The two remaining tails are
+non-alignment and already lane-owned elsewhere: pst-exa missing-`.inc` (IO/missing-file),
+shtthesis/suanpan-l3 luatexja (parked CJK), thesis-gwu `\fancyhf` (undefined-macro).

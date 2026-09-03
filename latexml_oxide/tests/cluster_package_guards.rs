@@ -11678,6 +11678,52 @@ x \noalign{\hrule} y
     );
   }
 
+  /// `\usetheme[opts]{name}` passes its options to the theme as package
+  /// options and `\ProcessOptionsBeamer` applies them (beamerbasethemes.sty:
+  /// 18, beamerbaseoptions.sty:15): Verona's `sidebar` option installs the
+  /// real `\sidegraphics` instead of its "defined only with the 'sidebar'
+  /// option" stub. A theme without options (Albi) loads as before.
+  #[test]
+  fn usetheme_options_reach_the_theme() {
+    let tex = r"\documentclass{beamer}
+\usetheme[sidebar]{Verona}
+\begin{document}
+\begin{frame}\sidegraphics<1>{plato}{scale=1.1}\end{frame}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert!(
+      !stderr.contains("defined only with the 'sidebar' option"),
+      "{stderr}"
+    );
+    let albi = r"\documentclass{beamer}\usetheme{Albi}\begin{document}\begin{frame}Hi\end{frame}\end{document}
+";
+    let (stderr, xml) = convert(albi, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hi"), "{xml}");
+  }
+
+  /// tex.web §211: `\ifinner` is the box/inline-math interior sign — false
+  /// at the main galley (paracol.sty:1996 `\ifinner\@parmoderr`; tidyres),
+  /// true inside `\parbox`/`$…$`, false in display math.
+  #[test]
+  fn ifinner_is_the_box_frame_sign() {
+    let tex = r"\documentclass{article}\usepackage{paracol}
+\begin{document}
+\par\ifinner INNER1\else OUTER1\fi
+{\par\ifinner INNER2\else OUTER2\fi}
+\parbox{5cm}{\par\ifinner INNER3\else OUTER3\fi}
+$\ifinner I4\else O4\fi$ \[\ifinner I5\else O5\fi\]
+\begin{paracol}{2}Left.\switchcolumn Right.\end{paracol}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for want in ["OUTER1", "OUTER2", "INNER3", "I4", "O5"] {
+      assert!(xml.contains(want), "{want}: {xml}");
+    }
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

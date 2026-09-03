@@ -5747,3 +5747,28 @@ ozguide 28). Rust: declared names are registered and selectable (no font
 change); an undeclared name still errors. Guard:
 `perfect_kernel_batch54::declared_math_versions_are_selectable`.
 
+## 188. `\ifinner` is true at the document body's galley (Rust fixes)
+
+TeX_Logic.pool.ltxml:127 tests the MODE string (`internal_vertical`,
+`restricted_horizontal`, `math` → inner), and latex_constructs.pool:314 opens the
+document body as a frameless `internal_vertical`, so after `\par` at the main
+galley `\ifinner` is true — paracol.sty:1996 `\ifinner\@parmoderr` errors "Not
+in outer par mode" on every `\begin{paracol}` (tidyres); conversely a
+`\parbox` interior in horizontal mode reads outer. tex.web §211: inner is the
+sign of a box or non-display-math interior. Trigger: `\usepackage{paracol}
+\begin{paracol}{2}…\end{paracol}`. Rust: a frame-bound `INNER_BOX` flag set by
+framed mode switches (boxes, inline math; not display math) is the predicate.
+Guard: `perfect_kernel_batch54::ifinner_is_the_box_frame_sign`.
+
+## 189. beamer's `\usetheme` options never reach the theme (Rust fixes)
+
+beamer.cls.ltxml no-ops `\usetheme` (and `\ProcessOptionsBeamer`), so a theme
+option (`\usetheme[sidebar]{Verona}`, beamerthemeVerona.sty:43
+`\DeclareOptionBeamer{sidebar}`) is dropped and the theme installs its
+missing-option stub ("`\sidegraphics` defined only with the 'sidebar'
+option"; beamer-verona-sidebar). Real: beamerbasethemes.sty:18
+`\beamer@calltheme` = `\usepackage[{opts}]{beamertheme<name>}`,
+beamerbaseoptions.sty:15 `\ProcessOptionsBeamer` = `\setkeys{\@currname}` over
+the passed options. Rust: both real bodies. Guard:
+`perfect_kernel_batch54::usetheme_options_reach_the_theme`.
+

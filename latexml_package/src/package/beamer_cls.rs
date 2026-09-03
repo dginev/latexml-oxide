@@ -443,67 +443,27 @@ LoadDefinitions!({
   // demo documents reference (epyt acolor1-5, amurmaple AmurmapleRed,
   // gotham/metropolis structure colors). Template/geometry internals in the
   // themes are absorbed by the surface noops below.
-  DefPrimitive!("\\usetheme[]{}", sub[(_opts, names)] {
-    for name in do_expand(names)?.to_string().split(',') {
-      let name = name.trim();
-      if !name.is_empty() {
-        let _ = require_package(
-          &s!("beamertheme{name}"),
-          RequireOptions::default(),
-        );
-      }
-    }
-  });
-  DefPrimitive!("\\usecolortheme[]{}", sub[(_opts, names)] {
-    for name in do_expand(names)?.to_string().split(',') {
-      let name = name.trim();
-      if !name.is_empty() {
-        let _ = require_package(
-          &s!("beamercolortheme{name}"),
-          RequireOptions::default(),
-        );
-      }
-    }
-  });
-  // beamerbasethemes.sty:25: `\usefonttheme{X}` loads `beamerfonthemeX.sty`
-  // like the other three; a no-op skipped beamerfontthemeuantwerpen.sty:31's
-  // `\usetikzlibrary{calc}` — 10 "You need to say \usetikzlibrary{calc}"
-  // in beamerthemeuantwerpenuserguide.
-  DefPrimitive!("\\usefonttheme[]{}", sub[(_opts, names)] {
-    for name in do_expand(names)?.to_string().split(',') {
-      let name = name.trim();
-      if !name.is_empty() {
-        let _ = require_package(
-          &s!("beamerfonttheme{name}"),
-          RequireOptions::default(),
-        );
-      }
-    }
-  });
-  DefPrimitive!("\\useinnertheme[]{}", sub[(_opts, names)] {
-    for name in do_expand(names)?.to_string().split(',') {
-      let name = name.trim();
-      if !name.is_empty() {
-        let _ = require_package(
-          &s!("beamerinnertheme{name}"),
-          RequireOptions::default(),
-        );
-      }
-    }
-  });
-  DefPrimitive!("\\useoutertheme[]{}", sub[(_opts, names)] {
-    for name in do_expand(names)?.to_string().split(',') {
-      let name = name.trim();
-      if !name.is_empty() {
-        let _ = require_package(
-          &s!("beameroutertheme{name}"),
-          RequireOptions::default(),
-        );
-      }
-    }
-  });
+  // beamerbasethemes.sty:18-29: `\usetheme[opts]{names}` (and the colour/
+  // font/inner/outer siblings) = `\beamer@calltheme{opts}{names}{prefix}`
+  // → `\usepackage[{opts}]{prefix<name>}` per name — the theme options are
+  // ORDINARY PACKAGE OPTIONS, which the theme's `\ProcessOptionsBeamer`
+  // (beamerbaseoptions.sty:15-29) applies with `\setkeys{\@currname}` over
+  // its `\DeclareOptionBeamer` keys. The former loader dropped the options
+  // and no-op'd `\ProcessOptionsBeamer`, so `\usetheme[sidebar]{Verona}` never
+  // set `\ifbeamer@sidebar` and the theme installed its "defined only with
+  // the 'sidebar' option" stub (beamer-verona-sidebar; Perl no-ops
+  // `\usetheme`). Guard: `perfect_kernel_batch54::usetheme_options_reach_the_theme`.
+  RawTeX!(r"\def\beamer@calltheme#1#2#3{\def\beamer@themelist{#2}\@for\beamer@themename:=\beamer@themelist\do{\usepackage[{#1}]{#3\beamer@themename}}}
+\newcommand*\usetheme[2][]{\beamer@calltheme{#1}{#2}{beamertheme}}
+\newcommand*\usecolortheme[2][]{\beamer@calltheme{#1}{#2}{beamercolortheme}}
+\newcommand*\usefonttheme[2][]{\beamer@calltheme{#1}{#2}{beamerfonttheme}}
+\newcommand*\useinnertheme[2][]{\beamer@calltheme{#1}{#2}{beamerinnertheme}}
+\newcommand*\useoutertheme[2][]{\beamer@calltheme{#1}{#2}{beameroutertheme}}
+\def\ProcessOptionsBeamer{\let\@tempa\@empty
+  \ifx\@currext\@clsextension\else
+  \@for\CurrentOption:=\@classoptionslist\do{\@ifundefined{KV@\@currname @\CurrentOption}{}{\edef\@tempa{\@tempa,\CurrentOption,}}}\fi
+  \edef\@tempa{\noexpand\setkeys{\@currname}{\@tempa\@ptionlist{\@currname.\@currext}}}\@tempa}");
   // Theme-file surface the raw loads touch.
-  def_macro_noop("\\ProcessOptionsBeamer")?;
   // beamerbaseoptions.sty:34-38: the theme option layer is keyval —
   // `\DeclareOptionBeamer{key}[default]{code}` → `\define@key{\@currname}`
   // and `\ExecuteOptionsBeamer{…}` → `\setkeys{\@currname}`. The raw themes

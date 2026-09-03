@@ -997,6 +997,23 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     }
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
+    // tex.web §211's inner sign, kept as a frame-bound flag: a FRAMED mode
+    // switch is a box or math interior (`\hbox`/`\vbox`/`\parbox`/minipage,
+    // `$…$`), where `\ifinner` is true; display math is positive `mmode`
+    // (outer); the document body's frameless `internal_vertical` and plain
+    // `{…}` groups bind nothing, so the main galley stays outer. The mode
+    // STRINGS serve both galley and box (`internal_vertical`), so `\ifinner`
+    // on them said inner at the body top after `\par` — paracol.sty:1996
+    // `\ifinner\@parmoderr` (tidyres); Perl identical. The binding is
+    // undone with the frame at `end_mode`. Guard:
+    // `perfect_kernel_batch54::ifinner_is_the_box_frame_sign`.
+    if !noframe {
+      assign_value_sym(
+        crate::pin!("INNER_BOX"),
+        bound_mode != "display_math",
+        Some(Scope::Local),
+      );
+    }
     set_mode(bound_mode)?;
     // Perl Stomach.pm lines 504-507: inject \everymath or \everydisplay tokens
     // Display math gets \everydisplay, inline math gets \everymath (not both).
