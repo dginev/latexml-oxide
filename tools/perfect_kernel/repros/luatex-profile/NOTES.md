@@ -136,3 +136,46 @@ via \@ifundefined{sentinel}{\input file}.
 NOT SHARED with the greek.polutoniko cluster: alphabeta-doc:66 \usepackage[greek.polutoniko,english]
 {babel} fails "Unknown option 'greek.polutoniko'" — babel's DOTTED-MODIFIER option syntax
 (language.modifier), a separate babel-binding option-parsing gap, unrelated to \@ifundefined.
+
+## ROOT CAUSE 5 (Checkpoint N #3) — babel language.modifier options: process_options reads the State VecDeque, not the babel-rewritten \opt@<pkg> macro  (repro: babelmodifier_greek_polutoniko.tex)
+Chosen over RC3-soul by corpus gain: both greek.polutoniko docs (alphabeta-doc, hyperref-with-greek)
+have ONLY this 1 error and reach 0 with the modifier stripped (verified: alphabeta-stripped,
+hyp-stripped -> 0 errors, complete). RC3-soul at best clears 1 doc (proofread has \LL/\FL/\ctable too).
+Mechanism (the babel dotted-modifier question, answered):
+- \usepackage[greek.polutoniko,english]{babel}. babel.sty:316-347 preprocesses BEFORE \ProcessOptions:
+  \bbl@tempd (:322) splits each option on '.', \bbl@tempe/\bbl@csarg\edef{mod@greek} (:320-321) stores
+  \bbl@mod@greek = polutoniko, and :347 rewrites the MACRO \opt@babel.sty := \bbl@tempc = the
+  modifier-STRIPPED "greek,english". \ProcessOptions* (:414) then processes it; greek.ldf later reads
+  \BabelModifiers = \bbl@mod@greek (babel.sty:4136-4137) to turn on polytonic. So polutoniko needs
+  ONLY \bbl@mod@greek — which our engine ALREADY sets correctly (probe: MODGREEK=[polutoniko],
+  OPTBABEL=[greek,english]).
+- The break: real \ProcessOptions reads \@curroptions := \@ptionlist{\@currname.\@currext}
+  (latex.ltx:18557) and \@ptionlist (:18393) expands the MACRO \opt@babel.sty (= rewritten
+  "greek,english"). Our \ProcessOptions is a Rust primitive (latex_constructs.rs:5300) -> process_options
+  (latexml_core/src/binding/content.rs:1890), which at :1904-1905 reads the STATE VecDeque
+  opt@babel.sty (still the raw "greek.polutoniko,english") — babel's macro rewrite is invisible to it.
+  So \bbl@load@language{greek.polutoniko} -> \InputIfFileExists{greek.polutoniko.ldf} fails ->
+  babel.sty:4140 \bbl@error{unknown-package-option} "Unknown option 'greek.polutoniko'".
+Classification: SHARED (Perl ProcessOptions reads LookupValue('opt@...') the same State store; Perl
+fails identically "Unknown option 'greek.polutoniko'" at babel.sty:4301, count=2). Oracle
+lualatex/pdflatex clean (real \@ptionlist reads the macro) => surpass-approved.
+Fix plan (CORE, not babel_sty.rs): process_options (content.rs:1904-1905) should build current_options
+from the \opt@<name>.<ext> MACRO expansion (comma-split, trimmed) — faithful \@ptionlist
+(latex.ltx:18393) — falling back to the VecDeque only when the macro is undefined. The macro is proven
+in-sync with the VecDeque for ordinary packages (graphicx=[final,draft], article=[11pt,twocolumn]),
+so behavior is unchanged EXCEPT when a package deliberately rewrites \opt@<pkg> before \ProcessOptions
+— exactly the LaTeX-standard idiom babel uses and that we must honor. NOT babel_sty.rs: putting it
+there would duplicate babel's modifier parser and miss the general case (es-*, german variants, other
+packages that rewrite \opt@). babel_sty.rs already pre-allocates \l@polutonikogreek (:19) as a related
+partial workaround; leave it.
+Guard: perfect_kernel batch NN — babelmodifier_greek_polutoniko repro: 0 errors + \bbl@mod@greek
+expands to "polutoniko" + a body <ltx:p>; plus a direct assertion that after a package \def-rewrites
+\opt@<pkg>.<ext>, its \ProcessOptions processes the rewritten list.
+Risk: MED (process_options is on every package/class load path; validated by the in-sync evidence,
+gate on full suite). Corpus gain (residue, PROVEN): alphabeta-doc 1->0, hyperref-with-greek 1->0
+(both reach clean, verified with modifier stripped). Beyond residue: any doc using babel
+language.modifier syntax (es-tabla/es-cuadro spanish, german variants, ...) and any package rewriting
+\opt@<pkg> pre-\ProcessOptions.
+Dead ends: suspected the modifier preprocessing (babel.sty:322-347) didn't run under our raw load —
+it DID (\bbl@mod@greek and the rewritten \opt@babel.sty macro are both correct); the sole break is
+process_options reading the wrong (State-VecDeque) copy of the option list.

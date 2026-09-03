@@ -5383,3 +5383,44 @@ expect `\else`/`\fi`"; bibarts.sty:2231 `\edef\@tempa{\write\@auxout
 robust, so the whole body rides in the frozen `\underline␣` token. Trigger:
 `\let\protect\@unexpandable@protect \edef\x{\underline{P}}`. Rust: `protected`
 macros. Guard: `perfect_kernel_batch54::underline_is_robust_in_an_edef_write`.
+
+## 160. `\labelformat` is undefined; the `\p@<ctr>` handoff to a typerefnum (Rust fixes)
+
+Two halves. (a) latex.ltx:14978 `\def\labelformat#1{\expandafter\def\csname
+p@#1\endcsname##1}` has been a KERNEL macro since 2019-10-01 (varioref only
+re-exports it); Perl's kernel lacks it and `varioref.sty.ltxml:32` noops it.
+contract.sty:978 probes `\scr@ifundefinedorrelax{labelformat}` and, finding it
+missing, installs its pre-2019 fallback `\p@sentence`=`\expandafter\p@@sentence`,
+whose one-token grab of `\thesentence`'s expansion (`\arabic`) leaves
+`{sentence}` behind and ends the label with `\arabic}`. (b)
+`Base_Utility.pool.ltxml:1080-1084` (`\lx@@typerefnum@@`) hands an
+argument-taking `\p@<ctr>` the token `\lx@the@@` (`\csname p@#1\endcsname
+\lx@the@@{#1}`) instead of the single `\the<ctr>` latex.ltx:14976 gives it
+(`\csname p@#1\expandafter\endcsname\csname the#1\endcsname`), so the
+`{<ctr>}` argument is orphaned ("You can't use } after \the" ×3 per
+`\refstepcounter{sentence}`; contract-example-en/-de 44 errors). Trigger:
+`\labelformat{equation}{[E:#1]} \begin{equation}\label{e}x\end{equation}`
+(Perl: `\labelformat` undefined) and `\newtheorem{thm}{Theorem}
+\labelformat{thm}{[T:#1]} \begin{thm}\label{t}x\end{thm}` (Perl: `\the}`).
+Rust: the kernel macro is defined in `latex_constructs.rs` next to
+`\refstepcounter`, the varioref binding leaves it to the kernel, and both
+formatters share `\lx@p@the@@{type}` = `\p@<ctr>\the<ctr>` in latex.ltx's shape.
+Guard: `perfect_kernel_batch54::labelformat_is_a_kernel_macro`.
+
+## 161. `\ProcessOptions` reads the loader's option list, not `\opt@<file>` (Rust fixes)
+
+latex.ltx:18557 `\ProcessOptions` reads `\@ptionlist{\@currname.\@currext}`
+= the MACRO `\opt@<pkg>.<ext>` (:18393), which a package may REWRITE before
+processing: babel.sty:316-347 strips its `language.modifier` syntax
+(`greek.polutoniko` → `greek`, `\bbl@mod@greek`=polutoniko). `Package.pm`
+`ProcessOptions` reads the State list the loader stored, so the rewrite is
+invisible and the raw option dispatch errors "Unknown option
+'greek.polutoniko'" (alphabeta-doc, hyperref-with-greek). Trigger:
+`\usepackage[greek.polutoniko,english]{babel}` under raw loading. Rust:
+`process_options` expands `\opt@<name>.<ext>` and splits it at depth-0
+commas, falling back to the State list only when the macro is undefined; the
+loader's `\opt@` builder joins BOTH stored shapes (`String` and the `Strings`
+a `--preload='[a,b]pkg'` stores — skipping the latter left the macro EMPTY and
+silently turned `rawstyles` off). Guard:
+`perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`.
+

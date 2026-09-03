@@ -6591,3 +6591,30 @@ is the oracle.
 golden `tests/expansion/definedness.xml`.
 **Upstream**: not filed.
 
+### 188. Box constructors read their content as a live `HBoxContents` body (Perl: an isolated argument)
+
+**Perl behavior**: `LaTeX.pool.ltxml` defines `\mbox{}`, `\@makebox[][]{}`,
+`\@framebox[][]{}`, `\raisebox{}[][]{}` with a plain `{}` argument digested in
+isolation under `mode => 'restricted_horizontal'`. Code that OPENS a box inside
+the argument and CLOSES it after (ulem's `\UL@start` = `\setbox\UL@box\hbox
+\bgroup…\bgroup`, `\UL@stop` = `\egroup\egroup`, driven by `\hss` →
+`\UL@hskip` → `\afterassignment\UL@reskip`; examdesign.cls:186-200 around
+`\makebox[.5in][r]{\hss}` at :1210) meets the wrong frame: "`\egroup` Attempt
+to close a group that switched to mode restricted_horizontal" then a cascade
+(examdesign examplea/b/c 101 errors each; Perl identical).
+**Rust behavior**: the content parameter is `HBoxContents` — read and digested
+in the SAME list as latex.ltx's `\mbox{#1}` = `\leavevmode\hbox{#1}` (:9967)
+and `\@makebox`/`\@framebox`/`\raisebox`'s `\hb@xt@`/`\hbox`, with the
+one-frame `readBoxContents` loop (tex.web §1083 `begin_box` pushes nest and
+save level together, §1100 `package` pops both) and `bounded => true` so the
+frame still scopes the box; `sizer` keeps the width/height computation. The
+common shapes (`\makebox[2cm][r]`, `\fbox`, `\raisebox`, `\framebox`, math
+`\fbox{$…$}`) keep their output.
+**Why**: kernel-quality: the box body is a TeX list, not an argument; the
+reader/frame shape is tex.web's. Engine-level (four constructors), Perl would
+take the same change.
+**Witnesses**: examdesign/examplea, examplea-b, examplec (TeX Live doc corpus).
+**Guard**: `perfect_kernel_batch54::{box_constructor_content_is_a_live_hbox_body,
+hbox_reader_is_one_frame}`.
+**Upstream**: not filed.
+

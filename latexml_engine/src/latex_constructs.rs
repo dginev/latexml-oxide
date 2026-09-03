@@ -8370,6 +8370,21 @@ LoadDefinitions!({
     let cs_expanded = &Expand!(cs).to_string();
     RefStepCounter!(cs_expanded, false)?;
   });
+  // latex.ltx:14978 `\def\labelformat#1{\expandafter\def\csname p@#1\endcsname##1}`
+  // — kernel since 2019-10-01 (varioref only re-exports it). Was undefined in
+  // Rust AND Perl (KPE #160): contract.sty:978 probes it with
+  // `\scr@ifundefinedorrelax{labelformat}` and fell back to its pre-2019
+  // `\p@sentence`=`\expandafter\p@@sentence` prefix, whose one-token grab of
+  // `\thesentence`'s expansion left `{sentence}` behind and ended
+  // `\refstepcounter`'s label with `\arabic}` ("You can't use } after \the"
+  // ×3 per sentence; contract-example-en 44 errors). The refnum formatter
+  // (`\lx@@therefnum@@`, base_utilities.rs) already applies the argument-taking
+  // `\p@<ctr>` this defines exactly as latex.ltx:14976's `\@currentlabel` does.
+  // Guard: `perfect_kernel_batch54::labelformat_is_a_kernel_macro`.
+  DefMacro!(
+    "\\labelformat{}",
+    r"\expandafter\def\csname p@#1\endcsname##1"
+  );
 
   // Perl latex_constructs.pool.ltxml: addtoCounterReset + defCounterID
   DefPrimitive!("\\@addtoreset{}{}", sub[(ctr, within)] {
@@ -10485,8 +10500,26 @@ LoadDefinitions!({
   //   beforeDigest => sub { Let(T_MATH, T_CS('\lx@dollar@default')); }
   // Rebinds `$` to the default text-mode toggle (so `\mbox{$x$}` opens
   // inline math). Match Perl literally rather than via reenter_text_mode.
-  DefConstructor!("\\mbox {}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
-    mode => "text",
+  // BOX CONTENT IS A LIVE HBOX BODY (batch 54n; OXIDIZED_DESIGN #188). latex.ltx
+  // `\mbox{#1}` = `\leavevmode\hbox{#1}` and `\@imakebox` = `\hb@xt@w{…#3…}`:
+  // the pre-scanned argument is re-inserted and read as an `\hbox{` body in
+  // the SAME list, so a group closed inside it from another macro closes the
+  // box — ulem's `\hss` (`\let\hskip\UL@hskip`, `\afterassignment\UL@reskip`
+  // → `\UL@stop` = `\egroup\egroup` … `\UL@start`) inside `\makebox[.5in][r]
+  // {\hss}` (examdesign.cls:1210, the truefalse answer key) ends the makebox
+  // at ulem's first `\egroup` and the makebox's own `}` later closes the box
+  // ulem reopened. Digesting the `{}` argument in an isolated mouth under a
+  // mode frame met that `\egroup` with the frame instead (Perl
+  // latex_constructs.pool:4709-4724 shares it; examdesign examplea/b/c). So
+  // the content parameter is `HBoxContents`: `read_box_contents` skips to the
+  // `{` and the one-frame `readBoxContents` loop digests from the live gullet
+  // until the frame closes. `bounded` stays to scope the `$` rebind. Guard:
+  // `perfect_kernel_batch54::box_constructor_content_is_a_live_hbox_body`.
+  DefConstructor!("\\mbox HBoxContents", "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    // `mode` stays, as on `\\hbox` (tex_box.rs): the constructor's own font is
+    // the TEXT font, so a box in math carries no `font="italic"` (golden
+    // 81_babel numprints).
+    mode => "restricted_horizontal",
     bounded => true,
     sizer => "#1",
     before_digest => {
@@ -10504,9 +10537,9 @@ LoadDefinitions!({
   // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   // Perl latex_constructs.pool.ltxml L4718-4724: `\@makebox` has NO
   // beforeDigest — the outer T_MATH binding persists.
-  DefConstructor!("\\@makebox[Dimension][]{}",
+  DefConstructor!("\\@makebox[Dimension][] HBoxContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
-    mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
+    mode => "restricted_horizontal", bounded => true, alias => "\\makebox", sizer => "#3",
     properties   => sub[args] {
       let mut props = stored_map!();
       let mut has_width = false;
@@ -10556,7 +10589,7 @@ LoadDefinitions!({
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
-  DefConstructor!("\\@framebox[Dimension][]{}",
+  DefConstructor!("\\@framebox[Dimension][] HBoxContents",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
@@ -10884,9 +10917,9 @@ LoadDefinitions!({
   );
   // Perl latex_constructs.pool.ltxml L4852-4855: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists.
-  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension]{}",
+  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension] HBoxContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
-    mode         => "text", bounded => true,
+    mode => "restricted_horizontal", bounded => true,
     // TODO
     // sizer        => sub { raisedSizer($_[0]->getArg(4), $_[0]->getArg(1)); }
   );

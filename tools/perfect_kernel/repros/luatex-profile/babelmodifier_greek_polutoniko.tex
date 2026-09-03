@@ -1,0 +1,19 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: greek-fontenc/alphabeta-doc (alphabeta-doc.tex:66); hyperref-with-greek (:22)
+% oracle:  lualatex 0 errors (pdflatex 0 too — engine-independent: SHARED-surpass)
+% engines: rust=RED perl=? (2026-09-03)
+% expect:  0 errors; body <ltx:p> present (Greek text digests)
+% status:  GREEN (b54r, batch 54n: KPE #161 \opt@ macro)
+% mechanism: babel.sty:322-347 preprocesses \usepackage[greek.polutoniko]{babel}: splits
+%   greek.polutoniko on '.', stores \bbl@mod@greek=polutoniko, rewrites the MACRO
+%   \opt@babel.sty to the modifier-stripped "greek,english" (babel.sty:347), then
+%   \ProcessOptions* (:414). Real \@ptionlist (latex.ltx:18393/18557) reads that macro, so
+%   babel processes "greek,english". Our \ProcessOptions -> process_options (content.rs:1904-1905)
+%   reads the State VecDeque opt@babel.sty (still "greek.polutoniko,english"), so
+%   \bbl@load@language{greek.polutoniko} -> \InputIfFileExists{greek.polutoniko.ldf} fails ->
+%   babel.sty:4140 \bbl@error{unknown-package-option} "Unknown option 'greek.polutoniko'".
+\documentclass{article}
+\usepackage[greek.polutoniko,english]{babel}
+\begin{document}
+\selectlanguage{greek}\textgreek{keimeno} \selectlanguage{english} text.
+\end{document}

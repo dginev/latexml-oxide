@@ -1611,9 +1611,22 @@ LoadDefinitions!({
   // every heading: caspervector 23, sduthesis 36, tabular2 28, inkpaper-en;
   // Perl Base_Utility.pool.ltxml:1028 identical, KPE #149). Guard:
   // `perfect_kernel_batch54::ctex_argument_taking_p_macro_keeps_the_refnum`.
+  DefMacro!("\\lx@@therefnum@@{}", "{\\normalfont\\lx@@p@the@@{#1}}");
+  // `\p@<ctr>\the<ctr>` in latex.ltx:14976's exact shape, resolved through
+  // `counter_for_type` like `\lx@the@@`. Shared by the refnum and typerefnum
+  // formatters so an argument-taking `\p@<ctr>` (`\labelformat`, latex.ltx:14978)
+  // always receives the single `\the<ctr>` token: the typerefnum's former
+  // `\csname p@#1\endcsname\lx@the@@{#1}` handed it `\lx@the@@` and left
+  // `{sentence}` behind ("You can't use } after \the" on every contract.sty
+  // sentence; Perl Base_Utility.pool.ltxml:1080-1084 identical, KPE #160).
+  // Guard: `perfect_kernel_batch54::labelformat_is_a_kernel_macro`.
   DefMacro!(
-    "\\lx@@therefnum@@{}",
-    "{\\normalfont\\csname p@#1\\expandafter\\endcsname\\csname the#1\\endcsname}"
+    "\\lx@p@the@@{}",
+    "\\expandafter\\lx@@p@the@@\\expandafter{\\lx@counterfor{#1}}"
+  );
+  DefMacro!(
+    "\\lx@@p@the@@{}",
+    "\\csname p@#1\\expandafter\\endcsname\\csname the#1\\endcsname"
   );
 
   AssignMapping!("type_tag_formatter", "refnum" => "\\lx@therefnum@@");
@@ -1692,7 +1705,7 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\lx@@typerefnum@@{}",
-    r"\@ifundefined{#1typerefname}{\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\csname p@#1\endcsname\lx@the@@{#1}}}"
+    r"\@ifundefined{#1typerefname}{\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@p@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@p@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@p@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");

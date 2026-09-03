@@ -19,8 +19,10 @@ LoadDefinitions!({
   DefMacro!("\\vrefpagenum DefToken Semiverbatim", "\\def#1{\\ref{#2}}",
     locked => true);
 
-  // Should use this, but....
-  def_macro_noop("\\labelformat{}{}")?;
+  // Perl noops `\labelformat{}{}` ("Should use this, but...."). Since
+  // 2019-10-01 the macro is the KERNEL's (latex.ltx:14978, defined in
+  // latex_constructs.rs) and the refnum formatter applies the `\p@<ctr>` it
+  // sets up, so the binding leaves it alone (KPE #160).
 
   Let!("\\Ref", "\\ref");
   Let!("\\Vref", "\\vref");

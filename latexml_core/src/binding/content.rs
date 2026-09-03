@@ -1327,15 +1327,24 @@ fn before_input_handle_options(
   }
   let current_opt_val = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq_opt| match vdq_opt {
     Some(vdq) => {
-      let mut pieces = String::new();
+      // Both item shapes the option list carries: `String` (one option) and
+      // `Strings` (a `--preload='[a,b]pkg'` / batched pass). The latter used to
+      // be skipped, leaving `\opt@<pkg>` EMPTY for preload options — harmless
+      // while `process_options` read the list, fatal once it reads the macro
+      // (latex.ltx `\@ptionlist`): `rawstyles` silently off.
+      let mut pieces: Vec<String> = Vec::new();
       for x in vdq.iter() {
-        if let Stored::String(val) = x {
-          arena::with(*val, |str| pieces.push_str(str));
+        match x {
+          Stored::String(val) => pieces.push(arena::with(*val, |str| str.to_string())),
+          Stored::Strings(vals) => {
+            for val in vals.iter() {
+              pieces.push(arena::with(*val, |str| str.to_string()));
+            }
+          },
+          _ => {},
         }
-        pieces.push(',');
       }
-      pieces.pop();
-      pieces
+      pieces.join(",")
     },
     None => String::new(),
   });
@@ -1902,7 +1911,46 @@ pub fn process_options(inorder: bool, keysets: &[&str]) -> Result<()> {
   };
   let declared_options: VecDeque<Stored> = lookup_vecdeque("@declaredoptions").unwrap_or_default();
   let opt_key = s!("opt@{}.{}", name, ext);
-  let current_options = lookup_vecdeque(&opt_key).unwrap_or_default();
+  // latex.ltx:18557 `\ProcessOptions` reads `\@curroptions` from `\@ptionlist
+  // {\@currname.\@currext}` (:18393) — the MACRO `\opt@<name>.<ext>`, which a
+  // package may rewrite before processing: babel.sty:316-347 strips the
+  // `language.modifier` syntax (`greek.polutoniko` → `greek`, the modifier
+  // kept in `\bbl@mod@greek`) by redefining `\opt@babel.sty`. Perl
+  // (Package.pm:2430-2465) and the former Rust read the State list the loader
+  // stored, so babel still saw `greek.polutoniko` and raised "Unknown option"
+  // (alphabeta-doc, hyperref-with-greek; SHARED). The macro is the source of
+  // truth when it exists (the loader defines it from the same list, so they
+  // agree unless a package rewrote it); the list is the fallback. Guard:
+  // `perfect_kernel_batch54::processoptions_reads_the_rewritten_opt_macro`.
+  let opt_cs = T_CS!(s!("\\{opt_key}"));
+  let current_options: VecDeque<Stored> = if lookup_definition(&opt_cs)?.is_some() {
+    let mut items: VecDeque<Stored> = VecDeque::new();
+    let mut cur: Vec<Token> = Vec::new();
+    let mut depth: i32 = 0;
+    let push_item = |cur: &mut Vec<Token>, items: &mut VecDeque<Stored>| {
+      let text = Tokens::new(std::mem::take(cur)).to_string();
+      let text = text.trim();
+      if !text.is_empty() {
+        items.push_back(Stored::String(arena::pin(text)));
+      }
+    };
+    for t in do_expand(opt_cs)?.unlist() {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      if depth == 0 && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == ",") {
+        push_item(&mut cur, &mut items);
+      } else {
+        cur.push(t);
+      }
+    }
+    push_item(&mut cur, &mut items);
+    items
+  } else {
+    lookup_vecdeque(&opt_key).unwrap_or_default()
+  };
   let class_options = lookup_vecdeque("class_options").unwrap_or_default();
 
   let collect_syms = |vdq: &VecDeque<Stored>| -> Vec<SymStr> {

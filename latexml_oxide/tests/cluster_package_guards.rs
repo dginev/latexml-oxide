@@ -10005,7 +10005,6 @@ Body.
   /// boxes (examdesign.cls:186-200 `\UL@start`/`\UL@stop`) around a
   /// `\makebox` meeting the wrong frame (examdesign examplea/b/c; Perl shares).
   #[test]
-  #[ignore = "RED: the one-frame hbox reader is landed (faithful, suite-green) but examdesign's ulem+\\@makebox interleave still errors — the \\egroup meets \\@makebox's OWN mode frame with a \\bgroup left open inside its argument (boxes-groups topic, wave 14 checkpoint N#3)"]
   fn hbox_reader_is_one_frame() {
     let tex = r"\documentclass[10pt]{examdesign}
 \Fullpages
@@ -10032,6 +10031,109 @@ $\hbox{ab}$ \setbox0\hbox\bgroup x\egroup\box0
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains(r#"tex="\hbox{ab}""#), "{xml}");
+    assert!(xml.contains("ab</text> x"), "{xml}");
+  }
+
+  /// latex.ltx:18557 `\ProcessOptions` reads `\@ptionlist{\@currname.\@currext}`
+  /// = the MACRO `\opt@<pkg>.<ext>`, which babel.sty:316-347 rewrites to strip
+  /// its `language.modifier` syntax (`greek.polutoniko` → `greek`,
+  /// `\bbl@mod@greek`=polutoniko). Reading the loader's State list instead
+  /// raised "Unknown option 'greek.polutoniko'" (alphabeta-doc,
+  /// hyperref-with-greek; Perl shares it).
+  #[test]
+  fn processoptions_reads_the_rewritten_opt_macro() {
+    let tex = r"\documentclass{article}
+\usepackage[greek.polutoniko,english]{babel}
+\begin{document}
+\makeatletter[\bbl@mod@greek]\makeatother \textgreek{a}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[polutoniko]"), "{xml}");
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\lx@rewriter@sty{}
+\DeclareOption{alpha}{\gdef\seen{ALPHA}}\DeclareOption{beta}{\gdef\seen{BETA}}
+\def\@currname{article}\def\@currext{cls}
+\expandafter\def\csname opt@article.cls\endcsname{beta}
+\ProcessOptions\relax
+\makeatother
+\begin{document}
+[\seen]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BETA]"), "{xml}");
+  }
+
+  /// latex.ltx `\mbox{#1}` = `\leavevmode\hbox{#1}`: the content is an hbox
+  /// BODY read in the same list, so ulem's `\hss` (`\UL@hskip` →
+  /// `\afterassignment\UL@reskip` → `\UL@stop` `\egroup\egroup` … `\UL@start`)
+  /// inside `\makebox[.5in][r]{\hss}` (examdesign.cls:1210) closes the makebox
+  /// and the makebox's own `}` closes the box ulem reopened (OD #188). The
+  /// common shapes keep their structure.
+  #[test]
+  fn box_constructor_content_is_a_live_hbox_body() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\makebox[2cm][r]{mk} \mbox{x y} \fbox{fb} \raisebox{1pt}{rb} \framebox[3cm]{fr} $\fbox{$op$}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text align="right" width="56.9pt">mk</text>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("x y"), "{xml}");
+    assert!(xml.contains(r#"framed="rectangle">fb</text>"#), "{xml}");
+    assert!(xml.contains(r#"<text yoffset="1.0pt">rb</text>"#), "{xml}");
+    assert!(
+      xml.contains("<XMArg enclose=\"box\">") || xml.contains(r#"tex="\framebox{$op$}""#),
+      "{xml}"
+    );
+  }
+
+  /// latex.ltx:14978 `\labelformat#1` = `\expandafter\def\csname p@#1\endcsname##1`
+  /// (kernel since 2019-10-01; varioref only re-exports it). contract.sty:978
+  /// probes it with `\scr@ifundefinedorrelax{labelformat}` and, when it is
+  /// missing, falls back to the pre-2019 `\p@sentence`=`\expandafter\p@@sentence`
+  /// prefix, whose one-token grab of `\thesentence`'s expansion (`\arabic`)
+  /// leaves `{sentence}` behind and ends `\refstepcounter`'s `\@currentlabel`
+  /// with `\arabic}` ("You can't use } after \the" ×3 per sentence,
+  /// contract-example-en 44 errors; Perl shares it, KPE #160). With the kernel
+  /// macro the `\labelformat` branch wins and `\p@sentence` takes
+  /// `\thesentence` whole, as it does under pdflatex.
+  #[test]
+  fn labelformat_is_a_kernel_macro() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\newcounter{par}\newcounter{sentence}[par]
+\renewcommand*{\thesentence}{\arabic{sentence}}
+\def\p@par{[P]}
+\@ifundefined{labelformat}{%
+  \renewcommand*{\p@sentence}{\expandafter\p@@sentence}%
+  \newcommand*{\p@@sentence}[1]{\p@par{{\thepar}-}{S:#1}}%
+}{\labelformat{sentence}{\p@par{{\thepar}-}{S:#1}}}
+\makeatother
+\labelformat{equation}{[E:#1]}
+\newtheorem{thm}{Theorem}\labelformat{thm}{[T:#1]}
+\begin{document}
+\refstepcounter{par}\refstepcounter{sentence}\label{s}
+X Y \ref{s}
+\begin{equation}\label{e}x\end{equation}
+\begin{thm}\label{t}x\end{thm}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<tag role="refnum">[E:1]</tag>"#), "{xml}");
+    // typerefnum goes through the same `\p@<ctr>\the<ctr>` helper.
+    assert!(
+      xml.contains(r#"<tag role="typerefnum">Theorem [T:1]</tag>"#),
+      "{xml}"
+    );
   }
 }

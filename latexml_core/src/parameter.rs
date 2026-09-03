@@ -653,8 +653,19 @@ impl Parameters {
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
     let mut args = Vec::with_capacity(self.0.len());
+    // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
+    // primitives read their parameters here).
+    let traced = fordefn.is_some_and(|d| {
+      std::env::var("LXML_TRACE_ARGS")
+        .map(|want| d.get_cs().to_string() == want)
+        .unwrap_or(false)
+    });
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
+      if traced && let Some(d) = fordefn {
+        let shown = values.revert().map(|t| t.to_string()).unwrap_or_default();
+        eprintln!("ARGS {}: {} = {shown}", d.get_cs(), parameter.stringify());
+      }
       if parameter.predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
         // closure... so this shouldn't be an error, not even an info -- but leaving it here
@@ -672,8 +683,23 @@ impl Parameters {
 
   pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::with_capacity(self.0.len());
+    // `LXML_TRACE_ARGS=\cs` prints every argument this constructor reads, as
+    // reverted tokens, before it is digested — a bisect aid for "which tokens
+    // did the `{}` scan swallow" questions (examdesign's version-loop
+    // re-execution; wave 14). Off by default.
+    let traced = std::env::var("LXML_TRACE_ARGS")
+      .map(|want| fordefn.get_cs().to_string() == want)
+      .unwrap_or(false);
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
+      if traced {
+        let shown = value.revert().map(|t| t.to_string()).unwrap_or_default();
+        eprintln!(
+          "ARGS {}: {} = {shown}",
+          fordefn.get_cs(),
+          parameter.stringify()
+        );
+      }
       if !parameter.novalue {
         let digested_value = parameter.digest(value, Some(fordefn))?;
         args.push(digested_value);
