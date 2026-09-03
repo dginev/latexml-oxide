@@ -1,0 +1,16 @@
+% witness: greek-fontenc/test-lgrenc, textalpha-doc (test-lgrenc.tex:584 Gr\a"u\ss e, \a<, \a>)
+% oracle:  lualatex 0 errors ; pdflatex 0 (dieresis needs no LGR)
+% engines: rust=1 pdflatex=0 (2026-09-03, b54x) -> PERL-ORIGIN, surpass in scope
+% expect:  0 errors; <ltx:tabular class="ltx_tabbing"> containing u-with-dieresis
+% status:  RED
+% mechanism: \a" -> \@tabbing@accent{"} -> \@tabbing@" undefined. " is NOT rebound by tabbing,
+%   so the faithful fix falls \@tabbing@accent back to \<char> (= \" dieresis). Greek reaches
+%   \a< / \a> too (LGR breathings): those chars ARE rebound (\<->untab, \>->nexttab), so they
+%   need pre-saving \@tabbing@< <- \< and \@tabbing@> <- \> BEFORE rebinding.
+\documentclass{article}
+\begin{document}
+\begin{tabbing}
+xxx \= yyy \\
+Gr\a"u\ss e \> \a`a \\
+\end{tabbing}
+\end{document}

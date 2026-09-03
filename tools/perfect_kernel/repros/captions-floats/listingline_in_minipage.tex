@@ -1,0 +1,22 @@
+% witness: algpseudocodex, coloredtheorem-doc — sweep36 (2+6 errs, 2 docs)
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — same-host Perl emits the identical listingline errors
+% expect: 0 Error; <ltx:listing>/<ltx:listingline> inside a block-repackaged minipage
+% status: RED with b54t (<ltx:listingline> isn't allowed in <ltx:p>)
+% mechanism: \begin{algorithmic} (block-level <ltx:listing>/<ltx:listingline>) inside a
+%   minipage captured as <ltx:p class=ltx_minipage> (horizontal). _CaptureBlock_ fails to
+%   repackage the p as a block ("Did not find a block-like candidate in ltx:p",
+%   latexml_engine/src/base_utilities.rs:4146); listingline can't open in <ltx:p>, then the
+%   capture close fails ("descendants do not auto-close: listingline"). coloredtheorem is
+%   the same with a colorbox/theorem-body <ltx:text> capture.
+\documentclass{article}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{minipage}[t]{0.45\textwidth}
+\begin{algorithmic}[1]
+\State first line
+\Statex continuing first line
+\end{algorithmic}
+\end{minipage}
+\end{document}

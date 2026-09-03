@@ -1418,6 +1418,17 @@ impl Document {
         },
       }
     }
+    // A `ltx:_CaptureBlock_` is a completed BOX (`\parbox`/minipage/`\vbox`
+    // capture, `insert_block`): tex.web's box completeness — nothing stays
+    // open across a finished box — so its non-auto-closeable descendants are
+    // closed BY the box, not reported (the close already happened below; the
+    // Error was a spurious diagnostic over an identical tree, Perl the same:
+    // testnumberedblock `numVblock` around `verbatim`, algpseudocodex and
+    // coloredtheorem `algorithmic` lines in a minipage). Guard:
+    // `perfect_kernel_batch54::capture_box_closes_its_descendants`.
+    if is_capture_block(node) {
+      cant_close.clear();
+    }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
       // Perl: suppress error when $ifopen is true
@@ -1487,6 +1498,9 @@ impl Document {
       }
     }
 
+    if is_capture_block(node) {
+      cant_close.clear(); // box completeness, see `close_to_node`
+    }
     if t == Some(NodeType::DocumentNode) || t.is_none() {
       // Didn't find $qname at all!!
       if strict {
@@ -6465,6 +6479,12 @@ pub fn can_auto_close(node: &Node) -> bool {
 /// Ie. using the registered prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// NOTE: Should Deprecate! (use model)
+/// The transient box-capture element of `insert_block` (`ltx:_CaptureBlock_`):
+/// a completed box, whose close force-closes its descendants.
+pub fn is_capture_block(node: &Node) -> bool {
+  arena::with(get_node_qname(node), |q| q == "ltx:_CaptureBlock_")
+}
+
 pub fn get_node_qname(node: &Node) -> SymStr { model::get_node_qname(node) }
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {

@@ -1,0 +1,18 @@
+% witness: testnumberedblock (numberedblock doc) — sweep36 (1 doc, 2 errs)
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — same-host Perl emits the identical _CaptureBlock_ close error
+% expect: 0 Error; the numbered block with the verbatim content force-closed at the box
+% status: RED with b54t (_CaptureBlock_ Closing ... descendants do not auto-close: verbatim)
+% mechanism: numVblock (numberedblock.sty, raw) captures verbatim content into a numbered
+%   box (_CaptureBlock_). When the capture closes, the open `verbatim` descendant is not
+%   auto-closeable, so the close fails. Same close-family as listingline (Group A 2nd error).
+%   Fix = capture-boundary hard-close of non-auto-closeable descendants in document.rs.
+\documentclass{article}
+\usepackage{numberedblock}
+\begin{document}
+\begin{numVblock}
+This is a labeled numVblock
+program test
+\end{numVblock}
+\end{document}

@@ -191,6 +191,7 @@ pub mod oup_authoring_template_cls;
 pub mod pax_sty;
 pub mod pb_diagram_sty;
 pub mod pdfcomment_sty;
+pub mod phy_ab_braket_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
@@ -431,6 +432,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("hvfloat", "sty", hvfloat_sty::load_definitions),
   ("ifoddpage", "sty", ifoddpage_sty::load_definitions),
   ("nmbib", "sty", nmbib_sty::load_definitions),
+  ("phy-ab.braket", "sty", phy_ab_braket_sty::load_definitions),
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),

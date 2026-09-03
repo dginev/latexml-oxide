@@ -1,0 +1,17 @@
+% witness: base/encguide (encguide.tex, \a= macron accent inside tabbing)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 pdflatex=0 (2026-09-03, b54x) -> PERL-ORIGIN, surpass in scope
+% expect:  0 errors; <ltx:tabular class="ltx_tabbing"> containing an o-with-macron
+% status:  RED
+% mechanism: inside tabbing \= is rebound to \@tabbing@tabset (mod.rs:2438), so \a= recovers
+%   the accent via \@tabbing@accent{=} -> \@tabbing@= (sect10.rs:132). tabbing_bindings()
+%   pre-saves only \@tabbing@' and \@tabbing@` (mod.rs:2445-2446; Perl latex_constructs.
+%   pool.ltxml:3572-3573) -> \@tabbing@= undefined. Real \@tabacckludge (latex.ltx:10005)
+%   recovers the ENCODING accent \csname\string#1\endcsname, bypassing the rebinding.
+\documentclass{article}
+\begin{document}
+\begin{tabbing}
+xxx \= yyy \\
+\a=o \> \a'e \\
+\end{tabbing}
+\end{document}

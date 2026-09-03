@@ -698,3 +698,58 @@ trigger (custom column type / bold rule), NOT the `\@tabarray` incompleteness. N
   alone, `\@tabarray` standalone: all CLEAN. Trigger = `\@tabarray` + non-boxing `\begingroup` wrapper
   + outer-array nesting together.
 - t-angles picture content (`\id`, `\hbx`, `\line`) is NOT the trigger (t2 clean).
+
+## Checkpoint N (wave-15) — ROOT 3b: shipunov boldline `\hlineB` brace-hack `\noalign`
+
+Witness: shipunov/boldline-ex-en (4 err). Repros (RED b54t): boldline_hlineB.tex (2 err);
+bl_rawhline_bracehack.tex (1 err, minimal kernel — the real latex.ltx `\hline` brace-hack, no pkg).
+First error `\@end@tabular Attempt to close boxing group` (+ with ≥2 hlineB, `\lx@begin@alignment
+Attempt to close a group that switched to mode restricted_horizontal`, egroup ERROR stomach.rs:733).
+
+### Trigger isolation
+boldline: `V{}` col (`!{\vrule…}`) CLEAN; `\clineB` CLEAN; **`\hlineB` RED**. A SINGLE `\hlineB`
+anywhere (top/mid/bottom) → 1 err. `\hlineB` (boldline.sty:13-21) = `\noalign{\ifnum0=`}\fi\hrule
+\@height#1\arrayrulewidth\futurelet\reserved@a\@xhlineB{#1}}` — the real latex.ltx `\hline`
+brace-hack. bl_rawhline_bracehack (that idiom, NO width arg) also RED → the trigger is the
+BRACE-HACK, not the `{#1}` argument.
+
+### Mechanism (file:line)
+LaTeXML OVERRIDES `\hline`=`\noalign{\@@alignment@hline}` (tex_tables.rs:522) — a clean noalign that
+sidesteps the brace-hack — so its own `\hline` works. But raw-loaded `\hlineB` uses the real
+brace-hack. The alignment column scanner's `\noalign` branch (tex_tables.rs:977-990) reads the body
+with `read_arg(ExpansionLevel::Off)` (tex_tables.rs:983) = a TOKEN-LEVEL balanced `{...}` pre-scan.
+The brace-hack's first `}` (in `\ifnum0=`}`) is a catcode-2 END token that real TeX consumes as a
+CHAR CONSTANT (``` `} ``` = charcode of `}`) during EXECUTION of `\ifnum` — tex.web §1206:
+`\noalign` = `scan_left_brace` then execute the material until the matching `}` fires
+`handle_right_brace`. `read_arg` pre-scans and miscounts that `}` as the noalign group close,
+truncating the body to `\ifnum0=` and LEAKING `\fi\hrule\@height…\futurelet\reserved@a\@xhlineB{#1}`
++ the REAL closing `}` into the alignment. The leaked `\hrule`/`\futurelet` material is processed as
+if it were cell content (opening a `\begingroup`+restricted_horizontal frame out of order), so
+`\@end@tabular`/`\lx@begin@alignment`'s egroup closes the wrong frame. Same class as physics2
+`\mathclose Digested` grabbing a deferred token: token pre-scan vs execution-time group boundary.
+
+### Classification: SHARED
+Perl 0.8.8 same host/preload on boldline_hlineB = 2 errors, IDENTICAL (`\@end@tabular` +
+`\lx@begin@alignment` … restricted_horizontal). pdflatex 0 (boldline-ex-en.pdf ships). In scope.
+
+### Fix — KERNEL alignment `\noalign` handler (execution-time group boundary)
+Make the alignment `\noalign` branch (tex_tables.rs:977-990) mirror tex.web §1206: instead of
+`read_arg(Off)` + `digest` (pre-scan), read the opening `{` (T_BEGIN), `bgroup()`, then DIGEST the
+body to the matching `}` at EXECUTION time (a `digest_next_body(Some(T_END))`-style loop that closes
+on the executed T_END egroup) — so the ``` `} ``` char-constant is consumed by `\ifnum` during
+digestion and the group closes at the CORRECT `}`. Fixes the whole class of raw `\hline`-brace-hack
+rule macros (boldline `\hlineB`, arydshln/booktabs-style custom rules), not just boldline. Fix site:
+latexml_engine/src/tex_tables.rs digest_alignment_column, the `token.defined_as(\noalign)` branch
+(~:977, replace the `read_arg`+`digest` at :983-985 with an execution-time bgroup/digest-to-T_END).
+Guard (boldline_hlineB.tex): 0 Error/Fatal AND the tabular renders (≥1 `<ltx:tabular>` with ≥3
+`<ltx:tr>`). NB mirror in Perl TeX_Tables.pool.ltxml noalign handler for parity (SHARED).
+Alternative REJECTED (boldline binding replacing `\hlineB`/`\clineB` with clean noalign): narrower,
+masks the shared kernel `\noalign` pre-scan bug that any brace-hack rule package hits.
+Risk: MED — touches every `\noalign` inside every alignment; re-run tabular/array/longtable +
+`\hline`/`\cline`/`\noalign` goldens (booktabs `\midrule`, colortbl `\arrayrulecolor`).
+Expected gain: shipunov/boldline-ex-en (4) + any brace-hack-rule package.
+
+### Dead ends
+- boldline `V{}` column and `\clineB`: CLEAN — only `\hlineB` (brace-hack `\noalign`). `\hlineB`
+  position (top/mid/bottom) irrelevant — a single one breaks. The `{#1}` width arg is NOT the
+  trigger (the arg-less real `\hline` brace-hack, bl_rawhline_bracehack, breaks identically).

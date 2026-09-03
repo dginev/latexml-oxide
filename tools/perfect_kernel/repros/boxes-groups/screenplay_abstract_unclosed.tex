@@ -1,0 +1,24 @@
+% witness: screenplay-pkg/screenplay-pkg (screenplay-pkg.tex:67). article `abstract` ENVIRONMENT
+% misused as a braced command \abstract{...} with \sections INSIDE the group. oracle: pdflatex 0
+% (tolerates it; sections typeset inside the abstract quotation, group auto-closes). status: RED
+% b54x=4 (\lx@add@frontmatter@until Attempt to close a group that switched to mode internal_vertical
+% + <ltx:section> not allowed in <ltx:abstract>/<ltx:section> + abstract/document close mismatch).
+% Perl 0.8.8 SHARED (11 err, same family: \lx@add@frontmatter@now internal_vertical).
+% mechanism: \abstract{ (sect05.rs:872) sees T_BEGIN -> emits \lx@begin@abstract { \aftergroup
+% \lx@end@abstract; \lx@begin@abstract=\lx@add@frontmatter@until{ltx:abstract}[..]{\lx@end@abstract}
+% (base_utilities.rs:816) does a BOUNDED digest_next_body(Some(\lx@end@abstract)) = internal_vertical
+% frame. The abstract-END is tied to the group's } (via \aftergroup), but the group wraps the whole
+% body incl. \sections; the sections digest INSIDE the bounded abstract frame (<ltx:section> in
+% <ltx:abstract>) and the frame is closed by the wrong } -> internal_vertical mismatch. The no-brace
+% \abstract path adds \maybe@end@abstract(=\lx@end@abstract) to \@startsection@hook (sect05.rs:889);
+% the BRACED path does NOT, so a \section inside \abstract{...} cannot end the abstract.
+\documentclass[11pt]{article}
+\title{T}\author{A}
+\begin{document}
+\maketitle
+\abstract{\noindent\begin{quote}Abstract text.\end{quote}
+\section{Introduction}
+Intro body.
+\section{Package use}
+More body.
+\end{document}

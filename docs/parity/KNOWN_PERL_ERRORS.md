@@ -5682,3 +5682,36 @@ Raw colortbl derivatives reach colortbl.sty internals — tabu.sty:720
 painters are `\relax`/`\@empty` no-ops as in colortbl.sty:75-166. Guard:
 `perfect_kernel_batch54::colortbl_internal_surface_is_defined`.
 
+## 182. `\@tabbing@accent` saves only `'` and `` ` `` (Rust fixes)
+
+latex_constructs.pool.ltxml:3547 `\a<accent>` → `\@tabbing@<accent>`, with
+:3572-3573 saving only `\@tabbing@'`/`` \@tabbing@` `` before tabbing rebinds
+the control symbols, so `\a=` (encguide macron), `\a<` (greek-fontenc
+breathings) and any never-rebound accent `\a"` are undefined. latex.ltx:10005
+`\@tabacckludge` recovers the encoding-level accent by name. Trigger:
+`\begin{tabbing}\a=o\end{tabbing}`. Rust: `=`, `<`, `>` are saved before the
+rebinding and an unsaved accent falls back to the accent command itself.
+Guard: `perfect_kernel_batch54::tabbing_accent_kludge_recovers_rebound_accents`.
+
+## 183. `\noalign` bodies are pre-scanned as a token argument (Rust fixes)
+
+TeX_Tables.pool.ltxml's alignment column reader takes the `\noalign` body as
+a balanced argument; tex.web §1206 executes it to the `}` that closes the
+no_align_group, and latex.ltx's `\hline` brace hack (`\noalign{\ifnum0=`}
+\fi\hrule…`) has a char-constant `}` that the pre-scan miscounts, cutting the
+body at `\ifnum0=` and leaking the rule into the alignment (boldline
+`\hlineB`, shipunov/boldline-ex-en; LaTeXML's own `\hline` sidesteps the hack).
+Trigger: the raw hack in any `\noalign`. Rust: the body is digested at
+execution time inside its group. Guard:
+`perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
+
+## 184. Box captures report their non-auto-closeable descendants (Rust fixes)
+
+Core/Document.pm `closeToNode`/`closeNode` error "Closing … whose open
+descendents do not auto-close" when `insertBlock`'s `ltx:_CaptureBlock_`
+closes over a `verbatim`/listing line, then close anyway — the tree is right
+and the diagnostic spurious (testnumberedblock `numVblock`; algpseudocodex,
+coloredtheorem). Rust: a capture block is a completed box (tex.web box
+completeness) and closes its descendants silently. Guard:
+`perfect_kernel_batch54::capture_box_closes_its_descendants`.
+

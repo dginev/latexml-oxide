@@ -4310,7 +4310,10 @@ Brix & 45 & 90
     );
     assert!(!stderr.contains("Fatal"), "{stderr}");
     assert!(!stderr.contains("read_newline_args"), "{stderr}");
-    assert!(stderr.contains("Stray alignment"), "{stderr}");
+    // `\@tabarray` is now the full array setup (batch 54x): in text mode
+    // real TeX errors too ("Missing $ inserted" for the `\vcenter`), so the
+    // guard only requires the non-fatal recovery.
+    assert!(stderr.contains("Error:"), "{stderr}");
   }
 
   /// P32: `[first-col]`/`[last-col]` add a label cell to every source row of
@@ -11321,6 +11324,120 @@ x
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
+  /// A box capture (`insert_block`'s `ltx:_CaptureBlock_`) is a completed
+  /// box: its non-auto-closeable descendants (a `verbatim`, listing lines)
+  /// are closed by the box, not reported (testnumberedblock; Perl emitted
+  /// the same spurious error over the same tree).
+  #[test]
+  fn capture_box_closes_its_descendants() {
+    let tex = r"\documentclass{article}
+\usepackage{numberedblock}
+\begin{document}
+\begin{numVblock}
+This is a labeled numVblock
+program test
+\end{numVblock}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("program test"), "{xml}");
+    assert!(!xml.contains("_CaptureBlock_"), "{xml}");
+  }
+
+  /// physics2 `ab.braket`: the active `|` in `\braket<a|b>` is a
+  /// `\middle\vert` without the `\egroup…\bgroup` atom split that
+  /// LaTeXML's token-level `\left` capture cannot pair (physics2,
+  /// physics2-legacy; lualatex clean).
+  #[test]
+  fn physics2_braket_active_bar_is_a_middle_fence() {
+    let tex = r"\documentclass{article}\usepackage{amsmath}\usepackage{physics2}
+\usephysicsmodule{ab,ab.braket}
+\begin{document}
+\[ \bra<\phi| \quad \ket|\psi> \quad \braket<\phi> \]
+\[ \braket<\phi|\psi> \quad \braket<\phi|A|\psi> \quad \ketbra|\phi><\psi| \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"role="MIDDLE""#) || xml.contains("∣"),
+      "{xml}"
+    );
+  }
+
+  /// tex.web §1206: a `\noalign` body is EXECUTED to the `}` closing its
+  /// group; latex.ltx's `\hline` brace hack (`\noalign{\ifnum0=`}\fi…`) has a
+  /// char-constant `}` a token pre-scan miscounted, leaking the rule into the
+  /// alignment (boldline `\hlineB`, shipunov/boldline-ex-en; Perl identical).
+  #[test]
+  fn noalign_body_is_executed_to_its_group_end() {
+    let tex = r"\documentclass{article}\usepackage{array}
+\makeatletter
+\def\myhline{\noalign{\ifnum0=`}\fi\hrule \@height \arrayrulewidth \futurelet\reserved@a\@xmyhline}
+\def\@xmyhline{\ifx\reserved@a\myhline\fi\ifnum0=`{\fi}}
+\makeatother
+\begin{document}
+\begin{tabular}{c}a\\\myhline b\\\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // the raw `\hrule` lands as a rule row between the two data rows
+    assert!(
+      xml.contains(">a") && xml.contains(">b") && xml.contains("<rule"),
+      "{xml}"
+    );
+    let boldline = r"\documentclass{article}\usepackage{boldline}
+\begin{document}
+\begin{tabular}{cc}\hlineB{2.5} a & b \\ \hlineB{2.5} c & d \\ \hlineB{2.5}\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(boldline, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for cell in [">a<", ">b<", ">c<", ">d<"] {
+      assert!(xml.contains(cell), "{cell}: {xml}");
+    }
+  }
+
+  /// tabu's remaining user surface: `\everyrow`, `\rowfont`, and the
+  /// `\extrarowsep` assignment syntax (tabu.sty:232) over
+  /// `\extrarowheight`/`\extrarowdepth`.
+  #[test]
+  fn tabu_row_surface_is_covered() {
+    let tex = r"\documentclass{article}\usepackage{tabu}
+\begin{document}
+\extrarowsep=2pt \extrarowsep^=3pt \extrarowsep=^1pt_2pt
+\everyrow{\hline}
+\begin{tabu}{ll}\rowfont[c]{\bfseries} a & b \\ c & d \\\end{tabu}
+\the\extrarowheight/\the\extrarowdepth
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    assert!(xml.contains("1.0pt/2.0pt"), "{xml}");
+  }
+
+  /// latex.ltx:10005 `\@tabacckludge`: inside tabbing `\a=`/`\a<`/`\a>` reach
+  /// the encoding-level accents although `\=`/`\<`/`\>` are tab operators,
+  /// and an accent tabbing never rebinds (`\a"`) is the accent itself
+  /// (encguide, greek-fontenc; Perl saved only `'` and `` ` ``).
+  #[test]
+  fn tabbing_accent_kludge_recovers_rebound_accents() {
+    let tex = r#"\documentclass{article}
+\begin{document}
+\begin{tabbing}
+xxx \= yyy \\
+\a=o \> \a'e \a"u \\
+\end{tabbing}
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ō") && xml.contains("é") && xml.contains("ü"), "{xml}");
   }
 
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a

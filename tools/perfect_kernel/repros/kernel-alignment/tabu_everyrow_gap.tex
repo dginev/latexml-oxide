@@ -1,0 +1,8 @@
+% witness: \usepackage{tabu}; \everyrow{\hline} (tabu.sty user cmd, header comment L20)
+% oracle:  pdflatex 0 errors ; engines rust=2 (b54x)
+% expect:  0 errors; <ltx:tabular> with cells
+% status:  RED — \everyrow undefined; presentational (inter-row rules), faithful = gobble arg
+\documentclass{article}\usepackage{tabu}
+\begin{document}
+\begin{tabu}{ll}\everyrow{\hline}a & b \\ c & d \\\end{tabu}
+\end{document}

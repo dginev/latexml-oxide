@@ -129,9 +129,18 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\@tabbing@poptabs", sub [_args] { /* NOT HANDLED */ });
 
   // Accent redirect: \a{x} → \@tabbing@x (looks up the accent by name)
+  // A saved copy exists only for the accents tabbing rebinds (`'`, `` ` ``,
+  // `=`, `<`, `>`); every other accent (`\"`, `\.`, `\^`, `\~`, `\u`, `\v`,
+  // `\H`, `\c`, …) is the encoding-level command itself, as latex.ltx:10005
+  // `\@tabacckludge` reaches it (`\csname\string#1\endcsname`).
   DefMacro!("\\@tabbing@accent{}", sub [args] {
     let accent = args[0].to_string();
-    Tokens::new(vec![T_CS!(&format!("\\@tabbing@{accent}"))])
+    let saved = T_CS!(&format!("\\@tabbing@{accent}"));
+    if is_defined_token(&saved) {
+      Tokens::new(vec![saved])
+    } else {
+      Tokens::new(vec![T_CS!(&format!("\\{accent}"))])
+    }
   });
 
   // Default definitions for \pushtabs/\poptabs/\kill (outside tabbing)

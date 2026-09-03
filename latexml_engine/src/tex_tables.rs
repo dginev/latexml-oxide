@@ -985,8 +985,36 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         }
         alignment.borrow_mut().start_column(true)?;
         alignment.borrow_mut().last_column();
-        let next_arg = read_arg(ExpansionLevel::Off)?;
-        let r = digest(next_arg)?;
+        // tex.web §1206: `\noalign` does `scan_left_brace`, opens the
+        // no_align_group, and the material is EXECUTED up to the `}` that
+        // closes that group. A token-level pre-scan (`read_arg`) miscounted
+        // latex.ltx's `\hline` brace hack — `\noalign{\ifnum0=`}\fi\hrule…}`
+        // whose first `}` is a char constant consumed by `\ifnum` at
+        // execution — so the body was cut at `\ifnum0=` and the rest leaked
+        // into the alignment as cell content (boldline `\hlineB`, any raw
+        // rule macro built on the hack; shipunov/boldline-ex-en: "`\@end@tabular`
+        // Attempt to close boxing group"; Perl identical, pdflatex clean).
+        // The kernel's own `\hline` = `\noalign{\@@alignment@hline}` never
+        // hit it. Guard: `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
+        match read_non_space()? {
+          Some(open) if open.defined_as(&T_BEGIN!()) => {},
+          Some(other) => {
+            Error!(
+              "expected",
+              "{",
+              s!("Missing {{ after \\noalign, got {other}")
+            );
+            unread_one(other);
+          },
+          None => {},
+        }
+        let depth_before = get_boxing_level();
+        bgroup();
+        let body = digest_next_body(None)?;
+        if get_boxing_level() > depth_before {
+          egroup()?; // ran out of input before the closing `}`
+        }
+        let r: Digested = List::new(body).into();
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole

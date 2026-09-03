@@ -1,0 +1,13 @@
+% witness: \usepackage{tabu} docs (amnestyreport, europasscv, ftc-notebook, sduthesis, ...)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 pdflatex=0 (2026-09-03, b54x) — GREEN, locks the tabu->tabularx binding
+% expect:  0 errors; <ltx:tabular> with 4 <ltx:td> (2 cols x 2 rows); td1 align=left, td2 align=right
+% status:  GREEN
+% mechanism: tabu_sty.rs \tabu -> \tabularx{<to/spread/\linewidth>}; X[align] -> tabularx X + align.
+\documentclass{article}\usepackage{tabu}
+\begin{document}
+\begin{tabu} to \linewidth {X[l]X[r]}
+a & b \\
+c & d \\
+\end{tabu}
+\end{document}

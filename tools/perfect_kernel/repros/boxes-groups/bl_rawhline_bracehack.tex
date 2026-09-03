@@ -1,0 +1,18 @@
+% witness: shipunov/boldline-ex-en (boldline.sty \hlineB). MINIMAL KERNEL repro: the real
+% latex.ltx \hline brace-hack (\ifnum0=`}\fi ... \ifnum0=`{\fi}) inside \noalign, WITHOUT the
+% width arg — proves the trigger is the brace-hack, not \hlineB's {#1}. oracle pdflatex 0.
+% status: RED b54t=1 (\@end@tabular Attempt to close boxing group); Perl 0.8.8 identical (SHARED).
+% mechanism: LaTeXML's alignment \noalign handler (tex_tables.rs:983) reads the noalign body via
+%   read_arg (token-level balanced {...} pre-scan). The brace-hack's first `}` (in \ifnum0=`}) is a
+%   catcode-2 token that real TeX consumes as a CHAR CONSTANT during EXECUTION (`} = charcode),
+%   tex.web §1206 \noalign=scan_left_brace + execute-to-matching-`}`. read_arg miscounts it as the
+%   group close, truncating the body to `\ifnum0=` and leaking `\hrule...\futurelet...}` into the
+%   alignment -> frame desync -> \@end@tabular/\lx@begin@alignment close the wrong frame.
+\documentclass{article}\usepackage{array}
+\makeatletter
+\def\myhline{\noalign{\ifnum0=`}\fi\hrule \@height \arrayrulewidth \futurelet\reserved@a\@xmyhline}
+\def\@xmyhline{\ifx\reserved@a\myhline\fi\ifnum0=`{\fi}}
+\makeatother
+\begin{document}
+\begin{tabular}{c}a\\\myhline b\\\end{tabular}
+\end{document}

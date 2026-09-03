@@ -400,3 +400,75 @@ colortbl-derivative family (tabulary/tabularht/keyvaltable/tabu docs) reaching \
 ## DEAD END
 - Defining \CT@everycr as an ordinary macro (\def\CT@everycr{}) not a toks register: tabu:720
   `\the\CT@everycr` then errors "You can't use \CT@everycr after \the" — it MUST be a register.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (b)  tablists-rus \org@halign … mode math -> RESOLVED
+================================================================================
+Re-ran /usr/local/texlive/2025/texmf-dist/doc/latex/tablists/tablists-rus.tex from a
+writable cwd with b54t (--preload=[rawstyles,rawclasses]latexml.sty).
+
+RESULT: CLEAN. 0 Error/Fatal (the only stderr `Error:` is the read-only-dir log-write
+"Permission denied" artifact, ignored per PREAMBLE), `Conversion complete: 1 warning`
+(hypdoc/hyperref hyperindex — cosmetic), 153 KB / 2760-line XML, no <ERROR>/undefined
+markers. Structure: 161 <td>, 29 <tr> (tables), 78 <Math>, 75 <verbatim>, 52 <para>.
+
+The s36 first error `\org@halign Attempt to close a group that switched to mode math`
+(101 errors) is GONE: the alignment-ledger `tablists_arraycr_backslash`/`_math` fixes
+(array-style `\TeXr@arraycr` \\ in a raw \halign leaving an open inline-math frame) plus
+batches 54w/54x cleared the whole cascade. No further action; do not re-open.
+
+Guard suggestion: add tablists-rus (or the reduced tablists_arraycr_* repros already in
+alignment-ledger, now GREEN) to the doc-level regression set to lock the 101->0 win.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: tabu strategy — RECOMMEND (a) FAITHFUL BINDING, already ~90% done
+================================================================================
+Binary b54x. Repros: tabu_to_X.tex, longtabu_X.tex (GREEN guards); tabu_everyrow_gap,
+tabu_rowfont_gap, tabu_extrarowsep_gap (RED, the only user-surface gaps).
+
+## RECOMMENDATION: option (a) — extend the existing tabu binding (tabu_sty.rs) on
+## tabularx/longtable. Option (b) (surface the array/longtable internals) is a DEAD HOLE.
+
+## (a) is ALREADY IMPLEMENTED (b54x tabu_sty.rs, 99 lines) — NOT the old stub:
+  \tabu -> \lx@tabu@start reads to/spread + \tabularx{<dim|\linewidth>}     [GREEN]
+  \longtabu -> \longtable (to/spread dim read & dropped)                    [GREEN]
+  X[coef,align,$,p|m|b] DefColumnType: align l/c/r/j, $ = inline-math cell, p/m/b vattach [GREEN]
+  \tabucline[]{} -> \hline ; |[rulespec]| rule (spec ignored, presentational) [GREEN]
+  \taburulecolor/\taburowcolors/\tabulinestyle/\newtabulinestyle/\tabuphantomline/
+    \savetabu/\usetabu/\preamble -> no-ops ; \tracingtabu/\tabulinesep/\above*/\below* -> registers [GREEN]
+  Guards prove it: tabu_to_X -> <ltx:tabular> 4 <ltx:td> (2col x 2row, td1 align=left td2 align=right);
+  longtabu_X -> <ltx:table>/<ltx:tabular> 4 td. Real witnesses that \usepackage{tabu}: amnestyreport,
+  coloring, europasscv, exam-randomizechoices, ftc-notebook, kotex-oblivoir, sduthesis (7+ docs).
+  ONLY 3 user-surface GAPS remain (all documented tabu user cmds; RED, pdflatex 0):
+    \everyrow{...}   (tabu header L20) — inter-row rule tokens; presentational -> gobble arg
+                     (def_macro_noop("\\everyrow{}")); matches existing \taburulecolor no-op policy.
+    \rowfont[pos]{f} (tabu user cmd)   — per-row font; presentational -> \rowfont[]{} gobble.
+    \extrarowsep     (tabu.sty:232 \newcommand*\extrarowsep, opt +/_ then =<dimen>) — row spacing;
+                     -> a primitive swallowing the (+/_)?=<dimen> assignment (no-op; \extrarowheight
+                     already handled by array). Fix all three in tabu_sty.rs.
+  Guard: the 5 repros above -> tabu_to_X/longtabu_X 0 errors + 4 <ltx:td>; the 3 gap repros -> 0 errors.
+  Risk: LOW (3 presentational no-op/swallow adds). Gain: the ~7 \usepackage{tabu} witnesses.
+
+## (b) is a DEAD HOLE — do NOT surface the internals:
+  Raw tabu reaches ~26 array/longtable internals (grep tabu.sty): \@arstrutbox(27) \NC@list(21)
+  \NC@do(15) \NC@find(14) \@preamble(10) \extratabsurround(8) \prepnext@tok(6) \d@llarend(5)
+  \NC@rewrite@(4) \LT@next(4) \LT@bchunk(4) \d@llarbegin(4) \@classz(4) \@addtopreamble(4)
+  \LT@cols(3) \@lastchclass(3) \col@sep(3) \@mkpream \@chnum \LT@startpbox \LT@echunk \save@decl …
+  DEFINING the names is NOT enough: tabu DRIVES array.sty's preamble state machine at runtime —
+  \tabu@setup (tabu.sty:696) does `\NC@list{\NC@do \tabu@rewritefirst}`, and \tabu@tabu@ (:667)
+  appends `\tabu@rewritefirst` which calls \NC@rewrite@ to REWRITE the preamble through
+  \@mkpream/\@classz/\@chclass/\@chnum/\@lastchclass/\prepnext@tok. latexml-oxide REPLACES that
+  machinery wholesale with a native template reader (read_alignment_template / DefColumnType), so
+  raw tabu cannot run to completion. Proof: srdp Fatal `Missing argument Until:\LT@bchunk … File
+  ended` — tabu's `\tabu@longpream #1\LT@bchunk #2\LT@bchunk` (tabu.sty:1207) delimited-scans for
+  \LT@bchunk which the longtable binding never emits. Perl LaTeXML "raw-loads tabu.sty and dies"
+  too (tabu_sty.rs comment). So (b) needs array.sty's \@mkpream/\@classz scanner in the kernel — a
+  large, separate effort; PARK it.
+
+## srdp-mathematik WITNESS REFRAMED — NOT a tabu-binding doc:
+  srdp-mathematik.sty -> srdp-tables.sty, which is a VENDORED INLINE COPY of tabu.sty's source
+  (1630 \tabu@ defs, \ProvidesPackage{srdp-tables}[2021/11/09]; it does NOT \usepackage{tabu}).
+  So the tabu binding cannot help srdp; srdp raw-runs tabu code and hits the (b) dead hole
+  (\NC@list, \tabu@rewritefirst, \col@sep, \extratabsurround, \LT@bchunk Fatal). srdp is only
+  winnable by implementing array.sty's preamble scanner (parked). Do NOT chase srdp under tabu;
+  re-file it as "raw vendored-tabu copy (srdp-tables.sty) / array \@mkpream scanner (parked)".

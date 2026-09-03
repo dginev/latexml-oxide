@@ -360,3 +360,112 @@ do NOT pursue (b). B's fix already halves algpseudocodex without touching A.
   `count(//ltx:listing/ltx:listingline)>=2` with `count(//ltx:listingline//ltx:listingline)=0`
   (listinglines are SIBLINGS, not nested). With B-only fix: assert exactly 1 Error remains (the
   placement), i.e. the `_CaptureBlock_ Closing` second error is gone.
+
+## Group C — pagelayout unmatched </ltx:picture> — SHARED — SPEC
+
+Repro: pagelayout_picture_close.tex (RED: <ltx:picture> Attempt to close, isn't open;
+pdflatex 0 !; same-host Perl emits the identical picture-close error + a Perl-only
+\Gin@draftfalse undefined).
+
+### (1) standalone multi=picture — how it's bound
+standalone.cls:190-191 `\sa@clsoption{multi}[true]{... \AtBeginDocument{\standaloneenv{#1}}}`
+→ `\standaloneenv{picture}` (:523) → `\@standaloneenv{picture}` (:629) which redefines the
+`picture` env to wrap it with `\preview\sa@varwidth` … `\endpreview` (keeping the ORIGINAL
+picture open/close). Rust standalone_cls.rs raw-loads the class (InputDefinitions noltxml) and
+NEUTRALISES the wrapper: `def_macro_noop("\\@standaloneenv{}")` (standalone_cls.rs:14) — so
+`picture` stays the plain LaTeX env. Perl standalone.cls.ltxml:20 raw-loads too. => the
+multi=picture wrapper is a NO-OP here; it is NOT the source of the open/close imbalance.
+
+### (2) where the picture is opened/closed — pagelayout's OWN renderer
+pagelayout.cls (raw, no binding). `\template[o]{name}{body}` (:3639) → `\pal@rendertemplate`
+(:3627) → `\page[o]{...}` (:3080) → `\pal@standardpage[o]{body}` (:3099). `\pal@standardpage`
+opens `\begin{picture}(\paperwidth,\paperheight)` (:3115) as a FULL-PAGE canvas, inserts the
+page content `#2` + `\pal@putgrid`/`\pal@putbleed`/… (each a `\put{...\begin{tikzpicture}...}`),
+then `\end{picture}` (:3153). The `\text{..}` placeholder becomes a `\put`-positioned pgfpicture
+containing a `\minipage` (block flow). LaTeXML's `<ltx:picture>` is an inline/Misc element that
+cannot hold block flow, so it auto-closes the picture to place the `<ltx:p>`/inline-block; the
+`\begin`/`\end{picture}` nesting desyncs and the `\end{picture}` at :3153 closes a picture that
+is no longer open → Error at latexml_core/src/document.rs:1298 (close_element, "isn't open"),
+Currently in #document. The close is pagelayout's OWN `\end{picture}`, NOT standalone's wrapper.
+Rust splits into several `<picture>` (p1.pic1 empty self-close, p2, p3 with the minipage/text);
+Perl captures the whole body into one `<picture tex="\begin{picture}…\end{picture}">` + siblings —
+both imbalanced, both emit the close error. Text present in both.
+
+### (3) fix class — (a) a pagelayout binding (NOT a standalone gap)
+Standalone's multi= wrapper is already neutralised and is not involved. The picture is opened and
+closed by pagelayout's `\pal@standardpage`, and the imbalance is intrinsic: LaTeXML has no page
+layout, so a full-page `picture` canvas hosting block flow cannot round-trip. Faithful fix = a
+`latexml_package/src/package/pagelayout_cls.rs` binding that raw-loads the class (InputDefinitions,
+like standalone_cls.rs) then overrides the page renderer to DROP the picture canvas and emit the
+template content as block flow:
+  - redefine `\page[]{}` / `\pal@standardpage[]{}` (+ `\pal@doublepage`/`\pal@frontcover`/
+    `\pal@backcover`) to digest `#2` as block flow WITHOUT `\begin{picture}`/`\end{picture}`, OR
+  - redefine `\template[]{}{}`→ digest `#3` directly and `\text{}`→ its arg as a paragraph,
+    bypassing `\page`.
+The picture canvas is pure page positioning (semantically empty for LaTeXML); the `\text{...}`
+placeholder text + any real graphics (tikz→svg) are the content to keep. MED risk (deep class, 2
+docs: example-template, example-text; the pagelayout-manual*/quickstart/example-* others may reach
+the same path — re-verify). Precedent: eso-pic/background page-canvas packages are similarly reduced.
+
+### (4) guard assertions
+0 Error lines AND the placeholder text present in a block:
+`//ltx:p[contains(.,'generic template')]` (or the template body as flow), AND no
+"<ltx:picture> Attempt to close" error. Structural: the template content is NOT lost and no stray
+`<ltx:picture>` close remains.
+
+Dead end: treating it as a standalone multi=picture gap — the wrapper is a no-op (standalone_cls.rs:14);
+the open/close is pagelayout's `\pal@standardpage`, so a standalone-side change would not help.
+
+## Group A REAL CAUSE — algpseudocodex \Statex leaves the code box open — SHARED — SPEC
+
+Repro: algpseudocodex_statex_line.tex (RED 2 err with b54x; pdflatex 0 !; same-host Perl
+identical 2 errors + identical nested tree). CORRECTED trigger: `\State` FOLLOWED BY `\Statex`
+— NOT minipage-dependent (the doc's minipage is incidental; a bare algorithmic reproduces it).
+Controls that stay CLEAN: `\State`+`\State` (sibling listinglines), `\Statex` alone,
+`lstlisting` in a minipage.
+
+### (1) how a line is opened / closed (binding)
+algorithmicx_sty.rs: `\algorithmic`→`\lx@setup@algorithmicx` re-lets `\item`→`\lx@algorithmicx@item`
+(:65). `\lx@algorithmicx@item[]`→`\@ifnextchar\nointerlineskip{}{\lx@algorithmicx@@item}` (:70).
+`\lx@algorithmicx@@item` (:90) opens `<ltx:listingline>`; its `before_construct`
+`maybe_close_element("ltx:listingline")` (:114) closes the PRIOR line. `\lx@algorithmicx@endlist`
+(:76) closes the last line then `</ltx:listing>`. `maybe_close_element` (document.rs:1389) →
+`is_closeable` → closes ONLY if every intervening node auto-closes; else NO-OP.
+
+### (2) algorithmicx.sty line ending + why it fails
+`\State` = `\algdef{SL}[STATE]{State}{0}{}` (algorithmicx.sty:577); `\Statex` = `\item[]` (:632).
+algpseudocodex wraps EACH line's content in `\begin{varwidth}[t]{…}` (algpseudocodex.sty:185),
+which LaTeXML captures (insert_block) as `<ltx:inline-block class=ltx_minipage>`. The box is
+closed by `\algpx@endCodeCommand` = `\end{varwidth}…` (algpseudocodex.sty:192), `\pretocmd` to
+`\State \While \For \ForAll \Loop \Repeat \Until \If …` (:782-…). `\Statex` is NOT in that list,
+so after a `\State` its varwidth box stays OPEN when `\Statex` opens the next line. In real TeX
+the list `\item` implicitly ends the box (\par/\@item) → pdflatex clean; in LaTeXML the inline-block
+is a live element and the non-strict `maybe_close_element("ltx:listingline")` can't close through
+it, so line 2 opens inside line 1's box `<ltx:p>` → "listingline isn't allowed in <ltx:p>", and the
+enclosing capture close then reports the open listingline descendant. Perl identical (SHARED); the
+nested tree is byte-for-byte the same (line 1's varwidth box holds line 1's text AND line 2).
+
+### (3) the fix (binding) + CONTROL
+Fix in algorithmicx_sty.rs, `\lx@algorithmicx@@item` (and `\lx@algorithmicx@endlist`) before_construct:
+replace the non-strict `maybe_close_element("ltx:listingline")` with "return to the enclosing
+`ltx:listing`" — locate the ancestor `ltx:listing` and close all its open descendants (the leftover
+per-line `<ltx:inline-block>` code box + the prior `<ltx:listingline>`) via `close_to_node(listing,true)`,
+so every new line opens as a DIRECT child of `ltx:listing`. This is the binding analogue of the
+package's own end-of-line (`\algpx@endCodeCommand`/`\ALG@endline`): a new algorithmic line always
+ends the previous line. The force-close of the per-line box must be SILENT (a new line is a hard
+line boundary) — mirror the Group B `_CaptureBlock_` box-completeness rule, or mark the varwidth
+code box `_autoclose`. CONTROL preserved: for `\State`-opened lines the box is ALREADY closed by
+`\algpx@endCodeCommand`, so "return to listing" == the current `maybe_close_element("ltx:listingline")`
+(no output change; two-`\State` and non-algpseudocodex algorithmic stay identical, sibling lines).
+
+### (4) guard assertions
+algpseudocodex_statex_line.tex (and listingline_in_minipage.tex): 0 Error lines AND
+`count(//ltx:listing/ltx:listingline) = 2` with `count(//ltx:listingline//ltx:listingline) = 0`
+(the two lines are SIBLINGS, not nested). CONTROL guard: a plain `\State`+`\State` algorithmic
+still yields two sibling `<ltx:listingline>` with 0 errors (unchanged).
+
+Dead ends:
+- "minipage triggers it" — WRONG: bare `\State`+`\Statex` reproduces (per-line varwidth box, not the
+  user minipage, is the box). The minipage in the doc is incidental.
+- Patching `\Statex` with `\algpx@endCodeCommand` in the binding — `\algpx@endCodeCommand` is
+  algpseudocodex-only (absent in plain algorithmicx); fix belongs at the package-agnostic line-open.

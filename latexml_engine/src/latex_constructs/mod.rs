@@ -2435,6 +2435,16 @@ fn tabbing_bindings() -> Result<()> {
 
   // Rebind control characters within tabbing
   // Perl: Let("\\=", '\@tabbing@tabset') etc.
+  // latex.ltx:10005 `\@tabacckludge#1` = `\@changed@cmd\csname\string#1
+  // \endcsname\relax` recovers the ENCODING-level accent by name, so `\a=`,
+  // `\a<`, `\a>` still accent although `\=`/`\<`/`\>` are tab operators
+  // inside tabbing (encguide `\a=o`; greek-fontenc test-lgrenc/textalpha-doc
+  // `\a<`; Perl pool:3572 saves only `'` and `` ` ``). Save every rebound
+  // accent BEFORE rebinding it. Guard:
+  // `perfect_kernel_batch54::tabbing_accent_kludge_recovers_rebound_accents`.
+  let_i(&T_CS!("\\@tabbing@="), &T_CS!("\\="), None);
+  let_i(&T_CS!("\\@tabbing@<"), &T_CS!("\\<"), None);
+  let_i(&T_CS!("\\@tabbing@>"), &T_CS!("\\>"), None);
   let_i(&T_CS!("\\="), &T_CS!("\\@tabbing@tabset"), None);
   let_i(&T_CS!("\\>"), &T_CS!("\\@tabbing@nexttab"), None);
   let_i(&T_CS!("\\\\"), &T_CS!("\\@tabbing@newline"), None);

@@ -1,0 +1,9 @@
+% witness: \usepackage{tabu}; \extrarowsep=<dimen> (tabu.sty:232, opt +/_ prefix)
+% oracle:  pdflatex 0 errors ; engines rust=1 (b54x)
+% expect:  0 errors; <ltx:tabular> with cells
+% status:  RED — \extrarowsep undefined; row spacing, faithful = swallow the (+/_)=<dimen> assignment
+\documentclass{article}\usepackage{tabu}
+\begin{document}
+\extrarowsep=2pt
+\begin{tabu}{ll}a & b \\ c & d \\\end{tabu}
+\end{document}

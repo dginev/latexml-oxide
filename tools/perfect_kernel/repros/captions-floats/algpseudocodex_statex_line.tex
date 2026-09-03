@@ -1,0 +1,23 @@
+% witness: algpseudocodex (algpseudocodex doc); coloredtheorem-doc — sweep36
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — same-host Perl emits the identical 2 errors, same nested tree
+% expect: 0 Error; the two lines are SIBLING <ltx:listingline> in the <ltx:listing>
+% status: RED with b54x (listingline in <ltx:p>; _CaptureBlock_ Closing listingline)
+% mechanism: algpseudocodex boxes each line in \begin{varwidth} (algpseudocodex.sty:185),
+%   closed by \algpx@endCodeCommand (\end{varwidth}, :192) which is \pretocmd to \State,
+%   \While, \For, \If, … (:782-…) but NOT to \Statex (=\item[], algorithmicx.sty:632).
+%   So after \State, its varwidth code box (-> <ltx:inline-block class=ltx_minipage>) stays
+%   OPEN when \Statex opens the next line; the binding's line-open \lx@algorithmicx@@item
+%   before_construct maybe_close_element("ltx:listingline") (algorithmicx_sty.rs:114) is
+%   NON-STRICT and cannot close through the open inline-block, so line 2 nests inside line 1's
+%   box (<ltx:p>) -> "listingline isn't allowed in <ltx:p>" + the capture-close error.
+%   NOT minipage-specific (the enclosing minipage in the doc is incidental).
+\documentclass{article}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\State first line
+\Statex continuing line
+\end{algorithmic}
+\end{document}

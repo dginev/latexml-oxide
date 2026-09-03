@@ -1,0 +1,19 @@
+% witness: pagelayout example-template + example-text — sweep36 (2 docs, 2 errs each)
+% oracle: pdflatex CLEAN
+% engines: pdflatex (lualatex-tolerant; fontspec optional)
+% class: SHARED — same-host Perl emits the identical picture-close error
+% expect: 0 Error; the template body without a stray <ltx:picture> close
+% status: RED with b54t (<ltx:picture> Attempt to close, which isn't open)
+% mechanism: pagelayout.cls (raw, no binding) \LoadClass[multi=picture]{standalone};
+%   \template[..]{layout}{\text{..}} emits a </ltx:picture> with no matching open (the
+%   standalone multi=picture wrapping / draft-mode tikz layout guide). Fix = a pagelayout
+%   (or standalone multi=picture) class binding.
+\documentclass[draft]{pagelayout}
+\usepackage{lipsum}
+\pagewidth=15cm
+\pageheight=15cm
+\begin{document}
+\template[gutter=5mm]{so-gs}{
+  \text{This is a generic template.}
+}
+\end{document}

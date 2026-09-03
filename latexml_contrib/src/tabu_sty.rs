@@ -83,6 +83,54 @@ LoadDefinitions!({
   });
   DefMacro!("\\endlongtabu", "\\endlongtable");
   // stubs
+  // The remaining documented user surface (tabu.pdf §2.3-2.5): `\everyrow
+  // {<tokens>}` (tabu.sty:1080, inter-row rule tokens), `\rowfont[pos]{font}`
+  // (:1123, a per-row font) — both presentational, gobbled like
+  // `\taburulecolor`; `\extrarowsep` (:232) is an assignment syntax over
+  // `\extrarowheight`/`\extrarowdepth`: `\extrarowsep=<d>` sets both,
+  // `\extrarowsep^=<d>` / `_=<d>` one of them, `\extrarowsep=^<d>_<d>` both
+  // separately — performed as those register assignments. Witnesses
+  // amnestyreport, coloring, europasscv, exam-randomizechoices, ftc-notebook,
+  // sduthesis. Guard: `perfect_kernel_batch54::tabu_row_surface_is_covered`.
+  def_macro_noop("\\everyrow{}")?;
+  def_macro_noop("\\rowfont[]{}")?;
+  DefRegister!("\\extrarowdepth" => Dimension::new(0)); // tabu.sty:97 `\newdimen`
+  DefMacro!("\\extrarowsep", sub[_args] {
+    let eq = Tokens!(T_OTHER!("="));
+    let up = Tokens!(T_SUPER!());
+    let down = Tokens!(T_SUB!());
+    let set = |reg: &str, d: &Dimension, out: &mut Vec<Token>| {
+      out.push(T_CS!(reg));
+      out.push(T_OTHER!("="));
+      out.extend(ExplodeText!(&d.to_string()));
+      out.push(T_CS!("\\relax"));
+    };
+    let reg_of = |sel: &Tokens| if *sel == up { "\\extrarowheight" } else { "\\extrarowdepth" };
+    let mut out: Vec<Token> = Vec::new();
+    // `\extrarowsep=<d>` | `^=<d>` | `_=<d>` | `=^<d>_<d>` | `=_<d>^<d>`
+    let _ = read_match(&[&eq])?;
+    let mut sel = read_match(&[&up, &down])?;
+    let _ = read_match(&[&eq])?;
+    if sel.is_none() {
+      sel = read_match(&[&up, &down])?;
+    }
+    match sel {
+      None => {
+        let d = read_dimension()?;
+        set("\\extrarowheight", &d, &mut out);
+        set("\\extrarowdepth", &d, &mut out);
+      },
+      Some(first) => {
+        let d = read_dimension()?;
+        set(reg_of(&first), &d, &mut out);
+        while let Some(next) = read_match(&[&up, &down])? {
+          let d = read_dimension()?;
+          set(reg_of(&next), &d, &mut out);
+        }
+      },
+    }
+    Ok(Tokens::new(out))
+  });
   def_macro_noop("\\savetabu{}")?;
   def_macro_noop("\\usetabu{}")?;
   def_macro_noop("\\preamble{}")?;
