@@ -5572,3 +5572,47 @@ internal_vertical"). Trigger: `\def\titlepage{\par T\par}` then
 when not redefined. Guard:
 `perfect_kernel_batch54::titlepage_environment_is_overridable`.
 
+## 173. soul's color setters store a macro name unexpanded (Rust fixes)
+
+`soul.sty.ltxml:75` `\setulcolor` (and `\setstcolor`/`\sethlcolor`, :93/:104)
+store the argument unexpanded; real soul resolves the name through
+`\color` at use time, expanding a macro-valued name — europasscv.cls:560
+`\setulcolor{\ecv@textcolor}` ("Can't find color named '\ecv@textcolor'").
+Trigger: `\def\n{red}\setulcolor{\n}\ul{x}`. Rust: the name is expanded.
+Guard: `perfect_kernel_batch54::soul_color_setters_expand_a_macro_name`.
+
+## 174. The array/tabular row continuation macros carry an unpaired `$` (Rust fixes)
+
+Both engines retract `\@arraycr`/`\@tabularcr` to the alignment newline but
+keep latex.ltx:16585-16594's `\@xarraycr`/`\@argarraycr` (`…}${}\cr`,
+the closing half of `\@arraycr`'s `${` trick) and `\@xtabularcr`/
+`\@argtabularcr`. tablists.sty's `\TeXr@arraycr` opens with `\iffalse{\fi`
+(no `$`) inside its own raw `\halign` and dispatches to `\@xarraycr`, so
+the `$` opens inline math the row's `\cr` cannot balance ("`\org@halign`
+Attempt to close a group that switched to mode math"; tablists-rus 101,
+Perl 12). Trigger: `\begin{tabenum}\tabenumitem a;\\ \tabenumitem b;
+\end{tabenum}`. Rust: the continuation macros drop the `$`/brace halves and
+keep the `\ifdim` spacing dispatch. Guard:
+`perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
+
+## 175. A content `.tex` re-input while reading a `.sty` is skipped (Rust-only, fixed)
+
+Rust routed every `\input`/`\InputIfFileExists` issued while
+`INTERPRETING_DEFINITIONS` through the once-only package guard, so a plain
+`.tex` read twice from a `.sty` ran once (Perl `Input` re-reads). babel.sty:
+4210-4227 inputs `babel-<lang>.tex` once per language occurrence; with
+french as BOTH the class option and `main=french` the second read was
+skipped, its `\BabelBeforeIni` descriptor never recorded, and french.ldf
+never loaded (`\og`/`\fg`/`\ieme` undefined: paresse-fra). Rust: a plain
+`.tex` request is reloadable in that path. Guard:
+`perfect_kernel_batch54::content_tex_reinput_during_definitions_rereads`.
+
+## 176. nmbib's `\citeall` runs natbib's low-level engine (Rust fixes)
+
+nmbib.sty:343 `\citeall` → `\@@@citeall` (:347) opens with natbib.sty:780's
+`\NAT@reset@parser` and uses 57 natbib internals that the high-level
+`natbib.sty.ltxml` emulation (8 `\NAT@*`) never defines; there is no nmbib
+binding (nmbib-sample 22). Trigger: `\usepackage{nmbib}…\citeall{key}`.
+Rust: an nmbib binding raw-loads the style and emulates `\citeall` as
+`\citet*`. Guard: `perfect_kernel_batch54::nmbib_citeall_is_a_cite`.
+

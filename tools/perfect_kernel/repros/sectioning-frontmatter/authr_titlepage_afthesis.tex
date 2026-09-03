@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=1 (2026-09-03) — SHARED (Rust already fixed the \cl@chapter Root-A the doc also hits)
 % expect:  0 errors; the title/fly page renders (an <ltx:title> present), no <ltx:ERROR/>
-% status:  RED
+% status:  GREEN (b54y, batch 54r)
 % mechanism: afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}` builds the internal \auth@r that
 %   \flyleaf (afthesis.cls:637 `\centerline{\auth@r}`) and \titlepage (:688) typeset. LaTeXML's
 %   kernel \author is locked (latex_constructs.pool.ltxml:1076 `locked => 1`; Rust equivalent in

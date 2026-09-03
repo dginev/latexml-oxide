@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=3 perl=blocked(pgfsys) (2026-09-03)   <- pdflatex-clean; Perl dies earlier on pgf driver
 % expect:  0 errors; NiceTabular row 1 cell 2 contains literal "one two three"
-% status:  RED
+% status:  GREEN (b54y, batch 54r)
 % mechanism: with option [ampersand-in-blocks], the & inside \Block{}{one & two}
 %   is LITERAL block content, not a column separator. Rust's nicematrix binding
 %   lets the inner & reach the kernel alignment -> "Extra alignment tab '&'".

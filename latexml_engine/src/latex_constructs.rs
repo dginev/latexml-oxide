@@ -9151,6 +9151,28 @@ LoadDefinitions!({
   // aliasing the entry point retracts the whole chain, exactly as for
   // `\@tabularcr`. See docs/known_crashes/kbordermatrix_halign_math/.
   Let!("\\@arraycr", "\\lx@alignment@newline");
+  // The CONTINUATION macros too (latex.ltx:16585-16594): `\@xarraycr` =
+  // `\@ifnextchar[\@argarraycr{\ifnum0=`{\fi}${}\cr}` and `\@argarraycr[#1]`
+  // = `\ifnum0=`{\fi}${}\ifdim…` carry the CLOSING half of `\@arraycr`'s
+  // `${` trick; `\@xtabularcr`/`\@argtabularcr` the `{` half. A package that
+  // reaches them directly — tablists.sty's `\TeXr@arraycr` opens with
+  // `\iffalse{\fi` (no `$`) inside its own raw `\halign` and dispatches to
+  // `\@xarraycr` — leaves the `$` unpaired, and LaTeXML digests it as an
+  // inline-math OPEN that the row's `\cr` then cannot balance ("`\org@halign`
+  // Attempt to close a group that switched to mode math"; tablists-rus 101,
+  // Perl 12; KPE #174). The real spacing macros `\@xargarraycr`/`\@yargarraycr`
+  // (:16600/:16602) are `$`-free and stay. Guard:
+  // `perfect_kernel_batch54::array_continuation_macros_carry_no_math_shift`.
+  DefMacro!("\\@xarraycr", "\\@ifnextchar[\\@argarraycr{\\cr}");
+  DefMacro!(
+    "\\@argarraycr[]",
+    "\\ifdim #1>\\z@ \\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+  );
+  DefMacro!("\\@xtabularcr", "\\@ifnextchar[\\@argtabularcr{\\cr}");
+  DefMacro!(
+    "\\@argtabularcr[]",
+    "\\ifdim #1>\\z@ \\unskip\\@xargarraycr{#1}\\else \\@yargarraycr{#1}\\fi"
+  );
   if !has_value("GUESS_TABULAR_HEADERS") {
     AssignValue!("GUESS_TABULAR_HEADERS" => true); // Defaults to yes
   }

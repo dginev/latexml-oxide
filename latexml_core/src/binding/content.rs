@@ -1528,10 +1528,25 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     {
       return input_definitions(stem, InputDefinitionOptions {
         extension: Some(Cow::Owned(ext.to_string())),
+        // A content `.tex` re-reads every time (see below).
+        reloadable: ext == "tex",
         ..InputDefinitionOptions::default()
       });
     }
-    return input_definitions(&clean_req, InputDefinitionOptions::default());
+    // A plain content `.tex` (no binding extension) is `\input` material
+    // even while a `.sty`/`.cls` is being read: TeX re-reads it every time
+    // (Perl `Input`/`loadTeXContent` likewise), so the once-only PACKAGE
+    // guard (`already_handled`) must not apply. babel.sty:4210-4227 inputs
+    // `babel-<lang>.tex` once per language occurrence; with french as BOTH a
+    // class option and `main=french` the second read was skipped, its
+    // `\BabelBeforeIni` descriptor never recorded, and french.ldf (→ `\og`,
+    // `\ieme`) never loaded (paresse-fra; `\documentclass[french]{…}` +
+    // `main=french`). Guard: `perfect_kernel_batch54::content_tex_reinput_during_definitions_rereads`.
+    let is_plain_tex = clean_req.ends_with(".tex") || !clean_req.contains('.');
+    return input_definitions(&clean_req, InputDefinitionOptions {
+      reloadable: is_plain_tex,
+      ..InputDefinitionOptions::default()
+    });
   }
   // Perl Package.pm L2109-2113: FindFile_aux checks for `"$file.ltxml"` in
   // $ltxml_paths BEFORE consulting raw TeX paths. In Rust the bindings are

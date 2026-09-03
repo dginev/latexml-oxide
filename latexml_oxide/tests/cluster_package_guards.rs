@@ -10726,4 +10726,211 @@ Body.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Ahoj"), "{xml}");
   }
+
+  /// Real soul resolves a stored color name through `\color` at use time,
+  /// which expands a macro-valued name (europasscv.cls:560 `\setulcolor
+  /// {\ecv@textcolor}`); the binding stored it unexpanded (Perl
+  /// soul.sty.ltxml:75 too; KPE #173). Same for `\setstcolor`/`\sethlcolor`.
+  #[test]
+  fn soul_color_setters_expand_a_macro_name() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\usepackage{soul}
+\definecolor{mycol}{HTML}{3E3A38}
+\def\mycolname{mycol}
+\begin{document}
+\setulcolor{\mycolname}\ul{underlined text} \sethlcolor{\mycolname}\hl{hi}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"framecolor="#3E3A38""##), "{xml}");
+    assert!(xml.contains(r##"backgroundcolor="#3E3A38""##), "{xml}");
+  }
+
+  /// nmbib.sty's `\citeall` (:343) runs natbib's low-level engine
+  /// (`\NAT@reset@parser`, natbib.sty:780) that the natbib binding — a
+  /// high-level `<ltx:cite>` emulation, like Perl's — does not carry (nmbib-
+  /// sample 22 errors); the binding emulates it as `\citet*`.
+  #[test]
+  fn nmbib_citeall_is_a_cite() {
+    let tex = r"\documentclass{article}
+\usepackage{nmbib}
+\begin{document}
+Text \citeall{Markey:Tame_the_BeaST} and \citealn{Markey:Tame_the_BeaST}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"bibrefs="Markey:Tame_the_BeaST""#), "{xml}");
+  }
+
+  /// latex.ltx:16585-16594's array/tabular row CONTINUATION macros carry the
+  /// closing half of `\@arraycr`'s `${` trick; reached directly (tablists.sty's
+  /// `\TeXr@arraycr` inside its own raw `\halign`) the `$` had no partner and
+  /// opened inline math the row's `\cr` could not balance (tablists-rus 101;
+  /// Perl 12; KPE #174).
+  #[test]
+  fn array_continuation_macros_carry_no_math_shift() {
+    let tex = r"\documentclass{article}\usepackage{tablists}
+\begin{document}
+\begin{tabenum}[\bfseries1)]
+\tabenumitem aa;\\
+\tabenumitem bb;\\[2pt]
+\tabenumitem $c$;
+\end{tabenum}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("aa") && xml.contains("bb"), "{xml}");
+    assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+  }
+
+  /// A plain content `.tex` re-`\InputIfFileExists`ed while a `.sty` is being
+  /// read is re-read every time (TeX; Perl `Input`); the once-only package
+  /// guard skipped the second read, so babel's second `babel-french.tex` scan
+  /// (french as BOTH class option and `main=`) never recorded french and
+  /// french.ldf (→ `\og`, `\ieme`) never loaded (paresse-fra; KPE #175).
+  #[test]
+  fn content_tex_reinput_during_definitions_rereads() {
+    let tex = r"\documentclass{article}
+\usepackage{reinstyx}
+\begin{document}
+[\afterone][\aftertwo]
+\end{document}
+";
+    let (stderr, xml) = convert_with_files(tex, &[
+      ("helperx.tex", "\\def\\hmarker{SET}\\endinput\n"),
+      (
+        "reinstyx.sty",
+        "\\ProvidesPackage{reinstyx}\n\\def\\hmarker{INIT}\\InputIfFileExists{helperx.tex}{}{}\\edef\\afterone{\\hmarker}%\n\\def\\hmarker{RESET}\\InputIfFileExists{helperx.tex}{}{}\\edef\\aftertwo{\\hmarker}%\n",
+      ),
+    ]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[SET][SET]"), "{xml}");
+    let tex = r"\documentclass[french]{article}
+\usepackage[english,main=french]{babel}
+\begin{document}
+\og guillemets\fg{} 1\ier{} 2\ieme
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("«") || xml.contains("guillemets"), "{xml}");
+  }
+
+  /// pdfmanagement's l3pdffile/l3pdfdict user surface (`\pdffile_embed_file:nnn`
+  /// pdfmanagement.ltx:3389, `\pdfdict_put:nnn`) builds PDF/A associated-file
+  /// objects nothing reads back (tagpdf's ex-AF-file.tex:29-32) — absorbed.
+  #[test]
+  fn pdffile_and_pdfdict_are_absorbed() {
+    let tex = r"\DocumentMetadata{tagging=on,pdfversion=2.0,lang=de}
+\documentclass{article}
+\ExplSyntaxOn
+\pdffile_embed_file:nnn{t.tex}{}{tag/AFtest}
+\pdfdict_put:nnn {l_pdffile/Filespec} {AFRelationship}{/Supplement}
+\ExplSyntaxOff
+\begin{document}AF done\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("AF done"), "{xml}");
+  }
+
+  /// nicematrix's `\CodeAfter` grab must be environment-balanced: a
+  /// `\begin{tikzpicture}…\end{tikzpicture}` inside it has its own `\end`
+  /// (nicematrix-french: 23 stray `\endgroup`s + leaked pgf node errors).
+  #[test]
+  fn nicematrix_codeafter_grab_is_environment_balanced() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix,tikz}
+\usetikzlibrary{fit}
+\begin{document}
+\[\begin{pNiceMatrix}
+121 & 23 & 345 \\ 45 & 346 & 863 \\ 3462 & 38458 & 34
+\CodeAfter
+\SubMatrix\{{2-2}{3-3}\}[name=A]
+\begin{tikzpicture}
+\node [fit = (A),fill = red!15] {} ;
+\end{tikzpicture}
+\end{pNiceMatrix}\]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("38458"), "{xml}");
+  }
+
+  /// The executed `\CodeBefore` block keeps its color commands but drops the
+  /// drawing `tikzpicture`/`scope` overlays that reference cell nodes LaTeXML
+  /// never materializes (`create-cell-nodes`, nicematrix-french ×280).
+  #[test]
+  fn nicematrix_codebefore_drops_drawing_environments() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix,tikz}
+\usetikzlibrary{fit}
+\begin{document}
+\[\begin{pNiceMatrix}
+\CodeBefore [create-cell-nodes]
+\cellcolor{red}{1-1}
+\begin{tikzpicture}
+\node [fit = (2-2), fill=red!15] {} ;
+\end{tikzpicture}
+\Body
+a & a + b \\ a & a
+\end{pNiceMatrix}\]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("backgroundcolor="), "{xml}");
+  }
+
+  /// Under `ampersand-in-blocks` a `\Block` body holding `&` is a sub-grid
+  /// (nicematrix.sty:7592 `\__nicematrix_Block_vii`, a tabular in text / an
+  /// array in math split on `&`); emitting it bare re-exposed the `&` to the
+  /// outer alignment (nicematrix.tex:1152; "Extra alignment tab").
+  #[test]
+  fn nicematrix_block_ampersand_body_is_a_subgrid() {
+    let tex = r"\documentclass{article}
+\usepackage[ampersand-in-blocks]{nicematrix}
+\begin{document}
+\begin{NiceTabular}{ll}
+\Block{}{one & two & three} & x \\
+a & b
+\end{NiceTabular}
+$\begin{pNiceMatrix}
+\Block{}{1 & 2} & c \\ d & e
+\end{pNiceMatrix}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">three<"), "{xml}");
+    assert!(xml.matches("<tabular").count() >= 2, "{xml}");
+  }
+
+  /// A raw class redefining a locked frontmatter command as a plain setter
+  /// (afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}`) is dropped
+  /// (Perl State.pm:502-517), and its readers then fail on the internal it
+  /// would have defined (`\flyleaf`/`\titlepage` :637/:688; usethesis). The
+  /// dropped body's `\def`-targets are defined EMPTY, the class's own default
+  /// convention (:494-495), so the locked binding stays the single source.
+  #[test]
+  fn locked_setter_internals_are_defined_empty() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\author#1{\def\auth@r{#1}\gdef\auth@rtwo{#1}}
+\makeatother
+\author{First Author}
+\begin{document}
+\makeatletter[\auth@r][\auth@rtwo]\makeatother\maketitle
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[][]"), "{xml}");
+    assert!(xml.contains("First Author"), "{xml}");
+  }
 }

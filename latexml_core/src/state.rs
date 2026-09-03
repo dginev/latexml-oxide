@@ -1194,6 +1194,47 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   let lock_key = token.with_cs_name(|cs| s!("{cs}:locked"));
   let is_locked = arena::get(&lock_key).is_some_and(lookup_bool_sym);
   if is_locked && !state_is_unlocked() {
+    // THE DROPPED SETTER'S INTERNALS EXIST, EMPTY. A raw class that
+    // redefines a locked frontmatter command as a plain setter —
+    // afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}` — expects the
+    // internal it would define to exist for its own readers (`\flyleaf`,
+    // `\titlepage` :637/:688 read `\auth@r`); afthesis itself initializes its
+    // other internals empty at load (:494-495 `\def\ti@tle{}`). Perl
+    // (`State.pm:502-517`) drops the redefinition and nothing else, so
+    // `\auth@r` stays undefined (usethesis). The locked binding remains the
+    // sole semantic source (running the setter's body with the real
+    // arguments would duplicate the author through the class layout), and
+    // every `\def`/`\gdef`/`\edef`/`\xdef <cs>` in the dropped body whose
+    // `<cs>` is still undefined gets an EMPTY definition — the class's own
+    // default convention, with no name enumerated. Guard:
+    // `perfect_kernel_batch54::locked_setter_internals_are_defined_empty`.
+    if let Stored::Expandable(ref defn) = definition
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      let body = body.unlist_ref();
+      let def_names = ["\\def", "\\gdef", "\\edef", "\\xdef"];
+      for (i, t) in body.iter().enumerate() {
+        if t.get_catcode() == Catcode::CS
+          && t.with_cs_name(|n| def_names.contains(&n))
+          && let Some(target) = body.get(i + 1)
+          && target.get_catcode() == Catcode::CS
+          && lookup_meaning(target).is_none()
+          && let Ok(empty) = Expandable::new(
+            target.clone(),
+            None,
+            Some(ExpansionBody::Tokens(Tokens::new(Vec::new()))),
+            None,
+          )
+        {
+          state_mut!().assign_internal(
+            TableName::Meaning,
+            target.get_cs_name(),
+            Stored::Expandable(Rc::new(empty)),
+            Some(Scope::Global),
+          );
+        }
+      }
+    }
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {

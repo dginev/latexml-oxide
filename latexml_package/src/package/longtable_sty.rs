@@ -198,6 +198,9 @@ LoadDefinitions!({
 ");
 
   let_i(&T_CS!("\\setlongtables"), &T_CS!("\\relax"), None);
+  // longtable.sty:76-78: the table/chunk counters packages read
+  // (topiclongtable.sty `\theLT@tables`).
+  RawTeX!(r"\newcounter{LT@tables}\providecommand\theHLT@tables{\theLT@tables}\newcounter{LT@chunks}[LT@tables]");
 });
 
 fn longtable_bindings(template: Template) -> Result<()> {

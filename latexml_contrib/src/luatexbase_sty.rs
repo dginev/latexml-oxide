@@ -22,6 +22,21 @@ LoadDefinitions!({
     \def\newwhatsit#1{}\def\newluabytecode#1{}\def\newluachunkname#1{}\def\newluafunction#1{}
     \def\newluacmd#1{\def#1{}}\def\newprotectedluacmd#1{\def#1{}}
   \fi");
+  // luatexbase.sty:288-300: the LuaTeX-0.x compatibility spellings are plain
+  // `\let` aliases of the modern primitives (`:295 \let\luatexattributedef
+  // \attributedef`) — categorically different from the engine-detection
+  // probes (`\directlua`, `\luatexversion`) this project never defines.
+  // luatexja's ltj-base.sty:30 uses `\luatexattributedef` (13 CJK docs
+  // under the luatex profile once the l3sys identity took the luatex branch).
+  RawTeX!(r"\ifx\attributedef\@undefined\else
+    \let\luatexattributedef\attributedef \let\luatexattribute\attribute
+    \let\luatexcatcodetable\catcodetable \let\luatexluaescapestring\luaescapestring
+    \let\luatexlatelua\latelua \let\luatexoutputbox\outputbox
+    \let\luatexscantextokens\scantextokens
+    \let\newluatexattribute\newattribute \let\setluatexattribute\setattribute
+    \let\unsetluatexattribute\unsetattribute \let\newluatexcatcodetable\newcatcodetable
+    \let\setluatexcatcodetable\catcodetable
+  \fi");
   // Callback management (lua-side) — absorb.
   def_macro_noop("\\luatexbase@directlua{}")?;
 });

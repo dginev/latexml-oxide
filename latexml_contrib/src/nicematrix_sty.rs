@@ -518,10 +518,64 @@ LoadDefinitions!({
     r"\let\rowcolors\lx@nice@rowcolors",
     r"\let\ShowCellNames\lx@nice@showcellnames",
     r"\let\TikzEveryCell\lx@nice@tikzeverycell",
-    r"#2",
+    r"\lx@nice@codebefore{#2}",
     r"\endgroup",
     r"\lx@ams@matrix{#1}}"
   ));
+  // The `\CodeBefore` block is EXECUTED to record its color commands, but a
+  // drawing `\begin{tikzpicture}…\end{tikzpicture}`/`{scope}` inside it (the
+  // `create-cell-nodes` overlays, nicematrix-french:6154…) references cell
+  // nodes LaTeXML never materializes ("No shape named 'i-j'" ×280) and is
+  // pure overlay — drop those environments, keep the rest. Guard:
+  // `perfect_kernel_batch54::nicematrix_codebefore_drops_drawing_environments`.
+  DefPrimitive!("\\lx@nice@codebefore{}", sub[(block)] {
+    let toks = block.unlist();
+    let mut kept: Vec<Token> = Vec::with_capacity(toks.len());
+    let begin_cs = T_CS!("\\begin");
+    let end_cs = T_CS!("\\end");
+    let mut i = 0;
+    let mut skip_depth = 0usize;
+    let env_name = |toks: &[Token], i: usize| -> String {
+      // `\begin{name}` → the tokens between the braces after position i
+      let mut j = i + 1;
+      if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+        j += 1;
+        let mut name = String::new();
+        while j < toks.len() && toks[j].get_catcode() != Catcode::END {
+          name.push_str(&toks[j].to_string());
+          j += 1;
+        }
+        name
+      } else {
+        String::new()
+      }
+    };
+    while i < toks.len() {
+      let t = &toks[i];
+      if *t == begin_cs {
+        let name = env_name(&toks, i);
+        if skip_depth > 0 || name == "tikzpicture" || name == "scope" {
+          skip_depth += 1;
+        }
+      } else if *t == end_cs && skip_depth > 0 {
+        skip_depth -= 1;
+        // consume the `{name}` of this \end
+        let mut j = i + 1;
+        if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+          while j < toks.len() && toks[j].get_catcode() != Catcode::END {
+            j += 1;
+          }
+        }
+        i = j + 1;
+        continue;
+      }
+      if skip_depth == 0 {
+        kept.push(t.clone());
+      }
+      i += 1;
+    }
+    digest(Tokens::new(kept))
+  });
 
   // The MATRIX family: `\<x>NiceMatrix[opts]` → set opts, then reduce to the
   // amsmath matrix flavour for delimiter <x>; `\end<x>NiceMatrix` closes the array
@@ -647,7 +701,46 @@ LoadDefinitions!({
   // \multicolumn/rowspan rewrite would break the row's cell count, since the
   // covered cells are still present in the source). The starred form and
   // math-mode `$`-wrapped bodies pass through unchanged.
-  DefMacro!("\\Block OptionalMatch:* []{}{}", "#4", locked => true);
+  // Under `ampersand-in-blocks` (nicematrix.sty:7310-7311, `\__nicematrix_Block_vii`
+  // :7592) a body holding `&`/`\\` is typeset as a SUB-GRID — a `tabular`
+  // in text, `$\begin{array}$` in math (:7398/:7406), split on `&` (:7906).
+  // Emitting the body bare re-exposed the inner `&` to the outer `\halign`
+  // ("Extra alignment tab '&'", nicematrix.tex:1152, nicematrix-french:1204).
+  // The sub-grid is built from the body's widest row; without a depth-0 `&`
+  // the body passes through as before. Guard:
+  // `perfect_kernel_batch54::nicematrix_block_ampersand_body_is_a_subgrid`.
+  DefMacro!("\\Block OptionalMatch:* []{}{}", sub[(_star, _pos, _ij, body)] {
+    let toks = body.unlist();
+    let mut depth = 0i32;
+    let mut cols = 1usize;
+    let mut max_cols = 1usize;
+    let newline = T_CS!("\\\\");
+    for t in &toks {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        Catcode::ALIGN if depth == 0 => cols += 1,
+        _ if depth == 0 && *t == newline => {
+          max_cols = max_cols.max(cols);
+          cols = 1;
+        },
+        _ => {},
+      }
+    }
+    max_cols = max_cols.max(cols);
+    if max_cols == 1 {
+      return Ok(Tokens::new(toks));
+    }
+    let (env_begin, env_end) = if lookup_bool_sym(pin!("IN_MATH")) {
+      (s!("\\begin{{array}}{{*{{{max_cols}}}{{c}}}}"), "\\end{array}".to_string())
+    } else {
+      (s!("\\begin{{tabular}}{{*{{{max_cols}}}{{c}}}}"), "\\end{tabular}".to_string())
+    };
+    let mut out: Vec<Token> = Tokenize!(TeXString::assembled(env_begin)).unlist();
+    out.extend(toks);
+    out.extend(Tokenize!(TeXString::assembled(env_end)).unlist());
+    Ok(Tokens::new(out))
+  }, locked => true);
   // \Hline[opts]: nicematrix's own \hline that survives its internal
   // machinery; opts (color=, thickness=) are rule styling. Reduce to \hline.
   DefMacro!("\\Hline []", "\\hline", locked => true);
@@ -676,7 +769,29 @@ LoadDefinitions!({
   // the environment closes normally.
   // (Plain `Until` — unexpanded scan. `XUntil` EXPANDS while scanning, which
   // would EXECUTE the overlay's \begin{tikzpicture}/\SubMatrix mid-grab.)
-  DefMacro!("\\CodeAfter Until:\\end", "\\end");
+  // The grab is ENVIRONMENT-BALANCED: a `\begin{tikzpicture}…\end{tikzpicture}`
+  // (or `{scope}`) inside `\CodeAfter` has its own `\end`, and a plain
+  // `Until:\end` stopped there, re-emitting `\end{tikzpicture}` into a context
+  // with no open picture (23 "`\endgroup` Attempt to close non-boxing group"
+  // + leaked `\node[fit=(A)]` pgf errors, nicematrix-french). Guard:
+  // `perfect_kernel_batch54::nicematrix_codeafter_grab_is_environment_balanced`.
+  DefMacro!("\\CodeAfter", sub[_args] {
+    let begin_cs = T_CS!("\\begin");
+    let end_cs = T_CS!("\\end");
+    let mut depth = 0usize;
+    while let Some(t) = read_token()? {
+      if t == begin_cs {
+        depth += 1;
+      } else if t == end_cs {
+        if depth == 0 {
+          unread_one(t);
+          break;
+        }
+        depth -= 1;
+      }
+    }
+    Ok(Tokens!())
+  });
   // Decoration/rule commands usable in cells and preambles: dotted/double
   // rules are rule styling (reduce to \hline / nothing); \RowStyle sets
   // per-row styling keys.

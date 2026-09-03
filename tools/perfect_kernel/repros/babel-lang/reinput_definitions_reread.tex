@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors; ROUTING:one=[SET]two=[SET]
 % engines: rust two=[RESET] perl two=[SET] (2026-09-03, b54w)
 % expect:  0 errors; second \InputIfFileExists re-runs -> \hmarker=SET both times
-% status:  RED
+% status:  GREEN (b54y, batch 54r)
 % mechanism: a 2nd \InputIfFileExists{X.tex} of the SAME file from a definitions
 %   (.sty/.cls) context is blocked by input_definitions' once-only already_handled
 %   guard (content.rs:648) -> file NOT re-read -> its \def does not re-run. Real TeX

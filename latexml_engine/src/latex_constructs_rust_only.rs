@@ -92,6 +92,25 @@ LoadDefinitions!({
   // the accessible structure — absorb here at kernel level, mirroring the
   // tagpdf_sty.rs binding.
   def_macro_noop("\\tagpdfsetup{}")?;
+  // pdfmanagement's l3pdffile/l3pdfdict user surface (pdfmanagement.ltx:3389
+  // `\pdffile_embed_file:nnn` writes an fstream + filespec object; the
+  // `\pdfdict_*` family edits named PDF dictionaries): PDF/A associated-file
+  // structure with no XML meaning, and nothing reads the objects back
+  // (tagpdf's ex-AF-file.tex:29-32). Absorbed as consume-and-drop; the names
+  // are formed with `\csname` because a `DefMacro!` body is tokenized under
+  // standard catcodes. Guard: `perfect_kernel_batch54::pdffile_and_pdfdict_are_absorbed`.
+  for (cs, params) in [
+    ("pdffile_embed_file:nnn", "{}{}{}"),
+    ("pdffile_embed_file:nnnN", "{}{}{} Token"),
+    ("pdffile_embed_stream:nnN", "{}{} Token"),
+    ("pdfdict_new:n", "{}"),
+    ("pdfdict_put:nnn", "{}{}{}"),
+    ("pdfdict_gput:nnn", "{}{}{}"),
+    ("pdfdict_remove:nn", "{}{}"),
+    ("pdfdict_gremove:nn", "{}{}"),
+  ] {
+    def_macro_noop(&s!("\\{cs} {params}"))?;
+  }
   // tagpdf.sty `\tagtool{<keyvals>}` (per-structure tagging tweaks) and
   // latex-lab-testphase-block's `\DebugBlocksOn/Off` (debug output for the
   // block tagging code) — both PDF-structure-only, like `\tagpdfsetup`.

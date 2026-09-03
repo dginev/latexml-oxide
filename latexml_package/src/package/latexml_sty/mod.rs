@@ -383,6 +383,10 @@ LoadDefinitions!({
     // minim-math.tex:19 sets it (lettrine-demo-arabic). Guard:
     // `perfect_kernel_batch54::luatex_profile_defines_matheqdirmode`.
     DefRegister!("\\matheqdirmode"        => Number::new(0));
+    // `\pagewidth`/`\pageheight` (LuaTeX manual §4.3, the page dimensions
+    // pdfTeX calls `\pdfpagewidth`): incgraph.sty reads them under LuaTeX.
+    DefRegister!("\\pagewidth"            => Dimension!("614.295pt"));
+    DefRegister!("\\pageheight"           => Dimension!("794.96999pt"));
     // luapstricks: under this profile pstricks.tex (L443-471) takes its
     // LuaTeX branch, routing `\pstverb`/`\pstVerb`/`\pstheader`/
     // `\c@lor@to@ps` through tokens that luapstricks.lua creates via

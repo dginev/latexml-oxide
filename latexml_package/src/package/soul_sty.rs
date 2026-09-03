@@ -123,7 +123,12 @@ LoadDefinitions!({
 
   // Customizing underlines
   DefPrimitive!("\\setulcolor{}", sub[(color_arg)] {
-    let color_str = color_arg.to_string();
+    // Real soul resolves the stored name through `\color` at use time, which
+    // EXPANDS a macro-valued name: europasscv.cls:560 `\setulcolor
+    // {\ecv@textcolor}` ("Can't find color named '\ecv@textcolor'"; Perl
+    // soul.sty.ltxml:75 stores `ToString` unexpanded too, KPE #173). Guard:
+    // `perfect_kernel_batch54::soul_color_setters_expand_a_macro_name`.
+    let color_str = do_expand(color_arg)?.to_string();
     // Perl L75 `AssignValue(soul_ul_color => …)` — no scope arg → LOCAL (reverts
     // with the enclosing group), NOT global. See \sethlcolor note below.
     assign_value("soul_ul_color", color_str, None);
@@ -148,7 +153,7 @@ LoadDefinitions!({
     if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
       let color_name = match lookup_value("soul_strike_color") {
         Some(Stored::String(sym)) => to_string(sym),
-        Some(Stored::Tokens(ts)) => ts.to_string(),
+        Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
         _ => String::new(),
       };
       if !color_name.is_empty() {
@@ -186,7 +191,7 @@ LoadDefinitions!({
     if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
       let color_name = match lookup_value("soul_hl_color") {
         Some(Stored::String(sym)) => to_string(sym),
-        Some(Stored::Tokens(ts)) => ts.to_string(),
+        Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
         _ => String::new(),
       };
       if !color_name.is_empty() {
