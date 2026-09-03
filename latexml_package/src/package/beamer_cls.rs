@@ -169,7 +169,30 @@ LoadDefinitions!({
 \newdimen\beamer@sidebarwidth \newdimen\beamer@headheight
 \newdimen\beamer@frametextheight \newdimen\beamer@boxheadheight
 \newdimen\beamer@blockheadheight
-\beamer@leftmargin=1cm \beamer@rightmargin=1cm");
+\beamer@leftmargin=1cm \beamer@rightmargin=1cm
+\newcount\beamer@slideinframe \beamer@slideinframe=1 ");
+  // beamerbasesection.sty:20-22,172,220-222,250,292-294 section-name family,
+  // beamerbaseframe.sty:745-746 `\framebreak`, and the internals gotham's font
+  // theme `\patchcmd`s (beamerbasetitle.sty:49-84 `\beamer@title`/
+  // `\beamer@subtitle`, beamerbasesection.sty:183-219 `\beamer@section`,
+  // beamerbasenavigation.sty:327 `\sectionentry`): token macros carrying
+  // beamer's assignment lines so the patches find their search strings (they
+  // are never invoked — article sectioning stays in charge). Witnesses
+  // thubeamer-example-en (`\frametitle{\secname}`), beamer-amurmaple-doc,
+  // gotham-example* ("Patching title failed" ×4), tikz-relay/tikz-sfc
+  // BeamerAnimation (`\beamer@slideinframe`).
+  RawTeX!(r"\def\secname{}\def\subsecname{}\def\subsubsecname{}
+\def\lastsection{}\def\lastsubsection{}
+
+\def\insertsection{}\def\insertsectionhead{}\def\insertsubsectionhead{}\def\insertsubsubsectionhead{}
+\def\insertsectionnumber{\@arabic\c@section}\def\insertsubsectionnumber{\@arabic\c@subsection}
+\def\framebreak{}\def\noframebreak{}
+\long\def\beamer@title[#1]#2{\def\inserttitle{#2}\def\beamer@shorttitle{#1}}
+\long\def\beamer@subtitle[#1]#2{\def\insertsubtitle{#2}\def\beamer@shortsubtitle{#1}}
+\def\sectionentry#1#2#3#4#5{\def\insertsectionhead{#2}\def\insertsectionheadnumber{#1}\def\insertpartheadnumber{#5}}
+\long\def\beamer@section[#1]#2{\refstepcounter{section}%
+  \def\insertsectionhead{\hyperlink{Navigation\the\c@page}{#1}}%
+  \edef\insertsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}");
 
   // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
   // — declares `fragile` as a zero-argument key for the beamerframe keyset.
@@ -331,8 +354,12 @@ LoadDefinitions!({
   // (which doesn't define them) by routing to ltx:note so any
   // \includegraphics inside resolves and the graphic is preserved.
   DefMacro!("\\logo{}", "\\@add@frontmatter{ltx:note}[role=logo]{#1}");
-  DefMacro!("\\titlegraphic{}",
-    "\\@add@frontmatter{ltx:note}[role=titlegraphic]{#1}");
+  // beamerbasetitle.sty:199-200: `\titlegraphic` STORES into
+  // `\inserttitlegraphic` (placed only by the title-page template). The old
+  // note emission digested the argument at once — beamerthemeVerona.sty:169
+  // wraps it in a bare tikz `\node…;` meant for the title-page picture
+  // (`\node` undefined, beamer-verona ×2).
+  RawTeX!(r"\def\inserttitlegraphic{}\long\def\titlegraphic#1{\def\inserttitlegraphic{#1}}");
   // Beamer's \titlepage lives INSIDE a frame (ltx:subsection with
   // _noautoclose), where the schema forbids ltx:subtitle/ltx:date — plain
   // \maketitle flushed the frontmatter "here" and produced the sweep-12

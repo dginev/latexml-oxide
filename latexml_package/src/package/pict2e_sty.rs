@@ -22,6 +22,15 @@ LoadDefinitions!({
   // Define a few defensive stubs for pict2e-specific user-facing
   // CSes that some packages probe.
   def_macro_noop("\\OriginalPictureCmds")?;
+  // pict2e.sty:686-740 — the polygonal-line family that curve2e.sty:240
+  // `\renewcommand*`s (sapthesis-doc, unifith-doc: `\polyline` undefined).
+  // `\lx@pic@polyline{terminators}{closed}` (latex_constructs.rs) reads the
+  // `(x,y)…` pairs and emits one `ltx:line`.
+  DefMacro!("\\polyline []", "\\lx@pic@polyline{}{0}");
+  DefMacro!("\\Line", "\\lx@pic@polyline{}{0}");
+  DefMacro!("\\polyvector", "\\lx@pic@polyline{->}{0}");
+  DefMacro!("\\Vector", "\\lx@pic@polyline{->}{0}");
+  DefMacro!("\\polygon OptionalMatch:*", "\\lx@pic@polyline{}{1}");
   def_macro_noop("\\pIIe@vector@ltx")?;
   def_macro_noop("\\pIIe@vector@pst")?;
 });

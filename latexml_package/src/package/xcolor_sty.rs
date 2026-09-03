@@ -581,6 +581,9 @@ LoadDefinitions!({
   // hook that `xcolor-patches-tmp-ltx.sty:83` (raw-loaded by pdfmanagement's
   // `package/xcolor/after` first-aid hook) calls last. Witness doc-use-newpax.
   RawTeX!("\\let\\XC@names\\relax\\let\\XC@@names\\relax");
+  // xcolor.sty:603 — the stored-colour selector `\XC@typ@` below tests
+  // against and expands (iodhbwm, newpax; Perl's binding omits it too).
+  RawTeX!("\\def\\xcolor@#1#2#3#4{#2}");
 
   // Real xcolor is a STANDALONE color package: for
   // `\documentclass[dvipsnames]{article}` + `\usepackage{xcolor}`, pdflatex

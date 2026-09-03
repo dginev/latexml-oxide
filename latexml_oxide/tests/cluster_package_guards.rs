@@ -9387,12 +9387,197 @@ Body.
 \begin{document}
 \fontencoding{LGR}\selectfont
 \section{A}
-[\<a][\accperispomeni{a}][\>'\textalpha][\accdialytika{i}]
+[\<a][\accperispomeni{a}][\>'\textalpha][\accdialytika{i}][\accpsili{}]
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("[ἁ][ᾶ][ἄ][ϊ]"), "{xml}");
+    assert!(xml.contains("[ἁ][ᾶ][ἄ][ϊ][\u{0313}]"), "{xml}");
     assert!(xml.contains(r#"<tag role="refnum">1</tag>"#), "{xml}");
+  }
+
+  /// multicol.sty.ltxml:22 closed an `ltx:p` a block spanning text had
+  /// already closed (KPE #150; thuaslogos-doc).
+  #[test]
+  fn multicols_spanning_section_is_not_double_closed() {
+    let tex = r"\documentclass{article}
+\usepackage{multicol}
+\begin{document}
+Intro.
+\begin{multicols}{2}[\section*{Contents}]
+Column text.
+\end{multicols}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<title>Contents</title>"), "{xml}");
+  }
+
+  /// latex.ltx:9525 `begindocument/end` and :15257 `enddocument` fire; the
+  /// former is UNREAD so a `+b` environment opened from it (jwjournal.cls:643
+  /// wraps the whole body) reads the body from the file.
+  #[test]
+  fn begindocument_end_and_enddocument_hooks_fire() {
+    let tex = r"\documentclass{article}
+\ExplSyntaxOn
+\NewDocumentEnvironment{wrapall}{+b}{[\regex_replace_all:nnN{\#\#}{\c{section}\*}\l_tmpa_tl\tl_set:Nn\l_tmpa_tl{#1}\regex_replace_all:nnN{\#\#}{\c{section}\*}\l_tmpa_tl\tl_use:N\l_tmpa_tl]}{}
+\hook_gput_code:nnn{begindocument/end}{t}{\begin{wrapall}}
+\hook_gput_code:nnn{enddocument}{t}{END-HOOK}
+\ExplSyntaxOff
+\begin{document}
+Body text.
+
+## {A New Section}
+
+More.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<title>A New Section</title>"), "{xml}");
+    assert!(xml.contains("END-HOOK"), "{xml}");
+  }
+
+  /// PLANS P37 (svg half): block content in a TikZ node (`\verb`) gets an
+  /// auto-opened `svg:foreignObject` (Flow model) — makeshape, optikz.
+  #[test]
+  fn verbatim_in_a_tikz_node_gets_a_foreign_object() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node at (0,0) [draw] (a) {\verb|x  x|};
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<svg:foreignObject") && xml.contains("x  x</verbatim>"),
+      "{xml}"
+    );
+  }
+
+  /// The trivial-recursion guard anchors on the INVOKING token: a `\let`
+  /// alias of a macro whose body starts with the original CS is not a loop
+  /// by itself (musixlyr.tex:709-722 `\der@kontext`; recorder-fingering,
+  /// undar-digitacion-doc), while `\def\x{\x}` invoked as `\x` still is.
+  #[test]
+  fn recursion_guard_anchors_on_the_invoking_token() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\def\selfx{\selfx}
+\def\ctx{\ctx A}
+\let\alias\ctx
+\def\ctx{}
+\edef\zz{\alias}[\zz]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[A]"), "{xml}");
+    let tex2 = r"\documentclass{article}
+\begin{document}
+\def\selfx{\selfx}\edef\zz{\selfx}
+\end{document}
+";
+    let (stderr2, _) = convert(tex2, false);
+    assert!(stderr2.contains("expands into itself"), "{stderr2}");
+  }
+
+  /// codehigh.sty:508 takes its `\directlua` parser under the luatex profile;
+  /// the binding pins the l3regex parser (CreationBoites-doc, tkz-bernoulli,
+  /// tabularray-abnt, functional).
+  #[test]
+  fn codehigh_highlights_without_lua() {
+    let tex = r"\documentclass{article}
+\usepackage{codehigh}
+\CodeHigh{language=latex/latex2}
+\begin{document}
+\begin{codehigh}
+\foo{bar}
+\end{codehigh}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("bar") && xml.contains("color="), "{xml}");
+  }
+
+  /// beamer internals the themes reach: beamerbasesection's `\secname`
+  /// family, `\beamer@slideinframe`, the gotham font theme's `\patchcmd`
+  /// targets, and `\titlegraphic` STORING its argument (Verona's `\node`).
+  #[test]
+  fn beamer_section_names_slide_counter_and_patch_targets() {
+    let tex = r"\documentclass{beamer}
+\usetheme{gotham}
+\title{T}
+\titlegraphic{\node[anchor=north]at(0,0){G};}
+\makeatletter
+\begin{document}
+\section{Intro}
+\begin{frame}\frametitle{\secname}[\number\beamer@slideinframe]\framebreak Body\end{frame}
+\begin{frame}\titlepage\end{frame}
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[1]") && xml.contains("Body"), "{xml}");
+  }
+
+  /// Wave-11 package internals: `\captionbox` (caption.sty:454), pict2e's
+  /// `\polyline` family under curve2e, graphics' `\Grot@setangle`/`\Grot@box`
+  /// (isorot), xcolor's `\xcolor@`, hyperref's `\IfHyperBoolean`, biblatex's
+  /// `\AtUsedriver`/`\delimcontext`/`\DeclareAutoCiteCommand`, cas's xspace.
+  #[test]
+  fn wave11_package_internals_are_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{caption}
+\usepackage{curve2e}
+\usepackage{isorot}
+\usepackage{hyperref}
+\usepackage{xspace}
+\usepackage{xcolor}
+\makeatletter
+\begin{document}
+\begin{figure}\captionbox{A caption\label{f}}[\linewidth]{Content}\end{figure}
+\begin{picture}(10,10)\polyline(0,0)(10,10)(20,0)\polygon(0,0)(5,5)(10,0)\end{picture}
+\begin{sideways}Hi\end{sideways}
+[\IfHyperBoolean{hyperfootnotes}{yes}{no}][\xcolor@{}{X}{}{}]
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<caption>") && xml.contains("A caption"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<line points=\"0,0 13.84,13.84 27.67,0\""),
+      "{xml}"
+    );
+    assert!(xml.contains("angle=\"90"), "{xml}");
+    assert!(xml.contains("[no][X]"), "{xml}");
+  }
+
+  /// tuenc.def:106-121 `\DeclareUnicodeAccent` under the luatex profile
+  /// (tipauni.sty:349) and the LuaTeX PDF primitives beside `\directlua`
+  /// (`\pdfvariable pageattr`, multimedia.sty:30).
+  #[test]
+  fn unicode_accent_and_pdfvariable_under_luatex_profile() {
+    let tex = r#"\documentclass{article}
+\usepackage{multimedia}
+\begin{document}
+\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}
+[\textsyllabic{n}]
+\end{document}
+"#;
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[n\u{0329}]"), "{xml}");
   }
 }

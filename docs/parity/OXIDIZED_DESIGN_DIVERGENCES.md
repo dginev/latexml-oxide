@@ -6529,3 +6529,21 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: teubner/teubner-doc, greek-fontenc (char-list, textalpha-doc), any babel-greek + polytonic text.
 **Guard**: `perfect_kernel_batch54::declare_text_accent_defines_greek_diacritics`.
 **Upstream**: not filed.
+
+### 185. The trivial-recursion guard anchors on the invoking token (Perl: the definition's CS)
+
+**Perl behavior**: `Expandable.pm:80-89` errors "Token \x expands into itself!" when a macro body begins with `$$self{cs}` — the Expandable's home CS. A `\let` alias shares the object, so invoking the alias of a legitimately self-headed body fires too: musixlyr.tex:709-722 stores `\cont@<verse>` bodies that begin with `\cont@<verse>`, snapshots them into `\der@kontext`, clears the original and expands the alias (recorder-fingering, undar-digitacion-doc 14 errors).
+**Rust behavior**: the comparison is `t0 == self.cs && t0 == invoking token` (`get_current_token()`). `\def\x{\x}` invoked as `\x` still fires; through an alias the loop is caught one step later when `\x` itself expands.
+**Why**: kernel-quality: TeX has no such guard at all; ours exists to turn a certain hang into an error, and it must not fire on a finite expansion.
+**Witnesses**: recorder-fingering/recorder-fingering, undar-digitacion/undar-digitacion-doc.
+**Guard**: `perfect_kernel_batch54::recursion_guard_anchors_on_the_invoking_token`.
+**Upstream**: not filed.
+
+### 186. Block content in a TikZ node is wrapped in `svg:foreignObject` (Perl: schema error)
+
+**Perl behavior**: `pgfsys-latexml.def.ltxml:202` absorbs the node box straight into `svg:g`; a `\verb` or paragraph in the node text opens `ltx:p` and errors `<ltx:p> isn't allowed in <svg:g>` (makeshape/testsample 22, optikz_doc 46). `LaTeXML-misc.rnc:114` limits `svg:foreignObject` to `Inline.model` (its own comment: "eventually must adapt to put LaTeXML objects in foreignObject").
+**Rust behavior**: `SVG.foreignObject.content = parent Flow.model`, and `find_insertion_point_qsym` auto-opens an `svg:foreignObject` (`_autoopened`/`_autoclose`) for a child an `svg:*` parent cannot hold but a foreignObject can — the shape `\lxSVG@includegraphics` already uses for non-SVG content and the sibling of the `ltx:inline-block` fallback (PLANS P37).
+**Why**: kernel-quality: the node content is kept, well-formed, in the element SVG designed for it.
+**Witnesses**: makeshape/testsample, optikz/optikz_doc.
+**Guard**: `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
+**Upstream**: not filed.

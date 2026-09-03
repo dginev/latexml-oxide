@@ -208,8 +208,18 @@ impl Definition for Expandable {
             let token_vec = tokens.unlist_ref();
             let t0_opt = token_vec.first();
             let t1_opt = token_vec.get(1);
+            // OXIDIZED_DESIGN #185: anchor on the token actually being
+            // expanded, not the definition's home CS: a `\let` alias shares the Expandable
+            // (`self.cs` = the original), and musixlyr.tex:709-722 legitimately
+            // stores a body beginning with `\cont@<verse>` that is invoked
+            // through the alias `\der@kontext` after the original was cleared
+            // (Perl Expandable.pm:84 uses `$$self{cs}` and errs the same way:
+            // recorder-fingering, undar-digitacion-doc). A genuine
+            // `\def\x{\x}` invoked as `\x` still fires; through an alias the
+            // loop is caught one step later when `\x` itself expands.
+            let invoker = get_current_token().unwrap_or(self.cs);
             if let Some(t0) = t0_opt {
-              if t0 == &self.cs {
+              if t0 == &self.cs && *t0 == invoker {
                 true
               } else if let Some(t1) = t1_opt {
                 // `\protect\foo` is only an actual runaway when

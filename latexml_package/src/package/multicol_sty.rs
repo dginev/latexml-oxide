@@ -16,11 +16,16 @@ LoadDefinitions!({
   // (Perl multicol.sty.ltxml:21-25) — only the digest mode is made
   // explicit. Cluster: cond-mat0001099 + hep-ph0001306 + math0601451's
   // many script-mode errors all trace here.
+  // No explicit `</ltx:p>` after the spanning text: a block-level `#2`
+  // (`\begin{multicols}{2}[\section*{…}]`, thuaslogos-doc) auto-closes the
+  // `ltx:p` itself and the explicit close then errored "Attempt to close
+  // </ltx:p>, which isn't open" (Perl multicol.sty.ltxml:22 identical, KPE
+  // #150); for inline `#2` the following `<ltx:para>` open closes it.
   DefEnvironment!("{multicols}{}[]",
-    r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
+    r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
   DefEnvironment!("{multicols*}{}[]",
-    r###"?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
+    r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
 
   def_macro_noop("\\botmark")?;

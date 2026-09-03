@@ -2591,6 +2591,12 @@ LoadDefinitions!({
   def_macro_noop("\\GenRefcontextData{}{}")?;
   def_macro_noop("\\AtEveryCite{}")?;
   def_macro_noop("\\AtBeginRefsection{}")?;
+  // biblatex.sty:4124 `\AtUsedriver*{code}` (appends to the usedriver hook),
+  // :4110 `\delimcontext{name}`, :12700 `\DeclareAutoCiteCommand{name}[pos]
+  // {cite}{cites}` — biblatex-gost's bbx/cbx reach these three.
+  def_macro_noop("\\AtUsedriver OptionalMatch:* {}")?;
+  def_macro_noop("\\delimcontext{}")?;
+  def_macro_noop("\\DeclareAutoCiteCommand OptionalMatch:* {}[]{}{}")?;
   // The rest of the hook family (biblatex.sty:10188/10381-10382/10741/11380-
   // 11397; blx-compat.def:155-156 `\AtBeginShorthands`/`\AtEveryLositem`),
   // reached by raw styles (philosophy-*.bbx:159/213, windycity.bbx;

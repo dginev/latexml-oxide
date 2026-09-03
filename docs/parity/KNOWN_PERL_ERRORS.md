@@ -5240,3 +5240,18 @@ tabular2 28, inkpaper-en 3). Trigger:
 Rust: the `\expandafter` idiom in `\lx@@therefnum@@` (`\lx@@typerefnum@@` keeps the
 bare shape: bracing its refnum leaves an empty group that `\lx@refnum@compose` no
 longer sees as empty — a trailing space on unnumbered theorem tags). Guard: `perfect_kernel_batch54::ctex_argument_taking_p_macro_keeps_the_refnum`.
+
+## 150. multicol's spanning text closes an `ltx:p` a block `#2` already closed (Rust fixes)
+
+`multicol.sty.ltxml:22,27` `?#2(<ltx:para><ltx:p>#2</ltx:p><ltx:para>)…`: with
+`\begin{multicols}{2}[\section*{Contents}]` the section auto-closes the `ltx:p`
+and `ltx:para`, and the template's explicit `</ltx:p>` errors "Attempt to close
+</ltx:p>, which isn't open" (thuaslogos-doc-english/-dutch). Trigger:
+
+```latex
+\usepackage{multicol}
+\begin{multicols}{2}[\section*{Contents}]x\end{multicols}
+```
+
+Rust: the explicit close is dropped (the next `<ltx:para>` open closes an inline
+`#2`). Guard: `perfect_kernel_batch54::multicols_spanning_section_is_not_double_closed`.

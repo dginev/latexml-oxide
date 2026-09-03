@@ -7,6 +7,26 @@ use libxml::tree::NodeType;
 use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 
 LoadDefinitions!({
+  // hyperref.sty:2190-2205 `\IfHyperBooleanExists`/`\IfHyperBoolean`
+  // (enumext.sty:455 `\IfHyperBoolean{hyperfootnotes}`; lua-tikz3dtools,
+  // whatsnote). Undefined `\Hy@…false`/defaults fall to the false branch.
+  RawTeX!(
+    r"\def\IfHyperBooleanExists#1{%
+  \@ifundefined{Hy@#1false}\@secondoftwo{%
+    \@ifundefined{KV@Hyp@#1@default}\@secondoftwo\@firstoftwo
+  }%
+}
+\@namedef{KV@Hyp@stoppedearly@default}{}
+\def\IfHyperBoolean#1{%
+  \IfHyperBooleanExists{#1}{%
+    \csname ifHy@#1\endcsname
+      \expandafter\@firstoftwo
+    \else
+      \expandafter\@secondoftwo
+    \fi
+  }\@secondoftwo
+}"
+  );
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
   RequirePackage!("iftex");
   RequirePackage!("etoolbox");

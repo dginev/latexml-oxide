@@ -113,6 +113,7 @@ pub mod citesort_sty;
 pub mod cleveref_sty;
 pub mod cmap_sty;
 pub mod cmbright_sty;
+pub mod codehigh_sty;
 pub mod color_sty;
 pub mod colordvi_sty;
 pub mod colortbl_sty;

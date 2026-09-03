@@ -3109,6 +3109,29 @@ impl Document {
           )?;
           return self.find_insertion_point_qsym(qsym, Some(inline_block));
         }
+        // Block content inside an SVG group — a TikZ node whose text holds a
+        // `\verb` or a paragraph (makeshape 22, optikz 46: `<ltx:p> isn't
+        // allowed in <svg:g>`) — takes an auto-opened `svg:foreignObject`,
+        // whose model is Flow (LaTeXML-misc.rnc `SVG.foreignObject.content`),
+        // the same shape `\lxSVG@includegraphics` uses for non-SVG content.
+        // Perl shares the error (pgfsys-latexml.def.ltxml:202 absorbs the
+        // node box into the group directly). OXIDIZED_DESIGN #186, PLANS P37
+        // (svg half). Guard:
+        // `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
+        let foreign_object = pin!("svg:foreignObject");
+        if qsym != foreign_object
+          && arena::with(cur_qname, |c| c.starts_with("svg:"))
+          && can_contain_qsym(cur_qname, foreign_object)
+          && can_contain_qsym(foreign_object, qsym)
+        {
+          let node_font = self.get_node_font(&self.node).clone();
+          self.open_element(
+            "svg:foreignObject",
+            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
+            Some(&node_font),
+          )?;
+          return self.find_insertion_point_qsym(qsym, Some(foreign_object));
+        }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
         // (a bare qname for #PCDATA), with "Currently in <insertion

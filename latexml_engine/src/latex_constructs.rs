@@ -4064,6 +4064,17 @@ LoadDefinitions!({
     // pre-#2846 placement — `\AtBeginDocument` above ran while still `inPreamble=1`.
     // `\par` paragraph-breaking is governed by mode + the `document` env, not this flag.
     assign_value("inPreamble", false, None);
+    // latex.ltx:9525 `\UseOneTimeHook{begindocument/end}` — AFTER the
+    // preamble is left. jwjournal.cls:643-650 wraps the whole body in a `+b`
+    // environment from this hook (and closes it from `enddocument`); without
+    // it the markdown body typeset raw (`##` reaching the stomach, 4 docs).
+    // Guard: `perfect_kernel_batch54::begindocument_end_and_enddocument_hooks_fire`.
+    // UNREAD onto the main stream rather than digest in a string mouth: a
+    // `+b` environment opened from this hook must read its body from the
+    // document file, not from the hook's own (empty) mouth.
+    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+      unread(hook_use_tokens("begindocument/end"));
+    }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
     // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
@@ -4098,6 +4109,22 @@ LoadDefinitions!({
   // \document is used directly in e.g. expl3.sty
   Let!("\\document", "\\begin{document}", Scope::Global);
 
+  /// `\hook_use:n {name}` as explicit tokens: `Tokenize!` runs under the
+  /// runtime catcodes, where `:` is OTHER and `/` must stay OTHER inside the
+  /// name.
+  fn hook_use_tokens(name: &str) -> Tokens {
+    let mut toks = vec![T_CS!("\\hook_use:n"), T_BEGIN!()];
+    for c in name.chars() {
+      toks.push(if c.is_ascii_alphabetic() {
+        T_LETTER!(c.to_string())
+      } else {
+        T_OTHER!(c.to_string())
+      });
+    }
+    toks.push(T_END!());
+    Tokens::new(toks)
+  }
+
   DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props] {
       document.close_element("ltx:document")?;
     },
@@ -4105,6 +4132,14 @@ LoadDefinitions!({
       let mut boxes : Vec<Digested> = Vec::new();
       if let Some(ops) = lookup_tokens("@at@end@document") {
         boxes.push(digest(ops)?);
+      }
+      // latex.ltx:15257 `\UseOneTimeHook{enddocument}` (the lthooks slot; the
+      // legacy `\AtEndDocument` list above is `@at@end@document`).
+      if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+        local_state_unlocked(false);
+        let r = digest(hook_use_tokens("enddocument"));
+        expire_state_unlocked();
+        boxes.push(r?);
       }
       // Should we try to indent the last paragraph? If so, it goes like this:
       boxes.push(digest(T_CS!("\\lx@normal@par"))?);
@@ -7613,8 +7648,11 @@ LoadDefinitions!({
       return Ok(());
     }
     Let!(orig, ecs);
+    // `\lx@text@composite@key{#1}` is the `\string` of the argument's first
+    // token, and EMPTY for an empty argument (`\accpsili{}` typesets the bare
+    // mark; a raw `\string#1` would stringify the `\endcsname`).
     let body = mouth::tokenize_internal(TeXString::assembled(s!(
-      "\\expandafter\\ifx\\csname {encoding_str}\\string{cs_str}-\\string#1\\endcsname\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{{\\csname {encoding_str}\\string{cs_str}@orig\\endcsname{{#1}}}}{{\\csname {encoding_str}\\string{cs_str}-\\string#1\\endcsname}}"
+      "\\expandafter\\ifx\\csname {encoding_str}\\string{cs_str}-\\lx@text@composite@key{{#1}}\\endcsname\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{{\\csname {encoding_str}\\string{cs_str}@orig\\endcsname{{#1}}}}{{\\csname {encoding_str}\\string{cs_str}-\\lx@text@composite@key{{#1}}\\endcsname}}"
     )));
     def_macro(
       ecs,
@@ -7624,6 +7662,12 @@ LoadDefinitions!({
     )?;
     Ok(())
   }
+  DefMacro!("\\lx@text@composite@key{}", sub[(arg)] {
+    Ok(match arg.unlist_ref().first() {
+      Some(t) => Tokens::new(Explode!(t.to_string())),
+      None => Tokens!(),
+    })
+  });
   DefPrimitive!("\\DeclareTextComposite DefToken {} Undigested {Number}", sub[(cs, encoding, ch, code)] {
     let encoding_str = Expand!(encoding).to_string();
     let cs_str = cs.to_string();
@@ -11082,6 +11126,61 @@ LoadDefinitions!({
         "points" => Stored::String(pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
         "thick"  => Stored::String(pin(format!("{thick}"))),
         "color"  => "#000000"
+      ))
+    }
+  );
+
+  // pict2e.sty:686-740 `\polyline(x1,y1)(x2,y2)…`, `\polygon[*]`, `\Line`,
+  // `\Vector`/`\polyvector`: a polyline in ABSOLUTE picture coordinates
+  // (`\unitlength` multiples), rendered as one `ltx:line` (the same element
+  // `\line` emits). `\lx@pic@polyline{terminators}{closed}` reads the `(x,y)`
+  // pairs itself. The pict2e binding is otherwise a no-op stub (its driver
+  // chain has no XML meaning); curve2e.sty:240 `\renewcommand*\polyline`
+  // needs the base to exist. Witnesses sapthesis-doc, unifith-doc.
+  fn read_pic_pairs() -> Result<Vec<(f64, f64)>> {
+    let mut pairs = Vec::new();
+    loop {
+      skip_spaces()?;
+      if !if_next(T_OTHER!("("))? {
+        break;
+      }
+      read_token()?;
+      let x = read_until(&Tokens!(T_OTHER!(",")))?
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      let y = read_until(&Tokens!(T_OTHER!(")")))?
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      let parse = |s: String| -> f64 { s.trim().parse().unwrap_or(0.0) };
+      pairs.push((parse(x), parse(y)));
+    }
+    Ok(pairs)
+  }
+  DefConstructor!("\\lx@pic@polyline{}{}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='#terminators'/>",
+    properties => sub[args] {
+      let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let closed = args[1].as_ref().map(|d| d.to_string() == "1").unwrap_or(false);
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let mut pairs = read_pic_pairs()?;
+      if closed && let Some(first) = pairs.first().copied() {
+        pairs.push(first);
+      }
+      let points = pairs.iter()
+        .map(|(x, y)| format!("{},{}", fmt_px(px_value(x * unit)), fmt_px(px_value(y * unit))))
+        .collect::<Vec<_>>().join(" ");
+      Ok(stored_map!(
+        "points" => Stored::String(pin(points)),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => "#000000",
+        "terminators" => Stored::String(pin(terminators))
       ))
     }
   );

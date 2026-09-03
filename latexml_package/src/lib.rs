@@ -929,6 +929,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("sectsty", "sty", package::sectsty_sty::load_definitions),
   ("xfrac", "sty", package::xfrac_sty::load_definitions),
   ("adjustbox", "sty", package::adjustbox_sty::load_definitions),
+  ("codehigh", "sty", package::codehigh_sty::load_definitions),
   ("afterpage", "sty", package::afterpage_sty::load_definitions),
   ("mathrsfs", "sty", package::mathrsfs_sty::load_definitions),
   ("blindtext", "sty", package::blindtext_sty::load_definitions),

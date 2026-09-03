@@ -412,6 +412,16 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\Grot@erotate", "\\rotatebox[]");
+  // graphics.sty:445-460 rotation internals reached by isorot.sty's own
+  // `\sideways`/`\turn`: `\Grot@setangle` records the angle, `\Grot@x`/
+  // `\Grot@y` are the origin shifts (no XML meaning), and `\Grot@box`
+  // rotates `\box\z@` through the constructor above (isorot/rotman,
+  // newpax/doc-use-newpax; Perl errs the same way).
+  RawTeX!(
+    r"\def\Grot@setangle#1{\edef\Grot@angle{#1}}
+\newdimen\Grot@x \newdimen\Grot@y
+\def\Grot@box{\expandafter\rotatebox\expandafter{\Grot@angle}{\box\z@}}"
+  );
 
   // Perl: DefConstructor('\reflectbox {}', ...) with properties callback
   // Returns width/height/depth from box size, xscale=-1, yscale=1

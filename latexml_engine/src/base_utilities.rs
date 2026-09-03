@@ -3911,9 +3911,16 @@ pub fn insert_block(
   let mut context = context_opt.unwrap();
   let mut context_tag = document::get_node_qname(&context);
   // svg is slightly tricky
+  // An `svg:foreignObject` context is LaTeXML content again (it holds ltx
+  // elements), not SVG proper: the block keeps its attributes and its own
+  // wrapper there. With the foreignObject model widened to Flow
+  // (OXIDIZED_DESIGN #186) the SVG rule "attributes are ignorable" would
+  // unwrap a minipage straight into the foreignObject and hoist its
+  // `width="31.37em"` over the foreignObject's px width (fixture
+  // tikz/various_colors).
   let (is_svg, is_xmath, is_xmtext) = with(context_tag, |tag| {
     (
-      tag.starts_with("svg:"),
+      tag.starts_with("svg:") && tag != "svg:foreignObject",
       tag.starts_with("ltx:XM"),
       tag == "ltx:XMText",
     )
@@ -4017,6 +4024,13 @@ pub fn insert_block(
             .unwrap_or(false)
         }))
       && let Some(nc) = newcontainer
+      // never an SVG element: with the foreignObject model widened to Flow
+      // (OXIDIZED_DESIGN #186) a minipage in a TikZ node resolved here to
+      // `svg:foreignObject` and the capture — class, vattach, `width` in em —
+      // was renamed INTO a foreignObject, clobbering the real one's px
+      // width (fixture tikz/various_colors); it belongs in the inline-block
+      // the candidates below pick.
+      && !with(nc, |s| s.starts_with("svg:"))
     {
       // rename the capture to that container
       document.rename_node_qsym(container, nc, true)?;

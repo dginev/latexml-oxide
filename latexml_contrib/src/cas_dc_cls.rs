@@ -9,6 +9,11 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
+  // cas-dc.cls:64 `\RequirePackage{xspace,xstring,footmisc}` (the samples'
+  // `\def\tsc#1{\textsc{#1}\xspace}`); xstring has no binding and would
+  // warn under the default (non-raw) load, so only the bound two.
+  RequirePackage!("xspace");
+  RequirePackage!("footmisc");
   RequirePackage!("amsthm");
   // amssymb supplies \lesssim, \gtrsim, \nleq, \ngeq, \square, \blacksquare
   // and other binary-relation/blackboard-bold symbols that CAS authors

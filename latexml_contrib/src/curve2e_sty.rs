@@ -51,6 +51,11 @@ LoadDefinitions!({
   // PERL 0 of that error. graphicx is idempotent if already loaded.
   RequirePackage!("graphicx");
   RequirePackage!("color");
+  // curve2e.sty:17 `\RequirePackage{pict2e}` — the polygonal-line family
+  // (`\polyline`, `\polygon`, `\Line`, `\Vector`) that curve2e
+  // `\renewcommand`s (:240) comes from pict2e's binding. Witnesses
+  // sapthesis-doc, unifith-doc (`\polyline` undefined).
+  RequirePackage!("pict2e");
 
   // curve2e exports — silently consume their arguments. None of
   // these have a faithful HTML rendering anyway.
@@ -60,9 +65,7 @@ LoadDefinitions!({
   def_macro_noop("\\VectorArc")?;
   def_macro_noop("\\Dashline")?;
   def_macro_noop("\\Dotline")?;
-  def_macro_noop("\\Vector")?;
   def_macro_noop("\\VECTOR")?;
-  def_macro_noop("\\polyvector")?;
   def_macro_noop("\\GraphLine")?;
   def_macro_noop("\\GraphGrid")?;
   // \Pbox and \Pnode-style — leave \put untouched (defined in TeX_Picture);

@@ -164,6 +164,100 @@ LoadDefinitions!({
       clear_prefixes();
       let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
     });
+    // LuaTeX manual §8: the PDF backend primitives that accompany
+    // `\directlua` — `\pdfvariable <name>` (a token-list/int variable:
+    // multimedia.sty:30 `\edef\beamer@pdfpageattr{\pdfvariable pageattr}`),
+    // `\pdfextension <name>…`, `\pdffeedback <name>`. The name keyword is
+    // consumed; the value is empty (hitszbeamer, vocaltract).
+    DefMacro!(T_CS!("\\pdfvariable"), None, {
+      let _ = read_keyword(&[
+        "pageattr",
+        "pagesattr",
+        "pageresources",
+        "compresslevel",
+        "objcompresslevel",
+        "decimaldigits",
+        "gentounicode",
+        "horigin",
+        "vorigin",
+        "linkmargin",
+        "destmargin",
+        "threadmargin",
+        "xformmargin",
+        "pkresolution",
+        "pkfixeddpi",
+        "inclusionerrorlevel",
+        "ignoreunknownimages",
+        "gamma",
+        "imageapplygamma",
+        "imagegamma",
+        "imagehicolor",
+        "imageaddfilename",
+        "uniqueresname",
+        "majorversion",
+        "minorversion",
+        "pagebox",
+        "inclusioncopyfonts",
+        "recorderfilename",
+        "suppressoptionalinfo",
+        "omitcidset",
+        "omitcharset",
+        "omitinfodict",
+        "omitmediabox",
+        "omitprocset",
+        "fontattr",
+        "info",
+        "catalog",
+        "names",
+        "trailer",
+        "trailerid",
+        "xformattr",
+        "xformresources",
+        "retval",
+        "lastlink",
+        "lastannot",
+        "lastobj",
+        "lastxform",
+        "lastximage",
+        "lastximagepages",
+      ])?;
+      Vec::new()
+    });
+    DefMacro!(T_CS!("\\pdffeedback"), None, {
+      let _ = read_keyword(&[
+        "lastlink",
+        "lastannot",
+        "lastobj",
+        "lastxform",
+        "lastximage",
+        "lastximagepages",
+        "retval",
+        "colorstackinit",
+        "creationdate",
+        "fontname",
+        "fontobjnum",
+        "fontsize",
+        "pageref",
+        "xformname",
+        "ximagebbox",
+        "version",
+        "revision",
+      ])?;
+      vec![T_OTHER!("0")]
+    });
+    DefPrimitive!("\\pdfextension Token", sub[(_name)] {});
+    // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
+    // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
+    // appends `\char code` to its argument (NBSP base when empty). The
+    // format here stays 8-bit (no `\UnicodeEncodingName`), so the command is
+    // declared as the encoding DEFAULT rather than for `TU`.
+    RawTeX!(
+      r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
+\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
+  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
+\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
+\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
+    );
     DefRegister!("\\prehyphenchar"     => Number::new(0));
     DefRegister!("\\posthyphenchar"    => Number::new(0));
     DefRegister!("\\preexhyphenchar"   => Number::new(0));

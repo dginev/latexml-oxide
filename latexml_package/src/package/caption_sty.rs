@@ -239,6 +239,16 @@ LoadDefinitions!({
   DefRegister!("\\captionwidth"      => Dimension::new(0));
 
   // Override \caption to support \caption* (starred form)
+  // caption.sty:454-487 `\captionbox[list]{caption}[width][inner]{content}`
+  // — content with its caption in a box (below by default). Same idiom as
+  // subcaption's `\subcaptionbox`; the width/inner position are layout only.
+  // Witness tikz-mirror-lens (both bindings lacked it).
+  DefMacro!("\\captionbox []{}[][]{}",
+    "\\begingroup#5\\caption{#2}\\ifx.#1.\\else\\lx@caption@addinlist{#1}\\fi\\endgroup");
+  DefConstructor!("\\lx@caption@addinlist{}", "", properties => sub[args] {
+    let list = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("inlist" => list))
+  });
   DefMacro!("\\caption",
     r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@caption\expandafter{\@captype}}}"
   );
