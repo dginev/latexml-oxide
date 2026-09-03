@@ -4,7 +4,7 @@
 > mutual-exclusivity remains the intended model, and the structured
 > Parameter encoding documented here is still the relevant dump-format
 > design. Current acceptance status, dump line counts, and sandbox
-> numbers live in [`SYNC_STATUS.md`](SYNC_STATUS.md). Treat exact line
+> numbers live in [`SYNC_STATUS.md`](../SYNC_STATUS.md). Treat exact line
 > references and bisection context below as Apr 26 audit data unless
 > revalidated on current `HEAD`.
 
@@ -232,8 +232,8 @@ flipping mutual-exclusivity:
    reversed that decision: the Rust port now mirrors Perl's mutual
    exclusivity exactly — `bootstrap → dump → constructs` when the dump
    is on disk, `bootstrap → base → constructs` otherwise. See
-   [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) for the
-   parity audit and [`SYNC_STATUS.md`](SYNC_STATUS.md) for
+   [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) for the
+   parity audit and [`SYNC_STATUS.md`](../SYNC_STATUS.md) for
    the rationale (the dump must be a faithful Perl translation, not a
    Rust-flavored alternate path).
 

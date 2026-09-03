@@ -3,7 +3,7 @@
 Point-in-time diagnostic for issue
 [#217](https://github.com/dginev/latexml-oxide/issues/217) (Portable use on
 MacOS), Phase 0 of the portability ladder in
-[`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §3. Facts gathered by
+[`RELEASE_CRITERIA.md`](../release/RELEASE_CRITERIA.md) §3. Facts gathered by
 `tools/portability_probe.sh` running in `.github/workflows/portability.yml`
 on `macos-15` (arm64, 3 vCPU / 7 GB) runners, under two TeX providers:
 **BasicTeX cask** (MacTeX's small distribution — what a typical Mac TeX user

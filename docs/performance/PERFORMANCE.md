@@ -168,118 +168,141 @@ rate (the math lever). Max RSS 1,692 MB.
 
 ## Open levers
 
-The phase bands above set priority. Current open work:
+The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, xslt 13.2%, graphics 8.9%, mathml 4.5%) and recent raw-kernel sweeps set the active priorities:
 
-### P0 — eager `Debug!` diagnostics on the text-absorption path — ✅ LANDED 2026-08-23
+> **2026-09-03 source reconciliation:** the ranked static findings and
+> implementation handoff are in
+> [`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+> The first isolated change is the discarded XMDual serialization; the audit
+> also covers its document-wide `idref` scan, the core-to-post output buffer,
+> pass-2 per-segment cloning, the whole-DOM split fallback, retained state
+> capacity, alternate-format XSLT, and file lookup. Runtime impact is unmeasured
+> unless the entry names an existing profile; keep static cost models separate
+> from measured percentages.
 
-Found and fixed the same day as the audit (see Audit log — full evidence
-there). `Debug!` (`error.rs`) and `generate_message!` built all their strings —
-including `gullet::get_location()` and, at the `open_text` /
-`open_text_internal` / `close_element` sites, a full `node_to_string` subtree
-serialization — **before** any verbosity check; `emit_record` then discarded
-them. Now gated on `debug_record_enabled()` (`max_level() >= Debug` and not
-suppressed), with the Debug `note_status` tally preserved unconditionally, so
-status counts are identical at every verbosity.
+### P1 — XMDual pruning: discarded serialization, then repeated global lookup
 
-**Measured** (same branch also carries the audit's R3/R5/R6 mechanical fixes:
-`is_noexpand_family` per-symbol memo, `generate_id` parent-chain walk,
-`collect_walk_matches` sibling iteration, fontmap-key memoization, probe-only
-`:locked` gate via non-interning `arena::get`, 13 redundant-clone fixes;
-interleaved best-of-3, idle box, HTML byte-identical on all four A/B
-witnesses): `2304.10050` (build/text-bound) **6.21 → 2.71 s (−56%)** — the
-band was quadratic-flavored (each insert re-serialized the growing subtree),
-so removal beats the ~26% profile share; `2408.08292` (typical math paper)
-8.66 → 7.74 s (−11%); `2405.14114` (200M-token digest runaway) 20.5 → 20.1 s
-(−2%). 82-paper regression-corpus sweep, same harness/box/day: **229.3 →
-200.0 s (−12.8%)**, zero exit-status changes, sum max-RSS flat (+1.3%,
-two ±≤60 MB movers, rest noise).
+* **Current reality:** `Document::prune_xmduals` unconditionally calls
+  `node_to_string(&dual)` and discards the returned `String`. Separately,
+  `collapse_xmdual` evaluates `//*[@idref='<dualid>']` from the document for
+  each collapsed dual.
+* **Cost shape:** definite serialization/allocation waste, followed by a
+  worst-case `O(collapsed_duals * document_nodes)` reference-repair loop. The
+  delta has not yet been measured.
+* **Order:** first remove only the discarded serialization and run a
+  same-session byte-identical A/B. Then, as a separate change, build one
+  `idref -> nodes` index and update its buckets when ids move. See audit F1/F2
+  for edge cases and witnesses.
 
-### P1 — math_parse (17% of wall, 17% over-parse) — the top remaining lever
+### P2 — Complete streaming across the core-to-post boundary
 
-Every math-heavy witness is now `math_parse`-bound (the `build` quadratic was
-fixed — see Closed). The over-parse rate is the lever; see **Principle 4**,
-[`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)
-(current measured and-node counts + ranked levers) and
-[`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
+* **Current reality:** fragmented core conversion and the two-pass streaming
+  split front-end are implemented. However, `ConversionResponse.result` still
+  materializes complete core XML as a `String`; TeX-to-HTML passes that string
+  to post, which may immediately spill it to disk. Pass 2 also clones the
+  conversion-global font map and rewrite rules per segment and constructs an
+  unused XML scaffold per fragment.
+* **Fix:** add a writer/file-backed conversion API while retaining the current
+  string API as a compatibility wrapper. Hand the CLI's file directly to post.
+  Independently, share immutable pass-2 data, use fragment-local overlays, make
+  rewrite diagnostics lazy, and construct fragment fields without `Self::new()`.
+* **Boundary:** this attacks very-large-document RSS and segmented pass-2 CPU;
+  it is not expected to move ordinary-paper medians. See audit F3/F4.
 
-**LANDED 2026-06-30 — differential-`d` lexer gating (output-neutral).** The lexer
-emitted `XDIFFUNK`/`XDIFFID` (the diffop-competing branch) for *every* `d`
-unconditionally; outside integrals the `diffop_apply` action always prunes it, so
-Marpa built a ~71-and-node branch per `d<var>` only to reject it. `util.rs`
-`node_to_grammar_lexemes_from` now downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when
-the formula has no `INTOP` (same predicate `diffop_apply` uses, over the same node
-list) — byte-identical output, removes the over-parse on every non-integral `d`
-(`\frac{dx}{dt}`, `d`-as-variable, `d`-subscripts). High volume (differentials are
-everywhere). Step 2 (a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is
-never built, pulling `\int … f(x)\,dx` off the legacy fallback) is the follow-up.
+### P3 — math_parse (19.2% of wall, 17% over-parse)
 
-Remaining open hot patterns (fresh 2026-06-30 measurements; the old
-`MATH_AMBIGUITY_AUDIT` claims are **stale** — `\Pi^N(p,q,r)` and simple bare
-`|x|≤|y|` are now *unambiguous*):
-- **`f(x,y)` apply-vs-multiply** — the dominant residual; parens alone create the
-  ambiguity (`f(x)` = 112 and-nodes vs `fx` unambiguous). NB — **superseded 2026-07-20: this is an
-  INTENTIONAL divergence, not a latent regression.** `speculative_prefix_apply`
-  (semantics.rs) indeed no longer checks the `MATHPARSER_SPECULATE` flag, so the
-  speculative apply is always on — but the toward-Perl flip was implemented and
-  verified against same-host Perl on 2026-07-02 and then **reverted on explicit
-  user review**; `f(x)`→application is divergence #18 (`OXIDIZED_DESIGN_MATH.md`
-  §18: do not re-attempt without a fresh user decision). The parity check this
-  note asks for has already been done.
-- **Bare `|x|` with ambiguous inner content** — e.g. `|v(x)| ≤ |v(x')|` (625
-  and-nodes, legacy fallback): bar-pairing × inner apply-ambiguity. A balanced-pair
-  **pre-lexer** pass (peer of the `STRETCHY_VERTBAR` hint) targets the pairing
-  factor. Lower priority — the *simple* modulus inequality is already unambiguous.
-- **Integrals** now the largest volume driver (`\int_0^1 f(x)\,dx` = 523 and-nodes,
-  on the legacy fallback path); Step 2 of the differential lever above is the fix.
+Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the primary lever; see **Principle 4**, [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](../math/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) and [`MATH_PARSER_AND_ASF.md`](../math/MATH_PARSER_AND_ASF.md).
 
-The architectural floor for a 2385–5000-formula paper is ~4 ms/formula
-(marpa-C-bound: ~25% of self-time is the marpa-C engine, out of scope). 1–2 s
-there needs the over-parse lever, not deeper marpa work. Audit with
-`LATEXML_PARSE_AUDIT=1` / `LATEXML_MATH_AMBIGUITY_AUDIT=1` /
-`LATEXML_MARPA_ASF_AUDIT=1`.
+* **Landed 2026-06-30 — differential-`d` lexer gating:** Downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP`, removing over-parse on every non-integral `d` (`\frac{dx}{dt}`, subscripts).
+* **Settled intentional divergence:** `f(x,y)` apply-vs-multiply is intentional divergence #18 (`OXIDIZED_DESIGN_MATH.md` §18; do not re-attempt toward-Perl reverts without explicit user sign-off).
+* **Open hot patterns:**
+  - **Integrals (largest volume driver):** Step 2 of differential gating — a dedicated in-integral `DIFFOP_D` terminal so `∫(x·d·x)` is never built, pulling `\int … f(x)\,dx` off the legacy fallback path.
+  - **Bare `|x|` with ambiguous inner content:** e.g. `|v(x)| ≤ |v(x')|` (625 and-nodes): balanced-pair pre-lexer pass targeting the pairing factor.
+  - **Content-addressed formula memoization (BP-5):** Hash normalized formula token stream to reuse parse→XMDual→MathML across identical formulae in tables and matrices.
 
-### P1 — graphics (36.5%) — largely CLOSED, two open traps
+### P4 — Internal TeX counters in `State` (`if_count` / `if_limit`)
 
-In-doc dedup, persistent disk cache, vector-SVG fast path, vector-PDF
-auto-detect all landed (see "Graphics — completed"), and the
-extensionless-kpathsea-lookup memo landed 2026-07-02 (Principle 5).
-Remaining: tikz-cd/xy/pgf **native** rendering cost (NOT external
-`gs`/`convert` — these render in-Rust and show up as digest+math+build on
-the formula count; see "tikz-cd cluster").
+* **Current Reality:** `Conditional::invoke` calls `assign_value_sym::<i64>` with `Scope::Global`, walking every undo frame and performing per-frame hashbrown `remove_entry` (2.4% self-time on digest witnesses), plus the per-assignment `\globaldefs` probe (`state.rs:841`).
+* **Fix:** Migrate internal TeX counters (`if_count`, `if_limit`, `tracingcommands`) to dedicated typed fields on `State`, eliminating the undo-frame walk entirely while preserving dump-filter compatibility.
 
-### FxHash libxml node-cache (measured ~28–30%, biggest single win) — SHIPS, pending upstream cleanup
+### P5 — tikz-cd / pgf native digest volume & `Tokens` allocation
 
-The `rust-libxml` fork's `xmlNodePtr → Node` cache is probed on EVERY
-`Node::wrap`; swapping its std SipHash `RandomState` for a dependency-free
-FxHash pointer hasher cut wall on every node-heavy phase by **~28–30%**
-(`1510.03361` 19.6→14.1 s; `1805.03265` tikz-cd 22.4→15.7 s). Output-identical
-(map never iterated; pointer keys non-adversarial so HashDoS is moot).
-**✅ CLOSED 2026-07-20 — the cleanup below is DONE.** The FxHash node cache landed
-upstream and now ships in the **published `libxml 0.3.16`**: every crate declares
-`libxml = "0.3.16"` from the registry, and the only `[patch.crates-io]` in the root
-`Cargo.toml` is commented out and is for `marpa-asf`. (Historically it shipped via
-a *committed* patch pointing at `KWARC/rust-libxml` branch `perf-improvements`,
-with "land the PR, publish 0.3.15, bump the dep, drop the patch" as the remaining
-supply-chain task — all of that has happened.) (The
-marpa FxHash already ships via the marpa git dep tracking `main`.)
+* **Current Reality:** tikz-cd and pgf emit thousands of small math formulae (one per cell/arrow/label — up to 6,800+ in a single document). Cost is formula count × (digest + math_parse + build), NOT external graphics.
+* **Levers:** (1) reduce per-cell formula count in bindings; (2) lazy `Tokens::Debug`; (3) return `Option<SymStr>` from `lookup_value*` to drop `Cow::Borrowed`; (4) pgfplots `\addplot table` direct Rust bypass.
+* *Note on SmallVec:* SmallVec-backed `Tokens` was tried and regressed (struct bloat); do not retry without shrinking `Token` below 8 bytes.
 
-### tikz-cd / pgf digest backlog
+### P6 — Large-document fallback and retained-state memory
 
-tikz-cd emits thousands of small math formulae (one per cell/arrow/label —
-6825 from one doc); cost is the formula count × (digest + math_parse + build),
-NOT external graphics. Levers (compounding): (1) reduce the per-cell formula
-count in the binding; (2) the pgf digest hot path — lazy `Tokens::Debug`,
-`Option<SymStr>` from `lookup_value*` to drop the `Cow::Borrowed`, a pgfplots
-`\addplot table` Rust bypass; (3+4) fold into math_parse/build above.
-SmallVec-backed `Tokens` was tried and **regressed** (struct bloat) — do not
-retry without first shrinking `Token` below 8 bytes. The per-token cycle-guard
-floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
-(pgf/tikz/xy bindings call `raise_cycle_guard_activate` at load) so healthy
-100–155 M-token graphics streams don't pay the guard.
+* **Whole-DOM split fallback:** `Split::process_pages` repeatedly removes and
+  inserts at the front of `Vec`s and runs two ancestor XPath queries per page.
+  The streaming front-end avoids this only when its input, destination, union,
+  and size gate are eligible. Linearize the eager fallback with a deque/owned
+  iterator and direct parent walks (audit F5).
+* **State templates:** `STD_STATE` and `STY_STATE` retain the same 131,072-slot
+  meaning-table reservation used to absorb the active state's dump. Give the
+  templates a lean capacity profile and avoid constructing default maps that
+  `State::new` immediately replaces (audit F6).
+* **Hard constraint:** retain libxml2 for dynamic `DefRewrite` XPath. The
+  fragmented architecture is the implemented solution to the measured DOM
+  floor; wholesale DOM replacement remains a settled non-lever.
+
+
+### P7 — Thermal & Concurrency Budget Limits (`docs/THERMALS.md`)
+
+* **Current Reality:** On dev laptops (Intel hybrid P/E-core CPUs, e.g. i7-12800H), sustained multi-job execution pins temperatures at 95–96 °C with severe CPU clock throttling. Running sweeps alongside tests causes 100% swap exhaustion and hundreds of throttle events per second.
+* **Operational Limits:**
+  - Standalone sweeps/benchmarks: `JOBS=6..8` maximum (`JOBS=6` is quiet; `JOBS=8` throttles mildly).
+  - Sweeps alongside other tasks: `JOBS=4` maximum.
+  - Memory ceiling: Keep `JOBS × --max-memory <= 24 GB` to preserve headroom for rust-analyzer (~4 GB) and OS buffers.
+
+### P8 — Lower-frequency global scans and lookup allocation
+
+* **JATS/TEI:** both alternate stylesheets match paragraphs with
+  `preceding::ltx:section`, a potential per-paragraph document scan. Establish
+  intended scope, replace with a structural/keyed test, and require
+  byte-identical output on scaling fixtures (audit F8).
+* **File fallback:** the two fallback helpers compile the same regexes per
+  invocation; lookup clones search paths and scans freshly materialized binding
+  registries twice. Use `Lazy<Regex>`, a borrowed path view, and prebuilt exact
+  plus lowercase indexes after collecting miss-count telemetry (audit F9).
+
 
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-09-03 — read-only algorithm and memory audit
+
+Audited the current working tree against the performance, large-document,
+streaming, startup, telemetry, and thermal documentation. No code was changed
+and no fresh measurements were taken. The ranked findings, cost models,
+implementation boundaries, validation matrix, stale-doc reconciliation, and
+resume checklist are recorded in
+[`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+
+The immediate next patch is deliberately narrow: remove the unused
+`Document::prune_xmduals` subtree serialization and run a same-session,
+byte-identical A/B. Keep the subsequent one-pass `idref` index separate. The
+largest architectural residual is that fragmented core output is still
+materialized as a document-sized `String` before the CLI hands it to post.
+
+### 2026-09-03 — Wave 15 / Batch 54 & WebAssembly audit pass: interner hygiene, macro cycle fast-fail, and thermal budgeting
+
+Investigation during the Wave 15 / Batch 54r sweep series (`perfect_kernel` branch) and the Stage 4 WebAssembly compatibility audit (see [`WASM_COMPATIBILITY_AUDIT.md`](../release/WASM_COMPATIBILITY_AUDIT.md) and [`HANDOFF_2026-09-03.md`](../perfect_kernel/HANDOFF_2026-09-03.md)):
+
+1. **`SymHashMap` negative-probe interner pollution — already resolved:**
+   The candidate was valid, but the current source already probes with
+   `arena::get` before map lookup. Keep this as provenance, not open work.
+2. **Macro-cycle fast-fail — already resolved:**
+   Duty-cycled gullet/stomach guards are present, and the source-scaled token
+   backstop now defaults to 4 billion. The older 1-billion/current-reality text
+   was stale; do not implement a second independent ring.
+3. **C-FFI decoupling of `marpa-asf` from `latexml_core`:**
+   Audited `latexml_core/src/common/error.rs`: `marpa-asf` was pulled into core solely for `impl From<marpa::error::Error> for Error`. Relocating this to `latexml_math_parser` frees `latexml_core`, `latexml_engine`, and `latexml_package` from compiling C Marpa code.
+4. **Codehigh LuaTeX O(n²) parser timeout (Batch 54k):**
+   `codehigh` package documentation was spinning indefinitely in its Lua parser emulation; falling back to plain verbatim for this path brought the document from 180s timeout to <1s (`86e764fda4`).
+5. **Host thermal throttling & memory budget (`docs/THERMALS.md`):**
+   Documented host limits on Intel hybrid i7-12800H: running `sweep.sh` (xargs -P 10, up to 6 GB each) concurrently with `cargo nextest -j 8` causes 100% swap fill (8 GB) and severe thermal throttling (700+ throttle events/5s at 96 °C). Established hard operational rules: `JOBS=6..8` alone, `JOBS=4` alongside other tasks; `JOBS × --max-memory <= 24 GB`.
 
 ### 2026-08-23 — pre-0.7.6 diagnostic-only audit: eager-Debug! band + ranked backlog
 
@@ -288,8 +311,9 @@ Idle-box pass at `80999906da` (release build with symbols; 82-paper
 lbr` on three phase-distinct witnesses, dhat allocation pass, clippy perf
 sweep). **Diagnostic only — no code changed.** No regression since 2026-07-29:
 `2405.14114` reproduces its post-guard wall (21.1 vs 21.45 s), and none of the
-248 commits since added hot-path code (XSLT still zero per-node `//` /
-`preceding::` scans). Healthy-paper RSS p50 285 MB / max ~1 GB — normal-path
+248 commits since added hot-path code (the default HTML5 XSLT still had zero
+per-node `//` / `preceding::` scans; JATS/TEI were outside that audit).
+Healthy-paper RSS p50 285 MB / max ~1 GB — normal-path
 memory is fine. Ranked findings, all output-neutral by construction:
 
 1. **Eager `Debug!` diagnostics — the headline (now Open levers P0).** On
@@ -530,44 +554,45 @@ output-neutral (suite green).
 
 One-line outcomes; detail in `git log` + commit messages.
 
+- **`SymHashMap` negative string probes — FIXED in the 2026-09-03 source snapshot.**
+  `get`/`get_mut`/`contains_key`/`remove` resolve with non-interning
+  `arena::get`, so misses do not grow the thread-local arena. No isolated A/B
+  was recorded; retain the invariant and its unit coverage.
+- **Eager `Debug!` diagnostics on text-absorption path — FIXED (`80999906da`, 2026-08-23).**
+  `Debug!` and `generate_message!` built debug strings and serialized XML subtrees via `node_to_string` before checking verbosity gates. Gating on `debug_record_enabled()` cut `2304.10050` from **6.21 → 2.71 s (−56%)**, and 82-paper sweep from **229.3 → 200.0 s (−12.8%)**, with byte-identical output.
+- **FxHash libxml node-cache — FIXED & SHIPPED (2026-07-20).**
+  Replaced std SipHash `RandomState` in `rust-libxml`'s `xmlNodePtr → Node` wrapper cache with a dependency-free FxHash pointer hasher. Wall time on node-heavy phases dropped by **~28–30%** (`1510.03361` 19.6→14.1 s; `1805.03265` tikz-cd 22.4→15.7 s). Published in **`libxml 0.3.16`** on crates.io.
+- **DOM traversal mechanics — FIXED (2026-08-23).**
+  `collect_walk_matches` sibling traversal (`get_first_child` / `get_next_sibling`) eliminated per-recursion-level `Vec<Node>` allocations (~2.4% self-time). `generate_id` parent-chain walk replaced per-call XPath `ancestor::*[@xml:id][1]` evaluation.
+- **`is_noexpand_family` and fontmap memos — FIXED (2026-08-23).**
+  Arena-indexed symbol vector memos eliminated string scanning on token meaning lookups and font mapping.
+- **UTF-8 SIMD fastpath on `.cls`/`.sty` scan — FIXED (2026-08-18).**
+  Replaced grapheme-aware lossy decode with byte-range scan, cutting ~3% CPU during package dependency scans.
+- **Graphics pipeline (36.5% → 8.9% wall) — FIXED.**
+  In-doc coalescing (`48fd96ac75`), persistent disk cache, vector-SVG fast path (`fig8.pdf` 32.4→0.3 s, ~130×), vector-PDF auto-detect, and worker count bounding (8 workers max).
+- **Codehigh LuaTeX O(n²) parser timeout — FIXED (Batch 54k, `86e764fda4`, 2026-09-02).**
+  Degraded unsupported codehigh LuaTeX tokenizer path to plain verbatim, eliminating multi-minute timeouts across documentation sweeps.
+- **One-Borrow Gullet Checkpoint & Duty-Cycled Cycle Guard — FIXED (2026-07-29).**
+  Merged 3 RefCell borrows into 1 in gullet token reading; duty-cycled active cycle guard (2,048 of every 16,384 tokens) cut 2405.14114 by −10.1%.
+- **CrossRef O(n²) → O(n) on 40k split docs — FIXED (`4ec2587993`, 2026-07-06).**
+  Restored page-node walk in `fill_in_frags` and memoized sibling index in `fill_in_relations`; dropped CrossRef on 40,201-page split doc from 40m47s to 6.1s (18.6× whole-run speedup).
 - **`build` phase quadratic — FIXED (`335b6b83`, ~20×).** `math0605199`
-  44.9 s → 2.1 s. Root cause: a single-`ltx:text`-child merge called
-  `record_node_ids(node)` *inside* a per-grandchild move loop → O(G²) XPath
-  `descendant-or-self::*[@xml:id]` re-scans; hoisted to one post-loop call.
-  Runs in every conversion → broad latent win. (Earlier 7-site
-  `get_child_nodes().is_empty()` → `get_first_child().is_some()` O(1)-emptiness
-  sweep also landed.) Build is now linear (~0.8 ms/formula); the build-side
-  sweep is exhausted.
+  44.9 s → 2.1 s. Hoisted `record_node_ids` out of grandchild move loop; build is now linear (~0.8 ms/formula).
 - **P1 digest + build (pure-Rust hot path) — CLOSED 2026-05-19.** Residual
   digest cost is structural to TeX semantics, not a translation accident. perf
-  floor is the `state.meaning` SwissTable double-probe (read_x_token decides
-  whether to expand; invoke_token decides how to invoke — each probes once).
-  Combining them = an API change on a gullet API that mirrors TeX by design —
-  **out of scope** (user directive 2026-05-19: don't change the gullet API for
-  perf without a big ergonomics win). Landed body-only wins: `Catcode::name_sym`
-  / `has_meaning` (8 sites) / `Token::pin_cs_name`.
+  floor is the `state.meaning` SwissTable double-probe.
 - **dhat allocation sweep — DONE (faithful, output byte-identical).** Cut
-  multi-GB of *churn* (allocator pressure / RSS, matters for the fleet) but
-  only ~1–2% single-process wall (digest/math_parse are CPU-bound, not
-  alloc-bound). Landed: `serialize_aux` → single growing buffer; serialize attr
-  loop reuses `get_attributes()`; `get_tag_action_list` borrows tag hashes;
-  `fixedformat`/`get_node_qname` in-place writes; `read_until`/`read_tokens`/
-  `List::revert` pre-sizing. Deferred architectural items (token-list COW, AST
-  arena, `Font::relative_to` keys) need explicit sign-off (no-redesign-away-
-  from-Perl constraint) — they ARE the Perl expansion/parse data model.
+  multi-GB of *churn* (allocator pressure / RSS) via `serialize_aux` growing buffer,
+  tag action list borrowing, and in-place `fixedformat`/`get_node_qname`.
 - **XSLT deep-DOM copy + max-depth — DONE.** `dup()` → `Rc clone()`
-  (−120–130 MB/paper); `xsltMaxDepth = 1000` (faithful Perl port, graceful
-  abort vs OOM). See STABILITY_WITNESSES Cluster A.
+  (−120–130 MB/paper); `xsltMaxDepth = 1000` graceful abort vs OOM.
 - **PGO / `target-cpu` (v3/native) — NO GAIN, closed.** maxperf is already at
-  the fat-LTO + CGU1 ceiling; engine isn't SIMD-amenable (branchy
-  catcode/macro dispatch). Keep portable `x86-64`. Tooling deleted. (Memory
-  `pgo-isa-no-gain-2026-06-21`.)
+  the fat-LTO + CGU1 ceiling; engine isn't SIMD-amenable (branchy catcode/macro dispatch).
 - **Startup dump-parse lever (~50 ms of ~161 ms floor) — declined** as too
-  small for release-critical risk; amortized to noise on long papers anyway.
-  (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`.)
+  small for release-critical risk; amortized to noise on long papers.
 - **`build-std` (panic_abort) — PARKED.** −0.11 MB (0.2%); `.eh_frame` is from
-  the static C deps (mimalloc/libmarpa/zstd), which `-Z build-std` doesn't
-  touch. Not worth the nightly fragility.
+  static C deps (mimalloc/libmarpa/zstd).
+
 
 ---
 

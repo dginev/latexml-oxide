@@ -19,7 +19,7 @@ The live worklists and the ship contract. Read these first when resuming.
 
 | Doc | What it is |
 |-----|------------|
-| [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets.** Opens with *How to read this file* + a **ranked worklist (R1…R9)** — take the top unblocked row. Then: current status, per-row detail, standing policies, parked-family pointers, stable reference. Completed logs lift to `archive/`. |
+| [`SYNC_STATUS.md`](SYNC_STATUS.md) | **The brief actionable worklist for both targets.** Opens with *How to read this file* + a **ranked worklist (R1…R7)** — take the top unblocked row. Then: current status, per-row detail, standing policies, parked-family pointers, stable reference. Completed logs lift to `archive/`. |
 | [`parity/BIBLIOGRAPHY_WORKLIST.md`](parity/BIBLIOGRAPHY_WORKLIST.md) | **R5** — surveyed missing-references targets + the MakeBibliography full-parity re-port. |
 | [`parity/BIB_ABSENCE_AUDIT_2026-07-29.md`](parity/BIB_ABSENCE_AUDIT_2026-07-29.md) | **R3** — every doc lacking `ltx_bibitem` across 2605/2606 sandboxes + full arXiv (52 299 corpus cases); cause families F1–F12, sprints S1–S10; complete lists in [`parity/bib_absence_2026-07-29/`](parity/bib_absence_2026-07-29/). |
 | [`performance/BEYOND_PERL_LEVERS.md`](performance/BEYOND_PERL_LEVERS.md) | **R7** — BP-1…BP-6 levers from the 60k-doc telemetry; POST-RELEASE. |
@@ -31,9 +31,13 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
 | [`release/WINDOWS_COMPATIBILITY_PLAN.md`](release/WINDOWS_COMPATIBILITY_PLAN.md) | Living worklist for the Windows port (`windows-compatibility` branch): MSVC + vcpkg-static toolchain, phased plan to `cargo test --release` green on `windows-latest` CI and a zipped `.exe` artifact. |
-| [`perfect_kernel/README.md`](perfect_kernel/README.md) | **Perfect-kernel mission** (branch `perfect_kernel`): raw-interpretation (`--preload=[rawstyles,rawclasses]latexml.sty`, no new bindings, no OmniBus) conversion of the ~2,400-manual TeX Live doc corpus; protocol + quality bars, with the living [ledger](perfect_kernel/LEDGER.md), [cluster worklist](perfect_kernel/CLUSTERS.md), [improvement-plans ledger](perfect_kernel/PLANS.md), [difficult-cases catalog](perfect_kernel/DIFFICULT_CASES.md), the [Lua rebinding strategy](perfect_kernel/LUA_REBINDING.md) and the [architecture-themes design brief](perfect_kernel/ARCHITECTURE_THEMES.md). |
+| [`release/WASM_COMPATIBILITY_AUDIT.md`](release/WASM_COMPATIBILITY_AUDIT.md) | **Stage 4 WASM Audit & Technical Analysis**: WebAssembly target analysis, C dependency audit (`libxml2`, `libxslt`, `marpa-asf`), subprocess mitigation, call stack bounds, and pure-Rust vs C trade-offs. |
+| [`release/WASM_COMPATIBILITY_PLAN.md`](release/WASM_COMPATIBILITY_PLAN.md) | **Stage 4 WASM Phased Implementation Plan**: Actionable bring-up worklist for `wasm32-wasip1` via `wasi-sdk`, client-side in-browser execution via `@bjorn3/browser_wasi_shim`, and virtual asset packaging. |
+| [`perfect_kernel/README.md`](perfect_kernel/README.md) | **Perfect-kernel mission** (branch `perfect_kernel`, brief in [`PERFECT_KERNEL.md`](PERFECT_KERNEL.md)): raw-interpretation (`--preload=[rawstyles,rawclasses]latexml.sty`, no new bindings, no OmniBus) conversion of the ~2,400-manual TeX Live doc corpus; protocol + quality bars, with the living [ledger](perfect_kernel/LEDGER.md), [cluster worklist](perfect_kernel/CLUSTERS.md), [improvement-plans ledger](perfect_kernel/PLANS.md), [difficult-cases catalog](perfect_kernel/DIFFICULT_CASES.md), the [Lua rebinding strategy](perfect_kernel/LUA_REBINDING.md), the [architecture-themes design brief](perfect_kernel/ARCHITECTURE_THEMES.md) and the [handoff notes](perfect_kernel/HANDOFF_2026-09-03.md). |
 | [`THERMALS.md`](THERMALS.md) | **Read before any parallel workload on the dev laptop** (sweeps, `cargo nextest`, oracle/validate runs): the CPU/memory budget (20 threads, 31 GB + 8 GB swap), the 2026-09-02 throttling incident (sweep + suite at once), `JOBS`/`-j` ceilings alone vs. combined, and the commands to check package temperature, throttle events and swap. |
+| [`CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md`](CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md) | Implemented Claude-to-Codex knowledge migration: source inventory, root `AGENTS.md`, ten curated `.agents/skills/latexml-*` workflows, Gemini coexistence boundary, and the remaining user-controlled `/import` step for generated local memory. |
 | [`AR5IV_DIAGNOSTICS.md`](AR5IV_DIAGNOSTICS.md) | The ar5iv issue-tracker sweep: every open "Improve article X" report screened against the current binary and classified vs same-host Perl, plus the ranked worklist. **Refresh before quoting any row** — a wrong main-file pick manufactures fake error counts. Re-measured 2026-07-20 on top of the 2026-07-18 snapshot. |
+| [`GEMINI_IMPROVEMENT_IDEAS.md`](GEMINI_IMPROVEMENT_IDEAS.md) | **Engineering & performance improvement proposals**: concrete recommendations for modularity, allocation reduction (`SmallVec`, `SymStr` probing), VFS unification, cycle detection, and test infrastructure. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
 
@@ -49,6 +53,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 | [`parity/ORGANIZATION.md`](parity/ORGANIZATION.md) | Maps Perl engine files (`Engine/*.pool.ltxml`) → Rust (`latexml_engine/src/*.rs`); loading hierarchy. |
 | [`parity/AUTHOR_MARKUP_PIPELINE.md`](parity/AUTHOR_MARKUP_PIPELINE.md) | **In-progress worklist** — unify the two-branch `\lx@add@authors` author/affiliation parser into one line-first pipeline; witness corpus + baseline + confirmed metadata-markup defects. |
 | [`parity/ALGORITHM_RENDERING.md`](parity/ALGORITHM_RENDERING.md) | **In-progress worklist** — algorithm2e/algorithmicx golden-match: completed fixes (line numbering, ruled/boxed frames, `\fname@`), open follow-ups (inline `\Comment*[r]`, ruled caption-at-top, `\ref`-to-line counter, side-by-side minipages), and the cross-binding markup-unification plan. |
+| [`parity/ENV_MARKUP_DESIGN.md`](parity/ENV_MARKUP_DESIGN.md) | **Phase 2 Design Brief** — `ltx_env_<name>` environment wrapper markup class for responsive CSS styling; implementation strategy and golden test plan. |
 
 ### Engine internals & known issues
 | Doc | What it is |
@@ -90,9 +95,11 @@ site) that have no Perl equivalent.
 |-----|------------|
 | [`performance/ARXIV_PERFORMANCE.md`](performance/ARXIV_PERFORMANCE.md) | Living empirical performance campaign over arXiv: slowest-100 testbed, phase rollups, optimization log. |
 | [`performance/PERFORMANCE.md`](performance/PERFORMANCE.md) | Timeless optimization principles, open/closed lever state, dated audit log. |
+| [`performance/PERFORMANCE_AUDIT_2026-09-03.md`](performance/PERFORMANCE_AUDIT_2026-09-03.md) | Read-only performance and memory audit: ranked algorithm/allocation findings, source anchors, implementation boundaries, validation gates, documentation reconciliation, and handoff order. |
+| [`performance/WINDOWS_PERFORMANCE.md`](performance/WINDOWS_PERFORMANCE.md) | Windows performance profile (2026-08-21): the kpathsea backend comparison (subprocess vs in-process linked-libkpathsea 16× speedup). |
 | [`performance/STABILITY_WITNESSES.md`](performance/STABILITY_WITNESSES.md) | Living worklist of reliability witnesses (timeout/OOM/peak-RSS/hang) with current + Perl baselines. |
-| [`performance/STREAMING_CORE_DESIGN_2026-07-29.md`](performance/STREAMING_CORE_DESIGN_2026-07-29.md) | Fragmented **core**-stage conversion so document size is bounded by disk, not RAM. Measured: ~1.84 GB RSS per MB of source, ~57 % of it the libxml2 DOM; a 131 MB witness needs ~241 GB. `TextReader::expand_to_document` as the partial-DOM substrate; the blocker is document-global labels in `DefRewrite`. |
-| [`performance/STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) | Very-large split-document post-processing (the 614 MB `index.xml` witness); two-pass streaming split design. |
+| [`performance/STREAMING_CORE_DESIGN_2026-07-29.md`](performance/STREAMING_CORE_DESIGN_2026-07-29.md) | **Implemented** fragmented core conversion: bounded live DOM, disk-backed segments, document-global index, pass 2, assembly splice, and auto-activation. The 131 MB witness converts; writer handoff and per-segment residuals are tracked in the 2026-09-03 audit. |
+| [`performance/STREAMING_POST_DESIGN_2026-07-06.md`](performance/STREAMING_POST_DESIGN_2026-07-06.md) | **Implemented** two-pass streaming split for very large file inputs, with byte-identical parity guard and auto gate; documents remaining render retention and whole-DOM fallbacks. |
 | [`performance/MULTIDOC_JOIN.md`](performance/MULTIDOC_JOIN.md) | Joining a main paper + Supplementary-Material documents into one output. In-memory join LANDED (#639/#640); the streaming-scale post-join (reusing the two-pass Scan/ObjectDB split engine over N core-XML files) is designed + queued. |
 | [`performance/ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md`](performance/ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md) | Very-large **single** doc (#361): RAM+time diagnosis; M1 (`List.font`→`Rc`) + M2 (box `KeyVals`) + M4 (box `Whatsit`'s reversion slots) landed — 9.05 → 5.99 GB (−34 %) at unchanged wall time; M3 (stream boxes→DOM) measured and **reverted** as a dead-end. |
 | [`performance/CORTEX_WORKER_HARNESS.md`](performance/CORTEX_WORKER_HARNESS.md) | `cortex_worker --harness` fleet orchestration: one-conversion-per-process, memory guards, deployment. |
@@ -118,4 +125,3 @@ merging, or archiving a doc. The placement **rules** that govern what belongs
 where live in `CLAUDE.md` ("Rules for these docs"), because they are policy
 rather than navigation. Diagnostic-snapshot docs (`*_TRIAGE`, `*_AUDIT`,
 `*_ANALYSIS`, …) carry a date in the filename; living worklists do not.*
-

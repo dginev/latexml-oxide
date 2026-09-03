@@ -36,7 +36,7 @@ work.** The then-new `plain.dump.txt` (1196 entries, runtime-loaded by
 `\columns` directly (verified post-`1e04a96c8`). Re-run the
 worksheet to confirm; expect these 5 papers cleared. Latex side is
 the next-up gap (302/752 `\tex_*:D` aliases missing — see
-[`PERL_LOADFORMAT_AUDIT.md`](../PERL_LOADFORMAT_AUDIT.md) "Remaining dump gaps").
+[`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) "Remaining dump gaps").
 
 ### Other clusters (181 - 5 = 176 remaining, deferred behind Track A)
 

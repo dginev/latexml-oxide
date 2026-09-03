@@ -4,6 +4,8 @@
 > 2026-07-10 60k-doc telemetry; companion to `ARXIV_PERFORMANCE.md` (the
 > measurement campaign) and `PERFORMANCE.md` (timeless principles).
 > **POST-RELEASE** — deferred out of release week by the stabilization review.
+> Immediate static findings and implementation handoff are tracked separately
+> in [`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
 
 ### Beyond-Perl performance levers — from the 2026-07-10 60k-doc telemetry (POST-RELEASE — deferred out of release week; that stabilization review is in `docs/archive/SYNC_SESSIONS_2026-07.md`)
 
@@ -32,12 +34,19 @@ singleton) and libxslt/`XML::LibXML`-bound; Rust affords levers it cannot.
 **BP-1 — Parallel per-formula math parsing** (attacks math_parse 19.2%; the
 math-dense slow tail — `2605.16382` 4136 formulae/116s, `2605.20736`, `2605.14423`).
 Each `<XMath>` Marpa parse is independent and operates on a token/box IR (data,
-not libxml). *Lever Perl lacks:* Parse::RecDescent + single thread. *Approach:*
-collect formula IRs during digest; parse them in a rayon pool (each thread gets
-its own thread-local SymStr arena — verify the parser is arena-isolatable and
-free of cross-formula shared mutable state); graft XMDual/parse results into the
-DOM sequentially in original order. *Feasibility:* medium (arena-per-thread +
-parser-purity audit). Output-neutral by construction (same parses, same order).
+not libxml). *Lever Perl lacks:* Parse::RecDescent + single thread.
+
+**Enabling blocker:** the current IR is not portable between worker threads.
+`Token.text` contains a `SymStr` handle into a thread-local arena; the same
+numeric handle has no stable meaning in another thread's independently
+populated arena. Box/state/libxml structures also carry `Rc`, `RefCell`, or
+thread-affine nodes. Do not send the existing IR to Rayon as-is.
+
+*Required approach:* define an owned/shared-string formula snapshot, re-intern
+it on the worker, return a portable parse result, and graft DOM nodes
+sequentially in original order. Measure the O(tokens) boundary conversion and
+audit every parser context input before claiming independence. *Feasibility:*
+medium after this prerequisite; output neutrality remains mandatory.
 
 **BP-2 — XSLT amortization → native transpilation** (attacks xslt 13.2%, the
 single most under-exploited phase — only the 3 `O(n²)` template fixes touched it).
@@ -121,26 +130,45 @@ must capture every parse-affecting context (font, mode, catcodes, math-style);
 mis-keying silently corrupts output, so gate hard on the output-neutrality diff.
 *Feasibility:* medium; large win on table/matrix-dense papers.
 
-**BP-6 (stretch/experiment) — Native construction tree, defer libxml FFI**
-(attacks build 18.1% = per-node rust-libxml FFI during construction). Build a
-native arena tree during construction, convert to libxml once at the end (or emit
-HTML directly on the non-`--validate` path). Perl is also `XML::LibXML`-FFI-bound,
-so this is a structural beyond-Perl bet. *Feasibility:* low-medium, HIGH effort
-(rewrites the document builder core) — park as an experiment, measure the FFI
-share first.
+**BP-6 — Streaming Fragmented Core DOM — IMPLEMENTED.** The fragmented
+digest/build, disk segment store, pass-2 driver, label/id index, assembly splice,
+CLI flag, and auto-activation are live; see
+[`STREAMING_CORE_DESIGN_2026-07-29.md`](STREAMING_CORE_DESIGN_2026-07-29.md).
+The two-pass large split front-end is also implemented in
+[`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md).
+
+**Residual, not BP-6 reimplementation:** core XML is still collected into a
+document-sized `String` before post, and pass 2 repeats global map/rule work per
+segment. Complete the writer/file handoff and shared pass-2 ownership described
+by audit F3/F4. Retain libxml2: dynamic `DefRewrite` XPath remains the hard
+constraint that invalidates a wholesale pure-Rust tree substitution.
 
 **Digest (19.7%) note:** sequential TeX engine — **no** parallelism lever; the win
-is algorithmic (profile the hot macros with the sampled `EXP_TRACE` histogram, cut
-redundant re-tokenization / re-expansion). Track separately from the parallelism
-BPs above.
+is algorithmic:
+- Profile hot macros with sampled `EXP_TRACE` histogram.
+- Negative `SymHashMap` probes already use `arena::get`; preserve the invariant.
+- Duty-cycled macro-cycle detection is already implemented; do not add a
+  second guard without a new failing witness.
+- Fast-path internal TeX counters (`if_count`, `if_limit`) via typed `State` fields.
 
-Suggested order (revised 2026-07-10 after BP-4 was retired) — **all POST-RELEASE per
-the release-week stabilization review (archived in `SYNC_SESSIONS_2026-07.md`);
-first work after the tag ships:**
-**BP-2 Step 1** (cheap XSLT profile+amortize — the cleanest, divergence-free win) →
-**BP-3 graphics batch** → **BP-1** (parallel parse) → BP-5 → BP-2 Step 2 / BP-6. Each
-lands on a feature branch, gated by the isolated before/after output-neutrality
-harness + Perl parity + `cargo test`. ~~Separately, the Cluster H runaway-loop bugs
-(ex-BP-4) are Target-1 parity work tracked in `STABILITY_WITNESSES.md` (also
-post-release — deep engine surgery, not release-week work).~~ **Cluster H is
-fully resolved as of 2026-07-20** — and none of it needed deep engine surgery.
+---
+
+## Ranked Roadmap (Updated 2026-09-03)
+
+Refined after the 2026-08-18 profile, the 2026-09-03 source reconciliation,
+and the landing of BP-6. This is the longer-horizon roadmap; execute the
+smaller ranked work in `PERFORMANCE_AUDIT_2026-09-03.md` first.
+
+1. **BP-5 (content-addressed formula memoization):** the lower-risk math lever;
+   use a bounded cache and include every parse-affecting context in the key.
+2. **BP-1 enabling work, then parallel math:** define and benchmark the portable
+   formula/result boundary before introducing Rayon.
+3. **BP-3 (bounded graphics concurrency):** first re-profile process scheduling
+   and existing worker limits; concurrency must obey `THERMALS.md` and the
+   external-process discipline in `PERFORMANCE.md`.
+4. **BP-2 Step 2 (native hot XSLT transforms):** proceed only after a large,
+   representative document identifies apply-time templates. Stylesheet
+   precompilation is already refuted.
+
+BP-6 is no longer a roadmap item. Its implementation residuals are ordinary
+performance backlog work in the dated audit.

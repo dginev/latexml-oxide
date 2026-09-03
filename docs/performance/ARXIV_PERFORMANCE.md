@@ -456,6 +456,22 @@ See the testbed table above (category + dominant phase per paper). Status legend
 > One entry per investigated hotspot: root cause, change, before→after delta,
 > output-neutrality (byte-identical XML) + test evidence. Newest first.
 
+### #7 — Codehigh LuaTeX parser O(n²) runaway loop degradation (Batch 54k) — 2026-09-02
+- **Root cause:** The `codehigh` package syntax highlighter executes nested Lua string tokenizers under LuaTeX. In the native engine emulation without a live Lua runtime, the tokenization loop degenerated into an O(n²) macro expansion runaway, hitting the 180s timeout on documentation and sample documents.
+- **Change:** Degraded the unsupported codehigh LuaTeX tokenizer path to standard verbatim block rendering (`86e764fda4`).
+- **Before→after:** Documentation and codehigh-heavy test fixtures went from **180 s fatal timeout to <1 s**. Enabled sweep #34 ledger progression (64.0% pass / 82.0% convertible).
+- **Output-neutral:** Verbatim code formatting preserved; zero regressions in existing test suite.
+
+### #6 — Eager `Debug!` subtree serialization on text-absorption path (witness 2304.10050) — 2026-08-23
+- **Root cause:** `Debug!` (`latexml_core/src/common/error.rs`) and `generate_message!` constructed all format strings — including `gullet::get_location()` and, at `open_text`/`open_text_internal`/`close_element` sites, a full `node_to_string` XML subtree serialization — **before** checking whether debug logging was enabled. In text/build-heavy documents, every text node insert re-serialized the growing DOM subtree (quadratic-flavored overhead).
+- **Change:** Gated diagnostic formatting behind `debug_record_enabled()` (`max_level() >= Debug` and not suppressed), while maintaining the `note_status` tally unconditionally so exit counts remain identical. Bundled with audit mechanical wins: `is_noexpand_family` symbol memo, `generate_id` parent walk, `collect_walk_matches` sibling traversal (`get_first_child`/`get_next_sibling`), and fontmap memos (`80999906da`).
+- **Before→after:**
+  - `2304.10050` (build/text-bound): **6.21 → 2.71 s (−56%)**.
+  - `2408.08292` (typical math paper): **8.66 → 7.74 s (−11%)**.
+  - `2405.14114` (token-runaway digest): **20.5 → 20.1 s (−2%)**.
+  - 82-paper regression sweep: **229.3 → 200.0 s (−12.8%)**, sum max-RSS flat (+1.3%).
+- **Output-neutral:** Byte-identical HTML on all witnesses; suite clean.
+
 ### #5 — per-token guard overhead on huge token streams (pgfplots witness 2405.14114) — 2026-07-29
 - **Root cause:** two compounding fixed costs on the token-read hot path:
   (a) every token read took up to three thread-local `RefCell` borrows —

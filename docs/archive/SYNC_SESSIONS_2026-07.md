@@ -199,7 +199,7 @@ ref `d666adf8` — post-dates the archived U1-U11 sync window):
 
 User-commissioned ("the Rust translation wants to be an exhaustive port") audit
 of the MathML post-processors, opened as the living worklist
-[`docs/MATHML_POST_LINE_AUDIT.md`](MATHML_POST_LINE_AUDIT.md) (verdicts for all
+[`MATHML_POST_LINE_AUDIT_2026-07-05.md`](MATHML_POST_LINE_AUDIT_2026-07-05.md) (verdicts for all
 60 MathML.pm subs + 197 DefMathML registrations + sibling files; F-numbered
 findings). Ten findings LANDED same-day, each witness-verified byte-identical
 against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):

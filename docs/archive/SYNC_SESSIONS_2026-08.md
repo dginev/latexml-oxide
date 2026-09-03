@@ -480,3 +480,18 @@ cited `OXIDIZED_DESIGN.md` / `KNOWN_PERL_ERRORS.md` entries.
     `--openmath`/`--mathimages`/`--mathsvg` (absent in Rust) — untestable dead code
     until that larger math-format feature lands.
 
+- **2026-08-05 — Font-selection chain audit fixes (PRs #450, #452, #453, #454, #455, #456):**
+  Six font audit findings merged:
+  - `\char`/`\symbol` yielding empty string in math mode fixed (guard: `117_char_font_decode::char_decodes_through_ot1_in_math_and_does_not_wrap_out_of_range`).
+  - `\DeclareSymbolFont` encoding argument expanded before storage (guard: `117_char_font_decode::symbol_font_encoding_argument_is_expanded_before_storage`).
+  - `\DeclareMathAlphabet` calls `lookup_tex_font` instead of raw NFSS codes (`latex_constructs.rs`).
+  - `\mathversion{bold}` merges `mathfont` instead of text font (guard: `06_cluster_regressions::mathversion_switches_the_mathfont_like_boldmath`).
+  - Dead font helpers (`ding_fontmap.rs`, `font::decode_str` FontDecode variant, `font::lookup_tex_font`, `font::rationalize_font_size`) connected or cleaned up.
+  - `\textit@math` shape switch assigns `it` not `i`.
+
+- **2026-08-21 … 2026-08-23 — Sandbox cortex triage (2605/2606) & Omnibus safe slice:**
+  - **PR #720 landed:** `scalerel` neutralization (preserves object, CSS-sized to text height), `neurips` `\if@anonymous`, `NiceTabular` reduction, `expl3` `#630` token scanning, `biblatex` loop guard, `cleanup_scripts` optimization $O(M \times N) \to O(N+M)$.
+  - **Stacked PR landed:** cleveref class stubs, AASTeX, and subdir/`.sty` binding shadow fix (dropped directory stripping at both package dispatcher and `find_file_fallback` so paper-local `subdir/<name>` raw-loads under `localrawstyles`; guard: `cluster_package_guards.rs::subdir_dispatch_no_strip`).
+  - **OmniBus frontmatter safe slice landed (0.7.6, OXIDIZED_DESIGN #160):** `\orcid[]{}` captures ID as `<contact role="orcid">` with orcid.org link; `\lefttitle`/`\righttitle` no-op'd as presentational running heads (guard: `omnibus_captures_orcid_and_drops_running_heads`).
+
+

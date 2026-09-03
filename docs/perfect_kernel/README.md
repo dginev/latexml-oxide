@@ -139,9 +139,13 @@ semantics, side-notes …) are cataloged in
 |---|---|
 | [LEDGER.md](LEDGER.md) | Living progress ledger: sweep tallies, tier status, fix log |
 | [CLUSTERS.md](CLUSTERS.md) | Living failure-cluster worklist from the latest sweep |
+| [PLANS.md](PLANS.md) | Detailed, execution-ready improvement-plans ledger (P1…P77+) |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
+| [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
+| [HANDOFF_2026-09-01.md](HANDOFF_2026-09-01.md) | Session handoff notes for Wave 3 investigation restart |
+| [HANDOFF_2026-09-03.md](HANDOFF_2026-09-03.md) | Advisory notes & Batch-54q handoff: digestion timing, VFS, alignment, SymHashMap and WASM synergy |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch; not pushed
 until the work is complete.

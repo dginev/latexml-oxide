@@ -54,6 +54,13 @@ which covers the *post-processing* half (splitting an already-built DOM) and was
 deferred with the condition *"Revisit only if a <64 GB target appears."* That
 condition has arrived from the other direction — the **document** grew, not the
 machine.
+
+**2026-09-03 residual handoff:** do not reimplement this design. The remaining
+structural work is the core-to-post writer/file handoff plus pass-2
+per-segment allocation removal in
+[`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md) F3/F4.
+The current `ConversionResponse` still holds full core XML as a `String`, and
+each pass-2 fragment clones conversion-global font/rule data.
 **Witness:** Nasser Abbasi's ODE notes, `flat_index.tex` — **131 MB, 5,050,933
 lines**, 84,233 `\subsubsection`, 105,921 `align` environments, 158,338 display
 `\[`. Reported 2026-07-28 against rc4; reproduced on stock Linux Mint 22.3 +

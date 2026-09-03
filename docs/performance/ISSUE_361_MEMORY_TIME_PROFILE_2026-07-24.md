@@ -1,5 +1,12 @@
 # Issue #361 — very-large single document: memory + time profile (2026-07-24)
 
+> **Status update 2026-09-03:** this document remains the representation-density
+> record and dead-end ledger. Fragmented core conversion and streaming split
+> subsequently landed as the structural large-document solution; do not resume
+> the original whole-document architecture from this baseline. Current writer,
+> pass-2, split-fallback, and retained-state residuals are ranked in
+> [`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+
 Analytical performance investigation of a **legitimately huge single document**
 (reporter nasser1, issue #361): an "Archive of LaTeX StackExchange newsletters"
 book — **232 806 lines / 7.9 MB**, 803 sections, 2255 subsections, **12 178

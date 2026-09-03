@@ -1241,7 +1241,7 @@
     when the strict split skips `_base.rs`, only Token bodies
     survive in the dump.
   - **Historical active gaps from the Apr 26 pivot** are preserved in
-    [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md), but
+    [`PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md), but
     must be re-audited before action. Several were superseded by the
     Apr 28-30 dump cleanup and package-loading fixes.
 

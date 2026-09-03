@@ -1,12 +1,12 @@
 # 10k sandbox triage workflow reference
 
 > **Status (refreshed 2026-04-30):** current priority and corpus
-> counts live in [`SYNC_STATUS.md`](SYNC_STATUS.md)'s dashboard.
+> counts live in [`SYNC_STATUS.md`](../SYNC_STATUS.md)'s dashboard.
 > Sandbox work continues opportunistically after strict Perl
 > format/package-loading parity checks.
 
 The older per-cluster sandbox triage worksheet is archived at
-[`archive/sandbox_failures_SYNC_STATUS.md`](archive/sandbox_failures_SYNC_STATUS.md).
+[`sandbox_failures_SYNC_STATUS.md`](sandbox_failures_SYNC_STATUS.md).
 
 That file tracked the focused 181-paper failure subset under
 `~/data/sandbox_failures` (post-AR-flip, 2026-04-26 baseline) by
@@ -19,7 +19,7 @@ This file previously
 held a session-by-session per-paper narrative through round 17.
 Those narratives have been folded into commit messages and
 `memory/project_session_history.md`. Keep this file as workflow
-guidance; put current corpus status in [`SYNC_STATUS.md`](SYNC_STATUS.md)
+guidance; put current corpus status in [`SYNC_STATUS.md`](../SYNC_STATUS.md)
 or in fresh run artifacts.
 
 ## Two-phase workflow: canvas (`release`) → triage (`test`)

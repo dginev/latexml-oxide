@@ -28,16 +28,16 @@ is already at `0.7.5-rc1`, and rule 0 below still binds: **never publish an
 8 crates publish **bottom-up**. Publishing `latexml` drags all 7 siblings onto
 crates.io permanently — **their names must be available too** (reserve them).
 
-| # | crate (dir) | version | crates.io deps it needs first |
-|---|-------------|---------|-------------------------------|
-| 1 | `latexml_core` | 0.4.0 | — |
-| 2 | `latexml_codegen` | 0.4.0 | core |
-| 3 | `latexml_math_parser` | 0.3.0 | core |
-| 4 | `latexml_engine` | 0.5.0 | codegen, core |
-| 5 | `latexml_package` | 0.5.0 | codegen, core, engine |
-| 6 | `latexml_post` | 0.3.0 | core, engine |
-| 7 | `latexml_contrib` | 0.3.0 | core, codegen, engine, package |
-| 8 | `latexml` (`latexml_oxide`) | published 0.7.4 | all 7 + `pericortex` |
+| # | crate (dir) | version (0.7.6 line) | crates.io deps it needs first |
+|---|-------------|----------------------|-------------------------------|
+| 1 | `latexml_core` | 0.6.0 | — |
+| 2 | `latexml_codegen` | 0.4.2 | core |
+| 3 | `latexml_math_parser` | 0.4.1 | core |
+| 4 | `latexml_engine` | 0.7.0 | codegen, core |
+| 5 | `latexml_package` | 0.7.0 | codegen, core, engine |
+| 6 | `latexml_post` | 0.5.0 | core, engine |
+| 7 | `latexml_contrib` | 0.5.0 | core, codegen, engine, package |
+| 8 | `latexml` (`latexml_oxide`) | 0.7.6 | all 7 + `pericortex` |
 
 **Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
 `libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.3.0 (the dginev/marpa fork; consumed by

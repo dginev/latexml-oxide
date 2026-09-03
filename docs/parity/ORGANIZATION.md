@@ -71,7 +71,7 @@ latex.rs                   (≈ LaTeX.pool)
 │     latex_dump           (runtime loader for latex.dump.txt)
 │   else:
 │     latex_base.rs        (≈ latex_base.pool.ltxml)
-└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~8675 lines, sections C.1–C.15)
+└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~12,900 lines, sections C.1–C.15)
 ```
 
 Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See

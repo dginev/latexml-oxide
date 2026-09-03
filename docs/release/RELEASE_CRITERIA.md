@@ -370,7 +370,8 @@ Nothing reaches macOS/Windows until `latexml_oxide` *builds and runs* there
 **Stage 4 — WASM (web-only).** The native model fails *only* in the web
 extension host (vscode.dev, github.dev): no subprocess. That alone needs a
 `wasm32` server build — hard for the same libxml2/libxslt reason — and is a
-separate, later track. **Not** required for "all desktop VSCode users."
+separate, later track (see technical audit in [`WASM_COMPATIBILITY_AUDIT.md`](WASM_COMPATIBILITY_AUDIT.md) and actionable execution roadmap in [`WASM_COMPATIBILITY_PLAN.md`](WASM_COMPATIBILITY_PLAN.md)).
+**Not** required for "all desktop VSCode users."
 
 | Stage | Deliverable | Reaches |
 |---|---|---|

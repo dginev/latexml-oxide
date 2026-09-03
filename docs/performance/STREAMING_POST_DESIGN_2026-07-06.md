@@ -53,6 +53,10 @@ id-dense math pages is the suspect — a `set_linked()` relink API in
 rust-libxml would remove it); (b) serialize the core→post handoff flat
 (`spill_flat`-style) to halve the streamed bytes — measured 50.9 % of the
 witness's core XML is decorative indentation.
+The 2026-09-03 source audit adds two adjacent residuals: avoid materializing
+that handoff as a Rust `String` at all, and linearize `Split::process_pages`
+for whole-DOM fallback/under-threshold runs. See
+[`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md) F3/F5.
 **Supersedes the resume half of** the original `HANDOFF.md` (large-index-database
 hardening). Companion to `docs/reproducers/` witness `~/scratch/nasser/index.xml`
 (614 MB, ~7M nodes, 40 000 one-equation sections, `--splitat=section`).

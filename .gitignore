@@ -74,8 +74,22 @@ USER_OK.md
 !.claude/skills/perf-check/
 !.claude/skills/perl-port/
 !.claude/skills/resolve-issue/
-# Vendored third-party agent skills (reproducible from skills-lock.json via npx skills add)
-.agents/
+# Vendored third-party agent skills (reproducible from skills-lock.json via
+# npx skills add) and agent-local rules stay ignored. Only the project-owned,
+# shared latexml-* skills below are tracked.
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/latexml-canvas-triage/
+!.agents/skills/latexml-cluster-classify/
+!.agents/skills/latexml-dump-debug/
+!.agents/skills/latexml-min-repro/
+!.agents/skills/latexml-next-release/
+!.agents/skills/latexml-perf-check/
+!.agents/skills/latexml-perl-port/
+!.agents/skills/latexml-resolve-issue/
+!.agents/skills/latexml-start-session/
+!.agents/skills/latexml-surpass-perl/
 html/
 
 # Python bytecode (e.g. tools/check_memory.py emits __pycache__/)
