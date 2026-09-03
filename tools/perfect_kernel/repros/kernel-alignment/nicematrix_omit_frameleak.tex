@@ -1,0 +1,20 @@
+% status: RED — Rust leaks +1 frame (net push-pop=1) + 1 err; cascades to Fatal
+%         EoF (\Body runaway) in the full nicematrix manual.
+% witness: nicematrix.tex (manual), b55c = 29 err incl Fatal:Mouth:EoF \Body.
+%          First permanent frame drift at log NR 15277 (784 alignment-starts in),
+%          triggered by nicematrix's internal \multicolumn (nicematrix.sty:5135/
+%          5141/5168, redefined \multicolumn=\__nicematrix_multicolumn:nnn :1662)
+%          invoked in an Anonymous-String measurement pass where no alignment is live.
+% oracle: pdflatex n/a (\multicolumn outside align is a TeX error too); Perl LaTeXML
+%          ALSO emits "\omit cannot be used here" (shared reject) but RECOVERS —
+%          no Fatal. Rust's orphaned \lx@hidden@bgroup/\lx@note frames swallow
+%          content to EoF.
+% class: cascade is RUST-ONLY (frame-depth amplification); the \omit reject +
+%          unbalanced bgroup is PERL-ORIGIN (TeX_Tables.pool.ltxml:130), faithfully
+%          ported to tex_tables.rs:243. Fix = balance the bgroup, per the \noalign
+%          precedent (tex_tables.rs:224-235).
+% assert: net frame push-pop == 0 (currently 1); 0 Fatal on the full manual.
+\documentclass{article}
+\begin{document}
+A\multicolumn{1}{c}{B}C
+\end{document}

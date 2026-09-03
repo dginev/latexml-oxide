@@ -16,6 +16,10 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("array");
   RequirePackage!("caption");
+  // oup.cls:137 `\RequirePackage[figuresright]{rotating}` — `sidewaystable`
+  // must exist for its `\caption` (oup-authoring-template). Guard:
+  // `perfect_kernel_batch54::class_stubs_require_their_float_packages`.
+  RequirePackage!("rotating");
 
   // OUP-specific metadata setters — preserve content.
   DefMacro!(

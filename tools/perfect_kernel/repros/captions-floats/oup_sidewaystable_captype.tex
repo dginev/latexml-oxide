@@ -1,0 +1,11 @@
+% RED: oup_authoring_template_cls.rs:11 LoadClass!("OmniBus") stub never runs
+% oup.cls:137 \RequirePackage[figuresright]{rotating} -> {sidewaystable}
+% undefined -> \caption "outside any known float".
+% Witness: oup-authoring-template.tex:272-273. RUST-ONLY (Perl raw-loads oup.cls).
+\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}
+\begin{document}
+\begin{sidewaystable}
+\caption{X\label{t3}}
+\begin{tabular}{ll}a&b\end{tabular}
+\end{sidewaystable}
+\end{document}

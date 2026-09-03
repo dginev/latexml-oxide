@@ -1,0 +1,13 @@
+% SHARED/OUT-OF-SCOPE: \documentclass{amltxdoc} -> class NOT in TeX Live
+% (kpsewhich amltxdoc.cls = empty). Both engines fall back; the fallback
+% lacks tabularx/ltablex, so tabularx is undefined and \caption cascades to
+% "outside any known float". Not a caption-mechanism bug — an uninstalled class.
+% Witness: storecmd-guide.tex:64-65.
+\documentclass{amltxdoc}
+\begin{document}
+\begin{tabularx}{\linewidth}{|X|}
+\caption{Package options}\\\hline
+a\\\hline
+\endfirsthead
+\end{tabularx}
+\end{document}

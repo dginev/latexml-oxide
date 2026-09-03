@@ -14,6 +14,11 @@ LoadDefinitions!({
   // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
+  // jmlr.cls:155-156 — the class's algorithm floats; without them
+  // `{algorithm2e}` is undefined and its `\caption` cascades to "outside any
+  // known float" (pmlr-sample). Guard:
+  // `perfect_kernel_batch54::class_stubs_require_their_float_packages`.
+  RequirePackage!("algorithm2e", options => vec!["algo2e".to_string(), "ruled".to_string()]);
 
   // Author block. jmlr.cls L259/374-449:
   //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}
@@ -116,7 +121,16 @@ LoadDefinitions!({
   );
 
   // jmlrcombine helpers used in tables / floats.
-  DefMacro!("\\floatconts{}{}{}", "#3");
+  // jmlrutils.sty:166-185: `\floatconts{label}{caption}{contents}` dispatches
+  // on `\@captype` — tables caption first, figures contents first,
+  // algorithms between rules. The former `#3` body dropped the caption.
+  RawTeX!(
+    r"\newcommand{\floatconts}[3]{\@ifundefined{\@captype conts}{\tableconts{#1}{#2}{#3}}{\csname\@captype conts\endcsname{#1}{#2}{#3}}}
+\providecommand{\tableconts}[3]{#2\label{#1}\vskip\baselineskip{\centering #3\par}}
+\newcommand{\figureconts}[3]{{\centering #3\par}\vskip\baselineskip#2\label{#1}}
+\newcommand{\algocfconts}[3]{\jmlralgorule\par\smallskip#2\label{#1}\jmlralgorule\par\smallskip#3\jmlralgorule}
+\providecommand{\jmlralgorule}{\noindent\rule{\linewidth}{0.4pt}}"
+  );
   DefMacro!("\\tableref{}", "#1");
   DefMacro!("\\figureref{}", "#1");
   DefMacro!("\\algorithmref{}", "#1");

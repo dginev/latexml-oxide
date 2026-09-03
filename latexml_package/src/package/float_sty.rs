@@ -168,12 +168,12 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
         }
       }
       av.insert("class".into(), class_val.clone());
-      // `^` float-up (Perl float.sty.ltxml:56 has none; KPE #190): a custom
+      // `^^` float-up (Perl float.sty.ltxml:56 has none; KPE #190): a custom
       // float opened inside a Block container (quote, list item — bashful's
       // `program` floats) escapes to the enclosing `ltx:para`, as the kernel
       // floats do (sect09.rs). Guard:
       // `perfect_kernel_batch54::floats_escape_block_containers`.
-      let savenode = document.float_to_element("ltx:float", false)?;
+      let savenode = document.float_to_element("ltx:float", true)?;
       document.open_element("ltx:float", Some(av), None)?;
       // #tags
       if let Some(stored) = props.get("tags") {

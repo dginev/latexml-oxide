@@ -1,0 +1,19 @@
+% status: RED (Rust 2 err) but SHARED — Perl LaTeXML emits the SAME 2 errors
+% witness: tabvar_doc (tabvar.sty manual), sweep#36 ~101 err
+% oracle: pdflatex exit=0 (valid); Perl LaTeXML = Rust = 2x "Extra alignment tab"
+% class: SHARED (varwidth->minipage box-env straddling >{}/<{} column template;
+%        row-2 column-loop not reset). tabvar has no .sty.ltxml so Perl-default
+%        skips it; defs inlined here so BOTH engines process natively.
+\documentclass{article}
+\usepackage{array,varwidth,ifthen}
+\makeatletter
+\newcount\@niveaux \newcount\@pos \newif\if@socle \newcommand{\@socle}{}
+\newif\ifreset@niveaux
+\newcommand{\reset@niveaux}{\ifreset@niveaux\global\@niveaux=1 \global\@pos=1 \global\@soclefalse\fi}
+\newdimen\TVmaxcolwidth \setlength{\TVmaxcolwidth}{\linewidth}
+\newcolumntype{C}{>{\begin{varwidth}[b]{\TVmaxcolwidth}\let\TVnl=\\ \let\\=\TVtabularnewline $}c<{\@socle \reset@niveaux $\@finalstrut\@arstrutbox\end{varwidth}}}
+\newenvironment{tabvar}[1]{\global\@niveaux=1 \global\@pos=1 \global\@soclefalse\def\TVtabularnewline{\reset@niveauxtrue\tabularnewline}\begin{array}{#1}}{\end{array}}
+\makeatother
+\begin{document}
+\[\begin{tabvar}{|C|CC|} a & b & c \\ d & e & f \end{tabvar}\]
+\end{document}

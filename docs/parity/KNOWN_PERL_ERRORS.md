@@ -5787,3 +5787,15 @@ custom floats (bashful's `program`), the listings `lol` wrappers
 rotating's sideways floats and subfloat's, so the float lands beside the quote
 in the enclosing `ltx:para` (or inside the enclosing box). Guard:
 `perfect_kernel_batch54::floats_escape_block_containers`.
+
+## 191. A misplaced `\omit`/`\span` opens a group it never closes (Rust fixes)
+
+TeX_Tables.pool.ltxml:128-135 (`\omit`) and the `\span` twin report the misuse
+and then call `$stomach->bgroup` with `\let`s to `\relax` inside — the group is
+never closed, so the next `}` closes it instead of its own frame and every
+enclosing frame drifts by one. nicematrix.sty:5135 invokes `\multicolumn`
+(= `\omit…`) in a measurement pass off any alignment; each use leaked two
+frames and the manual ended in a `\Body` runaway to EoF (Perl recovers by
+luck of its group model). tex.web §1128 `align_error`: "Misplaced \omit" is
+reported and nothing else happens. Trigger: `A{\multicolumn{1}{c}{B}}C`.
+Rust: error only. Guard: `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.

@@ -1,0 +1,15 @@
+% status: RED (Rust 1 err) SHARED — Perl LaTeXML emits the SAME error
+% witness: tabularcalc_doc_en, sweep#36 101 err (Fatal TooManyErrors)
+% oracle: Perl LaTeXML = Rust identical on the \loop-accumulated-& + \hline core
+% class: SHARED. Witness cascade is dominated by the PARKED mode-switch-frame
+%        family (51/101 "Attempt to close a group that switched to mode
+%        horizontal/vertical") downstream of \hline(->\noalign) landing in a
+%        \loop-built body whose & count desynced. STOP (parked family).
+\documentclass{article}
+\newcount\tcnt \def\tcrow{}
+\def\addcell#1{\expandafter\def\expandafter\tcrow\expandafter{\tcrow #1&}}
+\def\buildrow{\def\tcrow{}\tcnt=0 \loop\ifnum\tcnt<3 \addcell{x}\advance\tcnt by1 \repeat}
+\begin{document}
+\buildrow
+\begin{tabular}{|c|c|c|}\hline \tcrow\\ \hline a&b&c\\ \hline\end{tabular}
+\end{document}

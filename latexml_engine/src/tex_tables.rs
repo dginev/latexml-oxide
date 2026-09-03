@@ -236,21 +236,20 @@ LoadDefinitions!({
     Let!(&T_CS!("\\omit"), T_RELAX!());
     Let!(&T_CS!("\\span"), T_RELAX!());
   });
+  // A misplaced `\omit`/`\span` is tex.web §1128 `align_error`: report and
+  // continue, no group. Perl TeX_Tables.pool:128-135 opens a `bgroup` it never
+  // closes (with `\let`s to `\relax` inside it) — the group then swallows the
+  // next `}` and every enclosing frame drifts by one (nicematrix manual:
+  // `\multicolumn` = `\omit…` in a measurement pass off any alignment leaked
+  // +2 frames per use, ending in a `\Body` runaway to EoF; KPE #191). A
+  // live alignment never reaches these primitives (`\lx@alignment@multicolumn`
+  // / `omit_column`). Guard:
+  // `perfect_kernel_batch54::misplaced_omit_does_not_open_a_group`.
   DefPrimitive!("\\omit", {
     Error!("unexpected", "\\omit", "\\omit cannot be used here");
-    bgroup();
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
   });
   DefPrimitive!("\\span", {
-    bgroup();
     Error!("unexpected", "\\span", "\\span cannot be used here");
-    Let!(&T_ALIGN!(), T_RELAX!());
-    Let!(&T_CS!("\\noalign"), T_RELAX!());
-    Let!(&T_CS!("\\omit"), T_RELAX!());
-    Let!(&T_CS!("\\span"), T_RELAX!());
   });
 
   //======================================================================

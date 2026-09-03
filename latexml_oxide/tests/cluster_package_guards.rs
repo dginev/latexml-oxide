@@ -11808,6 +11808,63 @@ Text.
     );
   }
 
+  /// Stub class bindings must issue the float-package requires of the real
+  /// class: jmlr.cls:155 algorithm2e, oup.cls:137 rotating (pmlr-sample,
+  /// oup-authoring-template; RUST-ONLY, Perl raw-loads both). jmlr's
+  /// `\floatconts` keeps its caption (jmlrutils.sty:166).
+  #[test]
+  fn class_stubs_require_their_float_packages() {
+    let jmlr = r"\documentclass[pmlr]{jmlr}
+\title{T}\author{\Name{A}}
+\begin{document}
+\begin{algorithm2e}
+\caption{Computing Net Activation}
+\end{algorithm2e}
+\begin{table}\floatconts{tab:a}{\caption{Cap A}}{\begin{tabular}{l}x\end{tabular}}\end{table}
+\end{document}
+";
+    let (stderr, xml) = convert(jmlr, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Computing Net Activation") && xml.contains("Cap A"),
+      "{xml}"
+    );
+    let oup = r"\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}
+\begin{document}
+\begin{sidewaystable}
+\caption{X\label{t3}}
+\begin{tabular}{ll}a&b\end{tabular}
+\end{sidewaystable}
+\end{document}
+";
+    let (stderr, xml) = convert(oup, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<caption>"), "{xml}");
+  }
+
+  /// A misplaced `\omit` (tex.web §1128) is one error and nothing else: no
+  /// group is left open to swallow the next `}` (nicematrix manual's
+  /// `\multicolumn` off-alignment ran to a `\Body` EoF runaway), and `&`
+  /// keeps working afterwards.
+  #[test]
+  fn misplaced_omit_does_not_open_a_group() {
+    let tex = r"\documentclass{article}
+\begin{document}
+A{\multicolumn{1}{c}{B}}C
+
+\begin{tabular}{ll}x&y\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert!(
+      xml.contains(">C<") || xml.contains("BC") || xml.contains("C</p>"),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<td").count(), 2, "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

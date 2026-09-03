@@ -72,7 +72,7 @@ LoadDefinitions!({
   // sidewaysfigure/sidewaystable — full port matching Perl rotating.sty.ltxml
   // Each has: beforeFloat/afterFloat hooks, rotatedPage hsize, rotatedProperties for dimensions
   DefEnvironment!("{sidewaysfigure}[]",
-    "^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    "^^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
@@ -92,7 +92,7 @@ LoadDefinitions!({
     });
 
   DefEnvironment!("{sidewaysfigure*}[]",
-    "^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
+    "^^<ltx:figure xml:id='#id' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
@@ -111,7 +111,7 @@ LoadDefinitions!({
     });
 
   DefEnvironment!("{sidewaystable}[]",
-    "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
+    "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("table", None);
@@ -130,7 +130,7 @@ LoadDefinitions!({
     });
 
   DefEnvironment!("{sidewaystable*}[]",
-    "^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
+    "^^<ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1') angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xscale='#xscale' yscale='#yscale' xtranslate='#xtranslate' ytranslate='#ytranslate'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => {
       engine::latex_constructs::before_float("table", None);
