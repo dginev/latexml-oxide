@@ -58,7 +58,16 @@ reason, never silently.
 
 One document: `tools/perfect_kernel/run_doc.sh <manual.tex> [outroot]`
 Sweep: `tools/perfect_kernel/sweep.sh <corpus.tsv> [outroot]` (JOBS=12,
-TIMEOUT_S=120 default; resumable — a doc with a `verdict.tsv` is skipped).
+TIMEOUT_S=120 default; resumable — a doc with a `verdict.tsv` is skipped;
+build the sweep binary `--release`, user directive 2026-09-03).
+Topic repro corpus: `tools/perfect_kernel/repros/<topic>/*.tex` + runner
+`tools/perfect_kernel/repros.sh <topic> [--perl] [--pdflatex]` — minimal
+self-contained repros grouped by MECHANISM (alignment, boxes-groups, index,
+string-mouth, sectioning-frontmatter, luatex-profile, expl3), each with a
+witness/oracle/engines/expect/status header; the residue is worked one topic
+at a time, five read-only `root-causer` agents feeding repros + fix plans per
+topic, the main session landing fixes (user workflow 2026-09-03; conventions in
+`tools/perfect_kernel/repros/README.md`).
 
 The runner converts to **core XML** (`--xml`) with
 `--preload=[rawstyles,rawclasses]latexml.sty`, a 6 GiB RAM guard and a
