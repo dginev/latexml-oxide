@@ -1,0 +1,19 @@
+% witness: biblatex/biblatex (biblatex.tex:171,189) + biblatex-trad/biblatex-trad
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=2 (2026-09-03) SHARED — Perl hyperref.sty.ltxml also omits these
+% expect:  0 errors; footnote yields <ltx:note ... role="footnote"> with the url
+% status:  RED
+% mechanism: biblatex.tex:170-171 defines \fnurl via hyperref's low-level
+%   \hyper@normalise (URL-arg catcode sanitizer, hyperref.sty) + url.sty's \url@
+%   (the url typesetter). The hyperref binding (LoadDefinitions emulation, does NOT
+%   raw-load hyperref.sty) emulates high-level \url/\href but omits \hyper@normalise
+%   /\url@/\hyper@linkurl/\Hurl. Class-level fix: hyperref_sty.rs url-internal surface.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\newcommand\fnurl@[1]{\footnote{\url@{#1}}}
+\DeclareRobustCommand\fnurl{\hyper@normalise\fnurl@}
+\makeatother
+\begin{document}
+See the docs.\fnurl{https://ctan.org/pkg/biblatex}
+\end{document}

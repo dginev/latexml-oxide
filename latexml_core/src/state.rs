@@ -3278,6 +3278,23 @@ pub fn compute_indirect_model() -> IndirectModel {
 
 // Package helpers used in core need to be localized here -- as state methods
 /// `Let` macro setter
+/// Run `body` with `cs` temporarily `\let` to `target` (local scope), then
+/// restore `cs`'s prior meaning — the `{\let\cs\target …}` idiom of latex.ltx
+/// (`\protected@edef`'s `\let\protect\@unexpandable@protect`, :1442) without
+/// a save-stack group, for a reader that must not open one. The prior
+/// meaning is restored whether or not `body` fails. A `cs` with no meaning
+/// is restored to none.
+pub fn with_let<R>(cs: &Token, target: &Token, body: impl FnOnce() -> Result<R>) -> Result<R> {
+  let saved = lookup_meaning(cs);
+  let_i(cs, target, None);
+  let result = body();
+  match saved {
+    Some(meaning) => assign_meaning(cs, meaning, None),
+    None => assign_meaning(cs, Stored::None, None),
+  }
+  result
+}
+
 pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   let meaning =// if token2.get_dont_expand().is_some() {
   //   Stored::Token(token2.clone())
@@ -3843,6 +3860,25 @@ pub fn get_staged_snapshot(
 #[cfg(test)]
 mod reentrancy_tests {
   use super::*;
+
+  /// `with_let` binds for the body only and restores the prior meaning —
+  /// including "no meaning" — even when the body fails.
+  #[test]
+  fn with_let_restores_the_prior_meaning() {
+    let cs = T_CS!("\\p1a_with_let_probe");
+    // A character token is its own meaning even in a bare State (no engine).
+    let target = T_OTHER!("x");
+    assert!(lookup_meaning(&cs).is_none());
+    let seen: Result<bool> = with_let(&cs, &target, || Ok(lookup_meaning(&cs).is_some()));
+    assert_eq!(seen.ok(), Some(true));
+    assert!(lookup_meaning(&cs).is_none(), "restored to no meaning");
+    let_i(&cs, &T_LETTER!("y"), None);
+    let before = lookup_meaning(&cs);
+    assert!(before.is_some());
+    let failed: Result<()> = with_let(&cs, &target, || Err("boom".into()));
+    assert!(failed.is_err());
+    assert_eq!(lookup_meaning(&cs), before, "restored after a failing body");
+  }
 
   /// `try_lookup_int` must degrade to `None` under a live mutable borrow
   /// (contention) instead of panicking, while behaving like `lookup_int`

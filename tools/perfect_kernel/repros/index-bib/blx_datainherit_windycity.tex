@@ -1,0 +1,16 @@
+% witness: windycity/windycity (windycity.tex:3 -> windycity.sty:65)
+% oracle:  pdflatex 0 errors
+% engines: rust=5 perl=3 (2026-09-03) both fail; Perl aborts biblatex.sty raw-load at kvoptions
+% expect:  0 errors; output has <ltx:bibliography>
+% status:  RED
+% mechanism: \usepackage[style=windycity]{biblatex} raw-loads windycity.bbx/.cbx,
+%   which reach biblatex.sty internals the native binding (stands in for biblatex.sty)
+%   omits: \ResetDataInheritance (biblatex.sty:14566), \DefaultInheritance (:14474),
+%   \except, \clearfield, \DeclareCitePunctuationPosition, \DeclareAutoPunctuation,
+%   \idemcites. Class-level fix: extend biblatex_sty.rs \blx@*/data-model surface.
+\documentclass{article}
+\usepackage[style=windycity]{biblatex}
+\begin{document}
+Text.\par
+\printbibliography
+\end{document}

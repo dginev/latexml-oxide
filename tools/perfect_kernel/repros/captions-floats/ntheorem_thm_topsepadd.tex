@@ -1,0 +1,20 @@
+% witness: dlfltxbcodetips (dlfltxb doc), sweep36 first_errors36.tsv
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% class: SHARED — Perl ntheorem.sty.ltxml also omits \thm@topsep/\thm@topsepadd
+% expect: 0 Error lines; \thm@topsepadd is a defined skip register
+% status: RED with b54t (Error:undefined:\thm@topsepadd)
+% mechanism: ntheorem.sty:714-715 \newskip\thm@topsep \newskip\thm@topsepadd
+%   (unconditional). ntheorem_sty.rs binding defines the \theorem*skipamount
+%   registers but omits \thm@topsep/\thm@topsepadd. dlfltxbcodetips.sty:102-103
+%   ("code stolen from ntheorem.sty") assigns \thm@topsepadd \theorempostskipamount.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage[amsmath,thmmarks,framed]{ntheorem}
+\makeatletter
+\thm@topsepadd \theorempostskipamount
+\advance\thm@topsepadd\partopsep
+\makeatother
+\begin{document}
+Hi.
+\end{document}

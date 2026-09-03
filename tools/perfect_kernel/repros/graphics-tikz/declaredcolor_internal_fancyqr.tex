@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=1 (2026-09-03); real doc rust=5 (\@declaredcolor + 4 pict2e path prims)
 % expect:  0 errors; Hello carries color="#9E1D1C" (the tl!50!br mix)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: color/xcolor define \color = \@ifnextchar[\@undeclaredcolor\@declaredcolor
 %   (xcolor.sty:762-763). \@declaredcolor#1 (xcolor.sty:792) is the NAMED-color switch branch;
 %   \@undeclaredcolor[#1]#2 (xcolor.sty:764) the modelled branch. fancyqr calls \@declaredcolor

@@ -3,7 +3,7 @@
 % oracle:  pdflatex: hook does NOT fire (0 occurrences)
 % engines: rust=LEAK perl=LEAK pdflatex=clean (2026-09-03) <- SHARED
 % expect:  no "HOOK-FIRED-WRONGLY" (false \ifnum branch must not register the hook)
-% status:  RED (b54w)
+% status:  GREEN (b54u 2026-09-03; was RED) (b54w)
 % mechanism: \AtBeginDocument is DefMacro!(sub{ push_value("@at@begin@document",..); empty })
 %   (latex_constructs.rs:3896; Perl pool:296). Expandable => the \ifnum number-scan peek
 %   (tex.web sec444) expands it in the FALSE branch and fires push_value. latex.ltx defines

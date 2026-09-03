@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=0 (2026-09-03)   <- RUST-ONLY (Perl raw-loads ltablex; stub binding does not)
 % expect:  0 errors; tabularx body cell contains "c"
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: ltablex.sty:149 defines \keepXColumns (\TX@convertX@false) and
 %   \convertXColumns (:153). They only toggle the print-width measurement bool
 %   \TX@convertX@; X columns render identically in LaTeXML either way. The Rust

@@ -5,7 +5,7 @@
 %          HIGH level (only 8 \NAT@* internals, no \NAT@reset@parser/\NAT@citexnum/\NAT@parse)
 %          and there is no nmbib.sty.ltxml, so Perl hits the same undefined internals.
 % expect:  0 errors; \citeall yields an <ltx:cite> with bibrefs="Markey:Tame_the_BeaST"
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: nmbib (\RequirePackage{natbib}, nmbib.sty:43) REIMPLEMENTS natbib's low-level
 %   citation engine. \citeall (nmbib.sty:343) -> \@citeall -> \@@@citeall (nmbib.sty:347),
 %   a full-citation expander parallel to nmbib's \NAT@citexnum (nmbib.sty:141); both OPEN with

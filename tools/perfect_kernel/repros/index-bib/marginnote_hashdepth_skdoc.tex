@@ -5,7 +5,7 @@
 %          shortcuts \marginnote -> \marginpar, so it drops the same macro-arg layer)
 % expect:  0 errors; the two clist items render as [alpha][beta] (no literal '#'),
 %          i.e. no "# (catcode PARAM) should never reach Stomach"
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: real marginnote.sty (marginnote.sty:319-343) routes the note body through
 %   \marginnote -> \@dblarg\@mn@marginnote -> \@ifnextchar[ -> \@mn@@marginnote ->
 %   \@mn@@@marginnote -> the typeset box; that chain passes the body through one more

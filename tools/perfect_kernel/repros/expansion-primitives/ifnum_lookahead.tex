@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors; output "twelve thousand"
 % engines: rust=WRONG perl=WRONG pdflatex=RIGHT (2026-09-03)  <- SHARED
 % expect:  RESULT=[] (false \ifnum branch must NOT run its \g@addto@macro body)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: \ifnum second-operand scan peeks one token past the digits (tex.web
 %   sec444 scan_int, get_x_token). That peek EXPANDS \g@addto@macro, which is a
 %   side-effecting expandable DefMacro (latex_constructs.rs:5384 AddToMacro!),

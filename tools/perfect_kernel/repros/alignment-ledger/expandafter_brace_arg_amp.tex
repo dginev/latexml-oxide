@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (typesets "a = 1 + 2")
 % engines: rust=7 perl=? (b54t 2026-09-03); pdflatex=0
 % expect:  0 errors; <ltx:equationgroup> present, cell shows 1 + 2 (no stray & / Z)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: \exp_after:wN {\use_none:nn ...} — \expandafter's saved brace tok1={ is
 %   ledger-retracted (retract_scanned_braces, tex_macro.rs:190) BEFORE the one-step
 %   expansion of tok2 (\use_none:nn, line 193 defn.invoke(true)) reads its argument &.

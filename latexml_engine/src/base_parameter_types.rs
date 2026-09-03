@@ -53,6 +53,18 @@ fn optional_arg_reversion(
 
 // ======================================================================
 // Define parsers for standard parameter types.
+/// Run `body` under LaTeX's `\protected@edef` regime: `\protect` `\let` to
+/// `\@unexpandable@protect` (latex.ltx:1384) for the duration, restored after.
+/// A no-op outside LaTeX, where `\@unexpandable@protect` has no meaning.
+pub fn with_unexpandable_protect<R>(body: impl FnOnce() -> Result<R>) -> Result<R> {
+  let regime = T_CS!("\\@unexpandable@protect");
+  if lookup_meaning(&regime).is_some() {
+    with_let(&T_CS!("\\protect"), &regime, body)
+  } else {
+    body()
+  }
+}
+
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
     let mut value = ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?);
@@ -397,6 +409,50 @@ LoadDefinitions!({
     // at its root cause (href self-marker, \edef/\let reversion)
     // rather than re-adding branches here (plan Appendix A.4).
     Ok(read_x_until(&until)?)
+  });
+
+  // LaTeX's `\protected@edef` context (latex.ltx:1442-1454): `\protect` is
+  // `\@unexpandable@protect` (:1384 `\noexpand\protect\noexpand`) for the
+  // expanding read, so a raw `\DeclareRobustCommand` survives as
+  // `\protect\cs ` instead of expanding — a size command otherwise re-expands
+  // `\@setfontsize` (:14103, `\ifx\protect\@typeset@protect` true branch) →
+  // `\@currsize` → `\normalsize` → itself, the overflow pdflatex's
+  // `\edef\x{\small}` shows. `\noexpand`'d tokens collapse back to their
+  // plain identity when stored (tex.web §1149, as `read_balanced` does).
+  // Outside LaTeX (`\@unexpandable@protect` undefined) the read is plain.
+  // Rust-only parameter types, OXIDIZED_DESIGN #191. Witness zugferd-invoice
+  // (siunitx `S` cell opening with an unbraced `\small` under scrartcl,
+  // `PushbackLimit`). Guard: `perfect_kernel_batch54::
+  // s_column_unbraced_size_command_is_scoped`.
+  DefParameterType!(ProtectedXUntil, sub[_inner, untils] {
+    let Some(until_tks) = untils.first() else {
+      Warn!("expected", "token", "ProtectedXUntil parameter missing delimiter token");
+      return Ok(ArgWrap::Tokens(Tokens!()));
+    };
+    let until : Token = until_tks.into();
+    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| read_x_until(&until))?))
+  },
+  reversion => sub[arg, _inner, until] {
+    let mut rev = Vec::new();
+    for t in arg {
+      rev.push(t.revert());
+    }
+    for ts in until {
+      rev.extend(ts.clone().revert());
+    }
+    Ok(Tokens::new(rev))
+  });
+
+  // `\protected@edef`'s braced form: `Expanded` with `\the` once and
+  // e-TeX `\protected` deferred (as `\edef`), under the `\protect` regime.
+  DefParameterType!(ProtectedExpanded, sub[_inner, _untils] {
+    Ok(ArgWrap::Tokens(with_unexpandable_protect(|| read_arg(ExpansionLevel::Partial))?))
+  },
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_BEGIN!()];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_END!());
+    Ok(Tokens::new(tks))
   });
 
   //  This reads a braced tokens list, expanding as it goes,

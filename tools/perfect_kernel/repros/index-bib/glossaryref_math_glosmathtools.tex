@@ -7,7 +7,7 @@
 %          ltx:XMath are autoOpen in neither, so Perl fails identically)
 % expect:  0 errors; the <ltx:glossaryref> holds a <ltx:Math>/<ltx:XMTok> (math k),
 %          NOT a bare <ltx:XMTok> child (which is schema-illegal)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: a glossaryref (Inline.model) opened in math mode gets its display
 %   content (#3 = math token k) inserted as a bare <ltx:XMTok>; document.rs
 %   find_insertion_point_qsym (document.rs:2985/3135) can't auto-open the

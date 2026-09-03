@@ -2,7 +2,7 @@
 % oracle:  pdflatex ELSE-RESULT=[RIGHT]
 % engines: rust=[WRONGRIGHT] perl=[WRONGRIGHT] pdflatex=[RIGHT] (2026-09-03) <- SHARED
 % expect:  ELSE-RESULT=[RIGHT] (only the taken else-branch runs)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: proves the true-branch \g@addto@macro executes DURING the number peek
 %   (WRONG appears alongside the correctly-taken else-branch RIGHT).
 \documentclass{article}

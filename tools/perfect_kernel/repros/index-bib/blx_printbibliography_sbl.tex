@@ -6,7 +6,7 @@
 %          (biblatex.sty:9820) ARE defined there; the Rust binding stands in for biblatex.sty and
 %          omits them.
 % expect:  0 errors; \printbibliography yields an <ltx:bibliography> (empty w/o biber is fine)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: the Rust biblatex binding (latexml_contrib/src/biblatex_sty.rs:727) does NOT raw-load
 %   biblatex.sty -- it stands in for it, emulating a subset and defining its own \printbibliography[]
 %   (biblatex_sty.rs:1995, -> \biblatex@printbibliography native worker). But the biblatex-sbl STYLE

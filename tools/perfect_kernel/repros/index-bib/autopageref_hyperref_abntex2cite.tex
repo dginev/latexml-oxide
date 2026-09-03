@@ -3,7 +3,7 @@
 % engines: rust=1 perl=? (2026-09-03) -- SHARED (Perl hyperref.sty.ltxml defines
 %          \autoref L367 but NOT \autopageref; grep confirms it is absent)
 % expect:  0 errors; \autopageref{sec:x} yields an <ltx:ref> (page reference)
-% status:  RED
+% status:  GREEN (b54u 2026-09-03; was RED)
 % mechanism: hyperref.sty:8183 \DeclareRobustCommand*{\autopageref} (page-number
 %   ref, star=nolink) is a real hyperref command; the Rust hyperref binding
 %   (hyperref_sty.rs, a LoadDefinitions emulation that does NOT raw-load

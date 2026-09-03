@@ -1,0 +1,16 @@
+% witness: achemso/achemso-demo (achemso-demo.tex:189 \mciteSubRef{Eisenstein2005})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-03) RUST-ONLY — Perl raw-loads mciteplus.sty, clean
+% expect:  0 errors; \mciteSubRef yields <ltx:ref> to the sub-entry label
+% status:  RED
+% mechanism: mciteplus.sty:781-782 defines \mciteSubRef ->
+%   \@ifnextchar[ {\@mciteSubRef}{\@mciteSubRef[\mcitetrackID]}, and
+%   \@mciteSubRef[#1]#2 -> \ref{\@mcitereflabelprefix:#1:#2}. The Rust mciteplus
+%   binding (latexml_contrib/src/mciteplus_sty.rs) is a no-op stub set and OMITS the
+%   user-facing \mciteSubRef/\@mciteSubRef/\mcitetrackID/\@mcitereflabelprefix.
+%   Fix: mciteplus binding defines them faithfully (routing to \ref).
+\documentclass{article}
+\usepackage{mciteplus}
+\begin{document}
+See ref \mciteSubRef{Eisenstein2005}.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: titlesec.tex (titlesec doc), sweep36 first_errors36.tsv
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% expect: 0 Error lines; \titlewidth is a defined dimen register
+% status: RED with b54t (Error:undefined:\titlewidth)
+% mechanism: titlesec.sty:1039-1041 \newdimen\titlewidth \titlewidthlast
+%   \titlewidthfirst (unconditional). titlesec_sty.rs emulation omits them;
+%   titlesec.tex:1780 \titleformat{\section}[block]{...\addtolength{\titlewidth}{2pc}...}
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[block]
+  {\addtolength{\titlewidth}{2pc}\normalfont\sffamily}
+  {\thesection}{1em}{}
+\begin{document}
+\section{Hello}
+\end{document}

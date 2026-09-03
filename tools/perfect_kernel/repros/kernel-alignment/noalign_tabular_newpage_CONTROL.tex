@@ -1,0 +1,16 @@
+% CONTROL: plain tabular is a box, so \newpage between rows is a GENUINE pdflatex error
+% oracle:  pdflatex 9 errors (Missing } / Missing \cr) — must stay an error, unlike longtable
+% status:  CONTROL
+% mechanism: contrast to noalign_longtable_newpage — tabular has no page-break \cr, so the
+%   \noalign rejection here is correct; the longtable case must NOT be fixed by tolerating
+%   \noalign everywhere, only by preserving longtable's row-boundary state across \newpage.
+\documentclass{article}
+\begin{document}
+\begin{tabular}{|l|c|}
+a & b \\
+\hline
+\newpage
+\hline
+c & d \\
+\end{tabular}
+\end{document}

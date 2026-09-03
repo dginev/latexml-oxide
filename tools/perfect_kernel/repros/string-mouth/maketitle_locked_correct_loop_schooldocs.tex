@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=Fatal:Timeout:PushbackLimit (infinite loop) perl=n/a (2026-09-03, b54y)
 % expect:  no Fatal; body renders a title; \@originaltitle NOT self-referential
-% status:  RED (Fatal:Timeout:PushbackLimit — infinite \{ begin-group recursion)
+% status:  GREEN (b54u 2026-09-03; was RED) (Fatal:Timeout:PushbackLimit — infinite \{ begin-group recursion)
 % mechanism: Rust defines \maketitle with `locked => true` (latex_constructs/sect05.rs:807-811),
 %   so schooldocs' \renewcommand{\maketitle} (schooldocs.sty:136, which OMITS the standard cleanup)
 %   is IGNORED; Rust's locked \maketitle runs `\global\let\@title\@empty\global\let\title\relax`

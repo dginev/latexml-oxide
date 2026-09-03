@@ -1,0 +1,20 @@
+% witness: pfdicons/pfdicons-doc (pfdicons-doc.tex:996), tikzcodeblocks-documentation:679
+% oracle:  pdflatex 0 errors
+% engines: rust=2+ perl=? pdflatex=0 (2026-09-03, b54t)
+% expect:  0 errors; <ltx:tabular> with two rows, no leaked mode frame
+% status:  RED
+% mechanism: a p{} paragraph column opens a mode-switch-to-internal_vertical frame
+%   (\lx@tabular@p@); an lstlisting (verbatim-like env, \begingroup + catcode change)
+%   inside that cell leaves the p-frame open; \@end@tabular/\endgroup then hit it.
+%   tex.web S1085 (unset_box) / LaTeX array.sty \@endpbox close the paragraph box at
+%   `&`/`\\`; the verbatim env's \endgroup pops the wrong frame here.
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{tabular}{p{4cm}l}
+\begin{lstlisting}[numbers=none]
+x=1;
+\end{lstlisting} & b \\
+c & d \\
+\end{tabular}
+\end{document}
