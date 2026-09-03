@@ -817,6 +817,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // both this binary and the library (`latexml::api`, tests) funnel through, so
   // the library can no longer drift from the binaries the way it did (the flaky
   // spurious "1 warning" root-caused 2026-07-16).
+  //
+  // The handle itself is constructed HERE, on this thread, before the prewarm
+  // thread exists: construction `putenv`s (`kpathsea_set_program_name`), and a
+  // `putenv` racing this thread's `getenv`s (option parsing, chrono `TZ`, the
+  // logger's `NO_COLOR`) is a use-after-free of `environ` — sweep #35's
+  // pstool general-protection fault in `getenv`. See `init_kpathsea`.
+  latexml_core::util::pathname::init_kpathsea();
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
     Some(std::thread::spawn(
       latexml_core::util::pathname::prewarm_kpathsea,

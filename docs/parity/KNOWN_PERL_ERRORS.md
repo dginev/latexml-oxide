@@ -5255,3 +5255,53 @@ and `ltx:para`, and the template's explicit `</ltx:p>` errors "Attempt to close
 
 Rust: the explicit close is dropped (the next `<ltx:para>` open closes an inline
 `#2`). Guard: `perfect_kernel_batch54::multicols_spanning_section_is_not_double_closed`.
+
+## 151. `\pdfannot` never reads its `rule spec` (Rust fixes)
+
+`pdfTeX.pool.ltxml:156-171` `OpenAnnotSpecification` reads `reserveobjnum` /
+`useobjnum n` / `stream [attr …]` and then the general text; the pdfTeX
+grammar's `annot type spec → [useobjnum n] [rule spec] general text` puts an
+optional `(width|height|depth) dimen …` before the text, and pdfmarginpar.sty:142
+`\expandafter\pdfannot\pdfmarginpar@rulespec{…}` emits it whenever a
+`width=`/`height=` key is set (pdfmarginpar doc): "Expected opening '{'". Trigger:
+
+```latex
+Hi\pdfannot width 4cm height 0.5cm {/Subtype /Text /Contents (x)}
+```
+
+Rust: the same `while read_keyword(["width","height","depth"]) read_dimension`
+loop as `RuleSpecification`. Guard: `perfect_kernel_batch54::pdfannot_reads_its_rule_spec`.
+
+## 152. A class that owns `\section` as a non-sectioning environment hits the kernel lock (Rust fixes)
+
+`latex_constructs.pool.ltxml:559` defines `\section` `locked => 1`, so
+examdesign.cls:323-344 (`\def\section{\stepcounter{section}\setcounter
+{question}{1}}`, `\def\endsection{\make@qlist}`, and `\begin{section}…\end
+{section}` around every question block, :802-812) is refused; `\@startsection`
+then runs on the environment body — "Expected opening '{'", `\lx@tag Attempt
+to end mode restricted_horizontal`, an `\endgroup` error per `\end` (examplea:
+Perl 67 errors, Rust Fatal at 100). Trigger:
+
+```latex
+\documentclass{examdesign}
+\begin{document}
+\begin{matching}[title={T}]\pair{Elvis}{Spike}\end{matching}
+\end{document}
+```
+
+Rust: an `examdesign.cls` binding clears `\section:locked` before the raw load
+(the `\chapter` precedent, #141). Guard:
+`perfect_kernel_batch54::examdesign_owns_section_as_an_environment`.
+
+## 153. robustindex's page-reference hooks scan for makeindex's `.ind` line (Rust fixes)
+
+robustindex.sty:201-216 `\gobblepageref` = `\protect\gobbleindpageref` =
+`\wrappageref\@gobble`, and `\def\wrapindpageref#1, \indpageref#2` consumes the
+`, \indpageref{N}` makeindex writes into each `.ind` line. LaTeXML's index has
+no such line, so `\index{alpha!see also gamma\gobblepageref}`
+(robustsample.tex:82; multisample, robustmanual) runs the delimited scan off the
+entry — Perl "Missing argument Until:, \indpageref for \wrapindpageref", Rust
+`readBalanced ran out of input`. Trigger: that line with `\usepackage{makeidx}
+\usepackage{robustindex}\makeindex`. Rust: a `robustindex.sty` binding (raw
+load, then `\gobblepageref` → empty and `\wrappageref{}` → empty). Guard:
+`perfect_kernel_batch54::robustindex_page_reference_hooks_are_inert`.

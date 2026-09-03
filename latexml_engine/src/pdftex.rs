@@ -402,7 +402,13 @@ LoadDefinitions!({
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
   // Reads and discards the pdfTeX annotation-spec prefix:
   //   reserveobjnum  | useobjnum <n>  | stream [attr <text>]
-  // then consumes the trailing general-text spec.
+  // then the `annot type spec`'s optional `rule spec` — `(width|height|depth)
+  // dimension [rule spec]`, the same loop as `RuleSpecification` (tex_box.rs)
+  // — which Perl pdfTeX.pool:156-171 omits: pdfmarginpar.sty:142
+  // `\expandafter\pdfannot\pdfmarginpar@rulespec{…}` with a `width=`/`height=`
+  // key passes `width 4cm height 0.5cm {…}` and the reader met `w` where it
+  // wanted `{` ("Expected opening '{'", pdfmarginpar doc; KNOWN_PERL_ERRORS
+  // #151). Then consumes the trailing general-text spec.
   DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
     if read_keyword(&["reserveobjnum"])?.is_some() {
       return Ok(ArgWrap::None);
@@ -413,6 +419,9 @@ LoadDefinitions!({
         skip_spaces()?;
         let _ = read_balanced(ExpansionLevel::Off, false, true)?;
       }
+    while read_keyword(&["width", "height", "depth"])?.is_some() {
+      let _ = read_dimension()?;
+    }
     skip_spaces()?;
     let _ = read_balanced(ExpansionLevel::Off, false, true)?;
   }), optional => true);

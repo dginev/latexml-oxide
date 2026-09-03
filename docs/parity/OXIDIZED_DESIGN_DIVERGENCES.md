@@ -5658,6 +5658,20 @@ prepend so it does not enter hmode early. Result: statement lines carrying a tra
 `\Comment*[r]` KEEP their number; KwInOut headers and standalone comments stay
 unnumbered — matching the pdflatex golden and surpassing Perl.
 
+**Refinement (2026-09-03, batch 54l): only a *list* fires it.** tex.web §1091
+`new_graf` runs from `main_control` in vertical mode of the current list; a
+constructor's digested `{}` argument (`stomach::digest(tokens)`) is
+macro-parameter text TeX never typesets as such. `ARG_DIGEST_DEPTH` counts open
+isolated argument digestions and `fire_everypar` stays silent while it is
+non-zero; `digest_next_body` (an environment body, `\hbox`/`\vbox` contents,
+`DigestUntil`) resets it to 0 because the captured material IS a list. Before
+this, an armed `\everypar` — latex.ltx `\@afterheading`'s
+`{\setbox\z@\lastbox}`, left by ltugboat.cls:1214 `\aftergroup\@afterheading`
+in `\@maketitle` — fired inside `\@@numbered@section`'s *type* argument and
+reverted into it as `{}section` (counter `\c@{}section`, tag `ltx:{}section`;
+lazylist, parnotes). Guard:
+`perfect_kernel_batch54::everypar_does_not_fire_inside_a_constructor_argument`.
+
 **Why it's safe.** `\everypar` firing is body-only and a no-op for normal paragraphs
 (LaTeXML's list/item machinery does not populate `\everypar`, unlike real LaTeX);
 inside a listing algorithm2e overrides `\everypar` with its own `\algocf@everypar`.

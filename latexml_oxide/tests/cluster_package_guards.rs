@@ -3529,7 +3529,7 @@ mod perfect_kernel_batch40_43 {
 
   /// Like `convert`, with sibling files (`.cls`/`.sty` under test) written
   /// next to `t.tex` and reachable through `TEXINPUTS`.
-  fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+  pub(crate) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
     let workdir = tempfile::tempdir().expect("create tempdir");
@@ -6099,6 +6099,7 @@ mod perfect_kernel_batch54 {
   //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
   //! was vetted separately.
   use super::{
+    perfect_kernel_batch40_43::convert_with_files,
     perfect_kernel_batch46::{convert, convert_with, error_count},
     perfect_kernel_batch53::convert_with_sty,
   };
@@ -9580,5 +9581,175 @@ More.
     let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[n\u{0329}]"), "{xml}");
+  }
+
+  /// ltxtable.sty:9 `\LTXtable{width}{file}` — a longtable with `X` columns
+  /// from a file; the raw macro reaches `\TX@target`/`\LT@echunk` internals
+  /// the bindings do not model (tikzcodeblocks-documentation, vhistory).
+  #[test]
+  fn ltxtable_inputs_a_longtable_with_x_columns() {
+    let tex = r"\documentclass{article}
+\usepackage{ltxtable}
+\begin{document}
+\LTXtable{\textwidth}{mytab.tex}
+\end{document}
+";
+    let table = r"\begin{longtable}{lX}
+a & some longer text that would wrap \\
+b & more \\
+\end{longtable}
+";
+    let (stderr, xml) = convert_with_files(tex, &[("mytab.tex", table)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<tabular") && xml.contains("<p>more</p>"),
+      "{xml}"
+    );
+  }
+
+  /// tex.web §1091 `new_graf` fires `\everypar` when a *list* starts a
+  /// paragraph; a constructor's digested `{}` argument is macro-parameter
+  /// text, not a list. An armed `\everypar` (latex.ltx:8090 `\@afterheading`'s
+  /// `{\setbox\z@\lastbox}`, left by ltugboat.cls:1214 `\aftergroup\@afterheading`
+  /// in `\@maketitle`) used to fire inside `\@@numbered@section`'s *type*
+  /// argument and revert as `{}section` — counter `\c@{}section`, tag
+  /// `ltx:{}section` (lazylist, parnotes). The body paragraph after the
+  /// heading still fires it.
+  #[test]
+  fn everypar_does_not_fire_inside_a_constructor_argument() {
+    let tex = r"\documentclass{article}
+\begin{document}
+A\everypar{{\setbox0\lastbox}}
+\section{Why lists?}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("{}section"), "{stderr}");
+    assert!(
+      xml.contains(r#"<section inlist="toc" xml:id="S1">"#) && xml.contains("<tag>1</tag>"),
+      "{xml}"
+    );
+    // A paragraph of the current list is `new_graf`: it still fires (the
+    // algorithm2e `\nl` numbering rides on this).
+    let tex = r"\documentclass{article}
+\begin{document}
+\everypar{EP:}Text.
+
+More.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>EP:Text.</p>") && xml.contains("<p>EP:More.</p>"),
+      "{xml}"
+    );
+  }
+
+  /// lineno.sty:1077 `\newif\ifLineNumbers` — the binding lacked lineno's
+  /// switches, and `\lx@deposit@maketitle` (OD #124) runs a class's
+  /// `\@maketitle`, which for homework.cls:128 reaches minimalist.sty:144
+  /// `\LocallyStopLineNumbers` = `…\ifLineNumbers\LNturnsONtrue\fi…`
+  /// (homework-demo-{cn,de,en,es,fr,jp}).
+  #[test]
+  fn lineno_binding_defines_the_line_number_switches() {
+    let tex = r"\documentclass{article}
+\usepackage{lineno}
+\makeatletter
+\renewcommand{\@maketitle}{\ifLineNumbers\fi\ifoddNumberedPage\fi\ifcolumnwiselinenumbers\fi Body}
+\makeatother
+\title{X}\author{Y}
+\begin{document}
+\maketitle
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<title>X</title>") && xml.contains("<personname>Y</personname>"),
+      "{xml}"
+    );
+  }
+
+  /// examdesign.cls:323-344 owns `\section` as a *non-sectioning* macro and
+  /// `\begin{section}…\end{section}` wraps every question block
+  /// (examdesign.cls:802-812); the locked kernel `\section` ran
+  /// `\@startsection` on the environment body instead (examplea/b/c: Perl 67
+  /// errors, Rust Fatal after 100). The class binding unlocks it before the
+  /// raw load.
+  #[test]
+  fn examdesign_owns_section_as_an_environment() {
+    let tex = r"\documentclass{examdesign}
+\begin{document}
+\begin{matching}[title={T}]
+  \pair{Elvis}{Spike}
+  \pair{Nirvana}{Nevermind}
+\end{matching}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<section"), "{xml}");
+    assert!(xml.contains("Elvis") && xml.contains("Nevermind"), "{xml}");
+    assert!(xml.matches("<item").count() >= 4, "{xml}");
+  }
+
+  /// latex.ltx:9551 `\protected@write` freezes `\protect`ed macros into the
+  /// index entry (`\let\protect\@unexpandable@protect`); expanding them at
+  /// `\index` time ran manyind.sty:100/119's `\protect\def\nwletre{…}` and
+  /// `\protect\nxtletre` (`\proc@letter`'s caller-closing `\fi`) in the
+  /// gullet (mindsample: `undefined \nwletre`, stray `\fi`).
+  #[test]
+  fn index_entry_defers_protected_macros() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}\makeindex
+\long\def\ltest#1{\ifx#1\ltest\else X\fi}
+\newcommand\nxt{\def\item{\ltest}}
+\begin{document}
+A\index{key@\protect\nxt}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<indexphrase key="key"/>"#), "{xml}");
+  }
+
+  /// pdfTeX `annot type spec` = `[useobjnum n] [rule spec] general text`;
+  /// the `(width|height|depth) dimen` rule spec was never read (Perl
+  /// pdfTeX.pool:156-171 too; KPE #151). pdfmarginpar.sty:142 passes it
+  /// whenever a `width=`/`height=` key is set (pdfmarginpar doc).
+  #[test]
+  fn pdfannot_reads_its_rule_spec() {
+    let tex = r"\documentclass{article}
+\begin{document}
+Hi\pdfannot width 4cm height 0.5cm {/Subtype /Text /Contents (x)} there
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hi there</p>"), "{xml}");
+  }
+
+  /// robustindex.sty:201-216 `\gobblepageref`/`\wrappageref` scan for the
+  /// `, \indpageref{N}` makeindex writes into an `.ind` line; LaTeXML's index
+  /// has no such line (robustsample.tex:82; multisample, robustmanual).
+  #[test]
+  fn robustindex_page_reference_hooks_are_inert() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}
+\usepackage{robustindex}
+\makeindex
+\begin{document}
+A\index{alpha!see also gamma\gobblepageref}
+B\index{beta\wrappageref\textbf}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">alpha</indexphrase>"), "{xml}");
+    assert!(xml.contains(">see also gamma</indexphrase>"), "{xml}");
+    assert!(xml.contains(">beta</indexphrase>"), "{xml}");
   }
 }

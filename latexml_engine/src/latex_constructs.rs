@@ -2889,8 +2889,24 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // {tag_if_active:TF}{}`). Perl's process_index_phrases (pool:4376-4397)
   // shares the omission; expanding is the faithful `\@wrindex` behaviour.
   // The `\verb` runs are absorbed first so their bodies stay verbatim.
+  // `\protected@write` (latex.ltx:9551) does `\let\protect\@unexpandable@protect`
+  // before its `\edef`, so a `\protect`ed macro is FROZEN into the entry and
+  // runs only when the entry is typeset. Expanding with `\protect`=`\relax`
+  // ran manyind.sty:100/119's `\protect\def\nwletre{…}`/`\protect\nxtletre`
+  // at write time — the `\def` never bound its name (`undefined \nwletre`)
+  // and `\proc@letter`'s caller-closing `\fi` (manyind.sty:148) surfaced as a
+  // stray `\fi` (mindsample; Perl, which never expands here, is clean).
+  // Guard: `perfect_kernel_batch54::index_entry_defers_protected_macros`.
   let toks = absorb_index_verb_runs(&token_list);
-  let token_list = do_expand_partially(Tokens::new(toks))?.unlist();
+  push_frame();
+  let_i(
+    &T_CS!("\\protect"),
+    &T_CS!("\\@unexpandable@protect"),
+    Some(Scope::Local),
+  );
+  let expanded = do_expand_partially(Tokens::new(toks));
+  pop_frame()?;
+  let token_list = expanded?.unlist();
   // Add terminal ! if not present
   let mut toks = token_list;
   if toks

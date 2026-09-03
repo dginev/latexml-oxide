@@ -104,6 +104,7 @@ pub mod emlines_sty;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
+pub mod examdesign_cls;
 pub mod fairmeta_cls;
 pub mod fancyvrb_ex_sty;
 pub mod fcs_cls;
@@ -199,6 +200,7 @@ pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod refstyle_sty;
+pub mod robustindex_sty;
 pub mod rotfloat_sty;
 pub mod rsphrase_sty;
 pub mod sagej_cls;
@@ -227,6 +229,7 @@ pub mod typearea_sty;
 pub mod unicode_math_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
+pub mod ltxtable_sty;
 pub mod pnas_new_cls;
 pub mod scis2024_cls;
 pub mod scrlayer_scrpage_sty;
@@ -408,6 +411,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // Perl-parity rationale (Perl ships no binding for any of these).
   ("fancyvrb-ex", "sty", fancyvrb_ex_sty::load_definitions),
   ("rsphrase", "sty", rsphrase_sty::load_definitions),
+  ("robustindex", "sty", robustindex_sty::load_definitions),
   ("hpstatement", "sty", hpstatement_sty::load_definitions),
   ("tgpagella", "sty", tgpagella_sty::load_definitions),
   ("sourcecodepro", "sty", sourcecodepro_sty::load_definitions),
@@ -429,6 +433,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),
+  ("ltxtable", "sty", ltxtable_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
   ("xr", "sty", xr_sty::load_definitions),
   ("xr-hyper", "sty", xr_sty::load_definitions),
@@ -509,6 +514,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("egpubl", "cls", egpubl_cls::load_definitions),
   ("ejpecp", "cls", ejpecp_cls::load_definitions),
   ("elife", "cls", elife_cls::load_definitions),
+  ("examdesign", "cls", examdesign_cls::load_definitions),
   ("fairmeta", "cls", fairmeta_cls::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
   ("getfiledate", "sty", getfiledate_sty::load_definitions),

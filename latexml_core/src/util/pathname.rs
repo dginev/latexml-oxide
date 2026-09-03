@@ -317,8 +317,9 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
 /// every subsequent real lookup hits the post-init fast path.
 ///
 /// **Concurrency:** safe to invoke on a background thread spawned at
-/// process start. `KPSE` is process-global (`Lazy<Mutex<…>>`), so the
-/// init done on a background thread is visible to the main thread.
+/// process start **only after [`init_kpathsea`] has run on the spawning
+/// thread** — see there. `KPSE` is process-global (`Lazy<Mutex<…>>`), so
+/// the init done on a background thread is visible to the main thread.
 /// The Mutex briefly serializes the prewarm against the main thread's
 /// first real lookup, but dump load + arg parsing take >50 ms before
 /// digest reaches its first package resolution, by which point the
@@ -371,6 +372,42 @@ pub fn prewarm_kpathsea() {
 /// proc-macro build, which never resolves TeX files).
 #[cfg(not(feature = "kpathsea"))]
 pub fn prewarm_kpathsea() {}
+
+/// Construct the process-wide kpathsea handle NOW, on the calling thread,
+/// before any other thread exists that might read the environment.
+///
+/// `Kpaths::new` runs libkpathsea's `kpathsea_set_program_name`, which
+/// `putenv`s `SELFAUTOLOC`/`SELFAUTODIR`/`SELFAUTOPARENT`/
+/// `SELFAUTOGRANDPARENT` (progname.c). glibc's `putenv` of a new name
+/// reallocates the `environ` array and frees the old one; a concurrent
+/// `getenv` on another thread — `std::env::var`, chrono's `TZ` read inside
+/// `localtime_r`, the logger's `NO_COLOR` probe — walks the freed array.
+/// That is undefined behaviour with no lock to take: glibc's `getenv` is
+/// lock-free by contract, so the only sound ordering is "all `putenv`
+/// before any second thread". The CLI used to run this construction on
+/// the prewarm thread while the worker thread parsed options: sweep #35
+/// (release build, 2374 docs) caught one general-protection fault in
+/// `getenv+0x56` (`traps: latexml_oxide.s[1711120] general protection
+/// fault … in libc.so.6`, pstool/pstool at 1.1 s, unreproducible in 9
+/// reruns — a race, not a document).
+///
+/// Cost: ~0.1 ms for the construction plus the two memoized `kpsewhich`
+/// probes (`--version`, `-var-value=SELFAUTOPARENT`) that pick the
+/// backend. The expensive part of kpathsea start-up — `kpathsea_init_db`
+/// on the first lookup — is read-only with respect to the environment and
+/// stays on the [`prewarm_kpathsea`] background thread.
+#[cfg(feature = "kpathsea")]
+pub fn init_kpathsea() {
+  // Forces the `Lazy` (= `select_kpaths()`); the guard is released at once.
+  drop(
+    KPSE
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner),
+  );
+}
+
+#[cfg(not(feature = "kpathsea"))]
+pub fn init_kpathsea() {}
 
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
 static CANONICAL_URL_RE: Lazy<Regex> =

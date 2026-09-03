@@ -495,6 +495,30 @@ faithfulness argument and guards: OXIDIZED_DESIGN **#80**.
 attributable to an *uncited* entry disappears with this change. Re-measure rather
 than reading a drop as a separate fix.
 
+## Cluster J — start-up `getenv`/`putenv` race in the CLI (GENUINE Rust-only) — ✅ FIXED 2026-09-03
+
+**Witness**: perfect-kernel sweep #35 (release build, 2,374 docs), pstool/pstool:
+exit 139 at 1.1 s, `traps: latexml_oxide.s[1711120] general protection fault
+ip:7f4b57448806 … in libc.so.6` = `getenv+0x56`; unreproducible in 9 reruns
+with the identical command — a race, not a document.
+
+**Cause**: `bin/latexml_oxide.rs` spawned the kpathsea prewarm thread
+(`prewarm_kpathsea`) before the `KPSE` handle existed, so that thread ran
+`Kpaths::new` → libkpathsea `kpathsea_set_program_name` → `putenv` ×4
+(`SELFAUTOLOC`/`DIR`/`PARENT`/`GRANDPARENT`) while the worker thread parsed
+options, initialised the logger and stamped the banner — `std::env::var`,
+`NO_COLOR`, chrono's `TZ` inside `localtime_r`, all `getenv`. glibc's `putenv`
+of a new name reallocates `environ` and frees the old array; `getenv` is
+lock-free by contract and walks it. `cortex_worker` had the same shape.
+
+**Fix**: `latexml_core::util::pathname::init_kpathsea()` forces the handle on
+the calling thread before either binary spawns its prewarm thread; the prewarm
+now only performs read-only lookups (`kpathsea_init_db`). Cost ≈ the two
+memoised `kpsewhich` probes (`--version`, `-var-value=SELFAUTOPARENT`), a few
+ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
+run construction on the single worker thread they spawn; a multi-threaded host
+should call `init_kpathsea()` once at start-up before converting concurrently.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

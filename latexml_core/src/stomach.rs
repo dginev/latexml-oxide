@@ -1083,6 +1083,44 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 thread_local! {
   // Re-entrancy guard so `\everypar`'s own digestion can't recursively re-fire it.
   static EVERYPAR_FIRING: Cell<bool> = const { Cell::new(false) };
+  // How many isolated argument digestions (`digest(tokens)`) are open, with
+  // `digest_next_body` resetting the count to 0 for the list it captures.
+  // tex.web §1091 `new_graf` fires `\everypar` when a *list* — the main
+  // vertical list or a `\vbox`'s internal one — starts a paragraph; a
+  // constructor's digested `{}` argument is macro-parameter text that TeX
+  // never typesets as such, so a paragraph "started" while reverting it is
+  // not a `new_graf`. An armed `\everypar` (latex.ltx `\@afterheading`'s
+  // `{\setbox\z@\lastbox}`, left by ltugboat.cls:1214 `\aftergroup
+  // \@afterheading` in `\@maketitle`) used to fire inside
+  // `\@@numbered@section`'s *type* argument and revert into it as
+  // `{}section` — counter `\c@{}section`, tag `ltx:{}section` (lazylist,
+  // parnotes; guard
+  // `perfect_kernel_batch54::everypar_does_not_fire_inside_a_constructor_argument`).
+  static ARG_DIGEST_DEPTH: Cell<u32> = const { Cell::new(0) };
+}
+
+/// RAII bookkeeping for `ARG_DIGEST_DEPTH`: restores the saved depth on
+/// drop, so early `?` returns inside a digestion loop cannot leave the count
+/// skewed.
+struct ArgDigestScope(u32);
+
+impl ArgDigestScope {
+  /// Enter an isolated argument digestion (depth + 1).
+  fn enter_argument() -> Self {
+    let saved = ARG_DIGEST_DEPTH.with(|d| d.replace(d.get() + 1));
+    ArgDigestScope(saved)
+  }
+
+  /// Enter a body capture: the captured material is a list of its own
+  /// (a box, an environment body), so `new_graf` applies again inside it.
+  fn enter_body() -> Self {
+    let saved = ARG_DIGEST_DEPTH.with(|d| d.replace(0));
+    ArgDigestScope(saved)
+  }
+}
+
+impl Drop for ArgDigestScope {
+  fn drop(&mut self) { ARG_DIGEST_DEPTH.with(|d| d.set(self.0)); }
 }
 
 /// Fire `\the\everypar` when a paragraph enters horizontal mode, the way tex.web's
@@ -1104,7 +1142,7 @@ thread_local! {
 /// the listingline. Errors are swallowed (this rides the infallible mode-switch
 /// path); a genuine fatal is re-detected at the next digest-loop checkpoint.
 fn fire_everypar() {
-  if EVERYPAR_FIRING.with(|f| f.get()) {
+  if EVERYPAR_FIRING.with(|f| f.get()) || ARG_DIGEST_DEPTH.with(|d| d.get()) > 0 {
     return;
   }
   let toks = match lookup_register("\\everypar", Vec::new()) {
@@ -1579,6 +1617,7 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
     clear_prefixes(); // prefixes shouldn't apply here.
+    let _arg_scope = ArgDigestScope::enter_argument();
     let mode = if lookup_bool_sym(crate::pin!("IN_MATH")) {
       TexMode::Math
     } else {
@@ -1637,6 +1676,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   // not tokens were read before it. See the trailer push below.
   let mut ran_out = true;
   let mut found_terminal = false;
+  let _body_scope = ArgDigestScope::enter_body();
   new_local_box_list();
   let alignment_opt = lookup_alignment();
   // TODO: bookkeep for "expected" warning

@@ -71,4 +71,13 @@ LoadDefinitions!({
 
   def_macro_noop("\\quotelinenumberfont")?;
   DefRegister!("\\quotelinenumbersep", Number(0));
+
+  // lineno.sty:1077 `\newif\ifLineNumbers \LineNumbersfalse`, :1934-1935
+  // `\newif\ifoddNumberedPage`, `\newif\ifcolumnwiselinenumbers`. Classes test
+  // the switch: minimalist.sty:144 `\LocallyStopLineNumbers` =
+  // `\LNturnsONfalse\ifLineNumbers\LNturnsONtrue\fi\nolinenumbers`, reached
+  // from homework.cls:128 `\@maketitle` (homework-demo-{cn,de,en,es,fr,jp}).
+  DefConditional!("\\ifLineNumbers");
+  DefConditional!("\\ifoddNumberedPage");
+  DefConditional!("\\ifcolumnwiselinenumbers");
 });

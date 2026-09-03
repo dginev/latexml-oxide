@@ -65,7 +65,31 @@ pairing (the XML side) rides on the nest record, which is what
 `maybeCloseElement` already tolerates. Risk MED-HIGH: touches every
 `begin_mode` site; the arXiv canvas witnesses for the current model
 (1112.6246 halign frame balance, 0802.2207 `mathtrivlist`) must be
-re-converted. **Entry needs the user's go** (directive 2026-07/08, R9).
+re-converted. **Entry needs the user's go** (directive 2026-07/08, R9);
+granted 2026-09-02 ("all queued surpass shapes + R9 approved").
+
+**Correction (2026-09-03) — what the two-stack model must NOT do.** A
+wave-12 design pass proposed making `$` close inline math "only when the
+math frame is the current group", on the claim that `X ${$b$}$ Y` and
+`{$b$}` inside an `align*` cell are RUST-ONLY failures. Both claims were
+wrong: the agent's Perl runs never executed (empty stderr files read as
+"0 errors"), and same-host Perl 0.8.8 emits the same two
+`Attempt to end mode math` errors. tex.web agrees: §1065 (`mmode +
+math_shift: if cur_group = math_shift_group then after_math else
+off_save`) makes a `$` under a simple/semi-simple group an error
+("Missing } inserted", §1064 recovery inserts the closer). So tex.web
+keeps two stacks *and* still rejects a mode close across a group
+boundary — the nest is separate from the save stack, but `after_math`
+is gated on `cur_group`. The two-stack design therefore only changes the
+cases where TeX itself pushes both stacks together — `\hbox\bgroup` /
+`\vbox\bgroup` / `$` (§1083 `begin_box` → `push_nest` + `new_save_level`;
+§1139 `init_math`) — and where LaTeXML today opens the box in one macro
+and closes it in another; a `$` or `\egroup` meeting the wrong group
+stays an error in both models, with §1064's insert-the-closer recovery
+as the surpass-grade improvement over Perl's "don't pop". Any witness
+proposed for this theme must be re-verified against Perl **with the
+same preload** and against pdflatex's log, and its stderr must contain
+`Conversion complete:` to count as a run.
 
 ## 2. Constructors bind at the user-level macro, not at the latex.ltx seam
 
@@ -99,36 +123,61 @@ over the surface; every stub gets the delete-if-raw-loads-clean audit
 (PLANS "Approach revision", 25 raw-blocking stubs). Risk per seam LOW–MED;
 each seam needs its arXiv counter-witness re-converted (P38: 0802.2207).
 
-## 3. No `\halign`; alignment is a constructor-level interception
+## 3. Alignment IS a faithful `\halign`; the gaps are the width pass, theme 1, and package internals
 
-**TeX model.** `\halign` (tex.web §768–812) reads a preamble of u/v
-template parts split by `#`, then for each cell inserts the u-part,
-the cell, the v-part; `\omit`, `\span`, `\noalign`, `\cr`, `\crcr`,
-`\tabskip` are primitives on that machinery. LaTeX's `\@array`
-(latex.ltx:16564) builds the template from the column spec with
-`\@sharp` standing in for `#`, and *every* table package — array,
-longtable, tabu, tabularray, nicematrix, colortbl, memoir's tables —
-patches `\@array`/`\@mkpream`/`\@classz` or emits `\halign` directly.
+*Rewritten 2026-09-03 after a design investigation (the earlier text claimed
+"no `\halign`, no template insertion, no `\@sharp` semantics" — wrong).*
 
-**LaTeXML model.** The Stomach has an `Alignment` object opened by
-`\lx@begin@alignment` that catches `&` and `\\` as constructor
-arguments (`latexml_core/src/alignment.rs`); there is no `\halign`, no
-template insertion, no `\@sharp` semantics. Every package that reaches
-the internals needs its own binding, and each binding re-implements the
-column spec (nicematrix P23/P31–35/P40/P49, tabularray P24, tabu,
-longtable/xltabular, aguplus P41/P48). memman's residual 128 `&` + 28
-`\@sharp` and bibleref-parse's tabular breakage (wave 4) are the same gap
-seen from raw code.
+**TeX model.** `\halign` (tex.web §768–812: `init_align` 15327 pushes an
+align_group on the save stack AND a nest level; `init_row`/`init_span`/
+`init_col` insert the u-part; the alignment tab and `\cr` are recognised
+purely by `align_state` and fire `fin_col` (v-part via `\endtemplate`) and
+`fin_row`; `fin_align` 15743 runs the two-pass column-width computation over
+unset nodes).
 
-**Fix shape.** Implement `\halign` semantics at the Stomach level — a
-template reader producing u/v Tokens per column, cell processing that
-*inserts* the template around the cell tokens, `\omit`/`\span`/`\noalign`
-/`\cr` as primitives — and layer the current `Alignment` element-building
-on top (columns come from the template, not from a re-parsed spec).
-`\@array` then raw-loads and the per-package column-spec re-implementations
-retire. Risk HIGH (every tabular golden), payoff = the largest unparked
-cluster; do it after theme 1 so that cells containing mode changes
-(`\parbox`, `minipage`, verb, listings) are not blocked by the frame model.
+**LaTeXML model (Perl = Rust, line-faithful port).** `TeX_Tables.pool.ltxml:164`
+/ `tex_tables.rs:278` implement `\halign` with the REAL `#` preamble
+(`parseHAlignTemplate` → `parse_halign_template`, `tex_tables.rs:1498`: u/v
+split at `CC_PARAM`, `\tabskip`, `\span`, repeated columns on a leading `&`),
+and the §309 alignment-tab-as-scanner-event: `Gullet::readToken` classifies
+`&`/`\cr`/`\crcr`/`\span` when `ALIGN_STATE == 0` (`Gullet.pm:266-278` →
+`gullet.rs:3341`), `handleTemplate` inserts the v-part and a `before-column`
+marker resets the state (`gullet.rs:3366`). Raw `\halign{#\hfil&\hfil#\cr…}`
+and a tikz `matrix of nodes` convert with 0 errors in both engines; `\valign`
+already beats Perl. The `Alignment` object (`alignment.rs:108`) with its
+`Template`/`Cell` (u/v token parts, align, tabskip, colspan) is what the
+LaTeX `tabular`/`array` bindings sit on (`DefColumnType` → `\NC@rewrite@<c>`,
+`read_alignment_template` `alignment.rs:951`).
+
+**The real mismatches.** (1) **No `fin_align` width pass** — cells digest
+straight to boxes; `normalizeAlignment` guesses widths, so width-driven
+columns (tabularx `X`, longtable auto-measure) cannot come from the kernel
+and live in per-package bindings (tabu, tabularx, longtable, xltabular,
+tabularray, supertabular, tabulary all exist and pass). (2) **One stack, not
+two (theme 1)** — the alignment runs eagerly under a single `bgroup` +
+`begin_mode`, so pgf's `\hbox\bgroup\vbox\bgroup\halign\bgroup…\egroup
+\egroup\egroup` (pgf matrix: tex-font-cheatsheet) and tabular-in-box collide
+with the frame model. (3) **Eager body read** — a row-boundary command in an
+unexpected position (`\hline\newpage\hline`, harmony) desyncs the leading-row
+scan (`tex_tables.rs:958-1002`) instead of being absorbed by the main loop
+(SHARED: Perl 3 errors, Rust 1). (4) `\span`/`omit_template` splicing is
+simplified (`\lx@alignment@multicolumn`, `tex_tables.rs:586`).
+
+**Fix shape.** Not a second `\halign` engine (it would duplicate working
+code and touch none of the roots). In order: (i) binding hygiene — the only
+real hole is `ltxtable` (`\LTXtable{width}{file}`: no binding in Perl or Rust;
+raw ltxtable reaches `\TX@col@width`/`\TX@target`/`\LT@echunk`/`\LT@get@widths`,
+none of which exist — tikzcodeblocks, vhistory ~30-error cascade); (ii) theme 1
+for the box-nested `\halign` family; (iii) optionally skip `\newpage`-family
+marks in the leading-row scan (SHARED, low payoff); (iv) DEFER the width pass —
+only the width-driven columns need it and their bindings already provide it.
+Running array/tabularx/longtable RAW is not worth it: `\@array`/`\@mkpream`/
+`\@classz` are reimplemented via `DefColumnType`, and the raw path would need
+the whole `\TX@*`/`\LT@*` surface plus the width pass. Guard corpus:
+`latexml_oxide/tests/alignment/` (32 pairs, swept by `53_alignment.rs` and
+`114_streaming_alignment.rs`), `87_trip::halign_body_implicit_cr`, the
+`cluster_package_guards` tabular tests. Repros:
+`~/data/pk_agents/w12/halign/`.
 
 ## 4. The token stream is not TeX's
 
