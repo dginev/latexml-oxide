@@ -2898,13 +2898,39 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // stray `\fi` (mindsample; Perl, which never expands here, is clean).
   // Guard: `perfect_kernel_batch54::index_entry_defers_protected_macros`.
   let toks = absorb_index_verb_runs(&token_list);
+  // A control SYMBOL in the entry is never expanded here. After `\@sanitize`
+  // (latex.ltx:1778) real `\@wrindex` writes a `\string`ed control symbol as
+  // two characters, makeindex drops the sort key entirely and `\printindex`
+  // re-reads only the display — so amsldoc.cls:84-89's sort key `\*` for
+  // `\cn{\\*}` is never executed. `SanitizedVerbatim`'s re-tokenization
+  // welds those two characters back into the live `\*` (amsldoc.cls:213
+  // `\def\*#1`), which ate the rest of the entry (itamsldoc, amsldoc-vi;
+  // Perl shares it, PLANS P73). Freezing every control symbol with
+  // `\noexpand` keeps `\*` inert (the key is a string anyway) while accents
+  // in the display (`M\"uller`) are constructors and unaffected; separators
+  // still come from control WORDS (`\idx@actual`). Guard:
+  // `perfect_kernel_batch54::index_sanitized_backslash_symbol_stays_literal`.
+  let mut frozen: Vec<Token> = Vec::with_capacity(toks.len());
+  for t in toks {
+    if t.get_catcode() == Catcode::CS
+      && t.with_str(|s| {
+        let mut chars = s.chars();
+        chars.next() == Some('\\')
+          && chars.next().is_some_and(|c| !c.is_alphabetic())
+          && chars.next().is_none()
+      })
+    {
+      frozen.push(T_CS!("\\noexpand"));
+    }
+    frozen.push(t);
+  }
   push_frame();
   let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\@unexpandable@protect"),
     Some(Scope::Local),
   );
-  let expanded = do_expand_partially(Tokens::new(toks));
+  let expanded = do_expand_partially(Tokens::new(frozen));
   pop_frame()?;
   let token_list = expanded?.unlist();
   // Add terminal ! if not present
@@ -5762,6 +5788,11 @@ LoadDefinitions!({
     "\\thanks OptionalSemiverbatim {}",
     r"\def\@thanks{#2}\lx@add@pubnote{#2}"
   );
+  // ijmart.cls:180-182's `\thanks` accumulates `\thankses`, which its
+  // `\@maketitle` (:246) lays out; ours emits a pubnote instead, so the
+  // accumulator stays at its class-initial empty value for the layout run
+  // under `\lx@deposit@maketitle` (OXIDIZED_DESIGN #124; ijmart doc).
+  DefMacro!("\\thankses", "");
 
   // Abstract SHOULD have been so simple, but seems to be a magnet for abuse & confusion.
   // Standard LaTeX classes expect it after \maketitle, and deposit it where found.
@@ -5778,7 +5809,18 @@ LoadDefinitions!({
   // OR even \abstract text... \somethingelse  (section? \par ?)
   DefMacro!("\\abstract", {
     if if_next(T_BEGIN!())? {
-      Tokens!(T_CS!("\\lx@add@abstract"))
+      // `\abstract{…}` is NOT a macro call in LaTeX: `\abstract` is the
+      // environment's begin code and `{…}` a plain group the body is read
+      // through incrementally, so a `\makeatletter` inside it takes effect
+      // before the `\patch@level` that follows (char-list-alphabeta.tex:88-103,
+      // char-list). Taking the group as a pre-tokenized `{}` argument
+      // (`\lx@add@abstract{#1}`) split it into `\patch`+`@level` — Perl shares
+      // that (PLANS P74). Keep the group a group: open the abstract, re-emit
+      // the `{`, and let the group's end close the abstract via `\aftergroup`.
+      // Guard: `perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`.
+      read_token()?;
+      Tokens!(
+        T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes
@@ -8340,6 +8382,7 @@ LoadDefinitions!({
     let mut toks = vec![T_CS!(ctr_str), T_CS!(unctr)];
     toks.extend(prev.unlist());
     assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
+    sync_reset_list_macro(&within_str)?;
   });
 
   // Perl: latex_constructs.pool.ltxml \@removefromreset
@@ -8354,6 +8397,7 @@ LoadDefinitions!({
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();
       assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
+      sync_reset_list_macro(&within_str)?;
     }
   });
 
@@ -8368,6 +8412,7 @@ LoadDefinitions!({
     let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
     toks.extend(prev.unlist());
     assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
+    sync_reset_list_macro(&within_str)?;
     if star.is_none() {
       // Redefine \thectr to include \thewithin prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));
@@ -8405,6 +8450,7 @@ LoadDefinitions!({
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();
       assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
+      sync_reset_list_macro(&within_str)?;
     }
     if star.is_none() {
       // Redefine \thectr without prefix

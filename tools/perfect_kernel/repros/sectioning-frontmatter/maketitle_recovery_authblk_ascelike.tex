@@ -1,0 +1,23 @@
+% witness: ascelike/ascexmpl (ascelike.cls:406-411 \renewcommand{\@maketitle}{...\AB@authlist...}; authblk.sty:109 \newcommand\AB@authlist{})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-03) — RUST-ONLY
+% expect:  0 errors; a <ltx:title> with author frontmatter, no <ltx:ERROR>
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::class_maketitle_layout_over_binding_accumulators
+% mechanism: \maketitle (latex_constructs.rs:5741) runs \lx@deposit@maketitle (:5716),
+%   which EXECUTES the class \@maketitle when non-empty (surpass-Perl #124, recovers
+%   \g@addto@macro-injected content). ascelike \renewcommand's \@maketitle to reference
+%   authblk internal \AB@authlist, which the authblk_sty.rs binding (binds \author, not the
+%   \AB@* token lists) never defines -> undefined-cs. Perl \let\@maketitle\relax, discards it.
+%   Same path: ijmart \thankses (ijmart.cls:246), resphilosophica \author@andify (:323).
+\documentclass{article}
+\usepackage{authblk}
+\author{Alice}
+\title{T}
+\makeatletter
+\renewcommand{\@maketitle}{\begin{center}\@title\\ \AB@authlist\end{center}}
+\makeatother
+\begin{document}
+\maketitle
+Body.
+\end{document}

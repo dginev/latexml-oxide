@@ -136,6 +136,33 @@ LoadDefinitions!({
     );
     RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
+    // `\str_const:Ne \c_sys_engine_str {\cs_if_exist:NT \tex_luatexversion:D {luatex} …}`
+    // and one `\__sys_const:nn {sys_if_engine_<e>}` per engine), when
+    // `\luatexversion` did not exist yet, so `\sys_if_engine_luatex:TF` stayed FALSE
+    // under this profile and polyglossia's gloss-latin.ldf:125 took its XeTeX branch
+    // (`\newXeTeXintercharclass` ×12; hang, sample). Re-derive the constants the
+    // way :7860 does, with the engine now known; `\c_sys_engine_exec_str` (:7868-7884)
+    // and `\c_sys_engine_format_str` (:7886-7916, LaTeX2e format) follow.
+    // Guard: `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+    RawTeX!(
+      r"\ExplSyntaxOn
+        \tl_gset:Nn \c_sys_engine_str { luatex }
+        \tl_map_inline:nn { { pdftex } { ptex } { uptex } { xetex } }
+          {
+            \cs_gset_eq:cN { sys_if_engine_ #1 :T }  \use_none:n
+            \cs_gset_eq:cN { sys_if_engine_ #1 :F }  \use:n
+            \cs_gset_eq:cN { sys_if_engine_ #1 :TF } \use_ii:nn
+            \cs_gset_eq:cN { sys_if_engine_ #1 _p: } \c_false_bool
+          }
+        \cs_gset_eq:cN { sys_if_engine_luatex :T }  \use:n
+        \cs_gset_eq:cN { sys_if_engine_luatex :F }  \use_none:n
+        \cs_gset_eq:cN { sys_if_engine_luatex :TF } \use_i:nn
+        \cs_gset_eq:cN { sys_if_engine_luatex _p: } \c_true_bool
+        \tl_gset:Nn \c_sys_engine_exec_str { luatex }
+        \tl_gset:Nn \c_sys_engine_format_str { lualatex }
+        \ExplSyntaxOff"
+    );
     // The lualatex FORMAT surface: latex.ltx:107-110 enables the LuaTeX
     // extra primitives and :896-1058 (= ltluatex.dtx `2ekernel`) defines the
     // allocators every LuaTeX-branch package assumes — luaotfload.sty:38

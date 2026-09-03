@@ -6326,6 +6326,16 @@ libertinus→otf), TL doc bundles oracle-classified lualatex (~300).
 
 **Upstream**: branch-contained per user directive (perfect_kernel).
 
+**l3sys (batch 54m, 2026-09-03).** expl3 freezes `\c_sys_engine_str` and the
+`\sys_if_engine_<e>` conditionals at format-build time (expl3-code.tex:7846-7861,
+`\cs_if_exist:NT \tex_luatexversion:D {luatex}`), before the profile defined
+`\luatexversion`, so `\sys_if_engine_luatex:TF` stayed FALSE and polyglossia's
+gloss-latin.ldf:125 took its XeTeX branch (`\newXeTeXintercharclass` ×12; hang,
+sample). The profile now re-derives them (`\c_sys_engine_str` = luatex, the
+five engine conditionals, `\c_sys_engine_exec_str`/`_format_str` = luatex /
+lualatex per :7868-7916). `sys_if_engine_opentype` is left as derived. Guard:
+`perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+
 ### 169. Raw loader keeps `\ProvidesPackage`'s `\ver@<file>` (fallback-only `\fmtversion`)
 
 **Perl behavior**: `Package.pm` L2393 (raw loadTeXDefinitions) unconditionally
@@ -6561,3 +6571,23 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Witnesses**: makeshape/testsample, optikz/optikz_doc.
 **Guard**: `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
 **Upstream**: not filed.
+
+### 187. `\@ifundefined` leaves the probed name undefined (Perl defines it as `\relax`)
+
+**Perl behavior**: `Base_Utility.pool.ltxml:23-31` probes with the
+`\csname…\endcsname\relax` idiom, so after `\@ifundefined{foo}{}{}` the name
+`\foo` IS defined (`\relax`) — the golden `t/expansion/definedness.xml`
+records "After the @ifundefined: `\relax`, IS defined, IS cs-defined".
+**Rust behavior**: no side effect, as latex.ltx:1729-1737 (`\ifcsname`, LaTeX
+2020+) and pdflatex on the same test ("undefined, is NOT defined, is NOT
+cs-defined"); the golden is re-blessed to pdflatex's answer.
+**Why**: a reentrancy-guarded file loaded as `\@ifundefined{sentinel}
+{\input file}{}` must find its sentinel undefined — polyglossia's
+gloss-*.ldf:591 + babelsh.def:1 (19 languages) early-exited with
+`\bbl@afterfi` undefined (KPE #158). Kernel-quality, engine-level, pdflatex
+is the oracle.
+**Witnesses**: hang/hang, hang/sample (TeX Live doc corpus).
+**Guard**: `perfect_kernel_batch54::ifundefined_does_not_define_the_name`;
+golden `tests/expansion/definedness.xml`.
+**Upstream**: not filed.
+

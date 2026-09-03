@@ -2,7 +2,8 @@
 % oracle:  pdflatex 0 errors (verified 2026-09-03)
 % engines: rust=2 perl=2 (2026-09-03) — SHARED (Perl: 2x "Expected a relational token")
 % expect:  0 errors; index entry keeps a catcode-12 backslash-star, no \KV@tempa/readBalanced
-% status:  RED
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::index_sanitized_backslash_symbol_stays_literal
 % mechanism: \cn{\\*} (amsldoc.cls:114 \cs -> \@indexcs, :84 \indexcs) writes an \index
 %   entry containing the STRINGED control symbol \\* (catcode-12 `\'+`*'). process_index_phrases
 %   re-tokenizes the entry (SanitizedVerbatim, base_parameter_types.rs:567-591 + do_expand_partially),

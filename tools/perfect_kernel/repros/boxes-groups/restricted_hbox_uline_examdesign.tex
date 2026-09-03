@@ -1,0 +1,27 @@
+% witness: examdesign/examplea (examdesign.cls:1208 \item[\uline{\makebox[.5in][c]{..}}])
+% oracle:  pdflatex 0 errors (examplea.pdf ships clean)
+% engines: rust=10 perl=7 (2026-09-03)
+% expect:  0 errors; the truefalse answer-key item shows the boxed solution "True"
+% status:  RED
+% mechanism: the truefalse KEY (answer pass) sets each item label to
+%   \uline{\makebox[.5in][c]{True}} inside a \list. ulem's \uline (copied into
+%   examdesign.cls:141-200) underlines word-by-word: \UL@start opens
+%   `\setbox\UL@box\hbox\bgroup..\bgroup` and \UL@stop closes `\egroup\egroup`
+%   in a DIFFERENT macro. Those hbox-word boxes interleave with the \@makebox
+%   mode frame; Rust's restricted_horizontal hbox reader uses TWO frames
+%   (begin_mode + invoke_token(T_BEGIN)) where Perl readBoxContents uses ONE, so
+%   every stray \egroup/\@makebox meets the wrong frame.
+%   tex.web §1083 begin_box pushes nest AND save level together for \hbox\bgroup.
+\documentclass[10pt]{examdesign}
+\Fullpages
+\ContinuousNumbering
+\DefineAnswerWrapper{}{}
+\NumberOfVersions{2}
+\class{{\Large A sample exam}}
+\begin{document}
+\begin{truefalse}[title={T/F}]
+\begin{question}
+  \answer{True} This sentence is not false.
+\end{question}
+\end{truefalse}
+\end{document}

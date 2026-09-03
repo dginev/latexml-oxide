@@ -49,6 +49,45 @@ pub struct NewCounterOptions<'ct> {
   pub nested: Vec<&'ct str>,
 }
 
+/// Mirror the reset list into the `\cl@<ctr>` MACRO latex.ltx exposes.
+///
+/// latex.ltx:10140-10142 `\@definecounter` lets `\cl@<ctr>` to `\@empty` and
+/// :10156 `\@addtoreset` `\@cons`es `\@elt{<child>}` onto it, so the reset list
+/// is a macro raw code expands and rewrites: contract.sty:336
+/// `\edef\cl@Clause{\cl@Clause\cl@contractClause}` (contract-example-de/-en,
+/// 44 errors each), afthesis.cls:44-49's `\@removefromreset` re-`\edef` with a
+/// filtering `\@elt` (usethesis: "`\cl@chapter` expands into itself"). LaTeXML
+/// keeps the list as the State VALUE `\cl@<ctr>` (Perl Package.pm:674, entries
+/// `\<child>`/`\UN<child>`), which stays authoritative for stepping; this
+/// re-derives the macro (`\@elt{child}` per non-`UN` entry) after every
+/// mutation so both faces agree. Perl shares the gap (sectioning topic).
+/// Guard: `perfect_kernel_batch54::reset_list_is_an_expandable_cl_macro`.
+pub fn sync_reset_list_macro(ctr: &str) -> Result<()> {
+  let clctr = s!("\\cl@{ctr}");
+  let mut body: Vec<Token> = Vec::new();
+  if let Some(list) = lookup_tokens(&clctr) {
+    for t in list.unlist() {
+      let name = t.with_str(|s| s.to_string());
+      if name.starts_with("UN") {
+        continue;
+      }
+      body.push(T_CS!("\\@elt"));
+      body.push(T_BEGIN!());
+      body.extend(ExplodeText!(name));
+      body.push(T_END!());
+    }
+  }
+  def_macro(
+    T_CS!(&clctr),
+    None,
+    ExpansionBody::from(Tokens::new(body)),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )
+}
+
 /// Defines a new counter named $ctr.
 /// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
 pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOptions>) -> Result<()> {
@@ -106,6 +145,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   if !has_value(&clctr) {
     assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
+  sync_reset_list_macro(ctr)?;
   def_register(T_CS!(&cunctr), None, Number::new(0), None)?;
   if !has_value(&clunctr) {
     assign_value(&clunctr, Tokens!(), Some(Scope::Global));
@@ -139,7 +179,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       &clunwithin,
       Stored::Tokens(Tokens::new(clunwithin_tokens)),
       Some(Scope::Global),
-    )
+    );
+    sync_reset_list_macro(within)?;
   }
 
   if let Some(ref options) = options_opt

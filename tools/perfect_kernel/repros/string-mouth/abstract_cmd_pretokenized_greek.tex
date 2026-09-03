@@ -7,7 +7,8 @@
 %   \patch + @level -> \patch undefined. Real \abstract is the ENVIRONMENT begin-code, whose
 %   body is read incrementally, so the inner \makeatletter takes effect BEFORE \patch@level is
 %   scanned. P74 fix: route braced \abstract{ to the environment path (latex_constructs.rs:5728-5740).
-% status:  RED
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally
 \documentclass{article}
 \begin{document}
 \abstract{ \noindent Test.

@@ -9752,4 +9752,286 @@ B\index{beta\wrappageref\textbf}
     assert!(xml.contains(">see also gamma</indexphrase>"), "{xml}");
     assert!(xml.contains(">beta</indexphrase>"), "{xml}");
   }
+
+  /// `\abstract{…}` is the environment's begin code plus a plain group in
+  /// LaTeX, read incrementally — a `\makeatletter` inside it precedes the
+  /// `\patch@level` that follows (char-list-alphabeta.tex:88-103; PLANS P74,
+  /// SHARED). It was taken as one pre-tokenized `{}` argument.
+  #[test]
+  fn braced_abstract_reads_its_body_incrementally() {
+    let tex = r"\documentclass{article}
+\makeatletter\def\patch@level{7}\makeatother
+\title{T}
+\begin{document}
+\maketitle
+\abstract{ \noindent Test.
+\makeatletter
+patch-level \patch@level{} here.
+\makeatother
+}
+Body text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<abstract"), "{xml}");
+    assert!(xml.contains("patch-level 7 here."), "{xml}");
+    assert!(xml.contains("<p>Body text.</p>"), "{xml}");
+  }
+
+  /// latex.ltx:10140-10156 keep a counter's reset list as the macro
+  /// `\cl@<ctr>` = `\@elt{child}…`; raw code expands and rewrites it
+  /// (contract.sty:336 `\edef\cl@Clause{\cl@Clause\cl@contractClause}`,
+  /// afthesis.cls:44-49 `\@removefromreset` re-`\edef`). LaTeXML's State value
+  /// stays authoritative; the macro mirrors it after every mutation.
+  #[test]
+  fn reset_list_is_an_expandable_cl_macro() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\newcounter{Clause}\newcounter{contractClause}[Clause]
+\newcounter{Extra}\@addtoreset{Extra}{Clause}
+\edef\cl@Clause{\cl@Clause\cl@contractClause}
+\def\@elt#1{[#1]}
+\begin{document}
+A\cl@Clause B\cl@contractClause C
+\stepcounter{contractClause}\stepcounter{Clause}\thecontractClause
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("[contractClause]") && xml.contains("[Extra]"),
+      "{xml}"
+    );
+    assert!(xml.contains("BC"), "{xml}");
+    // the Value list still drives the reset: Clause stepped -> contractClause back to 0
+    assert!(xml.contains("0</p>") && !xml.contains("1</p>"), "{xml}");
+  }
+
+  /// `\mbox\bgroup A … B\egroup` (syntax.sty:158 `\syn@assist`; the newcommand
+  /// manual's `grammar` environment): TeX hands `\bgroup` to `\mbox#1` as its
+  /// one-token argument and the box then runs to the `\egroup`. A `{}` argument
+  /// that is exactly an implicit begin-group reads its group by digestion.
+  #[test]
+  fn implicit_bgroup_argument_reads_its_group() {
+    let tex = r"\documentclass{article}
+\def\OPEN{\mbox\bgroup A}
+\def\CLOSE{ B\egroup}
+\begin{document}
+X\OPEN\CLOSE Y
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("XA BY"), "{xml}");
+    let tex = r#"\documentclass{article}
+\usepackage{syntax}
+\begin{document}
+\begin{grammar}
+<decl> ::= \[[ "MACRO" <ident> \]]
+\end{grammar}
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("MACRO"), "{xml}");
+  }
+
+  /// amsldoc.cls:84-89 `\indexcs` writes the sort key of `\cn{\\*}` as the
+  /// `\string`ed `\*` — catcode-12 after `\@sanitize` (latex.ltx:1778); the
+  /// whole-string re-tokenization welded it into the live `\*` (amsldoc.cls:213)
+  /// which ate the entry (itamsldoc, amsldoc-vi; PLANS P73, SHARED).
+  #[test]
+  fn index_sanitized_backslash_symbol_stays_literal() {
+    let tex = r#"\documentclass{amsldoc}
+\usepackage{guit}
+\usepackage{makeidx}\makeindex
+\begin{document}
+Il comando \cn{\\*} qui.
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<indexmark").count(), 1, "{xml}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+  }
+
+  /// expl3-code.tex:7846-7861 fixes `\c_sys_engine_str` and the
+  /// `\sys_if_engine_<e>` conditionals at format-build time; the `luatex`
+  /// profile must re-derive them (polyglossia gloss-latin.ldf:125 else takes
+  /// the XeTeX branch — hang, sample), and unicode-math's `\math<style>`
+  /// aliases (unicode-math-luatex.sty:2273-2306; toptesi topcoman.sty:76
+  /// `\mathup`) must exist.
+  #[test]
+  fn l3sys_engine_identity_under_luatex_profile() {
+    let tex = r"\documentclass{article}
+\usepackage{unicode-math}
+\begin{document}
+\ExplSyntaxOn
+[\c_sys_engine_str][\sys_if_engine_luatex:TF{L}{X}][\sys_if_engine_pdftex:TF{P}{N}][\c_sys_engine_format_str]
+\ExplSyntaxOff
+$\mathup{\mu}+\mathbfit{x}+\symscr{S}$
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[luatex][L][N][lualatex]"), "{xml}");
+    assert!(xml.contains(r#"tex="\mathrm{\mu}+"#), "{xml}");
+  }
+
+  /// tex.web §394/§400: macro parameter scanning is `align_state`-neutral.
+  /// numerica.sty:2569's delimited-argument loop on the slash path of
+  /// `\eval{1/8}` drifted the ledger inside an `align*` cell, so the cell-ending
+  /// `&`/`\\` was never recognized and the amsmath template's after-`$` never
+  /// inserted (numerica, mhchem `\ce`, tablists; Perl shares it). The plain
+  /// `{$b$}` in a cell stays a TeX error (§1065 `off_save`).
+  #[test]
+  #[ignore = "RED: numerica's align_state ledger drift is being bisected (alignment topic, wave 14; LXML_TRACE_ALIGN_STATE=1 traces the ledger). NB tex.web macro_call keeps align_state LIVE during parameter scanning — a freeze there broke columncolor_lbrack_cell_does_not_cascade_the_column_mode."]
+  fn argument_scan_is_align_state_neutral() {
+    let tex = r"\documentclass{article}\usepackage{amsmath}\usepackage{numerica}
+\begin{document}
+\begin{align*}
+a & =\eval{1/8} \\
+b & =\eval{1/8} & c &= 2
+\end{align*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<equationgroup") && xml.contains(">0.125</XMTok>"),
+      "{xml}"
+    );
+    let tex = r"\documentclass{article}\usepackage{amsmath}
+\begin{document}
+\begin{align*}
+a &= {$b$} + c
+\end{align*}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert!(
+      error_count(&stderr) > 0,
+      "a $ under a simple group must stay an error:\n{stderr}"
+    );
+  }
+
+  /// latex.ltx:1729-1737 `\@ifundefined` probes with `\ifcsname` and leaves the
+  /// name undefined; the `\relax` pollution broke every reentrancy-guarded
+  /// `.def` loaded as `\@ifundefined{sentinel}{\input file}{}` — polyglossia's
+  /// gloss-latin.ldf:591 + babelsh.def:1 (hang, sample; Perl pollutes too).
+  #[test]
+  fn ifundefined_does_not_define_the_name() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\@ifundefined{zz@undef}{}{}
+\ifx\zz@undef\@undefined [STILL-UNDEFINED]\else [POLLUTED]\fi
+\@ifundefined{zz@undef}{[U]}{[D]}
+\def\zz@def{}\@ifundefined{zz@def}{[U]}{[D]}
+\makeatother
+\begin{document}
+\makeatletter\ifx\zz@undef\@undefined [BODY-UNDEFINED]\fi\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BODY-UNDEFINED]"), "{xml}");
+    let tex = r"\documentclass{article}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{latin}
+\begin{document}
+Text \textlatin{lingua latina} here.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("lingua latina"), "{xml}");
+  }
+
+  /// latex.ltx:16369 `\DeclareRobustCommand\underline`: robust, so an
+  /// `\edef`/`\write` freezes the whole `\ifmmode…\fi` body (bibarts.sty:2231
+  /// `\edef\@tempa{\write\@auxout{…\underline{Publ.}…}}`; Perl's non-robust
+  /// body tears at `\else`).
+  #[test]
+  fn underline_is_robust_in_an_edef_write() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\let\protect\@unexpandable@protect
+\edef\x{\underline{Publ.}\overline{X}}
+\let\protect\relax
+\x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text framed="underline">Publ.</text>"#) || xml.contains(">Publ.</text>"),
+      "{xml}"
+    );
+  }
+
+  /// A raw class's full `\@maketitle` (ascelike.cls:406-411 `\AB@authlist`)
+  /// runs under `\lx@deposit@maketitle` (OD #124); the bindings' semantic
+  /// `\author` never fills authblk's visual accumulators, which therefore exist
+  /// at their package-initial empty value so the layout collapses to nothing.
+  #[test]
+  fn class_maketitle_layout_over_binding_accumulators() {
+    let tex = r"\documentclass{article}
+\usepackage{authblk}
+\author{Alice}
+\title{T}
+\makeatletter
+\renewcommand{\@maketitle}{\begin{center}\@title\\ \AB@authlist\thankses\end{center}}
+\makeatother
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<personname>Alice</personname>"), "{xml}");
+    assert!(
+      !xml.contains("<ERROR") && !xml.contains("AB@authlist"),
+      "{xml}"
+    );
+  }
+
+  /// tex.web §1083 `begin_box` pushes nest and save level TOGETHER for
+  /// `\hbox\bgroup`; Perl `readBoxContents` (TeX_Box.pool:164-185) uses one
+  /// frame. The two-frame hbox reader left ulem's open-here/close-there word
+  /// boxes (examdesign.cls:186-200 `\UL@start`/`\UL@stop`) around a
+  /// `\makebox` meeting the wrong frame (examdesign examplea/b/c; Perl shares).
+  #[test]
+  #[ignore = "RED: the one-frame hbox reader is landed (faithful, suite-green) but examdesign's ulem+\\@makebox interleave still errors — the \\egroup meets \\@makebox's OWN mode frame with a \\bgroup left open inside its argument (boxes-groups topic, wave 14 checkpoint N#3)"]
+  fn hbox_reader_is_one_frame() {
+    let tex = r"\documentclass[10pt]{examdesign}
+\Fullpages
+\ContinuousNumbering
+\DefineAnswerWrapper{}{}
+\NumberOfVersions{2}
+\class{{\Large A sample exam}}
+\begin{document}
+\begin{truefalse}[title={T/F}]
+\begin{question}
+  \answer{True} This sentence is not false.
+\end{question}
+\end{truefalse}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("This sentence is not false."), "{xml}");
+    // `\hbox{a}` still reverts with its braces
+    let tex = r"\documentclass{article}
+\begin{document}
+$\hbox{ab}$ \setbox0\hbox\bgroup x\egroup\box0
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"tex="\hbox{ab}""#), "{xml}");
+  }
 }

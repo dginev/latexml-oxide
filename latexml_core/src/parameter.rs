@@ -130,6 +130,21 @@ impl Object for Parameter {
 static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
+/// A `{}` argument that is exactly one token whose MEANING is `{` (an
+/// implicit begin-group such as `\bgroup`, not a literal brace): the `{}`
+/// reader takes the single token, so the group body is still in the gullet.
+fn is_implicit_begin_group(arg: &ArgWrap) -> bool {
+  match arg {
+    ArgWrap::Tokens(toks) => {
+      let list = toks.unlist_ref();
+      list.len() == 1
+        && list[0].get_catcode() != Catcode::BEGIN
+        && list[0].defined_as(&crate::T_BEGIN!())
+    },
+    _ => false,
+  }
+}
+
 impl Parameter {
   pub fn new<T: AsRef<str>>(name: T, spec: T, extra: Option<Vec<Tokens>>) -> Result<Self> {
     Parameter {
@@ -452,6 +467,22 @@ impl Parameter {
       // "\foo" will use the default value for the Optional.
       if self.optional && value_arg.is_none() {
         None
+      } else if self.name == pin!("Plain") && is_implicit_begin_group(&value_arg) {
+        // `\mbox\bgroup A … B\egroup` (syntax.sty:158 `\syn@assist`, whose
+        // `\egroup` is even inserted by `\readupto`'s `\aftergroup`; the
+        // newcommand manual): TeX hands `\bgroup` to `\mbox#1` as its one-token
+        // argument, and the `\hbox{` that `\mbox` opens is then closed by the
+        // `\egroup`, its own `}` having closed the `\bgroup` — so the box runs to
+        // the `\egroup`. A `\bgroup`-only argument therefore reads its group by
+        // DIGESTION from the live gullet until the frame closes (the `{`
+        // primitive: `bgroup` + `digest_next_body`), tex.web §1063/§1068 pairing
+        // an implicit brace with whatever closes the group. Perl reads the lone
+        // `\bgroup`, opens a boxing frame inside the constructor's mode frame,
+        // and errors at `end_mode` (SHARED; pdflatex clean). Guard:
+        // `perfect_kernel_batch54::implicit_bgroup_argument_reads_its_group`.
+        crate::stomach::invoke_token(&crate::T_BEGIN!())?
+          .into_iter()
+          .next()
       } else {
         Some(value_arg.be_digested()?)
       }

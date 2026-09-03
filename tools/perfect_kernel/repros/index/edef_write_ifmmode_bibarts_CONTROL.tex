@@ -1,8 +1,8 @@
 % witness: bibarts/ba-short, bibarts/bibarts (bibarts.sty:2231 \edef\@tempa{\write\@auxout{...#4...}})
-% oracle:  pdflatex 0 errors
-% engines: rust=2 perl=7 (2026-09-03) — SHARED
-% expect:  0 errors; the \vli citations render, no stray \fi
-% status:  RED
+% oracle:  pdflatex 2 errors ("Missing \ktit{...} in *inner* ...vli-cmd") — INVALID INPUT: a bare \vli nested in a \vli title
+% engines: rust=4 perl=7 (2026-09-03, b54o: \underline root fixed; remaining first error `\fi \iffalse` — the pgf-style \iffalse idiom torn in the \edef, shared with ribbonproofs) — SHARED
+% expect:  1 error at least
+% status:  CONTROL (must keep erroring; the valid witness shape is bibarts_underline_in_vli.tex)
 % mechanism: the title #4 carries \ktit -> \ba@textmode -> \ifmmode $..$\fi (bibarts.sty:798)
 %   and \underline -> \ifmmode...\else...\fi; the \edef tears the conditional at the
 %   string-mouth boundary, leaving \else/\fi with no open conditional.

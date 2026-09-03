@@ -14,27 +14,48 @@ LoadDefinitions!({
   def_macro_noop("\\unimathsetup{}")?;
   def_macro_noop("\\NewNegationCommand{}{}")?;
   def_macro_noop("\\NewNegatedSymbol{}{}")?;
-  // \symbf/\symit/… — Unicode-math's semantic alphabet switches; map to the
-  // classical math alphabets so the CONTENT keeps its lettering.
-  DefMacro!("\\symbf{}", "\\mathbf{#1}");
-  DefMacro!("\\symit{}", "\\mathit{#1}");
-  DefMacro!("\\symsf{}", "\\mathsf{#1}");
-  DefMacro!("\\symtt{}", "\\mathtt{#1}");
-  DefMacro!("\\symcal{}", "\\mathcal{#1}");
-  DefMacro!("\\symbb{}", "\\mathbb{#1}");
-  DefMacro!("\\symfrak{}", "\\mathfrak{#1}");
-  DefMacro!("\\symrm{}", "\\mathrm{#1}");
-  DefMacro!("\\symnormal{}", "#1");
-  DefMacro!("\\symup{}", "\\mathrm{#1}");
-  // Bold-italic: prefer \boldsymbol when a loaded package provides it
-  // (keeps the italic), else plain bold. Witnesses: numbersets-doc,
-  // physics2-legacy (\symbfit); shtthesis-user-guide (\symbfsf);
-  // rec-thy (\symbffrak); intexgral/xfakebold/yquant docs (\symup).
+  // Unicode-math's alphabet switches (unicode-math-luatex.sty:2273-2306, the
+  // `\clist_map_inline:nn { up, it, bfup, bfit, sfup, sfit, bfsfup, bfsfit,
+  // bfsf, tt, bb, bbit, scr, bfscr, cal, bfcal, frak, bffrak, normal, literal,
+  // sf, bf }` styles): every style exists as `\sym<x>` AND `\math<x>`
+  // (`\math<x>` = `\sym<x>` for the non-text alphabets, :2288-2291;
+  // `\mathup` = `\mathrm`, :2306; `\mathrm/it/bf/sf/tt` stay LaTeX's). Mapped
+  // to the classical math alphabets so the CONTENT keeps its lettering.
+  // Witnesses: numbersets-doc, physics2-legacy (\symbfit); shtthesis-user-guide
+  // (\symbfsf); rec-thy (\symbffrak); intexgral/xfakebold/yquant docs (\symup);
+  // toptesi topcoman.sty:76 `\mathup{\mu}` (toptesi-example-luatex/-xetex;
+  // Perl shares the `\mathup` gap). Bold-italic prefers \boldsymbol when a
+  // loaded package provides it (keeps the italic), else plain bold.
+  {
+    use latexml_core::common::def_parser::parse_parameters;
+    let alias = |cs: String, body: String| -> Result<()> {
+      let params = parse_parameters("{}", &T_CS!(&cs), true)?;
+      def_macro(T_CS!(&cs), params, mouth::tokenize(TeXString::assembled(body)), None)
+    };
+    for (style, alphabet) in [
+      ("up", "\\mathrm"), ("bfup", "\\mathbf"), ("sfup", "\\mathsf"),
+      ("sfit", "\\mathsf"), ("bfsfup", "\\mathsf"), ("bfsfit", "\\mathsf"),
+      ("bfsf", "\\mathsf"), ("bb", "\\mathbb"), ("bbit", "\\mathbb"),
+      ("scr", "\\mathcal"), ("bfscr", "\\mathcal"), ("cal", "\\mathcal"),
+      ("bfcal", "\\mathcal"), ("frak", "\\mathfrak"), ("bffrak", "\\mathfrak"),
+    ] {
+      alias(s!("\\sym{style}"), s!("{alphabet}{{#1}}"))?;
+      // `\mathbb`/`\mathcal`/`\mathfrak` ARE the alphabet: leave LaTeX's.
+      if s!("\\math{style}") != alphabet {
+        alias(s!("\\math{style}"), s!("{alphabet}{{#1}}"))?;
+      }
+    }
+    for style in ["rm", "it", "bf", "sf", "tt"] {
+      alias(s!("\\sym{style}"), s!("\\math{style}{{#1}}"))?;
+    }
+    for style in ["normal", "literal"] {
+      alias(s!("\\sym{style}"), s!("#1"))?;
+      alias(s!("\\math{style}"), s!("#1"))?;
+    }
+  }
   DefMacro!(
     "\\symbfit{}",
     "\\ifdefined\\boldsymbol\\boldsymbol{#1}\\else\\mathbf{#1}\\fi"
   );
-  DefMacro!("\\symbfup{}", "\\mathbf{#1}");
-  DefMacro!("\\symbfsf{}", "\\mathsf{#1}");
-  DefMacro!("\\symbffrak{}", "\\mathfrak{#1}");
+  DefMacro!("\\mathbfit{}", "\\symbfit{#1}");
 });

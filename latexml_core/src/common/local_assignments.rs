@@ -95,19 +95,53 @@ pub fn expire_dual_branch() { locals_mut!().dual_branch.pop(); }
 /// get the current value for "dual branch"
 pub fn get_dual_branch() -> Option<&'static str> { locals!().dual_branch.last().cloned() }
 
-pub fn increment_align_group_count() {
-  let mut locals = locals_mut!();
-  match locals.align_group_count.last_mut() {
-    Some(v) => *v += 1,
-    None => locals.align_group_count.push(1),
+/// Cached snapshot of `LXML_TRACE_ALIGN_STATE`: print every change of the
+/// alignment ledger (tex.web `align_state`) with the current token and a
+/// short backtrace, to bisect a ledger drift (a cell-ending `&`/`\\` is only
+/// recognized at `align_group_count()==0`). Debug aid, off by default.
+static TRACE_ALIGN_STATE: Lazy<bool> =
+  Lazy::new(|| std::env::var("LXML_TRACE_ALIGN_STATE").is_ok());
+
+fn trace_align_state(what: &str, before: i32, after: i32) {
+  if *TRACE_ALIGN_STATE && !locals!().reading_alignment.is_empty() {
+    let tok = get_current_token()
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    let bt = std::backtrace::Backtrace::force_capture().to_string();
+    let frames: Vec<&str> = bt
+      .lines()
+      .filter(|l| l.contains("latexml_") && !l.contains("local_assignments"))
+      .take(4)
+      .map(str::trim)
+      .collect();
+    eprintln!(
+      "ALIGN_STATE {what}: {before} -> {after} at {tok} | {}",
+      frames.join(" < ")
+    );
   }
 }
-pub fn decrement_align_group_count() {
-  let mut locals = locals_mut!();
-  match locals.align_group_count.last_mut() {
-    Some(v) => *v -= 1,
-    None => locals.align_group_count.push(-1),
+
+pub fn increment_align_group_count() {
+  let before = align_group_count();
+  {
+    let mut locals = locals_mut!();
+    match locals.align_group_count.last_mut() {
+      Some(v) => *v += 1,
+      None => locals.align_group_count.push(1),
+    }
   }
+  trace_align_state("+1", before, before + 1);
+}
+pub fn decrement_align_group_count() {
+  let before = align_group_count();
+  {
+    let mut locals = locals_mut!();
+    match locals.align_group_count.last_mut() {
+      Some(v) => *v -= 1,
+      None => locals.align_group_count.push(-1),
+    }
+  }
+  trace_align_state("-1", before, before - 1);
 }
 
 pub fn state_is_unlocked() -> bool { locals!().unlocked.last().copied().unwrap_or(false) }
@@ -122,6 +156,7 @@ pub fn align_group_count() -> i32 {
     .unwrap_or_default()
 }
 pub fn set_align_group_count(v: i32) {
+  trace_align_state("set", align_group_count(), v);
   match locals_mut!().align_group_count.last_mut() {
     Some(gc) => {
       *gc = v;

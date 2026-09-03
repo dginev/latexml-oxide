@@ -1273,15 +1273,24 @@ LoadDefinitions!({
     name => "underbrace", alias => "\\underbrace", robust => true);
 
   // Careful: Use \protect so that it doesn't expand too early in alignments, etc.
+  // ROBUST (latex.ltx:16369 `\DeclareRobustCommand\underline`): under an
+  // `\edef`/`\write` — bibarts.sty:2231 `\edef\@tempa{\write\@auxout{…#4…}}`
+  // with `\underline{Publ.}` in the title — `\protect` froze only the
+  // `\ifmmode` head while the `\else…\fi` tail expanded into a stream with no
+  // open conditional ("Didn't expect \else/\fi"; ba-short, bibarts; Perl
+  // TeX_Math.pool:989-991 shares the non-robust body). `protected` keeps the
+  // whole body frozen in partial expansion, as the robust command's `\protect
+  // \underline␣` token does. Guard:
+  // `perfect_kernel_batch54::underline_is_robust_in_an_edef_write`.
   DefMacro!(
     "\\overline{}",
     r"\protect\ifmmode\lx@math@overline{#1}\else\lx@text@overline{#1}\fi",
-    locked => true
+    locked => true, protected => true
   );
   DefMacro!(
     "\\underline{}",
     r"\protect\ifmmode\lx@math@underline{#1}\else\lx@text@underline{#1}\fi",
-    locked => true
+    locked => true, protected => true
   );
 
   //======================================================================

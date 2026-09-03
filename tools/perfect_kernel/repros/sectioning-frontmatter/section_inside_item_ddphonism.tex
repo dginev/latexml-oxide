@@ -1,0 +1,18 @@
+% witness: ddphonism/ddphonism (\subsection inside an enumerate item; phonrule, prerex, pdfmarginpar seed share the shape)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03) — SHARED
+% expect:  0 errors; the <ltx:subsection> is a sibling of (auto-closes) the list, not inside <ltx:item>
+% status:  RED
+% mechanism: document.rs:3149 open-element rejects <ltx:subsection> in <ltx:item> per the
+%   RelaxNG model; TeX has no such constraint (a sectioning command inside a list just
+%   starts a heading). Need document auto-close of the enclosing item/list before opening
+%   the section, mirroring Perl Document.pm openElement autoclose. Same site as the
+%   paragraph_inside_item_pdfmarginpar seed.
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item First item.
+\subsection{Heading inside item}
+More text.
+\end{itemize}
+\end{document}

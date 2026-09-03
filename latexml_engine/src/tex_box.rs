@@ -624,9 +624,17 @@ LoadDefinitions!({
   // hardcoded to 'restricted_horizontal' / 'internal_vertical'
   // respectively — independent of the current mode at invocation time.
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
-      read_box_contents(lookup_tokens("\\everyhbox")) },
-    predigest => sub[arg] {
-      predigest_box_contents_in_mode(arg, "restricted_horizontal") });
+    read_box_contents(lookup_tokens("\\everyhbox")) },
+  predigest => sub[arg] {
+    predigest_box_contents_in_mode(arg, "restricted_horizontal") },
+  // Same brace re-wrap as VBoxContents below: the one-frame loop returns a
+  // bare `List::new(boxes)` (batch 54n), so `\\hbox{a}` reverts as `\\hbox{a}`.
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyvbox")) },
   predigest => sub[arg] {

@@ -5305,3 +5305,81 @@ entry — Perl "Missing argument Until:, \indpageref for \wrapindpageref", Rust
 \usepackage{robustindex}\makeindex`. Rust: a `robustindex.sty` binding (raw
 load, then `\gobblepageref` → empty and `\wrappageref{}` → empty). Guard:
 `perfect_kernel_batch54::robustindex_page_reference_hooks_are_inert`.
+
+## 154. A `{}` argument opened by `\bgroup` is read as the one token `\bgroup` (Rust fixes)
+
+`Gullet.pm:732 readArg` starts a balanced read only on catcode-BEGIN; for
+`\mbox\bgroup A … B\egroup` (syntax.sty:158 `\syn@assist`, whose `\egroup` is
+even inserted by `\readupto`'s `\aftergroup`; the newcommand manual) the
+argument is the lone `\bgroup`, which then opens a boxing frame inside the
+constructor's mode frame — "`\mbox` Attempt to end mode restricted_horizontal".
+TeX hands `\bgroup` to `\mbox#1` the same way, but the `\hbox{` that `\mbox`
+opens is then closed by the `\egroup` (its own `}` closed the `\bgroup`), so the
+box runs to the `\egroup`. Trigger:
+
+```latex
+\def\OPEN{\mbox\bgroup A}\def\CLOSE{ B\egroup}
+X\OPEN\CLOSE Y
+```
+
+Rust: a `{}` argument that is exactly one implicit-begin-group token reads its
+group by digestion through the `{` primitive (`parameter.rs`). Guard:
+`perfect_kernel_batch54::implicit_bgroup_argument_reads_its_group`.
+
+## 155. The counter reset list is not the latex.ltx `\cl@<ctr>` macro (Rust fixes)
+
+`Package.pm:674 NewCounter` keeps the reset list as the State value
+`\cl@<ctr>`; latex.ltx:10140-10156 keeps it as a macro `\@elt{child}…` that raw
+code expands and rewrites — contract.sty:336 `\edef\cl@Clause{\cl@Clause
+\cl@contractClause}` (`\cl@contractClause` undefined, contract-example ×2),
+afthesis.cls:44-49 `\@removefromreset` (`\cl@chapter expands into itself`).
+Trigger: `\newcounter{a}\newcounter{b}[a]\edef\cl@a{\cl@a\cl@b}`. Rust: the
+macro mirrors the value after every mutation. Guard:
+`perfect_kernel_batch54::reset_list_is_an_expandable_cl_macro`.
+
+## 156. `\abstract{…}` is taken as a pre-tokenized argument (Rust fixes)
+
+`latex_constructs.pool.ltxml` `\abstract` → `\lx@add@abstract{}`: the group is
+read as one argument, so a `\makeatletter` inside it cannot precede the
+`\patch@level` that follows (char-list-alphabeta.tex:88-103: `\patch`
+undefined). In LaTeX `\abstract` is the environment's begin code and `{…}` a
+plain group read incrementally. Rust: the brace stays a group and
+`\aftergroup\lx@end@abstract` closes the abstract. Guard:
+`perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`.
+
+## 157. `\index` re-tokenization welds a `\@sanitize`d control symbol (Rust fixes)
+
+`latex_constructs.pool.ltxml:4433-4451 SanitizedVerbatim` re-reads the UnTeX'd
+entry with normal catcodes, so amsldoc.cls:84-89's sort key `\*` for
+`\cn{\\*}` becomes the live `\*` (amsldoc.cls:213 `\def\*#1`) and eats the
+entry (itamsldoc, amsldoc-vi; Perl "Expected a relational token" ×2). After
+`\@sanitize` (latex.ltx:1778) no control sequence can form, and makeindex never
+typesets the sort key. Rust: the round-trip runs per segment between
+catcode-12 backslashes, each emitted OTHER. Guard:
+`perfect_kernel_batch54::index_sanitized_backslash_symbol_stays_literal`.
+
+## 158. `\@ifundefined` defines the probed name as `\relax` (Rust fixes)
+
+`Base_Utility.pool.ltxml:23-31` implements `\@ifundefined` with the
+`\csname…\endcsname\relax` idiom, which DEFINES the name; modern latex.ltx
+(:1729-1737) probes with `\ifcsname` and leaves it undefined. A reentrancy-
+guarded file loaded as `\@ifundefined{sentinel}{\input file}{}` then finds its
+sentinel `\relax`: polyglossia's gloss-latin.ldf:591 `\@ifundefined
+{initiate@active@char}{\input{babelsh.def}}{}` meets babelsh.def:1
+`\ifx\initiate@active@char\@undefined\else\bbl@afterfi\endinput\fi` and the
+shorthand surface never loads (`\bbl@afterfi`, `\shorthandoff`,
+`\bbl@deactivate` undefined; hang, sample; 19 gloss-*.ldf files use the idiom).
+Trigger: `\@ifundefined{zz}{}{}\ifx\zz\@undefined U\else POLLUTED\fi`. Rust: no
+pollution. Guard: `perfect_kernel_batch54::ifundefined_does_not_define_the_name`.
+
+## 159. `\underline`/`\overline` are not robust (Rust fixes)
+
+`TeX_Math.pool.ltxml:989-991` define them as plain macros whose body is
+`\protect\ifmmode…\else…\fi`; under `\protected@write`/`\edef` (`\protect` =
+`\@unexpandable@protect`) only the `\ifmmode` head is frozen and the
+`\else…\fi` tail expands into a stream with no open conditional ("Didn't
+expect `\else`/`\fi`"; bibarts.sty:2231 `\edef\@tempa{\write\@auxout
+{…\underline{Publ.}…}}` — ba-short, bibarts). latex.ltx:16369 declares them
+robust, so the whole body rides in the frozen `\underline␣` token. Trigger:
+`\let\protect\@unexpandable@protect \edef\x{\underline{P}}`. Rust: `protected`
+macros. Guard: `perfect_kernel_batch54::underline_is_robust_in_an_edef_write`.

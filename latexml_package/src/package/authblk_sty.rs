@@ -63,4 +63,15 @@ LoadDefinitions!({
   // Note formatting — Perl L95-96
   DefMacro!("\\AB@authnote{}",  "\\textsuperscript{\\normalfont#1}");
   DefMacro!("\\AB@affilnote{}", "\\textsuperscript{\\normalfont#1}");
+  // authblk.sty:109-112's visual accumulators, at their package-initial EMPTY
+  // value: `\author`/`\affil` above emit semantic frontmatter and never fill
+  // them, but a class that `\renewcommand`s `\@maketitle` to lay them out
+  // (ascelike.cls:406-411 `\AB@authlist`) runs under `\lx@deposit@maketitle`
+  // (OXIDIZED_DESIGN #124) and must collapse to nothing rather than hit an
+  // undefined name (ascexmpl). Guard:
+  // `perfect_kernel_batch54::class_maketitle_layout_over_binding_accumulators`.
+  DefMacro!("\\AB@authlist", "");
+  DefMacro!("\\AB@affillist", "");
+  DefMacro!("\\AB@authors", "");
+  DefMacro!("\\AB@empty", "");
 });

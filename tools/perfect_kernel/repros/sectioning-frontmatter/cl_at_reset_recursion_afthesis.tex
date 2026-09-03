@@ -1,0 +1,24 @@
+% witness: afthesis/usethesis (afthesis.cls:44-49 \@removefromreset, called :74-76 on chapter)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03) — SHARED
+% expect:  0 errors; document builds a <ltx:para> with body "x"
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::reset_list_is_an_expandable_cl_macro
+% mechanism: same root as cl_at_reset_macro_contract — \cl@chapter is a State Value, not a
+%   macro. \@removefromreset does \expandafter\edef\csname cl@chapter\endcsname
+%   {\csname cl@chapter\endcsname}: on an undefined-as-macro \cl@chapter the \edef captures
+%   a self-reference, so the 2nd call sees "\cl@chapter expands into itself" (recursion).
+\documentclass{report}
+\makeatletter
+\def\@removefromreset#1#2{\let\@tempb\@elt
+   \def\@tempa{#1}%
+   \def\@elt##1{\expandafter\ifx\csname c@##1\endcsname\@tempa\else
+         \noexpand\@elt{##1}\fi}%
+   \expandafter\edef\csname cl@#2\endcsname{\csname cl@#2\endcsname}%
+   \let\@elt\@tempb}
+\@removefromreset{figure}{chapter}
+\@removefromreset{table}{chapter}
+\makeatother
+\begin{document}
+x
+\end{document}

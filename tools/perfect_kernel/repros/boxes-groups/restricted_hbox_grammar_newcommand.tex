@@ -1,0 +1,18 @@
+% witness: newcommand/newcommand (newcommand.tex:660 \begin{grammar}; syntax.sty:158)
+% oracle:  pdflatex 0 errors
+% engines: rust=9 perl=11 (2026-09-03)
+% expect:  0 errors; the <decl> production renders (an <ltx:text>/mbox for the RHS)
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::implicit_bgroup_argument_reads_its_group
+% mechanism: syntax.sty's \[[ .. \]] (\syn@assist) does `\mbox\bgroup .. \readupto
+%   ..{\/\endgroup..\egroup..}` — the \mbox box is opened with \bgroup and closed
+%   with \egroup inserted by \readupto's \aftergroup. Same root as
+%   restricted_hbox_mbox_bgroup: the box constructor's \bgroup-opened arg is not
+%   scanned as a balanced group, so \bgroup/\endgroup/\egroup land on the wrong frame.
+\documentclass{article}
+\usepackage{syntax}
+\begin{document}
+\begin{grammar}
+<decl> ::= \[[ "MACRO" <ident> \]]
+\end{grammar}
+\end{document}

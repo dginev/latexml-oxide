@@ -104,9 +104,16 @@ LoadDefinitions!({
     if IsDefined!(&cs) && !is_autoload {
       Ok(else_token)
     } else {
-      if !is_autoload {
-        assign_meaning(&cs, lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
-      }
+      // No `\relax` pollution of the probed name. latex.ltx:1729-1737 defines
+      // `\@ifundefined` with `\ifcsname` precisely so a probe leaves the name
+      // undefined (the `\csname…\endcsname\relax` form at :1738 is only the
+      // pre-`\ifcsname` fallback, and Perl Base_Utility.pool:23-31 still
+      // pollutes). polyglossia's gloss-*.ldf:591 `\@ifundefined
+      // {initiate@active@char}{\input{babelsh.def}}{}` then hands babelsh.def:1
+      // `\ifx\initiate@active@char\@undefined\else\bbl@afterfi\endinput\fi` a
+      // `\relax`-valued name, so the shorthand file early-exits with
+      // `\bbl@afterfi` undefined (hang, sample; 19 gloss files load it this
+      // way). Guard: `perfect_kernel_batch54::ifundefined_does_not_define_the_name`.
       Ok(if_token)
     }
   }, locked=>true);
@@ -3539,7 +3546,19 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
   // `invoke_token(T_BEGIN)` path below. (A tabular inside a `\vbox`/`\vtop` is
   // correctly SKIPPED by the repack because `\@@tabular`/`\halign` mark the result
   // box `internal_vertical`.)
-  if mode.ends_with("vertical") {
+  // RESTRICTED HORIZONTAL (`\\hbox`/`\\mbox`/`\\makebox`… contents) takes the
+  // same one-frame loop (batch 54n). tex.web §1083 `begin_box` pushes the
+  // nest and the save level TOGETHER for `\\hbox\\bgroup` and §1100 `package`
+  // pops both; Perl's one frame is that single push. The former two-frame
+  // shortcut (`begin_mode` + the `{` primitive's own `bgroup`) made the box
+  // depend on an `\\egroup` to close its synthetic group, and ulem's
+  // open-here/close-there word boxes (examdesign.cls:186-200 `\\UL@start` =
+  // `\\setbox\\UL@box\\hbox\\bgroup…\\bgroup`, `\\UL@stop` = `\\egroup\\egroup`) around a
+  // `\\makebox` whose argument digests in isolation met the wrong frame
+  // ("\\egroup Attempt to close a group that switched to mode
+  // restricted_horizontal"; examdesign examplea/b/c, Perl shares it). Guard:
+  // `perfect_kernel_batch54::hbox_reader_is_one_frame`.
+  if mode.ends_with("vertical") || mode == "restricted_horizontal" {
     begin_mode(mode)?;
     let level = get_frame_depth(); // depth AFTER the mode frame (Perl: $level)
     new_local_box_list(); // Perl: local @LaTeXML::LIST = ()
@@ -3571,7 +3590,12 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
     let mut item: Digested = digested_list.into();
     // Perl: List(@LaTeXML::LIST, mode => $mode)
     item.set_property("mode", Stored::String(pin(mode)));
-    return Ok(Some(simplify_vertical_list(item)));
+    // Perl's single-item `List()` simplification is a vertical-mode rule.
+    return Ok(Some(if mode.ends_with("vertical") {
+      simplify_vertical_list(item)
+    } else {
+      item
+    }));
   }
   if mode.ends_with("vertical") || mode.ends_with("horizontal") {
     begin_mode(mode)?;

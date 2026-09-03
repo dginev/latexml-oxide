@@ -1,0 +1,21 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: highlightx/highlightx-doc (highlightx.sty:193 \SOUL@setup);
+%          proofread/example (proofread.sty:74 \SOUL@setup, inside \hilite)
+% oracle:  lualatex 0 errors (pdflatex 0 too — soul-ori is engine-agnostic: SHARED-surpass)
+% engines: rust=RED perl=? (2026-09-03)
+% expect:  0 errors; "word" typeset in a <ltx:text>
+% status:  RED
+% mechanism: \RequirePackage{soul} resolves to the soul_sty.rs binding (Perl
+%   soul.sty.ltxml: public API \so/\ul/\hl/\st/\sodef only). Real soul.sty:185
+%   \RequirePackage{soul-ori} defines the classic internals \SOUL@setup /
+%   \SOUL@preamble / \SOUL@postamble / \SOUL@everyhyphen / \SOUL@setkern that
+%   highlightx (\SurlignerTexte) and proofread (\hilite) build a tikz-overlay
+%   highlight on. Binding omits them -> \SOUL@setup undefined.
+\documentclass{article}
+\usepackage{soul}
+\makeatletter
+\SOUL@setup
+\makeatother
+\begin{document}
+\hl{word}
+\end{document}
