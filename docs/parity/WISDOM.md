@@ -2814,3 +2814,26 @@ standalone `svg.rs` post-processor would only produce divergent, unverified outp
 else absent (mathimages/dvipng pipeline, jats/html4/tex/box outputs, crossref/
 bibliography/index cluster, DTD-gated `--omitdoctype`, daemon mode) is a feature
 gap kept as a hard error, revisited per-flag as the feature lands.
+
+## 84. Keyval keys are read unexpanded; a binding assembles conditional key lists OUTSIDE the read
+
+keyval.sty reads each `key=value` item as a delimited macro argument (`\KV@do#1,`),
+so the KEY is never expanded and a `{…}` inside it is opaque. Perl
+`KeyVals.pm:273-286` (and this port until batch 54h) expanded while scanning and
+cut the key at the first `}`/`,`/`=` — enumitem's shortlabel `\setlist[test]
+{\@risp,…}` with `\@risp` = `\fbox{\parbox…}` was unfolded into box code and cut
+at an inner brace (verifica ×5). `read_keyword_from` (keyvals.rs) now uses
+`read_token()` with a brace-depth counter; only a key that STARTS with
+`\savevalue`/`\gsavevalue` (xkeyval.tex:140-146 `\XKV@ifcmd`) is expanded.
+
+**Method for bindings**: a key list must not carry `\ifx…\fi` in key position
+(mathtools' `\lx@mt@smallmatrix`, `\multlined`): decide before the read —
+`\ifx/#2/\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}` or an
+`\edef` of the whole list handed over with `\expandafter{…}`.
+
+Sibling rule: a leftover-key store (`\XKV@rm`) is fetched ONE STEP
+(`lookup_expandable(cs)?.invoke(true)`, xkeyval.tex:497/618), never
+`do_expand` — a value may name a macro defined only when its key code finally
+runs (chessboard.sty:1439 `trimarea=\board`, `\board` \edef'd at :1087).
+Guards: `perfect_kernel_batch54::{keyval_key_is_brace_aware,
+setrmkeys_keeps_leftover_values_unexpanded, xkeyval_usevalue_*}`.
