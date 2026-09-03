@@ -1,0 +1,20 @@
+% witness: physics2/physics2 (physics2.sty:83-84 \delopen/\delclose) -- REDUCED, no braket
+% oracle:  lualatex 0 errors
+% engines: rust=1 perl=undefined (2026-09-03)
+% expect:  0 errors
+% status:  RED (b54w: "\egroup Attempt to close boxing group", frame \begingroup)
+% mechanism: the fully-expanded core of \braket<a|b>. \delopen=\bgroup\left (opens
+%   \lx@hidden@bgroup); a math-active | (\egroup\vert\bgroup) splits the body into two
+%   \bgroup..\egroup boxes; \delclose=\aftergroup\egroup\right defers an \egroup to fire when
+%   \right closes \lx@hidden@bgroup. Requires physics2+unicode-math loaded: identical robust
+%   copies WITHOUT physics2 are CLEAN (both_unimath), so the trigger is physics2/unicode-math's
+%   math-delimiter setup, not the macro bodies. \middle is NOT required (this drops it).
+\documentclass{article}
+\usepackage{amsmath}\usepackage{unicode-math}\usepackage{physics2}
+\begingroup\catcode`\|=\active
+\gdef\mytest{\begingroup\mathcode`\|="8000\def|{\egroup\vert\bgroup}%
+  \delopen\langle\bgroup a|b\egroup\delclose\rangle\endgroup}
+\endgroup
+\begin{document}
+\[ \mytest \]
+\end{document}

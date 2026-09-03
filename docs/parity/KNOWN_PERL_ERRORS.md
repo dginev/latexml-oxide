@@ -5527,3 +5527,48 @@ mid-cell — the 6-error "close a group that switched to mode math" cascade
 cell. Rust: retract after the one-step expansion. Guard:
 `perfect_kernel_batch54::argument_scan_is_align_state_neutral`.
 
+## 170. `\g@addto@macro` is an expandable side-effecting macro (Rust fixes)
+
+latex.ltx:1832 `\long\def\g@addto@macro#1#2{\begingroup\toks@\expandafter{#1#2}
+\xdef#1{\the\toks@}\endgroup}` appends at DIGESTION. `latex_constructs.pool.
+ltxml:968` makes it an expandable `DefMacro` with the side effect in the
+closure, so the number scan's one-token look-ahead (tex.web §444) after an
+`\ifnum` operand EXECUTES it even in a false branch: numspell-english.sty:
+79-105 `\ifnum\numspell@group@digit@i>0\numspell@{ hundred}\fi` with
+`\numspell@#1` = `\g@addto@macro\thenumspell{#1}` spelled every group
+("hundred and -twotwelve thousand, nought", then `\StrChar` on the leading
+space → `\GenericError`; numspell 12 errors). Trigger: `\def\out{}\ifnum0>0
+\g@addto@macro\out{WRONG}\fi[\out]`. Rust: latex.ltx's macro verbatim (the
+hyperref and CJKutf8 bindings now provide the hook targets raw packages
+append to: `\Hy@UseMaketitleInfos`, `\pdfstringdefPreHook`). The same
+shape remains in `\AtBeginDocument`/`\AtEndDocument`/`\AtEndOfPackage`/
+`\@addtofilelist`/`\nocite` (no corpus witness; latent). Guard:
+`perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
+
+## 171. `\nocite` defers its key unexpanded (Rust fixes)
+
+latex.ltx's `\nocite` writes `\citation{#1}` through `\protected@write` at
+the call site, expanding the key there. `latex_constructs.pool.ltxml:4214`
+pushes the raw tokens to the end-of-document list, so a key held in a
+transient macro — tufte-common.def:934 `\@for\@temp@bibkeyx:=\@tufte@
+citations\do{…\bibentry{\@temp@bibkeyx}}` inside a `\marginpar`
+(bibentry.sty:64 `\bibentry` = `\nocite`) — expands at `\end{document}`
+when the loop variable is gone ("`\@temp@bibkeyx` is not defined"; tufte
+sample-book, sample-handout). Trigger: `\def\keys{k1}\marginpar{\@for
+\@temp@bibkeyx:=\keys\do{\nocite{\@temp@bibkeyx}}}`. Rust: the key is
+expanded at the call site. Guard:
+`perfect_kernel_batch54::nocite_expands_its_key_at_the_call_site`.
+
+## 172. `{titlepage}` is locked (Rust fixes)
+
+report/book define `{titlepage}` with `\newenvironment`, so a class may
+`\def\titlepage{…}` as a plain vertical macro (uwthesis.cls:610, used as
+`{… \titlepage }` at uwthesis.tex:95-102). `latex_constructs.pool.ltxml:
+1183` locks the environment, the class `\def` is refused, and the bare
+`\titlepage` opens the internal_vertical environment frame that the `}`
+then meets ("Attempt to close a group that switched to mode
+internal_vertical"). Trigger: `\def\titlepage{\par T\par}` then
+`{\titlepage}`. Rust: not locked; the environment binding still applies
+when not redefined. Guard:
+`perfect_kernel_batch54::titlepage_environment_is_overridable`.
+

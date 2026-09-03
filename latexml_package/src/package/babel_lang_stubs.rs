@@ -26,7 +26,40 @@
 //! arabic 1 ≈ 38 papers.
 use crate::prelude::*;
 
-fn install_lang_stub(lang: &str) -> Result<()> {
+/// The stub is a FALLBACK, not a binding of the language: when the real
+/// `<lang>.ldf` is installed (full TeX Live), raw-load it and return `true`
+/// — the registry entry that routes `<lang>.ldf` here would otherwise
+/// SHADOW the installed file, skipping its `\DeclareOption{<modifier>}`
+/// (spanish.ldf:66-88 `mexico`, `es-noshorthands`) and
+/// `\bbl@declare@ttribute` (czech.ldf:328 `split`), so babel's leftover
+/// `\DeclareOption{<opt>}{unknown-package-option}` (babel.sty:4214) fired
+/// at `\ProcessOptions` (:4300) and `\languageattribute` missed the
+/// attribute (:1512-1538) — unamthesis, udepcolor-doc-ES, csbulletin; greek
+/// (no stub) already raw-loads clean. Only when the file is absent does the
+/// minimal hook set below stand in. Guard:
+/// `perfect_kernel_batch54::installed_ldf_outranks_the_language_stub`.
+fn install_lang_stub(lang: &str) -> Result<bool> {
+  if find_file(
+    lang,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed("ldf")),
+      ..Default::default()
+    }),
+  )
+  .is_some()
+  {
+    input_definitions(lang, InputDefinitionOptions {
+      noltxml: true,
+      extension: Some(Cow::Borrowed("ldf")),
+      ..Default::default()
+    })?;
+    return Ok(true);
+  }
+  install_lang_stub_hooks(lang)?;
+  Ok(false)
+}
+
+fn install_lang_stub_hooks(lang: &str) -> Result<()> {
   // `\newlanguage` is a TeX macro of the form
   // `\alloc@9\language\chardef\@cclvi`, which delegates to a 5-arg
   // `\alloc@{}{}{}{}{}` macro. So a *raw* `\newlanguage\csname
@@ -58,7 +91,9 @@ fn install_lang_stub(lang: &str) -> Result<()> {
 }
 
 pub fn load_italian() -> Result<()> {
-  install_lang_stub("italian")?;
+  if install_lang_stub("italian")? {
+    return Ok(());
+  }
   // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`
   // (verifica.cls:66-70 turns compliance on; `$25\unit{m}$`), :179-180
   // `\IntelligentComma`/`\NoIntelligentComma` (the math-active `,` for
@@ -88,40 +123,56 @@ pub fn load_italian() -> Result<()> {
 // already the project's default. Witness:
 // arXiv:1502.05791 (`\usepackage[british,american]{babel}`)
 // CONVERR_2 → expected OK.
-pub fn load_english() -> Result<()> { install_lang_stub("english") }
+pub fn load_english() -> Result<()> { install_lang_stub("english").map(|_| ()) }
 pub fn load_american() -> Result<()> {
-  install_lang_stub("american")?;
-  install_lang_stub("USenglish")?;
-  install_lang_stub("english") // fallback chain
+  if install_lang_stub("american")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("USenglish")?;
+  install_lang_stub_hooks("english") // fallback chain
 }
 pub fn load_british() -> Result<()> {
-  install_lang_stub("british")?;
-  install_lang_stub("UKenglish")?;
-  install_lang_stub("english")
+  if install_lang_stub("british")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("UKenglish")?;
+  install_lang_stub_hooks("english")
 }
 pub fn load_usenglish() -> Result<()> {
-  install_lang_stub("USenglish")?;
-  install_lang_stub("english")
+  if install_lang_stub("USenglish")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("english")
 }
 pub fn load_ukenglish() -> Result<()> {
-  install_lang_stub("UKenglish")?;
-  install_lang_stub("english")
+  if install_lang_stub("UKenglish")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("english")
 }
 pub fn load_canadian() -> Result<()> {
-  install_lang_stub("canadian")?;
-  install_lang_stub("english")
+  if install_lang_stub("canadian")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("english")
 }
 pub fn load_australian() -> Result<()> {
-  install_lang_stub("australian")?;
-  install_lang_stub("english")
+  if install_lang_stub("australian")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("english")
 }
 pub fn load_newzealand() -> Result<()> {
-  install_lang_stub("newzealand")?;
-  install_lang_stub("english")
+  if install_lang_stub("newzealand")? {
+    return Ok(());
+  }
+  install_lang_stub_hooks("english")
 }
 
 pub fn load_spanish() -> Result<()> {
-  install_lang_stub("spanish")?;
+  if install_lang_stub("spanish")? {
+    return Ok(());
+  }
   // babel-spanish-specific `\decimalpoint` — switches decimal separator
   // from `,` (Spanish default) to `.`. We don't render locale-aware
   // numerics; HTML uses `.` by default. No-op preserves intent.
@@ -151,17 +202,19 @@ pub fn load_spanish() -> Result<()> {
   )?;
   Ok(())
 }
-pub fn load_portuges() -> Result<()> { install_lang_stub("portuges") }
-pub fn load_portuguese() -> Result<()> { install_lang_stub("portuguese") }
-pub fn load_brazil() -> Result<()> { install_lang_stub("brazil") }
-pub fn load_brazilian() -> Result<()> { install_lang_stub("brazilian") }
-pub fn load_czech() -> Result<()> { install_lang_stub("czech") }
-pub fn load_polish() -> Result<()> { install_lang_stub("polish") }
-pub fn load_romanian() -> Result<()> { install_lang_stub("romanian") }
-pub fn load_slovene() -> Result<()> { install_lang_stub("slovene") }
-pub fn load_turkish() -> Result<()> { install_lang_stub("turkish") }
+pub fn load_portuges() -> Result<()> { install_lang_stub("portuges").map(|_| ()) }
+pub fn load_portuguese() -> Result<()> { install_lang_stub("portuguese").map(|_| ()) }
+pub fn load_brazil() -> Result<()> { install_lang_stub("brazil").map(|_| ()) }
+pub fn load_brazilian() -> Result<()> { install_lang_stub("brazilian").map(|_| ()) }
+pub fn load_czech() -> Result<()> { install_lang_stub("czech").map(|_| ()) }
+pub fn load_polish() -> Result<()> { install_lang_stub("polish").map(|_| ()) }
+pub fn load_romanian() -> Result<()> { install_lang_stub("romanian").map(|_| ()) }
+pub fn load_slovene() -> Result<()> { install_lang_stub("slovene").map(|_| ()) }
+pub fn load_turkish() -> Result<()> { install_lang_stub("turkish").map(|_| ()) }
 pub fn load_vietnamese() -> Result<()> {
-  install_lang_stub("vietnamese")?;
+  if install_lang_stub("vietnamese")? {
+    return Ok(());
+  }
   // babel-vietnamese (vietnam.ldf) selects T5 font encoding and defines
   // the Vietnamese precomposed-character command set (`\ecircumflex`,
   // `\ocircumflex`, `\abreve`, `\ohorn`, `\uhorn`, hook-above `\h`, …).
@@ -176,10 +229,10 @@ pub fn load_vietnamese() -> Result<()> {
   t5enc_def::load_definitions()?;
   Ok(())
 }
-pub fn load_icelandic() -> Result<()> { install_lang_stub("icelandic") }
-pub fn load_arabic() -> Result<()> { install_lang_stub("arabic") }
-pub fn load_dutch() -> Result<()> { install_lang_stub("dutch") }
-pub fn load_farsi() -> Result<()> { install_lang_stub("farsi") }
-pub fn load_hindi() -> Result<()> { install_lang_stub("hindi") }
-pub fn load_latin() -> Result<()> { install_lang_stub("latin") }
-pub fn load_croatian() -> Result<()> { install_lang_stub("croatian") }
+pub fn load_icelandic() -> Result<()> { install_lang_stub("icelandic").map(|_| ()) }
+pub fn load_arabic() -> Result<()> { install_lang_stub("arabic").map(|_| ()) }
+pub fn load_dutch() -> Result<()> { install_lang_stub("dutch").map(|_| ()) }
+pub fn load_farsi() -> Result<()> { install_lang_stub("farsi").map(|_| ()) }
+pub fn load_hindi() -> Result<()> { install_lang_stub("hindi").map(|_| ()) }
+pub fn load_latin() -> Result<()> { install_lang_stub("latin").map(|_| ()) }
+pub fn load_croatian() -> Result<()> { install_lang_stub("croatian").map(|_| ()) }

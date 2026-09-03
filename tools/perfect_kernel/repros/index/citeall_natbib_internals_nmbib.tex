@@ -1,0 +1,29 @@
+% witness: nmbib/nmbib-sample (nmbib-sample.tex:20 \citeall{Markey:Tame_the_BeaST};
+%          also lines 23,25 etc. — every \citeall triggers the cascade)
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=~10 perl=? (2026-09-03) -- SHARED: Perl natbib.sty.ltxml emulates natbib at a
+%          HIGH level (only 8 \NAT@* internals, no \NAT@reset@parser/\NAT@citexnum/\NAT@parse)
+%          and there is no nmbib.sty.ltxml, so Perl hits the same undefined internals.
+% expect:  0 errors; \citeall yields an <ltx:cite> with bibrefs="Markey:Tame_the_BeaST"
+% status:  RED
+% mechanism: nmbib (\RequirePackage{natbib}, nmbib.sty:43) REIMPLEMENTS natbib's low-level
+%   citation engine. \citeall (nmbib.sty:343) -> \@citeall -> \@@@citeall (nmbib.sty:347),
+%   a full-citation expander parallel to nmbib's \NAT@citexnum (nmbib.sty:141); both OPEN with
+%   \NAT@reset@parser (natbib.sty:780) and then use \NAT@sort@cites, \NAT@reset@citea, \@cite,
+%   \NAT@parse, \NAT@num/name/date, \@ifnum, \NAT@ctype/\NAT@cmprs/\NAT@ifcat@num ... — 57 natbib
+%   internals that the Rust natbib EMULATION (natbib_sty.rs, LoadDefinitions, ~20 \NAT@*) does not
+%   provide. Our emulation intercepts \citep/\citet/\citenum/\citealn as high-level constructors,
+%   but \citeall (nmbib-specific) is NOT intercepted, so it falls through to nmbib's raw expander
+%   and hits the undefined internals (first: \NAT@reset@parser). The `_`/tabular cascade downstream
+%   is the malformed text-mode citation output.
+% fix: a small nmbib binding (latexml_package/src/package/nmbib_sty.rs or contrib) that EMULATES
+%   \citeall/\citeall* (and \@citeall/\@@citeall/\@@@citeall) as a high-level <ltx:cite> constructor
+%   the way natbib's \citet/\citep are emulated, so they do NOT fall through to \@@@citeall/
+%   \NAT@citexnum. \citealn is already [\citenum{#1}] (nmbib.sty:338) and works. Do NOT port the 57
+%   \NAT@* internals: that duplicates natbib.sty, yields text not <ltx:cite>, and still cascades.
+%   VALIDATED: \DeclareRobustCommand\citeall[1]{\citet{#1}} -> 0 errors + <ltx:cite bibrefs="...">.
+\documentclass{article}
+\usepackage{nmbib}
+\begin{document}
+Text \citeall{Markey:Tame_the_BeaST}.
+\end{document}

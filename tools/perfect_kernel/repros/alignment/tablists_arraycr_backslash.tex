@@ -1,0 +1,21 @@
+% witness: tablists/tablists-rus (tablists-rus.tex:149, DocInput dtx; 103 errors)
+% oracle:  pdflatex 0 errors
+% engines: rust=7 (b54w) perl=12 (2026-09-03); pdflatex=0  -> SHARED, surpass in scope
+% expect:  0 errors; a tabular/list structure, no spurious <ltx:Math>
+% status:  RED
+% mechanism: tabenum's row-ender \\ is \let to \TeXr@arraycr (tablists.sty:112) =
+%   \relax\iffalse{\fi\ifnum 0=`}\fi\@ifstar{...}{\@xarraycr}, an array.sty-style
+%   phantom-brace dance, run inside a RAW \halign\bgroup (tablists.sty:118). Plain
+%   \cr is CLEAN; \\ / \\* / \\[len] all fail identically (the optional arg is
+%   irrelevant, and it is NOT the inline math — text cells fail too). align_state
+%   ends at +1 after the dance, which MATCHES tex.web (§357 counts the skipped `{`,
+%   §442 makes `} neutral), so this is NOT a ledger-count drift. At the row boundary
+%   a spurious \lx@begin@inline@math (inline-math mode-switch frame) is opened via
+%   \lx@dollar@default (tex_math.rs:469) and left open when \halign/\endgroup close.
+\documentclass{article}\usepackage{tablists}
+\begin{document}
+\begin{tabenum}[\bfseries1)]
+\tabenumitem aa;\\
+\tabenumitem bb;
+\end{tabenum}
+\end{document}

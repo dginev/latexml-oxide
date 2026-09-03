@@ -1,0 +1,25 @@
+% witness: beamer-theme-albi/beamer-theme-albi-doc (beamer-theme-albi-doc.tex:504-534; ~40 of 57 errors)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=2 (2026-09-03) — SHARED (both DefEnvironment the frame body inline)
+% expect:  0 errors; the tikz key '/tikz/right' (not '#1') is set and color \mycol (not '#1') is used
+% status:  RED
+% mechanism: real beamer collects the frame body as a delimited arg into a token register and
+%   re-executes it (beamerbaseframe.sty:322-344), which \def-halves `#` TWICE — so an author writes
+%   `####1` inside a frame for a pgfkeys `.style` body whose param is `#1` (####1 -> ##1 -> #1).
+%   The Rust binding (beamer_cls.rs:213 `DefEnvironment!("{frame}[][]",...)`) and Perl
+%   (DefEnvironment '{frame}[][]') digest the frame body INLINE with ZERO halving, so `####1`
+%   reaches pgfkeys as a literal `#1`: `lab/.style={...####1=1.5mm}` invoked `lab=right` sets key
+%   `/tikz/#1` (not `right`), and `pastille/.style={fill=####1}` invoked `pastille=red` uses color
+%   `#1` (not `red`). Top-level and plain-\def `.style` halving are CORRECT (style1/2/3 probes);
+%   only the frame-body capture depth differs. Fix: make the frame environment capture its body
+%   through the same 2 `\def`/token-register halvings as beamer. HIGH risk (core `frame` env).
+\documentclass{beamer}
+\usepackage{tikz}
+\begin{document}
+\begin{frame}
+\tikzset{lab/.style={inner sep=1mm,####1=1.5mm}, pastille/.style={fill=####1}}
+\begin{tikzpicture}
+\fill[pastille=red] (0,0) circle (2pt) node[lab=right]{X};
+\end{tikzpicture}
+\end{frame}
+\end{document}

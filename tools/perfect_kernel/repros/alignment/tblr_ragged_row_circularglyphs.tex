@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=0 (2026-09-03)   <- RUST-ONLY (Perl converts clean)
 % expect:  0 errors; tblr row "Null" present (one ltx:td with "Null")
-% status:  RED
+% status:  GREEN (b54x, batch 54q)
 % mechanism: tabularray {tblr} collects & counts its own body; a row with MORE
 %   cells than colspec must extend, not error. Rust delegates tblr to the kernel
 %   \halign template (fixed 13 cols) so the 14-cell "Null&&&...&&\\" row raises

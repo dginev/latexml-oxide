@@ -394,7 +394,14 @@ LoadDefinitions!({
       None if extract_colspec_value(&combined).is_none() => String::from("*{32}{l}"),
       None => inner_str,
     };
-    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}}}"))))
+    // tabularray parses its own body and tolerates a row wider than the
+    // colspec (circularglyphs-doc.tex:196: `*{13}{X[m,c]}` with a 14-cell
+    // last row; pdflatex clean, Perl raw-loads it clean). The kernel template
+    // is only a hard cap — the final column count is the widest row and
+    // short rows are padded — so a margin of fallback columns is inert on a
+    // well-formed table and absorbs a ragged one. Guard:
+    // `perfect_kernel_batch54::tblr_row_wider_than_the_colspec_is_tolerated`.
+    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}*{{16}}{{c}}}}"))))
   });
   DefMacro!("\\tblr", "\\lx@tblr@env{tblr}");
   DefMacro!("\\endtblr", "\\endtabular");

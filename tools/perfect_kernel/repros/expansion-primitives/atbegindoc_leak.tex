@@ -1,0 +1,17 @@
+% audit: same shape as \g@addto@macro (expandable side-effecting DefMacro).
+% witness: none in corpus (latent); driver = the numspell idiom (no-space number->cs).
+% oracle:  pdflatex: hook does NOT fire (0 occurrences)
+% engines: rust=LEAK perl=LEAK pdflatex=clean (2026-09-03) <- SHARED
+% expect:  no "HOOK-FIRED-WRONGLY" (false \ifnum branch must not register the hook)
+% status:  RED (b54w)
+% mechanism: \AtBeginDocument is DefMacro!(sub{ push_value("@at@begin@document",..); empty })
+%   (latex_constructs.rs:3896; Perl pool:296). Expandable => the \ifnum number-scan peek
+%   (tex.web sec444) expands it in the FALSE branch and fires push_value. latex.ltx defines
+%   it via \g@addto@macro\@begindocumenthook (digestion-time). Same class as the numspell root.
+\documentclass{article}
+\makeatletter
+\ifnum0>0\AtBeginDocument{\typeout{HOOK-FIRED-WRONGLY}}\fi
+\makeatother
+\begin{document}
+x
+\end{document}

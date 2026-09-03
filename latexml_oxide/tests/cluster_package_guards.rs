@@ -10564,4 +10564,166 @@ Body.\Options{alpha,beta} \marginnote[L]{R}
     assert!(xml.contains("highlighted text"), "{xml}");
     assert!(xml.contains("letter-spacing"), "{xml}");
   }
+
+  /// latex.ltx:1832 `\g@addto@macro` appends at DIGESTION (its `\xdef`); an
+  /// expandable side-effecting version (Perl :968) was executed by the
+  /// `\ifnum` number scan's look-ahead (tex.web §444) even in a false branch
+  /// (numspell-english.sty:79-105 `\ifnum…>0\numspell@{ hundred}\fi`; KPE #170).
+  #[test]
+  fn g_addto_macro_appends_at_digestion() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\out{}%
+\def\g{\ifnum0>0\g@addto@macro\out{WRONG}\else\g@addto@macro\out{RIGHT}\fi}%
+\g
+\g@addto@macro\out{+MORE}
+\AtBeginDocument{\g@addto@macro\out{+ABD}}
+\makeatother
+\begin{document}
+[\out]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[RIGHT+MORE+ABD]"), "{xml}");
+  }
+
+  /// tabularray parses its own body and tolerates a row wider than the
+  /// colspec (circularglyphs-doc.tex:196 `*{13}{X[m,c]}` with a 14-cell
+  /// row; pdflatex and Perl clean); the kernel template is only a cap, so
+  /// the tblr translation carries a margin of fallback columns. A plain
+  /// tabular keeps erroring on an extra `&`.
+  #[test]
+  fn tblr_row_wider_than_the_colspec_is_tolerated() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={*{2}{c}}}
+a & b \\
+Null & & \\
+\end{tblr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">Null<"), "{xml}");
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{tabular}{cc} a & b & c \end{tabular}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, false);
+    assert!(
+      error_count(&stderr) > 0,
+      "a plain tabular's extra & stays an error:\n{stderr}"
+    );
+  }
+
+  /// latex.ltx's `\nocite` writes `\citation{#1}` through
+  /// `\protected@write` at the call site, so a key held in a transient
+  /// macro is expanded there; the deferred raw key (Perl :4214) was expanded
+  /// at `\end{document}` when tufte-common.def:934's `\@for\@temp@bibkeyx`
+  /// loop variable no longer existed (tufte sample-book; KPE #171).
+  #[test]
+  fn nocite_expands_its_key_at_the_call_site() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\def\keys{key1,key2}\marginpar{\@for\@temp@bibkeyx:=\keys\do{\nocite{\@temp@bibkeyx}}}
+\nocite{*}
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"bibrefs="key1""#) && xml.contains(r#"bibrefs="key2""#),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"bibrefs="*""#), "{xml}");
+  }
+
+  /// report/book define `{titlepage}` with `\newenvironment`, so a class may
+  /// `\def\titlepage{…}` as a plain vertical macro (uwthesis.cls:610, used as
+  /// `{… \titlepage }`); the locked environment refused the `\def` and the
+  /// bare `\titlepage` opened an environment frame the `}` then met
+  /// (KPE #172). The environment itself still works.
+  #[test]
+  fn titlepage_environment_is_overridable() {
+    let tex = r"\documentclass{report}
+\makeatletter
+\def\titlepage{\par TITLE STUFF\par}
+\makeatother
+\begin{document}
+{\titlepage}After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("TITLE STUFF") && !xml.contains("<titlepage"),
+      "{xml}"
+    );
+    let tex = r"\documentclass{report}
+\begin{document}
+\begin{titlepage}\title{T}\author{A}\maketitle\end{titlepage}
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<title>T</title>"), "{xml}");
+  }
+
+  /// The l3draw binding carries the full public surface; the path/state
+  /// functions are absorbed but `\draw_box_use:N`/`\draw_coffin_use:Nnn`
+  /// (l3draw.sty:40/:98) typeset their CONTENT (circledtext, tabular2,
+  /// suanpan-l3 under lualatex).
+  #[test]
+  fn l3draw_surface_keeps_box_content() {
+    let tex = r"\documentclass{article}
+\usepackage{l3draw}
+\ExplSyntaxOn
+\box_new:N \l_tmp_box \hbox_set:Nn \l_tmp_box { INSIDE-BOX }
+\NewDocumentCommand \mydraw { } {
+  \draw_begin:
+    \draw_set_linewidth:n { 1pt }
+    \draw_path_scope_begin: \draw_path_circle:nn {0pt,0pt}{5pt} \draw_path_scope_end:
+    \draw_box_use:N \l_tmp_box
+  \draw_end: }
+\ExplSyntaxOff
+\begin{document}Before \mydraw{} After\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Before INSIDE-BOX After"), "{xml}");
+  }
+
+  /// The babel language stubs are FALLBACKS for a missing `.ldf`: when the
+  /// real file is installed it is raw-loaded, so its `\DeclareOption
+  /// {mexico}` (spanish.ldf:66-88) and `\bbl@declare@ttribute{czech}{split}`
+  /// (czech.ldf:328) are honoured — the stub shadowed them ("Unknown option
+  /// 'mexico'", unamthesis; "attribute split", csbulletin).
+  #[test]
+  fn installed_ldf_outranks_the_language_stub() {
+    let tex = r"\documentclass{article}
+\usepackage[english,spanish,mexico]{babel}
+\begin{document}
+\selectlanguage{spanish}Hola \selectlanguage{english}Hello
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hola") && xml.contains("Hello"), "{xml}");
+    let tex = r"\documentclass{article}
+\usepackage[czech,english]{babel}
+\languageattribute{czech}{split}
+\begin{document}
+\selectlanguage{czech}Ahoj
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Ahoj"), "{xml}");
+  }
 }

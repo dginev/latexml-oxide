@@ -1,0 +1,25 @@
+% witness: nicematrix/nicematrix-french (nicematrix-french.tex:6413,6523)
+% oracle:  pdflatex 0 errors (2 runs)
+% engines: rust=12 perl=blocked(pgfsys) (2026-09-03)
+% expect:  0 errors; the pNiceMatrix array with "38458" present
+% status:  RED
+% mechanism: \CodeAfter followed by \begin{tikzpicture}..\end{tikzpicture}. The
+%   binding's `\CodeAfter Until:\end` (nicematrix_sty.rs:679) grabs to the FIRST
+%   \end token = \end{tikzpicture} (NOT the matrix's \end), drops the grabbed
+%   prefix and re-emits \end{tikzpicture} into a context with no open tikzpicture
+%   -> \endscope/\endgroup "Attempt to close non-boxing group" (23 in the doc) plus
+%   the leaked \node[fit=(A)] pgf-node errors. Fix: make \CodeAfter grab to the
+%   MATCHING matrix \end, balancing nested \begin..\end. Site: nicematrix_sty.rs:679.
+\documentclass{article}
+\usepackage{nicematrix,tikz}
+\usetikzlibrary{fit}
+\begin{document}
+\[\begin{pNiceMatrix}
+121 & 23 & 345 \\ 45 & 346 & 863 \\ 3462 & 38458 & 34
+\CodeAfter
+\SubMatrix\{{2-2}{3-3}\}[name=A]
+\begin{tikzpicture}
+\node [fit = (A),fill = red!15] {} ;
+\end{tikzpicture}
+\end{pNiceMatrix}\]
+\end{document}

@@ -1,0 +1,20 @@
+% witness: physics2/physics2 + physics2-legacy (phy-ab.braket.sty:55-58 \braket<a|b>)
+% oracle:  lualatex 0 errors (physics2 needs unicode-math => lualatex; pdflatex N/A)
+% engines: rust=1(this line) perl=undefined(\usephysicsmodule) (2026-09-03)
+% expect:  0 errors; the braket renders (>=1 <ltx:XMApp>/<ltx:XMTok> for the fenced <a|b>)
+% status:  RED (b54w: "\egroup Attempt to close boxing group", frame \begingroup)
+% mechanism: physics2.sty:83-84 \delopen=\mathopen{}\mathclose\bgroup\left ,
+%   \delclose=\aftergroup\egroup\right . \delclose DEFERS an \egroup (via \aftergroup)
+%   to fire when \right closes the \left group (LaTeXML \lx@hidden@bgroup, tex_box.rs:451/460
+%   via \@left..\lx@hidden@bgroup, tex_math.rs:961). ab.braket makes | math-active
+%   (\mathcode="8000") expanding to \egroup..\bgroup, splitting the delimiter body into two
+%   \bgroup..\egroup boxes. With physics2+unicode-math (unicode_math_sty.rs binding) loaded,
+%   LaTeXML's frame stack desyncs so the deferred \egroup reaches the outer \begingroup
+%   (phy-ab.braket.sty:55) => "close boxing group". RUST-ONLY: Perl never defines
+%   \usephysicsmodule (cannot raw-load physics2), lualatex oracle is clean.
+\documentclass{article}
+\usepackage{amsmath}\usepackage{unicode-math}\usepackage{physics2}
+\usephysicsmodule{ab,ab.braket}
+\begin{document}
+\[ \braket< a | b > \]
+\end{document}

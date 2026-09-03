@@ -1,0 +1,18 @@
+% witness: tagpdf/ex-AF-file (ex-AF-file.tex:29 \pdffile_embed_file:nnn, :32 \pdfdict_put:nnn)
+% oracle:  lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=2 perl=N/A(no luatex profile) (2026-09-03)
+% expect:  0 errors; body <ltx:p> "AF done" survives (PDF embed absorbed, no XML output)
+% status:  RED
+% mechanism: l3pdffile/l3pdfdict (pdfmanagement.ltx:3389 \pdffile_embed_file:nnn = embed a file
+%   into the PDF as an object; \pdfdict_put:nnn = set a key in a named PDF dict). Pure PDF
+%   structure, no XML meaning. Our \DocumentMetadata (latex_constructs_rust_only.rs:87-88) does
+%   \RequirePackage{tagpdf} instead of activating pdfmanagement/l3pdffile, so both are undefined.
+%   ex-AF-file.tex never references the created object later => faithful absorb = no-op.
+\DocumentMetadata{tagging=on,pdfversion=2.0,lang=de}
+\documentclass{article}
+\ExplSyntaxOn
+\pdffile_embed_file:nnn{pdffile_embed_exaf.tex}{}{tag/AFtest}
+\pdfdict_put:nnn {l_pdffile/Filespec} {AFRelationship}{/Supplement}
+\ExplSyntaxOff
+\begin{document}AF done\end{document}

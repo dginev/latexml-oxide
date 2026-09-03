@@ -1,0 +1,24 @@
+% witness: europasscv/europasscv (europasscv.cls:560 \setulcolor{\ecv@textcolor} reached via
+%          \ecvorcid[label,link] at europasscv.tex:76; \ecv@textcolor defined europasscv.cls:212)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03); real doc rust=1
+% expect:  0 errors; \ul underline carries framecolor="#3E3A38"
+% status:  RED
+% mechanism: soul's \setulcolor{#1} stores the color-name argument WITHOUT expanding
+%   (soul_sty.rs:126  color_arg.to_string()); the \ul/\textul reader looks it up verbatim
+%   (soul_sty.rs:116  lookup_color(&color_name)). A CS-valued name (\ecv@textcolor / \mycolname)
+%   reaches the lookup as the literal token -> "Can't find color named '\...'". Real soul resolves
+%   the stored name via \color at use-time (which expands); Rust's \color already do_expand's its
+%   spec (color_sty.rs:356) — soul's color setters must do the same. NOTE: it is \setulcolor, NOT
+%   \color, that fails here — \begin{europasscv} (cls:777 \color{\ecv@textcolor}) is CLEAN.
+% classification: SHARED (Perl soul.sty.ltxml:75 \setulcolor stores ToString($_[1]) with NO Expand
+%   -> Perl also errors "color '\mycolname' is undefined"). pdflatex clean => in-scope surpass.
+%   [correction to the round-3 brief: this root is SHARED, not RUST-ONLY.]
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{soul}
+\definecolor{mycol}{HTML}{3E3A38}
+\def\mycolname{mycol}
+\begin{document}
+\setulcolor{\mycolname}\ul{underlined text}
+\end{document}

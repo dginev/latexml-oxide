@@ -1,0 +1,27 @@
+% witness: nicematrix/nicematrix-french (nicematrix-french.tex:6154,6184,8060-8175)
+% oracle:  pdflatex 0 errors (2 runs)
+% engines: rust=5 perl=blocked(pgfsys) (2026-09-03)
+% expect:  0 errors; the pNiceMatrix array with cell "a + b" present
+% status:  RED
+% mechanism: \CodeBefore [create-cell-nodes] \begin{tikzpicture} \node[fit=(i-j)]
+%   {}; \end{tikzpicture} \Body ... — the binding's \lx@nice@grabcode
+%   (nicematrix_sty.rs:503-524) EXECUTES the CodeBefore block (only rebinding the
+%   color commands \rectanglecolor/\cellcolor/...) so the raw drawing tikzpicture
+%   RUNS and references the matrix cell node (2-2), which the binding never
+%   materialises -> raw pgf shape lookup raises Error:latex:(pgf) "No shape named
+%   `2-2'". This is 75% of the doc's 429 errors. Fix: drop nested
+%   \begin{tikzpicture}..\end{tikzpicture} in the CodeBefore grab (drawing overlay),
+%   keeping the color commands. Site: nicematrix_sty.rs \lx@nice@grabcode.
+\documentclass{article}
+\usepackage{nicematrix,tikz}
+\usetikzlibrary{fit}
+\begin{document}
+\[\begin{pNiceMatrix}
+\CodeBefore [create-cell-nodes]
+\begin{tikzpicture}
+\node [fit = (2-2), fill=red!15] {} ;
+\end{tikzpicture}
+\Body
+a & a + b \\ a & a
+\end{pNiceMatrix}\]
+\end{document}

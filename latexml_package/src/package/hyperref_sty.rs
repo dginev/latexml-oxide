@@ -979,6 +979,10 @@ LoadDefinitions!({
   // because no package-level binding currently claims these CSes.
   Let!("\\pdfstringdefPreHook", "\\@empty");
   Let!("\\pdfstringdefPostHook", "\\@gobble");
+  // hyperref.sty:6269 `\Hy@UseMaketitleInfos` (pdf title/author infos from
+  // `\@title`/`\@author`); hypdoc.sty:80 appends to it with
+  // `\g@addto@macro`, which requires the target to exist.
+  DefMacro!("\\Hy@UseMaketitleInfos", "");
 
   //======================================================================
   // 4.2 Utility macros

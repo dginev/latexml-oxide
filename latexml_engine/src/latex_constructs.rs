@@ -5375,16 +5375,22 @@ LoadDefinitions!({
     r"\@ifundefined{opt@#1}\@empty{\csname opt@#1\endcsname}"
   );
 
-  // Perl L962: DefMacro('\g@addto@macro DefToken {}', sub { AddToMacro(...) });
-  // The state mutation fires during gullet expansion, not stomach-level
-  // digestion — so \g@addto@macro takes effect immediately when the
-  // expansion chain reaches it (needed for \edef / \AtBeginDocument
-  // callers that rely on the hook-macro state being visible during
-  // subsequent expansion in the same batch).
-  DefMacro!("\\g@addto@macro DefToken {}", sub[(target, content)] {
-    AddToMacro!(target, content);
-    Ok(Tokens!())
-  });
+  // latex.ltx:1832 `\long\def\g@addto@macro#1#2{\begingroup\toks@\expandafter
+  // {#1#2}\xdef#1{\the\toks@}\endgroup}`: the append happens at DIGESTION
+  // (the `\xdef`), not at expansion. Perl :968 (and the former port) made it
+  // an expandable macro with a side effect, so a `\g@addto@macro` sitting
+  // right after an `\ifnum` operand — `\ifnum\numspell@group@digit@i>0
+  // \numspell@{ hundred}\fi` with `\numspell@#1` = `\g@addto@macro
+  // \thenumspell{#1}` (numspell-english.sty:79-105) — was EXECUTED by the
+  // number scan's one-token look-ahead (tex.web §444) even in a false
+  // branch: every group of "12000" spelled ("hundred and -twotwelve thousand,
+  // nought", then `\StrChar` on the leading space → `\GenericError`;
+  // numspell 12 errors, KPE #170). Trigger: `\def\out{}\ifnum0>0
+  // \g@addto@macro\out{WRONG}\fi[\out]`. Guard:
+  // `perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
+  RawTeX!(
+    r"\long\def\g@addto@macro#1#2{\begingroup\toks@\expandafter{#1#2}\xdef#1{\the\toks@}\endgroup}"
+  );
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 
   // Alas, we're not tracking versions, so we'll assume it's "later" & cross fingers....
@@ -5921,7 +5927,15 @@ LoadDefinitions!({
     after_construct => sub[doc, _whatsit] {
       insert_frontmatter(doc)?;
     },
-    locked => true,
+    // NOT locked: report/book define `{titlepage}` with `\newenvironment`, so
+    // a class may legitimately `\def\titlepage{…}` as a plain vertical macro
+    // (uwthesis.cls:610, used as `{… \titlepage }` at uwthesis.tex:95-102).
+    // Perl latex_constructs.pool:1183 locks it, so the class `\def` was
+    // refused and the bare `\titlepage` opened the internal_vertical
+    // environment frame that the `}` then met ("Attempt to close a group
+    // that switched to mode internal_vertical"; KPE #172). A document that
+    // does not redefine it still gets this binding. Guard:
+    // `perfect_kernel_batch54::titlepage_environment_is_overridable`.
     mode => "internal_vertical"
   );
 
@@ -10008,9 +10022,19 @@ LoadDefinitions!({
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]))
   }, robust => true, locked => true);
 
-  // Perl L4271-4278: \nocite — defer to document end for MakeBibliography
+  // Perl L4271-4278: \nocite — defer to document end for MakeBibliography.
+  // The key is EXPANDED here, as latex.ltx's `\nocite` writes it through
+  // `\protected@write\@auxout{}{\string\citation{#1}}` at the call site:
+  // Perl (:4214) and the former port deferred the raw tokens, so a key held
+  // in a transient macro — tufte-common.def:934 `\@for\@temp@bibkeyx:=
+  // \@tufte@citations\do{…\bibentry{\@temp@bibkeyx}}` inside a `\marginpar`
+  // (bibentry.sty:64 `\bibentry` = `\nocite`) — was expanded at `\end
+  // {document}` when the loop variable no longer existed ("`\@temp@bibkeyx`
+  // is not defined", tufte sample-book/-handout; KPE #171). Guard:
+  // `perfect_kernel_batch54::nocite_expands_its_key_at_the_call_site`.
   DefMacro!("\\nocite{}", sub[args] {
     let key = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let key = do_expand_partially(key).unwrap_or_default();
     let mut toks = vec![T_CS!("\\lx@mark@nocite"), T_BEGIN!()];
     toks.extend(key.unlist());
     toks.push(T_END!());

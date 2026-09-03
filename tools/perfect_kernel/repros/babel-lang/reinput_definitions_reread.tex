@@ -1,0 +1,22 @@
+% witness: paresse/paresse-fra + fr_classopt_og (minimized mechanism)
+% oracle:  pdflatex 0 errors; ROUTING:one=[SET]two=[SET]
+% engines: rust two=[RESET] perl two=[SET] (2026-09-03, b54w)
+% expect:  0 errors; second \InputIfFileExists re-runs -> \hmarker=SET both times
+% status:  RED
+% mechanism: a 2nd \InputIfFileExists{X.tex} of the SAME file from a definitions
+%   (.sty/.cls) context is blocked by input_definitions' once-only already_handled
+%   guard (content.rs:648) -> file NOT re-read -> its \def does not re-run. Real TeX
+%   \input/\InputIfFileExists ALWAYS re-reads. babel re-inputs babel-french.tex for
+%   the main-language descriptor; the blocked re-read drops \bbl@toload@last=french.
+\documentclass{article}
+\begin{filecontents*}[overwrite]{helperx.tex}
+\def\hmarker{SET}\endinput
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{reinstyx.sty}
+\ProvidesPackage{reinstyx}
+\def\hmarker{INIT}\InputIfFileExists{helperx.tex}{}{}\edef\afterone{\hmarker}%
+\def\hmarker{RESET}\InputIfFileExists{helperx.tex}{}{}\edef\aftertwo{\hmarker}%
+\AtEndOfPackage{\typeout{ROUTING:one=[\afterone]two=[\aftertwo]}}
+\end{filecontents*}
+\usepackage{reinstyx}
+\begin{document}x\end{document}
