@@ -9488,8 +9488,9 @@ More.
   }
 
   /// codehigh.sty:508 takes its `\directlua` parser under the luatex profile;
-  /// the binding pins the l3regex parser (CreationBoites-doc, tkz-bernoulli,
-  /// tabularray-abnt, functional).
+  /// the binding degrades that path to plain verbatim text in bounded time
+  /// (the l3regex parser is O(n²), PLANS P65 — CreationBoites-doc,
+  /// tkz-bernoulli, tabularray-abnt, functional all timed out on it).
   #[test]
   fn codehigh_highlights_without_lua() {
     let tex = r"\documentclass{article}
@@ -9503,7 +9504,7 @@ More.
 ";
     let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("bar") && xml.contains("color="), "{xml}");
+    assert!(xml.contains("bar") && xml.contains("foo"), "{xml}");
   }
 
   /// beamer internals the themes reach: beamerbasesection's `\secname`
