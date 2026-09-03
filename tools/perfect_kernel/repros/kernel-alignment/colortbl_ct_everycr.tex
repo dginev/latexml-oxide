@@ -1,0 +1,19 @@
+% witness: srdp-mathematik/srdp-mathematik (srdp-mathematik.tex:638, \multiplechoice ->
+%   srdp-mathematik.sty raw tabu; tabu.sty:720 \CT@everycr\expandafter{...\the\CT@everycr...})
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=2 pdflatex=0 (2026-09-03, b54t) -> SHARED, surpass in scope
+% expect:  0 errors; a document body (\CT@everycr usable as a toks register)
+% status:  RED
+% mechanism: colortbl.sty:116 `\let\CT@everycr\everycr` makes \CT@everycr an ALIAS of the
+%   \everycr toks register (then :117 \newtoks\everycr recreates a user \everycr, :118 sets
+%   the content). colortbl_sty.rs stands in for colortbl.sty but defines only \arrayrulecolor/
+%   \doublerulesepcolor (:197,199) — the \CT@* internal surface is missing, so raw
+%   colortbl-derivative code (tabu, tabulary, tabularht, keyvaltable) that reaches \CT@everycr
+%   / \CT@arc@ / \CT@drsc@ / \CT@do@color fails undefined. Perl colortbl.sty.ltxml lacks them too.
+\documentclass{article}\usepackage{colortbl}
+\makeatletter
+\CT@everycr\expandafter{\expandafter\relax\the\CT@everycr}
+\makeatother
+\begin{document}
+x
+\end{document}

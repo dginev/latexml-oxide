@@ -213,3 +213,150 @@ Dead ends:
 - Exposing multicol's `\mult@@cols`/`\endmulticols`/`\balance@columns` with real bodies:
   off-model (LaTeXML has no output routine / column balancer); would need the TeX page
   builder. Rejected.
+
+## malformed:ltx family (8 docs) + threeparttablex — grouped by fix class
+
+Ranked by docs × errors. isorot/rubik already covered by root 2.
+
+### Group A (b) — block-level listing element in a HORIZONTAL capture — 2 docs, 8 err — SHARED — TOP
+Docs: algpseudocodex (2), coloredtheorem-doc (6). Repro: listingline_in_minipage.tex.
+`\begin{algorithmic}` (block-level <ltx:listing>/<ltx:listingline>) inside a `minipage`
+(algpseudocodex.tex:73) or a colorbox/theorem body (coloredtheorem). The box is captured
+as <ltx:p class=ltx_minipage> / <ltx:text> (horizontal); _CaptureBlock_ fails "Did not find
+a block-like candidate in ltx:p" (latexml_engine/src/base_utilities.rs:4146) so listingline
+can't open in <ltx:p>, then the capture close fails (Group B symptom). Perl identical.
+Fix class (b) document.rs: the _CaptureBlock_ block-repackaging must SYNTHESIZE a block when
+a p-capture receives block-level content (generalizes base_utilities.rs:4146, which only
+finds an EXISTING block); OR add listing's block parent to `can_contain_indirect` auto-open
+from <ltx:p> in find_insertion_point_qsym (document.rs:2985 — same helper as the svg:foreignObject
+and inline-Math auto-opens). Structural guard: 0 err + //ltx:listing/ltx:listingline present,
+no <ltx:p> parent of listingline.
+
+### Group C (a) — mismatched <ltx:picture> open/close — 2 docs, 4 err — SHARED
+Docs: pagelayout example-template, example-text. Repro: pagelayout_picture_close.tex.
+pagelayout.cls (raw) `\LoadClass[multi=picture]{standalone}` (pagelayout.cls:227) +
+`\template[..]{layout}{\text{..}}` emit a </ltx:picture> with no matching open (standalone
+multi=picture wrapping / draft tikz guide). Perl identical.
+Fix class (a): a pagelayout (or standalone multi=picture) class binding for \template/\text/
+\newtemplate/\placeholder that emits balanced structure. Complex class; MED risk.
+Guard: 0 err + the template text present, no stray picture close.
+
+### Group B (b) — capture closes over an un-auto-closeable verbatim/listing descendant — 1 doc, 2 err — SHARED
+Doc: testnumberedblock. Repro: numberedblock_verbatim_capture.tex. (Also the 2nd error of
+every Group A doc.) `numVblock` (numberedblock.sty raw) captures verbatim into a numbered box
+(_CaptureBlock_); on close the open `verbatim` descendant is not auto-closeable → close fails.
+Perl identical.
+Fix class (b) document.rs: force-closing a capture boundary must hard-close its
+non-auto-closeable descendants (verbatim, listingline) — generalizes close_node_internal/
+close_to_node at a _CaptureBlock_ boundary. Guard: 0 err + //ltx:verbatim inside the box.
+
+### Group F (a) — \caption without a float context — 1 doc, 1 err — PERL-ORIGIN
+Doc: threeparttablex. Repro: threeparttable_caption_captype.tex.
+threeparttable.sty:110 `\@ifundefined{@captype}{\def\@captype{table}}{}` (measuredfigure:126
+-> figure) lets \caption work outside a float. Rust threeparttable_sty.rs:16 and Perl
+threeparttable.sty.ltxml:31 bind `{threeparttable}`/`{measuredfigure}` as bare `#body`,
+omitting the \@captype setup → \caption -> \@@generic@caption -> "outside any known float".
+Fix class (a): complete the binding — before_digest sets \@captype (table/figure) if undefined
+(faithful port of threeparttable.sty:110/126). PERL-ORIGIN (threeparttable.sty.ltxml:31,36).
+LOW risk. Guard: 0 err + //ltx:caption inside the threeparttable/tabular block.
+
+### Group E (a/b) — bibliography inside a poster SVG box — 1 doc, 1 err
+Doc: xebaposter/poster. `posterbox` (baposter-style, raw) renders as <svg:g> with a captured
+block; `\bibliography` inside lands in <ltx:block> in SVG (context <svg:g><svg:g>
+<ltx:_CaptureBlock_><ltx:p><ltx:block>). Fix (a) xebaposter/baposter binding, or (b) relocate
+bibliography to the document body. 1 doc; lower priority.
+
+### Group D — REASSIGN — screenplay-pkg — 1 doc, 6 err — mode-frame family, NOT document-model
+First error `\lx@add@frontmatter@until Attempt to close a group that switched to mode
+internal_vertical` (mode-switch frame family, no longer parked). The `<ltx:section> isn't
+allowed in <ltx:section>` malformed errors are a downstream cascade of the frontmatter/abstract
+mode break (context <ltx:document><ltx:abstract><ltx:section>). Recommend the mode-frame agent.
+
+TOP-3 repros written: listingline_in_minipage.tex (A), pagelayout_picture_close.tex (C),
+numberedblock_verbatim_capture.tex (B); plus threeparttable_caption_captype.tex (F, easy PERL-ORIGIN win).
+Note A+B are the same document-model capture root (block content in a horizontal capture;
+capture-close over un-auto-closeable descendants) — fix together in document.rs.
+
+## Groups A+B — document-model capture class root — IMPLEMENTATION SPEC
+
+Repros: listingline_in_minipage.tex (A), numberedblock_verbatim_capture.tex (B).
+
+### Mechanism (code path)
+`insert_block` (latexml_engine/src/base_utilities.rs:3927 = Perl `insertBlock`, TeX_Box.pool.ltxml)
+handles every \parbox/minipage/box capture: opens `<ltx:_CaptureBlock_>` with the box attrs
+(class/width/vattach), `document.absorb(contents)` (:3996), collects nodes,
+`close_to_node(&container,true)` + `close_node(&container)` (:3999-4000), then repackages the
+capture — unwrap single child / merge attrs (:4020-4076) / rename to a block candidate from
+[block,logical-block,sectional-block,figure] or inline-block set (:4110-4148), else Warn
+"Did not find a block-like candidate" + rename to ltx:block (:4145).
+
+- A error #1 `<ltx:listingline> isn't allowed in <ltx:p>`: fires DURING absorb, in
+  `find_insertion_point_qsym` (latexml_core/src/document.rs:2973). can_contain(p,listingline)=F;
+  can_contain_indirect=none; the auto-close loop (:3019 `while can_auto_close(node) && …`) stops
+  at the non-auto-closeable `<ltx:p>`/inline-block/`<ltx:listingline>`; only the ancestor
+  `<ltx:listing>` can host a listingline (schema). No candidate → Error at :3203, then "does it
+  anyway" (returns self.node → inserts listingline in the p).
+- B error `_CaptureBlock_ Closing … descendents do not auto-close. Descendants: verbatim/listingline`:
+  fires when insert_block closes the capture — `close_to_node` (document.rs:~1407) /
+  `close_node_with_strictness` (:1476) walk `self.node`→container collecting `!can_auto_close`
+  nodes into `cant_close`; non-empty → Error (:1449 / :1508); then close_node_internal closes
+  ANYWAY. can_auto_close (document.rs) = text/comment, or element w/o `_noautoclose` and with
+  `_autoclose` or model autoClose=true; verbatim/listingline have neither.
+
+### Schema (LaTeXML.model)
+- `ltx:listing` (a Block) contains ONLY `ltx:listingline`. `ltx:listingline` is contained ONLY
+  by `ltx:listing`; allows inline content only (no block, no listing, no p).
+- `ltx:p`/`ltx:inline-block` allow inline/Misc — NOT listing/listingline.
+- `ltx:verbatim` is in `Misc` (allowed inline: in p/text/inline-block/listingline).
+- `ltx:_CaptureBlock_` is a transient wrapper, always renamed by insert_block.
+
+### What Perl does (same-host, BOTH repros) — EXACT PARITY
+Perl emits the IDENTICAL errors AND produces a STRUCTURALLY IDENTICAL tree:
+- A: `<para class=ltx_minipage><listing><listingline l1><inline-block class=ltx_minipage>
+  <listingline l2>…</listingline></inline-block></listingline><listingline l3>…` — i.e. l2 is
+  NESTED inside l1's inline-block, not a sibling. Both engines. (Only cosmetic diffs: width em vs pt.)
+- B: `<inline-block><inline-block><inline-block vattach=bottom><verbatim>…</verbatim>` — verbatim
+  correctly inside the box in BOTH; only Perl leaks a `\verbbox@inner` literal + an extra
+  `ltx_nopad_l` class. The insert/close "happens anyway" in both.
+Divergence entry: "Perl emits the same close/placement diagnostics and builds the same tree; the
+box boundary legitimately force-closes, so the diagnostic is spurious — Rust drops it (surpass on
+error count, identical structure)."
+
+### The rule
+B (close rule — SAFE surpass, LOW risk). A `_CaptureBlock_` (and the box it becomes) is a HARD box
+boundary: tex.web box completeness means nothing stays open across a completed box, so any
+non-auto-closeable descendant is force-closed by the box, not an error. Rule: when the close TARGET
+`node` is `ltx:_CaptureBlock_` (i.e. the close originates from insert_block:3999-4000), treat
+intervening descendants as force-closeable — do NOT accumulate `cant_close` / do NOT emit the
+"descendents do not auto-close" Error (close_node_internal already closes them). Implement in
+`close_to_node` + `close_node_with_strictness` (document.rs): `if get_node_qname(node)=="ltx:_CaptureBlock_"
+{ /* suppress cant_close error */ }`, OR have insert_block mark the container so the close site
+recognises the box boundary. Faithful mechanism = box completeness (tex.web §640-ish \vpack/\hpack:
+a box's contents are finished when the box is). Clears B (numberedblock 2→0) AND the `_CaptureBlock_
+Closing` half of algpseudocodex (2→1) and coloredtheorem (~2 of 6).
+
+A (placement, error #1) — NOT a clean document-model rule; RISKIER. Root: the algorithmicx line box
+(inner `_CaptureBlock_`→inline-block) fails to close between `\State`/`\Statex` lines when the
+algorithmic is inside a minipage — the algpseudocode `\everypar`-on-hmode handoff item, NOT the
+document model. Options: (a) fix the algpseudocode/algorithmicx binding to close each line box
+before the next listingline (real root; un-nests l2 to a sibling → surpasses Perl); (b) document
+relocation — when `<ltx:listingline>` arrives and an ancestor `<ltx:listing>` can host it past box
+artifacts, force-close to the listing and open as sibling (surpasses Perl) — RISK MED/HIGH: would
+truncate a legitimately-open `\parbox` inside a line. RECOMMEND (a) via the algpseudocode binding;
+do NOT pursue (b). B's fix already halves algpseudocodex without touching A.
+
+### Regression guards (capture-path bar to run green)
+- `listing_sole_content_of_minipage_keeps_lstlisting_class` — cluster_sizing.rs:861
+  (fixture cluster_regressions/listing_in_minipage_keeps_class.tex): single-node unwrap + class MERGE.
+- `parbox_nested_math_converts_to_presentation_mathml` — cluster_sizing.rs:655.
+- `hphantom_braceless_minipage_does_not_swallow_endminipage` — 06_cluster_regressions.rs:1175.
+- `memoir_keeps_native_endminipage` — cluster_package_guards.rs:6260.
+- `fancybox_verbatim_layer_raw` — cluster_package_guards.rs:4507 (verbatim-in-box; closest to B).
+
+### Guard assertions
+- B (numberedblock_verbatim_capture.tex): 0 Error lines AND `count(//ltx:verbatim)=1` inside an
+  `<ltx:inline-block>` (verbatim survives the box close); no `_CaptureBlock_` string in the output.
+- A (listingline_in_minipage.tex): with the algpseudocode binding fix — 0 Error lines AND
+  `count(//ltx:listing/ltx:listingline)>=2` with `count(//ltx:listingline//ltx:listingline)=0`
+  (listinglines are SIBLINGS, not nested). With B-only fix: assert exactly 1 Error remains (the
+  placement), i.e. the `_CaptureBlock_ Closing` second error is gone.

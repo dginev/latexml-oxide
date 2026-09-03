@@ -513,3 +513,188 @@ physics2-legacy (~202 capped err-lines). Expected gain: physics2 docs → 0.
   `\mathclose\bgroup a\egroup`: all CLEAN. Trigger requires the active-`|` `\egroup…\bgroup` split
   INSIDE the `\delopen…\delclose` deferred-`\egroup` span (prior round: `\middle` not required,
   `\braket<\phi>` no-`|` clean, bare-kernel robust copies without physics2 clean).
+
+## Checkpoint N (wave-15) — physics2 FULL BINDING SPEC (texdoc physics2 v1.0.1)
+
+Empirical status per module (b54t, repros in repros/mod/*.tex; oracle lualatex/pdflatex clean):
+ONLY `ab.braket` is RED from the physics2 delimiter root. Everything else works via raw-load.
+(nabla.legacy is RED but from a SEPARATE fixdif `\the0` root — out of scope for this binding.)
+
+| module | user cmds (syntax) | rendered meaning | native LaTeXML target | status |
+|---|---|---|---|---|
+| **physics2** (bare) | `\delopen<d>` / `\delclose<d>` (d ∈ `( [ \{ < \| \|`+word-delims) | auto-sized open/close fence, whole = one \mathclose atom | `\left<d>` / `\right<d>` (drop `\mathopen{}\mathclose\bgroup`/`\aftergroup\egroup` spacing wrapper; INNER-vs-CLOSE spacing = presentational) | GREEN (single body) |
+| physics2 | `\biggg`/`\Biggg`/`\bigggl`/`\bigggm`/`\bigggr <d>` | delimiter bigger than `\Bigg` | size-only → map to `\Bigg`-class delim (`\left`-stretch); NO-OP on size (MathML sizing is renderer/font-driven) | GREEN |
+| **ab** | `\ab<d>#1<d>` (d ∈ `( [ \{ < \| \| \lbrace \vert \Vert \langle`) | auto-braces | `\left<open>#1\right<close>` | GREEN |
+| ab | `\ab*<d>#1<d>` | fixed-size (no auto-size) | `\mathopen<open>#1\mathclose<close>` | GREEN |
+| ab | `\ab\big<d>…\ab\Biggg<d>` | manual size | `\bigl<open>#1\bigr<close>` … | GREEN |
+| ab | `\pab \bab \Bab \aab \vab \Vab {#1}` (opt `*`, opt `[size]`) | (),[],\{\},⟨⟩,\|,‖ braces around braced arg | `\left(…\right)` etc. (native) | GREEN |
+| ab OPT | `tightbraces=true/false` | thin-skip around delims (spacing) | presentational NO-OP | — |
+| **ab.braket** | `\bra<#1\|` | ⟨#1\| auto-sized | `\left\langle #1\right\vert` | **RED** |
+| ab.braket | `\ket\|#1>` | \|#1⟩ | `\left\vert #1\right\rangle` | **RED** |
+| ab.braket | `\braket<#1>` (`\|`→middle bar) | ⟨#1⟩ / ⟨a\|b⟩ | `\left\langle #1' \right\rangle`, `\|`→`\middle\vert` | **RED** |
+| ab.braket | `\ketbra\|#1>#2<#3\|` | \|#1⟩#2⟨#3\| (vphantom-aligned) | `\left\vert#1\right\rangle#2\left\langle#3\right\vert` | **RED** |
+| ab.braket | star `*` / size `\big…\Biggg` prefix; active `<`/`>`→`\mathrel{<}`/`\mathrel{>}`, `\<`/`\>`→‹literal | as above, fixed/manual size | `\mathopen…\mathclose` (star) or `\bigl…\bigr` (size) | star/size GREEN, auto RED |
+| **braket** (conflicts ab.braket) | `\bra`/`\ket`/`\braket`/`\ketbra` with `s o m` BRACED args; `[n]`/`[size]`/`[size,n]` | same notation, braced args | native `\left\langle…\middle\vert…\right\rangle` (already, no active `\|`) | GREEN |
+| **diagmat** | `\diagmat[empty=e]{c1,c2,…}`, `\p/b/B/v/Vdiagmat` | diagonal (p/b/B/v/V)matrix | expl3 builds `\begin{Xmatrix}…\end{Xmatrix}` (amsmath) | GREEN |
+| diagmat OPT | `empty=<tok>` | off-diagonal fill (default 0) | passthrough | — |
+| **doubleprod** | `\doublecross` `\doubledot` (math binops) | vertically-stacked ×× / ·· | `\mathbin{...}` two-box `\vcenter` (presentational stack) | GREEN |
+| doubleprod OPT | `crosssymbol/dotsymbol/crossscale/dotscale/crossopenup/dotopenup` | symbol+scale of the stack | presentational; passthrough | — |
+| **xmat** | `\xmat[o]{entry}{rows}{cols}`, `\p/b/B/v/Vxmat` | matrix w/ formatted indexed entries + dots | expl3 builds `\begin{Xmatrix}…\end{Xmatrix}` | GREEN |
+| xmat OPT | `showtop showleft format` | dots layout / entry format | passthrough | — |
+| **ab.legacy** | `\abs \norm \eval \peval \beval \order` (`*`,`[size]`,`{}`) | \|·\|, ‖·‖, eval-bar, 𝒪(·) | native `\left\|…\right\|`, `\left.…\right\|`, `\mathcal{O}(…)` (= `physics` pkg) | GREEN |
+| ab.legacy OPT | `order=<sym>` | order symbol (default 𝒪) | passthrough | — |
+| **nabla.legacy** | `\grad \div \curl` (needs `fixdif`) | ∇V, ∇·, ∇× | `\nabla`, `\nabla\cdot`, `\nabla\times` | RED (fixdif `\the0`, SEPARATE root) |
+| **op.legacy** | `\asin \acos \atan \acsc \asec \acot \Tr \tr \rank \erf \Res \res \PV \pv \Re \Im` | log-like operators + 𝒫, Re/Im | `\operatorname{…}`; `\PV`→𝒫, `\Re`/`\Im`→Re/Im | GREEN |
+| op.legacy OPT | `ReIm=true/false` | (re)define `\Re`/`\Im` | passthrough | — |
+| **bm-um.legacy** | `\bm{#1}` (needs `bm`+unicode-math) | bold (italic/upright) one atom | `\boldsymbol{#1}` (presentational bold) | GREEN |
+| **qtext.legacy** | `\qq \qqtext \qcomma …` (legacy `physics` text-in-math) | text interludes in math | `\text{…}` etc. | GREEN |
+
+### Fix (binding) — SCOPED to ab.braket; core primitive rebind does NOT suffice
+- Rebinding `\delopen`→`\left`, `\delclose`→`\right` fixes the SINGLE-body case and keeps ab/braket
+  green (verify_target_braket/ketbra CLEAN, proper OPEN/MIDDLE/CLOSE roles), BUT does NOT fix
+  ab.braket: `tightbraces=false` (which ALREADY makes `\phy@abopen/close`=`\left`/`\right`) is
+  102 err. The real trigger is the ACTIVE `|`=`\egroup\phy@abb@bkv\bgroup`(=`\egroup\middle\vert
+  \bgroup`, phy-ab.braket.sty:56) splitting the subformula into `\bgroup…\egroup` boxes INSIDE
+  `\left`'s `\lx@hidden@bgroup` **capture_body** (tex_box.rs:451) — token-capture vs live-digest of
+  the active-`|` `\egroup`/`\bgroup` desyncs; `\left` closes early → `\right` Unbalanced + `\egroup`
+  cascade. The PRE-SPLIT literal form `\left\langle\bgroup a\egroup\middle\vert\bgroup b\egroup
+  \right\rangle` is CLEAN, so the boxing itself is fine — only the active-`|` + capture_body is not.
+- FAITHFUL BINDING (BINDINGS OUTRANK RAW; physics2 = contributed, no upstream Perl): add
+  `latexml_contrib/src/physics2_sty.rs` for `\usephysicsmodule` + the modules, redefining the
+  **ab.braket braket-family** (`\bra`,`\ket`,`\braket`,`\ketbra`, internals `\phy@@ab@bk`/`\phy@@ab@kb`)
+  so the active `|` becomes a plain `\middle\vert` (NO `\egroup…\bgroup` boxing) and the fences are
+  native `\left…\middle…\right` — i.e. `\braket<a|b>`→`\left\langle a\middle\vert b\right\rangle`
+  (verified CLEAN). Cover the mb/star/size and active-`<>`/`\<`/`\>` forms per the table. Everything
+  else already raw-loads green — a full binding SHOULD mirror the whole table (robustness), but only
+  ab.braket is a correctness fix; the rest are documented passthroughs (sizes/spacing = presentational
+  NO-OPs).
+- Guard: mod_ab_braket.tex — 0 Error/Fatal AND ⟨a|b⟩ renders (≥1 `<ltx:XMApp>` with OPEN+MIDDLE+CLOSE
+  roles). Regression: mod_ab / mod_braket / mod_diagmat / mod_doubleprod / mod_xmat / mod_ab_legacy /
+  mod_op_legacy / mod_bmum_legacy / mod_qtext_legacy stay GREEN.
+Risk: MED — ab.braket surface (bra/ket/braket/ketbra × star/size × active-|/<>) must be covered
+faithfully; re-run physics2/physics2 + physics2-legacy. Gain: physics2 arXiv docs (ab.braket users).
+
+### Dead ends
+- `\delopen`→`\left`/`\delclose`→`\right` alone: single-body clean but ab.braket still 102 err
+  (active-`|` capture_body). tightbraces=false: 102 err (same). So the fix is the braket-family
+  active-`|` rewrite, not the core primitive.
+- nabla.legacy `\the0 You can't use 0 after \the` = fixdif raw-load root, NOT physics2 — separate.
+
+## physics2 ab.braket — exact star/size argument grammar (phy-ab.sty + phy-ab.braket.sty)
+
+The override must read this same syntax. `\braket`/`\bra`/`\ket`/`\ketbra` are all
+`\DeclareRobustCommand X{\phy@d@lx{<X>.m}{<X>.a}}` (phy-ab.braket.sty:42,47,62,90):
+  \bra→{br.m}{br.a}  \ket→{kt.m}{kt.a}  \braket→{bk.m}{bk.a}  \ketbra→{kb.m}{kb.a}
+
+STEP 1 — star/size peek (phy-ab.sty:74-80):
+  \def\phy@d@lx#1#2#3{\ifcsname phy@del\string#3\endcsname \def\reserved@a{#1}%   (#3 = star/size → .m)
+                      \else \def\reserved@a{#2}\fi                                 (#3 = delimiter → .a)
+                      \csname phy@d@lx\reserved@a\endcsname#3}
+  The star/size token set is exactly what `\csname phy@del\string#3\endcsname` is defined for
+  (phy-ab.sty:65-72): `*`  `\big \Big \bigg \Bigg \biggg \Biggg`. Anything else ⇒ auto (.a) branch.
+
+STEP 2a — AUTO branch handler (phy-ab.sty:86-88, `\phy@d@l@genxa`):
+  \phy@d@lx<name>##1 = \csname phy@<name>@\string##1\endcsname##1
+  i.e. dispatch on the delimiter token ##1 to the xparse cmd whose signature IS the delim grammar.
+STEP 2b — MATH-SIZE branch handler (phy-ab.sty:81-85, `\phy@d@l@genxm`):
+  \phy@d@lx<name>##1##2 = \begingroup
+     \ifx##1*\let\phy@tempa=\relax\else\let\phy@tempa=##1\fi   (star→\relax, else the size cs)
+     \csname phy@<name>@\string##2\endcsname \phy@tempa ##2
+  ##1 = star/size, ##2 = delimiter; the size is passed as the leading `m` arg of the `mr..` grammar.
+  (the matching \endgroup is the trailing \endgroup in each .m body.)
+
+STEP 3 — per-delimiter xparse commands (phy-ab.braket.sty; `\phy@AB@gen{name}<delim>{sig}{body}`
+generates `\DeclareDocumentCommand\csname phy@<name>@\string<delim>\endcsname{sig}{body}`):
+  \bra   br.a {r<|} → \phy@abopen\langle#1\phy@abclose\vert           (:39)  [auto: \delopen…\delclose]
+         br.m {mr<|}→ \mathopen#1\langle#2\mathclose#1\vert\endgroup  (:38)  [size]
+  \ket   kt.a {r|>} → \phy@abopen\vert#1\phy@abclose\rangle           (:44)
+         kt.m {mr|>}→ \mathopen#1\vert#2\mathclose#1\rangle\endgroup  (:43)
+  \braket bk.a {r<>}→ \phy@@ab@bk{#1}                                 (:60)  [RED: active |]
+         bk.m {mr<>}→ \phy@@mb@bk#1{#2}\endgroup                      (:59)
+  \ketbra kb.a {r||}→ \phy@@ab@kb#1\phy@@end                          (:87)
+         kb.m {mr||}→ \phy@@mb@kb#1{#2}\endgroup                      (:86)
+
+STEP 4 — bodies with active chars (phy-ab.braket.sty:50-78; defined under \catcode`\|=\active etc.):
+  \phy@@ab@bk#1 (auto braket) :50-53:
+    \begingroup \mathcode`\|="8000 \def|{\egroup\phy@abb@bkv\bgroup}%   (\phy@abb@bkv=\middle\vert :54)
+      \def\<{\mathrel{<}}\def\>{\mathrel{>}}%
+      \phy@abopen\langle\bgroup#1\egroup\phy@abclose\rangle\endgroup    (= \delopen…\delclose ⇒ RED)
+  \phy@@mb@bk#1#2 (size braket) :46-49:  \begingroup \mathcode`\|="8000 \def|{\egroup#1\vert\bgroup}%
+      …\mathopen#1\langle\bgroup#2\egroup\mathclose#1\rangle\endgroup  (fixed-size mathopen/close)
+  \phy@@ab@kb#1>#2<#3\phy@@end (auto ketbra) :73-78: \begingroup \def\<{\phy@abb@l}\def\>{\phy@abb@r}%
+      \phy@abopen\vert\mathopen{\phy@mathvphantom{#3}}#1\phy@abclose\rangle#2%
+      \phy@abopen\langle#3\mathclose{\phy@mathvphantom{#1}}\phy@abclose\vert\endgroup  (2× \delopen…)
+  \phy@@mb@kb#1#2 (size ketbra) :67-72: active `<`/`>`→`#1\langle`/`#1\rangle`;
+      \mathopen#1\vert#2\mathclose#1\vert\endgroup
+  \phy@abb@l/@r (:80-84) = the active `\<`/`\>` in ketbra = literal ‹ › (\mathchar"313C/"313E, or
+      \Umathchar under unicode-math).
+
+OVERRIDE PLAN: keep STEP1-3 grammar verbatim (star/size peek + xparse delim signatures). Replace
+only the STEP-4 bodies for the .a (auto) forms so the active `|` = `\middle\vert` (NO \egroup…\bgroup),
+`\phy@abopen`/`\phy@abclose`→`\left`/`\right`, dropping the `\bgroup#1\egroup`. The .m (size/star)
+forms already use \mathopen/\mathclose (fixed size) — verify they are green, keep as-is if so.
+
+## Checkpoint N (wave-15) — ROOT 3a: t-angles `\lx@begin@alignment Attempt to close boxing group`
+
+Witness: t-angles/t-manual (101 err), `\Show\id` (t-manual:40-44 = `\begin{array}{c}\begin{tangle}#1
+\end{tangle}\\ \hbox{\tt\string#2}\end{array}`). Repros (RED b54t): tangle_nested_array.tex (12),
+m1_begingroup_tabarray.tex (8, minimal kernel). First error `\lx@begin@alignment Attempt to close
+boxing group` / `\@end@array Attempt to close boxing group`, current frame non-boxing `\begingroup`
+(stomach.rs:744).
+
+### Minimal trigger (isolated)
+A `\@tabarray`-based array (t-angles.sty:491-494 `\def\array{\let\@classz\@arrayclassz…\@tabarray}`),
+wrapped in a `\begingroup` (non-boxing group — here the `tangle` LaTeX environment's own group),
+NESTED inside an outer `\begin{array}` cell. Discriminators:
+- `\begingroup\@tabarray…\endarray\endgroup` nested  → RED (m1)          [non-boxing wrapper]
+- `{\@tabarray…\endarray}` nested                     → CLEAN (m2)        [boxing brace]
+- `\begingroup\begin{array}…\end{array}\endgroup` nested → CLEAN (m3)     [full \array path]
+- `\@tabarray…\endarray` nested, no wrapper           → CLEAN (t4/t5)
+- `\begin{tangle}…` standalone (not nested)           → CLEAN (t1/t2)
+`\@tabarray{l}a\\b\endarray` standalone = 0 err but **0 rows** (`ltx:tr`=0) — no real alignment.
+
+### Mechanism (file:line)
+`\@tabarray` = `\m@th\@@array[c]` (Rust latex_constructs/sect10.rs:424; Perl latex_constructs.pool
+.ltxml:3765) OMITS `\@array@bindings` + `\lx@begin@alignment` that the full `\array` macro carries
+(Rust sect10.rs:411-414; Perl :3755-3756: `\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@
+alignment`). So `\@tabarray` opens only `\@@array`'s `before_digest bgroup()` (boxing B_arr,
+sect10.rs:419) and its DigestedBody, but NEVER starts the alignment (`\lx@begin@alignment`, whose
+after_digest is bgroup()/digest_alignment_body/egroup(), tex_tables.rs:53-66). `\endarray` =
+`\lx@end@alignment\@end@array` (sect10.rs:415); `\@end@array` = `egroup()` (sect10.rs:416-418). Real
+latex.ltx `\@tabarray` = `\m@th\@ifnextchar[\@array{\@array[c]}` routes through `\@array` = the full
+`\vcenter{\halign{…}}` box (array.sty) — a self-contained boxing alignment. LaTeXML's incomplete
+`\@tabarray` leaves B_arr unbalanced against the enclosing NON-boxing `\begingroup`; when nested,
+the OUTER alignment's cell/teardown `egroup()` (alignment.rs end_column; `\@end@array` egroup) find
+the `\begingroup` (non-boxing) instead of a boxing cell frame → stomach.rs:744. With `{` (boxing) or
+the full `\array` (which pushes `\lx@begin@alignment`'s own boxing frame) the depths stay balanced.
+
+### Classification: SHARED (Perl fails identically)
+Perl 0.8.8 same host/preload: tangle_nested_array = 12 err, m1 = 8 err — IDENTICAL to Rust (12/8),
+same malformed cascade. `\@tabarray` is a faithful port. pdflatex 0 (t-manual.pdf ships). In scope
+(surpass-Perl approved; pdflatex clean).
+
+### Fix — KERNEL (the `\@tabarray` macro), not a t-angles binding
+Make `\@tabarray` faithful to real latex.ltx: route through the full `\array` alignment setup so it
+carries `\@array@bindings` + `\lx@begin@alignment`. Rust site: latex_constructs/sect10.rs:424 —
+change `\@tabarray` from `\m@th\@@array[c]` to `\m@th\@ifnextchar[\array{\array[c]}` (LaTeXML's
+`\array` = latex.ltx's `\@array`). VALIDATED: fix_tabarray_via_array.tex = 0 errors AND correct
+nested `<ltx:XMArray role="ARRAY">`(outer, center cell) ⊃ `<ltx:XMArray colsep="0.0pt" rowsep=…>`
+(inner, left cell). Fixes ALL packages calling `\@tabarray` directly, not just t-angles.
+Guard (tangle_nested_array.tex): 0 Error/Fatal AND a nested `<ltx:XMArray>` (outer ARRAY ⊃ inner
+XMArray with an `<ltx:XMCell>`). Risk LOW-MED: `\@tabarray` is vestigial in LaTeXML (`\begin{array}`
+uses `\array` directly sect10.rs:411, `\begin{tabular}` uses `\@tabular` sect10.rs:244), so only
+direct-callers are affected; re-run array/tabular goldens. Expected gain: t-angles/t-manual (101).
+NB: mirror the same fix in Perl's `\@tabarray` (latex_constructs.pool.ltxml:3765) for parity if
+Perl-side parity is tracked.
+
+### shipunov/boldline-ex-en — SEPARATE root (root 3a-sibling, not this fix)
+`\usepackage{boldline}` `\begin{tabular}{V{2.7}c|c|cV{2.7}}\hlineB{2.7}…` — boldline's `V{}` bold
+vertical-rule column type + `\hlineB`/`\clineB`. First error `\lx@begin@alignment Attempt to close a
+group that switched to mode restricted_horizontal` (NOT boxing-group; a MODE-frame variant). Distinct
+trigger (custom column type / bold rule), NOT the `\@tabarray` incompleteness. Needs its own repro.
+
+### Dead ends
+- Standard nested arrays (`\begin{array}` in `\begingroup`/`{}`), custom `\array` body alone, `\tangle`
+  alone, `\@tabarray` standalone: all CLEAN. Trigger = `\@tabarray` + non-boxing `\begingroup` wrapper
+  + outer-array nesting together.
+- t-angles picture content (`\id`, `\hbx`, `\line`) is NOT the trigger (t2 clean).

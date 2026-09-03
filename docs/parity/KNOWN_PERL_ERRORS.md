@@ -5645,3 +5645,40 @@ it; under `rawclasses` (KOMA `\DeclareRobustCommand\small{\@setfontsize
 latex.ltx:1384) so robust commands stay `\protect\cs ` (the `ProtectedXUntil`
 parameter type, OD #191), and the cell is emitted as one group as LaTeX's
 column template does. Guard: `perfect_kernel_batch54::s_column_unbraced_size_command_is_scoped`.
+
+## 179. Display listings open their group at expansion time (Rust fixes)
+
+listings.sty.ltxml:117 `\begin{lstlisting}` pushes the listing's group with
+`$STATE->bgroup` INSIDE the macro's expansion and closes it with a `}` in the
+emitted tokens. tex.web §785 `align_peek` expands a cell's first token before
+the row and cell frames exist, so in a `p{}` cell the group sits under the
+cell's box frame and the box's own `}` closes the wrong group (`\endgroup`
+"Attempt to close non-boxing group", `\@@tabular` "Attempt to end mode";
+pfdicons-doc:996, tikzcodeblocks-documentation:679, shipunov). Trigger:
+`\begin{tabular}{p{4cm}l}\begin{lstlisting}…\end{lstlisting} & b \\
+\end{tabular}`. Rust: the expansion leaves no frame behind; it emits
+`\begingroup\lx@lst@activate{env}[keys]` (keys re-activated at digestion)
+and the trailer closes with `\endgroup`. Guard:
+`perfect_kernel_batch54::block_listing_in_a_paragraph_cell`.
+
+## 180. `\@tabarray` skips the array setup (Rust fixes)
+
+latex_constructs.pool.ltxml:3765 `\@tabarray` = `\m@th\@@array[c]` opens
+`\@@array`'s boxing group but never runs `\@array@bindings` +
+`\lx@begin@alignment` (real latex.ltx: `\m@th\@ifnextchar[\@array
+{\@array[c]}`). A package building its own array on it (t-angles.sty:491)
+nested in an outer array cell under `\begingroup` broke the outer cell's
+group (t-angles/t-manual, 101 errors; pdflatex clean). Rust: `\@array` is
+defined as the internal behind `\array` and `\@tabarray` routes through it.
+Guard: `perfect_kernel_batch54::tabarray_is_the_full_array_setup`.
+
+## 181. colortbl.sty.ltxml lacks the `\CT@*` internal surface (Rust fixes)
+
+Raw colortbl derivatives reach colortbl.sty internals — tabu.sty:720
+`\CT@everycr\expandafter{…\the\CT@everycr…}` (colortbl.sty:116 `\let
+\CT@everycr\everycr`, a toks register), tabulary/tabularht/keyvaltable
+`\CT@arc@`, `\CT@column@color`… — and the Perl binding defines none
+(srdp-mathematik). Rust: `\CT@everycr` is `\let` to `\everycr`; the colour
+painters are `\relax`/`\@empty` no-ops as in colortbl.sty:75-166. Guard:
+`perfect_kernel_batch54::colortbl_internal_surface_is_defined`.
+

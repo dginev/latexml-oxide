@@ -421,7 +421,25 @@ pub(crate) fn load() -> Result<()> {
     before_digest => { bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");
 
-  DefMacro!("\\@tabarray", r"\m@th\@@array[c]");
+  // latex.ltx `\def\@tabarray{\m@th\@ifnextchar[\@array{\@array[c]}}` — the
+  // full array setup (`\@array`, the internal behind LaTeXML's `\array`), so a
+  // package that builds its own array on `\@tabarray` (t-angles.sty:491
+  // `\def\array{…\@tabarray}`) gets `\@array@bindings` and
+  // `\lx@begin@alignment`. The former `\m@th\@@array[c]` (Perl
+  // latex_constructs.pool:3765 identical) opened `\@@array`'s boxing group
+  // but never started the alignment, so nested in an outer array cell under
+  // a `\begingroup` the outer cell's `egroup` met the non-boxing frame
+  // ("`\lx@begin@alignment` Attempt to close boxing group"; t-angles/t-manual
+  // 101 errors, pdflatex clean). Guard:
+  // `perfect_kernel_batch54::tabarray_is_the_full_array_setup`.
+  // `\@array` is the latex.ltx INTERNAL the kernel's own callers use (a
+  // package may redefine the user `\array` on top of `\@tabarray`, as
+  // t-angles does — routing through `\array` would recurse).
+  DefMacro!(
+    "\\@array[]{}",
+    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+  );
+  DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
 
   Ok(())
 }

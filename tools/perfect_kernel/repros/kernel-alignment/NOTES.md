@@ -333,3 +333,70 @@ Risk: LOW (two scoped Lets in the longtable env; no kernel change). Expected gai
   :224) would silence the genuine plain-tabular `\newpage` error (noalign_tabular_newpage_CONTROL:
   pdflatex 9) and the longtable `\clearpage` error (pdflatex 2). The tolerance belongs to
   longtable's `\def\newpage{\noalign…}`, not the kernel.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (a)  colortbl \CT@* internal surface (\CT@everycr)
+================================================================================
+Repro: colortbl_ct_everycr.tex (RED, rust=2, perl=2, pdflatex=0). Witness srdp-mathematik:638.
+
+## CLASSIFICATION: SHARED — Perl colortbl.sty.ltxml defines NO \CT@* internals either
+   (grep: none), so Perl fails identically (2 errors). pdflatex 0 -> surpass in scope.
+
+## MECHANISM
+colortbl_sty.rs stands in for colortbl.sty but defines only \arrayrulecolor (:197) and
+\doublerulesepcolor (:199), both no-ops. The colortbl \CT@* INTERNAL surface is absent, so
+raw colortbl-derivative code that reaches those internals fails undefined. \everycr is a
+Tokens register in the kernel (tex_tables.rs:202 DefRegister). colortbl.sty:116
+`\let\CT@everycr\everycr` makes \CT@everycr an alias of that toks register; tabu.sty:720
+`\iftabu@colortbl\CT@everycr\expandafter{\expandafter\iftabu@everyrow \the\CT@everycr \fi}\fi`
+assigns to it and \the-s it -> needs \CT@everycr to BE a toks register.
+
+## \CT@* SURFACE REACHED BY RAW DERIVATIVES (grep \CT@ under texmf-dist; raw = tabu STUB
+## tabu_sty.rs:7, tabulary, tabularht, keyvaltable, ctable)
+  tabu.sty:      \CT@arc@ \CT@do@color \CT@drsc@ \CT@end \CT@everycr \CT@LT@sep
+  tabulary.sty:  \CT@arc@ \CT@cell@color \CT@color \CT@column@color \CT@do@color \CT@drsc@
+                 \CT@extract \CT@row@color \CT@setup \CT@start
+  tabularht.sty / keyvaltable.sty: \CT@arc@
+(tcolorbox, nicematrix, xcolor, revtex4-1, aastex are BOUND -> not raw reaches.)
+
+## FAITHFUL BINDING DEFS (colortbl.sty file:line -> colortbl_sty.rs) — "internal surface"
+## shape like the biblatex fix (define the internals the raw code names, mirroring the .sty)
+  \CT@everycr        colortbl.sty:116  \let\CT@everycr\everycr   -> Let!("\\CT@everycr","\\everycr")  [toks register]
+  \CT@arc@           :165  \let\CT@arc@\relax                    -> Let \relax   (arrayrule color; unrendered)
+  \CT@drsc@          :160  \let\CT@drsc@\relax                   -> Let \relax   (doublerulesep color)
+  \CT@do@color       :166  \let\CT@do@color\relax                -> Let \relax
+  \CT@@do@color      :78   \def\CT@@do@color{<leaders vrule>}    -> \relax (visual only)
+  \CT@column@color   :91   \let\CT@column@color\@empty           -> Let \@empty
+  \CT@row@color      :204  \let\CT@row@color\relax               -> Let \relax
+  \CT@cell@color     :139  \let\CT@cell@color\relax              -> Let \relax
+  \CT@color          :75   \def\CT@color{...\color}              -> \relax (color on rule = no-op in binding)
+  \CT@setup          :72   \def\CT@setup{...}                    -> \relax
+  \CT@start/\CT@end  :119/:125  \def (save/restore color state)  -> faithful \def OR \relax (state unused when colors no-op)
+  \CT@extract{b,d,e,f} :89-112  preamble \columncolor parser     -> faithful \def chain (only if the binding runs colortbl's \@classz; else \relax)
+  \CT@LT@sep         (longtable sep)                             -> \relax
+Minimum to clear the witness surface: the six tabu reaches + \CT@color/\CT@setup/\CT@start/
+\CT@extract/\CT@cell@color/\CT@column@color/\CT@row@color (tabulary). \CT@everycr MUST be a
+toks register (Let to \everycr); the rest are safe \relax/\@empty no-ops (colortbl paints
+colors on rules/cells, which the binding does not render — it already no-ops the public
+\arrayrulecolor/\doublerulesepcolor).
+
+## FIX
+File: latexml_package/src/package/colortbl_sty.rs (load_definitions). Add the \CT@* surface
+above. Prefer a RawTeX block copying colortbl.sty:72-166's \let/\def bodies verbatim where
+they matter, plus `Let!("\\CT@everycr","\\everycr")` for the toks register; keep the color
+emitters (\CT@color/\CT@do@color/\CT@arc@/\CT@drsc@) as \relax since rule/cell color is not
+rendered. Mirror into Perl's colortbl.sty.ltxml if upstreaming (both lack it = PERL-shared).
+Guard (cluster_package_guards / perfect_kernel batch):
+  colortbl_ct_everycr.tex -> 0 errors AND the document element is present (//ltx:document with
+  text "x"); a tabulary raw table (\CT@color/\CT@setup reach) -> 0 undefined \CT@*.
+Risk: LOW (adds only internal \CT@* definitions; no public-command or rendering change).
+
+## SCOPE NOTE (honest gain)
+srdp-mathematik is a MULTI-root doc: after \CT@* it still needs the array surface (\NC@list,
+\NC@do, \col@sep, \extratabsurround), tabu's \tabu@rewritefirst, and longtable's \LT@bchunk
+(its Fatal). So \CT@* alone reduces but does NOT clean srdp. Class-level value is the raw
+colortbl-derivative family (tabulary/tabularht/keyvaltable/tabu docs) reaching \CT@*.
+
+## DEAD END
+- Defining \CT@everycr as an ordinary macro (\def\CT@everycr{}) not a toks register: tabu:720
+  `\the\CT@everycr` then errors "You can't use \CT@everycr after \the" — it MUST be a register.

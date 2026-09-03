@@ -193,6 +193,26 @@ LoadDefinitions!({
     alias => "");
   RawTeX!(r"\let\@setcellcolor\lxsetcellcolor");
 
+  // colortbl.sty's `\CT@*` internal surface, reached by raw derivatives that
+  // require colortbl (tabu.sty:720 `\CT@everycr\expandafter{…\the\CT@everycr…}`,
+  // tabulary.sty `\CT@arc@`/`\CT@color`/`\CT@column@color`/`\CT@row@color`/
+  // `\CT@cell@color`/`\CT@do@color`/`\CT@setup`/`\CT@start`/`\CT@extract`,
+  // tabularht/keyvaltable `\CT@arc@`): the binding stands in for colortbl.sty
+  // (Perl colortbl.sty.ltxml omits them too). `\CT@everycr` MUST be the
+  // `\everycr` toks register (colortbl.sty:116 `\let\CT@everycr\everycr` —
+  // tabu assigns to it and `\the`s it); the colour painters are the
+  // unrendered rule/cell colours (:75-166 `\let…\relax`/`\@empty`), so they
+  // are the same no-ops as the public `\arrayrulecolor`. Witness
+  // srdp-mathematik (`\multiplechoice` → raw tabu). Guard:
+  // `perfect_kernel_batch54::colortbl_internal_surface_is_defined`.
+  Let!("\\CT@everycr", "\\everycr");
+  RawTeX!(
+    r"\let\CT@arc@\relax \let\CT@drsc@\relax \let\CT@do@color\relax
+\let\CT@@do@color\relax \let\CT@column@color\@empty \let\CT@row@color\relax
+\let\CT@cell@color\relax \let\CT@color\relax \let\CT@setup\relax
+\let\CT@start\relax \let\CT@end\relax \let\CT@LT@sep\relax
+\def\CT@extract#1#2#3#4{}"
+  );
   // Perl L85: \arrayrulecolor — ignored.
   DefMacro!("\\arrayrulecolor[]{}", None);
   // Perl L88: \doublerulesepcolor — ignored.

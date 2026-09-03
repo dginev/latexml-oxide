@@ -11252,6 +11252,77 @@ See the docs.\fnurl{https://ctan.org/pkg/biblatex#frag~x}
     );
   }
 
+  /// A block listing in a `p{}` cell: the listing's group must close with
+  /// an implicit `\egroup` (tex.web §347: only `{`/`}` characters move
+  /// `align_state`), else the cell's `&`/`\\` stop being column ends
+  /// (pfdicons-doc, tikzcodeblocks-documentation, shipunov; pdflatex clean).
+  /// The `\parbox` form errors in pdflatex too and stays an error.
+  #[test]
+  fn block_listing_in_a_paragraph_cell() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{tabular}{p{4cm}l}
+\begin{lstlisting}[numbers=none]
+x=1;
+\end{lstlisting} & b \\
+c & d \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    assert!(xml.contains("<listing"), "{xml}");
+    let control = tex
+      .replace(
+        r"\begin{tabular}{p{4cm}l}",
+        r"\begin{tabular}{ll}\parbox{4cm}{",
+      )
+      .replace(r"\end{lstlisting} & b", r"\end{lstlisting}} & b");
+    let (stderr, _xml) = convert(&control, false);
+    assert!(
+      error_count(&stderr) > 0,
+      "CONTROL: pdflatex errors here too\n{stderr}"
+    );
+  }
+
+  /// latex.ltx `\@tabarray` = `\m@th\@ifnextchar[\@array{\@array[c]}` — the
+  /// full array setup; a package building its own array on it (t-angles.sty:491)
+  /// nested in an outer array cell under `\begingroup` broke the outer cell's
+  /// group (t-angles/t-manual, 101 errors; Perl identical, pdflatex clean).
+  #[test]
+  fn tabarray_is_the_full_array_setup() {
+    let tex = r"\documentclass{article}\usepackage{amsmath}\usepackage{t-angles}
+\def\SHOW#1#2{\begin{array}{c}\begin{tangle}#1\end{tangle}\\ \hbox{\tt\string#2}\end{array}}
+\def\Show#1{\SHOW#1#1}
+\begin{document}
+$$ \Show\id \quad \Show\n $$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.matches("<XMArray").count() >= 2, "{xml}");
+  }
+
+  /// colortbl's `\CT@*` internal surface for raw derivatives (tabu.sty:720
+  /// assigns to and `\the`s `\CT@everycr`, colortbl.sty:116 `\let…\everycr`).
+  #[test]
+  fn colortbl_internal_surface_is_defined() {
+    let tex = r"\documentclass{article}\usepackage{colortbl}
+\makeatletter
+\CT@everycr\expandafter{\expandafter\relax\the\CT@everycr}
+\CT@arc@\CT@column@color\CT@row@color\CT@cell@color\CT@do@color
+\makeatother
+\begin{document}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

@@ -1885,9 +1885,56 @@ pub fn lst_process_block_with(
   if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
     trailer.extend(post.unlist());
   }
-  trailer.push(T_END!()); // balance bgroup from the caller
+  // Close the listing's group with the align-neutral implicit closer of the
+  // caller's boxing `bgroup()` (tcolorbox `\dispExample`, `\lx@lstenv@body`'s
+  // caller). `\begin{lstlisting}` and `\lstinputlisting` instead EMIT
+  // `\begingroup` as their first token and leave no frame behind at expansion
+  // time (`lst_group_opener` + `lst_process_display_scoped`, whose closer is
+  // `\endgroup`) — tex.web §785
+  // `align_peek` expands a cell's first token BEFORE the row and cell frames
+  // exist, so a frame pushed during expansion (the former `bgroup()`) sat
+  // under the `p{}` cell's box frame and the box's own `}` closed the wrong
+  // group ("`\endgroup` Attempt to close non-boxing group", "`\@@tabular`
+  // Attempt to end mode"; pfdicons-doc:996, tikzcodeblocks-documentation:679,
+  // shipunov; Perl identical, pdflatex clean). A `}` TOKEN here was also
+  // wrong: §347 moves `align_state` only for catcode-1/2 characters. Guard:
+  // `perfect_kernel_batch54::block_listing_in_a_paragraph_cell`.
+  trailer.push(T_CS!("\\lx@hidden@egroup"));
 
   (body_tokens, trailer)
+}
+
+/// The display listing's group opener, emitted as TOKENS so the group is
+/// opened at digestion, in stream order (listings.sty `\lst@Init` under the
+/// environment's `\begingroup`): `\bgroup\lx@lst@activate{env}[<keys>]`.
+/// The primitive re-activates the listing keys inside that group for the
+/// digestion-time consumers (`\lstname`, styles, `LISTINGS_POSTAMBLE`).
+fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
+  let mut out = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\lx@lst@activate"),
+    T_BEGIN!(),
+  ];
+  out.extend(ExplodeText!(env));
+  out.push(T_END!());
+  if let Some(kv) = kv {
+    let body = kv.revert()?;
+    if !body.is_empty() {
+      out.push(T_OTHER!("["));
+      out.extend(body.unlist());
+      out.push(T_OTHER!("]"));
+    }
+  }
+  Ok(out)
+}
+
+/// [`lst_process_display`] for a caller whose group is the `\begingroup`
+/// token `lst_group_opener` emitted: the trailer's closer is `\endgroup`.
+pub fn lst_process_display_scoped(name: Option<Tokens>, text: &str) -> Vec<Token> {
+  let mut result = lst_process_display(name, text);
+  result.pop(); // the boxing closer `\lx@hidden@egroup`
+  result.push(T_CS!("\\endgroup"));
+  result
 }
 
 /// Perl: lstProcessDisplay — generate full display listing with optional caption/title.
@@ -2287,6 +2334,10 @@ LoadDefinitions!({
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         let kv: Option<KeyVals> = args.into_iter().next().unwrap_or_default().into();
+        // The keys are activated in a frame of the EXPANSION only (they steer
+        // how the raw lines are processed), popped before the expansion
+        // returns; the digested listing re-activates them inside its own
+        // `\bgroup` (see `lst_process_display`'s trailer note).
         bgroup();
         assign_value("current_environment", Stored::String(pin("lstlisting")), None);
         def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled("lstlisting".into())), None)?;
@@ -2294,16 +2345,31 @@ LoadDefinitions!({
         lst_activate(kv.as_ref());
         let text = listings_read_raw_lines("lstlisting");
         if !lst_writefile_tee(&text) {
+          egroup()?;
           return Ok(Tokens!());
         }
         let name = lst_get_tokens("name");
         let name_opt = if name.is_empty() { None } else { Some(name) };
-        let result = lst_process_display(name_opt, &text);
-        Ok(Tokens::new(result))
+        let result = lst_process_display_scoped(name_opt, &text);
+        egroup()?;
+        let mut out = lst_group_opener("lstlisting", kv.as_ref())?;
+        out.extend(result);
+        Ok(Tokens::new(out))
       }
     )));
     def_macro(cs, params, expansion, None)?;
   }
+
+  // Digestion-time key activation for a display listing (see
+  // `lst_group_opener`): runs inside the `\bgroup` the opener emitted.
+  DefPrimitive!("\\lx@lst@activate {} OptionalKeyVals:LST", sub[args] {
+    let env = args.first().cloned().unwrap_or_default().to_string();
+    let kv: Option<KeyVals> = args.get(1).cloned().unwrap_or_default().into();
+    assign_value("current_environment", Stored::String(pin(&env)), None);
+    def_macro(T_CS!("\\@currenvir"), None, mouth::tokenize_internal(TeXString::assembled(env)), None)?;
+    lst_activate(kv.as_ref());
+    Ok(())
+  });
 
   // \lstinputlisting — read listing from file
   DefMacro!("\\lstinputlisting OptionalKeyVals:LST Semiverbatim", sub[(kv, file)] {
@@ -2315,8 +2381,11 @@ LoadDefinitions!({
     if name.is_empty() {
       name = Tokens::new(ExplodeText!(&filename));
     }
-    let result = lst_process_display(Some(name), &text);
-    Ok(Tokens::new(result))
+    let result = lst_process_display_scoped(Some(name), &text);
+    egroup()?;
+    let mut out = lst_group_opener("lstinputlisting", kv.as_ref())?;
+    out.extend(result);
+    Ok(Tokens::new(out))
   });
 
   // Counters

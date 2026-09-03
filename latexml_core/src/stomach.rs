@@ -17,6 +17,10 @@ use crate::{digested::DigestedData, pin};
 /// in `__GI_getenv` when running `cargo test --release --tests`.
 /// Sample once at static-init; subsequent reads are an atomic load.
 static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOUND_MODE").is_ok());
+/// `LXML_TRACE_FRAMES=1`: one line per stack-frame push/pop with the depth, the
+/// owning token and (on pop) the bound mode — the save-stack view of a
+/// group/box/mode imbalance.
+static TRACE_FRAMES: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
 
 // Conversion timeout: thread-local deadline. When set, digest loops check it.
 thread_local! {
@@ -540,6 +544,13 @@ pub fn regurgitate() -> Vec<Digested> { std::mem::take(&mut stomach_mut!().box_l
 /// Adds a new stack frame for a TeX group.
 pub fn push_stack_frame(nobox: bool) {
   let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
+  if *TRACE_FRAMES {
+    eprintln!(
+      "[frames] push nobox={nobox} depth {} -> {} at {current_token}",
+      get_frame_depth(),
+      get_frame_depth() + 1
+    );
+  }
   push_frame();
   assign_value(
     "beforeAfterGroup",
@@ -642,6 +653,15 @@ pub fn execute_before_after_group() -> Result<()> {
 
 /// Removes the last/current stack frame, ending a TeX group
 pub fn pop_stack_frame(nobox: bool) -> Result<()> {
+  if *TRACE_FRAMES {
+    let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
+    eprintln!(
+      "[frames] pop  nobox={nobox} depth {} -> {} at {current_token} (bound_mode={})",
+      get_frame_depth(),
+      get_frame_depth().saturating_sub(1),
+      lookup_string_from_sym(crate::pin!("BOUND_MODE"))
+    );
+  }
   let after = remove_value("afterGroup");
   execute_before_after_group()?;
   pop_frame()?;
