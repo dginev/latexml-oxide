@@ -1,0 +1,23 @@
+% witness: nicematrix/nicematrix (nicematrix.tex:1364 [rules/color=[gray]{0.9},...])
+% oracle:  pdflatex 0 errors
+% engines: rust=1 (b54x) pdflatex=0 ; Perl can't build nicematrix (raw pgfsys driver, 47 err)
+% expect:  0 errors; <ltx:tabular> with 1 row of 3 cells, no \noalign/Extra-tab cascade
+% status:  RED  -> RUST-ONLY (surpass; Perl raw-load dies before this point)
+% mechanism: nicematrix reads env options with xparse `O{}` (\NewDocumentCommand{\NiceTabular}
+%   { O{} m !O{} }, nicematrix.sty:3806-3841), which BALANCES nested [..]. The binding's
+%   \NiceTabular[]{}[] (nicematrix_sty.rs:267) uses the `[]`/Optional param -> read_optional ->
+%   read_optional_delimited (gullet.rs:2419) = read_until the FIRST `]` (NON-nesting, correct for
+%   plain LaTeX \@ifnextchar[). So `[rules/color=[gray]{0.9},rules/width=1pt,no-cell-nodes]`
+%   is cut at the inner `]` after `[gray`; `{0.9},rules/width=1pt,no-cell-nodes]` spills into the
+%   alignment body, and the following \hline (= \noalign) lands mid-row -> "\noalign cannot be
+%   used here" -> the env's rows desync -> downstream tables cascade to "Extra alignment tab"
+%   (16 in the doc) + malformed itemize. Trigger needs the nested [gray] AND a rule (\hline);
+%   [rules/color=red] (non-nested) and the nested option WITHOUT a rule are both clean.
+\documentclass{article}\usepackage{nicematrix,xcolor}
+\begin{document}
+\begin{NiceTabular}{|ccc|}[rules/color=[gray]{0.9},rules/width=1pt,no-cell-nodes]
+\hline
+a & b & c \\
+\hline
+\end{NiceTabular}
+\end{document}

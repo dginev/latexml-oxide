@@ -712,7 +712,18 @@ pub(crate) fn load() -> Result<()> {
 
   def_primitive_noop("\\DeclareMathDelimiter{}{}{}{}")?;
   def_primitive_noop("\\DeclareMathRadical{}{}{}{}{}")?;
-  def_primitive_noop("\\DeclareMathVersion{}")?;
+  // latex.ltx `\DeclareMathVersion{name}` registers a math version a later
+  // `\mathversion{name}` may select (oz.sty:34/:70, iwonamath.sty:110 with an
+  // expl3 name, askmaps `sans`, zed `zed`); the noop left every declared
+  // version "Unknown" (Perl latex_constructs.pool:2658 identical; 5 docs,
+  // ozguide 28). The name is recorded fully expanded; no font change is
+  // modelled beyond `bold`/`normal`. Guard:
+  // `perfect_kernel_batch54::declared_math_versions_are_selectable`.
+  DefPrimitive!("\\DeclareMathVersion Expanded", sub[(name)] {
+    let name = name.to_string().trim().to_string();
+    assign_value(&s!("MATH_VERSION_{name}"), Stored::Bool(true), Some(Scope::Global));
+    Ok(())
+  });
   def_primitive_noop("\\DeclarePreloadSizes{}{}{}{}{}")?;
 
   // The next font declaration commands are based on

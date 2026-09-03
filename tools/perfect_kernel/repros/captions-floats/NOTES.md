@@ -634,3 +634,157 @@ should detect texmf .otf fonts → true → branch never taken. FIX (fallback): 
 Actionable this family (by value): doclicense \doclicenseThis (6), listings \lst@XConvert (6), hyperref
 group (9+5+4), subfiles \ifSubfilesClassLoaded (4), \ClassErrorNoLine (2 docs). All binding gaps or
 font-detection; the rest are parked/raw-prerequisite/expl3.
+
+## FOLLOW-UP 1 — faithful bodies for the actionable singleton gaps (one block per binding)
+
+subfiles_sty.rs — \ifSubfilesClassLoaded (real body, control flow):
+  DefMacro!("\\ifSubfilesClassLoaded", r"\@ifundefined{ver@subfiles.cls}\@secondoftwo\@firstoftwo");
+  (subfiles.sty:171; when subfiles is a PACKAGE, ver@subfiles.cls is undefined → second branch.)
+
+listings_sty.rs — \lst@XConvert: the chain IS reached (tagpdfdocu-patches.sty:65-69 defines
+  \lstrenewenvironment via \lst@UserCommand(=\gdef) with body `\let\lst@arg\@empty \lst@XConvert{#1}\@nil
+  \expandafter\lstnewenvironment@\lst@arg{#1}{#2}`). It ONLY NEEDS TO EXIST + consume its delimiter — the
+  real case-conversion is pointless for LaTeXML, and `\lstnewenvironment@` must stay a NO-OP so the patch
+  does NOT rebind lstlisting to latex-lab blockenv (the reason listings_sty.rs:2404 omits it). VERIFIED
+  minimal fix (0 err):
+    RawTeX!(r"\def\lst@XConvert#1\@nil{}\long\def\lstnewenvironment@#1#2#3{}");
+  (Do NOT port the real listings.sty:211-236 chain — it would feed the blockenv rebind the comment warns of.)
+
+doclicense_sty.rs (contrib, currently a 16-line stub that no-ops ALL sub-macros incl. \doclicenseText/
+  \doclicenseLongText/\doclicenseImage/\doclicenseURL/\doclicenseName) — \doclicenseThis is the only
+  missing wrapper. Consistent minimal fix (VERIFIED 0 err): def_macro_noop("\\doclicenseThis")?;
+  (doclicense.sty:222 body is pure LAYOUT — center + minipages of \doclicenseImage + \doclicenseLongText,
+  all already no-op'd. SURPASS option: un-stub \doclicenseText/\doclicenseLongText/\doclicenseURL/
+  \doclicenseName to emit `\href{url}{name}` and make \doclicenseThis → \doclicenseLongText; larger change.)
+
+hyperref_sty.rs (emulation) — three internals reached by raw hyperref-dependent packages:
+  - \Hy@driver: SENTINEL = "hpdftex". hrefhide.sty:154 `\def\hrefhide@driver{hpdftex}\ifx\Hy@driver
+    \hrefhide@driver\relax\else\PackageError…`; real hyperref.sty:2555 `\def\Hy@driver{hpdftex}` under
+    pdfTeX. Fix: DefMacro!("\\Hy@driver", "hpdftex"); → the \ifx matches → no driver error. VERIFIED (the
+    \Hy@driver error clears; a residual `ocgcolorlinks` note is a separate hrefhide option in the real doc).
+  - \HyPsd@UTFviii: hyperref.sty:1788 — PDF-string UTF8 octet setup (bookmark encoding). LaTeXML emits no
+    pdfstrings → def_macro_noop("\\HyPsd@UTFviii")?;
+  - \hyper@makecurrent: hyperref.sty:6832 `\def\hyper@makecurrent#1{…}` — builds the current anchor name;
+    LaTeXML uses its native id/label system → def_macro_noop("\\hyper@makecurrent{}")?;
+
+## FOLLOW-UP 2 — \ClassErrorNoLine root = \IfFontExistsTF always-false
+
+Docs: asmeconf-template, asmejour-template (oracle=lualatex, run with the luatex preload → \ifac@fontspec
+TRUE → the fontspec font-check branch runs). asmeconf.cls:650-655
+  `\IfFontExistsTF{TexGyreTermesX-regular.otf}{}{\ClassErrorNoLine{\ClassName}{\FontWarning}}` (×4 fonts,
+  + \ClassWarningNoLine ×2). Under pdflatex \ifac@fontspec is FALSE (asmeconf.cls:640-642 loads
+  inconsolata/newtxmath instead), so the checks are never reached → pdflatex clean.
+
+ROOT: Rust \IfFontExistsTF is hard-wired to the FALSE branch — fontspec_sty.rs:79
+  `DefMacro!("\\IfFontExistsTF{}{}{}", "#3")` (comment :75-78: "No OpenType font resolves in this engine →
+  false branch. Witnesses: neoschool{,-fr}, beamerthemeCelestia{,-fr}"). So every asmeconf font check takes
+  the else branch → \ClassErrorNoLine, which is undefined (no real def anywhere — asmeconf assumes fonts
+  present so it never fires under a full TL). Real \IfFontExistsTF = fontspec `\fontspec_font_if_exist:nTF`,
+  a LuaTeX/XeTeX font lookup; the fonts ARE in TeX Live (kpsewhich resolves texgyretermes-math.otf,
+  texgyreheros-regular.otf, Inconsolatazi4-Regular.otf, lmroman10-regular.otf; TexGyreTermesX-regular.otf is
+  the one gap on this host).
+
+FAITHFUL FIX (fontspec_sty.rs): replace the always-#3 with a real lookup via the existing kpathsea resolver
+  find_file (latexml_core/src/binding/content.rs:3084, the same helper that resolves .sty) — return #2 if
+  find_file(#1) resolves the font file in texmf, else #3. Apply to \IfFontExistsTF (:79) and
+  \fontspec_font_if_exist:nTF (:151). fontspec accepts a filename (`Foo.otf`, asmeconf's case) — resolve as-is;
+  for a bare family name, a fallback (append .otf/.ttf) is optional.
+  ALSO define the missing kernel-ish error/warning macros so a genuinely-absent font degrades to a message
+  (not "undefined CS"): \ClassErrorNoLine{}{}  → \ClassError-style (no line helptext); \ClassWarningNoLine{}{}
+  → \ClassWarning-style. (These are legit `…NoLine` variants; asmeconf/asmejour + others reach them.)
+RISK: MED — the always-false was DELIBERATE (4 witnesses neoschool{,-fr}, beamerthemeCelestia{,-fr} that
+  chose the false/fallback path). A real lookup returns TRUE for TL-present fonts → those witnesses now take
+  the TRUE branch; RE-VERIFY all four don't regress (they likely load a fallback on "missing" — confirm the
+  found-font path is handled). If they regress, narrow the change (e.g. only for the `.otf`-filename form).
+GUARDS: \IfFontExistsTF{lmroman10-regular.otf}{YES}{NO} → YES; {nonsense-font-xyz.otf}{YES}{NO} → NO;
+  asmeconf repro (luatex preload) → the \ClassErrorNoLine root cleared for present fonts (0 font-check errors
+  on full-TL CI). NOTE: asmeconf has ADDITIONAL separate roots (\setoperatorfont, \affiliation undefined) —
+  the font fix clears only the font-check root; asmeconf reaches 0 total only once those are also fixed.
+
+## FAMILY — Error:latex:(pkg) package errors (all oracle-clean → Rust-side gaps)
+
+### TOP — "Unknown math version" — 5 docs, 36 err — SHARED, clean fix
+Docs: objectz/ozguide (oz, 28), askmaps (sans, 3), iwonamath (iwonacondensed, 3), zed-csp/csp2e+zed2e
+(zed, 1+1). Repros: mathversion_declared.tex (RED), mathversion_undeclared_control.tex (RED, must STAY).
+Mechanism: `\DeclareMathVersion{}` = def_primitive_noop (latexml_engine/src/latex_constructs/sect08.rs:715)
+— does NOT register the name; `\mathversion{}` (sect13.rs:1058-1067) accepts only bold/normal and errors
+`Unknown math version '<x>'` otherwise. oz.sty:34 `\DeclareMathVersion{oz}` then :70 `\mathversion{oz}`;
+iwonamath.sty:110 `\DeclareMathVersion{\l__iwonamath_versionname_tl}` (expl3 var — register the EXPANDED
+name). Perl is identical (latex_constructs.pool.ltxml:2658 `\DeclareMathVersion` undef, :5290 errors) → SHARED.
+FIX: `\DeclareMathVersion{name}` (sect08.rs:715) → register the (edef-expanded) name, e.g.
+AssignMapping!("MATH_VERSIONS", name => true); `\mathversion{}` (sect13.rs:1058) → accept "bold"/"normal"
+AND any name in MATH_VERSIONS (custom version = accept, no font change — LaTeXML has no custom math fonts);
+only Error when the name is neither. Guard: mathversion_declared.tex → 0 err; CONTROL
+mathversion_undeclared_control.tex (+ the existing mathversion_unknown_version_errors.tex `\mathversion{wobble}`)
+→ still exactly 1 Error. Risk LOW. Gain 5 docs (objectz alone 28 err).
+
+### scanpages \GenericError "Must be processed with pdf[la]tex!" — 1 err — SHARED-by-design (POLICY)
+scanpages.sty:22-23 `\ifpdf\else\@latex@error{Must be processed with pdf[la]tex!}\@eha`. Rust
+ifpdf_sty.rs:7 `DefConditional!("\\ifpdf")` is FALSE by design (comment "always false in LaTeXML"; Perl
+`\newif\ifpdf\pdffalse`). So the \else error fires; Perl identical → SHARED. pdflatex clean (pdf mode true).
+FIX = POLICY DECISION: LaTeXML emulates pdfTeX output, so \ifpdf arguably should be TRUE. Flipping it is a
+broad change (every \ifpdf branch); flag for the surpass-Perl call, NOT a quick binding fix. tidyres's
+\GenericError "Not in outer par mode" is a DIFFERENT root (a float/marginpar reached not in outer par mode —
+mode-tracking; lualatex; 1 err) — separate.
+
+### Verona "Command \sidegraphics ... defined only with the 'sidebar' option" — 4 err
+beamerthemeVerona.sty:184 `\newcommand<>{\sidegraphics}[3][]{…}` (beamer OVERLAY-newcommand, sidebar branch)
+vs :191 `\else\def\sidegraphics#1{\PackageError{Verona}{…defined only with the 'sidebar' option}}`. The doc
+is beamer-verona-SIDEBAR (sidebar option ON) so :184 should run, but the FALLBACK (:192) fired → the sidebar
+conditional was not set in Rust (theme-option not detected) OR `\newcommand<>` is unsupported so the real def
+was lost. FIX: ensure the Verona sidebar theme-option sets its conditional (and/or beamer `\newcommand<>`
+overlay-newcommand is honoured) so the real \sidegraphics is installed. Guard: beamer-verona-sidebar repro →
+0 err, \sidegraphics not the PackageError stub. (beamer binding; verify \newcommand<> support.)
+
+### colorspace "Unknown spot color" — 2 err — pdftex-primitive gap
+colorspace.sty:38-41 `\def\spc@unknown#1#2{\@ifundefined{#1}{\PackageError{colorspace}{Unknown #2}…}{}}`;
+colorspace's spot-color path uses pdftex primitives (`\pdffeedback colorstackinit` :35, `\pdfextension`).
+When those are absent in Rust the spot-color CS isn't built → \spc@unknown → "Unknown spot color". colorspace
+is raw (no binding). FIX: provide the pdftex color-stack primitives colorspace needs (or a colorspace binding
+that defines \definespotcolor to register the color). Deeper; note. 1 doc.
+
+### tikz/pgf — tikz-binding-deep, DEFER
+zx-calculus "Giving up on this path. Did you forget a semicolon?" (42 err) — a tikz PATH-PARSE failure in the
+pgf/tikz path grammar (zx-calculus uses heavy custom tikz). braids "No shape named `strands-3-s'" (4 err) —
+braids defines custom pgf SHAPES the pgf binding doesn't register (\pgfdeclareshape path). Both are tikz/pgf
+emulation gaps (shape registry / path grammar), high-effort; defer to a tikz-focused pass. All oracle-clean
+(Rust gaps, not document errors).
+
+## FOLLOW-UP (1) — Verona \sidegraphics = \usetheme option-drop, NOT \newcommand<> — SHARED (4 err)
+Repro: verona_sidebar_option.tex (RED). beamer_cls.rs ALREADY implements the overlay definers
+`\newcommand<>`/`\renewcommand<>`/`\newenvironment<>` (beamer_cls.rs:733-800, DefPrimitive
+`\lx@beamer@defcmd@angle {}[][]{}`; handles `[3][]` with the "overlay dropped, default unsupported"
+policy) — so `<>` is NOT the gap. The gap: `\usetheme[opts]{name}` (beamer_cls.rs:446) DROPS `_opts`
+and `\ProcessOptionsBeamer` (:506) is a no-op. Verona:29/36 `\newif\ifbeamer@sidebar`/`\beamer@sidebarfalse`;
+:43 `\DeclareOptionBeamer{sidebar}{\beamer@sidebartrue}`; :45 `\ProcessOptionsBeamer`; :174
+`\ifbeamer@sidebar…\newcommand<>{\sidegraphics}[3][]{…}\else\def\sidegraphics#1{\PackageError{Verona}{…}}`.
+Since the sidebar option never fires, `\ifbeamer@sidebar` is false → the fallback stub → the doc's 4
+`\sidegraphics<1>{..}{..}` calls error. Perl no-ops `\usetheme` (beamer_cls.rs:516 note) → SHARED; pdflatex clean.
+FIX (beamer_cls.rs): (a) `\usetheme[opts]{name}` → `\PassOptionsToPackage{opts}{beamertheme<name>}` before
+`require_package`; (b) `\ProcessOptionsBeamer` → `\setkeys{\@currname}{<opts passed to this theme>}` (the
+options are already routed to `\define@key{\@currname}` via `\DeclareOptionBeamer`→`\beamer@dokv`,
+beamer_cls.rs:524). Then Verona's `sidebar` key fires `\beamer@sidebartrue` DURING theme load (before the
+:174 branch), the real overlay `\sidegraphics` installs via the working `\newcommand<>`. Guard:
+verona_sidebar_option.tex → 0 err AND \sidegraphics emits a graphics/tikz node (not "Package Verona Error");
+CONTROL: no-sidebar Verona → \sidegraphics stub still errors on use (genuine). Risk MED (touches \usetheme
+option routing for all themes — re-verify Albi/Berkeley/sidebar size-option docs).
+
+## FOLLOW-UP (2) — tidyres "Not in outer par mode" = \ifinner wrong at main galley — SHARED (1 err)
+Repro: ifinner_main_galley.tex (RED, plain \begin{paracol}). NOT a genuine float-in-box: tidyres \ressection
+(tidyres.sty:82) → \begin{paracol}{2}; paracol.sty:1995-1996 `\def\pcol@zparacol[#1]#2{\par \ifinner\@parmoderr\fi…}`
+GUARDS outer par mode (paracol drives the output routine, valid only outside a box). ROOT = Rust's mode state:
+at the main document galley, AFTER `\par`, MODE is `internal_vertical` (an INNER mode), so `\ifinner`
+(latexml_engine/src/tex_logic.rs:110 — true for restricted_horizontal|internal_vertical|math) is wrongly TRUE
+→ `\@parmoderr` → the error (routed via base_utilities.rs:5552 make_generic_message). VERIFIED: `Main:\ifinner`
+(horizontal, text before) → OUTER (correct); `\par\ifinner` at body top → INNER (wrong); inside `\parbox` → INNER
+(correct, must STAY). LaTeXML does not distinguish TeX's OUTER main-vertical/horizontal galley from the INNER
+internal-vertical/restricted-horizontal of a real box. Perl is IDENTICAL (TeX_Logic.pool.ltxml:127-128 same
+regex; Perl errors on paracol too) → SHARED, pdflatex clean.
+FIX (deep, mode-model): `\ifinner` must be FALSE at the top-level galley and TRUE only inside a real box
+(\hbox/\vbox/\parbox/minipage/_CaptureBlock_) or nondisplay math. Two shapes: (a) track a box-capture depth
+(hbox/vbox/parbox/minipage/insert_block push a frame) — `\ifinner` = depth>0 || mode==math; main galley depth 0
+→ false. (b) give the main document body a distinct OUTER `vertical`/`horizontal` mode, reserving
+internal_vertical/restricted_horizontal for boxes; `\ifinner` checks the latter. Risk MED-HIGH (mode-model
+change; `\ifinner` has many callers — must keep box-interior true, e.g. isorot \@rotcaption, and the guard
+mathversion/box tests). Guard: ifinner_main_galley.tex → 0 err; `\par\ifinner` at body top → OUTER;
+`\parbox{}{...\ifinner...}` → INNER (unchanged). Unblocks every \begin{paracol} doc (tidyres + others).

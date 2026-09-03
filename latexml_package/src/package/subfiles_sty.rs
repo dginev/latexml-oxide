@@ -1,6 +1,15 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // subfiles.sty:171 `\ifSubfilesClassLoaded{yes}{no}`: true when the
+  // subfiles CLASS is driving (`\ver@subfiles.cls` defined) — the package
+  // form takes the second branch (sshrc-insight). Guard:
+  // `perfect_kernel_batch54::subfiles_class_loaded_test_is_defined`.
+  DefMacro!(
+    "\\ifSubfilesClassLoaded",
+    "\\@ifundefined{ver@subfiles.cls}\\@secondoftwo\\@firstoftwo"
+  );
+
   // Redefine \documentclass to do nothing in subfiles
   DefMacro!(
     "\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",

@@ -1544,6 +1544,13 @@ fn is_implicit_cr(t: &Token) -> bool {
   false
 }
 
+/// True when `t` is a control sequence `\let` to a catcode-PARAM `#` (array.sty's
+/// `\@sharp`): tex.web §783 tests the MEANING (`mac_param`) for the template slot.
+fn meaning_is_param(t: &Token) -> bool {
+  t.get_catcode().is_active_or_cs()
+    && matches!(lookup_meaning(t), Some(Stored::Token(m)) if m.get_catcode() == Catcode::PARAM)
+}
+
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let t = read_non_space()?;
@@ -1587,10 +1594,15 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       if let Some(xt) = expanded {
         unread_one(xt);
       }
-    } else if cc == Catcode::PARAM {
-      // Found the template's column slot
+    } else if cc == Catcode::PARAM || meaning_is_param(&t) {
+      // Found the template's column slot. array.sty's `\@mkpream` builds the
+      // template with `\@sharp` (array.sty:97 `\let\@sharp##`, a cs whose
+      // MEANING is the `#` placeholder), so a package-assembled `\ialign`
+      // (sgame.sty:58, tabularcalc, tabvar, epslatex) carries the slot as that
+      // cs; tex.web §783 checks the meaning (`cur_cmd=mac_param`), not the
+      // token. Guard: `perfect_kernel_batch54::ialign_template_accepts_the_sharp_placeholder`.
       before = false;
-      tokens.push(t);
+      tokens.push(if cc == Catcode::PARAM { t } else { T_PARAM!() });
     } else if cc == Catcode::ALIGN
       || t == T_CS!("\\cr")
       || t == T_CS!("\\crcr")

@@ -11557,8 +11557,125 @@ Text\marginpar{Note}\marginpar[L]{R} more.
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert_eq!(xml.matches(r#"role="margin""#).count(), 2, "{xml}");
+    // `\marginpar[L]{R}` yields a left and a right note
+    assert_eq!(xml.matches(r#"role="margin""#).count(), 3, "{xml}");
     assert!(xml.contains("ltx_marginpar_left"), "{xml}");
+  }
+
+  /// subfiles.sty:171 `\ifSubfilesClassLoaded{yes}{no}` (sshrc-insight).
+  #[test]
+  fn subfiles_class_loaded_test_is_defined() {
+    let tex = r"\documentclass{article}\usepackage{subfiles}
+\begin{document}
+\ifSubfilesClassLoaded{CLASS}{PACKAGE}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("PACKAGE") && !xml.contains("CLASS"), "{xml}");
+  }
+
+  /// xparse `O{}` options nest brackets: nicematrix.tex:1364
+  /// `[rules/color=[gray]{0.9},…]` was cut at the inner `]`, spilling the rest
+  /// into the table (16 "Extra alignment tab" cascades in nicematrix).
+  #[test]
+  fn optional_balanced_nests_brackets() {
+    let tex = r"\documentclass{article}\usepackage{nicematrix,xcolor}
+\begin{document}
+\begin{NiceTabular}{|ccc|}[rules/color=[gray]{0.9},rules/width=1pt,no-cell-nodes]
+\hline
+a & b & c \\
+\hline
+\end{NiceTabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 3, "{xml}");
+  }
+
+  /// fontspec's `\IfFontExistsTF` is a texmf-tree lookup, not a constant
+  /// false (asmeconf's class-level font checks under the luatex profile).
+  #[test]
+  fn font_exists_test_consults_the_texmf_tree() {
+    let tex = r"\documentclass{article}\usepackage{fontspec}
+\begin{document}
+\IfFontExistsTF{lmroman10-regular.otf}{YES1}{NO1}
+\IfFontExistsTF{nonsense-font-xyz.otf}{YES2}{NO2}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("YES1") && xml.contains("NO2"), "{xml}");
+  }
+
+  /// Singleton internals reached by raw packages over the standing-in
+  /// bindings: hyperref's driver sentinel (hrefhide.sty:154), doclicense's
+  /// layout wrapper (beautynote), listings' `\lst@XConvert` consumer.
+  #[test]
+  fn singleton_internal_surface() {
+    let tex = r"\documentclass{article}\usepackage{hyperref}\usepackage{doclicense}\usepackage{listings}
+\makeatletter
+\def\hrefhide@driver{hpdftex}
+\begin{document}
+\ifx\Hy@driver\hrefhide@driver DRIVER-OK\fi
+\lst@XConvert{abc}\@nil
+\doclicenseThis
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("DRIVER-OK"), "{xml}");
+  }
+
+  /// `\DeclareMathVersion{name}` registers a version `\mathversion{name}`
+  /// may select (oz, askmaps, iwonamath, zed); an undeclared one still errors.
+  #[test]
+  fn declared_math_versions_are_selectable() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\DeclareMathVersion{oz}
+\makeatother
+\begin{document}
+\mathversion{oz}$x=1$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<Math"), "{xml}");
+    let (stderr, _xml) = convert(&tex.replace(r"\DeclareMathVersion{oz}", ""), false);
+    assert_eq!(
+      error_count(&stderr),
+      1,
+      "CONTROL: undeclared version errors\n{stderr}"
+    );
+  }
+
+  /// array.sty's `\@mkpream` templates the cell as `\@sharp` (a cs `\let` to
+  /// `#`); a package-assembled `\ialign` (sgame, tabularcalc, tabvar) is a real
+  /// alignment once the raw `\halign` reader recognises the meaning (tex.web
+  /// §783). A `\noalign` outside any alignment still errors.
+  #[test]
+  fn ialign_template_accepts_the_sharp_placeholder() {
+    let tex = r"\documentclass{article}\makeatletter
+\begin{document}
+\let\@sharp=#
+\ialign{\hfil\@sharp\hfil&&\hfil\@sharp\hfil\cr a&b\cr c&d\cr}
+\makeatother\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    let control = r"\documentclass{article}\begin{document}
+x \noalign{\hrule} y
+\end{document}
+";
+    let (stderr, _xml) = convert(control, false);
+    assert!(
+      error_count(&stderr) >= 1,
+      "CONTROL: \\noalign outside an alignment errors\n{stderr}"
+    );
   }
 
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a

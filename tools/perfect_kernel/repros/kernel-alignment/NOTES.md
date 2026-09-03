@@ -611,3 +611,92 @@ not accounted the way the NORMAL group-digest loop does, so digest_next_body's
 
 ## Expected gain: shipunov/boldline-ex-en (4 err) + any doc with a raw rule macro on the hline
 brace hack (A+B together). A alone also un-drops explicit-height rules cluster-wide.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: ROOT (2)  nicematrix Extra-alignment-tab = NESTED-BRACKET OPTION
+================================================================================
+Repro: nm_nested_bracket_option.tex (RED rust=1, pdflatex 0). CONTROL: nicematrix_wide.tex
+(genuine over-count, pdflatex 3 "Too much columns"). Witness nicematrix/nicematrix:1364.
+
+## NOT the coordinator's "label-column miscount". first-col/last-col/first-row/last-row and the
+## rule-specs |[..]| / || in a colspec are ALL CLEAN in isolation (tested). The doc's 16
+## "Extra alignment tab" are a CASCADE from ONE corrupted env.
+
+## MECHANISM (isolated by bisecting nicematrix.tex)
+The 16 Extra-tabs (nicematrix.tex 1438/1440, 1502-1505, 2055-2058, 3054) do NOT reproduce with
+the doc preamble + the isolated env; they cascade from the env at 1363-1365:
+  \begin{NiceTabular}{|ccc|}[rules/color=[gray]{0.9},rules/width=1pt,no-cell-nodes] \hline ...
+whose FIRST error is `\noalign cannot be used here` (line 1365), followed by open-itemize
+mode-frame errors (1402/1406) that corrupt the document, cascading Extra-tabs into every later
+table. Root: nicematrix reads env options with xparse `O{}` (\NewDocumentCommand{\NiceTabular}
+{ O{} m !O{} }, nicematrix.sty:3806-3841), which BALANCES nested `[..]`. The binding
+\NiceTabular[]{}[] (nicematrix_sty.rs:267) uses the `[]`/Optional param -> read_optional ->
+read_optional_delimited (gullet.rs:2419) = read_until the FIRST `]` (NON-nesting; correct for
+plain-LaTeX \@ifnextchar[). So `[rules/color=[gray]…]` is cut at the inner `]` after `[gray`;
+`{0.9},rules/width=1pt,no-cell-nodes]` spills into the alignment body, and the following \hline
+(= \noalign) lands mid-row. Confirmed minimal: `[rules/color=[gray]{0.9},…]`+\hline = rust 1 /
+pdflatex 0; `[rules/color=red]` (non-nested) and the nested option WITHOUT a rule are clean.
+
+## CLASSIFICATION: RUST-ONLY. Perl cannot build nicematrix here (raw-loads nicematrix -> pgf
+   `pgfsys-` driver not found, 47 errors, DIFFERENT failure). pdflatex clean -> surpass.
+
+## FIX (binding): read \NiceTabular/\NiceTabular*/\NiceTabularX/\NiceArray/<x>NiceMatrix
+   `[options]` with a NESTING-AWARE bracket reader (xparse `O{}` semantics: balance `[`/`]`),
+   not the non-nesting `[]`/Optional. Site: nicematrix_sty.rs (the option slots at :267/279/290
+   and the matrix `[opts]` at :322) — either a new `OptionalNested` param type (balances brackets,
+   matching xparse O{}) reused there, or a bracket-balanced option grab in \lx@nice@setopts@wrap
+   (:176-186). Keep read_optional non-nesting (it is correct for plain LaTeX). CONTROL
+   nicematrix_wide.tex must STAY erroring.
+   Guard: nm_nested_bracket_option.tex -> 0 errors AND <ltx:tabular> with a 3-cell row;
+   nicematrix_wide.tex -> keeps >=1 error.
+Risk: LOW-MED (a nesting-aware optional read on the nicematrix env options only). Expected gain:
+   nicematrix (16 Extra-tab + itemize cascade) + nicematrix-french (shares the doc) — most of the
+   nicematrix Extra-tab cluster from the prior study, since they cascade from this root.
+
+## Dead ends
+- first-col/last-col/first-row/last-row extra label columns: CLEAN in isolation — not the root.
+- Rule-spec colspec |[color=..]| / c||ccccc: CLEAN in isolation — the doc failures are cascades.
+
+================================================================================
+# ROUND 2 — CHECKPOINT N: class-level  xparse O{}/o/d[] bracket nesting audit
+================================================================================
+Repros: xparse_nested_O.tex (xparse O{} NESTS — rust 0), newcommand_nonnest_CONTROL.tex
+(plain \newcommand stays non-nesting — rust 0). Binary b54x.
+
+## Q: does the Rust xparse layer read O{}/o/d[] with bracket nesting?  A: YES — no layer fix.
+\NewDocumentCommand RAW-LOADS xparse.sty (xparse_sty.rs:14 input_definitions("xparse")), so
+O{}/o run the REAL l3 `\__cmd_grab_optional` grabber, which balances [ ]. Verified:
+`\NewDocumentCommand\foo{O{}m}` + `\foo[a[b]c]{z}` -> #1 = "a[b]c" (rust 0, pdflatex 0);
+`\foo[a=[x]{y},b]{z}` -> #1 = "a=[x]{y},b". So the xparse LAYER is correct; nothing to fix there.
+
+## The Rust-native mirror for HAND-ROLLED bindings: OptionalBalanced (base_parameter_types.rs:466)
+A declared, nesting-aware `[...]` param (balances [ ] and { }); its doc comment already cites
+nicematrix.tex:1364; guard perfect_kernel_batch54::optional_balanced_nests_brackets. It is the
+vehicle for bindings that build option macros with DefMacro!/DefPrimitive! `[]` (the non-nesting
+`Optional` = read_optional, gullet.rs:2419) rather than \NewDocumentCommand, when the REAL
+package reads that option via xparse O{}.
+
+## nicematrix: ALREADY FIXED IN THE TREE (b54x predates it). nicematrix_sty.rs now spells the
+env/matrix option slots `OptionalBalanced`: \NiceTabular (:267), \NiceTabular* (:279),
+\NiceTabularX (:290), and \{,p,b,B,v,V}NiceMatrix (:583-604). So nm_nested_bracket_option.tex
+(RED on b54x) will go green on b54z. No further nicematrix action.
+
+## CONTROL: plain \newcommand\bar[1][] MUST stay non-nesting (read_optional -> first ]),
+matching pdflatex's \@ifnextchar[. newcommand_nonnest_CONTROL.tex: `\bar[a]b` -> #1="a" (rust 0).
+Do NOT make read_optional nesting-aware — only xparse O{} and OptionalBalanced nest.
+
+## AUDIT — other bindings that HAND-ROLL `[]` for options a real (xparse) package reads via O{}:
+  - tabularray_sty.rs: `\lx@tblr@env{} []{}` (:380), `\SetTblrInner []{}` (:418), `\SetCell[]{}`
+    (:435). tabularray is \NewDocumentCommand-based; tblr keys can carry braced sub-key-lists.
+  - tcolorbox_sty.rs: `\newtcblisting[]{}[][]{}` (:53), `\NewTCBListing[]{}{}{}` (:151),
+    `\DeclareTCBListing`/`\RenewTCBListing` (:154/157). tcolorbox/pgfkeys options.
+  - cleveref_sty.rs: `\lx@cleverref@label[]` (:9). `[type]` is a bare word — non-nesting is FINE.
+  - siunitx_sty.rs: `\num`/`\qty` option lists — key=value, values usually BRACED.
+  RISK: the bug only bites when an option value carries an UNBRACED nested `[...]` (xcolor model
+  `[gray]{0.9}` / `[HTML]{..}` or a `key=[..]` unbraced) AND the slot uses `[]` not O{}. nicematrix
+  is the confirmed case (its docs write `rules/color=[gray]{0.9}` unbraced). tcolorbox/tabularray/
+  siunitx usually BRACE such values (`{[HTML]{..}}`), so the outer `[..]` reader sees a balanced
+  `{..}` — my bare-nested probes there errored in pdflatex too (invalid syntax), so no live witness
+  found. RECOMMENDATION: switch every option slot that MIRRORS an xparse O{} to OptionalBalanced
+  (uniform + faithful); priority only where a package ships an unbraced nested `[model]{value}` in
+  its docs. cleveref `[type]` and braced-value key-lists can stay `[]` safely.

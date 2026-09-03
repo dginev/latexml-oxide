@@ -5726,3 +5726,24 @@ capture, so a class whose author machinery lives in `\renewcommand{\author}`
 lists; the lock stays. Guard:
 `perfect_kernel_batch54::quantumview_author_group_lists_are_initialised`.
 
+## 186. Raw `\halign` templates do not recognise a `\let`-to-`#` slot (Rust fixes)
+
+TeX_Tables.pool.ltxml's `\halign` template reader tests the slot token's own
+catcode; array.sty:97 `\let\@sharp##` makes the cell placeholder a control
+sequence whose MEANING is `#`, and array's real `\@mkpream` (which runs raw
+once a package redefines `\@array` over `\@tabarray`: sgame.sty:58,
+tabularcalc, tabvar, epslatex) builds `…\d@llarbegin\@sharp\d@llarend…`, so
+the template had no slot and `#` reached the stomach; `\omit`/`\noalign`
+inside then "cannot be used here" (~6 docs). tex.web §783 checks the meaning
+(`mac_param`). Trigger: `\let\@sharp=#` + `\ialign{\hfil\@sharp\hfil\cr a\cr}`.
+Guard: `perfect_kernel_batch54::ialign_template_accepts_the_sharp_placeholder`.
+
+## 187. `\DeclareMathVersion` registers nothing (Rust fixes)
+
+latex_constructs.pool.ltxml:2658 no-ops `\DeclareMathVersion` while :5290
+`\mathversion` accepts only `bold`/`normal`, so a class's own version (oz.sty:34
+→ :70, iwonamath, askmaps `sans`, zed) errors "Unknown math version" (5 docs,
+ozguide 28). Rust: declared names are registered and selectable (no font
+change); an undeclared name still errors. Guard:
+`perfect_kernel_batch54::declared_math_versions_are_selectable`.
+

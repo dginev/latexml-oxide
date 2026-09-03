@@ -1,0 +1,21 @@
+% witness: tidyres-doc (Not in outer par mode via paracol), any \begin{paracol}
+% oracle: pdflatex CLEAN. engines: pdflatex/lualatex.
+% class: SHARED — Perl \ifinner (TeX_Logic.pool.ltxml:127) uses the same
+%   restricted_horizontal->inner logic; Perl errors identically on paracol.
+% expect: at the MAIN document galley \ifinner is FALSE (outer); inside a \parbox it is TRUE.
+% status: RED with b54x — \ifinner at body top returns INNER (should be OUTER), so
+%   paracol.sty:1996 `\ifinner\@parmoderr\fi` fires "Not in outer par mode".
+% mechanism: \ifinner (latexml_engine/src/tex_logic.rs:110) is true for MODE
+%   restricted_horizontal — which is ALSO the mode of the main paragraph galley, not
+%   only \hbox/\parbox interiors. LaTeXML does not distinguish main-horizontal (outer)
+%   from restricted-horizontal (inner, inside a box). tidyres \ressection ->
+%   \begin{paracol}{2} (tidyres.sty:82) -> paracol.sty:1996 guards outer par mode.
+\documentclass{article}
+\usepackage{paracol}
+\begin{document}
+\begin{paracol}{2}
+Left column.
+\switchcolumn
+Right column.
+\end{paracol}
+\end{document}

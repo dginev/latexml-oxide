@@ -1,0 +1,17 @@
+% witness: beamer-verona-sidebar — sweep36 (4 errs). oracle: pdflatex CLEAN.
+% class: SHARED (Perl no-ops \usetheme too, beamer_cls.rs:516) — surpass.
+% expect: 0 Error; sidebar theme-option fires \beamer@sidebartrue so the real
+%   overlay \sidegraphics (via \newcommand<>) is installed, not the PackageError stub.
+% status: RED with b54x (Package Verona Error: Command \sidegraphics ... 'sidebar' option).
+% mechanism: \usetheme[sidebar]{Verona} passes 'sidebar'; beamer_cls.rs:446 \usetheme
+%   DROPS the option (_opts) and :506 \ProcessOptionsBeamer is a no-op, so Verona's
+%   \DeclareOptionBeamer{sidebar}{\beamer@sidebartrue} (beamerthemeVerona.sty:43) +
+%   \ProcessOptionsBeamer (:45) never fire -> \ifbeamer@sidebar false (:174) -> the \else
+%   branch defines \sidegraphics as a PackageError stub (:192) -> the doc's
+%   \sidegraphics<1>{..}{..} (x4) fire it. The \newcommand<> overlay-definer IS implemented
+%   (beamer_cls.rs:733-800) and handles [3][] — NOT the gap.
+\documentclass{beamer}
+\usetheme[sidebar]{Verona}
+\begin{document}
+\begin{frame}\sidegraphics<1>{plato}{scale=1.1}\end{frame}
+\end{document}

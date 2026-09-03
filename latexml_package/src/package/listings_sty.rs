@@ -2401,11 +2401,15 @@ LoadDefinitions!({
   // The binding reimplements listings, so without it the raw patch's
   // `#1#2#` PARAM tokens leaked into digestion (tagpdf manual: 7×
   // "should never reach Stomach" + 6 undefined). Perl listings.sty.ltxml
-  // omits it too. Deliberately NOT adding `\lst@XConvert`/`\lstnewenvironment@`
-  // /`\lst@TestEOLChar`: letting that patch succeed would rebind lstlisting
-  // to latex-lab's unimplemented `blockenv` template. Guard:
-  // `perfect_kernel_batch54::lst_usercommand_is_gdef`.
+  // omits it too. `\lst@XConvert#1\@nil` (listings.sty:211, the char-case
+  // conversion the patch runs first) exists only to consume its delimiter,
+  // and `\lstnewenvironment@` (:2xx) is a GOBBLE, not the real definer:
+  // letting that patch's redefinition succeed would rebind lstlisting to
+  // latex-lab's unimplemented `blockenv` template (tagpdf manual). Guards:
+  // `perfect_kernel_batch54::lst_usercommand_is_gdef`,
+  // `perfect_kernel_batch54::singleton_internal_surface`.
   Let!("\\lst@UserCommand", "\\gdef");
+  RawTeX!(r"\def\lst@XConvert#1\@nil{}\long\def\lstnewenvironment@#1#2#3{}");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })

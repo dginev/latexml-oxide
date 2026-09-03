@@ -1,0 +1,11 @@
+% CONTROL: plain \newcommand\myopt[1][] uses LaTeX's \@ifnextchar[ -> the Optional param type
+%   -> read_optional (gullet.rs:2419) = read to the FIRST ], NON-nesting. CORRECT (plain LaTeX is
+%   non-nesting) and must NOT change; only xparse O{} (raw l3 \__cmd_grab_optional) and the
+%   Rust-native OptionalBalanced nest. Here #1 = "a", then "b" typeset.
+% oracle:  pdflatex 0 ; rust 0
+% status:  CONTROL
+\documentclass{article}
+\newcommand\myopt[1][]{start-\textbf{#1}-end }
+\begin{document}
+\myopt[a]b
+\end{document}

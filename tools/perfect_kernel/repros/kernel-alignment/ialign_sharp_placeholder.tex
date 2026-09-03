@@ -1,0 +1,20 @@
+% witness: sgame/sgame (game matrix), tabularcalc_doc_en/fr/vn, tabvar/demo, epslatex-fr/fepslatex
+% oracle:  pdflatex 0 errors
+% engines: rust=5 (b54x) pdflatex=0 — a package-assembled \ialign whose cell placeholder is
+%   array.sty's \@sharp (a cs \let to #, not a literal #).
+% expect:  0 errors; <ltx:tabular> with cells a,b,c,d (the \@sharp is the column slot)
+% status:  RED
+% mechanism: array.sty's \@mkpream (real, runs raw) + \let\@classz\@tabclassz builds a real
+%   \halign template using \@sharp as the cell `#` placeholder ($\@sharp$ / \begingroup\@sharp
+%   \endgroup, array.sty:140/97/230/279). The kernel's raw \halign template parser
+%   parse_halign_template (tex_tables.rs:1590) detects the slot with `cc == Catcode::PARAM` —
+%   the token's OWN catcode — which is TRUE for a literal `#` but FALSE for the cs \@sharp
+%   (catcode CS, meaning = #). So the slot is missed, the # meaning leaks to the stomach
+%   ("# should never reach Stomach"), and the template is mis-split. A LITERAL # is clean
+%   (\ialign{\hfil#\hfil...} -> 0 errors), and \omit/\noalign/\cline all work once the
+%   alignment is real — so this one recognition is the whole gap.
+\documentclass{article}\makeatletter
+\begin{document}
+\let\@sharp=#
+\ialign{\hfil\@sharp\hfil&&\hfil\@sharp\hfil\cr a&b\cr c&d\cr}
+\makeatother\end{document}

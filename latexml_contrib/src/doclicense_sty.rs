@@ -13,4 +13,7 @@ LoadDefinitions!({
   def_macro_noop("\\doclicenseLongText")?;
   def_macro_noop("\\doclicenseImage[]")?;
   def_macro_noop("\\doclicenseLogo")?;
+  // doclicense.sty:222 `\doclicenseThis`: the centred minipage layout of the
+  // (already no-op) sub-macros (beautynote).
+  def_macro_noop("\\doclicenseThis")?;
 });

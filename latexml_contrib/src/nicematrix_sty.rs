@@ -264,7 +264,7 @@ LoadDefinitions!({
   // `\cmidrule` lands mid-cell ("\noalign cannot be used here" — the
   // exemplar manual's last error). Recorded rects are simply not painted for
   // text tabulars (color overlay is styling; the content is what matters).
-  DefMacro!("\\NiceTabular[]{}[]", sub[(opts, pream, post)] {
+  DefMacro!("\\NiceTabular OptionalBalanced {} OptionalBalanced", sub[(opts, pream, post)] {
     let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")])
   }, locked => true);
@@ -276,7 +276,7 @@ LoadDefinitions!({
   // witness nicematrix.tex `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`)
   // and `NiceTabular*` a `\tabular*` — the fixed total width is print layout.
   RequirePackage!("tabularx");
-  DefMacro!(T_CS!("\\NiceTabular*"), "{}[]{}[]", sub[(width, opts, pream, post)] {
+  DefMacro!(T_CS!("\\NiceTabular*"), "{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabular*"), T_BEGIN!()];
     starter.extend(width.revert()?.unlist());
     starter.push(T_END!());
@@ -287,7 +287,7 @@ LoadDefinitions!({
     nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
   });
   DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*");
-  DefMacro!("\\NiceTabularX{}[]{}[]", sub[(width, opts, pream, post)] {
+  DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
     starter.extend(width.revert());
     starter.push(T_END!());
@@ -580,27 +580,27 @@ LoadDefinitions!({
   // The MATRIX family: `\<x>NiceMatrix[opts]` → set opts, then reduce to the
   // amsmath matrix flavour for delimiter <x>; `\end<x>NiceMatrix` closes the array
   // and paints the recorded colors. Mirrors amsmath_sty.rs:393-427.
-  DefMacro!("\\NiceMatrix[]",
+  DefMacro!("\\NiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
     locked => true);
   DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\pNiceMatrix[]",
+  DefMacro!("\\pNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
     locked => true);
   DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\bNiceMatrix[]",
+  DefMacro!("\\bNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
     locked => true);
   DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\BNiceMatrix[]",
+  DefMacro!("\\BNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
     locked => true);
   DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\vNiceMatrix[]",
+  DefMacro!("\\vNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
     locked => true);
   DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\VNiceMatrix[]",
+  DefMacro!("\\VNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
     locked => true);
   DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);

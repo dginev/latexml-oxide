@@ -73,10 +73,25 @@ LoadDefinitions!({
   def_macro_noop("\\addfontfeatures{}")?;
   def_macro_noop("\\addfontfeature{}")?;
   // fontspec-xetex.sty:1116 + :1125 (\cs_set_eq \IfFontExistsTF
-  // \fontspec_font_if_exist:nTF). Was def_macro_noop, which SWALLOWED both
-  // branches. No OpenType font resolves in this engine → false branch.
-  // Witnesses: neoschool{,-fr}, beamerthemeCelestia{,-fr}.
-  DefMacro!("\\IfFontExistsTF{}{}{}", "#3");
+  // \fontspec_font_if_exist:nTF): a real font lookup. The former always-false
+  // sent every class-level font check down its missing-font branch —
+  // asmeconf.cls:650-655 `\IfFontExistsTF{…otf}{}{\ClassErrorNoLine…}` under
+  // the luatex profile, fonts that ARE in TeX Live — while a font lookup here
+  // is the texmf tree (`find_file`, kpathsea), as for `.sty`: a file name
+  // (`Foo.otf`) as given, a bare family name with `.otf`/`.ttf` appended.
+  // Witnesses that chose the missing branch before (neoschool{,-fr},
+  // beamerthemeCelestia{,-fr}) load their fallback either way. Guard:
+  // `perfect_kernel_batch54::font_exists_test_consults_the_texmf_tree`.
+  DefMacro!("\\IfFontExistsTF{}{}{}", sub[(name, yes, no)] {
+    let name = name.to_string();
+    let name = name.trim().to_string();
+    let found = !name.is_empty()
+      && (find_file(&name, None).is_some()
+        || (!name.contains('.')
+          && (find_file(&format!("{name}.otf"), None).is_some()
+            || find_file(&format!("{name}.ttf"), None).is_some())));
+    Ok(if found { yes } else { no })
+  });
   // fontspec-xetex.sty:658 — no OT feature is ever active here → false.
   DefMacro!("\\IfFontFeatureActiveTF{}{}{}", "#3");
 
@@ -148,7 +163,7 @@ LoadDefinitions!({
   DefMacro!("\\fontspec_if_current_feature:nTF{}{}{}", "#3");
   DefMacro!("\\fontspec_if_current_feature:nF{}{}", "#2");
   def_macro_noop("\\fontspec_font_if_exist:nT{}{}")?;
-  DefMacro!("\\fontspec_font_if_exist:nTF{}{}{}", "#3");
+  DefMacro!("\\fontspec_font_if_exist:nTF{}{}{}", "\\IfFontExistsTF{#1}{#2}{#3}");
   DefMacro!("\\fontspec_font_if_exist:nF{}{}", "#2");
   def_macro_noop("\\fontspec_if_small_caps:T{}")?;
   DefMacro!("\\fontspec_if_small_caps:TF{}{}", "#2");

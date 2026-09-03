@@ -455,6 +455,54 @@ LoadDefinitions!({
     Ok(Tokens::new(tks))
   });
 
+  // xparse's `o` / `O{}` optional argument: `[`…`]` NEST (l3 `\peek_charcode`
+  // + `\__cmd_grab_optional` balance brackets), unlike LaTeX's `\@ifnextchar[`
+  // read to the first `]` (`Optional`). Packages built on xparse take nested
+  // bracket values — nicematrix.tex:1364 `[rules/color=[gray]{0.9},…]` cut at
+  // the inner `]` spilled `{0.9},…]` into the table body, and the next
+  // `\hline` fell mid-row (16 "Extra alignment tab" cascades). Rust-only
+  // parameter type (OXIDIZED_DESIGN #191 family). Guard:
+  // `perfect_kernel_batch54::optional_balanced_nests_brackets`.
+  DefParameterType!(OptionalBalanced, sub[_inner, _extra] {
+    let open = T_OTHER!("[");
+    let close = T_OTHER!("]");
+    match read_non_space()? {
+      None => Ok(ArgWrap::None),
+      Some(t) if t == open => {
+        let mut depth = 0i32;
+        let mut toks: Vec<Token> = Vec::new();
+        while let Some(tok) = read_token()? {
+          if tok == close {
+            if depth == 0 {
+              break;
+            }
+            depth -= 1;
+          } else if tok == open {
+            depth += 1;
+          } else if tok.get_catcode() == Catcode::BEGIN {
+            toks.push(tok);
+            toks.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+            toks.push(T_END!());
+            continue;
+          }
+          toks.push(tok);
+        }
+        Ok(ArgWrap::Tokens(Tokens::new(toks)))
+      },
+      Some(t) => {
+        unread_one(t);
+        Ok(ArgWrap::None)
+      },
+    }
+  },
+  optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_OTHER!("[")];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_OTHER!("]"));
+    Ok(Tokens::new(tks))
+  });
+
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {

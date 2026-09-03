@@ -593,6 +593,15 @@ LoadDefinitions!({
   });
   DefMacro!("\\Hurl Semiverbatim", "\\texttt{#1}");
 
+  // Internals raw hyperref-dependent packages test or call: hyperref.sty:2555
+  // sets `\Hy@driver` to `hpdftex` under pdfTeX (hrefhide.sty:154 compares it
+  // against `\hrefhide@driver`); :1788 `\HyPsd@UTFviii` is the PDF-string
+  // UTF-8 octet setup and :6832 `\hyper@makecurrent{type}` the anchor namer —
+  // no pdfstrings or anchors here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
+  DefMacro!("\\Hy@driver", "hpdftex");
+  def_macro_noop("\\HyPsd@UTFviii")?;
+  def_macro_noop("\\hyper@makecurrent{}")?;
+
   // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1
   DefConstructor!(
     "\\nolinkurl Semiverbatim",

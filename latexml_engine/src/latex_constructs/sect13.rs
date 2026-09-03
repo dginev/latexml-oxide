@@ -1064,6 +1064,9 @@ pub(crate) fn load() -> Result<()> {
     match version.to_string().trim() {
       "bold" => set_forcebold(true),
       "normal" => set_forcebold(false),
+      // a version registered by `\DeclareMathVersion` (sect08.rs) is
+      // selectable; it changes no font here
+      other if lookup_bool(&s!("MATH_VERSION_{other}")) => {},
       other => { Error!("unexpected", other, s!("Unknown math version '{other}'")); },
     }
   });
