@@ -1,0 +1,14 @@
+% witness: numerica/numerica (numerica.tex:898)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=6 (2026-09-03)
+% expect:  0 errors; the cell Math contains XMTok 0.125
+% status:  RED
+% mechanism: numerica.sty:1580 closes/reopens its group (\group_end: \l__nmc_show_tl \group_begin:)
+%   only on the slash path (\__nmc_fpify_slash:, :1748); the cell's hidden $ pairing by boxing
+%   level (\lx@dollar@in@mathmode, TeX_Math.pool:92-108 / tex_math.rs) then mis-pairs.
+\documentclass{article}\usepackage{amsmath}\usepackage{numerica}
+\begin{document}
+\begin{align*}
+a & =\eval{1/8}
+\end{align*}
+\end{document}

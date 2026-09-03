@@ -1,0 +1,14 @@
+% witness: bibarts/ba-short, bibarts/bibarts (bibarts.sty:2231 \edef\@tempa{\write\@auxout{...#4...}})
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=7 (2026-09-03) — SHARED
+% expect:  0 errors; the \vli citations render, no stray \fi
+% status:  RED
+% mechanism: the title #4 carries \ktit -> \ba@textmode -> \ifmmode $..$\fi (bibarts.sty:798)
+%   and \underline -> \ifmmode...\else...\fi; the \edef tears the conditional at the
+%   string-mouth boundary, leaving \else/\fi with no open conditional.
+\documentclass{article}
+\usepackage{bibarts}
+\begin{document}
+\vli{J.}{Pitt}{The \ktit{First}, in: \vli{J.}{Yi}{An \underline{Publ.}}[Berlin 2000]}
+\printvli
+\end{document}
