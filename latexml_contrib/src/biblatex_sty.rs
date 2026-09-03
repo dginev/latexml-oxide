@@ -1058,6 +1058,46 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareRangeChars OptionalMatch:* {}")?;
   def_macro_noop("\\NumCheckSetup{}")?;
   def_macro_noop("\\NumsCheckSetup{}")?;
+  // The biblatex.sty internal/public surface that raw STYLE files reach at
+  // cite/bibliography time (the binding stands in for biblatex.sty; Perl
+  // raw-loads it and never gets this far — it fails at biblatex.sty:7113
+  // `\ProcessLocalKeyvalOptions` on every biblatex document). Inventory by
+  // static breadth across the biblatex-* bundles (wave-15 index-bib agent):
+  // biber/data-model declarations are faithful-signature gobbles —
+  // `\clearfield` (:2538, 35 bundles), `\DeclareCitePunctuationPosition`
+  // (:12771), `\DeclareAutoPunctuation` (:12754), `\ResetDataInheritance`
+  // (:14566), `\DefaultInheritance[]{}` (:14474, whose optional carries
+  // `\except{}{}{}`, :14485), `\AtDataInput[][*]{}` (:8985, `.bbl` item
+  // hooks our `.bbl` reader does not run), `\OnManualCitation{}` (:11442),
+  // `\abx@missing@entry{}` (:11661), `\blx@nocite@do{}` (:12337, the kernel
+  // `\nocite` records keys); control flow keeps its real shape —
+  // `\blx@blxinit` (:1105, one-shot init → `\relax`), `\blx@safe@actives`/
+  // `\blx@rest@actives` (:127), `\blx@ifdata{key}{t}{f}` (:8439
+  // `\ifcsdef{blx@data@#1}`: no biber data in our model → false branch),
+  // `\blx@xsanitizeafter{cmd}{text}` (:1216: `cmd{<detokenized text>}`).
+  // `\DeclareMultiCiteCommand{\cites}[wrap]{\cite}{sep}` (:12500) defines a
+  // NEW multicite name as its underlying cite command, as
+  // `\DeclareCiteCommand` above does (windycity.cbx:179 `\idemcites`).
+  // Witnesses: windycity, biblatex-sbl (`\citeshorthand`), biblatex-juradiss.
+  // Guard: `perfect_kernel_batch54::biblatex_style_internal_surface`.
+  def_macro_noop("\\clearfield{}")?;
+  def_macro_noop("\\DeclareCitePunctuationPosition{}{}")?;
+  def_macro_noop("\\DeclareAutoPunctuation{}")?;
+  def_macro_noop("\\ResetDataInheritance")?;
+  def_macro_noop("\\DefaultInheritance[]{}")?;
+  def_macro_noop("\\except{}{}{}")?;
+  def_macro_noop("\\AtDataInput[] OptionalMatch:* {}")?;
+  def_macro_noop("\\OnManualCitation{}")?;
+  def_macro_noop("\\abx@missing@entry{}")?;
+  def_macro_noop("\\blx@nocite@do{}")?;
+  DefMacro!("\\blx@blxinit", "\\relax");
+  def_macro_noop("\\blx@safe@actives")?;
+  def_macro_noop("\\blx@rest@actives")?;
+  DefMacro!("\\blx@ifdata{}{}{}", "#3");
+  DefMacro!(
+    "\\blx@xsanitizeafter{}{}",
+    "\\begingroup\\def\\blx@tempa{\\endgroup#1}\\edef\\blx@tempb{#2}\\expandafter\\blx@tempa\\expandafter{\\detokenize\\expandafter{\\blx@tempb}}"
+  );
   def_macro_noop("\\DeclareBiblistFilter{}{}")?;
   def_macro_noop("\\defbibnote{}{}")?;
   def_macro_noop("\\defbibfilter{}{}")?;
@@ -2538,6 +2578,22 @@ LoadDefinitions!({
 "#
   );
 
+  // biblatex.sty:7649-7654 registers, for every name-list field of the data
+  // model, the use-toggle `blx@use<name>` (default true) and the test
+  // `\ifuse<name>` = `\iftoggle{blx@use<name>}` (styles test them:
+  // standard-dw.bbx:1878 `\iftoggle{blx@useeditor}`, authortitle-dw.bbx:690
+  // `\ifuseeditor`; biblatex-juradiss). The standard data model's name fields
+  // (blx-dm.def) are registered here; `\providetoggle` keeps re-entry safe.
+  RawTeX!(
+    r"\def\lx@blx@regnameuse#1{\providetoggle{blx@use#1}\toggletrue{blx@use#1}\expandafter\def\csname ifuse#1\endcsname{\iftoggle{blx@use#1}}}
+\lx@blx@regnameuse{author}\lx@blx@regnameuse{editor}\lx@blx@regnameuse{translator}
+\lx@blx@regnameuse{annotator}\lx@blx@regnameuse{commentator}\lx@blx@regnameuse{introduction}
+\lx@blx@regnameuse{foreword}\lx@blx@regnameuse{afterword}\lx@blx@regnameuse{holder}
+\lx@blx@regnameuse{bookauthor}\lx@blx@regnameuse{editora}\lx@blx@regnameuse{editorb}
+\lx@blx@regnameuse{editorc}\lx@blx@regnameuse{namea}\lx@blx@regnameuse{nameb}
+\lx@blx@regnameuse{namec}\lx@blx@regnameuse{shortauthor}\lx@blx@regnameuse{shorteditor}"
+  );
+
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
   def_macro_noop("\\newrefsection[]")?;
@@ -2610,7 +2666,19 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareSortInclusion{}{}")?;
   def_macro_noop("\\DeclareSortingNamekeyTemplate[]{}")?;
   def_macro_noop("\\DeclareUniquenameTemplate[]{}")?;
-  def_macro_noop("\\DeclareMultiCiteCommand{}[]{}{}")?;
+  DefMacro!("\\DeclareMultiCiteCommand{}[]{}{}", sub[(target, _wrapper, cite, _sep)] {
+    if let Some(tok) = target.unlist().into_iter().find(|t| t.get_catcode() == Catcode::CS)
+      && lookup_meaning(&tok).is_none()
+    {
+      let underlying = cite
+        .unlist()
+        .into_iter()
+        .find(|t| t.get_catcode() == Catcode::CS)
+        .unwrap_or_else(|| T_CS!("\\cite"));
+      Let!(tok, underlying);
+    }
+    Ok(Tokens!())
+  });
   def_macro_noop("\\DeclareBibliographyExtras{}")?;
   def_macro_noop("\\GenRefcontextData{}{}")?;
   def_macro_noop("\\AtEveryCite{}")?;

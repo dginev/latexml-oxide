@@ -1,0 +1,23 @@
+% witness: rubikexamples (rubik doc), sweep36 first_errors36.tsv (4 errs)
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — same-host Perl emits the identical 2 errors
+% expect: 0 Error lines; caption belongs to the enclosing <ltx:figure>
+% status: RED with b54t (Error:malformed:ltx:caption isn't allowed in <ltx:block>)
+% mechanism: rubikexamples.tex:295-303 = \begin{figure} <graphic> \parbox{..}{\caption{..}}.
+%   A \parbox that FOLLOWS other float content becomes a nested <ltx:p class=ltx_parbox>
+%   with an inner <ltx:block>, built via _CaptureBlock_; the \caption inside cannot
+%   float up to the figure (detached capture). NOTE: when the parbox is the SOLE child
+%   of the figure it is absorbed (figure gets class=ltx_parbox) and this is CLEAN —
+%   the failure needs preceding content. This is the general "caption captured in a
+%   parbox/minipage inside a float" root; NOT fixable by a wrapper binding (\parbox is
+%   kernel). Deferred sub-case of the isorot root.
+\documentclass[a4paper]{article}
+\begin{document}
+\begin{figure}[hbt]
+\centering
+\fbox{Some graphics box here}
+\parbox{0.8\textwidth}{%
+\caption{\label{fig:x}A caption inside a parbox that follows a graphic.}}
+\end{figure}
+\end{document}

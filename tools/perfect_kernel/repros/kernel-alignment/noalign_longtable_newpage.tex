@@ -1,13 +1,15 @@
-% witness: harmony/harmony (harmony.tex:107 \newpage between \hline rows of a longtable)
-% oracle:  pdflatex 0 errors (longtable rows are page-breakable; \newpage is legal)
-% engines: rust=3+ perl=? pdflatex=0 (2026-09-03, b54t)
-% expect:  0 errors; <ltx:tabular> with two body rows, hlines
+% witness: harmony/harmony (harmony.tex, \newpage between \hline rows of a longtable)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=5+ pdflatex=0 (2026-09-03, b54t) -> SHARED, surpass in scope
+% expect:  0 errors; <ltx:table>/<ltx:tabular> with cells a,b,c,d (two body rows)
 % status:  RED
-% mechanism: a longtable is NOT a box — its rows sit in outer vertical mode, so vertical
-%   material (\newpage) between rows is legal and the following \hline's \noalign is still
-%   at a valid alignment boundary (tex.web S768-812; longtable.sty page-break \cr splices).
-%   Rust treats longtable like a boxed \halign; after \newpage it loses the row-boundary
-%   "noalign-legal" state -> \noalign cannot be used here -> row desync -> Extra alignment tab.
+% mechanism: longtable.sty:135 redefines \newpage -> \noalign{\break} INSIDE the table body,
+%   so at the row boundary it takes tex.web S785 align_peek's no_align branch (never starts a
+%   new row). The longtable binding (longtable_sty.rs:27-28 \@@longtable before_digest; Perl
+%   longtable.sty.ltxml:45) handles only \pagebreak (->\@gobble@optional); it omits \newpage,
+%   so \newpage stays the global vertical command. At the \cr boundary S785 then starts a NEW
+%   ROW with \newpage as its first cell -> the following \hline's \noalign is misplaced
+%   (tex_tables.rs:224 "\noalign cannot be used here") -> row desync -> Extra alignment tab.
 \documentclass{article}
 \usepackage{longtable}
 \begin{document}

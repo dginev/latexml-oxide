@@ -11000,6 +11000,258 @@ Text.
     assert!(xml.contains(r#"<Math mode="inline" tex="1.5""#), "{xml}");
   }
 
+  /// A pure size switch is LaTeX's `\@setfontsize` (latex.ltx:14103), whose
+  /// first act is `\let\@currsize#1`; packages test the identity with
+  /// `\ifx\@currsize\small` (ltugboat's `\SMC` cascade in
+  /// latex-doc-ptr.sty:203-215, else `\TBWarning`). With the class
+  /// binding's primitive alone `\@currsize` never matched any size.
+  #[test]
+  fn size_switch_lets_currsize() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\DeclareRobustCommand{\SMC}{\ifx\@currsize\normalsize\small\else
+ \ifx\@currsize\small\footnotesize\else
+  \ifx\@currsize\large\normalsize\else NOSIZE\fi\fi\fi}
+\makeatother
+\begin{document}
+{\small A\SMC B}
+{\large C\SMC D}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("NOSIZE"), "{xml}");
+    // `\small`→`\footnotesize` (B), `\large`→`\normalsize` (D, base size,
+    // no wrapper).
+    assert!(xml.contains(r#"<text fontsize="89%">B</text>"#), "{xml}");
+    assert!(
+      xml.contains(r#"<text fontsize="120%">C</text>D</p>"#),
+      "{xml}"
+    );
+  }
+
+  /// caption3.sty:1595 `\providecommand*\caption@prepareslc{}` is an empty
+  /// hook other packages extend (hep-bibliography.sty:108; 9 hep-* docs).
+  #[test]
+  fn caption_prepareslc_hook_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{caption}
+\makeatletter
+\g@addto@macro\caption@prepareslc{\relax}
+\makeatother
+\begin{document}
+Hello.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello."), "{xml}");
+  }
+
+  /// titlesec.sty:1039-1041 `\newdimen\titlewidth…` (titlesec.tex:1780).
+  #[test]
+  fn titlesec_title_width_registers_exist() {
+    let tex = r"\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[block]
+  {\addtolength{\titlewidth}{2pc}\normalfont\sffamily}
+  {\thesection}{1em}{}
+\begin{document}
+\section{Hello}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<title font=\"sansserif\">") && xml.contains("Hello</title>"),
+      "{xml}"
+    );
+  }
+
+  /// ntheorem.sty:714-715 `\newskip\thm@topsep`/`\thm@topsepadd`
+  /// (dlfltxbcodetips.sty:102-106 copies ntheorem's code).
+  #[test]
+  fn ntheorem_topsep_registers_exist() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage[amsmath,thmmarks,framed]{ntheorem}
+\makeatletter
+\thm@topsepadd \theorempostskipamount
+\advance\thm@topsepadd\partopsep
+\makeatother
+\begin{document}
+Hi.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hi."), "{xml}");
+  }
+
+  /// mathtools.sty:1897-1907 `\xmathstrut` is a `\vphantom` strut
+  /// (numerica.tex:3431 inside `\eval{\[\frac…\]}`).
+  #[test]
+  fn xmathstrut_is_a_vphantom() {
+    let tex = r"\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+\[ \frac{\xmathstrut{0.1} a}{\xmathstrut{0.4} b} \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<XMApp"#) && xml.contains("phantom"),
+      "{xml}"
+    );
+  }
+
+  /// isorot's raw `\@xrotfloat` (isorot.sty:139-147) builds the sideways
+  /// float as an lrbox + minipage capture, inside which `\caption`'s float-up
+  /// finds no float ("`<ltx:caption>` isn't allowed in `<ltx:block>`";
+  /// isorot/rotman, Perl identical, pdflatex clean). The binding gives the
+  /// float environments rotating's shape, so the caption is the float's child.
+  #[test]
+  fn isorot_sideways_float_holds_its_caption() {
+    let tex = r"\documentclass{article}
+\usepackage{isorot}
+\begin{document}
+\begin{sidewaystable}
+\centering
+\caption{The rotation facilities}
+\begin{tabular}{|l|l|}\hline A & B \\\hline\end{tabular}
+\end{sidewaystable}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<table") && xml.contains("<caption class=\"ltx_centering\">"),
+      "{xml}"
+    );
+    assert!(!xml.contains("<block>"), "{xml}");
+  }
+
+  /// adjmulticol.sty:151 raw-calls multicol.sty:172 `\mult@@cols`, the
+  /// column balancer LaTeXML never emulates; bound, `adjmulticols` emits the
+  /// same pagination markers as `multicols` (adjmulticol/sample).
+  #[test]
+  fn adjmulticols_are_pagination_markers() {
+    let tex = r"\documentclass{book}
+\usepackage{adjmulticol}
+\begin{document}
+\begin{adjmulticols}{2}{12pt}{-2in}
+Some text flowing across two adjusted columns. More text here.
+\end{adjmulticols}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<pagination role="start_2_columns"/>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<pagination role="end_2_columns"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("Some text flowing"), "{xml}");
+  }
+
+  /// Raw biblatex style files reach the biblatex.sty internal/public surface
+  /// at cite/bibliography time (windycity data-model declarations, sbl's
+  /// `\citeshorthand` control flow, juradiss' `\AtDataInput`); the binding
+  /// stands in for biblatex.sty and carries that surface.
+  #[test]
+  fn biblatex_style_internal_surface() {
+    for (style, body) in [
+      ("windycity", r"Text.\par \printbibliography"),
+      ("sbl", r"See \citeshorthand{SBL} and \cite{SBLHS}."),
+      ("biblatex-juradiss", r"Text.\par \printbibliography"),
+    ] {
+      let tex = format!(
+        "\\documentclass{{article}}\n\\usepackage[style={style}]{{biblatex}}\n\\begin{{document}}\n{body}\n\\end{{document}}\n"
+      );
+      let (stderr, xml) = convert(&tex, false);
+      assert_eq!(error_count(&stderr), 0, "{style}: {stderr}");
+      assert!(
+        xml.contains("Text.") || xml.contains("<cite class="),
+        "{style}: {xml}"
+      );
+    }
+  }
+
+  /// hyperref's low-level URL chain (`\hyper@normalise` :4604 → `\url@`
+  /// :4802 → `\hyper@linkurl`/`\Hurl`) reached by biblatex.tex's `\fnurl`;
+  /// the neutralised read keeps `#`/`%`/`~`.
+  #[test]
+  fn hyperref_normalise_chain_links_urls() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\newcommand\fnurl@[1]{\footnote{\url@{#1}}}
+\DeclareRobustCommand\fnurl{\hyper@normalise\fnurl@}
+\makeatother
+\begin{document}
+See the docs.\fnurl{https://ctan.org/pkg/biblatex#frag~x}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r##"href="https://ctan.org/pkg/biblatex#frag~x""##),
+      "{xml}"
+    );
+    assert!(xml.contains("biblatex#frag~x</ref>"), "{xml}");
+  }
+
+  /// longtable.sty:135-137 redefine `\newpage`/`\pagebreak`/`\nopagebreak`
+  /// inside the table to `\noalign{…}`, so tex.web §785 `align_peek` takes
+  /// the no_align branch instead of starting a row (harmony: `\newpage`
+  /// between `\hline` rows; `\clearpage` is NOT redefined and errors in
+  /// pdflatex too).
+  #[test]
+  fn longtable_page_commands_between_rows_are_noalign() {
+    for cmd in [r"\newpage", r"\nopagebreak", r"\pagebreak[2]"] {
+      let tex = format!(
+        "\\documentclass{{article}}\n\\usepackage{{longtable}}\n\\begin{{document}}\n\\begin{{longtable}}{{ll}}\n\\hline a & b \\\\ \\hline\n{cmd}\n\\hline c & d \\\\ \\hline\n\\end{{longtable}}\n\\end{{document}}\n"
+      );
+      let (stderr, xml) = convert(&tex, false);
+      assert_eq!(error_count(&stderr), 0, "{cmd}: {stderr}");
+      assert_eq!(xml.matches("<td").count(), 4, "{cmd}: {xml}");
+    }
+  }
+
+  /// threeparttable.sty:110 (`\def\@captype{table}` if undefined) and :126
+  /// (measuredfigure → `figure`) let `\caption` work outside a float; both
+  /// bindings bound a bare `#body` and dropped it (threeparttablex;
+  /// PERL-ORIGIN, threeparttable.sty.ltxml:31,36).
+  #[test]
+  fn threeparttable_sets_captype_outside_a_float() {
+    let tex = r"\documentclass{article}
+\usepackage{threeparttable}
+\begin{document}
+\begin{threeparttable}
+\caption{A table}
+\begin{tabular}{l} a \\ \end{tabular}
+\end{threeparttable}
+\begin{measuredfigure}
+\caption{A figure}
+\end{measuredfigure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Outside a float the kernel degrades the caption to inline text (guard
+    // `caption_without_a_float_ancestor_degrades_to_text`); the point here is
+    // that `\@captype` is defined, so no "outside any known float" error.
+    assert_eq!(
+      xml.matches(r#"<text class="ltx_caption">"#).count(),
+      2,
+      "{xml}"
+    );
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

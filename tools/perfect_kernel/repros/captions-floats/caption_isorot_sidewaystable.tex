@@ -1,0 +1,22 @@
+% witness: rotman (isorot doc), sweep36 first_errors36.tsv (3 errs)
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — same-host Perl emits the identical 2 errors
+% expect: 0 Error lines; <ltx:caption>/<ltx:toccaption> inside <ltx:table> float
+% status: RED with b54t (Error:malformed:ltx:caption isn't allowed in <ltx:block>)
+% mechanism: isorot.sty (raw-loaded, no binding) \sidewaystable -> \@rotfloat{table}
+%   -> \@xrotfloat = \@float{table} + \begin{lrbox} + \begin{minipage} (isorot.sty:143-147).
+%   \caption is built inside the minipage's _CaptureBlock_; at construction time the
+%   float is not a live ancestor, so the caption constructor's ^^ float_to_element
+%   (latex_constructs.pool.ltxml:3368) finds no container -> openElement errors in
+%   <ltx:block>. The bound `rotating` pkg (rotating.sty.ltxml) puts #body DIRECTLY in
+%   <ltx:table> and is VERIFIED clean on the same input.
+\documentclass{article}
+\usepackage{isorot}
+\begin{document}
+\begin{sidewaystable}
+\centering
+\caption{The rotation facilities}
+\begin{tabular}{|l|l|}\hline A & B \\\hline\end{tabular}
+\end{sidewaystable}
+\end{document}

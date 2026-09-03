@@ -1,0 +1,16 @@
+% witness: biblatex-sbl/biblatex-sbl (biblatex-sbl.tex:145 \citeshorthand{SBL})
+% oracle:  pdflatex 0 errors
+% engines: rust=5 perl=? (2026-09-03) — sbl raw cbx cite chain hits biblatex internals
+% expect:  0 errors; <ltx:cite> present for the raw sbl cite
+% status:  RED
+% mechanism: sbl.cbx's \citeshorthand (\DeclareCiteCommand, which the binding DOES
+%   define -> target runs the RAW cbx cite chain) reaches five biblatex.sty internals
+%   the binding omits: \blx@blxinit (:1105 one-shot init), \blx@xsanitizeafter (:1216
+%   protected #1#2 = run #1{detokenized #2}), \blx@ifdata (:8439 #1 = \ifcsdef biber
+%   data), \blx@nocite@do (:12337 #1 = nocite backend), \abx@missing@entry (:11661 #1 =
+%   missing-key report). Class-level fix: biblatex_sty.rs \blx@*/control-flow surface.
+\documentclass{article}
+\usepackage[style=sbl]{biblatex}
+\begin{document}
+See \citeshorthand{SBL} and \cite{SBLHS}.
+\end{document}

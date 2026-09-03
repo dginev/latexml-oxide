@@ -1,0 +1,20 @@
+% witness: nicematrix/nicematrix-french (nicematrix-french.tex:4899 \CodeAfter \TikzEveryCell)
+% oracle:  pdflatex 0 errors
+% engines: rust=? pdflatex=0 (2026-09-03, b54t)
+% expect:  0 errors; <ltx:tabular> with 2 rows, no undefined-macro / endgroup cascade
+% status:  RED
+% mechanism: nicematrix.sty:1807,3920 \cs_set_eq:NN \TikzEveryCell \__nicematrix_TikzEveryCell
+%   is run inside \CodeBefore/\CodeAfter setup; the nicematrix_sty.rs binding does not
+%   define \TikzEveryCell (a tikz per-cell overlay, presentational), so inside \CodeAfter
+%   it is undefined -> \endgroup closes the wrong group -> cascade (400 errors in the doc).
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{cc}
+a & b \\
+c & d
+\CodeAfter
+  \TikzEveryCell{offset=1pt,draw}
+\end{NiceTabular}
+\end{document}

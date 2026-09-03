@@ -13,7 +13,17 @@ LoadDefinitions!({
 
   // We SHOULD be playing games to link up the \tnote to the item...
   DefMacro!("\\tnote{}", "\\TPToverlap{\\textsuperscript{\\TPTtagStyle{#1}}}");
-  DefEnvironment!("{threeparttable}", "#body");
+  // threeparttable.sty:110 `\@ifundefined{@captype}{\def\@captype{table}}{}`
+  // (and :126 `figure` for `measuredfigure`): a `\caption` inside the
+  // environment works outside a float, as the package documents; the bare
+  // `#body` binding (Perl threeparttable.sty.ltxml:31,36 identical) dropped
+  // it → "`\caption` outside any known float" (threeparttablex). Group-local
+  // like the package's `\def`. Guard:
+  // `perfect_kernel_batch54::threeparttable_sets_captype_outside_a_float`.
+  DefEnvironment!("{threeparttable}", "#body",
+    before_digest => {
+      Digest!("\\@ifundefined{@captype}{\\def\\@captype{table}}{}")?;
+    });
   // Perl L30: DefMacroI('\begin{tablenotes}', '[]', '\begin{itemize}');
   // ie the {tablenotes} env optionally takes [keyvals] (para/flushleft/online/normal)
   // and discards them — the body is just an itemize list. Previously Rust used
@@ -33,5 +43,8 @@ LoadDefinitions!({
   DefMacro!("\\tablenotes[]", "\\begin{itemize}");
   DefMacro!("\\endtablenotes", "\\end{itemize}");
 
-  DefEnvironment!("{measuredfigure}", "#body");
+  DefEnvironment!("{measuredfigure}", "#body",
+    before_digest => {
+      Digest!("\\@ifundefined{@captype}{\\def\\@captype{figure}}{}")?;
+    });
 });

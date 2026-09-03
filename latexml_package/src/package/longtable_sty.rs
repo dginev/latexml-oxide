@@ -18,13 +18,23 @@ LoadDefinitions!({
     r"\lx@end@alignment\@end@tabular");
 
   DefMacro!("\\@gobble@optional[]", None);
+  DefMacro!("\\lx@LT@newpage", "\\noalign{\\break}");
 
   DefConstructor!("\\@@longtable [] Undigested DigestedBody",
     "<ltx:table xml:id='#id' inlist='lot' labels='#label'>#tags?#headcaption(<ltx:caption>#headcaption</ltx:caption>)?#headtoccaption(<ltx:toccaption>#headtoccaption</ltx:toccaption>)#3?#footcaption(<ltx:caption>#footcaption</ltx:caption>)?#foottoccaption(<ltx:toccaption>#foottoccaption</ltx:toccaption>)</ltx:table>",
     reversion => r"\begin{longtable}[#1]{#2}#3\end{longtable}",
     before_digest => {
       bgroup();
+      // longtable.sty:135-137: inside the table `\newpage` = `\noalign
+      // {\break}`, `\pagebreak`/`\nopagebreak` = `\noalign{…}` — vertical
+      // commands between rows must take tex.web §785's no_align branch, not
+      // start a row (harmony: `\newpage` between `\hline` rows → "`\noalign`
+      // cannot be used here" + row desync). `\clearpage` is not redefined
+      // (pdflatex errors too). Group-local, as longtable's own `\def`s.
+      // Guard: `perfect_kernel_batch54::longtable_page_commands_between_rows_are_noalign`.
       let_i(&T_CS!("\\pagebreak"), &T_CS!("\\@gobble@optional"), None);
+      let_i(&T_CS!("\\nopagebreak"), &T_CS!("\\@gobble@optional"), None);
+      let_i(&T_CS!("\\newpage"), &T_CS!("\\lx@LT@newpage"), None);
     },
     after_digest => sub[whatsit] {
       // Insert properties from LONGTABLE_PROPERTIES

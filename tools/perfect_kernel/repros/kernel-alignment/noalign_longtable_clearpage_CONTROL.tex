@@ -1,0 +1,15 @@
+% CONTROL: \clearpage is NOT redefined by longtable.sty, so it is a GENUINE error in a
+%   longtable body in pdflatex too (2 errors). The fix must redefine only \newpage/\pagebreak/
+%   \nopagebreak (longtable.sty:135-137), NOT tolerate every vertical command between rows.
+% oracle:  pdflatex 2 errors ; rust 3 errors — must STAY erroring
+% status:  CONTROL
+\documentclass{article}\usepackage{longtable}
+\begin{document}
+\begin{longtable}{|l|c|}
+a & b \\
+\hline
+\clearpage
+\hline
+c & d \\
+\end{longtable}
+\end{document}

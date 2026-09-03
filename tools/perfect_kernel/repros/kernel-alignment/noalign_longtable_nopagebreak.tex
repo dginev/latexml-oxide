@@ -1,0 +1,17 @@
+% witness: same longtable family; longtable.sty:137 \def\nopagebreak{\noalign{...}}
+% oracle:  pdflatex 0 errors
+% engines: rust=3 pdflatex=0 (2026-09-03, b54t) -> SHARED (binding omits it too)
+% expect:  0 errors; <ltx:tabular> with cells a,b,c,d
+% status:  RED
+% mechanism: identical to \newpage — the longtable binding does not redefine \nopagebreak
+%   to its \noalign form, so it reaches align_peek as a non-\noalign token and starts a row.
+\documentclass{article}\usepackage{longtable}
+\begin{document}
+\begin{longtable}{|l|c|}
+a & b \\
+\hline
+\nopagebreak
+\hline
+c & d \\
+\end{longtable}
+\end{document}

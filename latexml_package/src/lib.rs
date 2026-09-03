@@ -584,6 +584,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::supertabular_sty::load_definitions,
   ),
   ("multicol", "sty", package::multicol_sty::load_definitions),
+  (
+    "adjmulticol",
+    "sty",
+    package::adjmulticol_sty::load_definitions,
+  ),
+  ("isorot", "sty", package::isorot_sty::load_definitions),
   ("multido", "sty", package::multido_sty::load_definitions),
   ("multirow", "sty", package::multirow_sty::load_definitions),
   ("newclude", "sty", package::newclude_sty::load_definitions),

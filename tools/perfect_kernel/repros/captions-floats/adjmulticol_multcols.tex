@@ -1,0 +1,19 @@
+% witness: sample (adjmulticol doc), sweep36 first_errors36.tsv (4 errs)
+% oracle: pdflatex CLEAN (0 !)
+% engines: pdflatex
+% class: SHARED — no adjmulticol binding in Perl or Rust; both raw-load and fail
+% expect: 0 Error lines; <ltx:pagination start/end_N_columns> around the body
+% status: RED with b54t (\mult@@cols undefined + \endmulticols mode error)
+% mechanism: adjmulticol.sty raw-loads (no binding). \RequirePackage{multicol};
+%   \adjmulticols{cols}{inner}{outer} -> \adjmult@@cols -> \mult@@cols#1[#2]
+%   (adjmulticol.sty:151 calls multicol.sty:172 \mult@@cols). multicol_sty.rs binds
+%   {multicols} at the pagination-marker level and does NOT expose \mult@@cols/
+%   \endmulticols internals -> undefined; \endadjmulticols's \endmulticols then
+%   mismatches mode. Perl multicol.sty.ltxml:21 is the same high-level env.
+\documentclass{book}
+\usepackage{adjmulticol}
+\begin{document}
+\begin{adjmulticols}{2}{12pt}{-2in}
+Some text flowing across two adjusted columns. More text here.
+\end{adjmulticols}
+\end{document}

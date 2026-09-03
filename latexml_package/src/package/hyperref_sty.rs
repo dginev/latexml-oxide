@@ -570,6 +570,29 @@ LoadDefinitions!({
     },
     sizer     => "#5",
     reversion => "#1#2#4#3");
+  // hyperref's low-level URL chain, reached by raw packages and manual
+  // definitions (biblatex.tex:170-171 `\DeclareRobustCommand\fnurl
+  // {\hyper@normalise\fnurl@}` → `\footnote{\url@{#1}}`; btxdockit `\href`):
+  // hyperref.sty:4604 `\hyper@normalise` makes `#`/`%`/`~`/`_`/`&`/`$`
+  // catcode-neutral before reading the URL group, then :4648 hands
+  // `\X{url}` on — LaTeXML's `Semiverbatim` reader IS that neutralised read,
+  // so `\hyper@normalise\X{url}` = `\X{url}`; :4802 `\url@#1` =
+  // `\hyper@linkurl{\Hurl{#1}}{#1}`; hpdftex.def:407 `\hyper@linkurl{content}
+  // {target}` = the hyperlink (`<ltx:ref href>`); :4798 `\Hurl` typesets the
+  // URL text (url.sty:81 `\Url`). Perl's hyperref.sty.ltxml omits the chain
+  // (its `\url` uses its own reader): biblatex, biblatex-trad. Guard:
+  // `perfect_kernel_batch54::hyperref_normalise_chain_links_urls`.
+  DefMacro!("\\hyper@normalise Token Semiverbatim", "#1{#2}");
+  DefMacro!("\\url@ Semiverbatim", "\\hyper@linkurl{\\Hurl{#1}}{#1}");
+  DefConstructor!("\\hyper@linkurl {} Semiverbatim",
+  "<ltx:ref href='#href' class='ltx_url'>#1</ltx:ref>",
+  bounded => true, enter_horizontal => true,
+  properties => sub[args] {
+    unref!(args => _content, url);
+    Ok(stored_map!("href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None)))
+  });
+  DefMacro!("\\Hurl Semiverbatim", "\\texttt{#1}");
+
   // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1
   DefConstructor!(
     "\\nolinkurl Semiverbatim",

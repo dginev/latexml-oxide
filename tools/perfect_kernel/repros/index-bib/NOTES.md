@@ -390,3 +390,91 @@ driver (hrefhide); cmsendnotes ENDNOTES machinery (cms-noteref — the real 54-e
 - \glet is NOT etoolbox (no \glet in etoolbox.sty/.def) nor biblatex.sty — apa.cbx assumes it under lualatex only.
 - Bare hyperref+pagenote did NOT reach \hyper@makecurrent — the reach needs ucalgmthesis's pagenote config.
 - \HyPsd@UTFviii is not a clean hyperref-surface gap: entangled with [latin1]inputenc active-byte -> \pdfstringdef.
+
+# ============================================================
+# WAVE 15 — Checkpoint 2 (2026-09-03, b54t): BUCKET 1 ROOT =
+# COMPLETE biblatex.sty internal/public surface reached by raw style files
+# ============================================================
+
+ONE root = one binding block (latexml_contrib/src/biblatex_sty.rs LoadDefinitions!,
+extending the "Declaration-only biber/data-model and setup hooks" surface ~L1044).
+Class: SHARED but Rust is AHEAD — bare `\usepackage{biblatex}` is Rust-CLEAN, but Perl
+raw-loads biblatex.sty and FAILS UNIVERSALLY at `\ProcessLocalKeyvalOptions`
+(biblatex.sty:7113, kvoptions.sty.ltxml gap) = 4 errors on EVERY biblatex doc incl. the
+sbl+juradiss repros (verified). pdflatex 0 on all repros -> surpass in scope. The specific
+`undefined:\blx@*` lines are Rust-manifested (Perl never reaches the style internals).
+
+INVENTORY — every gap name (runtime-undefined across the 3 guard docs under b54t), with
+biblatex.sty def:line, signature, biber-only(gobble) vs control-flow(faithful body), and
+static breadth = distinct biblatex-* bundles referencing it in TeX Live. Sorted by breadth.
+
+| name | def:line | sig | kind | action | bundles | guard |
+|------|----------|-----|------|--------|---------|-------|
+| \clearfield | :2538 (\blx@imc@clearfield#1, imc-registered) | {#1} | biber-only | gobble {#1} | 35 | windycity |
+| \blx@blxinit | :1105 | () | control | \let\blx@blxinit\relax (one-shot init no-op) | 8 | sbl |
+| \blx@ifdata | :8439 | #1 | control | \ifcsdef{blx@data@#1} -> always-FALSE (no biber data in our model) | 5 | sbl |
+| \blx@safe@actives | :127 | () | control | no-op (+ \blx@rest@actives no-op) | 5 | juradiss |
+| \AtDataInput | :8985 | [#1][*]{#2} | biber-only | \csgappto{blx@hook@bblitem@#1}{#2} (or gobble [*]{}) | 5 | juradiss |
+| \DeclareCitePunctuationPosition | :12771 | #1#2 | biber-only | gobble {}{} | 4 | windycity |
+| \OnManualCitation | :11442 | #1 | biber-only | \appto\blx@hook@mancite{#1} (or gobble {}) | 4 | juradiss |
+| \blx@xsanitizeafter | :1216 | #1#2 (protected) | control | FAITHFUL: \begingroup\def\blx@tempa{\endgroup#1}\edef\blx@tempb{#2}\expandafter\blx@tempa\expandafter{\detokenize\expandafter{\blx@tempb}} | 3 | sbl |
+| \blx@nocite@do | :12337 | #1 | control | gobble {} (kernel \nocite already handles) | 3 | sbl |
+| \abx@missing@entry | :11661 | #1 | control | gobble {} (missing-key report; cosmetic) | 3 | sbl |
+| \ResetDataInheritance | :14566 | () | biber-only | gobble | 3 | windycity |
+| \DefaultInheritance | :14474 | [#1]{#2} | biber-only | gobble []{} (ALSO consumes \except in opt-arg, windycity.bbx:742) | 3 | windycity |
+| \except | :14485 (\let \blx@inherit@except[3]) | {}{}{} | biber-only | gobble {}{}{} (defensive; usually inside \DefaultInheritance opt) | 3 | windycity |
+| \DeclareAutoPunctuation | :12754 | #1 | biber-only | gobble {} | 3 | windycity |
+| \idemcites | windycity.cbx:179 via \DeclareMultiCiteCommand | — | control | FIX \DeclareMultiCiteCommand (biblatex_sty.rs:2613 is a NO-OP) to DEFINE its target as a cite cmd, mirroring \DeclareCiteCommand (:2151) | 1 | windycity |
+
+RESIDUAL (separate small gap, NOT this block): etoolbox toggle `blx@useeditor` undeclared
+(standard-dw.bbx:1878 \iftoggle) -> biblatex-dw option `useeditor` should \providetoggle it;
+leaves 1 juradiss error unless also fixed (biblatex option-declaration machinery).
+
+The `\clearfield` (35 bundles) is really the biblatex `\blx@imc@*` field-op family
+(\clearfield/\clearlist/\clearname/\savefield/\restorefield/\printfield/\ifentryinbib…),
+registered as user names by \blx@blxinit via \blx@regimc (biblatex.sty:1131). Only
+\clearfield + \ifentryinbib(->\blx@ifdata) are reached by the guard docs (via \AtNextCitekey
+/ raw-cbx cite hooks that RUN in text; the \DeclareBibliographyDriver bodies full of these
+are NOT executed by us — we render biber's .bbl). Cover the reached user names as gobbles;
+the full imc registration is a larger optional follow-up.
+
+## FIX PLAN (one binding block, biblatex_sty.rs LoadDefinitions!)
+- def_macro_noop faithful signatures: \clearfield{}, \ResetDataInheritance,
+  \DefaultInheritance[]{}, \except{}{}{}, \DeclareAutoPunctuation{},
+  \DeclareCitePunctuationPosition{}{}, \abx@missing@entry{}, \blx@nocite@do{}.
+- hook-appends (faithful, etoolbox \appto/\csgappto already present): \AtDataInput[*]{}
+  -> \csgappto{blx@hook@bblitem@#1}{#2}; \OnManualCitation{} -> \appto\blx@hook@mancite{#1}.
+- no-ops: \blx@blxinit (\let\relax), \blx@safe@actives, \blx@rest@actives.
+- faithful bodies: \blx@xsanitizeafter#1#2 (dispatch via \detokenize as above);
+  \blx@ifdata#1 -> \ifcsdef{blx@data@#1} (always false in our no-biber-data model).
+- FIX \DeclareMultiCiteCommand (biblatex_sty.rs:2613 no-op) to DEFINE its 1st arg as a
+  cite command routing to the multicite emulation (as \DeclareCiteCommand:2151 does),
+  so \idemcites and any style-declared multicite resolves.
+- (residual, optional in-block) \providetoggle{blx@useeditor} + audit biblatex-dw toggles.
+
+GUARD (perfect_kernel_batchNN / cluster_package_guards): 0 errors on
+blx_datainherit_windycity.tex (+ <ltx:bibliography>), blx_citechain_sbl.tex (+ <ltx:cite>),
+blx_datainput_juradiss.tex (document body; blx@useeditor residual noted). Where a real .bbl
+is present, <ltx:bibliography> non-empty.
+RISK: MED. Gobbles/no-ops LOW; the two faithful bodies rely on \detokenize/\ifcsdef (present);
+highest-risk is \DeclareMultiCiteCommand now DEFINING commands — must route to the existing
+multicite emulation without shadowing \cites/\parencites; \blx@ifdata always-false only
+affects RAW-cbx cites (\citeshorthand), not the binding's high-level \cite.
+GAIN: windycity 7->0, biblatex-sbl 5->0, biblatex-juradiss 6->~1 (toggle residual), cms-noteref
++1 (\blx@refpatch@sect; endnotes cascade separate); broad de-risk of 35-bundle \clearfield +
+8-bundle \blx@blxinit + 5-bundle \blx@ifdata surface across biblatex-ext/-ieee/-nature/-science/
+-phys/-mla/apa style docs.
+
+## REPROS (all RED under b54t, all pdflatex 0)
+1. blx_datainherit_windycity.tex  (windycity)  rust=5(min)/7(full) — data-model/decl gobbles
+2. blx_citechain_sbl.tex          (biblatex-sbl) rust=5 — \citeshorthand{SBL} -> the 5 sbl
+   control-flow internals (\blx@blxinit/\blx@xsanitizeafter/\blx@ifdata/\blx@nocite@do/\abx@missing@entry)
+3. blx_datainput_juradiss.tex     (biblatex-juradiss) rust=4 — \AtDataInput/\OnManualCitation/
+   \blx@safe@actives + blx@useeditor toggle residual
+
+## DEAD ENDS
+- Minimal `[style=sbl]{biblatex}` / `[style=juradiss]` style-LOAD is CLEAN — internals are
+  reached only during cite/bib RENDER (sbl) or via the correct style NAME (biblatex-juradiss,
+  not juradiss — inherits biblatex-dw standard-dw.{bbx,cbx}).
+- \clearfield is NOT a top-level def — it's \blx@imc@clearfield (biblatex.sty:2538) imc-registered.
+- \except never leaks if \DefaultInheritance gobbles its optional arg (windycity.bbx:742).

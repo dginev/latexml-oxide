@@ -1,0 +1,17 @@
+% witness: biblatex-juradiss/biblatex-juradiss (biblatex-juradiss.tex:185 style=biblatex-juradiss)
+% oracle:  pdflatex 0 errors
+% engines: rust=4 perl=? (2026-09-03)
+% expect:  0 errors; document body present
+% status:  RED
+% mechanism: style=biblatex-juradiss inherits biblatex-dw's standard-dw.{bbx,cbx},
+%   raw-loaded, reaching biblatex.sty internals the binding omits: \AtDataInput
+%   (:8985 [#1][*]{#2}=\csgappto a bblitem hook), \OnManualCitation (:11442 {#1}=
+%   \appto\blx@hook@mancite), \blx@safe@actives (:127 catcode-safety flag). Residual:
+%   etoolbox toggle blx@useeditor (standard-dw.bbx:1878 \iftoggle) undeclared — a
+%   separate biblatex-dw option-toggle gap. Class-level fix: biblatex_sty.rs surface.
+\documentclass{article}
+\usepackage[style=biblatex-juradiss]{biblatex}
+\begin{document}
+Text.\par
+\printbibliography
+\end{document}
