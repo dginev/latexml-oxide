@@ -339,7 +339,11 @@ LoadDefinitions!({
     });
     digest_alignment_body(whatsit)?;
     end_mode("restricted_horizontal")?;
-    decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+    // Balance the opening `{` OUTSIDE of the masking of ALIGN_STATE — only
+    // when the opener WAS a `{` character (see `parse_halign_template`).
+    if matches!(whatsit.get_property("halign_brace_opener").as_deref(), Some(Stored::Bool(true))) {
+      decrement_align_group_count();
+    }
   });
 
   def_macro_noop("\\lx@alignment@row@before")?;
@@ -1553,6 +1557,17 @@ fn meaning_is_param(t: &Token) -> bool {
 // Perl TeX_Tables L187-240: Parse an \halign style alignment template from Gullet
 pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let t = read_non_space()?;
+  // tex.web §347: only a `{` CHARACTER moved align_state when it was read
+  // (`\bgroup` does not), so only that opener has a `+1` for the after_digest
+  // to balance — recorded here, consulted at the decrement. An unconditional
+  // decrement drove the OUTER alignment's live count to -1 when a nested
+  // `\halign to\linewidth\bgroup` (oz.sty:800 `\z@format`, `op` inside
+  // `class`) closed, and the outer's following `\crcr\noalign` was rejected
+  // (ozguide). Guard: `perfect_kernel_batch54::nested_halign_bgroup_keeps_the_outer_align_state`.
+  let brace_opener = t
+    .as_ref()
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+  whatsit.set_property("halign_brace_opener", Stored::Bool(brace_opener));
   // Perl L190: $t->defined_as(T_BEGIN) — checks \let aliases like \bgroup
   if !t
     .as_ref()

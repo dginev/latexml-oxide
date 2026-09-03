@@ -49,6 +49,13 @@ LoadDefinitions!({
   DefMacro!("\\mcitefwdBIBdecl", "\\relax");
   DefMacro!("\\mcitebibitem", "\\bibitem");
   DefMacro!("\\mcitethebibliography", "\\thebibliography");
+  // mciteplus.sty:140/775/780-782 — `\mciteSubRef[track]{key}` is a `\ref` to
+  // the label the .bbl's sub-reference entries define (achemso-demo).
+  RawTeX!(
+    r"\def\mcitetrackID{main}\def\@mcitereflabelprefix{MciteSubReferenceLabel}
+\def\mciteSubRef{\@ifnextchar[{\@mciteSubRef}{\@mciteSubRef[\mcitetrackID]}}
+\def\@mciteSubRef[#1]#2{\ref{\@mcitereflabelprefix:#1:#2}}"
+  );
   DefMacro!("\\endmcitethebibliography", "\\endthebibliography");
   DefConditional!("\\ifmciteBstWouldAddEndPunct");
 });

@@ -272,7 +272,11 @@ fn ams_aligned_bindings() -> Result<()> {
 }
 
 LoadDefinitions!({
-  // Package options (Perl L44-57)
+  // Package options (Perl L44-57). amsmath.sty:52-57 `\newif\ifctagsplit@`
+  // (centertags = true by default) is the switch testmath.tex:1796 pokes
+  // directly (`\ctagsplit@true`); tag placement is a render no-op here.
+  // Guard: `perfect_kernel_batch54::amsmath_ctagsplit_switch_exists`.
+  RawTeX!(r"\newif\ifctagsplit@ \ctagsplit@true");
   DeclareOption!("centertags", None);
   DeclareOption!("tbtags", None);
   DeclareOption!("sumlimits", None);

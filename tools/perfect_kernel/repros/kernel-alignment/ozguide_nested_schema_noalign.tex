@@ -1,0 +1,31 @@
+% status: RED — Rust 10 err, FIRST = "\noalign cannot be used here"
+%         (precedes the mode-switch cascade). Fresh binary pk_target2/debug.
+% witness: ozguide (objectz manual), 27 err. First \noalign fires inside a nested
+%          Z-schema alignment (\begin{op} inside \begin{class}), reached via
+%          example.sty's tmp-file re-read (ozguide:155-173).
+% oracle: pdflatex 0 (clean). RUST-ONLY (nested-alignment \noalign recognition).
+% root: oz.sty nests schema alignments. \class (oz.sty:906) -> \z@boxenv ->
+%       \z@env\z@format; \op (oz.sty:909) = \z@inclasscheck\schema ->
+%       \z@inoutbox -> \z@env\z@format AGAIN, i.e. a 2nd \halign inside a CELL of
+%       the 1st. \z@env (oz.sty:787) opens $$ (display math), \def\\{\crcr},
+%       \everycr={\noalign{...}}; \z@format (oz.sty:800) = \halign to\linewidth\bgroup.
+%       \ST=\where (oz.sty:784) = \also\omit\hbox to\zedbar{..}\cr\also, and
+%       \also (oz.sty:813) = \crcr\noalign{\vskip\jot}. The INNER (op) alignment's
+%       \noalign (right after \crcr) is NOT recognized by the nested alignment's
+%       cr-loop -> falls to the reject primitive (tex_tables.rs:224) -> then the
+%       nested $$\halign groups cannot close (downstream parked mode-switch cascade).
+% class: RUST-ONLY nested-\halign-in-cell \noalign gap. First error is the \noalign
+%        (root), NOT a mode-switch symptom (it precedes the cascade). Entangled with
+%        the $$ display-math mode-switch machinery.
+% assert (after fix): 0 err; the op schema renders as a nested <ltx:tabular>.
+\documentclass{article}
+\usepackage{oz}
+\begin{document}
+\begin{class}{Point}
+\begin{op}{Translate}
+dx? : \real
+\ST
+x' = x + dx?
+\end{op}
+\end{class}
+\end{document}

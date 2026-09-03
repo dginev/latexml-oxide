@@ -33,6 +33,21 @@ LoadDefinitions!({
   // Perl raw-loads the class). Guard:
   // `perfect_kernel_batch54::achemso_declares_its_scheme_floats`.
   RequirePackage!("float");
+  // achemso.cls:1413-1414 loads mciteplus when installed (`\mciteSubRef`).
+  RequirePackage!("mciteplus");
+  // achemso.cls:144-165 (its embedded notes2bib): `\bibnote[label]{text}` files
+  // the text as a bibliography entry `Note-N` and cites it; the bibliography
+  // is bibtex's, so the note is rendered here as a numbered note in place
+  // (`\lx@note{bibnote}`), the mark/text halves as the footnote pair;
+  // `\printbibnotes` is the .bbl step (achemso-demo). Guard:
+  // `perfect_kernel_batch54::achemso_bibnote_is_a_numbered_note`.
+  RawTeX!(
+    r"\newcounter{bibnote}\def\thebibnote{Note-\the\value{bibnote}}
+\newcommand*\bibnote[2][\thebibnote]{\stepcounter{bibnote}\lx@note{bibnote}[\thebibnote]{#2}}
+\newcommand*\bibnotemark[1][\thebibnote]{\stepcounter{bibnote}\lx@notemark{bibnote}[\thebibnote]}
+\newcommand*\bibnotetext[2][\thebibnote]{\lx@notetext{bibnote}[\thebibnote]{#2}}
+\newcommand*\printbibnotes{}\def\bibnotetyperefname{note}\def\ext@bibnote{}"
+  );
   RawTeX!(
     r"\newfloat{scheme}{htbp}{los}\floatname{scheme}{Scheme}
 \newfloat{chart}{htbp}{loc}\floatname{chart}{Chart}

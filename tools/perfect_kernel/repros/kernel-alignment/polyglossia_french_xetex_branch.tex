@@ -1,0 +1,21 @@
+% status: RED — Rust 24 err, first "Error:undefined:\newXeTeXintercharclass".
+%         Fresh binary ~/data/pk_target2/debug/latexml_oxide.
+% witness: nicematrix-french (nicematrix manual, French). Fresh binary: 198 err,
+%          first \newXeTeXintercharclass from gloss-french.ldf:39.
+% oracle: pdflatex ALSO FAILS (exit=1) — polyglossia+fontspec refuse pdfTeX. This is
+%         a XeTeX/LuaTeX-ONLY document; the corpus "pdflatex" oracle is mis-assigned.
+%         Perl LaTeXML emits ZERO XeTeX errors (never raw-loads gloss-french.ldf).
+% root: XeTeX/LuaTeX-only doc. Our engine CORRECTLY reports pdfTeX (\ifpdftex=true,
+%       \ifxetex/\ifluatex=false). fontspec.sty:83-101 SHOULD fire
+%       \msg_fatal:nn{fontspec}{cannot-use-pdftex} (its \sys_if_engine_xetex:T /
+%       :luatex:T both false), refusing the doc like pdflatex — but fontspec_sty.rs
+%       STUBS fontspec and never emits that fatal, so polyglossia loads and
+%       gloss-french.ldf:36 `\ifluatex ... \else \newXeTeXintercharclass ... \fi`
+%       takes the XeTeX \else branch (no pdfTeX branch exists). BOTH branches need
+%       engine primitives we lack (\directlua = PARKED LuaTeX probe; \newXeTeXinter-
+%       charclass = XeTeX). PARKED family (XeTeX-only doc).
+% class: PARKED. Not a genuine parity gap (Perl also can't; pdflatex also fails).
+\documentclass{article}
+\usepackage{polyglossia}
+\setmainlanguage{french}
+\begin{document}Bonjour : le monde ! \end{document}

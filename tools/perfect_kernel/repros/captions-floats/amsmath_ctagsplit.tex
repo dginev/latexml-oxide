@@ -1,0 +1,12 @@
+% SHARED (Perl amsmath.sty.ltxml:46 declares centertags/tbtags as no-op options
+% too; neither binding runs amsmath.sty:52 \newif\ifctagsplit@). testmath.tex:1796
+% pokes the internal directly (`{\makeatletter\ctagsplit@true ...}`) to demo the
+% centertags feature -> \ctagsplit@true undefined.
+% Fix (surpass): amsmath_sty.rs:276-277 add \newif\ifctagsplit@ and route
+% DeclareOption centertags->\ctagsplit@true, tbtags->\ctagsplit@false.
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+{\makeatletter\ctagsplit@true
+\begin{equation}\begin{split} a&=b\\ &=c \end{split}\end{equation}}
+\end{document}

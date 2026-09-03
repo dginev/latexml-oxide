@@ -1,0 +1,21 @@
+% status: RED — Rust 19 err, FIRST = "\egroup Attempt to close a group that
+%         switched to mode display_math" (PARKED mode-switch family). \noalign is
+%         the SECOND error (co-symptom). Fresh binary pk_target2/debug.
+% witness: polydemo (polynom manual), 102 err. \dopolyhornerscheme/\dopolylongdiv
+%          (polydemo:57/39) wrap \polyhornerscheme/\polylongdiv in \[...\].
+% oracle: pdflatex 0 (clean).
+% root: polynom's \polyhornerscheme (polynom.sty:1495) / \polylongdiv (:100) open a
+%       raw \halign (polynom.sty:898/1107/1676) INSIDE \[...\] display math, with a
+%       body accumulated as \cr/\noalign/\multispan rows (\pld@allines, :1094/:1001/
+%       :774/:1043-1047). The display_math mode-switch frame around that \halign is
+%       mishandled: the \halign's \egroup cannot close ("switched to mode
+%       display_math"), and the accumulated \noalign co-fails. FIRST error is the
+%       mode-switch \egroup.
+% class: PARKED — first error is the "current frame is mode-switch to <mode>" family.
+%        STOP per rules. The \noalign here is downstream of the display-math
+%        mode-switch, NOT an independent alignment root (contrast ozguide).
+\documentclass{article}
+\usepackage{polynom}
+\begin{document}
+\[\polyhornerscheme[x=-2]{x^3+x^2-1}\]
+\end{document}

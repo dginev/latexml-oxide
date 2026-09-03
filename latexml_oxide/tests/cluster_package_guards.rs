@@ -11960,6 +11960,64 @@ $\begin{bNiceMatrix}\CodeBefore \rowcolor{blue!15}{1} \Body 9 & 17 \\ -2 & 5\end
     assert!(xml.contains("backgroundcolor="), "{xml}");
   }
 
+  /// achemso.cls:144-165 `\bibnote` (notes2bib) files a note into the
+  /// bibliography; rendered as a numbered in-place note, and mciteplus's
+  /// `\mciteSubRef` (mciteplus.sty:780-782) is defined (achemso-demo).
+  #[test]
+  fn achemso_bibnote_is_a_numbered_note() {
+    let tex = r"\documentclass{achemso}
+\author{A}\title{T}
+\begin{document}
+Text\bibnote{This is a note.} and ref.~\mciteSubRef{Key2005}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("role=\"bibnote\"") && xml.contains("This is a note."),
+      "{xml}"
+    );
+  }
+
+  /// A nested `\halign …\bgroup` (oz.sty's `op` schema inside `class`) must
+  /// not decrement the outer alignment's align_state at its end: `\bgroup`
+  /// never incremented it (tex.web §347), so the outer's `\crcr\noalign`
+  /// stayed recognizable (ozguide).
+  #[test]
+  fn nested_halign_bgroup_keeps_the_outer_align_state() {
+    let tex = r"\documentclass{article}
+\usepackage{oz}
+\begin{document}
+\begin{class}{Point}
+\begin{op}{Translate}
+dx? : \real
+\ST
+x' = x + dx?
+\end{op}
+\end{class}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Translate"), "{xml}");
+  }
+
+  /// amsmath.sty:52 `\newif\ifctagsplit@` exists for documents that poke it
+  /// (testmath.tex:1796); SHARED, Perl's binding lacks it too.
+  #[test]
+  fn amsmath_ctagsplit_switch_exists() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+{\makeatletter\ctagsplit@true
+\begin{equation}\begin{split} a&=b\\ &=c \end{split}\end{equation}}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<equation"), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

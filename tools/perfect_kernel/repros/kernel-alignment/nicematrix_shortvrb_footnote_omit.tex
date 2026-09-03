@@ -1,0 +1,21 @@
+% witness: nicematrix.tex:1396 \footnote{... |\multicolumn| ...} under \MakeShortVerb{\|}
+%   — the FIRST error in the manual (doc order): \omit cannot be used here (Anonymous String).
+% oracle:  pdflatex rc=1, "! Misplaced \omit." on the SAME construct -> SHARED, not Rust-only.
+% engines: rust=1 (Error:unexpected:\omit, EXIT 0/recovers) ; pdflatex=1 Misplaced \omit (recovers).
+% class:   SHARED (fragile verbatim in a moving argument; nicematrix NOT involved — kernel
+%          \multicolumn = \omit\@multicnt..., executed because shortvrb | fails to verbatim-ize
+%          inside \footnote's already-tokenized argument).
+% expect:  1 \omit error, both engines; NOT the cumulative-alignment-corruption root.
+% status:  RED (shared)  — leave as latent manual bug; do NOT stub \omit/\multicolumn.
+% mechanism: \MakeShortVerb{\|} makes | active doing \verb-style catcode rescan AT READ TIME.
+%   \footnote reads its arg as a token list (no rescan), so | is captured as an active-char
+%   token and \multicolumn as a \multicolumn cs token; at footnote-typeset time | cannot
+%   re-lower \multicolumn to letters -> \multicolumn runs off-alignment -> \omit (tex_tables.rs:249).
+\documentclass{article}
+\usepackage{nicematrix}
+\usepackage{shortvrb}
+\MakeShortVerb{\|}
+\begin{document}
+Plain (clean): the command |\multicolumn|.
+X\footnote{also |\multicolumn| here.}
+\end{document}
