@@ -171,6 +171,18 @@ LoadDefinitions!({
     }
   });
 
+  // \Uchar <charcode> — XeTeX/LuaTeX Unicode-engine primitive (LuaTeX manual §2.1).
+  // Expands to a character token with character code <charcode> and category 12 (other),
+  // except when <charcode> equals 32, in which case the category is 10 (space).
+  DefMacro!(T_CS!("\\Uchar"), None, {
+    let charcode = read_number()?.value_of();
+    match char::from_u32(charcode as u32) {
+      Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
+      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+      None => Vec::new(),
+    }
+  });
+
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
   def_macro_noop("\\pdftexbanner")?;

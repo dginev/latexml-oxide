@@ -208,6 +208,36 @@ LoadDefinitions!({
   DefRegister!("\\mathnolimitsmode" => Number::new(0));
   Let!("\\scantextokens", "\\scantokens");
 
+  // \Uchar post-dump fallback and expl3 kernel primitive aliases:
+  if lookup_definition(&T_CS!("\\Uchar"))?.is_none() {
+    DefMacro!(T_CS!("\\Uchar"), None, {
+      let charcode = read_number()?.value_of();
+      match char::from_u32(charcode as u32) {
+        Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
+        Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+        None => Vec::new(),
+      }
+    });
+  }
+  Let!("\\tex_Uchar:D", "\\Uchar");
+  Let!("\\tex_Ucharcat:D", "\\Ucharcat");
+
+  // ctex-engine-luatex.def declares these via `newluacmd` (Lua `token.set_lua`),
+  // which external texlua cannot insert into the engine's symbol table.
+  // In XML conversion, font metric and shape alternate adjustments are no-ops.
+  def_macro_noop("\\ctex_ltj_add_kyenc:n {}")?;
+  DefMacro!("\\ctex_ltj_is_kenc:n {}", "\\in@false");
+  DefMacro!("\\ctex_ltj_patch_external_font:n {}", "#1");
+  def_macro_noop("\\ctex_ltj_set_alt_font:nnnn {}{}{}{}")?;
+  def_macro_noop("\\ctex_ltj_clear_alt_font:n {}")?;
+  def_macro_noop("\\ctex_ltj_pickup_alt_font:nn {}{}")?;
+  def_macro_noop("\\__ctex_ltj_pickup_alt_font:Nn {}{}")?;
+  def_macro_noop("\\__ctex_ltj_if_alt_set:nT {}{}")?;
+  DefMacro!("\\ctex_ltj_zero_globaldefs:", "\\globaldefs=0\\relax");
+  def_macro_noop("\\ctex_update_kanjisize:")?;
+  def_macro_noop("\\fontspec_gset_family:Nnn DefToken {}{}")?;
+  def_macro_noop("\\fontspec_set_family:Nnn DefToken {}{}")?;
+
   //======================================================================
   // 2. LaTeXML-internal helpers
   //======================================================================

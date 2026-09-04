@@ -443,6 +443,32 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
+  // LaTeX kernel package disablement: \disable@package@load{<name>}{<action>}
+  // stores the action in `\@pkg-disable@<name>.<ext>` (latex.ltx:18771, 19829-19837).
+  // If defined, execute the action (warning/error) and ignore the load request.
+  let disable_cs = T_CS!(s!("\\@pkg-disable@{}", filename));
+  let fallback_cs = T_CS!(s!("\\@pkg-disable@{}", name));
+  let target = if lookup_definition(&disable_cs)?.is_some() {
+    Some(disable_cs)
+  } else if lookup_definition(&fallback_cs)?.is_some() {
+    Some(fallback_cs)
+  } else {
+    None
+  };
+  if let Some(cs) = target {
+    let _ = digest(Tokens!(cs));
+    Info!(
+      "latex",
+      "disable@package",
+      s!("Package '{filename}' has been disabled. Load request ignored")
+    );
+    assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{filename}_raw_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{name}_loaded"), true, Some(Scope::Global));
+    assign_value(&s!("{name}_raw_loaded"), true, Some(Scope::Global));
+    return Ok(());
+  }
+
   // The per-file load note is emitted ONLY when a load truly happens, so
   // CorTeX's `loaded_file` extraction (which parses the log) counts genuine
   // loads and nothing else:

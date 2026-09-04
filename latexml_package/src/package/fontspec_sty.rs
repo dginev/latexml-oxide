@@ -180,5 +180,7 @@ LoadDefinitions!({
   // asternote, scsnowman, jpnedu* family).
   def_macro_noop("\\fontspec_select:nn{}{}")?;
   def_macro_noop("\\fontspec_complete_fontname:Nn DefToken {}")?;
+  def_macro_noop("\\fontspec_gset_family:Nnn DefToken {}{}")?;
+  def_macro_noop("\\fontspec_set_family:Nnn DefToken {}{}")?;
   def_macro_noop("\\__fontspec_keys_define_code:nnn{}{}{}")?;
 });
