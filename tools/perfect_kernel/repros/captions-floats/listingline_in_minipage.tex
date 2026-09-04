@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — same-host Perl emits the identical listingline errors
 % expect: 0 Error; <ltx:listing>/<ltx:listingline> inside a block-repackaged minipage
-% status: RED with b54t (<ltx:listingline> isn't allowed in <ltx:p>)
+% status: GREEN (batch 54)
 % mechanism: \begin{algorithmic} (block-level <ltx:listing>/<ltx:listingline>) inside a
 %   minipage captured as <ltx:p class=ltx_minipage> (horizontal). _CaptureBlock_ fails to
 %   repackage the p as a block ("Did not find a block-like candidate in ltx:p",

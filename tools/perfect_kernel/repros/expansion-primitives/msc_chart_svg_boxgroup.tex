@@ -8,7 +8,7 @@
 %   Fatal:Timeout:PushbackLimit (cumulative; Perl recovers per chart, Rust spins).
 % class:   SHARED (mode-frame/SVG-box family, theme 1). Not verbatiminput, not an EOF-less loop.
 % expect:  the msc chart renders without \lxSVG@endscope/\hbox/\endgroup "non-boxing group" errors.
-% status:  RED (25 mode/box-group errors; full doc -> PushbackLimit)
+% status:  SHARED-FAILURE (Perl same-host: SAME 25 errors; pgf/tikz SVG box scope handling)
 % mechanism: \begin{msc}..\end{msc} draws a message-sequence chart via pgf/tikz; our SVG/box
 %   rendering closes an \lxSVG@endscope / \hbox / \endgroup on a group that was NOT opened as a
 %   boxing group ("Attempt to close non-boxing group" / "Attempt to end mode restricted_horizontal").

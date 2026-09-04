@@ -6,7 +6,7 @@
 %          \multicolumn = \omit\@multicnt..., executed because shortvrb | fails to verbatim-ize
 %          inside \footnote's already-tokenized argument).
 % expect:  1 \omit error, both engines; NOT the cumulative-alignment-corruption root.
-% status:  RED (shared)  — leave as latent manual bug; do NOT stub \omit/\multicolumn.
+% status:  SHARED-FAILURE (pdflatex also emits "! Misplaced \omit.", fragile verbatim in moving arg)
 % mechanism: \MakeShortVerb{\|} makes | active doing \verb-style catcode rescan AT READ TIME.
 %   \footnote reads its arg as a token list (no rescan), so | is captured as an active-char
 %   token and \multicolumn as a \multicolumn cs token; at footnote-typeset time | cannot

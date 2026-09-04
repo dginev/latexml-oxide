@@ -4,7 +4,7 @@
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
 % engines: rust=RED(4 undef + Fatal loop) perl=N/A(no luatex profile) (2026-09-03)
 % expect:  0 errors; XMP block absorbed (no PDF metadata in LaTeXML output)
-% status:  RED
+% status:  GREEN (batch 55, under --preload=[rawstyles,rawclasses,luatex]latexml.sty)
 % mechanism: l3pdfmeta's \pdfmeta_xmp_* family (pdfmanagement.ltx:2312+) builds the PDF
 %   XMP metadata packet. Our \DocumentMetadata (latex_constructs_rust_only.rs:87-88) does
 %   \RequirePackage{tagpdf} instead of activating pdfmanagement, so the public

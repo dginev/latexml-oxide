@@ -6,7 +6,7 @@
 %   driver "pgfsys-" missing) -> environmental, no direct parity.
 % class:   RUST-ONLY (contrib binding: latexml_contrib/src/nicematrix_sty.rs)
 % expect:  0 errors, an <ltx:XMArray> matrix with rows 9,17 / -2,5.
-% status:  RED
+% status:  GREEN (batch 54, 0 errors; XMArray matrix with rows 9,17 / -2,5)
 % mechanism: \begin{bNiceMatrix} -> \lx@nice@matrix@begin -> \@ifnextchar\CodeBefore ...
 %   \@ifnextchar compares by MEANING (x_equals, sect13.rs:1758-1763), and nicematrix_sty.rs:501
 %   \Let!("\CodeBefore","\relax"). So ANY \relax-meaning first-body token matches \CodeBefore,

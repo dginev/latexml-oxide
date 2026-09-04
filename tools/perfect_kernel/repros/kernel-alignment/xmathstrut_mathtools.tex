@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=? perl=? pdflatex=0 (2026-09-03, b54t)
 % expect:  0 errors; display math with a fraction, no "Extra alignment tab"
-% status:  RED
+% status:  GREEN (batch 54, perfect_kernel_batch54::xmathstrut_is_a_vphantom)
 % mechanism: mathtools.sty:1897 \def\xmathstrut{\@dblarg\xmathstrut@}; \xmathstrut@[#1]#2
 %   = \vphantom{\mathpalette\xmathstrut@do{#2}}. NOT defined in mathtools_sty.rs binding,
 %   so \xmathstrut is undefined -> the frac structure breaks -> "Extra alignment tab '&'".

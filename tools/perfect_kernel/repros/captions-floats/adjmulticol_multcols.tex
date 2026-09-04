@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — no adjmulticol binding in Perl or Rust; both raw-load and fail
 % expect: 0 Error lines; <ltx:pagination start/end_N_columns> around the body
-% status: RED with b54t (\mult@@cols undefined + \endmulticols mode error)
+% status: GREEN (batch 54)
 % mechanism: adjmulticol.sty raw-loads (no binding). \RequirePackage{multicol};
 %   \adjmulticols{cols}{inner}{outer} -> \adjmult@@cols -> \mult@@cols#1[#2]
 %   (adjmulticol.sty:151 calls multicol.sty:172 \mult@@cols). multicol_sty.rs binds

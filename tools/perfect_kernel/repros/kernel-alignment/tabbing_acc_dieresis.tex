@@ -2,7 +2,7 @@
 % oracle:  lualatex 0 errors ; pdflatex 0 (dieresis needs no LGR)
 % engines: rust=1 pdflatex=0 (2026-09-03, b54x) -> PERL-ORIGIN, surpass in scope
 % expect:  0 errors; <ltx:tabular class="ltx_tabbing"> containing u-with-dieresis
-% status:  RED
+% status:  GREEN (batch 54, perfect_kernel_batch54::tabbing_accent_kludge_recovers_rebound_accents)
 % mechanism: \a" -> \@tabbing@accent{"} -> \@tabbing@" undefined. " is NOT rebound by tabbing,
 %   so the faithful fix falls \@tabbing@accent back to \<char> (= \" dieresis). Greek reaches
 %   \a< / \a> too (LGR breathings): those chars ARE rebound (\<->untab, \>->nexttab), so they

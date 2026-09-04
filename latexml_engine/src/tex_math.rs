@@ -957,6 +957,22 @@ LoadDefinitions!({
       } else {
         unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
       }
+    } else if delim_str == "\\Udelimiter" {
+      let _class = read_number()?;
+      let _fam = read_number()?;
+      let code = read_number()?.value_of();
+      if let Some(ch) = char::from_u32(code as u32) {
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = ch.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
+          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
+        } else {
+          unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+        }
+      } else {
+        unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+      }
     } else {
       unread(Tokens::new(vec![T_CS!("\\@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
     }
@@ -1326,6 +1342,22 @@ LoadDefinitions!({
       if let Some(glyph) = props.glyph {
         let mut glyph_buf = [0u8; 4];
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
+        if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
+          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
+        } else {
+          unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+        }
+      } else {
+        unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+      }
+    } else if delim_str == "\\Udelimiter" {
+      let _class = read_number()?;
+      let _fam = read_number()?;
+      let code = read_number()?.value_of();
+      if let Some(ch) = char::from_u32(code as u32) {
+        let mut glyph_buf = [0u8; 4];
+        let glyph_key = ch.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
           unread(Tokens::new(vec![T_CS!("\\@right"), tok]));

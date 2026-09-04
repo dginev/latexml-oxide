@@ -1,6 +1,7 @@
 % witness: t-angles/t-manual (\Show\id, t-manual:40-44; t-angles.sty:494 \def\array{...\@tabarray})
 % MINIMAL kernel repro: a \@tabarray-based array, wrapped in \begingroup (non-boxing), nested in
-% an outer \begin{array}. oracle: pdflatex 0. status: RED b54t=8 (Perl 0.8.8 = 8, SHARED).
+% an outer \begin{array}. oracle: pdflatex 0.
+% status: GREEN
 % mechanism: \@tabarray (sect10.rs:424 / Perl latex_constructs.pool:3765 = \m@th\@@array[c]) omits
 %   \@array@bindings + \lx@begin@alignment (which full \array, sect10.rs:411 / Perl :3756, has), so
 %   it opens \@@array's bgroup (boxing) but never starts the alignment; nested + inside \begingroup

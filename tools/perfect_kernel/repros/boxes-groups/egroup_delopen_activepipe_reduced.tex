@@ -2,7 +2,7 @@
 % oracle:  lualatex 0 errors
 % engines: rust=1 perl=undefined (2026-09-03)
 % expect:  0 errors
-% status:  RED (b54w: "\egroup Attempt to close boxing group", frame \begingroup)
+% status:  GREEN (batch 55q: \Udelimiter constructor + DefMath \vert)
 % mechanism: the fully-expanded core of \braket<a|b>. \delopen=\bgroup\left (opens
 %   \lx@hidden@bgroup); a math-active | (\egroup\vert\bgroup) splits the body into two
 %   \bgroup..\egroup boxes; \delclose=\aftergroup\egroup\right defers an \egroup to fire when

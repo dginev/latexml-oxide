@@ -650,34 +650,54 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// `latexml_package::dispatch`. (The former `hobby.code.tex` refusal stub was
 /// retired in perfect-kernel batch 54: the real file raw-loads with 0 errors;
 /// guard `perfect_kernel_batch54::hobby_code_tex_raw_loads`.)
+#[inline]
+fn matches_entry(target: &str, name: &str, ext: &str) -> bool {
+  target.len() == name.len() + 1 + ext.len()
+    && target.starts_with(name)
+    && target.as_bytes()[name.len()] == b'.'
+    && target.ends_with(ext)
+}
+
+#[inline]
+fn matches_entry_nocase(target: &str, name: &str, ext: &str) -> bool {
+  target.len() == name.len() + 1 + ext.len()
+    && target[..name.len()].eq_ignore_ascii_case(name)
+    && target.as_bytes()[name.len()] == b'.'
+    && target[name.len() + 1..].eq_ignore_ascii_case(ext)
+}
+
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
-  let (base, ext) = filename.split_once('.')?;
+  if !filename.contains('.') {
+    return None;
+  }
   // Strip directory prefix: `\documentclass{Definitions/mdpi}` →
   // basename `mdpi`. Perl Package.pm L2167-2170 (FindFile_fallback)
   // does the same. Without this, paper-bundled classes like
   // `Definitions/mdpi.cls` miss the registered binding and cascade.
   // See latexml_package::dispatch.
-  let base_only = base.rsplit_once(['/', '\\']).map_or(base, |(_, b)| b);
+  let base_only = filename
+    .rsplit_once(['/', '\\'])
+    .map_or(filename, |(_, b)| b);
   // Perl pathname_find L383-389: strict-case first, case-insensitive fallback
   // (matches `\documentclass{jhep}` against `JHEP.cls.ltxml`-style entries).
   // See latexml_package::dispatch for the parallel comment.
   BINDINGS
     .iter()
-    .find(|(name, extension, _)| *name == base && *extension == ext)
+    .find(|(name, extension, _)| matches_entry(filename, name, extension))
     .or_else(|| {
       BINDINGS
         .iter()
-        .find(|(name, extension, _)| *name == base_only && *extension == ext)
+        .find(|(name, extension, _)| matches_entry(base_only, name, extension))
     })
     .or_else(|| {
-      BINDINGS.iter().find(|(name, extension, _)| {
-        name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
-      })
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| matches_entry_nocase(filename, name, extension))
     })
     .or_else(|| {
-      BINDINGS.iter().find(|(name, extension, _)| {
-        name.eq_ignore_ascii_case(base_only) && extension.eq_ignore_ascii_case(ext)
-      })
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| matches_entry_nocase(base_only, name, extension))
     })
     .map(|(_, _, loader)| loader())
     // biblatex style/variant packages (`biblatex-chicago`, `biblatex-apa`,
@@ -698,8 +718,8 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
     // undefined, empty References, before this fallback.
     .or_else(|| {
       let lower = base_only.to_ascii_lowercase();
-      (ext.eq_ignore_ascii_case("sty")
-        && lower.len() > "biblatex-".len()
+      (lower.ends_with(".sty")
+        && lower.len() > "biblatex-.sty".len()
         && lower.starts_with("biblatex-"))
       .then(biblatex_sty::load_definitions)
     })
@@ -727,3 +747,22 @@ pub fn binding_names() -> &'static [(&'static str, &'static str)] {
 
 // III. That's all! Run "cargo test" in the latexml_oxide/ root and your binding will be compiled
 // and made visible to the main latexml-oxide executable
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn dispatch_matches_multi_dot_package_name() {
+    assert!(
+      BINDINGS
+        .iter()
+        .any(|(name, ext, _)| matches_entry("phy-ab.braket.sty", name, ext))
+    );
+    assert!(BINDINGS.iter().any(|(name, ext, _)| matches_entry_nocase(
+      "phy-ab.braket.STY",
+      name,
+      ext
+    )));
+  }
+}

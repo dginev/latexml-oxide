@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=FATAL(EoF, 39-byte xml) perl=1 err (recovers) (2026-09-03, b54r)
 % expect:  no Fatal; recovers like Perl; body contains "Prefix=foo" (a parsed row)
-% status:  RED
+% status:  GREEN
 % mechanism: \ior_map_inline:Nn feeds each CSV line to a ","-delimited macro
 %   (\readrow:w #1 , #2 , #3 \q_stop). In real TeX each line = "foo,foopkg,Alice" so the
 %   commas satisfy the delimiters. In Rust the line content reaching the delimited scan

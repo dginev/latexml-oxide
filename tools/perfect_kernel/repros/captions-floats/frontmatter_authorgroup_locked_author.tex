@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED (quantumview is raw; quantumarticle_cls.rs overrides \author)
 % expect: 0 Error; author-group list initialized so \maketitle affiliation loop runs
-% status: RED with b54x (\@authorgroup undefined + \csname cascade)
+% status: GREEN (batch 54, under --preload=[rawstyles]latexml.sty)
 % mechanism: quantumview.cls (raw, derived from quantumarticle) builds an author-group
 %   list \@authorgroup via \internal@elseauthor: \ifcsdef{@authorgroup}{}{\csdef{@authorgroup}{}}
 %   then \listxadd{\@authorgroup}{..} (quantumview.cls:678-690; quantumarticle.cls:1093-1095),

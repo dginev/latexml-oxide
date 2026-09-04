@@ -2,7 +2,7 @@
 % oracle:  lualatex 0 errors (physics2 needs unicode-math => lualatex; pdflatex N/A)
 % engines: rust=1(this line) perl=undefined(\usephysicsmodule) (2026-09-03)
 % expect:  0 errors; the braket renders (>=1 <ltx:XMApp>/<ltx:XMTok> for the fenced <a|b>)
-% status:  RED (b54w: "\egroup Attempt to close boxing group", frame \begingroup)
+% status:  GREEN (batch 55q: multi-dot binding dispatch + \Udelimiter constructor)
 % mechanism: physics2.sty:83-84 \delopen=\mathopen{}\mathclose\bgroup\left ,
 %   \delclose=\aftergroup\egroup\right . \delclose DEFERS an \egroup (via \aftergroup)
 %   to fire when \right closes the \left group (LaTeXML \lx@hidden@bgroup, tex_box.rs:451/460

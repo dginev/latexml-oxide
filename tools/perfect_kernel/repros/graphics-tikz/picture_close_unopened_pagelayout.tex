@@ -3,7 +3,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=1 (2026-09-03); real doc rust=2 perl=2 (two \template calls)
 % expect:  0 errors; the template preview is one balanced <ltx:picture> (open+close paired)
-% status:  RED
+% status:  SHARED-FAILURE (Perl same-host: identical error, attempt to close unopened picture)
 % mechanism: pagelayout.cls[draft] draws a page preview via \put(x,y){\begin{tikzpicture}...
 %   \end{tikzpicture}} (pagelayout.cls:1690-1721) nested in LaTeX picture \put at document/page
 %   scope. The <ltx:picture> OPEN (\begin{tikzpicture}, tikz_sty.rs) is lost in the class-internal

@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — Perl ntheorem.sty.ltxml also omits \thm@topsep/\thm@topsepadd
 % expect: 0 Error lines; \thm@topsepadd is a defined skip register
-% status: RED with b54t (Error:undefined:\thm@topsepadd)
+% status: GREEN (batch 54)
 % mechanism: ntheorem.sty:714-715 \newskip\thm@topsep \newskip\thm@topsepadd
 %   (unconditional). ntheorem_sty.rs binding defines the \theorem*skipamount
 %   registers but omits \thm@topsep/\thm@topsepadd. dlfltxbcodetips.sty:102-103

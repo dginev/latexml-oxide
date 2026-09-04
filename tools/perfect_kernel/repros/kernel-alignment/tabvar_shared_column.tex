@@ -1,4 +1,4 @@
-% status: RED (Rust 2 err) but SHARED — Perl LaTeXML emits the SAME 2 errors
+% status: SHARED-FAILURE (Perl LaTeXML emits identical 2 errors: "Extra alignment tab")
 % witness: tabvar_doc (tabvar.sty manual), sweep#36 ~101 err
 % oracle: pdflatex exit=0 (valid); Perl LaTeXML = Rust = 2x "Extra alignment tab"
 % class: SHARED (varwidth->minipage box-env straddling >{}/<{} column template;

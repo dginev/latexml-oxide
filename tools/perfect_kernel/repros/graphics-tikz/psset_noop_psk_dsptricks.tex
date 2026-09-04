@@ -3,7 +3,7 @@
 % oracle:  pdflatex 0 errors  (after pst-node load \psk@mnodesize is \let to \relax, a no-op)
 % engines: rust=1 perl=1 (2026-09-03); real doc rust=101
 % expect:  0 errors; \psk@mnodesize defined (\relax) so its invocation is a silent no-op
-% status:  RED
+% status:  SHARED-FAILURE (Perl same-host: identical 1 error, missing pst-node psk)
 % mechanism: pst-node.tex:1248 \define@key[psset]{pst-node}{mnodesize}[-1pt]{...} then :1257
 %   \psset[pst-node]{mnodesize=-1pt} initialises \psk@mnodesize (\let ...\relax since -1pt<0).
 %   Rust STUBS \psset to a no-op (pstricks_support_sty.rs:36 / pstricks_sty.rs:29

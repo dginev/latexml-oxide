@@ -3375,22 +3375,30 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
         return Some(file.to_string());
       }
       // Check the compile-time binding registries from latexml_package and
-      // latexml_contrib for ANY (name, ext) pair that matches `file` (split
-      // on the FIRST `.`, mirroring `dispatch()`'s split rule so multi-dot
-      // names like `pgfmath.code.tex` resolve as `("pgfmath", "code.tex")`).
-      if let Some((base, ext)) = file.split_once('.') {
+      // latexml_contrib for ANY (name, ext) pair that matches `file`.
+      // Matches both multi-dot extensions (e.g. pgfmath.code.tex -> ("pgfmath", "code.tex"))
+      // and multi-dot package names (e.g. phy-ab.braket.sty -> ("phy-ab.braket", "sty")).
+      if file.contains('.') {
         // Perl pathname_find L383-389: strict-case first, then case-insensitive
         // fallback (mirrors the dispatcher's lookup). Without this, requests
         // like `find_file("jhep.cls", notex=true)` would miss `("JHEP","cls")`
         // entries that derive from Perl's `JHEP.cls.ltxml` filename.
-        let exact = get_binding_names()
-          .iter()
-          .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext));
+        let exact = get_binding_names().iter().any(|slice| {
+          slice.iter().any(|(n, e)| {
+            file.len() == n.len() + 1 + e.len()
+              && file.starts_with(n)
+              && file.as_bytes()[n.len()] == b'.'
+              && file.ends_with(e)
+          })
+        });
         let nocase = exact
           || get_binding_names().iter().any(|slice| {
-            slice
-              .iter()
-              .any(|(n, e)| n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext))
+            slice.iter().any(|(n, e)| {
+              file.len() == n.len() + 1 + e.len()
+                && file[..n.len()].eq_ignore_ascii_case(n)
+                && file.as_bytes()[n.len()] == b'.'
+                && file[n.len() + 1..].eq_ignore_ascii_case(e)
+            })
           });
         if nocase {
           return Some(file.to_string());

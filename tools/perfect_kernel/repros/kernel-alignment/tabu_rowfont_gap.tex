@@ -1,7 +1,7 @@
 % witness: \usepackage{tabu}; \rowfont[pos]{fontcmds} (tabu.sty user cmd)
 % oracle:  pdflatex 0 errors ; engines rust=1 (b54x)
 % expect:  0 errors; <ltx:tabular> with cells
-% status:  RED — \rowfont undefined; presentational font, faithful = \rowfont[]{} gobble
+% status:  GREEN (batch 54, perfect_kernel_batch54::tabu_row_surface_is_covered)
 \documentclass{article}\usepackage{tabu}
 \begin{document}
 \begin{tabu}{ll}\rowfont{\bfseries}a & b \\ c & d \\\end{tabu}

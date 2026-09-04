@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=3 perl=5+ pdflatex=0 (2026-09-03, b54t) -> SHARED, surpass in scope
 % expect:  0 errors; <ltx:table>/<ltx:tabular> with cells a,b,c,d (two body rows)
-% status:  RED
+% status:  GREEN (batch 54, perfect_kernel_batch54::longtable_page_commands_between_rows_are_noalign)
 % mechanism: longtable.sty:135 redefines \newpage -> \noalign{\break} INSIDE the table body,
 %   so at the row boundary it takes tex.web S785 align_peek's no_align branch (never starts a
 %   new row). The longtable binding (longtable_sty.rs:27-28 \@@longtable before_digest; Perl

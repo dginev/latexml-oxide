@@ -4,8 +4,7 @@
 %   <ltx:float class="ltx_float_scheme"> with the caption (Perl's only error is an
 %   unrelated \ifNAT@super). The Rust achemso_cls.rs STUB omits the float declarations.
 % expect: 0 Error; the scheme float renders with its <ltx:caption>.
-% status: RED with b55c — "{scheme} The environment {scheme} is not defined" then the
-%   cascade "Use of \caption outside any known float".
+% status: GREEN (batch 55)
 % mechanism: achemso.cls:309-311 \RequirePackage{caption,float,...}; :1022-1027
 %   \newfloat{scheme}{htbp}{los}\floatname{scheme}{Scheme} (+ chart, graph). The Rust
 %   binding latexml_contrib/src/achemso_cls.rs is a STUB (LoadClass!("OmniBus") + curated

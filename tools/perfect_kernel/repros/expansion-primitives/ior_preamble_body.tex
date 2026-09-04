@@ -9,7 +9,7 @@
 % class:   SHARED (both LaTeXML engines fail to persist the preamble-opened ior into the body);
 %   fixable in Rust to SURPASS Perl and match pdflatex.
 % expect:  the map reads r1..r4 / s1..s4 (READII fires), 0 Fatal.
-% status:  RED (rust Fatal; map delivers empty rows)
+% status:  GREEN
 % mechanism: kernel \openin/\read persists across \begin{document} (verified ports 0-3, even with
 %   expl3 loaded); expl3 \ior_open's stream does NOT — raw \tex_read:D on it reads line 2 in the
 %   PREAMBLE but EMPTY in the BODY (mouth stays open, \ifeof=false, reads empty). Only ONE \openin

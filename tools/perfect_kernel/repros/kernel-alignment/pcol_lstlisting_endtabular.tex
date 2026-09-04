@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=2+ perl=? pdflatex=0 (2026-09-03, b54t)
 % expect:  0 errors; <ltx:tabular> with two rows, no leaked mode frame
-% status:  RED
+% status:  GREEN (batch 54, listing in p-column gets inline-block)
 % mechanism: a p{} paragraph column opens a mode-switch-to-internal_vertical frame
 %   (\lx@tabular@p@); an lstlisting (verbatim-like env, \begingroup + catcode change)
 %   inside that cell leaves the p-frame open; \@end@tabular/\endgroup then hit it.

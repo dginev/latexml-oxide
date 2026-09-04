@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — same-host Perl emits the identical 2 errors
 % expect: 0 Error lines; caption belongs to the enclosing <ltx:figure>
-% status: RED with b54t (Error:malformed:ltx:caption isn't allowed in <ltx:block>)
+% status: SHARED-FAILURE (Perl fails identically with the same 2 errors)
 % mechanism: rubikexamples.tex:295-303 = \begin{figure} <graphic> \parbox{..}{\caption{..}}.
 %   A \parbox that FOLLOWS other float content becomes a nested <ltx:p class=ltx_parbox>
 %   with an inner <ltx:block>, built via _CaptureBlock_; the \caption inside cannot

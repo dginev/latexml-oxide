@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=1 pdflatex=0 (2026-09-03, b54x) -> PERL-ORIGIN, surpass in scope
 % expect:  0 errors; <ltx:tabular class="ltx_tabbing"> containing an o-with-macron
-% status:  RED
+% status:  GREEN (batch 54, perfect_kernel_batch54::tabbing_accent_kludge_recovers_rebound_accents)
 % mechanism: inside tabbing \= is rebound to \@tabbing@tabset (mod.rs:2438), so \a= recovers
 %   the accent via \@tabbing@accent{=} -> \@tabbing@= (sect10.rs:132). tabbing_bindings()
 %   pre-saves only \@tabbing@' and \@tabbing@` (mod.rs:2445-2446; Perl latex_constructs.

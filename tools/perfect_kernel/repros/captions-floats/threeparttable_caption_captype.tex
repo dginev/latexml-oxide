@@ -4,7 +4,7 @@
 % class: PERL-ORIGIN — threeparttable.sty.ltxml:31 (and Rust threeparttable_sty.rs:16)
 %   bind {threeparttable} as bare `#body`, omitting the \@captype setup.
 % expect: 0 Error; <ltx:caption> inside the threeparttable (captype=table)
-% status: RED with b54t (Use of \caption outside any known float)
+% status: GREEN (batch 54)
 % mechanism: threeparttable.sty:110 `\@ifundefined{@captype}{\def\@captype{table}}{}`
 %   (measuredfigure:126 -> figure) lets \caption work without a float. The bindings omit
 %   it, so \@captype stays undefined -> \caption -> \@@generic@caption -> outside-float error.

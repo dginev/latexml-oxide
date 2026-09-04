@@ -3,7 +3,7 @@
 % class: SHARED (Perl \DeclareMathVersion is undef/no-op too, latex_constructs.pool:2658;
 %   \mathversion errors on unknown, :5290) — surpass: register declared versions.
 % expect: 0 Error; \mathversion{oz} accepted because \DeclareMathVersion{oz} registered it.
-% status: RED with b54x (Error:unexpected:oz Unknown math version 'oz').
+% status: GREEN (batch 54)
 % mechanism: \DeclareMathVersion{} = def_primitive_noop (sect08.rs:715) — does NOT register the
 %   name; \mathversion{} (sect13.rs:1058-1067) accepts only bold/normal, else errors. oz.sty:34
 %   \DeclareMathVersion{oz} then :70 \mathversion{oz}. CONTROL: an UNDECLARED version must still error

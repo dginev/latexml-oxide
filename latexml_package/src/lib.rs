@@ -1100,8 +1100,26 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
 /// filenames like `pgfmath.code.tex` are matched as `("pgfmath", "code.tex")`
 /// rather than `("pgfmath.code", "tex")` — the latter silently dropped
 /// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
+#[inline]
+fn matches_entry(target: &str, name: &str, ext: &str) -> bool {
+  target.len() == name.len() + 1 + ext.len()
+    && target.starts_with(name)
+    && target.as_bytes()[name.len()] == b'.'
+    && target.ends_with(ext)
+}
+
+#[inline]
+fn matches_entry_nocase(target: &str, name: &str, ext: &str) -> bool {
+  target.len() == name.len() + 1 + ext.len()
+    && target[..name.len()].eq_ignore_ascii_case(name)
+    && target.as_bytes()[name.len()] == b'.'
+    && target[name.len() + 1..].eq_ignore_ascii_case(ext)
+}
+
 pub fn dispatch(filename: &str) -> Option<Result<()>> {
-  let (base, ext) = filename.split_once('.')?;
+  if !filename.contains('.') {
+    return None;
+  }
   // NO directory strip: a subdir name like `Definitions/mdpi` or `utils/mathenv` is a file
   // PATH, not a binding name — dispatch matches a compile-time binding by the class/package
   // NAME only. A subdir-bundled file with no exact-name binding falls through to the caller's
@@ -1122,11 +1140,11 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
   // pairs miss and trigger spurious `missing_file` warnings.
   BINDINGS
     .iter()
-    .find(|(name, extension, _)| *name == base && *extension == ext)
+    .find(|(name, extension, _)| matches_entry(filename, name, extension))
     .or_else(|| {
-      BINDINGS.iter().find(|(name, extension, _)| {
-        name.eq_ignore_ascii_case(base) && extension.eq_ignore_ascii_case(ext)
-      })
+      BINDINGS
+        .iter()
+        .find(|(name, extension, _)| matches_entry_nocase(filename, name, extension))
     })
     .map(|(_, _, loader)| loader())
 }
@@ -1221,5 +1239,11 @@ mod tests {
     // that's a bug regardless of split direction — since no "nonexistent"
     // binding exists in any form.
     assert!(dispatch("nonexistent.code.tex").is_none());
+  }
+
+  #[test]
+  fn dispatch_matches_multi_dot_binding() {
+    assert!(dispatch("pgfmath.code.tex").is_some());
+    assert!(dispatch("pgfmath.code.TEX").is_some());
   }
 }

@@ -3,7 +3,7 @@
 % engines: rust=5 (b54x) pdflatex=0 — a package-assembled \ialign whose cell placeholder is
 %   array.sty's \@sharp (a cs \let to #, not a literal #).
 % expect:  0 errors; <ltx:tabular> with cells a,b,c,d (the \@sharp is the column slot)
-% status:  RED
+% status:  GREEN (batch 54, 0 errors; tabular with cells a,b,c,d)
 % mechanism: array.sty's \@mkpream (real, runs raw) + \let\@classz\@tabclassz builds a real
 %   \halign template using \@sharp as the cell `#` placeholder ($\@sharp$ / \begingroup\@sharp
 %   \endgroup, array.sty:140/97/230/279). The kernel's raw \halign template parser

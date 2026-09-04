@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — amsart binding omits amsart.cls's \maketitle internals
 % expect: 0 Error; \author@andify/\@dedicatory/\@setabstract defined (init/no-op)
-% status: RED with b54x (\author@andify, \@dedicatory, \@setabstract undefined)
+% status: GREEN (batch 54)
 % mechanism: resphilosophica.cls:75 \LoadClass{amsart} -> amsart_cls.rs binding (loads
 %   ams_core, high-level \lx@add@* frontmatter). resphilosophica then raw-reuses amsart's
 %   \maketitle internals: \author@andify\authors (:323), \ifx\@empty\@dedicatory / \@dedicatory

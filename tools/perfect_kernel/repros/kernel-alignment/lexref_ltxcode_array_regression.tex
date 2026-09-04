@@ -1,5 +1,4 @@
-% status: RED on b54x AND current 55h (3 err "Extra alignment tab '&'"); GREEN on b54y.
-%         Regression introduced at batch 54x, NOT fixed by 55g/55h.
+% status: GREEN (batch 54, under --preload=[rawstyles]latexml.sty; 0 errors, 2 rows, 8 cells)
 % witness: lexref (lexref.tex:305 tabular {llll} with ltxdockit \begin{ltxcode} cells;
 %          error at lexref:324). s36-adjacent: b54x 11 err, b54y 0.
 % oracle: pdflatex 0. Plain {llll} (no listings) is GREEN on both binaries — the trigger

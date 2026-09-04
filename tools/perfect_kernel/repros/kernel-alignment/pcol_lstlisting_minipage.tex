@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=7 pdflatex=0 (2026-09-03, b54t)
 % expect:  0 errors; <ltx:tabular> cell contains an <ltx:listing>
-% status:  RED
+% status:  GREEN (batch 54, listing in p-column gets inline-block)
 % mechanism: a minipage (internal_vertical box) inside a p{}-cell does NOT shield the
 %   block-listings frame leak — confirms the trigger is a block lstlisting inside ANY
 %   internal_vertical paragraph box that sits inside a table cell.

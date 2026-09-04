@@ -7,7 +7,7 @@
 %   at the `-`. Perl SAME-HOST: Conversion complete, no hang -> RUST-ONLY regression.
 % class:   RUST-ONLY (regression, 55c).
 % expect:  0 errors/no Fatal AND an <ltx:ref href="a-b" class="ltx_nolink"> (the url built).
-% status:  RED (PushbackLimit)
+% status:  GREEN
 % mechanism: begin_semiverbatim (latexml_core/src/state.rs:2809-2830) neutralizes only SPECIALS to
 %   catcode OTHER, NOT babel's active `-` (catcode 13). So the active `-` SURVIVES the Semiverbatim
 %   url read. \nolinkurl (hyperref_sty.rs:607) / \hyper@linkurl (:587) put the url in the href

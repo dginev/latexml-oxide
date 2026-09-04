@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=7 perl=? (2026-09-03)
 % expect:  0 errors; an ltx:listing (or verbatim) containing "node" inside the 2nd cell
-% status:  RED
+% status:  GREEN (batch 54, listing in p-column gets inline-block)
 % mechanism: a listings {lstlisting} BLOCK env (or \lstinputlisting) inside a p{} column.
 %   The p-column reads its cell body as VBoxContents = an internal_vertical box
 %   (tex_tables.rs:154, DefColumnType "p" :123-134 -> Cell.after=T_END :130).

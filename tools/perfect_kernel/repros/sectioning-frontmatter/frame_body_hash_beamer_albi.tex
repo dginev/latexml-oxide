@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=2 perl=2 (2026-09-03) — SHARED (both DefEnvironment the frame body inline)
 % expect:  0 errors; the tikz key '/tikz/right' (not '#1') is set and color \mycol (not '#1') is used
-% status:  RED
+% status:  SHARED-FAILURE (engines: rust=2 perl=2; beamer frame body hash halving)
 % mechanism: real beamer collects the frame body as a delimited arg into a token register and
 %   re-executes it (beamerbaseframe.sty:322-344), which \def-halves `#` TWICE — so an author writes
 %   `####1` inside a frame for a pgfkeys `.style` body whose param is `#1` (####1 -> ##1 -> #1).

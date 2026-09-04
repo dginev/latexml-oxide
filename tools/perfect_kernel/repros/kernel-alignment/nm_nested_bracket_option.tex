@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 (b54x) pdflatex=0 ; Perl can't build nicematrix (raw pgfsys driver, 47 err)
 % expect:  0 errors; <ltx:tabular> with 1 row of 3 cells, no \noalign/Extra-tab cascade
-% status:  RED  -> RUST-ONLY (surpass; Perl raw-load dies before this point)
+% status:  GREEN (batch 54, 0 errors; tabular with 1 row of 3 cells)
 % mechanism: nicematrix reads env options with xparse `O{}` (\NewDocumentCommand{\NiceTabular}
 %   { O{} m !O{} }, nicematrix.sty:3806-3841), which BALANCES nested [..]. The binding's
 %   \NiceTabular[]{}[] (nicematrix_sty.rs:267) uses the `[]`/Optional param -> read_optional ->

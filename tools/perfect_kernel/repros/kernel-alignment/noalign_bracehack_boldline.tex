@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1-2 pdflatex=0 (2026-09-03, b54x)
 % expect:  0 errors; <ltx:tabular> with the 2 data rows, first row a (bold) top border
-% status:  RED
+% status:  GREEN (batch 54, perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end)
 % mechanism: boldline.sty:13 \hlineB#1 = \noalign{\ifnum0=`}\fi\hrule\@height#1\arrayrulewidth
 %   \futurelet\reserved@a\@xhlineB{#1}} with \@xhlineB ending \ifnum0=`{\fi}. The latex.ltx
 %   brace hack: \noalign{ is matched at DEFINITION by \ifnum0=`}'s } (a code at execution);

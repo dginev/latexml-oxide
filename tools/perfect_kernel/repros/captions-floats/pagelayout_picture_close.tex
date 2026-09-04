@@ -3,7 +3,7 @@
 % engines: pdflatex (lualatex-tolerant; fontspec optional)
 % class: SHARED — same-host Perl emits the identical picture-close error
 % expect: 0 Error; the template body without a stray <ltx:picture> close
-% status: RED with b54t (<ltx:picture> Attempt to close, which isn't open)
+% status: SHARED-FAILURE (same-host Perl emits identical picture-close error)
 % mechanism: pagelayout.cls (raw, no binding) \LoadClass[multi=picture]{standalone};
 %   \template[..]{layout}{\text{..}} emits a </ltx:picture> with no matching open (the
 %   standalone multi=picture wrapping / draft-mode tikz layout guide). Fix = a pagelayout

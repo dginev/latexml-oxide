@@ -1,7 +1,7 @@
 % witness: shipunov/boldline-ex-en (boldline.sty \hlineB). MINIMAL KERNEL repro: the real
 % latex.ltx \hline brace-hack (\ifnum0=`}\fi ... \ifnum0=`{\fi}) inside \noalign, WITHOUT the
 % width arg — proves the trigger is the brace-hack, not \hlineB's {#1}. oracle pdflatex 0.
-% status: RED b54t=1 (\@end@tabular Attempt to close boxing group); Perl 0.8.8 identical (SHARED).
+% status: GREEN (batch 55o: \noalign body executed to group end)
 % mechanism: LaTeXML's alignment \noalign handler (tex_tables.rs:983) reads the noalign body via
 %   read_arg (token-level balanced {...} pre-scan). The brace-hack's first `}` (in \ifnum0=`}) is a
 %   catcode-2 token that real TeX consumes as a CHAR CONSTANT during EXECUTION (`} = charcode),

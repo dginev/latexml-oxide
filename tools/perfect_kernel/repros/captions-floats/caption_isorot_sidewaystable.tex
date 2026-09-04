@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — same-host Perl emits the identical 2 errors
 % expect: 0 Error lines; <ltx:caption>/<ltx:toccaption> inside <ltx:table> float
-% status: RED with b54t (Error:malformed:ltx:caption isn't allowed in <ltx:block>)
+% status: GREEN (batch 54)
 % mechanism: isorot.sty (raw-loaded, no binding) \sidewaystable -> \@rotfloat{table}
 %   -> \@xrotfloat = \@float{table} + \begin{lrbox} + \begin{minipage} (isorot.sty:143-147).
 %   \caption is built inside the minipage's _CaptureBlock_; at construction time the

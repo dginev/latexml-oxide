@@ -3,7 +3,7 @@
 % engines: pdflatex
 % class: SHARED — same-host Perl emits the identical _CaptureBlock_ close error
 % expect: 0 Error; the numbered block with the verbatim content force-closed at the box
-% status: RED with b54t (_CaptureBlock_ Closing ... descendants do not auto-close: verbatim)
+% status: GREEN (batch 54, under --preload=[rawstyles]latexml.sty)
 % mechanism: numVblock (numberedblock.sty, raw) captures verbatim content into a numbered
 %   box (_CaptureBlock_). When the capture closes, the open `verbatim` descendant is not
 %   auto-closeable, so the close fails. Same close-family as listingline (Group A 2nd error).

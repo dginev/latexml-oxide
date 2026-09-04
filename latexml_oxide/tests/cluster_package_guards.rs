@@ -11368,6 +11368,43 @@ program test
     );
   }
 
+  /// physics2 + unicode-math: `physics2`'s `\vert` is redefined via `\Udelimiter`
+  /// when `unicode-math` defines `\symrm`. Multi-dot dispatch loads
+  /// `phy-ab.braket_sty.rs` and `\Udelimiter` constructor avoids mathcode 8000
+  /// recursion on `\middle\vert` (witness: egroup_braket_physics2.tex).
+  #[test]
+  fn physics2_braket_with_unicode_math_delimiters() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}\usepackage{unicode-math}\usepackage{physics2}
+\usephysicsmodule{ab,ab.braket}
+\begin{document}
+\[ \braket< a | b > \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"role="MIDDLE""#), "{xml}");
+  }
+
+  /// physics2 `\delopen` and `\delclose` paired with active pipe inside
+  /// `\bgroup`..`\egroup` delimited math (witness: egroup_delopen_activepipe_reduced.tex).
+  #[test]
+  fn physics2_delopen_delclose_active_pipe_reduced() {
+    let tex = r#"\documentclass{article}
+\usepackage{amsmath}\usepackage{unicode-math}\usepackage{physics2}
+\begingroup\catcode`\|=\active
+\gdef\mytest{\begingroup\mathcode`\|="8000\def|{\egroup\vert\bgroup}%
+  \delopen\langle\bgroup a|b\egroup\delclose\rangle\endgroup}
+\endgroup
+\begin{document}
+\[ \mytest \]
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<XMWrap"), "{xml}");
+  }
+
   /// tex.web §1206: a `\noalign` body is EXECUTED to the `}` closing its
   /// group; latex.ltx's `\hline` brace hack (`\noalign{\ifnum0=`}\fi…`) has a
   /// char-constant `}` a token pre-scan miscounted, leaking the rule into the

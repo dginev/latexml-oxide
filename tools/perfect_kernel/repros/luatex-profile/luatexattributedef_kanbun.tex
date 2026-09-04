@@ -4,7 +4,7 @@
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
 % engines: rust=2 perl=N/A (Perl has no luatex profile) (2026-09-03)
 % expect:  0 errors; \the\ltj@@attr@zero yields 0  (alias then used as \attributedef)
-% status:  RED
+% status:  GREEN (batch 55, under --preload=[rawstyles,rawclasses,luatex]latexml.sty)
 % mechanism: luatexbase.sty:288-300 \let-aliases the \luatex* compat spellings to the
 %   modern LuaTeX primitives (:295 \let\luatexattributedef\attributedef). The
 %   luatexbase_sty.rs binding omits that alias block, so \luatexattributedef is undefined.
@@ -14,7 +14,7 @@
 \usepackage{luatexbase}
 \makeatletter
 \luatexattributedef\ltj@@attr@zero=0
-\makeatother
 \begin{document}
 attr=\the\ltj@@attr@zero
+\makeatother
 \end{document}

@@ -108,6 +108,12 @@ LoadDefinitions!({
     ("pdfdict_gput:nnn", "{}{}{}"),
     ("pdfdict_remove:nn", "{}{}"),
     ("pdfdict_gremove:nn", "{}{}"),
+    ("pdfmeta_xmp_xmlns_new:nn", "{}{}"),
+    ("pdfmeta_xmp_schema_new:nnn", "{}{}{}"),
+    ("pdfmeta_xmp_property_new:nnnnn", "{}{}{}{}{}"),
+    ("pdfmeta_xmp_add:n", "{}"),
+    ("pdfmeta_xmp_add_declaration:n", "{}"),
+    ("pdfmeta_xmp_add_declaration:nnnnn", "{}{}{}{}{}"),
   ] {
     def_macro_noop(&s!("\\{cs} {params}"))?;
   }
@@ -164,15 +170,36 @@ LoadDefinitions!({
   //   \Umathcodenum <char>             — internal integer (:2924) → `0`
   //   \mathnolimitsmode=<int>          — parameter (:1405)
   //   \scantextokens                    — `\scantokens` variant (:670)
-  DefMacro!(T_CS!("\\Udelimiter"), None, {
-    let _class = read_number()?;
-    let _fam = read_number()?;
-    let code = read_number()?.value_of();
-    match char::from_u32(code as u32) {
-      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
-      None => Vec::new(),
+  DefConstructor!(
+    "\\Udelimiter Number Number Number",
+    "?#glyph(?#isMath(<ltx:XMTok role='#role' ?#name(name='#name') \
+     ?#stretchy(stretchy='#stretchy')>#glyph</ltx:XMTok>)(#glyph))",
+    sizer => "#glyph",
+    after_digest => sub[whatsit] {
+      let class = whatsit.get_arg(1).unwrap().value_of();
+      let _fam = whatsit.get_arg(2).unwrap().value_of();
+      let code = whatsit.get_arg(3).unwrap().value_of();
+      if let Some(ch) = char::from_u32(code as u32) {
+        whatsit.set_property("glyph", ch);
+        if let Some(f) = lookup_font() {
+          whatsit.set_property("font", f.specialize(&ch.to_string()));
+        }
+        let role = match class {
+          0 => if ch == '|' || ch == '\u{2016}' { "VERTBAR" } else { "ORD" },
+          1 => "OP",
+          2 => "BINOP",
+          3 => "RELOP",
+          4 => "OPEN",
+          5 => "CLOSE",
+          6 => "PUNCT",
+          _ => "ORD",
+        };
+        whatsit.set_property("role", role);
+        whatsit.set_property("stretchy", "true");
+      }
+      Ok(Vec::new())
     }
-  });
+  );
   DefMacro!("\\Uradical Number Number", "\\sqrt");
   DefMacro!(T_CS!("\\Umathcodenum"), None, {
     let _code = read_number()?;
