@@ -6688,3 +6688,28 @@ hand-rolled gullet loop in a `sub` body loses. KNOWN_PERL_ERRORS #178.
 **Upstream**: not filed (the Perl binding cannot loop with its primitive size
 commands).
 
+
+### 192. `\VerbatimFootnotes` captures the footnote body live (Perl freezes it as a constructor argument)
+
+**Perl behavior**: `latex_constructs.pool.ltxml:454-490` locks `\footnote`
+and `\@footnotetext` to constructors with ordinary `{}` body parameters.
+Consequently fancyvrb.sty:33-58 and fancybox.sty:647-668 cannot install their
+`\afterassignment` reader, and `\verb` or a short-verbatim delimiter inside a
+footnote is tokenized before its verbatim catcodes apply (two errors in the
+minimal witness, and a fatal/cascade in the fancybox manual).
+**Rust behavior**: the locked public footnote entry points dispatch through
+private current-implementation macros. The package-scoped
+`\VerbatimFootnotes` supplied by the existing fancyvrb/fancybox bindings
+selects live-body constructors: `\afterassignment` consumes the original
+opening brace, `\bgroup\aftergroup` turns its closing brace into the body
+boundary, and `capture_body` digests the intervening tokens under the active
+verbatim catcodes. Loading neither package does not define the public command.
+**Why**: kernel-quality, user-approved with the queued perfect-kernel surpass
+shapes on 2026-09-02. This preserves the package's content-bearing feature;
+silently freezing the argument loses or executes verbatim source and can
+truncate the surrounding document.
+**Witnesses**: fancyvrb/fancyvrb-doc, fancybox/fancybox-doc, nicematrix.
+**Guard**: `cluster_units::footnote::{verbatim_footnotes_allow_verb_in_footnote,
+verbatim_footnotes_is_package_scoped}` and
+`perfect_kernel_batch54::nicematrix_shortvrb_verbatim_footnotes`.
+**Upstream**: not filed.
