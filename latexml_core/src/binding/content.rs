@@ -3308,8 +3308,11 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
   // `posterboxenv` body stores "" and `\tcbusetemp` then `\input`s it —
   // falling through to disk raised `missing_file:<job>.tcbtemp` ×7 on
   // tcolorbox/tcolorbox-tutorial-poster (+ the bfh-ci/tuda-ci poster demos).
-  if crate::binding::virtual_files::vfs_exists(file) {
-    return Some(file.to_string());
+  // expl3's `\file_full_name:n` (and `\input{./x}`) hand a `./`-prefixed
+  // name to `\openin`; the cache key is the name `filecontents` was given.
+  let vkey = file.strip_prefix("./").unwrap_or(file);
+  if crate::binding::virtual_files::vfs_exists(vkey) {
+    return Some(vkey.to_string());
   }
   if pathname::is_absolute(file) {
     // Perl Package.pm L2089-2093:

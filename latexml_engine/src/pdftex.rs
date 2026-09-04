@@ -305,9 +305,17 @@ LoadDefinitions!({
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
     if let Some(path) = find_file(&filepath, None) {
-      match std::fs::metadata(&path) {
-        Ok(meta) => Explode!(meta.len()),
-        Err(_) => Vec::new(),
+      // A `filecontents`-written file is VIRTUAL here (pdfTeX sees a real
+      // one): expl3's `\file_full_name:n` existence test is this size, so an
+      // `\ior_open:Nn` of such a file found nothing. Guard:
+      // `perfect_kernel_batch54::read_consumes_the_physical_line_across_catcode_regimes`.
+      if let Some(content) = ::latexml_core::binding::virtual_files::vfs_read(&path) {
+        Explode!(content.len())
+      } else {
+        match std::fs::metadata(&path) {
+          Ok(meta) => Explode!(meta.len()),
+          Err(_) => Vec::new(),
+        }
       }
     } else {
       Vec::new() } });

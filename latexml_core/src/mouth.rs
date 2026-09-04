@@ -1174,6 +1174,16 @@ impl Mouth {
   /// Careful:
   /// used BOTH for flushing input for `\endinput`
   /// and for detecting line end for `\read`
+  /// tex.web §485-486: a `\read` consumes the WHOLE physical line
+  /// (`input_ln`); the catcode regime only decides which tokens the line
+  /// yields. Called by `\read` after its token loop so a residual
+  /// `\endlinechar` character left behind under one regime (an IGNORE-catcode
+  /// space under `\ExplSyntaxOn`) is never re-read as a spurious empty line by
+  /// a later `\read` under another (l3prefixes: header `\ior_get` in the
+  /// preamble, `\ior_map_inline` in the body → an empty first row →
+  /// `Until:,` runaway).
+  pub fn finish_physical_line(&mut self) { self.colno = self.nchars; }
+
   pub fn is_eol(&mut self) -> bool {
     let savecolno = self.colno;
     // We have to peek past any ignored tokens & also spaces, if skipping

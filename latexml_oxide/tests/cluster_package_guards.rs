@@ -12307,6 +12307,40 @@ Text\marginpar[{\lipsum[1][1-1]}]{Y} more.
     }
   }
 
+  /// tex.web §485-486: `\read` consumes the whole physical line, so a header
+  /// read under `\ExplSyntaxOn` (space = IGNORE) followed by an
+  /// `\ior_map_inline` under `\ExplSyntaxOff` yields no spurious empty row
+  /// (l3prefixes' `Until:,` runaway; Perl shares the empty row).
+  #[test]
+  fn read_consumes_the_physical_line_across_catcode_regimes() {
+    let tex = r"\documentclass{article}
+\usepackage{expl3}
+\begin{filecontents}[overwrite,noheader,nosearch]{guard-twocol.csv}
+h1,h2,h3,h4
+r1,r2,r3,r4
+s1,s2,s3,s4
+\end{filecontents}
+\ExplSyntaxOn
+\cs_new_protected:Npn \__guard_row:w #1 , #2 , #3 , #4 \q_stop { [#1/#2/#3/#4] }
+\ior_new:N \g_guard_ior
+\ior_open:Nn \g_guard_ior { guard-twocol.csv }
+\ior_get:NN \g_guard_ior \l_tmpa_tl
+\cs_new_protected:Npn \GuardTable
+  { \ior_map_inline:Nn \g_guard_ior { \__guard_row:w ##1 \q_stop } }
+\ExplSyntaxOff
+\begin{document}
+\GuardTable
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert!(
+      xml.contains("[r1/r2/r3/r4") && xml.contains("[s1/s2/s3/s4"),
+      "{xml}"
+    );
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

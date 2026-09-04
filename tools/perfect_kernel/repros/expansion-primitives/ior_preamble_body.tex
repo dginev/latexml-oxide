@@ -1,0 +1,31 @@
+% witness: l3kernel/l3prefixes (sweep#37 Fatal:Mouth:EoF Until:,). ROOT: an \openin stream opened
+%   via expl3 \ior_open in the PREAMBLE loses its content at \begin{document}; \ior_map_inline in
+%   the BODY (l3prefixes \PrintTable, l3prefixes.tex:66/90) then reads EMPTY lines, so the
+%   comma-delimited \__prefix_readii:w #1,#2,#3,#4\q_stop (:41) finds no comma -> runs to EOF.
+% oracle:  pdflatex rc=0 CLEAN (real expl3 \read persists). Perl same-host: 3 Until:, errors,
+%   Conversion complete (Perl ALSO delivers empty rows -> SHARED; it recovers). Rust: Fatal.
+% engines: rust=Fatal:Mouth:EoF Until:, ; needs twocol.csv alongside. Requires open+get in PREAMBLE
+%   and the map in the BODY (across \begin{document}).
+% class:   SHARED (both LaTeXML engines fail to persist the preamble-opened ior into the body);
+%   fixable in Rust to SURPASS Perl and match pdflatex.
+% expect:  the map reads r1..r4 / s1..s4 (READII fires), 0 Fatal.
+% status:  RED (rust Fatal; map delivers empty rows)
+% mechanism: kernel \openin/\read persists across \begin{document} (verified ports 0-3, even with
+%   expl3 loaded); expl3 \ior_open's stream does NOT — raw \tex_read:D on it reads line 2 in the
+%   PREAMBLE but EMPTY in the BODY (mouth stays open, \ifeof=false, reads empty). Only ONE \openin
+%   fires (not re-opened). Fix site: latexml_core input_file/Mouth lifecycle at the preamble->body
+%   boundary + latexml_engine/src/tex_file_io.rs \read (bgroup/egroup, :109/128) invoked from
+%   expl3 \ior_get inside \prg_/\exp:w expansion. Compare the immune kernel \read path.
+\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\cs_new_protected:Npn \__prefix_readii:w #1 , #2 , #3 , #4 \q_stop { \typeout{READII:[#1|#2|#3|#4]} }
+\ior_new:N \g_myior
+\ior_open:Nn \g_myior { twocol.csv }
+\ior_get:NN \g_myior \l_tmpa_tl   % header, in PREAMBLE
+\cs_new_protected:Npn \PrintTable
+  { \ior_map_inline:Nn \g_myior { \__prefix_readii:w ##1 \q_stop } }
+\ExplSyntaxOff
+\begin{document}
+\PrintTable
+\end{document}

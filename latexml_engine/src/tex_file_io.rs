@@ -125,6 +125,10 @@ LoadDefinitions!({
           break;
         }
       }
+      // tex.web §485-486 `input_ln`: the physical line is consumed whole,
+      // whatever catcode its `\endlinechar` had (`Mouth::finish_physical_line`).
+      // Guard: `perfect_kernel_batch54::read_consumes_the_physical_line_across_catcode_regimes`.
+      mouth.finish_physical_line();
       egroup()?;
       if level > 0 {
         Error!("unexpected", "unbalanced",

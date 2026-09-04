@@ -1,0 +1,11 @@
+\documentclass{article}\usepackage{expl3}
+\ExplSyntaxOn
+\ior_new:N \g_myior
+\ior_open:Nn \g_myior { twocol.csv }
+\char_set_catcode_space:n { 32 }   % space = catcode 10 during the header read
+\ior_get:NN \g_myior \l_tmpa_tl
+\iow_term:x { HDR:[\tl_to_str:N\l_tmpa_tl] }
+\char_set_catcode_ignore:n { 32 }  % restore expl3 space
+\cs_new_protected:Npn \Body { \ior_map_inline:Nn \g_myior { \iow_term:x { PROC:[\tl_to_str:n{##1}] } } }
+\ExplSyntaxOff
+\begin{document}\Body\end{document}

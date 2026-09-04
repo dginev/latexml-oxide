@@ -1,0 +1,26 @@
+% witness: msc/msc (sweep#37 Fatal:Timeout:PushbackLimit). CORRECTS the "verbatiminput" framing:
+%   msc.tex:287 \verbatiminput{COPYRIGHT} (missing; only COPYRIGHT.txt exists) is ONE BENIGN error
+%   in our binding (verbatim_sty.rs:199-203: Error + return empty; no loop, no group) — NOT the spin
+%   (verified: \verbatiminput{missing} and {\small \verbatiminput{missing}} both convert clean).
+% oracle:  pdflatex rc=0 CLEAN (renders the msc chart). Perl same-host: SAME 25 errors (18 \endgroup
+%   + 4 \hbox + 3 \lxSVG@endscope) + pgf shape/parse, Conversion complete (32 errors) -> SHARED.
+% engines: rust=25 mode/box-group errors here; the FULL msc doc accumulates these per-chart to
+%   Fatal:Timeout:PushbackLimit (cumulative; Perl recovers per chart, Rust spins).
+% class:   SHARED (mode-frame/SVG-box family, theme 1). Not verbatiminput, not an EOF-less loop.
+% expect:  the msc chart renders without \lxSVG@endscope/\hbox/\endgroup "non-boxing group" errors.
+% status:  RED (25 mode/box-group errors; full doc -> PushbackLimit)
+% mechanism: \begin{msc}..\end{msc} draws a message-sequence chart via pgf/tikz; our SVG/box
+%   rendering closes an \lxSVG@endscope / \hbox / \endgroup on a group that was NOT opened as a
+%   boxing group ("Attempt to close non-boxing group" / "Attempt to end mode restricted_horizontal").
+%   Per-chart this is a recoverable mode/box-group imbalance (Perl recovers); across the full msc
+%   manual it accumulates until the pushback limit (5M) trips. Root is in the pgf/tikz -> SVG box
+%   scope handling (mode-frame family), NOT verbatim.sty \verbatiminput.
+\documentclass{article}
+\usepackage{msc}
+\begin{document}
+\begin{msc}{Example}
+\declinst{a}{User}{}
+\declinst{b}{Machine}{}
+\mess{go}{a}{b}
+\end{msc}
+\end{document}
