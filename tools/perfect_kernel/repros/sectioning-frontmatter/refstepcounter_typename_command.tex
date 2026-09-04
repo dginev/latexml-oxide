@@ -1,0 +1,16 @@
+% status: GREEN (batch 56a)
+% witness: argumentation/argumentation-doc
+% oracle: pdflatex 0 (\refstepcounter never expands \afname).
+% class: SHARED (KPE #194). Base_Utility.pool.ltxml:1048 \lx@@fnum@@ takes any defined
+%   \<type>name as the counter's name noun; argumentation.sty:403 defines \afname as a
+%   \NewDocumentCommand drawing a tikz \node, executed inside the tag -> undefined:\node.
+%   Fix: \lx@ifnamenoun admits only parameterless expandable macros.
+\documentclass{article}
+\newcounter{af}
+\NewDocumentCommand{\afname}{m}{\node[caption](x){#1};}
+\newcounter{gadget}
+\newcommand{\gadgetname}{Gadget}
+\begin{document}
+\refstepcounter{af}\label{a}\refstepcounter{gadget}\label{g}
+See \ref{a} and \ref{g}.
+\end{document}

@@ -6713,3 +6713,24 @@ truncate the surrounding document.
 verbatim_footnotes_is_package_scoped}` and
 `perfect_kernel_batch54::nicematrix_shortvrb_verbatim_footnotes`.
 **Upstream**: not filed.
+
+### 193. A conditional left open by a re-parsed numeric argument is closed by expansion (Perl leaks the if-frame)
+
+**Perl behavior**: `Parameters.pm:78 reparseArgument` reads a `{Dimension}` /
+`{Glue}` / `{Number}` argument in an isolated mouth; when the numeric scan stops
+before a pending `\else…\fi` (the internal-register path of `Gullet.pm:961-998`
+returns without `skip1Space`), `readingFromMouth` (`Gullet.pm:131-146`) discards
+the leftovers unexpanded, so the `\ifx` frame stays on `if_stack`. The witness
+`\parbox[t]{0pt}{s\hspace{\ifx\a\b\Lreg\else\a\U\fi}e}` then reports
+`Extra \else` and, at `\end{document}`, "open conditionals".
+**Rust behavior**: `Parameters::reparse_argument` records the if-depth before the
+isolated mouth and, after the read, expands the remaining tokens of that mouth via
+`read_x_token` until the depth is back — exactly what TeX's `get_x_token` after
+`scan_dimen` does with the trailing `\fi` (tex.web §448/§461). A genuinely
+unbalanced argument (`\hspace{\iftrue 3pt}`) warns `expected:\fi` and drops the
+orphan frames instead of leaking them.
+**Why**: kernel-quality; pdflatex converts the witness with 0 errors and a single
+`\parbox`. The common path (no lingering conditional) is untouched.
+**Witnesses**: typog-example (`tools/perfect_kernel/repros/expansion-primitives/parbox_dimen_conditional_double.tex`).
+**Guard**: `cluster_package_guards::dimension_conditional_in_parbox_does_not_leak_or_duplicate`.
+**Upstream**: not filed.

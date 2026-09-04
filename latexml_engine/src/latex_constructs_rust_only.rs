@@ -512,13 +512,26 @@ LoadDefinitions!({
   // this one specifically).
   DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
 
-  // Catcode range helpers (luatexbase.sty:51 \let\SetCatcodeRange\@setrangecatcode,
-  // luacode.sty:138 \let\SetCatcodeRange\setcatcoderange, thumbpdf.sty:576).
-  // In LaTeXML, character encodings and Unicode catcodes are handled natively;
-  // absorb {start}{end}{catcode} cleanly.
-  def_macro_noop("\\SetCatcodeRange{}{}{}")?;
-  def_macro_noop("\\setcatcoderange{}{}{}")?;
-  def_macro_noop("\\@setrangecatcode{}{}{}")?;
+  // Catcode range helpers: ctablestack.sty:18 `\@setrangecatcode{lo}{hi}{cc}` is a
+  // plain `\catcode` loop over [lo, hi] (luatexbase.sty:51 `\let\SetCatcodeRange
+  // \@setrangecatcode`, luacode.sty:138 `\let\SetCatcodeRange\setcatcoderange`,
+  // thumbpdf.sty:576). Observable catcode semantics, so it is the real loop, not
+  // an absorbed stub. Guard: `perfect_kernel_batch56::luatex_catcoderange_and_listings_aspects`.
+  DefPrimitive!("\\@setrangecatcode {Number}{Number}{Number}", sub[(lo, hi, cc)] {
+    let lo = lo.value_of();
+    let hi = hi.value_of();
+    let code: Catcode = From::from(cc.value_of() as u8);
+    if lo <= hi {
+      for n in lo..=hi {
+        if let Some(ch) = char::from_u32(n as u32) {
+          assign_catcode(ch, code, None);
+        }
+      }
+    }
+    Ok(Vec::new())
+  });
+  Let!("\\SetCatcodeRange", "\\@setrangecatcode");
+  Let!("\\setcatcoderange", "\\@setrangecatcode");
 
   //======================================================================
   // 7. Rust helper used by `\newlength` (latex_constructs.rs)

@@ -456,16 +456,15 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     None
   };
   if let Some(cs) = target {
-    let _ = digest(Tokens!(cs));
+    digest(Tokens!(cs))?;
     Info!(
       "latex",
       "disable@package",
       s!("Package '{filename}' has been disabled. Load request ignored")
     );
-    assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
-    assign_value(&s!("{filename}_raw_loaded"), true, Some(Scope::Global));
-    assign_value(&s!("{name}_loaded"), true, Some(Scope::Global));
-    assign_value(&s!("{name}_raw_loaded"), true, Some(Scope::Global));
+    // latex.ltx:18771 skips the load without setting `\ver@<file>`, so the
+    // package stays NOT loaded (`\@ifpackageloaded` false; `\reenable@package@load`
+    // + a later request loads it). The hook itself answers every repeat request.
     return Ok(());
   }
 

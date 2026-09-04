@@ -722,13 +722,24 @@ impl Parameters {
       // If a conditional was opened during parsing of the argument and not closed
       // (e.g. \hspace{\ifx\a\b\Lreg\else\a\U\fi} where read_dimension stopped at \U),
       // drain the remaining tokens in this argument's mouth so any \else/\fi
-      // are expanded and the conditional is cleanly closed.
+      // are expanded and the conditional is cleanly closed. This is what TeX's
+      // `get_x_token` after `scan_dimen` (tex.web §448/§461) does with the trailing
+      // `\fi`; Perl's `reparseArgument` (Parameters.pm:78 → Gullet.pm:131-146)
+      // discards the leftovers unexpanded and leaks the if-frame — OXIDIZED_DESIGN #193.
+      // Witness: typog-example (`parbox_dimen_conditional_double.tex`).
       while crate::definition::conditional::if_stack_depth() > init_if_depth {
         match gullet::read_x_token(Some(false), false, None)? {
           Some(_) => {},
           None => {
-            // Mouth exhausted before conditional was closed:
-            // don't leak the orphaned conditional frame to the outer document.
+            // Mouth exhausted before conditional was closed (a genuinely unbalanced
+            // argument such as `\hspace{\iftrue 3pt}`): pdflatex reports
+            // "\iftrue … was incomplete", Perl warns at `\end{document}`; say so
+            // here, then drop the orphaned frames so they cannot leak outward.
+            Warn!(
+              "expected",
+              "\\fi",
+              "Missing \\fi: conditional opened inside an argument fell off its end"
+            );
             while crate::definition::conditional::if_stack_depth() > init_if_depth {
               crate::definition::conditional::pop_if_frame()?;
             }

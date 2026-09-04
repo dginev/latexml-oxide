@@ -12767,23 +12767,105 @@ mod perfect_kernel_batch56 {
   //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
   //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
   //! environment invocation and outer listing scanning, and unicode-math table loading).
-  use super::perfect_kernel_batch46::{convert, error_count};
+  use super::perfect_kernel_batch46::{convert, convert_with, error_count};
+
+  /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
+  /// non-ASCII char (utf8.def makes the bytes active), so under the default
+  /// profile `\xα` is `\x` followed by α, not one control sequence.
+  #[test]
+  fn non_ascii_letters_stay_other_under_pdftex() {
+    let tex = "\\documentclass{article}\n\\def\\x{OK}\n\\begin{document}\n\\xα and \\x中.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("OKα and OK中."), "{xml}");
+  }
+
+  /// load-unicode-data.tex:134-135: the LuaTeX format letters every L/M code
+  /// point, Latin-1 included (the dump pins U+0080-U+00FF OTHER, the profile
+  /// re-letters them). Witnesses: circledtext, jnuexam, tikz-bagua.
+  #[test]
+  fn non_ascii_letters_are_letters_under_luatex() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\typeout{CC:\\the\\catcode`é:\\the\\catcode`α:\\the\\catcode`中:\\the\\catcode`Ⅳ}\n\\ifcat A中 ZH-LETTER\\else ZH-OTHER\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("CC:11:11:11:12"), "{stderr}");
+    assert!(xml.contains("ZH-LETTER"), "{xml}");
+  }
+
+  /// A `\<type>name` that takes arguments (argumentation.sty:403 `\afname{…}`
+  /// draws a tikz node) is not the counter's name noun: `\refstepcounter{af}`
+  /// must format the tag from `\theaf` alone. KPE #194 (SHARED Perl failure;
+  /// pdflatex clean).
+  #[test]
+  fn counter_name_command_is_not_a_name_noun() {
+    let tex = r"\documentclass{article}
+\newcounter{af}
+\NewDocumentCommand{\afname}{m}{\node[caption](x){#1};}
+\newcounter{gadget}
+\newcommand{\gadgetname}{Gadget}
+\newcounter{zero}
+\NewDocumentCommand{\zeroname}{}{Zero}
+\makeatletter
+\begin{document}
+\refstepcounter{af}\label{a}\refstepcounter{gadget}\label{g}\refstepcounter{zero}\label{z}
+See \ref{a}, \ref{g} and \ref{z}.
+\typeout{NOUN:\iflx@namenoun\gadgetname Y\else N\fi:\iflx@namenoun\afname Y\else N\fi:\iflx@namenoun\zeroname Y\else N\fi:\iflx@namenoun\figurename Y\else N\fi}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("ERROR"), "{xml}");
+    // plain macro noun / m-taking xparse command / zero-arg xparse noun / kernel noun
+    assert!(stderr.contains("NOUN:Y:N:Y:Y"), "{stderr}");
+  }
+
+  /// A `\lstnewenvironment` listing used as `\begin{name}` terminates only at its
+  /// own `\end{name}`: a literal `\end{document}` in the body is verbatim content
+  /// (listings.sty:2211-2215 compares against `\@currenvir` = name). The bare
+  /// `\name` form (tcolorbox inside a wrapper environment) keeps terminating at
+  /// the enclosing environment's `\end`.
+  #[test]
+  fn lstnewenvironment_begin_form_keeps_literal_end_document() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\lstnewenvironment{mycode}{}{}
+\begin{document}
+\begin{mycode}
+line one of code
+\end{document}
+line three of code
+\end{mycode}
+Tail text survives.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Tail text survives."), "{xml}");
+    // base64 of "line one of code\n\end{document}\nline three of code"
+    assert!(
+      xml.contains("bGluZSBvbmUgb2YgY29kZQpcZW5ke2RvY3VtZW50fQpsaW5lIHRocmVlIG9mIGNvZGU="),
+      "{xml}"
+    );
+  }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {
     let tex = r"\documentclass{article}
 \usepackage{luatexbase}
-\SetCatcodeRange{1}{31}{15}
+\SetCatcodeRange{65}{90}{11}
 \usepackage{listings}
 \lstloadaspects{comments}
 \begin{document}
 Listing test.
+\SetCatcodeRange{`A}{`Z}{12}\typeout{CAT:\the\catcode`Q:\the\catcode`q}
 \end{document}
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Listing test."), "{xml}");
+    // ctablestack.sty:18: a real `\catcode` loop over the range, nothing else.
+    assert!(stderr.contains("CAT:12:11"), "{stderr}");
   }
 
   /// \DeclareTCBListing invoked via bare macros inside \NewDocumentEnvironment

@@ -5826,3 +5826,20 @@ leaks into the stream and a control-sequence symbol is never defined: oz.sty:261
 arguments; a cs symbol is `\DeclareMathSymbol`'d from the small variant
 (`\@xxDeclareMathDelimiter`), numeric classes 0-7 map as `\mathchar@type`. Guard:
 `perfect_kernel_batch54::declare_math_delimiter_defines_the_symbol`.
+
+## 194. Any defined `\<type>name` is taken as the counter's name noun (Rust fixes)
+
+Base_Utility.pool.ltxml:1048-1055 `\lx@@fnum@@` composes the reference tag from
+`\<type>name` whenever it is defined, assuming a parameterless noun
+(`\figurename`). argumentation.sty:403 pairs counter `af` with the drawing command
+`\NewDocumentCommand{\afname}{…}{… \node …}`, so `\refstepcounter{af}` executes
+`\node` inside the tag and reports `undefined:\node` (Perl and Rust identical;
+pdflatex never expands `\afname` there). Trigger: `\newcounter{af}
+\NewDocumentCommand{\afname}{m}{\node[caption](x){#1};} \refstepcounter{af}`. Rust:
+`\iflx@namenoun` (base_utilities.rs `is_name_noun`) admits `\<type>name` only when it is an
+expandable macro with no parameters (an ltcmd `\__cmd_start_optimized:` dispatcher is
+followed to its ` code` macro, so zero-arg xparse nouns still qualify); `\lx@@fnum@@` and `\lx@typerefnum@@` fall back
+to `\the<type>` otherwise. Witness: argumentation-doc. Guard:
+`perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`. The gemini
+HANDOFF.md hypothesis (a `stomach::digest` mouth leaking into the parent stream) was
+refuted: `stomach::digest` opens a non-autoclose mouth (`gullet.rs:3445`, `:1221`).

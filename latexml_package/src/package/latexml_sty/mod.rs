@@ -133,6 +133,12 @@ LoadDefinitions!({
   // option. Rust-only option; divergence documented as OXIDIZED_DESIGN #168.
   DeclareOption!("luatex", {
     AssignValue!("LUATEX_PROFILE" => true, Scope::Global);
+    // load-unicode-data.tex:134-135 letters Latin-1 at FORMAT time; the format
+    // (and its dump, which pins U+0080-U+00FF OTHER) loads at `\documentclass`,
+    // AFTER this preload option, so `latex.rs` re-letters them at the kernel
+    // seam when the profile is on. This call covers a mid-document
+    // `\usepackage[luatex]{latexml}` (format already loaded).
+    assign_luatex_latin1_letters();
     RawTeX!(
       r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse"
     );

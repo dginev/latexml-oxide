@@ -115,6 +115,17 @@ LoadDefinitions!({
     InnerPool!(latex_base);
   }
 
+  // latex.ltx:22071-22076: under LuaTeX/XeTeX the format inputs
+  // `load-unicode-data`, lettering every General_Category L/M code point
+  // (load-unicode-data.tex:98-99,134-135). The profile option is a preload,
+  // processed before this format (and its dump, which pins U+0080-U+00FF
+  // OTHER) loads, so the Latin-1 letters are re-lettered here at the seam;
+  // code points >= U+0100 come lazily from `state::lookup_catcode`.
+  // Guard: `perfect_kernel_batch56::non_ascii_letters_are_letters_under_luatex`.
+  if lookup_bool("LUATEX_PROFILE") {
+    ::latexml_core::state::assign_luatex_latin1_letters();
+  }
+
   // Format-layering rule: real LaTeX (INITEX-based) never defines plain.tex's
   // tabbing shorthand `\+` (= `\tabalign`), but our latex format is layered
   // on the plain layer (dump record or raw plain.tex), which does. A stray

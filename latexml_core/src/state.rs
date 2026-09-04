@@ -2254,25 +2254,57 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
   // i.e. "let s = c.to_string();"
   let s = arena::pin_char(c);
   match state!().catcode.get(&s) {
-    None => {
-      if c > '\x7f' && c.is_alphabetic() {
-        Some(Catcode::LETTER)
-      } else {
-        None
-      }
-    },
+    None => unicode_letter_catcode_default(c),
     Some(cvec) => match cvec.front() {
       Some(Stored::Catcode(cc)) => Some(*cc),
       Some(_) => None, // non-catcode value in catcode table — treat as undefined
-      _ => {
-        if c > '\x7f' && c.is_alphabetic() {
-          Some(Catcode::LETTER)
-        } else {
-          None
-        }
-      },
+      _ => unicode_letter_catcode_default(c),
     },
   }
+}
+
+/// The format-time Unicode letter catcodes of the LuaTeX/XeTeX kernels, as a
+/// lazy default for code points the catcode table does not pin.
+///
+/// latex.ltx:22071-22076 inputs `load-unicode-data` only under LuaTeX/XeTeX, and
+/// load-unicode-data.tex:98-99,134-135 assigns `\catcode 11` to every code point
+/// of General_Category L or M. pdfTeX never does (utf8.def makes the bytes
+/// active), and Perl `State.pm:113-115` letters only ASCII, so outside the
+/// LuaTeX profile a non-ASCII char without a table entry stays OTHER
+/// (`Mouth::get_next_char`). The profile check runs only for non-ASCII chars,
+/// so the ASCII tokenizer path is untouched. U+0080–U+00FF are pinned OTHER by
+/// the format dump; the `luatex` option re-letters them eagerly
+/// (`latexml_sty/mod.rs`). Witnesses: circledtext (102→0), jnuexam, tikz-bagua;
+/// guards `perfect_kernel_batch56::{non_ascii_letters_stay_other_under_pdftex,
+/// non_ascii_letters_are_letters_under_luatex}`.
+fn unicode_letter_catcode_default(c: char) -> Option<Catcode> {
+  if c > '\x7f' && lookup_bool("LUATEX_PROFILE") && is_unicode_letter_or_mark(c) {
+    Some(Catcode::LETTER)
+  } else {
+    None
+  }
+}
+
+/// load-unicode-data.tex:134-135 for U+0080–U+00FF: the LuaTeX/XeTeX format
+/// letters every L/M code point, but the latex dump pins that range OTHER
+/// (pdfTeX's utf8.def model), so the lazy default in `lookup_catcode` never
+/// reaches it. Called at the format seam (`latexml_engine::latex`) and by the
+/// `luatex` option of latexml.sty; 65 global assignments.
+pub fn assign_luatex_latin1_letters() {
+  for n in 0x80u32..=0xFF {
+    if let Some(ch) = char::from_u32(n)
+      && is_unicode_letter_or_mark(ch)
+    {
+      assign_catcode(ch, Catcode::LETTER, Some(Scope::Global));
+    }
+  }
+}
+
+/// General_Category L ∪ M, the set load-unicode-data.tex letters. `is_alphabetic`
+/// also admits Nl (Roman numerals), which the kernel leaves OTHER; combining marks
+/// (M) are added explicitly.
+pub fn is_unicode_letter_or_mark(c: char) -> bool {
+  (c.is_alphabetic() && !c.is_numeric()) || unicode_normalization::char::is_combining_mark(c)
 }
 
 /// assigns a Catcode for a given character

@@ -2498,8 +2498,23 @@ LoadDefinitions!({
     // captures the raw lines only after the start code has run, so
     // `\lstset` keys in it still govern the display, and it pushes the
     // postamble locally inside the `{` group.
+    // Two entry points, one discriminator. The BARE `\name` (tcolorbox's
+    // `\DeclareTCBListing` invoked inside a `\NewDocumentEnvironment` wrapper,
+    // codebox.sty:347) terminates at the ENCLOSING environment's `\end{outer}` —
+    // listings.sty:2211-2215 `\lstenv@endstring` compares against `\@currenvir`,
+    // which the bare form never changed. The magic `\begin{name}` form IS its own
+    // `\@currenvir`, so it terminates only at `\end{name}`/`\endname` and a literal
+    // `\end{document}` inside the listing is verbatim content (pdflatex prints it).
+    // `sect01.rs` does not run `\lx@setcurrenvir` before this closure on the magic
+    // branch, so `current_environment` still names the enclosing environment there;
+    // reading it for `\begin{name}` truncated a top-level listing (and the rest of
+    // the document) at `\end{document}`. Guard:
+    // `perfect_kernel_batch56::lstnewenvironment_begin_form_keeps_literal_end_document`.
+    let build_expansion = |is_bare: bool| -> Option<ExpansionBody> {
     let closure_env_name = env_name.clone();
-    let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
+    let start_code = start_code.clone();
+    let end_code = end_code.clone();
+    Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
@@ -2509,7 +2524,7 @@ LoadDefinitions!({
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();
-        let outer_env: Option<String> = lookup_value("current_environment").and_then(|v| {
+        let outer_env: Option<String> = if !is_bare { None } else { lookup_value("current_environment").and_then(|v| {
           if let Stored::String(s) = v {
             let str_val = with(s, |s| s.to_string());
             if str_val != closure_env_name && !str_val.is_empty() {
@@ -2520,7 +2535,7 @@ LoadDefinitions!({
           } else {
             None
           }
-        });
+        }) };
         // The environment's group is the `\begingroup` TOKEN (as
         // `\begin{lstlisting}`, `lst_group_opener`) and `\lx@lstenv@body`
         // closes it with `\endgroup`. A `{` here with 54x's
@@ -2547,9 +2562,10 @@ LoadDefinitions!({
           ]).unlist());
         Ok(Tokens::new(out))
       }
-    )));
-    def_macro(cs_bare, params_bare, expansion.clone(), None)?;
-    def_macro(cs, params, expansion, None)?;
+    )))
+    };
+    def_macro(cs_bare, params_bare, build_expansion(true), None)?;
+    def_macro(cs, params, build_expansion(false), None)?;
     let end_cs = T_CS!(s!("\\end{{{env_name}}}"));
     let end_bare_cs = T_CS!(s!("\\end{env_name}"));
     def_macro(

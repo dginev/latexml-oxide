@@ -1671,9 +1671,24 @@ LoadDefinitions!({
   // Really seems like <type>name should take precedence over \lx@name@<type>,
   // since users might define it.
   // BUT amsthm defines \thmname{}!
+  //
+  // `\<type>name` is a NAME NOUN only when it is a parameterless expandable
+  // macro (`\figurename`, `\chaptername`, babel captions). Perl
+  // Base_Utility.pool.ltxml:1048 takes any defined `\<type>name`, so a package
+  // that pairs counter `af` with the drawing command `\afname{…}`
+  // (argumentation.sty:403, `\NewDocumentCommand{\afname}{…}{… \node …}`)
+  // executes `\node` inside `\refstepcounter{af}` — SHARED Perl failure
+  // (KPE #194); pdflatex never expands `\afname` there. Guard:
+  // `perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`.
+  DefConditional!("\\iflx@namenoun Token", sub[(t)] {
+    match lookup_definition(&t) {
+      Ok(Some(def)) => is_name_noun(&def, 0),
+      _ => false,
+    }
+  });
   DefMacro!(
     "\\lx@@fnum@@ {}",
-    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
+    r"\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{\lx@the@@{#1}}{\expandafter\iflx@namenoun\csname #1name\endcsname\lx@refnum@compose{\csname #1name\endcsname}{\lx@the@@{#1}}\else\lx@the@@{#1}\fi}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "" => "\\lx@fnum@@"); // Default!
@@ -1705,7 +1720,7 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\lx@@typerefnum@@{}",
-    r"\@ifundefined{#1typerefname}{\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{}{\lx@refnum@compose{\csname #1name\endcsname}{\lx@p@the@@{#1}}}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@p@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@p@the@@{#1}}}"
+    r"\@ifundefined{#1typerefname}{\@ifundefined{lx@name@#1}{\@ifundefined{#1name}{}{\expandafter\iflx@namenoun\csname #1name\endcsname\lx@refnum@compose{\csname #1name\endcsname}{\lx@p@the@@{#1}}\fi}}{\lx@refnum@compose{\csname lx@name@#1\endcsname}{\lx@p@the@@{#1}}}}{\lx@refnum@compose{\csname #1typerefname\endcsname}{\lx@p@the@@{#1}}}"
   );
 
   AssignMapping!("type_tag_formatter", "typerefnum" => "\\lx@typerefnum@@");
@@ -5706,6 +5721,41 @@ pub fn escapechar() -> String {
   } else {
     String::new()
   }
+}
+
+/// Is this definition a NAME NOUN (`\figurename`): an expandable macro with no
+/// parameters? ltcmd's `\NewDocumentCommand` defines `\foo` as the protected,
+/// parameterless dispatcher `\__cmd_start_optimized: \foo code` (latex.ltx:1963-1972),
+/// so follow that one hop to `\foo code` (zero-arg xparse nouns qualify, `m`-taking
+/// drawing commands like argumentation.sty:403 `\afname` do not); the general
+/// `\__cmd_start:nNNnnn` / `\__cmd_start_expandable:nNNNNn` dispatchers always
+/// carry a signature.
+fn is_name_noun(def: &Rc<dyn Definition>, depth: u8) -> bool {
+  if !def.is_expandable()
+    || def
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = def.get_expansion() else {
+    return true;
+  };
+  let toks = body.clone().unlist();
+  let Some(first) = toks.first() else {
+    return true;
+  };
+  if first.get_catcode() != Catcode::CS {
+    return true;
+  }
+  let head = first.to_string();
+  if head == "\\__cmd_start_optimized:" {
+    return depth == 0
+      && toks.get(1).is_some_and(
+        |code| matches!(lookup_definition(code), Ok(Some(code_def)) if is_name_noun(&code_def, 1)),
+      );
+  }
+  !(head == "\\__cmd_start:nNNnnn" || head == "\\__cmd_start_expandable:nNNNNn")
 }
 
 #[cfg(test)]

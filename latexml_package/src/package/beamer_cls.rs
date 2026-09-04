@@ -776,12 +776,19 @@ LoadDefinitions!({
       if t.get_catcode() == Catcode::ARG {
         let idx: usize = with(t.get_sym(), |s| s.parse().unwrap_or(0));
         let remapped = if idx == n + 1 { 1 } else { idx + 1 };
+        // Same `<#1>` bracketing as `\lx@beamer@defcmd@angle` above.
+        if idx == n + 1 {
+          newbeg.push(T_OTHER!("<"));
+        }
         newbeg.push(Token {
           text: pin(remapped.to_string()),
           code: Catcode::ARG,
           #[cfg(feature = "token-locators")]
           loc: 0,
         });
+        if idx == n + 1 {
+          newbeg.push(T_OTHER!(">"));
+        }
       } else {
         newbeg.push(t);
       }
