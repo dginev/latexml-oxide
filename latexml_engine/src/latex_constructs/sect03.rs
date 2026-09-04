@@ -212,10 +212,82 @@ pub(crate) fn load() -> Result<()> {
   },
   reversion => "");
 
-  DefMacro!("\\footnote",      "\\lx@note{footnote}",     locked => true);
+  DefConstructor!("\\lx@note@live OptionalSemiverbatim {} []",
+  "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#body</ltx:note>",
+  before_digest => {
+    neutralize_font();
+    begin_mode("inline_internal_vertical")?;
+  },
+  properties   => sub [args] {
+    let arg1 = args[0].as_ref();
+    let arg2 = args[1].as_ref();
+    let arg3 = args[2].as_ref().map(Cow::Borrowed);
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let mut props = make_note_tags(&note_type, arg1, arg3)?;
+    props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
+    props.insert("role", note_type.into());
+    Ok(props)
+  },
+  capture_body => true,
+  reversion => "");
+
+  DefConstructor!("\\lx@notetext@live OptionalSemiverbatim {} []",
+  "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#body</ltx:note>",
+  before_digest => {
+    neutralize_font();
+    begin_mode("inline_internal_vertical")?;
+  },
+  properties => sub [args] {
+    let arg1 = args[0].as_ref();
+    let arg2 = args[1].as_ref();
+    let arg3 = args[2].as_ref();
+    let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
+    let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
+      Cow::Owned(
+        digest(T_CS!(s!("\\the{note_type}")))?
+      )
+    };
+    let mut props = make_note_tags(&note_type, arg1, Some(arg3_ready))?;
+    props.insert("role", s!("{note_type}text").into());
+    Ok(props)
+  },
+  capture_body => true,
+  reversion => "");
+
+  DefConstructor!(T_CS!("\\lx@note@live@end"), None, None,
+    before_digest => {
+      end_mode("inline_internal_vertical")?;
+    });
+
+  DefMacro!("\\lx@note@standard", "\\lx@note{footnote}");
+  DefMacro!("\\lx@notetext@standard", "\\lx@notetext{footnote}");
+  DefMacro!("\\lx@current@footnote", "\\lx@note@standard");
+  DefMacro!("\\lx@current@footnotetext", "\\lx@notetext@standard");
+
+  DefMacro!("\\VerbatimFootnotes",
+    "\\let\\lx@current@footnote\\lx@vfootnote\\let\\lx@current@footnotetext\\lx@vfootnotetext",
+    locked => true);
+
+  DefMacro!("\\lx@vfootnote",
+    "\\@ifnextchar[{\\lx@vfootnote@opt}{\\lx@vfootnote@noopt}");
+  DefMacro!("\\lx@vfootnote@opt[]",
+    "\\lx@note@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp");
+  DefMacro!("\\lx@vfootnote@noopt",
+    "\\lx@note@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp");
+  DefMacro!("\\lx@vfootnote@start",
+    "\\bgroup\\aftergroup\\lx@note@live@end");
+
+  DefMacro!("\\lx@vfootnotetext",
+    "\\@ifnextchar[{\\lx@vfootnotetext@opt}{\\lx@vfootnotetext@noopt}");
+  DefMacro!("\\lx@vfootnotetext@opt[]",
+    "\\lx@notetext@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp");
+  DefMacro!("\\lx@vfootnotetext@noopt",
+    "\\lx@notetext@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp");
+
+  DefMacro!("\\footnote", "\\lx@current@footnote", locked => true);
   DefMacro!("\\footnotemark",  "\\lx@notemark{footnote}", locked => true);
-  DefMacro!("\\footnotetext",  "\\lx@notetext{footnote}", locked => true);
-  DefMacro!("\\@footnotetext", "\\lx@notetext{footnote}", locked => true);
+  DefMacro!("\\footnotetext", "\\lx@current@footnotetext", locked => true);
+  DefMacro!("\\@footnotetext", "\\lx@current@footnotetext", locked => true);
   // we don't implement the internals directly, so lock them to the latexml variant
   Let!("\\@thefnmark", "\\lx@notemark{footnote}");
 

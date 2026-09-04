@@ -12627,4 +12627,26 @@ $\begin{pNiceMatrix}[name=ma-matrice]
       "Expected pNiceMatrix math: {xml}"
     );
   }
+
+  /// P52: nicematrix + shortvrb verbatim footnotes. Under \VerbatimFootnotes,
+  /// \footnote captures its body live so active verbatim tokens (e.g. `|` from
+  /// shortvrb) and inner unescaped braces digest cleanly into <note>
+  /// without triggering misplaced \omit or premature argument termination.
+  #[test]
+  fn nicematrix_shortvrb_verbatim_footnotes() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix,shortvrb}
+\MakeShortVerb{\|}
+\VerbatimFootnotes
+\begin{document}
+Plain: |\multicolumn|.
+X\footnote{Footnote with |\multicolumn| and a brace |}| here.}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r#"<note mark="1" role="footnote""#), "{xml}");
+    assert!(xml.contains(r">\multicolumn<"), "{xml}");
+  }
 }
+
