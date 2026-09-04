@@ -1,0 +1,6 @@
+% RUST-ONLY: graphics.sty:156 \def\graphicspath#1{\def\Ginput@path{#1}} + :157-158
+% \ifx\Ginput@path\@undefined \def\Ginput@path{} default. Rust graphics binding
+% reimplements \includegraphics and omits \Ginput@path (and \Ginclude@graphics,
+% deferred). Witness upmethodology/upmethodology-doc.
+\documentclass{article}\usepackage{graphicx}
+\begin{document}\makeatletter\Ginput@path\makeatother x\end{document}

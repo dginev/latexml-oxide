@@ -447,6 +447,8 @@ LoadDefinitions!({
   //
   // DirectoryList reads the arg ToString-first so `_` in path names never
   // becomes a SUB-catcode during digestion.
+  // graphics.sty:157-158 `\ifx\Ginput@path\@undefined \def\Ginput@path{}\fi`.
+  RawTeX!(r"\providecommand\Ginput@path{}");
   DefConstructor!("\\graphicspath DirectoryList",
   sub[document, _args, props] {
     if let Some(Stored::String(paths_sym)) = props.get("paths") {
@@ -463,6 +465,9 @@ LoadDefinitions!({
       .and_then(|a| a.as_ref())
       .map(|a| a.to_string())
       .unwrap_or_default();
+    // graphics.sty:156 `\def\graphicspath#1{\def\Ginput@path{#1}}` — the
+    // TeX-visible search-path macro (upmethodology reads it back).
+    def_macro(T_CS!("\\Ginput@path"), None, Tokens::new(ExplodeText!(&arg)), None)?;
     let root = with_value("SOURCEDIRECTORY",
       |v| v.map(|s| s.to_string()).unwrap_or_default());
     let mut collected: Vec<String> = Vec::new();

@@ -12258,6 +12258,55 @@ Text\marginpar[{\lipsum[1][1-1]}]{Y} more.
     assert!(xml.contains("a~b"), "{xml}");
   }
 
+  /// minted's displays use the `\begingroup`/`\endgroup` listing group like
+  /// lstlisting, so inside a `p{}` cell their closer meets no mode-switch
+  /// frame (kernel-alignment locus probe: the only red construct).
+  #[test]
+  fn minted_in_a_p_column_keeps_the_cell() {
+    for body in [
+      "\\begin{minted}{tex}\nzz\n\\end{minted}",
+      "\\inputminted{tex}{no-such-file-for-this-guard.tex}",
+    ] {
+      let tex = format!(
+        "\\documentclass{{article}}\n\\usepackage{{minted}}\n\\begin{{document}}\n\\begin{{tabular}}{{p{{4cm}}l}}\n{body} & next \\\\\nrow2 & x \\\\\n\\end{{tabular}}\n\\end{{document}}\n"
+      );
+      let (stderr, xml) = convert(&tex, false);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+      assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    }
+  }
+
+  /// Long-tail singletons, batch 4: physics.sty:23 `\vnabla`,
+  /// quantumarticle.cls:22 `\quantumarticleversion`, latex.ltx:18349
+  /// `\@normalsize`, graphics.sty:156-158 `\Ginput@path` (physics manual,
+  /// quantum-template, UNAMThesis, upmethodology; Perl lacks all four).
+  #[test]
+  fn long_tail_physics_quantum_normalsize_ginput_singletons() {
+    for (tex, needle) in [
+      (
+        r"\documentclass{article}\usepackage{physics}\begin{document}$\vnabla f$\end{document}",
+        "<Math",
+      ),
+      (
+        r"\documentclass{quantumarticle}\begin{document}v\quantumarticleversion.\end{document}",
+        "v6.",
+      ),
+      (
+        r"\documentclass{report}\begin{document}\makeatletter\@normalsize\makeatother x\end{document}",
+        "x",
+      ),
+      (
+        r"\documentclass{article}\usepackage{graphicx}\graphicspath{{figs/}}\begin{document}\makeatletter[\Ginput@path]\makeatother\end{document}",
+        "[figs/]",
+      ),
+    ] {
+      let (stderr, xml) = convert(tex, false);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains(needle), "{xml}");
+    }
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

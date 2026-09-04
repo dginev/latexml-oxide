@@ -78,4 +78,6 @@ LoadDefinitions!({
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   Let!("\\acknowledgements", "\\acknowledgments");
   Let!("\\endacknowledgements", "\\endacknowledgments");
+  // quantumarticle.cls:22 `\def\quantumarticleversion{6.1}` (quantum-template).
+  DefMacro!("\\quantumarticleversion", "6.1");
 });

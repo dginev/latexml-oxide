@@ -1554,4 +1554,7 @@ LoadDefinitions!({
   Let!("\\smqty", "\\smallmatrixquantity");
   Let!("\\mdet", "\\matrixdeterminant");
   Let!("\\smdet", "\\smallmatrixdeterminant");
+  // physics.sty:23/25 — `bolddel` is a default option, so `\vnabla` exists
+  // (physics manual; Perl's binding lacks it).
+  DefMacro!("\\vnabla", "\\boldsymbol\\nabla");
 });

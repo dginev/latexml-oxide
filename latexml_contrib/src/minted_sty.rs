@@ -1,4 +1,7 @@
-use latexml_package::prelude::*;
+use latexml_package::{
+  package::listings_sty::{lst_group_opener, lst_process_display_scoped, lst_scoped},
+  prelude::*,
+};
 
 LoadDefinitions!({
   RequirePackage!("ifplatform");
@@ -76,20 +79,25 @@ LoadDefinitions!({
     // Beyond-Perl frozencache color path (see \begin{minted}); falls back to the
     // uncolored listings display on a cache miss / no `_minted/`.
     let result = match crate::minted_frozencache::colored_display_body(&contents) {
-      Some(body) => lst_process_display_with(None, &contents, body),
-      None => lst_process_display(None, &contents),
+      Some(body) => lst_scoped(lst_process_display_with(None, &contents, body)),
+      None => lst_process_display_scoped(None, &contents),
     };
-    // `lst_process_display`'s trailer ends with the align-neutral
-    // `\lx@hidden@egroup` that balances the `bgroup()` above (the legacy
-    // caller contract, listings_sty.rs `lst_process_block_with`). Appending a
-    // `}` "when the result does not end with T_END" — the pre-54x convention —
-    // closed the CALLER's frame once the closer became `\lx@hidden@egroup`:
-    // a tcolorbox/minipage around `\inputminted` lost its box ("`}` Attempt
-    // to close a group that switched to mode internal_vertical due to
-    // `\minipage`"; 26-doc sweep-37 regression: algxpar-doc, tikzducks-doc,
-    // biblatex-oxref ×4, tcolorbox posters …). Guard:
-    // `perfect_kernel_batch54::inputminted_inside_a_minipage_keeps_its_box`.
-    Ok(Tokens::new(result))
+    // The expansion-time `bgroup()` above only scopes the key activation and
+    // is closed HERE; the listing's own group is the `\begingroup` TOKEN +
+    // `\lx@lst@activate` emitted in stream order and closed by `\endgroup`
+    // (`lst_scoped`) — `\begin{lstlisting}`'s 54x/55k contract. The former
+    // align-neutral `\lx@hidden@egroup` closer (a) once got a `}` appended
+    // that closed a tcolorbox/minipage around `\inputminted` (26-doc sweep-37
+    // regression: algxpar-doc, tikzducks-doc, biblatex-oxref ×4, tcolorbox
+    // posters) and (b) in a `p{}` cell hit the VBoxContents mode-switch frame
+    // ("`\lx@hidden@egroup` Attempt to close a group that switched to mode
+    // internal_vertical"). Guards:
+    // `perfect_kernel_batch54::{inputminted_inside_a_minipage_keeps_its_box,
+    // minted_in_a_p_column_keeps_the_cell}`.
+    egroup()?;
+    let mut out = lst_group_opener("lstlisting", None)?;
+    out.extend(result);
+    Ok(Tokens::new(out))
   });
   def_macro_noop("\\listoflistings")?;
   DefMacro!("\\listingscaption", "Listing");
@@ -220,8 +228,7 @@ LoadDefinitions!({
   // `\end{minted}`).
   use latexml_core::stomach::bgroup;
   use latexml_package::package::listings_sty::{
-    listings_read_raw_lines, listings_read_raw_string, lst_process_display,
-    lst_process_display_with,
+    listings_read_raw_lines, listings_read_raw_string, lst_process_display_with,
   };
   {
     let cs = T_CS!("\\begin{minted}");
@@ -287,10 +294,15 @@ LoadDefinitions!({
         // lines; otherwise keep the exact uncolored listings path.
         // (OXIDIZED_DESIGN_DIVERGENCES #157.)
         let result = match crate::minted_frozencache::colored_display_body(&text) {
-          Some(body) => lst_process_display_with(None, &text, body),
-          None => lst_process_display(None, &text),
+          Some(body) => lst_scoped(lst_process_display_with(None, &text, body)),
+          None => lst_process_display_scoped(None, &text),
         };
-        Ok(Tokens::new(result))
+        // As `\inputminted`: close the key-scoping `bgroup()` here and emit
+        // the `\begingroup` token opener for the listing's own group.
+        egroup()?;
+        let mut out = lst_group_opener("minted", None)?;
+        out.extend(result);
+        Ok(Tokens::new(out))
       },
     )));
     def_macro(cs, params, expansion, None)?;

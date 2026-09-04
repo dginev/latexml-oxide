@@ -1,0 +1,7 @@
+% RUST-ONLY: physics.sty:23 \DeclareOption{bolddel}{\DeclareDocumentCommand\vnabla
+% {}{\boldsymbol\nabla}} + :25 \ExecuteOptions{trig,uprightdiff,bolddel} define
+% \vnabla by DEFAULT. Rust physics_sty.rs builds \grad/\div/\curl on \nabla
+% directly but never defines \vnabla; the physics doc uses it -> undefined.
+% Witness physics/physics.
+\documentclass{article}\usepackage{physics}
+\begin{document}$\vnabla$\end{document}

@@ -1909,7 +1909,7 @@ pub fn lst_process_block_with(
 /// environment's `\begingroup`): `\bgroup\lx@lst@activate{env}[<keys>]`.
 /// The primitive re-activates the listing keys inside that group for the
 /// digestion-time consumers (`\lstname`, styles, `LISTINGS_POSTAMBLE`).
-fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
+pub fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
   let mut out = vec![
     T_CS!("\\begingroup"),
     T_CS!("\\lx@lst@activate"),
@@ -1931,7 +1931,13 @@ fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
 /// [`lst_process_display`] for a caller whose group is the `\begingroup`
 /// token `lst_group_opener` emitted: the trailer's closer is `\endgroup`.
 pub fn lst_process_display_scoped(name: Option<Tokens>, text: &str) -> Vec<Token> {
-  let mut result = lst_process_display(name, text);
+  lst_scoped(lst_process_display(name, text))
+}
+
+/// Re-close a display produced by [`lst_process_display`] /
+/// [`lst_process_display_with`] for a `\begingroup`-token caller: the boxing
+/// closer `\lx@hidden@egroup` becomes `\endgroup`.
+pub fn lst_scoped(mut result: Vec<Token>) -> Vec<Token> {
   result.pop(); // the boxing closer `\lx@hidden@egroup`
   result.push(T_CS!("\\endgroup"));
   result

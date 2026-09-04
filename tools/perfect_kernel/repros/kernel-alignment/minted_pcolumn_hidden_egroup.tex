@@ -1,0 +1,27 @@
+% status: RED — 55k binary: 3 err, first
+%   "\lx@hidden@egroup Attempt to close a group that switched to mode internal_vertical".
+% witness: probe of the VBoxContents/\lx@hidden@egroup locus (coordinator request).
+%   \inputminted and \begin{minted} in a p{4cm} tabular cell are the ONLY red cases;
+%   lstinline, \begin{lstlisting}, \lstinputlisting, \verb, aligned, minipage, parbox,
+%   \vbox are all GREEN in both tabular and array (55k listings fix covers them).
+% oracle: minted needs -shell-escape in pdflatex; the failure is Rust-side, listings-fixed.
+% root: minted (latexml_contrib/src/minted_sty.rs:22-42, \inputminted + \begin{minted})
+%   calls lst_process_display / lst_process_display_with (listings_sty.rs:1876) whose
+%   default closer is \lx@hidden@egroup (listings_sty.rs:1902) — the align-neutral closer
+%   that \begin{lstlisting} was MIGRATED OFF in 55k (to \begingroup/\endgroup,
+%   listings_sty.rs:1914/1931-1936). In a p{4cm} cell the cell's begin_mode(internal_vertical)
+%   VBoxContents frame (\lx@tabular@p@) is on top; the minted \lx@hidden@egroup egroup()
+%   hits the mode-switch guard (stomach.rs:754) -> "Attempt to close a group that switched
+%   to mode internal_vertical", then \endgroup "close non-boxing group", \@@tabular mode err.
+% class: RUST-ONLY (minted did not get the 55k listings \begingroup/\endgroup swap).
+% assert (after fix): 0 err; tabular has 2 <ltx:tr> and 4 <ltx:td> (2 cols x 2 rows).
+\documentclass{article}
+\usepackage{minted}
+\begin{document}
+\begin{tabular}{p{4cm}l}
+\begin{minted}{tex}
+zz
+\end{minted} & next \\
+row2 & x \\
+\end{tabular}
+\end{document}

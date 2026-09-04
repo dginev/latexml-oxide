@@ -1,0 +1,6 @@
+% RUST-ONLY: latex.ltx:18349-18350 \ifx\@normalsize\@undefined \let\@normalsize
+% \normalsize (kernel guard). \@normalsize is UNDEF in the Rust report class
+% (size commands are font primitives that bypass \@setfontsize, sect13.rs:1746);
+% UNAMThesis references \@normalsize. Witness UNAMThesis/UNAMThesis.
+\documentclass{report}
+\begin{document}\makeatletter\@normalsize\makeatother x\end{document}

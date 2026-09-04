@@ -1752,6 +1752,10 @@ pub(crate) fn load() -> Result<()> {
   // expansion-indirection default; a class that DOES route through
   // `\@setfontsize` overwrites it with the exact size command.
   DefMacro!("\\@currsize", "\\normalsize");
+  // latex.ltx:18349-18350 `\ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi`
+  // — the size `.clo`s set it through `\@setfontsize\@normalsize…`, which the
+  // font-primitive size commands here bypass (UNAMThesis under report).
+  DefMacro!("\\@normalsize", "\\normalsize");
 
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.

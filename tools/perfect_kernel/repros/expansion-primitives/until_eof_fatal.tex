@@ -1,0 +1,26 @@
+% cluster: sweep#37 status-3 pdflatex LARGEST cluster = `Fatal:Mouth:EoF File ended while scanning
+%   use of a Until:X argument` (5 docs: l3kernel/l3prefixes Until:, ; bibarts Until:\@@ ;
+%   colorspace Until:\@@ ; typog Until:\relax ; chessboard Until:.).
+% witness (representative): l3kernel/l3prefixes — pdflatex rc=0 (CLEAN); Perl same-host: 3
+%   recoverable errors, "Conversion complete"; Rust: 1 error + Fatal (aborts). The real parse only
+%   fails inside LaTeXML (expl3 \ior_map_inline over l3prefixes.csv -> \__prefix_readii:w #1,#2,#3,#4
+%   \q_stop, l3prefixes.tex:41/66); pdflatex's real expl3 parse succeeds.
+% This file ISOLATES the RUST-ONLY layer (Fatal-vs-recover) with a bare delimited macro:
+% oracle:  pdflatex rc=1 "! File ended while scanning use of \grab" (genuine runaway) — so THIS
+%   minimal is not pdflatex-clean; it is the Perl-parity probe. The 5 WITNESS docs ARE pdflatex-clean.
+% engines: Rust = Error:expected:Until: + Fatal:Mouth:EoF (abort). Perl = 1 Error, Conversion complete.
+% class:   Fatal escalation RUST-ONLY (Perl recovers). Underlying parse-miss SHARED (Perl errs too).
+% expect:  0 Fatal; a single recoverable Error:Until: and the doc completes (Perl parity).
+% status:  RED (rust Fatal ; perl recovers)
+% mechanism: base_parameter_types.rs:189-198 — on a true-EOF Until-miss the reader reports THEN
+%   Fatal!(Mouth,EoF). Perl (Parameter.pm L93-97) reports and delivers an EMPTY argument, re-running
+%   the caller; a NON-recursive caller (l3prefixes \__prefix_readii:w) then completes. Our Fatal-once
+%   design was tuned for the RECURSIVE scanners (fancyvrb \FV@Scan, stex \prg_map_break) where Perl
+%   re-misses to the 100-error cap -> too_many_errors Fatal (SAME outcome). It over-fatals the
+%   non-recursive cluster, aborting 5 pdflatex-clean docs Perl completes.
+\documentclass{article}
+\makeatletter
+\long\def\grab#1,#2\relax{[#1]}
+\begin{document}
+\grab nocomma\relax
+\end{document}
