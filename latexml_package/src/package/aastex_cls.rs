@@ -33,4 +33,7 @@ LoadDefinitions!({
 
   load_class("revtex4", Vec::new(), Tokens!())?;
   RequirePackage!("aas_support");
+  // aastex701.cls:13637-13638 — `\digitalasset` flags a digital-asset paper
+  // (aastex701-sample; the Perl reimplementation lacks it too).
+  RawTeX!(r"\newif\ifdigitasset\def\digitalasset{\digitassettrue}");
 });

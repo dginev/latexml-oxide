@@ -1,0 +1,8 @@
+% SHARED: aastex701.cls:13637-8 \newif\ifdigitasset + \def\digitalasset{\digitassettrue}.
+% Both aastex bindings (Rust aastex_cls.rs, Perl aastex.cls.ltxml) predate aastex701's
+% digital-asset feature and omit \digitalasset. Witness: aastex/aastex701-sample.
+\documentclass{aastex701}
+\begin{document}
+\digitalasset
+Body.
+\end{document}

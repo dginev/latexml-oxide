@@ -405,6 +405,7 @@ pub mod siunitx_sty;
 pub mod slashbox_sty;
 pub mod slashed_sty;
 pub mod slides_cls;
+pub mod u_fontmap;
 // smfart_cls: removed; Perl has no binding either, falls through to OmniBus.
 pub mod soul_sty;
 pub mod spectralsequences_sty;

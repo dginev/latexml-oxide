@@ -12018,6 +12018,53 @@ x' = x + dx?
     assert!(xml.contains("<equation"), "{xml}");
   }
 
+  /// latex.ltx:13531 `\DeclareMathDelimiter` takes six arguments and defines
+  /// a control-sequence symbol through `\DeclareMathSymbol` (oz.sty:261
+  /// corner delimiters from the AMSa symbol font; ozguide).
+  #[test]
+  fn declare_math_delimiter_defines_the_symbol() {
+    let tex = r#"\documentclass{article}
+\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}
+\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}{AMSa}{"70}
+\DeclareMathDelimiter\urcorner{5}{AMSa}{"71}{AMSa}{"71}
+\begin{document}
+$\ulcorner a\urcorner$
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("\u{231C}") && xml.contains("\u{231D}"),
+      "{xml}"
+    );
+    assert!(xml.contains("role=\"OPEN\""), "{xml}");
+  }
+
+  /// Long-tail singletons: aastex701.cls:13637 `\digitalasset`, amsbook.cls:1779
+  /// `\markleft`, t5enc's `\textdotbelow` (aastex701-sample,
+  /// Author_Handbook_Memo, amsldoc-vi; Perl's bindings lack all three).
+  #[test]
+  fn long_tail_class_and_encoding_singletons() {
+    for (tex, needle) in [
+      (
+        r"\documentclass{aastex701}\begin{document}\digitalasset Text.\end{document}",
+        "Text.",
+      ),
+      (
+        r"\documentclass{amsbook}\begin{document}\markleft{RUNNING}Body.\end{document}",
+        "Body.",
+      ),
+      (
+        r"\documentclass{article}\usepackage[T5]{fontenc}\begin{document}\textdotbelow{a}\end{document}",
+        "\u{1EA1}",
+      ),
+    ] {
+      let (stderr, xml) = convert(tex, false);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains(needle), "{xml}");
+    }
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

@@ -643,19 +643,26 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
   sub[(cs, sym_type, fontkind, code)] {
     let mut encoding = fontkind.to_string();
-    if let Some(Stored::Font(ref decl)) = lookup_value(&s!("fontdeclaration@{}", encoding))
-      && let Some(enc) = decl.get_encoding() {
+    // Decode with the DECLARED symbol font (Perl FontDecode takes the font):
+    // its family selects the per-family map (`U_msa_fontmap`, u_fontmap.rs).
+    let mut decl_font: Option<Rc<Font>> = None;
+    if let Some(Stored::Font(ref decl)) = lookup_value(&s!("fontdeclaration@{}", encoding)) {
+      if let Some(enc) = decl.get_encoding() {
         encoding = enc.to_string();
       }
-    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
-    let role = match sym_type.to_string().as_str() {
-      "\\mathord"  => Some("ID"),
-      "\\mathop"   => Some("BIGOP"),
-      "\\mathbin"  => Some("BINOP"),
-      "\\mathrel"  => Some("RELOP"),
-      "\\mathopen" => Some("OPEN"),
-      "\\mathclose"=> Some("CLOSE"),
-      "\\mathpunct"=> Some("PUNCT"),
+      decl_font = Some(decl.clone());
+    }
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font);
+    // latex.ltx `\mathchar@type`: the class is a `\math…` cs OR its number
+    // 0-7 (oz.sty:261 `\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}…`).
+    let role = match sym_type.to_string().trim() {
+      "\\mathord" | "0" | "\\mathalpha" | "7" => Some("ID"),
+      "\\mathop" | "1" => Some("BIGOP"),
+      "\\mathbin" | "2" => Some("BINOP"),
+      "\\mathrel" | "3" => Some("RELOP"),
+      "\\mathopen" | "4" => Some("OPEN"),
+      "\\mathclose" | "5" => Some("CLOSE"),
+      "\\mathpunct" | "6" => Some("PUNCT"),
       _ => None,
     };
     // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
@@ -710,7 +717,29 @@ pub(crate) fn load() -> Result<()> {
     def_math(cs, None, presentation, opts)?;
   });
 
-  def_primitive_noop("\\DeclareMathDelimiter{}{}{}{}")?;
+  // latex.ltx:13531-13548 `\DeclareMathDelimiter{sym}{class}{font}{slot}{font}{slot}`
+  // — SIX arguments in both forms. A control-sequence symbol is first
+  // `\DeclareMathSymbol`'d from the small variant (`\@xxDeclareMathDelimiter`);
+  // the large variant and a character symbol's delcode carry no XML meaning.
+  // The former four-brace no-op (Perl latex_constructs.pool:2654 identical)
+  // left `{AMSa}{"70}` in the stream and the symbol undefined (oz.sty:261-264
+  // `\ulcorner`…`\lrcorner`; ozguide). Guard:
+  // `perfect_kernel_batch54::declare_math_delimiter_defines_the_symbol`.
+  DefPrimitive!("\\DeclareMathDelimiter {}{}{}{}{}{}", sub[(sym, class, font, slot, _font2, _slot2)] {
+    let sym_toks = sym.unlist();
+    if sym_toks.len() == 1 && sym_toks[0].get_catcode() == Catcode::CS {
+      let mut toks = vec![T_CS!("\\DeclareMathSymbol"), sym_toks[0], T_BEGIN!()];
+      toks.extend(class.unlist());
+      toks.push(T_END!());
+      toks.push(T_BEGIN!());
+      toks.extend(font.unlist());
+      toks.push(T_END!());
+      toks.push(T_BEGIN!());
+      toks.extend(slot.unlist());
+      toks.push(T_END!());
+      unread(Tokens::new(toks));
+    }
+  });
   def_primitive_noop("\\DeclareMathRadical{}{}{}{}{}")?;
   // latex.ltx `\DeclareMathVersion{name}` registers a math version a later
   // `\mathversion{name}` may select (oz.sty:34/:70, iwonamath.sty:110 with an

@@ -1,0 +1,9 @@
+% SHARED: amsbook.cls:1779 \def\markleft (running-head mark). Perl amsbook.cls.ltxml:39
+% LoadClass('book') + Rust amsbook binding both reimplement WITHOUT \markleft; kernel
+% has \markboth/\markright noops (sect05.rs:580-581) but not \markleft.
+% Witness: amscls-doc/Author_Handbook_Body.tex:218 (\ifmemoirs\markleft{...}\fi).
+\documentclass{amsbook}
+\begin{document}
+\markleft{RUNNING HEAD}
+Body text.
+\end{document}

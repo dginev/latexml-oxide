@@ -1,9 +1,11 @@
 //! AMSa font encoding (from amsa.fontmap.ltxml)
 use crate::prelude::*;
 
-LoadDefinitions!({
-  #[rustfmt::skip]
-  DeclareFontMap!("AMSa", mixrc![
+/// The msam glyph table (also served as the `U`-encoding `msa` family map by
+/// `u_fontmap.rs`, for raw `\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}` declarations).
+#[rustfmt::skip]
+pub fn amsa_table() -> Rc<[Option<char>]> {
+  mixrc![
     // 0x00-0x07
     '\u{22A1}', '\u{229E}', '\u{22A0}', '\u{25A1}', '\u{25A0}', '\u{2219}', '\u{25CA}', '\u{29EB}', // slots 6,7: lozenge/blacklozenge (Perl #2845, was 25C7/25C6)
     // 0x08-0x0F
@@ -36,5 +38,9 @@ LoadDefinitions!({
     '\u{231C}', '\u{231D}', '\u{00AE}', '\u{24C8}', '\u{22D4}', '\u{2214}', '\u{223D}', '\u{224C}',
     // 0x78-0x7F
     '\u{231E}', '\u{231F}', '\u{2720}', '\u{2201}', '\u{22BA}', '\u{229A}', '\u{229B}', '\u{229D}'
-  ]);
+  ]
+}
+
+LoadDefinitions!({
+  DeclareFontMap!("AMSa", amsa_table());
 });

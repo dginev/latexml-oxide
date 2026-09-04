@@ -610,6 +610,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("t1enc", "def", package::t1enc_def::load_definitions),
   ("amsa", "fontmap", package::amsa_fontmap::load_definitions),
   ("amsb", "fontmap", package::amsb_fontmap::load_definitions),
+  ("u", "fontmap", package::u_fontmap::load_definitions),
   ("ding", "fontmap", package::ding_fontmap::load_definitions),
   ("ifblk", "fontmap", package::ifblk_fontmap::load_definitions),
   ("ifclk", "fontmap", package::ifclk_fontmap::load_definitions),

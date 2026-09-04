@@ -333,4 +333,7 @@ LoadDefinitions!({
   // \MRhref{label} — Math Reviews link; preserve as note (the link
   // target encodes the MR id which is genuine reference metadata).
   DefMacro!("\\MRhref{}", "\\lx@add@frontmatter{ltx:note}[role=mr-ref]{#1}");
+  // amsbook.cls:1779 / amsart `\markleft{}` — a running-head mark, ignored
+  // like `\markright`/`\markboth` (Author_Handbook_Memo).
+  def_primitive_noop("\\markleft{}")?;
 });

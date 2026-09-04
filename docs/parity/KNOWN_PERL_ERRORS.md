@@ -5813,3 +5813,16 @@ following `&` was an "Extra alignment tab" (tabvar demo ×80; Perl identical).
 Trigger: `\newcolumntype{C}{>{\begin{varwidth}{3cm}\let\\=\tabularnewline$}c<{$\end{varwidth}}}`
 `\[\begin{array}{cC}a&b\\ c&d\end{array}\]`. Rust: `\@array@bindings` lets both.
 Guard: `perfect_kernel_batch54::math_array_lets_tabularnewline_to_the_row_break`.
+
+## 193. `\DeclareMathDelimiter` is ignored with four arguments (Rust fixes)
+
+latex_constructs.pool.ltxml:2654 `DefPrimitive('\DeclareMathDelimiter{}{}{}{}', ignoredDefinition)`,
+but latex.ltx:13531-13548 takes SIX arguments in both forms
+(`{sym}{class}{font}{slot}{font}{slot}`), so the trailing `{font}{slot}` pair
+leaks into the stream and a control-sequence symbol is never defined: oz.sty:261-264
+`\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}{AMSa}{"70}` (…`\lrcorner`) left
+`\ulcorner` undefined (ozguide ×4). Trigger: `\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}
+\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}{AMSa}{"70} $\ulcorner a$`. Rust: six
+arguments; a cs symbol is `\DeclareMathSymbol`'d from the small variant
+(`\@xxDeclareMathDelimiter`), numeric classes 0-7 map as `\mathchar@type`. Guard:
+`perfect_kernel_batch54::declare_math_delimiter_defines_the_symbol`.
