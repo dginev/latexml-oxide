@@ -1,0 +1,13 @@
+% status: GREEN
+% witness: testidx-manual.tex (via nlctdoc.cls:122 \RequirePackage{doc}[=v2] + :123 \RequirePackage{dox})
+% run: latexml_oxide.b55g --timeout=20 --preload='[rawstyles,rawclasses]latexml.sty' this.tex
+% root: doc.sty rollback [=v2] ignored -> doc v3 loaded -> dox.sty:162 \let\SpecialMacroIndex\SpecialUsageIndex
+%       copies doc-v3's 0-arg alias \def\SpecialUsageIndex{\SpecialMacroIndex} -> \SpecialMacroIndex=macro:->\SpecialMacroIndex
+\documentclass{article}
+\usepackage{doc}[=v2]       % loads doc-2021-06-01.sty under [=v2]
+\usepackage{dox}          % dox.sty:162 \let\SpecialMacroIndex\SpecialUsageIndex  (v2-era assumption)
+\makeatletter
+\begin{document}
+\typeout{SMAI=\meaning\SpecialMacroIndex}   % prints: SMAI=macro:->\SpecialMacroIndex  (self-loop)
+\SpecialUsageIndex\foo    % -> \SpecialMacroIndex -> \SpecialMacroIndex -> ... (runaway)
+\end{document}

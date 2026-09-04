@@ -5,6 +5,80 @@
 
 use super::*;
 
+/// latex.ltx `\@parse@version`: `YYYY-MM-DD` / `YYYY/MM/DD` → `YYYYMMDD`, 0 if unparsable.
+fn parse_version_date(s: &str) -> i64 {
+  let parts: Vec<i64> = s
+    .split(['-', '/'])
+    .filter_map(|p| p.trim().parse::<i64>().ok())
+    .collect();
+  match parts.as_slice() {
+    [y, m, d, ..] => y * 10000 + m * 100 + d,
+    [n] if *n > 10000 => *n,
+    _ => 0,
+  }
+}
+fn pkgcls_targetdate() -> i64 { lookup_int("pkgcls@targetdate") }
+fn pkgcls_targetlabel() -> String {
+  with_value("pkgcls@targetlabel", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  })
+}
+fn pkgcls_candidate() -> String {
+  with_value("pkgcls@candidate", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  })
+}
+fn pkgcls_clear_request() {
+  assign_value("pkgcls@targetdate", 0i64, Some(Scope::Global));
+  assign_value("pkgcls@targetlabel", String::new(), Some(Scope::Global));
+  assign_value("pkgcls@candidate", String::new(), Some(Scope::Global));
+}
+/// latex.ltx:19133-19171 `\pkgcls@parse@date@arg`. A leading `=` is a
+/// rollback request: its suffix is either a release label or a date. A bare
+/// date is only a minimum-version check and does not select an old file.
+fn pkgcls_set_request(request: Option<&str>) {
+  pkgcls_clear_request();
+  let Some(target) = request.and_then(|s| s.trim().strip_prefix('=')) else {
+    return;
+  };
+  let target = target.trim();
+  let date = parse_version_date(target);
+  if date > 0 {
+    assign_value("pkgcls@targetdate", date, Some(Scope::Global));
+  } else if !target.is_empty() {
+    assign_value("pkgcls@targetdate", 1i64, Some(Scope::Global));
+    assign_value(
+      "pkgcls@targetlabel",
+      target.to_string(),
+      Some(Scope::Global),
+    );
+  }
+}
+fn require_package_with_rollback(
+  package: &str,
+  options: Vec<String>,
+  request: Option<&str>,
+) -> Result<()> {
+  pkgcls_set_request(request);
+  let result = require_package(package, RequireOptions {
+    options,
+    ..RequireOptions::default()
+  });
+  pkgcls_clear_request();
+  result
+}
+/// latex.ltx:19216 `\pkgcls@use@this@release`: load the chosen release and
+/// abort the rest of the current file.
+fn pkgcls_use_this_release(file: &str) -> Result<()> {
+  assign_value("pkgcls@targetdate", 0i64, Some(Scope::Global));
+  let mut toks = vec![T_CS!("\\@@input")];
+  toks.extend(ExplodeText!(file));
+  toks.push(T_CS!("\\relax"));
+  toks.push(T_CS!("\\endinput"));
+  unread(Tokens::new(toks));
+  Ok(())
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -61,6 +135,7 @@ pub(crate) fn load() -> Result<()> {
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
+      let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
       // Perl latex_constructs.pool.ltxml L795: `$pkg =~ s/\s+//g;` —
       // strip ALL whitespace (including internal) from each package name
       // so author typos like `\usepackage{graphic x}` resolve to graphicx.
@@ -83,10 +158,7 @@ pub(crate) fn load() -> Result<()> {
         // here in the constructor — NOT in require_package — so the dep-scan's
         // own programmatic require_package loads don't self-populate the set.
         assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
-        require_package(&package, RequireOptions {
-          options: options_list.clone(),
-          ..RequireOptions::default()
-        })?
+        require_package_with_rollback(&package, options_list.clone(), request.as_deref())?;
       }
       Ok(Vec::new())
     }
@@ -98,6 +170,7 @@ pub(crate) fn load() -> Result<()> {
   after_digest => sub[whatsit] {
     let options: Option<&Digested> = whatsit.get_arg(1);
     let packages: Option<&Digested> = whatsit.get_arg(2);
+    let request: Option<String> = whatsit.get_arg(3).map(|a| a.to_string());
     // Perl latex_constructs.pool.ltxml: `\RequirePackage` mirrors
     // `\usepackage`, with the same `$pkg =~ s/\s+//g;` whitespace strip.
     let package_list: Vec<String> = match packages {
@@ -114,10 +187,7 @@ pub(crate) fn load() -> Result<()> {
       // See \usepackage above — record the executed source-level require for
       // the dep-scan's executed-set gate.
       assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
-      require_package(&package, RequireOptions {
-        options: options_list.clone(),
-        ..RequireOptions::default()
-      })?;
+      require_package_with_rollback(&package, options_list.clone(), request.as_deref())?;
     }
     Ok(Vec::new())
   });
@@ -160,11 +230,66 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
   });
 
-  // anything useful?
-  //\DeclareRelease{v4.46}{2020-03-19}{glossaries-2020-03-19.sty}
-  def_macro_noop("\\DeclareRelease{}{}{}")?;
-  //\DeclareCurrentRelease{v4.49}{2021-11-01}
-  def_macro_noop("\\DeclareCurrentRelease{}{}")?;
+  // latex.ltx:19172-19280 — the package/class RELEASE ROLLBACK
+  // (`\RequirePackage{doc}[=v2]`, `[2021-06-01]`): `\@onefilewithoptions`
+  // records the request (`pkgcls@targetdate` = 1 for a label, YYYYMMDD for a
+  // date, 0 = none) and the file's `\DeclareRelease{label}{date}{file}` /
+  // `\DeclareCurrentRelease{label}{date}` lines pick the release, load it
+  // (`\pkgcls@use@this@release`: `\@@input file\relax\endinput`) and abort
+  // the rest of the current file. Both were no-ops here (Perl
+  // latex_constructs.pool:851 "anything useful?"), so nlctdoc.cls:122
+  // `\RequirePackage{doc}[=v2]` got doc v3 and dox.sty:162
+  // `\let\SpecialMacroIndex\SpecialUsageIndex` copied v3's 0-arg alias
+  // (doc.sty:1228) into a self-loop — every Talbot manual's `\DescribeMacro`
+  // ran away (testidx-manual TokenLimit; Perl hangs identically). Guard:
+  // `perfect_kernel_batch54::package_release_rollback_loads_the_named_release`.
+  DefPrimitive!("\\DeclareRelease{}{}{}", sub[(label, date, file)] {
+    let td = pkgcls_targetdate();
+    if td > 0 {
+      let label = label.to_string();
+      let date = date.to_string().trim().to_string();
+      let file = file.to_string().trim().to_string();
+      if date.is_empty() {
+        if td == 1 && pkgcls_targetlabel() == label {
+          pkgcls_use_this_release(&file)?;
+        }
+      } else if td > 1 {
+        if parse_version_date(&date) > td {
+          let candidate = pkgcls_candidate();
+          if candidate.is_empty() {
+            Warn!("unexpected", "rollback",
+              s!("Suspicious rollback date: no release before {date}; using the earliest known"));
+            pkgcls_use_this_release(&file)?;
+          } else {
+            pkgcls_use_this_release(&candidate)?;
+          }
+        } else {
+          assign_value("pkgcls@candidate", file, Some(Scope::Global));
+        }
+      } else if pkgcls_targetlabel() == label {
+        pkgcls_use_this_release(&file)?;
+      }
+    }
+  });
+  DefPrimitive!("\\DeclareCurrentRelease{}{}", sub[(label, date)] {
+    let td = pkgcls_targetdate();
+    if td > 0 {
+      if td > 1 {
+        if parse_version_date(date.to_string().trim()) > td {
+          let candidate = pkgcls_candidate();
+          if candidate.is_empty() {
+            Warn!("unexpected", "rollback",
+              s!("Suspicious rollback date: no release before {}", date.to_string().trim()));
+          } else {
+            pkgcls_use_this_release(&candidate)?;
+          }
+        }
+      } else if pkgcls_targetlabel() != label.to_string() {
+        Error!("unexpected", "rollback",
+          s!("Requested version '{}' is unknown", pkgcls_targetlabel()));
+      }
+    }
+  });
   // `\IncludeInRelease{date}{cs}{descr}…body…\EndIncludeInRelease`
   // (LaTeX kernel `latexrelease.sty`). The kernel decides at run-time
   // whether `date` matches the current release; if yes, body runs; if
@@ -286,9 +411,11 @@ pub(crate) fn load() -> Result<()> {
     }
   );
   // Perl: latex_constructs.pool.ltxml L900-903
-  DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[(name, option1, _option2, ext)] {
+  DefPrimitive!("\\@onefilewithoptions {} [][] {}", sub[(name, option1, option2, ext)] {
     let name_str = Expand!(name).to_string();
     let ext_str = Expand!(ext).to_string();
+    let request = option2.as_ref().map(|o| o.to_string());
+    pkgcls_set_request(request.as_deref());
     let opts_str = match option1 {
       Some(o) => Expand!(o).to_string(),
       None => String::new(),
@@ -302,6 +429,7 @@ pub(crate) fn load() -> Result<()> {
       handleoptions => true,
       options => options
     ));
+    pkgcls_clear_request();
   });
 
   def_macro_noop("\\CurrentOption")?;

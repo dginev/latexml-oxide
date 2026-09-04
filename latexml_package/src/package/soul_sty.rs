@@ -283,4 +283,7 @@ LoadDefinitions!({
   def_macro_noop("\\soulaccent{}")?;
   def_macro_noop("\\soulregister{}{}")?;
   Let!("\\soulfont", "\\soulregister");
+  // soul-ori.sty:824 `\SOUL@ulsetup` — the underline setup a document may
+  // call directly; `\textul` here is a constructor, so a no-op (soul-ori).
+  def_macro_noop("\\SOUL@ulsetup")?;
 });

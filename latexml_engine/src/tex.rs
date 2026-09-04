@@ -290,7 +290,11 @@ LoadDefinitions!({
   def_autoload("\\subequations", "amsmath")?;
   def_autoload("\\multline", "amsmath")?;
   def_autoload("\\curraddr", "ams_support")?;
-  def_autoload("\\subjclass", "ams_support")?;
+  // NOT `\subjclass`: it is amsart-only in LaTeX and packages probe it to
+  // detect an AMS class (projlib-author.sty:38 `\cs_if_exist:NT \subjclass
+  // {\endinput}`) — an ambient autoload stub answered "defined" and the
+  // probe aborted the package (homework: `\projlib_author_if_content_empty:nT`
+  // undefined). Guard: `perfect_kernel_batch54::autoload_stubs_do_not_satisfy_class_probes`.
 
   // LaTeX2HTML-era papers use the html.sty CSes without an explicit
   // `\usepackage{html}` because in the original LaTeX2HTML toolchain

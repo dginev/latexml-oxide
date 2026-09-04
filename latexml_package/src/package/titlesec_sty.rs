@@ -73,6 +73,11 @@ LoadDefinitions!({
     // \format@title@<sec>   (1 arg body)
     let body_target = s!("\\format@title@{sec}");
     let mut body: Vec<Token> = Vec::new();
+    // titlesec.sty:420 (`\ttl@straight@i`): `\gdef\thetitle{\csname the#1\endcsname}`
+    // when a title is typeset, so a label like mla.cls:196 `\thetitle.` works.
+    body.extend(mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\gdef\\thetitle{{\\csname the{sec}\\endcsname}}"
+    ))).unlist());
     body.push(T_CS!(&font_target));
     body.extend(label.unlist());
     body.push(T_CS!("\\hspace"));

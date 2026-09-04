@@ -12385,6 +12385,52 @@ See \subfigref{fig:a}{a}.
     assert!(xml.contains("Text."), "{xml}");
   }
 
+  /// An autoload stub must not satisfy a class-detection probe:
+  /// projlib-author.sty:38 `\cs_if_exist:NT \subjclass {\endinput}` (homework).
+  #[test]
+  fn autoload_stubs_do_not_satisfy_class_probes() {
+    let tex = r"\documentclass{article}\usepackage{expl3}\begin{document}
+\ExplSyntaxOn[\cs_if_exist:NTF\subjclass{AMS}{NOAMS}]\ExplSyntaxOff
+\end{document}";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[NOAMS]"), "{xml}");
+    let ams = r"\documentclass{amsart}\begin{document}\subjclass{03B05}Text.\end{document}";
+    let (stderr, _xml) = convert(ams, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// titlesec.sty:420 sets `\thetitle` per typeset title, so mla.cls:196's
+  /// `\titleformat{\section}{}{\thetitle.\enspace}…` label expands.
+  #[test]
+  fn titlesec_thetitle_in_format_label() {
+    let tex = r"\documentclass{article}\usepackage{titlesec}
+\titleformat{\section}{}{\thetitle.\enspace}{0pt}{}
+\begin{document}\section{Intro}Body.\end{document}";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Intro"), "{xml}");
+  }
+
+  /// latex.ltx:19172-19280 release rollback: `\RequirePackage{doc}[=v2]` loads
+  /// doc-2021-06-01.sty, so dox.sty's v2-era `\let\SpecialMacroIndex
+  /// \SpecialUsageIndex` is not a self-loop (testidx-manual and every
+  /// nlctdoc manual; Perl hangs identically).
+  #[test]
+  fn package_release_rollback_loads_the_named_release() {
+    let tex = r"\documentclass{article}
+\RequirePackage{doc}[=v2]
+\usepackage{dox}
+\begin{document}
+\makeatletter[\csname ver@doc.sty\endcsname]\makeatother
+\DescribeMacro\foo Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("2021") && xml.contains("Text."), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the
@@ -12423,5 +12469,54 @@ See \subfigref{fig:a}{a}.
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[]"), "{xml}");
+  }
+
+  /// Conditionals inside dimension/glue arguments (e.g. \hspace, \raisebox)
+  /// must cleanly expand remaining tokens (\else, \fi) when reparsed in a
+  /// temporary mouth so they do not leak unclosed if-frames into enclosing
+  /// macros like \parbox.
+  /// Witness: typog-example / parbox_dimen_conditional_double.tex
+  #[test]
+  fn dimension_conditional_in_parbox_does_not_leak_or_duplicate() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\newlength{\Lreg}\newlength{\U}\setlength{\U}{.001em}\def\a{0}\def\b{*}
+\makeatother
+\begin{document}
+\parbox[t]{0pt}{s\hspace{\ifx\a\b\Lreg\else\a\U\fi}e}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("class=\"ltx_parbox\"").count(),
+      1,
+      "Expected exactly one ltx_parbox: {xml}"
+    );
+    assert!(xml.contains("se"), "{xml}");
+
+    // True branch case (\else ... \fi tail in mouth)
+    let tex_true = r"\documentclass{article}
+\begin{document}
+\parbox[t]{0pt}{s\hspace{\iftrue 10pt\else 20pt\fi}e}
+\end{document}
+";
+    let (stderr_true, xml_true) = convert(tex_true, false);
+    assert_eq!(error_count(&stderr_true), 0, "{stderr_true}");
+    assert_eq!(
+      xml_true.matches("class=\"ltx_parbox\"").count(),
+      1,
+      "Expected exactly one ltx_parbox: {xml_true}"
+    );
+
+    // typog.sty \raisebox shape
+    let tex_raisebox = r"\documentclass{article}
+\begin{document}
+\raisebox{\iftrue 5pt\else 10pt\fi}{test}
+\end{document}
+";
+    let (stderr_raise, xml_raise) = convert(tex_raisebox, false);
+    assert_eq!(error_count(&stderr_raise), 0, "{stderr_raise}");
+    assert!(xml_raise.contains("test"), "{xml_raise}");
   }
 }

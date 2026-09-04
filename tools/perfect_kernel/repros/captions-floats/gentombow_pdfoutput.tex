@@ -1,0 +1,10 @@
+% Package X Error: gentombow "Option `pdfbox' is driver-dependent". CONDITION:
+% gentombow.sty:573 `\ifnum0\ifx\pdfpageattr\@undefined\else\the\pdfoutput\fi=0`
+% (with :571 \if1\pxgtmb@pdfbox@status) — the PDF-vs-DVI test. WHICH VALUE ANSWERS
+% DIFFERENTLY: \pdfoutput — OUR engine has \the\pdfoutput=0 (looks like DVI), so
+% gentombow enters its DVI branch (:576+), finds \Gin@driver/\pxgtmb@driver
+% undefined, and errors "add a driver option". pdflatex sets \pdfoutput=1 -> the
+% PDF branch -> no error. Verified: with \pdfoutput=1 the doc is 0 err.
+\pdfoutput=1  % <- remove this line to reproduce the error (our default \pdfoutput=0)
+\documentclass{article}\usepackage[pdfbox]{gentombow}
+\begin{document}Text.\end{document}

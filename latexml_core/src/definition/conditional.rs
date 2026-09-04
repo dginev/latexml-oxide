@@ -444,6 +444,20 @@ impl Conditional {
   }
 }
 
+/// Current depth of the active conditional stack (`if_stack`).
+pub fn if_stack_depth() -> usize {
+  with_value("if_stack", |v| match v {
+    Some(Stored::VecDequeStored(s)) => s.len(),
+    _ => 0,
+  })
+}
+
+/// Pop the top active conditional frame from `if_stack`.
+pub fn pop_if_frame() -> Result<()> {
+  shift_value("if_stack")?;
+  Ok(())
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

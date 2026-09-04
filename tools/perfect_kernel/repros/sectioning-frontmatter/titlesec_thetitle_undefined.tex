@@ -1,0 +1,18 @@
+% status: GREEN
+% witness: mlacls/mla-example
+% oracle: pdflatex 0 (titlesec.sty:420 \gdef\thetitle{\csname the#1\endcsname} inside
+%   \ttl@straight@i defines \thetitle=\thesection when a section is typeset).
+% class: RUST-ONLY. Our titlesec binding (latexml_package/src/package/titlesec_sty.rs)
+%   reimplements \titleformat (\lx@titleformat, :57) but OMITS titlesec.sty:420's
+%   \gdef\thetitle{\csname the<level>\endcsname} that fires on each section -> \thetitle
+%   undefined when the format label is expanded.
+% fix: in titlesec_sty.rs, when a section at level <name> is typeset, set
+%   \thetitle := \csname the<name>\endcsname (mirror titlesec.sty:420 / \ttl@straight@i).
+% assert (after fix): 0 err; the section number renders.
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[block]{\normalsize}{\thetitle.\enspace}{0pt}{}
+\begin{document}
+\section{Intro}
+Body.
+\end{document}
