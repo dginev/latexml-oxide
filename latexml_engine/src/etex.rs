@@ -538,13 +538,13 @@ LoadDefinitions!({
   // rather than derailing the conditional nesting.
   DefConditional!("\\iffontchar Token Number", sub[(_font, _code)] { true });
 
-  // \ifincsname — eTeX (TeX §506-507): true when expansion is happening
-  // inside a `\csname...\endcsname` construction. LaTeXML does not have
-  // a separate "inside csname" mode (it expands eagerly), so this is
-  // always false — matching Perl LaTeXML's same shortcut. Rust extra
-  // (Perl LaTeXML does not define this), placed near the other
-  // expandable-conditional primitives.
-  DefConditional!("\\ifincsname", { false });
+  // \ifincsname — eTeX: true while a `\csname…\endcsname` name is being
+  // scanned (`gullet::in_csname`). Perl LaTeXML leaves it constantly false,
+  // so utf8.def's `\ifincsname` guard never kept a non-ASCII character
+  // literal in a name (clefval `\TheValue{a§b}`: "`\textsection` should not
+  // appear between \csname and \endcsname"; pdflatex clean). Guard:
+  // `perfect_kernel_batch54::ifincsname_keeps_utf8_chars_literal_in_names`.
+  DefConditional!("\\ifincsname", { ::latexml_core::gullet::in_csname() });
 
   DefConditional!("\\unless Token", sub[(if_token)] {
     if let Some(Stored::Conditional(defn)) = lookup_definition_stored(&if_token)?

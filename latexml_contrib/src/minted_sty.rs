@@ -75,15 +75,20 @@ LoadDefinitions!({
     )?;
     // Beyond-Perl frozencache color path (see \begin{minted}); falls back to the
     // uncolored listings display on a cache miss / no `_minted/`.
-    let mut result = match crate::minted_frozencache::colored_display_body(&contents) {
+    let result = match crate::minted_frozencache::colored_display_body(&contents) {
       Some(body) => lst_process_display_with(None, &contents, body),
       None => lst_process_display(None, &contents),
     };
-    // lst_process_display ends with T_END to balance bgroup we opened above
-    // (mirrors `\begin{lstlisting}`'s convention).
-    if !matches!(result.last(), Some(t) if t.get_catcode() == Catcode::END) {
-      result.push(T_END!());
-    }
+    // `lst_process_display`'s trailer ends with the align-neutral
+    // `\lx@hidden@egroup` that balances the `bgroup()` above (the legacy
+    // caller contract, listings_sty.rs `lst_process_block_with`). Appending a
+    // `}` "when the result does not end with T_END" — the pre-54x convention —
+    // closed the CALLER's frame once the closer became `\lx@hidden@egroup`:
+    // a tcolorbox/minipage around `\inputminted` lost its box ("`}` Attempt
+    // to close a group that switched to mode internal_vertical due to
+    // `\minipage`"; 26-doc sweep-37 regression: algxpar-doc, tikzducks-doc,
+    // biblatex-oxref ×4, tcolorbox posters …). Guard:
+    // `perfect_kernel_batch54::inputminted_inside_a_minipage_keeps_its_box`.
     Ok(Tokens::new(result))
   });
   def_macro_noop("\\listoflistings")?;

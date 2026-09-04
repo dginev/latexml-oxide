@@ -1038,11 +1038,27 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
       hook?;
     }
-    // Always restore @currname/@currext and pop filename stack,
-    // even when no binding was found, to keep the stack balanced.
-    // Note: @popfilename uses \gdef to restore @currname/@currext from the stack,
-    // so it takes precedence. We also set them with def_macro as a fallback
-    // (matches Perl Package.pm lines 2635-2637).
+    // Perl-faithful: Package.pm:2637 —
+    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
+    // Pair with the dispatched push above. Using `\@popfilename` (dump's
+    // expl3-wrapped) when both push/pop are defined; else `\lx@popfilename`
+    // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
+    // `\@popfilename` definedness independently (state may have changed
+    // mid-load); here we re-check too rather than threading a flag.
+    let pop_use_expl = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
+      && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
+    if pop_use_expl {
+      digest(T_CS!("\\@popfilename"))?;
+    } else {
+      digest(T_CS!("\\lx@popfilename"))?;
+    }
+    // Restore @currname/@currext as a FALLBACK — AFTER the pop above, since
+    // latex.ltx's `\@popfilename` (and a package's patched copy, e.g.
+    // afterpackage.sty:20-28 firing `\<pkg>.sty-@dd` hooks) reads
+    // `\@currname` as the file being FINISHED and restores from its own
+    // stack. Restoring first made a nested load's hook look up the PARENT's
+    // name (ncclatex → nccsect: ncc's `\openrightorany` never defined).
+    // Guard: `perfect_kernel_batch54::afterpackage_hook_fires_for_a_nested_load`.
     if !prevname.is_empty() {
       def_macro(
         T_CS!("\\@currname"),
@@ -1058,20 +1074,6 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         Tokens!(ExplodeText!(prevext)),
         None,
       )?;
-    }
-    // Perl-faithful: Package.pm:2637 —
-    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
-    // Pair with the dispatched push above. Using `\@popfilename` (dump's
-    // expl3-wrapped) when both push/pop are defined; else `\lx@popfilename`
-    // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
-    // `\@popfilename` definedness independently (state may have changed
-    // mid-load); here we re-check too rather than threading a flag.
-    let pop_use_expl = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
-      && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
-    if pop_use_expl {
-      digest(T_CS!("\\@popfilename"))?;
-    } else {
-      digest(T_CS!("\\lx@popfilename"))?;
     }
     // Verify @currname was correctly restored, and force-fix if not
     let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {

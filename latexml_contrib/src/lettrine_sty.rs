@@ -6,4 +6,10 @@ LoadDefinitions!({
     "\\setcounter{DefaultLines}{2}\n\\setcounter{DefaultDepth}{0}\n\\renewcommand*{\\DefaultLoversize}{0}\n\\renewcommand*{\\DefaultLraise}{0}\n\\renewcommand*{\\DefaultLhang}{0}\n\\newlength\\DefaultFindent\n\\newlength\\DefaultNindent\n\\newlength\\DefaultSlope\n\\newlength\\DiscardVskip\n\\setlength{\\DefaultFindent}{0pt}\n\\setlength{\\DefaultNindent}{0.5em}\n\\setlength{\\DefaultSlope}{0pt}\n\\setlength{\\DiscardVskip}{0.2pt}"
   );
   DefMacro!("\\lettrine[]{}{}", "\\textbf{#2}#3");
+  // lettrine.sty:75/143-145 user-level defaults the binding omitted (ijsra
+  // redefines `\LettrineTextFont`; RUST-ONLY, Perl raw-loads lettrine).
+  RawTeX!(
+    r"\providecommand*{\LettrineTestString}{EFTZ}\providecommand*{\LettrineTextFont}{\scshape}
+\providecommand*{\LettrineSecondString}{x}\providecommand*{\LettrineFontHook}{}"
+  );
 });

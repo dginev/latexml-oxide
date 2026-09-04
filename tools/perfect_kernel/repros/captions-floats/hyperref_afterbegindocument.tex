@@ -1,0 +1,5 @@
+% SHARED: hyperref.sty:229-230 \@ifundefined{AfterBeginDocument}{\def
+% \AfterBeginDocument{\AtBeginDocument}}. Rust hyperref_sty.rs + Perl
+% hyperref.sty.ltxml both omit it. Witness iodhbwm (skdoc).
+\documentclass{article}\usepackage{hyperref}
+\begin{document}\AfterBeginDocument{\relax}x\end{document}

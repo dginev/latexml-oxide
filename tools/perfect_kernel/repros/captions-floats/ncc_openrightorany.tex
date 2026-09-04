@@ -1,0 +1,7 @@
+% ncc class (nccdefaults.sty:42-44 \newcommand\openrightorany{\clearpage},
+% defined inside \if@openright...\else...\fi). Both Perl+Rust raw-load ncc (no
+% binding); the class USES \openrightorany at nccdefaults.sty:57 (\NCC@startpart)
+% but the conditional DEF branch isn't reached in the raw-load -> undefined.
+% Witness: ncclatex/ncclatex. Classify RUST-ONLY vs SHARED by same-host Perl.
+\documentclass[11pt]{ncc}
+\begin{document}x\end{document}

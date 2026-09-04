@@ -12065,6 +12065,98 @@ $\ulcorner a\urcorner$
     }
   }
 
+  /// e-TeX `\ifincsname` is true inside `\csname…\endcsname`, so utf8.def's
+  /// guard keeps `§` literal in a name (clefval `\TheValue{a§b}`; Perl's
+  /// constant-false shortcut expanded it to `\textsection` and errored).
+  #[test]
+  fn ifincsname_keeps_utf8_chars_literal_in_names() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\expandafter\def\csname V@a§b\endcsname{VALUE}%
+[\csname V@a§b\endcsname][\ifincsname yes\else no\fi][§]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[VALUE][no][§]"), "{xml}");
+    let clef = r"\documentclass{article}
+\usepackage{clefval}
+\begin{document}
+\TheKey{a§b}{value-here}
+\TheValue{a§b}
+\end{document}
+";
+    let (stderr, xml) = convert(clef, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("value-here"), "{xml}");
+  }
+
+  /// Long-tail singletons, batch 2: article.cls:585 `\@openbib@code`,
+  /// lettrine.sty:143 `\LettrineTextFont`, hyperref.sty:229
+  /// `\AfterBeginDocument` (mciteplus_doc, ijsra, iodhbwm).
+  #[test]
+  fn long_tail_bib_lettrine_hyperref_singletons() {
+    for (tex, needle) in [
+      (
+        r"\documentclass{article}\begin{document}\makeatletter\@openbib@code Text.\end{document}",
+        "Text.",
+      ),
+      (
+        r"\documentclass{article}\usepackage{lettrine}\renewcommand*{\LettrineTextFont}{\itshape}\begin{document}\lettrine{A}{bc} def.\end{document}",
+        "def.",
+      ),
+      (
+        r"\documentclass{article}\usepackage{hyperref}\AfterBeginDocument{\def\x{Hooked.}}\begin{document}\x\end{document}",
+        "Hooked.",
+      ),
+    ] {
+      let (stderr, xml) = convert(tex, false);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains(needle), "{xml}");
+    }
+  }
+
+  /// afterpackage.sty's patched `\@popfilename` reads `\@currname` as the
+  /// package being finished; a NESTED load (ncc.cls → ncclatex → nccsect) must
+  /// still fire the `\AfterPackage{nccsect}` hook that defines
+  /// `\openrightorany` (nccdefaults.sty:41; ncclatex manual).
+  #[test]
+  fn afterpackage_hook_fires_for_a_nested_load() {
+    let tex = r"\documentclass[11pt]{ncc}
+\begin{document}
+\makeatletter\ifx\openrightorany\@undefined UNDEF\else DEF\fi\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("DEF") && !xml.contains("UNDEF"), "{xml}");
+  }
+
+  /// `\inputminted` inside a minipage/tcolorbox must not close the box: the
+  /// listing's trailer already balances its own group (sweep-37 regression
+  /// from 54x: algxpar-doc, tikzducks-doc, biblatex-oxref, tcolorbox posters).
+  #[test]
+  fn inputminted_inside_a_minipage_keeps_its_box() {
+    let tex = r"\documentclass{article}
+\usepackage{minted}
+\begin{document}
+\begin{figure}
+\begin{minipage}{5cm}
+\inputminted{tex}{no-such-file-for-this-guard.tex}
+Still inside.
+\end{minipage}
+\end{figure}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Still inside.") && xml.contains("After."),
+      "{xml}"
+    );
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

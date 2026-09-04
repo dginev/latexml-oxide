@@ -1,0 +1,5 @@
+% RUST-ONLY: lettrine_sty.rs binding reimplements \lettrine (lettrine.sty:201)
+% but omits \LettrineTextFont (lettrine.sty:143 \newcommand*{\LettrineTextFont}
+% {\scshape}). Perl has no lettrine.sty.ltxml -> raw-loads -> defines it. Witness ijsra.
+\documentclass{article}\usepackage{lettrine}
+\begin{document}\LettrineTextFont x\end{document}

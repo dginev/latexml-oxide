@@ -137,4 +137,8 @@ LoadDefinitions!( {
   DefPrimitive!("\\huge",         None, font => {size => 20.74 });
   DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
 
+  // article.cls `\let\@openbib@code\@empty` (article.cls:585) — the default
+  // the `openbib` option overrides; a copied `thebibliography` body reads it
+  // (mciteplus_doc; Perl's class binding lacks the default too).
+  RawTeX!(r"\let\@openbib@code\@empty");
 });

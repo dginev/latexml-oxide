@@ -1445,6 +1445,9 @@ LoadDefinitions!({
   // Witness 2406.01269.
   Let!("\\ltx@label", "\\label");
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // hyperref.sty:229-230 — the `\AfterBeginDocument` fallback when no
+  // scrlfile/KOMA defined it (iodhbwm under skdoc).
+  RawTeX!(r"\@ifundefined{AfterBeginDocument}{\def\AfterBeginDocument{\AtBeginDocument}}{}");
 });
 
 /// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current

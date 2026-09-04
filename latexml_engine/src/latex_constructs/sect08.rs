@@ -980,7 +980,13 @@ pub(crate) fn load() -> Result<()> {
         if cp <= 0x10FFFF {
           if let Some(ch) = char::from_u32(cp) {
             AssignCatcode!(ch, Catcode::ACTIVE);
-            DefMacro!(T_ACTIVE!(ch), None, expansion);
+            // utf8.def:55-90 (`\UTFviii@two@octets` …): inside a `\csname`
+            // the character stays LITERAL in the name (`\ifincsname`), else
+            // it is its LICR expansion.
+            let mut body = vec![T_CS!("\\ifincsname"), T_OTHER!(ch.to_string()), T_CS!("\\else")];
+            body.extend(expansion.unlist());
+            body.push(T_CS!("\\fi"));
+            DefMacro!(T_ACTIVE!(ch), None, Tokens::new(body));
           }
         } else {
           Error!("unexpected", hex_str,

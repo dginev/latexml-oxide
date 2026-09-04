@@ -2080,7 +2080,23 @@ pub fn read_cs_name() -> Result<Token> { read_cs_name_inner(false) }
 /// without emitting errors (unlike \csname which DOES emit errors).
 pub fn read_cs_name_quiet() -> Result<Token> { read_cs_name_inner(true) }
 
+/// e-TeX `\ifincsname` (etex.ch "Implement \ifincsname"): depth of the
+/// `\csname…\endcsname` scans in progress. utf8.def:55-90's octet handlers
+/// test it to keep a non-ASCII character LITERAL in a name instead of
+/// expanding to its LICR (clefval's `\csname V@a§b\endcsname`). Nest-safe
+/// via `CsnameScope`'s `Drop`, so an early error return still unwinds it.
+#[thread_local]
+static CSNAME_DEPTH: Cell<u32> = Cell::new(0);
+struct CsnameScope;
+impl Drop for CsnameScope {
+  fn drop(&mut self) { CSNAME_DEPTH.set(CSNAME_DEPTH.get().saturating_sub(1)); }
+}
+/// True while a `\csname…\endcsname` name is being scanned.
+pub fn in_csname() -> bool { CSNAME_DEPTH.get() > 0 }
+
 fn read_cs_name_inner(quiet: bool) -> Result<Token> {
+  CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);
+  let _csname_scope = CsnameScope;
   // TeX does NOT store the csname with the leading `\`, BUT stores active chars with a flag
   // However, so long as the Mouth's CS and \string properly respect \escapechar, all's well!
 

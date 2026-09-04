@@ -1,0 +1,20 @@
+% witness: clefval/example-utf8.tex (TL2025 doc). first_errors36: first error =
+%   `\textsection should not appear between \csname and \endcsname (partial cs so far: "\V@éçà@")`.
+%   clefval.sty:36 \TheValue{#1} -> \expandafter\@setTheValue\csname V@#1\endcsname{#1}; the key
+%   `éçà@§` puts `§` (U+00A7) inside \csname, and `§` expands to \textsection (unexpandable).
+% oracle:  pdflatex rc=0, 0 errors — real LaTeX keeps `§` LITERAL in the cs name (verified: builds
+%   the cs \V@a§b; utf8.def:55-90 \UTFviii@two@octets branches on \ifincsname -> \detokenize{bytes}).
+% engines: rust=2 (Error:unexpected:\textsection + Extra \endcsname, b55g). Perl SAME (1 error,
+%   `\textsection should not appear…`) -> SHARED. pdflatex clean -> surpass-Perl in scope.
+% class:   SHARED (Perl-origin: both stub \ifincsname=false); pdflatex-clean => fixable.
+% expect:  0 errors AND the value text "value-here" in the XML (\TheValue{a§b} resolves).
+% status:  RED (rust=2, perl=1)
+% mechanism: \ifincsname is hardcoded false (latexml_engine/src/etex.rs:547) AND the default
+%   (format-time) utf8 active char `§` = macro:->\textsection has NO \ifincsname guard, so inside
+%   \csname it always yields the LICR \textsection instead of the raw name bytes.
+\documentclass{article}
+\usepackage{clefval}
+\begin{document}
+\TheKey{a§b}{value-here}
+\TheValue{a§b}
+\end{document}

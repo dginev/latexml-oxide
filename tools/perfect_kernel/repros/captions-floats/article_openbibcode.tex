@@ -1,0 +1,6 @@
+% SHARED: article.cls:585 \let\@openbib@code\@empty (default); the `openbib`
+% option redefines it (article.cls:103). Rust article_cls.rs:43 + Perl
+% article.cls.ltxml both handle the OPTION but omit the default \@openbib@code
+% macro, so a bibliography referencing it (mciteplus_doc.tex:433 custom bib) fails.
+\documentclass{article}
+\begin{document}\makeatletter\@openbib@code\makeatother\end{document}
