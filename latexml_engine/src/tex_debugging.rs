@@ -1,8 +1,12 @@
 //! TeX Debugging
 //!
 //! Core TeX Implementation for LaTeXML
-static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> =
-  Lazy::new(|| Regex::new("^\\\\(?:(?:un)?expanded|detokenize)$").unwrap());
+static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^\\(?:(?:un)?expanded|detokenize|(?:lx@)?directlua|(?:lx@)?luaescapestring|primitive)$",
+  )
+  .unwrap()
+});
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
@@ -104,8 +108,16 @@ LoadDefinitions!({
         }
       }
       let definition : Stored = match definition {
-        Stored::Primitive(primitive) =>
-          Stored::Token(primitive.get_cs_or_alias().into_owned()),
+        Stored::Primitive(primitive) => {
+          let cs = primitive.get_cs_or_alias();
+          if cs.with_str(|s| s == "\\lx@directlua") || token.to_string() == "\\directlua" {
+            Stored::Token(T_CS!("\\directlua"))
+          } else if cs.with_str(|s| s == "\\lx@luaescapestring") || token.to_string() == "\\luaescapestring" {
+            Stored::Token(T_CS!("\\luaescapestring"))
+          } else {
+            Stored::Token(cs.into_owned())
+          }
+        },
         Stored::Constructor(constructor) =>
           Stored::Token(constructor.get_cs_or_alias().into_owned()),
         Stored::Conditional(cond) =>
@@ -123,11 +135,16 @@ LoadDefinitions!({
       match definition {
         Stored::Token(t) => {
           let cc = t.get_catcode();
-          let text = if cc == Catcode::SPACE {
+          let mut text = if cc == Catcode::SPACE {
             String::from(" ")
           } else {
             t.to_string()
           };
+          if text == "\\lx@directlua" {
+            text = String::from("\\directlua");
+          } else if text == "\\lx@luaescapestring" {
+            text = String::from("\\luaescapestring");
+          }
           meaning = String::from(cc.meaning());
           if !meaning.is_empty() {
             meaning.push(' ');
@@ -167,9 +184,20 @@ LoadDefinitions!({
           // short-circuit some troublesome discrepancies with TeX, which end up macros on our end,
           // but \meaning expects as primitives in the CTAN ecosystem.
           let cs = expandable.get_cs_or_alias().to_string();
+          let cs_token = token.to_string();
           // These exceptions could be extended further, as we add more .sty/.cls support
-          if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs) {
-            return Ok(Tokens::new(Explode!(cs)));
+          if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs)
+            || EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs_token)
+          {
+            let mut canonical = if EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(&cs_token) {
+              cs_token
+            } else {
+              cs
+            };
+            if let Some(stripped) = canonical.strip_prefix("\\lx@") {
+              canonical = format!("\\{stripped}");
+            }
+            return Ok(Tokens::new(ExplodeChars!(canonical)));
           }
           let params = match expandable.get_parameters() {
             Some(ps) => ps.get_parameters(),

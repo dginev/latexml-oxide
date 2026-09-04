@@ -2980,7 +2980,7 @@ pub fn read_dimension() -> Result<Dimension> {
 /// (`\wd0`, `\dimen`, glue) yield `(value_sp, 65536)` — the `floor(fix·v/65536)`
 /// path of tex.web §8983, exact in integer arithmetic.
 pub fn read_unit() -> Result<Option<(i64, i64)>> {
-  let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
+  let unit_opt = if let Some(u) = read_keyword(&["ex", "em", "zw", "zh"])? {
     skip_one_space(true)?;
     Some(convert_unit_ratio(&u))
   } else if let Some(u) = read_internal_integer()? {

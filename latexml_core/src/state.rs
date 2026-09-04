@@ -2254,11 +2254,23 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
   // i.e. "let s = c.to_string();"
   let s = arena::pin_char(c);
   match state!().catcode.get(&s) {
-    None => None,
+    None => {
+      if c > '\x7f' && c.is_alphabetic() {
+        Some(Catcode::LETTER)
+      } else {
+        None
+      }
+    },
     Some(cvec) => match cvec.front() {
       Some(Stored::Catcode(cc)) => Some(*cc),
       Some(_) => None, // non-catcode value in catcode table — treat as undefined
-      _ => None,
+      _ => {
+        if c > '\x7f' && c.is_alphabetic() {
+          Some(Catcode::LETTER)
+        } else {
+          None
+        }
+      },
     },
   }
 }
@@ -3115,7 +3127,7 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
   let font_metric =
     |getter: fn(&Font) -> i64| -> f64 { lookup_font().map(|f| getter(&f) as f64).unwrap_or(0.0) };
   match unit.as_str() {
-    "em" => font_metric(|f| f.get_em_width()),
+    "em" | "zw" | "zh" => font_metric(|f| f.get_em_width()),
     "ex" => font_metric(|f| f.get_ex_height()),
     "mu" => font_metric(|f| f.get_mu_width()),
     u => match UNITS.get(u) {
@@ -3148,7 +3160,7 @@ pub fn convert_unit_ratio(unit_arg: &str) -> (i64, i64) {
   // UNITY == 65536 sp per pt; font-relative and `sp` units convert via the
   // `floor(fix·v/UNITY)` path (tex.web §8983 nx_plus_y/xn_over_d).
   match unit.as_str() {
-    "em" => (font_metric(|f| f.get_em_width()), UNITY),
+    "em" | "zw" | "zh" => (font_metric(|f| f.get_em_width()), UNITY),
     "ex" => (font_metric(|f| f.get_ex_height()), UNITY),
     "mu" => (font_metric(|f| f.get_mu_width()), UNITY),
     "pt" => (1, 1),

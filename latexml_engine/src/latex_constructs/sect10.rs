@@ -249,9 +249,14 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\@tabular@column@after")?;
 
   // The Core alignment support is in LaTeXML::Core::Alignment and in TeX.ltxml
-  DefMacro!("\\tabular[]{}",
+  // In LaTeX kernel (latex.ltx:16541), \tabular is a parameterless macro that delegates
+  // to \@tabular. When expl3 or packages patch \tabular via \tl_put_left:Nn \tabular
+  // (\exp_after\def\exp_after\tabular...), expanding \tabular must NOT trigger argument
+  // scanning or alignment mode switches.
+  DefMacro!("\\@tabular[]{}",
     r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before",
     locked => true);
+  DefMacro!("\\tabular", "\\@tabular");
   DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular",
     locked => true);
   DefPrimitive!("\\@end@tabular", {

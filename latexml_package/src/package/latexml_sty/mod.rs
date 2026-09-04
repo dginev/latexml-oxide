@@ -1,3 +1,5 @@
+use latexml_core::parameter::{Parameter, Parameters};
+
 use crate::prelude::*;
 
 mod declare;
@@ -187,9 +189,27 @@ LoadDefinitions!({
     DefPrimitive!("\\initcatcodetable Number", sub[(_n)] {});
     DefPrimitive!("\\savecatcodetable Number", sub[(_n)] {});
     DefPrimitive!("\\catcodetable Number", sub[(_n)] {});
+    DefMacro!("\\luafunction Number", sub[(_n)] {
+      Ok(Tokens!())
+    });
+    DefMacro!("\\luafunctioncall Number", sub[(_n)] {
+      Ok(Tokens!())
+    });
     DefPrimitive!("\\luadef SkipSpaces Token SkipSpaces SkipMatch:= Number", sub[(cs, _n)] {
       clear_prefixes();
-      let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+      let cs_str = cs.to_string();
+      if cs_str.contains("time@measure") {
+        // Defined as 1-arg noop in RawTeX
+      } else if cs_str.contains("getparam@one") {
+        let _ = def_macro(
+          cs,
+          Some(Parameters::new(vec![Parameter::new("Plain", "{}", None)?])),
+          ExpansionBody::Tokens(Tokens!(T_CS!("\\z@"))),
+          None,
+        );
+      } else {
+        let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);
+      }
     });
     // LuaTeX manual §8: the PDF backend primitives that accompany
     // `\directlua` — `\pdfvariable <name>` (a token-list/int variable:
@@ -320,6 +340,39 @@ LoadDefinitions!({
 \chardef\catcodetable@latex=3
 \chardef\catcodetable@atletter=4
 \e@alloc@ccodetable@count=4
+\let\CatcodeTableLaTeX\catcodetable@latex
+\let\CatcodeTableLaTeXAtLetter\catcodetable@atletter
+\chardef\CatcodeTableExpl=5
+\let\catcodetable@expl\CatcodeTableExpl
+\def\ltj@@start@time@measure#1{}
+\def\ltj@@stop@time@measure#1{}
+\newdimen\ltj@dimen@zw \ltj@dimen@zw=10pt
+\newdimen\ltj@dimen@zh \ltj@dimen@zh=10pt
+\def\zw{\ltj@dimen@zw}
+\def\zh{\ltj@dimen@zh}
+\def\ltj@zw{\ltj@dimen@zw}
+\def\ltj@zh{\ltj@dimen@zh}
+\def\ltjgetparameter#1{\z@}
+\def\ltjsetparameter#1{}
+\AddToHook{package/luatexja-core/after}{%
+  \ltj@dimen@zw=10pt
+  \ltj@dimen@zh=10pt
+  \def\zw{\ltj@dimen@zw}%
+  \def\zh{\ltj@dimen@zh}%
+  \def\ltj@zw{\ltj@dimen@zw}%
+  \def\ltj@zh{\ltj@dimen@zh}%
+  \def\ltjgetparameter##1{\z@}%
+  \def\ltjsetparameter##1{}%
+}
+\NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}
+\NewDocumentCommand\LuaULSetUnderline{ m }{}
+\NewDocumentCommand\LuaULResetUnderline{ s }{}
+\AddToHook{package/lua-ul/after}{%
+  \NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}%
+  \NewDocumentCommand\LuaULSetUnderline{ m }{}%
+  \NewDocumentCommand\LuaULResetUnderline{ s }{}%
+  \RenewDocumentCommand\newunderlinetype{ E{*}{{}} m O{} +m }{\protected\def#2{}}%
+}
 \ifx\e@alloc@luafunction@count\@undefined
   \countdef\e@alloc@luafunction@count=260
   \e@alloc@luafunction@count=\z@

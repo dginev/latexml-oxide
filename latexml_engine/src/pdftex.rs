@@ -126,8 +126,11 @@ LoadDefinitions!({
   });
   // \luaescapestring <general text> — escape the text for inclusion inside a
   // Lua string literal (LuaTeX manual: precedes \ " ' and newline with \).
+  // XGeneralText already performed the partial expansion while scanning. A second
+  // Expand! here over-expanded unexpanded/robust macros inside arguments (e.g.
+  // luwa-ul's \unexpanded\expandafter{\underLineKK@test@contents}).
   DefMacro!("\\lx@luaescapestring XGeneralText", sub[(body)] {
-    let s = Expand!(body).to_string();
+    let s = writable_tokens(&body);
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
       match c {
@@ -139,7 +142,12 @@ LoadDefinitions!({
         _ => out.push(c),
       }
     }
-    Tokens!(Explode!(out))
+    Tokens!(ExplodeChars!(out))
+  });
+  // \primitive <cs> — pdfTeX 1.40+ / LuaTeX primitive to access the original
+  // meaning of a primitive. In latexml-oxide it unreads/delegates to the token.
+  DefMacro!("\\primitive Token", sub[(token)] {
+    Ok(Tokens::new(vec![token]))
   });
 
   // \Ucharcat <charcode> <catcode> — XeTeX/LuaTeX Unicode-engine primitive that
