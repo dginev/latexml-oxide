@@ -51,9 +51,8 @@ LoadDefinitions!({
     }
   });
 
-  // fancybox.sty:647 `\VerbatimFootnotes` swaps `\@footnotetext` for an
-  // `\insert\footins` variant (:649-668). `\footnote` here is a constructor
-  // that never calls `\@footnotetext`, so the raw swap would be inert at best
-  // and a stray `\insert` at worst — keep it a no-op.
-  def_macro_noop("\\VerbatimFootnotes")?;
+  // OXIDIZED_DESIGN #192: the raw package's swap cannot displace the locked
+  // LaTeXML footnote constructors. Route the package-scoped command to the
+  // kernel's live-body implementation.
+  DefMacro!("\\VerbatimFootnotes", "\\lx@VerbatimFootnotes");
 });

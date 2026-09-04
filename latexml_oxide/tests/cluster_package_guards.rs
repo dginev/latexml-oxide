@@ -12635,7 +12635,7 @@ $\begin{pNiceMatrix}[name=ma-matrice]
   #[test]
   fn nicematrix_shortvrb_verbatim_footnotes() {
     let tex = r"\documentclass{article}
-\usepackage{nicematrix,shortvrb}
+\usepackage{nicematrix,shortvrb,fancyvrb}
 \MakeShortVerb{\|}
 \VerbatimFootnotes
 \begin{document}
@@ -12647,6 +12647,42 @@ X\footnote{Footnote with |\multicolumn| and a brace |}| here.}
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains(r#"<note mark="1" role="footnote""#), "{xml}");
     assert!(xml.contains(r">\multicolumn<"), "{xml}");
+  }
+
+  /// P53: nicematrix AutoNiceMatrix, tabularnote, braces, and CodeBefore overlays.
+  #[test]
+  fn nicematrix_autonicematrix_delimiters_and_overlays() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix,tikz}
+\begin{document}
+\[ C = \pAutoNiceMatrix{2-2}{C_{\arabic{iRow},\arabic{jCol}}} \]
+\begin{NiceTabular}{cc}
+A\tabularnote{A note} & B \\
+\end{NiceTabular}
+$\begin{NiceArray}{cc}[first-col]
+\Hbrace{2}{top} \\
+\Vbrace{2}{left} & 1 & 2 \\
+& \Hspace{5mm} & \Vdotsfor{1}
+\end{NiceArray}$
+\[\begin{NiceArray}{cc}
+\CodeBefore [create-cell-nodes]
+  \chessboardcolors{red!15}{blue!15}
+  \SubMatrix({1-1}{2-2})
+  \tikz \draw (1-1) -- (2-2) ;
+\Body
+1 & 2 \\
+3 & 4
+\end{NiceArray}\]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("C_{1,1}"), "{xml}");
+    assert!(xml.contains("C_{2,2}"), "{xml}");
+    assert!(xml.contains(r#"role="footnote""#), "{xml}");
+    assert!(xml.contains("A note"), "{xml}");
+    assert!(xml.contains("top"), "{xml}");
+    assert!(xml.contains("left"), "{xml}");
   }
 }
 

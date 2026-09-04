@@ -5,6 +5,11 @@ LoadDefinitions!({
   // Perl: fancyvrb.sty.ltxml
   InputDefinitions!("fancyvrb", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
+  // OXIDIZED_DESIGN #192: the raw package's swap cannot displace the locked
+  // LaTeXML footnote constructors. Keep the public command package-scoped,
+  // but route it to the kernel's live-body implementation.
+  DefMacro!("\\VerbatimFootnotes", "\\lx@VerbatimFootnotes");
+
   // Perl fancyvrb.sty.ltxml L22-25: hack internals to add css class ltx_verbatim
   // to every typeset source line (fancyvrb applies \FancyVerbFormatLine per line
   // for all Verbatim variants). NOTE: a package that redefines

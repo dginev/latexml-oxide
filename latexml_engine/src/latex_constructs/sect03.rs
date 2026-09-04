@@ -264,7 +264,12 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@current@footnote", "\\lx@note@standard");
   DefMacro!("\\lx@current@footnotetext", "\\lx@notetext@standard");
 
-  DefMacro!("\\VerbatimFootnotes",
+  // OXIDIZED_DESIGN #192: fancyvrb/fancybox expose the public command; the
+  // kernel owns only the locked activation helper so the package surface does
+  // not leak into documents that loaded neither package.
+  Let!("\\lx@temp", "\\relax");
+
+  DefMacro!("\\lx@VerbatimFootnotes",
     "\\let\\lx@current@footnote\\lx@vfootnote\\let\\lx@current@footnotetext\\lx@vfootnotetext",
     locked => true);
 
