@@ -2,14 +2,11 @@
 % oracle:  pdflatex 0 errors (2 runs)
 % engines: rust=1 perl=blocked(pgfsys) (2026-09-03)
 % expect:  0 errors; the pNiceMatrix array with "5" present
-% status:  RED
+% status:  GREEN
 % mechanism: a STANDALONE \tikz[remember picture,overlay]\draw (name-i-j)... after
-%   a \begin{pNiceMatrix}[name=..] references the matrix cell node by name. Outside
-%   the env, so the binding cannot grab it. The binding never materialises the pgf
-%   cell nodes, so raw pgf shape lookup raises "No shape named `name-2-2'". Fix (not
-%   nicematrix-local): the pgf/tikz binding shape-anchor lookup should tolerate an
-%   undefined named shape (warn->origin) since LaTeXML cannot position pgf nodes.
-%   Site: pgfsys_latexml_def.rs / pgf_sty.rs shape lookup.
+%   a \begin{pNiceMatrix}[name=..] references the matrix cell node by name. Fixed:
+%   engine records LAST_ALIGNMENT_ROWS/LAST_ALIGNMENT_COLS on alignment end, and
+%   nicematrix materializes PGF cell and matrix coordinate nodes at environment end.
 \documentclass{article}
 \usepackage{nicematrix,tikz}
 \begin{document}

@@ -12556,4 +12556,24 @@ See \subfigref{fig:a}{a}.
     assert_eq!(error_count(&stderr_raise), 0, "{stderr_raise}");
     assert!(xml_raise.contains("test"), "{xml_raise}");
   }
+
+  /// nicematrix environments with `name=...` or `create-cell-nodes` materialize
+  /// coordinate nodes for PGF/TikZ overlays (`ma-matrice-2-2`), avoiding
+  /// `Package pgf Error: No shape named '...' is known` (witness nicematrix-french:5986).
+  #[test]
+  fn nicematrix_cell_nodes_materialized_for_pgf_overlay() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix,tikz}
+\begin{document}
+$\begin{pNiceMatrix}[name=ma-matrice]
+1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9
+\end{pNiceMatrix}$
+\tikz[remember picture,overlay] \draw (ma-matrice-2-2) circle (2mm) ;
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:path"), "Expected overlay svg path: {xml}");
+    assert!(xml.contains("matrix@(Array"), "Expected pNiceMatrix math: {xml}");
+  }
 }

@@ -25,6 +25,7 @@ thread_local! {
   /// coordinate origin by one and marks the label line `thead`.
   static NICE_FIRST_ROW: StdCell<bool> = const { StdCell::new(false) };
   static NICE_FIRST_COL: StdCell<bool> = const { StdCell::new(false) };
+  static NICE_NAME: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 /// Parse an `i-j` cell coordinate ("row-col").
@@ -93,6 +94,18 @@ fn nice_opts_has(opts: &str, flag: &str) -> bool {
     let key = tok.split('=').next().unwrap_or("").trim();
     key == flag
   })
+}
+
+/// Extract the value for a `key=value` option in a comma-separated key list.
+fn nice_opts_get(opts: &str, key: &str) -> Option<String> {
+  for tok in opts.split(',') {
+    let mut parts = tok.splitn(2, '=');
+    let k = parts.next().unwrap_or("").trim();
+    if k == key {
+      return parts.next().map(|v| v.trim().to_string());
+    }
+  }
+  None
 }
 
 /// Inverse of [`nice_encode`].
@@ -268,7 +281,7 @@ LoadDefinitions!({
     let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")])
   }, locked => true);
-  DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
+  DefMacro!("\\endNiceTabular", "\\endtabular\\lx@nicematrix@materializenodes", locked => true);
   // NiceTabular* {width}[opts]{colspec}[opts] / NiceTabularX {width}[opts]
   // {colspec}[opts] (nicematrix.sty:3788/3801 `{ m O{} m !O{} }`): the SAME
   // reduction; `NiceTabularX` is a tabularx (its `X` columns need the
@@ -286,7 +299,7 @@ LoadDefinitions!({
     );
     nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
   });
-  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*");
+  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*\\lx@nicematrix@materializenodes");
   DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
     starter.extend(width.revert());
@@ -294,7 +307,7 @@ LoadDefinitions!({
     let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), starter)
   }, locked => true);
-  DefMacro!("\\endNiceTabularX", "\\endtabularx", locked => true);
+  DefMacro!("\\endNiceTabularX", "\\endtabularx\\lx@nicematrix@materializenodes", locked => true);
 
   //======================================================================
   // #6569: the math Nice* MATRIX family renders as real bracketed math arrays,
@@ -326,6 +339,14 @@ LoadDefinitions!({
     NICE_RECTS.with(|c| c.borrow_mut().clear());
     NICE_FIRST_ROW.with(|c| c.set(nice_opts_has(&opts, "first-row")));
     NICE_FIRST_COL.with(|c| c.set(nice_opts_has(&opts, "first-col")));
+    let name = nice_opts_get(&opts, "name").or_else(|| {
+      if nice_opts_has(&opts, "create-cell-nodes") {
+        Some("NiceMatrix".to_string())
+      } else {
+        None
+      }
+    });
+    NICE_NAME.with(|c| *c.borrow_mut() = name);
     Ok(Vec::new())
   });
 
@@ -394,6 +415,50 @@ LoadDefinitions!({
   DefMacro!("\\lx@nice@showcellnames", "", locked => true);
   DefMacro!("\\lx@nice@tikzeverycell[]{}", "", locked => true);
   DefMacro!("\\lx@nice@rowlistcolors[]{}{}", "", locked => true);
+
+  RawTeX!(concat!(
+    r"\def\lx@nice@fakenode#1{",
+    r"\expandafter\gdef\csname pgf@sh@ns@#1\endcsname{coordinate}",
+    r"\expandafter\gdef\csname pgf@sh@np@#1\endcsname{\def\centerpoint{\pgfpointorigin}}",
+    r"\expandafter\gdef\csname pgf@sh@nt@#1\endcsname{{1}{0}{0}{1}{0pt}{0pt}}",
+    r"\expandafter\global\expandafter\let\csname pgf@sh@ma@#1\endcsname\empty",
+    r"\expandafter\gdef\csname pgf@sh@pi@#1\endcsname{1}}",
+  ));
+
+  DefPrimitive!("\\lx@nicematrix@materializenodes", {
+    let name_opt = NICE_NAME.with(|c| c.borrow_mut().take());
+    if let Some(name) = name_opt {
+      let n_rows = lookup_int("LAST_ALIGNMENT_ROWS");
+      let n_cols = lookup_int("LAST_ALIGNMENT_COLS");
+      let mut names = Vec::new();
+      names.push(name.clone());
+      for i in 1..=n_rows {
+        for j in 1..=n_cols {
+          names.push(format!("{name}-{i}-{j}"));
+          names.push(format!("{i}-{j}"));
+        }
+        names.push(format!("{name}-{i}-last"));
+        names.push(format!("{name}-row-{i}"));
+        names.push(format!("{i}-last"));
+      }
+      for j in 1..=n_cols {
+        names.push(format!("{name}-last-{j}"));
+        names.push(format!("{name}-col-{j}"));
+        names.push(format!("last-{j}"));
+      }
+      names.push(format!("{name}-last-last"));
+      names.push("last-last".to_string());
+      let mut cmd = String::new();
+      for n in names {
+        cmd.push_str("\\lx@nice@fakenode{");
+        cmd.push_str(&n);
+        cmd.push('}');
+      }
+      let t = mouth::tokenize_internal(TeXString::assembled(cmd));
+      digest(t)?;
+    }
+    Ok(Vec::new())
+  });
 
   // Paint the recorded \CodeBefore rectangles onto the just-built XMArray, and mark
   // first-row/first-col label cells thead. A no-output DefConstructor (like
@@ -588,27 +653,27 @@ LoadDefinitions!({
   DefMacro!("\\NiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
     locked => true);
-  DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\pNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
     locked => true);
-  DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\bNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
     locked => true);
-  DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\BNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
     locked => true);
-  DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\vNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
     locked => true);
-  DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\VNiceMatrix OptionalBalanced",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
     locked => true);
-  DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
 
   // The ARRAY family — REAL reductions (policy 2026-08-31: content must
   // survive; the former placeholders DISCARDED every body). First principles
@@ -686,7 +751,7 @@ LoadDefinitions!({
     Tokens::new(out)
   }, locked => true);
   DefMacro!("\\endNiceArrayWithDelims",
-    "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@applycolors", locked => true);
+    "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
   DefMacro!("\\pNiceArray[]{}[]", "\\NiceArrayWithDelims({)}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endpNiceArray", "\\endNiceArrayWithDelims", locked => true);
   DefMacro!("\\bNiceArray[]{}[]", "\\NiceArrayWithDelims[{]}[#1]{#2}[#3]", locked => true);

@@ -917,6 +917,26 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
     }
   }
   alignment_cell.borrow_mut().end_row()?;
+  {
+    let borrowed = alignment_cell.borrow();
+    let n_rows = borrowed.rows().len();
+    let n_cols = borrowed
+      .rows()
+      .iter()
+      .map(|r| r.get_columns().len())
+      .max()
+      .unwrap_or(0);
+    assign_value(
+      "LAST_ALIGNMENT_ROWS",
+      Stored::Int(n_rows as i64),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "LAST_ALIGNMENT_COLS",
+      Stored::Int(n_cols as i64),
+      Some(Scope::Global),
+    );
+  }
   alignment_cell
     .borrow_mut()
     .set_reversion(Tokens!(reversion));
