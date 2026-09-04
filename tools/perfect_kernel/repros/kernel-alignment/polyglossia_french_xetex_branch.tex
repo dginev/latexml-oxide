@@ -1,5 +1,6 @@
-% status: RED — Rust 24 err, first "Error:undefined:\newXeTeXintercharclass".
-%         Fresh binary ~/data/pk_target2/debug/latexml_oxide.
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect: 0
+% status: GREEN (clean under luatex profile)
 % witness: nicematrix-french (nicematrix manual, French). Fresh binary: 198 err,
 %          first \newXeTeXintercharclass from gloss-french.ldf:39.
 % oracle: pdflatex ALSO FAILS (exit=1) — polyglossia+fontspec refuse pdfTeX. This is

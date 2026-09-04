@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (pdfTeX in PDF mode => \ifpdf TRUE)
 % engines: rust=1 perl=1 (2026-09-03)  <- SHARED: iftex.sty.ltxml:27 DefConditional('\ifpdf') => FALSE
 % expect:  0 errors; body 'ok' present
-% status:  RED (engine-identity policy: \ifpdf false)
+% status:  PARKED (engine-identity policy: \ifpdf false is shared with Perl; deferred)
 % mechanism: scanpages \RequirePackage{ifpdf}; \ifpdf\else \@latex@error{Must be processed with pdf[la]tex!}\@eha
 \documentclass{article}
 \usepackage{ifpdf}

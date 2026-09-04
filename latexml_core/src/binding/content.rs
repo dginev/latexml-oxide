@@ -3578,7 +3578,17 @@ pub fn def_color(
   let spec_parts: Vec<String> = comps.iter().map(|c| color::format_component(*c)).collect();
   let spec_space = spec_parts.join(" ");
   let spec_comma = spec_parts.join(",");
-  let model_spec = s!("\\relax\\relax{{{model} {spec_space}}}{{{model}}}{{{spec_comma}}}");
+  let drv_spec = match model {
+    "cmyk" => s!("{spec_space} k {spec_space} K"),
+    "rgb" => s!("{spec_space} rg {spec_space} RG"),
+    "gray" => s!("{spec_space} g {spec_space} G"),
+    _ => s!("{model} {spec_space}"),
+  };
+  let model_spec = if lookup_definition(&T_CS!("\\xcolor@"))?.is_some() {
+    s!("\\xcolor@{{}}{{{drv_spec}}}{{{model}}}{{{spec_comma}}}")
+  } else {
+    s!("\\relax\\relax{{{model} {spec_space}}}{{{model}}}{{{spec_comma}}}")
+  };
   def_macro(
     T_CS!(s!("\\\\color@{name}")),
     None,

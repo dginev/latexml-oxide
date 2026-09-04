@@ -2,7 +2,7 @@
 % class: SHARED (Perl no-ops \usetheme too, beamer_cls.rs:516) — surpass.
 % expect: 0 Error; sidebar theme-option fires \beamer@sidebartrue so the real
 %   overlay \sidegraphics (via \newcommand<>) is installed, not the PackageError stub.
-% status: RED with b54x (Package Verona Error: Command \sidegraphics ... 'sidebar' option).
+% status: GREEN (batch 55, 2026-09-04: \newcommand<> argument remapping and \addtobeamertemplate)
 % mechanism: \usetheme[sidebar]{Verona} passes 'sidebar'; beamer_cls.rs:446 \usetheme
 %   DROPS the option (_opts) and :506 \ProcessOptionsBeamer is a no-op, so Verona's
 %   \DeclareOptionBeamer{sidebar}{\beamer@sidebartrue} (beamerthemeVerona.sty:43) +

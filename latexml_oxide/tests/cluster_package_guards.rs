@@ -8056,6 +8056,23 @@ x
     }
   }
 
+  /// beamerthemeVerona.sty:174-190 uses `\addtobeamertemplate{background}{...}{}`
+  /// and `\newcommand<>{\sidegraphics}[3][]{...}` with an optional default argument.
+  /// `\addtobeamertemplate` executes at frame start and `\newcommand<>` / `\newenvironment<>`
+  /// pack and remap overlay and optional-default arguments so the frame closes cleanly.
+  #[test]
+  fn beamer_frame_sidebar_overlay_template() {
+    let tex = r"\documentclass{beamer}
+\usetheme[sidebar]{Verona}
+\begin{document}
+\begin{frame}\sidegraphics<1>{plato}{scale=1.1}\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<subsection"), "{xml}");
+  }
+
   /// numprint.sty:779 `\DeclareRobustCommand*\numprint`: a `\the\toks255`
   /// register-number lookahead (tex.web §440-448) stops at `\protect`
   /// instead of pre-expanding the `\ifmmode` dispatch into the stored list
@@ -10292,6 +10309,34 @@ Body text.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("hello"), "{xml}");
     assert!(xml.contains(r##"color="#FF0000">red"##), "{xml}");
+  }
+
+  /// When xcolor is loaded, `\definecolor` registers `\\color@<name>` using the
+  /// standard LaTeX shape `\xcolor@{}{<driver_spec>}{<model>}{<spec_comma>}`.
+  /// Packages like colorspace.sty hook into `\xcolor@` inside `\definespotcolor`
+  /// to inspect components and driver commands (colorspace.tex).
+  #[test]
+  fn def_color_macro_emits_xcolor_representation() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\definecolor{testc}{cmyk}{0.8,0.2,0.5,0.3}
+\makeatletter
+\def\spctest#1{%
+  \begingroup
+    \def\xcolor@##1##2##3##4{%
+      \gdef\extractedmodel{##3}%
+      \gdef\extractedspec{##4}}%
+    \csname\string\color@#1\endcsname
+  \endgroup}
+\spctest{testc}
+\makeatother
+\begin{document}
+Model: \extractedmodel, Spec: \extractedspec
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Model: cmyk, Spec: 0.8,0.2,0.5,0.3"), "{xml}");
   }
 
   /// LaTeX runs `\section`/`\paragraph` inside an `\item` or a float body (the
@@ -12573,7 +12618,13 @@ $\begin{pNiceMatrix}[name=ma-matrice]
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("<svg:path"), "Expected overlay svg path: {xml}");
-    assert!(xml.contains("matrix@(Array"), "Expected pNiceMatrix math: {xml}");
+    assert!(
+      xml.contains("<svg:path"),
+      "Expected overlay svg path: {xml}"
+    );
+    assert!(
+      xml.contains("matrix@(Array"),
+      "Expected pNiceMatrix math: {xml}"
+    );
   }
 }

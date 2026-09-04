@@ -1,5 +1,6 @@
 % CONTROL: a verbatim env inside a \parbox{}{ARG} is illegal in real TeX too.
 % oracle:  pdflatex 7 errors ("Argument of \lst@next has an extra }") — must stay erroring
+% expect:  1
 % status:  CONTROL
 % mechanism: \parbox reads its body as a normal (pre-tokenized) macro argument, so the
 %   lstlisting's catcode/verbatim scan breaks — unlike a p{}-cell / minipage which read live.

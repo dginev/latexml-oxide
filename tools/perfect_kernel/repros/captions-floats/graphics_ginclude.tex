@@ -1,3 +1,5 @@
+% status: SHARED-FAILURE (Perl 0.8.8 emits identical Error:undefined:\Ginclude@graphics)
+% expect: 1
 % SHARED: graphics.sty:60 \def\Ginclude@graphics#1{...} (low-level driver
 % include). Both graphics bindings reimplement \includegraphics as a
 % constructor and omit \Ginclude@graphics; example-grid pokes it directly.

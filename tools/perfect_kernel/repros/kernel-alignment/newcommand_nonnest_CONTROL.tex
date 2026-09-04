@@ -3,7 +3,8 @@
 %   non-nesting) and must NOT change; only xparse O{} (raw l3 \__cmd_grab_optional) and the
 %   Rust-native OptionalBalanced nest. Here #1 = "a", then "b" typeset.
 % oracle:  pdflatex 0 ; rust 0
-% status:  CONTROL
+% expect:  0
+% status:  GREEN
 \documentclass{article}
 \newcommand\myopt[1][]{start-\textbf{#1}-end }
 \begin{document}

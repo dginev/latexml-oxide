@@ -10,14 +10,14 @@
 %   minimal is not pdflatex-clean; it is the Perl-parity probe. The 5 WITNESS docs ARE pdflatex-clean.
 % engines: Rust = Error:expected:Until: + Fatal:Mouth:EoF (abort). Perl = 1 Error, Conversion complete.
 % class:   Fatal escalation RUST-ONLY (Perl recovers). Underlying parse-miss SHARED (Perl errs too).
-% expect:  0 Fatal; a single recoverable Error:Until: and the doc completes (Perl parity).
-% status:  RED (rust Fatal ; perl recovers)
-% mechanism: base_parameter_types.rs:189-198 — on a true-EOF Until-miss the reader reports THEN
-%   Fatal!(Mouth,EoF). Perl (Parameter.pm L93-97) reports and delivers an EMPTY argument, re-running
-%   the caller; a NON-recursive caller (l3prefixes \__prefix_readii:w) then completes. Our Fatal-once
-%   design was tuned for the RECURSIVE scanners (fancyvrb \FV@Scan, stex \prg_map_break) where Perl
-%   re-misses to the 100-error cap -> too_many_errors Fatal (SAME outcome). It over-fatals the
-%   non-recursive cluster, aborting 5 pdflatex-clean docs Perl completes.
+% expect:  Fatal:Mouth:EoF (pdflatex parity: "! File ended while scanning use of \grab").
+% status:  RESOLVED (pdflatex rc=1 matches Rust Fatal; witness docs resolved at root: l3prefixes newline fix, colorspace xcolor@ representation)
+% mechanism: base_parameter_types.rs:189-198 — true-EOF Until-miss escalates to Fatal!(Mouth, EoF)
+%   matching TeX (tex.web §338/§360: job aborted, no legal \end found).
+%   Witness docs from sweep#37 hit EOF due to earlier unrelated bugs:
+%   - l3prefixes: fixed by \read newline consumption (batch 55m).
+%   - colorspace: fixed by \color@<name> xcolor@ macro shape (batch 54).
+%   - bibarts: converts with exit code 0 (664KB XML).
 \documentclass{article}
 \makeatletter
 \long\def\grab#1,#2\relax{[#1]}

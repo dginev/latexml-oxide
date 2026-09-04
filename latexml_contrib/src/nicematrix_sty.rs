@@ -299,12 +299,19 @@ LoadDefinitions!({
     );
     nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter)
   });
-  DefMacro!(T_CS!("\\endNiceTabular*"), None, "\\endtabular*\\lx@nicematrix@materializenodes");
+  DefMacro!(
+    T_CS!("\\endNiceTabular*"),
+    None,
+    "\\endtabular*\\lx@nicematrix@materializenodes"
+  );
   DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
     starter.extend(width.revert());
     starter.push(T_END!());
-    let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
+    let opts_toks = nice_merge_opts(
+      opts.map(|o| Tokens!(o.revert())),
+      post.map(|o| Tokens!(o.revert())),
+    );
     nice_tabular_expansion(opts_toks, pream.revert(), starter)
   }, locked => true);
   DefMacro!("\\endNiceTabularX", "\\endtabularx\\lx@nicematrix@materializenodes", locked => true);

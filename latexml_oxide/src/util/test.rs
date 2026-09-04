@@ -90,8 +90,10 @@ pub fn init_test_rss_cap() {
       // generated test (before any conversion thread reads the env in
       // `stomach::check_timeout`). `Once`'s release/acquire ordering
       // happens-before all those reads, so there is no setenv/getenv race.
+      let mib = latexml_core::watchdog::default_ceiling_mib().max(16_000);
+      let bytes = mib.saturating_mul(1024 * 1024);
       unsafe {
-        std::env::set_var("LATEXML_RSS_CAP_BYTES", "9000000000");
+        std::env::set_var("LATEXML_RSS_CAP_BYTES", bytes.to_string());
       }
     }
   });

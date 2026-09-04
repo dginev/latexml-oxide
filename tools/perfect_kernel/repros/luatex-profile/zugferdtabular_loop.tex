@@ -3,7 +3,7 @@
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
 % engines: rust=Fatal(PushbackLimit loop) perl=N/A(no luatex profile) (2026-09-03)
 % expect:  0 errors; an <ltx:tabular> with the invoice rows
-% status:  RED  (SEPARATE root from pdfmetaxmp_zugferd — proven independent of \pdfmeta_xmp_*)
+% status:  GREEN (completes with exit code 0, emits table and tabular without looping)
 % mechanism: \PrintInvoiceTabular (zugferd-invoice.sty:97) runs, inside xltabular+ZUGFeRD env,
 %   \seq_map_inline:Nn \l__ptxcd_invoice_items_seq { \PrintInvoiceItem##1 }; \PrintInvoiceItem
 %   (zugferd-invoice.sty:174) emits &/\tabularnewline alignment tokens from WITHIN the expl3

@@ -224,9 +224,11 @@ LoadDefinitions!({
   // nested in the frame (`<ltx:subsection> isn't allowed in <ltx:subsection>`,
   // DEMO-BFHBeamer ×2; Perl never loads themes). Local, so `\end{frame}`
   // restores it.
+  DefMacro!("\\lx@beamer@frame@start", "\\csname beamer@@tmpl@background\\endcsname");
   DefEnvironment!("{frame}[][]",
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>",
-    before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); });
+    before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); },
+    after_digest_begin => { unread_one(T_CS!("\\lx@beamer@frame@start")); });
   // Beamer's COMMAND form `\frame<overlays>[<default>][options]{contents}`
   // (beamerbaseframe.sty). DefEnvironment also installs a bare `\frame` CS,
   // but that one opens the subsection and waits for an `\end{frame}` that
@@ -576,7 +578,19 @@ LoadDefinitions!({
   def_macro_noop("\\setbeamerfont{}{}")?;
   def_macro_noop("\\setbeamersize{}")?;
   def_macro_noop("\\setbeamercovered{}")?;
-  def_macro_noop("\\addtobeamertemplate{}{}{}")?;
+  DefPrimitive!("\\addtobeamertemplate{}{}{}", sub[(name, pre, post)] {
+    let name = do_expand(name)?.to_string().trim().to_string();
+    let cs = T_CS!(s!("\\beamer@@tmpl@{name}"));
+    let mut new_body = pre.unlist();
+    if let Ok(Some(defn)) = lookup_definition(&cs)
+      && let Some(ExpansionBody::Tokens(toks)) = defn.get_expansion()
+    {
+      new_body.extend(toks.clone().unlist());
+    }
+    new_body.extend(post.unlist());
+    def_macro(cs, None, ExpansionBody::Tokens(Tokens::new(new_body)), None)?;
+    Ok(Vec::new())
+  });
   // `\defbeamertemplate*{name}{option}[args]...{body}`: we do not execute
   // templates, but the DECLARATION must register beamer's existence marker
   // `\beamer@@tmpop@<name>@<option>` (beamerbasetemplates.sty L59) — themes
@@ -703,20 +717,16 @@ LoadDefinitions!({
     let n: usize = nargs_opt
       .map(|t: Tokens| t.to_string().trim().parse().unwrap_or(0))
       .unwrap_or(0);
-    if default_opt.is_some() {
-      Info!("unexpected", "beamer",
-        "\\newcommand<> with an optional-default arg: overlay dropped, default unsupported");
-    }
-    // Remap body ARG indices: declared #k -> #(k+1); overlay #(n+1) -> drop.
+    let has_default = default_opt.is_some();
+    let packed_body = body.pack_parameters()?;
+    // Remap body ARG indices: declared #k -> #(k+1); overlay #(n+1) -> #1.
     let mut newbody = Vec::new();
-    for t in body.unlist() {
+    for t in packed_body.unlist() {
       if t.get_catcode() == Catcode::ARG {
         let idx: usize = with(t.get_sym(), |s| s.parse().unwrap_or(0));
-        if idx == n + 1 {
-          continue; // overlay ref -> empty
-        }
+        let remapped = if idx == n + 1 { 1 } else { idx + 1 };
         newbody.push(Token {
-          text: pin((idx + 1).to_string()),
+          text: pin(remapped.to_string()),
           code: Catcode::ARG,
           #[cfg(feature = "token-locators")]
           loc: 0,
@@ -725,7 +735,14 @@ LoadDefinitions!({
         newbody.push(t);
       }
     }
-    let proto = s!("OptionalAngled{}", " {}".repeat(n));
+    let mut proto = String::from("OptionalAngled");
+    let plain = n.saturating_sub(usize::from(has_default));
+    if let Some(default) = default_opt {
+      proto.push_str(&format!(" [Default:{}]", default.untex()));
+    }
+    for _ in 0..plain {
+      proto.push_str(" {}");
+    }
     let params = parse_parameters(&proto, &cmd, true)?;
     def_macro(cmd, params, ExpansionBody::Tokens(Tokens::new(newbody)), None)?;
     Ok(Vec::new())
@@ -753,15 +770,14 @@ LoadDefinitions!({
       .map(|t: Tokens| t.to_string().trim().parse().unwrap_or(0))
       .unwrap_or(0);
     let has_default = default_opt.is_some();
+    let packed_beg = beg.pack_parameters()?;
     let mut newbeg = Vec::new();
-    for t in beg.unlist() {
+    for t in packed_beg.unlist() {
       if t.get_catcode() == Catcode::ARG {
         let idx: usize = with(t.get_sym(), |s| s.parse().unwrap_or(0));
-        if idx == n + 1 {
-          continue;
-        }
+        let remapped = if idx == n + 1 { 1 } else { idx + 1 };
         newbeg.push(Token {
-          text: pin((idx + 1).to_string()),
+          text: pin(remapped.to_string()),
           code: Catcode::ARG,
           #[cfg(feature = "token-locators")]
           loc: 0,
@@ -772,8 +788,8 @@ LoadDefinitions!({
     }
     let mut proto = String::from("OptionalAngled");
     let plain = n.saturating_sub(usize::from(has_default));
-    if has_default {
-      proto.push_str(" []");
+    if let Some(default) = default_opt {
+      proto.push_str(&format!(" [Default:{}]", default.untex()));
     }
     for _ in 0..plain {
       proto.push_str(" {}");

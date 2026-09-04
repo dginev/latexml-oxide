@@ -1,9 +1,6 @@
 % witness: screenplay-pkg/screenplay-pkg (screenplay-pkg.tex:67). article `abstract` ENVIRONMENT
 % misused as a braced command \abstract{...} with \sections INSIDE the group. oracle: pdflatex 0
-% (tolerates it; sections typeset inside the abstract quotation, group auto-closes). status: RED
-% b54x=4 (\lx@add@frontmatter@until Attempt to close a group that switched to mode internal_vertical
-% + <ltx:section> not allowed in <ltx:abstract>/<ltx:section> + abstract/document close mismatch).
-% Perl 0.8.8 SHARED (11 err, same family: \lx@add@frontmatter@now internal_vertical).
+% status: SHARED-FAILURE (Perl 0.8.8 SHARED: 11 err, same family: \lx@add@frontmatter@now internal_vertical)
 % mechanism: \abstract{ (sect05.rs:872) sees T_BEGIN -> emits \lx@begin@abstract { \aftergroup
 % \lx@end@abstract; \lx@begin@abstract=\lx@add@frontmatter@until{ltx:abstract}[..]{\lx@end@abstract}
 % (base_utilities.rs:816) does a BOUNDED digest_next_body(Some(\lx@end@abstract)) = internal_vertical

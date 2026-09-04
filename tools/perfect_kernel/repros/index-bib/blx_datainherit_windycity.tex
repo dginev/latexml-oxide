@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=5 perl=3 (2026-09-03) both fail; Perl aborts biblatex.sty raw-load at kvoptions
 % expect:  0 errors; output has <ltx:bibliography>
-% status:  RED
+% status:  GREEN
 % mechanism: \usepackage[style=windycity]{biblatex} raw-loads windycity.bbx/.cbx,
 %   which reach biblatex.sty internals the native binding (stands in for biblatex.sty)
 %   omits: \ResetDataInheritance (biblatex.sty:14566), \DefaultInheritance (:14474),

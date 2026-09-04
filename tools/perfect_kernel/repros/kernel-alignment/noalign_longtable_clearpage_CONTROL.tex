@@ -2,6 +2,7 @@
 %   longtable body in pdflatex too (2 errors). The fix must redefine only \newpage/\pagebreak/
 %   \nopagebreak (longtable.sty:135-137), NOT tolerate every vertical command between rows.
 % oracle:  pdflatex 2 errors ; rust 3 errors — must STAY erroring
+% expect:  3
 % status:  CONTROL
 \documentclass{article}\usepackage{longtable}
 \begin{document}
