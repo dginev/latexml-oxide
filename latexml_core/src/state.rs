@@ -2828,6 +2828,19 @@ pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   for special_char in all_specials {
     assign_catcode(special_char, Catcode::OTHER, Some(Scope::Local));
   }
+  // `\dospecials` carries every ACTIVE shorthand a language registered
+  // (babel.def `\bbl@add@special`), so `\url`'s `\@makeother` loop inertizes
+  // babel-czech's `-`, babel-german's `"` … A live active `-` in a hyperref
+  // url reached the `href` attribute's expansion, where czech.ldf:243-322's
+  // `\futurelet` word scanner cannot assign and spun to PushbackLimit
+  // (csbulletin `\nolinkurl{a-b}`; pdflatex/Perl clean). Guard:
+  // `perfect_kernel_batch54::semiverbatim_inertizes_babel_shorthands`.
+  for code in 0x21u8..=0x7Eu8 {
+    let ch = code as char;
+    if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+      assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+    }
+  }
   assign_mathcode('\'', 0x8000u16, Some(Scope::Local));
   // try to stay as ASCII as possible
   if let Some(ref current_font) = lookup_font() {

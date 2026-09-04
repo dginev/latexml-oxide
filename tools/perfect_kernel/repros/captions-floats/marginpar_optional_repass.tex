@@ -1,0 +1,15 @@
+% REGRESSION (batch 55a marginpar macro-shape; sect09.rs:356-357). The doc-safe
+% BRACED optional `\marginpar[{...\lipsum[1][1-4]...}]{...}` (flexipage/
+% Test-flexipage:68) fails only via the 55a path:
+%   \marginpar -> \@ifnextchar[\@xmpar\@ympar
+%   \@xmpar[]{} -> \lx@marginpar[#1]{#2}         (sect09.rs:357)
+% \@xmpar reads the optional #1 = \lipsum[1] BRACE-STRIPPED, then re-emits it
+% UNBRACED into \lx@marginpar[#1]. The `[]` optional reader EXPANDS tokens while
+% scanning for `]`, so \lipsum (an optional-arg macro) reads its own [1] and peeks
+% for a 2nd `[`, eating the `]{...}` delimiters -> Gullet->readBalanced ran out of
+% input (gullet.rs:1757). Verified: \lx@marginpar[{\lipsum[1]}]{Y} = 0 err,
+% \lx@marginpar[\lipsum[1]]{Y} = readBalanced. b54x clean (no \lx@marginpar re-pass).
+\documentclass{article}\usepackage{lipsum}
+\begin{document}
+\marginpar[{\lipsum[1]}]{Y}
+\end{document}

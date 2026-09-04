@@ -1,0 +1,23 @@
+% witness: csbulletin/csbulletin.tex:139 \url{http://www.latex-project.org/lppl.txt} (czech MAIN).
+%   REGRESSION at 55c: the corrected \ifinner (false at the main galley, tex.web §211) routes
+%   babel-czech's active `-` shorthand (czech.ldf:230-233 \ifhmode\ifinner\cs@hyphen\else
+%   \cs@firsthyphen\fi) into the \futurelet word-scanner \cs@firsthyphen (czech.ldf:243).
+% oracle:  pdflatex/lualatex clean (the csbulletin manual ships a PDF).
+% engines: rust=Fatal:Timeout:PushbackLimit + \cs@token/\cs@word/\cs@lasttoken/\cs@next UNDEFINED
+%   at the `-`. Perl SAME-HOST: Conversion complete, no hang -> RUST-ONLY regression.
+% class:   RUST-ONLY (regression, 55c).
+% expect:  0 errors/no Fatal AND an <ltx:ref href="a-b" class="ltx_nolink"> (the url built).
+% status:  RED (PushbackLimit)
+% mechanism: begin_semiverbatim (latexml_core/src/state.rs:2809-2830) neutralizes only SPECIALS to
+%   catcode OTHER, NOT babel's active `-` (catcode 13). So the active `-` SURVIVES the Semiverbatim
+%   url read. \nolinkurl (hyperref_sty.rs:607) / \hyper@linkurl (:587) put the url in the href
+%   ATTRIBUTE (href='#1'); building that attribute EXPANDS the active `-`, firing \cs@firsthyphen's
+%   \futurelet/\let/\def scanner in a gullet-only context where those assignments are NO-OPS ->
+%   \cs@token/\cs@lasttoken stay undefined -> the \ifx-driven \cs@next never terminates. CONTROL:
+%   \Hurl{a-b} (content-only \texttt{#1}, no attribute) is CLEAN (the `-` fires in stomach digestion,
+%   where assignments work), as is bare `a-b`.
+\documentclass{csbulletin}
+\usepackage{hyperref}
+\begin{document}
+\nolinkurl{a-b}
+\end{document}

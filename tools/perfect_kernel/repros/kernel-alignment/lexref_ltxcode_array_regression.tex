@@ -1,0 +1,36 @@
+% status: RED on b54x AND current 55h (3 err "Extra alignment tab '&'"); GREEN on b54y.
+%         Regression introduced at batch 54x, NOT fixed by 55g/55h.
+% witness: lexref (lexref.tex:305 tabular {llll} with ltxdockit \begin{ltxcode} cells;
+%          error at lexref:324). s36-adjacent: b54x 11 err, b54y 0.
+% oracle: pdflatex 0. Plain {llll} (no listings) is GREEN on both binaries — the trigger
+%         is the listings (ltxcode) cells, not the preamble.
+% class: RUST-ONLY REGRESSION (b54x). Mechanism = per-cell align_group_count masking:
+%         ltxcode (\lstnewenvironment, ltxdockit.sty:561, listings-based) makes its cell
+%         align-neutral via decrement_align_group_count (listings_sty.rs:2203 inline /
+%         :1888-1935 env), which ASSUMES the alignment parks align_group_count at the
+%         1000000 sentinel per cell (tex.web §789 align_peek `align_state:=1000000`).
+%         54x routed \array/\@tabarray through the latex.ltx \@array internal
+%         (\@array@bindings, latexml_engine/src/latex_constructs/sect10.rs) whose per-cell
+%         masking differs, so after the listings decrement the count is left at 999999
+%         (one below the sentinel). The inter-cell & (row 1, between the 4 ltxcode cells)
+%         then fire at align_state=999999/2 instead of 0/1000000 and are NOT recognized
+%         as column delimiters -> row 1 collapses -> row 2's & are "Extra alignment tab".
+%         Confirmed by LXML_TRACE_ALIGN_STATE: b54x recognizes 2 of 6 &; b54y recognizes
+%         all 6 (b54y shows 1000001->1000000 re-balance per cell; b54x shows 0->2 residual).
+% assert (after fix): 0 err; the tabular has exactly 2 <ltx:tr> and 8 <ltx:td> (4 cols x 2 rows).
+\documentclass{article}
+\usepackage{ltxdockit}
+\begin{document}
+\begin{tabular}{llll}
+\begin{ltxcode}
+A
+\end{ltxcode} & \begin{ltxcode}
+B
+\end{ltxcode} & \begin{ltxcode}
+C
+\end{ltxcode} & \begin{ltxcode}
+D
+\end{ltxcode} \\
+a & b & c & d
+\end{tabular}
+\end{document}

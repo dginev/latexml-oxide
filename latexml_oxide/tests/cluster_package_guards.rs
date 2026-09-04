@@ -12186,6 +12186,78 @@ After.
     }
   }
 
+  /// A `\lstnewenvironment` cell leaves align_state balanced, so the `&`
+  /// after it is the column end (lexref's ltxdockit `ltxcode` cells; 54x
+  /// regression: `{` opener with an `\lx@hidden@egroup` closer).
+  #[test]
+  fn listings_environment_cell_ends_at_the_tab() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\lstnewenvironment{ltxcode}{}{}
+\begin{document}
+\begin{tabular}{llll}
+\begin{ltxcode}
+a
+\end{ltxcode} & \begin{ltxcode}
+b
+\end{ltxcode} & \begin{ltxcode}
+c
+\end{ltxcode} & \begin{ltxcode}
+d
+\end{ltxcode} \\
+1 & 2 & 3 & 4 \\
+\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    assert_eq!(xml.matches("<td").count(), 8, "{xml}");
+  }
+
+  /// `\marginpar[{…[1][1-4]…}]{…}`: the braced optional is re-passed braced,
+  /// so its own brackets are not read as the optional's end (Test-flexipage,
+  /// a 55a regression; latex.ltx:17591 uses `{#1}`).
+  #[test]
+  fn marginpar_optional_keeps_its_own_brackets() {
+    let tex = r"\documentclass{article}
+\usepackage{lipsum}
+\begin{document}
+Text\marginpar[{\lipsum[1][1-1]}]{Y} more.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("role=\"margin\"") || xml.contains("margin"),
+      "{xml}"
+    );
+    assert!(xml.contains("more."), "{xml}");
+  }
+
+  /// A Semiverbatim read inertizes active shorthands as `\url`'s
+  /// `\dospecials` loop does: babel-czech's active `-` in a hyperref url no
+  /// longer runs its word scanner inside the attribute (csbulletin; a 55c
+  /// regression once `\ifinner` became correct).
+  #[test]
+  fn semiverbatim_inertizes_babel_shorthands() {
+    let tex = r"\documentclass{csbulletin}
+\usepackage{hyperref}
+\begin{document}
+\nolinkurl{a-b}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert!(xml.contains("a-b"), "{xml}");
+    let tilde =
+      r"\documentclass{article}\usepackage{hyperref}\begin{document}\nolinkurl{a~b}\end{document}";
+    let (stderr, xml) = convert(tilde, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("a~b"), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

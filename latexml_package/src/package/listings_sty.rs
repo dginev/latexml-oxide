@@ -2470,7 +2470,14 @@ LoadDefinitions!({
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();
-        let mut out = vec![T_BEGIN!()];
+        // The environment's group is the `\begingroup` TOKEN (as
+        // `\begin{lstlisting}`, `lst_group_opener`) and `\lx@lstenv@body`
+        // closes it with `\endgroup`. A `{` here with 54x's
+        // `\lx@hidden@egroup` closer left align_state +1 per listing, so in a
+        // tabular the `&` after a listings cell was never a column end
+        // (lexref: ltxdockit's `ltxcode` cells, sweep-37 regression). Guard:
+        // `perfect_kernel_batch54::listings_environment_cell_ends_at_the_tab`.
+        let mut out = vec![T_CS!("\\begingroup")];
         out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokens::new(ExplodeText!(&env_name))]).unlist());
         if !start_code.is_empty() {
           out.extend(start_code.substitute_parameters(&sub_args).unlist());
@@ -2499,11 +2506,11 @@ LoadDefinitions!({
     }
     let text = listings_read_raw_lines(&env_name);
     if !lst_writefile_tee(&text) {
-      return Ok(Tokens!(T_END!()));
+      return Ok(Tokens!(T_CS!("\\endgroup")));
     }
     let lname = lst_get_tokens("name");
     let name_opt = if lname.is_empty() { None } else { Some(lname) };
-    Ok(Tokens::new(lst_process_display(name_opt, &text)))
+    Ok(Tokens::new(lst_process_display_scoped(name_opt, &text)))
   });
 
   //======================================================================
