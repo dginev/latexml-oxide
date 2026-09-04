@@ -82,11 +82,45 @@ pub fn sweep_dir_shard(dir: &str, shard: usize, nshards: usize) {
   sweep_dir_shard_with(dir, shard, nshards, latexml_contrib::dispatch)
 }
 
+/// Fixtures that should be excluded from the generic streaming sweep.
+///
+/// These fall into two categories:
+/// 1. Intentional error fixtures designed to verify compiler error handling,
+///    diagnostic recovery, or `makeError` markers in dedicated unit tests
+///    (e.g., `INTENTIONALLY_FAILING` or `convert_expecting_errors`). Running
+///    them here spams stderr with expected errors and tests nothing about
+///    streaming equivalence.
+/// 2. Fixtures requiring non-default CLI flags or custom preloads (such as
+///    `--includestyles` or `ar5iv.sty`) not provided by the generic streaming
+///    sweep runner, causing intentional undefined macros/classes if run plain.
+const EXCLUDED_FIXTURES: &[&str] = &[
+  // tests/structure: intentional error fixture for makeError (<ltx:ERROR class='undefined'>)
+  "undefined_env.tex",
+  // tests/digestion: deliberate malformed read content in exists.data (unbalanced brace)
+  "io.tex",
+  // tests/expansion: deliberate self-recursion error (\def\cs{\protect\cs})
+  "protect_self_ref.tex",
+  // tests/cluster_regressions: intentional EOF truncation error while scanning \url
+  "url_eof_no_panic.tex",
+  // tests/cluster_regressions: intentional unknown mathversion error
+  "mathversion_unknown_version_errors.tex",
+  // tests/cluster_regressions: tests class exclusion without rawclasses (\subdirclsmarker undefined)
+  "subdir_cls_not_rawloaded.tex",
+  // tests/cluster_regressions: requires --includestyles / ar5iv.sty preload for subdirdispatch
+  "subdir_sty_not_shadowed.tex",
+];
+
 pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: DispatchFn) {
   let mut fixtures: Vec<_> = std::fs::read_dir(dir)
     .unwrap_or_else(|e| panic!("cannot read {dir}: {e}"))
     .filter_map(|e| e.ok().map(|e| e.path()))
-    .filter(|p| p.extension().is_some_and(|x| x == "tex"))
+    .filter(|p| {
+      p.extension().is_some_and(|x| x == "tex")
+        && p
+          .file_name()
+          .and_then(|n| n.to_str())
+          .is_none_or(|name| !EXCLUDED_FIXTURES.contains(&name))
+    })
     .collect();
   fixtures.sort();
   assert!(
