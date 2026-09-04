@@ -80,4 +80,9 @@ LoadDefinitions!({
   DefConditional!("\\ifLineNumbers");
   DefConditional!("\\ifoddNumberedPage");
   DefConditional!("\\ifcolumnwiselinenumbers");
+  // lineno.sty:1445 `\linelabel{key}` marks the current line for `\lineref`
+  // (= `\ref` of the line number); the line number itself is layout, so the
+  // pair is the kernel label/ref (lineno manual; Perl's binding lacks both).
+  DefMacro!("\\linelabel{}", "\\label{#1}");
+  DefMacro!("\\lineref{}", "\\ref{#1}");
 });

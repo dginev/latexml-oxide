@@ -229,4 +229,7 @@ LoadDefinitions!({
   //     return; });
 
   //**********************************************************************
+  // verbatim.sty `\newread\verbatim@in@stream` — the read stream a document
+  // may address directly (ltug notes-for-authors).
+  RawTeX!(r"\newread\verbatim@in@stream");
 });

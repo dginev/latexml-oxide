@@ -609,6 +609,10 @@ LoadDefinitions!({
     enter_horizontal => true
   );
 
+  // hyperref.sty:3331 `\let\@baseurl\@empty` — the load-time default a URL
+  // builder expands (biblatex-chicago in cms-dates-intro); the `baseurl` key
+  // and `\hyperbaseurl` redefine it.
+  RawTeX!(r"\let\@baseurl\@empty");
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
   AssignValue!("BASE_URL" => url.to_string()); });

@@ -1,0 +1,5 @@
+% SHARED: verbatim.sty defines \verbatim@in@stream (the \verbatiminput read
+% stream conditional). Both verbatim bindings omit it. Witness ltug/
+% notes-for-authors (\verbatiminput / comment env). 
+\documentclass{article}\usepackage{verbatim}
+\begin{document}\makeatletter\verbatim@in@stream\makeatother\end{document}

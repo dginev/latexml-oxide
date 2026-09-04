@@ -12086,9 +12086,13 @@ $\ulcorner a\urcorner$
 \TheValue{a§b}
 \end{document}
 ";
+    // Single pass: clefval resolves values through the .aux file, so the
+    // lookup prints `?? a§b ??` (pdflatex's first run does the same); the
+    // point is that the key survived the `\csname` intact and no error fired.
     let (stderr, xml) = convert(clef, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("value-here"), "{xml}");
+    assert!(!stderr.contains("should not appear between"), "{stderr}");
+    assert!(xml.contains("a§b"), "{xml}");
   }
 
   /// Long-tail singletons, batch 2: article.cls:585 `\@openbib@code`,
@@ -12155,6 +12159,31 @@ After.
       xml.contains("Still inside.") && xml.contains("After."),
       "{xml}"
     );
+  }
+
+  /// Long-tail singletons, batch 3: lineno.sty:1445 `\linelabel`, verbatim's
+  /// `\verbatim@in@stream`, hyperref.sty:3331 `\@baseurl` default (lineno
+  /// manual, ltug notes-for-authors, cms-dates-intro).
+  #[test]
+  fn long_tail_lineno_verbatim_baseurl_singletons() {
+    for (tex, needle) in [
+      (
+        r"\documentclass{article}\usepackage{lineno}\begin{document}\linenumbers x\linelabel{a} y (\lineref{a})\end{document}",
+        "y",
+      ),
+      (
+        r"\documentclass{article}\usepackage{verbatim}\begin{document}\makeatletter\ifx\verbatim@in@stream\@undefined NO\else OK\fi\makeatother\end{document}",
+        "OK",
+      ),
+      (
+        r"\documentclass{article}\usepackage{hyperref}\begin{document}\makeatletter[\@baseurl]\makeatother Text.\end{document}",
+        "[]",
+      ),
+    ] {
+      let (stderr, xml) = convert(tex, false);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains(needle), "{xml}");
+    }
   }
 
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a

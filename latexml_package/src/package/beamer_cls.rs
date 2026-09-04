@@ -935,4 +935,12 @@ LoadDefinitions!({
     "\\colorlet{fg}{black}\\colorlet{bg}{white}\\colorlet{parent.fg}{black}\\colorlet{parent.bg}{white}"
       .to_string()
   )))?;
+  // beamerbasenavigation.sty:340-351 — the TOC/navigation display-style
+  // setters the sidebar OUTER theme calls at load (beamerouterthemesidebar
+  // .sty:33 `\beamer@nav@subsectionstyle{show/shaded/hide}`); pure
+  // presentation, accepted and ignored (LaTeX-Course, sweep-37 regression
+  // once 55c routed theme loading for real).
+  RawTeX!(
+    r"\providecommand\beamer@nav@sectionstyle[1]{}\providecommand\beamer@nav@subsectionstyle[1]{}\providecommand\beamer@nav@subsubsectionstyle[1]{}"
+  );
 });

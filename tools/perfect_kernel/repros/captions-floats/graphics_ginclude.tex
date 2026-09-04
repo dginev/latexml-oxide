@@ -1,0 +1,6 @@
+% SHARED: graphics.sty:60 \def\Ginclude@graphics#1{...} (low-level driver
+% include). Both graphics bindings reimplement \includegraphics as a
+% constructor and omit \Ginclude@graphics; example-grid pokes it directly.
+% Niche graphics-internal. Witness graphics/example-grid.
+\documentclass{article}\usepackage{graphicx}
+\begin{document}\makeatletter\Ginclude@graphics{x}\makeatother\end{document}

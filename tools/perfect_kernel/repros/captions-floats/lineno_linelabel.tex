@@ -1,0 +1,5 @@
+% SHARED: lineno.sty:1445 \newcommand\linelabel{...}. Both lineno bindings
+% (Rust lineno_sty.rs, Perl lineno.sty.ltxml) reimplement lineno and OMIT
+% \linelabel (line cross-reference marker). Witness lineno/lineno.
+\documentclass{article}\usepackage{lineno}
+\begin{document}\linenumbers x\linelabel{a} y\end{document}

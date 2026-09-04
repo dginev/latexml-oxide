@@ -1,0 +1,8 @@
+% SHARED: hyperref.sty:3331 \let\@baseurl\@empty is the DEFAULT (defined at load,
+% independent of the baseurl option); :3329 \def\hyperbaseurl#1{\def\@baseurl{#1}};
+% :5071 \ifx\@baseurl\@empty. Rust hyperref_sty.rs only defines \@baseurl inside
+% the `baseurl` KEY handler (:316); Perl hyperref.sty.ltxml only registers the key.
+% So a reference to \@baseurl WITHOUT the option (biblatex-chicago's URL builder)
+% is undefined. Witness cms/cms-dates-intro.
+\documentclass{article}\usepackage{hyperref}
+\begin{document}\makeatletter\ifx\@baseurl\@empty A\else B\fi\makeatother\end{document}
