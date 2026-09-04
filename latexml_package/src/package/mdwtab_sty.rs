@@ -26,4 +26,44 @@
 //! which `\RequirePackage{mdwtab}`).
 use crate::prelude::*;
 
-LoadDefinitions!({});
+LoadDefinitions!({
+  // mdwtab.sty:765-790 `\hlx{letters}`: `v[dim]` = `\vgap`, which ENDS the
+  // current row (`\cr`) and adds vertical space; `h` = `\hline` (`hh`
+  // double); `b`, `/` are print-only. Parsed here and emitted as bare
+  // `\\`/`\hline` tokens — a TeX-level loop left its bookkeeping assignment
+  // as the next row's first token, which the alignment then took as cell
+  // content and the following `\hline` was "`\noalign` cannot be used here"
+  // (talkdoc `\hlx{hhv[1pt]}`). Guard:
+  // `perfect_kernel_batch54::mdwtab_hlx_ends_the_row_and_rules`.
+  DefMacro!("\\hlx{}", sub[(letters)] {
+    let spec = letters.to_string();
+    let mut out: Vec<Token> = Vec::new();
+    // At a table's very start (talkdoc's leading `\hlx{hhv[1pt]}`) no row is
+    // open, so no `\\` precedes the rules.
+    let mut row_open = match lookup_alignment() {
+      Some(a) => a.alignment_cell().map(|cell| cell.borrow().is_in_row()).unwrap_or(true),
+      None => true,
+    };
+    let mut chars = spec.chars().peekable();
+    while let Some(c) = chars.next() {
+      match c {
+        'v' | 'h' => {
+          if row_open {
+            out.push(T_CS!("\\\\"));
+            row_open = false;
+          }
+          if c == 'h' {
+            out.push(T_CS!("\\hline"));
+          }
+        },
+        '[' => {
+          for d in chars.by_ref() {
+            if d == ']' { break; }
+          }
+        },
+        _ => {},
+      }
+    }
+    Ok(Tokens::new(out))
+  });
+});

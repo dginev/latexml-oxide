@@ -55,4 +55,14 @@ LoadDefinitions!({
   def_macro_noop("\\microtypecontext{}")?;
   DefMacro!("\\textmicrotypecontext{}{}", "#2");
   def_macro_noop("\\DeclareMicrotypeBabelHook{}{}")?;
+  // microtype.sty:36-37 `\def\MT@MT{microtype}` — the marker typog.sty:68
+  // tests with `\ifdefined\MT@MT` (else "package microtype not (pre-)loaded"
+  // under `trackingttspacing`; typog-example) — and the package's `\ifMT@*`
+  // switches (microtype.sty:194-205,233) a client may test.
+  RawTeX!(
+    r"\def\MT@MT{microtype}
+\newif\ifMT@protrusion \newif\ifMT@expansion \newif\ifMT@auto \newif\ifMT@selected
+\newif\ifMT@noligatures \newif\ifMT@draft \newif\ifMT@disable \newif\ifMT@spacing
+\newif\ifMT@kerning \newif\ifMT@tracking \newif\ifMT@babel \newif\ifMT@document \newif\ifMT@fontspec"
+  );
 });

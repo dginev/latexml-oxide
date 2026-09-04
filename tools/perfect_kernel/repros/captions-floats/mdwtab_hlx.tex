@@ -1,0 +1,7 @@
+% SHARED: mdwtab.sty:765 \def\hlx#1{\hlx@loop#1\q@delim} — the mdwtab hline/vspace
+% multiplier (`\hlx{vhv}` = vspace,hline,vspace). Rust mdwtab_sty.rs routes mdwtab
+% through standard array/tabular and defines NO mdwtab-specific macros (its header:
+% "no mdwtab-specific"); Perl ships no mdwtab.sty.ltxml and INCLUDE_STYLES=false, so
+% neither loads the raw \hlx. Witness talkdoc (ltxdoc + mdwtab).
+\documentclass{article}\usepackage{mdwtab}
+\begin{document}\begin{tabular}{cc}a&b\hlx{vhv}c&d\end{tabular}\end{document}

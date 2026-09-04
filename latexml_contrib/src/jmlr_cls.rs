@@ -19,6 +19,13 @@ LoadDefinitions!({
   // known float" (pmlr-sample). Guard:
   // `perfect_kernel_batch54::class_stubs_require_their_float_packages`.
   RequirePackage!("algorithm2e", options => vec!["algo2e".to_string(), "ruled".to_string()]);
+  // jmlr.cls:246-247 — title helpers (pmlr-sample's `\title{…\titlebreak…}`).
+  RawTeX!(r"\newcommand*{\titlebreak}{\newline}\newcommand*{\titletag}[1]{}");
+  // jmlr.cls loads jmlrutils.sty (raw-loadable here): `\subfigure`/`\subtable`,
+  // `\subfigref`/`\subtabref`, `\includeteximage`, `\jmlrminsubcaptionwidth`,
+  // the `\floatconts` family, `enumerate*` (pmlr-sample). Guard:
+  // `perfect_kernel_batch54::jmlr_has_the_jmlrutils_surface`.
+  RequirePackage!("jmlrutils");
 
   // Author block. jmlr.cls L259/374-449:
   //   \author[short]{ \Name{N1} \Email{E1} \\ \Name{N2} \Email{E2}

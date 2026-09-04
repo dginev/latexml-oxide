@@ -1,0 +1,13 @@
+% ROOT of typog "package microtype not (pre-)loaded" (typog-example, sweep #37).
+% typog detects microtype NOT via \@ifpackageloaded but via typog.sty:68
+% `\ifdefined\MT@MT` (microtype's package-name marker, microtype.sty:36-37
+% \def\MT@MT{microtype}, used by \MT@warning/\MT@error). Our microtype binding
+% (microtype_sty.rs) omits \MT@MT, so \ifdefined\MT@MT = UNDEF -> typog sets
+% \typog@microtype@preloadedfalse; the `trackingttspacing` option (typog.sty:245)
+% then calls \typog@require@preloaded@microtype -> \PackageError{typog}{package
+% microtype not (pre-)loaded}. Position-INDEPENDENT (2 packages reproduce).
+% SHARED: Perl microtype.sty.ltxml also omits \MT@MT.
+\documentclass{article}
+\usepackage[activate=true]{microtype}
+\usepackage[trackingttspacing]{typog}
+\begin{document}Text.\end{document}

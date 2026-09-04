@@ -1,0 +1,25 @@
+% status: RED — 55m: 2 err in the minimal (\titlebreak, \titletag undefined);
+%          full pmlr-sample = 16 err, all jmlr.cls-macro gaps.
+% witness: jmlr/pmlr-sample (\documentclass[pmlr]{jmlr}); title uses
+%          \titlebreak + \titletag (pmlr-sample.tex:34-35).
+% oracle: pdflatex exit=0 (jmlr.cls:246-247 defines both). Perl ships NO jmlr
+%         binding either (OmniBus fallback, per jmlr_cls.rs comment) -> SHARED gap,
+%         but origin != absolution: the binding should complete.
+% class: RUST-ONLY binding-completeness gap. latexml_contrib/src/jmlr_cls.rs is a
+%        STUB (LoadClass!("OmniBus") + RequirePackage amsmath/amsthm/amssymb/hyperref/
+%        natbib) that SHADOWS the raw jmlr.cls and OMITS the class's own macros:
+%        \titlebreak (jmlr.cls:246 = \newcommand*{\titlebreak}{\newline}),
+%        \titletag (jmlr.cls:247 = \newcommand*{\titletag}[1]{}), plus \subfigure,
+%        \subtable, \subfigref, \subtabref, \set, \includeteximage,
+%        \jmlrminsubcaptionwidth, {enumerate*} (all jmlr.cls-defined).
+% fix: add a RawTeX block to jmlr_cls.rs mirroring jmlr.cls's defs of these macros
+%      (BINDINGS OUTRANK RAW, so the raw class defs never run under the stub).
+% assert (after fix): 0 err; <ltx:title> present with the line break.
+\documentclass[pmlr]{jmlr}
+\jmlrvolume{1}\jmlryear{2010}\jmlrworkshop{}
+\title[Short]{A Long\titlebreak Title \titletag{x}}
+\author{\Name{A B}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

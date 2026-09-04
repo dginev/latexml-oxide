@@ -12341,6 +12341,50 @@ s1,s2,s3,s4
     );
   }
 
+  /// mdwtab.sty:765 `\hlx{vhv}` ends the row and rules it (talkdoc);
+  /// german.sty:375 `\def@dqmacro` exists for germkorr's patch.
+  #[test]
+  fn mdwtab_hlx_ends_the_row_and_rules() {
+    let tex = r"\documentclass{article}\usepackage{mdwtab}
+\begin{document}\begin{tabular}{cc}a&b\hlx{vhv}c&d\end{tabular}\end{document}";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    let de =
+      r"\documentclass{article}\usepackage{german,germkorr}\begin{document}Text.\end{document}";
+    let (stderr, xml) = convert(de, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Text."), "{xml}");
+  }
+
+  /// jmlr.cls:246-247 `\titlebreak`/`\titletag` and the raw jmlrutils.sty
+  /// surface (`\subfigure`, `\subfigref`, `\includeteximage`) reach the
+  /// jmlr binding (pmlr-sample).
+  #[test]
+  fn jmlr_has_the_jmlrutils_surface() {
+    let tex = r"\documentclass[pmlr]{jmlr}
+\title[Short]{A Long\titlebreak Title \titletag{x}}\author{\Name{A}}
+\begin{document}
+\begin{figure}\floatconts{fig:a}{\caption{Two}}{\subfigure[one]{\rule{1cm}{1cm}}\subfigure[two]{\rule{1cm}{1cm}}}\end{figure}
+See \subfigref{fig:a}{a}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<title") && xml.contains("<figure"), "{xml}");
+  }
+
+  /// microtype.sty:36 `\MT@MT` marks the package for typog.sty:68's
+  /// `\ifdefined\MT@MT` (typog-example under `trackingttspacing`).
+  #[test]
+  fn microtype_marker_satisfies_typog() {
+    let tex = r"\documentclass{article}\usepackage[activate=true]{microtype}\usepackage[trackingttspacing]{typog}
+\begin{document}Text.\end{document}";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Text."), "{xml}");
+  }
+
   /// article.cls's `\maketitle` disables `\title`/`\maketitle` after use; a
   /// class that `\renewcommand`s `\maketitle` without that cleanup
   /// (schooldocs.sty:136, `\correct` :168-178 chaining `\@title`) had the

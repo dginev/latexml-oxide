@@ -68,4 +68,12 @@ LoadDefinitions!({
   // placement of `\"` — a font matter with no XML counterpart.
   RawTeX!(r"\providecommand\umlautlow{}\providecommand\umlauthigh{}");
   RawTeX!(r"\providecommand\germanTeX{\mdqon\selectlanguage{german}}");
+  // german.sty:373-377 `\def@dqmacro{c}{text}{math}` / `\let@dqmacro` — the
+  // `"c` shorthand installers a derivative patches (germkorr.sty:141-144);
+  // recorded under german's own `\@grmn@@<c>dq` name.
+  RawTeX!(
+    r"\def\grmn@dq@macro#1#2{\expandafter#1\csname @grmn@@\string #2dq\endcsname}
+\def\def@dqmacro#1#2#3{\grmn@dq@macro\def{#1}{{#2}{#3}}}
+\def\let@dqmacro#1#2{\begingroup\edef\x{\endgroup\let\grmn@dq@macro\noexpand{#1}\grmn@dq@macro\noexpand{#2}}\x}"
+  );
 });
