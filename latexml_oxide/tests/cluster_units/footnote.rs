@@ -43,7 +43,6 @@ fn verbatim_footnotes_allow_verb_in_footnote() {
   assert!(xml.contains(r#"\multicolumn{1}{c}{foo}"#));
 }
 
-
 #[test]
 fn verbatim_footnotes_is_package_scoped() {
   let tex = concat!(
