@@ -512,6 +512,14 @@ LoadDefinitions!({
   // this one specifically).
   DefPrimitive!("\\textperiodcentered", "\u{00B7}"); // MIDDLE DOT
 
+  // Catcode range helpers (luatexbase.sty:51 \let\SetCatcodeRange\@setrangecatcode,
+  // luacode.sty:138 \let\SetCatcodeRange\setcatcoderange, thumbpdf.sty:576).
+  // In LaTeXML, character encodings and Unicode catcodes are handled natively;
+  // absorb {start}{end}{catcode} cleanly.
+  def_macro_noop("\\SetCatcodeRange{}{}{}")?;
+  def_macro_noop("\\setcatcoderange{}{}{}")?;
+  def_macro_noop("\\@setrangecatcode{}{}{}")?;
+
   //======================================================================
   // 7. Rust helper used by `\newlength` (latex_constructs.rs)
   //======================================================================

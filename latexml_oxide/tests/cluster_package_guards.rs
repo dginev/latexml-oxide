@@ -12761,3 +12761,72 @@ CJK fontspec ok
     assert!(xml.contains("CJK fontspec ok"), "{xml}");
   }
 }
+
+mod perfect_kernel_batch56 {
+  //! Red/green guards for perfect-kernel batch 56 (codebox manual:
+  //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
+  //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
+  //! environment invocation and outer listing scanning, and unicode-math table loading).
+  use super::perfect_kernel_batch46::{convert, error_count};
+
+  /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
+  #[test]
+  fn luatex_catcoderange_and_listings_aspects() {
+    let tex = r"\documentclass{article}
+\usepackage{luatexbase}
+\SetCatcodeRange{1}{31}{15}
+\usepackage{listings}
+\lstloadaspects{comments}
+\begin{document}
+Listing test.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Listing test."), "{xml}");
+  }
+
+  /// \DeclareTCBListing invoked via bare macros inside \NewDocumentEnvironment
+  /// (witness codebox-doc-en \begin{codeview} calling \codeviewaux).
+  #[test]
+  fn declare_tcb_listing_nested_in_document_environment() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,xparse}
+\DeclareTCBListing{mycodeaux}{m}{title={Title #1}}
+\NewDocumentEnvironment{mycode}{O{} m}
+  {\mycodeaux{#2}}
+  {\endmycodeaux}
+\begin{document}
+\begin{mycode}{My Title}
+#include <stdio.h>
+int main() { return 0; }
+\end{mycode}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("include"), "{xml}");
+    assert!(xml.contains("stdio"), "{xml}");
+  }
+
+  /// unicode-math symbol table loading and ctex LuaTeX math letter hooks
+  #[test]
+  fn unicode_math_table_loading_and_ctex_hooks() {
+    let tex = r"\documentclass{article}
+\usepackage{expl3}
+\ExplSyntaxOn
+\cs_if_exist:NTF \__um_input_math_symbol_table: { \__um_input_math_symbol_table: } {}
+\cs_if_exist:NTF \um_input_math_symbol_table: { \um_input_math_symbol_table: } {}
+\cs_if_exist:NTF \__um_load_symbols: { \__um_load_symbols: } {}
+\cs_if_exist:NTF \__um_switchto_literal: { \__um_switchto_literal: } {}
+\ExplSyntaxOff
+\begin{document}
+Table hooks ok.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Table hooks ok."), "{xml}");
+  }
+}

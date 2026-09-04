@@ -89,6 +89,10 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 /// the terminator becomes the last line, and the text AFTER is unread, exactly
 /// as Perl already does for the trailing part.
 pub fn listings_read_raw_lines(environment: &str) -> String {
+  listings_read_raw_lines_with_outer(environment, None)
+}
+
+pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&str>) -> String {
   let mut lines = Vec::new();
   // Ignore the remainder of the `\begin{...}` line — real listings drops it —
   // UNLESS the pushback holds a non-space token. An optional-argument probe
@@ -103,19 +107,37 @@ pub fn listings_read_raw_lines(environment: &str) -> String {
   if !pushback_holds_nonspace() {
     read_raw_line(); // leftover of the \begin line — not content
   }
-  let end_re = Regex::new(&format!("\\\\end\\{{{}\\}}", regex::escape(environment))).unwrap();
+  let mut end_patterns = vec![
+    format!(r"\\end\{{{}\}}", regex::escape(environment)),
+    format!(r"\\end{}", regex::escape(environment)),
+  ];
+  if let Some(outer) = outer_env
+    && !outer.is_empty()
+    && outer != environment
+  {
+    end_patterns.push(format!(r"\\end\{{{}\}}", regex::escape(outer)));
+  }
+  let end_re = Regex::new(&end_patterns.join("|")).unwrap();
   while let Some(line) = read_raw_line() {
     if let Some(m) = end_re.find(&line) {
+      let matched_str = m.as_str();
+      let is_outer = outer_env.is_some_and(|outer| matched_str == format!(r"\end{{{outer}}}"));
       // Whitespace-only text before the terminator is the ordinary
       // `\end{lstlisting}`-on-its-own-line case: contributes no listing line.
       let before = &line[..m.start()];
       if !before.trim().is_empty() {
         lines.push(before.to_string());
       }
-      let rest = line[m.end()..].to_string();
-      if !rest.is_empty() {
-        unread(Tokenize!(TeXString::assembled(rest)));
+      if is_outer {
+        let rest = line[m.start()..].to_string();
         unread(Tokens::new(vec![T_CR!()]));
+        unread(Tokenize!(TeXString::assembled(rest)));
+      } else {
+        let rest = line[m.end()..].to_string();
+        if !rest.is_empty() {
+          unread(Tokens::new(vec![T_CR!()]));
+          unread(Tokenize!(TeXString::assembled(rest)));
+        }
       }
       break;
     }
@@ -2416,11 +2438,15 @@ LoadDefinitions!({
   // `perfect_kernel_batch54::singleton_internal_surface`.
   Let!("\\lst@UserCommand", "\\gdef");
   RawTeX!(r"\def\lst@XConvert#1\@nil{}\long\def\lstnewenvironment@#1#2#3{}");
+  // listings.sty:291 \let\lstloadaspects\lst@RequireAspects
+  DefMacro!("\\lstloadaspects{}", "");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
   // Creates \begin{name} macro that digests start code (with arg substitution),
   // then reads raw lines and processes the listing display.
+  // Standard LaTeX and listings.sty:2204-2207 also define the bare \name and \endname
+  // (e.g. codebox.sty:347 \codeviewaux / \endcodeviewaux within an outer environment).
   DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
     let env_name = name.to_string();
     let n: usize = n_arg.value_of() as usize;
@@ -2445,17 +2471,23 @@ LoadDefinitions!({
       for _ in 0..n { param_spec.push_str("{}"); }
     }
     let cs = T_CS!(s!("\\begin{{{env_name}}}"));
+    let cs_bare = T_CS!(s!("\\{env_name}"));
     let params = if param_spec.is_empty() {
       None
     } else {
       parse_parameters(&param_spec, &cs, true)?
+    };
+    let params_bare = if param_spec.is_empty() {
+      None
+    } else {
+      parse_parameters(&param_spec, &cs_bare, true)?
     };
     // Move start_code / end_code / env_name directly into the closure
     // capture — none are used outside, so three setup-time clones are
     // avoided per `\lstnewenvironment` definition.
     // The begin macro returns TOKENS that run in the main stream — `{`,
     // `\lx@setcurrenvir`, the substituted start code, then
-    // `\lx@lstenv@body{name}{end code}` — instead of digesting the start
+    // `\lx@lstenv@body{name}{outer}{end code}` — instead of digesting the start
     // code in an isolated mouth (Perl listings.sty.ltxml `Digest($start…)`).
     // A mode-switching start code (`\mdframed`, `\begin{minipage}`, cnltx's
     // `sourcecode` frame) is a constructor whose body must extend over the
@@ -2466,6 +2498,7 @@ LoadDefinitions!({
     // captures the raw lines only after the start code has run, so
     // `\lstset` keys in it still govern the display, and it pushes the
     // postamble locally inside the `{` group.
+    let closure_env_name = env_name.clone();
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
@@ -2476,6 +2509,18 @@ LoadDefinitions!({
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();
+        let outer_env: Option<String> = lookup_value("current_environment").and_then(|v| {
+          if let Stored::String(s) = v {
+            let str_val = with(s, |s| s.to_string());
+            if str_val != closure_env_name && !str_val.is_empty() {
+              Some(str_val)
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        });
         // The environment's group is the `\begingroup` TOKEN (as
         // `\begin{lstlisting}`, `lst_group_opener`) and `\lx@lstenv@body`
         // closes it with `\endgroup`. A `{` here with 54x's
@@ -2484,7 +2529,7 @@ LoadDefinitions!({
         // (lexref: ltxdockit's `ltxcode` cells, sweep-37 regression). Guard:
         // `perfect_kernel_batch54::listings_environment_cell_ends_at_the_tab`.
         let mut out = vec![T_CS!("\\begingroup")];
-        out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokens::new(ExplodeText!(&env_name))]).unlist());
+        out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![Tokens::new(ExplodeText!(&closure_env_name))]).unlist());
         if !start_code.is_empty() {
           out.extend(start_code.substitute_parameters(&sub_args).unlist());
         }
@@ -2493,24 +2538,46 @@ LoadDefinitions!({
         } else {
           end_code.substitute_parameters(&sub_args)
         };
+        let outer_str = outer_env.unwrap_or_default();
         out.extend(Invocation!(T_CS!("\\lx@lstenv@body"),
-          vec![Tokens::new(ExplodeText!(&env_name)), end_subst]).unlist());
+          vec![
+            Tokens::new(ExplodeText!(&closure_env_name)),
+            Tokens::new(ExplodeText!(&outer_str)),
+            end_subst
+          ]).unlist());
         Ok(Tokens::new(out))
       }
     )));
+    def_macro(cs_bare, params_bare, expansion.clone(), None)?;
     def_macro(cs, params, expansion, None)?;
+    let end_cs = T_CS!(s!("\\end{{{env_name}}}"));
+    let end_bare_cs = T_CS!(s!("\\end{env_name}"));
+    def_macro(
+      end_cs,
+      None,
+      ExpansionBody::Tokens(Tokens::new(Vec::new())),
+      None,
+    )?;
+    def_macro(
+      end_bare_cs,
+      None,
+      ExpansionBody::Tokens(Tokens::new(Vec::new())),
+      None,
+    )?;
   });
 
   // Second half of `\lstnewenvironment`'s begin: runs after the start code,
   // inside the `{` group the begin macro opened. Reads the raw listing body,
   // records the end code as the postamble (locally — undone at the `}`),
   // and emits the display followed by that postamble and the closing `}`.
-  DefMacro!("\\lx@lstenv@body{}{}", sub[(name, end_code)] {
+  DefMacro!("\\lx@lstenv@body{}{}{}", sub[(name, outer, end_code)] {
     let env_name = name.to_string();
+    let outer_str = outer.to_string();
+    let outer_opt = if outer_str.is_empty() { None } else { Some(outer_str.as_str()) };
     if !end_code.is_empty() {
       lst_push_value_locally("LISTINGS_POSTAMBLE", end_code.unlist());
     }
-    let text = listings_read_raw_lines(&env_name);
+    let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
     if !lst_writefile_tee(&text) {
       return Ok(Tokens!(T_CS!("\\endgroup")));
     }

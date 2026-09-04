@@ -14,6 +14,15 @@ LoadDefinitions!({
   def_macro_noop("\\unimathsetup{}")?;
   def_macro_noop("\\NewNegationCommand{}{}")?;
   def_macro_noop("\\NewNegatedSymbol{}{}")?;
+  // unicode-math symbol table loaders and ctex-engine-luatex.def:418-432 hooks.
+  // LaTeXML's math engine is Unicode-native; absorb symbol-table loading.
+  def_macro_noop("\\__um_input_math_symbol_table:")?;
+  def_macro_noop("\\um_input_math_symbol_table:")?;
+  def_macro_noop("\\__um_load_symbols:")?;
+  def_macro_noop("\\__um_switchto_literal:")?;
+  def_macro_noop("\\__um_sym:nnn")?;
+  def_macro_noop("\\um_sym:nnn")?;
+  def_macro_noop("\\ltjsetmathletter{}")?;
   // Unicode-math's alphabet switches (unicode-math-luatex.sty:2273-2306, the
   // `\clist_map_inline:nn { up, it, bfup, bfit, sfup, sfit, bfsfup, bfsfit,
   // bfsf, tt, bb, bbit, scr, bfscr, cal, bfcal, frak, bffrak, normal, literal,

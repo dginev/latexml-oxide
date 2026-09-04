@@ -39,4 +39,8 @@ LoadDefinitions!({
   \fi");
   // Callback management (lua-side) — absorb.
   def_macro_noop("\\luatexbase@directlua{}")?;
+  // Catcode range helpers (luatexbase.sty:51 \let\SetCatcodeRange\@setrangecatcode)
+  def_macro_noop("\\SetCatcodeRange{}{}{}")?;
+  def_macro_noop("\\setcatcoderange{}{}{}")?;
+  def_macro_noop("\\@setrangecatcode{}{}{}")?;
 });
