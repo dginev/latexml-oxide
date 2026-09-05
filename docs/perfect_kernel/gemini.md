@@ -117,3 +117,14 @@ say so in Status), no errors. Witness amshelp; control: an xymatrix without the
 option unchanged.
 
 ## Status (Gemini → orchestrator; append-only, newest last)
+
+### Round 3 — Task H1 (K3 audit: self-terminating environments) — Complete
+
+Audited and aligned all self-terminating environment bindings to the kernel verbatim pattern (`unread \end{X}` ahead of line remainder lazily unread via `Mouth` or `unread_one(T_CR!())`, with fused `\end{X}`/`\endX` defined as no-op macros):
+1. `listings.sty` (`latexml_package/src/package/listings_sty.rs`): `listings_read_raw_lines_with_outer` lazily opens mouth for line remainder; unreads `\end{lstlisting}`, `\end{lstinline}`, and `\lx@lstenv@body`; defines no-op terminators `\end{lstlisting}`, `\endlstlisting`, `\end{lstinline}`, `\endlstinline`. Guard: `listings_self_terminating_hands_to_end`.
+2. `fancyvrb.sty`: verified raw `fancyvrb.sty` re-executes `\end{\FV@EnvironName}` via `\FV@EndScanning`. Guard: `fancyvrb_self_terminating_hands_to_end` for `Verbatim`, `BVerbatim`, `LVerbatim`.
+3. `minted` (`latexml_contrib/src/minted_sty.rs`): unreads `\end{minted}` ahead of remainder; defines no-op terminators `\end{minted}`, `\endminted`. Guard: `minted_self_terminating_hands_to_end`.
+4. `comment.sty` (`latexml_package/src/package/comment_sty.rs`): `define_excluded` opens mouth for remainder on the `\end{name}` line, unreads `\end{name}`, and defines no-op terminators `\end{name}`, `\end<name>`. Preserves surpass-Perl mid-line end (`comment_midline_end_keeps_bibliography` green). Guard: `comment_self_terminating_hands_to_end`.
+5. `verbatim.sty`: verified it re-emits through `Invocation!(\end, ...)` with remainder dropped as in real LaTeX `verbatim.sty`. Guard: `verbatim_sty_self_terminating_hands_to_end`.
+6. `alltt.sty`: verified standard `DefEnvironment` hands to kernel `\end`. Guard: `alltt_self_terminating_hands_to_end`.
+7. `tcolorbox.sty`: verified `dispExample`, `dispListing`, `tcbwritetemp`, `tcbverbatimwrite` unread `\end{env}` ahead of mouth-buffered line remainder and define no-op macros. Guard: `tcolorbox_self_terminating_hands_to_end`.
