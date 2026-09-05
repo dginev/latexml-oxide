@@ -16006,4 +16006,45 @@ x = 1
     assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:lstlisting]").count(), 1, "{xml}");
   }
+
+  /// fancyvrb self-terminating environments hand \end{Verbatim}, \end{BVerbatim}, \end{LVerbatim}
+  /// to current \end macro (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn fancyvrb_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{fancyvrb}
+\AfterEndEnvironment{Verbatim}{[AFTER-V]}
+\AfterEndEnvironment{BVerbatim}{[AFTER-B]}
+\AfterEndEnvironment{LVerbatim}{[AFTER-L]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{Verbatim}
+v = 1
+\end{Verbatim}
+\begin{BVerbatim}
+b = 1
+\end{BVerbatim}
+\begin{LVerbatim}
+l = 1
+\end{LVerbatim}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:Verbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-V]"), "{xml}");
+    assert!(xml.contains("[E:BVerbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-B]"), "{xml}");
+    assert!(xml.contains("[E:LVerbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-L]"), "{xml}");
+    assert_eq!(xml.matches("[AFTER-V]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:Verbatim]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[AFTER-B]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:BVerbatim]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[AFTER-L]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:LVerbatim]").count(), 1, "{xml}");
+  }
 }
+
