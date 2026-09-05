@@ -1,0 +1,34 @@
+% witness: forest/forest-doc (515 err, first Error:expected:}; s39 log forest-doc.log)
+%          the cascade lives in \DocInput{forest-libs.dtx}, whose forestexample
+%          environments (a listings example env) write+re-execute a \begin{forest} tree.
+% oracle:  pdflatex 0 errors (forest-doc.pdf ships in TL)
+% engines: rust=502 (501x Error:expected:} + Fatal:TooManyErrors), perl=31 (dies earlier
+%          on forest.sty RAW load: Fatal:misdefined:\forestversion). pdflatex clean.
+% expect:  0 errors; the forestexample tree is discarded by the forest stub, no cascade.
+% status:  RED (b56i)
+% mechanism: forest-doc.sty:48 \lstnewenvironment{forestexample}[1][]{...} + \lstset{gobble=2}
+%   writes the body to \jobname.tmp (\lst@BeginAlsoWriteFile:59) and re-inputs it
+%   (\lst@sampleInput, forest-doc.sty:142) to draw the tree. When the OPTIONAL [..] is
+%   ABSENT, listings_sty.rs read_optional probe unreads line-1's first token (pushback),
+%   so listings_read_raw_lines keeps line 1 with its leading `%` stripped, but reads
+%   lines 2+ RAW (with the doc `%` comment prefix). lst_writefile_tee (listings_sty.rs:3843)
+%   writes that RAW text UNGOBBLED, so on re-input the leading `%` comments out
+%   `\end{forest}` on line 2+; the forest stub's bgroup (discard_env.rs:60) never closes
+%   -> readBalanced-at-EOF (gullet.rs:1757) fires 501x -> Fatal:TooManyErrors.
+\documentclass{ltxdoc}
+\begin{filecontents*}{fdtx.dtx}
+% \iffalse
+% \fi
+% \section{T}
+% \begin{forestexample}
+%   \begin{forest}
+%     [VP[DP][V]]
+%   \end{forest}
+% \end{forestexample}
+% \endinput
+\end{filecontents*}
+\usepackage[external]{forest}
+\usepackage{forest-doc}
+\begin{document}
+\DocInput{fdtx.dtx}
+\end{document}

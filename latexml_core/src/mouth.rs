@@ -989,6 +989,22 @@ impl Mouth {
   // Alas: $noread true means NOT to read a new line, but only return
   // the remainder of the current line, if any. This is useful when combining
   // with previously peeked tokens from the Gullet.
+  /// The WHOLE current line as raw text, from column 0 — including the part
+  /// already tokenized — and consume the rest of it. `None` when no line is
+  /// loaded. Used by the listings raw-line reader when an optional-argument
+  /// probe has already tokenized the body's first token (OXIDIZED_DESIGN #162).
+  pub fn read_raw_line_from_start(&mut self) -> Option<String> {
+    if self.nchars == 0 && self.colno == 0 {
+      return None;
+    }
+    let mut line: String = self.chars.iter().collect();
+    if line.ends_with('\r') {
+      line.pop();
+    }
+    self.colno = self.nchars;
+    Some(line)
+  }
+
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {

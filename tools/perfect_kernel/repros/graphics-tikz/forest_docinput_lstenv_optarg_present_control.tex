@@ -1,0 +1,23 @@
+% CONTROL for forest_docinput_lstenv_optarg_absent.tex: identical except the
+% forestexample optional argument is written explicitly as `[]`. With [] present the
+% read_optional probe does not unread, listings discards line 1 as `\begin`-line
+% leftover, the \begin{forest} line is dropped, no stub group opens, and there is no
+% cascade. status: GREEN today (b56i) -> 0 Error:expected:} / no Fatal. Not a bug repro;
+% it isolates that the cascade is triggered purely by the ABSENT optional argument.
+\documentclass{ltxdoc}
+\begin{filecontents*}{fdtxc.dtx}
+% \iffalse
+% \fi
+% \section{T}
+% \begin{forestexample}[]
+%   \begin{forest}
+%     [VP[DP][V]]
+%   \end{forest}
+% \end{forestexample}
+% \endinput
+\end{filecontents*}
+\usepackage[external]{forest}
+\usepackage{forest-doc}
+\begin{document}
+\DocInput{fdtxc.dtx}
+\end{document}

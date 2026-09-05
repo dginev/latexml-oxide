@@ -1,0 +1,15 @@
+% witness: currency/currency_doc (currency.sty:90 \keys_set:nV {siunitx}{round-precision=\SetPrecision})
+% oracle: pdflatex CLEAN (round-precision is a valid siunitx v3 key)
+% engines: pdflatex 0 err; Perl LaTeXML emits it UNCOUNTED (siunitx.sty.ltxml native binding, l3keys empty); our binary emits Error:errmessage
+% expect: 0 Error/Fatal; XML has <ltx:document>
+% status: RED today (b56j) — Error:errmessage:\errmessage LaTeX Error: The key 'siunitx/round-precision' is unknown and is being ignored.
+% mechanism: native siunitx_sty.rs registers LaTeX2e keyval (DefKeyVal 'SIX'), NOT the expl3 l3keys 'siunitx' module;
+%            raw expl3 \keys_set:nn {siunitx}{...} finds an empty module. Classification: SHARED-with-Perl, but pdflatex-clean → surpass-Perl.
+\documentclass{article}
+\usepackage{siunitx}
+\ExplSyntaxOn
+\keys_set:nn {siunitx} {round-precision=2}
+\ExplSyntaxOff
+\begin{document}
+\num{1.23456}
+\end{document}

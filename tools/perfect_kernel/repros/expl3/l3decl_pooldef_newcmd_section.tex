@@ -1,0 +1,18 @@
+% witness: ltx-talk/verbatim-content (ltx-talk.cls:1574-1580 \NewDocumentCommand \section)
+% oracle:  pdflatex 0 errors (standalone class; \section free, article not loaded)
+% engines: rust=1 perl=0 (2026-09-05); RUST-ONLY (Perl aborts cls at \NeedsDocumentMetadata:32)
+% expect:  0 errors; XML has <ltx:section> (ltcmd keeps the pool sectioning constructor)
+% status:  RED
+\begin{filecontents*}[overwrite]{poolc.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{poolc}[2026/01/01 pk-expl3]
+\renewcommand\normalsize{\fontsize{10pt}{12pt}\selectfont}
+\ExplSyntaxOn
+\NewDocumentCommand \section { m } { \par \textbf {#1} \par }
+\ExplSyntaxOff
+\normalsize
+\end{filecontents*}
+\documentclass{poolc}
+\begin{document}
+\section{Hi}
+Text.
+\end{document}

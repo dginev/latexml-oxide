@@ -1,0 +1,16 @@
+% witness: tagpdf/tagpdf (sweep#40, tmpl=25 blockenv "template 'display' of type 'blockenv' is unknown", oracle-clean)
+% oracle: pdflatex clean (testphase-block declares blockenv type + display template/interface/code)
+% expect: 0 Error lines
+% mechanism: \DocumentMetadata{tagging=on} must load latex-lab-testphase-block.sty
+%   (\NewTemplateType{blockenv}{..}, \DeclareTemplateCode{blockenv}{display}{..}).
+%   tagpdfdocu-patches.sty:127 then \DeclareInstance{blockenv}{docCommand}{display}.
+%   Our \DocumentMetadata loads only the tagpdf binding, never testphase-block ->
+%   "The template 'display' of type 'blockenv' is unknown" from \DeclareInstance.
+\DocumentMetadata{tagging = on}
+\documentclass{article}
+\ExplSyntaxOn
+\DeclareInstance{blockenv}{docCommand}{display}{}
+\ExplSyntaxOff
+\begin{document}
+Hello
+\end{document}

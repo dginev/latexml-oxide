@@ -1,0 +1,24 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: fontsetup/fspsample (fspsample.tex:12-14), fspsample-withsans (both oracle lualatex 0/0);
+%          greektonoi/greektonoi (oracle 1/2), latex-mr/latex-mr (oracle 1/2, 98 errs + MaxLimit Fatal)
+% oracle:  lualatex 0 errors (fontsetup loads a Greek-capable OpenType font)
+% engines: rust=RED(1; witnesses 11/11/16/98) perl=0-of-this (Perl fails earlier: \addfontfeature,
+%          \fontspec_if_language:nT, \providehyphenmins undefined) (2026-09-05, b56g)
+% expect:  0 errors; body <ltx:p> keeps the Greek text "ασδφ"
+% status:  RED
+% mechanism: polyglossia.sty:719-721 \__xpg_setup_font:nn {rm}/{sf}/{tt} redefines \rmfamily/
+%   \sffamily/\ttfamily (:690-718) so that, in a non-Latin (Greek) language, a font switch calls
+%   \__xpg_add_font_feature_script:nnn (:632). That runs \xpg_if_script:nTF{scripttag} (:641);
+%   FALSE -> \xpg_error_msg "The current main <fam> font, cmr10, does not contain the Greek script!"
+%   (:677, a counted \errmessage since batch 56g). \xpg_if_script:n is \fontspec_if_script:n
+%   (:47, non-luatex profile) or gated by \fontspec_if_fontspec_font:TF (:31-45, luatex profile) —
+%   BOTH stubbed constant-FALSE in fontspec_sty.rs, so the check never passes. LaTeXML has no real
+%   OpenType font, so cmr10 is always "current"; the faithful answer for a valid doc is TRUE.
+\documentclass{article}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{greek}
+\usepackage[default]{fontsetup}
+\begin{document}
+Hello \textgreek{ασδφ} world.
+\end{document}

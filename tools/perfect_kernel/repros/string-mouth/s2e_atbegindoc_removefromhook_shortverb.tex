@@ -1,0 +1,16 @@
+% witness: base/source2e (source2e.tex -> ltoutenc.dtx:2242 macrocode leak; 30 err)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=2 (2026-09-05; perl's 2nd err = unrelated rerunfilecheck/kvoptions)
+% expect:  0 errors; a <text font="bold"> node (\textbf ran, " is an ordinary char)
+% status:  RED
+% mechanism: l3doc.cls:511 \AtBeginDocument{\MakeShortVerb\"} makes " a shortverb;
+%   source2edoc.cls:12 \RemoveFromHook{begindocument}[l3doc] cancels it in real TeX.
+%   Our \AtBeginDocument (sect02.rs:29) stores code in @at@begin@document, a store
+%   DISJOINT from the L3 begindocument hook \RemoveFromHook edits (latex.ltx:18901
+%   makes them ONE), so the removal misses and " stays a live \verb. The shortverb
+%   then over-runs from an opening " to the " in \" inside \textbf{...}, swallowing
+%   the { and leaving an unbalanced } -> "close a group ... mode horizontal".
+\documentclass{source2edoc}
+\begin{document}
+Start "verb \textbf{bold" and more} done.
+\end{document}

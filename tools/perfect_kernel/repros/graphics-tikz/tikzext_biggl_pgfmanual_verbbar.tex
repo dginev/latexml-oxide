@@ -1,0 +1,34 @@
+% WITNESS: tikz-ext/tikz-ext-manual (pdflatex+lualatex oracle CLEAN; latexml_oxide.b56i
+%   1001 errs = TooManyErrors). First real error in tikz-ext-manual-en-pgf-shapes-superellipse
+%   line 20: `Error:unexpected:\biggl Attempt to close boxing group / current frame is
+%   non-boxing group due to T_CS[\begingroup]`. That single break leaves display math open,
+%   cascading to 926 `malformed:ltx:XMTok isn't allowed in <ltx:item>` (itemize absorbed into
+%   the never-closed <ltx:XMath>) + 24 `expected:$` — i.e. ~950 of the 1001 errors are ONE root.
+% ORACLE: pdflatex 0 err (this repro). ENGINE: lualatex (manual); repro reproduces under
+%   plain, [rawstyles,rawclasses] and [rawstyles,rawclasses,luatex] preloads.
+% CLASS: SHARED. Perl latexml (same host, [rawstyles,rawclasses]) fails IDENTICALLY: 8 err,
+%   `Error:expected:TeXDelimiter Missing argument TeXDelimiter for ...[\biggl TeXDelimiter]`
+%   + `\biggl Attempt to close boxing group`. surpass-Perl in scope (pdflatex clean).
+% EXPECT: 0 err; the equation is real display math (<ltx:equation><ltx:Math>... with |-fenced
+%   \biggl delimiters), NOT a stray \begingroup/verbatim group.
+% MECHANISM: pgfmanual has TWO competing \AtBeginDocument defs of the active `|` char:
+%   (a) pgfmanual-en-macros.tex L34 `\gdef|{\ifmmode\pgfmanualnormalbar\else\verb...\fi}`
+%       (MATH-SAFE: in math yields a real bar);
+%   (b) pgfmanual.pdflinks.code.tex L413 `\let<active|>=\pgfmanual@verb` where
+%       `\def\pgfmanual@verb{\begingroup\pgfmanual@verb@preparecatcodes@ ... \pgfmanual@verb@collect}`
+%       (UNGUARDED verbatim collector, starts with \begingroup, no \ifmmode).
+%   In pdflatex the guarded def (a) wins at \begin{document} (active | meaning = `\ifmmode ...`);
+%   in LaTeXML the verb-collector (b) wins (meaning = `\begingroup ... \pgfmanual@verb@collect`).
+%   `\biggl` = DefConstructor('\biggl TeXDelimiter',...) whose TeXDelimiter reader
+%   (Engine/TeX_Math.pool.ltxml:714) does `readXToken` = EXPAND the delimiter token; expanding
+%   the verb-collector active `|` fires its `\begingroup`, which is then invokeToken'd AS the
+%   delimiter -> stray non-boxing group inside \biggl's bounded box -> "close boxing group"
+%   against a \begingroup frame. Root is the divergent WINNER of the two begindocument hooks
+%   (hook/package-(re)load order); force-issuing def (a) last makes it clean.
+% STATUS: RED on latexml_oxide.b56i (2026-09-05).
+\documentclass[a4paper,doc2,landscape]{ltxdoc}
+\usepackage{tikz}
+\input{pgfmanual-en-macros}
+\begin{document}
+\[ \biggl| {r} \biggr| \]
+\end{document}

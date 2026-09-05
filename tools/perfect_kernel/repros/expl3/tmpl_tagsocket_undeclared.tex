@@ -1,0 +1,15 @@
+% witness: tagpdf/tagpdf (sweep#40, sock=88, oracle-clean lualatex col4=0)
+% oracle: pdflatex/lualatex clean (testphase-minipage declares tagsupport/minipage/* sockets)
+% expect: 0 Error lines; XML has <ltx:p>AB</ltx:p>
+% mechanism: \DocumentMetadata{tagging=on} must load latex-lab-testphase-minipage.sty,
+%   which \NewTaggingSocket{minipage/before}{0}; tagpdfdocu-patches.sty:146 then
+%   \AssignSocketPlug{tagsupport/minipage/before}{noop}. Our \DocumentMetadata loads
+%   only the tagpdf binding, never testphase-minipage, so the socket is undeclared.
+\DocumentMetadata{tagging = on}
+\documentclass{article}
+\ExplSyntaxOn
+\AssignSocketPlug{tagsupport/minipage/before}{noop}
+\ExplSyntaxOff
+\begin{document}
+A\UseTaggingSocket{minipage/before}B
+\end{document}

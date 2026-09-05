@@ -112,9 +112,14 @@ LoadDefinitions!({
   // `\prop_map_inline:cn` loses its `\prg_break_point:Nn` and the trailing
   // `\prop_map_break:` runs to EOF — 39-byte XML + Fatal). Guard:
   // `perfect_kernel_batch54::documentmetadata_loads_tagpdf`.
+  // `latex-lab-testphase-latest.sty:43,47` (via documentmetadata-support
+  // .ltx:72) also loads the block and minipage testphase modules, whose
+  // template types/instances and tagging sockets raw classes edit and use
+  // (ltx-talk.cls:1860 `\EditInstance{item}{basic}`, tagpdfdocu-patches
+  // .sty:127,146): bound in latex_lab_testphase_{block,minipage}_sty.rs.
   DefMacro!(
     "\\DocumentMetadata{}",
-    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}"
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
   );
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
@@ -748,6 +753,95 @@ LoadDefinitions!({
   // physics2 is a self-contained expl3 package that interprets cleanly.
   // Guard: `perfect_kernel_batch54::physics2_is_not_a_version_of_physics`.
   //======================================================================
+  // The l3 / ltcmd declarators' "already defined" checks vs the LaTeX pool's
+  // class-level pre-definitions. Real LaTeX keeps `\section`, `\figurename`,
+  // `\thepage`, `{figure}`… in article.cls (:302, :458, :355-358), not in
+  // latex.ltx, so a standalone class (ltx-talk.cls:158 `\cs_new:Npn \thepage`,
+  // :1016-1033 `\NewDocumentEnvironment{figure/table}`, :1574-1580
+  // `\NewDocumentCommand \section…`, :1641/:2023) finds them FREE. Our pool
+  // pre-defines all of them for class-less robustness (Perl too), so
+  // expl3-code.tex:2031 `\__kernel_chk_if_free_cs:N`, latex.ltx:4820
+  // `\NewDocumentCommand` and :4872 `\__cmd_new_env:nnnn` raised 24 counted
+  // `\errmessage`s per ltx-talk manual (×10, all pdflatex-clean; RUST-ONLY —
+  // Perl never gets past the class's `\NeedsDocumentMetadata`). Perl's own
+  // `\newcommand`/`\newenvironment` sidestep the same collision through
+  // `isDefinableLaTeX` ("Ignoring redefinition"); this is that leniency for
+  // the l3 declarators: when the existing definition is LaTeXML's own
+  // (`is_latexml_predefinition_source`), the error is dropped and each
+  // declarator keeps its post-error shape — `\cs_new` still `\cs_gset`s
+  // (the raw `\thepage` replaces the pool's), ltcmd keeps the existing
+  // command/environment (the pool's `<ltx:figure>`/`<ltx:section>`
+  // constructors survive). Definitions with a real file locator (a genuine
+  // double declaration, which pdflatex reports too) still error.
+  // Guards: `perfect_kernel_batch56::{l3_cs_new_over_a_pool_definition_is_quiet,
+  // ltcmd_declarators_keep_pool_constructors_quietly}`.
+  DefMacro!("\\lx@if@pooldefined{}{}{}", sub[(name, if_tks, else_tks)] {
+    let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
+    // A constructor/environment defined from Rust carries no locator at all;
+    // a pool macro carries the Rust-side placeholder. Both are "ours".
+    let pool = lookup_definition(&cs)?.is_some_and(|prev| {
+      prev.get_locator().is_none_or(crate::latex_constructs::is_latexml_predefinition_source)
+    });
+    Ok(if pool { if_tks } else { else_tks })
+  });
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NT \__kernel_chk_if_free_cs:N
+  {
+    \cs_gset_protected:Npn \__kernel_chk_if_free_cs:N #1
+      {
+        \cs_if_free:NF #1
+          {
+            \lx@if@pooldefined { \cs_to_str:N #1 } { }
+              {
+                \msg_error:nnee { kernel } { command-already-defined }
+                  { \token_to_str:N #1 } { \token_to_meaning:N #1 }
+              }
+          }
+      }
+  }
+\cs_if_exist:NT \__cmd_declare_cmd:Nnn
+  {
+    \cs_gset_protected:Npn \NewDocumentCommand #1#2#3
+      {
+        \__cmd_check_definable:nNT {#1} \NewDocumentCommand
+          {
+            \cs_if_exist:NTF #1
+              {
+                \lx@if@pooldefined { \cs_to_str:N #1 } { }
+                  {
+                    \msg_error:nnxx { cmd } { already-defined }
+                      { \use:nnn \token_to_str:N #1 { } }
+                      { \token_to_str:N \NewDocumentCommand }
+                  }
+              }
+              { \__cmd_declare_cmd:Nnn #1 {#2} {#3} }
+          }
+      }
+  }
+\cs_if_exist:NT \__cmd_new_env:nnnn
+  {
+    \cs_gset_protected:Npn \__cmd_new_env:nnnn #1
+      {
+        \cs_if_exist:cTF {#1}
+          {
+            \lx@if@pooldefined {#1} { }
+              { \msg_error:nnx { cmd } { env-already-defined } {#1} }
+            \use_none:nnn
+          }
+          {
+            \cs_if_exist:cTF { end #1 }
+              {
+                \msg_error:nnx { cmd } { env-end-already-defined } {#1}
+                \use_none:nnn
+              }
+              { \__cmd_declare_env:nnnn {#1} }
+          }
+      }
+  }
+\ExplSyntaxOff"
+  );
+
   for name in [
     "physics2.sty",
     "phy-ab.sty",

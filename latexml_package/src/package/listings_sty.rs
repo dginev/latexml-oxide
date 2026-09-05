@@ -104,9 +104,22 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
   // manuals define example environments this way). Space-only pushback (the
   // built-in lstlisting's `if_next` probe unreads the end-of-line SPACE) still
   // means the first raw line is `\begin`-line leftover. OXIDIZED_DESIGN #162.
-  if !pushback_holds_nonspace() {
+  //
+  // That first line is taken from COLUMN 0 of the mouth's line, not as
+  // pushback + remainder: the probe's tokenization had dropped the
+  // indentation and every catcode-9 character, so under `\DocInput` (doc.sty
+  // `\MakePercentIgnore`) line 1 came back without its `% ` prefix while lines
+  // 2+ kept it, and `gobble=2` (lstdoc/forest-doc.sty:32) then ate two real
+  // characters of line 1 while the write-file tee re-input lines whose `%`
+  // commented out `\end{forest}` (forest-doc: 501 `readBalanced ran out of
+  // input` → Fatal). Guard:
+  // `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`.
+  let mut first_line = if pushback_holds_nonspace() {
+    read_raw_current_line_from_start()
+  } else {
     read_raw_line(); // leftover of the \begin line — not content
-  }
+    None
+  };
   let mut end_patterns = vec![
     format!(r"\\end\{{{}\}}", regex::escape(environment)),
     format!(r"\\end{}", regex::escape(environment)),
@@ -118,7 +131,7 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
     end_patterns.push(format!(r"\\end\{{{}\}}", regex::escape(outer)));
   }
   let end_re = Regex::new(&end_patterns.join("|")).unwrap();
-  while let Some(line) = read_raw_line() {
+  while let Some(line) = first_line.take().or_else(read_raw_line) {
     if let Some(m) = end_re.find(&line) {
       let matched_str = m.as_str();
       let is_outer = outer_env.is_some_and(|outer| matched_str == format!(r"\end{{{outer}}}"));
@@ -2425,9 +2438,14 @@ LoadDefinitions!({
     Ok(())
   });
 
-  // \lstinputlisting — read listing from file
+  // \lstinputlisting — read listing from file. The name is EXPANDED like
+  // real listings' `\lst@InputListing` → `\input` does (Perl's binding
+  // :124 reads it Semiverbatim): tcblistingscore.code.tex:25 hands
+  // `\tcbuselistinglisting` the unexpanded `\kvtcb@listingfile`
+  // (= `\jobname.listing`). Guard:
+  // `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
   DefMacro!("\\lstinputlisting OptionalKeyVals:LST Semiverbatim", sub[(kv, file)] {
-    let filename = file.to_string();
+    let filename = Expand!(file).to_string();
     let text = listings_read_raw_file(&filename).unwrap_or_default();
     bgroup();
     lst_activate(kv.as_ref());
@@ -3853,9 +3871,15 @@ fn lst_writefile_tee(text: &str) -> bool {
   // write here landed in the process CWD, not the destination directory
   // (repo-root leakage from test runs). Appends within one begin/end span
   // (`\lst@WFAppend`); `lst_writefile_open` truncates on each fresh begin.
+  // Real listings tees through `\lst@Append` (lstmisc.sty:47-64), AFTER the
+  // per-line `gobble` was applied, so the written file holds the gobbled
+  // text — what `\lst@sampleInput` (lstdoc.sty:187-192) re-inputs as code.
+  let gobble = lst_get_number("gobble").max(0) as usize;
   let mut mirrored = vfs_read(&file).unwrap_or_default();
-  mirrored.push_str(text);
-  mirrored.push('\n');
+  for line in text.split('\n') {
+    mirrored.extend(line.chars().skip(gobble));
+    mirrored.push('\n');
+  }
   vfs_store(&file, &mirrored);
   lookup_bool("LST@WF@also")
 }

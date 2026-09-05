@@ -1,0 +1,17 @@
+% witness: xpicture/xpicture-doc (./xpicture1.tex), checklistings/example (./example0000.ml)
+% oracle: pdflatex CLEAN (0 !); Perl LaTeXML CLEAN (verbatim content present)
+% engines: article
+% expect: 0 Error/Fatal; <ltx:verbatim> contains "hello dotslash world"
+% status: RED today (b56j) -> "FancyVerb Error: No verbatim file ./foo.tex"
+% mechanism: \openout stores VFS key raw "./foo.tex" (tex_file_io.rs:168); the read
+%   side find_file_aux strips a leading "./" before the VFS lookup (content.rs:3345),
+%   looking up "foo.tex" -> MISS -> \ifeof true -> fancyvrb.sty:421 \FV@Error.
+%   Asymmetric ./ normalization between write and read. RUST-ONLY.
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{VerbatimOut}{./foo.tex}
+hello dotslash world
+\end{VerbatimOut}
+\VerbatimInput{./foo.tex}
+\end{document}

@@ -1,0 +1,15 @@
+% witness: chemformula/chemformula-manual, endiagram/endiagram_en, ghsystem/ghsystem-manual
+% oracle: pdflatex CLEAN (\setchemformula{format=\bfseries} -> 0 err; chemformula.sty:3165 'format .code:n')
+% engines: pdflatex 0 err; Perl 0 err (raw-loads real chemformula.sty); our binary emits Error:errmessage
+% expect: 0 Error/Fatal
+% status: RED today (b56j) — Error:errmessage:\errmessage LaTeX Error: The key 'chemformula/format' is unknown and is being ignored.
+% mechanism: contrib stub latexml_contrib/src/chemformula_sty.rs REPLACES chemformula.sty (\ch->\ce, \setchemformula noop)
+%            and does NOT raw-load it, so the expl3 'chemformula' l3keys module is empty. Classification: RUST-ONLY.
+\documentclass{article}
+\usepackage{chemformula}
+\ExplSyntaxOn
+\keys_set:nn {chemformula} {format=\bfseries}
+\ExplSyntaxOff
+\begin{document}
+\ch{H2O}
+\end{document}

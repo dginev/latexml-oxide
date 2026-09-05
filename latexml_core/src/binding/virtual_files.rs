@@ -57,10 +57,19 @@ fn with_vfs_mut<R>(f: impl FnOnce(&mut HashMap<String, String>) -> R) -> R {
   result
 }
 
+/// The VFS key for a file name: a leading `./` is dropped on EVERY side of
+/// the store, the way one directory holds `./foo.tex` and `foo.tex`. The
+/// read side (`find_file_aux`) stripped it while `\openout ./foo.tex` +
+/// `\write` stored the raw name, so fancyvrb's `{VerbatimOut}{./x}` →
+/// `\VerbatimInput{./x}` (xpicture-doc ×6, checklistings ×4; RUST-ONLY,
+/// pdflatex and Perl clean) missed its own file. Guard:
+/// `perfect_kernel_batch56::verbatimout_dotslash_round_trips_through_the_vfs`.
+fn vfs_key(name: &str) -> &str { name.strip_prefix("./").unwrap_or(name) }
+
 /// Create/overwrite a virtual file with `content`.
 pub fn vfs_store(name: &str, content: &str) {
   with_vfs_mut(|map| {
-    map.insert(name.to_string(), content.to_string());
+    map.insert(vfs_key(name).to_string(), content.to_string());
   });
 }
 
@@ -68,7 +77,7 @@ pub fn vfs_store(name: &str, content: &str) {
 /// absent — the `\write`-to-stream shape.
 pub fn vfs_append_line(name: &str, line: &str) {
   with_vfs_mut(|map| {
-    let contents = map.entry(name.to_string()).or_default();
+    let contents = map.entry(vfs_key(name).to_string()).or_default();
     contents.push_str(line);
     contents.push('\n');
   });
@@ -78,14 +87,14 @@ pub fn vfs_append_line(name: &str, line: &str) {
 /// (the LSP overlay retracts an editor buffer this way).
 pub fn vfs_remove(name: &str) {
   with_vfs_mut(|map| {
-    map.remove(name);
+    map.remove(vfs_key(name));
   });
 }
 
 /// Read a virtual file's full content.
 pub fn vfs_read(name: &str) -> Option<String> {
   with_value(VFS_KEY, |v| match v {
-    Some(Stored::HashString(map)) => map.get(name).cloned(),
+    Some(Stored::HashString(map)) => map.get(vfs_key(name)).cloned(),
     _ => None,
   })
 }
@@ -93,7 +102,7 @@ pub fn vfs_read(name: &str) -> Option<String> {
 /// Does a virtual file exist?
 pub fn vfs_exists(name: &str) -> bool {
   with_value(VFS_KEY, |v| match v {
-    Some(Stored::HashString(map)) => map.contains_key(name),
+    Some(Stored::HashString(map)) => map.contains_key(vfs_key(name)),
     _ => false,
   })
 }

@@ -1,0 +1,21 @@
+% witness: bigints/bigints (class B "unexpected:} horizontal", top survivor group)
+% oracle: pdflatex -> 1 error "\verb ended by end of line" then RECOVERS (no cascade)
+% engines: pdflatex,lualatex
+% expect: <=1 Error line; the unterminated \verb must close its own \bgroup at EOL
+% status: RED (b56i) -> 10-error cascade; SHARED: Perl LaTeXML fails IDENTICALLY
+% mechanism: latex.ltx:15508 \verb does \leavevmode\null\bgroup (horizontal mode),
+%   delim after \@ifstar-space-skip = 'v'; no closing 'v' on the line. latex.ltx:15504
+%   \verb@eol@error closes the group + 1 recoverable error. LaTeXML's binding
+%   (latex_constructs.pool.ltxml:1797 / Rust read_verb_invocation mod.rs:3391) uses
+%   read_until(delim) with NO EOL guard, so the \bgroup leaks and swallows the later
+%   verbatim -> "\usepackage can only appear in preamble" etc.
+\documentclass{article}
+\begin{document}
+This package (\verb v1.1 ) helps you.
+
+\begin{center}
+\begin{verbatim}
+\usepackage{bigints}
+\end{verbatim}
+\end{center}
+\end{document}

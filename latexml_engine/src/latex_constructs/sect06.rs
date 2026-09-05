@@ -492,34 +492,35 @@ pub(crate) fn load() -> Result<()> {
   // Start an anonymous list (often misused)
   DefConstructor!("\\lx@list",
     "<ltx:itemize>",
-    before_digest => { bgroup(); });
+    before_digest => {
+      begin_mode("internal_vertical")?;
+      // Name the frame, so `\endtrivlist` (latex.ltx:15913 `\endlist` =
+      // `\endtrivlist`; a raw `\@trivlist` … `\endtrivlist` pair) can tell
+      // the list's own mode frame from an enclosing one.
+      assign_value("groupInitiator", Stored::Token(T_CS!("\\lx@list")), None);
+    });
   // Close the anonymous list if we're still within one.
   //
-  // The egroup pairs with `\lx@list`'s bgroup, so pop only a frame that
-  // `\lx@list` opened (groupInitiator). Perl's `\endlx@list` is
-  // `endMode('internal_vertical')` (Stomach.pm:524-531): when the top frame
-  // is not the list's own it Errors "Attempt to end mode" and does NOT pop
-  // — "maybe we'll recover?". A raw class can redefine `\list` alone —
-  // memoir.cls:4580 `\renewcommand*{\list}[2]` is latex.ltx's `\list`
-  // verbatim, ending in `\@trivlist` (no group here) — while `\endlist` stays
-  // `\endlx@list`; the unconditional egroup then popped the ENCLOSING frame
-  // whenever it was a plain `{` group, and every later `\global`/`\let`/
-  // `\csname` in the document cascaded (memman 144→1001, biblatex-oxref ×4
-  // 19→1001, verbatimcopy, dlfltxb; sweep 28). Perl's one-error-per-list
-  // shape is kept; giving raw `\list`/`\@trivlist` real list semantics is
-  // PLANS P38. Guard: `perfect_kernel_batch51::endlist_without_lx_list_frame`.
+  // Perl (latex_constructs.pool.ltxml:1647-1653): `\lx@list` =
+  // beginMode('internal_vertical'), `\endlx@list` = endMode('internal_vertical')
+  // — symmetric MODE frames, so `\endlist` also closes a list opened by a
+  // `{enumerate}`/`{itemize}` environment's begin macro (`mode =>
+  // "internal_vertical"` above): nih/denselists.sty:10,16 `\let\Onumerate
+  // \enumerate`, `\newenvironment{Enumerate}{\Onumerate\Nospacing}{\endlist}`
+  // (example-biosketch, polydemo; RUST-ONLY, Perl clean). A bgroup/egroup
+  // pair keyed on groupInitiator (batches 51/54) could not pop that frame,
+  // so `\end{Enumerate}`'s `\endgroup` cascaded. `end_mode` keeps Perl's
+  // Stomach.pm:524-531 shape when the top frame is not the list's own: it
+  // Errors "Attempt to end mode" and does NOT pop — which is what protected
+  // memoir.cls:4580's raw `\list` (latex.ltx's, ending in `\@trivlist`, no
+  // group) paired with our `\endlist` (memman 144→1001, biblatex-oxref ×4,
+  // verbatimcopy, dlfltxb; sweep 28), now served by OXIDIZED_DESIGN #180.
+  // Guards: `perfect_kernel_batch51::endlist_without_lx_list_frame`,
+  // `perfect_kernel_batch54::endlist_decrements_listdepth`,
+  // `perfect_kernel_batch56::endlist_closes_an_enumerate_opened_by_its_begin_macro`.
   DefConstructor!("\\endlx@list", sub[document] {
   document.maybe_close_element("ltx:itemize")?; },
-  before_digest => {
-    let opened_by_list = is_value_bound("groupInitiator", Some(0))
-      && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"));
-    if opened_by_list {
-      egroup()?;
-    } else {
-      Error!("unexpected", get_current_token().unwrap_or_else(|| T_CS!("\\endlx@list")),
-        "Attempt to end mode internal_vertical", current_frame_message());
-    }
-  });
+  before_digest => { end_mode("internal_vertical")?; });
 
   DefConstructor!("\\list@item OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
@@ -555,11 +556,12 @@ pub(crate) fn load() -> Result<()> {
       // an `\lx@list` frame; `\endtrivlist` is its kernel closer
       // (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207
       // `mathtrivlist` pairs `\@trivlist` with `\endtrivlist` directly).
-      // Our own `\trivlist` opens no frame, so the pop is conditional.
+      // Our own `\trivlist` opens no frame, so the pop is conditional; the
+      // `\lx@list` frame is a MODE frame (Perl's beginMode), closed as one.
       if is_value_bound("groupInitiator", Some(0))
         && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"))
       {
-        egroup()?;
+        end_mode("internal_vertical")?;
       }
     }
   );

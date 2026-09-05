@@ -1,0 +1,15 @@
+% witness: ltx-talk/* (float-centering, footer-text, ... 10 oracle-clean pdflatex docs; 2 template errs each)
+% oracle: pdflatex clean (testphase-block declares item type + basic/description instances)
+% expect: 0 Error lines
+% mechanism: ltx-talk.cls:1860 (begindocument/before) does \EditInstance{item}{basic}{...}.
+%   The item/basic instance is declared by latex-lab-testphase-block.sty:1429 (\DeclareInstance{item}{basic}{std}),
+%   loaded by \DocumentMetadata{tagging=on} -> testphase-latest -> block. Our \DocumentMetadata
+%   loads only the tagpdf binding, never testphase-block -> "instance 'basic' of type 'item' is unknown".
+\DocumentMetadata{tagging = on}
+\documentclass{article}
+\ExplSyntaxOn
+\EditInstance{item}{basic}{label-format = #1}
+\ExplSyntaxOff
+\begin{document}
+Hello
+\end{document}

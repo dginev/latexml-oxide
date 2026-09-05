@@ -1,0 +1,28 @@
+% witness: base/source2e -> ltoutenc.dtx:2237-2245 (%    "C0 = 192 doc line + macrocode)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl>=2 (2026-09-05; shared root, pdflatex clean)
+% expect:  0 errors; macrocode body \DeclareTextComposite{\"}... appears VERBATIM (captured, not executed)
+% status:  RED
+% mechanism: same root as s2e_atbegindoc_removefromhook_shortverb.tex. The " in the
+%   inter-block doc comment "C0 = 192 is a live shortverb (l3doc \MakeShortVerb\" not
+%   removed by source2edoc's \RemoveFromHook[l3doc]); it \verb-scans from "C0 across
+%   %    \begin{macrocode} to the " in \DeclareTextComposite{\"}, so \xmacro@code
+%   (l3doc.cls:1961) never captures the body; the leftover {T1}{A}{196} executes ->
+%   unbalanced } / \endgroup mode errors. ltoutenc is the 20th \DocInclude but the
+%   root is state-independent: a single "..." doc line + one \" line reproduces it.
+\documentclass{source2edoc}
+\begin{filecontents}[overwrite]{s2emac.dtx}
+% \StopEventually{}
+%    \begin{macrocode}
+\relax
+%    \end{macrocode}
+%    "C0 = 192
+%    \begin{macrocode}
+\DeclareTextComposite{\"}{T1}{A}{196}
+%    \end{macrocode}
+% \Finale
+\endinput
+\end{filecontents}
+\begin{document}
+\DocInput{s2emac.dtx}
+\end{document}

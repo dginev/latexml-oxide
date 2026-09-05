@@ -193,6 +193,24 @@ fn section_element_for_type_maybe(stype: &str) -> Option<String> {
 /// We deliberately do NOT use looser `contains("plain.")` /
 /// `contains("/plain")` checks — they would match unrelated
 /// paths such as `complainttext.tex` or `…/plainness/foo.sty`.
+/// Was a definition made by LaTeXML itself — the plain/LaTeX dump
+/// (`<embedded:plain>`/`<embedded:latex>`), a pool or binding's Rust code
+/// (a `.rs` placeholder locator) or the plain pool proper — rather than by a
+/// TeX file the document loaded? Broader than `is_plain_definition_source`, which keeps
+/// Perl's `\newcommand` plain-only leniency. Used by `\lx@if@pooldefined`
+/// for the l3/ltcmd "already defined" checks (latex_constructs_rust_only.rs).
+pub fn is_latexml_predefinition_source(locator: Locator) -> bool {
+  if locator.get_short_source("").starts_with("plain") {
+    return true;
+  }
+  // `<embedded:plain>`/`<embedded:latex>` are the dumps; a Rust-defined
+  // macro's locator points at the Rust source (`…/locator.rs` placeholder or
+  // the defining binding); a TeX file the document loaded is neither.
+  with(locator.get_source(), |s| {
+    s.is_empty() || s.starts_with("<embedded:") || s.ends_with(".rs")
+  })
+}
+
 fn is_plain_definition_source(locator: Locator) -> bool {
   if locator.get_short_source("").starts_with("plain") {
     return true;
@@ -3422,8 +3440,29 @@ pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
   if let Some(init_token) = init {
     let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
     assign_catcode(init_ch, Catcode::ACTIVE, None);
-    let delim = Tokens!(T_ACTIVE!(init_ch));
-    let body = read_until(&delim)?.unwrap_or_default();
+    let delim = T_ACTIVE!(init_ch);
+    // latex.ltx:15504-15510 `\verb@eol@error`: `\obeylines` makes the end of
+    // the line active, and that `^^M` closes the verb group with ONE
+    // recoverable "\verb ended by end of line" error. Perl's `readUntil`
+    // (latex_constructs.pool.ltxml:1797) has no such bound, so an unterminated
+    // `\verb v1.1 )` scanned across lines and swallowed a later `{verbatim}`
+    // (bigints manual, 10-error cascade; SHARED, pdflatex recovers with one
+    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`.
+    assign_catcode('\r', Catcode::ACTIVE, None);
+    let eol = T_ACTIVE!('\r');
+    let par = T_CS!("\\par");
+    let mut body = Vec::new();
+    while let Some(token) = read_token()? {
+      if token == delim {
+        break;
+      }
+      if token == eol || token == par {
+        Error!("unexpected", "\\verb", "\\verb ended by end of line", "");
+        break;
+      }
+      body.push(token);
+    }
+    let body = Tokens::new(body);
     end_semiverbatim()?;
     let mut result = Vec::new();
     if starred {

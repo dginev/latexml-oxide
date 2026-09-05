@@ -624,6 +624,60 @@ LoadDefinitions!({
   });
   def_macro_noop("\\pdfglyphtounicode{}{}")?;
 
+  // pdfTeX manual §8.14: `\pdfmatch [icase] [subcount <integer>] <general
+  // text> <general text>` matches the POSIX extended regex (first text)
+  // against the string (second text) and expands to `-1` (bad pattern), `0`
+  // (no match) or `1`; `\pdflastmatch <integer>` expands to `<pos>-><text>`
+  // for capture N of the last match (`-1->` when unset). Neither Perl nor
+  // Rust defined them, so dataref.sty:374 `\let\dref@strmatch\pdfmatch` fed
+  // `\ifnum` a bare CS (dataref-doc, chordbox; SHARED, pdflatex clean).
+  // Guard: `perfect_kernel_batch56::pdfmatch_expands_to_a_match_flag`.
+  DefMacro!("\\pdfmatch", sub[()] {
+    let icase = read_keyword(&["icase"])?.is_some();
+    let subcount: i64 = if read_keyword(&["subcount"])?.is_some() {
+      read_number()?.value_of()
+    } else {
+      -1
+    };
+    skip_filler()?;
+    let pattern = read_balanced(ExpansionLevel::Partial, false, true)?.to_string();
+    skip_filler()?;
+    let subject = read_balanced(ExpansionLevel::Partial, false, true)?.to_string();
+    let pattern = if icase { format!("(?i){pattern}") } else { pattern };
+    let mut groups: Vec<String> = Vec::new();
+    let flag = match Regex::new(&pattern) {
+      Err(_) => "-1",
+      Ok(re) => match re.captures(&subject) {
+        None => "0",
+        Some(caps) => {
+          let limit = if subcount < 0 { caps.len() } else { subcount as usize };
+          for i in 0..caps.len().min(limit.max(1)) {
+            groups.push(match caps.get(i) {
+              Some(m) => format!("{}->{}", m.start(), m.as_str()),
+              None => String::from("-1->"),
+            });
+          }
+          "1"
+        },
+      },
+    };
+    AssignValue!("pdfTeX:lastmatch" => groups.join("\u{1}"), Scope::Global);
+    Ok(Tokens!(Explode!(flag)))
+  });
+  DefMacro!("\\pdflastmatch Number", sub[(n)] {
+    let stored = match lookup_value("pdfTeX:lastmatch") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => String::new(),
+    };
+    let n = n.value_of();
+    let entry = if n < 0 {
+      None
+    } else {
+      stored.split('\u{1}').nth(n as usize).map(|s| s.to_string())
+    };
+    Ok(Tokens!(Explode!(entry.unwrap_or_else(|| String::from("-1->")))))
+  });
+
   // LuaTeX integer parameter (LuaTeX manual §2.5: hyphenation behaviour for
   // words with explicit hyphens/automatic discretionaries; a line-breaking
   // knob with no XML-content meaning). LuaLaTeX-authored manuals set it in

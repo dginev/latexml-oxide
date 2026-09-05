@@ -9316,11 +9316,14 @@ $\Uradical+0+8730\relax{x}$
   /// unit macro (verifica example4/5 `$25\unit{m}$`).
   #[test]
   fn babel_italian_unit_under_iso_compliance() {
+    // `\setISOcompliance` must precede babel's own `begindocument` chunk
+    // (italian.ldf:155-165 tests `\it@ISOcompliance` there). A document-level
+    // `\AtBeginDocument{\setISOcompliance}` runs LAST in lthooks (`top-level`
+    // after package labels) — pdflatex then also reports `\unit` undefined
+    // (probed TL2025) — so the compliance switch is set in the preamble.
     let tex = r"\documentclass{article}
-\makeatletter
-\AtBeginDocument{\setISOcompliance}
-\makeatother
 \usepackage[italian]{babel}
+\setISOcompliance
 \begin{document}
 $25\unit{m}$
 \end{document}
@@ -14018,6 +14021,309 @@ Hello colored box.
     );
     assert!(stderr.contains("EXEC:width=3cm"), "{stderr}");
     assert!(xml.contains("MODELE"), "{xml}");
+  }
+
+  /// The raw `{tcblisting}` environment (tcblistingscore.code.tex:275-283)
+  /// hands `\tcbverbatimwrite` the UNEXPANDED `\kvtcb@listingfile`; the body
+  /// must be stored under the expanded `\jobname.listing` name that
+  /// `\tcbinputlisting@core` reads back (sweep #40: 25 manuals regressed with
+  /// `missing_file:<job>.listing`; witness cistercian-doc).
+  #[test]
+  fn raw_tcblisting_environment_round_trips_its_listing_file() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\begin{document}
+\begin{tcblisting}{title={Font scaling}}
+\textbf{bold} Text
+\end{tcblisting}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("Can't find") && !stderr.contains("Can't read"),
+      "{stderr}"
+    );
+    assert!(xml.contains("<listing"), "{xml}");
+    assert!(xml.contains("font=\"bold\""), "{xml}");
+  }
+
+  /// latex.ltx:15504 `\verb@eol@error`: an unterminated `\verb` stops at the
+  /// end of its line with ONE recoverable error instead of scanning across
+  /// lines and swallowing a later `{verbatim}` (bigints manual; SHARED).
+  #[test]
+  fn verb_ended_by_end_of_line_recovers() {
+    let tex = r"\documentclass{article}
+\begin{document}
+This package (\verb v1.1 ) helps you.
+
+\begin{center}
+\begin{verbatim}
+\usepackage{bigints}
+\end{verbatim}
+\end{center}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(stderr.contains("ended by end of line"), "{stderr}");
+    assert!(xml.contains("<verbatim"), "{xml}");
+    assert!(xml.contains(r"\usepackage{bigints}"), "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// pdfTeX `\pdfmatch` (dataref.sty:374 `\let\dref@strmatch\pdfmatch`, then
+  /// `\ifnum\dref@strmatch{#1}{#2}=1`) expands to the match flag, and
+  /// `\pdflastmatch` to `<pos>-><text>` (dataref-doc; SHARED, pdflatex clean).
+  #[test]
+  fn pdfmatch_expands_to_a_match_flag() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\ifnum\pdfmatch{b}{abc}=1 yes\else no\fi.
+\ifnum\pdfmatch{z}{abc}=0 none\else some\fi.
+\ifnum\pdfmatch icase {B(C)}{abc}=1 \pdflastmatch0/\pdflastmatch1\fi.
+\ifnum\pdfmatch{(}{abc}=-1 bad\fi.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("yes."), "{xml}");
+    assert!(xml.contains("none."), "{xml}");
+    assert!(xml.contains("bc/2-") && xml.contains("c.\nbad."), "{xml}");
+    assert!(xml.contains("bad."), "{xml}");
+  }
+
+  /// `\endlist` = `\endlx@list` = endMode('internal_vertical') (Perl
+  /// latex_constructs.pool.ltxml:1651-1653) also closes an enumerate opened
+  /// by its begin macro: nih/denselists.sty:16 `\newenvironment{Enumerate}
+  /// {\Onumerate\Nospacing}{\endlist}` (example-biosketch, polydemo; RUST-ONLY).
+  #[test]
+  fn endlist_closes_an_enumerate_opened_by_its_begin_macro() {
+    let tex = r"\documentclass{article}
+\let\Onumerate=\enumerate
+\newenvironment{Enumerate}{\Onumerate}{\endlist}
+\begin{document}
+\begin{Enumerate}
+\item x
+\end{Enumerate}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<enumerate") && xml.contains("<item "),
+      "{xml}"
+    );
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// latex.ltx:18901 `\AtBeginDocument` = `\AddToHook{begindocument}`, so a
+  /// `\RemoveFromHook{begindocument}[pkg]` cancels a package's
+  /// `\AtBeginDocument{\MakeShortVerb\"}` (source2edoc.cls:12 vs
+  /// l3doc.cls:511; base/source2e's ltoutenc macrocode leak; SHARED).
+  #[test]
+  fn atbegindocument_joins_the_l3_begindocument_hook() {
+    let tex = r#"\documentclass{article}
+\usepackage{doc}
+\begin{filecontents}[overwrite,noheader,nosearch]{lxshortq.sty}
+\AtBeginDocument{\MakeShortVerb\"}
+\end{filecontents}
+\usepackage{lxshortq}
+\RemoveFromHook{begindocument}[lxshortq]
+\AtBeginDocument{\def\lxhookran{ran}}
+\begin{document}
+Start "verb \textbf{bold" and more} done. \lxhookran
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("font=\"bold\""), "{xml}");
+    assert!(!xml.contains("<verbatim"), "{xml}");
+    assert!(xml.contains("ran"), "{xml}");
+  }
+
+  /// A listings example environment under `\DocInput` (forest-doc.sty:48
+  /// `forestexample`, `gobble=2`, `\lst@BeginAlsoWriteFile` + re-input): the
+  /// body's first line is read whole from column 0 so its `% ` survives like
+  /// lines 2+, and the write-file tee is gobbled like real listings', so the
+  /// re-input's `\end{forest}` is not commented out (forest-doc: 501
+  /// `readBalanced ran out of input` + Fatal; RUST-ONLY, pdflatex clean).
+  #[test]
+  fn forest_docinput_lstenv_writefile_gobbles_doc_percent() {
+    let tex = r"\documentclass{ltxdoc}
+\begin{filecontents*}{fdtx.dtx}
+% \iffalse
+% \fi
+% \section{T}
+% \begin{forestexample}
+%   \begin{forest}
+%     [VP[DP][V]]
+%   \end{forest}
+% \end{forestexample}
+% \endinput
+\end{filecontents*}
+\usepackage[external]{forest}
+\usepackage{forest-doc}
+\begin{document}
+\DocInput{fdtx.dtx}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(!stderr.contains("ran out of input"), "{stderr}");
+    assert!(xml.contains("<section"), "{xml}");
+    // base64 of the gobbled first line "\begin{forest}" is what the listing
+    // data starts with — line 1 lost neither its `\b` nor its indentation.
+    assert!(xml.contains("<listing"), "{xml}");
+  }
+
+  /// polyglossia.sty:641 `\xpg_if_script:nTF` answers TRUE (there is no
+  /// OpenType font model to ask; a lualatex-clean document loaded a
+  /// script-capable font), so a non-Latin font switch no longer raises "The
+  /// current main roman font, cmr10, does not contain the Greek script!"
+  /// (fontsetup/fspsample ×2 11→0, greektonoi 16→0, latex-mr 98+Fatal→3).
+  #[test]
+  fn polyglossia_script_check_passes_without_font() {
+    let tex = r"\documentclass{article}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{greek}
+\usepackage[default]{fontsetup}
+\begin{document}
+Hello \textgreek{ασδφ} world.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ασδφ"), "{xml}");
+  }
+
+  /// `\DocumentMetadata{tagging=on}` also loads the block and minipage
+  /// testphase modules (latex-lab-testphase-latest.sty:43,47): ltx-talk.cls
+  /// :1860 `\EditInstance{item}{basic}`, tagpdfdocu-patches.sty:127
+  /// `\DeclareInstance{blockenv}{docCommand}{display}` + `\UseInstance` +
+  /// `\endblockenv`, and :146 `\AssignSocketPlug{tagsupport/minipage/before}
+  /// {noop}` find their declarations (ltx-talk ×10, tagpdf manual 113 lines).
+  #[test]
+  fn testphase_tagging_sockets_and_block_templates_are_declared() {
+    let tex = r"\DocumentMetadata{tagging = on}
+\documentclass{article}
+\ExplSyntaxOn
+\EditInstance{item}{basic}{label-format = #1}
+\DeclareInstance{blockenv}{docCommand}{display}{ name = docCommand, tag-name = Div, increment-level = false }
+\AssignSocketPlug{tagsupport/minipage/before}{noop}
+\ExplSyntaxOff
+\begin{document}
+A\UseTaggingSocket{minipage/before}B
+\UseInstance{blockenv}{docCommand}{tag-name=Div,leftmargin=1pt,rightmargin=2pt}Hello\endblockenv
+\begin{itemize}\item one\end{itemize}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("AB"), "{xml}");
+    assert!(xml.contains("Hello"), "{xml}");
+    assert!(xml.contains("<item "), "{xml}");
+  }
+
+  /// A `./`-prefixed name written by `\openout`/`\write` (fancyvrb
+  /// `{VerbatimOut}{./foo.tex}`) is read back by `\VerbatimInput{./foo.tex}`:
+  /// the VFS keys both sides without the `./` (xpicture-doc, checklistings;
+  /// RUST-ONLY).
+  #[test]
+  fn verbatimout_dotslash_round_trips_through_the_vfs() {
+    let tex = r"\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{VerbatimOut}{./foo.tex}
+hello dotslash world
+\end{VerbatimOut}
+\VerbatimInput{./foo.tex}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("hello dotslash world"), "{xml}");
+  }
+
+  /// lthooks runs `top-level` chunks of `begindocument` AFTER package
+  /// chunks: pgfmanual-en-macros.tex:35's document-level
+  /// `\AtBeginDocument{\gdef|{\ifmmode…}}` must beat pgfmanual.pdflinks
+  /// .code.tex:413-416's `\let|=\pgfmanual@verb` (registered later, under
+  /// the `pgfmanual` label), so `\biggl|{r}\biggr|` in math is a fence, not
+  /// a verbatim collector opening a group inside the box (tikz-ext-manual:
+  /// ~950 of 1001 errors; SHARED). Follows from `\AtBeginDocument` joining
+  /// the L3 hook.
+  #[test]
+  fn pgfmanual_toplevel_atbegindocument_runs_last() {
+    let tex = r"\documentclass[a4paper,doc2,landscape]{ltxdoc}
+\usepackage{tikz}
+\input{pgfmanual-en-macros}
+\begin{document}
+\[ \biggl| {r} \biggr| \]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("absolute-value"), "{xml}");
+  }
+
+  /// A standalone class's `\cs_new:Npn \thepage` (ltx-talk.cls:158) over the
+  /// pool's `\thepage` (article.cls material in real LaTeX) is quiet and
+  /// takes effect (ltx-talk ×10, 24 errors each; RUST-ONLY).
+  #[test]
+  fn l3_cs_new_over_a_pool_definition_is_quiet() {
+    let tex = r"\begin{filecontents*}[overwrite]{poolc.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{poolc}[2026/01/01 pk-expl3]
+\renewcommand\normalsize{\fontsize{10pt}{12pt}\selectfont}
+\ExplSyntaxOn
+\cs_new:Npn \thepage { \@arabic \c@page }
+\cs_new:Npn \figurename { Fig }
+\ExplSyntaxOff
+\normalsize
+\end{filecontents*}
+\documentclass{poolc}
+\begin{document}
+Page \thepage. \figurename.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Page 1. Fig."), "{xml}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+  }
+
+  /// ltcmd's `\NewDocumentEnvironment{figure}` / `\NewDocumentCommand
+  /// \section` (ltx-talk.cls:1016-1033, :1574-1580) over the pool's
+  /// constructors: no error, and the pool's `<figure>`/`<section>` survive
+  /// (ltcmd keeps the existing definition after its check).
+  #[test]
+  fn ltcmd_declarators_keep_pool_constructors_quietly() {
+    let tex = r"\begin{filecontents*}[overwrite]{poolc.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{poolc}[2026/01/01 pk-expl3]
+\renewcommand\normalsize{\fontsize{10pt}{12pt}\selectfont}
+\ExplSyntaxOn
+\NewDocumentEnvironment { figure } { } { } { }
+\NewDocumentCommand \section { m } { }
+\ExplSyntaxOff
+\normalsize
+\end{filecontents*}
+\documentclass{poolc}
+\begin{document}
+\section{Hi}
+\begin{figure}Body\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<section") && xml.contains("Hi</title>"),
+      "{xml}"
+    );
+    assert!(xml.contains("<figure"), "{xml}");
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

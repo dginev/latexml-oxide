@@ -959,7 +959,22 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::mleftright_sty::load_definitions,
   ),
+  (
+    "latex-lab-testphase-block",
+    "sty",
+    package::latex_lab_testphase_block_sty::load_definitions,
+  ),
+  (
+    "latex-lab-testphase-minipage",
+    "sty",
+    package::latex_lab_testphase_minipage_sty::load_definitions,
+  ),
   ("placeins", "sty", package::placeins_sty::load_definitions),
+  (
+    "polyglossia",
+    "sty",
+    package::polyglossia_sty::load_definitions,
+  ),
   ("ragged2e", "sty", package::ragged2e_sty::load_definitions),
   ("relsize", "sty", package::relsize_sty::load_definitions),
   ("scalefnt", "sty", package::scalefnt_sty::load_definitions),

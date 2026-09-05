@@ -1,0 +1,11 @@
+% witness: dataref-doc (dataref.sty:374 \let\dref@strmatch\pdfmatch; :392 \ifnum\dref@strmatch{#1}{#2}=1)
+% oracle:  pdflatex (pdfTeX has \pdfmatch, expands to 0/1) — clean
+% engines: pdflatex
+% expect:  0 errors; \pdfmatch{b}{abc} expands to 1, prints "yes"
+% status:  RED (b56i) — Error:expected:<relationaltoken> Got "\pdfmatch"
+% mechanism: \pdfmatch is an unimplemented expandable pdfTeX primitive; \ifnum
+%   reads the bare CS as its relational token.
+\documentclass{article}
+\begin{document}
+\ifnum\pdfmatch{b}{abc}=1 yes\else no\fi
+\end{document}

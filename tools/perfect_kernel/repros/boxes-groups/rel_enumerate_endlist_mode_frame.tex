@@ -1,0 +1,23 @@
+% witness: example-biosketch (nih/denselists.sty:10,16 \Onumerate=\enumerate,
+%          Enumerate={\Onumerate\Nospacing}{\endlist}); class-B endgroup survivor
+% oracle:  pdflatex — clean (0 errors)
+% engines: pdflatex
+% perl:    CLEAN (0 errors) => RUST-ONLY
+% expect:  0 errors; <ltx:enumerate> with one <ltx:item>
+% status:  RED (b56i) — Error:unexpected:\endlx@list "Attempt to end mode
+%          internal_vertical" then Error:unexpected:\endgroup "Attempt to close
+%          a group that switched to mode horizontal"
+% mechanism: \enumerate opened as a DefEnvironment (sect06.rs:290-296,
+%   mode=internal_vertical) but closed via \endlist->\endlx@list, which Rust
+%   reimplemented as egroup()+groupInitiator==\lx@list (sect06.rs:511-522)
+%   instead of Perl's endMode('internal_vertical')
+%   (latex_constructs.pool.ltxml:1651-1653). The internal_vertical mode frame is
+%   never popped, so \end{Enumerate}'s \endgroup cascades.
+\documentclass{article}
+\let\Onumerate=\enumerate
+\newenvironment{Enumerate}{\Onumerate}{\endlist}
+\begin{document}
+\begin{Enumerate}
+\item x
+\end{Enumerate}
+\end{document}

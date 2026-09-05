@@ -1416,6 +1416,21 @@ pub fn pushback_holds_nonspace() -> bool {
   }
 }
 
+/// The current mouth line as raw text from column 0, DROPPING the pushback:
+/// for a reader that knows the pushback holds tokens probed off this very
+/// line (`pushback_holds_nonspace`), so the line comes back whole — with its
+/// indentation and any catcode-9 characters the probe's tokenization lost.
+pub fn read_raw_current_line_from_start() -> Option<String> {
+  let mut gullet = gullet_mut!();
+  match gullet.runtime {
+    Some(ref mut runtime) => {
+      runtime.pushback.clear();
+      runtime.mouth.read_raw_line_from_start()
+    },
+    None => None,
+  }
+}
+
 pub fn read_raw_line() -> Option<String> {
   // If we've got unread tokens, they presumably should come before the Mouth's raw data
   // but we'll convert them back to string.

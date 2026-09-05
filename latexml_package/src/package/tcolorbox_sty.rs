@@ -200,7 +200,12 @@ LoadDefinitions!({
       _ => String::from("tcbverbatimwrite"),
     };
     let text = listings_read_raw_lines(&env);
-    let name = file.to_string().trim().to_string();
+    // The raw `{tcblisting}` environment (tcblistingscore.code.tex:275-283)
+    // passes `\kvtcb@listingfile` = `\jobname.listing`, which the later
+    // `\tcbinputlisting@core` reads back EXPANDED: store under the expanded
+    // name (sweep #40 regressed 25 manuals with `missing_file:<job>.listing`).
+    // Guard: `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
+    let name = Expand!(file).to_string().trim().to_string();
     vfs_store(&name, &text);
     unread(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))));
     Ok(Vec::new())

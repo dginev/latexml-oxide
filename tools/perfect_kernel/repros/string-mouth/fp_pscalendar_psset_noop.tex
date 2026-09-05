@@ -1,0 +1,24 @@
+% witness: pst-calendar/pst-calendar-doc (\psCalendar in LTXexample), 42 fp errors + 54 relational
+% oracle: pdflatex CLEAN (0 !); Perl LaTeXML SHARED-FAIL (1 error, same message)
+% engines: article
+% expect: 0 Error/Fatal; \res prints 505.25
+% status: RED today (b56j): "Error:undefined:\psk@CalendrierA" + "FP error: Illegal character
+%   \psk@CalendrierA found in float number!"
+% mechanism: our pstricks binding no-ops \psset (pstricks_support_sty.rs:36
+%   def_macro_noop("\\psset{}")), so \psset{Year=2021} never runs the key handler
+%   \define@key[psset]{myfam}{Year}{\def\psk@CalendrierA{#1}}. \psk@CalendrierA stays
+%   undefined; fp-basic.sty:253 \FP@strip \edef-expands it -> leftover CS -> :275
+%   \FP@errmessage{Illegal character ...}. Faithful \psset = pst-xkey.tex:60-63
+%   \setkeys+[psset]{\pst@famlist}{#1}. Perl same-fail (pstricks_support.sty.ltxml:622).
+\documentclass{article}
+\usepackage{pstricks}
+\usepackage{fp}
+\makeatletter
+\pst@addfams{myfam}
+\define@key[psset]{myfam}{Year}[2099]{\def\psk@CalendrierA{#1}}
+\begin{document}
+\psset{Year=2021}
+\FPeval{\res}{(\psk@CalendrierA)/4}
+Result: \res
+\makeatother
+\end{document}

@@ -21,16 +21,26 @@ pub(crate) fn load() -> Result<()> {
   //   \end{document}
 
   // Perl: PushValue('@at@begin@document', $_[1]->unlist)
-  // Note: in modern LaTeX with expl3, \AtBeginDocument is redefined to use
-  // the L3 hook system (\AddToHook{begindocument}{...}). Our definition here
-  // serves as a fallback when expl3 isn't loaded. When expl3 IS loaded, it
-  // overrides this with its own version that routes through \hook_gput_code:nnn.
-  // Perl 93f875a6: support optional [label] from modern LaTeX hooks system
-  DefMacro!("\\AtBeginDocument[]{}", sub[(_label, rules)] {
-    push_value("@at@begin@document", rules)
+  // latex.ltx:18901 `\DeclareRobustCommand\AtBeginDocument{\AddToHook
+  // {begindocument}}` (and `\AtEndDocument` = `\AddToHook{enddocument}`):
+  // the TeX-level macro IS the L3 hook under the current default label, so
+  // `\RemoveFromHook{begindocument}[l3doc]` (source2edoc.cls:12) can cancel
+  // l3doc.cls:511's `\AtBeginDocument{\MakeShortVerb\"}`. Perl
+  // (latex_constructs.pool.ltxml:296-297, 93f875a6) keeps a private
+  // `@at@begin@document` store that ignores the label and that
+  // `\RemoveFromHook` never sees, so the shortverb stayed live and
+  // `"` scanned across ltoutenc.dtx's macrocode blocks (base/source2e, 30
+  // errors; SHARED, pdflatex clean). With the hook system loaded, route
+  // through `\AddToHook` (honouring an explicit `[label]`); the private
+  // store stays the fallback for the format-less path and for the Rust
+  // bindings' `AtBeginDocument()` helper (prelude.rs:28), which fires just
+  // before the L3 `begindocument` hook (below).
+  // Guard: `perfect_kernel_batch56::atbegindocument_joins_the_l3_begindocument_hook`.
+  DefMacro!("\\AtBeginDocument[]{}", sub[(label, rules)] {
+    at_document_hook("begindocument", "@at@begin@document", label, rules)
   });
-  DefMacro!("\\AtEndDocument[]{}", sub[(_label, rules)] {
-    push_value("@at@end@document", rules)
+  DefMacro!("\\AtEndDocument[]{}", sub[(label, rules)] {
+    at_document_hook("enddocument", "@at@end@document", label, rules)
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
@@ -407,4 +417,31 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\enddocument", "\\end{document}", Scope::Global);
 
   Ok(())
+}
+
+/// `\AtBeginDocument[label]{code}` / `\AtEndDocument`: `\AddToHook{hook}
+/// [label]{code}` when the L3 hook system is loaded, else the private store.
+fn at_document_hook(
+  hook: &str,
+  store: &str,
+  label: Option<Tokens>,
+  rules: Tokens,
+) -> Result<Tokens> {
+  if lookup_meaning(&T_CS!("\\hook_gput_code:nnn")).is_some() {
+    let mut out = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+    out.extend(ExplodeText!(hook));
+    out.push(T_END!());
+    if let Some(label) = label {
+      out.push(T_OTHER!("["));
+      out.extend(label.unlist());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(rules.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  } else {
+    push_value(store, rules)?;
+    Ok(Tokens!())
+  }
 }
