@@ -195,3 +195,27 @@ and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays cl
     - Theorems in mdframed (arXiv 2506.03074, 2402.07712): clean.
 - **Guards**: `perfect_kernel_gemini::mdframed_block_bibliography_juradiss` and `perfect_kernel_gemini::mdframed_in_float_and_nested` in `latexml_oxide/tests/cluster_package_guards.rs`.
 
+### 2026-09-05: Task G5 (`gauss.sty`: native `gmatrix` alignment binding with row/col ops) complete
+- **Issue**: `tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex` produced 14 errors (`\lx@begin@alignment Attempt to close a group that switched to mode restricted_horizontal...`) when `\begin{gmatrix}[p]` was nested inside an outer alignment (`alignat*`).
+- **Root cause**:
+  - Previously, `\begin{gmatrix}` was defined as a macro reading the unbraced body via `Until:\end`.
+  - When nested inside an outer alignment (such as `alignat*`), `align_group_count()` is 0 at the body's outer level.
+  - While reading tokens during `read_token()`, the outer alignment intercepted `&` and `\\` tokens intended for the inner matrix cells as column delimiters of the outer alignment, causing severe mode leaks and alignment desynchronization.
+- **Fix in `latexml_contrib/src/gauss_sty.rs`**:
+  - Implemented `\gmatrix` natively through standard amsmath matrix environments (`\pmatrix`, `\bmatrix`, etc.) using explicit tokens (`T_CS!`) so that the inner alignment is opened immediately. Outer alignment delimiters are not intercepted because the inner alignment's `has_reading_alignment()` takes precedence.
+  - Track matrix open state via `\lx@gauss@matrix@open` (scoped locally to the `\begin{gmatrix}` group).
+  - In `\rowops` and `\colops`: if `\lx@gauss@matrix@open` is open, close the matrix alignment via `\lx@end@ams@matrix` and mark it closed, then set `\lx@gauss@RC` to `R` or `C`.
+  - In `\endgmatrix`: if `\lx@gauss@matrix@open` is still open (no operations were given), close the matrix alignment via `\lx@end@ams@matrix`.
+  - In `\newmatrix{l}{r}{X}`: define `\Xmatrix` through `\lx@ams@matrix{name=Xmatrix,datameaning=matrix,left=\lx@left{l},right=\lx@right{r}}` and `\endXmatrix` through `\lx@end@ams@matrix`, enabling custom delimiters to integrate seamlessly with the amsmath matrix machinery.
+- **Validation**:
+  - `tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex`: converts with **0 errors** (was 14 errors), producing the expected `<ltx:XMArray>` and operation annotations.
+  - All 7 control and feature repros convert with **0 errors**:
+    - `gauss_rowops_min.tex`: clean.
+    - `boxes-groups/gauss_colops.tex`: clean.
+    - `boxes-groups/gauss_delims.tex`: clean.
+    - `boxes-groups/gauss_newmatrix.tex`: clean.
+    - `boxes-groups/gauss_rowops.tex`: clean.
+    - `boxes-groups/gauss_starindex.tex`: clean.
+    - `boxes-groups/gauss_gmatrix_measure_loop.tex`: clean.
+- **Guard**: `perfect_kernel_gemini::gauss_gmatrix_in_alignat` in `latexml_oxide/tests/cluster_package_guards.rs` (and existing `perfect_kernel_batch54::gauss_gmatrix_renders_with_operation_lines` passes).
+

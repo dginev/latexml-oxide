@@ -15925,4 +15925,32 @@ Nested frame.
     assert!(xml.contains("Framed float."), "{xml}");
     assert!(xml.contains("Nested frame."), "{xml}");
   }
+
+  /// gauss.sty `gmatrix` inside outer alignment environments (e.g. `alignat*`):
+  /// opens the amsmath matrix natively without gullet delimited-scan failures,
+  /// with row and column operations closing the inner matrix alignment cleanly.
+  /// Witness: tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex.
+  #[test]
+  fn gauss_gmatrix_in_alignat() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath,gauss}
+\begin{document}
+\begin{alignat*}1
+A=\begin{gmatrix}[p]
+ 1 & 1 \\
+ t & 2t
+\rowops
+ \add[-t]{0}{1}
+\end{gmatrix}&\\
+\end{alignat*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<XMArray"), "{xml}");
+    assert!(
+      xml.contains("←") || xml.contains("&#8592;") || xml.contains("leftarrow"),
+      "{xml}"
+    );
+  }
 }
