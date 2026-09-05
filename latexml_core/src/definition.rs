@@ -4,6 +4,7 @@ pub mod argument;
 pub mod conditional;
 pub mod constructor;
 pub mod math_primitive;
+pub mod origin;
 pub mod primitive;
 pub mod register;
 

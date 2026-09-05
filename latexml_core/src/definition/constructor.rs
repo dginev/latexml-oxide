@@ -200,10 +200,12 @@ pub struct Constructor {
   pub after_digest_body: Vec<DigestionClosure>,
   pub reversion:         Option<Reversion>,
   pub alias:             Option<String>,
+  pub origin:            crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Constructor {
   fn default() -> Self {
     Constructor {
+      origin:            crate::definition::origin::current_origin(),
       cs:                T_CS!("Constructor"),
       nargs:             None,
       paramlist:         None,

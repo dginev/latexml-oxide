@@ -62,10 +62,12 @@ pub struct Primitive {
   /// font_id + the dumped `Stored::Font` value at that key let the reader
   /// rebuild an equivalent merge-font Primitive.
   pub font_id:       Option<crate::common::arena::data::SymStr>,
+  pub origin:        crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Primitive {
   fn default() -> Self {
     Primitive {
+      origin:        crate::definition::origin::current_origin(),
       cs:            T_CS!("Primitive"),
       paramlist:     None,
       replacement:   None,

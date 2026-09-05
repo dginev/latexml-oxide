@@ -1,0 +1,28 @@
+% witness: lie-hasse/lie-hasse (sweep #42: 60.9s wall, status 3, 0-byte XML,
+%          Fatal:Timeout:TokenLimit "Token limit of 4000000000 exceeded, infinite loop?")
+% oracle:  pdflatex 0 err, 83s (genuinely large figure, finite)
+% engines: pdflatex / latexml raw [rawstyles,rawclasses]
+% expect:  the E8 Hasse diagram (first, decorative title figure, line 89)
+% status:  RED with default binary -> FATAL 0-byte. GREEN with LATEXML_TOKEN_LIMIT=0:
+%          COMPLETES in 123.6s producing a 304,503-byte XML (verified sweep42 binary).
+% root:    FALSE-POSITIVE token-limit fatal. \hasse@E@series (rank-8, ~240 roots) is a
+%          genuinely large O(n^2)/O(n^3) figure: xstring \StrChar/\IfStrEq + pgfmath in
+%          nested \loop..\repeat (lie-hasse.sty L253,422,439,500-533; \coordinate L1206).
+%          It needs ~8e9 token-reads / ~124s. The DEFAULT_TOKEN_LIMIT=4e9
+%          (latexml_core/src/gullet.rs:304) trips at ~61s -- BEFORE the figure finishes
+%          and BELOW the user's --timeout=300 wall -- then flags it "infinite loop?".
+%          Token-count is a bad wall-time proxy: 65M tok/s here vs 13M tok/s for datatool,
+%          so 4e9 maps to 61-300s depending on workload. The wall-clock --timeout (plus
+%          cycle guards + RSS cap) already bounds true loops.
+% CLASS: RUST-ONLY (Perl LaTeXML has no token-count backstop; pdflatex has none). The
+%   underlying figure is SHARED-heavy, but the 0-byte FATAL is a Rust-only backstop
+%   mis-firing on a legitimate large figure within budget.
+% FIX (one lever): raise/align DEFAULT_TOKEN_LIMIT to the wall-clock budget (e.g. ~20e9,
+%   matching ~300s at 65M tok/s) OR gate the TokenLimit fatal on the --timeout wall also
+%   being exceeded. Expected after fix: 123.6s, 304KB XML instead of 0-byte FATAL.
+\documentclass{article}
+\usepackage{lie-hasse}
+\usetikzlibrary{positioning}
+\begin{document}
+\begin{tikzpicture}\hasse E8\end{tikzpicture}
+\end{document}

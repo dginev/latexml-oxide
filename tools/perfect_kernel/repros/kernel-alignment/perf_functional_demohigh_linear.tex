@@ -1,0 +1,30 @@
+% witness: functional/functional (82s, 1.4MB, 3813 Math, 17 KB/s).
+% oracle:  lualatex (doc's `% !TEX program = lualatex`); pdflatex-class fast.
+% engines: Perl LaTeXML (startup proxy) 24s / Rust 10s — Rust 2.4x FASTER.
+% expect:  functional is an expl3 manual; each demohigh EXECUTES functional code
+%          (codehigh.sty, built on tabularray) and shows the result.
+% status:  PERF — SHARED, Rust already FASTER than Perl. NOT a Rust bug; NOT O(n^2).
+% mechanism/rule-outs (all release sweep42):
+%   * Math parsing is NOT the cost: full doc digests 1.1->83.6s, then
+%     Building+Rewriting+MathParse(3813 formulae)+Finalize = 0.45s total. All 8
+%     cluster docs are digestion-bound; "Marpa setup per formula" is RULED OUT.
+%   * demohigh execution is LINEAR: N identical demohigh (functional preamble)
+%     N=50->11.5s N=100->13.2s N=200->15.2s => ~20-35ms/block, decreasing => no
+%     global O(n^2). Fixed startup (codehigh+functional+expl3 load) ~10.15s.
+%   * codehigh's O(n^2) code highlighter is already degraded to plain text
+%     (codehigh_sty.rs P65) — not the residual cost.
+% functional has 235 demohigh + 833 function/variable/syntax API boxes; heavier
+%   fp/step/mapping sections later push per-line cost up (content, not O(n^2)).
+% lever: none Rust-only (Rust beats Perl). Output IS large+structured (1.4MB,3813
+%   Math,~1000 API boxes); 17 KB/s. Justified-ish; residual is the shared ~10s
+%   expl3 load + faithful per-demo execution.
+\documentclass{article}
+\usepackage{functional}
+\usepackage{codehigh}
+\NewCodeHighEnv{demohigh}{demo}
+\begin{document}
+\begin{demohigh}
+\intSet\lTmpaInt{123}
+\expValue{\expName{lTmpaInt}}
+\end{demohigh}
+\end{document}

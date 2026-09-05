@@ -255,6 +255,7 @@ pub struct MathPrimitive {
   pub replacement: Option<PrimitiveClosure>,
   pub options:     MathPrimitiveOptions,
   pub alias:       Option<String>,
+  pub origin:      crate::definition::origin::DefinitionOrigin,
 }
 impl Default for MathPrimitive {
   fn default() -> Self {
@@ -265,6 +266,7 @@ impl Default for MathPrimitive {
       replacement: None,
       options:     MathPrimitiveOptions::default(),
       alias:       None,
+      origin:      crate::definition::origin::current_origin(),
     }
   }
 }

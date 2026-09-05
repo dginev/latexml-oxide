@@ -140,6 +140,7 @@ pub fn def_conditional(
   if cs.with_str(|cs_name| matches!(cs_name, "\\fi" | "\\else" | "\\or" | "\\unless")) {
     install_definition(
       Conditional {
+        origin: crate::definition::origin::current_origin(),
         cs,
         paramlist,
         test,
@@ -204,6 +205,7 @@ pub fn def_conditional(
         //  For \ifcase, the parameter list better be a single Number !!
         install_definition(
           Conditional {
+            origin: crate::definition::origin::current_origin(),
             cs,
             paramlist,
             test,
@@ -456,6 +458,7 @@ pub fn def_primitive(
 
   install_definition(
     Primitive {
+      origin: crate::definition::origin::current_origin(),
       cs: defcs,
       paramlist,
       replacement: compiled_replacement,
@@ -1298,6 +1301,7 @@ pub fn def_environment(
   };
 
   let begin_name_constructor = Rc::new(Constructor {
+    origin:            crate::definition::origin::current_origin(),
     cs:                T_CS!(begin_name),
     paramlist:         paramlist_skips,
     replacement:       compiled_replacement.clone(),
@@ -1434,6 +1438,7 @@ pub fn def_environment(
   let mut after_construct_bare: Vec<ConstructionClosure> = bare_after_construct;
   after_construct_bare.push(pop_frame_bare);
   let name_constructor = Rc::new(Constructor {
+    origin: crate::definition::origin::current_origin(),
     cs: T_CS!(s!("\\{}", &name)),
     paramlist,
     replacement: compiled_replacement,

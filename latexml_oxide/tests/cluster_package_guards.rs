@@ -14599,6 +14599,109 @@ Hello \textcolor{red}{world}.
     assert!(xml.contains("text."), "{xml}");
   }
 
+  /// K1 provenance: the l3/ltcmd leniency covers LaTeXML's OWN definitions
+  /// only — a genuine double declaration between two raw files (or in the
+  /// document) still reports "already defined", as pdflatex does.
+  #[test]
+  fn raw_double_declaration_still_errors() {
+    let tex = r"\documentclass{article}
+\begin{filecontents}[overwrite,noheader,nosearch]{lxdup.sty}
+\ExplSyntaxOn
+\cs_new:Npn \lxdupcmd { one }
+\ExplSyntaxOff
+\end{filecontents}
+\usepackage{lxdup}
+\ExplSyntaxOn
+\cs_new:Npn \lxdupcmd { two }
+\ExplSyntaxOff
+\NewDocumentCommand\lxdupdoc{}{a}
+\NewDocumentCommand\lxdupdoc{}{b}
+\begin{document}
+\lxdupcmd\ \lxdupdoc.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 2, "{stderr}");
+    assert!(stderr.contains("already defined"), "{stderr}");
+    assert!(xml.contains("two a."), "{xml}");
+  }
+
+  /// Perl Expandable.pm:35: an unbalanced expansion is FATAL. jarticle.cls's
+  /// `\ds@tate` (ISO-2022-JP bytes whose `%` eats a brace) aborts in seconds
+  /// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY).
+  #[test]
+  fn unbalanced_expansion_is_fatal() {
+    let tex = r"\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+\begin{document}
+Hello
+\end{document}
+";
+    let start = std::time::Instant::now();
+    let (stderr, _xml) = convert(tex, true);
+    assert!(stderr.contains("Fatal:Stomach:Misdefined"), "{stderr}");
+    assert!(start.elapsed().as_secs() < 60, "took {:?}", start.elapsed());
+  }
+
+  /// japanese-otf's ajmacros.sty (pTeX kanji token model, parked §D9) bails
+  /// with an explicit Fatal in under a second instead of an aperiodic
+  /// 250 s loop (platexsheet-jsclasses, wtref-ja, jpneduenumerate; SHARED).
+  #[test]
+  fn japanese_otf_kanji_scanners_bail_fast() {
+    let tex = r"\documentclass{article}
+\usepackage{otf}
+\begin{document}
+Hello
+\end{document}
+";
+    let start = std::time::Instant::now();
+    let (stderr, _xml) = convert(tex, true);
+    assert!(
+      stderr.contains("Fatal:") && stderr.contains("ajmacros"),
+      "{stderr}"
+    );
+    assert!(start.elapsed().as_secs() < 60, "took {:?}", start.elapsed());
+  }
+
+  /// lthooks is FIFO within a label: a raw `#`-bearing `\AtBeginDocument`
+  /// chunk registered first runs before a `#`-free one registered later
+  /// (alphabeta.sty then hep-math-font.sty; hep-paper-documentation fatal).
+  #[test]
+  fn raw_hashful_begin_document_chunk_keeps_fifo_order() {
+    let tex = r"\documentclass{article}
+\AtBeginDocument{\def\dummy#1{#1}\def\WHO{FIRST-param}}
+\AtBeginDocument{\def\WHO{SECOND-plain}}
+\begin{document}
+Who: \WHO.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Who: SECOND-plain."), "{xml}");
+  }
+
+  /// `\NewTCBListing{egcite}{D(){teal} o m !o}{colframe=#1,…}` (oxyear-doc
+  /// .tex:216): the absorbed `D()` still owns `#1` (its default `teal`), so
+  /// the mandatory citation text never reaches `colframe`.
+  #[test]
+  fn tcb_listing_absorbed_specifiers_keep_positional_numbers() {
+    let tex = r"\documentclass{article}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings}
+\definecolor{teal}{rgb}{0,0.5,0.5}
+\NewTCBListing{egcite}{D(){teal} o m !o}%
+  {colframe = #1 ,colback = #1!5!white ,listing side text}
+\begin{document}
+\begin{egcite}{(Marx 1867), (Clarke, n.d.).}
+Some text.
+\end{egcite}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Can't find color"), "{stderr}");
+    assert!(xml.contains("Some text."), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

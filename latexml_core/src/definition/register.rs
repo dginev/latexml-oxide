@@ -525,6 +525,7 @@ pub struct Register {
   pub chardef_props: HashMap<Stored>,
   /// the source point of origin for this register definition
   pub locator:       Locator,
+  pub origin:        crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Register {
   fn default() -> Self {
@@ -532,6 +533,7 @@ impl Default for Register {
       cs:            T_CS!("Register"),
       address:       String::from("Register"),
       locator:       Locator::default(),
+      origin:        crate::definition::origin::current_origin(),
       parameters:    None,
       register_type: RegisterType::Number,
       getter:        None,

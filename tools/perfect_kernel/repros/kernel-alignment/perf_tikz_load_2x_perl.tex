@@ -1,0 +1,27 @@
+% witness: tilings/tilings, spath3/{spath3,knots}, tkz-grapheur/*, graph35/graph35-en,
+%          rulercompass/rulercompass_doc, tabularray/tabularray — every tikz doc.
+% oracle:  pdflatex loads tikz in ~1s.
+% engines: pdflatex (fast) / Perl LaTeXML 7.4s / Rust (sweep42) 14.6s.
+% expect:  bare `\usepackage{tikz}` with ZERO pictures should not cost 14.6s.
+% status:  PERF — RUST-ONLY: Rust load is ~2x Perl (14.6 vs 7.4s), both >> pdflatex.
+% mechanism: pgf/tikz raw-load = processing ~50 pgf .code.tex files. Cost is
+%   DIFFUSE (uniform ~0.2-0.4s per file, NO single hotspot). callgrind (b56n,
+%   pgfmath-only load) top self-cost, resolved via addr2line:
+%     Mouth::get_next_char closures + VecDeque<char>::wrap_copy  ~7%  (tokenizer;
+%        mouth.rs:112 chars:VecDeque<char>, rebuilt per line mouth.rs:881, indexed
+%        per char in get_next_char mouth.rs:683)
+%     libkpathsea read_line/hash_insert_normalized + libc getenv ~6.6% (file lookup)
+%     Dimension::spec_to_f64 (numeric_ops.rs:80)                 ~3.9% (dim parse)
+%     compute_indirect_model SymbolU32 sort_by (state.rs)        ~2%   (model rebuild)
+%     malloc/_int_malloc/memcpy/memcmp churn                     ~10%
+% Per-pgf-file: Rust has a flat ~0.2s floor; Perl 0.06-0.14s for most files.
+% MEASURED (release sweep42, `\usepackage{X}` + trivial body):
+%   pgfkeys 2.18s | pgfsys 4.32s | pgfmath 5.77s (Perl 3.02s) | pgfcore 11.82s
+%   | pgf 12.34s | tikz 14.62s (Perl 7.44s). Adding N tikzpictures: +2.4ms each.
+% lever: close the ~2x load gap (tokenizer char path + kpathsea call caching);
+%   expected -7s on EVERY tikz doc. Does NOT alone make a 60s doc justified.
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+x
+\end{document}

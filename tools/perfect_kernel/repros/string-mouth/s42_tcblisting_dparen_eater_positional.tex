@@ -1,0 +1,23 @@
+% witness: biblatex-oxref/oxyear-doc (oxyear-doc.tex:216 \NewTCBListing{egcite}{D(){ok} o m !o}); oxnotes-doc same
+% oracle:  pdflatex 0 errors
+% engines: rust=5(b56n) rust=0(b56l/56i) pdflatex=0 (2026-09-05)
+% expect:  0 errors; egcite listing renders (no "Can't find color named")
+% status:  RED
+% mechanism: batch 56j tcb_xparse_listing (tcolorbox_sty.rs:272-311) gives every non-leading
+%   xparse specifier an \lxtcbifnext eater that DISCARDS its value (\lxtcbeatparen for D(),
+%   tcolorbox_sty.rs:116). The env arity becomes [#mandatory], so the definition body's
+%   positional #1 (author meant the D() paren arg, default {teal}) binds to the FIRST
+%   MANDATORY arg instead — the citation text. `colframe = #1` then gets "(Marx 1867)..."
+%   -> Error:unexpected Can't find color named + pgfkeys /tcb/<citation> leak.
+%   Pre-56j (b56l) treated leading D as an optional [] (arity [m+1][]), so #1 defaulted.
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings}
+\definecolor{teal}{rgb}{0,0.5,0.5}
+\NewTCBListing{egcite}{D(){teal} o m !o}%
+  {colframe = #1 ,colback = #1!5!white ,listing side text}
+\begin{document}
+\begin{egcite}{(Marx 1867), (Clarke, n.d.).}
+Some text.
+\end{egcite}
+\end{document}

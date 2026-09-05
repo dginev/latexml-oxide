@@ -1,0 +1,22 @@
+% witness: spreadtab/spreadtab-en, spreadtab/spreadtab-fr (sweep42 status 124, 300s cap, no output)
+% oracle: lualatex exit 1 (compiles; our engine + Perl both fail)
+% engines: pdflatex/lualatex clean-ish (oracle 1 err); Rust HANGS; Perl aborts 102 err no-output
+% expect: a 1x3 spreadtab table computing gcd(24,18)=6, XML with the tabular
+% status: RED on b56n (timeout 124 = infinite loop), RED on sweep42
+% mechanism: any cell FORMULA CONTAINING A FUNCTION (sum/gcd/lcm/...) routes through
+%   spreadtab.sty:1492 \ST_scan_func_arg -> \scantokens + \everyeof{\ST_nil} +
+%   \afterassignment\ST_eat_to_nil (spreadtab.sty:315-323, \let\ST_toks= eat-loop).
+%   etex.rs:459 \scantokens opens the pseudo-file but never calls
+%   gullet::mark_everyeof_mouth(), so \everyeof is NOT inserted at pseudo-file EOF
+%   (gullet.rs:562, close_mouth wants_everyeof). The \ST_nil sentinel never arrives ->
+%   the \let\ST_toks= loop reads past EOF forever. SHARED: Perl \everyeof DefRegister
+%   (eTeX.pool.ltxml:257) is commented "NOT used anywhere". PLANS P15.
+% CONTROL: a cell with plain arithmetic (a1+b1, no function) converts fine in ~1s.
+\documentclass{article}
+\usepackage{array}
+\usepackage{spreadtab}
+\begin{document}
+\begin{spreadtab}{{tabular}{rrr}}
+24 & 18 & gcd(a1,b1)\\
+\end{spreadtab}
+\end{document}

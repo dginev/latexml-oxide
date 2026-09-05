@@ -149,7 +149,34 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
-pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
+pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Result<()> {
+  // K1 provenance: what this load defines is a pool (`.pool`), a raw format
+  // file, or a raw file the document loaded. A compiled binding found by the
+  // dispatch below narrows its own code to `Binding` (latexml_package /
+  // latexml_contrib `dispatch`), and its `InputDefinitions!(noltxml)` re-enters
+  // here as `File` for the real package's definitions.
+  use crate::definition::origin::{DefinitionOrigin, OriginGuard};
+  let base = raw_file
+    .trim()
+    .rsplit(['/', '\\'])
+    .next()
+    .unwrap_or("")
+    .to_string();
+  let origin = if options.extension.as_deref() == Some("pool") || base.ends_with(".pool") {
+    DefinitionOrigin::Pool
+  } else if matches!(
+    base.as_str(),
+    "latex.ltx" | "plain.tex" | "expl3-code.tex" | "latex" | "plain" | "expl3-code"
+  ) {
+    DefinitionOrigin::Format
+  } else {
+    DefinitionOrigin::File
+  };
+  let _origin = OriginGuard::new(origin);
+  input_definitions_impl(raw_file, options)
+}
+
+fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
   // the dispatch dropped any directory the user wrote — so `\usepackage{DIR/pkg}`
@@ -698,6 +725,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
       None => _load_binding(true, &filename, options.reloadable),
     }) {
       Ok(v) => v,
+      Err(e) if get_status(LogStatus::Fatal) > 0 => {
+        // A binding that raised a Fatal (ajmacros.sty's pTeX bail, a
+        // resource cap) aborts the conversion; the top level logs it once.
+        return Err(e);
+      },
       Err(e) => {
         Error!(
           "unexpected",
@@ -2955,6 +2987,13 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     noerror: true,
     ..InputDefinitionOptions::default()
   });
+  // A Fatal raised while the class loaded (an unbalanced expansion, a bail)
+  // is not a missing class: it aborts the conversion (Perl dies), and the top
+  // level logs it once. Falling to OmniBus hid the Fatal line (jarticle.cls:94
+  // `\ds@tate`; `unbalanced_expansion_is_fatal`).
+  if result.is_err() && get_status(LogStatus::Fatal) > 0 {
+    return result;
+  }
   // Perl Package.pm L2700-2716: if no direct binding, try a prefix-match fallback.
   // Scan all known cls bindings (longest-first), pick the first whose name is a
   // prefix of the requested class. This catches author-renamed classes like

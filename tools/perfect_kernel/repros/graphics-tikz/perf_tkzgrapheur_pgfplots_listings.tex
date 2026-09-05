@@ -1,0 +1,22 @@
+% witness: tkz-grapheur/tkz-grapheur-doc-fr (sweep #42: 300s cap, status 3; was 271s/4.3MB
+%          in sweep #41; sibling -doc-en 216s). doc-fr = 2434 lines, 198 minted/tcblisting
+%          code examples, many rendering pgfplots axes.
+% oracle:  pdflatex renders (pgfplots is slow but finite)
+% engines: pdflatex/latexml raw [rawstyles,rawclasses]
+% expect:  the manual with all pgfplots example figures
+% status:  RED — a SINGLE pgfplots axis (\addplot {x^2}) is ~24.8s in latexml
+%          (pgfmathfloat function sampling); 198 listings -> cannot finish in 300s.
+% mechanism: tkz-grapheur loads pgfplots (tkz-grapheur.sty L57). pgfplots samples each
+%   plotted function via pgfmathfloat (ring: \pgfmathfloat@a@Mtok number parser rebuilding
+%   \the\toks per digit, \ifpgfmathfloatparsenumberpendingperiod). ~24s PER axis in latexml.
+%   The doc-fr has MORE examples than -doc-en, hence -fr exceeds 300s where -en (216s) fits.
+% CLASS: SHARED-heavy substrate (pgfplots/pgfmath run raw in both; pdflatex also slow but
+%   faster). No single O(n^2) bug -- constant-factor pgfmath throughput x 198 figures.
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}\addplot {x^2};\end{axis}
+\end{tikzpicture}
+\end{document}

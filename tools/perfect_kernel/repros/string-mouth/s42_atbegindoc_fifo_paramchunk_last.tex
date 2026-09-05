@@ -1,0 +1,21 @@
+% witness: hep-paper/hep-paper-documentation (alphabeta.sty:233 + hep-math-font.sty:154, both \AtBeginDocument redefine \delta)
+% oracle:  pdflatex 0 errors
+% engines: rust=Fatal(b56n) rust=0(b56l/56i) perl=23-unrelated (2026-09-05)
+% expect:  0 errors; XML body text contains "ok" (the param-FREE 2nd-registered chunk wins, LaTeX FIFO)
+% status:  RED
+% mechanism: batch 56j at_document_hook (sect02.rs:471-491) routes unlabeled #-bearing
+%   \AtBeginDocument chunks to the private @at@begin@document store, which \document
+%   (sect02.rs:285) fires AFTER the L3 begindocument hook (sect02.rs:258) that gets the
+%   param-free chunks. A #-bearing chunk registered FIRST thus runs LAST, inverting LaTeX's
+%   FIFO \AtBeginDocument order (latex.ltx lthooks begindocument). Real witness: alphabeta
+%   (required first, has \DeclareTextCompositeCommand{..}{#1}{..}) beats hep-math-font's
+%   later plain \renewcommand\delta{\hep@greek..}, so \delta=\TextOrMath{\textdelta}{\mathdelta}
+%   and \text{\delta} loops through \textdelta -> Fatal:Timeout:PushbackLimit.
+\documentclass{article}
+% chunk 1 (registered FIRST) is PARAM-bearing, like alphabeta:
+\AtBeginDocument{\def\dummy#1{#1}\def\grk{\ifnum1=1 \grk\fi}}
+% chunk 2 (registered SECOND) is param-FREE, like hep-math-font; wins under FIFO:
+\AtBeginDocument{\def\grk{ok}}
+\begin{document}
+\grk
+\end{document}

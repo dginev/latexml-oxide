@@ -1,0 +1,18 @@
+% witness: platexcheat/sample (253s fatal 4KB), platexsheet (259s), sample-jsclasses,
+%   platexsheet-jsclasses, wtref/wtref-ja, jpneduenumerate (all via otf / luatexja-otf).
+% oracle: none — pTeX/upTeX japanese-otf ecosystem (DIFFICULT_CASES §D9 out of scope).
+% engines: \usepackage{otf} pulls japanese-otf/ajmacros.sty, whose recursive kanji
+%   scanners (ajmacros.sty:246-259 \@aj$BH>3Q(Bdef, :263-271 \@ajligaturedef, etc.) have
+%   ISO-2022-JP-encoded control-sequence names. latexml tokenizes \@aj半角def as
+%   \@aj + raw ESC/ASCII junk, corrupting the delimited tail-recursion so its
+%   \ifx\@nil#1 sentinel is never reached: \@tempcnta spins past 18000, \advance loops
+%   forever. The \number\@tempcnta makes the token stream APERIODIC so the cycle guard
+%   can't catch it; only the 4G DEFAULT_TOKEN_LIMIT backstop stops it at ~250s.
+% expect: fast FATAL (<1s bail), not a 250s grind. SHARED (Perl also grinds: jsclasses
+%   >120s, wtref-ja 38s) => an early pTeX bail SURPASSES Perl on perf.
+% status: RED (b56n / sweep42) — loops ~250s to Fatal:Timeout:TokenLimit (4000000000).
+% mechanism: pTeX ISO-2022-JP source encoding + kanji tokenization unsupported (parked).
+\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+\usepackage{otf}
+\begin{document}
+\end{document}

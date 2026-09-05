@@ -133,6 +133,12 @@ fn current_dump_locator() -> crate::common::locator::Locator {
 }
 
 fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, String> {
+  // K1 provenance: dump-restored definitions carry the dump's origin.
+  let _origin = crate::definition::origin::OriginGuard::new(if source_name == "<embedded:plain>" {
+    crate::definition::origin::DefinitionOrigin::Plain
+  } else {
+    crate::definition::origin::DefinitionOrigin::LatexDump
+  });
   let mut count = 0;
   let mut skipped = 0;
   let mut errors = 0;

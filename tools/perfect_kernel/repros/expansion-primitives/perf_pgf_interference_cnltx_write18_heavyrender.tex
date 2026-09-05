@@ -1,0 +1,16 @@
+% witness: pgf-interference/pgf-interference-en, -de (sweep42 status 124, 300s cap, 1 err)
+% oracle: lualatex EXIT 124 — THE ORACLE ALSO TIMES OUT. Not a spurious infinite loop; a
+%   genuinely heavy doc. DEPRIORITIZE / candidate for tools/perfect_kernel/shell_escape_excluded.tsv.
+% engines: lualatex times out too; cnltx-example uses \write18 (cnltx-example.sty:653) to
+%   compile sub-examples, and the body renders heavy pgfmath interference patterns.
+% status: not a fixable RUST loop. Our 185K-warning flood = spurious "'\l'/'\c' is not a
+%   register" (pgf-interference physics macros \l wavelength / \c speed-of-light read as
+%   registers) amplified across the pgfmath plotting loop. Even suppressing the warnings, the
+%   render + \write18 examples won't finish (oracle 124). RECOMMEND excluding these two docs.
+\documentclass{article}
+\usepackage{cnltx-example}
+\begin{document}
+\begin{example}
+  Heavy pgfmath render placeholder; the real doc draws interference patterns.
+\end{example}
+\end{document}

@@ -79,6 +79,7 @@ pub struct Expandable {
   pub cs:           Token,
   pub paramlist:    Option<Parameters>,
   pub expansion:    Option<ExpansionBody>,
+  pub origin:       crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -92,6 +93,7 @@ impl Default for Expandable {
       cs:           T_CS!("Expandable"),
       paramlist:    None,
       expansion:    None,
+      origin:       crate::definition::origin::current_origin(),
     }
   }
 }
@@ -110,6 +112,7 @@ impl Object for Expandable {
   fn is_definition(&self) -> bool { true }
   fn is_expandable(&self) -> bool { true }
   fn get_locator(&self) -> Option<Locator> { Some(self.locator) }
+  fn get_origin(&self) -> crate::definition::origin::DefinitionOrigin { self.origin }
   fn stringify(&self) -> String { <Self as Definition>::stringify_type(self, "Expandable") }
 }
 impl Definition for Expandable {
@@ -312,16 +315,19 @@ impl Expandable {
     if !traits.nopack_parameters
       && let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt
     {
-      // Perl: Fatal if expansion is unbalanced (mismatched {/})
+      // Perl Core/Definition/Expandable.pm:35: FATAL if the expansion is
+      // unbalanced (mismatched {/}). An Error-and-store-as-is let
+      // jarticle.cls:94-97's `\ds@tate` (an ISO-2022-JP byte pair whose `%`
+      // eats `\message`'s closing brace) proceed into japanese-otf's kanji
+      // scanners, an aperiodic 250 s `\advance` loop the cycle guard cannot
+      // see (platexcheat sample/platexsheet; Perl aborts in 1.3 s). Fatal
+      // stays Fatal. Guard: `perfect_kernel_batch56::unbalanced_expansion_is_fatal`.
       if !expansion_tokens.is_balanced() {
-        Error!(
-          "misdefined",
-          cs,
-          s!("Expansion of '{}' has unbalanced {{}}", cs),
-          "skipping pack_parameters"
+        Fatal!(
+          Stomach,
+          Misdefined,
+          s!("Expansion of '{}' has unbalanced {{}}", cs)
         );
-        // Store as-is without packing
-        expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens));
       } else {
         expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
       }

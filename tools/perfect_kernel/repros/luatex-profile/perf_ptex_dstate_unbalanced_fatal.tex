@@ -1,0 +1,17 @@
+% witness: platexcheat/sample, platexcheat/platexsheet (TL doc/latex/platexcheat)
+% oracle: none — pTeX doc; both engines are meant to fail. This repro pins the
+%   KERNEL parity divergence, not a clean target.
+% engines: this is the jarticle (pLaTeX) class; jarticle.cls:94-97 \DeclareOption{tate}
+%   body \message{<ESC>$B..%b!<%I!U<ESC>(B} — the JIS 2nd byte `%` (catcode 14)
+%   comments out \message's closing brace in ISO-2022-JP, so \ds@tate is stored with
+%   unbalanced {}. LaTeXML (Perl AND Rust) both mis-read the bytes identically.
+% expect: FATAL (parity with Perl LaTeXML: Fatal:misdefined:\ds@tate unbalanced {}, 1.27s).
+% status: RED (b56n) — our binary emits a RECOVERABLE Error and *completes* (7 errors,
+%   349-byte XML, exit 0); Perl FATALS and aborts. RUST-ONLY divergence.
+% mechanism: Expandable::new stores unbalanced expansion + Error! instead of Fatal!.
+%   Perl Core/Definition/Expandable.pm:35 uses Fatal; Rust
+%   latexml_core/src/definition/expandable.rs:318 uses Error! (comment even says "Perl: Fatal").
+\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+\begin{document}
+Hello
+\end{document}

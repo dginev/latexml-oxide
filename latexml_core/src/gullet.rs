@@ -301,7 +301,12 @@ macro_rules! runtime {
 /// cycle guards, and by the RSS cap). `LATEXML_TOKEN_LIMIT` overrides
 /// (0 disables). Book-scale sources raise it proportionally per
 /// conversion — see [`scale_token_limit_to_source`].
-pub const DEFAULT_TOKEN_LIMIT: usize = 4_000_000_000;
+/// 20e9 = the 300 s sweep wall at the measured 65 M tok/s ceiling: at 4e9
+/// the backstop fired at 61 s on lie-hasse's legitimate E8 poset figure
+/// (completes at ~8e9 in 124 s with a 304 KB picture; pdflatex 83 s) and
+/// mislabelled it "infinite loop" with a 39-byte XML. True loops are still
+/// bounded by the wall clock, the cycle guards and the RSS cap.
+pub const DEFAULT_TOKEN_LIMIT: usize = 20_000_000_000;
 
 /// Initialize the runaway-token backstop from the environment, falling back to
 /// [`DEFAULT_TOKEN_LIMIT`].

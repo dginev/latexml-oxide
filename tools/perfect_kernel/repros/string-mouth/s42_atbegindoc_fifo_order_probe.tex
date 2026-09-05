@@ -1,0 +1,14 @@
+% witness: hep-paper/hep-paper-documentation (deterministic order probe, no loop)
+% oracle:  pdflatex \WHO -> SECOND-plain (FIFO: last-registered same-name \def wins)
+% engines: rust=SECOND-plain(b56l) rust=FIRST-param(b56n) (2026-09-05)
+% expect:  0 errors; \typeout shows ===WHO:SECOND-plain
+% status:  RED (b56n prints FIRST-param)
+% mechanism: same as s42_atbegindoc_fifo_paramchunk_last; this variant is loop-free and
+%   deterministic — proves the FIFO inversion without any timeout.
+\documentclass{article}
+\AtBeginDocument{\def\dummy#1{#1}\def\WHO{FIRST-param}}
+\AtBeginDocument{\def\WHO{SECOND-plain}}
+\begin{document}
+\typeout{===WHO:\WHO}
+x
+\end{document}

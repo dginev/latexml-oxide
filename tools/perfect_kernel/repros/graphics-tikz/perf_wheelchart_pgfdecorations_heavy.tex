@@ -1,0 +1,21 @@
+% witness: wheelchart/wheelchart (sweep #42: 240.2s, status 3, Fatal:Timeout:TokenLimit, 0-byte XML)
+% oracle:  pdflatex 0 err but >240s (confirmed: single-run pdflatex ran >240s, killed)
+% engines: pdflatex/latexml raw [rawstyles,rawclasses]
+% expect:  the wheelchart gallery to render
+% status:  RED — latexml FATAL Timeout:TokenLimit; a SINGLE 4-slice \wheelchart is 15.7s
+%          (mostly load); the doc draws MANY charts + decorations.text/markings/patterns
+%          + tikzlings animals -> minutes -> Fatal, 0-byte XML.
+% mechanism: pgf decorations (decorations.text/markings) + tikzlings are extremely
+%   token-heavy; the doc has dozens of example charts. Raw pgf expansion, no single
+%   O(n^2) bug -- a genuinely heavy figure gallery. pdflatex also >240s.
+% CLASS: SHARED (both engines run raw pgf decorations). "Genuinely enormous figure gallery."
+%   This minimal probe only shows the ~15.7s single-chart load+draw floor; the doc's
+%   Fatal is the cumulative gallery. Not a clean single-lever bug.
+\documentclass{article}
+\usepackage{wheelchart}
+\usetikzlibrary{decorations.markings,decorations.text,patterns}
+\begin{document}
+\begin{tikzpicture}
+\wheelchart{10/red/A,20/blue/B,30/green/C,40/gray/D}
+\end{tikzpicture}
+\end{document}

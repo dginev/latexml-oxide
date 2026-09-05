@@ -86,6 +86,7 @@ pub struct Conditional {
   pub conditional_type: ConditionalType,
   /// a skipper for \ifcase
   pub skipper:          Option<bool>,
+  pub origin:           crate::definition::origin::DefinitionOrigin,
 }
 impl Default for Conditional {
   fn default() -> Self {
@@ -95,6 +96,7 @@ impl Default for Conditional {
       test:             None,
       conditional_type: ConditionalType::Unknown,
       skipper:          None,
+      origin:           crate::definition::origin::current_origin(),
     }
   }
 }

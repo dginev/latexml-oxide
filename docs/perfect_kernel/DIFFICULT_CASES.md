@@ -133,3 +133,16 @@ arXiv usage counts to be measured with the corpus scanner before choosing the
 shape. Guards to keep green while touching it: `perfect_kernel_batch54::forest_bare_cs_form_discards_body`,
 `perfect_kernel_batch56::{forest_stub_is_a_warning, forest_docinput_lstenv_writefile_gobbles_doc_percent}`.
 
+## D11. Quick-failure registry — fast fatals that still owe a root cause (user directive 2026-09-05)
+
+"Failing quickly is better UX and DX than failing with a huge performance
+regression" — so a conversion that cannot succeed says so in seconds instead of
+grinding to a cap. Every such bail is recorded here with its witnesses and the
+work that would turn it into a conversion; none is a final answer.
+
+| Bail (site) | Witnesses | Time before → after | What would remove the bail |
+|---|---|---|---|
+| `ajmacros.sty` Fatal (`ajmacros_sty.rs`, batch 56l) — japanese-otf's ISO-2022-JP-named recursive kanji scanners loop aperiodically without pTeX's kanji token model | platexsheet-jsclasses, sample-jsclasses, wtref-ja, jpneduenumerate | 250–264 s → < 1 s | §D9: a kanji token model (`\kcatcode`, JIS/UTF-8 kanji as single tokens) in the mouth; then ajmacros runs raw |
+| Unbalanced-expansion Fatal (`Expandable::new`, batch 56l; Perl parity) — jarticle.cls:94-97 `\ds@tate`'s ISO-2022-JP byte pair whose `%` eats a brace | platexcheat sample, platexsheet | 253–259 s → ~2 s | the same kanji source model (the `%` is the second byte of a kanji) |
+| Runaway cap `TooManyErrors` (500 identical errors) — csvsimple's Java CSV-Sorter, `\file_input:n` of shell-escape products | csvsimple-l3, mercatormap | minutes → seconds after the cap | K8: degrade the offending construct instead of discarding the document; shell-escape emulation is a user decision |
+

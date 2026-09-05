@@ -1,0 +1,46 @@
+% witness: bibleref-parse/bibleref-parse (sweep42 status 124, 300s cap, ~7 err then cap)
+% oracle: lualatex exit 1 (compiles). Genuine RUST perf bug.
+% engines: pdflatex/lualatex complete; Rust super-linear accretion.
+% expect: a longtable of book-name rows; each \checkbook parses a name via \brp@parse.
+% status: RED on sweep42 (20 rows exceed the 60s internal --timeout; 10 rows=11s, 20 rows>60s).
+% mechanism: SUPER-LINEAR accretion. \addrow builds a longtable row whose cells run many
+%   \checkbook/\checkbooksilent -> bibleref-parse.sty:519 \brp@parse -> :583 recursive
+%   \brp@parse@book, via pgffor \foreach. ISOLATED: 400x \pbibleverse in a paragraph = fast;
+%   60-row trivial longtable = fast; 20-row longtable with \foreach-only cells = fast.
+%   ONLY brp@parse state x longtable-cell/alignment context accretes (10 rows 11s, 20 rows >60s).
+%   The per-row cost grows with the number of prior rows -> some global/alignment state is
+%   re-scanned per row. Needs a dedicated bisect of the accreting state (alignment cell buffer
+%   vs bibleref \brp@data@*/\br@* globals). Diverging Rust site: alignment/tabular digestion.
+\documentclass{article}
+\usepackage{bibleref-parse}
+\usepackage{longtable,pgffor}
+\makeatletter
+\def\checkbook#1#2#3{\def\brp@range##1##2##3##4##5{\ifstrequal{##1}{#1}{#3 }{X#3 }}\brp@parse{#2}\brp@result}
+\def\checkbooksilent#1#2{\def\brp@range##1##2##3##4##5{\ifstrequal{##1}{#1}{}{X}}\brp@parse{#2}\brp@result}
+\def\ger#1{#1}
+\def\addrow#1#2#3#4{#1&\checkbooksilent{#1}{#1}\foreach \name in {#4} {\checkbooksilent{#1}{\name}}\foreach \name/\n in {#2} {\checkbook{#1}{\name}{\n}}&\ger{\foreach \name/\n in {#3} {\checkbook{#1}{\name}{\n}}}\\}
+\makeatother
+\begin{document}
+\begin{longtable}{@{}p{3.6em}p{.4\linewidth}p{.4\linewidth}@{}}
+  \addrow{Gen}{Genesis,Gen,Ge,Gn,Ge*,Gn*}{1Mose,1Mos,1Mo,Genesis,Gen,Ge,Gn,1Mo*,Ge*,Gn*}{IMose,IMos,IMo,IMo*}
+  \addrow{Exod}{Exodus,Exod,Ex,Ex*}{2Mose,2Mos,2Mo,Exodus,Ex,2Mo*,Ex*}{IIMose,IIMos,IIMo,IIMo*}
+  \addrow{Lev}{Leviticus,Lev,Lv,Le*,Lv*}{3Mose,3Mos,3Mo,Levitikus,Leviticus,Lev,Lv,3M*,Le*,Lv*}{IIIMose,IIIMos,IIIMo,IIIM*}
+  \addrow{Num}{Numbers,Num,Nb,Nu*,Nb*}{4Mose,4Mos,4Mo,Numeri,Num,4M*,Nu*}{IVMose,IVMos,IVMo,IV*}
+  \addrow{Deut}{Deuteronomy,Deut,Deu,Dt,De*,Dt*}{5Mose,5Mos,5Mo,Deuteronomium,Deut,Dtn,Deu,Dt,5M*,De*,Dt*}{VMose,VMos,VMo,V*}
+  \addrow{Josh}{Joshua,Josh,Jos,Jos*}{Josua,Jos*}{}
+  \addrow{Judg}{Judges,Judg,Jdg,Jg,Jd,Judg*,Jdg*,Jg*}{Richter,Ri,Ri*}{}
+  \addrow{Ruth}{Ruth,Rt,Ru*,Rt*}{Rut,Ruth,Rt,Ru,Ru*,Rt*}{}
+  \addrow{1Sam}{1Samuel,1Sam,1S,1S*}{1Samuel,1Sam,1S,1S*}{ISamuel,ISam,IS,IS*}
+  \addrow{2Sam}{2Samuel,2Sam,2S,2S*}{2Samuel,2Sam,2S,2S*}{IISamuel,IISam,IIS,IIS*}
+  \addrow{1Kgs}{1Kings,1K,1Kg,1Kgs,1Ki*,1Kg*}{1Könige,1Kön,1Kö,1Kö*}{IKings,IK,IKg,IKgs,IKi*,IKg*,IKönige,IKön,IKö,IKö*,IK\"onige,IK"on,IKoe,IK\"o*}
+  \addrow{2Kgs}{2Kings,2K,2Kg,2Kgs,2Ki*,2Kg*}{2Könige,2Kön,2Kö,2Kö*}{IIKings,IIK,IIKg,IIKgs,IIKi*,IIKg*,IIKönige,IIKön,IIKö,IIKö}
+  \addrow{1Chr}{1Chronicles,1Ch,1Chr,1Ch*}{1Chronik,1Chr,1Ch,1Ch*}{IChronicles,ICh,IChr,ICh*,IChronik}
+  \addrow{2Chr}{2Chronicles,2Ch,2Chr,2Ch*}{2Chronik,2Chr,2Ch,2Ch*}{IIChronicles,IICh,IIChr,IICh*,IIChronik}
+  \addrow{Ezra}{Ezra,Ezr,Ezr*}{Esra,Esr,Esr*}{}
+  \addrow{Neh}{Nehemiah,Neh,Ne,Ne*}{Nehemia,Nehemiah,Neh,Ne,Ne*}{}
+  \addrow{Esth}{Esther,Esth,Est,Est*}{Ester,Esther,Est,Est*}{}
+  \addrow{Job}{Job,Jb}{Hiob,Hi,Ijob,Hi*,Ij*}{}
+  \addrow{Ps}{Psalms,Psalm,Ps,Ps*}{Psalmen,Psalm,Psalter,Ps,Ps*}{}
+  \addrow{Prov}{Proverbs,Prov,Pro,Pr/Pr\textsuperscript{(see text)},Pro*}{Sprüche,Sprichwörter,Spr,Sp,Sp*}{}
+\end{longtable}
+\end{document}

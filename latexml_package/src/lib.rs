@@ -969,6 +969,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::latex_lab_testphase_minipage_sty::load_definitions,
   ),
+  ("ajmacros", "sty", package::ajmacros_sty::load_definitions),
   ("placeins", "sty", package::placeins_sty::load_definitions),
   (
     "polyglossia",
@@ -1186,7 +1187,17 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
         .iter()
         .find(|(name, extension, _)| matches_entry_nocase(filename, name, extension))
     })
-    .map(|(_, _, loader)| loader())
+    .map(|(_, extension, loader)| {
+      // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
+      // entry is a pool.
+      use ::latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+      let origin = if *extension == "pool" {
+        DefinitionOrigin::Pool
+      } else {
+        DefinitionOrigin::Binding
+      };
+      with_origin(origin, loader)
+    })
 }
 
 /// All registered (name, extension) pairs across the BINDINGS table.

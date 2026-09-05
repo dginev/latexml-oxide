@@ -247,6 +247,14 @@ pub(crate) fn load() -> Result<()> {
     // run inside the `document` environment, so `\par` is active (only the RAW preamble,
     // where `document` is not yet on the env stack, no-ops it) regardless of
     // `inPreamble` (tex_paragraph.rs).
+    // Raw `#`-bearing `\AtBeginDocument` chunks (see `at_document_hook`) run
+    // first — before the L3 hook that holds the later, `#`-free raw chunks.
+    if first_begin && let Some(ops) = lookup_tokens("@at@begin@document@rawparam") {
+      local_state_unlocked(false);
+      let r = digest(ops);
+      expire_state_unlocked();
+      boxes.push(r?);
+    }
     // Order: the L3 `begindocument` hook (raw packages' `\AtBeginDocument`,
     // routed there since batch 56i) fires FIRST, then the bindings' private
     // `@at@begin@document` store — bindings outrank raw: cleveref_sty.rs
@@ -472,6 +480,16 @@ fn at_document_hook(
     .unlist_ref()
     .iter()
     .any(|t| t.get_catcode() == Catcode::PARAM);
+  if has_param && label.is_none() && hook == "begindocument" {
+    // A raw `#`-chunk registered BEFORE a `#`-free one must still run first
+    // (lthooks is FIFO within a label): alphabeta.sty:103-699's chunk then
+    // hep-math-font.sty:150-202's greek block — the private store fired
+    // after the L3 hook and inverted them (hep-paper-documentation: `\delta`
+    // self-loop → PushbackLimit fatal, sweep #42). Own store, fired before
+    // the L3 hook. Guard: `perfect_kernel_batch56::raw_hashful_begin_document_chunk_keeps_fifo_order`.
+    push_value("@at@begin@document@rawparam", rules)?;
+    return Ok(Tokens!());
+  }
   if lookup_meaning(&T_CS!("\\hook_gput_code:nnn")).is_some() && (label.is_some() || !has_param) {
     let mut out = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
     out.extend(ExplodeText!(hook));

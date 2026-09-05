@@ -269,7 +269,11 @@ pub(crate) fn tcb_xparse_listing(
   opts: &Tokens,
 ) -> Result<Tokens> {
   let sig_str = sig.to_string();
-  let specs = xparse_signature_specs(&sig_str);
+  let specs_defaults = xparse_signature_specs_defaults(&sig_str);
+  let specs: Vec<(char, String)> = specs_defaults
+    .iter()
+    .map(|(c, d, _)| (*c, d.clone()))
+    .collect();
   let mandatory = specs
     .iter()
     .filter(|(c, _)| matches!(c, 'm' | 'r' | 'R'))
@@ -306,8 +310,31 @@ pub(crate) fn tcb_xparse_listing(
       _ => {},
     }
   }
+  // The options body numbers its `#n` by POSITION in the full signature.
+  // An absorbed specifier still owns its slot: its `#n` becomes the
+  // specifier's default text (`D(){teal}` → `teal`, empty for `o`/`s`/`g`),
+  // and the mandatory (and the mapped leading optional) slots are renumbered
+  // to the `\lstnewenvironment` arity — `\NewTCBListing{egcite}{D(){ok} o m !o}
+  // {colframe=#1,…}` (oxyear-doc.tex:216) otherwise fed the citation text to
+  // `colframe` once the leading `D()` was eaten (sweep #42 regression).
+  // Guard: `perfect_kernel_batch56::tcb_listing_absorbed_specifiers_keep_positional_numbers`.
+  let mut slots: Vec<Option<String>> = Vec::new(); // Some(text) = substitute, None = keep `#k`
+  let mut next = 0usize;
+  let mut renumber: Vec<usize> = Vec::new();
+  for (i, (c, _d, default)) in specs_defaults.iter().enumerate() {
+    let mapped = (i == 0 && leading_optional) || matches!(c, 'm' | 'r' | 'R');
+    if mapped {
+      next += 1;
+      renumber.push(next);
+      slots.push(None);
+    } else {
+      renumber.push(0);
+      slots.push(Some(default.clone()));
+    }
+  }
+  let opts_renumbered = renumber_param_tokens(opts, &slots, &renumber);
   let name_str = name.to_string().trim().to_string();
-  let (start, end) = tcb_listing_startend(&name_str, init, opts);
+  let (start, end) = tcb_listing_startend(&name_str, init, &opts_renumbered);
   let start = format!("{eaters}{start}");
   let arity = if leading_optional {
     format!("[{}][]", mandatory + 1)
@@ -320,44 +347,90 @@ pub(crate) fn tcb_xparse_listing(
   ))))
 }
 
-/// The specifiers of an xparse argument signature, in order, each with its
-/// delimiter pair when it has one (`d<>` / `D<>{…}` → `"<>"`, `t*` → `"*"`).
-/// `!`/`+` prefixes and the `{default}` groups of `O`/`D`/`G` are skipped.
-fn xparse_signature_specs(sig: &str) -> Vec<(char, String)> {
+/// Rewrite the `#k` parameter references of a tcb options body per
+/// [`tcb_xparse_listing`]'s slot map: a substituted slot becomes its default
+/// text (tokenized at the current catcodes), a mapped slot its new number.
+fn renumber_param_tokens(opts: &Tokens, slots: &[Option<String>], renumber: &[usize]) -> Tokens {
+  let toks = opts.unlist_ref();
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let t = &toks[i];
+    if t.get_catcode() == Catcode::PARAM
+      && let Some(next) = toks.get(i + 1)
+      && let Some(k) = next.to_string().chars().next().and_then(|c| c.to_digit(10))
+      && next.get_catcode() != Catcode::PARAM
+    {
+      let idx = (k as usize).saturating_sub(1);
+      match slots.get(idx) {
+        Some(Some(text)) => {
+          out.extend(Tokenize!(TeXString::assembled(text.clone())).unlist());
+        },
+        Some(None) => {
+          out.push(*t);
+          out.push(T_OTHER!(&renumber[idx].to_string()));
+        },
+        None => {
+          out.push(*t);
+          out.push(*next);
+        },
+      }
+      i += 2;
+      continue;
+    }
+    out.push(*t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The specifiers of an xparse argument signature, in order: the letter, its
+/// delimiter pair when it has one (`d<>`/`D<>{…}` → `"<>"`, `t*` → `"*"`) and its
+/// `{default}` text (`O`, `D`, `G`; empty otherwise). `!`/`+` prefixes are skipped.
+fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String)> {
   let chars: Vec<char> = sig.chars().collect();
   let mut out = Vec::new();
   let mut i = 0;
-  let skip_group = |i: &mut usize| {
-    // `{…}` balanced
+  let take_group = |i: &mut usize| -> String {
+    let mut text = String::new();
     if *i < chars.len() && chars[*i] == '{' {
       let mut depth = 0;
       while *i < chars.len() {
         match chars[*i] {
-          '{' => depth += 1,
+          '{' => {
+            depth += 1;
+            if depth > 1 {
+              text.push('{');
+            }
+          },
           '}' => {
             depth -= 1;
             if depth == 0 {
               *i += 1;
               break;
             }
+            text.push('}');
           },
-          _ => {},
+          c => text.push(c),
         }
         *i += 1;
       }
     }
+    text
   };
   while i < chars.len() {
     let c = chars[i];
     i += 1;
     match c {
-      'm' | 'o' | 's' | 'g' | 'v' | 'b' | 'l' | 'u' | 'e' | 'E' => out.push((c, String::new())),
+      'm' | 'o' | 's' | 'g' | 'v' | 'b' | 'l' | 'u' | 'e' | 'E' => {
+        out.push((c, String::new(), String::new()))
+      },
       'O' | 'G' => {
         while i < chars.len() && chars[i] == ' ' {
           i += 1;
         }
-        skip_group(&mut i);
-        out.push((c, String::new()));
+        let d = take_group(&mut i);
+        out.push((c, String::new(), d));
       },
       't' => {
         while i < chars.len() && chars[i] == ' ' {
@@ -365,7 +438,7 @@ fn xparse_signature_specs(sig: &str) -> Vec<(char, String)> {
         }
         let d = chars.get(i).map(|c| c.to_string()).unwrap_or_default();
         i += 1;
-        out.push((c, d));
+        out.push((c, d, String::new()));
       },
       'd' | 'D' | 'r' | 'R' => {
         while i < chars.len() && chars[i] == ' ' {
@@ -373,13 +446,14 @@ fn xparse_signature_specs(sig: &str) -> Vec<(char, String)> {
         }
         let d: String = chars.iter().skip(i).take(2).collect();
         i += 2;
+        let mut default = String::new();
         if matches!(c, 'D' | 'R') {
           while i < chars.len() && chars[i] == ' ' {
             i += 1;
           }
-          skip_group(&mut i);
+          default = take_group(&mut i);
         }
-        out.push((c, d));
+        out.push((c, d, default));
       },
       _ => {}, // `!`, `+`, `>`, spaces, unknown
     }

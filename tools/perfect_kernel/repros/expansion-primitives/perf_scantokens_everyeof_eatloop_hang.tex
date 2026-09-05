@@ -1,0 +1,18 @@
+% witness: spreadtab (isolation of the root, no package)
+% oracle: pdflatex clean (\everyeof sentinel terminates the eat-loop)
+% engines: Rust HANGS; the \everyeof-terminated eat-loop over a \scantokens
+%   pseudo-file never sees \STnil because etex.rs:459 doesn't mark_everyeof_mouth().
+% expect: "AFTER-EAT-DONE" printed after the eat-loop drains the pseudo-file
+% status: RED on b56n/sweep42 (timeout 124)
+% mechanism: minimal \ST_eat_to_nil: \let\STtoks= reads token-by-token, \afterassignment
+%   re-fires, terminating only on the \everyeof-inserted \STnil at scantokens EOF.
+\documentclass{article}
+\begin{document}
+\def\STnil{@@}
+\def\eatnexta{\unless\ifx\STtoks\STnil \expandafter\eatnext\fi}
+\def\eatnext{\afterassignment\eatnexta\let\STtoks= }
+\everyeof{\STnil}
+\afterassignment\eatnext
+\expandafter\def\expandafter\dummy\scantokens{ABC}
+AFTER-EAT-DONE
+\end{document}

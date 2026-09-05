@@ -1,0 +1,23 @@
+% witness: pgf-periodictable/pgf-PeriodicTableManual (sweep42 status 124, 300s cap, 129 err)
+% oracle: lualatex exit 1 (compiles). Genuine RUST perf bug (warning flood -> 300s cap).
+% engines: pdflatex/lualatex complete; Rust floods 189K "Missing number" over the doc's many draws.
+% expect: a periodic table drawn once; here ONE \pgfPT already emits 2722 "Missing number"
+%   + 2 "layer not part of the layer list" errors. The full manual calls \pgfPT ~40x -> >300s.
+% status: RED on sweep42 (this minimal draw: 2722 warnings + 2 layer errors; the doc: 189K + cap).
+% mechanism: RAW pgf layer shipout (no engine binding for pgf layers). pgf-PeriodicTable does
+%   \pgfdeclarelayer{pgfPTbacklayer}/{pgfPTpaperlayer} + \pgfsetlayers{pgfPTpaperlayer,pgfPTbacklayer,...,main}.
+%   Our engine's per-layer iteration over the \pgfsetlayers comma-list does NOT split it:
+%   the layer-box lookup builds \csname pgf@layerbox@#1\endcsname with #1 = the WHOLE list
+%   -> observed cs name T_CS[\pgf@layerbox@pgfPTpaperlayer,pgfPTbacklayer,main]. That box
+%   register is undefined -> \setbox/\box "Missing number, treated as zero" (2722x here),
+%   and the layers read as "not part of the layer list" (pgfcorelayers.code.tex). The
+%   divergence is the raw pgf layer shipout loop mis-splitting THIS list. NOTE: a plain
+%   \pgfdeclarelayer{background}\pgfsetlayers{background,main} tikzpicture converts CLEANLY,
+%   so the split failure is pgfPT-SPECIFIC (its \pgfsetlayers is fed a >2-layer list built
+%   via a macro); narrower gain than a generic layer fix. Needs a dig into how pgfPT calls
+%   \pgfsetlayers. Diverging Rust site: raw pgf layer-list iteration (pgfcorelayers.code.tex).
+\documentclass{article}
+\usepackage{pgf-PeriodicTable}
+\begin{document}
+\pgfPT
+\end{document}

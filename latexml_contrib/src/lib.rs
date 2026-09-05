@@ -701,7 +701,16 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
         .iter()
         .find(|(name, extension, _)| matches_entry_nocase(base_only, name, extension))
     })
-    .map(|(_, _, loader)| loader())
+    .map(|(_, extension, loader)| {
+      // K1 provenance: a binding's own definitions are `Binding`.
+      use ::latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+      let origin = if *extension == "pool" {
+        DefinitionOrigin::Pool
+      } else {
+        DefinitionOrigin::Binding
+      };
+      with_origin(origin, loader)
+    })
     // biblatex style/variant packages (`biblatex-chicago`, `biblatex-apa`,
     // `biblatex-ieee`, `biblatex-nature`, `biblatex-science`, `biblatex-mla`,
     // `biblatex-phys`, `biblatex-chem`, …) each begin their real `.sty` with

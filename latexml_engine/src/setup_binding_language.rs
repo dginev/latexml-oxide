@@ -66,7 +66,10 @@ macro_rules! InnerPool {
         true,
         Some($crate::prelude::state::Scope::Global),
       );
-      $crate::$name::load_definitions()?;
+      ::latexml_core::definition::origin::with_origin(
+        ::latexml_core::definition::origin::DefinitionOrigin::Pool,
+        || $crate::$name::load_definitions(),
+      )?;
     }
   }};
 }

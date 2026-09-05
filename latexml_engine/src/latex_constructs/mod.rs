@@ -193,24 +193,6 @@ fn section_element_for_type_maybe(stype: &str) -> Option<String> {
 /// We deliberately do NOT use looser `contains("plain.")` /
 /// `contains("/plain")` checks — they would match unrelated
 /// paths such as `complainttext.tex` or `…/plainness/foo.sty`.
-/// Was a definition made by LaTeXML itself — the plain/LaTeX dump
-/// (`<embedded:plain>`/`<embedded:latex>`), a pool or binding's Rust code
-/// (a `.rs` placeholder locator) or the plain pool proper — rather than by a
-/// TeX file the document loaded? Broader than `is_plain_definition_source`, which keeps
-/// Perl's `\newcommand` plain-only leniency. Used by `\lx@if@pooldefined`
-/// for the l3/ltcmd "already defined" checks (latex_constructs_rust_only.rs).
-pub fn is_latexml_predefinition_source(locator: Locator) -> bool {
-  if locator.get_short_source("").starts_with("plain") {
-    return true;
-  }
-  // `<embedded:plain>`/`<embedded:latex>` are the dumps; a Rust-defined
-  // macro's locator points at the Rust source (`…/locator.rs` placeholder or
-  // the defining binding); a TeX file the document loaded is neither.
-  with(locator.get_source(), |s| {
-    s.is_empty() || s.starts_with("<embedded:") || s.ends_with(".rs")
-  })
-}
-
 fn is_plain_definition_source(locator: Locator) -> bool {
   if locator.get_short_source("").starts_with("plain") {
     return true;

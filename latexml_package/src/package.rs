@@ -31,6 +31,7 @@ pub mod afterpage_sty;
 pub mod aipcheck_tex;
 pub mod aipproc_cls;
 pub mod aipproc_sty;
+pub mod ajmacros_sty;
 pub mod algc_sty;
 pub mod algcompatible_sty;
 pub mod algmatlab_sty;

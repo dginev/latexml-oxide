@@ -772,7 +772,7 @@ LoadDefinitions!({
   // `\newcommand`/`\newenvironment` sidestep the same collision through
   // `isDefinableLaTeX` ("Ignoring redefinition"); this is that leniency for
   // the l3 declarators: when the existing definition is LaTeXML's own
-  // (`is_latexml_predefinition_source`), the error is dropped and each
+  // (`DefinitionOrigin::is_latexml_owned`), the error is dropped and each
   // declarator keeps its post-error shape — `\cs_new` still `\cs_gset`s
   // (the raw `\thepage` replaces the pool's), ltcmd keeps the existing
   // command/environment (the pool's `<ltx:figure>`/`<ltx:section>`
@@ -782,11 +782,9 @@ LoadDefinitions!({
   // ltcmd_declarators_keep_pool_constructors_quietly}`.
   DefMacro!("\\lx@if@pooldefined{}{}{}", sub[(name, if_tks, else_tks)] {
     let cs = T_CS!(s!("\\{}", Expand!(name).to_string()));
-    // A constructor/environment defined from Rust carries no locator at all;
-    // a pool macro carries the Rust-side placeholder. Both are "ours".
-    let pool = lookup_definition(&cs)?.is_some_and(|prev| {
-      prev.get_locator().is_none_or(crate::latex_constructs::is_latexml_predefinition_source)
-    });
+    // K1 provenance (`latexml_core::definition::origin`): ours = dump, pool,
+    // binding or format; a raw file's or the document's own definition is not.
+    let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
   RawTeX!(

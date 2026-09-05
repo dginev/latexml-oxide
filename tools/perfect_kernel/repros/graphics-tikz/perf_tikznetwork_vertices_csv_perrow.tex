@@ -1,0 +1,27 @@
+% witness: tikz-network/tikz-network (sweep #42: 299.6s, status 3, Fatal:Timeout:TokenLimit,
+%          0-byte XML; tripped ~line 1855 \Vertices{data/vertices.csv})
+% oracle:  pdflatex 0 err, whole isolated case 1.24s
+% engines: pdflatex/latexml raw [rawstyles,rawclasses]
+% expect:  a tikzpicture with the CSV vertices drawn
+% status:  RED-slow — latexml ~1s/row (synthetic) / ~2.7s/row (real 9-col CSV);
+%          the doc has ~30 \Vertices/\Edges calls -> cumulative minutes -> Fatal 0-byte
+% mechanism: \Vertices -> \@@vertices (tikz-network.sty L776) -> \DTLforeach* +
+%   \DTLforeachkeyinrow + nested \DTLifeq + \trim@spaces@in + \edef\vertex@Options per
+%   cell, all RAW datatool v3 / expl3. latexml expands ~7-15M tokens PER ROW (pdflatex
+%   ~1e4). LINEAR per row, catastrophic constant. Plain \DTLloaddb is only ~0.12s/row;
+%   the cost is the per-cell foreachkeyinrow+ifeq+option-edef iteration.
+% CLASS: SHARED substrate (Perl also raw datatool/expl3), LATEXML-heavy; surpass-Perl
+%   in scope (pdflatex clean). Fixable: native datatool row/cell binding.
+\documentclass{article}
+\usepackage{tikz-network}
+\begin{filecontents*}[overwrite]{v.csv}
+id, x, y ,size, color,opacity,label,IdAsLabel,NoLabel
+ A, 0,  0, .4 , green,  .9   ,  a  ,  false  , false
+ B, 1, .7, .6 ,      ,  .5   ,  b  ,  false  , false
+ C, 2,  1, .8 ,orange,  .3   ,  c  ,  false  , true
+ D, 2,  0, .5 ,   red,  .7   ,  d  ,  true   , false
+ E,.2,1.5, .5 ,  gray,       ,  e  ,  false  , false
+\end{filecontents*}
+\begin{document}
+\begin{tikzpicture}\Vertices{v.csv}\end{tikzpicture}
+\end{document}
