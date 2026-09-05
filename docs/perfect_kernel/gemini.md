@@ -148,3 +148,23 @@ Root-caused against real `endnotes.sty` + `cmsendnotes.sty` (`biblatex-chicago`)
   - `cms-notes-intro.tex`: 102 errors -> 0 errors, 0 fatals!
   - `cms-notes-sample.tex`: 1 error -> 0 errors, 0 fatals!
 - Guards: `perfect_kernel_gemini::endnotes_internals_and_cmsendnotes_overlay` and `perfect_kernel_gemini::endnotes_standard_standalone`.
+
+### Round 3 — Task H3 (istgame: tikz child nodes \tikzparentnode, \tikzchildnode, and tcolorbox !O{}) — Complete
+
+Root-caused against `istgame-doc.tex` (L468-473) and `tikz.code.tex`/`tikzlibrarytrees.code.tex`:
+- `istgame-doc.tex` declares `\DeclareTCBListing{docplain}{ !O{} }{colback=white,colframe=gray!15,listing only,#1}`.
+- In LaTeX3 `xparse`/`ltcmd` (xparse.dtx:306-313), the `!` modifier forbids skipping leading whitespace or newlines. Because `\begin{docplain}` was followed by a newline and comments before `[ edge from parent path={(\tikzparentnode) -- (\tikzchildnode)} ]`, real LaTeX does not find an optional argument and typesets the bracketed content verbatim as listing body.
+- In `latexml-oxide` (`tcolorbox_sty.rs`), `xparse_signature_specs_defaults` ignored `!` and mapped `!O{}` to `leading_optional`, converting `docplain` to `\lstnewenvironment{docplain}[1][]{...}`. LaTeX's `\lstnewenvironment` uses `\@ifnextchar[`, which skips whitespace and newlines, erroneously swallowing the listing body lines as the optional argument `#1`. The captured body was passed to `tcolorbox` keys, causing `Package pgfkeys Error: I do not know the key '/tcb/edge from parent path'` and evaluating `\tikzparentnode` and `\tikzchildnode`.
+- Furthermore, in core TikZ (`tikz.code.tex:1412-1414`), `\tikzparentanchor` and `\tikzchildanchor` are initialized to `\pgfutil@empty`, while `\tikzparentnode` and `\tikzchildnode` are only set dynamically inside `\tikz@children@collected` (tikz.code.tex:4591) and `\tikz@childnode` (tikz.code.tex:4664). In `tikzlibrarytrees.code.tex:95-106`, edge-from-parent styles reference `\tikzparentnode` and `\tikzchildnode`. Any key evaluation or path expansion outside an active child scope thus threw undefined CS errors for `\tikzparentnode` and `\tikzchildnode`.
+- Implemented:
+  1. `latexml_package/src/package/tikzlibrarytrees_code_tex.rs`: package binding for `tikzlibrarytrees.code.tex` that loads the upstream library and provides fallback definitions (`\providecommand\tikzparentnode{tikzparentnode}\providecommand\tikzchildnode{tikzchildnode}`).
+  2. Registered `tikzlibrarytrees` in `latexml_package/src/lib.rs` and `latexml_package/src/package.rs`.
+  3. `latexml_package/src/package/tikz_sty.rs`: defined `\tikzparentnode` and `\tikzchildnode` fallback macros before loading tikz.
+  4. `latexml_package/src/package/tcolorbox_sty.rs`:
+     - Added `\lxtcbifnextnospace` eater macro that peeks `\futurelet` without skipping spaces.
+     - Updated `xparse_signature_specs_defaults` to track the `!` modifier.
+     - In `tcb_xparse_listing`, `!O`/`!o`/`!d`/`!D` specifiers are excluded from `leading_optional` and routed to the `\lxtcbifnextnospace` eater with default substitution for `#k`.
+- Verification:
+  - Repro of `docplain` + TikZ tree with `edge from parent path` + `istgame`: 3 errors -> 0 errors!
+  - `cargo test -p latexml --test 86_tikz`: 10 passed, 0 failed.
+  - Guard: `perfect_kernel_gemini::istgame_and_tikz_trees_child_nodes`.

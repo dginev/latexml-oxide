@@ -16211,6 +16211,45 @@ Some text with an endnote.\endnote{This is an endnote.}
     assert!(xml.contains("<TOC"), "{xml}");
     assert!(xml.contains("This is an endnote."), "{xml}");
   }
+
+  /// istgame and TikZ trees child nodes (\tikzparentnode, \tikzchildnode,
+  /// tikzlibrarytrees, and tcolorbox !O{} listing signature without space-skipping).
+  #[test]
+  fn istgame_and_tikz_trees_child_nodes() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\usepackage{istgame}
+\DeclareTCBListing{docplain}{ !O{} }{colback=white,colframe=gray!15,listing only,#1}
+\begin{document}
+\begin{docplain}
+  % tikz-qtree conflict resolution (only with \usepackage{tikz-qtree})
+  [
+    edge from parent path={(\tikzparentnode) -- (\tikzchildnode)}
+  ]
+\end{docplain}
+\begin{tikzpicture}[edge from parent path={(\tikzparentnode) -- (\tikzchildnode)}]
+\node {root}
+  child { node {left} }
+  child { node {right} };
+\end{tikzpicture}
+\begin{istgame}
+\istroot(0){Alice}
+  \istb{L}[al]{(-1,1)}
+  \istb{R}[ar]{(1,-1)}
+  \endist
+\end{istgame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("tikzparentnode"), "{xml}");
+    assert!(xml.contains("tikzchildnode"), "{xml}");
+    assert!(xml.contains("root"), "{xml}");
+    assert!(xml.contains("Alice"), "{xml}");
+  }
 }
 
 
