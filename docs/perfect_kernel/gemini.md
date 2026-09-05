@@ -128,3 +128,23 @@ Audited and aligned all self-terminating environment bindings to the kernel verb
 5. `verbatim.sty`: verified it re-emits through `Invocation!(\end, ...)` with remainder dropped as in real LaTeX `verbatim.sty`. Guard: `verbatim_sty_self_terminating_hands_to_end`.
 6. `alltt.sty`: verified standard `DefEnvironment` hands to kernel `\end`. Guard: `alltt_self_terminating_hands_to_end`.
 7. `tcolorbox.sty`: verified `dispExample`, `dispListing`, `tcbwritetemp`, `tcbverbatimwrite` unread `\end{env}` ahead of mouth-buffered line remainder and define no-op macros. Guard: `tcolorbox_self_terminating_hands_to_end`.
+
+### Round 3 — Task H2 (cmsendnotes: endnotes.sty internals and replay pipeline) — Complete
+
+Root-caused against real `endnotes.sty` + `cmsendnotes.sty` (`biblatex-chicago`):
+- `cmsendnotes.sty` raw-loads on top of `endnotes.sty`, replacing `\endnote` with `\@endnotemark\@endnotetext`.
+- `\@endnotetext` drives `endnotes.sty` internals: `\@enotes` write register, `\if@enotesopen`, `\@openenotes` (`\openout\@enotes=\jobname.ent`), `\@doanenote`, and `\@endanenote`.
+- In `latexml-oxide`, `endnotes_sty.rs` only defined a high-level XML constructor without the real TeX macro/register surface, causing undefined `\if@enotesopen`, `\@enotes` write failure ("Missing number, treated as zero"), and a 58-error cascade on `cms-noteref-demo.tex` and 102 errors on `cms-notes-intro.tex`.
+- In addition, `biblatex.sty:436-441` attempts `\patchcmd\theendnotes{\enoteformat}{...}{}{\blx@err@patch{'endnotes' package}}`. Because `\theendnotes` was a constructor, `\patchcmd` failed and threw undefined `\blx@err@patch`.
+- Finally, `cmsendnotes.sty` uses `\IfBeginWith`, `\StrSubstitute`, `\StrGobbleLeft`, `\IfInteger` from `xstring`, which `biblatex-chicago.sty:18` requires (`\RequirePackage{xstring}`), and `\MakeCapital` from `biblatex.sty:2090` / `blx-case-latex2e.sty:61`.
+- Implemented in `latexml_package/src/package/endnotes_sty.rs`:
+  - Full macro & register surface from real `endnotes.sty`: `\newwrite\@enotes`, `\newif\if@enotesopen`, `\newif\if@haveenotes`, `\@openenotes`, `\@doanenote`, `\@endanenote`, `\enotesize`, `\enoteformat`, `\enoteheading`, `\endnotesep`, `\@theenmark`, `\@makeenmark`, `\@endnotemark`, `\@endnotetext`.
+  - Re-implemented `\theendnotes` as a macro containing `\enoteformat` so `\patchcmd` succeeds; if `\if@haveenotes` is true (written notes exist in VFS), replays `.ent` via `\InputIfFileExists`; else falls back to `<ltx:TOC lists='ent'>` (`\lx@theendnotes`), preserving `tests/structure/endnote.xml`.
+- Implemented in `latexml_contrib/src/biblatex_sty.rs`:
+  - Defined `\MakeCapital{text}` as `\MakeUppercase{#1}` and no-op `\blx@err@patch{}`.
+  - Added `RequirePackage!("xstring");` under the `biblatex-chicago` variant handler.
+- Witness outcomes:
+  - `cms-noteref-demo.tex`: 58 errors -> 0 errors, 0 fatals!
+  - `cms-notes-intro.tex`: 102 errors -> 0 errors, 0 fatals!
+  - `cms-notes-sample.tex`: 1 error -> 0 errors, 0 fatals!
+- Guards: `perfect_kernel_gemini::endnotes_internals_and_cmsendnotes_overlay` and `perfect_kernel_gemini::endnotes_standard_standalone`.
