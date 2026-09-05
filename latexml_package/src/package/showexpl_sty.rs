@@ -83,7 +83,14 @@ LoadDefinitions!({
     r"\newcommand*\SX@explpreset{}\newcommand*\SX@@explpreset{}",
     r"\newcommand*\SX@codefile{}\edef\SX@codefile{\jobname.tmp}",
     r"\newcommand*\SX@justification{\raggedright}",
-    r"\@ifundefined{c@ltxexample}{\newcounter{ltxexample}}{}"
+    r"\@ifundefined{c@ltxexample}{\newcounter{ltxexample}}{}",
+    // showexpl.sty:58-61,115 — the switches raw dependants skip over
+    // (pst-exa.sty:104 `\if@SX@rangeaccept` inside a false `\ifpstexa@swpl`
+    // branch: an UNDEFINED conditional is not counted by the skip, tex.web
+    // §510, so the nested `\else`/`\fi` desync it — pst-exa-doc). Guard:
+    // `perfect_kernel_batch56::showexpl_switches_balance_a_skipped_branch`.
+    r"\newif\if@SX@rangeaccept\newif\if@SX@varwidth\newif\if@SX@wide",
+    r"\newif\if@SX@attachfile\newif\ifSX@wasodd"
   ));
   // showexpl.sty:208 `\SX@put@code@result`: typeset the listing written to
   // `\SX@codefile` and run it as the result — the binding's own display path.

@@ -1,0 +1,23 @@
+% witness: sidenotes/caesar_example (caesar_book.cls:106-115 \maketitlepage)
+% oracle:  pdflatex 0 errors (caesar_example.pdf)
+% engines: rust=RUNAWAY perl=RUNAWAY (both hang; 2026-09-04)
+% expect:  0 errors; <ltx:p> with numlines=1 (loop terminates, box0 voids)
+% status:  RED (times out)
+% mechanism: \loop...\setbox0\lastbox...\ifvoid0...\repeat counts title lines.
+%   \unpenalty is def_primitive_noop (tex_penalties.rs:19); a no-op primitive
+%   digests to a Whatsit box pushed onto box_list. Two \unpenalty per iteration
+%   push 2 boxes, \lastbox pops 1 => net +1/iter => box_list grows unbounded,
+%   \ifvoid0 never true. Fix: make \unpenalty an active-removal DefPrimitive
+%   like \unkern (tex_kern.rs:69) that removes the last isPenalty box and
+%   pushes NOTHING. SHARED (Perl also hangs) but pdflatex-clean => surpass.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\setbox0\vbox{A title line here\par
+  \count@\z@
+  \loop
+  \unskip\unpenalty\unskip\unpenalty\unskip
+  \setbox0\lastbox
+  \ifvoid0 \xdef\numlines{\the\count@}\else \advance\count@\@ne \repeat}%
+numlines=\numlines
+\end{document}

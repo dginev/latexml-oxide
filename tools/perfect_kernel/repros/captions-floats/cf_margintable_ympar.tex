@@ -1,0 +1,17 @@
+\documentclass{article}
+\usepackage{sidenotes}
+\makeatletter
+\newcommand{\marginparstyle}{\footnotesize}
+\long\def\@ympar#1{%
+  \@savemarbox\@marbox{\marginparstyle#1}%
+  \global\setbox\@currbox\copy\@marbox
+  \@xympar}
+\makeatother
+\begin{document}
+Text.
+\begin{margintable}
+  \begin{tabular}{ll}a&b\end{tabular}
+  \caption{A margin table.\label{t}}
+\end{margintable}
+More~\ref{t}.
+\end{document}

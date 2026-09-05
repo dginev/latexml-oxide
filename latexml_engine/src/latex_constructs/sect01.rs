@@ -528,6 +528,18 @@ pub(crate) fn load() -> Result<()> {
 
   Let!("\\@normalcr", "\\\\");
   Let!("\\@normalnewline", "\\newline");
+  // latex.ltx:9247-9266: `\@normalcr` → `\@xnewline` → `\@newline[glue]` →
+  // `\@gnewline`, whose raw body (inherited from the dump) dereferences the
+  // scratch `\reserved@e{\reserved@f#1}` that only `\@normalcr` itself sets.
+  // `\\` is native here, but raw classes enter the chain directly —
+  // brief.cls:496 `\@nobreakcr` (`\stopbreaks`, :485) — and a parbox body
+  // holding it is re-expanded during sizing, where the scratch macro is
+  // undefined (ntgclass brief-sample, 2nd letter). Route the chain to the
+  // native newline, as `\\`/`\@normalcr` already are. Guard:
+  // `perfect_kernel_batch56::raw_newline_chain_is_the_native_newline`.
+  DefMacro!("\\@xnewline", "\\@ifnextchar[\\@newline{\\lx@newline}");
+  DefMacro!("\\@newline[]", "\\lx@newline[#1]");
+  DefMacro!("\\@gnewline{}", "\\lx@newline");
   // NOTE: Activating this binding messes up an \afterassign test,
   //       so it may be best left disabled.
   // PushValue!("TEXT_MODE_BINDINGS" => Tokens!(T_CS!("\\\\"), T_CS!("\\@normalcr")));

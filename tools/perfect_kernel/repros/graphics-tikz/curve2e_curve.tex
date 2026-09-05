@@ -1,0 +1,14 @@
+% witness: curve2e/curve2e-manual L973 (heart). oracle: pdflatex 0 err. engines: pdflatex.
+% expect: 0 err, cubic-bezier <line> with real coords. status: RED (b56b: \Curve is a
+%   no-op stub -> renders NOTHING; when absorbed verbatim, curves render all-zero points
+%   (Bezier tension math yields 0 control points) + \let\originalmoveto\moveto can recurse).
+% mechanism: \Curve/\CurveTo tension math (curve2e.sty:703-786), pure TeX+\fpeval.
+\documentclass{article}
+\usepackage{curve2e}
+\begin{document}
+\unitlength=8mm\relax
+\begin{picture}(5,5)
+\thicklines\roundcap
+\Curve(2.5,0)<0.1,1>(5,3.5)<0,1>(4,5)<-1,0>(2.5,3.5)<-0.1,-1.2>[-0.1,1.2](1,5)<-1,0>(0,3.5)<0,-1>(2.5,0)<0.1,-1>
+\end{picture}
+\end{document}

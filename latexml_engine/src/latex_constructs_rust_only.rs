@@ -201,25 +201,26 @@ LoadDefinitions!({
     }
   );
   DefMacro!("\\Uradical Number Number", "\\sqrt");
-  DefMacro!(T_CS!("\\Umathcodenum"), None, {
-    let _code = read_number()?;
-    vec![T_OTHER!("0")]
-  });
+  // `\Umathcodenum <char>` is an internal integer (LuaTeX manual §7.3), so
+  // `\the\Umathcodenum"2F` must read it as a register, not expand it to a
+  // literal `0` that leaves `\the0` behind (fixdif.sty:38 under unicode-math;
+  // physics2, physics2-legacy). Mirrors `\mathcode` (tex_math.rs); the value
+  // is 0 (no Unicode math classes here) and assignments are absorbed. Guard:
+  // `perfect_kernel_batch56::umathcodenum_is_an_internal_integer`.
+  DefRegister!("\\Umathcodenum Number", Number::new(0),
+    getter => sub[args] {
+      let _ = args;
+      Number::new(0)
+    },
+    setter => sub[value, scope, args] {
+      let _ = (value, scope, args);
+    }
+  );
   DefRegister!("\\mathnolimitsmode" => Number::new(0));
   Let!("\\scantextokens", "\\scantokens");
 
-  // \Uchar post-dump fallback and expl3 kernel primitive aliases:
-  if lookup_definition(&T_CS!("\\Uchar"))?.is_none() {
-    DefMacro!(T_CS!("\\Uchar"), None, {
-      let charcode = read_number()?.value_of();
-      match char::from_u32(charcode as u32) {
-        Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
-        Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
-        None => Vec::new(),
-      }
-    });
-  }
-  Let!("\\tex_Uchar:D", "\\Uchar");
+  // `\tex_Uchar:D` (with `\Uchar`) belongs to the luatex profile of
+  // latexml.sty; `\Ucharcat` is the deliberate pdftex.rs exception.
   Let!("\\tex_Ucharcat:D", "\\Ucharcat");
 
   // ctex-engine-luatex.def declares these via `newluacmd` (Lua `token.set_lua`),

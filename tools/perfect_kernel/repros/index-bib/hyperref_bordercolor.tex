@@ -1,0 +1,13 @@
+% witness: movie15/overlay-example (\pdfmark /C [\@urlbordercolor]),
+%          hrefhide/hrefhide-example (\definecolor{...}{rgb}{\@citebordercolor})
+% oracle: pdflatex CLEAN (hyperref defines these at load: hyperref.sty:3298-3311,3973-3979)
+% engines: pdflatex; expect: 0 errors; status: RED (b56a)
+% mechanism: hyperref binding reimplements hyperref, omits the \@*color/\@*bordercolor
+%            storage macros; raw hyperref-dependent packages expand them.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+\edef\z{/C [\@urlbordercolor] /H \@pdfhighlight (\@citebordercolor)(\@anchorcolor)}%
+Done.
+\end{document}

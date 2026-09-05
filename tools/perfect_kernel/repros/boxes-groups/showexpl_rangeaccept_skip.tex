@@ -1,0 +1,32 @@
+% witness: pst-exa/pst-exa-doc (the SOLE still-red doc of the 22 `Error:unexpected:}` cluster)
+% oracle: pdflatex -interaction=batchmode -> 0 '!' lines (real showexpl.sty defines the \newif)
+% engines: pdflatex (also the pst-exa[tcb] path)
+% expect: 0 Error/Fatal; \ifsw is FALSE so the swpl branch is SKIPPED and only "TCB-OK"
+%         is typeset; the \begin{center}c\end{center} inside the skipped branch must NOT leak.
+% status: RED under b56a (showexpl_sty.rs omits showexpl.sty:58-61 \newif\if@SX@rangeaccept ...).
+%         first error: `} Attempt to close a group that switched to mode internal_vertical`.
+% mechanism: LaTeXML's false-conditional skip (like tex.web pass_text S510) only counts
+%   tokens whose meaning IS a conditional. showexpl_sty.rs (a from-scratch reimplementation,
+%   no raw-load) never defines \if@SX@rangeaccept, so the nested \if@SX@rangeaccept(showexpl.sty
+%   :104-in-pst-exa) is uncounted; its \else/\fi then close the OUTER \ifsw early, the skip
+%   stops at the wrong \else, and the \begin{center} (vertical mode) is executed then hit by `}`.
+%   Fix: define the 5 showexpl \newif's in showexpl_sty.rs (showexpl.sty:58-61,115).
+\documentclass{article}
+\usepackage{showexpl}
+\makeatletter
+\newif\ifsw
+\swfalse
+\begin{document}
+\ifsw
+  \renewcommand*\Foo{%
+    \ifx\a\@empty
+      \if@SX@rangeaccept X\else Y\fi
+    \else
+      \begin{center}c\end{center}%
+    \fi
+  }%
+\else
+TCB-OK
+\fi
+\makeatother
+\end{document}

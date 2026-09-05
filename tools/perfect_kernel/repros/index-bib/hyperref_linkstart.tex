@@ -1,0 +1,12 @@
+% witness: ucalgmthesis/sample-thesis (\pagenote -> \hyper@linkstart{..}{..}txt\hyper@linkend)
+% oracle: pdflatex CLEAN (hpdftex.def:386 defines \hyper@linkstart; disabled branch
+%         hyperref.sty:4092 \let\hyper@linkstart\@gobbletwo)
+% engines: pdflatex; expect: 0 errors; status: RED (b56a) + \misdefined:# cascade
+% mechanism: hyperref binding omits driver-level \hyper@linkstart/\hyper@linkend;
+%            raw packages call them directly, params #1#2 leak to Stomach.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+Text \hyper@linkstart{link}{target}anchor\hyper@linkend\ end.
+\end{document}

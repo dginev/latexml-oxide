@@ -12702,7 +12702,9 @@ mod perfect_kernel_batch55 {
 [\Uchar 65][\Uchar 32][\ExplSyntaxOn\tex_Uchar:D 66\ExplSyntaxOff]
 \end{document}
 ";
-    let (stderr, xml) = convert(tex, false);
+    // `\Uchar` is a Unicode-engine primitive: only the luatex profile has it.
+    let (stderr, xml) =
+      super::perfect_kernel_batch46::convert_with(tex, Some("[luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[A][ ][B]"), "{xml}");
   }
@@ -12846,6 +12848,271 @@ Tail text survives.
       xml.contains("bGluZSBvbmUgb2YgY29kZQpcZW5ke2RvY3VtZW50fQpsaW5lIHRocmVlIG9mIGNvZGU="),
       "{xml}"
     );
+  }
+
+  /// pict2e.sty:742-774 path interface (dvips mode under `\pdfoutput=0`):
+  /// witnesses fancyqr-doc, curve2e-manual (RUST-ONLY: Perl raw-loads pict2e).
+  #[test]
+  fn pict2e_path_interface_strokes_a_polyline() {
+    let tex = r"\documentclass{article}
+\usepackage{pict2e}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\begin{picture}(40,40)
+\moveto(0,0)
+\lineto(40,0)
+\lineto(40,40)
+\closepath
+\strokepath
+\moveto(5,5)\curveto(10,20)(30,20)(35,5)\strokepath
+\circlearc{20}{20}{10}{0}{90}\fillpath
+\end{picture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+    // triangle + sampled curve + arc = three polylines
+    assert_eq!(xml.matches("<line ").count(), 3, "{xml}");
+  }
+
+  /// hyperref.sty:3298-3311/3973-3979 storage macros and the :4092-4093
+  /// driver link pair (witnesses movie15 overlay-example, hrefhide-example,
+  /// ucalgmthesis sample-thesis; SHARED with Perl, pdflatex clean).
+  #[test]
+  fn hyperref_storage_and_driver_link_internals() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+\edef\z{/C [\@urlbordercolor] /H \@pdfhighlight (\@citebordercolor)(\@anchorcolor)}\typeout{Z:\z}
+Text \hyper@linkstart{link}{target}anchor\hyper@linkend\ end.
+\hyper@natlinkstart{k}cite\hyper@natlinkend.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // the space after `\@pdfhighlight` is a control-word space, eaten by the tokenizer
+    assert!(
+      stderr.contains("Z:/C [0 1 1] /H /I(0 1 0)(black)"),
+      "{stderr}"
+    );
+    assert!(xml.contains("Text anchor end."), "{xml}");
+    assert!(xml.contains("cite."), "{xml}");
+  }
+
+  /// showexpl.sty:58-61,115 switches: an undefined `\if@SX@…` inside a
+  /// skipped branch desyncs the skip (tex.web §510). Witness pst-exa-doc
+  /// (`\usepackage[tcb]{pst-exa}`), SHARED with Perl, pdflatex clean.
+  #[test]
+  fn showexpl_switches_balance_a_skipped_branch() {
+    let tex = r"\documentclass{article}
+\usepackage{showexpl}
+\makeatletter
+\newif\ifsw
+\swfalse
+\begin{document}
+\ifsw
+  \renewcommand*\Foo{%
+    \ifx\a\@empty
+      \if@SX@rangeaccept X\else Y\fi
+    \else
+      \begin{center}c\end{center}%
+    \fi
+  }%
+\else
+TCB-OK
+\fi
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("TCB-OK"), "{xml}");
+    assert!(!xml.contains(">c<"), "{xml}");
+  }
+
+  /// `\Umathcodenum` is an internal integer: `\the\Umathcodenum"2F` reads a
+  /// number (fixdif.sty:38; physics2, physics2-legacy).
+  #[test]
+  fn umathcodenum_is_an_internal_integer() {
+    let tex = r#"\documentclass{article}
+\begin{document}
+\count0=\numexpr(\the\Umathcodenum"2F-"2F)/16777216\relax X\typeout{UM:\the\count0}
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("UM:0"), "{stderr}");
+    assert!(xml.contains("X"), "{xml}");
+  }
+
+  /// caesar_book.cls:106-115 counts title lines with a `\lastbox` loop;
+  /// `\unpenalty` must not push a box per iteration (sidenotes caesar_example,
+  /// an unbounded runaway in Perl too; pdflatex terminates).
+  #[test]
+  fn unpenalty_does_not_grow_the_box_list() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\setbox0\vbox{A title line here\par
+  \count@\z@
+  \loop
+  \unskip\unpenalty\unskip\unpenalty\unskip
+  \setbox0\lastbox
+  \ifvoid0 \xdef\numlines{\the\count@}\else \advance\count@\@ne \repeat}%
+numlines=\numlines
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("numlines="), "{xml}");
+  }
+
+  /// latex.ltx:17570-17591 allocates `\@marbox` before dispatching to
+  /// `\@ympar`; classes redefine `\@ympar` with the kernel idiom
+  /// (caesar_book.cls:84-87), so `\marginpar` must dispatch to private targets
+  /// (witness sidenotes caesar_example, 42 errors; RUST-ONLY, Perl and pdflatex clean).
+  #[test]
+  fn marginpar_ignores_a_class_redefined_ympar() {
+    let tex = r"\documentclass{article}
+\usepackage{graphicx}
+\usepackage{sidenotes}
+\makeatletter
+\newcommand{\marginparstyle}{\footnotesize}
+\long\def\@ympar#1{%
+  \@savemarbox\@marbox{\marginparstyle#1}%
+  \global\setbox\@currbox\copy\@marbox
+  \@xympar}
+\makeatother
+\begin{document}
+Text.
+\begin{marginfigure}
+  \includegraphics[width=\marginparwidth]{example-image-a}
+  \caption{A margin figure.\label{f}}
+\end{marginfigure}
+More text~\ref{f}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("role=\"margin\""), "{xml}");
+    assert!(xml.contains("<figure") && xml.contains("<caption"), "{xml}");
+  }
+
+  /// A `\lstnewenvironment` whose body is diverted to a file
+  /// (`\lst@BeginWriteFile`) still runs its end code (pst-exa.sty:163-170
+  /// closes a start-code `\hbox` there and reads the result back; pst-exa-doc,
+  /// RUST-ONLY).
+  #[test]
+  fn lstnewenvironment_writefile_runs_the_end_code() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\def\SX@put@code@result{RESULTMARK}
+\lstnewenvironment{myex}[1][]
+ {\setbox\@tempboxa=\hbox\bgroup\lst@BeginWriteFile{\jobname.swpl}}
+ {\lst@EndWriteFile\egroup\SX@put@code@result}
+\makeatother
+\begin{document}
+\begin{myex}[pos=t]
+hello world
+\end{myex}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("RESULTMARK"), "{xml}");
+  }
+
+  /// latex.ltx:9247-9266 cr chain entered directly by brief.cls:496
+  /// `\@nobreakcr` (ntgclass brief-sample, RUST-ONLY: the raw `\@gnewline`
+  /// body dereferences `\reserved@f` when a parbox body is re-expanded).
+  #[test]
+  fn raw_newline_chain_is_the_native_newline() {
+    let tex = r"\documentclass{brief}
+\name{WG}
+\begin{document}
+\begin{brief}{Jan}\end{brief}
+\begin{brief}{Jan}\opening{Hallo,} \ondertekening{Victor}\afsluiting{doei}\end{brief}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Victor") && xml.contains("doei"), "{xml}");
+  }
+
+  /// Perl locks both `\tabular` and `\endtabular`; a class redefining both
+  /// (jpsj2.cls:652,657) must have both dropped (witness jpsj injpsj2, RUST-ONLY).
+  #[test]
+  fn tabular_delegator_is_locked_with_endtabular() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\tabular{\begin{center}\let\@halignto\@empty\@tabular}
+\def\endtabular{\crcr\egroup\egroup $\egroup\end{center}}
+\makeatother
+\begin{document}
+\begin{center}
+\begin{tabular}{cc} a & b \\ c & d \end{tabular}
+\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    for cell in ["a", "b", "c", "d"] {
+      assert!(xml.contains(&format!(">{cell}<")), "{cell}: {xml}");
+    }
+  }
+
+  /// `\ifdefined\Uchar` (and `\primitive`) are Unicode-engine detection
+  /// probes (ucharcat.sty, math-operator.sty); pdfTeX has neither, so the
+  /// default profile must leave them undefined (sweep-38 regression).
+  #[test]
+  fn unicode_engine_primitives_stay_undefined_under_pdftex() {
+    let tex = r#"\documentclass{article}
+\begin{document}
+\ifdefined\Uchar \Umathchar"0"0"0 \fi
+\ifdefined\primitive \Umathchar"0"0"0 \fi
+Done.
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Done."), "{xml}");
+  }
+
+  /// latex.ltx:16560 `\@tabular` is parameterless with a literal `$` that
+  /// luababel.def:1895 `\bbl@replace\@tabular{$}{…}` rescans (lettrine-demo-arabic
+  /// and every babel `bidi=basic` document; sweep-38 TokenLimit regression).
+  #[test]
+  fn at_tabular_is_parameterless_with_a_patchable_math_shift() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\long\def\bbl@afterfi#1\fi{\fi#1}
+\def\bbl@replace#1#2#3{%
+  \toks@{}%
+  \def\bbl@replace@aux##1#2##2#2{%
+    \ifx\bbl@nil##2\toks@\expandafter{\the\toks@##1}%
+    \else\toks@\expandafter{\the\toks@##1#3}\bbl@afterfi\bbl@replace@aux##2#2\fi}%
+  \expandafter\bbl@replace@aux#1#2\bbl@nil#2%
+  \edef#1{\the\toks@}}
+\def\PATCHED{}
+\bbl@replace\@tabular{$}{$\def\PATCHED{patched}}%
+\makeatother
+\begin{document}
+\begin{tabular}{cc} \PATCHED & b \\ c & d \end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    // `\@tabular` is locked, so the rescanned `\edef` is dropped (the patch only
+    // sets bidi layout state); what matters is that the `$` scan balanced and
+    // the alignment still works.
+    for cell in ["b", "c", "d"] {
+      assert!(xml.contains(&format!(">{cell}<")), "{cell}: {xml}");
+    }
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

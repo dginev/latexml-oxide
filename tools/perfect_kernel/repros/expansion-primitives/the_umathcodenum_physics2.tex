@@ -1,0 +1,15 @@
+% witness: physics2/physics2 (via fixdif.sty:38, \the\Umathcodenum in \AtBeginDocument)
+% oracle:  lualatex 0 errors (physics2.pdf); pdflatex n/a (unicode-math)
+% engines: rust=2 perl=4 (2026-09-04)  -- rust \the0 x2; perl undefined \Umathcodenum
+% expect:  0 errors; <ltx:p> present (count assignment absorbed, no \the0)
+% status:  RED
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: \Umathcodenum is an expandable DefMacro->literal 0
+%   (latex_constructs_rust_only.rs:204). fixdif's \fd@patchUmathcode does
+%   \numexpr(\the\Umathcodenum"2F-"2F)/16777216 ; \the expands the macro,
+%   leaving \the0. Fix: model \Umathcodenum as \the-readable indexed
+%   DefRegister (like \mathcode) returning 0. RUST-ONLY-fixable (surpass).
+\documentclass{article}
+\begin{document}
+\count0=\numexpr(\the\Umathcodenum"2F-"2F)/16777216\relax X
+\end{document}

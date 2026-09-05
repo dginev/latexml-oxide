@@ -1,0 +1,14 @@
+% witness: curve2e/curve2e-manual. oracle: pdflatex 0 err. engines: pdflatex.
+% expect: 0 err, grid <line>s. status: RED (b56b: undefined:\AutoGrid).
+% mechanism: \AutoGrid/\GraphGrid (curve2e.sty:316-327) default their span to
+%   \pict@dimen/\pict@offset set by curve2e's \@picture (273); our Rust picture
+%   env must expose those (absorbing \@picture conflicts with the Rust picture env).
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{curve2e}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\begin{picture}(40,30)
+\AutoGrid
+\end{picture}
+\end{document}

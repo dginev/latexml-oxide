@@ -1,0 +1,14 @@
+% witness: hvfloat/wide1s2c, pgf-interference-en (residue38: Error:undefined:\setmonofont)
+% oracle: lualatex clean (libertinus loads libertinus-otf -> fontspec under \iftutex)
+% engines: lualatex,xelatex (fontspec); pdftex uses libertinus-type1
+% expect: 0 errors; \setmonofont absorbed as fontspec no-op family switch
+% status: RED? (verify)
+% mechanism: libertinus.sty:15 \iftutex -> libertinus-otf:190 \RequirePackage{fontspec}
+%            -> fontspec_sty.rs must define \setmonofont. If RED, fontspec binding
+%            not firing via indirect libertinus load under [luatex] profile.
+\documentclass{article}
+\usepackage{libertinus}
+\setmonofont[Scale=MatchLowercase]{DejaVu Sans Mono}
+\begin{document}
+Hello.
+\end{document}

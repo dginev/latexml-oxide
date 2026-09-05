@@ -1,0 +1,16 @@
+% witness: distilled from jpsj2.cls:652,657 (\def\tabular opens \begin{center})
+% oracle:  pdflatex 0 errors; perl 0 errors (Conversion complete)
+% engines: sweep37=0  sweep38=3  b56c=3 (2026-09-04)
+% expect:  0 errors; XML contains <ltx:tabular
+% status:  RED
+% preload: [rawstyles,rawclasses]latexml.sty
+\documentclass{article}
+\makeatletter
+\def\tabular{\begin{center}\let\@halignto\@empty\@tabular}
+\def\endtabular{\crcr\egroup\egroup $\egroup\end{center}}
+\makeatother
+\begin{document}
+\begin{center}
+\begin{tabular}{cc} a & b \\ c & d \end{tabular}
+\end{center}
+\end{document}

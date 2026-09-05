@@ -1,0 +1,19 @@
+% witness: jpsj/injpsj2 (injpsj2.tex:56, class jpsj2.cls:652)
+% oracle:  pdflatex 0 errors; perl 0 errors (Conversion complete)
+% engines: sweep37=0  sweep38=6  b56c=6 (2026-09-04)
+% expect:  0 errors; XML contains <ltx:tabular
+% status:  RED
+% preload: [rawstyles,rawclasses]latexml.sty
+\documentclass{jpsj2}
+\begin{document}
+\begin{table}[t]
+\caption{New and old commands.}
+\begin{center}
+\begin{tabular}{@{\hspace{\tabcolsep}\extracolsep{\fill}}cc|c} \hline
+New & Old & Output \\ \hline
+\verb|\textbf{boldface}| & \verb|{\bf boldface}| & \textbf{boldface} \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+\end{document}

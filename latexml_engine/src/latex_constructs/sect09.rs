@@ -353,7 +353,20 @@ pub(crate) fn load() -> Result<()> {
   // runaway"; Perl's Constructor loops the same way; pdflatex clean). The
   // constructor lives under `\lx@marginpar`. Guard:
   // `perfect_kernel_batch54::marginpar_is_a_macro_over_its_constructor`.
-  DefMacro!("\\marginpar", "\\@ifnextchar[\\@xmpar\\@ympar");
+  // The dispatch targets are LaTeXML-PRIVATE, not the kernel's `\@xmpar`/
+  // `\@ympar`: latex.ltx:17570-17591 allocates `\@currbox` and `\@marbox`
+  // from `\@freelist` before dispatching, and classes customise marginal
+  // notes by redefining `\@ympar` with the kernel idiom `\@savemarbox\@marbox
+  // {…}\@xympar` (caesar_book.cls:84-87). Dispatching to the kernel names let
+  // that redefinition hijack `\marginpar` into the raw float machinery with no
+  // `\@marbox` (undefined `\@marbox`, 24 unclosed `\vbox`es, the `\@captype`
+  // residue: sidenotes caesar_example, 42 errors). Perl's `\marginpar`
+  // constructor (latex_constructs.pool.ltxml:3487) never consults `\@ympar`.
+  // The kernel-named aliases below stay for direct callers. Guard:
+  // `perfect_kernel_batch56::marginpar_ignores_a_class_redefined_ympar`.
+  DefMacro!("\\marginpar", "\\@ifnextchar[\\lx@xmpar\\lx@ympar");
+  DefMacro!("\\lx@xmpar[]{}", "\\lx@marginpar[{#1}]{#2}");
+  DefMacro!("\\lx@ympar{}", "\\lx@marginpar{#1}");
   // latex.ltx:17591 `\@xmpar[#1]#2` uses `#1` as a brace group
   // (`\@savemarbox\@marbox{#1}`); re-passed UNBRACED, an optional holding
   // its own brackets (`\marginpar[{\lipsum[1][1-4]}]{…}`, Test-flexipage) was

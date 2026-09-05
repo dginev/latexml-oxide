@@ -1,0 +1,14 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: asmeconf/asmejour-template (asmeconf.cls:650 \IfFontExistsTF)
+% oracle:  lualatex 0 errors (font resolved case-insensitively by luaotfload)
+% engines: rust=1 perl=3 (2026-09-04, b56b) — SHARED (Perl lacks \IfFontExistsTF)
+% expect:  0 errors; body text "Hello world" survives; no ltx:ERROR (font check TRUE)
+% status:  RED
+\documentclass{article}
+\usepackage{fontspec}
+\makeatletter
+\IfFontExistsTF{TexGyreTermesX-regular.otf}{}{\ClassErrorNoLine{cls}{font missing}}
+\makeatother
+\begin{document}
+Hello world
+\end{document}

@@ -1,0 +1,28 @@
+% WITNESS: lettrine/lettrine-demo-arabic (sweep38 regression 0 -> Fatal TokenLimit)
+% ORACLE: lualatex, CLEAN (oracle_verdicts: lettrine-demo-arabic lualatex 0 0)
+% ENGINES: green on sweep37/55f (release), RED on sweep38/56a + b56c (debug)
+% EXPECT: 0 errors (\bbl@replace over \@tabular is a harmless no-op patch)
+% STATUS: RED today -> Error:expected:Until: Missing argument Until:$ at end of input
+%                       Fatal:Mouth:EoF  File ended while scanning use of a Until:$ argument
+% Catcode-INDEPENDENT (fails under plain AND luatex preload) -> NOT the luatex-letters change.
+% MECHANISM: batch 56a (commit 4f59c35b5c, sect10.rs:256) moved the arg-taking alignment
+%   binding from \tabular onto \@tabular (locked). \@tabular is now
+%   macro:#1#2->\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before
+%   whereas latex.ltx:16560 defines \@tabular as a PARAMETERLESS macro
+%   \leavevmode\hbox\bgroup$\let\@acol...\@tabarray . babel luababel.def:1895 does
+%   \bbl@replace\@tabular{$}{$...} which \expandafter-expands \@tabular; the new
+%   binding grabs $ and \bbl@nil as #1/#2, and the $-delimited scan runs to EOF
+%   (standalone) / loops (in babel's full bidi=basic context).
+\documentclass{article}
+\makeatletter
+\long\def\bbl@afterfi#1\fi{\fi#1}
+\def\bbl@replace#1#2#3{%
+  \toks@{}%
+  \def\bbl@replace@aux##1#2##2#2{%
+    \ifx\bbl@nil##2\toks@\expandafter{\the\toks@##1}%
+    \else\toks@\expandafter{\the\toks@##1#3}\bbl@afterfi\bbl@replace@aux##2#2\fi}%
+  \expandafter\bbl@replace@aux#1#2\bbl@nil#2%
+  \edef#1{\the\toks@}}
+\bbl@replace\@tabular{$}{$\def\bbl@insidemath{0}\def\bbl@parabefore{\localerestoredirs}}%
+\makeatother
+\begin{document}ok\end{document}

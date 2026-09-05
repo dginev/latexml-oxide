@@ -143,6 +143,22 @@ LoadDefinitions!({
       r"\let\iftutex\iftrue \let\ifluatex\iftrue \let\ifpdftex\iffalse \let\ifLuaTeX\iftrue \let\ifPDFTeX\iffalse"
     );
     RawTeX!(r"\let\directlua\lx@directlua \let\luaescapestring\lx@luaescapestring");
+    // Unicode-engine primitives (LuaTeX manual §2.1 / §2.4): `\Uchar <n>`
+    // expands to the character with category 12 (10 for a space); `\primitive
+    // <cs>` delegates to the token. pdfTeX has neither (`\ifdefined\Uchar` is
+    // a Unicode-engine probe), so they exist only in this profile. Guards:
+    // `perfect_kernel_batch55::uchar_primitive_and_expl3_alias` (luatex),
+    // `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
+    DefMacro!(T_CS!("\\Uchar"), None, {
+      let charcode = read_number()?.value_of();
+      match char::from_u32(charcode as u32) {
+        Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
+        Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+        None => Vec::new(),
+      }
+    });
+    Let!("\\tex_Uchar:D", "\\Uchar");
+    DefMacro!("\\primitive Token", sub[(token)] { Ok(Tokens::new(vec![token])) });
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
     // l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
     // `\str_const:Ne \c_sys_engine_str {\cs_if_exist:NT \tex_luatexversion:D {luatex} …}`

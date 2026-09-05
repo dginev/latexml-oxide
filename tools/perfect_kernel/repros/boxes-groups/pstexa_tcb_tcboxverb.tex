@@ -1,0 +1,17 @@
+% witness: pst-exa/pst-exa-doc  (arara latex->dvips; residue engine col = lualatex; oracle=pdflatex)
+% oracle: pdflatex -interaction=batchmode -> 0 '!' lines
+% engines: pdflatex
+% expect: 0 Error/Fatal; \tcboxverb{hello} renders as a verbatim tcolorbox containing "hello".
+% status: RED under b56a. first errors: `} Attempt to close a group that switched to mode vertical`
+%         + orphan `\else`(pst-exa.sty:172) + orphan `\fi`(pst-exa.sty:310).
+% mechanism: \usepackage[tcb]{pst-exa} -> \RequirePackage{showexpl}(pst-exa.sty:21) then the
+%   swpl/tcb selector \ifpstexa@swpl(pst-exa.sty:60,69) \else(172) \fi(310). Under [tcb] the swpl
+%   branch (69-171) is skipped; it nests \if@SX@rangeaccept(pst-exa.sty:104), undefined because
+%   the Rust showexpl binding omits showexpl.sty:58's \newif -> the skip mis-counts, executes the
+%   swpl branch, `}`-closes a vertical group and orphans the outer \else/\fi. Same root as
+%   showexpl_rangeaccept_skip.tex.
+\documentclass{article}
+\usepackage[tcb]{pst-exa}
+\begin{document}
+\tcboxverb{hello}
+\end{document}

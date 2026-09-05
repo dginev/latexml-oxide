@@ -1,0 +1,14 @@
+% WITNESS: lettrine/lettrine-demo-arabic (the real-package minimal witness)
+% ORACLE: lualatex CLEAN. Preload: [rawstyles,rawclasses,luatex]latexml.sty
+% ENGINES: green on sweep37/55f, RED on sweep38/56a -> Fatal:Timeout:TokenLimit (4e9)
+% SAME ROOT as regr_tabular_bbl_replace.tex: babel bidi=basic runs
+%   \bbl@replace\@tabular{$}{$\def\bbl@insidemath{0}\def\bbl@parabefore{\localerestoredirs}}
+%   (luababel.def:1895), broken by the batch-56a arg-taking \@tabular binding.
+% Needs bidi=basic (the \@tabular patch is only installed under lua bidi>1); no import,
+% no fontspec, no Arabic body text required.
+\documentclass{article}
+\usepackage[bidi=basic]{babel}
+\babelprovide[main]{persian}
+\begin{document}
+Hello world.
+\end{document}

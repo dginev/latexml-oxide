@@ -1,0 +1,20 @@
+% CONTROL: the caption/@captype path in isolation (lrbox+minipage+captionsetup+caption),
+% i.e. marginfigure structure minus \marginpar/\@ympar.
+% oracle: pdflatex CLEAN; Rust b56b CLEAN (0 err).
+% Proves \@captype is NOT a separate caption-binding bug: Rust's \captionsetup{type=}
+% + \caption route correctly via CAPTION_type/\maybe@@generic@caption. The witness's
+% \@captype/\the\@captype/\ext@\@captype/\csname errors are collateral of the marbox root.
+\documentclass{article}
+\usepackage{caption}
+\usepackage{graphicx}
+\newsavebox{\mybox}
+\begin{document}
+\begin{lrbox}{\mybox}
+  \begin{minipage}{3cm}
+    \captionsetup{type=figure}
+    \caption{A caption.\label{fig:x}}
+  \end{minipage}
+\end{lrbox}
+\usebox{\mybox}
+Figure~\ref{fig:x}.
+\end{document}

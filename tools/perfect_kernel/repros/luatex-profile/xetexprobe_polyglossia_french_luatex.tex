@@ -1,0 +1,13 @@
+% witness: intexgral-fr, datetime2-french-test-luatex (residue38: \newXeTeXintercharclass)
+% oracle: lualatex clean
+% engines: lualatex,xelatex
+% expect: 0 errors (b56c fixed: \ifluatex true -> gloss-french.ldf:37 \directlua branch)
+% status: GREEN (control, confirms ROOT A fixed)
+% mechanism: gloss-french.ldf:36 \ifluatex must be TRUE under [luatex]; iftex_sty.rs
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{french}
+\begin{document}
+Bonjour: le monde!
+\end{document}

@@ -1,0 +1,15 @@
+% CONTROL: plain sidenotes marginfigure WITHOUT the \@ympar redef.
+% oracle: pdflatex CLEAN; Rust b56b CLEAN (0 err) -> proves the caption/captype
+%   path and marginfigure are fine; only caesar's \@ympar redef breaks it.
+% Output nests <ltx:figure>/<ltx:caption> inside <ltx:note role="margin">.
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{sidenotes}
+\begin{document}
+Text.
+\begin{marginfigure}
+  \includegraphics[width=\marginparwidth]{example-image-a}
+  \caption{A margin figure.\label{f}}
+\end{marginfigure}
+More text~\ref{f}.
+\end{document}

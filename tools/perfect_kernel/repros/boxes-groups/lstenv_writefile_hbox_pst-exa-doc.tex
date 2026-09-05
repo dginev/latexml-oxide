@@ -1,0 +1,28 @@
+% witness: pst-exa/pst-exa-doc (pst-exa-doc.tex:277,286 \begin{PSTexample}; swpl redef :220)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% class:   RUST-ONLY (Perl completes the witness with 0 PSTexample errors; the
+%          \endgroup/\hbox restricted_horizontal errors are Rust-only).
+% oracle:  lualatex 0 errors
+% engines: rust=3 perl=n/a(needs showexpl) ; witness rust=6 perl=3(unrelated) (2026-09-04)
+% expect:  0 errors; body marker RESULTMARK present (proves end code ran)
+% status:  RED
+% mechanism: listings_sty.rs \lx@lstenv@body (:2589) write-file-DIVERT branch
+%   (`if !lst_writefile_tee(&text)` :2597) returns ONLY `\endgroup`, DROPPING the
+%   env end code. When the start code opened `\setbox\@tempboxa=\hbox\bgroup`
+%   (pst-exa.sty:163 swpl / doc:267) the closing `\egroup` lives in that dropped
+%   end code, so the \hbox group (restricted_horizontal) stays open; the emitted
+%   `\endgroup` then hits it -> "close a group that switched to mode
+%   restricted_horizontal", and \end{document} cleanup re-errors on the open \hbox.
+\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\def\SX@put@code@result{RESULTMARK}
+\lstnewenvironment{myex}[1][]
+ {\setbox\@tempboxa=\hbox\bgroup\lst@BeginWriteFile{\jobname.swpl}}
+ {\lst@EndWriteFile\egroup\SX@put@code@result}
+\makeatother
+\begin{document}
+\begin{myex}[pos=t]
+hello world
+\end{myex}
+\end{document}

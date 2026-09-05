@@ -1,0 +1,23 @@
+% witness: sidenotes/caesar_example (caesar_book.cls:84-87 \long\def\@ympar#1{\@savemarbox\@marbox{...}\global\setbox\@currbox\copy\@marbox\@xympar})
+% oracle: pdflatex CLEAN (0 !); Perl LaTeXML CLEAN (0 err, Conversion complete)
+% engines: pdflatex
+% class: RUST-ONLY. Perl \marginpar is a self-contained DefConstructor
+%   (latex_constructs.pool.ltxml:3487) that ignores \@ympar, so a class
+%   \def\@ympar is dead code. Rust routes \marginpar->\@xmpar/\@ympar
+%   (sect09.rs:356) so caesar's raw \@ympar runs and hits UNALLOCATED
+%   \@marbox/\@currbox (real \marginpar does \@next\@marbox\@freelist first,
+%   latex.ltx:17585-88; Rust's \marginpar omits that allocation).
+% expect: 0 Error; <ltx:note role="margin"> emitted (\marginpar content kept)
+% status: RED (b56b): Error:undefined:\@marbox ; Error:undefined:\@captype ;
+%   2x Error:unexpected:\vbox Attempt to end mode internal_vertical ;
+%   Error:malformed:ltx:_CaptureBlock_ ; Error:malformed:ltx:document  (6 err)
+\documentclass{article}
+\makeatletter
+\long\def\@ympar#1{%
+  \@savemarbox\@marbox{#1}%
+  \global\setbox\@currbox\copy\@marbox
+  \@xympar}
+\makeatother
+\begin{document}
+Body text.\marginpar{A margin note.}
+\end{document}

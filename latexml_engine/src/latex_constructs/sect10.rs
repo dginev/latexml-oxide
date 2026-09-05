@@ -253,10 +253,32 @@ pub(crate) fn load() -> Result<()> {
   // to \@tabular. When expl3 or packages patch \tabular via \tl_put_left:Nn \tabular
   // (\exp_after\def\exp_after\tabular...), expanding \tabular must NOT trigger argument
   // scanning or alignment mode switches.
-  DefMacro!("\\@tabular[]{}",
+  // latex.ltx:16560 `\@tabular` is PARAMETERLESS and its body carries a literal
+  // `$`: `\leavevmode\hbox\bgroup$\let\@acol\@tabacol…\@tabarray`; `[pos]{cols}`
+  // are read downstream. babel's bidi layer patches exactly that shape —
+  // luababel.def:1895 `\bbl@replace\@tabular{$}{$\def\bbl@insidemath{0}…}`
+  // `\expandafter`-expands `\@tabular` and rescans the body for `$`. An
+  // arg-taking `\@tabular[]{}` grabbed the `$` and `\bbl@nil` as its arguments,
+  // so the `$`-delimited scan never balanced (Until:$ at EOF, or the TokenLimit
+  // runaway of lettrine-demo-arabic and every `\babelprovide` bidi document).
+  // So: parameterless, the `$` present for patching and eaten by
+  // `\lx@tabular@eatmath` (never a math shift here), the arguments read by
+  // `\lx@@tabular@args`; a patch's inserted `\def`s run in between. Guard:
+  // `perfect_kernel_batch56::at_tabular_is_parameterless_with_a_patchable_math_shift`.
+  DefMacro!("\\@tabular", r"\lx@tabular@eatmath$\lx@@tabular@args", locked => true);
+  DefPrimitive!("\\lx@tabular@eatmath Token", sub[(_math_shift)] { Ok(Vec::new()) });
+  DefMacro!("\\lx@@tabular@args[]{}",
     r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before",
     locked => true);
-  DefMacro!("\\tabular", "\\@tabular");
+  // The delegator stays LOCKED like Perl's `\tabular[]{}` (latex_constructs
+  // .pool.ltxml:3666-3671, both entry points locked): a class that `\def`s BOTH
+  // `\tabular` and `\endtabular` (jpsj2.cls:652,657 wraps a raw `$\halign$` in
+  // an inner `center`) must have both dropped, not just the end — the 55u split
+  // unlocked this half and the unclosed inner `center` leaked (jpsj injpsj2, 0→11).
+  // jlreq.cls:5890's `\tl_put_left:Nn \tabular` still x-expands a parameterless
+  // macro; its `\cs_set` is dropped by the lock exactly as in Perl. Guard:
+  // `perfect_kernel_batch56::tabular_delegator_is_locked_with_endtabular`.
+  DefMacro!("\\tabular", "\\@tabular", locked => true);
   DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular",
     locked => true);
   DefPrimitive!("\\@end@tabular", {

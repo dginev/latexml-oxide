@@ -1,0 +1,11 @@
+% witness: ntgclass/brief-sample (brief.cls \afsluiting parbox; batch54q residue)
+% oracle:  pdflatex 0 errors; Perl latexml 0 errors (RUST-ONLY)
+% engines: rust=1 perl=0 (2026-09-04, b56b)
+% expect:  0 errors; closing "doei" and signature "Victor" survive as text, no ltx:ERROR
+% status:  RED
+\documentclass{brief}
+\name{WG}
+\begin{document}
+\begin{brief}{Jan}\end{brief}
+\begin{brief}{Jan}\opening{Hallo,} \ondertekening{Victor}\afsluiting{doei}\end{brief}
+\end{document}

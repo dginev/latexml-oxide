@@ -1,0 +1,24 @@
+% witness: sidenotes/caesar_example (realistic: sidenotes marginfigure + caesar \@ympar redef)
+% oracle: pdflatex CLEAN (0 !); Perl LaTeXML CLEAN (0 err)
+% class: RUST-ONLY (same root as cf_ympar_marbox); the whole witness cascade
+%   (\@marbox, \@captype, \vbox, \endgroup, _CaptureBlock_) is downstream of it.
+% expect: 0 Error; <ltx:note role="margin"> containing <ltx:figure>/<ltx:caption>
+% status: RED (b56b): \@marbox, \@captype undefined; \endgroup; 2x \vbox; 2x malformed (7 err)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{sidenotes}
+\makeatletter
+\newcommand{\marginparstyle}{\footnotesize}
+\long\def\@ympar#1{%
+  \@savemarbox\@marbox{\marginparstyle#1}%
+  \global\setbox\@currbox\copy\@marbox
+  \@xympar}
+\makeatother
+\begin{document}
+Text.
+\begin{marginfigure}
+  \includegraphics[width=\marginparwidth]{example-image-a}
+  \caption{A margin figure.\label{f}}
+\end{marginfigure}
+More text~\ref{f}.
+\end{document}

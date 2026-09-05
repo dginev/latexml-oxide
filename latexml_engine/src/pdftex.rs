@@ -144,12 +144,12 @@ LoadDefinitions!({
     }
     Tokens!(ExplodeChars!(out))
   });
-  // \primitive <cs> — pdfTeX 1.40+ / LuaTeX primitive to access the original
-  // meaning of a primitive. In latexml-oxide it unreads/delegates to the token.
-  DefMacro!("\\primitive Token", sub[(token)] {
-    Ok(Tokens::new(vec![token]))
-  });
-
+  // `\primitive` and `\Uchar` are NOT pdfTeX primitives (pdfTeX has only
+  // `\pdfprimitive`); `\ifdefined\Uchar` is a Unicode-engine detection probe
+  // (ucharcat.sty, math-operator.sty), so both live in the `luatex` profile of
+  // latexml.sty. `\Ucharcat` below is the one deliberate exception (expl3's
+  // `\char_generate` path, see its note). Guard:
+  // `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
   // \Ucharcat <charcode> <catcode> — XeTeX/LuaTeX Unicode-engine primitive that
   // builds a single char token of the given Unicode scalar + catcode. LaTeXML is
   // Unicode-native, so we provide it (real pdfTeX lacks it). Defining it flips
@@ -167,18 +167,6 @@ LoadDefinitions!({
     let catcode = read_number()?.value_of();
     match char::from_u32(charcode as u32) {
       Some(ch) => vec![CharToken!(ch, Catcode::from(catcode as u8))],
-      None => Vec::new(),
-    }
-  });
-
-  // \Uchar <charcode> — XeTeX/LuaTeX Unicode-engine primitive (LuaTeX manual §2.1).
-  // Expands to a character token with character code <charcode> and category 12 (other),
-  // except when <charcode> equals 32, in which case the category is 10 (space).
-  DefMacro!(T_CS!("\\Uchar"), None, {
-    let charcode = read_number()?.value_of();
-    match char::from_u32(charcode as u32) {
-      Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
-      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
       None => Vec::new(),
     }
   });

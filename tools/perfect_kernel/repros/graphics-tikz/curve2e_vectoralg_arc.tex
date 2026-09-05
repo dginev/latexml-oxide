@@ -1,0 +1,14 @@
+% witness: curve2e/curve2e-manual (pdflatex-clean). oracle: pdflatex 0 err.
+% engines: pdflatex. expect: 0 err, <line> arc. status: RED (b56b).
+% mechanism: contrib curve2e binding stubs the package; \GetCoord/\Arc/\CopyVect
+%   /\ModOfVect are undefined. Real defs are PURE TeX + \fpeval (curve2e.sty
+%   156-164,447-537,378-414) and absorb verbatim once pict2e exposes \pIIe@*.
+\documentclass{article}
+\usepackage{curve2e}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\CopyVect 3,4 to\V \ModOfVect\V to\M Mod=\M.
+\begin{picture}(40,40)
+\Arc(20,20)(30,20){90}
+\end{picture}
+\end{document}

@@ -613,6 +613,32 @@ LoadDefinitions!({
   // builder expands (biblatex-chicago in cms-dates-intro); the `baseurl` key
   // and `\hyperbaseurl` redefine it.
   RawTeX!(r"\let\@baseurl\@empty");
+  // Storage macros raw hyperref-dependent packages expand directly (Perl's
+  // hyperref.sty.ltxml omits them too; pdflatex clean): hyperref.sty:3298-3311
+  // `\Hy@temp{link}{red}` … defines `\@<kind>color`, :3973-3979 the border
+  // colours and `\@pdfhighlight`, :3213 `\@pdfborder` — movie15.sty:1417
+  // `/C [\@urlbordercolor] /H \@pdfhighlight`, hrefhide.sty:92-104
+  // `\definecolor{…}{rgb}{\@citebordercolor}` (overlay-example, hrefhide-example).
+  // The driver-level link pair, :4092-4093 in the no-driver branch
+  // (`\let\hyper@linkstart\@gobbletwo`, `\hyper@linkend`) and the natbib
+  // integration :7424-7438 — raw `\pagenote`-style callers (ucalgmthesis) and
+  // nmbib's `\hyper@natlinkstart`. Guard:
+  // `perfect_kernel_batch56::hyperref_storage_and_driver_link_internals`.
+  RawTeX!(
+    r"\def\@linkcolor{red}\def\@anchorcolor{black}\def\@citecolor{green}\def\@filecolor{cyan}
+\def\@urlcolor{magenta}\def\@menucolor{red}\def\@runcolor{\@filecolor}
+\def\@linkbordercolor{1 0 0}\def\@urlbordercolor{0 1 1}\def\@menubordercolor{1 0 0}
+\def\@filebordercolor{0 .5 .5}\def\@runbordercolor{0 .7 .7}\def\@citebordercolor{0 1 0}
+\def\@pdfhighlight{/I}\def\@pdfborder{0 0 0}\let\@pdfborderstyle\@empty
+\@ifundefined{Hy@xspace@end}{\let\Hy@xspace@end\relax}{}
+\let\hyper@linkstart\@gobbletwo \def\hyper@linkend{\Hy@xspace@end}
+\def\hyper@linkfile#1#2#3{#1\Hy@xspace@end}
+\@ifundefined{Hy@backout}{\let\Hy@backout\@gobble}{}
+\def\hyper@natlinkstart#1{\Hy@backout{#1}\hyper@linkstart{cite}{cite.#1}\def\hyper@nat@current{#1}}
+\def\hyper@natlinkend{\hyper@linkend}
+\def\hyper@natlinkbreak#1#2{\hyper@linkend#1\hyper@linkstart{cite}{cite.#2}}
+\def\hyper@natanchorstart#1{}\def\hyper@natanchorend{}"
+  );
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
   AssignValue!("BASE_URL" => url.to_string()); });

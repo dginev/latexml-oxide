@@ -1,0 +1,16 @@
+% witness: (engine-probe regression) datatool/mdframed family, first errors are engine probes
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=? (2026-09-04)  sweep37 \Uchar UNDEF -> sweep38 \Uchar DEFINED
+% expect:  0 errors; body has no ltx:ERROR
+% status:  RED
+\documentclass{article}
+\begin{document}
+% A Unicode-engine gate: \ifdefined\Uchar is TRUE only on XeTeX/LuaTeX.
+% pdfTeX has no \Uchar, so the branch is skipped. latexml-oxide's pdfTeX
+% pool wrongly DEFINES \Uchar (batch 56a, commit d2fdab759c), so the
+% XeTeX-only \Umathchar (undefined here) is reached -> spurious error.
+\ifdefined\Uchar
+  \Umathchar"0"0"0 %
+\fi
+Done.
+\end{document}

@@ -2590,12 +2590,22 @@ LoadDefinitions!({
     let env_name = name.to_string();
     let outer_str = outer.to_string();
     let outer_opt = if outer_str.is_empty() { None } else { Some(outer_str.as_str()) };
-    if !end_code.is_empty() {
-      lst_push_value_locally("LISTINGS_POSTAMBLE", end_code.unlist());
+    let post: Vec<Token> = if end_code.is_empty() { Vec::new() } else { end_code.unlist() };
+    if !post.is_empty() {
+      lst_push_value_locally("LISTINGS_POSTAMBLE", post.clone());
     }
     let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
     if !lst_writefile_tee(&text) {
-      return Ok(Tokens!(T_CS!("\\endgroup")));
+      // A body diverted to a file (`\lst@BeginWriteFile`, lstmisc.sty:30-70)
+      // is not displayed, but the environment still owes its END code: the
+      // showexpl/pst-exa idiom opens `\setbox\@tempboxa=\hbox\bgroup` in the
+      // start code and closes it with `\lst@EndWriteFile\egroup
+      // \SX@put@code@result` in the end code (pst-exa.sty:163-170). Dropping
+      // it left the `\hbox` open and lost the read-back result (pst-exa-doc).
+      // Guard: `perfect_kernel_batch56::lstnewenvironment_writefile_runs_the_end_code`.
+      let mut out = post;
+      out.push(T_CS!("\\endgroup"));
+      return Ok(Tokens::new(out));
     }
     let lname = lst_get_tokens("name");
     let name_opt = if lname.is_empty() { None } else { Some(lname) };

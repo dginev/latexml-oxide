@@ -1,0 +1,27 @@
+% witness: fancyqr/fancyqr-doc (\moveto \lineto \circlearc \fillpath undefined);
+%          curve2e/curve2e-manual (\moveto then \circlearc, 38 errors)
+% oracle:  pdflatex 0 errors
+% engines: rust=4 perl=0 (2026-09-04)   [Perl same-host raw-loads pict2e, defines \moveto]
+% expect:  0 errors; the picture body yields one <ltx:picture> element
+% status:  GREEN (batch 56b: pict2e_sty.rs path interface, sampled curves/arcs)
+% mechanism: pict2e.sty:742 \def\moveto(#1,#2), :748 \lineto, :754 \curveto, :765
+%   \newcommand*\circlearc[6][0], :772 \closepath, :773 \strokepath, :774 \fillpath
+%   are the path interface, defined ONLY when a driver sets \pIIe@mode>0 (pict2e.sty:160).
+%   pict2e.cfg picks the driver by engine: \pdfoutput=0 (our pdftex.rs:11 register, and Perl)
+%   => \ExecuteOptions{dvips} => p2e-dvips.def sets \pIIe@mode=1 => commands defined.
+%   Perl raw-loads pict2e => 0 errors (empty picture; path \special dropped). Our binding
+%   latexml_package/src/package/pict2e_sty.rs is an empty stub that SKIPS the raw load and
+%   never defines the 7 path CSes => Error:undefined:\moveto. curve2e RequirePackages pict2e
+%   (curve2e.sty:19) and \let\originalmoveto\moveto (curve2e.sty:92), so it cascades.
+\documentclass{article}
+\usepackage{pict2e}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\begin{picture}(40,40)
+\moveto(0,0)
+\lineto(40,0)
+\lineto(40,40)
+\closepath
+\strokepath
+\end{picture}
+\end{document}
