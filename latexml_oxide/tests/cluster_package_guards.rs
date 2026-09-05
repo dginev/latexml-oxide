@@ -14918,3 +14918,39 @@ Table hooks ok.
     assert!(xml.contains("Table hooks ok."), "{xml}");
   }
 }
+
+mod perfect_kernel_gemini {
+  use super::perfect_kernel_batch46::{convert, error_count};
+
+  /// lineno.sty manual surface (witness lineno/ulineno): \linenumberwidth,
+  /// \bframesep, \bframerule, \linerefp, \linerefr, and bare \internallinenumbers
+  /// inside \parbox.
+  #[test]
+  fn lineno_manual_surface() {
+    let tex = r"\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+\setlength\linenumberwidth{1cm}
+\setlength\bframesep{10pt}
+\setlength\bframerule{1pt}
+\linenumbers
+First line.\linelabel{l1}
+Second line references \lineref{l1}, offset \lineref[+1]{l1}, \linerefp[+2]{l1}, \linerefr[+3]{l1}.
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+  \internallinenumbers \resetlinenumber[13]
+  Internal linenumbers in a box.
+}}
+\end{center}
+\begin{bframe}Framed text.\end{bframe}
+\begin{internallinenumbers}Environment block.\end{internallinenumbers}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("First line.") && xml.contains("Internal linenumbers in a box."),
+      "{xml}"
+    );
+  }
+}
