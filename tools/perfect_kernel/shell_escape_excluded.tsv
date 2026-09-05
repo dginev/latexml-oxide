@@ -1,0 +1,28 @@
+# Manuals whose conversion errors name a shell-escape requirement (external tool: pygmentize, CSV-Sorter, python, java, piped \input, \write18).
+# Excluded from the perfect-kernel target by user directive 2026-09-05 ("we can exclude shell-escape tools for now").
+# Source: sweep #40 logs (batch 56g), `Error:`/`Fatal:` lines mentioning shell escape. Columns: bundle, doc, oracle engine/exit, matched text.
+beamertheme-rainbow	beamertheme-rainbow-doc	lualatex/1
+beamertheme-spectrum	beamertheme-spectrum-doc	lualatex/1
+beamertheme-tcolorbox	beamertheme-tcolorbox-doc	lualatex/1
+bibletext	bibletext	lualatex/1
+csvsimple	csvsimple-l3	lualatex/1
+csvsimple	csvsimple-legacy	lualatex/1
+forest	forest-doc	lualatex/1
+gitver	gitver	lualatex/1
+memorygraphs	memorygraphs	lualatex/1
+mercatormap	mercatormap	lualatex/1
+notebeamer	notebeamer-demo	pdflatex/0
+pagelayout	example-book	lualatex/1
+pagelayout	example-borders-and-shadows	lualatex/1
+pagelayout	quickstart	lualatex/1
+pgfornament-han	pgfornament-han-doc	lualatex/1
+pgfplotsthemebeamer	pgfplotsthemebeamer-doc	lualatex/1
+pixelart	pixelart	lualatex/1
+pynotebook	pynotebook-examples-pitonpyluatex	lualatex/1
+resolsysteme	ResolSysteme-doc	lualatex/1
+resolsysteme	ResolSysteme-exemples-pyluatex	lualatex/1
+robust-externalize	robust-externalize	lualatex/1
+sectionbreak	sectionbreak-doc	lualatex/1
+thalie	thalie	lualatex/1
+tikzfxgraph	tikzfxgraph	lualatex/1
+yquant	yquant-doc	lualatex/1
