@@ -609,6 +609,20 @@ fn apply_rewrite_rules(
   Ok(())
 }
 
+/// Stale-entry sweep threshold for `Document::node_boxes` during streaming
+/// pass 1 (default 1,000,000 entries; `LXML_NODE_BOXES_SWEEP=<n>` overrides
+/// it for memory probes — entries are counted, not weighed, and a
+/// picture-dense manual pins ~0.6 MB per entry).
+fn node_boxes_sweep_threshold() -> usize {
+  static THRESHOLD: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+  *THRESHOLD.get_or_init(|| {
+    std::env::var("LXML_NODE_BOXES_SWEEP")
+      .ok()
+      .and_then(|v| v.parse().ok())
+      .unwrap_or(1_000_000)
+  })
+}
+
 /// Streaming pass 2: give every spilled fragment the SAME whole-document tail
 /// the spine gets — rewrites, `\lxDeclare`, math parsing, per-fragment
 /// finalize — then store its final serialized text for the assembly splice.
@@ -1267,8 +1281,16 @@ impl DigestionAPI for Core {
         // detached without purging pin whole Digested box trees (see
         // sweep_stale_node_boxes). The threshold keeps the sweep rare and
         // the map bounded; the post-spill spine mark is cheap.
-        if document.node_boxes.len() > 1_000_000 {
+        if document.node_boxes.len() > node_boxes_sweep_threshold() {
+          let before = document.node_boxes.len();
           document.sweep_stale_node_boxes();
+          if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
+            eprintln!(
+              "streaming: node_boxes sweep {} -> {}",
+              before,
+              document.node_boxes.len()
+            );
+          }
         }
         // Rate-limited: a book-scale run yields MILLIONS of fragments, and
         // every log line lands in the in-RAM LOG_BUFFER — per-fragment

@@ -27,35 +27,15 @@
 //! witnesses and the reasoning — do not re-add the family.
 use crate::prelude::*;
 
-#[rustfmt::skip]
-/// The expl3 PDF/tagging API names this pool stubs as no-ops for documents
-/// that call them WITHOUT loading the real packages (`\DocumentMetadata`
-/// stays a stub here). tagpdf-base.sty:30-60 and pdfmanagement.sty (the
-/// combined l3pdfmeta/l3pdffile/l3pdfdict code) declare every one of them
-/// with `\cs_new_protected`/`\NewDocumentCommand`, whose "already defined"
-/// check is an `\errmessage` (counted since batch 56g), so the bindings for
-/// those packages call [`retract_pdf_api_stubs`] before their raw load.
-pub const PDF_API_STUBS: &[&str] = &[
-  "\\tagpdfsetup", "\\tagtool", "\\tagstructbegin", "\\tagstructend", "\\tagmcbegin",
-  "\\tagmcend", "\\tag_struct_begin:n", "\\tag_struct_end:", "\\tag_mc_begin:n",
-  "\\tag_mc_end:", "\\tag_suspend:n", "\\tag_resume:n", "\\tag_tool:n", "\\tag_get:n",
-  "\\pdffile_embed_file:nnn", "\\pdffile_embed_file:nnnN", "\\pdffile_embed_stream:nnN",
-  "\\pdfdict_new:n", "\\pdfdict_put:nnn", "\\pdfdict_gput:nnn", "\\pdfdict_remove:nn",
-  "\\pdfdict_gremove:nn", "\\pdfmeta_xmp_xmlns_new:nn", "\\pdfmeta_xmp_schema_new:nnn",
-  "\\pdfmeta_xmp_property_new:nnnnn", "\\pdfmeta_xmp_add:n",
-  "\\pdfmeta_xmp_add_declaration:n", "\\pdfmeta_xmp_add_declaration:nnnnn",
-];
-
-/// `\let <stub> \undefined` for every [`PDF_API_STUBS`] entry (what
-/// `\cs_undefine:N` does), so the real package's `\cs_new` declarations go
-/// through. Token-level: the names carry `_`/`:` that a raw-text
-/// tokenization at package catcodes would split.
-pub fn retract_pdf_api_stubs() {
-  for name in PDF_API_STUBS {
-    ::latexml_core::state::let_i(&T_CS!(name), &T_CS!("\\lx@pdfapi@undefined"), None);
-  }
-}
-
+// The expl3 PDF/tagging API names this pool stubs as no-ops (`\tagpdfsetup`,
+// `\tag_struct_begin:n`, `\pdffile_embed_file:nnn`, `\pdfdict_*`,
+// `\pdfmeta_xmp_*` …) are declared again by tagpdf-base.sty:30-60 and
+// pdfmanagement.sty with `\cs_new_protected`/`\NewDocumentCommand`. No
+// retraction is needed before those raw loads: the stubs carry
+// `DefinitionOrigin::Pool` (K1 provenance), so the declarators' overrides
+// below (`\lx@if@pooldefined`) let `\cs_new` replace them quietly and let
+// ltcmd keep them quietly. Guard:
+// `perfect_kernel_batch56::tagpdf_base_redeclares_the_stubbed_api_cleanly`.
 LoadDefinitions!({
   //======================================================================
   // 1. Modern LaTeX kernel — `\If…AtLeast/LoadedTF` family
@@ -787,6 +767,28 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
+  // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
+  // guard, then blank auto-select in PDF output or `dvips` in DVI output.
+  // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
+  // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NT \sys_load_backend:n
+  {
+    \cs_gset_protected:Npn \lx@sys@load@backend
+      {
+        \str_if_exist:NF \c_sys_backend_str
+          {
+            \ifnum \pdfoutput > 0
+              \sys_load_backend:n { }
+            \else
+              \sys_load_backend:n { dvips }
+            \fi
+          }
+      }
+  }
+\ExplSyntaxOff"
+  );
   RawTeX!(
     r"\ExplSyntaxOn
 \cs_if_exist:NT \__kernel_chk_if_free_cs:N

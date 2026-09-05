@@ -26,6 +26,16 @@ LoadDefinitions!({
 \@ifundefined{jung}{\let\jung\relax}{}
 \@ifundefined{rieul}{\let\rieul\relax}{}
 \@ifundefined{disablehangulfontspec}{\def\disablehangulfontspec{}}{}
-\@ifundefined{disablehangullinebreak}{\def\disablehangullinebreak{}}{}"
+\@ifundefined{disablehangullinebreak}{\def\disablehangullinebreak{}}{}
+\@ifundefined{pdfstringdefPreHook}{\let\pdfstringdefPreHook\@empty}{}
+\@ifundefined{dhucs@emph@raise}{\newdimen\dhucs@emph@raise}{}"
   );
+  // The last two lines are dhucs.sty:116-117's `\if@hangul` block (and
+  // kotexutf.sty:515-516, the byte-engine route pdflatex takes after the
+  // `\ifx가가` probe at dhucs.sty:44 endinputs dhucs): a Unicode-native reader
+  // stays in dhucs.sty with `@hangul` false, so memhangul-ucs.sty:509
+  // `\g@addto@macro\pdfstringdefPreHook` and :451 `\raise\dhucs@emph@raise`
+  // read undefined names (istgame-doc, obchapterstyles-doc, obsideparas,
+  // oblivoir-simpledoc, kotex-doc, kotex-utf-doc). Guard:
+  // `perfect_kernel_batch56::dhucs_native_branch_defines_pdfstringdefprehook`.
 });

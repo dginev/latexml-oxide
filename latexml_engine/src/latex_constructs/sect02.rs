@@ -214,27 +214,21 @@ pub(crate) fn load() -> Result<()> {
     // conversion left them undefined (witnesses: prettytok / spath3 manuals,
     // `Error:undefined:\__color_backend_reset:`; TL doc corpus 2026-08-31).
     //
-    // The backend is NAMED (`\sys_load_backend:n {dvips}`) rather than left
-    // to the class-option default: a `\documentclass[pdftex]` option maps to
-    // `pdfmode` (expl3-code.tex:8352), and `\__sys_load_backend_check:N`
-    // (:7992) rejects that in our DVI output state (`\pdfoutput=0`,
-    // pdftex.rs) with a counted "Backend request inconsistent with engine:
-    // using 'dvips'" before loading dvips anyway (elpres, scidoc; RUST-ONLY —
-    // Perl never fires the loader). The explicit name overrides the option
-    // after `\sys_finalize:` (:7977/:7985) and is what the DVI branch
-    // accepts; the loaded `.def` is the same as before.
-    // Guard: `perfect_kernel_batch56::backend_load_names_the_dvi_backend`.
-    if first_begin && lookup_definition(&T_CS!("\\sys_load_backend:n"))?.is_some() {
-      boxes.push(digest(Tokens!(
-        T_CS!("\\sys_load_backend:n"),
-        T_BEGIN!(),
-        T_LETTER!("d"),
-        T_LETTER!("v"),
-        T_LETTER!("i"),
-        T_LETTER!("p"),
-        T_LETTER!("s"),
-        T_END!()
-      ))?);
+    // The kernel's `\@expl@sys@load@backend@@` (expl3.ltx:130-134) is
+    // `\str_if_exist:NF \c_sys_backend_str { \sys_load_backend:n {} }`;
+    // `\lx@sys@load@backend` (latex_constructs_rust_only.rs) is that guard
+    // with the DVI case named: in our default `\pdfoutput=0` state a
+    // `\documentclass[pdftex]` option maps to `pdfmode` (expl3-code.tex:8352)
+    // and `\__sys_load_backend_check:N` (:7992) rejects it with a counted
+    // "inconsistent … using 'dvips'" (elpres, scidoc), so DVI names `dvips`
+    // outright; a document that set `\pdfoutput=1` (commath, isorot, thinsp,
+    // webguide, quantum-bibliographystyle-demo) gets the blank auto-select
+    // (pdftex), and one whose preamble already loaded a backend
+    // (quantum-template) is left alone. All RUST-ONLY: Perl never fires the
+    // loader. Guards: `perfect_kernel_batch56::{backend_load_names_the_dvi_backend,
+    // backend_load_follows_pdfoutput_and_prior_choice}`.
+    if first_begin && lookup_definition(&T_CS!("\\lx@sys@load@backend"))?.is_some() {
+      boxes.push(digest(Tokens!(T_CS!("\\lx@sys@load@backend")))?);
     } else if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }

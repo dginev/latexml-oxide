@@ -1,0 +1,17 @@
+% witness: isorot/rotman, commath, thinsp, webguide (TL2025 doc manuals)
+% oracle: pdflatex (clean); Perl LaTeXML clean (never fires l3backend loader)
+% engines: pdflatex
+% expect: 0 Error lines, ltx:document present
+% status: RED (b56o)
+% mechanism: doc sets \pdfoutput=1 (because \pdfoutput is defined) -> pdf mode;
+%   Rust begin-document hard-runs \sys_load_backend:n{dvips} (sect02.rs:227);
+%   expl3 \__sys_load_backend_check:N (expl3-code.tex:8008-8028) sees pdf output
+%   + request dvips (not pdftex/luatex/pdfmode) -> msg_error sys/wrong-backend
+%   "Backend request inconsistent with engine: using 'pdftex'".
+\documentclass[11pt]{article}
+\ifx\pdfoutput\undefined\else
+  \pdfoutput=1
+\fi
+\begin{document}
+Hello world.
+\end{document}

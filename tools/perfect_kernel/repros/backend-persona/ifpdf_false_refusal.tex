@@ -1,0 +1,16 @@
+% witness: scanpages/scanpages-doc, biblatex-cheatsheet (hypdestopt),
+%   gentombow, bxcoloremoji-shortnames (TL2025 doc manuals)
+% oracle: pdflatex (clean, PDF mode); Perl LaTeXML: SHARED (DVI persona, ifpdf FALSE)
+% expect: 0 Error lines
+% status: RED (b56o)
+% mechanism: latexml-oxide keeps \pdfoutput=0 (DVI persona), so iftex/ifpdf
+%   \ifpdf is FALSE (iftex.sty:291 \ifnum\pdfoutput>0). Packages that require
+%   PDF mode raise a PackageError. Real pdflatex has pdfoutput>0 -> clean.
+\documentclass{article}
+\makeatletter
+\newif\ifpdf\ifx\pdfoutput\undefined\else\ifnum\pdfoutput>0 \pdftrue\fi\fi
+\ifpdf\else \@latex@error{Must be processed with pdf[la]tex!}\@eha \fi
+\makeatother
+\begin{document}
+Hi.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: quantumarticle/quantum-template (TL2025 doc manual)
+% oracle: pdflatex (clean); Perl LaTeXML clean (never fires l3backend loader)
+% engines: pdflatex
+% expect: 0 Error lines, ltx:document present
+% status: RED (b56o)
+% mechanism: doc is PDF mode (\pdfoutput=1) and a preamble package loads the
+%   backend (\c_sys_backend_str := pdftex). Rust begin-document then hard-runs
+%   \sys_load_backend:n{dvips} (sect02.rs:227); expl3 \sys_load_backend:n
+%   (expl3-code.tex:7978-7981) sees \c_sys_backend_str already exists and
+%   dvips != pdftex -> msg_error sys/backend-set "Backend configuration
+%   already set." The faithful kernel loader (\@expl@sys@load@backend@@,
+%   expl3.ltx:132-134) is guarded by \str_if_exist:NF and never re-loads.
+\documentclass{article}
+\pdfoutput=1
+\makeatletter\ExplSyntaxOn
+\sys_load_backend:n {pdftex}
+\ExplSyntaxOff\makeatother
+\begin{document}
+Hello.
+\end{document}

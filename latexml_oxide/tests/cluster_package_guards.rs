@@ -4077,6 +4077,32 @@ pub(crate) mod perfect_kernel_batch46 {
     )
   }
 
+  /// `convert` with the raw preload plus extra CLI arguments (`--streaming`,
+  /// `--max-memory=N`, …).
+  pub(crate) fn convert_args(tex: &str, extra: &[&str]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let mut args = vec![
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ];
+    args.extend_from_slice(extra);
+    let output = Command::new(bin)
+      .args(&args)
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
   pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
@@ -12777,7 +12803,7 @@ mod perfect_kernel_batch56 {
   //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
   //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
   //! environment invocation and outer listing scanning, and unicode-math table loading).
-  use super::perfect_kernel_batch46::{convert, convert_with, error_count};
+  use super::perfect_kernel_batch46::{convert, convert_args, convert_with, error_count};
 
   /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
   /// non-ASCII char (utf8.def makes the bytes active), so under the default
@@ -14700,6 +14726,132 @@ Some text.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("Can't find color"), "{stderr}");
     assert!(xml.contains("Some text."), "{xml}");
+  }
+
+  /// 300 tcolorbox pictures stay bounded under `--streaming --max-memory=800`
+  /// (fuse at 600 MB): each finished picture releases its node boxes, so a
+  /// 1,000-box manual no longer climbs to the fuse with a 39-byte XML
+  /// (glossaries-user, glossaries-extra-manual, datatool-user).
+  #[test]
+  fn tcolorbox_pictures_stay_memory_bounded() {
+    let tex = r"\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{cb}{enhanced,breakable}
+\newcount\ct \ct=0
+\begin{document}
+\loop\ifnum\ct<300
+  \begin{cb}Sample code line \the\ct\end{cb}
+  \advance\ct by 1
+\repeat
+\end{document}
+";
+    let (stderr, xml) = convert_args(tex, &["--streaming", "--max-memory=800"]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("MemoryBudget"), "{stderr}");
+    assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
+  }
+
+  /// Under the luatex profile `\DeclareUnicodeCharacter` declares nothing
+  /// (latex.ltx:22168/22203 — utf8.def is 8-bit-engine only), so a class's
+  /// `\cs_new_protected:Npn ·` finds the native character free
+  /// (einfart.cls:838-839; homework-demo-cn/-jp/-tc, jwjournal-demo-cn).
+  /// Repro `unicode-catcodes/declareunicodechar_middot_luatex_einfart.tex`.
+  #[test]
+  fn unicode_engine_keeps_middle_dot_native() {
+    let tex = "\\documentclass{article}
+\\ExplSyntaxOn
+\\char_set_catcode_active:n { `\\· }
+\\cs_new_protected:Npn · { \\ensuremath\\cdot }
+\\ExplSyntaxOff
+\\begin{document}
+Middle dot active: $a·b$.
+\\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("already defined"), "{stderr}");
+    assert!(xml.contains("\u{22c5}") || xml.contains("\\cdot"), "{xml}");
+    // The 8-bit profile still activates the LICR mapping.
+    let tex8 = "\\documentclass{article}
+\\begin{document}
+Middle dot: ·.
+\\end{document}
+";
+    let (stderr, xml) = convert(tex8, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Middle dot: ·."), "{xml}");
+  }
+
+  /// expl3-code.tex:985-986 alias `\tex_luatexversion:D`/`\tex_luatexrevision:D`
+  /// at format time; the luatex profile re-derives them from its own
+  /// `\luatexversion` (lua-widow-control.sty:153 compares `\tex_luatexversion:D`).
+  #[test]
+  fn luatex_profile_aliases_expl3_version_primitives() {
+    let tex = "\\documentclass{article}
+\\ExplSyntaxOn
+\\int_compare:nNnTF { \\tex_luatexversion:D } > { 200 } { \\def\\x{NEW} } { \\def\\x{OLD-\\tex_luatexversion:D} }
+\\ExplSyntaxOff
+\\begin{document}
+Version: \\x.
+\\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Version: OLD-121."), "{xml}");
+  }
+
+  /// dhucs's Unicode-native branch (dhucs.sty:44 `\ifx가가` true) skips the
+  /// `\if@hangul` block that defines `\pdfstringdefPreHook` (:117) and
+  /// `\dhucs@emph@raise`, which memhangul-ucs.sty:509/:451 then read; the
+  /// overlay supplies them, and hyperref keeps an existing hook (Perl
+  /// hyperref.sty.ltxml:413). Repro
+  /// `loader/dhucs_native_pdfstringdefprehook_istgame.tex`.
+  #[test]
+  fn dhucs_native_branch_defines_pdfstringdefprehook() {
+    let tex = r"\documentclass{article}
+\usepackage{dhucs}
+\makeatletter
+\g@addto@macro\pdfstringdefPreHook{\def\lxprobe{kept}}
+\makeatother
+\usepackage{hyperref}
+\begin{document}
+\makeatletter\pdfstringdefPreHook
+ok \lxprobe\ \the\dhucs@emph@raise\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ok kept 0.0pt"), "{xml}");
+  }
+
+  /// The begin-document backend loader follows expl3.ltx:130: skip when a
+  /// backend was already chosen, auto-select in PDF output, `dvips` in DVI.
+  /// Repros `backend-persona/{pdfoutput_inconsistent,backend_already_set}.tex`.
+  #[test]
+  fn backend_load_follows_pdfoutput_and_prior_choice() {
+    let pdf = r"\documentclass[11pt]{article}
+\ifx\pdfoutput\undefined\else
+  \pdfoutput=1
+\fi
+\begin{document}
+Hello world.
+\end{document}
+";
+    let (stderr, xml) = convert(pdf, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello world."), "{xml}");
+    let set = r"\documentclass{article}
+\pdfoutput=1
+\makeatletter\ExplSyntaxOn
+\sys_load_backend:n {pdftex}
+\ExplSyntaxOff\makeatother
+\begin{document}
+Hello.
+\end{document}
+";
+    let (stderr, xml) = convert(set, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello."), "{xml}");
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

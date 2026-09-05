@@ -160,6 +160,15 @@ LoadDefinitions!({
     Let!("\\tex_Uchar:D", "\\Uchar");
     DefMacro!("\\primitive Token", sub[(token)] { Ok(Tokens::new(vec![token])) });
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // expl3-code.tex:985-986 aliases `\tex_luatexrevision:D`/`\tex_luatexversion:D`
+    // to the primitives at FORMAT time, when they did not exist here; lua-widow-
+    // control.sty:153 `\int_compare:nNnTF { \tex_luatexversion:D } > { 200 }`
+    // (homework-demo-*, jwjournal-demo-cn). `\tex_directlua:D` stays undefined
+    // on purpose (engine-detection probe, see `project_lua_bridge_directive`).
+    // Guard: `perfect_kernel_batch56::luatex_profile_aliases_expl3_version_primitives`.
+    RawTeX!(
+      r"\expandafter\let\csname tex_luatexversion:D\endcsname\luatexversion \expandafter\let\csname tex_luatexrevision:D\endcsname\luatexrevision"
+    );
     // l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
     // `\str_const:Ne \c_sys_engine_str {\cs_if_exist:NT \tex_luatexversion:D {luatex} …}`
     // and one `\__sys_const:nn {sys_if_engine_<e>}` per engine), when
@@ -378,9 +387,6 @@ LoadDefinitions!({
 \NewDocumentCommand\LuaULSetUnderline{ m }{}
 \NewDocumentCommand\LuaULResetUnderline{ s }{}
 \AddToHook{package/lua-ul/after}{%
-  \NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}%
-  \NewDocumentCommand\LuaULSetUnderline{ m }{}%
-  \NewDocumentCommand\LuaULResetUnderline{ s }{}%
   \RenewDocumentCommand\newunderlinetype{ E{*}{{}} m O{} +m }{\protected\def#2{}}%
 }
 \ifx\e@alloc@luafunction@count\@undefined

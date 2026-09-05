@@ -1,0 +1,17 @@
+% witness: istgame/istgame-doc (memhangul-ucs.sty:509 via oblivoir->memhangul-ucs->dhucs); also 5 kotex docs
+% oracle:  pdflatex 0 errors (byte engine endinputs dhucs.sty:44, loads kotexutf.sty:515 which defines the hook unconditionally)
+% engines: rust=1err perl=0err(1warn) (2026-09-05, b56o)
+% expect:  0 errors; body has <ltx:p>ok</ltx:p>, no <ltx:ERROR/>
+% status:  RED
+% mechanism: dhucs_sty.rs overlay loads dhucs.sty raw; Unicode-native engine takes
+%   dhucs.sty:44 \ifx가가 TRUE branch (not the byte endinput->kotexutf), so
+%   \pdfstringdefPreHook (dhucs.sty:117) is only defined inside \if@hangul (false in
+%   native branch) and stays undefined; \g@addto@macro\pdfstringdefPreHook then errors.
+\documentclass{article}
+\usepackage{dhucs}
+\makeatletter
+\g@addto@macro\pdfstringdefPreHook{\relax}
+\makeatother
+\begin{document}
+ok
+\end{document}

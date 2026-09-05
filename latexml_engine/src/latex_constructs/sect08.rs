@@ -972,13 +972,23 @@ pub(crate) fn load() -> Result<()> {
 
   // \DeclareUnicodeCharacter — from utf8.def / latex_constructs
   // Maps a hex codepoint to an expansion, making the character active.
+  // Only on the 8-bit engine: latex.ltx:22168 inputs utf8.def solely when
+  // `\Umathcode`/`\mubyte`/`\charsubdef` are all undefined, and :22203
+  // `\let\DeclareUnicodeCharacter\@undefined` otherwise — a Unicode engine
+  // keeps `·` (U+00B7) a native, undefined character, which einfart.cls:838
+  // then `\cs_new_protected`s (homework-demo-cn/-jp/-tc, jwjournal-demo-cn;
+  // the omsenc/ts1enc `.dfu` auto-load had made it an active LICR macro,
+  // so the declaration errored `already defined`). Guard:
+  // `perfect_kernel_batch56::unicode_engine_keeps_middle_dot_native`.
   DefPrimitive!("\\DeclareUnicodeCharacter Expanded {}", sub[(hexcode, expansion)] {
     let hex_str = hexcode.to_string();
     let hex_str = hex_str.trim();
     if hex_str.chars().all(|c| c.is_ascii_hexdigit()) && !hex_str.is_empty() {
       if let Ok(cp) = u32::from_str_radix(hex_str, 16) {
         if cp <= 0x10FFFF {
-          if let Some(ch) = char::from_u32(cp) {
+          if lookup_bool("LUATEX_PROFILE") {
+            // native character on the Unicode engine: nothing to declare
+          } else if let Some(ch) = char::from_u32(cp) {
             AssignCatcode!(ch, Catcode::ACTIVE);
             // utf8.def:55-90 (`\UTFviii@two@octets` …): inside a `\csname`
             // the character stays LITERAL in the name (`\ifincsname`), else

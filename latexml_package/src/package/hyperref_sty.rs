@@ -1037,10 +1037,15 @@ LoadDefinitions!({
   DefMacro!("\\texorpdfstring{}{}", "#1");
 
   // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
-  // the pdfstringdef hooks to sensible no-ops. Rust always defines them
-  // because no package-level binding currently claims these CSes.
-  Let!("\\pdfstringdefPreHook", "\\@empty");
-  Let!("\\pdfstringdefPostHook", "\\@gobble");
+  // the pdfstringdef hooks to sensible no-ops. The guard matters: dhucs /
+  // kotexutf define `\pdfstringdefPreHook` before hyperref loads and
+  // memhangul-ucs.sty:509 has already `\g@addto@macro`ed into it.
+  if lookup_definition(&T_CS!("\\pdfstringdefPreHook"))?.is_none() {
+    Let!("\\pdfstringdefPreHook", "\\@empty");
+  }
+  if lookup_definition(&T_CS!("\\pdfstringdefPostHook"))?.is_none() {
+    Let!("\\pdfstringdefPostHook", "\\@gobble");
+  }
   // hyperref.sty:6269 `\Hy@UseMaketitleInfos` (pdf title/author infos from
   // `\@title`/`\@author`); hypdoc.sty:80 appends to it with
   // `\g@addto@macro`, which requires the target to exist.

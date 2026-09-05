@@ -1,0 +1,18 @@
+% witness: glossaries/glossaries-user (also glossaries-extra-manual, datatool-user)
+% oracle: lualatex (oracle_verdicts col3), pdflatex/lualatex CLEAN, 0 errors
+% engines: rust FATAL, perl FATAL (perl worse: 3.4 MB/box vs rust 0.8 MB/box)
+% expect: 0 errors, converts to <ltx:picture>-per-box document (NOT a MemoryBudget fatal)
+% status: RED on sweep42 — Fatal:Timeout:MemoryBudget, 0-byte XML
+% mechanism: each tcolorbox is a pgf->SVG <picture>; ~0.5 MB retained per box in an
+%   untracked global structure (NOT box_list/token_stack/pushback/arena/tree), so a
+%   manual with ~1000-1500 boxes (nlctuserguide) balloons past the RSS fuse.
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{cb}{enhanced,breakable}
+\newcount\ct \ct=0
+\begin{document}
+\loop\ifnum\ct<600
+  \begin{cb}Sample code line \the\ct\end{cb}
+  \advance\ct by 1
+\repeat
+\end{document}

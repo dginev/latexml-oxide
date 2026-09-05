@@ -1,0 +1,23 @@
+% witness: homework/homework-demo-cn (einfart.cls:839)
+% oracle:  lualatex 0 errors (pdflatex rejects: einfart needs a Unicode engine)
+% engines: rust=1 perl=0 (2026-09-05)
+% expect:  0 errors; body math has an XMTok for \cdot
+% status:  RED
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: latexml-oxide's \DeclareUnicodeCharacter primitive
+%   (latex_constructs/sect08.rs:975) makes U+00B7 an ACTIVE macro
+%   ->\ifincsname ·\else \textperiodcentered \fi when omsenc.dfu/ts1enc.dfu is
+%   loaded via \DeclareFontEncoding (sect08.rs:908-946). Real LaTeX only inputs
+%   utf8.def / activates UTF-8 on 8-bit engines (latex.ltx:22168 gate
+%   \ifnum0\ifx\Umathcode\@undefined\else1\fi...=\z@). Under lualatex `·` stays
+%   a native char, so einfart's `\cs_new_protected:Npn ·` finds it FREE.
+%   Rust predefines it -> expl3 \__kernel_chk_if_free_cs:N raises
+%   `command-already-defined`.
+\documentclass{article}
+\ExplSyntaxOn
+\char_set_catcode_active:n { `\· }
+\cs_new_protected:Npn · { \ensuremath\cdot }
+\ExplSyntaxOff
+\begin{document}
+Middle dot active: $a·b$.
+\end{document}
