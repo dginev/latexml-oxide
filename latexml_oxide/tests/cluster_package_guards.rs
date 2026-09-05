@@ -15758,4 +15758,67 @@ $25\unit{m}$
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Hello from VFS with protected macro"), "{xml}");
   }
+
+  fn convert_env_args(tex: &str, extra: &[&str], envs: &[(&str, &str)]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(
+      std::path::Path::new(bin).is_file(),
+      "binary not staged at {bin}"
+    );
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let mut args = vec![
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ];
+    args.extend_from_slice(extra);
+    let mut cmd = std::process::Command::new(bin);
+    cmd.args(&args).current_dir(workdir.path());
+    for (k, v) in envs {
+      cmd.env(k, v);
+    }
+    let output = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
+  /// Spill-gated node_boxes sweep (K8 memory lever): sweeps run after spills
+  /// (runs_spilled > 0) to reclaim stale node_boxes, keeping the map bounded
+  /// without futile full-DOM traversals when nothing spilled.
+  #[test]
+  fn spill_gated_node_boxes_stays_bounded() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\newtcolorbox{cb}{colback=red!5,colframe=red!75!black,title=Boxed}
+\newcount\ct \ct=0
+\begin{document}
+\loop\ifnum\ct<300
+  \ifnum\numexpr\ct/5*5=\ct
+    \section{Section \the\ct}
+  \fi
+  \begin{cb}Box \the\ct\ with some text $x_{\the\ct}$.\end{cb}
+  \advance\ct by 1
+\repeat
+\end{document}
+";
+    let (stderr, xml) = convert_env_args(tex, &["--streaming", "--max-memory=768"], &[(
+      "LXML_TRACE_NODE_BOXES",
+      "1",
+    )]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains("node_boxes sweep"),
+      "expected trace output from spill-gated sweep:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("dropped:"),
+      "expected dropped entries in trace:\n{stderr}"
+    );
+    assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
+  }
 }
