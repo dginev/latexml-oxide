@@ -15591,6 +15591,34 @@ x = 1
     assert!(xml[vpos..].contains("[E:verbatim]"), "{xml}");
   }
 
+  /// Control for the Gemini G3 frame-body `#`-halving (DIVERGENCES #198): a
+  /// lone `#1` inside a non-fragile frame stays `#1` (leniency: real beamer
+  /// rejects it), `##1` and `####1` both reach `\newcommand` as `#1`, a
+  /// `[fragile]` frame is not halved, and a frame after the frame is unaffected.
+  #[test]
+  fn beamer_frame_single_hash_control() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}{One}
+\newcommand\ha[1]{(a:#1)}\ha{x}
+\newcommand\hb[1]{(b:##1)}\hb{y}
+\newcommand\hc[1]{(c:####1)}\hc{z}
+\end{frame}
+\begin{frame}[fragile]{Two}
+\newcommand\hd[1]{(d:#1)}\hd{w}
+\end{frame}
+\begin{frame}{Three}
+Plain text.
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for s in ["(a:x)", "(b:y)", "(c:z)", "(d:w)", "Plain text."] {
+      assert!(xml.contains(s), "missing {s}: {xml}");
+    }
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

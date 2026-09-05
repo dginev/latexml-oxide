@@ -6807,6 +6807,32 @@ NOT kept: braced `\input{…}` is stripped by `tex_file_io.rs` already.
 **Guard**: `perfect_kernel_gemini::openout_then_input_same_run`.
 **Upstream**: not filed.
 
+### 198. Beamer frame bodies halve `#` twice but tolerate a lone `#` (real beamer errors)
+
+**Perl behavior**: beamer.cls.ltxml:875 `readFrameBody` digests a `{frame}` body
+directly, so `####1` written for a `\tikzset`/`\newcommand` inside a frame
+(beamer-theme-albi-doc.tex:505) reaches `\def` as four parameter tokens and
+errors (`Illegal parameter number`, 40 errors; pdflatex clean).
+**Rust behavior**: `beamer_cls.rs::collect_frame_body` collects the body of a
+non-fragile frame to the matching `\end{frame}` and `halve_frame_hashes` halves
+`##` → `#` twice before replaying it, the way real beamer's default path does:
+`\beamer@doseveralframes` (beamerbaseframe.sty:469/518) puts the body through
+`\loop`'s `\def\iterate{…}` and then `\def\beamer@doifinframe{…}` (:527), two
+replacement-text scans. Fragile frames skip the halving (they are written to a
+`.vrb` file and re-read, `\beamer@doexternalframe` :476/553).
+**Leniency**: at either `\def` level real TeX rejects a `#` not followed by `#`
+or a digit ≤ 0, so a frame body must write `##`/`####`; Rust keeps a lone `#`
+intact (`#1` stays `#1`), so the many existing manuals that write
+`\newcommand\x[1]{#1}` inside a frame keep working. `containsverbatim` frames
+(`\beamer@dosingleframe`, no halving in beamer) are equivalent under the
+leniency.
+**Why**: the `\def`-shaped collect is how beamer really processes a frame;
+the leniency is a strict superset of the legal inputs.
+**Witnesses**: beamer-theme-albi/beamer-theme-albi-doc (40 → 0).
+**Guards**: `perfect_kernel_gemini::beamer_frame_hash_halving`,
+`perfect_kernel_batch56::beamer_frame_single_hash_control`.
+**Upstream**: not filed.
+
 ### 199. The kernel `{verbatim}` hands `\end{verbatim}` back to the current `\end` macro
 
 **Perl behavior**: latex_constructs.pool.ltxml:1734 `\begin{verbatim}` is a
