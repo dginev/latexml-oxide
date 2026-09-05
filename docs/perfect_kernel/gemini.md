@@ -178,3 +178,20 @@ and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays cl
   - Witness `tuda-ci/DEMO-TUDaBeamer.tex`: `The token "#" should never reach Stomach!` and `Can't find color named 'TUDa-##1'` completely resolved.
 - **Guard**: `perfect_kernel_gemini::beamer_frame_hash_halving` in `latexml_oxide/tests/cluster_package_guards.rs`.
 
+### 2026-09-05: Task G4 (mdframed with block content for biblatex-juradiss) complete
+- **Issue**: `biblatex-juradiss` placed `\printbibliography` inside an `mdframed` followed by `\subsection` (`tools/perfect_kernel/repros/index-bib/mdframed_block_bib_juradiss.tex`). Previously, `mdframed` was wrapped in `<ltx:inline-logical-block _noautoclose='1'>`. When opened mid-paragraph, block-level backmatter (`\thebibliography` / `<ltx:bibliography>`) could not be contained, and `_noautoclose='1'` blocked auto-closing up to `<ltx:section>`, resulting in two errors (`<ltx:section> isn't allowed in <ltx:inline-logical-block>` and `<ltx:bibliography> isn't allowed in <ltx:inline-logical-block>`).
+- **Fix in `latexml_contrib/src/mdframed_sty.rs`**:
+  - Implemented dynamic tag selection in constructor closure:
+    - If `document.is_openable("ltx:logical-block")` is true (standard section/body flow, or nested frames), emit `ltx:logical-block` (Para.class).
+    - If false (inside a float such as `figure`, `table`, or `algorithm`), fallback to `ltx:inline-logical-block` (Misc.class).
+  - Emitted `\par` in `before_digest` to ensure any preceding paragraph text is closed before the frame opens.
+  - Added `_autoclose='true'` attribute and closed with `document.maybe_close_element(tag)?`:
+    - If a block child (like `\thebibliography` or sectioning) auto-closes the frame to attach at section level, the closing tag does not error with "Attempt to close, which isn't open".
+- **Validation**:
+  - Repro `tools/perfect_kernel/repros/index-bib/mdframed_block_bib_juradiss.tex`: 0 errors (was 2 errors).
+  - Preserves all 4 existing witness behaviors:
+    - In-float frames (arXiv 1907.05772): clean.
+    - Nested frames (arXiv 1712.00062): clean.
+    - Theorems in mdframed (arXiv 2506.03074, 2402.07712): clean.
+- **Guards**: `perfect_kernel_gemini::mdframed_block_bibliography_juradiss` and `perfect_kernel_gemini::mdframed_in_float_and_nested` in `latexml_oxide/tests/cluster_package_guards.rs`.
+
