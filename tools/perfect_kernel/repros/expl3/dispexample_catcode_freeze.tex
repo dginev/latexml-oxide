@@ -1,0 +1,23 @@
+% witness: csvsimple/csvsimple-l3 (csvsimple-l3.tex:1240-1266, dispExample body)
+% oracle:  pdflatex 0 errors
+% engines: rust=4 perl=0(Script _) (2026-09-04); engine-independent (fails with/without luatex)
+% expect:  0 errors; listing shows `tl_new` (ltx_lst_identifier) and NO <ltx:ERROR>
+% status:  RED
+% mechanism: tcolorbox_sty.rs \dispExample (L76-82) runs the captured listing body
+%   via unread(Tokenize!(text)) — eager whole-string tokenization with the CURRENT
+%   catcode regime (`_`=SUBSCRIPT/8). A mid-body \ExplSyntaxOn cannot retroactively
+%   make `_` a LETTER for the already-tokenized `\tl_new:N`, so it splits as
+%   `\tl` + `_`(subscript). Real tcolorbox \tcbusetemp = \input{\jobname.tcbtemp}
+%   re-reads the temp file char-by-char, honoring the live catcode change.
+%   Fix: replay via VFS-temp + \input (as \LTXinputExample/\tcbusetemp already do),
+%   not eager Tokenize!.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{documentation}
+\begin{document}
+\begin{dispExample}
+\ExplSyntaxOn
+\tl_new:N \l_test_tl
+\ExplSyntaxOff
+\end{dispExample}
+\end{document}

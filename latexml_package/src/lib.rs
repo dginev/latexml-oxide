@@ -791,6 +791,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::pgfmath_code_tex::load_definitions,
   ),
   (
+    "tikzlibraryexternal",
+    "code.tex",
+    package::tikzlibraryexternal_code_tex::load_definitions,
+  ),
+  (
     "pgfmathcalc",
     "code.tex",
     package::pgfmathcalc_code_tex::load_definitions,

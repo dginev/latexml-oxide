@@ -91,6 +91,7 @@ pub mod datetime_sty;
 pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
 pub mod derivative_sty;
+pub mod dhucs_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
 pub mod dmtcs_episciences_cls;
@@ -467,6 +468,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("backref", "sty", backref_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
   ("curve2e", "sty", curve2e_sty::load_definitions),
+  ("dhucs", "sty", dhucs_sty::load_definitions),
   ("mathpartir", "sty", mathpartir_sty::load_definitions),
   ("nag", "sty", nag_sty::load_definitions),
   ("oldlfont", "sty", oldlfont_sty::load_definitions),

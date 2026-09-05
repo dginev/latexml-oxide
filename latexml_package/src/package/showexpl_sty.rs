@@ -29,7 +29,7 @@
 //! 2001.08314, 2002.09910, 1901.08750.
 
 use crate::{
-  package::listings_sty::{listings_read_raw_lines, lst_process_display},
+  package::listings_sty::{listings_read_raw_lines, lst_process_display, lst_run_body_via_input},
   prelude::*,
 };
 
@@ -61,7 +61,8 @@ LoadDefinitions!({
     // unread stack: LAST unread reads FIRST → reading order is
     // listing, result-body, \end{LTXexample}.
     unread(Tokenize!(TeXString::assembled("\\end{LTXexample}".to_string())));
-    unread(Tokenize!(TeXString::assembled(text.clone())));
+    // showexpl.sty:208 `\SX@put@code@result` `\input`s the written body back.
+    unread(lst_run_body_via_input("LTXexample", &text)?);
     unread(Tokens::new(lst_process_display(None, &text)));
   });
   def_macro_noop("\\endLTXexample")?;

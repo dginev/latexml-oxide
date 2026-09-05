@@ -1,7 +1,9 @@
 //! tcolorbox.sty — colored and framed text boxes
 //! Perl: tcolorbox.sty.ltxml
+use latexml_core::keyval::split_keyval_source;
+
 use crate::{
-  package::listings_sty::{listings_read_raw_lines, lst_process_display},
+  package::listings_sty::{listings_read_raw_lines, lst_process_display, lst_run_body_via_input},
   prelude::*,
 };
 
@@ -50,6 +52,33 @@ LoadDefinitions!({
   // "Script can only appear in math mode" (Perl raw-loads the real macro and is
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
+  DefPrimitive!("\\lxtcblistingmode{}", sub[(opts)] {
+    // tcblistingscore.code.tex:202-224: the mode STYLES that do not run the
+    // text; every other key (including content keys such as `listing
+    // options={commentstyle=…}`, postit-doc-en.tex:76) leaves the default
+    // `listing and text`. A brace-aware split keeps a nested `{…}` value with
+    // its key, so a substring like `comment` inside a value cannot match.
+    const NO_TEXT_MODES: &[&str] = &[
+      "listing only",
+      "comment only",
+      "listing and comment",
+      "comment and listing",
+      "comment side listing",
+      "listing side comment",
+      "comment above listing",
+      "comment above* listing",
+      "listing above comment",
+      "listing above* comment",
+      "comment outside listing",
+      "listing outside comment",
+    ];
+    let text = opts.to_string();
+    let execute = !split_keyval_source(&text)
+      .iter()
+      .any(|(key, _)| NO_TEXT_MODES.contains(&key.trim()));
+    AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Local);
+    Ok(Vec::new())
+  });
   DefMacro!("\\newtcblisting[]{}[][]{}", sub[(init, name, n, default, opts)] {
     let env_name = name.to_string().trim().to_string();
     let (start, end) = tcb_listing_startend(&env_name, init.as_ref(), &opts);
@@ -77,7 +106,9 @@ LoadDefinitions!({
     bgroup();
     let text = listings_read_raw_lines("dispExample");
     unread(Tokenize!(TeXString::assembled("\\end{dispExample}".to_string())));
-    unread(Tokenize!(TeXString::assembled(text.clone())));
+    // `\tcbusetemp` = `\input` of the temp file (tcolorbox.sty:2820). Guard:
+    // `perfect_kernel_batch56::dispexample_body_runs_with_live_catcodes`.
+    unread(lst_run_body_via_input("dispExample", &text)?);
     unread(Tokens::new(lst_process_display(None, &text)));
   }, locked => true);
   // The raw library redefines the END macros too (\enddispExample =
@@ -91,7 +122,7 @@ LoadDefinitions!({
     bgroup();
     let text = listings_read_raw_lines("dispExample*");
     unread(Tokenize!(TeXString::assembled("\\end{dispExample*}".to_string())));
-    unread(Tokenize!(TeXString::assembled(text.clone())));
+    unread(lst_run_body_via_input("dispExampleStar", &text)?);
     unread(Tokens::new(lst_process_display(None, &text)));
   });
   DefMacro!(T_CS!("\\dispExample*"), None, "\\lx@dispExampleStar", locked => true);
@@ -204,8 +235,7 @@ LoadDefinitions!({
     // "close a group that switched to mode internal_vertical".
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
-        use latexml_core::keyval::split_keyval_source;
-        let sub_args: Vec<Option<Cow<Tokens>>> = args
+              let sub_args: Vec<Option<Cow<Tokens>>> = args
           .iter()
           .map(|a| match a {
             ArgWrap::None => None,
@@ -332,7 +362,6 @@ fn tcb_xparse_listing(
 /// witness incgraph.tex L857 `\inputlisting{\n}` reading 12 such files).
 /// Everything else remains presentation-only and is dropped.
 fn tcb_listing_startend(env_name: &str, init: Option<&Tokens>, opts: &Tokens) -> (String, String) {
-  use latexml_core::keyval::split_keyval_source;
   let mut start = String::new();
   let mut end = String::new();
   let source = format!(
@@ -362,6 +391,12 @@ fn tcb_listing_startend(env_name: &str, init: Option<&Tokens>, opts: &Tokens) ->
       ),
     );
   }
+  // The listing MODE (tcblistingscore.code.tex:200-215: `listing and text`
+  // default, `listing only`, `text only`, the `*comment*` forms) decides
+  // whether the body is also executed; the per-use `#1` is only known at use
+  // time, so the resolved option text is handed to `\lxtcblistingmode` in
+  // the start code and read back by `\lx@lstenv@body`.
+  start.push_str(&format!("\\lxtcblistingmode{{{source}}}"));
   for (key, val) in split_keyval_source(&source) {
     let val = val.trim().trim_matches(['{', '}']).trim();
     match key.trim() {

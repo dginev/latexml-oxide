@@ -133,6 +133,13 @@ fn beamer_color_opts(opts: &str) -> Vec<(String, String)> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // beamerbasefont.sty:322-323 `\Tiny` (4pt) / `\TINY` (3pt), the two sizes
+  // below `\tiny` that beamer adds and its font themes use
+  // (beamerfontthemeBerlinFU.sty:20; beamer-fuberlin, beamertheme-detlevcm,
+  // URbeamer-DEMO). Same shape as the AMS classes' (ams_support_sty.rs).
+  DefPrimitive!("\\TINY", None, font => { size => 3 });
+  DefPrimitive!("\\Tiny", None, font => { size => 4 });
+
   // beamerbasetemplates.sty:24-30: `\ifbeamertemplateempty{name}{empty}
   // {nonempty}` gates control flow on whether `\beamer@@tmpl@<name>` is
   // undefined or `\beamer@@empty`; themes test it (beamerthemeAlbi.sty:224,

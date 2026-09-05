@@ -1,0 +1,14 @@
+% witness: nostarch/nssample (nostarch.cls:856 \DeclareCaptionFormat*{...}{\parbox{..}{#1#2#3}})
+% oracle:  lualatex/pdflatex clean (caption3.sty:701 defines it)
+% engines: rust=3 misdefined:# (2026-09-04, b56d); perl=3 misdefined:# => SHARED
+% expect:  0 errors
+% mechanism: caption_sty.rs:129 `def_macro_noop("\DeclareCaptionFormat{}{}")` (== Perl
+%   caption.sty.ltxml:76 `DefMacro('\DeclareCaptionFormat{}{}',Tokens())`) gobbles only
+%   {name}{code}. Real signature (caption3.sty:701-711) is `*?{name}[short]?{code}`.
+%   With `*`, the no-op eats `*`+`{name}`, leaving `{\parbox{..}{#1#2#3}}` -> #1#2#3 reach Stomach.
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionFormat*{myfmt}{\parbox{5cm}{#1#2#3}}
+\begin{document}
+Hello world.
+\end{document}

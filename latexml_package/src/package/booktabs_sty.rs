@@ -68,4 +68,44 @@ LoadDefinitions!({
 \newcount\@thisruleclass
 \newcount\@lastruleclass
 ");
+  // booktabs.sty:53-118 — the rule machinery a document reaches when it
+  // copies the REAL `\midrule`/`\toprule` verbatim over the binding's
+  // simplified ones (l2kurz.tex:58-65 = booktabs.sty:67-71): the `\noalign{`
+  // opened by `\ifnum0=`}\fi` is closed only by `\@BTendrule`'s
+  // `\ifnum0=`{\fi}`, so with `\@BTrule` undefined the noalign body over-ran
+  // to the end of the table and the alignment frame leaked through the whole
+  // document (lshort-german l2kurz, 41 errors; Perl shares the gap). The
+  // binding's own `\toprule`/`\midrule`/`\bottomrule` stay `\hline`-based;
+  // longtable's `\@BLTrule` branch (booktabs.sty:103-108, cmidrule kerning
+  // internals) reduces to `\@BTnormal`. Guard:
+  // `perfect_kernel_batch56::booktabs_rule_machinery_closes_its_noalign`.
+  TeX!(r"\@lastruleclass=0
+\@ifundefined{@thisrulewidth}{\newdimen\@thisrulewidth}{}
+\def\futurenonspacelet#1{\def\@BTcs{#1}\afterassignment\@BTfnslone\let\nexttoken= }
+\def\@BTfnslone{\expandafter\futurelet\@BTcs\@BTfnsltwo}
+\def\@BTfnsltwo{\expandafter\ifx\@BTcs\@sptoken\let\next=\@BTfnslthree
+   \else\let\next=\nexttoken\fi \next}
+\def\@BTfnslthree{\afterassignment\@BTfnslone\let\next= }
+\def\@addspace[#1]{\global\@belowrulesep=#1\global\@thisruleclass=\tw@
+  \futurelet\@tempa\@BTendrule}
+\def\@BTrule[#1]{\let\@BTswitch\@BTnormal
+  \global\@thisrulewidth=#1\relax
+  \ifnum\@thisruleclass=\tw@\vskip\@aboverulesep\else
+  \ifnum\@lastruleclass=\z@\vskip\@aboverulesep\else
+  \ifnum\@lastruleclass=\@ne\vskip\doublerulesep\fi\fi\fi
+  \@BTswitch}
+\providecommand*\CT@arc@{}
+\def\@BTnormal{{\CT@arc@\hrule\@height\@thisrulewidth}\futurenonspacelet\@tempa\@BTendrule}
+\let\@BLTrule\@BTnormal
+\let\@BTswitch\@BTnormal
+\def\@BTendrule{\ifx\@tempa\toprule\global\@lastruleclass=\@thisruleclass
+  \else\ifx\@tempa\midrule\global\@lastruleclass=\@thisruleclass
+  \else\ifx\@tempa\bottomrule\global\@lastruleclass=\@thisruleclass
+  \else\ifx\@tempa\cmidrule\global\@lastruleclass=\@thisruleclass
+  \else\ifx\@tempa\specialrule\global\@lastruleclass=\@thisruleclass
+  \else\ifx\@tempa\addlinespace\global\@lastruleclass=\@thisruleclass
+  \else\global\@lastruleclass=\z@\fi\fi\fi\fi\fi\fi
+  \ifnum\@lastruleclass=\@ne\relax\else\vskip\@belowrulesep\fi
+  \ifnum0=`{\fi}}
+");
 });

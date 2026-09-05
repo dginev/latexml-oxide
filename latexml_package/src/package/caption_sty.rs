@@ -116,8 +116,22 @@ LoadDefinitions!({
 \DeclareCaptionLabelSeparator{quad}{\quad}%
 \DeclareCaptionLabelSeparator{newline}{\\}%
 \DeclareCaptionLabelSeparator{endash}{ -- }");
+  // caption3.sty (2023, v2.4d) :767 also defines `\caption@lsep@default`; a
+  // loaded caption3 is detected by babel-hungarian through it —
+  // magyar.ldf:1882-1898 `\ifx\caption@lsep\caption@lsep@default
+  // \caption@setdefaultlabelsep{period}\fi` calls a caption3 internal REMOVED
+  // in 2023 only when both are undefined (two undefined cs `\ifx` true), so
+  // without this definition the seeding above sent elteikthesis/elteiktdk into
+  // the deprecated call (RUST-ONLY: Perl seeds no separators). Guard:
+  // `perfect_kernel_batch56::caption_lsep_default_keeps_magyar_off_the_removed_internal`.
+  RawTeX!(r"\newcommand*\caption@lsep@default{\caption@labelseparator@default\caption@labelsep}");
   def_macro_noop("\\DeclareCaptionFont{}{}")?;
-  def_macro_noop("\\DeclareCaptionFormat{}{}")?;
+  // caption3.sty:701-711 `\DeclareCaptionFormat*?{name}[short]?{code}`: the
+  // star and the optional must be consumed too — a 2-arg no-op left the
+  // starred form's `{code}` with its `#1#2#3` in the stream (nostarch.cls:856;
+  // Perl's `{}{}` no-op fails the same way). The declaration itself has no
+  // rendering here (captions are structural).
+  DefMacro!("\\DeclareCaptionFormat OptionalMatch:* {} [] {}", "");
   // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
   // of `\DeclareCaptionFormat` for text-only caption-format definers.
   def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;

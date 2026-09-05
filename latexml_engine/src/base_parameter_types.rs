@@ -809,8 +809,20 @@ LoadDefinitions!({
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
+  // tex.web §1215 `get_r_token` skips blanks before the token being defined
+  // (Perl's `DefToken`, Base_ParameterTypes.pool.ltxml:255, does not — a
+  // shared gap): `\lstMakeShortInline [opts]\n{"}` (install-latex-guide-zh-cn
+  // :111, the option list wrapped over two lines) read the SPACE after `]`,
+  // made the space active and every title/body space ran `\lstinline` — an
+  // unbounded `\bgroup` recursion at `\maketitle`. Guard:
+  // `perfect_kernel_batch56::deftoken_skips_a_leading_space`.
   DefParameterType!(DefToken, sub[_inner, _extra] {
     let mut token_opt = read_token()?;
+    while let Some(token) = token_opt
+      && token.get_catcode() == Catcode::SPACE
+    {
+      token_opt = read_token()?;
+    }
     while let Some(token) = token_opt {
       if token.get_catcode() != Catcode::BEGIN { break; }
       let mut toks : Vec<Token> = read_balanced(ExpansionLevel::Off,false,false)?

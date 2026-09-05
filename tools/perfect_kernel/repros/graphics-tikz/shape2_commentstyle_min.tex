@@ -1,0 +1,25 @@
+% witness: postit/postit-doc-en (postit-doc-en.tex:65-96 DemoCode def; :410-421)
+% oracle:  pdflatex 0 errors
+% engines: rust=1(No shape) perl=0 (2026-09-04)
+% expect:  0 errors; picture1 \coordinate executes -> shape registered -> picture2 ref OK
+% status:  RED (b56f)
+% mechanism: DemoCode's `listing options={commentstyle=...}` false-matches the
+%   substring "comment" in tcolorbox_sty.rs:55, so LISTINGS_EXECUTE_BODY=false and
+%   the tcblisting body is DISPLAYED but NOT executed; the \coordinate never runs.
+%   Real tcolorbox mode stays `listing and text` (default) -> body IS \input-executed
+%   (tcblistingscore.code.tex:205,25). commentstyle is a listings key, not a mode key.
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{DemoCode}[1][]{listing options={commentstyle={\itshape}},#1}
+\begin{document}
+\begin{DemoCode}[]
+\begin{tikzpicture}[remember picture]
+  \coordinate (foo-N-W) at (0,0);
+\end{tikzpicture}
+\end{DemoCode}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw (foo-N-W) circle[radius=2pt];
+\end{tikzpicture}
+\end{document}

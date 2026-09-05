@@ -18,56 +18,29 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "curve2e.sty",
-    "curve2e.sty is minimally stubbed — Bezier curve / vector picture extensions are no-ops."
-  );
-
-  // Register the version string a real load's \ProvidesPackage would have
-  // stored. Documents run `\GetFileInfo{curve2e.sty}` (curve2e-manual L161),
-  // whose `\@tempb` scans `\ver@curve2e.sty` for the delimited ` v.` pattern;
-  // with it undefined the Until-scan runs away and poisons the whole
-  // document (locator-less pushback, shortverb regions executing raw —
-  // witness curve2e-manual 88 errors + fatal). ANY stub replacing a raw
-  // .sty a document may \GetFileInfo must register its \ver@<file> —
-  // and it must carry the real ` v.` pattern; an empty string still
-  // runs away. Real string: curve2e.sty L14-15.
-  RawTeX!(
-    r"\expandafter\def\csname ver@curve2e.sty\endcsname{2024-11-13 v.2.6.0 Extension package for pict2e}"
-  );
-
-  // curve2e.sty L16: `\RequirePackage{graphicx,color}` — these are the
-  // package's *unconditional* hard dependencies (the curve/vector
-  // machinery on lines 17-21 is what we stub out as no-ops below, but
-  // graphicx+color are user-visible and papers rely on curve2e to pull
-  // them in). Perl has no curve2e binding, so it raw-loads the real .sty
-  // and executes this `\RequirePackage`, defining `\color`/`\definecolor`
-  // etc. Our no-op stub previously omitted it, so a paper that uses
-  // `\definecolor` *without* its own `\usepackage{color}` — relying on
-  // curve2e to supply it — left `\definecolor` undefined where Perl is
-  // clean. Witness 1810.10468 (ieeeconf + curve2e, `\definecolor{rouge}…`
-  // with no explicit color load): RUST 1 (`undefined:\definecolor`) /
-  // PERL 0 of that error. graphicx is idempotent if already loaded.
+  // curve2e.sty:16-17 hard dependencies (graphicx, color, pict2e), then the
+  // REAL package raw-loaded: with pict2e's driver-level path builders
+  // (`\pIIe@moveto`… in pict2e_sty.rs) and cap/join declarations present,
+  // curve2e's vector algebra (xfp `\fpeval`), `\Arc`/`\VectorArc`/`\VectorARC`,
+  // `\polyline`/`\Vector`/`\segment`, `\Zbox`/`\Pbox`, `\xmultiput` and the
+  // grid commands all run verbatim and render through `\lx@pic@polyline`
+  // (curve2e-manual: the 9-stub binding left 32 undefined-command errors;
+  // Perl's raw load of the same file, lacking the `\pIIe@*` builders, fails
+  // with 102 errors + Fatal). Its `\@picture` redefinition (curve2e.sty:273)
+  // is dead code here — the picture environment is a constructor that records
+  // `\pict@dimen`/`\pict@offset` itself (sect13.rs, pict2e_sty.rs).
   RequirePackage!("graphicx");
   RequirePackage!("color");
-  // curve2e.sty:17 `\RequirePackage{pict2e}` — the polygonal-line family
-  // (`\polyline`, `\polygon`, `\Line`, `\Vector`) that curve2e
-  // `\renewcommand`s (:240) comes from pict2e's binding. Witnesses
-  // sapthesis-doc, unifith-doc (`\polyline` undefined).
   RequirePackage!("pict2e");
-
-  // curve2e exports — silently consume their arguments. None of
-  // these have a faithful HTML rendering anyway.
-  def_macro_noop("\\Curve")?;
-  def_macro_noop("\\CbezierTo")?;
-  def_macro_noop("\\Arc")?;
-  def_macro_noop("\\VectorArc")?;
-  def_macro_noop("\\Dashline")?;
-  def_macro_noop("\\Dotline")?;
-  def_macro_noop("\\VECTOR")?;
-  def_macro_noop("\\GraphLine")?;
-  def_macro_noop("\\GraphGrid")?;
-  // \Pbox and \Pnode-style — leave \put untouched (defined in TeX_Picture);
-  // these are paper-local extensions that surface in <1% of curve2e papers.
+  InputDefinitions!("curve2e", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // curve2e.sty:92-96 snapshots pict2e's `\moveto`/`\lineto`/`\curveto` under
+  // `\original*` before wrapping them for the macro-pair `(\P)` form; pin the
+  // snapshots to the stable aliases so the wrappers can never resolve to
+  // themselves (a `\moveto`→`\originalmoveto`→`\moveto` recursion was seen
+  // with the body absorbed verbatim; the user-level primitives accept `(\P)`
+  // directly anyway).
+  RawTeX!(
+    r"\let\originalmoveto\lx@pictii@moveto \let\originallineto\lx@pictii@lineto
+\let\originalcurveto\lx@pictii@curveto"
+  );
 });

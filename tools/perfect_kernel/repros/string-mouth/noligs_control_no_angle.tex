@@ -1,0 +1,18 @@
+% CONTROL (GREEN b56d): same structure, verbatim body without < > -> 0 errors,
+% body captured as ltx_verbatim. Proves the trigger is the active < , not the
+% syntax/function/verbatim nesting itself.
+\documentclass[kernel]{l3doc}
+\begin{document}
+\begin{function}{\foo:n}
+  \begin{syntax}
+    |\foo:n| \Arg{x}
+  \end{syntax}
+  \begin{verbatim}
+    \bool_case:nF
+      {
+        { \dim_compare_p:n { \x } }
+        { \int_compare_p:n { \y } }
+      }
+  \end{verbatim}
+\end{function}
+\end{document}

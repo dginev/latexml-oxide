@@ -1,0 +1,14 @@
+% witness: beamertheme-mirage/mirage-poster-en (beamerposter.sty:55,109 \XKV@cc*+[\val\nr]{..}{..}{..}{..})
+% oracle:  lualatex clean (xkeyval.tex:248 defines \XKV@cc)
+% engines: rust=1 undefined:\XKV@cc (+ cascade \val,\nr) (2026-09-04, b56d)
+% expect:  0 errors; \val=matched choice, \nr=index; code runs
+% mechanism: xkeyval_sty.rs REIMPLEMENTS \define@choicekey (via \ltx@define@choicekey@int, a
+%   key-DEFINER) but never the standalone immediate checker \XKV@cc (xkeyval.tex:248
+%   `\def\XKV@cc{\XKV@testopta{\@testopt\XKV@checkchoice{}}}` + :249-320). beamerposter calls
+%   \XKV@cc DIRECTLY. Perl xkeyval.sty.ltxml also lacks it => SHARED.
+\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\XKV@cc*+[\val\nr]{a1}{a0,a1,a2}{Matched \val\ index \nr}{no match}
+\makeatother
+\begin{document}Done.\end{document}

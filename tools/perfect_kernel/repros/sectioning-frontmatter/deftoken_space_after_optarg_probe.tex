@@ -1,0 +1,15 @@
+% witness: install-latex-guide-zh-cn (\lstMakeShortInline [opt] {"}), engine-neutral root
+% oracle:  pdflatex 0 errors, prints SPCAT=10,DQCAT=13 (" active, space normal)
+% engines: rust SP[13]DQ[12] ; perl SP[13]DQ[12] (IDENTICAL -> SHARED); pdflatex SP10 DQ13
+% expect:  0 errors; body text contains "SP[10]DQ[13]" (space normal, doublequote active)
+% status:  RED
+% preload: [rawstyles,rawclasses]latexml.sty
+% mechanism: same DefToken leading-space bug, isolated with NO ctex/luatex. A space between
+%   the consumed [] optional arg and {"} is taken as the DefToken -> SPACE made active
+%   (catcode 13) instead of `"`. Both latexml engines diverge from pdflatex identically.
+\documentclass{article}
+\usepackage{listings}
+\lstMakeShortInline [ x = 1 ] {"}
+\begin{document}
+SP[\the\catcode`\ ]DQ[\the\catcode`\"]
+\end{document}

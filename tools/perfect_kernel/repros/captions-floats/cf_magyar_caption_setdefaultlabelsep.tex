@@ -1,0 +1,16 @@
+% witness: elteikthesis_en/hu/minted, elteiktdk_en/hu (babel[hungarian]+caption)
+% oracle: pdflatex+lualatex CLEAN; b56d RED
+% mechanism: magyar.ldf AtBeginDocument \ifx\caption@lsep\caption@lsep@default
+%   both undefined in Rust -> ifx TRUE -> calls undefined \caption@setdefaultlabelsep.
+%   Real caption3 2023 (caption3.sty:767) defines \caption@lsep@default -> ifx FALSE.
+% expect: 0 errors, an <ltx:caption> with the label separator
+% status: RED (b56d)
+\documentclass{article}
+\usepackage[hungarian]{babel}
+\usepackage{caption}
+\begin{document}
+\begin{figure}
+\centering Test
+\caption{Teszt \'abra}
+\end{figure}
+\end{document}

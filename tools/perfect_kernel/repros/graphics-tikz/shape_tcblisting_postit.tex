@@ -1,0 +1,26 @@
+% witness: postit/postit-doc-en (postit-doc-en.tex:412-421; postit.sty:864)
+% oracle:  pdflatex 0 errors (2 passes)
+% engines: rust=1(No shape) perl=0(No shape) (2026-09-04)
+% expect:  0 errors; picture 1's \coordinate executes so <svg> from BOTH pictures
+% status:  RED
+% mechanism: \newtcblisting default mode is "listing and text"
+%   (tcblistingscore.code.tex:429/205 -> \tcbuselistingtext = \input listingfile,
+%   i.e. the body is DISPLAYED *and* EXECUTED). Our binding
+%   (tcolorbox_sty.rs:53 -> \lstnewenvironment) only DISPLAYS it, so the tikz
+%   \coordinate never runs, \pgf@sh@ns@foo-N-W is never \xdef'd, and the later
+%   remember-picture reference raises pgfmoduleshapes.code.tex:535 "No shape named".
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{DemoCode}[1][]{#1}
+\begin{document}
+\begin{DemoCode}[]
+\begin{tikzpicture}[remember picture]
+  \coordinate (foo-N-W) at (0,0);
+\end{tikzpicture}
+\end{DemoCode}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw (foo-N-W) circle[radius=2pt];
+\end{tikzpicture}
+\end{document}

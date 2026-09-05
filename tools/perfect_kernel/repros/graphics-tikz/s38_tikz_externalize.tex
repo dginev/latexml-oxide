@@ -1,0 +1,21 @@
+% witness: tikzviolinplots/tikzviolinplots (591), causets/causets (106),
+%          tilings/tilings (80), tikz-feynhand (55), tikzscale (5)  [5 docs, 837 err]
+% oracle: pdflatex WITH -shell-escape (TeX Live doc-build env) = clean; renders inline
+% engines: pdflatex (shell-escape), lualatex (shell-escape)
+% expect: 0 errors; tikzpicture typeset INLINE (svg/picture), no system call
+% status: RED on b56d (1 Error per externalized picture)
+% mechanism: \usetikzlibrary{external}+\tikzexternalize -> every tikzpicture is
+%   intercepted; the external file is absent, so tikz attempts a shell-escape
+%   system call (\immediate\write18). LaTeXML no-ops write18, tikz finds no output
+%   file and raises tikzexternalshared.code.tex:1636 "Sorry, the system call ...".
+%   tikz THEN typesets the picture inline anyway, so only the Error line is wrong.
+%   SHARED: Perl LaTeXML emits the identical Error (no external binding either).
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{external}
+\tikzexternalize[prefix=ext/]
+\begin{document}
+\begin{tikzpicture}
+\draw (0,0) circle (1);
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,26 @@
+% witness: l3kernel/interface3 (source3body -> l3prg.dtx:662, l3str.dtx:370/477); also base/source2e
+% oracle: pdflatex interface3.tex => 0 '!'  (real \@noligs neutralises active < >)
+% engines: pdflatex/lualatex (l3doc). preload [rawstyles,rawclasses]latexml.sty
+% expect: 0 Error/Fatal; verbatim body captured as ltx_verbatim, < rendered literally
+% status: RED b56d (Error:unexpected:} Attempt to close boxing group, line ~13)
+% mechanism: l3doc \begin{function} makes < active = \@@_shorthand_meta:w #1 > (l3doc.dtx:2570).
+%   fancyvrb verbatim (fallback of undef \begin{verbatim}) calls \@noligs (fancyvrb.sty:379)
+%   which in real LaTeX (latex.ltx:15515-21) reactivates ` < > , ' - as literal chars,
+%   neutralising the active <. LaTeXML stubs \@noligs as a NO-OP (sect03.rs:133 /
+%   latex_constructs.pool.ltxml:426), so the active < fires inside verbatim and reads
+%   until > across lines -> group desync. SHARED (Perl identical), pdflatex clean.
+\documentclass[kernel]{l3doc}
+\begin{document}
+\begin{function}{\foo:n}
+  \begin{syntax}
+    |\foo:n| \Arg{x}
+  \end{syntax}
+  \begin{verbatim}
+    \bool_case:nF
+      {
+        { \dim_compare_p:n { \x <= 10pt } }
+        { \int_compare_p:n { \y >= 10 } }
+      }
+  \end{verbatim}
+\end{function}
+\end{document}

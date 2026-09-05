@@ -1,0 +1,15 @@
+% witness: beamer-fuberlin/exampleClass,exampleTheme; beamertheme-detlevcm; urcls/URbeamer-DEMO
+% oracle:  lualatex/pdflatex clean (beamerbasefont.sty:322 defines \Tiny)
+% engines: rust=2 (2026-09-04, b56d: \Tiny,\TINY undefined)
+% expect:  0 errors; body renders at font size 4pt/3pt
+% status:  RED
+% mechanism: beamerbasefont.sty:322-323 `\newrobustcmd*\Tiny{\@setfontsize\Tiny{4}{5}}`
+%   `\TINY{...}{3}{4}`. beamer_cls.rs (our hand binding, replaces beamerbase* modules)
+%   never defines these size CS; beamer font themes (beamerfontthemeBerlinFU.sty:20) use them.
+%   Perl beamer.cls.ltxml also lacks them => SHARED. \Tiny=size4,\TINY=size3 (== ams_support_sty.rs:37-38).
+\documentclass{beamer}
+\begin{document}
+\begin{frame}{Sizes}
+  {\Tiny tiny text} and {\TINY tinier text}
+\end{frame}
+\end{document}

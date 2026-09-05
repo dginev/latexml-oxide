@@ -1931,6 +1931,32 @@ pub fn lst_process_block_with(
 /// environment's `\begingroup`): `\bgroup\lx@lst@activate{env}[<keys>]`.
 /// The primitive re-activates the listing keys inside that group for the
 /// digestion-time consumers (`\lstname`, styles, `LISTINGS_POSTAMBLE`).
+/// Run a captured example body the way the real packages do — written to a
+/// temp file and `\input` back (tcolorbox.sty:2811-2820 `\tcbwritetemp`/
+/// `\tcbusetemp`, showexpl.sty:208 `\SX@put@code@result`): `\input`
+/// re-tokenizes character by character, so a mid-body catcode change
+/// (`\ExplSyntaxOn`, `\makeatletter`, `\verb`) applies to what follows.
+/// Eagerly `Tokenize!`-ing the body froze the outer regime (csvsimple-l3:
+/// `\tl_new:N` split at a subscript `_`). Returns the `\input{…}` tokens.
+pub fn lst_run_body_via_input(env: &str, text: &str) -> Result<Tokens> {
+  thread_local! {
+    static BODY_SEQ: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+  }
+  let n = BODY_SEQ.with(|c| {
+    let v = c.get() + 1;
+    c.set(v);
+    v
+  });
+  let name = format!("lx-{env}-{n}.tmp");
+  ::latexml_core::binding::virtual_files::vfs_store(&name, text);
+  // Built by hand: `Invocation!` consults `\input`'s parameter list, which
+  // reads its own argument, and would drop the braced name.
+  let mut inv = vec![T_CS!("\\input"), T_BEGIN!()];
+  inv.extend(ExplodeText!(&name));
+  inv.push(T_END!());
+  Ok(Tokens::new(inv))
+}
+
 pub fn lst_group_opener(env: &str, kv: Option<&KeyVals>) -> Result<Vec<Token>> {
   let mut out = vec![
     T_CS!("\\begingroup"),
@@ -2609,7 +2635,25 @@ LoadDefinitions!({
     }
     let lname = lst_get_tokens("name");
     let name_opt = if lname.is_empty() { None } else { Some(lname) };
-    Ok(Tokens::new(lst_process_display_scoped(name_opt, &text)))
+    let mut out = lst_process_display_scoped(name_opt, &text);
+    // tcolorbox listings default to `listing and text` (tcblistingscore
+    // .code.tex:429 → :205 `\tcbuselistingtext` = `\input{\kvtcb@listingfile}`,
+    // :25): the body is displayed AND executed. `\lxtcblistingmode` sets the
+    // flag from the resolved options; the execution runs after the display
+    // and its postamble, inside the environment's group (postit's PostItNote
+    // pictures never ran, so their `remember picture` coordinates were
+    // "No shape named"). Guard:
+    // `perfect_kernel_batch56::tcblisting_listing_and_text_executes_the_body`.
+    // The execution runs inside the environment's group, like the real
+    // `\tcbuselistingtext` inside its box: local definitions stay local,
+    // `\global` ones (pgf's `remember picture` node registrations, postit)
+    // escape as in TeX.
+    if lookup_bool("LISTINGS_EXECUTE_BODY") {
+      let closer = out.pop();
+      out.extend(lst_run_body_via_input(&env_name, &text)?.unlist());
+      out.extend(closer);
+    }
+    Ok(Tokens::new(out))
   });
 
   //======================================================================

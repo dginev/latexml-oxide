@@ -1,0 +1,22 @@
+% witness: lshort-german/l2kurz (l2kurz.tex:58-65 copies real booktabs \midrule)
+% oracle:  pdflatex 0 !   engines: pdflatex
+% expect:  0 Error/Fatal, <tabular> with 2 rows + rule borders
+% status:  RED on b56d/sweep37/sweep38 (14 errors); NOT a regression (longstanding)
+% mechanism: booktabs.sty:67-71 \midrule = \noalign{\ifnum0=`}\fi ... \@BTrule[..];
+%   the \noalign group is closed by \@BTrule->\@BTnormal->\@BTendrule (booktabs.sty:84-119,
+%   ends \ifnum0=`{\fi}). The Rust binding booktabs_sty.rs maps \midrule=\hline and never
+%   defines \@BTrule, so l2kurz's \def\midrule leaves the \noalign group OPEN. The Rust
+%   \noalign execution-loop (tex_tables.rs:1042) over-runs the unclosed group and cascades.
+\documentclass{article}
+\usepackage{array,longtable,tabularx,booktabs}
+\makeatletter
+\def\midrule{\noalign{\ifnum0=`}\fi\penalty\@M
+  \@aboverulesep=\aboverulesep \global\@belowrulesep=\belowrulesep
+  \global\@thisruleclass=\@ne
+  \@ifnextchar[{\@BTrule}{\@BTrule[\lightrulewidth]}}
+\makeatother
+\begin{document}
+\begin{tabular}[t]{rl}
+\toprule A & B \\ \midrule 1 & 2 \\ \bottomrule
+\end{tabular}
+\end{document}

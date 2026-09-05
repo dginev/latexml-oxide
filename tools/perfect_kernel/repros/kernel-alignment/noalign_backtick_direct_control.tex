@@ -1,0 +1,11 @@
+% CONTROL (GREEN, 0 errors on b56d): the SAME \noalign backtick-brace hack written
+% DIRECTLY (not via a macro whose group-closer \@BTrule is undefined) closes fine.
+% Proves the root is the UNCLOSED noalign group (missing \@BTrule), not the hack itself.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\begin{tabular}{rl}
+A & B \\ \noalign{\ifnum0=`}\fi\hrule\@height0.05em}
+1 & 2 \\
+\end{tabular}
+\end{document}

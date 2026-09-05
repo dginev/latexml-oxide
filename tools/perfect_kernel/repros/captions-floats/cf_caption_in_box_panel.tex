@@ -1,0 +1,19 @@
+% witness: rubik/rubikexamples (pdflatex), fancybox/fancybox-doc, latex4wp-it,
+%   miniplot/miniplot, swfigure/swfigure-examples (all lualatex except rubik)
+% oracle: pdflatex+lualatex CLEAN (0 errors)
+% engines: article
+% expect: 0 errors; <ltx:figure> with a DIRECT <ltx:caption> child (not nested in a block)
+% status: RED (b56d) — SHARED: same-host Perl emits the identical 2 malformed
+%   errors AND the identical malformed tree (caption trapped in <ltx:block>).
+% mechanism: \caption inside a \parbox/\minipage/box that is NOT the float's sole
+%   collapsible panel (here an \mbox{X} precedes it). \@@caption/\@@toccaption
+%   (sect09.rs:170-208; Perl latex_constructs.pool.ltxml:3368-3371 "^^" float-up)
+%   cannot float the caption out of the <ltx:block> to the enclosing <ltx:figure>;
+%   find_insertion_point (document.rs:3217 / Perl Document.pm:1007) then errors
+%   "<ltx:caption>/<ltx:toccaption> isn't allowed in <ltx:block>".
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\mbox{X}\parbox{5cm}{\caption{Test caption}}
+\end{figure}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: kotex-oblivoir/obchapterstyles-doc (uses \documentclass{oblivoir})
+% oracle:  pdflatex 0 errors (dhucs->kotexutf 8-bit path defines \dhucs@hu)
+% engines: rust=3 perl=99 (2026-09-04) both leave \dhucs@hu undefined
+% expect:  0 errors; XML has a <ltx:document> root with the body text
+% status:  RED
+% mechanism: dhucs.sty:44 \ifx 가가 is TRUE for a native-UTF-8 engine (Rust &
+%   Perl tokenize 가 as ONE codepoint) -> \else branch; then dhucs.sty:58
+%   \csname directlua\endcsname and dhucs.sty:78 \csname XeTeXrevision\endcsname
+%   are both undefined -> neither engine sub-branch runs -> \dhucs@hu (def site
+%   dhucs.sty:75 / kotexutf-core.tex:177) and \setInterHangulSkip (dhucs.sty:72)
+%   never defined. memhangul-ucs.sty:90 \memh@hu=\dhucs@hu and
+%   oblivoir-utf.cls:271 \ob@hu=\dhucs@hu then fail. In real pdfTeX 가 is 3 bytes
+%   so \ifx 가가 is FALSE -> \RequirePackage{kotexutf} -> \input kotexutf-core
+%   -> \def\dhucs@hu{\z@}. kotexutf_sty.rs stub is a RED HERRING (never loaded).
+\documentclass{oblivoir}
+\begin{document}
+Hello world.
+\end{document}

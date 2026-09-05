@@ -1,0 +1,15 @@
+% witness: FramedSyntax.sty:189-193 \Frame (curve2e-manual's \begin{Sintassi} frames)
+% oracle: pdflatex 0 errors, frame drawn at real coords; engines: pdflatex vs oxide
+% expect: <line> coords = (50,20)-scaled, NOT 0,0
+% status: RED on b56d (dimen-register/expr pict2e coords collapse to 0)
+% mechanism: pict2e_sty.rs pic_coord_str string-parses; \SIXR (dimen reg) -> 0
+\documentclass{article}
+\usepackage{pict2e}
+\makeatletter
+\newdimen\SIXR \newdimen\SIYU  \setlength\unitlength{1pt}
+\begin{document}
+\SIXR=50pt \SIYU=20pt
+reg:\begin{picture}(100,40)\moveto(\SIXR,\SIYU)\lineto(0,0)\strokepath\end{picture}
+arc:\begin{picture}(100,40)\circlearc{\SIXR-2pt}{\SIYU}{5pt}{0}{90}\strokepath\end{picture}
+\makeatother
+\end{document}

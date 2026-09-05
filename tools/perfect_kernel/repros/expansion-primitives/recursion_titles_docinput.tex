@@ -1,0 +1,16 @@
+% witness: frankenstein/titles (titles.sty:1052-1081 via \DocInput)
+% oracle:  lualatex 28 errors, FINISHES (no hang) -> Rust must not infinite-loop
+% engines: rust=Fatal(56a/56d) perl/lualatex=28-errs-complete (2026-09-04)
+% expect:  no Fatal:Stomach:Recursion; a non-trivial <ltx:document> is produced
+% status:  RED
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% NOTE: titles.sty/attrib.sty/compsci.sty resolved via kpsewhich (TeX Live frankenstein).
+%       The doc is NOT oracle-clean (self-documenting manual w/ deliberate errors);
+%       the DEFECT is only the RUST-ONLY infinite digestion loop, not the error count.
+\documentclass{ltxdoc}
+\usepackage{attrib,compsci}
+\CodelineIndex
+\EnableCrossrefs
+\begin{document}
+\DocInput{titles.sty}
+\end{document}

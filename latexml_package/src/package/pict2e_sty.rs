@@ -29,32 +29,28 @@ thread_local! {
   static PICT2E_PATH: RefCell<Vec<Vec<(f64, f64)>>> = const { RefCell::new(Vec::new()) };
 }
 
-/// A picture coordinate: pict2e's `\@defaultunitsset` takes a bare number
-/// (× `\unitlength`) or a dimension with a unit; the latter is converted to
-/// `\unitlength` multiples so the polyline scaling stays uniform.
-fn pic_coord(tokens: Tokens) -> Result<f64> {
-  let text = Expand!(tokens).to_string();
-  let text = text.trim();
-  if let Ok(v) = text.parse::<f64>() {
-    return Ok(v);
-  }
-  let split = text
-    .find(|c: char| c.is_ascii_alphabetic())
-    .unwrap_or(text.len());
-  let (num, unit) = text.split_at(split);
-  let num: f64 = num.trim().parse().unwrap_or(0.0);
-  if unit.is_empty() {
-    return Ok(num);
-  }
-  let unit_pt = convert_unit(unit.trim()) / 65536.0;
-  let unitlength = match lookup_register("\\unitlength", Vec::new())? {
+/// `\unitlength` in pt (1.0 when unset), for dimension → picture-unit conversion.
+fn unitlength_pt() -> Result<f64> {
+  Ok(match lookup_register("\\unitlength", Vec::new())? {
     Some(RegisterValue::Dimension(d)) => d.pt_value(None),
     _ => 1.0,
-  };
-  Ok(if unitlength == 0.0 {
+  })
+}
+
+/// An angle argument (`\pIIe@arc … {start}{end}`): a plain or macro-held number.
+fn pic_number(tokens: Tokens) -> Result<f64> {
+  let text = Expand!(tokens).to_string();
+  Ok(text.trim().parse().unwrap_or(0.0))
+}
+
+/// A driver-level `\pIIe@*` argument is a real dimension (pict2e.sty:267-308
+/// `\pIIe@add@CP{#1}{#2}`): convert to `\unitlength` multiples.
+fn pic_dim(d: Dimension) -> Result<f64> {
+  let unit = unitlength_pt()?;
+  Ok(if unit == 0.0 {
     0.0
   } else {
-    num * unit_pt / unitlength
+    d.pt_value(None) / unit
   })
 }
 
@@ -70,6 +66,45 @@ fn path_push(point: (f64, f64), new_subpath: bool) {
 
 fn path_current() -> Option<(f64, f64)> {
   PICT2E_PATH.with(|p| p.borrow().last().and_then(|s| s.last().copied()))
+}
+
+/// Cubic Bezier from the current point, sampled into the current subpath.
+fn path_curveto(c1: (f64, f64), c2: (f64, f64), end: (f64, f64)) {
+  let (x0, y0) = path_current().unwrap_or((0.0, 0.0));
+  for i in 1..=8 {
+    let t = f64::from(i) / 8.0;
+    let u = 1.0 - t;
+    let x = u * u * u * x0 + 3.0 * u * u * t * c1.0 + 3.0 * u * t * t * c2.0 + t * t * t * end.0;
+    let y = u * u * u * y0 + 3.0 * u * u * t * c1.1 + 3.0 * u * t * t * c2.1 + t * t * t * end.1;
+    path_push((x, y), false);
+  }
+}
+
+/// `\pIIe@arc[mode]{cx}{cy}{r}{start}{end}` (pict2e.sty:765): mode 0 = a new
+/// subpath at the arc's start, 1 = `\lineto` the start, 2 = the arc continues
+/// the current subpath. Angles in degrees, sampled every ≤10°.
+fn path_arc(mode: i64, (cx, cy, r): (f64, f64, f64), start: f64, end: f64) {
+  let sweep = end - start;
+  let steps = ((sweep.abs() / 10.0).ceil() as usize).max(1);
+  for i in 0..=steps {
+    let a = (start + sweep * (i as f64) / (steps as f64)).to_radians();
+    let point = (cx + r * a.cos(), cy + r * a.sin());
+    if i == 0 && mode == 2 && path_current().is_some() {
+      continue;
+    }
+    path_push(point, i == 0 && mode == 0);
+  }
+}
+
+fn path_close() {
+  PICT2E_PATH.with(|p| {
+    let mut p = p.borrow_mut();
+    if let Some(sub) = p.last_mut()
+      && let Some(first) = sub.first().copied()
+    {
+      sub.push(first);
+    }
+  });
 }
 
 /// Emit one `\lx@pic@polyline{}{closed}(x,y)…` per subpath and clear the path.
@@ -107,65 +142,114 @@ LoadDefinitions!({
   def_macro_noop("\\pIIe@vector@ltx")?;
   def_macro_noop("\\pIIe@vector@pst")?;
 
-  // The path interface, pict2e.sty:742-774 (mode > 0 branch). Guard:
-  // `perfect_kernel_batch56::pict2e_path_interface_strokes_a_polyline`.
-  DefPrimitive!("\\moveto Match:( Until:, Until:)", sub[(_open, x, y)] {
-    path_push((pic_coord(x)?, pic_coord(y)?), true);
+  // The driver level `\pIIe@moveto{dim}{dim}` … (pict2e.sty:267-308) feeds a
+  // subpath accumulator; every argument is a real dimension read by the
+  // engine (`{Dimension}`), so register and `\dimexpr` coordinates
+  // (FramedSyntax.sty:189 `\moveto(\SIXR,\SIYD+#4)`) scale correctly — an
+  // earlier string parse of the expansion read a register name as 0 (141
+  // zero-point frames in curve2e-manual). Guards:
+  // `perfect_kernel_batch56::{pict2e_path_interface_strokes_a_polyline,
+  // curve2e_raw_load_renders_arcs_and_vectors}`.
+  DefPrimitive!("\\pIIe@moveto {Dimension}{Dimension}", sub[(x, y)] {
+    path_push((pic_dim(x)?, pic_dim(y)?), true);
     Ok(Vec::new())
   });
-  DefPrimitive!("\\lineto Match:( Until:, Until:)", sub[(_open, x, y)] {
-    path_push((pic_coord(x)?, pic_coord(y)?), false);
+  DefPrimitive!("\\pIIe@lineto {Dimension}{Dimension}", sub[(x, y)] {
+    path_push((pic_dim(x)?, pic_dim(y)?), false);
     Ok(Vec::new())
   });
-  // Cubic Bezier from the current point, sampled (pict2e.sty:754 `\curveto`).
   DefPrimitive!(
-    "\\curveto Match:( Until:, Until:) Match:( Until:, Until:) Match:( Until:, Until:)",
-    sub[(_o1, x1, y1, _o2, x2, y2, _o3, x3, y3)] {
-      let (x0, y0) = path_current().unwrap_or((0.0, 0.0));
-      let (x1, y1) = (pic_coord(x1)?, pic_coord(y1)?);
-      let (x2, y2) = (pic_coord(x2)?, pic_coord(y2)?);
-      let (x3, y3) = (pic_coord(x3)?, pic_coord(y3)?);
-      for i in 1..=8 {
-        let t = f64::from(i) / 8.0;
-        let u = 1.0 - t;
-        let x = u * u * u * x0 + 3.0 * u * u * t * x1 + 3.0 * u * t * t * x2 + t * t * t * x3;
-        let y = u * u * u * y0 + 3.0 * u * u * t * y1 + 3.0 * u * t * t * y2 + t * t * t * y3;
-        path_push((x, y), false);
-      }
+    "\\pIIe@curveto {Dimension}{Dimension}{Dimension}{Dimension}{Dimension}{Dimension}",
+    sub[(x1, y1, x2, y2, x3, y3)] {
+      let c1 = (pic_dim(x1)?, pic_dim(y1)?);
+      let c2 = (pic_dim(x2)?, pic_dim(y2)?);
+      let end = (pic_dim(x3)?, pic_dim(y3)?);
+      path_curveto(c1, c2, end);
       Ok(Vec::new())
     }
   );
-  // `\circlearc[mode]{cx}{cy}{r}{start}{end}` (pict2e.sty:765, `\pIIe@arc`):
-  // mode 0 = a new subpath at the arc's start, 1 = `\lineto` the start,
-  // 2 = the arc continues the current subpath. Angles in degrees.
-  DefPrimitive!("\\circlearc [Number]{}{}{}{}{}", sub[(mode, cx, cy, r, start, end)] {
-    let mode = mode.value_of();
-    let (cx, cy, r) = (pic_coord(cx)?, pic_coord(cy)?, pic_coord(r)?);
-    let start = pic_coord(start)?;
-    let end = pic_coord(end)?;
-    let sweep = end - start;
-    let steps = ((sweep.abs() / 10.0).ceil() as usize).max(1);
-    for i in 0..=steps {
-      let a = (start + sweep * (i as f64) / (steps as f64)).to_radians();
-      let point = (cx + r * a.cos(), cy + r * a.sin());
-      if i == 0 && mode == 2 && path_current().is_some() {
-        continue;
-      }
-      path_push(point, i == 0 && mode == 0);
-    }
+  DefPrimitive!("\\pIIe@arc [Number]{Dimension}{Dimension}{Dimension}{}{}", sub[(mode, cx, cy, r, start, end)] {
+    let centre = (pic_dim(cx)?, pic_dim(cy)?, pic_dim(r)?);
+    path_arc(mode.value_of(), centre, pic_number(start)?, pic_number(end)?);
     Ok(Vec::new())
   });
-  DefPrimitive!("\\closepath", sub[()] {
-    PICT2E_PATH.with(|p| {
-      let mut p = p.borrow_mut();
-      if let Some(sub) = p.last_mut()
-        && let Some(first) = sub.first().copied()
-      {
-        sub.push(first);
-      }
-    });
+  DefPrimitive!("\\pIIe@closepath", sub[()] {
+    path_close();
     Ok(Vec::new())
   });
-  DefMacro!("\\strokepath", sub[()] { path_flush("0") });
-  DefMacro!("\\fillpath", sub[()] { path_flush("1") });
+  DefMacro!("\\pIIe@strokeGraph", sub[()] { path_flush("0") });
+  DefMacro!("\\pIIe@fillGraph", sub[()] { path_flush("1") });
+  // The user level, verbatim pict2e.sty:742-774 (the mode > 0 branch a
+  // driver enables): `\@defaultunitsset` scales a bare number by
+  // `\unitlength` and passes a dimension through. Plain macros, so
+  // curve2e.sty:92-96 can `\let\originalmoveto\moveto` and wrap them for its
+  // macro-pair `(\P)` form; `\lx@pictii@*` are stable aliases of the same.
+  RawTeX!(
+    r"\ifx\undefined\pIIe@tempdima \newdimen\pIIe@tempdima \fi
+\ifx\undefined\pIIe@tempdimb \newdimen\pIIe@tempdimb \fi
+\ifx\undefined\pIIe@tempdimc \newdimen\pIIe@tempdimc \fi
+\ifx\undefined\pIIe@tempdimd \newdimen\pIIe@tempdimd \fi
+\ifx\undefined\pIIe@tempdime \newdimen\pIIe@tempdime \fi
+\ifx\undefined\pIIe@tempdimf \newdimen\pIIe@tempdimf \fi
+\def\moveto(#1,#2){\@killglue
+  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+  \pIIe@moveto{\pIIe@tempdima}{\pIIe@tempdimb}\ignorespaces}
+\def\lineto(#1,#2){\@killglue
+  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+  \pIIe@lineto{\pIIe@tempdima}{\pIIe@tempdimb}\ignorespaces}
+\def\curveto(#1,#2)(#3,#4)(#5,#6){\@killglue
+  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+  \@defaultunitsset\pIIe@tempdimc{#3}\unitlength
+  \@defaultunitsset\pIIe@tempdimd{#4}\unitlength
+  \@defaultunitsset\pIIe@tempdime{#5}\unitlength
+  \@defaultunitsset\pIIe@tempdimf{#6}\unitlength
+  \pIIe@curveto{\pIIe@tempdima}{\pIIe@tempdimb}{\pIIe@tempdimc}{\pIIe@tempdimd}{\pIIe@tempdime}{\pIIe@tempdimf}\ignorespaces}
+\newcommand*\circlearc[6][0]{\@killglue
+  \@defaultunitsset\pIIe@tempdima{#2}\unitlength
+  \@defaultunitsset\pIIe@tempdimb{#3}\unitlength
+  \@defaultunitsset\pIIe@tempdimc{#4}\unitlength
+  \pIIe@arc[#1]{\pIIe@tempdima}{\pIIe@tempdimb}{\pIIe@tempdimc}{#5}{#6}\ignorespaces}
+\def\closepath{\pIIe@closepath}
+\def\strokepath{\pIIe@strokeGraph}
+\def\fillpath{\pIIe@fillGraph}
+\let\lx@pictii@moveto\moveto \let\lx@pictii@lineto\lineto \let\lx@pictii@curveto\curveto"
+  );
+  // pict2e.sty:78-80 arrow-head parameters, :603 `\pIIe@bezier@QtoC`,
+  // :779-791 the line cap/join declarations (pdfTeX driver operators).
+  RawTeX!(
+    r"\newcommand*\pIIe@FAL{1.52}\newcommand*\pIIe@FAW{3.2}\newcommand*\pIIe@CAW{1.5pt}
+\newcommand*\pIIe@bezier@QtoC[3]{\@tempdimc#1\relax \advance\@tempdimc-#2\relax
+  \divide\@tempdimc\thr@@ \advance\@tempdimc #2\relax #3\@tempdimc}
+\ifx\undefined\@arclen \newdimen\@arclen \fi
+\ifx\undefined\@arcrad \newdimen\@arcrad \fi
+\newcommand*\pIIe@linecap@op{J}\newcommand*\pIIe@linejoin@op{j}
+\def\pIIe@linecap{}\def\pIIe@linejoin{}
+\def\buttcap{\edef\pIIe@linecap{ 0 \pIIe@linecap@op}}
+\def\roundcap{\edef\pIIe@linecap{ 1 \pIIe@linecap@op}}
+\def\squarecap{\edef\pIIe@linecap{ 2 \pIIe@linecap@op}}
+\def\miterjoin{\edef\pIIe@linejoin{ 0 \pIIe@linejoin@op}}
+\def\roundjoin{\edef\pIIe@linejoin{ 1 \pIIe@linejoin@op}}
+\def\beveljoin{\edef\pIIe@linejoin{ 2 \pIIe@linejoin@op}}
+\def\pIIe@mode{2}"
+  );
+  // curve2e.sty:273-280 `\@picture` sets `\pict@dimen`/`\pict@offset` for its
+  // grid defaults; the picture environment constructor (sect13.rs) records the
+  // same pairs, so expose them here.
+  DefMacro!(T_CS!("\\pict@dimen"), None, {
+    ExplodeText!(
+      &lookup_value("PICTURE_DIMEN")
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "0,0".into())
+    )
+  });
+  DefMacro!(T_CS!("\\pict@offset"), None, {
+    ExplodeText!(
+      &lookup_value("PICTURE_OFFSET")
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "0,0".into())
+    )
+  });
 });

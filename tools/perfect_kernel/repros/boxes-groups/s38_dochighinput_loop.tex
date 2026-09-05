@@ -1,0 +1,11 @@
+% witness: fontscale/fontscale-code (fontscale-code.tex:25); also scaletextbullet-code,
+%          polyomino, pegmatch, codehigh, liftarm, broydensolve-doc
+% oracle: pdflatex 0 errors (fast, ships the highlighted manual)
+% engines: rust=Fatal:Timeout (2026-09-04)
+% expect: 0 errors; the package source renders as a listing
+% status: RED
+\documentclass{article}
+\usepackage{codehigh}
+\begin{document}
+\dochighinput[language=latex/latex3]{fontscale.sty}
+\end{document}

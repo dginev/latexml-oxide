@@ -139,6 +139,17 @@ pub(crate) fn load() -> Result<()> {
         },
         None => (0.0, 0.0),
       };
+      // curve2e.sty:273-280 `\@picture` records the picture's span and offset
+      // as `\pict@dimen`/`\pict@offset` (in `\unitlength` multiples) for its
+      // `\AutoGrid`/`\GraphGrid` defaults; the pict2e binding reads these.
+      let raw_pair = |data: Option<&DigestedData>| -> String {
+        match data {
+          Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => format!("{},{}", p.x.0, p.y.0),
+          _ => "0,0".to_string(),
+        }
+      };
+      assign_value("PICTURE_DIMEN", raw_pair(args[0].as_ref().map(|d| d.data())), Some(Scope::Global));
+      assign_value("PICTURE_OFFSET", raw_pair(args[1].as_ref().map(|d| d.data())), Some(Scope::Global));
       // Perl Float formats with at least one decimal place
       let fmt_pt = |v: f64| -> String {
         if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }

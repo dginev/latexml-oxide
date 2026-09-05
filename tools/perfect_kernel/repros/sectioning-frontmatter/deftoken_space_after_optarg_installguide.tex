@@ -1,0 +1,21 @@
+% witness: install-latex-guide-zh-cn/install-latex-guide-zh-cn (.tex:111 \lstMakeShortInline)
+% oracle:  lualatex 0 errors (pdflatex 0 errors on the article catcode-probe variant)
+% engines: rust=Fatal(recursion) perl=would-share-root (2026-09-04, b56d)
+% expect:  0 errors; <title> contains "A B" (space preserved), <creator><personname>C
+% status:  RED
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: DefToken (Base_ParameterTypes) reads via read_token() with NO leading-
+%   space skip (tex.web get_r_token §1215 skips blanks). `\lstMakeShortInline [] DefToken`
+%   after the consumed `[opt]` sees a SPACE before {"} and makes the SPACE active instead
+%   of `"`. The active space expands to `\lstinline...`; under raw listings-in-luatexja
+%   (\lst@Init/\lst@InlineJ/\lsthk@PreSet/\lsthk@TextStyle undefined) it runs away opening
+%   unbounded \bgroup, surfacing in \maketitle -> \lx@frontmatterhere ->
+%   \lx@add@frontmatter@now digesting the space in title "A B" -> Fatal:Stomach:Recursion.
+\documentclass[fontset=fandol]{ctexrep}
+\usepackage{listings}
+\lstMakeShortInline [ breaklines = true, basicstyle = \ttfamily,
+                      emphstyle = {}, keywordstyle = {} ] {"}
+\title{A B}\author{C}
+\begin{document}
+\maketitle
+\end{document}

@@ -1,0 +1,16 @@
+% witness: l2tabu/l2tabu (line 100), l2tabu-italian/l2tabuit (line 204)
+% oracle:  lualatex/pdflatex clean (pdfoutput>0 -> TRUE branch; the buggy code is the FALSE branch)
+% engines: rust=1 misdefined:# (2026-09-04, b56d); perl=1 misdefined:# => SHARED
+% expect:  0 errors (should pick the PDF/true branch and never digest the dead false branch)
+% mechanism: scrbase.sty:1424 `\scr@ifpdfoutput` tests `\ifnum\pdfoutput>0`. pdftex.rs:11 (and
+%   Perl pdfTeX.pool.ltxml:23) set \pdfoutput=0 -> \@secondoftwo -> FALSE branch runs, which
+%   has a latent source bug (stray `{Message-ID: \texttt{<#2>}}` after \newcommand{\MID}[2]{<#1>}).
+%   \outputmode=1 (latexml_sty/mod.rs:450) is NEVER consulted because KOMA checks \pdfoutput first.
+% status:  RED (fix is RISKY: pdfoutput global default; see NOTES)
+\documentclass{scrartcl}
+\begin{document}
+\Ifpdfoutput{PDF branch}{%
+  \newcommand{\MID}[2]{<#1>}{Message-ID: \texttt{<#2>}}%
+}
+Done.
+\end{document}

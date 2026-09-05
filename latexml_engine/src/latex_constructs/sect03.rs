@@ -129,8 +129,21 @@ pub(crate) fn load() -> Result<()> {
   // `\RequirePackage{geometry}` (geometry_sty.rs provides the no-op `\geometry`),
   // including the WileyMSP-template binding (the prior witness 2306.02129).
 
-  // ?
-  def_macro_noop("\\@noligs")?;
+  // latex.ltx:15515-15521 `\@noligs`: before every verbatim line (fancyvrb.sty:379
+  // `\FV@GetLine`, `\@verbatim`, `\verb`) the six ligature-prone chars become
+  // active and print themselves. That also NEUTRALISES a document-level active
+  // char inside verbatim — l3doc's `\begin{function}` makes `<` a `\meta`
+  // scanner that reads to `>` (l3doc.dtx:2570-2581); with `\@noligs` a no-op
+  // (Perl latex_constructs.pool.ltxml:426 too) an `<=` in a verbatim example
+  // scanned across lines, executed the body and closed the fallback's group
+  // (interface3 ×5, source3, source2e; pdflatex clean). Guard:
+  // `perfect_kernel_batch56::noligs_neutralises_active_chars_in_verbatim`.
+  DefMacro!("\\verbatim@nolig@list", r"\do\`\do\<\do\>\do\,\do\'\do\-");
+  DefMacro!(
+    "\\do@noligs{}",
+    r"\catcode`#1\active \begingroup\lccode`\~`#1\relax \lowercase{\endgroup\def~{\leavevmode\kern\z@\char`#1}}"
+  );
+  DefMacro!("\\@noligs", r"\let\do\do@noligs \verbatim@nolig@list");
   DefConditional!("\\if@endpe");
   def_macro_noop("\\@doendpe")?;
   DefMacro!("\\@bsphack", "\\relax"); // what else?

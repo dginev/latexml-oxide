@@ -3564,6 +3564,9 @@ mod perfect_kernel_batch40_43 {
   /// grabbed `[`, `u`, `s`; the options body digested raw (`misdefined:#`
   /// storm, `\thetcbcounter` undefined). Witness: atableau/atableau
   /// (1001-cap → 0 together with the stub removal).
+  // `listing only`: the body is C-like text that the default `listing and
+  // text` mode would also execute in real LaTeX (codebox.sty declares its
+  // listings `listing only` for the same reason).
   #[test]
   fn newtcblisting_xparse_leading_optional() {
     let (stderr, xml) = convert(
@@ -3571,7 +3574,7 @@ mod perfect_kernel_batch40_43 {
 \usepackage[skins]{tcolorbox}
 \tcbuselibrary{listings}
 \newcounter{example}
-\NewTCBListing[use counter=example, number within=section]{example}{ O{} s m }{ title={\thetcbcounter}, #1 }
+\NewTCBListing[use counter=example, number within=section]{example}{ O{} s m }{ title={\thetcbcounter}, listing only, #1 }
 \begin{document}
 \begin{example}{tst}
 verbatim_body^here
@@ -12867,13 +12870,17 @@ Tail text survives.
 \moveto(5,5)\curveto(10,20)(30,20)(35,5)\strokepath
 \circlearc{20}{20}{10}{0}{90}\fillpath
 \end{picture}
+\newdimen\SIXR \SIXR=50pt
+\begin{picture}(100,40)\moveto(\SIXR,20)\lineto(0,0)\strokepath\end{picture}
 \end{document}
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
-    // triangle + sampled curve + arc = three polylines
-    assert_eq!(xml.matches("<line ").count(), 3, "{xml}");
+    assert_eq!(xml.matches("<picture").count(), 2, "{xml}");
+    // triangle + sampled curve + arc + the register-coordinate segment
+    assert_eq!(xml.matches("<line ").count(), 4, "{xml}");
+    // FramedSyntax.sty:189 shape: a dimen REGISTER coordinate is not 0
+    assert!(!xml.contains("points=\"0,0 0,0\""), "{xml}");
   }
 
   /// hyperref.sty:3298-3311/3973-3979 storage macros and the :4092-4093
@@ -13115,6 +13122,276 @@ Done.
     }
   }
 
+  /// curve2e.sty raw-loads over pict2e's driver-level path builders: vector
+  /// algebra, `\Arc`, `\VectorARC`, `\Zbox`/`\Pbox`, `\xmultiput`, `\AutoGrid`
+  /// (witness curve2e-manual, 32 undefined-command errors with the old stub).
+  #[test]
+  fn curve2e_raw_load_renders_arcs_and_vectors() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\usepackage{curve2e}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\CopyVect 3,4 to\V \ModOfVect\V to\M Mod=\M.
+\begin{picture}(40,40)
+\Arc(20,20)(30,20){90}
+\VectorARC(20,20)(30,20){60}
+\Zbox(40,0)[l]{40,0}[1]
+\Pbox(0,0)[r]{C}[0.75ex]
+\xmultiput(0,0)(8,0){5}{\circle*{1}}
+\AutoGrid
+\end{picture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Mod=5"), "{xml}");
+    // the arc, the vector arc and the grid all render as lines
+    assert!(xml.matches("<line ").count() >= 3, "{xml}");
+    assert!(xml.matches("<circle").count() >= 5, "{xml}");
+  }
+
+  /// booktabs.sty:53-118 rule machinery for documents that copy the real
+  /// `\midrule` (l2kurz.tex:58-65): `\@BTendrule` closes the `\noalign{`
+  /// that `\ifnum0=`}\fi` opened (witness lshort-german l2kurz, 41 errors).
+  #[test]
+  fn booktabs_rule_machinery_closes_its_noalign() {
+    let tex = r"\documentclass{article}
+\usepackage{array,longtable,tabularx,booktabs}
+\makeatletter
+\def\midrule{\noalign{\ifnum0=`}\fi\penalty\@M
+  \@aboverulesep=\aboverulesep \global\@belowrulesep=\belowrulesep
+  \global\@thisruleclass=\@ne
+  \@ifnextchar[{\@BTrule}{\@BTrule[\lightrulewidth]}}
+\makeatother
+\begin{document}
+\begin{tabular}[t]{rl}
+\toprule A & B \\ \midrule 1 & 2 \\ \bottomrule
+\end{tabular}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    for cell in ["A", "B", "1", "2"] {
+      assert!(xml.contains(&format!(">{cell}<")), "{cell}: {xml}");
+    }
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// magyar.ldf:1882-1898 calls the removed caption3 internal
+  /// `\caption@setdefaultlabelsep` only when `\caption@lsep@default` is
+  /// undefined (witnesses elteikthesis ×3, elteiktdk ×2; RUST-ONLY).
+  #[test]
+  fn caption_lsep_default_keeps_magyar_off_the_removed_internal() {
+    let tex = r"\documentclass{article}
+\usepackage[hungarian]{babel}
+\usepackage{caption}
+\begin{document}
+\begin{figure}
+\centering Test
+\caption{Teszt \'abra}
+\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<caption"), "{xml}");
+    assert!(!xml.contains("ERROR"), "{xml}");
+  }
+
+  /// tcolorbox's `\dispExample` runs its body via `\tcbusetemp` = `\input`
+  /// (tcolorbox.sty:2820), so a mid-body `\ExplSyntaxOn` applies to what
+  /// follows (witness csvsimple-l3; RUST-ONLY: the body was eagerly tokenized).
+  #[test]
+  fn dispexample_body_runs_with_live_catcodes() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{documentation}
+\begin{document}
+\begin{dispExample}
+\ExplSyntaxOn
+\tl_new:N \l_test_tl
+\tl_set:Nn \l_test_tl {LI\csname VE\endcsname}
+\tl_use:N \l_test_tl \gdef\EXECUTED{yes}
+\ExplSyntaxOff
+\end{dispExample}
+\ifdefined\EXECUTED RAN-\else NOT-\fi
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("tl_new"), "{xml}");
+    // the executed body defines a macro the listing display cannot
+    assert!(xml.contains("RAN-"), "{xml}");
+  }
+
+  /// `\tikzexternalize` without shell escape: tikz's `mode=graphics if exists`
+  /// typesets the picture inline with no system-call error (witnesses
+  /// tikzviolinplots 591, causets 106, tilings 80, tikz-feynhand 55; SHARED).
+  #[test]
+  fn tikz_externalize_typesets_inline_without_a_system_call() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{external}
+\tikzexternalize[prefix=ext/]
+\begin{document}
+\begin{tikzpicture}
+\draw (0,0) circle (1);
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<picture") || xml.contains("<svg"), "{xml}");
+  }
+
+  /// codehigh's non-LuaTeX parser is O(n²) on the l3regex VM; a whole package
+  /// source through `\dochighinput` must still finish (fontscale-code and 6
+  /// more manuals timed out; SHARED with Perl, pdflatex fast).
+  #[test]
+  fn codehigh_dochighinput_is_bounded() {
+    let tex = r"\documentclass{article}
+\usepackage{codehigh}
+\begin{document}
+\dochighinput[language=latex/latex3]{fontscale.sty}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("ProvidesExplPackage") || xml.contains("fontscale"),
+      "{xml}"
+    );
+  }
+
+  /// `DefToken` skips blanks before the token being defined (tex.web §1215):
+  /// `\lstMakeShortInline [opts] {"}` must activate `"`, not the space
+  /// (install-latex-guide-zh-cn:111 → a `\maketitle` recursion Fatal; SHARED).
+  #[test]
+  fn deftoken_skips_a_leading_space() {
+    let tex = r#"\documentclass{article}
+\usepackage{listings}
+\lstMakeShortInline [ x = 1 ] {"}
+\newcommand {\foo} {FOO}
+\begin{document}
+SP[\the\catcode`\ ]DQ[\the\catcode`\"] \foo
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("SP[10]DQ[13]"), "{xml}");
+    assert!(xml.contains("FOO"), "{xml}");
+  }
+
+  /// dhucs.sty:44 `\ifx 가가` takes the native-Unicode branch here, whose
+  /// `\dhucs@hu` lives behind LuaTeX/XeTeX probes; the engine-neutral subset
+  /// is supplied after the raw load (kotex-oblivoir manuals; SHARED, pdflatex clean).
+  #[test]
+  fn dhucs_native_branch_defines_the_hangul_skip() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\RequirePackage{dhucs}
+\newdimen\x@hu \x@hu=\dhucs@hu
+\setInterHangulSkip{1pt}
+\makeatother
+\begin{document}
+ok
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ok"), "{xml}");
+  }
+
+  /// tcolorbox listings default to `listing and text`: the body is displayed
+  /// AND executed (tcblistingscore.code.tex:429/:205); `listing only` is not
+  /// (witnesses postit-doc-en/fr, 16 "No shape named" errors; RUST-ONLY).
+  #[test]
+  fn tcblisting_listing_and_text_executes_the_body() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{DemoCode}[1][]{listing options={commentstyle={\itshape}},#1}
+\begin{document}
+\begin{DemoCode}[]
+\begin{tikzpicture}[remember picture]
+  \coordinate (foo-N-W) at (0,0);
+\end{tikzpicture}
+\end{DemoCode}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw (foo-N-W) circle[radius=2pt];
+\end{tikzpicture}
+\begin{DemoCode}[listing only]
+\def\ONLYDISPLAYED{ran}
+\end{DemoCode}
+\ifdefined\ONLYDISPLAYED RAN\else NOTRUN\fi
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.matches("<svg").count() >= 2 || xml.matches("<picture").count() >= 2,
+      "{xml}"
+    );
+    assert!(xml.contains("NOTRUN"), "{xml}");
+  }
+
+  /// beamerbasefont.sty:322-323 `\Tiny`/`\TINY` (font themes use them) and
+  /// caption3.sty:701 `\DeclareCaptionFormat*{name}{code}` consumed whole
+  /// (nostarch.cls:856 left `#1#2#3` in the stream). Both SHARED with Perl.
+  #[test]
+  fn beamer_tiny_sizes_and_starred_caption_format() {
+    let tex = r"\documentclass{beamer}
+\usepackage{caption}
+\DeclareCaptionFormat*{myfmt}{\parbox{5cm}{#1#2#3}}
+\DeclareCaptionFormat{plain2}[short]{#1#2#3\par}
+\begin{document}
+\begin{frame}
+{\Tiny tiny text} {\TINY tinier text} Hello world.
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("tiny text") && xml.contains("tinier text") && xml.contains("Hello world."),
+      "{xml}"
+    );
+    assert!(!xml.contains("#1"), "{xml}");
+  }
+
+  /// latex.ltx:15515-15521 `\@noligs` neutralises an active `<` (l3doc's
+  /// `function` shorthand) inside fancyvrb verbatim (witnesses interface3,
+  /// source3, source2e; SHARED with Perl, pdflatex clean).
+  #[test]
+  fn noligs_neutralises_active_chars_in_verbatim() {
+    let tex = r"\documentclass{article}
+\usepackage{fancyvrb}
+\makeatletter
+\catcode`\<=\active
+\def<#1>{\textit{#1}}
+\makeatother
+\begin{document}
+Meta <arg> outside.
+\begin{Verbatim}
+\dim_compare_p:n { #1 <= #2 }
+next {line}
+\end{Verbatim}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("dim_compare_p:n") && xml.contains("&lt;= #2") || xml.contains("<= #2"),
+      "{xml}"
+    );
+    assert!(xml.contains("After."), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {
@@ -13142,7 +13419,7 @@ Listing test.
     let tex = r"\documentclass{article}
 \usepackage{tcolorbox}
 \tcbuselibrary{listings,xparse}
-\DeclareTCBListing{mycodeaux}{m}{title={Title #1}}
+\DeclareTCBListing{mycodeaux}{m}{title={Title #1},listing only}
 \NewDocumentEnvironment{mycode}{O{} m}
   {\mycodeaux{#2}}
   {\endmycodeaux}
