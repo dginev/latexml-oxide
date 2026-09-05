@@ -14983,4 +14983,22 @@ Second line references \lineref{l1}, offset \lineref[+1]{l1}, \linerefp[+2]{l1},
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Test caption"), "{xml}");
   }
+
+  /// babel-italian ISO compliance unit definition via deferred \AtBeginDocument
+  /// (witness: verifica/example4.tex, example5.tex).
+  #[test]
+  fn babel_italian_iso_compliance_unit() {
+    let tex = r"\documentclass{article}
+\usepackage[italian]{babel}
+\AtBeginDocument{
+  \setISOcompliance
+}
+\begin{document}
+$25\unit{m}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("25"), "{xml}");
+  }
 }

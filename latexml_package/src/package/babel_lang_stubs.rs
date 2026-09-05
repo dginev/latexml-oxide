@@ -91,21 +91,34 @@ fn install_lang_stub_hooks(lang: &str) -> Result<()> {
 }
 
 pub fn load_italian() -> Result<()> {
-  if install_lang_stub("italian")? {
-    return Ok(());
-  }
-  // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`
-  // (verifica.cls:66-70 turns compliance on; `$25\unit{m}$`), :179-180
-  // `\IntelligentComma`/`\NoIntelligentComma` (the math-active `,` for
-  // decimals is not modelled). Witness verifica example1-5.
+  let found = install_lang_stub("italian")?;
+  // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`.
+  // In pdflatex, verifica.cls:66-70 registers its \AtBeginDocument{\@ifpackagewith{babel}{italian}{\setISOcompliance}...}
+  // BEFORE italian.ldf's \AtBeginDocument, so FIFO execution sets \it@ISOcompliance=1
+  // before italian.ldf's hook checks \unless\ifnum\it@ISOcompliance=\z@.
+  // In latexml-oxide, italian.ldf's hook contains parameter tokens (#1) and is routed to
+  // @at@begin@document@rawparam which fires before the L3 begindocument hook containing
+  // the class's hook. Defining \setISOcompliance to activate \unit directly bridges the
+  // store-ordering gap without touching kernel hook internals. Witness: verifica example1-5.
   raw_tex(
-    r"\newcount\it@ISOcompliance \it@ISOcompliance=\z@
-    \providecommand\setISOcompliance{\it@ISOcompliance=\@ne}
+    r"\DeclareRobustCommand*{\bbl@it@unit}[1]{\textormath{\,\textup{#1}}{\,\mathrm{#1}}}%
+    \newcount\it@ISOcompliance \it@ISOcompliance=\z@
+    \def\setISOcompliance{%
+      \it@ISOcompliance=\@ne
+      \@ifpackageloaded{units}{}{%
+        \@ifpackageloaded{siunitx}{}{%
+          \@ifpackageloaded{SIunits}{}{%
+            \let\unit\bbl@it@unit}}}}
     \providecommand\IntelligentComma{}\providecommand\NoIntelligentComma{}
     \AtBeginDocument{\unless\ifnum\it@ISOcompliance=\z@
-      \DeclareRobustCommand*{\bbl@it@unit}[1]{\textormath{\,\textup{#1}}{\,\mathrm{#1}}}%
-      \@ifpackageloaded{units}{}{\@ifpackageloaded{siunitx}{}{\@ifpackageloaded{SIunits}{}{\let\unit\bbl@it@unit}}}\fi}",
+      \@ifpackageloaded{units}{}{%
+        \@ifpackageloaded{siunitx}{}{%
+          \@ifpackageloaded{SIunits}{}{%
+            \let\unit\bbl@it@unit}}}\fi}",
   )?;
+  if found {
+    return Ok(());
+  }
   Ok(())
 }
 // English-family stubs. babel-english.ldf uses `\@namedef{captions
