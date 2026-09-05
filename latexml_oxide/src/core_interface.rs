@@ -1276,19 +1276,20 @@ impl DigestionAPI for Core {
       // exactly that tail at 24.5 GB after a perfectly bounded pass 1.
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
-        document.spill_closed_subtrees(&mut index)?;
+        let t_spill = std::time::Instant::now();
+        let runs_spilled = document.spill_closed_subtrees(&mut index)?;
+        let t_spill_dur = t_spill.elapsed();
         // Self-healing: entries for nodes that build-time discard paths
         // detached without purging pin whole Digested box trees (see
         // sweep_stale_node_boxes). The threshold keeps the sweep rare and
         // the map bounded; the post-spill spine mark is cheap.
         if document.node_boxes.len() > node_boxes_sweep_threshold() {
-          let before = document.node_boxes.len();
+          let t_sweep = std::time::Instant::now();
           document.sweep_stale_node_boxes();
+          let t_sweep_dur = t_sweep.elapsed();
           if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
             eprintln!(
-              "streaming: node_boxes sweep {} -> {}",
-              before,
-              document.node_boxes.len()
+              "streaming: spill took {t_spill_dur:?} (spilled {runs_spilled} runs), sweep took {t_sweep_dur:?}"
             );
           }
         }
