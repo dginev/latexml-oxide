@@ -915,13 +915,28 @@ LoadDefinitions!({
     use Catcode::*;
     skip_spaces()?;
     let mut tokens = Vec::new();
-    while let Some(token) = read_x_token(Some(false), false, None)? {
+    let mut depth = 0;
+    while let Some(token) = read_x_token(Some(false), false, Some(true))? {
       let cc = token.get_catcode();
-      if matches!(cc, SPACE | EOL | COMMENT | CS) {
+      if cc == BEGIN {
+        depth += 1;
+        if depth == 1 {
+          continue;
+        }
+      } else if cc == END {
+        if depth > 0 {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        }
+      } else if depth == 0 && matches!(cc, SPACE | EOL | COMMENT | CS) {
         if matches!(cc, CS) {
           unread_one(token);
         }
-        break
+        break;
+      } else if depth > 0 && matches!(cc, EOL | COMMENT) {
+        break;
       }
       tokens.push(token);
     }

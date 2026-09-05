@@ -15001,4 +15001,24 @@ $25\unit{m}$
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("25"), "{xml}");
   }
+
+  /// \openout, \write, \closeout, then \input within the same run via VFS,
+  /// including filenames formed by protected macros (witness: proof-at-the-end/proof-at-the-end_demo).
+  #[test]
+  fn openout_then_input_same_run() {
+    let tex = r"\documentclass{article}
+\usepackage{xparse}
+\NewDocumentCommand\prefixMacro{m}{#1-vfs}
+\newwrite\testout
+\begin{document}
+\immediate\openout\testout=\prefixMacro{\jobname}out.tex
+\immediate\write\testout{Hello from VFS with protected macro}
+\immediate\closeout\testout
+\input{\prefixMacro{\jobname}out.tex}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello from VFS with protected macro"), "{xml}");
+  }
 }
