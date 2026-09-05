@@ -161,6 +161,114 @@ fn beamer_mode_spec_applies(spec: &str) -> bool {
   !saw_part
 }
 
+/// Halve adjacent `Catcode::PARAM` tokens (`##` -> `#`), mirroring TeX's
+/// `\def` replacement-text scanning when `\beamer@doifinframe` is stored
+/// (beamerbaseframe.sty:527). Single `#` tokens are preserved intact for
+/// backwards compatibility with inline macro definitions in frames.
+/// In real beamer (beamerbaseframe.sty:524-529), the collected frame body is
+/// processed through two nested `\def` levels:
+/// 1. `\loop ... \repeat` defines `\def\iterate{...}` enclosing the body.
+/// 2. `\iterate` executes `\def\beamer@doifinframe{\begin{beamer@frameslide} #1 \end{beamer@frameslide}}`.
+///
+/// Each `\def` level collapses double-PARAM `##` to `#`. Thus `####` in the
+/// source becomes `##` in step 1, and `#` in step 2.
+fn halve_frame_hashes(tokens: Vec<Token>) -> Vec<Token> {
+  fn halve_once(toks: Vec<Token>) -> Vec<Token> {
+    let mut halved = Vec::with_capacity(toks.len());
+    let mut i = 0;
+    while i < toks.len() {
+      let t = toks[i];
+      if t.get_catcode() == Catcode::PARAM {
+        if i + 1 < toks.len() && toks[i + 1].get_catcode() == Catcode::PARAM {
+          // Double PARAM: collapse `##` to `#`
+          halved.push(t);
+          i += 2;
+        } else {
+          // Single PARAM: keep as is for backward compatibility
+          halved.push(t);
+          i += 1;
+        }
+      } else {
+        halved.push(t);
+        i += 1;
+      }
+    }
+    halved
+  }
+
+  // Two \def levels: \loop's \def\iterate and \def\beamer@doifinframe
+  halve_once(halve_once(tokens))
+}
+
+/// Collect raw tokens from the input stream up to the matching `\end{frame}`,
+/// respecting nested `\begin{frame}...\end{frame}` depth.
+fn collect_frame_body() -> Result<(Vec<Token>, Option<Vec<Token>>)> {
+  let end_cs = T_CS!("\\end");
+  let begin_cs = T_CS!("\\begin");
+  let mut body_tokens: Vec<Token> = Vec::new();
+  let mut frame_depth: usize = 1;
+
+  while let Some(tok) = read_token()? {
+    if tok == begin_cs || tok == end_cs {
+      let is_begin = tok == begin_cs;
+      let mut lookahead = Vec::new();
+      let mut matched_frame = false;
+
+      while let Some(space_tok) = read_token()? {
+        if space_tok.get_catcode() == Catcode::SPACE {
+          lookahead.push(space_tok);
+        } else {
+          lookahead.push(space_tok);
+          break;
+        }
+      }
+
+      if let Some(&first_non_space) = lookahead.last()
+        && first_non_space.get_catcode() == Catcode::BEGIN
+      {
+        let mut name = String::new();
+        while let Some(name_tok) = read_token()? {
+          lookahead.push(name_tok);
+          if name_tok.get_catcode() == Catcode::END {
+            if name.trim() == "frame" {
+              matched_frame = true;
+            }
+            break;
+          } else {
+            name.push_str(&name_tok.to_string());
+          }
+        }
+      }
+
+      if matched_frame {
+        if is_begin {
+          frame_depth += 1;
+          body_tokens.push(tok);
+          body_tokens.extend(lookahead);
+        } else {
+          frame_depth -= 1;
+          if frame_depth == 0 {
+            let mut end_tokens = Vec::with_capacity(1 + lookahead.len());
+            end_tokens.push(tok);
+            end_tokens.extend(lookahead);
+            return Ok((body_tokens, Some(end_tokens)));
+          } else {
+            body_tokens.push(tok);
+            body_tokens.extend(lookahead);
+          }
+        }
+      } else {
+        body_tokens.push(tok);
+        body_tokens.extend(lookahead);
+      }
+    } else {
+      body_tokens.push(tok);
+    }
+  }
+
+  Ok((body_tokens, None))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // beamerbasefont.sty:322-323 `\Tiny` (4pt) / `\TINY` (3pt), the two sizes
@@ -292,7 +400,31 @@ LoadDefinitions!({
   DefEnvironment!("{frame}[][]",
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>",
     before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); },
-    after_digest_begin => { unread_one(T_CS!("\\lx@beamer@frame@start")); });
+    after_digest_begin => sub[whatsit] {
+      let is_fragile = whatsit.get_args().iter().flatten().any(|arg| {
+        arg.to_string().contains("fragile")
+      });
+      if !is_fragile {
+        let (body, end_tokens_opt) = collect_frame_body()?;
+        if let Some(end_tokens) = end_tokens_opt {
+          let halved = halve_frame_hashes(body);
+          let mut reinject = Vec::with_capacity(1 + halved.len() + end_tokens.len());
+          reinject.push(T_CS!("\\lx@beamer@frame@start"));
+          reinject.extend(halved);
+          reinject.extend(end_tokens);
+          unread_expansion(Tokens::new(reinject));
+          return Ok(Vec::new());
+        } else if !body.is_empty() {
+          let mut reinject = Vec::with_capacity(1 + body.len());
+          reinject.push(T_CS!("\\lx@beamer@frame@start"));
+          reinject.extend(body);
+          unread_expansion(Tokens::new(reinject));
+          return Ok(Vec::new());
+        }
+      }
+      unread_one(T_CS!("\\lx@beamer@frame@start"));
+      Ok(Vec::new())
+    });
   // Beamer's COMMAND form `\frame<overlays>[<default>][options]{contents}`
   // (beamerbaseframe.sty). DefEnvironment also installs a bare `\frame` CS,
   // but that one opens the subsection and waits for an `\end{frame}` that

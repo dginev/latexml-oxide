@@ -15758,4 +15758,199 @@ $25\unit{m}$
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Hello from VFS with protected macro"), "{xml}");
   }
+
+  fn convert_env_args(tex: &str, extra: &[&str], envs: &[(&str, &str)]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(
+      std::path::Path::new(bin).is_file(),
+      "binary not staged at {bin}"
+    );
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let mut args = vec![
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ];
+    args.extend_from_slice(extra);
+    let mut cmd = std::process::Command::new(bin);
+    cmd.args(&args).current_dir(workdir.path());
+    for (k, v) in envs {
+      cmd.env(k, v);
+    }
+    let output = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
+  /// Spill-gated node_boxes sweep (K8 memory lever): sweeps run after spills
+  /// (runs_spilled > 0) to reclaim stale node_boxes, keeping the map bounded
+  /// without futile full-DOM traversals when nothing spilled.
+  #[test]
+  fn spill_gated_node_boxes_stays_bounded() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\newtcolorbox{cb}{colback=red!5,colframe=red!75!black,title=Boxed}
+\newcount\ct \ct=0
+\begin{document}
+\loop\ifnum\ct<300
+  \ifnum\numexpr\ct/5*5=\ct
+    \section{Section \the\ct}
+  \fi
+  \begin{cb}Box \the\ct\ with some text $x_{\the\ct}$.\end{cb}
+  \advance\ct by 1
+\repeat
+\end{document}
+";
+    let (stderr, xml) = convert_env_args(tex, &["--streaming", "--max-memory=768"], &[(
+      "LXML_TRACE_NODE_BOXES",
+      "1",
+    )]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains("node_boxes sweep"),
+      "expected trace output from spill-gated sweep:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("dropped:"),
+      "expected dropped entries in trace:\n{stderr}"
+    );
+    assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
+  }
+
+  /// Native ctable binding: \ctable with keyvals, captions, tabular/tabularx,
+  /// rule macros (\NN, \FL, \ML, \LL), and footnotes block (\tnote, \tmark).
+  /// Witnesses: proofread/example, arXiv:2011.04706.
+  #[test]
+  fn ctable_native_table_with_caption() {
+    let tex = r"\documentclass{article}
+\usepackage{ctable}
+\begin{document}
+\ctable[
+  botcap,
+  caption=Sample Table with Ctable,
+  label=tab:sample,
+  pos=htbp,
+  width=80mm,
+]{ccc}{
+  \tnote[a]{First footnote.}
+  \tnote[b]{Second footnote.}
+}{
+  \FL
+  Col 1 & Col 2 & Col 3 \ML
+  A\tmark[a] & B & C\tmark[b] \NN
+  D & E & F \LL
+}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Sample Table with Ctable"), "{xml}");
+    assert!(xml.contains("<table"), "{xml}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("First footnote."), "{xml}");
+  }
+
+  /// Beamer frame body parameter halving (\def-collect level halving):
+  /// non-fragile beamer frames collect the body inside \loop ... \def\beamer@doifinframe ... \repeat,
+  /// requiring two levels of parameter-hash halving so that ####1 becomes #1 at definition time.
+  /// Witnesses: beamer-theme-albi/beamer-theme-albi-doc, tuda-ci/DEMO-TUDaBeamer.
+  #[test]
+  fn beamer_frame_hash_halving() {
+    let tex = r"\documentclass{beamer}
+\usepackage{etoolbox}
+\begin{document}
+\begin{frame}{Hash Halving Test}
+  \renewcommand*{\do}[1]{[X ####1 Y]}
+  \docsvlist{a,b,c}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[X a Y][X b Y][X c Y]"), "{xml}");
+  }
+
+  /// mdframed with block-level content (e.g. \printbibliography / \thebibliography)
+  /// mid-subsection followed by sectioning commands:
+  /// mdframed breaks paragraph before opening, chooses logical-block outside floats,
+  /// permits auto-closing so backmatter can place at section level, and auto-closes
+  /// gracefully without error.
+  /// Witness: biblatex-juradiss/biblatex-juradiss.
+  #[test]
+  fn mdframed_block_bibliography_juradiss() {
+    let tex = r"\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\section{A}
+Intro text before the frame.
+\begin{mdframed}
+\begin{thebibliography}{9}\bibitem{x}An entry.\end{thebibliography}
+\end{mdframed}
+\subsection{B}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<bibliography"), "{xml}");
+    assert!(xml.contains("<subsection"), "{xml}");
+    assert!(xml.contains("An entry."), "{xml}");
+  }
+
+  /// mdframed retains support for in-float frames (arXiv 1907.05772) and nested frames
+  /// (arXiv 1712.00062).
+  #[test]
+  fn mdframed_in_float_and_nested() {
+    let tex = r"\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\begin{figure}
+\begin{mdframed}
+Framed float.
+\end{mdframed}
+\end{figure}
+\begin{mdframed}
+\begin{mdframed}
+Nested frame.
+\end{mdframed}
+\end{mdframed}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Framed float."), "{xml}");
+    assert!(xml.contains("Nested frame."), "{xml}");
+  }
+
+  /// gauss.sty `gmatrix` inside outer alignment environments (e.g. `alignat*`):
+  /// opens the amsmath matrix natively without gullet delimited-scan failures,
+  /// with row and column operations closing the inner matrix alignment cleanly.
+  /// Witness: tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex.
+  #[test]
+  fn gauss_gmatrix_in_alignat() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath,gauss}
+\begin{document}
+\begin{alignat*}1
+A=\begin{gmatrix}[p]
+ 1 & 1 \\
+ t & 2t
+\rowops
+ \add[-t]{0}{1}
+\end{gmatrix}&\\
+\end{alignat*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<XMArray"), "{xml}");
+    assert!(
+      xml.contains("←") || xml.contains("&#8592;") || xml.contains("leftarrow"),
+      "{xml}"
+    );
+  }
 }

@@ -57,7 +57,7 @@ LoadDefinitions!({
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Wrap body in `inline-logical-block` (Misc.class container with Para.model body).
+  // Dynamic selection between `logical-block` (Para.class) and `inline-logical-block` (Misc.class):
   //
   // The schema offers three framed-box elements, each satisfying only TWO of
   // the three placements an `mdframed` must support (verified against
@@ -73,35 +73,39 @@ LoadDefinitions!({
   //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓ (Para.class ∈
   //     Para.model), in-float ✗ — Para.class ⊄ float_model.
   //
-  // No single element does all three, and the missing auto-open bridge
-  // (inline-logical-block → para → inline-logical-block, which para_model =
-  // Block.model WOULD admit) is intentionally suppressed by the `($tag ne $kid)`
-  // self-nesting guard in BOTH Perl `Document::computeIndirectModel` (L207) and
-  // our `state::compute_indirect_model` — so adding it would diverge from Perl's
-  // document model. We therefore pick the element that fails the RAREST case:
-  //
-  // History: this was `logical-block` (theorem ✓ + nests ✓) until a fresh sweep
-  // surfaced arXiv:1907.05772 — an `mdframed` inside a `\begin{algorithm}`
-  // float, where Perl is clean (0 err, its `inline-block` is Misc.class) but
-  // `logical-block` (Para.class) tripped `"logical-block" isn't allowed in
-  // <float>` ×3 (Rust-only, Perl=0). mdframed-in-float (framed algorithm/figure
-  // boxes) is far more common than nested frames, so `inline-logical-block`
-  // strictly dominates `logical-block`: it FIXES the float regression and keeps
-  // the theorem-in-mdframed surpass (arXiv:2506.03074, 2402.07712 — beyond Perl,
-  // which errors there). The residual cost is the rare directly-nested-frame
-  // case (1712.00062): inner frame as the FIRST child of an outer frame errors
-  // `"inline-logical-block" isn't allowed in <inline-logical-block>` (any leading
-  // text auto-opens a `para` that then admits the inner frame, so only the
-  // bare-first-child variant is affected). Net: trades a moderate Rust-only
-  // regression (float) for a rare one (bare-nested-frame), maximizing error-free
-  // conversions.
-  //
-  // The template emits `framecolor=` only when the #framecolor property is
-  // set (via the `?#framecolor(...)` guard), so an unset color correctly
-  // omits the attribute rather than emitting `framecolor=''`.
+  // By inspecting `document.is_openable("ltx:logical-block")` at construction time:
+  //   - inside a float (arXiv:1907.05772), `logical-block` is not openable, so we emit
+  //     `inline-logical-block` (in-float ✓);
+  //   - in standard flow or outer frames (arXiv:2506.03074, 2402.07712, 1712.00062),
+  //     `logical-block` is openable, so we emit `logical-block` (theorems ✓, nested frames ✓).
+  // Furthermore, `before_digest` issues `\par` so preceding text paragraph is closed, and
+  // the frame element carries `_autoclose='true'` with `document.maybe_close_element` so that
+  // block-level backmatter (such as `\printbibliography` / `\thebibliography`, biblatex-juradiss)
+  // can auto-close the frame without malformed nesting or missing close errors.
   DefEnvironment!(
     "{mdframed}[]",
-    "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
+    sub[document, _args, props] {
+      let tag = if document.is_openable("ltx:logical-block") {
+        "ltx:logical-block"
+      } else {
+        "ltx:inline-logical-block"
+      };
+      let mut attr = HashMap::default();
+      attr.insert("framed".to_string(), "rectangle".to_string());
+      attr.insert("_autoclose".to_string(), "true".to_string());
+      if let Some(Stored::String(framecolor)) = props.get("framecolor") {
+        attr.insert("framecolor".to_string(), to_string(*framecolor));
+      }
+      document.open_element(tag, Some(attr), None)?;
+      if let Some(Stored::Digested(body)) = props.get("body") {
+        document.absorb(body, None)?;
+      }
+      document.maybe_close_element(tag)?;
+      Ok(())
+    },
+    before_digest => {
+      digest(Tokens!(T_CS!("\\par")))?;
+    },
     properties => sub[_args] {
       let mut props = SymHashMap::default();
       if let Some(font) = lookup_font()
@@ -118,5 +122,6 @@ LoadDefinitions!({
     // open + immediate close, leaving body content in text mode and
     // cascading "Script _/^ can only appear in math mode" on subscripts.
     // Witness 2402.07712 (eqnarray + multiple `$$..$$` in mdframed).
-    mode => "internal_vertical");
+    mode => "internal_vertical"
+  );
 });

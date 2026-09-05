@@ -147,3 +147,75 @@ and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays cl
   - `glossaries-user.tex` (`--streaming --max-memory=2048 --timeout=180`): finished in **68.09s**, exit status 0, output XML 3.57 MB, peak RSS **1.52 GB** (previously crashed with OOM at 4.76 GB or timed out at 778–800s).
   - Guard `spill_gated_node_boxes_stays_bounded`: passed in 17.02s along with all other `perfect_kernel_gemini` tests. Clippy clean, cargo fmt clean.
 
+### 2026-09-05: Task G2 (`ctable.sty`: native `\ctable` binding) complete
+- **Issue**: `proofread/example.tex` failed with 3 errors (`\ctable`, `\FL`, `\LL` undefined) because `ctable_sty.rs` deferred to raw `ctable.sty` via `\AtBeginDocument` when `tikz.sty_loaded` was true, but under `--includestyles` the raw package load did not execute cleanly.
+- **Fix**:
+  - Replaced the raw-load guard in `latexml_package/src/package/ctable_sty.rs` with a complete native implementation.
+  - Implemented `CT` and `suCT` KeyVals (`caption`, `cap`, `label`, `width`, `maxwidth`, `pos`, `botcap`, `topcap`, `star`, `nostar`, `sideways`, `nosideways`, `figure`, `table`, etc.).
+  - Bound table rule macros `\NN` (`\tabularnewline`), `\FL` (`\toprule`), `\ML` (`\NN\midrule`), `\LL` (`\NN\bottomrule`).
+  - Bound footnote macros `\tnote[mark]{text}` and `\tmark[mark]`, plus `\setupctable`.
+  - Implemented `\ctable` macro expanding into `table`/`figure` (or starred/sideways variants) with positioning, centering/ragged alignments, `caption` (top or bottom), `label`, `tabular`/`tabularx` body, and footnotes block.
+- **Guard**: `perfect_kernel_gemini::ctable_native_table_with_caption` in `latexml_oxide/tests/cluster_package_guards.rs`.
+
+### 2026-09-05: Task G3 (beamer frame body: `\def`-collect halving) complete
+- **Root cause in real TeX / Beamer (`beamerbaseframe.sty:524-529`)**:
+  - In real Beamer, frame bodies are executed inside:
+    `\loop ... \def\beamer@doifinframe{\begin{beamer@frameslide} #1 \end{beamer@frameslide}} ... \repeat`
+  - In plain TeX / LaTeX, `\loop #1 \repeat` defines `\def\iterate{#1...}`.
+  - Because `\def\beamer@doifinframe` is inside `\iterate`, `#1` undergoes **two nested `\def` passes**:
+    1. Pass 1 (`\iterate` definition): collapses pairs of `##` → `#` (mapping `####` → `##`).
+    2. Pass 2 (`\beamer@doifinframe` definition): collapses pairs of `##` → `#` (mapping `##` → `#`).
+  - Thus, definitions written with `####1` in real beamer frames (like `beamer-theme-albi-doc` and `DEMO-TUDaBeamer`) become `#1` by the time the frame body digests.
+- **Fix in `latexml_package/src/package/beamer_cls.rs`**:
+  - In `{frame}`'s `after_digest_begin`: check if the frame is `[fragile]`. If fragile, skip body collection and digestion proceeds verbatim.
+  - For non-fragile frames: collect the frame body tokens up to the matching `\end{frame}` (tracking nested `\begin`/`\end` pairs).
+  - Apply parameter halving twice (`halve_once(halve_once(tokens))`), collapsing adjacent `Catcode::PARAM` tokens while preserving isolated single `#` tokens for compatibility with inline latexml macros.
+  - Reinject `\lx@beamer@frame@start`, followed by the halved body tokens and `\end{frame}` via `unread_expansion()`.
+- **Validation**:
+  - Repro `beamer_frame_hashhalving.tex` (`\tikzset{pastille/.style={fill=####1,draw=gray}}`): 0 errors, circle rendered.
+  - Repro `beamer_frame_body_hash_level.tex` (`\renewcommand*{\do}[1]{[X ####1 Y]}`): 0 errors, XML contains `[X a Y][X b Y][X c Y]`.
+  - Witness `beamer-theme-albi/beamer-theme-albi-doc.tex`: `Can't find color named '#1'` and `key '/tikz/#1'` errors completely resolved.
+  - Witness `tuda-ci/DEMO-TUDaBeamer.tex`: `The token "#" should never reach Stomach!` and `Can't find color named 'TUDa-##1'` completely resolved.
+- **Guard**: `perfect_kernel_gemini::beamer_frame_hash_halving` in `latexml_oxide/tests/cluster_package_guards.rs`.
+
+### 2026-09-05: Task G4 (mdframed with block content for biblatex-juradiss) complete
+- **Issue**: `biblatex-juradiss` placed `\printbibliography` inside an `mdframed` followed by `\subsection` (`tools/perfect_kernel/repros/index-bib/mdframed_block_bib_juradiss.tex`). Previously, `mdframed` was wrapped in `<ltx:inline-logical-block _noautoclose='1'>`. When opened mid-paragraph, block-level backmatter (`\thebibliography` / `<ltx:bibliography>`) could not be contained, and `_noautoclose='1'` blocked auto-closing up to `<ltx:section>`, resulting in two errors (`<ltx:section> isn't allowed in <ltx:inline-logical-block>` and `<ltx:bibliography> isn't allowed in <ltx:inline-logical-block>`).
+- **Fix in `latexml_contrib/src/mdframed_sty.rs`**:
+  - Implemented dynamic tag selection in constructor closure:
+    - If `document.is_openable("ltx:logical-block")` is true (standard section/body flow, or nested frames), emit `ltx:logical-block` (Para.class).
+    - If false (inside a float such as `figure`, `table`, or `algorithm`), fallback to `ltx:inline-logical-block` (Misc.class).
+  - Emitted `\par` in `before_digest` to ensure any preceding paragraph text is closed before the frame opens.
+  - Added `_autoclose='true'` attribute and closed with `document.maybe_close_element(tag)?`:
+    - If a block child (like `\thebibliography` or sectioning) auto-closes the frame to attach at section level, the closing tag does not error with "Attempt to close, which isn't open".
+- **Validation**:
+  - Repro `tools/perfect_kernel/repros/index-bib/mdframed_block_bib_juradiss.tex`: 0 errors (was 2 errors).
+  - Preserves all 4 existing witness behaviors:
+    - In-float frames (arXiv 1907.05772): clean.
+    - Nested frames (arXiv 1712.00062): clean.
+    - Theorems in mdframed (arXiv 2506.03074, 2402.07712): clean.
+- **Guards**: `perfect_kernel_gemini::mdframed_block_bibliography_juradiss` and `perfect_kernel_gemini::mdframed_in_float_and_nested` in `latexml_oxide/tests/cluster_package_guards.rs`.
+
+### 2026-09-05: Task G5 (`gauss.sty`: native `gmatrix` alignment binding with row/col ops) complete
+- **Issue**: `tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex` produced 14 errors (`\lx@begin@alignment Attempt to close a group that switched to mode restricted_horizontal...`) when `\begin{gmatrix}[p]` was nested inside an outer alignment (`alignat*`).
+- **Root cause**:
+  - Previously, `\begin{gmatrix}` was defined as a macro reading the unbraced body via `Until:\end`.
+  - When nested inside an outer alignment (such as `alignat*`), `align_group_count()` is 0 at the body's outer level.
+  - While reading tokens during `read_token()`, the outer alignment intercepted `&` and `\\` tokens intended for the inner matrix cells as column delimiters of the outer alignment, causing severe mode leaks and alignment desynchronization.
+- **Fix in `latexml_contrib/src/gauss_sty.rs`**:
+  - Implemented `\gmatrix` natively through standard amsmath matrix environments (`\pmatrix`, `\bmatrix`, etc.) using explicit tokens (`T_CS!`) so that the inner alignment is opened immediately. Outer alignment delimiters are not intercepted because the inner alignment's `has_reading_alignment()` takes precedence.
+  - Track matrix open state via `\lx@gauss@matrix@open` (scoped locally to the `\begin{gmatrix}` group).
+  - In `\rowops` and `\colops`: if `\lx@gauss@matrix@open` is open, close the matrix alignment via `\lx@end@ams@matrix` and mark it closed, then set `\lx@gauss@RC` to `R` or `C`.
+  - In `\endgmatrix`: if `\lx@gauss@matrix@open` is still open (no operations were given), close the matrix alignment via `\lx@end@ams@matrix`.
+  - In `\newmatrix{l}{r}{X}`: define `\Xmatrix` through `\lx@ams@matrix{name=Xmatrix,datameaning=matrix,left=\lx@left{l},right=\lx@right{r}}` and `\endXmatrix` through `\lx@end@ams@matrix`, enabling custom delimiters to integrate seamlessly with the amsmath matrix machinery.
+- **Validation**:
+  - `tools/perfect_kernel/repros/beamer-stubs/gauss_in_alignat.tex`: converts with **0 errors** (was 14 errors), producing the expected `<ltx:XMArray>` and operation annotations.
+  - All 7 control and feature repros convert with **0 errors**:
+    - `gauss_rowops_min.tex`: clean.
+    - `boxes-groups/gauss_colops.tex`: clean.
+    - `boxes-groups/gauss_delims.tex`: clean.
+    - `boxes-groups/gauss_newmatrix.tex`: clean.
+    - `boxes-groups/gauss_rowops.tex`: clean.
+    - `boxes-groups/gauss_starindex.tex`: clean.
+    - `boxes-groups/gauss_gmatrix_measure_loop.tex`: clean.
+- **Guard**: `perfect_kernel_gemini::gauss_gmatrix_in_alignat` in `latexml_oxide/tests/cluster_package_guards.rs` (and existing `perfect_kernel_batch54::gauss_gmatrix_renders_with_operation_lines` passes).
+

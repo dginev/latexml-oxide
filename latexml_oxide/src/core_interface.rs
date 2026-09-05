@@ -609,17 +609,17 @@ fn apply_rewrite_rules(
   Ok(())
 }
 
-/// Stale-entry sweep threshold for `Document::node_boxes` during streaming
-/// pass 1 (default 1,000,000 entries; `LXML_NODE_BOXES_SWEEP=<n>` overrides
-/// it for memory probes — entries are counted, not weighed, and a
-/// picture-dense manual pins ~0.6 MB per entry).
+/// Stale-entry sweep growth threshold for `Document::node_boxes` during streaming
+/// pass 1 when no runs were spilled (default 50,000 entries; `LXML_NODE_BOXES_SWEEP=<n>`
+/// overrides it for memory probes). When runs_spilled > 0, the sweep runs unconditionally
+/// since the post-spill spine is small and mark is cheap.
 fn node_boxes_sweep_threshold() -> usize {
   static THRESHOLD: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
   *THRESHOLD.get_or_init(|| {
     std::env::var("LXML_NODE_BOXES_SWEEP")
       .ok()
       .and_then(|v| v.parse().ok())
-      .unwrap_or(1_000_000)
+      .unwrap_or(50_000)
   })
 }
 
@@ -1281,9 +1281,17 @@ impl DigestionAPI for Core {
         let t_spill_dur = t_spill.elapsed();
         // Self-healing: entries for nodes that build-time discard paths
         // detached without purging pin whole Digested box trees (see
-        // sweep_stale_node_boxes). The threshold keeps the sweep rare and
-        // the map bounded; the post-spill spine mark is cheap.
-        if document.node_boxes.len() > node_boxes_sweep_threshold() {
+        // sweep_stale_node_boxes). When runs are spilled, the post-spill
+        // spine mark is cheap and drops detached nodes immediately.
+        // Otherwise, rate-limit sweeps by node_boxes growth threshold
+        // to avoid futile full-DOM traversals on live trees.
+        let growth = document
+          .node_boxes
+          .len()
+          .saturating_sub(document.last_swept_node_boxes_len);
+        let should_sweep = (runs_spilled > 0 && !document.node_boxes.is_empty())
+          || growth >= node_boxes_sweep_threshold();
+        if should_sweep {
           let t_sweep = std::time::Instant::now();
           document.sweep_stale_node_boxes();
           let t_sweep_dur = t_sweep.elapsed();
