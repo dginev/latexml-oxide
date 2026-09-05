@@ -143,6 +143,7 @@ semantics, side-notes …) are cataloged in
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
+| [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K8 with source of truth, abstraction, landing plan, guards, order |
 | [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
 | [HANDOFF_2026-09-01.md](HANDOFF_2026-09-01.md) | Session handoff notes for Wave 3 investigation restart |
 | [HANDOFF_2026-09-03.md](HANDOFF_2026-09-03.md) | Advisory notes & Batch-54q handoff: digestion timing, VFS, alignment, SymHashMap and WASM synergy |

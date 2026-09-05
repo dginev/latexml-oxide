@@ -10,6 +10,8 @@ here is the set of mechanisms that recur **regardless of package**, each
 with its tex.web / latex.ltx model, the Rust sites, the witnesses, and a
 fix shape.
 
+**2026-09-05:** the user approved a generalized kernel-capability program built on these themes — landing plans, abstractions and order live in [`KERNEL_CAPABILITIES.md`](KERNEL_CAPABILITIES.md) (K2 = theme 1, K3/K7 = theme 6, K5 = theme 4, K6 = theme 5).
+
 Ranking is by corpus mass capped, not by ease. Themes 1 and 3 are the two
 that move the curve by tens of points; 1 is a precondition for much of
 3's benefit; 2 and 4 are pursued as *policy* on every fix; 5 is one
