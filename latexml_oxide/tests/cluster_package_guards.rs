@@ -16071,4 +16071,29 @@ x = 1
     assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:minted]").count(), 1, "{xml}");
   }
+
+  /// comment.sty self-terminating environments hand \end{comment} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn comment_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{comment}
+\AfterEndEnvironment{comment}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{comment}
+ignored
+\end{comment} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:comment]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:comment]").count(), 1, "{xml}");
+  }
 }
