@@ -15420,3 +15420,107 @@ Table hooks ok.
     assert!(xml.contains("Table hooks ok."), "{xml}");
   }
 }
+
+mod perfect_kernel_gemini {
+  use super::perfect_kernel_batch46::{convert, error_count};
+
+  /// lineno.sty manual surface (witness lineno/ulineno): \linenumberwidth,
+  /// \bframesep, \bframerule, \linerefp, \linerefr, and bare \internallinenumbers
+  /// inside \parbox.
+  #[test]
+  fn lineno_manual_surface() {
+    let tex = r"\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+\setlength\linenumberwidth{1cm}
+\setlength\bframesep{10pt}
+\setlength\bframerule{1pt}
+\linenumbers
+First line.\linelabel{l1}
+Second line references \lineref{l1}, offset \lineref[+1]{l1}, \linerefp[+2]{l1}, \linerefr[+3]{l1}.
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+  \internallinenumbers \resetlinenumber[13]
+  Internal linenumbers in a box.
+}}
+\end{center}
+\begin{bframe}Framed text.\end{bframe}
+\begin{internallinenumbers}Environment block.\end{internallinenumbers}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("First line.") && xml.contains("Internal linenumbers in a box."),
+      "{xml}"
+    );
+  }
+
+  /// caption hook surface for class and extension package patches
+  /// (witness shtthesis/shtthesis-user-guide via raw bicaption.sty):
+  /// \caption@beginhook, \caption@endhook, \caption@LT@setup, \caption@dblarg,
+  /// \captionsetup[type][subtype], and faithful \caption@ifundefined.
+  #[test]
+  fn caption_hook_surface_for_class_patches() {
+    let tex = r"\documentclass{article}
+\usepackage{caption}
+\makeatletter
+\g@addto@macro\caption@beginhook{\def\hook@ran{1}}
+\g@addto@macro\caption@endhook{\def\hook@ended{1}}
+\g@addto@macro\caption@LT@setup{\relax}
+\caption@ifundefined\undefined@cmd{\def\undef@branch{1}}{\def\undef@branch{0}}
+\caption@ifundefined\caption@beginhook{\def\def@branch{0}}{\def\def@branch{1}}
+\caption@dblarg{\def\test@dblarg[#1]#2{#1:#2}}
+\test@dblarg{My Title}
+\captionsetup[figure][bi-second]{name=Figure}
+\captionsetup*[table][bi-second]{name=Table}
+\makeatother
+\begin{document}
+\begin{figure}
+  \caption{Test caption}
+\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Test caption"), "{xml}");
+  }
+
+  /// babel-italian ISO compliance unit definition via deferred \AtBeginDocument
+  /// (witness: verifica/example4.tex, example5.tex).
+  #[test]
+  fn babel_italian_iso_compliance_unit() {
+    let tex = r"\documentclass{article}
+\usepackage[italian]{babel}
+\AtBeginDocument{
+  \setISOcompliance
+}
+\begin{document}
+$25\unit{m}$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("25"), "{xml}");
+  }
+
+  /// \openout, \write, \closeout, then \input within the same run via VFS,
+  /// including filenames formed by protected macros (witness: proof-at-the-end/proof-at-the-end_demo).
+  #[test]
+  fn openout_then_input_same_run() {
+    let tex = r"\documentclass{article}
+\usepackage{xparse}
+\NewDocumentCommand\prefixMacro{m}{#1-vfs}
+\newwrite\testout
+\begin{document}
+\immediate\openout\testout=\prefixMacro{\jobname}out.tex
+\immediate\write\testout{Hello from VFS with protected macro}
+\immediate\closeout\testout
+\input{\prefixMacro{\jobname}out.tex}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello from VFS with protected macro"), "{xml}");
+  }
+}

@@ -1062,6 +1062,8 @@ LoadDefinitions!({
   // `\@title`/`\@author`); hypdoc.sty:80 appends to it with
   // `\g@addto@macro`, which requires the target to exist.
   DefMacro!("\\Hy@UseMaketitleInfos", "");
+  DefMacro!("\\Hy@SaveLastskip", "");
+  DefMacro!("\\Hy@RestoreLastskip", "");
 
   //======================================================================
   // 4.2 Utility macros

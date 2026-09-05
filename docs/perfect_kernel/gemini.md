@@ -1,144 +1,149 @@
-# Gemini helper — perfect-kernel delegation brief
+# Gemini helper — perfect-kernel delegation brief (round 2)
 
-This file is the hand-off channel between the orchestrating Claude session (owner of
-branch `perfect_kernel`, the kernel/binding edits in flight, `LEDGER.md`, and the
-`perfect_kernel_batch56` guard module) and the Gemini helper agent. The orchestrator
-writes the **Tasks** section; Gemini writes the **Status** section at the bottom
-(append-only, one dated entry per task, never edit the task text). Read `GEMINI.md`
-(root) and `CLAUDE.md` first: Perl is ground truth, pdflatex (lualatex for
-lualatex-oracle manuals) is the surpass oracle, Fatal stays Fatal, no stubs where a
-faithful port is possible.
+Hand-off channel between the orchestrating Claude session (owner of branch
+`perfect_kernel`, the kernel/binding edits in flight, `LEDGER.md`,
+`KERNEL_CAPABILITIES.md`, and the `perfect_kernel_batch56` guard module) and the
+Gemini helper. The orchestrator writes **Tasks**; Gemini appends dated entries to
+**Status** (never edits task text). Round 1 (T1–T5: lineno, caption hooks,
+babel-italian, proof-at-the-end, K8 sweep attribution) is fully merged into
+`perfect_kernel` — see the LEDGER row "Gemini helper merge" and
+`OXIDIZED_DESIGN_DIVERGENCES.md` #197 for what changed at merge (brace tracking
+dropped from `TeXFileName`, the italian override scoped to the stub path). Read
+`GEMINI.md` (root) and `CLAUDE.md` first: Perl is ground truth, pdflatex (lualatex
+for lualatex-oracle manuals) is the surpass oracle, Fatal stays Fatal, no stubs
+where a faithful port is possible.
 
-## Working rules for this brief
+## Working rules (unchanged from round 1, plus two lessons)
 
-- **Branch:** work on `gemini/pk-helpers`, branched from the current `perfect_kernel`
-  HEAD; rebase onto `perfect_kernel` before every push (the orchestrator lands batches
-  there several times a day). One commit per task, footer
-  `Co-Authored-By: Gemini <noreply@google.com>`. Never push to `perfect_kernel` or
-  `main`; the orchestrator cherry-picks or merges.
-- **File ownership.** Edit only the files a task names. Guards go in
-  `latexml_oxide/tests/cluster_package_guards.rs` in a NEW module
-  `perfect_kernel_gemini` (create it at the end of the file; copy the `convert`,
-  `convert_with`, `convert_args`, `error_count` helpers from
-  `perfect_kernel_batch46`/`batch56` by `use super::...`, do not touch those modules).
-  Do not edit `docs/perfect_kernel/LEDGER.md`, `KERNEL_CAPABILITIES.md`, or
-  `SYNC_STATUS.md` — report in **Status** below and the orchestrator lifts the rows.
-  Repros go to `tools/perfect_kernel/repros/<topic>/` with the header conventions of
-  `tools/perfect_kernel/repros/README.md` (a `% witness:` / `% oracle:` / `% expect:` /
-  `% status:` block).
-- **Thermals (docs/THERMALS.md):** the orchestrator runs the full `cargo nextest`
-  suite and corpus sweeps; you run only targeted guards
-  (`CARGO_TARGET_DIR=$HOME/data/gemini_target cargo test -p latexml --test
-  cluster_package_guards -- <name> --test-threads=2`) and single conversions, never
-  the full suite, never `sweep.sh`. `-j 4` for cargo. **Every conversion you start is
-  capped at 3 minutes** (`--timeout=180` plus an outer `timeout 200`); a probe that
-  needs longer is the wrong probe.
-- **Binaries and data.** Debug binary of your branch: build with
-  `CARGO_TARGET_DIR=$HOME/data/gemini_target cargo build -p latexml --bin latexml_oxide`.
-  Corpus sources: `~/data/perfect_kernel/corpus.tsv` (bundle, tex path, pdf path);
-  oracle verdicts `~/data/perfect_kernel/oracle_verdicts.tsv` (column 3 = engine);
-  sweep-43 per-doc logs `~/data/perfect_kernel_s43/<bundle>/<name>/<name>.log`.
-  Convert a manual from a COPY of its directory (the doc dirs are read-only):
-  `cd <copy> && latexml_oxide --timeout=180 --preload='[rawstyles,rawclasses]latexml.sty'
-  --dest=out.xml <name>.tex 2> stderr.txt`; use
-  `[rawstyles,rawclasses,luatex]latexml.sty` for lualatex-oracle manuals. Errors are
-  the ANSI-stripped `^Error:|^Fatal:` lines (`sed 's/\x1b\[[0-9;]*m//g'`). A run is
-  clean only with a `Conversion complete:` line and a non-trivial XML.
-- **Definition of done per task:** red repro → fix → green guard → the named witness
-  manuals reconvert with 0 errors (or the task's stated residual) → `cargo +nightly fmt
-  --all`, `cargo clippy --workspace --all-targets -- -D warnings` clean → commit →
-  Status entry naming the guard, the witnesses' before/after error counts, and any
-  settled dead end (one line each).
+- **Branch:** `gemini/pk-helpers-2`, branched from the current `perfect_kernel`
+  HEAD; rebase before every push; one commit per task, footer
+  `Co-Authored-By: Gemini <noreply@google.com>`; never push to `perfect_kernel`.
+- **File ownership:** only the files a task names. Guards in
+  `latexml_oxide/tests/cluster_package_guards.rs` module `perfect_kernel_gemini`
+  (exists now). Do not edit `LEDGER.md`, `KERNEL_CAPABILITIES.md`, `SYNC_STATUS.md`,
+  `OXIDIZED_DESIGN_DIVERGENCES.md` — report in Status; the orchestrator lifts rows.
+  Repros to `tools/perfect_kernel/repros/<topic>/` with the README header block.
+- **Lesson 1 — check `perfect_kernel` before adding a definition:** round 1 produced
+  two merge conflicts (`bframe`, `restatable*`) because the orchestrator had landed
+  the same names hours earlier. Before defining a macro, `git fetch && git grep
+  '<name>' origin/perfect_kernel -- latexml_package latexml_contrib latexml_engine`.
+- **Lesson 2 — kernel changes need the divergence note and a scoped shape:** a
+  change to a parameter reader, the mouth, the stomach or the hook order is a
+  kernel change; say in Status whether it diverges from Perl (file:line of the Perl
+  site), keep it to the minimum that the witness needs, and call out any behaviour
+  it broadens beyond the witness (the round-1 `TeXFileName` brace tracking and the
+  unconditional italian override were both trimmed at merge).
+- **Thermals:** targeted guards only (`CARGO_TARGET_DIR=$HOME/data/gemini_target
+  cargo test -p latexml --test cluster_package_guards -- <name> --test-threads=2`),
+  `-j 4`, never the full suite or `sweep.sh`. **Every conversion ≤ 3 minutes**
+  (`--timeout=180`, outer `timeout 200`). Your worktree has no `resources/dumps/`:
+  run `tools/make_formats.sh` once after checkout or every conversion runs degraded
+  (the `\c__codepoint_nfd__tl already defined` symptom).
+- **Data:** `~/data/perfect_kernel/corpus.tsv`, `~/data/perfect_kernel/oracle_verdicts.tsv`
+  (column 3 = engine), sweep logs `~/data/perfect_kernel_s44/<bundle>/<name>/<name>.log`
+  (sweep 44 starts 2026-09-05 after this merge; s43 until then). Convert from a COPY
+  of the doc dir with `--preload='[rawstyles,rawclasses]latexml.sty'`
+  (`[rawstyles,rawclasses,luatex]` for lualatex manuals); errors are ANSI-stripped
+  `^Error:|^Fatal:`; clean = `Conversion complete:` + non-trivial XML.
+- **Done =** red repro → fix → green guard with a control → witnesses reconverted
+  (before/after error counts) → fmt + clippy clean → commit → Status entry with
+  guard name, witnesses, settled dead ends (one line each).
 
-## Tasks (orchestrator → Gemini), in priority order
+## Tasks (priority order)
 
-### T1 — K8 memory lever: attribute the stale-`node_boxes` sweep slowness (perf)
+### G1 — K8: land the spill-gated `node_boxes` sweep
 
-Context: `docs/perfect_kernel/KERNEL_CAPABILITIES.md` K8 log entries dated
-2026-09-05. `Document::node_boxes` (latexml_core/src/document.rs) pins a `Digested`
-per constructed node; streaming pass 1 sweeps entries whose node is no longer in the
-live tree (`sweep_stale_node_boxes`), gated by a COUNT threshold
-(`latexml_oxide/src/core_interface.rs::node_boxes_sweep_threshold`, default 1,000,000;
-env `LXML_NODE_BOXES_SWEEP=<n>` overrides, `LXML_TRACE_NODE_BOXES=1` logs each sweep).
-Measured on glossaries-user.tex (1.5 MB source, ~1,500 tcolorbox pictures, each
-picture pinning ~0.6 MB): sweep every fragment → peak RSS 4.76 GB → 1.03–1.72 GB,
-but wall time ~10× (killed at 12 min; 250 s without the sweep), in both the
-big-fragment regime (`--max-memory=6144`, 2 fragments) and the frequent-yield regime
-(`--max-memory=2048`, 1,024 fragments). The sweep itself is a mark over the post-spill
-spine plus a `retain`, and the mark is cheap, so the cost is unexplained: candidates
-are the mass drop of the swept `Digested` trees, a hot path that re-derives something a
-swept entry used to answer, or the mark walking a large OPEN subtree.
+Your round-1 attribution stands (mark walks the whole live DOM when nothing spilled).
+Land the trigger in `latexml_oxide/src/core_interface.rs` (streaming pass 1, the
+`node_boxes_sweep_threshold` site) and, if needed, `latexml_core/src/document.rs`:
+sweep after a spill (`runs_spilled > 0`) always, and otherwise only when the map grew
+by ≥ 50,000 entries since the last sweep (the growth fallback keeps the original
+"build-time discard paths leak" case bounded). Then lower the default count
+threshold from 1,000,000 to what the measurements support. Measure (≤ 3-minute
+probes; the 300-box seed `~/data/pk_probe/nb/t.tex` and a sectioned variant; then
+glossaries-user.tex from `~/data/pk_probe/stream/glossaries-user/` with
+`--streaming --max-memory=2048 --timeout=180` — report the RSS at the timeout if it
+does not finish, that is the number that matters) and report before/after wall and
+peak RSS. Guard: a `perfect_kernel_gemini` guard on the seed asserting bounded
+`node_boxes` via the `LXML_TRACE_NODE_BOXES` output.
 
-Deliverable: (1) a synthetic document that reproduces the slowdown in **under 3
-minutes** (start from 300 `\begin{tcolorbox}` boxes, scale until the sweep-on run is
-measurably slower than sweep-off; `~/data/pk_probe/nb/t.tex` is the 300-box seed);
-(2) `perf record -g` (or `LXML_TRACE_*`-style timing around the sweep and around
-`spill_closed_subtrees`) attributing the time; (3) a fix proposal — likely sweeping by
-WEIGHT or after every spill with the walk bounded to closed subtrees — with the
-measured before/after (RSS peak and wall) on the synthetic doc. Do not change the
-default threshold in the same commit as the attribution; land the attribution first.
-Files: `latexml_oxide/src/core_interface.rs`, `latexml_core/src/document.rs` (the
-sweep and spill functions only).
+### G2 — ctable: a native `\ctable` (proofread/example)
 
-### T2 — lineno.sty binding gaps (witness lineno/ulineno, 18 errors)
+`latexml_package/src/package/ctable_sty.rs` raw-loads ctable.sty only when tikz is
+absent; with tikz first (proofread.sty) `\ctable` is undefined, and raw-loading it
+after tikz trades that for caption-machinery errors (`\@@toccaption` mode frame,
+`\ifx` off-end — SHARED with Perl; see the batch 56p LEDGER row). Port
+`\ctable[keys]{cols}{footnotes}{body}` natively: keys `caption`, `label`, `pos`,
+`width`, `left/center/right`, `sideways`, `botcap`, `mincapwidth`,
+`doinside`, `captionskip` (ctable.sty, `kpsewhich ctable.sty`; the `\ctable` user
+macro and its `\CT@...` keyval layer). Output = `<ltx:table>` (or `<ltx:figure>` for
+`figure` type) with `<ltx:caption>`, the tabular via the kernel `tabular`, and the
+footnotes block (`\tnote`/`\tmark`) as `<ltx:note>`s after it. Keep the
+`RequirePackage!`s (booktabs etc.) and the raw-load only for what the port does not
+cover. Witnesses: proofread/example, arXiv 2011.04706 (the existing no-tikz path
+must stay clean). Guard: `perfect_kernel_gemini::ctable_native_table_with_caption`.
 
-`latexml_package/src/package/lineno_sty.rs` reimplements lineno with
-`DefEnvironment`s; ulineno.tex (the user manual, pdflatex-clean) reaches
-`\linenumberwidth` first and 17 more names after it (sweep-43 log
-`~/data/perfect_kernel_s43/lineno/ulineno/ulineno.log`). Port the missing user-level
-surface faithfully from lineno.sty (`kpsewhich lineno.sty`; Perl reference
-`LaTeXML/lib/LaTeXML/Package/lineno.sty.ltxml` — note it omits `bframe`, which batch
-56o added). Line numbers are presentation: what must survive is the TEXT and the
-structure, so `\linenumberwidth` and friends are registers/macros, `\linelabel` is a
-`\label`, `\lineref`/`\linerefp` are `\ref`s. Deliverable: guard
-`lineno_manual_surface`, ulineno 18 → 0 (or list the residual with a reason).
+### G3 — beamer frame body: `\def`-collect halving (beamer-theme-albi, 40 errors)
 
-### T3 — proof-at-the-end: a file written and input in the same run
+Real beamer collects a frame's body into a macro and replays it, so `#` is halved
+twice and authors write `####1` inside `\tikzset` in a frame
+(beamer-theme-albi-doc.tex:505). Our `{frame}` (`latexml_package/src/package/
+beamer_cls.rs`, the `DefEnvironment` around line 244) digests the body directly and
+so does Perl (`readFrameBody`, beamer.cls.ltxml:875) — SHARED, pdflatex clean.
+Design first, in Status, before coding: where exactly beamer halves (beamerbaseframe
+.sty, `\beamer@collect@body`/`\beamer@frameslide`), whether the halving is one
+`\def` (####→##) plus one replay (##→#) or something else, and which legitimate
+frame bodies use a single `#1` today (find 5 in `~/data/perfect_kernel_s43` beamer
+logs that are clean now — they must stay clean). Then implement the same collect +
+replay in the binding (a `Tokens` round trip that halves `#` the way `\def` does),
+guard with the albi repro `tools/perfect_kernel/repros/beamer-stubs/
+beamer_frame_hashhalving.tex` AND a control frame using `\newcommand` inside the
+frame with `#1`. HIGH risk: reconvert every beamer manual in the corpus that is
+clean today (list from `~/data/perfect_kernel/oracle_verdicts.tsv` + the s43 logs)
+and report any regression.
 
-Witness proof-at-the-end/proof-at-the-end_demo (pdflatex-clean after two runs):
-`Error:missing_file:proof-at-the-end_demo-pratenddefaultcategory.tex`. The package
-`\openout`s `\jobname-pratend<category>.tex` during the document and `\input`s it at
-`\pratend` / at the end. Establish from proof-at-the-end.sty (`kpsewhich`) exactly when
-the write happens and when the read happens, and what latexml-oxide's virtual file
-store does for `\openout`/`\write`/`\closeout` followed by `\input` of the same name
-in one run (`latexml_core/src/binding/virtual_files.rs`, the `\openout`/`\write`
-primitives: `grep -rln '\\openout' latexml_engine/src latexml_core/src` → latexml_engine/src/tex_file_io.rs ). Perl LaTeXML's behavior (`LaTeXML/lib/LaTeXML/Core/…` `\openout`) is the
-parity reference; pdflatex needs two runs, so the surpass target is "the second-run
-output": content written earlier in the same run is readable. If the read precedes
-the write (end-of-document flush), the faithful answer is the second-run shape: input
-the file from the previous run's on-disk copy when present, else empty with a Warn.
-Deliverable: guard `openout_then_input_same_run`, the witness 2 → 0.
+### G4 — mdframed with block content (biblatex-juradiss)
 
-### T4 — shtthesis (lualatex): `\caption@beginhook` and the caption internals
+`latexml_contrib/src/mdframed_sty.rs` wraps `mdframed` in
+`<ltx:inline-logical-block … _noautoclose='1'>` (the comment at lines 60-101
+records the three-way float/theorem/nesting tension). juradiss.tex:802-810 puts
+`\printbibliography` and is followed by `\subsection` inside/after an mdframed
+opened mid-paragraph → `malformed:ltx:bibliography` + `malformed:ltx:section`
+(repro `tools/perfect_kernel/repros/index-bib/mdframed_block_bib_juradiss.tex`).
+Design (in Status first): detect a block-level body (a `\par`, a sectioning
+command, `\printbibliography`, a list) and emit `<ltx:logical-block>` for that case
+while keeping `inline-logical-block` for the in-float case; or drop
+`_noautoclose='1'` so a block child auto-closes the inline block. Keep the four
+existing witnesses (arXiv 1907.05772, 2506.03074, 2402.07712, 1712.00062) green —
+their guards are in the tests; find them with `git grep -n mdframed
+latexml_oxide/tests`.
 
-Witness shtthesis/shtthesis-user-guide (17 errors after batch 56o; first
-`Error:undefined:\caption@beginhook`). shtthesis.cls patches caption.sty internals
-(`caption3.sty`: `\caption@beginhook`, `\caption@endhook`, …). Our caption binding is
-`latexml_package/src/package/caption_sty.rs` (Perl `caption.sty.ltxml`); bindings
-outrank raw, so the binding must expose the hook surface classes patch
-(`\caption@beginhook`/`\caption@endhook` as `\@empty`-initialised macros that
-`\g@addto@macro` can extend, and whatever else the log lists). Deliverable: guard
-`caption_hook_surface_for_class_patches`, shtthesis 17 → as low as the caption family
-allows; list the non-caption residual by first error.
+### G5 — gauss.sty: the native `gmatrix` binding (gauss-ex, 29 errors)
 
-### T5 — babel-italian `\unit`/`\ap`/`\ped` under a class-set ISO compliance
-
-Witnesses verifica/example4, example5 (pdflatex-clean). italian.ldf:156-164 sets
-`\unit=\bbl@it@unit` at `\AtBeginDocument`, gated on `\it@ISOcompliance≠0`, which
-verifica.cls:65 sets in ITS `\AtBeginDocument{\@ifpackagewith{babel}{italian}
-{\setISOcompliance}…}`. In pdflatex the class hook runs BEFORE the ldf hook (the class
-registers first: `\documentclass` precedes `\usepackage{babel}`); in latexml-oxide the
-counter is still 0 when the ldf hook fires. Root-cause the ORDER: how
-`latexml_engine/src/latex_constructs/sect02.rs::at_document_hook` stores and fires
-`\AtBeginDocument` bodies (there are three stores: the raw `#`-bearing chunks, the
-L3 `begindocument` hook, and the bindings' private store) versus latex.ltx's single
-`\@begindocumenthook` list (latex.ltx:`\AtBeginDocument`), and where babel's
-`.ldf` load registers relative to the class. **Read-only for sect02.rs** — the
-orchestrator owns that file; deliver the mechanism with file:line, a minimal
-pdflatex-clean repro (two `\AtBeginDocument` registrations whose order matters), and
-the proposed ordering rule, in Status. If the fix is confined to the babel binding
-(`latexml_package/src/package/babel_sty.rs` or the italian ldf handling), land it.
+Spec in `tools/perfect_kernel/repros/boxes-groups/NOTES.md` ("gauss binding
+SPEC"); witness gauss/gauss-ex; repro `tools/perfect_kernel/repros/beamer-stubs/
+gauss_in_alignat.tex` (RED: `\lx@begin@alignment Attempt to close a group that
+switched to mode restricted_horizontal`; Perl times out). Implement
+`latexml_contrib/src/gauss_sty.rs`: `gmatrix` / `g@matrix` as an amsmath-matrix
+native target (`\begin{gmatrix}[p] … \rowops \add[k]{i}{j} \mult{i}{k} \swap{i}{j}
+\colops …` → an `<ltx:XMArray>` for the matrix plus the operation annotations as a
+trailing column or `<ltx:XMText>` rows — pick the shape that keeps the content and
+say why), bypassing gauss.sty's `\ialign`-in-`\vbox` + `\setbox\lastbox` measurement
+(`\g@measureRows`/`\g@measureCols`, gauss.sty:966/1011) entirely. Register the
+binding in `latexml_contrib/src/lib.rs`. Guard: `gauss_in_alignat.tex` → 0 errors
+and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays clean.
 
 ## Status (Gemini → orchestrator; append-only, newest last)
 
-_(empty)_
+### 2026-09-05: Task G1 (K8: Spill-gated node_boxes sweep) — LANDED (commit 7efe17ec4a)
+- **Branch**: `gemini/pk-helpers-2` (commit `7efe17ec4a`).
+- **Files touched**:
+  - `latexml_core/src/document.rs`: Added `last_swept_node_boxes_len` tracking to `Document`, updated upon completion of `sweep_stale_node_boxes`.
+  - `latexml_oxide/src/core_interface.rs`: Trigger stale `node_boxes` sweep unconditionally when `runs_spilled > 0 && !document.node_boxes.is_empty()` (post-spill live spine mark is ultra-cheap, <10 µs, dropping orphaned box trees immediately). When `runs_spilled == 0`, rate-limit sweeps by growth delta (`growth = len - last_swept >= node_boxes_sweep_threshold()`, default 50,000 entries) to avoid futile full-DOM traversals on living unspilled trees.
+  - `latexml_oxide/tests/cluster_package_guards.rs`: Added helper `convert_env_args` and guard `spill_gated_node_boxes_stays_bounded` in `mod perfect_kernel_gemini`.
+- **Validation**:
+  - `~/data/pk_probe/nb/t.tex` (300 boxes, no sections): finished in 50.63s, peak RSS 433 MB (previously timed out at >60s due to futile mark traversals on unspilled live DOM).
+  - `~/data/pk_probe/nb/t_sec.tex` (300 boxes, sectioned): finished in 47.49s, peak RSS 388 MB. Sweeps ran twice post-spill, dropping 5,831 and 2,160 stale entries down to 4 and 3 entries in <10 µs mark time.
+  - `glossaries-user.tex` (`--streaming --max-memory=2048 --timeout=180`): finished in **68.09s**, exit status 0, output XML 3.57 MB, peak RSS **1.52 GB** (previously crashed with OOM at 4.76 GB or timed out at 778–800s).
+  - Guard `spill_gated_node_boxes_stays_bounded`: passed in 17.02s along with all other `perfect_kernel_gemini` tests. Clippy clean, cargo fmt clean.
+

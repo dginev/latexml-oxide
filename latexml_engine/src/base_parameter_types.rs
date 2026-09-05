@@ -915,7 +915,12 @@ LoadDefinitions!({
     use Catcode::*;
     skip_spaces()?;
     let mut tokens = Vec::new();
-    while let Some(token) = read_x_token(Some(false), false, None)? {
+    // Fully expanded (`Some(true)`): tex.web §526 `scan_file_name` reads the
+    // name with `get_x_token`, so a `\protected` macro in an `\openout`/`\input`
+    // filename expands (proof-at-the-end.sty:112/127
+    // `\pratendGeneratePrefixFile`); Perl's `readXToken(0)` leaves it
+    // unexpanded. OXIDIZED_DESIGN_DIVERGENCES #197.
+    while let Some(token) = read_x_token(Some(false), false, Some(true))? {
       let cc = token.get_catcode();
       if matches!(cc, SPACE | EOL | COMMENT | CS) {
         if matches!(cc, CS) {

@@ -4203,6 +4203,7 @@ impl Document {
   /// including future ones. Runs when the map is large; the post-spill
   /// spine is small, so the mark phase is cheap.
   pub fn sweep_stale_node_boxes(&mut self) {
+    let t_start = std::time::Instant::now();
     fn mark(node: &Node, live: &mut rustc_hash::FxHashSet<usize>) {
       live.insert(node.to_hashable());
       if node.get_type() == Some(NodeType::ElementNode) {
@@ -4215,7 +4216,20 @@ impl Document {
     if let Some(root) = self.document.get_root_element() {
       mark(&root, &mut live);
     }
+    let t_mark = t_start.elapsed();
+    let before = self.node_boxes.len();
+    let t_retain_start = std::time::Instant::now();
     self.node_boxes.retain(|k, _| live.contains(k));
+    let t_retain = t_retain_start.elapsed();
+    let after = self.node_boxes.len();
+    let total = t_start.elapsed();
+    if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
+      eprintln!(
+        "streaming: node_boxes sweep {before} -> {after} (live: {}, dropped: {}) | mark: {t_mark:?}, retain: {t_retain:?}, total: {total:?}",
+        live.len(),
+        before - after
+      );
+    }
   }
 
   /// Attach the processed-segment store for serialization: from here on,

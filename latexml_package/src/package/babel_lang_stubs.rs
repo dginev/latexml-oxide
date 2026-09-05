@@ -91,21 +91,43 @@ fn install_lang_stub_hooks(lang: &str) -> Result<()> {
 }
 
 pub fn load_italian() -> Result<()> {
-  if install_lang_stub("italian")? {
+  let found = install_lang_stub("italian")?;
+  // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`.
+  // In pdflatex, verifica.cls:66-70 registers its
+  // `\AtBeginDocument{\@ifpackagewith{babel}{italian}{\setISOcompliance}…}`
+  // BEFORE italian.ldf's `\AtBeginDocument`, so FIFO execution sets
+  // `\it@ISOcompliance=1` before the ldf's hook tests it. In latexml-oxide the
+  // ldf's hook carries parameter tokens (`##1`) and is routed to
+  // `@at@begin@document@rawparam`, which fires before the L3 `begindocument`
+  // pool holding the class's hook (sect02.rs; the single-FIFO order is the
+  // K7 item). Bridge: `\setISOcompliance` binds `\unit` itself, so the order
+  // no longer matters. With the real ldf loaded (`found`) only that override
+  // is applied — its counter, hook and `\bbl@it@unit` stay the ldf's.
+  // Witness: verifica example1-5. Guard: `perfect_kernel_gemini::babel_italian_iso_compliance_unit`.
+  let set_iso = r"\def\setISOcompliance{%
+      \it@ISOcompliance=\@ne
+      \@ifpackageloaded{units}{}{%
+        \@ifpackageloaded{siunitx}{}{%
+          \@ifpackageloaded{SIunits}{}{%
+            \let\unit\bbl@it@unit}}}}";
+  if found {
+    raw_tex(&format!(
+      r"\ifdefined\bbl@it@unit\else\DeclareRobustCommand*{{\bbl@it@unit}}[1]{{\textormath{{\,\textup{{#1}}}}{{\,\mathrm{{#1}}}}}}\fi
+      \ifdefined\it@ISOcompliance {set_iso}\fi"
+    ))?;
     return Ok(());
   }
-  // italian.ldf:154-171 `\setISOcompliance` and the begin-document `\unit`
-  // (verifica.cls:66-70 turns compliance on; `$25\unit{m}$`), :179-180
-  // `\IntelligentComma`/`\NoIntelligentComma` (the math-active `,` for
-  // decimals is not modelled). Witness verifica example1-5.
-  raw_tex(
-    r"\newcount\it@ISOcompliance \it@ISOcompliance=\z@
-    \providecommand\setISOcompliance{\it@ISOcompliance=\@ne}
-    \providecommand\IntelligentComma{}\providecommand\NoIntelligentComma{}
-    \AtBeginDocument{\unless\ifnum\it@ISOcompliance=\z@
-      \DeclareRobustCommand*{\bbl@it@unit}[1]{\textormath{\,\textup{#1}}{\,\mathrm{#1}}}%
-      \@ifpackageloaded{units}{}{\@ifpackageloaded{siunitx}{}{\@ifpackageloaded{SIunits}{}{\let\unit\bbl@it@unit}}}\fi}",
-  )?;
+  raw_tex(&format!(
+    r"\DeclareRobustCommand*{{\bbl@it@unit}}[1]{{\textormath{{\,\textup{{#1}}}}{{\,\mathrm{{#1}}}}}}%
+    \newcount\it@ISOcompliance \it@ISOcompliance=\z@
+    {set_iso}
+    \providecommand\IntelligentComma{{}}\providecommand\NoIntelligentComma{{}}
+    \AtBeginDocument{{\unless\ifnum\it@ISOcompliance=\z@
+      \@ifpackageloaded{{units}}{{}}{{%
+        \@ifpackageloaded{{siunitx}}{{}}{{%
+          \@ifpackageloaded{{SIunits}}{{}}{{%
+            \let\unit\bbl@it@unit}}}}}}\fi}}"
+  ))?;
   Ok(())
 }
 // English-family stubs. babel-english.ldf uses `\@namedef{captions
