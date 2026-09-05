@@ -252,4 +252,32 @@ LoadDefinitions!({
         .unwrap_or_else(|| "0,0".into())
     )
   });
+  // pict2e.sty:791 `\cbezier[N](p0)(p1)(p2)(p3)` — the cubic Bézier pict2e adds
+  // beside the kernel's `\qbezier` (halloweenmath-man draws its pumpkins with
+  // it); forwarded to the kernel's four-point `\lx@pic@cbezier`.
+  // Guard: `perfect_kernel_batch56::pict2e_cbezier_cubic`.
+  DefMacro!("\\cbezier [Number] Pair Pair Pair Pair", sub[args] {
+    let get_pair = |i: usize| -> (f64, f64) {
+      args.get(i).and_then(|a| match a {
+        ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+        _ => None,
+      }).unwrap_or((0.0_f64, 0.0_f64))
+    };
+    let n = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let mut result = Vec::with_capacity(50);
+    result.push(T_CS!("\\lx@pic@cbezier"));
+    result.push(T_BEGIN!());
+    result.extend(n.unlist_ref().iter().copied());
+    result.push(T_END!());
+    for i in 1..=4 {
+      let (x, y) = get_pair(i);
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", x)));
+      result.push(T_END!());
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", y)));
+      result.push(T_END!());
+    }
+    Ok(Tokens::new(result))
+  });
 });

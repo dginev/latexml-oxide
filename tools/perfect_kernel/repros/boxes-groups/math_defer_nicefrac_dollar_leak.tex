@@ -1,0 +1,19 @@
+% witness: egpeirce/egpeirce-doc egpeirce-doc.tex:1831 (\nicefrac{1}{2$^{\textrm{16}}$})
+% oracle: pdflatex (clean — real nicefrac.sty wraps the denominator in \mbox); engines: pdflatex
+% expect: <= 2 Error (benign "Attempt to end mode math", matching Perl LaTeXML & s43), NO malformed leak,
+%   exactly one well-nested <ltx:Math> (fraction), no <ltx:Math> child of <ltx:document>
+% status: RED (b56t/batch56o) — 1 "Attempt to end mode math" + 3 malformed ltx:document/XMath/Math leak;
+%   s43/b56n & Perl = 2 benign "Attempt to end mode math", no leak (REGRESSION from batch 56o defer)
+% mechanism: the nicefrac binding (nicefrac_sty.rs:64 / nicefrac.sty.ltxml, SHARED) renders the text-mode
+%   denominator as  $\ltx@nicefrac@inline{..}{\nf@mathcopytextfont{2$^{\textrm{16}}$}}$  — the user's inner
+%   $...$ is digested INSIDE math, inside an InFractionStyle arg group. Each inner $ meets MODE=math with a
+%   non-mode-switch {group} on top, so end_math_or_defer (tex_math.rs:455, batch 56o) DEFERS both enders to
+%   afterGroup. The two deferred \lx@end@inline@math RE-DEFER up the group stack (afterGroup chaining) past
+%   the real math frame to internal_vertical (depth 0), over-close and re-open math -> <ltx:Math> leaks.
+%   Fix: the DEFERRED ender must not re-defer — close math iff the math frame is on top now, else benign
+%   end_mode error (restores s43/Perl). CONTROL: mal_math_bm_group_close.tex (single defer) must stay GREEN.
+\documentclass{article}
+\usepackage{nicefrac}
+\begin{document}
+X \nicefrac{1}{2$^{\textrm{16}}$} Y
+\end{document}

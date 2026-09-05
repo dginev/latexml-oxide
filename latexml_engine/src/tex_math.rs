@@ -462,7 +462,17 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
         "A math shift arrived inside a group opened in {mode}; the math ends when the group does."
       )
     );
-    push_value("afterGroup", T_CS!(ender))?;
+    // The deferred ender is the `@atgroup` twin, which ends the mode
+    // DIRECTLY and never re-defers: with the raw ender, a `$` two or more
+    // groups below the math frame (nicefrac's text-mode denominator
+    // `\nicefrac{1}{2$^{x}$}`, nicefrac_sty.rs:64, egpeirce-doc.tex:1831)
+    // re-deferred at every group boundary, escaped past the math frame and
+    // left `<ltx:Math>` open to the document root (egpeirce 2 → 8 errors in
+    // sweep 44). At the group's end the twin either closes the math (the
+    // frame is on top: `\bm{…$}`) or reports the benign "Attempt to end mode
+    // math" with the frame left for the real closing `$`.
+    // Guard: `perfect_kernel_batch56::deferred_math_end_never_escapes_the_math_frame`.
+    push_value("afterGroup", T_CS!(&s!("{ender}@atgroup")))?;
     return Ok(());
   }
   end_mode(mode)
@@ -635,6 +645,15 @@ LoadDefinitions!({
   DefConstructor!(T_CS!("\\lx@end@inline@math"), None, None,
     before_digest => { end_math_or_defer("math", "\\lx@end@inline@math")?; },
     reversion    => Tokens!(T_MATH!())
+  );
+  // The deferred twins (see `end_math_or_defer`): end the mode directly.
+  DefConstructor!(T_CS!("\\lx@end@inline@math@atgroup"), None, None,
+    before_digest => { end_mode("math")?; },
+    reversion    => Tokens!(T_MATH!())
+  );
+  DefConstructor!(T_CS!("\\lx@end@display@math@atgroup"), None, None,
+    before_digest => { end_mode("display_math")?; },
+    reversion    => Tokens!(T_MATH!(), T_MATH!())
   );
 
   // Same as add_TeX, but add the code from the body of the object.

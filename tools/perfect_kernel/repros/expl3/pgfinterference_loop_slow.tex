@@ -1,0 +1,12 @@
+% witness: pgf-interference/pgf-interference-en (slow-call s43=412s, s44 timeout 420s)
+% oracle: pdflatex clean; renders the interference pattern
+% engines: pdflatex
+% expect: 0 Error/Fatal, 0 'is not a register' warnings, finishes fast
+% status: RED (b56t) — floods '\l'/'\c' is not a register; the \dim_step_inline
+%   pixel loop re-parses \fill coordinates \l_..._dim/\c_..._dim through pgfmath,
+%   each split at _ and warned. Small screen-width keeps it bounded (~60 px).
+\documentclass{article}
+\usepackage{pgf-interference}
+\begin{document}
+\pgfinterferencepattern{screen-width=0.004,screen-height=0.004}
+\end{document}

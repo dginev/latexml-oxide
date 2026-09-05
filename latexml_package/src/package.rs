@@ -281,6 +281,7 @@ pub mod lmodern_sty;
 pub mod longtable_sty;
 pub mod lscape_sty;
 pub mod ltxcmds_sty;
+pub mod lua_widow_control_sty;
 pub mod luximono_sty;
 pub mod lxrdfa_sty;
 pub mod ly1_fontmap;

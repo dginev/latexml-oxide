@@ -1204,19 +1204,38 @@ mod pgfmath_grammar {
   }
 
   /// `\\[a-zA-Z@]+` — a TeX register; reading one declares units (see the
-  /// pgfplots ybar witnesses on the original implementation).
+  /// pgfplots ybar witnesses on the original implementation). An expl3 name
+  /// (`\l_tmpa_dim`, `\c_pgfinterference_delta_dim`) is ONE control sequence
+  /// in the tokens `\pgfmathparse` received; the string round-trip
+  /// (`expanded.to_string()`) plus this alphabetic-only scan split it at `_`
+  /// and looked up `\l`/`\c` — 200k "not a register" warnings and zero
+  /// geometry per pixel on pgf-interference (412 s; Perl pgfmath.code.tex
+  /// .ltxml:704 splits the same way, pdflatex reads the register token). When
+  /// the maximal `[a-zA-Z@_:]` run names a live register, that is the name.
+  /// Guard: `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`.
   fn try_cs_register(i: &mut In) -> Option<f64> {
     sb(i);
     let b = i.input.as_bytes();
     if b.first() != Some(&b'\\') {
       return None;
     }
+    let n_long = b[1..]
+      .iter()
+      .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
+      .count();
     let n = b[1..]
       .iter()
       .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
       .count();
     if n == 0 {
       return None;
+    }
+    if n_long > n && ::latexml_core::state::lookup_register_quiet(&i.input[..1 + n_long]).is_some()
+    {
+      let value = pgfmath_register_lookup(&i.input[..1 + n_long]);
+      bump(i, 1 + n_long);
+      i.state.units_declared = true;
+      return Some(value);
     }
     let cs = &i.input[..1 + n];
     let value = pgfmath_register_lookup(cs);

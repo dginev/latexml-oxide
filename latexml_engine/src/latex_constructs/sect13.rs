@@ -555,6 +555,39 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
+  // `\lx@pic@cbezier{N}{x0}{y0}…{x3}{y3}` — the four-point (cubic) sibling of
+  // `\lx@pic@qbezier`, the target of pict2e's `\cbezier` (pict2e_sty.rs); a
+  // four-point `<ltx:bezier>` renders as an SVG `C` segment (latexml_post
+  // svg.rs `convert_bezier`, Perl SVG.pm `convertBezier`).
+  DefConstructor!("\\lx@pic@cbezier{}{}{}{}{}{}{}{}{}",
+    "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\cbezier",
+    properties => sub[args] {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 1.0,
+      };
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let parse_f = |i: usize| -> f64 {
+        args[i].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0)
+      };
+      let pts: Vec<String> = (0..4)
+        .map(|k| {
+          let (x, y) = (px_value(parse_f(2 * k + 1) * unit), px_value(parse_f(2 * k + 2) * unit));
+          format!("{},{}", fmt_px(x), fmt_px(y))
+        })
+        .collect();
+      Ok(stored_map!(
+        "points" => Stored::String(pin(pts.join(" "))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => "#000000"
+      ))
+    }
+  );
+
   // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
   DefMacro!("\\multiput Pair Pair {}{}", sub[args] {
     let (x0, y0) = args.first().and_then(|a| match a {

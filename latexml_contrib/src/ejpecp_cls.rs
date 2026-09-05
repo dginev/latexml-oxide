@@ -60,6 +60,8 @@ LoadDefinitions!({
   DefMacro!("\\EMAIL{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   // ejpecp.cls:156 `\BEMAIL` — a further e-mail line (sample).
   DefMacro!("\\BEMAIL{}", "\\EMAIL{#1}");
+  // ejpecp.cls:467 `\let\realmathbb=\mathbb` (the class re-styles `\mathbb`).
+  Let!("\\realmathbb", "\\mathbb");
   DefMacro!(
     "\\support{}",
     "\\@add@frontmatter{ltx:note}[role=support]{#1}"

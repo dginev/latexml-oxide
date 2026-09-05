@@ -970,6 +970,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::latex_lab_testphase_minipage_sty::load_definitions,
   ),
   ("ajmacros", "sty", package::ajmacros_sty::load_definitions),
+  (
+    "lua-widow-control",
+    "sty",
+    package::lua_widow_control_sty::load_definitions,
+  ),
   ("placeins", "sty", package::placeins_sty::load_definitions),
   (
     "polyglossia",

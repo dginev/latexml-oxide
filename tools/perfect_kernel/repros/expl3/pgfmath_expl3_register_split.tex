@@ -1,0 +1,21 @@
+% witness: pgf-interference/pgf-interference-en,-de (slow-call s43 412s / s44 timeout)
+% oracle: pdflatex clean; \pgfmathresult == the real dimen value (85.35867)
+% engines: pdflatex
+% expect: 0 Error/Fatal, 0 'is not a register' warnings, RESULT != 0
+% status: RED (b56t) — Warning:expected:register '\l' is not a register, RESULT=[0.0]
+% mechanism: the expl3 register \l_x_dim is a single CS baked under ExplSyntaxOn.
+%   \pgfmathparse stringifies it to "\l_x_dim" (pgfmath_code_tex.rs:1682) then the
+%   Rust CS scanner (try_cs_register :1214, take_while alphabetic|@) truncates at
+%   \l; lookup_register("\l") warns (state.rs:1962) + returns 0. Perl's fixed
+%   grammar CS rule /\\[a-zA-Z@]*/ splits identically (SHARED); real pgf reads the
+%   register token, so pdflatex is clean (surpass approved).
+\documentclass{article}
+\usepackage{tikz}
+\ExplSyntaxOn
+\dim_new:N \l_x_dim
+\dim_set:Nn \l_x_dim { 3cm }
+\NewDocumentCommand \showit {} { \pgfmathparse { \l_x_dim } RESULT=[\pgfmathresult] }
+\ExplSyntaxOff
+\begin{document}
+\showit
+\end{document}

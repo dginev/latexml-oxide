@@ -15356,6 +15356,103 @@ After.
     );
   }
 
+  /// lua-widow-control's user surface under the luatex profile (its Lua half
+  /// cannot run: homework-demo-*, jwjournal-demo-cn, abntexto).
+  #[test]
+  fn lua_widow_control_surface() {
+    let tex = r"\documentclass{article}
+\usepackage{lua-widow-control}
+\lwcsetup{emergencystretch=1em, draft=false}
+\begin{document}
+\iflwc on\else off\fi; \lwcdisable\iflwc on\else off\fi.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("on; off."), "{xml}");
+  }
+
+  /// pict2e.sty:791 `\cbezier` (halloweenmath-man) and ejpecp.cls:467
+  /// `\realmathbb` (ejpecp sample).
+  #[test]
+  fn pict2e_cbezier_cubic() {
+    let tex = r"\documentclass{article}
+\usepackage{pict2e}
+\begin{document}
+\setlength{\unitlength}{1pt}
+\begin{picture}(40,20)
+\cbezier(0,0)(10,20)(30,20)(40,0)
+\end{picture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // four point pairs → the post-processor's SVG `C` segment
+    let points = xml
+      .split("<bezier points=\"")
+      .nth(1)
+      .and_then(|r| r.split('"').next())
+      .unwrap_or("");
+    assert_eq!(points.split(' ').count(), 4, "{xml}");
+    let ej = r"\documentclass{ejpecp}
+\title{T}\author{A}
+\begin{document}
+\maketitle
+$\realmathbb{R}$
+\end{document}
+";
+    let (stderr, xml) = convert(ej, true);
+    assert!(!stderr.contains("undefined:\\realmathbb"), "{stderr}");
+    assert!(
+      xml.contains("\u{211d}") || xml.contains("mathbb") || xml.contains("R<"),
+      "{xml}"
+    );
+  }
+
+  /// `\pgfmathparse{\l_x_dim}` reads the expl3 register as one name; the
+  /// alphabetic-only scanner split it at `_` and read `\l` (pgf-interference:
+  /// 200k warnings, 412 s). Repro `expl3/pgfmath_expl3_register_split.tex`.
+  #[test]
+  fn pgfmath_reads_expl3_register_names() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\ExplSyntaxOn
+\dim_new:N \l_x_dim
+\dim_set:Nn \l_x_dim { 3cm }
+\NewDocumentCommand \showit {} { \pgfmathparse { \l_x_dim } RESULT=[\pgfmathresult] }
+\ExplSyntaxOff
+\begin{document}
+\showit
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("is not a register"), "{stderr}");
+    assert!(xml.contains("RESULT=[85.35826]"), "{xml}");
+  }
+
+  /// A deferred math end (#196) fires once at its group's end and never
+  /// re-defers: nicefrac's text-mode denominator `\nicefrac{1}{2$^{x}$}` puts
+  /// the inner `$` two groups below the math frame (egpeirce-doc.tex:1831);
+  /// the ender must not escape past the math frame and leak `<ltx:Math>`.
+  /// Repro `boxes-groups/math_defer_nicefrac_dollar_leak.tex`.
+  #[test]
+  fn deferred_math_end_never_escapes_the_math_frame() {
+    let tex = r"\documentclass{article}
+\usepackage{nicefrac}
+\begin{document}
+X \nicefrac{1}{2$^{\textrm{16}}$} Y
+
+Z $a$ W
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert!(!stderr.contains("malformed"), "{stderr}");
+    assert!(error_count(&stderr) <= 2, "{stderr}");
+    assert!(xml.contains(" W</p>") || xml.contains(" W\n"), "{xml}");
+    assert!(!xml.contains("</p>\n<Math"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {
