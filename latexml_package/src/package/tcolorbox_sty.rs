@@ -82,7 +82,12 @@ LoadDefinitions!({
       "comment outside listing",
       "listing outside comment",
     ];
-    let text = opts.to_string();
+    // `untex()`, not `to_string()`: the option tokens carry substituted
+    // environment arguments (`before lower={…#3\par}` with `#3` =
+    // `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652), and a separator-less
+    // concatenation re-tokenizes `\dots ii` as `\dotsii`.
+    // Guard: `perfect_kernel_batch56::tcb_listing_option_tokens_keep_cs_boundaries`.
+    let text = opts.untex();
     if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
       // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
       // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),

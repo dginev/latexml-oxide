@@ -1,0 +1,25 @@
+% witness: biblatex-juradiss/biblatex-juradiss (L802-810: mid-subsection
+%   \begin{mdframed}...\printbibliography[nottype=...]\end{mdframed} then \subsection).
+%   \printbibliography expands (via the bib pipeline) to a block \thebibliography /
+%   <ltx:bibliography>; this repro uses \thebibliography directly (no biber needed).
+% oracle: pdflatex 0 (mdframed is a BLOCK frame; a bibliography list + a following
+%   sectioning command are block-level and legal around/after it).
+% engines: pdflatex/lualatex
+% expect: 0 errors
+% status: RED (b56o/q: malformed ltx:section + ltx:bibliography in inline-logical-block)
+% mechanism 5: contrib mdframed_sty.rs:102-104 wraps the mdframed body in
+%   <ltx:inline-logical-block framed='rectangle' _noautoclose='1'> (Misc.class, Para.model).
+%   When mdframed starts MID-PARAGRAPH its body is inline; a block child
+%   (<ltx:bibliography>, or any sectioning) is not in the inline-logical-block's Para.model
+%   -> malformed, and _noautoclose='1' blocks the auto-close escape so the following
+%   \subsection is also trapped inside the still-open inline-logical-block.
+\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\section{A}
+Intro text before the frame.
+\begin{mdframed}
+\begin{thebibliography}{9}\bibitem{x}An entry.\end{thebibliography}
+\end{mdframed}
+\subsection{B}
+\end{document}

@@ -4,6 +4,12 @@ LoadDefinitions!({
   RequirePackage!("textcomp");
   RequirePackage!("eufrak");
   RequirePackage!("amsmath");
+  // MnSymbol is a full replacement symbol font (`\Decl@Mn@Char`); its
+  // symbol SET is the AMS one plus extras — the amssymb binding covers the
+  // shared names (`\blacktriangleright` univie-ling, `\nmid`), the extras
+  // are added below as they surface (`\bigcircle` MnSymbol.sty:1635,
+  // atableau). Guard: `perfect_kernel_batch56::font_symbol_packages_carry_amssymb`.
+  RequirePackage!("amssymb");
   Let!("\\slimits@", "\\nolimits");
   Warn!(
     "missing_file",
@@ -19,4 +25,5 @@ LoadDefinitions!({
   // raw load. Extend the list as more arxmliv papers surface other
   // MnSymbol-only symbols.
   DefMath!("\\checkmark", "\u{2713}", role => "ID"); // CHECK MARK
+  DefMath!("\\bigcircle", "\u{25EF}", role => "OP"); // LARGE CIRCLE (\Decl@Mn@Op)
 });

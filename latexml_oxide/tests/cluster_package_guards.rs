@@ -14854,6 +14854,251 @@ Hello.
     assert!(xml.contains("Hello."), "{xml}");
   }
 
+  /// biblatex.sty:12862 `\citefield`, :3649 `\mkcomprange`, and the
+  /// :4371-4377 page-string family (`\pno`, `\psqq`) at document level
+  /// (oxref manuals, biblatex-german-legal, biblatex-true-citepages-omit).
+  /// Repro `index-bib/blx_toplevel_pagehelpers_oxref.tex`.
+  #[test]
+  fn biblatex_field_cites_and_page_strings() {
+    let tex = r"\documentclass{article}
+\usepackage[style=authoryear,backend=biber]{biblatex}
+\begin{document}
+Alpha \citefield{smith}{labelalpha}, range \mkcomprange{367-368}, first \mkfirstpage{367--368}.
+See \cite[\pno~110]{smith}; also \cite[295 \psqq]{jones}.
+Title \citefield{smith}{title}, editors \citename{smith}{editor}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("range 367-368, first 367."), "{xml}");
+    assert!(
+      xml.contains("p.\u{a0}110") || xml.contains("p.~110"),
+      "{xml}"
+    );
+    assert!(xml.contains("sqq.</cite>"), "{xml}");
+    assert!(xml.contains("show=\"Title\""), "{xml}");
+    assert!(xml.contains("class=\"ltx_citemacro_citename\""), "{xml}");
+  }
+
+  /// `\usepackage[style = abnt]{biblatex}` with spaces around `=`
+  /// (biblatex-abnt.tex:53) still selects the style, so `abnt.cbx` loads and
+  /// its `\apud` exists.
+  #[test]
+  fn biblatex_style_option_tolerates_spaces() {
+    let tex = r"\documentclass{article}
+\usepackage[style = abnt, backend = biber]{biblatex}
+\begin{document}
+\makeatletter\typeout{[\meaning\apud]}\makeatother
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("[undefined]"), "{stderr}");
+    assert!(xml.contains("Text."), "{xml}");
+  }
+
+  /// newpxmath (uantwerpenexam-example2 `\square`) and MnSymbol (univie-ling
+  /// `\blacktriangleright`, atableau `\bigcircle`) carry the AMS symbol set.
+  #[test]
+  fn font_symbol_packages_carry_amssymb() {
+    for (pkg, sym) in [
+      ("newpxmath", "\\square"),
+      ("MnSymbol", "\\blacktriangleright"),
+      ("MnSymbol", "\\bigcircle"),
+    ] {
+      let tex = format!(
+        "\\documentclass{{article}}\n\\usepackage{{{pkg}}}\n\\begin{{document}}\n$a {sym} b$\n\\end{{document}}\n"
+      );
+      let (stderr, xml) = convert(&tex, true);
+      assert_eq!(error_count(&stderr), 0, "{pkg} {sym}: {stderr}");
+      assert!(!xml.contains("<ERROR"), "{pkg} {sym}: {xml}");
+    }
+  }
+
+  /// mdframed.sty:591 `\newmdtheoremenv` defines a theorem environment
+  /// (beautynote).
+  #[test]
+  fn mdframed_theorem_environments_are_theorems() {
+    let tex = r"\documentclass{article}
+\usepackage{amsthm}
+\usepackage{mdframed}
+\newmdtheoremenv[linewidth=1pt]{theorem}{Theorem}[section]
+\newmdtheoremenv{lemma}[theorem]{Lemma}
+\begin{document}
+\section{One}
+\begin{theorem}Thm body.\end{theorem}
+\begin{lemma}Lemma body.\end{lemma}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<theorem") && xml.contains("Lemma body."),
+      "{xml}"
+    );
+  }
+
+  /// thm-restate.sty:191 `restatable*` (proof-at-the-end demo) and
+  /// lineno.sty:2881 `bframe` (ulineno).
+  #[test]
+  fn restatable_star_and_lineno_bframe() {
+    let tex = r"\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thm-restate}
+\usepackage{lineno}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{restatable*}[Main]{theorem}{mainthm}Restated body.\end{restatable*}
+\begin{bframe}Framed text.\end{bframe}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Restated body.") && xml.contains("Framed text."),
+      "{xml}"
+    );
+  }
+
+  /// subeqn.sty:51 `subeqnarray` (subeqn-sample).
+  #[test]
+  fn subeqn_subeqnarray_environment() {
+    let tex = r"\documentclass{article}
+\usepackage{subeqn}
+\begin{document}
+\begin{subeqnarray}\label{main}
+a &=& b \\
+c &=& d
+\end{subeqnarray}
+Eq.~\ref{main}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<equationgroup"), "{xml}");
+  }
+
+  /// unicode-math-table.tex rows become math symbols (derivative `\coloneq`,
+  /// rec-thy `\nvrightarrow`/`\mathhyphen`, shtthesis `\oiint`), while a
+  /// kernel-defined name keeps its own definition.
+  #[test]
+  fn unicode_math_symbol_table_defines_names() {
+    let tex = r"\documentclass{article}
+\usepackage{unicode-math}
+\removenolimits{\sum}
+\begin{document}
+$a \coloneq b \nvrightarrow c \mathhyphen d \oiint_S f \le g$
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("\u{2254}") && xml.contains("\u{21f8}") && xml.contains("\u{222f}"),
+      "{xml}"
+    );
+    assert!(xml.contains("less-than-or-equals"), "{xml}");
+  }
+
+  /// `\DeclareMathOperator` stores its body unexpanded like TeX: iidef.sty:147
+  /// names `\mathds` with dsfont unloaded and never uses the operator (ithw).
+  #[test]
+  fn declaremathoperator_body_stays_lazy() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\DeclareMathOperator{\one}{\mathds{1}}
+\DeclareMathOperator{\Tr}{{\rm Tr}}
+\begin{document}
+$\Tr A$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Tr"), "{xml}");
+  }
+
+  /// biblatex-chicago's `notes` style (the default) loads chicago-notes
+  /// bbx/cbx, whose `\DeclareCiteCommand`s define `\runcite` and
+  /// `\headlessfullcite` (cms-legal-sample, cms-notes-sample); internals a
+  /// document reaches directly (`\blx@opt@loccittracker@false`,
+  /// biblatex-sbl-ibid.tex:200; `\blx@refpatch@sect`, cmsendnotes.sty:121)
+  /// are consumed. Repros `index-bib/blx_chicago_cbx_citecmd_undefined.tex`,
+  /// `blx_loccittracker_internal_sbl.tex`, `blx_refpatch_sect_cmsendnotes.tex`.
+  #[test]
+  fn biblatex_chicago_notes_loads_its_cbx() {
+    let tex = r"\documentclass{article}
+\usepackage[notes,backend=biber]{biblatex-chicago}
+\begin{document}
+Text.\footnote{See \runcite{smith}; \headlessfullcite{jones}.} \Citetitle{smith}.
+\makeatletter\blx@opt@loccittracker@false\blx@refpatch@sect{section}{}{1}\makeatother
+\printshorthands
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<note"), "{xml}");
+  }
+
+  /// biblatex-cv.sty is raw-input on top of the binding, so its own
+  /// `\highlightname` (biblatex-cv.sty:565) exists. Repro
+  /// `index-bib/blx_variant_own_macro_cv.tex`.
+  #[test]
+  fn biblatex_cv_variant_overlay() {
+    let tex = r"\documentclass{article}
+\usepackage{biblatex-cv}
+\highlightname{Doe}{Jon}{}{}
+\begin{document}
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Body."), "{xml}");
+  }
+
+  /// tex.web §1131: `$` inside a group opened within math (`$\bm{\hat{m}$} b`,
+  /// kblocks-doc.tex:207) closes the group first; the math ends when the
+  /// bounded argument group does, and stays nested in the paragraph.
+  /// Repro `boxes-groups/mal_math_bm_group_close.tex`.
+  #[test]
+  fn math_end_inside_open_group_defers_to_group_end() {
+    let tex = r"\documentclass{article}
+\usepackage{bm}
+\begin{document}
+a $\bm{\hat{m}$} b
+
+c $\bm{x}$ d
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<Math ").count(), 2, "{xml}");
+    assert!(xml.contains("</Math> b"), "{xml}");
+    assert!(!xml.contains("</p>\n<Math"), "{xml}");
+  }
+
+  /// A `\NewTCBListing` option value built from a substituted argument keeps
+  /// its control-word boundaries (`\dots ii` stayed `\dotsii`; oxnotes-doc).
+  #[test]
+  fn tcb_listing_option_tokens_keep_cs_boundaries() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\NewTCBListing{egcite}{m}{listing side text,before lower={#1\par}}
+\begin{document}
+\begin{egcite}{\dots ii (Brussels, 1867--88), 367--8}
+\cite[367--368]{key}
+\end{egcite}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("\u{2026} ii (Brussels") || xml.contains("\u{2026}ii (Brussels"),
+      "{xml}"
+    );
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

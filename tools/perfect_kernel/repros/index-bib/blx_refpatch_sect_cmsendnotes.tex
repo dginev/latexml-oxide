@@ -1,0 +1,19 @@
+% witness: biblatex-chicago/cms-noteref-demo (\usepackage[split=section]{cmsendnotes};
+%   cmsendnotes.sty:121 \blx@refpatch@sect{section}{\cms@closechap}{1}). Root of a 62-error
+%   cascade (cmsendnotes aborts -> \@enotes/\@doanenote/\if@enotesopen/\shortrefcite undefined).
+% oracle: pdflatex 0 (biblatex.sty:11077 \def\blx@refpatch@sect#1#2#3, called via
+%   \blx@patchsection@switch biblatex.sty:10930/10939, \AtEndPreamble-deferred).
+% engines: pdflatex/lualatex
+% expect: 0 errors on THIS root (the cmsendnotes cascade is a separate package, out of biblatex scope)
+% status: RED (b56o/q: 1 undefined \blx@refpatch@sect) -> want GREEN
+% mechanism 3: biblatex.sty sectioning-patch internals \blx@refpatch@sect#1#2#3 /
+%   \blx@refpatch@part#1 / \blx@refpatch@chapter#1 are reached by refsection/noteref section
+%   patching AND by the cmsendnotes companion; the binding never ported them.
+\documentclass{article}
+\usepackage[style=authoryear,backend=biber]{biblatex}
+\makeatletter
+\blx@refpatch@sect{section}{\relax}{1}
+\makeatother
+\begin{document}
+Body.
+\end{document}

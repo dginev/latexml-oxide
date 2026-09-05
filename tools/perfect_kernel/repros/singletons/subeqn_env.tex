@@ -1,0 +1,11 @@
+% witness: subeqn/subeqn-sample ({subeqnarray}). oracle pdflatex clean.
+% subeqn.sty:51 \newenvironment{subeqnarray}; Rust+Perl subeqn binding omit it.
+\documentclass{article}
+\usepackage{subeqn}
+\begin{document}
+\begin{subeqnarray}
+  \label{d}
+  x &=& y+z\label{d1}\\
+  u &=& v+w\label{d2}
+\end{subeqnarray}
+\end{document}

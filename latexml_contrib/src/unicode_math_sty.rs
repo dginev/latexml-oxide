@@ -15,6 +15,76 @@ LoadDefinitions!({
   // unicode-math-luatex.sty:329 `\NewDocumentCommand\setoperatorfont{m}`:
   // operator-font bookkeeping (asmeconf.cls). Witness asmeconf-template.
   def_macro_noop("\\setoperatorfont{}")?;
+  // unicode-math-table.tex: 2,448 rows `\UnicodeMathSymbol{"HHHH}{\cs}
+  // {\class}{description}` — the symbol NAMES a unicode-math document reaches
+  // (`\coloneq` :412 derivative, `\mathhyphen` :123 / `\nvrightarrow` :317
+  // rec-thy, `\oiint`/`\intclockwise` :373-375 shtthesis). Each row becomes
+  // a DefMath of its code point with the role its class implies, unless the
+  // kernel or a loaded package already defines the name (their richer
+  // `meaning=` wins); accents and fences are left to those definitions.
+  // Guard: `perfect_kernel_batch56::unicode_math_symbol_table_defines_names`.
+  DefPrimitive!("\\UnicodeMathSymbol {}{}{}{}", sub[(code, cs, class, _desc)] {
+    let code = code.to_string();
+    let code = code.trim().trim_start_matches('"');
+    let cs = cs.to_string();
+    let cs = cs.trim();
+    let class = class.to_string();
+    let class = class.trim().to_string();
+    if let Ok(cp) = u32::from_str_radix(code, 16)
+      && let Some(ch) = char::from_u32(cp)
+      && cs.starts_with('\\')
+      && lookup_definition(&T_CS!(cs))?.is_none()
+    {
+      let lower = cs.to_ascii_lowercase();
+      let role = match class.as_str() {
+        "\\mathrel" if lower.contains("arrow") || lower.contains("harpoon") => Some("ARROW"),
+        "\\mathrel" => Some("RELOP"),
+        "\\mathbin" => Some("ADDOP"),
+        "\\mathop" if lower.contains("int") => Some("INTOP"),
+        "\\mathop" => Some("SUMOP"),
+        "\\mathopen" => Some("OPEN"),
+        "\\mathclose" => Some("CLOSE"),
+        "\\mathpunct" => Some("PUNCT"),
+        "\\mathord" | "\\mathalpha" => Some("ID"),
+        _ => None,
+      };
+      if let Some(role) = role {
+        def_math(T_CS!(cs), None, ch.to_string(),
+          MathPrimitiveOptions { role: Some(role.to_string()), ..Default::default() })?;
+      } else if let Some(role) = match class.as_str() {
+        // combining marks: `\vec{x}`-shaped accents (rec-thy `\notaccent`)
+        "\\mathaccent" | "\\mathaccentwide" | "\\mathaccentoverlay" => Some("OVERACCENT"),
+        "\\mathbotaccent" | "\\mathbotaccentwide" => Some("UNDERACCENT"),
+        _ => None,
+      } {
+        use latexml_core::common::def_parser::parse_parameters;
+        let params = parse_parameters("{}", &T_CS!(cs), true)?;
+        // an argument-taking DefMath carries the role on the operator
+        // (`operator_role`, like the kernel's `\vec{}` in math_common.rs)
+        def_math(T_CS!(cs), params, ch.to_string(),
+          MathPrimitiveOptions { operator_role: Some(role.to_string()), ..Default::default() })?;
+      }
+    }
+  });
+  InputDefinitions!("unicode-math-table", noltxml => true, extension => Some(Cow::Borrowed("tex")));
+  // unicode-math-luatex.sty:338 `\removenolimits{\op}`: strips the `\nolimits`
+  // an operator was declared with (shtthesis.cls:715) — limits placement is
+  // the renderer's.
+  def_macro_noop("\\removenolimits{}")?;
+  // unicode-math-luatex.sty:3600-3620 provides `\overbracket`/`\underbracket`
+  // (`[rule thickness][bracket height]{arg}`; also `\Uoverbracket`/
+  // `\Uunderbracket`) with mathtools' interface — derivative.tex:1344 uses
+  // `\underbracket` without mathtools. Same rendering as mathtools_sty.rs.
+  DefMacro!("\\overbracket[][][]{}",  "\\lx@um@overbracket{#4}");
+  DefMacro!("\\underbracket[][][]{}", "\\lx@um@underbracket{#4}");
+  Let!("\\Uoverbracket", "\\overbracket");
+  Let!("\\Uunderbracket", "\\underbracket");
+  DefMath!("\\lx@um@overbracket{}", "\u{FE47}",
+    operator_role => "OVERACCENT", scriptpos => "mid",
+    alias => "\\overbracket");
+  DefMath!("\\lx@um@underbracket{}", "\u{FE48}",
+    operator_role => "UNDERACCENT", scriptpos => "mid",
+    alias => "\\underbracket");
   def_macro_noop("\\NewNegationCommand{}{}")?;
   def_macro_noop("\\NewNegatedSymbol{}{}")?;
   // unicode-math symbol table loaders and ctex-engine-luatex.def:418-432 hooks.

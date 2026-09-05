@@ -1,0 +1,8 @@
+\documentclass{article}
+\makeatletter
+\AtBeginDocument{\@ifpackagewith{babel}{italian}{\setISOcompliance\typeout{ISO-SET}}{\typeout{NO-ITALIAN-OPT}}}
+\makeatother
+\usepackage[english,italian]{babel}
+\begin{document}
+$10\unit{W}$
+\end{document}

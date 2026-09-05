@@ -440,6 +440,34 @@ fn script_sizer(
   ))
 }
 
+/// tex.web §1131 `off_save`: a math shift arriving while a group opened
+/// INSIDE the math is still on top (`$\bm{\hat{m}$} b`, kblocks-doc.tex:207;
+/// titlecaps' word-wrap splits `$x^2$` across its `{…}` groups) — TeX inserts
+/// the missing `}`, closing the group, and re-reads the `$`. Here the group
+/// is a bounded constructor's argument frame (`\bm{}` is `bounded`), which
+/// its own digestion closes, so the math end is deferred to the moment the
+/// group ends (`\aftergroup`), and the enclosing math stays well nested; the
+/// two symmetric recoveries (`\endgroup` over math, `}` over math) live in
+/// stomach.rs. Perl (Stomach.pm:367) reports the mismatch and leaves the
+/// frame, leaking `<ltx:Math>` to the document root. pdflatex is clean on
+/// the `\bm` shape (its argument is boxed), so this is a warning.
+/// Guard: `perfect_kernel_batch56::math_end_inside_open_group_defers_to_group_end`.
+fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
+  if !is_value_bound("BOUND_MODE", Some(0)) && lookup_string("MODE") == mode {
+    Warn!(
+      "expected",
+      "}",
+      "Missing } inserted",
+      s!(
+        "A math shift arrived inside a group opened in {mode}; the math ends when the group does."
+      )
+    );
+    push_value("afterGroup", T_CS!(ender))?;
+    return Ok(());
+  }
+  end_mode(mode)
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Math Family of primitive control sequences
@@ -590,7 +618,7 @@ LoadDefinitions!({
 
   DefConstructor!(T_CS!("\\lx@end@display@math"), None, None,
     reversion => Tokens!(T_MATH!(),T_MATH!()),
-    before_digest => { end_mode("display_math")?; });
+    before_digest => { end_math_or_defer("display_math", "\\lx@end@display@math")?; });
 
   // Perl TeX_Math.pool.ltxml L142-153: DefConstructorI with NO xml:id,
   // beforeDigest = enterHorizontal + beginMode('math'),
@@ -605,7 +633,7 @@ LoadDefinitions!({
     properties   => { stored_map!("mode" => "math") },
     capture_body => true);
   DefConstructor!(T_CS!("\\lx@end@inline@math"), None, None,
-    before_digest => { end_mode("math")?; },
+    before_digest => { end_math_or_defer("math", "\\lx@end@inline@math")?; },
     reversion    => Tokens!(T_MATH!())
   );
 

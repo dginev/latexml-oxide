@@ -1,0 +1,11 @@
+% witness: kksymbols/kksymbols-doc kksymbols-doc.tex:114-117,127-130 (lstlisting w/ CJK)
+% oracle: lualatex (clean per residue); engines: lualatex
+% expect: 0 Error/Fatal; listing lines well-formed
+% status: probe — #PCDATA isn't allowed in <ltx:listing>
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\begin{lstlisting}
+  \maru{A\dccare{j}}\maru{XYZ}
+\end{lstlisting}
+\end{document}

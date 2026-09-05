@@ -1,0 +1,11 @@
+% witness: kblocks/kblocks-doc kblocks-doc.tex:207 ($\bm{\hat{m}$}) in a tikz node
+% oracle: pdflatex (clean per residue); engines: pdflatex
+% expect: 0 Error/Fatal, inline math present
+% status: RED (b56q) — \lx@end@inline@math Attempt to end mode math (frame \bm boxing group)
+% mechanism: MECH-1 inline math closed while an inner boxing group (\bm{) is open;
+%   tex.web off_save should insert } to close the group, then end math.
+\documentclass{article}
+\usepackage{bm}
+\begin{document}
+a $\bm{\hat{m}$} b
+\end{document}

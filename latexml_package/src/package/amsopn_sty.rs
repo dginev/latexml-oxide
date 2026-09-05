@@ -29,8 +29,28 @@ LoadDefinitions!({
   // shatters into `\cs_to_str` `_` `:N` … at every use — 100 malformed:ltx +
   // a Stomach:Recursion Fatal. Expanding first yields the plain letters the
   // author meant; unexpandable font switches (`\rm`, `\mathrm`) survive intact.
+  //
+  // Expansion at DEFINITION time is what real TeX never does (the body is
+  // `\operatorname{#text}`, expanded at use): iidef.sty:147
+  // `\DeclareMathOperator{\1}{\mathds{1}}` with dsfont unloaded and `\1`
+  // unused is pdflatex-clean (thucoursework ithw), so a body that names an
+  // undefined control sequence is stored verbatim — the error, if the
+  // operator is used, then comes at use like TeX's.
+  // Guard: `perfect_kernel_batch56::declaremathoperator_body_stays_lazy`.
   DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
-    let text_str = do_expand(text)?.untex();
+    let mut names_undefined = false;
+    for t in text.unlist_ref().iter() {
+      // the operator's own name may appear in its body (`\cs_to_str:N \asinh`)
+      if t.get_catcode() == Catcode::CS && *t != cs && lookup_definition(t)?.is_none() {
+        let name = t.to_string();
+        // single-character control symbols (`\,`, `\ `) are chars, not macros
+        if name.chars().count() > 2 {
+          names_undefined = true;
+          break;
+        }
+      }
+    }
+    let text_str = if names_undefined { text.untex() } else { do_expand(text)?.untex() };
     let has_star = star.is_some();
     // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
     // gets dynamic mid/post from current display style; bare form is always 'post'.

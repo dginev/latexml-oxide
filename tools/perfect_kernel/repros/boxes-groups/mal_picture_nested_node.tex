@@ -1,0 +1,11 @@
+% witness: pagelayout/example-template (draft grid: node text is itself a tikzpicture)
+% oracle: pdflatex (clean per residue); engines: pdflatex
+% expect: 0 Error/Fatal; nested pictures well-formed
+% status: probe — </ltx:picture> isn't open
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+  \node at (0,0) {\begin{tikzpicture}\draw (0,0)--(1,1);\end{tikzpicture}};
+\end{tikzpicture}
+\end{document}

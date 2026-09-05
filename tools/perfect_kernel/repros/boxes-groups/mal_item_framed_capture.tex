@@ -1,0 +1,17 @@
+% witness: colorframed/colorframed-doc
+% oracle: pdflatex; engines: pdflatex,lualatex
+% expect: 0 Error lines; \item inside framed belongs to the surrounding itemize
+% status: RED (b56i) -> Error:malformed:ltx:item <ltx:item> isn't allowed in <ltx:_CaptureBlock_>
+% mechanism: framed.sty env body captured as ltx:_CaptureBlock_; an \item (of the
+%   enclosing itemize) inside it is rejected. Binding: framed capture vs list item.
+\documentclass{article}
+\usepackage{framed}
+\begin{document}
+\begin{itemize}
+\item first
+\begin{framed}
+\item boxed item
+\end{framed}
+\item last
+\end{itemize}
+\end{document}

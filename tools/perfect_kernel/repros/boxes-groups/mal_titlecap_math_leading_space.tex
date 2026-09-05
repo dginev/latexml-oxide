@@ -1,0 +1,12 @@
+% witness: titlecaps/titlecaps titlecaps.tex:353-383 (\titlecap{... $ x^2$ ...})
+% oracle: pdflatex (clean per residue) ; engines: pdflatex
+% expect: 0 Error/Fatal, inline math rendered
+% status: RED (b56q) — Error:unexpected:\lx@end@inline@math Attempt to end mode math
+% mechanism: MECH-1 inline math frame closed across a group boundary (titlecaps wraps
+%   each word in {..}; the space after $ splits "$" from "x^2$" so the closing $ fires
+%   inside the word-group {x^2$}).
+\documentclass{article}
+\usepackage{titlecaps}
+\begin{document}
+\titlecap{the method will work capitalizing symbols if there is a leading space, $ x^2$ can become $ y^2$}
+\end{document}

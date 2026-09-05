@@ -1,0 +1,14 @@
+% witness: xebaposter/poster poster.tex:312-338 (\headerbox{References}{...}{\begin{thebibliography}..})
+% oracle: pdflatex (clean per residue); engines: pdflatex
+% expect: 0 Error/Fatal; a bibliography rendered
+% status: RED (b56q) — <ltx:bibliography> isn't allowed in <ltx:block>
+% mechanism: MECH-2 structural block-child emitted inside a _CaptureBlock_ (parbox/minipage)
+\documentclass{article}
+\begin{document}
+\parbox{0.9\textwidth}{%
+  Some intro text.
+  \begin{thebibliography}{1}
+  \bibitem{a} A. Author, \emph{A title}, 2020.
+  \end{thebibliography}
+}
+\end{document}

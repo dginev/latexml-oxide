@@ -621,6 +621,21 @@ fn blx_cite_args(args: Vec<ArgWrap>) -> (bool, Option<Tokens>, Option<Tokens>, T
   (blx_nonempty(&star), pre, post, keys)
 }
 
+/// One `key=value` package option, split at the first `=` with both sides
+/// trimmed and the value's outer braces removed — biblatex manuals write
+/// `\usepackage[style = abnt, ...]{biblatex}` with spaces around `=`
+/// (biblatex-abnt.tex:52), which a prefix match on `style=` never saw, so
+/// `abnt.cbx` was never loaded (`\apud` undefined).
+fn blx_opt_kv(opt: &str) -> Option<(String, String)> {
+  let (k, v) = opt.split_once('=')?;
+  let v = v.trim();
+  let v = v
+    .strip_prefix('{')
+    .and_then(|v| v.strip_suffix('}'))
+    .unwrap_or(v);
+  Some((k.trim().to_string(), v.trim().to_string()))
+}
+
 /// Perl label split `/^(.+),\s*(\d{4}\w*)$/` — greedy `.+` means the LAST
 /// comma whose tail is a 4-digit year plus an optional disambiguation
 /// suffix wins. Returns (author_part, year_with_suffix).
@@ -775,20 +790,17 @@ LoadDefinitions!({
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
-      let opt_str = opt_str.trim();
-      if let Some(v) = opt_str
-        .strip_prefix("style=")
-        .or_else(|| opt_str.strip_prefix("citestyle="))
-      {
-        blx_set_style(v.trim().trim_start_matches('{').trim_end_matches('}'));
-      } else if let Some(v) = opt_str.strip_prefix("maxbibnames=")
-        && let Ok(n) = v
-          .trim()
-          .trim_start_matches('{')
-          .trim_end_matches('}')
-          .parse::<i64>()
-      {
-        bib_state_set_int("biblatex_maxbibnames", n);
+      let Some((k, v)) = blx_opt_kv(&opt_str) else {
+        continue;
+      };
+      match k.as_str() {
+        "style" | "citestyle" => blx_set_style(&v),
+        "maxbibnames" => {
+          if let Ok(n) = v.parse::<i64>() {
+            bib_state_set_int("biblatex_maxbibnames", n);
+          }
+        },
+        _ => {},
       }
     }
   }
@@ -945,6 +957,8 @@ LoadDefinitions!({
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("citetitle")), Tokens::new(body)]))
   }, locked => true);
+  // biblatex.sty:12726 `\Citetitle` — the capitalised form (cms-notes-sample).
+  Let!("\\Citetitle", "\\citetitle");
   DefMacro!("\\citeyear OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (_star, pre, post, keys) = blx_cite_args(args);
     let (pre, post) = blx_swap_pre_post(pre, post);
@@ -980,6 +994,78 @@ LoadDefinitions!({
     Ok(Invocation!(T_CS!("\\@@cite"),
       vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
   }, locked => true);
+  // biblatex.sty:12862 `\citefield` / :12802 `\citename` —
+  // `[pre][post]{keys}[format]{field | namelist}`: the field-cite family.
+  // The bibref model carries authors, title and year, so those fields map
+  // to its `show` keys; any other field, and every non-authoryear style,
+  // takes the plain-cite fallback `\citetitle` already uses. Style docs
+  // exercise them at top level (oxref manuals ×4, biblatex-german-legal).
+  // Guard: `perfect_kernel_batch56::biblatex_field_cites_and_page_strings`.
+  for (cs, is_name) in [("\\citefield", false), ("\\citename", true)] {
+    let spec = s!("{cs} OptionalMatch:* [][] Semiverbatim [] {{}}");
+    DefMacro!(&spec, sub[args] {
+      let mut it = args.into_iter();
+      let star: Option<Tokens> = it.next().unwrap().into();
+      let pre: Option<Tokens> = it.next().unwrap().into();
+      let post: Option<Tokens> = it.next().unwrap().into();
+      let keys: Tokens = it.next().unwrap().into();
+      let _format: Option<Tokens> = it.next().unwrap().into();
+      let field: Tokens = it.next().unwrap().into();
+      let star = blx_nonempty(&star);
+      let (pre, post) = blx_swap_pre_post(pre, post);
+      let field = field.to_string().trim().to_ascii_lowercase();
+      let show = match field.as_str() {
+        "author" | "editor" | "translator" | "bookauthor" | "labelname" | "sortname" =>
+          Some(if star { "FullAuthors" } else { "Authors" }),
+        "title" | "shorttitle" | "maintitle" | "booktitle" | "labeltitle" => Some("Title"),
+        "year" | "date" | "labelyear" => Some("Year"),
+        _ => None,
+      };
+      let Some(show) = show.filter(|_| blx_is_authoryear()) else {
+        return Ok(blx_cite_fallback(post, keys));
+      };
+      let bibref = Invocation!(T_CS!("\\@@bibref"),
+        vec![Tokens::new(Explode!(show)), keys, Tokens!(), Tokens!()]);
+      let mut body = Vec::new();
+      if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+      body.extend(bibref.unlist());
+      if let Some(p) = post {
+        body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+      }
+      let class = if is_name { "citename" } else { "citefield" };
+      Ok(Invocation!(T_CS!("\\@@cite"),
+        vec![Tokens::new(Explode!(class)), Tokens::new(body)]))
+    }, locked => true);
+  }
+  // biblatex.sty:3649 `\mkcomprange*[postpro]{string}` and :3505
+  // `\mknormrange` compress or normalise a page-range string item by item;
+  // the string itself is the rendering, with the postprocessor applied to it
+  // when given. :3863 `\mkfirstpage*[postpro]{string}` keeps the first page
+  // of the (first) range.
+  RawTeX!(
+    r"\def\lx@blx@rangeaux{\@ifnextchar[{\lx@blx@range@i}{\lx@blx@range@i[]}}
+\def\lx@blx@range@i[#1]#2{\ifx\\#1\\#2\else#1{#2}\fi}
+\def\mkcomprange{\@ifstar\lx@blx@rangeaux\lx@blx@rangeaux}
+\def\mknormrange{\@ifstar\lx@blx@rangeaux\lx@blx@rangeaux}
+\def\lx@blx@firstaux{\@ifnextchar[{\lx@blx@first@i}{\lx@blx@first@i[]}}
+\def\lx@blx@first@i[#1]#2{\lx@blx@range@i[#1]{\lx@blx@firstpage#2-\@nil}}
+\def\lx@blx@firstpage#1-#2\@nil{#1}
+\def\mkfirstpage{\@ifstar\lx@blx@firstaux\lx@blx@firstaux}"
+  );
+  // biblatex.sty:4371-4377 (`\blx@blxinit`): the page-string family used
+  // inside cite postnotes — `\pno`/`\ppno` are the localised page strings,
+  // `\psq`/`\psqq` "sequens"/"sequentes", `\nopp` suppresses the prefix,
+  // `\pnfmt` formats a postnote. Real biblatex hardens them to `\ERROR`
+  // outside a citation context (:4382-4389); the manuals use them at top
+  // level only inside `\cite[...]`, which this binding renders verbatim.
+  RawTeX!(
+    r"\protected\def\pnfmt#1{#1}
+\protected\def\pno{\bibstring{page}}
+\protected\def\ppno{\bibstring{pages}}
+\let\nopp\relax
+\protected\def\psq{\sqspace\bibstring{sequens}}
+\protected\def\psqq{\sqspace\bibstring{sequentes}}"
+  );
 
   // -- Multicite commands: repeated [pre][post]{keys} groups -------------
   // Greedy gullet reading (blx_read_multicite_groups); groups joined "; ".
@@ -1037,6 +1123,9 @@ LoadDefinitions!({
   // biblatex.sty:15020 `\newrobustcmd*{\DeclareLabeldate}[2][]` — the optional
   // entrytype list (apa.bbx:337 `\DeclareLabeldate[constitution]{\field{date}}`).
   def_macro_noop("\\DeclareLabeldate []{}")?;
+  // biblatex.sty:14952 `\DeclareExtradate{\scope{\field{…}}}` — the extradate
+  // (year-suffix) scoping; chicago-authordate.bbx declares one at load.
+  def_macro_noop("\\DeclareExtradate{}")?;
   // biblatex.sty:15093 `\DeclareLabeltitle[types]{spec}` and :14853
   // `\DeclareLabelalphaTemplate[types]{spec}` (biblatex-apa.bbx, ext-*.bbx).
   def_macro_noop("\\DeclareLabeltitle []{}")?;
@@ -1055,6 +1144,10 @@ LoadDefinitions!({
   // abntexto-exemplo). \abx@classtype is read as `\ifcase\abx@classtype`
   // (abnt.bbx L1264), so it must be a number source, not a macro noop.
   def_macro_noop("\\DeclareDatamodelFields[]{}")?;
+  // biblatex.sty:16643 `\DeclareDatamodelConstraints[types]{\constraint…}`
+  // (biblatex-cv.dbx:23/37): validation-only, its body (`\constraintfield`,
+  // `\regexp{^…$}`) must never run in text.
+  def_macro_noop("\\DeclareDatamodelConstraints[]{}")?;
   def_macro_noop("\\DeclareDatamodelEntryfields[]{}")?;
   def_macro_noop("\\DeclareDatamodelEntrytypes[]{}")?;
   def_macro_noop("\\DeclareDatamodelConstant[]{}{}")?;
@@ -2729,8 +2822,50 @@ LoadDefinitions!({
   DefMacro!("\\addsemicolon", ";");
   DefMacro!("\\addcolon", ":");
   DefMacro!("\\newunitpunct", ". ");
-  DefMacro!("\\bibstring{}", "#1");
+  // `\bibstring{key}` — the localisation bank is not modelled (strings render
+  // through the rebuilt \thebibliography), but the keys a document reaches
+  // directly through the page-string family and the common cite-context
+  // strings get their english.lbx short forms (english.lbx:365-455,
+  // `abbreviate=true` default); an unknown key stays the key.
+  DefMacro!("\\bibstring{}", sub[(key)] {
+    let key = key.to_string();
+    let key = key.trim();
+    let text = match key {
+      "page" => "p.", "pages" => "pp.", "sequens" => "sq.", "sequentes" => "sqq.",
+      "and" => "and", "andothers" => "et al.", "andmore" => "et al.",
+      "editor" => "ed.", "editors" => "eds.", "byeditor" => "ed. by",
+      "translator" => "trans.", "translators" => "trans.", "bytranslator" => "trans. by",
+      "volume" => "vol.", "volumes" => "vols.", "number" => "no.", "edition" => "ed.",
+      "chapter" => "chap.", "section" => "\u{a7}", "paragraph" => "par.",
+      "column" => "col.", "columns" => "cols.", "line" => "l.", "lines" => "ll.",
+      "verse" => "v.", "verses" => "vv.", "in" => "in", "idem" => "idem",
+      "ibidem" => "ibid.", "opcit" => "op. cit.", "loccit" => "loc. cit.",
+      "seenote" => "see n.", "quotedin" => "qtd. in", "citedas" => "henceforth cited as",
+      "nodate" => "n.d.", "urlseen" => "visited on", "version" => "version",
+      "phdthesis" => "PhD thesis", "mathesis" => "MA thesis",
+      other => other,
+    };
+    Ok(Tokens::new(Explode!(text)))
+  });
   // [<datatype>]{<key>}[<default>]{<code>} — biblatex.sty L7226-7228.
+  // biblatex.sty:4430/4435 `\DeclareNameWrapperFormat`/`\DeclareListWrapperFormat`
+  // (`[<entrytype>]{<format>}{<code>}`): render-side wrappers around name and
+  // list formats — declaration-only here (biblatex-cv.sty:641-651 declares
+  // them for every name field at load).
+  def_macro_noop("\\DeclareNameWrapperFormat OptionalMatch:* []{}{}")?;
+  def_macro_noop("\\DeclareListWrapperFormat OptionalMatch:* []{}{}")?;
+  // Internals styles and documents reach directly: biblatex.sty:15791
+  // `\blx@opt@loccittracker@<mode>` (loccit tracking modes; biblatex-sbl-ibid
+  // .tex:200 calls `\blx@opt@loccittracker@false`) and :11077
+  // `\blx@refpatch@sect{level}{code}{n}` / `@part` / `@chapter` (refsection
+  // patches of sectioning commands; cmsendnotes.sty:121). Neither tracking
+  // nor refsection boundaries are modelled — consume.
+  for mode in ["true", "false", "context", "strict", "constrict"] {
+    def_macro_noop(&s!("\\blx@opt@loccittracker@{mode}"))?;
+  }
+  def_macro_noop("\\blx@refpatch@sect{}{}{}")?;
+  def_macro_noop("\\blx@refpatch@part{}")?;
+  def_macro_noop("\\blx@refpatch@chapter{}")?;
   def_macro_noop("\\DeclareBibliographyOption[]{}[]{}")?;
   def_macro_noop("\\DeclareTypeOption[]{}[]{}")?;
   def_macro_noop("\\DeclareEntryOption[]{}[]{}")?;
@@ -2748,6 +2883,9 @@ LoadDefinitions!({
   def_macro_noop("\\newrefsegment")?;
   def_macro_noop("\\endrefsegment")?;
   def_macro_noop("\\printbiblist[]{}")?;
+  // biblatex.sty:16006 `\printshorthands` = `\printbiblist{shorthand}` (kept
+  // for compatibility; cms-legal-sample, cms-notes-sample).
+  def_macro_noop("\\printshorthands[]")?;
   // Bibliography categories (biblatex ~L2900): filtering machinery with no
   // XML counterpart in the native pipeline — declare/assign as noops, test
   // takes the false branch. 6-bundle cluster (biblatex-abnt/-juradiss …).
@@ -2797,21 +2935,52 @@ LoadDefinitions!({
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
-      let opt_str = opt_str.trim();
-      let val = |v: &str| {
-        v.trim()
-          .trim_start_matches('{')
-          .trim_end_matches('}')
-          .to_string()
+      let Some((k, v)) = blx_opt_kv(&opt_str) else {
+        continue;
       };
-      if let Some(v) = opt_str.strip_prefix("style=") {
-        bibstyle = Some(val(v));
-        citestyle_name = Some(val(v));
-      } else if let Some(v) = opt_str.strip_prefix("bibstyle=") {
-        bibstyle = Some(val(v));
-      } else if let Some(v) = opt_str.strip_prefix("citestyle=") {
-        citestyle_name = Some(val(v));
+      match k.as_str() {
+        "style" => {
+          bibstyle = Some(v.clone());
+          citestyle_name = Some(v);
+        },
+        "bibstyle" => bibstyle = Some(v),
+        "citestyle" => citestyle_name = Some(v),
+        _ => {},
       }
+    }
+  }
+  // biblatex-chicago.sty:24-31 selects the style by keyword (`notes` is the
+  // default, :32 `\setkeys{cms@ldt}{notes}`) and loads `chicago-<style>`
+  // through `\RequirePackage[style=…]{biblatex}` (:143); routed here as the
+  // variant, the keyword sits under `opt@biblatex-chicago.sty`. The
+  // chicago-notes bbx/cbx raw-load cleanly and declare the user cite commands
+  // (`\runcite` chicago-notes.cbx:3164, `\headlessfullcite` :2919;
+  // cms-legal-sample, cms-notes-sample). Raw-overlaying biblatex-chicago.sty
+  // itself is not an option: it owns kvoptions declarations and `\patchcmd`s
+  // of biblatex internals the binding does not have.
+  // Guard: `perfect_kernel_batch56::biblatex_chicago_notes_loads_its_cbx`.
+  if lookup_value("opt@biblatex-chicago.sty").is_some() || blx_variant_requested("biblatex-chicago")
+  {
+    let mut style = "chicago-notes";
+    if let Some(opts) = lookup_vecdeque("opt@biblatex-chicago.sty") {
+      for opt in opts.iter() {
+        let opt_str = opt.to_string();
+        style = match opt_str.trim() {
+          "authordate" => "chicago-authordate",
+          "authordate-trad" => "chicago-authordate-trad",
+          "authordate16" => "chicago-authordate16",
+          "authordate-trad16" => "chicago-authordate-trad16",
+          "notes16" => "chicago-notes16",
+          "notes" => "chicago-notes",
+          _ => style,
+        };
+      }
+    }
+    if bibstyle.is_none() {
+      bibstyle = Some(style.to_string());
+    }
+    if citestyle_name.is_none() {
+      citestyle_name = Some(style.to_string());
     }
   }
   if let Some(s) = &bibstyle {
@@ -2821,6 +2990,47 @@ LoadDefinitions!({
     blx_load_style_file(s, "cbx");
   }
 });
+
+/// `biblatex-<x>.sty` routed to this binding (`latexml_contrib::dispatch`):
+/// the binding stands in for the `\RequirePackage{biblatex}` the variant
+/// would do, then — for the variants in [`BIBLATEX_VARIANT_OVERLAYS`] — the
+/// variant's own `.sty` is raw-input on top, so its user macros exist
+/// (`\highlightname` biblatex-cv.sty:565). A variant is listed only when
+/// its `.sty` is a bare `\RequirePackage{biblatex}` plus declarations the
+/// binding's surface accepts; biblatex-chicago is NOT (kvoptions
+/// declarations, `\patchcmd`s of biblatex internals, option clash) — its
+/// style selection is mapped in `load_definitions` instead.
+/// Guard: `perfect_kernel_batch56::biblatex_cv_variant_overlay`.
+pub const BIBLATEX_VARIANT_OVERLAYS: &[&str] = &["biblatex-cv"];
+
+pub fn load_variant(variant: &str) -> Result<()> {
+  assign_value(
+    "blx@variant",
+    Stored::from(variant.to_string()),
+    Some(Scope::Global),
+  );
+  if BIBLATEX_VARIANT_OVERLAYS.contains(&variant) {
+    // The variant's own `\PassOptionsToPackage{style=…}{biblatex}` +
+    // `\RequirePackage{biblatex}` (biblatex-cv.sty:12-17) reach this binding
+    // through the package machinery with the style options intact, so the
+    // variant runs first and the binding loads from inside it.
+    let _ = input_definitions(variant, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("sty")),
+      noltxml: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+    if lookup_definition(&T_CS!("\\ver@biblatex.sty"))?.is_none() {
+      load_definitions()?;
+    }
+    return Ok(());
+  }
+  load_definitions()
+}
+
+/// Is the biblatex binding being loaded on behalf of `biblatex-<x>.sty`
+/// (the `latexml_contrib::dispatch` variant route, recorded by [`load_variant`])?
+fn blx_variant_requested(variant: &str) -> bool { lookup_string("blx@variant") == variant }
 
 /// Raw-load `<name>.bbx` / `<name>.cbx` once (biblatex.sty `\blx@inputonce`,
 /// L2256-2258 / L11428-11435). Style files chain (`sbl.bbx` L1 inputs
@@ -2875,4 +3085,15 @@ fn blx_load_style_file(name: &str, ext: &str) {
     noerror: true,
     ..InputDefinitionOptions::default()
   });
+  // biblatex.sty:7118-7128 (`\blx@inputonce{<style>.dbx}`): a bibliography
+  // style's data model `<style>.dbx` loads with the bbx when it exists (biblatex-cv.dbx:11-30
+  // `\newtoggle`s the `cv@blx:*` switches biblatex-cv.sty:27-35 then set).
+  if ext == "bbx" {
+    let _ = input_definitions(name, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("dbx")),
+      noltxml: true,
+      noerror: true,
+      ..InputDefinitionOptions::default()
+    });
+  }
 }

@@ -1,0 +1,15 @@
+% witness: biblatex-chicago/cms-legal-sample (\runcite), cms-notes-sample (\headlessfullcite)
+% oracle: pdflatex 0 (biblatex-chicago.sty \RequireCitationStyle{chicago-notes} loads
+%   chicago-notes.cbx which \DeclareCiteCommand{\runcite}/{\headlessfullcite})
+% engines: pdflatex/lualatex
+% expect: 0 errors
+% status: RED (b56o) -> want GREEN
+% mechanism B: the biblatex binding REPLACES biblatex-chicago.sty (biblatex-* dispatch,
+%   lib.rs:730) so chicago's own \RequireCitationStyle{chicago-notes} never runs and
+%   chicago-notes.cbx is never loaded; its \DeclareCiteCommand-declared user cite
+%   commands (\runcite chicago-notes.cbx:3164, \headlessfullcite :2919) stay undefined.
+\documentclass{article}
+\usepackage[notes,backend=biber]{biblatex-chicago}
+\begin{document}
+Text.\footnote{See \runcite{smith}; \headlessfullcite{jones}.}
+\end{document}

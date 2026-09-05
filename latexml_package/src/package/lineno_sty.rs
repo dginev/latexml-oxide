@@ -8,6 +8,8 @@ LoadDefinitions!({
   DefEnvironment!("{pagewiselinenumbers*}[Number]", "#body");
   DefEnvironment!("{linenomath}",                   "#body");
   DefEnvironment!("{linenomath*}",                  "#body");
+  // lineno.sty:2881 `bframe` — a framed block (frame presentational; ulineno).
+  DefEnvironment!("{bframe}",                       "#body");
   // Real lineno.sty also defines control sequences `\linenomath`,
   // `\linenomathWithnumbers`, `\linenomathNonumbers` (raw-load
   // sees these as macros). Other packages — eccv.sty, journal templates —

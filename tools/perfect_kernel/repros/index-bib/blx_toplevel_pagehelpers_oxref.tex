@@ -1,0 +1,18 @@
+% witness: biblatex-oxref/oxalph-doc (\citefield L557, \mkcomprange L1571 in postnote),
+%          biblatex-true-citepages-omit-example (\pno L12 in postnote),
+%          biblatex-german-legal (\psqq L96 in postnote)
+% oracle: pdflatex 0 (all top-level biblatex.sty macros; \pno/\psqq are \ERROR only
+%   OUTSIDE a cite postnote, so they are exercised inside \cite[...] here)
+% engines: pdflatex/lualatex
+% expect: 0 errors
+% status: RED (b56o) -> want GREEN
+% mechanism A: biblatex.sty top-level user macros NOT ported into the biblatex binding
+%   (which replaces biblatex.sty): \citefield :12862, \mkcomprange :3649,
+%   \pno/\ppno/\nopp/\psq/\psqq :4371-4383 (installed \AtBeginDocument as \ERROR, redefined
+%   inside the postnote pagination machinery).
+\documentclass{article}
+\usepackage[style=authoryear,backend=biber]{biblatex}
+\begin{document}
+Alpha \citefield{smith}{labelalpha}, range \mkcomprange{367-368}.
+See \cite[\pno~110]{smith}; also \cite[295 \psqq]{jones}.
+\end{document}

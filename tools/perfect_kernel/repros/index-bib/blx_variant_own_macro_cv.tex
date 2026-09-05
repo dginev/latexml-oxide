@@ -1,0 +1,16 @@
+% witness: biblatex-cv/cv (\highlightname, preamble L5)
+% oracle: pdflatex 0 (biblatex-cv.sty:565 \newcommand{\highlightname}[4] after its own
+%   \RequirePackage{biblatex})
+% engines: pdflatex/lualatex
+% expect: 0 errors
+% status: RED (b56o: 1 undefined \highlightname) -> want GREEN
+% mechanism E (== same root class as B): the biblatex-* blanket dispatch (contrib
+%   lib.rs:730-736) runs the biblatex binding INSTEAD of raw-loading the variant's own
+%   .sty, so biblatex-cv.sty's own user macros (\highlightname biblatex-cv.sty:565) and
+%   drivers are never defined. Only pure-reconfiguration variants are safe to replace.
+\documentclass{article}
+\usepackage{biblatex-cv}
+\highlightname{Doe}{Jon}{}{}
+\begin{document}
+Body.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: biblatex-sbl/biblatex-sbl-ibid (line 200-201: \makeatletter \blx@opt@loccittracker@false)
+% oracle: pdflatex 0 (biblatex.sty:15791 \def\blx@opt@loccittracker@false{...})
+% engines: pdflatex/lualatex
+% expect: 0 errors
+% status: RED (b56o/q: 1 undefined) -> want GREEN
+% mechanism 3: the DOC directly calls a biblatex.sty INTERNAL that the binding (which
+%   replaces biblatex.sty) never ported. \blx@opt@loccittracker@{true,false,context,strict,
+%   constrict} biblatex.sty:15786-15810 just \let internal loc-cit tracking macros
+%   (\blx@imc@ifloccit / \blx@loccittracker / \blx@loccitreset) that our model does not use.
+\documentclass{article}
+\usepackage[style=sbl,backend=biber]{biblatex}
+\makeatletter
+\blx@opt@loccittracker@false
+\makeatother
+\begin{document}
+Body.
+\end{document}

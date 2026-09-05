@@ -10,7 +10,30 @@ LoadDefinitions!({
   RequirePackage!("xparse");
   RequirePackage!("etoolbox");
   RequirePackage!("xcolor");
-  def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
+  // mdframed.sty:591 `\newmdtheoremenv[mdframed-opts]{env}[numbered like]
+  // {caption}[within]` = `\newtheorem` inside a frame (presentational);
+  // the no-op it replaced left every such theorem environment undefined
+  // (beautynote: theorem, lemma, definition, proposition, problem).
+  // Guard: `perfect_kernel_batch56::mdframed_theorem_environments_are_theorems`.
+  DefMacro!("\\newmdtheoremenv [] {} [] {} []", sub[(_opts, env, like, caption, within)] {
+    let mut toks = vec![T_CS!("\\newtheorem"), T_BEGIN!()];
+    toks.extend(env.unlist());
+    toks.push(T_END!());
+    if let Some(like) = like {
+      toks.push(T_OTHER!("["));
+      toks.extend(like.unlist());
+      toks.push(T_OTHER!("]"));
+    }
+    toks.push(T_BEGIN!());
+    toks.extend(caption.unlist());
+    toks.push(T_END!());
+    if let Some(within) = within {
+      toks.push(T_OTHER!("["));
+      toks.extend(within.unlist());
+      toks.push(T_OTHER!("]"));
+    }
+    Ok(Tokens::new(toks))
+  });
   // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
   // `mdframed` (mdframed.sty L578-585:
   //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).

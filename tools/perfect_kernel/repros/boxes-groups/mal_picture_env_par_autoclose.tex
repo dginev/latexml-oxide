@@ -1,0 +1,13 @@
+% witness: pagelayout/example-template,-text  (\template{so-gs}{\text{..}} -> \pal@standardpage
+%   opens \begin{picture}(..) then flow content + \put{tikzpicture}; picture auto-closes early)
+% oracle: pdflatex (clean); engines: pdflatex ; Perl: SHARED (identical </ltx:picture> error)
+% expect: 0 Error/Fatal ; picture well-formed
+% status: RED (b56q) — malformed:ltx:picture Attempt to close </ltx:picture>, which isn't open
+% mechanism: MECH-3 kernel LaTeX picture env (latex_constructs.pool.ltxml:4958, mode=
+%   inline_internal_vertical) opens <ltx:picture> (Tag autoClose=1, :4943). A \par from
+%   non-\put flow content in the body auto-closes the (empty) picture; the env template's
+%   own </ltx:picture> then finds nothing open. Uses the real pagelayout class.
+\documentclass{pagelayout}
+\begin{document}
+\template{so-gs}{\text{This is a generic template.}}
+\end{document}

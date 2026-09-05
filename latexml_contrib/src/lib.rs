@@ -732,7 +732,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
       (lower.ends_with(".sty")
         && lower.len() > "biblatex-.sty".len()
         && lower.starts_with("biblatex-"))
-      .then(biblatex_sty::load_definitions)
+      .then(|| biblatex_sty::load_variant(&lower[..lower.len() - ".sty".len()]))
     })
 }
 

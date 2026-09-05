@@ -1,0 +1,18 @@
+% witness: fancybox/fancybox-doc (also latex4wp-it, miniplot, rubik, swfigure)
+% oracle: pdflatex (clean); engines: pdflatex,lualatex
+% expect: 0 Error lines; a caption's toccaption placed at float level, not in the box
+% status: RED (b56i) -> Error:malformed:ltx:toccaption <ltx:toccaption> isn't allowed in <ltx:block>
+% mechanism: \caption inside \fbox{\begin{minipage}} in a float -> minipage body is
+%   ltx:_CaptureBlock_/ltx:block; \caption emits ltx:caption+ltx:toccaption; toccaption
+%   not allowed in ltx:block. Known document-model deferral (boxed float panel).
+\documentclass{article}
+\begin{document}
+\begin{table}[h]
+  \begin{center}
+    \fbox{\begin{minipage}{.8\textwidth}
+      \begin{tabular}{rl} foo & bar \end{tabular}
+      \caption{A table of foo and bar.}
+    \end{minipage}}
+  \end{center}
+\end{table}
+\end{document}

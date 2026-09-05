@@ -1,0 +1,9 @@
+% witness: verifica/example4,example5 (\unit). oracle pdflatex clean.
+% \unit/\ap/\ped are babel-italian shorthands (italian.ldf AtBeginDocument,
+% gated by \setISOcompliance which verifica.cls:68 calls). \bbl@it@unit.
+\documentclass{article}
+\usepackage[italian]{babel}
+\setISOcompliance
+\begin{document}
+Potenza $10\unit{W}$; apici \ap{o} e pedici \ped{2}.
+\end{document}

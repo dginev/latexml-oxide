@@ -1,0 +1,7 @@
+% witness: derivative/derivative (\coloneq), rec-thy (\mathhyphen,\nvrightarrow,\notaccent)
+% oracle: lualatex clean. expect: 0 errors. mechanism: unicode-math symbol table not processed.
+\documentclass{article}
+\usepackage{unicode-math}
+\begin{document}
+\[ a \coloneq b,\quad x \nvrightarrow y,\quad p\mathhyphen q \]
+\end{document}
