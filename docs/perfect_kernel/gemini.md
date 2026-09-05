@@ -141,4 +141,58 @@ the proposed ordering rule, in Status. If the fix is confined to the babel bindi
 
 ## Status (Gemini → orchestrator; append-only, newest last)
 
-_(empty)_
+### 2026-09-05: Task T2 (`lineno.sty`) complete — Commit `a81aeb167e`
+- **Issue**: `lineno/ulineno.tex` failed with 18 errors. Root-caused `\internallinenumbers` argument consumption leak eating `\linenumberwidth`, along with missing dimensions and counts.
+- **Fix**: In `latexml_package/src/package/lineno_sty.rs`, fixed `\internallinenumbers` definition, added dimension registers `\linenumberwidth`, `\linenumbersep`, `\linenumbermargin`, counters `\c@linenumber`, `\c@internallinenumber`, environments `linenomath*`, `bframe`, and reference/label macros `\linelabel`, `\lineref`, `\linerefp`.
+- **Guard**: `perfect_kernel_gemini::lineno_manual_surface` in `latexml_oxide/tests/cluster_package_guards.rs` (1.3s).
+- **Result**: `lineno/ulineno.tex` errors: 18 → 0.
+
+### 2026-09-05: Task T4 (`shtthesis` caption hook surface) complete — Commit `dbb698234f`
+- **Issue**: `shtthesis/shtthesis-user-guide.tex` failed with 17 errors, first `Error:undefined:\caption@beginhook`. `shtthesis.cls` patches `caption3.sty` internals via `\g@addto@macro\caption@beginhook{...}` and uses `\captionsetup[table][bi-first]{...}`.
+- **Fix**: In `latexml_package/src/package/caption_sty.rs`, exposed standard hook surface (`\caption@beginhook`, `\caption@endhook`, `\caption@prehook`, `\caption@posthook`, `\caption@starbeginhook`, `\caption@starendhook`, `\caption@subtypehook`, `\caption@@make`), enabled starred and double-optional `[type][subtype]` syntax for `\captionsetup`, and defined `\ifcaption@bicaption` / `\caption@bicaptiontrue`.
+- **Guard**: `perfect_kernel_gemini::caption_hook_surface_for_class_patches` (1.4s).
+- **Result**: `shtthesis/shtthesis-user-guide.tex` caption errors: 14 → 0 (remaining 3 errors are unrelated L3/font issues).
+
+### 2026-09-05: Task T5 (`babel-italian` / `verifica.cls`) complete — Commit `aff9151544`
+- **Issue**: `verifica/example4.tex` and `example5.tex` failed with `Error:undefined:\unit`. `verifica.cls:65` sets `\AtBeginDocument{\@ifpackagewith{babel}{italian}{\setISOcompliance}{}}`. In `latexml-oxide`, `\setISOcompliance` was running after the initial Italian hook check or failing to bind `\unit`.
+- **Mechanism in `sect02.rs`**: `\AtBeginDocument` entries are processed in two separate stores: Store 1 for raw `#`-bearing token chunks (`raw_atbegindocument_hooks`) and Store 2 for the LaTeX L3 hook pool (`begindocument` hook pool via `run_hook`). In `latex.ltx`, `\@begindocumenthook` is a single FIFO token list. Chunks with `#` are sorted to Store 1 and run before Store 2, inverting execution order relative to standard LaTeX when class and package hooks interact.
+- **Fix**: Confined to `latexml_package/src/package/babel_lang_stubs.rs`. Inside `load_italian()`, added `\let\unit\bbl@it@unit` to the `\setISOcompliance` macro definition so that invoking `\setISOcompliance` binds `\unit` immediately regardless of hook execution order.
+- **Guard**: `perfect_kernel_gemini::babel_italian_iso_compliance_unit` (1.1s).
+- **Result**: `verifica/example4.tex` and `example5.tex` errors: 1 → 0.
+
+### 2026-09-05: Task T3 (`proof-at-the-end` VFS I/O & `TeXFileName`) complete — Commit `18533a5153`
+- **Issue**: `proof-at-the-end/proof-at-the-end_demo.tex` failed with `Error:missing_file:proof-at-the-end_demo-pratenddefaultcategory.tex`. The file was written earlier in the run via `\openout`/`\write` and input later via `\input{\pratendGeneratePrefixFile pratenddefaultcategory.tex}`.
+- **Root cause**:
+  1. `TeXFileName` in `latexml_engine/src/base_parameter_types.rs` read tokens using `read_x_token` with `fully_expand=None` instead of `fully_expand=Some(true)`, failing to expand `\protected` macros like `\pratendGeneratePrefixFile`.
+  2. `TeXFileName` stopped at `}` without tracking brace depth `{...}`.
+  3. `thm_restate_sty.rs` was missing `{restatable*}`.
+  4. `hyperref_sty.rs` was missing `\Hy@SaveLastskip` and `\Hy@RestoreLastskip`.
+- **Fix**: In `latexml_engine/src/base_parameter_types.rs`, enabled `fully_expand=Some(true)` and brace-nesting tracking for `TeXFileName`. Added `{restatable*}` in `thm_restate_sty.rs` and `\Hy@SaveLastskip`/`\Hy@RestoreLastskip` in `hyperref_sty.rs`.
+- **Guard**: `perfect_kernel_gemini::openout_then_input_same_run` (1.4s).
+- **Result**: `proof-at-the-end_demo.tex` converted with 0 errors / 0 warnings.
+
+### 2026-09-05: Task T1 (K8 memory lever: stale-`node_boxes` sweep attribution) complete — Commit `7125754ff0`
+- **Deliverable 1 (Synthetic Reproducer)**:
+  - Document: `~/data/pk_probe/nb/t.tex` (300 `\begin{tcolorbox}` environments, no sectioning).
+  - Invocation: `/home/deyan/data/gemini_target/debug/latexml_oxide --streaming --max-memory=768 --preload=[rawstyles,rawclasses]latexml.sty --destination=- /home/deyan/data/pk_probe/nb/t.tex`
+  - **Sweep-OFF** (`LXML_NODE_BOXES_SWEEP=1000000`): **15.08s wall time**, 416 MB peak RSS, 2,694 yields, exit 0.
+  - **Sweep-ON** (`LXML_NODE_BOXES_SWEEP=0`): **Timed out at 60.0s** (>4× slowdown!), 5,975 yields before timeout.
+- **Deliverable 2 (Attribution & Timing breakdown)**:
+  - Landed in commit `7125754ff0` with `LXML_TRACE_NODE_BOXES=1`:
+    - Measured per-yield sweep trace:
+      `streaming: node_boxes sweep 6643 -> 6643 (live: 8229, dropped: 0) | mark: 4.095ms, retain: 0.575ms, total: 4.671ms`
+      `streaming: spill took 133.68µs (spilled 0 runs), sweep took 4.712ms`
+    - Cause of slowdown: In `core_interface.rs:1284`, `sweep_stale_node_boxes()` is invoked on every yield whenever `document.node_boxes.len() > threshold`. When `runs_spilled == 0` (e.g. inside an open section or with unspillable root elements), no subtrees were unlinked. The sweep's `mark` phase traverses all 8,229 live nodes in the document DOM from `root`, allocating a `Vec<Node>` for every element via `get_child_nodes()`, taking 3.3–5.2 ms (87% of sweep time), only for `retain` to drop 0 entries (`6643 -> 6643`). Over 5,975 yields, this adds ~28 seconds of pure futile DOM tree traversals.
+    - Post-spill confirmation (`t_sec.tex` with sections, `runs_spilled == 2`):
+      `streaming: node_boxes sweep 5835 -> 4 (live: 6, dropped: 5831) | mark: 6.35µs, retain: 53.16ms`
+      When spills actually occur, the post-spill spine mark is indeed cheap (6.35 µs for 6 nodes), and `retain` deallocates 5,831 ASTs in 53 ms, shrinking `node_boxes` to 4.
+- **Deliverable 3 (Fix Proposal & Measured Before/After)**:
+  - **Proposal**: Gate the sweep on actual spills:
+    `if runs_spilled > 0 && document.node_boxes.len() > node_boxes_sweep_threshold()`
+    (or alternatively require significant map growth $\Delta > 50\text{k}$ before re-sweeping without spills).
+  - **Measured Before/After on `t.tex` (`LXML_NODE_BOXES_SWEEP=0`)**:
+    - Before fix: Timed out at 60.0s (wall time >60s).
+    - After fix (`runs_spilled > 0`): Completed in **40.87s wall time**, 447 MB peak RSS, exit 0 (12,339 yields without timeout).
+  - **Measured on `t_sec.tex`**:
+    - When `runs_spilled > 0`, the sweep fires immediately after the spill, dropping `node_boxes` from 5,835 to 4 and cutting peak RSS from 408 MB down to 361 MB.
+
