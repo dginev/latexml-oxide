@@ -17,57 +17,57 @@ use latexml_package::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsmath");
-  // `\begin{gmatrix}[d] cells [\rowops ops] [\colops ops] \end{gmatrix}`: the
-  // body is read unexpanded and split at the section switches.
-  DefMacro!(T_CS!("\\begin{gmatrix}"), None, "\\lx@gauss@matrix");
-  // (`Until:\\end` then the `{gmatrix}` group as a third, ignored argument.)
-  DefMacro!("\\lx@gauss@matrix [] Until:\\end {}", sub[args] {
+  // Environment `gmatrix`: renders `gmatrix[d]` natively through the
+  // corresponding amsmath matrix environment (`pmatrix`, `bmatrix`, etc.),
+  // avoiding gullet delimited-scan failures when nested inside outer alignments
+  // (such as `alignat*`). `\rowops` and `\colops` close the inner matrix alignment
+  // if still open, and switch the operation prefix (\lx@gauss@RC) to R or C.
+  DefMacro!("\\gmatrix []", sub[args] {
     let delim = args.first().filter(|a| !a.is_none()).map(|d| d.to_string()).unwrap_or_default();
-    let body: Tokens = args.get(1).cloned().unwrap_or_default().into_tokens_result()?;
     let env = if delim.is_empty() { "matrix".to_string() } else { format!("{delim}matrix") };
-    let mut cells: Vec<Token> = Vec::new();
-    let mut rowops: Vec<Token> = Vec::new();
-    let mut colops: Vec<Token> = Vec::new();
-    let mut section = 0u8; // 0 cells, 1 rowops, 2 colops
-    let mut depth = 0i32;
-    for t in body.unlist() {
-      match t.get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth -= 1,
-        Catcode::CS if depth == 0 && t == T_CS!("\\rowops") => { section = 1; continue; },
-        Catcode::CS if depth == 0 && t == T_CS!("\\colops") => { section = 2; continue; },
-        _ => {},
-      }
-      match section { 0 => cells.push(t), 1 => rowops.push(t), _ => colops.push(t) }
-    }
-    let mut out: Vec<Token> = Vec::new();
-    out.extend(Tokenize!(TeXString::assembled(format!("\\begin{{{env}}}"))).unlist());
-    out.extend(cells);
-    out.extend(Tokenize!(TeXString::assembled(format!("\\end{{{env}}}"))).unlist());
-    for (name, ops) in [("R", rowops), ("C", colops)] {
-      if ops.iter().any(|t| t.get_catcode() != Catcode::SPACE) {
-        out.push(T_BEGIN!());
-        out.extend(Tokenize!(TeXString::assembled(format!("\\def\\lx@gauss@RC{{{name}}}"))).unlist());
-        out.extend(ops);
-        out.push(T_END!());
-      }
-    }
-    Ok(Tokens::new(out))
+    let mut toks = Vec::new();
+    toks.push(T_CS!("\\let"));
+    toks.push(T_CS!("\\lx@gauss@matrix@open"));
+    toks.push(T_CS!("\\relax"));
+    toks.push(T_CS!(&format!("\\{env}")));
+    Ok(Tokens::new(toks))
   });
+  DefMacro!("\\rowops",
+    "\\ifx\\lx@gauss@matrix@open\\relax\
+       \\lx@end@ams@matrix\
+       \\let\\lx@gauss@matrix@open\\undefined\
+     \\fi\
+     \\def\\lx@gauss@RC{R}"
+  );
+  DefMacro!("\\colops",
+    "\\ifx\\lx@gauss@matrix@open\\relax\
+       \\lx@end@ams@matrix\
+       \\let\\lx@gauss@matrix@open\\undefined\
+     \\fi\
+     \\def\\lx@gauss@RC{C}"
+  );
+  DefMacro!("\\endgmatrix",
+    "\\ifx\\lx@gauss@matrix@open\\relax\
+       \\lx@end@ams@matrix\
+       \\let\\lx@gauss@matrix@open\\undefined\
+     \\fi"
+  );
+  DefMacro!("\\g@matrix", "\\gmatrix[]");
+  DefMacro!("\\endg@matrix", "\\endgmatrix");
   // The operations, as math annotation fragments (each preceded by `\;`).
   DefMacro!("\\mult{}{}", "\\;\\lx@gauss@RC_{#1}\\leftarrow #2\\,\\lx@gauss@RC_{#1}");
   DefMacro!("\\add[][]{}{}", "\\;\\lx@gauss@RC_{#4}\\leftarrow\\lx@gauss@RC_{#4}+#1\\,\\lx@gauss@RC_{#3}");
   DefMacro!("\\swap[][]{}{}", "\\;\\lx@gauss@RC_{#3}\\leftrightarrow\\lx@gauss@RC_{#4}");
   DefMacro!("\\lx@gauss@RC", "R");
-  def_macro_noop("\\rowops")?;
-  def_macro_noop("\\colops")?;
-  // gauss.sty `\newmatrix{l}{r}{X}`: the fenced `Xmatrix` environment and the
-  // `gmatrix[X]` delimiter letter.
+  // gauss.sty `\newmatrix{l}{r}{X}`: defines the `Xmatrix` amsmath-style environment
+  // and enables `\begin{gmatrix}[X]`.
   DefMacro!("\\newmatrix{}{}{}", sub[(l, r, x)] {
     let (l, r, x) = (l.to_string(), r.to_string(), x.to_string());
     if x.is_empty() || x == "g" { return Ok(Tokens!()); }
-    Ok(Tokenize!(TeXString::assembled(format!(
-      "\\newenvironment{{{x}matrix}}{{\\left{l}\\begin{{matrix}}}}{{\\end{{matrix}}\\right{r}}}"
+    Ok(TokenizeInternal!(TeXString::assembled(format!(
+      "\\def\\{x}matrix{{\\lx@ams@matrix{{name={x}matrix,datameaning=matrix,left=\\lx@left{l},right=\\lx@right{r}}}}}\
+       \\def\\end{x}matrix{{\\lx@end@ams@matrix}}\
+       \\newenvironment{{{x}matrix}}{{\\{x}matrix}}{{\\end{x}matrix}}"
     ))))
   });
   // Arrow geometry and label fontifiers: presentational.

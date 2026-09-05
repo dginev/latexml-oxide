@@ -169,6 +169,7 @@ fn beamer_mode_spec_applies(spec: &str) -> bool {
 /// processed through two nested `\def` levels:
 /// 1. `\loop ... \repeat` defines `\def\iterate{...}` enclosing the body.
 /// 2. `\iterate` executes `\def\beamer@doifinframe{\begin{beamer@frameslide} #1 \end{beamer@frameslide}}`.
+///
 /// Each `\def` level collapses double-PARAM `##` to `#`. Thus `####` in the
 /// source becomes `##` in step 1, and `#` in step 2.
 fn halve_frame_hashes(tokens: Vec<Token>) -> Vec<Token> {
