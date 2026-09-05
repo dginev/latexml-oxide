@@ -1,0 +1,14 @@
+% witness: upmethodology/upmethodology-doc (upmethodology-doc.tex:774 \mfigurewtex; upmethodology-fmt.sty:461-465,509)
+% oracle:  pdflatex 0 errors (PDFMODE -> .pdftex_t exists)
+% engines: rust=DVIMODE perl=DVIMODE (2026-09-05)  [SHARED: ifpdf false in both]
+% expect:  PDFMODE (so .pdftex_t extension is chosen and the shipped file is found)
+% status:  RED (prints DVIMODE)
+% mechanism: with \pdfoutput=0, \ifpdf is FALSE (ifpdf_sty.rs:7, Perl ifpdf.sty.ltxml:19),
+%   so upmethodology-fmt.sty:461-465 declares DVI extensions (.pstex_t,.ps_tex); the doc
+%   ships figure_and_tex.pdftex_t/.pdf -> \IfFileExists fails -> File not found (:509).
+%   Same pdf-mode family as the backend repro. CONTROL note: this is the pdf-mode decision.
+\documentclass{article}
+\usepackage{ifpdf}
+\begin{document}
+[\ifpdf PDFMODE\else DVIMODE\fi]
+\end{document}

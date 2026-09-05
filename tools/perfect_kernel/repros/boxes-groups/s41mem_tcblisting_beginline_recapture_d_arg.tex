@@ -1,0 +1,21 @@
+% witness: tutodoc/tutodoc-en (tutodoc-en.tex:1816 \begin{tdoclatex}<\tdoctcb{sbs}>); tutodoc.cls:1024 \NewTCBListing{tdoclatex}{ O{} D<>{} }
+% oracle:  pdflatex 0 errors
+% engines: rust(b56l)=124/runaway rust(b56j)=0 perl=0(1 unrelated malformed) (2026-09-05)  pdflatex=0
+% mechanism: \NewTCBListing{ O{} D<>{} } maps to \lstnewenvironment{...}[1][] (tcolorbox_sty.rs:281 tcb_xparse_listing
+%   drops the D<> spec). \begin{mylst}<..> -> the [ optional probe reads '<' (nonspace), unreads -> pushback_holds_nonspace
+%   TRUE, mouth STILL on the \begin line. 56i read_raw_current_line_from_start (gullet.rs:1421 + mouth.rs:read_raw_line_from_start)
+%   clears pushback and returns the \begin{mylst}<..> line from COLUMN 0 as the first captured body line
+%   (listings_sty.rs:118). lst_run_body_via_input writes it to lx-mylst-N.tmp and \input's it back; the leading
+%   \begin{mylst} re-executes -> re-captures -> new tmp per turn -> infinite recursion (MemoryBudget / 124).
+% expect:  0 errors; <ltx:listing>/verbatim body has NO literal \begin{mylst}; run terminates
+% status:  RED (regression introduced by batch 56i / commit 8c3c7d565a)
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,breakable}
+\tcbset{listing engine=listings, colframe=black, colback=white, size=small}
+\NewTCBListing{mylst}{ O{} D<>{} }{ listing side text, #1 }
+\begin{document}
+\begin{mylst}<colback=red>
+Some code line A
+\end{mylst}
+\end{document}

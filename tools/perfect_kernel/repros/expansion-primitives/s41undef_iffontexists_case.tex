@@ -1,0 +1,11 @@
+% witness: asmeconf/asmeconf-template, asmejour/asmejour-template sweep-41
+% root: our \IfFontExistsTF is case-sensitive; real file TeXGyreTermesX-Regular.otf
+%   queried as TexGyreTermesX-regular.otf (asmeconf.cls:650); luaotfload matches
+%   case-insensitively so the \ClassErrorNoLine false-branch is dead on oracle.
+% expect: 0 Error lines. status: RED today -> \ClassErrorNoLine undefined (false branch)
+\documentclass{article}
+\usepackage{fontspec}
+\makeatletter
+\IfFontExistsTF{TexGyreTermesX-regular.otf}{}{\ClassErrorNoLine{X}{Y}}
+\makeatother
+\begin{document}x\end{document}

@@ -12,6 +12,9 @@ LoadDefinitions!({
   def_macro_noop("\\setmathfont[]{}[]")?;
   def_macro_noop("\\setmathfontface DefToken []{}[]")?;
   def_macro_noop("\\unimathsetup{}")?;
+  // unicode-math-luatex.sty:329 `\NewDocumentCommand\setoperatorfont{m}`:
+  // operator-font bookkeeping (asmeconf.cls). Witness asmeconf-template.
+  def_macro_noop("\\setoperatorfont{}")?;
   def_macro_noop("\\NewNegationCommand{}{}")?;
   def_macro_noop("\\NewNegatedSymbol{}{}")?;
   // unicode-math symbol table loaders and ctex-engine-luatex.def:418-432 hooks.

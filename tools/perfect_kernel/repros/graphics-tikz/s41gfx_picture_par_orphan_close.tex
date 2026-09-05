@@ -1,0 +1,19 @@
+% witness: pagelayout/example-template, pagelayout/example-text (both 2 malformed:ltx:picture)
+% oracle:  pdflatex 0 errors (a \par inside a picture box is harmless)
+% engines: rust=1 perl=1 (SHARED — same close-which-isn't-open)
+% expect:  0 Error/Fatal; the explicit \begin{picture}..\end{picture} balances
+% status:  RED (b56l) — SHARED. Kernel isolation of the pagelayout page-picture bug.
+% mechanism: pagelayout.cls:3113/3155 \pal@standardpage wraps each page in \begin{picture}..
+%   \end{picture}; block content (a \par) inside forces autoClose of <ltx:picture>
+%   (Tag autoClose=1, latex_constructs.pool.ltxml:4943; picture_model excludes block <ltx:p>),
+%   orphaning \end{picture} -> Error:malformed:ltx:picture (document.rs:1298 close_element).
+%   Perl flags the fix itself: TeX_Paragraph.pool.ltxml:95-96 "\par should be a NOOP in vertical mode".
+\documentclass{article}
+\setlength{\unitlength}{1pt}
+\begin{document}
+\begin{picture}(100,100)
+\put(0,0){hello}
+
+paragraph text
+\end{picture}
+\end{document}

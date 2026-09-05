@@ -1,0 +1,8 @@
+% witness: biblatex-oxref/oxalph-doc, oxnum-doc sweep-41
+% oracle: pdflatex; real def biblatex.def \citefield (data getter)
+% expect: 0 Error lines. status: RED today -> Error:undefined:\citefield
+\documentclass{article}
+\usepackage[style=numeric,backend=biber]{biblatex}
+\begin{document}
+\citefield{key}{labelnumber}
+\end{document}

@@ -1,0 +1,12 @@
+% witness: euclideangeometry-man via pm-isomath.sty:84-86 (\MathLatin) — pre-existing, masked before batch 56j by a listings cascade
+% oracle: pdflatex clean
+% engines: pdflatex
+% expect: 0 errors; <ltx:Math> for $\mathrmbf{x}$
+% status: RED (56j build): Error:undefined:\y, \x "at Anonymous String", then Fatal:Timeout:Recursion (window of 2 tokens)
+% mechanism: \NewDocumentCommand\MathLatin{m g O{m} D(){it}}{\bgroup\edef\y{\IfNoValueTF{#2}{\ISOfam}{#2}}\edef\x{\noexpand\egroup\noexpand\MLatin{\noexpand#1}{\y}}\x{#3}{#4}} — the \edef\x with \noexpand#1 (#1 a letter) inside an ltcmd body; \x is undefined afterwards and the expansion loops. Root not yet found.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{pm-isomath}
+\begin{document}
+$\mathrmbf{x}$.
+\end{document}

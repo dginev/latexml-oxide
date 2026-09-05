@@ -758,6 +758,20 @@ LoadDefinitions!({
   // Perl `DeclareOption(undef, sub { })` — ignore unknown options.
   DeclareOption!(None, {});
   ProcessOptions!();
+  // biblatex-chicago.sty:24-29 (`\DeclareVoidOption{authordate}` …) selects
+  // `style=chicago-authordate` / `chicago-notes`; when routed here as the
+  // variant, the options sit under `opt@biblatex-chicago.sty`. The
+  // author-date family is our authoryear rendering (cms-dates-intro,
+  // cms-dates-sample; lualatex clean).
+  // Guard: `perfect_kernel_batch56::biblatex_chicago_authordate_has_gentextcite`.
+  if let Some(opts) = lookup_vecdeque("opt@biblatex-chicago.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      if opt_str.trim().starts_with("authordate") {
+        blx_set_style("authoryear");
+      }
+    }
+  }
   if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
@@ -987,6 +1001,12 @@ LoadDefinitions!({
   DefMacro!("\\Autocites OptionalMatch:*", sub[(star)] {
     blx_multicite_parenthetical(blx_nonempty(&star))
   }, locked => true);
+  // chicago-dates-common.cbx:2966 `\gentextcite` (genitive text cite) and
+  // its `s`/`G` forms: the case is prose-only, so they render as `\textcite`.
+  DefMacro!("\\gentextcite", "\\textcite");
+  DefMacro!("\\gentextcites", "\\textcites");
+  DefMacro!("\\Gentextcite", "\\textcite");
+  DefMacro!("\\Gentextcites", "\\textcites");
   DefMacro!("\\textcites OptionalMatch:*", sub[(star)] {
     blx_multicite_textual(blx_nonempty(&star))
   }, locked => true);

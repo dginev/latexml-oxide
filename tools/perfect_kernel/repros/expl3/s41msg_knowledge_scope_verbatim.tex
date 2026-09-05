@@ -1,0 +1,20 @@
+% witness: knowledge/knowledge (knowledge.tex:11 usepackage[scope]{knowledge}; verbatim body)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-05)  [SHARED: Perl reproduces the same scope error]
+% expect:  0 errors; <ltx:verbatim> present
+% status:  RED
+% mechanism: scope module redefines \begin/\end (knowledge.sty:1674-1685); \begin{verbatim}
+%   goes through scope's \begin -> pushes area "verbatim". Our verbatim constructor
+%   (sect06.rs:678) reads the body and consumes \end{verbatim} itself, sidestepping the
+%   env machinery, so scope's \end-wrapper never pops "verbatim". At \end{document} scope
+%   pops and finds "verbatim" on top -> "Not allowed to close 'document' here (at 'verbatim')"
+%   (knowledge.sty:889). center/quotation (non-verbatim tracked envs) pop fine.
+\documentclass{article}
+\usepackage[scope,silent]{knowledge}
+\begin{document}
+Text.
+\begin{verbatim}
+some verbatim
+\end{verbatim}
+More text.
+\end{document}

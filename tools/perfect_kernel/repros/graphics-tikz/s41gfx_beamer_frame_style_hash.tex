@@ -1,0 +1,21 @@
+% witness: beamer-theme-albi/beamer-theme-albi-doc (Error:latex:(pgfkeys) '/tikz/#1' x25 + color '#1' x15)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (SHARED — both mishandle beamer frame body-capture hash level)
+% expect:  0 Error/Fatal; the tikz .style arg #1 resolves to the passed key name
+% status:  RED (b56l) — SHARED. HIGH risk (beamer frame capture, wide blast radius).
+% mechanism: doc:506 lab/.style={...,####1=1.5mm} inside a beamer \begin{frame}. Real beamer
+%   captures & re-executes the frame body (one #-halving level), so ####1 -> ##1 (frame) -> #1
+%   (.style \def). Our beamer_cls.rs frame handling omits that halving level, so ####1 lands as a
+%   literal '#1' key -> pgfkeys "I do not know the key '/tikz/#1'". The color '#1' errors
+%   (pastille/.style={fill=####1}, doc:505) share the SAME root. Fixing frame body-capture halving
+%   would clear all 40 errors -> doc clean.
+\documentclass{beamer}
+\usepackage{tikz}
+\begin{document}
+\begin{frame}
+\begin{tikzpicture}
+  \tikzset{lab/.style={inner sep=1pt,####1=1.5mm}}
+  \foreach \pos in {outer sep}{ \node[lab=\pos]{x}; }
+\end{tikzpicture}
+\end{frame}
+\end{document}

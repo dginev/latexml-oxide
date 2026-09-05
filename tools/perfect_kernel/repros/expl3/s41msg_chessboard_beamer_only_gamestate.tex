@@ -1,0 +1,20 @@
+% witness: chessboard/chessboard_and_beamer (chessboard_and_beamer.tex:20-25 \only<n>{\mainline/\hidemoves})
+% oracle:  pdflatex 0 errors
+% engines: rust=Fatal perl=? (2026-09-05)
+% expect:  0 errors; chessboard frame present
+% status:  RED
+% mechanism: skak stores game state in .fen files (\@storegame/\@restoregame, skak.sty:1986-2017).
+%   Plain \newgame\mainline{1.e4} is CLEAN. Under beamer \only<n>, suppressed-overlay side
+%   effects (\hidemoves/\mainline in \only<2>/<3>) leak into the .fen state so \only<1>'s
+%   \mainline{1.e4} restores black-to-move -> \errmessage (skak.sty:1368) then the delimited
+%   Until:. arg scan (skak.sty:1274 \@mainline #-catcode-12 parse) runs off EOF -> Fatal.
+\documentclass{beamer}
+\usepackage[skaknew]{chessboard, skak}
+\begin{document}
+\begin{frame}
+\newgame
+\only<1>{\mainline{1.e4}}
+\only<2>{\hidemoves{1.e4}\mainline{1... e5}}
+\only<3>{\hidemoves{1.e4 e5}\mainline{2. Nf3}}
+\end{frame}
+\end{document}

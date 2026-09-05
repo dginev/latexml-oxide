@@ -179,6 +179,10 @@ LoadDefinitions!({
   // \pgfdeclareverticalshading, gotham). Load our pgf binding so that raw
   // theme surface resolves against the real implementations.
   RequirePackage!("pgf");
+  // beamerbasetranslator.sty:14 `\RequirePackage{translator}`: language
+  // packs call `\uselanguage`/`\languagealias` (ctex-scheme-chinese-beamer
+  // .def:71; mirage-beamer-zh). Guard: `perfect_kernel_batch56::beamer_loads_translator`.
+  RequirePackage!("translator");
   // beamer.cls:32-49 + beamerbaseframecomponents.sty:22-23: the dimension
   // registers themes read (`\beamer@rightsidebar` unconditionally at
   // beamerthemeVerona.sty:287 → `Missing close parenthesis in Dimension

@@ -1,0 +1,19 @@
+% witness: ltx-talk/verbatim-content (verbatim-content.tex:1 \DocumentMetadata; ltx-talk.cls:212 \DeclareColor{alert})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-05)  [SHARED: Perl also emits Unknown color, and lacks \DocumentMetadata]
+% expect:  0 errors; body text present, no unknown-color
+% status:  RED
+% mechanism: under \DocumentMetadata, pdfmanagement-firstaid loads
+%   xcolor-patches-tmp-ltx.sty which redefines \XC@definec@lor to append
+%   \expl@color@set@@nnn -> \color_set:nnn (xcolor-patches:56), populating
+%   l3color's \l__color_named_<name>_prop. Our \XC@definecolor binding
+%   (xcolor_sty.rs:758 -> content.rs def_color) never calls \color_set:nnn, so raw
+%   l3color \color_select:n{alert} (expl3-code.tex:31780) fails \color_if_exist:n
+%   (:31234) -> unknown-color (:31384). Adding \color_set:nnn clears it.
+\DocumentMetadata{}
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{alert}{RGB}{200,0,0}
+\begin{document}
+\ExplSyntaxOn \color_select:n {alert} \ExplSyntaxOff text.
+\end{document}

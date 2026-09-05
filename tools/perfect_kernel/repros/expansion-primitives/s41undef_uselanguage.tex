@@ -1,0 +1,10 @@
+% witness: beamertheme-mirage/mirage-beamer-zh (+ -poster-zh) sweep-41
+% oracle: lualatex; real def translator.sty:20 \newcommand\uselanguage[2][]{...}
+%   beamer loads it via beamerbasetranslator.sty:14 \RequirePackage{translator}
+% expect: 0 Error lines. status: RED today -> Error:undefined:\uselanguage
+\documentclass{beamer}
+\uselanguage{English}
+\languagealias{en}{English}
+\begin{document}
+\begin{frame}\trans@languagepath\end{frame}
+\end{document}

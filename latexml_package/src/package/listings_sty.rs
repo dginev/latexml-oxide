@@ -115,7 +115,16 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
   // input` → Fatal). Guard:
   // `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`.
   let mut first_line = if pushback_holds_nonspace() {
-    read_raw_current_line_from_start()
+    // A begin-line argument the environment's mapping could not consume
+    // leaves non-space pushback while the mouth is STILL on the `\begin`
+    // line; that line is not content — re-inputting it re-entered the
+    // environment without bound (tutodoc, simplebnf, istgame: MemoryBudget
+    // fatal, sweep #41). Guard:
+    // `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
+    read_raw_current_line_from_start().filter(|l| {
+      !l.trim_start()
+        .starts_with(&format!("\\begin{{{environment}}}"))
+    })
   } else {
     read_raw_line(); // leftover of the \begin line — not content
     None

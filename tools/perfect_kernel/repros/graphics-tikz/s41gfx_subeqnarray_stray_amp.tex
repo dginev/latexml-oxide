@@ -1,0 +1,18 @@
+% witness: subeqnarray/subeqnarray-sample (Error:unexpected:& Stray alignment)
+% oracle:  pdflatex 0 errors (subeqnarray = eqnarray with subnumbering)
+% engines: rust=1 perl=6 (SHARED/PERL-ORIGIN — subeqnarray.sty.ltxml:21-22 maps to display math)
+% expect:  0 Error/Fatal; <ltx:equationgroup> with subnumbered rows (1a,1b)
+% status:  RED (b56l) — SHARED/PERL-ORIGIN.
+% mechanism: subeqnarray.sty.ltxml:21-22 (& Rust subeqnarray_sty.rs:10-14) map \subeqnarray to
+%   \lx@equationgroup@subnumbering@begin\bgroup\lx@begin@display@math — plain DISPLAY MATH,
+%   NO eqnarray alignment, so every & is stray. Fix: rebind to subnumbering + eqnarray machinery
+%   (latex_constructs.pool.ltxml:2205 \@eqnarray@bindings...\lx@begin@alignment). Verified:
+%   \begin{subequations}\begin{eqnarray}...\end{eqnarray}\end{subequations} is clean today.
+\documentclass{article}
+\usepackage{subeqnarray}
+\begin{document}
+\begin{subeqnarray}
+\slabel{a} x & = & a \\
+\slabel{b}   & = & b
+\end{subeqnarray}
+\end{document}

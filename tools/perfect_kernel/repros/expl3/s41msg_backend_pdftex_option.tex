@@ -1,0 +1,16 @@
+% witness: elpres/elpres-example (elpres-example.tex:1), intro-scientific/scidoc (scidoc.tex:1)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-05)  [RUST-ONLY: Perl binds \document natively, never fires the backend load]
+% expect:  0 errors; body contains "world"
+% status:  RED
+% mechanism: \documentclass[pdftex] -> \@classoptionslist has "pdftex" -> l3 finalise
+%   (expl3-code.tex:8352) sets \g__sys_backend_tl=pdfmode. At \document,
+%   \@expl@sys@load@backend@@ (latex.ltx:9472) -> \sys_load_backend:n{} ->
+%   \__sys_load_backend_check:N (expl3-code.tex:7992). \sys_if_output_pdf: is FALSE
+%   because \pdfoutput=0 (pdftex.rs:11; real pdflatex sets \pdfoutput=1 via
+%   pdftexconfig.tex:6) -> dvi branch rejects pdfmode -> wrong-backend (expl3-code.tex:11591).
+\documentclass[pdftex]{article}
+\usepackage{xcolor}
+\begin{document}
+Hello \textcolor{red}{world}.
+\end{document}

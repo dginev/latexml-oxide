@@ -1,0 +1,15 @@
+% witness: prtec/PRTEC24-template (prtec.cls:316 \NewDocumentCommand{\entry}{m g}; xparse pulled via newtxtext->xpatch)
+% oracle:  pdflatex 0 errors
+% engines: rust=2 perl=? (2026-09-05)  [RUST-ONLY: xpatch binding omits xparse]
+% expect:  0 errors; body shows [A/B] and [C/-NoValue-]
+% status:  RED
+% mechanism: kernel ltcmd rejects deprecated arg types g/G/l/u unless xparse.sty is loaded
+%   (latex.ltx:2287-2308; message :4731). Real xpatch.sty:42 does \RequirePackage{xparse,etoolbox};
+%   our xpatch_sty.rs:32 only RequirePackage!("etoolbox"), so xparse.sty's
+%   \__cmd_normalize_type_g:w (xparse.sty:98-114) is never installed. Fix: xpatch loads xparse.
+\documentclass{article}
+\usepackage{xpatch}
+\NewDocumentCommand{\entry}{m g}{[#1/#2]}
+\begin{document}
+\entry{A}{B} \entry{C}.
+\end{document}

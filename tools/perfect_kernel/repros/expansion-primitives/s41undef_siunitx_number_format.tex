@@ -1,0 +1,12 @@
+% witness: zugferd/DEMO-rechnung-zugferd(-Kleinunternehmen) sweep-41
+% oracle: lualatex; siunitx.sty internal \siunitx_number_format:nN {num} <tlvar>
+%   (zugferd.sty:415 \siunitx_number_format:nN {#3} #2). Native siunitx_sty.rs
+%   replaces siunitx.sty and omits this l3 internal.
+% expect: 0 Error lines. status: RED today
+\documentclass{article}
+\usepackage{siunitx}
+\ExplSyntaxOn
+\tl_new:N \l_my_tl
+\siunitx_number_format:nN { 1234.5 } \l_my_tl
+\ExplSyntaxOff
+\begin{document}x\end{document}

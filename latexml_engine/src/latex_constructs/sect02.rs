@@ -225,12 +225,14 @@ pub(crate) fn load() -> Result<()> {
     // run inside the `document` environment, so `\par` is active (only the RAW preamble,
     // where `document` is not yet on the env stack, no-ops it) regardless of
     // `inPreamble` (tex_paragraph.rs).
-    if first_begin && let Some(ops) = lookup_tokens("@at@begin@document") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
-    }
+    // Order: the L3 `begindocument` hook (raw packages' `\AtBeginDocument`,
+    // routed there since batch 56i) fires FIRST, then the bindings' private
+    // `@at@begin@document` store — bindings outrank raw: cleveref_sty.rs
+    // defers `\let\label\lx@cleverref@label` here, and the raw cleveref.sty:66
+    // hook's `\def\label{\@ifnextchar[\label@optarg\label@noarg}` must not
+    // shadow it (its `\cref@override@label@type` `[#1][#2]` scan ran to EOF:
+    // crossreftools_driver, test-autonum fatal; RUST-ONLY, Perl has no raw
+    // cleveref). Guard: `perfect_kernel_batch56::binding_begin_document_code_outranks_raw_hook`.
     if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
       // Build the Tokens explicitly: `Tokenize!` runs at the runtime
       // catcode regime where `:` is OTHER (not LETTER), which would
@@ -255,6 +257,12 @@ pub(crate) fn load() -> Result<()> {
         T_LETTER!("t"),
         T_END!()
       ));
+      expire_state_unlocked();
+      boxes.push(r?);
+    }
+    if first_begin && let Some(ops) = lookup_tokens("@at@begin@document") {
+      local_state_unlocked(false);
+      let r = digest(ops);
       expire_state_unlocked();
       boxes.push(r?);
     }
@@ -427,7 +435,22 @@ fn at_document_hook(
   label: Option<Tokens>,
   rules: Tokens,
 ) -> Result<Tokens> {
-  if lookup_meaning(&T_CS!("\\hook_gput_code:nnn")).is_some() {
+  // INTERIM (K3 correctness item, KERNEL_CAPABILITIES.md): a parameter-
+  // bearing chunk under a package label (pm-isomath.sty's
+  // `\AtBeginDocument{…\NewDocumentCommand\vectorsymbol{s m}{…#2…}}`)
+  // takes lthooks' labeled `\exp_args:Nx` cleanup path (latex.ltx:5375,
+  // 5401-5416), whose x-expansion our gullet does not yet reproduce: a
+  // `\noexpand`-family `\tl_if_empty:nTF` surfaced inside the
+  // `\csname g__hook_…` (euclideangeometry-man 100× + Fatal, sweep #41).
+  // Until the gullet is faithful there, such chunks stay in the private
+  // store (pre-56i behaviour); `#`-free chunks and explicitly labeled ones
+  // go through lthooks, which is what `\RemoveFromHook` and the top-level-
+  // last order need. Guard: `perfect_kernel_batch56::hashful_begin_document_chunk_under_a_package_label`.
+  let has_param = rules
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::PARAM);
+  if lookup_meaning(&T_CS!("\\hook_gput_code:nnn")).is_some() && (label.is_some() || !has_param) {
     let mut out = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
     out.extend(ExplodeText!(hook));
     out.push(T_END!());

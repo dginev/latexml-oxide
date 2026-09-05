@@ -252,6 +252,11 @@ LoadDefinitions!({
     }
   );
   DefRegister!("\\mathnolimitsmode" => Number::new(0));
+  // `\mathitalicsmode` is likewise a LuaTeX integer parameter (LuaTeX manual
+  // §7.3; expl3-code.tex:996 `\__kernel_primitive:NN \mathitalicsmode`), set
+  // by lualatex classes (homework, jwjournal). Not an engine-detection probe.
+  // Guard: `perfect_kernel_batch56::mathitalicsmode_is_a_register`.
+  DefRegister!("\\mathitalicsmode" => Number::new(0));
   Let!("\\scantextokens", "\\scantokens");
 
   // `\tex_Uchar:D` (with `\Uchar`) belongs to the luatex profile of

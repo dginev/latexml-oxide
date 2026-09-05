@@ -1,0 +1,17 @@
+% witness: quantum-chemistry-bonn/quantum-chemistry-bonn-example (Error:unexpected:power x2)
+% oracle:  pdflatex 0 errors (per-mode=power is the siunitx DEFAULT)
+% engines: rust=1 perl=1 (SHARED/PERL-ORIGIN — siunitx.sty.ltxml:1094 catchall, no power branch)
+% expect:  0 Error/Fatal; unit renders kJ mol^{-1}
+% status:  RED (b56l) — SHARED/PERL-ORIGIN. Perl reaches same error with \si{...}.
+% mechanism: quantum-chemistry-bonn.sty:55 \sisetup{per-mode=power}; \unit{\kilo\joule\per\mol}.
+%   six_format_units (siunitx_sty.rs:1758 / siunitx.sty.ltxml:1042) handles reciprocal/fraction/
+%   symbol/repeated-symbol but NOT 'power' -> "Unknown siunitx per-mode power". 'power' renders
+%   identically to LaTeXML's internal 'reciprocal' (per units as negative exponents, in order;
+%   six_format_1unit siunitx.sty.ltxml:977). FIX: alias power->reciprocal,
+%   power-positive-first->reciprocal-positive-first at the top of six_format_units.
+\documentclass{article}
+\usepackage{siunitx}
+\sisetup{per-mode=power}
+\begin{document}
+Energy: \qty{5}{\kilo\joule\per\mole}.
+\end{document}

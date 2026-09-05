@@ -113,6 +113,10 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
+  // Begin-line argument eaters for `tcb_xparse_listing`'s unmapped specifiers.
+  // No `@` in these names: `tcb_xparse_listing` emits them through `Tokenize!`
+  // at the document's catcodes, where `@` is OTHER.
+  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}");
   DefMacro!("\\lx@tcb@execbefore", "");
   DefMacro!("\\lx@tcb@execafter", "");
   DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
@@ -265,19 +269,46 @@ pub(crate) fn tcb_xparse_listing(
   opts: &Tokens,
 ) -> Result<Tokens> {
   let sig_str = sig.to_string();
-  let specs: Vec<char> = sig_str
-    .chars()
-    .filter(|c| matches!(c, 'O' | 'o' | 'm' | 'd' | 'D' | 'r' | 'R'))
-    .collect();
+  let specs = xparse_signature_specs(&sig_str);
   let mandatory = specs
     .iter()
-    .filter(|c| matches!(c, 'm' | 'r' | 'R'))
+    .filter(|(c, _)| matches!(c, 'm' | 'r' | 'R'))
     .count();
+  // The `[n][]` arity can express one LEADING bracket optional; every other
+  // specifier the arity cannot express — `s`, `t<c>`, `d`/`D` with non-`[]`
+  // delimiters, `G`/`g`, trailing `O`/`o` — is absorbed from the begin line
+  // by an `\@ifnextchar` eater in the start code (xparse reads them in the
+  // same peek-then-consume way, ltcmd `\__cmd_grab_D:w`/`_G:w`/`_t:w`).
+  // Left unconsumed, `\begin{tdoclatex}<opts>` / `\begin{example}*` /
+  // `\begin{doccode}{opts}` (tutodoc.cls:1024, simplebnf-doc.tex:58,
+  // istgame-doc.tex:129) leaked into the captured body and re-entered the
+  // environment on `\input`-back (MemoryBudget fatal ×4, sweep #41).
+  // Guard: `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
   let leading_optional = specs
     .first()
-    .is_some_and(|c| matches!(c, 'O' | 'o' | 'd' | 'D'));
+    .is_some_and(|(c, d)| matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"));
+  let mut eaters = String::new();
+  for (i, (c, d)) in specs.iter().enumerate() {
+    if i == 0 && leading_optional {
+      continue;
+    }
+    match c {
+      's' => eaters.push_str("\\lxtcbifnext*{\\lxtcbeatone}{}"),
+      't' => eaters.push_str(&format!("\\lxtcbifnext{}{{\\lxtcbeatone}}{{}}", d)),
+      'G' | 'g' => eaters.push_str("\\lxtcbifnext\\bgroup{\\lxtcbeatone}{}"),
+      'O' | 'o' => eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}"),
+      'd' | 'D' => match d.as_str() {
+        "<>" => eaters.push_str("\\lxtcbifnext<{\\lxtcbeatangle}{}"),
+        "()" => eaters.push_str("\\lxtcbifnext({\\lxtcbeatparen}{}"),
+        "[]" => eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}"),
+        _ => {},
+      },
+      _ => {},
+    }
+  }
   let name_str = name.to_string().trim().to_string();
   let (start, end) = tcb_listing_startend(&name_str, init, opts);
+  let start = format!("{eaters}{start}");
   let arity = if leading_optional {
     format!("[{}][]", mandatory + 1)
   } else {
@@ -287,6 +318,73 @@ pub(crate) fn tcb_xparse_listing(
     "\\lstnewenvironment{{{}}}{}{{{}}}{{{}}}",
     name_str, arity, start, end
   ))))
+}
+
+/// The specifiers of an xparse argument signature, in order, each with its
+/// delimiter pair when it has one (`d<>` / `D<>{…}` → `"<>"`, `t*` → `"*"`).
+/// `!`/`+` prefixes and the `{default}` groups of `O`/`D`/`G` are skipped.
+fn xparse_signature_specs(sig: &str) -> Vec<(char, String)> {
+  let chars: Vec<char> = sig.chars().collect();
+  let mut out = Vec::new();
+  let mut i = 0;
+  let skip_group = |i: &mut usize| {
+    // `{…}` balanced
+    if *i < chars.len() && chars[*i] == '{' {
+      let mut depth = 0;
+      while *i < chars.len() {
+        match chars[*i] {
+          '{' => depth += 1,
+          '}' => {
+            depth -= 1;
+            if depth == 0 {
+              *i += 1;
+              break;
+            }
+          },
+          _ => {},
+        }
+        *i += 1;
+      }
+    }
+  };
+  while i < chars.len() {
+    let c = chars[i];
+    i += 1;
+    match c {
+      'm' | 'o' | 's' | 'g' | 'v' | 'b' | 'l' | 'u' | 'e' | 'E' => out.push((c, String::new())),
+      'O' | 'G' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        skip_group(&mut i);
+        out.push((c, String::new()));
+      },
+      't' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        let d = chars.get(i).map(|c| c.to_string()).unwrap_or_default();
+        i += 1;
+        out.push((c, d));
+      },
+      'd' | 'D' | 'r' | 'R' => {
+        while i < chars.len() && chars[i] == ' ' {
+          i += 1;
+        }
+        let d: String = chars.iter().skip(i).take(2).collect();
+        i += 2;
+        if matches!(c, 'D' | 'R') {
+          while i < chars.len() && chars[i] == ' ' {
+            i += 1;
+          }
+          skip_group(&mut i);
+        }
+        out.push((c, d));
+      },
+      _ => {}, // `!`, `+`, `>`, spaces, unknown
+    }
+  }
+  out
 }
 
 /// Distill the per-use side effects a tcb listing environment owes from its

@@ -1,0 +1,18 @@
+% witness: simplebnf/simplebnf-doc (simplebnf-doc.tex:335 \begin{example}*); simplebnf-doc.tex:58 \NewTCBListing{example}{ !O{} !s }
+% oracle:  pdflatex 0 errors (was CLEAN in sweep #40)
+% engines: rust(b56l)=124/runaway rust(b56j)=0 (2026-09-05)  pdflatex=0
+% mechanism: same root as the D<> repro. \NewTCBListing{ !O{} !s } maps to [1][] (the 's' star spec is dropped,
+%   tcolorbox_sty.rs:268 filter keeps only O/o/m/d/D/r/R). \begin{example}* -> [ probe reads '*' (nonspace), unreads,
+%   mouth still on the \begin line; 56i column-0 read captures \begin{example}* -> \input recursion.
+% expect:  0 errors; run terminates; example listing body present
+% status:  RED (regression introduced by batch 56i / commit 8c3c7d565a)
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,breakable}
+\tcbset{listing engine=listings, colframe=black, colback=white, size=small}
+\NewTCBListing{example}{ !O{} !s }{ listing side text, #1 }
+\begin{document}
+\begin{example}*
+Some code line A
+\end{example}
+\end{document}

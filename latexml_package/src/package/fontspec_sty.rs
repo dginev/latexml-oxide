@@ -89,7 +89,8 @@ LoadDefinitions!({
       && (find_file(&name, None).is_some()
         || (!name.contains('.')
           && (find_file(&format!("{name}.otf"), None).is_some()
-            || find_file(&format!("{name}.ttf"), None).is_some())));
+            || find_file(&format!("{name}.ttf"), None).is_some()))
+        || font_file_exists_case_insensitive(&name));
     Ok(if found { yes } else { no })
   });
   // fontspec-xetex.sty:658 — no OT feature is ever active here → false.
@@ -184,3 +185,48 @@ LoadDefinitions!({
   def_macro_noop("\\fontspec_set_family:Nnn DefToken {}{}")?;
   def_macro_noop("\\__fontspec_keys_define_code:nnn{}{}{}")?;
 });
+
+/// luaotfload resolves font FILE names through its own database, which
+/// compares case-insensitively (luaotfload-database.lua lowercases names),
+/// while kpathsea is case-sensitive: asmeconf.cls:650 asks for
+/// `TexGyreTermesX-regular.otf` and TeX Live ships `TeXGyreTermesX-Regular.otf`
+/// — lualatex says yes, our exact lookup said no and the class took its
+/// missing-font branch (`\ClassErrorNoLine`, asmeconf/asmejour templates).
+/// Consult the ambient tree's `ls-R` (the same file database) case-folded.
+/// Guard: `perfect_kernel_batch56::font_exists_test_is_case_insensitive`.
+fn font_file_exists_case_insensitive(name: &str) -> bool {
+  use std::sync::OnceLock;
+  static LSR_NAMES: OnceLock<std::collections::HashSet<String>> = OnceLock::new();
+  let base = name.rsplit('/').next().unwrap_or(name).to_ascii_lowercase();
+  if base.is_empty() {
+    return false;
+  }
+  let names = LSR_NAMES.get_or_init(|| {
+    let mut set = std::collections::HashSet::new();
+    let Ok(out) = std::process::Command::new("kpsewhich")
+      .args(["-var-value=TEXMFDIST"])
+      .output()
+    else {
+      return set;
+    };
+    let dist = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if let Ok(text) = std::fs::read_to_string(format!("{dist}/ls-R")) {
+      for line in text.lines() {
+        let l = line.trim();
+        if !l.is_empty() && !l.ends_with(':') && !l.starts_with('%') {
+          let lower = l.to_ascii_lowercase();
+          if lower.ends_with(".otf") || lower.ends_with(".ttf") || lower.ends_with(".ttc") {
+            set.insert(lower);
+          }
+        }
+      }
+    }
+    set
+  });
+  let candidates: Vec<String> = if base.contains('.') {
+    vec![base]
+  } else {
+    vec![format!("{base}.otf"), format!("{base}.ttf")]
+  };
+  candidates.iter().any(|c| names.contains(c))
+}

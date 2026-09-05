@@ -1,0 +1,29 @@
+% witness: crossreftools/crossreftools_driver (crossreftools_driver.tex:140 \label[section]{pythagoreantheorem}); also autonum/test-autonum
+% oracle:  pdflatex 0 errors
+% engines: rust=FATAL(Until:][ + Mouth:EoF) perl=0 (2026-09-05); REGRESSION batch 56i, clean at b56j
+% expect:  0 errors; document has <ltx:equation labels="LABEL:pyth">
+% status:  RED
+% mechanism: cleveref binding (cleveref_sty.rs:8-26, Perl cleveref.sty.ltxml:21-30)
+%   AtBeginDocument-defers `\let\label\lx@cleverref@label` (an Optional [] reader).
+%   Under rawstyles the RAW cleveref.sty (cleveref.sty:66-92 in an \AtBeginDocument)
+%   also defines `\def\label{\@ifnextchar[\label@optarg\label@noarg}`, whose
+%   \label@optarg (cleveref.sty:82,91) calls \cref@override@label@type (cleveref.sty:368)
+%   `[#1][#2][#3]#4\@nil#5` -> #1 is delimited by `][` (the Until:][ reader,
+%   base_parameter_types.rs:159-199). latexml never populates \cref@currentlabel via
+%   cleveref's \refstepcounter override, so it is empty and the `][` scan runs to EOF.
+%   Batch 56i (sect02.rs:24-40, at_document_hook, latex.ltx:18901) routed `\AtBeginDocument`
+%   through `\AddToHook{begindocument}` (L3 hook = sect02.rs step5, line 234), which fires
+%   AFTER the Rust binding helper's @at@begin@document store (step4, sect02.rs:228). So the
+%   raw `\def\label` now shadows the binding's `\let\label` (b56j: binding won). RUST-ONLY
+%   (Perl loads only the .ltxml binding, no raw \label competition; Perl clean=0).
+%   Fix: sect02.rs `\document` constructor — fire the begindocument L3 hook (step5) BEFORE
+%   the @at@begin@document store (step4) so binding at_begin_document helpers outrank raw
+%   package \AtBeginDocument redefinitions (matches Perl + b56j).
+\documentclass{book}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\begin{document}
+\begin{equation}
+  a^2+b^2=c^2\label[section]{pyth}
+\end{equation}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: iodhbwm/iodhbwm (Error:unexpected:60 Can't find color named '60')
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (SHARED/PERL-ORIGIN — xcolor.sty.ltxml:336-337 $mix_expr .= $blend)
+% expect:  0 Error/Fatal; "hello" gets the blended gray (~gray 0.55), no color-'60' fallback
+% status:  RED (b56l) — SHARED/PERL-ORIGIN.
+% mechanism: ydoc-desc.sty:125 \optionalstyle=\blendcolors*{!60!white}\color{black!75} (via \oarg,
+%   used by skdoc's \Macro..\oarg). xcolor blend combination string-concatenates the local mix
+%   with the blend: xcolor_sty.rs:214 format!("{}{}", mix_part, blend) (Perl xcolor.sty.ltxml:337).
+%   For black!75 the mix_part is "!75"; +"!60!white" = "!75!60!white", parsed as "mix color 60 at
+%   75%" -> color '60' undefined. FIX: apply blend as a SEPARATE mix pass on the RESOLVED color
+%   (resolve black!75=gray .25 first, then !60!white -> gray .55), in xcolor_sty.rs resolve_color_expr.
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\blendcolors*{!60!white}\textcolor{black!75}{hello}
+\end{document}

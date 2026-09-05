@@ -1,0 +1,22 @@
+% witness: euclideangeometry/euclideangeometry-man (TL2025 doc); pm-isomath.sty
+% oracle: pdflatex (0 '!'; pm-isomath is pdflatex-only, refuses lualatex/xelatex)
+% engines: [rawstyles,rawclasses]latexml.sty
+% expect: 0 Error/Fatal; <ltx:XMApp>/math for \vectorsymbol
+% status: RED on b56l (batch 56i) — 100x Error:unexpected:\special_relax\tl_if_empty:nTF
+%   (partial cs "\g__hook_") between \csname..\endcsname -> Fatal:TooManyErrors;
+%   CLEAN of this error on b56j (pre-56i, private @at@begin@document store).
+% mechanism: batch 56i (sect02.rs::at_document_hook) routes \AtBeginDocument through
+%   the raw lthooks \AddToHook{begindocument} (latex.ltx:18901). pm-isomath registers
+%   its \AtBeginDocument blocks while \@currname=pm-isomath, so lthooks takes the
+%   LABELED storage path \__hook_prop_gput_labeled_cleanup:nnn (latex.ltx:5401-5416):
+%   \exp_args:Nx {hash-check} + \exp_args:NcV {g__hook_#2_code_prop}. Our gullet cannot
+%   faithfully x-expand that path with the accumulated code prop, leaking a \noexpand'd
+%   \tl_if_empty:nTF (body of \__hook_hash_check_aux:w, latex.ltx:5400) into the
+%   \csname g__hook_...\endcsname build. RUST-ONLY (pdflatex clean; Perl uses the
+%   private store and never drives lthooks).
+\documentclass{article}
+\usepackage{amsmath,fancyvrb}
+\usepackage{pm-isomath}
+\begin{document}
+$\vectorsymbol{v}$
+\end{document}

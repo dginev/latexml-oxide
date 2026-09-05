@@ -14326,6 +14326,154 @@ Page \thepage. \figurename.
     assert!(xml.contains("<figure"), "{xml}");
   }
 
+  /// The bindings' deferred begin-document code (cleveref_sty.rs `\let\label
+  /// \lx@cleverref@label`) runs AFTER the raw packages' `begindocument` hook
+  /// chunks, so raw cleveref.sty:66's `\def\label{\@ifnextchar[…}` does not
+  /// shadow it (its `[#1][#2]` scan ran to EOF: crossreftools_driver,
+  /// test-autonum fatal; RUST-ONLY).
+  #[test]
+  fn binding_begin_document_code_outranks_raw_hook() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\begin{document}
+\begin{equation}a^2+b^2=c^2\label[section]{pyth}\end{equation}
+See \cref{pyth}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert!(xml.contains("labels=\"LABEL:pyth\""), "{xml}");
+  }
+
+  /// `\NewTCBListing{E}{ O{} D<>{} }` / `{ !O{} !s }` / `{ !G{1} !O{} }`
+  /// (tutodoc.cls:1024, simplebnf-doc.tex:58, istgame-doc.tex:129): the
+  /// begin-line arguments the `\lstnewenvironment` arity cannot express are
+  /// absorbed, and the environment's own `\begin` line is never captured as
+  /// body (it re-entered the environment on `\input`-back without bound:
+  /// MemoryBudget fatal ×4, sweep #41; RUST-ONLY).
+  #[test]
+  fn tcb_listing_unmapped_begin_line_args_are_absorbed() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,breakable}
+\tcbset{listing engine=listings}
+\NewTCBListing{mylst}{ O{} D<>{} }{ listing side text, #1 }
+\NewTCBListing{example}{ !O{} !s }{ listing side text, #1 }
+\DeclareTCBListing{doccode}{ !G{1} !O{} }{ listing only }
+\begin{document}
+\begin{mylst}<colback=red>
+Some code line A
+\end{mylst}
+\begin{example}*
+Some code line B
+\end{example}
+\begin{doccode}{colback=blue}
+Some code line C
+\end{doccode}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert_eq!(xml.matches("<listing ").count(), 3, "{xml}");
+    assert!(!xml.contains("colback"), "{xml}");
+    // `doccode` is `listing only`: its body is the base64 data, not text.
+    assert!(
+      xml.contains("Some code line A") && xml.contains("Some code line B"),
+      "{xml}"
+    );
+    assert!(xml.contains("U29tZSBjb2RlIGxpbmUgQw=="), "{xml}");
+  }
+
+  /// `\mathitalicsmode` is a LuaTeX integer parameter (expl3-code.tex:996),
+  /// set by lualatex classes (homework, jwjournal).
+  #[test]
+  fn mathitalicsmode_is_a_register() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\mathitalicsmode=1 Mode \the\mathitalicsmode.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Mode 1."), "{xml}");
+  }
+
+  /// beamerbasetranslator.sty:14 loads translator: `\uselanguage` from a
+  /// language pack (ctex-scheme-chinese-beamer.def:71; mirage-beamer-zh).
+  #[test]
+  fn beamer_loads_translator() {
+    let tex = r"\documentclass{beamer}
+\uselanguage{English}\languagealias{en}{English}
+\begin{document}
+\begin{frame}Hi \translate{Theorem}\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hi"), "{xml}");
+  }
+
+  /// `\IfFontExistsTF` answers like luaotfload's case-insensitive database:
+  /// asmeconf.cls:650 asks for `TexGyreTermesX-regular.otf` (TeX Live ships
+  /// `TeXGyreTermesX-Regular.otf`), so the class must not take its
+  /// missing-font `\ClassErrorNoLine` branch (asmeconf/asmejour templates).
+  #[test]
+  fn font_exists_test_is_case_insensitive() {
+    let tex = r"\documentclass{article}
+\usepackage{fontspec}
+\begin{document}
+\IfFontExistsTF{TexGyreTermesX-regular.otf}{found}{missing}.
+\IfFontExistsTF{NoSuchFontXyz.otf}{found}{missing}.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("found.") && xml.contains("missing."), "{xml}");
+  }
+
+  /// `\usepackage[authordate]{biblatex-chicago}` selects the author-date
+  /// family and chicago-dates-common.cbx:2966's `\gentextcite` renders as a
+  /// text cite (cms-dates-intro, cms-dates-sample; lualatex clean).
+  #[test]
+  fn biblatex_chicago_authordate_has_gentextcite() {
+    let tex = r"\documentclass{article}
+\usepackage[authordate,backend=biber]{biblatex-chicago}
+\begin{document}
+As \gentextcite{k1} shows; \Gentextcite{k1}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+    assert!(xml.contains("<cite"), "{xml}");
+  }
+
+  /// A `#`-bearing `\AtBeginDocument` chunk registered under a package's own
+  /// label (pm-isomath.sty:150 `\providecommand\mathrmbf[1]{…}` and its
+  /// `\NewDocumentCommand…{…#2…}` blocks) takes the private store: lthooks'
+  /// labeled cleanup path is not yet reproduced by our gullet
+  /// (euclideangeometry-man: 100× `\csname g__hook_` errors + Fatal, sweep
+  /// #41). K3 correctness item; this guard pins the interim.
+  #[test]
+  fn hashful_begin_document_chunk_under_a_package_label() {
+    let tex = r"\documentclass{article}
+\begin{filecontents}[overwrite,noheader,nosearch]{lxhashpkg.sty}
+\AtBeginDocument{\NewDocumentCommand\lxhashcmd{s m}{[#2]}\providecommand\lxhashplain[1]{(#1)}}
+\end{filecontents}
+\usepackage{lxhashpkg}
+\begin{document}
+\lxhashcmd{v} \lxhashplain{w}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("g__hook_"), "{stderr}");
+    assert!(xml.contains("[v] (w)"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

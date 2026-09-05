@@ -1,0 +1,9 @@
+% witness: bxcjkjatype/bxcjkjatype-ja, bxcjkvert-ja, kanbun/kanbun-example sweep-41
+% oracle: lualatex; real def geometry.sty:42 \newif\ifGm@showframe
+% expect: 0 Error lines. status: RED today -> Error:undefined:\ifGm@showframe
+\documentclass{article}
+\usepackage{geometry}
+\makeatletter
+\ifGm@showframe\fi
+\makeatother
+\begin{document}x\end{document}
