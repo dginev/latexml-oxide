@@ -84,63 +84,63 @@ pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
 pub struct Document {
-  pub document:                XmlDoc,
-  pub pending:                 Vec<Node>,
-  context:                     Option<XPath>,
-  pub node:                    Node,
-  pub node_boxes:              HashMap<usize, Digested>, // used to be _box attribute
-  pub node_fonts:              HashMap<u64, Font>,       // used to be _font attribute
-  pub idstore:                 HashMap<String, Node>,
+  pub document:                  XmlDoc,
+  pub pending:                   Vec<Node>,
+  context:                       Option<XPath>,
+  pub node:                      Node,
+  pub node_boxes:                HashMap<usize, Digested>, // used to be _box attribute
+  pub node_fonts:                HashMap<u64, Font>,       // used to be _font attribute
+  pub idstore:                   HashMap<String, Node>,
   /// Streaming pass 1: every `xml:id` moved out of `idstore` by a spill.
   /// The GLOBAL half of id-collision dedup — a later build-time minting of
   /// the same id must rename exactly as eager would have (witness: the
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
-  pub spilled_ids:             rustc_hash::FxHashSet<String>,
+  pub spilled_ids:               rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
-  pub rewrite_labels:          HashMap<String, String>,
+  pub rewrite_labels:            HashMap<String, String>,
   /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
   /// only when `rewrite_labels` misses. Pass 2 used to copy the whole spilled
   /// index into each fragment's own map, which is quadratic in document size:
   /// 28,068 labels × 459,579 segments on the 131 MB witness = 12.9 billion
   /// String allocations. Frag-local labels still win, preserving exactly the
   /// `entry().or_insert_with()` precedence that copy had.
-  pub rewrite_labels_shared:   Option<Rc<HashMap<String, String>>>,
+  pub rewrite_labels_shared:     Option<Rc<HashMap<String, String>>>,
   // the following are internal "local"-based declarations in Perl
-  localized_constructed_nodes: Vec<Vec<Node>>,
-  constructed_nodes:           Vec<Node>,
+  localized_constructed_nodes:   Vec<Vec<Node>>,
+  constructed_nodes:             Vec<Node>,
   /// Free-list of emptied `Vec<Node>` buffers, reused across `init_constructed_nodes`
   /// / `close_constructed_nodes` cycles. The per-body constructed-nodes frame pushes
   /// here after its elements are drained so the next `init_constructed_nodes` can pop
   /// a buffer with pre-existing capacity instead of heap-allocating a fresh one.
   /// Cuts the `Vec<Node>::from_iter` hotspot that dominated absorb profiles.
-  reusable_node_buffers:       Vec<Vec<Node>>,
-  localized_boxes:             Vec<Option<Digested>>,
-  box_to_absorb:               Option<Digested>, // local $LaTeXML::BOX;
+  reusable_node_buffers:         Vec<Vec<Node>>,
+  localized_boxes:               Vec<Option<Digested>>,
+  box_to_absorb:                 Option<Digested>, // local $LaTeXML::BOX;
   /// Transient handoff from `open_text`'s verbatim-space exception to
   /// `open_text_internal`: whitespace-only TYPEWRITER text (verbatim
   /// indentation / space-only verbatim lines) must be INSERTED even where
   /// the current node needs an auto-open to reach a `#PCDATA` context —
   /// both whitespace gates would otherwise drop it. Consumed (reset) by
   /// `open_text_internal`.
-  verbatim_space_pending:      bool,
+  verbatim_space_pending:        bool,
   /// Source-map (`--source-map`) cache: the current `box_to_absorb`'s
   /// source range, captured as a plain `Copy` `Locator` at set time so
   /// stamping never re-borrows the box's `RefCell` mid-absorb (which
   /// panics for the mutably-borrowed `Alignment` path). Mirrors the
   /// `box_to_absorb` save stack; `None` when source-map is off.
-  current_box_locator:         Option<Locator>,
-  localized_box_locators:      Vec<Option<Locator>>,
-  localized_fonts:             Vec<Rc<Font>>,
+  current_box_locator:           Option<Locator>,
+  localized_box_locators:        Vec<Option<Locator>>,
+  localized_fonts:               Vec<Rc<Font>>,
   /// Streaming mode only: the store holding processed spilled segments. Set
   /// by the streaming driver after pass 2; `serialize_into` then splices each
   /// segment's text where its `<_spilled_ ref="N"/>` placeholder sits. `None`
   /// on the eager path and on fragment documents.
-  spill_store:                 Option<crate::sxml::SegmentStore>,
+  spill_store:                   Option<crate::sxml::SegmentStore>,
   /// Streaming only: RDFa prefixes USED inside spilled (freed) content,
   /// recorded at spill time — `set_rdfa_prefixes` scans the live DOM, and
   /// spilled usages would otherwise vanish from the root's `prefix=`.
-  extra_rdfa_prefixes:         Vec<String>,
+  extra_rdfa_prefixes:           Vec<String>,
   /// Streaming only: an UNRESOLVED `label:`/`id:` rewrite scope makes the
   /// rule INERT instead of continuing unscoped. Perl (and the eager path)
   /// continue with the remaining clauses on the same tree when a scope fails
@@ -150,7 +150,7 @@ pub struct Document {
   /// another fragment", and continuing unscoped applies the rule to
   /// EVERYTHING — sweep witness tests/math/declare.tex, where section-7
   /// declarations stamped section-1 math.
-  pub scoped_rules_strict:     bool,
+  pub scoped_rules_strict:       bool,
   /// Streaming: serialize spill placeholders LITERALLY (`<_spilled_ ref=…/>`)
   /// instead of splicing the segment text. True during pass 1 (a spilling
   /// ancestor must keep its children's placeholders — inlining them rebuilt
@@ -158,7 +158,7 @@ pub struct Document {
   /// and pass 2 died re-parsing them) and on pass-2 fragment docs (which
   /// re-emit the placeholders they contain). False only at final assembly,
   /// where the splice resolves placeholders RECURSIVELY.
-  pub literal_placeholders:    bool,
+  pub literal_placeholders:      bool,
   /// Serialize spill segments FLAT — no indentation, no decorative newlines.
   ///
   /// A spilled segment's text is an intermediate: pass 2 re-parses it,
@@ -177,18 +177,18 @@ pub struct Document {
   ///
   /// Set for pass 1 only. Fragment documents in pass 2 are separate `Document`s
   /// and default to `false`, so the OUTPUT keeps its formatting exactly.
-  pub spill_flat:              bool,
+  pub spill_flat:                bool,
   /// Streaming pass 2 only: the fragment's ancestor `xml:id`s at spill time
   /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
   /// resolves to one of these covers the WHOLE fragment.
-  pub fragment_ancestor_ids:   rustc_hash::FxHashSet<String>,
+  pub fragment_ancestor_ids:     rustc_hash::FxHashSet<String>,
   /// Streaming pass 2 only: the recorded qname of the fragment's REAL parent
   /// (SegmentMeta::parent). `finalize_rec` substitutes it for the
   /// `ltx:_lxfragment` parse wrapper in schema decisions, so top-level
   /// fragment content is judged against the element it will splice back
   /// under (e.g. the empty-`ltx:text` collapse needs
   /// `can_contain(parent, grandchild)`).
-  pub fragment_parent_qname:   Option<SymStr>,
+  pub fragment_parent_qname:     Option<SymStr>,
   /// Streaming pass 1 only: suppress the ROOT element's `after_open` hook
   /// dispatch. Eager semantics guarantee every hook runs with digestion
   /// COMPLETE (build starts after digestion ends); interleaving would fire
@@ -198,7 +198,10 @@ pub struct Document {
   /// against still-EMPTY frontmatter state and mark it done, discarding the
   /// document's abstract when the real content arrived. The streaming driver
   /// dispatches the root's hooks exactly once, after digestion finishes.
-  defer_root_after_open:       bool,
+  defer_root_after_open:         bool,
+  /// Size of `node_boxes` after the last sweep, used to rate-limit
+  /// sweeps when no runs were spilled.
+  pub last_swept_node_boxes_len: usize,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -294,6 +297,7 @@ impl Document {
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
+      last_swept_node_boxes_len:   0,
     }
   }
 
@@ -4222,6 +4226,7 @@ impl Document {
     self.node_boxes.retain(|k, _| live.contains(k));
     let t_retain = t_retain_start.elapsed();
     let after = self.node_boxes.len();
+    self.last_swept_node_boxes_len = after;
     let total = t_start.elapsed();
     if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
       eprintln!(
