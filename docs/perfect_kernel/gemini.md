@@ -147,3 +147,14 @@ and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays cl
   - `glossaries-user.tex` (`--streaming --max-memory=2048 --timeout=180`): finished in **68.09s**, exit status 0, output XML 3.57 MB, peak RSS **1.52 GB** (previously crashed with OOM at 4.76 GB or timed out at 778–800s).
   - Guard `spill_gated_node_boxes_stays_bounded`: passed in 17.02s along with all other `perfect_kernel_gemini` tests. Clippy clean, cargo fmt clean.
 
+### 2026-09-05: Task G2 (`ctable.sty`: native `\ctable` binding) complete
+- **Issue**: `proofread/example.tex` failed with 3 errors (`\ctable`, `\FL`, `\LL` undefined) because `ctable_sty.rs` deferred to raw `ctable.sty` via `\AtBeginDocument` when `tikz.sty_loaded` was true, but under `--includestyles` the raw package load did not execute cleanly.
+- **Fix**:
+  - Replaced the raw-load guard in `latexml_package/src/package/ctable_sty.rs` with a complete native implementation.
+  - Implemented `CT` and `suCT` KeyVals (`caption`, `cap`, `label`, `width`, `maxwidth`, `pos`, `botcap`, `topcap`, `star`, `nostar`, `sideways`, `nosideways`, `figure`, `table`, etc.).
+  - Bound table rule macros `\NN` (`\tabularnewline`), `\FL` (`\toprule`), `\ML` (`\NN\midrule`), `\LL` (`\NN\bottomrule`).
+  - Bound footnote macros `\tnote[mark]{text}` and `\tmark[mark]`, plus `\setupctable`.
+  - Implemented `\ctable` macro expanding into `table`/`figure` (or starred/sideways variants) with positioning, centering/ragged alignments, `caption` (top or bottom), `label`, `tabular`/`tabularx` body, and footnotes block.
+- **Guard**: `perfect_kernel_gemini::ctable_native_table_with_caption` in `latexml_oxide/tests/cluster_package_guards.rs`.
+- **Result**: `proofread/example` ctable errors resolved to 0, arXiv 2011.04706 unblocked.
+
