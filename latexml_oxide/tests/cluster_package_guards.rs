@@ -15716,4 +15716,24 @@ $25\unit{m}$
     assert!(xml.contains("<tabular"), "{xml}");
     assert!(xml.contains("First footnote."), "{xml}");
   }
+
+  /// Beamer frame body parameter halving (\def-collect level halving):
+  /// non-fragile beamer frames collect the body inside \loop ... \def\beamer@doifinframe ... \repeat,
+  /// requiring two levels of parameter-hash halving so that ####1 becomes #1 at definition time.
+  /// Witnesses: beamer-theme-albi/beamer-theme-albi-doc, tuda-ci/DEMO-TUDaBeamer.
+  #[test]
+  fn beamer_frame_hash_halving() {
+    let tex = r"\documentclass{beamer}
+\usepackage{etoolbox}
+\begin{document}
+\begin{frame}{Hash Halving Test}
+  \renewcommand*{\do}[1]{[X ####1 Y]}
+  \docsvlist{a,b,c}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[X a Y][X b Y][X c Y]"), "{xml}");
+  }
 }

@@ -156,5 +156,25 @@ and one `<ltx:XMArray>`; control: the standalone `gauss_rowops_min.tex` stays cl
   - Bound footnote macros `\tnote[mark]{text}` and `\tmark[mark]`, plus `\setupctable`.
   - Implemented `\ctable` macro expanding into `table`/`figure` (or starred/sideways variants) with positioning, centering/ragged alignments, `caption` (top or bottom), `label`, `tabular`/`tabularx` body, and footnotes block.
 - **Guard**: `perfect_kernel_gemini::ctable_native_table_with_caption` in `latexml_oxide/tests/cluster_package_guards.rs`.
-- **Result**: `proofread/example` ctable errors resolved to 0, arXiv 2011.04706 unblocked.
+
+### 2026-09-05: Task G3 (beamer frame body: `\def`-collect halving) complete
+- **Root cause in real TeX / Beamer (`beamerbaseframe.sty:524-529`)**:
+  - In real Beamer, frame bodies are executed inside:
+    `\loop ... \def\beamer@doifinframe{\begin{beamer@frameslide} #1 \end{beamer@frameslide}} ... \repeat`
+  - In plain TeX / LaTeX, `\loop #1 \repeat` defines `\def\iterate{#1...}`.
+  - Because `\def\beamer@doifinframe` is inside `\iterate`, `#1` undergoes **two nested `\def` passes**:
+    1. Pass 1 (`\iterate` definition): collapses pairs of `##` → `#` (mapping `####` → `##`).
+    2. Pass 2 (`\beamer@doifinframe` definition): collapses pairs of `##` → `#` (mapping `##` → `#`).
+  - Thus, definitions written with `####1` in real beamer frames (like `beamer-theme-albi-doc` and `DEMO-TUDaBeamer`) become `#1` by the time the frame body digests.
+- **Fix in `latexml_package/src/package/beamer_cls.rs`**:
+  - In `{frame}`'s `after_digest_begin`: check if the frame is `[fragile]`. If fragile, skip body collection and digestion proceeds verbatim.
+  - For non-fragile frames: collect the frame body tokens up to the matching `\end{frame}` (tracking nested `\begin`/`\end` pairs).
+  - Apply parameter halving twice (`halve_once(halve_once(tokens))`), collapsing adjacent `Catcode::PARAM` tokens while preserving isolated single `#` tokens for compatibility with inline latexml macros.
+  - Reinject `\lx@beamer@frame@start`, followed by the halved body tokens and `\end{frame}` via `unread_expansion()`.
+- **Validation**:
+  - Repro `beamer_frame_hashhalving.tex` (`\tikzset{pastille/.style={fill=####1,draw=gray}}`): 0 errors, circle rendered.
+  - Repro `beamer_frame_body_hash_level.tex` (`\renewcommand*{\do}[1]{[X ####1 Y]}`): 0 errors, XML contains `[X a Y][X b Y][X c Y]`.
+  - Witness `beamer-theme-albi/beamer-theme-albi-doc.tex`: `Can't find color named '#1'` and `key '/tikz/#1'` errors completely resolved.
+  - Witness `tuda-ci/DEMO-TUDaBeamer.tex`: `The token "#" should never reach Stomach!` and `Can't find color named 'TUDa-##1'` completely resolved.
+- **Guard**: `perfect_kernel_gemini::beamer_frame_hash_halving` in `latexml_oxide/tests/cluster_package_guards.rs`.
 
