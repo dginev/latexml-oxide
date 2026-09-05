@@ -16046,5 +16046,29 @@ l = 1
     assert_eq!(xml.matches("[AFTER-L]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:LVerbatim]").count(), 1, "{xml}");
   }
-}
 
+  /// minted self-terminating environments hand \end{minted} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn minted_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{minted}
+\AfterEndEnvironment{minted}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{minted}{python}
+x = 1
+\end{minted} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:minted]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:minted]").count(), 1, "{xml}");
+  }
+}

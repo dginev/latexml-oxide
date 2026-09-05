@@ -302,12 +302,17 @@ LoadDefinitions!({
         egroup()?;
         let mut out = lst_group_opener("minted", None)?;
         out.extend(result);
+        let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+        end_tokens.extend(ExplodeText!("minted"));
+        end_tokens.push(T_END!());
+        unread_expansion(Tokens::new(end_tokens));
         Ok(Tokens::new(out))
       },
     )));
     def_macro(cs, params, expansion, None)?;
+    DefMacro!(T_CS!("\\end{minted}"), None, Tokens!());
+    DefMacro!(T_CS!("\\endminted"), None, Tokens!());
   }
-  // No \end{minted}: mintedEnvBody fully consumed it.
   DefMacro!(T_CS!("\\begin{listing}"), None, "\\begin{figure}");
   DefMacro!(T_CS!("\\end{listing}"), None, "\\end{figure}");
 });
