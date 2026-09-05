@@ -797,3 +797,35 @@ the STREAMING_CORE_DESIGN "PERF CONSOLIDATION" entry).
   discarded-enumeration pile to prune. MathParse's measured 41% ≈ 1.55 ms per
   formula of recognition + tree build + semantics + FFI: constant-factor
   levers only, no ≥40% single technique in the current architecture.
+
+## Slow-call audit (perfect-kernel corpus) — user directive 2026-09-05
+
+A conversion that takes more than about a minute must be **justified** by its
+output: a large, highly structured, content-preserving XML/HTML. Anything else
+is a performance root, and a long run that ends in a fatal with no output is
+the worst case (time spent, nothing delivered).
+
+Tool: `tools/perfect_kernel/slow_calls.sh <sweep_dir> [threshold_secs=60]` —
+one row per slow document with the source size, the XML size, structure counts
+(sections, `<Math>`, `<tabular>`, `<figure>`, `<picture>`/`<svg>`), the KB/s
+rate and a verdict: `JUSTIFIED` (≥ 25 KB of XML per second, or ≥ 2 MB of
+XML), `TIMEOUT` (killed at the cap), else `SUSPECT`. Run it after every sweep
+and carry the SUSPECT/TIMEOUT rows into the LEDGER's sweep row as a perf
+cluster (root-caused like any other: witness, mechanism, one lever per run).
+
+Sweep #41 baseline (batch 56i release, 300 s cap): 65 calls over 60 s —
+17 justified (source3 18 MB at 75 KB/s, circuitikzmanual 12.8 MB at 116 KB/s,
+unicodefonttable 15.9 MB at 229 KB/s …), 14 timeouts (tzplot, tutodoc ×2 —
+fixed in 56j — spreadtab ×2, pgf-periodictable, pgf-interference ×2,
+latexsheet-esmx, kaytannollista-latexia, jpneduenumerate, chemobabel ×2,
+bibleref-parse), 34 suspect, of which 21 ran 60–270 s and then died with a
+0-byte XML (tikz-network 271 s, wtref-ja 242 s, pgf-spectraPreviewDataLSE
+241 s, wheelchart 207 s, glossaries-extra-manual 155 s, datatool-user 144 s,
+glossaries-user 144 s, tcolorbox 101 s, Explications_ScratchX 100 s, istgame
+88 s, xebaposter, lie-hasse, handout, quran ×2, texnegar ×3, polyglossia,
+tikz-among-us, latexbangla, expkv-bundle) and 13 delivered small outputs
+slowly (platexcheat ×4 at ~265 s for 250 KB, tabularray 216 s for 1.9 MB,
+rulercompass 103 s for 81 KB, tilings, graph35, functional, spath3,
+tkz-grapheur-exemples). The 0-byte-fatal group is the first target: those
+runs are pure waste.
+
