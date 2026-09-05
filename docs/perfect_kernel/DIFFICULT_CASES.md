@@ -100,3 +100,36 @@ Raw interpretation of l3-programming-layer packages exercises expl3 the
 hardest (regex VM, intarray, fp). Known open expl3 gaps are tracked in the
 main memory/SYNC docs; entries here should reference the specific manual +
 first error rather than duplicating that tracking.
+
+## D10. forest.sty — full support is a standing side goal (user directive 2026-09-05)
+
+**Status:** `latexml_contrib/src/forest_sty.rs` is a discard stub (batch 56k made
+its diagnostic a Warn: the `{forest}` body is dropped, nothing is drawn). Not a
+perfect-kernel target row, but the user asked that complete support be recorded
+and not forgotten: forest is heavily used on arXiv (linguistics trees, decision
+and proof trees), and three TL manuals (forest-quickstart, fragoli, milsymb) plus
+forest-doc/forest-libs exercise it end to end.
+
+**What "complete" means.** forest.sty (9,259 lines, expl3 + pgfkeys) parses a
+bracket notation into a tree, lays it out (its own packing algorithm,
+`forest-lib-edges.sty` edge styles, `forest-lib-linguistics.sty` presets) and
+draws it with TikZ. Faithful support has two candidate shapes, to be decided when
+it is taken up:
+1. **Overlay binding (K1 shape):** raw-load forest.sty and let its bracket
+   parser, keys and layout run on our TikZ layer (D1) — the layout uses
+   `\pgfmath` and pgf coordinates throughout, so this is gated on D1's fidelity
+   and on the expl3/pgfkeys machinery already in place. Perl raw-loads forest
+   and dies on `\forestversion` (misdefined), so this is beyond-Perl.
+2. **Native tree model:** parse the bracket notation natively (it is a small
+   grammar: `[label, keys [child] …]`) into an `<ltx:picture>`-free structural
+   tree (nested lists or a dedicated tree element with a CSS renderer), which
+   is what an accessible web rendering of a syntax tree wants anyway. Drawing
+   fidelity is lower; structure fidelity and accessibility are higher.
+
+**Evidence to keep:** the discard stub's witnesses (forest-quickstart,
+fragoli_doc, milsymb; sweep #41), the forest-doc `\DocInput` example environment
+(fixed in 56i for the listings side, the trees themselves still discarded),
+arXiv usage counts to be measured with the corpus scanner before choosing the
+shape. Guards to keep green while touching it: `perfect_kernel_batch54::forest_bare_cs_form_discards_body`,
+`perfect_kernel_batch56::{forest_stub_is_a_warning, forest_docinput_lstenv_writefile_gobbles_doc_percent}`.
+

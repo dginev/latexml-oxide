@@ -53,6 +53,7 @@ High-impact fatal seeds and major publisher class fixes take priority.
 | **R6** | **`Collector::rescan` Refactor for Generated Backmatter** | **OPEN**; `Scan` owns `ObjectDB` by value; generated backmatter lacks full relations/labels | medium | Open items §R6 |
 | **R7** | Presentation-MathML **F5** Linebreaker | **OPEN**, full linebreaker feature gap needing a port-or-drop scope decision | family | Open items §R7 |
 | **R8** | **Generalized kernel-capability program** (branch `perfect_kernel`; user-approved 2026-09-05) — K1 definition provenance + overlay bindings, K3 lthooks store, K4 templates/sockets, K5 raw-line reader, K2 nest vs save stack (= R9), K6 font model, K7 file model, K8 runaway cap | **OPEN**, seeds landed in batch 56i | program | [`perfect_kernel/KERNEL_CAPABILITIES.md`](perfect_kernel/KERNEL_CAPABILITIES.md) |
+| **R8b** | **forest.sty full support** (side goal, user 2026-09-05; heavily used on arXiv) — discard stub today; overlay-binding vs native-tree shape to be decided | **OPEN**, recorded | large | [`perfect_kernel/DIFFICULT_CASES.md` §D10](perfect_kernel/DIFFICULT_CASES.md) |
 
 ---
 
