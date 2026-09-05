@@ -16096,4 +16096,29 @@ ignored
     assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:comment]").count(), 1, "{xml}");
   }
+
+  /// verbatim.sty self-terminating environments hand \end{verbatim} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn verbatim_sty_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{verbatim}
+\AfterEndEnvironment{verbatim}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{verbatim}
+x = 1
+\end{verbatim}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:verbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:verbatim]").count(), 1, "{xml}");
+  }
 }
+
