@@ -445,11 +445,37 @@ LoadDefinitions!({
     }
     Ok(Tokens!())
   });
-  DefMacro!("\\booktabs", "\\tabular");
+  // tabularray.sty:8163 `\NewTblrEnviron{booktabs}` (and `longtabs`/`talltabs`)
+  // are tblr-family environments whose inner spec is the same key-value list
+  // (`{row{2}={c}}`); mapping `\booktabs` straight to `\tabular` bypassed the
+  // `\lx@tblr@env` colspec extraction, so the keys became a 0-column template
+  // (tabularray manual :2666/:2686, 12 "Extra alignment tab" errors; RUST-ONLY).
+  // Guard: `perfect_kernel_batch56::tblr_table_commands_and_booktabs_env`.
+  DefMacro!("\\booktabs", "\\lx@tblr@env{booktabs}");
   DefMacro!("\\endbooktabs", "\\endtabular");
+  DefMacro!("\\longtabs", "\\lx@tblr@env{longtabs}");
+  DefMacro!("\\endlongtabs", "\\endtabular");
+  DefMacro!("\\talltabs", "\\lx@tblr@env{talltabs}");
+  DefMacro!("\\endtalltabs", "\\endtabular");
   DefMacro!("\\UseTblrLibrary", "\\usepackage");
   def_macro_noop("\\SetCell[]{}")?;
   def_macro_noop("\\SetCells[]{}")?;
+  // The other `\NewTblrTableCommand`s (tabularray.sty:1613; :2990 `\SetRow`,
+  // :2962 `\SetRows`, :2824 `\SetColumn`, :2796 `\SetColumns` = `O{} m`;
+  // :2013 `\SetHline`, :1964 `\SetHlines`, :2256 `\SetVline`, :2208
+  // `\SetVlines` = `O{+} m m`; :1695 `\SetChild` = `m`): the real extractor
+  // (:3770-3860) gobbles the command and its arguments out of the cell before
+  // alignment; undefined here they leaked an `<ltx:ERROR>` plus their braced
+  // arguments into the first cell (manual :580/:591/:908).
+  def_macro_noop("\\SetRow[]{}")?;
+  def_macro_noop("\\SetRows[]{}")?;
+  def_macro_noop("\\SetColumn[]{}")?;
+  def_macro_noop("\\SetColumns[]{}")?;
+  def_macro_noop("\\SetHline[]{}{}")?;
+  def_macro_noop("\\SetHlines[]{}{}")?;
+  def_macro_noop("\\SetVline[]{}{}")?;
+  def_macro_noop("\\SetVlines[]{}{}")?;
+  def_macro_noop("\\SetChild{}")?;
   // tabularray styling primitives — no-op stubs.
   // Witness 2406.00523 (\SetTblrInner).
   def_macro_noop("\\SetTblrOuter[]{}")?;

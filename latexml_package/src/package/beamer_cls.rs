@@ -360,6 +360,16 @@ LoadDefinitions!({
   // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
   DefEnvironment!("{columns} OptionalAngled []", "#body");
   DefEnvironment!("{column} OptionalAngled {}", "#body");
+  // beamerbasecolor.sty:149 `{beamercolorbox}[keys]{color}` — the coloured box
+  // every theme builds on (mirage's `pullquote`, beamerthemeMirage.sty:82-92);
+  // article mode (:241) collapses it to a transparent pair, the shape a class
+  // loaded on article takes here. Perl no-ops `\usetheme` and never meets it.
+  // `{beamerboxesrounded}` (beamerbaseboxes.sty:36-138) stays UNDEFINED on
+  // purpose: themes `\xpatchcmd` its macro body (beamerthemeMirage.sty:35-37),
+  // and a constructor definition is not a body xpatch can re-scan (`\scan…`
+  // split + `_` errors); undefined, xpatch's failure branch is silent.
+  // Guard: `perfect_kernel_batch56::beamer_theme_compat_aliases_and_colorbox`.
+  DefEnvironment!("{beamercolorbox} [] {}", "<ltx:inline-block class='ltx_beamercolorbox'>#body</ltx:inline-block>");
   def_macro_noop("\\column OptionalAngled {}")?;
 
   // Title page macros — Perl L1010-1035
@@ -467,6 +477,101 @@ LoadDefinitions!({
   // set `\ifbeamer@sidebar` and the theme installed its "defined only with
   // the 'sidebar' option" stub (beamer-verona-sidebar; Perl no-ops
   // `\usetheme`). Guard: `perfect_kernel_batch54::usetheme_options_reach_the_theme`.
+  // beamerbasecompatibility.sty:510-583, 620-635 verbatim (`\newcommand` →
+  // `\providecommand`): the `\beamertemplate…` aliases old themes still call
+  // (beamerouterthememiniframes.sty:49 `\beamertemplatedotitem` via mirage's
+  // `\usetheme[compress]{Singapore}`, shipunov lecture-slides
+  // `\beamertemplatearticlebibitems`). Each reduces to `\setbeamertemplate`/
+  // `\setbeamercovered`/`\setbeamercolor`, all present above.
+  RawTeX!(r"\def\beamertemplatedefaulttoc{\setbeamertemplate{sections/subsections in toc}[default]}
+\def\beamertemplatenumberedsubsectiontoc{\setbeamertemplate{sections/subsections in toc}[subsections numbered]}
+\def\beamertemplatenumberedsectiontoc{\setbeamertemplate{sections/subsections in toc}[sections numbered]}
+\def\beamertemplatenumberedcirclesectiontoc{\setbeamertemplate{sections/subsections in toc}[circle]}
+\def\beamertemplatenumberedsquaresectiontoc{\setbeamertemplate{sections/subsections in toc}[square]}
+\def\beamertemplatenumberedballsectiontoc{\setbeamertemplate{sections/subsections in toc}[ball]}
+\def\beamertemplateballtoc{\setbeamertemplate{sections/subsections in toc}[ball unnumbered]}
+\def\beamertemplatedotitem{\setbeamertemplate{itemize items}[circle]}
+\def\beamertemplatetriangleitem{\setbeamertemplate{itemize items}[default]}
+\def\beamertemplatesquareitem{\setbeamertemplate{itemize items}[square]}
+\def\beamertemplateballitem{\setbeamertemplate{items}[ball]}
+\def\beamertemplateenumeratealpha{\setbeamertemplate{enumerate items}[default]}
+\def\beamertemplateenumeratecircle{\setbeamertemplate{enumerate items}[circle]}
+\def\beamertemplateenumeratesquare{\setbeamertemplate{enumerate items}[square]}
+\def\beamertemplatelargepartpage{\setbeamertemplate{part page}[default]}
+\def\beamertemplateboldpartpage{\setbeamerfont{part}{size=\large}%
+\setbeamerfont{part name}{series=\bfseries}%
+\setbeamertemplate{part page}[default]}
+\def\beamertemplatelargetitlepage{\setbeamertemplate{title page}[default]}
+\def\beamertemplateboldtitlepage{\setbeamerfont{title}{size=\large,series=\bfseries}%
+\setbeamertemplate{title page}[default]}
+\def\beamertemplateboldcenterframetitle{\setbeamerfont{frametitle}{size={},series=\bfseries}
+\setbeamerfont{framesubtitle}{series=\bfseries}
+\setbeamertemplate{frametitle}[default][center]}
+\def\beamertemplateboldframetitle{\setbeamerfont{frametitle}{series=\bfseries}
+\setbeamerfont{framesubtitle}{series=\bfseries}
+\setbeamertemplate{frametitle}[default]}
+\def\beamertemplatelargeframetitle{\setbeamertemplate{frametitle}[default]}
+\def\beamertemplateboldblocks{\setbeamerfont{block title}{size={},series=\bfseries}\setbeamertemplate{blocks}[default]}
+\def\beamertemplatelargeblocks{\setbeamertemplate{blocks}[default]}
+\def\beamertemplateshadowblocks{\setbeamertemplate{blocks}[rounded][shadow=true]}
+\def\beamertemplateplaintoc{\beamertemplatedefaulttoc}
+\def\beamertemplatecircleminiframeinverted{\beamertemplatecircleminiframe%
+\usebeamercolor{mini frames}{use=structure,fg=white,bg=structure.bg}}
+\def\beamertemplatesphereminiframe{\beamertemplatecircleminiframe}
+\def\beamertemplatesphereminiframeinverted{\beamertemplatecircleminiframeinverted}
+\def\beamertemplatelightsectionheads{\usesectionheadtemplate{\hfill\insertsectionhead}{\hfill\color{fg!50!bg}\insertsectionhead}
+\usesubsectionheadtemplate{\insertsubsectionhead}{\color{fg!50!bg}\insertsubsectionhead}}
+\let\beamertemplatedarksectionheads=\beamertemplatedefaultsectionheads
+\def\usecontinuationtemplate{\setbeamertemplate{frametitle continuation}}
+\def\beamertemplatecontinuationroman{\setbeamertemplate{frametitle continuation}[default]}
+\def\beamertemplatecontinuationtext{\setbeamertemplate{frametitle continuation}[from second]}
+\def\beamertemplateroundedbuttons{\setbeamertemplate{button}[default]}
+\def\beamertemplateoutlinebuttons{\setbeamercolor*{button border}{parent=structure,use=structure,fg=structure.fg!50!bg}}
+\def\beamertemplatesolidbuttons{\setbeamercolor*{button}{use=structure,bg=structure.fg!50!bg,fg=white}
+\setbeamercolor*{button border}{use=structure,fg=structure.fg!50!bg}}
+\def\usetemplatequotation#1#2{
+\setbeamertemplate{quotation begin}{#1}
+\setbeamertemplate{quote begin}{#1}
+\setbeamertemplate{quotation end}{#2}
+\setbeamertemplate{quote end}{#2}}
+\def\beamertemplateheadempty{\setbeamertemplate{headline}{}}
+\def\beamertemplatefootempty{\setbeamertemplate{footline}{}}
+\def\beamertemplatefootpagenumber{\setbeamertemplate{footline}[page number]}
+\def\beamertemplatecaptionownline{\setbeamertemplate{caption}[caption name own line]}
+\def\beamertemplatecaptionnwithnumber{\setbeamertemplate{caption}[numbered]}
+\def\beamertemplateroundedblocks{\setbeamertemplate{blocks}[rounded]}
+\def\beamertemplatetheoremsunnumbered{\setbeamertemplate{theorems}[default]}
+\def\beamertemplatetheoremsnumbered{\setbeamertemplate{theorems}[numbered]}
+\def\beamertemplatetheoremsamslike{\setbeamertemplate{theorems}[ams style]}
+\def\beamertemplatetheoremssimple{\setbeamertemplate{theorems}[normal font]}
+\def\beamertemplatenavigationsymbolsempty{\setbeamertemplate{navigation symbols}{}}
+\def\beamertemplatenavigationsymbolsframe{\setbeamertemplate{navigation symbols}[only frame symbol]}
+\def\beamertemplatenavigationsymbolsvertical{\setbeamertemplate{navigation symbols}[vertical]}
+\def\beamertemplatenavigationsymbolshorizontal{\setbeamertemplate{navigation symbols}[horizontal]}
+\def\beamertemplatedefaultsectionheads{%
+\setbeamertemplate{section in head/foot}[default]
+\setbeamertemplate{subsection in head/foot}[default]
+\setbeamertemplate{section in head/foot shaded}[default]
+\setbeamertemplate{subsection in head/foot shaded}[default]
+}
+\def\beamertemplatecircleminiframe{\setbeamertemplate{mini frames}[default]}
+\def\beamertemplateticksminiframe{\setbeamertemplate{mini frames}[tick]}
+\def\beamertemplateboxminiframe{\setbeamertemplate{mini frames}[box]}
+\providecommand{\beamertemplategridbackground}[1][]{\setbeamertemplate{background}[grid][step={#1}]}
+\providecommand{\beamertemplateshadingbackground}[2]{\setbeamertemplate{background canvas}[vertical shading][bottom={#1},top={#2}]}
+\providecommand\usealerttemplate[2]{\setbeamertemplate{alerted text begin}{#1}\setbeamertemplate{alerted text end}{#2}}
+\providecommand\usestructuretemplate[2]{\setbeamertemplate{structure begin}{#1}\setbeamertemplate{structure end}{#2}}
+\providecommand{\beamertemplatebookbibitems}{\setbeamertemplate{bibliography item}[book]}
+\providecommand{\beamertemplatearticlebibitems}{\setbeamertemplate{bibliography item}[article]}
+\providecommand{\beamertemplatetextbibitems}{\setbeamertemplate{bibliography item}[text]}
+\providecommand{\beamertemplatearrowbibitems}{\setbeamertemplate{bibliography item}[triangle]}
+\providecommand{\beamertemplateonlinebibitems}{\setbeamertemplate{bibliography item}[online]}
+\def\beamertemplatetransparentcovereddynamic{\setbeamercovered{highly dynamic}}
+\def\beamertemplatetransparentcovereddynamicmedium{\setbeamercovered{dynamic}}
+\def\beamertemplatetransparentcovered{\setbeamercovered{transparent}}
+\def\beamertemplatetransparentcoveredmedium{\setbeamercovered{transparent=10}}
+\def\beamertemplatetransparentcoveredhigh{\setbeamercovered{transparent=5}}
+\def\beamertemplatetransparentcoveredhighest{\setbeamercovered{transparent=2}}");
   RawTeX!(r"\def\beamer@calltheme#1#2#3{\def\beamer@themelist{#2}\@for\beamer@themename:=\beamer@themelist\do{\usepackage[{#1}]{#3\beamer@themename}}}
 \newcommand*\usetheme[2][]{\beamer@calltheme{#1}{#2}{beamertheme}}
 \newcommand*\usecolortheme[2][]{\beamer@calltheme{#1}{#2}{beamercolortheme}}

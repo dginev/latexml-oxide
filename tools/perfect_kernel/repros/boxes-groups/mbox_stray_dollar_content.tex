@@ -1,0 +1,12 @@
+% witness: \mbox variant WITH content — shows the runaway swallows the rest of the document into math
+% oracle:  pdflatex 3 errors; box holds `x` as an inline formula
+% engines: rust=7 perl=fails  pdflatex=3   (b56i, 2026-09-05)
+% mechanism: same box-reader-loop leak as endmode_hbox_stray_dollar; here the Math body captures
+%   `x}\lx@frontmatter@fallback\par\end{document}` (tex attr proves the runaway). Closing the math
+%   at the box `}` (invoke \lx@end@inline@math) confines it to `x` and lets the box end cleanly.
+% expect:  <=3 errors, single well-formed ltx:Math containing `x`, no document-root leak
+% status:  RED (b56i: 7 errors, Math tex="{x}\lx@frontmatter@fallback\par\end{document}")
+\documentclass{article}
+\begin{document}
+\mbox{$x}
+\end{document}

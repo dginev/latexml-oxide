@@ -84,8 +84,19 @@ LoadDefinitions!({
     ];
     let text = opts.to_string();
     if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
+      // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
+      // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),
+      // so it runs inside the box's resolved `before lower*`/`after lower*`
+      // wrapper: `tikz lower` (tcolorbox.sty:712) = `\begin{tikzpicture}[…]` …
+      // `\end{tikzpicture}`. Captured here for `\lx@lstenv@body` (tikz2d-fr,
+      // OutilsGeomTikz: `\draw`/`{scope}` undefined outside a picture).
+      // Guard: `perfect_kernel_batch56::tcblisting_tikz_lower_wraps_the_executed_body`.
       let src = format!(
         "\\begingroup\\tcbset{{{text}}}\
+         \\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
+           \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
+         \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
+           \\else\\global\\let\\lx@tcb@execafter\\@empty\\fi\
          \\ifx\\tcb@use@listing@other\\tcbuselistingtext \
            \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
              \\ifx\\tcb@listing@process\\tcb@listing@listing \\lxtcbexec0 \\else\\lxtcbexec1 \\fi\
@@ -102,6 +113,8 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
+  DefMacro!("\\lx@tcb@execbefore", "");
+  DefMacro!("\\lx@tcb@execafter", "");
   DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
     AssignValue!("LISTINGS_EXECUTE_BODY" => n.value_of() != 0, Scope::Global);
     Ok(Vec::new())

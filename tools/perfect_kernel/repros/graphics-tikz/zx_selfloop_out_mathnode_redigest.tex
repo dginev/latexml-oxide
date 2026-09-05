@@ -1,0 +1,27 @@
+% witness: zx-calculus/zx-calculus (zx-calculus.tex:461 \zxX{\alpha} \zxLoopAboveDots{};
+%          \zxLoopAboveDots = \ar[loop,...,in=90-20,out=90+20] tikzlibraryzx-calculus.code.tex:4226,4229)
+% oracle:  pdflatex 0 errors (PDF built, loop-above-dots drawn)
+% engines: rust=1fatal perl=1fatal(loop) (2026-09-05, b56i)
+% expect:  0 errors; a <svg:path> for the loop wire AND the node's <Math> alpha survive
+% status:  RED
+% mechanism: SHARED infinite DIGESTION loop. Trigger needs ALL of: zx-calculus `zx main node`
+%   (\zxX/\zxZ), NON-EMPTY MATH content (\alpha; empty node is clean), a to-path arrow with
+%   `out=` SET (in= alone is clean), and a SELF-LOOP (loop => start=target=same zx node).
+%   The runaway is an unbounded \begingroup...\endgroup group loop that re-runs
+%   \halign+\hbox+\lx@begin@inline@math..\alpha..\lx@end@inline@math (re-typesetting the zx
+%   node's math phase) during the self-loop wire's to-path anchor scan (topaths
+%   \tikz@to@compute -> \tikz@to@modify\tikz@tofrom\tikz@to@out => `node.<out-angle>` border
+%   anchor). Real TeX terminates; BOTH LaTeXML engines re-enter unboundedly.
+%   Our box cycle-guard (stomach.rs:1513) converts the hang to a clean Fatal (Perl just hangs).
+% classification: SHARED (Perl LaTeXML timed out at 300s, stack = repeated Primitive[Begin]
+%   inside \setbox/\hbox; pdflatex 0 err) => surpass-eligible.
+% does NOT repro with: plain tikz-cd (even |[draw,circle]| named node), plain tikz self-loop
+%   on a math \node, empty \zxX{}/\zxN{}, `in=` only, or plain cell content in ZX.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{zx-calculus}
+\begin{document}
+\begin{ZX}
+  \zxX{\alpha} \ar[loop,out=110]
+\end{ZX}
+\end{document}

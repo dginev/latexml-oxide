@@ -1,0 +1,14 @@
+% witness: beamertheme-mirage/mirage-poster-en (lualatex oracle, clean)
+% oracle: lualatex/pdflatex clean; beamercolorbox = beamerbasecolor.sty:149
+% engines: pdflatex,lualatex,xelatex
+% expect: 0 errors; a colored inline-block container around the body
+% status: RED (Error:undefined:{beamercolorbox})
+% mechanism: beamer binding replaces raw beamer; beamercolorbox env missing
+\documentclass{beamer}
+\begin{document}
+\begin{frame}
+\begin{beamercolorbox}[sep=1ex,leftskip=1em]{structure}
+Hello colored box.
+\end{beamercolorbox}
+\end{frame}
+\end{document}

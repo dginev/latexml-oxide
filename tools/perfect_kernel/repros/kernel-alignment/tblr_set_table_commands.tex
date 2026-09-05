@@ -1,0 +1,27 @@
+% witness: tabularray/tabularray (tabularray.tex:575,584,908)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=0 (2026-09-05)
+% expect:  0 errors; first <tabular> row 1 = 3 <td>, cell 1 text "Alpha" (no leak)
+% status:  RED
+% mechanism: \SetRow/\SetColumn/\SetHline are \NewTblrTableCommand table
+%   commands (tabularray.sty:2990/2824/2013) extracted from cell text
+%   (tabularray.sty:3770); the tblr->tabular stub lacks them so they are
+%   undefined and their brace args leak as cell text.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={lcr}}
+ \SetRow{c}  Alpha   & Beta  & Gamma  \\
+ \SetRow{c} Epsilon & Zeta  & Eta    \\
+\end{tblr}
+
+\begin{tblr}{colspec={lcr}}
+ \SetColumn{c} Alpha & \SetColumn{c} Beta & Gamma \\
+ Epsilon & Zeta & Eta \\
+\end{tblr}
+
+\begin{tblr}{llll}
+ Alpha & Beta & Gamma & Delta \\
+\SetHline{2-4}{1pt}
+\end{tblr}
+\end{document}

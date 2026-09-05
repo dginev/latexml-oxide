@@ -1432,12 +1432,20 @@ pub(crate) fn load() -> Result<()> {
       || find_file(&file_string, Some(FindFileOptions {
           notex: true, ..Default::default()
         })).is_some();
+    // latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch
+    // (`\expandafter\def\expandafter\reserved@a\expandafter{\reserved@a{#2}{#3}}`),
+    // so a `\def\x##1{…}` written inside it is scanned as a replacement text
+    // and its `##` halves once (tex.web §473-476). Returning the branch
+    // verbatim (Perl latex_constructs.pool.ltxml:5692-5697 too) left the
+    // doubled `#` in `\react@`'s body — chemexec.sty:274-289, 20 PARAM
+    // errors per manual. `pack_parameters` is that halving.
+    // Guard: `perfect_kernel_batch56::iffileexists_branch_halves_doubled_parameters`.
     if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
-      if_tks
+      if_tks.pack_parameters()?
     } else {
-      else_tks
+      else_tks.pack_parameters()?
     }
   });
 
@@ -1466,10 +1474,10 @@ pub(crate) fn load() -> Result<()> {
     if found {
       let found_str = s!("\"{file_string}\" ");
       def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
-      Tokens!(if_tks, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
+      Tokens!(if_tks.pack_parameters()?, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
         T_CS!("\\ltx@input"), T_BEGIN!(), file_tks, T_END!())
     } else {
-      else_tks
+      else_tks.pack_parameters()?
     }
   });
 

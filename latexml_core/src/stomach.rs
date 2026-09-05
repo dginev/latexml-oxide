@@ -1766,6 +1766,34 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       gullet::unread_one(token);
       return Ok(expire_local_box_list());
     }
+    // A group closer arriving while the frame on top is the math switch this
+    // body capture opened (`\mbox{$x}`, `\hbox{$}`: no group opened inside
+    // the math): tex.web §1069 drops the brace ("Extra }, or forgotten $")
+    // and §1047 inserts the `$` at the next forbidden token, so the math
+    // closes and the enclosing box then ends on its own `}`. Perl (Stomach.pm
+    // digestNextBody + egroup :339-349) reported the mismatch and kept
+    // reading, so the math swallowed the rest of the document (`\hbox{$}`:
+    // pdflatex 3 / Perl 7 + Fatal / Rust 6 with `<ltx:Math>` at the document
+    // root). Insert the math's own end token and re-read the brace.
+    // Guard: `perfect_kernel_batch56::box_end_over_leaked_math_closes_it_into_the_box`.
+    if token.defined_as(&T_END!()) && is_value_bound("BOUND_MODE", Some(0)) {
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      let ender = match mode.as_str() {
+        "math" => Some("\\lx@end@inline@math"),
+        "display_math" => Some("\\lx@end@display@math"),
+        _ => None,
+      };
+      if let Some(ender) = ender {
+        Error!(
+          "expected",
+          "$",
+          "Missing $ inserted",
+          s!("Extra }}, or forgotten $: closing {mode} before the group ends.")
+        );
+        gullet::unread(Tokens::new(vec![T_CS!(ender), token]));
+        continue;
+      }
+    }
     // normal case
     let invoked = invoke_token(&token)?;
     extend_box_list(invoked);

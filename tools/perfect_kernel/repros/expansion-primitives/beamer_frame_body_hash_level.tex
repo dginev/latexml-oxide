@@ -1,0 +1,28 @@
+% witness: tuda-ci/DEMO-TUDaBeamer:144 (~22 errors) —
+%   \renewcommand*{\do}[1]{TUDa-####1: \textcolor{TUDa-####1}{...}} then \docsvlist{...}
+%   INSIDE a beamer frame. Minimal repro uses plain beamer (class is the subject).
+% oracle:  pdflatex 0 errors (#### is REQUIRED: ## alone errors "Illegal parameter
+%          number in definition of \beamer@doifinframe"; #### needs the frame's \def level)
+% engines: rust=6 perl=6 (2026-09-05) <- SHARED
+% expect:  0 errors; docsvlist items "[X a Y][X b Y][X c Y]" present, no PARAM leak
+% status:  RED
+% mechanism: real beamer collects the frame body VERBATIM and stores it via a \def
+%   (\beamer@frametext, for overlay re-execution) — ONE halving level (####->##).
+%   Then \renewcommand*{\do}[1]{...##1...} halves again (##->#). Our `frame` env is a
+%   plain DefEnvironment('{frame}[][]',...) (beamer_cls.rs:240; Perl beamer.cls.ltxml)
+%   that digests the body INLINE — the \def-storage level is ABSENT, so #### is halved
+%   only ONCE (by \renewcommand) to ##, and \do's body leaks catcode-PARAM # to Stomach.
+%   docsvlist (etoolbox) adds NO \def level (verified: top-level ## errors, #1 clean).
+% class:   SHARED (both engines lack the frame-body \def level). pdflatex clean -> in scope.
+% fix:     DISTINCT/harder root (own checkpoint): make `{frame}` collect+store its body via
+%   a single \def-halving pass (collect@body style) before digesting. RISK MED-HIGH: also
+%   makes single-# macro defs in frames (which real beamer REJECTS) newly error, and touches
+%   the mode-frame family. NOT batched with the \IfFileExists fix.
+\documentclass{beamer}
+\usepackage{etoolbox}
+\begin{document}
+\begin{frame}{T}
+\renewcommand*{\do}[1]{[X ####1 Y]}
+\docsvlist{a,b,c}
+\end{frame}
+\end{document}

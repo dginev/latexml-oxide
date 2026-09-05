@@ -13860,6 +13860,166 @@ Body.
     assert!(xml.contains("Body."), "{xml}");
   }
 
+  /// tabularray's `\Set*` table commands are gobbled out of the cell
+  /// (tabularray.sty:3770-3860) and the `booktabs` environment takes the tblr
+  /// key-value spec through the same colspec extraction (:8163).
+  #[test]
+  fn tblr_table_commands_and_booktabs_env() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+\begin{document}
+\begin{tblr}{colspec={lcr}}
+ \SetRow{c}  Alpha   & Beta  & Gamma  \\
+ \SetHline[1]{1-3}{solid}
+ \SetColumn{c} Epsilon & Zeta  & Eta    \\
+\end{tblr}
+\begin{booktabs}{row{2}={c}}
+\toprule
+ One & Two & Three & Four \\
+ Five & Six & Seven & Eight \\
+\bottomrule
+\end{booktabs}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+    assert!(xml.contains("Alpha"), "{xml}");
+    assert!(xml.contains("Eight"), "{xml}");
+    assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
+  }
+
+  /// tex.web §1069/§1047 for a box reader: a box whose body left inline math
+  /// open (`\mbox{$x}`) closes the math into the box instead of running to the
+  /// end of the document; a balanced `\hbox{$x$}` stays error-free.
+  #[test]
+  fn box_end_over_leaked_math_closes_it_into_the_box() {
+    let tex = r"\documentclass{article}
+\begin{document}
+Before \mbox{$x} after.
+
+Next paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert!(error_count(&stderr) <= 2, "{stderr}");
+    assert!(!stderr.contains("malformed"), "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+    assert!(xml.contains("after."), "{xml}");
+    assert!(xml.contains("Next paragraph."), "{xml}");
+    let last_para_end = xml.rfind("</para>").unwrap_or(0);
+    assert!(!xml[last_para_end..].contains("<Math"), "{xml}");
+    let tex = r"\documentclass{article}
+\begin{document}
+Before \hbox{$x$} after.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+  }
+
+  /// tcolorbox.sty:712 `tikz lower` wraps the box's executed lower part in a
+  /// `tikzpicture`; the executed listing body runs inside it.
+  #[test]
+  fn tcblisting_tikz_lower_wraps_the_executed_body() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{DemoCode}[1][]{#1}
+\begin{document}
+\begin{DemoCode}[tikz lower]
+\draw (0,0) -- (2,1);
+\coordinate (A) at (1,1);
+\end{DemoCode}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<picture"), "{xml}");
+    assert!(xml.contains("<svg:path"), "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// beamerbasecompatibility.sty:517 `\beamertemplatedotitem` (called by the
+  /// miniframes outer theme) and beamerbasecolor.sty:149 `{beamercolorbox}`.
+  #[test]
+  fn beamer_theme_compat_aliases_and_colorbox() {
+    let tex = r"\documentclass{beamer}
+\usetheme[compress]{Singapore}
+\begin{document}
+\begin{frame}
+\beamertemplatearticlebibitems
+\begin{beamercolorbox}[wd=\textwidth,rounded=true]{block body}
+Hello colored box.
+\end{beamercolorbox}
+\begin{itemize}\item One\end{itemize}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Hello colored box."), "{xml}");
+    assert!(xml.contains("<item"), "{xml}");
+  }
+
+  /// latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch, halving
+  /// `##` once (chemexec.sty:274-289 defines `\react@##1` inside it).
+  #[test]
+  fn iffileexists_branch_halves_doubled_parameters() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\IfFileExists{article.cls}{%
+  \long\def\reactx##1{[X ##1 Y]}%
+}{}
+\IfFileExists{no-such-file-xyz.sty}{}{\def\other##1{(O ##1)}}
+\reactx{Z} \other{W}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[X Z Y]"), "{xml}");
+    assert!(xml.contains("(O W)"), "{xml}");
+  }
+
+  /// xkeyval.tex:446-448: `\presetkeys` apply through `\ProcessOptionsX` and
+  /// `\ExecuteOptionsX` (powerdot.cls:52-92 sets `mode=present` only by preset);
+  /// head presets fill un-given keys, given keys win, tail presets follow.
+  #[test]
+  fn xkeyval_option_processing_applies_presetkeys() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\@namedef{opt@.}{size=12pt}
+\define@choicekey*[pd]{class}{mode}[\pd@tempa\pd@mode]{present,print,handout}{}
+\define@cmdkey[pd]{class}{size}{}
+\define@cmdkey[pd]{class}{disp}{}
+\presetkeys[pd]{class}{mode=present,size=10pt}{disp=tail}
+\ProcessOptionsX[pd]<class>\relax
+\typeout{PROBE:mode=\pd@mode:size=\cmdpd@class@size:disp=\cmdpd@class@disp}
+\define@cmdkey[ex]{fam}{width}{}
+\presetkeys[ex]{fam}{width=3cm}{}
+\ExecuteOptionsX[ex]<fam>{}
+\typeout{EXEC:width=\cmdex@fam@width}
+\makeatother
+\begin{document}
+\makeatletter\ifnum\pd@mode>0 MODEGT\else MODELE\fi\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains("PROBE:mode=0:size=12pt:disp=tail"),
+      "{stderr}"
+    );
+    assert!(stderr.contains("EXEC:width=3cm"), "{stderr}");
+    assert!(xml.contains("MODELE"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

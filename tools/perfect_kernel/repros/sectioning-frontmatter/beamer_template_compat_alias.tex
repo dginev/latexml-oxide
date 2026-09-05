@@ -1,0 +1,13 @@
+% witness: beamertheme-mirage/mirage-poster-en via \usetheme{Singapore}->miniframes
+% oracle: pdflatex clean; \beamertemplatedotitem = beamerbasecompatibility.sty:517
+% engines: pdflatex,lualatex,xelatex
+% expect: 0 errors; itemize renders
+% status: RED (Error:undefined:\beamertemplatedotitem)
+% mechanism: compat alias = \setbeamertemplate{itemize items}[circle]; missing in binding
+\documentclass{beamer}
+\beamertemplatedotitem
+\begin{document}
+\begin{frame}
+\begin{itemize}\item alpha \item beta\end{itemize}
+\end{frame}
+\end{document}

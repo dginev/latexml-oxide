@@ -1,0 +1,22 @@
+% witness: bohr/bohr_en (cnltx-doc.cls:728,805,878); also cnltx_en, chemformula-manual, exsheets_en (~35 docs)
+% oracle:  pdflatex 13 errors (TL2025) — NOT clean; deprecated \AfterPackage! dropped by scrlfile-hook >=2021
+% engines: rust=1 perl=1 (2026-09-05, isolated); full bohr_en rust=3
+% expect:  SHARED: rust==perl==1 (Error:undefined:{multicols}); surpass-fixable to 0 by mapping !->*
+% status:  CONTROL (pdflatex also fails, worse); SURPASS target
+% mechanism: scrlfile-hook.sty:209 \scrlfile@AfterPackage{s m o +m}: "!" is NOT xparse "*",
+%   so #2="!", #4="hyperref"; the real body group runs IMMEDIATELY at preamble in a group ->
+%   \newrobustcmd*\cnltx@tableofcontents + \RequirePackage{multicol,ragged2e} are LOCAL and lost.
+%   cnltx should have used \AfterPackage* (deprecated ! == modern *). Perl has no scrlfile binding
+%   (raw-loads -> same mis-parse); our scrlfile_sty.rs raw-loads too -> identical.
+\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{scrlfile}
+\AfterPackage!{hyperref}{%
+  \newrobustcmd*\cnltx@tableofcontents{TOCBODY}%
+  \RequirePackage{multicol,ragged2e}%
+}
+\AtEndPreamble{\RequirePackage{hyperref}}
+\begin{document}
+\ifdefined\cnltx@tableofcontents \cnltx@tableofcontents\else TOC-UNDEF\fi\par
+\begin{multicols}{2}x\end{multicols}
+\end{document}

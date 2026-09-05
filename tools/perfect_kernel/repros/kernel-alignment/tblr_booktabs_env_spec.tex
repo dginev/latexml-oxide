@@ -1,0 +1,21 @@
+% witness: tabularray/tabularray (tabularray.tex:2666)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=0 (2026-09-05)
+% expect:  0 errors; <tabular> row 1 has 4 <td>
+% status:  RED
+% mechanism: booktabs is a tblr-family env (\NewTblrEnviron{booktabs},
+%   tabularray.sty:8163) taking a key-value inner spec; the stub hard-maps
+%   \booktabs->\tabular (tabularray_sty.rs:448), BYPASSING \lx@tblr@env colspec
+%   extraction, so `row{2}={c}` is parsed as a 0-column template -> 4-cell rows
+%   overflow -> 3x "Extra alignment tab &" per row.
+\documentclass{article}
+\usepackage{tabularray}
+\UseTblrLibrary{booktabs}
+\begin{document}
+\begin{booktabs}{row{2}={c}}
+\toprule
+ Alpha   & Beta  & Gamma   & Delta \\
+ Epsilon & Zeta  & Eta     & Theta \\
+\bottomrule
+\end{booktabs}
+\end{document}

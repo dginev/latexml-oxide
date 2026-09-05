@@ -1,0 +1,24 @@
+% witness: chemexec/chemexec_en (chemexec.sty:274 \long\def\react@##1 inside
+%          \IfFileExists{mhchem.sty}{...}{}); same in chemexec_de. 20/26 errors each.
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-05) <- SHARED
+% expect:  0 errors; body text "[X Z Y]" present, no catcode-PARAM leak
+% status:  RED
+% mechanism: robust \IfFileExists@ (latex.ltx:9670) does
+%   \expandafter\def\expandafter\reserved@a\expandafter{\reserved@a{#2}{#3}} — it
+%   re-\def's the SELECTED branch, so the branch is scanned as a \def replacement
+%   text, HALVING ##-># once (tex.web sec473-476). Our binding sect13.rs:1418
+%   \IfFileExists{}{}{} (Perl pool:5692) returns the branch VERBATIM (if_tks),
+%   never halving. So \long\def\reactx##1{[X ##1 Y]} keeps ##1 doubled, \reactx's
+%   body leaks a catcode-PARAM # into Stomach (stomach.rs:1942).
+% class:   SHARED (Perl-origin binding; both return branch verbatim). pdflatex clean -> in scope.
+% fix:     sect13.rs \IfFileExists / \InputIfFileExists: return branch.pack_parameters()
+%   (tokens.rs:653 == Perl Tokens::packParameters) to collapse ##->#, replicating
+%   \IfFileExists@'s \def re-scan.
+\documentclass{article}
+\begin{document}
+\IfFileExists{article.cls}{%
+  \long\def\reactx##1{[X ##1 Y]}%
+}{}
+\reactx{Z}
+\end{document}

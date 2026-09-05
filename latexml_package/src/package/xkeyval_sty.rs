@@ -597,37 +597,30 @@ LoadDefinitions!({
   // ExecuteOptionsX
   //
 
-  // \ExecuteOptionsX [prefix]<keyset>[na]
-  DefMacro!("\\ExecuteOptionsX [] OptionalAngle []", sub[args] {
-    let [prefix_arg, keyset_arg, na_arg] :
-      [ArgWrap; 3] = args.try_into().unwrap();
-    let prefix_opt: Option<Tokens> = prefix_arg.owned_tokens();
-    let keyset_opt: Option<Tokens> = keyset_arg.owned_tokens();
-    let na_opt: Option<Tokens> = na_arg.owned_tokens();
-
-    let mut tokens = Vec::new();
-    tokens.push(T_CS!("\\lx@xkv@setkeys"));
-    if let Some(prefix) = prefix_opt {
-      tokens.push(T_OTHER!("["));
-      tokens.extend(prefix.unlist());
-      tokens.push(T_OTHER!("]"));
-    }
-    if let Some(keyset) = keyset_opt.filter(|t| !t.is_empty()) {
-      tokens.push(T_BEGIN!());
-      tokens.extend(keyset.unlist());
-      tokens.push(T_END!());
-    } else {
-      tokens.push(T_BEGIN!());
-      tokens.extend(Explode!(xkeyval_get_file_name()));
-      tokens.push(T_END!());
-    }
-    if let Some(na) = na_opt {
-      tokens.push(T_OTHER!("["));
-      tokens.extend(na.unlist());
-      tokens.push(T_OTHER!("]"));
-    }
-    Ok(Tokens::new(tokens))
-  });
+  // \ExecuteOptionsX — xkeyval.sty:73-85 + :100 verbatim: the star/prefix/
+  // keyset front-end that ends in `\XKV@setkeys`, the ONLY site that applies
+  // `\presetkeys` (xkeyval.tex:446-448 `\XKV@usepresetkeys{…}{preseth/presett}`).
+  // The former native front-end emitted `\lx@xkv@setkeys` directly, so presets
+  // never applied (powerdot.cls:52-91 `mode=present` → `\pd@mode` undefined,
+  // powerdot-fuberlin ×3; SHARED — Perl stubs `\presetkeys` with a warning).
+  // Guard: `perfect_kernel_batch56::xkeyval_option_processing_applies_presetkeys`.
+  RawTeX!(
+    r"\def\XKV@testopte#1{%
+  \XKV@ifstar{\XKV@sttrue\XKV@t@stopte#1}{\XKV@stfalse\XKV@t@stopte#1}%
+}
+\def\XKV@t@stopte#1{\@testopt{\XKV@t@st@pte#1}{KV}}
+\def\XKV@t@st@pte#1[#2]{%
+  \XKV@makepf{#2}%
+  \@ifnextchar<{\XKV@@t@st@pte#1}%
+    {\XKV@@t@st@pte#1<\@currname.\@currext>}%
+}
+\def\XKV@@t@st@pte#1<#2>{%
+  \XKV@inpoxtrue
+  \XKV@sp@deflist\XKV@fams{#2}%
+  \@testopt#1{}%
+}
+\def\ExecuteOptionsX{\XKV@stfalse\XKV@plfalse\XKV@t@stopte\XKV@setkeys}"
+  );
 
   //
   // ProcessOptionsX
@@ -723,6 +716,9 @@ LoadDefinitions!({
       SkipMissing::None
     };
 
+    let raw_prefix = prefix.clone().unwrap_or_else(|| String::from("KV"));
+    let fams = keysets.join(",");
+    let na = skip.join(",");
     let mut keyvals = KeyVals::new(KeyvalsConfig {
       prefix,
       keysets,
@@ -740,7 +736,28 @@ LoadDefinitions!({
     // read package options
     keyvals.read_from(T_END!(), false)?;
 
-    Ok(keyvals.set_keys_expansion())
+    // xkeyval.sty:104-133 `\XKV@pox` ends in `\XKV@setkeys[na]{opts}`, which
+    // applies `\presetkeys` around the option list (xkeyval.tex:438-449:
+    // `\XKV@naa` = the given key names, then `\XKV@usepresetkeys{na}{preseth}`
+    // … keys … `{presett}`). The native read keeps the `\DeclareOptionX*`
+    // unknown-option handler (KPE #122), so the preset hooks bracket it here —
+    // a no-op without presets. `set_keys_expansion` resets `\XKV@prefix`/
+    // `\XKV@fams`, hence the re-establishment before the tail hook.
+    let naa = keyvals
+      .get_pairs()
+      .map(|(k, _)| k.clone())
+      .collect::<Vec<_>>()
+      .join(",");
+    let head = mouth::tokenize_internal(TeXString::assembled(format!(
+      "\\XKV@makepf{{{raw_prefix}}}\\def\\XKV@fams{{{fams}}}\\def\\XKV@naa{{{naa}}}\\XKV@usepresetkeys{{{na}}}{{preseth}}"
+    )));
+    let tail = mouth::tokenize_internal(TeXString::assembled(format!(
+      "\\XKV@makepf{{{raw_prefix}}}\\def\\XKV@fams{{{fams}}}\\XKV@usepresetkeys{{{na}}}{{presett}}"
+    )));
+    let mut out = head.unlist();
+    out.extend(keyvals.set_keys_expansion().unlist());
+    out.extend(tail.unlist());
+    Ok(Tokens::new(out))
   });
 
   //

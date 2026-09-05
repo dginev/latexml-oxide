@@ -1,0 +1,14 @@
+% witness: biblatex-chicago/cms-notes-intro (first error \if@enotesopen; 92x expected:{ cascade)
+% oracle:  pdflatex CLEAN (0 !) ; our binary RED (undefined:\if@enotesopen, \@enotes; \the\@enotes)
+% engines: pdflatex (doc itself is xelatex+biber)
+% expect:  CLEAN — endnotes.sty:292-293 declare \newwrite\@enotes + \newif\if@enotesopen (\if@haveenotes:294)
+% status:  RED — native endnotes binding (endnotes_sty.rs / Perl endnotes.sty.ltxml) omits base internals
+% mechanism: cmsendnotes.sty (biblatex-chicago 'notes' opt) \RequirePackage{endnotes} then reuses
+%            \if@enotesopen / \@enotes / \@doanenote / \@endanenote which the native binding never allocates.
+%            SHARED (Perl same binding); pdflatex clean -> surpass-Perl. Fix: endnotes_sty.rs.
+\documentclass{article}
+\usepackage{endnotes}
+\makeatletter
+\begin{document}
+\if@enotesopen Open\else Closed\fi\ \the\@enotes
+\end{document}

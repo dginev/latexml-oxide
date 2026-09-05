@@ -1,0 +1,20 @@
+% witness: tikz2d-fr/tikz2d-fr-doc (lx-DemoCode-4), outilsgeomtikz/OutilsGeomTikz-doc (lx-PresentationCode-1)
+% oracle: pdflatex (clean; lualatex in the doc but pdflatex compiles this repro clean)
+% engines: pdflatex, lualatex
+% expect: 0 Error: lines; the tikz lower lower part runs inside a tikzpicture
+% status: RED with b56g
+% mechanism: tcolorbox.sty:712 `tikz lower/.style={before lower*={...\begin{tikzpicture}},after lower*=\end{tikzpicture}}`
+%            wraps the EXECUTED (lower) part of a listing-and-text tcblisting; our
+%            lst_run_body_via_input inputs the raw body with no tikzpicture scope,
+%            so \draw / \coordinate / {scope} are undefined.
+\documentclass{article}
+\usepackage{tikz}
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{DemoCode}[1][]{#1}
+\begin{document}
+\begin{DemoCode}[tikz lower]
+\draw (0,0) -- (2,1);
+\coordinate (A) at (1,1);
+\end{DemoCode}
+\end{document}

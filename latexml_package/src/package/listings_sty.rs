@@ -2661,7 +2661,17 @@ LoadDefinitions!({
     // escape as in TeX.
     if lookup_bool("LISTINGS_EXECUTE_BODY") {
       let closer = out.pop();
+      // tcolorbox's resolved `before lower*`/`after lower*` wrapper around the
+      // executed part (`tikz lower`, tcolorbox.sty:712); empty for every other
+      // box, absent without tcolorbox.
+      let wrapped = lookup_meaning(&T_CS!("\\lx@tcb@execbefore")).is_some();
+      if wrapped {
+        out.push(T_CS!("\\lx@tcb@execbefore"));
+      }
       out.extend(lst_run_body_via_input(&env_name, &text)?.unlist());
+      if wrapped {
+        out.push(T_CS!("\\lx@tcb@execafter"));
+      }
       out.extend(closer);
     }
     Ok(Tokens::new(out))
