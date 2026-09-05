@@ -1,0 +1,10 @@
+\documentclass{article}
+% WITNESS: zugferd/DEMO-rechnung-zugferd (residue43); ORACLE: pdflatex 0 err
+% MECH: siunitx_sty.rs reimplements siunitx (Perl too) and omits the v3 expl3
+%   API \siunitx_number_format:nN (siunitx.sty). zugferd.sty:415 calls it directly.
+\usepackage{siunitx}
+\ExplSyntaxOn
+\tl_set:Nn \l_tmpa_tl { }
+\siunitx_number_format:nN { 12.5 } \l_tmpa_tl
+\ExplSyntaxOff
+\begin{document}x\end{document}

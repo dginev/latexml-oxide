@@ -6,6 +6,29 @@
 use super::*;
 
 #[rustfmt::skip]
+/// OXIDIZED_DESIGN #179, the "has chapters" step: after a class has loaded,
+/// the kernel-level `\chapter` (Perl pool:557, locked) is retracted unless
+/// the class made a chapter counter (Perl's own probe, pool:690) or the class
+/// is the OmniBus fallback. Runs at `\documentclass` AND at `\LoadClass`
+/// return (sect05.rs): a class body's probe `\@ifundefined{chapter}` after
+/// its `\LoadClass{article}` (aguplus.cls:524 "figcaps may only be used with
+/// article-like classes") must already see article's answer, as in LaTeX
+/// where article never defines one. The lock is released with the
+/// definition so a class that builds its own chapters afterwards
+/// (source3body.tex:100-123 `\newcounter{chapter}` + `\newcommand\chapter`)
+/// is not "Ignoring redefinition of \chapter" (KNOWN_PERL_ERRORS #141).
+/// Guard: `perfect_kernel_batch56::loadclass_return_retracts_kernel_chapter`.
+pub(crate) fn retract_kernel_chapter_if_chapterless() -> Result<()> {
+  if lookup_definition(&T_CS!("\\c@chapter"))?.is_none()
+    && !lookup_bool("OmniBus.cls_loaded")
+    && !lookup_bool("OmniBus.cls.ltxml_loaded")
+  {
+    let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
+    assign_value("\\chapter:locked", false, Some(Scope::Global));
+  }
+  Ok(())
+}
+
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
   // C.1 Commands and Environments
@@ -125,19 +148,7 @@ pub(crate) fn load() -> Result<()> {
       // "has chapters" test (pool:690). An unknown class (OmniBus fallback)
       // may well have chapters — OmniBus autoloads book.cls on `\thechapter`
       // (arXiv:2602.10407) — so it keeps the kernel `\chapter`.
-      if lookup_definition(&T_CS!("\\c@chapter"))?.is_none()
-        && !lookup_bool("OmniBus.cls_loaded")
-        && !lookup_bool("OmniBus.cls.ltxml_loaded")
-      {
-        let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
-        // …and unlock it: the kernel `\chapter` is `locked`, and a lock
-        // outlives the definition, so a document that then builds its own
-        // (source3body.tex:100-123 `\newcounter{chapter}` +
-        // `\newcommand\chapter{…\secdef\@chapter\@schapter}`, l3kernel
-        // interface3/source3) was "Ignoring redefinition of \chapter" and
-        // errored on every chapter. KNOWN_PERL_ERRORS #141.
-        assign_value("\\chapter:locked", false, Some(Scope::Global));
-      }
+      retract_kernel_chapter_if_chapterless()?;
       Ok(())
   });
 

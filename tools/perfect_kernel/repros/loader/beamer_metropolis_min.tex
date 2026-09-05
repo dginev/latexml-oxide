@@ -1,0 +1,17 @@
+% witness: beamertheme-metropolis/demo
+% oracle: pdflatex (clean, 0 err); engines: pdflatex; Perl LaTeXML 0 err (no-ops \usetheme)
+% expect: 0 errors; \usetheme{metropolis} loads the theme and its \patchcmd's succeed
+% status: RED today (b56t): 2 errors (section title + frame title "Patching ... failed")
+% class: RUST-ONLY. Perl no-ops \usetheme (beamer.cls.ltxml:1246 beamerTODO) so the
+%   metropolis font theme is never loaded. latexml-oxide loads themes raw (beamer_cls.rs:580,
+%   beyond-Perl), so beamerfontthememetropolis.sty:278/293 \patchcmd{\beamer@subsection}
+%   and \patchcmd{\beamer@@frametitle} run; both targets are UNDEFINED in beamer_cls.rs,
+%   so etoolbox \patchcmd returns $failure -> the theme's \PackageError.
+% fix: extend beamer_cls.rs raw-macro block (:214-225) with \beamer@subsection and
+%   \beamer@@frametitle bodies carrying the patch search strings (never invoked).
+\documentclass[10pt]{beamer}
+\usetheme{metropolis}
+\begin{document}
+\section{S}
+\begin{frame}{Title}x\end{frame}
+\end{document}

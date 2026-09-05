@@ -131,6 +131,36 @@ fn beamer_color_opts(opts: &str) -> Vec<(String, String)> {
   out
 }
 
+/// Does a beamer `<…>` specification apply in presentation mode? Parts are
+/// separated by `|`; a part `mode:overlays` or bare `mode` names a mode
+/// (beamer, presentation, handout, trans, article, second, all); a part with
+/// no mode name is an overlay spec and applies. False only when every part
+/// names a mode other than beamer/presentation/all.
+fn beamer_mode_spec_applies(spec: &str) -> bool {
+  const MODES: &[&str] = &[
+    "beamer",
+    "presentation",
+    "handout",
+    "trans",
+    "article",
+    "second",
+    "all",
+  ];
+  let mut saw_part = false;
+  for part in spec.split('|') {
+    let part = part.trim();
+    if part.is_empty() {
+      continue;
+    }
+    saw_part = true;
+    let mode = part.split(':').next().unwrap_or("").trim();
+    if !MODES.contains(&mode) || matches!(mode, "beamer" | "presentation" | "all") {
+      return true;
+    }
+  }
+  !saw_part
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // beamerbasefont.sty:322-323 `\Tiny` (4pt) / `\TINY` (3pt), the two sizes
@@ -146,13 +176,15 @@ LoadDefinitions!({
   // 301, 689 — 43 `\fi` cascade errors). The binding stands in for beamer
   // and had no templates surface here; real body, since it gates flow. Guard:
   // `perfect_kernel_batch54::beamer_template_empty_test_is_defined`.
-  RawTeX!(r"\long\def\beamer@@empty{}
+  RawTeX!(
+    r"\long\def\beamer@@empty{}
 \def\expandbeamertemplate#1{\csname beamer@@tmpl@#1\endcsname}
 \def\ifbeamertemplateempty#1#2#3{%
   \def\beamer@ifdo{#3}%
   \expandafter\ifx\csname beamer@@tmpl@#1\endcsname\relax\def\beamer@ifdo{#2}\fi%
   \expandafter\ifx\csname beamer@@tmpl@#1\endcsname\beamer@@empty\def\beamer@ifdo{#2}\fi%
-  \beamer@ifdo}");
+  \beamer@ifdo}"
+  );
 
   // Load article.cls as the base class (beamer builds on article; Perl
   // beamer.cls.ltxml:1361 `LoadClass('article')`). `RequirePackage!` looked
@@ -189,7 +221,8 @@ LoadDefinitions!({
   // expr`; sidebar/inmargin outer themes, boxes). Real themes raw-load here
   // (beyond Perl, which no-ops `\usetheme`), so beamer.cls's own state must
   // exist. Defaults as in beamer.cls (0pt; margins 1cm).
-  RawTeX!(r"\newdimen\headdp \newdimen\footheight \newdimen\sidebarheight
+  RawTeX!(
+    r"\newdimen\headdp \newdimen\footheight \newdimen\sidebarheight
 \newdimen\beamer@tempdim \newdimen\beamer@finalheight
 \newdimen\beamer@animht \newdimen\beamer@animdp \newdimen\beamer@animwd
 \newdimen\beamer@leftmargin \newdimen\beamer@rightmargin
@@ -200,7 +233,8 @@ LoadDefinitions!({
 \newdimen\beamer@frametextheight \newdimen\beamer@boxheadheight
 \newdimen\beamer@blockheadheight
 \beamer@leftmargin=1cm \beamer@rightmargin=1cm
-\newcount\beamer@slideinframe \beamer@slideinframe=1 ");
+\newcount\beamer@slideinframe \beamer@slideinframe=1 "
+  );
   // beamerbasesection.sty:20-22,172,220-222,250,292-294 section-name family,
   // beamerbaseframe.sty:745-746 `\framebreak`, and the internals gotham's font
   // theme `\patchcmd`s (beamerbasetitle.sty:49-84 `\beamer@title`/
@@ -211,7 +245,8 @@ LoadDefinitions!({
   // thubeamer-example-en (`\frametitle{\secname}`), beamer-amurmaple-doc,
   // gotham-example* ("Patching title failed" ×4), tikz-relay/tikz-sfc
   // BeamerAnimation (`\beamer@slideinframe`).
-  RawTeX!(r"\def\secname{}\def\subsecname{}\def\subsubsecname{}
+  RawTeX!(
+    r"\def\secname{}\def\subsecname{}\def\subsubsecname{}
 \def\lastsection{}\def\lastsubsection{}
 
 \def\insertsection{}\def\insertsectionhead{}\def\insertsubsectionhead{}\def\insertsubsubsectionhead{}
@@ -222,7 +257,17 @@ LoadDefinitions!({
 \def\sectionentry#1#2#3#4#5{\def\insertsectionhead{#2}\def\insertsectionheadnumber{#1}\def\insertpartheadnumber{#5}}
 \long\def\beamer@section[#1]#2{\refstepcounter{section}%
   \def\insertsectionhead{\hyperlink{Navigation\the\c@page}{#1}}%
-  \edef\insertsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}");
+  \edef\insertsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}
+\long\def\beamer@subsection[#1]#2{\refstepcounter{subsection}%
+  \def\insertsubsectionhead{\hyperlink{Navigation\the\c@page}{#1}}%
+  \edef\insertsubsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}
+\long\def\beamer@@frametitle[#1]#2{{\gdef\insertframetitle{{#2\ifnum\beamer@autobreakcount>0\relax{}\space\usebeamertemplate*{frametitle continuation}\fi}}\gdef\beamer@frametitle{#2}\gdef\beamer@shortframetitle{#1}}}"
+  );
+  // The last two carry beamerbasesection.sty:283 `\beamer@subsection` and
+  // beamerbaselocalstructure.sty:30 `\beamer@@frametitle`, the targets of
+  // beamerfontthememetropolis.sty:278/:284/:293 `\patchcmd`s ("Patching
+  // section title failed", "Patching frame title failed": metropolis demo).
+  // Guard: `perfect_kernel_batch56::beamer_metropolis_font_theme_patches_apply`.
 
   // Perl beamer.cls.ltxml L853: DefKeyVal('beamerframe', 'fragile', '', '')
   // — declares `fragile` as a zero-argument key for the beamerframe keyset.
@@ -240,7 +285,10 @@ LoadDefinitions!({
   // nested in the frame (`<ltx:subsection> isn't allowed in <ltx:subsection>`,
   // DEMO-BFHBeamer ×2; Perl never loads themes). Local, so `\end{frame}`
   // restores it.
-  DefMacro!("\\lx@beamer@frame@start", "\\csname beamer@@tmpl@background\\endcsname");
+  DefMacro!(
+    "\\lx@beamer@frame@start",
+    "\\csname beamer@@tmpl@background\\endcsname"
+  );
   DefEnvironment!("{frame}[][]",
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>",
     before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); },
@@ -270,7 +318,27 @@ LoadDefinitions!({
   // printed `¡handout¿`; Perl routes through \beamer@ifnextcharospec,
   // beamer.cls.ltxml L745). The trailing-spec form `\only{stuff}<spec>` is
   // absorbed by the OptionalAngled tail.
-  DefMacro!("\\only OptionalAngled {} OptionalAngled", "#2");
+  // beamer's mode specifications (beamerbasemodes.sty:33-70 `\mode<…>`, and
+  // the `<…>` of `\only`/`\alt`/`\uncover`: `\beamer@masterdecode`): a spec
+  // whose parts all name OTHER modes — `<handout>`, `<handout:0| trans:0>`,
+  // `<article>` — makes the action a no-op in the presentation mode this
+  // binding lives in (beamerswitch.cls:226 `\only<handout>{\pgfpagesuselayout…}`
+  // with pgfpages unloaded; Perl beamer.cls.ltxml:435 `matchesMode` answers
+  // handout=beamer, a Perl-origin bug). A part with no mode name (`<2->`) or
+  // naming `beamer`/`presentation`/`all` applies.
+  // Guard: `perfect_kernel_batch56::beamer_only_discards_other_mode_specs`.
+  DefMacro!("\\only OptionalAngled {} OptionalAngled", sub[args] {
+    let mut it = args.into_iter();
+    let spec: Option<Tokens> = it.next().unwrap().into();
+    let body: Tokens = it.next().unwrap().into();
+    let spec2: Option<Tokens> = it.next().unwrap().into();
+    let spec = spec.or(spec2);
+    let applies = spec.as_ref().is_none_or(|s| beamer_mode_spec_applies(&s.to_string()));
+    Ok(if applies { body } else { Tokens!() })
+  });
+  // pgfpages.sty `\pgfpagesuselayout{layout}[options]` (beamerswitch.cls:226
+  // `\handoutlayout`): page-imposition layout, no XML.
+  def_macro_noop("\\pgfpagesuselayout{}[]")?;
   def_macro_noop("\\onslide")?;
   DefMacro!("\\temporal OptionalAngled {}{}{}", "#3");
   def_macro_noop("\\pause")?;
@@ -287,29 +355,58 @@ LoadDefinitions!({
   DefMacro!("\\uncover OptionalAngled {}", "#2");
   DefMacro!("\\invisible OptionalAngled {}", "");
 
-  DefMacro!("\\beamer@visible{}",   "\\beamer@visible@begin{#1}\\beamer@visible@end");
-  DefConstructor!("\\beamer@visible@begin", "<ltx:inline-block class='ltx_visible'>");
-  DefConstructor!("\\beamer@visible@end",   "</ltx:inline-block>");
+  DefMacro!(
+    "\\beamer@visible{}",
+    "\\beamer@visible@begin{#1}\\beamer@visible@end"
+  );
+  DefConstructor!(
+    "\\beamer@visible@begin",
+    "<ltx:inline-block class='ltx_visible'>"
+  );
+  DefConstructor!("\\beamer@visible@end", "</ltx:inline-block>");
 
-  DefMacro!("\\beamer@invisible{}", "\\beamer@invisible@begin{#1}\\beamer@invisible@end");
-  DefConstructor!("\\beamer@invisible@begin", "<ltx:inline-block class='ltx_invisible'>");
-  DefConstructor!("\\beamer@invisible@end",   "</ltx:inline-block>");
+  DefMacro!(
+    "\\beamer@invisible{}",
+    "\\beamer@invisible@begin{#1}\\beamer@invisible@end"
+  );
+  DefConstructor!(
+    "\\beamer@invisible@begin",
+    "<ltx:inline-block class='ltx_invisible'>"
+  );
+  DefConstructor!("\\beamer@invisible@end", "</ltx:inline-block>");
 
-  DefMacro!("\\beamer@uncovered{}", "\\beamer@uncovered@begin{#1}\\beamer@uncovered@end");
-  DefConstructor!("\\beamer@uncovered@begin", "<ltx:inline-block class='ltx_uncovered'>");
-  DefConstructor!("\\beamer@uncovered@end",   "</ltx:inline-block>");
+  DefMacro!(
+    "\\beamer@uncovered{}",
+    "\\beamer@uncovered@begin{#1}\\beamer@uncovered@end"
+  );
+  DefConstructor!(
+    "\\beamer@uncovered@begin",
+    "<ltx:inline-block class='ltx_uncovered'>"
+  );
+  DefConstructor!("\\beamer@uncovered@end", "</ltx:inline-block>");
 
-  DefMacro!("\\beamer@covered{}", "\\beamer@covered@begin{#1}\\beamer@covered@end");
-  DefConstructor!("\\beamer@covered@begin", "<ltx:inline-block class='ltx_covered'>");
-  DefConstructor!("\\beamer@covered@end",   "</ltx:inline-block>");
+  DefMacro!(
+    "\\beamer@covered{}",
+    "\\beamer@covered@begin{#1}\\beamer@covered@end"
+  );
+  DefConstructor!(
+    "\\beamer@covered@begin",
+    "<ltx:inline-block class='ltx_covered'>"
+  );
+  DefConstructor!("\\beamer@covered@end", "</ltx:inline-block>");
 
-  DefMacro!("\\beamer@alerted{}", "\\beamer@alerted@begin{#1}\\beamer@alerted@end");
-  DefConstructor!("\\beamer@alerted@begin", "<ltx:inline-block class='ltx_alert'>");
-  DefConstructor!("\\beamer@alerted@end",   "</ltx:inline-block>");
+  DefMacro!(
+    "\\beamer@alerted{}",
+    "\\beamer@alerted@begin{#1}\\beamer@alerted@end"
+  );
+  DefConstructor!(
+    "\\beamer@alerted@begin",
+    "<ltx:inline-block class='ltx_alert'>"
+  );
+  DefConstructor!("\\beamer@alerted@end", "</ltx:inline-block>");
 
   // Frame structure
-  DefMacro!("\\frametitle OptionalAngled []{}",
-    "\\par\\textbf{#3}\\par");
+  DefMacro!("\\frametitle OptionalAngled []{}", "\\par\\textbf{#3}\\par");
   def_macro_noop("\\framesubtitle OptionalAngled {}")?;
 
   // Perl beamer.cls.ltxml L961-963: internal frame title constructors
@@ -321,12 +418,18 @@ LoadDefinitions!({
   // undefined-CS errors. The three constructors all carry the same
   // float semantics, differing only in element (title vs subtitle)
   // and CSS class.
-  DefConstructor!("\\beamer@frametitle{}",
-    "^<ltx:title class='ltx_frame_title'>#1</ltx:title>");
-  DefConstructor!("\\beamer@frameshorttitle{}",
-    "^<ltx:title class='ltx_frame_shorttitle'>#1</ltx:title>");
-  DefConstructor!("\\beamer@framesubtitle{}",
-    "^<ltx:subtitle class='ltx_frame_subtitle'>#1</ltx:subtitle>");
+  DefConstructor!(
+    "\\beamer@frametitle{}",
+    "^<ltx:title class='ltx_frame_title'>#1</ltx:title>"
+  );
+  DefConstructor!(
+    "\\beamer@frameshorttitle{}",
+    "^<ltx:title class='ltx_frame_shorttitle'>#1</ltx:title>"
+  );
+  DefConstructor!(
+    "\\beamer@framesubtitle{}",
+    "^<ltx:subtitle class='ltx_frame_subtitle'>#1</ltx:subtitle>"
+  );
 
   // beamerbaseframe.sty:730 `\newcounter{framenumber}` (Perl beamer.cls.ltxml:933
   // `NewCounter('framenumber')`): appendixnumberbeamer.sty:43 reads
@@ -354,12 +457,18 @@ LoadDefinitions!({
   DefEnvironment!("{overprint}", "#body");
 
   // Block environments — Perl L1189 beamerbaseblocks.sty
-  DefEnvironment!("{block} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
-  DefEnvironment!("{alertblock} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
-  DefEnvironment!("{exampleblock} OptionalAngled {}",
-    "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>");
+  DefEnvironment!(
+    "{block} OptionalAngled {}",
+    "<ltx:theorem class='ltx_theorem_block'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+  );
+  DefEnvironment!(
+    "{alertblock} OptionalAngled {}",
+    "<ltx:theorem class='ltx_theorem_alertblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+  );
+  DefEnvironment!(
+    "{exampleblock} OptionalAngled {}",
+    "<ltx:theorem class='ltx_theorem_exampleblock'><ltx:title class='ltx_runin'>#2</ltx:title>#body</ltx:theorem>"
+  );
 
   // Columns environment — Perl L1230-1240 beamerbaseboxes.sty
   DefEnvironment!("{columns} OptionalAngled []", "#body");
@@ -373,11 +482,17 @@ LoadDefinitions!({
   // and a constructor definition is not a body xpatch can re-scan (`\scan…`
   // split + `_` errors); undefined, xpatch's failure branch is silent.
   // Guard: `perfect_kernel_batch56::beamer_theme_compat_aliases_and_colorbox`.
-  DefEnvironment!("{beamercolorbox} [] {}", "<ltx:inline-block class='ltx_beamercolorbox'>#body</ltx:inline-block>");
+  DefEnvironment!(
+    "{beamercolorbox} [] {}",
+    "<ltx:inline-block class='ltx_beamercolorbox'>#body</ltx:inline-block>"
+  );
   def_macro_noop("\\column OptionalAngled {}")?;
 
   // Title page macros — Perl L1010-1035
-  DefMacro!("\\institute OptionalAngled []{}", "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}");
+  DefMacro!(
+    "\\institute OptionalAngled []{}",
+    "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}"
+  );
   // beamerbasetitle.sty:148/169 and :233/238: `\inst{n}` is defined locally
   // inside `\insertauthor`/`\insertinstitute` as the superscript affiliation
   // mark; our `\author`/`\institute` digest their argument at once, where it
@@ -487,7 +602,8 @@ LoadDefinitions!({
   // `\usetheme[compress]{Singapore}`, shipunov lecture-slides
   // `\beamertemplatearticlebibitems`). Each reduces to `\setbeamertemplate`/
   // `\setbeamercovered`/`\setbeamercolor`, all present above.
-  RawTeX!(r"\def\beamertemplatedefaulttoc{\setbeamertemplate{sections/subsections in toc}[default]}
+  RawTeX!(
+    r"\def\beamertemplatedefaulttoc{\setbeamertemplate{sections/subsections in toc}[default]}
 \def\beamertemplatenumberedsubsectiontoc{\setbeamertemplate{sections/subsections in toc}[subsections numbered]}
 \def\beamertemplatenumberedsectiontoc{\setbeamertemplate{sections/subsections in toc}[sections numbered]}
 \def\beamertemplatenumberedcirclesectiontoc{\setbeamertemplate{sections/subsections in toc}[circle]}
@@ -575,8 +691,10 @@ LoadDefinitions!({
 \def\beamertemplatetransparentcovered{\setbeamercovered{transparent}}
 \def\beamertemplatetransparentcoveredmedium{\setbeamercovered{transparent=10}}
 \def\beamertemplatetransparentcoveredhigh{\setbeamercovered{transparent=5}}
-\def\beamertemplatetransparentcoveredhighest{\setbeamercovered{transparent=2}}");
-  RawTeX!(r"\def\beamer@calltheme#1#2#3{\def\beamer@themelist{#2}\@for\beamer@themename:=\beamer@themelist\do{\usepackage[{#1}]{#3\beamer@themename}}}
+\def\beamertemplatetransparentcoveredhighest{\setbeamercovered{transparent=2}}"
+  );
+  RawTeX!(
+    r"\def\beamer@calltheme#1#2#3{\def\beamer@themelist{#2}\@for\beamer@themename:=\beamer@themelist\do{\usepackage[{#1}]{#3\beamer@themename}}}
 \newcommand*\usetheme[2][]{\beamer@calltheme{#1}{#2}{beamertheme}}
 \newcommand*\usecolortheme[2][]{\beamer@calltheme{#1}{#2}{beamercolortheme}}
 \newcommand*\usefonttheme[2][]{\beamer@calltheme{#1}{#2}{beamerfonttheme}}
@@ -585,7 +703,8 @@ LoadDefinitions!({
 \def\ProcessOptionsBeamer{\let\@tempa\@empty
   \ifx\@currext\@clsextension\else
   \@for\CurrentOption:=\@classoptionslist\do{\@ifundefined{KV@\@currname @\CurrentOption}{}{\edef\@tempa{\@tempa,\CurrentOption,}}}\fi
-  \edef\@tempa{\noexpand\setkeys{\@currname}{\@tempa\@ptionlist{\@currname.\@currext}}}\@tempa}");
+  \edef\@tempa{\noexpand\setkeys{\@currname}{\@tempa\@ptionlist{\@currname.\@currext}}}\@tempa}"
+  );
   // Theme-file surface the raw loads touch.
   // beamerbaseoptions.sty:34-38: the theme option layer is keyval —
   // `\DeclareOptionBeamer{key}[default]{code}` → `\define@key{\@currname}`
@@ -771,8 +890,17 @@ LoadDefinitions!({
   // xskak_and_beamer 34 errors). The overlay is taken as always-active, as
   // for `\only`. Guard: `perfect_kernel_batch54::beamer_color_and_text_commands_take_an_overlay`.
   for cs in [
-    "color", "textbf", "textit", "textmd", "textnormal", "textrm", "textsc", "textsf",
-    "textsl", "texttt", "textup",
+    "color",
+    "textbf",
+    "textit",
+    "textmd",
+    "textnormal",
+    "textrm",
+    "textsc",
+    "textsf",
+    "textsl",
+    "texttt",
+    "textup",
   ] {
     let orig = T_CS!(s!("\\beamer@original@{cs}"));
     let_i(&orig, &T_CS!(s!("\\{cs}")), None);
@@ -791,7 +919,8 @@ LoadDefinitions!({
   // Perl beamer.cls.ltxml L1201-1239: theorem + German-compat envs.
   // `\translate{}` is an identity pass-through in Rust, so bare English
   // names match Perl's expansion.
-  RawTeX!(r#"
+  RawTeX!(
+    r#"
 \newcommand{\ExampleInline}[1]{\translate{Example}: \ignorespaces#1}
 \newcommand{\BeispielInline}[1]{Beispiel: \ignorespaces#1}
 \newtheorem{theorem}{Theorem}
@@ -819,7 +948,8 @@ LoadDefinitions!({
 \newenvironment{Example}{\begin{example}}{\end{example}}
 \newenvironment{Examples}{\begin{examples}}{\end{examples}}
 \newenvironment{Definition}{\begin{definition}}{\end{definition}}
-"#);
+"#
+  );
   def_macro_noop("\\pushQED{}")?;
   def_macro_noop("\\popQED")?;
   def_macro_noop("\\qedhere")?;
@@ -1004,16 +1134,20 @@ LoadDefinitions!({
   // `\insertshortlecture` (:83-88). The title stays frontmatter (an
   // `ltx:note[role=lecture]`); the at-begin hook is not run (a structuring
   // decision beyond this layer). Perl beamer.cls.ltxml:847 "TODO: Support me!".
-  RawTeX!(r"\newcounter{lecture}
+  RawTeX!(
+    r"\newcounter{lecture}
 \renewcommand\thelecture{\@arabic\c@lecture}
 \let\insertlecturenumber\thelecture
 \newcommand\AtBeginLecture[1]{\def\beamer@atbeginlecture{#1}}
 \AtBeginLecture{}
 \def\beamer@lecturename{}\def\beamer@lectureshortname{}
 \newcommand*\insertlecture{\beamer@lecturename}
-\newcommand*\insertshortlecture{\beamer@lectureshortname}");
-  DefMacro!("\\lecture OptionalAngled []{}{}",
-    "\\stepcounter{lecture}\\def\\beamer@lecturename{#3}\\def\\beamer@lectureshortname{#2}\\@add@frontmatter{ltx:note}[role=lecture]{#3}");
+\newcommand*\insertshortlecture{\beamer@lectureshortname}"
+  );
+  DefMacro!(
+    "\\lecture OptionalAngled []{}{}",
+    "\\stepcounter{lecture}\\def\\beamer@lecturename{#3}\\def\\beamer@lectureshortname{#2}\\@add@frontmatter{ltx:note}[role=lecture]{#3}"
+  );
   def_macro_noop("\\againframe OptionalAngled []{}")?;
   def_macro_noop("\\appendix")?;
   def_macro_noop("\\note OptionalAngled []{}")?;

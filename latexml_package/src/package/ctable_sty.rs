@@ -46,6 +46,12 @@ LoadDefinitions!({
   // papers keep the deps-only behavior (matching the prior stub).
   // Witness arXiv:2011.04706 (`\usepackage{ctable}` + `\ctable[caption=…]{…}`,
   // no tikz: Perl 0 err; the old deps-only stub left `\ctable` undefined → 3 err).
+  // Deferred (batch 56p probe): raw-loading ctable AFTER tikz is legal
+  // (ctable.sty:26-48 needs `transparent` only without tikz), but the raw
+  // `\ctable` then reaches the caption machinery our captions do not model
+  // (`\@@toccaption` mode frame, `\ifx` off-end — SHARED with Perl), so
+  // proofread/example would trade `undefined:\ctable` for those; lift the
+  // guard together with a native `\ctable` caption port.
   if !lookup_bool("tikz.sty_loaded") {
     InputDefinitions!("ctable", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   }

@@ -3615,4 +3615,14 @@ LoadDefinitions!({
   // expl3 LETTER set (unlike `_`/`:`), so this restore does not touch the
   // glossary-sensitive codepoint path.
   assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  // siunitx v3 expl3 API `\siunitx_number_format:nN {number} \tl` (siunitx.sty
+  // `\siunitx_number_format:nN` — parses and formats the number into the token
+  // list; zugferd.sty:415 rounds invoice amounts with it): the number text
+  // is kept as written (the formatting options are presentation).
+  RawTeX!(
+    r"\ExplSyntaxOn
+\cs_if_exist:NF \siunitx_number_format:nN
+  { \cs_new_protected:Npn \siunitx_number_format:nN #1#2 { \tl_set:Nn #2 {#1} } }
+\ExplSyntaxOff"
+  );
 });

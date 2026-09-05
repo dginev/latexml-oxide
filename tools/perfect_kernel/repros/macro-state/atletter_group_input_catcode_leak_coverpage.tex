@@ -1,0 +1,17 @@
+% witness: coverpage/SimpleSample (CoverPage.sty:60-77, via SimpleSample.BibTeX.txt)
+% oracle:  pdflatex 0 errors; perl latexml 0 errors on the \define cascade (RUST-ONLY)
+% engines: rust~20 perl=0 (2026-09-05, b56t)
+% expect:  0 errors; XML has a <ltx:document> and the token \define is NEVER undefined
+% status:  RED
+% mechanism: a .sty (at_letter mouth) opens a child \input mouth INSIDE a group that
+%   locally set \catcode`\@=0; the child mouth's at_letter save/restore
+%   (mouth.rs initialize/finish) assigns @ with Scope::Global, which WIPES the
+%   group's @-catcode undo entry and restores @ to the transient (in-group) value,
+%   so after \egroup @ stays catcode-0 (escape). \define@key then splits into
+%   \define + \key. Perl uses local scope (Mouth.pm:98-100,117) and is clean.
+% NOTE: 3-file repro (driver + helper .sty + input .txt); the runner cd's into the
+%   topic dir so the siblings are found. Root fix is kernel, not this package.
+\documentclass{article}
+\usepackage{keyval}
+\usepackage{atletter_group_input_catcode_leak_coverpage}
+\begin{document}x\end{document}

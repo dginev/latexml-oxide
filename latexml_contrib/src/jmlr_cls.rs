@@ -177,4 +177,7 @@ LoadDefinitions!({
 \newtheorem{example}[theorem]{Example}
 \newtheorem{remark}[theorem]{Remark}"
   );
+  // jmlr.cls:593-594 table struts (pmlr-sample).
+  DefMacro!("\\abovestrut{}", "\\rule[0in]{0in}{#1}\\ignorespaces");
+  DefMacro!("\\belowstrut{}", "\\rule[-#1]{0in}{#1}\\ignorespaces");
 });

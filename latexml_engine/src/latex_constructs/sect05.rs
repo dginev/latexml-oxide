@@ -204,6 +204,7 @@ pub(crate) fn load() -> Result<()> {
         None => Vec::new(),
       };
       load_class(&class, options, Tokens!())?;
+      sect01::retract_kernel_chapter_if_chapterless()?;
     }
   );
 
@@ -408,6 +409,7 @@ pub(crate) fn load() -> Result<()> {
       let class_arg: Option<&Digested> = whatsit.get_arg(1);
       let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
       load_class(&class, Vec::new(), Tokens!())?;
+      sect01::retract_kernel_chapter_if_chapterless()?;
     }
   );
   // Perl: latex_constructs.pool.ltxml L900-903

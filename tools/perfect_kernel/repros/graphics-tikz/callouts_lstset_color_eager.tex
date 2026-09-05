@@ -1,0 +1,14 @@
+\documentclass{article}
+% WITNESS: callouts/callouts (residue43); ORACLE: pdflatex 0 errors
+% MECHANISM: listings binding digests backgroundcolor=\color{..} EAGERLY at
+%   \lstset time (lst_extract_color→digest), but color/xcolor is loaded LATER,
+%   so \color is undefined. pdflatex only STORES the value; never executes it here.
+% EXPECT: 0 errors. STATUS: RED on b56t.
+\usepackage{listings}
+\lstset{backgroundcolor=\color{cyan!10},basicstyle=\ttfamily}
+\usepackage{xcolor}
+\begin{document}
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\end{document}

@@ -1,0 +1,13 @@
+% witness: jmlr/pmlr-sample (jmlr.cls:593 \def\abovestrut#1{...})
+% oracle:  pdflatex 0 errors; perl loads jmlr.cls raw (no ltxml) -> 0 (RUST-ONLY)
+% engines: rust=2 perl=0 (2026-09-05, b56t)
+% expect:  0 errors; <ltx:document> exists and \abovestrut is NOT undefined
+% status:  RED
+% mechanism: latexml_contrib/src/jmlr_cls.rs replaces the raw jmlr.cls (bindings
+%   outrank raw) but omits \abovestrut / \belowstrut (jmlr.cls:593-594, plain top-
+%   level \def). Binding coverage gap. Same shape: ejpecp_cls.rs \BEMAIL
+%   (ejpecp.cls:156), oup_authoring_template_cls.rs \ORCID.
+\documentclass{jmlr}
+\begin{document}
+\abovestrut{2.0ex}Test.
+\end{document}

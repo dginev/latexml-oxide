@@ -600,6 +600,18 @@ LoadDefinitions!({
   // no pdfstrings or anchors here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
   DefMacro!("\\Hy@driver", "hpdftex");
   def_macro_noop("\\HyPsd@UTFviii")?;
+  // hyperref.sty:1185 `\let\HyPsd@AMSclassfix\relax` and the PDF-string
+  // conversion routines pdfnotiz.sty:251-351 calls raw (dvdcoll).
+  Let!("\\HyPsd@AMSclassfix", "\\relax");
+  // :1168 `\HyPsd@LetUnexpandableSpace#1` and :643 `\HyPsd@ConvertToUnicode#1`
+  // take the macro they act on.
+  def_macro_noop("\\HyPsd@LetUnexpandableSpace{}")?;
+  def_macro_noop("\\HyPsd@ConvertToUnicode{}")?;
+  // pdfmark.def:474 `\pdfmark[<opt>]{<key=value list>}` — the dvips-branch
+  // PostScript pdfmark writer movie15.sty:1143 reaches under our
+  // `\pdfoutput=0` persona: no PDF objects here, and the `Raw={…}` PostScript
+  // must not leak as text (`_` scripts).
+  RawTeX!(r"\def\pdfmark{\@ifnextchar[\lx@pdfmark{\lx@pdfmark[]}}\long\def\lx@pdfmark[#1]#2{}");
   def_macro_noop("\\hyper@makecurrent{}")?;
 
   // \nolinkurl{url} — Perl L197-199: enterHorizontal=>1

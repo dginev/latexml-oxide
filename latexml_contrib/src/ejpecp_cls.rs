@@ -58,6 +58,8 @@ LoadDefinitions!({
   );
   DefMacro!("\\DOI{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
   DefMacro!("\\EMAIL{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // ejpecp.cls:156 `\BEMAIL` — a further e-mail line (sample).
+  DefMacro!("\\BEMAIL{}", "\\EMAIL{#1}");
   DefMacro!(
     "\\support{}",
     "\\@add@frontmatter{ltx:note}[role=support]{#1}"

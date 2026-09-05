@@ -486,11 +486,18 @@ impl Mouth {
     if let Some(ref msg) = self.note_message {
       note_begin(msg);
     }
-    // Perl: at_letter saves/restores @ catcode independently of fordefinitions.
-    // Use Scope::Global to ensure it persists across scope frame pops during file loading.
+    // Perl Mouth.pm:98-100: at_letter saves/restores `@`'s catcode with a
+    // LOCAL assignment (no scope argument), independently of fordefinitions.
+    // It was global here (2121a02d09, "persist across scope frame pops"),
+    // which erased the enclosing group's undo entry for `@`: a package that
+    // `\input`s a file inside `\bgroup\catcode`\@0 … \egroup` (CoverPage.sty:
+    // 60-70 reading a BibTeX-keyword file) then kept `@` as an escape after
+    // the group, and every later `\CP@…`/`\define@key` split (coverpage
+    // SimpleSample, ~20 errors; RUST-ONLY, Perl 0).
+    // Guard: `perfect_kernel_batch56::at_letter_mouth_keeps_group_catcode_undo`.
     if self.at_letter {
       self.saved_at_cc = lookup_catcode('@');
-      assign_catcode('@', Catcode::LETTER, Some(Scope::Global));
+      assign_catcode('@', Catcode::LETTER, None);
     }
     // Perl: fordefinitions saves/restores INCLUDE_COMMENTS
     if self.fordefinitions {
@@ -518,11 +525,11 @@ impl Mouth {
   /// Called by close_mouth when the mouth is popped from the stack.
   pub fn finish(&mut self) {
     self.stop_reading();
-    // Perl: at_letter restores @ catcode (independent of fordefinitions).
-    // Use Scope::Global to ensure it takes effect regardless of scope frame state.
+    // Perl Mouth.pm:117: at_letter restores `@`'s catcode locally (see
+    // `initialize`).
     if self.at_letter {
       let cc = self.saved_at_cc.take().unwrap_or(Catcode::OTHER);
-      assign_catcode('@', cc, Some(Scope::Global));
+      assign_catcode('@', cc, None);
     }
     // Perl: fordefinitions restores INCLUDE_COMMENTS
     if let Some(sic) = self.saved_include_comments.take() {

@@ -7,17 +7,19 @@ LoadDefinitions!({
     "datetime.sty is only minimally stubbed and will not be interpreted raw."
   );
 
-  // datetime.sty L181-188 `\newdateformat{name}{def}` creates a date-
-  // format command. Stub as no-op — we don't render datetime
-  // distinctly so author's custom format is moot. Witness cluster:
-  // arXiv:2506.21718 / 2507.03037 — Rust 4 → 0, beats Perl=0
-  // (REAL REGRESSION → BOTH CLEAN).
-  def_macro_noop("\\newdateformat{}{}")?;
+  // datetime.sty:181-188 `\newdateformat{name}{format}` DEFINES `\<name>`,
+  // which installs `format` (written over `\THEDAY`/`\THEMONTH`/`\THEYEAR`,
+  // datetime.sty:100-110) as the current date format; the no-op it replaced
+  // left `\mydate` undefined (chet chetdoc; arXiv:2506.21718 / 2507.03037
+  // only called the setter). `\formatdate{d}{m}{y}` binds the three fields
+  // and expands the current format (default `d/m/y`, the earlier rendering).
+  RawTeX!(
+    r"\def\lx@dateformat{\THEDAY/\THEMONTH/\THEYEAR}
+\def\newdateformat#1#2{\@ifundefined{#1}{\expandafter\def\csname #1\endcsname{\def\lx@dateformat{#2}}}{}}
+\def\formatdate#1#2#3{\def\THEDAY{#1}\def\THEMONTH{#2}\def\THEYEAR{#3}\lx@dateformat}"
+  );
   // Companion format setters as no-ops.
   def_macro_noop("\\settimeformat{}")?;
-  // \formatdate{day}{month}{year} — emit as plain numeric date.
-  // Round-34 surpass-Perl: was gobbled; preserve content inline.
-  DefMacro!("\\formatdate{}{}{}", "#1/#2/#3");
   DefMacro!("\\formattime{}{}{}", "#1:#2:#3");
   // datetime.sty `\monthname[num]` / `\shortmonthname[num]` (default
   // `[\month]`) — were content-losing noops; emit the English month name

@@ -197,8 +197,13 @@ LoadDefinitions!({
         },
       )
     } else {
-      let message = s!("\\verbatiminput found no file for {:?}, output may be incomplete", file);
-      Error!("binding", "missing_file", message);
+      // verbatim.sty:210-217 `\verbatim@input` = `\IfFileExists{#2}{…}{\typeout
+      // {No file #2.}}`: a missing file is a message, not an error (msc.tex:287
+      // `\verbatiminput{COPYRIGHT}` beside COPYRIGHT.txt; lnosuppl.tex:89).
+      // Perl verbatim.sty.ltxml:108 opens an empty-path Mouth and errors —
+      // SHARED, pdflatex clean. Guard: `perfect_kernel_batch56::verbatiminput_missing_file_is_not_an_error`.
+      let message = s!("No file {}. (\\verbatiminput)", file.to_string().trim());
+      Warn!("binding", "missing_file", message);
       Ok(Tokens!())
     }
   });

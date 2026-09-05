@@ -1,0 +1,8 @@
+\documentclass{article}
+% WITNESS: colortbl/colortbl-DE (residue43, colortbl-DE.tex:390); ORACLE: pdflatex 0 err
+% MECH: colortbl_sty.rs (and Perl) omit colortbl's rownum counter; real colortbl.sty:
+%   269-274 \newcount\rownum\let\c@rownum\rownum + \providecommand\therownum{\arabic{rownum}}.
+\usepackage[table]{xcolor}
+\begin{document}
+row \therownum
+\end{document}

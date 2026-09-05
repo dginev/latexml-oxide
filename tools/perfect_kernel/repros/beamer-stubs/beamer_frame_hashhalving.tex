@@ -1,0 +1,10 @@
+\documentclass{beamer}
+\usepackage{tikz}
+\begin{document}
+\begin{frame}
+\begin{tikzpicture}
+\tikzset{pastille/.style={fill=####1,draw=gray}}
+\fill[pastille=red] (0,0) circle (2pt);
+\end{tikzpicture}
+\end{frame}
+\end{document}

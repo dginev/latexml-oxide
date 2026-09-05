@@ -1,0 +1,14 @@
+% witness: typog/typog-example
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; \patchcmd{\itemize} succeeds in pdflatex
+% mechanism: typog.sty:974 \@typog@patch@itemize -> :984 \patchcmd{\itemize}{\expandafter}
+%   {..}{ok}{\PackageError{typog}{Patching plain LaTeX macro \itemize failed}}.
+%   LaTeXML \itemize is a native DefEnvironment (sect06.rs:283) -> etoolbox \patchcmd
+%   failure branch -> PackageError.
+\documentclass{article}
+\usepackage{typog}
+\begin{document}
+\uppercaseadjustlabelitems{1}
+ok
+\begin{itemize}\item a\end{itemize}
+\end{document}

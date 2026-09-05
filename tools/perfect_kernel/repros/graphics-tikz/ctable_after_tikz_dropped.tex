@@ -1,0 +1,13 @@
+\documentclass{article}
+% WITNESS: proofread/example (residue43); ORACLE: pdflatex 0 errors
+% MECHANISM: ctable_sty.rs raw-loads real ctable.sty ONLY when tikz is absent
+%   (`if !lookup_bool("tikz.sty_loaded")`). A doc (via proofread.sty) loads tikz
+%   FIRST, then ctable — so the guard skips the raw-load and \ctable stays
+%   undefined. Real ctable.sty loaded AFTER tikz is clean (it requires transparent
+%   only when tikz is ABSENT), so pdflatex has \ctable defined.
+% EXPECT: 0 errors. STATUS: RED on b56t.
+\usepackage{tikz}
+\usepackage{ctable}
+\begin{document}
+\ctable[caption=test]{c}{}{\FL a \ML b \LL}
+\end{document}

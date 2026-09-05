@@ -220,4 +220,14 @@ LoadDefinitions!({
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));
+  // colortbl.sty:269-274 the `rownum` counter `\rowcolors` steps and
+  // `\therownum` (colortbl-DE prints it).
+  // (`\providecommand`-shaped: the xcolor binding's `\rowcolors` already owns
+  // a `rownum` counter when it loaded first — re-allocating it zeroed every
+  // `\rowcolors` row, golden `65_graphics::xcolors`.)
+  RawTeX!(
+    r"\ifdefined\rownum\else\newcount\rownum\fi
+\@ifundefined{c@rownum}{\let\c@rownum\rownum}{}
+\providecommand\therownum{\arabic{rownum}}"
+  );
 });

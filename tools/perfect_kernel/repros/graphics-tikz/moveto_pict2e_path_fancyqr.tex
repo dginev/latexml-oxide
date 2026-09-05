@@ -3,7 +3,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=4 perl=0 (2026-09-04)   [Perl same-host raw-loads pict2e, defines \moveto]
 % expect:  0 errors; the picture body yields one <ltx:picture> element
-% status:  GREEN (batch 56b: pict2e_sty.rs path interface, sampled curves/arcs)
+% status:  RED (b56a) — RUST-ONLY
 % mechanism: pict2e.sty:742 \def\moveto(#1,#2), :748 \lineto, :754 \curveto, :765
 %   \newcommand*\circlearc[6][0], :772 \closepath, :773 \strokepath, :774 \fillpath
 %   are the path interface, defined ONLY when a driver sets \pIIe@mode>0 (pict2e.sty:160).

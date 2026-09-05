@@ -6760,3 +6760,49 @@ and the document tree stays well-formed.
 kblocks-doc, ozguide, nathguide, chemobabel-en/ja carry the cascade.
 **Guard**: `perfect_kernel_batch56::endgroup_against_open_math_inserts_the_missing_dollar`.
 **Upstream**: not filed.
+
+### 196. A math shift inside a group opened within math defers the math end to the group's end (Perl leaves the frame open)
+
+**Perl behavior**: `$\bm{\hat{m}$} b` (kblocks-doc.tex:207; titlecaps' word-wrap
+splits `$x^2$` across its `{…}` groups): the `$` reaches `endMode('math')` while
+the bounded constructor's argument group is on top; Stomach.pm:367 reports
+"Attempt to end mode math" and leaves the math frame, so `<ltx:Math>` leaks to the
+document root and every later closer re-errors (pdflatex 0 / Perl 4 / Rust 4
+before this entry).
+**Rust behavior**: tex.web §1131 `off_save` — TeX inserts the missing `}`, closing
+the group, and re-reads the `$`. `tex_math.rs::end_math_or_defer` (the
+`before_digest` of `\lx@end@inline@math`/`\lx@end@display@math`) warns "Missing }
+inserted" and, since the group is a constructor's own argument frame that its
+digestion closes, defers the math end to that moment with the `\aftergroup`
+mechanism; the enclosing math stays nested in its paragraph. It fires only where
+`end_mode` already took its error branch (BOUND_MODE not bound on the top frame),
+so every balanced `$…$`, `\mbox{$…$}`, `array`/`cases` and alignment path is
+untouched. The plain-brace shape `${\hat m$}` (an error for pdflatex too) gets
+the same warning instead of Perl's error.
+**Why**: TeX's own recovery; one warning instead of a cascade; well-formed tree.
+**Witnesses**: `tools/perfect_kernel/repros/boxes-groups/mal_math_bm_group_close.tex`
+(and `mal_math_brace_close_plain.tex`, the malformed control); kblocks-doc 4 → 0,
+titlecaps 10 → 3.
+**Guard**: `perfect_kernel_batch56::math_end_inside_open_group_defers_to_group_end`.
+**Upstream**: not filed.
+
+### 197. `TeXFileName` fully expands the filename tokens (Perl expands with `readXToken(0)`)
+
+**Perl behavior**: Base_ParameterTypes.pool.ltxml:296-306 reads a filename with
+`readXToken(0)`: macros expand, but a `\protected` macro stays unexpanded, so
+`\openout\file=\pratendGeneratePrefixFile pratenddefaultcategory.tex`
+(proof-at-the-end.sty:112/127, a protected `\NewDocumentCommand`) writes to a
+file literally named `\pratendGeneratePrefixFile…` and the later
+`\input{\pratendGeneratePrefixFile pratenddefaultcategory.tex}` cannot find it
+(`Error:missing_file`; pdflatex, which expands with `\scan_file_name`'s full
+expansion in the `\openout` filename scan, is clean).
+**Rust behavior**: `base_parameter_types.rs` `TeXFileName` reads with
+`read_x_token(…, Some(true))`, expanding protected macros too (tex.web §526
+`scan_file_name` expands the filename with `get_x_token`, which is why TeX itself
+sees the expansion). The brace-depth tracking Gemini's original commit added is
+NOT kept: braced `\input{…}` is stripped by `tex_file_io.rs` already.
+**Why**: TeX's own filename scan; a same-run write-then-read of a generated file
+(the K7/VFS lane) depends on it.
+**Witnesses**: proof-at-the-end/proof-at-the-end_demo (2 → 0).
+**Guard**: `perfect_kernel_gemini::openout_then_input_same_run`.
+**Upstream**: not filed.

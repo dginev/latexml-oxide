@@ -4103,6 +4103,34 @@ pub(crate) mod perfect_kernel_batch46 {
     (stderr, xml)
   }
 
+  /// Like `convert_args` with the raw preload, after writing `files`
+  /// (`(name, content)`) into the work directory — for repros that need a
+  /// package, class or data file beside the document.
+  pub(crate) fn convert_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    for (name, content) in files {
+      std::fs::write(workdir.path().join(name), content).expect("write file");
+    }
+    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+    let output = Command::new(bin)
+      .args([
+        "t.tex",
+        "--dest",
+        "t.xml",
+        "--nocomments",
+        "--timeout=110",
+        "--preload=[rawstyles,rawclasses]latexml.sty",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
   pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
@@ -12803,7 +12831,9 @@ mod perfect_kernel_batch56 {
   //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
   //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
   //! environment invocation and outer listing scanning, and unicode-math table loading).
-  use super::perfect_kernel_batch46::{convert, convert_args, convert_with, error_count};
+  use super::perfect_kernel_batch46::{
+    convert, convert_args, convert_files, convert_with, error_count,
+  };
 
   /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
   /// non-ASCII char (utf8.def makes the bytes active), so under the default
@@ -15095,6 +15125,233 @@ c $\bm{x}$ d
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(
       xml.contains("\u{2026} ii (Brussels") || xml.contains("\u{2026}ii (Brussels"),
+      "{xml}"
+    );
+  }
+
+  /// beamerfontthememetropolis.sty:278-308 `\patchcmd`s `\beamer@subsection`
+  /// and `\beamer@@frametitle`; the binding carries both bodies (never
+  /// invoked) so the patches apply. Repro `loader/beamer_metropolis_min.tex`.
+  #[test]
+  fn beamer_metropolis_font_theme_patches_apply() {
+    let tex = r"\documentclass[10pt]{beamer}
+\usetheme{metropolis}
+\begin{document}
+\section{S}
+\subsection{Sub}
+\begin{frame}{Title}x\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Patching"), "{stderr}");
+    assert!(xml.contains("<subsection"), "{xml}");
+  }
+
+  /// aguplus.cls:524 probes `\@ifundefined{chapter}` right after its
+  /// `\LoadClass{article}`; the kernel `\chapter` is retracted at `\LoadClass`
+  /// return, not only at `\documentclass`. Control: book keeps chapters.
+  /// Repro `loader/aguplus_figcaps.tex`.
+  #[test]
+  fn loadclass_return_retracts_kernel_chapter() {
+    let tex = r"\documentclass[twoside,agupp]{aguplus}
+\begin{document}
+ok
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ok"), "{xml}");
+    let book = r"\documentclass{book}
+\begin{document}
+\chapter{One}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(book, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<chapter"), "{xml}");
+  }
+
+  /// Perl Mouth.pm:98-117: an `at_letter` mouth saves and restores `@`'s
+  /// catcode LOCALLY, so a package that `\input`s a file inside
+  /// `\bgroup\catcode`\@0 … \egroup` (CoverPage.sty:60-70) gets `@` back as a
+  /// letter after the group. Repro
+  /// `macro-state/atletter_group_input_catcode_leak_coverpage.tex`.
+  #[test]
+  fn at_letter_mouth_keeps_group_catcode_undo() {
+    let sty = r"\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{lxcatleak}
+\bgroup
+  \catcode`\@0
+  \bgroup
+    \def\article##1{\xdef\CP@ParseArg{##1}}%
+    \input{lxcatleak.txt}%
+  \egroup
+\egroup
+\define@key{cover}{title}{\gdef\CP@Title{#1}}
+\endinput
+";
+    let txt = "@article{k,\n title = {Some Title}}\n";
+    let tex = r"\documentclass{article}
+\usepackage{keyval}
+\usepackage{lxcatleak}
+\begin{document}
+\makeatletter\setkeys{cover}{title=T}\CP@Title\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("lxcatleak.sty", sty), ("lxcatleak.txt", txt)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">T<") || xml.contains("T</p>"), "{xml}");
+  }
+
+  /// datetime.sty:181-188 `\newdateformat{name}{format}` defines `\name`
+  /// (chetdoc `\mydate`); jmlr.cls:593 `\abovestrut` (pmlr-sample); ejpecp.cls:156
+  /// `\BEMAIL` (sample).
+  #[test]
+  fn class_and_datetime_definitions_exist() {
+    let tex = r"\documentclass{article}
+\usepackage{datetime}
+\newdateformat{mydate}{\THEYEAR-\THEMONTH-\THEDAY}
+\begin{document}
+\mydate Date: \formatdate{5}{9}{2026}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Date: 2026-9-5."), "{xml}");
+    let jmlr = r"\documentclass{jmlr}
+\title{T}\author{\Name{A}\Email{a@b}}
+\begin{document}
+\maketitle
+\begin{tabular}{c}\abovestrut{2ex}x\belowstrut{1ex}\end{tabular}
+\end{document}
+";
+    let (stderr, xml) = convert(jmlr, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+  }
+
+  /// Internals raw packages/documents reach that the replacing bindings
+  /// omitted (one witness manual each): lastpage `\lastpage@lastpage`,
+  /// geometry `\Gm@lmargin`, amsmath `\tag@true`, hyperref `\HyPsd@AMSclassfix`
+  /// and the dvips `\pdfmark`, colortbl `\therownum`, beamer's
+  /// `\pgfpagesuselayout`, siunitx v3 `\siunitx_number_format:nN`, fourier's
+  /// `\lefthand`.
+  #[test]
+  fn binding_internals_reached_by_raw_code() {
+    let tex = r"\documentclass{article}
+\usepackage{lastpage}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{colortbl}
+\usepackage{siunitx}
+\usepackage{fourier}
+\makeatletter
+\tag@true
+\pdfmark[/ANN]{pdfmark=/OBJ,Raw={/_objdef {x} /type /stream}}
+\HyPsd@AMSclassfix
+\ExplSyntaxOn
+\siunitx_number_format:nN {12.50} \l_tmpa_tl
+\tl_set_eq:NN \lxnum \l_tmpa_tl
+\ExplSyntaxOff
+\begin{document}
+Last \lastpage@lastpage; margin \the\Gm@lmargin; row \therownum; number \lxnum; hand \lefthand.
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Last ??; margin 0.0pt; row 0; number 12.50; hand"),
+      "{xml}"
+    );
+    let beamer = r"\documentclass{beamer}
+\pgfpagesuselayout{2 on 1}[a4paper]
+\begin{document}
+\begin{frame}x\end{frame}
+\end{document}
+";
+    let (stderr, _) = convert(beamer, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// listings stores an undefined-yet colour instead of digesting it
+  /// (callouts: `\lstset{backgroundcolor=\color{…}}` before xcolor loads), and
+  /// its character-conversion internals exist for add-on styles
+  /// (lstfiracode `\lst@CCPutMacro`). Repros
+  /// `graphics-tikz/{callouts_lstset_color_eager,listings_CCPutMacro}.tex`.
+  #[test]
+  fn listings_deferred_colour_and_conversion_internals() {
+    let tex = r#"\documentclass{article}
+\usepackage{listings}
+\lstset{backgroundcolor=\color{cyan!10}}
+\usepackage{xcolor}
+\makeatletter
+\lst@CCPutMacro\lst@ProcessOther {"2D}{\lst@ttfamily{-{}}{-{}}}\@empty\z@\@empty
+\makeatother
+\begin{document}
+\begin{lstlisting}
+x = 1
+\end{lstlisting}
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("data=\"eCA9IDE=\""), "{xml}"); // base64 of `x = 1`
+  }
+
+  /// `\only<handout>{…}` is discarded in presentation mode (beamerswitch.cls:
+  /// 226 runs `\pgfpagesuselayout` with pgfpages unloaded there); overlay
+  /// specs and beamer-mode specs still apply. seminar.cls:760 probes
+  /// `\ps@fancy` (semsamp1/2). Repro `beamer-stubs/beamer_only_modespec.tex`.
+  #[test]
+  fn beamer_only_discards_other_mode_specs() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}
+\only<handout>{\undefinedhandoutonly}
+\only<handout:0| trans:0>{\undefinedhandoutonly}
+\only<2->{Overlay.}
+\only<beamer>{Beamer.}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Overlay.") && xml.contains("Beamer."), "{xml}");
+    let fancy = r"\documentclass{article}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\makeatletter\ifx\ps@fancy\@undefined MISSING\fi\makeatother
+\begin{document}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(fancy, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("MISSING"), "{xml}");
+  }
+
+  /// verbatim.sty:210-217: `\verbatiminput` of a file that does not exist
+  /// is `\typeout{No file …}`, not an error (msc.tex:287, lnosuppl.tex:89).
+  /// Repro `parameter-conditional/verbatiminput_missing_msc.tex`.
+  #[test]
+  fn verbatiminput_missing_file_is_not_an_error() {
+    let tex = r"\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+Before.
+\verbatiminput{COPYRIGHT}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("No file COPYRIGHT"), "{stderr}");
+    assert!(
+      xml.contains("Before.") && xml.contains("After.") && !xml.contains("<ERROR"),
       "{xml}"
     );
   }

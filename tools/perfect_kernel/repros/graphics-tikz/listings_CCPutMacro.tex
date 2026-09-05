@@ -1,0 +1,8 @@
+\documentclass{article}
+% WITNESS: lstfiracode/lstfiracode (residue43); ORACLE: pdflatex 0 err
+% MECH: listings binding omits listings.sty:908 \lst@CCPutMacro/\lst@ProcessOther/
+%   \lst@ttfamily; lstfiracode's \lstnewenvironment body invokes them directly.
+\usepackage{listings}
+\begin{document}
+\makeatletter\lst@CCPutMacro\lst@ProcessOther{"2D}{\lst@ttfamily{-{}}{-{}}}\@empty\z@\@empty\makeatother
+\end{document}

@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage{tikz}
+\makeatletter
+\pgfkeys{/albi/gen/.code n args={3}{\setbeamertmpl{#1}{#2}{#3}}}
+\def\setbeamertmpl#1#2#3{[a=#1|b=#2|c=#3]}
+\pgfkeys{/albi/wrap/.style n args={3}{/albi/gen={#1}{#2}{#3}}}
+\pgfkeys{/albi/top/.style={/albi/wrap={L}{M}{#1}}}
+\makeatother
+\begin{document}
+\pgfkeys{/albi/top={X}}
+\end{document}

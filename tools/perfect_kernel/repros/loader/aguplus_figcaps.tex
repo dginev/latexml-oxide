@@ -1,0 +1,9 @@
+% witness: aguplus/aguplus
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; \chapter undefined in article-derived aguplus class
+% mechanism: aguplus.cls:524 \@ifundefined{chapter}{}{PackageError figcaps
+%   'may only be used with article-like classes'}. \chapter must stay undefined.
+\documentclass[twoside,agupp]{aguplus}
+\begin{document}
+ok
+\end{document}

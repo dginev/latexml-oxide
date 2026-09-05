@@ -1,0 +1,32 @@
+% witness: jourcl/jourcl (jourcl.cls:99 \ifempty, :145 \RecommendedPerson; jourcl.tex:130 \showreviewers)
+% oracle:  pdflatex 0 errors (benign "(\end occurred when \ifx ... incomplete)", no ! bang)
+% engines: rust=2 perl=2 (2026-09-05, b56t)  pdflatex=0
+% expect:  0 errors; two <ltx:p>/text nodes "Rev A","Rev B"; no "Extra \else"
+% status:  RED
+% mechanism: jourcl.cls conditional is malformed (3 conditionals \ifx+\ifdim+\ifdim,
+%   only 2 \fi). Real TeX tolerates: leaves \ifx incomplete, reports benignly at \end.
+%   LaTeXML (Perl+Rust): when \sbox digests #1 inside the still-open outer \ifx frame
+%   across MULTIPLE such calls, an inner \else is matched to the leftover \ifx frame
+%   (elses=true) -> spurious "Extra \else". Needs \sbox + >=2 calls to trigger.
+\documentclass{article}
+\makeatletter
+\def\ifempty#1{\def\temp{#1} \ifx\temp\empty }
+\def\RecommendedPerson#1{ \ifempty{#1} %
+    \else
+    \sbox0{#1}%
+      \ifdim\wd0=0pt %
+        {} %
+    \else
+        \ifdim0pt=\dimexpr\ht0+\dp0\relax
+        {} %
+    \else
+          {#1}%
+    \fi
+\fi
+}
+\makeatother
+\begin{document}
+\parbox{.3\linewidth}{ \RecommendedPerson{Rev A} }
+\parbox{.3\linewidth}{ \RecommendedPerson{Rev B} }
+Text after.
+\end{document}

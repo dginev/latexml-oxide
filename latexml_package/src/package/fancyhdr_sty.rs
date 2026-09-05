@@ -36,6 +36,10 @@ LoadDefinitions!({
   DefMacro!("\\iffootnote{}{}", "#2"); // since 3.8
 
   def_macro_noop("\\fancypagestyle{}[]{}")?;
+  // fancyhdr.sty:617-619 `\ps@fancy`/`\ps@fancyplain`: the page styles a class
+  // probes (`seminar.cls:760 \@ifgoodps{fancy}`) or `\let`s — headers are not
+  // modelled, so the styles are empty.
+  RawTeX!(r"\def\ps@fancy{}\def\ps@fancyplain{}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}");
 
   // extramarks.sty not implemented, as its commands can only be used in headers and footers
 

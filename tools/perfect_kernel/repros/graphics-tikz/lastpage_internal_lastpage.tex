@@ -1,0 +1,9 @@
+\documentclass{article}
+% WITNESS: lastpage/lastpage-example (residue43, doc line 175); ORACLE: pdflatex 0 err
+% MECH: lastpage_sty.rs replaces the package with only \AtEndDocument{\label{lastpage}};
+%   real lastpage->lastpage2e->lastpagemodern.sty:73 \gdef\lastpage@lastpage{??}.
+%   Doc executes \lastpage@lastpage in running text (prints the page name "??").
+\usepackage{lastpage}
+\begin{document}
+Page name: \makeatletter\lastpage@lastpage\makeatother.
+\end{document}

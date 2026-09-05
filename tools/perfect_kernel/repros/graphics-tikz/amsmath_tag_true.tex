@@ -1,0 +1,8 @@
+\documentclass{article}
+% WITNESS: xreview/xreview (residue43); ORACLE: pdflatex 0 err
+% MECH: amsmath_sty.rs omits amsmath's \newif\iftag@ (amsmath.sty:1289), so
+%   \tag@true/\tag@false are undefined; xreview.sty:99 does \global\tag@true.
+\usepackage{amsmath}
+\begin{document}
+\makeatletter\global\tag@true\makeatother x
+\end{document}

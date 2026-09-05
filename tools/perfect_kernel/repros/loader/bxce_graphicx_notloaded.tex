@@ -1,0 +1,11 @@
+% witness: bxcoloremoji/bxcoloremoji-shortnames
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; graphicx auto-loaded, \scalebox defined
+% mechanism: bxcoloremoji.sty:452 \ifnum\ifdefined\pdfoutput\pdfoutput...>\z@ gates
+%   \RequirePackage{graphicx}; at :434 \@ifpackageloaded{graphicx} else PackageError
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage[twemojis]{bxcoloremoji}
+\begin{document}
+ok \scalebox{2}{x}
+\end{document}

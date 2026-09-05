@@ -2134,6 +2134,17 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
   if cmd.is_empty() {
     return None;
   }
+  // listings stores the value and executes it at listing time; digesting it
+  // here (Perl listings.sty.ltxml:945-953 `lstExtractColor`) errors when the
+  // colour command is not defined YET (callouts: `\lstset{backgroundcolor=
+  // \color{cyan!10}}` before tikz pulls xcolor in). Leave it unset then.
+  if cmd
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::CS && lookup_definition(t).ok().flatten().is_none())
+  {
+    return None;
+  }
   bgroup();
   let _ = digest(cmd.clone());
   // Use to_stored() format ("rgb r g b") for round-trip through state storage,
@@ -2157,6 +2168,12 @@ LoadDefinitions!({
   DefMacro!("\\lst@true", None, r"\let\lst@if\iftrue");
   DefMacro!("\\lst@false", None, r"\let\lst@if\iffalse");
   Let!("\\lst@if", "\\iffalse");
+  // listings.sty:908 `\lst@CCPutMacro{<class>}{<char>}{<code>}…\@empty\z@\@empty`
+  // (character-class conversion table) and the per-character hooks
+  // `\lst@ProcessOther`/`\lst@ttfamily` an add-on `\lstnewenvironment`
+  // invokes directly (lstfiracode) — no character-conversion model here.
+  RawTeX!(r"\def\lst@CCPutMacro#1\@empty\z@\@empty{}
+\def\lst@ProcessOther#1#2{}\def\lst@ttfamily#1#2{}");
   //======================================================================
   // Region 1: Preamble (Perl lines 1-33)
   //======================================================================

@@ -1,0 +1,14 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{atletter_group_input_catcode_leak_coverpage}
+% Mirrors CoverPage.sty:60-70 : read a @-keyword file with @ made an escape,
+% scoped inside \bgroup ... \egroup.
+\bgroup
+  \catcode`\@0
+  \bgroup
+    \def\article##1{\xdef\CP@ParseArg{##1}}%
+    \input{atletter_group_input_catcode_leak_coverpage.txt}%
+  \egroup
+\egroup
+% CoverPage.sty:77 : @ must be a letter again here.
+\define@key{cover}{title}{\gdef\CP@Title{#1}}
+\endinput

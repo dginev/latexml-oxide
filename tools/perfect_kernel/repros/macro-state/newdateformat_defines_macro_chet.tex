@@ -1,0 +1,15 @@
+% witness: chet/chetdoc (chet.sty:251-252 \newdateformat{mydate}{...}\mydate{})
+% oracle:  pdflatex 0 errors; perl loads datetime.sty raw (no ltxml) -> 0 (RUST-ONLY)
+% engines: rust=1 perl=0 (2026-09-05, b56t)
+% expect:  0 errors; <ltx:document> exists and \mydate is NOT undefined
+% status:  RED
+% mechanism: datetime_sty.rs:15 stubs \newdateformat{}{} as def_macro_noop, so the
+%   date-format command \<name> it must CREATE (datetime.sty:181-184
+%   \DeclareRobustCommand\csname#1\endcsname{...}) is never defined. chet.sty then
+%   calls \mydate{} -> undefined. Faithful fix: \newdateformat must DEFINE \<name>.
+\documentclass{article}
+\usepackage{datetime}
+\newdateformat{mydate}{\monthname[\THEMONTH] \THEYEAR}
+\begin{document}
+\mydate{}Today.
+\end{document}

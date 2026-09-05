@@ -1,0 +1,13 @@
+\documentclass{article}
+% WITNESS: movie15/overlay-example.tex (FULL DOC is pdflatex 0-err; this isolated
+%   probe is NOT pdflatex-clean because pdflatex takes movie15's \ifpdf TRUE branch).
+% MECH: because \ifpdf is FALSE in LaTeXML (Perl ifpdf.sty.ltxml:19 \pdffalse; Rust
+%   ifpdf_sty.rs same), movie15.sty routes into its dvips \else branch (movie15.sty:1138)
+%   which calls \pdfmark{...} (movie15.sty:1143); hyperref binding omits \pdfmark
+%   (real pdfmark.def:474 \def\pdfmark{\@ifnextchar[...}). Then the PostScript Raw={...}
+%   body leaks as text, cascading into "_ Script can only appear in math mode".
+% STATUS: RED on b56t (isolated \pdfmark undefined); SHARED (Perl 61 err incl \pdfmark).
+\usepackage{hyperref}
+\begin{document}
+\makeatletter\pdfmark{pdfmark=/OBJ,Raw={/x 1}}\makeatother x
+\end{document}

@@ -1843,6 +1843,10 @@ LoadDefinitions!({
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
   DefConditional!("\\iftagsleft@");
+  // amsmath.sty:1289 `\newif\iftag@` (a tag is pending; xreview sets it)
+  // and :1292 `\newif\ifshifttag@`.
+  DefConditional!("\\iftag@");
+  DefConditional!("\\ifshifttag@");
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
 });

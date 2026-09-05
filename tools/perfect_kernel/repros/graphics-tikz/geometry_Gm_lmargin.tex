@@ -1,0 +1,9 @@
+\documentclass{article}
+% WITNESS: stocksize/stocksize-doc (residue43); ORACLE: pdflatex 0 err
+% MECH: geometry_sty.rs reimplements geometry with its own \Gm@* dimens but omits
+%   \Gm@lmargin (real geometry.sty:767 \setlength\oddsidemargin{\Gm@lmargin});
+%   stocksize.sty:76 reads \the\dimexpr\Gm@lmargin+... .
+\usepackage[margin=1in]{geometry}
+\begin{document}
+\makeatletter\the\dimexpr\Gm@lmargin\relax\makeatother
+\end{document}

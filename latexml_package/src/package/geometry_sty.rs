@@ -36,6 +36,8 @@ LoadDefinitions!({
 \newdimen\Gm@tw \newdimen\Gm@th            % computed text width/height (SVG scope)
 \newdimen\Gm@doctw                         % class-default \textwidth (the full column)
 \newdimen\Gm@bindingoffset                 % geometry.sty L51; read by classes
+\newdimen\Gm@lmargin \newdimen\Gm@rmargin \newdimen\Gm@tmargin \newdimen\Gm@bmargin
+\newdimen\Gm@width \newdimen\Gm@height    % geometry.sty:767 names read by classes (stocksize-doc)
                                            % (tudapub.cls L506 \g_ptxcd_headwidth_dim)
 \newif\ifGm@lset \newif\ifGm@rset \newif\ifGm@tset \newif\ifGm@bset
 \newif\ifGm@twset \newif\ifGm@thset

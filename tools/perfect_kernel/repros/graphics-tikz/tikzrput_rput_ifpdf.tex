@@ -1,0 +1,8 @@
+\documentclass{article}
+% WITNESS: pgfornament/ornaments (residue43, uses tikzrput's \rput); ORACLE: pdflatex 0 err
+% MECH: tikzrput.sty:66 gates \def\rput{...} behind \ifpdf; both Perl & Rust set
+%   \ifpdf FALSE (ifpdf.sty.ltxml:19 \pdffalse), so \rput is never defined.
+\usepackage{tikzrput}
+\begin{document}
+\begin{tikzpicture}\rput(0,0){x}\end{tikzpicture}
+\end{document}
