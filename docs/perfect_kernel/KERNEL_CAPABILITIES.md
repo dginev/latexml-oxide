@@ -61,9 +61,29 @@ constructors, locked) or `Replace` (today's default; to be justified per
 binding). The overlay form is what tcblistingscore, tagpdf-base,
 pdfmanagement, polyglossia and circuitikz already do by hand.
 
-**Landing plan.** (1) `DefinitionOrigin` on `Definition`, set at the three
-definition sites (pool load, dump apply, mouth-driven `\def`); replace the
-locator heuristic. (2) `retract_pdf_api_stubs`-style retraction becomes
+**Design (2026-09-05, from the source survey).** Only `Expandable` carries a
+`locator` today (`definition/expandable.rs:78`, set from `gullet::get_locator()`
+in `binding/def/dialect.rs:333`); `Primitive`/`Constructor`/`Register` answer
+`Object::get_locator() → None` (`common/object.rs:36`), which is why the
+56i heuristic had to treat "no locator" as "ours". The origin is therefore
+NOT derived from locators but recorded as its own field: a thread-local
+`CURRENT_ORIGIN: Cell<DefinitionOrigin>` in `latexml_core::definition`,
+set by RAII guard at the five loader seams — `dump_reader::load_from_str_
+internal` (`Plain`/`LatexDump`, next to its existing `CURRENT_LOAD_CTX`),
+`InnerPool!`/`LoadPool!` (`Pool`, `setup_binding_language.rs:60`),
+`latexml_package::dispatch` (`Binding(name)`, `lib.rs:1159`), `content.rs::
+input_definitions` for a raw `.sty`/`.cls`/`.def` (`File(path)`), and the
+document mouth (`Document`) — and captured at construction by every
+definition struct's `new`/`default` (the same moment `locator` is), so
+`\let` shares the object and its origin travels with it. The trait gains
+`Object::get_origin() -> DefinitionOrigin` (default `Unknown`) and
+`DefinitionOrigin::is_latexml_owned()` = not `File`/`Document`. The dump's
+`assign_internal('global')` apply keeps the dump origin (rule 2 of the
+format boundary: the dump overwrites, and says so).
+
+**Landing plan.** (1) `DefinitionOrigin` on `Definition`, set at the five
+loader seams above; replace the locator heuristic
+(`is_latexml_predefinition_source`) with `get_origin().is_latexml_owned()`. (2) `retract_pdf_api_stubs`-style retraction becomes
 unnecessary: `\cs_new` over a `Binding` origin replaces silently. (3) Audit the
 bindings that `Replace` a package whose internals raw code reaches for
 (hyperref, siunitx, geometry, fontspec, chemformula, forest) and convert to
@@ -241,3 +261,6 @@ guard, not as a site patch.
 | Date | Row | Event |
 |---|---|---|
 | 2026-09-05 | all | Program approved by the user; K1/K3/K4 seeds from batch 56i recorded above |
+| 2026-09-05 | K3 | Ordering fixed in 56j (L3 hook before the bindings' private store; bindings outrank raw). OPEN correctness item: lthooks' labeled `\exp_args:Nx` cleanup (latex.ltx:5375, 5401-5416) is not reproduced by the gullet — a `\noexpand`-family token surfaced inside `\csname g__hook_…`; parameter-bearing unlabeled chunks are pinned to the private store meanwhile (`hashful_begin_document_chunk_under_a_package_label`). |
+| 2026-09-05 | K1 | Design fixed (thread-local origin captured at construction; five loader seams). Implementation next, after sweep #42. |
+| 2026-09-05 | K6 | Persona decision pending with the user: DVI default (Perl's `\ifpdf` false / `\pdfoutput=0` = pdfTeX in DVI mode, right for the arXiv legacy), PDF mode as a per-document persona switched by document evidence. |
