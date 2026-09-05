@@ -29,6 +29,12 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // xpatch.sty:42 `\RequirePackage{xparse,etoolbox}`: xparse.sty restores
+  // ltcmd's legacy `g`/`G`/`l`/`u` argument types (latex.ltx:2287-2308 reject
+  // them otherwise) — prtec.cls:316 `\NewDocumentCommand\entry{m g}` under
+  // newtxtext→xpatch (RUST-ONLY). Guard:
+  // `perfect_kernel_batch56::xpatch_loads_xparse_for_legacy_arg_types`.
+  RequirePackage!("xparse");
   RequirePackage!("etoolbox");
 
   // RawTeX! (not TeX!) because every derived name has `@` as a letter

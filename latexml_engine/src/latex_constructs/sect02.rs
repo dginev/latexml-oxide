@@ -213,7 +213,29 @@ pub(crate) fn load() -> Result<()> {
     // defers it to `\document`), so without this firing every dump-mode
     // conversion left them undefined (witnesses: prettytok / spath3 manuals,
     // `Error:undefined:\__color_backend_reset:`; TL doc corpus 2026-08-31).
-    if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
+    //
+    // The backend is NAMED (`\sys_load_backend:n {dvips}`) rather than left
+    // to the class-option default: a `\documentclass[pdftex]` option maps to
+    // `pdfmode` (expl3-code.tex:8352), and `\__sys_load_backend_check:N`
+    // (:7992) rejects that in our DVI output state (`\pdfoutput=0`,
+    // pdftex.rs) with a counted "Backend request inconsistent with engine:
+    // using 'dvips'" before loading dvips anyway (elpres, scidoc; RUST-ONLY —
+    // Perl never fires the loader). The explicit name overrides the option
+    // after `\sys_finalize:` (:7977/:7985) and is what the DVI branch
+    // accepts; the loaded `.def` is the same as before.
+    // Guard: `perfect_kernel_batch56::backend_load_names_the_dvi_backend`.
+    if first_begin && lookup_definition(&T_CS!("\\sys_load_backend:n"))?.is_some() {
+      boxes.push(digest(Tokens!(
+        T_CS!("\\sys_load_backend:n"),
+        T_BEGIN!(),
+        T_LETTER!("d"),
+        T_LETTER!("v"),
+        T_LETTER!("i"),
+        T_LETTER!("p"),
+        T_LETTER!("s"),
+        T_END!()
+      ))?);
+    } else if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`

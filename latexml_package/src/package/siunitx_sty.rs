@@ -1762,6 +1762,16 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
   // front to `fraction` in display math, `symbol` otherwise. Without this
   // remap it falls through to the "Unknown siunitx per-mode" catchall.
   // Witness 1811.06895 (`\sisetup{per-mode=symbol-or-fraction}`).
+  // siunitx's `power` / `power-positive-first` (its DEFAULT since v3) are
+  // what our `reciprocal` variants render — per-units as negative exponents,
+  // in order (`six_format_1unit`); they fell to the catchall Error
+  // (quantum-chemistry-bonn.sty:55; SHARED, Perl siunitx.sty.ltxml:1094).
+  // Guard: `perfect_kernel_batch56::siunitx_per_mode_power_renders_reciprocal`.
+  let permode = match permode.as_str() {
+    "power" => "reciprocal".to_string(),
+    "power-positive-first" => "reciprocal-positive-first".to_string(),
+    _ => permode,
+  };
   let permode = if permode == "symbol-or-fraction" {
     let is_display = lookup_font()
       .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.as_ref() == "display"))

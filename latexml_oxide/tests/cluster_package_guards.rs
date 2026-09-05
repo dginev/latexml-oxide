@@ -6771,7 +6771,9 @@ A\forest [root [w=\frac{1}{3}] [b]]\endforest B
 \end{document}
 ";
     let (stderr, xml) = convert(tex, false);
-    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    // The stub diagnostic is a Warn since batch 56k (`forest_stub_is_a_warning`).
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("stub binding"), "{stderr}");
     assert!(!stderr.contains("undefined:\\forest "), "{stderr}");
     assert!(!stderr.contains("bracketset"), "{stderr}");
     assert!(!xml.contains("XMApp"), "tree body leaked: {xml}");
@@ -14472,6 +14474,129 @@ As \gentextcite{k1} shows; \Gentextcite{k1}.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(!stderr.contains("g__hook_"), "{stderr}");
     assert!(xml.contains("[v] (w)"), "{xml}");
+  }
+
+  /// The forest/diagrams discard stubs warn instead of erroring: the body is
+  /// discarded cleanly (forest-quickstart, fragoli_doc, milsymb; pdflatex clean).
+  #[test]
+  fn forest_stub_is_a_warning() {
+    let tex = r"\documentclass{article}
+\usepackage{forest}
+\begin{document}
+Before.
+\begin{forest}
+[VP [V [sees]] [NP [DP [the]] [NP [dog]]]]
+\end{forest}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Before.") && xml.contains("After."), "{xml}");
+  }
+
+  /// `{subeqnarray}` (subeqnarray.sty:33-41) is eqnarray with `\slabel`
+  /// subnumbers: `&` aligns, rows get `1a`/`1b` (subeqnarray-sample).
+  #[test]
+  fn subeqnarray_aligns_with_subnumbers() {
+    let tex = r"\documentclass{article}
+\usepackage{subeqnarray}
+\begin{document}
+\begin{subeqnarray}
+\slabel{a} x & = & a \\
+\slabel{b}   & = & b
+\end{subeqnarray}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<equationgroup"), "{xml}");
+    assert!(xml.contains("1a") && xml.contains("1b"), "{xml}");
+  }
+
+  /// `\blendcolors*{!60!white}` then `\textcolor{black!75}`: the blend is a
+  /// separate mix on the resolved color (gray .25 → .55 = #8C8C8C), not a
+  /// string-concatenated `black!75!60!white` (iodhbwm via ydoc-desc.sty:125).
+  #[test]
+  fn xcolor_blend_applies_after_the_local_mix() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\blendcolors*{!60!white}\textcolor{black!75}{hello}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("#8C8C8C"), "{xml}");
+  }
+
+  /// siunitx `per-mode=power` (its default) renders per-units as negative
+  /// exponents like our `reciprocal` (quantum-chemistry-bonn.sty:55).
+  #[test]
+  fn siunitx_per_mode_power_renders_reciprocal() {
+    let tex = r"\documentclass{article}
+\usepackage{siunitx}
+\sisetup{per-mode=power}
+\begin{document}
+Energy: \qty{5}{\kilo\joule\per\mole}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("mol"), "{xml}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+  }
+
+  /// `\documentclass[pdftex]` puts `pdfmode` in the backend request; naming
+  /// `dvips` at the `\document` backend load avoids expl3's "Backend request
+  /// inconsistent with engine" (elpres, scidoc), under both profiles.
+  #[test]
+  fn backend_load_names_the_dvi_backend() {
+    let tex = r"\documentclass[pdftex]{article}
+\usepackage{xcolor}
+\begin{document}
+Hello \textcolor{red}{world}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("world"), "{xml}");
+    let (stderr, _) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// xpatch.sty:42 loads xparse, which restores ltcmd's legacy `g` argument
+  /// type (prtec.cls:316 `\NewDocumentCommand\entry{m g}`).
+  #[test]
+  fn xpatch_loads_xparse_for_legacy_arg_types() {
+    let tex = r"\documentclass{article}
+\usepackage{xpatch}
+\NewDocumentCommand{\entry}{m g}{[#1/#2]}
+\begin{document}
+\entry{A}{B} \entry{C}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[A/B]"), "{xml}");
+  }
+
+  /// Under `\DocumentMetadata`, `\definecolor` also registers the color with
+  /// l3color (xcolor-patches-tmp-ltx.sty:56), so raw `\color_select:n`
+  /// (ltx-talk.cls:201) finds it.
+  #[test]
+  fn xcolor_definecolor_bridges_to_l3color_under_documentmetadata() {
+    let tex = r"\DocumentMetadata{}
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{alert}{RGB}{200,0,0}
+\begin{document}
+\ExplSyntaxOn \color_select:n {alert} \ExplSyntaxOff text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("text."), "{xml}");
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

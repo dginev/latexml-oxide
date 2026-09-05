@@ -207,21 +207,22 @@ fn decode_color(expression: &str) -> Color {
     lookup_color_obj(stripped_name)
   };
 
-  // Apply blend from state
-  let full_mix = match lookup_value("color_blend") {
-    Some(Stored::String(blend_sym)) => with(blend_sym, |blend| {
-      if !blend.is_empty() {
-        format!("{}{}", mix_part, blend)
-      } else {
-        mix_part.clone()
-      }
-    }),
-    _ => mix_part,
-  };
-
   // Apply mix expressions: !pct!name...
-  if !full_mix.is_empty() {
-    color = apply_mix_expr(color, &full_mix);
+  if !mix_part.is_empty() {
+    color = apply_mix_expr(color, &mix_part);
+  }
+  // Then the `\blendcolors` blend (xcolor.sty `\XC@blendcolors`: the blend is
+  // a mix applied to the RESOLVED color). Perl (xcolor.sty.ltxml:337) string-
+  // concatenated it onto the local mix — `black!75` + `!60!white` became
+  // `black!75!60!white`, "mix with color 60" (iodhbwm via ydoc-desc.sty:125;
+  // SHARED, pdflatex clean). Guard:
+  // `perfect_kernel_batch56::xcolor_blend_applies_after_the_local_mix`.
+  let blend = match lookup_value("color_blend") {
+    Some(Stored::String(blend_sym)) => with(blend_sym, |b| b.to_string()),
+    _ => String::new(),
+  };
+  if !blend.is_empty() {
+    color = apply_mix_expr(color, &blend);
   }
 
   // Perl L343: complement applied AFTER mix, not before
@@ -764,15 +765,42 @@ LoadDefinitions!({
     // binding drops the definition altogether, so `\color{lambda}` later
     // errors 101× → Fatal (xcolor/xcolor2 figure 5, xcolor2.tex:143/134;
     // KNOWN_PERL_ERRORS #111).
+    let mut bridge_specs = None;
     let color = if is_ps {
       WHITE
     } else {
       let models_str = do_expand(models)?.to_string();
       let specs_str = do_expand(specs)?.to_string();
-      convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?
+      let color = convert_to_target_model(parse_xcolor(Some(&models_str), &specs_str, None))?;
+      bridge_specs = Some((models_str, specs_str));
+      color
     };
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
+    // Under `\DocumentMetadata`, pdfmanagement-firstaid's xcolor-patches-tmp-
+    // ltx.sty:56 appends `\color_set:nnn{name}{model}{spec}` to every
+    // `\definecolor`, so raw l3color code (`\color_select:n{alert}`,
+    // ltx-talk.cls:201 after :212 `\DeclareColor`) finds the color; without
+    // the bridge it raised "Unknown color" (SHARED, pdflatex clean with
+    // `\DocumentMetadata`). Mirror the bridge when the kernel flag is set.
+    // Guard: `perfect_kernel_batch56::xcolor_definecolor_bridges_to_l3color_under_documentmetadata`.
+    if let Some((models_str, specs_str)) = bridge_specs
+      && lookup_meaning(&T_CS!("\\IfDocumentMetadataTF")) == lookup_meaning(&T_CS!("\\@firstoftwo"))
+      && lookup_meaning(&T_CS!("\\color_set:nnn")).is_some()
+    {
+      let model = models_str.split('/').next().unwrap_or("").trim().to_string();
+      let spec = specs_str.split('/').next().unwrap_or("").trim().to_string();
+      let mut inv = vec![T_CS!("\\color_set:nnn"), T_BEGIN!()];
+      inv.extend(ExplodeText!(&name_str));
+      inv.push(T_END!());
+      inv.push(T_BEGIN!());
+      inv.extend(ExplodeText!(&model));
+      inv.push(T_END!());
+      inv.push(T_BEGIN!());
+      inv.extend(ExplodeText!(&spec));
+      inv.push(T_END!());
+      let _ = digest(Tokens::new(inv));
+    }
     assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });

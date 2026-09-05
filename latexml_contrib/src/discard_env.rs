@@ -73,7 +73,11 @@ fn report_stub_once(kind: &str, source: &str) -> Result<()> {
       "{} has no support in {}, this is a stub binding.",
       kind, source
     );
-    Error!("undefined", &obj, msg);
+    // A Warn, not an Error: the body IS discarded cleanly, and the ar5iv
+    // binding's Error (forest.sty.ltxml:37-38) was the only diagnostic of
+    // forest-quickstart, fragoli_doc and milsymb (pdflatex clean; sweep #41).
+    // Guard: `perfect_kernel_batch56::forest_stub_is_a_warning`.
+    Warn!("undefined", &obj, msg);
   }
   Ok(())
 }
