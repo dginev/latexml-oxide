@@ -15683,4 +15683,37 @@ $25\unit{m}$
     );
     assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
   }
+
+  /// Native ctable binding: \ctable with keyvals, captions, tabular/tabularx,
+  /// rule macros (\NN, \FL, \ML, \LL), and footnotes block (\tnote, \tmark).
+  /// Witnesses: proofread/example, arXiv:2011.04706.
+  #[test]
+  fn ctable_native_table_with_caption() {
+    let tex = r"\documentclass{article}
+\usepackage{ctable}
+\begin{document}
+\ctable[
+  botcap,
+  caption=Sample Table with Ctable,
+  label=tab:sample,
+  pos=htbp,
+  width=80mm,
+]{ccc}{
+  \tnote[a]{First footnote.}
+  \tnote[b]{Second footnote.}
+}{
+  \FL
+  Col 1 & Col 2 & Col 3 \ML
+  A\tmark[a] & B & C\tmark[b] \NN
+  D & E & F \LL
+}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Sample Table with Ctable"), "{xml}");
+    assert!(xml.contains("<table"), "{xml}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("First footnote."), "{xml}");
+  }
 }
