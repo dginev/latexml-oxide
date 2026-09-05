@@ -1,0 +1,19 @@
+% witness: tabularray/tabularray (tabularray.tex:547, first failing demo)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 pdflatex=0 (2026-09-05) <- RUST-ONLY
+% expect:  0 errors; a <tabular> row carries border="tt" (double-rule kept)
+% status:  RED
+% mechanism: tabularray \hline takes an optional [style] (tabularray.sty:2008,
+%   \NewTblrTableCommand \hline [1] []). Our contrib stub maps tblr->tabular and
+%   reuses classic \hline (=\noalign{\@@alignment@hline}, tex_tables.rs:525) which
+%   does NOT absorb the [style]; the leaked "[dashed]" becomes cell text and the
+%   FOLLOWING \hline fires \noalign in horizontal mode ("cannot be used here").
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{lcr}
+One & Two & Three \\
+\hline[dashed]\hline
+Four & Five & Six \\
+\end{tblr}
+\end{document}

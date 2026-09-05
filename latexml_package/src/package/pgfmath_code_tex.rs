@@ -60,9 +60,37 @@ fn pgfmath_result_tokens(value: f64) -> Vec<Token> {
 }
 
 /// Return tokens that \def\pgfmathresult{<string>}
+///
+/// pgfmathparser.code.tex:392-396 keeps a `"…"` string operand as the REAL
+/// tokens it was written with, so a ternary like braids.sty:276
+/// `\pgfmathparse{\value{c} < \n ? "\noexpand\setcounter{c}{\n}" : ""}` followed
+/// by `\pgfmathresult` EXECUTES the `\setcounter`. Our evaluator carries the
+/// string through Rust, so a result holding a control sequence is re-tokenized
+/// (at the caller's `@` catcode — braids.sty runs under `\makeatletter`) instead
+/// of exploded into dead `\`+letters. Numbers explode as before. Perl's pgfmath
+/// cannot parse the ternary at all (SHARED). Witness: braids/braids.
+/// Guard: `perfect_kernel_batch56::pgfmath_string_result_keeps_control_sequences`.
 fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
   let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
-  toks.extend(Explode!(s));
+  // pgfmathparser.code.tex:35-40 `\pgfmath@catcodes` re-catcodes only `= , | &`,
+  // so a string operand's LETTERS stay catcode 11: tikz's path dispatcher
+  // `\tikz@handle` (tikz.code.tex:2134-2163) `\ifx`-matches the letter `a` of
+  // an `arc[…]` result against a catcode-11 `{a}` — exploded OTHER letters never
+  // dispatch and the path gives up (zx-calculus curved wires,
+  // tikzlibraryzx-calculus.code.tex:56-63; Perl's `ExplodeText` shares the
+  // gap). Guard: `perfect_kernel_batch56::pgfmath_string_result_keeps_letter_catcodes`.
+  if s.contains('\\') || s.chars().any(|c| c.is_ascii_alphabetic()) {
+    let at_letter = matches!(lookup_catcode('@'), Some(Catcode::LETTER));
+    let src = TeXString::assembled(s.to_string());
+    let retok = if at_letter {
+      TokenizeInternal!(src)
+    } else {
+      Tokenize!(src)
+    };
+    toks.extend(retok.unlist());
+  } else {
+    toks.extend(Explode!(s));
+  }
   toks.push(T_END!());
   toks
 }

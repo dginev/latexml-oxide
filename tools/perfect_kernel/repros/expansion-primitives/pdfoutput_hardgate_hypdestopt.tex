@@ -1,0 +1,11 @@
+% witness: biblatex-cheatsheet (hypdestopt), feupphdteses/Template_EN
+% oracle: pdflatex (clean: pdflatex has \pdfoutput=1 -> \ifpdf true)
+% engines: pdflatex
+% expect: 0 errors; hypdestopt takes its pdf-mode branch
+% status: RED today -> "requires pdfTeX or luaTeX in PDF mode"
+% mechanism: hypdestopt.sty:66 \ifpdf...\else\PackageError; \ifpdf=iftex_sty.rs:20 (false)
+\documentclass{article}
+\usepackage{hypdestopt}
+\begin{document}
+Hello.
+\end{document}

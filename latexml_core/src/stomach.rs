@@ -841,6 +841,35 @@ pub fn endgroup() -> Result<()> {
       );
     }
     // Last stack frame was a mode switch!?!?!
+    let mode = lookup_string_from_sym(crate::pin!("MODE"));
+    if mode == "math" || mode == "display_math" {
+      // tex.web §1063/§1064 `off_save`: `\endgroup` against a math_shift_group
+      // inserts the missing `$` ("Missing $ inserted"), closes the math and
+      // re-reads the `\endgroup`. Perl (Stomach.pm:367-369) only reports the
+      // mismatch and leaves the math frame on the stack, so every later closer
+      // re-errors and `<ltx:Math>` leaks to the document root — tikz calc's
+      // bailout `\tikz@cc@end$` (tikzlibrarycalc.code.tex:118-129) eats the
+      // injected `$` and `\tikz@finish` (tikz.code.tex:2500-2508) re-inserts
+      // the orphaned one as real math (calc_fraction_partway_bailout_mode_frame:
+      // pdflatex 3 / Perl 24 / Rust 23; kblocks-doc, ozguide, nathguide,
+      // chemobabel carry the cascade). `}`/`\egroup` keep TeX's §1069 shape
+      // (the brace is dropped, math stays open). OXIDIZED_DESIGN_DIVERGENCES
+      // #195. Guard: `perfect_kernel_batch56::endgroup_against_open_math_inserts_the_missing_dollar`.
+      let closer = get_current_token().unwrap_or_else(|| T_CS!("\\endgroup"));
+      Error!(
+        "expected",
+        "$",
+        "Missing $ inserted",
+        s!("I've inserted an end-math symbol before {closer}.")
+      );
+      let mut toks = vec![T_MATH!()];
+      if mode == "display_math" {
+        toks.push(T_MATH!());
+      }
+      toks.push(closer);
+      gullet::unread(Tokens::new(toks));
+      return Ok(());
+    }
     // Don't pop if there's an error; maybe we'll recover?
     // Perl Stomach.pm:367-369: currentFrameMessage is a SEPARATE detail.
     Error!(
@@ -848,10 +877,7 @@ pub fn endgroup() -> Result<()> {
       get_current_token()
         .map(|t| t.to_string())
         .unwrap_or_else(|| String::from("\\?")),
-      s!(
-        "Attempt to close a group that switched to mode {}",
-        lookup_string_from_sym(crate::pin!("MODE"))
-      ),
+      s!("Attempt to close a group that switched to mode {mode}"),
       current_frame_message()
     );
   } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {

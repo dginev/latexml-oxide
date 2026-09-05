@@ -1,0 +1,12 @@
+% witness: isolation of the \hbox variant (restricted_horizontal end over leaked math)
+% oracle:  pdflatex 3 errors (Extra }/forgotten $; Missing $ inserted; Missing } inserted)
+% engines: rust=6 perl=7+FATAL (2026-09-04)  pdflatex=3
+% mechanism: } while cur_group=math_shift_group -> tex.web extra_right_brace(1069) deletes };
+%   then \hbox end meets leaked math. LaTeXML end_mode (Stomach.pm:522-560) + egroup lack it,
+%   so restricted_horizontal end re-errors and Perl even crashes (hasAttribute on undef).
+% expect:  <=3 errors; no leaked ltx:Math at document root
+% status:  RED (Rust slightly better than Perl: no Fatal)
+\documentclass{article}
+\begin{document}
+\hbox{$}
+\end{document}

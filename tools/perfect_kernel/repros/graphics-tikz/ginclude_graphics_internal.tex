@@ -1,0 +1,13 @@
+% witness: pagelayout/example-graphic, example-grid, quickstart (residue38, first err \Ginclude@graphics)
+% oracle: pdflatex (clean); engines: pdflatex/lualatex
+% expect: 0 errors, one <ltx:graphics>; status: RED on b56g
+% mechanism: graphics.sty:189 \Ginclude@graphics is the driver-level include called
+%   directly by pagelayout.cls:1494 (\Ginclude@graphics#6). Perl graphics.sty.ltxml
+%   and Rust graphics_sty.rs both reimplement \includegraphics as a constructor and
+%   never define \Ginclude@graphics -> undefined. SHARED (Perl fails identically).
+\documentclass{article}
+\usepackage{graphicx}
+\makeatletter
+\begin{document}
+\Ginclude@graphics{example-image}
+\end{document}

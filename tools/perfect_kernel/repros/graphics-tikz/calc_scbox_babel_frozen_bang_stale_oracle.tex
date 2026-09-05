@@ -1,0 +1,26 @@
+% witness: scratchx / Explications_ScratchX (French), ScratchX.sty:189-203 \scbox
+% oracle: pdflatex (current babel v25.15) — NOT CLEAN: 4 '!' errors, PDF still produced
+% engines: pdflatex 4 ; latexml_oxide.b56g 4 ; Perl LaTeXML 4  => SHARED (all raw-load real tikz, identical)
+% expect: 4x tikz "+ or - expected"/"Giving up on this path"  (2 per \coordinate line)
+% status: RED (both engines). Classification SHARED, pdflatex-not-clean => OUT OF SCOPE.
+% mechanism: coordinate-bearing macro tokenized in preamble/package where babel-french
+%   shorthand '!' is still catcode-12; tikz runtime \ifnum\the\catcode`\!=\active
+%   (tikzlibrarycalc.code.tex:183) picks the @active branch and fails to match the frozen
+%   catcode-12 '!' => tikz.code.tex:5198 "Giving up", tikzlibrarycalc:119 "+ or - expected".
+%   Cure is doc-level \usetikzlibrary{babel} (see calc_babelfix_control.tex), which scratchx omits.
+\documentclass{article}
+\usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage[nomessages]{fp}
+\usepackage{tikz}\usetikzlibrary{calc}
+\newlength{\malongueuR}
+\newcommand{\myscbox}[2]{%
+  \FPeval{X}{0}\FPeval{Y}{0}%
+  \settowidth{\malongueuR}{\pgfinterruptpicture \text{#1} \endpgfinterruptpicture}%
+  \FPeval{C}{0.36+(Y)}\FPeval{D}{0.1+(X)}\FPeval{e}{0.46+(Y)}\FPeval{f}{0.4+(X)}\FPeval{G}{0.6+(X)}%
+  \coordinate (A) at ($(\D,\e) ! \malongueuR ! (\f,\e)$);%
+  \coordinate (AA) at ($(\X,\C) ! \malongueuR+0.2cm ! (\G,\C)$);%
+  \draw (A)--(AA);}
+\begin{document}
+\begin{tikzpicture}\myscbox{Thibault Ralet}{blue}\end{tikzpicture}
+\end{document}

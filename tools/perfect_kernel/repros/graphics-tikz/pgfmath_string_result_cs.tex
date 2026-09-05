@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{tikz}
+\newcounter{mytest}
+\setcounter{mytest}{1}
+\begin{document}
+\pgfmathparse{\value{mytest} < 4 ? "\noexpand\setcounter{mytest}{4}" : ""}%
+\pgfmathresult
+\typeout{EXECVAL:\the\value{mytest}}
+\typeout{RESULT:[\pgfmathresult]}
+\end{document}

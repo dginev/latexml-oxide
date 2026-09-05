@@ -1,0 +1,21 @@
+% witness: csvsimple/csvsimple-legacy (csvsimple-legacy.tex:153 \begin{tcbverbatimwrite}{grade.csv})
+% oracle:  pdflatex 0 errors (grade.csv written with no leading blank line)
+% engines: rust=5 perl=9 (2026-09-05)   full doc: rust=1001 perl=9
+% expect:  0 errors; ltx:tabular cell contains "Maier"
+% status:  RED
+% mechanism: real verbatim.sty:107-112 \verbatim@start#1 swallows the leading
+%   active ^^M so the \begin-line newline is not an empty first file line; our
+%   raw \verbatim@ (verbatim_sty.rs:116) keeps that empty remainder (faithful to
+%   Perl verbatim.sty.ltxml:85) so tcbverbatimwrite (unbound; tcolorbox.sty:2726)
+%   writes grade.csv with a blank line 1 -> csvsimple-legacy.sty:222 errors.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{documentation}
+\usepackage{csvsimple-legacy}
+\begin{document}
+\begin{tcbverbatimwrite}{grade.csv}
+name,givenname,matriculation,gender,grade
+Maier,Hans,12345,m,1.0
+\end{tcbverbatimwrite}
+\csvautotabular{grade.csv}
+\end{document}

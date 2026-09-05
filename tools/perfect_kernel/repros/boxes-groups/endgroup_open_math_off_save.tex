@@ -1,0 +1,13 @@
+% witness: isolation of the kernel off_save gap (the tikz-calc bailout's stray $)
+% oracle:  pdflatex 1 error (Missing $ inserted -> off_save closes math, retries \endgroup)
+% engines: rust=4 perl=4 (2026-09-04)  pdflatex=1
+% expect:  <=1 error; NO malformed ltx:Math/ltx:XMath at document root
+% status:  RED
+% mechanism: $ opens math_shift_group; \endgroup while cur_group=math_shift_group ->
+%   tex.web off_save(1064): back_input \endgroup, insert $, close math, retry.
+%   LaTeXML egroup/endgroup (Stomach.pm:339-378) error and DON'T pop -> Math leaks to root.
+%   SHARED (Perl identical, 4 err).
+\documentclass{article}
+\begin{document}
+\begingroup $\endgroup
+\end{document}

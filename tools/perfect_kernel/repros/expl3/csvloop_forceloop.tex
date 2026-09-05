@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{csvsimple-l3}
+\begin{filecontents*}[overwrite]{grade.csv}
+name,givenname
+Maier,Hans
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{namesort.xml}
+<sortconfig/>
+\end{filecontents*}
+\ExplSyntaxOn \tl_gclear_new:N \csvline \ExplSyntaxOff
+\begin{document}
+\csvreader[sort by=namesort.xml]{grade.csv}{}{X}
+\end{document}

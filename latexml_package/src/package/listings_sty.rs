@@ -2617,9 +2617,15 @@ LoadDefinitions!({
     let outer_str = outer.to_string();
     let outer_opt = if outer_str.is_empty() { None } else { Some(outer_str.as_str()) };
     let post: Vec<Token> = if end_code.is_empty() { Vec::new() } else { end_code.unlist() };
-    if !post.is_empty() {
-      lst_push_value_locally("LISTINGS_POSTAMBLE", post.clone());
-    }
+    // The END code is emitted as plain trailing tokens (below), NOT armed as
+    // the shared `LISTINGS_POSTAMBLE`: every listing display re-reads that
+    // slot as its trailer, so an end code that itself displays a listing
+    // (exsheets-listings.sty:89-112 `lstquestion` = `\lst@EndWriteFile
+    // \begin{question}…\lstinputlisting{\jobname-exN.lst}…`) re-emitted the end
+    // code from inside the nested display, opening a new question per turn
+    // until `Fatal:Stomach:Recursion` (exsheets_en, sweep 39; pdflatex clean,
+    // Perl escapes only because it never writes the round-trip file).
+    // Guard: `perfect_kernel_batch56::lstnewenvironment_end_code_with_a_listing_does_not_recurse`.
     let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
     if !lst_writefile_tee(&text) {
       // A body diverted to a file (`\lst@BeginWriteFile`, lstmisc.sty:30-70)
@@ -2636,6 +2642,11 @@ LoadDefinitions!({
     let lname = lst_get_tokens("name");
     let name_opt = if lname.is_empty() { None } else { Some(lname) };
     let mut out = lst_process_display_scoped(name_opt, &text);
+    if !post.is_empty() {
+      let closer = out.pop();
+      out.extend(post);
+      out.extend(closer);
+    }
     // tcolorbox listings default to `listing and text` (tcblistingscore
     // .code.tex:429 → :205 `\tcbuselistingtext` = `\input{\kvtcb@listingfile}`,
     // :25): the body is displayed AND executed. `\lxtcblistingmode` sets the

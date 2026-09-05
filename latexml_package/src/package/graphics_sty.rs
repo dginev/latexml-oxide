@@ -518,6 +518,16 @@ LoadDefinitions!({
     },
     alias => "\\includegraphics");
 
+  // graphics.sty:189 `\Ginclude@graphics#1` is the driver-level include that
+  // `\includegraphics` reaches after its keyval pass (graphicx.sty:87 only
+  // re-points it for `type=`). Classes call it directly — pagelayout.cls:1494
+  // `\Ginclude@graphics#6` inside `\pal@putgraphic`'s crop probe. Perl's
+  // graphics.sty.ltxml has no internal either (SHARED, pdflatex clean); route it
+  // to the constructor `\includegraphics` itself expands to. Witness:
+  // pagelayout/example-grid (1→0), example-graphic, quickstart.
+  // Guard: `perfect_kernel_batch56::ginclude_graphics_internal_routes_to_the_constructor`.
+  DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
+
   DefConstructor!("\\DeclareGraphicsExtensions{}", "");
   DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
 

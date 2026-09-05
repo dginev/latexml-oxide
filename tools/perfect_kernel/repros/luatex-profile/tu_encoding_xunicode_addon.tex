@@ -1,0 +1,11 @@
+% witness: codebox-doc-en (lualatex): `Package xunicode-addon Error: Encoding scheme "TU" unknown` x3
+% oracle: lualatex (clean); preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect: 0 errors; status: RED on b56g once \errmessage counts
+% mechanism: fonttext.ltx:57-68,93 — a Unicode-engine format inputs tuenc.def, declares
+%   the TU encoding and makes it \encodingdefault; the pdflatex-shaped dump has neither,
+%   so xunicode-addon.sty:59-113's \T@TU check fails.
+\documentclass{article}
+\usepackage{xunicode-addon}
+\begin{document}
+Caf\'e na\"ive \textdollar\ \S
+\end{document}

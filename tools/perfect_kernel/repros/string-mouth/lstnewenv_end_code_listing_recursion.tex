@@ -1,0 +1,18 @@
+% witness: exsheets/exsheets_en (pdflatex oracle) — exact exsheets-listings lstquestion shape
+%   (exsheets-listings.sty:95-108: \lst@BeginWriteFile ... \lst@EndWriteFile\lstinputlisting{same file})
+% oracle: pdflatex (0 errors); engines: pdflatex
+% expect: 0 errors, one <ltx:listing> block
+% status: RED b56h (timeout / infinite loop); exsheets_en itself -> Fatal:Stomach:Recursion (\mdframed{{{...)
+% mechanism: same LISTINGS_POSTAMBLE re-read; here the round-trip .lst file is written by the
+%   writefile aspect (implemented in Rust, absent in Perl) so \lstinputlisting reads real content.
+\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\lst@RequireAspects{writefile}
+\lstnewenvironment{myq}[1][]{\lst@BeginWriteFile{myq.lst}}{\lst@EndWriteFile\lstinputlisting{myq.lst}}
+\makeatother
+\begin{document}
+\begin{myq}
+hello listing
+\end{myq}
+\end{document}

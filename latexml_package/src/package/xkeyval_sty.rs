@@ -1313,12 +1313,42 @@ LoadDefinitions!({
   ));
   RawTeX!(r"\long\def\XKV@for@break #1\@nil,{\fi}");
 
+  // \XKV@whilist — xkvutils.tex:110-124 verbatim: the "while" list loop
+  // (`\XKV@whilist\list\item\ifcond\fi{code}`) powerdot's style loader runs
+  // over its option list (powerdot-fuberlin exampleClass/exampleStyle, 22/18
+  // errors; SHARED, Perl's native xkeyval lacks it too). Deps `\XKV@f@r`,
+  // `\XKV@for@break` are above. Guard:
+  // `perfect_kernel_batch56::xkeyval_choice_check_and_whilist_internals`.
+  RawTeX!(
+    r"\long\def\XKV@whilist#1#2#3\fi#4{%
+  #3\expandafter\XKV@wh@list#1,\@nil,\@nil\@@#2#3\fi{#4}{}\fi
+}
+\long\def\XKV@wh@list#1,#2\@@#3#4\fi#5#6{%
+  \def#3{#1}%
+  \ifx#3\@nnil
+    \def#3{#6}\expandafter\XKV@wh@l@st
+  \else
+    #4%
+      #5\expandafter\expandafter\expandafter\XKV@wh@list
+    \else
+      \def#3{#6}\expandafter\expandafter\expandafter\XKV@wh@l@st
+    \fi
+  \fi
+  #2\@@#3#4\fi{#5}{#1}%
+}
+\long\def\XKV@wh@l@st#1\@@#2#3\fi#4#5{}"
+  );
+
   // \XKV@checkchoice — the choice-key checker style authors call directly
   // (regulatory.sty, glossaries-extra, keyreader). Verbatim from
   // xkeyval.tex L249-321; all its internals (\XKV@afterfi/\XKV@toks/
   // \ifXKV@st/\ifXKV@pl/\XKV@err/\XKV@addtomacro@n) exist above.
+  // `\XKV@cc` (xkeyval.tex:248) is the star/plus/optional-reading front-end
+  // packages call directly — beamerposter.sty:55 `\XKV@cc*+[\val\nr]{…}` fires
+  // in poster mode (beamertheme-mirage posters, 12 errors each; SHARED).
   RawTeX!(
-    r"\def\XKV@checkchoice[#1]#2#3{%
+    r"\def\XKV@cc{\XKV@testopta{\@testopt\XKV@checkchoice{}}}
+\def\XKV@checkchoice[#1]#2#3{%
   \def\XKV@tempa{#1}%
   \ifXKV@st\lowercase{\fi
   \ifx\XKV@tempa\@empty

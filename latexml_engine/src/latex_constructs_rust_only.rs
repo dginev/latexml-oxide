@@ -28,6 +28,34 @@
 use crate::prelude::*;
 
 #[rustfmt::skip]
+/// The expl3 PDF/tagging API names this pool stubs as no-ops for documents
+/// that call them WITHOUT loading the real packages (`\DocumentMetadata`
+/// stays a stub here). tagpdf-base.sty:30-60 and pdfmanagement.sty (the
+/// combined l3pdfmeta/l3pdffile/l3pdfdict code) declare every one of them
+/// with `\cs_new_protected`/`\NewDocumentCommand`, whose "already defined"
+/// check is an `\errmessage` (counted since batch 56g), so the bindings for
+/// those packages call [`retract_pdf_api_stubs`] before their raw load.
+pub const PDF_API_STUBS: &[&str] = &[
+  "\\tagpdfsetup", "\\tagtool", "\\tagstructbegin", "\\tagstructend", "\\tagmcbegin",
+  "\\tagmcend", "\\tag_struct_begin:n", "\\tag_struct_end:", "\\tag_mc_begin:n",
+  "\\tag_mc_end:", "\\tag_suspend:n", "\\tag_resume:n", "\\tag_tool:n", "\\tag_get:n",
+  "\\pdffile_embed_file:nnn", "\\pdffile_embed_file:nnnN", "\\pdffile_embed_stream:nnN",
+  "\\pdfdict_new:n", "\\pdfdict_put:nnn", "\\pdfdict_gput:nnn", "\\pdfdict_remove:nn",
+  "\\pdfdict_gremove:nn", "\\pdfmeta_xmp_xmlns_new:nn", "\\pdfmeta_xmp_schema_new:nnn",
+  "\\pdfmeta_xmp_property_new:nnnnn", "\\pdfmeta_xmp_add:n",
+  "\\pdfmeta_xmp_add_declaration:n", "\\pdfmeta_xmp_add_declaration:nnnnn",
+];
+
+/// `\let <stub> \undefined` for every [`PDF_API_STUBS`] entry (what
+/// `\cs_undefine:N` does), so the real package's `\cs_new` declarations go
+/// through. Token-level: the names carry `_`/`:` that a raw-text
+/// tokenization at package catcodes would split.
+pub fn retract_pdf_api_stubs() {
+  for name in PDF_API_STUBS {
+    ::latexml_core::state::let_i(&T_CS!(name), &T_CS!("\\lx@pdfapi@undefined"), None);
+  }
+}
+
 LoadDefinitions!({
   //======================================================================
   // 1. Modern LaTeX kernel — `\If…AtLeast/LoadedTF` family
@@ -37,10 +65,10 @@ LoadDefinitions!({
   // entries that don't actually replay because we filter same-target
   // aliases in `dump_writer`. Re-establish here post-dump.
   //======================================================================
-  Let!("\\IfPackageLoadedTF",  r"\@ifpackageloaded");
-  Let!("\\IfClassLoadedTF",    r"\@ifclassloaded");
+  Let!("\\IfPackageLoadedTF", r"\@ifpackageloaded");
+  Let!("\\IfClassLoadedTF", r"\@ifclassloaded");
   Let!("\\IfPackageAtLeastTF", r"\@ifpackagelater");
-  Let!("\\IfClassAtLeastTF",   r"\@ifclasslater");
+  Let!("\\IfClassAtLeastTF", r"\@ifclasslater");
   // \IfFormatAtLeastTF is deliberately NOT redefined here. latex.ltx L18405
   // defines it as `\@ifl@t@r\fmtversion`, and both halves survive the dump
   // (`\@ifl@t@r` + `\@parse@version@`, `\fmtversion` = the real per-TL-year
@@ -51,7 +79,7 @@ LoadDefinitions!({
   // scrbase.sty L127) warned "Your are using a KOMA-Script version, that has
   // not been tested with LaTeX version" on every KOMA document. Guard:
   // `perfect_kernel_batch53::ifformatatleast_compares_real_fmtversion`.
-  Let!("\\IfFileAtLeastTF",    r"\@ifl@t@r");
+  Let!("\\IfFileAtLeastTF", r"\@ifl@t@r");
 
   // \UseRawInputEncoding — latex.ltx L18268-18324 defines this kernel CS
   // for legacy 8-bit-encoding compat (used by papers that pre-date the
@@ -84,8 +112,10 @@ LoadDefinitions!({
   // `\prop_map_inline:cn` loses its `\prg_break_point:Nn` and the trailing
   // `\prop_map_break:` runs to EOF — 39-byte XML + Fatal). Guard:
   // `perfect_kernel_batch54::documentmetadata_loads_tagpdf`.
-  DefMacro!("\\DocumentMetadata{}",
-    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}");
+  DefMacro!(
+    "\\DocumentMetadata{}",
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}"
+  );
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
   // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is
@@ -256,13 +286,13 @@ LoadDefinitions!({
   // stays undefined. Re-declare here so they're always available
   // regardless of dump completeness. Witness: 2512.06027 (and ~2 v6
   // papers) — textcomp.sty raw-load calls \@gobble at L74 and crashes.
-  DefMacro!("\\@gobble{}",          None);
-  DefMacro!("\\@gobbletwo{}{}",     None);
+  DefMacro!("\\@gobble{}", None);
+  DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
 
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
-  Let!("\\ltx@ifclassloaded",   r"\@ifclassloaded");
+  Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");
 
   // `\*` — invisible-times (U+2062, MULOP). Perl `TeX.pool.ltxml:7124`:
   //   DefMathI('\*', undef, "\x{2062}", role=>'MULOP', name=>'', meaning=>'times');
@@ -452,11 +482,11 @@ LoadDefinitions!({
   // already gets them from latex_base.rs. Either way, definitions
   // are Perl-faithful values.
   //======================================================================
-  DefMacro!("\\appendixname",   "Appendix");
+  DefMacro!("\\appendixname", "Appendix");
   DefMacro!("\\appendixesname", "Appendixes");
-  DefMacro!("\\contentsname",   "Contents");
+  DefMacro!("\\contentsname", "Contents");
   DefMacro!("\\listfigurename", "List of Figures");
-  DefMacro!("\\listtablename",  "List of Tables");
+  DefMacro!("\\listtablename", "List of Tables");
 
   // C.5.1 page registers (Perl latex_base L309-311) — same dump-path
   // coverage rationale.
@@ -628,7 +658,11 @@ LoadDefinitions!({
     let (captured, _terminator) = capture_raw_lines_until(&[end_marker]);
     lines.extend(captured);
     let n = lines.len();
-    Info!("note", "filecontents", s!("Cached filecontents for {filename} ({n} lines)"));
+    Info!(
+      "note",
+      "filecontents",
+      s!("Cached filecontents for {filename} ({n} lines)")
+    );
     vfs_store(&filename, &lines.join("\n"));
     Ok(())
   }
@@ -655,7 +689,7 @@ LoadDefinitions!({
     Some(Scope::Global),
   );
 
-    //======================================================================
+  //======================================================================
   // `\cprime` / `\Cprime` / `\cdprime` / `\Cdprime` — REMOVED from the
   // always-on set 2026-07-27 (maintainer decision). They belong to
   // `mathscinet.sty`, which defines them (`mathscinet_sty.rs`), and a
@@ -715,10 +749,19 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch54::physics2_is_not_a_version_of_physics`.
   //======================================================================
   for name in [
-    "physics2.sty", "phy-ab.sty", "phy-braket.sty", "phy-ab.braket.sty",
-    "phy-diagmat.sty", "phy-doubleprod.sty", "phy-xmat.sty", "phy-ab.legacy.sty",
-    "phy-bm-um.legacy.sty", "phy-nabla.legacy.sty", "phy-op.legacy.sty",
-    "phy-qtext.legacy.sty", "fontawesome7.sty",
+    "physics2.sty",
+    "phy-ab.sty",
+    "phy-braket.sty",
+    "phy-ab.braket.sty",
+    "phy-diagmat.sty",
+    "phy-doubleprod.sty",
+    "phy-xmat.sty",
+    "phy-ab.legacy.sty",
+    "phy-bm-um.legacy.sty",
+    "phy-nabla.legacy.sty",
+    "phy-op.legacy.sty",
+    "phy-qtext.legacy.sty",
+    "fontawesome7.sty",
   ] {
     AssignMapping!("INTERPRETABLE_SOURCES", name => 1);
   }

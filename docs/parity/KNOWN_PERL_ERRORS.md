@@ -5843,3 +5843,18 @@ to `\the<type>` otherwise. Witness: argumentation-doc. Guard:
 `perfect_kernel_batch56::counter_name_command_is_not_a_name_noun`. The gemini
 HANDOFF.md hypothesis (a `stomach::digest` mouth leaking into the parent stream) was
 refuted: `stomach::digest` opens a non-autoclose mouth (`gullet.rs:3445`, `:1221`).
+
+## 195. `\errmessage` is only a Note, so an `\errmessage` loop never trips the error cap (Rust fixes)
+
+TeX_Debugging.pool.ltxml:71-74 `DefPrimitive('\errmessage{}', sub { Note(...) })`, but
+tex.web §1283/§23571 runs `error` for `\errmessage` and §1887-1890 stops fatally at
+100 errors. expl3's `\msg_error` is `\tex_errmessage:D` (expl3-code.tex:349), so a
+package that repeats an error in a loop — csvsimple-l3.sty:227-235
+`\__csvsim_read_head:` looping on a blank `\csvline` while `\ior_get:NNTF` on the
+missing `<jobname>_sorted._csv` (the CSV-Sorter never runs without shell escape)
+raises `file-error` each turn — repeats forever (Perl: 1,496+ in 120 s to the wall
+timeout; Rust before the fix: 90,508 to TokenLimit, 39-byte XML) where pdflatex aborts
+at 100. Trigger: `\csvreader[sort by=namesort.xml]{grade.csv}{}{X}` with no sorter.
+Rust: `\errmessage` is a counted `Error!`, and the consecutive-error breaker ends the
+loop with a partial document. Guard:
+`perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.

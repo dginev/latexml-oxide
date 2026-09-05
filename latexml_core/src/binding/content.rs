@@ -538,8 +538,17 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // before_input_handle_options (line 756-757). For the
   // `handleoptions == false` path no push happens, so set the names
   // directly here.
+  // Perl Package.pm:2578 computes `$pushpop` ONCE, before the push, and reuses it
+  // for the pop (:2637). A load that itself brings in the LaTeX pool + dump (a
+  // `--preload` package, `expl3_sty.rs`'s `LoadPool!("LaTeX")`) pushes with the
+  // native `\lx@pushfilename` (no `\@pushfilename` yet) but, re-checked after the
+  // load, would pop with the dump's `\@popfilename` → `\__hook_curr_name_pop:` on
+  // an empty `\g__hook_name_stack_seq` → "Extra \PopDefaultHookLabel" (counted
+  // `\errmessage` since batch 56g). Witness: every `[luatex]` profile run.
+  // Guard: `perfect_kernel_batch56::preload_that_pulls_in_the_format_pops_with_the_native_stack`.
+  let mut pushpop = false;
   if options.handleoptions {
-    before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
+    pushpop = before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
     def_macro(
       T_CS!(s!("\\{}.{}-h@@k", name, as_type)),
       None,
@@ -1065,14 +1074,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     }
     // Perl-faithful: Package.pm:2637 —
     //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
-    // Pair with the dispatched push above. Using `\@popfilename` (dump's
-    // expl3-wrapped) when both push/pop are defined; else `\lx@popfilename`
-    // (LaTeXML safe internal). The push site re-checks `\@pushfilename` and
-    // `\@popfilename` definedness independently (state may have changed
-    // mid-load); here we re-check too rather than threading a flag.
-    let pop_use_expl = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some()
-      && lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
-    if pop_use_expl {
+    // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
+    // before the push (see the declaration at the `handleoptions` branch), so a
+    // load that defines `\@popfilename` mid-way still pops the stack it pushed.
+    if pushpop {
       digest(T_CS!("\\@popfilename"))?;
     } else {
       digest(T_CS!("\\lx@popfilename"))?;
@@ -1256,7 +1261,7 @@ fn before_input_handle_options(
   prevext: &str,
   name: &str,
   as_type: &str,
-) -> Result<()> {
+) -> Result<bool> {
   // Perl-faithful translation of Package.pm:2578-2591:
   //
   //   my $pushpop = LookupDefinition(T_CS('\@pushfilename'))
@@ -1279,7 +1284,8 @@ fn before_input_handle_options(
   // "\q_no_value cascade" for the full investigation.
   let push_defined = lookup_definition(&T_CS!("\\@pushfilename"))?.is_some();
   let pop_defined = lookup_definition(&T_CS!("\\@popfilename"))?.is_some();
-  if push_defined && pop_defined {
+  let pushpop = push_defined && pop_defined;
+  if pushpop {
     let mut pushtoks = vec![
       T_CS!("\\@pushfilename"),
       T_BEGIN!(),
@@ -1399,7 +1405,7 @@ fn before_input_handle_options(
     crate::mouth::tokenize_internal(TeXString::assembled(current_opt_val)),
     None,
   )?;
-  Ok(())
+  Ok(pushpop)
 }
 
 /// configuration for input of a TeX source (content files mostly)

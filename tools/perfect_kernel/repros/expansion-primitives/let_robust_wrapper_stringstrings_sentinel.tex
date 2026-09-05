@@ -1,0 +1,25 @@
+% witness: tikzviolinplots/tikzviolinplots (TL2025 doc), line 182 \violinsetoptions
+% oracle: pdflatex (0 `!`); engine: pdflatex/lualatex
+% expect: 0 errors, <document> with "DONE"
+% status: RED (b56h): 2x Error:unexpected:\else "Extra \else already saw \else for \if"
+%         then Fatal:Timeout:Recursion (2-token loop \protect \SaveOEthel<space>).
+%         Perl LaTeXML: SAME 2x \else error + hang to 300s timeout -> SHARED.
+% mechanism: stringstrings.sty:82 `\let\SaveOEthel\OE` captures the ROBUST \OE
+%   (LaTeXML upgrades \OE to \DeclareRobustCommand => \protect\OE<space>) and uses it
+%   (line 94 \def\EncodedBlankSpace{\SaveOEthel}) as the encoded-blank-space sentinel.
+%   \noblanks[e]{ } (a blank \@for element from a trailing comma across a line break)
+%   emits the sentinel; the \if\<X>Code#1 char-classifier chain (stringstrings ~1130)
+%   scanning the robust wrapper double-counts an \else and loops. Non-robust \OE -> clean.
+\documentclass{article}
+\usepackage{stringstrings}
+\makeatletter
+\begin{document}
+\def\axopts{ymajorgrids=true,
+}
+\@for\kdeoption:=\axopts\do{%
+  \noblanks[e]{\kdeoption}%
+  \let\opt\thestring
+  \whereisword[q]{\opt}{xmin}%
+}%
+DONE
+\end{document}

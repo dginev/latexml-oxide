@@ -338,6 +338,8 @@ pub mod paralist_sty;
 pub mod parskip_sty;
 pub mod pdfcol_sty;
 pub mod pdflscape_sty;
+pub mod pdfmanagement_sty;
+pub mod pdfmanagement_testphase_sty;
 pub mod pdfpages_sty;
 pub mod pdfsync_sty;
 pub mod pdftexcmds_sty;
@@ -405,6 +407,8 @@ pub mod siunitx_sty;
 pub mod slashbox_sty;
 pub mod slashed_sty;
 pub mod slides_cls;
+pub mod tagpdf_base_sty;
+pub mod tcblistingscore_code_tex;
 pub mod tikzlibraryexternal_code_tex;
 pub mod u_fontmap;
 // smfart_cls: removed; Perl has no binding either, falls through to OmniBus.

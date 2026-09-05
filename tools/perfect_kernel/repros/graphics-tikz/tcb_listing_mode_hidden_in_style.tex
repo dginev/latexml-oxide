@@ -1,0 +1,17 @@
+% witness: tutodoc/tutodoc-en (pdflatex oracle), tutodoc.cls:1208 `listing only`
+% inside style `tutodoc-full-listing-style`, used by `tdoccode` (cls:1230).
+% oracle: pdflatex 0 (listing-only => body typeset verbatim, NOT executed).
+% expect: 0 Error; body shown as <ltx:verbatim>, NOT executed as math/groups.
+% status: RED (regression batch56f) — listing-only body run via \input.
+% mechanism: tcolorbox_sty.rs \lxtcblistingmode NO_TEXT_MODES scan misses the
+%   `listing only` hidden behind a user tcbset .style alias.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\tcbset{mystyle/.style={listing only}}
+\NewTCBListing{mycode}{ m }{ mystyle }
+\begin{document}
+\begin{mycode}{}
+if ($name eq "") { print "hi $name"; }
+\end{mycode}
+\end{document}

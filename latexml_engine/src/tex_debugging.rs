@@ -64,10 +64,20 @@ LoadDefinitions!({
   });
 
   DefRegister!("\\errhelp", Tokens!());
+  // tex.web §1283/§23571: `\errmessage` runs `error`, so it COUNTS — 100 of
+  // them are a fatal stop (§1887-1890). Perl TeX_Debugging.pool.ltxml:71-74
+  // only `Note`s it (KPE #195), which let expl3's `\msg_error` (`\tex_errmessage:D`,
+  // expl3-code.tex:349) loop unbounded: csvsimple-l3's `sort by=` head read
+  // repeats a missing-file error forever (90,508 times to TokenLimit) where
+  // pdflatex aborts at 100. Counting it lets the consecutive-error breaker
+  // (`MAX_CONSECUTIVE_ERRORS`) end the loop with a partial document. Guard:
+  // `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
   DefPrimitive!("\\errmessage{}", sub[(args)] {
     let message = Expand!(args);
     let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    Note!(s!("{}: {}", message, help));
+    let help = help.to_string();
+    let text = if help.trim().is_empty() { message.to_string() } else { s!("{message}: {help}") };
+    Error!("errmessage", "\\errmessage", text);
   });
   DefRegister!("\\errorcontextlines", Number!(5));
 

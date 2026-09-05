@@ -1,0 +1,17 @@
+% witness: l3kernel/source3 (via source3body -> l3str-convert.dtx:1492-1503)
+% oracle:  pdflatex 0 errors
+% engines: rust=11 perl=61 (2026-09-04)
+% expect:  0 errors; <ltx:itemize> with 6 <ltx:item>, tag text has literal \n \f \ddd, no ltx:ERROR
+% status:  RED
+% preload: [rawstyles,rawclasses]latexml.sty
+\documentclass{article}
+\begin{document}
+\begin{itemize}\def\makelabel#1{\hss\llap{\ttfamily\string#1}}
+  \item[\n] Line feed ($10$)
+  \item[\f] Form feed ($12$)
+  \item[\(] Left parenthesis
+  \item[\)] Right parenthesis
+  \item[\\] Backslash
+  \item[\ddd] (octal) Byte
+\end{itemize}
+\end{document}

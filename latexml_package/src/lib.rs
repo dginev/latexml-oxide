@@ -791,6 +791,26 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::pgfmath_code_tex::load_definitions,
   ),
   (
+    "pdfmanagement",
+    "sty",
+    package::pdfmanagement_sty::load_definitions,
+  ),
+  (
+    "pdfmanagement-testphase",
+    "sty",
+    package::pdfmanagement_testphase_sty::load_definitions,
+  ),
+  (
+    "tagpdf-base",
+    "sty",
+    package::tagpdf_base_sty::load_definitions,
+  ),
+  (
+    "tcblistingscore",
+    "code.tex",
+    package::tcblistingscore_code_tex::load_definitions,
+  ),
+  (
     "tikzlibraryexternal",
     "code.tex",
     package::tikzlibraryexternal_code_tex::load_definitions,

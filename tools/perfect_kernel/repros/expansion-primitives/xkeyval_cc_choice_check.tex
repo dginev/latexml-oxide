@@ -1,0 +1,23 @@
+% witness: beamerposter/beamerposter.sty:55 (via beamertheme-mirage/mirage-poster-en)
+% oracle: pdflatex clean (0 '!' lines)
+% engines: pdflatex
+% expect: 0 errors; \XKV@cc*+ chooses branch, \define@choicekey sets \val/\nr
+% status: RED (Error:undefined:\XKV@cc)
+% mechanism: xkeyval.tex:248 \def\XKV@cc{\XKV@testopta{\@testopt\XKV@checkchoice{}}}
+%            missing from latexml_package/src/package/xkeyval_sty.rs
+\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+% direct \XKV@cc*+ call, exactly the beamerposter.sty:55 shape
+\XKV@cc*+[\val\nr]{a1}{a0,a1,a2}{%
+  \typeout{XKVCC-OK val=\val\space nr=\nr}%
+}{%
+  \typeout{XKVCC-BAD}%
+}%
+% \define@choicekey, the public front-end that shares \XKV@checkchoice
+\define@choicekey{fam}{shape}[\val\nr]{circle,square}{\typeout{shape=\val/\nr}}
+\makeatother
+\begin{document}
+\setkeys{fam}{shape=square}
+Done.
+\end{document}

@@ -424,14 +424,19 @@ LoadDefinitions!({
   DefMacro!("\\lx@nice@emptyrow{}", "", locked => true);
   DefMacro!("\\roundedrectanglecolor OptionalBalanced {}{}{}", "", locked => true);
   DefMacro!("\\lx@nice@roundedrectanglecolor OptionalBalanced {}{}{}", "", locked => true);
-  DefMacro!("\\rowcolors OptionalBalanced {}{}{}", "", locked => true);
-  DefMacro!("\\lx@nice@rowcolors OptionalBalanced {}{}{}", "", locked => true);
+  // nicematrix.sty:5772 `\rowcolors {O{}mmm}` chains into :5704
+  // `\__nicematrix_rowlistcolors {O{}mm O{}}`, whose TRAILING optional absorbs a
+  // following `[cols=2-3,restart]` (manual :2412, :2446) — without it the keys
+  // leaked as a text node before the tabular. Guard:
+  // `perfect_kernel_batch56::nicematrix_rowcolors_trailing_optional_is_absorbed`.
+  DefMacro!("\\rowcolors OptionalBalanced {}{}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\lx@nice@rowcolors OptionalBalanced {}{}{} OptionalBalanced", "", locked => true);
   DefMacro!("\\ShowCellNames", "", locked => true);
   DefMacro!("\\lx@nice@showcellnames", "", locked => true);
   DefMacro!("\\TikzEveryCell OptionalBalanced {}", "", locked => true);
   DefMacro!("\\lx@nice@tikzeverycell OptionalBalanced {}", "", locked => true);
-  DefMacro!("\\rowlistcolors OptionalBalanced {}{}", "", locked => true);
-  DefMacro!("\\lx@nice@rowlistcolors OptionalBalanced {}{}", "", locked => true);
+  DefMacro!("\\rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\lx@nice@rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
 
   RawTeX!(concat!(
     r"\def\lx@nice@fakenode#1{",

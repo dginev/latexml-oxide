@@ -14,6 +14,11 @@ LoadDefinitions!({
   // Prior Rust stub used `[]` instead of `OptionalKeyVals` and dropped
   // the `pages` key entirely, so `\includepdf[pages=1-3]{foo}` never got
   // the "pages 1-3 of " prefix.
+  // pdfpages.sty:205 `\includepdfset{keyvals}` accumulates default options
+  // for later `\includepdf`s; ours ignores everything but `pages`, so the
+  // defaults are absorbed (tutodoc-en/fr :1339; Perl pdfpages.sty.ltxml lacks
+  // it too). Guard: `perfect_kernel_batch56::includepdfset_is_absorbed`.
+  DefMacro!("\\includepdfset{}", "");
   DefConstructor!("\\includepdf OptionalKeyVals {}",
     "<ltx:resource src='#src' type='application/pdf'/>See #pages<ltx:ref href='#src'>#src</ltx:ref>",
     properties => sub[args] {

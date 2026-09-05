@@ -349,15 +349,17 @@ LoadDefinitions!({
     def_autoload_pool(amstrigger, "AmSTeX")?;
   }
 
-  // File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
-  DefMacro!(
-    "\\@pushfilename",
-    r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
-  );
-  DefMacro!(
-    "\\@popfilename",
-    r"\expandafter\@p@pfilename\@currnamestack\@nil"
-  );
+  // File bookkeeping. Perl's TeX.pool defines NONE of `\@pushfilename` /
+  // `\@popfilename`: before the LaTeX format arrives, package loads push and pop
+  // with LaTeXML's own `\lx@pushfilename` / `\lx@popfilename` (Package.pm:2578
+  // `$pushpop` is false), and latex.ltx's hook-label-aware pair (L18363/L18375)
+  // takes over with the dump. A Rust-only `\@pushfilename` alias here made
+  // `$pushpop` true from the start, so a load that itself brought in the format
+  // (a `--preload` package, expl3's `LoadPool!("LaTeX")`) pushed WITHOUT a hook
+  // label and popped WITH the dump's `\__hook_curr_name_pop:` → "Extra
+  // \PopDefaultHookLabel" twice on every `[luatex]` run. `\@p@pfilename` and the
+  // stack stay (latex.ltx overwrites them). Guard:
+  // `perfect_kernel_batch56::preload_that_pulls_in_the_format_pops_with_the_native_stack`.
   DefMacro!(
     "\\@p@pfilename {}{}{} Until:\\@nil",
     r"\gdef\@currname{#1}%

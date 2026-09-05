@@ -6734,3 +6734,29 @@ orphan frames instead of leaking them.
 **Witnesses**: typog-example (`tools/perfect_kernel/repros/expansion-primitives/parbox_dimen_conditional_double.tex`).
 **Guard**: `cluster_package_guards::dimension_conditional_in_parbox_does_not_leak_or_duplicate`.
 **Upstream**: not filed.
+
+### 195. `\endgroup` against an open math frame inserts the missing `$` (Perl leaves the frame open)
+
+**Perl behavior**: `Stomach.pm:367-369` `endgroup` sees `BOUND_MODE` bound on the
+top frame, reports "Attempt to close a group that switched to mode math" and does
+not pop ("maybe we'll recover?" — no recovery was ever written). The math frame
+stays; every later `\endgroup`/`\egroup`/box end re-errors and the `<ltx:Math>`
+leaks out of its paragraph. tikz calc's failure path produces exactly this: the
+bailout `\tikz@cc@end$` (tikzlibrarycalc.code.tex:118-129) eats the injected `$`
+and `\tikz@finish` (tikz.code.tex:2500-2508) re-inserts the orphaned one as real
+inline math (`\begingroup $\endgroup`: pdflatex 1 / Perl 4 / Rust 4 errors; the
+calc witness pdflatex 3 / Perl 24 / Rust 23).
+**Rust behavior**: `stomach.rs::endgroup` follows tex.web §1063/§1064 `off_save`:
+when the top frame is an inline or display math switch, it reports "Missing $
+inserted", pushes `$` (or `$$`) and the closer back onto the input, and returns;
+the `$` closes the math through the ordinary `\lx@dollar@default` path and the
+`\endgroup` then matches its group. `}`/`\egroup` keep TeX's §1069 shape (the
+brace is dropped, math stays open) and every non-math mode switch keeps Perl's
+behaviour.
+**Why**: kernel-quality; TeX's own recovery, one diagnostic instead of a cascade,
+and the document tree stays well-formed.
+**Witnesses**: `tools/perfect_kernel/repros/boxes-groups/endgroup_open_math_off_save.tex`,
+`tools/perfect_kernel/repros/graphics-tikz/calc_fraction_partway_bailout_mode_frame.tex`;
+kblocks-doc, ozguide, nathguide, chemobabel-en/ja carry the cascade.
+**Guard**: `perfect_kernel_batch56::endgroup_against_open_math_inserts_the_missing_dollar`.
+**Upstream**: not filed.

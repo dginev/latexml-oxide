@@ -1,0 +1,17 @@
+% witness: nicematrix.tex:2412 \rowcolors[gray]{2}{0.8}{}[cols=2-3,restart] ; :2446 \rowcolors{1}{blue!10}{}[respect-blocks]
+% oracle: pdflatex (clean); engines: pdflatex
+% expect: NO stray "[cols=2-3,restart]" / "[respect-blocks]" text node before the tabular
+% status: RED-structural (trailing optional of \rowcolors leaks as literal text)
+% mechanism: nicematrix.sty:5772 \__nicematrix_rowcolors {O{}mmm} chains to :5704 \__nicematrix_rowlistcolors {O{}mm O{}} absorbing trailing [..]
+\documentclass{article}
+\usepackage{nicematrix}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{NiceTabular}{lr}
+\CodeBefore
+  \rowcolors[gray]{2}{0.8}{}[cols=2-3,restart]
+\Body
+a & 12 \\
+b & 13 \\
+\end{NiceTabular}
+\end{document}

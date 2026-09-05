@@ -1,0 +1,20 @@
+% witness: powerdot-fuberlin/exampleStyle (also demo-powerdotFU), lualatex+pdflatex oracle
+% oracle: pdflatex CLEAN (powerdot is a real class); Perl FAILS identically (SHARED)
+% engines: pdflatex/lualatex clean; latexml_oxide.b56h RED; Perl RED
+% expect: 0 errors; \pd@mode defined (=0) from preset mode=present
+% status: RED (Error:undefined:\pd@mode)
+% mechanism: xkeyval \ProcessOptionsX (native \ProcessOptionsX@int, xkeyval_sty.rs)
+%   bypasses raw \XKV@setkeys, the only site running \XKV@usepresetkeys
+%   (xkeyval.tex:446-448 preseth/presett). powerdot.cls:52-61,89-91 defines
+%   mode/orient/paper/display ONLY via \presetkeys + \ProcessOptionsX[pd]<class>,
+%   so \pd@mode etc. are never set. powerdot.cls:101 \ifnum\pd@mode>0 then errors.
+\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\@namedef{opt@.}{}% real class has \opt@<name>.cls; supply empty here
+\define@choicekey*[pd]{class}{mode}[\pd@tempa\pd@mode]{present,print,handout}{}
+\presetkeys[pd]{class}{mode=present}{}
+\ProcessOptionsX[pd]<class>\relax
+\ifnum\pd@mode>0 \typeout{GT0}\else\typeout{LE0}\fi
+\makeatother
+\begin{document}x\end{document}

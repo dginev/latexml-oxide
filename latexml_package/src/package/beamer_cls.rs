@@ -169,6 +169,11 @@ LoadDefinitions!({
   RequirePackage!("ifpdf");
   RequirePackage!("keyval");
   RequirePackage!("graphicx");
+  // beamer.cls:343-350 `\RequirePackage[papersize=…,hmargin=1cm,…]{geometry}`:
+  // beamerposter.sty:176 calls `\geometry{…}` for poster sizes, which was
+  // undefined (beamertheme-mirage posters ×2; SHARED — Perl beamer.cls.ltxml:30-32
+  // omits it too). Guard: `perfect_kernel_batch56::beamer_requires_geometry`.
+  RequirePackage!("geometry");
   // Real beamer requires pgfcore (beamer.cls → beamerbasemodes → pgfcore);
   // themes then use shadings/pictures directly (epyt's
   // \pgfdeclareverticalshading, gotham). Load our pgf binding so that raw

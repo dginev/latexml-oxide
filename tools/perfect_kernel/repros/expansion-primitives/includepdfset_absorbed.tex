@@ -1,0 +1,10 @@
+% witness: tutodoc-en.tex:1339 (outer preamble). oracle: pdflatex 0.
+% classification: SHARED/PERL-ORIGIN — pdfpages.sty.ltxml lacks \includepdfset.
+% real def: pdfpages.sty:205 \newcommand*\includepdfset[1]{...global opts...}.
+% expect: 0 Error.  status: RED (undefined).
+\documentclass{article}
+\usepackage{pdfpages}
+\includepdfset{pages=-,fitpaper=true}
+\begin{document}
+Hello.
+\end{document}

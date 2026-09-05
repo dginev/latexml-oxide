@@ -1,0 +1,13 @@
+% SECONDARY (Rust-only, NOT in the scratchx/tipfr counts): fraction-partway ($(a)!f!(b)$)
+% whose parse FAILS under a frozen active '!'. pdflatex 3 err. latexml_oxide.b56g ~23 err:
+% the 2 SHARED tikz errors PLUS ~20 "Attempt to close a group that switched to mode math"
+% + "Attempt to end mode restricted_horizontal" — a RUST-ONLY cascade from the ($...$) calc
+% failure-recovery leaving the math-shift group open (mode-frame family, base_utilities.rs
+% \tikz@cc@end $ bailout). scratchx/tipfr use DISTANCE partway and DON'T hit this.
+\documentclass{article}
+\usepackage[french]{babel}
+\usepackage{tikz}\usetikzlibrary{calc}
+\newcommand{\drawpartway}{\coordinate (M) at ($(0,0) ! 0.5 ! (2,2)$);\draw (0,0)--(M);}
+\begin{document}
+\begin{tikzpicture}\drawpartway\end{tikzpicture}
+\end{document}

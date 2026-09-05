@@ -13392,6 +13392,474 @@ After.
     assert!(xml.contains("After."), "{xml}");
   }
 
+  /// `\errmessage` counts as an error (tex.web §1283), so an expl3
+  /// `\msg_error` loop is cut by the consecutive-error breaker instead of
+  /// running to the token limit (csvsimple-l3 `sort by=` with no sorter).
+  #[test]
+  fn errmessage_counts_toward_the_error_breaker() {
+    let tex = r"\documentclass{article}
+\usepackage{csvsimple-l3}
+\begin{filecontents*}[overwrite]{grade.csv}
+name,givenname
+Maier,Hans
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{namesort.xml}
+<sortconfig/>
+\end{filecontents*}
+\ExplSyntaxOn \tl_gclear_new:N \csvline \ExplSyntaxOff
+\begin{document}
+Before.
+\csvreader[sort by=namesort.xml]{grade.csv}{}{X}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert!(
+      stderr.contains("Fatal:TooManyErrors") || stderr.contains("TooManyErrors"),
+      "{stderr}"
+    );
+    assert!(!stderr.contains("Fatal:Timeout"), "{stderr}");
+    assert!(
+      stderr.matches("not existent").count() < 700,
+      "{}",
+      stderr.matches("not existent").count()
+    );
+  }
+
+  /// A preload that itself pulls in the LaTeX pool + dump pushes with the
+  /// native `\lx@pushfilename`; the pop must use the SAME decision (Perl's
+  /// `$pushpop`, Package.pm:2578/2637), not the dump's `\@popfilename` —
+  /// otherwise `\__hook_curr_name_pop:` underflows ("Extra \PopDefaultHookLabel").
+  #[test]
+  fn preload_that_pulls_in_the_format_pops_with_the_native_stack() {
+    let tex = r"\documentclass{article}
+\begin{document}
+Plain text.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("PopDefaultHookLabel"), "{stderr}");
+    assert!(xml.contains("Plain text."), "{xml}");
+  }
+
+  /// `\tcbuselibrary{listings}` raw-loads tcblistingscore.code.tex, whose
+  /// `\NewDocumentCommand \newtcblisting` must not find our override already
+  /// defined (ltcmd `command-already-defined` = counted `\errmessage`). The
+  /// family is installed by the code.tex binding after the raw load.
+  #[test]
+  fn tcbuselibrary_listings_installs_the_family_once() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{mybox}{listing only}
+\NewTCBListing{exbox}{ O{} }{listing only,#1}
+\begin{document}
+\begin{mybox}
+int alpha = 1;
+\end{mybox}
+\begin{exbox}
+int beta = 2;
+\end{exbox}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("already defined"), "{stderr}");
+    // listings bodies are base64 `data=` payloads.
+    assert!(xml.contains("aW50IGFscGhhID0gMTs="), "{xml}");
+    assert!(xml.contains("aW50IGJldGEgPSAyOw=="), "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// graphics.sty:189 `\Ginclude@graphics` (driver-level include, called
+  /// directly by pagelayout.cls:1494) routes to the `\includegraphics`
+  /// constructor.
+  #[test]
+  fn ginclude_graphics_internal_routes_to_the_constructor() {
+    let tex = r"\documentclass{article}
+\usepackage{graphicx}
+\makeatletter
+\begin{document}
+\Ginclude@graphics{example-image}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<graphics ").count(), 1, "{xml}");
+    assert!(xml.contains(r#"graphic="example-image""#), "{xml}");
+  }
+
+  /// A pgfmath string result carrying a control sequence stays executable
+  /// (pgfmathparser.code.tex:392-396 keeps `"…"` operands as real tokens);
+  /// braids.sty:276 sets its strand counter through `\pgfmathresult`.
+  #[test]
+  fn pgfmath_string_result_keeps_control_sequences() {
+    let tex = r#"\documentclass{article}
+\usepackage{tikz}
+\newcounter{mytest}
+\setcounter{mytest}{1}
+\begin{document}
+\pgfmathparse{\value{mytest} < 4 ? "\noexpand\setcounter{mytest}{4}" : ""}%
+\pgfmathresult
+\typeout{EXECVAL:\the\value{mytest}}
+\pgfmathparse{2*3}\typeout{NUMVAL:\pgfmathresult}
+\end{document}
+"#;
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("EXECVAL:4"), "{stderr}");
+    assert!(stderr.contains("NUMVAL:6"), "{stderr}");
+  }
+
+  /// xkeyval.tex:248 `\XKV@cc` (beamerposter.sty:55 calls it directly) and
+  /// xkvutils.tex:110-124 `\XKV@whilist` (powerdot) are verbatim ports.
+  #[test]
+  fn xkeyval_choice_check_and_whilist_internals() {
+    let tex = r"\documentclass{article}
+\usepackage{xkeyval}
+\makeatletter
+\XKV@cc*+[\val\nr]{a1}{a0,a1,a2}{\typeout{XKVCC-OK val=\val\space nr=\nr}}{\typeout{XKVCC-BAD}}
+\define@choicekey{fam}{shape}[\val\nr]{circle,square}{\typeout{shape=\val/\nr}}
+\def\lst{alpha,beta,gamma}
+\XKV@whilist\lst\itm\ifx\itm\@nnil\fi{\typeout{WH:\itm}}
+\makeatother
+\begin{document}
+\setkeys{fam}{shape=square}
+Done.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("XKVCC-OK val=a1 nr=1"), "{stderr}");
+    assert!(stderr.contains("shape=square/1"), "{stderr}");
+    assert!(xml.contains("Done."), "{xml}");
+  }
+
+  /// fonttext.ltx:57-68,93: a Unicode-engine format inputs tuenc.def and makes
+  /// TU the default encoding; xunicode-addon.sty:59-113 checks `\T@TU` exists.
+  #[test]
+  fn tu_encoding_is_declared_under_luatex() {
+    let tex = r#"\documentclass{article}
+\usepackage{xunicode-addon}
+\makeatletter
+\typeout{TUENC:\UnicodeEncodingName:\encodingdefault:\ifcsname T@TU\endcsname yes\else no\fi}
+\makeatother
+\begin{document}
+Caf\'e na\"ive \textdollar\ \S
+\end{document}
+"#;
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("TUENC:TU:TU:yes"), "{stderr}");
+    assert!(xml.contains("Café naïve $ §"), "{xml}");
+  }
+
+  /// tex.web §1063/§1064 `off_save`: `\endgroup` against an open math frame
+  /// inserts the missing `$`, closes the math and re-reads the `\endgroup`
+  /// (Perl leaves the frame open and every later closer re-errors).
+  #[test]
+  fn endgroup_against_open_math_inserts_the_missing_dollar() {
+    let tex = r"\documentclass{article}
+\begin{document}
+Before \begingroup $x+1\endgroup after.
+
+Next paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(stderr.contains("Missing $ inserted"), "{stderr}");
+    assert!(!stderr.contains("Attempt to close"), "{stderr}");
+    assert_eq!(xml.matches("<Math ").count(), 1, "{xml}");
+    assert!(xml.contains("after."), "{xml}");
+    assert!(xml.contains("Next paragraph."), "{xml}");
+    // The math closed inside the paragraph: no Math element after the last </para>.
+    let last_para_end = xml.rfind("</para>").unwrap_or(0);
+    assert!(!xml[last_para_end..].contains("<Math"), "{xml}");
+  }
+
+  /// `\newtcblisting{env}[1]{…,#1}`: `[1]` is one MANDATORY argument
+  /// (tcblistingscore.code.tex:318-323), so `\begin{env}{listing only}` reaches
+  /// the mode decision and the displayed preamble code is not executed.
+  #[test]
+  fn newtcblisting_mandatory_argument_stays_mandatory() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,skins}
+\newtcblisting{DemoCode}[1]{%
+	enhanced,width=\linewidth,%
+	listing options={breaklines=true,commentstyle={\itshape}},%
+	#1
+}
+\newtcblisting{OptCode}[1][listing only]{#1}
+\begin{document}
+\begin{DemoCode}{listing only}
+\usepackage{calculatoritems}
+\end{DemoCode}
+\begin{OptCode}
+\usepackage{calculatoritems}
+\end{OptCode}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml
+        .matches("XHVzZXBhY2thZ2V7Y2FsY3VsYXRvcml0ZW1zfQ==")
+        .count(),
+      2,
+      "{xml}"
+    );
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// nicematrix.sty:5772→5704: `\rowcolors`/`\rowlistcolors` absorb a trailing
+  /// `[keys]` optional (manual :2412 `[cols=2-3,restart]`, :2446 `[respect-blocks]`).
+  #[test]
+  fn nicematrix_rowcolors_trailing_optional_is_absorbed() {
+    let tex = r"\documentclass{article}
+\usepackage{nicematrix}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{NiceTabular}{lr}
+\CodeBefore
+  \rowcolors[gray]{2}{0.8}{}[cols=2-3,restart]
+  \rowlistcolors{1}{blue!10}[respect-blocks]
+\Body
+a & 12 \\
+b & 13 \\
+\end{NiceTabular}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("cols=2-3"), "{xml}");
+    assert!(!xml.contains("respect-blocks"), "{xml}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains(">13<") || xml.contains("13</"), "{xml}");
+  }
+
+  /// A pgfmath string result keeps its letters at catcode 11
+  /// (pgfmathparser.code.tex:35-40), so `\pgfmathresult` = `arc[…]` dispatches
+  /// in `\tikz@handle` (tikz.code.tex:2134-2163) instead of "Giving up".
+  #[test]
+  fn pgfmath_string_result_keeps_letter_catcodes() {
+    let tex = r#"\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+  \node (a) at (0,0) {A};
+  \draw (a) \pgfextra{\pgfmathparse{"arc[start angle=90,end angle=180,radius=5pt]"}}%
+    \pgfmathresult;
+\end{tikzpicture}
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Giving up"), "{stderr}");
+    assert!(xml.matches("<svg:path").count() >= 1, "{xml}");
+  }
+
+  /// tcblistingscore.code.tex:195-224: the listing mode is tcolorbox's resolved
+  /// state; `listing only` inside a user `.style` (tutodoc.cls:1208) must not
+  /// execute the body.
+  #[test]
+  fn tcb_listing_mode_hidden_in_a_style_is_honoured() {
+    let tex = r#"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\tcbset{mystyle/.style={listing only}}
+\NewTCBListing{mycode}{ m }{ mystyle }
+\NewTCBListing{runcode}{ m }{ listing and text }
+\begin{document}
+\begin{mycode}{}
+if ($name eq "") { print "hi $name"; }
+\end{mycode}
+\begin{runcode}{}
+\gdef\RAN{yes}
+\end{runcode}
+\typeout{RAN:\ifdefined\RAN\RAN\else no\fi}
+After.
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<XMath"), "{xml}");
+    assert!(
+      xml.contains("aWYgKCRuYW1lIGVxICIiKSB7IHByaW50ICJoaSAkbmFtZSI7IH0="),
+      "{xml}"
+    );
+    assert!(stderr.contains("RAN:yes"), "{stderr}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// codebox.sty:268 sets `listing only` from the ENCLOSING environment before
+  /// its `\DeclareTCBListing` box; the C body must stay a listing.
+  #[test]
+  fn tcb_listing_mode_set_by_the_enclosing_environment_is_honoured() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\DeclareTCBListing[]{codeviewaux}{m}{title={#1}}
+\newenvironment{codeview}{\tcbset{listing only}\codeviewaux{X}}{\endcodeviewaux}
+\begin{document}
+\begin{codeview}{demo}
+#include <stdio.h>
+int main(){return 0;}
+\end{codeview}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("misdefined"), "{stderr}");
+    assert!(xml.contains("I2luY2x1ZGUgPHN0ZGlvLmg+"), "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// tcolorbox.sty:2726-2735 `tcbverbatimwrite` writes the body without the
+  /// `\begin`-line remainder as an empty first line (csvsimple reads line 1).
+  #[test]
+  fn tcbverbatimwrite_has_no_leading_blank_line() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{documentation}
+\usepackage{csvsimple-legacy}
+\begin{document}
+\begin{tcbverbatimwrite}{grade.csv}
+name,givenname,matriculation,gender,grade
+Maier,Hans,12345,m,1.0
+\end{tcbverbatimwrite}
+\csvautotabular{grade.csv}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("empty line"), "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("Maier"), "{xml}");
+  }
+
+  /// pdfpages.sty:205 `\includepdfset{…}` (tutodoc :1339) is absorbed.
+  #[test]
+  fn includepdfset_is_absorbed() {
+    let tex = r"\documentclass{article}
+\usepackage{pdfpages}
+\includepdfset{pages=-,fitpaper=true}
+\begin{document}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// tabularray.sty:2006/2008: `\hline[style]`/`\cline[style]` inside tblr
+  /// absorb their optional (manual :547 `\hline[dashed]\hline`).
+  #[test]
+  fn tblr_hline_style_optional_is_absorbed() {
+    let tex = r"\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{lcr}
+One & Two & Three \\
+\hline[dashed]\hline
+Four & Five & Six \\
+\cline[dotted]{1-2}
+Seven & Eight & Nine \\
+\end{tblr}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("dashed"), "{xml}");
+    assert!(!xml.contains("dotted"), "{xml}");
+    assert!(xml.contains("Nine"), "{xml}");
+    assert!(
+      xml.contains(r#"border="tt""#) || xml.contains(r#"border="bb""#),
+      "{xml}"
+    );
+  }
+
+  /// beamer.cls:343 requires geometry; beamerposter.sty:176 calls `\geometry`.
+  #[test]
+  fn beamer_requires_geometry() {
+    let tex = r"\documentclass{beamer}
+\geometry{paperwidth=84.1cm,paperheight=118.9cm,hmargin=1cm}
+\begin{document}
+\begin{frame}\frametitle{Poster}Body text.\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Body text."), "{xml}");
+    assert!(xml.contains("Poster"), "{xml}");
+  }
+
+  /// A `\lstnewenvironment` end code that displays a listing itself
+  /// (exsheets-listings.sty:89-112) runs once — it is not the postamble every
+  /// nested display re-reads.
+  #[test]
+  fn lstnewenvironment_end_code_with_a_listing_does_not_recurse() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\begin{filecontents*}[overwrite]{pre.lst}
+preexisting line one
+preexisting line two
+\end{filecontents*}
+\lstnewenvironment{myq}[1][]{}{\lstinputlisting{pre.lst}}
+\begin{document}
+\begin{myq}
+hello listing
+\end{myq}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal"), "{stderr}");
+    assert_eq!(xml.matches("<listing ").count(), 2, "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
+  /// tagpdf-base.sty declares the tagging API with `\cs_new_protected`; the
+  /// no-op stubs for tagpdf-less documents are retracted before it loads.
+  #[test]
+  fn tagpdf_base_redeclares_the_stubbed_api_cleanly() {
+    let tex = r"\RequirePackage{pdfmanagement}
+\documentclass{article}
+\begin{document}
+\tagstructbegin{tag=P}\tagmcbegin{tag=P}Tagged.\tagmcend\tagstructend
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("already defined"), "{stderr}");
+    assert!(xml.contains("Tagged."), "{xml}");
+  }
+
+  /// expl3-code.tex:34944-34966 stubs `\lua_*` on a non-Lua format; the luatex
+  /// profile rebinds them to the bridge.
+  #[test]
+  fn lua_functions_are_live_under_the_luatex_profile() {
+    let tex = r"\documentclass{article}
+\ExplSyntaxOn
+\lua_load_module:n { luaotfload-main }
+\lua_now:n { tex.print('LUANOW') }
+\ExplSyntaxOff
+\begin{document}
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("LuaTeX engine not in use"), "{stderr}");
+    assert!(xml.contains("Body."), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

@@ -1,0 +1,28 @@
+% witness: codebox/codebox-doc-en (lualatex oracle; tmp file lx-codeviewaux-1, lines 1-2 `#include`)
+% oracle:  pdflatex 0 errors (listing only => body displayed, NOT executed)
+% engines: rust=2 perl=2-but-different (2026-09-05). Rust=2 "# should never reach Stomach";
+%          Perl=2 (.listing I/O + malformed doc, unrelated) => RUST-ONLY for the # cluster.
+% expect:  0 errors; the C body appears once inside an <ltx:verbatim>, never digested as LaTeX
+% status:  RED (b56h 2026-09-05)
+% mechanism: codebox.sty:268 `\tcbset{listing only}` (via \__codebox_comment_tcbset:) is issued
+%   by the OUTER `codeview` env BEFORE it calls `\codeviewaux{#2}` (a \DeclareTCBListing). Our
+%   \lxtcblistingmode (tcolorbox_sty.rs:55) reads the DEF-TIME options of codeviewaux only
+%   (use counter=..,title=..) — no mode key — so LISTINGS_EXECUTE_BODY stays true (default
+%   `listing and text`, tcblistingscore.code.tex:429). \lx@lstenv@body (listings_sty.rs:2650)
+%   then runs the raw C body via lst_run_body_via_input -> \input{lx-codeviewaux-1.tmp}, whose
+%   `#include` `#` is catcode PARAM under normal catcodes -> reaches Stomach (stomach.rs:1942).
+%   The runtime tcolorbox state IS correct: after \tcbset{listing only},
+%   \tcb@listing@process = \tcbuselistinglisting (does NOT invoke \tcb@use@listing@other),
+%   so tcolorbox does NOT \input the file. Fix must consult that runtime state.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\DeclareTCBListing[]{codeviewaux}{m}{title={#1}}
+\newenvironment{codeview}{\tcbset{listing only}\codeviewaux{X}}{\endcodeviewaux}
+\begin{document}
+\begin{codeview}{demo}
+#include <stdio.h>
+#include <stdlib.h>
+int main(){return 0;}
+\end{codeview}
+\end{document}

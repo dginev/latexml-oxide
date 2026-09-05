@@ -1,0 +1,11 @@
+% witness: every [luatex]-profile doc (2 x "Extra \PopDefaultHookLabel" once \errmessage counts)
+% oracle: lualatex (clean)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect: 0 errors; status: RED on b56g (Note before 56g)
+% mechanism: a load that pulls in the LaTeX pool pushes via \lx@pushfilename but re-checked
+%   after the load, popped via the dump's \@popfilename -> hook-label stack underflow.
+%   Perl threads one $pushpop decision (Package.pm:2578/2637).
+\documentclass{article}
+\begin{document}
+Plain text.
+\end{document}

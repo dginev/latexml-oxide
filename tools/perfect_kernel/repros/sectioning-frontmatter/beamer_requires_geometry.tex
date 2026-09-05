@@ -1,0 +1,16 @@
+% witness: bebeamertheme-mirage/mirage-poster-en (lualatex oracle), 4 errors, first \geometry
+% oracle: lualatex/pdflatex CLEAN (beamer.cls:343 \RequirePackage{geometry});
+%   Perl FAILS identically (beamer.cls.ltxml omits geometry too) => SHARED
+% engines: (lua)latex clean; latexml_oxide.b56h RED; Perl RED (1 error)
+% expect: 0 errors; \geometry defined (no-op layout parse) and call processed
+% status: RED (Error:undefined:\geometry)
+% mechanism: beamer.cls:343-350 \RequirePackage[...]{geometry} defines \geometry;
+%   our beamer_cls.rs (RequirePackage list) omits geometry, as does Perl
+%   beamer.cls.ltxml:30-32. beamerposter.sty:176 \geometry{...} (raw, no
+%   beamerposter binding) then finds \geometry undefined. geometry_sty.rs:112
+%   \def\geometry already exists; it is simply never loaded.
+\documentclass{beamer}
+\geometry{paperwidth=84.1cm,paperheight=118.9cm,hmargin=1cm}
+\begin{document}
+\begin{frame}\frametitle{t}x\end{frame}
+\end{document}

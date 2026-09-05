@@ -403,7 +403,23 @@ LoadDefinitions!({
     // `perfect_kernel_batch54::tblr_row_wider_than_the_colspec_is_tolerated`.
     // The margin continues the LAST column's alignment, as tabularray does.
     let last = cols.trim_end().chars().last().filter(|c| c.is_ascii_alphabetic()).unwrap_or('c');
-    Ok(Tokenize!(TeXString::assembled(format!("\\tabular{{{cols}*{{16}}{{{last}}}}}"))))
+    // tabularray.sty:2006/2008 `\NewTblrTableCommand \hline [1] []` /
+    // `\cline [2] []`: inside a tblr both take an optional `[<style>]`
+    // (`\hline[dashed]\hline`, manual :547). The kernel `\hline` the stub
+    // reuses has no optional, so `[dashed]` became cell text and the next
+    // `\hline`'s `\noalign` fired mid-cell (7-error cascade per demo;
+    // RUST-ONLY — Perl raw-loads tabularray). Scoped to the environment's
+    // group; the style itself is unrendered. Guard:
+    // `perfect_kernel_batch56::tblr_hline_style_optional_is_absorbed`.
+    Ok(TokenizeInternal!(TeXString::assembled(format!(
+      "\\let\\lx@tblr@saved@hline\\hline\
+       \\def\\hline{{\\@ifnextchar[\\lx@tblr@hline@opt\\lx@tblr@saved@hline}}\
+       \\def\\lx@tblr@hline@opt[#1]{{\\lx@tblr@saved@hline}}\
+       \\let\\lx@tblr@saved@cline\\cline\
+       \\def\\cline{{\\@ifnextchar[\\lx@tblr@cline@opt\\lx@tblr@saved@cline}}\
+       \\def\\lx@tblr@cline@opt[#1]#2{{\\lx@tblr@saved@cline{{#2}}}}\
+       \\tabular{{{cols}*{{16}}{{{last}}}}}"
+    ))))
   });
   DefMacro!("\\tblr", "\\lx@tblr@env{tblr}");
   DefMacro!("\\endtblr", "\\endtabular");

@@ -315,18 +315,6 @@ LoadDefinitions!({
       vec![T_OTHER!("0")]
     });
     DefPrimitive!("\\pdfextension Token", sub[(_name)] {});
-    // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
-    // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
-    // appends `\char code` to its argument (NBSP base when empty). The
-    // format here stays 8-bit (no `\UnicodeEncodingName`), so the command is
-    // declared as the encoding DEFAULT rather than for `TU`.
-    RawTeX!(
-      r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
-\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
-  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
-\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
-\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
-    );
     DefRegister!("\\prehyphenchar"     => Number::new(0));
     DefRegister!("\\posthyphenchar"    => Number::new(0));
     DefRegister!("\\preexhyphenchar"   => Number::new(0));
@@ -497,6 +485,58 @@ LoadDefinitions!({
     // Patterns are engine hyphenation state with no XML meaning → no-op
     // body. Guard: cluster_package_guards::luatex_babel_api.
     DefMacro!("\\bbl@luapatterns{}{}", "");
+    // expl3-code.tex:34944-34966 replaces the `\lua_*` functions with
+    // "LuaTeX engine not in use" errors when the FORMAT is built on a non-Lua
+    // engine — our dump — so under this profile they stayed stubs (polyglossia's
+    // gloss-latin path: `\lua_load_module:n` → a counted `\errmessage`). Rebind
+    // to the bridge: `\lua_now`/`\lua_escape` mirror `\directlua`/
+    // `\luaescapestring` (expl3-code.tex:34917-34935), the shipout hooks and
+    // module loading are absorbed (no document meaning; the bridge cannot
+    // `require` TeX-side Lua modules). Guard:
+    // `perfect_kernel_batch56::lua_functions_are_live_under_the_luatex_profile`.
+    RawTeX!(
+      r"\ExplSyntaxOn
+\cs_gset:Npn \lua_now:n #1 { \directlua{#1} }
+\cs_gset:Npn \lua_now:e #1 { \directlua{#1} }
+\cs_gset:Npn \lua_escape:n #1 { \luaescapestring{#1} }
+\cs_gset:Npn \lua_escape:e #1 { \luaescapestring{#1} }
+\cs_gset_protected:Npn \lua_shipout_e:n #1 { }
+\cs_gset_protected:Npn \lua_shipout:n #1 { }
+\cs_gset_protected:Npn \lua_load_module:n #1 { }
+\ExplSyntaxOff"
+    );
+    // fonttext.ltx:57-68,93: a Unicode-engine format inputs tuenc.def (which
+    // declares the `TU` encoding, `\UnicodeEncodingName`), substitutes Latin
+    // Modern for it and makes TU `\encodingdefault`. The pdflatex-shaped
+    // format has none of that, so xunicode-addon.sty:59-113
+    // (`\cs_if_exist:NTF \UnicodeEncodingName`, then the `\T@TU` check) raised
+    // `Encoding scheme "TU" unknown` (codebox-doc-en ×3, an `\errmessage`
+    // counted since batch 56g). This runs here, not at the `latex.rs` seam:
+    // the LaTeX pool loads while latexml.sty pulls in expl3, BEFORE this
+    // option body, so the seam would see neither `\newprotectedluacmd`
+    // (tuenc.def:77, defined above) nor the constructs' `\encodingdefault`.
+    // Idempotent on a second `\usepackage[luatex]{latexml}`.
+    // Guard: `perfect_kernel_batch56::tu_encoding_is_declared_under_luatex`.
+    RawTeX!(
+      r"\ifcsname T@TU\endcsname\else
+  \input{tuenc.def}\fontencoding{TU}\def\@fontenc@load@list{\@elt{TU}}%
+  \DeclareFontSubstitution{TU}{lmr}{m}{n}\LoadFontDefinitionFile{TU}{lmr}%
+  \renewcommand\encodingdefault{TU}%
+\fi"
+    );
+    // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
+    // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
+    // appends `\char code` to its argument (NBSP base when empty). Re-asserted
+    // AFTER the tuenc.def load above, whose own version declares for the `TU`
+    // encoding only — our font model has no TU map (`\cf@encoding` stays OT1,
+    // as in Perl), so the command is declared as the encoding DEFAULT.
+    RawTeX!(
+      r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
+\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
+  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
+\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
+\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
+    );
   });
 
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate

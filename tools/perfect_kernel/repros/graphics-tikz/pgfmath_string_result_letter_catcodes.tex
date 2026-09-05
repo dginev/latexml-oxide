@@ -1,0 +1,30 @@
+% witness:   zx-calculus/zx-calculus (TL2025 doc manual), 42 err on b56h
+% oracle:    pdflatex 0 err (PDF built clean, arc drawn)
+% engines:   pdflatex
+% expect:    0 Error; the arc path op is drawn -> >=1 <svg:path>
+% status:    RED on b56h (1 Error "Giving up on this path"; <svg:path> count = 0)
+% class:     SHARED  (Perl LaTeXML emits the identical "Giving up on this path";
+%            pgfmath.code.tex.ltxml:85-90 sub pgfmathresult uses ExplodeText ->
+%            catcode-12 letters, same bug). pdflatex clean -> surpass-approved.
+% mechanism: real pgfmath's string operand keeps SOURCE catcodes
+%            (pgfmathparser.code.tex:392  \pgfmath@parse@operand@quote#1"{\def\pgfmathresult{#1}};
+%            \pgfmath@catcodes only re-catcodes = , | & -> letters stay catcode-11).
+%            So \pgfmathresult="arc[...]" has a catcode-11 'a'. tikz's central path
+%            dispatcher \tikz@handle (tikz.code.tex:2134-2163) \ifx-compares
+%            \pgf@let@token against the catcode-11 literal {a} -> \tikz@a@char ->
+%            \pgfutil@ifnextchar r{\tikz@arcA} (tikz.code.tex:2188). Our pgfmath is a
+%            Rust re-impl: pgfmath_result_tokens_str (pgfmath_code_tex.rs:73-88) uses
+%            Explode! for strings without '\' -> letters catcode-12(OTHER). A catcode-12
+%            'a' fails the \ifx, no path op dispatches, \tikz@expand exhausts its
+%            100-step budget (tikz.code.tex:2127/2487) -> \tikzerror "Giving up on this
+%            path". CONTROL zx_pgfmath_lineto_string_control.tex ("-- (3,3)") is GREEN
+%            because '-' is catcode-12(OTHER) in both Explode! AND tikz's switch list.
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+  \node (a) at (0,0) {A};
+  \draw (a) \pgfextra{\pgfmathparse{"arc[start angle=90,end angle=180,radius=5pt]"}}%
+    \pgfmathresult;
+\end{tikzpicture}
+\end{document}

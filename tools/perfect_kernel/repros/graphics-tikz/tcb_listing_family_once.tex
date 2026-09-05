@@ -1,0 +1,19 @@
+% witness: codebox-doc-en, postit, keytheorems-doc (7 x "Command already defined" per \tcbuselibrary{listings})
+% oracle: pdflatex (clean); preload: [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors, both listings present; status: RED on b56g once \errmessage counts
+% mechanism: binding pre-defined the tcblistingscore family before the raw library
+%   ran \NewDocumentCommand on the same names (ltcmd command-already-defined).
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcblisting{mybox}{listing only}
+\NewTCBListing{exbox}{ O{} }{listing only,#1}
+\begin{document}
+\begin{mybox}
+int alpha = 1;
+\end{mybox}
+\begin{exbox}
+int beta = 2;
+\end{exbox}
+After.
+\end{document}

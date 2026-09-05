@@ -1,0 +1,27 @@
+% witness: calculatoritems-doc, mathador-doc, randintlist-doc, tikz-decofonts-doc, tikzbrickfigurines-doc, OutilsGeomTikz-doc, commalists-tools ×2, tikz2d-fr-doc (sweep 39 regressions)
+% oracle: pdflatex (clean); preload: [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors, both listings display-only; status: RED on b56h
+% mechanism: \newtcblisting{E}[1]{…} was translated with an empty [default] → optional first
+%   argument → \begin{E}{listing only} read #1 empty and executed the preamble code.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable,skins,hooks,listingsutf8}
+\newtcblisting{DemoCode}[1]{%
+	enhanced,width=\linewidth,%
+	bicolor,size=title,%
+	listing options={%
+		breaklines=true,%
+		commentstyle={\itshape\color{gray}},
+		keywords={\newfontfamily,\includegraphics},%
+	},%
+	#1
+}
+\begin{document}
+\begin{DemoCode}{listing only}
+\usepackage{calculatoritems}
+\end{DemoCode}
+\begin{tcblisting}{colframe=lightgray,listing only}
+\usepackage{other}
+\end{tcblisting}
+After.
+\end{document}

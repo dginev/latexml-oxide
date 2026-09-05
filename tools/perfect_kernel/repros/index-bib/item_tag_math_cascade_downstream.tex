@@ -1,0 +1,19 @@
+% witness: l3kernel/source3 (source3body -> l3str-convert.dtx:1492-1503 item block;
+%          downstream \end{macro}=\endgroup @1597-1600, \end{implementation}=\endgroup @3563,
+%          l3seq function-tabular \noalign @1182/1191/1200)
+% oracle:  pdflatex 0 errors (source3body:165 \providecommand\hexnum; \( never opens math)
+% engines: rust cascade (see below) perl SHARED (2026-09-05)
+% expect:  0 errors once \item[\(] tag no longer opens math (batch 56g typerefnum fix)
+% status:  RED (cascade); CONTROL s3_cascade_control.tex is GREEN
+% preload: [rawstyles,rawclasses]latexml.sty
+% note:    the \( in the raw typerefnum tag opens \lx@begin@inline@math that never closes;
+%          EVERY later group-close / \end / \noalign then errors -> Roots 1,2,3 are ALL this.
+\documentclass{article}
+\begin{document}
+\begin{itemize}\def\makelabel#1{\hss\llap{\ttfamily\string#1}}
+  \item[\(] Left parenthesis
+  \item[\)] Right parenthesis
+\end{itemize}
+\begingroup Hello \endgroup
+\begin{tabular}{l}\noalign{\vskip2pt}a\\b\end{tabular}
+\end{document}
