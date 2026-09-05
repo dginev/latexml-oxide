@@ -16271,7 +16271,59 @@ Some text with an endnote.\endnote{This is an endnote.}
     assert!(xml.contains("(abc)(def)(ghi)"), "{xml}");
     assert!(xml.contains("(1)(2)(3)(4)"), "{xml}");
   }
+
+  /// xy curve option and curved arrow handling (witness: amshelp manual)
+  /// \usepackage[curve]{xy} or \usepackage[all,cmtip]{xy} loads xycurve;
+  /// marks xycurveloaded, neutralizes \curve@check, and defines \curve inside
+  /// xymatrix arrows with minimal real semantics (renders as the arrow without error).
+  #[test]
+  fn xy_curve_option_and_curved_arrows() {
+    let tex = r"\documentclass{article}
+\usepackage[all,cmtip]{xy}
+\begin{document}
+\begin{displaymath}
+  \xymatrix{
+    {A} \ar@/^/[drr]^{p} \ar@{.>}[dr]|{\exists!} \ar@/_/[ddr]_{q}\\
+    & {B} \ar[r] \ar[d]
+    & {C} \ar[d]\\
+    & {D} \ar[r]
+    & {E}
+  }
+\end{displaymath}
+\begin{displaymath}
+  \xymatrix{
+    {X} \ar \curve{+(0,2)} [r] & {Y}
+  }
+\end{displaymath}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Info:xy:error"), "stderr had xy error:\n{stderr}");
+    assert!(xml.contains("<svg:svg"), "{xml}");
+    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">A</XMTok>"), "{xml}");
+    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">Y</XMTok>"), "{xml}");
+
+    // Control: standard xymatrix without curve option unchanged
+    let control_tex = r"\documentclass{article}
+\usepackage{xy}
+\xyoption{matrix}
+\xyoption{arrow}
+\begin{document}
+\begin{displaymath}
+  \xymatrix{
+    {A} \ar[r]^f & {B}
+  }
+\end{displaymath}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("<svg:svg"), "{c_xml}");
+    assert!(c_xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok>"), "{c_xml}");
+  }
 }
+
 
 
 

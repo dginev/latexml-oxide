@@ -200,3 +200,34 @@ Root-cause and design:
   2. Guard: `perfect_kernel_gemini::expkv_ekvcsvloop_delimiter_adjacent_spaces`.
   3. Validated on `test_min_ekv.tex` (0 errors, clean conversion) and eliminated `Error:undefined:\ekv@stop` and `Fatal:Timeout:TokenLimit` on `expkv-bundle.tex`.
 
+### Round 3 — Task H5 (xy: curve option, amshelp manual) — Complete
+
+Root-cause and design:
+- Witness: `amshelp` manual (`/usr/local/texlive/2025/texmf-dist/doc/latex/amslatex-primer/amshelp.tex`).
+- In `amshelp.tex:62`, `\usepackage[all,cmtip]{xy}` is loaded. Throughout the manual, curved arrows like `\ar@/^/`, `\ar@/_/`, and `\ar@(dr,dl)` were used, producing 57 instances of:
+  `Info:xy:error Forms @/.../, @(...), and @`{...}, only available when curve extension loaded`
+- Analysis of xy-pic internals:
+  - In `xyarrow.tex:517-529`:
+    `\xydef@\ar@curve@#1{\curve@check ...}`
+    `\xydef@\curve@check{\xyerror@{Forms @/.../, @(...), and @`{...}, only available when curve extension loaded}{}}`
+    `\xywithoption{curve}{\let\curve@check=\relax}`
+  - In `xy.tex:1947-1970`:
+    When a feature is loaded, xy-pic sets `\csname xy<feature>loaded\endcsname` and executes `\runxywith@` to fire any queued `\xywithoption{<feature>}{...}` handlers.
+  - In `latexml_package/src/package/xy_sty.rs:113-156`:
+    When features (such as `curve`, `matrix`, `arrow`, `frame`, or `all`) were loaded, latexml-oxide called `input_definitions` but never marked `\csname xy<feature>loaded\endcsname` and never ran `\runxywith@`.
+    As a result, `\xywithoption{curve}{\let\curve@check=\relax}` in `xyarrow.tex` never executed, leaving `\curve@check` active and raising 57 errors across `amshelp`.
+  - Furthermore, `DeclareOption!` in `xy_sty.rs` lacked explicit declarations for `curve`, `arrow`, `matrix`, `frame`, `all`, etc.
+- Fix:
+  - In `latexml_package/src/package/xy_sty.rs`:
+    1. Added helper `mark_xy_feature_loaded` in `\xyoption` that sets `\csname xy\xyoption@@ loaded\endcsname` and invokes `\runxywith@`.
+    2. When `curve` is loaded (individually or via `all`), explicitly runs `\let\curve@check=\relax` and defines `\curve` with minimal real semantics:
+       `\def\curve{\@ifnextchar\bgroup{\lx@xy@curve@arg}{}} \def\lx@xy@curve@arg#1{}`
+       Inside `\xymatrix` arrows, `\curve{...}` consumes the curve geometry and renders as the straight arrow without errors (curve geometry is not preserved in this minimal path).
+    3. Added explicit `DeclareOption!` declarations for `all`, `curve`, `arrow`, `matrix`, `frame`, `graph`, `tips`, `line`, `rotate`, `color`.
+- Validation and Deliverables:
+  1. Witness `amshelp.tex`: All 57 curve errors eliminated; 0 xy errors remaining.
+  2. Control `\xymatrix` without `curve` option: Clean conversion, SVG arrow output unchanged.
+  3. Minimal repro: `tools/perfect_kernel/repros/graphics-tikz/xy_curve_option_amshelp.tex`.
+  4. Guard: `perfect_kernel_gemini::xy_curve_option_and_curved_arrows`.
+
+
