@@ -16171,6 +16171,46 @@ x = 1
     assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:dispListing]").count(), 1, "{xml}");
   }
+
+  /// endnotes internals and raw-load overlay for cmsendnotes / biblatex-chicago
+  /// (witness: biblatex-chicago/cms-noteref-demo, cms-notes-intro, cms-notes-sample; s44).
+  /// Exposes \@enotes, \if@enotesopen, \@openenotes, \@doanenote, \@endanenote,
+  /// \enotesize, \enoteformat, \enoteheading, \theendnotes with .ent replay,
+  /// and biblatex \MakeCapital + xstring dependency.
+  #[test]
+  fn endnotes_internals_and_cmsendnotes_overlay() {
+    let tex = r"\documentclass{article}
+\usepackage{biblatex-chicago}
+\usepackage[split=section]{cmsendnotes}
+\begin{document}
+\section{First Section}
+Some text with an endnote.\endnote{This is the first endnote.}
+Another sentence.\endnote{Second endnote.}
+\theendnotesbypart
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("This is the first endnote."), "{xml}");
+    assert!(xml.contains("Second endnote."), "{xml}");
+  }
+
+  /// standard endnotes.sty standalone with \theendnotes TOC output
+  /// (tests/structure/endnote.xml).
+  #[test]
+  fn endnotes_standard_standalone() {
+    let tex = r"\documentclass{article}
+\usepackage{endnotes}
+\begin{document}
+Some text with an endnote.\endnote{This is an endnote.}
+\theendnotes
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<TOC"), "{xml}");
+    assert!(xml.contains("This is an endnote."), "{xml}");
+  }
 }
 
 
