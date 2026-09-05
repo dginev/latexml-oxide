@@ -15874,4 +15874,55 @@ $25\unit{m}$
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[X a Y][X b Y][X c Y]"), "{xml}");
   }
+
+  /// mdframed with block-level content (e.g. \printbibliography / \thebibliography)
+  /// mid-subsection followed by sectioning commands:
+  /// mdframed breaks paragraph before opening, chooses logical-block outside floats,
+  /// permits auto-closing so backmatter can place at section level, and auto-closes
+  /// gracefully without error.
+  /// Witness: biblatex-juradiss/biblatex-juradiss.
+  #[test]
+  fn mdframed_block_bibliography_juradiss() {
+    let tex = r"\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\section{A}
+Intro text before the frame.
+\begin{mdframed}
+\begin{thebibliography}{9}\bibitem{x}An entry.\end{thebibliography}
+\end{mdframed}
+\subsection{B}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<bibliography"), "{xml}");
+    assert!(xml.contains("<subsection"), "{xml}");
+    assert!(xml.contains("An entry."), "{xml}");
+  }
+
+  /// mdframed retains support for in-float frames (arXiv 1907.05772) and nested frames
+  /// (arXiv 1712.00062).
+  #[test]
+  fn mdframed_in_float_and_nested() {
+    let tex = r"\documentclass{article}
+\usepackage{mdframed}
+\begin{document}
+\begin{figure}
+\begin{mdframed}
+Framed float.
+\end{mdframed}
+\end{figure}
+\begin{mdframed}
+\begin{mdframed}
+Nested frame.
+\end{mdframed}
+\end{mdframed}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Framed float."), "{xml}");
+    assert!(xml.contains("Nested frame."), "{xml}");
+  }
 }
