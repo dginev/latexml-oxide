@@ -14953,4 +14953,34 @@ Second line references \lineref{l1}, offset \lineref[+1]{l1}, \linerefp[+2]{l1},
       "{xml}"
     );
   }
+
+  /// caption hook surface for class and extension package patches
+  /// (witness shtthesis/shtthesis-user-guide via raw bicaption.sty):
+  /// \caption@beginhook, \caption@endhook, \caption@LT@setup, \caption@dblarg,
+  /// \captionsetup[type][subtype], and faithful \caption@ifundefined.
+  #[test]
+  fn caption_hook_surface_for_class_patches() {
+    let tex = r"\documentclass{article}
+\usepackage{caption}
+\makeatletter
+\g@addto@macro\caption@beginhook{\def\hook@ran{1}}
+\g@addto@macro\caption@endhook{\def\hook@ended{1}}
+\g@addto@macro\caption@LT@setup{\relax}
+\caption@ifundefined\undefined@cmd{\def\undef@branch{1}}{\def\undef@branch{0}}
+\caption@ifundefined\caption@beginhook{\def\def@branch{0}}{\def\def@branch{1}}
+\caption@dblarg{\def\test@dblarg[#1]#2{#1:#2}}
+\test@dblarg{My Title}
+\captionsetup[figure][bi-second]{name=Figure}
+\captionsetup*[table][bi-second]{name=Table}
+\makeatother
+\begin{document}
+\begin{figure}
+  \caption{Test caption}
+\end{figure}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Test caption"), "{xml}");
+  }
 }

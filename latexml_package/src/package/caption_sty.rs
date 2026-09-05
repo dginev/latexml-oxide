@@ -75,16 +75,43 @@ LoadDefinitions!({
   // quoted values parse correctly; the prior Rust version accepted
   // `{}` and manually split on `,`, which mis-parsed values containing
   // commas inside braces (e.g. `font={normal,bold}`).
-  DefPrimitive!("\\captionsetup[] RequiredKeyVals:caption", sub[(_ignore, kv)] {
-    for (key, value) in kv.get_pairs() {
-      let state_key = s!("CAPTION_{key}");
-      assign_value(
-        &state_key,
-        Stored::String(pin(value.to_string())),
-        None,
-      );
+  // Perl L62-68: \captionsetup stores key-value pairs as CAPTION_{key}
+  // in state. Supports optional * and single or double optional argument:
+  // \captionsetup*[<type>][<subtype>]{<keyvals>}
+  // Used by bicaption, subcaption, etc. (e.g. \captionsetup[figure][bi-second]{name=Figure})
+  DefPrimitive!(
+    "\\captionsetup OptionalMatch:* [] [] RequiredKeyVals:caption",
+    sub[(_star, type_opt, subtype_opt, kv)] {
+      let type_prefix = type_opt
+        .as_ref()
+        .map(|t| t.to_string())
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("{s}_"))
+        .unwrap_or_default();
+      let sub_prefix = subtype_opt
+        .as_ref()
+        .map(|st| st.to_string())
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("{s}_"))
+        .unwrap_or_default();
+      for (key, value) in kv.get_pairs() {
+        if !type_prefix.is_empty() || !sub_prefix.is_empty() {
+          let state_key = s!("CAPTION_{type_prefix}{sub_prefix}{key}");
+          assign_value(
+            &state_key,
+            Stored::String(pin(value.to_string())),
+            None,
+          );
+        }
+        let state_key = s!("CAPTION_{key}");
+        assign_value(
+          &state_key,
+          Stored::String(pin(value.to_string())),
+          None,
+        );
+      }
     }
-  });
+  );
   def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
   // caption3.sty:1753-1756: the public float-type API lazy-loads newfloat and
   // delegates (`\DeclareCaptionType[opts]{type}[singular][listname]`);
@@ -156,13 +183,16 @@ LoadDefinitions!({
 \DeclareCaptionJustification{centerlast}{\centering}%
 \DeclareCaptionJustification{raggedleft}{\raggedleft}%
 \DeclareCaptionJustification{raggedright}{\raggedright}");
-  def_macro_noop("\\DeclareCaptionOption{}[]{}")?;
-  // caption3.sty L640+: `\DeclareCaptionOptionNoValue{name}{body}` —
-  // sibling of `\DeclareCaptionOption` for options without values.
-  // 5 papers in R-stages emit `Error:undefined`. Same no-op as the
-  // valued sibling: caption-option declarations are typesetting-only
-  // setup, not body content.
-  def_macro_noop("\\DeclareCaptionOptionNoValue{}{}")?;
+  // caption3.sty:221-236: \DeclareCaptionOption delegates to \define@key{caption}
+  // bicaption.sty:71-76 uses \DeclareCaptionOption{bi-swap}[1]{\caption@set@bool\bicaption@ifswap{#1}}
+  RawTeX!(
+    r"\def\DeclareCaptionOption{\@ifstar{\@gobble\caption@decl@opt}{\caption@decl@opt}}%
+\def\caption@decl@opt#1{\define@key{caption}{#1}}%
+\def\DeclareCaptionOptionNoValue{\@ifstar{\@gobble\caption@decl@opt@noval}{\caption@decl@opt@noval}}%
+\def\caption@decl@opt@noval#1#2{\define@key{caption}{#1}{#2}}%
+\providecommand*\bicaption@ifswap{\@secondoftwo}%
+\providecommand*\bicaption@ifslc{\@firstoftwo}"
+  );
   def_macro_noop("\\DeclareCaptionPackage{}")?;
   // caption3.sty internals that user code or extension packages
   // (e.g. caption-style extensions, fltrace, ccaption) sometimes
@@ -175,8 +205,27 @@ LoadDefinitions!({
   //   * `\caption@ExecuteOptions[opt-list]` — internal option-
   //     execution helper. No-op.
   def_macro_noop("\\SetCaptionDefault{}{}")?;
-  DefMacro!("\\caption@ifundefined{}{}{}", "#3");  // always take else branch
-  def_macro_noop("\\caption@ExecuteOptions[]{}")?;
+  // caption3.sty:67-75: \caption@ifundefined\cs{then:undefined}{else:defined}
+  // bicaption.sty:379 calls \caption@ifundefined\caption@LT@setup{\providecommand*\caption@LT@setup{}}
+  RawTeX!(
+    r"\newcommand*\caption@ifundefined[1]{%
+  \ifdefined#1%
+    \ifx#1\relax \expandafter\expandafter\expandafter\@firstoftwo
+    \else \expandafter\expandafter\expandafter\@secondoftwo \fi
+  \else \expandafter\@firstoftwo \fi}"
+  );
+  // caption3.sty:130-139: boolean option setter
+  // bicaption.sty:76 calls \caption@set@bool\bicaption@ifswap{#1}
+  RawTeX!(
+    r"\def\caption@set@bool#1#2{%
+  \caption@ifinlist{#2}{1,true,yes,on}%
+    {\let#1\@firstoftwo}%
+    {\let#1\@secondoftwo}}
+\def\caption@ifinlist#1#2#3#4{%
+  \in@{,#1,}{,#2,}\ifin@#3\else#4\fi}
+\def\caption@ExecuteOptions#1#2{\caption@setkeys{#1}{#2}}
+\def\caption@Error#1{\PackageError{caption}{#1}{}}"
+  );
   // caption.sty L184-185 call these as part of package-init bootstrap of
   // the caption3 backend (`\caption@SetupOptions{caption}{\caption@setkeys...}`
   // / `\caption@ProcessOptions*{caption}`). Our binding intercepts
@@ -240,8 +289,27 @@ LoadDefinitions!({
     }
   });
 
-  def_macro_noop("\\AtBeginCaption{}")?;
-  def_macro_noop("\\AtEndCaption{}")?;
+  // caption3.sty:1048-1051: caption hook definitions.
+  // bicaption.sty:128 appends to \caption@beginhook with \g@addto@macro.
+  RawTeX!(r"\def\caption@beginhook{}");
+  RawTeX!(r"\def\caption@endhook{}");
+  RawTeX!(r"\def\AtBeginCaption#1{\g@addto@macro\caption@beginhook{#1}}");
+  RawTeX!(r"\def\AtEndCaption#1{\g@addto@macro\caption@endhook{#1}}");
+
+  // caption.sty:1208: \caption@LT@setup for longtable integration.
+  // bicaption.sty:386 patches \caption@LT@setup with \g@addto@macro.
+  RawTeX!(r"\def\caption@LT@setup{}");
+
+  // caption.sty:600: \caption@dblarg duplicates single argument [arg]{arg}.
+  // bicaption.sty:261,265,361,365 uses \caption@dblarg.
+  RawTeX!(r"\def\caption@dblarg{\@dblarg}");
+
+  // Common internal hooks from caption.sty / caption3.sty
+  RawTeX!(r"\def\caption@beginex@hook{}");
+  RawTeX!(r"\def\caption@xfloat@hook{}");
+  RawTeX!(r"\def\caption@xdblfloat@hook{}");
+  RawTeX!(r"\def\caption@subtype@hook{}");
+  RawTeX!(r"\def\caption@calcmargin@hook{}");
   def_macro_noop("\\ContinuedFloat")?;
   // caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
   // sub-caption float continuation. Gobble safely (visual-only).
