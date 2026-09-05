@@ -15453,6 +15453,144 @@ Z $a$ W
     assert!(!xml.contains("</p>\n<Math"), "{xml}");
   }
 
+  /// latex.ltx keeps one FIFO `\@begindocumenthook`: a `#`-bearing raw
+  /// `\AtBeginDocument` chunk registered AFTER a `#`-free one runs after it
+  /// (the italian.ldf/verifica.cls shape), and one registered BEFORE runs
+  /// before (the hep-paper shape, guarded separately). Repro
+  /// `macro-state/begindocument_hook_fifo.tex`.
+  #[test]
+  fn begin_document_hooks_run_in_registration_order() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\def\lxorder{}
+\AtBeginDocument{\g@addto@macro\lxorder{A}}
+\AtBeginDocument{\newcommand\lxhashed[1]{#1}\g@addto@macro\lxorder{B}}
+\AtBeginDocument{\g@addto@macro\lxorder{C}}
+\makeatother
+\begin{document}
+Order: \lxorder; \lxhashed{ok}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Order: ABC; ok."), "{xml}");
+  }
+
+  /// Sweep-44 singles: fontspec's `\latinencoding` (textalpha-doc), CJK.sty's
+  /// `\CJKspace`/`\CJKencfamily` (cjk-ko-doc, bxcjkjatype beamer), beamer
+  /// `\subject` (shipunov), pdfmanagement `\pdfmanagement_add:nee` under
+  /// `\DocumentMetadata` (zugferd), MnSymbol `\rcurvearrowse` (biblatex-apa6),
+  /// biblatex `\printorigdate` (cms-notes-sample).
+  #[test]
+  fn sweep44_single_name_gaps() {
+    let luatex = r"\documentclass{article}
+\usepackage{fontspec}
+\usepackage{MnSymbol}
+\begin{document}
+Enc: \latinencoding; $a \rcurvearrowse b$.
+\end{document}
+";
+    let (stderr, xml) = convert_with(luatex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Enc: TU;") && xml.contains("\u{21b7}"),
+      "{xml}"
+    );
+    let cjk = r"\documentclass{article}
+\usepackage{CJK}
+\begin{document}
+\CJKspace\CJKencfamily[UTF8]{mj}{}\CJKnospace Text.
+\end{document}
+";
+    let (stderr, xml) = convert(cjk, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Text."), "{xml}");
+    let beamer = r"\documentclass{beamer}
+\subject{S}
+\begin{document}
+\begin{frame}x\end{frame}
+\end{document}
+";
+    let (stderr, _) = convert(beamer, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let meta = r"\DocumentMetadata{}
+\documentclass{article}
+\ExplSyntaxOn
+\pdfmanagement_add:nee {Catalog/AF}{}{x}
+\pdfmanagement_add:nnx {Catalog}{AF}{\pdf_object_ref:n{zugferd/rechnung}}
+\ExplSyntaxOff
+\begin{document}
+Meta.
+\end{document}
+";
+    let (stderr, xml) = convert(meta, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Meta."), "{xml}");
+  }
+
+  /// Package state: newtxtext keeps its xpatch dependency so ltcmd's legacy
+  /// `g` type exists for `\NewDocumentCommand\entry{m g}` (prtec.cls:316);
+  /// psfrag allocates its `\newwrite\pfg@temp` (psfrag.sty:151) so psfragx's
+  /// read/write streams do not collide; verbatim's terminator reaches the
+  /// current `\end` macro (knowledge's scope areas). Repros
+  /// `macro-state/{newtxtext_drops_xpatch_xparse_g_prtec,psfrag_missing_newwrite_pfx_already_exists,knowledge_scope_verbatim_no_pop}.tex`.
+  #[test]
+  fn package_state_prtec_psfragx_knowledge() {
+    let prtec = r"\documentclass{article}
+\usepackage{newtxtext}
+\NewDocumentCommand{\entry}{m g}{[#1/\IfNoValueTF{#2}{NO}{#2}]}
+\begin{document}
+\entry{A} \entry{B}{C}
+\end{document}
+";
+    let (stderr, xml) = convert(prtec, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[A/NO]") && xml.contains("[B/C]"), "{xml}");
+    let psfrag = r"\documentclass{article}
+\usepackage{psfrag}
+\usepackage{psfragx}
+\begin{document}
+\copypfxfromto{article.cls}{out.pfx}
+Done.
+\end{document}
+";
+    let (stderr, xml) = convert(psfrag, true);
+    assert!(!stderr.contains("already exists"), "{stderr}");
+    assert!(xml.contains("Done."), "{xml}");
+    let knowledge = r"\documentclass{article}
+\usepackage[scope,silent]{knowledge}
+\begin{document}
+Before.
+\begin{verbatim}
+x = 1
+\end{verbatim}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(knowledge, true);
+    assert!(!stderr.contains("Not allowed to close"), "{stderr}");
+    assert!(xml.contains("<verbatim") && xml.contains("After."), "{xml}");
+    // Control: the kernel `{verbatim}` hands its terminator to the CURRENT
+    // `\end` (latex.ltx:15438 `\@xverbatim`), so a hooked `\end` sees it
+    // once, after the verbatim, and the rest of the `\end` line still reads.
+    let hooked = r"\documentclass{article}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{verbatim}
+x = 1
+\end{verbatim} tail
+\begin{center}c\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(hooked, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("[E:verbatim]").count(), 1, "{xml}");
+    assert!(xml.contains("[E:center]") && xml.contains("tail"), "{xml}");
+    let vpos = xml.find("</verbatim>").unwrap();
+    assert!(xml[vpos..].contains("[E:verbatim]"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

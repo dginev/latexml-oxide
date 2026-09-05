@@ -1,0 +1,12 @@
+% witness: shipunov/lecture-slides-ex + beamerswitch/beamerswitch-example (residue44, pdflatex)
+% oracle: pdflatex CLEAN; Perl SHARED (beamer.cls.ltxml omits \subject)
+% engines: preload [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors
+% status: RED b56v (Error:undefined:\subject)
+% mechanism: beamerbasetitle.sty:213 \providecommand\subject[1]{\hypersetup{pdfsubject={#1}}}
+%   (pdf metadata only); beamer_cls.rs never defines \subject.
+\documentclass{beamer}
+\subject{My Subject}
+\begin{document}
+\begin{frame}Hello world.\end{frame}
+\end{document}

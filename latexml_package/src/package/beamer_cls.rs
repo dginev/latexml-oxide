@@ -327,6 +327,9 @@ LoadDefinitions!({
   // handout=beamer, a Perl-origin bug). A part with no mode name (`<2->`) or
   // naming `beamer`/`presentation`/`all` applies.
   // Guard: `perfect_kernel_batch56::beamer_only_discards_other_mode_specs`.
+  // beamerbasetitle.sty:213 `\subject{text}` = `\hypersetup{pdfsubject=…}`
+  // (PDF metadata; shipunov lecture-slides-ex, beamerswitch-example).
+  def_macro_noop("\\subject{}")?;
   DefMacro!("\\only OptionalAngled {} OptionalAngled", sub[args] {
     let mut it = args.into_iter();
     let spec: Option<Tokens> = it.next().unwrap().into();

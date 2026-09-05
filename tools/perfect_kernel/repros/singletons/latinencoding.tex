@@ -1,0 +1,12 @@
+% witness: greek-fontenc/textalpha-doc (residue44, lualatex, 1 err)
+% oracle: lualatex CLEAN; Perl SHARED (fontspec.sty.ltxml omits \latinencoding, 1 err)
+% engines: preload [rawstyles,rawclasses,luatex]latexml.sty
+% expect: 0 errors; \latinencoding expands to encoding name (empty/TU)
+% status: RED b56v (Error:undefined:\latinencoding)
+% mechanism: fontspec-luatex.sty:129 \tl_clear_new:N \latinencoding (+ :445 set);
+%   our hand fontspec_sty.rs reimpl omits it (also \cyrillicencoding,\UTFencname).
+\documentclass{article}
+\usepackage{fontspec}
+\begin{document}
+Encoding is: \latinencoding.
+\end{document}

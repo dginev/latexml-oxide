@@ -1,0 +1,18 @@
+% witness: zugferd/DEMO-rechnung-zugferd ×2 (residue44, lualatex, 2 err)
+% oracle: lualatex CLEAN
+% engines: preload [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors
+% status: RED b56v (Error:undefined:\pdfmanagement_add:nnx,:nee)
+% mechanism: pdfmanagement.ltx:320 \cs_new_protected:Npn \pdfmanagement_add:nnn,
+%   :336 \cs_generate_variant:Nn \pdfmanagement_add:nnn {nne,nee,eee,nnx,nxx,xxx};
+%   latexml defines NEITHER base nor variants (our \DocumentMetadata stub loads
+%   tagpdf/latex-lab but not pdfmanagement). zugferd.sty:279,283 call :nee/:nnx.
+%   NB full doc also needs \__pdf_backend_object_ref:n stub (pdfmgmt_full.tex).
+\documentclass{article}
+\ExplSyntaxOn
+\pdfmanagement_add:nnx {Catalog} {AF} {abc}
+\pdfmanagement_add:nee {Catalog/Names/EmbeddedFiles} {x} {y}
+\ExplSyntaxOff
+\begin{document}
+Hello world.
+\end{document}

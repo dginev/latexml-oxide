@@ -1,0 +1,21 @@
+% witness: psfragx/psfragx_example (psfragx.sty:62-63,70-111; psfrag.sty:151)
+% oracle: pdflatex CLEAN (0 errors)
+% engines: pdflatex clean; latexml(perl) FAILS (same "already exists"); oxide FAILS
+% expect: 0 errors, \copypfxlines runs the copy loop
+% status: RED (b56v: 1 error — "psfragx: output file already exists!")
+% mechanism: psfrag.sty:151 does \newwrite\pfg@temp. Our psfrag_sty.rs binding
+%   (from Perl psfrag.sty.ltxml) drops it, so \count17 (write counter) is one
+%   below real TeX. psfragx.sty:62-63 then allocs \newread\pfx@in=3 AND
+%   \newwrite\pfx@out=3 (COLLISION; pdflatex gives in=3,out=4). In \copypfxlines
+%   (psfragx.sty:70-111) after \openin\pfx@in{src} (input_file:3 open) and
+%   \openout\pfx@out=out.pfx, the guard \ifeof\pfx@out == \ifeof(read 3) reads the
+%   open input mouth -> NOT-EOF -> \else branch \errmessage{output file already
+%   exists!} (psfragx.sty:107). In TeX \ifeof N always means READ stream N; when
+%   the read/write numbers collide our input_file:N keying picks up the open read.
+\documentclass{article}
+\usepackage[sub,ovp]{psfragx}
+\makeatletter
+\begin{document}
+\copypfxfromto{article.cls}{repro_out.pfx}
+Done.
+\end{document}

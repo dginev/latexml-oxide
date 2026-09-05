@@ -1,0 +1,32 @@
+% witness: knowledge/knowledge (knowledge.sty:3754 registers verbatim as a scope
+%   area under the `scope` option; 1671-1685 \ScopeHackEnvironments hooks
+%   \begin/\end; 887-889 msg no~popping~here)
+% oracle: pdflatex CLEAN (0 errors)
+% engines: pdflatex clean; latexml(perl) clean of THIS error (currfile noise only);
+%   latexml-oxide FAILS
+% expect: 0 errors, verbatim renders, scope stack balanced at \end{document}
+% status: RED (b56v: 1 error — "Package scope Error: Not allowed to close
+%   'document' here (at 'verbatim').")
+% mechanism: knowledge's hooked \begin pushes area "verbatim" (\begin{verbatim}
+%   is routed through the \begin MACRO because the fused cs is only reached
+%   from it), but the kernel's fused \begin{verbatim} constructor
+%   (latex_constructs/mod.rs after_digest_verbatim) read the body AND swallowed
+%   the terminator, so the hooked \end never ran -> no pop -> stack =
+%   [verbatim::document] at \end{document}. Real LaTeX re-executes the
+%   terminator (latex.ltx:15438 \@xverbatim#1\end{verbatim}{#1\end{verbatim}}).
+%   Perl swallows it too (latex_constructs.pool.ltxml:1734) but never defines
+%   \verbatim/\endverbatim, so \KnowledgeConfigureEnvironment? (:3754, gated
+%   on both existing) skips verbatim there; our dumped latex.ltx defines them.
+%   verbatim.sty is NOT loaded by the witness (its \verbatim@ already re-emits
+%   the terminator through Invocation(\end), Perl verbatim.sty.ltxml:104).
+%   RUST-ONLY. Fix: hand \end{verbatim} back
+%   to the current \end; fused \end{verbatim} = no-op. DIVERGENCES #199.
+\documentclass{article}
+\usepackage[scope,silent]{knowledge}
+\begin{document}
+Before.
+\begin{verbatim}
+hello world
+\end{verbatim}
+After.
+\end{document}

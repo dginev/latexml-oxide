@@ -83,4 +83,11 @@ LoadDefinitions!({
   // Perl psfrag.sty.ltxml L149: DefEnvironment('{psfrags}', '#body').
   // Pure grouping, no content transform. Previously unported.
   DefEnvironment!("{psfrags}", "#body");
+  // psfrag.sty:151 `\newwrite\pfg@temp`: the write-stream allocation the
+  // binding skipped shifted every later `\newwrite` down by one, so psfragx's
+  // `\newread\pfx@in` and `\newwrite\pfx@out` (psfragx.sty:62-63) shared the
+  // number 3 and its `\ifeof\pfx@out` guard read the open input stream
+  // ("psfragx: output file already exists!", psfragx_example; SHARED with
+  // Perl's binding, pdflatex clean).
+  RawTeX!(r"\ifdefined\pfg@temp\else\newwrite\pfg@temp\fi");
 });

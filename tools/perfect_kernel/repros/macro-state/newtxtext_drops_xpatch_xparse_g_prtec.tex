@@ -1,0 +1,17 @@
+% witness: prtec/PRTEC24-template (prtec.cls:107,316)
+% oracle: pdflatex CLEAN (full doc: newtxtext->xpatch->xparse re-enables 'g')
+% engines: pdflatex clean; latexml(perl) FAILS (\entry undefined); latexml-oxide FAILS
+% expect: 0 errors, \entry defined and used
+% status: RED (b56v: 2 errors — xparse-arg-type 'g' + \entry undefined)
+% mechanism: newtxtext.sty:20 \RequirePackage{xpatch,xcolor}; xpatch->xparse
+%   defines \__cmd_normalize_type_g:w (xparse.sty:98) re-enabling ltcmd's
+%   deprecated 'g'/'G' types. Our newtxtext_sty.rs binding is a stub ("Nothing
+%   to do") that drops the xpatch require, so xparse never loads, so \entry's
+%   'g' arg-spec hits ltcmd.dtx:1118 xparse-arg-type error and \entry stays undef.
+\documentclass{article}
+\usepackage{newtxtext}
+\NewDocumentCommand{\entry}{m g}{[#1|\IfNoValueTF{#2}{NO}{#2}]}
+\begin{document}
+\entry{A}\par
+\entry{B}{C}
+\end{document}

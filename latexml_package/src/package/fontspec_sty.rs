@@ -184,6 +184,12 @@ LoadDefinitions!({
   def_macro_noop("\\fontspec_gset_family:Nnn DefToken {}{}")?;
   def_macro_noop("\\fontspec_set_family:Nnn DefToken {}{}")?;
   def_macro_noop("\\__fontspec_keys_define_code:nnn{}{}{}")?;
+  // fontspec-luatex.sty:129/445-449: `\latinencoding` (and the sibling
+  // `\cyrillicencoding`, `\UTFencname`) name the Unicode font encoding
+  // (`TU`); textalpha-doc's Unicode branch reads `\latinencoding` directly.
+  DefMacro!("\\latinencoding", "TU");
+  DefMacro!("\\cyrillicencoding", "TU");
+  DefMacro!("\\UTFencname", "TU");
 });
 
 /// luaotfload resolves font FILE names through its own database, which

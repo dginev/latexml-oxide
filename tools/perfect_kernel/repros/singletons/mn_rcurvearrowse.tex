@@ -1,0 +1,13 @@
+% witness: biblatex-apa6/biblatex-apa6-test (residue44, lualatex, 1 err)
+% oracle: pdflatex CLEAN; Perl SHARED (no MnSymbol.sty.ltxml; raw-load fails on \slimits@)
+% engines: preload [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors; 2 <ltx:XMTok> RELOP
+% status: RED b56v (Error:undefined:\rcurvearrowse,\lcurvearrowse)
+% mechanism: MnSymbol.sty:456-473 \Decl@Mn@Char\{l,r}curvearrow{right,up,left,down,ne,nw,sw,se}{MnSyA}{\mathrel}
+%   — bespoke arc-arrow font, no exact Unicode. mnsymbol_sty.rs carries amssymb+\bigcircle
+%   but not the curvearrow directional family. Only \rcurvearrowse (apa6-test:89) corpus-reached.
+\documentclass{article}
+\usepackage[retainmissing]{MnSymbol}
+\begin{document}
+$\rcurvearrowse$ and $\lcurvearrowse$.
+\end{document}

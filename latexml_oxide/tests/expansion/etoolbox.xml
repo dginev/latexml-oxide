@@ -68,6 +68,7 @@ At End stuff(inside).End stuff.After End stuff(outside).</p>
       <verbatim font="typewriter">
 \some \code
 End verbatim(inside): Some Code.</verbatim>
+      <p>After End verbatim(outside).</p>
     </para>
   </section>
   <section inlist="toc" xml:id="S3">

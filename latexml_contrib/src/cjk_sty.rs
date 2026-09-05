@@ -22,6 +22,14 @@ LoadDefinitions!({
   // bookkeeping. Deep CJK typesetting (kanji classes, pTeX primitives)
   // stays catalogued in DIFFICULT_CASES — these absorbs only stop the
   // undefined-CS cascade.
+  // CJK.sty:879/881 `\CJKspace`/`\CJKnospace` (the inter-CJK glue toggle;
+  // cjk-ko-doc) and :477/:484 `\CJKencfamily[enc]{family}{shape}` /
+  // `\CJKencshape` (per-encoding family selection; bxcjkjatype beamer sample)
+  // — presentation only.
+  def_macro_noop("\\CJKspace")?;
+  def_macro_noop("\\CJKnospace")?;
+  def_macro_noop("\\CJKencfamily[]{}{}")?;
+  Let!("\\CJKencshape", "\\CJKencfamily");
   def_macro_noop("\\CJKaddEncHook{}{}")?;
   def_macro_noop("\\CJK@loadBinding{}")?;
   def_macro_noop("\\CJK@envStart{}{}{}")?;

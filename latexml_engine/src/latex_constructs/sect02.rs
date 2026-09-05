@@ -475,12 +475,33 @@ fn at_document_hook(
     .iter()
     .any(|t| t.get_catcode() == Catcode::PARAM);
   if has_param && label.is_none() && hook == "begindocument" {
-    // A raw `#`-chunk registered BEFORE a `#`-free one must still run first
-    // (lthooks is FIFO within a label): alphabeta.sty:103-699's chunk then
-    // hep-math-font.sty:150-202's greek block — the private store fired
-    // after the L3 hook and inverted them (hep-paper-documentation: `\delta`
-    // self-loop → PushbackLimit fatal, sweep #42). Own store, fired before
-    // the L3 hook. Guard: `perfect_kernel_batch56::raw_hashful_begin_document_chunk_keeps_fifo_order`.
+    // K7 (KERNEL_CAPABILITIES.md): latex.ltx keeps ONE FIFO `\@begindocumenthook`
+    // (`\AtBeginDocument` = `\AddToHook{begindocument}`). A `#`-bearing chunk
+    // cannot go through lthooks' cleanup here (K3), so it is stored under a
+    // fresh `\lx@bdhook@N` macro — a no-parameter body keeps its `#` tokens
+    // verbatim, exactly what the private store replayed — and THAT `#`-free
+    // name is what lthooks receives, at the chunk's registration position:
+    // alphabeta.sty:103-699's `#`-chunk before hep-math-font.sty:150-202's
+    // `#`-free one (hep-paper-documentation; a separate first-fired store
+    // inverted the opposite order, italian.ldf:156's nested `##1` hook running
+    // before verifica.cls:65's earlier class hook — Gemini T5). Without
+    // lthooks (plain-derived formats) the private store keeps the old order.
+    // Guards: `perfect_kernel_batch56::{raw_hashful_begin_document_chunk_keeps_fifo_order,
+    // begin_document_hooks_run_in_registration_order}`.
+    if lookup_meaning(&T_CS!("\\hook_gput_code:nnn")).is_some() {
+      use std::sync::atomic::{AtomicUsize, Ordering};
+      static BDHOOK_SEQ: AtomicUsize = AtomicUsize::new(0);
+      let n = BDHOOK_SEQ.fetch_add(1, Ordering::Relaxed);
+      let cs = T_CS!(s!("\\lx@bdhook@{n}"));
+      DefMacro!(cs, None, rules, scope => Some(Scope::Global));
+      let mut out = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+      out.extend(ExplodeText!(hook));
+      out.push(T_END!());
+      out.push(T_BEGIN!());
+      out.push(cs);
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    }
     push_value("@at@begin@document@rawparam", rules)?;
     return Ok(Tokens!());
   }

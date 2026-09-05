@@ -154,6 +154,15 @@ LoadDefinitions!({
   def_macro_noop("\\tag_resume:n{}")?;
   def_macro_noop("\\tag_tool:n{}")?;
   def_macro_noop("\\tag_get:n{}")?;
+  // pdfmanagement.ltx:320 `\pdfmanagement_add:nnn {dict}{key}{value}` and :336
+  // its variants (`nne,nee,eee,nnx,nxx,xxx`): PDF catalog/dictionary entries;
+  // zugferd.sty:279/283 adds the ZUGFeRD `/AF` array. `\pdf_object_ref:n`
+  // expands to the l3backend `\__pdf_backend_object_ref:n`, which no PDF
+  // backend defines here — consumed too.
+  for v in ["nnn", "nne", "nee", "eee", "nnx", "nxx", "xxx"] {
+    def_macro_noop(&s!("\\pdfmanagement_add:{v}{{}}{{}}{{}}"))?;
+  }
+  def_macro_noop("\\__pdf_backend_object_ref:n{}")?;
 
   // Unicode-engine math-code primitives (LuaTeX/XeTeX; LuaTeX manual §7.3).
   // Raw font-setup files probe-and-set them when the engine claims Unicode

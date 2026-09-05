@@ -688,6 +688,12 @@ pub(crate) fn load() -> Result<()> {
     before_construct => sub[document, _whatsit] {
       document.maybe_close_element("ltx:p")?; }
   );
+  // The terminator is re-executed through the current `\end` macro
+  // (`after_digest_verbatim`, latex.ltx:15438 `\@xverbatim`); these fused
+  // ends make the kernel `\end` a no-op for it, since the constructor has
+  // already closed its group and emitted `</ltx:verbatim>`.
+  DefMacro!(T_CS!("\\end{verbatim}"), None, Tokens!());
+  DefMacro!(T_CS!("\\end{verbatim*}"), None, Tokens!());
 
   // Perl latex_constructs.pool.ltxml L1847 — re-let `\nobreakspace`
   // to LaTeXML's `\lx@nobreakspace` (= NBSP `\u{00A0}`). Required HERE

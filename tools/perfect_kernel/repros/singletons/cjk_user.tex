@@ -1,0 +1,15 @@
+% witness: cjk-ko/cjk-ko-doc (\CJKspace, 101 err) + bxcjkjatype/sample-bxcjkjatype-beamer (\CJKencfamily)
+% oracle: pdflatex CLEAN; Perl SHARED (no CJK.sty.ltxml; raw-load omits them, 2 err)
+% engines: preload [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors
+% status: RED b56v (Error:undefined:\CJKspace,\CJKencfamily)
+% mechanism: CJK.sty:879 \DeclareRobustCommand{\CJKspace}, :881 \CJKnospace,
+%   :477 \DeclareRobustCommand{\CJKencfamily}[3][] (+ :484 \let\CJKencshape\CJKencfamily);
+%   latexml_contrib/src/cjk_sty.rs reimplements CJK and omits these user macros.
+\documentclass{article}
+\usepackage{CJK}
+\begin{document}
+\CJKspace
+\CJKencfamily{song}{...}
+Hello world.
+\end{document}

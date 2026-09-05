@@ -831,6 +831,23 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
       } else {
         open_mouth(Mouth::new(remaining, None)?, true);
       }
+      // Hand `\end{verbatim}` back to the CURRENT `\end` macro instead of
+      // consuming it here: latex.ltx:15438 `\def\@xverbatim#1\end{verbatim}
+      // {#1\end{verbatim}}` re-executes the terminator, so packages that hook
+      // `\begin`/`\end` (knowledge.sty:1671-1685 pushes a scope area at
+      // `\begin{verbatim}` and pops it at `\end{verbatim}`) stay balanced.
+      // Perl's fused constructor (latex_constructs.pool.ltxml:1734) swallows
+      // the terminator, but Perl never defines `\verbatim`/`\endverbatim`, so
+      // knowledge's `\KnowledgeConfigureEnvironment?` (:3754, gated on both
+      // existing) never registers the area there; our dumped latex.ltx does
+      // define them. The fused `\end{verbatim}` (sect06.rs) is a no-op so the
+      // kernel `\end` adds nothing: the group already closed below.
+      // OXIDIZED_DESIGN_DIVERGENCES #199. Guard:
+      // `perfect_kernel_batch56::package_state_prtec_psfragx_knowledge`.
+      let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+      end_tokens.extend(ExplodeText!(if starred { "verbatim*" } else { "verbatim" }));
+      end_tokens.push(T_END!());
+      unread_expansion(Tokens::new(end_tokens));
       exiting = true;
     }
     // The raw chars will still have to be decoded (but not space!!). A TAB

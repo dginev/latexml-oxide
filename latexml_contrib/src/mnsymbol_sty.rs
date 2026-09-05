@@ -26,4 +26,21 @@ LoadDefinitions!({
   // MnSymbol-only symbols.
   DefMath!("\\checkmark", "\u{2713}", role => "ID"); // CHECK MARK
   DefMath!("\\bigcircle", "\u{25EF}", role => "OP"); // LARGE CIRCLE (\Decl@Mn@Op)
+  // MnSymbol.sty:456-473 `\{l,r}curvearrow{right,up,left,down,ne,nw,sw,se}`
+  // (`\mathrel`, bespoke arc arrows): the directional variants have no
+  // Unicode of their own — nearest clockwise/anticlockwise curved arrows
+  // (biblatex-apa6-test `\rcurvearrowse`).
+  for dir in ["right", "up", "left", "down", "ne", "nw", "sw", "se"] {
+    for (prefix, glyph) in [("r", "\u{21B7}"), ("l", "\u{21B6}")] {
+      def_math(
+        T_CS!(s!("\\{prefix}curvearrow{dir}")),
+        None,
+        glyph.to_string(),
+        MathPrimitiveOptions {
+          role: Some("RELOP".to_string()),
+          ..Default::default()
+        },
+      )?;
+    }
+  }
 });

@@ -6806,3 +6806,34 @@ NOT kept: braced `\input{…}` is stripped by `tex_file_io.rs` already.
 **Witnesses**: proof-at-the-end/proof-at-the-end_demo (2 → 0).
 **Guard**: `perfect_kernel_gemini::openout_then_input_same_run`.
 **Upstream**: not filed.
+
+### 199. The kernel `{verbatim}` hands `\end{verbatim}` back to the current `\end` macro
+
+**Perl behavior**: latex_constructs.pool.ltxml:1734 `\begin{verbatim}` is a
+fused-cs constructor that reads the raw body AND swallows the terminating
+`\end{verbatim}`, so a package that hooks `\begin`/`\end` sees the begin (the
+fused cs is only reached from the `\begin` macro) but never the end.
+knowledge.sty:1671-1685 pushes a scope area at `\begin{verbatim}` and pops it
+at `\end{verbatim}`; Perl is nevertheless clean because it never defines
+`\verbatim`/`\endverbatim`, and `\KnowledgeConfigureEnvironment?` (:3754) is
+gated on both existing, so the area is never registered there.
+**Rust behavior**: the dumped latex.ltx defines both (:15459-15460), the area
+is registered, and the swallowed terminator left the stack as
+`[verbatim::document]` at `\end{document}` (`Not allowed to close 'document'
+here (at 'verbatim')`). `after_digest_verbatim` now unreads
+`\end{verbatim}` (or `\end{verbatim*}`) ahead of the rest of the line so the
+CURRENT `\end` macro runs, as latex.ltx:15438 `\def\@xverbatim#1\end{verbatim}
+{#1\end{verbatim}}` does; the fused `\end{verbatim}` cs is a no-op macro so
+the kernel `\end` adds nothing (the constructor already closed its group).
+`\AfterEndEnvironment{verbatim}` hooks (`@environment@verbatim@afterend`) now
+fire too, as in LaTeX.
+**Why**: the terminator re-execution is LaTeX's own shape; every
+`\begin`/`\end` hook pair stays balanced.
+**Witnesses**: knowledge/knowledge (1 → 0). Golden re-baselined:
+`tests/expansion/etoolbox.xml` gains the `\AfterEndEnvironment{verbatim}` line
+"After End verbatim(outside)." after the verbatim — pdflatex prints it there;
+Perl's golden (t/expansion/etoolbox.xml:70) lacks it.
+**Guard**: `perfect_kernel_batch56::package_state_prtec_psfragx_knowledge`
+(hooked-`\end` control: the hook fires once, after `</ltx:verbatim>`, and the
+`\end` line's tail still reads).
+**Upstream**: not filed.

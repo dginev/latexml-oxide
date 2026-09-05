@@ -1,0 +1,14 @@
+% witness: verifica/example4 (italian.ldf:156 nested ##1 hook vs verifica.cls:65), hep-paper-documentation
+% oracle: pdflatex (clean); engines: pdflatex
+% expect: "Order: ABC" — \AtBeginDocument chunks run in registration order whether or not they carry #
+% status: RED before batch 56r (the #-chunk store fired first: "BAC")
+\documentclass{article}
+\makeatletter
+\def\lxorder{}
+\AtBeginDocument{\g@addto@macro\lxorder{A}}
+\AtBeginDocument{\newcommand\lxhashed[1]{#1}\g@addto@macro\lxorder{B}}
+\AtBeginDocument{\g@addto@macro\lxorder{C}}
+\makeatother
+\begin{document}
+Order: \lxorder; \lxhashed{ok}.
+\end{document}

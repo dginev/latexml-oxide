@@ -1,0 +1,11 @@
+% companion to pdfmgmt_variants: after variants defined, next blocker is the l3backend object ref.
+% status: RED b56v (\pdfmanagement_add:nnx undefined; \__pdf_backend_object_ref:n undefined)
+% mechanism: \pdf_object_ref:n IS defined (expands to \__pdf_backend_object_ref:n) but the
+%   backend impl is undefined (no PDF backend in latexml). zugferd.sty:283 x-expands it.
+\documentclass{article}
+\ExplSyntaxOn
+\pdfmanagement_add:nnx {Catalog} {AF} {\pdf_object_ref:n{zugferd/rechnung}}
+\ExplSyntaxOff
+\begin{document}
+Hello world.
+\end{document}

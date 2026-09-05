@@ -2530,6 +2530,13 @@ LoadDefinitions!({
   def_macro_noop("\\printtime")?;
   def_macro_noop("\\printdate")?;
   def_macro_noop("\\printdateextra")?;
+  // biblatex generates a `\print<type>date[extra]` for every date field
+  // (origdate/eventdate/urldate/labeldate; chicago-dates-common.cbx:1872
+  // `\printorigdate`, cms-notes-sample).
+  for d in ["orig", "event", "url"] {
+    def_macro_noop(&s!("\\print{d}date"))?;
+    def_macro_noop(&s!("\\print{d}dateextra"))?;
+  }
   def_macro_noop("\\printlabeldate")?;
   def_macro_noop("\\printlabeldateextra")?;
   def_macro_noop("\\printfile[]{}")?;
