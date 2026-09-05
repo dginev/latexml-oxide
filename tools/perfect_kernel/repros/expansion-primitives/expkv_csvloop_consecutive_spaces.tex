@@ -1,0 +1,7 @@
+\documentclass{article}
+\usepackage{expkv}
+\begin{document}
+\newcommand*\myprocessor[1]{\texttt{(#1)}}
+\ekvcsvloop\myprocessor{abc,def,ghi}\par
+\ekvcsvloop\myprocessor{1,,2,,3,,4}\par
+\end{document}

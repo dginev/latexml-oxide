@@ -2718,8 +2718,8 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
             break;
           }
 
-          if cc == Catcode::SPACE {
-            // If this was space, SKIP any following!!!
+          if cc == Catcode::SPACE && to_match.last().map(|w| w.get_catcode()) != Some(Catcode::SPACE) {
+            // If this was space and no more spaces are expected next in this run, SKIP any following!
             while let Some(space_token) = read_token()? {
               if space_token.get_catcode() != Catcode::SPACE {
                 // Unread non-space and end — use unread_one for proper agc adjustment

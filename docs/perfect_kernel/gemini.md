@@ -168,3 +168,35 @@ Root-caused against `istgame-doc.tex` (L468-473) and `tikz.code.tex`/`tikzlibrar
   - Repro of `docplain` + TikZ tree with `edge from parent path` + `istgame`: 3 errors -> 0 errors!
   - `cargo test -p latexml --test 86_tikz`: 10 passed, 0 failed.
   - Guard: `perfect_kernel_gemini::istgame_and_tikz_trees_child_nodes`.
+
+### Round 3 — Task H4 (expkv: \ekv@stop sentinel expanded, read_match with consecutive spaces) — Complete
+
+Root-cause and design:
+- Witness: `expkv-bundle/expkv-bundle.tex` (sweep-44, 18 errors / 2 fatals: first `Error:undefined:\ekv@stop` followed by `Fatal:Timeout:TokenLimit`).
+- In `expkv.tex:210-227`, `\ekvcsvloop` runs a `\romannumeral`-driven loop that terminates when the item stream hits the sentinel `\ekv@stop ,`.
+- The termination step uses:
+  `\long\def\ekv@csv@loop@end\ekv@stop\ekv@ifblank@...\ekv@nil\ekv@mark  \ekv@nil\ekv@csv@loop@do##1{...}`
+- In real TeX (`tex.web` §473-476 `scan_toks`, §389-392 parameter matching): Every token in the parameter text before `##1` must match the input stream exactly. Note that `\ekv@csv@loop@end`'s prefix contains TWO consecutive space tokens (`\ekv@mark  \ekv@nil`).
+- In `latexml-oxide` (`latexml_engine/src/base_utilities.rs:3454-3474`), tokens preceding `#1` are extracted as `Parameter { name: "Match", extra: vec![expected], novalue: true }`.
+- When `read_match` (`latexml_core/src/gullet.rs:2721-2731`) matched the first space token:
+  ```rust
+  if cc == Catcode::SPACE {
+    // If this was space, SKIP any following!!!
+    while let Some(space_token) = read_token()? {
+      if space_token.get_catcode() != Catcode::SPACE { ... }
+      else { matched.push(space_token); }
+    }
+  }
+  ```
+  It greedily devoured all following space tokens from the input stream and pushed them into `matched`, even though the pattern `to_match` itself expected another space token next!
+- As a result, in the next loop iteration, `to_match` still needed to match the second space, but the stream had already been drained to `\ekv@nil`. The comparison `\ekv@nil == " "` failed, `read_match` returned `None`, and because `Match` had `novalue: true`, `parameter.rs` ignored the match failure and proceeded to execute `\ekv@csv@loop@end` without consuming the prefix tokens.
+- The unconsumed literal prefix tokens (starting with `\ekv@stop`) leaked into top-level digestion in `digest_next_body`, where `\ekv@stop` triggered `Error:undefined:\ekv@stop` and became an error stub, derailing the loop termination and triggering `Fatal:Timeout:TokenLimit`.
+- Fix:
+  In `latexml_core/src/gullet.rs::read_match`:
+  Only skip/collapse following space tokens if `to_match` does not expect another space next:
+  `if cc == Catcode::SPACE && to_match.last().map(|w| w.get_catcode()) != Some(Catcode::SPACE) { ... }`
+- Deliverables:
+  1. Minimal red repro: `tools/perfect_kernel/repros/expansion-primitives/expkv_csvloop_consecutive_spaces.tex`.
+  2. Guard: `perfect_kernel_gemini::expkv_ekvcsvloop_delimiter_adjacent_spaces`.
+  3. Validated on `test_min_ekv.tex` (0 errors, clean conversion) and eliminated `Error:undefined:\ekv@stop` and `Fatal:Timeout:TokenLimit` on `expkv-bundle.tex`.
+

@@ -16250,6 +16250,27 @@ Some text with an endnote.\endnote{This is an endnote.}
     assert!(xml.contains("root"), "{xml}");
     assert!(xml.contains("Alice"), "{xml}");
   }
+
+  /// expkv \ekvcsvloop delimiter matching with adjacent spaces
+  /// (witness expkv-bundle/expkv-bundle: \ekv@stop undefined and TokenLimit fatal):
+  /// \ekv@csv@loop@end matches literal delimiter prefix tokens containing
+  /// adjacent space tokens (\ekv@mark  \ekv@nil). read_match must not greedily
+  /// swallow subsequent spaces from input when to_match expects another space.
+  #[test]
+  fn expkv_ekvcsvloop_delimiter_adjacent_spaces() {
+    let tex = r"\documentclass{article}
+\usepackage{expkv}
+\newcommand*\myprocessor[1]{(#1)}
+\begin{document}
+\ekvcsvloop\myprocessor{abc,def,ghi}
+\ekvcsvloop\myprocessor{1,,2,,3,,4}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("(abc)(def)(ghi)"), "{xml}");
+    assert!(xml.contains("(1)(2)(3)(4)"), "{xml}");
+  }
 }
 
 
