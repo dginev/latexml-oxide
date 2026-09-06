@@ -69,8 +69,10 @@ pub(crate) fn load() -> Result<()> {
         // raw `\def` leaves (state.rs `<cs>:redefined@nargs`).
         let redefined = s!("{}:redefined", cs_token.to_string());
         let redefined_nargs = s!("{}:redefined@nargs", cs_token.to_string());
+        let redefined_body = s!("{}:redefined@body", cs_token.to_string());
         AssignValue!(&redefined => true, Some(Scope::Global));
         AssignValue!(&redefined_nargs => Number::new(nargs as i64), Some(Scope::Global));
+        AssignValue!(&redefined_body => Stored::Tokens(body), Some(Scope::Global));
       }
       return Ok(vec![]);
     }

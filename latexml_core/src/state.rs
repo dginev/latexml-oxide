@@ -1261,6 +1261,15 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         Stored::Number(Number::new(nargs as i64)),
         Some(Scope::Global),
       );
+      if let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() {
+        let body_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@body")));
+        state_mut!().assign_internal(
+          TableName::Value,
+          body_key,
+          Stored::Tokens(body.clone()),
+          Some(Scope::Global),
+        );
+      }
     }
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source

@@ -17590,6 +17590,7 @@ line 2
     assert!(c_xml.contains("hello verbatim world"), "{c_xml}");
   }
 
+<<<<<<< HEAD
   /// xcolor: \XC@getcolor & \XC@usecolor (L1, witness dsptricks/dspTricksManual).
   /// Verifies \XC@getcolor yields xcolor's real `\xcolor@…` shape in the target macro,
   /// \XC@usecolor consumes the color argument without error, and that loading
@@ -17940,5 +17941,71 @@ Hello
     assert!(xml.contains("0002"), "{xml}");
     assert!(xml.contains("First paragraph."), "{xml}");
     assert!(xml.contains("Second paragraph."), "{xml}");
+  }
+
+  /// \maketitle honours class's dropped body after structured frontmatter
+  /// (witness: uspatent/PatentApplication, PatentApplicationGuide).
+  /// A class redefining \maketitle (e.g. \renewcommand{\maketitle}{\patentTitlePage\patentStart})
+  /// has its body executed after frontmatter deposition and cleanup so counters like parnum are defined.
+  #[test]
+  fn maketitle_executes_dropped_class_body_after_frontmatter() {
+    let tex = r"\documentclass{uspatent}
+\title{Test Patent}
+\author{Test Inventor}
+\begin{document}
+\maketitle
+\patentParagraph First paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Test Patent"), "{xml}");
+    assert!(xml.contains("Test Inventor"), "{xml}");
+    assert!(xml.contains("First paragraph."), "{xml}");
+    assert!(xml.contains("0001"), "{xml}");
+
+    // Control: standard article where \maketitle redefinition only adds \thispagestyle{empty}
+    let control_tex = r"\documentclass{article}
+\renewcommand{\maketitle}{\thispagestyle{empty}}
+\title{Foo}
+\author{Bar}
+\begin{document}
+\maketitle
+Hello world.
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Foo"), "{c_xml}");
+    assert!(c_xml.contains("Bar"), "{c_xml}");
+    assert!(c_xml.contains("Hello world."), "{c_xml}");
+  }
+
+  /// xcolor \XC@getcolor normalises color spec to \xcolor@ {}{<drv_spec>}{<model>}{<spec_comma>}
+  /// (witness: dsptricks/dspTricksManual; oracle: pdflatex \meaning\x).
+  #[test]
+  fn xcolor_getcolor_faithful_normalization() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\makeatletter
+\XC@getcolor{red!50}\x
+\typeout{MEANING_XC=\meaning\x}
+\pst@getcolor{red!50}\y
+\typeout{MEANING_PST=\meaning\y}
+\XC@usecolor\x
+\makeatother
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains(r"MEANING_XC=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+      "{stderr}"
+    );
+    assert!(
+      stderr.contains(r"MEANING_PST=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+      "{stderr}"
+    );
   }
 }

@@ -1,5 +1,5 @@
 use latexml_core::common::color::{
-  BLACK, Color, WHITE, color_from_model_spec, from_model_components,
+  BLACK, Color, WHITE, color_from_model_spec, format_component, from_model_components,
 };
 
 use crate::{
@@ -1635,6 +1635,80 @@ LoadDefinitions!({
       \else2\fi\@gobbletwo
     \else1\fi
   \fi}
+"##);
+
+  // \XC@getcolor{colordesc}\cmd (xcolor.sty:1373-1390)
+  // Normalizes color into \xcolor@{}{<drv_spec>}{<model>}{<spec_comma>}
+  DefPrimitive!("\\XC@getcolor{}{}", sub[(color_arg, cmd)] {
+    let cs = cmd
+      .unlist_ref()
+      .iter()
+      .find(|t| t.get_catcode() == Catcode::CS)
+      .copied()
+      .unwrap_or_else(|| T_CS!(cmd.to_string().trim()));
+
+    // If already normalized (\xcolor@{...}...), preserve expansion tokens directly.
+    if let Some(first) = color_arg.unlist_ref().first()
+      && first.get_catcode() == Catcode::CS
+      && first.with_cs_name(|n| n == "\\xcolor@")
+    {
+      def_macro(cs, None, Some(ExpansionBody::Tokens(color_arg)), None)?;
+      return Ok(Vec::new());
+    }
+
+    let color_str = do_expand(color_arg)?.to_string();
+    let trimmed = color_str.trim();
+
+    if trimmed.starts_with("\\xcolor@") {
+      def_macro(cs, None, Some(ExpansionBody::from(trimmed)), None)?;
+      return Ok(Vec::new());
+    }
+
+    let color = if trimmed.starts_with('[') {
+      if let Some(close_bracket) = trimmed.find(']') {
+        let model = &trimmed[1..close_bracket];
+        let rest = trimmed[close_bracket + 1..].trim();
+        let spec = rest.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(rest);
+        parse_xcolor(Some(model), spec, None)
+      } else {
+        parse_xcolor(None, trimmed, None)
+      }
+    } else {
+      parse_xcolor(None, trimmed, None)
+    };
+
+    let model = color.model();
+    let comps = color.components();
+    let spec_parts: Vec<String> = comps.iter().map(|c| format_component(*c)).collect();
+    let spec_space = spec_parts.join(" ");
+    let spec_comma = spec_parts.join(",");
+    let drv_spec = match model {
+      "cmyk" => format!("{spec_space} k {spec_space} K"),
+      "rgb" => format!("{spec_space} rg {spec_space} RG"),
+      "gray" => format!("{spec_space} g {spec_space} G"),
+      _ => format!("{model} {spec_space}"),
+    };
+    let value = format!("\\xcolor@ {{}}{{{drv_spec}}}{{{model}}}{{{spec_comma}}}");
+    def_macro(cs, None, Some(ExpansionBody::from(value.as_str())), None)?;
+    Ok(Vec::new())
+  });
+
+  RawTeX!(r##"
+\def\XC@usecolor#1{\expandafter\XC@usec@lor#1\XC@@}
+\def\XC@usec@lor#1#2\XC@@{%
+ \ifx#1\xcolor@
+   \expandafter\expandafter\expandafter\c@lor@to@ps#1#2\@@
+ \else
+   \expandafter\expandafter\expandafter\expandafter\expandafter\expandafter
+   \expandafter\c@lor@to@ps\csname\@backslashchar color@#1#2\endcsname\@@
+ \fi
+ \space}
+\let\XC@c@lor@to@ps\XC@usecolor
+\ifx\c@lor@to@ps\@undefined
+  \def\c@lor@to@ps#1\@@{}
+\fi
+\let\pst@getcolor\XC@getcolor
+\let\pst@usecolor\XC@usecolor
 "##);
 
   // testcolors environment and \testcolor
