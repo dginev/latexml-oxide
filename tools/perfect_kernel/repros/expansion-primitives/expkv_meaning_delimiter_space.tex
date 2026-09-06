@@ -1,0 +1,14 @@
+% witness: expkv-bundle.tex (TL2025 doc/latex/expkv-bundle), pkg-cs.tex L495-515 aggregate example
+% oracle: pdflatex CLEAN. engines: pdflatex,latexml(rust),latexml(perl)
+% expect: \meaning of a delimited macro shows "\foo #2" (tex.web print_cs trailing space)
+% status: RED today -- rust prints "\foo#2" (no space); Perl SHARED (also no space)
+% mechanism: tex.web:5613-5615 print_cs appends a space after every control word;
+%   our param-spec render (latexml_engine/src/tex_debugging.rs ~L240) splices the raw
+%   Until:/Match: delimiter string without it. expkv-cs \ekvc@extract@mark@ (expkv-cs.tex
+%   L996-1001) delimits on <space>#, so the missing space breaks aggregate keys.
+\documentclass{article}
+\makeatletter
+\begin{document}
+\def\x#1\foo#2{Q}%
+\begingroup\ttfamily\meaning\x\endgroup
+\end{document}

@@ -6912,3 +6912,22 @@ loop terminates and the document runs through to its next classes).
 (the two-space delimiter) and its control (a single-space delimiter still
 collapses surplus input spaces, the Perl behaviour).
 **Upstream**: not filed.
+
+### 201. amsrefs `\bib` titles keep their case (Perl re-cases them like BibTeX)
+
+**Perl behavior**: amsrefs entries go through the BibTeX pool, whose default
+`BibTeX_title_case = capitalize1` (BibTeX.pool.ltxml:293-332) lowercases every
+word after the first — including control-sequence NAMES, so `\AmS` becomes
+`\ams` and `\LaTeX` `\latex` (undefined: amslatex-primer/amshelp, 3 errors).
+amsrefs.sty.ltxml never overrides it.
+**Rust behavior**: `amsrefs_sty.rs` sets `BibTeX_title_case = asis`. amsrefs
+typesets `\bib` titles verbatim (pdflatex prints "Using AMS-LaTeX and Other
+Tools Well", verified 2026-09-06); documents without amsrefs keep the BibTeX
+`.bib` default `capitalize1` (the value is set at amsrefs load, so a document
+using both gets `asis` for its `.bib` too).
+**Goldens re-baselined**: `tests/structure/amsrefs_basic.xml` (titles "On
+Examples", "A Book" keep their case) and the `06_cluster_bibliography` amsrefs
+guard.
+**Witnesses**: amslatex-primer/amshelp (3 → 0).
+**Guard**: `perfect_kernel_batch56::sweep46_single_name_gaps` (amsrefs part).
+**Upstream**: not filed.

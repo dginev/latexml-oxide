@@ -1,6 +1,11 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // ulem.sty:46 `\global\let\UL@protected\csname protected\endcsname`: packages
+  // that build on ulem read it (oblivoir-misc.sty:51-54 defines its own only
+  // when ulem is absent). Perl's ulem.sty.ltxml omits it (SHARED).
+  // Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
+  Let!("\\UL@protected", "\\protected");
   RequireResource!("ltx-ulem.css");
 
   DefConstructor!("\\uline{}",

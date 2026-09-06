@@ -897,9 +897,9 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
     x.contains("<bibitem"),
     "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
   );
-  // Both entries, with their content, are present. NB amsrefs sentence-cases
-  // titles ("On Examples" -> "On examples"), as `amsrefs_basic.xml` records.
-  for needle in ["Beilinson", "Height pairing", "On examples", "Smith"] {
+  // Both entries, with their content, are present. amsrefs titles keep their
+  // case ("On Examples"; OXIDIZED_DESIGN #201 — Perl sentence-cased them).
+  for needle in ["Beilinson", "Height pairing", "On Examples", "Smith"] {
     assert!(
       x.contains(needle),
       "amsrefs entry content `{needle}` missing from the References:\n{x}"

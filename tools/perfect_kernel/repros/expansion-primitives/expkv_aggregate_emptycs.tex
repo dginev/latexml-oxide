@@ -1,0 +1,11 @@
+% witness: expkv-bundle pkg-cs.tex L495-507 (aggregate example, run via enverb \scantokens)
+% oracle: pdflatex CLEAN. status: RED. classification: SHARED (Perl also errors, +2 more)
+% mechanism: \foo{k=1} runs the aggregate key -> \ekvc@extract@mark on a splitmark macro
+%   whose \meaning lacks the print_cs trailing space -> parse runaway -> bare \ (empty CS).
+\documentclass{article}
+\usepackage{xcolor}\usepackage{enverb}\usepackage[all]{expkv}\usepackage{expkv-cs}
+\makeatletter
+\begin{document}
+\def\enverbBody{\ekvcSplit\foo{k-internal=0}{X}\ekvcSecondaryKeys\foo{aggregate k = {k-internal}{#1,#2}}\foo{k=1}}
+\enverbExecute
+\end{document}

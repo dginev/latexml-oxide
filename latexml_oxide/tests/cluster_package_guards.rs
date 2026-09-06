@@ -15860,6 +15860,218 @@ After.
     );
   }
 
+  /// amsmath.sty:211-216 `\@saveprimitive\over\@@over` …: a document that
+  /// restores the primitive (`\let\over=\@@over`, abntexto.tex:187) keeps a
+  /// working `\over`. Perl's binding omits the block (SHARED; lualatex clean).
+  #[test]
+  fn amsmath_saves_fraction_primitives() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\makeatletter \let\over=\@@over \let\atop=\@@atop \makeatother
+\begin{document}
+$1\over2$ and $a\atop b$.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("divide") || xml.contains("XMApp"), "{xml}");
+  }
+
+  /// tex.web §262 `print_cs`: `\meaning` prints a delimiter control word
+  /// with a trailing space (`macro:#1\foo #2->Q`); expkv-cs's aggregate keys
+  /// parse `\meaning` output delimited on `<space>#` (expkv-cs.tex:996-1001;
+  /// expkv-bundle 13 errors, Perl omits the space too).
+  #[test]
+  fn meaning_prints_delimiter_control_words_with_a_space() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\def\x#1\foo#2{Q}\def\y a\bar{R}
+[\meaning\x][\meaning\y]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // OT1 text renders `\` as U+201C and `>` as U+00BF
+    assert!(xml.contains("macro:#1\u{201C}foo #2-\u{BF}Q"), "{xml}");
+    assert!(xml.contains("macro:a\u{201C}bar -\u{BF}R"), "{xml}");
+    // expkv-cs aggregate keys parse `\meaning` output delimited on `<space>#`
+    // (the manual's enverb-executed example, pkg-cs.tex:495-515).
+    let agg = r"\documentclass{article}
+\usepackage{xcolor}\usepackage{enverb}\usepackage[all]{expkv}\usepackage{expkv-cs}
+\makeatletter
+\begin{document}
+\def\enverbBody{\ekvcSplit\foo{k-internal=0}{X}\ekvcSecondaryKeys\foo{aggregate k = {k-internal}{#1,#2}}\foo{k=1}}
+\enverbExecute
+\end{document}
+";
+    let (stderr, xml) = convert(agg, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("X"), "{xml}");
+  }
+
+  /// `\ensuremath{}` with an EMPTY argument in a text box inside math is
+  /// `$\relax$` (latex.ltx:15807), never an adjacent `$$` display shift
+  /// (polynom's Horner scheme: an empty p-column cell; polydemo 29→3).
+  #[test]
+  fn ensuremath_empty_argument_in_text_box() {
+    let tex = r"\documentclass{article}
+\usepackage{array}
+\makeatletter
+\begin{document}
+\@tempdima=20pt
+\[\leavevmode\hbox{$\vcenter{\offinterlineskip
+  \halign{\hfil\ensuremath{##}&&\@startpbox\@tempdima\hfil\ensuremath{##}\@endpbox\cr
+    a&\cr}}$}\]
+Text \ensuremath{x+1} and \ensuremath{}.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<equation") && xml.contains("<tabular"),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"tex="x+1""#), "{xml}");
+  }
+
+  /// Sweep-46 single-name gaps: ulem's `\UL@protected` (ulem.sty:46),
+  /// amsmath's `\std@minus`/`\overarrow@` internals (amsmath.sty:949/983),
+  /// ejpecp's supplement block (ejpecp.cls:350-366), stix2's AMS names
+  /// (stix2.sty:1316), and a missing `\include` file as a note (latex.ltx:9730).
+  #[test]
+  fn sweep46_single_name_gaps() {
+    let tex = r"\documentclass{article}
+\usepackage{ulem}
+\usepackage{amsmath}
+\usepackage{stix2}
+\makeatletter
+\let\x\UL@protected
+\def\pfill{\rightarrowfill@}
+\makeatother
+\begin{document}
+$a \nmid b$, $\twoheadrightarrowtail$, \makeatletter$\std@minus$ $\overarrow@\pfill\displaystyle{ab}$\makeatother.
+\include{no-such-chapter}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("\u{2224}") && xml.contains("\u{2916}") && xml.contains("After."),
+      "{xml}"
+    );
+    let ejp = r"\documentclass{ejpecp}
+\begin{document}
+\title{T}\author{A}\maketitle
+\begin{supplement}
+\stitle{Extra proofs}
+\sdescription{The long proofs.}
+\end{supplement}
+Cite \MR{1234567 (2007e:60001)} and \ARXIV{2011.04706}.
+\end{document}
+";
+    let (stderr, xml) = convert(ejp, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Supplementary Material") && xml.contains("Extra proofs"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("mr=1234567") && xml.contains("arXiv:2011.04706"),
+      "{xml}"
+    );
+    // amsrefs titles keep their control-sequence names' case
+    let refs = r"\documentclass{article}
+\usepackage{amsrefs}
+\begin{document}
+Cite \cite{k}.
+\begin{bibdiv}\begin{biblist}
+\bib{k}{book}{author={A. B.}, title={Using \LaTeX{} and \LaTeXe{} well}, date={2020}}
+\end{biblist}\end{bibdiv}
+\end{document}
+";
+    let (stderr, xml) = convert(refs, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("well"), "{xml}");
+  }
+
+  /// `escapechar={}` clears an inherited `\lstset{escapechar=*}` (newpax's
+  /// `\lstinputlisting[escapechar={}]` executed a `*…*` span as LaTeX).
+  #[test]
+  fn listings_escapechar_empty_clears() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\lstset{escapechar=*}
+\begin{document}
+\begin{lstlisting}[escapechar={}]
+* \typeout{never run} \undefinedcs *
+\end{lstlisting}
+\begin{lstlisting}
+a *\textbf{bold}* b
+\end{lstlisting}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("undefinedcs") && xml.contains("bold"), "{xml}");
+    assert!(
+      !xml.contains("never run") || xml.contains("typeout"),
+      "{xml}"
+    );
+  }
+
+  /// `subequations` fixes the parent number under `\protected@edef`'s regime
+  /// (amsmath.sty:1134): a robust `\loop` with local `\edef`s inside
+  /// `\theequation` runs at digestion, not in the gullet (hep-paper's
+  /// oldstyle `\tstyle`; hep-math-documentation 39 errors). Control: the
+  /// `{\rm S}\arabic{equation}` shape (witness 2005.06712) keeps `S1a`/`S1b`.
+  #[test]
+  fn subequations_keep_robust_number_commands() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\def\mfirst#1#2\@nil{#1}
+\def\mrest#1#2\@nil{#2}
+\newif\ifmytake
+\DeclareRobustCommand{\myloopnum}{%
+  \edef\mya{2j}\mytaketrue
+  \loop
+    \edef\myn{\expandafter\mfirst\mya\@nil}%
+    \edef\mya{\expandafter\mrest\mya\@nil}%
+    \ifx\mya\@empty \edef\myq{\myn}\mytakefalse \fi
+  \ifmytake \repeat
+}
+\renewcommand{\theequation}{\myloopnum\arabic{equation}}
+\makeatother
+\begin{document}
+\begin{subequations}
+\begin{align}
+a &= b \\
+c &= d
+\end{align}
+\end{subequations}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<equationgroup").count(), 2, "{xml}");
+    let control = r"\documentclass{article}
+\usepackage{amsmath}
+\renewcommand{\theequation}{{\rm S}\arabic{equation}}
+\begin{document}
+\begin{subequations}
+\begin{align}
+a &= b \\
+c &= d
+\end{align}
+\end{subequations}
+\end{document}
+";
+    let (stderr, xml) = convert(control, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("S1a") && xml.contains("S1b"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

@@ -1,0 +1,20 @@
+% witness:  msc/msc  (/usr/local/texlive/2025/texmf-dist/doc/latex/msc/msc.tex)
+% oracle:   pdflatex CLEAN (0 '!' lines); manual draws message-sequence charts
+% engines:  pdflatex(clean) / Perl-latexml 25 err / oxide 24 err  -> SHARED
+% expect:   0 errors + non-trivial SVG for the instance head node
+% status:   RED (b56z). first error: Error:unexpected:\endgroup Attempt to close non-boxing group
+% mechanism: msc \declinst draws a TikZ node (\pgfmultipartnode/\pgfnode) + instance
+%   line \draw inside pgf \foreach + nested \begin{pgfscope}. LaTeXML's pgf SVG driver
+%   (pgfsys-latexml.def.ltxml:561-586) maps \pgfsys@beginscope/@endscope to
+%   stomach begingroup/endgroup; through the node-box + \pgfsys@begin@idscope
+%   machinery (pgfsys.code.tex:572-611) the TeX-group accounting drifts, leaving a
+%   { boxing group open, so a later bare \endgroup (from pgffor/pgfscope) hits it ->
+%   stomach.rs:874-895 "Attempt to close non-boxing group" (faithful: no pop, cascade).
+%   Self-documented LaTeXML limitation: pgfsys-latexml.def.ltxml:887-890.
+\documentclass{article}
+\usepackage{msc}
+\begin{document}
+\begin{msc}{Example}
+\declinst{usr}{User}{control}
+\end{msc}
+\end{document}

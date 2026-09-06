@@ -712,6 +712,35 @@ LoadDefinitions!({
   DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
 
   //======================================================================
+  // amsmath.sty:211-216 saves the six generalized-fraction primitives under
+  // `\@@over` … `\@@abovewithdelims` (`\@saveprimitive` = `\let#2#1`,
+  // amsgen.sty.ltxml:19) BEFORE its `\primfrac` wrappers; a document that
+  // restores them (abntexto.tex:187 `\let\over=\@@over`) otherwise unsets
+  // `\over`. Perl's amsmath.sty.ltxml omits the block (SHARED); the :227
+  // `\renewcommand\over{\primfrac{over}}` warning wrappers stay unported, as
+  // in Perl. Guard: `perfect_kernel_batch56::amsmath_saves_fraction_primitives`.
+  RawTeX!(
+    r"\@saveprimitive\over\@@over \@saveprimitive\atop\@@atop \@saveprimitive\above\@@above
+\@saveprimitive\overwithdelims\@@overwithdelims \@saveprimitive\atopwithdelims\@@atopwithdelims
+\@saveprimitive\abovewithdelims\@@abovewithdelims"
+  );
+  // amsmath.sty:949-950 `\std@minus`/`\std@equal` (the non-Umathcode branch)
+  // and :983/:998 `\overarrow@`/`\underarrow@`, read by packages that build
+  // extensible arrows on amsmath's internals (halloweenmath.sty:851-852,
+  // :1233). The arrow builders render through the accent constructors,
+  // choosing the arrow from the fill macro (`\leftarrowfill@` etc., defined
+  // above); a foreign fill falls back to a right arrow. Perl's amsmath.sty.ltxml omits
+  // all of these (SHARED). Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
+  // `\std@minus`/`\std@equal` as the symbols themselves: our user-facing
+  // `\mathcode` register read is not synced with the init glyph store (a
+  // `\mathchardef` of `\mathcode`\-` read 0 and rendered Γ), so the faithful
+  // `\mathchardef` form waits for that seam.
+  DefMath!("\\std@minus", "\u{2212}", role => "ADDOP", meaning => "minus");
+  DefMath!("\\std@equal", "=", role => "RELOP", meaning => "equals");
+  RawTeX!(
+    r"\def\overarrow@#1#2#3{\ifx#1\leftarrowfill@\overleftarrow{#3}\else\ifx#1\leftrightarrowfill@\overleftrightarrow{#3}\else\overrightarrow{#3}\fi\fi}
+\def\underarrow@#1#2#3{\ifx#1\leftarrowfill@\underleftarrow{#3}\else\ifx#1\leftrightarrowfill@\underleftrightarrow{#3}\else\underrightarrow{#3}\fi\fi}"
+  );
   // Section 4.11.3 The \genfrac command
   // Perl: amsmath.sty.ltxml lines 1016-1094
   // \genfrac{open}{close}{thickness}{style}{numerator}{denominator}

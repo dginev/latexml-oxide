@@ -735,7 +735,15 @@ pub(crate) fn load() -> Result<()> {
       _ => true,
     };
     if should_include {
-      Input!(&path_str);
+      // latex.ltx:9557→9612→9730: `\include` reaches the file through
+      // `\@input@{#1.tex}` = `\InputIfFileExists{…}{}{\typeout{No file …}}`,
+      // so a missing chapter file is a note, not an error (uiucthesis
+      // thesis-ex ships without its `\include`d chapters; pdflatex prints
+      // "No file 1-introduction.tex."). Perl's `\include` opens it hard
+      // (SHARED). Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
+      unread(Tokenize!(TeXString::assembled(format!(
+        "\\InputIfFileExists{{{path_str}.tex}}{{}}{{\\typeout{{No file {path_str}.tex.}}}}"
+      ))));
     }
   });
 

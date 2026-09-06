@@ -10,6 +10,25 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
+/// The parameter text of a delimited parameter as TeX prints it (tex.web
+/// §262 `print_cs`): every control word is followed by a space, so
+/// `\def\x#1\foo#2{…}` shows `macro:#1\foo #2->…`. The delimiter tokens
+/// live in `param.extra`; rendering them with `writable_tokens` (the one
+/// print_cs-faithful path, shared with `\detokenize` and the expansion body)
+/// keeps a `\meaning`-driven parser aligned — expkv-cs.tex:996-1001
+/// `\ekvc@extract@mark@` delimits on `<space>#` and its aggregate keys ran
+/// away without the space (expkv-bundle 13 errors; Perl omits it too).
+/// Guard: `perfect_kernel_batch56::meaning_prints_delimiter_control_words_with_a_space`.
+fn delimiter_text(param: &::latexml_core::parameter::Parameter, spec: &str) -> String {
+  if let Some(tks) = param.extra.first()
+    && !tks.is_empty()
+  {
+    writable_tokens(tks)
+  } else {
+    LEAD_W_COLON_RE.replace(spec, "").to_string()
+  }
+}
+
 // TODO: Rethink the numeric juggling here to make sense in our low-level proglang.
 static TRACE_MACROS: u8 = 0x1;
 static TRACE_COMMANDS: u8 = 0x2;
@@ -237,14 +256,13 @@ LoadDefinitions!({
               }
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
-                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
+                p_spec = pin(delimiter_text(param, other));
               },
               other if UNTIL_SPEC.is_match(other) => {
                 // implied argument at this slot
-                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
+                let delim = delimiter_text(param, other);
                 arg_index +=1 ;
-                p_spec = pin(
-                  with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
+                p_spec = pin(s!("#{arg_index}{delim}"));
               },
               _other => { // regular parameter, increment
               // skip the latexml-only requirement params, but only here,

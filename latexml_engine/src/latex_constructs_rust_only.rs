@@ -599,7 +599,15 @@ LoadDefinitions!({
     if lookup_bool_sym(pin!("IN_MATH")) {
       stuff.unlist()
     } else {
-      let mut result = vec![T_MATH!()];
+      // latex.ltx:15807 `\long\def\@ensuredmath#1{$\relax#1$}`: the `\relax`
+      // keeps an EMPTY argument from producing adjacent `$$`, which the mouth
+      // reads as a display-math shift (polynom.sty:1656-1687 Horner scheme:
+      // an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox`
+      // opened a display frame in a text box — 26 "Missing $ inserted",
+      // polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 omits it too
+      // (SHARED, worse there); pdflatex clean.
+      // Guard: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`.
+      let mut result = vec![T_MATH!(), T_CS!("\\relax")];
       result.extend(stuff.unlist());
       result.push(T_MATH!());
       result

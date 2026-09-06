@@ -1,0 +1,15 @@
+% witness: abntexto (abntexto.tex:187 `\let\over=\@@over`)
+% oracle: lualatex clean; engines: pdflatex,lualatex clean
+% expect: 0 errors; \@@over must be the saved \over primitive
+% status: RED (b56z) — Error:undefined:\over The token T_CS[\over] is not defined.
+% mechanism: amsmath.sty:211 `\@saveprimitive\over\@@over` is omitted by our
+%   amsmath binding (and Perl amsmath.sty.ltxml) => \@@over undefined =>
+%   \let\over=\@@over makes \over undefined. SHARED (Perl: 1 err).
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\let\over=\@@over
+\makeatother
+\begin{document}
+$1\over2$
+\end{document}

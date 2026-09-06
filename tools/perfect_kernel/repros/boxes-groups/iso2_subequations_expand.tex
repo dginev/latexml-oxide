@@ -1,0 +1,24 @@
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\def\mfirst#1#2\@nil{#1}
+\def\mrest#1#2\@nil{#2}
+\newif\ifmytake
+\DeclareRobustCommand{\myloopnum}{%
+  \edef\mya{2j}\mytaketrue
+  \loop
+    \edef\myn{\expandafter\mfirst\mya\@nil}%
+    \edef\mya{\expandafter\mrest\mya\@nil}%
+    \ifx\mya\@empty \edef\myq{\myn}\mytakefalse \fi
+  \ifmytake \repeat
+}
+\renewcommand{\theequation}{\myloopnum\arabic{equation}}
+\makeatother
+\begin{document}
+\begin{subequations}
+\begin{align}
+a &= b \\
+c &= d
+\end{align}
+\end{subequations}
+\end{document}

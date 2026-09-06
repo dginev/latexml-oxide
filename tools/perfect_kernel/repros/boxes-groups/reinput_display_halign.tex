@@ -1,0 +1,21 @@
+% witness: abntexto (abntexto.tex:1037 `\catcode`\%=9 \input{abntexto.cls}`;
+%   live block = abntexto.cls:727-736). oracle: lualatex clean.
+% expect: 0 errors. status: RED (b56z) — \halign "...mode internal_vertical",
+%   "...mode restricted_horizontal", \end{topics} "...internal_vertical",
+%   "Missing $ inserted". SHARED (Perl: 4x "\lx@end@inline@math Attempt to end
+%   mode math"). MODE-FRAME FAMILY (stomach.rs:753 / :1112).
+% mechanism: display-math \halign whose $#$ cells contain active <...> which
+%   emits \hbox{...$\langle$..$\rangle$..} (mode-dependent \ifhmode\else\hbox\fi)
+%   => \hbox(restricted_horizontal)+inner $..$ nested in halign(internal_vertical)
+%   in display math; mode-switch frames never reconcile; groups stay open.
+\documentclass{article}
+\usepackage{enumitem}
+\newlist{topics}{enumerate}{2}
+\setlist[topics,1]{label=\alph*)}
+\makeatletter
+{\catcode`<=13 \AtBeginDocument{\catcode`<=13
+  \def<#1>{\ifhmode\else\expandafter\hbox\fi\bgroup\ttfamily$\langle$\/{\itshape #1\/}$\rangle$\egroup}}}
+\makeatother
+\begin{document}
+{\catcode`\%=9 \input{reinput_display_halign.snippet} }
+\end{document}

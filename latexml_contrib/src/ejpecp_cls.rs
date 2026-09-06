@@ -60,6 +60,22 @@ LoadDefinitions!({
   DefMacro!("\\EMAIL{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
   // ejpecp.cls:156 `\BEMAIL` — a further e-mail line (sample).
   DefMacro!("\\BEMAIL{}", "\\EMAIL{#1}");
+  // ejpecp.cls:350-366 the supplement block and :372-375 `\MR`/`\ARXIV`
+  // (verbatim; the binding shadows the class file). Guard:
+  // `perfect_kernel_batch56::sweep46_single_name_gaps`.
+  RawTeX!(
+    r"\def\supplement@name{Supplementary Material}
+\def\stitle#1{\def\@stitle{#1}}
+\def\stitle@fmt#1{\textbf{#1.}\ }
+\def\sdescription#1{\def\@sdescription{#1}}
+\def\suppsection@fmt{\section*{\supplement@name}}
+\long\def\supplement{\@ifnextchar[{\@supplement}{\@supplement[]}}
+\long\def\@supplement[#1]{\suppsection@fmt\global\let\suppsection@fmt\smallskip}
+\def\endsupplement{\@ifundefined{@stitle}{}{\stitle@fmt{\@stitle}}\@ifundefined{@sdescription}{}{\@sdescription}\par}
+\def\@MRExtract#1 #2!{#1}
+\newcommand{\MR}[1]{\xdef\@MRSTRIP{\@MRExtract#1 !}\href{https://mathscinet.ams.org/mathscinet-getitem?mr=\@MRSTRIP}{MR\@MRSTRIP}}
+\newcommand{\ARXIV}[1]{\href{https://arXiv.org/abs/#1}{arXiv:#1}}"
+  );
   // ejpecp.cls:467 `\let\realmathbb=\mathbb` (the class re-styles `\mathbb`).
   Let!("\\realmathbb", "\\mathbb");
   DefMacro!(

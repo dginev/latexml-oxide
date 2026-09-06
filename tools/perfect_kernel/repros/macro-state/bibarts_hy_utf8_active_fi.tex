@@ -1,0 +1,18 @@
+% witness: bibarts/bibarts.tex L2318 (TL2025 doc/latex/bibarts)
+% oracle: pdflatex clean; PERL latexml does NOT emit this (2 diff errors) => RUST-ONLY
+% engines: pdflatex; expect: 0 errors; status: RED (5 errors)
+% first: Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since not in a conditional
+% mechanism: our engine makes decoded a-acute (U+00E1) catcode-13 ACTIVE bound to
+% the \DeclareUnicodeCharacter LICR macro (Perl keeps it catcode-12 char). bibarts
+% (\act@ba{\M-a}=byte 0xE1 active, its 3-byte-UTF8 lead detector) then matches
+% \ifx\next@hy <0xE1> (bibarts.sty:4029) => \batriplet@hy => \doUTFhyT@ba#1#2
+% (bibarts.sty:3871) reads spurious tokens, its \ifx\Foct@ba/#1/#2 high-byte
+% chain emits unbalanced \fi. Forcing \catcode`<U+00E1>=12 => 0 errors.
+\documentclass[12pt,a4paper]{article}
+\usepackage{bibarts}\bacaptionsgerman
+\usepackage{ngerman}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\begin{document}
+\textsc{\hy á}
+\end{document}

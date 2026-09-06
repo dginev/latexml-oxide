@@ -3642,6 +3642,25 @@ LoadDefinitions!({
   // escapechar handler
   DefMacro!("\\lst@@escapechar Until:\\end", sub [args] {
     let esc = lst_deslash(&args[0].to_string());
+    // `escapechar={}` CLEARS an inherited escape (listings' `\lst@@escapechar`
+    // re-lets the delimiter table; `\lstinputlisting[escapechar={}]` after a
+    // `\lstset{escapechar=*}` otherwise kept `*` live and executed a
+    // `\typeout{* Missing: \PAX@file}` as LaTeX — newpax, `\PAX` undefined).
+    // Perl's listings.sty.ltxml:1069 has the same latent gap (SHARED).
+    // Guard: `perfect_kernel_batch56::listings_escapechar_empty_clears`.
+    if let Some(Stored::String(prev)) = lookup_value("LST_ESCAPECHAR_CURRENT") {
+      let prev = to_string(prev);
+      if prev != esc {
+        for k in ["open", "close", "class", "escape"] {
+          assign_value(&s!("LST_DELIM@{prev}@{k}"), Stored::None, None);
+        }
+        if let Some(Stored::Tokens(keys)) = lookup_value("LST_DELIM_KEYS") {
+          let kept: Vec<Token> = keys.unlist_ref().iter().filter(|t| t.to_string() != prev).copied().collect();
+          assign_value("LST_DELIM_KEYS", Stored::Tokens(Tokens::new(kept)), None);
+        }
+      }
+    }
+    assign_value("LST_ESCAPECHAR_CURRENT", if esc.is_empty() { Stored::None } else { Stored::String(pin(&esc)) }, None);
     if !esc.is_empty() {
       let esc_re = regex::escape(&esc);
       assign_value(&s!("LST_DELIM@{esc}@open"), Stored::String(pin(&esc_re)), None);

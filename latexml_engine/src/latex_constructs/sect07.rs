@@ -330,7 +330,16 @@ pub(crate) fn load() -> Result<()> {
     // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
     // L1134) — token-level, no string round-trip. Witness 2005.06712
     // (subequation tags `(S15a)` → `(\rmS15a)`).
-    let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
+    // `\protected@edef`'s REGIME, not a full expansion: robust commands in
+    // the number (`\DeclareRobustCommand`, e.g. hep-paper's oldstyle `\tstyle`
+    // → nfssext-cfr-nnfss.sty:391 `\exfs@unmerge@families`, a `\loop` whose
+    // scratch macros are set by local `\edef`) stay tokens and run at
+    // digestion, where their assignments execute; gullet-expanding them
+    // skipped the `\edef`s and the loop fell off its `\ifexfs@take`
+    // (hep-math-documentation 39 errors; Perl's `Expand` at
+    // latex_constructs.pool.ltxml:2123 fails the same way — SHARED).
+    // Guard: `perfect_kernel_batch56::subequations_keep_robust_number_commands`.
+    let eqnum_toks = with_unexpandable_protect(|| do_expand_partially(T_CS!("\\theequation")))?;
     // Save current equation counter value
     let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
       match rv {

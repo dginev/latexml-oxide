@@ -2,6 +2,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // amsrefs typesets `\bib` titles verbatim; the BibTeX pool's default
+  // `capitalize1` re-casing lowercases later words INCLUDING control-sequence
+  // names (`\LaTeX` → `\latex`, `\AmS` → `\ams`: amslatex-primer/amshelp).
+  // Perl's amsrefs.sty.ltxml never overrides it (SHARED); pdflatex clean.
+  // Guard: `perfect_kernel_batch56::sweep46_single_name_gaps`.
+  AssignValue!("BibTeX_title_case" => "asis");
   // Perl: amsrefs.sty.ltxml — Leverage the BibTeX implementation
 
   // Perl: LoadPool('BibTeX');

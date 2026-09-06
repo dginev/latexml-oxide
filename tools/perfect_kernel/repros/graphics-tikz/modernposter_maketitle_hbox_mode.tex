@@ -1,0 +1,16 @@
+% witness: modernposter/demo.tex (TL2025 doc/latex/modernposter)
+% oracle: pdflatex clean; PERL latexml SHARED (same \hbox error, 31 vs our 16)
+% engines: pdflatex; expect: 0 errors; status: RED (15 errors)
+% first: Error:unexpected:\hbox Attempt to end mode restricted_horizontal
+% mechanism: modernposter.cls \maketitle (L137-170) filled tikz \node's are
+% typeset via pgfsys->SVG; \pgfsys@beginscope (pgfsys-latexml.def.ltxml:562->
+% \lxSVG@beginscope:576 = $stomach->begingroup) leaves a \begingroup frame on
+% top of an \hbox restricted_horizontal mode frame, so end_mode fails
+% (base_utilities.rs:3610 predigest_box_contents_in_mode -> stomach.rs:1108).
+\documentclass{modernposter}
+\title{Demo Title}
+\author{Firstname Lastname}
+\email{a@b.com}
+\begin{document}
+\maketitle
+\end{document}
