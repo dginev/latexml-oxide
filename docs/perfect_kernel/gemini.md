@@ -3,7 +3,7 @@
 You are a helper on branch `perfect_kernel` of `~/git/latexml-oxide` (the perfect-
 kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-7`
 cut from the current `perfect_kernel` tip (which now contains batch 56z AND your
-round-6 merge, commit `MERGE_SHA`), push it, and append to the **Status** section at
+round-6 merge, commit `02cd6e2c70`), push it, and append to the **Status** section at
 the end of this file (never edit task text). Rounds 1–6 are merged into
 `perfect_kernel`; the orchestrator generalised your L5 at merge (the kernel's
 `\@currsize` is now a `\let`, sect13.rs — the five class copies are gone) and
