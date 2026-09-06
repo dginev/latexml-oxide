@@ -17250,4 +17250,41 @@ line 2
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("hello verbatim world"), "{c_xml}");
   }
+
+  /// xcolor: \XC@getcolor & \XC@usecolor (L1, witness dsptricks/dspTricksManual).
+  /// Verifies \XC@getcolor normalizes and assigns into the target macro,
+  /// \XC@usecolor consumes the color argument without error, and that loading
+  /// pstricks after/with xcolor aliases \pst@getcolor / \pst@usecolor to them.
+  #[test]
+  fn xcolor_pst_getcolor_and_usecolor() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\usepackage{pstricks}
+\begin{document}
+\makeatletter
+\XC@getcolor{red}\mycolorA
+\pst@getcolor{blue}\mycolorB
+\XC@usecolor\mycolorA
+\pst@usecolor\mycolorB
+ColorA:\mycolorA;ColorB:\mycolorB.
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ColorA:red;ColorB:blue."), "{xml}");
+
+    // Control: standard \definecolor + \color still emits color attribute
+    let control_tex = r"\documentclass{article}
+\usepackage{xcolor}
+\definecolor{mytestcolor}{rgb}{1,0,0}
+\begin{document}
+{\color{mytestcolor}Hello Red World}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("color=\"#FF0000\""), "{c_xml}");
+    assert!(c_xml.contains("Hello Red World"), "{c_xml}");
+  }
 }
