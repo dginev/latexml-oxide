@@ -16917,4 +16917,27 @@ Hello world
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("Hello world"), "{c_xml}");
   }
+
+  /// ejpecp class \LaTeXe in math mode (witness: ejpecp/sample.tex).
+  #[test]
+  fn ejpecp_latexe_math_mode() {
+    let tex = r"\documentclass{ejpecp}
+\begin{document}
+$\LaTeXe$ and $\LaTeX$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ltx_LaTeX_logo"), "{xml}");
+
+    // Control: text mode in standard article works without error
+    let control_tex = r"\documentclass{article}
+\begin{document}
+\LaTeXe\ and \LaTeX
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("ltx_LaTeX_logo"), "{c_xml}");
+  }
 }

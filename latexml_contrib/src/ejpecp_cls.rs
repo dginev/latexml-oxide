@@ -83,6 +83,15 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=support]{#1}"
   );
 
+  // ejpecp sample.tex lines 128 and 171 use `$\LaTeXe$`. In LaTeX kernel (latex.ltx:7650-7661),
+  // \LaTeX and \LaTeXe are defined with \mbox{\m@th...}. In math mode, the bare logo constructor
+  // emits <ltx:text> inside <ltx:XMath>, causing 4 "Attempt to close </ltx:text>, which isn't open"
+  // errors per occurrence (Perl shared failure). Wrapping in \mbox restores LaTeX kernel semantics.
+  Let!("\\ejpecp@LaTeX", "\\LaTeX");
+  DefMacro!("\\LaTeX", "\\mbox{\\ejpecp@LaTeX}");
+  Let!("\\ejpecp@LaTeXe", "\\LaTeXe");
+  DefMacro!("\\LaTeXe", "\\mbox{\\ejpecp@LaTeXe}");
+
   // Standard envs commonly used in probability papers.
   DefEnvironment!("{acks}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
