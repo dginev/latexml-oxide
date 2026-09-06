@@ -17287,4 +17287,43 @@ ColorA:\mycolorA;ColorB:\mycolorB.
     assert!(c_xml.contains("color=\"#FF0000\""), "{c_xml}");
     assert!(c_xml.contains("Hello Red World"), "{c_xml}");
   }
+
+  /// etoolbox: \AtBeginEnvironment & co. routing to lthooks env hooks (L2 / K3 step)
+  /// with label support, firing in lthooks order, plus verbatim private store compatibility.
+  #[test]
+  fn etoolbox_env_hooks_onto_lthooks() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\BeforeBeginEnvironment{center}{[BEFORE-C]}
+\AtBeginEnvironment[label1]{center}{[BEGIN-C1]}
+\AtBeginEnvironment[label2]{center}{[BEGIN-C2]}
+\AtEndEnvironment{center}{[END-C]}
+\AfterEndEnvironment{center}{[AFTER-C]}
+\begin{document}
+\begin{center}
+Center text.
+\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BEFORE-C]"), "{xml}");
+    assert!(xml.contains("[BEGIN-C1]"), "{xml}");
+    assert!(xml.contains("[BEGIN-C2]"), "{xml}");
+    assert!(xml.contains("[END-C]"), "{xml}");
+    assert!(xml.contains("[AFTER-C]"), "{xml}");
+    assert!(xml.contains("Center text."), "{xml}");
+
+    // Control: center environment without hooks
+    let control_tex = r"\documentclass{article}
+\begin{document}
+\begin{center}
+Control center text.
+\end{center}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Control center text."), "{c_xml}");
+  }
 }

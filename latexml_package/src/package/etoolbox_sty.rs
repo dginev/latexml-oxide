@@ -1815,14 +1815,87 @@ LoadDefinitions!({
   //======================================================================
   // 2.6 Environment Hooks
 
-  DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
-  DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
-  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
-  DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+    DefMacro!(
+      "\\AtBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atbegin"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/begin")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\AtEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atend"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/end")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\BeforeBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/before")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\AfterEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/after")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+  } else {
+    DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
+    DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
+    DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
+    DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  }
 
   // \PatchFailed — used as the failure-callback in
   // `\apptocmd{cs}{add}{success}{\PatchFailed}` invocations
