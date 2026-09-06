@@ -15829,6 +15829,37 @@ $\tr A$
     assert!(xml.contains(">tr<"), "{xml}");
   }
 
+  /// A `!O{}` LEADING optional of a tcolorbox listing environment reaches the
+  /// box options (`[listing only]` stops the body from executing, so the
+  /// `\errmessage` in it never runs), while a `[`-line inside the body stays
+  /// content (xparse `!`: no space skipping; istgame-doc). keytheorems-doc,
+  /// wordle ×2, simplebnf-doc flipped dirty in sweep 46 with a dropping eater.
+  #[test]
+  fn tcb_bang_leading_optional_reaches_options() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\NewTCBListing{ex}{ !O{} }{colback=red!5,#1}
+\begin{document}
+\begin{ex}[listing only]
+\errmessage{executed}
+\end{ex}
+\begin{ex}
+  [
+    not an option
+  ]
+\end{ex}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("After.") && xml.matches("<listing class").count() == 2,
+      "{xml}"
+    );
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

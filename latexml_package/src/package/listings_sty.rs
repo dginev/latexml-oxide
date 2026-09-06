@@ -126,7 +126,52 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
         .starts_with(&format!("\\begin{{{environment}}}"))
     })
   } else {
-    read_raw_line(); // leftover of the \begin line — not content
+    // leftover of the \begin line — not content, EXCEPT a tcolorbox
+    // `!`-leading optional written right after `\begin{env}` (xparse `!O`:
+    // no space skipping, so only a `[` at column 0 of the remainder): grab
+    // it into `\lxtcbbangopt` and re-resolve the listing mode with it
+    // (`\NewTCBListing{keythmscode}{ !O{} }` + `[withpreamble]`,
+    // keytheorems-doc). Guard:
+    // `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+    let leftover = read_raw_line();
+    // Take the parked options exactly once, whether or not a `[` follows:
+    // a stale value must not re-resolve a later listing environment.
+    let pending = lookup_value("tcb_pending_mode_opts");
+    AssignValue!("tcb_pending_mode_opts" => Stored::None);
+    if let Some(Stored::Tokens(pending)) = pending
+      && let Some(rest) = leftover.as_deref()
+      && rest.starts_with('[')
+    {
+      // bracket balance only (a `]` inside a brace group would mis-close;
+      // xparse scans brace-aware — rare, not yet needed)
+      let mut depth = 0usize;
+      let mut close = None;
+      for (i, ch) in rest.char_indices() {
+        match ch {
+          '[' => depth += 1,
+          ']' => {
+            depth -= 1;
+            if depth == 0 {
+              close = Some(i);
+              break;
+            }
+          },
+          _ => {},
+        }
+      }
+      if let Some(ci) = close {
+        let inner = &rest[1..ci];
+        let _ = (|| -> Result<()> {
+          DefMacro!(
+            T_CS!("\\lxtcbbangopt"),
+            None,
+            Tokenize!(TeXString::assembled(inner.to_string()))
+          );
+          Ok(())
+        })();
+        let _ = tcolorbox_sty::tcb_resolve_listing_mode(pending);
+      }
+    }
     None
   };
   let mut end_patterns = vec![

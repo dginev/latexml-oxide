@@ -7,6 +7,99 @@ use crate::{
   prelude::*,
 };
 
+/// Resolve a tcolorbox listing environment's MODE from its per-use option
+/// text (see the primitive below). Re-run by listings' raw body reader once a
+/// `!`-leading optional has been grabbed from the begin line.
+pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
+  // Whether the body is EXECUTED is tcolorbox's own resolved state, not the
+  // option text: tcblistingscore.code.tex:195-224 makes every mode a style
+  // that `\let`s `\tcb@listing@process` / `\tcb@inputlisting` /
+  // `\tcb@use@listing@other`, and the text part runs only when the process
+  // reaches `\tcb@use@listing@other` = `\tcbuselistingtext` (:24-35, :429
+  // default `listing and text`). A key-name scan of the options missed a
+  // mode hidden in a user `.style` (tutodoc.cls:1208 `listing only` inside
+  // `tutodoc-full-listing-style`, a Perl program then ran as LaTeX) and a
+  // mode set by the ENCLOSING environment (codebox.sty:268 `\tcbset{listing
+  // only}` before its `\DeclareTCBListing` box: `#include` lines reached the
+  // stomach). So: set the per-use options through `\tcbset` in a group —
+  // exactly what the box does — and read the three macros back. Without the
+  // library (no `\tcb@listing@process`), keep the literal scan.
+  // Guards: `perfect_kernel_batch56::{tcb_listing_mode_hidden_in_a_style_is_honoured,
+  // tcb_listing_mode_set_by_the_enclosing_environment_is_honoured}`.
+  const NO_TEXT_MODES: &[&str] = &[
+    "listing only",
+    "comment only",
+    "listing and comment",
+    "comment and listing",
+    "comment side listing",
+    "listing side comment",
+    "comment above listing",
+    "comment above* listing",
+    "listing above comment",
+    "listing above* comment",
+    "comment outside listing",
+    "listing outside comment",
+  ];
+  // `untex()`, not `to_string()`: the option tokens carry substituted
+  // environment arguments (`before lower={…#3\par}` with `#3` =
+  // `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652), and a separator-less
+  // concatenation re-tokenizes `\dots ii` as `\dotsii`.
+  // Guard: `perfect_kernel_batch56::tcb_listing_option_tokens_keep_cs_boundaries`.
+  // A grabbed `!`-leading optional stands in the options as the token
+  // `\lxtcbbangopt` (see the eaters); splice its `\def` body in here so the
+  // key list carries the bracket text, not a macro name pgfkeys would
+  // report as an unknown key.
+  let opts = {
+    let bang = T_CS!("\\lxtcbbangopt");
+    if opts.unlist_ref().contains(&bang)
+      && let Ok(Some(defn)) = lookup_definition(&bang)
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      let mut out = Vec::new();
+      for t in opts.unlist_ref().iter() {
+        if *t == bang {
+          out.extend(body.unlist_ref().iter().copied());
+        } else {
+          out.push(*t);
+        }
+      }
+      Tokens::new(out)
+    } else {
+      opts
+    }
+  };
+  let text = opts.untex();
+  if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
+    // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
+    // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),
+    // so it runs inside the box's resolved `before lower*`/`after lower*`
+    // wrapper: `tikz lower` (tcolorbox.sty:712) = `\begin{tikzpicture}[…]` …
+    // `\end{tikzpicture}`. Captured here for `\lx@lstenv@body` (tikz2d-fr,
+    // OutilsGeomTikz: `\draw`/`{scope}` undefined outside a picture).
+    // Guard: `perfect_kernel_batch56::tcblisting_tikz_lower_wraps_the_executed_body`.
+    let src = format!(
+      "\\begingroup\\tcbset{{{text}}}\
+       \\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
+         \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
+       \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
+         \\else\\global\\let\\lx@tcb@execafter\\@empty\\fi\
+       \\ifx\\tcb@use@listing@other\\tcbuselistingtext \
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
+           \\ifx\\tcb@listing@process\\tcb@listing@listing \\lxtcbexec0 \\else\\lxtcbexec1 \\fi\
+         \\else\\lxtcbexec1 \\fi\
+       \\else\\lxtcbexec0 \\fi\
+       \\endgroup"
+    );
+    let _ = digest(mouth::tokenize_internal(TeXString::assembled(src)));
+  } else {
+    let execute = !split_keyval_source(&text)
+      .iter()
+      .any(|(key, _)| NO_TEXT_MODES.contains(&key.trim()));
+    AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Global);
+  }
+  Ok(Vec::new())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // used in tcbbreakable.code.tex assuming it was defined
@@ -53,74 +146,26 @@ LoadDefinitions!({
   // clean). Witness: 2606.00555 (leading init-options). Prior witnesses use no
   // leading optional and are unaffected: 2507.00833 (ar5iv #569/#570), 2402.13846 (#504).
   DefPrimitive!("\\lxtcblistingmode{}", sub[(opts)] {
-    // Whether the body is EXECUTED is tcolorbox's own resolved state, not the
-    // option text: tcblistingscore.code.tex:195-224 makes every mode a style
-    // that `\let`s `\tcb@listing@process` / `\tcb@inputlisting` /
-    // `\tcb@use@listing@other`, and the text part runs only when the process
-    // reaches `\tcb@use@listing@other` = `\tcbuselistingtext` (:24-35, :429
-    // default `listing and text`). A key-name scan of the options missed a
-    // mode hidden in a user `.style` (tutodoc.cls:1208 `listing only` inside
-    // `tutodoc-full-listing-style`, a Perl program then ran as LaTeX) and a
-    // mode set by the ENCLOSING environment (codebox.sty:268 `\tcbset{listing
-    // only}` before its `\DeclareTCBListing` box: `#include` lines reached the
-    // stomach). So: set the per-use options through `\tcbset` in a group —
-    // exactly what the box does — and read the three macros back. Without the
-    // library (no `\tcb@listing@process`), keep the literal scan.
-    // Guards: `perfect_kernel_batch56::{tcb_listing_mode_hidden_in_a_style_is_honoured,
-    // tcb_listing_mode_set_by_the_enclosing_environment_is_honoured}`.
-    const NO_TEXT_MODES: &[&str] = &[
-      "listing only",
-      "comment only",
-      "listing and comment",
-      "comment and listing",
-      "comment side listing",
-      "listing side comment",
-      "comment above listing",
-      "comment above* listing",
-      "listing above comment",
-      "listing above* comment",
-      "comment outside listing",
-      "listing outside comment",
-    ];
-    // `untex()`, not `to_string()`: the option tokens carry substituted
-    // environment arguments (`before lower={…#3\par}` with `#3` =
-    // `\dots ii (Brussels…)`, oxnotes-doc.tex:216/1652), and a separator-less
-    // concatenation re-tokenizes `\dots ii` as `\dotsii`.
-    // Guard: `perfect_kernel_batch56::tcb_listing_option_tokens_keep_cs_boundaries`.
-    let text = opts.untex();
-    if lookup_meaning(&T_CS!("\\tcb@listing@process")).is_some() {
-      // The executed part is the box's LOWER part (tcblistingscore.code.tex:30-34
-      // `\tcb@listing@listingAndOther` = listing, `\tcblower`, then the text),
-      // so it runs inside the box's resolved `before lower*`/`after lower*`
-      // wrapper: `tikz lower` (tcolorbox.sty:712) = `\begin{tikzpicture}[…]` …
-      // `\end{tikzpicture}`. Captured here for `\lx@lstenv@body` (tikz2d-fr,
-      // OutilsGeomTikz: `\draw`/`{scope}` undefined outside a picture).
-      // Guard: `perfect_kernel_batch56::tcblisting_tikz_lower_wraps_the_executed_body`.
-      let src = format!(
-        "\\begingroup\\tcbset{{{text}}}\
-         \\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
-           \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
-         \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
-           \\else\\global\\let\\lx@tcb@execafter\\@empty\\fi\
-         \\ifx\\tcb@use@listing@other\\tcbuselistingtext \
-           \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
-             \\ifx\\tcb@listing@process\\tcb@listing@listing \\lxtcbexec0 \\else\\lxtcbexec1 \\fi\
-           \\else\\lxtcbexec1 \\fi\
-         \\else\\lxtcbexec0 \\fi\
-         \\endgroup"
-      );
-      let _ = digest(mouth::tokenize_internal(TeXString::assembled(src)));
+    // A `!`-leading optional is grabbed LATER, by listings' raw body reader
+    // (the only reader that sees the begin line's `[opts]`; every TeX-level
+    // eater in the start code peeks the next start-code token). Park the
+    // option tokens so the reader can re-resolve with the grabbed value.
+    if opts.unlist_ref().iter().any(|t| *t == T_CS!("\\lxtcbbangopt")) {
+      AssignValue!("tcb_pending_mode_opts" => Stored::Tokens(opts.clone()));
     } else {
-      let execute = !split_keyval_source(&text)
-        .iter()
-        .any(|(key, _)| NO_TEXT_MODES.contains(&key.trim()));
-      AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Global);
+      AssignValue!("tcb_pending_mode_opts" => Stored::None);
     }
-    Ok(Vec::new())
+    tcb_resolve_listing_mode(opts)
   });
   // Begin-line argument eaters for `tcb_xparse_listing`'s unmapped specifiers.
   // No `@` in these names: `tcb_xparse_listing` emits them through `Tokenize!`
-  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}\long\def\lxtcbifnextnospace#1#2#3{\def\lxtcbtempa{#2}\def\lxtcbtempb{#3}\def\lxtcbtemptarget{#1}\futurelet\lxtcblettoken\lxtcbifnchnospace}\def\lxtcbifnchnospace{\ifx\lxtcblettoken\lxtcbtemptarget\let\lxtcbtempc\lxtcbtempa\else\let\lxtcbtempc\lxtcbtempb\fi\lxtcbtempc}");
+  // `\lxtcbifnextnospace` (xparse `!O{}`: no leading-space skip) must `\let`
+  // its target to the delimiter CHARACTER: `\futurelet` binds a character
+  // token, and `\ifx` of that against a `\def`'d macro is never equal, so
+  // the round-3 version never ate `[opts]` and the options fell through as
+  // `/tcb/\par` (keytheorems-doc, wordle ×2, simplebnf-doc flipped dirty in
+  // sweep 46). Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
+  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}\long\def\lxtcbifnextnospace#1#2#3{\def\lxtcbtempa{#2}\def\lxtcbtempb{#3}\let\lxtcbtemptarget=#1\futurelet\lxtcblettoken\lxtcbifnchnospace}\def\lxtcbifnchnospace{\ifx\lxtcblettoken\lxtcbtemptarget\let\lxtcbtempc\lxtcbtempa\else\let\lxtcbtempc\lxtcbtempb\fi\lxtcbtempc}");
   DefMacro!("\\lx@tcb@execbefore", "");
   DefMacro!("\\lx@tcb@execafter", "");
   DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
@@ -294,9 +339,26 @@ pub(crate) fn tcb_xparse_listing(
   // istgame-doc.tex:129) leaked into the captured body and re-entered the
   // environment on `\input`-back (MemoryBudget fatal ×4, sweep #41).
   // Guard: `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
+  // A `!`-modified LEADING optional (xparse: no leading-space skip) cannot
+  // be the `[n][]` parameter — the kernel `[]` reader skips newlines, and
+  // `\begin{docplain}` + a `[`-line inside the body (istgame-doc) must stay
+  // content. It goes through the non-skipping peek instead, but GRABBED, not
+  // dropped: the bracket text lands in `\lxtcbbangopt`, which stands in for
+  // its `#n` in the options and is spliced back by `\lxtcblistingmode`
+  // (`\NewTCBListing{keythmscode}{ !O{} }{…,#1}` + `[withpreamble]`,
+  // keytheorems-doc; the round-3 dropping eater lost the value and changed
+  // the arity, and the box read a stray `\par` — `/tcb/\par`: keytheorems-doc,
+  // wordle ×2, simplebnf-doc flipped dirty in sweep 46).
+  // Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
   let leading_optional = specs.first().is_some_and(|(c, d, bang)| {
     !bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"))
   });
+  let bang_leading = specs.first().is_some_and(|(c, d, bang)| {
+    *bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"))
+  });
+  // Known gap: a `!`-leading optional FOLLOWED by a mandatory (`{ !O{} m }`)
+  // is not expressible in the `[n][]` arity — the `[` is consumed as the
+  // mandatory argument (silent, wrong options); pure `!O{}` is correct.
   let mut eaters = String::new();
   for (i, (c, d, bang)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {
@@ -307,7 +369,9 @@ pub(crate) fn tcb_xparse_listing(
       't' => eaters.push_str(&format!("\\lxtcbifnext{}{{\\lxtcbeatone}}{{}}", d)),
       'G' | 'g' => eaters.push_str("\\lxtcbifnext\\bgroup{\\lxtcbeatone}{}"),
       'O' | 'o' => {
-        if *bang {
+        if *bang && i == 0 {
+          eaters.push_str("\\def\\lxtcbbangopt{}");
+        } else if *bang {
           eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
         } else {
           eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
@@ -317,7 +381,9 @@ pub(crate) fn tcb_xparse_listing(
         "<>" => eaters.push_str("\\lxtcbifnext<{\\lxtcbeatangle}{}"),
         "()" => eaters.push_str("\\lxtcbifnext({\\lxtcbeatparen}{}"),
         "[]" => {
-          if *bang {
+          if *bang && i == 0 {
+            eaters.push_str("\\def\\lxtcbbangopt{}");
+          } else if *bang {
             eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
           } else {
             eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
@@ -345,6 +411,9 @@ pub(crate) fn tcb_xparse_listing(
       next += 1;
       renumber.push(next);
       slots.push(None);
+    } else if i == 0 && bang_leading {
+      renumber.push(0);
+      slots.push(Some("\\lxtcbbangopt".to_string()));
     } else {
       renumber.push(0);
       slots.push(Some(default.clone()));
