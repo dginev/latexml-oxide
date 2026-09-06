@@ -17537,4 +17537,43 @@ Inside minipage
       "{xml}"
     );
   }
+
+  /// bookmark.sty / hyperref.sty: `\bookmark[options]{text}` and `\bookmarksetup{options}`
+  /// are PDF outline metadata macros that become no-ops in XML/HTML conversion without
+  /// emitting navigation elements or erroring.
+  /// Witness: tagpdf/tagpdf.tex:129 (Task L7).
+  #[test]
+  fn bookmark_and_setup_absorbed_in_hyperref_and_bookmark() {
+    // 1. In hyperref (witness usage where bookmark is implicitly available)
+    let hyp_tex = r"\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\bookmarksetup{depth=2}
+\bookmarksetupnext{level=section}
+\bookmark[dest=toc,level=section]{Table of Contents}
+\bookmark{Unadorned Bookmark}
+\bookmarkdefinestyle{mystyle}{color=blue}
+\bookmarkget{dest}
+\BookmarkAtEnd{\bookmark{End Bookmark}}
+\section{First Section}
+Hello
+\end{document}
+";
+    let (hyp_stderr, hyp_xml) = convert(hyp_tex, false);
+    assert_eq!(error_count(&hyp_stderr), 0, "{hyp_stderr}");
+    assert!(hyp_xml.contains("First Section"), "{hyp_xml}");
+    assert!(!hyp_xml.contains("<ltx:navigation"), "{hyp_xml}");
+
+    // 2. In bookmark.sty
+    let bkm_tex = r"\documentclass{article}
+\usepackage{bookmark}
+\begin{document}
+\bookmarksetup{depth=2}
+\bookmark[dest=toc,level=section]{Table of Contents}
+\bookmark{Unadorned Bookmark}
+\end{document}
+";
+    let (bkm_stderr, _bkm_xml) = convert(bkm_tex, false);
+    assert_eq!(error_count(&bkm_stderr), 0, "{bkm_stderr}");
+  }
 }

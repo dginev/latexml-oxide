@@ -1033,6 +1033,15 @@ LoadDefinitions!({
   def_macro_noop("\\currentpdfbookmark{}{}")?;
   def_macro_noop("\\subpdfbookmark{}{}")?;
   def_macro_noop("\\belowpdfbookmark{}{}")?;
+  // Modern hyperref / pdfmanagement automatically loads bookmark.sty when bookmarks are enabled;
+  // stub user-facing bookmark macros so documents relying on implicit loading (e.g. tagpdf/tagpdf)
+  // or PDF outline metadata process without undefined macro errors.
+  def_macro_noop("\\bookmark[]{}")?;
+  def_macro_noop("\\bookmarksetup{}")?;
+  def_macro_noop("\\bookmarksetupnext{}")?;
+  def_macro_noop("\\bookmarkdefinestyle{}{}")?;
+  def_macro_noop("\\bookmarkget{}")?;
+  def_macro_noop("\\BookmarkAtEnd{}")?;
   // \Hy@raisedlink — hyperref-internal PDF-anchor positioning helper.
   // TL hyperref ships this as `\let \Hy@raisedlink \@empty` in every
   // non-PDF driver (htex4ht.def, hvtexmrk.def, hdvips.def, …), so it's
