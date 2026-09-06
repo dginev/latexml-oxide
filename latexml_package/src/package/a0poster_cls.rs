@@ -82,4 +82,5 @@ LoadDefinitions!({
   DefPrimitive!("\\veryHuge",     None, font => {size => 74.3 });
   DefPrimitive!("\\VeryHuge",     None, font => {size => 89.16 });
   DefPrimitive!("\\VERYHuge",     None, font => {size => 107 });
+  Let!("\\@currsize", "\\normalsize", Scope::Global);
 });

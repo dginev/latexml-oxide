@@ -17424,4 +17424,56 @@ Inside minipage
     assert!(c_xml.contains("(a)"), "{c_xml}");
     assert!(c_xml.contains("(b)"), "{c_xml}");
   }
+
+  #[test]
+  fn font_size_currsize_maintenance() {
+    // Task L5: font-size commands maintain \@currsize and initial document size
+    // is \let to \normalsize so \ifx\@currsize\normalsize chains succeed.
+
+    // 1. Initial document state equals \normalsize without explicit switch.
+    let init_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\ifx\@currsize\normalsize Y\else N\fi
+\end{document}
+";
+    let (i_stderr, i_xml) = convert(init_tex, false);
+    assert_eq!(error_count(&i_stderr), 0, "{i_stderr}");
+    assert!(i_xml.contains("<p>Y</p>"), "{i_xml}");
+
+    // 2. Switching to \small updates \@currsize to \small.
+    let small_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\small\ifx\@currsize\small Y\else N\fi
+\end{document}
+";
+    let (s_stderr, s_xml) = convert(small_tex, false);
+    assert_eq!(error_count(&s_stderr), 0, "{s_stderr}");
+    assert!(s_xml.contains("Y"), "{s_xml}");
+
+    // 3. Control: \normalsize branch.
+    let norm_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\small small text
+\normalsize\ifx\@currsize\normalsize Y\else N\fi
+\end{document}
+";
+    let (n_stderr, n_xml) = convert(norm_tex, false);
+    assert_eq!(error_count(&n_stderr), 0, "{n_stderr}");
+    assert!(n_xml.contains("Y"), "{n_xml}");
+
+    // 4. Scoped group restoration: {\small ...} restores \normalsize on group exit.
+    let grp_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+{\small\ifx\@currsize\small S\fi}\ifx\@currsize\normalsize N\fi
+\end{document}
+";
+    let (g_stderr, g_xml) = convert(grp_tex, false);
+    assert_eq!(error_count(&g_stderr), 0, "{g_stderr}");
+    assert!(g_xml.contains("S"), "{g_xml}");
+    assert!(g_xml.contains("N"), "{g_xml}");
+  }
 }

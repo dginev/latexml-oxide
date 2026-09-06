@@ -137,6 +137,11 @@ LoadDefinitions!( {
   DefPrimitive!("\\huge",         None, font => {size => 20.74 });
   DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
 
+  // latex.ltx:14103-14107: \normalsize runs \@setfontsize\normalsize... which
+  // does \let\@currsize\normalsize. Initialize \@currsize to \normalsize here
+  // so \ifx\@currsize\normalsize matches immediately before any size switch.
+  Let!("\\@currsize", "\\normalsize", Scope::Global);
+
   // article.cls `\let\@openbib@code\@empty` (article.cls:585) — the default
   // the `openbib` option overrides; a copied `thebibliography` body reads it
   // (mciteplus_doc; Perl's class binding lacks the default too).
