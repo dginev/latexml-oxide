@@ -17476,4 +17476,65 @@ Inside minipage
     assert!(g_xml.contains("S"), "{g_xml}");
     assert!(g_xml.contains("N"), "{g_xml}");
   }
+
+  /// pdfpages.sty:262 `\includepdfmerge[opts]{file-page-list}` delegates each
+  /// comma-separated file and optional page spec to `\includepdf`.
+  /// Witness: latex-refsheet/LaTeX_RefSheet.tex:1395 (Task L6).
+  #[test]
+  fn pdfpages_includepdfmerge_multi_and_opts() {
+    let tex = r"\documentclass{article}
+\usepackage{pdfpages}
+\begin{document}
+\includepdfmerge[pages=-, nup=5x2, frame=true, scale=0.97]{thesis.pdf, 1-9, acknowledgements.pdf}
+\includepdfmerge{single.pdf}
+\includepdfmerge{docA.pdf, 1, docB.pdf, 2-, docC.pdf}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // thesis.pdf with page spec 1-9
+    assert!(
+      xml.contains(r#"<resource src="thesis.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 1-9 of "), "{xml}");
+    assert!(
+      xml.contains(r#"<ref href="thesis.pdf">thesis.pdf</ref>"#),
+      "{xml}"
+    );
+    // acknowledgements.pdf with default pages=- from options
+    assert!(
+      xml.contains(r#"<resource src="acknowledgements.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages - of "), "{xml}");
+    assert!(
+      xml.contains(r#"<ref href="acknowledgements.pdf">acknowledgements.pdf</ref>"#),
+      "{xml}"
+    );
+    // single.pdf with no options
+    assert!(
+      xml.contains(r#"<resource src="single.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<ref href="single.pdf">single.pdf</ref>"#),
+      "{xml}"
+    );
+    // docA.pdf with page 1, docB.pdf with pages 2-, docC.pdf with no pages
+    assert!(
+      xml.contains(r#"<resource src="docA.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 1 of "), "{xml}");
+    assert!(
+      xml.contains(r#"<resource src="docB.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 2- of "), "{xml}");
+    assert!(
+      xml.contains(r#"<resource src="docC.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+  }
 }
