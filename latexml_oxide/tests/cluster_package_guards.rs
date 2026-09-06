@@ -17576,4 +17576,28 @@ Hello
     let (bkm_stderr, _bkm_xml) = convert(bkm_tex, false);
     assert_eq!(error_count(&bkm_stderr), 0, "{bkm_stderr}");
   }
+
+  /// uspatent.cls: redefines \maketitle to run \patentTitlePage and \patentStart,
+  /// the latter of which defines `\newcounter{parnum}` (used by \patentParagraph).
+  /// Kernel \maketitle is locked, which dropped the redefinition, leaving `parnum`
+  /// undefined (`undefined:\theparnum`, `undefined:counter:parnum`).
+  /// Witness: uspatent/PatentApplication.tex (Task L9).
+  #[test]
+  fn uspatent_maketitle_defines_parnum_counter() {
+    let tex = r"\documentclass{uspatent}
+\begin{document}
+\title{Test Patent}
+\author{Test Inventor}
+\maketitle
+\patentParagraph First paragraph.
+\patentParagraph Second paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("0001"), "{xml}");
+    assert!(xml.contains("0002"), "{xml}");
+    assert!(xml.contains("First paragraph."), "{xml}");
+    assert!(xml.contains("Second paragraph."), "{xml}");
+  }
 }
