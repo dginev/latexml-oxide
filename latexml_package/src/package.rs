@@ -415,6 +415,7 @@ pub mod slides_cls;
 pub mod tagpdf_base_sty;
 pub mod tcblistingscore_code_tex;
 pub mod tikzlibraryexternal_code_tex;
+pub mod tikzlibrarytrees_code_tex;
 pub mod u_fontmap;
 // smfart_cls: removed; Perl has no binding either, falls through to OmniBus.
 pub mod soul_sty;

@@ -152,13 +152,17 @@ pub fn listings_read_raw_lines_with_outer(environment: &str, outer_env: Option<&
       }
       if is_outer {
         let rest = line[m.start()..].to_string();
-        unread(Tokens::new(vec![T_CR!()]));
-        unread(Tokenize!(TeXString::assembled(rest)));
+        if rest.trim().is_empty() {
+          unread_one(T_CR!());
+        } else if let Ok(mouth) = Mouth::new(&rest, None) {
+          open_mouth(mouth, true);
+        }
       } else {
         let rest = line[m.end()..].to_string();
-        if !rest.is_empty() {
-          unread(Tokens::new(vec![T_CR!()]));
-          unread(Tokenize!(TeXString::assembled(rest)));
+        if rest.trim().is_empty() {
+          unread_one(T_CR!());
+        } else if let Ok(mouth) = Mouth::new(&rest, None) {
+          open_mouth(mouth, true);
         }
       }
       break;
@@ -2414,10 +2418,16 @@ LoadDefinitions!({
           result.extend(post.unlist());
         }
         result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (as \lx@lstinline)
+        let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+        end_tokens.extend(ExplodeText!("lstinline"));
+        end_tokens.push(T_END!());
+        unread_expansion(Tokens::new(end_tokens));
         Ok(Tokens::new(result))
       }
     )));
     def_macro(cs, params, expansion, None)?;
+    DefMacro!(T_CS!("\\end{lstinline}"), None, Tokens!());
+    DefMacro!(T_CS!("\\endlstinline"), None, Tokens!());
   }
 
   // \begin{lstlisting} — block listing environment
@@ -2447,10 +2457,16 @@ LoadDefinitions!({
         egroup()?;
         let mut out = lst_group_opener("lstlisting", kv.as_ref())?;
         out.extend(result);
+        let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+        end_tokens.extend(ExplodeText!("lstlisting"));
+        end_tokens.push(T_END!());
+        unread_expansion(Tokens::new(end_tokens));
         Ok(Tokens::new(out))
       }
     )));
     def_macro(cs, params, expansion, None)?;
+    DefMacro!(T_CS!("\\end{lstlisting}"), None, Tokens!());
+    DefMacro!(T_CS!("\\endlstlisting"), None, Tokens!());
   }
 
   // Digestion-time key activation for a display listing (see
@@ -2717,6 +2733,12 @@ LoadDefinitions!({
         out.push(T_CS!("\\lx@tcb@execafter"));
       }
       out.extend(closer);
+    }
+    if outer_opt.is_none() {
+      let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+      end_tokens.extend(ExplodeText!(&env_name));
+      end_tokens.push(T_END!());
+      unread_expansion(Tokens::new(end_tokens));
     }
     Ok(Tokens::new(out))
   });

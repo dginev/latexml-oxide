@@ -120,8 +120,7 @@ LoadDefinitions!({
   });
   // Begin-line argument eaters for `tcb_xparse_listing`'s unmapped specifiers.
   // No `@` in these names: `tcb_xparse_listing` emits them through `Tokenize!`
-  // at the document's catcodes, where `@` is OTHER.
-  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}");
+  RawTeX!(r"\let\lxtcbifnext\@ifnextchar\def\lxtcbeatone#1{}\def\lxtcbeatangle<#1>{}\def\lxtcbeatparen(#1){}\def\lxtcbeatbracket[#1]{}\long\def\lxtcbifnextnospace#1#2#3{\def\lxtcbtempa{#2}\def\lxtcbtempb{#3}\def\lxtcbtemptarget{#1}\futurelet\lxtcblettoken\lxtcbifnchnospace}\def\lxtcbifnchnospace{\ifx\lxtcblettoken\lxtcbtemptarget\let\lxtcbtempc\lxtcbtempa\else\let\lxtcbtempc\lxtcbtempb\fi\lxtcbtempc}");
   DefMacro!("\\lx@tcb@execbefore", "");
   DefMacro!("\\lx@tcb@execafter", "");
   DefPrimitive!("\\lxtcbexec Number", sub[(n)] {
@@ -275,18 +274,20 @@ pub(crate) fn tcb_xparse_listing(
 ) -> Result<Tokens> {
   let sig_str = sig.to_string();
   let specs_defaults = xparse_signature_specs_defaults(&sig_str);
-  let specs: Vec<(char, String)> = specs_defaults
+  let specs: Vec<(char, String, bool)> = specs_defaults
     .iter()
-    .map(|(c, d, _)| (*c, d.clone()))
+    .map(|(c, d, _, bang)| (*c, d.clone(), *bang))
     .collect();
   let mandatory = specs
     .iter()
-    .filter(|(c, _)| matches!(c, 'm' | 'r' | 'R'))
+    .filter(|(c, _, _)| matches!(c, 'm' | 'r' | 'R'))
     .count();
   // The `[n][]` arity can express one LEADING bracket optional; every other
   // specifier the arity cannot express — `s`, `t<c>`, `d`/`D` with non-`[]`
-  // delimiters, `G`/`g`, trailing `O`/`o` — is absorbed from the begin line
-  // by an `\@ifnextchar` eater in the start code (xparse reads them in the
+  // delimiters, `G`/`g`, trailing `O`/`o`, or any `!`-modified optional
+  // (which forbids skipping leading whitespace/newlines, unlike LaTeX's
+  // `\@ifnextchar[` in `\lstnewenvironment`) — is absorbed from the begin
+  // line by an eater in the start code (xparse reads them in the
   // same peek-then-consume way, ltcmd `\__cmd_grab_D:w`/`_G:w`/`_t:w`).
   // Left unconsumed, `\begin{tdoclatex}<opts>` / `\begin{example}*` /
   // `\begin{doccode}{opts}` (tutodoc.cls:1024, simplebnf-doc.tex:58,
@@ -295,9 +296,9 @@ pub(crate) fn tcb_xparse_listing(
   // Guard: `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
   let leading_optional = specs
     .first()
-    .is_some_and(|(c, d)| matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"));
+    .is_some_and(|(c, d, bang)| !bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]")));
   let mut eaters = String::new();
-  for (i, (c, d)) in specs.iter().enumerate() {
+  for (i, (c, d, bang)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {
       continue;
     }
@@ -305,11 +306,23 @@ pub(crate) fn tcb_xparse_listing(
       's' => eaters.push_str("\\lxtcbifnext*{\\lxtcbeatone}{}"),
       't' => eaters.push_str(&format!("\\lxtcbifnext{}{{\\lxtcbeatone}}{{}}", d)),
       'G' | 'g' => eaters.push_str("\\lxtcbifnext\\bgroup{\\lxtcbeatone}{}"),
-      'O' | 'o' => eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}"),
+      'O' | 'o' => {
+        if *bang {
+          eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
+        } else {
+          eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
+        }
+      },
       'd' | 'D' => match d.as_str() {
         "<>" => eaters.push_str("\\lxtcbifnext<{\\lxtcbeatangle}{}"),
         "()" => eaters.push_str("\\lxtcbifnext({\\lxtcbeatparen}{}"),
-        "[]" => eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}"),
+        "[]" => {
+          if *bang {
+            eaters.push_str("\\lxtcbifnextnospace[{\\lxtcbeatbracket}{}");
+          } else {
+            eaters.push_str("\\lxtcbifnext[{\\lxtcbeatbracket}{}");
+          }
+        },
         _ => {},
       },
       _ => {},
@@ -326,7 +339,7 @@ pub(crate) fn tcb_xparse_listing(
   let mut slots: Vec<Option<String>> = Vec::new(); // Some(text) = substitute, None = keep `#k`
   let mut next = 0usize;
   let mut renumber: Vec<usize> = Vec::new();
-  for (i, (c, _d, default)) in specs_defaults.iter().enumerate() {
+  for (i, (c, _d, default, _bang)) in specs_defaults.iter().enumerate() {
     let mapped = (i == 0 && leading_optional) || matches!(c, 'm' | 'r' | 'R');
     if mapped {
       next += 1;
@@ -392,10 +405,11 @@ fn renumber_param_tokens(opts: &Tokens, slots: &[Option<String>], renumber: &[us
 /// The specifiers of an xparse argument signature, in order: the letter, its
 /// delimiter pair when it has one (`d<>`/`D<>{…}` → `"<>"`, `t*` → `"*"`) and its
 /// `{default}` text (`O`, `D`, `G`; empty otherwise). `!`/`+` prefixes are skipped.
-fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String)> {
+fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String, bool)> {
   let chars: Vec<char> = sig.chars().collect();
   let mut out = Vec::new();
   let mut i = 0;
+  let mut has_bang = false;
   let take_group = |i: &mut usize| -> String {
     let mut text = String::new();
     if *i < chars.len() && chars[*i] == '{' {
@@ -426,16 +440,22 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String)> {
   while i < chars.len() {
     let c = chars[i];
     i += 1;
+    if c == '!' {
+      has_bang = true;
+      continue;
+    }
     match c {
       'm' | 'o' | 's' | 'g' | 'v' | 'b' | 'l' | 'u' | 'e' | 'E' => {
-        out.push((c, String::new(), String::new()))
+        out.push((c, String::new(), String::new(), has_bang));
+        has_bang = false;
       },
       'O' | 'G' => {
         while i < chars.len() && chars[i] == ' ' {
           i += 1;
         }
         let d = take_group(&mut i);
-        out.push((c, String::new(), d));
+        out.push((c, String::new(), d, has_bang));
+        has_bang = false;
       },
       't' => {
         while i < chars.len() && chars[i] == ' ' {
@@ -443,7 +463,8 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String)> {
         }
         let d = chars.get(i).map(|c| c.to_string()).unwrap_or_default();
         i += 1;
-        out.push((c, d, String::new()));
+        out.push((c, d, String::new(), has_bang));
+        has_bang = false;
       },
       'd' | 'D' | 'r' | 'R' => {
         while i < chars.len() && chars[i] == ' ' {
@@ -458,9 +479,10 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String)> {
           }
           default = take_group(&mut i);
         }
-        out.push((c, d, default));
+        out.push((c, d, default, has_bang));
+        has_bang = false;
       },
-      _ => {}, // `!`, `+`, `>`, spaces, unknown
+      _ => {}, // `+`, `>`, spaces, unknown
     }
   }
   out

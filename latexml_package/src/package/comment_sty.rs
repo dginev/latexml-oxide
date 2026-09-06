@@ -27,7 +27,9 @@ LoadDefinitions!({
   // until \endname or \end{name}, respectively
   let define_excluded: PrimitiveClosure = Rc::new(|mut args: Vec<ArgWrap>| {
     let name = args.remove(0).owned_tokens().unwrap();
-    let begin_mark = s!("\\begin{{{name}}}");
+    let name_str = name.to_string();
+    let begin_mark = format!("\\begin{{{name_str}}}");
+    let name_clone = name_str.clone();
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
       // Detect `\end{name}` MID-LINE (allowing spaces, `\end {name}`), but only
@@ -43,25 +45,31 @@ LoadDefinitions!({
       // a 31-`\bibitem` thebibliography). The `%`-guard keeps the tokenize
       // `comment` fixture's `% […] \end{Excluded}` from closing early. Guard
       // `comment_midline_end_keeps_bibliography`.
-      let end_re = Regex::new(&format!("\\\\end\\s*\\{{{name}\\}}")).unwrap();
+      let end_re = Regex::new(&format!("\\\\end\\s*\\{{{name_clone}\\}}")).unwrap();
       let mut nlines = 0;
       read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
       while let Some(line) = read_raw_line() {
         let code = strip_tex_comment(&line);
         if let Some(m) = end_re.find(code) {
-          // comment.sty expects `\end{name}` at the line's end; trailing content
-          // on that line is dropped, as verbatim.sty's `\verbatim@` does too.
-          if !code[m.end()..].trim().is_empty() {
-            Info!("unexpected", "stuff",
-              s!("Characters dropped after '\\end{{{name}}}'"));
+          let rest = &line[m.end()..];
+          if rest.trim().is_empty() {
+            unread_one(T_CR!());
+          } else if let Ok(mouth) = Mouth::new(rest, None) {
+            open_mouth(mouth, true);
           }
+          let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
+          end_tokens.extend(ExplodeText!(&name_clone));
+          end_tokens.push(T_END!());
+          unread_expansion(Tokens::new(end_tokens));
           break;
         }
         nlines += 1;
       }
-      note_progress(&s!("[Skipped {name} ({nlines} lines)]"));
+      note_progress(&s!("[Skipped {name_clone} ({nlines} lines)]"));
       Ok(Vec::new())
     });
+    DefMacro!(T_CS!(format!("\\end{{{name_str}}}")), None, Tokens!());
+    DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
     Ok(Vec::new())
   });
 

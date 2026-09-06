@@ -1,0 +1,22 @@
+\documentclass{article}
+\usepackage[all,cmtip]{xy}
+\begin{document}
+% Curved arrows from amshelp manual:
+% Without xycurveloaded and \curve@check neutralized, these error:
+% "Forms @/.../, @(...), and @`{...}, only available when curve extension loaded"
+\begin{displaymath}
+  \xymatrix{
+    {A} \ar@/^/[drr]^{p} \ar@{.>}[dr]|{\exists!} \ar@/_/[ddr]_{q}\\
+    & {B} \ar[r] \ar[d]
+    & {C} \ar[d]\\
+    & {D} \ar[r]
+    & {E}
+  }
+\end{displaymath}
+% \curve{...} inside \xymatrix arrow renders as the arrow:
+\begin{displaymath}
+  \xymatrix{
+    {X} \ar \curve{+(0,2)} [r] & {Y}
+  }
+\end{displaymath}
+\end{document}

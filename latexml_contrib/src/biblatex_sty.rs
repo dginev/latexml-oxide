@@ -2388,6 +2388,11 @@ LoadDefinitions!({
   // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
   DefRegister!("\\lositemsep" => Glue!("0pt"));
 
+  // \MakeCapital{text} — capitalizes the first character or uppercase (blx-case-latex2e.sty:61).
+  DefMacro!("\\MakeCapital{}", "\\MakeUppercase{#1}");
+  // \blx@err@patch{pkg} — error reporter if patching a package fails (biblatex.sty:154).
+  DefMacro!("\\blx@err@patch{}", "");
+
   // \NewBibliographyString{key,key,…} — declares localization-string KEYS
   // (biblatex.sty; real def registers each key in the lbx string bank and
   // makes \bibstring{key} legal). This binding models no localization bank —
@@ -2968,6 +2973,7 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch56::biblatex_chicago_notes_loads_its_cbx`.
   if lookup_value("opt@biblatex-chicago.sty").is_some() || blx_variant_requested("biblatex-chicago")
   {
+    RequirePackage!("xstring");
     let mut style = "chicago-notes";
     if let Some(opts) = lookup_vecdeque("opt@biblatex-chicago.sty") {
       for opt in opts.iter() {

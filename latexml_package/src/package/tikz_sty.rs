@@ -22,6 +22,13 @@ LoadDefinitions!({
 
   DefMacro!("\\pgfmathresult", "0.0");
   DefMacro!("\\tikz@align@temp", "\\pgfmathresult");
+  // tikz.code.tex:1412-1414 initializes \tikzparentanchor and \tikzchildanchor to
+  // \pgfutil@empty, while \tikzparentnode and \tikzchildnode are set dynamically in
+  // \tikz@children@collected (tikz.code.tex:4591) and \tikz@childnode (tikz.code.tex:4664).
+  // Provide fallback definitions so keys or styles evaluated outside an active child scope
+  // do not trigger undefined CS errors.
+  DefMacro!("\\tikzparentnode", "tikzparentnode");
+  DefMacro!("\\tikzchildnode", "tikzchildnode");
   InputDefinitions!("tikz", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   // latex-lab-testphase-tikz.sty:228-260 (loaded by every `\DocumentMetadata`
   // through latex-lab-testphase-latest.sty:39-58) adds the accessibility keys

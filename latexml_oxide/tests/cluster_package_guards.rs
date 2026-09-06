@@ -16191,4 +16191,349 @@ A=\begin{gmatrix}[p]
       "{xml}"
     );
   }
+
+  /// listings self-terminating environments hand \end{lstlisting} to the current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn listings_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{listings}
+\AfterEndEnvironment{lstlisting}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{lstlisting}
+x = 1
+\end{lstlisting} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:lstlisting]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:lstlisting]").count(), 1, "{xml}");
+  }
+
+  /// fancyvrb self-terminating environments hand \end{Verbatim}, \end{BVerbatim}, \end{LVerbatim}
+  /// to current \end macro (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn fancyvrb_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{fancyvrb}
+\AfterEndEnvironment{Verbatim}{[AFTER-V]}
+\AfterEndEnvironment{BVerbatim}{[AFTER-B]}
+\AfterEndEnvironment{LVerbatim}{[AFTER-L]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{Verbatim}
+v = 1
+\end{Verbatim}
+\begin{BVerbatim}
+b = 1
+\end{BVerbatim}
+\begin{LVerbatim}
+l = 1
+\end{LVerbatim}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:Verbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-V]"), "{xml}");
+    assert!(xml.contains("[E:BVerbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-B]"), "{xml}");
+    assert!(xml.contains("[E:LVerbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER-L]"), "{xml}");
+    assert_eq!(xml.matches("[AFTER-V]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:Verbatim]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[AFTER-B]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:BVerbatim]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[AFTER-L]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:LVerbatim]").count(), 1, "{xml}");
+  }
+
+  /// minted self-terminating environments hand \end{minted} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn minted_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{minted}
+\AfterEndEnvironment{minted}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{minted}{python}
+x = 1
+\end{minted} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:minted]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:minted]").count(), 1, "{xml}");
+  }
+
+  /// comment.sty self-terminating environments hand \end{comment} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn comment_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{comment}
+\AfterEndEnvironment{comment}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{comment}
+ignored
+\end{comment} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:comment]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:comment]").count(), 1, "{xml}");
+  }
+
+  /// verbatim.sty self-terminating environments hand \end{verbatim} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn verbatim_sty_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{verbatim}
+\AfterEndEnvironment{verbatim}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{verbatim}
+x = 1
+\end{verbatim}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:verbatim]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:verbatim]").count(), 1, "{xml}");
+  }
+
+  /// alltt self-terminating environments hand \end{alltt} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn alltt_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{alltt}
+\AfterEndEnvironment{alltt}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{alltt}
+x = 1
+\end{alltt} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:alltt]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:alltt]").count(), 1, "{xml}");
+  }
+
+  /// tcolorbox dispListing self-terminating environments hand \end{dispListing} to current \end macro
+  /// (witness: s44 manuals with hooked \end, \AfterEndEnvironment, knowledge scope areas).
+  #[test]
+  fn tcolorbox_self_terminating_hands_to_end() {
+    let tex = r"\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\usepackage{etoolbox}
+\AfterEndEnvironment{dispListing}{[AFTER]}
+\let\SUPERend\end
+\def\end#1{\SUPERend{#1}[E:#1]}
+\begin{document}
+\begin{dispListing}
+x = 1
+\end{dispListing} tail
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[E:dispListing]"), "{xml}");
+    assert!(xml.contains("[AFTER]"), "{xml}");
+    assert!(xml.contains("tail"), "{xml}");
+    assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
+    assert_eq!(xml.matches("[E:dispListing]").count(), 1, "{xml}");
+  }
+
+  /// endnotes internals and raw-load overlay for cmsendnotes / biblatex-chicago
+  /// (witness: biblatex-chicago/cms-noteref-demo, cms-notes-intro, cms-notes-sample; s44).
+  /// Exposes \@enotes, \if@enotesopen, \@openenotes, \@doanenote, \@endanenote,
+  /// \enotesize, \enoteformat, \enoteheading, \theendnotes with .ent replay,
+  /// and biblatex \MakeCapital + xstring dependency.
+  #[test]
+  fn endnotes_internals_and_cmsendnotes_overlay() {
+    let tex = r"\documentclass{article}
+\usepackage{biblatex-chicago}
+\usepackage[split=section]{cmsendnotes}
+\begin{document}
+\section{First Section}
+Some text with an endnote.\endnote{This is the first endnote.}
+Another sentence.\endnote{Second endnote.}
+\theendnotesbypart
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("This is the first endnote."), "{xml}");
+    assert!(xml.contains("Second endnote."), "{xml}");
+  }
+
+  /// standard endnotes.sty standalone with \theendnotes TOC output
+  /// (tests/structure/endnote.xml).
+  #[test]
+  fn endnotes_standard_standalone() {
+    let tex = r"\documentclass{article}
+\usepackage{endnotes}
+\begin{document}
+Some text with an endnote.\endnote{This is an endnote.}
+\theendnotes
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<TOC"), "{xml}");
+    assert!(xml.contains("This is an endnote."), "{xml}");
+  }
+
+  /// istgame and TikZ trees child nodes (\tikzparentnode, \tikzchildnode,
+  /// tikzlibrarytrees, and tcolorbox !O{} listing signature without space-skipping).
+  #[test]
+  fn istgame_and_tikz_trees_child_nodes() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{trees}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\usepackage{istgame}
+\DeclareTCBListing{docplain}{ !O{} }{colback=white,colframe=gray!15,listing only,#1}
+\begin{document}
+\begin{docplain}
+  % tikz-qtree conflict resolution (only with \usepackage{tikz-qtree})
+  [
+    edge from parent path={(\tikzparentnode) -- (\tikzchildnode)}
+  ]
+\end{docplain}
+\begin{tikzpicture}[edge from parent path={(\tikzparentnode) -- (\tikzchildnode)}]
+\node {root}
+  child { node {left} }
+  child { node {right} };
+\end{tikzpicture}
+\begin{istgame}
+\istroot(0){Alice}
+  \istb{L}[al]{(-1,1)}
+  \istb{R}[ar]{(1,-1)}
+  \endist
+\end{istgame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("tikzparentnode"), "{xml}");
+    assert!(xml.contains("tikzchildnode"), "{xml}");
+    assert!(xml.contains("root"), "{xml}");
+    assert!(xml.contains("Alice"), "{xml}");
+  }
+
+  /// expkv \ekvcsvloop delimiter matching with adjacent spaces
+  /// (witness expkv-bundle/expkv-bundle: \ekv@stop undefined and TokenLimit fatal):
+  /// \ekv@csv@loop@end matches literal delimiter prefix tokens containing
+  /// adjacent space tokens (\ekv@mark  \ekv@nil). read_match must not greedily
+  /// swallow subsequent spaces from input when to_match expects another space.
+  #[test]
+  fn expkv_ekvcsvloop_delimiter_adjacent_spaces() {
+    let tex = r"\documentclass{article}
+\usepackage{expkv}
+\newcommand*\myprocessor[1]{(#1)}
+\begin{document}
+\ekvcsvloop\myprocessor{abc,def,ghi}
+\ekvcsvloop\myprocessor{1,,2,,3,,4}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("(abc)(def)(ghi)"), "{xml}");
+    assert!(xml.contains("(1)(2)(3)(4)"), "{xml}");
+  }
+
+  /// xy curve option and curved arrow handling (witness: amshelp manual)
+  /// \usepackage[curve]{xy} or \usepackage[all,cmtip]{xy} loads xycurve;
+  /// marks xycurveloaded, neutralizes \curve@check, and defines \curve inside
+  /// xymatrix arrows with minimal real semantics (renders as the arrow without error).
+  #[test]
+  fn xy_curve_option_and_curved_arrows() {
+    let tex = r"\documentclass{article}
+\usepackage[all,cmtip]{xy}
+\begin{document}
+\begin{displaymath}
+  \xymatrix{
+    {A} \ar@/^/[drr]^{p} \ar@{.>}[dr]|{\exists!} \ar@/_/[ddr]_{q}\\
+    & {B} \ar[r] \ar[d]
+    & {C} \ar[d]\\
+    & {D} \ar[r]
+    & {E}
+  }
+\end{displaymath}
+\begin{displaymath}
+  \xymatrix{
+    {X} \ar \curve{+(0,2)} [r] & {Y}
+  }
+\end{displaymath}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Info:xy:error"), "stderr had xy error:\n{stderr}");
+    assert!(xml.contains("<svg:svg"), "{xml}");
+    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">A</XMTok>"), "{xml}");
+    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">Y</XMTok>"), "{xml}");
+
+    // Control: standard xymatrix without curve option unchanged
+    let control_tex = r"\documentclass{article}
+\usepackage{xy}
+\xyoption{matrix}
+\xyoption{arrow}
+\begin{document}
+\begin{displaymath}
+  \xymatrix{
+    {A} \ar[r]^f & {B}
+  }
+\end{displaymath}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("<svg:svg"), "{c_xml}");
+    assert!(c_xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok>"), "{c_xml}");
+  }
 }
+
+
+
+
