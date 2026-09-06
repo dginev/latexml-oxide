@@ -357,44 +357,21 @@ LoadDefinitions!({
       }}
     },
     after_digest => sub[whatsit] {
-      use crate::engine::tex_tables::{
-        parse_halign_template, digest_alignment_body,
-      };
-      whatsit.set_property("mode", Stored::from("internal_vertical"));
-      begin_mode("restricted_horizontal")?;
-      let template = parse_halign_template(whatsit)?;
-      // NOTE: a 0-column template (parse couldn't catcode-1-`{`-delimit it,
-      // e.g. young.sty's `\halign\bgroup &\setbox…`) is NOT special-cased
-      // here — exactly like the standard `\halign` (tex_tables.rs). The body
-      // is still digested under the restricted_horizontal frame begun above
-      // and the SINGLE `end_mode` at the bottom balances it. A prior
-      // half-implemented "bail" ran an early `end_mode` here WITHOUT a
-      // `return`, so the body was digested anyway and `end_mode` ran a SECOND
-      // time at the bottom — popping past the already-closed
-      // restricted_horizontal frame into the enclosing `\vbox`'s
-      // `internal_vertical` → "Attempt to end mode restricted_horizontal in
-      // horizontal" (driver 1902.11165: `\node {\begin{young}…\end{young}}`,
-      // Perl=0). Conversely, `return`ing early left the body's `&`/`\cr`
-      // unconsumed → "Stray alignment &". Matching the standard `\halign`
-      // (digest body, end once) fixes both.
-      // Get width from BoxSpecification 'to' key
-      let width_attr: Option<String> = {
-        let spec = whatsit.get_arg(1);
-        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-          Some(w.to_attribute())
-        } else {
-          None
-        }
-      };
+      // One implementation with the tabular `\halign` (tex_tables.rs
+      // `halign_after_digest`): the SVG variant differs only in its bindings
+      // and the `vattach` attribute. pgf's matrices open `\halign\bgroup`
+      // (`\pgf@matrix@cont`, pgfmodulematrix.code.tex:191-193, reached from
+      // `\pgfmatrix` :160 via `\afterassignment`; tikz-cd's `\matrix`
+      // likewise), so the align-state balance for a `{` opener never fires
+      // for them — an unconditional decrement here left the ENCLOSING
+      // amsmath alignment one level off and its cell's closing hidden `$`
+      // unrecognized ("`\lx@begin@alignment` Attempt to close a group that
+      // switched to mode math"; tikz-cd inside `align`, zx-calculus 46).
+      // Guard: `perfect_kernel_batch56::tikzcd_matrix_inside_an_amsmath_cell_closes_its_math`.
+      use crate::engine::tex_tables::halign_after_digest;
       let mut xml_attrs = HashMap::default();
-      if let Some(w) = width_attr {
-        xml_attrs.insert(String::from("width"), w);
-      }
       xml_attrs.insert(String::from("vattach"), String::from("bottom"));
-      tikz_alignment_bindings(template, xml_attrs);
-      digest_alignment_body(whatsit)?;
-      end_mode("restricted_horizontal")?;
-      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+      halign_after_digest(whatsit, xml_attrs, tikz_alignment_bindings)?;
     });
 
   // Perl L65-69: \lxSVG@picture — wraps pgfpicture with SVG setup

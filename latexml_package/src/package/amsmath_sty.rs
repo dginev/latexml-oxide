@@ -1871,6 +1871,15 @@ LoadDefinitions!({
 
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
+  // amsmath.sty:1896 `\let\maxcolumn@widths\@empty`: the column-width register
+  // the two-pass `\measure@` (:1936-1944) rebuilds. The binding replaces the
+  // alignment code but raw packages still read the register — cryptocode.sty:
+  // 462-470 `\@pc@settowidthofalign` does `\global\let\got@maxcolwd
+  // \maxcolumn@widths` after its measuring `flalign*` and then
+  // `\dimexpr\got@maxcolwd\relax` ("undefined:\got@maxcolwd" on every
+  // `\pseudocode` without `width=`; zx-calculus 3, Perl identical, pdflatex
+  // clean). amsmath's "no columns measured" default is the empty list.
+  Let!("\\maxcolumn@widths", "\\@empty");
   DefConditional!("\\iftagsleft@");
   // amsmath.sty:1289 `\newif\iftag@` (a tag is pending; xreview sets it)
   // and :1292 `\newif\ifshifttag@`.

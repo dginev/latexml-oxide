@@ -1,0 +1,19 @@
+% witness: tikz-cd matrix inside an amsmath align cell (general; zx-calculus is one caller)
+% oracle: pdflatex zx10_tikzcd_nocell_in_align.tex -> exit 0, 0 errors
+% engines: oxide b56ac 7 errors ; perl native tikz-cd 41 errors (SHARED) ; pdflatex clean
+% expect: 0 Error:/Fatal: ; <svg:g> matrix inside the <ltx:equation> align
+% status:  GREEN (batch 56ae, 2026-09-06: \lxSVG@halign decrements the align-group count only for a `{` opener, like \halign)
+% mechanism: amsmath align wraps each cell in a hidden $...$ (\lx@begin@inline@math);
+%   the tikz-cd SVG matrix (\lxSVG@halign, pgfsys_latexml_def.rs:349) digested in that
+%   cell leaves MODE/frame so the cell's closing hidden $ never closes the math frame;
+%   at \end{align} the alignment closers meet the open math frame on the FUSED single
+%   frame/mode stack (stomach.rs:791). Same family as mode-frames D12 (psmatrix).
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\begin{document}
+\begin{align}
+  \begin{tikzcd} A \end{tikzcd}
+\end{align}
+\end{document}

@@ -77,7 +77,7 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
   run `tools/make_formats.sh` once after checkout.
 - **Data:** `~/data/perfect_kernel/corpus.tsv`, `~/data/perfect_kernel/oracle_verdicts.tsv`
   (column 3 = engine), sweep logs `~/data/perfect_kernel_s51/<bundle>/<name>/<name>.log`
-  (s51 = batch 56aa is the current sweep; s52 = 56ab + your round 7 lands next). Convert from a COPY of the doc dir with
+  (s53 = batch 56ac, s54 = 56ad are the current sweeps; s52 = 56ab + your round 7). Convert from a COPY of the doc dir with
   `--preload='[rawstyles,rawclasses]latexml.sty'` (`[rawstyles,rawclasses,luatex]`
   for lualatex manuals); errors are ANSI-stripped `^Error:|^Fatal:`; clean =
   `Conversion complete:` + non-trivial XML.
@@ -140,12 +140,28 @@ design (one page-count reader feeding both) and a ≤20-line red repro under
 `repros/graphics-tikz/` whose expected output names the real page count of
 `example-image-a4.pdf` (or a small local PDF you generate with pdflatex).
 
-### N4 — verify round 7 on sweep 52
+### N4 — verify rounds 7 and the 56ac–56ae batches on sweeps 52 → 54
 
-When `~/data/perfect_kernel_s52/sweep_verdicts.tsv` exists, repeat round 7's M5 for
-s51 → s52 over the oracle-clean set: newly clean, regressions (first error side by
-side with s51), and confirm the round-7 witnesses (biblatex-cheatsheet, kksymbols-doc,
-notebeamer-demo, istgame-doc, uspatent) at 0.
+`~/data/perfect_kernel_s52..s54/sweep_verdicts.tsv` exist (s54 finishes tonight). Repeat
+round 7's M5 over the oracle-clean set for s52 → s54: newly clean, regressions (first
+error side by side), and confirm at 0: biblatex-cheatsheet, kksymbols-doc,
+notebeamer-demo, istgame-doc, uspatent (round 7); msc, ribbonproofsmanual (56ac);
+modernposter/demo (56ad). Also explain the non-oracle rises in s53: datatool-user 8→14,
+glossaries-user 4→5, tcolorbox 10→21 (memory fuse — report only).
+
+### N5 — pgf layers in the SVG driver (binding)
+
+pgf-PeriodicTableManual (non-oracle) carries ~200 errors, 68 of them
+`Package pgf Error: Sorry, the requested layer 'pgfPTbacklayer'/'pgfPTpaperlayer' is not
+part of the layer list`: `\pgfdeclarelayer`/`\pgfsetlayers`/`{pgfonlayer}` under our SVG
+driver (`latexml_package/src/package/pgfsys_latexml_def.rs`, `pgfcorelayers.code.tex`).
+Read pgfcorelayers.code.tex (`\pgfsetlayers` builds `\pgf@layerlist`; `\pgfonlayer`
+checks membership at :90-110) and find why the list the manual sets is not seen — a
+binding-defined `\pgfsetlayers` shadowing the raw one, a `\pgfsys@…` layer hook missing
+(`\pgfsys@beginlayer`?), or the list assignment landing in a group. Deliver a ≤20-line
+repro (`\pgfdeclarelayer{bg}\pgfsetlayers{bg,main}` + `\begin{pgfonlayer}{bg}`), the
+fix, a guard asserting the layered content renders (0 errors + an `<svg:g>` per layer in
+order), and the manual's before/after count.
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 8 only)
 

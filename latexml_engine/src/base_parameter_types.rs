@@ -190,7 +190,15 @@ LoadDefinitions!({
       Some(tokens) => Ok(ArgWrap::Tokens(tokens)),
       None => {
         if at_end_of_all_input() {
-          Error!("expected", "Until:", s!("Missing argument Until:{} at end of input", until_extra[0]));
+          let caller = get_current_token()
+            .map(|t| t.to_string())
+            .unwrap_or_default();
+          Error!(
+            "expected",
+            "Until:",
+            s!("Missing argument Until:{} at end of input", until_extra[0]),
+            s!("while reading the arguments of {caller}")
+          );
           latch_too_many_errors();
           Fatal!(Mouth, EoF, s!("File ended while scanning use of a Until:{} argument (job aborted, no legal \\end found)", until_extra[0]));
         }

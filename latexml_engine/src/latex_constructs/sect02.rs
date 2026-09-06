@@ -385,7 +385,15 @@ pub(crate) fn load() -> Result<()> {
   // jwjournal `+b` environment); this is the closer side. The hooks are
   // unread once (`lx@enddocument@hooks@fired`), followed by the finalizer.
   // Guard: `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
-  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document");
+  // …and the expansion ENDS with `\@@end` as latex.ltx:15278's does
+  // (`\deadcycles\z@\@@end`): morewrites.sty:550-557's `\AtEndDocument` hook
+  // `\__morewrites_close_all_at_end:nw #1#2 \@@end` grabs the rest of
+  // `\enddocument` up to that token and re-emits it after closing its
+  // streams — without the token the scan ran to the end of the file
+  // (cntperchap_example, runcode_troubleshoot: "Missing argument
+  // Until:\@@end", sweep 54). Our `\@@end` is the job-end primitive
+  // (tex_job.rs `\lx@end@document`: leave horizontal mode, flush).
+  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
     if lookup_bool("lx@enddocument@hooks@fired") {
       return Ok(Vec::new());

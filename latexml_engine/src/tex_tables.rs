@@ -310,40 +310,19 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:p")?;
   },
   after_digest => sub[whatsit] {
-    whatsit.set_property("mode", Stored::from("internal_vertical"));
-    begin_mode("restricted_horizontal")?;
-    let template = parse_halign_template(whatsit)?;
-    // Get width from BoxSpecification 'to' key
-    let width_attr: Option<String> = {
-      let spec = whatsit.get_arg(1);
-      if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-        Some(w.to_attribute())
-      } else {
-        None
-      }
-    };
-    let mut xml_attrs = HashMap::default();
-    if let Some(w) = width_attr {
-      xml_attrs.insert(String::from("width"), w);
-    }
-    alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
-    // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
-    // tabular). with_value avoids the Stored::clone on the Digested
-    // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
-    // still works fine through the borrow.
-    with_value("Alignment", |v| {
-      if let Some(Stored::Digested(d)) = v
-        && let DigestedData::Alignment(alignment) = d.data() {
-          alignment.borrow_mut().is_halign = true;
-        }
-    });
-    digest_alignment_body(whatsit)?;
-    end_mode("restricted_horizontal")?;
-    // Balance the opening `{` OUTSIDE of the masking of ALIGN_STATE — only
-    // when the opener WAS a `{` character (see `parse_halign_template`).
-    if matches!(whatsit.get_property("halign_brace_opener").as_deref(), Some(Stored::Bool(true))) {
-      decrement_align_group_count();
-    }
+    halign_after_digest(whatsit, HashMap::default(), |template, xml_attrs| {
+      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+      // Mark as \halign — first column CAN get ltx_nopad_l (unlike LaTeX
+      // tabular). with_value avoids the Stored::clone on the Digested
+      // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
+      // still works fine through the borrow.
+      with_value("Alignment", |v| {
+        if let Some(Stored::Digested(d)) = v
+          && let DigestedData::Alignment(alignment) = d.data() {
+            alignment.borrow_mut().is_halign = true;
+          }
+      });
+    })?;
   });
 
   def_macro_noop("\\lx@alignment@row@before")?;
@@ -767,6 +746,49 @@ LoadDefinitions!({
 // And the general alignment processing.
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
+
+/// The `\halign` after-digest shared by the tabular primitive (above) and the
+/// SVG matrix variant (`\lxSVG@halign`, pgfsys_latexml_def.rs): the
+/// restricted-horizontal mode frame, the template parse, the `to` width, the
+/// caller's alignment bindings, the body digest, and the align-state balance
+/// for a `{` opener (tex.web §347: only a catcode-1 `{` is masked by the
+/// gullet, so only that opener is unmasked here — a `\halign\bgroup`, pgf's
+/// matrices, must not be). ONE implementation: the SVG copy once kept an
+/// unconditional decrement after the tabular one gained this guard (batch
+/// 54), and every tikz-cd inside an amsmath cell left the cell's math open.
+pub fn halign_after_digest(
+  whatsit: &mut Whatsit,
+  mut xml_attrs: HashMap<String, String>,
+  bind: impl FnOnce(Template, HashMap<String, String>),
+) -> Result<()> {
+  whatsit.set_property("mode", Stored::from("internal_vertical"));
+  begin_mode("restricted_horizontal")?;
+  let template = parse_halign_template(whatsit)?;
+  // Get width from BoxSpecification 'to' key
+  let width_attr: Option<String> = {
+    let spec = whatsit.get_arg(1);
+    if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
+      Some(w.to_attribute())
+    } else {
+      None
+    }
+  };
+  if let Some(w) = width_attr {
+    xml_attrs.insert(String::from("width"), w);
+  }
+  bind(template, xml_attrs);
+  digest_alignment_body(whatsit)?;
+  end_mode("restricted_horizontal")?;
+  // Balance the opening `{` OUTSIDE of the masking of ALIGN_STATE — only
+  // when the opener WAS a `{` character (see `parse_halign_template`).
+  if matches!(
+    whatsit.get_property("halign_brace_opener").as_deref(),
+    Some(Stored::Bool(true))
+  ) {
+    decrement_align_group_count();
+  }
+  Ok(())
+}
 
 pub fn alignment_bindings(
   template: Template,

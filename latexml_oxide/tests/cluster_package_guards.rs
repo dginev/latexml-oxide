@@ -16920,6 +16920,76 @@ c &= d
       xml.contains("<svg:g") && xml.contains("Demo Title"),
       "{xml}"
     );
+    // latex.ltx:15278: the expansion ends with `\@@end`, and a hook may grab
+    // the rest of it up to that token and re-emit it (morewrites.sty:550-557).
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\AtEndDocument{\\def\\grab#1\\@@end{TAIL#1\\@@end}\\grab}\n\\makeatother\n\\begin{document}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Body.") && xml.contains("TAIL") && xml.contains("</document>"),
+      "{xml}"
+    );
+    if kpsewhich_has("morewrites.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{morewrites}\n\\begin{document}\n\\newwrite\\w\\immediate\\openout\\w=t-extra.txt\\immediate\\write\\w{x}\nBody.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        xml.contains("Body.") && xml.contains("</document>"),
+        "{xml}"
+      );
+    }
+  }
+
+  /// pgf's matrices open with `\halign\bgroup` (tikz-cd, `\matrix`), for which
+  /// the gullet's ALIGN_STATE was never masked; `\lxSVG@halign` decremented
+  /// the align-group count unconditionally where the standard `\halign` does
+  /// it only for a `{` opener, so the ENCLOSING amsmath alignment lost a level:
+  /// its cell's closing hidden `$` was not recognized and the math frame stayed
+  /// open (zx-calculus 46 errors; tikz-cd inside `align`; Perl worse).
+  #[test]
+  fn tikzcd_matrix_inside_an_amsmath_cell_closes_its_math() {
+    let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{tikz}\n\\usepackage{tikz-cd}\n\\begin{document}\n\\begin{align}\n  \\begin{tikzcd} A \\arrow[r] & B \\end{tikzcd} &= x\n\\end{align}\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<equation") && xml.contains("<svg:g") && xml.contains("After."),
+      "{xml}"
+    );
+    // Control: a plain picture in the same cell (no matrix).
+    let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{tikz}\n\\begin{document}\n\\begin{align}\n  \\begin{tikzpicture}\\node{A};\\end{tikzpicture} &= x\n\\end{align}\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<equation") && xml.contains("<svg:g") && xml.contains("After."),
+      "{xml}"
+    );
+    if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+      let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\begin{align}\n  \\zx{\\zxZ{}} &= \\zx{\\zxX{}}\n\\end{align}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("<equation") && xml.contains("<svg:g"), "{xml}");
+    }
+  }
+
+  /// amsmath.sty:1896 initializes `\maxcolumn@widths` to `\@empty`; the binding
+  /// lacked it, so cryptocode.sty:462-470's `\let\got@maxcolwd\maxcolumn@widths`
+  /// copied an undefined meaning and `\dimexpr\got@maxcolwd` errored on every
+  /// `\pseudocode` (zx-calculus manual; Perl identical, pdflatex clean).
+  #[test]
+  fn amsmath_maxcolumn_widths_is_initialized() {
+    if kpsewhich_has("cryptocode.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{cryptocode}\n\\begin{document}\n\\[ \\pseudocode{a \\gets b \\\\ c \\gets d} \\]\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        !xml.contains("got@maxcolwd") && xml.contains("ltx_eqn_align"),
+        "{xml}"
+      );
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\makeatletter\n\\begin{document}\n\\ifx\\maxcolumn@widths\\@empty EMPTY\\else OTHER\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("EMPTY"), "{xml}");
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
