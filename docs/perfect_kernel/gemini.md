@@ -147,3 +147,15 @@ repro; witness srdp-mathematik.
   - Settled dead-ends:
     - `srdp-tables.sty` is a 1:1 verbatim vendored copy of `tabu.sty`; routing to latexml's native `tabu` binding avoids raw tabu's deep array token register dependencies (`\NC@list`, `\NC@do`) that cause fatal mouth EOF during column scan.
 
+- **2026-09-05 I3 (oup-authoring-template / second layer class definitions)**:
+  - Guard: `perfect_kernel_gemini::oup_authoring_template_constructs` (repro: `\documentclass{oup-authoring-template}` with `\botrule`, `\tablenotes`, `{algorithm}`, `\caption`, `{algorithmic}`, `\State`, `{unlist}`, `\orgaddress{\state{...}}`, `{appendices}`, `{biography}` renders clean XML with 0 errors; control: standard article with 0 errors).
+  - Implementation: `latexml_contrib/src/oup_authoring_template_cls.rs` adds:
+    - Required packages from `oup-authoring-template.cls:2425-2435`: `booktabs`, `algorithm`, `algorithmicx`, `algpseudocode`, `listings`, `appendix`, and `amsthm`.
+    - Macro definitions from `oup-authoring-template.cls`: `\botrule` (alias to `\bottomrule`), `\tablenotes[]` / `\endtablenotes` (wrapped `itemize`), address fields `\orgdiv`, `\orgname`, `\orgaddress`, `\street`, `\postcode`, `\state`, `\country` (identity macros).
+    - Environments: `{unlist}` (`<ltx:itemize class='unlist'>`), `{biography}{}{}` (`<ltx:note role='biography'>` with local `\author` font switch).
+    - Theorem styles: `\th@thmstyleone`..`four` mapped to amsthm styles.
+  - Witnesses:
+    - `oup-authoring-template/oup-authoring-template.tex`: 21 errors in probe / 22 in s45 → 0 errors, 0 fatals, 0 warnings (`Conversion complete: No obvious problems`).
+  - Settled dead-ends:
+    - `oup-authoring-template.cls` embeds verbatim copies of `appendix.sty` and loads `algorithm`/`algorithmicx`/`algpseudocode`/`listings`/`amsthm`; delegating to existing package bindings satisfies all 21 missing surfaces cleanly without duplicating complex float/listing machinery.
+

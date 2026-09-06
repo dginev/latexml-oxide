@@ -16653,4 +16653,54 @@ a & b \\
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("<tabular"), "{c_xml}");
   }
+
+  /// oup-authoring-template class constructs (witness: oup-authoring-template.tex).
+  #[test]
+  fn oup_authoring_template_constructs() {
+    let tex = r"\documentclass{oup-authoring-template}
+\begin{document}
+\address[1]{\orgaddress{\state{California}}}
+\begin{table}
+\caption{Table}\label{tab}
+\begin{tabular}{cc}
+\toprule
+a & b \\
+\botrule
+\end{tabular}
+\begin{tablenotes}
+\item Note
+\end{tablenotes}
+\end{table}
+\begin{algorithm}
+\caption{Alg}\label{alg}
+\begin{algorithmic}[1]
+\State $x \Leftarrow 1$
+\end{algorithmic}
+\end{algorithm}
+\begin{unlist}
+\item item
+\end{unlist}
+\begin{appendices}
+\section{App}
+\end{appendices}
+\begin{biography}{}{\author{Author.} Bio text}
+\end{biography}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("California"), "{xml}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("Bio text"), "{xml}");
+
+    // Control: standard article
+    let control_tex = r"\documentclass{article}
+\begin{document}
+Hello world
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Hello world"), "{c_xml}");
+  }
 }
