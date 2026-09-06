@@ -17590,7 +17590,6 @@ line 2
     assert!(c_xml.contains("hello verbatim world"), "{c_xml}");
   }
 
-<<<<<<< HEAD
   /// xcolor: \XC@getcolor & \XC@usecolor (L1, witness dsptricks/dspTricksManual).
   /// Verifies \XC@getcolor yields xcolor's real `\xcolor@…` shape in the target macro,
   /// \XC@usecolor consumes the color argument without error, and that loading
@@ -17935,7 +17934,7 @@ Hello
 \patentParagraph Second paragraph.
 \end{document}
 ";
-    let (stderr, xml) = convert(tex, false);
+    let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("0001"), "{xml}");
     assert!(xml.contains("0002"), "{xml}");
@@ -18004,8 +18003,72 @@ Hello world.
       "{stderr}"
     );
     assert!(
-      stderr.contains(r"MEANING_PST=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
-      "{stderr}"
+      stderr
+        .contains(r"MEANING_PST=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
     );
+  }
+
+  /// algpseudocodex.sty binding: clean inline comments, LComment, and boxed blocks
+  /// (witness: arXiv 2511.21969; Divergence #209).
+  #[test]
+  fn algpseudocodex_produces_clean_comments_and_boxes() {
+    let tex = r"\documentclass{article}
+\usepackage[italicComments=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\State $x \gets 1$ \Comment{First comment}
+\LComment{Wide comment}
+\BeginBox[draw=blue,dashed,thick]
+\If{$x > 0$}
+  \State $y \gets 2$
+\EndBox
+\EndIf
+\State \BoxedString[draw=red]{boxed text}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Comment sits in the \State's own <listingline>
+    assert!(
+      xml.contains("<listingline xml:id=\"algx1.l1\">"),
+      "missing first listingline:\n{xml}"
+    );
+    assert!(
+      xml.contains("ltx_algpx_comment"),
+      "expected right-flushed comment:\n{xml}"
+    );
+    assert!(xml.contains("First comment"), "{xml}");
+    // LComment is on its own listingline with delimiters
+    assert!(
+      xml.contains("<listingline xml:id=\"algx1.l2\">"),
+      "missing LComment listingline:\n{xml}"
+    );
+    assert!(xml.contains("Wide comment"), "{xml}");
+    // Box styling:
+    assert!(xml.contains("ltx_border_blue"), "expected blue box:\n{xml}");
+    assert!(xml.contains("ltx_dashed"), "expected dashed box:\n{xml}");
+    assert!(xml.contains("ltx_thick"), "expected thick box:\n{xml}");
+    assert!(
+      xml.contains("ltx_border_red"),
+      "expected inline red box:\n{xml}"
+    );
+  }
+
+  /// algpseudocodex defensive fallback when old algorithmic.sty loaded first
+  /// (algorithmicx bails, leaving \algrenewcomment undefined; witness: 2410.03000).
+  #[test]
+  fn algpseudocodex_defensive_when_algorithmic_loaded_first() {
+    let tex = r"\documentclass{article}
+\usepackage{algorithmic}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\STATE $x \leftarrow 1$
+\end{algorithmic}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
   }
 }
