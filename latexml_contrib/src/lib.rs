@@ -39,6 +39,7 @@ pub mod achemso_cls;
 pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
 pub mod alegreyasans_sty;
+pub mod algpseudocodex_sty;
 pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
 pub mod aomart_cls;
@@ -273,6 +274,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
   // ar5iv-bindings ports
   ("aistats2026", "sty", aistats2026_sty::load_definitions),
+  (
+    "algpseudocodex",
+    "sty",
+    algpseudocodex_sty::load_definitions,
+  ),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
   // No Perl binding; force-raw-load apxproof.sty in all configs so its
   // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).

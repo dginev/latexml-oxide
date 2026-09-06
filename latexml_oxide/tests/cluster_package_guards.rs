@@ -2171,3 +2171,65 @@ mod overpic_renders_graphic_and_overlays {
     );
   }
 }
+
+mod algpseudocodex_binding {
+  //! `algpseudocodex.sty` binding guard.
+  //!
+  //! Bypasses raw TikZ overlay and varwidth calculations for comments and boxes.
+  //! Produces single-line right-flushed comments, full-width LComments,
+  //! and styled inline and multi-line boxed blocks.
+  use std::{path::Path, process::Command};
+
+  const TEX: &str = "\
+    \\documentclass{article}\n\
+    \\usepackage[italicComments=false]{algpseudocodex}\n\
+    \\begin{document}\n\
+    \\begin{algorithmic}[1]\n\
+    \\State $x \\gets 1$ \\Comment{First comment}\n\
+    \\LComment{Wide comment}\n\
+    \\BeginBox[draw=blue,dashed,thick]\n\
+    \\If{$x > 0$}\n\
+      \\State $y \\gets 2$\n\
+    \\EndBox\n\
+    \\EndIf\n\
+    \\State \\BoxedString[draw=red]{boxed text}\n\
+    \\end{algorithmic}\n\
+    \\end{document}\n";
+
+  #[test]
+  fn algpseudocodex_produces_clean_comments_and_boxes() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
+
+    let output = Command::new(bin)
+      .arg("a.tex")
+      .arg("--dest")
+      .arg("a.xml")
+      .arg("--nocomments")
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\nstderr:\n{stderr}",
+      output.status.code(),
+    );
+
+    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read xml");
+    assert!(
+      xml.contains("ltx_algpx_comment"),
+      "expected right-flushed comment:\n{xml}"
+    );
+    assert!(xml.contains("ltx_border_blue"), "expected blue box:\n{xml}");
+    assert!(xml.contains("ltx_dashed"), "expected dashed box:\n{xml}");
+    assert!(
+      xml.contains("ltx_border_red"),
+      "expected inline red box:\n{xml}"
+    );
+  }
+}

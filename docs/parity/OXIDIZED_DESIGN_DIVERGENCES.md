@@ -6110,3 +6110,22 @@ Guardrails that must NOT regress: 2608.11332 (shared `\email` under `\inst{1}`),
 **Upstream**: the ar5iv CSS comment already anticipates this ("Ideally latexml's schema should
 evolve to handle this via differently organized markup") — the trailing-creator normalization is
 that markup.
+
+### 161. algpseudocodex.sty package binding
+
+**Background.** `algpseudocodex.sty` extends `algorithmicx` / `algpseudocode` with indentation guides, single-line right-flushed comments, multiline LComments, and boxed algorithmic code blocks (`\BeginBox`, `\EndBox`, `\BoxedString`). Raw TeX relies on two-pass TikZ overlay coordinates, `varwidth`, and `tabto` calculations. In latexml, raw-loading fails due to complex overlay calculations, causing right-flushed comments to wrap onto separate empty lines and boxed code blocks to degenerate into empty or missing elements.
+
+**Perl behavior**: SHARED failure — Perl LaTeXML has no binding for `algpseudocodex.sty`. Raw loading attempts to evaluate the TikZ overlay/varwidth macros, producing fatal or malformed layout errors.
+
+**Rust behavior**: `latexml_contrib::algpseudocodex_sty` provides a clean binding:
+1. Loads `algpseudocode` (and `algorithmicx`).
+2. Honors package options (`italicComments`, `rightComments`, `commentColor`, `beginComment`, `endComment`, `beginLComment`, `endLComment`, `noEnd`).
+3. Emits `<ltx:text class='ltx_algpx_comment' cssstyle='float:right'>` for `\Comment`, placing the comment in-flow on the same listingline.
+4. Emits formatted `<ltx:text>` for `\LComment`.
+5. Intercepts `\BeginBox`, `\EndBox`, and `\BoxedString`, translating box options (`draw=<color>`, `dashed`, `dotted`, `thick`, etc.) to structured CSS styles and classes on `<ltx:text class='ltx_framed ltx_algpx_boxed ...'>`.
+6. Stubs internal counters, lengths, and no-op macros.
+
+**Why it's safe.** Surpasses Perl on unbound package, recovers clean structured HTML/XML rendering of algorithms, and conforms strictly to LaTeX semantic intent.
+
+**Witnesses**: arXiv 2511.21969. Guarded by `algpseudocodex_produces_clean_comments_and_boxes` in `cluster_package_guards.rs`.
+
