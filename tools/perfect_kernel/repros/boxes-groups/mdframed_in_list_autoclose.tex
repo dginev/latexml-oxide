@@ -1,0 +1,28 @@
+% witness: schulmathematik/schulmathematik (doc/latex/schulmathematik)
+% oracle:  pdflatex clean (0 !-errors)
+% engines: pdflatex/lualatex (raw cnltx-example -> mdframed)
+% expect:  0 errors; the outer list keeps items i1/i3/i4 as siblings
+% status:  RED on b56x (HEAD); GREEN on b56v (56q)   [regression 1->40 in sweep45]
+% mechanism: mdframed binding (commit 01a9300257) opens a block-level
+%   ltx:logical-block via open_element/absorb/maybe_close_element instead of
+%   the faithful insert_block capture-and-rename (Perl framed.sty.ltxml:21).
+%   cnltx-example's {example} frames its output in \mdframed; inside a low-level
+%   \begin{list} item the box's stray nested-itemize state leaks out and closes
+%   the OUTER list, so following \item's land in <subsubsection>/<p> -> malformed.
+\documentclass{article}
+\usepackage{cnltx-example}
+\NewDocumentEnvironment {Liste} { }
+  {\begin{list}{ }{\setlength{\leftmargin}{1em}}}{\end{list}}
+\NewDocumentCommand \Desc {m}{\item \texttt{#1}\newline}
+\begin{document}
+\subsubsection*{Test}
+\begin{Liste}
+\Desc{Kosy}
+Some description text.
+\begin{example}
+  \textbf{hello world}
+\end{example}
+\Desc{LGS}
+\Desc{third}
+\end{Liste}
+\end{document}

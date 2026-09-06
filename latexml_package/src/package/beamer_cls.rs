@@ -200,25 +200,32 @@ fn halve_frame_hashes(tokens: Vec<Token>) -> Vec<Token> {
   halve_once(halve_once(tokens))
 }
 
-/// Collect raw tokens from the input stream up to the matching `\end{frame}`,
-/// respecting nested `\begin{frame}...\end{frame}` depth.
+/// Collect raw tokens from the input stream up to the `\end` that closes the
+/// frame: a generic environment depth (any `\begin{X}` opens a level, any
+/// `\end{X}` closes one), the way LaTeX's `\end`/`\@checkend` pairs
+/// environments by nesting, not by name. Counting only the literal name
+/// `frame` ran away when a wrapper environment produced the close by
+/// expansion — beamerthemeTorinoTh.sty:97 `\newenvironment{tframe}
+/// {\begin{frame}[t]}{\end{frame}}`: the body's `\end{tframe}` was swallowed,
+/// the scan reached EOF and re-injected the rest of the document (beamer2thesis
+/// 4→83 errors, sweep 45). The closing tokens are returned verbatim, so a
+/// wrapper's `\end{tframe}` still runs its own end code.
+/// Guard: `perfect_kernel_batch56::beamer_wrapper_frame_environment_terminates`.
 fn collect_frame_body() -> Result<(Vec<Token>, Option<Vec<Token>>)> {
   let end_cs = T_CS!("\\end");
   let begin_cs = T_CS!("\\begin");
   let mut body_tokens: Vec<Token> = Vec::new();
-  let mut frame_depth: usize = 1;
+  let mut env_depth: usize = 0;
 
   while let Some(tok) = read_token()? {
     if tok == begin_cs || tok == end_cs {
       let is_begin = tok == begin_cs;
       let mut lookahead = Vec::new();
-      let mut matched_frame = false;
+      let mut named = false;
 
       while let Some(space_tok) = read_token()? {
-        if space_tok.get_catcode() == Catcode::SPACE {
-          lookahead.push(space_tok);
-        } else {
-          lookahead.push(space_tok);
+        lookahead.push(space_tok);
+        if space_tok.get_catcode() != Catcode::SPACE {
           break;
         }
       }
@@ -226,41 +233,29 @@ fn collect_frame_body() -> Result<(Vec<Token>, Option<Vec<Token>>)> {
       if let Some(&first_non_space) = lookahead.last()
         && first_non_space.get_catcode() == Catcode::BEGIN
       {
-        let mut name = String::new();
         while let Some(name_tok) = read_token()? {
           lookahead.push(name_tok);
           if name_tok.get_catcode() == Catcode::END {
-            if name.trim() == "frame" {
-              matched_frame = true;
-            }
+            named = true;
             break;
-          } else {
-            name.push_str(&name_tok.to_string());
           }
         }
       }
 
-      if matched_frame {
+      if named {
         if is_begin {
-          frame_depth += 1;
-          body_tokens.push(tok);
-          body_tokens.extend(lookahead);
+          env_depth += 1;
+        } else if env_depth == 0 {
+          let mut end_tokens = Vec::with_capacity(1 + lookahead.len());
+          end_tokens.push(tok);
+          end_tokens.extend(lookahead);
+          return Ok((body_tokens, Some(end_tokens)));
         } else {
-          frame_depth -= 1;
-          if frame_depth == 0 {
-            let mut end_tokens = Vec::with_capacity(1 + lookahead.len());
-            end_tokens.push(tok);
-            end_tokens.extend(lookahead);
-            return Ok((body_tokens, Some(end_tokens)));
-          } else {
-            body_tokens.push(tok);
-            body_tokens.extend(lookahead);
-          }
+          env_depth -= 1;
         }
-      } else {
-        body_tokens.push(tok);
-        body_tokens.extend(lookahead);
       }
+      body_tokens.push(tok);
+      body_tokens.extend(lookahead);
     } else {
       body_tokens.push(tok);
     }
@@ -462,6 +457,12 @@ LoadDefinitions!({
   // beamerbasetitle.sty:213 `\subject{text}` = `\hypersetup{pdfsubject=…}`
   // (PDF metadata; shipunov lecture-slides-ex, beamerswitch-example).
   def_macro_noop("\\subject{}")?;
+  // beamerbaseframe.sty:181-188: the overlay counter-reset list; consing onto
+  // it is all real beamer does at definition time (beamer2thesis
+  // `\resetcounteronoverlays{...}` after `\usetheme`).
+  RawTeX!(r"\def\resetcounteronoverlays#1{\@cons\beamer@overlaycounterresets{{c@#1}}}
+\def\resetcountonoverlays#1{\@cons\beamer@overlaycounterresets{{#1}}}
+\ifdefined\beamer@overlaycounterresets\else\def\beamer@overlaycounterresets{}\fi");
   DefMacro!("\\only OptionalAngled {} OptionalAngled", sub[args] {
     let mut it = args.into_iter();
     let spec: Option<Tokens> = it.next().unwrap().into();

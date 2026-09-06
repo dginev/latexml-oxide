@@ -462,17 +462,47 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
         "A math shift arrived inside a group opened in {mode}; the math ends when the group does."
       )
     );
-    // The deferred ender is the `@atgroup` twin, which ends the mode
-    // DIRECTLY and never re-defers: with the raw ender, a `$` two or more
-    // groups below the math frame (nicefrac's text-mode denominator
-    // `\nicefrac{1}{2$^{x}$}`, nicefrac_sty.rs:64, egpeirce-doc.tex:1831)
-    // re-deferred at every group boundary, escaped past the math frame and
-    // left `<ltx:Math>` open to the document root (egpeirce 2 → 8 errors in
-    // sweep 44). At the group's end the twin either closes the math (the
-    // frame is on top: `\bm{…$}`) or reports the benign "Attempt to end mode
-    // math" with the frame left for the real closing `$`.
+    // The deferred ender is the `@atgroup` twin (`end_math_at_group`): at the
+    // group's end it closes the math if the frame is on top, re-defers once
+    // more through a REAL TeX group (`{`/`\bgroup`/`\begingroup`, the groups
+    // tex.web off_save would close), and otherwise reports the benign
+    // "Attempt to end mode math" leaving the frame for the real closing `$`
+    // (nicefrac's text-mode denominator `\nicefrac{1}{2$^{x}$}`,
+    // nicefrac_sty.rs:64, egpeirce-doc.tex:1831 — with the raw ender it
+    // re-deferred at every boundary and escaped past the math frame).
     // Guard: `perfect_kernel_batch56::deferred_math_end_never_escapes_the_math_frame`.
     push_value("afterGroup", T_CS!(&s!("{ender}@atgroup")))?;
+    return Ok(());
+  }
+  end_mode(mode)
+}
+
+/// The deferred twin fires when the group that swallowed the math shift
+/// ends. If the math frame is now on top, the mode ends; if not, the next
+/// frame decides: a REAL TeX group (`{`, `\bgroup`, `\begingroup`) is one
+/// tex.web §1131 `off_save` would close too, so the ender is deferred once
+/// more to that group's end (titlecaps.sty:107 wraps a nested `\titlecap`
+/// in `\bgroup…\egroup`, and its word scanner re-emits `$` two groups below
+/// the math frame — titlecaps 3→10 errors in sweep 45); a constructor's
+/// bounded argument frame is not a TeX group, and there the inner `$` is a
+/// spurious re-entry the real outer `$` closes (nicefrac's text-mode
+/// denominator, egpeirce), so the benign "Attempt to end mode" stays.
+/// Guard: `perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
+fn end_math_at_group(mode: &str, twin: &str) -> Result<()> {
+  if lookup_string("MODE") != mode {
+    // A SECOND shift deferred in the same group is TeX's re-opener (`$…$`
+    // inside the group: off_save ends the math, the next `$` starts it
+    // again); its twin fires after the first one already closed the math,
+    // so there is nothing left to end (titlecaps' scanner re-emits both
+    // shifts of `$\backslash$` two groups deep).
+    return Ok(());
+  }
+  if !is_value_bound("BOUND_MODE", Some(0))
+    && lookup_string("MODE") == mode
+    && let Some(t) = ::latexml_core::state::lookup_token_sym(::latexml_core::pin!("groupInitiator"))
+    && (t.get_catcode() == Catcode::BEGIN || t == T_CS!("\\bgroup") || t == T_CS!("\\begingroup"))
+  {
+    push_value("afterGroup", T_CS!(twin))?;
     return Ok(());
   }
   end_mode(mode)
@@ -646,13 +676,13 @@ LoadDefinitions!({
     before_digest => { end_math_or_defer("math", "\\lx@end@inline@math")?; },
     reversion    => Tokens!(T_MATH!())
   );
-  // The deferred twins (see `end_math_or_defer`): end the mode directly.
+  // The deferred twins (see `end_math_or_defer` / `end_math_at_group`).
   DefConstructor!(T_CS!("\\lx@end@inline@math@atgroup"), None, None,
-    before_digest => { end_mode("math")?; },
+    before_digest => { end_math_at_group("math", "\\lx@end@inline@math@atgroup")?; },
     reversion    => Tokens!(T_MATH!())
   );
   DefConstructor!(T_CS!("\\lx@end@display@math@atgroup"), None, None,
-    before_digest => { end_mode("display_math")?; },
+    before_digest => { end_math_at_group("display_math", "\\lx@end@display@math@atgroup")?; },
     reversion    => Tokens!(T_MATH!(), T_MATH!())
   );
 

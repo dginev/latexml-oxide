@@ -107,6 +107,7 @@ pub use crate::base_utilities::*;
 // route through the same loop-safe path instead of hand-rolling it.
 pub use crate::tex::def_autoload;
 pub use crate::{
+  base_parameter_types::with_unexpandable_protect,
   latex_constructs::{
     begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
     start_appendices, tabular_bindings,

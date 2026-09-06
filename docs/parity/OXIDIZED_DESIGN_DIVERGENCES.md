@@ -6782,9 +6782,16 @@ the same warning instead of Perl's error.
 **Why**: TeX's own recovery; one warning instead of a cascade; well-formed tree.
 **Witnesses**: `tools/perfect_kernel/repros/boxes-groups/mal_math_bm_group_close.tex`
 (and `mal_math_brace_close_plain.tex`, the malformed control); kblocks-doc 4 → 0,
-titlecaps 10 → 3.
+titlecaps 10 → 3, then 10 → 0 with the re-defer below.
 **Guard**: `perfect_kernel_batch56::math_end_inside_open_group_defers_to_group_end`.
 **Upstream**: not filed.
+**Refinement (batch 56u)**: the deferred `@atgroup` twin (`tex_math.rs::end_math_at_group`)
+re-defers once more when the frame on top at the group's end is a REAL TeX group
+(`groupInitiator` = `{`, `\bgroup`, `\begingroup` — the groups off_save would
+close), and is a no-op when its math has already closed (a second `$` deferred in
+the same group is TeX's re-opener). A constructor's bounded frame is not a TeX
+group: there the benign "Attempt to end mode" stays (nicefrac, egpeirce). Guard:
+`perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
 
 ### 197. `TeXFileName` fully expands the filename tokens (Perl expands with `readXToken(0)`)
 

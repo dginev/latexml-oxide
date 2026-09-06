@@ -1,0 +1,13 @@
+% witness: montex/montex (\MyTogrog + 13 more LMC/LMS symbols undefined)
+% oracle: pdflatex CLEAN. engines: pdflatex.
+% expect: 0 errors. status: RED (\MyTogrog undefined) — needs ctib preloading fontenc first.
+% mechanism: ctib.sty:61 \RequirePackage[,LCT,T1]{fontenc}; mls.sty:413
+%   \usepackage[LGR,LMS,LMO,LMA,LMC,T1]{fontenc} is a RELOAD; our fontenc reload
+%   hits option-clash and skips the NEW encodings, so lmcenc.def (\DeclareTextSymbol
+%   \MyTogrog LMC 250, lmcenc.def:35) never loads. First-load path is clean (see control).
+\documentclass{report}
+\usepackage{ctib}
+\usepackage[latin1]{mls}
+\begin{document}
+\MyTogrog
+\end{document}

@@ -85,4 +85,8 @@ LoadDefinitions!({
   def_macro_noop("\\SetCrop{}{}")?;
   def_macro_noop("\\SetTrim{}{}")?;
   def_macro_noop("\\SetBleed{}{}")?;
+  // oup-authoring-template.cls:2733 `\DeclareRobustCommand\ORCID[1]{…\href
+  // {https://orcid.org/#1}{\XeTeXLinkBox{…\pic{orcidlogo}…}}}`: the link with
+  // the id as its text (the logo picture is out of scope).
+  DefMacro!("\\ORCID{}", "\\href{https://orcid.org/#1}{#1}");
 });

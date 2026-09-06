@@ -1,0 +1,17 @@
+% witness: titlecaps (TL2025 doc/latex/titlecaps/titlecaps.tex:353,393-395)
+% oracle:  pdflatex — CLEAN (0 errors)
+% engines: pdflatex (raw [rawstyles,rawclasses]latexml.sty)
+% expect:  0 Error lines
+% status:  RED on b56x (5 err: 2x @atgroup + 3x malformed) / 1 err on sweep44 (56p)
+% mechanism: titlecaps.sty word-scanner (\bs=$\backslash$, \texttt->\bgroup..
+%   \titlecap[s]{{..}}..\egroup, lines 99-107) leaves outer inline-math open and
+%   emits a 2nd $ two group-levels below the math frame. tex_math.rs
+%   end_math_or_defer defers via \lx@end@inline@math@atgroup (56q); that twin
+%   ends mode DIRECTLY (never re-defers), so it fires while the intermediate
+%   \bgroup frame is still on top -> "Attempt to end mode math" + leaked <Math>.
+\documentclass{article}
+\usepackage{titlecaps}
+\def\bs{$\backslash$}
+\begin{document}
+\titlecap{\ttfamily \bs a\{b \{c\} d\}. \texttt{\bs x}}
+\end{document}

@@ -1,0 +1,11 @@
+% witness: heria/heria-proposal (heria.cls:389 \IfEq under [showinstructions])
+% oracle: pdflatex CLEAN (newtxtext.sty:22 \RequirePackage{xstring} => \IfEq from xstring.tex:685)
+% expect: \IfEq defined. status: RED (\IfEq undefined).
+% mechanism: our newtxtext_sty.rs requires xpatch,xcolor but NOT xstring,ifthen,scalefnt
+%   (newtxtext.sty:22). Perl newtxtext.sty.ltxml ALSO omits it => SHARED.
+\documentclass{article}
+\usepackage{newtxtext}
+\begin{document}
+\makeatletter\ifdefined\IfEq \typeout{IFEQ-OK}\else \IfEq{a}{a}{}{}\fi\makeatother
+ok
+\end{document}

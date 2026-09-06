@@ -1,0 +1,18 @@
+% WITNESS: euclideangeometry/euclideangeometry-man (TL2025 doc manual)
+% ORACLE: pdflatex clean (compiles); ENGINE: pdflatex
+% EXPECT: 0 errors. STATUS: RED today (batch 56x b56x binary): 102 errors.
+% FIRST ERROR (ANSI-stripped):
+%   Error:unexpected:\special_relax\tl_if_empty:nTF ... should not appear
+%   between \csname and \endcsname (partial cs so far: "\g__hook_")  x100 + Fatal:TooManyErrors
+% MECHANISM: pm-isomath.sty registers #-bearing \AtBeginDocument chunks
+%   (mathrmbf 151, vectorsymbol 158). Batch 56r routes them into lthooks
+%   (\AddToHook{begindocument}{\lx@bdhook@N}). pm-isomath.sty:185
+%   \DeclareMathOperator\eu{\MathLatin{e}(n)} x-expands the stored hook code;
+%   \NewDocumentCommand\vectorsymbol's \exp_args:Nx \tl_if_empty:nTF
+%   (ltcmd \__cmd_check_definable_aux:nN, latex.ltx:4385) leaves a persistent
+%   \special_relax-family \tl_if_empty:nTF that floods \csname g__hook_.
+\documentclass{article}
+\usepackage{pm-isomath}
+\begin{document}
+Text.
+\end{document}

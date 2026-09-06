@@ -50,7 +50,22 @@ LoadDefinitions!({
         }
       }
     }
-    let text_str = if names_undefined { text.untex() } else { do_expand(text)?.untex() };
+    // The defined-name branch expands under `\protected@edef`'s regime
+    // (latex.ltx:1442-1454, `with_unexpandable_protect` + `Partial` = e-TeX
+    // `\protected` deferred), not a full expansion: pm-isomath.sty:185
+    // `\DeclareMathOperator\eu{\MathLatin{e}(n)}` names a `\NewDocumentCommand`
+    // (protected) whose body `\edef\x{…}\x{#3}{#4}` runs away when forced at
+    // definition time — and dragged lthooks' stored `#`-chunks into the
+    // expansion (100× `\special_relax…` inside a `\g__hook_` csname;
+    // euclideangeometry-man 2→101, sweep 45; sweep 44's `\y`/`\x` undefined
+    // was the milder face of the same root). Perl passes the body unexpanded
+    // to `\operatorname` (amsopn.sty.ltxml) — RUST-ONLY.
+    // Guard: `perfect_kernel_batch56::declaremathoperator_keeps_protected_macros`.
+    let text_str = if names_undefined {
+      text.untex()
+    } else {
+      with_unexpandable_protect(|| do_expand_partially(text))?.untex()
+    };
     let has_star = star.is_some();
     // Perl L26-29: scriptpos => ($star ? \&doScriptpos : 'post') — starred form
     // gets dynamic mid/post from current display style; bare form is always 'post'.

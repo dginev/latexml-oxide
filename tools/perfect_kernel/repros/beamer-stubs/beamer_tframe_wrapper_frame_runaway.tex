@@ -1,0 +1,24 @@
+% witness: beamer2thesis, beamer2thesis_ita (TeX Live doc/latex/beamer2thesis)
+% oracle: pdflatex/xelatex clean; Perl LaTeXML completes (no-ops \usetheme)
+% engines: [rawstyles,rawclasses]latexml.sty
+% expect: 0 errors; both frames present, \verb content verbatim
+% status: RED (b56x c2d3d88f63)
+% mechanism: beamerthemeTorinoTh.sty:97 \newenvironment{tframe}{\begin{frame}[t]}{\end{frame}}
+%   opens a NON-fragile frame; collect_frame_body (beamer_cls.rs:205) scans literal
+%   \begin/\end{frame} and never sees \end{tframe} (expands to \end{frame}), so the
+%   frame-only depth counter runs away past the fragile frame and corrupts structure.
+\documentclass{beamer}
+\newenvironment{tframe}{\begin{frame}[t]}{\end{frame}}
+\begin{document}
+\begin{tframe}{General}
+\begin{itemize}
+\item All guides show options
+\end{itemize}
+\end{tframe}
+\begin{frame}[t,fragile]{Config}
+\begin{itemize}
+\item It is the first thing
+\item \verb!hello!
+\end{itemize}
+\end{frame}
+\end{document}

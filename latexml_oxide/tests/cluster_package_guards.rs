@@ -7494,10 +7494,14 @@ After.
       xml.contains("framed=\"rectangle\""),
       "mdframed block lost: {xml}"
     );
-    // the frame WRAPS the listing (the constructor body extends over it)
+    // the frame covers the listing: either as a wrapper element or, since
+    // batch 56u routes mdframed through `insert_block` (Perl insertBlock's
+    // single-node rule), as `framed="rectangle"` on the listing element
+    // itself — the same way the minipage's `ltx_minipage` lands on the second
     let frame = xml.find("framed=\"rectangle\"").unwrap();
     let first_listing = xml.find("<listing class").unwrap();
-    assert!(frame < first_listing, "{xml}");
+    let first_tag_end = first_listing + xml[first_listing..].find('>').unwrap();
+    assert!(frame < first_tag_end, "{xml}");
     assert!(xml.contains("<p>After.</p>"), "{xml}");
   }
 
@@ -15617,6 +15621,212 @@ Plain text.
     for s in ["(a:x)", "(b:y)", "(c:z)", "(d:w)", "Plain text."] {
       assert!(xml.contains(s), "missing {s}: {xml}");
     }
+  }
+
+  /// listings stores its length keys as macros (lstmisc.sty:1193
+  /// `\def\lst@numbersep{#1}`), so a value naming a macro defined only later
+  /// is fine; Perl's Dimension-typed key evaluated it at `\lstset` time
+  /// (abntexto-uece.tex:402/406, SHARED; pdflatex clean).
+  #[test]
+  fn listings_length_keys_are_lazy() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\lstset{numbers=left,numbersep=\dimexpr-5pt+\addnumbersep\relax,xleftmargin=\addnumbersep}
+\def\addnumbersep{9pt}
+\begin{document}
+\begin{lstlisting}
+x = 1
+\end{lstlisting}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<listing") && xml.contains("After."), "{xml}");
+  }
+
+  /// LuaTeX `\csstring` (manual §2.8.3): `\string` without the escape
+  /// character; control: `\string` keeps it. Witness abntexto-uece.
+  #[test]
+  fn luatex_csstring_primitive() {
+    let tex = r"\documentclass{article}
+\edef\bslash{\csstring\\}
+\begin{document}
+[\csstring\foo][\bslash][\string\foo][\csstring a]
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // A catcode-12 `\` in the OT1 text font is the left-quote glyph (pdflatex
+    // prints the same), so the escape char renders as U+201C.
+    assert!(xml.contains("[foo][\u{201C}][\u{201C}foo][a]"), "{xml}");
+  }
+
+  /// A wrapper environment whose end code produces `\end{frame}` by expansion
+  /// (beamerthemeTorinoTh.sty:97 `tframe`) must still terminate the frame-body
+  /// collection at its own `\end{tframe}`; the following `[fragile]` frame's
+  /// `\verb` then reads raw characters. Witness beamer2thesis (4→83 in sweep 45).
+  #[test]
+  fn beamer_wrapper_frame_environment_terminates() {
+    let tex = r"\documentclass{beamer}
+\newenvironment{tframe}{\begin{frame}[t]}{\end{frame}}
+\begin{document}
+\begin{tframe}{General}
+\begin{itemize}
+\item All guides show options
+\end{itemize}
+\end{tframe}
+\begin{frame}[t,fragile]{Config}
+\begin{itemize}
+\item It is the first thing
+\item \verb!hello!
+\end{itemize}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("All guides show options") && xml.contains("hello"),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<subsection").count(), 2, "{xml}");
+  }
+
+  /// An `mdframed` box (here cnltx-example's `{example}`) inside a low-level
+  /// `\begin{list}` item must not close the outer list: items after it stay
+  /// siblings (schulmathematik 1→40 in sweep 45; pdflatex clean).
+  #[test]
+  fn mdframed_inside_low_level_list_keeps_items() {
+    let tex = r"\documentclass{article}
+\usepackage{cnltx-example}
+\NewDocumentEnvironment {Liste} { }
+  {\begin{list}{ }{\setlength{\leftmargin}{1em}}}{\end{list}}
+\NewDocumentCommand \Desc {m}{\item \texttt{#1}\newline}
+\begin{document}
+\subsubsection*{Test}
+\begin{Liste}
+\Desc{Kosy}
+Some description text.
+\begin{example}
+  \textbf{hello world}
+\end{example}
+\Desc{LGS}
+\Desc{third}
+\end{Liste}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The frame keeps cnltx's stray inner list (item i2) INSIDE itself; the
+    // outer list's later items stay its children (i3, i4), never a section's.
+    assert!(
+      xml.contains(r#"<item xml:id="S0.I1.i3">"#) && xml.contains(r#"<item xml:id="S0.I1.i4">"#),
+      "{xml}"
+    );
+    assert_eq!(xml.matches("<subsubsection").count(), 1, "{xml}");
+    let fb = xml.find("<logical-block").unwrap();
+    let fe = xml.find("</logical-block>").unwrap();
+    assert!(xml[fb..fe].contains("hello world"), "{xml}");
+    assert!(
+      xml[fe..].contains(r#"<item xml:id="S0.I1.i3">"#) && xml.contains("third"),
+      "{xml}"
+    );
+  }
+
+  /// A deferred math ender (#196) that fires with another REAL TeX group on
+  /// top re-defers to that group's end (tex.web §1131 off_save closes real
+  /// groups); titlecaps.sty:107 nests `\titlecap` in `\bgroup…\egroup` and
+  /// re-emits `$` two groups below the math frame (titlecaps 3→10, sweep 45).
+  /// Control: the nicefrac constructor-frame shape stays as #196 left it
+  /// (`deferred_math_end_never_escapes_the_math_frame`).
+  #[test]
+  fn deferred_math_end_walks_real_groups() {
+    let tex = r"\documentclass{article}
+\usepackage{titlecaps}
+\def\bs{$\backslash$}
+\begin{document}
+\titlecap{\ttfamily \bs a\{b \{c\} d\}. \texttt{\bs x}}
+
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("malformed"), "{stderr}");
+    assert!(xml.contains("After."), "{xml}");
+    let last_p = xml.rfind("<p>").unwrap();
+    assert!(!xml[last_p..].contains("<Math"), "{xml}");
+  }
+
+  /// Sweep-45 single-name gaps: cprotect's `\icprotect` (cprotect.sty:133;
+  /// LaTeX_RefSheet), newtxtext's xstring/ifthen/scalefnt requires
+  /// (newtxtext.sty:22; heria `\IfEq`), oup's `\ORCID` (cls:2733), beamer's
+  /// `\resetcounteronoverlays` (beamerbaseframe.sty:181; beamer2thesis).
+  #[test]
+  fn sweep45_single_name_gaps() {
+    let tex = r"\documentclass{article}
+\usepackage{cprotect}
+\usepackage{newtxtext}
+\begin{document}
+\icprotect\textbf{hello \verb|world|}
+[\IfEq{a}{a}{Y}{N}\IfEq{a}{b}{Y}{N}]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("world") && xml.contains("[YN]"), "{xml}");
+    let oup = r"\documentclass{oup-authoring-template}
+\begin{document}
+\title{T}
+\author{A \ORCID{0000-0001-2345-6789}}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(oup, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("https://orcid.org/0000-0001-2345-6789"),
+      "{xml}"
+    );
+    let beamer = r"\documentclass{beamer}
+\resetcounteronoverlays{equation}
+\begin{document}
+\begin{frame}Reset ok.\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(beamer, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Reset ok."), "{xml}");
+  }
+
+  /// `\DeclareMathOperator` expands its body under `\protected@edef`'s regime:
+  /// a protected `\NewDocumentCommand` in the body stays unexpanded
+  /// (pm-isomath.sty:185; euclideangeometry-man 2→101 in sweep 45). Control:
+  /// a plain defined-macro body still resolves (`\newcommand\tr{tr}`).
+  #[test]
+  fn declaremathoperator_keeps_protected_macros() {
+    let tex = r"\documentclass{article}
+\usepackage{pm-isomath}
+\begin{document}
+Text $\eu{3}$.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Text"), "{xml}");
+    let control = r"\documentclass{article}
+\usepackage{amsmath}
+\newcommand\trname{tr}
+\DeclareMathOperator\tr{\trname}
+\begin{document}
+$\tr A$
+\end{document}
+";
+    let (stderr, xml) = convert(control, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">tr<"), "{xml}");
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

@@ -11,4 +11,10 @@ LoadDefinitions!({
   // Guard: `perfect_kernel_batch56::package_state_prtec_psfragx_knowledge`.
   RequirePackage!("xpatch");
   RequirePackage!("xcolor");
+  // newtxtext.sty:22 `\RequirePackage{xstring,ifthen,scalefnt}`: heria.cls:389
+  // uses xstring's `\IfEq` after loading newtxtext (:758). Perl's binding omits
+  // these too (SHARED); pdflatex clean.
+  RequirePackage!("xstring");
+  RequirePackage!("ifthen");
+  RequirePackage!("scalefnt");
 });

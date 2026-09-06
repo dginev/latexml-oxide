@@ -4008,14 +4008,69 @@ pub fn insert_block(
   document.absorb(contents, None)?;
 
   let mut nodes = content_nodes(&container);
-  let node_tags = nodes
+  let mut node_tags = nodes
     .iter()
     .map(document::get_node_qname)
     .collect::<Vec<_>>();
-  let nnodes = nodes.len();
   document.close_to_node(&container, true)?;
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
+
+  // Content no block-like container can hold anywhere (a bibliography; a
+  // section is always held by `ltx:sectional-block`) floats out AFTER the box — to the nearest ancestor that accepts
+  // it, with the insertion point following — which is what an autoclosing
+  // frame does when `\printbibliography` opens inside it (mdframed,
+  // biblatex-juradiss). The box keeps the content before it.
+  // Guard: `perfect_kernel_gemini::mdframed_block_bibliography_juradiss`.
+  let all_candidates = [
+    "ltx:inline-block",
+    "ltx:inline-logical-block",
+    "ltx:inline-sectional-block",
+    "ltx:block",
+    "ltx:logical-block",
+    "ltx:sectional-block",
+    "ltx:figure",
+  ]
+  .map(pin_static);
+  let uncontainable = |tag: SymStr| {
+    all_candidates
+      .iter()
+      .all(|c| document::sym_can_contain_somehow(*c, tag).is_none())
+  };
+  if let Some(bad) = node_tags.iter().position(|t| uncontainable(*t)) {
+    let tail = nodes.split_off(bad);
+    node_tags.truncate(bad);
+    let tail_tags: Vec<SymStr> = tail.iter().map(document::get_node_qname).collect();
+    let mut anchor = container.clone();
+    let mut ancestor = context.clone();
+    while !tail_tags
+      .iter()
+      .all(|t| with(*t, |s| document::can_contain(&ancestor, s)))
+    {
+      match ancestor.get_parent() {
+        Some(p) if matches!(p.get_type(), Some(NodeType::ElementNode)) => {
+          anchor = ancestor;
+          ancestor = p;
+        },
+        _ => break,
+      }
+    }
+    // `anchor` is an element and a box's content nodes are already
+    // coalesced, so no two adjacent text nodes reach `add_next_sibling`
+    // (libxml2 merges those and frees the second — see `replace_node`).
+    let mut prev = anchor;
+    for mut n in tail {
+      n.unlink();
+      prev.add_next_sibling(&mut n)?;
+      prev = n;
+    }
+    document.set_node(&ancestor);
+    if nodes.is_empty() {
+      document.remove_node(container);
+      return Ok(Vec::new());
+    }
+  }
+  let nnodes = nodes.len();
 
   // Perl: Hack: apparently TeX doesn't shift (vattach) a single node in a vbox/vtop/...
   #[allow(clippy::redundant_locals)]

@@ -1,0 +1,11 @@
+% witness: latex-refsheet/LaTeX_RefSheet (line 66 \outer\def\sectionbox{\icprotect\oldsectionbox})
+% oracle: pdflatex CLEAN (0 err). engines: pdflatex.
+% expect: 0 errors. status: RED today (2 errors).
+% mechanism: cprotect.sty:133 \def\cprotect{\icprotect}; :135 \newcommand{\icprotect}[2][om].
+%   our contrib cprotect_sty.rs defines \cprotect (the worker) but not \icprotect.
+% error today: Error:undefined:\icprotect
+\documentclass{article}
+\usepackage{cprotect}
+\begin{document}
+\icprotect\textbf{hello \verb|world|}
+\end{document}

@@ -2836,9 +2836,18 @@ LoadDefinitions!({
   // 4.3 Space and placement
   DefKeyVal!("LST", "float", "");
   DefKeyVal!("LST", "floatplacement", "");
-  DefKeyVal!("LST", "aboveskip", "Dimension");
-  DefKeyVal!("LST", "belowskip", "Dimension");
-  DefKeyVal!("LST", "lineskip", "Dimension");
+  // listings stores every length key as a MACRO, not a dimen
+  // (lstmisc.sty:1193 `\lst@Key{numbersep}{10pt}{\def\lst@numbersep{#1}}`,
+  // likewise aboveskip/belowskip/lineskip/linewidth/x*margin/break*/frame*/
+  // rulesep), so `numbersep=\dimexpr-5pt+\addnumbersep\relax` may name a
+  // macro defined only LATER (abntexto-uece.tex:402/406). Perl's
+  // `DefKeyVal('LST','numbersep','Dimension')` (listings.sty.ltxml:875) evaluates
+  // at \lstset time — SHARED failure; pdflatex is clean. Nothing reads these
+  // keys as dimensions, so store the tokens as listings does.
+  // Guard: `perfect_kernel_batch56::listings_length_keys_are_lazy`.
+  DefKeyVal!("LST", "aboveskip", "");
+  DefKeyVal!("LST", "belowskip", "");
+  DefKeyVal!("LST", "lineskip", "");
   DefKeyVal!("LST", "boxpos", "");
 
   // 4.4 Printed range
@@ -2893,7 +2902,7 @@ LoadDefinitions!({
   DefKeyVal!("LST", "stepnumber", "Number");
   DefKeyVal!("LST", "numberfirstline", "", "true");
   DefKeyVal!("LST", "numberstyle", "");
-  DefKeyVal!("LST", "numbersep", "Dimension");
+  DefKeyVal!("LST", "numbersep", "");
   DefKeyVal!("LST", "numberblanklines", "", "true");
   DefKeyVal!("LST", "firstnumber", "");
   DefKeyVal!("LST", "name", "Semiverbatim");
@@ -2904,13 +2913,13 @@ LoadDefinitions!({
   DefKeyVal!("LST", "label", "Semiverbatim");
   DefKeyVal!("LST", "nolol", "", "true");
   DefKeyVal!("LST", "captionpos", "");
-  DefKeyVal!("LST", "abovecaptionskip", "Dimension");
-  DefKeyVal!("LST", "belowcaptionskip", "Dimension");
+  DefKeyVal!("LST", "abovecaptionskip", "");
+  DefKeyVal!("LST", "belowcaptionskip", "");
 
   // 4.10 Margins and line shape
-  DefKeyVal!("LST", "linewidth", "Dimension");
-  DefKeyVal!("LST", "xleftmargin", "Dimension");
-  DefKeyVal!("LST", "xrightmargin", "Dimension");
+  DefKeyVal!("LST", "linewidth", "");
+  DefKeyVal!("LST", "xleftmargin", "");
+  DefKeyVal!("LST", "xrightmargin", "");
   // Real \lst@Key{xleftmargin} stores the value as \lst@xleftmargin; raw
   // styles read it directly (bohr/cntformats family, 8 bundles). Default 0pt.
   RawTeX!(r"\def\lst@xleftmargin{0pt}\def\lst@xrightmargin{0pt}");
@@ -2965,7 +2974,7 @@ LoadDefinitions!({
   DefKeyVal!("LST", "breaklines", "", "true");
   DefKeyVal!("LST", "prebreak", "");
   DefKeyVal!("LST", "postbreak", "");
-  DefKeyVal!("LST", "breakindent", "Dimension");
+  DefKeyVal!("LST", "breakindent", "");
   DefKeyVal!("LST", "breakautoindent", "", "true");
   DefKeyVal!("LST", "breakatwhitespace", "", "true");
   DefKeyVal!("LST", "tabs", "");
@@ -2979,13 +2988,13 @@ LoadDefinitions!({
   // 4.11 Frames
   DefKeyVal!("LST", "frame", "");
   DefKeyVal!("LST", "framearound", "");
-  DefKeyVal!("LST", "framesep", "Dimension");
-  DefKeyVal!("LST", "rulesep", "Dimension");
-  DefKeyVal!("LST", "framerule", "Dimension");
-  DefKeyVal!("LST", "framexleftmargin", "Dimension");
-  DefKeyVal!("LST", "framexrightmargin", "Dimension");
-  DefKeyVal!("LST", "framextopmargin", "Dimension");
-  DefKeyVal!("LST", "framexbottommargin", "Dimension");
+  DefKeyVal!("LST", "framesep", "");
+  DefKeyVal!("LST", "rulesep", "");
+  DefKeyVal!("LST", "framerule", "");
+  DefKeyVal!("LST", "framexleftmargin", "");
+  DefKeyVal!("LST", "framexrightmargin", "");
+  DefKeyVal!("LST", "framextopmargin", "");
+  DefKeyVal!("LST", "framexbottommargin", "");
   DefKeyVal!("LST", "backgroundcolor", "");
   DefKeyVal!("LST", "rulecolor", "");
   DefKeyVal!("LST", "fillcolor", "");

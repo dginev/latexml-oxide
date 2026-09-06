@@ -269,4 +269,9 @@ LoadDefinitions!({
   // `\begin{env}` in place, which is that same net effect.
   DefMacro!(T_CS!("\\cprotEnv"), None, Tokens!());
   Let!("\\CPTbegin", "\\begin");
+  // cprotect.sty:133 `\outer\long\def\cprotect{\icprotect}`: the user-level
+  // worker is `\icprotect` and documents call it directly
+  // (LaTeX_RefSheet.tex:66 `\outer\def\sectionbox{\icprotect\oldsectionbox}`).
+  // Guard: `perfect_kernel_batch56::sweep45_single_name_gaps`.
+  Let!("\\icprotect", "\\cprotect");
 });

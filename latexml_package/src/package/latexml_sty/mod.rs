@@ -159,6 +159,22 @@ LoadDefinitions!({
     });
     Let!("\\tex_Uchar:D", "\\Uchar");
     DefMacro!("\\primitive Token", sub[(token)] { Ok(Tokens::new(vec![token])) });
+    // LuaTeX manual §2.8.3 `\csstring`: like `\string` but without the escape
+    // character (`\csstring\\` is a lone catcode-12 `\`; abntexto-uece.tex:49
+    // `\edef\bslash{\csstring\\}`). Same token cases as tex_character.rs
+    // `\string`. Guard: `perfect_kernel_batch56::luatex_csstring_primitive`.
+    DefMacro!("\\csstring Token", sub[(token)] {
+      let token = if token.is_noexpand_family() { T_CS!("\\special_relax") } else { token };
+      match token.code {
+        Catcode::CS => {
+          let s = token.to_string();
+          Explode!(s.strip_prefix('\\').unwrap_or(&s).to_string())
+        }
+        Catcode::SPACE => vec![token],
+        Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
+        _ => vec![Token { text: token.text, code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 }],
+      }
+    });
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
     // expl3-code.tex:985-986 aliases `\tex_luatexrevision:D`/`\tex_luatexversion:D`
     // to the primitives at FORMAT time, when they did not exist here; lua-widow-

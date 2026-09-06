@@ -57,54 +57,34 @@ LoadDefinitions!({
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Dynamic selection between `logical-block` (Para.class) and `inline-logical-block` (Misc.class):
-  //
-  // The schema offers three framed-box elements, each satisfying only TWO of
-  // the three placements an `mdframed` must support (verified against
-  // resources/RelaxNG: float_model ⊇ Block.model = Block.class|Misc.class|
-  // Meta.class; Para.model = Para.class|Meta.class):
-  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓ (Block.model ⊇
-  //     Misc.class), theorem ✗ (Block.model ⊉ Para.class). This is what Perl
-  //     ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so Perl ITSELF errors
-  //     `malformed:ltx:theorem` on a theorem-in-mdframed.
-  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓ (Misc.class ⊂ Block.model ⊂
-  //     float_model), theorem ✓ (Para.model ⊇ Para.class), nests ✗ — a directly-nested inner
-  //     `inline-logical-block` (Misc.class) isn't in the outer's Para.model.
-  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓ (Para.class ∈
-  //     Para.model), in-float ✗ — Para.class ⊄ float_model.
-  //
-  // By inspecting `document.is_openable("ltx:logical-block")` at construction time:
-  //   - inside a float (arXiv:1907.05772), `logical-block` is not openable, so we emit
-  //     `inline-logical-block` (in-float ✓);
-  //   - in standard flow or outer frames (arXiv:2506.03074, 2402.07712, 1712.00062),
-  //     `logical-block` is openable, so we emit `logical-block` (theorems ✓, nested frames ✓).
-  // Furthermore, `before_digest` issues `\par` so preceding text paragraph is closed, and
-  // the frame element carries `_autoclose='true'` with `document.maybe_close_element` so that
-  // block-level backmatter (such as `\printbibliography` / `\thebibliography`, biblatex-juradiss)
-  // can auto-close the frame without malformed nesting or missing close errors.
+  // The frame is inserted through `insert_block` (Perl TeX_Box.pool.ltxml:449
+  // `insertBlock`, the shape `framed.sty.ltxml:21-26` and our `framed_sty.rs`
+  // use): the body is built inside `ltx:_CaptureBlock_` and the container is
+  // then chosen from content AND context — `logical-block` in flow (theorems,
+  // nested frames: arXiv 2506.03074, 2402.07712, 1712.00062), the inline
+  // variant inside a float (arXiv 1907.05772), a block child auto-closing
+  // when backmatter follows (biblatex-juradiss `\printbibliography`). A
+  // hand-rolled `open_element`/`absorb`/`maybe_close_element` with
+  // `_autoclose` (the round-2 rewrite) let a box's stray nested-list state
+  // leak into a low-level `\begin{list}` item and closed the OUTER list after
+  // its first item (cnltx-example's `{example}` frames its output in
+  // `\mdframed`; schulmathematik 1→40 errors, sweep 45; pdflatex clean,
+  // RUST-ONLY). The capture-and-rename isolates that state.
+  // Guards: `perfect_kernel_batch56::mdframed_inside_low_level_list_keeps_items`,
+  // `perfect_kernel_gemini::{mdframed_block_bibliography_juradiss, mdframed_in_float_and_nested}`.
   DefEnvironment!(
     "{mdframed}[]",
     sub[document, _args, props] {
-      let tag = if document.is_openable("ltx:logical-block") {
-        "ltx:logical-block"
-      } else {
-        "ltx:inline-logical-block"
-      };
-      let mut attr = HashMap::default();
-      attr.insert("framed".to_string(), "rectangle".to_string());
-      attr.insert("_autoclose".to_string(), "true".to_string());
-      if let Some(Stored::String(framecolor)) = props.get("framecolor") {
-        attr.insert("framecolor".to_string(), to_string(*framecolor));
-      }
-      document.open_element(tag, Some(attr), None)?;
+      document.maybe_close_element("ltx:p")?;
       if let Some(Stored::Digested(body)) = props.get("body") {
-        document.absorb(body, None)?;
+        let mut attrs: HashMap<String, String> = HashMap::default();
+        attrs.insert("framed".to_string(), "rectangle".to_string());
+        if let Some(Stored::String(framecolor)) = props.get("framecolor") {
+          attrs.insert("framecolor".to_string(), to_string(*framecolor));
+        }
+        insert_block(document, body, attrs)?;
       }
-      document.maybe_close_element(tag)?;
       Ok(())
-    },
-    before_digest => {
-      digest(Tokens!(T_CS!("\\par")))?;
     },
     properties => sub[_args] {
       let mut props = SymHashMap::default();
