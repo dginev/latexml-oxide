@@ -209,3 +209,49 @@ env-hook change (that is a regression for the orchestrator).
   `insert_block` should not mutate `document.set_node` to point at `&ancestor` during digestion of a box unless restoring the original cursor or handling box closure properly. Alternatively, if uncontainable nodes are floated as siblings of `anchor`, `document.set_node` should remain at `&context` (or be restored) so subsequent nodes in the active box are correctly parented.
 - **Scope Rule Action:** Per the Round 5 Scope Rule, stopped at the red reproducer and bisection report.
 
+### Task L6 — pdfpages: `\includepdfmerge` definition (batch 56w)
+- **Status:** COMPLETED & PUSHED (`073b91bca7`)
+- **Witness:** `pdfmanagement-testphase/pdfmanagement-testphase.tex` (was 2 errors → now 0 errors on pdfpages commands)
+- **Reproducer:** Verified via existing suite & witness document.
+- **Guard:** `includepdfmerge_in_pdfpages` in `latexml_oxide/tests/cluster_package_guards.rs`
+- **Root Cause & Fix:** `pdfpages.sty` defines `\includepdfmerge[options]{file-spec-list}` as the underlying engine macro for `\includepdf` and multi-document inclusion. In `latexml_package/src/package/pdfpages_sty.rs`, added constructor `\includepdfmerge` matching `\includepdf`'s behavior and attributes.
+
+### Task L7 — bookmark: `\bookmark` and `\bookmarksetup` stubs (batch 56w)
+- **Status:** COMPLETED & PUSHED (`05a6d706b6`)
+- **Witness:** `tagpdf/tagpdf.tex:129` (1 undefined macro `\bookmarksetup` → 0)
+- **Reproducer:** Verified via witness document and `cluster_package_guards.rs`.
+- **Guard:** `bookmark_and_setup_absorbed_in_hyperref_and_bookmark` in `latexml_oxide/tests/cluster_package_guards.rs`
+- **Root Cause & Fix:** In `latexml_package/src/package/hyperref_sty.rs`, `bookmark.sty` macros (`\bookmark`, `\bookmarksetup`, `\bookmarksetupnext`, `\bookmarkdefinestyle`, `\bookmarkget`, `\BookmarkAtEnd`) are PDF-outline metadata hooks that do not produce document flow content. Stubbed as no-ops taking keyval arguments so that packages and documents relying on `bookmark` or `hyperref` metadata compile cleanly with 0 errors without emitting unwanted `<ltx:navigation>` tags.
+
+### Task L8 — chessboard/xskak: "mainline: black, not white, to move (e4)"
+- **Status:** INVESTIGATION & MIN-REPRO DELIVERED (Plan P72 beamer overlay-merge policy, commit `bb3e0ae7cc`)
+- **Witness:** `chessboard/chessboard_and_beamer.tex` (3 errors + Fatal)
+- **Reproducer:** `tools/perfect_kernel/repros/singletons/chessboard_beamer_overlay.tex` (8 lines):
+  ```latex
+  \documentclass{beamer}
+  \usepackage[skaknew]{chessboard, skak}
+  \begin{document}
+  \begin{frame}
+  \newgame
+  \only<1>{\mainline{1.e4}}
+  \only<2>{\hidemoves{1.e4}\mainline{1... e5}}
+  \end{frame}
+  \end{document}
+  ```
+- **Root Cause & Mechanism:** Neither `latexml_package`, `latexml_contrib`, nor Perl LaTeXML has bindings for `chessboard`, `xskak`, or `skak` (all are raw-loaded). Outside of beamer, chess move parsing (`\newchessgame \mainline{1. e4 e5 ...}`) runs 100% cleanly with 0 errors in both engines. In `beamer`, latexml-oxide merges overlay specifications (`<1>`, `<2>`) into a single sequential pass across the frame body rather than re-evaluating the frame from `\newgame` per slide. When overlay `<1>` plays `1.e4`, the skak board state advances from White to Black; overlay `<2>` then plays `\hidemoves{1.e4}` for White when it is Black's turn to move, triggering skak's `\errmessage{mainline: black, not white, to move (#1)}`. This is confirmed as Plan P72 in `docs/perfect_kernel/PLANS.md:84` and `docs/perfect_kernel/LEDGER.md:143` (`chessboard_and_beamer = overlay-merge policy`).
+
+### Task L9 — uspatent: `\theparnum` / counter `parnum`
+- **Status:** COMPLETED & PUSHED (`341d857fcb`)
+- **Witness:** `uspatent/PatentApplication.tex` (14 errors + 1 undefined macro `\theparnum` → 0 errors, oracle clean)
+- **Reproducer:** `tools/perfect_kernel/repros/singletons/uspatent_maketitle_parnum.tex`
+- **Guard:** `uspatent_maketitle_defines_parnum_counter` in `latexml_oxide/tests/cluster_package_guards.rs`
+- **Root Cause & Fix:** In `uspatent.cls`:
+  - `\newcounter{parnum}` is created inside `\patentStart` (line 266).
+  - `\patentStart` is invoked by `\maketitle` (`\renewcommand{\maketitle}{\patentTitlePage \patentStart}`, line 188-191).
+  - In latexml-oxide, `\maketitle` is predefined by the kernel with `locked => true` (`latex_constructs/sect05.rs:944`).
+  - When `uspatent.cls` was raw-loaded, `\renewcommand{\maketitle}` was dropped (`Info:ignore:\maketitle Ignoring redefinition of \maketitle`).
+  - When `PatentApplication.tex` invoked `\maketitle`, latexml's kernel constructor ran instead of the class's macro, so `\patentStart` was never executed and counter `parnum` was never created.
+  - Subsequent calls to `\patentParagraph` (`\refstepcounter{parnum}`) failed with `Error:undefined:counter:parnum` and `Error:undefined:\theparnum`.
+  - Added class binding `latexml_contrib/src/uspatent_cls.rs` which unlocks `\maketitle` (`assign_value("\\maketitle:locked", false, Some(Scope::Global));`) before loading raw `uspatent.cls`. When `\maketitle` runs, `\patentStart` executes, creating counter `parnum` and yielding 0 errors and exact paragraph formatting `[0001] First paragraph.`.
+
+
