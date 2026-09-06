@@ -16823,8 +16823,10 @@ Some text with an endnote.\endnote{This is an endnote.}
     assert!(xml.contains("소개"), "{xml}");
 
     // Control: Latin accents with plain CJK
+    // Control under the SAME octet bindings (kotex installs them): the
+    // accented Latin code points keep their catcode-12 identity.
     let latin_tex = r"\documentclass{article}
-\usepackage{cjk}
+\usepackage[cjk,hangul]{kotex}
 \begin{document}
 café résumé
 \end{document}
