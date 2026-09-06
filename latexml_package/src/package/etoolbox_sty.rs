@@ -1380,6 +1380,110 @@ LoadDefinitions!({
   }
 }, protected => true);
 
+  // L3: \apptocmd / \pretocmd support for constructor-backed environments (\X or \end<X>).
+  // For an environment whose begin/end is a constructor, the faithful equivalent is the
+  // env hook: \apptocmd\endX{code} ≡ \AddToHook{env/X/end}{code}, \pretocmd\endX{code}
+  // ≡ \AddToHook{env/X/end}[..]{code}\DeclareHookRule{env/X/end}{..}{before}{.}.
+  DefMacro!(
+    "\\lx@etb@hooktocmd@nonmacro {}{}{}{}{}",
+    sub[(op, cs_toks, code, success, failure)] {
+      let cs_token = cs_toks.unlist().into_iter().find(|t| t.get_catcode().is_active_or_cs());
+      let Some(cs) = cs_token else {
+        return Ok(failure);
+      };
+      let cs_str = cs.to_string();
+      let cs_name = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
+
+      let (env_name, hook_point) = if let Some(end_env) = cs_name.strip_prefix("end") {
+        if !end_env.is_empty() {
+          (end_env, "end")
+        } else {
+          (cs_name, "begin")
+        }
+      } else {
+        (cs_name, "begin")
+      };
+
+      // Check whether env_name is a known constructor-backed environment
+      let is_env = lookup_definition(&T_CS!(format!("\\begin{{{env_name}}}")))?.is_some()
+        || lookup_definition(&T_CS!(format!("\\end{{{env_name}}}")))?.is_some();
+
+      if !is_env {
+        return Ok(failure);
+      }
+
+      let is_prepend = op.to_string().contains("prepend");
+
+      if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+        if env_name.starts_with("verbatim") {
+          let key = format!("@environment@{env_name}@at{hook_point}");
+          if is_prepend {
+            let mut new_tokens = code.clone().unlist();
+            if let Some(existing) = lookup_tokens(&key) {
+              new_tokens.extend(existing.unlist());
+            }
+            assign_value(&key, Tokens::new(new_tokens), Scope::Global);
+          } else {
+            push_value(&key, code.clone().unlist())?;
+          }
+        }
+
+        let mut tokens = Vec::new();
+        if is_prepend {
+          tokens.push(T_CS!("\\AddToHook"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_OTHER!("["));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("]"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(code.unlist());
+          tokens.push(T_END!());
+
+          tokens.push(T_CS!("\\DeclareHookRule"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!("before"));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.push(T_OTHER!("."));
+          tokens.push(T_END!());
+        } else {
+          tokens.push(T_CS!("\\AddToHook"));
+          tokens.push(T_BEGIN!());
+          tokens.extend(ExplodeText!(format!("env/{env_name}/{hook_point}")));
+          tokens.push(T_END!());
+          tokens.push(T_BEGIN!());
+          tokens.extend(code.unlist());
+          tokens.push(T_END!());
+        }
+
+        tokens.extend(success.unlist());
+        Ok(Tokens::new(tokens))
+      } else {
+        let key = format!("@environment@{env_name}@at{hook_point}");
+        if is_prepend {
+          let mut new_tokens = code.unlist();
+          if let Some(existing) = lookup_tokens(&key) {
+            new_tokens.extend(existing.unlist());
+          }
+          assign_value(&key, Tokens::new(new_tokens), Scope::Global);
+        } else {
+          push_value(&key, code.unlist())?;
+        }
+        Ok(success)
+      }
+    }
+  );
+
   // RawTeX! (not TeX!): the DeclareListParser bodies (line `\etb@lst@...&`)
   // use `&` as a delimiter sentinel. Perl's etoolbox.sty.ltxml sets
   // `\catcode`\&=3` (MATH_SHIFT) at file head so that subsequent `\def`
@@ -1459,7 +1563,7 @@ LoadDefinitions!({
             \edef#2{#1{\expandonce#2}{\unexpanded{#3}}}%
             \lx@etb@relock
             \@firstoftwo}}
-        {\etb@dbg@fail{mac}\@secondoftwo}}}
+        {\lx@etb@hooktocmd@nonmacro{#1}{#2}{#3}}}}
 
 \long\def\etb@hooktocmd@i#1#2#3{%
   \begingroup
@@ -1815,14 +1919,87 @@ LoadDefinitions!({
   //======================================================================
   // 2.6 Environment Hooks
 
-  DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
-  DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
-  DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
-  DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
-    push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  if lookup_meaning(&T_CS!("\\AddToHook")).is_some() {
+    DefMacro!(
+      "\\AtBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atbegin"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/begin")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\AtEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env.clone()).to_string();
+        if env_str.starts_with("verbatim") {
+          push_value(&format!("@environment@{env_str}@atend"), code.clone().unlist())?;
+        }
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/end")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\BeforeBeginEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/before")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+    DefMacro!(
+      "\\AfterEndEnvironment [] {}{}",
+      sub[(label, env, code)] {
+        let env_str = Expand!(env).to_string();
+        let mut tokens = vec![T_CS!("\\AddToHook"), T_BEGIN!()];
+        tokens.extend(ExplodeText!(format!("env/{env_str}/after")));
+        tokens.push(T_END!());
+        tokens.push(T_OTHER!("["));
+        tokens.extend(label.unwrap_or_else(|| Tokens::new(vec![T_OTHER!(".")])).unlist());
+        tokens.push(T_OTHER!("]"));
+        tokens.push(T_BEGIN!());
+        tokens.extend(code.unlist());
+        tokens.push(T_END!());
+        Ok(Tokens::new(tokens))
+      }
+    );
+  } else {
+    DefMacro!("\\AtBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atbegin"), arg2.unlist())?; });
+    DefMacro!("\\AtEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@atend"), arg2.unlist())?; });
+    DefMacro!("\\BeforeBeginEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@beforebegin"), arg2.unlist())?; });
+    DefMacro!("\\AfterEndEnvironment{}{}", sub[(arg1,arg2)] {
+      push_value(&format!("@environment@{arg1}@afterend"), arg2.unlist())?; });
+  }
 
   // \PatchFailed — used as the failure-callback in
   // `\apptocmd{cs}{add}{success}{\PatchFailed}` invocations

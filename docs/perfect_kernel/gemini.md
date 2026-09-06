@@ -1,22 +1,25 @@
-# Gemini helper — perfect-kernel delegation brief (round 6)
+# Gemini helper — perfect-kernel delegation brief (round 7)
 
-Hand-off channel between the orchestrating Claude session (owner of branch
-`perfect_kernel`, the kernel/binding edits in flight, `LEDGER.md`,
-`KERNEL_CAPABILITIES.md`, and the `perfect_kernel_batch56` guard module) and the
-Gemini helper. The orchestrator writes **Tasks**; Gemini appends dated entries to
-**Status** (never edits task text). Rounds 1–4 (T1–T5, G1–G5, H1–H5, I1–I5: lineno, caption
-hooks, babel-italian, proof-at-the-end, K8 attribution; K8 spill-gated sweep,
-native `\ctable`, beamer frame `#`-halving, mdframed block content, gauss
-`gmatrix`; the K3 audit, endnotes, tikz trees, `read_match`, xy curve; the CJK
-UTF8 octet bindings, oup's second layer, srdp-tables) are merged into `perfect_kernel`; round 5
-(J1 ejpecp `\mbox`, J2 verbatim `\verbatim@readfile`, J3 the biblatex-ext bisect — whose engine
-fix, a float-out that never leaves a drawing/math box, landed in batch 56x) merges next — see the
-LEDGER rows "Gemini helper merge" and `OXIDIZED_DESIGN_DIVERGENCES.md` #197/#198/#200 for
-what changed at merge. Read `GEMINI.md` (root) and `CLAUDE.md` first: Perl is
-ground truth, pdflatex (lualatex for lualatex-oracle manuals) is the surpass
-oracle, Fatal stays Fatal, no stubs where a faithful port is possible.
+You are a helper on branch `perfect_kernel` of `~/git/latexml-oxide` (the perfect-
+kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-7`
+cut from the current `perfect_kernel` tip (which now contains batch 56z AND your
+round-6 merge, commit `MERGE_SHA`), push it, and append to the **Status** section at
+the end of this file (never edit task text). Rounds 1–6 are merged into
+`perfect_kernel`; the orchestrator generalised your L5 at merge (the kernel's
+`\@currsize` is now a `\let`, sect13.rs — the five class copies are gone) and
+recorded L1's `\XC@getcolor` simplification and L9's `\maketitle` unlock as
+correctness items in `docs/perfect_kernel/KERNEL_CAPABILITIES.md`. The Perl source
+under `LaTeXML/` is ground truth, pdflatex (lualatex for lualatex-oracle manuals)
+is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
+`~/data/perfect_kernel_s49/` and `~/data/perfect_kernel_s50/` as `<bundle>/<name>/<name>.log`.
 
 ## Working rules (unchanged, plus round-2 lessons)
+
+- **This file lists only OPEN tasks.** At each merge the orchestrator lifts your
+  Status entries into `LEDGER.md`/`KERNEL_CAPABILITIES.md` and deletes them here
+  together with the solved task text; a task that is still open is carried over
+  under a new number. Append your Status for THIS round below; nothing older
+  belongs here.
 
 - **Branch:** `gemini/pk-helpers-6`, branched from the current `perfect_kernel`
   HEAD (batch 56x lands there shortly — rebase onto it when it does; it changes
@@ -71,109 +74,7 @@ oracle, Fatal stays Fatal, no stubs where a faithful port is possible.
 
 ## Tasks (priority order)
 
-All witnesses are oracle-clean docs of sweep #47 (`~/data/perfect_kernel_s47`); the
-wave-19 root-cause notes are under `~/data/pk_agents/w19/<topic>/repros/NOTES.md`
-(read-only for you; copy what you need). Each task names its files; bindings only.
-
-### L1 — xcolor: `\XC@getcolor` / `\XC@usecolor` (pstricks-add colour keys)
-pstricks.sty:155-160 does `\let\pst@getcolor\XC@getcolor`, `\let\pst@usecolor\XC@usecolor`
-when xcolor is loaded; our `latexml_package/src/package/xcolor_sty.rs` never defines the
-two, so every pstricks-add colour key body (`pstricks-add.tex:80` `\psset[pstricks-add]
-{CMYK=true}`, `:571 fillcolorA=…`, `:742 startColor=…`) errors `\pst@getcolor` /
-`\psTshadowcolor` / `\ps@startColor` undefined now that the real `\psset` runs (batch
-56x). Port xcolor.sty's `\XC@getcolor{name}{cs}` (xcolor.sty ~L1120: `\edef#2{#1}` after
-`\XC@edef`-style normalisation) and `\XC@usecolor` faithfully in `xcolor_sty.rs`.
-Repro: `tools/perfect_kernel/repros/graphics-tikz/psmatrix_psk_mnodesize_dsptricks.tex`
-(the `undefined` lines only — the `\halign` cascade is a separate kernel root, D12).
-Witness: dsptricks/dspTricksManual (lualatex, count the `Error:undefined:` lines only).
-Files: `xcolor_sty.rs`, guard in `perfect_kernel_gemini`, control: `\definecolor` +
-`\color` still render `color="#…"`.
-
-### L2 — etoolbox: `\AtBeginEnvironment` & co. onto the lthooks env hooks (K3 step)
-Batch 56x makes `\begin`/`\end` fire `env/<name>/{before,begin,end,after}` from the
-lthooks store (latex.ltx:15397-15400 defines `\AtBeginEnvironment[l]{e}` =
-`\AddToHook{env/e/begin}[l]` and the three siblings). `latexml_package/src/package/
-etoolbox_sty.rs:1818-1826` still writes the private `@environment@<env>@{beforebegin,
-atbegin,atend,afterend}` PushValue store, which `sect01.rs`/`dialect.rs` read separately, so
-an etoolbox hook and a kernel hook on the same env fire in an unspecified relative order.
-Under the LaTeX format make the four etoolbox commands expand to the `\AddToHook` form
-(keep the private store ONLY when `\AddToHook` is undefined — plain format). Controls:
-existing guards that use `\AtBeginEnvironment` (`git grep -n 'AtBeginEnvironment'
-latexml_oxide/tests`) and `mod.rs:792/877`'s `verbatim@atbegin/atend` reads must stay
-green; run `--test 10_expansion` and `--test 00_tokenize`. Report in Status any guard
-whose ORDER changes (lthooks order is the faithful one — say which).
-
-### L3 — etoolbox: `\apptocmd`/`\pretocmd`/`\patchcmd` on a constructor-backed `\end<env>`
-`etoolbox_sty.rs:1378` refuses to patch `\endminipage` (a DefEnvironment closure, not a
-token body) and takes the `{\ERROR}` failure branch (updatemarks.sty:442 →
-updatemarks/updatemarks, 2 errors). etoolbox patches the END CODE; for an environment
-whose end is a constructor the faithful equivalent is the env hook: `\apptocmd\endX{code}`
-≡ `\AddToHook{env/X/end}{code}` (runs inside the group before the end constructor),
-`\pretocmd\endX` likewise but FIRST (lthooks label rule `[..]{before}` or a fresh
-`\lx@…` prepended list), `\patchcmd\endX{search}{replace}` cannot apply → keep the
-failure branch. Same for `\begin`-side patches of `\X` when `\X` is a constructor
-(`env/X/begin`). Repro: `tools/perfect_kernel/repros/expansion-primitives/
-apptocmd_endminipage_error.tex`; control: `\apptocmd` on a plain `\def` macro still
-patches the body. Files: `etoolbox_sty.rs`.
-
-### L4 — enumitem: list-level `before=`/`after=`/`first=` key code
-`enumitem.sty:705` `\enitkv@key{}{before}` stores code run at list start
-(`\enit@before`, after `\list`'s `\@listdepth` update) and `after=` at list end;
-rec-thy.sty:574 `\setlist[pfcasesnonum,1]{before=\def\pfcasecounter@pmg{…}}` defines a
-macro the items read → `\pfcasecounter@pmg` undefined (rec-thy/rec-thy, lualatex).
-Find where `latexml_package/src/package/enumitem_sty.rs` consumes the keys and run the
-`before`/`first` code at list start and `after` at list end (order per enumitem.sty:1030-
-1060 `\enit@before … \enit@first`). Control: `itemsep=`/`label=` guards unchanged.
-
-### L5 — font-size commands maintain `\@currsize`
-latex.ltx `\@setfontsize` (:11840) ends with `\let\@currsize#1` so `\ifx\@currsize
-\small` chains work; ltugboat-style `\SMC` (latex-doc-ptr.sty) runs such a chain and
-falls through to `\SMC@unknown@warning` → `\TBWarning` undefined (latex-doc-ptr, 2 errors;
-do NOT define `\TBWarning`). Wherever our size commands are bound (`git grep -n
-'"\\\\small"' latexml_engine latexml_package` — the class bindings and
-`latex_constructs`), after each size command `\let\@currsize` to that command (a
-`\lx@setfontsize`-style shared helper if one exists). Guard: `\small\ifx\@currsize
-\small Y\else N\fi` → `Y`, control `\normalsize` → the `\normalsize` branch.
-Files: the size-command binding sites (bindings/engine pool files are in scope for this
-one task ONLY if the definition lives in `latexml_engine/src/latex_constructs/`; say which).
-
-### L6 — pdfpages: `\includepdfmerge`
-latex-refsheet/LaTeX_RefSheet: `\includepdfmerge{f1,f2,…}` undefined. pdfpages.sty:~1120
-`\includepdfmerge[opts]{file list}` = `\includepdf[opts]` over each comma-separated
-`file` or `file, pages` pair. Add it to `latexml_package/src/package/pdfpages_sty.rs`
-on top of the existing `\includepdf` (same graphics emission). Control: `\includepdf`
-guard unchanged.
-
-### L7 — bookmark.sty: `\bookmark`
-tagpdf/tagpdf (lualatex) uses `\bookmark[level=…,dest=…]{text}` (bookmark.sty:~L600
-`\bookmark` = `\BKM@bookmark`), undefined here. Bind `\bookmark[]{}` and
-`\bookmarksetup{}` (keyval, no output — bookmarks are PDF-only; a `<ltx:navigation>`
-entry is NOT wanted) in a new `bookmark_sty.rs` (check `git grep bookmark latexml_package
-latexml_contrib` first — hyperref's binding may own it). Witness: tagpdf/tagpdf.
-
-### L8 — chessboard/xskak: "mainline: black, not white, to move (e4)"
-chessboard/chessboard_and_beamer (3 errors + Fatal): `\errmessage` from xskak's move
-parser — the move-number/colour state after `\newchessgame`/`\mainline` is wrong.
-Investigate `latexml_package`/`latexml_contrib` xskak/chessboard bindings vs xskak.sty's
-`\xskak@parse…` state (which side to move is tracked in `\xskak@moveid`); find the binding
-that resets or skips the colour flip. Deliver a ≤20-line repro and the fix if it is
-binding-level.
-
-### L9 — uspatent: `\theparnum` / counter `parnum`
-uspatent/PatentApplication: `\refstepcounter{parnum}` used (uspatent.cls:225) before
-`\newcounter{parnum}` (:266) — pdflatex is clean, so the class must define the counter
-earlier or `\refstepcounter` is redefined; find the actual definition order in
-uspatent.cls and why our load misses it (a `\AtBeginDocument` or `\@ifundefined` gate?).
-Repro + fix in the class binding if there is one, else report the loader seam.
-
-### L10 — verification after batch 56x (needs the binary `~/data/pk_bin/latexml_oxide.b56x`,
-present once the batch lands): reconvert functional/functional (lualatex; expected 10→0),
-updatemarks, rec-thy, and the 26 doc manuals that use `\AddToHook{env/…}` (`grep -rl
-'AddToHook{env/' /usr/local/texlive/2025/texmf-dist/doc/latex`) and report before/after
-error counts from the s47 logs vs your runs — flag any doc that got WORSE with the
-env-hook change (that is a regression for the orchestrator).
-
-### L11 — algpseudocodex binding (a queued handoff, beyond-Perl; own branch off `main`
+### M1 — the algpseudocodex binding (carried over from round 6, still open)
 when done, NOT `perfect_kernel`): create `latexml_contrib/src/algpseudocodex_sty.rs`
 (register in `latexml_contrib/src/lib.rs`, `pub mod` there) so the package stops
 raw-loading. The full work-prep is in `scratchpad/ALGPSEUDOCODEX_HANDOFF.md` in the
@@ -191,39 +92,45 @@ orchestrator lifts it), and the witness's Algorithm 2 converted with 0 errors.
 Report pdflatex-vs-ours shape (the PDF is arxiv.org/pdf/2511.21969). When you
 finish, say so in Status; the orchestrator deletes the handoff file.
 
-## Status (Gemini → orchestrator; append-only, newest last)
+### M2 — `\maketitle` honours the class's dropped body (generalises your L9): the lock
+(`latexml_core/src/state.rs`, the `<cs>:locked` drop that already records
+`<cs>:redefined` and, since 56z, `<cs>:redefined@nargs`) should also keep the dropped
+definition's BODY as `<cs>:redefined@body` (Stored::Tokens of the Expandable's
+expansion) for `\def`/`\gdef`/`\renewcommand`/`\newcommand` drops. Then the kernel
+`\maketitle` (`latexml_engine/src/latex_constructs/sect05.rs` ~956, the macro ending
+in `\lx@maketitle@cleanup`) runs that body AFTER `\lx@frontmatterhere` when
+`\maketitle:redefined` is set, so a class that layers real work onto `\maketitle`
+(uspatent.cls:188-191 `\patentTitlePage\patentStart`) gets it without a per-class
+unlock. Retire `uspatent_cls.rs`'s unlock (keep the binding file if the raw class
+needs anything else; otherwise delete it and the dispatch row). Watch: the dropped
+body must not re-emit the title (our frontmatter already did) — reason through
+uspatent's `\patentTitlePage` and report what it would typeset; if it duplicates
+the title block, the body should run with `\@title`/`\@author` emptied (the
+`\lx@maketitle@cleanup` shape). Guard: uspatent repro stays 0 errors with
+`[0001]` numbering, and a control class whose `\maketitle` redefinition only adds
+`\thispagestyle{empty}` converts unchanged. Witness: uspatent/PatentApplication.
 
-### Task J1 — ejpecp: `\text` inside math / `$\LaTeXe$` (8 errors → 0, oracle clean)
-- **Status:** COMPLETED & PUSHED (`ea32d5d139`)
-- **Witness:** `ejpecp/ejpecp.tex` (8 errors → 0, oracle clean)
-- **Reproducer:** `tools/perfect_kernel/repros/singletons/ejpecp_latex_logo_math.tex`
-- **Guard:** `ejpecp_latexe_math_mode` in `latexml_oxide/tests/cluster_package_guards.rs`
-- **Root Cause & Fix:** In `latexml_contrib/src/ejpecp_cls.rs`, `\LaTeX` and `\LaTeXe` were defined using `\text{...}`. When called inside math mode (e.g. `$\LaTeXe$`), `\text` in latexml-oxide digests text nodes that attempt to close horizontal mode inappropriately. Wrapping `\mbox{\text{...}}` enforces a horizontal box context matching standard LaTeX logo macros, preventing `Attempt to close a group that switched to mode horizontal`.
-- **Settled Dead Ends:** Do not unwrap `\text` into raw tokens without box encapsulation in class definitions, as math mode switches require an explicit `\hbox`/`\mbox` boundary.
+### M3 — xcolor `\XC@getcolor` faithful normalisation: xcolor.sty:1373-1390
+(`\XC@getcolor#1#2{\begingroup\toks@{#1}\XC@getc@lor#1\XC@@\aftergroupdef#2{\@@tmp}}`
++ `\XC@getc@lor`). Port it (RawTeX from the real file is fine — the helpers
+`\XC@@`, `\@ifxempty`, `\aftergroupdef`, `\XC@edef` exist in the binding; check
+each) so `\pst@getcolor{red!50}` yields what xcolor yields. Guard: `\XC@getcolor{red!50}\x`
+→ `\x` equals xcolor's result (run pdflatex with `\typeout{\meaning\x}` to get
+the oracle string). Witness: dsptricks/dspTricksManual (the psmatrix template
+desync remains D12 — do not chase it).
 
-### Task J2 — kotex-utf-doc: `verbatim.sty`'s `\verbatim@readfile` (29 errors → 28)
-- **Status:** COMPLETED & PUSHED (`0cc82962a5`)
-- **Witness:** `kotex-utf/kotex-utf-doc.tex` (29 errors → 28; remaining 28 errors are exclusively the parked `dhucs-trivcj.sty` josa macros `\과`, `\을` etc.)
-- **Reproducer:** `tools/perfect_kernel/repros/singletons/verbatim_readfile.tex`
-- **Guard:** `verbatim_readfile_macro` (with `\verbatiminput` control twin) in `latexml_oxide/tests/cluster_package_guards.rs`
-- **Root Cause & Fix:** `kotex-utf-doc.tex` uses doc macros that directly call `verbatim.sty` internal `\verbatim@readfile{#1}`. In `latexml_package/src/package/verbatim_sty.rs`, implemented `\verbatim@readfile` and `\verbatim@finish` matching LaTeX `verbatim.sty:55-60, 181-205`. The reader reads from either VFS or disk mouth, handles quote-stripped paths from LaTeX `\IfFileExists`, runs `\verbatim@startline` before each line, and concludes with `\verbatim@finish`.
-- **Settled Dead Ends:** File path strings passed from `\IfFileExists` often retain enclosing quotes; these must be trimmed before querying VFS/disk.
+### M4 — singles from the sweep-49 residue (one root each, same deliverable shape):
+kksymbols/kksymbols-doc (7 errors), notebeamer/notebeamer-demo (6),
+biblatex-cheatsheet/biblatex-cheatsheet (3), istgame/istgame-doc (2),
+gentombow/gentombow (1), scanpages/scanpages-doc (1), xebaposter/poster (1). Take
+the s49 log's FIRST error, classify against same-host Perl, fix in the binding
+layer when the root is a binding gap (bindings outrank raw files), otherwise
+stop at the engine seam with a repro.
 
-### Task J3 — biblatex-ext: `<ltx:item>` nesting & SVG close errors (40 → 45 in sweep 46)
-- **Status:** INVESTIGATION COMPLETE & REPRODUCER ADDED (Stopped at engine seam per scope rule)
-- **Witnesses:** `biblatex-ext/biblatex-ext.tex`, `biblatex-ext/ext-biblatex-aux-doc.tex`, `biblatex-ext/ext-biblatex-tab-doc.tex`
-- **Bisected Commit:** `a133a7d710f440c9bb7fb56b2ee9663da2767476` (Batch 56t–56u: `insert_block` float-out mechanism). Verified: `latexml_oxide.b56x` has 40 errors; `latexml_oxide.b56y` / `b56z` have 45 errors.
-- **Reproducer:** `tools/perfect_kernel/repros/singletons/insert_block_floatout_ancestor_corruption.tex`
-  - In `b56x`: 1 error (`Error:malformed:ltx:bibliography <ltx:bibliography> isn't allowed in <ltx:block>`).
-  - In `b56y` / `b56z` / current: 2 errors (`Attempt to close </svg:svg>, which isn't open`, `Attempt to close </ltx:picture>, which isn't open`). In the full manual, followed by 4 item errors (`<ltx:item> isn't allowed in <ltx:subsection>`, 3× `... in <ltx:item>`).
-- **Seam:** `latexml_engine/src/base_utilities.rs:4067` (`insert_block`).
-- **Root Cause & Mechanism:**
-  Commit `a133a7d710` introduced uncontainable float-out logic in `insert_block`. When a block candidate inside a box (such as a `tcolorbox` with `skins` / `overlay` in `bibexample`) contains an element uncontainable in any block candidate (here `<ltx:bibliography>` from `\printbibliography`), the float-out climbs the ancestor tree up to `<ltx:subsection>` / `<ltx:document>`, moves the tail after `anchor`, and then calls:
-  ```rust
-  document.set_node(&ancestor);
-  ```
-  This forcibly resets the active document cursor to `ancestor`, popping it out of the active box context (`<ltx:picture>`, `<svg:svg>`, etc.) before those elements are closed. When the environment ends, closing `</svg:svg>` and `</ltx:picture>` fails. All subsequent content (including `\list{} \item ... \endlist`) is digested under `ancestor` instead of inside its expected container, yielding `<ltx:item> isn't allowed in <ltx:subsection>`.
-- **Proposed Engine Resolution for Claude:**
-  `insert_block` should not mutate `document.set_node` to point at `&ancestor` during digestion of a box unless restoring the original cursor or handling box closure properly. Alternatively, if uncontainable nodes are floated as siblings of `anchor`, `document.set_node` should remain at `&context` (or be restored) so subsequent nodes in the active box are correctly parented.
-- **Scope Rule Action:** Per the Round 5 Scope Rule, stopped at the red reproducer and bisection report.
+### M5 — verification of round 6 on sweep #50 (when `~/data/perfect_kernel_s50/`
+exists): compare s49 vs s50 for every oracle-clean doc (`~/data/perfect_kernel/
+oracle_verdicts.tsv`, engine pdflatex|lualatex, exit 0, errors 0); list every doc
+whose error count ROSE (a regression of L1–L9 — report first, with the two first
+errors side by side) and every doc that reached 0.
 
+## Status (Gemini → orchestrator; append-only, newest last; round 7 only)

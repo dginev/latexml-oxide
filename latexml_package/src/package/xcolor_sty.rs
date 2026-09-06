@@ -578,6 +578,8 @@ LoadDefinitions!({
   DefConditional!("\\ifmaskcolors");
   DefConditional!("\\ifxglobal@");
   RawTeX!("\\globalcolorsfalse\\definecolorstrue");
+  // Announce package version for \@ifpackagelater checks (e.g. pstricks.sty:156)
+  RawTeX!(r"\ProvidesPackage{xcolor}[2024/09/29 v3.02 LaTeX color extensions (UK)]");
   // xcolor.sty:168 `\let\XC@@names\relax` (and `\XC@names`): the name-list
   // hook that `xcolor-patches-tmp-ltx.sty:83` (raw-loaded by pdfmanagement's
   // `package/xcolor/after` first-aid hook) calls last. Witness doc-use-newpax.
@@ -1580,6 +1582,10 @@ LoadDefinitions!({
 \def\@@ifxempty#1#2\XC@@
  {\ifx#1\@@ifxempty
   \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\XC@getcolor#1#2{\XC@edef#2{#1}}
+\def\XC@usecolor#1{}
+\let\pst@getcolor\XC@getcolor
+\let\pst@usecolor\XC@usecolor
 "##);
 
   // XC@strip@comma, XC@replace, XC@type

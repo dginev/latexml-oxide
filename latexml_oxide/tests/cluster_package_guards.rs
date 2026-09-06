@@ -17532,4 +17532,354 @@ line 2
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("hello verbatim world"), "{c_xml}");
   }
+
+  /// xcolor: \XC@getcolor & \XC@usecolor (L1, witness dsptricks/dspTricksManual).
+  /// Verifies \XC@getcolor normalizes and assigns into the target macro,
+  /// \XC@usecolor consumes the color argument without error, and that loading
+  /// pstricks after/with xcolor aliases \pst@getcolor / \pst@usecolor to them.
+  #[test]
+  fn xcolor_pst_getcolor_and_usecolor() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\usepackage{pstricks}
+\begin{document}
+\makeatletter
+\XC@getcolor{red}\mycolorA
+\pst@getcolor{blue}\mycolorB
+\XC@usecolor\mycolorA
+\pst@usecolor\mycolorB
+ColorA:\mycolorA;ColorB:\mycolorB.
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ColorA:red;ColorB:blue."), "{xml}");
+
+    // Control: standard \definecolor + \color still emits color attribute
+    let control_tex = r"\documentclass{article}
+\usepackage{xcolor}
+\definecolor{mytestcolor}{rgb}{1,0,0}
+\begin{document}
+{\color{mytestcolor}Hello Red World}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("color=\"#FF0000\""), "{c_xml}");
+    assert!(c_xml.contains("Hello Red World"), "{c_xml}");
+  }
+
+  /// etoolbox: \AtBeginEnvironment & co. routing to lthooks env hooks (L2 / K3 step)
+  /// with label support, firing in lthooks order, plus verbatim private store compatibility.
+  #[test]
+  fn etoolbox_env_hooks_onto_lthooks() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\BeforeBeginEnvironment{center}{[BEFORE-C]}
+\AtBeginEnvironment[label1]{center}{[BEGIN-C1]}
+\AtBeginEnvironment[label2]{center}{[BEGIN-C2]}
+\AtEndEnvironment{center}{[END-C]}
+\AfterEndEnvironment{center}{[AFTER-C]}
+\begin{document}
+\begin{center}
+Center text.
+\end{center}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BEFORE-C]"), "{xml}");
+    assert!(xml.contains("[BEGIN-C1]"), "{xml}");
+    assert!(xml.contains("[BEGIN-C2]"), "{xml}");
+    assert!(xml.contains("[END-C]"), "{xml}");
+    assert!(xml.contains("[AFTER-C]"), "{xml}");
+    assert!(xml.contains("Center text."), "{xml}");
+
+    // Control: center environment without hooks
+    let control_tex = r"\documentclass{article}
+\begin{document}
+\begin{center}
+Control center text.
+\end{center}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Control center text."), "{c_xml}");
+  }
+
+  #[test]
+  fn apptocmd_pretocmd_constructor_env_and_control() {
+    // 1. Repro case from tools/perfect_kernel/repros/expansion-primitives/apptocmd_endminipage_error.tex:
+    // \apptocmd on constructor-backed \endminipage takes success branch, not {\ERROR}.
+    let repro_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\apptocmd{\endminipage}{\relax}{}{\ERROR}%
+ok
+\end{document}
+";
+    let (r_stderr, r_xml) = convert(repro_tex, true);
+    assert_eq!(error_count(&r_stderr), 0, "{r_stderr}");
+    assert!(r_xml.contains("<p>ok</p>"), "{r_xml}");
+
+    // 2. Functional test: \apptocmd and \pretocmd on \endminipage correctly append and prepend
+    // to the environment's end hook (with pretocmd running first).
+    let mp_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\apptocmd{\endminipage}{[MP-APP]}{}{}
+\pretocmd{\endminipage}{[MP-PRE]}{}{}
+\begin{document}
+\begin{minipage}{5cm}
+Inside minipage
+\end{minipage}
+\end{document}
+";
+    let (mp_stderr, mp_xml) = convert(mp_tex, true);
+    assert_eq!(error_count(&mp_stderr), 0, "{mp_stderr}");
+    assert!(mp_xml.contains("[MP-PRE][MP-APP]"), "{mp_xml}");
+
+    // 3. Control case: \apptocmd and \pretocmd on a plain \def macro still patch the macro body.
+    let ctrl_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\def\mymacro{HELLO}
+\pretocmd{\mymacro}{[PRE-]}{}{}
+\apptocmd{\mymacro}{[-APP]}{}{}
+\begin{document}
+\mymacro
+\end{document}
+";
+    let (ctrl_stderr, ctrl_xml) = convert(ctrl_tex, true);
+    assert_eq!(error_count(&ctrl_stderr), 0, "{ctrl_stderr}");
+    assert!(ctrl_xml.contains("[PRE-]HELLO[-APP]"), "{ctrl_xml}");
+  }
+
+  /// enumitem.sty:705-725 list-level `before=`/`after=`/`first=` key code
+  /// (rec-thy.sty:574 \setlist[pfcasesnonum,1]{before=\def\pfcasecounter@pmg{…}}).
+  #[test]
+  fn enumitem_before_after_first_key_code() {
+    // 1. Witness case: \newlist + \setlist[...,1]{before=...} defines macro read inside items.
+    let witness_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\newlist{pfcasesnonum}{enumerate}{3}
+\setlist[pfcasesnonum,1]{
+    before=\def\pfcasecounter@pmg{pfcasesnonumi},
+}
+\begin{document}
+\begin{pfcasesnonum}
+\item \pfcasecounter@pmg
+\end{pfcasesnonum}
+\end{document}
+";
+    let (w_stderr, w_xml) = convert(witness_tex, false);
+    assert_eq!(error_count(&w_stderr), 0, "{w_stderr}");
+    assert!(w_xml.contains("pfcasesnonumi"), "{w_xml}");
+
+    // 2. Inline key execution: before, before*, first, after.
+    let keys_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{itemize}[before=\def\testb{B1},before*=\def\testbb{B2},first=\def\testf{F},after=\def\testa{A}]
+\item \testb-\testbb-\testf
+\end{itemize}
+\testa
+\end{document}
+";
+    let (k_stderr, k_xml) = convert(keys_tex, false);
+    assert_eq!(error_count(&k_stderr), 0, "{k_stderr}");
+    assert!(k_xml.contains("B1-B2-F"), "{k_xml}");
+    assert!(k_xml.contains("<p>A</p>"), "{k_xml}");
+
+    // 3. Control case: label= and itemsep= guards unchanged.
+    let ctrl_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{enumerate}[label=(\alph*),itemsep=2pt]
+\item First
+\item Second
+\end{enumerate}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(ctrl_tex, false);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("(a)"), "{c_xml}");
+    assert!(c_xml.contains("(b)"), "{c_xml}");
+  }
+
+  #[test]
+  fn font_size_currsize_maintenance() {
+    // Task L5: font-size commands maintain \@currsize and initial document size
+    // is \let to \normalsize so \ifx\@currsize\normalsize chains succeed.
+
+    // 1. Initial document state equals \normalsize without explicit switch.
+    let init_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\ifx\@currsize\normalsize Y\else N\fi
+\end{document}
+";
+    let (i_stderr, i_xml) = convert(init_tex, false);
+    assert_eq!(error_count(&i_stderr), 0, "{i_stderr}");
+    assert!(i_xml.contains("<p>Y</p>"), "{i_xml}");
+
+    // 2. Switching to \small updates \@currsize to \small.
+    let small_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\small\ifx\@currsize\small Y\else N\fi
+\end{document}
+";
+    let (s_stderr, s_xml) = convert(small_tex, false);
+    assert_eq!(error_count(&s_stderr), 0, "{s_stderr}");
+    assert!(s_xml.contains("Y"), "{s_xml}");
+
+    // 3. Control: \normalsize branch.
+    let norm_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+\small small text
+\normalsize\ifx\@currsize\normalsize Y\else N\fi
+\end{document}
+";
+    let (n_stderr, n_xml) = convert(norm_tex, false);
+    assert_eq!(error_count(&n_stderr), 0, "{n_stderr}");
+    assert!(n_xml.contains("Y"), "{n_xml}");
+
+    // 4. Scoped group restoration: {\small ...} restores \normalsize on group exit.
+    let grp_tex = r"\documentclass{article}
+\makeatletter
+\begin{document}
+{\small\ifx\@currsize\small S\fi}\ifx\@currsize\normalsize N\fi
+\end{document}
+";
+    let (g_stderr, g_xml) = convert(grp_tex, false);
+    assert_eq!(error_count(&g_stderr), 0, "{g_stderr}");
+    assert!(g_xml.contains("S"), "{g_xml}");
+    assert!(g_xml.contains("N"), "{g_xml}");
+  }
+
+  /// pdfpages.sty:262 `\includepdfmerge[opts]{file-page-list}` delegates each
+  /// comma-separated file and optional page spec to `\includepdf`.
+  /// Witness: latex-refsheet/LaTeX_RefSheet.tex:1395 (Task L6).
+  #[test]
+  fn pdfpages_includepdfmerge_multi_and_opts() {
+    let tex = r"\documentclass{article}
+\usepackage{pdfpages}
+\begin{document}
+\includepdfmerge[pages=-, nup=5x2, frame=true, scale=0.97]{thesis.pdf, 1-9, acknowledgements.pdf}
+\includepdfmerge{single.pdf}
+\includepdfmerge{docA.pdf, 1, docB.pdf, 2-, docC.pdf}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // thesis.pdf with page spec 1-9
+    assert!(
+      xml.contains(r#"<resource src="thesis.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 1-9 of "), "{xml}");
+    assert!(
+      xml.contains(r#"<ref href="thesis.pdf">thesis.pdf</ref>"#),
+      "{xml}"
+    );
+    // acknowledgements.pdf with default pages=- from options
+    assert!(
+      xml.contains(r#"<resource src="acknowledgements.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages - of "), "{xml}");
+    assert!(
+      xml.contains(r#"<ref href="acknowledgements.pdf">acknowledgements.pdf</ref>"#),
+      "{xml}"
+    );
+    // single.pdf with no options
+    assert!(
+      xml.contains(r#"<resource src="single.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<ref href="single.pdf">single.pdf</ref>"#),
+      "{xml}"
+    );
+    // docA.pdf with page 1, docB.pdf with pages 2-, docC.pdf with no pages
+    assert!(
+      xml.contains(r#"<resource src="docA.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 1 of "), "{xml}");
+    assert!(
+      xml.contains(r#"<resource src="docB.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+    assert!(xml.contains("pages 2- of "), "{xml}");
+    assert!(
+      xml.contains(r#"<resource src="docC.pdf" type="application/pdf"/>"#),
+      "{xml}"
+    );
+  }
+
+  /// bookmark.sty / hyperref.sty: `\bookmark[options]{text}` and `\bookmarksetup{options}`
+  /// are PDF outline metadata macros that become no-ops in XML/HTML conversion without
+  /// emitting navigation elements or erroring.
+  /// Witness: tagpdf/tagpdf.tex:129 (Task L7).
+  #[test]
+  fn bookmark_and_setup_absorbed_in_hyperref_and_bookmark() {
+    // 1. In hyperref (witness usage where bookmark is implicitly available)
+    let hyp_tex = r"\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\bookmarksetup{depth=2}
+\bookmarksetupnext{level=section}
+\bookmark[dest=toc,level=section]{Table of Contents}
+\bookmark{Unadorned Bookmark}
+\bookmarkdefinestyle{mystyle}{color=blue}
+\bookmarkget{dest}
+\BookmarkAtEnd{\bookmark{End Bookmark}}
+\section{First Section}
+Hello
+\end{document}
+";
+    let (hyp_stderr, hyp_xml) = convert(hyp_tex, false);
+    assert_eq!(error_count(&hyp_stderr), 0, "{hyp_stderr}");
+    assert!(hyp_xml.contains("First Section"), "{hyp_xml}");
+    assert!(!hyp_xml.contains("<ltx:navigation"), "{hyp_xml}");
+
+    // 2. In bookmark.sty
+    let bkm_tex = r"\documentclass{article}
+\usepackage{bookmark}
+\begin{document}
+\bookmarksetup{depth=2}
+\bookmark[dest=toc,level=section]{Table of Contents}
+\bookmark{Unadorned Bookmark}
+\end{document}
+";
+    let (bkm_stderr, _bkm_xml) = convert(bkm_tex, false);
+    assert_eq!(error_count(&bkm_stderr), 0, "{bkm_stderr}");
+  }
+
+  /// uspatent.cls: redefines \maketitle to run \patentTitlePage and \patentStart,
+  /// the latter of which defines `\newcounter{parnum}` (used by \patentParagraph).
+  /// Kernel \maketitle is locked, which dropped the redefinition, leaving `parnum`
+  /// undefined (`undefined:\theparnum`, `undefined:counter:parnum`).
+  /// Witness: uspatent/PatentApplication.tex (Task L9).
+  #[test]
+  fn uspatent_maketitle_defines_parnum_counter() {
+    let tex = r"\documentclass{uspatent}
+\begin{document}
+\title{Test Patent}
+\author{Test Inventor}
+\maketitle
+\patentParagraph First paragraph.
+\patentParagraph Second paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("0001"), "{xml}");
+    assert!(xml.contains("0002"), "{xml}");
+    assert!(xml.contains("First paragraph."), "{xml}");
+    assert!(xml.contains("Second paragraph."), "{xml}");
+  }
 }
