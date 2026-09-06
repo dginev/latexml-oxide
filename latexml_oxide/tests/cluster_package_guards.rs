@@ -16323,6 +16323,22 @@ c &= d
     );
   }
 
+  /// The real `\psset` runs pst key bodies through pstricks.tex's own helpers
+  /// (`\pst@getangle{#1}\psk@angleA`); a stub that ate the value left
+  /// `\psk@angleA` undefined (sweep #48 flips: hexgame, xcolor2, seminar).
+  #[test]
+  fn psset_angle_keys_run_the_raw_helpers() {
+    if !kpsewhich_has("pst-coil.sty") || !kpsewhich_has("pst-node.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks,pst-node,pst-coil}\n\\psset{angleA=45,arcangleA=10,coilaspect=30,linewidth=1.5pt}\n\\makeatletter\n\\begin{document}\nA:\\psk@angleA;B:\\psk@arcangleA;C:\\psk@coilaspect.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // pstricks keeps angles in its PostScript form (`\pst@@getangle` →
+    // "45. "): the raw helper ran, the target macros exist.
+    assert!(xml.contains("A:45. ;B:10. ;C:30. ."), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

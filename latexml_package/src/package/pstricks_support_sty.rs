@@ -127,9 +127,21 @@ LoadDefinitions!({
 
   // Arrow tips
   def_macro_noop("\\psoverlay{}")?;
-  def_macro_noop("\\pst@getangle{}")?;
-  def_macro_noop("\\pst@number{}")?;
-  def_macro_noop("\\pst@coor")?;
+  // `\pst@getangle`, `\pst@number`, `\pst@coor` are pstricks.tex's own VALUE
+  // helpers (raw-loaded by pstricks_sty.rs: `\pst@getangle#1#2{\pst@@getangle
+  // {#1}\let#2\pst@angle}` :738, `\pst@number` :527 → `\pst@@dimtonum` :265,
+  // `\pst@coor` :723 — `\edef`/`\let` into `\psk@…`, no driver output). Perl
+  // never defines them: its `\psset` constructor never runs a key body. Rule
+  // for this binding: a stub may shadow a raw pstricks helper only when that
+  // helper emits driver output (`\pst@object`/`\pstVerb`/`\special`/
+  // `\addto@pscode`) with no rendering fallback; a stub over a pure value
+  // computer is a bug. With the
+  // real `\psset` every angle/length key runs `\pst@getangle{#1}\psk@…`
+  // (pst-coil.tex:49-50, pst-node's angleA/arcangleA, pst-3dplot's
+  // viewangle): a one-argument stub ate the value and left the target macro
+  // undefined (sweep #48 flips: hexgame, xcolor2, srdp-mathematik, ffslides,
+  // vocaltract, seminar ×2). Nothing to define here. Guard:
+  // `perfect_kernel_batch56::psset_angle_keys_run_the_raw_helpers`.
 
   // Perl pstricks_support.sty.ltxml L1042-1055: color shorthands. pstricks
   // re-binds these CSes (usually provided by color.sty / xcolor.sty as the
