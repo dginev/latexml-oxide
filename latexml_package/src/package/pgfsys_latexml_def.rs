@@ -494,8 +494,11 @@ LoadDefinitions!({
 
         // Close all svg:g's
         while let Ok(Some(_)) = document.maybe_close_element("svg:g") {}
-        document.close_element("svg:svg")?;
-        document.close_element("ltx:picture")?;
+        // Content that the picture could not hold (a tcolorbox placed
+        // directly in a `{picture}`: pagelayout, xebaposter) auto-closed
+        // them already — close only what is still open, as for the `svg:g`s.
+        document.close_element_if_open("svg:svg")?;
+        document.close_element_if_open("ltx:picture")?;
       }
     },
     reversion => sub[whatsit, _args] {

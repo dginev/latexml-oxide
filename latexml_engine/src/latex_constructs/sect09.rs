@@ -284,8 +284,14 @@ pub(crate) fn load() -> Result<()> {
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
-  def_primitive_noop("\\flushbottom")?;
-  def_primitive_noop("\\suppressfloats[]")?;
+  // `\flushbottom`/`\suppressfloats` are latex_base.pool's (latex_base.rs:434,
+  // the NODUMP branch only); latex.ltx:18330 declares `\flushbottom` a robust
+  // MACRO and the dump carries it. Re-declaring it a primitive here (after
+  // the dump) made scrlttr2.cls:5053 `\g@addto@macro\flushbottom{…}` capture
+  // the unexpandable token literally — `\flushbottom` expanding into itself
+  // (scrlttr2copy letter-copy-test; RUST-ONLY, Perl keeps the dump's macro).
+  // The NODUMP branch still gets latex_base.rs's primitives (Perl-faithful there).
+  // Guard: `perfect_kernel_batch56::flushbottom_stays_the_kernel_macro`.
 
   NewCounter!("topnumber");
   DefMacro!("\\topfraction", "0.25");

@@ -373,6 +373,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   }
   let current_options = options.options.join(",");
   if !current_options.is_empty()
+    && !lookup_bool(&s!("{filename}_unmarks_itself"))
     && let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options"))
     && arena::with(prevoptions, |prev_str| current_options != prev_str)
   {
@@ -407,6 +408,13 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   // post-call check, disabling `maybe_require_dependencies` for any
   // package that had no binding (e.g. paper-local `jinstpub.sty`).
   let already_handled = |fkey: &str| -> bool {
+    // A file that un-marks itself loaded at its end (fontenc.sty tail:
+    // `\global\let\ver@fontenc.sty\relax`, `\let\opt@fontenc.sty\relax`)
+    // is loaded afresh by every request, each time with the new options —
+    // its binding declares that with `<file>_unmarks_itself` (fontenc_sty.rs).
+    if lookup_bool(&s!("{fkey}_unmarks_itself")) {
+      return false;
+    }
     if opt_noltxml {
       lookup_bool(&s!("{fkey}_raw_loaded"))
     } else if opt_notex {
@@ -823,6 +831,12 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           },
         }
       }
+      // fontenc.sty:tail `\global\let\ver@fontenc.sty\relax` — the file
+      // reports itself NOT loaded (`\@ifpackageloaded{fontenc}` is false in
+      // real LaTeX), so the next request loads it again.
+      if lookup_bool(&s!("{filename}_unmarks_itself")) {
+        let_i(&ver_cs, &T_CS!("\\relax"), Some(Scope::Global));
+      }
     }
   } else {
     // We're inverting the control flow, because it is near-instant to check whether we have an
@@ -1200,7 +1214,10 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
   // (`_raw_loaded`) does NOT preclude the binding from loading — they
   // are independent paths. Mirrors Perl `loadLTXML` (Package.pm L2311).
   let loaded_key = s!("{request}_loaded");
-  if !reloadable && lookup_bool(&loaded_key) {
+  // A file that un-marks itself loaded (fontenc.sty tail; see `already_handled`)
+  // is loaded afresh on every request.
+  let unmarks_itself = lookup_bool(&s!("{request}_unmarks_itself"));
+  if !reloadable && !unmarks_itself && lookup_bool(&loaded_key) {
     // Already loaded; the source path is not retained across loads, and the
     // announce site short-circuits on `already_handled` before reaching here,
     // so reporting an unknown (`None`) source is correct.

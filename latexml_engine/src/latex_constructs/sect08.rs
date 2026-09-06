@@ -989,7 +989,24 @@ pub(crate) fn load() -> Result<()> {
           if lookup_bool("LUATEX_PROFILE") {
             // native character on the Unicode engine: nothing to declare
           } else if let Some(ch) = char::from_u32(cp) {
-            AssignCatcode!(ch, Catcode::ACTIVE);
+            // utf8.def's invariant under a natively decoded UTF-8 mouth
+            // (utf8_def.rs:236-243, Perl utf8.def.ltxml: code points
+            // 128..=255 are reset to OTHER and Perl never re-activates them
+            // at document time): a decoded Latin-1 code point stays a plain
+            // character. Re-activating it here — t1enc.dfu via
+            // `\DeclareFontEncoding{T1}` AFTER inputenc[utf8] — made the
+            // document's `á` (U+00E1) the same active token as bibarts.sty's
+            // raw byte 0xE1 (its UTF-8 lead-byte detector, bibarts.sty:3868/
+            // 4029), whose `\doUTFhyT@ba` then ate spurious tokens: 10×
+            // `unexpected:fi` + an EoF Fatal (bibarts; RUST-ONLY, pdflatex
+            // clean). Latin-1 input (`[latin1]{inputenc}`, witness
+            // arXiv:1509.06785 `\newtheorem{déf}`) keeps the byte active.
+            // The LICR macro is still defined (Perl keeps it too). Guard:
+            // `perfect_kernel_batch56::utf8_input_keeps_latin1_code_points_other`.
+            let native_utf8 = lookup_string("CURRENT_INPUT_ENCODING") == "UTF8";
+            if !(native_utf8 && (0x80..=0xFF).contains(&cp)) {
+              AssignCatcode!(ch, Catcode::ACTIVE);
+            }
             // utf8.def:55-90 (`\UTFviii@two@octets` …): inside a `\csname`
             // the character stays LITERAL in the name (`\ifincsname`), else
             // it is its LICR expansion.

@@ -6931,3 +6931,72 @@ guard.
 **Witnesses**: amslatex-primer/amshelp (3 → 0).
 **Guard**: `perfect_kernel_batch56::sweep46_single_name_gaps` (amsrefs part).
 **Upstream**: not filed.
+
+### 202. An environment's closing tag closes only what its own replacement opened
+
+**Perl behavior**: a constructor's `</ltx:X>` is a blunt `closeElement`
+(Document.pm:803); when the element's content could not be held and auto-closed
+it — a tcolorbox placed directly in a `{picture}` (pagelayout.cls:3656,
+xebaposter), a `\subsection` inside a beamer `{block}` (`</ltx:theorem>`,
+beamertheme-mirage), `\lxSVG@insertpicture`'s `svg:svg`/`ltx:picture` closes
+(pgfsys-latexml.def.ltxml:106-107) — the close reports "Attempt to close
+</ltx:X>, which isn't open" (pdflatex clean).
+**Rust behavior**: a `CloseElement` op whose element was opened by an
+`OpenElement` op of the same replacement runs `Document::close_element_if_open`
+— the strict close (force-closing intervening descendants) whenever the element
+is still on the ancestor chain, a no-op only when it is already gone (runtime
+interpreter `replacement.rs::exec_ops` and the codegen `emit_ops`); closes
+of elements the replacement did not open stay strict. A genuine
+`\begin{a}…\end{b}` mismatch is caught by the environment-name check
+before the closing tag runs, so nothing real is hidden. Witnesses:
+pagelayout/example-template, example-text, xebaposter/poster,
+beamertheme-mirage/mirage-poster-{en,zh}. Guard:
+`perfect_kernel_batch56::environment_close_after_content_autoclose_is_not_an_error`.
+
+### 203. fontenc loads afresh on every request (Perl loads its binding once)
+
+**Perl behavior**: fontenc.sty.ltxml is loaded once (Package.pm:2328); the
+second `\usepackage[<encs>]{fontenc}` is an option-clash Info and the new
+encodings' `.def` files never load (montex: ctib.sty `[LCT,T1]` then
+mls.sty:416 `[LMS,LMO,LMA,LMC,T1]` — `\MyTogrog` from lmcenc.def undefined).
+**Rust behavior**: the real fontenc.sty un-marks itself at its end
+(`\global\let\ver@fontenc.sty\relax`, `\let\opt@fontenc.sty\relax`), so
+every request loads it again with the new options and `\@ifpackageloaded
+{fontenc}` is false. `fontenc_sty.rs` declares `fontenc.sty_unmarks_itself`;
+the loader (`content.rs` `already_handled`, `_load_binding`, the option-clash
+check, `\ver@` relax) and `\@ifl@aded` honour it. Guard:
+`perfect_kernel_batch56::fontenc_reloads_with_new_encodings`.
+
+### 204. `\ifpdf` is true under the luatex profile
+
+Extends #168: iftex.sty:272-291 answers `\ifpdf` TRUE on LuaTeX whenever the
+output mode is PDF — always, LuaTeX's default — so a lualatex-oracle document
+takes the PDF branch (tikzrput.sty defines `\rput` only there: pgfornament
+ornaments/tikzrput). The pdfTeX persona keeps Perl's FALSE; the K6 PDF-mode
+persona question for pdfTeX documents is separate. Guard:
+`perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`.
+
+### 205. A box keeps what it can hold; the rest is placed after it (`insertBlock`)
+
+**Perl behavior**: `insertBlock` (TeX_Box.pool.ltxml:406-472) renames the
+captured box content to the first candidate container that can hold all of it
+(`inline-block`/`inline-logical-block`/`inline-sectional-block` in an inline
+context, `block`/`logical-block`/`sectional-block`/`figure` otherwise) and, when
+none can, to a hard `ltx:block` — after which every child the model rejects is
+reported ("`<ltx:caption>` isn't allowed in `<ltx:block>`": a `\caption` inside
+`\rotatebox{\parbox{…}}`, heria-proposal; `\printbibliography` inside mdframed,
+biblatex-juradiss; pdflatex clean in each).
+**Rust behavior**: the same container choice first; when no candidate holds
+everything, the first candidate that holds the box's leading content is the
+box, and the content it cannot hold is placed after the box in the nearest
+FLOW ancestor (one that can hold a paragraph) that can hold it, with the
+insertion point following — the outcome an autoclosing frame produces for the
+same content written live. The climb never leaves a flow container (a drawing
+or math box is another medium; hoisting past it strands the rest of the box),
+where the model's verdict stands as in Perl. One rule, no per-tag cases
+(`latexml_engine/src/base_utilities.rs::insert_block`). Guards:
+`perfect_kernel_gemini::mdframed_block_bibliography_juradiss`,
+`perfect_kernel_batch56::caption_in_inline_parbox_floats_to_figure`,
+`tests/complex/figure_dual_caption` (a minipage of graphics + caption still
+becomes the figure).
+

@@ -5858,3 +5858,61 @@ at 100. Trigger: `\csvreader[sort by=namesort.xml]{grade.csv}{}{X}` with no sort
 Rust: `\errmessage` is a counted `Error!`, and the consecutive-error breaker ends the
 loop with a partial document. Guard:
 `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
+
+## 196. `\parbox`'s dispatch leaves the box body inside an open `\ifx` (Rust fixes)
+
+latex_constructs.pool.ltxml:4748 `\parbox` = `\ifx.#2.\lx@parbox[#1]{#4}{#5}\else
+\lx@parbox[#1][#2][#3]{#4}{#5}\fi`: the body `#5` is digested while the wrapper's
+own conditional is still open, so a body that leaves an `\if` dangling — jourcl.cls:145
+`\RecommendedPerson` (three `\if`, two `\fi`; pdflatex only warns "incomplete
+\ifx") — meets the wrapper's `\else`: "Extra \else already saw \else for \ifx"
+(jourcl, 3 errors; Perl 1 identical). Real `\@iiiparbox` has no such wrapper.
+Trigger: `\def\ifempty#1{\def\temp{#1} \ifx\temp\empty }` … `\parbox{3cm}{\RP{x}}`.
+Rust: the dispatch is `\ifx.#2.\expandafter\@firstoftwo\else\expandafter
+\@secondoftwo\fi{…}{…}` — the conditional closes before the body digests. Guard:
+`perfect_kernel_batch56::parbox_body_dangling_conditional_is_not_the_wrappers`.
+
+## 197. `\iffontchar` is undefined (Rust fixes)
+
+eTeX.pool.ltxml:335 leaves `\iffontchar` a comment; the dump's `\tex_iffontchar:D`
+LETs to it and l3text / unicodefonttable code desyncs mid-conditional (Perl on a
+0–00FF `\displayfonttable`: 101 errors + too-many-errors Fatal). Rust: defined from
+the font file's coverage — a `\font`-declared TFM's populated `char_info` slots, a
+fontspec-selected OpenType font's `cmap` (`latexml_core::common::font::coverage`;
+`\fontspec`/`\setmainfont`/`\setfontface` record the resolved file as
+`FONTSPEC_FONTFILE`); unresolvable fonts answer TRUE. Guards:
+`perfect_kernel_batch56::iffontchar_reads_tfm_coverage`,
+`iffontchar_bounds_unicodefonttable_to_font_coverage`.
+
+## 198. listings.sty.ltxml never inputs `lstlocal.cfg` (Rust fixes)
+
+listings.sty:2315-2316 inputs both `listings.cfg` and the user's `lstlocal.cfg`;
+listings.sty.ltxml:1609 reads only the first, so a document shipping its own
+`lstlocal.cfg` (labyrinth: `\pkgname`, `\meta`, the `{code}` environment) loses every
+definition in it (13 errors + a token-limit Fatal). Guard:
+`perfect_kernel_batch56::listings_reads_lstlocal_cfg`.
+
+## 199. `\begin`/`\end` never fire the kernel's `env/<name>/*` hooks (Rust fixes)
+
+latex.ltx:15347/15362/15388/15391 fire `\UseHook{env/#1/before|begin|end|after}`
+around every environment; Perl's `\begin`/`\end` (latex_constructs.pool.ltxml:190-231)
+consult only etoolbox's private `@environment@*` store, and `\AddToHook` is a no-op
+(latex_base.pool.ltxml:833). Under a raw-loaded lthooks the hooks are registered but
+never used: functional.sty `\AddToHook{env/demohigh/before}{\MyDeleteShortVerb}` left
+shortvrb's `|` active for codehigh's rescan ("\verb ended by end of line", 10 errors).
+Rust: `\begin{}`/`\end{}` (sect01.rs) and DefEnvironment's constructors (dialect.rs)
+fire the four hooks in the kernel's own token shapes (latex.ltx:15386's
+`\romannumeral\IfHookEmptyTF…` for `end`, load-bearing: an unexpandable token between an
+alignment's last cell and `\endtabular`'s implicit `\crcr` leaks the cell group).
+Guard: `perfect_kernel_batch56::kernel_env_hooks_fire_around_environments`.
+
+## 200. The `\psset` constructor drops pst family key bodies (Rust fixes)
+
+pstricks_support.sty.ltxml:622 `DefConstructor('\psset [] RequiredKeyVals:pstricks')`
+consumes the keys without running them; raw pst-node.tex:1248-1257 defines
+`\psk@mnodesize`/`\psk@mnode`/`\psk@mcol` only as the side effect of
+`\psset[pst-node]{mnodesize=-1pt,…}`, and `\psm@endnode` (:1224) reads them:
+`{psmatrix}` under pstricks-add (dsptricks 101 errors, pst-eucl; Perl 8 identical on
+the repro). Rust: `\psset` stays pst-xkey.tex:60-63's family-aware `\setkeys+[psset]`
+from the raw load. Guard: `perfect_kernel_batch56::psset_dispatches_family_key_bodies`.
+

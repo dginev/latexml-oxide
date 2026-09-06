@@ -16,8 +16,15 @@ LoadDefinitions!({
   DefConditional!("\\ifPDFTeX", { !lookup_bool("LUATEX_PROFILE") });
   DefConditional!("\\ifluatex", { lookup_bool("LUATEX_PROFILE") });
   DefConditional!("\\ifLuaTeX", { lookup_bool("LUATEX_PROFILE") });
+  // iftex.sty:272-291: `\ifpdf` is TRUE on LuaTeX whenever
+  // `tex.outputmode`/`tex.pdfoutput` > 0 — always, LuaTeX defaults to PDF
+  // output — so a lualatex-oracle document sees the PDF branch
+  // (tikzrput.sty defines `\rput` only inside `\ifpdf…\fi`: pgfornament
+  // ornaments/tikzrput). The pdfTeX persona keeps FALSE (Perl; the K6
+  // PDF-mode question is separate). Guard:
+  // `perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`.
+  DefConditional!("\\ifpdf", { lookup_bool("LUATEX_PROFILE") });
   // All others are false
-  DefConditional!("\\ifpdf");
   DefConditional!("\\ifxetex");
   DefConditional!("\\ifXeTeX");
   DefConditional!("\\ifluahbtex");

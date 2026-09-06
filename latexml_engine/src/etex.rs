@@ -32,6 +32,31 @@ fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   .or_else(lookup_font)
 }
 
+/// The glyph coverage of the font a `\iffontchar` font token names, when
+/// its file can be resolved: the current font (`\font`) selected by
+/// fontspec carries `FONTSPEC_FONTFILE` (locally scoped by
+/// `\lx@fontspec@usefile`), any `\font`-declared font carries its TFM name.
+fn fontchar_coverage(
+  font_tok: &Token,
+) -> Option<Rc<::latexml_core::common::font::coverage::GlyphCoverage>> {
+  use ::latexml_core::common::font::coverage::{coverage_for_file, font_file_path};
+  // `\font` itself, or a `\let` alias of it (`\tex_font:D`).
+  let is_current_font = font_tok.defined_as(&T_CS!("\\font"));
+  if is_current_font {
+    let file = lookup_string("FONTSPEC_FONTFILE");
+    if !file.is_empty() {
+      return coverage_for_file(&file);
+    }
+  }
+  let font = fontchar_lookup_font(font_tok)?;
+  let name = font.name.as_deref()?.trim().to_string();
+  if name.is_empty() || name.contains('/') {
+    return None;
+  }
+  let tfm = font_file_path(&format!("{name}.tfm"))?;
+  coverage_for_file(&tfm)
+}
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -526,17 +551,30 @@ LoadDefinitions!({
     has_meaning(&t)
   });
 
-  // \iffontchar <font><charcode> — eTeX: true iff the character exists in
-  // the font. Perl eTeX.pool.ltxml L335 leaves this as a COMMENT (undefined),
-  // which breaks every kernel consumer: the dump's `\tex_iffontchar:D` LETs
-  // to it and records `N` (undefined), so l3text/unicodefonttable code hits
-  // an undefined-CS stub mid-conditional and the \else/\fi structure
-  // desyncs (unicodefonttable-samples: 100-error cascade). We consume the
-  // arguments faithfully and approximate the test as TRUE — our font model
-  // has no per-glyph TFM coverage table; fonts under test overwhelmingly
-  // contain the probed slots, and a wrong TRUE renders an empty glyph cell
-  // rather than derailing the conditional nesting.
-  DefConditional!("\\iffontchar Token Number", sub[(_font, _code)] { true });
+  // \iffontchar <font><charcode> — eTeX (etex_man §3.7): true iff the
+  // font has a character in that slot. Perl eTeX.pool.ltxml L335 leaves it a
+  // COMMENT (undefined) and every kernel consumer desyncs (the dump's
+  // `\tex_iffontchar:D` LETs to it). The answer is the font FILE's coverage
+  // (`latexml_core::common::font::coverage`): a TFM's populated `char_info`
+  // slots for a `\font`-declared font, an OpenType `cmap` for a fontspec-
+  // selected font (`FONTSPEC_FONTFILE`, fontspec_sty.rs). A constant TRUE
+  // made unicodefonttable's `\displayfonttable` emit one cell per code
+  // point of the requested range instead of one per covered glyph —
+  // 262k cells, `Fatal:Timeout:MemoryBudget` (unicodefonttable-samples);
+  // a constant FALSE would skip every row. Fonts whose file cannot be
+  // resolved (NFSS families without a recorded file) keep TRUE, the old
+  // behaviour. Guards: `perfect_kernel_batch56::iffontchar_reads_tfm_coverage`,
+  // `iffontchar_bounds_unicodefonttable_to_font_coverage`.
+  DefConditional!("\\iffontchar Token Number", sub[(font, code)] {
+    let code = code.value_of();
+    if code < 0 {
+      return Ok(false);
+    }
+    match fontchar_coverage(&font) {
+      Some(cov) => cov.contains(code as u32),
+      None => true,
+    }
+  });
 
   // \ifincsname — eTeX: true while a `\csname…\endcsname` name is being
   // scanned (`gullet::in_csname`). Perl LaTeXML leaves it constantly false,

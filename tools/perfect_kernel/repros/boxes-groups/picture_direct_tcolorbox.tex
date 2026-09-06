@@ -1,0 +1,19 @@
+% witness: pagelayout/example-template, pagelayout/example-text, xebaposter/poster (sweep-47 residue)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-06, SHARED -> surpass opportunity)
+% expect:  0 errors; the tcolorbox content contained inside the <ltx:picture>, no unbalanced close
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: pagelayout \page->\pal@standardpage wraps the page body in a LaTeX {picture} (pagelayout.cls:3112),
+%   and \pal@putcontent places \text{...}=tcolorbox content DIRECTLY (no \put) into the picture (pagelayout.cls:3656).
+%   {picture}=<ltx:picture> cannot contain the tcolorbox block; find_insertion_point auto-closes the picture to place
+%   the block (document.rs), then the {picture} env's closing constructor "</ltx:picture>" (closeElement) finds no open
+%   picture -> Document.pm:803 / document.rs:1302 "Attempt to close </ltx:picture>, which isn't open".
+%   xebaposter is the same shape with \tikz (svg:svg close) instead of a picture.
+\documentclass{article}
+\usepackage{tcolorbox}
+\begin{document}
+\setlength{\unitlength}{1pt}
+\begin{picture}(200,200)
+\begin{tcolorbox}A box directly in a picture.\par Second para.\end{tcolorbox}
+\end{picture}
+\end{document}

@@ -3822,8 +3822,14 @@ LoadDefinitions!({
  ndkeywordstyle=keywordstyle,texcsstyle=keywordstyle,directivestyle=keywordstyle
 }"##);
 
-  // Load language configuration files
+  // Load language configuration files. listings.sty:2315-2316 inputs BOTH
+  // `listings.cfg` and the user's `lstlocal.cfg` (`\InputIfFileExists`);
+  // Perl (listings.sty.ltxml:1609) and this binding read only the first, so
+  // a document shipping its own `lstlocal.cfg` (labyrinth: `\pkgname`,
+  // `\meta`, the `{code}` environment) lost every definition in it.
+  // Guard: `perfect_kernel_batch56::listings_reads_lstlocal_cfg`.
   InputDefinitions!("listings", extension => Some(Cow::Borrowed("cfg")));
+  RawTeX!(r"\InputIfFileExists{lstlocal.cfg}{}{}");
 
   // Internal macros used by sibling bindings (e.g. cleveref) AND by the
   // lang-file raw loads below (lstlang3.sty in particular calls

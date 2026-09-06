@@ -324,14 +324,60 @@ pub(crate) fn load() -> Result<()> {
     r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi"
   );
 
+  // latex.ltx:15346-15364 `\begin#1`: `\UseHook{env/#1/before}` OUTSIDE the
+  // group, then inside it `\@currenvir` and `\UseHook{env/#1/begin}` before
+  // `\csname #1\endcsname`. The kernel's environment hooks live in
+  // lthooks' own store (`\AddToHook{env/X/before}` — real lthooks under
+  // the raw-loaded latexml.sty; the no-op `\UseHook` of latex_base.rs
+  // otherwise), which `\begin`/`\end` never consulted: only the
+  // `@environment@X@*` PushValue store written by etoolbox's
+  // `\AtBeginEnvironment` & co. fired. functional.sty's
+  // `\AddToHook{env/demohigh/before}{\MyDeleteShortVerb}` (functional
+  // manual, 10 errors: the live shortvrb `|` re-read by codehigh as `\verb`)
+  // and 39 tex/latex packages use the kernel form. SHARED (Perl's `\begin`
+  // is the same), pdflatex clean. DefEnvironment-managed environments fire
+  // `begin`/`end` from their constructors (dialect.rs). Guard:
+  // `perfect_kernel_batch56::kernel_env_hooks_fire_around_environments`.
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
     let before_opt = lookup_tokens(&format!("@environment@{name}@beforebegin"));
     let after_opt  = lookup_tokens(&format!("@environment@{name}@atbegin"));
+    // The kernel's own token shapes: bare `\UseHook{env/#1/<point>}` for
+    // before/begin/after (latex.ltx:15347/15362/15391) and, for `end`,
+    // `\romannumeral\IfHookEmptyTF{env/#1/end}{\expandafter\z@}{\z@\UseHook
+    // {env/#1/end}}` (:15386-15388): an empty hook vanishes at EXPANSION time,
+    // so nothing sits between an alignment's last cell and `\endtabular`'s
+    // implicit `\crcr` (a trailing `\multicolumn` row leaked its group when
+    // an unexpandable token stood there).
+    let use_hook = |point: &str| -> Vec<Token> {
+      let hook = |v: &mut Vec<Token>| {
+        v.push(T_CS!("\\UseHook"));
+        v.push(T_BEGIN!());
+        v.extend(ExplodeText!(s!("env/{name}/{point}")));
+        v.push(T_END!());
+      };
+      let mut v = Vec::new();
+      if point == "end" {
+        v.push(T_CS!("\\romannumeral"));
+        v.push(T_CS!("\\IfHookEmptyTF"));
+        v.push(T_BEGIN!());
+        v.extend(ExplodeText!(s!("env/{name}/end")));
+        v.push(T_END!());
+        v.extend([T_BEGIN!(), T_CS!("\\expandafter"), T_CS!("\\z@"), T_END!()]);
+        v.push(T_BEGIN!());
+        v.push(T_CS!("\\z@"));
+        hook(&mut v);
+        v.push(T_END!());
+      } else {
+        hook(&mut v);
+      }
+      v
+    };
 
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
+      tks.extend(use_hook("before"));
       tks.push(T_CS!(begin_name));
       Ok(Tokens::new(tks)) // Magic cs!
     } else {
@@ -355,11 +401,13 @@ pub(crate) fn load() -> Result<()> {
         install_undefined_error_constructor(token, &undef);
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
+      out_tokens.extend(use_hook("before"));
       out_tokens.push(T_CS!("\\begingroup"));
       if let Some(after) = after_opt {
         out_tokens.extend(after.unlist());
       }
       out_tokens.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
+      out_tokens.extend(use_hook("begin"));
       out_tokens.push(token);
       Ok(Tokens::new(out_tokens))
     }
@@ -379,21 +427,57 @@ pub(crate) fn load() -> Result<()> {
     let name = Expand!(env).to_string();
     let before = lookup_tokens(&s!("@environment@{name}@atend"));
     let after = lookup_tokens(&s!("@environment@{name}@afterend"));
+    // The kernel's own token shapes: bare `\UseHook{env/#1/<point>}` for
+    // before/begin/after (latex.ltx:15347/15362/15391) and, for `end`,
+    // `\romannumeral\IfHookEmptyTF{env/#1/end}{\expandafter\z@}{\z@\UseHook
+    // {env/#1/end}}` (:15386-15388): an empty hook vanishes at EXPANSION time,
+    // so nothing sits between an alignment's last cell and `\endtabular`'s
+    // implicit `\crcr` (a trailing `\multicolumn` row leaked its group when
+    // an unexpandable token stood there).
+    let use_hook = |point: &str| -> Vec<Token> {
+      let hook = |v: &mut Vec<Token>| {
+        v.push(T_CS!("\\UseHook"));
+        v.push(T_BEGIN!());
+        v.extend(ExplodeText!(s!("env/{name}/{point}")));
+        v.push(T_END!());
+      };
+      let mut v = Vec::new();
+      if point == "end" {
+        v.push(T_CS!("\\romannumeral"));
+        v.push(T_CS!("\\IfHookEmptyTF"));
+        v.push(T_BEGIN!());
+        v.extend(ExplodeText!(s!("env/{name}/end")));
+        v.push(T_END!());
+        v.extend([T_BEGIN!(), T_CS!("\\expandafter"), T_CS!("\\z@"), T_END!()]);
+        v.push(T_BEGIN!());
+        v.push(T_CS!("\\z@"));
+        hook(&mut v);
+        v.push(T_END!());
+      } else {
+        hook(&mut v);
+      }
+      v
+    };
     let mut t = T_CS!(s!("\\end{{{name}}}"));
     let mut out_tokens = Vec::new();
     if is_defined_token(&t) {
-      // Magic CS!
+      // Magic CS! (its constructor fires `env/NAME/end` inside the group)
       out_tokens.push(t);
+      out_tokens.extend(use_hook("after"));
       if let Some(afterend_toks) = after {
         out_tokens.extend(afterend_toks.unlist())
       }
     } else {
+      // latex.ltx:15386-15391: `env/#1/end` inside the group before
+      // `\end#1`, `env/#1/after` after the `\endgroup`.
       out_tokens = before.map(Tokens::unlist).unwrap_or_default();
+      out_tokens.extend(use_hook("end"));
       t = T_CS!(s!("\\end{name}"));
       if is_defined_token(&t) {
         out_tokens.push(t);
       }
       out_tokens.push(T_CS!("\\endgroup"));
+      out_tokens.extend(use_hook("after"));
       if let Some(afterend_toks) = after {
         out_tokens.extend(afterend_toks.unlist())
       }

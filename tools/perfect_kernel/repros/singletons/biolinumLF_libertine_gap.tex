@@ -1,0 +1,11 @@
+% witness: whatsnote/whatsnote-demo (libertine.sty:456 \providecommand*\biolinumLF)
+% oracle:  pdflatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; body 'ok' present
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: libertine_sty.rs binding omits \biolinumLF (raw libertine.sty:456 pdftex branch)
+\documentclass{article}
+\usepackage{libertine}
+\begin{document}
+{\biolinumLF ok}
+\end{document}

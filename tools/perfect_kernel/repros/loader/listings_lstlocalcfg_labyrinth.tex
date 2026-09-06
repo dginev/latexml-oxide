@@ -1,0 +1,14 @@
+% witness: labyrinth/labyrinth (labyrinth.tex:41 \pkgname; def in lstlocal.cfg)
+% oracle:  lualatex/pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-06)  -- SHARED (surpass approved: pdflatex clean)
+% expect:  0 errors; \pkgname{labyrinth} renders as <ltx:text font=sansserif>labyrinth
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: listings.sty:2315-2316 \InputIfFileExists{listings.cfg}+{lstlocal.cfg}.
+%   LaTeXML listings binding loads only listings.cfg (Perl listings.sty.ltxml:1609,
+%   Rust listings_sty.rs:3826) -> lstlocal.cfg (defines \pkgname,\meta,{code}..) skipped.
+%   NOTE: needs companion lstlocal.cfg in the run dir (shipped alongside).
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+The \pkgname{labyrinth} package.
+\end{document}

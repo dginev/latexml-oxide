@@ -405,9 +405,16 @@ pub(crate) fn load() -> Result<()> {
   // intentional divergence as the {minipage} binding: real LaTeX \@iiiparbox
   // runs \@parboxrestore, so nested raw-loaded boxes read the reduced
   // \linewidth. See the minipage after_digest_begin note.
+  // The `\ifx.#2.` dispatch closes BEFORE the box body is digested
+  // (`\@firstoftwo`/`\@secondoftwo`): real `\@iiiparbox` wraps the body in
+  // no conditional, so a body that leaves an `\if` open (jourcl.cls:145
+  // `\RecommendedPerson` — three `\if`, two `\fi`; pdflatex only warns
+  // "incomplete \ifx") must not meet the wrapper's own `\else` — Perl's
+  // form (:4748) raised `Extra \else` (SHARED). Guard:
+  // `perfect_kernel_batch56::parbox_body_dangling_conditional_is_not_the_wrappers`.
   DefMacro!(
     "\\parbox[] [] [] {Dimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
   );
   DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {

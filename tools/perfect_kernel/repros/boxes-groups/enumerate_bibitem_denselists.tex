@@ -1,0 +1,17 @@
+% witness: nih/example-biosketch (sweep-47 residue)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-06, SHARED -> surpass opportunity)
+% expect:  0 errors; two <ltx:bibitem> under an <ltx:bibliography>/<ltx:biblist>
+% status:  RED (b56aa) Error:malformed:ltx:enumerate Attempt to close </ltx:enumerate>, which isn't open (document.rs:1302)
+% mechanism: denselists \begin{Enumerate}=\Onumerate(=\enumerate)+\Nospacing, \end{Enumerate}=\endlist.
+%   The bare \enumerate opens <ltx:enumerate>; a \bibitem inside floats up to an auto-opened
+%   <ltx:bibliography>/<ltx:biblist>, closing the enumerate; the enumerate's later close (frame/group
+%   close) finds it gone -> close_element (document.rs:1265-1302, Perl Document.pm:803 closeElement).
+\documentclass{article}
+\usepackage{denselists}
+\begin{document}
+\begin{Enumerate}
+\bibitem{a} B.~Donald. A paper. 1992.
+\bibitem{b} B.~Donald. Another. 1993.
+\end{Enumerate}
+\end{document}

@@ -227,6 +227,17 @@ LoadDefinitions!({
   // Font Encoding
   // We ALSO need to read in or set the char=>unicode mapping.
 
+  // fontenc.sty (2025/07/18) un-marks itself at its end — `\global\let
+  // \ver@fontenc.sty\relax`, `\global\let\opt@fontenc.sty\relax` — so EVERY
+  // `\usepackage[<encs>]{fontenc}` loads it again with the new encodings
+  // (no option clash). Perl's binding is loaded once (Package.pm:2328), so
+  // montex's second request (mls.sty:416 `[LMS,LMO,LMA,LMC,T1]` after
+  // ctib.sty's `[LCT,T1]`) never input lmcenc.def → `\MyTogrog` undefined
+  // (SHARED, pdflatex clean). The loader honours the declaration
+  // (content.rs `already_handled`). Guard:
+  // `perfect_kernel_batch56::fontenc_reloads_with_new_encodings`.
+  AssignValue!("fontenc.sty_unmarks_itself" => true, Some(Scope::Global));
+
   DeclareOption!(None, {
     let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
     push_value("font_encodings", Stored::String(pin(current_option)))?;
@@ -277,6 +288,9 @@ LoadDefinitions!({
       }
     }
   }
+  // `\let\opt@fontenc.sty\relax`: the option list does not carry over
+  // into the next load.
+  AssignValue!("font_encodings" => Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 });

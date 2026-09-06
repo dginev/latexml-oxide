@@ -1,0 +1,19 @@
+% witness: dsptricks/dspTricksManual (dspTricksManual.tex:759)
+% oracle:  lualatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; a psmatrix node cell digests without undefined \psk@mnodesize
+% status:  RED
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: pstricks-add.tex:27 `\ifx\PSTnodesLoaded\endinput\else \input pst-node \fi`
+%   re-\input's raw pst-node.tex on top of the pst-node_sty.rs binding because the
+%   binding never \let\PSTnodesLoaded\endinput; the re-loaded raw file's
+%   \psset[pst-node]{mnodesize=-1pt} (pst-node.tex:1257) fails to \let\psk@mnodesize,
+%   which \psm@endnode (pst-node.tex:1224) then references -> undefined.
+\documentclass{article}
+\usepackage{pstricks-add}
+\begin{document}
+\begin{psmatrix}
+  A & B \\
+  C & D
+\end{psmatrix}
+\end{document}

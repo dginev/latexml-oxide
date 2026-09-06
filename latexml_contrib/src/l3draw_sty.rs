@@ -96,6 +96,12 @@ LoadDefinitions!({
   def_macro_noop("\\draw_set_join_miter:")?;
   def_macro_noop("\\draw_set_join_round:")?;
   def_macro_noop("\\draw_set_linewidth:n {}")?;
+  // l3draw.sty:1821-1822 (l3draw-state.dtx) `\dim_new:N \l_draw_default_linewidth_dim`
+  // `\dim_set:Nn … {0.4pt}` — a public variable documents read
+  // (rpgicons-doc). Guard: `perfect_kernel_batch56::sweep47_single_name_gaps`.
+  RawTeX!(
+    r"\ExplSyntaxOn \dim_new:N \l_draw_default_linewidth_dim \dim_set:Nn \l_draw_default_linewidth_dim { 0.4pt } \ExplSyntaxOff"
+  );
   def_macro_noop("\\draw_set_miterlimit:n {}")?;
   def_macro_noop("\\draw_set_nonzero_rule:")?;
   def_macro_noop("\\draw_suspend_begin:")?;

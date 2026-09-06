@@ -495,7 +495,11 @@ pub(crate) fn load() -> Result<()> {
   // place. User-level `\@ifpackageloaded{X}` doesn't care which path.
   // Mirrors Perl `\@ifpackageloaded` checking `<X.sty>_loaded` (which
   // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
-  if lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")) {
+  // A file that un-marks itself (fontenc.sty tail `\let\ver@fontenc.sty\relax`)
+  // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`.
+  if (lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
+    && !lookup_bool(&s!("{path}_unmarks_itself"))
+  {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")

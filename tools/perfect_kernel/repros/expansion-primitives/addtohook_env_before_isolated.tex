@@ -1,0 +1,8 @@
+% Isolated: kernel \AddToHook{env/foo/before} must fire before \begin{foo}
+\documentclass{article}
+\AddToHook{env/foo/before}{BEFOREMARK }
+\AddToHook{env/foo/after}{ AFTERMARK}
+\newenvironment{foo}{}{}
+\begin{document}
+\begin{foo}INSIDE\end{foo}
+\end{document}

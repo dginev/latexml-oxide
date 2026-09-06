@@ -1256,6 +1256,43 @@ impl Document {
   /// Since this is an "explicit request", we're currently skipping over those nodes,
   /// ie. we're automatically closing them, even if they're the same type as we're asking to
   /// close!!! This is kinda risky! Maybe we should try to request closing of specific nodes.
+  /// `close_element`, but a no-op when no `qname` element is open on the
+  /// current ancestor chain: the strict close (auto-closing or force-closing
+  /// the intervening descendants) whenever the element is still open, and
+  /// silence only when content that the element could not hold auto-closed
+  /// it already. Used for a replacement's closing tag of an element the same
+  /// replacement opened (OXIDIZED_DESIGN_DIVERGENCES #202).
+  pub fn close_element_if_open(&mut self, qname: &str) -> Result<Option<Node>> {
+    let qsym = arena::pin(qname);
+    let mut node = if self.node.get_type() == Some(NodeType::TextNode) {
+      self.node.get_parent()
+    } else {
+      Some(self.node.clone())
+    };
+    let mut open = false;
+    while let Some(n) = node {
+      if n.get_type() != Some(NodeType::ElementNode) {
+        break;
+      }
+      if get_node_qname(&n) == qsym && !(qsym == pin!("ltx:text") && n.has_attribute("_fontswitch"))
+      {
+        open = true;
+        break;
+      }
+      node = n.get_parent();
+    }
+    if open {
+      self.close_element(qname)
+    } else {
+      Debug!(
+        "document",
+        "close_element",
+        s!("Element {:?} already closed by its content", qname)
+      );
+      Ok(None)
+    }
+  }
+
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
     Debug!(
       "document",

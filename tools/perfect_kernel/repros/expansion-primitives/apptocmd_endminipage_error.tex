@@ -1,0 +1,13 @@
+% witness: updatemarks/updatemarks (updatemarks.sty:442 \apptocmd\endminipage{...}{}{\ERROR})
+% oracle:  pdflatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; \endminipage patched, failure branch \ERROR never run
+% status:  RED
+% mechanism: etoolbox \apptocmd cannot patch \endminipage (Rust binding = non-token body)
+%   -> takes the {\ERROR} failure branch -> undefined \ERROR
+\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\apptocmd{\endminipage}{\relax}{}{\ERROR}%
+ok
+\end{document}

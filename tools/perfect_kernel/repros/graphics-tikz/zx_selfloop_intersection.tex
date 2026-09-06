@@ -1,0 +1,23 @@
+% witness: zx-calculus/zx-calculus (zx-calculus.tex:459 \zxLoopAboveDots)
+% oracle:  pdflatex 0 errors
+% engines: rust=1fatal(~60s) perl=hang/terminated(197s) (2026-09-06)
+% expect:  0 errors; ltx:picture (SVG) for the ZX diagram, no infinite digestion
+% status:  RED (SHARED: Perl LaTeXML also runs away -> terminated at 197s)
+% mechanism: a ZX self-loop arrow (start==target node) makes zx-calculus's
+%   border-intersection wire code (\zx@find@intersection@fakecenter,
+%   tikzlibraryzx-calculus.code.tex:481-597) call \pgfintersectionofpaths on a
+%   degenerate line (center-through-control, zero direction). pgf's intersections
+%   library (pgflibraryintersections.code.tex: \pgfmathloop L170, Bezier
+%   subdivision L738+, tolerance \pgfintersectiontolerance L689) never reaches its
+%   \ifdim<tolerance termination in our (and Perl's) engine, appending 2 boxes per
+%   pass until the Stomach cycle-guard Fatals (stomach.rs:1512). Real pgf (pdflatex)
+%   terminates. \ar[loop] alone is clean; plain tikz edge[loop] and plain tikz-cd
+%   \ar[loop] are clean -- only the ZX intersection wire loops.
+\documentclass{article}
+\usepackage{tikz}
+\makeatletter
+\usetikzlibrary{zx-calculus}
+\makeatother
+\begin{document}
+\begin{ZX}\zxX{\alpha}\ar[loop,in=70,out=110]\end{ZX}
+\end{document}

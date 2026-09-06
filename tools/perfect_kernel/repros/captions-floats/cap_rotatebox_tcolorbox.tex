@@ -1,0 +1,27 @@
+% witness: heria/heria-proposal, rubik/rubikexamples (sweep-47 residue)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=3 (2026-09-06, SHARED -> surpass opportunity)
+% expect:  0 errors; a <ltx:caption>/<ltx:toccaption> under the enclosing <ltx:figure>, not inside the parbox block
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: \caption inside \parbox (heria: \rotatebox{\parbox{...\caption}}, rubik: \parbox{...\caption}) in a {figure}.
+%   \parbox/minipage digest their body then insertBlock() (latex_constructs.pool.ltxml:4750/4771 ->
+%   base_utilities.rs insert_block); the rotatebox context is <ltx:inline-block> so insert_block picks
+%   is_inline=true candidates (inline-block/-logical/-sectional), none can hold para+caption, so it falls
+%   back to renaming the capture to 'ltx:block'. The caption's ^^ float constructor (\@@caption
+%   PBoxContents "^^<ltx:caption>", latex_constructs.pool.ltxml:3368) floatToElement stops at the
+%   _CaptureBlock_ (which accepts caption), so caption+toccaption+para land inside the renamed <ltx:block>,
+%   which cannot contain them (find_insertion_point_qsym, document.rs:3221; ltx:block does not auto-close).
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[raster]{tcolorbox}
+\begin{document}
+\begin{figure}[hbt]
+\rotatebox{90}{\parbox{10cm}{%
+\begin{tcbraster}[raster columns=2]
+\begin{tcolorbox}[title=A]x\end{tcolorbox}
+\begin{tcolorbox}[title=B]y\end{tcolorbox}
+\end{tcbraster}
+\caption{Cap}\label{fig:x}
+}}
+\end{figure}
+\end{document}

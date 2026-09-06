@@ -25,8 +25,15 @@ LoadDefinitions!({
   // `\tikzpicture{\node{\blue{…}}}`. Without it those CSes are undefined.
   RequirePackage!("pstricks_support");
 
-  // Core PSTricks parameter setting
-  def_macro_noop("\\psset{}")?;
+  // `\psset` is the real family-aware xkeyval one from the raw load above
+  // (pst-xkey.tex:60-63 `\def\psset{\@testopt\pss@t{\pst@famlist}}`,
+  // `\setkeys+[psset]{#1}{#2}`). A no-op here lost every key BODY: raw
+  // pst-node.tex:1248-1257 defines its `\psk@mnodesize`/`\psk@mnode`/
+  // `\psk@mcol` internals only as the side effect of `\psset[pst-node]
+  // {mnodesize=-1pt,…}`, and `\psm@endnode` (:1224) then read them —
+  // `{psmatrix}` under pstricks-add (dsptricks 101 errors, pst-eucl,
+  // egpeirce; Perl fails the same way with its constructor `\psset`).
+  // Guard: `perfect_kernel_batch56::psset_dispatches_family_key_bodies`.
 
   // Perl pstricks_support.sty.ltxml L849-861: `\newpsobject{name}{oldname}{keyval}`
   // dynamically defines `\<name>` to forward to `\<oldname>` with the saved

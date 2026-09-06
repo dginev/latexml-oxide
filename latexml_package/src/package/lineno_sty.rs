@@ -43,6 +43,11 @@ LoadDefinitions!({
   DefMacro!("\\csname endinternallinenumbers*\\endcsname", "");
 
   def_macro_noop("\\linenumbers OptionalMatch:* [Number]")?;
+  // lineno.sty:2214 `\newcommand*\firstlinenumber[1]{\chardef\c@firstlinenumber#1\relax …}`
+  // — the binding replaces the raw file, so the command must exist here
+  // (lineno/lineno manual: `\firstlinenumber{1}`). Guard:
+  // `perfect_kernel_batch56::sweep47_single_name_gaps`.
+  DefMacro!("\\firstlinenumber{}", "\\chardef\\c@firstlinenumber#1\\relax");
   def_macro_noop("\\nolinenumbers")?;
   def_macro_noop("\\runninglinenumbers OptionalMatch:* [Number]")?;
   def_macro_noop("\\pagewiselinenumbers")?;

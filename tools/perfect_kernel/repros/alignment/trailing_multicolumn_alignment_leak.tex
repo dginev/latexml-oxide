@@ -1,0 +1,23 @@
+% witness: unicodefonttable/unicodefonttable-samples (statistics row);
+%          minimal form independent of unicodefonttable/fontspec/iffontchar.
+% oracle:  lualatex/pdflatex 0 errors (implicit \crcr closes the last row)
+% engines: b56aa=0 errors ; b56x=5 errors (REGRESSION, 2026-09-06)
+% expect:  0 errors; <ltx:tabular> with 2 <ltx:tr> (data row + multicolumn row)
+% status:  GREEN (batch 56x, 2026-09-06)
+%          alignment groups: "\endgroup Attempt to close non-boxing group",
+%          "\lx@begin@alignment Attempt to close a group that switched to mode
+%          internal_vertical" x3, "\@@longtable Attempt to end mode
+%          restricted_horizontal".
+% mechanism: \lx@end@alignment (tex_tables.rs:63) = \lx@hidden@crcr\lx@close@alignment;
+%          the implicit \lx@hidden@crcr does not close a pending \multicolumn cell
+%          -> the alignment cell/row group is left open. \lx@alignment@multicolumn
+%          (tex_tables.rs:589) expands to \omit\span..body; the boxing group it
+%          opens is only closed by an explicit \\/\cr, so the hidden-crcr firing
+%          gate (stomach.rs:1761 `boxing.len() <= init_depth`) is not met.
+\documentclass{article}
+\begin{document}
+\begin{tabular}{cc}
+c & d\\
+\multicolumn{2}{l}{Total: 5}
+\end{tabular}
+\end{document}

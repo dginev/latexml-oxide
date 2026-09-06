@@ -1,0 +1,97 @@
+% witness: ribbonproofs/ribbonproofsmanual (ribbonproofsmanual.tex:135-210, the list-append proof)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 perl=3 (2026-09-06)  -- SHARED (both fail on etextools/ribbonproofs; pdflatex clean)
+% expect:  0 errors; the ribbonproof yields an <ltx:picture>/tikz block, ribbon c finished before the \com
+% status:  RED
+% mechanism: ribbonproofs.sty \RequirePackage{etextools} (etextools.sty:26 -> etex,etoolbox).
+%   Ribbon-list parsing (start/finish ribbons={...}) via \foreachtwo + etoolbox \ifboolexpr/\notblank
+%   + etextools loop machinery. Under raw-load our engine loses a \fi (\iffalse conditional fell off
+%   end at an Anonymous String, conditional.rs:334) AND fails to finish ribbon c (\jus[finish ribbons=]),
+%   so \com[finish e, start e] reports "Ribbon e already active {e,c}". etextools.sty:773-777
+%   \ettl@futured@f@CheckSpecials/\ifintokslist scans a token list literally containing
+%   \iffalse\ifcase\ifdefined\ifcsname\iffontchar (conditional primitives as DATA).
+%   NOTE: not reducible below the full multi-block proof (ribbon state must accumulate).
+\documentclass{article}
+\usepackage{ribbonproofs}
+\newcommand\ls{\mathit{ls}}
+\newcommand\x{\texttt{x}}\newcommand\y{\texttt{y}}
+\renewcommand\t{\texttt{t}}\renewcommand\u{\texttt{u}}
+\newcommand{\dotneq}{\mathrel{\not\doteq}}
+\begin{document}
+\begin{ribbonproof}[start ribbons={
+  c/{left=35,right=53,label=\ls\,\x\,0},
+  e/{left=74,right=86,label=\ls\,\y\,0}}]
+\startblock[extra left=33, extra right=2,
+  fit ribbons={c,e}, start ribbons={
+    d/{left=\RIBcRIGHT+2,right=\RIBeLEFT-4,label=\x\doteq 0}
+  }]{if (x==0) \{}
+\\
+\jus[finish ribbons={c,d}]{Unfold $\ls$ def}
+\com[finish ribbons={e}, start ribbons={
+  e/{label=\ls\,\x\,0}}]{x:=y}
+\\[-6]
+\moveribbons{e/{left=4}}
+\\[-1]
+\continueblock[repeat labels, start ribbons={
+  d/{label=\x\dotneq 0}}]{\} else \{}
+\\[-1]
+\jus[start ribbons={
+  a/{left=6,right=\RIBcLEFT-2,label=\ls\,\x\,\x}}]{Fold $\ls$ def}
+\\[-4]
+\moveribbons{c/{left=20},a/{right=18}}
+\\[-4]
+\com[finish ribbons={a,c,d}, start ribbons={
+  a/{label=\ls\,\x\,\t},
+  c/{label=\ls\,\t\,0},
+  d/{label=\t\dotneq 0}}]{t:=x}
+\\
+\jus[finish ribbons={c,d}, start ribbons={
+  c/{label=\exists U\ldotp\t\mapsto U * \ls\,U\,0}}]{Unfold $\ls$ def}
+\\
+\com[finish ribbons={c}, start ribbons={
+  b/{left=\RIBcLEFT,right=33,label=\t\mapsto\u},
+  c/{left=35,right=\RIBcRIGHT,label=\ls\,\u\,0}}]{u:=[t]}
+\\
+\startblock[fit ribbons={a}, 
+  extra left=2, extra right=2,start ribbons={
+  d/{label=\u\dotneq 0}}]{while (u!=0) \{}
+\\
+\jus[finish ribbons={a,b,c}, height=10, start ribbons={
+  a/{right=\RIBbRIGHT, label=\ls\,\x\,\u},
+  c/{label=\ls\,\u\,0}}]{Lemma: $\ls\,a\,b *\ls\,b\,c * \ls\,c\,0$ \\
+    implies $\ls\,a\,c * \ls\,c\,0$}
+\\
+\moveribbons{a/{right=18},c/{left=20}}
+\\[-3]
+\com[finish ribbons={a,c,d}, start ribbons={
+  a/{label=\ls\,\x\,\t},
+  c/{label=\ls\,\t\,0},
+  d/{label=\t\dotneq 0}}]{t:=u}
+\\
+\jus[finish ribbons={c,d}, start ribbons={
+  c/{label=\exists U\ldotp\t\mapsto U * \ls\,U\,0}}]{Unfold $\ls$ def}
+\\
+\com[finish ribbons={c}, start ribbons={
+  b/{left=\RIBcLEFT,right=33,label=\t\mapsto\u},
+  c/{left=35,right=\RIBcRIGHT,label=\ls\,\u\,0}}]{u:=[t]}
+\\
+\finishblock[start ribbons={
+  d/{label=\u\doteq 0}}]{\}}
+\\
+\jus[finish ribbons={b,c,d}, start ribbons={
+  b/{label=\t\mapsto0}}]{Unfold $\ls$ def}
+\\
+\com[finish ribbons={b}, start ribbons={
+  b/{label=\t\mapsto\y}}]{[t]:=y}
+\\
+\jus[finish ribbons={b,e}, start ribbons={
+  b/{right=\RIBeRIGHT,label=\ls\,\t\,0}}]{Fold $\ls$ def}
+\\
+\jus[finish ribbons={a,b}, start ribbons={
+  a/{right=\RIBeRIGHT,label=\ls\,\x\,0}}]{
+  Lemma: $\ls\,a\,b * \ls\,b\,0$ implies $\ls\,a\,0$}
+\\
+\finishblock{\}}
+\\
+\end{ribbonproof}
+\end{document}

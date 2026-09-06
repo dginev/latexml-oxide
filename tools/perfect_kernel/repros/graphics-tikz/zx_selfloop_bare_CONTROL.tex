@@ -1,0 +1,14 @@
+% witness: zx-calculus boundary control (neighbour of zx_selfloop_intersection)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 (2026-09-06)
+% expect:  0 errors; ZX diagram renders. \ar[loop] WITHOUT explicit in/out does not
+%          trigger the intersection wire loop -- marks the mechanism boundary.
+% status:  CONTROL
+\documentclass{article}
+\usepackage{tikz}
+\makeatletter
+\usetikzlibrary{zx-calculus}
+\makeatother
+\begin{document}
+\begin{ZX}\zxX{\alpha}\ar[loop]\end{ZX}
+\end{document}

@@ -29,6 +29,7 @@ use crate::{
   state::*,
 };
 
+pub mod coverage;
 pub mod standard_metrics;
 use standard_metrics::{MetricData, STDMETRICS};
 

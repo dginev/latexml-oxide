@@ -1,0 +1,14 @@
+% witness: rpgicons/rpgicons-doc (l3draw.sty:1821 \dim_new:N \l_draw_default_linewidth_dim)
+% oracle:  pdflatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; no undefined variable
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: l3draw_sty.rs binding omits \l_draw_default_linewidth_dim (raw l3draw.sty:1821)
+\documentclass{article}
+\usepackage{l3draw}
+\ExplSyntaxOn
+\dim_compare:nNnTF { \l_draw_default_linewidth_dim } > { 0pt } {} {}
+\ExplSyntaxOff
+\begin{document}
+ok
+\end{document}

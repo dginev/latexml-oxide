@@ -4016,12 +4016,23 @@ pub fn insert_block(
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
 
-  // Content no block-like container can hold anywhere (a bibliography; a
-  // section is always held by `ltx:sectional-block`) floats out AFTER the box — to the nearest ancestor that accepts
-  // it, with the insertion point following — which is what an autoclosing
-  // frame does when `\printbibliography` opens inside it (mdframed,
-  // biblatex-juradiss). The box keeps the content before it.
-  // Guard: `perfect_kernel_gemini::mdframed_block_bibliography_juradiss`.
+  // Perl `insertBlock` (TeX_Box.pool.ltxml:406-472): the first candidate, in
+  // preference order, that can hold ALL of the box's content becomes the
+  // container (:457-458 give the candidate sets; :471 the hard `ltx:block`
+  // fallback that then reports every child the model rejects). One general
+  // rule extends it (Rust-only): when no candidate holds everything, the
+  // first candidate that holds the box's LEADING content is the box, and the
+  // content it cannot hold is placed after the box, in the nearest flow
+  // ancestor that can hold it — the outcome an autoclosing frame produces
+  // for the same content written live (`\printbibliography` in mdframed:
+  // `perfect_kernel_gemini::mdframed_block_bibliography_juradiss`; a
+  // `\caption` in a rotated `\parbox`: heria-proposal, rubik —
+  // `perfect_kernel_batch56::caption_in_inline_parbox_floats_to_figure`).
+  // The climb stays inside text containers (an ancestor holding paragraphs
+  // or text): a drawing or a math box is a different medium, and content
+  // hoisted past it would strand the rest of the box (Gemini J3,
+  // biblatex-ext) — there the model's own verdict stands, as in Perl.
+  // `LXML_TRACE_INSERT_BLOCK=1` prints each decision.
   let all_candidates = [
     "ltx:inline-block",
     "ltx:inline-logical-block",
@@ -4032,21 +4043,74 @@ pub fn insert_block(
     "ltx:figure",
   ]
   .map(pin_static);
-  let uncontainable = |tag: SymStr| {
-    all_candidates
-      .iter()
-      .all(|c| document::sym_can_contain_somehow(*c, tag).is_none())
+  let candidate_set: &[SymStr] = if is_inline {
+    &all_candidates[0..3]
+  } else {
+    &all_candidates
   };
-  if let Some(bad) = node_tags.iter().position(|t| uncontainable(*t)) {
-    let tail = nodes.split_off(bad);
-    node_tags.truncate(bad);
+  let holds = |c: SymStr, t: SymStr| document::sym_can_contain_somehow(c, t).is_some();
+  let holds_all = |c: SymStr| node_tags.iter().all(|t| holds(c, *t));
+  let container_tag = candidate_set
+    .iter()
+    .copied()
+    .find(|c| holds_all(*c))
+    .or_else(|| {
+      node_tags
+        .first()
+        .and_then(|first| candidate_set.iter().copied().find(|c| holds(*c, *first)))
+    });
+  let hoisted: Vec<bool> = node_tags
+    .iter()
+    .map(|t| container_tag.is_none_or(|c| !holds(c, *t)))
+    .collect();
+  if std::env::var_os("LXML_TRACE_INSERT_BLOCK").is_some() {
+    eprintln!(
+      "insert_block: context={} inline={} tags={:?} container={:?} hoisted={:?}",
+      with(context_tag, |s| s.to_string()),
+      is_inline,
+      node_tags
+        .iter()
+        .map(|t| with(*t, |s| s.to_string()))
+        .collect::<Vec<_>>(),
+      container_tag.map(|c| with(c, |s| s.to_string())),
+      hoisted
+    );
+  }
+  if hoisted.iter().any(|h| *h) {
+    let mut tail = Vec::new();
+    let mut kept = Vec::new();
+    let mut kept_tags = Vec::new();
+    for (n, (node, tag)) in nodes.drain(..).zip(node_tags.iter().copied()).enumerate() {
+      if hoisted[n] {
+        tail.push(node);
+      } else {
+        kept.push(node);
+        kept_tags.push(tag);
+      }
+    }
     let tail_tags: Vec<SymStr> = tail.iter().map(document::get_node_qname).collect();
+    // A text container: holds paragraphs, or text itself (`ltx:p`, an
+    // inline block). A drawing (`ltx:picture`, `svg:g`) holds neither.
+    let flow = |n: &Node| {
+      document::can_contain(n, "#PCDATA")
+        || with(document::get_node_qname(n), |t| {
+          document::can_contain_somehow(t, "ltx:p")
+        })
+    };
     let mut anchor = container.clone();
     let mut ancestor = context.clone();
-    while !tail_tags
-      .iter()
-      .all(|t| with(*t, |s| document::can_contain(&ancestor, s)))
-    {
+    let mut placed = false;
+    loop {
+      if tail_tags
+        .iter()
+        .all(|t| with(*t, |s| document::can_contain(&ancestor, s)))
+      {
+        placed = true;
+        break;
+      }
+      if !flow(&ancestor) {
+        break;
+      }
       match ancestor.get_parent() {
         Some(p) if matches!(p.get_type(), Some(NodeType::ElementNode)) => {
           anchor = ancestor;
@@ -4055,19 +4119,30 @@ pub fn insert_block(
         _ => break,
       }
     }
-    // `anchor` is an element and a box's content nodes are already
-    // coalesced, so no two adjacent text nodes reach `add_next_sibling`
-    // (libxml2 merges those and frees the second — see `replace_node`).
-    let mut prev = anchor;
-    for mut n in tail {
-      n.unlink();
-      prev.add_next_sibling(&mut n)?;
-      prev = n;
-    }
-    document.set_node(&ancestor);
-    if nodes.is_empty() {
-      document.remove_node(container);
-      return Ok(Vec::new());
+    if placed {
+      // `anchor` is an element and a box's content nodes are already
+      // coalesced, so no two adjacent text nodes reach `add_next_sibling`
+      // (libxml2 merges those and frees the second — see `replace_node`).
+      let mut prev = anchor;
+      for mut n in tail {
+        n.unlink();
+        prev.add_next_sibling(&mut n)?;
+        prev = n;
+      }
+      document.set_node(&ancestor);
+      nodes = kept;
+      node_tags = kept_tags;
+      if nodes.is_empty() {
+        document.remove_node(container);
+        return Ok(Vec::new());
+      }
+    } else {
+      // No flow ancestor holds it: the content stays in the box and the
+      // model reports it (Perl's outcome).
+      nodes = kept;
+      nodes.extend(tail);
+      node_tags = kept_tags;
+      node_tags.extend(tail_tags);
     }
   }
   let nnodes = nodes.len();

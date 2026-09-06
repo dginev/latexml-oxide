@@ -1,0 +1,14 @@
+% witness: montex/montex (montex.tex:44 via mls.sty:416 \RequirePackage[..LMC..]{fontenc})
+% oracle:  pdflatex 0 errors (double-loads fontenc, defines \MyTogrog)
+% engines: rust=1 perl=1 (2026-09-06)  -- SHARED (surpass approved: pdflatex clean)
+% expect:  0 errors; body contains the LMC symbol \MyTogrog (₮) once
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: fontenc.sty un-marks itself loaded (\global\let\ver@fontenc.sty\relax)
+%   so a 2nd \usepackage[enc]{fontenc} reloads & \input <enc>enc.def. LaTeXML's
+%   fontenc binding does NOT reload -> lmcenc.def (\DeclareTextSymbol\MyTogrog) skipped.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[LMC,T1]{fontenc}
+\begin{document}
+Togrog: \MyTogrog\ done.
+\end{document}

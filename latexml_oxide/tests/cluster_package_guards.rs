@@ -12839,6 +12839,15 @@ mod perfect_kernel_batch56 {
     convert, convert_args, convert_files, convert_with, error_count,
   };
 
+  /// Self-skip helper: is this file in the host TeX tree?
+  fn kpsewhich_has(name: &str) -> bool {
+    std::process::Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
+
   /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
   /// non-ASCII char (utf8.def makes the bytes active), so under the default
   /// profile `\xα` is `\x` followed by α, not one control sequence.
@@ -16070,6 +16079,248 @@ c &= d
     let (stderr, xml) = convert(control, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("S1a") && xml.contains("S1b"), "{xml}");
+  }
+
+  /// eTeX `\iffontchar` (etex_man §3.7) answers from the font FILE: a
+  /// `\font`-declared TFM's populated `char_info` slots (cmr10 = 128 OT1
+  /// slots). Perl leaves the conditional undefined; the former stub said TRUE
+  /// for every slot.
+  #[test]
+  fn iffontchar_reads_tfm_coverage() {
+    let tex = "\\documentclass{article}\n\\font\\x=cmr10 \n\\begin{document}\n\\x A:\\iffontchar\\x`A yes\\else no\\fi; 200:\\iffontchar\\x 200 yes\\else no\\fi; cur:\\iffontchar\\font`A yes\\else no\\fi/\\iffontchar\\font 200 yes\\else no\\fi.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("A:yes; 200:no; cur:yes/no."), "{xml}");
+  }
+
+  /// unicodefonttable's `\displayfonttable` walks every code point of the
+  /// range and keeps a cell only where `\iffontchar\font` is true; with real
+  /// OpenType `cmap` coverage the control blocks U+0000–001F and U+0080–009F
+  /// of Latin Modern Sans vanish (the samples manual emitted 262k cells and
+  /// hit the memory fuse). Self-skips without the font.
+  #[test]
+  fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
+    if !kpsewhich_has("lmsans10-regular.otf") || !kpsewhich_has("unicodefonttable.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{fontspec}\n\\setmainfont{Latin Modern Sans}\n\\usepackage{unicodefonttable}\n\\begin{document}\n\\displayfonttable[range-start=0000,range-end=00FF]{Latin Modern Sans}\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let cells = xml.matches("<td").count();
+    assert!(cells > 150 && cells < 260, "cells={cells}\n{xml}");
+    assert!(
+      !xml.contains("U+0000"),
+      "control block row must be skipped:\n{xml}"
+    );
+    assert!(
+      !xml.contains("U+0080"),
+      "C1 block row must be skipped:\n{xml}"
+    );
+    assert!(xml.contains("U+0040") || xml.contains("U+0041"), "{xml}");
+  }
+
+  /// fontenc.sty un-marks itself loaded at its end, so a second
+  /// `\usepackage[<encs>]{fontenc}` loads again and inputs the new
+  /// encodings' .def files (montex: `\MyTogrog` from lmcenc.def).
+  #[test]
+  fn fontenc_reloads_with_new_encodings() {
+    if !kpsewhich_has("lmcenc.def") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage[LMC,T1]{fontenc}\n\\makeatletter\n\\begin{document}\n\\typeout{FE:\\@ifpackageloaded{fontenc}{loaded}{unloaded}}\nTogrog: \\MyTogrog\\ done.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Option clash"), "{stderr}");
+    assert!(stderr.contains("FE:unloaded"), "{stderr}");
+    assert!(xml.contains("done."), "{xml}");
+  }
+
+  /// `\psset` is pst-xkey's family-aware `\setkeys+[psset]`; a no-op lost the
+  /// key BODIES that define pst-node's `\psk@mnodesize` & co. (psmatrix under
+  /// pstricks-add: dsptricks 101 errors).
+  #[test]
+  fn psset_dispatches_family_key_bodies() {
+    if !kpsewhich_has("pstricks-add.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\begin{document}\n\\begin{psmatrix}\n  A & B \\\\\n  C & D\n\\end{psmatrix}\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    // pst-node's psmatrix internals now exist; the remaining psmatrix
+    // `\halign` group cascade and pstricks-add's colour-key internals
+    // (`\pst@getcolor` = xcolor's `\XC@getcolor`) are separate roots.
+    assert!(!stderr.contains("psk@mnodesize"), "{stderr}");
+    assert!(!stderr.contains("Error:undefined:\\psk@mnode"), "{stderr}");
+    assert!(!stderr.contains("Error:undefined:\\psk@mcol"), "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    // Control: the idiomatic colour default through the real `\psset` runs
+    // pstricks' `\pst@getcolor` over color's `\color@<name>` storage.
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\psset{linewidth=2pt,linecolor=red}\n\\begin{document}\nok \\psframebox{boxed}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // (`\psframebox`'s content is dropped by the DVI-only binding — a
+    // separate, pre-existing gap; the control is the colour key running clean.)
+    assert!(xml.contains("ok"), "{xml}");
+  }
+
+  /// iftex.sty:272-291: LuaTeX always answers `\ifpdf` TRUE (PDF output
+  /// mode); tikzrput.sty defines `\rput` only inside that branch.
+  #[test]
+  fn ifpdf_is_true_under_the_luatex_profile() {
+    let tex = "\\documentclass{article}\n\\usepackage{iftex}\n\\begin{document}\n\\ifpdf PDF\\else DVI\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">PDF<") || xml.contains("PDF\n"), "{xml}");
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("DVI"), "{xml}");
+  }
+
+  /// listings.sty:2315-2316 inputs `listings.cfg` AND the user's
+  /// `lstlocal.cfg` (labyrinth ships `\pkgname` there).
+  #[test]
+  fn listings_reads_lstlocal_cfg() {
+    let tex = "\\documentclass{article}\n\\usepackage{listings}\n\\begin{document}\nThe \\pkgname{labyrinth} package.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[(
+      "lstlocal.cfg",
+      "\\newcommand{\\pkgname}[1]{{\\normalfont\\textsf{#1}}}\n",
+    )]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("font=\"sansserif\"") && xml.contains("labyrinth"),
+      "{xml}"
+    );
+  }
+
+  /// Single-name gaps of sweep #47: lineno.sty:2214 `\firstlinenumber`,
+  /// l3draw.sty:1821 `\l_draw_default_linewidth_dim`, libertine.sty:456
+  /// `\biolinumLF` — each binding replaced the raw file without the name.
+  #[test]
+  fn sweep47_single_name_gaps() {
+    let tex = "\\documentclass{article}\n\\usepackage{lineno}\n\\usepackage{l3draw}\n\\usepackage{libertine}\n\\ExplSyntaxOn\n\\dim_compare:nNnTF { \\l_draw_default_linewidth_dim } > { 0pt } { \\def\\lw{POS} } { \\def\\lw{ZERO} }\n\\ExplSyntaxOff\n\\begin{document}\n\\firstlinenumber{1}%\nlw:\\lw; {\\biolinumLF bio}.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("lw:POS;"), "{xml}");
+    assert!(xml.contains("bio"), "{xml}");
+  }
+
+  /// Under `[utf8]{inputenc}` a decoded Latin-1 code point stays catcode 12
+  /// even after t1enc.dfu's `\DeclareUnicodeCharacter{00E1}` (utf8.def's
+  /// invariant); bibarts's raw-byte UTF-8 lead detector must not match the
+  /// document's `á`. Latin-1 input keeps the byte active.
+  #[test]
+  fn utf8_input_keeps_latin1_code_points_other() {
+    let tex = "\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\begin{document}\n\\typeout{CC:\\the\\catcode`á:\\the\\catcode`α}\ncaf\\'e café\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("CC:12:"), "{stderr}");
+    assert!(xml.contains("café café"), "{xml}");
+    if kpsewhich_has("bibarts.sty") {
+      let tex = "\\documentclass[12pt,a4paper]{article}\n\\usepackage{bibarts}\\bacaptionsgerman\n\\usepackage{ngerman}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\begin{document}\n\\textsc{\\hy á}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("á"), "{xml}");
+    }
+  }
+
+  /// latex.ltx:15347/15362/15388/15391: `\begin`/`\end` fire the kernel's
+  /// `env/NAME/{before,begin,end,after}` hooks (lthooks store, real under the
+  /// raw-loaded latexml.sty) around both `\newenvironment` and
+  /// DefEnvironment-managed environments; functional.sty's
+  /// `\AddToHook{env/demohigh/before}{\MyDeleteShortVerb}` never ran.
+  #[test]
+  fn kernel_env_hooks_fire_around_environments() {
+    let tex = "\\documentclass{article}\n\\newenvironment{foo}{[I}{J]}\n\\AddToHook{env/foo/before}{B}\n\\AddToHook{env/foo/begin}{G}\n\\AddToHook{env/foo/end}{E}\n\\AddToHook{env/foo/after}{A}\n\\AddToHook{env/quote/before}{QB}\n\\AddToHook{env/quote/begin}{QG}\n\\AddToHook{env/quote/end}{QE}\n\\AddToHook{env/quote/after}{QA}\n\\begin{document}\nx\\begin{foo}body\\end{foo}y\n\n\\begin{quote}qbody\\end{quote}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // latex.ltx:15362: `env/X/begin` runs before `\csname X\endcsname`.
+    assert!(xml.contains("xBG[IbodyEJ]Ay"), "{xml}");
+    // A DefEnvironment-managed env: `begin` before the constructor opens its
+    // element (like `\quote` starting its list), `end` inside, `after` outside.
+    assert!(xml.contains("QBQG"), "{xml}");
+    assert!(xml.contains("qbodyQE"), "{xml}");
+    let quote_end = xml.find("</quote>").expect("quote element");
+    assert!(xml[quote_end..].contains("QA"), "{xml}");
+    // The default (non-raw) profile keeps its no-op hooks: no errors, no marks.
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[Ibody"), "{xml}");
+  }
+
+  /// A `\caption` inside a `\parbox` whose insert context is inline
+  /// (`\rotatebox`) floats out to the enclosing figure (`insert_block`'s
+  /// float-out predicate keyed on the inline candidate set), instead of a
+  /// hard `ltx:block` rejecting it (heria-proposal, rubik).
+  #[test]
+  fn caption_in_inline_parbox_floats_to_figure() {
+    if !kpsewhich_has("tcolorbox.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage[raster]{tcolorbox}\n\\begin{document}\n\\begin{figure}[hbt]\n\\rotatebox{90}{\\parbox{10cm}{%\n\\begin{tcbraster}[raster columns=2]\n\\begin{tcolorbox}[title=A]x\\end{tcolorbox}\n\\begin{tcolorbox}[title=B]y\\end{tcolorbox}\n\\end{tcbraster}\n\\caption{Cap}\\label{fig:x}\n}}\n\\end{figure}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let fig = xml.find("<figure").expect("figure");
+    let fig_end = xml[fig..]
+      .find("</figure>")
+      .map(|i| fig + i)
+      .expect("figure end");
+    let body = &xml[fig..fig_end];
+    assert_eq!(body.matches("<caption").count(), 1, "{xml}");
+    assert!(
+      !xml.contains("<block>\n      <caption") && !xml.contains("<block><caption"),
+      "{xml}"
+    );
+  }
+
+  /// A `\parbox` body that leaves a conditional open (jourcl.cls:145) must
+  /// not be digested inside the wrapper's own `\ifx` dispatch.
+  #[test]
+  fn parbox_body_dangling_conditional_is_not_the_wrappers() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\ifempty#1{\\def\\temp{#1} \\ifx\\temp\\empty }\n\\def\\RP#1{ \\ifempty{#1} \\else \\sbox0{#1}\\ifdim\\wd0=0pt {} \\else \\ifdim0pt=\\dimexpr\\ht0+\\dp0\\relax {} \\else {N:#1} \\fi \\fi }\n\\makeatother\n\\begin{document}\n\\parbox{3cm}{ \\RP{Reviewer} }\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("N:Reviewer"), "{xml}");
+  }
+
+  /// latex.ltx:18330 `\flushbottom` is a robust macro (the dump carries it);
+  /// scrlttr2.cls:5053 `\g@addto@macro`s it, which a primitive clobber turned
+  /// into a self-expanding loop.
+  #[test]
+  fn flushbottom_stays_the_kernel_macro() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\g@addto@macro\\flushbottom{\\relax}\n\\makeatother\n\\begin{document}\n\\flushbottom OK\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("OK"), "{xml}");
+  }
+
+  /// A trailing `\multicolumn` row with no `\\` before `\end{tabular}` must
+  /// still close the alignment (the DefEnvironment `env/tabular/end` hook
+  /// digests nothing when the hook has no code — latex.ltx:15386's
+  /// `\IfHookEmptyTF` guard).
+  #[test]
+  fn trailing_multicolumn_row_closes_the_alignment() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{tabular}{cc}\nc & d\\\\\n\\multicolumn{2}{l}{Total: 5}\n\\end{tabular}\n\\end{document}\n";
+    for raw in [false, true] {
+      let (stderr, xml) = convert(tex, raw);
+      assert_eq!(error_count(&stderr), 0, "raw={raw}: {stderr}");
+      assert_eq!(xml.matches("<tr").count(), 2, "raw={raw}: {xml}");
+    }
+  }
+
+  /// An environment's closing tag closes only what its own replacement
+  /// opened; content the element could not hold (a tcolorbox directly in a
+  /// `{picture}`: pagelayout, xebaposter) auto-closed it already.
+  #[test]
+  fn environment_close_after_content_autoclose_is_not_an_error() {
+    if !kpsewhich_has("tcolorbox.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{tcolorbox}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(200,200)\n\\begin{tcolorbox}A box directly in a picture.\\par Second para.\\end{tcolorbox}\n\\end{picture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<picture") && xml.contains("Second para."),
+      "{xml}"
+    );
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).

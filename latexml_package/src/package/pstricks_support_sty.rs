@@ -26,14 +26,25 @@ LoadDefinitions!({
   // Intentional divergence (WISDOM #44 class: DVI-only + parameter-type
   // blocker): pstricks is DVI-only — the tracker (_psActiveTransform /
   // ackTransform) lives only in PSTricks post-processing and is not
-  // ported to Rust. Both the \psset DefConstructor → DefMacro flip
-  // (L28) and the \@@@ackscale DefPrimitive → DefMacro flip (L181) are
-  // no-op arg-consumers whose observable behavior under an
+  // ported to Rust. The \@@@ackscale DefPrimitive → DefMacro flip (L181)
+  // is a no-op arg-consumer whose observable behavior under an
   // HTML/MathML backend is identical to a constructor body of "".
   DefMacro!("\\pst@object{}", "#1");
   def_macro_noop("\\use@par")?;
   def_macro_noop("\\addto@par{}")?;
-  def_macro_noop("\\psset{}")?;
+  // `\psset` itself stays the raw pst-xkey.tex definition (pstricks_sty.rs),
+  // so the family key BODIES run: `linecolor=` & co. call `\pst@getcolor`
+  // (pstricks.tex `\pst@getcolor{name}\psk@linecolor`). pstricks.sty:155-172
+  // takes xcolor's `\XC@getcolor` when xcolor is loaded (not in our xcolor
+  // binding — `\let` of an undefined name) and otherwise defines it over
+  // `\color@<name>` storage, which is exactly how color_sty.rs stores a
+  // `\definecolor` — so the no-xcolor definition is the faithful one here.
+  // `\pst@usecolor` writes the PostScript colour (`\c@lor@to@ps`): no
+  // PostScript backend, so it emits nothing. Guard:
+  // `perfect_kernel_batch56::psset_dispatches_family_key_bodies` (control:
+  // `\psset{linewidth=2pt,linecolor=red}` converts clean).
+  RawTeX!(r"\def\pst@getcolor#1#2{\@ifundefined{\string\color@#1}{\@pstrickserr{Color `#1' not defined}\@eha}{\edef#2{#1}}}
+\def\pst@usecolor#1{}");
   def_macro_noop("\\psset@special{}")?;
 
   // Perl pstricks_support.sty.ltxml L580-606: register 22 pstricks keyvals

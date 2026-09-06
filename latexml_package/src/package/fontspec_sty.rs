@@ -1,5 +1,18 @@
 use crate::prelude::*;
 
+/// Resolve a fontspec font name (family or file) to a font file on disk.
+fn fontspec_resolve(name: &str) -> Option<String> {
+  ::latexml_core::common::font::coverage::resolve_fontspec_file(name)
+}
+
+/// Record the file a fontspec selection resolved to as `FONTSPEC_FONTFILE`
+/// (local unless `scope` says global); nothing when unresolved.
+fn fontspec_record_file(name: &str, scope: Option<Scope>) {
+  if let Some(path) = fontspec_resolve(name) {
+    assign_value("FONTSPEC_FONTFILE", path, scope);
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: fontspec.sty.ltxml
@@ -21,8 +34,25 @@ LoadDefinitions!({
   // font name (`\setmonofont{DejaVu Sans Mono}[Scale=…]`) — the `[]{}[]`
   // signatures absorb both the v1 pre-optional and v2 post-optional forms
   // (hvfloat/libertinus-otf corpus preambles use the v2 form bare).
-  def_macro_noop("\\fontspec[]{}[]")?;
-  def_macro_noop("\\setmainfont[]{}[]")?;
+  // The font itself stays the NFSS current font (no OpenType shaping here),
+  // but the SELECTED FILE is recorded so `\iffontchar\font` (etex.rs) can
+  // answer from its `cmap` coverage: fontspec.pdf §3 takes a family name
+  // (luaotfload's name database) or a file name; `coverage::
+  // resolve_fontspec_file` resolves both from the TeX Live tree's ls-R.
+  // `\fontspec` selects locally (fontspec-xetex.sty:571 `\fontspec_select:nn`
+  // + `\selectfont` in the current group); `\setmainfont` sets the
+  // document default (global). Unresolved names record nothing (the
+  // conditional then keeps its permissive TRUE). Witness
+  // unicodefonttable-samples (`\displayfonttable{TeX Gyre Pagella}`).
+  DefPrimitive!("\\fontspec[]{}[]", sub[(_pre, name, _post)] {
+    fontspec_record_file(&name.to_string(), None);
+  });
+  DefPrimitive!("\\setmainfont[]{}[]", sub[(_pre, name, _post)] {
+    fontspec_record_file(&name.to_string(), Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@fontspec@usefile{}", sub[(path)] {
+    AssignValue!("FONTSPEC_FONTFILE" => path.to_string());
+  });
   def_macro_noop("\\setsansfont[]{}[]")?;
   def_macro_noop("\\setmonofont[]{}[]")?;
   // The face/family definers (fontspec-xetex.sty:575-605, all `{ m O{} m
@@ -37,11 +67,21 @@ LoadDefinitions!({
   // OpenType font resolves here, so the switch keeps the current family
   // (`\selectfont`). Perl (fontspec.sty.ltxml:35-36) shares the no-op.
   // Guard: `perfect_kernel_batch54::fontspec_definers_define_a_font_switch`.
-  DefMacro!("\\lx@fontspec@definer DefToken []{}[]", sub[(cs, _pre, _font, _post)] {
+  DefMacro!("\\lx@fontspec@definer DefToken []{}[]", sub[(cs, _pre, font, _post)] {
+    // The defined switch also records the resolved file (see `\fontspec`)
+    // so `\iffontchar\font` under `{\Foo …}` answers from that font.
+    let mut body = Vec::new();
+    if let Some(path) = fontspec_resolve(&font.to_string()) {
+      body.push(T_CS!("\\lx@fontspec@usefile"));
+      body.push(T_BEGIN!());
+      body.extend(TokenizeInternal!(TeXString::assembled(path)).unlist());
+      body.push(T_END!());
+    }
+    body.push(T_CS!("\\selectfont"));
     def_macro(
       cs,
       None,
-      Tokens!(T_CS!("\\selectfont")),
+      Tokens::new(body),
       Some(ExpandableOptions { protected: true, ..Default::default() }),
     )?;
     Ok(Tokens::default())

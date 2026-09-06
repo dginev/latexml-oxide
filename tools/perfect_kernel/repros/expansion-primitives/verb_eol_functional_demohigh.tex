@@ -1,0 +1,18 @@
+% witness: functional/functional (functional.tex:5998, demohigh body \seqVarJoin{|})
+% oracle:  pdflatex 0 errors (lualatex per residue; mechanism identical)
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; document paragraph present, no \verb scan
+% status:  RED
+% mechanism: env/demohigh/before hook (\MyDeleteShortVerb) never fires ->
+%   shortvrb '|' stays active -> codehigh \tl_set_rescan of {|} = active \verb -> EOL
+\documentclass{article}
+\usepackage{codehigh}
+\usepackage{shortvrb}
+\MakeShortVerb\|
+\AddToHook{env/demohigh/before}{\DeleteShortVerb\|}
+\AddToHook{env/demohigh/after}{\MakeShortVerb\|}
+\begin{document}
+\begin{demohigh}
+\detokenize{a}{|}
+\end{demohigh}
+\end{document}

@@ -1132,6 +1132,40 @@ pub fn def_constructor(
   }
 }
 
+/// `\UseHook{env/<name>/<point>}` as tokens, or `None` when `\UseHook` is not
+/// defined (plain format): the LaTeX kernel fires these around every
+/// environment (latex.ltx:15347/15362/15388/15391), from the lthooks store.
+fn env_hook_invocation(name: &str, point: &str) -> Option<Tokens> {
+  let use_hook = T_CS!("\\UseHook");
+  lookup_meaning(&use_hook)?;
+  let mut toks = vec![use_hook, T_BEGIN!()];
+  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
+  toks.push(T_END!());
+  Some(Tokens::new(toks))
+}
+
+/// latex.ltx:15386 fires `env/#1/end` only `\IfHookEmptyTF`-guarded (an empty
+/// hook must contribute nothing inside an alignment's last cell): ask the
+/// kernel's own predicate — `\IfHookEmptyTF{env/<name>/<point>}{0}{1}` expands
+/// to `1` when there is code (the no-op format's stub answers `#3` = `1`, and
+/// its `\UseHook` then digests nothing).
+pub fn env_hook_has_code(name: &str, point: &str) -> bool {
+  let mut toks = vec![T_CS!("\\IfHookEmptyTF"), T_BEGIN!()];
+  toks.extend(ExplodeText!(format!("env/{name}/{point}")));
+  toks.push(T_END!());
+  toks.extend([
+    T_BEGIN!(),
+    T_OTHER!("0"),
+    T_END!(),
+    T_BEGIN!(),
+    T_OTHER!("1"),
+    T_END!(),
+  ]);
+  match gullet::do_expand(Tokens::new(toks)) {
+    Ok(expanded) => expanded.to_string().trim() == "1",
+    Err(_) => false,
+  }
+}
 /// Defines an Environment that generates a specific XML fragment.
 ///
 /// `compiled_replacement` is of the same form as for DefConstructor, but will generally include
@@ -1178,12 +1212,22 @@ pub fn def_environment(
   });
   before_digest_env.push(bgroup_closure);
   let atbegin_key = s!("@environment@{name}@atbegin");
+  // latex.ltx:15362 `\UseHook{env/#1/begin}` inside the group (the
+  // kernel's lthooks store); the `@environment@…` PushValue store is
+  // etoolbox's. `\UseHook` exists only under the LaTeX format.
+  let begin_hook_tokens = env_hook_invocation(&name, "begin");
+  let begin_hook_name = name.clone();
   let atbegin_hook_closure = before_digest_simple!({
+    let mut boxes = Vec::new();
     if let Some(b) = lookup_tokens(&atbegin_key) {
-      vec![digest(b.unlist())?]
-    } else {
-      Vec::new()
+      boxes.push(digest(b.unlist())?);
     }
+    if let Some(hook) = begin_hook_tokens.clone()
+      && env_hook_has_code(&begin_hook_name, "begin")
+    {
+      boxes.push(digest(hook.unlist())?);
+    }
+    boxes
   });
 
   before_digest_env.push(atbegin_hook_closure);
@@ -1377,12 +1421,21 @@ pub fn def_environment(
     (options.before_digest_end, cloned)
   };
   let atend_key = s!("@environment@{name}@atend");
+  // latex.ltx:15386-15388 `\UseHook{env/#1/end}` inside the group before
+  // `\end#1`.
+  let end_hook_tokens = env_hook_invocation(&name, "end");
+  let end_hook_name = name.clone();
   let atend_hook_closure = before_digest_simple!({
+    let mut boxes = Vec::new();
     if let Some(e) = lookup_tokens(&atend_key) {
-      vec![digest(e.unlist())?]
-    } else {
-      Vec::new()
+      boxes.push(digest(e.unlist())?);
     }
+    if let Some(hook) = end_hook_tokens.clone()
+      && env_hook_has_code(&end_hook_name, "end")
+    {
+      boxes.push(digest(hook.unlist())?);
+    }
+    boxes
   });
   before_digest_for_endenv.push(atend_hook_closure);
 

@@ -1,0 +1,13 @@
+% witness: pgfornament/tikzrput (tikzrput.tex:229), pgfornament/ornaments (ornaments.tex:331)
+% oracle:  lualatex 0 errors
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; \rput body text "Hello" reaches output
+% status:  GREEN (batch 56x, 2026-09-06)
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: tikzrput.sty defines \rput inside `\ifpdf ... \fi`; iftex \ifpdf must be
+%   TRUE under LuaTeX PDF mode. If \ifpdf false, \rput stays undefined.
+\documentclass{article}
+\usepackage{tikzrput}
+\begin{document}
+\rput(0,0){Hello}
+\end{document}

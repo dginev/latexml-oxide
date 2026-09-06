@@ -60,7 +60,25 @@ pub fn compile_replacement(input: DeriveInput) -> TokenStream {
 }
 
 /// Lower a parsed op-list to a sequence of `quote!` statements.
-fn emit_ops(ops: &[ReplacementOp]) -> Vec<TokenStream2> { ops.iter().map(emit_op).collect() }
+fn emit_ops(ops: &[ReplacementOp]) -> Vec<TokenStream2> {
+  // A closing tag for an element this replacement opened itself closes only
+  // what is still open: content the element could not hold auto-closed it
+  // already (mirrors the runtime interpreter, replacement.rs `exec_ops`).
+  let mut opened: Vec<&str> = Vec::new();
+  ops
+    .iter()
+    .map(|op| match op {
+      ReplacementOp::OpenElement { qname, self_closing: false, .. } => {
+        opened.push(qname.as_str());
+        emit_op(op)
+      },
+      ReplacementOp::CloseElement { qname } if opened.contains(&qname.as_str()) => {
+        quote!(document.close_element_if_open(#qname)?;)
+      },
+      _ => emit_op(op),
+    })
+    .collect()
+}
 
 fn emit_op(op: &ReplacementOp) -> TokenStream2 {
   match op {
