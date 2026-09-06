@@ -123,6 +123,7 @@ pub mod harvmac_tex;
 pub mod hepnames_sty;
 pub mod hepparticles_sty;
 pub mod hpstatement_sty;
+pub mod hypdestopt_sty;
 pub mod hyphenat_sty;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
@@ -382,6 +383,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("datetime2", "sty", datetime2_sty::load_definitions),
   ("datetime", "sty", datetime_sty::load_definitions),
   ("emlines", "sty", emlines_sty::load_definitions),
+  ("hypdestopt", "sty", hypdestopt_sty::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
   ("l3draw", "sty", l3draw_sty::load_definitions),
   ("lettrine", "sty", lettrine_sty::load_definitions),

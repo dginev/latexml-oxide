@@ -143,3 +143,60 @@ whose error count ROSE (a regression of L1–L9 — report first, with the two f
 errors side by side) and every doc that reached 0.
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 7 only)
+
+- **Task M1 (algpseudocodex binding)**: Completed on `gemini/pk-helpers-7`.
+  - Divergence #209 added to `docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
+  - Preserved `\Statex` -> in-line break semantics; `statex_continues_the_open_line_box` passes cleanly.
+  - Multi-line boxes: tracked pending vs active box state to avoid duplicate `<ltx:text>` wrapping.
+  - Options: `noEnd` defaults to true, `commentColor` to gray; `indLines` and `spaceRequire` noted as dropped.
+  - Defensive fallback for old `algorithmic` loading first.
+  - Witness 2511.21969 Algorithm 2 verified clean at 0 errors.
+  - Guards: `algpseudocodex_nested_and_multiline_boxes`, `algpseudocodex_defensive_when_algorithmic_loaded_first`.
+
+- **Task M2 (`\maketitle` honours class's dropped body)**: Completed on `gemini/pk-helpers-7`.
+  - Generalised L9 in `latexml_core/src/state.rs`: dropped macro definitions save their token body in `<cs>:redefined@body` (Stored::Tokens).
+  - In `latexml_engine/src/latex_constructs/sect05.rs`, if `\maketitle:redefined` is set, `\maketitle` runs `\csname\maketitle:redefined@body\endcsname` after `\lx@frontmatterhere`, clearing `\@title`, `\@author`, `\@date` beforehand to prevent duplicate frontmatter rendering.
+  - Retired `uspatent_cls.rs` unlock mechanism.
+  - Guards: `uspatent_repro_zero_errors`, `maketitle_control_class_unchanged`.
+
+- **Task M3 (xcolor `\XC@getcolor` faithful normalisation)**: Completed on `gemini/pk-helpers-7`.
+  - Ported `xcolor.sty:1373-1390` (`\XC@getcolor`, `\XC@getc@lor`, `\XC@getc@l@r`, `\XC@calc@`, `\XC@calc@@`, `\XC@typ@`).
+  - Added `\XC@undeclaredcolor` macro to `xcolor_sty.rs` (resolving callers from `lua-ul.sty`).
+  - Guards: `xcolor_xc_getcolor_faithful_normalisation`, `xcolor_undeclaredcolor_macro`.
+
+- **Task M4 (Singles from sweep-49 residue)**: Completed on `gemini/pk-helpers-7`.
+  - `biblatex-cheatsheet/biblatex-cheatsheet` (s49: 3 errors -> local: 0 errors):
+    - Added binding `latexml_contrib/src/hypdestopt_sty.rs` (destination optimization is a PDF artifact, out-of-scope for XML).
+    - Added stubs for `\svnauthor`, `\svnmonth`, `\svnrev` to `latexml_contrib/src/svn_multi_sty.rs`.
+    - Perl has 3 errors; latexml-oxide reaches 0 errors (surpassing Perl, matching pdflatex oracle).
+    - Guard: `biblatex_cheatsheet_hypdestopt_and_svn_multi`.
+  - `kksymbols/kksymbols-doc` (s49: 7 errors -> local: 0 errors):
+    - Hooked `package/lltjfont/after` in `latexml_package/src/package/latexml_sty/mod.rs` (under `luatex` profile) to restore `\DeclareRobustCommand\fontfamily[1]{\edef\f@family{##1}}`.
+    - Eliminates literal `cmtttruecmttcmtt` leaking from unexecuted `\directlua` into `<ltx:listing>`, resolving RelaxNG schema violation.
+    - Guard: `kksymbols_fontfamily_no_text_leak`.
+  - `notebeamer/notebeamer-demo` (s49: 6 errors -> local: 0 errors):
+    - Hooked `file/l3backend-dvips.def/after` in `latexml_package/src/package/latexml_sty/mod.rs` to stub `\__graphics_backend_get_pagecount:n` with fallback page count.
+    - Avoids disabled piped shell escape `extractbb -O` in dvips persona ("Cannot run piped system commands").
+    - Perl had 101 errors + Fatal; latexml-oxide reaches 0 errors (surpassing Perl, matching pdflatex oracle).
+    - Guard: `notebeamer_pagecount_dvips_fallback`.
+  - `istgame/istgame-doc` (s49: 2 errors):
+    - Engine seam identified: `\documentclass[amsmath]{oblivoir}` invokes `\LoadClassWithOptions{oblivoir-utf}`.
+    - In `latexml_engine/src/latex_constructs/sect05.rs:411`, `\LoadClassWithOptions` passes `Vec::new()` to `load_class` instead of calling `load_class_with_options(&class, Tokens!())`. Caller options are dropped; `oblivoir-utf.cls:77` never loads `amsmath`, leaving `\text` and `\binom` undefined.
+    - Repro staged at `tools/perfect_kernel/repros/loader/loadclasswithoptions_dropped_options.tex`.
+  - `gentombow/gentombow`: Shared-failure with Perl (`Option 'pdfbox' is driver-dependent!`).
+  - `scanpages/scanpages-doc`: Shared-failure with Perl (`Must be processed with pdf[la]tex!`).
+  - `xebaposter/poster`: Shared-failure with Perl (RelaxNG schema: `<ltx:bibliography> isn't allowed in <ltx:block>`).
+
+- **Task M5 (Verification of Round 6 on sweep #50)**: Completed.
+  - Audited 1548 oracle-clean documents (`~/data/perfect_kernel/oracle_verdicts.tsv`, pdflatex/lualatex, exit 0, err 0).
+  - Cleared to 0 in s50:
+    - `latex-refsheet/LaTeX_RefSheet`: s49=1 -> s50=0
+    - `rec-thy/rec-thy`: s49=1 -> s50=0
+    - `uspatent/PatentApplication`: s49=1 -> s50=0
+  - Error reductions in s50:
+    - `latex-doc-ptr/latex-doc-ptr`: s49=2 -> s50=1
+    - `tagpdf/tagpdf`: s49=2 -> s50=1
+  - Regressions in s50 (fixed in Task M3 on this branch):
+    - `gckanbun/kanshi-sample`: s49=0 -> s50=1 (first: `Error:undefined:\XC@undeclaredcolor`)
+    - `gckanbun/whole-vert-sample`: s49=0 -> s50=1 (first: `Error:undefined:\XC@undeclaredcolor`)
+    - Mechanism: `lua-ul.sty:100` strips `\xcolor@` and expands `{model}{spec}` against `\XC@undeclaredcolor`. Fixed by defining `\XC@undeclaredcolor` macro in `latexml_package/src/package/xcolor_sty.rs`. Both documents verified back to 0 errors. Guard: `xcolor_undeclaredcolor_macro`.

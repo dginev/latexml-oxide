@@ -18071,4 +18071,67 @@ Hello world.
     let (stderr, _xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
   }
+
+  /// lltjfont fontfamily redefined without leaking trailing arguments into gullet (witness: kksymbols/kksymbols-doc).
+  #[test]
+  fn kksymbols_fontfamily_no_text_leak() {
+    let tex = r"\documentclass[luatex,fontsize=10pt,paper=b5,twoside]{jlreq}
+\usepackage{KKsymbols}
+\usepackage{listings}
+\begin{document}
+\begin{lstlisting}
+hello
+\end{lstlisting}
+\end{document}
+";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_with(
+      tex,
+      Some("[rawstyles,rawclasses,luatex]latexml.sty"),
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("hello"), "{xml}");
+    assert!(!xml.contains("cmtttrue"), "{xml}");
+  }
+
+  /// l3backend-dvips pagecount hook prevents "Cannot run piped system commands" (witness: notebeamer/notebeamer-demo).
+  #[test]
+  fn notebeamer_pagecount_dvips_fallback() {
+    let tex = r"\documentclass{article}
+\usepackage{notebeamer}
+\begin{document}
+\includebeamer[nup=1,pages=1]{example-image-a4.pdf}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// hypdestopt binding and svn-multi \svnrev, \svnmonth, \svnauthor stubs (witness: biblatex-cheatsheet/biblatex-cheatsheet).
+  #[test]
+  fn biblatex_cheatsheet_hypdestopt_and_svn_multi() {
+    let tex = r"\documentclass{article}
+\usepackage{hypdestopt}
+\usepackage{svn-multi}
+\begin{document}
+\svnrev\ \svnmonth\ \svnauthor
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// xcolor.sty \XC@undeclaredcolor used by lua-ul.sty (witness: gckanbun/kanshi-sample).
+  #[test]
+  fn xcolor_undeclaredcolor_macro() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\begin{document}
+\XC@undeclaredcolor{rgb}{1,0,0}{Red text}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Red text"), "{xml}");
+  }
 }

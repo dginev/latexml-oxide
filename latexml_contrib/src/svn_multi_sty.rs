@@ -13,6 +13,7 @@ LoadDefinitions!({
   def_macro_noop("\\svnFullAuthor OptionalMatch:* {}")?;
   def_macro_noop("\\svnRegisterAuthor{}{}")?;
   def_macro_noop("\\svnRegisterRevision OptionalMatch:* {}{}")?;
+  def_macro_noop("\\svnauthor")?;
   def_macro_noop("\\svncgtime")?;
   def_macro_noop("\\svncgtimezone")?;
   def_macro_noop("\\svncgtoday")?;
@@ -38,7 +39,9 @@ LoadDefinitions!({
   def_macro_noop("\\svnid{}")?;
   def_macro_noop("\\svnidlong")?;
   def_macro_noop("\\svnminute")?;
+  def_macro_noop("\\svnmonth")?;
   DefMacro!("\\svnnolinkurl", "#1");
+  def_macro_noop("\\svnrev")?;
   def_macro_noop("\\svnsecond")?;
   def_macro_noop("\\svntime")?;
   def_macro_noop("\\svntimezone")?;
