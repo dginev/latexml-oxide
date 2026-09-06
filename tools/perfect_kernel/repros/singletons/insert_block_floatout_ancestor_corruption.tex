@@ -1,0 +1,29 @@
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins}
+\usepackage{biblatex}
+\begin{filecontents*}{\jobname.bib}
+@article{test, author={Test}, title={Title}, journal={J}, year={2020}}
+\end{filecontents*}
+\addbibresource{\jobname.bib}
+
+\begin{document}
+\subsection{Section}
+\nocite{test}
+
+% tcolorbox with printbibliography triggers insert_block float-out:
+% When insert_block moves <ltx:bibliography> to ancestor, it must not corrupt
+% the document's open-element stack via document.set_node(&ancestor).
+\begin{tcolorbox}[enhanced]
+\printbibliography
+\end{tcolorbox}
+
+% Subsequent environment with items should close cleanly, not complain that
+% </svg:svg> or </ltx:picture> isn't open or that <ltx:item> is in <ltx:subsection>.
+\begin{tcolorbox}[enhanced]
+\begin{itemize}
+\item First item
+\end{itemize}
+\end{tcolorbox}
+
+\end{document}
