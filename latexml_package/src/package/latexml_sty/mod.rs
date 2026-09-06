@@ -1259,17 +1259,25 @@ LoadDefinitions!({
     "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>",
     before_digest => { AssignValue!("inPreamble" => false); });
 
-  // In dvips backend mode (latexml-oxide's DVI persona), \graphics_get_pagecount:n
-  // delegates to extractbb -O via shell escape, which is disabled and fails with
-  // "Cannot run piped system commands" (notebeamer-demo). Hook l3backend-dvips.def
-  // to stub pagecount resolution with a fallback page count.
+  // In dvips backend mode (the DVI persona), `\__graphics_backend_get_pagecount:n`
+  // is l3graphics' generic `\__graphics_get_pagecount:n`, which pipes
+  // `extractbb -O` (expl3-code.tex:33334-33350) — shell escape is off here, so
+  // it failed with "Cannot run piped system commands" (notebeamer-demo). The
+  // hook answers with l3's OWN fallback when the pipe yields nothing: one page
+  // (expl3-code.tex:33348). A real count needs the PDF page count exposed to
+  // TeX (`\pdflastximagepages` is a stub, pdftex.rs) — recorded in
+  // KERNEL_CAPABILITIES; the caller guards a double definition with
+  // `\int_if_exist:cF` (:33320).
+  // Written with `\csname` names, not `\ExplSyntaxOn`: latexml.sty's body runs
+  // while the format is still loading (wisdom_preload_before_format_dump), and
+  // an `\ExplSyntaxOn` here pulled a raw expl3.sty whose backend selection
+  // loaded l3backend-dvips.def at preload time — a later `\pdfoutput=1` /
+  // `\sys_load_backend:n{pdftex}` then hit "Backend configuration already set"
+  // (`backend_load_follows_pdfoutput_and_prior_choice`).
   RawTeX!(
-    r"\ExplSyntaxOn
-\AddToHook{file/l3backend-dvips.def/after}{%
-  \cs_set_protected:Npn \__graphics_backend_get_pagecount:n ##1 {
-    \int_const:cn { c__graphics_ ##1 _pages_int } { 10 }
-  }%
-}
-\ExplSyntaxOff"
+    r"\AddToHook{file/l3backend-dvips.def/after}{%
+  \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname##1{%
+    \csname int_const:cn\endcsname{c__graphics_##1_pages_int}{1}}%
+}"
   );
 });

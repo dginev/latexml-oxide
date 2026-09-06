@@ -125,16 +125,6 @@ LoadDefinitions!({
     \def\algpx@endLComment{~$\triangleleft$}
     \def\algpxDefaultBox{}
 
-    \def\KV@algpseudocodex@italicComments#1{\csname algpx@italicComments#1\endcsname}
-    \def\KV@algpseudocodex@rightComments#1{\csname algpx@rightComments#1\endcsname}
-    \def\KV@algpseudocodex@indLines#1{\csname algpx@indLines#1\endcsname}
-    \def\KV@algpseudocodex@spaceRequire#1{\csname algpx@spaceRequire#1\endcsname}
-    \def\KV@algpseudocodex@noEnd#1{\csname algpx@noEnd#1\endcsname}
-    \def\KV@algpseudocodex@commentColor#1{\def\algpx@commentColor{#1}}
-    \def\KV@algpseudocodex@beginComment#1{\def\algpx@beginComment{#1}}
-    \def\KV@algpseudocodex@endComment#1{\def\algpx@endComment{#1}}
-    \def\KV@algpseudocodex@beginLComment#1{\def\algpx@beginLComment{#1}}
-    \def\KV@algpseudocodex@endLComment#1{\def\algpx@endLComment{#1}}
   "#
   );
 
@@ -148,6 +138,24 @@ LoadDefinitions!({
   DefKeyVal!("algpseudocodex", "endComment", "");
   DefKeyVal!("algpseudocodex", "beginLComment", "");
   DefKeyVal!("algpseudocodex", "endLComment", "");
+  // The registrations above define the `\KV@algpseudocodex@<key>` macros
+  // (keyval_qname), which `ProcessOptions` digests with the option's value —
+  // so the REAL handlers (algpseudocodex.sty:43-52's key bodies) must come
+  // AFTER them, or every explicit package option is silently a no-op.
+  RawTeX!(
+    r#"
+    \def\KV@algpseudocodex@italicComments#1{\csname algpx@italicComments#1\endcsname}
+    \def\KV@algpseudocodex@rightComments#1{\csname algpx@rightComments#1\endcsname}
+    \def\KV@algpseudocodex@indLines#1{\csname algpx@indLines#1\endcsname}
+    \def\KV@algpseudocodex@spaceRequire#1{\csname algpx@spaceRequire#1\endcsname}
+    \def\KV@algpseudocodex@noEnd#1{\csname algpx@noEnd#1\endcsname}
+    \def\KV@algpseudocodex@commentColor#1{\def\algpx@commentColor{#1}}
+    \def\KV@algpseudocodex@beginComment#1{\def\algpx@beginComment{#1}}
+    \def\KV@algpseudocodex@endComment#1{\def\algpx@endComment{#1}}
+    \def\KV@algpseudocodex@beginLComment#1{\def\algpx@beginLComment{#1}}
+    \def\KV@algpseudocodex@endLComment#1{\def\algpx@endLComment{#1}}
+  "#
+  );
 
   DeclareOption!("italicComments", "\\algpx@italicCommentstrue");
   DeclareOption!("rightComments", "\\algpx@rightCommentstrue");

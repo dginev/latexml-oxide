@@ -2403,12 +2403,12 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
   result
 }
 
-/// Perl: `RequirePackage($name, withoptions => 1)` — forward the current
-/// package/class's options to the required child package. Reads
-/// `\@currname` / `\@currext` to identify the caller, looks up its
-/// `opt@<name>.<ext>` options, and passes them explicitly as the child's
-/// options list. Mirrors `load_class_with_options` for the package path.
-pub fn require_package_with_options(name: &str) -> Result<()> {
+/// The calling file's option list — latex.ltx:18637 `\@loadwithoptions`
+/// `\let`s `\opt@<callee>` to `\opt@\@currname.\@currext`, the shared half
+/// of `\RequirePackageWithOptions` and `\LoadClassWithOptions` (Perl
+/// `withoptions => 1`, Package.pm:2610 `opt@prevname.prevext`). Empty when no
+/// file is being loaded.
+pub fn calling_file_options() -> Result<Vec<String>> {
   let currname = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
     do_expand(T_CS!("\\@currname"))?.to_string()
   } else {
@@ -2419,7 +2419,7 @@ pub fn require_package_with_options(name: &str) -> Result<()> {
   } else {
     String::new()
   };
-  let options: Vec<String> = if !currname.is_empty() {
+  Ok(if !currname.is_empty() {
     let key = s!("opt@{}.{}", currname, currext);
     lookup_vecdeque(&key)
       .unwrap_or_default()
@@ -2431,7 +2431,15 @@ pub fn require_package_with_options(name: &str) -> Result<()> {
       .collect()
   } else {
     Vec::new()
-  };
+  })
+}
+
+/// Perl: `RequirePackage($name, withoptions => 1)` — forward the calling
+/// package/class's options ([`calling_file_options`]) to the required child
+/// package as its explicit options list. Mirrors `load_class_with_options`
+/// for the package path.
+pub fn require_package_with_options(name: &str) -> Result<()> {
+  let options = calling_file_options()?;
   require_package(name, RequireOptions {
     options,
     ..RequireOptions::default()
@@ -2943,15 +2951,25 @@ pub fn require_resource(mut resource: Resource) {
 /// state (populated by the outer `\documentclass` invocation) and forwards
 /// those as the child's options list, matching Perl Package.pm LoadClass's
 /// `withoptions` branch.
+/// `\LoadClassWithOptions` — the calling class's options go to the loaded
+/// class (latex.ltx:18637 `\@loadwithoptions`, [`calling_file_options`]);
+/// with no file on the load stack (a class binding delegating directly, e.g.
+/// amsart → ams_core) the document class's recorded options stand in. The
+/// `\LoadClassWithOptions` constructor once passed an EMPTY list, so a raw
+/// class delegating its options (oblivoir.cls → oblivoir-utf.cls:77
+/// `\if@AMSmath\RequirePackage{amsmath}`) never saw `[amsmath]` (istgame-doc).
 pub fn load_class_with_options(name: &str, after: Tokens) -> Result<()> {
-  let class_opts = lookup_vecdeque("class_options").unwrap_or_default();
-  let options: Vec<String> = class_opts
-    .iter()
-    .filter_map(|item| match item {
-      Stored::String(s) => Some(arena::to_string(*s)),
-      _ => None,
-    })
-    .collect();
+  let mut options = calling_file_options()?;
+  if options.is_empty() {
+    let class_opts = lookup_vecdeque("class_options").unwrap_or_default();
+    options = class_opts
+      .iter()
+      .filter_map(|item| match item {
+        Stored::String(s) => Some(arena::to_string(*s)),
+        _ => None,
+      })
+      .collect();
+  }
   load_class(name, options, after)
 }
 

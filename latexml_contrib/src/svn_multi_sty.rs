@@ -39,9 +39,11 @@ LoadDefinitions!({
   def_macro_noop("\\svnid{}")?;
   def_macro_noop("\\svnidlong")?;
   def_macro_noop("\\svnminute")?;
-  def_macro_noop("\\svnmonth")?;
+  // svn-multi.sty:261 — the "no keyword yet" default.
+  DefMacro!("\\svnmonth", "00");
   DefMacro!("\\svnnolinkurl", "#1");
-  def_macro_noop("\\svnrev")?;
+  // svn-multi.sty:255 — the "no keyword yet" default.
+  DefMacro!("\\svnrev", "-2");
   def_macro_noop("\\svnsecond")?;
   def_macro_noop("\\svntime")?;
   def_macro_noop("\\svntimezone")?;

@@ -16758,6 +16758,45 @@ c &= d
     }
   }
 
+  /// latex.ltx:18637 `\@loadwithoptions`: `\LoadClassWithOptions` hands the
+  /// calling class's option list to the loaded class (witness istgame-doc:
+  /// `\documentclass[amsmath]{oblivoir}` → oblivoir-utf.cls:77 loads amsmath).
+  #[test]
+  fn load_class_with_options_forwards_the_calling_options() {
+    // A local wrapper class with NO option handling of its own: the options
+    // reach `article` only through `\LoadClassWithOptions`.
+    let tex = "\\documentclass[twocolumn,fleqn]{wrapcls}\n\\makeatletter\n\\begin{document}\n\\@ifclasswith{article}{twocolumn}{TWO}{ONE}\\@ifclasswith{article}{fleqn}{-F}{-N}\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[(
+      "wrapcls.cls",
+      "\\ProvidesClass{wrapcls}\n\\LoadClassWithOptions{article}\n",
+    )]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("TWO-F"), "{xml}");
+    if kpsewhich_has("oblivoir.cls") {
+      let tex = "\\documentclass[amsmath]{oblivoir}\n\\begin{document}\n$\\text{hello}$ $\\binom{n}{k}$\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("hello") && xml.contains("<Math"), "{xml}");
+    }
+  }
+
+  /// A class/document `\renewcommand{\maketitle}[1]{…}` is dropped by the
+  /// lock and never replayed (the Gemini round-7 raw replay was reverted:
+  /// resphilosophica.cls:331's body needs amsart internals the binding lacks);
+  /// the kernel's frontmatter still lands and the raw `#1` never reaches the
+  /// stomach.
+  #[test]
+  fn maketitle_replay_skips_a_parameterized_body() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\renewcommand{\\maketitle}[1]{TITLEARG:#1:END}\n\\makeatother\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle{HELLO}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<title>T</title>") && xml.contains("Body."),
+      "{xml}"
+    );
+    assert!(!xml.contains("TITLEARG"), "{xml}");
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {
@@ -18024,8 +18063,11 @@ Hello
 
   /// \maketitle honours class's dropped body after structured frontmatter
   /// (witness: uspatent/PatentApplication, PatentApplicationGuide).
-  /// A class redefining \maketitle (e.g. \renewcommand{\maketitle}{\patentTitlePage\patentStart})
-  /// has its body executed after frontmatter deposition and cleanup so counters like parnum are defined.
+  /// uspatent's binding unlocks `\maketitle` so the class's own
+  /// `\renewcommand{\maketitle}{\patentTitlePage\patentStart}` (uspatent.cls:188-191)
+  /// runs and defines the `parnum` counter; the article control keeps the
+  /// kernel `\maketitle`. (A generic raw replay of any dropped body was reverted
+  /// at the round-7 merge: resphilosophica.cls:331 needs amsart internals.)
   #[test]
   fn maketitle_executes_dropped_class_body_after_frontmatter() {
     let tex = r"\documentclass{uspatent}
@@ -18078,13 +18120,17 @@ Hello world.
 ";
     let (stderr, _xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The binding's `\XC@getcolor` (xcolor_sty.rs, batch 56aa) yields the real
+    // contract shape `\xcolor@{}{drv}{model}{spec}` with the model spec standing
+    // in for the driver literal (our colours are attributes, not `rg`/`RG`
+    // operators); pstricks aliases `\pst@getcolor` to it when xcolor is loaded.
     assert!(
-      stderr.contains(r"MEANING_XC=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+      stderr.contains(r"MEANING_XC=macro:->\xcolor@ {}{1,0.5,0.5}{rgb}{1,0.5,0.5}"),
       "{stderr}"
     );
     assert!(
-      stderr
-        .contains(r"MEANING_PST=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+      stderr.contains(r"MEANING_PST=macro:->\xcolor@ {}{1,0.5,0.5}{rgb}{1,0.5,0.5}"),
+      "{stderr}"
     );
   }
 
@@ -18119,6 +18165,13 @@ Hello world.
       "expected right-flushed comment:\n{xml}"
     );
     assert!(xml.contains("First comment"), "{xml}");
+    // `[italicComments=false]` reached its handler (algpseudocodex.sty:43): the
+    // comment text is not italic.
+    assert!(
+      !xml.contains("font=\"italic\">First comment")
+        && !xml.contains("font=\"italic\">Wide comment"),
+      "{xml}"
+    );
     // LComment is on its own listingline with delimiters
     assert!(
       xml.contains("<listingline xml:id=\"algx1.l2\">"),
@@ -18148,8 +18201,12 @@ Hello world.
 \end{algorithmic}
 \end{document}
 ";
-    let (stderr, _xml) = convert(tex, true);
+    let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<listingline") && xml.contains("<Math"),
+      "{xml}"
+    );
   }
 
   /// lltjfont fontfamily redefined without leaking trailing arguments into gullet (witness: kksymbols/kksymbols-doc).
@@ -18182,8 +18239,9 @@ hello
 \includebeamer[nup=1,pages=1]{example-image-a4.pdf}
 \end{document}
 ";
-    let (stderr, _xml) = convert(tex, true);
+    let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<graphics"), "{xml}");
   }
 
   /// hypdestopt binding and svn-multi \svnrev, \svnmonth, \svnauthor stubs (witness: biblatex-cheatsheet/biblatex-cheatsheet).
@@ -18196,8 +18254,16 @@ hello
 \svnrev\ \svnmonth\ \svnauthor
 \end{document}
 ";
-    let (stderr, _xml) = convert(tex, true);
+    let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // svn-multi.sty:255/261 defaults before any keyword is registered.
+    assert!(xml.contains("-2 00"), "{xml}");
+    // The svn-multi binding announces itself as a stub (one intrinsic warning).
+    assert_eq!(
+      stderr.matches("Warning:missing_file:svn-multi.sty").count(),
+      1,
+      "{stderr}"
+    );
   }
 
   /// xcolor.sty \XC@undeclaredcolor used by lua-ul.sty (witness: gckanbun/kanshi-sample).

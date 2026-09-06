@@ -1,6 +1,6 @@
 % witness: istgame/istgame-doc (uses \documentclass[a4paper,amsmath]{oblivoir})
 % oracle:  pdflatex (clean, 0 errors); Perl LaTeXML: passes (withoptions => 1 forwards class options)
-% status:  RED
+% status:  GREEN (Gemini round-7 fixups, 2026-09-06: load_class_with_options forwards the calling file's \opt@ list)
 % mechanism: \documentclass[amsmath]{oblivoir} delegates to \LoadClassWithOptions{oblivoir-utf}.
 %   latexml_engine/src/latex_constructs/sect05.rs:411 calls load_class(&class, Vec::new(), Tokens!())
 %   passing empty options instead of load_class_with_options(&class, Tokens!()) (port of Perl

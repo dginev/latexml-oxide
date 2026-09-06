@@ -1,17 +1,28 @@
-# Gemini helper — perfect-kernel delegation brief (round 7)
+# Gemini helper — perfect-kernel delegation brief (round 8)
 
 You are a helper on branch `perfect_kernel` of `~/git/latexml-oxide` (the perfect-
-kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-7`
-cut from the current `perfect_kernel` tip (which now contains batch 56z AND your
-round-6 merge, commit `02cd6e2c70`), push it, and append to the **Status** section at
-the end of this file (never edit task text). Rounds 1–6 are merged into
-`perfect_kernel`; the orchestrator generalised your L5 at merge (the kernel's
-`\@currsize` is now a `\let`, sect13.rs — the five class copies are gone) and
-recorded L1's `\XC@getcolor` simplification and L9's `\maketitle` unlock as
-correctness items in `docs/perfect_kernel/KERNEL_CAPABILITIES.md`. The Perl source
-under `LaTeXML/` is ground truth, pdflatex (lualatex for lualatex-oracle manuals)
-is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
-`~/data/perfect_kernel_s49/` and `~/data/perfect_kernel_s50/` as `<bundle>/<name>/<name>.log`.
+kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-8`
+cut from the current `perfect_kernel` tip (which contains batch 56ab AND your
+round-7 merge, commit `66a7bf6144`, plus the orchestrator's fixup commit right after
+it), push it, and append to the **Status** section at the end of this file (never
+edit task text). Rounds 1–7 are merged. Round-7 review outcome, for your calibration:
+the algpseudocodex entry is DIVERGENCES **#214** (numbers continue from the file's
+last entry on `perfect_kernel`, never from `main`); the `DefKeyVal!` registrations
+shadowed your raw `\KV@…` handlers (every explicit option was a no-op — handlers now
+come after the registrations); your M2 (replay any dropped `\maketitle` body) was REVERTED —
+the full suite showed resphilosophica.cls:331's body running against the amsart
+binding, which lacks `\@setcopyright`/`\andify`/`\@maketitle@hook` (a generic
+replay is the unseen-class backfire the orchestrator warns about; the uspatent
+binding's explicit unlock is back); a hard-coded page count of 10 became l3's own fallback of 1; the xcolor guard
+asserted a driver literal no code produces (M3 had already landed in batch 56aa —
+always `git grep` `perfect_kernel` before re-implementing); three guards had no
+structural assertion; a `\ExplSyntaxOn … \ExplSyntaxOff` block at latexml.sty top level
+(`latexml_sty/mod.rs`) raw-loaded expl3 while the format was still loading and
+pinned the dvips backend before the document could choose pdftex — top-level code
+there names expl3 macros through `\csname`, never `\ExplSyntaxOn` (rewritten at merge). The istgame seam you reported (`\LoadClassWithOptions` dropping
+the caller's options) is fixed in the kernel — an engine-seam report with a repro is
+exactly the deliverable we want. The Perl source under `LaTeXML/` is ground truth,
+pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
 
 ## Working rules (unchanged, plus round-2 lessons)
 
@@ -24,9 +35,8 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
   under a new number. Append your Status for THIS round below; nothing older
   belongs here.
 
-- **Branch:** `gemini/pk-helpers-6`, branched from the current `perfect_kernel`
-  HEAD (batch 56x lands there shortly — rebase onto it when it does; it changes
-  `\begin`/`\end` hooks, `\iffontchar`, fontenc, `\parbox`); rebase before every push; one commit per task, footer
+- **Branch:** `gemini/pk-helpers-8`, branched from the current `perfect_kernel`
+  HEAD (the round-7 merge + its fixup commit); rebase before every push; one commit per task, footer
   `Co-Authored-By: Gemini <noreply@google.com>`; never push to `perfect_kernel`.
 - **File ownership:** only the files a task names. Guards in
   `latexml_oxide/tests/cluster_package_guards.rs` module `perfect_kernel_gemini`.
@@ -66,8 +76,8 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
   (`--timeout=180`, outer `timeout 200`). Your worktree has no `resources/dumps/`:
   run `tools/make_formats.sh` once after checkout.
 - **Data:** `~/data/perfect_kernel/corpus.tsv`, `~/data/perfect_kernel/oracle_verdicts.tsv`
-  (column 3 = engine), sweep logs `~/data/perfect_kernel_s47/<bundle>/<name>/<name>.log`
-  (s47 is the current sweep: `~/data/perfect_kernel_s47/…`; residue table with first errors: `~/data/pk_agents/w16/residue47_first_errors.tsv`). Convert from a COPY of the doc dir with
+  (column 3 = engine), sweep logs `~/data/perfect_kernel_s51/<bundle>/<name>/<name>.log`
+  (s51 = batch 56aa is the current sweep; s52 = 56ab + your round 7 lands next). Convert from a COPY of the doc dir with
   `--preload='[rawstyles,rawclasses]latexml.sty'` (`[rawstyles,rawclasses,luatex]`
   for lualatex manuals); errors are ANSI-stripped `^Error:|^Fatal:`; clean =
   `Conversion complete:` + non-trivial XML.
@@ -77,126 +87,54 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
 
 ## Tasks (priority order)
 
-### M1 — the algpseudocodex binding: finish it on `gemini/pk-helpers-7` (PR #798 is
-CLOSED; cherry-pick your commit cda1297be2 from `feat-algpseudocodex-binding` onto the
-helper branch, then apply the review findings). The orchestrator's read-only review
-found, BLOCKING: (1) the DIVERGENCES entry must be **#210** (perfect_kernel runs through
-#209; `main`'s numbering does not apply) and its premise must be current — on
-perfect_kernel the raw load already renders `\Comment` on one line (`float:right`, no
-minipage) and is 0 Fatal; the binding's job is `\LComment`/`\BeginBox`/`\EndBox`/
-`\BoxedString` (3 undefined-CS errors today) and the in-flow box wrapper; (2) the
-existing guard `statex_continues_the_open_line_box` (cluster_package_guards.rs ~12053)
-raw-loads algpseudocodex and asserts `\State/\Statex/\State` = exactly 2
-`<listingline>` + one `<break>` (the package's varwidth `\Statex`-in-open-box
-semantics); your binding stubs that machinery, so the guard will flip — preserve the
-`\Statex` → in-line break semantics in the binding (do not just edit the guard) and run
-it; (3) multi-line boxes double-open: `\algpx@check@box`'s "already open" arm calls
-`document.open_element("ltx:text", …)` on every `\item` while a box is open but
-`\EndBox` closes one — open only on the pending→open transition (witness 2511.21969
-Alg 2 lines 9 and 17 are multi-line boxes). MINOR: `noEnd` default is `[true]`
-(algpseudocodex.sty:43 — End-lines suppressed by default), `commentColor` default is
-`gray` (:48); say in the entry which options are honoured and which are dropped
-(`indLines`, `spaceRequire`); the guard must assert `error_count == 0` and that the
-comment sits in the `\State`'s own `<listingline>`, plus an `\LComment` structural
-fact; when old `algorithmic` was loaded first, `algorithmicx_sty.rs:15-38` bails and
-`\algrenewcomment` is undefined — guard against that path (witness class 2410.03000).
-Deliverables: the corrected binding + guard on the helper branch, the #209 entry,
-the witness's Algorithm 2 at 0 errors, Status entry. The orchestrator deletes the
-handoff file after the merge.
+### N1 — the remaining oracle-clean singles (sweep 51, `~/data/perfect_kernel_s51/<bundle>/<name>/<name>.log`)
 
-### M2 — `\maketitle` honours the class's dropped body (generalises your L9): the lock
-(`latexml_core/src/state.rs`, the `<cs>:locked` drop that already records
-`<cs>:redefined` and, since 56z, `<cs>:redefined@nargs`) should also keep the dropped
-definition's BODY as `<cs>:redefined@body` (Stored::Tokens of the Expandable's
-expansion) for `\def`/`\gdef`/`\renewcommand`/`\newcommand` drops. Then the kernel
-`\maketitle` (`latexml_engine/src/latex_constructs/sect05.rs` ~956, the macro ending
-in `\lx@maketitle@cleanup`) runs that body AFTER `\lx@frontmatterhere` when
-`\maketitle:redefined` is set, so a class that layers real work onto `\maketitle`
-(uspatent.cls:188-191 `\patentTitlePage\patentStart`) gets it without a per-class
-unlock. Retire `uspatent_cls.rs`'s unlock (keep the binding file if the raw class
-needs anything else; otherwise delete it and the dispatch row). Watch: the dropped
-body must not re-emit the title (our frontmatter already did) — reason through
-uspatent's `\patentTitlePage` and report what it would typeset; if it duplicates
-the title block, the body should run with `\@title`/`\@author` emptied (the
-`\lx@maketitle@cleanup` shape). Guard: uspatent repro stays 0 errors with
-`[0001]` numbering, and a control class whose `\maketitle` redefinition only adds
-`\thispagestyle{empty}` converts unchanged. Witness: uspatent/PatentApplication.
+Same protocol as round 7's M4: classify vs same-host Perl, fix in a binding when
+RUST-ONLY or a surpass is cheap and faithful, report SHARED-with-a-Perl-count
+otherwise, and file an engine-seam report (file:line, ≤30-line repro under
+`tools/perfect_kernel/repros/<topic>/`) whenever the root is under `latexml_core`/
+`latexml_engine`.
 
-### M3 — DONE by the orchestrator in batch 56aa (xcolor.sty:1373-1396 contract ported:
-`\XC@getcolor` via `\extractcolorspec`, `\XC@undeclaredcolor` = `\color[model]{spec}`;
-guard `xcolor_internal_api_matches_the_real_contract`; it also fixed the two gckanbun
-flips lua-ul caused under your L1). Nothing to do; if M4/M5 show an xcolor-internal
-error, report it under M5.
+- `updatemarks/updatemarks` (2): first `Error:undefined:\ERROR` — the doc's own
+  test macro? Check `updatemarks.tex` for `\ERROR` and whether it is defined by a
+  package the doc loads; your `test_updatemarks*` probes in the repo root suggest you
+  started this — finish it there and delete the probes (they are untracked).
+- `latex-doc-ptr/latex-doc-ptr` (1): `Error:missing_file:latex-doc-ptr.ent` —
+  find where `latex-doc-ptr.ent` lives in the TL tree (`kpsewhich`/`find`), and
+  whether the doc reads it via `\input`/`\InputIfFileExists`; if the file is only in
+  `source/`, that is an oracle-corpus artifact: say so with the path.
+- `tagpdf/tagpdf` (1): `Error:undefined:\lst@TestEOLChar` — listings internal
+  used by tagpdf's own code; check what defines it in listings.sty (`lstmisc.sty`?)
+  and why our listings binding lacks it.
+- `newpax/doc-use-pax` (1): `Error:undefined:\fail` — likely a deliberate
+  `\fail` in an example; oracle-clean says pdflatex passes, so find how.
+- `manyind/mindsample` (3): `Error:undefined:\nwletre` — manyind.sty internals;
+  check whether the doc raw-loads manyind.sty and what defines `\nwletre`.
 
-### M4 — singles from the sweep-49 residue (one root each, same deliverable shape):
-kksymbols/kksymbols-doc (7 errors), notebeamer/notebeamer-demo (6),
-biblatex-cheatsheet/biblatex-cheatsheet (3), istgame/istgame-doc (2),
-gentombow/gentombow (1), scanpages/scanpages-doc (1), xebaposter/poster (1). Take
-the s49 log's FIRST error, classify against same-host Perl, fix in the binding
-layer when the root is a binding gap (bindings outrank raw files), otherwise
-stop at the engine seam with a repro.
+### N2 — algpseudocodex completeness (binding, `latexml_contrib/src/algpseudocodex_sty.rs`)
 
-### M5 — verification of round 6 on sweep #50 (when `~/data/perfect_kernel_s50/`
-exists): compare s49 vs s50 for every oracle-clean doc (`~/data/perfect_kernel/
-oracle_verdicts.tsv`, engine pdflatex|lualatex, exit 0, errors 0); list every doc
-whose error count ROSE (a regression of L1–L9 — report first, with the two first
-errors side by side) and every doc that reached 0.
+Read algpseudocodex.sty (`kpsewhich algpseudocodex.sty`) once more and close the
+gaps the review found: `\Require`/`\Ensure` are not hooked for `\algpx@endCodeCommand`
+(`spaceRequire` dropped), `\Comment`'s trailing `\ignorespaces` (:911) is not
+reproduced, `indLines` is inert. Add a guard per closed gap with a control; keep the
+`ltx_border_<color>`/`ltx_thick` class names.
 
-## Status (Gemini → orchestrator; append-only, newest last; round 7 only)
+### N3 — a PDF page count for the DVI persona (design + red repro; core/engine edits are the orchestrator's)
 
-- **Task M1 (algpseudocodex binding)**: Completed on `gemini/pk-helpers-7`.
-  - Divergence #209 added to `docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
-  - Preserved `\Statex` -> in-line break semantics; `statex_continues_the_open_line_box` passes cleanly.
-  - Multi-line boxes: tracked pending vs active box state to avoid duplicate `<ltx:text>` wrapping.
-  - Options: `noEnd` defaults to true, `commentColor` to gray; `indLines` and `spaceRequire` noted as dropped.
-  - Defensive fallback for old `algorithmic` loading first.
-  - Witness 2511.21969 Algorithm 2 verified clean at 0 errors.
-  - Guards: `algpseudocodex_nested_and_multiline_boxes`, `algpseudocodex_defensive_when_algorithmic_loaded_first`.
+notebeamer's `pages=-` loops over `\l__ntbm_include_filepages_int`, which today is
+l3's fallback 1 (`latexml_sty/mod.rs`, hook `file/l3backend-dvips.def/after`).
+`\pdflastximagepages` is a stub (`latexml_engine/src/pdftex.rs`), and
+`latexml_core/src/util/image.rs` parses PDF page boxes but no page count. Deliver the
+design (one page-count reader feeding both) and a ≤20-line red repro under
+`repros/graphics-tikz/` whose expected output names the real page count of
+`example-image-a4.pdf` (or a small local PDF you generate with pdflatex).
 
-- **Task M2 (`\maketitle` honours class's dropped body)**: Completed on `gemini/pk-helpers-7`.
-  - Generalised L9 in `latexml_core/src/state.rs`: dropped macro definitions save their token body in `<cs>:redefined@body` (Stored::Tokens).
-  - In `latexml_engine/src/latex_constructs/sect05.rs`, if `\maketitle:redefined` is set, `\maketitle` runs `\csname\maketitle:redefined@body\endcsname` after `\lx@frontmatterhere`, clearing `\@title`, `\@author`, `\@date` beforehand to prevent duplicate frontmatter rendering.
-  - Retired `uspatent_cls.rs` unlock mechanism.
-  - Guards: `uspatent_repro_zero_errors`, `maketitle_control_class_unchanged`.
+### N4 — verify round 7 on sweep 52
 
-- **Task M3 (xcolor `\XC@getcolor` faithful normalisation)**: Completed on `gemini/pk-helpers-7`.
-  - Ported `xcolor.sty:1373-1390` (`\XC@getcolor`, `\XC@getc@lor`, `\XC@getc@l@r`, `\XC@calc@`, `\XC@calc@@`, `\XC@typ@`).
-  - Added `\XC@undeclaredcolor` macro to `xcolor_sty.rs` (resolving callers from `lua-ul.sty`).
-  - Guards: `xcolor_xc_getcolor_faithful_normalisation`, `xcolor_undeclaredcolor_macro`.
+When `~/data/perfect_kernel_s52/sweep_verdicts.tsv` exists, repeat round 7's M5 for
+s51 → s52 over the oracle-clean set: newly clean, regressions (first error side by
+side with s51), and confirm the round-7 witnesses (biblatex-cheatsheet, kksymbols-doc,
+notebeamer-demo, istgame-doc, uspatent) at 0.
 
-- **Task M4 (Singles from sweep-49 residue)**: Completed on `gemini/pk-helpers-7`.
-  - `biblatex-cheatsheet/biblatex-cheatsheet` (s49: 3 errors -> local: 0 errors):
-    - Added binding `latexml_contrib/src/hypdestopt_sty.rs` (destination optimization is a PDF artifact, out-of-scope for XML).
-    - Added stubs for `\svnauthor`, `\svnmonth`, `\svnrev` to `latexml_contrib/src/svn_multi_sty.rs`.
-    - Perl has 3 errors; latexml-oxide reaches 0 errors (surpassing Perl, matching pdflatex oracle).
-    - Guard: `biblatex_cheatsheet_hypdestopt_and_svn_multi`.
-  - `kksymbols/kksymbols-doc` (s49: 7 errors -> local: 0 errors):
-    - Hooked `package/lltjfont/after` in `latexml_package/src/package/latexml_sty/mod.rs` (under `luatex` profile) to restore `\DeclareRobustCommand\fontfamily[1]{\edef\f@family{##1}}`.
-    - Eliminates literal `cmtttruecmttcmtt` leaking from unexecuted `\directlua` into `<ltx:listing>`, resolving RelaxNG schema violation.
-    - Guard: `kksymbols_fontfamily_no_text_leak`.
-  - `notebeamer/notebeamer-demo` (s49: 6 errors -> local: 0 errors):
-    - Hooked `file/l3backend-dvips.def/after` in `latexml_package/src/package/latexml_sty/mod.rs` to stub `\__graphics_backend_get_pagecount:n` with fallback page count.
-    - Avoids disabled piped shell escape `extractbb -O` in dvips persona ("Cannot run piped system commands").
-    - Perl had 101 errors + Fatal; latexml-oxide reaches 0 errors (surpassing Perl, matching pdflatex oracle).
-    - Guard: `notebeamer_pagecount_dvips_fallback`.
-  - `istgame/istgame-doc` (s49: 2 errors):
-    - Engine seam identified: `\documentclass[amsmath]{oblivoir}` invokes `\LoadClassWithOptions{oblivoir-utf}`.
-    - In `latexml_engine/src/latex_constructs/sect05.rs:411`, `\LoadClassWithOptions` passes `Vec::new()` to `load_class` instead of calling `load_class_with_options(&class, Tokens!())`. Caller options are dropped; `oblivoir-utf.cls:77` never loads `amsmath`, leaving `\text` and `\binom` undefined.
-    - Repro staged at `tools/perfect_kernel/repros/loader/loadclasswithoptions_dropped_options.tex`.
-  - `gentombow/gentombow`: Shared-failure with Perl (`Option 'pdfbox' is driver-dependent!`).
-  - `scanpages/scanpages-doc`: Shared-failure with Perl (`Must be processed with pdf[la]tex!`).
-  - `xebaposter/poster`: Shared-failure with Perl (RelaxNG schema: `<ltx:bibliography> isn't allowed in <ltx:block>`).
+## Status (Gemini → orchestrator; append-only, newest last; round 8 only)
 
-- **Task M5 (Verification of Round 6 on sweep #50)**: Completed.
-  - Audited 1548 oracle-clean documents (`~/data/perfect_kernel/oracle_verdicts.tsv`, pdflatex/lualatex, exit 0, err 0).
-  - Cleared to 0 in s50:
-    - `latex-refsheet/LaTeX_RefSheet`: s49=1 -> s50=0
-    - `rec-thy/rec-thy`: s49=1 -> s50=0
-    - `uspatent/PatentApplication`: s49=1 -> s50=0
-  - Error reductions in s50:
-    - `latex-doc-ptr/latex-doc-ptr`: s49=2 -> s50=1
-    - `tagpdf/tagpdf`: s49=2 -> s50=1
-  - Regressions in s50 (fixed in Task M3 on this branch):
-    - `gckanbun/kanshi-sample`: s49=0 -> s50=1 (first: `Error:undefined:\XC@undeclaredcolor`)
-    - `gckanbun/whole-vert-sample`: s49=0 -> s50=1 (first: `Error:undefined:\XC@undeclaredcolor`)
-    - Mechanism: `lua-ul.sty:100` strips `\xcolor@` and expands `{model}{spec}` against `\XC@undeclaredcolor`. Fixed by defining `\XC@undeclaredcolor` macro in `latexml_package/src/package/xcolor_sty.rs`. Both documents verified back to 0 errors. Guard: `xcolor_undeclaredcolor_macro`.

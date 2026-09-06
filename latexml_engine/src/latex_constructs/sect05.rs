@@ -399,16 +399,17 @@ pub(crate) fn load() -> Result<()> {
   // `\LoadClassWithOptions{article}` (e.g. applemlr.cls in
   // arXiv:2512.10685). Port the `LoadClass` call.
   //
-  // We pass empty options here (Perl's `withoptions => 1` would
-  // inherit calling-class options from `\@classoptionslist`, but
-  // for the no-options-on-\documentclass cases that dominate the
-  // arxmliv warning corpus this is a no-op anyway).
+  // Perl's `withoptions => 1` = latex.ltx:18637 `\@loadwithoptions`: the
+  // calling class's option list becomes the loaded class's
+  // (`load_class_with_options`). An empty list here dropped `[amsmath]` on
+  // oblivoir.cls → oblivoir-utf.cls (istgame-doc: `\text`/`\binom` undefined).
+  // Guard: `perfect_kernel_batch56::load_class_with_options_forwards_the_calling_options`.
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
     before_digest => { only_preamble("\\LoadClassWithOptions") }
     after_digest => sub[whatsit] {
       let class_arg: Option<&Digested> = whatsit.get_arg(1);
       let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
-      load_class(&class, Vec::new(), Tokens!())?;
+      load_class_with_options(&class, Tokens!())?;
       sect01::retract_kernel_chapter_if_chapterless()?;
     }
   );
@@ -973,10 +974,6 @@ pub(crate) fn load() -> Result<()> {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
       }
-    }
-    if let Some(Stored::Tokens(body)) = lookup_value("\\maketitle:redefined@body") {
-      assign_value("\\maketitle:redefined@body", Stored::None, Some(Scope::Global));
-      unread(body);
     }
     Ok(())
   });
