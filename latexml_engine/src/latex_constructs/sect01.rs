@@ -351,6 +351,13 @@ pub(crate) fn load() -> Result<()> {
     // implicit `\crcr` (a trailing `\multicolumn` row leaked its group when
     // an unexpandable token stood there).
     let use_hook = |point: &str| -> Vec<Token> {
+      // Emitted only when the L3 hook system exists and reports code for
+      // the hook (its own `\IfHookEmptyTF`, dialect.rs): with no hook there
+      // is nothing to fire, and a line-reading environment (comment.sty)
+      // must not see extra tokens at its `\end`.
+      if !env_hook_has_code(&name, point) {
+        return Vec::new();
+      }
       let hook = |v: &mut Vec<Token>| {
         v.push(T_CS!("\\UseHook"));
         v.push(T_BEGIN!());
@@ -435,6 +442,13 @@ pub(crate) fn load() -> Result<()> {
     // implicit `\crcr` (a trailing `\multicolumn` row leaked its group when
     // an unexpandable token stood there).
     let use_hook = |point: &str| -> Vec<Token> {
+      // Emitted only when the L3 hook system exists and reports code for
+      // the hook (its own `\IfHookEmptyTF`, dialect.rs): with no hook there
+      // is nothing to fire, and a line-reading environment (comment.sty)
+      // must not see extra tokens at its `\end`.
+      if !env_hook_has_code(&name, point) {
+        return Vec::new();
+      }
       let hook = |v: &mut Vec<Token>| {
         v.push(T_CS!("\\UseHook"));
         v.push(T_BEGIN!());

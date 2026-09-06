@@ -174,3 +174,38 @@ error counts from the s47 logs vs your runs — flag any doc that got WORSE with
 env-hook change (that is a regression for the orchestrator).
 
 ## Status (Gemini → orchestrator; append-only, newest last)
+
+### Task J1 — ejpecp: `\text` inside math / `$\LaTeXe$` (8 errors → 0, oracle clean)
+- **Status:** COMPLETED & PUSHED (`ea32d5d139`)
+- **Witness:** `ejpecp/ejpecp.tex` (8 errors → 0, oracle clean)
+- **Reproducer:** `tools/perfect_kernel/repros/singletons/ejpecp_latex_logo_math.tex`
+- **Guard:** `ejpecp_latexe_math_mode` in `latexml_oxide/tests/cluster_package_guards.rs`
+- **Root Cause & Fix:** In `latexml_contrib/src/ejpecp_cls.rs`, `\LaTeX` and `\LaTeXe` were defined using `\text{...}`. When called inside math mode (e.g. `$\LaTeXe$`), `\text` in latexml-oxide digests text nodes that attempt to close horizontal mode inappropriately. Wrapping `\mbox{\text{...}}` enforces a horizontal box context matching standard LaTeX logo macros, preventing `Attempt to close a group that switched to mode horizontal`.
+- **Settled Dead Ends:** Do not unwrap `\text` into raw tokens without box encapsulation in class definitions, as math mode switches require an explicit `\hbox`/`\mbox` boundary.
+
+### Task J2 — kotex-utf-doc: `verbatim.sty`'s `\verbatim@readfile` (29 errors → 28)
+- **Status:** COMPLETED & PUSHED (`0cc82962a5`)
+- **Witness:** `kotex-utf/kotex-utf-doc.tex` (29 errors → 28; remaining 28 errors are exclusively the parked `dhucs-trivcj.sty` josa macros `\과`, `\을` etc.)
+- **Reproducer:** `tools/perfect_kernel/repros/singletons/verbatim_readfile.tex`
+- **Guard:** `verbatim_readfile_macro` (with `\verbatiminput` control twin) in `latexml_oxide/tests/cluster_package_guards.rs`
+- **Root Cause & Fix:** `kotex-utf-doc.tex` uses doc macros that directly call `verbatim.sty` internal `\verbatim@readfile{#1}`. In `latexml_package/src/package/verbatim_sty.rs`, implemented `\verbatim@readfile` and `\verbatim@finish` matching LaTeX `verbatim.sty:55-60, 181-205`. The reader reads from either VFS or disk mouth, handles quote-stripped paths from LaTeX `\IfFileExists`, runs `\verbatim@startline` before each line, and concludes with `\verbatim@finish`.
+- **Settled Dead Ends:** File path strings passed from `\IfFileExists` often retain enclosing quotes; these must be trimmed before querying VFS/disk.
+
+### Task J3 — biblatex-ext: `<ltx:item>` nesting & SVG close errors (40 → 45 in sweep 46)
+- **Status:** INVESTIGATION COMPLETE & REPRODUCER ADDED (Stopped at engine seam per scope rule)
+- **Witnesses:** `biblatex-ext/biblatex-ext.tex`, `biblatex-ext/ext-biblatex-aux-doc.tex`, `biblatex-ext/ext-biblatex-tab-doc.tex`
+- **Bisected Commit:** `a133a7d710f440c9bb7fb56b2ee9663da2767476` (Batch 56t–56u: `insert_block` float-out mechanism). Verified: `latexml_oxide.b56x` has 40 errors; `latexml_oxide.b56y` / `b56z` have 45 errors.
+- **Reproducer:** `tools/perfect_kernel/repros/singletons/insert_block_floatout_ancestor_corruption.tex`
+  - In `b56x`: 1 error (`Error:malformed:ltx:bibliography <ltx:bibliography> isn't allowed in <ltx:block>`).
+  - In `b56y` / `b56z` / current: 2 errors (`Attempt to close </svg:svg>, which isn't open`, `Attempt to close </ltx:picture>, which isn't open`). In the full manual, followed by 4 item errors (`<ltx:item> isn't allowed in <ltx:subsection>`, 3× `... in <ltx:item>`).
+- **Seam:** `latexml_engine/src/base_utilities.rs:4067` (`insert_block`).
+- **Root Cause & Mechanism:**
+  Commit `a133a7d710` introduced uncontainable float-out logic in `insert_block`. When a block candidate inside a box (such as a `tcolorbox` with `skins` / `overlay` in `bibexample`) contains an element uncontainable in any block candidate (here `<ltx:bibliography>` from `\printbibliography`), the float-out climbs the ancestor tree up to `<ltx:subsection>` / `<ltx:document>`, moves the tail after `anchor`, and then calls:
+  ```rust
+  document.set_node(&ancestor);
+  ```
+  This forcibly resets the active document cursor to `ancestor`, popping it out of the active box context (`<ltx:picture>`, `<svg:svg>`, etc.) before those elements are closed. When the environment ends, closing `</svg:svg>` and `</ltx:picture>` fails. All subsequent content (including `\list{} \item ... \endlist`) is digested under `ancestor` instead of inside its expected container, yielding `<ltx:item> isn't allowed in <ltx:subsection>`.
+- **Proposed Engine Resolution for Claude:**
+  `insert_block` should not mutate `document.set_node` to point at `&ancestor` during digestion of a box unless restoring the original cursor or handling box closure properly. Alternatively, if uncontainable nodes are floated as siblings of `anchor`, `document.set_node` should remain at `&context` (or be restored) so subsequent nodes in the active box are correctly parented.
+- **Scope Rule Action:** Per the Round 5 Scope Rule, stopped at the red reproducer and bisection report.
+

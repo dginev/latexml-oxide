@@ -17168,4 +17168,70 @@ Hello world
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("Hello world"), "{c_xml}");
   }
+
+  /// `$\LaTeXe$` in ejpecp (sample.tex:128, :171): the logo constructor's
+  /// `</ltx:text>` after its content auto-closed the text is a scoped close
+  /// (batch 56x, DIVERGENCES #202) — no class-level `\mbox` wrapping (which
+  /// collapses the whole formula into a marked-as-math text node).
+  #[test]
+  fn ejpecp_latexe_math_mode() {
+    let tex = r"\documentclass{ejpecp}
+\begin{document}
+$\LaTeXe$ and $\LaTeX$
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ltx_LaTeX_logo"), "{xml}");
+    assert!(xml.contains("<Math"), "{xml}");
+    assert!(!xml.contains("ltx_markedasmath"), "{xml}");
+
+    // Control: text mode in standard article works without error
+    let control_tex = r"\documentclass{article}
+\begin{document}
+\LaTeXe\ and \LaTeX
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("ltx_LaTeX_logo"), "{c_xml}");
+  }
+
+  /// verbatim.sty: \verbatim@readfile (witness: kotex-utf/kotex-utf-doc.tex).
+  /// Tests reading an external/filecontents file through \verbatim@readfile,
+  /// with \verbatiminput as control twin.
+  #[test]
+  fn verbatim_readfile_macro() {
+    let tex = r"\begin{filecontents*}{readfile_test.txt}
+hello verbatim world
+line 2
+\end{filecontents*}
+\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+\makeatletter
+\verbatim@readfile{readfile_test.txt}
+\makeatother
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("hello verbatim world"), "{xml}");
+    assert!(xml.contains("line 2"), "{xml}");
+
+    // Control: standard \verbatiminput on the same file
+    let control_tex = r"\begin{filecontents*}{readfile_test2.txt}
+hello verbatim world
+line 2
+\end{filecontents*}
+\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+\verbatiminput{readfile_test2.txt}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("hello verbatim world"), "{c_xml}");
+  }
 }

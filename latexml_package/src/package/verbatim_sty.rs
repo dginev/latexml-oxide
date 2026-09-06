@@ -29,6 +29,10 @@ LoadDefinitions!({
     r"\verbatim@line\expandafter{\the\verbatim@line#1}"
   );
   DefMacro!(r"\verbatim@processline", r"\the\verbatim@line\par");
+  DefMacro!(
+    r"\verbatim@finish",
+    r"\ifcat$\the\verbatim@line$\else\verbatim@processline\fi"
+  );
 
   DefMacro!(
     r"\verbatim@font",
@@ -155,11 +159,68 @@ LoadDefinitions!({
 
   // //======================================================================
   // // Read verbatim material from file.
+  DefMacro!("\\verbatim@readfile {}", sub[(file)] {
+    let name = do_expand(file)?.to_string();
+    let trimmed = name.trim().trim_matches('"');
+    if let Some(content) = vfs_read(trimmed) {
+      let mut tokens = Vec::new();
+      tokens.push(T_CS!("\\verbatim@startline"));
+      for line in content.lines() {
+        tokens.extend(
+          Invocation!(
+            T_CS!("\\verbatim@addtoline"),
+            vec![Tokens::new(ExplodeText!(line.to_string()))]
+          )
+          .unlist(),
+        );
+        tokens.push(T_CS!("\\verbatim@processline"));
+        tokens.push(T_CS!("\\verbatim@startline"));
+      }
+      tokens.push(T_CS!("\\verbatim@finish"));
+      return Ok(Tokens::new(tokens));
+    }
+    if let Some(path) = find_file(trimmed, None) {
+      reading_from_mouth(
+        Mouth::create(&path, MouthOptions::default())?,
+        || -> Result<Tokens> {
+          let mut lines = Vec::new();
+          with_mouth_mut(|mouth_opt| {
+            if let Some(mouth) = mouth_opt {
+              while let Some(line) = mouth.read_raw_line(false) {
+                lines.push(line);
+              }
+            }
+          });
+          let mut tokens = Vec::new();
+          tokens.push(T_CS!("\\verbatim@startline"));
+          for line in lines.into_iter() {
+            tokens.extend(
+              Invocation!(
+                T_CS!("\\verbatim@addtoline"),
+                vec![Tokens::new(ExplodeText!(line))]
+              )
+              .unlist(),
+            );
+            tokens.push(T_CS!("\\verbatim@processline"));
+            tokens.push(T_CS!("\\verbatim@startline"));
+          }
+          tokens.push(T_CS!("\\verbatim@finish"));
+          Ok(Tokens::new(tokens))
+        },
+      )
+    } else {
+      let message = s!("No file {}. (\\verbatim@readfile)", trimmed);
+      Warn!("binding", "missing_file", message);
+      Ok(Tokens!(T_CS!("\\verbatim@finish")))
+    }
+  });
+
   DefMacro!("\\verbatiminput {}", sub[(file)] {
     // Expand the argument (`\verbatiminput{\jobname.tmp}`) and serve
     // in-memory filecontents/VerbatimOut captures before touching disk.
     let name = do_expand(file)?.to_string();
-    if let Some(content) = vfs_read(&name) {
+    let trimmed = name.trim().trim_matches('"');
+    if let Some(content) = vfs_read(trimmed) {
       let mut tokens = Vec::new();
       for line in content.lines() {
         tokens.push(T_CS!("\\verbatim@startline"));
@@ -172,8 +233,7 @@ LoadDefinitions!({
         T_CS!("\\frenchspacing"), T_CS!("\\@vobeyspaces"),
         T_CS!("\\lx@verbatim@"), Tokens::new(tokens), T_CS!("\\lx@end@verbatim@"), T_CS!("\\endgroup")));
     }
-    let file = Tokens!(ExplodeText!(name));
-    if let Some(path) = find_file(&file.to_string(), None) {
+    if let Some(path) = find_file(trimmed, None) {
       reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
             || -> Result<Tokens> {
           let mut lines = Vec::new();
@@ -202,7 +262,7 @@ LoadDefinitions!({
       // `\verbatiminput{COPYRIGHT}` beside COPYRIGHT.txt; lnosuppl.tex:89).
       // Perl verbatim.sty.ltxml:108 opens an empty-path Mouth and errors —
       // SHARED, pdflatex clean. Guard: `perfect_kernel_batch56::verbatiminput_missing_file_is_not_an_error`.
-      let message = s!("No file {}. (\\verbatiminput)", file.to_string().trim());
+      let message = s!("No file {}. (\\verbatiminput)", trimmed);
       Warn!("binding", "missing_file", message);
       Ok(Tokens!())
     }
