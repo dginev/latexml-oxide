@@ -15,6 +15,9 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
 
 ## Working rules (unchanged, plus round-2 lessons)
 
+- **No pull requests.** All work lands on `perfect_kernel` through your
+  `gemini/pk-helpers-N` branches; the single PR to `main` is opened by the user
+  when the branch is ready. Never open a PR (PR #798 was closed for this reason).
 - **This file lists only OPEN tasks.** At each merge the orchestrator lifts your
   Status entries into `LEDGER.md`/`KERNEL_CAPABILITIES.md` and deletes them here
   together with the solved task text; a task that is still open is carried over
@@ -74,7 +77,7 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
 
 ## Tasks (priority order)
 
-### M1 — the algpseudocodex binding (carried over from round 6, still open)
+### M1 — the algpseudocodex binding (carried over from round 6; the branch `feat-algpseudocodex-binding` / PR #798 is CLOSED — the orchestrator merges that branch into `perfect_kernel`; if it is not complete, continue it on `gemini/pk-helpers-7`, never on a branch off `main`)
 when done, NOT `perfect_kernel`): create `latexml_contrib/src/algpseudocodex_sty.rs`
 (register in `latexml_contrib/src/lib.rs`, `pub mod` there) so the package stops
 raw-loading. The full work-prep is in `scratchpad/ALGPSEUDOCODEX_HANDOFF.md` in the

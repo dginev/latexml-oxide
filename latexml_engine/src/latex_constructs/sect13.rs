@@ -1802,12 +1802,14 @@ pub(crate) fn load() -> Result<()> {
   // linguistics doc family (linguex, covington, philex, drs,
   // movement-arrows; 5 TL doc bundles). Provide the invariant as an
   // expansion-indirection default; a class that DOES route through
-  // `\@setfontsize` overwrites it with the exact size command. A `\let`,
-  // not a macro: latex.ltx:14107 `\let\@currsize#1` makes `\@currsize` the
-  // size command ITSELF, so `\ifx\@currsize\normalsize` (ltugboat's `\SMC`
-  // cascade, latex-doc-ptr.sty:203-215; Gemini L5) compares meanings — a
-  // macro whose body is `\normalsize` is not `\ifx`-equal to it.
-  Let!("\\@currsize", "\\normalsize");
+  // `\@setfontsize` overwrites it with the exact size command. Kept a MACRO:
+  // a `\let` here would copy latex.ltx:14104's placeholder `\normalsize` (the
+  // "font size command not defined" error) before any class defines the real
+  // one. The `\ifx\@currsize\normalsize` identity (ltugboat's `\SMC` cascade,
+  // latex-doc-ptr.sty:203-215; Gemini L5) is established the way size10.clo:54
+  // does it — the class bindings EXECUTE `\normalsize` after defining the size
+  // commands, and the size switch itself lets `\@currsize` (dialect.rs).
+  DefMacro!("\\@currsize", "\\normalsize");
   // latex.ltx:18349-18350 `\ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi`
   // — the size `.clo`s set it through `\@setfontsize\@normalsize…`, which the
   // font-primitive size commands here bypass (UNAMThesis under report).

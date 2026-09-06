@@ -154,6 +154,12 @@ LoadDefinitions!({
   DefPrimitive!("\\LARGE",        None, font => {size => 17.28 });
   DefPrimitive!("\\huge",         None, font => {size => 20.74 });
   DefPrimitive!("\\Huge",         None, font => {size => 29.8 });
+  // size10.clo:54 (every `size*.clo`): `\normalsize` is EXECUTED right after
+  // the size commands are defined, which is what sets `\@currsize` to the size
+  // command itself (latex.ltx:14107 `\let\@currsize#1` via `\@setfontsize`;
+  // our size switch lets it in dialect.rs). `\ifx\@currsize\normalsize` then
+  // holds from the start (ltugboat's `\SMC` cascade, latex-doc-ptr; Gemini L5).
+  Digest!("\\normalsize")?;
   // report.cls `\let\@openbib@code\@empty` (article.cls:585) — the default
   // the `openbib` option overrides; a copied `thebibliography` body reads it
   // (mciteplus_doc; Perl's class binding lacks the default too).
