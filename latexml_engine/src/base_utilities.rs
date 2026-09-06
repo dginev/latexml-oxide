@@ -3028,7 +3028,11 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   for item in content {
     insert_frontmatter_rec(document, item)?;
   }
-  document.close_element(tag)?;
+  // Scoped close (OXIDIZED_DESIGN #202): a deferred body that ran to the end
+  // of the input carries the `\end{document}` whatsit (an unbalanced
+  // `\abstract{…`, #207); absorbing it here closes the document — and this
+  // element with it — so there is nothing left of ours to close.
+  document.close_element_if_open(tag)?;
   // At this time, the frontmatter element should really carry the actual literal values intended.
   // (Perl PR #2767 disables the former empty-element pruning here.)
   Ok(())

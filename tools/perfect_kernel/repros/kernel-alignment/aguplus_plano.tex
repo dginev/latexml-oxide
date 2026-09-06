@@ -1,0 +1,24 @@
+% witness: aguplus/aguplus (aguplus.cls:305 \pt@tabular, :314 planotable, :320 close)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=10 (2026-09-06)
+% expect:  0 errors; //ltx:tabular with 3 td, the 45/90 cells inline Math
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: deluxetable \pt@tabular = \hbox\bgroup $ ... \@tabarray with text cells
+%   (\@classz=\@tabclassz). Two coupled roots: (1) \@tabarray forces math bindings
+%   -> cell $ mis-toggles; (2) \endtabular (LaTeXML) omits latex.ltx:16554's closing
+%   $\egroup so the outer $/hbox stay open. Both SHARED; pdflatex clean.
+\documentclass{article}
+\makeatletter
+\newbox\pt@box
+\def\pt@format{\string lcc}
+\def\@halignto{}
+\def\@ptabacol{\edef\@preamble{\@preamble\hskip\tabcolsep\tabskip\fill}}
+\def\pt@tabular{\hbox\bgroup$\let\@acol\@ptabacol
+  \let\@classz\@tabclassz\let\@classiv\@tabclassiv\let\\\@tabularcr\@tabarray}
+\begin{document}
+\setbox\pt@box=\pt@tabular{\pt@format}%
+A & $45^\circ$ & $90^\circ$ \\
+B & $56^\circ$ & $124^\circ$
+\crcr\endtabular
+\box\pt@box
+\end{document}

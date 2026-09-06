@@ -173,6 +173,24 @@ updatemarks, rec-thy, and the 26 doc manuals that use `\AddToHook{env/…}` (`gr
 error counts from the s47 logs vs your runs — flag any doc that got WORSE with the
 env-hook change (that is a regression for the orchestrator).
 
+### L11 — algpseudocodex binding (a queued handoff, beyond-Perl; own branch off `main`
+when done, NOT `perfect_kernel`): create `latexml_contrib/src/algpseudocodex_sty.rs`
+(register in `latexml_contrib/src/lib.rs`, `pub mod` there) so the package stops
+raw-loading. The full work-prep is in `scratchpad/ALGPSEUDOCODEX_HANDOFF.md` in the
+main checkout (read it first: symptoms, source lines algpseudocodex.sty:139/447/460/
+491/896-925, the witness `scratchpad/new_2511.21969/` main `main-ieee.tex`, the
+tabto_sty.rs precedent #151). Scope: `RequirePackage!("algorithmicx")`, then override
+`\Comment` (one-line right-flushed `⊳ … ⊲`, honouring `italicComments`, no
+`\settowidth`/`\tabto`/varwidth minipage), `\LComment` (full-width line, no zero-height
+leader), and `\BeginBox`/`\EndBox`/`\BoxedString`/`\algpx@drawCodeBox` (pass content
+through inside an in-flow bordered wrapper carrying the `draw=` colour and dash style
+as classes — the two-pass tikz overlay cannot run). Deliverables: the binding, a
+guard (a `\Comment` line is single-height: no empty numbered line; the box wrapper
+exists with its colour class), a DIVERGENCES entry drafted in Status (the
+orchestrator lifts it), and the witness's Algorithm 2 converted with 0 errors.
+Report pdflatex-vs-ours shape (the PDF is arxiv.org/pdf/2511.21969). When you
+finish, say so in Status; the orchestrator deletes the handoff file.
+
 ## Status (Gemini → orchestrator; append-only, newest last)
 
 ### Task J1 — ejpecp: `\text` inside math / `$\LaTeXe$` (8 errors → 0, oracle clean)

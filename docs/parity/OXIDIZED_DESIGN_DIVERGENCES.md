@@ -7000,3 +7000,75 @@ where the model's verdict stands as in Perl. One rule, no per-tag cases
 `tests/complex/figure_dual_caption` (a minipage of graphics + caption still
 becomes the figure).
 
+
+
+### 206. Array cells follow `\@classz`; `\endtabular` closes a raw scaffold; templates `\edef`-expand
+
+**Perl behavior**: `\@array@bindings` always binds MATH cells; `\@tabarray` is
+`\m@th\@@array[c]`; `\endtabular` = `\@tabular@after\lx@end@alignment\@end@tabular`
+(no `$\egroup`); `ReadAlignmentTemplate` (Alignment.pm:895-921) reads the template
+unexpanded.
+**Rust behavior**: `\@arrayclassz`/`\@tabclassz` exist (latex.ltx:16645/16652) and
+`\@array@bindings` + `\@array` pick text cells and the tabular container when
+`\ifx\@classz\@tabclassz` (latex.ltx:16561 `\@tabular`), math cells otherwise
+(:16550 `\array`); `\@array@bindings` records `lx@raw@array@open` (scoped to the
+scaffold group, cleared by the constructor's `\@tabular@bindings`) and
+`\endtabular` appends latex.ltx:16554's `$\egroup` exactly when set; the template
+reader expands every expandable token as `\@mkpream`'s `\edef` does
+(latex.ltx:16610-16644) except `\csname`/`\expandafter`/`\noexpand` (the over-read
+protection nicematrix's `V{3cm}`-before-binding needs).
+**Why**: one latex.ltx discriminator instead of a forced mode; binding-less
+deluxetable copies (aguplus, sgame, mdwtab, fcolumn, plarray, tabularborder) close
+balanced. KNOWN_PERL_ERRORS #202.
+**Witnesses**: aguplus/aguplus (11 → 0), t-angles (unchanged, math path).
+**Guards**: `perfect_kernel_batch56::{tabarray_cell_mode_follows_classz,
+raw_tabular_scaffold_closes_and_template_expands}`, `perfect_kernel_batch54::
+tabarray_is_the_full_array_setup`.
+
+### 207. Groups still open at `\end{document}` are abandoned §1335-style
+
+**Perl behavior**: `\end{document}` pops the open undo frames back to the document
+frame (latex_constructs.pool.ltxml:350-374) with one warning; `boxing` and any
+bounded primitive still digesting are left inconsistent, so an unbalanced
+`\abstract{…` cascades into mode-close and malformed-XML errors.
+**Rust behavior**: the same unwinding pops STACK frames (frame + `boxing`), discards
+their `\aftergroup` lists (tex.web §1335 never runs them), reports "(\end occurred
+inside a group at level N)" for plain groups, and sets `lx@end@document@open@groups`;
+the `ltx:document` close is then lenient (`close_element_lenient`: descendants the
+abandoned groups left open close with a Warning, not an Error); a `bounded => true`
+primitive closes only the frame it opened (the opener writes its cs as the frame's group code, `lx@group@code`, as tex.web §274 `new_save_level` does; the closer checks it as §1068 checks `cur_group`), so one unwound by
+`\end{document}` does not close the document frame; and
+because the deferred body then carries the `\end{document}` whatsit — absorbed
+when the frontmatter is inserted at finalization, which is when the document
+actually closes — that constructor is idempotent (`lx@document@closed`) and a
+frontmatter entry's own close is scoped (`close_element_if_open`, #202).
+**Why**: pdflatex treats the unclosed group as a warning; the content is typeset.
+A `\section` inside the open group stays inside the abstract, as TeX typesets it
+inside the group (settled dead end: arming `\@startsection@hook` in the braced
+branch is inert — a `{` group is a NESTED body in this stomach, `tex_box.rs`'s
+`{` primitive, so the until-body's terminal never reaches its own loop — Perl nests the same
+way, TeX_Box.pool.ltxml:30-41; KERNEL_CAPABILITIES 2026-09-06 correctness item).
+KNOWN_PERL_ERRORS #203.
+**Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0).
+**Guards**: `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`,
+`perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`.
+
+### 208. A locked `\abstract` honours the class's argument-taking signature
+
+**Perl behavior**: `\abstract{…}` → `\lx@add@abstract[]{}` always (deferred, argument
+form); a class's `\newcommand{\abstract}[1]` is dropped by the lock with no trace.
+**Rust behavior**: the lock records the dropped definition's parameter count
+(`<cs>:redefined@nargs`, from `\newcommand`'s locked bail in sect08.rs and from a
+dropped raw `\def` in state.rs). `\abstract{…}` reads the group as ONE stored
+argument routed to the deferred `\lx@add@abstract` when the class declared
+`\abstract` with ≥1 argument (ryethesis.cls:344, apa7.cls:785, uwthesis.cls:805 —
+~25 TL classes, all store-then-use at `\maketitle`/`\frontmatter`), and keeps the
+incremental env-begin path (#P74, char-list) otherwise — the meaning of `\abstract`
+at the call site, which is what real TeX keys on.
+**Why**: `\abstract{\Gls{LI}…}` before `\newacronym{LI}` (ryethesis ryesample) is
+valid under the class's own `\abstract`; a one-path capture cannot serve both the
+live-catcode and the deferred cases (settled dead end: undigested capture snapshots
+catcodes, so an inner `\makeatletter` breaks `\patch@level`).
+**Witnesses**: ryethesis/ryesample (1 → 0; Perl 0 on the reduction).
+**Guards**: `perfect_kernel_batch56::class_redefined_abstract_defers_its_argument`.
+\n

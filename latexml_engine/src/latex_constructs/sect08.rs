@@ -62,6 +62,15 @@ pub(crate) fn load() -> Result<()> {
       if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);
+      } else {
+        // The lock drops the class's definition but keeps its SIGNATURE
+        // (ryethesis.cls:344 `\newcommand{\abstract}[1]{…\gdef…{#1}}`: the
+        // braced text is one stored argument) — the same record a dropped
+        // raw `\def` leaves (state.rs `<cs>:redefined@nargs`).
+        let redefined = s!("{}:redefined", cs_token.to_string());
+        let redefined_nargs = s!("{}:redefined@nargs", cs_token.to_string());
+        AssignValue!(&redefined => true, Some(Scope::Global));
+        AssignValue!(&redefined_nargs => Number::new(nargs as i64), Some(Scope::Global));
       }
       return Ok(vec![]);
     }

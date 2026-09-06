@@ -1030,6 +1030,9 @@ LoadDefinitions!({
   // Hopefully noop is sufficient for PDF-specific uses?
   def_macro_noop("\\pdfstringdefDisableCommands")?;
   def_macro_noop("\\pdfbookmark[]{}{}")?;
+  // hyperref.sty:2077 `\def\Hy@writebookmark#1#2#3#4#5{}` — the driver-less
+  // default a class may call directly (shtthesis.cls; Perl lacks it too).
+  RawTeX!(r"\def\Hy@writebookmark#1#2#3#4#5{}");
   def_macro_noop("\\currentpdfbookmark{}{}")?;
   def_macro_noop("\\subpdfbookmark{}{}")?;
   def_macro_noop("\\belowpdfbookmark{}{}")?;
@@ -1143,14 +1146,36 @@ LoadDefinitions!({
   // options (hpdftex.def \define@key{Field}{…} block) — declare them as
   // value-absorbing no-ops so raw styles' \kvsetkeys{Field}{…} passes.
   // Driver-level internals raw form code pokes when it takes over field
-  // rendering (hpdftex.def surface) — inert stubs.
-  def_macro_noop("\\PDFForm@Name{}")?;
+  // rendering (hpdftex.def surface) — inert stubs. RULE: a stub carries the
+  // ARITY of its hpdftex.def / hyperref.sty definition (they emit only
+  // PDF-dictionary fragments, so a no-op of the right arity is faithful);
+  // one argument too many swallows the token after the call — a 1-arg
+  // `\HyField@AddToFields` ate hyperbar.sty:175's closing `\endgroup`, so
+  // `\end{Form}` met an open group ("Attempt to end mode restricted_
+  // horizontal", hyperbar/example; Perl defines none of these). Arities:
+  // `\PDFForm@Name` hpdftex.def:1289 (0), `\HyField@FlagsAnnot` hyperref.sty:
+  // 5427 (1), `\HyField@FlagsText` :5488 (0), `\HyField@FlagsCheckBox` :5459
+  // (0), `\HyField@FlagsChoice` :5520 (0), `\HyField@FlagsPushButton` :5445
+  // (0), `\HyField@FlagsSubmit` :5393 (0), `\HyField@FlagsRadioButton` :5472
+  // (0), `\HyField@AddToFields` hpdftex.def:837 (0), `\HyField@UseFlag`
+  // :5257 / `\HyField@SetFlag` :5267 / `\HyField@PrintFlags` :5275 (2),
+  // `\PDFForm@{Check,Push,List,Radio,Text,Submit,Reset}` hpdftex.def:1373-
+  // 1575 (0). Guard: `perfect_kernel_batch56::hyperref_form_internals_keep_driver_arity`.
+  def_macro_noop("\\PDFForm@Name")?;
   def_macro_noop("\\HyField@FlagsAnnot{}")?;
-  def_macro_noop("\\HyField@FlagsText{}")?;
-  def_macro_noop("\\HyField@FlagsCheckBox{}")?;
-  def_macro_noop("\\HyField@FlagsChoice{}")?;
-  def_macro_noop("\\HyField@FlagsPushButton{}")?;
-  def_macro_noop("\\HyField@AddToFields{}")?;
+  def_macro_noop("\\HyField@FlagsText")?;
+  def_macro_noop("\\HyField@FlagsCheckBox")?;
+  def_macro_noop("\\HyField@FlagsChoice")?;
+  def_macro_noop("\\HyField@FlagsPushButton")?;
+  def_macro_noop("\\HyField@FlagsSubmit")?;
+  def_macro_noop("\\HyField@FlagsRadioButton")?;
+  def_macro_noop("\\HyField@AddToFields")?;
+  def_macro_noop("\\HyField@UseFlag{}{}")?;
+  def_macro_noop("\\HyField@SetFlag{}{}")?;
+  def_macro_noop("\\HyField@PrintFlags{}{}")?;
+  for name in ["Check", "Push", "List", "Radio", "Text", "Submit", "Reset"] {
+    def_macro_noop(&s!("\\PDFForm@{name}"))?;
+  }
   def_macro_identity("\\Hy@escapeform{}")?;
   def_macro_noop("\\HyAnn@AbsPageLabel")?;
   def_macro_noop("\\Fld@pageobjref")?;

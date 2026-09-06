@@ -1,0 +1,15 @@
+% witness: shtthesis/shtthesis-user-guide.tex (TL2025 doc, lualatex)
+% oracle: pdflatex clean; doc engine: lualatex
+% expect: 0 errors; caption3.sty:446 \SetCaptionDefault{biseparator}{none}
+%   must define \caption@biseparator@default (bicaption.sty:92-94).
+% status: GREEN (batch 56z, 2026-09-06)
+% mechanism: caption_sty.rs:207 def_macro_noop("\\SetCaptionDefault{}{}") is a
+%   no-op; bicaption's default-biseparator decl never binds
+%   \caption@biseparator@default; bicaption.sty:132
+%   \caption@set{biseparator}{default} -> \caption@Error "Undefined biseparator `default'".
+\documentclass{article}
+\usepackage{keyval,caption}
+\usepackage{bicaption}
+\begin{document}
+x
+\end{document}

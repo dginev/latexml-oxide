@@ -176,6 +176,11 @@ LoadDefinitions!({
       }
     });
     RawTeX!(r"\def\luatexversion{121} \def\luatexrevision{0} \def\directluaversion{1}");
+    // LuaTeX primitive `\glet` (luatex-enhancements.tex:991: equivalent to
+    // `\protected\def\glet{\global\let}`) — functional, not an engine probe.
+    // apa.cbx:645-646 uses it inside `\ifdef\luatexversion{…}` (biblatex-apa
+    // test doc). Guard: `perfect_kernel_batch56::luatex_profile_defines_glet`.
+    RawTeX!(r"\protected\def\glet{\global\let}");
     // expl3-code.tex:985-986 aliases `\tex_luatexrevision:D`/`\tex_luatexversion:D`
     // to the primitives at FORMAT time, when they did not exist here; lua-widow-
     // control.sty:153 `\int_compare:nNnTF { \tex_luatexversion:D } > { 200 }`

@@ -16339,6 +16339,288 @@ c &= d
     assert!(xml.contains("A:45. ;B:10. ;C:30. ."), "{xml}");
   }
 
+  /// The kernel provides `\inst{n}` as a superscript affiliation mark, so a
+  /// class that defines `\inst` only inside the title-box scope where
+  /// `\@author` expands (bfhsciposter.cls:445,476) still converts
+  /// (witness bfh-ci/DEMO-BFHSciPoster; Perl: `undefined:\inst`).
+  #[test]
+  fn kernel_inst_fallback_is_a_superscript() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\@maketitle{\\begingroup\\def\\inst##1{\\textsuperscript{##1}}\\@author\\par\\endgroup}\n\\makeatother\n\\begin{document}\n\\author{Name\\inst{*}}\n\\title{T}\n\\maketitle\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<creator role=\"author\">")
+        && xml.contains("<personname>Name<sup>*</sup></personname>"),
+      "{xml}"
+    );
+    // A class binding's own `\inst` (the affiliation-LINKING form) beats the
+    // `\providecommand` fallback.
+    let llncs = "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\n\\author{Name\\inst{1}}\n\\institute{Univ A}\n\\maketitle\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(llncs, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("role=\"affiliation\"") && !xml.contains("<sup>1</sup>"),
+      "{xml}"
+    );
+  }
+
+  /// `\@nil` is undefined, as in latex.ltx, so the `\ifx\@nil#1` sentinel
+  /// test is false against an empty macro (polynom.sty:1695
+  /// `\pld@MeasureCells@`; witness polynom/polydemo stage=8 "Stray
+  /// alignment").
+  #[test]
+  fn at_nil_is_undefined_for_ifx_sentinels() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\es{}\n\\begin{document}\n\\ifx\\@nil\\es EQ\\else NE\\fi;\\ifx\\@nil\\@undefinedcs SAME\\else DIFF\\fi.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("NE;SAME."), "{xml}");
+    if kpsewhich_has("polynom.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{polynom}\n\\begin{document}\n\\[\\polyhornerscheme[x=-2,stage=8]{x^3+x^2-1}\\]\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      // The Horner scheme is polynom's `\halign` inside display math: a
+      // text-mode tabular of inline math cells.
+      assert!(
+        xml.contains("<tabular") && xml.matches("<tr").count() == 3,
+        "{xml}"
+      );
+    }
+  }
+
+  /// CJK.sty:232 `\Unicode{hi}{lo}` typesets the code point `hi*256+lo`
+  /// (cjkutf8-ko.sty:65 `\dotemphchar` = U+02D9; witness cjk-ko/cjk-ko-doc).
+  #[test]
+  fn cjk_unicode_inserts_the_code_point() {
+    let tex = "\\documentclass{article}\n\\usepackage{CJKutf8}\n\\begin{document}\n[\\Unicode{0}{\"B7}\\Unicode{\"02}{\"D9}]\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[\u{b7}\u{2d9}]"), "{xml}");
+    if kpsewhich_has("kotex.sty") && kpsewhich_has("cjkutf8-ko.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage[cjk,hangul,usedotemph]{kotex}\n\\begin{document}\n\\dotemph{ABC}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      // `\CJKfamily{nanummj}` (kotex's font setup) is a font switch, not text.
+      assert!(xml.contains("ABC") && !xml.contains("nanummj"), "{xml}");
+    }
+  }
+
+  /// ifpdf.sty is `\RequirePackage{iftex}`: `\ifpdf` has ONE profile-aware
+  /// source, so tikzrput.sty:66's `\ifpdf…\def\rput…\fi` defines `\rput`
+  /// under the luatex profile (pgfornament ornaments, tikzrput) and the
+  /// legacy `\pdffalse` setter still works.
+  #[test]
+  fn ifpdf_delegates_to_iftex() {
+    let tex = "\\documentclass{article}\n\\usepackage{ifpdf}\n\\begin{document}\n\\ifpdf PDF\\else DVI\\fi;\\pdffalse\\ifpdf PDF\\else DVI\\fi.\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("PDF;DVI."), "{xml}");
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("DVI;DVI."), "{xml}");
+    if kpsewhich_has("tikzrput.sty") && kpsewhich_has("tufte-handout.cls") {
+      let tex = "\\RequirePackage{luatex85}\n\\documentclass{tufte-handout}\n\\usepackage{tikz}\n\\usepackage{tikzrput}\n\\begin{document}\n\\rput(0,0){X}\n\\end{document}\n";
+      let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("<picture") || xml.contains("<svg"), "{xml}");
+    }
+  }
+
+  /// beamerbasetitle.sty:214-215 `\keywords{…}` (PDF metadata) is provided
+  /// beside `\subject` (witness beamerswitch-example).
+  #[test]
+  fn beamer_keywords_is_provided() {
+    let tex = "\\documentclass{beamer}\n\\title{T}\n\\author{A}\n\\keywords{CTAN, literate programming}\n\\begin{document}\n\\begin{frame}\\maketitle\\end{frame}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<title>T</title>") && !xml.contains("literate programming"),
+      "{xml}"
+    );
+  }
+
+  /// caption3.sty:446-457 `\SetCaptionDefault{name}{value}` binds
+  /// `\caption@<name>@default`, so bicaption.sty:92/132's biseparator
+  /// default resolves (witness shtthesis-user-guide).
+  #[test]
+  fn setcaptiondefault_binds_the_default() {
+    let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\makeatletter\n\\def\\caption@foo@bar{BAR}\n\\SetCaptionDefault{foo}{bar}\n\\begin{document}\n[\\caption@foo@default]\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[BAR]"), "{xml}");
+    if kpsewhich_has("bicaption.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{keyval,caption}\n\\usepackage{bicaption}\n\\begin{document}\nx\n\\end{document}\n";
+      let (stderr, _) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+    }
+  }
+
+  /// hyperref.sty:2077 `\Hy@writebookmark` (5 arguments) and
+  /// biblatex.sty:15506 `\BiblatexManualHyperrefOn` exist for classes that
+  /// call them directly (shtthesis.cls:330).
+  #[test]
+  fn hyperref_and_biblatex_manual_internals_exist() {
+    let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\usepackage[hyperref=manual]{biblatex}\n\\makeatletter\n\\begin{document}\n\\Hy@writebookmark{0}{T}{a.1}{1}{toc}x\\BiblatexManualHyperrefOn y\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("x y") || xml.contains("xy"), "{xml}");
+  }
+
+  /// LuaTeX's `\glet` primitive (`\protected\def\glet{\global\let}`,
+  /// luatex-enhancements.tex:991) exists under the luatex profile only
+  /// (apa.cbx:645; witness biblatex-apa-test, lualatex oracle). Engine
+  /// check 2026-09-06: `pdflatex` on `\glet\myfoo\relax` = "Undefined
+  /// control sequence", `lualatex` = OK — each persona follows its engine.
+  #[test]
+  fn luatex_profile_defines_glet() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n{\\glet\\myfoo\\relax}\\ifx\\myfoo\\relax OK\\else BAD\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("OK"), "{xml}");
+    // pdfTeX has no `\glet`.
+    let (stderr, _) = convert(tex, true);
+    assert!(stderr.contains("undefined:\\glet"), "{stderr}");
+  }
+
+  /// Cell mode follows `\@classz` (latex.ltx:16550/16561): a raw
+  /// `\let\@classz\@tabclassz … \@tabarray` scaffold gets TEXT cells whose
+  /// `$45^\circ$` is a clean inline math (witness aguplus planotable,
+  /// aguplus.tex:633; Perl 8).
+  #[test]
+  fn tabarray_cell_mode_follows_classz() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\begin{document}\n\\let\\@halignto\\@empty\n\\hbox{$\\let\\@acol\\@tabacol\\let\\@classz\\@tabclassz\n  \\let\\@classiv\\@tabclassiv\\let\\\\\\@tabularcr\n  \\@tabarray{lcc}A & $45^\\circ$ & b\\\\ C & $90^\\circ$ & d\\endarray$}\n\\makeatother\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<tabular") && xml.matches("<tr").count() == 2,
+      "{xml}"
+    );
+    assert!(xml.contains("<td") && xml.contains("<Math"), "{xml}");
+    // `\begin{array}` keeps math cells (t-angles: `\let\@classz\@arrayclassz`).
+    let tex = "\\documentclass{article}\n\\begin{document}\n$\\begin{array}{cc}a&b\\\\c&d\\end{array}$\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<XMArray"), "{xml}");
+  }
+
+  /// latex.ltx:16554 `\endtabular` = `\crcr\egroup\egroup $\egroup`: a
+  /// deluxetable-style raw scaffold (`\hbox\bgroup$…\@tabarray` …
+  /// `\endtabular`, aguplus.cls:305 `\pt@tabular`) closes balanced, and the
+  /// template is `\edef`-expanded (`\string lcc`, aguplus.cls:314).
+  #[test]
+  fn raw_tabular_scaffold_closes_and_template_expands() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\newbox\\pt@box\n\\def\\pt@format{\\string lcc}\n\\def\\@halignto{}\n\\def\\@ptabacol{\\edef\\@preamble{\\@preamble\\hskip\\tabcolsep\\tabskip\\fill}}\n\\def\\pt@tabular{\\hbox\\bgroup$\\let\\@acol\\@ptabacol\n  \\let\\@classz\\@tabclassz\\let\\@classiv\\@tabclassiv\\let\\\\\\@tabularcr\\@tabarray}\n\\begin{document}\n\\setbox\\pt@box=\\pt@tabular{\\pt@format}%\nA & $45^\\circ$ & $90^\\circ$ \\\\\nB & $56^\\circ$ & $124^\\circ$\n\\crcr\\endtabular\n\\box\\pt@box\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("Unrecognized tabular template"),
+      "{stderr}"
+    );
+    assert!(
+      xml.contains("<tabular")
+        && xml.matches("<tr").count() == 2
+        && xml.matches("<td").count() == 6,
+      "{xml}"
+    );
+    assert!(xml.contains("After.") && !xml.contains("<ERROR"), "{xml}");
+    // The constructor `\begin{tabular}` opens no scaffold: nothing extra closes.
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\pt@format{\\string lcc}\n\\begin{document}\n\\begin{tabular}{\\pt@format}\nA & $45^\\circ$ & $90^\\circ$\\\\\nB & $56^\\circ$ & $124^\\circ$\n\\end{tabular}\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("Unrecognized tabular template"),
+      "{stderr}"
+    );
+    assert!(
+      xml.matches("<td").count() == 6 && xml.contains("After."),
+      "{xml}"
+    );
+  }
+
+  /// A class that redefines `\abstract` as an argument-taking command
+  /// (ryethesis.cls:344 `\newcommand{\abstract}[1]{…}`) reads `{…}` as one
+  /// stored argument, so `\Gls{LI}` before `\newacronym{LI}` resolves at
+  /// frontmatter time (witness ryethesis ryesample; Perl 0, Rust 1).
+  #[test]
+  fn class_redefined_abstract_defers_its_argument() {
+    if !kpsewhich_has("glossaries.sty") {
+      return;
+    }
+    let cls = "\\ProvidesClass{deferabs}\n\\LoadClass{report}\n\\newcommand{\\abstract}[1]{\\gdef\\my@theabstract{#1}}\n";
+    let tex = "\\documentclass{deferabs}\n\\usepackage[acronym]{glossaries}\n\\begin{document}\n\\abstract{\\Gls{LI} dolor sit amet.}\n\\newglossaryentry{Lorem}{name={lorem},description={x}}\n\\newacronym{LI}{LI}{lorem ipsum}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[("deferabs.cls", cls)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<abstract") && xml.contains("dolor sit amet"),
+      "{xml}"
+    );
+    // A `\def\abstract#1{…}` class (apa7.cls:785 shape) records the same.
+    let cls2 =
+      "\\ProvidesClass{deferabs2}\n\\LoadClass{report}\n\\def\\abstract#1{\\gdef\\@abstract{#1}}\n";
+    let tex2 = "\\documentclass{deferabs2}\n\\begin{document}\n\\abstract{\\undefinedlater ipsum.}\n\\def\\undefinedlater{Lorem}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex2, &[("deferabs2.cls", cls2)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // `\undefinedlater ipsum.`: the space after the control word is gobbled.
+    assert!(xml.contains("Loremipsum."), "{xml}");
+  }
+
+  /// thumbs.sty loads in its own `hidethumbs` off-mode (:1537-1544), so the
+  /// shipout-reset state machine never raises "\thumbnewcolumn after
+  /// \addthumb" (:573; witness thumbs-example).
+  #[test]
+  fn thumbs_loads_in_its_own_hide_mode() {
+    if !kpsewhich_has("thumbs.sty") {
+      return;
+    }
+    let tex = "\\documentclass[twoside]{article}\n\\usepackage{thumbs}\n\\begin{document}\n\\section{A}\n\\addthumb{F mark}{\\Huge F}{magenta}{black}\nSome text.\n\\newpage\n\\thumbnewcolumn\n\\addthumb{New column}{\\Huge NC}{magenta}{black}\nThere.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Some text.") && xml.contains("There."),
+      "{xml}"
+    );
+  }
+
+  /// The hyperref PDF-form internal stubs carry their hpdftex.def /
+  /// hyperref.sty arity: a 0-argument `\HyField@AddToFields` (hpdftex.def:837)
+  /// no longer swallows the `\endgroup` that follows it (hyperbar.sty:175;
+  /// witness hyperbar/example `\end{Form}` mode error).
+  #[test]
+  fn hyperref_form_internals_keep_driver_arity() {
+    let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\makeatletter\n\\begin{document}\n\\begin{Form}\nA\\begingroup\\leavevmode\\HyField@AddToFields\\endgroup B\\PDFForm@Name C\\HyField@UseFlag{Ff}{Multiline}D\n\\end{Form}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Each 0-argument stub gobbles only the space after its name (TeX's
+    // control-word rule): the letters run together.
+    assert!(xml.contains("ABCD") && !xml.contains("Multiline"), "{xml}");
+  }
+
+  /// tex.web §1335: an `\abstract{` whose brace never closes
+  /// (screenplay-pkg.tex:67) ends with the benign "(\end occurred inside a
+  /// group)" line, not a mode error. A `\section` inside the open group is
+  /// typeset inside it, as in TeX (the group is a nested body here, so the
+  /// brace-less form's section-hook terminal cannot end this abstract).
+  #[test]
+  fn unbalanced_abstract_brace_unwinds_at_end() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\abstract{\\begin{quote}This is the abstract body.\n\\end{quote}\n\\section{Intro}\nSome following text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<abstract") && xml.contains("</abstract>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<section") && xml.contains("Some following text."),
+      "{xml}"
+    );
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\abstract{\\begin{quote}Abstract body, no closing brace, no section.\n\\end{quote}\nTrailing text still inside the runaway group.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<abstract") && xml.contains("Trailing text"),
+      "{xml}"
+    );
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

@@ -1,0 +1,15 @@
+% witness: biblatex-apa/biblatex-apa-test (apa.cbx:645 \glet\textcitei\textcite)
+% oracle:  lualatex 0 errors (\glet is a LuaTeX engine primitive)
+% engines: rust=? perl=? (2026-09-06)
+% expect:  0 errors; body text contains "OK"
+% status:  GREEN (batch 56z, 2026-09-06)
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% mechanism: LuaTeX primitive \glet (luatex-enhancements.tex:991
+%   \protected\def\glet{\global\let}) absent from our luatex-profile
+%   primitive surface (latexml_sty/mod.rs), while \luatexversion IS defined,
+%   so apa.cbx's \ifdef\luatexversion true-branch runs \glet and fails.
+\documentclass{article}
+\begin{document}
+\glet\myfoo\relax
+\ifx\myfoo\relax OK\else BAD\fi
+\end{document}

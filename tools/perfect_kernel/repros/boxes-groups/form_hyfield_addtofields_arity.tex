@@ -1,0 +1,21 @@
+% witness: hyperbar/example (example.tex:4-10) — minimal hyperref-only isolation
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=? (2026-09-06)
+% expect:  0 errors; text before ("A") and after ("B") the group both render, Form closes
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: our stub `def_macro_noop("\\HyField@AddToFields{}")` (hyperref_sty.rs:1153)
+%   gives \HyField@AddToFields a spurious argument; the real pdftex-driver def
+%   hpdftex.def:837 `\def\HyField@AddToFields{...}` takes ZERO args. Called bare (as
+%   hpdftex.def field code and hyperbar.sty:175 do), our stub eats the following
+%   \endgroup, so \@BarcodeField's \begingroup (hyperbar.sty:143) never closes and
+%   \end{Form} errors "end mode restricted_horizontal". Same family bug: \PDFForm@Name{}
+%   and \HyField@Flags{Text,CheckBox,Choice,PushButton}{} are also 1-arg stubs of
+%   real 0-arg macros.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\begin{document}
+\begin{Form}
+A\begingroup\leavevmode\HyField@AddToFields\endgroup B
+\end{Form}
+\end{document}

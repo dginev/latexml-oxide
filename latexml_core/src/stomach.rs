@@ -21,6 +21,12 @@ static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOU
 /// owning token and (on pop) the bound mode — the save-stack view of a
 /// group/box/mode imbalance.
 static TRACE_FRAMES: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
+/// `LXML_TRACE_TERMINAL=1`: for every bounded body (`digest_next_body` with a
+/// terminal), the terminal, each token the loop reads with the boxing depth,
+/// and the exit — shows which loop actually digests a token (a brace group is
+/// a NESTED body here, so an until-body's terminal inside `{…}` never reaches
+/// the outer loop).
+static TRACE_TERMINAL: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_TERMINAL").is_ok());
 
 // Conversion timeout: thread-local deadline. When set, digest loops check it.
 thread_local! {
@@ -1732,6 +1738,9 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
 
   let init_depth = { stomach!().boxing.len() };
+  if *TRACE_TERMINAL {
+    eprintln!("[terminal] enter body terminal={terminal_opt:?} init_depth={init_depth}");
+  }
   // Did the loop end because the INPUT RAN OUT (as opposed to reaching the
   // terminal or closing the initial mode)? Perl `Stomach.pm` L130 keys the
   // trailer box on `unless $token`, and `$token` is undef exactly when the
@@ -1795,6 +1804,25 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       }
     }
     // normal case
+    if *TRACE_TERMINAL && terminal_opt.is_some() {
+      eprintln!(
+        "[terminal] read {token:?} depth={} init={}",
+        stomach!().boxing.len(),
+        init_depth
+      );
+    }
+    if *TRACE_TERMINAL
+      && let Some(ref terminal) = terminal_opt
+      && token.get_catcode() == Catcode::CS
+      && token.with_str(|a| terminal.with_str(|b| a == b))
+    {
+      eprintln!(
+        "[terminal] candidate {token:?} vs {terminal:?} eq={} depth={} init={}",
+        &token == terminal,
+        stomach!().boxing.len(),
+        init_depth
+      );
+    }
     let invoked = invoke_token(&token)?;
     extend_box_list(invoked);
 
@@ -1806,6 +1834,13 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       break;
     }
     if init_depth > stomach!().boxing.len() {
+      if *TRACE_TERMINAL && terminal_opt.is_some() {
+        eprintln!(
+          "[terminal] EXIT depth {} < init {} after {token:?}",
+          stomach!().boxing.len(),
+          init_depth
+        );
+      }
       ran_out = false;
       break;
     }

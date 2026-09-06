@@ -238,6 +238,7 @@ pub(crate) fn load() -> Result<()> {
       attrs.insert(String::from("vattach"), translate_attachment(va).to_string());
     }
 
+    AssignValue!("lx@raw@array@open" => false);
     tabular_bindings(template, SymHashMap::default(), attrs)?;
   });
 
@@ -279,10 +280,24 @@ pub(crate) fn load() -> Result<()> {
   // macro; its `\cs_set` is dropped by the lock exactly as in Perl. Guard:
   // `perfect_kernel_batch56::tabular_delegator_is_locked_with_endtabular`.
   DefMacro!("\\tabular", "\\@tabular", locked => true);
-  DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular",
+  // latex.ltx:16554 `\def\endtabular{\crcr\egroup\egroup $\egroup}`: the
+  // trailing `$\egroup` closes the `\hbox\bgroup$` scaffold `\@tabular`
+  // (:16560) opened. The constructor path opens none (`\lx@tabular@eatmath`
+  // above), so the unwind is keyed on `\@array@bindings` having opened the
+  // array (`lx@raw@array@open`, scoped to the scaffold group). Witness
+  // aguplus planotable (`\pt@tabular` … `\endtabular`): the inline-math and
+  // hbox frames stayed open → `\pt@endfloat`/`\endgroup` mode errors.
+  DefMacro!("\\endtabular", r"\@tabular@after\lx@end@alignment\@end@tabular\lx@raw@array@close",
     locked => true);
   DefPrimitive!("\\@end@tabular", {
     egroup()?;
+  });
+  DefMacro!("\\lx@raw@array@close", {
+    if lookup_bool("lx@raw@array@open") {
+      Tokens!(T_MATH!(), T_CS!("\\egroup"))
+    } else {
+      Tokens!()
+    }
   });
   // Perl latex_constructs.pool.ltxml L3735-3746: mode => 'restricted_horizontal',
   //   enterHorizontal => 1.
@@ -410,6 +425,26 @@ pub(crate) fn load() -> Result<()> {
   DefRegister!("\\extrarowheight", Dimension!("0pt"));
   def_macro_noop("\\extracolsep{}")?;
 
+  // latex.ltx:16645-16665 `\@arrayclassz` / `\@tabclassz`: the class-z
+  // preamble builders `\array` (:16550) and `\@tabular` (:16561) `\let\@classz`
+  // to. LaTeXML reads the template itself (never runs `\@mkpream`), so the
+  // bodies are inert — but the MEANING of `\@classz` is how latex.ltx says
+  // whether the cells are math (`\@arrayclassz` wraps `\@sharp` in `$…$`) or
+  // text (`\@tabclassz` does not), and `\@array@bindings` keys on it below.
+  RawTeX!(r"\def\@arrayclassz{\ifcase \@lastchclass \@acolampacol \or \@ampacol \or
+   \or \or \@addamp \or
+   \@acolampacol \or \@firstampfalse \@acol \fi
+\edef\@preamble{\@preamble
+  \ifcase \@chnum
+     \hfil$\relax\@sharp$\hfil \or $\relax\@sharp$\hfil
+    \or \hfil$\relax\@sharp$\fi}}
+\def\@tabclassz{\ifcase\@lastchclass \@acolampacol \or \@ampacol \or \or \or
+    \@addamp \or \@acolampacol \or \@firstampfalse\@acol \fi
+  \edef\@preamble{\@preamble
+    \ifcase \@chnum \hfil\ignorespaces\@sharp\unskip\hfil
+      \or \ignorespaces\@sharp\unskip\hfil
+      \or \hfil\hskip\z@ \ignorespaces\@sharp\unskip\fi}}");
+
   // Array and similar environments
   // Perl: latex_constructs.pool.ltxml lines 3792-3809
   DefPrimitive!("\\@array@bindings [] AlignmentTemplate", sub[(pos, template)] {
@@ -417,6 +452,24 @@ pub(crate) fn load() -> Result<()> {
     let attachment = pos.map(|a| translate_attachment(a.to_string()))
       .unwrap_or_else(|| translate_attachment(""));
     attrs.insert(String::from("vattach"), attachment.to_string());
+    // A raw `\hbox\bgroup$…\@tabarray` scaffold (latex.ltx:16560 `\@tabular`,
+    // copied by deluxetable-style classes: aguplus.cls:305 `\pt@tabular`,
+    // sgame, mdwtab, fcolumn, plarray) closes with `\endtabular`'s trailing
+    // `$\egroup` (:16554); the constructor `\tabular` opens no scaffold.
+    // Record which one opened the array so `\endtabular` unwinds the right
+    // frames (`\lx@raw@array@close`); `\@tabular@bindings` clears it.
+    AssignValue!("lx@raw@array@open" => true);
+    // Cell mode follows `\@classz` (latex.ltx:16550 `\array` → `\@arrayclassz`
+    // = `$\@sharp$` math cells; :16561 `\@tabular` → `\@tabclassz` = text
+    // cells). Forcing math here re-let `$` to `\lx@dollar@in@mathmode` inside
+    // a deluxetable's text cells, so `$45^\circ$` opened a TEXT box and
+    // `^\circ` fell outside math (aguplus planotable ×6 "Script ^", pdflatex
+    // clean; Perl 8-10). Guard:
+    // `perfect_kernel_batch56::tabarray_cell_mode_follows_classz`.
+    if x_equals(&T_CS!("\\@classz"), &T_CS!("\\@tabclassz")) {
+      tabular_bindings(template, SymHashMap::default(), attrs)?;
+      return Ok(Vec::new());
+    }
     attrs.insert(String::from("role"), String::from("ARRAY"));
     // Determine column and row separations, if non default
     let colsep = lookup_dimension("\\arraycolsep");
@@ -453,9 +506,10 @@ pub(crate) fn load() -> Result<()> {
     Let!("\\lx@intercol", "\\lx@math@intercol");
   });
 
+  // latex.ltx:16550 `\array` `\let\@classz\@arrayclassz` (math cells).
   DefMacro!(
     "\\array[]{}",
-    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+    r"\let\@classz\@arrayclassz\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!("\\endarray", None, r"\lx@end@alignment\@end@array");
   DefPrimitive!("\\@end@array", {
@@ -480,9 +534,13 @@ pub(crate) fn load() -> Result<()> {
   // `\@array` is the latex.ltx INTERNAL the kernel's own callers use (a
   // package may redefine the user `\array` on top of `\@tabarray`, as
   // t-angles does — routing through `\array` would recurse).
+  // The box the array lives in follows `\@classz` too: `\@tabclassz` cells
+  // are text, so the container is the tabular one (`\@@tabular`, mode
+  // restricted_horizontal — the `\vcenter` of latex.ltx:16565 leaves the
+  // enclosing math); `\@arrayclassz` keeps `\@@array` (math cells).
   DefMacro!(
     "\\@array[]{}",
-    r"\@array@bindings[#1]{#2}\@@array[#1]{#2}\lx@begin@alignment"
+    r"\@array@bindings[#1]{#2}\ifx\@classz\@tabclassz\expandafter\@@tabular\else\expandafter\@@array\fi[#1]{#2}\lx@begin@alignment"
   );
   DefMacro!("\\@tabarray", r"\m@th\@ifnextchar[\@array{\@array[c]}");
 

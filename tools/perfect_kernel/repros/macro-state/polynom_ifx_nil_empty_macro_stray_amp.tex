@@ -1,0 +1,18 @@
+% witness:  polynom/polydemo (TL2025 doc/latex/polynom/polydemo.tex), lines 92-107
+% oracle:   pdflatex (clean, 0 errors)
+% engines:  pdflatex
+% expect:   0 errors; a math <ltx:XMArray>/alignment for the Horner scheme
+% status:   GREEN (batch 56z, 2026-09-06)
+% mechanism: \@nil is defined as an EMPTY macro in latex_bootstrap.rs:89
+%   (def_macro_noop). In real LaTeX \@nil is UNDEFINED (latex.ltx never \def's it;
+%   Perl \meaning\@nil = undefined). polynom's \pld@MeasureCells@#1& loop tests the
+%   sentinel with \ifx\@nil#1 (polynom.sty:1695). At stage=8 the hornerresult cell
+%   begins with the empty macro \pld@resultstyle (default empty, resultstyle=,
+%   polynom.sty:1471). \ifx\@nil\pld@resultstyle is WRONGLY true (empty==empty),
+%   so the measuring loop stops early and leaves the appended `&\@nil&' tokens in
+%   the stream; the stray `&' digests to tex_tables.rs:69 "Stray alignment".
+\documentclass{article}
+\usepackage{polynom}
+\begin{document}
+\[\polyhornerscheme[x=-2,stage=8]{x^3+x^2-1}\]
+\end{document}

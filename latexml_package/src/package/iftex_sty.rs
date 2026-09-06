@@ -24,6 +24,8 @@ LoadDefinitions!({
   // PDF-mode question is separate). Guard:
   // `perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`.
   DefConditional!("\\ifpdf", { lookup_bool("LUATEX_PROFILE") });
+  // iftex.sty:269-270: the legacy ifpdf.sty setters.
+  RawTeX!(r"\def\pdftrue{\let\ifpdf\iftrue}\def\pdffalse{\let\ifpdf\iffalse}");
   // All others are false
   DefConditional!("\\ifxetex");
   DefConditional!("\\ifXeTeX");

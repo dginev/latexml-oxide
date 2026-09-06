@@ -81,11 +81,16 @@ LoadDefinitions!({
   // load — which is what probes them — runs BEFORE constructs.
   //
   // \tracingstacklevels: TeX primitive added in TL 2021/06/01.
-  // \@nil: kernel pattern-boundary marker some shims dereference.
   // \@expl@str@if@eq@@nnTF: expl3 internal predicate used in compat
   //   rollback (4-arg gobble matches \str_if_eq:nnTF semantics).
   // Witness 2408.00879, 2408.02823, 2406.00475.
+  // `\@nil` is NOT predefined: latex.ltx never defines it (a delimiter /
+  // `\ifx\@nil#1\@nil` sentinel only, e.g. latexrelease.sty:144), and an
+  // empty-macro stand-in makes `\ifx\@nil\<any empty macro>` true —
+  // polynom.sty:1695 `\pld@MeasureCells@` then stops at an empty
+  // `\pld@resultstyle` and leaks its `&\@nil&` (polynom/polydemo "Stray
+  // alignment"). The dump-replay `undefined:\@nil` the shim once silenced
+  // must be fixed where the `\@parse@version …\@nil` scan runs, never here.
   DefRegister!("\\tracingstacklevels" => Number::new(0));
-  def_macro_noop("\\@nil")?;
   def_macro_noop("\\@expl@str@if@eq@@nnTF{}{}{}{}")?;
 });

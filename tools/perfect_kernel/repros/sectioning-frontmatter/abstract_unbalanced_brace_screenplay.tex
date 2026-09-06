@@ -1,0 +1,19 @@
+% witness: screenplay-pkg/screenplay-pkg (screenplay-pkg.tex:67)
+% oracle:  pdflatex 0 errors
+% engines: rust=6 perl=? (2026-09-06)
+% expect:  0 errors; <ltx:abstract> present; <ltx:section> "Intro" stays INSIDE the abstract (TeX typesets it inside the open group; a `{` group is a nested body, DIVERGENCES #207)
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: \abstract{ opens an unbalanced group; TeX warns at \end{document}
+%   and closes it. Our sect05.rs:1006 \abstract binding turns \abstract{ into
+%   \lx@begin@abstract{\aftergroup\lx@end@abstract ; the missing } never fires
+%   the aftergroup terminator, so \lx@add@frontmatter@until (base_utilities.rs:459)
+%   runs away and errors closing the internal_vertical (quote) mode frame.
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\date{}
+\maketitle
+\abstract{\begin{quote}This is the abstract body.
+\end{quote}
+\section{Intro}
+Some following text.
+\end{document}

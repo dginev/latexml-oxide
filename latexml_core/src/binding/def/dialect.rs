@@ -398,6 +398,11 @@ pub fn def_primitive(
   } else if options.bounded {
     let bgroup_closure = before_digest_simple!({
       bgroup();
+      // tex.web §274 `new_save_level(c)`: the OPENER writes the group code
+      // on the save-stack level; the closer checks it (§1068 `cur_group`).
+      // The code here is this primitive's cs (`groupInitiator` is the
+      // INVOKING token, which an alias or `\csname` form can differ from).
+      assign_value("lx@group@code", Stored::Token(cs), Some(Scope::Local));
     });
     before_digest_env.push(bgroup_closure);
   }
@@ -445,7 +450,20 @@ pub fn def_primitive(
     after_digest_env.push(end_mode_closure);
   } else if options.bounded {
     let egroup_closure: DigestionClosure = after_digest_simple!(_whatsit, {
-      egroup()?;
+      // tex.web closes a group only through a closer whose handler finds the
+      // matching group code on top of the save stack (§1068 `cur_group`);
+      // `lx@group@code`, written by the opener above, is that code. If the top frame was
+      // not opened by this primitive — `\end{document}` inside the body
+      // abandoned it (§1335; an unbalanced `\abstract{…`, screenplay-pkg.tex:
+      // 67) — there is nothing of ours to close; closing the document frame
+      // instead was the "Attempt to close a group that switched to mode
+      // internal_vertical" error. Nested invocations of one primitive close
+      // innermost-first, as group codes need not be unique in TeX either.
+      let mine = is_value_bound("lx@group@code", Some(0))
+        && lookup_token("lx@group@code").is_some_and(|t| t == cs);
+      if mine {
+        egroup()?;
+      }
     });
     after_digest_env.push(egroup_closure);
   }

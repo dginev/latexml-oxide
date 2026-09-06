@@ -359,7 +359,18 @@ pub(crate) fn load() -> Result<()> {
   }
 
   DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props] {
-      document.close_element("ltx:document")?;
+      // Idempotent: an `\end{document}` digested inside a deferred body (the
+      // unbalanced `\abstract{…` of OXIDIZED_DESIGN #207) is replayed when
+      // that body is inserted; the document is closed once.
+      if lookup_bool("lx@document@closed") {
+        return Ok(());
+      }
+      AssignValue!("lx@document@closed" => true, Some(Scope::Global));
+      if lookup_bool("lx@end@document@open@groups") {
+        document.close_element_lenient("ltx:document", "groups still open at \\end{document}")?;
+      } else {
+        document.close_element("ltx:document")?;
+      }
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
@@ -390,6 +401,7 @@ pub(crate) fn load() -> Result<()> {
         && lookup_string("current_environment") == "document";
       if !top_is_document {
         let mut popped_lines: Vec<String> = Vec::new();
+        let mut plain_groups = 0usize;
         while !(is_value_bound("current_environment", Some(0))
           && lookup_string("current_environment") == "document")
           && get_frame_depth() > 0
@@ -409,20 +421,44 @@ pub(crate) fn load() -> Result<()> {
           if !env_name.is_empty() {
             popped_lines.push(s!("Environment {env_name} opened by {initiator}"));
           } else {
+            // tex.web §1335 `final_cleanup`: a plain group still open at `\end`
+            // is reported ("(\end occurred inside a group at level N)") and
+            // simply abandoned — its `\aftergroup` list never runs.
+            plain_groups += 1;
             popped_lines.push(s!("Group opened by {initiator}"));
           }
-          pop_frame()?;
+          // Pop the STACK frame (frame + its `boxing` entry), not only the
+          // undo frame: a `{` left open by an unbalanced `\abstract{…`
+          // (screenplay-pkg.tex:67) otherwise kept `boxing` one deeper than
+          // the frames, and the bounded primitive reading that body closed
+          // the document frame instead of its own. The abandoned group's
+          // `\aftergroup` tokens are discarded (§1335).
+          let _ = remove_value("afterGroup");
+          let nonboxing = lookup_bool("groupNonBoxing");
+          pop_stack_frame(nonboxing)?;
+        }
+        if plain_groups > 0 {
+          // Elements those groups left open close with the document — a
+          // warning, as pdflatex treats the unclosed group (the content is
+          // already typeset). Read by the `ltx:document` close below.
+          AssignValue!("lx@end@document@open@groups" => true, Some(Scope::Global));
         }
         let detail = if popped_lines.is_empty() {
           String::new()
         } else {
           s!("\n{}", popped_lines.join("\n"))
         };
+        // tex.web §1335 reports ONE line with the total level count.
+        let level_note = if plain_groups > 0 {
+          s!(" (\\end occurred inside a group at level {plain_groups})")
+        } else {
+          String::new()
+        };
         Warn!(
           "unexpected",
           "\\end{document}",
           s!(
-            "Attempt to end document with open groups, environments or conditionals{detail}"
+            "Attempt to end document with open groups, environments or conditionals{level_note}{detail}"
           )
         );
       }

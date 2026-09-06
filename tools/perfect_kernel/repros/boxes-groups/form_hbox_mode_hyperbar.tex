@@ -1,0 +1,16 @@
+% witness: hyperbar/example (example.tex:4-10)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=? (2026-09-06)
+% expect:  0 errors; <ltx:form>-equivalent body closes; no open restricted_horizontal frame
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: hyperbar \BarcodeField -> \MakeBarcodeField = \vbox to H{\hbox to W{\hfill}\vfill}
+%   (hyperbar.sty:98,174). The \hbox to <dimen>{} leaves restricted_horizontal open;
+%   at \end{Form} (hyperref_sty.rs:1108 {Form}=#body) closing errors "end mode
+%   restricted_horizontal".
+\documentclass{article}
+\usepackage{hyperref,hyperbar}
+\begin{document}
+\begin{Form}
+  \BarcodeField[width=3cm,height=3cm,tsv={a,b}]{BC}
+\end{Form}
+\end{document}

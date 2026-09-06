@@ -457,6 +457,13 @@ LoadDefinitions!({
   // beamerbasetitle.sty:213 `\subject{text}` = `\hypersetup{pdfsubject=…}`
   // (PDF metadata; shipunov lecture-slides-ex, beamerswitch-example).
   def_macro_noop("\\subject{}")?;
+  // beamerbasetitle.sty:214-215, the sibling in the same `\mode<all>` block:
+  // `\providecommand\keywords[1]{\hypersetup{pdfkeywords={#1}}}` under
+  // `\ifbeamer@keywords` (set true below, so provided unconditionally here) —
+  // PDF metadata only
+  // (beamerswitch-example; Perl beamer.cls.ltxml:838 leaves beamerbasetitle
+  // unimplemented).
+  RawTeX!(r"\providecommand\keywords[1]{}");
   // beamerbaseframe.sty:181-188: the overlay counter-reset list; consing onto
   // it is all real beamer does at definition time (beamer2thesis
   // `\resetcounteronoverlays{...}` after `\usetheme`).
@@ -631,9 +638,10 @@ LoadDefinitions!({
   );
   // beamerbasetitle.sty:148/169 and :233/238: `\inst{n}` is defined locally
   // inside `\insertauthor`/`\insertinstitute` as the superscript affiliation
-  // mark; our `\author`/`\institute` digest their argument at once, where it
-  // was `undefined:\inst` (beamertheme-detlevcm, beamerstructure2; Perl too).
-  DefMacro!("\\inst{}", "\\textsuperscript{#1}");
+  // mark; our `\author`/`\institute` digest their argument at once
+  // (beamertheme-detlevcm, beamerstructure2; Perl too). The kernel's
+  // `\providecommand\inst[1]{\textsuperscript{#1}}` (sect05.rs, beside
+  // `\author`) is that exact body, so no copy is needed here.
   // The constructor \institute expands into was never defined here — every
   // beamer doc using \institute logged `undefined:\@@@affiliation` (sweep-11
   // cluster: 16 docs, witness beamerthemeconcrete/demo-cbernoulli). Same

@@ -106,7 +106,11 @@ LoadDefinitions!({
     before_digest => { leave_horizontal()?; },
     mode => "internal_vertical"
   );
-  DefMacro!("\\CJKfamily{}", "#1");
+  // CJK.sty `\CJKfamily{fam}` selects the CJK font family — a font switch
+  // with no XML meaning. (ar5iv-bindings CJK.sty.ltxml:24 expands it to
+  // `#1`, which prints the family NAME as body text: kotex's
+  // `\CJKfamily{nanummj}` leaked "nanummj" into every cjk-ko document.)
+  def_macro_noop("\\CJKfamily{}")?;
   // CJK/xeCJK/ctex SURFACE macros absorbed (perfect-kernel sweep-16
   // `\CJKaddEncHook` = 14 bundles; einfart's minimalist chain pulls
   // CJKpunct/CJKspace raw even in non-CJK docs). Font selection is the
@@ -123,6 +127,18 @@ LoadDefinitions!({
   def_macro_noop("\\CJKencfamily[]{}{}")?;
   Let!("\\CJKencshape", "\\CJKencfamily");
   def_macro_noop("\\CJKaddEncHook{}{}")?;
+  // CJK.sty:232 `\DeclareRobustCommand{\Unicode}[2]` typesets the character
+  // at code point `#1*256+#2` (cjkutf8-ko.sty:65,134 `\dotemphchar` =
+  // `\Unicode{"02}{"D9}` = U+02D9; witness cjk-ko/cjk-ko-doc `\dotemph`).
+  // Our input is Unicode already, so insert the code point as a character
+  // token (the texvc `\unicode` shape) — `\char` is font-encoding bound.
+  DefPrimitive!("\\Unicode {Number} {Number}", sub[(hi, lo)] {
+    let cp = (hi.value_of() as u32) * 256 + lo.value_of() as u32;
+    if let Some(ch) = char::from_u32(cp) {
+      unread(Tokens!(Token { text: pin_char(ch), code: Catcode::OTHER,
+        #[cfg(feature = "token-locators")] loc: 0 }));
+    }
+  });
   // CJK.sty:915-1012, 1049-1075 + UTF8.bdg:
   // Faithfully implement CJK's active-byte decoder definitions and UTF8 binding.
   // Downstream packages (such as cjkutf8-ko.sty:150-154's "protect utf8 octets" loop)

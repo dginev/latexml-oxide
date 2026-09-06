@@ -204,7 +204,16 @@ LoadDefinitions!({
   //     of `\@ifundefined`. Treat as undefined (always run `\else`).
   //   * `\caption@ExecuteOptions[opt-list]` — internal option-
   //     execution helper. No-op.
-  def_macro_noop("\\SetCaptionDefault{}{}")?;
+  // caption3.sty:446-457 `\SetCaptionDefault{name}{value}` →
+  // `\caption@@set{name}{name@default}{value}` (:443-445) = define
+  // `\caption@<name>@default` as `\caption@<name>@<value>`. bicaption.sty:92
+  // `\SetCaptionDefault{biseparator}{none}` must bind
+  // `\caption@biseparator@default`, or :132 `\caption@set{biseparator}
+  // {default}` raises "Undefined biseparator `default'" (shtthesis).
+  // The `*`-form (`\edef`), `\caption@maparg` aliasing, `\caption@checkdecl`
+  // and the `\@onlypreamble` restriction (:448) are omitted (keyword values only). Guard:
+  // `perfect_kernel_batch56::setcaptiondefault_binds_the_default`.
+  RawTeX!(r"\def\SetCaptionDefault#1#2{\expandafter\def\csname caption@#1@default\expandafter\endcsname\expandafter{\csname caption@#1@#2\endcsname}}");
   // caption3.sty:67-75: \caption@ifundefined\cs{then:undefined}{else:defined}
   // bicaption.sty:379 calls \caption@ifundefined\caption@LT@setup{\providecommand*\caption@LT@setup{}}
   RawTeX!(

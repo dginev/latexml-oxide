@@ -871,6 +871,19 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\author[]{}",
     r"\def\@shortauthor{#1}\gdef\shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors\expandafter{\@author}",
     locked => true);
+  // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
+  // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
+  // would `\let\inst`" to `\lx@request@frontmatter@annotation`, and leaves it
+  // to the class. Classes that define `\inst` only inside the title-box scope
+  // where `\@author` is expanded (bfhsciposter.cls:445,476 `\cs_set_eq:NN
+  // \inst \__ptxcd_inst:n` inside `\ptxcd_poster_setup_title_box:`;
+  // beamerbasetitle.sty:148/233 likewise) never reach our `\author`, which
+  // digests the author content at once — witness bfh-ci/DEMO-BFHSciPoster
+  // logged `undefined:\inst` (Perl too; SURPASS, KNOWN_PERL_ERRORS #201).
+  // `\providecommand` so a class binding's `\inst` (llncs, sv_support,
+  // inst_support: the affiliation-LINKING form) still wins, mirroring
+  // beamerbasetitle.sty:262's own `\providecommand\inst[1]{}`.
+  RawTeX!(r"\providecommand\inst[1]{\textsuperscript{#1}}");
 
   DefPrimitive!("\\lx@authors@oneline", {
     if lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline").is_none() {
@@ -1014,7 +1027,35 @@ pub(crate) fn load() -> Result<()> {
       // that (PLANS P74). Keep the group a group: open the abstract, re-emit
       // the `{`, and let the group's end close the abstract via `\aftergroup`.
       // Guard: `perfect_kernel_batch54::braced_abstract_reads_its_body_incrementally`.
+      //
+      // UNLESS the class redefined `\abstract` as an argument-taking command
+      // (ryethesis.cls:344 `\newcommand{\abstract}[1]{…\gdef\ryethesis@
+      // theabstract{…#1}}`, apa7.cls:785 `\def\abstract#1{\gdef\@abstract{#1}}`
+      // and ~25 TL classes, all store-then-use at `\maketitle`/`\frontmatter`):
+      // then real TeX reads `{…}` as ONE pre-tokenized argument whose macros
+      // expand later — `\abstract{\Gls{LI}…}` before `\newacronym{LI}`
+      // (ryethesis ryesample) is valid. The lock keeps our frontmatter capture
+      // but records the dropped signature (`\abstract:redefined@nargs`); route
+      // to the deferred `\lx@add@abstract` (Perl latex_constructs.pool.ltxml:
+      // 1136-1143) exactly when the class's own `\abstract` took an argument.
+      // Guard: `perfect_kernel_batch56::class_redefined_abstract_defers_its_argument`.
+      let class_nargs = match lookup_value("\\abstract:redefined@nargs") {
+        Some(Stored::Number(n)) => n.value_of(),
+        _ => 0,
+      };
+      if class_nargs >= 1 {
+        let body = read_arg(ExpansionLevel::Off)?;
+        let mut toks = vec![T_CS!("\\lx@add@abstract"), T_BEGIN!()];
+        toks.extend(body.unlist_ref().iter().copied());
+        toks.push(T_END!());
+        return Ok(Tokens::new(toks));
+      }
       read_token()?;
+      // (A `\section` inside an unbalanced `\abstract{` stays inside the
+      // abstract, as in TeX the section is typeset inside the open group:
+      // the brace group is digested as a NESTED body (`tex_box.rs`, the `{`
+      // primitive), so the brace-less branch's `\@startsection@hook` terminal
+      // could never reach this body's loop. Settled dead end, batch 56z.)
       Tokens!(
         T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
     } else {

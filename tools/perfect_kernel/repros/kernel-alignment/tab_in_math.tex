@@ -1,0 +1,12 @@
+% witness: aguplus/aguplus (control for the deluxetable $\vcenter{}$ shape)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-06)
+% expect:  0 errors; text tabular nested in inline Math
+% status:  CONTROL
+% mechanism: a text \begin{tabular} inside BALANCED inline math is already clean;
+%   proves the aguplus residual is the UNBALANCED \pt@tabular/\endtabular close,
+%   not tabular-in-math per se.
+\documentclass{article}
+\begin{document}
+\hbox{$\begin{tabular}{lcc}A & $45^\circ$ & $90^\circ$\\ B & c & d\end{tabular}$}
+\end{document}

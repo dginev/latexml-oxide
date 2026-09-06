@@ -5916,3 +5916,64 @@ consumes the keys without running them; raw pst-node.tex:1248-1257 defines
 the repro). Rust: `\psset` stays pst-xkey.tex:60-63's family-aware `\setkeys+[psset]`
 from the raw load. Guard: `perfect_kernel_batch56::psset_dispatches_family_key_bodies`.
 
+## 201. No kernel `\inst`: classes defining it inside the title box (Rust fixes)
+
+Base_Utility.pool.ltxml:549 leaves `\inst` to the class ("typically would
+`\let\inst`" to `\lx@request@frontmatter@annotation`); Perl has no fallback.
+bfhsciposter.cls:445,476 (`\cs_set_eq:NN \inst \__ptxcd_inst:n` inside
+`\ptxcd_poster_setup_title_box:`) and beamerbasetitle.sty:148/233 define `\inst`
+only in the scope where `\@author` expands; LaTeXML's `\author` digests its
+argument at once, outside that scope → `undefined:\inst` (bfh-ci/DEMO-BFHSciPoster,
+Perl 1 = Rust 1, lualatex 0). Rust: the kernel `\providecommand\inst[1]
+{\textsuperscript{#1}}` beside `\author` (sect05.rs) — `\providecommand` as
+beamerbasetitle.sty:262's own fallback (an empty `\inst`; the superscript is what
+beamer's `\insertauthor` renders); class bindings' affiliation-linking `\inst`
+(llncs, sv_support, inst_support) still win. Guard:
+`perfect_kernel_batch56::kernel_inst_fallback_is_a_superscript`.
+
+
+
+## 202. `\@tabarray` cells are forced into math (Rust fixes)
+
+Perl `\@tabarray` = `\m@th\@@array[c]` (latex_constructs.pool.ltxml:3765) never
+starts the alignment, and LaTeXML's array setup always binds math cells:
+latex.ltx keys the cell mode on `\@classz` (`\array` :16550 → `\@arrayclassz`
+= `$\@sharp$`; `\@tabular` :16561 → `\@tabclassz` = text). A deluxetable-style
+raw scaffold (`\hbox\bgroup$\let\@classz\@tabclassz…\@tabarray`, aguplus.cls:305
+`\pt@tabular`) therefore got math cells whose `$45^\circ$` opened a TEXT box:
+"Script ^ can only appear in math mode" ×6 + mode-stack errors (aguplus.tex:633;
+Perl 8-10 on the repros, pdflatex 0). Its `\endtabular` (latex.ltx:16554
+`\crcr\egroup\egroup $\egroup`) also needs the trailing `$\egroup` LaTeXML's
+constructor path omits, and the class's `\edef\pt@format{\string lcc}` (:314) needs
+the template `\edef`-expanded (`\string`). Rust: `\@arrayclassz`/`\@tabclassz`
+defined, `\@array@bindings`/`\@array` keyed on `\ifx\@classz\@tabclassz`,
+`\endtabular` closes a raw-opened scaffold (`lx@raw@array@open`), and
+`ReadAlignmentTemplate` expands every expandable except `\csname`/`\expandafter`/
+`\noexpand` (OXIDIZED_DESIGN #206). Guards:
+`perfect_kernel_batch56::{tabarray_cell_mode_follows_classz,
+raw_tabular_scaffold_closes_and_template_expands}`.
+
+## 203. An unbalanced `\abstract{` errors at `\end{document}` (Rust fixes)
+
+screenplay-pkg.tex:67 `\abstract{\noindent\begin{quote}…\section…` never closes
+its brace; pdflatex ends with tex.web §1335's "(\end occurred inside a group at
+level 1)" warning. Perl's `\lx@add@abstract[]{}` reads the group as an argument
+("readBalanced ran out of input") plus mode-close errors (10). Rust's incremental
+path left the `{` frame for the bounded primitive's `egroup()` to meet ("Attempt to
+close a group that switched to mode internal_vertical") and the document closed
+over the open abstract (3 errors). Rust now: `\end{document}` abandons open plain
+groups §1335-style (stack frame + `boxing` popped, `\aftergroup` discarded, one
+warning), a bounded primitive closes only the frame it opened, the document's
+close is lenient about elements those groups left open (OXIDIZED_DESIGN #207;
+a `\section` inside the open group stays inside the abstract, as TeX typesets it). Guard:
+`perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`.
+
+## 204. thumbs.sty's shipout state machine never resets (Rust fixes)
+
+thumbs.sty draws page-edge tabs at shipout (`\AtBeginShipout`, :1076) and resets
+`\th@mbtoprint` there (:1151); LaTeXML never ships out, so `\thumbnewcolumn` after
+`\addthumb` raises the package's own "\thumbnewcolumn after \addthumb" (:573) on
+the second column (thumbs/thumbs-example; Perl identical; pdflatex 0). Rust:
+`thumbs_sty.rs` loads the real package and applies its own `hidethumbs` branch
+(:1531-1538). Guard: `perfect_kernel_batch56::thumbs_loads_in_its_own_hide_mode`.
+\n

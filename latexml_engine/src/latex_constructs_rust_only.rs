@@ -320,7 +320,7 @@ LoadDefinitions!({
   DefRegister!("\\@bls"          => Dimension!("12pt"));
   DefRegister!("\\@maxlistdepth" => Number::new(6));
 
-  // \tracingstacklevels / \@nil / \@expl@str@if@eq@@nnTF moved to
+  // \tracingstacklevels / \@expl@str@if@eq@@nnTF moved to
   // latex_bootstrap.rs — must be defined BEFORE the dump loads (the
   // dump's latexrelease replay probes them).
   //

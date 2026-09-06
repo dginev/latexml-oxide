@@ -414,6 +414,7 @@ pub mod slashed_sty;
 pub mod slides_cls;
 pub mod tagpdf_base_sty;
 pub mod tcblistingscore_code_tex;
+pub mod thumbs_sty;
 pub mod tikzlibraryexternal_code_tex;
 pub mod tikzlibrarytrees_code_tex;
 pub mod u_fontmap;

@@ -2491,6 +2491,13 @@ LoadDefinitions!({
     }
     DefMacro!("\\ifhyperref{}{}", "\\@ifpackageloaded{hyperref}{#1}{#2}");
   }
+  // biblatex.sty:15506-15520 `\BiblatexManualHyperrefOn`/`Off` run
+  // `\blx@mkhyperref`/`\blx@mknohyperref` once under `hyperref=manual`
+  // (`\blx@hyperref`=3). Our citation/bibliography constructors link
+  // unconditionally, so the manual switch has nothing to do here
+  // (shtthesis.cls:330; Perl has no biblatex binding).
+  def_macro_noop("\\BiblatexManualHyperrefOn")?;
+  def_macro_noop("\\BiblatexManualHyperrefOff")?;
 
   // Perl L608-610 gobbles \key / \keyword silently. Round-34
   // surpass-Perl: preserve as classification tags so author keywords

@@ -1,0 +1,14 @@
+% witness: pgfornament/ornaments.tex, pgfornament/tikzrput.tex (TL2025 doc)
+% oracle: pdflatex clean; doc engine: lualatex
+% expect: 0 errors; \rput defined by tikzrput.sty:66-110 (inside \ifpdf)
+% status: GREEN (batch 56z, 2026-09-06)
+% mechanism: tufte-common.def:266 \RequirePackage{ifpdf}; our ifpdf_sty.rs
+%   sets \ifpdf static-FALSE, contradicting iftex_sty.rs:26 (=LUATEX_PROFILE
+%   true). tikzrput.sty:66 \ifpdf ... \def\rput is skipped -> \rput undefined.
+\RequirePackage{luatex85}
+\documentclass{tufte-handout}
+\usepackage{tikz}
+\usepackage{tikzrput}
+\begin{document}
+\rput(0,0){X}
+\end{document}

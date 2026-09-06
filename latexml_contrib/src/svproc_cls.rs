@@ -57,8 +57,8 @@ LoadDefinitions!({
     "\\institute{}",
     "\\@add@frontmatter{ltx:note}[role=institute]{#1}"
   );
-  // \inst{N} is a superscript marker keyed to numbered affiliations.
-  DefMacro!("\\inst{}", "\\textsuperscript{#1}");
+  // \inst{N}, the superscript marker keyed to numbered affiliations, is the
+  // kernel's `\providecommand\inst[1]{\textsuperscript{#1}}` (sect05.rs).
   // svproc.cls L240-245 defines \frontmatter / \mainmatter / \backmatter as
   // page-numbering + \@mainmatter-flag toggles (`\pagenumbering{Roman}` etc.).
   // All three are pure page-layout — moot in our HTML paradigm — so Perl

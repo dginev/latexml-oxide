@@ -1294,6 +1294,19 @@ impl Document {
   }
 
   pub fn close_element(&mut self, qname: &str) -> Result<Option<Node>> {
+    self.close_element_impl(qname, None)
+  }
+
+  /// `close_element`, but descendants that do not auto-close are closed with
+  /// a Warning naming `reason` instead of an Error — for a close the source
+  /// itself leaves unbalanced with only a warning in TeX (tex.web §1335: a
+  /// group still open at `\end` is reported and abandoned; the elements it
+  /// left open end with the document).
+  pub fn close_element_lenient(&mut self, qname: &str, reason: &str) -> Result<Option<Node>> {
+    self.close_element_impl(qname, Some(reason))
+  }
+
+  fn close_element_impl(&mut self, qname: &str, lenient: Option<&str>) -> Result<Option<Node>> {
     Debug!(
       "document",
       "close_element",
@@ -1351,7 +1364,11 @@ impl Document {
             .collect::<Vec<String>>()
             .join(",")
         );
-        Error!("malformed", qname, message);
+        if let Some(reason) = lenient {
+          Warn!("malformed", qname, s!("{message} ({reason})"));
+        } else {
+          Error!("malformed", qname, message);
+        }
       }
       // So, now close up to the desired node.
       self.close_node_internal(&node)?;

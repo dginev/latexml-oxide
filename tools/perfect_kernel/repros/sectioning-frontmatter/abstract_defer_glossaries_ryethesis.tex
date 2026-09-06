@@ -1,0 +1,24 @@
+% witness: ryethesis/ryesample (ryesample.tex:119, \Gls{LI} inside \abstract{})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-06)  [RUST-ONLY at this mechanism]
+% expect:  0 errors; <ltx:abstract> present with the Gls text
+% status:  RED
+% mechanism: ryethesis \abstract{\Gls{LI}...} appears (doc line 119) BEFORE
+%   \newacronym{LI} (doc line 163); real TeX + Perl defer the abstract body to
+%   frontmatter/maketitle time, after LI is defined. Rust's kernel \abstract{}
+%   (sect05.rs:1006-1019, batch54 char-list fix) reroutes the command form to
+%   the in-place \lx@begin@abstract{...\aftergroup\lx@end@abstract} env path,
+%   digesting the body EAGERLY, so \Gls{LI} runs before \newacronym => glossaries
+%   errors "Glossary entry LI not defined". Perl routes \abstract{} to the
+%   DEFERRED \lx@add@abstract (latex_constructs.pool.ltxml:1136-1143 ->
+%   Base_Utility.pool.ltxml:610-612), so the body digests later (0 errors).
+%   Digestion-order probe: \abstract{\typeout{A}}\typeout{B}: Rust A,B ; Perl B,A.
+%   Rust's own \lx@add@abstract{...} DOES defer (verified clean).
+\documentclass{ryethesis}
+\author{A. E. Ryerson}\title{T}\degreeName{Doctor of Philosophy}\degreeYear{1847}\program{Education}
+\usepackage[acronym]{glossaries}
+\begin{document}
+\abstract{\Gls{LI} dolor sit amet.}
+\newglossaryentry{Lorem}{name={lorem},description={x}}
+\newacronym{LI}{LI}{lorem ipsum}
+\end{document}

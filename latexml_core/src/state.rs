@@ -1245,6 +1245,23 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       Stored::Bool(true),
       Some(Scope::Global),
     );
+    // …and the dropped setter's SIGNATURE: an argument-taking `\def\abstract#1`
+    // (apa7.cls:785, uwthesis.cls:805) means the class reads `{…}` as one
+    // pre-tokenized argument stored for later, which the locked binding can
+    // honour (`\abstract`, sect05.rs). `\newcommand` records it at its own
+    // locked bail (sect08.rs).
+    if let Stored::Expandable(ref defn) = definition {
+      let nargs = defn
+        .get_parameters()
+        .map_or(0, |p| p.get_parameters().len());
+      let nargs_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@nargs")));
+      state_mut!().assign_internal(
+        TableName::Value,
+        nargs_key,
+        Stored::Number(Number::new(nargs as i64)),
+        Some(Scope::Global),
+      );
+    }
     if let Some(Stored::String(s)) = state!().lookup_value("SOURCEFILE") {
       // report if the redefinition seems to come from document source
       if arena::with(*s, |txt| {
