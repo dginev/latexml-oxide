@@ -247,6 +247,7 @@ pub mod silence_sty;
 pub mod smc_ieeeconf_cls;
 pub mod sn_jnl_cls;
 pub mod spie_cls;
+pub mod srdp_tables_sty;
 pub mod stix2_sty;
 pub mod stix_sty;
 pub mod svg_extract_sty;
@@ -628,6 +629,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("wlpeerj", "cls", wlpeerj_cls::load_definitions),
   ("svn-multi", "sty", svn_multi_sty::load_definitions),
   ("svninfo", "sty", svninfo_sty::load_definitions),
+  ("srdp-tables", "sty", srdp_tables_sty::load_definitions),
   ("tabu", "sty", tabu_sty::load_definitions),
   ("ucs", "sty", ucs_sty::load_definitions),
   ("ut-thesis", "cls", ut_thesis_cls::load_definitions),

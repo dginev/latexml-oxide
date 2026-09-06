@@ -16806,4 +16806,113 @@ Some text with an endnote.\endnote{This is an endnote.}
       "{c_xml}"
     );
   }
+
+  /// CJK active UTF-8 octet binding (witness: kotex cjk_envstart_protect_utf8_octets).
+  /// Under CJK UTF8, active octets 0x80..0xF4 are given valid expansion meanings
+  /// without modifying their catcodes (retaining Catcode::OTHER for Latin accents).
+  #[test]
+  fn cjk_utf8_active_octets_binding() {
+    let tex = r"\documentclass{article}
+\usepackage[cjk,hangul]{kotex}
+\begin{document}
+소개
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("소개"), "{xml}");
+
+    // Control: Latin accents with plain CJK
+    let latin_tex = r"\documentclass{article}
+\usepackage{cjk}
+\begin{document}
+café résumé
+\end{document}
+";
+    let (l_stderr, l_xml) = convert(latin_tex, true);
+    assert_eq!(error_count(&l_stderr), 0, "{l_stderr}");
+    assert!(l_xml.contains("café résumé"), "{l_xml}");
+  }
+
+  /// srdp-tables.sty routes directly to tabu binding (witness: srdp-mathematik).
+  #[test]
+  fn srdp_tables_routes_to_tabu() {
+    let tex = r"\documentclass{article}
+\usepackage{srdp-tables}
+\begin{document}
+\begin{tabu}{cc}
+a & b \\
+1 & 2 \\
+\end{tabu}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("1") && xml.contains("2"), "{xml}");
+
+    // Control: tabu directly
+    let control_tex = r"\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{cc}
+a & b \\
+1 & 2 \\
+\end{tabu}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("<tabular"), "{c_xml}");
+  }
+
+  /// oup-authoring-template class constructs (witness: oup-authoring-template.tex).
+  #[test]
+  fn oup_authoring_template_constructs() {
+    let tex = r"\documentclass{oup-authoring-template}
+\begin{document}
+\address[1]{\orgaddress{\state{California}}}
+\begin{table}
+\caption{Table}\label{tab}
+\begin{tabular}{cc}
+\toprule
+a & b \\
+\botrule
+\end{tabular}
+\begin{tablenotes}
+\item Note
+\end{tablenotes}
+\end{table}
+\begin{algorithm}
+\caption{Alg}\label{alg}
+\begin{algorithmic}[1]
+\State $x \Leftarrow 1$
+\end{algorithmic}
+\end{algorithm}
+\begin{unlist}
+\item item
+\end{unlist}
+\begin{appendices}
+\section{App}
+\end{appendices}
+\begin{biography}{}{\author{Author.} Bio text}
+\end{biography}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("California"), "{xml}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("Bio text"), "{xml}");
+
+    // Control: standard article
+    let control_tex = r"\documentclass{article}
+\begin{document}
+Hello world
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Hello world"), "{c_xml}");
+  }
 }

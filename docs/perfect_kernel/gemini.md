@@ -127,3 +127,64 @@ tabu binding; guard with a two-line `\usepackage{srdp-tables}` + `\begin{tabu}`
 repro; witness srdp-mathematik.
 
 ## Status (Gemini → orchestrator; append-only, newest last)
+
+- **2026-09-05 I1 (cjk-ko / CJK active UTF8 octet bindings)**:
+  - Guard: `perfect_kernel_gemini::cjk_utf8_active_octets_binding` (red repro `cjk_envstart_protect_utf8_octets.tex` 102 errors + fatal → 0 errors, Hangul `소개` in `<p>`; control: accented Latin text `café résumé` preserves `Catcode::OTHER` and converts with 0 errors).
+  - Implementation: `bind_cjk_utf8_octets()` in `latexml_contrib/src/cjk_sty.rs` hooks into `\CJK@envStart{}{}{}` and `\CJK@loadBinding{}`. It defines active-byte meanings for octets 0x80..0xF4 (`\CJK@@@`, `\CJK@X..XXXX`, `\CJK@XXp..XXXXp`) via pure Rust `DefMacro!(T_ACTIVE!(ch), None, expansion)` without changing their catcodes from `OTHER`.
+  - Witnesses:
+    - `cjk-ko/cjk-ko-doc.tex`: 102 errors (101 errors + `Fatal:TooManyErrors`) → 2 errors (`\Unicode`, `\를`), 0 fatals. Next error class: undefined `\Unicode` and `\를`.
+    - `pxcjkcat/pxcjkcat.tex`: 102 errors (101 errors + `Fatal:TooManyErrors`) → 1 error, 0 fatals.
+    - `bxcjkjatype/sample-bxcjkjatype.tex`: 2 errors → 1 error, 0 fatals.
+  - Settled dead-ends:
+    - `RawTeX!` definitions inside `LoadDefinitions!` tokenize strings before mouth `open()` sets `@` to letter, tokenizing `\def\CJK@...` as `\CJK` with pattern `@...`; implemented directly in Rust via `DefMacro!` / `DefPrimitive!`.
+    - Activating catcodes 0x80..0xFE breaks UTF-8 Latin accented characters; keeping catcodes `OTHER` and binding only active meanings preserves both CJK loops and Latin text.
+
+- **2026-09-05 I5 (srdp-mathematik / srdp-tables routes to tabu)**:
+  - Guard: `perfect_kernel_gemini::srdp_tables_routes_to_tabu` (repro: `\usepackage{srdp-tables}` + `\begin{tabu}` renders table with 0 errors; control: direct `\usepackage{tabu}` unchanged with 0 errors).
+  - Implementation: `latexml_contrib/src/srdp_tables_sty.rs` requires `tabu` (`RequirePackage!("tabu");`), registered in `latexml_contrib/src/lib.rs` for `"srdp-tables"`.
+  - Witnesses:
+    - `srdp-mathematik/srdp-mathematik.tex`: 9 errors (8 errors + `Fatal:Mouth:EoF`) in s44 → 0 errors, 0 fatals, clean XML with 17 benign warnings (under `--timeout=180`).
+  - Settled dead-ends:
+    - `srdp-tables.sty` is a 1:1 verbatim vendored copy of `tabu.sty`; routing to latexml's native `tabu` binding avoids raw tabu's deep array token register dependencies (`\NC@list`, `\NC@do`) that cause fatal mouth EOF during column scan.
+
+- **2026-09-05 I3 (oup-authoring-template / second layer class definitions)**:
+  - Guard: `perfect_kernel_gemini::oup_authoring_template_constructs` (repro: `\documentclass{oup-authoring-template}` with `\botrule`, `\tablenotes`, `{algorithm}`, `\caption`, `{algorithmic}`, `\State`, `{unlist}`, `\orgaddress{\state{...}}`, `{appendices}`, `{biography}` renders clean XML with 0 errors; control: standard article with 0 errors).
+  - Implementation: `latexml_contrib/src/oup_authoring_template_cls.rs` adds:
+    - Required packages from `oup-authoring-template.cls:2425-2435`: `booktabs`, `algorithm`, `algorithmicx`, `algpseudocode`, `listings`, `appendix`, and `amsthm`.
+    - Macro definitions from `oup-authoring-template.cls`: `\botrule` (alias to `\bottomrule`), `\tablenotes[]` / `\endtablenotes` (wrapped `itemize`), address fields `\orgdiv`, `\orgname`, `\orgaddress`, `\street`, `\postcode`, `\state`, `\country` (identity macros).
+    - Environments: `{unlist}` (`<ltx:itemize class='unlist'>`), `{biography}{}{}` (`<ltx:note role='biography'>` with local `\author` font switch).
+    - Theorem styles: `\th@thmstyleone`..`four` mapped to amsthm styles.
+  - Witnesses:
+    - `oup-authoring-template/oup-authoring-template.tex`: 21 errors in probe / 22 in s45 → 0 errors, 0 fatals, 0 warnings (`Conversion complete: No obvious problems`).
+  - Settled dead-ends:
+    - `oup-authoring-template.cls` embeds verbatim copies of `appendix.sty` and loads `algorithm`/`algorithmicx`/`algpseudocode`/`listings`/`amsthm`; delegating to existing package bindings satisfies all 21 missing surfaces cleanly without duplicating complex float/listing machinery.
+
+- **2026-09-05 I2 (montex / fontenc repeat-load seam report)**:
+  - Repro: `tools/perfect_kernel/repros/singletons/repro_montex_lmc_reload.tex` (RED: `\MyTogrog` undefined; control: `repro_montex_lmc_control.tex` GREEN: `\MyTogrog` defined when mls loads first).
+  - Root cause / Engine Seam:
+    - In `latexml_core/src/binding/content.rs:463-471`:
+      ```rust
+      if !options.reloadable && already_handled(&filename) {
+        apply_new_options_on_reload(&filename)?;
+        return Ok(());
+      }
+      ```
+    - When `fontenc` is loaded first with `LCT,T1` (`ctib.sty:61`) and then reloaded with `LGR,LMS,LMO,LMA,LMC,T1` (`mls.sty:413`), `already_handled("fontenc.sty")` triggers because `options.reloadable` is false by default.
+    - `apply_new_options_on_reload` only executes `\ds@<option>` handlers (lines 451-459); it never re-executes `load_definitions` of `fontenc_sty.rs`.
+    - As a result, `fontenc_sty.rs` cannot see the second load's options, and `lmcenc.def` is never input.
+  - Proposed Core/Engine Fix (stopped per scope rule):
+    - Either mark `fontenc` as `reloadable: true` in `PackageOptions` / package loader table, or enhance `apply_new_options_on_reload` to call a package-specific reload hook or re-invoke `load_definitions` with the delta options.
+
+- **2026-09-05 I4 (heria / SidewaysFigure insert_block float-out seam report)**:
+  - Repro: `heria/heria-proposal.tex` (4 errors in s45: 2× `malformed:ltx:para <ltx:para> isn't allowed in <ltx:block>`, `malformed:ltx:toccaption <ltx:toccaption> isn't allowed in <ltx:block>`, `malformed:ltx:caption <ltx:caption> isn't allowed in <ltx:block>`).
+  - Root cause in `heria.cls`:
+    - `heria.cls:737-746` defines `\NewEnviron{SidewaysFigure}{\begin{figure}[p]...\rotatebox{90}{\parbox[c][\textwidth][c]{\textheight}{\BODY}}\end{figure}}`.
+    - In `heria-proposal.tex:103-121`, `\begin{SidewaysFigure}` contains two `\begin{summarycanvas}` environments followed by `\caption{Impact summary tableau}\label{fig:impact}` inside `\BODY`.
+    - `\rotatebox` and `\parbox` run `insert_block` in an inline context (`is_inline = true`), restricting candidates to `[ltx:inline-block, ltx:inline-logical-block, ltx:inline-sectional-block]`. None of these can contain `<ltx:caption>`.
+    - At line 4025 of `latexml_engine/src/base_utilities.rs`, `uncontainable` checks whether *any* container in `[ltx:inline-block, ..., ltx:block, ..., ltx:figure]` can contain `<ltx:caption>`. Because `ltx:figure` can contain `<ltx:caption>`, `uncontainable` returns `false` (i.e. caption is considered containable).
+    - Consequently, `ltx:caption` is not floated out to the enclosing ancestor `ltx:figure`. `filtered_candidates` becomes empty, falling back to `document.rename_node(container, "ltx:block", true)` at line 4217, placing `<ltx:caption>`, `<ltx:toccaption>`, and `<ltx:para>` illegally inside `<ltx:block>`.
+  - Proposed Engine Fix (stopped per scope rule):
+    - In `latexml_engine/src/base_utilities.rs:4025`, `uncontainable` should check against candidate containers valid for the *current block context* (`is_inline` vs block, excluding `ltx:figure` unless the box itself can morph into a figure).
+    - When `<ltx:caption>` / `<ltx:toccaption>` are identified as uncontainable inside a generic box, the existing float-out loop (lines 4040-4072) will float them out to the enclosing ancestor `ltx:figure`, where they are valid.
+
+

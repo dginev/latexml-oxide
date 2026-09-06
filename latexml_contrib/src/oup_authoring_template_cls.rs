@@ -89,4 +89,47 @@ LoadDefinitions!({
   // {https://orcid.org/#1}{\XeTeXLinkBox{…\pic{orcidlogo}…}}}`: the link with
   // the id as its text (the logo picture is out of scope).
   DefMacro!("\\ORCID{}", "\\href{https://orcid.org/#1}{#1}");
+
+  // oup-authoring-template.cls:2425-2435: required packages
+  RequirePackage!("booktabs");
+  RequirePackage!("algorithm");
+  RequirePackage!("algorithmicx");
+  RequirePackage!("algpseudocode");
+  RequirePackage!("listings");
+  RequirePackage!("appendix");
+
+  // Table rules and notes
+  Let!("\\botrule", "\\bottomrule");
+  DefMacro!("\\tablenotes[]", "\\begin{itemize}");
+  DefMacro!("\\endtablenotes", "\\end{itemize}");
+
+  // Organization address fields (oup-authoring-template.cls:1120-1127)
+  DefMacro!("\\orgdiv{}", "#1");
+  DefMacro!("\\orgname{}", "#1");
+  DefMacro!("\\orgaddress{}", "#1");
+  DefMacro!("\\street{}", "#1");
+  DefMacro!("\\postcode{}", "#1");
+  DefMacro!("\\state{}", "#1");
+  DefMacro!("\\country{}", "#1");
+
+  // Environments (oup-authoring-template.cls:2098, 2303)
+  DefEnvironment!(
+    "{unlist}",
+    "<ltx:itemize class='unlist'>#body</ltx:itemize>"
+  );
+  DefEnvironment!(
+    "{biography}{}{}",
+    "<ltx:note role='biography'>#1 #2#body</ltx:note>",
+    before_digest => {
+      DefMacro!("\\author{}", "{\\bfseries #1\\enspace}");
+    },
+    mode => "internal_vertical"
+  );
+
+  // Predefined theorem styles (oup-authoring-template.cls:2370-2410)
+  RequirePackage!("amsthm");
+  Let!("\\th@thmstyleone", "\\th@plain");
+  Let!("\\th@thmstyletwo", "\\th@plain");
+  Let!("\\th@thmstylethree", "\\th@definition");
+  Let!("\\th@thmstylefour", "\\th@remark");
 });
