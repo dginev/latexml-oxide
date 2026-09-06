@@ -17326,4 +17326,50 @@ Control center text.
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("Control center text."), "{c_xml}");
   }
+
+  #[test]
+  fn apptocmd_pretocmd_constructor_env_and_control() {
+    // 1. Repro case from tools/perfect_kernel/repros/expansion-primitives/apptocmd_endminipage_error.tex:
+    // \apptocmd on constructor-backed \endminipage takes success branch, not {\ERROR}.
+    let repro_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\apptocmd{\endminipage}{\relax}{}{\ERROR}%
+ok
+\end{document}
+";
+    let (r_stderr, r_xml) = convert(repro_tex, true);
+    assert_eq!(error_count(&r_stderr), 0, "{r_stderr}");
+    assert!(r_xml.contains("<p>ok</p>"), "{r_xml}");
+
+    // 2. Functional test: \apptocmd and \pretocmd on \endminipage correctly append and prepend
+    // to the environment's end hook (with pretocmd running first).
+    let mp_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\apptocmd{\endminipage}{[MP-APP]}{}{}
+\pretocmd{\endminipage}{[MP-PRE]}{}{}
+\begin{document}
+\begin{minipage}{5cm}
+Inside minipage
+\end{minipage}
+\end{document}
+";
+    let (mp_stderr, mp_xml) = convert(mp_tex, true);
+    assert_eq!(error_count(&mp_stderr), 0, "{mp_stderr}");
+    assert!(mp_xml.contains("[MP-PRE][MP-APP]"), "{mp_xml}");
+
+    // 3. Control case: \apptocmd and \pretocmd on a plain \def macro still patch the macro body.
+    let ctrl_tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\def\mymacro{HELLO}
+\pretocmd{\mymacro}{[PRE-]}{}{}
+\apptocmd{\mymacro}{[-APP]}{}{}
+\begin{document}
+\mymacro
+\end{document}
+";
+    let (ctrl_stderr, ctrl_xml) = convert(ctrl_tex, true);
+    assert_eq!(error_count(&ctrl_stderr), 0, "{ctrl_stderr}");
+    assert!(ctrl_xml.contains("[PRE-]HELLO[-APP]"), "{ctrl_xml}");
+  }
 }
