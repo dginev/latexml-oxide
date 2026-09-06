@@ -17372,4 +17372,56 @@ Inside minipage
     assert_eq!(error_count(&ctrl_stderr), 0, "{ctrl_stderr}");
     assert!(ctrl_xml.contains("[PRE-]HELLO[-APP]"), "{ctrl_xml}");
   }
+
+  /// enumitem.sty:705-725 list-level `before=`/`after=`/`first=` key code
+  /// (rec-thy.sty:574 \setlist[pfcasesnonum,1]{before=\def\pfcasecounter@pmg{…}}).
+  #[test]
+  fn enumitem_before_after_first_key_code() {
+    // 1. Witness case: \newlist + \setlist[...,1]{before=...} defines macro read inside items.
+    let witness_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\newlist{pfcasesnonum}{enumerate}{3}
+\setlist[pfcasesnonum,1]{
+    before=\def\pfcasecounter@pmg{pfcasesnonumi},
+}
+\begin{document}
+\begin{pfcasesnonum}
+\item \pfcasecounter@pmg
+\end{pfcasesnonum}
+\end{document}
+";
+    let (w_stderr, w_xml) = convert(witness_tex, false);
+    assert_eq!(error_count(&w_stderr), 0, "{w_stderr}");
+    assert!(w_xml.contains("pfcasesnonumi"), "{w_xml}");
+
+    // 2. Inline key execution: before, before*, first, after.
+    let keys_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{itemize}[before=\def\testb{B1},before*=\def\testbb{B2},first=\def\testf{F},after=\def\testa{A}]
+\item \testb-\testbb-\testf
+\end{itemize}
+\testa
+\end{document}
+";
+    let (k_stderr, k_xml) = convert(keys_tex, false);
+    assert_eq!(error_count(&k_stderr), 0, "{k_stderr}");
+    assert!(k_xml.contains("B1-B2-F"), "{k_xml}");
+    assert!(k_xml.contains("<p>A</p>"), "{k_xml}");
+
+    // 3. Control case: label= and itemsep= guards unchanged.
+    let ctrl_tex = r"\documentclass{article}
+\usepackage{enumitem}
+\begin{document}
+\begin{enumerate}[label=(\alph*),itemsep=2pt]
+\item First
+\item Second
+\end{enumerate}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(ctrl_tex, false);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("(a)"), "{c_xml}");
+    assert!(c_xml.contains("(b)"), "{c_xml}");
+  }
 }

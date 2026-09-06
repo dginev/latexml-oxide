@@ -2,6 +2,7 @@ use latexml_core::{
   common::arena::SymHashMap,
   definition::{PropertiesClosure, argument::ArgWrap},
   document::Document,
+  gullet::unread,
 };
 
 use crate::prelude::*;
@@ -148,6 +149,38 @@ fn begin_enum_itemize(
     // dropped rather than leaked into CSS — the list falls back to the default
     // `--ltx-enum-leftmargin` (1em).
   }
+
+  // Execute list-level `before` and `first` key code at list start
+  // (order per enumitem.sty:1030-1060 \enit@before … \enit@first).
+  let mut start_tokens = Vec::new();
+  if let Some(b) = hash.get("before").and_then(argwrap_to_tokens) {
+    start_tokens.extend(b.unlist());
+  }
+  if let Some(b) = hash.get("before*").and_then(argwrap_to_tokens) {
+    start_tokens.extend(b.unlist());
+  }
+  if let Some(f) = hash.get("first").and_then(argwrap_to_tokens) {
+    start_tokens.extend(f.unlist());
+  }
+  if let Some(f) = hash.get("first*").and_then(argwrap_to_tokens) {
+    start_tokens.extend(f.unlist());
+  }
+  if !start_tokens.is_empty() {
+    unread(Tokens::new(start_tokens));
+  }
+
+  // Store list-level `after` key code for execution at list end.
+  let mut after_tokens = Vec::new();
+  if let Some(a) = hash.get("after").and_then(argwrap_to_tokens) {
+    after_tokens.extend(a.unlist());
+  }
+  if let Some(a) = hash.get("after*").and_then(argwrap_to_tokens) {
+    after_tokens.extend(a.unlist());
+  }
+  if !after_tokens.is_empty() {
+    props.insert("after", Stored::Tokens(Tokens::new(after_tokens)));
+  }
+
   Ok(props)
 }
 
@@ -201,6 +234,9 @@ fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
         );
       }
     }
+  }
+  if let Some(Stored::Tokens(after)) = whatsit.properties.get("after") {
+    unread(after.clone());
   }
   Ok(Vec::new())
 }
