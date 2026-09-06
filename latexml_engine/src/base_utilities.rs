@@ -502,6 +502,10 @@ LoadDefinitions!({
       frontmatter_clear(&tag);
     }
     let index = frontmatter_push(&tag, entry);
+    // A terminal reached INSIDE a nested group (`\section`'s
+    // `\@startsection@hook` inside an unbalanced `\abstract{…`) ends the
+    // body from there: `digest_next_body` records the terminal and depth on
+    // this frame, `until_terminal_inside_group` (stomach.rs) acts.
     let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
@@ -817,14 +821,20 @@ LoadDefinitions!({
   );
 
   // Like \let \relax, but \relax not def yet!
-  DefPrimitive!("\\lx@end@abstract", None);
+  // The until-body terminals: no-ops when the body's loop sees them; inside a
+  // nested group they end the body from there (stomach.rs).
+  DefPrimitive!("\\lx@end@abstract", {
+    until_terminal_inside_group(&T_CS!("\\lx@end@abstract"))?;
+  });
 
   DefMacro!(
     "\\lx@begin@keywords[]",
     "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter@until{ltx:keywords}[#1]{\\lx@end@keywords}"
   );
 
-  DefPrimitive!("\\lx@end@keywords", None);
+  DefPrimitive!("\\lx@end@keywords", {
+    until_terminal_inside_group(&T_CS!("\\lx@end@keywords"))?;
+  });
 
   // Add random notes about the document itself
   DefMacro!(

@@ -2107,6 +2107,11 @@ LoadDefinitions!({
       }
     }
   });
+  // biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` = `\blx@addbib`
+  // with the global / per-refsection register; one resource list here
+  // (shtthesis.cls, biblatex-apa-test `\addglobalbib`).
+  Let!("\\addglobalbib", "\\addbibresource");
+  Let!("\\addsectionbib", "\\addbibresource");
   // Idempotent for the same double-init reason as \blx@saved@cite above: a bare
   // \let on a 2nd init would save the already-rebound \bibliography (=\addbibresource).
   RawTeX!(

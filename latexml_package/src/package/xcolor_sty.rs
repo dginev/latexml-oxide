@@ -1582,12 +1582,26 @@ LoadDefinitions!({
 \def\@@ifxempty#1#2\XC@@
  {\ifx#1\@@ifxempty
   \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
-\def\XC@getcolor#1#2{\XC@edef#2{#1}}
+\def\XC@getcolor#1#2{\extractcolorspec{#1}\XC@@lxtmp\expandafter\XC@getcolor@lx\XC@@lxtmp#2}
+\def\XC@getcolor@lx#1#2#3{\edef#3{\noexpand\xcolor@{}{#2}{#1}{#2}}}
+\def\XC@undeclaredcolor#1#2{\color[#1]{#2}}
 \def\XC@usecolor#1{}
 \let\pst@getcolor\XC@getcolor
 \let\pst@usecolor\XC@usecolor
 "##);
 
+  // xcolor's internal colour API, with THIS binding's colour model behind it
+  // (xcolor.sty:1373-1396 `\XC@getcolor{spec}\cs` leaves `\cs` =
+  // `\xcolor@{}{<driver>}{<model>}{<spec>}` = `\XC@current@color`, produced
+  // by :786 `\XC@undeclaredcolor{model}{spec}`, which also SETS the colour;
+  // `\XC@usecolor` emits driver code). Announcing an xcolor version
+  // (`\ProvidesPackage` above) means supplying this contract: lua-ul.sty:82-100
+  // switches to it whenever `\XC@getcolor` exists (`\XC@getcolor{#1}\l_tmpa_tl`,
+  // strips the leading `\xcolor@{}{drv}`, later `\XC@undeclaredcolor{model}{spec}`)
+  // — a `\XC@getcolor` with a private shape and no `\XC@undeclaredcolor` broke
+  // every lua-ul document (gckanbun kanshi/whole-vert samples, sweep 50); pstricks
+  // aliases `\pst@getcolor` to it (pstricks.sty:150-156). Guard:
+  // `perfect_kernel_batch56::xcolor_internal_api_matches_the_real_contract`.
   // XC@strip@comma, XC@replace, XC@type
   RawTeX!(r##"
 \def\XC@strip@comma#1,#2%

@@ -348,6 +348,17 @@ pub(crate) fn load() -> Result<()> {
   });
   // Perl: Let('\multicolumn', '\lx@alignment@multicolumn');
   Let!("\\multicolumn", "\\lx@alignment@multicolumn");
+  // LOCKED like `\tabular`/`\endtabular` (:282/:291): a raw package that
+  // re-`\def`s latex.ltx's `\multicolumn` (agupp.sty:599 = latex.ltx:16603's
+  // `\multispan…\@mkpream{#2}…`) would run `\@mkpream`, which EXECUTES
+  // `\@classz`/`\@acol` (latex.ltx:16641/16643) — `\let`-targets only
+  // `\array`/`\@tabular`'s raw scaffolds bind (:16550/:16560), never the
+  // constructor path — and typeset the cell outside the alignment model
+  // (aguplus.tex:731 `undefined:\@classz`+`\@acol`; Perl identical, its
+  // `\multicolumn` is unlocked at latex_constructs.pool.ltxml:3702 — SURPASS).
+  // Binding-level redefinitions (colortbl) load unlocked and still win. Guard:
+  // `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+  AssignValue!("\\multicolumn:locked" => true, Some(Scope::Global));
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
   // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)

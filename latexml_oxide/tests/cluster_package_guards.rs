@@ -16596,9 +16596,10 @@ c &= d
 
   /// tex.web §1335: an `\abstract{` whose brace never closes
   /// (screenplay-pkg.tex:67) ends with the benign "(\end occurred inside a
-  /// group)" line, not a mode error. A `\section` inside the open group is
-  /// typeset inside it, as in TeX (the group is a nested body here, so the
-  /// brace-less form's section-hook terminal cannot end this abstract).
+  /// group)" line, not a mode error; a `\section` inside the open group ends
+  /// the abstract (the section hook's terminal arrives inside the nested `{`
+  /// body and `until_terminal_inside_group` closes the runaway group), so the
+  /// section lands at document level as in the brace-less form.
   #[test]
   fn unbalanced_abstract_brace_unwinds_at_end() {
     let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\abstract{\\begin{quote}This is the abstract body.\n\\end{quote}\n\\section{Intro}\nSome following text.\n\\end{document}\n";
@@ -16608,9 +16609,11 @@ c &= d
       xml.contains("<abstract") && xml.contains("</abstract>"),
       "{xml}"
     );
+    let abs_end = xml.find("</abstract>").expect("abstract closes");
+    let sec = xml.find("<section").expect("section present");
     assert!(
-      xml.contains("<section") && xml.contains("Some following text."),
-      "{xml}"
+      sec > abs_end && xml.contains("Some following text."),
+      "section nested in the abstract:\n{xml}"
     );
     let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\abstract{\\begin{quote}Abstract body, no closing brace, no section.\n\\end{quote}\nTrailing text still inside the runaway group.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, false);
@@ -16619,6 +16622,60 @@ c &= d
       xml.contains("<abstract") && xml.contains("Trailing text"),
       "{xml}"
     );
+  }
+
+  /// A raw package's `\def\multicolumn` (agupp.sty:599 = latex.ltx's, whose
+  /// `\@mkpream` executes the `\let`-only `\@classz`/`\@acol`) is dropped by
+  /// the lock; the native alignment `\multicolumn` keeps the cell (witness
+  /// aguplus/aguplus:731; Perl shares the two undefined errors).
+  #[test]
+  fn raw_multicolumn_redefinition_is_dropped() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\multicolumn#1#2#3{\\multispan{#1}\\begingroup\\@mkpream{#2}\\def\\@sharp{#3}\\set@typeset@protect\\@arstrut\\@preamble\\hbox{}\\endgroup\\ignorespaces}\n\\makeatother\n\\begin{document}\n\\begin{tabular}{l@{~$\\Rightarrow$~}l}\na & b\\\\\n\\multicolumn{1}{c}{X} & c\\\\\n\\end{tabular}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<td align=\"center\">X</td>"), "{xml}");
+    if kpsewhich_has("aguplus.cls") && kpsewhich_has("agupp.sty") {
+      let tex = "\\documentclass[twoside,agupp]{aguplus}\n\\begin{document}\n\\begin{tabular}{l@{~$\\Rightarrow$~}l}\na & b\\\\\n\\multicolumn{1}{c}{X} & c\\\\\n\\end{tabular}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("<td align=\"center\">X</td>"), "{xml}");
+    }
+  }
+
+  /// biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` record
+  /// resources like `\addbibresource` (biblatex-apa-test, shtthesis).
+  #[test]
+  fn biblatex_addglobalbib_records_resources() {
+    let tex = "\\documentclass{article}\n\\usepackage{filecontents}\n\\begin{filecontents}{t.bib}\n@book{knuth84, author={Donald Knuth}, title={The TeXbook}, year={1984}, publisher={Addison-Wesley}}\n\\end{filecontents}\n\\usepackage[backend=biber]{biblatex}\n\\addglobalbib{t.bib}\n\\addsectionbib[label=x]{t.bib}\n\\begin{document}\nCite \\cite{knuth84}.\n\\printbibliography\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The resource was RECORDED: the bibliography element carries it (the
+    // entries are filled at post-processing).
+    assert!(
+      xml.contains("<bibliography") && xml.contains("files=\"t.bib\""),
+      "{xml}"
+    );
+  }
+
+  /// xcolor.sty:1373-1396 contract: `\XC@getcolor{spec}\cs` leaves
+  /// `\xcolor@{}{drv}{model}{spec}` in `\cs` and `\XC@undeclaredcolor{model}
+  /// {spec}` sets the colour — the path lua-ul.sty:82-100 takes whenever
+  /// `\XC@getcolor` exists (witness gckanbun kanshi-sample under luwa-ul).
+  #[test]
+  fn xcolor_internal_api_matches_the_real_contract() {
+    let tex = "\\documentclass{article}\n\\usepackage{xcolor}\n\\makeatletter\n\\def\\strip\\xcolor@#1#2{}\n\\begin{document}\n\\XC@getcolor{blue}\\x\\edef\\y{\\expandafter\\strip\\x}%\n{\\expandafter\\XC@undeclaredcolor\\y B}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("color=\"#0000FF\"") && xml.contains(">B<"),
+      "{xml}"
+    );
+    if kpsewhich_has("lua-ul.sty") && kpsewhich_has("luacolor.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{luacolor,lua-ul}\n\\begin{document}\n\\underLine{under} and \\highLight[yellow]{high}.\n\\end{document}\n";
+      let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("under") && xml.contains("high"), "{xml}");
+    }
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
@@ -17534,7 +17591,7 @@ line 2
   }
 
   /// xcolor: \XC@getcolor & \XC@usecolor (L1, witness dsptricks/dspTricksManual).
-  /// Verifies \XC@getcolor normalizes and assigns into the target macro,
+  /// Verifies \XC@getcolor yields xcolor's real `\xcolor@…` shape in the target macro,
   /// \XC@usecolor consumes the color argument without error, and that loading
   /// pstricks after/with xcolor aliases \pst@getcolor / \pst@usecolor to them.
   #[test]
@@ -17554,7 +17611,9 @@ ColorA:\mycolorA;ColorB:\mycolorB.
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("ColorA:red;ColorB:blue."), "{xml}");
+    // xcolor.sty:1373-1396: `\cs` holds `\xcolor@{}{drv}{model}{spec}` and this
+    // binding's `\xcolor@` expands to the driver spec.
+    assert!(xml.contains("ColorA:1,0,0;ColorB:0,0,1."), "{xml}");
 
     // Control: standard \definecolor + \color still emits color attribute
     let control_tex = r"\documentclass{article}

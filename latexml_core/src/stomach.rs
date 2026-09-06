@@ -1734,10 +1734,71 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
 
 /// Return the digested `List` after reading and digesting a body from the its Gullet.
 /// The body extends until the current level of boxing or environment is closed.
+/// A bounded body's terminal token (`\lx@add@frontmatter@until`'s
+/// `\lx@end@abstract`…) invoked INSIDE a group opened within that body — a
+/// `{` group is a nested digest body here (and in Perl, TeX_Box.pool.ltxml:
+/// 30-41), so the body's own loop never sees the token. LaTeX's rule for an
+/// environment end met inside an open group is `\@checkend`'s "\begin{X}
+/// ended by \end{Y}" (latex.ltx:15394) with the groups closed by the error
+/// recovery; here the groups above the body are abandoned (tex.web §1335
+/// shape: popped, `\aftergroup` discarded) with a Warning, and the body's
+/// loop is told its terminal arrived (`lx@until@terminal@hit`). Returns true
+/// when it acted. Witness: screenplay-pkg.tex:67 `\abstract{…\section` —
+/// the section then lands at document level, as the brace-less form does.
+pub fn until_terminal_inside_group(terminal: &Token) -> Result<bool> {
+  if lookup_token("lx@until@terminal").as_ref() != Some(terminal) {
+    return Ok(false);
+  }
+  let depth = match lookup_value("lx@until@depth") {
+    Some(Stored::Number(n)) => n.0 as usize,
+    _ => return Ok(false),
+  };
+  if stomach!().boxing.len() <= depth {
+    return Ok(false); // the body's own loop will see it
+  }
+  let mut popped = 0usize;
+  while !is_value_bound("lx@until@terminal", Some(0)) && get_frame_depth() > 0 && popped < 64 {
+    let _ = remove_value("afterGroup");
+    let nonboxing = lookup_bool_sym(crate::pin!("groupNonBoxing"));
+    pop_stack_frame(nonboxing)?;
+    popped += 1;
+  }
+  Warn!(
+    "unexpected",
+    terminal,
+    s!(
+      "{} inside {popped} open group(s): closing them (LaTeX: environment ended inside a group)",
+      terminal.stringify()
+    )
+  );
+  assign_value(
+    "lx@until@terminal@hit",
+    Stored::Token(*terminal),
+    Some(Scope::Global),
+  );
+  Ok(true)
+}
+
 pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
 
   let init_depth = { stomach!().boxing.len() };
+  // Every bounded body records its terminal and depth on the current frame
+  // (the caller's own `bounded => true` frame), for
+  // `until_terminal_inside_group`; a terminal primitive that never calls it
+  // (`\endgroup` for url.sty's body) leaves the record inert.
+  if let Some(ref terminal) = terminal_opt {
+    assign_value(
+      "lx@until@terminal",
+      Stored::Token(*terminal),
+      Some(Scope::Local),
+    );
+    assign_value(
+      "lx@until@depth",
+      Stored::Number(crate::common::number::Number(init_depth as i64)),
+      Some(Scope::Local),
+    );
+  }
   if *TRACE_TERMINAL {
     eprintln!("[terminal] enter body terminal={terminal_opt:?} init_depth={init_depth}");
   }
@@ -1829,6 +1890,16 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     if let Some(ref terminal) = terminal_opt
       && &token == terminal
     {
+      found_terminal = true;
+      ran_out = false;
+      break;
+    }
+    // The terminal arrived inside a nested group and ended the body from
+    // there (`until_terminal_inside_group`).
+    if let Some(ref terminal) = terminal_opt
+      && lookup_token("lx@until@terminal@hit").as_ref() == Some(terminal)
+    {
+      assign_value("lx@until@terminal@hit", Stored::None, Some(Scope::Global));
       found_terminal = true;
       ran_out = false;
       break;

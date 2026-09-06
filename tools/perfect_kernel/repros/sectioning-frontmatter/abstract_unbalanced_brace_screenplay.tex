@@ -1,8 +1,8 @@
 % witness: screenplay-pkg/screenplay-pkg (screenplay-pkg.tex:67)
 % oracle:  pdflatex 0 errors
 % engines: rust=6 perl=? (2026-09-06)
-% expect:  0 errors; <ltx:abstract> present; <ltx:section> "Intro" stays INSIDE the abstract (TeX typesets it inside the open group; a `{` group is a nested body, DIVERGENCES #207)
-% status:  GREEN (batch 56z, 2026-09-06)
+% expect:  0 errors; <ltx:abstract> present; <ltx:section> "Intro" is a document-level SIBLING of the abstract (the section hook ends the abstract from inside the runaway group, DIVERGENCES #207)
+% status:  GREEN (batch 56aa, 2026-09-06)
 % mechanism: \abstract{ opens an unbalanced group; TeX warns at \end{document}
 %   and closes it. Our sect05.rs:1006 \abstract binding turns \abstract{ into
 %   \lx@begin@abstract{\aftergroup\lx@end@abstract ; the missing } never fires

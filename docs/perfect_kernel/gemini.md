@@ -80,8 +80,8 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
 ### M1 — the algpseudocodex binding: finish it on `gemini/pk-helpers-7` (PR #798 is
 CLOSED; cherry-pick your commit cda1297be2 from `feat-algpseudocodex-binding` onto the
 helper branch, then apply the review findings). The orchestrator's read-only review
-found, BLOCKING: (1) the DIVERGENCES entry must be **#209** (perfect_kernel runs through
-#208; `main`'s numbering does not apply) and its premise must be current — on
+found, BLOCKING: (1) the DIVERGENCES entry must be **#210** (perfect_kernel runs through
+#209; `main`'s numbering does not apply) and its premise must be current — on
 perfect_kernel the raw load already renders `\Comment` on one line (`float:right`, no
 minipage) and is 0 Fatal; the binding's job is `\LComment`/`\BeginBox`/`\EndBox`/
 `\BoxedString` (3 undefined-CS errors today) and the in-flow box wrapper; (2) the
@@ -122,14 +122,11 @@ the title block, the body should run with `\@title`/`\@author` emptied (the
 `[0001]` numbering, and a control class whose `\maketitle` redefinition only adds
 `\thispagestyle{empty}` converts unchanged. Witness: uspatent/PatentApplication.
 
-### M3 — xcolor `\XC@getcolor` faithful normalisation: xcolor.sty:1373-1390
-(`\XC@getcolor#1#2{\begingroup\toks@{#1}\XC@getc@lor#1\XC@@\aftergroupdef#2{\@@tmp}}`
-+ `\XC@getc@lor`). Port it (RawTeX from the real file is fine — the helpers
-`\XC@@`, `\@ifxempty`, `\aftergroupdef`, `\XC@edef` exist in the binding; check
-each) so `\pst@getcolor{red!50}` yields what xcolor yields. Guard: `\XC@getcolor{red!50}\x`
-→ `\x` equals xcolor's result (run pdflatex with `\typeout{\meaning\x}` to get
-the oracle string). Witness: dsptricks/dspTricksManual (the psmatrix template
-desync remains D12 — do not chase it).
+### M3 — DONE by the orchestrator in batch 56aa (xcolor.sty:1373-1396 contract ported:
+`\XC@getcolor` via `\extractcolorspec`, `\XC@undeclaredcolor` = `\color[model]{spec}`;
+guard `xcolor_internal_api_matches_the_real_contract`; it also fixed the two gckanbun
+flips lua-ul caused under your L1). Nothing to do; if M4/M5 show an xcolor-internal
+error, report it under M5.
 
 ### M4 — singles from the sweep-49 residue (one root each, same deliverable shape):
 kksymbols/kksymbols-doc (7 errors), notebeamer/notebeamer-demo (6),

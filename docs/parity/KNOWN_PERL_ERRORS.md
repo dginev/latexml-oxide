@@ -5964,8 +5964,9 @@ close a group that switched to mode internal_vertical") and the document closed
 over the open abstract (3 errors). Rust now: `\end{document}` abandons open plain
 groups §1335-style (stack frame + `boxing` popped, `\aftergroup` discarded, one
 warning), a bounded primitive closes only the frame it opened, the document's
-close is lenient about elements those groups left open (OXIDIZED_DESIGN #207;
-a `\section` inside the open group stays inside the abstract, as TeX typesets it). Guard:
+close is lenient about elements those groups left open, and a `\section` inside
+the open group ends the abstract from inside the nested brace body
+(`until_terminal_inside_group`; OXIDIZED_DESIGN #207). Guard:
 `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`.
 
 ## 204. thumbs.sty's shipout state machine never resets (Rust fixes)
@@ -5977,3 +5978,16 @@ the second column (thumbs/thumbs-example; Perl identical; pdflatex 0). Rust:
 `thumbs_sty.rs` loads the real package and applies its own `hidethumbs` branch
 (:1531-1538). Guard: `perfect_kernel_batch56::thumbs_loads_in_its_own_hide_mode`.
 \n
+
+## 205. A raw `\def\multicolumn` runs `\@mkpream` against LaTeXML's array model (Rust fixes)
+
+agupp.sty:599 re-`\def`s `\multicolumn` as latex.ltx:16603's `\multispan…\@mkpream{#2}
+…`; `\@mkpream` executes `\@classz`/`\@acol` (latex.ltx:16641/16643), which only
+`\array`/`\@tabular`'s raw scaffolds `\let` (:16550/:16560) — LaTeXML's constructor
+`\tabular` never does, so the cell errors `undefined:\@classz` + `\@acol` and is typeset
+outside the alignment model (aguplus.tex:731; Perl identical: its `\multicolumn` is
+unlocked, latex_constructs.pool.ltxml:3702). Rust: `\multicolumn` is LOCKED like
+`\tabular`/`\endtabular` (OXIDIZED_DESIGN #209); binding-level redefinitions
+(colortbl…) load unlocked and still win. Guard:
+`perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+

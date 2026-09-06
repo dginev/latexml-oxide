@@ -1051,12 +1051,13 @@ pub(crate) fn load() -> Result<()> {
         return Ok(Tokens::new(toks));
       }
       read_token()?;
-      // (A `\section` inside an unbalanced `\abstract{` stays inside the
-      // abstract, as in TeX the section is typeset inside the open group:
-      // the brace group is digested as a NESTED body (`tex_box.rs`, the `{`
-      // primitive), so the brace-less branch's `\@startsection@hook` terminal
-      // could never reach this body's loop. Settled dead end, batch 56z.)
+      // A `\section` inside an unbalanced `\abstract{` ends the abstract as
+      // in the brace-less form: the section hook's `\lx@end@abstract` arrives
+      // inside the `{` group (a NESTED digest body, `tex_box.rs`), where
+      // `until_terminal_inside_group` (stomach.rs) closes the runaway group
+      // and ends the body (screenplay-pkg.tex:67).
       Tokens!(
+        T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
         T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),

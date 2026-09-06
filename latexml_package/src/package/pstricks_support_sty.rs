@@ -34,17 +34,20 @@ LoadDefinitions!({
   def_macro_noop("\\addto@par{}")?;
   // `\psset` itself stays the raw pst-xkey.tex definition (pstricks_sty.rs),
   // so the family key BODIES run: `linecolor=` & co. call `\pst@getcolor`
-  // (pstricks.tex `\pst@getcolor{name}\psk@linecolor`). pstricks.sty:155-172
-  // takes xcolor's `\XC@getcolor` when xcolor is loaded (not in our xcolor
-  // binding — `\let` of an undefined name) and otherwise defines it over
-  // `\color@<name>` storage, which is exactly how color_sty.rs stores a
-  // `\definecolor` — so the no-xcolor definition is the faithful one here.
+  // (pstricks.tex `\pst@getcolor{name}\psk@linecolor`). pstricks.sty:150-176,
+  // verbatim in shape: with xcolor loaded (its 2004+ contract — our binding
+  // supplies `\XC@getcolor`/`\XC@usecolor`, xcolor.sty:1373-1396) the helpers
+  // are xcolor's; otherwise pstricks' own over `\color@<name>` storage, which
+  // is exactly how color_sty.rs stores a `\definecolor`, plus the three grays.
   // `\pst@usecolor` writes the PostScript colour (`\c@lor@to@ps`): no
-  // PostScript backend, so it emits nothing. Guard:
+  // PostScript backend, so the fallback emits nothing. Guards:
   // `perfect_kernel_batch56::psset_dispatches_family_key_bodies` (control:
-  // `\psset{linewidth=2pt,linecolor=red}` converts clean).
-  RawTeX!(r"\def\pst@getcolor#1#2{\@ifundefined{\string\color@#1}{\@pstrickserr{Color `#1' not defined}\@eha}{\edef#2{#1}}}
-\def\pst@usecolor#1{}");
+  // `\psset{linewidth=2pt,linecolor=red}` converts clean),
+  // `perfect_kernel_gemini::xcolor_pst_getcolor_and_usecolor` (xcolor first).
+  RawTeX!(r"\@ifpackageloaded{xcolor}{\let\pst@getcolor\XC@getcolor\let\pst@usecolor\XC@usecolor}{%
+\def\pst@getcolor#1#2{\@ifundefined{\string\color@#1}{\@pstrickserr{Color `#1' not defined}\@eha}{\edef#2{#1}}}%
+\def\pst@usecolor#1{}%
+\definecolor{darkgray}{gray}{.25}\definecolor{gray}{gray}{.5}\definecolor{lightgray}{gray}{.75}}");
   def_macro_noop("\\psset@special{}")?;
 
   // Perl pstricks_support.sty.ltxml L580-606: register 22 pstricks keyvals

@@ -7043,11 +7043,15 @@ when the frontmatter is inserted at finalization, which is when the document
 actually closes — that constructor is idempotent (`lx@document@closed`) and a
 frontmatter entry's own close is scoped (`close_element_if_open`, #202).
 **Why**: pdflatex treats the unclosed group as a warning; the content is typeset.
-A `\section` inside the open group stays inside the abstract, as TeX typesets it
-inside the group (settled dead end: arming `\@startsection@hook` in the braced
-branch is inert — a `{` group is a NESTED body in this stomach, `tex_box.rs`'s
-`{` primitive, so the until-body's terminal never reaches its own loop — Perl nests the same
-way, TeX_Box.pool.ltxml:30-41; KERNEL_CAPABILITIES 2026-09-06 correctness item).
+A `\section` inside the open group ENDS the abstract as in the brace-less form:
+the braced branch arms `\@startsection@hook` too, and because a `{` group is a
+NESTED digest body (`tex_box.rs`'s `{` primitive; Perl nests the same way,
+TeX_Box.pool.ltxml:30-41) the hook's `\lx@end@abstract` arrives inside that
+nested body where the until-loop cannot see it — so the terminal primitive itself
+acts (`until_terminal_inside_group`, stomach.rs): it abandons the groups opened
+inside the body (§1335 shape, one Warning — LaTeX's `\@checkend` "\begin{X}
+ended by \end{Y}", latex.ltx:15394, is the analogue) and flags the body's loop
+(`lx@until@terminal@hit`), so the section lands at document level (batch 56aa).
 KNOWN_PERL_ERRORS #203.
 **Witnesses**: screenplay-pkg/screenplay-pkg (6 → 0).
 **Guards**: `perfect_kernel_batch56::unbalanced_abstract_brace_unwinds_at_end`,
@@ -7072,3 +7076,19 @@ catcodes, so an inner `\makeatletter` breaks `\patch@level`).
 **Witnesses**: ryethesis/ryesample (1 → 0; Perl 0 on the reduction).
 **Guards**: `perfect_kernel_batch56::class_redefined_abstract_defers_its_argument`.
 \n
+
+### 209. `\multicolumn` is locked like `\tabular`
+
+**Perl behavior**: `\tabular`/`\endtabular` locked (latex_constructs.pool.ltxml:3667/
+3671), `\multicolumn` unlocked (:3702): a raw package's latex.ltx-shaped
+`\def\multicolumn` replaces the alignment binding and runs `\@mkpream`, which
+needs the raw scaffold's `\@classz`/`\@acol` (KNOWN_PERL_ERRORS #205).
+**Rust behavior**: `\multicolumn` carries `:locked`; a raw `\def` is dropped (the
+lock records it as `\multicolumn:redefined`), a binding's redefinition (loaded
+unlocked) wins. The rule: commands that ARE the alignment model's structure
+(`\tabular`, `\endtabular`, `\multicolumn`) are locked; raw copies of latex.ltx's
+`\halign`-preamble machinery cannot run against a model that has no preamble.
+**Why**: the cell keeps its column and content (aguplus 2 → 0).
+**Witnesses**: aguplus/aguplus.
+**Guards**: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+
