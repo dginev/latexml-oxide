@@ -77,23 +77,32 @@ is the surpass oracle; sweep #49 (batch 56z) and #50 (your round 6) logs land in
 
 ## Tasks (priority order)
 
-### M1 — the algpseudocodex binding (carried over from round 6; the branch `feat-algpseudocodex-binding` / PR #798 is CLOSED — the orchestrator merges that branch into `perfect_kernel`; if it is not complete, continue it on `gemini/pk-helpers-7`, never on a branch off `main`)
-when done, NOT `perfect_kernel`): create `latexml_contrib/src/algpseudocodex_sty.rs`
-(register in `latexml_contrib/src/lib.rs`, `pub mod` there) so the package stops
-raw-loading. The full work-prep is in `scratchpad/ALGPSEUDOCODEX_HANDOFF.md` in the
-main checkout (read it first: symptoms, source lines algpseudocodex.sty:139/447/460/
-491/896-925, the witness `scratchpad/new_2511.21969/` main `main-ieee.tex`, the
-tabto_sty.rs precedent #151). Scope: `RequirePackage!("algorithmicx")`, then override
-`\Comment` (one-line right-flushed `⊳ … ⊲`, honouring `italicComments`, no
-`\settowidth`/`\tabto`/varwidth minipage), `\LComment` (full-width line, no zero-height
-leader), and `\BeginBox`/`\EndBox`/`\BoxedString`/`\algpx@drawCodeBox` (pass content
-through inside an in-flow bordered wrapper carrying the `draw=` colour and dash style
-as classes — the two-pass tikz overlay cannot run). Deliverables: the binding, a
-guard (a `\Comment` line is single-height: no empty numbered line; the box wrapper
-exists with its colour class), a DIVERGENCES entry drafted in Status (the
-orchestrator lifts it), and the witness's Algorithm 2 converted with 0 errors.
-Report pdflatex-vs-ours shape (the PDF is arxiv.org/pdf/2511.21969). When you
-finish, say so in Status; the orchestrator deletes the handoff file.
+### M1 — the algpseudocodex binding: finish it on `gemini/pk-helpers-7` (PR #798 is
+CLOSED; cherry-pick your commit cda1297be2 from `feat-algpseudocodex-binding` onto the
+helper branch, then apply the review findings). The orchestrator's read-only review
+found, BLOCKING: (1) the DIVERGENCES entry must be **#209** (perfect_kernel runs through
+#208; `main`'s numbering does not apply) and its premise must be current — on
+perfect_kernel the raw load already renders `\Comment` on one line (`float:right`, no
+minipage) and is 0 Fatal; the binding's job is `\LComment`/`\BeginBox`/`\EndBox`/
+`\BoxedString` (3 undefined-CS errors today) and the in-flow box wrapper; (2) the
+existing guard `statex_continues_the_open_line_box` (cluster_package_guards.rs ~12053)
+raw-loads algpseudocodex and asserts `\State/\Statex/\State` = exactly 2
+`<listingline>` + one `<break>` (the package's varwidth `\Statex`-in-open-box
+semantics); your binding stubs that machinery, so the guard will flip — preserve the
+`\Statex` → in-line break semantics in the binding (do not just edit the guard) and run
+it; (3) multi-line boxes double-open: `\algpx@check@box`'s "already open" arm calls
+`document.open_element("ltx:text", …)` on every `\item` while a box is open but
+`\EndBox` closes one — open only on the pending→open transition (witness 2511.21969
+Alg 2 lines 9 and 17 are multi-line boxes). MINOR: `noEnd` default is `[true]`
+(algpseudocodex.sty:43 — End-lines suppressed by default), `commentColor` default is
+`gray` (:48); say in the entry which options are honoured and which are dropped
+(`indLines`, `spaceRequire`); the guard must assert `error_count == 0` and that the
+comment sits in the `\State`'s own `<listingline>`, plus an `\LComment` structural
+fact; when old `algorithmic` was loaded first, `algorithmicx_sty.rs:15-38` bails and
+`\algrenewcomment` is undefined — guard against that path (witness class 2410.03000).
+Deliverables: the corrected binding + guard on the helper branch, the #209 entry,
+the witness's Algorithm 2 at 0 errors, Status entry. The orchestrator deletes the
+handoff file after the merge.
 
 ### M2 — `\maketitle` honours the class's dropped body (generalises your L9): the lock
 (`latexml_core/src/state.rs`, the `<cs>:locked` drop that already records
