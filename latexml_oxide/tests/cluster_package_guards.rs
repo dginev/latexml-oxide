@@ -16621,4 +16621,36 @@ café résumé
     assert_eq!(error_count(&l_stderr), 0, "{l_stderr}");
     assert!(l_xml.contains("café résumé"), "{l_xml}");
   }
+
+  /// srdp-tables.sty routes directly to tabu binding (witness: srdp-mathematik).
+  #[test]
+  fn srdp_tables_routes_to_tabu() {
+    let tex = r"\documentclass{article}
+\usepackage{srdp-tables}
+\begin{document}
+\begin{tabu}{cc}
+a & b \\
+1 & 2 \\
+\end{tabu}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<tabular"), "{xml}");
+    assert!(xml.contains("1") && xml.contains("2"), "{xml}");
+
+    // Control: tabu directly
+    let control_tex = r"\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{cc}
+a & b \\
+1 & 2 \\
+\end{tabu}
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("<tabular"), "{c_xml}");
+  }
 }

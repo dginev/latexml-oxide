@@ -138,3 +138,12 @@ repro; witness srdp-mathematik.
   - Settled dead-ends:
     - `RawTeX!` definitions inside `LoadDefinitions!` tokenize strings before mouth `open()` sets `@` to letter, tokenizing `\def\CJK@...` as `\CJK` with pattern `@...`; implemented directly in Rust via `DefMacro!` / `DefPrimitive!`.
     - Activating catcodes 0x80..0xFE breaks UTF-8 Latin accented characters; keeping catcodes `OTHER` and binding only active meanings preserves both CJK loops and Latin text.
+
+- **2026-09-05 I5 (srdp-mathematik / srdp-tables routes to tabu)**:
+  - Guard: `perfect_kernel_gemini::srdp_tables_routes_to_tabu` (repro: `\usepackage{srdp-tables}` + `\begin{tabu}` renders table with 0 errors; control: direct `\usepackage{tabu}` unchanged with 0 errors).
+  - Implementation: `latexml_contrib/src/srdp_tables_sty.rs` requires `tabu` (`RequirePackage!("tabu");`), registered in `latexml_contrib/src/lib.rs` for `"srdp-tables"`.
+  - Witnesses:
+    - `srdp-mathematik/srdp-mathematik.tex`: 9 errors (8 errors + `Fatal:Mouth:EoF`) in s44 → 0 errors, 0 fatals, clean XML with 17 benign warnings (under `--timeout=180`).
+  - Settled dead-ends:
+    - `srdp-tables.sty` is a 1:1 verbatim vendored copy of `tabu.sty`; routing to latexml's native `tabu` binding avoids raw tabu's deep array token register dependencies (`\NC@list`, `\NC@do`) that cause fatal mouth EOF during column scan.
+
