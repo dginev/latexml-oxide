@@ -1,5 +1,97 @@
 use latexml_package::prelude::*;
 
+fn bind_cjk_utf8_octets() -> Result<()> {
+  let cjk_at_at_at = T_CS!("\\CJK@@@");
+  if lookup_definition(&cjk_at_at_at)?.is_none() {
+    def_macro_noop("\\CJK@@@")?;
+    def_macro_noop("\\CJK@X{}")?;
+    def_macro_noop("\\CJK@XX{}{}")?;
+    def_macro_noop("\\CJK@XXp{}{}")?;
+    def_macro_noop("\\CJK@XXX{}{}{}")?;
+    def_macro_noop("\\CJK@XXXp{}{}{}{}")?;
+    def_macro_noop("\\CJK@XXXX{}{}{}{}")?;
+    def_macro_noop("\\CJK@XXXXp{}{}{}{}{}")?;
+  }
+
+  for code in 0x80..=0xF4u8 {
+    let ch = code as char;
+    let act = T_ACTIVE!(ch);
+    let expansion = if code <= 0xBF {
+      Tokens!(
+        T_CS!("\\CJK@@@"),
+        T_CS!("\\ifx"),
+        T_CS!("\\protect"),
+        T_CS!("\\@typeset@protect"),
+        T_CS!("\\string"),
+        act,
+        T_CS!("\\else"),
+        T_CS!("\\noexpand"),
+        act,
+        T_CS!("\\fi")
+      )
+    } else if code <= 0xDF {
+      Tokens!(
+        T_CS!("\\CJK@@@"),
+        T_CS!("\\ifx"),
+        T_CS!("\\protect"),
+        T_CS!("\\@typeset@protect"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\CJK@XX"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\string"),
+        T_CS!("\\expandafter"),
+        act,
+        T_CS!("\\else"),
+        T_CS!("\\noexpand"),
+        act,
+        T_CS!("\\fi")
+      )
+    } else if code <= 0xEF {
+      Tokens!(
+        T_CS!("\\CJK@@@"),
+        T_CS!("\\ifx"),
+        T_CS!("\\protect"),
+        T_CS!("\\@typeset@protect"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\CJK@XXX"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\string"),
+        T_CS!("\\expandafter"),
+        act,
+        T_CS!("\\else"),
+        T_CS!("\\noexpand"),
+        act,
+        T_CS!("\\fi")
+      )
+    } else {
+      Tokens!(
+        T_CS!("\\CJK@@@"),
+        T_CS!("\\ifx"),
+        T_CS!("\\protect"),
+        T_CS!("\\@typeset@protect"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\CJK@XXXX"),
+        T_CS!("\\expandafter"),
+        T_CS!("\\string"),
+        T_CS!("\\expandafter"),
+        act,
+        T_CS!("\\else"),
+        T_CS!("\\noexpand"),
+        act,
+        T_CS!("\\fi")
+      )
+    };
+    DefMacro!(act, None, expansion);
+  }
+  Ok(())
+}
+
 LoadDefinitions!({
   // ar5iv-bindings/bindings/CJK.sty.ltxml L17-24: CJK environment is a
   // transparent wrapper that passes body through. `leaveHorizontal` +
@@ -31,8 +123,33 @@ LoadDefinitions!({
   def_macro_noop("\\CJKencfamily[]{}{}")?;
   Let!("\\CJKencshape", "\\CJKencfamily");
   def_macro_noop("\\CJKaddEncHook{}{}")?;
-  def_macro_noop("\\CJK@loadBinding{}")?;
-  def_macro_noop("\\CJK@envStart{}{}{}")?;
+  // CJK.sty:915-1012, 1049-1075 + UTF8.bdg:
+  // Faithfully implement CJK's active-byte decoder definitions and UTF8 binding.
+  // Downstream packages (such as cjkutf8-ko.sty:150-154's "protect utf8 octets" loop)
+  // expand active bytes 0x80..0xF4 via `\unexpanded\expandafter{~}`; without these
+  // bindings, they hit inputenc's `\@inpenc@undefined` 117 times (cjk-ko-doc fatal).
+  //
+  // NOTE: We bind the active-byte MEANINGS only, and intentionally leave catcodes
+  // 0x80..0xFE as Catcode::OTHER (from utf8_def.rs). In latexml-oxide, input is
+  // Unicode codepoints; setting catcode ACTIVE would cause accented Latin characters
+  // (e.g. U+00E9 'é' in "café") to be intercepted as multi-byte CJK lead bytes.
+  DefPrimitive!("\\CJK@loadBinding{}", sub[(binding)] {
+    let b = binding.to_string();
+    if b.trim().is_empty() || b.trim().eq_ignore_ascii_case("utf8") {
+      bind_cjk_utf8_octets()?;
+    }
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\CJK@envStart{}{}{}", sub[(_font, enc, family)] {
+    let enc_str = enc.to_string();
+    if enc_str.trim().is_empty() || enc_str.trim().eq_ignore_ascii_case("utf8") {
+      bind_cjk_utf8_octets()?;
+    }
+    digest(Tokens!(T_CS!("\\CJKfamily"), family))?;
+    Ok(Vec::new())
+  });
+  def_macro_noop("\\CJKenc{}")?;
+  def_macro_noop("\\CJKfontenc{}{}")?;
   def_macro_noop("\\CJK@envEnd")?;
   def_macro_noop("\\CJKtilde")?;
   def_macro_noop("\\nbs")?;

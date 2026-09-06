@@ -16594,4 +16594,31 @@ Some text with an endnote.\endnote{This is an endnote.}
       "{c_xml}"
     );
   }
+
+  /// CJK active UTF-8 octet binding (witness: kotex cjk_envstart_protect_utf8_octets).
+  /// Under CJK UTF8, active octets 0x80..0xF4 are given valid expansion meanings
+  /// without modifying their catcodes (retaining Catcode::OTHER for Latin accents).
+  #[test]
+  fn cjk_utf8_active_octets_binding() {
+    let tex = r"\documentclass{article}
+\usepackage[cjk,hangul]{kotex}
+\begin{document}
+소개
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("소개"), "{xml}");
+
+    // Control: Latin accents with plain CJK
+    let latin_tex = r"\documentclass{article}
+\usepackage{cjk}
+\begin{document}
+café résumé
+\end{document}
+";
+    let (l_stderr, l_xml) = convert(latin_tex, true);
+    assert_eq!(error_count(&l_stderr), 0, "{l_stderr}");
+    assert!(l_xml.contains("café résumé"), "{l_xml}");
+  }
 }

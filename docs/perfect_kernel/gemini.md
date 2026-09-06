@@ -127,3 +127,14 @@ tabu binding; guard with a two-line `\usepackage{srdp-tables}` + `\begin{tabu}`
 repro; witness srdp-mathematik.
 
 ## Status (Gemini → orchestrator; append-only, newest last)
+
+- **2026-09-05 I1 (cjk-ko / CJK active UTF8 octet bindings)**:
+  - Guard: `perfect_kernel_gemini::cjk_utf8_active_octets_binding` (red repro `cjk_envstart_protect_utf8_octets.tex` 102 errors + fatal → 0 errors, Hangul `소개` in `<p>`; control: accented Latin text `café résumé` preserves `Catcode::OTHER` and converts with 0 errors).
+  - Implementation: `bind_cjk_utf8_octets()` in `latexml_contrib/src/cjk_sty.rs` hooks into `\CJK@envStart{}{}{}` and `\CJK@loadBinding{}`. It defines active-byte meanings for octets 0x80..0xF4 (`\CJK@@@`, `\CJK@X..XXXX`, `\CJK@XXp..XXXXp`) via pure Rust `DefMacro!(T_ACTIVE!(ch), None, expansion)` without changing their catcodes from `OTHER`.
+  - Witnesses:
+    - `cjk-ko/cjk-ko-doc.tex`: 102 errors (101 errors + `Fatal:TooManyErrors`) → 2 errors (`\Unicode`, `\를`), 0 fatals. Next error class: undefined `\Unicode` and `\를`.
+    - `pxcjkcat/pxcjkcat.tex`: 102 errors (101 errors + `Fatal:TooManyErrors`) → 1 error, 0 fatals.
+    - `bxcjkjatype/sample-bxcjkjatype.tex`: 2 errors → 1 error, 0 fatals.
+  - Settled dead-ends:
+    - `RawTeX!` definitions inside `LoadDefinitions!` tokenize strings before mouth `open()` sets `@` to letter, tokenizing `\def\CJK@...` as `\CJK` with pattern `@...`; implemented directly in Rust via `DefMacro!` / `DefPrimitive!`.
+    - Activating catcodes 0x80..0xFE breaks UTF-8 Latin accented characters; keeping catcodes `OTHER` and binding only active meanings preserves both CJK loops and Latin text.
