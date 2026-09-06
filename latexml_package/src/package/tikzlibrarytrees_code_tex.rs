@@ -16,5 +16,7 @@ LoadDefinitions!({
     extension => Some(Cow::Borrowed("tex")),
     noltxml => true
   );
-  RawTeX!(r"\providecommand\tikzparentnode{tikzparentnode}\providecommand\tikzchildnode{tikzchildnode}");
+  RawTeX!(
+    r"\providecommand\tikzparentnode{tikzparentnode}\providecommand\tikzchildnode{tikzchildnode}"
+  );
 });

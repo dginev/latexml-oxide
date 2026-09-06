@@ -280,7 +280,7 @@ pub(crate) fn tcb_xparse_listing(
     .collect();
   let mandatory = specs
     .iter()
-    .filter(|(c, _, _)| matches!(c, 'm' | 'r' | 'R'))
+    .filter(|(c, ..)| matches!(c, 'm' | 'r' | 'R'))
     .count();
   // The `[n][]` arity can express one LEADING bracket optional; every other
   // specifier the arity cannot express — `s`, `t<c>`, `d`/`D` with non-`[]`
@@ -294,9 +294,9 @@ pub(crate) fn tcb_xparse_listing(
   // istgame-doc.tex:129) leaked into the captured body and re-entered the
   // environment on `\input`-back (MemoryBudget fatal ×4, sweep #41).
   // Guard: `perfect_kernel_batch56::tcb_listing_unmapped_begin_line_args_are_absorbed`.
-  let leading_optional = specs
-    .first()
-    .is_some_and(|(c, d, bang)| !bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]")));
+  let leading_optional = specs.first().is_some_and(|(c, d, bang)| {
+    !bang && (matches!(c, 'O' | 'o') || (matches!(c, 'd' | 'D') && d == "[]"))
+  });
   let mut eaters = String::new();
   for (i, (c, d, bang)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {

@@ -34,7 +34,8 @@ LoadDefinitions!({
 
   DefMacro!("\\notesname", "Notes");
 
-  RawTeX!(r"
+  RawTeX!(
+    r"
     \newwrite\@enotes
     \newif\if@enotesopen \global\@enotesopenfalse
     \newif\if@haveenotes \global\@haveenotesfalse
@@ -58,14 +59,16 @@ LoadDefinitions!({
         \immediate\write\@enotes{\meaning\next}%
       \endgroup
       \immediate\write\@enotes{\@endanenote}}
-  ");
+  "
+  );
 
   // Note: NOT called \printendnotes!
   DefConstructor!(T_CS!("\\lx@theendnotes"), None,
     "<ltx:TOC lists='ent' scope='global' show='refnum > note'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { stored_map!("name" => digest(T_CS!("\\notesname"))?) });
 
-  RawTeX!(r"
+  RawTeX!(
+    r"
     \def\theendnotes{%
       \immediate\closeout\@enotes \global\@enotesopenfalse
       \if@haveenotes
@@ -93,5 +96,6 @@ LoadDefinitions!({
         \lx@theendnotes
       \fi
     }
-  ");
+  "
+  );
 });

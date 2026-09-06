@@ -1,26 +1,5 @@
 use crate::prelude::*;
 
-/// The prefix of a raw body line up to its first *unescaped* `%` — comment.sty
-/// reads its body with `%` active as a TeX comment, so an `\end{name}` sitting
-/// behind a `%` (e.g. `% […] \end{comment}`) does NOT close the environment.
-/// `%` and `\` are ASCII, so byte scanning is UTF-8-safe (the cut index always
-/// lands on a char boundary).
-fn strip_tex_comment(line: &str) -> &str {
-  let bytes = line.as_bytes();
-  for i in 0..bytes.len() {
-    if bytes[i] == b'%' {
-      let mut bs = 0;
-      while i > bs && bytes[i - 1 - bs] == b'\\' {
-        bs += 1;
-      }
-      if bs % 2 == 0 {
-        return &line[..i];
-      }
-    }
-  }
-  line
-}
-
 LoadDefinitions!({
   //**********************************************************************
   // Define \name and \begin{name} to start an ignored section
@@ -32,38 +11,39 @@ LoadDefinitions!({
     let name_clone = name_str.clone();
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
-      // Detect `\end{name}` MID-LINE (allowing spaces, `\end {name}`), but only
-      // in the code part of the line — an `\end` hidden behind a `%` comment
-      // does NOT close the environment (comment.sty reads its body with `%`
-      // active). Perl comment.sty.ltxml L30 matched only a whole line,
-      // `/^\s*\Q$endmark\E\s*$/`, and our prior port did the same
-      // (`line.trim() == end_mark`), so a comment ending `…text.\end{name}`
-      // overran to EOF and silently swallowed everything after it — a document's
-      // bibliography included. Surpass-Perl divergence (OXIDIZED_DESIGN #133):
-      // both LaTeXML engines lose it, and pdflatex keeps it for the witness
-      // arXiv:2606.11493 (`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed
-      // a 31-`\bibitem` thebibliography). The `%`-guard keeps the tokenize
-      // `comment` fixture's `% […] \end{Excluded}` from closing early. Guard
-      // `comment_midline_end_keeps_bibliography`.
-      let end_re = Regex::new(&format!("\\\\end\\s*\\{{{name_clone}\\}}")).unwrap();
+      // comment.sty:186-193 reads the body LINE by line with every special
+      // made innocent and compares each whole line against `\end{name}`
+      // (`\ProcessCommentLine#1^^M{\def\test{#1}\csarg\ifx{End…Test}\test`):
+      // only a line that IS `\end{name}` ends the comment — TeX's line
+      // reader strips trailing spaces (tex.web §362), so `\end{name}   ` does,
+      // while leading spaces, a trailing `%` (innocent, so literal), text
+      // before it, or text after it do not, and the comment then runs to the
+      // end of the file where pdflatex stops with "File ended while scanning
+      // use of \next" (verified on each shape, 2026-09-05). The earlier
+      // mid-line detection (OXIDIZED_DESIGN #133, since retracted) showed
+      // MORE than pdflatex; we now report TeX's error at EOF instead.
+      // The terminator is handed to the CURRENT `\end` macro (K3, #199).
+      // Guards: `00_tokenize::comment_test` (golden), `06_cluster_bibliography::
+      // comment_midline_end_runs_to_eof_like_pdflatex`,
+      // `perfect_kernel_gemini::comment_self_terminating_hands_to_end`.
+      let end_line = format!("\\end{{{name_clone}}}");
       let mut nlines = 0;
+      let mut ended = false;
       read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
       while let Some(line) = read_raw_line() {
-        let code = strip_tex_comment(&line);
-        if let Some(m) = end_re.find(code) {
-          let rest = &line[m.end()..];
-          if rest.trim().is_empty() {
-            unread_one(T_CR!());
-          } else if let Ok(mouth) = Mouth::new(rest, None) {
-            open_mouth(mouth, true);
-          }
+        if line.trim_end_matches(' ') == end_line {
           let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
           end_tokens.extend(ExplodeText!(&name_clone));
           end_tokens.push(T_END!());
           unread_expansion(Tokens::new(end_tokens));
+          ended = true;
           break;
         }
         nlines += 1;
+      }
+      if !ended {
+        Error!("unexpected", "EOF",
+          s!("File ended while scanning use of \\next (no whole-line \\end{{{name_clone}}} closes this {name_clone})"));
       }
       note_progress(&s!("[Skipped {name_clone} ({nlines} lines)]"));
       Ok(Vec::new())

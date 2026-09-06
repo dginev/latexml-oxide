@@ -2181,25 +2181,16 @@ fn bib_xpatch_does_not_truncate_the_document() {
 ///
 /// RED before the fix: 0 `<bibitem>` and "After the comment block" absent.
 #[test]
-fn comment_midline_end_keeps_bibliography() {
-  let x = convert_and_post_clean("tests/cluster_regressions/comment_midline_end.tex");
-  let n = x.matches("<bibitem").count();
-  assert_eq!(
-    n, 2,
-    "comment overran and swallowed the bibliography, got {n}\n{x}"
-  );
-  assert!(
-    x.contains("After the comment block"),
-    "comment overran past its mid-line \\end{{comment}}:\n{x}"
-  );
-  for needle in ["First entry", "Second entry"] {
-    assert!(x.contains(needle), "comment: {needle:?} lost:\n{x}");
-  }
-  // The comment body itself must NOT leak into the output.
-  assert!(
-    !x.contains("commented reasoning"),
-    "the comment body leaked into the output:\n{x}"
-  );
+fn comment_midline_end_runs_to_eof_like_pdflatex() {
+  // comment.sty ends a comment only on a whole `\end{comment}` line; a
+  // mid-line `…text.\end{comment}` is not an end, the comment runs to EOF and
+  // pdflatex aborts ("File ended while scanning use of \next", no PDF —
+  // verified 2026-09-05, which retracted OXIDIZED_DESIGN #133). We report
+  // TeX's error and, like TeX, keep nothing after the open comment.
+  // exactly one core error: TeX's "File ended while scanning use of \next"
+  let x = cluster::convert_expecting_errors("tests/cluster_regressions/comment_midline_end.tex", 1);
+  assert_eq!(x.matches("<bibitem").count(), 0, "{x}");
+  assert!(!x.contains("commented reasoning"), "{x}");
 }
 
 /// A physics.sty `\qty(...)` whose argument holds a `(` inside a `{…}` group

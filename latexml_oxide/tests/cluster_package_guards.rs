@@ -16295,16 +16295,22 @@ x = 1
 \begin{document}
 \begin{comment}
 ignored
-\end{comment} tail
+\end{comment}
+Tail.
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[E:comment]"), "{xml}");
-    assert!(xml.contains("[AFTER]"), "{xml}");
-    assert!(xml.contains("tail"), "{xml}");
+    assert!(xml.contains("[AFTER]") && xml.contains("Tail."), "{xml}");
     assert_eq!(xml.matches("[AFTER]").count(), 1, "{xml}");
     assert_eq!(xml.matches("[E:comment]").count(), 1, "{xml}");
+    // comment.sty ends only on a WHOLE `\end{comment}` line (pdflatex aborts on
+    // `\end{comment} tail`: the comment runs to EOF); we report TeX's error.
+    let midline = tex.replace("\\end{comment}\n", "\\end{comment} tail\n");
+    let (stderr, xml) = convert(&midline, true);
+    assert!(stderr.contains("File ended while scanning"), "{stderr}");
+    assert!(!xml.contains("Tail."), "{xml}");
   }
 
   /// verbatim.sty self-terminating environments hand \end{verbatim} to current \end macro
@@ -16480,6 +16486,19 @@ Some text with an endnote.\endnote{This is an endnote.}
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("(abc)(def)(ghi)"), "{xml}");
     assert!(xml.contains("(1)(2)(3)(4)"), "{xml}");
+    // Control (the preserved Perl Gullet.pm:614 branch): a LEADING literal
+    // delimiter compiles to `Match:` → `read_match` (a delimiter after `#n` is
+    // `Until:` and never reaches it); its space token followed by a non-space
+    // still matches plain source.
+    let control = r"\documentclass{article}
+\def\foo a b#1{[#1]}
+\begin{document}
+\foo a b Z.
+\end{document}
+";
+    let (stderr, xml) = convert(control, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[Z]."), "{xml}");
   }
 
   /// xy curve option and curved arrow handling (witness: amshelp manual)
@@ -16509,10 +16528,19 @@ Some text with an endnote.\endnote{This is an endnote.}
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(!stderr.contains("Info:xy:error"), "stderr had xy error:\n{stderr}");
+    assert!(
+      !stderr.contains("Info:xy:error"),
+      "stderr had xy error:\n{stderr}"
+    );
     assert!(xml.contains("<svg:svg"), "{xml}");
-    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">A</XMTok>"), "{xml}");
-    assert!(xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">Y</XMTok>"), "{xml}");
+    assert!(
+      xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">A</XMTok>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">Y</XMTok>"),
+      "{xml}"
+    );
 
     // Control: standard xymatrix without curve option unchanged
     let control_tex = r"\documentclass{article}
@@ -16530,10 +16558,9 @@ Some text with an endnote.\endnote{This is an endnote.}
     let (c_stderr, c_xml) = convert(control_tex, true);
     assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
     assert!(c_xml.contains("<svg:svg"), "{c_xml}");
-    assert!(c_xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok>"), "{c_xml}");
+    assert!(
+      c_xml.contains("XMTok font=\"italic\" role=\"UNKNOWN\">B</XMTok>"),
+      "{c_xml}"
+    );
   }
 }
-
-
-
-

@@ -5075,6 +5075,22 @@ heuristic-2-before-3 reorder would benefit Perl `Pack.pm`).
 
 ### 133. comment.sty detects `\end{comment}` mid-line, not only as a whole line
 
+**RETRACTED 2026-09-05** (user directive: match pdflatex). comment.sty:186-193
+compares each WHOLE line against `\end{name}` (`\ProcessCommentLine#1^^M{\def
+\test{#1}\csarg\ifx{End…Test}\test`) with every special made innocent, so a
+mid-line `…text.\end{comment}` is NOT an end: the comment runs to the end of
+the file and pdflatex aborts with "File ended while scanning use of \next" and
+no PDF — verified on the witness fixture `tests/cluster_regressions/
+comment_midline_end.tex` and on each edge shape (leading spaces, trailing `%`,
+text before or after: all abort; trailing spaces: end, TeX's line reader strips
+them). The claim below that pdflatex keeps the 31-entry bibliography was wrong.
+`comment_sty.rs` now ends only on such a line and reports TeX's error at EOF
+(Perl's `^\s*\end{name}\s*$` is looser on leading spaces). Guards:
+`00_tokenize::comment_test`, `06_cluster_bibliography::
+comment_midline_end_runs_to_eof_like_pdflatex`,
+`perfect_kernel_gemini::comment_self_terminating_hands_to_end`. Original text kept
+for the record:
+
 **Perl**: `comment.sty.ltxml`'s `defineExcluded` reads the body raw line-by-line
 and stops only at a line that is *entirely* the end marker — `/^\s*\Q\end{name}\E\s*$/`
 (L30). A comment whose closing sits at the end of a content line —
@@ -6869,4 +6885,30 @@ Perl's golden (t/expansion/etoolbox.xml:70) lacks it.
 **Guard**: `perfect_kernel_batch56::package_state_prtec_psfragx_knowledge`
 (hooked-`\end` control: the hook fires once, after `</ltx:verbatim>`, and the
 `\end` line's tail still reads).
+**Upstream**: not filed.
+
+### 200. `read_match` keeps a delimiter's adjacent space tokens (Perl always skips the run)
+
+**Perl behavior**: Gullet.pm:604-620 `readMatch` shifts the next to-match
+token and, when the token just matched was a space, SKIPS the whole following
+space run in the input ("If this was space, SKIP any following!!!", :614) —
+even when the next delimiter token is itself a space. expkv.tex:176 builds a
+`\def` delimiter by `\detokenize` of control words, which yields TWO adjacent
+space tokens (`…\ekv@mark  \ekv@nil…`); Perl's skip swallows the second
+space of the input, the delimiter never matches, and the key loop runs off
+(`\ekv@stop` undefined, then the PushbackLimit/EoF fatal; Perl 101 errors +
+fatal on the same witness).
+**Rust behavior**: `gullet.rs::read_match` skips the space run only when the
+next token to match is NOT a space (Gemini round 3, 6d7501762d). tex.web §392
+`macro_call` matches delimiter tokens one by one with no skipping, so a
+two-space delimiter matches two input spaces there; pdflatex is clean.
+**Why**: the change is behaviour-preserving except for delimiters with ≥2
+adjacent spaces, where it follows TeX; every other case (single space + a
+non-space, trailing space, surplus input spaces) is byte-identical to the
+Perl port.
+**Witnesses**: expkv-bundle/expkv (2 errors + fatal → 13 errors, no fatal: the
+loop terminates and the document runs through to its next classes).
+**Guards**: `perfect_kernel_gemini::expkv_ekvcsvloop_delimiter_adjacent_spaces`
+(the two-space delimiter) and its control (a single-space delimiter still
+collapses surplus input spaces, the Perl behaviour).
 **Upstream**: not filed.

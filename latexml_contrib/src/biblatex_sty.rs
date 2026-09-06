@@ -2388,8 +2388,19 @@ LoadDefinitions!({
   // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
   DefRegister!("\\lositemsep" => Glue!("0pt"));
 
-  // \MakeCapital{text} — capitalizes the first character or uppercase (blx-case-latex2e.sty:61).
-  DefMacro!("\\MakeCapital{}", "\\MakeUppercase{#1}");
+  // \MakeCapital{text} capitalizes the FIRST character only
+  // (blx-case-latex2e.sty `\newrobustcmd{\MakeCapital}[1]{…\blx@mkcp@parse…}`):
+  // "ibidem" → "Ibidem", never "IBIDEM".
+  DefMacro!("\\MakeCapital{}", sub[(arg)] {
+    let mut toks = arg.unlist();
+    if let Some(first) = toks.first_mut()
+      && matches!(first.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+    {
+      let up = first.to_string().to_uppercase();
+      *first = Token { text: pin(&up), code: first.code, #[cfg(feature = "token-locators")] loc: 0 };
+    }
+    Ok(Tokens::new(toks))
+  });
   // \blx@err@patch{pkg} — error reporter if patching a package fails (biblatex.sty:154).
   DefMacro!("\\blx@err@patch{}", "");
 
