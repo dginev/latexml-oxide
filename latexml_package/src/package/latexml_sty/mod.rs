@@ -404,6 +404,9 @@ LoadDefinitions!({
   \def\ltjgetparameter##1{\z@}%
   \def\ltjsetparameter##1{}%
 }
+\AddToHook{package/lltjfont/after}{%
+  \DeclareRobustCommand\fontfamily[1]{\edef\f@family{##1}}%
+}
 \NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}
 \NewDocumentCommand\LuaULSetUnderline{ m }{}
 \NewDocumentCommand\LuaULResetUnderline{ s }{}
@@ -1255,4 +1258,18 @@ LoadDefinitions!({
   DefEnvironment!("{lxFooter}",
     "<ltx:inline-logical-block class='ltx_page_footer'>#body</ltx:inline-logical-block>",
     before_digest => { AssignValue!("inPreamble" => false); });
+
+  // In dvips backend mode (latexml-oxide's DVI persona), \graphics_get_pagecount:n
+  // delegates to extractbb -O via shell escape, which is disabled and fails with
+  // "Cannot run piped system commands" (notebeamer-demo). Hook l3backend-dvips.def
+  // to stub pagecount resolution with a fallback page count.
+  RawTeX!(
+    r"\ExplSyntaxOn
+\AddToHook{file/l3backend-dvips.def/after}{%
+  \cs_set_protected:Npn \__graphics_backend_get_pagecount:n ##1 {
+    \int_const:cn { c__graphics_ ##1 _pages_int } { 10 }
+  }%
+}
+\ExplSyntaxOff"
+  );
 });

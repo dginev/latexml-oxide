@@ -39,6 +39,7 @@ pub mod achemso_cls;
 pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
 pub mod alegreyasans_sty;
+pub mod algpseudocodex_sty;
 pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
 pub mod amsdtx_cls;
@@ -122,6 +123,7 @@ pub mod harvmac_tex;
 pub mod hepnames_sty;
 pub mod hepparticles_sty;
 pub mod hpstatement_sty;
+pub mod hypdestopt_sty;
 pub mod hyphenat_sty;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
@@ -260,7 +262,6 @@ pub mod tipa_sty;
 pub mod tlp_cls;
 pub mod uai2025_cls;
 pub mod ucs_sty;
-pub mod uspatent_cls;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
 pub mod wileymsp_template_cls;
@@ -301,6 +302,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
   // ar5iv-bindings ports
   ("aistats2026", "sty", aistats2026_sty::load_definitions),
+  (
+    "algpseudocodex",
+    "sty",
+    algpseudocodex_sty::load_definitions,
+  ),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
   // No Perl binding; force-raw-load apxproof.sty in all configs so its
   // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).
@@ -377,6 +383,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("datetime2", "sty", datetime2_sty::load_definitions),
   ("datetime", "sty", datetime_sty::load_definitions),
   ("emlines", "sty", emlines_sty::load_definitions),
+  ("hypdestopt", "sty", hypdestopt_sty::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
   ("l3draw", "sty", l3draw_sty::load_definitions),
   ("lettrine", "sty", lettrine_sty::load_definitions),
@@ -634,7 +641,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tabu", "sty", tabu_sty::load_definitions),
   ("ucs", "sty", ucs_sty::load_definitions),
   ("ut-thesis", "cls", ut_thesis_cls::load_definitions),
-  ("uspatent", "cls", uspatent_cls::load_definitions),
   ("ws-p8-50x6-00", "cls", ws_p8_50x6_00_cls::load_definitions),
   ("ws-ijgmmp", "cls", ws_journal_cls::load_definitions),
   ("ws-ijmpd", "cls", ws_journal_cls::load_definitions),

@@ -1,0 +1,13 @@
+% witness: istgame/istgame-doc (uses \documentclass[a4paper,amsmath]{oblivoir})
+% oracle:  pdflatex (clean, 0 errors); Perl LaTeXML: passes (withoptions => 1 forwards class options)
+% status:  RED
+% mechanism: \documentclass[amsmath]{oblivoir} delegates to \LoadClassWithOptions{oblivoir-utf}.
+%   latexml_engine/src/latex_constructs/sect05.rs:411 calls load_class(&class, Vec::new(), Tokens!())
+%   passing empty options instead of load_class_with_options(&class, Tokens!()) (port of Perl
+%   latex_constructs.pool.ltxml:901 LoadClass($class, withoptions => 1)), discarding the caller's options.
+%   oblivoir-utf.cls:77 (\if@AMSmath \RequirePackage{amsmath,amssymb}\fi) therefore never loads
+%   amsmath, leaving \text and \binom undefined.
+\documentclass[amsmath]{oblivoir}
+\begin{document}
+$\text{hello}$ $\binom{n}{k}$
+\end{document}

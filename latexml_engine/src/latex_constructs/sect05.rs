@@ -974,6 +974,10 @@ pub(crate) fn load() -> Result<()> {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
       }
     }
+    if let Some(Stored::Tokens(body)) = lookup_value("\\maketitle:redefined@body") {
+      assign_value("\\maketitle:redefined@body", Stored::None, Some(Scope::Global));
+      unread(body);
+    }
     Ok(())
   });
   // In case \maketitle isn't used in the document, let's check for it.

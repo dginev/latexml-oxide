@@ -7075,8 +7075,6 @@ live-catcode and the deferred cases (settled dead end: undigested capture snapsh
 catcodes, so an inner `\makeatletter` breaks `\patch@level`).
 **Witnesses**: ryethesis/ryesample (1 → 0; Perl 0 on the reduction).
 **Guards**: `perfect_kernel_batch56::class_redefined_abstract_defers_its_argument`.
-\n
-
 ### 209. `\multicolumn` is locked like `\tabular`
 
 **Perl behavior**: `\tabular`/`\endtabular` locked (latex_constructs.pool.ltxml:3667/
@@ -7130,4 +7128,22 @@ retracting it; assignments in the tag execute in place.
 **Why**: mhequ's `\@restoreMHComms` after `\eqno{…}`. KNOWN_PERL_ERRORS #208.
 **Witnesses**: mhequ/mhequ-example.
 **Guards**: `perfect_kernel_batch56::eqno_digests_its_tag_material`.
+
+### 214. algpseudocodex.sty package binding
+
+**Background.** `algpseudocodex.sty` extends `algorithmicx` / `algpseudocode` with indentation guides, single-line right-flushed comments, multiline `\LComment`s, and boxed algorithmic code blocks (`\BeginBox`, `\EndBox`, `\BoxedString`). On `perfect_kernel`, raw loading already renders `\Comment` on one line (`float:right`) with 0 Fatal; the binding provides full semantic support for `\LComment`, `\BeginBox`, `\EndBox`, and `\BoxedString` (which raise undefined control sequence errors under raw loading) and implements clean in-flow box wrappers.
+
+**Perl behavior**: SHARED failure — Perl LaTeXML has no binding for `algpseudocodex.sty`.
+
+**Rust behavior**: `latexml_contrib::algpseudocodex_sty` provides a clean binding:
+1. Loads `algpseudocode` (and `algorithmicx`).
+2. Honors package options `italicComments` (default `true`), `rightComments` (default `true`), `noEnd` (default `true`, suppressing `\EndWhile`, `\EndIf`, etc.), `commentColor` (default `gray`), and comment delimiter options `beginComment`, `endComment`, `beginLComment`, `endLComment`. Drops visual-only TikZ layout options (`indLines`, `spaceRequire`).
+3. Supports `\Comment` and `\LComment` with configurable formatting and delimiters, placing single-line comments in-flow within the line's `<listingline>` and multiline `\LComment` on its own `<listingline>`. Defensively provides stubs if old `algorithmic.sty` was loaded first.
+4. Preserves `\Statex` in-line break semantics (`<break/>` within the open line box) matching raw TeX varwidth-in-open-box execution.
+5. Implements `\BeginBox`, `\EndBox`, and `\BoxedString`, translating box options (`draw=<color>`, `dashed`, `dotted`, `thick`, etc.) to structured CSS styles and classes on `<ltx:text class='ltx_framed ltx_algpx_boxed ...'>`, opening only on the pending→open transition so multi-line boxes do not double-open.
+6. Declares dummy counters, lengths, and stubs for internal TikZ coordinate macros.
+
+**Why it's safe.** Surpasses Perl on unbound package, eliminates undefined CS errors on `\LComment`/`\BeginBox`/`\EndBox`/`\BoxedString`, and preserves exact line and break structure.
+
+**Witnesses**: arXiv 2511.21969. Guarded by `algpseudocodex_produces_clean_comments_and_boxes` and `statex_continues_the_open_line_box` in `cluster_package_guards.rs`.
 

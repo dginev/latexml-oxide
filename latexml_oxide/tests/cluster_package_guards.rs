@@ -18014,11 +18014,204 @@ Hello
 \patentParagraph Second paragraph.
 \end{document}
 ";
-    let (stderr, xml) = convert(tex, false);
+    let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("0001"), "{xml}");
     assert!(xml.contains("0002"), "{xml}");
     assert!(xml.contains("First paragraph."), "{xml}");
     assert!(xml.contains("Second paragraph."), "{xml}");
+  }
+
+  /// \maketitle honours class's dropped body after structured frontmatter
+  /// (witness: uspatent/PatentApplication, PatentApplicationGuide).
+  /// A class redefining \maketitle (e.g. \renewcommand{\maketitle}{\patentTitlePage\patentStart})
+  /// has its body executed after frontmatter deposition and cleanup so counters like parnum are defined.
+  #[test]
+  fn maketitle_executes_dropped_class_body_after_frontmatter() {
+    let tex = r"\documentclass{uspatent}
+\title{Test Patent}
+\author{Test Inventor}
+\begin{document}
+\maketitle
+\patentParagraph First paragraph.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Test Patent"), "{xml}");
+    assert!(xml.contains("Test Inventor"), "{xml}");
+    assert!(xml.contains("First paragraph."), "{xml}");
+    assert!(xml.contains("0001"), "{xml}");
+
+    // Control: standard article where \maketitle redefinition only adds \thispagestyle{empty}
+    let control_tex = r"\documentclass{article}
+\renewcommand{\maketitle}{\thispagestyle{empty}}
+\title{Foo}
+\author{Bar}
+\begin{document}
+\maketitle
+Hello world.
+\end{document}
+";
+    let (c_stderr, c_xml) = convert(control_tex, true);
+    assert_eq!(error_count(&c_stderr), 0, "{c_stderr}");
+    assert!(c_xml.contains("Foo"), "{c_xml}");
+    assert!(c_xml.contains("Bar"), "{c_xml}");
+    assert!(c_xml.contains("Hello world."), "{c_xml}");
+  }
+
+  /// xcolor \XC@getcolor normalises color spec to \xcolor@ {}{<drv_spec>}{<model>}{<spec_comma>}
+  /// (witness: dsptricks/dspTricksManual; oracle: pdflatex \meaning\x).
+  #[test]
+  fn xcolor_getcolor_faithful_normalization() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\makeatletter
+\XC@getcolor{red!50}\x
+\typeout{MEANING_XC=\meaning\x}
+\pst@getcolor{red!50}\y
+\typeout{MEANING_PST=\meaning\y}
+\XC@usecolor\x
+\makeatother
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains(r"MEANING_XC=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+      "{stderr}"
+    );
+    assert!(
+      stderr
+        .contains(r"MEANING_PST=macro:->\xcolor@ {}{1 0.5 0.5 rg 1 0.5 0.5 RG}{rgb}{1,0.5,0.5}"),
+    );
+  }
+
+  /// algpseudocodex.sty binding: clean inline comments, LComment, and boxed blocks
+  /// (witness: arXiv 2511.21969; Divergence #214).
+  #[test]
+  fn algpseudocodex_produces_clean_comments_and_boxes() {
+    let tex = r"\documentclass{article}
+\usepackage[italicComments=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\State $x \gets 1$ \Comment{First comment}
+\LComment{Wide comment}
+\BeginBox[draw=blue,dashed,thick]
+\If{$x > 0$}
+  \State $y \gets 2$
+\EndBox
+\EndIf
+\State \BoxedString[draw=red]{boxed text}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Comment sits in the \State's own <listingline>
+    assert!(
+      xml.contains("<listingline xml:id=\"algx1.l1\">"),
+      "missing first listingline:\n{xml}"
+    );
+    assert!(
+      xml.contains("ltx_algpx_comment"),
+      "expected right-flushed comment:\n{xml}"
+    );
+    assert!(xml.contains("First comment"), "{xml}");
+    // LComment is on its own listingline with delimiters
+    assert!(
+      xml.contains("<listingline xml:id=\"algx1.l2\">"),
+      "missing LComment listingline:\n{xml}"
+    );
+    assert!(xml.contains("Wide comment"), "{xml}");
+    // Box styling:
+    assert!(xml.contains("ltx_border_blue"), "expected blue box:\n{xml}");
+    assert!(xml.contains("ltx_dashed"), "expected dashed box:\n{xml}");
+    assert!(xml.contains("ltx_thick"), "expected thick box:\n{xml}");
+    assert!(
+      xml.contains("ltx_border_red"),
+      "expected inline red box:\n{xml}"
+    );
+  }
+
+  /// algpseudocodex defensive fallback when old algorithmic.sty loaded first
+  /// (algorithmicx bails, leaving \algrenewcomment undefined; witness: 2410.03000).
+  #[test]
+  fn algpseudocodex_defensive_when_algorithmic_loaded_first() {
+    let tex = r"\documentclass{article}
+\usepackage{algorithmic}
+\usepackage{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\STATE $x \leftarrow 1$
+\end{algorithmic}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// lltjfont fontfamily redefined without leaking trailing arguments into gullet (witness: kksymbols/kksymbols-doc).
+  #[test]
+  fn kksymbols_fontfamily_no_text_leak() {
+    let tex = r"\documentclass[luatex,fontsize=10pt,paper=b5,twoside]{jlreq}
+\usepackage{KKsymbols}
+\usepackage{listings}
+\begin{document}
+\begin{lstlisting}
+hello
+\end{lstlisting}
+\end{document}
+";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_with(
+      tex,
+      Some("[rawstyles,rawclasses,luatex]latexml.sty"),
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("hello"), "{xml}");
+    assert!(!xml.contains("cmtttrue"), "{xml}");
+  }
+
+  /// l3backend-dvips pagecount hook prevents "Cannot run piped system commands" (witness: notebeamer/notebeamer-demo).
+  #[test]
+  fn notebeamer_pagecount_dvips_fallback() {
+    let tex = r"\documentclass{article}
+\usepackage{notebeamer}
+\begin{document}
+\includebeamer[nup=1,pages=1]{example-image-a4.pdf}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// hypdestopt binding and svn-multi \svnrev, \svnmonth, \svnauthor stubs (witness: biblatex-cheatsheet/biblatex-cheatsheet).
+  #[test]
+  fn biblatex_cheatsheet_hypdestopt_and_svn_multi() {
+    let tex = r"\documentclass{article}
+\usepackage{hypdestopt}
+\usepackage{svn-multi}
+\begin{document}
+\svnrev\ \svnmonth\ \svnauthor
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+
+  /// xcolor.sty \XC@undeclaredcolor used by lua-ul.sty (witness: gckanbun/kanshi-sample).
+  #[test]
+  fn xcolor_undeclaredcolor_macro() {
+    let tex = r"\documentclass{article}
+\usepackage{xcolor}
+\makeatletter
+\begin{document}
+\XC@undeclaredcolor{rgb}{1,0,0}{Red text}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Red text"), "{xml}");
   }
 }
