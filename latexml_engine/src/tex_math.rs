@@ -1787,58 +1787,60 @@ LoadDefinitions!({
   // However, since people abuse this, and we're really not quite TeX,
   // we really can't do it Right.
   // Even a \begin{array} ends up expanding into a $ !!!
-  DefMacro!("\\eqno", {
-    // my $locator  = $gullet->getLocator;
-    let mut stuff = Vec::new();
-    // This is risky!!!
-
-    while let Some(t) = read_x_token(Some(false), false, None)? {
-      if t == T_BEGIN!() {
-        stuff.push(t);
-        let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
-        if !balanced_arg.is_empty() {
-          stuff.extend(balanced_arg.unlist());
-        }
-        stuff.push(T_END!());
-      }
-      // What do I need to explicitly list here!?!?!? UGGH!
-      else if t == T_MATH!()
-        || t == T_CS!("\\]")
-        // UGH from 2022: also don"t jump over rows
-        || t == T_CS!("\\cr")
-        // see arXiv:math/0001062, for one example
-        || t == T_CS!("\\lx@hidden@cr")
-        || t == T_CS!("\\lx@end@display@math")
-        || t == T_CS!("\\begingroup") // Totally wrong, but to catch expanded environments
-        // any sort of environ begin or end???
-        || t.with_str(|tstr| tstr.starts_with("\\begin{") || tstr.starts_with("\\end{"))
-      // This seems needed within AmSTeX environs
-      {
-        // `stuff` and `t` were read (brace-counted) and re-enter via our
-        // expansion: retract (tex.web back_input flavor; a lone `}` can
-        // land in `stuff` through the else-push below).
-        retract_scanned_braces(&stuff);
-        retract_scanned_brace(&t);
-        let mut invoked = Invocation!(T_CS!("\\lx@eqno"), vec![Tokens::new(stuff)]).unlist();
-        invoked.push(t);
-        return Ok(Tokens::new(invoked));
-      } else {
-        stuff.push(t);
-      }
-    }
-    Error!(
-      "unexpected",
-      "\\eqno",
-      "Fell of the end reading tag for \\eqno!"
-    );
-    // s!("started {locator}"));
-    retract_scanned_braces(&stuff);
-    Tokens::new(stuff)
-  });
-
+  // tex.web §21745-21748 `start_eq_no`: `\eqno`/`\leqno` push a math list
+  // level and hand control back to the MAIN LOOP — the tag material is
+  // DIGESTED as an ordinary math list (assignments and conditionals execute
+  // at their position) until the same `$$` that ends the display, which
+  // `after_math` (§22405-22432) handles for both levels. Perl
+  // (TeX_Math.pool.ltxml:1239) gullet-COLLECTED the tokens instead, so a
+  // `\let` in the tag ran after the tag's tokens were expanded
+  // (mhequ.sty:184 `\@restoreMHComms` after `\eqno{…}` — `\\` still undefined,
+  // the `\if…\fi`s of :307-311 swallowed, "Fell of the end reading tag";
+  // mhequ-example 3, Perl 8 — SHARED). Here the tag is a bounded math
+  // sub-body that stops BEFORE the display's end token and retracts it, so
+  // the tag lands on the still-open equation and the retracted end closes
+  // it afterwards. The stop set keeps the old net for `\eqno` abuse outside
+  // display math (an `array` expanding to `$`, AmSTeX environs). Guard:
+  // `perfect_kernel_batch56::eqno_digests_its_tag_material`.
+  DefMacro!("\\eqno", "\\lx@eqno");
   Let!("\\leqno", "\\eqno");
+  fn eqno_stops_at(t: &Token) -> bool {
+    *t == T_MATH!()
+      || *t == T_CS!("\\]")
+      || *t == T_CS!("\\cr")
+      || *t == T_CS!("\\lx@hidden@cr")
+      || *t == T_CS!("\\lx@end@display@math")
+      || *t == T_CS!("\\begingroup")
+      || t.with_str(|s| s.starts_with("\\begin{") || s.starts_with("\\end{"))
+  }
+  DefParameterType!(EqnoTag, sub[_inner, _extra] {
+      Ok(Tokens!())
+    },
+    predigest => sub[_arg, _extra] {
+      let mut boxes: Vec<Digested> = Vec::new();
+      let mut ended = false;
+      while let Some(t) = read_x_token(Some(true), false, None)? {
+        if eqno_stops_at(&t) {
+          unread_one(t);
+          ended = true;
+          break;
+        }
+        boxes.extend(invoke_token(&t)?);
+      }
+      if !ended {
+        Error!("unexpected", "\\eqno", "Fell of the end reading tag for \\eqno!");
+      }
+      boxes.retain(|b| !b.is_comment());
+      let mut digested = List::new(boxes);
+      digested.mode = Some(TexMode::Math);
+      digested
+    },
+    reversion => sub[args, _inner, _extra] {
+      Ok(Tokens!(T_BEGIN!(), Tokens::new(args).revert(), T_END!()))
+    }
+  );
   // Revert to nothing, since it really doesn't belong in the TeX string(?)
-  DefConstructor!("\\lx@eqno{}",
+  DefConstructor!("\\lx@eqno EqnoTag",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
     reversion => "");
 

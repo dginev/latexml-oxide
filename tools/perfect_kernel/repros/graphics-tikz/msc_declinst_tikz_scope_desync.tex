@@ -1,16 +1,22 @@
 % witness:  msc/msc  (/usr/local/texlive/2025/texmf-dist/doc/latex/msc/msc.tex)
 % oracle:   pdflatex CLEAN (0 '!' lines); manual draws message-sequence charts
-% engines:  pdflatex(clean) / Perl-latexml 25 err / oxide 24 err  -> SHARED
+% engines:  pdflatex(clean) / Perl-latexml 25 err / oxide 21 err (b56ab)  -> SHARED
 % expect:   0 errors + non-trivial SVG for the instance head node
-% status:   RED (b56z). first error: Error:unexpected:\endgroup Attempt to close non-boxing group
-% mechanism: msc \declinst draws a TikZ node (\pgfmultipartnode/\pgfnode) + instance
-%   line \draw inside pgf \foreach + nested \begin{pgfscope}. LaTeXML's pgf SVG driver
-%   (pgfsys-latexml.def.ltxml:561-586) maps \pgfsys@beginscope/@endscope to
-%   stomach begingroup/endgroup; through the node-box + \pgfsys@begin@idscope
-%   machinery (pgfsys.code.tex:572-611) the TeX-group accounting drifts, leaving a
-%   { boxing group open, so a later bare \endgroup (from pgffor/pgfscope) hits it ->
-%   stomach.rs:874-895 "Attempt to close non-boxing group" (faithful: no pop, cascade).
-%   Self-documented LaTeXML limitation: pgfsys-latexml.def.ltxml:887-890.
+% status:   RED (b56ab). first error: Error:unexpected:\endgroup Attempt to close non-boxing group
+% mechanism: (batch 56ab removed the driver-scope groups: \pgfsys@beginscope/@endscope
+%   are q/Q literals, no TeX group; an empty {msc} chart is now clean.) What remains is
+%   the fused mode-frame family (DIFFICULT_CASES D12): \pgf@maketext
+%   (pgfcorescopes.code.tex:160-184) opens \setbox\hbox\bgroup \pgfinterruptpicture
+%   (= \begingroup, :742-766) \bgroup and defers the box's \egroup via \aftergroup
+%   (\pgf@@maketextafter :173-177); msc's `instance head` multipart shape supplies a
+%   text-width \vbox part on top, so a nested \hbox reader's end_mode
+%   (base_utilities.rs:3624) meets an internal_vertical frame opened by `{`, then every
+%   \endgroup cascades (stomach.rs:889/1092). tex.web separates the save stack (§274,
+%   \endgroup §1063 checks cur_group only) from the semantic nest (§211-218); our
+%   begin_mode/end_mode fuse them. Fix = decouple the nest from the save stack; no
+%   stopgap pop. LXML_TRACE_BOUND_MODE=1 prints the backtrace. Every sub-msc isolation
+%   (\hbox\bgroup\begingroup\vbox{\hbox X}\endgroup\egroup, multipart/text-width
+%   nodes in {pgfscope}) is green — the trigger needs msc's shape replay.
 \documentclass{article}
 \usepackage{msc}
 \begin{document}

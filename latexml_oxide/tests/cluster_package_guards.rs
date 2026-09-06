@@ -16678,6 +16678,86 @@ c &= d
     }
   }
 
+  /// tex.web §15510 `align_peek`: the cell-head token is expanded in the
+  /// alignment's inter-row mode (internal vertical, §15350), before `init_row`
+  /// (§15532) enters the cell's restricted horizontal mode — so a cell head
+  /// `\ifhmode\else\expandafter\hbox\fi\bgroup…$…$…\egroup` (abntexto.tex:79-81)
+  /// keeps its `\hbox` and the display closes (witness abntexto/abntexto).
+  #[test]
+  fn alignment_cell_head_peeks_in_internal_vertical_mode() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\X{\\ifhmode\\else\\expandafter\\hbox\\fi\\bgroup $a$\\egroup}\n\\makeatother\n\\begin{document}\nBefore.\n$$\\offinterlineskip\\halign{$#$\\cr \\X + b\\cr}$$\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<tabular") && xml.contains("mode=\"inline\""),
+      "{xml}"
+    );
+    assert!(xml.contains("After."), "{xml}");
+    // Inside a cell tex.web init_row enters -hmode (§15532); LaTeXML's cell begins in a
+    // vmode-ish galley, so the first `\\ifhmode` reads V — `VH || HH` accepts both.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{tabular}{l}\n\\ifhmode H\\else V\\fi\\ifhmode H\\else V\\fi\\\\\n\\end{tabular}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("VH") || xml.contains("HH"), "{xml}");
+    // The override is frame-local: it must end in the frame that set it, before
+    // the cell/row groups open — otherwise every LATER cell (and every row led
+    // by `\multicolumn`'s `\omit`) stays in internal vertical mode, which the
+    // goldens showed as spaces kept before `&` in `tex=` and diagbox cells
+    // measured at the text width. Three cells after a group-opening peek must
+    // all read the horizontal cell mode, and a space before `&` must vanish.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{tabular}{lll}\n\\multicolumn{1}{c}{M} & \\ifhmode H\\else V\\fi\\ifhmode H\\else V\\fi & \\ifhmode H\\else V\\fi\\ifhmode H\\else V\\fi\\\\\n\\hline\nA & \\ifhmode H\\else V\\fi\\ifhmode H\\else V\\fi & 2 \\\\\n\\end{tabular}\n$\\begin{array}{cc} 1 & 2 \\\\ 3 & 4 \\end{array}$\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("VH").count() + xml.matches("HH").count(),
+      3,
+      "{xml}"
+    );
+    assert!(xml.contains("1&amp;2\\\\"), "{xml}");
+  }
+
+  /// pgfsys-common-pdf.def:37-38: a graphics-state scope is `q`/`Q` output,
+  /// not a TeX group, so pgf may open it before a box and close it inside
+  /// (pgfsys.code.tex:572-611 `\pgfsys@begin@idscope`; witnesses msc/msc,
+  /// modernposter/demo).
+  #[test]
+  fn pgf_scope_straddling_a_box_is_not_a_tex_group() {
+    let tex = "\\documentclass{article}\n\\usepackage{pgf}\n\\makeatletter\n\\begin{document}\n\\begin{pgfpicture}\n\\pgfsys@beginscope\n\\setbox0=\\hbox{X\\pgfsys@endscope}%\n\\box0\n\\end{pgfpicture}\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:svg") && xml.contains("After."), "{xml}");
+    // msc's `\end{msc}` title node (`\pgf@maketext`) crosses driver scopes;
+    // an instance (`\declinst`) still trips the parked fused mode-frame family
+    // (DIFFICULT_CASES D12), so the guard stops at the empty chart.
+    if kpsewhich_has("msc.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{msc}\n\\begin{document}\n\\begin{msc}{Chart}\n\\end{msc}\nAfter.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        xml.contains("<svg:svg") && xml.contains("<svg:g") && xml.contains("After."),
+        "{xml}"
+      );
+    }
+  }
+
+  /// tex.web §21745 `start_eq_no`: the `\eqno`/`\leqno` tag is DIGESTED as a
+  /// math list, so an assignment in it executes at its position (mhequ.sty:184
+  /// `\@restoreMHComms` after `\eqno{…}`; witness mhequ/mhequ-example).
+  #[test]
+  fn eqno_digests_its_tag_material() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\let\\BAD\\undefinedxyz\n$$ a \\eqno \\let\\BAD\\relax \\BAD (1) $$\nAfter.\n$$ b \\leqno (2) $$\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tags>").count(), 2, "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+    if kpsewhich_has("mhequ.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{mhequ}\n\\begin{document}\n\\begin{equ}[onelab]\n\te^{i\\pi} + 1 = 0 \\;.\n\\end{equ}\nAfter: a \\\\ b.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("<equation") && xml.contains("<break"), "{xml}");
+    }
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

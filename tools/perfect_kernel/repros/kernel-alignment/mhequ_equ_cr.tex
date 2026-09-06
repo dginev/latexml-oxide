@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=3 perl=? (2026-09-06)
 % expect:  0 errors; one <ltx:equation> with a tag, and \\ still defined after
-% status:  RED
+% status:  GREEN (batch 56ab, 2026-09-06)
 % mechanism: equ env = $$ + \halign; \@saveMHComms \let\\=\@MHcr / \@restoreMHComms
 %   \let\\=\MHsavecr (mhequ.sty:98,181,184). After \end{equ} our \\ ends up undefined;
 %   also \eqno "fell off end" + stray \fi. Topic-4 \\ retraction in display halign.

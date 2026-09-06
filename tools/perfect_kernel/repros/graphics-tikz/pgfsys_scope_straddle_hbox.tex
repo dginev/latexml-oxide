@@ -1,0 +1,25 @@
+% witness:  msc/msc + modernposter/demo (this is the mechanism-isolating synthetic repro)
+% oracle:   pdflatex CLEAN — q/Q are output literals; a q before an \hbox and its Q
+%           inside the box are just bytes in the pgfsysprotocol buffer, legal in any order
+% engines:  pdflatex
+% expect:   0 errors; the scope carries NO TeX group, only an <svg:g>
+% status:   GREEN (batch 56ab, 2026-09-06)
+% mechanism: our SVG driver maps \pgfsys@beginscope->\lxSVG@beginscope=begingroup() and
+%   \pgfsys@endscope->\lxSVG@endscope=endgroup() (pgfsys_latexml_def.rs:1451-1457, faithful
+%   to Perl pgfsys-latexml.def.ltxml:576-586). The real pdf driver makes them q/Q literals
+%   with NO TeX group (pgfsys-common-pdf.def:37-38). When a scope open and its matching
+%   close straddle a TeX box boundary (\hbox{...\pgfsys@endscope}), the injected \begingroup
+%   and the box's { frame interleave illegally -> stomach.rs:889/1092 "close ... group that
+%   switched to mode restricted_horizontal" / "\hbox Attempt to end mode". pgf's node boxing
+%   (\pgfnode + \pgfsys@begin@idscope, pgfsys.code.tex:572-611/1524-1534) produces exactly
+%   this straddle inside {pgfscope} (pgfcorescopes.code.tex:48-61).
+\documentclass{article}
+\usepackage{pgf}
+\makeatletter
+\begin{document}
+\begin{pgfpicture}
+\pgfsys@beginscope
+\setbox0=\hbox{X\pgfsys@endscope}%
+\box0
+\end{pgfpicture}
+\end{document}

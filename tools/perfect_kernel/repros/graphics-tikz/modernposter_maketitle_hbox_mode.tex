@@ -1,12 +1,14 @@
 % witness: modernposter/demo.tex (TL2025 doc/latex/modernposter)
 % oracle: pdflatex clean; PERL latexml SHARED (same \hbox error, 31 vs our 16)
-% engines: pdflatex; expect: 0 errors; status: RED (15 errors)
+% engines: pdflatex; expect: 0 errors; status: RED (14 errors on b56ab; 15 before)
 % first: Error:unexpected:\hbox Attempt to end mode restricted_horizontal
 % mechanism: modernposter.cls \maketitle (L137-170) filled tikz \node's are
-% typeset via pgfsys->SVG; \pgfsys@beginscope (pgfsys-latexml.def.ltxml:562->
-% \lxSVG@beginscope:576 = $stomach->begingroup) leaves a \begingroup frame on
-% top of an \hbox restricted_horizontal mode frame, so end_mode fails
-% (base_utilities.rs:3610 predigest_box_contents_in_mode -> stomach.rs:1108).
+% typeset via pgfsys->SVG. Batch 56ab made \pgfsys@beginscope/@endscope group-free
+% (q/Q literals); the frame now on top of the \hbox restricted_horizontal mode frame
+% is pgf's own \begingroup from \pgfinterruptpicture (pgfcorescopes.code.tex:744) /
+% the idscope (pgfsys.code.tex:573,586), present in every driver, so end_mode fails
+% (base_utilities.rs:3624 predigest_box_contents_in_mode -> stomach.rs:1092). Parked
+% fused mode-frame family (DIFFICULT_CASES D12): decouple the nest from the save stack.
 \documentclass{modernposter}
 \title{Demo Title}
 \author{Firstname Lastname}

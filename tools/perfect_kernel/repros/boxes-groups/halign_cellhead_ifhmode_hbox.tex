@@ -1,0 +1,24 @@
+% witness: abntexto/abntexto (D12 halign row; s50 8/8 errors are this cascade)
+% oracle: pdflatex clean (PDF produced); lualatex clean
+% engines: latexml_oxide.b56aa RED (5 Error), same-host Perl RED (2x "Attempt to
+%   end mode math") => SHARED, surpass approved
+% expect: 0 errors; <ltx:equation><ltx:tabular><ltx:td> with inline <Math>; "After." present
+% status: GREEN (batch 56ab, 2026-09-06)
+% mechanism: the align-peek (digest_alignment_column omit-scan read_x_token,
+%   tex_tables.rs:981; Perl TeX_Tables.pool:376) expands the cell-HEAD token in
+%   restricted_horizontal (\halign afterDigest beginMode, tex_tables.rs:314 /
+%   Perl :181) BEFORE the $#$ template's $ is unread (:1096). tex.web align_peek
+%   (§15510) runs in internal_vertical (-vmode, set by init_align §15350 for a
+%   display/box halign; init_row §15532 switches to -hmode only AFTER the peek),
+%   so \ifhmode is FALSE and the \hbox fires. Under restricted_horizontal \ifhmode
+%   is TRUE, the \hbox is dropped, and the inner $..$ collide with the cell's
+%   template math => "Missing $"/"switched to mode internal_vertical" cascade.
+\documentclass{article}
+\makeatletter
+\def\X{\ifhmode\else\expandafter\hbox\fi\bgroup $a$\egroup}% abntexto/OpTeX <...> idiom
+\makeatother
+\begin{document}
+Before.
+$$\offinterlineskip\halign{$#$\cr \X + b\cr}$$
+After.
+\end{document}

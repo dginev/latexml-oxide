@@ -1444,17 +1444,23 @@ LoadDefinitions!({
     }
   );
 
-  // Scope bindings — same WISDOM #44 intentional divergence as the
-  // path-op / color blocks above: Perl `DefConstructor` with empty
-  // template + afterDigest side-effect; Rust `DefPrimitive` with the
-  // side-effect in the body.
-  DefPrimitive!("\\lxSVG@beginscope", {
-    begingroup();
-  });
-
-  DefPrimitive!("\\lxSVG@endscope", {
-    let _ = endgroup();
-  });
+  // A graphics-state scope is NOT a TeX group: pgfsys-common-pdf.def:37-38
+  // `\pgfsys@beginscope` = `q`, `\pgfsys@endscope` = `Q` — output literals
+  // that pgf freely interleaves with its own box/group machinery (a `q`
+  // before a `\setbox…\hbox` whose matching `Q` sits inside the box:
+  // `\pgfsys@begin@idscope`/`\pgfsys@hbox`, pgfsys.code.tex:572-611/1524).
+  // pgf supplies the TeX grouping itself where it needs it (`{pgfscope}`,
+  // pgfcorescopes.code.tex:48-61). Perl pgfsys-latexml.def.ltxml:576-586
+  // mapped the scope to a real `\begingroup`/`\endgroup` — a scope
+  // straddling a box boundary then interleaved with the box's frame and
+  // every later `\endgroup` hit "close non-boxing group" / "end mode"
+  // (the authors' note at :887-890; msc/msc 24 errors and an empty chart,
+  // modernposter/demo 15; Perl 25/31 — SHARED). Here the scope is the
+  // `<svg:g _scopebegin>` element only (opened by `\lxSVG@begingroup`, closed
+  // back to its marker by `\lxSVG@closescope`); driver state is global and
+  // per-path. Guard: `perfect_kernel_batch56::pgf_scope_straddling_a_box_is_not_a_tex_group`.
+  DefPrimitive!("\\lxSVG@beginscope", None);
+  DefPrimitive!("\\lxSVG@endscope", None);
 
   //===================================================================
   // 9. Image

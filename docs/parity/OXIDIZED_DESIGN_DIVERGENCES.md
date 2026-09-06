@@ -7092,3 +7092,42 @@ unlocked) wins. The rule: commands that ARE the alignment model's structure
 **Witnesses**: aguplus/aguplus.
 **Guards**: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
 
+### 211. The alignment cell-head peek runs in internal vertical mode
+
+**Perl behavior**: the whole `\halign` body, including the per-column peek that
+expands the cell-head token, is digested in restricted_horizontal
+(TeX_Tables.pool.ltxml:181/376).
+**Rust behavior**: the peek (and `\noalign` material) runs under
+`internal_vertical`, the cell body in restricted_horizontal — tex.web §15350/
+§15510/§15532's mode split (`AlignPeekMode`, tex_tables.rs).
+**Why**: a mode-conditional cell head (`\ifhmode\else\expandafter\hbox\fi…`, the
+abntexto/OpTeX `<…>` idiom) keeps its box. KNOWN_PERL_ERRORS #206.
+**Witnesses**: abntexto/abntexto (8 → 0).
+**Guards**: `perfect_kernel_batch56::alignment_cell_head_peeks_in_internal_vertical_mode`.
+
+### 212. A pgf graphics-state scope is an `<svg:g>`, not a TeX group
+
+**Perl behavior**: pgfsys-latexml.def.ltxml:576-586 `\pgfsys@beginscope`/
+`\pgfsys@endscope` = `\begingroup`/`\endgroup` plus the `<svg:g>`.
+**Rust behavior**: the `<svg:g _scopebegin>` open/close only, as the pdf driver's
+`q`/`Q` literals open no TeX group (pgfsys-common-pdf.def:37-38); pgf's own
+`{pgfscope}` supplies the TeX grouping it needs (pgfcorescopes.code.tex:48-61).
+**Why**: scopes straddling pgf's node boxes no longer interleave with box frames.
+KNOWN_PERL_ERRORS #207.
+**Witnesses**: `tools/perfect_kernel/repros/graphics-tikz/pgfsys_scope_straddle_hbox.tex`,
+an empty `{msc}` chart; msc/msc and modernposter/demo improve (24→21, 15→14) but stay
+open on the fused mode-frame family (DIFFICULT_CASES D12).
+**Guards**: `perfect_kernel_batch56::pgf_scope_straddling_a_box_is_not_a_tex_group`.
+
+### 213. `\eqno`/`\leqno` digest their tag
+
+**Perl behavior**: TeX_Math.pool.ltxml:1239 collects the tag tokens with
+`readXToken` up to a terminator net, then digests them as the constructor's
+argument.
+**Rust behavior**: `\lx@eqno EqnoTag` digests the tag as a bounded math sub-body
+(tex.web §21745 `start_eq_no`), stopping before the display-end token and
+retracting it; assignments in the tag execute in place.
+**Why**: mhequ's `\@restoreMHComms` after `\eqno{…}`. KNOWN_PERL_ERRORS #208.
+**Witnesses**: mhequ/mhequ-example.
+**Guards**: `perfect_kernel_batch56::eqno_digests_its_tag_material`.
+

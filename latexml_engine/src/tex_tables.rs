@@ -954,6 +954,30 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
 // accommodating the current template and any special cs's
 // Returns the column's digested boxes, the ending token, and it's alignment type.
 type DigestedColumn = Result<(Option<Digested>, Option<Token>, Option<String>, bool)>;
+/// The alignment's inter-row mode for the cell-head peek (tex.web §15510
+/// `align_peek` runs in the -vmode `init_align` §15350 entered), restored
+/// on drop so every exit path of the peek loop leaves `MODE` as it was.
+/// The cell-head peek's mode override (tex.web §15510 `align_peek` runs in
+/// the alignment's -vmode, before `init_row` §15532). `MODE` is frame-local
+/// (`begin_mode` binds it in the box's own frame), so the override and its
+/// restore MUST happen in the SAME save frame: a restore issued inside the
+/// cell group that `start_column` opens dies with that group and leaves the
+/// rest of the row in internal vertical mode (spaces before `&`/`\\` kept
+/// in `tex=`, diagbox cells measured at the full text width — the 40_math /
+/// 53_alignment / 65_graphics goldens). The peek therefore ends the override
+/// BEFORE any row/cell group opens (`\omit` re-enters after its row group).
+struct AlignPeekMode(String);
+impl AlignPeekMode {
+  fn enter() -> Self {
+    let saved = lookup_string_from_sym(pin!("MODE"));
+    assign_value_sym(pin!("MODE"), "internal_vertical", Some(Scope::Local));
+    AlignPeekMode(saved)
+  }
+}
+impl Drop for AlignPeekMode {
+  fn drop(&mut self) { assign_value_sym(pin!("MODE"), self.0.clone(), Some(Scope::Local)); }
+}
+
 pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) -> DigestedColumn {
   new_local_box_list();
   let ismath = lookup_bool_sym(pin!("IN_MATH"));
@@ -978,6 +1002,20 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // (column_before, marker, last_token) bundle into an empty gullet,
     // looping infinitely. Reset to None per Perl's per-iteration semantics.
     last_token = None;
+    // tex.web §15350 (`init_align`: a display/box `\halign` enters -vmode) and
+    // §15510 (`align_peek`): the per-column peek that expands the cell-head
+    // token runs in the alignment's INTER-ROW mode, internal vertical;
+    // `init_row` §15532 switches to restricted horizontal only afterwards, and
+    // `\noalign` material stays in -vmode (§15513). LaTeXML digests the whole
+    // body in restricted_horizontal, so a cell-head `\ifhmode\else\expandafter
+    // \hbox\fi\bgroup…$…$…\egroup` (abntexto.tex:79-81's active `<…>` in the
+    // class's `$$\halign{$#$\cr…}$$`, :727-736) dropped its `\hbox`, its inner
+    // `$` became a math END inside the template's math, and the display, the
+    // list and the section after it never closed (abntexto 8; Perl 4 — SHARED).
+    // The override lives only for the peek: restored on EVERY exit of this
+    // loop (`peek_mode`'s Drop, ended before any row/cell group opens). Guard:
+    // `perfect_kernel_batch56::alignment_cell_head_peeks_in_internal_vertical_mode`.
+    let mut peek_mode = Some(AlignPeekMode::enter());
     while let Some(xtoken) = read_x_token(Some(true), false, Some(false))? {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
@@ -994,7 +1032,11 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if
         // $LaTeXML::DEBUG{halign};
         if !alignment.borrow().is_in_row() {
+          // The row group opens here: end the override in the frame that
+          // set it and re-enter inside the row's frame (see `AlignPeekMode`).
+          drop(peek_mode.take());
           alignment.borrow_mut().start_row(false)?;
+          peek_mode = Some(AlignPeekMode::enter());
         }
         alignment.borrow_mut().omit_next_column();
       } else if token.defined_as(&T_CS!("\\noalign")) {
@@ -1003,12 +1045,15 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // `pseudo` package's per-line init `\noalign`) is recognized here rather
         // than falling through to the primitive's "cannot be used here" error.
         // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
+        // `end_row`/`start_column` change frames: end the override first; the
+        // material's own -vmode (§15513) is bound inside its group below.
+        drop(peek_mode.take());
         if alignment.borrow().is_in_row() {
           alignment.borrow_mut().end_row()?;
         }
         alignment.borrow_mut().start_column(true)?;
         alignment.borrow_mut().last_column();
-        // tex.web §1206: `\noalign` does `scan_left_brace`, opens the
+        // tex.web §15513: `\noalign` does `scan_left_brace`, opens the
         // no_align_group, and the material is EXECUTED up to the `}` that
         // closes that group. A token-level pre-scan (`read_arg`) miscounted
         // latex.ltx's `\hline` brace hack — `\noalign{\ifnum0=`}\fi\hrule…}`
@@ -1037,6 +1082,9 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // without invoking it — the alignment's own cell machinery must not
         // see it as a cell end.
         bgroup();
+        // tex.web §15513: `\noalign` material runs in -vmode; bound in the
+        // group's own frame, so `egroup` below restores the cell mode.
+        assign_value_sym(pin!("MODE"), "internal_vertical", Some(Scope::Local));
         let level = get_frame_depth();
         new_local_box_list();
         loop {
@@ -1073,6 +1121,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         break;
       }
     }
+    // The peek is over: back to the cell mode (tex.web `init_row`/`init_col`,
+    // §15532/§15560) in the frame that set the override, before the cell
+    // group opens below.
+    drop(peek_mode.take());
     //     Debug("Halign $alignment: COLUMN end scan at " . Stringify($token)) if
     // $LaTeXML::DEBUG{halign};
     // Perl L395: $token->defined_as(T_END) — recognizes \egroup as column end

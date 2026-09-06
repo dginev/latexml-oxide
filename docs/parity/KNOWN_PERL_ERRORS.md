@@ -5696,7 +5696,7 @@ Guard: `perfect_kernel_batch54::tabbing_accent_kludge_recovers_rebound_accents`.
 ## 183. `\noalign` bodies are pre-scanned as a token argument (Rust fixes)
 
 TeX_Tables.pool.ltxml's alignment column reader takes the `\noalign` body as
-a balanced argument; tex.web §1206 executes it to the `}` that closes the
+a balanced argument; tex.web §15513 executes it to the `}` that closes the
 no_align_group, and latex.ltx's `\hline` brace hack (`\noalign{\ifnum0=`}
 \fi\hrule…`) has a char-constant `}` that the pre-scan miscounts, cutting the
 body at `\ifnum0=` and leaking the rule into the alignment (boldline
@@ -5990,4 +5990,48 @@ unlocked, latex_constructs.pool.ltxml:3702). Rust: `\multicolumn` is LOCKED like
 `\tabular`/`\endtabular` (OXIDIZED_DESIGN #209); binding-level redefinitions
 (colortbl…) load unlocked and still win. Guard:
 `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+
+## 206. The alignment cell-head peek runs in the cell's mode (Rust fixes)
+
+tex.web §15350 (`init_align`: a display/box `\halign` enters -vmode) and §15510
+(`align_peek`): the per-column peek that expands the cell-head token runs in the
+alignment's inter-row mode, internal vertical; `init_row` §15532 enters the cell's
+restricted horizontal mode only afterwards. LaTeXML digests the whole `\halign`
+body in restricted_horizontal (TeX_Tables.pool.ltxml:181; `readXToken` peek :376), so
+a cell head `\ifhmode\else\expandafter\hbox\fi\bgroup…$…$…\egroup` (abntexto.tex:79-81,
+in the class's `$$\halign{$#$\cr…}$$`, abntexto.cls:727-736) dropped its `\hbox`,
+its inner `$` became a math END inside the template's math and the display, the
+list and the following section never closed (abntexto 8 errors; Perl 4 — SHARED;
+pdflatex 0). Rust: the peek (and `\noalign` material, §15513) runs under
+`internal_vertical`, restored on every exit (`AlignPeekMode`, tex_tables.rs).
+Guard: `perfect_kernel_batch56::alignment_cell_head_peeks_in_internal_vertical_mode`.
+
+## 207. The SVG pgf driver makes a graphics-state scope a TeX group (Rust fixes)
+
+pgfsys-common-pdf.def:37-38: `\pgfsys@beginscope` = `q`, `\pgfsys@endscope` = `Q`,
+output literals pgf interleaves with its own boxes (`\pgfsys@begin@idscope`/
+`\pgfsys@hbox`, pgfsys.code.tex:572-611/1524: a scope opened before a `\setbox…
+\hbox` and closed inside it). pgfsys-latexml.def.ltxml:576-586 maps them to a real
+`\begingroup`/`\endgroup`; the straddling scope interleaves with the box frame and
+every later `\endgroup` reports "close non-boxing group" / "end mode" (the authors'
+note at :887-890): msc/msc 24 errors and an empty chart, modernposter/demo 15
+(Perl 25/31 — SHARED; pdflatex 0). Rust: the scope is the `<svg:g _scopebegin>`
+element only, no stomach frame: the straddle repro and an empty `{msc}` chart are
+clean. msc (21) and modernposter (14) still fail on a distinct root — pgf's own
+`\pgfinterruptpicture`/idscope `\begingroup` inside `\pgf@maketext`'s deferred
+`\hbox\bgroup` meets our fused mode/save frames (DIFFICULT_CASES D12, parked). Guard:
+`perfect_kernel_batch56::pgf_scope_straddling_a_box_is_not_a_tex_group`.
+
+## 208. `\eqno`/`\leqno` collect their tag instead of digesting it (Rust fixes)
+
+tex.web §21745-21748 `start_eq_no` pushes a math-list level and returns to the main
+loop: the tag is DIGESTED (assignments execute in place) up to the display's `$$`
+(§22405-22432 `after_math`). TeX_Math.pool.ltxml:1239 gullet-collects the tokens up
+to a terminator net, so mhequ.sty:184's `\@restoreMHComms` (`\let\\=\MHsavecr`)
+after `\eqno{…}` (:307-311) never executed before `\\` was read, and the `\if…\fi`s
+were swallowed ("Fell of the end reading tag"; mhequ-example 3, Perl 8 — SHARED;
+pdflatex 0). Rust: `\lx@eqno EqnoTag` digests the tag as a bounded math sub-body
+that stops BEFORE the display-end token and retracts it (same stop net for
+`\eqno` abuse outside display math). Guard:
+`perfect_kernel_batch56::eqno_digests_its_tag_material`.
 
