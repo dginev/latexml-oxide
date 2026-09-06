@@ -6035,3 +6035,34 @@ that stops BEFORE the display-end token and retracts it (same stop net for
 `\eqno` abuse outside display math). Guard:
 `perfect_kernel_batch56::eqno_digests_its_tag_material`.
 
+## 209. `\globaldefs` globalizes the save-frame bookkeeping (Rust fixes)
+
+State.pm:144-151 rescopes EVERY assignment to global while `\globaldefs>0` —
+including the stack-frame records Stomach.pm:284-294 `pushStackFrame` writes
+(`groupNonBoxing`, `groupInitiator`, `beforeAfterGroup`…) and `beginMode`'s
+`BOUND_MODE`. tex.web §1214 adds the global flag only to the ASSIGNMENTS of
+`prefixed_command`; the save stack (§274 `new_save_level`, §282 `unsave`) never
+consults `\globaldefs`. So while msc.sty:2616 `\msc@global@set`
+(`\globaldefs=1\relax\mscset{#1}\globaldefs=0`) runs pgfkeys code that opens
+groups, a closed `{` group keeps reporting itself as the current frame, and every
+later `\endgroup` reports "Attempt to close non-boxing group" (msc/msc: Perl 25,
+Rust 21 → 0; latex.ltx:12612/12911/12976 `\globaldefs\@ne \math@fonts` and
+tikzexternalshared carry the same shape). Rust: the frame bookkeeping binds
+through `assign_local_unconditional` (state.rs), exempt from `\globaldefs` and
+the `\global` prefix. Guard:
+`perfect_kernel_batch56::globaldefs_does_not_globalize_the_save_stack`.
+
+## 210. pgfmath trig is float, so pgf's exact-equality bisections never exit (Rust fixes)
+
+pgfmath.code.tex.ltxml:182-218 evaluates `sin`/`cos`/`atan2` in float; pgf's
+`\pgfmathpointintersectionoflineandarc` (pgfmathcalc.code.tex:366-468) bisects an
+arc's parametric angle until the angle from the concave point to the arc point
+EQUALS (`\ifdim\x pt=\q pt`, :447) the target angle in pgf's fixed-point trig —
+its only exit. Float trig leaves the two ~0.0005° apart forever, so a
+rounded-rectangle corner border query (a self-loop wire: tikz-cd `\ar[loop]`,
+zx-calculus `\zxLoopAboveDots`; callout nodes, arXiv 2201.09268) spins — Perl to
+its wall clock, Rust to the 50,000-box cycle fatal (zx-calculus/zx-calculus;
+pdflatex 0). Rust: the intersection is bound in closed form
+(`pgfmathcalc_code_tex.rs`, quadratic of the ray against the ellipse, the root on
+the arc). Guard: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
+

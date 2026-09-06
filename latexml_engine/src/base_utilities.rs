@@ -3602,7 +3602,17 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
   // `perfect_kernel_batch54::hbox_reader_is_one_frame`.
   if mode.ends_with("vertical") || mode == "restricted_horizontal" {
     begin_mode(mode)?;
-    let level = get_frame_depth(); // depth AFTER the mode frame (Perl: $level)
+    // The box's OWN frame (tex.web §1068 `handle_right_brace` dispatches on
+    // `cur_group`, the group itself): Perl keys the terminal on the save-stack
+    // DEPTH (`$level >= getFrameDepth`, TeX_Box.pool.ltxml:172), which a
+    // crossing — a `\begingroup` opened inside the box after a frame below
+    // it was popped, pgf's node text over our bound `\pgfsys@*` seam — can
+    // satisfy with a `\begingroup` frame on top, so `end_mode` then failed
+    // ("\hbox Attempt to end mode restricted_horizontal", modernposter; the
+    // msc/dsptricks cascades). A `}` that meets another frame is invoked
+    // instead: `egroup` reports and drops it (tex.web §1069
+    // `extra_right_brace`) and the box goes on to its own `}`.
+    let own_frame = current_frame_id();
     new_local_box_list(); // Perl: local @LaTeXML::LIST = ()
     loop {
       let next = match get_pending_comment() {
@@ -3610,10 +3620,9 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
         None => read_x_token(Some(true), false, None)?,
       };
       let Some(token) = next else { break };
-      // Perl: last if T_END && (level >= getFrameDepth). The box's own `}` (no
-      // nested group open → depth == level) ends the loop and is closed by
-      // `end_mode`, NOT egroup; a nested group's `}` (depth > level) is processed.
-      if token.defined_as(&T_END!()) && level >= get_frame_depth() {
+      // The box's own `}` (its frame on top) ends the loop and is closed by
+      // `end_mode`, NOT egroup; any other `}` is processed.
+      if token.defined_as(&T_END!()) && current_frame_id() == own_frame {
         break;
       }
       check_timeout()?; // runaway guard (mirrors the canonical group-digest loop)

@@ -7147,3 +7147,32 @@ retracting it; assignments in the tag execute in place.
 
 **Witnesses**: arXiv 2511.21969. Guarded by `algpseudocodex_produces_clean_comments_and_boxes` and `statex_continues_the_open_line_box` in `cluster_package_guards.rs`.
 
+### 215. The save-frame bookkeeping is exempt from `\globaldefs`
+
+**Perl behavior**: State.pm:144-151 applies `\globaldefs` to every
+assignment, including `pushStackFrame`/`beginMode`'s frame records, so a group
+closed under `\globaldefs=1` leaves its records behind.
+**Rust behavior**: the frame records (`groupInitiator`, `groupNonBoxing`,
+`lx@frame@id`, `BOUND_MODE`/`MODE`/`INNER_BOX` at a mode switch, an
+environment's `lx@group@code`, the alignment cell group, an until-body's
+terminal record) bind through `assign_local_unconditional`, local to their
+frame whatever `\globaldefs` or a `\global` prefix says.
+**Why**: tex.web §1214 (`\globaldefs` only flags `prefixed_command`'s
+assignments) vs §274/§282 (the save stack). KNOWN_PERL_ERRORS #209.
+**Witnesses**: msc/msc (21 → 0, `repros/graphics-tikz/msc_declinst_tikz_scope_desync.tex`).
+**Guards**: `perfect_kernel_batch56::globaldefs_does_not_globalize_the_save_stack`.
+
+### 216. `\pgfmathpointintersectionoflineandarc` is closed form
+
+**Perl behavior**: the raw pgf bisection runs over Perl's float trig and never
+meets its exact-equality exit (KNOWN_PERL_ERRORS #210).
+**Rust behavior**: a binding solves the ray/ellipse quadratic and returns the
+parametric angle of the root on the arc (nearest to it otherwise — pgf's own
+"best estimate" `\n`), then pgf's `\pgfpointadd{center}{\pgfpointpolar…}` as
+before.
+**Why**: the point set is the bisection's limit; no loop, no dependence on
+trig self-consistency. Sub-point border coordinates of rounded-rectangle and
+callout nodes may move from the bisection's approximation to the exact point.
+**Witnesses**: zx-calculus/zx-calculus (Fatal → 0), arXiv 2201.09268 class.
+**Guards**: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
+

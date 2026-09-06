@@ -444,6 +444,11 @@ static FRAGMENT_YIELD_BUDGET: Cell<Option<usize>> = Cell::new(None);
 /// "more to come" from EOF.
 #[thread_local]
 static FRAGMENT_YIELDED: Cell<bool> = Cell::new(false);
+/// Serial of the last stack frame pushed (`lx@frame@id`): the identity a
+/// box reader keys its terminal on (tex.web §1068 dispatches `}` on
+/// `cur_group`, the group itself, never on the save-stack depth).
+#[thread_local]
+static FRAME_SERIAL: Cell<u64> = Cell::new(0);
 /// Total yields this conversion (telemetry + test probe).
 #[thread_local]
 static FRAGMENT_YIELD_COUNT: Cell<usize> = Cell::new(0);
@@ -552,34 +557,28 @@ pub fn push_stack_frame(nobox: bool) {
   let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
   if *TRACE_FRAMES {
     eprintln!(
-      "[frames] push nobox={nobox} depth {} -> {} at {current_token}",
+      "[frames] push nobox={nobox} id={} depth {} -> {} at {current_token}",
+      FRAME_SERIAL.get() + 1,
       get_frame_depth(),
       get_frame_depth() + 1
     );
   }
   push_frame();
-  assign_value(
-    "beforeAfterGroup",
-    Stored::VecDequeStored(VecDeque::new()),
-    Some(Scope::Local),
-  ); // ALWAYS bind this!
-  assign_value(
-    "afterGroup",
-    Stored::VecDequeStored(VecDeque::new()),
-    Some(Scope::Local),
-  ); // ALWAYS bind this!
-  assign_value("afterAssignment", Stored::None, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(crate::pin!("groupNonBoxing"), nobox, Some(Scope::Local)); // ALWAYS bind this!
-  assign_value_sym(
-    crate::pin!("groupInitiator"),
-    current_token,
-    Some(Scope::Local),
+  let serial = FRAME_SERIAL.get() + 1;
+  FRAME_SERIAL.set(serial);
+  if *TRACE_FRAMES && (get_prefix("global") || get_prefix("long")) {
+    eprintln!("[frames] push id={serial} with a prefix pending at {current_token}");
+  }
+  assign_frame_value_sym(
+    crate::pin!("lx@frame@id"),
+    Stored::Number(crate::common::number::Number(serial as i64)),
   );
-  assign_value_sym(
-    crate::pin!("groupInitiatorLocator"),
-    gullet::get_locator(),
-    Some(Scope::Local),
-  );
+  assign_frame_value("beforeAfterGroup", Stored::VecDequeStored(VecDeque::new())); // ALWAYS bind this!
+  assign_frame_value("afterGroup", Stored::VecDequeStored(VecDeque::new())); // ALWAYS bind this!
+  assign_frame_value("afterAssignment", Stored::None); // ALWAYS bind this!
+  assign_frame_value_sym(crate::pin!("groupNonBoxing"), nobox); // ALWAYS bind this!
+  assign_frame_value_sym(crate::pin!("groupInitiator"), current_token);
+  assign_frame_value_sym(crate::pin!("groupInitiatorLocator"), gullet::get_locator());
   if !nobox {
     // For begingroup/endgroup
     stomach_mut!().boxing.push(current_token)
@@ -662,14 +661,23 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
   if *TRACE_FRAMES {
     let current_token = get_current_token().unwrap_or_else(|| T_CS!("\\relax"));
     eprintln!(
-      "[frames] pop  nobox={nobox} depth {} -> {} at {current_token} (bound_mode={})",
+      "[frames] pop  nobox={nobox} id={} depth {} -> {} at {current_token} (bound_mode={})",
+      current_frame_id(),
       get_frame_depth(),
       get_frame_depth().saturating_sub(1),
       lookup_string_from_sym(crate::pin!("BOUND_MODE"))
     );
   }
   let after = remove_value("afterGroup");
+  let depth_before = get_frame_depth();
   execute_before_after_group()?;
+  if *TRACE_FRAMES && get_frame_depth() != depth_before {
+    eprintln!(
+      "[frames] beforeAfterGroup changed the depth {depth_before} -> {} (top id {} now)",
+      get_frame_depth(),
+      current_frame_id()
+    );
+  }
   pop_frame()?;
   if !nobox {
     {
@@ -689,6 +697,21 @@ pub fn pop_stack_frame(nobox: bool) -> Result<()> {
 }
 
 /// explain the current frame
+/// `LXML_TRACE_FRAMES` helper: which group bindings each of the top `n`
+/// frames carries — a frame without `groupInitiator` is a bare `push_frame`
+/// (construct-time scope, `\protected@edef`, semiverbatim), invisible to the
+/// `[frames]` push/pop trace.
+pub fn dump_frame_bindings(n: usize) -> String {
+  s!(
+    "  depth {}\n  ids   {:?}\n  init  {:?}\n  nobox {:?}\n  mode  {:?}\n",
+    get_frame_depth(),
+    value_history("lx@frame@id", n),
+    value_history("groupInitiator", n),
+    value_history("groupNonBoxing", n),
+    value_history("BOUND_MODE", n)
+  )
+}
+
 pub fn current_frame_message() -> String {
   let target = if is_value_bound("MODE", Some(0)) {
     // SET mode in CURRENT frame ?
@@ -730,6 +753,15 @@ pub fn current_frame_message() -> String {
 
 /// Begin a new level of binding by pushing a new stack frame,
 /// and a new level of boxing the digested output.
+/// The serial of the stack frame on top (`lx@frame@id`, written by
+/// [`push_stack_frame`]); 0 below the first frame.
+pub fn current_frame_id() -> u64 {
+  match lookup_value("lx@frame@id") {
+    Some(Stored::Number(n)) => n.0 as u64,
+    _ => 0,
+  }
+}
+
 pub fn bgroup() {
   push_stack_frame(false);
   // Perl's bgroup does NOT touch $ALIGN_STATE — it's tracked only at the scan level
@@ -877,6 +909,11 @@ pub fn endgroup() -> Result<()> {
       return Ok(());
     }
     // Don't pop if there's an error; maybe we'll recover?
+    // Settled dead end (K9): inserting the box's `}` here (tex.web §1064
+    // `off_save`) reaches whichever nested consumer is reading, not the box
+    // reader that owns the frame, and only doubled the count (modernposter,
+    // dsptricks); the `\globaldefs` bookkeeping exemption was the real msc
+    // root (state.rs `assign_local_unconditional`).
     // Perl Stomach.pm:367-369: currentFrameMessage is a SEPARATE detail.
     Error!(
       "unexpected",
@@ -923,8 +960,8 @@ pub fn set_mode(mode: &str) -> Result<()> {
       std::backtrace::Backtrace::force_capture()
     );
   }
-  assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
-  assign_value("MODE", arena::pin(bound_mode), Some(Scope::Local));
+  assign_frame_value("BOUND_MODE", arena::pin(bound_mode));
+  assign_frame_value("MODE", arena::pin(bound_mode));
   assign_value("IN_MATH", ismath, Some(Scope::Local));
   if mode == prevmode {
   } else if ismath {
@@ -1028,7 +1065,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       );
     }
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
-    assign_value("BOUND_MODE", arena::pin(bound_mode), Some(Scope::Local));
+    assign_frame_value("BOUND_MODE", arena::pin(bound_mode));
     // tex.web §211's inner sign, kept as a frame-bound flag: a FRAMED mode
     // switch is a box or math interior (`\hbox`/`\vbox`/`\parbox`/minipage,
     // `$…$`), where `\ifinner` is true; display math is positive `mmode`
@@ -1040,11 +1077,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // undone with the frame at `end_mode`. Guard:
     // `perfect_kernel_batch54::ifinner_is_the_box_frame_sign`.
     if !noframe {
-      assign_value_sym(
-        crate::pin!("INNER_BOX"),
-        bound_mode != "display_math",
-        Some(Scope::Local),
-      );
+      assign_frame_value_sym(crate::pin!("INNER_BOX"), bound_mode != "display_math");
     }
     set_mode(bound_mode)?;
     // Perl Stomach.pm lines 504-507: inject \everymath or \everydisplay tokens
@@ -1788,15 +1821,10 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   // `until_terminal_inside_group`; a terminal primitive that never calls it
   // (`\endgroup` for url.sty's body) leaves the record inert.
   if let Some(ref terminal) = terminal_opt {
-    assign_value(
-      "lx@until@terminal",
-      Stored::Token(*terminal),
-      Some(Scope::Local),
-    );
-    assign_value(
+    assign_frame_value("lx@until@terminal", Stored::Token(*terminal));
+    assign_frame_value(
       "lx@until@depth",
       Stored::Number(crate::common::number::Number(init_depth as i64)),
-      Some(Scope::Local),
     );
   }
   if *TRACE_TERMINAL {

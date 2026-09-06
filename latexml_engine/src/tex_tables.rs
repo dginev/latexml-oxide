@@ -970,12 +970,12 @@ struct AlignPeekMode(String);
 impl AlignPeekMode {
   fn enter() -> Self {
     let saved = lookup_string_from_sym(pin!("MODE"));
-    assign_value_sym(pin!("MODE"), "internal_vertical", Some(Scope::Local));
+    assign_frame_value_sym(pin!("MODE"), "internal_vertical");
     AlignPeekMode(saved)
   }
 }
 impl Drop for AlignPeekMode {
-  fn drop(&mut self) { assign_value_sym(pin!("MODE"), self.0.clone(), Some(Scope::Local)); }
+  fn drop(&mut self) { assign_frame_value_sym(pin!("MODE"), self.0.clone()); }
 }
 
 pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) -> DigestedColumn {
@@ -1084,7 +1084,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         bgroup();
         // tex.web §15513: `\noalign` material runs in -vmode; bound in the
         // group's own frame, so `egroup` below restores the cell mode.
-        assign_value_sym(pin!("MODE"), "internal_vertical", Some(Scope::Local));
+        assign_frame_value_sym(pin!("MODE"), "internal_vertical");
         let level = get_frame_depth();
         new_local_box_list();
         loop {

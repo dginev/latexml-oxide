@@ -371,6 +371,20 @@ fn is_builtin_constant(name: &str) -> bool {
 }
 
 /// Apply a built-in pgf math function (Perl L556-647)
+/// pgf's `min`/`max` list fold (pgfmathfunctions.misc.code.tex:292-336): every
+/// argument against the sentinel; a lone comma-less argument is scanned one
+/// token at a time by `\pgfmathmin@@#1{}` — its decimal digits.
+fn pgfmath_fold_list(args: &[f64], sentinel: f64, pick: fn(f64, f64) -> f64) -> f64 {
+  if args.len() == 1 {
+    let text = format!("{}", args[0].trunc().abs() as i64);
+    return text
+      .bytes()
+      .map(|b| f64::from(b - b'0'))
+      .fold(sentinel, pick);
+  }
+  args.iter().copied().fold(sentinel, pick)
+}
+
 fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
   let a = args.first().copied().unwrap_or(0.0);
   let b = args.get(1).copied().unwrap_or(0.0);
@@ -512,9 +526,18 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
         0.0
       }
     },
-    // Misc
-    "max" => a.max(b),
-    "min" => a.min(b),
+    // Misc — variadic, as pgfmathfunctions.misc.code.tex:292-336 declares
+    // `min`/`max` `{...}` and folds `\pgfmathmin@@`/`\pgfmathmax@@` over the
+    // whole list from the `±16383pt` sentinel; the binary `a.max(b)` dropped
+    // every argument past the second (ribbonproofs.sty:1213
+    // `min(\@leftPositions)` → wrong `\@stepLeft`, a ribbon re-started
+    // "already active" and a `\fi`/`\iffalse` cascade inside the tikz
+    // `\foreach`; ribbonproofsmanual 3, pdflatex clean). A SINGLE comma-less
+    // argument reaches `\pgfmathmin@@#1{}` unbraced, so pgf consumes it one
+    // TOKEN at a time — `min(20)` is `min(2,0)` = 0, `max(20)` = 2 (pdflatex
+    // verified); reproduced over the integer's digits.
+    "max" => pgfmath_fold_list(args, -16383.0, f64::max),
+    "min" => pgfmath_fold_list(args, 16383.0, f64::min),
     "iseven" => {
       if (a as i64) % 2 == 0 {
         1.0
@@ -1995,6 +2018,21 @@ mod pgfmath_golden_tests {
   /// mismatch broke `\ifnum\pgfmathresult=1` in pgf-spectra's spectral
   /// loop — ~7k `expected:<relationaltoken>` errors per manual (witnesses
   /// pgf-spectra/pgf-spectraManual, *PreviewDataLSE, *PreviewDataNIST).
+  #[test]
+  fn min_max_fold_over_every_argument() {
+    // pgfmathfunctions.misc.code.tex:292-336: `min`/`max` are variadic.
+    assert_eq!(super::pgfmath_apply_fn("min", &[55.0, 74.0, 35.0]), 35.0);
+    assert_eq!(super::pgfmath_apply_fn("max", &[10.0, 20.0, 30.0]), 30.0);
+    // A lone comma-less argument is scanned token by token: `min(2,0)`.
+    assert_eq!(super::pgfmath_apply_fn("min", &[20.0]), 0.0);
+    assert_eq!(super::pgfmath_apply_fn("max", &[20.0]), 2.0);
+    assert_eq!(
+      super::pgfmath_apply_fn("max", &[1.0, 2.0, 3.0, 4.0, 5.0]),
+      5.0
+    );
+    assert_eq!(super::pgfmath_apply_fn("min", &[55.0, 35.0]), 35.0);
+  }
+
   #[test]
   fn boolean_function_forms_return_bare_integers() {
     latexml_core::state::set_state(latexml_core::state::State::new(

@@ -2,7 +2,7 @@
 % oracle:   pdflatex CLEAN (0 '!' lines); manual draws message-sequence charts
 % engines:  pdflatex(clean) / Perl-latexml 25 err / oxide 21 err (b56ab)  -> SHARED
 % expect:   0 errors + non-trivial SVG for the instance head node
-% status:   RED (b56ab). first error: Error:unexpected:\endgroup Attempt to close non-boxing group
+% status:   GREEN (batch 56ac, 2026-09-06: \globaldefs no longer globalizes the save-frame bookkeeping — KPE #209, DIVERGENCES #215; 0 errors, 10 <svg:g>)
 % mechanism: (batch 56ab removed the driver-scope groups: \pgfsys@beginscope/@endscope
 %   are q/Q literals, no TeX group; an empty {msc} chart is now clean.) What remains is
 %   the fused mode-frame family (DIFFICULT_CASES D12): \pgf@maketext

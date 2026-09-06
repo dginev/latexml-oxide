@@ -1,0 +1,24 @@
+% witness: zx-calculus/zx-calculus (sweep51 1 Fatal); minimal zx-free reduction
+% oracle: pdflatex clean (pgf's fixed-point trig makes the arc bisection converge)
+% engines: latexml_oxide.b56ab2 Fatal ~60s; same-host Perl runs away to the wall clock (SHARED)
+% expect: 0 Error/Fatal; SVG with the self-loop wire path drawn to the node border
+% status:  GREEN (batch 56ac, 2026-09-06: closed-form \pgfmathpointintersectionoflineandarc binding)
+% mechanism: a self-loop `(a) to[out,in] (a)` on a `rounded rectangle` node makes tikz
+%   query the node border via the shape's \anchorborder (pgflibraryshapes.misc.code.tex:400),
+%   which for a convex corner calls \pgfmathpointintersectionoflineandarc
+%   (pgfmathcalc.code.tex:366). That runs an UNBOUNDED angle bisection whose ONLY exit is
+%   the exact fixed-point equality \ifdim\x pt=\q pt (line 447). Our \pgfmathcos@/\pgfmathsin@/
+%   \pgfmathatantwo@ (pgfmath_code_tex.rs:1597-1612) use native float trig, not pgf's
+%   self-consistent fixed-point trig, so the arc-point angle \q (->110.0009) never equals the
+%   target \x (110.00039); the interval collapses to s=110.0009,e=110.00091 with \p rounding
+%   to \e forever (the \p==\s guard at line 418 does not break) -> spin -> 2 empty boxes/iter
+%   -> stomach cycle guard Fatal (stomach.rs:1519). NOT the intersections library.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes.misc,topaths}
+\begin{document}
+\begin{tikzpicture}
+\node[rounded rectangle, draw, minimum width=1cm, minimum height=6mm] (a) at (0,0) {};
+\draw (a) to[out=110,in=70,looseness=8] (a);
+\end{tikzpicture}
+\end{document}

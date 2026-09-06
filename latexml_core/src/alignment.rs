@@ -459,7 +459,7 @@ impl Alignment {
     let _colspec = self.next_column()?;
     // Mark the cell frame: its `\aftergroup` tokens are run at the cell's
     // end (see `end_column`).
-    assign_value_sym(crate::pin!("alignCellGroup"), true, Some(Scope::Local));
+    assign_frame_value_sym(crate::pin!("alignCellGroup"), true);
     set_align_group_count(1000000);
     self.in_column = true;
     Ok(())

@@ -1,0 +1,23 @@
+% witness: ribbonproofs/ribbonproofsmanual (temp_example_listappend.tex, the list-append proof)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 (b56ab)  perl=3 (different root: \globcount undef, etextools.sty:905)
+% expect:  0 errors; the ribbonproof yields an <ltx:picture>; ribbon e obliterated then restarted
+% status:  GREEN (batch 56ac, 2026-09-06: pgfmath min/max fold over every argument)
+% mechanism: native pgfmath min()/max() are BINARY not variadic (pgfmath_code_tex.rs:516-517,
+%   pgfmath_apply_fn: a=args[0],b=args[1] -> a.min(b)). startblock computes
+%   \@stepLeft=min(\@leftPositions)-extraleft (ribbonproofs.sty:1213/1218). leftPositions={55,74,35};
+%   real min=35 -> stepLeft=2, our min=55 -> stepLeft=22. \moveribbons puts e at left=4; the
+%   continueblock obliterate check (\@stepLeft<=\@getRibbonLeft e)=(22<=4)=false leaves e active,
+%   then the restored catalyst e re-starts -> RibbonProofs "already active" (base_utilities.rs:5711),
+%   whose \PackageError expansion inside the tikz \foreach cascades to Error:expected:\fi \iffalse.
+\documentclass{article}
+\usepackage{ribbonproofs}
+\begin{document}
+\begin{ribbonproof}[start ribbons={c/{left=35,right=53},e/{left=74,right=86}}]
+\startblock[extra left=33,fit ribbons={c,e},start ribbons={d/{left=55,right=70}}]{if}\\
+\jus[finish ribbons={c,d}]{u}
+\com[finish ribbons={e},start ribbons={e/{}}]{x}\\
+\moveribbons{e/{left=4}}\\
+\continueblock[repeat labels,start ribbons={d/{}}]{else}
+\end{ribbonproof}
+\end{document}

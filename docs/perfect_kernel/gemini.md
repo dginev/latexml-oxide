@@ -111,10 +111,21 @@ otherwise, and file an engine-seam report (file:line, ≤30-line repro under
 - `manyind/mindsample` (3): `Error:undefined:\nwletre` — manyind.sty internals;
   check whether the doc raw-loads manyind.sty and what defines `\nwletre`.
 
-### N2 — algpseudocodex completeness (binding, `latexml_contrib/src/algpseudocodex_sty.rs`)
+### N2 — algpseudocodex completeness (binding, `latexml_contrib/src/algpseudocodex_sty.rs`) — REGRESSION FIRST
 
-Read algpseudocodex.sty (`kpsewhich algpseudocodex.sty`) once more and close the
-gaps the review found: `\Require`/`\Ensure` are not hooked for `\algpx@endCodeCommand`
+Sweep 52 (your round 7 merged) FLIPPED the package's own manual
+`algpseudocodex/algpseudocodex` from 0 (raw load of the .sty) to 13 errors under the
+binding: `\Output`/`\Structure`/`\Properties`/`\Methods` undefined (the manual defines
+them with `\algnewcommand`/`\algrenewcommand`/`\algdef` — the algorithmicx
+definition API must work through the binding exactly as through the raw package),
+`\tikzset` undefined (algpseudocodex.sty `\RequirePackage{tikz}`; the binding must
+load what the package loads), and 3× `#PCDATA isn't allowed in <ltx:listing>` (text
+landing directly in the listing instead of a `listingline`). Reconvert the manual
+(`grep algpseudocodex ~/data/perfect_kernel/corpus.tsv`, log
+`~/data/perfect_kernel_s52/algpseudocodex/algpseudocodex/algpseudocodex.log`) to 0
+FIRST, with a guard per construct; a binding that handles less than the raw package
+is a regression, not a feature. Then read algpseudocodex.sty (`kpsewhich
+algpseudocodex.sty`) once more and close the gaps the review found: `\Require`/`\Ensure` are not hooked for `\algpx@endCodeCommand`
 (`spaceRequire` dropped), `\Comment`'s trailing `\ignorespaces` (:911) is not
 reproduced, `indLines` is inert. Add a guard per closed gap with a control; keep the
 `ltx_border_<color>`/`ltx_thick` class names.

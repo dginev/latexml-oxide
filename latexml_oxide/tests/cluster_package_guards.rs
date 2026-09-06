@@ -16797,6 +16797,71 @@ c &= d
     assert!(!xml.contains("TITLEARG"), "{xml}");
   }
 
+  /// tex.web §1214: `\globaldefs>0` globalizes the ASSIGNMENTS of
+  /// `prefixed_command`; the save stack (§274/§282) is untouched. Ours (and
+  /// Perl's, State.pm:144-151) routed the frame bookkeeping through the same
+  /// override, so under `\globaldefs=1` (msc.sty:2616 `\msc@global@set`) a
+  /// closed `{` group kept reporting itself as the current frame and every
+  /// later closer cascaded ("close non-boxing group"; the D12 family).
+  #[test]
+  fn globaldefs_does_not_globalize_the_save_stack() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\globaldefs=1 \\setbox0\\hbox{X{Y}}\\globaldefs=0 \\box0 {\\begingroup Z\\endgroup}A\n{\\globaldefs=1 \\def\\gl{G}}\\gl\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The box, the group content and the text after them all land …
+    assert!(
+      xml.contains("XY") && xml.contains("Z") && xml.contains("A"),
+      "{xml}"
+    );
+    // … and `\globaldefs` still globalizes a real assignment made in a group.
+    assert!(xml.contains("G</p>") || xml.contains("G\n"), "{xml}");
+  }
+
+  /// pgfmath `min`/`max` fold over EVERY argument
+  /// (pgfmathfunctions.misc.code.tex:292-336 `\pgfmathmin@@`); the native
+  /// arms were binary, so `min(55,74,35)` was 55 —
+  /// ribbonproofs.sty:1213 `min(\@leftPositions)` mis-stepped a block and a
+  /// ribbon re-started "already active" (ribbonproofsmanual 3, pdflatex 0).
+  #[test]
+  fn pgfmath_min_max_fold_over_every_argument() {
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\\pgfmathparse{min(55,74,35)}A\\pgfmathresult.\n\\pgfmathparse{max(10,20,30)}B\\pgfmathresult.\n\\pgfmathparse{min(20)}C\\pgfmathresult.\n\\pgfmathparse{min(55,35)}D\\pgfmathresult.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // `min(20)` is `min(2,0)`: a lone argument is scanned one token at a time
+    // (pdflatex: 0).
+    assert!(
+      xml.contains("A35.") && xml.contains("B30.") && xml.contains("C0.") && xml.contains("D35."),
+      "{xml}"
+    );
+    if kpsewhich_has("ribbonproofs.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{ribbonproofs}\n\\begin{document}\n\\begin{ribbonproof}[start ribbons={c/{left=35,right=53},e/{left=74,right=86}}]\n\\startblock[extra left=33,fit ribbons={c,e},start ribbons={d/{left=55,right=70}}]{if}\\\\\n\\jus[finish ribbons={c,d}]{u}\n\\com[finish ribbons={e},start ribbons={e/{}}]{x}\\\\\n\\moveribbons{e/{left=4}}\\\\\n\\continueblock[repeat labels,start ribbons={d/{}}]{else}\n\\end{ribbonproof}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+    }
+  }
+
+  /// pgfmathcalc.code.tex:366-468 `\pgfmathpointintersectionoflineandarc`
+  /// bisects until pgf's fixed-point trig reaches an exact angle equality;
+  /// with float trig the loop never exits (a rounded-rectangle border query
+  /// for a self-loop wire: zx-calculus `\zxLoopAboveDots`, callout nodes
+  /// arXiv 2201.09268 — the 50,000-box cycle fatal). The binding solves the
+  /// line/ellipse intersection in closed form; the `rectangle` control has no
+  /// arc and never bisected.
+  #[test]
+  fn line_and_arc_intersection_is_closed_form() {
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usetikzlibrary{shapes.misc,topaths}\n\\begin{document}\n\\begin{tikzpicture}\n\\node[rounded rectangle, draw, minimum width=1cm, minimum height=6mm] (a) at (0,0) {};\n\\draw (a) to[out=110,in=70,looseness=8] (a);\n\\end{tikzpicture}\n\\begin{tikzpicture}\n\\node[rectangle, draw, minimum width=1cm, minimum height=6mm] (b) at (0,0) {};\n\\draw (b) to[out=110,in=70,looseness=8] (b);\n\\end{tikzpicture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<svg:path").count(), 4, "{xml}");
+    if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+      let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\zx{\\zxX{\\alpha} \\zxLoopAboveDots{}}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.matches("<svg:path").count() >= 2, "{xml}");
+    }
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

@@ -812,6 +812,50 @@ impl State {
     }
   }
 
+  /// The `Scope::Local` binding itself: record one undo entry in the top
+  /// frame (unless the key is already bound there — then replace) and push the
+  /// value. Reached by every local assignment, and DIRECTLY by the save-frame
+  /// bookkeeping ([`assign_frame_value_sym`]): tex.web §1214 lets
+  /// `\globaldefs` (and the `\global` prefix, §1211) globalize an
+  /// ASSIGNMENT made by `prefixed_command`, never the save stack (§274
+  /// `new_save_level` / §282 `unsave`), so a group's own records must stay
+  /// local whatever `\globaldefs` says. Perl (State.pm:144-151) routes its
+  /// frame bookkeeping through the same override, and under `\globaldefs=1`
+  /// (msc.sty:2616 `\msc@global@set`, tikzexternalshared, latex.ltx's
+  /// `\math@fonts` block) a closed `{` group kept reporting itself as the
+  /// current frame — the D12 "close non-boxing group" cascades.
+  pub(crate) fn assign_local_unconditional(
+    &mut self,
+    table_name: TableName,
+    key: SymStr,
+    value: Stored,
+  ) {
+    // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state_tables
+    let mut is_replace = false;
+    // 1. Undo mutable logic
+    if let Some(current_frame) = self.undo.front_mut() {
+      let current_frame_table = current_frame.table_mut(table_name);
+
+      is_replace = current_frame_table.get(&key).unwrap_or(&0) > &0;
+      if is_replace { // If the value was previously assigned in this frame
+        // we do this in 2.1, then proceed to 2.2
+      } else {
+        // Otherwise, push new value & set 1 to be undone
+        current_frame_table.insert(key, 1);
+        //  And push new binding in 2.2
+      }
+    }
+    // 2. state_table mutable logic
+    let state_table = self.table_mut(table_name);
+    let defs = state_table.entry(key).or_default();
+    if is_replace {
+      // 2.1. Replace the value, i.e. remove existing one
+      defs.pop_front();
+    }
+    // 2.2 Add new value
+    defs.push_front(value);
+  }
+
   pub(crate) fn assign_internal(
     &mut self,
     table_name: TableName,
@@ -898,32 +942,7 @@ impl State {
         let table_entry = state_table.entry(key).or_default();
         table_entry.push_front(value);
       },
-      Scope::Local => {
-        // Again, split the logic as 1) bookkeeping in undo, then 2) operations in state_tables
-        let mut is_replace = false;
-        // 1. Undo mutable logic
-        if let Some(current_frame) = self.undo.front_mut() {
-          let current_frame_table = current_frame.table_mut(table_name);
-
-          is_replace = current_frame_table.get(&key).unwrap_or(&0) > &0;
-          if is_replace { // If the value was previously assigned in this frame
-            // we do this in 2.1, then proceed to 2.2
-          } else {
-            // Otherwise, push new value & set 1 to be undone
-            current_frame_table.insert(key, 1);
-            //  And push new binding in 2.2
-          }
-        }
-        // 2. state_table mutable logic
-        let state_table = self.table_mut(table_name);
-        let defs = state_table.entry(key).or_default();
-        if is_replace {
-          // 2.1. Replace the value, i.e. remove existing one
-          defs.pop_front();
-        }
-        // 2.2 Add new value
-        defs.push_front(value);
-      },
+      Scope::Local => self.assign_local_unconditional(table_name, key, value),
       Scope::InPlace => {
         // Perl `State.pm:175`: replace the front value in the frame it was last
         // bound in, adding NO undo entry, so the mutation keeps the binding's
@@ -1486,6 +1505,19 @@ pub fn assign_value_inplace_sym(key_sym: SymStr, value: impl Into<Stored>) {
       break;
     }
   }
+}
+
+/// A save-frame bookkeeping binding (`groupInitiator`, `BOUND_MODE`, the
+/// frame id, an environment's group code…): always local to the current
+/// frame, exempt from `\globaldefs` and the `\global` prefix — tex.web §1214
+/// vs §274. See `State::assign_local_unconditional`.
+pub fn assign_frame_value_sym<T: Into<Stored>>(key: SymStr, value: T) {
+  state_mut!().assign_local_unconditional(TableName::Value, key, value.into());
+}
+
+/// [`assign_frame_value_sym`] with a string key.
+pub fn assign_frame_value<T: Into<Stored>>(key: &str, value: T) {
+  assign_frame_value_sym(arena::pin(key), value);
 }
 
 /// assigns a `Stored` value at the given (arena ticket!) key and scope
@@ -2736,6 +2768,17 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
 /// Note that this is lower level than C<\bgroup>;
 /// Diagnostic helper: dump the keys in undo`0`'s value table.
 /// For temporary instrumentation only — no production callers should rely on this.
+/// The newest `n` values bound to `key` in the Value table, newest first —
+/// one entry per frame that bound it (`LXML_TRACE_FRAMES` group-stack dump).
+pub fn value_history(key: &str, n: usize) -> Vec<String> {
+  let key_sym = arena::pin(key);
+  state!()
+    .value
+    .get(&key_sym)
+    .map(|d| d.iter().take(n).map(|v| v.to_string()).collect())
+    .unwrap_or_default()
+}
+
 pub fn dump_top_frame_keys() -> String {
   let state = state!();
   let f0 = state.undo.front().expect("undo is non-empty");
@@ -2756,6 +2799,13 @@ pub fn dump_top_frame_keys() -> String {
 
 pub fn push_frame() {
   // Easy: just push a new undo frame.
+  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+    eprintln!(
+      "[state] push_frame depth {} -> {}",
+      get_frame_depth(),
+      get_frame_depth() + 1
+    );
+  }
   state_mut!().undo.push_front(UndoFrame::default());
 }
 
@@ -2830,6 +2880,13 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
 pub fn pop_frame() -> Result<()> {
+  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+    eprintln!(
+      "[state] pop_frame depth {} -> {}",
+      get_frame_depth(),
+      get_frame_depth().saturating_sub(1)
+    );
+  }
   let mut state = state_mut!();
   if state.undo.front().as_ref().unwrap().locked {
     fatal!(

@@ -402,7 +402,7 @@ pub fn def_primitive(
       // on the save-stack level; the closer checks it (§1068 `cur_group`).
       // The code here is this primitive's cs (`groupInitiator` is the
       // INVOKING token, which an alias or `\csname` form can differ from).
-      assign_value("lx@group@code", Stored::Token(cs), Some(Scope::Local));
+      assign_frame_value("lx@group@code", Stored::Token(cs));
     });
     before_digest_env.push(bgroup_closure);
   }

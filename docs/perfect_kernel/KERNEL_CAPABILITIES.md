@@ -253,10 +253,57 @@ once, and conversion continues. Fatal stays Fatal for genuine kernel faults.
 
 **Risk.** LOW; beyond-Perl reliability lever, recorded as a divergence.
 
+## K9 — Group codes on every frame; closers dispatch on the group code
+
+**Goal.** The parked "fused mode-frame family" (DIFFICULT_CASES D12: msc,
+modernposter, dsptricks/psmatrix — a `\begingroup`/`\endgroup` pair or a
+deferred `\egroup` straddling a box or cell boundary) stops cascading.
+
+**Source of truth.** tex.web keeps the semantic nest (§211-218 `push_nest`/
+`pop_nest`: mode + current list) apart from the save stack (§274
+`new_save_level(group_code)`); a box pushes both (§1083-1085 `scan_spec` then
+`push_nest`) and is packaged when its GROUP closes (§1085-1086 `package`:
+`unsave` → `hpack` → `pop_nest`). `}` dispatches on `cur_group` only
+(§1068 `handle_right_brace`: `simple_group` → `unsave`, `semi_simple_group` →
+`extra_right_brace`, box groups → `package`); `\endgroup` checks
+`cur_group = semi_simple_group` only, else `off_save` (§1064-1065) inserts the
+matching closer with "Missing } inserted". Perl fuses the two
+(Stomach.pm:330-335 admits it: modes "are NOT correlated to grouping").
+
+**Today.** One `State` frame stack carries groups AND modes: `begin_mode` =
+`push_stack_frame(false)` + `BOUND_MODE` bound in that frame (stomach.rs:1004-
+1043); `end_mode` demands the top frame be the mode frame (:1103, error :1118);
+`egroup`/`endgroup` gate on `BOUND_MODE`-on-top + `groupNonBoxing` (:741-903);
+the box reader's terminal is the raw frame depth (base_utilities.rs:3616).
+Batch 56z added `lx@group@code` for `bounded` environments only.
+
+**Abstraction (staged; each stage = guard + control).**
+- Stage 0, no behaviour change: every opener writes its group code
+  (`simple`, `semi_simple`, `hbox`/`vbox`/`vtop`, `math`/`display`/
+  `math_left`, `align`), generalizing 56z's `lx@group@code`.
+- Stage 1 (msc, modernposter): `end_mode` closes intervening `semi_simple`
+  frames the tex.web way (one "Missing } inserted"-class warning) instead of
+  refusing; the box reader keys its terminal on the box's OWN group level.
+- Stage 2: `\endgroup`/`}`/`\egroup` dispatch on the group code with
+  `off_save`/`extra_right_brace` recovery, unified with the existing
+  "Missing $ inserted" path (stomach.rs:851-877).
+- Stage 3 (psmatrix/dsptricks): alignment cell-boundary group codes — the
+  template's `\begingroup…##…\endgroup` pairs close on the save stack
+  without exposing the `\halign` box frame.
+
+**Open question before Stage 1 lands.** pdflatex is clean on the witnesses, so
+real TeX's save stack never drifts there; the drift source in our engine
+(which push/pop differs — `\tracinggroups=1` on pdflatex vs
+`LXML_TRACE_FRAMES=1`) is being pinpointed; a local missing pop would land
+first. Design notes: `~/data/pk_agents/w22/mode-frames/NOTES.md`.
+
+**Risk.** LOW (Stage 0), MED (1-2: `AlignPeekMode`, `$…$`, `INNER_BOX`/
+`\ifinner`, `\aftergroup` order), HIGH (3).
+
 ## Ordering
 
 K1 → K3+K4 → K5 → K2 → K6 → K7/K8 (K7 and K8 are small and slot between
-batches). Batch fixes continue in parallel, but a batch item that belongs
+batches); K9 runs as its own staged batch once the drift source is known. Batch fixes continue in parallel, but a batch item that belongs
 to a capability is landed *as* that capability's step, with its class-level
 guard, not as a site patch.
 
@@ -307,3 +354,5 @@ guard, not as a site patch.
 | 2026-09-06 | K1 | Landed (Gemini round-7 fixups): `\LoadClassWithOptions` = latex.ltx:18637 `\@loadwithoptions` — the calling file's `\opt@\@currname.\@currext` list goes to the loaded class (`calling_file_options`, shared with `\RequirePackageWithOptions`; the document-class list is the fallback for bindings delegating outside a file load). The K1 `\ver@`/`\opt@` re-rooting item stays open; this is one more seam that reads `\opt@` the way latex.ltx does. |
 | 2026-09-06 | — | REVERTED at the merge (Gemini round 7 M2, macro state): replaying a class's dropped `\maketitle` body raw after the kernel's frontmatter deposit ran resphilosophica.cls:331's body (`\@setcopyright`, `\andify\shortauthors`, `\@maketitle@hook`) against the amsart BINDING, which defines none of them (guard `amsart_maketitle_internals_are_defined`) — the unseen-class backfire of a generic replay. Rule kept: the lock drops a class `\maketitle`; a class owns it only through its binding's explicit unlock (`uspatent_cls.rs` restored: `\maketitle:locked=false` + raw load — the class body is complete only when its base chain is raw or bound with the internals). General form unchanged: the class's definition should be the whole `\maketitle` with the kernel's frontmatter deposit hooked in, which needs the deferred-frontmatter model (`\author` digested at `\maketitle` in the class's scope). |
 | 2026-09-06 | — | Correctness item (Gemini round 7 M4, graphics): the DVI persona has no PDF page count — `\pdflastximagepages` is a stub (pdftex.rs) and l3graphics' `\__graphics_backend_get_pagecount:n` answered by `extractbb -O` (expl3-code.tex:33334-33350) now returns l3's fallback 1 (expl3-code.tex:33348). `latexml_core/src/util/image.rs` parses PDF page BOXES but exposes no page COUNT; general fix = one PDF page-count reader feeding both `\pdflastximagepages` and the l3 backend hook (notebeamer `pages=-` loops over it). Trap found at the merge: the hook was written under `\ExplSyntaxOn` at latexml.sty top level; latexml.sty's body runs WHILE the format loads, so that pulled a raw expl3.sty whose backend selection loaded l3backend-dvips.def at preload time — a later `\pdfoutput=1`/`\sys_load_backend:n{pdftex}` hit "Backend configuration already set" (`backend_load_follows_pdfoutput_and_prior_choice`). Rule: latexml.sty top-level code uses `\csname` for expl3 names, never `\ExplSyntaxOn`. |
+| 2026-09-06 | K9 | Landed (batch 56ac): every stack frame carries a serial (`lx@frame@id`, Stage 0) and the box reader ends on its OWN frame, not on the save-stack depth (tex.web §1068 dispatches on `cur_group`). The msc "crossing" root: `\globaldefs=1` (msc.sty:2616) globalized the frame bookkeeping through `assign_internal`'s override (Perl State.pm:144-151 too) — the records now bind via `assign_local_unconditional`, exempt from `\globaldefs`/`\global` (tex.web §1214 vs §274; KPE #209, DIVERGENCES #215): msc 21→0. Settled dead end: `\endgroup` off_save insertion of the box's `}` (Stage 2 shape) — the inserted brace reaches the nested consumer, not the box reader owning the frame; modernposter (14) and psmatrix/dsptricks stay open (Stages 1/3). |
+
