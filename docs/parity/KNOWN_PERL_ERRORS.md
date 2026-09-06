@@ -6066,3 +6066,20 @@ pdflatex 0). Rust: the intersection is bound in closed form
 (`pgfmathcalc_code_tex.rs`, quadratic of the ray against the ellipse, the root on
 the arc). Guard: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
 
+## 211. The document hooks are digested in an isolated mouth (Rust fixes)
+
+latex_constructs.pool.ltxml digests `\AtEndDocument`'s list and the `enddocument`
+hook (and etoolbox's `\AfterEndPreamble` store) with `Digest(...)` in a string
+mouth, where latex.ltx:15255-15259 `\enddocument` runs `\UseOneTimeHook
+{enddocument}` INLINE before `\@checkend{document}` and etoolbox.sty:1774-1776
+runs `\@afterendpreamblehook` inline from `\document`. A box opened from the
+one hook and closed from the other — modernposter.cls's document-spanning
+`tikzpicture[overlay]` (`\AfterEndPreamble{\begin{tikzpicture}…}` +
+`\AtEndDocument{\end{tikzpicture}}`): the pgfpicture `\setbox\hbox\bgroup`
+and every node box — has its reader run dry at the hook's end and `end_mode`
+meet pgf's `\begingroup` ("`\hbox` Attempt to end mode restricted_horizontal";
+modernposter/demo Rust 14 → 0, Perl 15; pdflatex 0). Rust: both stores and both
+lthooks slots are unread onto the galley, the end-document finalizer follows
+(`\lx@finalize@document`). Guard:
+`perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
+

@@ -1,6 +1,6 @@
 % witness: modernposter/demo.tex (TL2025 doc/latex/modernposter)
 % oracle: pdflatex clean; PERL latexml SHARED (same \hbox error, 31 vs our 16)
-% engines: pdflatex; expect: 0 errors; status: RED (14 errors on b56ab; 15 before)
+% engines: pdflatex; expect: 0 errors; status: GREEN (batch 56ad, 2026-09-06: the \AfterEndPreamble opener and the \AtEndDocument closer run inline in the galley; was 14)
 % first: Error:unexpected:\hbox Attempt to end mode restricted_horizontal
 % mechanism: modernposter.cls \maketitle (L137-170) filled tikz \node's are
 % typeset via pgfsys->SVG. Batch 56ab made \pgfsys@beginscope/@endscope group-free

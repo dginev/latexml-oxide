@@ -1,0 +1,24 @@
+% witness: dsptricks/dspTricksManual (dspTricksManual.tex:759); psmatrix via pstricks-add
+% oracle:  pdflatex 0 errors; lualatex 0 errors (real_1x1_traced.log balanced groups)
+% engines: rust=2 (b56ac)  perl=3 (own bindings: {psmatrix} undefined + 2x bare &)
+% expect:  0 errors; one <ltx:tabular>/<ltx:td> for the single "A" node cell
+% status:  RED
+% mechanism: our \halign opens FOUR BOXING save frames (bounded bgroup + begin_mode
+%   + start_row bgroup + start_column bgroup; alignment.rs:420/453, tex_tables.rs:314)
+%   where tex.web opens TWO NON-boxing align groups (code 6, scan_spec+new_save_level
+%   sec.15336/15338) and NEST-only row/column levels (init_row push_nest sec.15532,
+%   init_col nothing sec.15560). psmatrix's cell straddles a box: pst-node.tex:1215
+%   \psm@beginnode@i = \hbox\bgroup\begingroup (opens in the u-part), :1222
+%   \psm@endnode@i = \endgroup\egroup (closes in the v-part after the cell). Those
+%   perfectly-nested closers (tracinggroups: L6 semisimple>L7 hbox>L8 semisimple)
+%   cross our extra CELL/ROW boxing frames, so the template-trailing \endgroup
+%   (pst-node.tex:1187) meets the ROW bgroup -> stomach.rs:933 "close non-boxing group".
+%   SHARED fusion (Perl Alignment.pm:218/242, TeX_Tables.pool.ltxml:181); Perl's own
+%   pst-node binding noops psmatrix so Perl never runs the raw \halign.
+\documentclass{article}
+\usepackage{pstricks-add}
+\begin{document}
+\begin{psmatrix}
+A
+\end{psmatrix}
+\end{document}

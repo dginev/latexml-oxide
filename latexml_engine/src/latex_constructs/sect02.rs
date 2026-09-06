@@ -305,8 +305,10 @@ pub(crate) fn load() -> Result<()> {
     // UNREAD onto the main stream rather than digest in a string mouth: a
     // `+b` environment opened from this hook must read its body from the
     // document file, not from the hook's own (empty) mouth.
+    // Collected with the other inline hook below and unread once, in order.
+    let mut inline_hooks: Vec<Token> = Vec::new();
     if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      unread(hook_use_tokens("begindocument/end"));
+      inline_hooks.extend(hook_use_tokens("begindocument/end").unlist());
     }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
@@ -327,12 +329,23 @@ pub(crate) fn load() -> Result<()> {
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    // @document@preamble@afterend runs after the \@preamblecmds point (both
-    // inPreamble=0 and the hook window closed above), so onlyPreamble commands
-    // here are already disabled — matching latex.ltx's begindocument/end.
+    // @document@preamble@afterend (etoolbox `\AfterEndPreamble`) runs after
+    // the \@preamblecmds point (both inPreamble=0 and the hook window closed
+    // above), so onlyPreamble commands here are already disabled — matching
+    // latex.ltx's begindocument/end, which it IS under a 2020+ format
+    // (etoolbox.sty:1745) and which the legacy `\@afterendpreamblehook` runs
+    // INLINE from `\document` (:1774-1776). Unread with `begindocument/end`,
+    // not digested in a string mouth: modernposter.cls opens its
+    // document-spanning `tikzpicture[overlay]` here, and a box reader opened
+    // in an isolated mouth runs dry before the body ("`\hbox` Attempt to end
+    // mode restricted_horizontal", modernposter/demo). Guard:
+    // `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
     if first_begin
       && let Some(ops) = lookup_tokens("@document@preamble@afterend") {
-      boxes.push(digest(ops)?);
+      inline_hooks.extend(ops.unlist());
+    }
+    if !inline_hooks.is_empty() {
+      unread(Tokens::new(inline_hooks));
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();
@@ -358,7 +371,43 @@ pub(crate) fn load() -> Result<()> {
     Tokens::new(toks)
   }
 
-  DefConstructor!(T_CS!("\\end{document}"), None, sub[document,_args,_props] {
+  // latex.ltx:15255-15259 `\enddocument`: the end-document hooks run INLINE
+  // in the main token stream (`\UseOneTimeHook{enddocument}`, preceded by the
+  // legacy `\AtEndDocument` list) and only then `\@checkend{document}` and
+  // the final cleanup. They were digested here in an isolated mouth, so a
+  // box reader suspended in the galley — modernposter.cls's document-spanning
+  // `tikzpicture[overlay]` opened from `\AfterEndPreamble` and closed by
+  // `\AtEndDocument{\end{tikzpicture}}`: the pgfpicture `\setbox\hbox\bgroup`
+  // and every node box — never received its `\egroup`; its loop ran dry and
+  // `end_mode` met pgf's `\begingroup` on top ("`\hbox` Attempt to end mode
+  // restricted_horizontal", modernposter/demo 14; Perl 15 — SHARED; pdflatex
+  // clean). The opener side already unreads `begindocument/end` (above, the
+  // jwjournal `+b` environment); this is the closer side. The hooks are
+  // unread once (`lx@enddocument@hooks@fired`), followed by the finalizer.
+  // Guard: `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
+  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document");
+  DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
+    if lookup_bool("lx@enddocument@hooks@fired") {
+      return Ok(Vec::new());
+    }
+    AssignValue!("lx@enddocument@hooks@fired" => true, Some(Scope::Global));
+    let mut toks: Vec<Token> = Vec::new();
+    if let Some(ops) = lookup_tokens("@at@end@document") {
+      toks.extend(ops.unlist());
+    }
+    // latex.ltx:15257 `\UseOneTimeHook{enddocument}` (the lthooks slot; the
+    // legacy `\AtEndDocument` list above is `@at@end@document`).
+    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+      toks.extend(hook_use_tokens("enddocument").unlist());
+    }
+    unread(Tokens::new(toks));
+    Ok(Vec::new())
+  });
+
+  // The `\@checkend{document}` + `final_cleanup` half of `\enddocument`:
+  // abandon open groups (tex.web §1335), end the document's mode, close
+  // `ltx:document`.
+  DefConstructor!(T_CS!("\\lx@finalize@document"), None, sub[document,_args,_props] {
       // Idempotent: an `\end{document}` digested inside a deferred body (the
       // unbalanced `\abstract{…` of OXIDIZED_DESIGN #207) is replayed when
       // that body is inserted; the document is closed once.
@@ -374,17 +423,6 @@ pub(crate) fn load() -> Result<()> {
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
-      if let Some(ops) = lookup_tokens("@at@end@document") {
-        boxes.push(digest(ops)?);
-      }
-      // latex.ltx:15257 `\UseOneTimeHook{enddocument}` (the lthooks slot; the
-      // legacy `\AtEndDocument` list above is `@at@end@document`).
-      if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-        local_state_unlocked(false);
-        let r = digest(hook_use_tokens("enddocument"));
-        expire_state_unlocked();
-        boxes.push(r?);
-      }
       // Should we try to indent the last paragraph? If so, it goes like this:
       boxes.push(digest(T_CS!("\\lx@normal@par"))?);
       // Pop unclosed groups and environments back to the document frame

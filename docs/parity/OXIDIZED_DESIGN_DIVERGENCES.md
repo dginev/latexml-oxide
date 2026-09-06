@@ -7176,3 +7176,18 @@ callout nodes may move from the bisection's approximation to the exact point.
 **Witnesses**: zx-calculus/zx-calculus (Fatal → 0), arXiv 2201.09268 class.
 **Guards**: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
 
+### 217. The document hooks run inline in the galley
+
+**Perl behavior**: `\begin{document}`/`\end{document}` digest the hook stores
+in isolated string mouths (latex_constructs.pool.ltxml).
+**Rust behavior**: `begindocument/end` + etoolbox's `\AfterEndPreamble` store
+are unread onto the main stream at the end of `\begin{document}`;
+`\end{document}` expands to the `\AtEndDocument` list + the `enddocument`
+hook + `\lx@finalize@document` (the `\@checkend`/`final_cleanup` half).
+**Why**: latex.ltx:15255-15259 and etoolbox.sty:1774-1776 run them inline, so
+a box or environment spanning the body reads the body as its contents.
+KNOWN_PERL_ERRORS #211; extends the opener-side unread of batch 54.
+**Witnesses**: modernposter/demo (14 → 0),
+`repros/boxes-groups/atenddocument_hbox_egroup.tex`.
+**Guards**: `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
+

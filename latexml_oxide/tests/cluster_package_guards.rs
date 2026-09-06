@@ -4131,6 +4131,34 @@ pub(crate) mod perfect_kernel_batch46 {
     (stderr, xml)
   }
 
+  /// [`convert_with`] with an explicit `--timeout` (seconds) for a guard whose
+  /// single conversion is legitimately long: under a full-suite run (20+
+  /// parallel conversions) the shared 110 s budget turns a 38 s document into
+  /// a false red (`codehigh_dochighinput_is_bounded`, three times in one day).
+  pub(crate) fn convert_with_budget(
+    tex: &str,
+    preload: Option<&str>,
+    secs: u32,
+  ) -> (String, String) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(dir.path().join("t.tex"), tex).expect("write");
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let timeout = format!("--timeout={secs}");
+    let mut args = vec!["t.tex", "--dest", "t.xml", "--nocomments", timeout.as_str()];
+    let preload_arg = preload.map(|p| format!("--preload={p}"));
+    if let Some(ref p) = preload_arg {
+      args.push(p);
+    }
+    let output = Command::new(bin)
+      .args(&args)
+      .current_dir(dir.path())
+      .output()
+      .expect("run latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let xml = std::fs::read_to_string(dir.path().join("t.xml")).unwrap_or_default();
+    (stderr, xml)
+  }
+
   pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
@@ -13332,7 +13360,8 @@ After.
 \dochighinput[language=latex/latex3]{fontscale.sty}
 \end{document}
 ";
-    let (stderr, xml) = convert(tex, false);
+    // ~38 s alone; a full-suite run needs the wider budget (still bounded).
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_with_budget(tex, None, 300);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(
       xml.contains("ProvidesExplPackage") || xml.contains("fontscale"),
@@ -16860,6 +16889,37 @@ c &= d
       assert_eq!(error_count(&stderr), 0, "{stderr}");
       assert!(xml.matches("<svg:path").count() >= 2, "{xml}");
     }
+  }
+
+  /// latex.ltx:15255-15259 `\enddocument` runs the end-document hooks INLINE
+  /// before `\@checkend`, and etoolbox.sty:1774-1776 runs `\@afterendpreamblehook`
+  /// inline from `\document`: a box opened from the one hook and closed from the
+  /// other reads the document body as its contents. Digesting either hook in
+  /// an isolated mouth starved the box reader (modernposter.cls's
+  /// document-spanning `tikzpicture[overlay]`; Perl shares it).
+  #[test]
+  fn atenddocument_closer_reaches_the_galley_box() {
+    let tex = "\\documentclass{article}\n\\AtEndDocument{X\\egroup}\n\\begin{document}\n\\setbox0=\\hbox\\bgroup A\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Warning:"), "{stderr}");
+    assert!(xml.contains("</document>"), "{xml}");
+    // The opener from `\AfterEndPreamble`, the closer from `\AtEndDocument`.
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usepackage{etoolbox}\n\\AfterEndPreamble{\\begin{tikzpicture}[remember picture, overlay]}\n\\AtEndDocument{\\end{tikzpicture}}\n\\begin{document}\n\\node (title) at (0,0) {\\Huge Demo Title};\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<svg:g") && xml.contains("Demo Title"),
+      "{xml}"
+    );
+    // Control: the same picture in the body.
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\\begin{tikzpicture}[remember picture, overlay]\n\\node (title) at (0,0) {\\Huge Demo Title};\n\\end{tikzpicture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<svg:g") && xml.contains("Demo Title"),
+      "{xml}"
+    );
   }
 
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
