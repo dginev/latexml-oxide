@@ -29,9 +29,19 @@ LoadDefinitions!({
   // ported to Rust. The \@@@ackscale DefPrimitive → DefMacro flip (L181)
   // is a no-op arg-consumer whose observable behavior under an
   // HTML/MathML backend is identical to a constructor body of "".
-  DefMacro!("\\pst@object{}", "#1");
-  def_macro_noop("\\use@par")?;
-  def_macro_noop("\\addto@par{}")?;
+  // `\pst@object`, `\use@par`, `\addto@par` are the RAW pstricks.tex
+  // definitions (pstricks.tex:1453-1461: `\pst@object{name}` sets `\pst@par`,
+  // reads `*`/`[…]` and dispatches to `\<name>@i`; `\use@par` :1441 applies the
+  // stored key list; `\addto@par` :1425 extends it). The former stub
+  // `\pst@object{}` → `#1` typeset the
+  // object's NAME as text and never reached `\<name>@i`: pst-node's
+  // `\psm@beginnode` (pst-node.tex:1206-1209, `\pst@object{psm@beginnode}`)
+  // opened no node box, so psmatrix's v-part `\psm@endnode@i`
+  // (`\unskip\endgroup\psm@endmath\egroup`, :1215-1221) closed the
+  // alignment's own cell frame and the template's trailing `\endgroup` met
+  // the row frame ("`\endgroup` Attempt to close non-boxing group";
+  // dsptricks 98, every psmatrix). Perl has no such stub. Drawing objects
+  // that must stay silent are no-op'ed BY NAME in pstricks_sty.rs.
   // `\psset` itself stays the raw pst-xkey.tex definition (pstricks_sty.rs),
   // so the family key BODIES run: `linecolor=` & co. call `\pst@getcolor`
   // (pstricks.tex `\pst@getcolor{name}\psk@linecolor`). pstricks.sty:150-176,

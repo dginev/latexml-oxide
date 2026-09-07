@@ -16992,6 +16992,25 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// pstricks.tex:1453-1461 `\pst@object{name}` dispatches to `\<name>@i` after
+  /// the `*`/`[…]` options; the support binding's stub (`#1`, no Perl
+  /// counterpart) typeset the NAME instead, so pst-node's `\psm@beginnode`
+  /// never opened its node box and psmatrix's v-part closers popped the
+  /// alignment's own cell frame (dsptricks 98; every psmatrix).
+  #[test]
+  fn pst_object_dispatches_to_the_object_body() {
+    if kpsewhich_has("pstricks-add.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\makeatletter\n\\def\\lxfoo@i{FOO-\\pst@par-END}\n\\makeatother\n\\begin{document}\n\\makeatletter\\pst@object{lxfoo}[linewidth=2pt]\\makeatother\n\\begin{psmatrix} A & B \\\\ C & D \\end{psmatrix}\nAfter.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        xml.contains("FOO-linewidth=2pt-END") && xml.contains("After."),
+        "{xml}"
+      );
+      assert_eq!(xml.matches("<td").count(), 4, "{xml}");
+    }
+  }
+
   /// \SetCatcodeRange and \lstloadaspects support (witness codebox-doc-en).
   #[test]
   fn luatex_catcoderange_and_listings_aspects() {

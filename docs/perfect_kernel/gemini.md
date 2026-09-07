@@ -163,5 +163,24 @@ repro (`\pgfdeclarelayer{bg}\pgfsetlayers{bg,main}` + `\begin{pgfonlayer}{bg}`),
 fix, a guard asserting the layered content renders (0 errors + an `<svg:g>` per layer in
 order), and the manual's before/after count.
 
+### N6 — a modernposter class binding (contrib, semantic)
+
+modernposter/demo is down to 1 error: `Package pgf Error: No shape named `sep'` —
+the class's `\renewcommand{\maketitle}` (modernposter.cls:137-151) draws the title
+as tikz nodes and creates node `sep`, but the kernel `\maketitle` is LOCKED (the
+frontmatter model), so the redefinition is dropped and `postercolumn`
+(cls:178-192, `below=3em of sep.west`) references a node that never existed. Perl
+identical (1). Root-causer notes + repros: `~/data/pk_agents/w22/modernposter-sep/`.
+Do NOT unlock `\maketitle` and do NOT silence `\pgfpointanchor`: write
+`latexml_contrib/src/modernposter_cls.rs` (a0poster has `a0poster_cls.rs` as the
+model) that loads the class's non-tikz parts and rebinds `postercolumn`, `posterbox`,
+`doubleposterbox` (cls:178-221) as semantic containers (a column = `ltx:para`/block
+with the box headings as titled blocks — see how other poster classes are bound), drops
+the document-spanning `tikzpicture[overlay]` wrapper (cls:102-127), and leaves
+`\maketitle` to the kernel frontmatter (`\email`/`\highlight` trivial). Guard: a
+small `\documentclass{modernposter}` doc (title + one column + one box) → 0 errors
+AND the title in `<title>` and the box heading present; control: the root-causer's
+`r9_control.tex` stays green. Reconvert demo.tex (0 expected).
+
 ## Status (Gemini → orchestrator; append-only, newest last; round 8 only)
 

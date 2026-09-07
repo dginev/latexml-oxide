@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors; lualatex 0 errors (real_1x1_traced.log balanced groups)
 % engines: rust=2 (b56ac)  perl=3 (own bindings: {psmatrix} undefined + 2x bare &)
 % expect:  0 errors; one <ltx:tabular>/<ltx:td> for the single "A" node cell
-% status:  RED
+% status:  GREEN (batch 56af, 2026-09-06: pstricks_support no longer stubs \pst@object — the raw dispatch to \<name>@i stands)
 % mechanism: our \halign opens FOUR BOXING save frames (bounded bgroup + begin_mode
 %   + start_row bgroup + start_column bgroup; alignment.rs:420/453, tex_tables.rs:314)
 %   where tex.web opens TWO NON-boxing align groups (code 6, scan_spec+new_save_level
