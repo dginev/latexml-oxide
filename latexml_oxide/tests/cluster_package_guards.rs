@@ -18975,4 +18975,27 @@ Marks stub
     assert!(xml.contains("<svg:linearGradient"), "{xml}");
     assert!(xml.matches("<svg:stop").count() >= 2, "{xml}");
   }
+
+  /// pgfplots scatter markers group balance (witness: ualberta 05_Plots_And_Graphs.tex:325-337).
+  /// Scatter marker post-marker code calls colormap routines which trigger \pgfmathmultiply@{0.0}{...}.
+  /// Under LaTeXML/latexml-oxide, integer formatting strips the decimal point ('0' instead of '0.0'),
+  /// breaking \pgfplotscolormap@floor@unforgiving#1.#2\relax delimiter matching and corrupting the group stack.
+  #[test]
+  #[ignore = "Orchestrator fix: pgfmath float zero formatting / engine group recovery"]
+  fn pgfplots_scatter_marker_group_balance() {
+    let tex = r"\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}
+\addplot+[only marks,scatter,mark=*] coordinates {(1,1)(2,4)(3,9)};
+\end{axis}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.matches("<svg:g").count() >= 3, "{xml}");
+  }
 }

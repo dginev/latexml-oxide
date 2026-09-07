@@ -1,0 +1,22 @@
+% witness:   ualberta 05_Plots_And_Graphs.tex:325-337 \addplot+[scatter]
+% oracle:    pdflatex 0 err
+% engines:   pdflatex
+% expect:    0 Error; \testfloor successfully binds #1=0, #2=0
+% status:    RED on latexml-oxide & Perl latexml (Error:expected:Until:. Missing argument Until:.)
+% class:     SHARED (Perl LaTeXML emits identical Missing argument Until:.)
+% mechanism: Real pgfmath's \pgfmath@tonumber converts \dimen (0.0pt) to "0.0"
+%            preserving the decimal dot. In latexml-oxide (pgfmath_code_tex.rs:40-43)
+%            and Perl (pgfmath.code.tex.ltxml), integers are stripped of '.0'
+%            returning bare "0". Macro argument matching expecting '#1.#2\relax'
+%            (e.g. pgfplots \pgfplotscolormap@floor@unforgiving) scans past \relax
+%            to EOF seeking '.', eating \endgroup and derailing group balance.
+\documentclass{article}
+\usepackage{pgf}
+\makeatletter
+\def\testfloor#1.#2\relax{\def\result{#1}}
+\makeatother
+\begin{document}
+\pgfmathmultiply@{0.0}{1.0}
+\expandafter\testfloor\pgfmathresult\relax
+Result: \result
+\end{document}

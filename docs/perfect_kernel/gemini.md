@@ -171,3 +171,35 @@ wrapper and an `xml:id`/`idref` pair so references link. Guard: first use = 1, s
 label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 9 only)
+
+### N1 — tikzpingus: bisect shading regeneration failure (COMPLETED)
+- **Root cause**: Functional shadings in PGF (e.g. `\pgfuseshading{bilinear interpolation}` invoked by tikzpingus cloaks) invoke `\pgfsys@functionalshading`, which delegates to `\pgf@sys@noshading`. In latexml's SVG driver (`resources/LaTeXML-texmf/pgfsys-latexml.def`), `\pgfsys@shadinginsidepgfpicture` expects `\@pgfshading<name>!` to be defined and provide `\lxSVG@sh@defs`, `\lxSVG@sh`, and `\lxSVG@pos`. Because `\pgf@sys@noshading` did not define `\@pgfshading<name>!`, Gullet crashed with undefined control sequence `\@pgfshading...`.
+- **Fix**: Updated `\pgf@sys@noshading` in `pgfsys-latexml.def` to define `\@pgfshading#1!` as empty `\lxSVG@sh@defs`/`\lxSVG@sh`/`\lxSVG@pos`, matching PGF driver contracts and preventing Gullet crashes.
+- **Commit**: `6e707afda6` on `gemini/pk-helpers-9`.
+- **Guards**: `cluster_package_guards::perfect_kernel_gemini::pgf_functional_shading_and_gradients`, `tikzpingus_cloak_functional_shading`.
+
+### N2 — pgfplots scatter markers group leak & token trace (ANALYSIS & REPRO COMPLETE)
+- **Token trace of ONE marker**:
+  - The boxing `{` frame (`nobox=false`, initiator `{`) is created by `{% \pgftransformshift{} \pgf@plot@mark }` inside `\tikz@@@plot`'s `\hbox{{...}}`.
+  - Inside this group, `\aftergroup\pgfplots@scatter@plot@mark` is queued.
+  - The boxing frame **does pop** cleanly at the matching `}`. Its `\aftergroup` token `\pgfplots@scatter@plot@mark` is placed into the input stream per tex.web §280.
+  - `\pgfplots@scatter@plot@mark` begins executing: it opens `\begingroup` and invokes `\pgfplotscolormapdefinemappedcolor\pgfplotspointmetatransformed`.
+  - Inside `pgfplotscolormap.code.tex:2137-2155` (`\pgfplotscolormapfind@precomputed@`), a `\begingroup` is opened.
+  - At line 2145: `\pgfmathmultiply@{\pgfplotscolormapfind@transformedx}{\csname pgfpl@cm@#5@invh\endcsname}` is evaluated to scale the coordinate meta `0.0`.
+  - In real TeX / PGF, `\pgfmath@tonumber` (`\expandafter\Pgf@geT\the#1`) converts `\dimen` (`0.0pt`) to `"0.0"` with a decimal point.
+  - In LaTeXML / latexml-oxide (`latexml_package/src/package/pgfmath_code_tex.rs:40-43` and Perl `pgfmath.code.tex.ltxml`), integers are formatted via `format!("{}", clamped as i64)` (stripping `.0` to match Perl `@`-function output), producing `"0"`.
+  - At line 2150: `\expandafter\pgfplotscolormap@floor@unforgiving\pgfmathresult\relax` is executed.
+  - Line 2420 defines `\def\pgfplotscolormap@floor@unforgiving#1.#2\relax{\def\pgfplotscolormapfind@intervalno{#1}}` with delimited parameter `#1.#2\relax` strictly requiring a period `.`.
+  - Because `\pgfmathresult` is `"0"` (no period), TeX's parameter scanner does not match `.` before `\relax`. It scans forward through the token stream looking for `.`, eating `\relax` and gobbling the `\endgroup` intended to close line 2139's `\begingroup`!
+  - Eating `\endgroup` desynchronizes the group nesting. When later `\endgroup` tokens execute (e.g. at `\endscope`), they encounter the outer boxing group frame from the plot marker handler.
+- **Robustness Gap / Runaway Location**:
+  - `latexml_core/src/stomach.rs:930-948`: When `\endgroup` encounters `!lookup_bool_sym("groupNonBoxing")`, it emits `Error:unexpected:\endgroup Attempt to close non-boxing group` but **does not pop or discard the incompatible frame**. The stuck frame remains on top of the stack, causing every subsequent `\endgroup` in `\end{axis}` and `\end{tikzpicture}` to hit the same stuck frame and fail repeatedly.
+  - `latexml_core/src/stomach.rs:888-913`: In `math` mode, `off_save` recovery pushes `closer` back via `toks.push(closer); gullet::unread(Tokens::new(toks));`. If the frame cannot be closed, this unread loop fires until `Fatal:Timeout:PushbackLimit`.
+- **Red Reproducers**:
+  - `tools/perfect_kernel/repros/graphics-tikz/pgfmath_multiply_zero_delimited_dot.tex` (12 lines, NO pgfplots, RED on oxide & Perl, GREEN on pdflatex).
+  - `tools/perfect_kernel/repros/graphics-tikz/pgfplots_scatter_marker_group_leak.tex` (minimal scatter plot).
+- **Fix Plan for Orchestrator**:
+  - **Plan A (PGFMath precision / dot formatting)**: Update `pgfmath_result_str` in `latexml_package/src/package/pgfmath_code_tex.rs:40-43` to retain `.0` for float results (e.g. matching `\pgfmath@tonumber`), or specifically when called via `@`-functions expecting TeX dimen string outputs. (Note comment at line 25-34 regarding bisection tolerances).
+  - **Plan B (PGFPlots colormap fallback)**: Provide a safe definition of `\pgfplotscolormap@floor@unforgiving` in `pgfplots_code_tex.rs` or `pgfplotscolormap.code.tex.ltxml` that tolerates integer representations without a decimal point: `\def\pgfplotscolormap@floor@unforgiving#1\relax{\pgfmathfloor{#1}\let\pgfplotscolormapfind@intervalno=\pgfmathresult}`. (Verified in scratch test: 3-point scatter repro compiles with 0 errors, 0 warnings, and 46 clean SVG elements!).
+  - **Plan C (Stomach group desync recovery)**: In `stomach.rs:930-948`, consider popping or marking the stuck frame after error to avoid 30+ identical cascading errors across the document.
+- **Guard**: `latexml_oxide/tests/cluster_package_guards.rs` `pgfplots_scatter_marker_group_balance` (asserting 0 errors and `<svg:g>` marker nodes).
