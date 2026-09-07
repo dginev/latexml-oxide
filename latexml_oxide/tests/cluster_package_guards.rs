@@ -14593,6 +14593,60 @@ After.
     assert!(xml.contains("Before.") && xml.contains("After."), "{xml}");
   }
 
+  /// forest.sty:1413-1655 (bracket reader), 8506-8515 (\NewDocumentEnvironment{forest}),
+  /// 8666-8680 (\Forest): parses the bracket grammar [label, options [child]...]
+  /// into a semantic tree of nested <ltx:enumerate class="ltx_forest_children">
+  /// and <ltx:item class="ltx_forest_node">.
+  #[test]
+  fn forest_three_level_semantic_tree() {
+    let tex = r"\documentclass{article}
+\usepackage{forest}
+\begin{document}
+\begin{forest}
+[Root, for tree={draw}
+  [Child1
+    [Grandchild1]
+    [Grandchild2]
+  ]
+  [Child2
+    [Grandchild3]
+  ]
+]
+\end{forest}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Root"), "Root node missing: {xml}");
+    assert!(xml.contains("Child1"), "Child1 node missing: {xml}");
+    assert!(xml.contains("Child2"), "Child2 node missing: {xml}");
+    assert!(
+      xml.contains("Grandchild1"),
+      "Grandchild1 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("Grandchild2"),
+      "Grandchild2 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("Grandchild3"),
+      "Grandchild3 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("ltx_forest_tree"),
+      "ltx_forest_tree missing: {xml}"
+    );
+    assert!(
+      xml.contains("ltx_forest_children"),
+      "ltx_forest_children missing: {xml}"
+    );
+    assert_eq!(
+      xml.matches("ltx_forest_children").count(),
+      3,
+      "expected 3 child lists: {xml}"
+    );
+  }
+
   /// `{subeqnarray}` (subeqnarray.sty:33-41) is eqnarray with `\slabel`
   /// subnumbers: `&` aligns, rows get `1a`/`1b` (subeqnarray-sample).
   #[test]

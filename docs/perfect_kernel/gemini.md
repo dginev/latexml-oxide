@@ -203,3 +203,38 @@ label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
   - **Plan B (PGFPlots colormap fallback)**: Provide a safe definition of `\pgfplotscolormap@floor@unforgiving` in `pgfplots_code_tex.rs` or `pgfplotscolormap.code.tex.ltxml` that tolerates integer representations without a decimal point: `\def\pgfplotscolormap@floor@unforgiving#1\relax{\pgfmathfloor{#1}\let\pgfplotscolormapfind@intervalno=\pgfmathresult}`. (Verified in scratch test: 3-point scatter repro compiles with 0 errors, 0 warnings, and 46 clean SVG elements!).
   - **Plan C (Stomach group desync recovery)**: In `stomach.rs:930-948`, consider popping or marking the stuck frame after error to avoid 30+ identical cascading errors across the document.
 - **Guard**: `latexml_oxide/tests/cluster_package_guards.rs` `pgfplots_scatter_marker_group_balance` (asserting 0 errors and `<svg:g>` marker nodes).
+
+### N3 — forest: a real binding (COMPLETED)
+- **Grammar & Implementation**:
+  - Implemented the bracket reader in `latexml_contrib/src/forest_sty.rs` based on `forest.sty:1413-1655` (`\bracketset`, `\bracket@get@token`, `\bracket@process@delimited@token`, `\forest@delimited@parse`, brace tracking, bracket checking) and `forest.sty:3992-4003` (`\forest@node@parse`):
+    - `[label, options [child1] [child2]]`
+    - Preserves braces `{...}` around labels and option values.
+    - Preserves node text and key=value option pairs.
+    - Handles `%` comments and whitespace properly.
+  - Implemented semantic tree output:
+    - `<ltx:para class="ltx_forest_tree">` wrapper.
+    - `<ltx:enumerate class="ltx_forest">` and `<ltx:enumerate class="ltx_forest_children">` nesting hierarchy.
+    - `<ltx:item class="ltx_forest_node" text="..." options="...">` for each node with `<ltx:tag>` and `<ltx:para class="ltx_forest_node_content">`.
+  - Registered `\begin{forest}` (`forest.sty:8506-8515`) and `\Forest` (`forest.sty:8666-8680`).
+  - Retained `\forest ... \endforest` bare CS form compatibility for `neoschool.cls`.
+- **Line Citations from `forest.sty`**:
+  - `forest.sty:1413-1655`: Bracket reader and scanner loop, splitting node text from comma-separated option lists while respecting brace grouping.
+  - `forest.sty:3992-4003`: Node and child-list parsing mechanics.
+  - `forest.sty:8506-8515`: `\NewDocumentEnvironment{forest}{D(){}}`.
+  - `forest.sty:8666-8680`: `\Forest` command invocation.
+- **Unsupported Syntax**:
+  - TikZ coordinate layout & drawing: geometric packing, edge drawing, `s sep`, `l sep`, `grow` directions.
+  - Dynamic forest stage execution: `before typesetting nodes`, `delay`, `where n children=...`.
+  - Relative spatial navigation references in PGFmath: `!u`, `!c`, `!1`, `!sibling`.
+  - Bracket action characters (`action character=@`).
+- **What Would Be Needed for Full TikZ Drawing**:
+  - A layout engine performing Forest's two-pass node positioning:
+    1. Pass 1: measure each node's bounding box and compute subtree envelopes.
+    2. Pass 2: compute `x, y` positions avoiding overlaps, and emit SVG `<path>` edges connecting parents to children, followed by TikZ node shapes for labels.
+- **Verification & Guards**:
+  - Added guard test `forest_three_level_semantic_tree` in `latexml_oxide/tests/cluster_package_guards.rs`: 3-level tree converts with 0 errors, all 6 node labels present, and 3 nested child list elements.
+  - All 5 forest test guards pass (`cargo test -p latexml --test cluster_package_guards forest`).
+  - The 3 oracle-clean manuals re-converted with their trees present in XML:
+    - `forest-quickstart.tex`: 344 `ltx_forest` elements present.
+    - `fragoli_doc.tex`: 9 `ltx_forest` elements present.
+    - `milsymb.tex`: 99 `ltx_forest` elements present.
