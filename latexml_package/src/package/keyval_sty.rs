@@ -38,9 +38,10 @@ LoadDefinitions!({
   // reads the following `{keyvals}` group.
   fn setkeys_body(keyset_tks: Tokens, skip_missing: keyvals::SkipMissing) -> Result<Tokens> {
     let keyset = do_expand(keyset_tks)?.to_string();
+    // An explicit empty family stays the empty family (`\KV@@k` in keyval.sty,
+    // the header rule of `keyval_qname` here); see DIVERGENCES #219.
     let keysets: Vec<String> = keyset.split(',')
       .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
       .collect();
 
     let mut keyvals = KeyVals::new(KeyvalsConfig {

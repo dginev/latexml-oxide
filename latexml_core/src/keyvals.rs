@@ -218,15 +218,14 @@ impl KeyVals {
       hook_missing,
     } = options;
     let prefix = prefix.unwrap_or_else(|| String::from("KV"));
-    // Perl KeyVals.pm #2777 (fdc8bf91, 2026-03-27):
-    // filter empty strings from the keyset list. Split("," , ",pstricks")
-    // (e.g. \pst@famlist accumulates as ",pstricks") yields ["", "pstricks"];
-    // the empty keyset caused keyval_qname("psset","","ArrowInside") to
-    // collide with raw \def\psset@@ArrowInside (a delimited-argument helper)
-    // and emit spurious "Missing argument" errors. Hardening here matches
-    // the Perl fix regardless of how keysets was constructed at the call
-    // site.
-    keysets.retain(|k| !k.is_empty());
+    // The EMPTY family is a family (xkeyval.tex:83-88): pst-xkey.tex:53-57
+    // accumulates `\pst@famlist` as ",pstricks", so every `\psset` searches
+    // "" (pstricks.tex:808-810 `precode`/`postcode`/`exchange`, pst-node.tex's
+    // `Xnodesep` family) before "pstricks". Perl KeyVals.pm:52 drops the empty
+    // entries (its `keyval_qname` doubled the `@` and collided with pstricks'
+    // delimited `\psset@@…` helpers; `keyval_qname` now uses xkeyval's header
+    // rule instead) — KNOWN_PERL_ERRORS #212, DIVERGENCES #219. Only an
+    // ABSENT list falls back to `_anonymous_`.
     if keysets.is_empty() {
       keysets = vec![String::from("_anonymous_")];
     }
@@ -604,7 +603,13 @@ impl KeyVals {
             tokens.push(T_CS!("\\def"));
             tokens.push(T_CS!("\\XKV@header"));
             tokens.push(T_BEGIN!());
-            tokens.extend(Explode!(s!("{prefix}@{keyset}@")));
+            // xkeyval.tex:83-88 `\XKV@makehd`: no `<family>@` segment for the
+            // empty family (same rule as `keyval_qname`).
+            tokens.extend(Explode!(if keyset.is_empty() {
+              s!("{prefix}@")
+            } else {
+              s!("{prefix}@{keyset}@")
+            }));
             tokens.push(T_END!());
             tokens.push(T_CS!("\\def"));
             tokens.push(T_CS!("\\XKV@tkey"));
@@ -1364,29 +1369,29 @@ mod tests {
   }
 
   #[test]
-  fn keyvals_new_filters_empty_keysets() {
-    // Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
-    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
-    // entry would collide with `\def\psset@@ArrowInside` via the
-    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
-    // path. Empty entries must be filtered before any default fallback.
+  fn keyvals_new_keeps_the_empty_family() {
+    // `\pst@famlist` accumulates as ",pstricks" (pst-xkey.tex:53-57); xkeyval
+    // searches the empty family first, and its key macros are `\psset@<key>`
+    // (keyval_qname's header rule), so nothing collides with pstricks'
+    // delimited `\psset@@…` helpers. Perl drops the entry (KPE #212).
     let cfg = KeyvalsConfig {
       keysets: vec!["".to_string(), "pstricks".to_string()],
       ..KeyvalsConfig::default()
     };
     let kv = KeyVals::new(cfg);
-    assert_eq!(kv.keysets, vec!["pstricks".to_string()]);
+    assert_eq!(kv.keysets, vec!["".to_string(), "pstricks".to_string()]);
   }
 
   #[test]
-  fn keyvals_new_all_empty_keysets_defaults_to_anonymous() {
-    // If every keyset entry is empty, we still fall back to
-    // _anonymous_ (not retain an empty keyset).
+  fn keyvals_new_all_empty_keysets_stay_the_empty_family() {
+    // Explicit empty entries are the empty family; only an ABSENT list
+    // falls back to _anonymous_.
     let cfg = KeyvalsConfig {
       keysets: vec!["".to_string(), "".to_string()],
       ..KeyvalsConfig::default()
     };
     let kv = KeyVals::new(cfg);
-    assert_eq!(kv.keysets, vec!["_anonymous_".to_string()]);
+    // An explicit empty family is xkeyval's empty family, not `_anonymous_`.
+    assert_eq!(kv.keysets, vec!["".to_string(), "".to_string()]);
   }
 }

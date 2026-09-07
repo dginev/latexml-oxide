@@ -90,9 +90,10 @@ LoadDefinitions!({
       SkipMissing::None
     };
 
+    // The empty family is a family (xkeyval.tex:83-88; `\pst@famlist` is
+    // ",pstricks"): keep it. KNOWN_PERL_ERRORS #212, DIVERGENCES #219.
     let keysets: Vec<String> = keysets_str.split(',')
       .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
       .collect();
 
     let mut keyvals = KeyVals::new(KeyvalsConfig {
@@ -705,9 +706,10 @@ LoadDefinitions!({
       .flat_map(|s| s.split(',').map(|x| x.trim().to_string()))
       .collect();
     let keysets_str = keysets_tks.to_string();
+    // The empty family is a family (xkeyval.tex:83-88; `\pst@famlist` is
+    // ",pstricks"): keep it. KNOWN_PERL_ERRORS #212, DIVERGENCES #219.
     let keysets: Vec<String> = keysets_str.split(',')
       .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
       .collect();
 
     let skip_missing = if hook_missing.is_some() {
@@ -1236,7 +1238,13 @@ LoadDefinitions!({
       _ => String::new(),
     };
     for ks in keysets.split(',') {
-      let cs = T_CS!(s!("\\XKV@{prefix}@{ks}@{key}@value"));
+      // The store is keyed by `keyval_qname` (xkeyval's header rule: no
+      // `<family>@` segment for the empty family) — mirror it here.
+      let cs = if ks.is_empty() {
+        T_CS!(s!("\\XKV@{prefix}@{key}@value"))
+      } else {
+        T_CS!(s!("\\XKV@{prefix}@{ks}@{key}@value"))
+      };
       if lookup_meaning(&cs).is_some() {
         return Ok(Tokens!(cs));
       }

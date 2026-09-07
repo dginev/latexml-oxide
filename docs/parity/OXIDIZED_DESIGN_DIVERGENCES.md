@@ -7191,3 +7191,41 @@ KNOWN_PERL_ERRORS #211; extends the opener-side unread of batch 54.
 `repros/boxes-groups/atenddocument_hbox_egroup.tex`.
 **Guards**: `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
 
+
+### 218. The pst-grad binding loads `pst-grad.tex`
+
+**Perl behavior**: `pst-grad.sty.ltxml` is `RequirePackage('pstricks')` and
+nothing else, so `\psfs@gradient` and the `grad*` keys never exist.
+**Rust behavior**: `pst_grad_sty.rs` additionally raw-loads `pst-grad.tex`
+(pst-grad.sty:3), exactly what the wrapper does.
+**Why**: with `\pst@object` dispatching for real (batch 56af) a raw object's
+bracket `[fillstyle=gradient,…,addfillstyle=boxfill]` reaches pstricks.tex's
+`fillstyle`/`addfillstyle` keys (:1333-1350): the first raised "Undefined fill
+style" and left `\psk@fillstyle` at its `\let…\relax` default
+(pstricks.tex:1337); the second's `\expandafter\noexpand\psk@fillstyle`
+then froze that unexpandable NAME into the new definition — a
+self-recursion at the next use (TeX loops the same way; the difference is
+only that pdflatex has `\psfs@gradient`). The gradient fill styles are PostScript
+strings the renderer ignores; the key surface is what matters.
+**Witnesses**: arabi/big2 (0 → 2 after 56af → 0).
+**Guards**: `perfect_kernel_batch56::pst_grad_binding_loads_the_gradient_fill_styles`.
+
+### 219. The empty xkeyval family is searched and named by the header rule
+
+**Perl behavior**: `KeyVals->new` drops empty keyset entries (KeyVals.pm:52)
+and `keyval_qname` always doubles the `@` (KeyVal.pm:60-62), so keys defined
+with `\define@key[psset]{}{…}` are unreachable.
+**Rust behavior**: `keyval_qname` follows xkeyval.tex:83-88 (`\XKV@makehd`):
+`<prefix>@<key>` for the empty family, `<prefix>@<family>@<key>` otherwise;
+`KeyVals::new` keeps explicit empty entries and reserves `_anonymous_` for an
+absent list.
+**Why**: pst-xkey builds `\pst@famlist` as `,pstricks` so that `\psset` searches
+the empty family first; pstricks.tex:808-810 (`precode`, `postcode`,
+`exchange`) and pst-node.tex (`Xnodesep`… six keys) live there. The header rule
+is also what keeps `\psset@@dash`-style delimited helpers from colliding.
+KNOWN_PERL_ERRORS #212.
+**Witnesses**: every pstricks load ("unknown KeyVals key 'precode'" ×3 warnings
+gone); pst-node `Xnodesep` users.
+**Guards**: `perfect_kernel_batch56::xkeyval_empty_family_is_searched_by_psset`,
+`keyval::tests::keyval_qname_normalizes_empty_prefix`,
+`keyvals::tests::keyvals_new_keeps_the_empty_family`.

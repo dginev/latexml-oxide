@@ -16992,6 +16992,50 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// xkeyval's EMPTY family is a family: pst-xkey.tex:53-57 accumulates
+  /// `\pst@famlist` as ",pstricks" and pstricks.tex:808-810 defines
+  /// `precode`/`postcode`/`exchange` in it (pst-node.tex the `Xnodesep` six).
+  /// `KeyVals::new` dropped the empty entry (Perl KeyVals.pm:52); now every
+  /// `\psset` searches it and the pstricks load emits no "unknown key" warning.
+  /// The `@`-count of the key macro (xkeyval.tex:83-88 header rule,
+  /// `\psset@precode`, leaving `\psset@@dash` to pstricks) is pinned by the unit
+  /// test `keyval_qname_normalizes_empty_prefix`, not here.
+  /// KNOWN_PERL_ERRORS #212, DIVERGENCES #219.
+  #[test]
+  fn xkeyval_empty_family_is_searched_by_psset() {
+    if kpsewhich_has("pstricks.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\makeatletter\n\\define@key[psset]{}{lxfoo}{\\gdef\\lxres{GOT-#1}}\n\\makeatother\n\\begin{document}\n\\psset{lxfoo=42,dash=3pt 2pt}\\lxres\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("GOT-42"), "{xml}");
+      for key in ["precode", "postcode", "exchange", "lxfoo"] {
+        assert!(
+          !stderr.contains(&format!("unknown KeyVals key '{key}'")),
+          "{stderr}"
+        );
+      }
+    }
+  }
+
+  /// pst-grad.sty:3 is `\input{pst-grad.tex}`; the binding (like Perl's) stopped
+  /// at `\RequirePackage{pstricks}`, so once `\pst@object` dispatched for real a
+  /// raw object's `[fillstyle=gradient,…,addfillstyle=boxfill]` bracket raised
+  /// "Undefined fill style" and, with `\psk@fillstyle` left at its `\relax`
+  /// default, an `addfillstyle` self-recursion (arabi/big2, exposed by batch
+  /// 56af). DIVERGENCES #218.
+  #[test]
+  fn pst_grad_binding_loads_the_gradient_fill_styles() {
+    if kpsewhich_has("pst-grad.tex")
+      && kpsewhich_has("pst-char.sty")
+      && kpsewhich_has("pst-fill.sty")
+    {
+      let tex = "\\documentclass{article}\n\\usepackage[tiling]{pst-fill}\n\\usepackage{pst-text,pst-char,pst-grad}\n\\begin{document}\nBefore.\n\\psboxfill{\\small x}\n\\begin{pspicture}(0,0)(6,2)\n\\pscharpath[linestyle=none,gradbegin=magenta,gradend=cyan,fillstyle=gradient,gradangle=-30,gradmidpoint=0.5,addfillstyle=boxfill]{\\rput[b](1,0){\\Huge Word}}\n\\end{pspicture}\nAfter.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("Before.") && xml.contains("After."), "{xml}");
+    }
+  }
+
   /// pstricks.tex:1453-1461 `\pst@object{name}` dispatches to `\<name>@i` after
   /// the `*`/`[…]` options; the support binding's stub (`#1`, no Perl
   /// counterpart) typeset the NAME instead, so pst-node's `\psm@beginnode`

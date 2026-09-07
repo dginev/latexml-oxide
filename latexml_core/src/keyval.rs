@@ -68,7 +68,18 @@ impl KeyVal {
 // semi-internals
 pub(crate) fn keyval_qname(prefix: &str, keyset: &str, key: &str) -> String {
   let prefix = if prefix.is_empty() { "KV" } else { prefix };
-  s!("{prefix}@{keyset}@{key}")
+  // xkeyval.tex:83-88 `\XKV@makehd`: header = `<prefix>@` followed by
+  // `<family>@` ONLY when the family is non-empty, so an empty-family key
+  // (`\define@key[psset]{}{precode}`, pstricks.tex:808) is `\psset@precode`,
+  // never `\psset@@precode`. Perl KeyVal.pm:60-62 always doubles the `@`,
+  // which is why its `KeyVals->new` had to drop the empty family (KNOWN_PERL_ERRORS
+  // #212, DIVERGENCES #219); with the real rule the `@@` names stay free for
+  // pstricks' delimited helpers (`\psset@@dash`, `\psset@@ArrowInside`).
+  if keyset.is_empty() {
+    s!("{prefix}@{key}")
+  } else {
+    s!("{prefix}@{keyset}@{key}")
+  }
 }
 
 pub(crate) fn keyval_get(qname: &str, prop: &str) -> Option<Stored> {
@@ -624,6 +635,9 @@ mod tests {
     // Empty prefix is substituted with "KV".
     assert_eq!(keyval_qname("", "set", "k"), "KV@set@k");
     assert_eq!(keyval_qname("P", "set", "k"), "P@set@k");
+    // The empty family takes xkeyval's `\XKV@makehd` shape (no doubled `@`).
+    assert_eq!(keyval_qname("psset", "", "precode"), "psset@precode");
+    assert_eq!(keyval_qname("", "", "k"), "KV@k");
   }
 }
 

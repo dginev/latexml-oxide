@@ -6083,3 +6083,23 @@ lthooks slots are unread onto the galley, the end-document finalizer follows
 (`\lx@finalize@document`). Guard:
 `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box`.
 
+
+## 212. `KeyVals` drops xkeyval's empty family and misnames its keys (Rust fixes)
+
+xkeyval's empty family is a family: `\XKV@makehd` (xkeyval.tex:83-88) builds the
+key-macro header as `<prefix>@` plus `<family>@` only when the family is
+non-empty, so `\define@key[psset]{}{precode}` (pstricks.tex:808) defines
+`\psset@precode`, and pst-xkey.tex:53-57 accumulates `\pst@famlist` as
+`,pstricks` precisely so every `\psset` searches "" before "pstricks"
+(pdflatex probe: `FAMLIST=[,pstricks]`, an empty-family key is found).
+Perl `KeyVal.pm:60-62` always emits `<prefix>@<keyset>@<key>` — `psset@@precode`
+— and `KeyVals.pm:52` `grep { $_ ne '' }`s the empty entries away (LaTeXML
+#2777), so pstricks' own `\psset{precode={},postcode={}}` (pstricks.tex:810)
+and pst-node's `Xnodesep`/`Ynodesep` family report "unknown KeyVals key" and
+are dropped. Minimal trigger: `\usepackage{pstricks}\makeatletter
+\define@key[psset]{}{foo}{\gdef\x{#1}}\psset{foo=42}` — Perl never runs the
+body. Rust: `keyval_qname` applies the header rule (`psset@precode`, leaving
+the `@@` names to pstricks' delimited helpers `\psset@@dash`/`\psset@@ArrowInside`,
+the collision that motivated #2777) and `KeyVals::new` keeps the empty family;
+only an absent keyset list falls back to `_anonymous_`. Guard:
+`perfect_kernel_batch56::xkeyval_empty_family_is_searched_by_psset`.
