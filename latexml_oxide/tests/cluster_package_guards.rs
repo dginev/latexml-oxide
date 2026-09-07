@@ -16992,6 +16992,72 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// tex.web §484: a `\read` from the terminal below scroll mode is a fatal
+  /// error — the deliberate halt of iftex.sty:51 (`\Require<engine>`) and expl3's
+  /// `\__msg_fatal_exit:` (`\batchmode\read -1 to …`). Both were no-ops, so
+  /// XeTeX-only packages ran their bodies on undefined XeTeX primitives until a
+  /// 3.3 GB log-buffer allocation failed (23 docs in sweep 57: bidi, xepersian,
+  /// polyglossia-xetex, ucharclasses/latexbangla). KPE #213, DIVERGENCES #220.
+  #[test]
+  fn batchmode_terminal_read_halts_the_job() {
+    let (stderr, _) = convert(
+      "\\documentclass{article}\n\\begin{document}\nBefore.\n\\batchmode\\read-1 to\\x\nAfter.\n\\end{document}\n",
+      true,
+    );
+    assert!(
+      stderr.contains("Fatal:") && stderr.contains("cannot \\read from terminal"),
+      "{stderr}"
+    );
+    if kpsewhich_has("iftex.sty") {
+      let (stderr, _) = convert(
+        "\\documentclass{article}\n\\usepackage{iftex}\n\\RequireXeTeX\n\\begin{document}\nx\n\\end{document}\n",
+        true,
+      );
+      assert!(
+        stderr.contains("Fatal:") && stderr.contains("XeTeX is required"),
+        "{stderr}"
+      );
+      // The engine we DO present passes its own guard.
+      let (stderr, xml) = convert(
+        "\\documentclass{article}\n\\usepackage{iftex}\n\\RequirePDFTeX\\RequireeTeX\n\\begin{document}\nAfter.\n\\end{document}\n",
+        true,
+      );
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        !stderr.contains("Fatal:") && xml.contains("After."),
+        "{stderr}"
+      );
+    }
+    // Scroll/errorstop mode (the default; no terminal here): a closed-stream
+    // read stays a no-op, as in Perl.
+    let (stderr, xml) = convert(
+      "\\documentclass{article}\n\\begin{document}\n\\read16 to\\x After.\n\\end{document}\n",
+      true,
+    );
+    assert!(
+      !stderr.contains("Fatal:") && xml.contains("After."),
+      "{stderr}"
+    );
+  }
+
+  /// The K1-step-3 stub audit (2026-09-06, 8 packages) found two silent drops:
+  /// datetime's `\newdate`/`\displaydate` no-ops (datetime.sty:149-172) and
+  /// mdframed's `\mdfsubtitle` no-op (mdframed.sty:1312-1347). Both now carry
+  /// their text.
+  #[test]
+  fn datetime_named_dates_and_mdframed_subtitles_are_kept() {
+    if kpsewhich_has("datetime.sty") && kpsewhich_has("mdframed.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{datetime}\n\\usepackage{mdframed}\n\\begin{document}\n\\newdate{lx}{5}{9}{2026}Date: \\displaydate{lx}.\n\\begin{mdframed}\nBody.\n\\mdfsubtitle{Sub Title}\nMore.\n\\end{mdframed}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("September") && xml.contains("2026"), "{xml}");
+      assert!(
+        xml.contains("Sub Title") && xml.contains("Body.") && xml.contains("More."),
+        "{xml}"
+      );
+    }
+  }
+
   /// biblatex.sty:10757-10769 `\refsection` takes an OPTIONAL resource list only;
   /// the binding's `[]{}` signature swallowed the `\begin` of the environment that
   /// followed `\begin{refsection}[…]`, so `\end{otherlanguage}` closed the

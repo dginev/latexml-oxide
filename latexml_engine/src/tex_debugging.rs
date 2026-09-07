@@ -54,11 +54,25 @@ LoadDefinitions!({
   // \pausing          pi if positive, the program halts after every line is read from the input
   // file and waits for a response from the user.
 
-  // These are no-ops; Basically, LaTeXML runs in scrollmode
-  DefPrimitive!(T_CS!("\\errorstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\scrollmode"), None, None);
-  DefPrimitive!(T_CS!("\\nonstopmode"), None, None);
-  DefPrimitive!(T_CS!("\\batchmode"), None, None);
+  // tex.web §71 `interaction` (batch=0, nonstop=1, scroll=2, errorstop=3) is a
+  // global, not an eqtb entry (§1265 `new_interaction`). LaTeXML has no
+  // terminal, so the modes only matter where tex.web consults them: §484 makes a
+  // `\read` from the terminal FATAL below scroll mode — the halt idiom of
+  // iftex.sty:51 `\IFTEX@Require` and expl3's `\__msg_fatal_exit:`
+  // (`\batchmode\read -1 to …`). Absent = above nonstop (tex.web §1758 starts in errorstop; a terminal-less
+  // run can only ever prompt into EOF, so scroll/errorstop both stay no-ops). KNOWN_PERL_ERRORS #213, DIVERGENCES #220.
+  DefPrimitive!(T_CS!("\\errorstopmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(3), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\scrollmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(2), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\nonstopmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(1), Some(Scope::Global));
+  });
+  DefPrimitive!(T_CS!("\\batchmode"), None, {
+    AssignValue!("INTERACTION_MODE", Number::new(0), Some(Scope::Global));
+  });
   DefRegister!("\\pausing", Number!(0));
 
   //======================================================================

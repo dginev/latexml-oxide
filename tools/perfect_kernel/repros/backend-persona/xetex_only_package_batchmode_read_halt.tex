@@ -1,0 +1,17 @@
+% witness: texnegar/texnegar-xetex-bidi-leaders-hrule (+22 more bidi/xepersian/polyglossia docs)
+% oracle: xetex loads bidi fine; lualatex fatals cleanly (bidi:cannot-use-engine)
+% engines: preload [rawstyles,rawclasses]latexml.sty (presents pdfTeX; the sweep adds `luatex` for lualatex-oracle docs — never XeTeX, so bidi halts either way)
+% expect:  ONE `Fatal:…cannot \read from terminal` within seconds (the lualatex oracle also exits fatally: "bidi: cannot-use-engine"); never the 3.3 GB alloc_failed runaway
+% status:  GREEN (batch 56ak, 2026-09-06: tex.web §484 — `\batchmode\read -1` halts the job with one Fatal in seconds; guard batchmode_terminal_read_halts_the_job)
+% mechanism: under the luatex profile bidi.sty:60 \sys_if_engine_xetex:F fires
+%   \msg_fatal:nn{bidi}{cannot-use-engine}; expl3 \__msg_fatal_exit: (\batchmode
+%   \read-1) does NOT abort input in oxide, so bidi.sty runs on to line 354's
+%   \loop, where the UNDEFINED \XeTeXcharclass fails to consume its two count
+%   args, degrading "\bidi@digits \bidi@digits@charclass" into a spurious
+%   "\bidi@digits=0" assignment -> \loop never terminates -> the in-memory
+%   log String (align 1) grows without bound until the 3.28 GB alloc fails.
+\documentclass{article}
+\usepackage{bidi}
+\begin{document}
+x
+\end{document}

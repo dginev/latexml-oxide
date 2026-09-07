@@ -7229,3 +7229,27 @@ gone); pst-node `Xnodesep` users.
 **Guards**: `perfect_kernel_batch56::xkeyval_empty_family_is_searched_by_psset`,
 `keyval::tests::keyval_qname_normalizes_empty_prefix`,
 `keyvals::tests::keyvals_new_keeps_the_empty_family`.
+
+### 220. A terminal `\read` below scroll mode halts the job (tex.web §484)
+
+**Perl behavior**: `\batchmode`/`\nonstopmode`/`\scrollmode`/`\errorstopmode`
+are no-ops and a `\read` from an unopened stream does nothing.
+**Rust behavior**: the modes set a global interaction level (tex.web §71,
+§1265); a `\read` from a stream that is not open is a Fatal when the level is
+batch or nonstop, and stays a no-op in scroll/errorstop mode (no terminal).
+iftex's `\Require<engine>` and `ifxetex` are the real definitions
+(iftex.sty:42-52, 78-91; ifxetex.sty:4-5 requires iftex).
+**Why**: `\batchmode\read -1 to …` is THE halt idiom of iftex and expl3's
+`\msg_fatal`; without it a wrong-engine package keeps loading and loops on
+undefined engine primitives (bidi.sty:354 on `\XeTeXcharclass`) until memory
+runs out. KNOWN_PERL_ERRORS #213. Does not define any XeTeX primitive: those
+names are engine-detection probes (the XeTeX analogue of the parked
+`\directlua` family). Collateral by design: a LuaTeX-only package's
+`\RequireLuaTeX` (cartonaugh, mandi, luaprogtable, luamathalign, junicodevf)
+halts under the pdfTeX profile exactly as pdflatex would; lualatex-oracle
+documents are converted under the `luatex` profile, where it passes
+(cartonaugh-example: 0 errors).
+**Witnesses**: the 23-doc `alloc_failed 3288334336` cluster of sweep 57
+(handout, latexbangla, lshort-persian, texnegar-xetex-bidi-leaders-hrule…);
+`repros/backend-persona/xetex_only_package_batchmode_read_halt.tex`.
+**Guards**: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.

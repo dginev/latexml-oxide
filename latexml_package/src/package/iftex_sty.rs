@@ -48,14 +48,28 @@ LoadDefinitions!({
   DefConditional!("\\ifhint");
   DefConditional!("\\ifHINT");
 
-  // \Require* macros — all no-ops
-  for cs in [
-    "\\RequireeTeX", "\\RequirePDFTeX", "\\RequireXeTeX",
-    "\\RequireLuaTeX", "\\RequireLuaHBTeX", "\\RequirepTeX",
-    "\\RequireupTeX", "\\RequirepTeXng", "\\RequireVTeX",
-    "\\RequireAlephTeX", "\\RequireTUTeX", "\\RequireTexpadTeX",
-    "\\RequireHINT",
-  ] {
-    DefMacro!(T_CS!(cs), None, None);
-  }
+  // iftex.sty:42-52 + :78-91 verbatim: `\Require<engine>` tests the engine
+  // conditional and otherwise writes the banner and HALTS via the
+  // `\batchmode\read -1` terminal read (tex.web §484 → Fatal here). Formerly
+  // 13 no-ops, which let XeTeX-only packages (bidi, ucharclasses) run their
+  // bodies on undefined XeTeX primitives — the sweep-57 alloc_failed cluster.
+  RawTeX!(
+    r"\def\IFTEX@Require#1#2#3{#1\else\newlinechar 64\relax\errorcontextlines -1\relax
+  \immediate\write20{@********************************************@* #2 is required to compile this document.@* Sorry!@********************************************}%
+  \batchmode\read -1 to \@tempa #3}
+\protected\def\RequireeTeX{\IFTEX@Require\ifetex{eTeX}\fi}
+\protected\def\RequirePDFTeX{\IFTEX@Require\ifpdftex{pdfTeX}\fi}
+\protected\def\RequireXeTeX{\IFTEX@Require\ifxetex{XeTeX}\fi}
+\protected\def\RequireLuaTeX{\IFTEX@Require\ifluatex{LuaTeX}\fi}
+\protected\def\RequireLuaHBTeX{\IFTEX@Require\ifluahbtex{LuaHBTeX}\fi}
+\protected\def\RequireLuaMetaTeX{\IFTEX@Require\ifluahbtex{LuaMetaTeX}\fi}
+\protected\def\RequirepTeX{\IFTEX@Require\ifptex{pTeX}\fi}
+\protected\def\RequireupTeX{\IFTEX@Require\ifuptex{upTeX}\fi}
+\protected\def\RequirepTeXng{\IFTEX@Require\ifptexng{pTeX-ng}\fi}
+\protected\def\RequireVTeX{\IFTEX@Require\ifvtex{VTeX}\fi}
+\protected\def\RequireAlephTeX{\IFTEX@Require\ifalephtex{AlephTeX}\fi}
+\protected\def\RequireTUTeX{\IFTEX@Require\iftutex{TUTeX}\fi}
+\protected\def\RequireTexpadTeX{\IFTEX@Require\iftexpadtex{TexpadTeX}\fi}
+\protected\def\RequireHINT{\IFTEX@Require\ifhint{HINT}\fi}"
+  );
 });

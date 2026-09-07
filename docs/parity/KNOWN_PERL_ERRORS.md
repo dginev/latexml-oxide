@@ -6103,3 +6103,25 @@ the `@@` names to pstricks' delimited helpers `\psset@@dash`/`\psset@@ArrowInsid
 the collision that motivated #2777) and `KeyVals::new` keeps the empty family;
 only an absent keyset list falls back to `_anonymous_`. Guard:
 `perfect_kernel_batch56::xkeyval_empty_family_is_searched_by_psset`.
+
+## 213. `\batchmode` and a terminal `\read` are no-ops, so wrong-engine halts never halt (Rust fixes)
+
+tex.web §484: a `\read` whose stream is not open reads from the terminal, and
+below scroll mode that is `fatal_error("*** (cannot \read from terminal in
+nonstop modes)")`. iftex.sty:42-52 (`\IFTEX@Require`, behind every
+`\Require<engine>`) and expl3-code.tex:10951-10954 (`\__msg_fatal_exit:`,
+behind `\msg_fatal:nn`) rely on exactly that: `\batchmode\read -1 to \tmp`
+stops the job the moment a package finds itself under the wrong engine. Perl
+LaTeXML defines the four interaction modes as no-ops (TeX.pool `\batchmode`)
+and a `\read` on an unopened stream does nothing, so bidi.sty:60
+(`\sys_if_engine_xetex:F{\msg_fatal:nn{bidi}{cannot-use-engine}}`) and
+ucharclasses.sty:987 (`\RequireXeTeX`) report their fatal message and then
+RUN their bodies on the undefined `\XeTeXcharclass`; bidi.sty:354's `\loop`
+never terminates ("Missing number, treated as zero" every iteration). Minimal
+trigger: `\usepackage{bidi}` under pdflatex/lualatex, or bare
+`\batchmode\read-1 to\x`. Rust (batch 56ak): the interaction modes set a
+global `INTERACTION_MODE`, a closed-stream `\read` below scroll mode is a
+Fatal, iftex's `\Require*` bodies are the real ones (the binding had 13
+no-ops). 23 sweep-57 documents traded a 3,288,334,336-byte `alloc_failed`
+after ~45 s for one Fatal in seconds, matching their lualatex oracle's exit.
+Guard: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.

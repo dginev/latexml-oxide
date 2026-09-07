@@ -139,6 +139,22 @@ LoadDefinitions!({
         }
       }
       DefMacro!(token, None, Tokens::new(tokens), nopack_parameters => true);
+    } else {
+      // tex.web §484: a stream that is not open reads from the terminal, and
+      // "if interaction > nonstop_mode" TeX prompts — otherwise
+      // `fatal_error("*** (cannot \read from terminal in nonstop modes)")`.
+      // That is the deliberate halt of iftex.sty:51 (`\RequireXeTeX` & co.)
+      // and expl3's `\__msg_fatal_exit:` (`\batchmode\read -1 to …`): a
+      // wrong-engine package stops loading HERE instead of running its body on
+      // undefined engine primitives (the 23-doc `alloc_failed` cluster of sweep
+      // 57: bidi/ucharclasses looping on `\XeTeXcharclass`). In scroll/
+      // errorstop mode (no terminal here) the read stays a no-op, as in Perl.
+      let interaction = lookup_value("INTERACTION_MODE")
+        .and_then(|v| match v { Stored::Number(n) => Some(n.0), _ => None })
+        .unwrap_or(2);
+      if interaction <= 1 {
+        Fatal!(Mouth, EoF, s!("*** (cannot \\read from terminal in nonstop modes) — \\read{port} to {token} under \\batchmode/\\nonstopmode (tex.web §484)"));
+      }
     }
   });
   // Note that TeX doesn't actually close the mouth;
