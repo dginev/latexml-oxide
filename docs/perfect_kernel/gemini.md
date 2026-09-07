@@ -182,5 +182,43 @@ small `\documentclass{modernposter}` doc (title + one column + one box) → 0 er
 AND the title in `<title>` and the box heading present; control: the root-causer's
 `r9_control.tex` stays green. Reconvert demo.tex (0 expected).
 
+### N7 — tikzpingus: bisect the shading regeneration failure (root-cause + fix)
+
+tikzpingus/tikzpingus-doc (oracle lualatex, renders) dies with `\lxSVG@sh@defs`/
+`\lxSVG@pos`/`\lxSVG@sh` undefined → `Timeout:PushbackLimit`. The trio is what
+`\@pgfshading<name>!` defines when invoked (Perl pgfsys-latexml.def.ltxml:672-724,
+Rust `pgfsys_latexml_def.rs:1616-1760`); it is undefined iff a use-time regeneration
+(`\pgfuseshading` → `\pgfshadepath`, pgfcoreshade.code.tex:769-810) failed to reinstall
+`\@pgfshading<xname>!`, so `\pgfsys@shadinginsidepgfpicture{\relax}` runs. Fingerprint:
+three "Illegal unit of measure (pt inserted) at Anonymous String" right before. A
+root-causer's 12 isolation probes stayed clean (`~/data/pk_agents/w22/pgf-pair/NOTES.md`,
+`probe_*.tex`); the trigger needs the full manual's showcase+tcolorbox+tikzducks
+context. Task: bisect tikzpingus-doc.tex (delete halves of the body until the first
+error survives in ≤ 40 lines), then decide between the two candidates — (1) the global
+`\@pgfshading<xname>!` lost across `\pgfmath@smuggleone\csname\pgf@shadingxname\endcsname`
+(:794-802) on our opaque `DefPrimitiveI`; (2) the malformed-spec dimension math in
+`\lxSVG@sh@create`/`@intervals`/`@stop` derailing the stream before `\lxSVG@sh@defstripes`
+installs the shading — with file:line evidence, a red repro, the faithful fix (binding
+or, if (1), a note for the orchestrator: core edits are theirs), and a guard asserting
+0 errors + an `<svg:linearGradient>`/`radialGradient` with ≥ 2 `<svg:stop>`.
+
+### N8 — pgfplots `scatter` markers leak one boxing `{` frame each (token trace)
+
+ualberta/ualberta (oracle lualatex exit 1) — `\endgroup Attempt to close non-boxing
+group` then a PushbackLimit runaway. Inline repro (no data file, ≥ 32 errors):
+`~/data/pk_agents/w22/color-group/repro_b.tex` (`\addplot+[scatter,mark=*] coordinates
+{(1,1)(2,4)(3,9)}`); non-scatter plots are clean. `LXML_TRACE_FRAMES=1` shows one boxing
+`{` frame per marker pushed in restricted_horizontal and never popped; the marker body is
+`\pgfplots@scatter@plot@mark`, an xdef'd `\noexpand\begingroup … \noexpand\endgroup`
+deferred by `\aftergroup` (pgfplots.markers.code.tex:178-214). Task: a token-level trace
+of ONE marker (which `}` is lost — the marker `\hbox`'s closer, or an `\aftergroup` fired
+into the wrong frame; tex.web §1063-1068 for the box closer, §280 for `\aftergroup`), the
+mechanism named at the general level (this is an engine `\aftergroup`-vs-box-reader
+question — do NOT patch pgfplots), a ≤ 25-line red repro without pgfplots if possible, and
+a fix PLAN for the orchestrator (core edits are theirs) with the guard
+`pgfplots_scatter_marker_group_balance` (0 errors + one `<svg:g>` per marker). Note also
+that the runaway after the first error is a robustness gap (error recovery re-unreads an
+unclosable `\endgroup`) worth a separate cap — name where.
+
 ## Status (Gemini → orchestrator; append-only, newest last; round 8 only)
 

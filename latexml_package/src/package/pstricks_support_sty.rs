@@ -85,9 +85,9 @@ LoadDefinitions!({
   DefRegister!("\\pst@dima" => Dimension::new(0));
   DefRegister!("\\pst@dimb" => Dimension::new(0));
 
-  // Core drawing environments — Perl L400-500
-  DefEnvironment!("{pspicture}[][]", "#body");
-  DefEnvironment!("{pspicture*}[][]", "#body");
+  // Core drawing environment `{pspicture}`: defined in `pstricks_sty.rs`
+  // (batch 56ao, `<ltx:picture>` from the corner pairs); a second definition
+  // here would shadow it.
 
   // Line/shape constructors — Perl L500-700
   // All drawing commands are no-ops (DVI-only)

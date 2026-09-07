@@ -5,6 +5,99 @@
 //! Perl: pstricks.sty.ltxml (44L) + pstricks_support.sty.ltxml (1057L)
 use crate::prelude::*;
 
+/// Perl `Dimension::pxValue`: TeX points → CSS px at the `DPI` value (100 by
+/// default), rounded to 2 decimals (mirrors `latex_constructs::px_value`).
+fn ps_px(pt: f64) -> f64 {
+  let dpi = lookup_value("DPI")
+    .and_then(|v| {
+      if let Stored::Number(n) = v {
+        Some(n.0 as f64)
+      } else {
+        None
+      }
+    })
+    .unwrap_or(100.0);
+  (pt * dpi / 72.27 * 100.0).round() / 100.0
+}
+
+fn ps_fmt_px(v: f64) -> String {
+  if v == v.round() && v.abs() < 1e10 {
+    format!("{}", v as i64)
+  } else {
+    format!("{v}")
+  }
+}
+
+fn ps_fmt_pt(v: f64) -> String {
+  if v == v.round() {
+    format!("{v:.1}pt")
+  } else {
+    format!("{v}pt")
+  }
+}
+
+fn ps_units() -> Result<(f64, f64)> {
+  let unit = |name: &str| -> Result<f64> {
+    Ok(match lookup_register(name, Vec::new())? {
+      Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+      _ => 28.45274, // 1cm, pstricks_support:417
+    })
+  };
+  Ok((unit("\\psxunit")?, unit("\\psyunit")?))
+}
+
+fn ps_pair(arg: &Option<Digested>) -> Option<(f64, f64)> {
+  match arg.as_ref()?.data() {
+    DigestedData::RegisterValue(RegisterValue::Pair(p)) => Some((p.x.0, p.y.0)),
+    _ => None,
+  }
+}
+
+/// `{pspicture}(c0)(c1)` — Perl pstricks_support.sty.ltxml:527-536: with one
+/// pair, it is the far corner and the origin is (0,0); width/height are the
+/// corner differences in `\psxunit`/`\psyunit`; the body is translated by the
+/// negated origin (the same attributes the LaTeX `{picture}` binding emits).
+fn pspicture_properties(
+  first: &Option<Digested>,
+  second: &Option<Digested>,
+) -> Result<SymHashMap<Stored>> {
+  let (ux, uy) = ps_units()?;
+  let a = ps_pair(first).unwrap_or((0.0, 0.0));
+  let (c0, c1) = match ps_pair(second) {
+    Some(b) => (a, b),
+    None => ((0.0, 0.0), a),
+  };
+  let (w, h) = ((c1.0 - c0.0) * ux, (c1.1 - c0.1) * uy);
+  let (ox, oy) = (c0.0 * ux, c0.1 * uy);
+  let mut map = stored_map!(
+    "width"      => Stored::String(pin(ps_fmt_pt(w))),
+    "height"     => Stored::String(pin(ps_fmt_pt(h))),
+    "unitlength" => Stored::String(pin(ps_fmt_pt(ux)))
+  );
+  if ox != 0.0 || oy != 0.0 {
+    map.insert("origin-x", Stored::String(pin(ps_fmt_pt(ox))));
+    map.insert("origin-y", Stored::String(pin(ps_fmt_pt(oy))));
+    map.insert(
+      "transform",
+      Stored::String(pin(format!(
+        "translate({},{})",
+        ps_fmt_px(ps_px(-ox)),
+        ps_fmt_px(ps_px(-oy))
+      ))),
+    );
+  }
+  Ok(map)
+}
+
+/// `\lx@ps@put(x,y){body}` — the LaTeX `\put` transform in pstricks units.
+fn ps_put_properties(coords: &Option<Digested>) -> Result<SymHashMap<Stored>> {
+  let (ux, uy) = ps_units()?;
+  let (x, y) = ps_pair(coords).unwrap_or((0.0, 0.0));
+  Ok(stored_map!(
+    "transform" => Stored::String(pin(format!("translate({},{})", ps_fmt_px(ps_px(x * ux)), ps_fmt_px(ps_px(y * uy)))))
+  ))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("xcolor");
@@ -158,18 +251,11 @@ LoadDefinitions!({
   // inside `\mbox{\scalebox{\begin{pspicture}…}}`).
   def_macro_noop("\\qdisk Pair {}")?;
 
-  // Text placement — drop both coords AND the text body. Perl's
-  // `DefPSConstructor` would wrap the labelled text inside a
-  // `<ltx:picture>`, so the picture auto-closes cleanly when block
-  // content (e.g. `\begin{minipage}` inside a figure) follows. Rust's
-  // pstricks port doesn't yet generate `<ltx:picture>`; emitting the
-  // text into the surrounding paragraph traps later block content
-  // inside an `<ltx:p>` (witness: hep-ph0102192 minipage-in-figure
-  // schema errors). Dropping the text body is a fidelity regression —
-  // visible labels like "cocktail"/"thermal" placed via `\rput` are
-  // lost — but it eliminates the cascading schema errors. TODO: port
-  // `DefPSConstructor` framework so pstricks output lives in
-  // `<ltx:picture>` and labels survive.
+  // Text placement — since batch 56ao the body SURVIVES inside an
+  // `<ltx:g transform>` (`\lx@ps@put`, Perl :879-888), and `{pspicture}` is
+  // a real `<ltx:picture>`, so a placed label no longer lands in the
+  // surrounding paragraph (the hep-ph/0102192 minipage-in-figure cascade
+  // that once forced the body to be dropped; re-verified 0 errors).
   // Runaway-safe placement gobbler shared by \rput/\cput. Consumes (and
   // drops) optional [refpoint], optional {angle}, optional (coords), and the
   // mandatory {body}. The PREVIOUS def used a *delimited* `(#1)` parameter
@@ -183,14 +269,15 @@ LoadDefinitions!({
   // `OptionalBracketed`+`ZeroPSCoord` (coords optional); we PEEK for `(`
   // instead of requiring it. (Body still dropped — see the <ltx:p>-cascade
   // note above; faithful `<ltx:g>`-with-body is the separate TODO.)
-  RawTeX!("\\def\\lx@put@cb(#1)#2{}");      // (coords){body} -> drop
-  RawTeX!("\\def\\lx@put@bb#1{}");          // {body} -> drop (no coords)
-  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb\\lx@put@bb}"); // {angle}; then (coords)? body
+  RawTeX!("\\def\\lx@put@cb(#1)#2{\\lx@ps@put(#1){#2}}");      // (coords){body} -> placed body
+  // `{group}` with no `(` after it: the group WAS the body (Perl's ZeroPSCoord
+  // leniency, origin (0,0)); with a `(` after it, it was the rotation angle.
+  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb{\\lx@ps@put(0,0){#1}}}");
   RawTeX!("\\def\\lx@put@s{\\@ifnextchar(\\lx@put@cb\\lx@put@b}");    // ( -> coords; else {angle}|{body}
   RawTeX!("\\def\\lx@put@opt[#1]{\\lx@put@s}");                       // [refpoint] -> continue
   RawTeX!("\\def\\lx@put@start{\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
   RawTeX!("\\def\\rput{\\@ifstar\\lx@put@start\\lx@put@start}");
-  RawTeX!("\\def\\lx@uput@parens#1(#2)#3{}"); // {dist}(coord){text} → drop
+  RawTeX!("\\def\\lx@uput@parens#1(#2)#3{\\lx@ps@put(#2){#3}}"); // {dist}(coord){text} → placed text
   RawTeX!("\\def\\lx@uput@bracket[#1]{\\lx@uput@parens}");
   RawTeX!("\\def\\uput{\\@ifstar\\lx@uput@i\\lx@uput@i}");
   RawTeX!("\\def\\lx@uput@i{\\@ifnextchar[\\lx@uput@bracket{\\lx@uput@parens}}");
@@ -204,9 +291,41 @@ LoadDefinitions!({
   DefMacro!("\\psovalbox OptionalMatch:* []{}", "#2");
   DefMacro!("\\psdblframebox OptionalMatch:* []{}", "#2");
 
-  // Environment
-  DefEnvironment!("{pspicture} OptionalMatch:* []{}", "#body");
-  DefEnvironment!("{pspicture*} OptionalMatch:* []{}", "#body");
+  // Environment — Perl pstricks_support.sty.ltxml:520-560: `\begin{pspicture}
+  // *[baseline](x0,y0)(x1,y1)` is an `<ltx:picture>` sized by the two corners
+  // in `\psxunit`/`\psyunit` (the FIRST corner is optional: a lone pair is
+  // the far corner, origin (0,0)), the body inside a `<ltx:g>` translated by
+  // the negated origin, `\par` let to `\relax`. The former `[]{}` signature
+  // swallowed the `(` of the first pair and leaked `x0,y0)(x1,y1)` as text in
+  // EVERY pstricks picture (batch 56ao; the LaTeX `{picture}` binding in
+  // latex_constructs/sect13.rs is the model).
+  DefEnvironment!("{pspicture} OptionalMatch:* [] Pair OptionalPair",
+    "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
+      fill='none' stroke='none' unitlength='#unitlength'>\
+      ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
+    </ltx:picture>",
+    mode => "inline_internal_vertical",
+    before_digest => { Let!("\\par", "\\relax"); },
+    properties => sub[args] { pspicture_properties(&args[2], &args[3]) }
+  );
+  DefEnvironment!("{pspicture*} OptionalMatch:* [] Pair OptionalPair",
+    "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
+      clip='true' fill='none' stroke='none' unitlength='#unitlength'>\
+      ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
+    </ltx:picture>",
+    mode => "inline_internal_vertical",
+    before_digest => { Let!("\\par", "\\relax"); },
+    properties => sub[args] { pspicture_properties(&args[2], &args[3]) }
+  );
+  // `\rput`-family bodies (Perl :879-888 `\rput@start` → `<ltx:g transform>`
+  // … `\put@end`): the same shape as the LaTeX `\put` constructor, in
+  // pstricks units. Rotation/refpoint/labelsep are dropped (presentation).
+  DefConstructor!("\\lx@ps@put Pair {}",
+    "<ltx:g transform='#transform'>#2</ltx:g>",
+    alias => "\\rput",
+    mode  => "restricted_horizontal",
+    properties => sub[args] { ps_put_properties(&args[0]) }
+  );
 
   // Grid
   def_macro_noop("\\psgrid OptionalMatch:* []{}")?;

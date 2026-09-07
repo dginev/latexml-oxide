@@ -16992,6 +16992,67 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// `{pspicture}` is an `<ltx:picture>` sized by its corner pairs (Perl
+  /// pstricks_support.sty.ltxml:520-536; a lone pair is the far corner) and
+  /// `\rput`/`\uput`/`\cput` keep their bodies inside `<ltx:g transform>`
+  /// (:879-888). The former `[]{}` signature leaked `x0,y0)(x1,y1)` as text in
+  /// every pstricks picture and the placement gobblers dropped every label
+  /// (batch 56ao).
+  #[test]
+  fn pspicture_is_a_picture_and_rput_keeps_its_body() {
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\begin{document}\nA\\begin{pspicture}(4,3)\\rput(1,1){R1}\\end{pspicture}B\n\\begin{pspicture}(-1,-1)(4,3)\\rput[l]{90}(2,2){R2}\\uput[r](1,1){R3}\\end{pspicture}C\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<picture").count(), 2, "{xml}");
+    assert!(
+      xml.contains("width=\"113.8pt\"") && xml.contains("height=\"85.35pt\""),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("origin-x=\"-28.45pt\"") && xml.contains("width=\"142.25pt\""),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<g transform=\"translate(78.73,78.73)\">"),
+      "{xml}"
+    );
+    for label in ["R1", "R2", "R3"] {
+      assert!(
+        xml.contains(&format!("<text>{label}</text>")),
+        "{label} lost: {xml}"
+      );
+    }
+    for leak in ["4,3)", "-1,-1)", "(2,2)", "(1,1)"] {
+      assert!(!xml.contains(leak), "leaked {leak}: {xml}");
+    }
+    assert!(
+      xml.contains("A<") && xml.contains(">B") && xml.contains(">C"),
+      "{xml}"
+    );
+  }
+
+  /// pst-plot's refusing stub left `\psplot`/`\psaxes`… undefined (plot
+  /// expressions and coordinates leaked as text) and pst-all's stub loaded two
+  /// of its twelve packages (`\multido` undefined). K1 step 3 pass two, batch
+  /// 56an: both bindings now consume/provide what pst-plot.tex:107-1099 and
+  /// pst-all.sty:17-32 define.
+  #[test]
+  fn pst_plot_and_pst_all_consume_their_arguments() {
+    if kpsewhich_has("pst-all.sty") && kpsewhich_has("pst-plot.tex") && kpsewhich_has("multido.sty")
+    {
+      let tex = "\\documentclass{article}\n\\usepackage{pst-all}\n\\begin{document}\nBefore.\n\\begin{pspicture}(4,3)\\psaxes{->}(0,0)(4,3)\\psplot[linecolor=red]{0}{4}{x 2 div}\\parametricplot{0}{360}{t cos t sin}\\multido{\\i=1+1}{2}{\\psline(\\i,0)(\\i,1)}\\rput(1,1){R}\\end{pspicture}\nAfter.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        xml.contains("Before.") && xml.contains("After.") && xml.contains(">R<"),
+        "{xml}"
+      );
+      for leak in ["x 2 div", "t cos", "(0,0)", "(4,3)", "->"] {
+        assert!(!xml.contains(leak), "leaked {leak}: {xml}");
+      }
+    }
+  }
+
   /// xcolor.sty:1373-1390 `\XC@getcolor` branches on the argument's first token:
   /// `[model]{spec}` is parsed directly; only a bare name is a declared-colour
   /// lookup. Our reimplementation handed `[cmyk]{…}` to the name lookup
