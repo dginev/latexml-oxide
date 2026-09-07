@@ -8,6 +8,11 @@
 mod cluster;
 mod common;
 
+#[allow(unused_imports)]
+pub(crate) use perfect_kernel_batch46::{
+  convert, convert_files, convert_files_with, convert_with, convert_with_budget, error_count,
+};
+
 mod href_edef_loop {
   //! `\href` inside `\edef`/`\xdef` must not infinite-loop.
   //!
@@ -273,8 +278,6 @@ mod deferred_load_retry {
   //! Driven through the binary (fresh process) so tcolorbox can raw-load its
   //! library files from the host texmf; no `--includestyles`/preload needed.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{nicematrix}\n\
     \\usepackage[most]{tcolorbox}\n\
@@ -284,34 +287,13 @@ mod deferred_load_retry {
 
   #[test]
   fn deferred_pgfcore_miss_does_not_poison_tcolorbox_skins() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("d.tex"), TEX).expect("write d.tex");
-
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = super::convert(TEX, false);
     // The nicematrix-then-tcolorbox order must be error-clean (was ~49 pgf errors).
     assert!(
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "nicematrix-then-tcolorbox[most] should be error-clean, stderr had errors:\n{stderr}",
     );
     // Sanity: the box content still made it through.
-    let xml = std::fs::read_to_string(workdir.path().join("d.xml")).expect("read d.xml");
     assert!(xml.contains("Hello box"), "tcolorbox body missing:\n{xml}");
   }
 }
@@ -392,7 +374,7 @@ mod expl3_nested_raw_load_catcodes {
   //! AND a paper-local `mymac.sty` on the search path, simultaneously — no single
   //! in-process helper combines all three. Same legitimate subprocess reason as the
   //! `newtcblisting_verbatim` / `deferred_load_retry` tests.
-  use std::{path::Path, process::Command};
+  use std::process::Command;
 
   #[test]
   fn nested_expl3_raw_load_preserves_catcodes() {
@@ -407,32 +389,15 @@ mod expl3_nested_raw_load_catcodes {
       eprintln!("skip nested_expl3_raw_load_preserves_catcodes: derivative.sty not installed");
       return;
     }
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("mymac.sty"),
-      "\\ProvidesExplPackage{mymac}{2025/01/01}{1.0}{repro}\n\
-       \\RequirePackage{derivative}\n\
-       \\seq_new:N \\l_mymac_seq\n",
-    )
-    .expect("write mymac.sty");
-    std::fs::write(
-      workdir.path().join("d.tex"),
+    let (stderr, _) = super::convert_files(
       "\\documentclass{article}\n\\usepackage{mymac}\n\\begin{document}hi\\end{document}\n",
-    )
-    .expect("write d.tex");
-    let output = Command::new(bin)
-      .arg("d.tex")
-      .arg("--dest")
-      .arg("d.xml")
-      .arg("--includestyles")
-      .arg("--path")
-      .arg(workdir.path())
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr);
+      &[(
+        "mymac.sty",
+        "\\ProvidesExplPackage{mymac}{2025/01/01}{1.0}{repro}\n\
+         \\RequirePackage{derivative}\n\
+         \\seq_new:N \\l_mymac_seq\n",
+      )],
+    );
     assert!(
       !stderr.contains("unexpected:_"),
       "nested expl3 raw-load left `_` as SUB (expl3 catcodes lost after the inner load):\n{stderr}",
@@ -524,35 +489,13 @@ mod rawclasses_binding_precedence_and_no_omnibus {
   //! made its binding a raw shim that itself `\input`s the `.cls`) for
   //! precedence, `pkzzz` (no binding anywhere) for the no-OmniBus raw load.
 
-  use std::{path::Path, process::Command};
-
   fn convert(class: &str, cls_body: &str, preload: Option<&str>) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join(format!("{class}.cls")), cls_body).expect("write cls");
+    let cls_name = format!("{class}.cls");
     let tex = format!(
       "\\documentclass{{{class}}}\n\\begin{{document}}\n\
        \\ifdefined\\rawmarker\\rawmarker\\else NOMARKER\\fi\n\\end{{document}}\n"
     );
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let mut cmd = Command::new(bin);
-    cmd.args(["t.tex", "--dest", "t.xml", "--nocomments"]);
-    if let Some(spec) = preload {
-      cmd.arg(format!("--preload={spec}"));
-    }
-    let output = cmd
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{}",
-      output.status.code(),
-      String::from_utf8_lossy(&output.stderr),
-    );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    let (stderr, xml) = super::convert_files_with(&tex, &[(&cls_name, cls_body)], preload);
     (xml, stderr)
   }
 
@@ -606,8 +549,6 @@ mod defplain_skips_blanks_before_brace {
   //! `\lstnewenvironment{x}[1][]` body sits on the NEXT line — the standard
   //! documentation style (~148 TL doc manuals; ltxdockit.sty, cnltx-example.sty).
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{listings}\n\
     \\lstnewenvironment{ltxcode}[1][]\n\
@@ -621,17 +562,7 @@ mod defplain_skips_blanks_before_brace {
 
   #[test]
   fn lstnewenvironment_body_on_next_line_defines_cleanly() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Expected opening '{'"),
       "DefPlain must skip the newline before the body brace:\n{stderr}",
@@ -640,7 +571,6 @@ mod defplain_skips_blanks_before_brace {
       !stderr.contains("Error:") && !stderr.contains("Fatal:"),
       "the definition and its use must digest cleanly:\n{stderr}",
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("<listing"),
       "\\begin{{ltxcode}} should produce an ltx:listing:\n{xml}",
@@ -664,8 +594,6 @@ mod process_key_options_sees_load_options {
   //! (latex.ltx L19398). Without it every ltkeys key-option package silently
   //! drops its load-time options (Perl 0.8.8 shares the miss).
 
-  use std::{path::Path, process::Command};
-
   const STY: &str = "\\NeedsTeXFormat{LaTeX2e}\n\
     \\ProvidesPackage{pkoguard}\n\
     \\RequirePackage{expl3}\n\
@@ -686,25 +614,11 @@ mod process_key_options_sees_load_options {
 
   #[test]
   fn key_option_reaches_process_key_options() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("pkoguard.sty"), STY).expect("write sty");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (stderr, xml) = super::convert_files_with(
+      TEX,
+      &[("pkoguard.sty", STY)],
+      Some("[rawstyles]latexml.sty"),
+    );
     assert!(
       xml.contains("flag=ON"),
       "\\ProcessKeyOptions must see the [flag] load option:\n{xml}\n{stderr}",
@@ -718,8 +632,6 @@ mod currsize_default {
   //! primitives (and Perl's) never establish via `\@setfontsize`. Raw
   //! packages (linguex family) call `{\@currsize …}` to restore text size.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\begin{document}\n\
     x{\\makeatletter\\@currsize\\makeatother restored}\n\
@@ -727,22 +639,11 @@ mod currsize_default {
 
   #[test]
   fn currsize_is_defined_and_usable() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "\\@currsize must be defined (begin-document invariant):\n{stderr}",
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("restored"),
       "content after \\@currsize lost:\n{xml}"
@@ -758,8 +659,6 @@ mod luatex_profile {
   //! untouched (defining \directlua by default flipped 26 tests onto luatex
   //! paths — the regression this guard pins).
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{iftex}\n\
     \\begin{document}\n\
@@ -768,22 +667,7 @@ mod luatex_profile {
     \\end{document}\n";
 
   fn convert(preload: &str) -> String {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .arg(format!("--preload={preload}"))
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    assert!(
-      output.status.success(),
-      "binary exited: {}",
-      String::from_utf8_lossy(&output.stderr)
-    );
-    std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml")
+    super::convert_with(TEX, Some(preload)).1
   }
 
   #[test]
@@ -808,7 +692,7 @@ mod luacode_bridge {
   //! Self-skips without a host `texlua` (CI trimmed-TL trap: a green run on
   //! such a host does not prove the bridge ran).
 
-  use std::{path::Path, process::Command};
+  use std::process::Command;
 
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{luacode}\n\
@@ -831,22 +715,11 @@ mod luacode_bridge {
     {
       return; // no texlua on this host
     }
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "luacode must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("E:7") && xml.contains("Sum: 55") && xml.contains("after"),
       "lua output and following content must both survive:\n{xml}",
@@ -866,7 +739,7 @@ mod lua_state_mirror {
   //! (field 'locale_props')` — chunks die mid-sequence, later chunks see
   //! missing state). Self-skips without a host texlua.
 
-  use std::{path::Path, process::Command};
+  use std::process::Command;
 
   const TEX: &str = "\\documentclass{article}\n\
     \\makeatletter\n\
@@ -886,18 +759,11 @@ mod lua_state_mirror {
     {
       return; // no texlua on this host
     }
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (stderr, xml) = super::convert(TEX, false);
+    assert!(
+      !stderr.contains("Error:"),
+      "directlua must digest cleanly:\n{stderr}"
+    );
     // \count255=7 read back; \dimen0=2pt as 131072 sp (LuaTeX convention:
     // tex.dimen reads in scaled points); the Lua-side write of count 100
     // visible to the following \the.
@@ -920,8 +786,6 @@ mod expanded_protected_brace_hunt {
   //! witnesses sim-os-menus-doc, ipsum-doc, tikz-bagua-en). Same
   //! argument-scanning-fidelity family as OXIDIZED_DESIGN #161.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\protected\\def\\pp{{abc}}\n\
     \\begin{document}\n\
@@ -930,22 +794,11 @@ mod expanded_protected_brace_hunt {
 
   #[test]
   fn brace_hunt_expands_protected_macros() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "protected macro must expand in the brace hunt:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(xml.contains("XabcY"), "expanded body must survive:\n{xml}");
   }
 }
@@ -959,8 +812,6 @@ mod raw_provides_version_survives {
   //! clobber (Package.pm L2393). Witness cluster: all 12 toptesi manuals
   //! abort with "the sty file you are using has a date of <empty>".
 
-  use std::{path::Path, process::Command};
-
   const STY: &str = "\\ProvidesPackage{vguard}[2001/01/01 v9.9 Version guard fixture]\n\
     \\endinput\n";
   const TEX: &str = "\\documentclass{article}\n\
@@ -971,25 +822,11 @@ mod raw_provides_version_survives {
 
   #[test]
   fn provides_package_version_not_clobbered() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("vguard.sty"), STY).expect("write sty");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--preload=[rawstyles]latexml.sty",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (_stderr, xml) = super::convert_files_with(
+      TEX,
+      &[("vguard.sty", STY)],
+      Some("[rawstyles]latexml.sty"),
+    );
     assert!(
       xml.contains("2001/01/01 v9.9 Version guard fixture"),
       "\\ver@vguard.sty must keep the ProvidesPackage string:\n{xml}",
@@ -1010,8 +847,6 @@ mod accent_meaning_robust_shape {
   //! cluster (witnesses cahierprof-doc, tikz-mirror-lens, colorblind_doc,
   //! sunpath.track). The accent must still typeset.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\begin{document}\n\
     M[\\meaning\\u]\n\
@@ -1020,18 +855,7 @@ mod accent_meaning_robust_shape {
 
   #[test]
   fn accent_meaning_is_kernel_robust() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (_stderr, xml) = super::convert(TEX, false);
     // Typeset \meaning output font-decodes `\`/`>` via OT1 (“/-¿ glyphs;
     // wisdom_ot1_angle_brackets_inverted), so assert the discriminating
     // prefix: `macro:` — NOT `\protected macro:` — is what tikzmath's
@@ -1055,8 +879,6 @@ mod openright_kernel_contract {
   //! sweep-12 `\if@openright` cluster. Same kernel-contract precedent as
   //! `\if@mainmatter` (commit dba2a7eab0).
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass[openright]{report}\n\
     \\makeatletter\n\
     \\begin{document}\n\
@@ -1066,22 +888,11 @@ mod openright_kernel_contract {
 
   #[test]
   fn openright_switch_and_options_work() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "openright contract must digest:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("A[OR]") && xml.contains("B[OA]"),
       "option must set the switch and the setter must flip it:\n{xml}",
@@ -1098,8 +909,6 @@ mod unicode_caret_notation {
   //! verifica ×5, tikz-trackschematic ×2, uspace). Unicode-native-engine
   //! precedent: same as providing \Ucharcat.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{newunicodechar}\n\
     \\newunicodechar{\u{00D7}}{x}\n\
@@ -1109,28 +918,11 @@ mod unicode_caret_notation {
 
   #[test]
   fn four_and_six_caret_forms_scan() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--preload=[rawstyles]latexml.sty",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert_with(TEX, Some("[rawstyles]latexml.sty"));
     assert!(
       !stderr.contains("Error:"),
       "newunicodechar must take its Unicode branch:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("C[A]") && xml.contains("U[3x4]") && xml.contains("S[\u{1D49E}]"),
       "caret forms must scan and the active-char mapping must fire:\n{xml}",
@@ -1144,8 +936,6 @@ mod memoir_output_streams {
   //! (dlfltxbmarkup-showkeys routes its whole body that way). Our memoir
   //! binding delegates to REAL TeX write streams so the round-trip works.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{memoir}\n\
     \\begin{document}\n\
     \\newoutputstream{keys}\n\
@@ -1157,18 +947,7 @@ mod memoir_output_streams {
 
   #[test]
   fn stream_write_and_readback() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       xml.contains("K[ROUNDTRIP"),
       "stream content must round-trip through the aux file:\n{xml}\n{stderr}",
@@ -1185,8 +964,6 @@ mod graphicx_internals {
   //! `\Gin@draftfalse` 9 (bohr, pagelayout, …). The binding must carry the
   //! real internal names, faithfully ported from the sources.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{graphicx}\n\
     \\makeatletter\n\
@@ -1198,22 +975,11 @@ mod graphicx_internals {
 
   #[test]
   fn gin_internal_names_defined() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "Gin@ internals must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("ISOK") && xml.contains("CLOK") && xml.contains("DROK"),
       "boolkey must flip the real newifs (empty #1 = true per graphicx.sty L137):\n{xml}",
@@ -1234,7 +1000,7 @@ mod luatex_babel_api {
   //! `attempt to index a nil value (field 'locale_props')` (abntexto,
   //! abntexto-uece, derivative, newpax). Self-skips without texlua.
 
-  use std::{path::Path, process::Command};
+  use std::process::Command;
 
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage[english]{babel}\n\
@@ -1252,24 +1018,7 @@ mod luatex_babel_api {
     {
       return; // no texlua on this host
     }
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--preload=[luatex]latexml.sty",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (stderr, xml) = super::convert_with(TEX, Some("[luatex]latexml.sty"));
     assert!(
       xml.contains("BOK"),
       "Babel.locale_props must exist after babel loads under the luatex profile:\n{xml}\n{stderr}",
@@ -1285,8 +1034,6 @@ mod filelist_letter_catcodes {
   //! idiom got an empty #1 under all-OTHER tokens, and the mis-split
   //! desynced conditional bookkeeping (13-bundle `expected:\fi` cluster).
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\makeatletter\n\
     \\def\\get#1.cls#2\\relax{\\def\\res{#1}}\n\
@@ -1298,18 +1045,7 @@ mod filelist_letter_catcodes {
 
   #[test]
   fn delimited_parse_of_filelist_matches() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (_stderr, xml) = super::convert(TEX, false);
     // #1 = everything before the first ".cls" — must contain the class name,
     // not be empty.
     assert!(
@@ -1327,8 +1063,6 @@ mod raw_classoptionslist_recorded {
   //! `[french]{article}` + babel loads nil.ldf and `\og`/`\fg` are
   //! undefined. Babel isn't needed to guard the record itself.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass[french,11pt]{article}\n\
     \\begin{document}\n\
     raw=[\\makeatletter\\@raw@classoptionslist\\makeatother]\n\
@@ -1336,18 +1070,7 @@ mod raw_classoptionslist_recorded {
 
   #[test]
   fn documentclass_options_recorded_raw() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (_stderr, xml) = super::convert(TEX, false);
     assert!(
       xml.contains("raw=[french,11pt]"),
       "\\@raw@classoptionslist must carry the raw \\documentclass options:\n{xml}",
@@ -1363,8 +1086,6 @@ mod makeindex_allocates_indexfile {
   //! l3kernel's own manuals). The semantic `\index` constructor must remain
   //! in charge — \makeindex must NOT restore the kernel's raw `\index`.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\makeindex\n\
     \\begin{document}\n\
@@ -1377,22 +1098,12 @@ mod makeindex_allocates_indexfile {
 
   #[test]
   fn stream_allocated_semantic_index_intact() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "\\makeindex + raw \\@indexfile write must be error-free:\n{stderr}",
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let xml = xml;
     assert!(
       xml.contains("STREAMDEFINED"),
       "\\@indexfile not allocated:\n{xml}"
@@ -1417,10 +1128,6 @@ mod newtcblisting_verbatim {
   //! `<ltx:verbatim>` (`<ltx:section> isn't allowed in <ltx:verbatim>`) and the
   //! document failed to close. The binding now delegates `\newtcblisting` to
   //! listings' `\lstnewenvironment`, whose verbatim reader terminates correctly.
-  //!
-  //! Binary-driven (fresh process) so tcolorbox can raw-load its library files.
-
-  use std::{path::Path, process::Command};
 
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage[most]{tcolorbox}\n\
@@ -1438,27 +1145,7 @@ mod newtcblisting_verbatim {
 
   #[test]
   fn newtcblisting_body_is_verbatim_and_closes() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-
-    let output = Command::new(bin)
-      .arg("t.tex")
-      .arg("--dest")
-      .arg("t.xml")
-      .arg("--nocomments")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = super::convert(TEX, false);
     // No malformed-nesting / unclosed errors: the box body must not swallow the
     // following section.
     assert!(
@@ -1466,7 +1153,6 @@ mod newtcblisting_verbatim {
       "newtcblisting box should close cleanly, stderr had errors:\n{stderr}",
     );
 
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     // The second section and the text after the box survive OUTSIDE the listing.
     assert!(
       xml.contains("Text after the box"),
@@ -1657,8 +1343,6 @@ mod aligned_overset_includestyles {
   //! pre-empt the host-texmf raw `.sty` (the exact ar5iv path). Without the binding
   //! this run emits ~15 `\lx@begin@alignment`/`unexpected:_` errors.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{amsmath,aligned-overset}\n\
     \\newcommand{\\tor}{\\text{Tor}}\n\
@@ -1671,28 +1355,7 @@ mod aligned_overset_includestyles {
 
   #[test]
   fn aligned_overset_rawload_does_not_break_amsmath_alignment() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
-
-    let output = Command::new(bin)
-      .arg("a.tex")
-      .arg("--dest")
-      .arg("a.xml")
-      .arg("--nocomments")
-      .arg("--includestyles")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
+    let (stderr, xml) = super::convert(TEX, true);
     // The near-no-op binding must pre-empt the raw expl3 `.sty`; the alignment is
     // then error-clean (was ~15 `\lx@begin@alignment`/`unexpected:_` errors).
     assert!(
@@ -1700,7 +1363,6 @@ mod aligned_overset_includestyles {
       "aligned-overset + \\overset-in-align should be error-clean, stderr had errors:\n{stderr}",
     );
     // Sanity: the overset and the post-align subscript both made it into MathML.
-    let xml = std::fs::read_to_string(workdir.path().join("a.xml")).expect("read a.xml");
     assert!(
       xml.contains("OVERACCENT"),
       "\\overset should still emit an OVERACCENT mover:\n{xml}",
@@ -1734,35 +1396,12 @@ mod lstinputlisting_range_crlf {
   //!    pdflatex on the witness renders only the `#` line in comment green
   //!    (9 green vs 69 black glyph groups); both LaTeXML engines painted the whole
   //!    snippet green.
-  //!
-  //! Binary-driven (fresh process) so the listing file is read from disk.
-
-  use std::{path::Path, process::Command};
 
   /// CRLF on purpose — this is half of what is under test.
   const DATA_PY: &str = "# a comment line\r\nvalue = 1\r\nother = 2\r\nlast = 3\r\n";
 
   fn convert(tex: &str, data: &str) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("data.py"), data).expect("write data.py");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
-    assert!(
-      output.status.success(),
-      "binary exited {:?}\nstderr:\n{stderr}",
-      output.status.code(),
-    );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+    let (stderr, xml) = super::convert_files(tex, &[("data.py", data)]);
     (xml, stderr)
   }
 
@@ -2005,8 +1644,6 @@ mod silence_keeps_diagnostics {
   //! diagnostic survives. This test pins that: the run must still report the
   //! `boompkg` error even with silence loaded and `\ErrorsOff` in force.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{silence}\n\
     \\ErrorsOff\n\
@@ -2020,24 +1657,11 @@ mod silence_keeps_diagnostics {
 
   #[test]
   fn silence_errorsoff_does_not_swallow_a_package_error() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("a.tex"), TEX).expect("write a.tex");
-    std::fs::write(workdir.path().join("boompkg.sty"), STY).expect("write boompkg.sty");
-
-    let output = Command::new(bin)
-      .arg("a.tex")
-      .arg("--dest")
-      .arg("a.xml")
-      .arg("--nocomments")
-      .arg("--includestyles")
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let (stderr, _xml) = super::convert_files_with(
+      TEX,
+      &[("boompkg.sty", STY)],
+      Some("[rawstyles]latexml.sty"),
+    );
     assert!(
       stderr.contains("Deliberate boom"),
       "silence + \\ErrorsOff must not suppress the boompkg error:\n{stderr}",
@@ -2553,18 +2177,13 @@ mod stex_raw_ltxml {
   //!      `\RequirePackage{xkeyval}` / `\RequirePackage{currfile}` (→ filehook), so
   //!      `\AtEndOfPackageFile` / `\define@key` were undefined.
 
-  use std::{path::Path, process::Command};
+  use std::process::Command;
 
   use crate::common::strip_ansi;
 
-  fn convert(work: &Path, doc: &str) -> String {
-    std::fs::write(work.join("doc.tex"), doc).expect("write doc.tex");
-    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-      .args(["--includestyles", "--dest", "doc.xml", "doc.tex"])
-      .current_dir(work)
-      .output()
-      .expect("spawn latexml_oxide");
-    strip_ansi(&String::from_utf8_lossy(&out.stderr))
+  fn convert(doc: &str) -> String {
+    let (stderr, _xml) = super::convert(doc, true);
+    strip_ansi(&stderr)
   }
 
   fn error_count(log: &str) -> usize {
@@ -2587,9 +2206,7 @@ mod stex_raw_ltxml {
   /// `xkeyval` + `currfile → filehook` chain so `\AtEndOfPackageFile` is defined.
   #[test]
   fn standalone_under_includestyles_provides_filehook_hooks() {
-    let work = tempfile::tempdir().expect("tempdir");
     let log = convert(
-      work.path(),
       "\\documentclass{article}\n\
        \\usepackage{standalone}\n\
        \\AtEndOfPackageFile{graphicx}{\\typeout{DEFERRED}}\n\
@@ -2615,9 +2232,7 @@ mod stex_raw_ltxml {
       eprintln!("stex.sty / stex.sty.ltxml not in TeX Live — skipping");
       return;
     }
-    let work = tempfile::tempdir().expect("tempdir");
     let log = convert(
-      work.path(),
       "\\documentclass{article}\n\\usepackage{stex}\n\
        \\begin{document}\nHello sTeX.\n\\end{document}\n",
     );
@@ -3080,8 +2695,6 @@ mod xkeyval_internals {
   //! verbatim from xkeyval.tex/xkvutils.tex, with `\XKV@s@tkeys` as a thin
   //! shim onto the Rust `\setkeys` path.
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{article}\n\
     \\usepackage{xkeyval}\n\
     \\makeatletter\n\
@@ -3105,22 +2718,11 @@ mod xkeyval_internals {
   /// `\KV@@sp@def` space-trimming intact.
   #[test]
   fn setkeys_frontend_clone_reaches_rust_path() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "XKV internals must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("got:hello"),
       "front-end clone did not reach the key code (spaces must be trimmed):\n{xml}"
@@ -3162,21 +2764,11 @@ mod xkeyval_internals {
   /// cascading ~1000 csname errors per xskak/chessboard manual).
   #[test]
   fn pointer_system_cmdkey_and_token_defaults() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), PTR_TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(PTR_TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "pointer/cmdkey/default paths must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     for needle in [
       "[A:hello]",
       "[B:hello]",
@@ -3200,8 +2792,6 @@ mod kernel_language_and_part_contracts {
   //! define `\@endpart` (report.cls L318-327), invoked by `\@part`/`\@spart`
   //! and directly by raw classes (toptesi.sty L448).
 
-  use std::{path::Path, process::Command};
-
   const TEX: &str = "\\documentclass{report}\n\
     \\usepackage[italian]{babel}\n\
     \\iflanguage{english}{\\def\\langprobe{EN}}{\\def\\langprobe{IT}}\n\
@@ -3213,22 +2803,11 @@ mod kernel_language_and_part_contracts {
 
   #[test]
   fn babel_language_register_and_endpart() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), TEX).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+    let (stderr, xml) = super::convert(TEX, false);
     assert!(
       !stderr.contains("Error:"),
       "kernel contracts must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("[lang:IT]"),
       "\\iflanguage must take the non-English branch under [italian]:\n{xml}"
@@ -3254,32 +2833,13 @@ mod input_routing_and_bbx {
   //! `\newtoggle`s etc. were undefined corpus-wide (windycity,
   //! biblatex-ext/-fiwi/-sbl).
 
-  use std::{path::Path, process::Command};
-
   #[test]
   fn document_body_sty_input_is_content_catcodes() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("vguardcat.sty"),
-      "\\edef\\guardcat{\\the\\catcode`\\@}\n",
-    )
-    .expect("write vguardcat.sty");
-    std::fs::write(
-      workdir.path().join("t.tex"),
+    let (_stderr, xml) = super::convert_files(
       "\\documentclass{article}\n\\begin{document}\n\
        \\input{vguardcat.sty}\n[cat:\\guardcat]\n\\end{document}\n",
-    )
-    .expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
+      &[("vguardcat.sty", "\\edef\\guardcat{\\the\\catcode`\\@}\n")],
+    );
     assert!(
       xml.contains("[cat:12]"),
       "document-body \\input{{x.sty}} must read at current catcodes (@=12), got:\n{xml}"
@@ -3288,35 +2848,22 @@ mod input_routing_and_bbx {
 
   #[test]
   fn biblatex_style_option_loads_bbx() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("lxguardstyle.bbx"),
-      "\\newtoggle{lxguardtoggle}\\toggletrue{lxguardtoggle}\n\
-       \\DeclareBibliographyOption[boolean]{lxguardopt}[true]{}\n",
-    )
-    .expect("write lxguardstyle.bbx");
-    std::fs::write(
-      workdir.path().join("t.tex"),
+    let (stderr, xml) = super::convert_files(
       "\\documentclass{article}\n\
        \\usepackage[style=lxguardstyle]{biblatex}\n\
        \\begin{document}\n\
        \\iftoggle{lxguardtoggle}{[BBX-LOADED]}{[BBX-FALSE]}\n\
        \\end{document}\n",
-    )
-    .expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+      &[(
+        "lxguardstyle.bbx",
+        "\\newtoggle{lxguardtoggle}\\toggletrue{lxguardtoggle}\n\
+         \\DeclareBibliographyOption[boolean]{lxguardopt}[true]{}\n",
+      )],
+    );
     assert!(
       !stderr.contains("Error:"),
       "style-file load must digest cleanly:\n{stderr}"
     );
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("read t.xml");
     assert!(
       xml.contains("[BBX-LOADED]"),
       ".bbx toggle not allocated — style file not loaded:\n{xml}"
@@ -3334,28 +2881,8 @@ mod expl3_state_and_param_replay {
   //! (3) `\@ifnextchar` re-scans its branches as macro bodies, collapsing
   //! `##`→`#` (latex.ltx L1756-1760; adtreesdoc witness, Perl shares).
 
-  use std::{path::Path, process::Command};
-
   fn convert(tex: &str) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    super::convert(tex, true)
   }
 
   #[test]
@@ -3400,21 +2927,8 @@ mod alignment_ledger_expansion_pushback {
   //! on this exact repro). Root of the l3doc `{function}` stray-`&` family
   //! (17+ bundles: every l3doc manual with a `{syntax}` block).
 
-  use std::{path::Path, process::Command};
-
   fn convert(tex: &str) -> String {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let output = Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
-    stderr
+    super::convert(tex, false).0
   }
 
   #[test]
@@ -3476,39 +2990,17 @@ mod autoload_trigger_identity {
   //! expl3 catcodes never enabled, 89-error cascade (21-doc `unexpected:_`
   //! cluster; updatemarks 101→2).
 
-  use std::{path::Path, process::Command};
-
   #[test]
   fn ifundefined_sees_dump_definition_over_stale_trigger() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("trigid.sty"),
-      "\\@ifundefined{ProvidesExplPackage}{\\RequirePackage{expl3}}\n\
-       \\ProvidesExplPackage{trigid}{2024/02/19}{v0.1}{x}\n\
-       \\tl_new:N \\l__trigid_tmpa_tl\n\\ExplSyntaxOff\n",
-    )
-    .expect("write sty");
-    std::fs::write(
-      workdir.path().join("t.tex"),
+    let (stderr, _xml) = super::convert_files(
       "\\documentclass{article}\n\\usepackage{trigid}\n\\begin{document}\nx\n\\end{document}\n",
-    )
-    .expect("write tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .env("TEXINPUTS", format!("{}:", workdir.path().display()))
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    assert!(output.status.success(), "binary exited: {stderr}");
+      &[(
+        "trigid.sty",
+        "\\@ifundefined{ProvidesExplPackage}{\\RequirePackage{expl3}}\n\
+         \\ProvidesExplPackage{trigid}{2024/02/19}{v0.1}{x}\n\
+         \\tl_new:N \\l__trigid_tmpa_tl\n\\ExplSyntaxOff\n",
+      )],
+    );
     assert!(
       !stderr.contains("Error:"),
       "stale autoload trigger masked the dump's \\ProvidesExplPackage:\n{stderr}"
@@ -4087,16 +3579,22 @@ pub(crate) mod perfect_kernel_batch46 {
     (stderr, xml)
   }
 
-  /// Like `convert_args` with the raw preload, after writing `files`
-  /// (`(name, content)`) into the work directory — for repros that need a
-  /// package, class or data file beside the document.
-  pub(crate) fn convert_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+  pub(crate) fn convert_files_with(
+    tex: &str,
+    files: &[(&str, &str)],
+    preload: Option<&str>,
+  ) -> (String, String) {
     let workdir = tempfile::tempdir().expect("create tempdir");
     for (name, content) in files {
-      std::fs::write(workdir.path().join(name), content).expect("write file");
+      let path = workdir.path().join(name);
+      if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+      }
+      std::fs::write(path, content).expect("write file");
     }
     let tex = tex.to_string();
     let search_path = workdir.path().to_string_lossy().into_owned();
+    let preload = preload.map(|p| vec![p.to_string()]);
     std::thread::Builder::new()
       .stack_size(256 * 1024 * 1024)
       .spawn(move || {
@@ -4104,7 +3602,7 @@ pub(crate) mod perfect_kernel_batch46 {
         let opts = Config {
           format: OutputFormat::XML,
           include_comments: Some(false),
-          preload: Some(vec!["[rawstyles,rawclasses]latexml.sty".to_string()]),
+          preload,
           search_paths: Some(vec![search_path]),
           bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
           extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
@@ -4121,6 +3619,13 @@ pub(crate) mod perfect_kernel_batch46 {
       .expect("spawn test worker")
       .join()
       .expect("test worker panicked")
+  }
+
+  /// Like `convert_args` with the raw preload, after writing `files`
+  /// (`(name, content)`) into the work directory — for repros that need a
+  /// package, class or data file beside the document.
+  pub(crate) fn convert_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+    convert_files_with(tex, files, Some("[rawstyles,rawclasses]latexml.sty"))
   }
 
   pub(crate) fn convert_with_budget(
@@ -4891,35 +4396,13 @@ mod perfect_kernel_batch51 {
   //! minimal reproduction distilled during triage; the doc-comment names the
   //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
   //! was vetted separately.
-  use std::{path::Path, process::Command};
 
   use super::perfect_kernel_batch46::{convert, error_count};
 
   /// Like [`convert`] (raw preload), but first drops extra `(name, content)`
   /// files into the tempdir so the snippet can `\input` them.
   pub(super) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    for (name, content) in files {
-      std::fs::write(workdir.path().join(name), content).expect("write aux file");
-    }
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--timeout=110",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    super::perfect_kernel_batch46::convert_files(tex, files)
   }
 
   /// P15 (file side): eTeX §362 begins the `\everyeof` token list at the end
@@ -5674,30 +5157,7 @@ X\ekvset{foo}{}Y\ekvset{foo}{bar=1, ,}Z
   /// Convert `t.tex` next to a sidecar package file under the perfect-kernel
   /// preload; `--includestyles --path .` makes the sidecar raw-loadable.
   pub(super) fn convert_with_sty(tex: &str, sty_name: &str, sty_body: &str) -> (String, String) {
-    use std::{path::Path, process::Command};
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    std::fs::write(workdir.path().join(sty_name), sty_body).expect("write sidecar sty");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--timeout=110",
-        "--includestyles",
-        "--path",
-        ".",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    super::perfect_kernel_batch46::convert_files(tex, &[(sty_name, sty_body)])
   }
 
   /// latex.ltx `\@pass@ptions` (L18509-18526) is the single writer of
@@ -7597,39 +7057,16 @@ After.
   /// pushback limit (KNOWN_PERL_ERRORS #132).
   #[test]
   fn at_end_of_package_hook_runs_with_at_letter() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("hookcls.cls"),
-      "\\ProvidesClass{hookcls}\n\
+    let cls = "\\ProvidesClass{hookcls}\n\
        \\AtEndOfPackage{\\InputIfFileExists{hookcls.def}{}{}}\n\
        \\newcommand\\hook@one{ONE}\n\
-       \\LoadClass{article}\n",
-    )
-    .expect("write cls");
-    std::fs::write(
-      workdir.path().join("hookcls.def"),
-      "\\providecommand\\hooktwo{[\\hook@one]}\n",
-    )
-    .expect("write def");
-    std::fs::write(
-      workdir.path().join("t.tex"),
-      "\\documentclass{hookcls}\n\\begin{document}\n\\hooktwo\n\\end{document}\n",
-    )
-    .expect("write tex");
-    let output = std::process::Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+       \\LoadClass{article}\n";
+    let def = "\\providecommand\\hooktwo{[\\hook@one]}\n";
+    let tex = "\\documentclass{hookcls}\n\\begin{document}\n\\hooktwo\n\\end{document}\n";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+      tex,
+      &[("hookcls.cls", cls), ("hookcls.def", def)],
+    );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[ONE]"), "{xml}");
   }
@@ -7643,27 +7080,18 @@ After.
   /// cistercian manuals (codehigh); arXiv 2210.08043, 1611.01359.
   #[test]
   fn catchfiledef_reads_under_setup_catcodes_and_edef_expands() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("caught.txt"), "A#1\\foo B\nC\n").expect("write txt");
-    std::fs::write(
-      workdir.path().join("t.tex"),
-      "\\documentclass{article}\\usepackage{catchfile}\n\
+    let txt = "A#1\\foo B\nC\n";
+    let tex = "\\documentclass{article}\\usepackage{catchfile}\n\
        \\def\\foo{FOO}\n\
        \\begin{document}\n\
        \\CatchFileDef\\raw{caught.txt}{\\catcode`\\#=12 \\endlinechar=-1 }\n\
        \\CatchFileEdef\\exp{caught.txt}{\\catcode`\\#=12 \\endlinechar=-1 }\n\
        [\\detokenize\\expandafter{\\raw}][\\detokenize\\expandafter{\\exp}]\n\
-       \\end{document}\n",
-    )
-    .expect("write tex");
-    let output = std::process::Command::new(bin)
-      .args(["t.tex", "--dest", "t.xml", "--nocomments"])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+       \\end{document}\n";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+      tex,
+      &[("caught.txt", txt)],
+    );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     // `\detokenize`'s backslash renders through OT1 as `“`.
     assert!(xml.contains("[A#1“foo BC][A#1FOOBC ]"), "{xml}");
@@ -7675,37 +7103,17 @@ After.
   /// path that DOES resolve still loads the local file.
   #[test]
   fn relative_package_path_falls_back_to_basename() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::create_dir_all(workdir.path().join("local")).expect("mkdir");
-    std::fs::write(
-      workdir.path().join("local/xspace.sty"),
-      "\\ProvidesPackage{xspace}\\newcommand\\localmarker{LOCALXSPACE}\n",
-    )
-    .expect("write local sty");
-    std::fs::write(
-      workdir.path().join("t.tex"),
-      "\\documentclass{article}\n\
+    let xspace = "\\ProvidesPackage{xspace}\\newcommand\\localmarker{LOCALXSPACE}\n";
+    let tex = "\\documentclass{article}\n\
        \\usepackage{../tex/xcolor}\n\
        \\usepackage{./local/xspace}\n\
        \\begin{document}\n\
        \\textcolor{red}{R}\\localmarker\n\
-       \\end{document}\n",
-    )
-    .expect("write tex");
-    let output = std::process::Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+       \\end{document}\n";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+      tex,
+      &[("local/xspace.sty", xspace)],
+    );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
     assert!(xml.contains("LOCALXSPACE"), "{xml}");
@@ -7796,16 +7204,8 @@ Done [\thepage].
   /// scrbook's `\addchap` via `class/scrbook/after` (DEMO-TUDaPhD).
   #[test]
   fn package_after_hook_fires_for_a_binding_load() {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(
-      workdir.path().join("rawpkg.sty"),
-      "\\ProvidesPackage{rawpkg}\\newcommand\\rawmark{RAW}\n",
-    )
-    .expect("write sty");
-    std::fs::write(
-      workdir.path().join("t.tex"),
-      "\\documentclass{article}\n\
+    let sty = "\\ProvidesPackage{rawpkg}\\newcommand\\rawmark{RAW}\n";
+    let tex = "\\documentclass{article}\n\
        \\AddToHook{package/xspace/after}{\\def\\afterx{AX}}\n\
        \\AddToHook{package/xspace/before}{\\def\\beforex{BX}}\n\
        \\AddToHook{file/rawpkg.sty/after}{\\def\\afterraw{AR}}\n\
@@ -7813,22 +7213,11 @@ Done [\thepage].
        \\usepackage{xspace}\\usepackage{rawpkg}\n\
        \\begin{document}\n\
        [\\beforex\\afterx\\afterraw\\rawmarktwo]\n\
-       \\end{document}\n",
-    )
-    .expect("write tex");
-    let output = std::process::Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+       \\end{document}\n";
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+      tex,
+      &[("rawpkg.sty", sty)],
+    );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[BXAXARRAW]"), "{xml}");
   }
