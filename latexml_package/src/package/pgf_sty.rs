@@ -45,6 +45,17 @@ LoadDefinitions!({
   def_macro_noop("\\beginpgfgraphicnamed{}")?;
   def_macro_noop("\\endpgfgraphicnamed")?;
 
+  // pgfcorelayers.code.tex: \pgfsetlayers passes its argument unexpanded to \pgf@dosetlayer,
+  // matching delimited argument `#1,#2,\relax`. When a package (e.g. pgf-PeriodicTable:
+  // \pgfsetlayers{\@pgfPT@layers}) passes a macro containing the comma-list, raw TeX's
+  // \romannumeral expansion trick in \pgfutil@trimspaces relies on integer scanning expansion.
+  // In latexml-oxide, expanding #1 under \expanded ensures \pgf@dosetlayer sees the comma-delimited
+  // tokens, correctly building \pgf@layerlist and preventing "layer not part of the layer list"
+  // and \setbox undefined box register floods (WITNESS: pgf-PeriodicTableManual).
+  RawTeX!(
+    r"\def\pgfsetlayers#1{\let\pgf@layerlist\pgfutil@empty\expandafter\pgf@dosetlayer\expanded{#1},,\relax}"
+  );
+
 
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   at_begin_document(TokenizeInternal!(

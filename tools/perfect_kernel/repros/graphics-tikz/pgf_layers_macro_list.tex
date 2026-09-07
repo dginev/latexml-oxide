@@ -1,0 +1,16 @@
+\documentclass{article}
+% WITNESS: pgf-PeriodicTableManual; ORACLE: pdflatex exit 0
+% MECH: \pgfsetlayers must expand a macro argument to split comma-separated layers.
+% Raw pgfcorelayers.code.tex matches delimited argument `#1,#2,\relax` without expanding #1.
+\usepackage{tikz}
+\pgfdeclarelayer{bg}
+\def\mylayers{bg,main}
+\pgfsetlayers{\mylayers}
+\begin{document}
+\begin{tikzpicture}
+  \fill[blue] (0,0) rectangle (2,2);
+  \begin{pgfonlayer}{bg}
+    \fill[red] (0,0) rectangle (1,1);
+  \end{pgfonlayer}
+\end{tikzpicture}
+\end{document}

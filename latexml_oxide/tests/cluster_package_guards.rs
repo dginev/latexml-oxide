@@ -18666,4 +18666,36 @@ Marks stub
       "{stderr}"
     );
   }
+
+  /// pgf layers macro list expansion (witness: pgf-periodictable/pgf-PeriodicTableManual).
+  ///
+  /// \pgfsetlayers passes its argument unexpanded to \pgf@dosetlayer, matching
+  /// `#1,#2,\relax`. When a package passes a macro containing a comma list,
+  /// \expanded{#1} ensures layers are split into \pgf@layerlist, preventing
+  /// "layer not part of the layer list" errors and rendering ordered <svg:g> elements.
+  #[test]
+  fn pgf_layers_macro_list_renders_ordered_svg_groups() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\pgfdeclarelayer{bg}
+\def\mylayers{bg,main}
+\pgfsetlayers{\mylayers}
+\begin{document}
+\begin{tikzpicture}
+  \fill[blue] (0,0) rectangle (2,2);
+  \begin{pgfonlayer}{bg}
+    \fill[red] (0,0) rectangle (1,1);
+  \end{pgfonlayer}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("part of the layer list"), "{stderr}");
+    // Verify that bg (red) is shipped out in an SVG group before main (blue)
+    let red_pos = xml.find("#FF0000").expect("red background layer present");
+    let blue_pos = xml.find("#0000FF").expect("blue main layer present");
+    assert!(red_pos < blue_pos, "background layer must precede main layer in SVG output");
+  }
 }
+
