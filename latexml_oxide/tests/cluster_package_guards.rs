@@ -18695,7 +18695,50 @@ Marks stub
     // Verify that bg (red) is shipped out in an SVG group before main (blue)
     let red_pos = xml.find("#FF0000").expect("red background layer present");
     let blue_pos = xml.find("#0000FF").expect("blue main layer present");
-    assert!(red_pos < blue_pos, "background layer must precede main layer in SVG output");
+    assert!(
+      red_pos < blue_pos,
+      "background layer must precede main layer in SVG output"
+    );
+  }
+
+  /// modernposter class semantic blocks and frontmatter (witness: modernposter/demo).
+  ///
+  /// modernposter wraps documents in an overlay tikzpicture spanning the page,
+  /// causing "No shape named sep is known" when nodes are looked up across scopes.
+  /// The modernposter binding drops the overlay tikzpicture and outputs semantic
+  /// containers (postercolumn, posterbox, doubleposterbox) with title and author frontmatter.
+  #[test]
+  fn modernposter_semantic_poster_blocks_and_frontmatter() {
+    let tex = r"\documentclass{modernposter}
+\title{Demo Title}
+\author{A. Author}
+\email{a@author.org}
+\begin{document}
+\maketitle
+\begin{postercolumn}
+  \posterbox{Intro}{Some intro text.}
+  \doubleposterbox{Box A}{Body A}{Box B}{Body B}
+\end{postercolumn}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("No shape named"), "{stderr}");
+    assert!(xml.contains("<title>Demo Title</title>"), "{xml}");
+    assert!(xml.contains("<personname>A. Author</personname>"), "{xml}");
+    assert!(
+      xml.contains("<note role=\"email\">a@author.org</note>"),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"<block class="ltx_postercolumn">"#), "{xml}");
+    assert!(xml.contains(r#"<block class="ltx_posterbox">"#), "{xml}");
+    assert!(
+      xml.contains(r#"<p class="ltx_posterbox_title">Intro</p>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<block class="ltx_doubleposterbox">"#),
+      "{xml}"
+    );
   }
 }
-

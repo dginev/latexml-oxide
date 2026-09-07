@@ -177,6 +177,7 @@ pub mod mhchem_sty;
 pub mod minted_frozencache;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
+pub mod modernposter_cls;
 pub mod morefloats_sty;
 pub mod mrm_cls;
 pub mod mssymb_tex;
@@ -585,6 +586,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lmcs", "cls", lmcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
+  ("modernposter", "cls", modernposter_cls::load_definitions),
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
