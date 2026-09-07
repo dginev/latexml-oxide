@@ -18606,4 +18606,64 @@ hello
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Red text"), "{xml}");
   }
+
+  /// listings.sty \lst@TestEOLChar internal used by tagpdfdocu-patches.sty
+  /// (witness: tagpdf/tagpdf).
+  #[test]
+  fn listings_test_eol_char_exists() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\begin{document}
+\lst@TestEOLChar{foo}
+OK
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("OK"), "{xml}");
+  }
+
+  /// pax.sty definitions patched by doc-use-pax.tex (witness: newpax/doc-use-pax).
+  #[test]
+  fn pax_patchcmd_targets_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{pax}
+\makeatletter
+\patchcmd\PAX@pdf@annot{\PAX@pagellx}{\PAX@page@llx}{}{\fail}
+\patchcmd\PAX@AddAnnots{\InputIfFileExists\PAX@file{}{\typeout{* Missing: \PAX@file}}}
+ {\begingroup \catcode`\#=12 \catcode`\%=12
+  \InputIfFileExists\PAX@file{}{\typeout{* Missing: \PAX@file}}\endgroup}{}{\fail}
+\makeatother
+\begin{document}
+Patched
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Patched"), "{xml}");
+    assert!(!stderr.contains("undefined:\\fail"), "{stderr}");
+  }
+
+  /// updatemarks.sty out-of-scope stub (witness: updatemarks/updatemarks).
+  #[test]
+  fn updatemarks_stub_loads_cleanly() {
+    let tex = r"\documentclass{article}
+\usepackage{updatemarks}
+\begin{document}
+Marks stub
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Marks stub"), "{xml}");
+    assert_eq!(
+      stderr
+        .matches("Warning:missing_file:updatemarks.sty")
+        .count(),
+      1,
+      "{stderr}"
+    );
+  }
 }

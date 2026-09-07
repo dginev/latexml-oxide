@@ -2568,7 +2568,9 @@ LoadDefinitions!({
   // `perfect_kernel_batch54::lst_usercommand_is_gdef`,
   // `perfect_kernel_batch54::singleton_internal_surface`.
   Let!("\\lst@UserCommand", "\\gdef");
-  RawTeX!(r"\def\lst@XConvert#1\@nil{}\long\def\lstnewenvironment@#1#2#3{}");
+  // listings.sty:2267 \lst@TestEOLChar tests whether #1 is an EOL character;
+  // tagpdfdocu-patches.sty calls it when hooking \lstlisting.
+  RawTeX!(r"\def\lst@XConvert#1\@nil{}\def\lst@TestEOLChar#1{}\long\def\lstnewenvironment@#1#2#3{}");
   // listings.sty:291 \let\lstloadaspects\lst@RequireAspects
   DefMacro!("\\lstloadaspects{}", "");
 

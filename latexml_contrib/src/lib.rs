@@ -262,6 +262,7 @@ pub mod tipa_sty;
 pub mod tlp_cls;
 pub mod uai2025_cls;
 pub mod ucs_sty;
+pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
@@ -641,6 +642,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("srdp-tables", "sty", srdp_tables_sty::load_definitions),
   ("tabu", "sty", tabu_sty::load_definitions),
   ("ucs", "sty", ucs_sty::load_definitions),
+  ("updatemarks", "sty", updatemarks_sty::load_definitions),
   ("ut-thesis", "cls", ut_thesis_cls::load_definitions),
   ("uspatent", "cls", uspatent_cls::load_definitions),
   ("ws-p8-50x6-00", "cls", ws_p8_50x6_00_cls::load_definitions),
