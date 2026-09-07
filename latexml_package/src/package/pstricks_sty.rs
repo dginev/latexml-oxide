@@ -28,7 +28,9 @@ fn ps_fmt_px(v: f64) -> String {
   }
 }
 
+/// Perl `Dimension::ptValue`: two decimals, integers with one.
 fn ps_fmt_pt(v: f64) -> String {
+  let v = (v * 100.0).round() / 100.0;
   if v == v.round() {
     format!("{v:.1}pt")
   } else {
@@ -46,7 +48,65 @@ fn ps_units() -> Result<(f64, f64)> {
   Ok((unit("\\psxunit")?, unit("\\psyunit")?))
 }
 
-fn ps_pair(arg: &Option<Digested>) -> Option<(f64, f64)> {
+/// One pstricks coordinate component (Perl pstricks_support.sty.ltxml:85-100
+/// `ReadPSDimension`): a bare number is multiplied by the axis unit
+/// (`\psxunit`/`\psyunit`), an explicit TeX dimension stands as is. Braces
+/// around a component are stripped (`({36.5},1)`). Anything else — a node
+/// name `(N)`, `([nodesep=2pt]N)`, an unexpanded macro — is not a coordinate.
+fn ps_component_pt(text: &str, unit_pt: f64) -> Option<f64> {
+  let t = text.trim().trim_matches(|c| c == '{' || c == '}').trim();
+  let num_end = t
+    .char_indices()
+    .take_while(|(k, c)| c.is_ascii_digit() || *c == '.' || (*c == '-' || *c == '+') && *k == 0)
+    .map(|(k, c)| k + c.len_utf8())
+    .last()?;
+  let value: f64 = t[..num_end].parse().ok()?;
+  let rest = t[num_end..].trim().trim_end_matches("true").trim();
+  if rest.is_empty() {
+    return Some(value * unit_pt);
+  }
+  let factor = match rest {
+    "pt" => 1.0,
+    "pc" => 12.0,
+    "in" => 72.27,
+    "bp" => 72.27 / 72.0,
+    "cm" => 72.27 / 2.54,
+    "mm" => 72.27 / 25.4,
+    "dd" => 1238.0 / 1157.0,
+    "cc" => 12.0 * 1238.0 / 1157.0,
+    "sp" => 1.0 / 65536.0,
+    "em" => 10.0,
+    "ex" => 4.3,
+    _ => return None,
+  };
+  Some(value * factor)
+}
+
+/// `(x,y)` → a pair in points, or `None` when there is no `(` (optional
+/// coordinate) or the content is not numeric (a node reference).
+fn read_ps_coord() -> Result<ArgWrap> {
+  use latexml_core::common::pair::Pair;
+  skip_spaces()?;
+  if !if_next(T_OTHER!("("))? {
+    return Ok(ArgWrap::None);
+  }
+  read_token()?; // (
+  let Some(inner) = read_until(&Tokens!(T_OTHER!(")")))? else {
+    return Ok(ArgWrap::None);
+  };
+  let text = do_expand(inner)?.to_string();
+  let (ux, uy) = ps_units()?;
+  let (xs, ys) = text.split_once(',').unwrap_or(("", ""));
+  // A node reference or other non-numeric content is consumed and stands for
+  // the origin (Perl's `ZeroPSCoord`), never an error.
+  let (x, y) = match (ps_component_pt(xs, ux), ps_component_pt(ys, uy)) {
+    (Some(x), Some(y)) => (x, y),
+    _ => (0.0, 0.0),
+  };
+  Ok(ArgWrap::Pair(Pair::new(Float(x), Float(y))))
+}
+
+fn ps_pair_pt(arg: &Option<Digested>) -> Option<(f64, f64)> {
   match arg.as_ref()?.data() {
     DigestedData::RegisterValue(RegisterValue::Pair(p)) => Some((p.x.0, p.y.0)),
     _ => None,
@@ -55,20 +115,21 @@ fn ps_pair(arg: &Option<Digested>) -> Option<(f64, f64)> {
 
 /// `{pspicture}(c0)(c1)` — Perl pstricks_support.sty.ltxml:527-536: with one
 /// pair, it is the far corner and the origin is (0,0); width/height are the
-/// corner differences in `\psxunit`/`\psyunit`; the body is translated by the
-/// negated origin (the same attributes the LaTeX `{picture}` binding emits).
+/// corner differences (the pairs are already in points, see `read_ps_coord`);
+/// the body is translated by the negated origin (the same attributes the
+/// LaTeX `{picture}` binding emits).
 fn pspicture_properties(
   first: &Option<Digested>,
   second: &Option<Digested>,
 ) -> Result<SymHashMap<Stored>> {
-  let (ux, uy) = ps_units()?;
-  let a = ps_pair(first).unwrap_or((0.0, 0.0));
-  let (c0, c1) = match ps_pair(second) {
+  let (ux, _) = ps_units()?;
+  let a = ps_pair_pt(first).unwrap_or((0.0, 0.0));
+  let (c0, c1) = match ps_pair_pt(second) {
     Some(b) => (a, b),
     None => ((0.0, 0.0), a),
   };
-  let (w, h) = ((c1.0 - c0.0) * ux, (c1.1 - c0.1) * uy);
-  let (ox, oy) = (c0.0 * ux, c0.1 * uy);
+  let (w, h) = (c1.0 - c0.0, c1.1 - c0.1);
+  let (ox, oy) = c0;
   let mut map = stored_map!(
     "width"      => Stored::String(pin(ps_fmt_pt(w))),
     "height"     => Stored::String(pin(ps_fmt_pt(h))),
@@ -89,12 +150,12 @@ fn pspicture_properties(
   Ok(map)
 }
 
-/// `\lx@ps@put(x,y){body}` — the LaTeX `\put` transform in pstricks units.
+/// `\lx@ps@put(x,y){body}` — the LaTeX `\put` transform; a node reference
+/// (no numeric pair) places at the origin rather than failing.
 fn ps_put_properties(coords: &Option<Digested>) -> Result<SymHashMap<Stored>> {
-  let (ux, uy) = ps_units()?;
-  let (x, y) = ps_pair(coords).unwrap_or((0.0, 0.0));
+  let (x, y) = ps_pair_pt(coords).unwrap_or((0.0, 0.0));
   Ok(stored_map!(
-    "transform" => Stored::String(pin(format!("translate({},{})", ps_fmt_px(ps_px(x * ux)), ps_fmt_px(ps_px(y * uy)))))
+    "transform" => Stored::String(pin(format!("translate({},{})", ps_fmt_px(ps_px(x)), ps_fmt_px(ps_px(y)))))
   ))
 }
 
@@ -299,7 +360,14 @@ LoadDefinitions!({
   // swallowed the `(` of the first pair and leaked `x0,y0)(x1,y1)` as text in
   // EVERY pstricks picture (batch 56ao; the LaTeX `{picture}` binding in
   // latex_constructs/sect13.rs is the model).
-  DefEnvironment!("{pspicture} OptionalMatch:* [] Pair OptionalPair",
+  // Perl pstricks_support.sty.ltxml:103-113: `PSCoord` / `OptionalPSCoord`
+  // read `(x,y)` in pstricks units (batch 56aq: the generic `Pair` dropped
+  // explicit units — `(1cm,2mm)` became 1×unit,2×unit — and could not take a
+  // node reference `(N)` / `([nodesep=2pt]N)`, derailing the picture).
+  // `OptionalPSCoord` needs no definition: the parameter-spec parser derives
+  // `Optional<Type>` from the prefix (as `OptionalPair` in latex_constructs).
+  DefParameterType!(PSCoord, sub[_inner, _extra] { read_ps_coord()? });
+  DefEnvironment!("{pspicture} OptionalMatch:* [] PSCoord OptionalPSCoord",
     "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
       fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
@@ -308,7 +376,7 @@ LoadDefinitions!({
     before_digest => { Let!("\\par", "\\relax"); },
     properties => sub[args] { pspicture_properties(&args[2], &args[3]) }
   );
-  DefEnvironment!("{pspicture*} OptionalMatch:* [] Pair OptionalPair",
+  DefEnvironment!("{pspicture*} OptionalMatch:* [] PSCoord OptionalPSCoord",
     "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
       clip='true' fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
@@ -320,7 +388,7 @@ LoadDefinitions!({
   // `\rput`-family bodies (Perl :879-888 `\rput@start` → `<ltx:g transform>`
   // … `\put@end`): the same shape as the LaTeX `\put` constructor, in
   // pstricks units. Rotation/refpoint/labelsep are dropped (presentation).
-  DefConstructor!("\\lx@ps@put Pair {}",
+  DefConstructor!("\\lx@ps@put OptionalPSCoord {}",
     "<ltx:g transform='#transform'>#2</ltx:g>",
     alias => "\\rput",
     mode  => "restricted_horizontal",

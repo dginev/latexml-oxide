@@ -16992,6 +16992,71 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
+  /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
+  /// as is, and a node reference is not a coordinate (placed at the origin, no
+  /// error); pst-node objects take an OPTIONAL pair (pst-node.tex:157-421).
+  /// Batch 56aq — sweep 61 regressions from 56ao: lsc (`\cnode{r}{n}` without a
+  /// pair), pst-eucl/egpeirce (`\rput(N){…}` derailing the picture).
+  #[test]
+  fn pstricks_coordinates_take_units_nodes_and_optional_pairs() {
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks,pst-node,pgffor}\n\\begin{document}\nA\\begin{pspicture}(4,3)\\foreach \\x in {1,2}{\\rput(\\x,1){P\\x}}\\end{pspicture}B\n\\begin{pspicture}(3cm,2cm)\\pnode(1,1){N}\\cnode{3pt}{n2}\\cnode(2,2){3pt}{n3}\\rput(N){at N}\\rput([nodesep=2pt]N){near N}\\uput[ur](N){$A_1$}\\rput(1cm,2mm){dims}\\end{pspicture}C\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<picture").count(), 2, "{xml}");
+    assert!(
+      xml.contains("<g transform=\"translate(39.37,39.37)\">"),
+      "P1: {xml}"
+    );
+    assert!(
+      xml.contains("<g transform=\"translate(78.73,39.37)\">"),
+      "P2: {xml}"
+    );
+    assert!(
+      xml.contains("width=\"85.36pt\"") && xml.contains("height=\"56.91pt\""),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<g transform=\"translate(39.37,7.87)\">"),
+      "dims: {xml}"
+    );
+    for label in ["at N", "near N", "dims"] {
+      assert!(
+        xml.contains(&format!("<text>{label}</text>")),
+        "{label} lost: {xml}"
+      );
+    }
+    assert!(
+      xml.contains("A<") && xml.contains(">B") && xml.contains(">C"),
+      "{xml}"
+    );
+    assert!(
+      !xml.contains("(1,1)N") && !xml.contains("3pt"),
+      "leak: {xml}"
+    );
+  }
+
+  /// pdfTeX manual §8.9: `\pdfximage{file}` sets `\pdflastximagepages` to the
+  /// PDF's page count (bitmaps: 1) and bumps `\pdflastximage`. Both were stubs
+  /// at 0, so pdfpages' `\AM@getpagecount` (pppdftex.def:79-82), the l3 backend
+  /// page count in the DVI persona and any `\ifnum\pdflastximagepages=…` test
+  /// were wrong. The reader takes the largest `/Type /Pages … /Count` (batch 56ap;
+  /// Gemini round 8 N3 design).
+  #[test]
+  fn pdfximage_reports_the_pdf_page_count() {
+    // A minimal but well-formed 3-page PDF: two /Pages nodes (the LARGEST /Count
+    // must be picked) and a nested /Resources dictionary BEFORE the root's /Count
+    // (the scan must stay at the dictionary's own brace depth).
+    let pdf = "%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Resources << /Font << /F1 9 0 R >> >> /Kids [3 0 R 6 0 R] /Count 3 >> endobj\n3 0 obj << /Type /Pages /Parent 2 0 R /Kids [4 0 R 5 0 R] /Count 2 >> endobj\n4 0 obj << /Type /Page /Parent 3 0 R /MediaBox [0 0 200 100] >> endobj\n5 0 obj << /Type /Page /Parent 3 0 R /MediaBox [0 0 200 100] >> endobj\n6 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n";
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\pdfximage{three.pdf}A=\\the\\pdflastximagepages;N=\\the\\pdflastximage;\n\\pdfximage{example-image-a4.pdf}B=\\the\\pdflastximagepages;N=\\the\\pdflastximage.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[("three.pdf", pdf)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("A=3;N=1;"), "{xml}");
+    if kpsewhich_has("example-image-a4.pdf") {
+      assert!(xml.contains("B=1;N=2."), "{xml}");
+    }
+  }
+
   /// `{pspicture}` is an `<ltx:picture>` sized by its corner pairs (Perl
   /// pstricks_support.sty.ltxml:520-536; a lone pair is the far corner) and
   /// `\rput`/`\uput`/`\cput` keep their bodies inside `<ltx:g transform>`

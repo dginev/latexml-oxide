@@ -40,7 +40,13 @@ LoadDefinitions!({
   // once. Audit currently flags rnode+pnode explicitly.
   DefMacro!("\\rnode[]{}{}", "#3");
   DefMacro!("\\Rnode[]{}{}", "#3");
-  def_macro_noop("\\pnode[]")?;
+  // Node objects take an OPTIONAL coordinate pair (pst-node.tex:157-165
+  // `\\pnode`, :182 `\\cnode`, :203 `\\Cnode`, :280 `\\psnode`, :421
+  // `\\dotnode`: `\\@ifnextchar(` … `(0,0)`) — `OptionalPSCoord` (pstricks
+  // binding) also accepts a node reference. Batch 56aq: `\\cnode` demanded
+  // `(`,`,`,`)` and `\\pnode` consumed nothing (lsc.sty:1444, "(1,1)N" leaks).
+  def_macro_noop("\\pnode OptionalMatch:* [] OptionalPSCoord {}")?;
+  DefMacro!("\\psnode OptionalMatch:* [] OptionalPSCoord {} {}", "#4"); // pst-node.tex:281 (x,y){name}{contents}
   // PSTricks node macros take a `(coord)` argument, not `[...]`. Perl
   // pst-node.sty.ltxml: \cnode = 'ZeroPSCoord {PSDimension} {}'
   // (coord, radius, name); \Cnode = 'ZeroPSCoord {}' (coord, name).
@@ -48,12 +54,12 @@ LoadDefinitions!({
   // `\Cnode(1,1){000}` leaked "1,1)" as body text. Consume the optional
   // `[par]`, the `(coord)`, then the braced args (mirrors the
   // `\cnodeput ... [] () {} {}` pattern in pst_all_sty.rs).
-  def_macro_noop("\\cnode OptionalMatch:* [] () {} {}")?;
-  def_macro_noop("\\Cnode OptionalMatch:* [] () {}")?;
+  def_macro_noop("\\cnode OptionalMatch:* [] OptionalPSCoord {} {}")?;
+  def_macro_noop("\\Cnode OptionalMatch:* [] OptionalPSCoord {}")?;
   DefMacro!("\\circlenode[]{}{}", "#3");
   DefMacro!("\\ovalnode[]{}{}", "#3");
-  def_macro_noop("\\fnode OptionalMatch:* []{}")?;
-  def_macro_noop("\\dotnode OptionalMatch:* []{}")?;
+  def_macro_noop("\\fnode OptionalMatch:* [] OptionalPSCoord {}")?;
+  def_macro_noop("\\dotnode OptionalMatch:* [] OptionalPSCoord {}")?;
   DefMacro!("\\trinode[]{}{}", "#3");
   DefMacro!("\\dianode[]{}{}", "#3");
 
