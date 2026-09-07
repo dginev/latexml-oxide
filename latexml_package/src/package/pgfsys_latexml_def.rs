@@ -1875,11 +1875,22 @@ LoadDefinitions!({
   });
 
   // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
-  DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
-
-    mouth::tokenize_internal(
-      "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist()
-  });
+  // PGF system layer fallback for unsupported shadings (e.g. functional shadings with PostScript code).
+  // In PGF, \pgfsys@functionalshading calls \pgf@sys@noshading{#1}, which defaults to \pgfutil@empty.
+  // But LaTeXML's \pgfsys@shadinginsidepgfpicture expects \@pgfshading<name>! to define
+  // \lxSVG@sh@defs, \lxSVG@sh, and \lxSVG@pos. If not defined, Gullet encounters undefined tokens.
+  // Defining \pgf@sys@noshading and \pgfsys@functionalshading to install a no-op \@pgfshading<name>!
+  // ensures unsupported shadings expand cleanly without undefined-CS errors.
+  RawTeX!(r"
+\def\pgf@sys@noshading#1{%
+  \expandafter\gdef\csname @pgfshading#1!\endcsname{%
+    \let\lxSVG@sh@defs\relax
+    \let\lxSVG@sh\relax
+    \def\lxSVG@pos{\pgfpointorigin}%
+  }%
+}
+\def\pgfsys@functionalshading#1#2#3#4{\pgf@sys@noshading{#1}}
+");
 
   //===================================================================
   // PGF sentinel tokens — make non-expandable

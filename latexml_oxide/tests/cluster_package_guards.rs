@@ -18928,4 +18928,51 @@ Marks stub
       "{xml}"
     );
   }
+
+  /// PGF functional shading fallback and gradient stops (witness: tikzpingus/tikzpingus-doc.tex Figure 1).
+  /// Functional shadings (e.g. \pgfuseshading{bilinear interpolation}) must define \@pgfshading<name>!
+  /// via \pgf@sys@noshading to provide \lxSVG@sh@defs, \lxSVG@sh, and \lxSVG@pos, rather than
+  /// leaving them undefined in Gullet. Also asserts valid SVG linear and radial gradients with >= 2 stops.
+  #[test]
+  fn pgf_functional_shading_and_gradients() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shadings}
+\pgfdeclareradialshading{testradial}{\pgfpointorigin}{%
+  color(0bp)=(red); color(20bp)=(yellow); color(40bp)=(blue)%
+}
+\pgfdeclarehorizontalshading{testhori}{100bp}{%
+  color(0bp)=(red); color(50bp)=(yellow); color(100bp)=(blue)%
+}
+\begin{document}
+\begin{tikzpicture}
+\pgfuseshading{bilinear interpolation}
+\pgfuseshading{testradial}
+\pgfuseshading{testhori}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:radialGradient"), "{xml}");
+    assert!(xml.contains("<svg:linearGradient"), "{xml}");
+    assert!(xml.matches("<svg:stop").count() >= 2, "{xml}");
+  }
+
+  /// tikzpingus shading regeneration with cloak and functional-shading left wing grab
+  /// (witness: tikzpingus/tikzpingus-doc.tex Figure 1 Table 3).
+  #[test]
+  fn tikzpingus_cloak_functional_shading() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{tikzpingus}
+\begin{document}
+\tikz{\pingu[cloak=gray,cup,left wing grab]}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:linearGradient"), "{xml}");
+    assert!(xml.matches("<svg:stop").count() >= 2, "{xml}");
+  }
 }
