@@ -34,6 +34,10 @@
 # the same reason the repo's canonical command carries `--no-fail-fast`.
 fail-fast = false
 failure-output = "immediate-final"
+# docs/THERMALS.md & GEMINI.md: hardware limit is JOBS=8 alone, JOBS=4 beside another process.
+# On a 20-thread host, defaulting to num_cpus=20 spawns 20 TeX engines, breaching 31 GB RAM
+# and thrashing swap. Capping default profile at 8 keeps RAM at ~10 GB and swap at 0 B.
+test-threads = 8
 
 [[profile.default.overrides]]
 filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'

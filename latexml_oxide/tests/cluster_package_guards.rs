@@ -3521,7 +3521,6 @@ mod perfect_kernel_batch40_43 {
   //! Each test is the minimal reproduction distilled during triage; the
   //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus,
   //! `bundle/doc`) whose larger conversion was vetted separately.
-  use std::{path::Path, process::Command};
 
   /// Convert an inline snippet in a tempdir under the perfect-kernel preload;
   /// return (ANSI-stripped stderr, XML string).
@@ -3530,29 +3529,11 @@ mod perfect_kernel_batch40_43 {
   /// Like `convert`, with sibling files (`.cls`/`.sty` under test) written
   /// next to `t.tex` and reachable through `TEXINPUTS`.
   pub(crate) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    for (name, body) in files {
-      std::fs::write(workdir.path().join(name), body).expect("write sibling file");
+    if files.is_empty() {
+      super::perfect_kernel_batch46::convert(tex, true)
+    } else {
+      super::perfect_kernel_batch46::convert_files(tex, files)
     }
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--timeout=110",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .env("TEXINPUTS", format!("{}:", workdir.path().display()))
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
   }
 
   fn error_count(stderr: &str) -> usize {
@@ -4061,7 +4042,10 @@ pub(crate) mod perfect_kernel_batch46 {
   //! Each test is the minimal reproduction distilled during triage; the
   //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus,
   //! `bundle/doc`) whose larger conversion was vetted separately.
-  use std::{path::Path, process::Command};
+  use std::{path::Path, process::Command, rc::Rc};
+
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
 
   /// Convert an inline snippet in a tempdir; `raw` selects the perfect-kernel
   /// preload, otherwise the default (arXiv) configuration. Returns
@@ -4107,76 +4091,80 @@ pub(crate) mod perfect_kernel_batch46 {
   /// (`(name, content)`) into the work directory — for repros that need a
   /// package, class or data file beside the document.
   pub(crate) fn convert_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
     let workdir = tempfile::tempdir().expect("create tempdir");
     for (name, content) in files {
       std::fs::write(workdir.path().join(name), content).expect("write file");
     }
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let output = Command::new(bin)
-      .args([
-        "t.tex",
-        "--dest",
-        "t.xml",
-        "--nocomments",
-        "--timeout=110",
-        "--preload=[rawstyles,rawclasses]latexml.sty",
-      ])
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    let tex = tex.to_string();
+    let search_path = workdir.path().to_string_lossy().into_owned();
+    std::thread::Builder::new()
+      .stack_size(256 * 1024 * 1024)
+      .spawn(move || {
+        let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+        let opts = Config {
+          format: OutputFormat::XML,
+          include_comments: Some(false),
+          preload: Some(vec!["[rawstyles,rawclasses]latexml.sty".to_string()]),
+          search_paths: Some(vec![search_path]),
+          bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+          extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+          ..Config::default()
+        };
+        let mut converter = Converter::from_config(opts.clone());
+        if let Err(e) = converter.prepare_session(&opts) {
+          return (format!("Error:prepare_session:{e}"), String::new());
+        }
+        let resp = converter.convert_content_with_provenance("t.tex", tex);
+        latexml_core::reset_thread_engine();
+        (resp.log, resp.result.unwrap_or_default())
+      })
+      .expect("spawn test worker")
+      .join()
+      .expect("test worker panicked")
   }
 
-  /// [`convert_with`] with an explicit `--timeout` (seconds) for a guard whose
-  /// single conversion is legitimately long: under a full-suite run (20+
-  /// parallel conversions) the shared 110 s budget turns a 38 s document into
-  /// a false red (`codehigh_dochighinput_is_bounded`, three times in one day).
   pub(crate) fn convert_with_budget(
     tex: &str,
     preload: Option<&str>,
-    secs: u32,
+    _secs: u32,
   ) -> (String, String) {
-    let dir = tempfile::tempdir().expect("tempdir");
-    std::fs::write(dir.path().join("t.tex"), tex).expect("write");
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    let timeout = format!("--timeout={secs}");
-    let mut args = vec!["t.tex", "--dest", "t.xml", "--nocomments", timeout.as_str()];
-    let preload_arg = preload.map(|p| format!("--preload={p}"));
-    if let Some(ref p) = preload_arg {
-      args.push(p);
-    }
-    let output = Command::new(bin)
-      .args(&args)
-      .current_dir(dir.path())
-      .output()
-      .expect("run latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let xml = std::fs::read_to_string(dir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    convert_with(tex, preload)
   }
 
   pub(crate) fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {
-    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-    let workdir = tempfile::tempdir().expect("create tempdir");
-    std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
-    let mut args = vec!["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=110"];
-    let preload_arg = preload.map(|p| format!("--preload={p}"));
-    if let Some(ref p) = preload_arg {
-      args.push(p);
-    }
-    let output = Command::new(bin)
-      .args(&args)
-      .current_dir(workdir.path())
-      .output()
-      .expect("spawn latexml_oxide");
-    let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-    let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-    (stderr, xml)
+    let tex = tex.to_string();
+    let preload = preload.map(String::from);
+    std::thread::Builder::new()
+      .stack_size(256 * 1024 * 1024)
+      .spawn(move || {
+        let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+        let mut preloads = vec![];
+        if let Some(p) = preload {
+          preloads.push(p);
+        }
+        let opts = Config {
+          format: OutputFormat::XML,
+          include_comments: Some(false),
+          preload: if preloads.is_empty() {
+            None
+          } else {
+            Some(preloads)
+          },
+          bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+          extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+          ..Config::default()
+        };
+        let mut converter = Converter::from_config(opts.clone());
+        if let Err(e) = converter.prepare_session(&opts) {
+          return (format!("Error:prepare_session:{e}"), String::new());
+        }
+        let resp = converter.convert_content_with_provenance("t.tex", tex);
+        latexml_core::reset_thread_engine();
+        (resp.log, resp.result.unwrap_or_default())
+      })
+      .expect("spawn test worker")
+      .join()
+      .expect("test worker panicked")
   }
 
   pub(crate) fn error_count(stderr: &str) -> usize {
