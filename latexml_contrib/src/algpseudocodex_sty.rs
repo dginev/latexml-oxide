@@ -105,6 +105,16 @@ LoadDefinitions!({
 
   RequirePackage!("algpseudocode");
   RequirePackage!("etoolbox");
+  RequirePackage!("tikz");
+  RawTeX!(
+    r#"
+    \usetikzlibrary{calc,fit,tikzmark}
+    \tikzset{%
+      algpxDefaultBox/.style={draw},%
+      algpxIndentLine/.style={draw=gray,very thin}%
+    }
+  "#
+  );
 
   // Package options and conditionals
   // Defaults from algpseudocodex.sty:43-52:
@@ -167,6 +177,47 @@ LoadDefinitions!({
 
   RawTeX!(
     r#"
+    \newif\ifalgpx@firstLine \algpx@firstLinetrue
+    \ifdefined\pretocmd
+      \pretocmd{\algorithmic}{\algpx@firstLinetrue}{}{}
+    \fi
+
+    \algnewcommand\algorithmicoutput{\textbf{output}}
+    \algnewcommand\algorithmicstructure{\textbf{structure}}
+    \algnewcommand\algorithmicclass{\textbf{class}}
+    \algnewcommand\algorithmicproperties{\textbf{properties}}
+    \algnewcommand\algorithmicmethods{\textbf{methods}}
+    \providecommand{\textstruc}{\textsc}
+
+    \ifdefined\algdef
+      \algdef{SE}[STRUCTURE]{Structure}{EndStructure}[1]{\algorithmicstructure\ \textstruc{#1}}{\algorithmicend\ \algorithmicstructure}
+      \algdef{SE}[CLASS]{Class}{EndClass}[1]{\algorithmicclass\ \textstruc{#1}}{\algorithmicend\ \algorithmicclass}
+      \algdef{SE}[PROPERTIES]{Properties}{EndProperties}{\algorithmicproperties}{\algorithmicend\ \algorithmicproperties}
+      \algdef{SE}[METHODS]{Methods}{EndMethods}{\algorithmicmethods}{\algorithmicend\ \algorithmicmethods}
+    \fi
+
+    \algnewcommand\Return{\algorithmicreturn{} }
+    \algnewcommand\Output{\algorithmicoutput{} }
+    \algnewcommand\Call[2]{\textproc{#1}\ifstrempty{#2}{}{(#2)}}
+
+    \ifdefined\algrenewcommand
+      \algrenewcommand\Require{%
+        \algpx@endCodeCommand%
+        \ifalgpx@spaceRequire
+          \ifalgpx@firstLine\else\medskip\fi
+        \fi
+        \algpx@firstLinefalse
+        \item[\algorithmicrequire]%
+        \algpx@startCodeCommand%
+      }
+      \algrenewcommand\Ensure{%
+        \algpx@endCodeCommand%
+        \algpx@firstLinefalse
+        \item[\algorithmicensure]%
+        \algpx@startCodeCommand%
+      }
+    \fi
+
     \ifalgpx@noEnd
       \ifdefined\algtext
         \algtext*{EndWhile}%
@@ -217,6 +268,7 @@ LoadDefinitions!({
         \else
           \algpx@commentString{#1}%
         \fi
+        \ignorespaces
       }
     \else
       \providecommand{\Comment}[1]{%
@@ -225,6 +277,7 @@ LoadDefinitions!({
         \else
           \algpx@commentString{#1}%
         \fi
+        \ignorespaces
       }
     \fi
 
@@ -259,18 +312,131 @@ LoadDefinitions!({
     assign_value("algpx@code_open", Stored::Bool(true), Some(Scope::Global));
   });
 
-  DefConstructor!("\\algpx@endCodeCommand []", sub [document] {
+  fn unwind_code_command(document: &mut Document) -> Result<()> {
     if lookup_value("algpx@code_open").is_some_and(|s| matches!(s, Stored::Bool(true))) {
-      let _ = document.maybe_close_element("ltx:text");
+      let mut curr = Some(document.get_node().clone());
+      let mut target = None;
+      while let Some(node) = curr {
+        if document::get_node_qname(&node) == pin!("ltx:text")
+          && node.get_attribute("class").as_deref() == Some("ltx_algpx_code")
+        {
+          target = Some(node);
+          break;
+        }
+        if document::get_node_qname(&node) == pin!("ltx:listingline")
+          || document::get_node_qname(&node) == pin!("ltx:listing")
+          || document::get_node_qname(&node) == pin!("ltx:document")
+        {
+          break;
+        }
+        curr = node.get_parent();
+      }
+      if let Some(code_node) = target {
+        document.close_node_internal(&code_node)?;
+      }
       assign_value("algpx@code_open", Stored::Bool(false), Some(Scope::Global));
     }
+    Ok(())
+  }
+
+  fn unwind_one_box(document: &mut Document) -> Result<()> {
+    unwind_code_command(document)?;
+    let mut count = match lookup_value("algpx@open_box_depth") {
+      Some(Stored::Number(n)) => n.value_of(),
+      _ => 0,
+    };
+    if count > 0 {
+      let mut curr = Some(document.get_node().clone());
+      let mut target = None;
+      while let Some(node) = curr {
+        if document::get_node_qname(&node) == pin!("ltx:text")
+          && node
+            .get_attribute("class")
+            .is_some_and(|c| c.contains("ltx_framed"))
+        {
+          target = Some(node);
+          break;
+        }
+        if document::get_node_qname(&node) == pin!("ltx:listingline")
+          || document::get_node_qname(&node) == pin!("ltx:listing")
+          || document::get_node_qname(&node) == pin!("ltx:document")
+        {
+          break;
+        }
+        curr = node.get_parent();
+      }
+      if let Some(box_node) = target {
+        document.close_node_internal(&box_node)?;
+        count -= 1;
+        assign_value(
+          "algpx@open_box_depth",
+          Stored::Number(Number::new(count)),
+          Some(Scope::Global),
+        );
+      }
+    }
+    assign_value(
+      "algpx@pending_boxes",
+      Stored::String(pin("")),
+      Some(Scope::Global),
+    );
+    Ok(())
+  }
+
+  fn unwind_all_boxes(document: &mut Document) -> Result<()> {
+    unwind_code_command(document)?;
+    let mut count = match lookup_value("algpx@open_box_depth") {
+      Some(Stored::Number(n)) => n.value_of(),
+      _ => 0,
+    };
+    while count > 0 {
+      let mut curr = Some(document.get_node().clone());
+      let mut target = None;
+      while let Some(node) = curr {
+        if document::get_node_qname(&node) == pin!("ltx:text")
+          && node
+            .get_attribute("class")
+            .is_some_and(|c| c.contains("ltx_framed"))
+        {
+          target = Some(node);
+          break;
+        }
+        if document::get_node_qname(&node) == pin!("ltx:listingline")
+          || document::get_node_qname(&node) == pin!("ltx:listing")
+          || document::get_node_qname(&node) == pin!("ltx:document")
+        {
+          break;
+        }
+        curr = node.get_parent();
+      }
+      if let Some(box_node) = target {
+        document.close_node_internal(&box_node)?;
+        count -= 1;
+      } else {
+        break;
+      }
+    }
+    assign_value(
+      "algpx@open_box_depth",
+      Stored::Number(Number::new(0)),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "algpx@pending_boxes",
+      Stored::String(pin("")),
+      Some(Scope::Global),
+    );
+    Ok(())
+  }
+
+  DefConstructor!("\\algpx@endCodeCommand []", sub [document] {
+    unwind_code_command(document)?;
   });
 
   // In-flow boxes:
   // \BeginBox[opts] stores pending box options.
-  // The next \item opens `<ltx:text class='ltx_framed ...' cssstyle='...'>`.
-  // Multi-line boxes only open on the pending->open transition to prevent double-opening.
-  // \EndBox closes the `<ltx:text>`.
+  // Multiple nested boxes can be pending and are opened at the next item.
+  // \EndBox closes one nested box.
   DefConstructor!("\\BeginBox []", sub [_document, args] {
     let raw = args
       .first()
@@ -278,38 +444,52 @@ LoadDefinitions!({
       .map(|d| d.to_string())
       .unwrap_or_else(|| "algpxDefaultBox".to_string());
     let raw_str = if raw.is_empty() { "algpxDefaultBox" } else { &raw };
-    assign_value("algpx@pending_box", Stored::String(pin(raw_str)), Some(Scope::Global));
+    let prev = lookup_value("algpx@pending_boxes");
+    let queue_str = if let Some(Stored::String(s)) = prev && !to_string(s).is_empty() {
+      format!("{}|||{}", to_string(s), raw_str)
+    } else {
+      raw_str.to_string()
+    };
+    assign_value("algpx@pending_boxes", Stored::String(pin(&queue_str)), Some(Scope::Global));
   });
 
   DefConstructor!("\\algpx@check@box", sub [document] {
-    let pending = lookup_value("algpx@pending_box");
+    let pending = lookup_value("algpx@pending_boxes");
     if let Some(Stored::String(p)) = pending && !to_string(p).is_empty() {
-      let spec = to_string(p);
-      assign_value("algpx@open_box", Stored::String(p), Some(Scope::Global));
-      assign_value("algpx@pending_box", Stored::String(pin("")), Some(Scope::Global));
-      let (classes, cssstyle) = parse_box_options(&spec);
-      let mut attrs = FxHashMap::default();
-      attrs.insert("class".into(), format!("ltx_framed {classes}"));
-      attrs.insert("cssstyle".into(), cssstyle);
-      document.open_element("ltx:text", Some(attrs), None)?;
-      assign_value("algpx@box_is_open", Stored::Bool(true), Some(Scope::Global));
+      let spec_str = to_string(p).to_string();
+      assign_value("algpx@pending_boxes", Stored::String(pin("")), Some(Scope::Global));
+      let mut count = match lookup_value("algpx@open_box_depth") {
+        Some(Stored::Number(n)) => n.value_of(),
+        _ => 0,
+      };
+      for spec in spec_str.split("|||") {
+        let (classes, cssstyle) = parse_box_options(spec);
+        let mut attrs = FxHashMap::default();
+        attrs.insert("class".into(), format!("ltx_framed {classes}"));
+        attrs.insert("cssstyle".into(), cssstyle);
+        document.open_element("ltx:text", Some(attrs), None)?;
+        count += 1;
+      }
+      assign_value("algpx@open_box_depth", Stored::Number(Number::new(count)), Some(Scope::Global));
     }
   });
 
   DefConstructor!("\\EndBox", sub [document] {
-    // If an inner code line is currently open, close it before closing the box.
-    if lookup_value("algpx@code_open").is_some_and(|s| matches!(s, Stored::Bool(true))) {
-      let _ = document.maybe_close_element("ltx:text");
-      assign_value("algpx@code_open", Stored::Bool(false), Some(Scope::Global));
-    }
-    let is_open = lookup_value("algpx@box_is_open").is_some_and(|s| matches!(s, Stored::Bool(true)));
-    if is_open {
-      let _ = document.maybe_close_element("ltx:text");
-      assign_value("algpx@box_is_open", Stored::Bool(false), Some(Scope::Global));
-    }
-    assign_value("algpx@open_box", Stored::String(pin("")), Some(Scope::Global));
-    assign_value("algpx@pending_box", Stored::String(pin("")), Some(Scope::Global));
+    unwind_one_box(document)?;
   });
+
+  DefConstructor!("\\algpx@close@all@boxes", sub [document] {
+    unwind_all_boxes(document)?;
+  });
+
+  DefConstructor!(
+    "\\lx@algorithmicx@endlist",
+    "</ltx:listing>",
+    before_construct => sub [document] {
+      unwind_all_boxes(document)?;
+      document.maybe_close_element("ltx:listingline")?;
+    }
+  );
 
   DefConstructor!(
     "\\BoxedString [] {}",
@@ -332,7 +512,31 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\lx@algpx@item",
-    "\\lx@algorithmicx@@item\\algpx@check@box"
+    "\\lx@algorithmicx@@item\\algpx@check@box\\algpx@firstLinefalse"
+  );
+
+  // Listing container with indLines class when \ifalgpx@indLines is active
+  DefConstructor!(
+    "\\lx@algorithmicx@beginlist@{}",
+    "<ltx:listing class='#class'>",
+    properties => sub[_args] {
+      let ind = lookup_meaning(&T_CS!("\\ifalgpx@indLines"))
+        .is_some() && {
+          let expanded = Expand!(Tokens::new(vec![
+            T_CS!("\\ifalgpx@indLines"),
+            T_OTHER!("1"),
+            T_CS!("\\else"),
+            T_OTHER!("0"),
+            T_CS!("\\fi"),
+          ])).to_string();
+          expanded.trim() == "1"
+        };
+      if ind {
+        Ok(stored_map!("class" => "ltx_algpx_indlines"))
+      } else {
+        Ok(stored_map!())
+      }
+    }
   );
 
   // Hook start and end code commands to State and control blocks
@@ -365,13 +569,15 @@ LoadDefinitions!({
       \pretocmd{\EndClass}{\algpx@endCodeCommand}{}{}
       \pretocmd{\EndProperties}{\algpx@endCodeCommand}{}{}
       \pretocmd{\EndMethods}{\algpx@endCodeCommand}{}{}
+      \pretocmd{\Require}{\algpx@endCodeCommand}{}{}
+      \pretocmd{\Ensure}{\algpx@endCodeCommand}{}{}
       \pretocmd{\LComment}{\algpx@endCodeCommand}{}{}
-      \pretocmd{\endalgorithmic}{\algpx@endCodeCommand}{}{}
+      \pretocmd{\endalgorithmic}{\algpx@close@all@boxes}{}{}
     \fi
     \let\lx@algpx@orig@endalgorithmic\endalgorithmic
-    \def\endalgorithmic{\algpx@endCodeCommand\lx@algpx@orig@endalgorithmic}
+    \def\endalgorithmic{\algpx@close@all@boxes\lx@algpx@orig@endalgorithmic}
     \ifdefined\AtEndEnvironment
-      \AtEndEnvironment{algorithmic}{\algpx@endCodeCommand}
+      \AtEndEnvironment{algorithmic}{\algpx@close@all@boxes}
     \fi
     \ifdefined\apptocmd
       \apptocmd{\State}{\algpx@startCodeCommand}{}{}
@@ -406,6 +612,7 @@ LoadDefinitions!({
     \def\algpx@startIndent{}
     \def\algpx@endIndent{}
     \def\algpx@startEndBlockCommand{}
+    \def\algpx@startCodeCommandX#1#2{\algpx@startCodeCommand}
     \def\algpx@checkPageBreak{}
     \def\algpx@drawIndentLine#1#2{}
     \@ifundefined{tikzmark}{\def\tikzmark#1{}}{}

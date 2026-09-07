@@ -18467,6 +18467,74 @@ Hello world.
     );
   }
 
+  /// algpseudocodex.sty completeness: indLines, spaceRequire, keywords, structures, statements, and comments.
+  #[test]
+  fn algpseudocodex_completeness_and_controls() {
+    // 1. With indLines=true: <listing> has ltx_algpx_indlines
+    let tex_true = r"\documentclass{article}
+\usepackage[indLines=true]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\Require input A
+\Require input B
+\Structure{Point}
+  \Properties
+    \State $x, y$
+  \EndProperties
+  \Methods
+    \State \Call{Dist}{$p$}
+  \EndMethods
+\EndStructure
+\Class{Graph}
+  \State \Return 0
+  \State \Output \Call{Find}{$v$}
+\EndClass
+\State $x \gets 1$ \Comment{Inline}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_true, xml_true) = convert(tex_true, true);
+    assert_eq!(error_count(&stderr_true), 0, "{stderr_true}");
+    assert!(
+      xml_true.contains("class=\"ltx_algpx_indlines\""),
+      "{xml_true}"
+    );
+    assert!(xml_true.contains(">structure<"), "{xml_true}");
+    assert!(xml_true.contains(">properties<"), "{xml_true}");
+    assert!(xml_true.contains(">methods<"), "{xml_true}");
+    assert!(xml_true.contains(">class<"), "{xml_true}");
+    assert!(xml_true.contains(">return<"), "{xml_true}");
+    assert!(xml_true.contains(">output<"), "{xml_true}");
+    assert!(xml_true.contains(">Dist<"), "{xml_true}");
+    assert!(xml_true.contains(">Find<"), "{xml_true}");
+
+    // 2. Control: indLines=false: <listing> does NOT have ltx_algpx_indlines
+    let tex_false = r"\documentclass{article}
+\usepackage[indLines=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\State $x \gets 1$
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_false, xml_false) = convert(tex_false, true);
+    assert_eq!(error_count(&stderr_false), 0, "{stderr_false}");
+    assert!(!xml_false.contains("ltx_algpx_indlines"), "{xml_false}");
+
+    // 3. Control: rightComments=false converts cleanly without malformed descendant errors
+    let tex_comm = r"\documentclass{article}
+\usepackage[rightComments=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\State $x \gets 1$ \Comment{Inline comment}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_comm, xml_comm) = convert(tex_comm, true);
+    assert_eq!(error_count(&stderr_comm), 0, "{stderr_comm}");
+    assert!(xml_comm.contains("Inline comment"), "{xml_comm}");
+  }
+
   /// lltjfont fontfamily redefined without leaking trailing arguments into gullet (witness: kksymbols/kksymbols-doc).
   #[test]
   fn kksymbols_fontfamily_no_text_leak() {
