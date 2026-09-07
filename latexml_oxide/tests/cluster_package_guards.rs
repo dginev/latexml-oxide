@@ -16992,6 +16992,27 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// xkeyval choice keys: the bin macro holds the chosen value with its original
+  /// catcodes (`\XKV@checkchoice`; `\lowercase` for `\define@choicekey*` keeps
+  /// them), so `\ifx`/`\in@` against a catcode-11 list matches. It was built
+  /// with `Explode!` (catcode-12 letters; Perl KeyVal.pm:143 too), which is why
+  /// powerdot.cls:353-387 never saw `\ifpd@ifsetup` true and every `\pd@@<key>`
+  /// stayed undefined (powerdot-fuberlin, 20 errors surfaced by batch 56ao).
+  /// KNOWN_PERL_ERRORS #215, batch 56ar.
+  #[test]
+  fn choicekey_bin_macro_keeps_letter_catcodes() {
+    let tex = "\\documentclass{article}\n\\usepackage{xkeyval}\n\\makeatletter\n\\define@choicekey{lx}{mode}[\\lxval\\lxnr]{alpha,beta}{}\n\\define@choicekey*{lx}{mo}[\\lxv]{Alpha,Beta}{}\n\\setkeys{lx}{mode=beta,mo=BETA}\n\\def\\lxbeta{beta}\n\\edef\\lxres{[\\ifx\\lxval\\lxbeta same\\else diff\\fi][\\lxnr][\\ifx\\lxv\\lxbeta same\\else diff\\fi]}\n\\makeatother\n\\begin{document}\n\\lxres\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[same][1][same]"), "{xml}");
+    if kpsewhich_has("powerdot.cls") {
+      let tex = "\\documentclass{powerdot}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\begin{slide}{S}\nx\n\\end{slide}\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert!(!stderr.contains("pd@@"), "{stderr}");
+      assert!(xml.contains(">S<") || xml.contains(">S\n"), "{xml}");
+    }
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

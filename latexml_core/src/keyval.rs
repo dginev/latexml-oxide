@@ -473,12 +473,18 @@ fn define_choice(
       nvalue = nvalue.to_lowercase();
     }
     if let Some(varmacro) = varmacro_opt {
-      def_macro(
-        varmacro,
-        None,
-        ExpansionBody::Tokens(Tokens::new(Explode!(nvalue))),
-        None,
-      )?;
+      // xkeyval.tex `\XKV@checkchoice` leaves the chosen value in the bin
+      // macro with its ORIGINAL catcodes (`\lowercase` for the `*` form keeps
+      // them): letters stay catcode 11, so a later `\ifx`/`\in@` against a
+      // catcode-11 list matches (powerdot.cls:353-387 `\pd@pdifs@tup` on
+      // `\pd@cursetup`). `Explode!` made every letter catcode 12 — Perl
+      // KeyVal.pm:143 shares that (KNOWN_PERL_ERRORS #215, batch 56ar).
+      let body = if normalize {
+        Tokens::new(ExplodeText!(nvalue))
+      } else {
+        value.clone()
+      };
+      def_macro(varmacro, None, ExpansionBody::Tokens(body), None)?;
     }
     // iterate over the possible choices and store them
     let mut valid = false;

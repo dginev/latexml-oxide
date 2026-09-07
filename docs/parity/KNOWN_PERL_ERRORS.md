@@ -6143,3 +6143,22 @@ registers globally; the DVI-persona l3 hook in latexml.sty now reports the
 real count instead of l3's constant-1 fallback. Guard:
 `perfect_kernel_batch56::pdfximage_reports_the_pdf_page_count`.
 
+## 215. Choice-key bin macros get catcode-12 letters (Rust fixes)
+
+xkeyval.tex `\XKV@checkchoice` stores the value chosen through
+`\define@choicekey{fam}{key}[\bin\nr]{choices}{code}` in `\bin` with the
+value's ORIGINAL catcodes (the `*` form lowercases with `\lowercase`, which
+keeps catcodes), so packages compare it with `\ifx` or `\in@` against
+catcode-11 lists. Perl KeyVal.pm:143 binds `\bin` as `Explode($nvalue)` —
+every letter catcode 12 — and the Rust port copied it (`keyval.rs
+define_choice`). powerdot.cls:54-61 builds `\pd@cursetup` through such a key
+and :353-387 `\pd@pdifs@tup` tests it with `\in@` against `\pd@@ifsetup`;
+the mismatch leaves `\ifpd@ifsetup` false, so :363 never defines any
+`\pd@@<key>` (titlepos, titlewidth, titlefont, tocpos, tocwidth…). Minimal
+trigger: `\define@choicekey{f}{k}[\v]{a,b}{}\setkeys{f}{k=b}\def\b{b}
+\ifx\v\b same\else diff\fi` → Perl "diff", pdflatex "same". Rust (batch
+56ar): the bin macro holds the original tokens (a catcode-preserving lowercase
+for `*`). Witness powerdot-fuberlin exampleClass/exampleStyle (20 undefined
+`\pd@@…` each, surfaced when batch 56ao started digesting `\rput` bodies).
+Guard: `perfect_kernel_batch56::choicekey_bin_macro_keeps_letter_catcodes`.
+
