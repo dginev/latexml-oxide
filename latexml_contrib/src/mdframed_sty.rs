@@ -52,7 +52,16 @@ LoadDefinitions!({
     "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}"
   );
   def_macro_noop("\\surroundwithmdframed[]{}")?;
-  def_macro_noop("\\mdfsubtitle[]{}")?;
+  // mdframed.sty:1312-1347 `\mdfsubtitle[opts]{text}`: its own paragraph
+  // (`\par\addvspace…\par`) in `\mdf@subtitlefont` (default `\bfseries`,
+  // the `subtitlefont` key); the frame rules/skips are presentation. The
+  // former no-op dropped the subtitle text (batch 56aj).
+  RawTeX!(
+    r"\providecommand\mdf@subtitlefont{\normalfont\bfseries}
+\providecommand\mdf@subsubtitlefont{\normalfont}
+\newcommand\mdfsubtitle[2][]{\par\noindent{\mdf@subtitlefont #2}\par}
+\newcommand\mdfsubsubtitle[2][]{\par\noindent{\mdf@subsubtitlefont #2}\par}"
+  );
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
