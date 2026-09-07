@@ -256,3 +256,33 @@ label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
 - **Guard Test**:
   - Added `animate_multiframe_single_frame` in `latexml_oxide/tests/cluster_package_guards.rs` verifying 0 errors, `xml.matches("<svg:svg").count() == 1`, and attributes `class="ltx_animate"` and `frame-count="10"`.
 
+### N5 — chemnum: sequential compound numbering model (COMPLETED)
+- **Implementation**:
+  - Implemented the numbering and compound tracking model in `latexml_contrib/src/chemnum_sty.rs`:
+    - Track global sequential compound counter and per-compound sub-compound counters in thread-local `CHEMNUM_STATE`.
+    - Macro `\cmpd [*] [+] [opts] {labels}`:
+      - First use creates target: `<ltx:text class="ltx_cmpd" xml:id="cmpd.<label>"><number></ltx:text>`.
+      - Subsequent uses or `+` modifier emit reference: `<ltx:text class="ltx_cmpd" idref="cmpd.<label>"><number></ltx:text>`.
+      - Starred `*` (silent) declares compound(s) sequentially without printing tokens.
+      - Option `sub-only` emits only the sub-compound index suffix.
+    - Macro `\refcmpd [opts] {labels}`: emits reference linking with `idref="cmpd.<label>"`.
+    - Macros `\labelcmpd`, `\initcmpd`, `\cmpdinit`: pre-declare compounds sequentially without text emission.
+    - Macros `\resetcmpd [val]`, `\cmpdreset [val]`: resets counter to `val - 1` (default 0).
+    - Plain value macros: `\cmpdplain{label}`, `\subcmpdplain{main}{sub}`, `\submaincmpdplain{main}{sub}`.
+    - Parsing & list expansion: supports comma-separated lists (`\cmpd{a,b}` → `1, 2`) and sub-compound dot notation (`\cmpd{a.sub}` → `1a`, `\cmpd{a.{1,2}}` → `1a, 1b`).
+    - Registered attribute `idref` on tag `ltx:text` via `model::add_tag_attribute("ltx:text", vec!["idref"]);`.
+- **Line Citations from `chemnum.sty`**:
+  - `chemnum.sty:228-250`: Public command declarations (`\cmpd`, `\refcmpd`, `\labelcmpd`, `\initcmpd`, `\resetcmpd`).
+  - `chemnum.sty:260-261`: `\cmpdinit` and `\cmpdreset` aliases.
+  - `chemnum.sty:640-646`: `\chemnum_init_compound:`.
+  - `chemnum.sty:660-701`: `\chemnum_reset_counter:n`.
+  - `chemnum.sty:1373-1380`: `\chemnum_cmpd:nnnn`, starred/plus variant handling.
+  - `chemnum.sty:1676-1701`: Comma-separated list splitting and sub-compound period splitting.
+  - `chemnum.sty:1976-1983`: Sub-compound label representation (`{counter}{alph(sub_index)}`).
+  - `chemnum.sty:2016-2026`: `\chemnum_ref_compound:nn`.
+- **Verification & Guards**:
+  - Tested on minimal scratch document: 0 errors, clean XML hierarchy with `<text class="ltx_cmpd" xml:id="cmpd.first">1</text>` and `<text class="ltx_cmpd" idref="cmpd.first">1</text>`.
+  - Added guard test `chemnum_compound_numbering` in `latexml_oxide/tests/cluster_package_guards.rs` verifying 0 errors, first use = 1 (or next counter), second label = 2, `\refcmpd` of the first = 1 with `idref`, sub-compound = 1a, comma lists, and pre-allocation via `\cmpdinit`.
+  - Full lint suite (`tools/lint.sh`) and cargo fmt pass cleanly.
+
+
