@@ -16992,6 +16992,20 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// xcolor.sty:1373-1390 `\XC@getcolor` branches on the argument's first token:
+  /// `[model]{spec}` is parsed directly; only a bare name is a declared-colour
+  /// lookup. Our reimplementation handed `[cmyk]{…}` to the name lookup
+  /// (pst-3dplot.tex:245 `SegmentColor={[cmyk]{0.2,0.6,1,0}}` through
+  /// pstricks.sty:155 `\let\pst@getcolor\XC@getcolor`; neoschool-fr).
+  #[test]
+  fn xcolor_getcolor_parses_a_model_prefixed_spec() {
+    let tex = "\\documentclass{article}\n\\usepackage{xcolor}\n\\makeatletter\n\\def\\lxstrip\\xcolor@#1#2#3#4{#3:#4}\n\\XC@getcolor{[cmyk]{0.2,0.6,1,0}}\\lxa\n\\XC@getcolor{red}\\lxb\n\\edef\\lxres{A=\\expandafter\\lxstrip\\lxa;B=\\expandafter\\lxstrip\\lxb;}\n\\makeatother\n\\begin{document}\n\\lxres\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("A=cmyk:0.2,0.6,1,0;"), "{xml}");
+    assert!(xml.contains("B=rgb:") || xml.contains("B=named:"), "{xml}");
+  }
+
   /// tex.web §484: a `\read` from the terminal below scroll mode is a fatal
   /// error — the deliberate halt of iftex.sty:51 (`\Require<engine>`) and expl3's
   /// `\__msg_fatal_exit:` (`\batchmode\read -1 to …`). Both were no-ops, so

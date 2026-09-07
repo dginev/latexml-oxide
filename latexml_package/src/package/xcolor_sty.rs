@@ -1582,7 +1582,9 @@ LoadDefinitions!({
 \def\@@ifxempty#1#2\XC@@
  {\ifx#1\@@ifxempty
   \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
-\def\XC@getcolor#1#2{\extractcolorspec{#1}\XC@@lxtmp\expandafter\XC@getcolor@lx\XC@@lxtmp#2}
+\def\XC@getcolor#1#2{\XC@getc@lor#1\XC@@#2}
+\def\XC@getc@lor#1#2\XC@@#3{\ifx#1\xcolor@\def#3{#1#2}\else\ifx#1[\XC@getcolor@lxmodel#1#2\XC@@#3\else\extractcolorspec{#1#2}\XC@@lxtmp\expandafter\XC@getcolor@lx\XC@@lxtmp#3\fi\fi}
+\def\XC@getcolor@lxmodel[#1]#2\XC@@#3{\edef#3{\noexpand\xcolor@{}{#2}{#1}{#2}}}
 \def\XC@getcolor@lx#1#2#3{\edef#3{\noexpand\xcolor@{}{#2}{#1}{#2}}}
 \def\XC@undeclaredcolor#1#2{\color[#1]{#2}}
 \def\XC@usecolor#1{}
@@ -1591,6 +1593,13 @@ LoadDefinitions!({
 "##);
 
   // xcolor's internal colour API, with THIS binding's colour model behind it
+  // xcolor.sty:1373-1390 dispatches on the FIRST token of the argument: an
+  // `\xcolor@` token is a resolved spec (kept), a leading `[` is a
+  // model-prefixed `[model]{spec}` (parsed directly, `\@undeclaredcolor`), and
+  // only a bare name goes through the declared-colour lookup. Batch 56al: the
+  // `[` case had been handed to `\extractcolorspec` as a colour NAME
+  // (pst-3dplot.tex:245 `SegmentColor={[cmyk]{0.2,0.6,1,0}}` via pstricks.sty:155
+  // `\let\pst@getcolor\XC@getcolor`; witness neoschool-fr).
   // (xcolor.sty:1373-1396 `\XC@getcolor{spec}\cs` leaves `\cs` =
   // `\xcolor@{}{<driver>}{<model>}{<spec>}` = `\XC@current@color`, produced
   // by :786 `\XC@undeclaredcolor{model}{spec}`, which also SETS the colour;
