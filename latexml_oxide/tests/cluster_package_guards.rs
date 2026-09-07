@@ -18654,6 +18654,74 @@ Hello world.
     );
   }
 
+  /// algpseudocodex.sty completeness: indLines, spaceRequire, keywords, structures, statements, and comments.
+  #[test]
+  fn algpseudocodex_completeness_and_controls() {
+    // 1. With indLines=true: <listing> has ltx_algpx_indlines
+    let tex_true = r"\documentclass{article}
+\usepackage[indLines=true]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}[1]
+\Require input A
+\Require input B
+\Structure{Point}
+  \Properties
+    \State $x, y$
+  \EndProperties
+  \Methods
+    \State \Call{Dist}{$p$}
+  \EndMethods
+\EndStructure
+\Class{Graph}
+  \State \Return 0
+  \State \Output \Call{Find}{$v$}
+\EndClass
+\State $x \gets 1$ \Comment{Inline}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_true, xml_true) = convert(tex_true, true);
+    assert_eq!(error_count(&stderr_true), 0, "{stderr_true}");
+    assert!(
+      xml_true.contains("class=\"ltx_algpx_indlines\""),
+      "{xml_true}"
+    );
+    assert!(xml_true.contains(">structure<"), "{xml_true}");
+    assert!(xml_true.contains(">properties<"), "{xml_true}");
+    assert!(xml_true.contains(">methods<"), "{xml_true}");
+    assert!(xml_true.contains(">class<"), "{xml_true}");
+    assert!(xml_true.contains(">return<"), "{xml_true}");
+    assert!(xml_true.contains(">output<"), "{xml_true}");
+    assert!(xml_true.contains(">Dist<"), "{xml_true}");
+    assert!(xml_true.contains(">Find<"), "{xml_true}");
+
+    // 2. Control: indLines=false: <listing> does NOT have ltx_algpx_indlines
+    let tex_false = r"\documentclass{article}
+\usepackage[indLines=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\State $x \gets 1$
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_false, xml_false) = convert(tex_false, true);
+    assert_eq!(error_count(&stderr_false), 0, "{stderr_false}");
+    assert!(!xml_false.contains("ltx_algpx_indlines"), "{xml_false}");
+
+    // 3. Control: rightComments=false converts cleanly without malformed descendant errors
+    let tex_comm = r"\documentclass{article}
+\usepackage[rightComments=false]{algpseudocodex}
+\begin{document}
+\begin{algorithmic}
+\State $x \gets 1$ \Comment{Inline comment}
+\end{algorithmic}
+\end{document}
+";
+    let (stderr_comm, xml_comm) = convert(tex_comm, true);
+    assert_eq!(error_count(&stderr_comm), 0, "{stderr_comm}");
+    assert!(xml_comm.contains("Inline comment"), "{xml_comm}");
+  }
+
   /// lltjfont fontfamily redefined without leaking trailing arguments into gullet (witness: kksymbols/kksymbols-doc).
   #[test]
   fn kksymbols_fontfamily_no_text_leak() {
@@ -18724,5 +18792,140 @@ hello
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Red text"), "{xml}");
+  }
+
+  /// listings.sty \lst@TestEOLChar internal used by tagpdfdocu-patches.sty
+  /// (witness: tagpdf/tagpdf).
+  #[test]
+  fn listings_test_eol_char_exists() {
+    let tex = r"\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\begin{document}
+\lst@TestEOLChar{foo}
+OK
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("OK"), "{xml}");
+  }
+
+  /// pax.sty definitions patched by doc-use-pax.tex (witness: newpax/doc-use-pax).
+  #[test]
+  fn pax_patchcmd_targets_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\usepackage{pax}
+\makeatletter
+\patchcmd\PAX@pdf@annot{\PAX@pagellx}{\PAX@page@llx}{}{\fail}
+\patchcmd\PAX@AddAnnots{\InputIfFileExists\PAX@file{}{\typeout{* Missing: \PAX@file}}}
+ {\begingroup \catcode`\#=12 \catcode`\%=12
+  \InputIfFileExists\PAX@file{}{\typeout{* Missing: \PAX@file}}\endgroup}{}{\fail}
+\makeatother
+\begin{document}
+Patched
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Patched"), "{xml}");
+    assert!(!stderr.contains("undefined:\\fail"), "{stderr}");
+  }
+
+  /// updatemarks.sty out-of-scope stub (witness: updatemarks/updatemarks).
+  #[test]
+  fn updatemarks_stub_loads_cleanly() {
+    let tex = r"\documentclass{article}
+\usepackage{updatemarks}
+\begin{document}
+Marks stub
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Marks stub"), "{xml}");
+    assert_eq!(
+      stderr
+        .matches("Warning:missing_file:updatemarks.sty")
+        .count(),
+      1,
+      "{stderr}"
+    );
+  }
+
+  /// pgf layers macro list expansion (witness: pgf-periodictable/pgf-PeriodicTableManual).
+  ///
+  /// \pgfsetlayers passes its argument unexpanded to \pgf@dosetlayer, matching
+  /// `#1,#2,\relax`. When a package passes a macro containing a comma list,
+  /// \expanded{#1} ensures layers are split into \pgf@layerlist, preventing
+  /// "layer not part of the layer list" errors and rendering ordered <svg:g> elements.
+  #[test]
+  fn pgf_layers_macro_list_renders_ordered_svg_groups() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\pgfdeclarelayer{bg}
+\def\mylayers{bg,main}
+\pgfsetlayers{\mylayers}
+\begin{document}
+\begin{tikzpicture}
+  \fill[blue] (0,0) rectangle (2,2);
+  \begin{pgfonlayer}{bg}
+    \fill[red] (0,0) rectangle (1,1);
+  \end{pgfonlayer}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("part of the layer list"), "{stderr}");
+    // Verify that bg (red) is shipped out in an SVG group before main (blue)
+    let red_pos = xml.find("#FF0000").expect("red background layer present");
+    let blue_pos = xml.find("#0000FF").expect("blue main layer present");
+    assert!(
+      red_pos < blue_pos,
+      "background layer must precede main layer in SVG output"
+    );
+  }
+
+  /// modernposter class semantic blocks and frontmatter (witness: modernposter/demo).
+  ///
+  /// modernposter wraps documents in an overlay tikzpicture spanning the page,
+  /// causing "No shape named sep is known" when nodes are looked up across scopes.
+  /// The modernposter binding drops the overlay tikzpicture and outputs semantic
+  /// containers (postercolumn, posterbox, doubleposterbox) with title and author frontmatter.
+  #[test]
+  fn modernposter_semantic_poster_blocks_and_frontmatter() {
+    let tex = r"\documentclass{modernposter}
+\title{Demo Title}
+\author{A. Author}
+\email{a@author.org}
+\begin{document}
+\maketitle
+\begin{postercolumn}
+  \posterbox{Intro}{Some intro text.}
+  \doubleposterbox{Box A}{Body A}{Box B}{Body B}
+\end{postercolumn}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("No shape named"), "{stderr}");
+    assert!(xml.contains("<title>Demo Title</title>"), "{xml}");
+    assert!(xml.contains("<personname>A. Author</personname>"), "{xml}");
+    assert!(
+      xml.contains("<note role=\"email\">a@author.org</note>"),
+      "{xml}"
+    );
+    assert!(xml.contains(r#"<block class="ltx_postercolumn">"#), "{xml}");
+    assert!(xml.contains(r#"<block class="ltx_posterbox">"#), "{xml}");
+    assert!(
+      xml.contains(r#"<p class="ltx_posterbox_title">Intro</p>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<block class="ltx_doubleposterbox">"#),
+      "{xml}"
+    );
   }
 }

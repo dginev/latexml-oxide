@@ -87,102 +87,9 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
 
 ## Tasks (priority order)
 
-### N1 — the remaining oracle-clean singles (sweep 51, `~/data/perfect_kernel_s51/<bundle>/<name>/<name>.log`)
+Round 9. Rounds 1–8 are lifted into `LEDGER.md` (their Status text is deleted here by rule).
 
-Same protocol as round 7's M4: classify vs same-host Perl, fix in a binding when
-RUST-ONLY or a surpass is cheap and faithful, report SHARED-with-a-Perl-count
-otherwise, and file an engine-seam report (file:line, ≤30-line repro under
-`tools/perfect_kernel/repros/<topic>/`) whenever the root is under `latexml_core`/
-`latexml_engine`.
-
-- `updatemarks/updatemarks` (2): first `Error:undefined:\ERROR` — the doc's own
-  test macro? Check `updatemarks.tex` for `\ERROR` and whether it is defined by a
-  package the doc loads; your `test_updatemarks*` probes in the repo root suggest you
-  started this — finish it there and delete the probes (they are untracked).
-- `latex-doc-ptr/latex-doc-ptr` (1): `Error:missing_file:latex-doc-ptr.ent` —
-  find where `latex-doc-ptr.ent` lives in the TL tree (`kpsewhich`/`find`), and
-  whether the doc reads it via `\input`/`\InputIfFileExists`; if the file is only in
-  `source/`, that is an oracle-corpus artifact: say so with the path.
-- `tagpdf/tagpdf` (1): `Error:undefined:\lst@TestEOLChar` — listings internal
-  used by tagpdf's own code; check what defines it in listings.sty (`lstmisc.sty`?)
-  and why our listings binding lacks it.
-- `newpax/doc-use-pax` (1): `Error:undefined:\fail` — likely a deliberate
-  `\fail` in an example; oracle-clean says pdflatex passes, so find how.
-- `manyind/mindsample` (3): `Error:undefined:\nwletre` — manyind.sty internals;
-  check whether the doc raw-loads manyind.sty and what defines `\nwletre`.
-
-### N2 — algpseudocodex completeness (binding, `latexml_contrib/src/algpseudocodex_sty.rs`) — REGRESSION FIRST
-
-Sweep 52 (your round 7 merged) FLIPPED the package's own manual
-`algpseudocodex/algpseudocodex` from 0 (raw load of the .sty) to 13 errors under the
-binding: `\Output`/`\Structure`/`\Properties`/`\Methods` undefined (the manual defines
-them with `\algnewcommand`/`\algrenewcommand`/`\algdef` — the algorithmicx
-definition API must work through the binding exactly as through the raw package),
-`\tikzset` undefined (algpseudocodex.sty `\RequirePackage{tikz}`; the binding must
-load what the package loads), and 3× `#PCDATA isn't allowed in <ltx:listing>` (text
-landing directly in the listing instead of a `listingline`). Reconvert the manual
-(`grep algpseudocodex ~/data/perfect_kernel/corpus.tsv`, log
-`~/data/perfect_kernel_s52/algpseudocodex/algpseudocodex/algpseudocodex.log`) to 0
-FIRST, with a guard per construct; a binding that handles less than the raw package
-is a regression, not a feature. Then read algpseudocodex.sty (`kpsewhich
-algpseudocodex.sty`) once more and close the gaps the review found: `\Require`/`\Ensure` are not hooked for `\algpx@endCodeCommand`
-(`spaceRequire` dropped), `\Comment`'s trailing `\ignorespaces` (:911) is not
-reproduced, `indLines` is inert. Add a guard per closed gap with a control; keep the
-`ltx_border_<color>`/`ltx_thick` class names.
-
-### N3 — a PDF page count for the DVI persona (design + red repro; core/engine edits are the orchestrator's)
-
-notebeamer's `pages=-` loops over `\l__ntbm_include_filepages_int`, which today is
-l3's fallback 1 (`latexml_sty/mod.rs`, hook `file/l3backend-dvips.def/after`).
-`\pdflastximagepages` is a stub (`latexml_engine/src/pdftex.rs`), and
-`latexml_core/src/util/image.rs` parses PDF page boxes but no page count. Deliver the
-design (one page-count reader feeding both) and a ≤20-line red repro under
-`repros/graphics-tikz/` whose expected output names the real page count of
-`example-image-a4.pdf` (or a small local PDF you generate with pdflatex).
-
-### N4 — verify rounds 7 and the 56ac–56ae batches on sweeps 52 → 54
-
-`~/data/perfect_kernel_s52..s54/sweep_verdicts.tsv` exist (s54 finishes tonight). Repeat
-round 7's M5 over the oracle-clean set for s52 → s54: newly clean, regressions (first
-error side by side), and confirm at 0: biblatex-cheatsheet, kksymbols-doc,
-notebeamer-demo, istgame-doc, uspatent (round 7); msc, ribbonproofsmanual (56ac);
-modernposter/demo (56ad). Also explain the non-oracle rises in s53: datatool-user 8→14,
-glossaries-user 4→5, tcolorbox 10→21 (memory fuse — report only).
-
-### N5 — pgf layers in the SVG driver (binding)
-
-pgf-PeriodicTableManual (non-oracle) carries ~200 errors, 68 of them
-`Package pgf Error: Sorry, the requested layer 'pgfPTbacklayer'/'pgfPTpaperlayer' is not
-part of the layer list`: `\pgfdeclarelayer`/`\pgfsetlayers`/`{pgfonlayer}` under our SVG
-driver (`latexml_package/src/package/pgfsys_latexml_def.rs`, `pgfcorelayers.code.tex`).
-Read pgfcorelayers.code.tex (`\pgfsetlayers` builds `\pgf@layerlist`; `\pgfonlayer`
-checks membership at :90-110) and find why the list the manual sets is not seen — a
-binding-defined `\pgfsetlayers` shadowing the raw one, a `\pgfsys@…` layer hook missing
-(`\pgfsys@beginlayer`?), or the list assignment landing in a group. Deliver a ≤20-line
-repro (`\pgfdeclarelayer{bg}\pgfsetlayers{bg,main}` + `\begin{pgfonlayer}{bg}`), the
-fix, a guard asserting the layered content renders (0 errors + an `<svg:g>` per layer in
-order), and the manual's before/after count.
-
-### N6 — a modernposter class binding (contrib, semantic)
-
-modernposter/demo is down to 1 error: `Package pgf Error: No shape named `sep'` —
-the class's `\renewcommand{\maketitle}` (modernposter.cls:137-151) draws the title
-as tikz nodes and creates node `sep`, but the kernel `\maketitle` is LOCKED (the
-frontmatter model), so the redefinition is dropped and `postercolumn`
-(cls:178-192, `below=3em of sep.west`) references a node that never existed. Perl
-identical (1). Root-causer notes + repros: `~/data/pk_agents/w22/modernposter-sep/`.
-Do NOT unlock `\maketitle` and do NOT silence `\pgfpointanchor`: write
-`latexml_contrib/src/modernposter_cls.rs` (a0poster has `a0poster_cls.rs` as the
-model) that loads the class's non-tikz parts and rebinds `postercolumn`, `posterbox`,
-`doubleposterbox` (cls:178-221) as semantic containers (a column = `ltx:para`/block
-with the box headings as titled blocks — see how other poster classes are bound), drops
-the document-spanning `tikzpicture[overlay]` wrapper (cls:102-127), and leaves
-`\maketitle` to the kernel frontmatter (`\email`/`\highlight` trivial). Guard: a
-small `\documentclass{modernposter}` doc (title + one column + one box) → 0 errors
-AND the title in `<title>` and the box heading present; control: the root-causer's
-`r9_control.tex` stays green. Reconvert demo.tex (0 expected).
-
-### N7 — tikzpingus: bisect the shading regeneration failure (root-cause + fix)
+### N1 — tikzpingus: bisect the shading regeneration failure (root-cause + fix)
 
 tikzpingus/tikzpingus-doc (oracle lualatex, renders) dies with `\lxSVG@sh@defs`/
 `\lxSVG@pos`/`\lxSVG@sh` undefined → `Timeout:PushbackLimit`. The trio is what
@@ -202,7 +109,7 @@ installs the shading — with file:line evidence, a red repro, the faithful fix 
 or, if (1), a note for the orchestrator: core edits are theirs), and a guard asserting
 0 errors + an `<svg:linearGradient>`/`radialGradient` with ≥ 2 `<svg:stop>`.
 
-### N8 — pgfplots `scatter` markers leak one boxing `{` frame each (token trace)
+### N2 — pgfplots `scatter` markers leak one boxing `{` frame each (token trace)
 
 ualberta/ualberta (oracle lualatex exit 1) — `\endgroup Attempt to close non-boxing
 group` then a PushbackLimit runaway. Inline repro (no data file, ≥ 32 errors):
@@ -220,5 +127,47 @@ a fix PLAN for the orchestrator (core edits are theirs) with the guard
 that the runaway after the first error is a robustness gap (error recovery re-unreads an
 unclosable `\endgroup`) worth a separate cap — name where.
 
-## Status (Gemini → orchestrator; append-only, newest last; round 8 only)
+### N3 — forest: a real binding (the user's standing side goal, DIFFICULT_CASES §D10)
 
+`latexml_contrib/src/forest_sty.rs` discards the whole `{forest}` body into an
+`<ltx:ERROR>` (mirrors ar5iv's `discard_env_body`): every tree in the 12 forest manuals
+(3 oracle-clean) is lost while the docs read "0 errors". A raw load needs tikz +
+`pgfopts` + `elocalloc` + `environ` + `xparse` + `inlinedef` + forest's own bracket
+parser; the last two are the blockers. Task, direct implementation: write the forest
+bracket grammar as a Rust reader (forest.sty / forest-lib-*.sty: `[root [child][child]]`
+with node options `[label, key=value, …]`, `
+ode` text, nested brackets, comments) and
+emit the tree as nested `ltx:para`/`ltx:enumerate`-style structure — a semantic tree
+(each node a titled item with its children) — keeping node TEXT and options as attributes;
+no tikz drawing (out of scope for now, document what would be needed). Guard: a 3-level
+tree → 0 errors, every node label present, nesting depth reflected; the 3 oracle-clean
+manuals re-converted with their trees present. Cite forest.sty line numbers for the
+grammar you implement and list unsupported syntax explicitly.
+
+### N4 — an `animate` binding: one representative frame
+
+tikz-among-us/tikz-among-us reaches the 4.6 GB memory fuse in 13 s because
+`egin{animateinline}…\multiframe{180}{rt=0+1}{<tikzpicture>}` (animate.sty:2369-2394,
+a bounded `\whiledo`) materializes 180 SVG frames in the document tree (~39 MB each);
+pdflatex ships each frame as a Form XObject. No Perl binding either. Task: a
+`latexml_contrib/src/animate_sty.rs` that runs the `\multiframe` body ONCE (the first
+frame; expose the frame count as an attribute on a wrapper block) for both `animateinline`
+and `nimategraphics` (which selects one file of a sequence), keeping every other command
+of the package (`
+ewframe`, `\multiframe`, timeline options) argument-consuming. Repro:
+`~/data/pk_agents/w22/among-us/repro.tex` (`--max-memory=1536`). Guard
+`animate_multiframe_single_frame`: 0 errors, `count(//svg:svg)=1`, the frame-count
+attribute present.
+
+### N5 — chemnum: sequential compound numbers instead of blank labels
+
+`latexml_contrib/src/chemnum_sty.rs` no-ops `\cmpd`/`\cmpdinit`/`efcmpd`… so compound
+labels and references are blank (11 manuals, 1 oracle-clean; body text kept). Raw load is
+blocked (expl3/l3keys/translations/chemgreek). Task: implement the numbering model of
+chemnum.sty (`\cmpd{label}` assigns the next number on first use, `efcmpd` prints it,
+sub-compound `label.sub` → `1a`, lists `\cmpd{a,b}` → `1, 2`, the `\cmpdinit` declare
+form; cite the .sty lines), emitting numbers as text with an `ltx:text class="ltx_cmpd"`
+wrapper and an `xml:id`/`idref` pair so references link. Guard: first use = 1, second
+label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
+
+## Status (Gemini → orchestrator; append-only, newest last; round 9 only)

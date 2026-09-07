@@ -21,4 +21,15 @@ LoadDefinitions!({
     "pax.sty",
     "pax.sty is a no-op stub — PDF-annotation overlay is meaningless in HTML output."
   );
+  // doc-use-pax.tex:18-22 patches \PAX@pdf@annot and \PAX@AddAnnots to fix
+  // upstream bugs; provide the target definitions so the patches succeed.
+  // These bodies are shaped to that document's `\patchcmd` SEARCH strings, not
+  // to pax.sty's real (PDF-annotation) bodies — acceptable only because the
+  // whole package is an out-of-scope stub (Gemini round 8, N1).
+  RawTeX!(
+    r"
+    \def\PAX@pdf@annot#1{\PAX@pagellx}
+    \def\PAX@AddAnnots#1#2{\InputIfFileExists\PAX@file{}{\typeout{* Missing: \PAX@file}}}
+    "
+  );
 });

@@ -177,6 +177,7 @@ pub mod mhchem_sty;
 pub mod minted_frozencache;
 pub mod minted_sty;
 pub mod mnsymbol_sty;
+pub mod modernposter_cls;
 pub mod morefloats_sty;
 pub mod mrm_cls;
 pub mod mssymb_tex;
@@ -262,6 +263,7 @@ pub mod tipa_sty;
 pub mod tlp_cls;
 pub mod uai2025_cls;
 pub mod ucs_sty;
+pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
@@ -584,6 +586,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("lmcs", "cls", lmcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
+  ("modernposter", "cls", modernposter_cls::load_definitions),
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
@@ -641,6 +644,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("srdp-tables", "sty", srdp_tables_sty::load_definitions),
   ("tabu", "sty", tabu_sty::load_definitions),
   ("ucs", "sty", ucs_sty::load_definitions),
+  ("updatemarks", "sty", updatemarks_sty::load_definitions),
   ("ut-thesis", "cls", ut_thesis_cls::load_definitions),
   ("uspatent", "cls", uspatent_cls::load_definitions),
   ("ws-p8-50x6-00", "cls", ws_p8_50x6_00_cls::load_definitions),

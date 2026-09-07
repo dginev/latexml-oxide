@@ -1,0 +1,16 @@
+% witness: modernposter/demo.tex (TL2025 doc/latex/modernposter)
+% oracle: pdflatex clean; latexml_oxide clean; status: GREEN
+% mechanism: modernposter class creates full-page overlay tikzpicture with node 'sep'.
+%   The modernposter binding replaces the overlay tikzpicture with semantic containers
+%   (postercolumn, posterbox, doubleposterbox) and preserves frontmatter.
+\documentclass{modernposter}
+\title{Demo Title}
+\author{A. Author}
+\email{a@author.org}
+\begin{document}
+\maketitle
+\begin{postercolumn}
+  \posterbox{Intro}{Some intro text.}
+  \doubleposterbox{Box A}{Body A}{Box B}{Body B}
+\end{postercolumn}
+\end{document}
