@@ -1263,11 +1263,12 @@ LoadDefinitions!({
   // is l3graphics' generic `\__graphics_get_pagecount:n`, which pipes
   // `extractbb -O` (expl3-code.tex:33334-33350) — shell escape is off here, so
   // it failed with "Cannot run piped system commands" (notebeamer-demo). The
-  // hook answers with l3's OWN fallback when the pipe yields nothing: one page
-  // (expl3-code.tex:33348). A real count needs the PDF page count exposed to
-  // TeX (`\pdflastximagepages` is a stub, pdftex.rs) — recorded in
-  // KERNEL_CAPABILITIES; the caller guards a double definition with
-  // `\int_if_exist:cF` (:33320).
+  // hook answers with what the pdfTeX backend itself does (l3backend-pdftex
+  // `\__graphics_backend_get_pagecount:n`: `\pdfximage` then
+  // `\pdflastximagepages`), which our `\pdfximage` primitive fills from the
+  // PDF's `/Pages /Count` (batch 56ap; before that a constant 1, l3's own
+  // fallback, expl3-code.tex:33348); the caller guards a double definition
+  // with `\int_if_exist:cF` (:33320).
   // Written with `\csname` names, not `\ExplSyntaxOn`: latexml.sty's body runs
   // while the format is still loading (wisdom_preload_before_format_dump), and
   // an `\ExplSyntaxOn` here pulled a raw expl3.sty whose backend selection
@@ -1277,7 +1278,7 @@ LoadDefinitions!({
   RawTeX!(
     r"\AddToHook{file/l3backend-dvips.def/after}{%
   \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname##1{%
-    \csname int_const:cn\endcsname{c__graphics_##1_pages_int}{1}}%
+    \pdfximage{##1}\csname int_const:cn\endcsname{c__graphics_##1_pages_int}{\pdflastximagepages}}%
 }"
   );
 });

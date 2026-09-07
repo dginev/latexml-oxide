@@ -367,10 +367,14 @@ LoadDefinitions!({
   DefRegister!("\\pdfretval"               => Number::new(0));
 
   // \pdfximage [ image attr spec ] general text (h, v, m)
-  // Real pdfTeX reads optional `[image attr spec]` then a balanced text
-  // (the file path). Stub: drop a leading `[...]` if present, then
-  // consume one balanced general-text arg. No PDF emission. Driver:
-  // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
+  // Real pdfTeX reads optional `[image attr spec]` then a balanced text (the
+  // file path), registers the image and sets `\pdflastximage` (its object
+  // number) and `\pdflastximagepages` (a PDF's page count, 1 for bitmaps —
+  // pdfTeX manual §8.9). No PDF emission here, but the two registers are real
+  // (batch 56ap): pdfpages' `\AM@getpagecount` (pppdftex.def:79-82), the
+  // l3 backend's page count in the DVI persona (latexml.sty hook) and any
+  // document testing `\pdflastximagepages` read them. Drivers: 2406.14142
+  // (`\pdfximage{...}` in a graphics-bbox-precompute path), notebeamer-demo.
   DefPrimitive!("\\pdfximage", sub[_args] {
     skip_spaces()?;
     if if_next(T_OTHER!("["))? {
@@ -382,7 +386,31 @@ LoadDefinitions!({
       }
     }
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let file = read_balanced(ExpansionLevel::Off, false, true)?.to_string();
+    let name = file.trim().trim_matches(|c| c == '{' || c == '}').trim().to_string();
+    let pages = find_file(&name, None)
+      .or_else(|| {
+        // pdfTeX's default extension search order for `\pdfximage`
+        [".pdf", ".png", ".jpg", ".jpeg", ".PDF", ".PNG", ".JPG"]
+          .iter()
+          .find_map(|ext| find_file(&format!("{name}{ext}"), None))
+      })
+      .and_then(|found| {
+        let path = std::path::PathBuf::from(found);
+        let is_pdf = path.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf"))
+          || std::fs::File::open(&path)
+            .ok()
+            .and_then(|mut f| { let mut h = [0u8; 5]; std::io::Read::read_exact(&mut f, &mut h).ok().map(|_| &h == b"%PDF-") })
+            .unwrap_or(false);
+        if is_pdf { util::image::read_pdf_page_count(&path) } else { Some(1) }
+      })
+      .unwrap_or(0);
+    let next = match lookup_register("\\pdflastximage", Vec::new())? {
+      Some(RegisterValue::Number(n)) => n.0 + 1,
+      _ => 1,
+    };
+    assign_register("\\pdflastximage", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
+    assign_register("\\pdflastximagepages", RegisterValue::Number(Number::new(i64::from(pages))), Some(Scope::Global), Vec::new())?;
     Ok(vec![])
   });
   // \pdfrefximage object number (h, v, m) — discard the object number

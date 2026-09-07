@@ -1,6 +1,6 @@
 \documentclass{article}
 % WITNESS: notebeamer, pdfpages/beamer; ORACLE: pdflatex outputs 1, err 0
-% MECH: \pdfximage + \pdflastximagepages must report real PDF page count.
+% MECH: \pdfximage + \pdflastximagepages report the real PDF page count (batch 56ap: image.rs read_pdf_page_count; KPE #214). status: GREEN
 % Under the DVI persona, \pdflastximagepages is stubbed to 0 in pdftex.rs.
 \begin{document}
 \pdfximage{example-image-a4.pdf}

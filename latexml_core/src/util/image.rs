@@ -825,6 +825,90 @@ pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
   parse_pdf_box(&inflated, "/CropBox").or_else(|| parse_pdf_box(&inflated, "/MediaBox"))
 }
 
+/// The page count of a PDF, as pdfTeX's `\pdflastximagepages` reports it
+/// after `\pdfximage`: the root `/Type /Pages` node's `/Count`. Without a
+/// full parser, the root is the `/Pages` dictionary with the LARGEST `/Count`
+/// (intermediate nodes count only their subtree); raw bytes first, then the
+/// inflated object streams (PDF 1.5+, see [`read_pdf_page_box`]). A PDF with
+/// no `/Pages` dictionary at all falls back to counting `/Type /Page` objects.
+pub fn read_pdf_page_count(path: &Path) -> Option<u32> {
+  let bytes = read_file_resilient(path)?;
+  let raw = String::from_utf8_lossy(&bytes);
+  if let Some(n) = max_pages_count(&raw) {
+    return Some(n);
+  }
+  let inflated = inflate_object_streams(&bytes);
+  if let Some(content) = inflated.as_deref()
+    && let Some(n) = max_pages_count(content)
+  {
+    return Some(n);
+  }
+  let pages = count_page_objects(&raw) + inflated.as_deref().map_or(0, count_page_objects);
+  if pages > 0 { Some(pages) } else { None }
+}
+
+/// The largest `/Count N` of a `/Type /Pages` dictionary. From each
+/// `/Type /Pages` (with or without the space) scan forward to the `/Count` at
+/// the dictionary's own brace depth — a nested `/Resources << … >>` before it
+/// must not end the search — stopping at the dictionary's closing `>>`.
+fn max_pages_count(content: &str) -> Option<u32> {
+  let mut best: Option<u32> = None;
+  for key in ["/Type /Pages", "/Type/Pages"] {
+    let mut from = 0;
+    while let Some(rel) = content[from..].find(key) {
+      let start = from + rel + key.len();
+      from = start;
+      let mut depth = 0i32;
+      let mut i = start;
+      let b = content.as_bytes();
+      while i < b.len() {
+        if b[i] == b'<' && i + 1 < b.len() && b[i + 1] == b'<' {
+          depth += 1;
+          i += 2;
+          continue;
+        }
+        if b[i] == b'>' && i + 1 < b.len() && b[i + 1] == b'>' {
+          if depth == 0 {
+            break;
+          }
+          depth -= 1;
+          i += 2;
+          continue;
+        }
+        if depth == 0 && content[i..].starts_with("/Count") {
+          let digits: String = content[i + 6..]
+            .trim_start()
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
+          if let Ok(n) = digits.parse::<u32>() {
+            best = Some(best.map_or(n, |b| b.max(n)));
+          }
+          break;
+        }
+        i += 1;
+      }
+    }
+  }
+  best
+}
+
+fn count_page_objects(content: &str) -> u32 {
+  let mut n = 0;
+  for key in ["/Type /Page", "/Type/Page"] {
+    let mut from = 0;
+    while let Some(rel) = content[from..].find(key) {
+      let at = from + rel + key.len();
+      // `/Page` followed by a delimiter, not `/Pages`.
+      if !content[at..].starts_with('s') {
+        n += 1;
+      }
+      from = at;
+    }
+  }
+  n
+}
+
 /// Concatenate the inflated contents of every `/Type /ObjStm` in `bytes`.
 ///
 /// Deliberately not a PDF parser: it finds object-stream dictionaries, takes the

@@ -6125,3 +6125,21 @@ Fatal, iftex's `\Require*` bodies are the real ones (the binding had 13
 no-ops). 23 sweep-57 documents traded a 3,288,334,336-byte `alloc_failed`
 after ~45 s for one Fatal in seconds, matching their lualatex oracle's exit.
 Guard: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.
+
+## 214. `\pdfximage` never sets `\pdflastximagepages` (Rust fixes)
+
+pdfTeX manual §8.9: `\pdfximage` registers the image and sets `\pdflastximage`
+(the object number) and `\pdflastximagepages` (a PDF's page count; 1 for a
+bitmap). Perl LaTeXML's pdfTeX pool (pdfTeX.pool.ltxml:131-145) leaves `\pdfximage`
+UNDEFINED and defines both registers as constant 0, so pdfpages' `\AM@getpagecount`
+(pppdftex.def:79-82), the pdfTeX l3 backend's `\__graphics_backend_get_pagecount:n`
+and any document that tests the count (`\ifnum\pdflastximagepages=1`, the
+notebeamer demo) see 0. Minimal trigger: `\pdfximage{example-image-a4.pdf}
+\the\pdflastximagepages` → Perl an undefined-macro error and 0, pdflatex 1. Rust (batch 56ap): the
+primitive resolves the file (pdfTeX's extension search), reads the root
+`/Type /Pages` node's `/Count` from the raw bytes or the inflated object
+streams (`latexml_core/src/util/image.rs::read_pdf_page_count`), and sets both
+registers globally; the DVI-persona l3 hook in latexml.sty now reports the
+real count instead of l3's constant-1 fallback. Guard:
+`perfect_kernel_batch56::pdfximage_reports_the_pdf_page_count`.
+
