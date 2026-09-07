@@ -238,3 +238,21 @@ label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
     - `forest-quickstart.tex`: 344 `ltx_forest` elements present.
     - `fragoli_doc.tex`: 9 `ltx_forest` elements present.
     - `milsymb.tex`: 99 `ltx_forest` elements present.
+
+### N4 — animate: single representative frame binding (COMPLETED)
+- **Implementation**:
+  - Implemented `latexml_contrib/src/animate_sty.rs`:
+    - Environment `animateinline` (options, fps): digests in `internal_vertical` mode. On construction, closes open `ltx:p`, pops frame count from thread-local `ANIM_STACK`, and emits `<ltx:block class="ltx_animate" frame-count="{frame_count}">` wrapping the digested body.
+    - Macro `\multiframe{count}{vars}{body}`: evaluates `count` (supports literal integers and TeX counters), parses `name=init+step` variable declarations, emits `\def\<name>{<init>}` for the first frame, sets `frame_count = count` in `ANIM_STACK`, and digests `body` ONCE. If invoked outside an enclosing `animateinline`, wraps in `animateinline` with the specified frame count.
+    - Macro `\animategraphics[opts]{fps}{basename}{first}{last}`: parses `first` and `last` frame indices to compute total frame count `(|last - first| + 1)`, chooses the initial file (`basename` + `first`), and expands to an `animateinline` block wrapping `\includegraphics[opts]{selected_file}` with `frame-count` set.
+    - Macro `\newframe[*] []`: argument-consuming frame separator; increments active `frame_count`.
+    - Macro `\multiframebreak`: no-op break macro.
+  - Removed dead stub `latexml_package/src/package/animate_sty.rs` and registered `animate` in `latexml_contrib/src/lib.rs`.
+- **Verification & Repro**:
+  - Re-ran `/home/deyan/data/pk_agents/w22/among-us/repro.tex` (`--preload=[rawstyles]latexml.sty --max-memory=1536`):
+    - Converted with 0 errors (`Conversion complete: No obvious problems`, `Status:conversion:0`).
+    - Output XML contains `<block class="ltx_animate" frame-count="180">` with exactly 1 `<svg:svg>` element.
+    - Memory usage remained under 100MB (previously blew 1.5GB budget with ~150 frames).
+- **Guard Test**:
+  - Added `animate_multiframe_single_frame` in `latexml_oxide/tests/cluster_package_guards.rs` verifying 0 errors, `xml.matches("<svg:svg").count() == 1`, and attributes `class="ltx_animate"` and `frame-count="10"`.
+

@@ -19052,4 +19052,28 @@ Marks stub
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.matches("<svg:g").count() >= 3, "{xml}");
   }
+
+  /// animate: single representative frame for multi-frame animations (witness: among-us repro.tex).
+  /// Exposes frame-count on wrapper block, avoiding memory budget exhaustion.
+  #[test]
+  fn animate_multiframe_single_frame() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{animate}
+\begin{document}
+\begin{animateinline}[controls]{30}
+\multiframe{10}{x=0+1}{%
+  \begin{tikzpicture}
+    \draw (0,0) rectangle (\x,2);
+  \end{tikzpicture}%
+}
+\end{animateinline}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
+    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+    assert!(xml.contains("class=\"ltx_animate\""), "{xml}");
+  }
 }
