@@ -16992,6 +16992,52 @@ c &= d
     assert!(xml.contains("EMPTY"), "{xml}");
   }
 
+  /// biblatex.sty:10757-10769 `\refsection` takes an OPTIONAL resource list only;
+  /// the binding's `[]{}` signature swallowed the `\begin` of the environment that
+  /// followed `\begin{refsection}[…]`, so `\end{otherlanguage}` closed the
+  /// refsection group and `\end{refsection}` hit the document frame ("Attempt to
+  /// close a group that switched to mode horizontal"; biblatex-apa-test:1203-1208).
+  #[test]
+  fn refsection_takes_only_an_optional_resource_list() {
+    if kpsewhich_has("biblatex.sty") && kpsewhich_has("babel.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage[ngerman,american]{babel}\n\\usepackage[style=apa]{biblatex}\n\\begin{document}\n\\begin{refsection}[foo.bib]\n\\begin{otherlanguage}{ngerman}\nx\n\\end{otherlanguage}\n\\end{refsection}\nAfter.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(!xml.contains("otherlanguagengerman"), "{xml}");
+      // babel's `otherlanguage` wraps the body it DID open: `<text xml:lang="de">x`.
+      assert!(
+        xml.contains("xml:lang=\"de\">x") && xml.contains("After."),
+        "{xml}"
+      );
+      // A biber `.bbl` opens with `\refsection{0}` — the bbl-time variant with a
+      // MANDATORY section number (biblatex.sty:8634, re-let by `\blx@bblstart`
+      // :8999-9000). The old `[]{}` signature ate that `{0}` by accident; the
+      // optional-only document macro must not typeset a stray "0".
+      let bbl = include_str!("cluster_regressions/biblatex_ay/declarecite.bbl");
+      let tex = "\\documentclass{article}\n\\usepackage[style=authoryear]{biblatex}\n\\addbibresource{x.bib}\n\\begin{document}\nCite \\cite{smith2020}.\n\\printbibliography\n\\end{document}\n";
+      let (stderr, xml) = convert_files(tex, &[("t.bbl", bbl)]);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(
+        xml.contains("<bibitem") || xml.contains("<ltx:bibitem"),
+        "{xml}"
+      );
+      let mut text = String::new();
+      let mut in_tag = false;
+      for c in xml.chars() {
+        match c {
+          '<' => in_tag = true,
+          '>' => in_tag = false,
+          _ if !in_tag => text.push(c),
+          _ => {},
+        }
+      }
+      assert!(
+        !text.split_whitespace().any(|w| w == "0"),
+        "stray bbl refsection number: {xml}"
+      );
+    }
+  }
+
   /// xkeyval's EMPTY family is a family: pst-xkey.tex:53-57 accumulates
   /// `\pst@famlist` as ",pstricks" and pstricks.tex:808-810 defines
   /// `precode`/`postcode`/`exchange` in it (pst-node.tex the `Xnodesep` six).

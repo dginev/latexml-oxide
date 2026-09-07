@@ -1,0 +1,27 @@
+% witness: biblatex-apa/biblatex-apa-test (TeX Live doc manual), line 1203-1208
+% oracle: lualatex (clean, exit 0, 0 errors); pdflatex/biber also clean
+% engines: pdflatex/lualatex
+% expect: 0 errors; an <ltx:p> containing just "x" (no "otherlanguagengerman")
+% status: GREEN (batch 56ai, 2026-09-06: `\refsection[]` optional-only; guard refsection_takes_only_an_optional_resource_list)
+% mechanism: oxide binds \refsection with a bogus MANDATORY {} arg
+%   (biblatex_sty.rs:2749 def_macro_noop("\refsection[]{}")). Real biblatex
+%   \refsection (biblatex.sty:10757 \newrobustcmd*{\refsection}{...\@ifnextchar[
+%   {\blx@refsection}{\blx@refsection[]}}) takes an OPTIONAL [...] arg ONLY.
+%   So \begin{refsection}[foo.bib] -> \begingroup + \refsection eats optional
+%   [foo.bib] AND swallows the next token \begin (of \begin{otherlanguage}) as
+%   its {} arg. \begin{otherlanguage} never opens its \begingroup, but
+%   \end{otherlanguage} still emits \endgroup (latex.ltx \end), which closes
+%   refsection's \begingroup; \end{refsection}'s \endgroup then hits the base
+%   frame that had switched to horizontal -> the error.
+% load-bearing: babel (defines otherlanguage), biblatex (defines \refsection),
+%   the [foo.bib] optional arg, and \begin{otherlanguage} DIRECTLY after it.
+\documentclass{article}
+\usepackage[ngerman,american]{babel}
+\usepackage[style=apa]{biblatex}
+\begin{document}
+\begin{refsection}[foo.bib]
+\begin{otherlanguage}{ngerman}
+x
+\end{otherlanguage}
+\end{refsection}
+\end{document}

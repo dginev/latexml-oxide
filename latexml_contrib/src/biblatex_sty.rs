@@ -661,8 +661,8 @@ fn blx_split_ay_label(label: &str) -> Option<(String, String)> {
 #[rustfmt::skip]
 /// The `.bbl` command set (biblatex.sty:8995-9024 `\\blx@bblstart`): saved
 /// and rebound around the `.bbl` input, restored after it.
-const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset";
-const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset";
+const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset\\let\\biblatex@saved@refsection\\refsection\\let\\refsection\\biblatex@bbl@refsection\\let\\biblatex@saved@endrefsection\\endrefsection\\let\\endrefsection\\biblatex@bbl@endrefsection";
+const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset\\let\\refsection\\biblatex@saved@refsection\\let\\endrefsection\\biblatex@saved@endrefsection";
 
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
@@ -1335,7 +1335,11 @@ LoadDefinitions!({
   });
   // Perl L107-108: \lossort / \refsection — empty stubs.
   DefMacro!("\\lossort", "", locked => true);
-  DefMacro!("\\refsection{}", "", locked => true);
+  // biblatex.sty:10757-10769 `\newrobustcmd*{\refsection}{…\@ifnextchar[{\blx@refsection}
+  // {\blx@refsection[]}}`: an OPTIONAL resource list only — a mandatory `{}` here
+  // swallowed the `\begin` of the next environment inside `\begin{refsection}[…]`
+  // (biblatex-apa-test:1203-1208; batch 56ai).
+  DefMacro!("\\refsection[]", "", locked => true);
 
   // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
   // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
@@ -2229,6 +2233,17 @@ LoadDefinitions!({
   def_macro_noop("\\biblatex@bbl@warn{}")?;
   DefMacro!("\\biblatex@bbl@xref{}", "\\ref{#1}");
   def_macro_noop("\\biblatex@bbl@fakeset{}")?;
+  // biblatex.sty:8634-8641 + 8999-9000: while the `.bbl` is read, `\refsection`
+  // is the bbl variant taking a MANDATORY section number (`\refsection{0}` opens
+  // every biber .bbl) and `\endrefsection` closes its group; the document-level
+  // `\refsection[]` (optional resource list only) must not see that `{0}`.
+  DefMacro!(
+    "\\biblatex@bbl@refsection{}",
+    "\\begingroup\\c@refsection#1\\relax"
+  );
+  // (biblatex.sty:8638-8642 also flushes `blx@addset` cross-reference sets
+  // here; the binding models no `\set`/`\inset`, so only the group close remains.)
+  DefMacro!("\\biblatex@bbl@endrefsection", "\\endgroup");
 
   // biblatex source-mapping API (a biber pre-processing stage LaTeXML does not
   // run): gobble the whole rule argument WITHOUT expanding it, so the nested
@@ -2746,7 +2761,7 @@ LoadDefinitions!({
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
   def_macro_noop("\\newrefsection[]")?;
   def_macro_noop("\\endrefcontext")?;
-  def_macro_noop("\\refsection[]{}")?;
+  def_macro_noop("\\refsection[]")?; // optional-only, biblatex.sty:10757-10769 (batch 56ai)
   def_macro_noop("\\endrefsection")?;
 
   // `\refcontext`/`\newrefcontext` take an optional `[...]` and then a
