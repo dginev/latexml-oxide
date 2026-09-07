@@ -17013,6 +17013,20 @@ c &= d
     }
   }
 
+  /// `\newpsstyle{X}{…}` defines `\pscs@X` (pstricks.tex:638-645) and the raw
+  /// `style` key (pstricks.tex:633-636) consults it; a leftover noop stub for
+  /// `\newpsstyle` made every `\psset{style=X}` raise "Custom style 'X'
+  /// undefined" (pst-calendar-doc 15→101 once `\rput` bodies were digested).
+  /// Batch 56as.
+  #[test]
+  fn newpsstyle_defines_the_custom_style_psset_consults() {
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\newpsstyle{september}{linewidth=2pt}\n\\begin{document}\nTop: \\psset{style=september}\n\\begin{pspicture}(0,0)(2,2)\n\\rput(1,1){\\psset{style=september}\\psframe(0,0)(1,1)}\n\\end{pspicture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Custom style"), "{stderr}");
+    assert!(xml.contains("<picture"), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

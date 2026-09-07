@@ -238,7 +238,13 @@ LoadDefinitions!({
     def_macro(new_tok, params, Some(body_closure), None)?;
   });
 
-  def_macro_noop("\\newpsstyle{}{}")?;
+  // `\newpsstyle` stays the RAW pstricks.tex:638-645 definition (`\@namedef
+  // {pscs@<name>}{…}`): the raw `style` key (pstricks.tex:633-636) consults
+  // `\pscs@<name>` and raises "Custom style '<name>' undefined" otherwise. A
+  // noop stub here hid every `\newpsstyle` from the real `\psset` (a stub over
+  // a pure value computer is a bug; pst-calendar-doc 15→101 once `\rput`
+  // bodies were digested in batch 56ao; Perl's own `\newpsstyle` binding stores
+  // the style for its own `setGraphParams`). Batch 56as.
 
   // PSCoordList-emulator. Perl's pstricks_support.sty.ltxml uses parameter
   // type `PSCoordList` (variable-arity `(x,y)(x,y)...`) to absorb the paren
