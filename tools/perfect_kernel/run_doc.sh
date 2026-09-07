@@ -63,21 +63,38 @@ if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t0\t0$" "$ORACLE"; 
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
 fi
 
+run_once() {
+  timeout "$TIMEOUT_S" "$BIN" \
+    --preload="$PRELOAD" \
+    --xml \
+    --timeout="$TIMEOUT_S" \
+    --max-memory=6144 \
+    --dest="$out/$name.xml" \
+    "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log"
+  exit_code=$?
+  # ANSI-strip the log (older/current binaries may color when not TTY-gated).
+  sed 's/\x1b\[[0-9;]*m//g' "$out/$name.raw.log" >"$out/$name.log"
+  rm -f "$out/$name.raw.log"
+}
+
 start=$(date +%s.%N)
-timeout "$TIMEOUT_S" "$BIN" \
-  --preload="$PRELOAD" \
-  --xml \
-  --timeout="$TIMEOUT_S" \
-  --max-memory=6144 \
-  --dest="$out/$name.xml" \
-  "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log"
-exit_code=$?
+run_once
+# Wrong-engine retry (batch 56am, 2026-09-07). Since batch 56ak a `\batchmode
+# \read -1` (iftex `\Require<engine>`, expl3 `\msg_fatal`) is the Fatal it is
+# in TeX (tex.web §484), so a LuaLaTeX/XeLaTeX-authored manual whose oracle is
+# NOT clean (and therefore ran under the pdfTeX identity above) now halts in
+# seconds instead of limping on — sweep 59: 46 docs, 23 of them formerly partial
+# output, two formerly 0-error (musical, dithesis/sampleNoArial). The kernel
+# stays faithful; the harness gives such a doc the engine it was written for:
+# one retry under the `luatex` identity, recorded next to the verdict.
+rm -f "$out/retried_luatex"
+if [[ "$PRELOAD" != *luatex* ]] && grep -q 'cannot \\read from terminal in nonstop modes' "$out/$name.log"; then
+  PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
+  printf 'first run (pdfTeX identity) halted on a wrong-engine terminal read; retried under luatex\n' >"$out/retried_luatex"
+  run_once
+fi
 end=$(date +%s.%N)
 secs=$(printf '%.1f' "$(echo "$end $start" | awk '{print $1-$2}')")
-
-# ANSI-strip the log (older/current binaries may color when not TTY-gated).
-sed 's/\x1b\[[0-9;]*m//g' "$out/$name.raw.log" >"$out/$name.log"
-rm -f "$out/$name.raw.log"
 
 # Strict error grep (feedback_strict_vs_lax_error_grep).
 errors=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
