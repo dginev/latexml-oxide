@@ -87,10 +87,17 @@ run_once
 # output, two formerly 0-error (musical, dithesis/sampleNoArial). The kernel
 # stays faithful; the harness gives such a doc the engine it was written for:
 # one retry under the `luatex` identity, recorded next to the verdict.
+# A second unambiguous LuaTeX-required signal: pgf's graph-drawing library
+# (pgflibrarygraphdrawing.code.tex:16-24) errors "You need to run LuaTeX to
+# use the graph drawing library" and `\endinput`s under any other engine —
+# tikz-ext-manual (oracle lualatex, not clean, so the gate above excluded it)
+# lost 14 errors to that gate's cascade (2026-09-09). Only docs that emit the
+# message are retried, so the clean-oracle gate's guard against pdfLaTeX-
+# authored stale docs is untouched.
 rm -f "$out/retried_luatex"
-if [[ "$PRELOAD" != *luatex* ]] && grep -q 'cannot \\read from terminal in nonstop modes' "$out/$name.log"; then
+if [[ "$PRELOAD" != *luatex* ]] && grep -q -e 'cannot \\read from terminal in nonstop modes' -e 'You need to run LuaTeX to use the graph drawing library' "$out/$name.log"; then
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
-  printf 'first run (pdfTeX identity) halted on a wrong-engine terminal read; retried under luatex\n' >"$out/retried_luatex"
+  printf 'first run (pdfTeX identity) hit a wrong-engine halt or a LuaTeX-required library gate; retried under luatex\n' >"$out/retried_luatex"
   run_once
 fi
 end=$(date +%s.%N)

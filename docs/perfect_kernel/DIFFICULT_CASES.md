@@ -105,6 +105,8 @@ for a missing relative `\input` path would be a beyond-oracle divergence
 (surpass-perl escalation, not taken). mercatormap (459) is shell-escape
 (`shell_escape_excluded.tsv`).
 
+**tcolorbox `compilable listing` / `pdf comment` (sweep 66: beamertheme-rainbow/-spectrum/-tcolorbox docs, didec; root-caused 2026-09-09).** Every `Package tcolorbox Error` is one cascade from tcblistingscore.code.tex:167-181 `\__tcbox_run_system_command:n` refusing without shell escape ("You must invoke LaTeX with the -shell-escape flag"), then tcbskins.code.tex:1684-1706's missing sub-PDF and the undefined `\pdfpages`. pdflatex without `-shell-escape` fails identically; Perl explodes earlier on raw minted v3. Three bundles were already in `shell_escape_excluded.tsv`; didec added.
+
 ## D8. expl3-heavy packages
 
 Raw interpretation of l3-programming-layer packages exercises expl3 the
@@ -171,6 +173,7 @@ work that would turn it into a conversion; none is a final answer.
 | Sweep-58 fatal residue after 56ak, grouped by first error (2026-09-07; excludes the D9 pTeX bails and the memory-fuse docs): `\epTeXinputencoding` undefined → `PushbackLimit` **6 docs** (gckanbun, asternote, hideanswer, inlinelabel, jpnedumathsymbols, jpneduenumerate — all `jlreq`; lualatex oracle exit 1 for every one, so they run under the pdfTeX identity and jlreq.cls:492 correctly takes its (u)pLaTeX branch = D9 pTeX primitives. PARKED 2026-09-07; the runaway afterwards is an unreduced l3keys `\keys_set` re-unread loop (`\__kernel_tl_set:Nx` of the choice/finally save-restore) confined to jlreq's platex path, repro `~/data/pk_agents/w22/eptex-pushback/repro.tex`; no in-scope lever short of giving lualatex-authored-but-failing docs the luatex identity, which still needs luatexja) · class-requires-XeLaTeX/LuaLaTeX → `Recursion` 2 (thuthesis, nxuthesis: `\directlua` detection, D6 policy) · tikzpingus (`\lxSVG@sh@defs` — our own name — → PushbackLimit) · tikzviolinplots (`Extra \else` → Recursion) · neoschool-fr (`[cmyk]{…}` taken as a colour NAME → EoF) · ualberta (non-boxing `\endgroup` → PushbackLimit) · xytree (`\ex` undefined → Recursion) · singles typog, tikz-optics (`../` library path), pldocverb (`\hour`, D9), pas-crosswords (`\lstset` undefined), dmlb-template (`\mya`), stex-doc (archive), fixdif-zh-cn (xelatex-only); out of scope: resolsysteme ×2, robust-externalize, tikzfxgraph (shell-escape). Oracle-clean among them: bibarts, chessboard (recorded verdicts). | as listed | — | root-causers on the epTeX chain, the pgf pair, and neoschool/ualberta in flight (2026-09-07) |
 | `Timeout:MemoryBudget` in 13 s — tikz-among-us/tikz-among-us: NOT a loop or a wrong unit; `\begin{animateinline}…\multiframe{180}{rt=0+1}{<tikzpicture>}` (tex:756-765, animate.sty:2369-2394 bounded `\whiledo`) materializes 180 SVG frames in the document tree (~39 MB each; pdflatex ships each frame as a Form XObject and frees it). SHARED: Perl has no animate binding either. Repro `~/data/pk_agents/w22/among-us/repro.tex` (1 character, fuse at ~150 frames under `--max-memory=1536`). The `_ in math mode` errors are the doc's missing local FHZ-* packages (`\href` undefined). The other fuse docs (source2e/source3, glossaries ×3, datatool-user, tcolorbox, pgf-spectra) are genuine big manuals (≤ 4 MB logs, no repeated line) = the memory lever for a quiet machine (PERFORMANCE.md), not loops. A root-causer's side claim that ifthen `\whiledo`/`\equal` break under the `luatex` preload did NOT reproduce (ifthen, xifthen, animate+xifthen all clean under both preloads, 2026-09-07). | tikz-among-us (oracle lualatex exit 1) | beyond-Perl binding: an `animate` binding emitting ONE representative frame (guard `animate_multiframe_single_frame`: 0 errors, `count(//svg:svg)=1`) | registered 2026-09-07; value = fleet stability, not a clean doc |
 | `\end{minipage} Attempt to end mode internal_vertical` ×84 — yquant/yquant-doc (shell-escape-EXCLUDED): the doc's `option` environment opens a `\begingroup` that only minted's real inline processor (`\RobustMintInlineProcess@ii`, patched by the doc via `\patch@mintinline`) closes; the `minted` stub (`latexml_contrib/src/minted_sty.rs`, `\tex`→`\lstinline`) never runs it, so every `\end{minipage}` meets the open group. Perl (raw minted2) has no minipage error. Fix would be a patchable stub processor — version-specific; deferred (excluded doc). Repro `~/data/pk_agents/w22/yquant/repros/minipage_minted_group.tex`. | yquant-doc | minted stub processor hook | registered 2026-09-09 |
+| `Fatal:Timeout:Recursion` "Infinite expansion loop: a window of 2 token(s) repeated 100+ times" — yquant/yquant-doc (shell-escape-EXCLUDED), sweep 67, surfaced once batch 56bd defined `\gundef` and yquant's register-group cleanup ran further. The doc's `minipage`/minted imbalance (row above) still precedes it. Root not isolated; yquant's own language parser (`yquant-lang.sty`) is arXiv-relevant, so worth a bounded root-cause when a yquant arXiv witness appears. | yquant-doc | — | registered 2026-09-09 |
 
 ## D12. Deferred shared roots with a high-risk fix (wave 18, 2026-09-06)
 
@@ -254,3 +257,23 @@ persona/parked. (5) name re-scans through `digest()` in dun19expl3, paracol-man,
 regulatory ×2 — confounded by a source-tree `.dtx` FindFile that Perl skips; deferred
 per doc. Settled: `\DeclareRobustCommand\0` works (dun19expl3's `\0` is a
 `\loadglsentries` context issue).
+
+**frankenstein self-documenting manuals (sweep 66: attrib 54, dialogue 9, lgreekuse,
+blkcntrl/lips/slemph `missing_file:\aftergroup` ×2, achicago/abbrevs csname leaks;
+root-caused 2026-09-09) — SHARED with pdflatex, content kept.** Every driver is
+`ltxdoc` + `\ProcessDTXFile{X.sty}` + `\DocInput{X.sty}`, i.e. the package's own
+`%`-prose executes as LaTeX (doc.sty:895-897 `\MakePercentIgnore`). That prose is
+`\cs\FOO` throughout, and compsci.sty:998-1003 `\cs@cmd@ungrouped` wraps
+`\code{\FOO}` in `\begingroup…\aftergroup…\endgroup`; `\code` should be compsci's
+url-verbatim (compsci.sty:510 `\newcommand*\code`) but doc.sty:622 already defines
+`\code` as the identity, so the `\newcommand*` is refused (pdflatex: "Command \code
+already defined", 21 errors on slemph) and every `\FOO` in the prose EXECUTES:
+`\ProcessDTXFile` swallows the trailing `\aftergroup` as its file name, `\usepackage`
+runs in the body, `\attrib` opens a box the `\endgroup` cannot close, moredefs'
+`\futurelet` star parser leaks into a `\csname`. Perl reports 0 errors only because
+its raw-`.sty` `\input` is reload-protected (Package.pm:2289-2291) and the whole
+documentation body is DROPPED; our content re-read (PLANS P66, `content.rs:1712-1734`)
+executes it as pdflatex does. The `\aftergroup`/`\futurelet`/`\code`-verbatim primitives
+are clean (probe 0 errors). No faithful fix; an Error→Warning downgrade of a nested
+missing `\input` inside a definitions re-read would save 2 lines per doc and nothing
+else. Repros `~/data/pk_agents/w22/frankenstein/repros/` (`frank_docbody_reinput.tex`).

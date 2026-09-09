@@ -16605,6 +16605,44 @@ c &= d
     assert!(xml.contains("csgdef") && !xml.contains("unhbox"), "{xml}");
   }
 
+  /// `\endtrivlist` closes only the trivlist's own `_autoclose` itemize: a
+  /// `\trivlist\item\relax\par…\endtrivlist` inside a `\list` item (the
+  /// cnltx `{example}[outside=true]` shape) had its list auto-closed by the
+  /// `\par`, and the closer then climbed to the OUTER list — later `\item`s
+  /// fell into the section. Perl identical; pdflatex clean. Batch 56be.
+  #[test]
+  fn endtrivlist_closes_only_its_own_list() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\begin{document}\n\\subsubsection*{T}\n\\begin{list}{}{}\n\\item Kosy\n\\begingroup\\trivlist\\item\\relax\\par\\endtrivlist\\endgroup\n\\item LGS\n\\item third\n\\end{list}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // All three items belong to the one outer list (the trivlist's own
+    // itemize nests inside it, so the outer list ends at the LAST `</itemize>`).
+    let outer = xml.find("<itemize").unwrap_or_else(|| panic!("{xml}"));
+    let outer_end = xml.rfind("</itemize>").unwrap_or_else(|| panic!("{xml}"));
+    let body = &xml[outer..outer_end];
+    for label in ["Kosy", "LGS", "third"] {
+      assert!(body.contains(label), "{label} outside the list: {xml}");
+    }
+    assert!(!xml[outer_end..].contains("<item"), "{xml}");
+  }
+
+  /// pb-diagram.sty is raw-loaded (its registers exist: pb-diagram.sty:45
+  /// `\newskip\dgARROWLENGTH`); the `{diagram}` picture stays the ar5iv
+  /// placeholder. The stub refused the raw load and every register use was
+  /// "undefined" + "expected a Variable" (pb-manual). Batch 56bf.
+  #[test]
+  fn pb_diagram_raw_loads_its_registers() {
+    if !kpsewhich_has("pb-diagram.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{pb-diagram}\n\\begin{document}\n\\divide\\dgARROWLENGTH by2\nL:\\the\\dgARROWLENGTH.\n\\begin{diagram}\\node{A}\\arrow{e}\\node{B}\\end{diagram}\nAfter.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // 2.5em in cmr10 = 25.00004pt, halved (Perl prints the same).
+    assert!(xml.contains("L:12.50002pt."), "{xml}");
+    assert!(xml.contains("After."), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

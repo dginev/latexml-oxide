@@ -5,6 +5,13 @@
 
 use super::*;
 
+thread_local! {
+  /// `\endtrivlist`: whether `before_digest` just popped a `\@trivlist`
+  /// (`\lx@list`) mode frame — handed to the constructor's `properties`,
+  /// which run after the frame is gone.
+  static ENDTRIVLIST_OWN_FRAME: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -532,8 +539,10 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml L1720-1726:
   //   DefConstructor('\trivlist', "<ltx:itemize _autoclose='1'>", mode=>internal_vertical, …);
   //   DefConstructor('\endtrivlist', sub { maybeCloseElement('ltx:itemize') }, beforeDigest=>Digest('\par'));
-  // The `\endtrivlist` is an *idempotent* closer — `maybeCloseElement` is a
-  // no-op when the element is already closed. That matters when user code
+  // The `\endtrivlist` is an *idempotent* closer of the list its opener owns
+  // (two owners, see the constructor: a `\@trivlist`/`\lx@list` frame, or
+  // `\trivlist`'s own `_autoclose` itemize) — a no-op when that element is
+  // already closed. That matters when user code
   // calls `\endtrivlist` directly (e.g. arxiv 0908.0398's `\cqfd → …\endtrivlist`),
   // then `\end{proof}` closes the outer trivlist, then `\end{proof}`'s own
   // `\endproof → \endtrivlist` fires again. Perl swallows the double-close;
@@ -547,8 +556,25 @@ pub(crate) fn load() -> Result<()> {
     }
   );
   DefConstructor!("\\endtrivlist",
-    sub[document, _args, _props] {
-      document.maybe_close_element("ltx:itemize")?;
+    sub[document, _args, props] {
+      // Close only the list this `\endtrivlist` owns — never an enclosing
+      // `\list` itemize: latex.ltx pairs `\endtrivlist` with the innermost
+      // `\trivlist`. Two owners: a `\@trivlist`-opened list (its `\lx@list`
+      // mode frame was just popped in `before_digest`; the itemize has no
+      // `_autoclose`), closed as before; or `\trivlist`'s own
+      // `<ltx:itemize _autoclose='1'>`. A trivlist nested in a `\list` item
+      // whose first token is `\par` (cnltx-example.sty:628-651
+      // `\trivlist\item\relax\par…`) had its itemize auto-closed by that
+      // `\par`, and the plain `maybe_close_element` then climbed to the OUTER
+      // list and closed it — every later `\item` landed in the section
+      // (schule, source2e; Perl identical, pdflatex clean). Batch 56be.
+      if matches!(props.get("own_frame"), Some(Stored::Bool(true))) {
+        document.maybe_close_element("ltx:itemize")?;
+      } else if let Some(node) = document.is_closeable("ltx:itemize")
+        && node.has_attribute("_autoclose")
+      {
+        document.maybe_close_node(&node)?;
+      }
     },
     before_digest => {
       Digest!("\\par")?;
@@ -558,11 +584,17 @@ pub(crate) fn load() -> Result<()> {
       // `mathtrivlist` pairs `\@trivlist` with `\endtrivlist` directly).
       // Our own `\trivlist` opens no frame, so the pop is conditional; the
       // `\lx@list` frame is a MODE frame (Perl's beginMode), closed as one.
-      if is_value_bound("groupInitiator", Some(0))
-        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"))
-      {
+      let own_frame = is_value_bound("groupInitiator", Some(0))
+        && lookup_token("groupInitiator").as_ref() == Some(&T_CS!("\\lx@list"));
+      if own_frame {
         end_mode("internal_vertical")?;
       }
+      ENDTRIVLIST_OWN_FRAME.with(|c| c.set(own_frame));
+    },
+    properties => {
+      let mut props = stored_map!();
+      props.insert("own_frame", Stored::Bool(ENDTRIVLIST_OWN_FRAME.with(|c| c.get())));
+      Ok(props)
     }
   );
 
