@@ -31,6 +31,11 @@ LoadDefinitions!({
   def_macro_noop("\\botmark")?;
   def_macro_noop("\\topmark")?;
 
+  // multicol.sty:936-950 `\newcolumn`: a column break (`\vfill\penalty-\@Mv`
+  // in vertical mode, `\vadjust` in horizontal mode) — like `\columnbreak`
+  // (`sect12.rs`) it has no meaning in a flow layout; it was undefined here
+  // (tikz-ext-manual-en-intro.tex:37). Batch 56bg.
+  def_macro_noop("\\newcolumn")?;
   def_macro_noop("\\flushcolumns")?;
   def_macro_noop("\\raggedcolumns")?;
   def_macro_noop("\\setemergencystretch")?;

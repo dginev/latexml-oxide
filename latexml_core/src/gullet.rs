@@ -210,7 +210,35 @@ thread_local! {
   /// false-positive was diagnosed).
   static DEBUG_RECENT_TOKENS: RefCell<VecDeque<String>> =
     RefCell::new(VecDeque::with_capacity(512));
+  /// Depth of number/dimension/glue scans in progress (`read_number` & co.).
+  /// tex.web §440ff `scan_int`'s digit/unit/keyword lookahead is pure
+  /// expansion: an alignment tab or row end met there is an UNEXPANDABLE
+  /// token that ends the scan and is re-read by the main loop. Our alignment
+  /// actions live in `read_x_token` (`handle_template`), so without this gate
+  /// `\ifnum1<\nb\\…\fi` inside a p/m tabular cell (tabularcalc.sty:428, a
+  /// macro operand forcing the lookahead) broke the row mid-scan, and the
+  /// false-branch skip then desynchronized the cell ("\noalign cannot be used
+  /// here", then every group close of the table; tabularcalc ×3, floatrow-rus,
+  /// fepslatex ≈ 200 errors; Perl clean). Batch 56bi.
+  static NUMBER_SCAN_DEPTH: Cell<u32> = const { Cell::new(0) };
 }
+
+/// RAII marker for a number/dimension/glue scan (see `NUMBER_SCAN_DEPTH`).
+/// The depth needs no reset: every `?`-return and every unwind past a reader
+/// runs the drop, so it is 0 again the moment the outermost scan ends. The
+/// eTeX expression evaluator (`etex.rs`) takes one too, for its own
+/// inter-operand reads (etex.ch `scan_expr` treats a tab/row end the same).
+pub struct NumberScan;
+impl NumberScan {
+  pub fn begin() -> Self {
+    NUMBER_SCAN_DEPTH.with(|c| c.set(c.get() + 1));
+    NumberScan
+  }
+}
+impl Drop for NumberScan {
+  fn drop(&mut self) { NUMBER_SCAN_DEPTH.with(|c| c.set(c.get().saturating_sub(1))); }
+}
+fn in_number_scan() -> bool { NUMBER_SCAN_DEPTH.with(|c| c.get() > 0) }
 
 /// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
 /// `common::error`; read once so the per-token hot path pays one bool test).
@@ -1255,6 +1283,12 @@ pub fn read_x_token(
     let check_alignment_data = {
       if has_reading_alignment() && align_group_count() == 0 {
         if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
+          if in_number_scan() {
+            // tex.web §440: a tab/row end is unexpandable inside a number
+            // scan — it ends the scan and is re-read (and then acted on) by
+            // the main loop. Batch 56bi.
+            return Ok(Some(token));
+          }
           let reading_alignment = get_reading_alignment().unwrap();
           Some((reading_alignment, atype, ahidden))
         } else {
@@ -2754,6 +2788,7 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
 // <coerced integer> = <internal dimen> | <internal glue>
 // ```
 pub fn read_number() -> Result<Number> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1 } else { 1 };
   if let Some(n) = read_normal_integer()? {
@@ -2889,6 +2924,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
 /// Similar to factor, but does NOT accept comma!
 /// This is NOT part of TeX, but is convenient.
 pub fn read_float() -> Result<Float> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1.0 } else { 1.0 };
   let mut string = read_digits(&DIGIT_RE, true)?;
@@ -2949,6 +2985,7 @@ fn read_internal_glue() -> Result<Option<Glue>> {
 // <coerced dimen> = <internal glue>
 // ```
 pub fn read_dimension() -> Result<Dimension> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(d) = read_internal_dimension()? {
     Ok(if is_negative { d.negate() } else { d })
@@ -3030,6 +3067,7 @@ pub fn read_unit() -> Result<Option<(i64, i64)>> {
 // <stretch> = plus <dimen> | plus <fil dimen> | <optional spaces>
 // <shrink>  = minus <dimen> | minus <fil dimen> | <optional spaces>
 pub fn read_glue() -> Result<Glue> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(n) = read_internal_glue()? {
     if is_negative { Ok(n.negate()) } else { Ok(n) }
@@ -3115,6 +3153,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
 // <mustretch> = plus <mudimen> | plus <fil dimen> | <optional spaces>
 // <mushrink> = minus <mudimen> | minus <fil dimen> | <optional spaces>
 pub fn read_mu_glue() -> Result<MuGlue> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(n) = read_internal_mu_glue()? {
     Ok(if is_negative { n.negate() } else { n })
@@ -3146,6 +3185,7 @@ pub fn read_mu_glue() -> Result<MuGlue> {
 // <mu unit> = <optional spaces><internal muglue> | mu <one optional space>
 // <coerced mudimen> = <internal muglue>
 pub fn read_mu_dimension() -> Result<MuDimension> {
+  let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   if let Some(mut m) = read_factor()? {
     let munit = read_mu_unit()?;

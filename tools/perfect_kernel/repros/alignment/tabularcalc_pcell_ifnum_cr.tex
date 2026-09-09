@@ -1,0 +1,22 @@
+% witness: tabularcalc/tabularcalc_doc_en (also _fr,_vn ~153 err), floatrow/floatrow-rus, epslatex-fr/fepslatex
+% oracle: pdflatex/lualatex 0 errors (the manual's tables typeset fine)
+% engines: latexml_oxide.sweep67 vs ~/perl5/bin/latexml (0.8.8)
+% expect: 0 Error lines and one <ltx:tabular>/<ltx:inline-block> for the p/m cell
+% status: GREEN (batch 56bi, 2026-09-09)
+% mechanism: in a p/m-column cell (\lx@tabular@p@ VBoxContents mode frame), an
+%   \ifnum whose 2nd operand is a MACRO number immediately followed by the row-break
+%   \\ (=\lx@alignment@newline) forces a digit-terminator lookahead that expands/
+%   handle_templates \\ mid-scan (gullet.rs read_digits->read_x_token 1256-1269);
+%   the false \ifnum branch skip + the VBoxContents frame then desync ->
+%   "\noalign cannot be used here" (tex_tables.rs:224) -> the p-cell mode frame
+%   never closes -> "close a group that switched to mode horizontal" cascade.
+%   Perl readXToken (Gullet.pm:399-407) does not expand the column-end in a
+%   number scan -> 0 errors. Real \tc@nblines is a \let-macro (tabularcalc.sty:356).
+\documentclass{article}
+\usepackage{array}
+\newcommand\nb{1}
+\begin{document}
+\begin{tabular}{|>{\centering\arraybackslash}m{1cm}|}\hline
+d\ifnum1<\nb\\\hline\fi \\ \hline
+\end{tabular}
+\end{document}

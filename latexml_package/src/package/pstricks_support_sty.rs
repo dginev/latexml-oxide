@@ -167,11 +167,17 @@ LoadDefinitions!({
   DefRegister!("\\psdotsize"  => Dimension!("2pt"));
   DefRegister!("\\psrunit"    => Dimension!("1cm"));
 
-  // Color definition shorthands — Perl L570-573.
-  DefMacro!("\\newgray{}{}",      "\\definecolor{#1}{gray}{#2}");
-  DefMacro!("\\newrgbcolor{}{}",  "\\definecolor{#1}{rgb}{#2}");
-  DefMacro!("\\newhsbcolor{}{}",  "\\definecolor{#1}{hsb}{#2}");
-  DefMacro!("\\newcmykcolor{}{}", "\\definecolor{#1}{cmyk}{#2}");
+  // Color definition shorthands. pstricks.sty:187-207 defines BOTH the color
+  // and a switch macro: `\newrgbcolor{n}{r g b}` = `\gdef\n{\color{n}}` +
+  // registration, and documents use `{\n text}` (ffslides-doc.tex:58-59,
+  // header-example.txt). Perl's pstricks_support.sty.ltxml:570-573 has only the
+  // `\definecolor` half — dead code there, since Perl raw-loads pstricks.sty
+  // and the raw `\def` wins; here bindings outrank raw, so the port must be
+  // the winning definition. Batch 56bh.
+  DefMacro!("\\newgray{}{}",      "\\expandafter\\gdef\\csname #1\\endcsname{\\color{#1}}\\definecolor{#1}{gray}{#2}");
+  DefMacro!("\\newrgbcolor{}{}",  "\\expandafter\\gdef\\csname #1\\endcsname{\\color{#1}}\\definecolor{#1}{rgb}{#2}");
+  DefMacro!("\\newhsbcolor{}{}",  "\\expandafter\\gdef\\csname #1\\endcsname{\\color{#1}}\\definecolor{#1}{hsb}{#2}");
+  DefMacro!("\\newcmykcolor{}{}", "\\expandafter\\gdef\\csname #1\\endcsname{\\color{#1}}\\definecolor{#1}{cmyk}{#2}");
 
   // Length helpers — Perl L650-651: Let to \setlength / \addtolength.
   Let!("\\pssetlength",   "\\setlength");

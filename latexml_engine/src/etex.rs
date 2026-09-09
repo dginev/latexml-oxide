@@ -73,6 +73,9 @@ LoadDefinitions!({
   }
 
   fn etex_readexpr(rtype: RegisterType) -> Result<RegisterValue> {
+    // etex.ch `scan_expr`: an alignment tab/row end met between operands is
+    // unexpandable (batch 56bi, `gullet::NumberScan`).
+    let _scan = NumberScan::begin();
     let value = etex_readexpr_i(rtype, 0)?;
     if let Some(token) = read_token()? {
       // Skip \relax or token with \relax meaning (\__int_eval_end: etc.)

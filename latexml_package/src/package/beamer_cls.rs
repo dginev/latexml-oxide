@@ -464,6 +464,35 @@ LoadDefinitions!({
   // (beamerswitch-example; Perl beamer.cls.ltxml:838 leaves beamerbasetitle
   // unimplemented).
   RawTeX!(r"\providecommand\keywords[1]{}");
+  // beamerbaseoverlay.sty:755-771: the slide-transition family,
+  // `\newcommand<>{\transdissolve}[1][]{\only#2{\beamer@dotrans[{#1}]{Dissolve}}}`
+  // — `\beamer@dotrans` (:738) is `\hypersetup{pdfpagetransition=…}`, a PDF
+  // viewer effect; `\transduration<>{secs}` (:774) likewise sets
+  // `pdfpageduration`. In a continuous document there is nothing to render:
+  // consume the `<overlay>` and `[options]` (or `{secs}`) and emit nothing
+  // (Perl beamer.cls.ltxml defines none of them; witness
+  // sample-bxcjkjatype-beamer). Same family, still unbound for want of a
+  // witness: `\animate<spec>` (:808, calls `\transduration`) and
+  // `\animatevalue<a-b>{cmd}{start}{end}` (:809) — delimited `<…>` prototypes.
+  // Guard: `perfect_kernel_batch56::beamer_transitions_and_nopagecolor_are_noops`.
+  def_macro_noop("\\transblindshorizontal OptionalAngled []")?;
+  def_macro_noop("\\transblindsvertical OptionalAngled []")?;
+  def_macro_noop("\\transboxin OptionalAngled []")?;
+  def_macro_noop("\\transboxout OptionalAngled []")?;
+  def_macro_noop("\\transcover OptionalAngled []")?;
+  def_macro_noop("\\transdissolve OptionalAngled []")?;
+  def_macro_noop("\\transfade OptionalAngled []")?;
+  def_macro_noop("\\transglitter OptionalAngled []")?;
+  def_macro_noop("\\transpush OptionalAngled []")?;
+  def_macro_noop("\\transreplace OptionalAngled []")?;
+  def_macro_noop("\\transsplitverticalin OptionalAngled []")?;
+  def_macro_noop("\\transsplitverticalout OptionalAngled []")?;
+  def_macro_noop("\\transsplithorizontalin OptionalAngled []")?;
+  def_macro_noop("\\transsplithorizontalout OptionalAngled []")?;
+  def_macro_noop("\\transuncover OptionalAngled []")?;
+  def_macro_noop("\\transwipe OptionalAngled []")?;
+  def_macro_noop("\\transfly OptionalAngled []")?;
+  def_macro_noop("\\transduration OptionalAngled {}")?;
   // beamerbaseframe.sty:181-188: the overlay counter-reset list; consing onto
   // it is all real beamer does at definition time (beamer2thesis
   // `\resetcounteronoverlays{...}` after `\usetheme`).

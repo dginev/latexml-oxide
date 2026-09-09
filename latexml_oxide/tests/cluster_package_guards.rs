@@ -16643,6 +16643,77 @@ c &= d
     assert!(xml.contains("After."), "{xml}");
   }
 
+  /// multicol's `\newcolumn` (multicol.sty:936-950, a column break) is a
+  /// no-op like `\columnbreak`; it was undefined (tikz-ext-manual). Batch 56bg.
+  #[test]
+  fn multicol_newcolumn_is_a_column_break() {
+    let tex = "\\documentclass{article}\n\\usepackage{multicol}\n\\begin{document}\n\\begin{multicols}{2}\nA\\newcolumn B\\columnbreak C\n\\end{multicols}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("A") && xml.contains("B") && xml.contains("C"),
+      "{xml}"
+    );
+    assert!(xml.contains("start_2_columns"), "{xml}");
+  }
+
+  /// pstricks.sty:187-207 `\newrgbcolor{n}{…}` & co. define the switch macro
+  /// `\n` (= `\color{n}`) as well as the color; the binding only registered
+  /// the color (Perl's identical line is dead code under its raw load), so
+  /// `{\deepblue text}` was an undefined macro (ffslides-doc). Batch 56bh.
+  #[test]
+  fn pstricks_color_definitions_define_the_switch_macro() {
+    let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\newrgbcolor{deepblue}{.2 .2 .5}\\newgray{midgray}{.5}\n\\begin{document}\n{\\deepblue text is blue} and {\\midgray gray}.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("color=\"#333380\""), "{xml}");
+    assert!(xml.contains("color=\"#808080\""), "{xml}");
+  }
+
+  /// tex.web §440: a tab or row end met by a number scan's lookahead is an
+  /// unexpandable token that ends the scan; the alignment action runs when
+  /// the main loop re-reads it. `\ifnum1<\nb\\\hline\fi` in an m-cell
+  /// (tabularcalc.sty:428 with a macro operand) broke the row mid-scan and
+  /// desynchronized the cell's frame (tabularcalc ×3, floatrow-rus, fepslatex).
+  /// Batch 56bi.
+  #[test]
+  fn number_scan_lookahead_does_not_fire_alignment_actions() {
+    let tex = "\\documentclass{article}\n\\usepackage{array}\n\\newcommand\\nb{1}\\newcommand\\nc{2}\n\\begin{document}\n\\begin{tabular}{|>{\\centering\\arraybackslash}m{1cm}|}\\hline\nd\\ifnum1<\\nb\\\\\\hline\\fi \\\\ \\hline\n\\end{tabular}\n\\begin{tabular}{|c|}\\hline\ne\\ifnum1<\\nc\\\\\\hline\\fi f \\\\ \\hline\n\\end{tabular}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tabular").count(), 2, "{xml}");
+    // The false branch skipped its `\\`: one row; the true branch kept it: two rows.
+    let second = xml.rfind("<tabular").unwrap();
+    assert_eq!(xml[..second].matches("<tr").count(), 1, "{xml}");
+    assert_eq!(xml[second..].matches("<tr").count(), 2, "{xml}");
+  }
+
+  /// Batch 56bj: `\nopagecolor` (color.sty:110, a driver info message) and
+  /// beamer's `\trans…<overlay>[options]` family (beamerbaseoverlay.sty:755-774,
+  /// `\hypersetup{pdfpagetransition=…}` viewer effects) are no-ops that consume their
+  /// arguments. Witnesses: ffslides-doc, sample-bxcjkjatype-beamer.
+  #[test]
+  fn beamer_transitions_and_nopagecolor_are_noops() {
+    let tex = "\\documentclass{beamer}\n\\begin{document}\n\\begin{frame}\n\\transdissolve<2>[duration=0.5]\\transwipe[direction=90]\\transduration<3>{2}\\transglitter\nkept\n\\end{frame}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("kept"), "{xml}");
+    assert!(
+      !xml.contains("duration")
+        && !xml.contains("direction")
+        && !xml.contains("transdissolve")
+        && !xml.contains("Dissolve"),
+      "{xml}"
+    );
+    let tex = "\\documentclass{article}\n\\usepackage{xcolor}\n\\begin{document}\n\\pagecolor{yellow}\\nopagecolor text\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("text") && !xml.contains("nopagecolor"),
+      "{xml}"
+    );
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

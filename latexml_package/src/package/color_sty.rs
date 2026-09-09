@@ -407,6 +407,14 @@ LoadDefinitions!({
       reversion_tokens, SymHashMap::default()))])
   });
 
+  // color.sty:110-112 `\protected\def\nopagecolor{\@ifundefined{no@page@color}
+  // {\PackageInfo{color}{nopagecolor not supported}}{\no@page@color}}` — a driver
+  // capability (pdftex.def:141 `\no@page@color` = `\global\GPT@pagecolorfalse`):
+  // page-level paint only, nothing to carry into the document. Perl has no binding
+  // (color.sty.ltxml); xcolor inherits it. Witness: ffslides-doc.
+  // Guard: `perfect_kernel_batch56::beamer_transitions_and_nopagecolor_are_noops`.
+  def_macro_noop("\\nopagecolor")?;
+
   // \normalcolor — restores color from preamble
   DefPrimitive!("\\normalcolor", {
     let color = match lookup_value("preambleTextcolor") {
