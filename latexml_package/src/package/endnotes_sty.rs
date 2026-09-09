@@ -20,9 +20,25 @@ LoadDefinitions!({
 
   DefMacro!("\\ext@endnote", None, "ent");
 
-  DefMacro!("\\endnote", "\\lx@note{endnote}");
+  // endnotes.sty:309,323: every `\endnote`/`\endnotetext` first opens the
+  // `\jobname.ent` file (`\if@enotesopen\else\@openenotes\fi`) and writes
+  // the note to it; `\theendnotes` reads it back. The notes render inline
+  // here (`\lx@note`), so nothing is written — but the file must still EXIST,
+  // because a document that redefines `\theendnotes` raw and ends it with
+  // `\input{\jobname.ent}` (latex-doc-ptr.sty:69-88) otherwise reports the
+  // file missing (latex-doc-ptr, oracle pdflatex-clean; Perl endnotes.sty.ltxml
+  // shares the shape and fails earlier on `\@enotes`). Keep the package's
+  // invariant: the inline note also opens the (empty) file. Guard:
+  // `perfect_kernel_batch56::endnote_opens_the_ent_file_for_a_raw_theendnotes`.
+  DefMacro!(
+    "\\endnote",
+    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@note{endnote}"
+  );
   DefMacro!("\\endnotemark", "\\lx@notemark{endnote}");
-  DefMacro!("\\endnotetext", "\\lx@notetext{endnote}");
+  DefMacro!(
+    "\\endnotetext",
+    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@notetext{endnote}"
+  );
 
   // \addtoendnotes{text} — appends author-typed text to the endnotes
   // list. Render as a `\\par` followed by the body so the prose

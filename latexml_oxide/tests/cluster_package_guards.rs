@@ -16828,6 +16828,17 @@ c &= d
     );
   }
 
+  /// Batch 56bm: the inline `\endnote` still opens `\jobname.ent`
+  /// (endnotes.sty:309 invariant), so a raw `\theendnotes` ending in
+  /// `\input{\jobname.ent}` (latex-doc-ptr.sty:86) finds the file.
+  #[test]
+  fn endnote_opens_the_ent_file_for_a_raw_theendnotes() {
+    let tex = "\\documentclass{article}\n\\usepackage{endnotes}\n\\let\\footnote=\\endnote\n\\makeatletter\\def\\theendnotes{\\immediate\\closeout\\@enotes \\input{\\jobname.ent}}\\makeatother\n\\begin{document}\nText\\footnote{a note}.\n\\theendnotes\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("role=\"endnote\"").count(), 1, "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no
