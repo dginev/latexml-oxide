@@ -12,6 +12,119 @@ use latexml_package::prelude::*;
 
 struct AnimateContext {
   frame_count: usize,
+  /// animate.sty:3197-3201 `end` key: code run at the END of every frame
+  /// (`\@anim@endframe`, animate.sty:2314-2340); the `begin` code is emitted
+  /// straight into the stream by `\begin{animateinline}`.
+  end:         Vec<Token>,
+  /// The representative frame has been closed (its `end` code emitted).
+  ended:       bool,
+}
+
+fn is_token_char(t: &Token, ch: char) -> bool {
+  t.get_charcode() == ch as u32 && t.get_catcode() != Catcode::CS
+}
+
+/// Split an option list at brace depth 0 into `(key, value)` pairs, one outer
+/// brace pair stripped from the value (`begin={\begin{tikzpicture}…}`). Scoped
+/// to animate's simple keys (`begin`, `end`, `timeline`, flags): no top-level
+/// commas in unbraced values, no general keyval grammar.
+fn split_keyvals(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
+  let mut out = Vec::new();
+  let mut depth = 0usize;
+  let mut key = String::new();
+  let mut value: Vec<Token> = Vec::new();
+  let mut in_value = false;
+  let flush = |key: &mut String,
+               value: &mut Vec<Token>,
+               in_value: &mut bool,
+               out: &mut Vec<(String, Vec<Token>)>| {
+    let k = key.trim().to_string();
+    if !k.is_empty() {
+      let mut v = std::mem::take(value);
+      while v
+        .first()
+        .map(|t| t.get_catcode() == Catcode::SPACE)
+        .unwrap_or(false)
+      {
+        v.remove(0);
+      }
+      while v
+        .last()
+        .map(|t| t.get_catcode() == Catcode::SPACE)
+        .unwrap_or(false)
+      {
+        v.pop();
+      }
+      if v.len() >= 2
+        && v
+          .first()
+          .map(|t| t.get_catcode() == Catcode::BEGIN)
+          .unwrap_or(false)
+        && v
+          .last()
+          .map(|t| t.get_catcode() == Catcode::END)
+          .unwrap_or(false)
+      {
+        v.remove(0);
+        v.pop();
+      }
+      out.push((k, v));
+    }
+    key.clear();
+    *in_value = false;
+  };
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    if depth == 0 && is_token_char(t, ',') {
+      flush(&mut key, &mut value, &mut in_value, &mut out);
+    } else if depth == 0 && !in_value && is_token_char(t, '=') {
+      in_value = true;
+    } else if in_value {
+      value.push(*t);
+    } else {
+      key.push_str(&t.to_string());
+    }
+  }
+  flush(&mut key, &mut value, &mut in_value, &mut out);
+  out
+}
+
+/// Discard the rest of the `{animateinline}` body up to its LITERAL
+/// `\end{animateinline}` (the read does not expand, so an environment closed
+/// by an unexpanded macro would be swallowed to the end of the input — bounded,
+/// not a hang), counting the `\newframe` separators it contained; leaves
+/// nothing in the stream.
+fn discard_remaining_frames() -> Result<usize> {
+  let end_delim = Tokens!(T_CS!("\\end"));
+  let mut newframes = 0usize;
+  loop {
+    if let Some(toks) = read_until(&end_delim)? {
+      newframes += toks
+        .unlist_ref()
+        .iter()
+        .filter(|t| t.get_catcode() == Catcode::CS && t.to_string() == "\\newframe")
+        .count();
+    }
+    let Some(_open) = read_token()? else {
+      break;
+    };
+    let env = read_balanced(ExpansionLevel::Off, false, false)?;
+    if env.to_string() == "animateinline" {
+      break;
+    }
+  }
+  Ok(newframes)
+}
+
+fn env_tokens(cs: &str, env: &str) -> Vec<Token> {
+  let mut toks = vec![T_CS!(cs), T_BEGIN!()];
+  toks.extend(tok_str(env).unlist());
+  toks.push(T_END!());
+  toks
 }
 
 thread_local! {
@@ -55,10 +168,47 @@ LoadDefinitions!({
 
   model::add_tag_attribute("ltx:block", vec!["frame-count"]);
 
+  // `\begin{animateinline}[opts]{fps}` is a macro layer over the block
+  // constructor `{lx@animateinline}`: the option list's `begin`/`end` code is
+  // run at the start/end of the ONE representative frame, exactly where
+  // animate.sty:2314-2340 runs `\@anim@begin`/`\@anim@end` for every frame,
+  // and the first `\newframe` closes that frame and discards the rest of the
+  // body (liftarm.tex:626-641 `\liftarmanimate` wraps every frame in a
+  // tikzpicture through `begin=`/`end=`: without them 72 frames ran outside
+  // any picture, 813 errors, sweep 63).
+  DefMacro!(T_CS!("\\begin{animateinline}"), "[] {}", sub[(opts, _fps)] {
+    let mut begin = Vec::new();
+    let mut end = Vec::new();
+    if let Some(opts) = opts.owned_tokens() {
+      for (k, v) in split_keyvals(&opts.unlist()) {
+        match k.as_str() {
+          "begin" => begin = v,
+          "end" => end = v,
+          _ => {}
+        }
+      }
+    }
+    ANIM_STACK.with(|s| s.borrow_mut().push(AnimateContext {
+      frame_count: 1, end, ended: false,
+    }));
+    let mut toks = env_tokens("\\begin", "lx@animateinline");
+    toks.extend(begin);
+    Ok(Tokens::new(toks))
+  });
+  DefMacro!(T_CS!("\\end{animateinline}"), None, sub[_args] {
+    let mut toks = ANIM_STACK.with(|s| {
+      match s.borrow_mut().last_mut() {
+        Some(ctx) if !ctx.ended => { ctx.ended = true; ctx.end.clone() }
+        _ => Vec::new(),
+      }
+    });
+    toks.extend(env_tokens("\\end", "lx@animateinline"));
+    Ok(Tokens::new(toks))
+  });
+
   DefEnvironment!(
-    "{animateinline} [] {}",
+    "{lx@animateinline}",
     sub[document, _args, props] {
-      model::add_tag_attribute("ltx:block", vec!["frame-count"]);
       document.maybe_close_element("ltx:p")?;
       let frame_count = ANIM_STACK
         .with(|s| s.borrow_mut().pop())
@@ -73,9 +223,6 @@ LoadDefinitions!({
       }
       document.close_element("ltx:block")?;
       Ok(())
-    },
-    before_digest => {
-      ANIM_STACK.with(|s| s.borrow_mut().push(AnimateContext { frame_count: 1 }));
     },
     mode => "internal_vertical"
   );
@@ -94,9 +241,10 @@ LoadDefinitions!({
     let count_num = count.value_of().max(1) as usize;
     let is_inside_animate = ANIM_STACK.with(|s| !s.borrow().is_empty());
     if is_inside_animate {
+      // `\multiframe{n}` inside a frame sequence stands for n frames.
       ANIM_STACK.with(|s| {
         if let Some(ctx) = s.borrow_mut().last_mut() {
-          ctx.frame_count = count_num;
+          ctx.frame_count += count_num - 1;
         }
       });
     }
@@ -142,13 +290,28 @@ LoadDefinitions!({
     }
   });
 
+  // The first `\newframe` ends the representative frame: it runs the `end`
+  // code, discards the remaining frames (counting their separators for
+  // `frame-count`) and re-emits the environment end.
   DefMacro!("\\newframe OptionalMatch:* []", sub[(_star, _fps)] {
-    ANIM_STACK.with(|s| {
-      if let Some(ctx) = s.borrow_mut().last_mut() {
-        ctx.frame_count += 1;
+    let end = ANIM_STACK.with(|s| {
+      match s.borrow_mut().last_mut() {
+        Some(ctx) if !ctx.ended => { ctx.ended = true; ctx.frame_count += 1; Some(ctx.end.clone()) }
+        Some(ctx) => { ctx.frame_count += 1; None }
+        None => None,
       }
     });
-    Ok(Tokens::new(vec![]))
+    let Some(mut toks) = end else {
+      return Ok(Tokens::new(vec![]));
+    };
+    let rest = discard_remaining_frames()?;
+    ANIM_STACK.with(|s| {
+      if let Some(ctx) = s.borrow_mut().last_mut() {
+        ctx.frame_count += rest;
+      }
+    });
+    toks.extend(env_tokens("\\end", "animateinline"));
+    Ok(Tokens::new(toks))
   });
 
   def_macro_noop("\\multiframebreak")?;

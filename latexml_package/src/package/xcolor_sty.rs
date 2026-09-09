@@ -1280,13 +1280,26 @@ LoadDefinitions!({
   // vertical mode (e.g. `\fcolorbox{red}{yellow}{important}` between
   // paragraphs at top level), so the framed <ltx:text> opens inside
   // a paragraph instead of as a stray block-level child.
-  DefConstructor!("\\fcolorbox[]{}{} Undigested",
+  // The frame and background specs are color NAMES (xcolor's name grammar
+  // `[a-zA-Z0-9@*_.']`, xcolor.sty `\XC@edef`/`\extractcolorspec`), read here
+  // undigested and expanded to a string like `\color`/`\extractcolorspec` do.
+  // Perl's `{}` (xcolor.sty.ltxml:878) DIGESTS them in text mode, so a name
+  // with `_` (hobete_doc `Hohenheim_glow_lightblue`) raised "Script _ can only
+  // appear in math mode" before the spec was ever parsed — SHARED, surpassed
+  // (batch 56at; the `\color` primitive expands, never digests, its spec).
+  DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
     mode => "internal_vertical", enter_horizontal => true,
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
-      let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
-      let bspec_str = whatsit.get_arg(3).map(|b| b.to_string()).unwrap_or_default();
+      let fspec_str = match whatsit.get_arg(2) {
+        Some(f) => do_expand(f.revert()?)?.to_string(),
+        None => String::new(),
+      };
+      let bspec_str = match whatsit.get_arg(3) {
+        Some(b) => do_expand(b.revert()?)?.to_string(),
+        None => String::new(),
+      };
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_xcolor(model_str.as_deref(), &fspec_str, None);

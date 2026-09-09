@@ -13951,8 +13951,8 @@ After.
 
   /// forest.sty:1413-1655 (bracket reader), 8506-8515 (\NewDocumentEnvironment{forest}),
   /// 8666-8680 (\Forest): parses the bracket grammar [label, options [child]...]
-  /// into a semantic tree of nested <ltx:enumerate class="ltx_forest_children">
-  /// and <ltx:item class="ltx_forest_node">.
+  /// into a semantic tree of nested <ltx:inline-enumerate class="ltx_forest_children">
+  /// and <ltx:inline-item class="ltx_forest_node">.
   #[test]
   fn forest_three_level_semantic_tree() {
     let tex = r"\documentclass{article}
@@ -13989,9 +13989,37 @@ After.
       "Grandchild3 node missing: {xml}"
     );
     assert!(
-      xml.contains("ltx_forest_tree"),
-      "ltx_forest_tree missing: {xml}"
+      xml.contains("<inline-enumerate class=\"ltx_forest\""),
+      "inline forest list missing: {xml}"
     );
+    // Sweep 63: a block wrapper was rejected inside text, cells and figures
+    // (forest-doc 13→133, milsymb 0→1); the tree is an inline object.
+    let tex = "\\documentclass{article}\n\\usepackage{forest}\n\\begin{document}\n\\fbox{\\begin{forest}[A[B][C]]\\end{forest}}\n\\begin{tabular}{c}\\begin{forest}[D[E]]\\end{forest}\\\\\\end{tabular}\n\\begin{figure}\\centering\\begin{forest}[F[G]]\\end{forest}\\caption{c}\\end{figure}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The `\fbox` frame lands on the list itself, `\centering` merges into
+    // its class list, and the cell holds it directly.
+    assert!(
+      xml.contains("<inline-enumerate class=\"ltx_forest\" framed=\"rectangle\">"),
+      "fbox: {xml}"
+    );
+    assert!(
+      xml.contains("<td align=\"center\"><inline-enumerate class=\"ltx_forest\">"),
+      "cell: {xml}"
+    );
+    let fig = xml
+      .find("<figure")
+      .unwrap_or_else(|| panic!("figure: {xml}"));
+    assert!(
+      xml[fig..].contains("<inline-enumerate class=\"ltx_centering ltx_forest\">"),
+      "figure: {xml}"
+    );
+    for label in ["A", "B", "C", "D", "E", "F", "G"] {
+      assert!(
+        xml.contains(&format!("ltx_forest_node_content\">{label}<")),
+        "{label}: {xml}"
+      );
+    }
     assert!(
       xml.contains("ltx_forest_children"),
       "ltx_forest_children missing: {xml}"
@@ -16437,6 +16465,39 @@ c &= d
     assert!(xml.contains("<picture"), "{xml}");
   }
 
+  /// `\fcolorbox{frame}{bg}{text}` reads its two color names undigested and
+  /// expands them to strings (like `\color`); the digesting `{}` reader
+  /// (Perl xcolor.sty.ltxml:878 too) raised "Script _ can only appear in math
+  /// mode" on a name with `_` (hobete_doc). A macro-valued name still expands.
+  /// Batch 56at (SHARED, surpassed).
+  #[test]
+  fn fcolorbox_color_names_are_expanded_not_digested() {
+    let tex = "\\documentclass{article}\n\\usepackage{xcolor}\n\\definecolor{foo_bar}{rgb}{1,0,0}\n\\def\\mybg{yellow}\n\\begin{document}\n\\fcolorbox{foo_bar}{\\mybg}{Test}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("framed=\"rectangle\"") && xml.contains("framecolor=\"#FF0000\""),
+      "{xml}"
+    );
+    assert!(xml.contains("backgroundcolor=\"#FFFF00\""), "{xml}");
+  }
+
+  /// `\@roman`/`\@alph`/… are latex.ltx:10206-10224 token macros: `#1` is one
+  /// token and `\romannumeral`/`\ifcase` scan the number from the stream, so
+  /// `\csname x\@roman\the\cnt\endcsname` builds a name (texmate.sty:546).
+  /// The `{Number}` closures re-parsed the one token in an isolated mouth and
+  /// leaked the register into the name ("Extra \endcsname"). DIVERGENCES
+  /// #221, batch 56av.
+  #[test]
+  fn at_roman_family_expands_inside_csname() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\newcount\\mycount \\mycount=3\n\\expandafter\\def\\csname chessdiagiii\\endcsname{ROMANOK}\n\\begin{document}\nS:\\csname chessdiag\\@roman\\mycount\\endcsname:\nR:\\csname chessdiag\\@roman\\the\\mycount\\endcsname:\nA:\\@Roman{7}\\@alph{3}\\@Alph{4}\\@arabic{12}:\n\\makeatother\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("S:ROMANOK:"), "{xml}");
+    assert!(xml.contains("R:ROMANOK:"), "{xml}");
+    assert!(xml.contains("A:VIIcD12:"), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no
@@ -18542,6 +18603,28 @@ Marks stub
     assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
     assert!(xml.contains("frame-count=\"10\""), "{xml}");
     assert!(xml.contains("class=\"ltx_animate\""), "{xml}");
+    // Batch 56aw (liftarm 1→813, sweep 63): the option list's `begin`/`end`
+    // code wraps EVERY frame (animate.sty:2314-2340) and the first `\newframe`
+    // closes the representative frame; the remaining frames are discarded but
+    // still counted.
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{animate}
+\begin{document}
+\begin{animateinline}[begin={\begin{tikzpicture}\def\r{1}},end={\end{tikzpicture}}]{20}
+\path let \p1=(1,1) in (\p1) node{a};\draw (0,0) circle (\r);
+\newframe
+\draw (0,0) circle (2);
+\newframe
+\draw (0,0) circle (3);
+\end{animateinline}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
+    assert!(xml.contains("frame-count=\"3\""), "{xml}");
   }
 
   /// chemnum: sequential compound numbering model (Task N5).

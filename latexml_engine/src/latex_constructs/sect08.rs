@@ -1389,9 +1389,17 @@ pub(crate) fn load() -> Result<()> {
     T_CS!(s!("\\c@{resolved}"))
   });
 
-  DefMacro!("\\@arabic{Number}", sub[(number)] {
-    ExplodeText!(number.value_of().to_string())
-  });
+  // latex.ltx:10206-10224: `\@arabic`, `\@roman`, `\@Roman`, `\@alph`,
+  // `\@Alph`, `\@fnsymbol` are plain expandable macros whose `#1` is ONE
+  // token (`\c@x`, `\the`, `\@tempcnta`); the number itself is scanned by
+  // `\number`/`\romannumeral`/`\ifcase` from the continuing stream. They were
+  // `{Number}` closures here (Perl latex_constructs.pool.ltxml:3053 too): the
+  // one-token argument was re-parsed as a number in an isolated mouth, so
+  // `\csname chessdiag\@roman\the\@diagramsbuilt\endcsname` (texmate.sty:546)
+  // read `\the` alone, errored, and the leaked count ended the name early
+  // ("Extra \endcsname" ×33; Perl's re-parse mouth falls through to the
+  // outer stream by accident, DIVERGENCES #221). Token bodies, as latex.ltx.
+  RawTeX!(r"\def\@arabic#1{\number #1}");
   // latex.ltx L15715: \def\two@digits#1{\ifnum#1<10 0\fi\number#1}
   // Zero-pad a number to at least two digits (date/time formatting helper,
   // used by \today and many class/package date macros). Faithful literal
@@ -1436,38 +1444,33 @@ pub(crate) fn load() -> Result<()> {
     ExplodeText!(ctr_value)
   });
 
-  DefMacro!("\\@roman{Number}", sub[(number)] {
-    ExplodeText!(radix::radix_roman(number.value_of()))
-  });
+  RawTeX!(r"\def\@roman#1{\romannumeral #1}");
+  // The counter-name wrappers keep their closures (`radix::*` extends past z
+  // where latex.ltx's `\alph` = `\expandafter\@alph\csname c@#1\endcsname`
+  // would raise `\@ctrerr`; DIVERGENCES #221 covers the `\@`-forms only).
   DefMacro!("\\roman{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Roman{Number}", sub[(number)] {
-    ExplodeText!(radix::radix_up_roman(number.value_of()))
-  });
+  RawTeX!(r"\def\@Roman#1{\expandafter\@slowromancap\romannumeral #1@}");
+  // latex.ltx:10209-10215 (was undefined here).
+  RawTeX!(r"\def\@slowromancap#1{\ifx @#1\else\if i#1I\else\if v#1V\else\if x#1X\else\if l#1L\else\if c#1C\else\if d#1D\else \if m#1M\else#1\fi\fi\fi\fi\fi\fi\fi\expandafter\@slowromancap\fi}");
   DefMacro!("\\Roman{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_roman(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@alph{Number}", sub[(number)] {
-    ExplodeText!(radix::radix_alpha(number.value_of()))
-  });
+  RawTeX!(r"\def\@alph#1{\ifcase#1\or a\or b\or c\or d\or e\or f\or g\or h\or i\or j\or k\or l\or m\or n\or o\or p\or q\or r\or s\or t\or u\or v\or w\or x\or y\or z\else\@ctrerr\fi}");
   DefMacro!("\\alph{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_alpha(CounterValue!(&ctr).value_of()))
   });
-  DefMacro!("\\@Alph{Number}", sub[(number)] {
-    ExplodeText!(radix::radix_up_alpha(number.value_of()))
-  });
+  RawTeX!(r"\def\@Alph#1{\ifcase#1\or A\or B\or C\or D\or E\or F\or G\or H\or I\or J\or K\or L\or M\or N\or O\or P\or Q\or R\or S\or T\or U\or V\or W\or X\or Y\or Z\else\@ctrerr\fi}");
   DefMacro!("\\Alph{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_up_alpha(CounterValue!(&ctr).value_of()))
   });
 
-  DefMacro!("\\@fnsymbol{Number}", sub[(number)] {
-    ExplodeText!(radix::radix_format_str(number.value_of(), FNSYMBOLS))
-  });
+  RawTeX!(r"\def\@fnsymbol#1{\ifcase#1\or \TextOrMath\textasteriskcentered *\or \TextOrMath \textdagger \dagger\or \TextOrMath \textdaggerdbl \ddagger \or \TextOrMath \textsection  \mathsection\or \TextOrMath \textparagraph \mathparagraph\or \TextOrMath \textbardbl \|\or \TextOrMath {\textasteriskcentered\textasteriskcentered}{**}\or \TextOrMath {\textdagger\textdagger}{\dagger\dagger}\or \TextOrMath {\textdaggerdbl\textdaggerdbl}{\ddagger\ddagger}\else \@ctrerr \fi}");
   DefMacro!("\\fnsymbol{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))

@@ -1,0 +1,19 @@
+% witness: liftarm/liftarm (TeXLive doc); \liftarmanimate begin=/end= per-frame
+% oracle: pdflatex (2 runs) exit 0, 0 errors
+% engines: pdflatex
+% expect: 0 Error lines (single representative frame, begin=/end= applied)
+% status: GREEN (batch 56aw, 2026-09-09)
+% mechanism: animate_sty.rs animateinline drops begin=/end= keys and renders ALL
+%   \newframe frames; frame body \CL uses \r (from dropped \def\r{1}) and tikz
+%   calc \p/\x/\y (from dropped \begin{tikzpicture}) -> undefined -> \the fails.
+\documentclass{article}
+\usepackage{tikz}\usepackage{liftarm}\usepackage{animate}
+\newcommand{\CL}[1]{\liftarm{0,0}{4*\r}{0}%
+  \begin{liftarmconnect}%
+    \liftarm[coordinate=5*\r/A]{4*\r,0}{5*\r}{90}%
+    \liftarm[coordinate=5*\r/A]{#1:2*\r}{10*\r}{90}%
+  \end{liftarmconnect}}
+\begin{document}
+\liftarmanimate[begin={\begin{tikzpicture}\def\r{1}},
+  end={\end{tikzpicture}}]{20}{0,5,...,355}{\CL}
+\end{document}

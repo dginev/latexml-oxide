@@ -216,3 +216,40 @@ inside a group would diverge from both oracles); expected gain 0. Repro
 Settled dead ends: the multicol binding does load (log `Loading multicol_sty.rs`); the
 `!`/label parse and `\@ifpackageloaded` are not the discriminator; raw
 `\AddToHook{file/*/after}` bodies persist.
+
+**`#` (catcode PARAM) reaching the stomach (sweep 62: 31 manuals, 12 as the dominant
+class; root-caused 2026-09-09) — SHARED, no action.** The emitter
+(`stomach.rs:2119-2133`) is the faithful port of Perl Stomach.pm:192-201 and of tex.web
+§1049 ("You can't use macro parameter character #"): a `#` at digestion is always the
+symptom of an upstream failure that pdflatex hits too. Roots: ltxmdf.cls:46
+`\pdftex_if_engine:TF` (removed from l3kernel in TL2025 → its branches run as bare groups,
+refcount's `\rc@RobustDefOne` never defined; mdframed-example ×4, fullwidth), classes and
+packages absent from TeX Live (amltxdoc.cls: keyval2e-guide, storecmd-guide; packagedoc.cls:
+underoverlap; noweb.sty: biocon; pas-doc.sty: pas-cv), a companion file not co-located
+(tagpdf-code's `tagpdf-docelements.tex`), cnltx-doc (translations-manual, above), and
+broken sources where pdflatex reports as much or more (changelayout-guide 102 vs our 101,
+xwatermark-examples2 96 vs 25). The one pdflatex-clean member, l2tabu (2 errors), takes
+scrbase.sty:1424-1444 `\ifpdfoutput`'s FALSE branch because both latexml engines set
+`\pdfoutput=0` (pdfTeX.pool.ltxml:23, `pdftex.rs:11`) and that branch holds the document's
+own buggy `\newcommand` — a K6 persona question (PDF-mode identity), not a cluster fix.
+Repros and oracle logs: `~/data/pk_agents/w22/param-hash/`.
+
+**Text-mode `_` from an "Anonymous String" (sweep 62: 16 manuals dominant, 237 errors;
+root-caused 2026-09-09) — five shapes, one landed.** The message site is
+`tex_math.rs:261` (a cat-8 `_` digested in text mode); the locator names the string
+mouth, not the source. (1) chemfig re-scans molecules with `\everyeof{\_nil}…\scantokens`
+(chemfig.tex:1051-1053) and our `\scantokens` (`etex.rs:465`) never inserts `\everyeof` at
+the pseudo-file end, so the `\_nil`-delimited capture runs on and the molecule leaks to text
+digestion — Perl shares it (eTeX.pool.ltxml:251-258, `\everyeof` "NOT used anywhere");
+the wiring exists but both prior attempts regressed the l3doc family (see the `etex.rs`
+comment; prerequisite = stop expandable `\verb` scanning inside edef-style bodies) — PARKED,
+witnesses chemexec ×2, carbohydrates_en, quickreaction; repro
+`~/data/pk_agents/w22/text-underscore/repros/shape1_chemfig_everyeof.tex`. (2) `\fcolorbox`
+digested its color-name arguments (hobete_doc, 30) — landed as batch 56at. (3) the source's
+own `_`/`^` in text (tikz-among-us, pst-eucl-docBG, resolsysteme-doc, egpeirce's document
+positions) — SHARED with pdflatex. (4) LuaTeX-detection halts and Lua-as-TeX (fontscale's
+beery.cls:29 `\sys_if_engine_luatex:F`, responsive's linebreaker.sty, pyluatex docs) —
+persona/parked. (5) name re-scans through `digest()` in dun19expl3, paracol-man,
+regulatory ×2 — confounded by a source-tree `.dtx` FindFile that Perl skips; deferred
+per doc. Settled: `\DeclareRobustCommand\0` works (dun19expl3's `\0` is a
+`\loadglsentries` context issue).

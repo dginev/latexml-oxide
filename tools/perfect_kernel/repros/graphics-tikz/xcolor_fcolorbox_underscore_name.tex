@@ -1,0 +1,15 @@
+% witness: hobete/hobete_doc (hobete_doc.tex:124 \fcolorbox{Hohenheim_glow_lightblue}{...}{Test})
+% oracle: pdflatex = 0 errors
+% engines: same-host Perl 0.8.8 = 2 errors (at doc line 5); ours = 2 errors (at Anonymous String)
+% expect: 0 errors; one <ltx:text framed='rectangle'> with framecolor set
+% status: GREEN (batch 56at, 2026-09-09)
+% mechanism: \fcolorbox is DefConstructor "\fcolorbox[]{}{} Undigested" (xcolor_sty.rs:1283 =
+%   xcolor.sty.ltxml:878). DefConstructor DIGESTS the {} fspec/bspec color-name args in text
+%   mode; cat-8 `_` in the color name errors (stomach::digest, stomach.rs:1719). \color /
+%   \pagecolor are DefPrimitive (Expand not Digest) and are clean. SHARED / PERL-ORIGIN.
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{foo_bar}{rgb}{1,0,0}
+\begin{document}
+\fcolorbox{foo_bar}{foo_bar}{Test}
+\end{document}

@@ -7253,3 +7253,24 @@ documents are converted under the `luatex` profile, where it passes
 (handout, latexbangla, lshort-persian, texnegar-xetex-bidi-leaders-hrule…);
 `repros/backend-persona/xetex_only_package_batchmode_read_halt.tex`.
 **Guards**: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.
+
+### 221. `\@roman` & co. are latex.ltx token macros; a `{Type}` re-parse is isolated
+
+**Perl behavior**: `\@arabic`/`\@roman`/`\@Roman`/`\@alph`/`\@Alph`/`\@fnsymbol`
+are `{Number}` closures (latex_constructs.pool.ltxml:3053ff): one braced-or-single
+token is read, then re-parsed as a number in a fresh mouth. When that token is
+`\the` (texmate.sty:546 `\csname chessdiag\@roman\the\@diagramsbuilt\endcsname`),
+the re-parse mouth runs dry and Perl's `readXToken` falls THROUGH to the outer
+gullet, so it reads `\@diagramsbuilt` by accident and prints the right numeral.
+**Rust behavior**: the six are latex.ltx:10206-10224's own bodies (`\number #1`,
+`\romannumeral #1`, `\expandafter\@slowromancap\romannumeral #1@`, the `\ifcase`
+alphabets with `\@ctrerr`, and `\@fnsymbol` with `\TextOrMath`); `\@slowromancap` is
+defined (it was not). A `{Type}` re-parse stays isolated (`reading_from_mouth`).
+**Why**: `#1` is one token and the NUMBER is scanned by the primitive from the
+continuing stream — the kernel's own semantics, expandable inside `\csname`/`\edef`,
+and serializable into the dump (CLAUDE rule 3). The isolated re-parse read `\the`
+alone, errored "A <register> was supposed to be here", and the leaked count ended
+the name scan early ("Extra \endcsname" ×33, texmate2manual 100-error storm).
+Collateral by design: `\@alph{27}` is "Counter too large" as in LaTeX (the closure
+extended silently). Guard `at_roman_family_expands_inside_csname`. Batch 56av.
+

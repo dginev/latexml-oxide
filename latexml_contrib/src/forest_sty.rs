@@ -23,7 +23,14 @@ pub struct ForestTree {
 }
 
 thread_local! {
+  /// Trees read at `before_digest` time, moved into `FOREST_TREES` under a
+  /// serial id at digest time (`properties`), so that construction — which
+  /// happens later, for every whatsit of a paragraph in order — finds each
+  /// whatsit's OWN tree (a LIFO pop at construction time handed the first
+  /// `\fbox{\begin{forest}…}` the last tree read; sweep-63 guard).
   static PENDING_FOREST_TREES: RefCell<Vec<ForestTree>> = const { RefCell::new(Vec::new()) };
+  static FOREST_TREES: RefCell<HashMap<u64, ForestTree>> = RefCell::new(HashMap::default());
+  static FOREST_SERIAL: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
 fn is_token_char(t: &Token, ch: char) -> bool {
@@ -246,83 +253,73 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
   }
 }
 
+// A forest tree is an inline, picture-like object (real forest draws a
+// tikzpicture, i.e. `<ltx:picture>`, which is Inline.class): it is emitted as
+// the schema's INLINE list (`inline-enumerate`/`inline-item`, Misc.class —
+// allowed in text, table cells, figures and paragraphs alike). A block
+// `ltx:para`/`ltx:enumerate` wrapper was rejected inside `<ltx:text>`,
+// `<ltx:td>` and `<ltx:figure>` (forest-doc 13→133, milsymb 0→1, sweep 63).
+// `options`/`config`/`text` attributes are not declared for these elements
+// and would be dropped by the model, so they are not computed.
 fn emit_forest_tree(document: &mut Document, tree: &ForestTree) -> Result<()> {
-  let mut para_attrs = HashMap::default();
-  para_attrs.insert("class".into(), "ltx_forest_tree".into());
-  if !tree.preamble.is_empty() {
-    para_attrs.insert("options".into(), tree.preamble.clone());
+  if tree.roots.is_empty() {
+    return Ok(());
   }
-  if !tree.config.is_empty() {
-    para_attrs.insert("config".into(), tree.config.clone());
+  let mut enum_attrs = HashMap::default();
+  enum_attrs.insert("class".into(), "ltx_forest".into());
+  document.open_element("ltx:inline-enumerate", Some(enum_attrs), None)?;
+  for root in &tree.roots {
+    emit_forest_node(document, root)?;
   }
-  document.open_element("ltx:para", Some(para_attrs), None)?;
-
-  if !tree.roots.is_empty() {
-    let mut enum_attrs = HashMap::default();
-    enum_attrs.insert("class".into(), "ltx_forest".into());
-    document.open_element("ltx:enumerate", Some(enum_attrs), None)?;
-
-    for root in &tree.roots {
-      emit_forest_node(document, root)?;
-    }
-
-    document.close_element("ltx:enumerate")?;
-  }
-
-  document.close_element("ltx:para")?;
+  document.close_element("ltx:inline-enumerate")?;
   Ok(())
 }
 
 fn emit_forest_node(document: &mut Document, node: &ForestNode) -> Result<()> {
   let mut item_attrs: HashMap<String, String> = HashMap::default();
   item_attrs.insert("class".into(), "ltx_forest_node".into());
-  if !node.label_text.is_empty() {
-    item_attrs.insert("text".into(), node.label_text.clone());
-  }
-  if !node.options_text.is_empty() {
-    item_attrs.insert("options".into(), node.options_text.clone());
-  }
-  document.open_element("ltx:item", Some(item_attrs), None)?;
+  document.open_element("ltx:inline-item", Some(item_attrs), None)?;
 
   if !node.label_text.is_empty() {
-    document.open_element("ltx:tags", None, None)?;
-    document.open_element("ltx:tag", None, None)?;
+    let mut text_attrs: HashMap<String, String> = HashMap::default();
+    text_attrs.insert("class".into(), "ltx_forest_node_content".into());
+    document.open_element("ltx:text", Some(text_attrs), None)?;
     document.absorb_string(&node.label_text, &SymHashMap::default())?;
-    document.close_element("ltx:tag")?;
-    document.close_element("ltx:tags")?;
-
-    let mut content_attrs = HashMap::default();
-    content_attrs.insert("class".into(), "ltx_forest_node_content".into());
-    document.open_element("ltx:para", Some(content_attrs), None)?;
-    document.absorb_string(&node.label_text, &SymHashMap::default())?;
-    document.close_element("ltx:para")?;
+    document.close_element("ltx:text")?;
   }
 
   if !node.children.is_empty() {
     let mut enum_attrs = HashMap::default();
     enum_attrs.insert("class".into(), "ltx_forest_children".into());
-    document.open_element("ltx:enumerate", Some(enum_attrs), None)?;
+    document.open_element("ltx:inline-enumerate", Some(enum_attrs), None)?;
     for child in &node.children {
       emit_forest_node(document, child)?;
     }
-    document.close_element("ltx:enumerate")?;
+    document.close_element("ltx:inline-enumerate")?;
   }
 
-  document.close_element("ltx:item")?;
+  document.close_element("ltx:inline-item")?;
   Ok(())
 }
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Per-conversion reset (a mid-body fatal can leave a tree behind).
+  PENDING_FOREST_TREES.with(|c| c.borrow_mut().clear());
+  FOREST_TREES.with(|c| c.borrow_mut().clear());
   RequirePackage!("tikz");
   RequirePackage!("etoolbox");
   RawTeX!(r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]");
   // Semantic tree parser: \begin{forest} reads bracket grammar into a nested
-  // semantic ltx:para/ltx:enumerate tree.
+  // inline-enumerate/inline-item tree.
   DefConstructor!(
     T_CS!("\\begin{forest}"), None,
-    sub [document, _args, _props] {
-      let tree_opt = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop());
+    sub [document, _args, props] {
+      let id = match props.get("forest_tree") {
+        Some(Stored::String(s)) => to_string(*s).parse::<u64>().ok(),
+        _ => None,
+      };
+      let tree_opt = id.and_then(|id| FOREST_TREES.with(|c| c.borrow_mut().remove(&id)));
       if let Some(tree) = tree_opt {
         emit_forest_tree(document, &tree)?;
       }
@@ -333,6 +330,15 @@ LoadDefinitions!({
       let tokens = read_forest_env_tokens()?;
       let tree = parse_forest_tokens(&tokens);
       PENDING_FOREST_TREES.with(|c| c.borrow_mut().push(tree));
+    },
+    properties => {
+      let mut props = stored_map!();
+      if let Some(tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
+        let id = FOREST_SERIAL.with(|c| { let n = c.get() + 1; c.set(n); n });
+        FOREST_TREES.with(|c| c.borrow_mut().insert(id, tree));
+        props.insert("forest_tree", Stored::String(pin(id.to_string())));
+      }
+      Ok(props)
     }
   );
   // \Forest command: \Forest*{ [root [child]] }

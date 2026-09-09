@@ -431,14 +431,22 @@ LoadDefinitions!({
     "\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
   );
 
-  // \fcolorbox[model]{framespec}{bgspec}{text}
-  DefConstructor!("\\fcolorbox[]{}{} Undigested",
+  // \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
+  // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
+  // color.sty.ltxml:108 digests them and errors on a `_` in a name).
+  DefConstructor!("\\fcolorbox[] Undigested Undigested Undigested",
     "<ltx:text framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#text</ltx:text>",
     mode => "internal_vertical",
     after_digest => sub[whatsit] {
       let model_str = whatsit.get_arg(1).map(|m| m.to_string());
-      let fspec_str = whatsit.get_arg(2).map(|f| f.to_string()).unwrap_or_default();
-      let bspec_str = whatsit.get_arg(3).map(|b| b.to_string()).unwrap_or_default();
+      let fspec_str = match whatsit.get_arg(2) {
+        Some(f) => do_expand(f.revert()?)?.to_string(),
+        None => String::new(),
+      };
+      let bspec_str = match whatsit.get_arg(3) {
+        Some(b) => do_expand(b.revert()?)?.to_string(),
+        None => String::new(),
+      };
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_color(model_str.as_deref(), &fspec_str);
