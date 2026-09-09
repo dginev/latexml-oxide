@@ -1,11 +1,11 @@
-# Gemini helper — perfect-kernel delegation brief (round 8)
+# Gemini helper — perfect-kernel delegation brief (round 10)
 
 You are a helper on branch `perfect_kernel` of `~/git/latexml-oxide` (the perfect-
-kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-8`
+kernel program: `docs/PERFECT_KERNEL.md`). Work on a branch `gemini/pk-helpers-10`
 cut from the current `perfect_kernel` tip (which contains batch 56ab AND your
 round-7 merge, commit `66a7bf6144`, plus the orchestrator's fixup commit right after
 it), push it, and append to the **Status** section at the end of this file (never
-edit task text). Rounds 1–7 are merged. Round-7 review outcome, for your calibration:
+edit task text). Rounds 1–9 are merged. Round-7 review outcome, for your calibration:
 the algpseudocodex entry is DIVERGENCES **#214** (numbers continue from the file's
 last entry on `perfect_kernel`, never from `main`); the `DefKeyVal!` registrations
 shadowed your raw `\KV@…` handlers (every explicit option was a no-op — handlers now
@@ -35,7 +35,7 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
   under a new number. Append your Status for THIS round below; nothing older
   belongs here.
 
-- **Branch:** `gemini/pk-helpers-8`, branched from the current `perfect_kernel`
+- **Branch:** `gemini/pk-helpers-10`, branched from the current `perfect_kernel`
   HEAD (the round-7 merge + its fixup commit); rebase before every push; one commit per task, footer
   `Co-Authored-By: Gemini <noreply@google.com>`; never push to `perfect_kernel`.
 - **File ownership:** only the files a task names. Guards in
@@ -87,87 +87,88 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
 
 ## Tasks (priority order)
 
-Round 9. Rounds 1–8 are lifted into `LEDGER.md` (their Status text is deleted here by rule).
+Round 10. Rounds 1–9 are lifted into `LEDGER.md` (their Status text is deleted here by rule).
+Round-9 review outcome, for your calibration: all five deliverables merged; the two
+fixups applied at merge were a `kpsewhich_has("tikzpingus.sty")` gate on a guard that
+raw-loads an optional package (CI's trimmed TeX Live) and a per-conversion clear of
+`ANIM_STACK` (a mid-body fatal leaves an unbalanced push behind on a long-running
+worker; chemnum's `reset_chemnum_state(0)` in `LoadDefinitions!` is the pattern).
+Schema note: `set_attribute` silently DROPS an attribute the model does not declare for
+the element (no error, dead markup) — check `latexml_core/resources/schema/*.rnc`
+before emitting one, and prefer the element that already carries it.
 
-### N1 — tikzpingus: bisect the shading regeneration failure (root-cause + fix)
+### N1 — pgfmath `@`-function results keep their decimal point (your round-9 N2, plan A)
 
-tikzpingus/tikzpingus-doc (oracle lualatex, renders) dies with `\lxSVG@sh@defs`/
-`\lxSVG@pos`/`\lxSVG@sh` undefined → `Timeout:PushbackLimit`. The trio is what
-`\@pgfshading<name>!` defines when invoked (Perl pgfsys-latexml.def.ltxml:672-724,
-Rust `pgfsys_latexml_def.rs:1616-1760`); it is undefined iff a use-time regeneration
-(`\pgfuseshading` → `\pgfshadepath`, pgfcoreshade.code.tex:769-810) failed to reinstall
-`\@pgfshading<xname>!`, so `\pgfsys@shadinginsidepgfpicture{\relax}` runs. Fingerprint:
-three "Illegal unit of measure (pt inserted) at Anonymous String" right before. A
-root-causer's 12 isolation probes stayed clean (`~/data/pk_agents/w22/pgf-pair/NOTES.md`,
-`probe_*.tex`); the trigger needs the full manual's showcase+tcolorbox+tikzducks
-context. Task: bisect tikzpingus-doc.tex (delete halves of the body until the first
-error survives in ≤ 40 lines), then decide between the two candidates — (1) the global
-`\@pgfshading<xname>!` lost across `\pgfmath@smuggleone\csname\pgf@shadingxname\endcsname`
-(:794-802) on our opaque `DefPrimitiveI`; (2) the malformed-spec dimension math in
-`\lxSVG@sh@create`/`@intervals`/`@stop` derailing the stream before `\lxSVG@sh@defstripes`
-installs the shading — with file:line evidence, a red repro, the faithful fix (binding
-or, if (1), a note for the orchestrator: core edits are theirs), and a guard asserting
-0 errors + an `<svg:linearGradient>`/`radialGradient` with ≥ 2 `<svg:stop>`.
+Real pgfmath's `\pgfmath@tonumber` (pgfmathutil.code.tex:190) is `\the<dimen>` minus
+`pt`, so `\pgfmathresult` after `\pgfmathmultiply@` & co. is ALWAYS dotted (`0.0`);
+ours (`pgfmath_result_str`, `latexml_package/src/package/pgfmath_code_tex.rs:35-51`)
+prints integers bare, which is what pgfplotscolormap.code.tex:2420
+`\pgfplotscolormap@floor@unforgiving#1.#2\relax` cannot take. Perl shares the bare form
+(pgfmath.code.tex.ltxml:85-90) — say so in Status (divergence, Lesson 2).
+- Implement plan A in `pgfmath_result_str` for the `@`-level arithmetic path only (the
+  public `\pgfmathparse` path `format_parse_result` already appends `.0`).
+- The comment at `pgfmath_code_tex.rs:26-34` says the bare form was needed for
+  2201.09268's `\pgfmathpointintersectionoflineandarc` bisection. Batch 56ac replaced
+  that bisection with a closed-form binding (KNOWN_PERL_ERRORS #210, `git log -S
+  pointintersectionoflineandarc`) — verify whether the strip is now dead by fetching
+  2201.09268 (`curl -L https://arxiv.org/src/2201.09268`, scratch only) and converting
+  it before/after; report both error counts.
+- Un-`#[ignore]` `pgfplots_scatter_marker_group_balance`; make
+  `repros/graphics-tikz/pgfmath_multiply_zero_delimited_dot.tex` GREEN; re-convert
+  ualberta/ualberta-thesis (sweep-62 log for the before count) and report.
+- Run the tikz/pgf goldens (`cargo nextest run -p latexml -E 'test(tikz) | test(pgf)'`)
+  and list every golden whose coordinates change; a coordinate that only gains `.0` is
+  fine, a changed VALUE is a bug.
 
-### N2 — pgfplots `scatter` markers leak one boxing `{` frame each (token trace)
+### N2 — chemnum: references are `<ltx:ref>`
 
-ualberta/ualberta (oracle lualatex exit 1) — `\endgroup Attempt to close non-boxing
-group` then a PushbackLimit runaway. Inline repro (no data file, ≥ 32 errors):
-`~/data/pk_agents/w22/color-group/repro_b.tex` (`\addplot+[scatter,mark=*] coordinates
-{(1,1)(2,4)(3,9)}`); non-scatter plots are clean. `LXML_TRACE_FRAMES=1` shows one boxing
-`{` frame per marker pushed in restricted_horizontal and never popped; the marker body is
-`\pgfplots@scatter@plot@mark`, an xdef'd `\noexpand\begingroup … \noexpand\endgroup`
-deferred by `\aftergroup` (pgfplots.markers.code.tex:178-214). Task: a token-level trace
-of ONE marker (which `}` is lost — the marker `\hbox`'s closer, or an `\aftergroup` fired
-into the wrong frame; tex.web §1063-1068 for the box closer, §280 for `\aftergroup`), the
-mechanism named at the general level (this is an engine `\aftergroup`-vs-box-reader
-question — do NOT patch pgfplots), a ≤ 25-line red repro without pgfplots if possible, and
-a fix PLAN for the orchestrator (core edits are theirs) with the guard
-`pgfplots_scatter_marker_group_balance` (0 errors + one `<svg:g>` per marker). Note also
-that the runaway after the first error is a robustness gap (error recovery re-unreads an
-unclosable `\endgroup`) worth a separate cap — name where.
+Your round-9 N5 emits `<ltx:text class="ltx_cmpd" idref="cmpd.<label>">` and registers
+`idref` on `ltx:text` from the binding. The schema element for a cross-reference is
+`<ltx:ref idref=…>` (`LaTeXML-inline.rnc`, `ref_attributes`), which the post-processor
+resolves and links. Change references (`\refcmpd`, repeated `\cmpd`, `\cmpd+`) to
+`<ltx:ref class="ltx_cmpd" idref="cmpd.<label>">` with the number as content; keep the
+first-use target as `<ltx:text class="ltx_cmpd" xml:id=…>`; drop the
+`add_tag_attribute("ltx:text", …)` call. A `\refcmpd` to a never-declared label must
+not crash: emit the ref (the post-processor reports the dangling id) and say in Status
+what chemnum.sty does in that case (cite the line). Update `chemnum_compound_numbering`.
 
-### N3 — forest: a real binding (the user's standing side goal, DIFFICULT_CASES §D10)
+### N3 — forest: labels are TeX, `\Forest` takes its config
 
-`latexml_contrib/src/forest_sty.rs` discards the whole `{forest}` body into an
-`<ltx:ERROR>` (mirrors ar5iv's `discard_env_body`): every tree in the 12 forest manuals
-(3 oracle-clean) is lost while the docs read "0 errors". A raw load needs tikz +
-`pgfopts` + `elocalloc` + `environ` + `xparse` + `inlinedef` + forest's own bracket
-parser; the last two are the blockers. Task, direct implementation: write the forest
-bracket grammar as a Rust reader (forest.sty / forest-lib-*.sty: `[root [child][child]]`
-with node options `[label, key=value, …]`, `
-ode` text, nested brackets, comments) and
-emit the tree as nested `ltx:para`/`ltx:enumerate`-style structure — a semantic tree
-(each node a titled item with its children) — keeping node TEXT and options as attributes;
-no tikz drawing (out of scope for now, document what would be needed). Guard: a 3-level
-tree → 0 errors, every node label present, nesting depth reflected; the 3 oracle-clean
-manuals re-converted with their trees present. Cite forest.sty line numbers for the
-grammar you implement and list unsupported syntax explicitly.
+Follow-ups on your round-9 N3 (`latexml_contrib/src/forest_sty.rs`):
+- Node labels are absorbed as literal strings (`absorb_string`), so `[$x^2$]` and
+  `[\textbf{Root}]` come out as raw source text. Digest each label as TeX (the way
+  `\lx@ps@put`/`framed` bindings digest a body: tokenize the label and `digest` it, then
+  absorb the digested boxes) so math and markup render.
+- `\Forest` is `\NewDocumentCommand{\Forest}{s D(){} m}` (forest.sty:8666) — the
+  binding declares `OptionalMatch:* Undigested` and misparses `\Forest(config){body}`.
+- `text`/`options`/`config` attributes on `ltx:item`/`ltx:para` are dropped by the
+  model (see the schema note above): either stop computing them or register them
+  deliberately — say which and why.
+- Guard: extend `forest_three_level_semantic_tree` with one math label and one `\Forest(…){…}`
+  call; re-convert forest-quickstart/fragoli_doc/milsymb (sweep-62 logs for the before counts).
 
-### N4 — an `animate` binding: one representative frame
+### N4 — animate: small cleanups
 
-tikz-among-us/tikz-among-us reaches the 4.6 GB memory fuse in 13 s because
-`egin{animateinline}…\multiframe{180}{rt=0+1}{<tikzpicture>}` (animate.sty:2369-2394,
-a bounded `\whiledo`) materializes 180 SVG frames in the document tree (~39 MB each);
-pdflatex ships each frame as a Form XObject. No Perl binding either. Task: a
-`latexml_contrib/src/animate_sty.rs` that runs the `\multiframe` body ONCE (the first
-frame; expose the frame count as an attribute on a wrapper block) for both `animateinline`
-and `nimategraphics` (which selects one file of a sequence), keeping every other command
-of the package (`
-ewframe`, `\multiframe`, timeline options) argument-consuming. Repro:
-`~/data/pk_agents/w22/among-us/repro.tex` (`--max-memory=1536`). Guard
-`animate_multiframe_single_frame`: 0 errors, `count(//svg:svg)=1`, the frame-count
-attribute present.
+`latexml_contrib/src/animate_sty.rs`: register `frame-count` once (it is registered both in
+`LoadDefinitions!` and inside the environment sub); `\animategraphics` with `first > last`
+(reverse playback, animate.sty:1560ff) must still select an existing frame file and count
+`|last-first|+1`; `\newframe*` and `\newframe[fps]` must both be consumed silently. Extend
+`animate_multiframe_single_frame` with a reverse-range `\animategraphics` case (a missing
+image file is a warning, not an error — assert on `frame-count`).
 
-### N5 — chemnum: sequential compound numbers instead of blank labels
+### N5 — sesamanuel: 94 `misdefined` errors
 
-`latexml_contrib/src/chemnum_sty.rs` no-ops `\cmpd`/`\cmpdinit`/`efcmpd`… so compound
-labels and references are blank (11 manuals, 1 oracle-clean; body text kept). Raw load is
-blocked (expl3/l3keys/translations/chemgreek). Task: implement the numbering model of
-chemnum.sty (`\cmpd{label}` assigns the next number on first use, `efcmpd` prints it,
-sub-compound `label.sub` → `1a`, lists `\cmpd{a,b}` → `1, 2`, the `\cmpdinit` declare
-form; cite the .sty lines), emitting numbers as text with an `ltx:text class="ltx_cmpd"`
-wrapper and an `xml:id`/`idref` pair so references link. Guard: first use = 1, second
-label = 2, `efcmpd` of the first = 1, sub-compound = 1a; 0 errors.
+`sesamanuel/sesamath-doc-fr` (sweep 62: 123 errors — `misdefined` 94, `undefined` 18;
+oracle lualatex exit 1 with 2 `!` lines, so not oracle-clean but the class is
+pdflatex-compatible). `Error:misdefined:` means a `\newcommand`/`\newenvironment` hit a
+name that already exists — usually a name our kernel or a binding defines that the real
+format leaves undefined (real LaTeX accepted the definition). Tally the 94 by name (log
+`~/data/perfect_kernel_s62/sesamanuel/sesamath-doc-fr/sesamath-doc-fr.log`), find where
+each is defined on our side (`git grep`), and for each decide: kernel/binding defines a
+name real LaTeX does not → remove or rename ours (cite latex.ltx / the .sty to show it is
+absent there); the class redefines a real LaTeX name → our error is right (pdflatex would
+error too: prove it with a 5-line repro). Land the removals with a guard; report the
+after count.
 
-## Status (Gemini → orchestrator; append-only, newest last; round 9 only)
+## Status (Gemini → orchestrator; append-only, newest last; round 10 only)
+

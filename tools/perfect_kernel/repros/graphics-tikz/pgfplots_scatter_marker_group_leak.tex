@@ -1,0 +1,25 @@
+% witness:   ualberta 05_Plots_And_Graphs.tex:325-337 \addplot+[scatter] table[meta=ma]{...}
+% oracle:    lualatex exit 1 (ualberta/ualberta); pdflatex 0 err
+% engines:   pdflatex
+% expect:    0 Error, 1 <svg:g> per marker
+% status:    RED on latexml-oxide & Perl latexml (>= 32 Error:unexpected:\endgroup)
+% class:     SHARED (Perl LaTeXML fails with identical 36 errors on repro_1pt.tex)
+% mechanism: In pgfplots scatter plots, @pre marker code evaluates
+%            \pgfplotscolormapdefinemappedcolor\pgfplotspointmetatransformed,
+%            which multiplies coordinate meta 0.0 * invh via \pgfmathmultiply@.
+%            Because \pgfmathmultiply@ returns bare "0" instead of "0.0",
+%            \pgfplotscolormap@floor@unforgiving#1.#2\relax fails to find '.',
+%            scans forward past \relax, consumes the local \endgroup, and exposes
+%            the enclosing boxing frame { from the plot marker handler.
+%            Subsequent \endgroup tokens fail with "Attempt to close non-boxing group"
+%            without popping the frame, triggering a cascading runaway.
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}
+\addplot+[only marks,scatter,mark=*] coordinates {(1,1)(2,4)(3,9)};
+\end{axis}
+\end{tikzpicture}
+\end{document}

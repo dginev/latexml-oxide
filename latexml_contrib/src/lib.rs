@@ -44,6 +44,7 @@ pub mod aliascnt_sty;
 pub mod aligned_overset_sty;
 pub mod amsdtx_cls;
 pub mod amsldoc_cls;
+pub mod animate_sty;
 pub mod aomart_cls;
 pub mod apacite_sty;
 pub mod apxproof_sty;
@@ -462,6 +463,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     aligned_overset_sty::load_definitions,
   ),
+  ("animate", "sty", animate_sty::load_definitions),
   ("arxbj", "cls", arxbj_cls::load_definitions),
   // Paper-BUNDLED styles, so both bindings hand control straight back to the
   // paper's own file whenever raw style loading is on; they only fill the

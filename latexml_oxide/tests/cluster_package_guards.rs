@@ -666,9 +666,7 @@ mod luatex_profile {
     dl:\\ifdefined\\directlua DEF\\else UNDEF\\fi.\n\
     \\end{document}\n";
 
-  fn convert(preload: &str) -> String {
-    super::convert_with(TEX, Some(preload)).1
-  }
+  fn convert(preload: &str) -> String { super::convert_with(TEX, Some(preload)).1 }
 
   #[test]
   fn profile_flips_identity_only_when_opted_in() {
@@ -822,11 +820,8 @@ mod raw_provides_version_survives {
 
   #[test]
   fn provides_package_version_not_clobbered() {
-    let (_stderr, xml) = super::convert_files_with(
-      TEX,
-      &[("vguard.sty", STY)],
-      Some("[rawstyles]latexml.sty"),
-    );
+    let (_stderr, xml) =
+      super::convert_files_with(TEX, &[("vguard.sty", STY)], Some("[rawstyles]latexml.sty"));
     assert!(
       xml.contains("2001/01/01 v9.9 Version guard fixture"),
       "\\ver@vguard.sty must keep the ProvidesPackage string:\n{xml}",
@@ -1103,7 +1098,6 @@ mod makeindex_allocates_indexfile {
       !stderr.contains("Error:"),
       "\\makeindex + raw \\@indexfile write must be error-free:\n{stderr}",
     );
-    let xml = xml;
     assert!(
       xml.contains("STREAMDEFINED"),
       "\\@indexfile not allocated:\n{xml}"
@@ -1657,11 +1651,8 @@ mod silence_keeps_diagnostics {
 
   #[test]
   fn silence_errorsoff_does_not_swallow_a_package_error() {
-    let (stderr, _xml) = super::convert_files_with(
-      TEX,
-      &[("boompkg.sty", STY)],
-      Some("[rawstyles]latexml.sty"),
-    );
+    let (stderr, _xml) =
+      super::convert_files_with(TEX, &[("boompkg.sty", STY)], Some("[rawstyles]latexml.sty"));
     assert!(
       stderr.contains("Deliberate boom"),
       "silence + \\ErrorsOff must not suppress the boompkg error:\n{stderr}",
@@ -2881,9 +2872,7 @@ mod expl3_state_and_param_replay {
   //! (3) `\@ifnextchar` re-scans its branches as macro bodies, collapsing
   //! `##`→`#` (latex.ltx L1756-1760; adtreesdoc witness, Perl shares).
 
-  fn convert(tex: &str) -> (String, String) {
-    super::convert(tex, true)
-  }
+  fn convert(tex: &str) -> (String, String) { super::convert(tex, true) }
 
   #[test]
   fn ifnextchar_collapses_doubled_params() {
@@ -2927,9 +2916,7 @@ mod alignment_ledger_expansion_pushback {
   //! on this exact repro). Root of the l3doc `{function}` stray-`&` family
   //! (17+ bundles: every l3doc manual with a `{syntax}` block).
 
-  fn convert(tex: &str) -> String {
-    super::convert(tex, false).0
-  }
+  fn convert(tex: &str) -> String { super::convert(tex, false).0 }
 
   #[test]
   fn tl_greplace_then_protected_amp_in_cell() {
@@ -7063,10 +7050,10 @@ After.
        \\LoadClass{article}\n";
     let def = "\\providecommand\\hooktwo{[\\hook@one]}\n";
     let tex = "\\documentclass{hookcls}\n\\begin{document}\n\\hooktwo\n\\end{document}\n";
-    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
-      tex,
-      &[("hookcls.cls", cls), ("hookcls.def", def)],
-    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(tex, &[
+      ("hookcls.cls", cls),
+      ("hookcls.def", def),
+    ]);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[ONE]"), "{xml}");
   }
@@ -7088,10 +7075,7 @@ After.
        \\CatchFileEdef\\exp{caught.txt}{\\catcode`\\#=12 \\endlinechar=-1 }\n\
        [\\detokenize\\expandafter{\\raw}][\\detokenize\\expandafter{\\exp}]\n\
        \\end{document}\n";
-    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
-      tex,
-      &[("caught.txt", txt)],
-    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(tex, &[("caught.txt", txt)]);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     // `\detokenize`'s backslash renders through OT1 as `“`.
     assert!(xml.contains("[A#1“foo BC][A#1FOOBC ]"), "{xml}");
@@ -7110,10 +7094,8 @@ After.
        \\begin{document}\n\
        \\textcolor{red}{R}\\localmarker\n\
        \\end{document}\n";
-    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
-      tex,
-      &[("local/xspace.sty", xspace)],
-    );
+    let (stderr, xml) =
+      super::perfect_kernel_batch46::convert_files(tex, &[("local/xspace.sty", xspace)]);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains(r##"color="#FF0000""##), "{xml}");
     assert!(xml.contains("LOCALXSPACE"), "{xml}");
@@ -7214,10 +7196,7 @@ Done [\thepage].
        \\begin{document}\n\
        [\\beforex\\afterx\\afterraw\\rawmarktwo]\n\
        \\end{document}\n";
-    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
-      tex,
-      &[("rawpkg.sty", sty)],
-    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(tex, &[("rawpkg.sty", sty)]);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[BXAXARRAW]"), "{xml}");
   }
@@ -13970,6 +13949,60 @@ After.
     assert!(xml.contains("Before.") && xml.contains("After."), "{xml}");
   }
 
+  /// forest.sty:1413-1655 (bracket reader), 8506-8515 (\NewDocumentEnvironment{forest}),
+  /// 8666-8680 (\Forest): parses the bracket grammar [label, options [child]...]
+  /// into a semantic tree of nested <ltx:enumerate class="ltx_forest_children">
+  /// and <ltx:item class="ltx_forest_node">.
+  #[test]
+  fn forest_three_level_semantic_tree() {
+    let tex = r"\documentclass{article}
+\usepackage{forest}
+\begin{document}
+\begin{forest}
+[Root, for tree={draw}
+  [Child1
+    [Grandchild1]
+    [Grandchild2]
+  ]
+  [Child2
+    [Grandchild3]
+  ]
+]
+\end{forest}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("Root"), "Root node missing: {xml}");
+    assert!(xml.contains("Child1"), "Child1 node missing: {xml}");
+    assert!(xml.contains("Child2"), "Child2 node missing: {xml}");
+    assert!(
+      xml.contains("Grandchild1"),
+      "Grandchild1 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("Grandchild2"),
+      "Grandchild2 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("Grandchild3"),
+      "Grandchild3 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("ltx_forest_tree"),
+      "ltx_forest_tree missing: {xml}"
+    );
+    assert!(
+      xml.contains("ltx_forest_children"),
+      "ltx_forest_children missing: {xml}"
+    );
+    assert_eq!(
+      xml.matches("ltx_forest_children").count(),
+      3,
+      "expected 3 child lists: {xml}"
+    );
+  }
+
   /// `{subeqnarray}` (subeqnarray.sty:33-41) is eqnarray with `\slabel`
   /// subnumbers: `&` aligns, rows get `1a`/`1b` (subeqnarray-sample).
   #[test]
@@ -16787,6 +16820,14 @@ Table hooks ok.
 mod perfect_kernel_gemini {
   use super::perfect_kernel_batch46::{convert, error_count};
 
+  fn kpsewhich_has(name: &str) -> bool {
+    std::process::Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
+
   /// lineno.sty manual surface (witness lineno/ulineno): \linenumberwidth,
   /// \bframesep, \bframerule, \linerefp, \linerefr, and bare \internallinenumbers
   /// inside \parbox.
@@ -18403,6 +18444,157 @@ Marks stub
     assert!(
       xml.contains(r#"<block class="ltx_doubleposterbox">"#),
       "{xml}"
+    );
+  }
+
+  /// PGF functional shading fallback and gradient stops (witness: tikzpingus/tikzpingus-doc.tex Figure 1).
+  /// Functional shadings (e.g. \pgfuseshading{bilinear interpolation}) must define \@pgfshading<name>!
+  /// via \pgf@sys@noshading to provide \lxSVG@sh@defs, \lxSVG@sh, and \lxSVG@pos, rather than
+  /// leaving them undefined in Gullet. Also asserts valid SVG linear and radial gradients with >= 2 stops.
+  #[test]
+  fn pgf_functional_shading_and_gradients() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{shadings}
+\pgfdeclareradialshading{testradial}{\pgfpointorigin}{%
+  color(0bp)=(red); color(20bp)=(yellow); color(40bp)=(blue)%
+}
+\pgfdeclarehorizontalshading{testhori}{100bp}{%
+  color(0bp)=(red); color(50bp)=(yellow); color(100bp)=(blue)%
+}
+\begin{document}
+\begin{tikzpicture}
+\pgfuseshading{bilinear interpolation}
+\pgfuseshading{testradial}
+\pgfuseshading{testhori}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:radialGradient"), "{xml}");
+    assert!(xml.contains("<svg:linearGradient"), "{xml}");
+    assert!(xml.matches("<svg:stop").count() >= 2, "{xml}");
+  }
+
+  /// tikzpingus shading regeneration with cloak and functional-shading left wing grab
+  /// (witness: tikzpingus/tikzpingus-doc.tex Figure 1 Table 3).
+  #[test]
+  fn tikzpingus_cloak_functional_shading() {
+    if !kpsewhich_has("tikzpingus.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{tikzpingus}
+\begin{document}
+\tikz{\pingu[cloak=gray,cup,left wing grab]}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<svg:linearGradient"), "{xml}");
+    assert!(xml.matches("<svg:stop").count() >= 2, "{xml}");
+  }
+
+  /// pgfplots scatter markers group balance (witness: ualberta 05_Plots_And_Graphs.tex:325-337).
+  /// Scatter marker post-marker code calls colormap routines which trigger \pgfmathmultiply@{0.0}{...}.
+  /// Under LaTeXML/latexml-oxide, integer formatting strips the decimal point ('0' instead of '0.0'),
+  /// breaking \pgfplotscolormap@floor@unforgiving#1.#2\relax delimiter matching and corrupting the group stack.
+  #[test]
+  #[ignore = "Orchestrator fix: pgfmath float zero formatting / engine group recovery"]
+  fn pgfplots_scatter_marker_group_balance() {
+    let tex = r"\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}
+\addplot+[only marks,scatter,mark=*] coordinates {(1,1)(2,4)(3,9)};
+\end{axis}
+\end{tikzpicture}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.matches("<svg:g").count() >= 3, "{xml}");
+  }
+
+  /// animate: single representative frame for multi-frame animations (witness: among-us repro.tex).
+  /// Exposes frame-count on wrapper block, avoiding memory budget exhaustion.
+  #[test]
+  fn animate_multiframe_single_frame() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\usepackage{animate}
+\begin{document}
+\begin{animateinline}[controls]{30}
+\multiframe{10}{x=0+1}{%
+  \begin{tikzpicture}
+    \draw (0,0) rectangle (\x,2);
+  \end{tikzpicture}%
+}
+\end{animateinline}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
+    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+    assert!(xml.contains("class=\"ltx_animate\""), "{xml}");
+  }
+
+  /// chemnum: sequential compound numbering model (Task N5).
+  /// Guard: first use = 1, second label = 2, \refcmpd of the first = 1,
+  /// sub-compound = 1a; 0 errors. Also tests list expansion and \cmpdinit pre-allocation.
+  #[test]
+  fn chemnum_compound_numbering() {
+    let tex = r"\documentclass{article}
+\usepackage{chemnum}
+\cmpdinit{initA, initB}
+\begin{document}
+\cmpd{first}
+\cmpd{second}
+\refcmpd{first}
+\cmpd{first.a}
+\refcmpd{first.a}
+\cmpd{first,second}
+\cmpd{initA} and \cmpd{initB}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.first">3</text>"#),
+      "first use must be 3 (after initA=1, initB=2) with xml:id target: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.second">4</text>"#),
+      "second label must be 4 with xml:id target: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>"#),
+      "refcmpd of first must be 3 with idref link: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.first.a">3a</text>"#),
+      "sub-compound must be 3a with xml:id target: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first.a">3a</text>"#),
+      "refcmpd of sub-compound must be 3a with idref link: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>, <text class="ltx_cmpd" idref="cmpd.second">4</text>"#),
+      "list must emit comma-separated references: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.initA">1</text>"#),
+      "initA must be 1 with xml:id target: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.initB">2</text>"#),
+      "initB must be 2 with xml:id target: {xml}"
     );
   }
 }

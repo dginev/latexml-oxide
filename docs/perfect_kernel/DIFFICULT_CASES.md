@@ -191,3 +191,28 @@ comes up for another reason.
 | pgfplots `scatter` markers leak one boxing `{` frame each: `\aftergroup\pgfplots@scatter@plot@mark` (pgfplots.markers.code.tex:178-214, an xdef'd `\begingroup…\endgroup` body deferred out of the marker box) — `LXML_TRACE_FRAMES` shows the `{` pushed in restricted_horizontal never popped; `\end{axis}`'s `\endgroup` cascade underflows ("close non-boxing group"), a second axis hits "nested axis" and error recovery re-unreads past the pushback cap. Inline repro `~/data/pk_agents/w22/color-group/repro_b.tex` (`\addplot+[scatter,mark=*] coordinates {…}`, ≥32 errors; non-scatter plots clean). | ualberta/ualberta (oracle lualatex exit 1) | RUST-ONLY engine (`\aftergroup` vs box reader) | OPEN 2026-09-07 — needs a token-level trace of the marker box; also the pushback runaway on an unclosable `\endgroup` is a robustness cap worth its own guard |
 | stringstrings' encoded blank space is the robust `\protect\OE` (stringstrings.sty:82-94 `\SaveOEthel`); its non-`\edef` byte machinery (`\@rotate`/`\@treatleadingspaces` :1580+, `\@gobblearg`/`\@DiscardNextChar` :1546-1560, `\isnextbyte` :915) must see that multi-token unit as one byte; here `\OE`'s decomposition leaks `O`,`E`,`\else`,`\fi` into `\edef\@x{\if\SignalChar\@x F\else T\fi}` → "Extra `\else`" ×2 → expansion runaway. Trigger = a leading space (a newline inside `\violinsetoptions[…]{…}`'s option list, tikzviolinplots.sty:201-228 `\noblanks[e]`+`\whereisword[q]`). **SHARED**: Perl fails identically (2 Error + `Fatal:terminate`). Repro `~/data/pk_agents/w22/pgf-pair/probe_ba.tex` (the inline-options twin is clean). | tikzviolinplots/tikzviolinplots (oracle lualatex, renders) | SHARED kernel — `\protect` must freeze to `\relax` on the non-`\edef` discard path so one encoded byte = one `\@gobble` (latex.ltx robust-command semantics) | OPEN 2026-09-07, surpass-tier (1 doc); design the `\protect` rule first, MED risk |
 | pgf shading regenerated at use time (`\pgfuseshading` → `\pgfshadepath`, pgfcoreshade.code.tex:769-810) fails to reinstall `\@pgfshading<xname>!`, so `\pgfsys@shadinginsidepgfpicture{\relax}` runs our `\lxSVG@sh@defs`/`@pos`/`@sh` trio undefined (pgfsys_latexml_def.rs:1616-1760, Perl pgfsys-latexml.def.ltxml:672-724) and the stream derails into a PushbackLimit; fingerprint = three "Illegal unit of measure (pt inserted) at Anonymous String" just before. Candidates: the global `\@pgfshading<xname>!` lost across `\pgfmath@smuggleone` on our opaque primitive (:794-802), or the malformed-spec dimension math in `\lxSVG@sh@create`. 12 isolation probes clean — fires only in the full manual's showcase+tcolorbox+tikzducks context. | tikzpingus/tikzpingus-doc (oracle lualatex, renders) | not isolated; likely SHARED (faithful Perl translation) | OPEN 2026-09-07 — needs bisection of the full doc (notes `~/data/pk_agents/w22/pgf-pair/NOTES.md`) |
+
+## D13. Manuals broken by their own class on TL2025 (SHARED with pdflatex)
+
+**cnltx-doc `{multicols}` undefined (sweep 62: 35 manuals, 21 as first error;
+root-caused 2026-09-09).** cnltx-doc.cls:728 defers `\RequirePackage{multicol,ragged2e}`
+with scrlfile's deprecated `\AfterPackage!{hyperref}{…}` (scrlfile-hook.sty:209), and
+hyperref only loads from `\AtEndPreamble` (cls:879), so the body runs from the
+`file/hyperref.sty/after` hook at `\currentgrouplevel>0`; latex.ltx:18699-18703
+`\@fileswithoptions` refuses a grouped load ("Loading a class or package in a group"),
+multicol never loads, and `\begin{multicols}` (cls:796) is undefined. pdflatex on the real
+class stops at cls:736 with exactly those two errors; Perl LaTeXML and oxide both load the
+binding inside the group and lose the local `{multicols}` at the pop (same end state,
+Perl 2 errors, oxide 1). Members: bohr_en, cnltx_en, cntformats_en, currency_doc,
+dashrulex, easybook, elements-manual, embrac_en, enotez_en, fnpct-manual,
+guitarchordschemes_en, idxcmds_en, leadsheets_en, passopt, schule, snotez-manual,
+spbmark, syntaxdi, tasks-manual, translations-manual, utfsym (first error), plus the
+chemmacros/acro family where another cnltx-doc root fires first (carbohydrates_en,
+chemformula-manual, chemnum_en, chemgreek_en, endiagram_en, ghsystem-manual,
+modiagram_en, substances_en, exsheets_en, xsim-manual, scaletextbullet, thalie, pixelart,
+convert-jpfonts). No faithful fix produces the environment (a global package definition
+inside a group would diverge from both oracles); expected gain 0. Repro
+`tools/perfect_kernel/repros/loader/multicols_afterpackage_group.tex` (RED by design).
+Settled dead ends: the multicol binding does load (log `Loading multicol_sty.rs`); the
+`!`/label parse and `\@ifpackageloaded` are not the discriminator; raw
+`\AddToHook{file/*/after}` bodies persist.
