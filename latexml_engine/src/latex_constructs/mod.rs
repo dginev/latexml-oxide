@@ -3523,7 +3523,14 @@ fn caption_can_float(document: &Document, qname: &str) -> bool {
 pub(crate) fn absorb_without_tags(document: &mut Document, piece: &Digested) -> Result<()> {
   match piece.data() {
     DigestedData::Whatsit(w) => {
-      if w.borrow().get_definition().get_cs_name().contains("lx@tag") {
+      // Exactly the two tag constructors (`\lx@tag`, `\lx@tags`), by
+      // identity — not any internal name containing `lx@tag`.
+      let is_tag = {
+        let whatsit = w.borrow();
+        let name = whatsit.get_definition().get_cs_name().into_owned();
+        name == "\\lx@tag" || name == "\\lx@tags"
+      };
+      if is_tag {
         return Ok(());
       }
       document.absorb(piece, None)?;

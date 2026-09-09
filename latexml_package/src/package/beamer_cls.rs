@@ -1254,13 +1254,11 @@ LoadDefinitions!({
   // {spec}{yes}{no}: yes when the spec names the presentation-family mode
   // (presentation / beamer / all / second) — beamer_cls IS the presentation
   // context, mirroring Perl matchesCurrentMode(getCurrentMode()).
+  // One decider for every mode specification (`\mode<…>` here, `\only<…>`/
+  // `\alt<…>` below): `beamer_mode_spec_applies` parses the `|`/`:` parts as
+  // Perl `matchesMode` does — a substring test read `<install>` as `all`.
   DefMacro!("\\lx@beamer@ifpresmode{}{}{}", sub[(spec, yes, no)] {
-    let spec_str = spec.to_string().to_lowercase();
-    let matches = spec_str.contains("presentation")
-      || spec_str.contains("beamer")
-      || spec_str.contains("all")
-      || spec_str.trim().is_empty();
-    Ok(if matches { yes } else { no })
+    Ok(if beamer_mode_spec_applies(&spec.to_string()) { yes } else { no })
   });
   // Perl L493-495: \presentation / \article / \common route to
   // \mode<…>. Since the Rust \mode dispatcher is already a no-op for

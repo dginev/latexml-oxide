@@ -1207,6 +1207,16 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     _ => panic!("_wrong_argument_for_install_definition"),
   };
   let cs_sym = token.get_cs_name();
+  // A real definition retires the error-stub provenance (`is_error_stub`):
+  // a name stubbed as `<ltx:ERROR/>` and later `\def`ed is a defined cs
+  // again, so `\csname…\endcsname` takes tex.web's §373 path for it, not the
+  // §370 discard. Probe-only, like the `:locked` check below.
+  let stub_key = token.with_cs_name(|cs| s!("{cs}:error@stub"));
+  if let Some(stub_sym) = arena::get(&stub_key)
+    && lookup_bool_sym(stub_sym)
+  {
+    assign_value_sym(stub_sym, false, Some(Scope::Global));
+  }
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
@@ -1392,33 +1402,26 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       //TODO: sizer => "X"),
       Some(Scope::Global),
     );
-    LAST_ERROR_STUB.with(|c| c.set(Some(*token)));
+    // The stub's provenance travels with the NAME (tex.web §370 discards an
+    // undefined cs inside `\csname…\endcsname`; a defined non-expandable one
+    // takes the §373 `back_error` path): `<cs>:error@stub`, read by
+    // `gullet::read_cs_name_inner` — not a global "last stubbed token", which
+    // went stale across interleaved stubs.
+    assign_value_sym(
+      arena::pin(token.with_cs_name(|c| s!("{c}:error@stub"))),
+      true,
+      Some(Scope::Global),
+    );
   }
   Ok(*token)
 }
 
-thread_local! {
-  /// The token most recently stubbed as `<ltx:ERROR/>` by
-  /// [`generate_error_stub`]. tex.web §370: an UNDEFINED control sequence met
-  /// while scanning a `\csname` name is reported and discarded (the scan
-  /// continues to `\endcsname`), whereas a defined non-expandable one takes
-  /// the §373 `back_error` path. Our stub installs a global definition
-  /// before the csname loop can tell the two apart, so the loop consults this
-  /// one-shot cell — see `gullet::read_cs_name_inner`.
-  static LAST_ERROR_STUB: std::cell::Cell<Option<Token>> = const { std::cell::Cell::new(None) };
-}
-
-/// Take (and clear) the token last stubbed by [`generate_error_stub`] if it
-/// is `token`.
-pub fn take_error_stub_if(token: &Token) -> bool {
-  LAST_ERROR_STUB.with(|c| {
-    if c.get().as_ref() == Some(token) {
-      c.set(None);
-      true
-    } else {
-      false
-    }
-  })
+/// Was `token` stubbed as `<ltx:ERROR/>` by [`generate_error_stub`]? Probe
+/// only: the flag key is interned when the stub is made, so an unknown name
+/// costs no arena entry (the `:locked` probe's discipline).
+pub fn is_error_stub(token: &Token) -> bool {
+  let key = token.with_cs_name(|c| s!("{c}:error@stub"));
+  arena::get(&key).is_some_and(lookup_bool_sym)
 }
 
 /// Install a `Constructor` for `token` whose sole effect at digestion time is to

@@ -16839,6 +16839,17 @@ c &= d
     assert_eq!(xml.matches("role=\"endnote\"").count(), 1, "{xml}");
   }
 
+  /// Batch 56bn review: a colour defined under a whitespace-padded name is
+  /// stored and looked up under the same trimmed key (`def_color` and
+  /// `color_sty::color_key` must not drift).
+  #[test]
+  fn whitespace_padded_color_name_resolves() {
+    let tex = "\\documentclass{article}\n\\usepackage{color}\n\\definecolor{ foo }{rgb}{1,0,0}\n\\begin{document}\n\\textcolor{foo}{hello}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("color=\"#FF0000\""), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

@@ -1130,13 +1130,14 @@ impl From<&str> for Token {
       Some('\\') => T_CS!(text),
       Some('%') => T_COMMENT!(text),
       _ => {
-        if text.chars().all(|c| c.is_alphabetic()) {
-          T_LETTER!(text)
-        } else if text.chars().all(|c| c.is_ascii_whitespace()) {
-          // ASCII whitespace only: tex.web §262 makes catcode 10 for the
-          // space character; U+00A0/U+0085 are Unicode whitespace but under
-          // the pdfTeX byte mouth (K10) they are the bytes 0xA0/0x85 of 素
-          // or 銀紅 and must stay characters.
+        // tex.web §464 `str_toks`: a string becomes tokens with catcode
+        // OTHER, except the space character (catcode SPACE). No catcode is
+        // ever inferred from the character class — U+00A0/U+0085 are Unicode
+        // whitespace but under the pdfTeX byte mouth (K10) they are the bytes
+        // 0xA0/0x85 of 素 or 銀紅, and letters are letters only through a
+        // mouth's catcode table. The punctuation arms above are the callers'
+        // alias contract (`{`, `}`, `\cs`…), not a catcode guess.
+        if text.chars().all(|c| c.is_ascii_whitespace()) {
           T_SPACE!()
         } else {
           T_OTHER!(text)

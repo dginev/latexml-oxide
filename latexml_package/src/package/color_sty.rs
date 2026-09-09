@@ -105,18 +105,12 @@ fn try_color_algebra(name: &str) -> Option<Color> {
 /// Used as the recursive base case from `try_color_algebra` to avoid
 /// infinite descent when neither half of a `!` expression is a base
 /// named color.
-/// The state key of a named color. Under the pdfTeX byte mouth (K10) the
-/// name may arrive as bytes or as characters; both address the same color.
-pub fn color_key(name: &str) -> String {
-  // Decode BEFORE trimming: the bytes 0x85 (NEL) and 0xA0 (NBSP) are Unicode
-  // whitespace, so `str::trim` on a byte spelling would eat the last byte of
-  // 素 (E7 B4 A0) or 銀紅 (…B4 85).
-  s!("color_{}", mouth::decode_byte_mouth_runs(name).trim())
-}
+/// The state key of a named color (one spelling per name: `Tokens`' Display
+/// is the token→string boundary that normalizes it).
+pub fn color_key(name: &str) -> String { s!("color_{}", name.trim()) }
 
 fn lookup_color_obj_no_algebra(name: &str) -> Color {
-  let name_decoded = mouth::decode_byte_mouth_runs(name);
-  let name = name_decoded.trim();
+  let name = name.trim();
   if name.is_empty() {
     return color::BLACK;
   }

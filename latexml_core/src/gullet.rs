@@ -2176,7 +2176,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     // 65 manuals: babel's `\csname l@\beamer@torinoth@language\endcsname`
     // in beamer2thesis, gckanbun's pgf arrow declarations …). Perl consumes
     // the `\endcsname` but also emits a second error; pdflatex emits one.
-    if token.get_catcode() == Catcode::CS && take_error_stub_if(&token) {
+    if token.get_catcode() == Catcode::CS && is_error_stub(&token) {
       continue;
     }
     if cs.len() > MAX_CS_NAME_BYTES {

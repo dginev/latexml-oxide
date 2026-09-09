@@ -3670,11 +3670,7 @@ pub fn def_color(
   };
   // Store in state as "model c1 c2 ..."
   let stored = color.to_stored();
-  // K10: one spelling per name — the byte-mouth and character spellings share
-  // one key (`color_sty::color_key` on the lookup side) and one `\color@…`
-  // macro (`\csname` decodes byte runs the same way, so tikz's
-  // `\csname\string\color@<key>\endcsname` probe finds it either way).
-  let name = crate::mouth::decode_byte_mouth_runs(name).into_owned();
+  // The lookup side (`color_sty::color_key`) trims; store under the same key.
   let name = name.trim();
   assign_value(
     &s!("color_{name}"),

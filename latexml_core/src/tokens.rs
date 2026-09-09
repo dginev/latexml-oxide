@@ -1,5 +1,10 @@
 //! Token List constructors.
-use std::{borrow::Cow, collections::VecDeque, fmt::Display, rc::Rc};
+use std::{
+  borrow::Cow,
+  collections::VecDeque,
+  fmt::{Display, Write as _},
+  rc::Rc,
+};
 
 #[cfg(feature = "codegen")]
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
@@ -151,7 +156,26 @@ impl From<Token> for Option<Cow<'static, Tokens>> {
 impl Display for Tokens {
   /// to_string is used often, and for more keyword-like reasons,
   /// NOT for creating valid TeX (use revert or UnTeX for that!)
+  ///
+  /// This is THE token-list → Rust-string boundary (Perl `ToString`). Under
+  /// the pdfTeX byte mouth (KERNEL_CAPABILITIES K10) a non-ASCII name has two
+  /// token spellings — the bytes and the character the octet readers emit —
+  /// that pdfTeX never distinguishes; every Rust-side key derived here (colour
+  /// names, key-value keys, labels) gets the one decoded spelling
+  /// (`mouth::decode_byte_mouth_runs`), so the bindings need no per-site
+  /// normalization. Text runs reach the document as single-character boxes
+  /// and are reassembled there (`Document::open_text_internal`); `\csname`
+  /// builds its name in the gullet (`read_cs_name_inner`).
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    if crate::state::lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
+      let mut s = String::new();
+      for t in &self.0 {
+        if t.code != Catcode::COMMENT {
+          write!(s, "{t}")?;
+        }
+      }
+      return f.write_str(&crate::mouth::decode_byte_mouth_runs(&s));
+    }
     for t in &self.0 {
       if t.code != Catcode::COMMENT {
         write!(f, "{t}")?;

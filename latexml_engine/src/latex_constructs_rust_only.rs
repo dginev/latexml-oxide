@@ -646,10 +646,13 @@ LoadDefinitions!({
     // (a CSV for `\ior_map_inline`) must not start with comment lines that
     // read as empty rows. `overwrite`/`force`/`nosearch`/`nowarn` are
     // no-ops for the cache.
+    // latex.ltx:18956-18967 `\filec@ntents@opt`: the bracket is a comma list
+    // and each key is matched EXACTLY (`\filec@ntents@noheader`), never by
+    // substring.
     let noheader = header_star
       || opts
         .as_ref()
-        .map(|o| o.to_string().contains("noheader"))
+        .map(|o| o.to_string().split(',').any(|k| k.trim() == "noheader"))
         .unwrap_or(false);
     let mut lines: Vec<String> = Vec::new();
     if !noheader {

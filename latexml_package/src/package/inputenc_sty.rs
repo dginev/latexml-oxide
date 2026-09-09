@@ -37,12 +37,12 @@ pub fn enable_pdftex_byte_mouth() -> Result<bool> {
 /// mouth is on (kotexutf.sty:34, CJKutf8.sty:26 both `\RequirePackage[utf8]
 /// {inputenc}` after the switch).
 pub fn install_utf8_byte_activation() -> Result<()> {
-  // utf8.def:174-176: 0x80..0xC1 active and invalid on their own —
-  // inputenc's undefined-character handler here (`\@inpenc@undefined`, the
-  // same "keyboard character undefined" report as `\UTFviii@invalid@err`);
-  // 0xF5..0xFF (utf8.def:190-192, invalid too) are left as they are.
+  // utf8.def:174-176 and :190-192: 0x80..0xC1 and 0xF5..0xFF are active and
+  // invalid on their own — inputenc's undefined-character handler here
+  // (`\@inpenc@undefined`, the same "keyboard character undefined" report as
+  // `\UTFviii@invalid@err`).
   let undef_cs = T_CS!("\\@inpenc@undefined");
-  for code in 0x80..=0xC1u8 {
+  for code in (0x80..=0xC1u8).chain(0xF5..=0xFFu8) {
     let ch = code as char;
     assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
     Let!(T_ACTIVE!(ch), undef_cs.clone(), Scope::Global);
