@@ -1,11 +1,13 @@
 //! dhucs.sty — kotex's Unicode Hangul support.
 //!
-//! The real package is loaded. dhucs.sty:44 `\ifx 가가\else…\RequirePackage
-//! {kotexutf}\expandafter\endinput\fi` is a byte-vs-native-Unicode engine probe:
-//! pdfTeX sees two different UTF-8 bytes (false → the kotexutf byte path,
-//! kotexutf-core.tex:177 `\def\dhucs@hu{\z@}`), while a Unicode-native reader
-//! (this engine, Perl alike) sees one character twice (true → the native
-//! branch). In that branch `\dhucs@hu`, `\setInterHangulSkip`, `\jong`/
+//! The real package is loaded under the pdfTeX byte mouth (KERNEL_CAPABILITIES
+//! K10, `inputenc_sty::enable_pdftex_byte_mouth`). dhucs.sty:44 `\ifx 가가\else…
+//! \RequirePackage{kotexutf}\expandafter\endinput\fi` is a byte-vs-native-Unicode
+//! engine probe: pdfTeX sees two different UTF-8 bytes (false → the kotexutf
+//! byte path, kotexutf-core.tex:177 `\def\dhucs@hu{\z@}`) — which the byte
+//! mouth reproduces, so `kotexutf_sty.rs` takes over — while a Unicode-native
+//! reader (the LuaTeX persona; Perl alike) sees one character twice (true →
+//! the native branch). In that branch `\dhucs@hu`, `\setInterHangulSkip`, `\jong`/
 //! `\jung`/`\rieul` and the `\disablehangul*` switches are defined only under
 //! the LuaTeX (dhucs.sty:58-75, `\csname directlua\endcsname`) or XeTeX
 //! (:78-93, `\csname XeTeXrevision\endcsname`) probes — neither of which may be
@@ -18,6 +20,7 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  inputenc_sty::enable_pdftex_byte_mouth()?;
   InputDefinitions!("dhucs", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   RawTeX!(
     r"\@ifundefined{dhucs@hu}{\let\dhucs@hu\z@}{}

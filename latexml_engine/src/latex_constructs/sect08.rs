@@ -997,6 +997,22 @@ pub(crate) fn load() -> Result<()> {
         if cp <= 0x10FFFF {
           if lookup_bool("LUATEX_PROFILE") {
             // native character on the Unicode engine: nothing to declare
+          } else if lookup_bool("PDFTEX_BYTE_MOUTH") {
+            // The pdfTeX byte mouth (KERNEL_CAPABILITIES K10): utf8.def:253-265
+            // defines `\u8:<the UTF-8 bytes>` — the name the lead-byte readers
+            // look up (`\csname u8:\string#1\string#2\endcsname`) — and
+            // touches no character. The code point U+00ED is here the lead
+            // byte 0xED of `한`, so the native branch below (t1enc.dfu via
+            // `\DeclareFontEncoding{T1}` after kotexutf) would turn every
+            // hangul lead byte into `\'\i`.
+            if cp >= 0x80 && let Some(ch) = char::from_u32(cp) {
+              let mut buf = [0u8; 4];
+              let name: String = ch.encode_utf8(&mut buf).bytes().map(|b| b as char).collect();
+              // The name is spelled as `\csname` spells it (one decoded
+              // spelling per name under the byte mouth, gullet.rs).
+              let name = mouth::decode_byte_mouth_runs(&name).into_owned();
+              DefMacro!(T_CS!(s!("\\u8:{}", name)), None, Tokens::new(expansion.unlist()));
+            }
           } else if let Some(ch) = char::from_u32(cp) {
             // utf8.def's invariant under a natively decoded UTF-8 mouth
             // (utf8_def.rs:236-243, Perl utf8.def.ltxml: code points

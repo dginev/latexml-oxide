@@ -1132,7 +1132,11 @@ impl From<&str> for Token {
       _ => {
         if text.chars().all(|c| c.is_alphabetic()) {
           T_LETTER!(text)
-        } else if text.chars().all(|c| c.is_whitespace()) {
+        } else if text.chars().all(|c| c.is_ascii_whitespace()) {
+          // ASCII whitespace only: tex.web §262 makes catcode 10 for the
+          // space character; U+00A0/U+0085 are Unicode whitespace but under
+          // the pdfTeX byte mouth (K10) they are the bytes 0xA0/0x85 of 素
+          // or 銀紅 and must stay characters.
           T_SPACE!()
         } else {
           T_OTHER!(text)

@@ -2307,6 +2307,9 @@ impl Document {
   //  AND, we've assumed that "font" names the relevant attribute!!!]
 
   pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
+    // K10: byte-mouth spellings become characters at the document boundary.
+    let text_decoded = crate::mouth::decode_byte_mouth_runs(text);
+    let text: &str = &text_decoded;
     let node_type = self.node.get_type();
     {
       // Ignore initial whitespace
@@ -2643,7 +2646,19 @@ impl Document {
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&parent, &bta);
       }
-      self.node.append_text(text)?;
+      // K10: under the byte mouth the bytes of one character arrive one
+      // token at a time; a lone byte is never a decodable run, so decode the
+      // text node as a whole once the new piece is on.
+      if state::lookup_bool("PDFTEX_BYTE_MOUTH")
+        && text.chars().any(|c| ('\u{80}'..='\u{FF}').contains(&c))
+      {
+        let merged = s!("{}{}", self.node.get_content(), text);
+        self
+          .node
+          .set_content(&crate::mouth::decode_byte_mouth_runs(&merged))?;
+      } else {
+        self.node.append_text(text)?;
+      }
     }
     // Perl lines 1139-1144: if lastChild is a comment node and its previous sibling is
     // a text node, swap them to avoid splitting text runs, then recurse.
@@ -3442,7 +3457,9 @@ impl Document {
     // (`open_text_internal`/`open_math_text_internal`) already stripped NUL;
     // this attribute sink did not. PR #249 review P0-1.
     let value_sanitized = xml_sanitize(value);
-    let value: &str = &value_sanitized;
+    // K10: byte-mouth spellings become characters at the document boundary.
+    let value_decoded = crate::mouth::decode_byte_mouth_runs(&value_sanitized);
+    let value: &str = &value_decoded;
     if value.is_empty() {
       return Ok(()); // skip if empty
     }

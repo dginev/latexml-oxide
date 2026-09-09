@@ -16737,6 +16737,97 @@ c &= d
     assert_eq!(error_count(&stderr), 1, "{stderr}");
   }
 
+  /// Batch 56bl (KERNEL_CAPABILITIES K10): the pdfTeX byte mouth, package-scoped.
+  /// kotexutf runs raw under it: josa control symbols over a lead byte
+  /// (kotexutf.sty `\DeclareRobustCommand*\^^ec[2]`) resolve, hangul funnels
+  /// through `\unihangulchar` (kotexutf-core.tex:213) and comes out as the
+  /// character, accents in the same document survive. Witnesses kotex-utf-doc,
+  /// kotex-doc, cjk-ko-doc.
+  #[test]
+  fn kotexutf_runs_under_the_byte_mouth() {
+    let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\begin{document}\n한글\\은 문서\\를 café 만든다.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("한글은 문서를 café 만든다."), "{xml}");
+  }
+
+  /// Batch 56bl: dhucs-trivcj.sty:18 `\ifx 가가` is FALSE under the byte mouth
+  /// (two different bytes), so its legacy branch defines the `{japanese}`
+  /// environment (dhucs-trivcj.sty:117) instead of `\edef`-ing an undefined
+  /// luatexko `\japanese` (kotex-doc ×3).
+  #[test]
+  fn dhucs_trivcj_takes_the_byte_branch() {
+    let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage{dhucs-trivcj}\n\\begin{document}\n\\begin{japanese}日本語\\end{japanese} 한글\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("日本語 한글"), "{xml}");
+  }
+
+  /// Batch 56bl: CJK's octet readers (`\CJK@XXX`, CJKutf8.sty:41-84) receive
+  /// real bytes under the byte mouth and emit the character; `\CJK@input`
+  /// (CJK.sty:76) feeds `UTF8.bdg`'s `\CJK@namedef` family
+  /// (sample-bxcjkjatype-beamer via bxcjkjatype.sty:932).
+  #[test]
+  fn cjk_octet_readers_emit_the_character() {
+    let tex = "\\documentclass{article}\n\\usepackage{CJKutf8}\n\\makeatletter\n\\begingroup\\CJK@input{UTF8.bdg}\\endgroup\n\\makeatother\n\\begin{document}\n\\begin{CJK}{UTF8}{mj}한글 café\\end{CJK}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("한글 café"), "{xml}");
+  }
+
+  /// Batch 56bl: under the byte mouth `\DeclareUnicodeCharacter{00ED}` defines
+  /// `\u8:<bytes>` (utf8.def:253-265) and leaves U+00ED — the lead byte of
+  /// `한` — alone; t1enc.dfu loaded after kotexutf (kotex-doc `[T1]{fontenc}`)
+  /// turned every hangul lead byte into `\'\i` (30 errors, mojibake title).
+  #[test]
+  fn byte_mouth_declare_unicode_character_defines_u8_names() {
+    let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage[T1]{fontenc}\n\\title{한국어 텍}\n\\begin{document}\n\\maketitle\n본문 café.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("한국어 텍") && xml.contains("본문 café."),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56bl: under the byte mouth a name has two spellings — the bytes
+  /// (`\detokenize`, cncolours.sty:21's comma list) and the characters the
+  /// octet readers emit; `color_sty::color_key` + `def_color` share one key
+  /// (pgfornament-han-doc: 16 → 1001 "Can't find color named '乌黑'" before).
+  #[test]
+  fn byte_mouth_color_names_share_one_key() {
+    let tex = "\\documentclass{article}\n\\usepackage{xcolor}\n\\usepackage{CJKutf8}\n\\definecolorset{RGB}{}{}{素,240,240,240;青翠,0,224,158}\n\\begin{document}\n\\begin{CJK}{UTF8}{gbsn}\n\\expandafter\\definecolor\\expandafter{\\detokenize{乌黑}}{rgb}{0.1,0.1,0.1}\n\\textcolor{乌黑}{墨}\\textcolor{素}{a}\\textcolor{青翠}{b}\n\\end{CJK}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("color=\"#1A1A1A\"") && xml.contains("墨"),
+      "{xml}"
+    );
+    // 素 = E7 B4 A0, 青翠 = … BF A0: byte 0xA0 is Unicode whitespace, so a
+    // trim before the decode ate the last byte (`Token::from`, the colour
+    // set parser).
+    assert!(
+      xml.contains("color=\"#F0F0F0\"") && xml.contains("color=\"#00E09E\""),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56bl: strings stringified from byte tokens (hyperref's `pdftitle`
+  /// → `<ltx:rdf content=…>`, a theorem tag) are decoded at the document
+  /// boundary (`mouth::decode_byte_mouth_runs` in `open_text`/`set_attribute`;
+  /// cjk-ko-doc's `content="cjk-ko ê°ë¨…"`, inkpaper-cn's `<tag>å®ç 3.1</tag>`).
+  #[test]
+  fn byte_mouth_strings_decode_at_the_document_boundary() {
+    let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage{hyperref}\n\\title{한국어 텍}\n\\author{김강수}\n\\begin{document}\n\\maketitle\n본문.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("한국어 텍"), "{xml}");
+    assert!(
+      !xml.contains('ê') && !xml.contains('í'),
+      "byte spellings leaked: {xml}"
+    );
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

@@ -427,7 +427,7 @@ fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
 
 /// Step the color series
 fn step_color_series(name: &str, n: usize) {
-  let color_key = s!("color_{name}");
+  let color_key = color_sty::color_key(name);
   let step_key = s!("color_series_{name}_step");
   if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) =
     (lookup_value(&color_key), lookup_value(&step_key))
@@ -760,7 +760,7 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\XC@definecolor[]{}[]{}{}', sub { ... });
   DefPrimitive!("\\XC@definecolor[]{}[]{}{}", sub[(type_opt, name, _prefix, models, specs)] {
     let is_ps = !check_no_postscript(type_opt, "\\XC@definecolor")?;
-    let name_str = do_expand(name)?.to_string();
+    let name_str = mouth::decode_byte_mouth_runs(&do_expand(name)?.to_string()).into_owned();
     // xcolor.sty:531-533: a `ps` color still REGISTERS — its driver spec is
     // the raw PostScript, and its ordinary color value is the model's white
     // (`\XC@clr@<model>@white`, :510-516 — white in every model). Perl's
@@ -817,8 +817,8 @@ LoadDefinitions!({
   // direct-call simplification of an expand-to-alias indirection).
   DefPrimitive!("\\providecolor[]{}{}{}", sub[(type_opt, name, models, specs)] {
     let is_ps = !check_no_postscript(type_opt, "\\XC@providecolor")?;
-    let name_str = do_expand(name)?.to_string();
-    let key = s!("color_{name_str}");
+    let name_str = mouth::decode_byte_mouth_runs(&do_expand(name)?.to_string()).into_owned();
+    let key = color_sty::color_key(&name_str);
     if with_value(&key, |v| v.is_some()) {
       return Ok(Vec::new()); // Already defined
     }
@@ -843,7 +843,7 @@ LoadDefinitions!({
   // Perl: DefPrimitive('\colorlet[]{}[]{}', sub { ... ParseXColor(undef, $colordesc, $tomodel) ... })
   DefPrimitive!("\\colorlet[]{}[]{}", sub[(type_opt, name, tomodel_opt, colordesc)] {
     if !check_no_postscript(type_opt, "\\colorlet")? { return Ok(Vec::new()); }
-    let name_str = do_expand(name)?.to_string();
+    let name_str = mouth::decode_byte_mouth_runs(&do_expand(name)?.to_string()).into_owned();
     let colordesc_str = do_expand(colordesc)?.to_string();
     let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     // xcolor.sty:625-628: a `\colorlet` that is not a plain alias re-enters
@@ -861,7 +861,7 @@ LoadDefinitions!({
     let models_str = do_expand(models)?.to_string();
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
-    let specset_str = do_expand(specset)?.to_string();
+    let specset_str = mouth::decode_byte_mouth_runs(&do_expand(specset)?.to_string()).into_owned();
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
@@ -885,7 +885,7 @@ LoadDefinitions!({
     let models_str = do_expand(models)?.to_string();
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
-    let specset_str = do_expand(specset)?.to_string();
+    let specset_str = mouth::decode_byte_mouth_runs(&do_expand(specset)?.to_string()).into_owned();
     let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
@@ -893,7 +893,7 @@ LoadDefinitions!({
         let name = spec[..comma_pos].trim();
         let specs = spec[comma_pos+1..].trim();
         let full_name = s!("{head_str}{name}{tail_str}");
-        let key = s!("color_{full_name}");
+        let key = color_sty::color_key(&full_name);
         if with_value(&key, |v| v.is_some()) { continue; }
         let color = parse_xcolor(Some(&models_str), specs, None);
         def_color(&full_name, &color, scope)?;
@@ -921,6 +921,8 @@ LoadDefinitions!({
   // We call the Rust function directly for efficiency
   {
     fn define_colorset(models: &str, specset: &str) -> Result<()> {
+      let specset = mouth::decode_byte_mouth_runs(specset);
+      let specset: &str = &specset;
       for spec in specset.split(';') {
         let spec = spec.trim();
         if spec.is_empty() { continue; }
@@ -1083,7 +1085,7 @@ LoadDefinitions!({
   // Perl 0 errors).
   DefPrimitive!("\\definecolorseries{}{}{}[]{}[]{}",
                 sub[(name, model, method, bmodel_opt, bspec, smodel_opt, sspec)] {
-    let name_str = do_expand(name)?.to_string();
+    let name_str = mouth::decode_byte_mouth_runs(&do_expand(name)?.to_string()).into_owned();
     let model_str = do_expand(model)?.to_string();
     let method_str = do_expand(method)?.to_string();
     let bspec_str = do_expand(bspec)?.to_string();
@@ -1113,7 +1115,7 @@ LoadDefinitions!({
   // \resetcolorseries[div]{name}
   // reset/initialize the color series <name> for <div> steps.
   DefPrimitive!("\\resetcolorseries[]{}", sub[(div_opt, name)] {
-    let name_str = do_expand(name)?.to_string();
+    let name_str = mouth::decode_byte_mouth_runs(&do_expand(name)?.to_string()).into_owned();
     let div_str = div_opt.and_then(|d| do_expand(d).ok()).map(|t| t.to_string())
       .unwrap_or_else(|| "16".to_string());
     let div: f64 = div_str.parse().unwrap_or(16.0);
@@ -1723,6 +1725,7 @@ LoadDefinitions!({
 
 /// Perl: sub defineColors — define colors from "name=from,name=from,..." pairs
 fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
+  let id_pairs = mouth::decode_byte_mouth_runs(id_pairs);
   for pair in id_pairs.split(',') {
     let pair = pair.trim();
     if pair.is_empty() {
@@ -1734,14 +1737,14 @@ fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
       (pair, pair)
     };
     if if_undef {
-      let key = s!("color_{name}");
+      let key = color_sty::color_key(name);
       if with_value(&key, |v| v.is_some()) {
         continue;
       }
     }
-    let from_key = s!("color_{from}");
+    let from_key = color_sty::color_key(from);
     if let Some(stored) = lookup_value(&from_key) {
-      assign_value(&s!("color_{name}"), stored, None);
+      assign_value(&color_sty::color_key(name), stored, None);
       // Also copy the \color@name macro via Let
       let from_cs = T_CS!(s!("\\color@{from}"));
       let to_cs = T_CS!(s!("\\color@{name}"));

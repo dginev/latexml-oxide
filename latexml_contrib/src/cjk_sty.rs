@@ -1,16 +1,99 @@
 use latexml_package::prelude::*;
 
+/// CJKutf8.sty:41-84 `\CJK@XX#1#2` … `\CJK@XXXXp`: the octet readers behind
+/// the active lead bytes reassemble the code point by byte arithmetic
+/// (`\csname CJK@\number`#1\endcsname{`#2}{`#3}` → a subfont glyph); the
+/// `p` variants are the same readers with a `\protect` interleaved
+/// (CJKutf8.sty:57 `\ifx #2\protect`). Under the byte mouth (K10) the arguments
+/// are the bytes; emit the character they encode (`inputenc_sty::utf8_octets`,
+/// skipping the `\protect`).
+fn cjk_octets(args: &[ArgWrap]) -> Tokens {
+  let bytes: Vec<ArgWrap> = args
+    .iter()
+    .filter(|a| inputenc_sty::byte_of_arg(a).is_some())
+    .cloned()
+    .collect();
+  match bytes.split_first() {
+    Some((lead, rest)) => match inputenc_sty::byte_of_arg(lead) {
+      Some(lead) => inputenc_sty::utf8_octets(lead, rest),
+      None => Tokens::new(Vec::new()),
+    },
+    None => Tokens::new(Vec::new()),
+  }
+}
+
+/// A byte handed over as `` `<byte> `` (CJK.sty:981-1012 `{`#2}`): the
+/// character after the backquote.
+fn quoted_byte(arg: &ArgWrap) -> Option<u8> {
+  let ts = arg.clone().owned_tokens()?;
+  let t = ts
+    .unlist_ref()
+    .iter()
+    .rev()
+    .find(|t| t.code != Catcode::CS)
+    .cloned()?;
+  u8::try_from(t.get_charcode()).ok()
+}
+
+/// CJK.sty:981-1012 / CJKutf8.sty:41-84 / cjkutf8-ko.sty:392-430: every
+/// octet reader ends in `\csname CJK@\number`<lead>\endcsname{`b2}{`b3}` — the
+/// per-lead-byte handlers the UTF8 encoding's binding files supply (they map
+/// the bytes to a subfont plane and glyph). Bind that layer: whatever a
+/// package's own `\CJK@XXX` looks like, the bytes funnel here and become the
+/// character.
+fn bind_cjk_lead_byte_handlers() -> Result<()> {
+  for lead in 0xC2..=0xF4u8 {
+    let cs = T_CS!(s!("\\CJK@{}", lead));
+    if lead <= 0xDF {
+      DefMacro!(cs, "{}", sub[args] { Ok(cjk_lead_octets(lead, &args)) });
+    } else if lead <= 0xEF {
+      DefMacro!(cs, "{}{}", sub[args] { Ok(cjk_lead_octets(lead, &args)) });
+    } else {
+      DefMacro!(cs, "{}{}{}", sub[args] { Ok(cjk_lead_octets(lead, &args)) });
+    }
+  }
+  Ok(())
+}
+
+fn cjk_lead_octets(lead: u8, args: &[ArgWrap]) -> Tokens {
+  let mut bytes = vec![lead];
+  bytes.extend(args.iter().filter_map(quoted_byte));
+  match str::from_utf8(&bytes).ok().and_then(|t| t.chars().next()) {
+    Some(ch) if bytes.len() == args.len() + 1 => {
+      Tokens!(Token {
+        text: pin_char(ch),
+        code: Catcode::OTHER,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
+      })
+    },
+    _ => Tokens::new(Vec::new()),
+  }
+}
+
 fn bind_cjk_utf8_octets() -> Result<()> {
+  bind_cjk_lead_byte_handlers()?;
   let cjk_at_at_at = T_CS!("\\CJK@@@");
   if lookup_definition(&cjk_at_at_at)?.is_none() {
     def_macro_noop("\\CJK@@@")?;
     def_macro_noop("\\CJK@X{}")?;
-    def_macro_noop("\\CJK@XX{}{}")?;
-    def_macro_noop("\\CJK@XXp{}{}")?;
-    def_macro_noop("\\CJK@XXX{}{}{}")?;
-    def_macro_noop("\\CJK@XXXp{}{}{}{}")?;
-    def_macro_noop("\\CJK@XXXX{}{}{}{}")?;
-    def_macro_noop("\\CJK@XXXXp{}{}{}{}{}")?;
+  }
+  // Bindings outrank raw: a raw CJKutf8.sty/cjkutf8-ko.sty load in between
+  // (kotex's `[cjk]` path) leaves CJKutf8.sty:41's `\csname CJK@\number`#1
+  // \endcsname{`#2}{`#3}` in place, whose subfont handlers do not exist here
+  // (the backquotes typeset as ‘). Re-bind the readers at every env start.
+  DefMacro!("\\CJK@XX{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  DefMacro!("\\CJK@XXp{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  DefMacro!("\\CJK@XXX{}{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  DefMacro!("\\CJK@XXXp{}{}{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  DefMacro!("\\CJK@XXXX{}{}{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  DefMacro!("\\CJK@XXXXp{}{}{}{}{}", sub[args] { Ok(cjk_octets(&args)) });
+  // CJK.sty:898-903 `\CJK@makeActive`: 0x80..0xFE active — under the byte
+  // mouth the bytes really arrive, so the meanings below need the catcode.
+  if lookup_bool("PDFTEX_BYTE_MOUTH") {
+    for code in 0x80..=0xF4u8 {
+      assign_catcode(code as char, Catcode::ACTIVE, Some(Scope::Global));
+    }
   }
 
   for code in 0x80..=0xF4u8 {
@@ -93,6 +176,28 @@ fn bind_cjk_utf8_octets() -> Result<()> {
 }
 
 LoadDefinitions!({
+  // KERNEL_CAPABILITIES K10: CJK is built on pdfTeX's byte model
+  // (CJK.sty:896-968); run the rest of the document under the byte mouth.
+  inputenc_sty::enable_pdftex_byte_mouth()?;
+  // CJK.sty:76-84 `\CJK@input` (bxcjkjatype.sty:932 `\CJK@input{UTF8.bdg}`)
+  // and the `\CJK@namedef` family it feeds (CJK.sty:925-975; `\CJK@active`
+  // = `\relax` for LaTeX, CJK.sty:43): the active-byte meanings the raw
+  // binding files install — the same meanings `bind_cjk_utf8_octets` gives.
+  RawTeX!(
+    r"\let\CJK@active\relax
+\def\CJK@input#1{\makeatletter
+  \edef\CJK@lesscatcode{\noexpand\catcode`< \the\catcode`<}\catcode`\< 12\relax
+  \endlinechar \m@ne \input #1\relax \endlinechar `\^^M \CJK@lesscatcode \makeatother}
+\def\CJK@namedef#1{\CJK@active\def#1{\CJK@@@\ifx\protect\@typeset@protect\string #1\else\noexpand #1\fi}}
+\def\CJK@namepdef#1{\CJK@active\def#1{\CJK@@@\ifx\protect\@typeset@protect
+  \expandafter\expandafter\expandafter\CJK@X\expandafter\string\expandafter#1\else\noexpand #1\fi}}
+\def\CJK@nameppdef#1{\CJK@active\def#1{\CJK@@@\ifx\protect\@typeset@protect
+  \expandafter\expandafter\expandafter\CJK@XX\expandafter\string\expandafter#1\else\noexpand #1\fi}}
+\def\CJK@namepppdef#1{\CJK@active\def#1{\CJK@@@\ifx\protect\@typeset@protect
+  \expandafter\expandafter\expandafter\CJK@XXX\expandafter\string\expandafter#1\else\noexpand #1\fi}}
+\def\CJK@nameppppdef#1{\CJK@active\def#1{\CJK@@@\ifx\protect\@typeset@protect
+  \expandafter\expandafter\expandafter\CJK@XXXX\expandafter\string\expandafter#1\else\noexpand #1\fi}}"
+  );
   // ar5iv-bindings/bindings/CJK.sty.ltxml L17-24: CJK environment is a
   // transparent wrapper that passes body through. `leaveHorizontal` +
   // `internal_vertical` mode ensures paragraph breaks inside CJK blocks
@@ -145,9 +250,9 @@ LoadDefinitions!({
   // expand active bytes 0x80..0xF4 via `\unexpanded\expandafter{~}`; without these
   // bindings, they hit inputenc's `\@inpenc@undefined` 117 times (cjk-ko-doc fatal).
   //
-  // NOTE: We bind the active-byte MEANINGS only, and intentionally leave catcodes
-  // 0x80..0xFE as Catcode::OTHER (from utf8_def.rs). In latexml-oxide, input is
-  // Unicode codepoints; setting catcode ACTIVE would cause accented Latin characters
+  // NOTE: Under the LuaTeX persona we bind the active-byte MEANINGS only and
+  // leave catcodes 0x80..0xFE as Catcode::OTHER (from utf8_def.rs): input is
+  // Unicode codepoints there, and setting catcode ACTIVE would cause accented Latin characters
   // (e.g. U+00E9 'é' in "café") to be intercepted as multi-byte CJK lead bytes.
   DefPrimitive!("\\CJK@loadBinding{}", sub[(binding)] {
     let b = binding.to_string();

@@ -142,7 +142,10 @@ macro_rules! FindFile {
 #[macro_export]
 macro_rules! LookupColor {
   ($name:expr_2021) => {{
-    if let Some(color) = LookupValue!(&s!("color_{}", $name)) {
+    if let Some(color) = LookupValue!(&s!(
+      "color_{}",
+      latexml_core::mouth::decode_byte_mouth_runs($name).trim()
+    )) {
       color.to_string()
     } else {
       Error!("undefined", $name, s!("color '{}' is undefined...", $name));

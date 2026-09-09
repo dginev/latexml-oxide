@@ -11,7 +11,7 @@ fn current_background_hex() -> String {
 
 /// Look up a named color from state, returning hex attribute string.
 fn lookup_color_hex(name: &str) -> String {
-  let key = s!("color_{name}");
+  let key = color_sty::color_key(name);
   // with_value avoids cloning the Stored envelope on the String arm.
   with_value(&key, |v| match v {
     Some(Stored::String(sym)) => {

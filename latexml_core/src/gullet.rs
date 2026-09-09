@@ -2348,6 +2348,15 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
       },
     };
   }
+  // K10: under the pdfTeX byte mouth a name has two spellings — the bytes
+  // (`\csname\string\color@#1\endcsname` from a detokenized key, tikz's
+  // colour probe) and the characters the octet readers emit (the binding's
+  // `\definecolor` name) — which pdfTeX never distinguishes. One spelling
+  // per name: the decoded one (`mouth::decode_byte_mouth_runs`).
+  let cs = match crate::mouth::decode_byte_mouth_runs(&cs) {
+    std::borrow::Cow::Borrowed(_) => cs,
+    std::borrow::Cow::Owned(decoded) => decoded,
+  };
   Ok(T_CS!(cs))
 }
 

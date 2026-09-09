@@ -67,6 +67,13 @@ pub struct MouthOptions {
   pub at_letter:      bool,
   pub notes:          bool,
   pub content:        Option<String>,
+  /// The string IS a document source (a file handed over as content: the
+  /// cortex/in-process API, filecontents, an `\openin` overlay): keep its
+  /// bytes and decode each line lazily under the encoding current when the
+  /// line is read, exactly like a file mouth — so the pdfTeX byte mouth (K10)
+  /// switched on by a package mid-document reaches the document's own text.
+  /// Internal strings (`Tokenize!` bodies, `\scantokens`) stay pre-decoded.
+  pub lazy_decode:    bool,
   pub foodtype:       Option<FoodType>,
   pub source:         Option<String>,
   pub shortsource:    Option<String>,
@@ -97,6 +104,8 @@ pub struct Mouth {
   /// separate object and keeps TeX's meanings, which a State-level assignment
   /// could not guarantee.
   bib_data_literals:      bool,
+  /// See [`MouthOptions::lazy_decode`].
+  lazy_decode:            bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -150,6 +159,7 @@ impl Default for Mouth {
       // handle : None,
       foodtype:               FoodType::File,
       bib_data_literals:      false,
+      lazy_decode:            false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -214,6 +224,46 @@ impl Object for Mouth {
 /// keeps the damage to the offending line and matches the Mouth's own
 /// granularity. The all-valid-UTF-8 case (the overwhelming majority) still
 /// costs exactly one `from_utf8` SIMD validation of the whole buffer.
+/// KERNEL_CAPABILITIES K10: under the pdfTeX byte mouth a non-ASCII string
+/// has two spellings — the bytes (a run of chars in U+0080..U+00FF, from
+/// `\string`/`\detokenize`/`\csname` of the active bytes, or a stringified
+/// token list) and the character the octet readers emit. pdfTeX knows only
+/// the bytes, so the two never meet there; here they meet at every string
+/// boundary (a color name defined from a detokenized list and used from the
+/// text — cncolours.sty:21 vs pgfornament-han-doc; hyperref's `pdftitle`;
+/// a theorem tag). Decode every maximal byte run that is valid UTF-8 back
+/// into its characters; anything else stays as it is. A no-op unless the
+/// byte mouth is on.
+pub fn decode_byte_mouth_runs(s: &str) -> std::borrow::Cow<'_, str> {
+  if !s.chars().any(|c| ('\u{80}'..='\u{FF}').contains(&c))
+    || !lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH"))
+  {
+    return std::borrow::Cow::Borrowed(s);
+  }
+  let mut out = String::with_capacity(s.len());
+  let mut run: Vec<u8> = Vec::new();
+  let flush = |run: &mut Vec<u8>, out: &mut String| {
+    if run.is_empty() {
+      return;
+    }
+    match str::from_utf8(run) {
+      Ok(text) => out.push_str(text),
+      Err(_) => out.extend(run.iter().map(|&b| b as char)),
+    }
+    run.clear();
+  };
+  for c in s.chars() {
+    if ('\u{80}'..='\u{FF}').contains(&c) {
+      run.push(c as u32 as u8);
+    } else {
+      flush(&mut run, &mut out);
+      out.push(c);
+    }
+  }
+  flush(&mut run, &mut out);
+  std::borrow::Cow::Owned(out)
+}
+
 pub fn decode_input_bytes(raw: &[u8]) -> String {
   match str::from_utf8(raw) {
     Ok(s) => s.to_string(),
@@ -250,6 +300,7 @@ impl Mouth {
       let (_dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
+      options.lazy_decode = true;
       // Read-log: a named cached-content open (filecontents / LSP overlay).
       record_opened_source(crate::common::arena::pin(source));
       Mouth::new(&content, Some(options))
@@ -297,6 +348,7 @@ impl Mouth {
           fordefinitions: opts.fordefinitions,
           at_letter: opts.at_letter,
           notes: opts.notes,
+          lazy_decode: opts.lazy_decode,
           source_sym: crate::common::arena::pin(&source),
           source,
           shortsource,
@@ -442,7 +494,15 @@ impl Mouth {
     }
     Ok(())
   }
-  fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
+  fn open_literal(&mut self, content: &str) {
+    if self.lazy_decode {
+      // A document handed over as content: bytes, decoded per line on read
+      // (`get_next_line`), like a file.
+      self.raw_buffer = Mouth::split_raw_lines(content.as_bytes());
+    } else {
+      self.buffer = Mouth::split_lines(content);
+    }
+  }
   fn open_http(&mut self, url: &str) {
     emit_warn(
       "unsupported",
@@ -589,10 +649,22 @@ impl Mouth {
       // line, so even a small heap alloc per call adds up on large
       // documents. Only resolve the symbol to an owned String when we
       // actually need it for the misdefined-encoding Info! message.
+      // `bytes` is the pdfTeX byte mouth (KERNEL_CAPABILITIES K10): pdfTeX
+      // reads a file byte by byte (tex.web §30-31 `buffer: array of
+      // ASCII_code`, §341 `cur_chr:=buffer[loc]`) against a 256-entry
+      // `\catcode` table, so a UTF-8 syllable is three char tokens whose codes
+      // are its bytes — the model cjkutf8-josa.sty:176 (`\DeclareRobustCommand*
+      // \^^ea[2]`, a control symbol over the lead byte) and dhucs.sty:44
+      // (`\ifx 가가`, two different bytes) are built on. Byte→char over
+      // U+0000..U+00FF is exactly the Latin-1 decode, and the catcode table's
+      // U+0000..U+00FF entries ARE that 256-entry table (`\catcode"EA` and a
+      // `^^ea` both address U+00EA). Enabled package-scoped by
+      // `inputenc_sty::enable_pdftex_byte_mouth`, never globally.
       let is_latin1 = crate::common::arena::with(*encoding_sym, |s| {
         s.eq_ignore_ascii_case("iso-8859-1")
           || s.eq_ignore_ascii_case("latin1")
           || s.eq_ignore_ascii_case("latin-1")
+          || s.eq_ignore_ascii_case("bytes")
       });
       let file_str = if is_latin1 {
         raw_line.iter().map(|&b| b as char).collect::<String>()

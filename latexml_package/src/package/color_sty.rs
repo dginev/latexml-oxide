@@ -47,7 +47,7 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
       // Perl reaches the same end-state (it loads dvipsnam for this paper);
       // witness 2005.01533 (revtex4-2 → hyperref preloads color →
       // `\definecolor{red}{named}{Red}` → `named_Red` undefined).
-      if lookup_value(&format!("color_{key}")).is_none() {
+      if lookup_value(&color_key(&key)).is_none() {
         let _ = input_definitions("dvipsnam", InputDefinitionOptions {
           extension: Some(Cow::Borrowed("def")),
           noerror: true,
@@ -105,12 +105,22 @@ fn try_color_algebra(name: &str) -> Option<Color> {
 /// Used as the recursive base case from `try_color_algebra` to avoid
 /// infinite descent when neither half of a `!` expression is a base
 /// named color.
+/// The state key of a named color. Under the pdfTeX byte mouth (K10) the
+/// name may arrive as bytes or as characters; both address the same color.
+pub fn color_key(name: &str) -> String {
+  // Decode BEFORE trimming: the bytes 0x85 (NEL) and 0xA0 (NBSP) are Unicode
+  // whitespace, so `str::trim` on a byte spelling would eat the last byte of
+  // 素 (E7 B4 A0) or 銀紅 (…B4 85).
+  s!("color_{}", mouth::decode_byte_mouth_runs(name).trim())
+}
+
 fn lookup_color_obj_no_algebra(name: &str) -> Color {
-  let name = name.trim();
+  let name_decoded = mouth::decode_byte_mouth_runs(name);
+  let name = name_decoded.trim();
   if name.is_empty() {
     return color::BLACK;
   }
-  let key = s!("color_{name}");
+  let key = color_key(name);
   match lookup_value(&key) {
     Some(Stored::String(sym)) => {
       let stored_str = with(sym, |s| s.to_string());
@@ -135,7 +145,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
   if let Some(mixed) = try_color_algebra(name) {
     return mixed;
   }
-  let key = s!("color_{name}");
+  let key = color_key(name);
   match lookup_value(&key) {
     Some(Stored::String(sym)) => {
       let stored_str = with(sym, |s| s.to_string());
@@ -220,7 +230,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // because that macro is return-based (`Fatal!` at threshold) and
       // `lookup_color_obj` returns `Color`, not `Result<Color>`.
       assign_value(
-        &s!("color_{name}"),
+        &color_key(name),
         Stored::String(pin(color::BLACK.to_stored())),
         None,
       );

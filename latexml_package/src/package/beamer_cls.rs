@@ -52,9 +52,11 @@ fn beamer_resolve(name: &str, field: &str, depth: usize) -> Option<String> {
 /// color/xcolor, or raw xcolor storage `\color@<name>` — the
 /// `wisdom_xcolor_internal_storage_interop` shape.)
 fn beamer_color_known(name: &str) -> bool {
-  let name = name.trim();
-  lookup_value(&s!("color_{name}")).is_some()
-    || lookup_meaning(&T_CS!(s!("\\color@{name}"))).is_some()
+  // One spelling per name (K10): the key and the `\color@…` macro are
+  // spelled as `color_sty::color_key`/`def_color` spell them.
+  let key = color_sty::color_key(name);
+  let name = &key["color_".len()..];
+  lookup_value(&key).is_some() || lookup_meaning(&T_CS!(s!("\\color@{name}"))).is_some()
 }
 
 /// A color EXPR (`A!30!B`, `-A`, `A`) is registrable when every base name it
