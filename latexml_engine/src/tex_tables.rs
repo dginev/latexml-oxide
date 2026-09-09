@@ -1595,7 +1595,11 @@ fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {
 // tex.web @<Manufacture a control...@> (cur_cmd dispatch by meaning,
 // not by token catcode).
 fn is_implicit_align(t: &Token) -> bool {
-  if t.get_catcode() != Catcode::CS {
+  // tex.web §783 `get_preamble_token` dispatches on `cur_cmd`, so an ACTIVE
+  // character `\let` to a tab or to `\cr` is a separator too (the body path
+  // `gullet::is_column_end` already accepts both). Batch 56bb: metre's
+  // `\obeylines`+`\let\par=\cr` preamble terminator ran the template away.
+  if !t.get_catcode().is_active_or_cs() {
     return false;
   }
   matches!(
@@ -1616,7 +1620,7 @@ fn is_implicit_align(t: &Token) -> bool {
 //   - `\let\rowEnd=<token-CS>`: meaning is `Stored::Token(<\cr>)`. Use the by-name fallback
 //     (matches when no engine binding has shipped a proper `\cr` Constructor / Primitive yet).
 fn is_implicit_cr(t: &Token) -> bool {
-  if t.get_catcode() != Catcode::CS {
+  if !t.get_catcode().is_active_or_cs() {
     return false;
   }
   let defn = lookup_meaning(t);

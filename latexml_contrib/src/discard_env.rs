@@ -32,26 +32,41 @@ thread_local! {
   static REPORTED: RefCell<HashSet<String>> = RefCell::new(HashSet::default());
 }
 
-/// Read and discard tokens up to and including a matching `\end{kind}`.
-/// Emits a one-time `Error("undefined", "{kind}", ...)` on the first
-/// invocation per `kind`.
-pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
-  bgroup();
-  report_stub_once(kind, source)?;
+/// Read the raw (unexpanded) tokens of the current environment body up to
+/// the first `\end{kind}`, which is consumed and not returned; an `\end` of
+/// another environment inside the body is kept. The one mechanism behind
+/// every binding that captures or discards a body wholesale (forest's bracket
+/// parser, animate's frame discard, the stub discards below) — batch 56bc.
+/// `read_balanced(…, false, false)`: the `{` after `\end` was just consumed,
+/// so the balanced read starts inside it (Perl's argless `readBalanced`).
+pub fn read_env_body_tokens(kind: &str) -> Result<Vec<Token>> {
   let end_delim = Tokens!(T_CS!("\\end"));
+  let mut body: Vec<Token> = Vec::new();
   loop {
-    let _upto_end = read_until(&end_delim)?;
-    let _drop_open = read_token()?;
-    // require_open=false because `_drop_open` just consumed the `{` —
-    // read_balanced should read the inside, not a second `{`. Mirrors
-    // Perl's argless `$gullet->readBalanced` which assumes the `{` is
-    // already open. Driver: 2402.09676 + nicematrix stub cascaded
-    // "Expected opening '{'" because of the spurious require_open.
+    if let Some(toks) = read_until(&end_delim)? {
+      body.extend(toks.unlist());
+    }
+    let Some(open) = read_token()? else {
+      break; // end of input
+    };
     let env = read_balanced(ExpansionLevel::Off, false, false)?;
     if env.to_string() == kind {
       break;
     }
+    body.push(T_CS!("\\end"));
+    body.push(open);
+    body.extend(env.unlist());
+    body.push(T_END!());
   }
+  Ok(body)
+}
+
+/// Read and discard the body up to and including the matching `\end{kind}`,
+/// with a one-time stub warning per `kind`.
+pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
+  bgroup();
+  report_stub_once(kind, source)?;
+  let _body = read_env_body_tokens(kind)?;
   egroup()?;
   Ok(())
 }

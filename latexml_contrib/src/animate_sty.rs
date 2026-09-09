@@ -7,8 +7,15 @@
 
 use std::{cell::RefCell, collections::HashMap};
 
-use latexml_core::{mouth, tokens::TeXString};
+use latexml_core::{
+  gullet::reading_from_mouth,
+  keyvals::{KeyVals, KeyvalsConfig},
+  mouth::{self, Mouth},
+  tokens::TeXString,
+};
 use latexml_package::prelude::*;
+
+use crate::discard_env::read_env_body_tokens;
 
 struct AnimateContext {
   frame_count: usize,
@@ -20,104 +27,17 @@ struct AnimateContext {
   ended:       bool,
 }
 
-fn is_token_char(t: &Token, ch: char) -> bool {
-  t.get_charcode() == ch as u32 && t.get_catcode() != Catcode::CS
-}
-
-/// Split an option list at brace depth 0 into `(key, value)` pairs, one outer
-/// brace pair stripped from the value (`begin={\begin{tikzpicture}…}`). Scoped
-/// to animate's simple keys (`begin`, `end`, `timeline`, flags): no top-level
-/// commas in unbraced values, no general keyval grammar.
-fn split_keyvals(tokens: &[Token]) -> Vec<(String, Vec<Token>)> {
-  let mut out = Vec::new();
-  let mut depth = 0usize;
-  let mut key = String::new();
-  let mut value: Vec<Token> = Vec::new();
-  let mut in_value = false;
-  let flush = |key: &mut String,
-               value: &mut Vec<Token>,
-               in_value: &mut bool,
-               out: &mut Vec<(String, Vec<Token>)>| {
-    let k = key.trim().to_string();
-    if !k.is_empty() {
-      let mut v = std::mem::take(value);
-      while v
-        .first()
-        .map(|t| t.get_catcode() == Catcode::SPACE)
-        .unwrap_or(false)
-      {
-        v.remove(0);
-      }
-      while v
-        .last()
-        .map(|t| t.get_catcode() == Catcode::SPACE)
-        .unwrap_or(false)
-      {
-        v.pop();
-      }
-      if v.len() >= 2
-        && v
-          .first()
-          .map(|t| t.get_catcode() == Catcode::BEGIN)
-          .unwrap_or(false)
-        && v
-          .last()
-          .map(|t| t.get_catcode() == Catcode::END)
-          .unwrap_or(false)
-      {
-        v.remove(0);
-        v.pop();
-      }
-      out.push((k, v));
-    }
-    key.clear();
-    *in_value = false;
-  };
-  for t in tokens {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ => {},
-    }
-    if depth == 0 && is_token_char(t, ',') {
-      flush(&mut key, &mut value, &mut in_value, &mut out);
-    } else if depth == 0 && !in_value && is_token_char(t, '=') {
-      in_value = true;
-    } else if in_value {
-      value.push(*t);
-    } else {
-      key.push_str(&t.to_string());
-    }
-  }
-  flush(&mut key, &mut value, &mut in_value, &mut out);
-  out
-}
-
-/// Discard the rest of the `{animateinline}` body up to its LITERAL
-/// `\end{animateinline}` (the read does not expand, so an environment closed
-/// by an unexpanded macro would be swallowed to the end of the input — bounded,
-/// not a hang), counting the `\newframe` separators it contained; leaves
-/// nothing in the stream.
+/// Discard the rest of the `{animateinline}` body up to its literal
+/// `\end{animateinline}` (unexpanded read, bounded by the end of input) and
+/// count the `\newframe` separators it contained.
 fn discard_remaining_frames() -> Result<usize> {
-  let end_delim = Tokens!(T_CS!("\\end"));
-  let mut newframes = 0usize;
-  loop {
-    if let Some(toks) = read_until(&end_delim)? {
-      newframes += toks
-        .unlist_ref()
-        .iter()
-        .filter(|t| t.get_catcode() == Catcode::CS && t.to_string() == "\\newframe")
-        .count();
-    }
-    let Some(_open) = read_token()? else {
-      break;
-    };
-    let env = read_balanced(ExpansionLevel::Off, false, false)?;
-    if env.to_string() == "animateinline" {
-      break;
-    }
-  }
-  Ok(newframes)
+  let body = read_env_body_tokens("animateinline")?;
+  Ok(
+    body
+      .iter()
+      .filter(|t| t.get_catcode() == Catcode::CS && t.to_string() == "\\newframe")
+      .count(),
+  )
 }
 
 fn env_tokens(cs: &str, env: &str) -> Vec<Token> {
@@ -167,6 +87,10 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
 
   model::add_tag_attribute("ltx:block", vec!["frame-count"]);
+  // animate.sty:3197-3201: the per-frame `begin`/`end` code keys (the ones
+  // the single-frame model consumes; the rest are read and skipped).
+  DefKeyVal!("animate", "begin", "UndigestedKey");
+  DefKeyVal!("animate", "end", "UndigestedKey");
 
   // `\begin{animateinline}[opts]{fps}` is a macro layer over the block
   // constructor `{lx@animateinline}`: the option list's `begin`/`end` code is
@@ -177,20 +101,30 @@ LoadDefinitions!({
   // tikzpicture through `begin=`/`end=`: without them 72 frames ran outside
   // any picture, 813 errors, sweep 63).
   DefMacro!(T_CS!("\\begin{animateinline}"), "[] {}", sub[(opts, _fps)] {
-    let mut begin = Vec::new();
-    let mut end = Vec::new();
-    if let Some(opts) = opts.owned_tokens() {
-      for (k, v) in split_keyvals(&opts.unlist()) {
-        match k.as_str() {
-          "begin" => begin = v,
-          "end" => end = v,
-          _ => {}
-        }
-      }
+    // The option list is a keyval list (animate.sty:3197-3201 `begin`/`end`
+    // are `.tl_gset:N` keys): the core `KeyVals` reader (`read_from`, the
+    // `=`/`,` grammar with brace handling; `Tokens::to_keyvals` is only a
+    // token-pairing), silenced for animate's many undeclared keys.
+    let mut kv = KeyVals::new(KeyvalsConfig { keysets: vec!["animate".into()], ..Default::default() });
+    if let Some(list) = opts.owned_tokens() {
+      // `read_from` consumes the opening delimiter itself.
+      let mut toks = vec![T_OTHER!("[")];
+      toks.extend(list.unlist());
+      toks.push(T_OTHER!("]"));
+      reading_from_mouth(Mouth::default(), || {
+        unread(Tokens::new(toks));
+        kv.read_from(T_OTHER!("]"), true)
+      })?;
     }
-    ANIM_STACK.with(|s| s.borrow_mut().push(AnimateContext {
-      frame_count: 1, end, ended: false,
-    }));
+    let key_tokens = |key: &str| -> Vec<Token> {
+      kv.get_value(key)
+        .and_then(|a| a.clone().owned_tokens())
+        .map(|t| t.unlist())
+        .unwrap_or_default()
+    };
+    let begin = key_tokens("begin");
+    let end = key_tokens("end");
+    ANIM_STACK.with(|s| s.borrow_mut().push(AnimateContext { frame_count: 1, end, ended: false }));
     let mut toks = env_tokens("\\begin", "lx@animateinline");
     toks.extend(begin);
     Ok(Tokens::new(toks))

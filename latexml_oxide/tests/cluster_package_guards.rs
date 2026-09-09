@@ -16548,6 +16548,63 @@ c &= d
     assert!(xml.contains("class=\"ltx_markedasmath\""), "{xml}");
   }
 
+  /// tex.web §783: the `\halign` preamble's separators are recognized by
+  /// MEANING, so an active character `\let` to `\cr` (metre's
+  /// `\obeylines`+`\let\par=\cr`) terminates the template. The template
+  /// parser only accepted control sequences and ran the preamble away to the
+  /// end of the input (Perl's strict token equality drops the table too).
+  /// Batch 56bb.
+  #[test]
+  fn halign_template_accepts_active_char_separators() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\catcode`\\~=\\active\n\\let~=\\cr\n\\setbox0=\\vbox{\\halign{#\\hfil&#\\hfil~\naaa&bbb~\nccc&ddd~\n}}\n\\box0\n\\par XYZ\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    for cell in ["aaa", "bbb", "ccc", "ddd"] {
+      assert!(xml.contains(&format!(">{cell}<")), "{cell}: {xml}");
+    }
+    assert!(xml.contains("XYZ"), "{xml}");
+  }
+
+  /// latex.ltx `\index` → `\@wrindex#1` reads ONE undelimited argument; a bare
+  /// `\index` in prose takes the next token instead of scanning to the next
+  /// `{` anywhere ahead (varindex.dtx:1497: the scan ate `\end{abstract}` and
+  /// the abstract swallowed the document). KNOWN_PERL_ERRORS #216, batch 56ba.
+  #[test]
+  fn bare_index_takes_one_token() {
+    let tex = "\\documentclass{article}\n\\makeindex\n\\begin{document}\n\\begin{abstract}\nthe \\index command, twice \\index here.\n\\end{abstract}\n\\section{S}\nBody \\index{real entry} text TAILMARK.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let abs = xml.find("<abstract").unwrap_or_else(|| panic!("{xml}"));
+    let abs_end = xml[abs..]
+      .find("</abstract>")
+      .map(|i| abs + i)
+      .unwrap_or_else(|| panic!("{xml}"));
+    assert!(!xml[abs..abs_end].contains("<section"), "{xml}");
+    assert!(xml.contains("<section"), "{xml}");
+    assert!(xml.contains("real entry"), "{xml}");
+    // The braced form must stop at its own `}` (a runaway would eat the tail).
+    assert!(xml.contains("text TAILMARK."), "{xml}");
+  }
+
+  /// etoolbox.sty:849-852 `\csdef`/`\csedef`/`\csgdef`/`\csxdef` are
+  /// `\newrobustcmd*` (protected): an `\edef` stores the call verbatim and the
+  /// `\noexpand`ed `\the` inside its name argument comes back plain
+  /// (yquantlanguage-groups.sty:241-245); the binding's expandable macros
+  /// expanded them in place. `\gundef` (etoolbox.sty:931) exists (Perl omits
+  /// it, KNOWN_PERL_ERRORS #217). Batch 56bd.
+  #[test]
+  fn etoolbox_cs_definers_are_protected_and_gundef_exists() {
+    let tex = "\\documentclass{article}\n\\usepackage{etoolbox}\n\\makeatletter\n\\csgdef{yqreg}{2}\n\\edef\\splittext{\\csgdef{import@\\noexpand\\the\\numexpr\\csname yqreg\\endcsname+\\noexpand\\@ne\\relax}{VECBODY}}\n\\splittext\n\\edef\\t{\\csgdef{a}{b}}\n\\def\\gone{here}\\gundef\\gone\n\\makeatother\n\\begin{document}\n\\ifcsname import@3\\endcsname import3-ok\\else no3\\fi. \\ifdefined\\gone still\\else gone-ok\\fi. \\meaning\\t.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("import3-ok"), "{xml}");
+    assert!(xml.contains("gone-ok"), "{xml}");
+    // `\meaning\t` keeps the protected call; the braces render as typographic
+    // characters, so assert on the name and on the absence of its expansion.
+    assert!(xml.contains("csgdef") && !xml.contains("unhbox"), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

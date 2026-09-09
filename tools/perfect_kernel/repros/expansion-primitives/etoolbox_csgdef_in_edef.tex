@@ -1,0 +1,18 @@
+% witness: yquant/yquant-doc (yquantlanguage-groups.sty:241-245 vector register \yquant@for + \noexpand\the inside \csgdef)
+% oracle: pdflatex 0 err (import@3 = VECBODY); Perl latexml 0 err (import@3-ok)
+% engines: pdflatex/lualatex; Perl RUST-ONLY
+% expect: 0 errors, \csname import@3\endcsname defined -> "import@3-ok"
+% status: GREEN (batch 56bd, 2026-09-09)
+% mechanism: etoolbox_sty.rs \csgdef was an expandable DefMacro (etoolbox.sty:851 = \newrobustcmd*), so the \edef expanded it in place and the \noexpand shadow reached \csname; TeX stores the protected call verbatim.
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\csgdef{yqreg}{2}
+\edef\splittext{%
+  \csgdef{import@\noexpand\the\numexpr\csname yqreg\endcsname+\noexpand\@ne\relax}{VECBODY}%
+}
+\splittext
+\makeatother
+\begin{document}
+\ifcsname import@3\endcsname import@3-ok\else no3\fi
+\end{document}

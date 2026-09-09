@@ -6162,3 +6162,27 @@ for `*`). Witness powerdot-fuberlin exampleClass/exampleStyle (20 undefined
 `\pd@@…` each, surfaced when batch 56ao started digesting `\rput` bodies).
 Guard: `perfect_kernel_batch56::choicekey_bin_macro_keeps_letter_catcodes`.
 
+## 216. `\index` scans forward to the next `{` (Rust fixes)
+
+Perl's `SanitizedVerbatim` parameter (latex_constructs.pool.ltxml:4376-4383,
+`readUntil(T_BEGIN)`) discards everything up to the next `{` wherever it is, so
+a bare `\index` in prose swallows the following text and, in varindex.dtx:1497
+("the \index command … multiple \index entries"), the brace of `\end{abstract}`:
+the abstract runs to the end of the document (`<ltx:TOC>` and every section
+inside `<ltx:abstract>`, `ltx:section isn't allowed in ltx:abstract` ×8).
+latex.ltx `\index` = `\@bsphack\begingroup\@sanitize\@wrindex`, and `\@wrindex#1`
+reads ONE undelimited argument: a brace group, or the single next token.
+Rust (batch 56ba) skips spaces, reads a balanced group when a `{` follows and
+one token otherwise. Trigger: `\begin{abstract}the \index command\end{abstract}
+\section{S}` — Perl nests the section in the abstract; pdflatex indexes `c`.
+Guard `bare_index_takes_one_token`.
+
+## 217. etoolbox binding omits `\gundef` (Rust fixes)
+
+etoolbox.sty.ltxml:867-872 transcribes `\undef`, `\csundef` and `\csgundef` but
+not etoolbox.sty:931 `\newrobustcmd{\gundef}[1]{\global\let#1\etb@undefined}`.
+yquantlanguage-groups.sty:185 calls `\gundef\yquantgroup@registers@text` in every
+register-group cleanup, so each `yquantgroup` cascades (`\etb@tempa`,
+`\yquant@lang@attr@value` … undefined, then unbalanced `\hbox` ends). Trigger:
+`\usepackage{etoolbox}\def\x{1}\gundef\x\ifdefined\x still\else gone\fi`.
+Rust (batch 56bd) adds the line. Guard `etoolbox_cs_definers_are_protected_and_gundef_exists`.

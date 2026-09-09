@@ -53,12 +53,17 @@ LoadDefinitions!({
   // Perl loads the raw .sty after .ltxml so it picks them up; Rust's
   // .rs binding skips the raw .sty so they're undefined. Driver:
   // 2205.03932 (`\csdef` Real Regression P=0 vs R=1 → 0).
-  // Direct DefMacro! since the TeX! block running \newrobustcmd has
-  // ordering issues with our bootstrap.
-  DefMacro!("\\csdef{}", "\\expandafter\\def\\csname #1\\endcsname");
-  DefMacro!("\\csedef{}", "\\expandafter\\edef\\csname #1\\endcsname");
-  DefMacro!("\\csgdef{}", "\\expandafter\\gdef\\csname #1\\endcsname");
-  DefMacro!("\\csxdef{}", "\\expandafter\\xdef\\csname #1\\endcsname");
+  // `\newrobustcmd*` = `\protected\def`: these must NOT expand inside an
+  // `\edef`/`\xdef` — a plain `DefMacro!` did, so `\edef\t{\csgdef{a}{b}}`
+  // expanded `\csname a\endcsname` (the `\a` accent!) into the body, and
+  // yquantlanguage-groups.sty:241-245's `\edef{…\csgdef{import@\noexpand
+  // \the\numexpr…}…}` reached the `\csname` builder with the `\noexpand`
+  // shadow still live (real TeX stores the deferred `\csgdef` call verbatim).
+  // Batch 56bd; Perl picks the robust definitions up from the raw .sty.
+  RawTeX!(r"\protected\def\csdef#1{\expandafter\def\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csedef#1{\expandafter\edef\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csgdef#1{\expandafter\gdef\csname#1\endcsname}");
+  RawTeX!(r"\protected\def\csxdef#1{\expandafter\xdef\csname#1\endcsname}");
 
   // `\lx@etb@unlock` / `\lx@etb@relock` — a matched push/pop of the
   // "assign through the CS lock" flag (`state_is_unlocked()`, consumed by
@@ -922,6 +927,9 @@ LoadDefinitions!({
 
 \newrobustcmd*{\csundef}[1]{\cslet{#1}\etb@undefined}
 \newrobustcmd*{\csgundef}[1]{\global\cslet{#1}\etb@undefined}
+% etoolbox.sty:931 — omitted by the Perl binding (etoolbox.sty.ltxml:867-872,
+% KNOWN_PERL_ERRORS #217); yquantlanguage-groups.sty:185 relies on it.
+\newrobustcmd{\gundef}[1]{\global\let#1\etb@undefined}
 
 % {<cstoken>}{<code>}
 

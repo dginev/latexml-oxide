@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use latexml_core::digested::DigestedData;
 use latexml_package::prelude::*;
 
-use crate::discard_env::discard_body_until_cs;
+use crate::discard_env::{discard_body_until_cs, read_env_body_tokens};
 
 /// A node in the parsed forest bracket tree.
 #[derive(Debug, Clone)]
@@ -46,30 +46,7 @@ fn is_ignorable_token(t: &Token) -> bool {
 }
 
 /// Reads all tokens belonging to the `{forest}` environment body up to `\end{forest}`.
-fn read_forest_env_tokens() -> Result<Vec<Token>> {
-  let end_delim = Tokens!(T_CS!("\\end"));
-  let mut body_tokens: Vec<Token> = Vec::new();
-  loop {
-    let upto_end = read_until(&end_delim)?;
-    if let Some(toks) = upto_end {
-      body_tokens.extend(toks.unlist());
-    }
-    let Some(drop_open) = read_token()? else {
-      break;
-    };
-    let env = read_balanced(ExpansionLevel::Off, false, false)?;
-    if env.to_string() == "forest" {
-      break;
-    } else {
-      // Nested environment inside forest! E.g. \begin{tabular}...\end{tabular}
-      body_tokens.push(T_CS!("\\end"));
-      body_tokens.push(drop_open);
-      body_tokens.extend(env.unlist());
-      body_tokens.push(T_OTHER!("}"));
-    }
-  }
-  Ok(body_tokens)
-}
+fn read_forest_env_tokens() -> Result<Vec<Token>> { read_env_body_tokens("forest") }
 
 /// Parses forest bracket tokens according to forest.sty grammar:
 /// - (config): optional configuration (forest.sty:8506)

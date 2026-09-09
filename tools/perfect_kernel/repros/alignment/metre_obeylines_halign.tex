@@ -1,0 +1,20 @@
+% witness: metre/demo.tex (TL doc/latex/metre) — MetricalScheme environment
+% oracle: pdflatex (FAILS on this legacy doc: "Missing # inserted", 100 err)
+% engines: pdflatex FAIL / Perl 1 (Input ended, runaway to EOF) / ours 6
+% expect: 0 Error lines + a 2-col ltx:tabular
+% status: GREEN (batch 56bb, 2026-09-09)
+%   Error:...\halign Attempt to close a group that switched to mode internal_vertical
+% mechanism: `\let\par=\cr \obeylines` makes the preamble terminator an ACTIVE
+%   `^^M` (meaning \cr); parse_halign_template's is_implicit_cr rejects
+%   Catcode::ACTIVE (tex_tables.rs:1618) -> the halign preamble runs away.
+\documentclass{article}
+\newenvironment{MetricalScheme}{%
+  \let\par=\cr \obeylines %
+  \halign to \hsize \bgroup ##\hfill&##\hfill}{\egroup}
+\begin{document}
+\begin{MetricalScheme}
+aaa&bbb
+ccc&ddd
+\end{MetricalScheme}
+\par XYZ
+\end{document}

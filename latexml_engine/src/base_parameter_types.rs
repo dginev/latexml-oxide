@@ -698,13 +698,18 @@ LoadDefinitions!({
   // Read verbatim, as if with LaTeX's \@sanitize; useful for \index (maybe others?)
   // Perl: latex_constructs.pool.ltxml L4433-4451
   DefParameterType!(SanitizedVerbatim, sub[_inner, _extra] {
-      read_until(&Tokens!(T_BEGIN!()))?;
-      // Deactivate the backslash to avoid activating command sequences.
-      // Chars switched to CC_OTHER by \@sanitize: ' ', '\\', '$', '&', '#',
-      // '^', '_', '%', '~'. Some are already in state's SPECIALS, so only
-      // adding the rest:
+      // latex.ltx `\index` = `\@bsphack\begingroup\@sanitize\@wrindex`: the
+      // catcodes change FIRST (`\@sanitize` makes ` `, `\`, `$`, `&`, `#`,
+      // `^`, `_`, `%`, `~` other), THEN `\@wrindex#1` reads ONE undelimited
+      // argument — the kernel's own reader (`read_arg`, tex.web §392: a brace
+      // group, or the single next token). Perl (latex_constructs.pool.ltxml
+      // :4376-4383) scanned forward to the next `{` wherever it was, so a bare
+      // `\index` in prose (varindex.dtx:1497 "the \index command") swallowed
+      // everything up to `\end{abstract}`'s brace and the abstract ran to the
+      // end of the document (KNOWN_PERL_ERRORS #216). Batches 56ba/56bc.
+      // Chars already in the state's SPECIALS are not repeated here:
       begin_semiverbatim(Some(&[' ', '\\', '%']));
-      let arg = read_balanced(ExpansionLevel::Off, false, false)?;
+      let arg = read_arg(ExpansionLevel::Off)?;
       end_semiverbatim()?;
       // Now that we have the semiverbatim tokens, retokenize.
       // This may seem like wasted work, but it avoids very unfortunate error
