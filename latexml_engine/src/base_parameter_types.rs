@@ -645,6 +645,42 @@ LoadDefinitions!({
   },
   semiverbatim => Some(Vec::new()));
 
+  // The option list of `\documentclass`/`\usepackage`/`\RequirePackage`/
+  // `\LoadClass` (latex.ltx:18509 `\@fileswith@pti@ns`): `OptionalSemiverbatim`
+  // that is NEVER digested — the kernel stores the argument TOKENS
+  // (`\@pass@ptions`, `\protected@xdef`) and typesets nothing. Digesting
+  // them ran whatever an option's tokens expand to: under the byte mouth
+  // the CJK byte in `\usepackage[piecechar={C}{炮}]{chinesechess}` reached
+  // ctex's `\CTEX@char@nnn` and CJKspace.sty:46's `\futurelet\CJK@next@token`
+  // at the end of the argument's mouth, with nothing to peek (chinesechess,
+  // sweep 70: `undefined \CJK@next@token` + a runaway text node). The
+  // constructors expand the list `\protected@xdef`-wise themselves
+  // (`sect05::protected_xdef_options`). Guard:
+  // `perfect_kernel_batch56::package_options_are_stored_by_protected_xdef`.
+  // The semiverbatim catcodes are set up by the reader itself, so that the
+  // `semiverbatim` digest pass (Parameter::digest: a TOPLEVEL `read_x_token`
+  // expand-and-neutralize, Perl Parameter.pm:124-132) never runs on the list.
+  DefParameterType!(PackageOptions,
+    sub[_inner, _extra] {
+      begin_semiverbatim(None);
+      let opts = read_optional(None);
+      end_semiverbatim()?;
+      opts
+    },
+    optional => true,
+    predigest => sub[arg]{ Ok(arg.undigested()) }
+    reversion => sub[arg, _inner, _extra] {
+    if !arg.is_empty() {
+      let mut read_tokens = vec![T_OTHER!(s!("["))];
+      read_tokens.extend(arg.into_iter().map(Token::revert));
+      read_tokens.push(T_OTHER!(s!("]")));
+      Ok(Tokens::new(read_tokens))
+    } else {
+      Ok(Tokens!())
+    }
+    }
+  );
+
   // Read a LaTeX-style optional argument (ie. in []), but the contents read as Semiverbatim.
   DefParameterType!(OptionalSemiverbatim,
     sub[_inner, _extra] { read_optional(None) },
@@ -724,7 +760,12 @@ LoadDefinitions!({
       // with `#1` = `\TIKZ` (pgfornament usefulcommands.tex:93) — re-reads as
       // `\TIKZ` + `@`, not the undefined `\TIKZ@`. Perl re-tokenizes its
       // UnTeX string, which glues a control word to a following non-letter
-      // (KNOWN_PERL_ERRORS #140).
+      // (KNOWN_PERL_ERRORS #140). Style catcodes (`@` a letter) here: the
+      // entry is EXPANDED first (`\protected@write`, process_index_phrases),
+      // and a package-built entry is made of `@` names — tcolorbox's
+      // `\kvtcb@doc@sortindex\idx@actual…`; the `.ind` re-read with `@`
+      // OTHER is applied to what survives that expansion, in
+      // process_index_phrases.
       Ok(mouth::tokenize_internal(TeXString::assembled(writable_tokens(&arg))))
     },
     reversion => sub[arg, _inner, _extra] {

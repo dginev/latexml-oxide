@@ -104,7 +104,7 @@ pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
   let mut string = String::new();
   if s < 0 {
     string.push('-');
-    s = -s;
+    s = s.saturating_neg(); // i64::MIN (an overflowed product) cannot be negated
   }
   write!(string, "{}", s / UNITY).unwrap();
   string.push('.');

@@ -2953,15 +2953,21 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // in the display (`M\"uller`) are constructors and unaffected; separators
   // still come from control WORDS (`\idx@actual`). Guard:
   // `perfect_kernel_batch54::index_sanitized_backslash_symbol_stays_literal`.
+  // An UNDEFINED control word is frozen too: the entry is a `.idx` STRING
+  // that `\printindex` re-reads and digests in order, so manyind.sty:100/119's
+  // `\protect\def \nwletre {\"O}…\nwletre` defines the name before its use;
+  // force-expanding the bare `\nwletre` here stubbed it as `<ltx:ERROR/>`
+  // (mindsample; Perl, which never expands, is clean). Guard:
+  // `perfect_kernel_batch56::index_entry_passes_undefined_words_inert`.
   let mut frozen: Vec<Token> = Vec::with_capacity(toks.len());
   for t in toks {
     if t.get_catcode() == Catcode::CS
-      && t.with_str(|s| {
+      && (t.with_str(|s| {
         let mut chars = s.chars();
         chars.next() == Some('\\')
           && chars.next().is_some_and(|c| !c.is_alphabetic())
           && chars.next().is_none()
-      })
+      }) || lookup_meaning(&t).is_none())
     {
       frozen.push(T_CS!("\\noexpand"));
     }
@@ -2975,7 +2981,30 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   );
   let expanded = do_expand_partially(Tokens::new(frozen));
   pop_frame()?;
-  let token_list = expanded?.unlist();
+  // The `.ind` re-read: `\printindex` `\input`s the written entry in the
+  // document body, where `@` is OTHER, so a control word that still carries
+  // an `@` after the `\protected@write` expansion splits there —
+  // mindsample.tex:208 `\index{\AB@\relax…}` is the key `\AB` and the
+  // separator (Perl's `TokenizeInternal` re-read keeps one undefined `\AB@`;
+  // OXIDIZED_DESIGN_DIVERGENCES #222). Names the expansion consumed
+  // (`\kvtcb@doc@sortindex`, `\idx@actual`) never reach this point; a
+  // DEFINED survivor is a robust command or one of our own markers
+  // (`\@internal@text@verb` from the `\verb` absorption) and stays whole —
+  // only an undefined `@`-name, which could otherwise just error, is re-read.
+  let token_list: Vec<Token> = expanded?
+    .unlist()
+    .into_iter()
+    .flat_map(|t| {
+      if t.get_catcode() == Catcode::CS
+        && t.with_str(|s| s[1..].contains('@'))
+        && lookup_meaning(&t).is_none()
+      {
+        t.with_str(|s| mouth::tokenize(TeXString::assembled(s.to_string())).unlist())
+      } else {
+        vec![t]
+      }
+    })
+    .collect();
   // Add terminal ! if not present
   let mut toks = token_list;
   if toks
@@ -3036,16 +3065,30 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       // `\index{a_b@\texttt{a\_b}}`). Digesting the key with their live
       // catcodes raised `Script _ can only appear in math mode`; Perl
       // (`\@indexphrase[]` digests too) shares that. Neutralize them here.
+      // An undefined control word in the key is literal text as well:
+      // makeindex sorts on the characters `\A`/`\AB` (mindsample.tex:200-208
+      // `\index{\A>@…}`, `\index{\AB@…}` — manyind's sort-key idiom), and
+      // digesting it can only raise `undefined` (Perl shares that error).
+      // Guard: `perfect_kernel_batch56::index_sort_key_undefined_word_is_text`.
       sortas = phrase
         .drain(..)
-        .map(|t| match t.get_catcode() {
+        .flat_map(|t| match t.get_catcode() {
           Catcode::MATH
           | Catcode::ALIGN
           | Catcode::PARAM
           | Catcode::SUPER
           | Catcode::SUB
-          | Catcode::ACTIVE => T_OTHER!(t.with_str(|s| s.to_string())),
-          _ => t,
+          | Catcode::ACTIVE => vec![T_OTHER!(t.with_str(|s| s.to_string()))],
+          Catcode::CS if lookup_meaning(&t).is_none() => {
+            // `\textbackslash` + the name: an OTHER `\` would typeset
+            // through the OT1 slot (“).
+            let mut lit = vec![T_CS!("\\textbackslash")];
+            t.with_str(|s| {
+              lit.extend(s.chars().skip(1).map(|c| T_OTHER!(c.to_string())));
+            });
+            lit
+          },
+          _ => vec![t],
         })
         .collect();
     } else if s == "!" || s == "|" {

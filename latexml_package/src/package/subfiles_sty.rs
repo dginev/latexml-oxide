@@ -12,7 +12,7 @@ LoadDefinitions!({
 
   // Redefine \documentclass to do nothing in subfiles
   DefMacro!(
-    "\\documentclass OptionalSemiverbatim SkipSpaces Semiverbatim []",
+    "\\documentclass PackageOptions SkipSpaces Semiverbatim []",
     ""
   );
 

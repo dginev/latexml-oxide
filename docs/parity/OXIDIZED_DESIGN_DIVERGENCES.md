@@ -7274,3 +7274,28 @@ the name scan early ("Extra \endcsname" ×33, texmate2manual 100-error storm).
 Collateral by design: `\@alph{27}` is "Counter too large" as in LaTeX (the closure
 extended silently). Guard `at_roman_family_expands_inside_csname`. Batch 56av.
 
+### 222. An index entry is the `.idx` string `\printindex` re-reads
+
+**Perl behavior**: `SanitizedVerbatim` (latex_constructs.pool.ltxml:4376-4394)
+re-tokenizes the sanitized entry with `TokenizeInternal` — style catcodes, `@` a
+LETTER — so `\index{\AB@\relax…}` (manyind mindsample.tex:208) is the one
+undefined name `\AB@`; and every control word in the phrase, including an
+undefined sort key `\A`, is digested (mindsample: 15 errors).
+**Rust behavior**: the same style re-tokenize, but AFTER the `\protected@write`
+expansion (`process_index_phrases`) an UNDEFINED control word still carrying an `@` is
+re-read with the document's table (`@` OTHER) — the `.ind` is `\input` by
+`\printindex` in the document body — so `\AB@` is the key `\AB` plus the
+separator, while names the expansion consumes (tcolorbox's
+`\kvtcb@doc@sortindex\idx@actual`) and defined survivors (robust commands, the
+`\@internal@text@verb` marker) are untouched. The pre-expansion
+(`process_index_phrases`) passes an undefined control word inert with
+`\noexpand`, so the entry digests in order (manyind.sty:100/119's
+`\protect\def \nwletre {…}…\nwletre` defines the name before its use); an
+undefined control word in the SORT KEY is its literal characters — makeindex
+sorts on the string `\AB`, it never typesets it.
+**Why**: the entry is out-of-band text in real LaTeX (`\@sanitize`, `\write`,
+makeindex, `\input`); the kernel emulates that pipeline in one pass, and the
+catcodes of the re-read are the document's. Witness: manyind/mindsample
+(oracle pdflatex-clean) 3 → 0. Guards `index_entry_passes_undefined_words_inert`,
+`index_sort_key_undefined_word_is_text`; KNOWN_PERL_ERRORS #83 sibling. Batch 56bp.
+

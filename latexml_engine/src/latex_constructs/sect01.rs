@@ -100,8 +100,9 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\@arrayright", "\\@empty");
   AssignValue!("inPreamble", true); // \begin{document} will clear this.
 
-  DefConstructor!("\\documentclass OptionalSemiverbatim SkipSpaces ExpandedSemiverbatim []",
-                  "<?latexml class='#2' ?#1(options='#1')?>",
+  DefConstructor!("\\documentclass PackageOptions SkipSpaces ExpandedSemiverbatim []",
+                  "<?latexml class='#2' ?#options(options='#options')?>",
+    properties => sub[args] { Ok(sect05::options_pi_spelling(args[0].as_ref())) },
     after_digest => sub[whatsit] {
       // Now that we know we're a LaTeX document, undefine `\magnification`
       // (babel's plain-TeX vs LaTeX discriminator). Deferred from the
@@ -117,7 +118,7 @@ pub(crate) fn load() -> Result<()> {
       // recorded in `\@raw@classoptionslist`, mis-parsed by l3keys.
       let options: Option<&Digested> = whatsit.get_arg(1);
       let class_opts = match options {
-        Some(opts) => split_trim_options(&opts.untex()?),
+        Some(opts) => split_trim_options(&sect05::protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
       // Perl LaTeX.pool.ltxml:57 — `$class =~ s/\s+//g;`. Strip ALL

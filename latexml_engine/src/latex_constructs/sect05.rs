@@ -129,9 +129,10 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\@curroptions")?;
   def_macro_noop("\\@unusedoptionlist")?;
 
-  DefConstructor!("\\usepackage OptionalSemiverbatim ExpandedSemiverbatim []",
-                  "<?latexml package='#2' ?#1(options='#1')?>",
+  DefConstructor!("\\usepackage PackageOptions ExpandedSemiverbatim []",
+                  "<?latexml package='#2' ?#options(options='#options')?>",
     before_digest => { only_preamble("\\usepackage") },
+    properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
       let packages: Option<&Digested> = whatsit.get_arg(2);
@@ -145,9 +146,11 @@ pub(crate) fn load() -> Result<()> {
           .filter(|s| !s.is_empty() && !s.starts_with('%')).collect(),
         None => Vec::new(),
       };
-      // `untex` (reversion) keeps a braced value's braces — see `\documentclass`.
+      // `\@pass@ptions` (latex.ltx:18514): the list is `\protected@xdef`ed
+      // (a `\myopts` macro expands, protected macros stand) and its braces
+      // survive (`\zap@space` only) — see `\documentclass`.
       let options_list = match options {
-        Some(opts) => split_trim_options(&opts.untex()?),
+        Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
       for package in package_list {
@@ -164,9 +167,10 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
-  DefConstructor!("\\RequirePackage OptionalSemiverbatim ExpandedSemiverbatim []",
-  "<?latexml package='#2' ?#1(options='#1')?>",
+  DefConstructor!("\\RequirePackage PackageOptions ExpandedSemiverbatim []",
+  "<?latexml package='#2' ?#options(options='#options')?>",
   before_digest =>  { only_preamble("\\RequirePackage") },
+    properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
   after_digest => sub[whatsit] {
     let options: Option<&Digested> = whatsit.get_arg(1);
     let packages: Option<&Digested> = whatsit.get_arg(2);
@@ -180,7 +184,7 @@ pub(crate) fn load() -> Result<()> {
       None => Vec::new(),
     };
     let options_list: Vec<String> = match options {
-      Some(opts) => split_trim_options(&opts.untex()?),
+      Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
       None => Vec::new(),
     };
     for package in package_list {
@@ -192,15 +196,16 @@ pub(crate) fn load() -> Result<()> {
     Ok(Vec::new())
   });
 
-  DefConstructor!("\\LoadClass OptionalSemiverbatim ExpandedSemiverbatim []",
-    "<?latexml class='#2' ?#1(options='#1')?>",
+  DefConstructor!("\\LoadClass PackageOptions ExpandedSemiverbatim []",
+    "<?latexml class='#2' ?#options(options='#options')?>",
     before_digest => { only_preamble("\\LoadClass") }
+    properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
     after_digest => sub[whatsit] {
       let options_arg: Option<&Digested> = whatsit.get_arg(1);
       let class_arg: Option<&Digested> = whatsit.get_arg(2);
       let class = class_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
       let options: Vec<String> = match options_arg {
-        Some(opts) => split_trim_options(&opts.to_string()),
+        Some(opts) => split_trim_options(&protected_xdef_options(opts.revert()?)?.untex()),
         None => Vec::new(),
       };
       load_class(&class, options, Tokens!())?;
@@ -344,13 +349,13 @@ pub(crate) fn load() -> Result<()> {
   // `\ProcessKeyOptions` reads them back with their braces intact.
   DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
-    let opts = split_trim_options(&Expand!(options).untex());
+    let opts = split_trim_options(&protected_xdef_options(options)?.untex());
     pass_options(&name_str, "sty", opts)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
-    let opts = split_trim_options(&Expand!(options).untex());
+    let opts = split_trim_options(&protected_xdef_options(options)?.untex());
     pass_options(&name_str, "cls", opts)?;
   });
 
@@ -420,7 +425,7 @@ pub(crate) fn load() -> Result<()> {
     let request = option2.as_ref().map(|o| o.to_string());
     pkgcls_set_request(request.as_deref());
     let opts_str = match option1 {
-      Some(o) => Expand!(o).to_string(),
+      Some(o) => protected_xdef_options(o)?.to_string(),
       None => String::new(),
     };
     let options: Vec<String> = opts_str.split(',')
@@ -510,7 +515,10 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\@ifclasswith", r"\@if@ptions\@clsextension");
   // Perl: latex_constructs.pool.ltxml lines 952-958
   DefMacro!("\\@if@ptions{}{}{}", sub[(ext, name, option)] {
-    let option_str = Expand!(option).to_string();
+    // latex.ltx `\@if@ptions` `\edef`s the query; expand it exactly as the
+    // stored list was (protected macros and `\protect` stand), so the two
+    // spellings match.
+    let option_str = protected_xdef_options(option)?.to_string();
     let key = s!("opt@{}.{}", Expand!(name), Expand!(ext));
     let found = with_value(&key, |val_opt| {
       if let Some(Stored::VecDequeStored(values)) = val_opt {
@@ -1181,4 +1189,31 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\@evenfoot")?;
 
   Ok(())
+}
+
+/// latex.ltx:18514 `\@pass@ptions`: an option list is stored by
+/// `\protected@xdef` — expanded once with `\protect` = `\@unexpandable@protect`,
+/// e-TeX `\protected` macros left standing. Full expansion (`Expand!`) ran
+/// their bodies: under the byte mouth a CJK byte in `[piecechar={C}{炮}]`
+/// expands through ctex's protected `\CTEX@char@nnn` (ctex-engine-pdftex.def:
+/// 294-317) to `\CJK@ignorespaces` = CJKspace.sty:46 `\futurelet\CJK@next@token
+/// …`, whose lookahead name was force-expanded and stubbed (chinesechess,
+/// sweep 70: `undefined \CJK@next@token` + a runaway text node). Guard:
+/// `perfect_kernel_batch56::package_options_are_stored_by_protected_xdef`.
+pub(crate) fn protected_xdef_options<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  with_unexpandable_protect(|| do_expand_partially(tokens))
+}
+
+/// The `<?latexml … options=?>` PI spelling of an option list: what digesting
+/// it used to print (Perl's box: the tokens with their braces gone —
+/// `pdftitle={Test}` reads `pdftitle=Test`, hypertest golden); the list itself
+/// is never digested (`PackageOptions`).
+pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> {
+  let mut map = stored_map!();
+  if let Some(text) = arg.map(|a| a.to_string().replace(['{', '}'], ""))
+    && !text.is_empty()
+  {
+    map.insert("options", Stored::String(pin(text)));
+  }
+  map
 }

@@ -16866,6 +16866,63 @@ c &= d
     assert!(xml.contains("color=\"#FF0000\""), "{xml}");
   }
 
+  /// Batch 56bp: `\@pass@ptions` (latex.ltx:18514) stores an option list by
+  /// `\protected@xdef` — a CJK byte in `[piecechar={C}{炮}]` under the byte
+  /// mouth expands to ctex's PROTECTED `\CTEX@char@nnn` and stops there;
+  /// full expansion ran its body into CJKspace's `\futurelet\CJK@next@token`
+  /// and stubbed the lookahead name (chinesechess, sweep 70).
+  #[test]
+  fn package_options_are_stored_by_protected_xdef() {
+    let tex = "\\documentclass[full]{l3doc}\n\\usepackage[scheme=chinese]{ctex}\n\\usepackage{enumitem}\n\\usepackage{indentfirst}\n\\usepackage{titling}\n\\usepackage{geometry}\n\\usepackage{graphicx}\n\\usepackage{fontawesome5}\n\\usepackage{fancyvrb-ex}\n\\usepackage[piecechar={C}{炮}]{chinesechess}\n\\begin{document}\n中文 x\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    // chinesechess.sty's l3draw `\draw_linewidth:n` gap is a separate,
+    // pre-existing error (sweep 69: 2); this guard is about the option store.
+    assert!(!stderr.contains("CJK@next@token"), "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("piecechar"), "{xml}");
+    assert!(xml.contains("中文 x"), "{xml}");
+  }
+
+  /// Batch 56bp: the byte-mouth decoder is sequence-wise — a decoded Latin-1
+  /// character (é = U+00E9, the image of a 3-byte lead) directly before a
+  /// fresh CJK sequence no longer poisons the whole run into an invalid
+  /// `from_utf8` that left both as bytes; and the text merge decodes only the
+  /// pending tail (`mouth::byte_mouth_pending_tail`).
+  #[test]
+  fn byte_mouth_latin1_before_cjk_decodes_sequence_wise() {
+    let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\begin{document}\ncafé한글 naïve문서\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("café한글 naïve문서"), "{xml}");
+  }
+
+  /// Batch 56bp (manyind/mindsample): the index entry is a `.idx` string that
+  /// `\printindex` digests in order — the pre-expansion passes an undefined
+  /// control word inert (`\noexpand`), so manyind.sty:100/119's
+  /// `\protect\def \nwletre {…}` defines `\nwletre` before its use instead
+  /// of the bare name being force-expanded into `<ltx:ERROR/>`.
+  #[test]
+  fn index_entry_passes_undefined_words_inert() {
+    let tex = "\\documentclass{book}\n\\usepackage{manyind}\n\\makeindex\n\\begin{document}\n\\setindex{main}\na\\index{\\\"N@\\protect\\nxtletre \\protect\\def \\nwletre {\\\"O}\\gobblepageref}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<indexmark"), "{xml}");
+  }
+
+  /// Batch 56bp: the sort key is a makeindex STRING — an undefined control
+  /// word in it is the literal characters (mindsample.tex:208
+  /// `\index{\AB@\relax…}`), and an undefined control word still carrying `@` after
+  /// the `\protected@write` expansion is re-read with document catcodes
+  /// (`@` OTHER), so `\AB@` is key `\AB` + separator, not one undefined
+  /// name (Perl's style-catcode re-tokenize; KPE #83).
+  #[test]
+  fn index_sort_key_undefined_word_is_text() {
+    let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("key=\"\\AB\""), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

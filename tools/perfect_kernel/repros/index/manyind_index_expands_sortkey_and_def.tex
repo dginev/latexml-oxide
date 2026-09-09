@@ -1,0 +1,14 @@
+% witness: manyind/mindsample (TL2025); oracle: pdflatex-clean
+% engines: Perl 15 err (shares \A,\AB@; NO \nwletre); Rust 3 err. status: RED (sweep70) → fixed batch 56bp
+% expect: 0 Error:undefined:\nwletre (RUST-ONLY); \A,\AB@ SHARED surpass
+% mechanism: process_index_phrases do_expand_partially+\@unexpandable@protect freezes \def
+%   -> force-expands undefined \nwletre; Perl digests \protect\def\nwletre{} in order
+\documentclass{book}
+\usepackage{manyind}
+\makeindex
+\begin{document}
+\setindex{main}
+a\index{\"N@\protect\nxtletre \protect\def \nwletre {\"O}\gobblepageref}
+b\index{\A>@\protect\nxtletre \protect\def \nwletre {\AA}\gobblepageref}
+c\index{\AB@\relax\gobblepageref}
+\end{document}

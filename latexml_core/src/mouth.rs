@@ -235,33 +235,85 @@ impl Object for Mouth {
 /// into its characters; anything else stays as it is. A no-op unless the
 /// byte mouth is on.
 pub fn decode_byte_mouth_runs(s: &str) -> std::borrow::Cow<'_, str> {
-  if !s.chars().any(|c| ('\u{80}'..='\u{FF}').contains(&c))
-    || !lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH"))
-  {
+  if !s.chars().any(is_byte_spelling) || !lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
     return std::borrow::Cow::Borrowed(s);
   }
   let mut out = String::with_capacity(s.len());
   let mut run: Vec<u8> = Vec::new();
-  let flush = |run: &mut Vec<u8>, out: &mut String| {
-    if run.is_empty() {
-      return;
-    }
-    match str::from_utf8(run) {
-      Ok(text) => out.push_str(text),
-      Err(_) => out.extend(run.iter().map(|&b| b as char)),
-    }
-    run.clear();
-  };
   for c in s.chars() {
-    if ('\u{80}'..='\u{FF}').contains(&c) {
+    if is_byte_spelling(c) {
       run.push(c as u32 as u8);
     } else {
-      flush(&mut run, &mut out);
+      decode_byte_run(&mut run, &mut out);
       out.push(c);
     }
   }
-  flush(&mut run, &mut out);
+  decode_byte_run(&mut run, &mut out);
   std::borrow::Cow::Owned(out)
+}
+
+/// A char that spells a byte under the byte mouth: the Latin-1 image of
+/// 0x80..0xFF (`decode_bytes` "bytes" branch).
+fn is_byte_spelling(c: char) -> bool { ('\u{80}'..='\u{FF}').contains(&c) }
+
+/// Decode one maximal byte run SEQUENCE by sequence: every valid UTF-8
+/// sequence becomes its character, an invalid byte stays its Latin-1 image,
+/// and a trailing INCOMPLETE sequence stays as bytes — it is still being
+/// assembled when the run is a text node the bytes reach one token at a time
+/// (`byte_mouth_pending_tail`). An all-or-nothing `from_utf8` of the run
+/// mis-read a decoded Latin-1 character (é = U+00E9, a 3-byte lead's image)
+/// next to a fresh CJK sequence as one invalid run and left both undecoded.
+fn decode_byte_run(run: &mut Vec<u8>, out: &mut String) {
+  let mut rest: &[u8] = run;
+  while !rest.is_empty() {
+    match str::from_utf8(rest) {
+      Ok(text) => {
+        out.push_str(text);
+        break;
+      },
+      Err(e) => {
+        let (valid, bad) = rest.split_at(e.valid_up_to());
+        out.push_str(str::from_utf8(valid).unwrap_or_default());
+        let n = e.error_len().unwrap_or(bad.len());
+        out.extend(bad[..n].iter().map(|&b| b as char));
+        rest = &bad[n..];
+      },
+    }
+  }
+  run.clear();
+}
+
+/// Byte offset in `s` where a trailing INCOMPLETE UTF-8 sequence in the byte
+/// spelling begins (`s.len()` when there is none). The text-run merge in
+/// `Document::open_text_internal` re-decodes only from there: the bytes of
+/// one character arrive one token at a time (tex.web §1034: one char node per
+/// byte), so a run is complete only once its last continuation byte is on,
+/// and everything before the pending lead byte is already decoded (or
+/// invalid and final). Invariant relied on: a decoded character in
+/// U+00C2..U+00F4 (é, Ã) is never followed by raw continuation bytes without
+/// their own lead — well-formed input never produces that shape, so the one
+/// preceding character this looks back at is only ever re-merged when it IS
+/// the pending lead byte.
+pub fn byte_mouth_pending_tail(s: &str) -> usize {
+  let mut continuations = 0usize;
+  for (i, c) in s.char_indices().rev() {
+    let u = c as u32;
+    if (0x80..=0xBF).contains(&u) {
+      continuations += 1;
+      if continuations > 3 {
+        return s.len();
+      }
+      continue;
+    }
+    let needed = match u {
+      0xC2..=0xDF => 1,
+      0xE0..=0xEF => 2,
+      0xF0..=0xF4 => 3,
+      _ => return s.len(),
+    };
+    return if continuations < needed { i } else { s.len() };
+  }
+  s.len()
 }
 
 pub fn decode_input_bytes(raw: &[u8]) -> String {

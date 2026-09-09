@@ -3448,6 +3448,10 @@ issue #347 into #354. Rust **surpasses** (OXIDIZED_DESIGN #119): `process_index_
 a `\verb<D>body<D>` run atomically before the `!`/`@`/`|` split can see the delimiter, and emits
 `\@internal@text@verb`, so the body renders as `<verbatim font="typewriter">`. Guard:
 `06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.
+Sibling (manyind/mindsample, 2026-09-09): the same re-tokenize uses style catcodes (`@` a
+letter), so `\index{\AB@\relax…}` is one undefined `\AB@` and an undefined sort-key word
+`\A` is digested — Perl 15 errors on the manual. Rust re-reads what survives the `\protected@write` expansion with the document's table
+and keeps undefined words inert / literal in the key (OXIDIZED_DESIGN_DIVERGENCES #222).
 
 ## 84. `\ref` to a `\label` on a `\nonumber` eqnarray row renders the document title (Rust surpasses)
 

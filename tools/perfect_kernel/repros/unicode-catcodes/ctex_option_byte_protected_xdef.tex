@@ -1,0 +1,21 @@
+% witness: /usr/local/texlive/2025/texmf-dist/doc/latex/chinesechess/chinesechess.tex
+% oracle: pdflatex (chinesechess manual builds a PDF)
+% engines: pdflatex
+% expect: 0 Error/Fatal; a text node, no <ltx:ERROR/>
+% status: RED (sweep70) -> fixed batch 56bp; was Error:undefined:\CJK@next@token ... at Anonymous String  (log line 222)
+% mechanism: \@onefilewithoptions (sect05.rs:422) Expand!(option1)=do_expand=ExpansionLevel::Full
+%   expands the PROTECTED \CTEX@char@nnn (real \protected@xdef, latex.ltx:18514, would not),
+%   reaching ctex-armed \CJK@ignorespaces=\CJK@@ignorespaces=\futurelet\CJK@next@token
+%   (CJKspace.sty:36/45), then Full-expands undefined \CJK@next@token. RUST-ONLY (K10 byte mouth).
+\documentclass[full]{l3doc}
+\usepackage[scheme=chinese]{ctex}
+\usepackage{enumitem}
+\usepackage{indentfirst}
+\usepackage{titling}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{fontawesome5}
+\usepackage{fancyvrb-ex}
+\usepackage[piecechar={C}{炮}]{chinesechess}
+\begin{document}
+\end{document}

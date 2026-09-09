@@ -2651,10 +2651,21 @@ impl Document {
       if state::lookup_bool("PDFTEX_BYTE_MOUTH")
         && text.chars().any(|c| ('\u{80}'..='\u{FF}').contains(&c))
       {
-        let merged = s!("{}{}", self.node.get_content(), text);
-        self
-          .node
-          .set_content(&crate::mouth::decode_byte_mouth_runs(&merged))?;
+        // Only the pending tail (an incomplete sequence's bytes) plus the new
+        // piece is decoded — re-decoding the whole node per byte was O(n²)
+        // and, given a runaway feeding one node, a 2^32-byte String
+        // (chinesechess, sweep 70).
+        let content = self.node.get_content();
+        let split = crate::mouth::byte_mouth_pending_tail(&content);
+        let tail = s!("{}{}", &content[split..], text);
+        let decoded = crate::mouth::decode_byte_mouth_runs(&tail);
+        if split == content.len() {
+          self.node.append_text(&decoded)?;
+        } else {
+          self
+            .node
+            .set_content(&s!("{}{}", &content[..split], decoded))?;
+        }
       } else {
         self.node.append_text(text)?;
       }
