@@ -16530,6 +16530,24 @@ c &= d
     assert!(xml.contains("<XMApp"), "sfrac: {xml}");
   }
 
+  /// chemformula.sty is raw-loaded (batch 56az): the old `\ch`→mhchem `\ce`
+  /// alias rejected chemformula's `"text"` literals ("Assertion failed",
+  /// chemformula-manual ×50) and knew no `chemformula/*` key.
+  #[test]
+  fn chemformula_ch_is_the_real_parser() {
+    if !kpsewhich_has("chemformula.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{chemformula}\n\\setchemformula{format=\\sffamily}\n\\begin{document}\n\\ch{\"text\" O2 + 2 H2 -> 2 H2O}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Assertion failed"), "{stderr}");
+    // chemformula's own rendering: the `"…"` literal survives and a subscript
+    // is its raised text box (`math-scripts=false`, chemformula.sty:3092).
+    assert!(xml.contains("textO"), "{xml}");
+    assert!(xml.contains("class=\"ltx_markedasmath\""), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

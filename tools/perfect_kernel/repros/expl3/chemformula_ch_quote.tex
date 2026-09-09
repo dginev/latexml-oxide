@@ -1,0 +1,12 @@
+% witness: chemformula-manual (chemformula-manual.tex L200-207), endiagram_en, modiagram_en
+% oracle: pdflatex r_ch_quote.tex -> exit 0, 0 errors, PDF produced
+% engines: pdfLaTeX clean; Perl LaTeXML N/A (no chemformula binding; different failure)
+% expect: 0 errors; chemformula's "..." literal-text renders as text
+% status: GREEN (batch 56az, 2026-09-09)
+% mechanism: chemformula_sty.rs:38 stubs \ch{...}->\ce{...}; chemformula's
+%   "..."-literal-text syntax is rejected by mhchem's \ce parser assertion.
+\documentclass{article}
+\usepackage{chemformula}
+\begin{document}
+\ch{"text" O2}
+\end{document}

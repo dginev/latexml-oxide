@@ -3,8 +3,8 @@
 % load triggers \ProcessKeysPackageOptions at chemformula.sty L481,
 % which is undefined unless l3keys2e is loaded first. Driver
 % cluster: stage11_v3 2504.13749 (chemformula raw-load cascade).
-% Our chemformula stub preloads l3keys2e + xparse so the post-binding
-% raw load succeeds.
+% The chemformula binding requires l3keys2e + xparse and then raw-loads
+% chemformula.sty itself (batch 56az retired the mhchem-alias stub).
 \documentclass{article}
 \usepackage{chemformula}
 \begin{document}

@@ -180,8 +180,8 @@ fn babel_spanish_decimalpoint() {
 #[test]
 fn chemformula_raw_l3keys() {
   // Round-33 fix (commit 1afa4dc8ca). chemformula 4.x is expl3-based;
-  // the INCLUDE_STYLES post-binding raw load triggers
-  // \ProcessKeysPackageOptions at chemformula.sty L481, undefined
+  // its raw load (now the binding's own `InputDefinitions!`, batch 56az)
+  // triggers \ProcessKeysPackageOptions at chemformula.sty L481, undefined
   // unless l3keys2e is loaded first. Driver 2504.13749.
   let (code, status) = run_trip("chemformula_raw_l3keys");
   assert_eq!(
