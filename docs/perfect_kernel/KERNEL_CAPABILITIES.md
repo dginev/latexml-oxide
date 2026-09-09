@@ -39,6 +39,7 @@ where it is new (K1, K3, K4, K6), the model is here.
 | K6 | A consistent font-selection model for Unicode engines | 5 | polyglossia 136 lines, fontspec queries, `\mathitalicsmode` ×4, most lualatex manuals | 5 | OPEN — polyglossia TRUE stub (56i) is the anti-pattern to replace |
 | K7 | One in-memory file model | 6 | VFS `./` (56i), `\jobname` round trips, `\IfFileExists`/`\openin`/`\file_full_name:n` gaps | 6 | half-landed (b42/b47/b50/56i) |
 | K8 | Runaway cap that degrades instead of discarding | — | csvsimple-l3, forest-doc (pre-56i), euclideangeometry: 500 same-errors → 39-byte XML | 7 | OPEN |
+| K10 | A pdfTeX byte mouth (256-entry catcode table over U+0000..U+00FF) | new (7 CJK/kotex manuals, D9) | cjk-ko-doc, kotex-doc, kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer (`\가`/`\japanese`/`\ifx 가가`) | 8 | DESIGNED 2026-09-09, not started |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
 
@@ -300,10 +301,64 @@ first. Design notes: `~/data/pk_agents/w22/mode-frames/NOTES.md`.
 **Risk.** LOW (Stage 0), MED (1-2: `AlignPeekMode`, `$…$`, `INNER_BOX`/
 `\ifinner`, `\aftergroup` order), HIGH (3).
 
+## K10 — A pdfTeX byte mouth
+
+**Goal.** The last non-policy oracle-clean residue (D9: cjk-ko-doc, kotex-doc,
+kotex-utf-doc, oblivoir-simpledoc, sample-bxcjkjatype-beamer) converts. All
+five are SHARED with Perl (no CJK/kotex binding exists in either engine).
+
+**Source of truth.** pdfTeX reads a UTF-8 file byte by byte: tex.web §30-31
+(`buffer: array of ASCII_code`, `input_ln` decodes nothing), §230-232 (a
+256-entry `\catcode` table), §341-356 (`get_next`: one byte, one token;
+a control symbol from a single byte, `^^ea` = byte 0xEA). Proven on plain
+pdftex (`~/data/pk_agents/w22/byte-mouth/repros/pdftex_byte_probe.tex`):
+`가` = three tokens 234/176/128, `\ifx 가가` is FALSE, `\catcode234`=12.
+LuaTeX/XeTeX read Unicode scalars (one token U+AC00) — the split that
+dhucs-trivcj.sty:18 `\ifx 가가` probes. cjkutf8-josa.sty:176-194 defines
+control SYMBOLS over the first byte (`\DeclareRobustCommand*\^^ea[2]`) and
+reads the next two bytes as arguments; kotexutf.sty:40-41, CJK.sty:896-910 and
+`UTF8.bdg` make 0x80..0xFF active. Perl's Mouth.pm:145-163 splits on `\X`
+grapheme clusters and keys catcodes on the code point — no byte mode.
+
+**Mechanism.** The 256-entry table is ALREADY our `catcode: HashMap<char>`
+on U+0000..U+00FF: `\catcode"EA` and a `^^ea` in a `.sty` both address
+U+00EA today. Byte mode is therefore a per-Mouth flag (sibling of
+`saved_at_cc`, mouth.rs:100) under which `decode_bytes` (mouth.rs:586) takes
+the Latin-1 branch that already exists at :598 (`b as char`): `\가` lexes to
+`\<U+00EA>` = the josa definition, `\ifx 가가` compares U+00EA/U+00B0 → the
+legacy branch. Output text needs the bytes reassembled into scalars at the
+funnels the packages themselves use: CJK.sty:896-968 `\CJK@XX/XXX/XXXX`
+(`\csname CJK@\number\`#1…`), `\CJKchar`, `\Unicode`, kotexutf-core:143-217
+`\@@ucs` — net-new bindings (bindings outrank raw) that UTF-8-combine their
+byte arguments and emit the scalar.
+
+**Trigger.** Package-scoped opt-in: the CJK/CJKutf8/kotexutf bindings set a
+global `BYTE_MOUTH` (gated `!LUATEX_PROFILE`); nested mouths inherit it.
+Faithful (those packages ARE the byte-catcode switchers), package-keyed not
+hangul-keyed. A GLOBAL byte mouth under the pdfTeX persona is rejected: real
+utf8.def:157-170 makes 0xC2..0xFD active (pdflatex `\catcode234`=13 under
+utf8), our `utf8_def.rs` deliberately keeps native code points (bibarts,
+`utf8_input_keeps_latin1_code_points_other`), and a global mode would split
+every accented Latin character. Phase-3 generalization (auto-trigger on an
+`assign_catcode` to U+0080..U+00FF while `!LUATEX_PROFILE`) waits for that
+invariant's guard against latin1 + `\DeclareFontEncoding{T1}`.
+
+**Steps.** Phase 1 (MED): mouth `byte_mode` + the bindings that set it; CJK,
+kotexutf and dhucs run raw; guards `josa_min.tex` (0 errors, josa text
+present; today `Error:undefined:\가`) and the trivcj probe (`\japanese`
+defined). Phase 2 (MED): the reassembly bindings; guard = a cjk-ko-doc
+syllable serializes as its real scalar. Expected gain ≤ 5 docs; bxcoloremoji
+and gentombow are the `\pdfoutput` persona (K6), not this. Notes
+`~/data/pk_agents/w22/byte-mouth/NOTES.md`.
+
+**Dead ends.** Global byte mouth (above); defining `\japanese`/josa directly
+(hangul special case, then needs kotex's font infrastructure); reassembling
+byte runs inside the mouth (the probes need the bytes as separate tokens).
+
 ## Ordering
 
 K1 → K3+K4 → K5 → K2 → K6 → K7/K8 (K7 and K8 are small and slot between
-batches); K9 runs as its own staged batch once the drift source is known. Batch fixes continue in parallel, but a batch item that belongs
+batches); K9 runs as its own staged batch once the drift source is known; K10 last (surpass-tier, package-scoped). Batch fixes continue in parallel, but a batch item that belongs
 to a capability is landed *as* that capability's step, with its class-level
 guard, not as a site patch.
 
@@ -364,5 +419,6 @@ guard, not as a site patch.
 | 2026-09-09 | K6 | Persona measurement on sweep 62: of the 805 lualatex-oracle docs whose oracle was NOT clean (so they run under the pdfTeX identity), 125 load a fontspec-family package (`fontspec`, `luacode`, `unicode-math`, `polyglossia`, `luatexja`) — 45 are already S0/S1, 59 status 2, 18 fatal, 3 timeouts. Their first errors split into LuaTeX-identity gaps (`\setmainfont`/`\setmonofont`/`\newfontfamily` 32, `\directlua` 5, `\luatexversion` 1 — a source-grep persona rule would recover roughly a dozen) and engines we never impersonate (`\newXeTeXintercharclass`/`\XeTeXcharclass` 6, `\epTeXinputencoding` 6, bidi/xepersian fatals). A persona rule is a harness lever measured in its own sweep (one lever per run), not folded into a code sweep. |
 | 2026-09-09 | K6 | Second persona signal in the harness (`run_doc.sh`): pgf's graph-drawing library gate ("You need to run LuaTeX to use the graph drawing library", pgflibrarygraphdrawing.code.tex:16-24) now triggers the one-shot luatex retry like the §484 terminal-read halt. tikz-ext-manual (lualatex oracle exit 1, so the clean-oracle gate ran it as pdfTeX) had 14 of its 16 errors from that gate; under the luatex identity our kernel renders the force layout (0 errors on the repro) where Perl-under-luatex still fails pgf's gate (15). Rule confirmed: decide the identity by an unambiguous engine-required signal, never by the oracle engine alone. |
 | 2026-09-09 | K6 | `\pdfoutput=0` (the DVI persona, `pdftex.rs:11`, Perl pdfTeX.pool.ltxml:23) now has three named pdflatex-clean casualties: l2tabu (scrbase `\ifpdfoutput` false branch, 2 errors), gentombow (gentombow.sty:582 driver branch, 1) and bxcoloremoji-shortnames (bxcoloremoji.sty:461 graphicx gate, 3). All SHARED with Perl. A PDF-mode persona (`\pdfoutput=1` with the graphics/color/hyperref driver selection that follows) is the pending decision; note `latexml_sty/mod.rs:468` already sets `\outputmode=1`, so the two answers disagree today. |
+| 2026-09-09 | K10 | Designed (root-causer design study): per-Mouth byte mode over the existing U+0000..U+00FF catcode entries, package-scoped trigger from the net-new CJK/kotexutf bindings, reassembly at the packages' own `\CJK@XXX`/`\@@ucs` funnels. Global byte mode rejected (utf8.def activation vs our native-code-point design). Two phases, ≤ 5 docs. |
 | 2026-09-07 | K1 | Step 3 pass two (batch 56an): pst-plot refusing stub → argument-consuming binding; pst-all → the real require chain; chemnum/forest KEEP with named blockers. Running tally of the audit: 12 stubs examined, 2 retired-in-spirit (pst-plot, pst-all), 2 silent drops closed (56aj), 0 raw-load retirements. Next by hit count: libertinehologopatch (27 docs, 0 oracle-clean), listings (13, 0), nag/tabu/xr KEEP. |
 

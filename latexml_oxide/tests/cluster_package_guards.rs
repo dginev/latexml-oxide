@@ -16714,6 +16714,29 @@ c &= d
     );
   }
 
+  /// Batch 56bk: an `\item` digested inside a captured box (`minipage` in a
+  /// list item; tikz-ext-manual `{arrowtip}`) gets an auto-opened
+  /// `ltx:itemize` in the box instead of `malformed:ltx:item` (SHARED with
+  /// Perl; surpass). Repro `repros/boxes-groups/item_in_minipage_inside_list.tex`.
+  #[test]
+  fn item_in_a_captured_box_gets_an_itemize() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{itemize}\n\\item first\n\\begin{minipage}[t]{3cm}\n\\item boxed\n\\end{minipage}\n\\end{itemize}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<itemize").count(), 2, "{xml}");
+    let inner = xml.rfind("<itemize").unwrap();
+    let block = xml.find("ltx_minipage").unwrap();
+    assert!(
+      block < inner,
+      "the inner list sits inside the minipage block: {xml}"
+    );
+    assert!(xml[inner..].contains("boxed"), "{xml}");
+    // An item in an inline box still reports: \fbox holds text, not a list.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{itemize}\n\\item first \\fbox{\\item boxed}\n\\end{itemize}\n\\end{document}\n";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

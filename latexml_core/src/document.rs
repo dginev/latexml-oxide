@@ -3258,6 +3258,35 @@ impl Document {
           )?;
           return self.find_insertion_point_qsym(qsym, Some(foreign_object));
         }
+        // A list item stranded outside its list — `\item` digested inside a
+        // box whose body `insert_block` captures (`\parbox`/`minipage`/`\vbox`
+        // inside a list item: tikz-ext-manual's `{arrowtip}` puts `\tipCompat`'s
+        // `\item` in a `minipage` inside a `\pgfmanualentryheadline` item;
+        // `<ltx:item> isn't allowed in <ltx:_CaptureBlock_>`). The item is
+        // still the enclosing list's `\@item` (latex.ltx's `\@parboxrestore`
+        // resets no list bindings), and pdflatex typesets it as a labelled
+        // paragraph inside the box. Perl shares the error: only `ltx:item` is
+        // autoOpen (latex_constructs.pool.ltxml:1277), so
+        // `computeIndirectModel` has no `_CaptureBlock_`→`item` route
+        // (Document.pm:974-1010). Recovery = the shape LaTeX gives an item
+        // outside its list: an auto-opened `ltx:itemize` holding it, closed
+        // with the box. Restricted to containers that CAN hold a list, so an
+        // item in an inline `\fbox` still reports. Guard:
+        // `perfect_kernel_batch56::item_in_a_captured_box_gets_an_itemize`.
+        let ltx_item = pin!("ltx:item");
+        let ltx_itemize = pin!("ltx:itemize");
+        if qsym == ltx_item
+          && can_contain_qsym(cur_qname, ltx_itemize)
+          && can_contain_qsym(ltx_itemize, qsym)
+        {
+          let node_font = self.get_node_font(&self.node).clone();
+          self.open_element(
+            "ltx:itemize",
+            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
+            Some(&node_font),
+          )?;
+          return self.find_insertion_point_qsym(qsym, Some(ltx_itemize));
+        }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
         // (a bare qname for #PCDATA), with "Currently in <insertion
