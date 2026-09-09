@@ -5,7 +5,7 @@
 //! multi-frame animations (e.g. tikz-among-us with 180 frames).
 //! Exposes `frame-count` as an attribute on `<ltx:block class="ltx_animate">`.
 
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use latexml_core::{
   gullet::reading_from_mouth,
@@ -47,8 +47,23 @@ fn env_tokens(cs: &str, env: &str) -> Vec<Token> {
   toks
 }
 
+/// The open `{animateinline}` contexts, innermost last. Each entry is SHARED
+/// (`Rc`) with the environment whatsit's `anim_ctx` property
+/// (`Stored::Opaque`), so the macros (`\newframe`, `\multiframe`,
+/// `\end{animateinline}`) mutate the innermost one and the whatsit reads its
+/// own at construction — in whatever order deferred whatsits construct. The
+/// stack is popped when the environment ends (`after_digest`), not at
+/// construction.
+type AnimCtx = Rc<RefCell<AnimateContext>>;
+
 thread_local! {
-  static ANIM_STACK: RefCell<Vec<AnimateContext>> = const { RefCell::new(Vec::new()) };
+  static ANIM_STACK: RefCell<Vec<AnimCtx>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Run `f` on the innermost open context, if any.
+fn with_top<R>(f: impl FnOnce(&mut AnimateContext) -> R) -> Option<R> {
+  let top: Option<AnimCtx> = ANIM_STACK.with(|s| s.borrow().last().cloned());
+  top.map(|ctx| f(&mut ctx.borrow_mut()))
 }
 
 fn tok_str(s: &str) -> Tokens { mouth::tokenize_internal(TeXString::assembled(s.to_string())) }
@@ -124,18 +139,24 @@ LoadDefinitions!({
     };
     let begin = key_tokens("begin");
     let end = key_tokens("end");
-    ANIM_STACK.with(|s| s.borrow_mut().push(AnimateContext { frame_count: 1, end, ended: false }));
+    ANIM_STACK.with(|s| {
+      s.borrow_mut()
+        .push(Rc::new(RefCell::new(AnimateContext { frame_count: 1, end, ended: false })))
+    });
     let mut toks = env_tokens("\\begin", "lx@animateinline");
     toks.extend(begin);
     Ok(Tokens::new(toks))
   });
   DefMacro!(T_CS!("\\end{animateinline}"), None, sub[_args] {
-    let mut toks = ANIM_STACK.with(|s| {
-      match s.borrow_mut().last_mut() {
-        Some(ctx) if !ctx.ended => { ctx.ended = true; ctx.end.clone() }
-        _ => Vec::new(),
+    let mut toks = with_top(|ctx| {
+      if ctx.ended {
+        Vec::new()
+      } else {
+        ctx.ended = true;
+        ctx.end.clone()
       }
-    });
+    })
+    .unwrap_or_default();
     toks.extend(env_tokens("\\end", "lx@animateinline"));
     Ok(Tokens::new(toks))
   });
@@ -144,10 +165,13 @@ LoadDefinitions!({
     "{lx@animateinline}",
     sub[document, _args, props] {
       document.maybe_close_element("ltx:p")?;
-      let frame_count = ANIM_STACK
-        .with(|s| s.borrow_mut().pop())
-        .map(|c| c.frame_count)
-        .unwrap_or(1);
+      let frame_count = match props.get("anim_ctx") {
+        Some(Stored::Opaque(payload)) => payload
+          .downcast_ref::<AnimCtx>()
+          .map(|ctx| ctx.borrow().frame_count)
+          .unwrap_or(1),
+        _ => 1,
+      };
       let mut attrs = HashMap::default();
       attrs.insert("class".to_string(), "ltx_animate".to_string());
       attrs.insert("frame-count".to_string(), frame_count.to_string());
@@ -158,16 +182,22 @@ LoadDefinitions!({
       document.close_element("ltx:block")?;
       Ok(())
     },
-    mode => "internal_vertical"
+    mode => "internal_vertical",
+    properties => {
+      let mut props = stored_map!();
+      if let Some(ctx) = ANIM_STACK.with(|s| s.borrow().last().cloned()) {
+        props.insert("anim_ctx", Stored::Opaque(Rc::new(ctx)));
+      }
+      Ok(props)
+    },
+    after_digest => sub[_whatsit] {
+      ANIM_STACK.with(|s| s.borrow_mut().pop());
+    }
   );
 
   DefMacro!("\\anim@set@framecount {Number}", sub[(count)] {
     let count_num = count.value_of().max(1) as usize;
-    ANIM_STACK.with(|s| {
-      if let Some(ctx) = s.borrow_mut().last_mut() {
-        ctx.frame_count = count_num;
-      }
-    });
+    with_top(|ctx| ctx.frame_count = count_num);
     Ok(Tokens::new(vec![]))
   });
 
@@ -176,11 +206,7 @@ LoadDefinitions!({
     let is_inside_animate = ANIM_STACK.with(|s| !s.borrow().is_empty());
     if is_inside_animate {
       // `\multiframe{n}` inside a frame sequence stands for n frames.
-      ANIM_STACK.with(|s| {
-        if let Some(ctx) = s.borrow_mut().last_mut() {
-          ctx.frame_count += count_num - 1;
-        }
-      });
+      with_top(|ctx| ctx.frame_count += count_num - 1);
     }
 
     let vars_str = vars.to_string();
@@ -228,22 +254,21 @@ LoadDefinitions!({
   // code, discards the remaining frames (counting their separators for
   // `frame-count`) and re-emits the environment end.
   DefMacro!("\\newframe OptionalMatch:* []", sub[(_star, _fps)] {
-    let end = ANIM_STACK.with(|s| {
-      match s.borrow_mut().last_mut() {
-        Some(ctx) if !ctx.ended => { ctx.ended = true; ctx.frame_count += 1; Some(ctx.end.clone()) }
-        Some(ctx) => { ctx.frame_count += 1; None }
-        None => None,
+    let end = with_top(|ctx| {
+      ctx.frame_count += 1;
+      if ctx.ended {
+        None
+      } else {
+        ctx.ended = true;
+        Some(ctx.end.clone())
       }
-    });
+    })
+    .flatten();
     let Some(mut toks) = end else {
       return Ok(Tokens::new(vec![]));
     };
     let rest = discard_remaining_frames()?;
-    ANIM_STACK.with(|s| {
-      if let Some(ctx) = s.borrow_mut().last_mut() {
-        ctx.frame_count += rest;
-      }
-    });
+    with_top(|ctx| ctx.frame_count += rest);
     toks.extend(env_tokens("\\end", "animateinline"));
     Ok(Tokens::new(toks))
   });

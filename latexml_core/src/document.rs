@@ -3194,112 +3194,108 @@ impl Document {
         if is_sectioning_unit && is_lenient_container {
           return Ok(self.node.clone());
         }
-        // Block content in an inline container that cannot auto-close —
-        // a `{lstlisting}` in an `l`/`c`/`r` tabular cell or a `{tabbing}`
-        // field (engtlc, lexref, expex-glossonly: `<ltx:listing> isn't
-        // allowed in <ltx:td>`) — takes the shape the `p{}` column already
-        // gives cell blocks (`insert_block`): an auto-opened
-        // `ltx:inline-block`, legal here and holding the child. Only when
-        // every direct, auto-open and auto-close route above is exhausted,
-        // so a display equation in a paragraph still closes the `ltx:p`.
-        // Perl shares the error (Document.pm:1008; `inline-block` is not an
-        // autoOpen tag, and making it one globally would wrap equations
-        // instead of closing paragraphs). PLANS P37. Guard:
-        // `perfect_kernel_batch54::listing_in_a_tabular_cell_gets_an_inline_block`.
-        // A math node arriving in an INLINE-model element opened while in
-        // math mode — a `\hyperref[l]{b}`/`\glsdisp{k}{k}`/`\gls` ref whose
-        // content is math (glosmathtools.sty:74 `\ensuremath{\glsdisp…}`;
-        // `<ltx:XMTok> isn't allowed in <ltx:glossaryref>`, sample_glosmathtools
-        // ×2 53 errors; Perl TeX_Math.pool:42 autoOpens only XMText, so it
-        // shares the error) — takes the shape `\text{$k$}` already has: an
-        // auto-opened inline `ltx:Math`/`ltx:XMath` holding the leaves, closed
-        // with the ref. Restricted to containers that CAN hold `ltx:Math`
-        // (Inline.model) and are not the p/text/emph cascade cases above.
-        // Guard: `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
-        let ltx_math = pin!("ltx:Math");
-        let ltx_xmath = pin!("ltx:XMath");
-        let is_math_node = qsym_str.starts_with("ltx:XM");
-        if is_math_node
-          && can_contain_qsym(cur_qname, ltx_math)
-          && can_contain_qsym(ltx_xmath, qsym)
-        {
-          let node_font = self.get_node_font(&self.node).clone();
-          self.open_element(
-            "ltx:Math",
-            Some(string_map!("mode" => "inline", "_autoopened" => "true", "_autoclose" => "true")),
-            Some(&node_font),
-          )?;
-          self.open_element(
-            "ltx:XMath",
-            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
-            Some(&node_font),
-          )?;
-          return self.find_insertion_point_qsym(qsym, Some(ltx_xmath));
+        // Auto-open bridges — ONE rule, tex.web has none: when a child cannot
+        // go here, cannot be reached by any autoOpen path of the model
+        // (Perl Document.pm:974-1010 `computeIndirectModel`) and the current
+        // element cannot autoClose, open the container chain that the model
+        // says would hold it, marked `_autoopened`/`_autoclose` so it closes
+        // with what it wraps. Perl shares every one of these errors (its only
+        // autoOpen tags are the model's); the bridges are the documented
+        // surpasses, one table row each, in precedence order:
+        //
+        //   Math: a math node arriving in an INLINE-model element opened
+        //   while in math mode — `\hyperref[l]{b}`/`\glsdisp{k}{k}` whose
+        //   content is math (glosmathtools.sty:74 `\ensuremath{\glsdisp…}`;
+        //   `<ltx:XMTok> isn't allowed in <ltx:glossaryref>`,
+        //   sample_glosmathtools ×2 53 errors; Perl TeX_Math.pool:42 autoOpens
+        //   only XMText). Wrapper = inline `ltx:Math`/`ltx:XMath`, the shape
+        //   `\text{$k$}` already has. Guard:
+        //   `perfect_kernel_batch54::math_content_in_a_ref_gets_an_inline_math`.
+        //
+        //   inline-block: block content in an inline container that cannot
+        //   auto-close — a `{lstlisting}` in an `l`/`c`/`r` tabular cell or a
+        //   `{tabbing}` field (engtlc, lexref, expex-glossonly: `<ltx:listing>
+        //   isn't allowed in <ltx:td>`) — takes the shape the `p{}` column
+        //   already gives cell blocks (`insert_block`). Only when every direct,
+        //   auto-open and auto-close route above is exhausted, so a display
+        //   equation in a paragraph still closes the `ltx:p` (Document.pm:1008;
+        //   making `inline-block` an autoOpen tag globally would wrap
+        //   equations instead of closing paragraphs). PLANS P37. Guard:
+        //   `perfect_kernel_batch54::listing_in_a_tabular_cell_gets_an_inline_block`.
+        //
+        //   foreignObject: block content inside an SVG group — a TikZ node
+        //   whose text holds a `\verb` or a paragraph (makeshape 22, optikz
+        //   46: `<ltx:p> isn't allowed in <svg:g>`) — takes `svg:foreignObject`,
+        //   whose model is Flow (LaTeXML-misc.rnc `SVG.foreignObject.content`),
+        //   the same shape `\lxSVG@includegraphics` uses for non-SVG content
+        //   (pgfsys-latexml.def.ltxml:202 absorbs the node box into the group
+        //   directly). OXIDIZED_DESIGN #186, PLANS P37 (svg half). Guard:
+        //   `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
+        //
+        //   itemize: a list item stranded outside its list — `\item` digested
+        //   inside a box whose body `insert_block` captures (`\parbox`/
+        //   `minipage`/`\vbox` inside a list item: tikz-ext-manual's
+        //   `{arrowtip}` puts `\tipCompat`'s `\item` in a `minipage` inside a
+        //   `\pgfmanualentryheadline` item; `<ltx:item> isn't allowed in
+        //   <ltx:_CaptureBlock_>`). The item is still the enclosing list's
+        //   `\@item` (latex.ltx's `\@parboxrestore` resets no list bindings),
+        //   and pdflatex typesets it as a labelled paragraph inside the box;
+        //   only `ltx:item` is autoOpen (latex_constructs.pool.ltxml:1277), so
+        //   `computeIndirectModel` has no `_CaptureBlock_`→`item` route.
+        //   Wrapper = the shape LaTeX gives an item outside its list, an
+        //   `ltx:itemize`; an item in an inline `\fbox` still reports. Guard:
+        //   `perfect_kernel_batch56::item_in_a_captured_box_gets_an_itemize`.
+        //
+        // A row applies when its own predicate holds, the current element can
+        // hold the chain's first wrapper and the chain's last wrapper can hold
+        // the child (both by the model, never by name).
+        struct AutoOpenBridge {
+          /// The wrapper chain, outermost first.
+          chain:   &'static [&'static str],
+          /// The row's own predicate on (current element, arriving child).
+          applies: fn(cur: &str, qsym: &str) -> bool,
+          /// Extra attributes on the outermost wrapper.
+          attrs:   &'static [(&'static str, &'static str)],
         }
-        let inline_block = pin!("ltx:inline-block");
-        if qsym != inline_block
-          && can_contain_qsym(cur_qname, inline_block)
-          && can_contain_qsym(inline_block, qsym)
-        {
-          let node_font = self.get_node_font(&self.node).clone();
-          self.open_element(
-            "ltx:inline-block",
-            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
-            Some(&node_font),
-          )?;
-          return self.find_insertion_point_qsym(qsym, Some(inline_block));
-        }
-        // Block content inside an SVG group — a TikZ node whose text holds a
-        // `\verb` or a paragraph (makeshape 22, optikz 46: `<ltx:p> isn't
-        // allowed in <svg:g>`) — takes an auto-opened `svg:foreignObject`,
-        // whose model is Flow (LaTeXML-misc.rnc `SVG.foreignObject.content`),
-        // the same shape `\lxSVG@includegraphics` uses for non-SVG content.
-        // Perl shares the error (pgfsys-latexml.def.ltxml:202 absorbs the
-        // node box into the group directly). OXIDIZED_DESIGN #186, PLANS P37
-        // (svg half). Guard:
-        // `perfect_kernel_batch54::verbatim_in_a_tikz_node_gets_a_foreign_object`.
-        let foreign_object = pin!("svg:foreignObject");
-        if qsym != foreign_object
-          && arena::with(cur_qname, |c| c.starts_with("svg:"))
-          && can_contain_qsym(cur_qname, foreign_object)
-          && can_contain_qsym(foreign_object, qsym)
-        {
-          let node_font = self.get_node_font(&self.node).clone();
-          self.open_element(
-            "svg:foreignObject",
-            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
-            Some(&node_font),
-          )?;
-          return self.find_insertion_point_qsym(qsym, Some(foreign_object));
-        }
-        // A list item stranded outside its list — `\item` digested inside a
-        // box whose body `insert_block` captures (`\parbox`/`minipage`/`\vbox`
-        // inside a list item: tikz-ext-manual's `{arrowtip}` puts `\tipCompat`'s
-        // `\item` in a `minipage` inside a `\pgfmanualentryheadline` item;
-        // `<ltx:item> isn't allowed in <ltx:_CaptureBlock_>`). The item is
-        // still the enclosing list's `\@item` (latex.ltx's `\@parboxrestore`
-        // resets no list bindings), and pdflatex typesets it as a labelled
-        // paragraph inside the box. Perl shares the error: only `ltx:item` is
-        // autoOpen (latex_constructs.pool.ltxml:1277), so
-        // `computeIndirectModel` has no `_CaptureBlock_`→`item` route
-        // (Document.pm:974-1010). Recovery = the shape LaTeX gives an item
-        // outside its list: an auto-opened `ltx:itemize` holding it, closed
-        // with the box. Restricted to containers that CAN hold a list, so an
-        // item in an inline `\fbox` still reports. Guard:
-        // `perfect_kernel_batch56::item_in_a_captured_box_gets_an_itemize`.
-        let ltx_item = pin!("ltx:item");
-        let ltx_itemize = pin!("ltx:itemize");
-        if qsym == ltx_item
-          && can_contain_qsym(cur_qname, ltx_itemize)
-          && can_contain_qsym(ltx_itemize, qsym)
-        {
-          let node_font = self.get_node_font(&self.node).clone();
-          self.open_element(
-            "ltx:itemize",
-            Some(string_map!("_autoopened" => "true", "_autoclose" => "true")),
-            Some(&node_font),
-          )?;
-          return self.find_insertion_point_qsym(qsym, Some(ltx_itemize));
+        const AUTO_OPEN_BRIDGES: &[AutoOpenBridge] = &[
+          AutoOpenBridge {
+            chain:   &["ltx:Math", "ltx:XMath"],
+            applies: |_cur, qsym| qsym.starts_with("ltx:XM"),
+            attrs:   &[("mode", "inline")],
+          },
+          AutoOpenBridge {
+            chain:   &["ltx:inline-block"],
+            applies: |_cur, qsym| qsym != "ltx:inline-block",
+            attrs:   &[],
+          },
+          AutoOpenBridge {
+            chain:   &["svg:foreignObject"],
+            applies: |cur, qsym| cur.starts_with("svg:") && qsym != "svg:foreignObject",
+            attrs:   &[],
+          },
+          AutoOpenBridge {
+            chain:   &["ltx:itemize"],
+            applies: |_cur, qsym| qsym == "ltx:item",
+            attrs:   &[],
+          },
+        ];
+        for bridge in AUTO_OPEN_BRIDGES {
+          let first = arena::pin(bridge.chain[0]);
+          let last = arena::pin(bridge.chain[bridge.chain.len() - 1]);
+          let applies = arena::with2(cur_qname, qsym, |cur, q| (bridge.applies)(cur, q));
+          if applies && can_contain_qsym(cur_qname, first) && can_contain_qsym(last, qsym) {
+            let node_font = self.get_node_font(&self.node).clone();
+            for (i, wrapper) in bridge.chain.iter().enumerate() {
+              let mut attrs = string_map!("_autoopened" => "true", "_autoclose" => "true");
+              if i == 0 {
+                for (k, v) in bridge.attrs {
+                  attrs.insert((*k).to_string(), (*v).to_string());
+                }
+              }
+              self.open_element(wrapper, Some(attrs), Some(&node_font))?;
+            }
+            return self.find_insertion_point_qsym(qsym, Some(last));
+          }
         }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"

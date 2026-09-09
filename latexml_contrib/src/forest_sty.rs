@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::digested::DigestedData;
 use latexml_package::prelude::*;
@@ -23,14 +23,15 @@ pub struct ForestTree {
 }
 
 thread_local! {
-  /// Trees read at `before_digest` time, moved into `FOREST_TREES` under a
-  /// serial id at digest time (`properties`), so that construction — which
-  /// happens later, for every whatsit of a paragraph in order — finds each
-  /// whatsit's OWN tree (a LIFO pop at construction time handed the first
-  /// `\fbox{\begin{forest}…}` the last tree read; sweep-63 guard).
+  /// The tree read at `before_digest` time, handed to the same whatsit's
+  /// `properties` a moment later (the two hooks of one `\begin{forest}` run
+  /// back to back, so this is the Rust form of a lexical shared by two Perl
+  /// closures). From there it rides on the whatsit as `Stored::Opaque`, so
+  /// construction — later, in whatever order deferred whatsits construct —
+  /// finds each whatsit's OWN tree (a LIFO pop at construction time once
+  /// handed the first `\fbox{\begin{forest}…}` the last tree read; sweep-63
+  /// guard).
   static PENDING_FOREST_TREES: RefCell<Vec<ForestTree>> = const { RefCell::new(Vec::new()) };
-  static FOREST_TREES: RefCell<HashMap<u64, ForestTree>> = RefCell::new(HashMap::default());
-  static FOREST_SERIAL: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
 fn is_token_char(t: &Token, ch: char) -> bool {
@@ -283,7 +284,6 @@ fn emit_forest_node(document: &mut Document, node: &ForestNode) -> Result<()> {
 LoadDefinitions!({
   // Per-conversion reset (a mid-body fatal can leave a tree behind).
   PENDING_FOREST_TREES.with(|c| c.borrow_mut().clear());
-  FOREST_TREES.with(|c| c.borrow_mut().clear());
   RequirePackage!("tikz");
   RequirePackage!("etoolbox");
   RawTeX!(r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]");
@@ -292,13 +292,12 @@ LoadDefinitions!({
   DefConstructor!(
     T_CS!("\\begin{forest}"), None,
     sub [document, _args, props] {
-      let id = match props.get("forest_tree") {
-        Some(Stored::String(s)) => to_string(*s).parse::<u64>().ok(),
-        _ => None,
-      };
-      let tree_opt = id.and_then(|id| FOREST_TREES.with(|c| c.borrow_mut().remove(&id)));
-      if let Some(tree) = tree_opt {
-        emit_forest_tree(document, &tree)?;
+      // The tree rides on the whatsit's own properties (`Stored::Opaque`),
+      // so deferred or nested whatsits construct in any order.
+      if let Some(Stored::Opaque(payload)) = props.get("forest_tree")
+        && let Some(tree) = payload.downcast_ref::<ForestTree>()
+      {
+        emit_forest_tree(document, tree)?;
       }
     },
     mode => "text",
@@ -311,9 +310,7 @@ LoadDefinitions!({
     properties => {
       let mut props = stored_map!();
       if let Some(tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
-        let id = FOREST_SERIAL.with(|c| { let n = c.get() + 1; c.set(n); n });
-        FOREST_TREES.with(|c| c.borrow_mut().insert(id, tree));
-        props.insert("forest_tree", Stored::String(pin(id.to_string())));
+        props.insert("forest_tree", Stored::Opaque(Rc::new(tree)));
       }
       Ok(props)
     }

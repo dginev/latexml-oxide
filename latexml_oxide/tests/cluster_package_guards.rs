@@ -16839,6 +16839,22 @@ c &= d
     assert_eq!(xml.matches("role=\"endnote\"").count(), 1, "{xml}");
   }
 
+  /// Batch 56bo (`Stored::Opaque`): an `{animateinline}` deferred inside a
+  /// float constructs after the animate that follows it in the source; its
+  /// `frame-count` rides on its own whatsit (the shared context in
+  /// `anim_ctx`), so construction order no longer matters (the old LIFO pop
+  /// at construction handed the float's animate the later count).
+  #[test]
+  fn animateinline_in_a_float_keeps_its_own_frame_count() {
+    let tex = "\\documentclass{article}\n\\usepackage{animate}\n\\begin{document}\n\\begin{figure}\\begin{animateinline}{2}A\\newframe B\\newframe C\\end{animateinline}\\caption{f}\\end{figure}\nText \\begin{animateinline}{2}X\\end{animateinline} more.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let fig = xml.find("<figure").unwrap();
+    let fig_end = xml[fig..].find("</figure>").unwrap() + fig;
+    assert!(xml[fig..fig_end].contains("frame-count=\"3\""), "{xml}");
+    assert!(xml[fig_end..].contains("frame-count=\"1\""), "{xml}");
+  }
+
   /// Batch 56bn review: a colour defined under a whitespace-padded name is
   /// stored and looked up under the same trimmed key (`def_color` and
   /// `color_sty::color_key` must not drift).

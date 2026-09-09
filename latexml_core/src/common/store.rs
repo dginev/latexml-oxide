@@ -154,6 +154,13 @@ pub enum Stored {
   KeyVals(Rc<KeyVals>),
   /// alignment template (for storing between macros, e.g. deluxetable)
   Template(Rc<crate::alignment::template::Template>),
+  /// A binding-private payload carried on a whatsit's properties (Perl's
+  /// `%props` held any scalar or reference): a parsed tree, a parser context.
+  /// Cheap to clone (`Rc`), compared by identity, never serialized to a dump,
+  /// downcast at the reading site (`Rc::downcast`/`Any::downcast_ref`). This
+  /// is what lets a constructor's `properties` hand its own `before_digest`
+  /// result to its replacement without a thread-local side table.
+  Opaque(Rc<dyn std::any::Any>),
 }
 
 impl fmt::Debug for Stored {
@@ -205,6 +212,7 @@ impl fmt::Debug for Stored {
       KeyVal(ref kv) => write!(f, "KeyVal[{kv:?}]"),
       KeyVals(ref kvs) => write!(f, "KeyVals[{kvs:?}]"),
       Template(ref t) => write!(f, "Template[{t}]"),
+      Opaque(_) => write!(f, "Stored::Opaque"),
     }
   }
 }
@@ -548,6 +556,13 @@ impl PartialEq for Stored {
       Template(ref t) => {
         if let Template(t2) = other {
           Rc::ptr_eq(t, t2)
+        } else {
+          false
+        }
+      },
+      Opaque(ref a) => {
+        if let Opaque(b) = other {
+          Rc::ptr_eq(a, b)
         } else {
           false
         }

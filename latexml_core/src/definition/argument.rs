@@ -463,6 +463,7 @@ impl From<Stored> for Result<ArgWrap> {
       // meaningful cases.
       Stored::None => ArgWrap::None,
       Stored::Mouth(_)
+      | Stored::Opaque(_)
       | Stored::Primitive(_)
       | Stored::Bool(_)
       | Stored::Parameter(_)
