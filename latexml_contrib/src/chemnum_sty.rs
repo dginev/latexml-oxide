@@ -263,6 +263,13 @@ fn chemnum_process_labels(
 }
 
 LoadDefinitions!({
+  // chemnum.sty:51-55 requires translations, chemgreek (its label alphabet;
+  // chemgreek.sty:486 defines the preamble-only `\activatechemgreekmapping`
+  // that documents call after `\usepackage{chemnum}` — undefined while the
+  // binding loaded neither) and psfrag. Batch 56ax.
+  RequirePackage!("translations");
+  RequirePackage!("chemgreek");
+  RequirePackage!("psfrag");
   reset_chemnum_state(0);
   model::add_tag_attribute("ltx:text", vec!["idref"]);
 

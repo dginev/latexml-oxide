@@ -16498,6 +16498,38 @@ c &= d
     assert!(xml.contains("A:VIIcD12:"), "{xml}");
   }
 
+  /// chemnum.sty:51-55 loads translations, chemgreek and psfrag; the binding
+  /// loaded none, so chemgreek's preamble-only `\activatechemgreekmapping`
+  /// (chemgreek.sty:486) was undefined after `\usepackage{chemnum}`. The
+  /// `default` mapping needs no extra font package. Batch 56ax.
+  #[test]
+  fn chemnum_loads_chemgreek() {
+    if !kpsewhich_has("chemgreek.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{chemnum}\n\\activatechemgreekmapping{default}\n\\begin{document}\n\\cmpd{a} and \\chemalpha\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ltx_cmpd"), "{xml}");
+  }
+
+  /// The xfrac binding raw-loads xfrac.sty; its old stub no-op'ed the KERNEL
+  /// `\DeclareInstance` (latex.ltx:8671) for every package loaded after it,
+  /// so tasks.sty:780's `alphabetize` instance never existed ("instance
+  /// unknown"; substances-index ×50, schulmathematik). Batch 56ay.
+  #[test]
+  fn xfrac_keeps_the_kernel_declareinstance() {
+    if !kpsewhich_has("tasks.sty") {
+      return;
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{xfrac}\n\\usepackage{tasks}\n\\begin{document}\n\\begin{tasks}(2)\\task A\\task B\\end{tasks}\n$\\sfrac{1}{2}$\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("is unknown"), "{stderr}");
+    assert!(xml.contains(">A<") && xml.contains(">B<"), "{xml}");
+    assert!(xml.contains("<XMApp"), "sfrac: {xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no
