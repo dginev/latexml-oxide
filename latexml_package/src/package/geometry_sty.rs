@@ -41,7 +41,16 @@ LoadDefinitions!({
                                            % (tudapub.cls L506 \g_ptxcd_headwidth_dim)
 \newif\ifGm@lset \newif\ifGm@rset \newif\ifGm@tset \newif\ifGm@bset
 \newif\ifGm@twset \newif\ifGm@thset
-\Gm@pw=\paperwidth \Gm@ph=\paperheight
+% The paper is kept PORTRAIT (\Gm@ppw/\Gm@pph) plus a landscape flag
+% (geometry.sty:34 \ifGm@landscape, :471-473 the `landscape` key only sets it);
+% \Gm@setpaper derives \Gm@pw/\Gm@ph from both, so `landscape,a4paper` and
+% `a4paper,landscape` agree (the eager swap of the KERNEL registers was
+% order-dependent and a later paper key clobbered it — elzcards root-causer).
+\newdimen\Gm@ppw \newdimen\Gm@pph
+\newif\ifGm@landscape
+\Gm@ppw=\paperwidth \Gm@pph=\paperheight
+\def\Gm@setpaper{\ifGm@landscape\Gm@pw=\Gm@pph\Gm@ph=\Gm@ppw\else\Gm@pw=\Gm@ppw\Gm@ph=\Gm@pph\fi}
+\Gm@setpaper
 \Gm@tw=\textwidth  \Gm@th=\textheight
 \Gm@doctw=\textwidth
 
@@ -53,16 +62,17 @@ LoadDefinitions!({
 
 %% ---- keys (family Gm, prefix KV) -----------------------------------------
 % Paper sizes
-\define@key{Gm}{paperwidth}{\Gm@pw=#1\relax}
-\define@key{Gm}{paperheight}{\Gm@ph=#1\relax}
-\define@key{Gm}{papersize}{\Gm@pair{#1}\Gm@pw=\Gm@vA\relax\Gm@ph=\Gm@vB\relax}
-\define@key{Gm}{letterpaper}[]{\Gm@pw=8.5in\Gm@ph=11in }
-\define@key{Gm}{legalpaper}[]{\Gm@pw=8.5in\Gm@ph=14in }
-\define@key{Gm}{executivepaper}[]{\Gm@pw=7.25in\Gm@ph=10.5in }
-\define@key{Gm}{a4paper}[]{\Gm@pw=210mm\Gm@ph=297mm }
-\define@key{Gm}{a5paper}[]{\Gm@pw=148mm\Gm@ph=210mm }
-\define@key{Gm}{b5paper}[]{\Gm@pw=176mm\Gm@ph=250mm }
-\define@key{Gm}{landscape}[]{\Gm@pw=\paperheight\Gm@ph=\paperwidth}
+\define@key{Gm}{paperwidth}{\Gm@ppw=#1\relax\Gm@setpaper}
+\define@key{Gm}{paperheight}{\Gm@pph=#1\relax\Gm@setpaper}
+\define@key{Gm}{papersize}{\Gm@pair{#1}\Gm@ppw=\Gm@vA\relax\Gm@pph=\Gm@vB\relax\Gm@setpaper}
+\define@key{Gm}{letterpaper}[]{\Gm@ppw=8.5in\Gm@pph=11in \Gm@setpaper}
+\define@key{Gm}{legalpaper}[]{\Gm@ppw=8.5in\Gm@pph=14in \Gm@setpaper}
+\define@key{Gm}{executivepaper}[]{\Gm@ppw=7.25in\Gm@pph=10.5in \Gm@setpaper}
+\define@key{Gm}{a4paper}[]{\Gm@ppw=210mm\Gm@pph=297mm \Gm@setpaper}
+\define@key{Gm}{a5paper}[]{\Gm@ppw=148mm\Gm@pph=210mm \Gm@setpaper}
+\define@key{Gm}{b5paper}[]{\Gm@ppw=176mm\Gm@pph=250mm \Gm@setpaper}
+\define@key{Gm}{landscape}[true]{\csname Gm@landscape#1\endcsname\Gm@setpaper}
+\define@key{Gm}{portrait}[true]{\ifx f#1\Gm@landscapetrue\else\Gm@landscapefalse\fi\Gm@setpaper}
 % Margins (each with the aliases geometry accepts)
 \define@key{Gm}{left}{\Gm@l=#1\relax\Gm@lsettrue}
 \define@key{Gm}{lmargin}{\Gm@l=#1\relax\Gm@lsettrue}

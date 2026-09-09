@@ -7299,3 +7299,21 @@ catcodes of the re-read are the document's. Witness: manyind/mindsample
 (oracle pdflatex-clean) 3 → 0. Guards `index_entry_passes_undefined_words_inert`,
 `index_sort_key_undefined_word_is_text`; KNOWN_PERL_ERRORS #83 sibling. Batch 56bp.
 
+### 223. A class-cleared option handler is undefined for a package's default option
+
+**Perl behavior**: `Package.pm:2481-2486` tests `lookupDefinition('\ds@'.$option)`,
+which returns the `\relax` primitive a class's `\ProcessOptions` left behind
+(`\let\ds@landscape\relax`, latex.ltx:18582), so `\usepackage[landscape,a4paper]
+{geometry}` runs `\relax` and geometry's `\DeclareOption*` default never sees the
+option.
+**Rust behavior**: `execute_option_internal` treats a handler `\let` to `\relax` as
+undefined (`x_equals(cs, \relax)`), as latex.ltx:18589 `\@use@ption`'s
+`\@ifundefined{ds@\CurrentOption}` does, so the package default runs. The option
+value and `\CurrentOption` are the argument tokens (standard catcodes, braces
+grouping; `option_argument_tokens`), not an all-OTHER explode.
+**Why**: the kernel's own test; a package that declares `\DeclareOption*` is meant to
+receive every option the class does not claim at that moment. Witness elzcards'
+`[landscape,letterpaper,vmargin={0mm,0mm}]{geometry}` (root-causer 2026-09-09).
+Guards `class_cleared_option_handler_reaches_the_package_default`,
+`package_option_value_keeps_its_braces`. Batch 56bq.
+

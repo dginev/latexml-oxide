@@ -1,0 +1,18 @@
+% witness: ijsra/ijsra (arXiv-class); regressed sweep 71->72 (batch 56bp)
+% oracle: pdflatex clean (ijsra oracle-clean per s71); engines: pdflatex
+% expect: 0 errors; setspaceenhanced loads with empty setspace raw-opts
+% status: RED
+% mechanism: latex.ltx:18521-18523 \@pass@ptions \gdef's \@raw@opt@setspace.sty
+%   to EMPTY even for an option-less \RequirePackage{setspace}; scrhack.sty:288
+%   forwards \use:c{@raw@opt@setspace.sty} into setspaceenhanced's option list.
+%   Rust content.rs:~633 `if !merged_opts.is_empty()` skips the empty define,
+%   so the undefined csname survives as a \relax token and (56bp: un-digested
+%   \protected@xdef option store) re-tokenizes to `\@raw@opt@setspace .sty`.
+\documentclass{article}
+\usepackage{setspace}
+\makeatletter
+\RequirePackage[\csname @raw@opt@setspace.sty\endcsname,byselectfont,keepfontsize]{setspaceenhanced}
+\makeatother
+\begin{document}
+x
+\end{document}

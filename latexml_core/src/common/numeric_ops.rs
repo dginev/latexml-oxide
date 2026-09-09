@@ -76,8 +76,45 @@ pub fn fixpoint(float: f64, unit_opt: Option<f64>) -> i64 {
 /// TeX: it tracks sign separately and floors the magnitude, i.e. truncation
 /// toward zero — exactly Rust's integer `/`.
 pub fn fixpoint_unit(float: f64, num: i64, den: i64) -> i64 {
+  fixpoint_unit_checked(float, num, den).unwrap_or_else(|sign| sign * MAX_DIMEN)
+}
+
+/// TeX's `max_dimen` (tex.web §421: 2^30 − 1 sp = 16383.99998pt), the bound
+/// `arith_error` clamps a scanned dimension to ("Dimension too large", §460).
+/// LaTeXML keeps i64 headroom above it for pgf/tikz intermediates, so the
+/// clamp fires only where the value would not even fit an i64 — the
+/// pathology that wrapped to garbage (chinesechess.sty:2016-2020's
+/// `\coffin_scale:cnn{\dim_ratio:nn{…}{0}}`, batch 56bq).
+pub const MAX_DIMEN: i64 = 0x3FFF_FFFF;
+
+/// [`fixpoint_unit`] that reports an i64 overflow as `Err(sign)` instead of
+/// wrapping the `i128` product (the caller raises TeX's arith_error).
+pub fn fixpoint_unit_checked(float: f64, num: i64, den: i64) -> Result<i64, i64> {
   let fix = kround(float * UNITY_F64) as i128;
-  (fix * num as i128 / den as i128) as i64
+  let v = fix * num as i128 / den as i128;
+  i64::try_from(v).map_err(|_| if v < 0 { -1 } else { 1 })
+}
+
+/// TeX's `infinity` for integers (tex.web §445: 2^31 − 1), the `\numexpr`/
+/// `\multiply` counterpart of [`MAX_DIMEN`].
+pub const MAX_INTEGER: i64 = 0x7FFF_FFFF;
+
+/// A product that left the i64 range (an infinite or saturated `f64→i64`
+/// cast): TeX's arith_error ("Arithmetic overflow", tex.web §105-108) clamps
+/// to ±`ceiling` — `MAX_DIMEN` for a dimension, `MAX_INTEGER` for a count —
+/// never a wrapped value.
+pub fn clamp_arith_overflow(product: f64, ceiling: i64) -> i64 {
+  if product.is_finite() && product.abs() < i64::MAX as f64 {
+    product as i64
+  } else {
+    crate::Warn!(
+      "expected",
+      "<number>",
+      "Arithmetic overflow.",
+      "clamped (tex.web §105-108)"
+    );
+    if product < 0.0 { -ceiling } else { ceiling }
+  }
 }
 
 pub trait NumericOps {
@@ -133,8 +170,14 @@ pub trait NumericOps {
   // handle Float multipliers correctly, then truncates.
   fn multiply<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {
-    Self::new((self.value_of() as f64 * other.value_f64()) as i64)
+    Self::new(clamp_arith_overflow(
+      self.value_of() as f64 * other.value_f64(),
+      Self::arith_ceiling(),
+    ))
   }
+  /// The arith_error clamp bound: `max_dimen` for dimensions and glue,
+  /// TeX's integer `infinity` for counts (overridden by `Number`).
+  fn arith_ceiling() -> i64 { MAX_DIMEN }
   /// Truncating division
   fn divide<T: NumericOps>(self, other: T) -> Self
   where Self: Sized {

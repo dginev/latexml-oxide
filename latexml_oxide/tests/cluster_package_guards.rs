@@ -16923,6 +16923,100 @@ c &= d
     assert!(xml.contains("key=\"\\AB\""), "{xml}");
   }
 
+  /// Batch 56bq: a scanned dimension past the i64 range is TeX's arith_error
+  /// (tex.web §460 "Dimension too large" → max_dimen), not a wrapped i128
+  /// product (`100899720527872.0pt`; chinesechess.sty:2016-2020's coffin
+  /// scale by a `\dim_ratio:nn` with a zero box dimension). Conservative:
+  /// the clamp fires only past the i64 range — LaTeXML's headroom above
+  /// max_dimen (pgf intermediates re-scanned as `<factor><internal dimen>`)
+  /// stays, so `200000000000\dimen0` at -1pt prints as computed.
+  #[test]
+  fn dimension_overflow_clamps_to_max_dimen() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\dimen0=-16383pt\n\\dimen2=2000000000000000\\dimen0\nB=[\\the\\dimen2]\\par\n\\dimen1=\\dimexpr\\dimen0*100000000000\\relax\nA=[\\the\\dimen1]\\par\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("B=[-16383.99998pt]"), "{xml}");
+    assert!(xml.contains("A=[-16383.99998pt]"), "{xml}");
+  }
+
+  /// Batch 56bq: `\@raw@opt@<file>` exists after an option-less load too
+  /// (latex.ltx:18521-18523 `\gdef`s it empty), so scrhack.sty:284-293's
+  /// forwarding of `\use:c{@raw@opt@setspace.sty}` into setspaceenhanced's
+  /// options is an empty first option, not the name `\@raw@opt@setspace .sty`
+  /// (ijsra, sweep 72).
+  #[test]
+  fn raw_option_record_exists_for_an_optionless_load() {
+    let tex = "\\documentclass{article}\n\\usepackage{setspace}\n\\makeatletter\n\\RequirePackage[\\csname @raw@opt@setspace.sty\\endcsname,byselectfont,keepfontsize]{setspaceenhanced}\n\\edef\\x{\\@ifundefined{@raw@opt@setspace.sty}{UNDEF}{DEF}}\\typeout{RAW=\\x}\n\\makeatother\n\\begin{document}\nx\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("RAW=DEF"), "{stderr}");
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
+  /// Batch 56bq: a package option whose handler the CLASS left `\let` to
+  /// `\relax` (`landscape`, `a4paper` after article's `\ProcessOptions`) is
+  /// undefined for latex.ltx `\@use@ption`'s `\@ifundefined`, so the
+  /// package's `\DeclareOption*` default sees it (geometry swallowed both;
+  /// Perl shares).
+  #[test]
+  fn class_cleared_option_handler_reaches_the_package_default() {
+    let tex = "\\begin{filecontents}[overwrite]{lxoptprobe.sty}\n\\DeclareOption*{\\typeout{OPT=[\\CurrentOption]}}\n\\ProcessOptions*\n\\end{filecontents}\n\\documentclass{article}\n\\usepackage[landscape,a4paper,x={a,b}]{lxoptprobe}\n\\begin{document}\nx\n\\end{document}\n";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for opt in ["OPT=[landscape]", "OPT=[a4paper]", "OPT=[x={a,b}]"] {
+      assert!(stderr.contains(opt), "{opt} missing: {stderr}");
+    }
+  }
+
+  /// Batch 56bq: geometry's `landscape` is a flag applied to the portrait
+  /// paper (geometry.sty:34/471-473), so `landscape,a4paper` and
+  /// `a4paper,landscape` agree; the eager swap of the kernel registers was
+  /// order-dependent (elzcards root-causer).
+  #[test]
+  fn geometry_landscape_is_order_independent() {
+    let mk = |opts: &str| {
+      format!(
+        "\\documentclass{{article}}\n\\usepackage[{opts}]{{geometry}}\n\\begin{{document}}\n\\makeatletter W=[\\the\\Gm@pw] H=[\\the\\Gm@ph]\\makeatother\n\\end{{document}}\n"
+      )
+    };
+    let (e1, x1) = convert(&mk("landscape,a4paper"), true);
+    let (e2, x2) = convert(&mk("a4paper,landscape"), true);
+    assert_eq!(error_count(&e1) + error_count(&e2), 0, "{e1}\n{e2}");
+    assert!(x1.contains("W=[845.04684pt] H=[597.50787pt]"), "{x1}");
+    assert!(x2.contains("W=[845.04684pt] H=[597.50787pt]"), "{x2}");
+  }
+
+  /// Batch 56bq: a package option's value keeps its argument tokens
+  /// (latex.ltx:18514), braces grouping — `vmargin={3mm,7mm}` reaches
+  /// `\setkeys` as one pair instead of splitting at its comma with OTHER
+  /// braces ("Missing number" ×4; elzcards root-causer).
+  #[test]
+  fn package_option_value_keeps_its_braces() {
+    let tex = "\\documentclass{article}\n\\usepackage[vmargin={3mm,7mm}]{geometry}\n\\begin{document}\n\\makeatletter T=[\\the\\Gm@t] B=[\\the\\Gm@b]\\makeatother\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Missing number"), "{stderr}");
+    assert!(xml.contains("T=[8.53581pt] B=[19.91692pt]"), "{xml}");
+  }
+
+  /// Batch 56bq: a bibliography issued inside a pgf node (xebaposter's
+  /// References `\headerbox`) floats out of the drawing to the document,
+  /// as from a plain minipage, because nothing else in the box would be
+  /// stranded; `ltx:bibliography` is not Flow (LaTeXML-structure.rnc:677).
+  #[test]
+  fn bibliography_in_a_drawing_floats_to_the_document() {
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\\begin{tikzpicture}\n\\node[text width=5cm]{%\n  \\begin{thebibliography}{1}\n  \\bibitem{a} Foo bar baz.\n  \\end{thebibliography}%\n};\n\\end{tikzpicture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let bib = xml.find("<bibliography").expect("a bibliography");
+    let svg_end = xml.rfind("</svg:svg>").unwrap_or(0);
+    assert!(
+      bib > svg_end,
+      "the bibliography is still inside the drawing: {xml}"
+    );
+    assert!(xml.contains("bibitem"), "{xml}");
+  }
+
   /// pstricks coordinates (Perl pstricks_support.sty.ltxml:85-113): a bare
   /// number is scaled by `\psxunit`/`\psyunit`, an explicit dimension stands
   /// as is, and a node reference is not a coordinate (placed at the origin, no

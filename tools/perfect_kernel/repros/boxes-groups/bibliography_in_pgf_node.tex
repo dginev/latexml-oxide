@@ -1,0 +1,20 @@
+% witness: xebaposter/poster  (\headerbox{References} -> posterbox minipage -> pgf node -> svg:foreignObject inside svg:g)
+% oracle: pdflatex (clean; typesets the bibliography inside the References box)
+% engines: pdflatex
+% expect: 0 Error:/Fatal: lines; ltx:bibliography placed at a schema-legal parent (NOT inside svg/ltx:block)
+% status: RED  (identical on b56ac AND Perl LaTeXML 0.8.8 -> SHARED)
+% emits today: Error:malformed:ltx:bibliography <ltx:bibliography> isn't allowed in <ltx:block>
+% mechanism: bibliography (BackMatter.class) is only legal under a sectional/document/sidebar parent;
+%   trapped in a pgf-node foreignObject (a drawing, svg:g) insert_block cannot hoist it out
+%   (base_utilities.rs:4117 flow() gate stops at svg:g) so _CaptureBlock_ falls back to ltx:block.
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node[text width=5cm]{%
+  \begin{thebibliography}{1}
+  \bibitem{a} Foo bar baz.
+  \end{thebibliography}%
+};
+\end{tikzpicture}
+\end{document}

@@ -22,7 +22,7 @@ use crate::{
     mudimension::MuDimension,
     muglue::MuGlue,
     number::Number,
-    numeric_ops::{NumericOps, UNITY, fixpoint, fixpoint_unit},
+    numeric_ops::{MAX_DIMEN, NumericOps, UNITY, fixpoint, fixpoint_unit, fixpoint_unit_checked},
     object::Object,
     store::Stored,
   },
@@ -3017,7 +3017,23 @@ pub fn read_dimension() -> Result<Dimension> {
       },
     };
     let d_signed = if is_negative { -d } else { d };
-    Ok(Dimension::new(fixpoint_unit(d_signed, num, den)))
+    // tex.web §460 attach_sign: `arith_error` → "Dimension too large", the
+    // value clamped to max_dimen. Raised here only past the i64 range (the
+    // i128 product wrapped to garbage before: `200000000000\dimen0`).
+    Ok(Dimension::new(
+      match fixpoint_unit_checked(d_signed, num, den) {
+        Ok(v) => v,
+        Err(sign) => {
+          Warn!(
+            "expected",
+            "<dimen>",
+            "Dimension too large.",
+            "clamped to max_dimen (tex.web §460)"
+          );
+          sign * MAX_DIMEN
+        },
+      },
+    ))
   } else {
     // Perl Gullet.pm:972: the type is named in the primary message
     // ("(Dimension)") and "while processing X" is a separate detail

@@ -4113,7 +4113,15 @@ pub fn insert_block(
     }
     let tail_tags: Vec<SymStr> = tail.iter().map(document::get_node_qname).collect();
     // A text container: holds paragraphs, or text itself (`ltx:p`, an
-    // inline block). A drawing (`ltx:picture`, `svg:g`) holds neither.
+    // inline block). A drawing (`ltx:picture`, `svg:g`) holds neither —
+    // backmatter trapped in a drawing (xebaposter's References `\headerbox`
+    // is a pgf node → `svg:foreignObject`) still floats to the enclosing flow
+    // exactly as from a plain minipage, but never at the cost of stranding
+    // TEXT: the climb crosses a drawing only when no kept node carries
+    // non-whitespace text (a graphic in the box is drawing content and stays
+    // where it is; Perl's `adjustBackmatterElement` cannot cross at all —
+    // `ltx:bibliography` isn't allowed in `ltx:block`, SHARED; batch 56bq).
+    let kept_empty = kept.iter().all(|n| n.get_content().trim().is_empty());
     let flow = |n: &Node| {
       document::can_contain(n, "#PCDATA")
         || with(document::get_node_qname(n), |t| {
@@ -4131,7 +4139,7 @@ pub fn insert_block(
         placed = true;
         break;
       }
-      if !flow(&ancestor) {
+      if !flow(&ancestor) && !kept_empty {
         break;
       }
       match ancestor.get_parent() {

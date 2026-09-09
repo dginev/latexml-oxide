@@ -630,7 +630,13 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       }
       out
     });
-    if !merged_opts.is_empty() {
+    // Defined for EVERY load, an option-less one included: latex.ltx:18521-
+    // 18523 `\@pass@ptions` `\gdef`s `\@raw@opt@<file>` empty when no record
+    // exists, and scrhack.sty:284-293 forwards `\use:c{@raw@opt@setspace.sty}`
+    // as the first option of setspaceenhanced — undefined, the csname became
+    // `\relax`, survived the `\protected@xdef` store and re-read as the option
+    // `\@raw@opt@setspace .sty` (ijsra, sweep 72; batch 56bq).
+    {
       let raw_opt_cs = T_CS!(s!("\\@raw@opt@{}", filename));
       let joined = merged_opts.join(",");
       // Standard-catcode tokenization (as `\@classoptionslist` above): the
@@ -2136,28 +2142,45 @@ fn execute_option_internal(option: SymStr, keysets: &[&str]) -> Result<bool> {
       Stored::String(arena::pin(value.trim())),
       Some(Scope::Global),
     );
-    digest(Tokens!(
-      T_CS!(s!("\\{qname}")),
-      T_BEGIN!(),
-      ExplodeText!(&value),
-      T_END!()
-    ))?;
+    // The value is the option's ARGUMENT tokens (latex.ltx:18514 stores them
+    // by `\protected@xdef`): standard catcodes, braces group, and keyval
+    // strips one brace level (`\KV@@sp@def`) — `vmargin={0mm,0mm}` hands
+    // `0mm,0mm` to the key, not `{0mm,0mm}` with OTHER braces (geometry
+    // package options gave "Missing number" ×4; elzcards root-causer).
+    let bare = value
+      .strip_prefix('{')
+      .and_then(|v| v.strip_suffix('}'))
+      .unwrap_or(&value);
+    let mut call = vec![T_CS!(s!("\\{qname}")), T_BEGIN!()];
+    call.extend(option_argument_tokens(bare).unlist());
+    call.push(T_END!());
+    digest(Tokens::new(call))?;
     return Ok(true);
   }
 
   let cs = T_CS!(arena::with(option, |opt| s!("\\ds@{opt}")));
-  if lookup_definition(&cs)?.is_some() {
+  // latex.ltx `\@use@ption`: `\@ifundefined{ds@<option>}` — a handler
+  // `\let` to `\relax` (the class's `landscape`/`a4paper` after its own
+  // `\ProcessOptions`, cleared below) counts as UNDEFINED, so the package's
+  // `\DeclareOption*` default runs for it (geometry's `landscape,a4paper`
+  // were silently swallowed as "declared"; Perl Package.pm:2481-2486 retains
+  // the swallow — Rust matches `\@ifundefined`, OXIDIZED_DESIGN_DIVERGENCES
+  // #223).
+  if lookup_definition(&cs)?.is_some() && !x_equals(&cs, &T_RELAX!()) {
     // Perl Package.pm L2482: `DefMacroI('\CurrentOption', undef, $option)` —
     // tokenizes `$option` via Tokens(Explode($option)) so letters get
     // catcode LETTER and others OTHER. Babel's `\ifx\CurrentOption\bbl@tempa`
     // (where `\bbl@tempa{frenchb}` produces LETTER tokens) only matches when
-    // our `\CurrentOption` body has the same catcodes — packing the whole
-    // option string into one OTHER-catcode "string" token would make the
-    // \ifx silently false. Use SymExplodeText! to split per-character.
+    // our `\CurrentOption` body has the same catcodes. Real LaTeX's
+    // `\CurrentOption` is the ARGUMENT tokens (latex.ltx:18514), so braces
+    // GROUP: geometry's `\DeclareOption*{…\CurrentOption}` → `\setkeys*{Gm}
+    // {vmargin={0mm,0mm}}` needs them (OTHER braces split the pair at its
+    // comma: "Missing number" ×4). Standard-catcode tokenization keeps
+    // babel's LETTER match and the braces.
     def_macro(
       T_CS!("\\CurrentOption"),
       None,
-      Tokens!(SymExplodeText!(option)),
+      option_argument_tokens(&arena::to_string(option)),
       None,
     )?;
 
@@ -2180,6 +2203,22 @@ fn execute_option_internal(option: SymStr, keysets: &[&str]) -> Result<bool> {
   } else {
     Ok(false)
   }
+}
+
+/// An option's ARGUMENT tokens (latex.ltx:18514 `\@pass@ptions` stores them by
+/// `\protected@xdef`): standard catcodes — letters LETTER (babel's `\ifx
+/// \CurrentOption\bbl@tempa` match), braces GROUP (`vmargin={0mm,0mm}` is
+/// one pair for `\setkeys`) — without the tokenizer's end-of-line space,
+/// which is not part of the argument (`landscape␣` matched no key).
+pub fn option_argument_tokens(text: &str) -> Tokens {
+  let mut toks = crate::mouth::tokenize(TeXString::assembled(text.to_string())).unlist();
+  while toks
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    toks.pop();
+  }
+  Tokens::new(toks)
 }
 
 fn keyval_option_qname(option: SymStr, keysets: &[&str]) -> Option<(String, String)> {
@@ -2205,11 +2244,11 @@ fn keyval_option_qname(option: SymStr, keysets: &[&str]) -> Option<(String, Stri
 
 fn execute_default_option_internal(option: SymStr) -> Result<bool> {
   // Perl Package.pm L2494: `DefMacroI('\CurrentOption', undef, $option)`.
-  // Same catcode-faithful tokenization as execute_option_internal.
+  // Same argument-token spelling as execute_option_internal.
   def_macro(
     T_CS!("\\CurrentOption"),
     None,
-    Tokens!(SymExplodeText!(option)),
+    option_argument_tokens(&arena::to_string(option)),
     None,
   )?;
   digest(T_CS!("\\default@ds"))?;

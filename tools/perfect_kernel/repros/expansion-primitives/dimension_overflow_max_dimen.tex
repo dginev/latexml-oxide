@@ -1,0 +1,12 @@
+% witness: chinesechess.sty coffin scaling (scan_dimen coefficient x internal dimension)
+% oracle: pdflatex -> "! Dimension too large." result clamped to 16383.99998pt (max_dimen)
+% engines: pdflatex TL2025
+% expect: kernel clamps overflowing scan_dimen to max_dimen + arith_error, no garbage, no panic
+% status: RED  (today: B=[100899720527872.0pt] garbage from i128->i64 truncation)
+% mechanism: fixpoint_unit numeric_ops.rs:80 (fix*num/den) as i64 TRUNCATES (wraps); read_dimension gullet.rs:3020
+\documentclass{article}
+\begin{document}
+\dimen0=-1pt
+\dimen2=200000000000\dimen0
+B=[\the\dimen2]\par
+\end{document}
