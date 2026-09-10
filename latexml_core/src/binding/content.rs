@@ -2206,12 +2206,17 @@ fn execute_option_internal(option: SymStr, keysets: &[&str]) -> Result<bool> {
 }
 
 /// An option's ARGUMENT tokens (latex.ltx:18514 `\@pass@ptions` stores them by
-/// `\protected@xdef`): standard catcodes — letters LETTER (babel's `\ifx
-/// \CurrentOption\bbl@tempa` match), braces GROUP (`vmargin={0mm,0mm}` is
-/// one pair for `\setkeys`) — without the tokenizer's end-of-line space,
-/// which is not part of the argument (`landscape␣` matched no key).
+/// `\protected@xdef`): letters LETTER (babel's `\ifx\CurrentOption\bbl@tempa`
+/// match), braces GROUP (`vmargin={0mm,0mm}` is one pair for `\setkeys`), and
+/// `@` a LETTER too — the list crossed a string, and a control word in it
+/// came from package/class code where `@` is a letter (xebaposter.cls passes
+/// `paperwidth=\xebaposter@finalpaperwidth`, a register token, to geometry;
+/// re-read with `@` OTHER it split into the undefined `\xebaposter`; the
+/// `\@raw@opt@` writer makes the same choice) — without the tokenizer's
+/// end-of-line space, which is not part of the argument (`landscape␣` matched
+/// no key).
 pub fn option_argument_tokens(text: &str) -> Tokens {
-  let mut toks = crate::mouth::tokenize(TeXString::assembled(text.to_string())).unlist();
+  let mut toks = crate::mouth::tokenize_internal(TeXString::assembled(text.to_string())).unlist();
   while toks
     .last()
     .is_some_and(|t| t.get_catcode() == Catcode::SPACE)

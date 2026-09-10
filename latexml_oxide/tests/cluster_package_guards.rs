@@ -16953,6 +16953,19 @@ c &= d
     assert!(xml.contains("<p>x</p>"), "{xml}");
   }
 
+  /// Batch 56br: an option value carrying a control word from package/class
+  /// code (`@` a letter there — xebaposter.cls passes the register
+  /// `\xebaposter@finalpaperwidth` to geometry) survives the string round trip
+  /// of the option store; re-read with `@` OTHER it split into an undefined
+  /// `\xebaposter` (sweep 73).
+  #[test]
+  fn option_value_keeps_an_at_name_token() {
+    let tex = "\\documentclass{article}\n\\makeatletter\\newlength\\my@w\\setlength\\my@w{5in}\n\\usepackage[paperwidth=\\my@w,paperheight=7in]{geometry}\n\\begin{document}\nW=[\\the\\Gm@pw]\\makeatother\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("W=[361.34999pt]"), "{xml}");
+  }
+
   /// Batch 56bq: a package option whose handler the CLASS left `\let` to
   /// `\relax` (`landscape`, `a4paper` after article's `\ProcessOptions`) is
   /// undefined for latex.ltx `\@use@ption`'s `\@ifundefined`, so the
