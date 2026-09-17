@@ -88,8 +88,49 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
 ## Tasks (priority order)
 
 Round 10 (N1–N5) is merged (`b879e165cc`, verified 2026-09-17; the review's
-fixes landed on top in batch 56bu — see LEDGER). No open tasks are queued for
-round 11 yet; the orchestrator will append them here.
+fixes landed on top in batch 56bu — see LEDGER; two lessons from that review:
+cite the exact line of the construct you name, and never `def_autoload` a
+package macro that LaTeX and Perl would report as undefined).
+
+### N1 — forest: node keys become structure (D10, native tree model)
+Today `parse_forest_tokens` keeps a node's key list (`[label, edge label={…},
+tier=…, for tree={…}]`) only as an opaque string and `\forestset`/`\bracketset`
+are `\relax`. Faithful next step of the native model (DIFFICULT_CASES §D10
+shape 2): (a) parse the comma list with pgfkeys' own `key=value`/`{…}` rules
+(forest.sty `\forest@node@parseoptions`, cite the line) into per-node keys;
+(b) map the LABEL-affecting keys that have a structural meaning to the emitted
+`<ltx:item>`: `edge label` → a child `<ltx:text class="ltx_forest_edge_label">`
+(forest-doc §3.3, `forest.sty` `edge label` key), `tier` and `phantom` →
+`class="ltx_forest_tier_<name>"` / `ltx_forest_phantom` (phantom nodes emit no
+label), `name=` → `xml:id="forest.<name>"` so `\node` references from a
+following `\draw` at least resolve; (c) `\forestset{…}`/`\bracketset{…}` and
+`for tree={…}` are recorded as tree-wide defaults and applied per node before
+the node's own keys (the precedence forest.sty documents). Everything else
+stays ignored (no `\pgfmath`, no layout). Witnesses: forest-quickstart,
+fragoli_doc, milsymb, forest-doc — error counts must not rise; guard
+`forest_node_keys_become_structure` with a 3-node tree using edge label,
+phantom, name and `for tree`.
+
+### N2 — forest: `\Forest*`/`{forest*}` grouping and the `forest` library preambles
+`\Forest*` and the starred environment run in `\forest@group@env` (forest.sty:
+8511 and the `{forest*}` definition — cite), which matters for a tree used
+INLINE (`\Forest*{…}` inside a sentence): emit the tree as an inline block
+(`<ltx:inline-block class="ltx_forest_tree">`) for the starred forms and a
+block for the plain ones. Also handle the `\useforestlibrary{…}` and
+`\forestapplylibrarydefaults{…}` preambles (`forest-lib-<name>.sty`: linguistics,
+edges) as no-ops that RECORD the library name in a document property, and
+make the linguistics library's `sn edges`/`nice empty nodes` keys parse (N1's
+key parser must accept them). Guard: starred tree inline in a paragraph, plain
+tree as a block, `\useforestlibrary{linguistics}` + `[S [NP] [VP]]` clean.
+
+### N3 — chemnum/chemfig follow-ups from round 10
+`\refcmpd` now emits `<ltx:ref>`; make the compound DECLARATION carry
+`xml:id="cmpd.<label>"` on an element the post-processor's ref resolution
+accepts (check `LaTeXML-inline.rnc` — `ltx:text` with `xml:id` is fine; verify
+the Scan/CrossRef post stage links it: run `latexml_oxide --dest=x.html` on the
+guard doc and look for a resolved `href`). If it does not resolve, switch the
+declaration to the element the post stage indexes. Guard: the round-10
+`chemnum_compound_numbering` doc converted to HTML has an `<a href="#cmpd.first">`.
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 11 only)
 
