@@ -136,6 +136,23 @@ pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
   add_binding_names(latexml_package::binding_names());
 }
 
+/// Everything a fresh `Core` needs before its first `input_definitions`:
+/// the resolution chain above plus contrib's (name, ext) pairs. `Core::new`
+/// resets the State, which starts with NO dispatch, so every site that
+/// constructs an engine and loads pools must call this — the converter's
+/// `initialize_session` and the post-only recursive bibliography session
+/// (`bib_session::ensure_session`); omitting it there once left `TeX.pool`
+/// "missing" and every post-only bibliography empty.
+///
+/// contrib (memoir / siamltex / scrbook / etc.) is registered unconditionally
+/// because the canonical setup for both `latexml_oxide` and `cortex_worker`
+/// loads it — downstream embedders that replace the dispatchers can register
+/// their own (name, ext) slice the same way via `add_binding_names`.
+pub(crate) fn install_default_binding_chain(extra: Option<BindingDispatcher>) {
+  install_binding_dispatch(extra);
+  add_binding_names(latexml_contrib::binding_names());
+}
+
 pub struct ConversionResponse {
   pub result:      Option<String>,
   pub log:         String,
@@ -183,14 +200,7 @@ impl Converter {
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.
-    install_binding_dispatch(self.opts.extra_bindings_dispatch.clone());
-    // Also expose contrib's bindings (memoir / siamltex / scrbook / etc.)
-    // so they participate in the same resolution pool. We unconditionally
-    // register latexml_contrib here because the canonical setup for both
-    // `latexml_oxide` and `cortex_worker` binaries loads it — downstream
-    // embedders that replace the dispatchers can register their own
-    // (name, ext) slice the same way via `add_binding_names`.
-    add_binding_names(latexml_contrib::binding_names());
+    install_default_binding_chain(self.opts.extra_bindings_dispatch.clone());
     // Prepare LaTeXML object — load mode-specific pool + user preloads.
     // Perl: $self->initializeState($mode.".pool", @{$$self{preload} || []})
     // For `--bibtex` (mode = BibTeX), Perl `Common/Config.pm:406`

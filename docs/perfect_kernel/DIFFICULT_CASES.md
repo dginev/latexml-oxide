@@ -330,7 +330,36 @@ the mechanism, its witnesses, and the disposition.
   `TeX.pool`/`BibTeX.pool` were "missing", the preloaded class was read raw against an
   empty kernel (100 errors → TooManyErrors) and every bibtex/biblatex-fallback
   bibliography came back empty. Witness aomart/aomsample (24 references).
-- **Empty-body XML while "No obvious problems" (157 docs under 3,000 bytes)** — root cause
-  per mechanism in progress (`~/data/pk_agents/w22/empty_xml/`); examples
-  tools/tools-overview (title only), frontespizio/example* (`<titlepage><p/>`),
-  comment/t1test, textpos/niepraschk-eso-pic, math-into-latex-4/babybeamer*, ltx-talk/*.
+- **Empty-body XML while "No obvious problems" (157 docs under 3,000 bytes) — root-caused, no RUST-ONLY drop.**
+  Classifier (`~/data/pk_agents/w22/empty_xml/NOTES.md`): 76 docs are complete and simply short
+  (ltx-talk, xassoccnt, tagpdf, babybeamer, ltnews18 …); 36 have a PDF with fewer than 30 words;
+  13 = uni-titlepage's `\TitlePageStyle` re-`\renewcommand`s `\maketitle` from the document body,
+  which both engines refuse for a locked binding CS (Perl State.pm:511-517; Rust state.rs:1290-1307)
+  so `[author=…]` typesets as text (SHARED, byte-identical repro `probes/mt.tex`);
+  13 render through an external resource LaTeXML cannot see (frontespizio's separately compiled
+  `\jobname-frn.eps`, arabi `\special{ps:}`, textpos/eso-pic absolute boxes, newpax PDF overlays,
+  pygmentex shell-out, nomencl `.nls`); 7 are bibliography-only bodies; tools/tools-overview
+  accumulates its content in `\toks@` and emits it from a user-redefined `\enddocument`, which the
+  magic `\end{document}` never calls — the SAME mechanism as ltnews above (SHARED, repro
+  `probes/toks.tex`). Disposition: the `\enddocument`/`\document` redefinition family is the one
+  surpass candidate (three witnesses now: ltnews, l3news, tools-overview); the rest are not losses
+  or are out of scope (D4/D7).
+- **Bibliography-only bodies (shipunov/rusnat-ex1-ru, bookshelf/spines, biblatex-* samples): not a core-XML loss.**
+  The body is `\nocite{*}` + `\bibliography{…}`; the core XML carries the `<bibliography files=…>`
+  placeholder and the reference list is a POST product — judge these on the HTML root
+  (`post_sweep.sh`, batch 56bw), never on the core XML.
+- **`\DocInput{<file>.sty}` of a package with a compiled binding typesets nothing (frankenstein ×11, SHARED).**
+  A body-level input of a `.sty` routes to `input_definitions(notex)` (content.rs:1706) and the
+  loaded binding short-circuits the raw typeset (:1723); Perl `loadTeXDefinitions` drops the doc
+  body the same way (Package.pm:2298). Rust already typesets an UNBOUND `.sty`'s prose
+  (probe `~/data/pk_agents/w22/empty2/probes/docinput_min.tex`), so the gap is the bound case
+  only; forcing raw content for bound files was litigated at content.rs:1725-1740 (HIGH risk).
+  Parked; frankenstein is the only bundle in the corpus that `\DocInput`s a `.sty`.
+- **Not losses (agent-verified, `~/data/pk_agents/w22/recall_mid3/NOTES.md`):** geradwp (the shipped
+  PDF is the class documentation, the `.tex` is a 2-page template); milsymb (symbol tables are
+  PythonTeX `\pyc` output — D7); skeldoc (enotez endnote bodies come back from the `.aux` on a
+  second run; Perl caches `\write` by filename and never re-inputs the aux either — SHARED,
+  needs a two-pass or an enotez binding); pdfreview (overlaid source PDF pages); elsdoc
+  (`\includeclip` of sample-manuscript PDFs; only rvdtx's `\setbox\topbox` title block is a
+  real ~1% loss).
+- **blindtext is English where the PDF is Latin (assoccnt/xassoccnt examples, Perl-origin, fixed 56bx, #228).**

@@ -100,6 +100,13 @@ LoadDefinitions!({
   // (undefined:\@ehd). Help text is log-only (not rendered) but must exist.
   // Faithful port; Perl defines it via the kernel.
   DefMacro!("\\@ehd", r"You're in trouble here.  \space\@ehc");
+  // latex.ltx:8956 `\gdef\@eha{Your command was ignored. …}` — the help text
+  // behind `\@notprerr` (latex.ltx:9019) and `\@latex@error{…}\@eha` sites;
+  // `\GenericError` expands the help slot, so it must exist like `\@ehd`.
+  DefMacro!(
+    "\\@eha",
+    r"Your command was ignored.\MessageBreak Type  I <command> <return>  to replace it with another command,\MessageBreak or  <return>  to continue without it."
+  );
 
   // Perl L40-47: gobble/firstof/secondof macros
   def_macro_noop("\\@gobble{}")?;

@@ -671,6 +671,16 @@ pub(crate) fn load() -> Result<()> {
 
   // Perl L5511: \@preamblecmds collects \@onlypreamble entries; empty by default
   def_macro_noop("\\@preamblecmds")?;
+  // latex.ltx:9019 `\def\@notprerr{\@latex@error{Can be used only in
+  // preamble}\@eha}`. `\document` (latex.ltx:9521-9522) runs
+  // `\gdef\do#1{\global\let#1\@notprerr}\@preamblecmds`, and because
+  // `\@preamblecmds` is itself `\@onlypreamble` (latex.ltx:1228) it ends up
+  // `\let` to `\@notprerr` — the probe lppl.tex:44 uses
+  // (`\ifx\@preamblecmds\@notprerr`) to tell "inside a running document"
+  // from "standalone"; the standalone branch `\let\endLPPLicense\enddocument`
+  // ends the whole document at the license (beameruserguide lost 16 of 26
+  // chapters). Perl defines neither (SHARED); OXIDIZED_DESIGN_DIVERGENCES #226.
+  DefMacro!("\\@notprerr", "\\@latex@error{Can be used only in preamble}\\@eha");
 
   // Perl L5536-5539: q-tokens used by \@notdefinable error formatting and by
   // various pattern-quoting expansion paths (e.g. \GenericWarning padding).

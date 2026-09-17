@@ -16977,6 +16977,68 @@ c &= d
     assert!(xml.contains("<break"), "{xml}");
   }
 
+  /// Batch 56bx: a `filecontents` capture ends at `\end{<current
+  /// environment>}` (latex.ltx:19047), so a wrapper environment that runs the
+  /// bare `\filecontents*` command (latexdemo.sty:97-101 `DefineCode`) ends at
+  /// its own `\end`; the fixed `\end{filecontents*}` marker swallowed the rest
+  /// of latex4wp (63% of the manual) with no diagnostic.
+  #[test]
+  fn filecontents_inside_a_wrapper_environment_ends_at_the_wrappers_end() {
+    let tex = "\\documentclass{article}\n\\newenvironment{DemoCode}{\\csname filecontents*\\endcsname[overwrite]{democode}}{\\csname endfilecontents*\\endcsname}\n\\begin{document}\nBEFOREWORD\n\\begin{DemoCode}\ninside \\textbf{demo} body\n\\end{DemoCode}\nAFTERWORD\n\\input{democode}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("BEFOREWORD"), "{xml}");
+    assert!(xml.contains("AFTERWORD"), "{xml}");
+    // The captured body is the wrapper's content, readable back by name.
+    assert!(xml.contains("demo"), "{xml}");
+    assert!(
+      stderr.contains("Cached filecontents for democode (1 lines)"),
+      "{stderr}"
+    );
+  }
+
+  /// Batch 56bx: after `\begin{document}` the kernel's `\@preamblecmds` is
+  /// `\let` to `\@notprerr` (latex.ltx:9521-9522, :1228), which lppl.tex:44
+  /// probes to choose its running-document branch; the standalone branch
+  /// `\let\endLPPLicense\enddocument` ended beameruserguide at the license.
+  #[test]
+  fn preamblecmds_is_notprerr_inside_a_running_document() {
+    let tex = "\\documentclass{article}\n\\begin{document}\nBEFOREWORD\n\\makeatletter\n\\ifx\\@preamblecmds\\@notprerr \\let\\LPPLtest\\bgroup \\let\\endLPPLtest\\egroup \\else \\let\\LPPLtest\\document \\let\\endLPPLtest\\enddocument \\fi\n\\makeatother\n\\begin{LPPLtest}\nINSIDEWORD\n\\end{LPPLtest}\nAFTERWORD\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("INSIDEWORD"), "{xml}");
+    assert!(xml.contains("AFTERWORD"), "{xml}");
+  }
+
+  /// Batch 56bx: `\vsplit` of a register holding a `\vbox` splits the box's
+  /// vertical list (tex.web §977) and stores the remainder back as a vbox;
+  /// treating the whatsit as one item swept the whole table into the
+  /// discard-top split of short-math-guide.tex:167 (`\splitlist`), losing
+  /// every amssymb symbol name at zero errors.
+  #[test]
+  fn vsplit_of_a_vbox_register_splits_its_lines() {
+    let tex = "\\documentclass{article}\\makeatletter\n\\newcount\\cols\\newcount\\curcol\n\\def\\do{\\advance\\curcol1 \\setbox2=\\vsplit0 to\\dimen@\n  \\vtop{\\unvbox2}\\ifdim\\ht0>\\z@\\expandafter\\do\\fi}\n\\begin{document}\n\\setbox0\\vbox{\\hbox{alpha}\\hbox{beta}\\hbox{gamma}\\hbox{delta}}%\n\\cols=2 \\dimen@\\ht0 \\divide\\dimen@\\cols\n\\setbox2=\\vsplit0 to\\baselineskip\nBEGIN\\hbox to\\textwidth{\\curcol=0 \\do\\hfil}END\n\\makeatother\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    // The discard-top split takes the first line only; the rest survives.
+    for w in ["beta", "gamma", "delta"] {
+      assert!(xml.contains(w), "missing {w}:\n{xml}");
+    }
+  }
+
+  /// Batch 56bx: `\blindtext` without babel is the Latin default
+  /// (blindtext.sty:356-369); the binding's forced `babel[english]` made
+  /// `\extrasenglish` swap in the English text (Perl-origin, #228).
+  #[test]
+  fn blindtext_default_is_latin_without_babel() {
+    let tex = "\\documentclass{article}\n\\usepackage{blindtext}\n\\begin{document}\n\\blindtext\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("consectetuer"), "{xml}");
+    assert!(!xml.contains("without a meaning"), "{xml}");
+  }
+
   /// Batch 56bu: unicode-math re-binds the active math prime at begin-document
   /// (unicode-math-luatex.sty:3405/3426), so hanging.sty:85/101's global
   /// `\gdef'` no longer recurses on `$f'(x)$` (kaytannollista, 420 s).

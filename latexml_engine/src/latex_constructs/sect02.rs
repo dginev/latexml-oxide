@@ -297,6 +297,15 @@ pub(crate) fn load() -> Result<()> {
     // pre-#2846 placement — `\AtBeginDocument` above ran while still `inPreamble=1`.
     // `\par` paragraph-breaking is governed by mode + the `document` env, not this flag.
     assign_value("inPreamble", false, None);
+    // latex.ltx:9521-9522: the `\@preamblecmds` walk leaves `\@preamblecmds`
+    // itself `\let` to `\@notprerr` (it is `\@onlypreamble`, latex.ltx:1228).
+    // Raw code probes exactly that (lppl.tex:44) to detect a running document;
+    // see `\@notprerr` in sect05.rs.
+    assign_meaning(
+      &T_CS!("\\@preamblecmds"),
+      lookup_meaning(&T_CS!("\\@notprerr")).unwrap_or(Stored::None),
+      Some(Scope::Global),
+    );
     // latex.ltx:9525 `\UseOneTimeHook{begindocument/end}` — AFTER the
     // preamble is left. jwjournal.cls:643-650 wraps the whole body in a `+b`
     // environment from this hook (and closes it from `enddocument`); without

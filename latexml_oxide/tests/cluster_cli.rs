@@ -708,6 +708,54 @@ mod whatsinout {
     );
   }
 
+  /// A post-only run over an existing core XML (`--whatsin=xml`) must
+  /// still produce the bibliography from the `.bib` beside the source: the
+  /// recursive MakeBibliography session is the thread's FIRST engine and
+  /// needs the binding dispatch installed before it can find `TeX.pool`.
+  /// Witness: TeX Live aomart/aomsample (100 errors, 0 entries).
+  #[test]
+  fn whatsin_xml_post_only_run_builds_the_bibliography() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("cited.tex"),
+      "\\documentclass{article}\n\\begin{document}\nSee \\cite{knuth84}.\n\
+       \\bibliographystyle{plain}\n\\bibliography{refs}\n\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      work.path().join("refs.bib"),
+      "@book{knuth84, author={Donald E. Knuth}, title={The {\\TeX}book},\n\
+       publisher={Addison-Wesley}, year={1984}}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["cited.tex", "--dest", "cited.xml"]);
+    assert!(
+      out.status.success(),
+      "core conversion failed:\n{}",
+      stderr_of(&out)
+    );
+    let source_dir = work.path().to_string_lossy().to_string();
+    let out = run(work.path(), &[
+      "--whatsin=xml",
+      "cited.xml",
+      "--dest",
+      "cited.html",
+      "--sourcedirectory",
+      &source_dir,
+    ]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "post-only run failed:\n{err}");
+    assert!(
+      !err.contains("Error:"),
+      "post-only bibliography run reported errors:\n{err}"
+    );
+    let html = std::fs::read_to_string(work.path().join("cited.html")).expect("read cited.html");
+    assert!(
+      html.contains("ltx_bibitem") && html.contains("Addison-Wesley"),
+      "bibliography entry missing from the post-only HTML:\n{html}"
+    );
+  }
+
   #[test]
   fn whatsin_math_wraps_literal_as_mathml() {
     // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168

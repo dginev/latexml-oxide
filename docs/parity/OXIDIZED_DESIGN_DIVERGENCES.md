@@ -7346,3 +7346,45 @@ LaTeX and Perl (sesamath-doc-fr relies on a missing sesamath-doc.sty; SHARED).
 Guard `afterpage_body_undoubles_parameter_hashes`. Gemini round 10 N5, merged
 with the autoload removed.
 
+
+### 226. `\@preamblecmds` is `\@notprerr` inside a running document
+
+**Perl behavior**: latex_constructs.pool.ltxml:5460 `\@preamblecmds` = `Tokens()`
+forever, `:5594` `\@onlypreamble` records nothing ("Don't bother enforcing this"),
+and `\@notprerr` is undefined. Raw code that probes the kernel's own signal for
+"inside a running document" — lppl.tex:44 `\ifx\@preamblecmds\@notprerr` — takes the
+standalone branch, `\let\endLPPLicense\enddocument`, and ends the document at the
+license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
+**Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
+`\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
+is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
+`\@onlypreamble` itself stays the loose flag-only guard (sect01.rs), not a `\do` list.
+**Why**: the observable side effect raw code tests for is part of the kernel
+contract; reproducing it costs one `\let` and no per-command bookkeeping.
+Guard `preamblecmds_is_notprerr_inside_a_running_document`. Batch 56bx.
+
+### 227. A `filecontents` capture ends at `\end{<current environment>}`
+
+**Perl behavior**: latex_constructs.pool.ltxml:4278-4295 binds only
+`\begin{filecontents*}`; the bare `\filecontents*` command that a wrapper
+environment runs through `\csname filecontents*\endcsname` (latexdemo.sty:97-101
+`DefineCode`) is undefined there — an error, but no loss.
+**Rust behavior**: the bare command is a primitive; its raw capture ended at a
+fixed `\end{filecontents[*]}`, which a wrapper's body never contains, so the rest
+of the document was swallowed silently (latex4wp: 63% of the manual). The
+terminator is now `\end{<\@currenvir>}` (latex.ltx:19047), the wrapper's own end.
+**Why**: faithful to latex.ltx; the fixed marker was the Rust-only defect.
+Guard `filecontents_inside_a_wrapper_environment_ends_at_the_wrappers_end`. Batch 56bx.
+
+### 228. `blindtext` does not force `babel[english]`
+
+**Perl behavior**: blindtext.sty.ltxml:21 `RequirePackage('babel', options => ['english'])`
+so `\languagename` exists; babel's `\extrasenglish` then runs the English text that
+blindtext.sty:342-354 registered, replacing the Latin `\blindtext@text` default
+(:356-369) — `\blindtext` reads "Hello, here is some text without a meaning".
+**Rust behavior**: no implicit babel; the engine defines `\languagename`
+(tex_hyphenation.rs), so a document without babel gets the Latin default exactly as
+pdflatex does (the shipped PDFs of assoccnt/xassoccnt), and one that loads babel
+gets its own language's text as before.
+**Why**: the oracle is the PDF; the forced language was a binding convenience with
+a visible, wrong side effect. Guard `blindtext_default_is_latin_without_babel`. Batch 56bx.

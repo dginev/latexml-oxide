@@ -622,7 +622,31 @@ LoadDefinitions!({
   // and caches the content for later \input. Helper fn defined here so
   // the migration is self-contained.
   //======================================================================
-  fn cache_filecontents(end_marker: &str, header_star: bool) -> Result<()> {
+  fn cache_filecontents(header_star: bool) -> Result<()> {
+    // latex.ltx:19047 `\edef\E{\@backslashchar end\string{\@currenvir\string}}`:
+    // the capture ends at `\end{<current environment>}`, NOT at a fixed
+    // `\end{filecontents}`. A wrapper environment that runs the bare command
+    // (latexdemo.sty:97-101 `\csname filecontents*\endcsname` inside
+    // `DefineCode`; democodetools, codedescribe, revtex's ltxdocext.sty) ends
+    // its capture at ITS OWN `\end{DefineCode}`; the fixed marker never
+    // matched and the rest of the document was swallowed silently
+    // (latex4wp: 63% of the manual, sweep 75 S3). Perl binds only
+    // `\begin{filecontents*}`, so it errors on the bare command instead.
+    let currenvir = lookup_value("current_environment")
+      .map(|v| v.to_string())
+      .unwrap_or_default();
+    let end_marker = if currenvir.is_empty() {
+      // Bare command outside any environment: latex.ltx would look for
+      // `\end{document}`; keep the historical marker so a hand-written
+      // `\filecontents{f}…\end{filecontents}` at the top level still closes.
+      if header_star {
+        "\\end{filecontents*}".to_string()
+      } else {
+        "\\end{filecontents}".to_string()
+      }
+    } else {
+      format!("\\end{{{currenvir}}}")
+    };
     skip_spaces()?;
     // Real LaTeX `\filecontents` `\edef`s the filename argument, so
     // `\begin{filecontents}{\jobname-acro.tex}` writes — and a later
@@ -665,7 +689,7 @@ LoadDefinitions!({
     read_raw_line();
     // Read raw lines until the end marker (whole-line match; see
     // capture_raw_lines_until).
-    let (captured, _terminator) = capture_raw_lines_until(&[end_marker]);
+    let (captured, _terminator) = capture_raw_lines_until(&[&end_marker]);
     lines.extend(captured);
     let n = lines.len();
     Info!(
@@ -676,15 +700,16 @@ LoadDefinitions!({
     vfs_store(&filename, &lines.join("\n"));
     Ok(())
   }
-  // The \filecontents primitive reads filename + raw lines until \end{filecontents}.
-  // When called via \begin{filecontents}, \begin opens a group first, so we manually
-  // close the group after caching, matching the \end that was consumed.
+  // The \filecontents primitive reads filename + raw lines until
+  // `\end{<current environment>}`. The `\begin` of that environment (its own
+  // name, or a wrapper's) opened a group, and its `\end` was consumed by the
+  // capture, so the group is closed here in its place.
   DefPrimitive!("\\filecontents", {
-    cache_filecontents("\\end{filecontents}", false)?;
+    cache_filecontents(false)?;
     endgroup()?;
   });
   DefPrimitive!("\\lx@filecontents@star", {
-    cache_filecontents("\\end{filecontents*}", true)?;
+    cache_filecontents(true)?;
     endgroup()?;
   });
   assign_meaning(

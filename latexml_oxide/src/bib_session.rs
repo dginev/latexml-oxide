@@ -11,6 +11,8 @@
 //! depending on `latexml_oxide` would be a cycle. `latexml_post` declares the
 //! hook, this module fills it in — see [`install`].
 
+use std::rc::Rc;
+
 use latexml_core::{
   Core, CoreOptions,
   binding::content::{InputDefinitionOptions, input_definitions},
@@ -150,11 +152,23 @@ fn ensure_session(request: &BibConversionRequest) -> Result<()> {
     // and Perl's preload reconstruction is exactly right here.
     let mut preloads = vec![s!("TeX.pool"), s!("BibTeX.pool")];
     preloads.extend(request.preloads.iter().cloned());
+    // Perl's `convertBibliography` (MakeBibliography.pm:180-235) spins a FULL
+    // converter — `get_converter` + `prepare_session` (`includestyles=1`) —
+    // so the pools and the document's class resolve through the bindings.
+    // `Core::new` resets the State, which starts with NO binding dispatch
+    // (`State::new` → `bindings_dispatch: None`): without the chain that
+    // `Converter::initialize_session` installs, `input_definitions` finds
+    // neither `TeX.pool` nor `BibTeX.pool`, the kernel never bootstraps, the
+    // preloaded class is read raw against an empty state (100 errors →
+    // TooManyErrors) and the bibliography comes back empty. Witness: TeX Live
+    // aomart/aomsample, `--whatsin=xml … --sourcedirectory=<bundle>`.
     let mut core = Core::new(CoreOptions {
       preload: Some(request.preloads.clone()),
       search_paths: Some(request.search_paths.clone()),
+      include_styles: Some(true),
       ..CoreOptions::default()
     });
+    crate::converter::install_default_binding_chain(Some(Rc::new(latexml_contrib::dispatch)));
     core.initialize_singletons(preloads)
   }
 }

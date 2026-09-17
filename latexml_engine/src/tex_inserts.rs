@@ -52,12 +52,34 @@ LoadDefinitions!({
         Digested::from(List::default())
       } else {
         let target = dimension.value_of();
-        let items: Vec<Digested> = match stuff.data() {
+        // A register filled by `\setbox0=\vbox{…}` holds the `\vbox` WHATSIT,
+        // whose vertical list is its `content_box` (tex_box.rs after_digest);
+        // splitting the whatsit itself as one opaque item swept the whole
+        // box into the first split-off and voided the register — the
+        // discard-top idiom `\setbox2=\vsplit0 to\baselineskip` then threw
+        // away every line (short-math-guide's amssymb tables, 361 words,
+        // zero errors). tex.web §977 splits the box's list; the remainder
+        // is stored back as the same kind of box (`vpack(q)`).
+        let (items, vbox): (Vec<Digested>, Option<Whatsit>) = match stuff.data() {
           DigestedData::List(l) => match l.try_borrow() {
-            Ok(l) => l.boxes.clone(),
-            Err(_) => vec![stuff.clone()],
+            Ok(l) => (l.boxes.clone(), None),
+            Err(_) => (vec![stuff.clone()], None),
           },
-          _ => vec![stuff.clone()],
+          DigestedData::Whatsit(w) => match w.try_borrow() {
+            Ok(w) if w.get_property_bool("is_vbox") => {
+              let items = match w.get_arg(2).map(|c| (c.clone(), c.data())) {
+                Some((_, DigestedData::List(l))) => match l.try_borrow() {
+                  Ok(l) => l.boxes.clone(),
+                  Err(_) => Vec::new(),
+                },
+                Some((c, _)) => vec![c],
+                None => Vec::new(),
+              };
+              (items, Some(w.clone()))
+            },
+            _ => (vec![stuff.clone()], None),
+          },
+          _ => (vec![stuff.clone()], None),
         };
         let mut split_off: Vec<Digested> = Vec::new();
         let mut rest: Vec<Digested> = Vec::new();
@@ -79,11 +101,18 @@ LoadDefinitions!({
         if rest.is_empty() {
           assign_value(&box_key, Stored::None, Some(Scope::InPlace));
         } else {
-          assign_value(
-            &box_key,
-            Stored::Digested(Digested::from(List::new(rest))),
-            Some(Scope::InPlace),
-          );
+          let remainder = match vbox {
+            Some(mut w) => {
+              // `vpack(q)`: the same box with the remaining list.
+              if let Some(arg) = w.get_arg_mut(2) {
+                *arg = Digested::from(List::new(rest));
+              }
+              w.set_property("content_box", w.get_arg(2).cloned());
+              Digested::from(w)
+            },
+            None => Digested::from(List::new(rest)),
+          };
+          assign_value(&box_key, Stored::Digested(remainder), Some(Scope::InPlace));
         }
         Digested::from(List::new(split_off))
       }
