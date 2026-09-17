@@ -2959,27 +2959,40 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // force-expanding the bare `\nwletre` here stubbed it as `<ltx:ERROR/>`
   // (mindsample; Perl, which never expands, is clean). Guard:
   // `perfect_kernel_batch56::index_entry_passes_undefined_words_inert`.
-  let mut frozen: Vec<Token> = Vec::with_capacity(toks.len());
-  for t in toks {
-    if t.get_catcode() == Catcode::CS
-      && (t.with_str(|s| {
-        let mut chars = s.chars();
-        chars.next() == Some('\\')
-          && chars.next().is_some_and(|c| !c.is_alphabetic())
-          && chars.next().is_none()
-      }) || lookup_meaning(&t).is_none())
-    {
-      frozen.push(T_CS!("\\noexpand"));
-    }
-    frozen.push(t);
-  }
+  // The freeze is a STATE-level `\let` to `\relax` inside the expansion
+  // frame, never an injected `\noexpand` TOKEN: `\string` reads the next
+  // token literally, so `\string\noexpand\cmd` stringified "\noexpand" and
+  // re-exposed `\cmd` to expansion — beamerug-macros.tex:44's
+  // `\gdef\stripcommand#1{\expandafter\@gobble\string#1}` (which hides the
+  // `\string` from any token-level neighbour check) made every documented
+  // command undefined and every `\if…` name a runaway conditional
+  // (beameruserguide 167 errors; Perl 0). Let to `\relax`, the name is
+  // unexpandable for the pass, stringifies by NAME, and is restored to its
+  // real (or undefined) meaning when the frame pops. Guard:
+  // `cluster_package_guards::index_string_of_undefined_command_stringifies_its_name`.
+  let inert: Vec<Token> = toks
+    .iter()
+    .filter(|t| {
+      t.get_catcode() == Catcode::CS
+        && (t.with_str(|s| {
+          let mut chars = s.chars();
+          chars.next() == Some('\\')
+            && chars.next().is_some_and(|c| !c.is_alphabetic())
+            && chars.next().is_none()
+        }) || lookup_meaning(t).is_none())
+    })
+    .cloned()
+    .collect();
   push_frame();
   let_i(
     &T_CS!("\\protect"),
     &T_CS!("\\@unexpandable@protect"),
     Some(Scope::Local),
   );
-  let expanded = do_expand_partially(Tokens::new(frozen));
+  for t in &inert {
+    let_i(t, &T_CS!("\\relax"), Some(Scope::Local));
+  }
+  let expanded = do_expand_partially(Tokens::new(toks));
   pop_frame()?;
   // The `.ind` re-read: `\printindex` `\input`s the written entry in the
   // document body, where `@` is OTHER, so a control word that still carries

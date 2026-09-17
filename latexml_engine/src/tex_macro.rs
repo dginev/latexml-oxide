@@ -311,6 +311,15 @@ LoadDefinitions!({
             if let Some(Stored::Font(_)) = lookup_value(&s!("fontinfo_{cs_str}")) {
               return Ok(Tokens!(token));
             }
+            // A primitive that is an INTERNAL QUANTITY with its own assignment
+            // syntax (no `=`, no register type) publishes its `\the` value
+            // under `the_value_<cs>`: luatex's direction primitives
+            // (`\the\bodydir` → `TLT`; `latexml_sty` under the luatex
+            // profile), whose `scan_direction` argument the register
+            // machinery cannot read.
+            if let Some(Stored::String(v)) = lookup_value(&s!("the_value_{cs_str}")) {
+              return Ok(Tokens::new(Explode!(with(v, |s| s.to_string()))));
+            }
           }
         },
         _ => {

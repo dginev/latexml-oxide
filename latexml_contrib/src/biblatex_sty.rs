@@ -2100,7 +2100,15 @@ LoadDefinitions!({
   // the bibliography then resolved to nothing. Its keys (`location`, `label`,
   // `datatype`) are biber-side, so consuming and ignoring them is right here.
   // Witness 2605.27263; audit family F4(b).
-  DefPrimitive!("\\addbibresource[]{}", sub[(_opts, file_list_arg)] {
+  // The resource argument is EXPANDED: biblatex.sty:1216-1222 (`\blx@addbib`)
+  // `\edef`s it and `\detokenize`s the result, so `\addbibresource
+  // {\jobname.bib}` — the idiom of every manual that ships its `.bib` through
+  // `filecontents` (biblatex-nejm/-spbasic/-juradiss/-license, cleanthesis's
+  // `\cthesis@bibfile`, gitlog's `\gitLog@bibfile`, shtthesis's
+  // `\sht@bib@resource`; 16 corpus docs) — records `<jobname>.bib`, not the
+  // literal control sequence that no bibliography stage can open. Guard:
+  // `cluster_package_guards::biblatex_addbibresource_expands_its_argument`.
+  DefPrimitive!("\\addbibresource[] Expanded", sub[(_opts, file_list_arg)] {
     // Perl: split(/\s*,\s*/, ToString($_[1])) — split on commas and
     // strip surrounding whitespace.
     let raw = file_list_arg.to_string();

@@ -499,13 +499,61 @@ LoadDefinitions!({
     // a REGISTER: a macro stub would leave the trailing `=1` to typeset.
     DefRegister!("\\suppressfontnotfounderror" => Number::new(0));
     // Direction primitives (LuaTeX §6): `\textdir TLT` etc. are PRIMITIVES
-    // consuming a three-letter direction keyword — not macros producing one
-    // (defining them as `{TLT}` typeset the keyword: `TLTTLT` text leaked
-    // into the babel guard-test paragraph). TLT (left-to-right) is the only
-    // direction this engine models → absorb the keyword, emit nothing.
-    RawTeX!(
-      r"\def\pagedir#1#2#3{} \def\bodydir#1#2#3{} \def\pardir#1#2#3{} \def\textdir#1#2#3{} \def\mathdir#1#2#3{} \def\linedir#1#2#3{}"
-    );
+    // whose argument is read by luatex's `scan_direction` — ONE expanded
+    // token that is itself a direction primitive (the internal form
+    // `\pagedir\bodydir`, `\mathdir\the\bodydir` once `\the` expands), else
+    // exactly three letters (`TLT`, `TRT`, `LTL`, `RTT`). The earlier
+    // three-parameter gobblers (`\def\pagedir#1#2#3{}`) modelled the letter
+    // form only: babel.sty:1163-1165 registers `\AtBeginDocument
+    // {\pagedir\bodydir}` under `\bbl@engine=1`, and the gobbler reached
+    // across the next hook chunks and ate babel.def:2262's leading
+    // `\DeclareTextCompositeCommand`, leaving its four arguments
+    // `{\"}{OT1}{a}{\bbl@umlauta{a}}` to typeset as the junk first paragraph
+    // `¨OT1aä` before `\maketitle` in every luatex-profile babel manual (S2
+    // cluster A, 98 docs; Perl's babel binding never reaches the code).
+    // TLT (left-to-right) is the only direction this engine models → absorb
+    // the argument, emit nothing. Guard:
+    // `cluster_package_guards::luatex_profile::direction_primitive_scans_one_internal_direction_token`.
+    DefPrimitive!("\\pagedir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\bodydir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\pardir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\textdir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\mathdir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    DefPrimitive!("\\linedir", {
+      scan_direction()?;
+      Ok(Vec::new())
+    });
+    // They are internal quantities too: `\the\bodydir` is the current
+    // direction (`\mathdir\the\bodydir`, luatexbase/babel), always TLT here.
+    for cs in [
+      "\\pagedir",
+      "\\bodydir",
+      "\\pardir",
+      "\\textdir",
+      "\\mathdir",
+      "\\linedir",
+    ] {
+      assign_value(
+        &s!("the_value_{cs}"),
+        Stored::String(pin_static("TLT")),
+        Some(Scope::Global),
+      );
+    }
     // Format parity: the lualatex FORMAT ships hyphenation patterns, so
     // `\bbl@luapatterns` is already defined when babel.def loads. That makes
     // babel.def L1135 skip the patterns-only first `\input luababel.def`
@@ -1282,3 +1330,55 @@ LoadDefinitions!({
 }"
   );
 });
+
+/// LuaTeX `scan_direction`: the argument of a direction primitive is one
+/// expanded token — a direction primitive itself (the internal form,
+/// `\pagedir\bodydir`) — or a three-letter keyword (`TLT`, `TRT`, `LTL`,
+/// `RTT`); leading spaces are skipped as `scan_keyword` does. Nothing is kept:
+/// TLT is the only direction this engine models.
+fn scan_direction() -> Result<()> {
+  const DIRECTION_PRIMITIVES: [&str; 6] = [
+    "\\pagedir",
+    "\\bodydir",
+    "\\pardir",
+    "\\textdir",
+    "\\mathdir",
+    "\\linedir",
+  ];
+  let mut first = None;
+  while let Some(t) = read_x_token(None, false, None)? {
+    if t.get_catcode() == Catcode::SPACE {
+      continue;
+    }
+    first = Some(t);
+    break;
+  }
+  let Some(first) = first else {
+    return Ok(());
+  };
+  if first.get_catcode() == Catcode::CS && first.with_str(|s| DIRECTION_PRIMITIVES.contains(&s)) {
+    return Ok(());
+  }
+  // The keyword form: `first` is its first letter; take the remaining two.
+  // `scan_keyword` matches letters by character, not catcode (`\the\bodydir`
+  // expands to OTHER-catcode `TLT`).
+  let is_keyword_char = |t: &Token| {
+    matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+      && t.with_str(|s| s.chars().all(|c| c.is_ascii_alphabetic()))
+  };
+  if !is_keyword_char(&first) {
+    unread(Tokens::new(vec![first]));
+    return Ok(());
+  }
+  for _ in 0..2 {
+    match read_x_token(None, false, None)? {
+      Some(t) if is_keyword_char(&t) => {},
+      Some(t) => {
+        unread(Tokens::new(vec![t]));
+        break;
+      },
+      None => break,
+    }
+  }
+  Ok(())
+}

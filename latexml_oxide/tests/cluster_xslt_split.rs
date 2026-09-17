@@ -1441,3 +1441,104 @@ mod urlstyle {
     );
   }
 }
+
+/// Batch 56bz: `<ltx:picture>` is converted to SVG on the live page DOM by
+/// `latexml_post::svg::SVG` before MathML/XSLT (Perl's chain order,
+/// `LaTeXML.pm` Graphics → SVG → MathML → XSLT), not by a regex over the
+/// serialized XML spliced into the XSLT's placeholder span after the fact. The
+/// regex path truncated an outer picture at its first NESTED `</picture>` and
+/// had no `foreignObject` branch for `<block>`/`<p>`/`<inline-block>` children
+/// (`SVG.pm:148` `convertNode`'s else-branch), so every text label after a
+/// nested picture and every `\parbox`/`minipage` inside a picture vanished
+/// between the core XML and the HTML: pagelayout ×3, ticket ×2, vocaltract,
+/// bookcover-example2 and latex-refsheet/header-graph went from 100% to 0-11%
+/// PDF-text recall at post. The assertions cover the WHOLE rendered `<svg>`:
+/// the nested picture's group and path, then the label after it.
+mod picture_svg_on_the_live_dom {
+  use std::{path::Path, process::Command};
+
+  fn run(cwd: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(args)
+      .current_dir(cwd)
+      .output()
+      .expect("spawn latexml_oxide")
+  }
+
+  fn html_of(name: &str, tex: &str) -> String {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join(format!("{name}.tex")), tex).unwrap();
+    let out = run(work.path(), &[
+      &format!("{name}.tex"),
+      "--dest",
+      &format!("{name}.html"),
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr
+        .lines()
+        .any(|l| l.starts_with("Error:") || l.starts_with("Fatal:")),
+      "{stderr}"
+    );
+    std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")
+  }
+
+  /// A text label placed AFTER a nested picture survives, and the nested
+  /// picture is a y-flipped group of its own (`SVG.pm:193` `convertPicture`).
+  #[test]
+  fn label_after_a_nested_picture_renders_in_the_svg() {
+    let html = html_of(
+      "nested",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\begin{picture}(50,50)\\put(0,0){\\line(1,0){50}}\\end{picture}}\n\
+       \\put(100,50){\\makebox(0,0){VISIBLETEXTLABEL}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg height="132.84" overflow="visible" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)">"##,
+      r##"<g transform="translate(0,0)"><g transform="translate(0,66.42) scale(1,-1)">"##,
+      r##"<g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path>"##,
+      r##"</g></g></g>"##,
+      r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(0,0)">"##,
+      r##"<text transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
+      r##"</g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// A `\parbox` inside a picture is wrapped in `<foreignObject>` with the
+  /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), its
+  /// block markup intact.
+  #[test]
+  fn parbox_inside_a_picture_renders_as_a_foreign_object() {
+    let html = html_of(
+      "parbox",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\parbox{100pt}{PARBOXVISIBLEWORD inside picture}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg height="132.84" overflow="visible" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)"><g transform="translate(0,0)">"##,
+      r##"<g transform="translate(0,1.33) scale(1,-1)">"##,
+      r##"<foreignObject height="1.33" overflow="visible" width="132.84">"##,
+      r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
+      "\n",
+      r##"<div class="ltx_block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
+      "\n",
+      r##"<p class="ltx_p">PARBOXVISIBLEWORD inside picture</p>"##,
+      "\n",
+      r##"</div></span></span></foreignObject></g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+}

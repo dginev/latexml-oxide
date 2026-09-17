@@ -982,6 +982,47 @@ mod graphicx_internals {
   }
 }
 
+mod luatex_direction_scan {
+  //! Batch 56bz: luatex's direction primitives read their argument with
+  //! `scan_direction` — ONE expanded token when it is a direction primitive
+  //! (the internal form `\pagedir\bodydir`), else three letters (`TLT`). The
+  //! former `\def\pagedir#1#2#3{}` gobblers over-scanned the internal form:
+  //! babel.sty:1163-1165's `\AtBeginDocument{\pagedir\bodydir}` (under
+  //! `\bbl@engine=1`) reached into the following hook chunks and ate
+  //! babel.def:2262's `\DeclareTextCompositeCommand`, whose four arguments
+  //! then typeset as the junk paragraph `¨OT1aä` before every luatex-profile
+  //! babel manual's title (S2 cluster A, 98 docs; Perl's babel binding never
+  //! reaches this code). Pure token scanning — no texlua needed.
+
+  #[test]
+  fn direction_primitive_scans_one_internal_direction_token() {
+    let tex = "\\documentclass{article}\n\\usepackage[english]{babel}\n\\begin{document}\nx\n\\end{document}\n";
+    let (stderr, xml) = super::convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    // The body is exactly the one paragraph `x`: nothing typeset by the hooks.
+    let body = xml
+      .split("<para")
+      .nth(1)
+      .and_then(|s| s.split("</para>").next())
+      .unwrap_or("");
+    assert_eq!(
+      body.split('>').skip(1).collect::<Vec<_>>().join(">").trim(),
+      "<p>x</p>",
+      "{xml}"
+    );
+    assert!(!xml.contains("OT1a"), "{xml}");
+
+    // The keyword form and the internal form both absorb exactly their
+    // argument: the text after each is intact (the spaces after the control
+    // words `\bodydir` are the tokenizer's, gone in real TeX too), and
+    // `\the\bodydir` is the direction keyword.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\textdir TLT A\\pagedir\\bodydir B\\mathdir\\the\\bodydir C[\\the\\pagedir]\n\\end{document}\n";
+    let (stderr, xml) = super::convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>ABC[TLT]</p>"), "{xml}");
+  }
+}
+
 mod luatex_babel_api {
   //! Under the `luatex` profile, babel's Lua API layer (luababel.def L196+,
   //! creating `Babel.locale_props`, `Babel.lua_error`, …) must actually run.
@@ -16118,6 +16159,25 @@ c &= d
     }
   }
 
+  /// Batch 56bz: `\addbibresource`'s argument is expanded before it is
+  /// recorded (biblatex.sty:1216-1222 `\blx@addbib` `\edef`s then
+  /// `\detokenize`s it), so the `\addbibresource{\jobname.bib}` idiom of the
+  /// manuals that ship their `.bib` through `filecontents` (biblatex-nejm,
+  /// cleanthesis, gitlog, shtthesis; 16 corpus docs) records the file NAME.
+  /// The literal control sequence was stored before, and no bibliography
+  /// stage can open `\jobname.bib`.
+  #[test]
+  fn biblatex_addbibresource_expands_its_argument() {
+    let tex = "\\documentclass{article}\n\\usepackage{filecontents}\n\\begin{filecontents}{t.bib}\n@book{knuth84, author={Donald Knuth}, title={The TeXbook}, year={1984}, publisher={Addison-Wesley}}\n\\end{filecontents}\n\\usepackage[backend=biber]{biblatex}\n\\def\\mybibfile{t.bib}\n\\addbibresource{\\mybibfile}\n\\begin{document}\nCite \\cite{knuth84}.\n\\printbibliography\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<bibliography files=\"t.bib\"") || xml.contains("files=\"t.bib\""),
+      "{xml}"
+    );
+    assert!(!xml.contains("\\mybibfile"), "{xml}");
+  }
+
   /// biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` record
   /// resources like `\addbibresource` (biblatex-apa-test, shtthesis).
   #[test]
@@ -19456,5 +19516,45 @@ World
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("[B2:2.50]"), "{xml}");
+  }
+
+  /// Batch 56bz: an undefined control word in an `\index` entry is inerted at
+  /// STATE level for the `\protected@write` pre-expansion, never by an
+  /// injected `\noexpand` token — `\string` reads the NEXT token literally, so
+  /// `\string\noexpand\cmd` stringified "\noexpand" and re-exposed `\cmd`
+  /// (beamerug-macros.tex:44 `\gdef\stripcommand#1{\expandafter\@gobble\string#1}`;
+  /// beameruserguide 167 errors, Perl 0). The `\if…` names are the worst case:
+  /// an exposed one is auto-defined as a conditional and scans for `\fi` off
+  /// the end of the entry.
+  #[test]
+  fn index_string_of_undefined_command_stringifies_its_name() {
+    let tex = r"\documentclass{article}
+\usepackage{makeidx}\makeindex
+\makeatletter
+\gdef\stripcommand#1{\expandafter\@gobble\string#1}
+\makeatother
+\def\myprintcommand#1{\texttt{\char`\\#1}}
+\begin{document}
+\index{\stripcommand\insertframetitle @\protect\myprintcommand{\stripcommand\insertframetitle}}
+\index{\stripcommand\ifbeamercolorempty @\protect\myprintcommand{\stripcommand\ifbeamercolorempty}}
+X\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The whole index phrase: the key is the STRINGIFIED name and the display
+    // is `\myprintcommand`'s typewriter text, run at typesetting time.
+    assert!(
+      xml.contains(
+        "<indexphrase key=\"insertframetitle\"><text font=\"typewriter\">\\insertframetitle</text></indexphrase>"
+      ),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        "<indexphrase key=\"ifbeamercolorempty\"><text font=\"typewriter\">\\ifbeamercolorempty</text></indexphrase>"
+      ),
+      "{xml}"
+    );
+    assert!(!xml.contains("<ERROR"), "{xml}");
   }
 }

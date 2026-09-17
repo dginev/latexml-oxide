@@ -11,7 +11,7 @@
 
 use std::f64::consts::PI;
 
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
@@ -368,10 +368,21 @@ impl SVG {
     })
   }
 
-  fn convert_text(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
+  fn convert_text(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let x = node.get_attribute("x").unwrap_or_else(|| "0".to_string());
     let y = node.get_attribute("y").unwrap_or_else(|| "0".to_string());
-    let text = node.get_content();
+    // Mixed content, as `SVG.pm::convertText` (L256-261): a text child is
+    // appended as text, an element child (a nested `<text>`, a `<Math>` or
+    // `<graphics>` label) recurses through `convert_node`. `get_content`
+    // would flatten the subtree to its characters and drop the elements.
+    let children: Vec<NodeData> =
+      std::iter::successors(node.get_first_child(), |c| c.get_next_sibling())
+        .filter_map(|child| match child.get_type() {
+          Some(NodeType::TextNode) => Some(NodeData::Text(child.get_content())),
+          Some(NodeType::ElementNode) => self.convert_node(doc, &child),
+          _ => None,
+        })
+        .collect();
 
     let mut attrs = HashMap::default();
     attrs.insert("x".to_string(), x);
@@ -399,9 +410,9 @@ impl SVG {
     }
 
     Some(NodeData::Element {
-      tag:        "svg:text".to_string(),
+      tag: "svg:text".to_string(),
       attributes: Some(attrs),
-      children:   vec![NodeData::Text(text)],
+      children,
     })
   }
 

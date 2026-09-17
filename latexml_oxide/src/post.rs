@@ -307,7 +307,6 @@ fn page_placeholder_probes(d: &PostDocument) -> (bool, bool) {
 struct PostFront {
   spilled_pages:  Vec<SpilledPage>,
   db:             ObjectDB,
-  svg_fragments:  Vec<(String, String)>,
   intent_literal: bool,
 }
 
@@ -361,7 +360,6 @@ fn try_streaming_front(
     .latexml_pis
     .iter()
     .any(|pi| pi.contains("package=\"ar5iv"));
-  let svg_fragments = extract_svg_fragments(&outcome.picture_xml);
 
   // Pre-order Scan sweep over the spilled pages — the streaming equivalent of
   // `run_phase(docs, Scan)` + the driver's spill loop, ONE page resident at a
@@ -445,7 +443,6 @@ fn try_streaming_front(
   Ok(Some(PostFront {
     spilled_pages: spilled,
     db: scanner.db,
-    svg_fragments,
     intent_literal,
   }))
 }
@@ -673,18 +670,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     audit_end(t_parse);
     telemetry::phase_exit();
 
-    // SVG extraction reads the pre-post XML before any in-tree mutation; do it
-    // once up-front so the regex-based fragment table is valid for every split
-    // sub-document below. In-memory input scans the string; File input locates
-    // pictures via a limit-safe `//ltx:picture` DOM query and serializes only
-    // those (never the whole file) — most large documents have none.
-    let t_svg = audit_start("SVG extraction");
-    let svg_fragments = match raw_xml {
-      Some(xml) => extract_svg_fragments(xml),
-      None => extract_svg_fragments_from_doc(&doc),
-    };
-    audit_end(t_svg);
-
     // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
     // checks the raw string; file input checks the parsed doc's `<?latexml
     // package="ar5iv"?>` PI. Computed here — before Split moves `doc` into `docs`.
@@ -842,14 +827,12 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     PostFront {
       spilled_pages,
       db: scanner.db,
-      svg_fragments,
       intent_literal,
     }
   }; // ==== end of the whole-DOM front-end ====
   let PostFront {
     spilled_pages,
     db,
-    svg_fragments,
     intent_literal,
   } = front;
 
@@ -904,9 +887,20 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       .with_svg_threshold_kb(graphics_svg_threshold_kb)
   });
 
-  // Phase 3: MathML + XSLT
+  // Phase 3: SVG + MathML + XSLT
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+  let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
+
+  // SVG first, on the live page DOM — Perl's chain order (`LaTeXML.pm`
+  // L493-581: Graphics → SVG → MathML → XSLT; SVG only for the HTML formats,
+  // `$$opts{svg}`). The Graphics page-phase has already resolved every
+  // picture-nested `<ltx:graphics>` by the time this runs, so
+  // `SVG::convert_foreign` wraps the resolved node and the XSLT renders it
+  // (#1291's Graphics→SVG order comes for free).
+  if is_html_out {
+    processors.push(Box::new(latexml_post::svg::SVG::new()));
+  }
 
   // `intent_literal` was computed up-front (before Split consumed `doc`).
 
@@ -1055,8 +1049,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   // becomes the input to the next processor. We've already produced the
   // post-Split list above; ProcessChain just needs to fan MathML/XSLT
   // across it.
-  let is_html_out = stylesheet.is_some_and(|s| s.contains("html"));
-
   // ---- Pass B: render one page at a time, then FREE it --------------------
   //
   // Document-major, not phase-major: each page goes through MakeIndex ->
@@ -1182,7 +1174,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       nodefaultresources,
       searchpaths: manifest_searchpaths,
       is_html_out,
-      svg_fragments: svg_fragments.clone(),
       schemadocs,
       whatsout: whatsout.as_cli().to_string(),
       page_opts: (&page_opts).into(),
@@ -1218,7 +1209,6 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   let ctx = PageRenderCtx {
     page_opts: page_opts.clone(),
     is_html_out,
-    svg_fragments,
     schemadocs,
     whatsout,
   };
@@ -1348,11 +1338,10 @@ pub(crate) struct PageProcessors {
 pub(crate) struct PageRenderCtx {
   /// Clone-source for each page's `PostDocument` parse — carries the same
   /// searchpaths/site-directory the pass-A parse used.
-  pub(crate) page_opts:     PostDocumentOptions,
-  pub(crate) is_html_out:   bool,
-  pub(crate) svg_fragments: Vec<(String, String)>,
-  pub(crate) schemadocs:    bool,
-  pub(crate) whatsout:      latexml_post::extract::Whatsout,
+  pub(crate) page_opts:   PostDocumentOptions,
+  pub(crate) is_html_out: bool,
+  pub(crate) schemadocs:  bool,
+  pub(crate) whatsout:    latexml_post::extract::Whatsout,
 }
 
 /// Run one page-local phase (CrossRef / Graphics) over one page, mirroring
@@ -1433,22 +1422,6 @@ pub(crate) fn render_spilled_page(
     staged = next;
   }
 
-  // Harvest the Graphics-resolved image for every `<ltx:graphics>` that lives
-  // inside a `<ltx:picture>`, keyed by `xml:id`. The picture's serialized SVG
-  // fragment (captured in pass A, BEFORE Graphics ran) carries the RAW
-  // `<graphics>` with no `@imagesrc`; the imagesrc set here on the page DOM is
-  // then discarded when XSLT collapses the picture to an empty placeholder span.
-  // So we snapshot the resolution now and re-inject it into the fragment at
-  // splice time (`finalize_html5`). This restores Perl's Graphics→SVG order
-  // (`LaTeXML.pm` L493 before L502), which our pass-A/pass-B split inverts.
-  // arXiv/html_feedback#1291 (witness arXiv:2311.14363v2, Inkscape `.pdf_tex`
-  // figures). Only meaningful for the HTML splice path.
-  let resolved_graphics = if ctx.is_html_out {
-    harvest_resolved_graphics(&staged)
-  } else {
-    rustc_hash::FxHashMap::default()
-  };
-
   let rendered = match procs.post.process_chain(staged, &mut procs.processors) {
     Ok(r) => r,
     Err(e) => {
@@ -1462,7 +1435,7 @@ pub(crate) fn render_spilled_page(
     let dest = doc.get_destination().map(String::from);
     let output = latexml_post::extract::serialize_whatsout(&doc, ctx.whatsout);
     let output = if ctx.is_html_out {
-      finalize_html5(output, &ctx.svg_fragments, &resolved_graphics)
+      finalize_html5(output)
     } else {
       output
     };
@@ -1489,222 +1462,20 @@ struct SpilledPage {
   needs_bib:             bool,
 }
 
-/// Re-derive SVG fragments from a parsed document (the file-input equivalent of
-/// [`extract_svg_fragments`]).
+/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) to one rendered
+/// page. Pulled out of `run_post_processing` so it can run on every split
+/// sub-document, not just the first.
 ///
-/// `//ltx:picture` is a *typed* descendant query, which libxml2 evaluates
-/// without materializing `descendant-or-self::node()` — so it stays under the
-/// 10M node-set ceiling even on a 600 MB document. Most large documents have no
-/// pictures at all (the fast, zero-serialization path); when they do, only the
-/// picture subtrees are serialized and handed to the shared string extractor,
-/// never the whole file.
-fn extract_svg_fragments_from_doc(doc: &PostDocument) -> Vec<(String, String)> {
-  let pictures = doc.findnodes("//ltx:picture");
-  if pictures.is_empty() {
-    return Vec::new();
-  }
-  let joined: String = pictures.iter().map(|p| doc.node_to_string(p)).collect();
-  extract_svg_fragments(&joined)
-}
-
-/// A picture-nested `<ltx:graphics>` that the Graphics phase resolved to a web
-/// image, harvested (by `xml:id`) from the post-Graphics page DOM before XSLT
-/// discards it. Re-injected into the picture's SVG fragment at splice time so
-/// the `<foreignObject>` carries a real `<img>`/`<object>` instead of the raw
-/// `<graphics>` the pass-A snapshot froze. arXiv/html_feedback#1291.
-struct ResolvedGraphic {
-  imagesrc:     String,
-  imagewidth:   Option<String>,
-  imageheight:  Option<String>,
-  /// The `ltx_img_landscape|portrait|square` token Graphics adds (aspect ratio).
-  aspect_class: Option<String>,
-  /// Mirrors the XSLT `alt`: `@description`, else "Refer to caption" when inside
-  /// a captioned figure, else "[Uncaptioned image]".
-  alt:          String,
-  is_svg:       bool,
-}
-
-/// Harvest [`ResolvedGraphic`]s for every `<ltx:graphics>` inside a
-/// `<ltx:picture>` that Graphics gave an `@imagesrc`, keyed by `xml:id`.
-/// The `alt`/`object`-vs-`img` decisions mirror `LaTeXML-misc-xhtml.xsl`'s
-/// `ltx:graphics` templates (L142 raster → `<img>`, L192 `.svg` → `<object>`).
-fn harvest_resolved_graphics(
-  docs: &[PostDocument],
-) -> rustc_hash::FxHashMap<String, ResolvedGraphic> {
-  let mut map = rustc_hash::FxHashMap::default();
-  for d in docs {
-    for g in d.findnodes("//ltx:graphics[@imagesrc][ancestor::ltx:picture]") {
-      // xml:id is namespace-bound; the bare string key silently misses it
-      // (docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md).
-      let Some(id) = g.get_attribute_ns("id", latexml_core::common::xml::XML_NS) else {
-        continue;
-      };
-      let imagesrc = g.get_attribute("imagesrc").unwrap_or_default();
-      if imagesrc.is_empty() {
-        continue;
-      }
-      let is_svg = imagesrc.ends_with(".svg");
-      let aspect_class = g.get_attribute("class").and_then(|c| {
-        c.split_whitespace()
-          .find(|t| t.starts_with("ltx_img_"))
-          .map(str::to_string)
-      });
-      let alt = if let Some(desc) = g.get_attribute("description") {
-        desc
-      } else if !d
-        .findnodes_at("ancestor::ltx:figure[1]/ltx:caption", Some(&g))
-        .is_empty()
-      {
-        "Refer to caption".to_string()
-      } else {
-        "[Uncaptioned image]".to_string()
-      };
-      map.insert(id, ResolvedGraphic {
-        imagesrc,
-        imagewidth: g.get_attribute("imagewidth"),
-        imageheight: g.get_attribute("imageheight"),
-        aspect_class,
-        alt,
-        is_svg,
-      });
-    }
-  }
-  map
-}
-
-/// Escape a string for use inside a double-quoted HTML attribute value.
-fn escape_attr(s: &str) -> String {
-  s.replace('&', "&amp;")
-    .replace('<', "&lt;")
-    .replace('>', "&gt;")
-    .replace('"', "&quot;")
-}
-
-/// A self-closing `<graphics …/>` element — the frozen pre-Graphics placeholder
-/// the picture-SVG path carries until splice time. Shared by the two consumers:
-/// `convert_picture_children_to_svg` (strip it from a makebox `<text>` copy /
-/// re-emit it as `<foreignObject>`) and `resolve_fragment_graphics` (rewrite it
-/// to the resolved `<img>`/`<object>`).
-static GRAPHICS_SELF_CLOSE_RE: std::sync::LazyLock<regex::Regex> =
-  std::sync::LazyLock::new(|| regex::Regex::new(r"<graphics\b[^>]*/>").unwrap());
-
-/// Render a resolved graphic as the HTML the XSLT would have produced for the
-/// `<ltx:graphics>` — `<object>` for an `.svg` imagesrc (interactivity), `<img>`
-/// otherwise. Attribute set and order (src/data, id, class, width, height,
-/// alt/aria-label) mirror `LaTeXML-misc-xhtml.xsl` (`add_id` carries the
-/// graphic's `xml:id` onto the element, as Perl's SVG.pm→XSLT chain does).
-fn render_resolved_graphic(id: &str, g: &ResolvedGraphic, constrain: bool) -> String {
-  let id = format!(" id=\"{}\"", escape_attr(id));
-  let class = match &g.aspect_class {
-    Some(c) => format!(" class=\"ltx_graphics {c}\""),
-    None => " class=\"ltx_graphics\"".to_string(),
-  };
-  let w = g
-    .imagewidth
-    .as_deref()
-    .map(|w| format!(" width=\"{}\"", escape_attr(w)))
-    .unwrap_or_default();
-  let h = g
-    .imageheight
-    .as_deref()
-    .map(|h| format!(" height=\"{}\"", escape_attr(h)))
-    .unwrap_or_default();
-  let src = escape_attr(&g.imagesrc);
-  let alt = escape_attr(&g.alt);
-  // Constrain the image to the `<foreignObject>` box the SVG already sized. The
-  // enclosing `<foreignObject overflow="visible">` (SVG.pm L148-183 port) takes
-  // its size from the graphic's own width/imagewidth in the picture's scaled
-  // coordinate space; without this the browser instead draws the `<img>` at the
-  // raster's *natural* pixel size (the `width`/`height` px attrs), which spills
-  // out of that box — the giant-image regression (arXiv:2510.17772 Fig 7, every
-  // picture-nested `\includegraphics`, e.g. overpic). `100%` fills the sized box;
-  // `object-fit:contain` preserves the aspect ratio.
-  //
-  // `constrain` is false only for a DEGENERATE picture SVG (sub-pixel outer size,
-  // the `\unitlength`-not-applied core gap — SYNC_STATUS "picture-SVG unitlength
-  // sizing", witness arXiv:2311.14363v2 Inkscape `.pdf_tex`). There the box is
-  // ~0px, so a `100%`/`object-fit` constraint would collapse the image to nothing
-  // (worse than the pre-existing overflow leak); leave it unconstrained until the
-  // core sizing is fixed. `resolve_fragment_graphics` makes the call.
-  let style = if constrain {
-    " style=\"width:100%;height:100%;object-fit:contain\""
-  } else {
-    ""
-  };
-  if g.is_svg {
-    // The XSLT uses aria-label (not alt) on <object>, and a <p> fallback; the
-    // aria-label alone is enough inside the SVG foreignObject.
-    format!(
-      "<object type=\"image/svg+xml\" data=\"{src}\"{id}{class}{style}{w}{h} aria-label=\"{alt}\"></object>"
-    )
-  } else {
-    format!("<img src=\"{src}\"{id}{class}{style}{w}{h} alt=\"{alt}\">")
-  }
-}
-
-/// Rewrite each raw `<graphics .../>` in a picture's SVG fragment into the
-/// Graphics-resolved `<img>`/`<object>`, matched by its own `xml:id`. A picture
-/// can hold several (e.g. an Inkscape `.pdf_tex` overlay: `page=1` background +
-/// `page=2` labels). An id with no resolved entry is left as-is (a genuinely
-/// unconverted / missing image, exactly as before).
-fn resolve_fragment_graphics(
-  fragment: &str,
-  resolved: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
-) -> String {
-  use std::sync::LazyLock;
-  static XMLID_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
-  static SVG_DIM_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r#"<svg\b[^>]*\bwidth="([0-9.]+)"[^>]*\bheight="([0-9.]+)""#).unwrap()
-  });
-  if resolved.is_empty() || !fragment.contains("<graphics") {
-    return fragment.to_string();
-  }
-  // Constrain the resolved images to their `<foreignObject>` boxes (object-fit)
-  // ONLY when the picture's outer `<svg>` has a real coordinate extent. A
-  // sub-pixel outer SVG is the `\unitlength`-not-applied core gap (SYNC_STATUS
-  // "picture-SVG unitlength sizing", arXiv:2311.14363v2): its foreignObjects
-  // collapse in the browser, so a `100%` constraint would zero the image. Below
-  // `DEGENERATE_SVG_PX` we leave images unconstrained (the pre-existing overflow
-  // behavior) rather than hide them. A well-sized picture (overpic, ~186px+) is
-  // far above the floor; a degenerate one is ~1px.
-  const DEGENERATE_SVG_PX: f64 = 4.0;
-  let constrain = SVG_DIM_RE
-    .captures(fragment)
-    .and_then(|c| {
-      let w = c[1].parse::<f64>().ok()?;
-      let h = c[2].parse::<f64>().ok()?;
-      Some(w >= DEGENERATE_SVG_PX && h >= DEGENERATE_SVG_PX)
-    })
-    // No parseable outer <svg> dims → assume a real picture and constrain.
-    .unwrap_or(true);
-  GRAPHICS_SELF_CLOSE_RE
-    .replace_all(fragment, |caps: &regex::Captures| {
-      let tag = &caps[0];
-      match XMLID_RE.captures(tag) {
-        Some(c) => match resolved.get(&c[1]) {
-          Some(g) => render_resolved_graphic(&c[1], g, constrain),
-          None => tag.to_string(),
-        },
-        None => tag.to_string(),
-      }
-    })
-    .to_string()
-}
-
-/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
-/// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
-/// so it can run on every split sub-document, not just the first.
-///
-/// `resolved_graphics` carries the Graphics-phase image resolution for
-/// picture-nested `<graphics>` (see [`harvest_resolved_graphics`]); the raw
-/// `<graphics>` frozen into each fragment during pass-A extraction is rewritten
-/// to the resolved `<img>`/`<object>` here. arXiv/html_feedback#1291.
-fn finalize_html5(
-  output: String,
-  svg_fragments: &[(String, String)],
-  resolved_graphics: &rustc_hash::FxHashMap<String, ResolvedGraphic>,
-) -> String {
+/// Pictures need no string-level work here any more: `latexml_post::svg::SVG`
+/// converts every `<ltx:picture>` on the live page DOM before MathML/XSLT
+/// (Perl's chain order, `LaTeXML.pm` Graphics → SVG → MathML → XSLT), so the
+/// XSLT's `as-svg` branch renders the `<svg:svg>` itself. The former
+/// regex-built fragment table and post-XSLT placeholder splice truncated an
+/// outer picture at its first nested `</picture>` and dropped every
+/// `<block>`/`<p>`/`<inline-block>` child (pagelayout ×3, ticket ×2,
+/// vocaltract, bookcover-example2, latex-refsheet/header-graph lost all
+/// picture text at post; batch 56bz).
+fn finalize_html5(output: String) -> String {
   use std::sync::LazyLock;
   // Cached at first call — regex compile is the slow part of `Regex::new`,
   // and finalize_html5 runs on every (sub-)document in the post-pipeline.
@@ -1734,674 +1505,7 @@ fn finalize_html5(
     .replace_all(&output, "<$1$2></$1>")
     .to_string();
   let output = VOID_CLOSE_RE.replace_all(&output, "").to_string();
-  let mut output = VOID_SELF_CLOSE_RE
+  VOID_SELF_CLOSE_RE
     .replace_all(&output, "<$1$2>")
-    .to_string();
-  // SVG fragment injection into the empty `ltx_picture` placeholder spans.
-  //
-  // WHY this is a string splice and not a DOM operation (issue #398).
-  // The SVG must land AFTER the XSLT stage (it is collected separately by
-  // `extract_svg_fragments` / the streaming split), and the obvious DOM
-  // alternative — re-parse the SVG fragment and append it under the placeholder
-  // node before serialization — was deliberately abandoned: it tripped a
-  // libxml2 use-after-free in `PostDocument` cleanup (see the note on
-  // `extract_svg_fragments`). So we splice into the serialized string instead.
-  //
-  // The original splice hard-coded the placeholder as `<span id="…"
-  // class="ltx_picture"…>` — coupled to id-before-class order AND double quotes,
-  // neither guaranteed by a serializer. Measured (issue #398): on every LIVE
-  // input the coupling holds — the XSLT emits `id` (add_id) then `class`
-  // (add_classes is the first thing add_attributes does), and libxml2 preserves
-  // insertion order and always double-quotes — so no real break was
-  // demonstrable; the fragility is latent. We keep the string splice (the DOM
-  // refactor is not worth re-entering the use-after-free for a latent concern)
-  // but make the MATCH robust so a future serializer/XSLT change cannot silently
-  // break it: match any empty `<span>` whose class contains `ltx_picture`,
-  // regardless of attribute order or quote style, and look the fragment up by
-  // the id found inside.
-  //
-  // WHEN TO REVISIT (do the real DOM refactor and delete this splice):
-  //   * once the fork's `PostDocument` cleanup no longer use-after-frees on an
-  //     inserted subtree (rust-libxml; we have fixed adjacent UAF/NULL-deref
-  //     bugs there this year) — then inject the SVG as child nodes of the
-  //     placeholder in the post-XSLT DOM (`doc`, before `serialize_whatsout`),
-  //     which also lets the void-element normalization above move to a proper
-  //     HTML serializer;
-  //   * or if a demonstrated attribute-order/quote break ever appears (none
-  //     today) — that would raise the priority from latent to real.
-  if !svg_fragments.is_empty() {
-    static EMPTY_PICTURE_SPAN: LazyLock<regex::Regex> = LazyLock::new(|| {
-      // An empty `<span …></span>` carrying `ltx_picture` as a whole class
-      // token, in a single- or double-quoted class value, with the other
-      // attributes (notably `id`) in ANY position.
-      regex::Regex::new(
-        r#"<span\b(?P<attrs>[^>]*\bclass\s*=\s*(?:"[^"]*\bltx_picture\b[^"]*"|'[^']*\bltx_picture\b[^']*')[^>]*)></span>"#,
-      )
-      .unwrap()
-    });
-    static SPAN_ID: LazyLock<regex::Regex> =
-      LazyLock::new(|| regex::Regex::new(r#"\bid\s*=\s*(?:"([^"]+)"|'([^']+)')"#).unwrap());
-    output = EMPTY_PICTURE_SPAN
-      .replace_all(&output, |caps: &regex::Captures| {
-        let attrs = &caps["attrs"];
-        let id = SPAN_ID
-          .captures(attrs)
-          .and_then(|c| c.get(1).or_else(|| c.get(2)))
-          .map(|m| m.as_str());
-        match id.and_then(|id| svg_fragments.iter().find(|(fid, _)| fid == id)) {
-          // Preserve the placeholder's own attributes verbatim; only fill it.
-          // The fragment's raw `<graphics>` (frozen pre-Graphics) is rewritten
-          // to the resolved image here — Perl's Graphics→SVG order (#1291).
-          Some((_, svg_html)) => {
-            let filled = resolve_fragment_graphics(svg_html, resolved_graphics);
-            format!("<span{attrs}>{filled}</span>")
-          },
-          // A picture span we have no fragment for — leave it untouched.
-          None => caps[0].to_string(),
-        }
-      })
-      .to_string();
-  }
-  output
-}
-
-/// Extract SVG fragments from intermediate LaTeXML XML.
-///
-/// Finds `<picture>` elements, converts their children to inline SVG HTML.
-/// Uses a lightweight regex+string approach (no libxml2) to avoid the
-/// use-after-free crash in PostDocument cleanup.
-///
-/// Returns (picture_id, svg_html) pairs for post-XSLT injection.
-fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
-  use std::sync::LazyLock;
-  // Fast-fail: most documents have no `<picture>` elements (tikz / pgf
-  // is uncommon in the canvas). Skip the backtracking lazy-match
-  // regex (`(?s)...(.*?)`) when `<picture` doesn't appear as a literal
-  // substring. `str::contains` is a SIMD-accelerated byte search and
-  // takes microseconds even on ~MB inputs.
-  if !xml.contains("<picture") {
-    return Vec::new();
-  }
-  static PICTURE_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap());
-  static ID_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
-  static WIDTH_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"width="([^"]+)""#).unwrap());
-  static HEIGHT_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"height="([^"]+)""#).unwrap());
-  let mut fragments = Vec::new();
-  let picture_re = &*PICTURE_RE;
-  let id_re = &*ID_RE;
-  let width_re = &*WIDTH_RE;
-  let height_re = &*HEIGHT_RE;
-
-  for pic_caps in picture_re.captures_iter(xml) {
-    let attrs = &pic_caps[1];
-    let content = &pic_caps[2];
-    let id = id_re
-      .captures(attrs)
-      .map(|c| c[1].to_string())
-      .unwrap_or_default();
-    let width = width_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
-    let height = height_re.captures(attrs).and_then(|c| parse_tex_dim(&c[1]));
-
-    if id.is_empty() || content.trim().is_empty() {
-      continue;
-    }
-
-    let w = width.unwrap_or(100.0);
-    let h = height.unwrap_or(100.0);
-
-    // Build inline SVG: coordinate system has y-flip (TeX origin bottom-left, SVG top-left)
-    let mut svg_content = format!(
-      r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{w:.2}" height="{h:.2}" overflow="visible">"#,
-    );
-    svg_content.push_str(&format!(
-      r#"<g transform="translate(0,{h:.2}) scale(1,-1)">"#,
-    ));
-
-    // Convert ltx picture children to SVG elements
-    svg_content.push_str(&convert_picture_children_to_svg(content));
-
-    svg_content.push_str("</g></svg>");
-    fragments.push((id, svg_content));
-  }
-  fragments
-}
-
-/// Convert LaTeXML picture children (g, line, text, circle, etc.) to SVG elements.
-fn convert_picture_children_to_svg(content: &str) -> String {
-  use std::sync::LazyLock;
-  static G_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"(?s)<g([^>]*)>(.*?)</g>"#).unwrap());
-  static TRANSFORM_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"transform="([^"]+)""#).unwrap());
-  static LINE_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<line\s+points="([^"]+)"([^/]*)/?>"#).unwrap());
-  static CIRCLE_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<circle([^/]*)/?>"#).unwrap());
-  static ELLIPSE_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<ellipse([^/]*)/?>"#).unwrap());
-  static RECT_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<rect([^/]*)/?>"#).unwrap());
-  static POLYGON_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<polygon([^/]*)/?>"#).unwrap());
-  static PATH_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<path([^/]*)/?>"#).unwrap());
-  static BEZIER_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap());
-  static TEXT_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"(?s)<text([^>]*)>(.*?)</text>"#).unwrap());
-  // Foreign (non-SVG) content that a picture makebox can carry: a math label or
-  // an embedded graphic. Perl's SVG.pm wraps these in <foreignObject>. The
-  // `<graphics …/>` matcher is the module-level `GRAPHICS_SELF_CLOSE_RE` (shared
-  // with `resolve_fragment_graphics`).
-  static MATH_RE: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r#"(?s)<Math\b[^>]*>.*?</Math>"#).unwrap());
-
-  let mut svg = String::new();
-
-  for g_caps in G_RE.captures_iter(content) {
-    let g_attrs = &g_caps[1];
-    let g_content = &g_caps[2];
-
-    // Extract transform
-    let transform = TRANSFORM_RE.captures(g_attrs).map(|c| c[1].to_string());
-
-    if let Some(t) = &transform {
-      svg.push_str(&format!(r#"<g transform="{t}">"#));
-    } else {
-      svg.push_str("<g>");
-    }
-
-    // <line points="x1,y1 x2,y2" stroke="..." stroke-width="..."/>
-    for line_caps in LINE_RE.captures_iter(g_content) {
-      let points = &line_caps[1];
-      let rest_attrs = &line_caps[2];
-      let coords: Vec<&str> = points.split_whitespace().collect();
-      if coords.len() >= 2 {
-        let p1: Vec<&str> = coords[0].split(',').collect();
-        let p2: Vec<&str> = coords[1].split(',').collect();
-        if p1.len() == 2 && p2.len() == 2 {
-          svg.push_str(&format!(
-            r#"<line x1="{}" y1="{}" x2="{}" y2="{}"{}/>"#,
-            p1[0], p1[1], p2[0], p2[1], rest_attrs
-          ));
-        }
-      }
-    }
-
-    // <circle cx="..." cy="..." r="..." .../>
-    for circle_caps in CIRCLE_RE.captures_iter(g_content) {
-      svg.push_str(&format!("<circle{}/>", &circle_caps[1]));
-    }
-
-    // <ellipse cx="..." cy="..." rx="..." ry="..." .../>
-    for ellipse_caps in ELLIPSE_RE.captures_iter(g_content) {
-      svg.push_str(&format!("<ellipse{}/>", &ellipse_caps[1]));
-    }
-
-    // <rect x="..." y="..." width="..." height="..." .../>
-    for rect_caps in RECT_RE.captures_iter(g_content) {
-      svg.push_str(&format!("<rect{}/>", &rect_caps[1]));
-    }
-
-    // <polygon points="..." .../>
-    for polygon_caps in POLYGON_RE.captures_iter(g_content) {
-      svg.push_str(&format!("<polygon{}/>", &polygon_caps[1]));
-    }
-
-    // <path d="..." .../>
-    for path_caps in PATH_RE.captures_iter(g_content) {
-      svg.push_str(&format!("<path{}/>", &path_caps[1]));
-    }
-
-    // <bezier points="x1,y1 x2,y2 x3,y3 x4,y4" .../>
-    // Convert to SVG cubic bezier path
-    for bez_caps in BEZIER_RE.captures_iter(g_content) {
-      let points = &bez_caps[1];
-      let rest = &bez_caps[2];
-      let coords: Vec<&str> = points.split_whitespace().collect();
-      if coords.len() >= 4 {
-        // SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
-        let d = format!(
-          "M {} C {} {} {}",
-          coords[0], coords[1], coords[2], coords[3]
-        );
-        svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
-      } else if coords.len() >= 3 {
-        // Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
-        let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);
-        svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
-      }
-    }
-
-    // <arc .../> — arc segments (rarely used, stub for now)
-    // <wedge .../> — filled wedges (rarely used, stub for now)
-
-    // <text>...</text> — wrap in SVG text with y-flip correction. A picture
-    // makebox (e.g. overpic's `\put(0,0){\makebox(0,0)[bl]{\includegraphics}}`)
-    // serializes its graphic/math INSIDE the `<text>`; strip those here — the
-    // foreign-content block below emits each `<graphics>`/`<Math>` once, as a
-    // faithful `<foreignObject>`. Left in, the graphic renders a SECOND time,
-    // unconstrained, inside an SVG `<text>` (the overpic double-image,
-    // arXiv:2510.17772 Fig 7). Plain-text labels are untouched.
-    for text_caps in TEXT_RE.captures_iter(g_content) {
-      let text_attrs = &text_caps[1];
-      let text_content = GRAPHICS_SELF_CLOSE_RE.replace_all(&text_caps[2], "");
-      let text_content = MATH_RE.replace_all(&text_content, "");
-      // The overpic BACKGROUND makebox wraps only the graphic, so after the strip
-      // there is no label left — skip the wrapper rather than emit a dead
-      // `<text></text>` (the graphic still renders via the foreign block below).
-      if text_content.trim().is_empty() {
-        continue;
-      }
-      svg.push_str(&format!(
-        r#"<g transform="scale(1,-1)"><text{text_attrs}>{text_content}</text></g>"#,
-      ));
-    }
-
-    // Foreign content (a `<Math>` label or a `<graphics>` image inside a picture
-    // makebox) must survive into the SVG wrapped in a `<foreignObject>`, not be
-    // dropped. Mirrors `SVG.pm::convertNode`
-    // (LaTeXML/lib/LaTeXML/Post/SVG.pm:148-183): a non-SVG child takes its size
-    // from its own width/imagewidth, else the containing `<g>`'s
-    // innerwidth/width (defaults 1pt, non-zero required), and is placed in a
-    // y-flipped `<g><foreignObject overflow="visible">`. html_feedback#74
-    // (arXiv:0810.1673v3 Fig 2 — xfig math labels + `\epsfig` image).
-    //
-    // NOTE: `latexml_post::svg::SVG::convert_foreign` is the *canonical*,
-    // DOM-based faithful port (it already handles this). This string-level
-    // reimplementation exists only because the active SVG path splices serialized
-    // strings post-XSLT to dodge a libxml2 PostDocument-cleanup UAF (see the
-    // `finalize_html5` splice note). When that path can carry a live DOM, this
-    // block and its siblings above are deleted in favor of the `svg.rs` Processor.
-    for node in MATH_RE
-      .find_iter(g_content)
-      .chain(GRAPHICS_SELF_CLOSE_RE.find_iter(g_content))
-      .map(|m| m.as_str())
-    {
-      let width = svg_attr(node, "width")
-        .or_else(|| svg_attr(node, "imagewidth"))
-        .or_else(|| svg_attr(g_attrs, "innerwidth"))
-        .or_else(|| svg_attr(g_attrs, "width"))
-        .unwrap_or_else(|| "1pt".to_string());
-      let height = svg_attr(node, "height")
-        .or_else(|| svg_attr(node, "imageheight"))
-        .or_else(|| svg_attr(g_attrs, "innerheight"))
-        .or_else(|| svg_attr(g_attrs, "height"))
-        .unwrap_or_else(|| "1pt".to_string());
-      let depth = svg_attr(node, "depth")
-        .or_else(|| svg_attr(g_attrs, "innerdepth"))
-        .or_else(|| svg_attr(g_attrs, "depth"))
-        .unwrap_or_else(|| "0pt".to_string());
-      let px_w = parse_tex_dim(&width).unwrap_or(1.0);
-      let px_h = parse_tex_dim(&height).unwrap_or(1.0);
-      let px_d = parse_tex_dim(&depth).unwrap_or(0.0);
-      // Perl: y = to_px(height) + to_px(depth); flip so foreign content is upright.
-      let y = px_h + px_d;
-      svg.push_str(&format!(
-        r#"<g transform="translate(0,{y:.2}) scale(1,-1)"><foreignObject width="{px_w:.2}" height="{px_h:.2}" overflow="visible">{node}</foreignObject></g>"#
-      ));
-    }
-
-    svg.push_str("</g>");
-  }
-
-  // Also handle direct children not inside <g> (e.g. top-level <bezier>, <line>)
-  // These appear directly inside <picture> without a <g> wrapper
-  let direct_bezier_re =
-    regex::Regex::new(r#"(?m)^\s*<bezier\s+points="([^"]+)"([^/]*)/?>"#).unwrap();
-  for bez_caps in direct_bezier_re.captures_iter(content) {
-    let points = &bez_caps[1];
-    let rest = &bez_caps[2];
-    let coords: Vec<&str> = points.split_whitespace().collect();
-    if coords.len() >= 4 {
-      let d = format!(
-        "M {} C {} {} {}",
-        coords[0], coords[1], coords[2], coords[3]
-      );
-      svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
-    } else if coords.len() >= 3 {
-      let d = format!("M {} Q {} {}", coords[0], coords[1], coords[2]);
-      svg.push_str(&format!(r#"<path d="{d}"{rest} fill="none"/>"#));
-    }
-  }
-
-  svg
-}
-
-/// Extract a `name="value"` attribute from a serialized element/attribute
-/// string. Matches `name` only at an attribute boundary (string start,
-/// whitespace, or after `<`), so a query for `width` does NOT match
-/// `innerwidth="…"`. Returns the first such value.
-fn svg_attr(s: &str, name: &str) -> Option<String> {
-  let pat = format!("{name}=\"");
-  let bytes = s.as_bytes();
-  let mut from = 0;
-  while let Some(rel) = s[from..].find(&pat) {
-    let at = from + rel;
-    let boundary = at == 0 || bytes[at - 1].is_ascii_whitespace() || bytes[at - 1] == b'<';
-    if boundary {
-      let vstart = at + pat.len();
-      return s[vstart..]
-        .find('"')
-        .map(|end| s[vstart..vstart + end].to_string());
-    }
-    from = at + pat.len();
-  }
-  None
-}
-
-/// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
-fn parse_tex_dim(s: &str) -> Option<f64> {
-  let s = s.trim();
-  if let Some(rest) = s.strip_suffix("pt") {
-    rest.parse::<f64>().ok().map(|v| v * 96.0 / 72.27)
-  } else if let Some(rest) = s.strip_suffix("px") {
-    rest.parse::<f64>().ok()
-  } else {
-    s.parse::<f64>().ok()
-  }
-}
-
-#[cfg(test)]
-mod finalize_html5_splice_tests {
-  //! #398: the `ltx_picture` SVG splice must fill the placeholder span
-  //! regardless of the serialized attribute ORDER or QUOTE style — the coupling
-  //! the original `<span id="…" class="ltx_picture"…>` regex had. No live input
-  //! perturbs the order today (the XSLT emits id-then-class, libxml2 preserves
-  //! order and double-quotes), so these craft the perturbations directly to keep
-  //! the match robust against a future serializer/XSLT change. The old regex
-  //! FAILED cases 2-4 (class-first / single-quotes / an attribute between id and
-  //! class); the hardened match passes them.
-  use super::finalize_html5;
-
-  fn splice(span: &str) -> String {
-    finalize_html5(
-      span.to_string(),
-      &[("p1".to_string(), "<svg>OK</svg>".to_string())],
-      &rustc_hash::FxHashMap::default(),
-    )
-  }
-
-  #[test]
-  fn splice_is_attribute_order_and_quote_agnostic() {
-    // 1. Canonical (id-first, double-quote) — the only shape seen live.
-    assert!(splice(r#"<span id="p1" class="ltx_picture"></span>"#).contains("<svg>OK</svg>"));
-    // 2. class BEFORE id — the old regex required id-then-class.
-    assert!(splice(r#"<span class="ltx_picture" id="p1"></span>"#).contains("<svg>OK</svg>"));
-    // 3. single quotes — the old regex hard-coded double quotes.
-    assert!(splice(r#"<span id='p1' class='ltx_picture'></span>"#).contains("<svg>OK</svg>"));
-    // 4. an attribute BETWEEN id and class — the old regex needed them adjacent.
-    assert!(
-      splice(r#"<span id="p1" style="color:red" class="ltx_picture"></span>"#)
-        .contains("<svg>OK</svg>")
-    );
-    // The placeholder's own attributes are preserved (only the content is filled).
-    assert!(
-      splice(r#"<span class="ltx_picture" id="p1"></span>"#).contains(r#"class="ltx_picture""#)
-    );
-  }
-
-  #[test]
-  fn splice_leaves_non_targets_alone() {
-    // Not a picture span → untouched.
-    assert_eq!(
-      splice(r#"<span id="p1" class="ltx_note"></span>"#),
-      r#"<span id="p1" class="ltx_note"></span>"#
-    );
-    // A picture span with an id we have NO fragment for → untouched.
-    assert_eq!(
-      splice(r#"<span id="other" class="ltx_picture"></span>"#),
-      r#"<span id="other" class="ltx_picture"></span>"#
-    );
-    // `ltx_picture` must be a whole class token, not a substring.
-    assert_eq!(
-      splice(r#"<span id="p1" class="ltx_picturewide"></span>"#),
-      r#"<span id="p1" class="ltx_picturewide"></span>"#
-    );
-  }
-}
-
-#[cfg(test)]
-mod picture_graphics_resolution_tests {
-  //! arXiv/html_feedback#1291 (witness arXiv:2311.14363v2): a `<graphics>` inside
-  //! a `{picture}` (Inkscape `.pdf_tex` figures) must carry the Graphics-resolved
-  //! `<img>`/`<object>` into its `<foreignObject>`, not the raw `<graphics>` the
-  //! pass-A snapshot froze before Graphics ran. `finalize_html5` re-injects the
-  //! resolution harvested from the post-Graphics page DOM.
-  use rustc_hash::FxHashMap;
-
-  use super::{ResolvedGraphic, finalize_html5};
-
-  fn resolved(pairs: Vec<(&str, ResolvedGraphic)>) -> FxHashMap<String, ResolvedGraphic> {
-    pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
-  }
-
-  /// A picture placeholder span + its SVG fragment carrying two raw `<graphics>`
-  /// (an Inkscape overlay: `page=1` background + `page=2` labels).
-  fn placeholder_and_fragment() -> (String, (String, String)) {
-    let span = r#"<span id="p1" class="ltx_picture"></span>"#.to_string();
-    let fragment = (
-      "p1".to_string(),
-      concat!(
-        r#"<svg><g><foreignObject width="100" height="120">"#,
-        r#"<graphics graphic="bg.pdf" options="page=1" xml:id="p1.g1"/></foreignObject>"#,
-        r#"<foreignObject width="100" height="120">"#,
-        r#"<graphics graphic="bg.pdf" options="page=2" xml:id="p1.g2"/></foreignObject>"#,
-        r#"</g></svg>"#,
-      )
-      .to_string(),
-    );
-    (span, fragment)
-  }
-
-  #[test]
-  fn raster_graphics_becomes_img_inside_foreignobject() {
-    let (span, fragment) = placeholder_and_fragment();
-    let map = resolved(vec![
-      ("p1.g1", ResolvedGraphic {
-        imagesrc:     "bg.png".to_string(),
-        imagewidth:   Some("100".to_string()),
-        imageheight:  Some("120".to_string()),
-        aspect_class: Some("ltx_img_portrait".to_string()),
-        alt:          "Refer to caption".to_string(),
-        is_svg:       false,
-      }),
-      ("p1.g2", ResolvedGraphic {
-        imagesrc:     "bg-2.png".to_string(),
-        imagewidth:   None,
-        imageheight:  None,
-        aspect_class: None,
-        alt:          "[Uncaptioned image]".to_string(),
-        is_svg:       false,
-      }),
-    ]);
-    let out = finalize_html5(span, &[fragment], &map);
-    // Both nested graphics are resolved to <img>, each by its own xml:id.
-    assert!(
-      out.contains(r#"<img src="bg.png" id="p1.g1" class="ltx_graphics ltx_img_portrait" style="width:100%;height:100%;object-fit:contain" width="100" height="120" alt="Refer to caption">"#),
-      "page=1 graphic not resolved to <img> (with foreignObject-box constraint):\n{out}"
-    );
-    assert!(
-      out.contains(
-        r#"<img src="bg-2.png" id="p1.g2" class="ltx_graphics" style="width:100%;height:100%;object-fit:contain" alt="[Uncaptioned image]">"#
-      ),
-      "page=2 graphic not resolved to <img>:\n{out}"
-    );
-    // The raw <graphics> element must be gone (the #1291 defect).
-    assert!(
-      !out.contains("<graphics"),
-      "raw <graphics> survived into HTML (missing image):\n{out}"
-    );
-  }
-
-  #[test]
-  fn svg_imagesrc_becomes_object() {
-    let (span, fragment) = placeholder_and_fragment();
-    let map = resolved(vec![("p1.g1", ResolvedGraphic {
-      imagesrc:     "x1.svg".to_string(),
-      imagewidth:   Some("100".to_string()),
-      imageheight:  Some("120".to_string()),
-      aspect_class: Some("ltx_img_square".to_string()),
-      alt:          "Refer to caption".to_string(),
-      is_svg:       true,
-    })]);
-    let out = finalize_html5(span, &[fragment], &map);
-    assert!(
-      out.contains(r#"<object type="image/svg+xml" data="x1.svg" id="p1.g1" class="ltx_graphics ltx_img_square" style="width:100%;height:100%;object-fit:contain" width="100" height="120" aria-label="Refer to caption"></object>"#),
-      "svg graphic not resolved to <object>:\n{out}"
-    );
-    // p1.g2 has no map entry → its raw <graphics> is left as-is (genuinely
-    // unconverted), never silently promoted to a broken <img>.
-    assert!(
-      out.contains(r#"<graphics graphic="bg.pdf" options="page=2" xml:id="p1.g2"/>"#),
-      "unresolved graphic should be left raw:\n{out}"
-    );
-  }
-
-  #[test]
-  fn empty_map_leaves_raw_graphics_untouched() {
-    // Non-HTML / graphicimages-off path: no resolution, no rewrite.
-    let (span, fragment) = placeholder_and_fragment();
-    let out = finalize_html5(span, &[fragment], &FxHashMap::default());
-    assert!(out.contains(r#"<graphics graphic="bg.pdf" options="page=1" xml:id="p1.g1"/>"#));
-  }
-
-  #[test]
-  fn degenerate_picture_svg_leaves_image_unconstrained() {
-    // A picture whose outer <svg> is sub-pixel (the `\unitlength`-not-applied
-    // core gap, arXiv:2311.14363v2 Inkscape `.pdf_tex`): its foreignObject boxes
-    // collapse in the browser, so a `100%`/object-fit constraint would zero the
-    // image. The resolved <img> must therefore carry NO size constraint here
-    // (leaving the pre-existing overflow behavior), unlike a well-sized picture.
-    let span = r#"<span id="p1" class="ltx_picture"></span>"#.to_string();
-    let fragment = (
-      "p1".to_string(),
-      concat!(
-        r#"<svg xmlns="http://www.w3.org/2000/svg" width="1.33" height="0.95" overflow="visible">"#,
-        r#"<g><foreignObject width="458.28" height="328.24" overflow="visible">"#,
-        r#"<graphics graphic="x5.pdf" xml:id="p1.g1"/></foreignObject></g></svg>"#,
-      )
-      .to_string(),
-    );
-    let map = resolved(vec![("p1.g1", ResolvedGraphic {
-      imagesrc:     "x5.png".to_string(),
-      imagewidth:   None,
-      imageheight:  None,
-      aspect_class: None,
-      alt:          "Refer to caption".to_string(),
-      is_svg:       false,
-    })]);
-    let out = finalize_html5(span, &[fragment], &map);
-    assert!(
-      out.contains(r#"<img src="x5.png" id="p1.g1" class="ltx_graphics" alt="Refer to caption">"#),
-      "degenerate-SVG image must be resolved but UNCONSTRAINED (no object-fit):\n{out}"
-    );
-    assert!(
-      !out.contains("object-fit"),
-      "a sub-pixel picture SVG must not get an object-fit constraint (would hide the image):\n{out}"
-    );
-  }
-}
-
-#[cfg(test)]
-mod picture_svg_foreign_content_tests {
-  //! html_feedback#74 (arXiv:0810.1673v3 Fig 2): a `<Math>` or `<graphics>`
-  //! inside a `{picture}` `\makebox` must survive into the SVG, wrapped in a
-  //! `<foreignObject>` (as Perl's `SVG.pm` does), not be dropped.
-  //! `convert_picture_children_to_svg` handled the drawing primitives + `<text>`
-  //! but had NO case for foreign content, so xfig/pstricks figures silently lost
-  //! their math labels and `\epsfig` images. Plain text is the baseline; math and
-  //! graphics are the canaries.
-  use super::convert_picture_children_to_svg;
-
-  #[test]
-  fn plain_text_label_still_renders() {
-    // The shape emitted for `\put(50,50){\makebox(0,0){Hello}}` — already worked.
-    let input = r#"<g transform="translate(50,50)"><text>Hello</text></g>"#;
-    let out = convert_picture_children_to_svg(input);
-    assert!(
-      out.contains("Hello"),
-      "plain-text picture label regressed: {out}"
-    );
-  }
-
-  #[test]
-  fn math_label_survives_as_foreignobject() {
-    // The shape emitted for `\put(20,20){\makebox(0,0){$X^{2}$}}`.
-    let input = r#"<g transform="translate(20,20)" innerwidth="13.55pt" innerheight="8.14pt"><Math mode="inline" tex="X^{2}"><XMath><XMTok>X</XMTok></XMath></Math></g>"#;
-    let out = convert_picture_children_to_svg(input);
-    assert!(
-      out.contains("foreignObject") && out.contains("Math"),
-      "math inside a picture makebox was dropped, not wrapped in <foreignObject>: {out}"
-    );
-  }
-
-  #[test]
-  fn embedded_graphic_survives_as_foreignobject() {
-    // The shape emitted for `\epsfig{file=link.ps}` inside a picture.
-    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><graphics candidates="link.ps" graphic="link.ps"/></g>"#;
-    let out = convert_picture_children_to_svg(input);
-    assert!(
-      out.contains("foreignObject") && out.contains("graphic"),
-      "an embedded picture graphic was dropped, not wrapped in <foreignObject>: {out}"
-    );
-  }
-
-  #[test]
-  fn graphic_inside_a_makebox_text_is_not_double_emitted() {
-    // overpic's `\put(0,0){\makebox(0,0)[bl]{\includegraphics{img}}}` serializes
-    // the graphic INSIDE a `<text>`. It must render ONCE — as a `<foreignObject>`
-    // — never a second time inside an SVG `<text>` (the giant double-image,
-    // arXiv:2510.17772 Fig 7). The plain "A" label beside it must survive.
-    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><text>A<graphics graphic="img.png" xml:id="p1.g1"/></text></g>"#;
-    let out = convert_picture_children_to_svg(input);
-    assert_eq!(
-      out.matches("<graphics").count(),
-      1,
-      "picture graphic emitted more than once (double-image): {out}"
-    );
-    assert!(
-      out.contains("foreignObject"),
-      "the single copy must be the faithful <foreignObject>, not inside <text>: {out}"
-    );
-    // The <graphics> must be gone from any <text> node: no `<graphic` between a
-    // <text> and its </text>.
-    let text_seg = out.split("<text").nth(1).unwrap_or("");
-    let text_inner = text_seg.split("</text>").next().unwrap_or("");
-    assert!(
-      !text_inner.contains("<graphic"),
-      "graphic left inside <text> (will double-render): {out}"
-    );
-    assert!(
-      out.contains(">A<") || text_inner.contains('A'),
-      "plain label dropped: {out}"
-    );
-  }
-
-  #[test]
-  fn background_makebox_graphic_only_emits_no_empty_text() {
-    // The overpic BACKGROUND — `\put(0,0){\makebox(0,0)[bl]{\usebox\OVP@box}}` —
-    // wraps ONLY the graphic, so the `<text>` has no sibling label. After the
-    // graphic is stripped from the text copy, the leftover is empty: emit the
-    // graphic once (as `<foreignObject>`) and NO dead `<text></text>` wrapper.
-    let input = r#"<g transform="translate(0,0)" innerwidth="277pt" innerheight="277pt"><text><graphics graphic="bg.png" xml:id="p1.g0"/></text></g>"#;
-    let out = convert_picture_children_to_svg(input);
-    assert_eq!(
-      out.matches("<graphics").count(),
-      1,
-      "background graphic emitted more than once: {out}"
-    );
-    assert!(
-      out.contains("foreignObject"),
-      "the graphic must survive as a <foreignObject>: {out}"
-    );
-    assert!(
-      !out.contains("<text>") && !out.contains("<text "),
-      "an empty <text> wrapper was emitted for a label-less makebox: {out}"
-    );
-  }
+    .to_string()
 }

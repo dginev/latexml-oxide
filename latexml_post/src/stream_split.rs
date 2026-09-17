@@ -100,9 +100,6 @@ pub struct StreamSplitOutcome {
   pub pages:       Vec<StreamedSplitPage>,
   /// Bodies of every `<?latexml …?>` PI (for the ar5iv literal-intent sniff).
   pub latexml_pis: Vec<String>,
-  /// Concatenated serializations of every `ltx:picture` subtree, ready for
-  /// the driver's `extract_svg_fragments`.
-  pub picture_xml: String,
 }
 
 /// Can this `--splitpath` union be evaluated by the streaming split? (The
@@ -154,12 +151,7 @@ pub fn stream_split(
   splitter.patch_inlist_toc()?;
   let n = splitter.metas.len();
   Info!("split", "result", " [Split into {} pages]", n);
-  let Splitter {
-    metas,
-    latexml_pis,
-    picture_xml,
-    ..
-  } = splitter;
+  let Splitter { metas, latexml_pis, .. } = splitter;
   let pages = metas
     .into_iter()
     .map(|m| StreamedSplitPage {
@@ -167,11 +159,7 @@ pub fn stream_split(
       destination: m.name,
     })
     .collect();
-  Ok(Some(StreamSplitOutcome {
-    pages,
-    latexml_pis,
-    picture_xml,
-  }))
+  Ok(Some(StreamSplitOutcome { pages, latexml_pis }))
 }
 
 /// Metadata for one page, mirroring `Split`'s `PageEntry` plus what the
@@ -253,7 +241,6 @@ struct Splitter {
   /// Root element `class` attribute (merged into every page).
   root_class:         Option<String>,
   /// Concatenated `ltx:picture` serializations for SVG extraction.
-  picture_xml:        String,
   first_page_spilled: bool,
   warned_late:        bool,
   unnamed_counter:    u32,
@@ -280,7 +267,6 @@ impl Splitter {
       dates_xml: Vec::new(),
       navs_xml: Vec::new(),
       root_class: None,
-      picture_xml: String::new(),
       first_page_spilled: false,
       warned_late: false,
       unnamed_counter: 0,
@@ -567,9 +553,6 @@ impl Splitter {
   fn bulk_probes(&mut self, outer: &str, expected_resource: bool) {
     if probe_lists_toc(outer) {
       self.top().has_lists_toc = true;
-    }
-    if outer.contains("<picture") || outer.contains(":picture") {
-      collect_pictures(outer, &mut self.picture_xml);
     }
     // `expected_resource`: the subtree IS a direct-child ltx:resource that
     // append_bulk already collected — its own serialization must not trip the
@@ -924,9 +907,6 @@ impl Splitter {
   /// tracked by the caller's incremental probe, and the shell append handles
   /// the enclosing level's flag).
   fn bulk_probes_dom(&mut self, serialized: &str) {
-    if serialized.contains("<picture") || serialized.contains(":picture") {
-      collect_pictures(serialized, &mut self.picture_xml);
-    }
     if serialized.contains("<?latexml") {
       for body in extract_pi_bodies(serialized) {
         self.latexml_pis.push(body);
@@ -1396,48 +1376,6 @@ fn probe_lists_toc(outer: &str) -> bool {
   false
 }
 
-/// Extract `ltx:picture` spans from a serialized fragment into the
-/// SVG-extraction buffer. (The DOM path serializes each `//ltx:picture` node
-/// and hands the concatenation to a regex-based fragment table; span
-/// extraction at the text level is equivalent input for that table.)
-fn collect_pictures(outer: &str, into: &mut String) {
-  let mut search_from = 0;
-  while let Some(rel) = outer[search_from..].find("<picture") {
-    let start = search_from + rel;
-    match outer[start..].find("</picture>") {
-      Some(rel_end) => {
-        let end = start + rel_end + "</picture>".len();
-        into.push_str(&outer[start..end]);
-        search_from = end;
-      },
-      None => break,
-    }
-  }
-  // Prefixed form (`<pfx:picture …>` in prefixed documents).
-  let mut search_from = 0;
-  while let Some(rel) = outer[search_from..].find(":picture") {
-    let colon = search_from + rel;
-    let after = colon + ":picture".len();
-    let is_open = outer[..colon].rfind('<').is_some_and(|lt| {
-      lt + 1 < colon
-        && !outer[lt..].starts_with("</")
-        && outer[lt + 1..colon]
-          .chars()
-          .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-    });
-    if is_open {
-      let lt = outer[..colon].rfind('<').expect("checked above");
-      if let Some(rel_end) = outer[after..].find(":picture>") {
-        let end = after + rel_end + ":picture>".len();
-        into.push_str(&outer[lt..end]);
-        search_from = end;
-        continue;
-      }
-    }
-    search_from = after;
-  }
-}
-
 /// Extract the bodies of `<?latexml …?>` PIs embedded in a serialized
 /// fragment.
 fn extract_pi_bodies(outer: &str) -> Vec<String> {
@@ -1732,16 +1670,6 @@ mod tests {
       "patched tag order wrong: {out}"
     );
     std::fs::remove_file(&file).ok();
-  }
-
-  #[test]
-  fn collect_pictures_extracts_spans() {
-    let mut buf = String::new();
-    collect_pictures(
-      r#"<p>x</p><picture xml:id="p1"><g/></picture><q/><picture xml:id="p2"/>...</picture>"#,
-      &mut buf,
-    );
-    assert!(buf.starts_with(r#"<picture xml:id="p1"><g/></picture>"#));
   }
 
   /// End-to-end mini split: a wrapper (backmatter) page must carry the ltx
