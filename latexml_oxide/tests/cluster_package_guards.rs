@@ -19196,9 +19196,9 @@ Marks stub
     assert!(xml.contains("frame-count=\"3\""), "{xml}");
   }
 
-  /// chemnum: sequential compound numbering model (Task N5).
-  /// Guard: first use = 1, second label = 2, \refcmpd of the first = 1,
-  /// sub-compound = 1a; 0 errors. Also tests list expansion and \cmpdinit pre-allocation.
+  /// chemnum: sequential compound numbering model (Task N5, Task N2).
+  /// Guard: first use = target <text>, references = <ref idref=...>,
+  /// \refcmpd of undeclared label emits <ref> with ?? without crashing; 0 errors.
   #[test]
   fn chemnum_compound_numbering() {
     let tex = r"\documentclass{article}
@@ -19212,6 +19212,7 @@ Marks stub
 \refcmpd{first.a}
 \cmpd{first,second}
 \cmpd{initA} and \cmpd{initB}
+\refcmpd{undeclared}
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
@@ -19225,19 +19226,19 @@ Marks stub
       "second label must be 4 with xml:id target: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>"#),
-      "refcmpd of first must be 3 with idref link: {xml}"
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first">3</ref>"#),
+      "refcmpd of first must be 3 with ltx:ref link: {xml}"
     );
     assert!(
       xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.first.a">3a</text>"#),
       "sub-compound must be 3a with xml:id target: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first.a">3a</text>"#),
-      "refcmpd of sub-compound must be 3a with idref link: {xml}"
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first.a">3a</ref>"#),
+      "refcmpd of sub-compound must be 3a with ltx:ref link: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>, <text class="ltx_cmpd" idref="cmpd.second">4</text>"#),
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first">3</ref>, <ref class="ltx_cmpd" idref="cmpd.second">4</ref>"#),
       "list must emit comma-separated references: {xml}"
     );
     assert!(
@@ -19247,6 +19248,10 @@ Marks stub
     assert!(
       xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.initB">2</text>"#),
       "initB must be 2 with xml:id target: {xml}"
+    );
+    assert!(
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.undeclared">??</ref>"#),
+      "refcmpd of undeclared label must emit ref with ?? without crashing: {xml}"
     );
   }
 }

@@ -166,6 +166,11 @@ fn lookup_or_register(
   CHEMNUM_STATE.with(|st| {
     let mut state = st.borrow_mut();
     if !state.compounds.contains_key(main_label) {
+      if is_ref {
+        let sub_part = sub_label.map(|s| format!(".{s}")).unwrap_or_default();
+        let clean_target_id = clean_id(&format!("cmpd.{main_label}{sub_part}"));
+        return (clean_target_id, "??".to_string(), false);
+      }
       state.counter += 1;
       let counter = state.counter;
       state
@@ -182,6 +187,15 @@ fn lookup_or_register(
 
     if let Some(sub_name) = sub_label {
       if !entry.sub_compounds.contains_key(sub_name) {
+        if is_ref {
+          let clean_target_id = clean_id(&format!("cmpd.{main_label}.{sub_name}"));
+          let display_text = if sub_only {
+            "??".to_string()
+          } else {
+            format!("{main_num}??")
+          };
+          return (clean_target_id, display_text, false);
+        }
         entry.sub_counter += 1;
         let sub_counter = entry.sub_counter;
         entry
@@ -271,7 +285,6 @@ LoadDefinitions!({
   RequirePackage!("chemgreek");
   RequirePackage!("psfrag");
   reset_chemnum_state(0);
-  model::add_tag_attribute("ltx:text", vec!["idref"]);
 
   DefConstructor!(
     "\\chemnumEmitTarget Semiverbatim {}",
@@ -279,7 +292,7 @@ LoadDefinitions!({
   );
   DefConstructor!(
     "\\chemnumEmitRef Semiverbatim {}",
-    "<ltx:text class='ltx_cmpd' idref='#1'>#2</ltx:text>"
+    "<ltx:ref class='ltx_cmpd' idref='#1'>#2</ltx:ref>"
   );
 
   DefMacro!(
