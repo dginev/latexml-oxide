@@ -802,6 +802,70 @@ pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
   }
 }
 
+/// RelaxNG-validate a core-XML string against the repo's authoritative
+/// `LaTeXML.rng` with `jing` (the S2 bar of the perfect-kernel program): the
+/// number of jing error lines, `Some(0)` = schema-valid; `None` when `jing` is
+/// not installed (CI installs it; a local run without it does not measure).
+/// The schema directory is prepared once per process the way
+/// `tools/perfect_kernel/validate.sh` does: the `.rng` files copied to a temp
+/// dir with the `urn:x-LaTeXML:RelaxNG:` includes rewritten to relative paths.
+pub fn rng_error_count(xml: &str) -> Option<usize> {
+  use std::{path::PathBuf, process::Command, sync::OnceLock};
+  static SCHEMA: OnceLock<Option<PathBuf>> = OnceLock::new();
+  let dir = SCHEMA
+    .get_or_init(|| {
+      if !Command::new("jing").arg("--help").output().is_ok() {
+        return None;
+      }
+      let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../latexml_core/resources/RelaxNG");
+      let dir = std::env::temp_dir().join(format!("latexml-rng-{}", std::process::id()));
+      std::fs::create_dir_all(dir.join("svg")).ok()?;
+      for (sub, from) in [("", src.clone()), ("svg", src.join("svg"))] {
+        for entry in std::fs::read_dir(&from).ok()? {
+          let path = entry.ok()?.path();
+          if path.extension().is_some_and(|e| e == "rng") {
+            let text = std::fs::read_to_string(&path).ok()?;
+            let text = if sub.is_empty() {
+              text
+                .replace("urn:x-LaTeXML:RelaxNG:svg:", "svg/")
+                .replace("urn:x-LaTeXML:RelaxNG:", "")
+            } else {
+              text
+                .replace("urn:x-LaTeXML:RelaxNG:svg:", "")
+                .replace("urn:x-LaTeXML:RelaxNG:", "")
+            };
+            std::fs::write(dir.join(sub).join(path.file_name()?), text).ok()?;
+          }
+        }
+      }
+      Some(dir)
+    })
+    .as_ref()?;
+  let file = dir.join(format!(
+    "doc-{}-{:?}.xml",
+    std::process::id(),
+    std::thread::current().id()
+  ));
+  std::fs::write(&file, xml).ok()?;
+  let out = Command::new("jing")
+    .arg(dir.join("LaTeXML.rng"))
+    .arg(&file)
+    .output()
+    .ok()?;
+  std::fs::remove_file(&file).ok();
+  let text = format!(
+    "{}{}",
+    String::from_utf8_lossy(&out.stdout),
+    String::from_utf8_lossy(&out.stderr)
+  );
+  Some(
+    text
+      .lines()
+      .filter(|l| l.contains(": error:") || l.contains(": fatal:"))
+      .count(),
+  )
+}
+
 /// True iff a year-versioned latex kernel dump is present in the dev tree.
 /// Without it the engine raw-loads `expl3-code.tex` (degraded mode) and the
 /// error landscape is dominated by unrelated raw-load cascades — dump-gated

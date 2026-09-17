@@ -27,8 +27,13 @@ LoadDefinitions!({
   def_macro_noop("\\defineliststyle{}{}")?;
   def_macro_noop("\\listofpdfcomments[]")?;
   // The note body is text even when the annotation sits in math
-  // (`$x\pdftooltip{y}{tip}$`, example_math_markup).
-  DefConstructor!("\\lx@pdfcomment@note{}{}", "<ltx:note role='#1'>#2</ltx:note>",
+  // (`$x\pdftooltip{y}{tip}$`, example_math_markup). `^` floats the note to
+  // the nearest ancestor that admits one, as the kernel footnote does
+  // (sect03.rs `^<ltx:note …>`, Perl plain_constructs.pool.ltxml:148): inside
+  // math the marked text opens an `<XMText>`, whose model has no `note`, so
+  // an unfloated note was schema-invalid (5 sweep-78 manuals). Guard:
+  // `cluster_package_guards::svg_schema::pdfcomment_note_floats_out_of_math`.
+  DefConstructor!("\\lx@pdfcomment@note{}{}", "^<ltx:note role='#1'>#2</ltx:note>",
     mode => "text");
   // Single-body annotations: the text IS the note.
   DefMacro!("\\pdfcomment[]{}", "\\lx@pdfcomment@note{pdfcomment}{#2}");

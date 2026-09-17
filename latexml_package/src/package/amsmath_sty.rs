@@ -1687,15 +1687,21 @@ LoadDefinitions!({
   DefMath!("\\mod", "mod", role => "MODIFIEROP", meaning => "modulo");
   DefMath!("\\pod{}", "(#1)", role => "MODIFIER", meaning => "modulo");
 
-  // Perl: amsmath.sty.ltxml L1243-1250 — multiple integrals
+  // Perl: amsmath.sty.ltxml L1254-1262 — multiple integrals. Perl's
+  // `mathstyle => \&doVariablesizeOp` (TeX_Math.pool.ltxml:353-354) yields
+  // `display` in display style, else `text` — the same dynamic rule `\int`
+  // uses (`dynamic_mathstyle`, math_common.rs). The literal `\displaystyle`
+  // string was schema-invalid (`mathstyle` admits display|text|script|
+  // scriptscript; 16 sweep-78 manuals). Guard:
+  // `cluster_package_guards::svg_schema::multiple_integrals_have_a_dynamic_mathstyle`.
   DefMath!("\\iint", "\u{222C}", role => "INTOP", meaning => "double-integral",
-    mathstyle => "\\displaystyle");
+    dynamic_mathstyle => true);
   DefMath!("\\iiint", "\u{222D}", role => "INTOP", meaning => "triple-integral",
-    mathstyle => "\\displaystyle");
+    dynamic_mathstyle => true);
   DefMath!("\\iiiint", "\u{2A0C}", role => "INTOP", meaning => "quadruple-integral",
-    mathstyle => "\\displaystyle");
+    dynamic_mathstyle => true);
   DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", role => "INTOP",
-    meaning => "multiple-integral", mathstyle => "\\displaystyle");
+    meaning => "multiple-integral", dynamic_mathstyle => true);
 
   // Perl: amsmath.sty.ltxml L1283-1293 — italic Greek capitals
   DefMath!("\\varGamma", "\u{0393}", font => { shape => "italic" });

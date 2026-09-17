@@ -895,8 +895,13 @@ LoadDefinitions!({
     "\\lxSVG@buttcap\\lxSVG@begingroup{stroke-linecap=butt}");
   DefMacro!("\\pgfsys@roundcap",
     "\\lxSVG@roundcap\\lxSVG@begingroup{stroke-linecap=round}");
+  // pgf's `rect` cap is SVG's `square` (`stroke-linecap` admits only
+  // butt|round|square|inherit): Perl's pgfsys-latexml.def.ltxml:411-412 emits
+  // the pgf name verbatim and every `line cap=rect` drawing is schema-invalid
+  // (6,733 lines in 21 sweep-78 manuals; PERL-ORIGIN). Guard:
+  // `cluster_package_guards::svg_schema::rect_line_cap_is_square`.
   DefMacro!("\\pgfsys@rectcap",
-    "\\lxSVG@rectcap\\lxSVG@begingroup{stroke-linecap=rect}");
+    "\\lxSVG@rectcap\\lxSVG@begingroup{stroke-linecap=square}");
   DefMacro!("\\pgfsys@miterjoin",
     "\\lxSVG@miterjoin\\lxSVG@begingroup{stroke-linejoin=miter}");
   DefMacro!("\\pgfsys@setmiterlimit{}",

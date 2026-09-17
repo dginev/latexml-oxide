@@ -895,7 +895,13 @@ LoadDefinitions!({
               }
           }
         }
-        if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+        // Perl TeX_Box.pool.ltxml:409-424 sizes the foreignObject whenever the
+        // whatsit exists — a ZERO-size box gets `width="0" height="0"` too
+        // (quantikz's empty cells, tikz-cd's empty matrix nodes); the schema
+        // requires both attributes (svg-extensibility.rnc:38-45), and a
+        // zero-size guard here left 3,010 foreignObjects sizeless in 32 sweep-78
+        // manuals. Guard: `cluster_package_guards::svg_schema::empty_node_foreign_object_is_sized`.
+        {
           has_dims = true;
           let w_px = w.px_value(Some(2));
           let h_px = h.px_value(Some(2));
