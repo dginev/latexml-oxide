@@ -19305,4 +19305,37 @@ Frame 4
       "refcmpd of undeclared label must emit ref with ?? without crashing: {xml}"
     );
   }
+
+  /// afterpage: \afterpage defined as macro that un-doubles ## parameters (Task N5).
+  /// Guard: \afterpage with nested \newcommand with ##1/##2 parameters converts with 0 errors
+  /// and substitutes correctly. Also tests autoload of afterpage package via \afterpage trigger.
+  #[test]
+  fn afterpage_nested_macro_and_autoload() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\afterpage{%
+  \newcommand\C[2]{[#1:#2]}%
+  \C{A1}{1.00}%
+}
+Hello
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[A1:1.00]"), "{xml}");
+
+    let tex = r"\documentclass{article}
+\usepackage{afterpage}
+\begin{document}
+\afterpage{%
+  \newcommand\C[2]{[##1:##2]}%
+  \C{B2}{2.50}%
+}
+World
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[B2:2.50]"), "{xml}");
+  }
 }
