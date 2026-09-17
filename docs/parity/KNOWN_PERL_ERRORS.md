@@ -6190,3 +6190,14 @@ register-group cleanup, so each `yquantgroup` cascades (`\etb@tempa`,
 `\yquant@lang@attr@value` … undefined, then unbalanced `\hbox` ends). Trigger:
 `\usepackage{etoolbox}\def\x{1}\gundef\x\ifdefined\x still\else gone\fi`.
 Rust (batch 56bd) adds the line. Guard `etoolbox_cs_definers_are_protected_and_gundef_exists`.
+
+## 218. `annote` fields are typeset as notes, so `.bib` typos in them surface (kept)
+
+BibTeX.pool.ltxml:679-681 maps `annote` to `\bib@@field{ltx:bib-note}[role=annotation]`,
+so LaTeXML typesets a field that no bibtex/biber style prints. A macro typo in
+an annotation — biblatex-chicago's dates-test.bib:169 `\textt{…}` for `\texttt` —
+therefore becomes `Error:undefined:\textt` in both engines (cms-dates-sample,
+cms-trad-sample) while the real PDF is clean. Trigger: `@book{k, author={A},
+title={T}, year={2000}, annote={\textt{x}}}` + `\nocite{k}\bibliographystyle{plain}`.
+Perl-origin policy, not a binding gap: the annotation is content LaTeXML chooses
+to keep; a source typo is not defined away. Kept as-is (batch 56ca).

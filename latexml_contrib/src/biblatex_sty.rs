@@ -2951,9 +2951,44 @@ LoadDefinitions!({
   def_macro_noop("\\addtocategory{}{}")?;
   DefMacro!("\\ifcategory{}{}{}", "#3");
   DefMacro!("\\ifentrycategory{}{}{}", "#3");
+  // biber never sentence-cases a title at the `.bib` layer (BibTeX's
+  // `change.case$` "t" does, and lowercases unbraced control sequences with
+  // it — `\H`→`\h`, `\TeX`→`\tex` — which is why the classic path keeps
+  // `capitalize1` and its SHARED breakage); a biblatex style that wants
+  // sentence case applies `\MakeSentenceCase*` at print time, protecting
+  // control sequences. So a biblatex document reads titles as entered, like
+  // amsrefs (`amsrefs_sty.rs`): `Erd\H{o}s` stays `Erd\H{o}s` (biblatex2bibitem,
+  // shortmathj), `The \TeX book` keeps its `\TeX`. Guard:
+  // `06_cluster_bibliography::biblatex_title_case_is_as_entered`.
+  AssignValue!("BibTeX_title_case" => "asis");
   DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
   DefMacro!("\\mkbibparens{}", "(#1)");
   DefMacro!("\\mkbibbrackets{}", "[#1]");
+  // The rest of biblatex's public formatting family. Real biblatex registers
+  // each as an "internal macro command" (`\blx@regimcs`, biblatex.sty:1137,
+  // activated by `\blx@blxinit` inside the bibliography) AND as an always
+  // available `\newrobustcmd` (biblatex.sty:13084-13093, :13217) — both are
+  // stubbed here, so the names must be defined directly. `.bib` fields use
+  // them freely (`title = {Review of \mkbibemph{The Last Marlin}}`,
+  // `note = {… on\nopunct}` in biblatex-chicago's dates-test.bib; the
+  // undefined name leaked its argument unemphasized: 7 + 4 corpus docs).
+  // `\nopunct`/`\isdot`/`\newunit` act on biblatex's punctuation buffer
+  // (biblatex.sty:2092-2106, :4207), which this pipeline has no analogue of
+  // → no-ops; `\addperiod` is the period itself. `\lbx@initnamehook` /
+  // `\lbx@inittitlehook` (biblatex.def:2121-2122) are the empty one-argument
+  // hooks that the style name macros call (`name:hook`, biblatex.def:1135;
+  // biblatex-chicago's raw .lbx). Guard:
+  // `06_cluster_bibliography::biblatex_formatting_family_renders_in_bib_fields`.
+  DefMacro!("\\mkbibemph{}", "\\emph{#1}");
+  DefMacro!("\\mkbibbold{}", "\\textbf{#1}");
+  DefMacro!("\\mkbibitalic{}", "\\textit{#1}");
+  DefMacro!("\\mkbibsuperscript{}", "\\textsuperscript{#1}");
+  def_macro_noop("\\nopunct")?;
+  def_macro_noop("\\isdot")?;
+  def_macro_noop("\\newunit")?;
+  DefMacro!("\\addperiod", ".");
+  def_macro_noop("\\lbx@initnamehook{}")?;
+  def_macro_noop("\\lbx@inittitlehook{}")?;
   // `\blx@inputonce{file}` — biblatex's guarded input; style .def files
   // call it directly (sbl.bbx L1 → biblatex-sbl.def; biblatex-software).
   DefPrimitive!("\\blx@inputonce{}", sub[(file)] {
