@@ -322,12 +322,12 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
             </Math>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(55.35,27.67)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,0)">
+            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(-8.65,-6.07)">
               <text>Xg</text>
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(138.37,27.67)">
-            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,0)">
+            <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(-9.82,-6.07)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p2.pic1.m2">
                 <XMath>
                   <XMApp>
@@ -706,7 +706,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       </tags>
       <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
         <g innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(16.6,78.87)">
-          <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.01854pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.01854pt" transform="translate(-21.46,-6.92)">
             <Math mode="inline" tex="F(x,y)" text="F@(vector@(x, y))" xml:id="S3.F1.pic1.m1">
               <XMath>
                 <XMApp>
@@ -749,7 +749,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           <line points="0,0 0,55.35" stroke="#000000" stroke-width="0.4"/>
         </g>
         <g innerdepth="1.9pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(69.19,78.87)">
-          <g class="makebox" innerdepth="1.94444pt" innerheight="4.30554pt" innerwidth="5.2616pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="1.94444pt" innerheight="4.30554pt" innerwidth="5.2616pt" transform="translate(-3.64,-4.33)">
             <Math mode="inline" tex="y" text="y" xml:id="S3.F1.pic1.m2">
               <XMath>
                 <XMTok font="italic" role="UNKNOWN">y</XMTok>
@@ -758,7 +758,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(55.35,65.03)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m3">
               <XMath>
                 <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
@@ -767,7 +767,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(83.02,65.03)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m4">
               <XMath>
                 <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
@@ -776,7 +776,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.7pt" transform="translate(19.37,27.67)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.71527pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.71527pt" transform="translate(-3.96,-2.97)">
             <Math mode="inline" tex="x" text="x" xml:id="S3.F1.pic1.m5">
               <XMath>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
@@ -785,7 +785,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(30.44,41.51)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
             <Math mode="inline" tex="0" text="0" xml:id="S3.F1.pic1.m6">
               <XMath>
                 <XMTok fontsize="80%" meaning="0" role="NUMBER">0</XMTok>
@@ -794,7 +794,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="0.0pt" innerheight="5.2pt" innerwidth="4.3pt" transform="translate(30.44,13.84)">
-          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="0.0pt" innerheight="5.15556pt" innerwidth="4.25006pt" transform="translate(-2.95,-3.57)">
             <Math mode="inline" tex="1" text="1" xml:id="S3.F1.pic1.m7">
               <XMath>
                 <XMTok fontsize="80%" meaning="1" role="NUMBER">1</XMTok>
@@ -803,7 +803,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(55.35,41.51)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
             <Math mode="inline" tex="m_{0}" text="m _ 0" xml:id="S3.F1.pic1.m8">
               <XMath>
                 <XMApp>
@@ -816,7 +816,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(83.02,41.51)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
             <Math mode="inline" tex="m_{1}" text="m _ 1" xml:id="S3.F1.pic1.m9">
               <XMath>
                 <XMApp>
@@ -829,7 +829,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(55.35,13.84)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
             <Math mode="inline" tex="m_{2}" text="m _ 2" xml:id="S3.F1.pic1.m10">
               <XMath>
                 <XMApp>
@@ -842,7 +842,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </g>
         </g>
         <g innerdepth="1.5pt" innerheight="4.3pt" innerwidth="13.3pt" transform="translate(83.02,13.84)">
-          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(0,0)">
+          <g class="makebox" innerdepth="1.5pt" innerheight="4.30554pt" innerwidth="13.26627pt" transform="translate(-9.17,-4.01)">
             <Math mode="inline" tex="m_{3}" text="m _ 3" xml:id="S3.F1.pic1.m11">
               <XMath>
                 <XMApp>

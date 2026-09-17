@@ -62,7 +62,16 @@ impl SVG {
     let height = node.get_attribute("height").map(|s| to_px(&s));
     let clip = node.get_attribute("clip").as_deref() == Some("true");
 
-    let mut svg_attrs = HashMap::default();
+    // `SVG.pm::ProcessSVG` L96-97: the picture's own attributes that are
+    // valid on `svg:svg` move onto it (`copy_valid_attributes`, model-checked
+    // in Perl — LaTeXML loads the full svg-structure schema, so `fill`/
+    // `stroke` qualify; the allowlist here is `copy_valid_attrs`): the
+    // `fill="none" stroke="none"` of the picture state, `class`, `style`.
+    // The picture's `xml:id` is NOT carried over — Perl drops it with the
+    // replaced node, and so does this.
+    let mut svg_attrs = self.copy_valid_attrs(node);
+    svg_attrs.remove("width");
+    svg_attrs.remove("height");
     svg_attrs.insert("version".to_string(), "1.1".to_string());
     if let Some(w) = width {
       svg_attrs.insert("width".to_string(), format!("{:.2}", w));
@@ -417,17 +426,33 @@ impl SVG {
   }
 
   /// Wrap foreign (non-picture) elements in svg:foreignObject.
+  ///
+  /// Port of `SVG.pm::convertNode`'s else-branch (L148-183): the size comes
+  /// from the node's own `width`/`height`/`depth` (or `imagewidth`/
+  /// `imageheight` for an image), else from the CONTAINING `ltx:g`'s
+  /// `innerwidth`/`innerheight`/`innerdepth`, else its `width`/`height`/
+  /// `depth` — a `\makebox(0,0){$x$}` label's `<Math>` carries no size of its
+  /// own, the `<g>` that `\put` built around it does. `1pt` (non-zero,
+  /// required) when nothing is recorded.
   fn convert_foreign(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
+    let parent = node.get_parent();
+    let parent_attr = |name: &str| parent.as_ref().and_then(|p| p.get_attribute(name));
     let width = node
       .get_attribute("width")
       .or_else(|| node.get_attribute("imagewidth"))
+      .or_else(|| parent_attr("innerwidth"))
+      .or_else(|| parent_attr("width"))
       .unwrap_or_else(|| "1pt".to_string());
     let height = node
       .get_attribute("height")
       .or_else(|| node.get_attribute("imageheight"))
+      .or_else(|| parent_attr("innerheight"))
+      .or_else(|| parent_attr("height"))
       .unwrap_or_else(|| "1pt".to_string());
     let depth = node
       .get_attribute("depth")
+      .or_else(|| parent_attr("innerdepth"))
+      .or_else(|| parent_attr("depth"))
       .unwrap_or_else(|| "0pt".to_string());
 
     let h_px = to_px(&height);

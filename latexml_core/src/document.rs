@@ -2555,7 +2555,10 @@ impl Document {
     to: &mut Node,
     force: Option<&HashSet<&'static str>>,
   ) -> Result<()> {
-    for (key, val) in from.get_attributes().iter() {
+    // Key order, so the attributes merged onto `to` land deterministically.
+    let mut attrs: Vec<(String, String)> = from.get_attributes().into_iter().collect();
+    attrs.sort();
+    for (key, val) in attrs.iter() {
       // Skip internal attributes
       if key.starts_with('_') {
         continue;
@@ -5491,7 +5494,12 @@ impl Document {
             child.get_namespace().map(|ns| ns.get_href()),
             &child.get_name(),
           )?;
-          for (key, val) in child.get_attributes() {
+          // Key order: `get_attributes` is a HashMap, libxml appends on set —
+          // sort so a cloned subtree serializes deterministically
+          // (`open_element_at` emits sorted; Perl's native clone keeps it).
+          let mut attrs: Vec<(String, String)> = child.get_attributes().into_iter().collect();
+          attrs.sort();
+          for (key, val) in attrs {
             match key.as_str() {
               "xml:id" | "id" => {
                 // Use the replacement id. The pre-walk
@@ -5711,9 +5719,13 @@ impl Document {
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
     // Move to the position AFTER node
     node.add_next_sibling(&mut new)?;
-    // Copy ALL attributes from `node` to `newnode`
+    // Copy ALL attributes from `node` to `newnode`, in key order (HashMap
+    // iteration would serialize the renamed element's attributes in a
+    // per-process random order; the original was emitted sorted).
     let mut id = None;
-    for (key, value) in node.get_attributes() {
+    let mut attrs: Vec<(String, String)> = node.get_attributes().into_iter().collect();
+    attrs.sort();
+    for (key, value) in attrs {
       // `get_attributes()` returns the `xml:id` attribute under its LOCAL name
       // `"id"` (it lives in the XML namespace), NOT the prefixed `"xml:id"`.
       // Capture it here so it can be re-registered on `new` AFTER `remove_node`

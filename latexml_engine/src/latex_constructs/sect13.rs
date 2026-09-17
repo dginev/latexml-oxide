@@ -704,21 +704,30 @@ pub(crate) fn load() -> Result<()> {
       };
       let ht = Dimension::new(h.value_of() + d.value_of()); // total height = h + d
 
-      // Extract frame size from Pair parameter (args[2])
-      let (mut ww, mut hh) = match args[2].as_ref() {
-        Some(d) => match d.data() {
-          DigestedData::RegisterValue(RegisterValue::Pair(p)) => {
-            (Dimension::new((p.x.0 * unit * 65536.0) as i64),
-             Dimension::new((p.y.0 * unit * 65536.0) as i64))
-          },
-          _ => (Dimension::default(), Dimension::default()),
-        },
-        None => (Dimension::default(), Dimension::default()),
+      // Extract frame size from Pair parameter (args[2]). The size PAIR being
+      // present is what selects the positioning branch — Perl's
+      // `if ($size)` (latex_constructs.pool.ltxml:5054) with the nonzero-value
+      // test DELIBERATELY commented out — so a `\makebox(0,0){…}` gets its
+      // centring offset `translate(-w/2,-(h+d)/2)` like any other size: the
+      // dominant picture-label idiom `\put(x,y){\makebox(0,0){…}}` (and
+      // overpic's `[bl]` form) anchors at its centre, not its bottom-left. A
+      // nonzero guard here left every zero-size label at `translate(0,0)`
+      // (Perl `translate(-7.06,-5.63)` for `$x^2$`). Guards:
+      // `cluster_package_guards::picture_makebox_offset::*`.
+      let size = match args[2].as_ref().map(|d| d.data()) {
+        Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => Some((
+          Dimension::new((p.x.0 * unit * 65536.0) as i64),
+          Dimension::new((p.y.0 * unit * 65536.0) as i64),
+        )),
+        _ => None,
       };
+      let (mut ww, mut hh) = (w, ht);
 
       // Perl: position-based shift computation
       let (mut xshift, mut yshift) = (Dimension::default(), Dimension::default());
-      if ww.value_of() != 0 || hh.value_of() != 0 {
+      if let Some((sw, sh)) = size {
+        ww = sw;
+        hh = sh;
         let pos = args[3].as_ref().map(|d| d.to_string().to_lowercase()).unwrap_or_default();
         // x positioning
         if pos.contains('l') {
@@ -736,9 +745,6 @@ pub(crate) fn load() -> Result<()> {
         } else {
           yshift = Dimension::new((hh.value_of() - ht.value_of()) / 2); // centered
         }
-      } else {
-        ww = w;
-        hh = Dimension::new(h.value_of() + d.value_of());
       }
 
       // Frame dimensions: use ww/hh if nonzero, else content size

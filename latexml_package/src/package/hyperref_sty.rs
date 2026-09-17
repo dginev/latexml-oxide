@@ -697,10 +697,17 @@ LoadDefinitions!({
     Ok(stored_map!("label" => clean_label(&label, None).into_owned()))
   });
 
-  // Perl L228-230: \hyperlink{name}{text}
+  // Perl L228-230: \hyperlink{name}{text}. `bounded` as in Perl (L234): the
+  // link text is digested in its own group, so a font switch inside it —
+  // abntexto.tex:61 `\hyperlink{…}{\color{blue}\ttfamily\tmp}` — ends with
+  // the argument instead of leaking `\f@family=cmtt` into the rest of the
+  // document (and into the bibliography, whose entries then came out
+  // typewriter-wrapped and malformed). Guard:
+  // `cluster_package_guards::hyperlink_text_is_a_bounded_group`.
   DefConstructor!("\\hyperlink Semiverbatim {}",
   "<ltx:ref idref='#id'>#2</ltx:ref>",
   enter_horizontal => true,
+  bounded => true,
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))

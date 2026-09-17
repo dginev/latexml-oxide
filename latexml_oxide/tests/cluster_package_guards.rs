@@ -982,6 +982,67 @@ mod graphicx_internals {
   }
 }
 
+mod hyperlink_bounded {
+  //! Batch 56ce: `\hyperlink{name}{text}` digests its text in its own group
+  //! (Perl hyperref.sty.ltxml:234 `bounded => 1`), so a font switch inside the
+  //! link ends with it — abntexto.tex:61 `\hyperlink{…}{\color{blue}\ttfamily
+  //! \tmp}` leaked `\ttfamily` into the rest of the document and its bibliography.
+  //! The whole paragraph is pinned: typewriter inside the link only.
+
+  #[test]
+  fn hyperlink_text_is_a_bounded_group() {
+    let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\\hyperlink{tgt}{\\ttfamily link} after\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      "<p><ref font=\"typewriter\" idref=\"tgt\">link</ref> after</p>",
+    );
+  }
+}
+
+mod picture_makebox_offset {
+  //! Batch 56cc: picture-mode `\makebox`/`\framebox`/`\dashbox` (`\pic@makebox@`)
+  //! shift their content by the `[pos]` rule for EVERY size pair, including
+  //! `(0,0)` — Perl's `if ($size)` (latex_constructs.pool.ltxml:5054) has the
+  //! nonzero-value test commented out on purpose. A zero-size box is the
+  //! standard picture LABEL idiom, `\put(x,y){\makebox(0,0){…}}`: centred means
+  //! `translate(-w/2,-(h+d)/2)`; `[l]` keeps x at 0. Rust guarded on a nonzero
+  //! size and left every label at `translate(0,0)` (bottom-left anchored).
+  //! Whole `<g class="makebox">` start tags are pinned (Perl: `translate(-7.06,-5.63)`
+  //! / `translate(0,-5.63)`; the pt strings are this engine's serialization).
+
+  #[test]
+  fn zero_size_makebox_centres_its_content() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(100,50)\n\\put(20,10){\\makebox(0,0){$x^2$}}\n\\end{picture}\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    let g = latexml::util::test::xml_element(&xml, "g", &["class=\"makebox\""]).unwrap_or_default();
+    let start = &g[..g.find('>').map_or(g.len(), |i| i + 1)];
+    assert_eq!(
+      start,
+      "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.14003pt\" innerwidth=\"10.2014pt\" transform=\"translate(-7.06,-5.63)\">",
+      "{xml}"
+    );
+  }
+
+  #[test]
+  fn zero_size_makebox_left_position_keeps_x() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(100,50)\n\\put(20,10){\\makebox(0,0)[l]{$x^2$}}\n\\end{picture}\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    let g = latexml::util::test::xml_element(&xml, "g", &["class=\"makebox\""]).unwrap_or_default();
+    let start = &g[..g.find('>').map_or(g.len(), |i| i + 1)];
+    assert_eq!(
+      start,
+      "<g class=\"makebox\" innerdepth=\"0.0pt\" innerheight=\"8.14003pt\" innerwidth=\"10.2014pt\" transform=\"translate(0,-5.63)\">",
+      "{xml}"
+    );
+  }
+}
+
 mod luatex_direction_scan {
   //! Batch 56bz: luatex's direction primitives read their argument with
   //! `scan_direction` — ONE expanded token when it is a direction primitive

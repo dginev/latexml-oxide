@@ -1588,8 +1588,16 @@ impl PostDocument {
         };
 
         // Copy the remaining attributes verbatim; the xml:id and fragid are set
-        // explicitly (above/below) from their remapped values.
-        for (key, value) in &source.get_properties() {
+        // explicitly (above/below) from their remapped values. In KEY ORDER:
+        // `get_properties` hands back a HashMap, and libxml appends each
+        // `set_attribute` at the end, so iterating it serialized a cloned
+        // `.bib` field's `<ref class= href= font=>` in a different order on
+        // every run (all six permutations seen). Perl's `Post.pm:1259`
+        // `cloneNode(1)` keeps the source DOM order, which the core builder had
+        // emitted sorted (`open_element_at`), so sorted = Perl's order.
+        let mut props: Vec<(String, String)> = source.get_properties().into_iter().collect();
+        props.sort();
+        for (key, value) in &props {
           if key.starts_with('_') || key == "fragid" {
             continue;
           }

@@ -3092,3 +3092,52 @@ fn biblatex_title_case_is_as_entered() {
     r##"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="erdos" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2021</tag><tag class="ltx_bib_title" role="title">On a Question of Erdős and Ulam About TeX</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">B. Writer</text><text class="ltx_bib_year"> (2021)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On a Question of Erdős and Ulam About <text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
+
+/// Batch 56cd: a `.bib` field's marked-up content is deep-cloned into the
+/// rendered entry (`clone_subtree`, latexml_post/src/document.rs), and that
+/// clone used to copy attributes out of a HashMap — so `note={\url{…}}`'s
+/// `<ref class="ltx_url" href=… font=…>` came out in a different attribute
+/// order on every run (all six permutations observed while pinning the
+/// snapshots above; the core XML and a body `\url` were stable). Perl's
+/// `Post.pm:1259` `cloneNode(1)` keeps the source order, which the core
+/// builder emits sorted; the clone now sorts too. Four runs must agree
+/// byte-for-byte on the whole start tag.
+#[test]
+fn cloned_bib_field_markup_has_deterministic_attribute_order() {
+  let mut tags = Vec::new();
+  for _ in 0..4 {
+    let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
+    let r = latexml::util::test::xml_element(&x, "ref", &["ltx_url", "https://example.org/a"])
+      .unwrap_or_default();
+    let start = r[..r.find('>').map_or(r.len(), |i| i + 1)].to_string();
+    tags.push(start);
+  }
+  assert!(
+    tags.iter().all(|t| t == &tags[0]),
+    "attribute order varied across runs: {tags:?}"
+  );
+  assert_eq!(
+    tags[0], "<ref class=\"ltx_url\" font=\"typewriter\" href=\"https://example.org/a\">",
+    "{tags:?}"
+  );
+}
+
+/// Batch 56ce: the recursive `.bib` digestion runs in the DOCUMENT's default
+/// font. The monolithic pipeline reuses the live State (so preamble macros
+/// reach the fields), and a body that leaves `\ttfamily` in force — abntexto's
+/// doc-point macro through an unbounded `\hyperlink` — made every field a
+/// `<text font="typewriter">` wrapper that broke the `<bibentry>` nesting
+/// (99 `#PCDATA isn't allowed in <ltx:bibentry>`; Perl's fresh per-`.bib`
+/// state starts at the default font, 0 errors). `\normalfont` before the
+/// entries; the whole first `<bibitem>` is pinned, note nested, no font wrapper.
+#[test]
+fn bib_entries_digest_in_the_default_font() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_font_state.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2000</tag><tag class="ltx_bib_title" role="title">First title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2000)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">First title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">visible, nested</text></bibblock></bibitem>"##,
+  );
+  assert!(x.contains("key=\"b\""), "second entry lost:\n{x}");
+}

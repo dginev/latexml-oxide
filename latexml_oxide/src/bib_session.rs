@@ -247,6 +247,16 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
     // ready and before any entry is digested.
     provide_url_command()?;
     latexml_core::stomach::digest(latexml_core::mouth::tokenize(BBL_STANDARD_FALLBACKS))?;
+    // The entries are digested in the DOCUMENT's default font. Perl's fresh
+    // per-`.bib` state (Core.pm:39) starts at the default font; the live
+    // session here inherits whatever NFSS state the body left — abntexto's
+    // doc-point `\ttfamily` (leaked through an unbounded `\hyperlink`) made
+    // every field a `<text font="typewriter">` wrapper that broke the
+    // `<bibentry>` nesting: 99 `#PCDATA isn't allowed in <ltx:bibentry>`.
+    // `\normalfont` here keeps every live definition (the point of the
+    // monolithic pass) and only normalizes the typographic state. Guard:
+    // `06_cluster_bibliography::bib_entries_digest_in_the_default_font`.
+    latexml_core::stomach::digest(latexml_core::mouth::tokenize(r"\normalfont"))?;
 
     // Digest only what the document cites — a `.bib` is a library, and
     // `bibtex(1)` reads the `.aux`'s `\citation` records rather than the whole

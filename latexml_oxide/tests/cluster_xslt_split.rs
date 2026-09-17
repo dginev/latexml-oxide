@@ -1453,7 +1453,9 @@ mod urlstyle {
 /// between the core XML and the HTML: pagelayout ×3, ticket ×2, vocaltract,
 /// bookcover-example2 and latex-refsheet/header-graph went from 100% to 0-11%
 /// PDF-text recall at post. The assertions cover the WHOLE rendered `<svg>`:
-/// the nested picture's group and path, then the label after it.
+/// the nested picture's group and path, then the label after it. The outer
+/// `<svg>` carries the picture's own valid attributes (`fill`/`stroke`, as
+/// `SVG.pm::ProcessSVG`'s `copy_valid_attributes`).
 mod picture_svg_on_the_live_dom {
   use std::{path::Path, process::Command};
 
@@ -1501,13 +1503,13 @@ mod picture_svg_on_the_live_dom {
        \\end{picture}\n\\end{document}\n",
     );
     let expected = concat!(
-      r##"<svg height="132.84" overflow="visible" version="1.1" width="265.67">"##,
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
       r##"<g transform="translate(0,132.84) scale(1,-1)">"##,
       r##"<g transform="translate(0,0)"><g transform="translate(0,66.42) scale(1,-1)">"##,
       r##"<g transform="translate(0,0)">"##,
       r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path>"##,
       r##"</g></g></g>"##,
-      r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(0,0)">"##,
+      r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(-71.3,-4.73)">"##,
       r##"<text transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
       r##"</g></g></g></svg>"##,
     );
@@ -1516,7 +1518,10 @@ mod picture_svg_on_the_live_dom {
 
   /// A `\parbox` inside a picture is wrapped in `<foreignObject>` with the
   /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), its
-  /// block markup intact.
+  /// block markup intact, and sized from the containing `<g>`'s
+  /// `innerheight`/`innerdepth` (the parbox carries no height of its own):
+  /// height 17.14 px, y-offset 27.63 = height + depth — Perl's 17.85 / 28.78
+  /// at its 100 dpi basis.
   #[test]
   fn parbox_inside_a_picture_renders_as_a_foreign_object() {
     let html = html_of(
@@ -1527,10 +1532,10 @@ mod picture_svg_on_the_live_dom {
        \\end{picture}\n\\end{document}\n",
     );
     let expected = concat!(
-      r##"<svg height="132.84" overflow="visible" version="1.1" width="265.67">"##,
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
       r##"<g transform="translate(0,132.84) scale(1,-1)"><g transform="translate(0,0)">"##,
-      r##"<g transform="translate(0,1.33) scale(1,-1)">"##,
-      r##"<foreignObject height="1.33" overflow="visible" width="132.84">"##,
+      r##"<g transform="translate(0,27.63) scale(1,-1)">"##,
+      r##"<foreignObject height="17.14" overflow="visible" width="132.84">"##,
       r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
       "\n",
       r##"<div class="ltx_block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
