@@ -32,7 +32,7 @@ LoadDefinitions!({
   // (sect03.rs `^<ltx:note …>`, Perl plain_constructs.pool.ltxml:148): inside
   // math the marked text opens an `<XMText>`, whose model has no `note`, so
   // an unfloated note was schema-invalid (5 sweep-78 manuals). Guard:
-  // `cluster_package_guards::svg_schema::pdfcomment_note_floats_out_of_math`.
+  // `cluster_schema::pdfcomment_note_floats_out_of_math`.
   DefConstructor!("\\lx@pdfcomment@note{}{}", "^<ltx:note role='#1'>#2</ltx:note>",
     mode => "text");
   // Single-body annotations: the text IS the note.

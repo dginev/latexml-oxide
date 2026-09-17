@@ -1231,9 +1231,9 @@ pub(crate) fn load() -> Result<()> {
   DefMath!("\\ldotp", None, ".", role => "MULOP");
   // Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
   DefMath!("\\intop", None, "\u{222B}", role => "INTOP", meaning => "integral",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\ointop", None, "\u{222E}", role => "INTOP", meaning => "contour-integral",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
 
   // WHat are these? They look like superscripted parentheses, or combining accents!
   // \lhook

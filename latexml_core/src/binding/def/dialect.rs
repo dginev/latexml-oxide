@@ -679,7 +679,7 @@ pub fn def_math_primitive(
   // DefMath invocation (e.g. 1000 math tokens = 1000 full clones). Now the closure
   // reads fields through the Rc and applies overrides via a dedicated method.
   let shared_options = Rc::new(options.clone());
-  let dynamic_mathstyle = shared_options.dynamic_mathstyle;
+  let variablesize_op = shared_options.variablesize_op;
   let dynamic_scriptpos = shared_options.dynamic_scriptpos;
 
   install_definition(
@@ -705,7 +705,7 @@ pub fn def_math_primitive(
         };
         let state_font = lookup_font().unwrap();
         // Dynamic mathstyle: doVariablesizeOp — "display" in display, "text" otherwise
-        let mathstyle_override: Option<&'static str> = if dynamic_mathstyle {
+        let mathstyle_override: Option<&'static str> = if variablesize_op {
           let is_display = state_font
             .get_mathstyle()
             .is_some_and(|s| s.as_ref() == "display");
@@ -1838,7 +1838,7 @@ fn transfer_common_constructor_options(
   //
   let mut after_digest_closures = options.after_digest;
   // Perl: mathstyle => \&doVariablesizeOp — compute mathstyle at digest time
-  if options.dynamic_mathstyle {
+  if options.variablesize_op {
     after_digest_closures.push(after_digest_simple!(_args, {
       let state_font = lookup_font().unwrap();
       let is_display = state_font

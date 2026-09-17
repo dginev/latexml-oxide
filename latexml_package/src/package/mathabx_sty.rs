@@ -535,38 +535,38 @@ LoadDefinitions!({
   //  \sum, \prod
   //  \coprod, \intop
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\iiintop", "\u{222D}", meaning => "triple-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   //  \ointop, \oint
   DefMath!("\\oiintop", "\u{222F}", meaning => "double-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigplus", "+",
     font => { scale => 1.2 },
     meaning => "nary-plus", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigtimes", "\u{2A09}",
     meaning => "nary-times", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\bigcomplementop", "\u{2201}",
     meaning => "nary-complement", role => "BIGOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   //  \bigcap
   //  \bigcup, \biguplus
   DefMath!("\\bigsqcap", None, "\u{2A05}",
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   //  \bigsqcup
   //  \bigwedge
   //  \bigvee
   DefMath!("\\bigcurlywedge", None, "\u{22CF}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigcurlyvee", None, "\u{22CE}",
     font => { scale => 1.6 },
     role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
 
   //======================================================================
   // Big circles (mathx)

@@ -29,17 +29,17 @@ LoadDefinitions!({
   Let!("\\varint", "\\int");
   Let!("\\varoint", "\\oint");
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\iiintop", "\u{222D}", meaning => "triple-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\oiintop", "\u{222F}", meaning => "surface-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\iint", "\u{222C}", meaning => "double-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\iiint", "\u{222D}", meaning => "triple-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\oiint", "\u{222F}", meaning => "surface-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
 
   // Gender / miscellaneous symbols
   DefPrimitive!("\\male", "\u{2642}");

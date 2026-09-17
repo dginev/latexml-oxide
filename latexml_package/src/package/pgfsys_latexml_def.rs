@@ -899,7 +899,7 @@ LoadDefinitions!({
   // butt|round|square|inherit): Perl's pgfsys-latexml.def.ltxml:411-412 emits
   // the pgf name verbatim and every `line cap=rect` drawing is schema-invalid
   // (6,733 lines in 21 sweep-78 manuals; PERL-ORIGIN). Guard:
-  // `cluster_package_guards::svg_schema::rect_line_cap_is_square`.
+  // `cluster_schema::rect_line_cap_is_square`.
   DefMacro!("\\pgfsys@rectcap",
     "\\lxSVG@rectcap\\lxSVG@begingroup{stroke-linecap=square}");
   DefMacro!("\\pgfsys@miterjoin",

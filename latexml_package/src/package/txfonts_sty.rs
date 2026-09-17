@@ -61,106 +61,106 @@ LoadDefinitions!({
   //======================================================================
   // Table 28 — Variable-size operators (integrals)
   DefMath!("\\fint", "\u{2A0F}", meaning => "integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\fintop", "\u{2A0F}", meaning => "integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", meaning => "multiple-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\idotsintop", "\u{222B}\u{22EF}\u{222B}", meaning => "multiple-integral",
-    role => "INTOP", scriptpos => "mid", dynamic_mathstyle => true);
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\iint", "\u{222C}", meaning => "double-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\iintop", "\u{222C}", meaning => "double-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\iiint", "\u{222D}", meaning => "triple-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\iiintop", "\u{222D}", meaning => "triple-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\iiiint", "\u{2A0C}", meaning => "quadruple-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\iiiintop", "\u{2A0C}", meaning => "quadruple-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
 
   // Clockwise/counter-clockwise contour integrals with combining overlays
   DefMath!("\\oiiintclockwise", "\u{222D}\u{20D9}",
     meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiiintclockwiseop", "\u{222D}\u{20D9}",
     meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varoiiintclockwise", "\u{222D}\u{20D9}",
     meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\varoiiintclockwiseop", "\u{222D}\u{20D9}",
     meaning => "triple-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiiintctrclockwise", "\u{222D}\u{20DA}",
     meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiiintctrclockwiseop", "\u{222D}\u{20DA}",
     meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varoiiintctrclockwise", "\u{222D}\u{20DA}",
     meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\varoiiintctrclockwiseop", "\u{222D}\u{20DA}",
     meaning => "triple-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiiint", "\u{2230}",
     meaning => "triple-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiiintop", "\u{2230}",
     meaning => "triple-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiintclockwise", "\u{222C}\u{20D9}",
     meaning => "double-clockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiintclockwiseop", "\u{222C}\u{20D9}",
     meaning => "double-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varoiintclockwise", "\u{222C}\u{20D9}",
     meaning => "double-clockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\varoiintclockwiseop", "\u{222C}\u{20D9}",
     meaning => "double-clockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiintctrclockwise", "\u{222C}\u{20DA}",
     meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiintctrclockwiseop", "\u{222C}\u{20DA}",
     meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varoiintctrclockwise", "\u{222C}\u{20DA}",
     meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\varoiintctrclockwiseop", "\u{222C}\u{20DA}",
     meaning => "double-counterclockwise-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\oiint", "\u{222F}", meaning => "double-contour-integral", role => "INTOP",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
   DefMath!("\\oiintop", "\u{222F}", meaning => "double-contour-integral", role => "INTOP",
-    scriptpos => "mid", dynamic_mathstyle => true);
+    scriptpos => "mid", variablesize_op => true);
   DefMath!("\\ointclockwise", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\ointclockwiseop", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", dynamic_mathstyle => true);
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\ointctrclockwise", "\u{2233}", meaning => "counter-clockwise-contour-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\ointctrclockwiseop", "\u{2233}", meaning => "counter-clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", dynamic_mathstyle => true);
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varointclockwise", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\varointclockwiseop", "\u{2232}", meaning => "clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", dynamic_mathstyle => true);
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\varointctrclockwise", "\u{2233}", meaning => "counter-clockwise-contour-integral",
-    role => "INTOP", dynamic_mathstyle => true);
+    role => "INTOP", variablesize_op => true);
   DefMath!("\\varointctrclockwiseop", "\u{2233}", meaning => "counter-clockwise-contour-integral",
-    role => "INTOP", scriptpos => "mid", dynamic_mathstyle => true);
+    role => "INTOP", scriptpos => "mid", variablesize_op => true);
   DefMath!("\\sqint", "\u{2A16}", role => "INTOP", meaning => "square-contour-integral",
-    dynamic_mathstyle => true);
+    variablesize_op => true);
 
   DefMath!("\\bigsqcap", None, "\u{2A05}", role => "SUMOP",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    dynamic_scriptpos => true, variablesize_op => true);
 
   //======================================================================
   // Table 34 — Relations

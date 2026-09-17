@@ -66,9 +66,11 @@ pub struct MathPrimitiveOptions {
   pub reorder:                bool,
   pub dual:                   bool,
   pub mathstyle:              Option<String>,
-  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation
-  /// time Perl: mathstyle => \&doVariablesizeOp
-  pub dynamic_mathstyle:      bool,
+  /// A variable-size operator: Perl's `mathstyle => \&doVariablesizeOp`
+  /// (TeX_Math.pool.ltxml:353) — the `mathstyle` is computed at construction
+  /// from the current style (`display` in display style, else `text`) instead
+  /// of being a fixed value (`\int`, `\sum`, amsmath's `\iint` family).
+  pub variablesize_op:        bool,
   pub scriptpos:              Option<String>,
   /// Dynamic scriptpos: compute "mid"/"post" based on current font mathstyle at invocation time
   /// Perl: scriptpos => \&doScriptpos
@@ -114,7 +116,7 @@ impl Default for MathPrimitiveOptions {
       reorder:                false,
       dual:                   false,
       mathstyle:              None,
-      dynamic_mathstyle:      false,
+      variablesize_op:        false,
       scriptpos:              None,
       dynamic_scriptpos:      false,
       operator_scriptpos:     None,
@@ -350,7 +352,7 @@ mod tests {
     assert!(!o.protected);
     assert!(!o.reorder);
     assert!(!o.dual);
-    assert!(!o.dynamic_mathstyle);
+    assert!(!o.variablesize_op);
     assert!(!o.dynamic_scriptpos);
     assert!(o.nogroup, "nogroup defaults to true (Perl parity)");
     assert!(!o.hide_content_reversion);

@@ -100,7 +100,7 @@ fn empty_node_foreign_object_is_sized() {
 /// `\int` (Perl `\&doVariablesizeOp`: `display` in display style, else `text`);
 /// the literal `\displaystyle` string was schema-invalid (16 manuals).
 #[test]
-fn multiple_integrals_have_a_dynamic_mathstyle() {
+fn multiple_integrals_have_a_variablesize_op() {
   let (log, xml) = convert(
     "\\documentclass{article}\\usepackage{amsmath}\n\\begin{document}\nInline $\\iint_D f$\n\\end{document}\n",
   );

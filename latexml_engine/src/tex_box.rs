@@ -900,7 +900,7 @@ LoadDefinitions!({
         // (quantikz's empty cells, tikz-cd's empty matrix nodes); the schema
         // requires both attributes (svg-extensibility.rnc:38-45), and a
         // zero-size guard here left 3,010 foreignObjects sizeless in 32 sweep-78
-        // manuals. Guard: `cluster_package_guards::svg_schema::empty_node_foreign_object_is_sized`.
+        // manuals. Guard: `cluster_schema::empty_node_foreign_object_is_sized`.
         {
           has_dims = true;
           let w_px = w.px_value(Some(2));
