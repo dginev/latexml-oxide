@@ -157,17 +157,15 @@ pub fn write_dump(
       continue;
     }
 
-    // Skip \@currname / \@currext file-IO bookkeeping. These are
-    // assigned per-document during `\input` by `read_input_file_recursive`
-    // (see `binding/content.rs:262-263`) to the literal filename's
-    // tokens, so the snapshot captures the LAST opened file's name
-    // ("plain.tex" / "latex.ltx"). Perl's `TeX_FileIO.pool.ltxml:28-29`
-    // initializes them via `Let('\@currname','\lx@empty')` before any
-    // file load, and Perl's plain_dump.pool.ltxml omits them — so
-    // post-dump they remain at the `\lx@empty` baseline. Matching that
-    // behavior here keeps us file-IO-state-agnostic in the dump.
-    if matches!(*table, TableName::Meaning) && (key_str == "\\@currname" || key_str == "\\@currext")
-    {
+    // Skip the file-IO bookkeeping family (`is_file_io_bookkeeping`). The
+    // dump is applied WHILE the document's preload is being read (the
+    // LaTeX pool+dump load runs inside `latexml.sty`), so any per-load
+    // state it carries clobbers the live values: a dumped
+    // `\@currnamestack` = empty made `latexml.sty`'s `\@popfilename` pop
+    // nothing, `\catcode`\@` then read an empty number ("Missing number")
+    // and every later `@`-name broke — a4wide 3 → 35 errors, every
+    // siunitx tabular (2026-09-17, cortex dump regeneration).
+    if matches!(*table, TableName::Meaning) && is_file_io_bookkeeping(&key_str) {
       skipped += 1;
       continue;
     }
@@ -377,7 +375,7 @@ fn table_to_code(t: TableName) -> &'static str {
 
 /// Serialize a Stored value to a type-tag + data string.
 /// Returns None if the value can't be serialized.
-fn serialize_stored(stored: &Stored) -> Option<String> {
+pub(crate) fn serialize_stored(stored: &Stored) -> Option<String> {
   match stored {
     Stored::None => Some("N".to_string()),
     Stored::Bool(b) => Some(format!("B\t{}", if *b { "1" } else { "0" })),
@@ -837,8 +835,52 @@ fn rle_encode_i64(values: &[i64]) -> String {
   out
 }
 
+/// Per-load file-IO state that must never be dumped. `\@currname` /
+/// `\@currext` are assigned per `\input` by `read_input_file_recursive`
+/// (`binding/content.rs`), so at snapshot time they hold the LAST opened
+/// file ("latex.ltx") — Perl's `\input` leaves them at the `\@empty`
+/// baseline its latex_dump records (latex_dump.pool.ltxml:24122-24123).
+/// `\@currnamestack` is the `\@pushfilename`/`\@popfilename` stack
+/// (tex_file_io.rs:32-40) and carries `\the\catcode`\@`; Perl never dumps it
+/// because its serialized form equals the bootstrap's (`diff_from_snapshot`
+/// now makes the same comparison — this list is the belt to that brace).
+/// `\CurrentFile*` are ltfilehook's per-file names (latex.ltx
+/// `\set@curr@file`); Perl dumps them EMPTY, which is what the bootstrap
+/// already defines (tex_file_io.rs:26-29), so omitting them is equivalent.
+/// All describe the file being read at dump time, not the format.
+pub(crate) fn is_file_io_bookkeeping(key: &str) -> bool {
+  matches!(
+    key,
+    "\\@currname"
+      | "\\@currext"
+      | "\\@currnamestack"
+      | "\\CurrentFile"
+      | "\\CurrentFilePath"
+      | "\\CurrentFileUsed"
+      | "\\CurrentFilePathUsed"
+  )
+}
+
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn file_io_bookkeeping_family_is_skipped() {
+    for k in [
+      "\\@currname",
+      "\\@currext",
+      "\\@currnamestack",
+      "\\CurrentFile",
+      "\\CurrentFilePath",
+      "\\CurrentFileUsed",
+      "\\CurrentFilePathUsed",
+    ] {
+      assert!(is_file_io_bookkeeping(k), "{k}");
+    }
+    // The static popper macro is part of the format and stays.
+    assert!(!is_file_io_bookkeeping("\\@p@pfilename"));
+    assert!(!is_file_io_bookkeeping("\\@array"));
+  }
+
   use super::*;
   use crate::{
     parameter::{Parameter, Parameters},

@@ -785,8 +785,23 @@ impl State {
           let changed = match snap.get(&key_pair) {
             None => true, // new entry
             Some(prev) => {
-              // Compare string representations (cheap approximation of Perl's dump-based diff)
-              format!("{:?}", current) != format!("{:?}", prev)
+              // Perl diffs the SERIALIZED dump form against the bootstrap
+              // snapshot (TeX_Job.pool.ltxml:126-200: a key whose `Dump`
+              // string equals the `<fmt>_bootstrap` baseline is omitted), so
+              // a raw redefinition to an identical body — latex.ltx:18386
+              // `\gdef\@currnamestack{}` over the bootstrap's empty macro —
+              // is NOT dumped. A `Debug` comparison also sees definition
+              // metadata (the `:redefined@nargs` lock records of batch 56z)
+              // and reported such entries as changed; the dumped empty
+              // `\@currnamestack` then clobbered the live file stack of the
+              // preload being read (a4wide 3 → 35 errors, cortex 2026-09-17).
+              match (
+                crate::dump_writer::serialize_stored(current),
+                crate::dump_writer::serialize_stored(prev),
+              ) {
+                (Some(a), Some(b)) => a != b,
+                _ => format!("{:?}", current) != format!("{:?}", prev),
+              }
             },
           };
           if changed && is_serializable(current) {
