@@ -13962,13 +13962,14 @@ After.
 [Root, for tree={draw}
   [Child1
     [Grandchild1]
-    [Grandchild2]
+    [$x^2$]
   ]
   [Child2
     [Grandchild3]
   ]
 ]
 \end{forest}
+\Forest(stages={foo}){ [TreeRoot [ChildLeaf]] }
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
@@ -13981,12 +13982,20 @@ After.
       "Grandchild1 node missing: {xml}"
     );
     assert!(
-      xml.contains("Grandchild2"),
-      "Grandchild2 node missing: {xml}"
+      xml.contains("<Math"),
+      "Math element for $x^2$ missing: {xml}"
     );
     assert!(
       xml.contains("Grandchild3"),
       "Grandchild3 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("TreeRoot"),
+      "TreeRoot from \\Forest missing: {xml}"
+    );
+    assert!(
+      xml.contains("ChildLeaf"),
+      "ChildLeaf from \\Forest missing: {xml}"
     );
     assert!(
       xml.contains("<inline-enumerate class=\"ltx_forest\""),
