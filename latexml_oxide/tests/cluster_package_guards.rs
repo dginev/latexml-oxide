@@ -19203,6 +19203,48 @@ Marks stub
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
     assert!(xml.contains("frame-count=\"3\""), "{xml}");
+
+    // Task N4: \newframe* and \newframe[fps] consumed silently, counting frames.
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\begin{animateinline}{10}
+Frame 1
+\newframe*
+Frame 2
+\newframe[20]
+Frame 3
+\newframe*[15]
+Frame 4
+\end{animateinline}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"4\""), "{xml}");
+
+    // Task N4: reverse playback \animategraphics with first > last (|last-first|+1 frames).
+    // Missing frame file emits a warning, not an error.
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\animategraphics[controls]{12}{missing_frame_}{10}{1}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+
+    // Reverse playback selecting an existing file candidate (e.g. example-image-a).
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\animategraphics{12}{example-image-a}{5}{1}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"5\""), "{xml}");
   }
 
   /// chemnum: sequential compound numbering model (Task N5, Task N2).

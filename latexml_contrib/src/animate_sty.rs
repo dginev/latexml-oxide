@@ -283,15 +283,38 @@ LoadDefinitions!({
       let base_str = basename.to_string().trim().to_string();
       let f_num = f_str.parse::<i64>();
       let l_num = l_str.parse::<i64>();
-      let frame_count = match (f_num, l_num) {
+      let frame_count = match (&f_num, &l_num) {
         (Ok(f), Ok(l)) => ((l - f).abs() + 1) as usize,
         _ => 1,
       };
-      let file = if f_str.is_empty() {
-        base_str
+      let mut file = if f_str.is_empty() {
+        base_str.clone()
       } else {
         format!("{base_str}{f_str}")
       };
+      // Animate reverse playback (animate.sty:1560ff) or padded numbering:
+      // if the first candidate file does not exist, look for an existing frame
+      // among zero-padded variants, the other end of the range, or base_str itself
+      // (multipage document).
+      if !file.is_empty() && util::image::image_candidates(&file).is_empty() {
+        let mut alt_candidates = Vec::new();
+        if let (Ok(f), Ok(l)) = (f_num, l_num) {
+          if l_str.len() > f_str.len() {
+            alt_candidates.push(format!("{base_str}{:0width$}", f, width = l_str.len()));
+          }
+          alt_candidates.push(format!("{base_str}{l_str}"));
+          if f_str.len() > l_str.len() {
+            alt_candidates.push(format!("{base_str}{:0width$}", l, width = f_str.len()));
+          }
+        }
+        alt_candidates.push(base_str);
+        for cand in alt_candidates {
+          if !util::image::image_candidates(&cand).is_empty() {
+            file = cand;
+            break;
+          }
+        }
+      }
       let mut toks = Vec::new();
       // \begin{animateinline}[opts]{fps}
       toks.push(T_CS!("\\begin"));
