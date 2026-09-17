@@ -102,10 +102,16 @@ fn cluster_svg_subfloat_survives_subcaption_2563() {
      (#2563 Perl breakage). Expected a figure panel, not a raw `[...]`:\n{xml}"
   );
   // The subcaption must render as an actual caption, and the body as the panel.
+  // subfloat subcaption lost: the WHOLE first <caption> element is pinned.
+  latexml::util::test::assert_element(
+    &xml,
+    "caption",
+    &[],
+    r##"<caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">This is a caption.</text></caption>"##,
+  );
   assert!(
-    xml.contains("<caption") && xml.contains("This is a caption."),
-    "\\subfloat's subcaption was lost — expected a <caption> carrying \
-     'This is a caption.':\n{xml}"
+    xml.contains("This is a caption."),
+    "subfloat subcaption lost:\n{xml}"
   );
   assert!(
     xml.contains("This is a figure."),
@@ -1158,8 +1164,15 @@ fn subcaption_does_not_clobber_subfigure_macro() {
     "subcaption clobbered subfigure.sty's \\subfigure; content after the figure was lost:\n{x}"
   );
   // The bibliography (document tail) is present => no truncation.
+  // bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="ref-a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> A. Author, A representative title, 2021.</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("representative title"),
+    x.contains("representative title"),
     "bibliography lost — the subfigure/subcaption clash leaked a group and truncated the document:\n{x}"
   );
 }
@@ -1180,8 +1193,15 @@ fn hphantom_braceless_minipage_does_not_swallow_endminipage() {
     "brace-less \\hphantom swallowed \\endminipage; content after the minipage was lost:\n{x}"
   );
   // The bibliography (last thing in the document) is present => no truncation.
+  // bibliography lost — the minipage leaked and truncated the document: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="ref-a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> A. Author, A representative title, 2020.</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("representative title"),
+    x.contains("representative title"),
     "bibliography lost — the minipage leaked and truncated the document:\n{x}"
   );
 }
@@ -1581,8 +1601,15 @@ fn derivative_package_defines_its_operators() {
     );
   }
   // The operators produced real math structure rather than nothing.
+  // derivative operators produced no math content: the WHOLE first <XMApp> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "XMApp",
+    &[],
+    r##"<XMApp><XMTok meaning="fragments"/><XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/><XMRef idref="S0.Ex1.m1.3"/><XMRef idref="S0.Ex1.m1.4"/></XMApp>"##,
+  );
   assert!(
-    x.contains("<XMApp") && x.contains("<Math"),
+    x.contains("<Math"),
     "derivative operators produced no math content:\n{x}"
   );
 }

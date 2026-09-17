@@ -1044,9 +1044,12 @@ fn frontmatter_spconf_name() {
 #[test]
 fn frontmatter_spconf_keywords() {
   let x = convert_to_xml_contrib_clean("tests/cluster_regressions/frontmatter_spconf_keywords.tex");
-  assert!(
-    x.contains("<keywords"),
-    "spconf keywords did not become ltx:keywords frontmatter:\n{x}"
+  // spconf keywords did not become ltx:keywords frontmatter: the WHOLE first <keywords> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "keywords",
+    &[],
+    r##"<keywords name="Index Terms: ">Speech recognition, deep learning</keywords>"##,
   );
   assert!(
     x.contains("Speech recognition, deep learning"),

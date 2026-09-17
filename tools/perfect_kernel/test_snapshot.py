@@ -29,10 +29,13 @@ import re, subprocess, sys, os
 path, testbin, tag = sys.argv[1], sys.argv[2], sys.argv[3]
 src = open(path).read()
 # Phase 1: rewrite bare-tag assertions to assert_element with a pending expectation.
-pat = re.compile(r'''  assert!\(\n    (\w+)\.contains\("<%s"\)(?: \|\| \1\.contains\("%s"\))?,\n    "([^"\n]*?):\\n\{\1\}"\n  \);\n''' % (tag, tag))
+pat = re.compile(r'''  assert!\(\n    (\w+)\.contains\("<%s"\)(?: \|\| \1\.contains\("%s"\))?(?: && \1\.contains\("([^"\n]*)"\))?,\n    "((?:[^"\\]|\\.)*?):?\\n\{\1\}"\n  \);\n''' % (tag, tag))
 def repl(m):
-    var, msg = m.group(1), m.group(2)
-    return f'  // {msg}: the WHOLE first <{tag}> element is pinned.\n  latexml::util::test::assert_element(&{var}, "{tag}", &[], r##"PENDING"##);\n'
+    var, text, msg = m.group(1), m.group(2), m.group(3)
+    out = f'  // {msg}: the WHOLE first <{tag}> element is pinned.\n  latexml::util::test::assert_element(&{var}, "{tag}", &[], r##"PENDING"##);\n'
+    if text:
+        out += f'  assert!({var}.contains("{text}"), "{msg}:\\n{{{var}}}");\n'
+    return out
 new, n = pat.subn(repl, src)
 print("rewritten assertions:", n)
 open(path, 'w').write(new)
