@@ -1,0 +1,14 @@
+% witness: kaytannollista-latexia (luku-rakenne.tex:7392, the bare $'$ in "Matematiikkatilan kielioppia")
+% oracle: lualatex EXIT=0 (works); pdflatex on the NO-unicode-math variant = "! TeX capacity exceeded [input stack size=10000]"
+% engines: doc is lualatex (fontspec/unicode-math); oracle_verdicts kaytannollista-latexia=lualatex/124/0 (whole doc times out; THIS construct is fine in lualatex)
+% expect: 0 Error:/Fatal: lines, XML contains a <m:mo>...prime (U+2032) from the $f'$
+% status: RED  (our engine: Fatal:Timeout:PushbackLimit after ~100s, EXIT 1)
+% mechanism: hanging.sty:85,101 makes ' active + \gdef'{\futurelet\next\h@ngrqtest}, overriding the kernel active math ' (math_common.rs:461 Let!("'","\active@math@prime")). unicode-math re-binds ' at \AtBeginDocument (unicode-math-luatex.sty:3405/3426 \__um_define_prime_chars:) — our unicode_math_sty.rs binding omits that, so the mathcode-"8000 ' runs hanging's self-recursive macro (\h@ngrquote re-emits a catcode-12 ' which is math-active again) forever.
+\documentclass{book}
+\usepackage{fontspec}
+\usepackage{amsmath}
+\usepackage[math-style=ISO]{unicode-math}
+\usepackage{hanging}
+\begin{document}
+$f'(x) = 6x - 2$
+\end{document}

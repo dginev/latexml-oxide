@@ -16962,6 +16962,18 @@ c &= d
     assert!(xml.contains("<p>x</p>"), "{xml}");
   }
 
+  /// Batch 56bu: unicode-math re-binds the active math prime at begin-document
+  /// (unicode-math-luatex.sty:3405/3426), so hanging.sty:85/101's global
+  /// `\gdef'` no longer recurses on `$f'(x)$` (kaytannollista, 420 s).
+  #[test]
+  fn unicode_math_rebinds_the_math_prime_at_begin_document() {
+    let tex = "\\documentclass{book}\n\\usepackage{fontspec}\n\\usepackage{amsmath}\n\\usepackage[math-style=ISO]{unicode-math}\n\\usepackage{hanging}\n\\begin{document}\n$f'(x)=6x-2$\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("\u{2032}"), "{xml}");
+  }
+
   /// Batch 56bt: an accent pushed through `\edef` + `\scantokens` (tkzexample.sty:
   /// 352-357, a Latin-1 `é` in grafcet.tex:1136) round-trips because the
   /// accent's inner is a letters-only private name (`\lxaccentacute`) that
@@ -19337,10 +19349,11 @@ Frame 4
 
   /// afterpage: \afterpage defined as macro that un-doubles ## parameters (Task N5).
   /// Guard: \afterpage with nested \newcommand with ##1/##2 parameters converts with 0 errors
-  /// and substitutes correctly. Also tests autoload of afterpage package via \afterpage trigger.
+  /// and substitutes correctly. The package must be loaded: an undefined `\afterpage` stays an error (LaTeX, Perl).
   #[test]
-  fn afterpage_nested_macro_and_autoload() {
+  fn afterpage_body_undoubles_parameter_hashes() {
     let tex = r"\documentclass{article}
+\usepackage{afterpage}
 \begin{document}
 \afterpage{%
   \newcommand\C[2]{[#1:#2]}%

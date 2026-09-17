@@ -87,88 +87,9 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
 
 ## Tasks (priority order)
 
-Round 10. Rounds 1–9 are lifted into `LEDGER.md` (their Status text is deleted here by rule).
-Round-9 review outcome, for your calibration: all five deliverables merged; the two
-fixups applied at merge were a `kpsewhich_has("tikzpingus.sty")` gate on a guard that
-raw-loads an optional package (CI's trimmed TeX Live) and a per-conversion clear of
-`ANIM_STACK` (a mid-body fatal leaves an unbalanced push behind on a long-running
-worker; chemnum's `reset_chemnum_state(0)` in `LoadDefinitions!` is the pattern).
-Schema note: `set_attribute` silently DROPS an attribute the model does not declare for
-the element (no error, dead markup) — check `latexml_core/resources/schema/*.rnc`
-before emitting one, and prefer the element that already carries it.
+Round 10 (N1–N5) is merged (`b879e165cc`, verified 2026-09-17; the review's
+fixes landed on top in batch 56bu — see LEDGER). No open tasks are queued for
+round 11 yet; the orchestrator will append them here.
 
-### N1 — pgfmath `@`-function results keep their decimal point (your round-9 N2, plan A)
-
-Real pgfmath's `\pgfmath@tonumber` (pgfmathutil.code.tex:190) is `\the<dimen>` minus
-`pt`, so `\pgfmathresult` after `\pgfmathmultiply@` & co. is ALWAYS dotted (`0.0`);
-ours (`pgfmath_result_str`, `latexml_package/src/package/pgfmath_code_tex.rs:35-51`)
-prints integers bare, which is what pgfplotscolormap.code.tex:2420
-`\pgfplotscolormap@floor@unforgiving#1.#2\relax` cannot take. Perl shares the bare form
-(pgfmath.code.tex.ltxml:85-90) — say so in Status (divergence, Lesson 2).
-- Implement plan A in `pgfmath_result_str` for the `@`-level arithmetic path only (the
-  public `\pgfmathparse` path `format_parse_result` already appends `.0`).
-- The comment at `pgfmath_code_tex.rs:26-34` says the bare form was needed for
-  2201.09268's `\pgfmathpointintersectionoflineandarc` bisection. Batch 56ac replaced
-  that bisection with a closed-form binding (KNOWN_PERL_ERRORS #210, `git log -S
-  pointintersectionoflineandarc`) — verify whether the strip is now dead by fetching
-  2201.09268 (`curl -L https://arxiv.org/src/2201.09268`, scratch only) and converting
-  it before/after; report both error counts.
-- Un-`#[ignore]` `pgfplots_scatter_marker_group_balance`; make
-  `repros/graphics-tikz/pgfmath_multiply_zero_delimited_dot.tex` GREEN; re-convert
-  ualberta/ualberta-thesis (sweep-62 log for the before count) and report.
-- Run the tikz/pgf goldens (`cargo nextest run -p latexml -E 'test(tikz) | test(pgf)'`)
-  and list every golden whose coordinates change; a coordinate that only gains `.0` is
-  fine, a changed VALUE is a bug.
-
-### N2 — chemnum: references are `<ltx:ref>`
-
-Your round-9 N5 emits `<ltx:text class="ltx_cmpd" idref="cmpd.<label>">` and registers
-`idref` on `ltx:text` from the binding. The schema element for a cross-reference is
-`<ltx:ref idref=…>` (`LaTeXML-inline.rnc`, `ref_attributes`), which the post-processor
-resolves and links. Change references (`\refcmpd`, repeated `\cmpd`, `\cmpd+`) to
-`<ltx:ref class="ltx_cmpd" idref="cmpd.<label>">` with the number as content; keep the
-first-use target as `<ltx:text class="ltx_cmpd" xml:id=…>`; drop the
-`add_tag_attribute("ltx:text", …)` call. A `\refcmpd` to a never-declared label must
-not crash: emit the ref (the post-processor reports the dangling id) and say in Status
-what chemnum.sty does in that case (cite the line). Update `chemnum_compound_numbering`.
-
-### N3 — forest: labels are TeX, `\Forest` takes its config
-
-Follow-ups on your round-9 N3 (`latexml_contrib/src/forest_sty.rs`):
-- Node labels are absorbed as literal strings (`absorb_string`), so `[$x^2$]` and
-  `[\textbf{Root}]` come out as raw source text. Digest each label as TeX (the way
-  `\lx@ps@put`/`framed` bindings digest a body: tokenize the label and `digest` it, then
-  absorb the digested boxes) so math and markup render.
-- `\Forest` is `\NewDocumentCommand{\Forest}{s D(){} m}` (forest.sty:8666) — the
-  binding declares `OptionalMatch:* Undigested` and misparses `\Forest(config){body}`.
-- `text`/`options`/`config` attributes on `ltx:item`/`ltx:para` are dropped by the
-  model (see the schema note above): either stop computing them or register them
-  deliberately — say which and why.
-- Guard: extend `forest_three_level_semantic_tree` with one math label and one `\Forest(…){…}`
-  call; re-convert forest-quickstart/fragoli_doc/milsymb (sweep-62 logs for the before counts).
-
-### N4 — animate: small cleanups
-
-`latexml_contrib/src/animate_sty.rs`: register `frame-count` once (it is registered both in
-`LoadDefinitions!` and inside the environment sub); `\animategraphics` with `first > last`
-(reverse playback, animate.sty:1560ff) must still select an existing frame file and count
-`|last-first|+1`; `\newframe*` and `\newframe[fps]` must both be consumed silently. Extend
-`animate_multiframe_single_frame` with a reverse-range `\animategraphics` case (a missing
-image file is a warning, not an error — assert on `frame-count`).
-
-### N5 — sesamanuel: 94 `misdefined` errors
-
-`sesamanuel/sesamath-doc-fr` (sweep 62: 123 errors — `misdefined` 94, `undefined` 18;
-oracle lualatex exit 1 with 2 `!` lines, so not oracle-clean but the class is
-pdflatex-compatible). `Error:misdefined:` means a `\newcommand`/`\newenvironment` hit a
-name that already exists — usually a name our kernel or a binding defines that the real
-format leaves undefined (real LaTeX accepted the definition). Tally the 94 by name (log
-`~/data/perfect_kernel_s62/sesamanuel/sesamath-doc-fr/sesamath-doc-fr.log`), find where
-each is defined on our side (`git grep`), and for each decide: kernel/binding defines a
-name real LaTeX does not → remove or rename ours (cite latex.ltx / the .sty to show it is
-absent there); the class redefines a real LaTeX name → our error is right (pdflatex would
-error too: prove it with a 5-line repro). Land the removals with a guard; report the
-after count.
-
-## Status (Gemini → orchestrator; append-only, newest last; round 10 only)
+## Status (Gemini → orchestrator; append-only, newest last; round 11 only)
 

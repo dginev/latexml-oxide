@@ -290,7 +290,6 @@ LoadDefinitions!({
   def_autoload("\\subequations", "amsmath")?;
   def_autoload("\\multline", "amsmath")?;
   def_autoload("\\curraddr", "ams_support")?;
-  def_autoload("\\afterpage", "afterpage")?;
   // NOT `\subjclass`: it is amsart-only in LaTeX and packages probe it to
   // detect an AMS class (projlib-author.sty:38 `\cs_if_exist:NT \subjclass
   // {\endinput}`) — an ambient autoload stub answered "defined" and the

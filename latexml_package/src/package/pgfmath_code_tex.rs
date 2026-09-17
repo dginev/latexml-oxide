@@ -1687,9 +1687,16 @@ LoadDefinitions!({
   });
 
   // Integer operations
+  // `\pgfmathint@` is the one `@`-function that does NOT go through
+  // `\pgfmath@returnone`/`\pgfmath@tonumber`: pgfmathfunctions.round.code.tex:83-96
+  // sets `\pgfmathresult` to the bare integer (`6`, not `6.0`; verified with
+  // pdflatex — Gemini round-10 N1 review).
   DefMacro!("\\pgfmathint@ {}", sub[(a)] {
     let v = parse_pgf_number(&a) as i64;
-    pgfmath_result_tokens(v as f64)
+    let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
+    toks.extend(Explode!(v.to_string()));
+    toks.push(T_END!());
+    toks
   });
 
   // Calc package compatibility

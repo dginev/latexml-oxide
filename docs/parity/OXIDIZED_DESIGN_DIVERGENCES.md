@@ -7333,3 +7333,16 @@ catcode-2 characters differ from Perl, which fails those identically (SHARED).
 Witnesses chemexec/chemnum/carbohydrates (25 → 6), abntexto-exemplo (Fatal → 0).
 Guard `delimited_read_keeps_a_groups_own_close_token`. Batch 56bt.
 
+### 225. `\afterpage` runs its body in place
+
+**Perl behavior**: afterpage.sty.ltxml:20 `DefRegister('\afterpage' => Tokens())` —
+the argument is dropped.
+**Rust behavior**: `\afterpage{…}` is `\gdef\lx@afterpage@body{#1}\lx@afterpage@body`
+(afterpage.sty:83 stores the body by `\gdef`, halving `##` to `#`, and typesets
+it after the page; a web document has no page, so the body runs at once).
+Only with the package loaded — an undefined `\afterpage` stays an error, as in
+LaTeX and Perl (sesamath-doc-fr relies on a missing sesamath-doc.sty; SHARED).
+**Why**: the content is part of the document; dropping it loses text.
+Guard `afterpage_body_undoubles_parameter_hashes`. Gemini round 10 N5, merged
+with the autoload removed.
+

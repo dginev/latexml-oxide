@@ -316,7 +316,8 @@ LoadDefinitions!({
     }
   );
   // \Forest command: \Forest*(config){ [root [child]] }
-  // forest.sty:8666 defines \NewDocumentCommand{\Forest}{s D(){} m}.
+  // forest.sty:8511 defines \NewDocumentCommand{\Forest}{s D(){} m} (the star
+  // is consumed; its `\forest@group@env` grouping is not modelled).
   // We handle optional * and optional (config) before delegating to \lx@forest@exec.
   RawTeX!(
     r"\def\Forest{\@ifstar{\lx@forest@opt}{\lx@forest@opt}}

@@ -7,6 +7,19 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // unicode-math-luatex.sty:3405/3426 `\__um_define_prime_chars:` re-binds the
+  // ACTIVE math `'` to its prime scanner at `\AtBeginDocument` — after every
+  // preamble package: hanging.sty:85/101 `\gdef'{\futurelet\next\h@ngrqtest}`
+  // globally takes the active prime over, and its `\h@ngrquote` re-emits a
+  // catcode-12 `'` that mathcode "8000 makes active again → an unbounded
+  // pushback recursion on `$f'(x)$` (kaytannollista-latexia, 420 s; real
+  // lualatex is clean because unicode-math has the last word). The kernel's
+  // scanner is `\active@math@prime` (math_common.rs). Batch 56bu.
+  at_begin_document(Tokens!(
+    T_CS!("\\let"),
+    T_ACTIVE!('\''),
+    T_CS!("\\active@math@prime")
+  ))?;
   RequirePackage!("amsmath");
   RequirePackage!("fontspec");
   def_macro_noop("\\setmathfont[]{}[]")?;
