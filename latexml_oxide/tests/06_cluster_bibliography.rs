@@ -296,9 +296,12 @@ fn bib_raw_cite_redefinition_is_ignored() {
     !x.contains("CLOBBERED"),
     "a raw \\def\\cite displaced the binding:\n{x}"
   );
-  assert!(
-    x.contains("<bibitem") || x.contains("bibitem"),
-    "the bibliography did not survive the clobber attempt:\n{x}"
+  // the bibliography did not survive the clobber attempt: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="knuth" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> D. Knuth. </bibblock><bibblock>The TeXbook. </bibblock><bibblock>1984.</bibblock></bibitem>"##,
   );
 }
 
@@ -458,9 +461,12 @@ fn biblatex_declaresourcemap_does_not_leak_the_preamble() {
 #[test]
 fn biblatex_refcontext_block_keeps_its_printbibliography() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/refctx.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "refcontext swallowed \\printbibliography — no bibliography at all:\n{x}"
+  // refcontext swallowed \\printbibliography — no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="smith2020" xml:id="bib.bibx1"><tags><tag role="year">2020</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2020)</tag></tags><bibblock>John Smith</bibblock><bibblock>“A study of things”</bibblock><bibblock>In <emph font="italic">Journal of Testing</emph> <text font="bold">12</text>, 2020, pp. 1–20</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("Smith"),
@@ -893,9 +899,12 @@ fn sn_jnl_natbib_two_optional_cite_keeps_its_keys() {
 fn amsrefs_inline_bibliography_is_not_dropped() {
   let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
   // The inline entries became real bibitems (post ran and collected them).
-  assert!(
-    x.contains("<bibitem"),
-    "amsrefs inline bibliography was dropped whole — no bibitem survived:\n{x}"
+  // amsrefs inline bibliography was dropped whole — no bibitem survived: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="Bartnik" type="article" xml:id="bib.bib3a"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bartnik</tag><tag class="ltx_bib_year" role="year">1986</tag><tag class="ltx_bib_title" role="title">The mass of an asymptotically flat manifold</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">R. Bartnik</text><text class="ltx_bib_year"> (1986)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">The mass of an asymptotically flat manifold</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Comm. Pure Appl. Math.</text>, <text class="ltx_bib_pages">pp. 661–693</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="https://doi.org/10.1002/cpa.3160390505">Link</ref>,<text class=" ltx_bib_external">Review <ref class="ltx_mathreviews" href="http://www.ams.org/mathscinet-getitem?mr=849427">MathReviews</ref></text></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Both entries, with their content, are present. amsrefs titles keep their
   // case ("On Examples"; OXIDIZED_DESIGN #201 — Perl sentence-cased them).
@@ -943,9 +952,12 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
 #[test]
 fn amsrefs_bibsection_environment_renders() {
   let x = convert_and_post("tests/cluster_regressions/amsrefs_bibsection.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "\\begin{{bibsection}} produced no References (environment undefined?):\n{x}"
+  // \\begin{{bibsection}} produced no References (environment undefined?): the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="CG" type="article" xml:id="bib.bib1a"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chakerian</tag><tag class="ltx_bib_year" role="year">1983</tag><tag class="ltx_bib_title" role="title">Convex bodies of constant width</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">G. D. Chakerian</text><text class="ltx_bib_year"> (1983)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Convex bodies of constant width</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Math</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     !x.contains("<bibentry"),
@@ -1029,9 +1041,12 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
     );
   }
   // And it is a structured bibitem, not leaked body text.
-  assert!(
-    x.contains("<bibitem"),
-    "sn-jnl/apacite bibliography did not produce a <bibitem>:\n{x}"
+  // sn-jnl/apacite bibliography did not produce a <bibitem>: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="survey2018" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">(2018)</tag><tag role="authors">Ahmed et al.</tag><tag role="fullauthors">Ahmed et al.</tag><tag role="refnum">Ahmed et al. ((2018))</tag><tag role="key">survey2018</tag></tags><bibblock>Ahmed, E., Saint, A.Ottersten, B. </bibblock><bibblock>(2018).</bibblock><bibblock>A survey on deep learning.</bibblock><bibblock>arXiv preprint arXiv:1808.01462   ,</bibblock><bibblock></bibblock></bibitem>"##,
   );
 }
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
@@ -1046,9 +1061,12 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
 fn bibunits_cite_resolves_against_the_main_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
   // The entry reaches the References either way — the defect is the LINK.
-  assert!(
-    x.contains("<bibitem"),
-    "bibunits: the bibliography itself is missing:\n{x}"
+  // bibunits: the bibliography itself is missing: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="Smith2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On examples</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On examples</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Repro</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     !x.contains("ltx_missing_citation"),
@@ -1069,9 +1087,12 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
 #[test]
 fn non_utf8_bib_file_still_yields_a_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/cp1252_bib.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte:\n{x}"
+  // cp1252 .bib: the whole bibliography was dropped on a non-UTF-8 byte: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="Cafe2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Café</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On legacy encodings</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Café</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On legacy encodings</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Bytes</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The Latin-1 fallback is lossless byte -> char, so the accent survives to
   // the rendered entry rather than collapsing to U+FFFD. Only the SURNAME is
@@ -1118,9 +1139,12 @@ fn non_utf8_bib_file_still_yields_a_bibliography() {
 #[test]
 fn bib_field_bbl_fallbacks_render_without_a_url_package() {
   let x = convert_and_post("tests/cluster_regressions/bib_field_no_url_package.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bbl fallbacks: no bibliography at all:\n{x}"
+  // bbl fallbacks: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_misc" key="urlnopkg" type="misc" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Doe</tag><tag class="ltx_bib_year" role="year">2026</tag><tag class="ltx_bib_title" role="title">A web thing</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Doe</text><text class="ltx_bib_year"> (2026)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A web thing</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref href="https://example.org/nopkg" font="typewriter" class="ltx_nolink ltx_url">https://example.org/nopkg</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The recovered content must be THERE ...
   assert!(
@@ -1149,9 +1173,12 @@ fn bib_field_bbl_fallbacks_render_without_a_url_package() {
 #[test]
 fn bib_field_markup_survives_into_the_bibliography() {
   let x = convert_and_post("tests/cluster_regressions/bib_field_markup.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bib markup: no bibliography at all:\n{x}"
+  // bib markup: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="urlnote2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Doe</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A plain title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Doe</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A plain title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Things</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref class="ltx_url" href="https://example.org/a" font="typewriter">https://example.org/a</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The whole point: no TeX source may leak into the rendered entries.
   for leak in ["\\urlhttps", "\\url{", "\\href", "\\emph"] {
@@ -1247,9 +1274,12 @@ fn bib_field_markup_survives_into_the_bibliography() {
 #[test]
 fn bib_abstract_percent_does_not_sink_the_entry() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_abstract_percent.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "abstract percent: no bibliography at all:\n{x}"
+  // abstract percent: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="emptyabstract" type="article" xml:id="bib.bib4" fragid="bib.bib4"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chen</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">An entry whose abstract field is empty</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">W. Chen</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">An entry whose abstract field is empty</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Bibliographies</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Containment is the whole point: the entry AFTER the runaway must survive.
   // Before the fix every one of these was gone together.
@@ -1428,9 +1458,12 @@ fn bib_bare_ampersand_leaves_live_markup_alone() {
 #[test]
 fn bib_unmatched_dollar_does_not_leak_math() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_unmatched_dollar.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "unmatched $: no bibliography at all:\n{x}"
+  // unmatched $: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="straynodigit" type="article" xml:id="bib.bib3" fragid="bib.bib3"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Diallo</tag><tag class="ltx_bib_year" role="year">2021</tag><tag class="ltx_bib_title" role="title">A stray $ shift with no amount after it</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">C. Diallo</text><text class="ltx_bib_year"> (2021)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A stray $ shift with no amount after it</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Typesetting Notes</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Every entry survives — `aftermath` sits after all three stray-`$` entries.
   for needle in [
@@ -1484,9 +1517,12 @@ fn bib_unmatched_dollar_does_not_leak_math() {
 #[test]
 fn bib_field_specials_are_data_not_tex() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_field_specials.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "bib specials: no bibliography at all:\n{x}"
+  // bib specials: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="preescaped" type="article" xml:id="bib.bib6" fragid="bib.bib6"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bergström</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates ^ caret</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">N. Bergström</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">AT&amp;T dataset at1g01010_v2 at 95% with #3 replicates ^ caret</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Bibliographies</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // All ten entries arrive — `Gilakjani` is the containment canary.
   for needle in [
@@ -1617,9 +1653,12 @@ fn bib_field_specials_are_data_not_tex() {
 #[test]
 fn bib_name_space_form_accent_survives_reversion() {
   let x = convert_and_post("tests/cluster_regressions/bib_accent_space_form.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "accent fixture: no bibliography at all:\n{x}"
+  // accent fixture: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="cedilla" type="article" xml:id="bib.bib2" fragid="bib.bib2"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Gonçalves</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">Cedilla, space form</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Gonçalves</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Cedilla, space form</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Accents</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // The accents must have COMPOSED, not merely survived as source.
   for (name, ch) in [
@@ -1681,9 +1720,12 @@ fn bib_name_space_form_accent_survives_reversion() {
 #[test]
 fn bib_field_blank_line_does_not_inject_a_bibitem() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_field_blank_line.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "blank line: no bibliography at all:\n{x}"
+  // blank line: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_misc" key="BertiRingdown" type="misc" xml:id="bib.bib4" fragid="bib.bib4"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve">Note: <text class="ltx_bib_note"><ref href="https://pages.jh.edu/eberti2/ringdown" class="ltx_nolink ltx_url" font="typewriter">https://pages.jh.edu/eberti2/ringdown</ref> <break/><ref font="typewriter" href="https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown" class="ltx_nolink ltx_url">https://centra.tecnico.ulisboa.pt/network/grit/files/ringdown</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Every entry must arrive, including the canary AFTER the injected item.
   for needle in ["Tao", "Santos", "Girolami", "Fixture"] {
@@ -1767,9 +1809,12 @@ fn bib_field_blank_line_does_not_inject_a_bibitem() {
 #[test]
 fn active_at_catcode_does_not_corrupt_bibtex_wrapper() {
   let x = convert_and_post_clean("tests/cluster_regressions/bib_active_at_catcode.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "active-@: bibliography destroyed by a leaked active `@`:\n{x}"
+  // active-@: bibliography destroyed by a leaked active `@`: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="alpha" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Anderson</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">Alpha title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Anderson</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Alpha title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal One</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Both entries must arrive — the `@` in `\begin{bibtex@bibliography}` no longer
   // eats the wrapper. Titles are recased (MakeBibliography lowercases all but the
@@ -1932,9 +1977,12 @@ fn bib_mathscinet_package_supplies_its_transliteration_glyphs() {
       "mathscinet: `\\{leaked}` leaked into the output as source:\n{x}"
     );
   }
-  assert!(
-    x.contains("<bibitem"),
-    "mathscinet: no bibliography at all:\n{x}"
+  // mathscinet: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="dbarrev" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">A mathscinet glyph macro in a reviewer name</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">E. Author</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A mathscinet glyph macro in a reviewer name</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Reviews</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="mr ltx_bib_external" href="https://www.ams.org/mathscinet-getitem?mr=MR4567890">MathReview (Dragomir Ž. Đoković)</ref></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
 
@@ -1972,9 +2020,12 @@ fn bib_mathscinet_macro_yields_to_the_authors_own_definition() {
      never loads the package:\n{x}"
   );
   // …and the bibliography still renders, so the guard cannot pass by losing it.
-  assert!(
-    x.contains("<bibitem"),
-    "author `\\Dbar`: no bibliography at all:\n{x}"
+  // author `\\Dbar`: no bibliography at all: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem class="ltx_bib_article" key="plainref" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2025</tag><tag class="ltx_bib_title" role="title">An entry with nothing special in it</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">F. Author</text><text class="ltx_bib_year"> (2025)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">An entry with nothing special in it</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Reviews</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
 
@@ -2209,9 +2260,12 @@ fn comment_midline_end_runs_to_eof_like_pdflatex() {
 #[test]
 fn physics_qty_braced_paren_does_not_run_away() {
   let x = convert_and_post_clean("tests/cluster_regressions/physics_qty_braced_paren.tex");
-  assert!(
-    x.contains("<bibitem"),
-    "physics \\qty ran away and swallowed the bibliography:\n{x}"
+  // physics \\qty ran away and swallowed the bibliography: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="a" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> First entry.</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("First entry"),
@@ -2998,5 +3052,43 @@ fn cluster_bib_natbib_authoryear_stays_alphabetical() {
     reference_list_keys(&x),
     vec!["alpha", "beta", "gamma"],
     "author-year natbib must stay alphabetical, not citation-ordered\n{x}"
+  );
+}
+
+/// biblatex's public formatting family (`\mkbibemph`, `\mkbibbold`, …) and its
+/// punctuation-buffer no-ops (`\nopunct`, `\isdot`, `\newunit`) are defined by the
+/// binding (biblatex.sty:13084-13093 `\newrobustcmd`; `\blx@regimcs` :1137 is
+/// stubbed, so the names must exist directly). biblatex-chicago's dates-test.bib
+/// uses them inside `title`/`note` fields; the undefined `\mkbibemph` leaked its
+/// argument unemphasized in 7 corpus manuals and `\nopunct` errored in 4. The
+/// whole first `<bibitem>` is pinned: the emphasis and bold reach the title, the
+/// note ends cleanly.
+#[test]
+fn biblatex_formatting_family_renders_in_bib_fields() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_formatting_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"marlin\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="marlin" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">Review of The Last Marlin and Others</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Review of <emph font="italic">The Last Marlin</emph> and <text font="bold">Others</text></text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">from a broadcast on</text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// A biblatex document reads titles AS ENTERED (`BibTeX_title_case` = `asis`,
+/// like amsrefs): biber never runs BibTeX's `change.case$`, whose "t" mode
+/// lowercases unbraced control sequences too (`\H`→`\h`, `\TeX`→`\tex`) —
+/// that breakage is real and SHARED for classic `\bibliography` documents, but
+/// a biblatex+biber PDF renders `Erdős` and `TeX`. Witnesses biblatex2bibitem
+/// (`\h` ×3), aomsample/abntexto-style `\TeX` titles under biblatex.
+#[test]
+fn biblatex_title_case_is_as_entered() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_formatting_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"erdos\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib2" key="erdos" type="article" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2021</tag><tag class="ltx_bib_title" role="title">On a Question of Erdős and Ulam About TeX</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">B. Writer</text><text class="ltx_bib_year"> (2021)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On a Question of Erdős and Ulam About <text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }

@@ -631,6 +631,177 @@ pub fn error_count(log: &str) -> usize {
     .count()
 }
 
+/// The first `<tag …>…</tag>` (or self-closing `<tag …/>`) element of `xml`
+/// whose start tag contains every fragment in `attrs` (e.g. `key="smith2020"`),
+/// returned WHOLE — start tag, attributes, children, end tag — with the
+/// inter-tag whitespace of pretty-printing collapsed (`>\s+<` → `><`, trimmed)
+/// so the same element compares equal across serializers. Nesting of the same
+/// tag is tracked, so the outermost match is returned complete. `None` when no
+/// element matches.
+///
+/// This is the guard-strength primitive (PLANS.md item 5, user directive
+/// 2026-09-17): a guard asserts the entire markup context of its feature, not a
+/// substring that unrelated markup can satisfy. `tag` is matched with or
+/// without the `ltx:` prefix.
+pub fn xml_element(xml: &str, tag: &str, attrs: &[&str]) -> Option<String> {
+  let bare = tag.strip_prefix("ltx:").unwrap_or(tag);
+  let opens = [format!("<{bare}"), format!("<ltx:{bare}")];
+  let mut from = 0;
+  while let Some(rel) = xml[from..].find('<') {
+    let start = from + rel;
+    let rest = &xml[start..];
+    let Some(open) = opens.iter().find(|o| {
+      rest.starts_with(o.as_str())
+        && rest[o.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+    }) else {
+      from = start + 1;
+      continue;
+    };
+    let tag_end = start_tag_end(rest)?;
+    let start_tag = &rest[..=tag_end];
+    if !attrs.iter().all(|a| start_tag.contains(a)) {
+      from = start + 1;
+      continue;
+    }
+    if start_tag.ends_with("/>") {
+      return Some(normalize_markup(start_tag));
+    }
+    // Depth-aware scan to the matching close tag.
+    let close = format!("</{}>", &open[1..]);
+    let mut depth = 1usize;
+    let mut pos = tag_end + 1;
+    while depth > 0 {
+      let rel = rest[pos..].find('<')?;
+      let at = pos + rel;
+      if rest[at..].starts_with(&close) {
+        depth -= 1;
+        pos = at + close.len();
+        if depth == 0 {
+          return Some(normalize_markup(&rest[..pos]));
+        }
+      } else if rest[at..].starts_with(open.as_str())
+        && rest[at + open.len()..]
+          .chars()
+          .next()
+          .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+      {
+        let e = start_tag_end(&rest[at..])?;
+        if !rest[at..at + e].ends_with('/') {
+          depth += 1;
+        }
+        pos = at + e + 1;
+      } else {
+        pos = at + 1;
+      }
+    }
+    return None;
+  }
+  None
+}
+
+/// Byte offset of the `>` that closes the start tag beginning at `s[0]`,
+/// skipping any `>` inside a quoted attribute value (libxml2 does not escape
+/// `>` in attributes: `tex="a>b"`).
+fn start_tag_end(s: &str) -> Option<usize> {
+  let mut quote: Option<u8> = None;
+  for (i, b) in s.bytes().enumerate() {
+    match (quote, b) {
+      (Some(q), c) if c == q => quote = None,
+      (Some(_), _) => {},
+      (None, b'"') | (None, b'\'') => quote = Some(b),
+      (None, b'>') => return Some(i),
+      _ => {},
+    }
+  }
+  None
+}
+
+/// Collapse pretty-printing whitespace and trim, so an element's serialization
+/// compares equal whatever the indentation: a whitespace run that contains a
+/// newline is indentation — dropped when it touches a tag boundary (`>` before
+/// it or `<` after it), one space otherwise; a run without a newline is real
+/// text spacing and is kept verbatim.
+pub fn normalize_markup(s: &str) -> String {
+  let mut out = String::with_capacity(s.len());
+  let chars: Vec<char> = s.chars().collect();
+  let mut i = 0;
+  while i < chars.len() {
+    if chars[i].is_whitespace() {
+      let start = i;
+      while i < chars.len() && chars[i].is_whitespace() {
+        i += 1;
+      }
+      let run: String = chars[start..i].iter().collect();
+      if run.contains('\n') {
+        let at_boundary =
+          out.ends_with('>') || chars.get(i) == Some(&'<') || out.is_empty() || i >= chars.len();
+        if !at_boundary {
+          out.push(' ');
+        }
+      } else {
+        out.push_str(&run);
+      }
+    } else {
+      out.push(chars[i]);
+      i += 1;
+    }
+  }
+  sort_start_tag_attributes(out.trim())
+}
+
+/// Rewrite every start tag as `<name a="…" b="…">` with its attributes in
+/// lexicographic order. Attribute order is not significant in XML, and one
+/// emitter (the bibliography's `<ref>` for a `.bib` URL field) orders them by
+/// hash — the test-side normalization keeps a pinned element stable; the
+/// nondeterminism itself is tracked separately.
+fn sort_start_tag_attributes(s: &str) -> String {
+  use std::sync::LazyLock;
+  static START_TAG: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"<([A-Za-z_:][\w:.-]*)((?:\s+[\w:.-]+="[^"]*")+)\s*(/?)>"#).unwrap()
+  });
+  static ATTR: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"([\w:.-]+)="([^"]*)""#).unwrap());
+  START_TAG
+    .replace_all(s, |c: &regex::Captures| {
+      let mut attrs: Vec<(String, String)> = ATTR
+        .captures_iter(&c[2])
+        .map(|a| (a[1].to_string(), a[2].to_string()))
+        .collect();
+      attrs.sort();
+      let attrs: Vec<String> = attrs
+        .into_iter()
+        .map(|(k, v)| format!("{k}=\"{v}\""))
+        .collect();
+      format!("<{} {}{}>", &c[1], attrs.join(" "), &c[3])
+    })
+    .to_string()
+}
+
+/// Assert that the first `<tag …>` element carrying every `attrs` fragment is
+/// EXACTLY `expected` (whitespace-normalized on both sides). The failure
+/// message prints the element that was found, so a guard can be pinned from a
+/// real conversion in one round trip.
+#[track_caller]
+pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
+  match xml_element(xml, tag, attrs) {
+    Some(found) => {
+      let want = normalize_markup(expected);
+      assert!(
+        found == want,
+        "element <{tag} {}> differs from the expected markup\n--- found:\n{found}\n--- expected:\n{want}\n--- xml:\n{xml}",
+        attrs.join(" ")
+      );
+    },
+    None => panic!(
+      "no <{tag} {}> element in the output\n--- xml:\n{xml}",
+      attrs.join(" ")
+    ),
+  }
+}
+
 /// True iff a year-versioned latex kernel dump is present in the dev tree.
 /// Without it the engine raw-loads `expl3-code.tex` (degraded mode) and the
 /// error landscape is dominated by unrelated raw-load cascades — dump-gated
@@ -801,6 +972,67 @@ mod exemption_audit {
         .iter()
         .any(|(k, hits)| k == key && hits.len() == 2),
       "audit should flag the duplicate {key:?}: {collisions:?}"
+    );
+  }
+}
+
+#[cfg(test)]
+mod element_helper_tests {
+  use super::{assert_element, normalize_markup, xml_element};
+
+  const XML: &str = "<document>\n  <bibliography>\n    <biblist>\n      <bibitem key=\"a\" xml:id=\"bib.a\">\n        <bibtag role=\"refnum\">1</bibtag>\n        <bibblock>Author <emph>T</emph></bibblock>\n      </bibitem>\n      <bibitem key=\"b\"><bibtag>2</bibtag></bibitem>\n    </biblist>\n  </bibliography>\n  <graphics graphic=\"x.pdf\"/>\n</document>\n";
+
+  #[test]
+  fn first_element_is_returned_whole_and_normalized() {
+    assert_eq!(
+      xml_element(XML, "bibitem", &[]).as_deref(),
+      Some(
+        "<bibitem key=\"a\" xml:id=\"bib.a\"><bibtag role=\"refnum\">1</bibtag><bibblock>Author <emph>T</emph></bibblock></bibitem>"
+      )
+    );
+  }
+
+  #[test]
+  fn attribute_fragments_select_a_later_element() {
+    assert_eq!(
+      xml_element(XML, "ltx:bibitem", &["key=\"b\""]).as_deref(),
+      Some("<bibitem key=\"b\"><bibtag>2</bibtag></bibitem>")
+    );
+    assert_eq!(xml_element(XML, "bibitem", &["key=\"zz\""]), None);
+  }
+
+  #[test]
+  fn nested_same_tag_and_self_closing_are_handled() {
+    let nested = "<g id=\"o\"><g id=\"i\"><path/></g><text>L</text></g>";
+    assert_eq!(xml_element(nested, "g", &[]).as_deref(), Some(nested));
+    assert_eq!(
+      xml_element(nested, "g", &["id=\"i\""]).as_deref(),
+      Some("<g id=\"i\"><path/></g>")
+    );
+    assert_eq!(
+      xml_element(XML, "graphics", &[]).as_deref(),
+      Some("<graphics graphic=\"x.pdf\"/>")
+    );
+    // `<graphicsX>` is not `<graphics>`.
+    assert_eq!(xml_element("<graphicsX/>", "graphics", &[]), None);
+    // A `>` inside an attribute value does not end the start tag.
+    assert_eq!(
+      xml_element("<p><Math tex=\"a>b\"><XMath/></Math></p>", "Math", &[]).as_deref(),
+      Some("<Math tex=\"a>b\"><XMath/></Math>")
+    );
+  }
+
+  #[test]
+  fn normalization_keeps_text_whitespace() {
+    assert_eq!(
+      normalize_markup("<p>\n  a <b> c </b>\n</p>\n"),
+      "<p>a <b> c </b></p>"
+    );
+    assert_element(
+      XML,
+      "bibitem",
+      &["key=\"b\""],
+      "<bibitem key=\"b\">\n  <bibtag>2</bibtag>\n</bibitem>",
     );
   }
 }
