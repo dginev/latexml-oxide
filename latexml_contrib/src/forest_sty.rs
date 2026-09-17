@@ -10,6 +10,9 @@ use crate::discard_env::{discard_body_until_cs, read_env_body_tokens};
 pub struct ForestNode {
   pub label_tokens:   Vec<Token>,
   pub label_digested: Option<Digested>,
+  /// The label as a string when its tokens are not plain horizontal-mode
+  /// content (see `is_plain_label`).
+  pub label_text:     Option<String>,
   pub children:       Vec<ForestNode>,
 }
 
@@ -120,8 +123,14 @@ pub fn parse_forest_tokens(tokens: &[Token]) -> ForestTree {
     if is_token_char(&tokens[idx], '[') {
       let root = parse_node(tokens, &mut idx);
       roots.push(root);
-    } else {
+    } else if roots.is_empty() {
       idx += 1;
+    } else {
+      // A non-bracket token after the tree is trailing material, not another
+      // root: forest-doc.tex:1055's `\measureydistance[…=#1]{…}` follows the
+      // tree, and reading its optional argument as a root emitted a bogus
+      // node (batch 56bv).
+      break;
     }
   }
 
@@ -206,16 +215,45 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
   ForestNode {
     label_tokens,
     label_digested: None,
+    label_text: None,
     children,
   }
+}
+
+/// A plain forest node label is horizontal-mode content and is digested as
+/// TeX (a `$x^2$` label becomes `<Math>`). PARAM or ALIGN tokens, and the
+/// alignment-only primitives, mark a stream that is not a label at all —
+/// forest-doc.tex:1055 `\measureydistance[…=#1]{…}` (a macro's optional
+/// argument after the tree, mis-read as a root by the stub parser) and :3142
+/// `special value&actual value\\\hline…` (forest's `align` feature, a
+/// tabular inside a node) — which the stomach can only report (`#` should
+/// never reach Stomach, stray `&`, `\noalign`); such a label is kept as its
+/// string (sweep 75, round-10 N3 follow-up).
+/// A bare `\\\\` is NOT in the list: a multi-line `align=center` node label
+/// digests it to a line break.
+fn is_plain_label(tokens: &Tokens) -> bool {
+  tokens.unlist_ref().iter().all(|t| {
+    !matches!(t.get_catcode(), Catcode::PARAM | Catcode::ALIGN)
+      && !(t.get_catcode() == Catcode::CS
+        && t.with_str(|s| {
+          matches!(
+            s,
+            "\\noalign" | "\\cr" | "\\crcr" | "\\omit" | "\\span" | "\\hline"
+          )
+        }))
+  })
 }
 
 fn digest_forest_node(node: &mut ForestNode) -> Result<()> {
   let stripped = Tokens::new(node.label_tokens.clone()).strip_braces();
   let has_content = stripped.unlist_ref().iter().any(|t| !is_ignorable_token(t));
   if has_content {
-    let digested = stripped.be_digested()?;
-    node.label_digested = Some(digested);
+    if is_plain_label(&stripped) {
+      let digested = stripped.be_digested()?;
+      node.label_digested = Some(digested);
+    } else {
+      node.label_text = Some(stripped.to_string());
+    }
   }
   for child in &mut node.children {
     digest_forest_node(child)?;
@@ -257,11 +295,15 @@ fn emit_forest_node(document: &mut Document, node: &ForestNode) -> Result<()> {
   item_attrs.insert("class".into(), "ltx_forest_node".into());
   document.open_element("ltx:inline-item", Some(item_attrs), None)?;
 
-  if let Some(ref dig) = node.label_digested {
+  if node.label_digested.is_some() || node.label_text.is_some() {
     let mut text_attrs: HashMap<String, String> = HashMap::default();
     text_attrs.insert("class".into(), "ltx_forest_node_content".into());
     document.open_element("ltx:text", Some(text_attrs), None)?;
-    document.absorb(dig, None)?;
+    if let Some(ref dig) = node.label_digested {
+      document.absorb(dig, None)?;
+    } else if let Some(ref text) = node.label_text {
+      document.absorb_string(text, &SymHashMap::default())?;
+    }
     document.close_element("ltx:text")?;
   }
 
@@ -371,6 +413,9 @@ LoadDefinitions!({
   // forest.sty:1413 bracket-parser configuration (neoschool.cls:8568
   // `\bracketset{action character=@}`); nothing to configure in a stub.
   DefMacro!("\\bracketset{}", "\\relax");
+  // forest's `@+` resume-bracket feature (forest-doc.tex:1787-1795 `\x#1{…
+  // \expandafter\bracketResume\xtemp}`): a digested label expands into it.
+  DefMacro!("\\bracketResume", "\\relax");
   DefMacro!("\\forestset{}", "\\relax");
   DefMacro!("\\forestoption{}", "\\relax");
   DefMacro!("\\foresteoption{}", "\\relax");

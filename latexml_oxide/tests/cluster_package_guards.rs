@@ -16962,6 +16962,21 @@ c &= d
     assert!(xml.contains("<p>x</p>"), "{xml}");
   }
 
+  /// Batch 56bv: a forest node label with `#`, `&` or an alignment primitive is
+  /// not plain horizontal content — it is kept as a string instead of being
+  /// digested (forest-doc.tex:1055 `[…=#1]`, :3142 a tabular in a node), while
+  /// a plain label still digests (`$x^2$` → `<Math>`); `\bracketResume` exists.
+  #[test]
+  fn forest_non_label_streams_stay_strings() {
+    let tex = "\\documentclass{article}\n\\usepackage{forest}\n\\begin{document}\n\\begin{forest}\n[root [a\\#1b] [x&y\\\\\\hline z] [$x^2$] [one\\\\two, align=center]]\n\\end{forest}\n\\end{document}\n".replace("a\\#1b", "a#1b");
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<Math"), "{xml}");
+    assert!(xml.contains("a#1b"), "{xml}");
+    // A multi-line node label still digests its `\\` to a break.
+    assert!(xml.contains("<break"), "{xml}");
+  }
+
   /// Batch 56bu: unicode-math re-binds the active math prime at begin-document
   /// (unicode-math-luatex.sty:3405/3426), so hanging.sty:85/101's global
   /// `\gdef'` no longer recurses on `$f'(x)$` (kaytannollista, 420 s).

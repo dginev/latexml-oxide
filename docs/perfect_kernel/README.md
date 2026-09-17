@@ -35,6 +35,8 @@ command inside a `\fancypagestyle` body both engines discard). A raw-first
 attempt is still the default for every new cluster; a new binding requires a
 justification of this kind in the file header.
 
+> **Stage transition (2026-09-17).** The error-free stage (S0∧S1) is accepted as complete at its reachable ceiling (oracle-clean 1,535/1,548, residue = policy decisions K6/D14/#99 + bibarts + LuaTeX-only Japanese manuals; corpus 1,850/2,374). Work now runs the **content-preservation and markup-quality audit** over the S0∧S1 slice: S2 schema validity (`validate.sh`), S3 recall of the shipped PDF's text in the **post-processed HTML** (`post_sweep.sh` then `S3_EXT=html s3_sweep.sh`), and a semantic-markup audit (structure present where the source has it, no text blobs, no dropped constructs; markup consistent with core LaTeXML). Verdicts and clusters are logged in `LEDGER.md`.
+
 ## Why this corpus
 
 Every TeX Live package ships its manual as `doc/latex/<bundle>/<name>.tex`

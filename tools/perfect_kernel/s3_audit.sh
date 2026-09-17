@@ -16,7 +16,9 @@ set -uo pipefail
 DOC="$1"
 OUTROOT="${2:-$HOME/data/perfect_kernel}"
 name=$(basename "$DOC")
-xml="$OUTROOT/$DOC/$name.xml"
+# S3_EXT=html audits the post-processed page (post_sweep.sh output root).
+S3_EXT="${S3_EXT:-xml}"
+xml="$OUTROOT/$DOC/$name.$S3_EXT"
 # The golden PDF sits in the source bundle dir.
 DOCROOT="${DOCROOT:-$(kpsewhich -var-value=TEXMFDIST)/doc/latex}"
 pdf="$DOCROOT/$DOC.pdf"
@@ -29,7 +31,9 @@ pdftotext -q "$pdf" "$tmp/pdf.txt"
 # boundaries — `Wolczko<break/>mario` read as "wolczkomario" and produced a
 # false missing-word). Entities are then decoded by xmllint on the wrapped
 # remainder.
-sed 's/<[^>]*>/ /g' "$xml" > "$tmp/xml.txt" 2>/dev/null
+# MathML annotations carry the TeX source; drop them so HTML recall counts
+# rendered text only (they could only inflate "found").
+perl -0pe 's{<(m:)?annotation\b.*?</(m:)?annotation>}{ }gs; s{<[^>]*>}{ }g' "$xml" > "$tmp/xml.txt" 2>/dev/null
 
 words() {
   tr -cs '[:alpha:]' '\n' < "$1" | tr '[:upper:]' '[:lower:]' |

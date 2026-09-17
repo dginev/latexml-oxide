@@ -177,6 +177,8 @@ work that would turn it into a conversion; none is a final answer.
 | `\end{minipage} Attempt to end mode internal_vertical` ×84 — yquant/yquant-doc (shell-escape-EXCLUDED): the doc's `option` environment opens a `\begingroup` that only minted's real inline processor (`\RobustMintInlineProcess@ii`, patched by the doc via `\patch@mintinline`) closes; the `minted` stub (`latexml_contrib/src/minted_sty.rs`, `\tex`→`\lstinline`) never runs it, so every `\end{minipage}` meets the open group. Perl (raw minted2) has no minipage error. Fix would be a patchable stub processor — version-specific; deferred (excluded doc). Repro `~/data/pk_agents/w22/yquant/repros/minipage_minted_group.tex`. | yquant-doc | minted stub processor hook | registered 2026-09-09 |
 | `Fatal:Timeout:Recursion` "Infinite expansion loop: a window of 2 token(s) repeated 100+ times" — yquant/yquant-doc (shell-escape-EXCLUDED), sweep 67, surfaced once batch 56bd defined `\gundef` and yquant's register-group cleanup ran further. The doc's `minipage`/minted imbalance (row above) still precedes it. Root not isolated; yquant's own language parser (`yquant-lang.sty`) is arXiv-relevant, so worth a bounded root-cause when a yquant arXiv witness appears. | yquant-doc | — | registered 2026-09-09 |
 
+**chemexec ×2 / quickreaction (lualatex fallback, 3 oracle errors; root-causer 2026-09-17) — SHARED broken documents, "oracle-incomplete".** Both `\usepackage` packages REMOVED from TL2025 (chemexec: slashbox, scrpage2; quickreaction: mol2chemfig — `kpsewhich` empty), so real pdflatex/lualatex Emergency-stop at the missing file after ~3 errors and never reach the molecules; we have bindings for slashbox/scrpage2 and continue into genuinely broken chemfig use. chemexec.sty:922 `\edef\empty#1{#1}` (under its `exercise` option) clobbers the kernel `\empty` that chemfig uses as its atom sentinel (chemfig.tex:1877/1930, 169-175), so `\CF_hookatomnumber` (chemfig.tex:1751-1768) references `n<g>-0` that was never created → pgf `No shape named` (pdflatex shows the same `No shape named 'n-0'` after an `extra }` cascade our engine suppresses); quickreaction's `dlh`/`dbl`/`dlr` bond styles are mol2chemfig's, undefined. No fix (defining them or special-casing `\empty` would diverge from the oracle). The sweep-75 25→202 delta is a MEASUREMENT artifact of 56bt drawing more of a document whose oracle never finished loading. Repro `~/data/pk_agents/w22/chemfig-nodes/repros/min_node.tex` (RED in pdflatex too). Method: a doc whose oracle stops at a missing `\usepackage`d file is oracle-incomplete — error-count deltas against it are not regressions; the tally's Δerr flag should exclude that class (`oracle_verdicts.tsv` has no column for it yet — TODO when the harness is next touched).
+
 **kaytannollista-latexia (lualatex oracle itself times out; root-causer 2026-09-17) — the runaway is a unicode-math gap, queued (56bu).** hanging.sty:85/101 makes `'` active and `\gdef'{\futurelet\next\h@ngrqtest}` globally; its `\h@ngrquote` (hanging.sty:73) re-emits a catcode-12 `'` which under mathcode "8000 is math-active again → unbounded pushback recursion on a bare math prime (`$f'(x)$`, luku-rakenne.tex:7392). Without unicode-math this is SHARED (pdflatex `TeX capacity exceeded`, Perl 124); with unicode-math real lualatex is fine because unicode-math-luatex.sty:3405/3426 re-binds the active `'` to its prime scanner at `\AtBeginDocument`, after hanging — ours (`unicode_math_sty.rs`) never does. Fix: `at_begin_document` re-let of `T_ACTIVE!('\'')` to `\active@math@prime` (math_common.rs:436-461), validated by the agent's green variant; repro `~/data/pk_agents/w22/kaytannollista/repros/prime_hanging_unicodemath.tex`. The doc stays a lualatex-timeout non-target; the win is the removed multi-minute runaway.
 
 **bibleref-parse/bibleref-parse (lualatex fallback, 2 oracle errors; root-causer 2026-09-17) — SHARED infinite loop, registered.** bibleref-parse.sty:481-508 `\brp@ifcs` asks whether a token is a control sequence via `` `<first char of \detokenize{#1}> `` = 92; for an accent like `\"` in the doc's silent-name lists (bibleref-parse.tex:347 `IK\"onige`) that is TRUE in real TeX (tex.web §442), and `\brp@@expandcs` then `\expandafter`-expands the unexpandable `\"` forever — **real pdflatex hangs on `\pbibleverse{\"o}` too**. Perl terminates (2 errors) only because Gullet.pm:923-928 strips the backslash unconditionally, giving `` `\ `` = 0 — the quirk KNOWN_PERL_ERRORS #123 / batch 54 deliberately did NOT copy (it re-breaks l3fp's `\if_case:w` on `` `\token_to_str:N``, guards `fpeval_register_right_operand_of_comparison`, `backquote_charcode_of_other_backslash`). Bounded by `--timeout` (fires ~5 s past it); no code change. Repro `~/data/pk_agents/w22/bibleref-parse/repros/accent_in_brp_ifcs.tex`. A generalized no-progress guard (an expansion consuming 0 net tokens at the same mouth position over K≫1 iterations → fail fast) is the only kernel-level option, MED-HIGH risk, not pursued.
@@ -299,3 +301,36 @@ else. Repros `~/data/pk_agents/w22/frankenstein/repros/` (`frank_docbody_reinput
 ## D14. beamer overlays are one pass here, many passes in beamer
 
 **Witness:** chessboard/chessboard_and_beamer (oracle pdflatex-clean; sweep 69: `\errmessage mainline: black, not white, to move (e4)`, then `1 is not the correct move number`, then a `Until:.` runaway to EoF, 3 errors + Fatal). The frame (chessboard_and_beamer.tex:19-24) is `\newgame … \only<1>{\mainline{1.e4}} \only<2>{\hidemoves{1.e4}\mainline{1... e5}} \only<3>{\hidemoves{1.e4 e5}\mainline{2. Nf3}}`. Real beamer typesets a frame ONCE PER OVERLAY SLIDE (beamerbaseframe.sty `\beamer@@@@frame`/`\beamer@checkframetitle` loop: the frame body is re-read for slide 1, 2, 3, `\newgame` resetting skak's game state each pass), so each `\only` branch sees a fresh game. Our beamer binding (and Perl beamer.cls.ltxml:793-834) take every `\only`/`\onslide` branch in ONE pass — the reader-facing "all overlays as a continuous document" contract — so skak replays 1.e4 on a game that already advanced. SHARED with Perl; the faithful alternative (re-executing the frame body per overlay and emitting N slides) is a design decision for the beamer binding, not a kernel gap. Recorded, not pursued: the single-pass contract is what every other beamer manual in the corpus relies on. **User decision 2026-09-10: keep Perl parity (single pass); chessboard_and_beamer stays documented residue.**
+
+## D15. Content-preservation audit findings (stage 2, from 2026-09-17)
+
+The S3 recall audit (`tools/perfect_kernel/s3_sweep.sh` over the S0∧S1 slice) and the
+markup census expose losses that the error-free stage could not see. Each row names
+the mechanism, its witnesses, and the disposition.
+
+- **`\renewenvironment{document}` cannot bypass the magic `\end{document}` (SHARED with Perl, surpass candidate awaiting the user's call).**
+  `base/ltnews` concatenates 42 issue files, each a full document, by re-defining the
+  `document` environment around a `\loop … \input{ltnews\theissue} \repeat`
+  (ltnews.tex ~239). LaTeXML dispatches `\begin{document}`/`\end{document}` to the
+  magic constructor CS whenever it is defined (Perl latex_constructs.pool.ltxml:199/224;
+  Rust sect01.rs:386/459) and the magic `\end{document}` flushes the gullet
+  (Perl :387; Rust sect02.rs:526), so `\renewenvironment{document}` — which only re-lets
+  `\document`/`\enddocument` — never takes effect: the first inner `\end{document}`
+  discards issues 02–42 (recall 3.9%). Perl produces the same single issue with zero
+  errors. Repro (`~/data/pk_agents/w22/ltnews/repro/docenv.tex`): a document that
+  `\renewenvironment{document}{\clearpage}{\clearpage}` and nests a second
+  `\begin{document}…\end{document}` loses everything after the inner `\end`.
+  Faithful fix = prefer the magic CS only while `\document`/`\enddocument` still `\ifx`
+  the kernel's aliases (latex.ltx `\begin`/`\end` dynamic `\csname` dispatch), gated on
+  `ltx:document` already being open; HIGH-risk core dispatch, two witnesses
+  (`base/ltnews`, `base/l3news`). Parked as a surpass-Perl candidate.
+- **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
+  `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
+  recursive MakeBibliography session on a fresh `Core` with no bindings chain, so
+  `TeX.pool`/`BibTeX.pool` were "missing", the preloaded class was read raw against an
+  empty kernel (100 errors → TooManyErrors) and every bibtex/biblatex-fallback
+  bibliography came back empty. Witness aomart/aomsample (24 references).
+- **Empty-body XML while "No obvious problems" (157 docs under 3,000 bytes)** — root cause
+  per mechanism in progress (`~/data/pk_agents/w22/empty_xml/`); examples
+  tools/tools-overview (title only), frontespizio/example* (`<titlepage><p/>`),
+  comment/t1test, textpos/niepraschk-eso-pic, math-into-latex-4/babybeamer*, ltx-talk/*.
