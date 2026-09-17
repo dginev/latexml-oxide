@@ -939,7 +939,14 @@ macro_rules! DefAccent {
     // fixture, which a literal `\protect` token here broke — the suite
     // caught it). Perl's protected-primitive accents fail the tikzmath
     // half. Guard: cluster_package_guards::accent_meaning_robust_shape.
-    let inner_cs = T_CS!(concat!($accent, " "));
+    // The inner is a PRIVATE name, not the control-symbol `\<accent> ` that
+    // `\DeclareRobustCommand*\<accent>` (latex.ltx `\DeclareRobustCommand`)
+    // uses for its own inner: LaTeX's accent inner is `\OT1\.` (ot1enc.def:52),
+    // so babel-spanish's `\let\es@save@dot\.` + `\DeclareRobustCommand*\.{…
+    // \es@save@dot}` (spanish.ldf:329-331) keeps a snapshot of the ORIGINAL
+    // accent; with `\. ` shared, the redefinition overwrote the snapshot's
+    // target and `\.o` cycled forever (latexsheet-esmx, 420 s; batch 56bs).
+    let inner_cs = T_CS!(format!("\\lx@accent@{}", &$accent[1..]));
     def_macro(inner_cs.clone(), plain_param, ExpansionBody::Tokens(Tokens!(
         T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
         T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),

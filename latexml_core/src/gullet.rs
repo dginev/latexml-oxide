@@ -146,6 +146,12 @@ pub struct MouthRuntime {
   /// captures depend on their token identity). Read at CLOSE time, per
   /// eTeX's file-end evaluation.
   pub insert_everyeof: bool,
+  /// eTeX's `eof_seen[index]` (tex.web §362 as changed by etex.ch): the
+  /// `\everyeof` payload is inserted ONCE, at this mouth's own level, the
+  /// first time it runs dry — the mouth stays current until the payload is
+  /// read, so a delimited scan inside the pseudo-file sees the payload as
+  /// the file's last tokens and never crosses into the parent stream.
+  pub eof_seen:        bool,
   /// See [`BalancedBoundary`]. Only consulted when `autoclose` is set and the
   /// mouth is not a file.
   pub boundary:        BalancedBoundary,
@@ -583,6 +589,7 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
     autoclose,
     boundary,
     insert_everyeof: false,
+    eof_seen: false,
     pushback: Vec::with_capacity(128),
   });
 }
@@ -623,16 +630,17 @@ pub fn close_mouth(forced: bool) -> Result<()> {
       // A FORCED close is error-recovery/cleanup (`reading_from_mouth`
       // teardown) — never a file end, so it must not inject the payload
       // into a recovery stream.
-      wants_everyeof = runtime.insert_everyeof && !forced;
+      wants_everyeof = runtime.insert_everyeof && !forced && !runtime.eof_seen;
       shift_from_mouthstack = true;
     }
     if shift_from_mouthstack {
       gullet.runtime = gullet.mouthstack.pop_front();
     }
   }
-  // eTeX file-end: insert the CURRENT `\everyeof` token list where reading
-  // continues (the parent stream). Token-identity preserved — expansion
-  // flavor push (the tokens were never scanned).
+  // Insurance for a marked mouth closed before it ever ran dry (a forced
+  // teardown is excluded above; `\endinput` only stops the reader, so the
+  // next read still takes the file-level branch): insert the payload where
+  // reading continues. Token-identity preserved — expansion flavor push.
   if wants_everyeof
     && let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
     && !eof_toks.is_empty()
@@ -878,6 +886,27 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
           }
         }
       }
+      // eTeX file end (tex.web §362 + etex.ch `every_eof`): the first time a
+      // marked mouth runs dry, its `\everyeof` tokens are read AS THE FILE'S
+      // LAST TOKENS — pushed at this level, before the mouth closes. Token
+      // identity preserved (l3tl's rescan quarks, xint's captures). spreadtab
+      // 's `\ST_scan_func_arg` (spreadtab.sty:1493-1504) ends its `\scantokens`
+      // scan on `\everyeof{\ST_nil}`; a parent-level insertion after the close
+      // (the earlier designs) reached a nested scan in the enclosing stream.
+      if next_token.is_none() && rt.insert_everyeof && !rt.eof_seen {
+        rt.eof_seen = true;
+        if let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
+          && !eof_toks.is_empty()
+        {
+          rt.pushback.extend(eof_toks.unlist().into_iter().rev());
+          while let Some(t) = rt.pushback.pop() {
+            if let Some(t) = route(t) {
+              next_token = Some(t);
+              break;
+            }
+          }
+        }
+      }
       if let Some(token) = next_token {
         // Record BEFORE the activation gate: the ring is also what the
         // token-limit fatal dumps, and that fatal fires precisely for
@@ -1029,16 +1058,14 @@ pub fn read_token() -> Result<Option<Token>> {
     next_token = match read_internal_token_checked(CommentSink::Pending)? {
       CheckedRead::NoRuntime => return Ok(None),
       // A marked eTeX pseudo-file (`\scantokens`) end is NOT crossed here:
-      // an unbounded read_token-level cross lets a delimited scan whose
-      // marker misses escape into the enclosing LIVE stream — inside an
-      // alignment cell the scan then swallows the column-after program as
-      // data and poisons l3tl rescan results (l3doc `\tl_replace_all`
-      // 5-token loop, witnesses spath3/litetable-zh/zref-check; settled
-      // dead-end, tried 3× 2026-09-01 under both Until policies). The
-      // delimited readers cross it themselves, BOUNDED by the inserted
-      // `\everyeof` payload (`cross_marked_mouth`), and plain execution
-      // crosses via read_x_token's autoclose drain, which close-time
-      // insertion serves equally (tex.web §360 semantics).
+      // its `\everyeof` payload was already read at the file's own level
+      // (`read_internal_token_checked`, `eof_seen`), so this is the true end
+      // — a delimited scan whose marker misses must not escape into the
+      // enclosing LIVE stream (inside an alignment cell it swallowed the
+      // column-after program as data and poisoned l3tl rescan results: l3doc
+      // `\tl_replace_all` 5-token loop, witnesses spath3/litetable-zh/
+      // zref-check; settled dead-end, tried 3× 2026-09-01). Plain execution
+      // crosses via read_x_token's autoclose drain.
       CheckedRead::Exhausted => None,
       CheckedRead::Tok(t) => Some(t),
     };
@@ -1898,39 +1925,6 @@ pub fn at_end_of_all_input() -> bool {
   g.mouthstack.is_empty() && g.ctx_stack.is_empty()
 }
 
-/// If the CURRENT mouth is a marked eTeX pseudo-file (autoclose +
-/// `insert_everyeof`), close it — which inserts the `\everyeof` payload into
-/// the parent stream — and return the payload's token count as a scan
-/// BUDGET. The delimited readers use this to continue a scan across the
-/// pseudo-file end (tex.web §360: the end is invisible, `\everyeof` is the
-/// only extra input) without escaping into the enclosing live stream when
-/// the delimiter never matches: at budget 0 the scan declares EOF exactly as
-/// if the mouth had ended. `None` = the current mouth is not a marked
-/// pseudo-file (a real EOF for this reader).
-fn cross_marked_mouth() -> Result<Option<usize>> {
-  let marked = runtime!()
-    .as_ref()
-    .map(|r| r.autoclose && r.insert_everyeof)
-    .unwrap_or(false);
-  if !marked {
-    return Ok(None);
-  }
-  let count = match lookup_register("\\everyeof", Vec::new()) {
-    Ok(Some(RegisterValue::Tokens(toks))) => toks.len(),
-    _ => 0,
-  };
-  // Every `\input` file mouth is marked (`load_tex_content`), and the register
-  // is empty for nearly all of them: an empty payload gives the scan nothing
-  // to continue on, so leave the exhausted mouth to its owner exactly as an
-  // unmarked one — closing it here would only shift the reader's
-  // `at_end_of_all_input` verdict onto the parent stream.
-  if count == 0 {
-    return Ok(None);
-  }
-  close_mouth(false)?;
-  Ok(Some(count))
-}
-
 pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   // Pre-size like `read_balanced`: the accumulator is grown one token at a time
   // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
@@ -1942,36 +1936,19 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
   let ntomatch = want.len();
   let mut has_matched;
 
-  // Scan budget after crossing a marked `\scantokens` pseudo-file end: the
-  // `\everyeof` payload is all the extra input the scan may legally consume
-  // (see `cross_marked_mouth`). `None` until a cross happens.
-  let mut budget: Option<usize> = None;
-
   if ntomatch == 1 {
     let want = &want[0];
     loop {
-      if budget == Some(0) {
-        // Payload spent without the delimiter — the pseudo-file's true end.
-        unread(Tokens::new(tokens));
-        return Ok(None);
-      }
       let token = match read_token()? {
         Some(t) => t,
-        None => match cross_marked_mouth()? {
-          Some(n) if n > 0 => {
-            budget = Some(n);
-            continue;
-          },
-          _ => {
-            // Ran out! Unread and report the distinguishable EOF.
-            unread(Tokens::new(tokens));
-            return Ok(None);
-          },
+        None => {
+          // Ran out! Unread and report the distinguishable EOF. A marked
+          // `\scantokens` mouth has already delivered its `\everyeof`
+          // payload as its last tokens (`eof_seen`), so this is the true end.
+          unread(Tokens::new(tokens));
+          return Ok(None);
         },
       };
-      if let Some(b) = budget.as_mut() {
-        *b = b.saturating_sub(1);
-      }
       // Perl: check direct match OR \special_relax smuggling (Gullet.pm line 662)
       if token == *want || special_relax_matches(&token, want) {
         break;
@@ -1986,11 +1963,6 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           nbraces += 1;
           tokens.push(token);
           let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
-          if let Some(b) = budget.as_mut() {
-            // The balanced group's tokens (plus its closing END) came off
-            // the same stream — they count wholly against the payload.
-            *b = b.saturating_sub(balanced_arg.len() + 1);
-          }
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -2006,33 +1978,18 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
     loop {
       // prefill the required number of tokens
       while ring.len() < ntomatch {
-        if budget == Some(0) {
-          // Payload spent without the delimiter — the pseudo-file's true
-          // end (partial ring dropped, matching the ran-out arm below).
-          unread(Tokens::new(tokens));
-          return Ok(None);
-        }
         let token = match read_token()? {
           Some(t) => t,
-          None => match cross_marked_mouth()? {
-            Some(n) if n > 0 => {
-              budget = Some(n);
-              continue;
-            },
-            _ => {
-              // Ran out! Unread and report the distinguishable EOF.
-              // The partial ring is DROPPED, not unread — replaying a
-              // half-matched delimiter prefix into the stream re-tokenizes
-              // it under current catcodes (l3doc `_`-laden names became
-              // double-subscript cascades: spath3 1→1001, 2026-09-01).
-              unread(Tokens::new(tokens));
-              return Ok(None);
-            },
+          None => {
+            // Ran out! Unread and report the distinguishable EOF.
+            // The partial ring is DROPPED, not unread — replaying a
+            // half-matched delimiter prefix into the stream re-tokenizes
+            // it under current catcodes (l3doc `_`-laden names became
+            // double-subscript cascades: spath3 1→1001, 2026-09-01).
+            unread(Tokens::new(tokens));
+            return Ok(None);
           },
         };
-        if let Some(b) = budget.as_mut() {
-          *b = b.saturating_sub(1);
-        }
         // Perl: $$token[1] == CC_BEGIN — direct catcode check
         if token.get_catcode() == Catcode::BEGIN {
           // read balanced, and refill ring.
@@ -2042,9 +1999,6 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           }
           tokens.push(token);
           let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
-          if let Some(b) = budget.as_mut() {
-            *b = b.saturating_sub(balanced_arg.len() + 1);
-          }
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
@@ -3673,6 +3627,7 @@ pub fn flush() {
     autoclose:       true,
     boundary:        BalancedBoundary::Transparent,
     insert_everyeof: false,
+    eof_seen:        false,
   });
   g.mouthstack = VecDeque::new();
 }

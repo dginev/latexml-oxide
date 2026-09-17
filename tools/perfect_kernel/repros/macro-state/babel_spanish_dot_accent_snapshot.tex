@@ -1,0 +1,17 @@
+% witness: latexcheat-esmx/latexsheet-esmx (TL2025 doc/latex/latexcheat-esmx/latexsheet-esmx.tex, line 413 `\.o`)
+% oracle: pdflatex/lualatex terminate (doc fails with 2 layout errors, not a clean target); Perl LaTeXML: 0 errors, renders <p>ȯ</p>
+% engines: latexml_oxide.debug (this tree), --preload=[rawstyles,rawclasses]latexml.sty
+% expect: 0 errors, output <p>ȯ</p>  (dot-accented o, U+022F)
+% status: RED  (silent RUNAWAY: at default token limit hangs >60s; with a token cap emits `Fatal:Timeout:TokenLimit ... infinite loop?`; sweep-72 killed at 420s, log ends at `\@nameuse{es@quoting}`)
+% mechanism: babel-spanish spanish.ldf:329-331 `\let\es@save@dot\.` + `\es@sDRC\.{...\es@save@dot}`
+%   (=\babel@save + \DeclareRobustCommand*\.). Our DefAccent (setup_binding_language.rs:942)
+%   binds `\.` two-level with inner `\. ` (dot+space) — the SAME control-symbol inner name
+%   \DeclareRobustCommand*\. uses. babel's redefinition overwrites `\. ` with its own body, so the
+%   \let-snapshot \es@save@dot -> \. -> \.  (babel body) -> \es@save@dot cycles forever. Real LaTeX's
+%   \. is a text-command dispatcher `\OT1-cmd \. \OT1\.` (ot1enc.def:52 via \@dec@text@cmd,
+%   latex.ltx:9832) whose inner is `\OT1\.`, distinct from `\. `, so the snapshot survives.
+\documentclass{article}
+\usepackage[spanish]{babel}
+\begin{document}
+\.o
+\end{document}

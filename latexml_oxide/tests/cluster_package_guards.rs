@@ -16953,6 +16953,44 @@ c &= d
     assert!(xml.contains("<p>x</p>"), "{xml}");
   }
 
+  /// Batch 56bs: eTeX reads the `\everyeof` payload as the pseudo-file's
+  /// LAST tokens (tex.web §362 + etex.ch `every_eof`/`eof_seen`) — at the
+  /// file's own level, before it closes — so a delimited scan started inside
+  /// a `\scantokens` sees its terminator.
+  #[test]
+  fn scantokens_everyeof_is_the_files_last_tokens() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\everyeof{\\ENDEOF}%\n\\def\\grab#1\\ENDEOF{[GOT:\\detokenize{#1}]}%\n\\expandafter\\grab\\scantokens{ABC}%\nDONE\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("[GOT:ABC ]DONE") || xml.contains("[GOT:ABC]DONE"),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56bs: spreadtab's macro-functions end their `\scantokens` scan on
+  /// `\everyeof{\ST_nil}` (spreadtab.sty:1493-1504); without the payload
+  /// every `sum(...)` cell re-pushed itself forever (spreadtab-en/-fr, 420 s).
+  #[test]
+  fn spreadtab_function_cell_evaluates() {
+    let tex = "\\documentclass{article}\n\\usepackage{spreadtab}\n\\begin{document}\n\\begin{spreadtab}{{tabular}{c|c|c}}\n1 & 2 & :={sum(a1:b1)} \\\\\n\\end{spreadtab}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(">3</td>"), "{xml}");
+  }
+
+  /// Batch 56bs: `DefAccent!`'s inner is a private name, so babel-spanish's
+  /// `\let\es@save@dot\.` + `\DeclareRobustCommand*\.` (spanish.ldf:329-331)
+  /// keeps the original accent, as LaTeX's `\OT1\.` inner does; the shared
+  /// `\. ` inner made `\.o` cycle forever (latexsheet-esmx, 420 s).
+  #[test]
+  fn babel_spanish_dot_accent_does_not_loop() {
+    let tex = "\\documentclass{article}\n\\usepackage[spanish]{babel}\n\\begin{document}\n\\.o y \\.a fin.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("ȯ y ȧ fin."), "{xml}");
+  }
+
   /// Batch 56br: an option value carrying a control word from package/class
   /// code (`@` a letter there — xebaposter.cls passes the register
   /// `\xebaposter@finalpaperwidth` to geometry) survives the string round trip

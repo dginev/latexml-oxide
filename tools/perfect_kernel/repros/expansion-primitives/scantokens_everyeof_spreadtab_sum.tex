@@ -1,0 +1,18 @@
+% witness: spreadtab/spreadtab-en (doc line 617 Pascal-triangle sum; also line 687 test())
+% oracle: pdflatex/lualatex build it (sum over a1 = 1); Perl LaTeXML shares the primitive gap
+% engines: raw spreadtab.sty via [rawstyles,rawclasses]latexml.sty
+% expect: c1 = sum(a1:b1) = 3; NO hang
+% status: RED (internal --timeout fires: Fatal:Timeout:Convert; 420s runaway in sweep-72)
+% mechanism: spreadtab macro-functions call \ST_scan_func_arg (spreadtab.sty:1493),
+%   which relies on \everyeof{\ST_nil} being inserted at the \scantokens pseudo-file EOF.
+%   Our \scantokens (etex.rs:468) does NOT wire gullet::mark_everyeof_mouth, so
+%   \ST_eat_to_nil / \ST_assign_result never see \ST_nil -> argument extraction breaks
+%   -> the function is never substituted out of the formula -> \ST_stack_call re-evaluates
+%   the same cell forever.
+\documentclass{article}
+\usepackage{spreadtab}
+\begin{document}
+\begin{spreadtab}{{tabular}{c|c|c}}
+1 & 2 & :={sum(a1:b1)} \\
+\end{spreadtab}
+\end{document}
