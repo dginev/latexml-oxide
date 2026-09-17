@@ -61,7 +61,13 @@ reason, never silently.
 One document: `tools/perfect_kernel/run_doc.sh <manual.tex> [outroot]`
 Sweep: `tools/perfect_kernel/sweep.sh <corpus.tsv> [outroot]` (JOBS=12,
 TIMEOUT_S=120 default; resumable — a doc with a `verdict.tsv` is skipped;
-build the sweep binary `--release`, user directive 2026-09-03).
+build the sweep binary `--release`, user directive 2026-09-03). On cortex
+(128 cores / 246 GB, the program's host since 2026-09-17) a sweep runs as a
+`systemd-run --user` unit pinned to cores 0-63 (`-p AllowedCPUs=0-63`,
+`JOBS=32`, `TIMEOUT_S=420`, `--setenv=PATH` with the vendor TeX Live first)
+while builds, gates and probes take `taskset -c 64-127`, so sweep timings stay
+comparable and nothing heavy shares the sweep's cores; the laptop's thermal
+rules (JOBS=8 alone, no nextest beside a sweep) do not apply there.
 Topic repro corpus: `tools/perfect_kernel/repros/<topic>/*.tex` + runner
 `tools/perfect_kernel/repros.sh <topic> [--perl] [--pdflatex]` — minimal
 self-contained repros grouped by MECHANISM (alignment, boxes-groups, index,

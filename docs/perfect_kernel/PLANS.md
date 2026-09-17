@@ -165,6 +165,26 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    tallied with `tally.sh` against the previous sweep; re-run timeouts solo
    before recording; exemplar row every sweep.
 4. Every 2-3 sweeps: S2 validation + S3 recall over the S0∧S1 slice.
+5. **Guard-strength side-goal (user 2026-09-17):** assertions must capture the
+   whole markup context of the guarded feature — the complete element with its
+   attributes and children, or a line-by-line golden (the original LaTeXML
+   `t/` style) — never a short substring that unrelated markup can satisfy.
+   Every new guard follows this. The FULL AUDIT of the existing suite is done
+   (read-only classifier, 2026-09-17, `~/data/pk_agents/w23/test_audit/`
+   REPORT.md + inventory.tsv): of 2,867 tests, A (golden / whole-document /
+   multi-element) 421 = 367 `tex_tests!` pairs + 54 handwritten; B (one full
+   element, count or absence) 1,508; **C (short substring, attribute-only,
+   bare tag, error-count-only) 938 = 520 on XML output + 418 typed-value unit
+   predicates**. 371 of the 520 live in `cluster_package_guards.rs`. The three
+   golden harnesses differ in strictness: `tex_tests!` exact line-by-line
+   (`util/test.rs:371-405`), `post_test` normalized LCS diff
+   (`90_latexmlpost.rs:47-120`), `streaming_sweep` byte-equal eager-vs-streamed.
+   Upgrade batches, in order: **B1** an `assert_element(xml, tag, attrs, inner)`
+   helper lifting the bare-tag / attribute-fragment / split-element families
+   (~120 mechanically); **B5** one structural assertion for the 40
+   error-count-only guards; **B2** computed-value marker probes → golden
+   `.tex`/`.xml` pairs; **B3** extract-and-compare text; **B4** structural
+   absence checks; the 418 unit predicates last. No test is deleted.
 
 ## DONE
 
