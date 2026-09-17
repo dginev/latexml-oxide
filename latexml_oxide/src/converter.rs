@@ -684,6 +684,7 @@ impl Converter {
     // Per-conversion cache hygiene: a persistent worker converts many papers
     // per thread; cwd-relative kpsewhich results must not leak across them.
     latexml_core::util::pathname::clear_kpsewhich_memo();
+    latexml_core::util::image::clear_image_size_memo();
     if !self.ready {
       self.initialize_session()?
     }

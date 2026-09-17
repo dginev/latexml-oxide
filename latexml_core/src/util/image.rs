@@ -617,6 +617,43 @@ fn open_file_resilient(path: &Path) -> Option<std::fs::File> {
 /// for typical arXiv graphics inclusions — anything else returns `None`
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
 pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
+  IMAGE_DIMENSIONS_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
+    }
+    let value = read_image_dimensions_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+// Per-thread memos of the on-disk size reads, keyed by path and cleared per
+// conversion (`clear_image_size_memo`, beside the kpsewhich memo). pdfTeX
+// reads an image file's box ONCE and shares the XObject across every
+// `\includegraphics` of it (`page=N` selects a page of the read resource);
+// without the memo every inclusion re-read the file — hwemoji's manual
+// includes its 6.7 MB, 3,677-page `hwemoji-assets.pdf` ~7,800 times through
+// `\hwemoji@insert` (hwemoji.sty:11), three reads each, and timed out at
+// 420 s once #230 let the asset resolve (2 s before). Guard:
+// `cluster_package_guards::graphics_asset_memo::repeated_inclusions_of_one_asset_read_it_once`.
+type SizeMemo<T> = std::cell::RefCell<rustc_hash::FxHashMap<PathBuf, Option<T>>>;
+std::thread_local! {
+  static IMAGE_DIMENSIONS_MEMO: SizeMemo<(u32, u32)> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+  static PDF_PAGE_BOX_MEMO: SizeMemo<(f64, f64)> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Clear the per-thread image size memos. Called at the start of every
+/// conversion, beside `clear_kpsewhich_memo`: a long-lived worker thread
+/// converts many papers, and a file may change between them.
+pub fn clear_image_size_memo() {
+  IMAGE_DIMENSIONS_MEMO.with(|m| m.borrow_mut().clear());
+  PDF_PAGE_BOX_MEMO.with(|m| m.borrow_mut().clear());
+  PDF_PAGE_COUNT_MEMO.with(|m| m.borrow_mut().clear());
+}
+
+fn read_image_dimensions_uncached(path: &Path) -> Option<(u32, u32)> {
   use std::io::Read;
   let mut file = open_file_resilient(path)?;
   let mut header = [0u8; 32];
@@ -832,6 +869,17 @@ fn graphicx_box_pt(nw: f64, nh: f64, options: &str) -> (Dimension, Dimension) {
 /// single-page, the first box is the page's own (or the `/Pages` node's, which
 /// it inherits).
 pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
+  PDF_PAGE_BOX_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
+    }
+    let value = read_pdf_page_box_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+fn read_pdf_page_box_uncached(path: &Path) -> Option<(f64, f64)> {
   let bytes = read_file_resilient(path)?;
   if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
     let content = String::from_utf8_lossy(&bytes);
@@ -852,6 +900,22 @@ pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
 /// inflated object streams (PDF 1.5+, see [`read_pdf_page_box`]). A PDF with
 /// no `/Pages` dictionary at all falls back to counting `/Type /Page` objects.
 pub fn read_pdf_page_count(path: &Path) -> Option<u32> {
+  PDF_PAGE_COUNT_MEMO.with(|m| {
+    if let Some(hit) = m.borrow().get(path) {
+      return *hit;
+    }
+    let value = read_pdf_page_count_uncached(path);
+    m.borrow_mut().insert(path.to_path_buf(), value);
+    value
+  })
+}
+
+std::thread_local! {
+  static PDF_PAGE_COUNT_MEMO: SizeMemo<u32> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+fn read_pdf_page_count_uncached(path: &Path) -> Option<u32> {
   let bytes = read_file_resilient(path)?;
   let raw = String::from_utf8_lossy(&bytes);
   if let Some(n) = max_pages_count(&raw) {
