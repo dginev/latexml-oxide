@@ -19133,7 +19133,6 @@ Marks stub
   /// Under LaTeXML/latexml-oxide, integer formatting strips the decimal point ('0' instead of '0.0'),
   /// breaking \pgfplotscolormap@floor@unforgiving#1.#2\relax delimiter matching and corrupting the group stack.
   #[test]
-  #[ignore = "Orchestrator fix: pgfmath float zero formatting / engine group recovery"]
   fn pgfplots_scatter_marker_group_balance() {
     let tex = r"\documentclass{article}
 \usepackage{pgfplots}
