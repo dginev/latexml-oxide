@@ -1,0 +1,9 @@
+\documentclass{article}
+\begin{filecontents}{fc_written.bib}
+@book{a, author={Alpha Author}, title={Written Inline}, publisher={P}, year={2001}}
+\end{filecontents}
+\begin{document}
+\nocite{*}
+\bibliography{fc_written}
+\bibliographystyle{plain}
+\end{document}

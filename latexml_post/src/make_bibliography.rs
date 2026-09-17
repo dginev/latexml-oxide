@@ -292,7 +292,17 @@ impl MakeBibliography {
         } else {
           bib.clone()
         };
-        if let Some(bib_path) = find_file(&bib_file, search_paths)
+        // A `.bib` written by `filecontents` lives in the session's virtual
+        // file store, never on disk (Perl admits the gap at
+        // MakeBibliography.pm:92-93 — `pathname_find` only). Serve it as
+        // literal data, as `\input` does for such a file (docsurvey, chet,
+        // xreview, koma-moderncvclassic, rub-kunstgeschichte, chemplants).
+        // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #231). Guard:
+        // `06_cluster_bibliography::filecontents_bib_feeds_the_bibliography`.
+        if let Some(contents) = latexml_core::binding::virtual_files::vfs_read(&bib_file) {
+          rawbibs.push(RawBibSource::Literal(contents));
+          loaded = true;
+        } else if let Some(bib_path) = find_file(&bib_file, search_paths)
           .or_else(|| latexml_core::util::pathname::kpsewhich(&[bib_file.as_str()]))
         {
           rawbibs.push(RawBibSource::Path(bib_path));

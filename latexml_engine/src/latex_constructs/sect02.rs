@@ -363,6 +363,11 @@ pub(crate) fn load() -> Result<()> {
 
   // \document is used directly in e.g. expl3.sty
   Let!("\\document", "\\begin{document}", Scope::Global);
+  // The ORIGINAL, for `\begin{document}`'s user-redefinition test
+  // (sect01.rs `is_user_document_macro`): a binding may later redefine the
+  // `\begin{document}` CS itself (subfiles), so "still the original" cannot
+  // be read off that CS.
+  Let!("\\lx@orig@document", "\\begin{document}", Scope::Global);
 
   /// `\hook_use:n {name}` as explicit tokens: `Tokenize!` runs under the
   /// runtime catcodes, where `:` is OTHER and `/` must stay OTHER inside the
@@ -538,6 +543,10 @@ pub(crate) fn load() -> Result<()> {
 
   // \enddocument is used directly in e.g. standalone.cls
   Let!("\\enddocument", "\\end{document}", Scope::Global);
+  // The ORIGINAL (see `\lx@orig@document` above): docmute and subfiles
+  // redefine the `\end{document}` CS to end the FILE while `\enddocument`
+  // keeps this definition.
+  Let!("\\lx@orig@enddocument", "\\end{document}", Scope::Global);
 
   Ok(())
 }

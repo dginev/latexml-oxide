@@ -982,6 +982,77 @@ mod graphicx_internals {
   }
 }
 
+mod graphics_kpsewhich {
+  //! Surpass #230: a graphic named WITH its extension that the search paths
+  //! do not hold is asked of kpsewhich as-is. Perl (Util/Image.pm:49-53) asks
+  //! kpsewhich only for extensionless names with `.png`/`.pdf` appended, so a
+  //! package-shipped asset referenced by its full name (`openmoji-color-all.pdf`
+  //! and the other icon galleries: ~27,700 corpus figures) never resolved.
+  //! The whole `<graphics>` element is pinned with its texmf candidate path
+  //! normalized (it is host-relative).
+
+  #[test]
+  fn extensioned_texmf_graphic_is_a_candidate() {
+    if !latexml::util::test::kpse_has("example-image-a.pdf") {
+      return; // no such asset on this TeX Live
+    }
+    let tex = "\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n\\includegraphics{example-image-a.pdf}\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    let g = latexml::util::test::xml_element(&xml, "graphics", &[]).unwrap_or_default();
+    let re = regex::Regex::new(r#"candidates="[^"]*/example-image-a\.pdf""#).unwrap();
+    assert!(
+      re.is_match(&g),
+      "no texmf candidate on the graphic: {g}\n{xml}"
+    );
+    let normalized = re.replace(&g, "candidates=\"<texmf>/example-image-a.pdf\"");
+    assert_eq!(
+      normalized,
+      "<graphics candidates=\"<texmf>/example-image-a.pdf\" cssstyle=\"width:32.120em; height:24.090em\" graphic=\"example-image-a.pdf\" xml:id=\"p1.g1\"/>",
+      "{xml}"
+    );
+  }
+}
+
+mod document_indirection {
+  //! Surpass #232: `\begin{document}` runs a user-redefined `\document` (as
+  //! LaTeX's `\begingroup\document`) and `\end{document}` a user-redefined
+  //! `\enddocument` (then `\endgroup`); the binding's aliases keep the
+  //! document constructors. The two corpus shapes: ltnews/l3news
+  //! `\renewenvironment{document}` around the `\input` of each issue (an
+  //! issue's `\end{document}` ended the whole newsletter in both engines) and
+  //! tools-overview's `\def\enddocument{<tail>\TO@enddocument}`. Whole
+  //! `<document>` elements are pinned: every paragraph, in order.
+
+  #[test]
+  fn renewed_document_environment_wraps_an_input_issue() {
+    let driver = "\\documentclass{article}\n\\begin{document}\nDRIVER-START\n\\begingroup\n\\renewcommand*{\\documentclass}[2][]{}\n\\renewenvironment{document}{ISSUE-BEGIN}{ISSUE-END}\n\\input{issue1}\n\\endgroup\nDRIVER-AFTER-ISSUE\n\\end{document}\n";
+    let issue = "\\documentclass{article}\n\\begin{document}\nISSUE-ONE-BODY\n\\end{document}\n";
+    let (stderr, xml) =
+      super::perfect_kernel_batch46::convert_files(driver, &[("issue1.tex", issue)]);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "document",
+      &[],
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>DRIVER-START ISSUE-BEGIN ISSUE-ONE-BODY ISSUE-END DRIVER-AFTER-ISSUE</p></para></document>"##,
+    );
+  }
+
+  #[test]
+  fn redefined_enddocument_runs_its_tail_before_the_end() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\let\\TO@enddocument\\enddocument\n\\def\\enddocument{TAIL-BEFORE-END\\par\\TO@enddocument}\n\\makeatother\n\\begin{document}\nBODY\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "document",
+      &[],
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>BODY TAIL-BEFORE-END</p></para></document>"##,
+    );
+  }
+}
+
 mod hyperlink_bounded {
   //! Batch 56ce: `\hyperlink{name}{text}` digests its text in its own group
   //! (Perl hyperref.sty.ltxml:234 `bounded => 1`), so a font switch inside the

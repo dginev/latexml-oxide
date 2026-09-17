@@ -383,6 +383,36 @@ pub(crate) fn load() -> Result<()> {
       v
     };
 
+    // LaTeX's own indirection for the ONE environment whose `\begin{…}`
+    // is a binding constructor here: `\begin{document}` is `\begingroup
+    // \document` (latex.ltx:14780-14790), so a `\document` the document
+    // redefined — ltnews.tex:236 / l3news.tex:109 `\renewenvironment
+    // {document}` around the `\input` of every issue, tools-overview.tex:59
+    // `\def\document{\TO@document\maketitle…}` — is what a later
+    // `\begin{document}` runs. Both engines took the constructor
+    // regardless (Perl's `\begin` looks up `\begin{document}` first), so an
+    // issue's `\end{document}` ended the whole newsletter (ltnews 3.9 %
+    // recall, l3news 12.6 %). While `\document` is still the binding's alias
+    // (`\let\document\begin{document}`, `\ifx`-equal), nothing changes.
+    // Beyond Perl, user-approved: OXIDIZED_DESIGN_DIVERGENCES #232. Guard:
+    // `cluster_package_guards::document_indirection::*`.
+    // No `\begingroup` here: latex.ltx's `\document` closes `\begin`'s
+    // group at once (:14790), and a renewed `document` body is a whole
+    // typeset document, whose paragraphs this engine's group-mode
+    // bookkeeping would refuse to close (`\endgroup … switched to mode`).
+    let user_document = name == "document"
+      && is_user_document_macro(&T_CS!("\\document"), &T_CS!("\\lx@orig@document"));
+    if user_document {
+      let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
+      tks.extend(use_hook("before"));
+      tks.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
+      if let Some(after) = after_opt {
+        tks.extend(after.unlist());
+      }
+      tks.extend(use_hook("begin"));
+      tks.push(T_CS!("\\document"));
+      return Ok(Tokens::new(tks));
+    }
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
@@ -475,6 +505,23 @@ pub(crate) fn load() -> Result<()> {
     };
     let mut t = T_CS!(s!("\\end{{{name}}}"));
     let mut out_tokens = Vec::new();
+    // The `\end{document}` half of the indirection (see `\begin`): a
+    // user-redefined `\enddocument` runs in place of the constructor (no
+    // `\endgroup`: see `\begin` — the document environment opens no group);
+    // the binding's own definition keeps the constructor.
+    // … \endgroup`); the binding's alias keeps the constructor.
+    let user_enddocument = name == "document"
+      && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+    if user_enddocument {
+      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+      tks.extend(use_hook("end"));
+      tks.push(T_CS!("\\enddocument"));
+      tks.extend(use_hook("after"));
+      if let Some(afterend_toks) = after {
+        tks.extend(afterend_toks.unlist())
+      }
+      return Ok(Tokens::new(tks));
+    }
     if is_defined_token(&t) {
       // Magic CS! (its constructor fires `env/NAME/end` inside the group)
       out_tokens.push(t);
@@ -666,4 +713,31 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\@icentercr[]", "\\vskip #1\\ignorespaces");
 
   Ok(())
+}
+
+/// Is `cs` (`\document` / `\enddocument`) a macro the DOCUMENT gave it, which
+/// `\begin{document}` / `\end{document}` should run (OXIDIZED_DESIGN_DIVERGENCES
+/// #232)? Three things are NOT that: the binding's own definition (`\ifx`-equal
+/// to the ORIGINAL `\begin{document}`/`\end{document}`, kept as
+/// `\lx@orig@document`/`\lx@orig@enddocument` in `sect02.rs` — docmute and
+/// subfiles redefine the `\end{document}` CS itself to end an `\input` file
+/// while `\enddocument` keeps the original, so the current CS is no yardstick);
+/// the kernel's re-let of `\document` to `\@notprerr` once the document has
+/// begun (latex.ltx:1228 `\@onlypreamble`, sect02.rs), which every nested
+/// `\begin{document}` of an `\input` complete document meets; and a wrapper
+/// whose body contains the control sequence ITSELF — standalone.cls:1073-1083
+/// captures the kernel macro's body with `\toks@\expandafter{\document …}`,
+/// which for this engine's unexpandable alias is the token `\document` (a
+/// self-loop), so such a wrapper keeps the constructor.
+fn is_user_document_macro(cs: &Token, alias: &Token) -> bool {
+  if x_equals(cs, alias) || x_equals(cs, &T_CS!("\\@notprerr")) {
+    return false;
+  }
+  match lookup_definition(cs) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => !body.unlist_ref().iter().any(|t| t == cs),
+      _ => false,
+    },
+    _ => false,
+  }
 }

@@ -124,6 +124,26 @@ pub fn image_candidates(path: &str) -> String {
     }
   }
 
+  // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #230): a name WITH an extension
+  // that the search paths do not hold is asked of kpsewhich as-is. Perl (and
+  // the branch above) consults kpsewhich only for extensionless names with
+  // `.png`/`.pdf` appended (Util/Image.pm:49-53), so a package-shipped asset
+  // referenced by its full name — `\includegraphics[page=N]
+  // {openmoji-color-all.pdf}` and the other icon galleries, 97.8 % of the
+  // corpus's lost figures (~27,700) — never resolved although kpsewhich finds
+  // it in the texmf tree. Guard: `cluster_package_guards::graphics_kpsewhich::
+  // extensioned_texmf_graphic_is_a_candidate`.
+  if candidates.is_empty()
+    && has_extension
+    && let Some(found) = crate::util::pathname::kpsewhich(&[path])
+  {
+    let rel = match &source_path {
+      Some(sp) => crate::util::pathname::relative(&found, &sp.to_string_lossy()),
+      None => found,
+    };
+    candidates.push(rel);
+  }
+
   // Deduplicate while preserving order
   let mut seen = rustc_hash::FxHashSet::default();
   candidates.retain(|c| seen.insert(c.clone()));

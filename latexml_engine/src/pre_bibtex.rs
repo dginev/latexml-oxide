@@ -532,8 +532,22 @@ impl PreBibTeX {
     } else {
       return Err(BibParseError::ExpectedDelimitedString { lineno: self.lineno });
     }
-    // trim leading/trailing whitespace (Perl L272-273)
-    Ok(out.trim().to_string())
+    // trim leading/trailing whitespace (Perl L272-273) — but a trailing space
+    // that is ESCAPED stays: `type = {Memo No.\ }` ends in the control space
+    // `\ `, and Perl's `s/\s+$//` leaves a lone `\` that welds with the
+    // splice's closing brace (`\}`) and swallows the rest of the entry and
+    // the next ones (asmejour, 23 malformed; real bibtex misbehaves the same
+    // way). Beyond Perl: keep one space after an odd run of backslashes
+    // (OXIDIZED_DESIGN_DIVERGENCES #229). Guard:
+    // `06_cluster_bibliography::bib_field_trailing_control_space_survives_trimming`.
+    let trimmed = out.trim_end();
+    let backslashes = trimmed.chars().rev().take_while(|&c| c == '\\').count();
+    let keep_space = backslashes % 2 == 1 && trimmed.len() < out.len();
+    let mut value = trimmed.trim_start().to_string();
+    if keep_space {
+      value.push(' ');
+    }
+    Ok(value)
   }
 
   /// Perl `parseBalancedBraces` (L276-283). Uses our own balanced-

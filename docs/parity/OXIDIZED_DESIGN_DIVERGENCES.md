@@ -7388,3 +7388,66 @@ pdflatex does (the shipped PDFs of assoccnt/xassoccnt), and one that loads babel
 gets its own language's text as before.
 **Why**: the oracle is the PDF; the forced language was a binding convenience with
 a visible, wrong side effect. Guard `blindtext_default_is_latin_without_babel`. Batch 56bx.
+
+
+### 229. A `.bib` field value keeps an escaped trailing space
+
+**Perl behavior**: `Pre::BibTeX` trims every field value (`BibTeX.pm:273`
+`s/\s+$//`), so `type = {Memo No.\ }` becomes `…No.\` and the entry-to-TeX
+splice `\csname bib@field@default@type\endcsname{…No.\}` has `\}` eat the
+delimiter — the runaway argument swallows the rest of the entry and the next
+ones (asmejour ×23 `malformed:ltx:bib-part`). Real bibtex + pdflatex fail the
+same way.
+**Rust behavior**: the trim keeps one space when the trailing run follows an
+odd number of backslashes, so the control space survives (`pre_bibtex.rs`).
+**Why**: user-approved surpass (2026-09-17); the source is valid BibTeX and the
+PDF shows the entries. Guard `bib_field_trailing_control_space_survives_trimming`.
+
+### 230. A graphic named with its extension is also asked of kpsewhich
+
+**Perl behavior**: `image_candidates` (Util/Image.pm:43-57) searches the
+graphics/search paths; when nothing is found it consults kpsewhich only for an
+EXTENSIONLESS name with `.png`/`.pdf` appended. A package-shipped asset
+referenced by its full name — `\includegraphics[page=N]{openmoji-color-all.pdf}`,
+five icon galleries, 97.8 % of the corpus's lost figures (~27,700) — is never
+found although kpsewhich locates it.
+**Rust behavior**: when the candidate list is empty and the name has an
+extension, `kpsewhich <name>` supplies the candidate (`image.rs`).
+**Why**: user-approved surpass (2026-09-17). Guard
+`graphics_kpsewhich::extensioned_texmf_graphic_is_a_candidate`.
+
+### 231. A `.bib` written by `filecontents` reaches MakeBibliography
+
+**Perl behavior**: `filecontents` caches the file in State; MakeBibliography's
+`getBibliographies` uses `pathname_find` (filesystem only), so the `.bib` is
+"not found" — Perl admits the gap (MakeBibliography.pm:92-93). Six corpus
+manuals ship their `.bib` this way.
+**Rust behavior**: the virtual file store is consulted first and the data fed
+as a literal source (`make_bibliography.rs`), in the same process (the
+monolithic pipeline); a split `--whatsin=xml` post has no store and behaves as
+before.
+**Why**: user-approved surpass (2026-09-17). Guard
+`filecontents_bib_feeds_the_bibliography`.
+
+### 232. `\begin{document}` runs a user-redefined `\document`
+
+**Perl behavior**: `\begin{x}` prefers the `\begin{x}` control sequence
+(the document constructor) over `\x`, so `\renewenvironment{document}`
+(ltnews.tex:236, l3news.tex:109 — a driver that `\input`s every issue, each a
+complete document, inside a group) and `\def\enddocument{…\TO@enddocument}`
+(tools-overview.tex:65) are ignored: the first inner `\end{document}` ends the
+conversion (ltnews 3.9 % recall, l3news 12.6 %, tools-overview 1.7 %).
+**Rust behavior**: for the `document` environment only, `\begin{document}` runs
+`\document` and `\end{document}` runs `\enddocument` whenever that macro is the
+document's own: not `\ifx`-equal to the ORIGINAL constructor (kept as
+`\lx@orig@document`/`\lx@orig@enddocument`, since docmute/subfiles redefine the
+`\end{document}` CS itself), not the kernel's post-begin re-let to `\@notprerr`,
+and not a wrapper whose body contains the control sequence itself
+(standalone.cls captures the kernel macro's body, which here is the unexpandable
+alias — a self-loop). No `\begingroup`: latex.ltx's `\document` closes it at
+once. Every ordinary document is unchanged (`sect01.rs`).
+**Why**: user-approved surpass (2026-09-17); latex.ltx semantics. Not
+generalized to other environments on purpose: a corpus-wide "user environment
+outranks the binding" rule would turn every `\renewenvironment{abstract}`
+into presentational markup. Guards `document_indirection::*`.
+\n

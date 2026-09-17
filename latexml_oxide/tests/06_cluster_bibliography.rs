@@ -131,8 +131,15 @@ fn biblatex_declarecitecommand_defines_its_command() {
     !x.contains("ERROR"),
     "the declared cite command stayed undefined:\n{x}"
   );
+  // citations made with the declared command did not select any entry: the WHOLE first <bibitem> element is pinned.
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &[],
+    r##"<bibitem key="smith2020" xml:id="bib.bibx1"><tags><tag role="year">2020</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2020)</tag></tags><bibblock>John Smith</bibblock><bibblock>“A study of things”</bibblock><bibblock>In <emph font="italic">Journal of Testing</emph> <text font="bold">12</text>, 2020, pp. 1–20</bibblock></bibitem>"##,
+  );
   assert!(
-    x.contains("<bibitem") && x.contains("Smith"),
+    x.contains("Smith"),
     "citations made with the declared command did not select any entry:\n{x}"
   );
 }
@@ -3140,4 +3147,40 @@ fn bib_entries_digest_in_the_default_font() {
     r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2000</tag><tag class="ltx_bib_title" role="title">First title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2000)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">First title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock xml:space="preserve">Note: <text class="ltx_bib_note">visible, nested</text></bibblock></bibitem>"##,
   );
   assert!(x.contains("key=\"b\""), "second entry lost:\n{x}");
+}
+
+/// Surpass #229: a `.bib` field value ending in an escaped space keeps it.
+/// `type={Memo No.\ }` trimmed to a lone `\` welded with the splice's closing
+/// brace and swallowed the next entries (asmejour, 23 malformed; real bibtex
+/// misbehaves the same way). Both entries are pinned whole.
+#[test]
+fn bib_field_trailing_control_space_survives_trimming() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_trailing_space.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_report" fragid="bib.bib1" key="a" type="report" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">1958</tag><tag class="ltx_bib_type" role="bibtype">Memo No. </tag><tag class="ltx_bib_title" role="title">Report title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">X. Author</text><text class="ltx_bib_year"> (1958)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Report title</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_type">Memo No. </text></bibblock><bibblock xml:space="preserve">Technical Report <text class="ltx_bib_number">5</text>,  <text class="ltx_bib_publisher">Inst</text>,  <text class="ltx_bib_place">City</text>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"b\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib2" key="b" type="book" xml:id="bib.bib2"><tags><tag class="ltx_bib_number" role="number">2</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2000</tag><tag class="ltx_bib_title" role="title">Book title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">2</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Y. Writer</text><text class="ltx_bib_year"> (2000)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Book title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Pub</text>.</bibblock></bibitem>"##,
+  );
+}
+
+/// Surpass #231: a `.bib` written by `filecontents` lives only in the session's
+/// virtual file store; MakeBibliography served it from there (Perl's
+/// `pathname_find` misses it, MakeBibliography.pm:92-93 — docsurvey, chet,
+/// xreview, koma-moderncvclassic, rub-kunstgeschichte, chemplants).
+#[test]
+fn filecontents_bib_feeds_the_bibliography() {
+  let x = convert_and_post_clean("tests/cluster_regressions/bib_from_filecontents.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Written inline</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Written inline</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock></bibitem>"##,
+  );
 }

@@ -41,14 +41,14 @@ print("rewritten assertions:", n)
 open(path, 'w').write(new)
 # which tests contain PENDING?
 tests = []
-for m in re.finditer(r'fn (\w+)\(\) \{(.*?)\n\}\n', new, re.S):
-    if 'r##"PENDING"##' in m.group(2):
-        tests.append(m.group(1))
+for m in re.finditer(r'^([ \t]*)fn (\w+)\(\) \{(.*?)\n\1\}\n', new, re.S | re.M):
+    if 'r##"PENDING"##' in m.group(3):
+        tests.append(m.group(2))
 print("tests:", len(tests))
 # Phase 2: run each test, harvest the found element.
 found = {}
 for t in tests:
-    out = subprocess.run(['taskset','-c','64-127','cargo','nextest','run','--build-jobs','48','-j','48','-p','latexml','--test',testbin,'-E',f'test(={t})','--no-fail-fast'], capture_output=True, text=True); out = out.stdout + out.stderr
+    out = subprocess.run(['taskset','-c','64-127','cargo','nextest','run','--build-jobs','48','-j','48','-p','latexml','--test',testbin,'-E',f'test(/(^|::){t}$/)','--no-fail-fast'], capture_output=True, text=True); out = out.stdout + out.stderr
     m = re.search(r'--- found:\n(.*?)\n *--- expected:\n', out, re.S)
     if m:
         found[t] = '\n'.join(l[4:] if l.startswith('    ') else l for l in m.group(1).split('\n'))
@@ -58,11 +58,11 @@ for t in tests:
         if m2: print("   ", m2.group(1)[:200])
 # Phase 3: fill the expectations, in order of appearance per test.
 def fill(m):
-    name, body = m.group(1), m.group(2)
+    indent, name, body = m.group(1), m.group(2), m.group(3)
     if name in found:
         el = found[name].replace('"##', '"# #')
         body = body.replace('r##"PENDING"##', 'r##"' + el + '"##', 1)
-    return f'fn {name}() {{{body}\n}}\n'
-final = re.sub(r'fn (\w+)\(\) \{(.*?)\n\}\n', fill, new, flags=re.S)
+    return f'{indent}fn {name}() {{{body}\n{indent}}}\n'
+final = re.sub(r'^([ \t]*)fn (\w+)\(\) \{(.*?)\n\1\}\n', fill, new, flags=re.S | re.M)
 open(path, 'w').write(final)
 print("filled:", len(found), "of", len(tests))
