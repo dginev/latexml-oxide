@@ -363,3 +363,8 @@ the mechanism, its witnesses, and the disposition.
   (`\includeclip` of sample-manuscript PDFs; only rvdtx's `\setbox\topbox` title block is a
   real ~1% loss).
 - **blindtext is English where the PDF is Latin (assoccnt/xassoccnt examples, Perl-origin, fixed 56bx, #228).**
+- **Structure-loss signals (131 clean docs, markup audit): no general drop.** ~90% are displayed
+  source code or macro bodies; the rest are element-name mismatches the check must accept —
+  a footnote in `\title` is `<pubnote>`, in `\author` `<contact role="note">` (byte-identical
+  to Perl); minipage footnotes emit `<note>`; grid's `gridenv` is the shared `\box0`+`\vadjust`
+  path. Notes `~/data/pk_agents/w22/structure_loss/NOTES.md`.
