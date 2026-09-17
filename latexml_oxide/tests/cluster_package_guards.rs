@@ -16953,6 +16953,35 @@ c &= d
     assert!(xml.contains("<p>x</p>"), "{xml}");
   }
 
+  /// Batch 56bt: an accent pushed through `\edef` + `\scantokens` (tkzexample.sty:
+  /// 352-357, a Latin-1 `é` in grafcet.tex:1136) round-trips because the
+  /// accent's inner is a letters-only private name (`\lxaccentacute`) that
+  /// re-tokenizes to itself under document catcodes; `\lx@accent@'` split
+  /// into the undefined `\lx` (sweep 74).
+  #[test]
+  fn accent_inner_survives_a_scantokens_round_trip() {
+    let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\begin{document}\n\\edef\\x{caf\\'e}\\scantokens\\expandafter{\\x}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>café</p>"), "{xml}");
+  }
+
+  /// Batch 56bt: a delimited reader stores a matched group with its OWN
+  /// close token (tex.web §392) — chemfig scans `(…)` submols with `(`/`)`
+  /// as catcodes 1/2 (chemfig.tex:1315-1324); a canonical `}` in place of the
+  /// `)` re-tokenized as a real end-brace in the next `\scantokens` and
+  /// unbalanced the molecule (chemexec/chemnum, sweep 74).
+  #[test]
+  fn delimited_read_keeps_a_groups_own_close_token() {
+    let tex = "\\documentclass{article}\n\\usepackage{chemfig}\n\\begin{document}\n\\chemfig{A(-B)(-C)D}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<svg:svg") || xml.contains("<picture"),
+      "{xml}"
+    );
+  }
+
   /// Batch 56bs: eTeX reads the `\everyeof` payload as the pseudo-file's
   /// LAST tokens (tex.web §362 + etex.ch `every_eof`/`eof_seen`) — at the
   /// file's own level, before it closes — so a delimited scan started inside

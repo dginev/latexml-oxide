@@ -7317,3 +7317,19 @@ receive every option the class does not claim at that moment. Witness elzcards'
 Guards `class_cleared_option_handler_reaches_the_package_default`,
 `package_option_value_keeps_its_braces`. Batch 56bq.
 
+### 224. A delimited argument keeps each interior group's own close token
+
+**Perl behavior**: `Gullet.pm:661/674` (`readUntil`) pushes a canonical `T_END`
+after `readBalanced` consumed a group's close, whatever character carried
+catcode 2 — a `(…)` group scanned with `(`/`)` given catcodes 1/2 (chemfig.tex:
+1315-1324 `\CF_grabsubmol`) comes back as `(…}`, which the next `\scantokens`
+re-reads as a real end-brace (chemfig two-submol molecules; abntexto-exemplo).
+**Rust behavior**: `read_balanced_with_close` returns the close token and
+`read_until` stores it verbatim, as `macro_call` does (tex.web §392-398
+`store_new_token(cur_tok)`); the single-group outer-brace strip stays
+catcode-driven (§399-400, `right_brace_limit`), so `(A)` is still stripped.
+**Why**: the argument keeps the braces it was scanned with; only exotic
+catcode-2 characters differ from Perl, which fails those identically (SHARED).
+Witnesses chemexec/chemnum/carbohydrates (25 → 6), abntexto-exemplo (Fatal → 0).
+Guard `delimited_read_keeps_a_groups_own_close_token`. Batch 56bt.
+

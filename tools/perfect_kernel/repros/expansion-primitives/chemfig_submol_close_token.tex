@@ -1,0 +1,17 @@
+% witness: chemexec/chemexec_en, chemnum/chemnum_en, carbohydrates/carbohydrates_en (sweep 73->74)
+% oracle: pdflatex/lualatex render the molecule; Perl LaTeXML = 1 Error (Until:\_nil miss), completes
+% engines: pdflatex clean; Perl 1 err; latexml_oxide 5bd2a8e9b4 (s73) 0 err -> 822232c304 (56bs) FATAL
+% expect: 0 Error/Fatal, an <ltx:picture> (chemfig molecule) in the body
+% status: RED (56bs: Fatal:Mouth:EoF "File ended while scanning use of a Until:\_nil argument")
+% mechanism: chemfig \CF_grabsubmol nested \scantokens + \everyeof{\_nil} + \CF_grabsubmola#1\_nil
+%   (chemfig.tex:1315-1325,180). 56bs delivers the everyeof payload (etex.rs:483 mark_everyeof_mouth,
+%   gullet.rs:886 eof_seen) so the delimited scan now CAPTURES the submol group; that exposes
+%   read_until's canonical T_END!() close-reconstruction (gullet.rs:1969,2007) which turns the paren-
+%   trick close ')' (catcode 2) into char '}', so the nested \scantokens (chemfig.tex:1324) re-tokenizes
+%   '}' as a real END -> unbalanced -> read_balanced crosses the marked \scantokens boundary
+%   (gullet.rs:1697-1705) into the parent, consuming \end{document} -> runaway Fatal.
+\documentclass{article}
+\usepackage{chemfig}
+\begin{document}
+\chemfig{A(-B)(-C)D}
+\end{document}

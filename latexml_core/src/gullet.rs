@@ -1587,7 +1587,26 @@ pub fn read_balanced(
   is_macrodef: bool,
   require_open: bool,
 ) -> Result<Tokens> {
+  Ok(read_balanced_with_close(expansion_level, is_macrodef, require_open)?.0)
+}
+
+/// [`read_balanced`] that also hands back the CLOSE token that ended the
+/// group (`None` when the read ran out or found no opening brace). A
+/// delimited reader stores a matched group verbatim (tex.web §392-398
+/// `macro_call`'s `store_new_token(cur_tok)` — the argument keeps the braces
+/// it was scanned with; the single-group outer-brace strip is §399-400, by
+/// catcode). Diverges from Perl's canonical `T_END` (Gullet.pm:661/674),
+/// OXIDIZED_DESIGN_DIVERGENCES #224. chemfig scans `(…)`
+/// submols with `(`/`)` given catcodes 1/2 (chemfig.tex:1315-1324) and a
+/// canonical `}` in their place re-tokenized as a real end-brace in the next
+/// `\scantokens`, unbalancing it (chemexec/chemnum, sweep 74).
+pub fn read_balanced_with_close(
+  expansion_level: ExpansionLevel,
+  is_macrodef: bool,
+  require_open: bool,
+) -> Result<(Tokens, Option<Token>)> {
   use ExpansionLevel::*;
+  let mut close: Option<Token> = None;
   // NOTE: no align-ledger localization and no entry compensator here.
   // tex.web's `scan_toks` (§473-482) does NOT touch `align_state`: every
   // scanned brace counts on the live ledger, and the opening `{` of the
@@ -1638,7 +1657,7 @@ pub fn read_balanced(
         unread_one(t);
       }
       Error!("expected", "{", s!("Expected opening '{{'"));
-      return Ok(Tokens!());
+      return Ok((Tokens!(), None));
     }
   }
   // Pre-size the token accumulator: most balanced reads are short
@@ -1721,6 +1740,7 @@ pub fn read_balanced(
           decrement_align_group_count();
           level -= 1;
           if level <= 0 {
+            close = Some(token);
             break;
           }
           tokens.push(token);
@@ -1842,13 +1862,16 @@ pub fn read_balanced(
     );
   }
   if tokens.is_empty() {
-    Ok(Tokens!())
+    Ok((Tokens!(), close))
   } else {
-    Ok(if is_macrodef {
-      Tokens::new(tokens).pack_parameters()?
-    } else {
-      Tokens::new(tokens)
-    })
+    Ok((
+      if is_macrodef {
+        Tokens::new(tokens).pack_parameters()?
+      } else {
+        Tokens::new(tokens)
+      },
+      close,
+    ))
   }
 }
 
@@ -1962,11 +1985,12 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           // And if it's a BEGIN, copy till balanced END
           nbraces += 1;
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
-          tokens.push(T_END!());
+          // The group's OWN close (tex.web §392), not a canonical `}`.
+          tokens.push(close.unwrap_or_else(|| T_END!()));
         },
         _ => {
           tokens.push(token);
@@ -1998,11 +2022,11 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
             tokens.push(r_token);
           }
           tokens.push(token);
-          let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
+          let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
-          tokens.push(T_END!()); // Copy directly to result
+          tokens.push(close.unwrap_or_else(|| T_END!())); // the group's own close
           ring = VecDeque::new(); // and retry
         } else {
           ring.push_back(token);
