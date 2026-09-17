@@ -8,10 +8,9 @@ use crate::discard_env::{discard_body_until_cs, read_env_body_tokens};
 /// A node in the parsed forest bracket tree.
 #[derive(Debug, Clone)]
 pub struct ForestNode {
-  pub label_tokens: Vec<Token>,
-  pub label_text:   String,
-  pub options_text: String,
-  pub children:     Vec<ForestNode>,
+  pub label_tokens:   Vec<Token>,
+  pub label_digested: Option<Digested>,
+  pub children:       Vec<ForestNode>,
 }
 
 /// A parsed forest tree with optional environment configuration, preamble keys, and root nodes.
@@ -139,7 +138,6 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
   let mut first_comma_seen = false;
   let mut current_part: Vec<Token> = Vec::new();
   let mut label_tokens: Vec<Token> = Vec::new();
-  let mut options: Vec<String> = Vec::new();
   let mut stopped_by_child = false;
 
   while *idx < tokens.len() {
@@ -164,13 +162,7 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
           first_comma_seen = true;
           label_tokens = std::mem::take(&mut current_part);
         } else {
-          let opt = Tokens::new(std::mem::take(&mut current_part))
-            .to_string()
-            .trim()
-            .to_string();
-          if !opt.is_empty() {
-            options.push(opt);
-          }
+          current_part.clear();
         }
       } else if is_token_char(t, '[') {
         stopped_by_child = true;
@@ -186,19 +178,7 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
 
   if !first_comma_seen {
     label_tokens = std::mem::take(&mut current_part);
-  } else {
-    let opt = Tokens::new(std::mem::take(&mut current_part))
-      .to_string()
-      .trim()
-      .to_string();
-    if !opt.is_empty() {
-      options.push(opt);
-    }
   }
-
-  let stripped_label_tokens = Tokens::new(label_tokens.clone()).strip_braces();
-  let label_text = stripped_label_tokens.to_string().trim().to_string();
-  let options_text = options.join(", ");
 
   let mut children = Vec::new();
   if stopped_by_child {
@@ -225,10 +205,29 @@ fn parse_node(tokens: &[Token], idx: &mut usize) -> ForestNode {
 
   ForestNode {
     label_tokens,
-    label_text,
-    options_text,
+    label_digested: None,
     children,
   }
+}
+
+fn digest_forest_node(node: &mut ForestNode) -> Result<()> {
+  let stripped = Tokens::new(node.label_tokens.clone()).strip_braces();
+  let has_content = stripped.unlist_ref().iter().any(|t| !is_ignorable_token(t));
+  if has_content {
+    let digested = stripped.be_digested()?;
+    node.label_digested = Some(digested);
+  }
+  for child in &mut node.children {
+    digest_forest_node(child)?;
+  }
+  Ok(())
+}
+
+fn digest_forest_tree(tree: &mut ForestTree) -> Result<()> {
+  for root in &mut tree.roots {
+    digest_forest_node(root)?;
+  }
+  Ok(())
 }
 
 // A forest tree is an inline, picture-like object (real forest draws a
@@ -258,11 +257,11 @@ fn emit_forest_node(document: &mut Document, node: &ForestNode) -> Result<()> {
   item_attrs.insert("class".into(), "ltx_forest_node".into());
   document.open_element("ltx:inline-item", Some(item_attrs), None)?;
 
-  if !node.label_text.is_empty() {
+  if let Some(ref dig) = node.label_digested {
     let mut text_attrs: HashMap<String, String> = HashMap::default();
     text_attrs.insert("class".into(), "ltx_forest_node_content".into());
     document.open_element("ltx:text", Some(text_attrs), None)?;
-    document.absorb_string(&node.label_text, &SymHashMap::default())?;
+    document.absorb(dig, None)?;
     document.close_element("ltx:text")?;
   }
 
@@ -309,27 +308,50 @@ LoadDefinitions!({
     },
     properties => {
       let mut props = stored_map!();
-      if let Some(tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
+      if let Some(mut tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
+        digest_forest_tree(&mut tree)?;
         props.insert("forest_tree", Stored::Opaque(Rc::new(tree)));
       }
       Ok(props)
     }
   );
-  // \Forest command: \Forest*{ [root [child]] }
+  // \Forest command: \Forest*(config){ [root [child]] }
+  // forest.sty:8666 defines \NewDocumentCommand{\Forest}{s D(){} m}.
+  // We handle optional * and optional (config) before delegating to \lx@forest@exec.
+  RawTeX!(
+    r"\def\Forest{\@ifstar{\lx@forest@opt}{\lx@forest@opt}}
+\def\lx@forest@opt{\@ifnextchar({\lx@forest@withconfig}{\lx@forest@noconfig}}
+\def\lx@forest@withconfig(#1){\lx@forest@exec{#1}}
+\def\lx@forest@noconfig{\lx@forest@exec{}}"
+  );
   DefConstructor!(
-    "\\Forest OptionalMatch:* Undigested",
-    sub [document, args, _props] {
+    "\\lx@forest@exec {} Undigested",
+    sub [document, _args, props] {
+      if let Some(Stored::Opaque(payload)) = props.get("forest_tree")
+        && let Some(tree) = payload.downcast_ref::<ForestTree>()
+      {
+        emit_forest_tree(document, tree)?;
+      }
+    },
+    mode => "text",
+    locked => true,
+    properties => sub[args] {
+      let mut props = stored_map!();
+      let config = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
       if let Some(Some(body_dig)) = args.get(1) {
         let tokens = match body_dig.data() {
           DigestedData::Postponed(t) => t.unlist_ref().clone(),
           _ => Vec::new(),
         };
-        let tree = parse_forest_tokens(&tokens);
-        emit_forest_tree(document, &tree)?;
+        let mut tree = parse_forest_tokens(&tokens);
+        if !config.is_empty() && tree.config.is_empty() {
+          tree.config = config;
+        }
+        digest_forest_tree(&mut tree)?;
+        props.insert("forest_tree", Stored::Opaque(Rc::new(tree)));
       }
-    },
-    mode => "text",
-    locked => true
+      Ok(props)
+    }
   );
   // The bare-CS form `\forest … \endforest` that `\NewDocumentEnvironment
   // {forest}{D(){}}` (forest.sty:8506) also defines — neoschool.cls:8567-8581

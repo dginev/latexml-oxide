@@ -13962,13 +13962,14 @@ After.
 [Root, for tree={draw}
   [Child1
     [Grandchild1]
-    [Grandchild2]
+    [$x^2$]
   ]
   [Child2
     [Grandchild3]
   ]
 ]
 \end{forest}
+\Forest(stages={foo}){ [TreeRoot [ChildLeaf]] }
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
@@ -13981,12 +13982,20 @@ After.
       "Grandchild1 node missing: {xml}"
     );
     assert!(
-      xml.contains("Grandchild2"),
-      "Grandchild2 node missing: {xml}"
+      xml.contains("<Math"),
+      "Math element for $x^2$ missing: {xml}"
     );
     assert!(
       xml.contains("Grandchild3"),
       "Grandchild3 node missing: {xml}"
+    );
+    assert!(
+      xml.contains("TreeRoot"),
+      "TreeRoot from \\Forest missing: {xml}"
+    );
+    assert!(
+      xml.contains("ChildLeaf"),
+      "ChildLeaf from \\Forest missing: {xml}"
     );
     assert!(
       xml.contains("<inline-enumerate class=\"ltx_forest\""),
@@ -19162,7 +19171,6 @@ Marks stub
   /// Under LaTeXML/latexml-oxide, integer formatting strips the decimal point ('0' instead of '0.0'),
   /// breaking \pgfplotscolormap@floor@unforgiving#1.#2\relax delimiter matching and corrupting the group stack.
   #[test]
-  #[ignore = "Orchestrator fix: pgfmath float zero formatting / engine group recovery"]
   fn pgfplots_scatter_marker_group_balance() {
     let tex = r"\documentclass{article}
 \usepackage{pgfplots}
@@ -19224,11 +19232,53 @@ Marks stub
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
     assert!(xml.contains("frame-count=\"3\""), "{xml}");
+
+    // Task N4: \newframe* and \newframe[fps] consumed silently, counting frames.
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\begin{animateinline}{10}
+Frame 1
+\newframe*
+Frame 2
+\newframe[20]
+Frame 3
+\newframe*[15]
+Frame 4
+\end{animateinline}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"4\""), "{xml}");
+
+    // Task N4: reverse playback \animategraphics with first > last (|last-first|+1 frames).
+    // Missing frame file emits a warning, not an error.
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\animategraphics[controls]{12}{missing_frame_}{10}{1}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+
+    // Reverse playback selecting an existing file candidate (e.g. example-image-a).
+    let tex = r"\documentclass{article}
+\usepackage{animate}
+\begin{document}
+\animategraphics{12}{example-image-a}{5}{1}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("frame-count=\"5\""), "{xml}");
   }
 
-  /// chemnum: sequential compound numbering model (Task N5).
-  /// Guard: first use = 1, second label = 2, \refcmpd of the first = 1,
-  /// sub-compound = 1a; 0 errors. Also tests list expansion and \cmpdinit pre-allocation.
+  /// chemnum: sequential compound numbering model (Task N5, Task N2).
+  /// Guard: first use = target <text>, references = <ref idref=...>,
+  /// \refcmpd of undeclared label emits <ref> with ?? without crashing; 0 errors.
   #[test]
   fn chemnum_compound_numbering() {
     let tex = r"\documentclass{article}
@@ -19242,6 +19292,7 @@ Marks stub
 \refcmpd{first.a}
 \cmpd{first,second}
 \cmpd{initA} and \cmpd{initB}
+\refcmpd{undeclared}
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
@@ -19255,19 +19306,19 @@ Marks stub
       "second label must be 4 with xml:id target: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>"#),
-      "refcmpd of first must be 3 with idref link: {xml}"
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first">3</ref>"#),
+      "refcmpd of first must be 3 with ltx:ref link: {xml}"
     );
     assert!(
       xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.first.a">3a</text>"#),
       "sub-compound must be 3a with xml:id target: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first.a">3a</text>"#),
-      "refcmpd of sub-compound must be 3a with idref link: {xml}"
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first.a">3a</ref>"#),
+      "refcmpd of sub-compound must be 3a with ltx:ref link: {xml}"
     );
     assert!(
-      xml.contains(r#"<text class="ltx_cmpd" idref="cmpd.first">3</text>, <text class="ltx_cmpd" idref="cmpd.second">4</text>"#),
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.first">3</ref>, <ref class="ltx_cmpd" idref="cmpd.second">4</ref>"#),
       "list must emit comma-separated references: {xml}"
     );
     assert!(
@@ -19278,5 +19329,42 @@ Marks stub
       xml.contains(r#"<text class="ltx_cmpd" xml:id="cmpd.initB">2</text>"#),
       "initB must be 2 with xml:id target: {xml}"
     );
+    assert!(
+      xml.contains(r#"<ref class="ltx_cmpd" idref="cmpd.undeclared">??</ref>"#),
+      "refcmpd of undeclared label must emit ref with ?? without crashing: {xml}"
+    );
+  }
+
+  /// afterpage: \afterpage defined as macro that un-doubles ## parameters (Task N5).
+  /// Guard: \afterpage with nested \newcommand with ##1/##2 parameters converts with 0 errors
+  /// and substitutes correctly. Also tests autoload of afterpage package via \afterpage trigger.
+  #[test]
+  fn afterpage_nested_macro_and_autoload() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\afterpage{%
+  \newcommand\C[2]{[#1:#2]}%
+  \C{A1}{1.00}%
+}
+Hello
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[A1:1.00]"), "{xml}");
+
+    let tex = r"\documentclass{article}
+\usepackage{afterpage}
+\begin{document}
+\afterpage{%
+  \newcommand\C[2]{[##1:##2]}%
+  \C{B2}{2.50}%
+}
+World
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("[B2:2.50]"), "{xml}");
   }
 }
