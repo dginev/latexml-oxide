@@ -766,10 +766,16 @@ pub(crate) fn load() -> Result<()> {
       if kv_str.contains("framed") {
         map.insert("framed", Stored::Bool(true));
       }
-      if let Some(dash_start) = kv_str.find("dash={") {
-        let rest = &kv_str[dash_start + 6..];
-        if let Some(end) = rest.find('}') {
-          map.insert("dash", Stored::String(pin(&rest[..end])));
+      // `dash={N}` (Perl latex_constructs.pool.ltxml:5076 `\lx@pic@dashbox`):
+      // the keyval argument is digested, so its braces may already be gone
+      // (`dash=2`) — read the value up to the next `}`/`,`/end, brace or not.
+      // The `stroke-dasharray` was dropped on every `\dashbox` before.
+      if let Some(dash_start) = kv_str.find("dash=") {
+        let rest = kv_str[dash_start + 5..].trim_start_matches('{');
+        let end = rest.find(['}', ',']).unwrap_or(rest.len());
+        let dash = rest[..end].trim();
+        if !dash.is_empty() {
+          map.insert("dash", Stored::String(pin(dash)));
         }
       }
       map.insert("thick", Stored::String(pin(s!("{thick}"))));

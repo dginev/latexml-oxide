@@ -190,7 +190,7 @@
             </g>
           </g>
           <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="104.6pt" transform="translate(55.35,0)">
-            <rect fill="none" height="10.0pt" stroke="#000000" stroke-width="0.4" width="10.0pt" x="0" y="0"/>
+            <rect fill="none" height="10.0pt" stroke="#000000" stroke-dasharray="2.0" stroke-width="0.4" width="10.0pt" x="0" y="0"/>
             <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(3.27,3.94)">
               <text>x</text>
             </g>

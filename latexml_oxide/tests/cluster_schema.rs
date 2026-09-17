@@ -138,7 +138,7 @@ fn pdfcomment_note_floats_out_of_math() {
     &xml,
     "p",
     &[],
-    r##"<p><Math mode="inline" tex="P(E)=1\lx@pdfcomment@note{pdfmarkupcomment}{a note}=1" text="P@(E) = 1 = 1" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="multirelation"/><XMApp><XMTok font="italic" role="UNKNOWN">P</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">E</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math><note role="pdfmarkupcomment">a note</note></p>"##,
+    r##"<p><Math mode="inline" tex="P(E)=1=1" text="P@(E) = 1 = 1" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="multirelation"/><XMApp><XMTok font="italic" role="UNKNOWN">P</XMTok><XMDual><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">E</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math><note role="pdfmarkupcomment">a note</note></p>"##,
   );
   assert_valid(&xml);
 }

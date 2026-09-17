@@ -402,6 +402,12 @@ pub(crate) fn load() -> Result<()> {
     // bookkeeping would refuse to close (`\endgroup … switched to mode`).
     let user_document = name == "document"
       && is_user_document_macro(&T_CS!("\\document"), &T_CS!("\\lx@orig@document"));
+    if name == "document" {
+      // The end side follows this decision (see `\end`): a class that wraps
+      // BOTH macros around the originals (standalone.cls) must not have its
+      // begin wrapper skipped (self-referential here) and its end wrapper run.
+      assign_value("document:indirected", Stored::Bool(user_document), Some(Scope::Global));
+    }
     if user_document {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
@@ -510,8 +516,16 @@ pub(crate) fn load() -> Result<()> {
     // `\endgroup`: see `\begin` — the document environment opens no group);
     // the binding's own definition keeps the constructor.
     // … \endgroup`); the binding's alias keeps the constructor.
+    // Symmetric with `\begin`: the user's `\enddocument` runs when the
+    // user's `\document` ran, or when `\document` was left alone and only
+    // `\enddocument` was redefined (tools-overview.tex:65). standalone.cls
+    // wraps both; its begin wrapper is self-referential and skipped, so its
+    // end wrapper (`\endstandalone`, closing a minipage the skipped begin
+    // never opened) is skipped too.
     let user_enddocument = name == "document"
-      && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+      && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
+      && (lookup_bool("document:indirected")
+        || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
     if user_enddocument {
       let mut tks = before.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("end"));

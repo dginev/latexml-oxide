@@ -33,8 +33,11 @@ LoadDefinitions!({
   // math the marked text opens an `<XMText>`, whose model has no `note`, so
   // an unfloated note was schema-invalid (5 sweep-78 manuals). Guard:
   // `cluster_schema::pdfcomment_note_floats_out_of_math`.
+  // No `tex=` reversion, as the kernel's footnote note (sect03.rs): an
+  // annotation is not part of the math it sits in, and the internal name
+  // `\lx@pdfcomment@note{…}` must not leak into a `<Math tex=…>` attribute.
   DefConstructor!("\\lx@pdfcomment@note{}{}", "^<ltx:note role='#1'>#2</ltx:note>",
-    mode => "text");
+    mode => "text", reversion => "");
   // Single-body annotations: the text IS the note.
   DefMacro!("\\pdfcomment[]{}", "\\lx@pdfcomment@note{pdfcomment}{#2}");
   DefMacro!(

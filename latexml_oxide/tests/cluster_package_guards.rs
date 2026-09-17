@@ -1099,6 +1099,24 @@ mod picture_makebox_offset {
     );
   }
 
+  /// Batch 56ch: `\dashbox{N}(w,h){…}` carries `stroke-dasharray="N"` on its
+  /// frame rect (Perl latex_constructs.pool.ltxml:5043 `stroke-dasharray='#dash'`,
+  /// :5076 `dash={N}`); the keyval argument is digested, so its braces are
+  /// gone by the time the `dash=` value is read, and a `dash={` search found
+  /// nothing — every dashbox rendered as a solid frame. Whole `<rect>` pinned.
+  #[test]
+  fn dashbox_frame_rect_has_its_dash_array() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(60,30)\n\\put(0,0){\\dashbox{2}(30,10){x}}\n\\end{picture}\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "rect",
+      &[],
+      "<rect fill=\"none\" height=\"10.0pt\" stroke=\"#000000\" stroke-dasharray=\"2.0\" stroke-width=\"0.4\" width=\"30.0pt\" x=\"0\" y=\"0\"/>",
+    );
+  }
+
   #[test]
   fn zero_size_makebox_left_position_keeps_x() {
     let tex = "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(100,50)\n\\put(20,10){\\makebox(0,0)[l]{$x^2$}}\n\\end{picture}\n\\end{document}\n";
