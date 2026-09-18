@@ -888,14 +888,27 @@ so the typed scalars are the same counter; both keys were already dump-skipped.
 Bar ≤ 487 G, measured picC 497.8 G → 475.7 G instructions (−4.4 %, `perf stat`,
 XML byte-identical, 0 errors).
 
-Ranked next (re-profiled on the lever-1 binary,
-`~/data/pk_agents/w23/perf_pgf/levers/NOTES.md`): (B) `is_noexpand_family`
-memo probe + `noexpand_shadowed` without an early-out ≈2.6 % self → memo
-early-out and intern-time population (bar ≤ 467 G); (C) align bookkeeping on
-every `{`/`}` outside any alignment ≈2.0 % (the counter is dead while
-`reading_alignment` is empty, tex.web §774 pushes a fresh `align_state`; hoist
-the `before` read behind the trace switch, gate the mutation on
-`has_reading_alignment()` symmetrically; bar ≤ 468 G); (D) `substitute_parameters`
+**Lever B measured and reverted (2026-09-18)**: `noexpand_shadowed` early-out
+through the memoized `is_noexpand_family` plus settling the memo at the
+producer — picC 475.7 G → 477.4 G instructions (+0.35 %): for the ~all
+non-family CS tokens the thread-local memo probe costs more than the
+`with_str` prefix scan it replaced; the producer-time memo has no measurable
+effect. Correct (reviewed) but not a win; only the B3 shape (a family bit in
+`Token`'s padding byte, set at construction) can remove the probe — deferred
+with P5.
+
+**Lever C landed (batch 56de): one borrow per scanned brace.** Every `{`/`}`
+(tex.web §358 `incr`/`decr(align_state)`) paid a `locals!()` borrow for the
+trace's `before` value, a `locals_mut!()` for the bump, and a call into
+`trace_align_state` that dereferenced the off-by-default switch — now one
+`shift_align_group_count` borrow, the trace read behind the switch. Bar ≤ 468 G,
+measured picC 475.7 G → 467.4 G (−1.7 %), XML byte-identical. Not taken: gating
+the mutation on `has_reading_alignment()` — the count stack is also pushed
+without a reading alignment (`gullet.rs:2524`, the unit test at
+`local_assignments.rs:333`), so the symmetric-skip argument does not hold as
+stated; revisit only with a tex.web §774-shaped `push_alignment` model.
+
+Ranked next: (D) `substitute_parameters`
 under-sizes its result (template length only) → size to template + used-arg
 lengths (bar ≤ 472 G). Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`

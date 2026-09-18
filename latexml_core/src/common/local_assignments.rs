@@ -121,27 +121,34 @@ fn trace_align_state(what: &str, before: i32, after: i32) {
   }
 }
 
-pub fn increment_align_group_count() {
-  let before = align_group_count();
-  {
-    let mut locals = locals_mut!();
-    match locals.align_group_count.last_mut() {
-      Some(v) => *v += 1,
-      None => locals.align_group_count.push(1),
-    }
+/// Bump the current `align_state` by `delta` (tex.web §358: `left_brace:
+/// incr(align_state)`, `right_brace: decr(align_state)`), returning the new
+/// value. Every scanned `{`/`}` lands here, so it is one thread-local
+/// borrow; the trace's before/after read is behind the off-by-default switch.
+fn shift_align_group_count(delta: i32) -> i32 {
+  let mut locals = locals_mut!();
+  match locals.align_group_count.last_mut() {
+    Some(v) => {
+      *v += delta;
+      *v
+    },
+    None => {
+      locals.align_group_count.push(delta);
+      delta
+    },
   }
-  trace_align_state("+1", before, before + 1);
+}
+pub fn increment_align_group_count() {
+  let after = shift_align_group_count(1);
+  if *TRACE_ALIGN_STATE {
+    trace_align_state("+1", after - 1, after);
+  }
 }
 pub fn decrement_align_group_count() {
-  let before = align_group_count();
-  {
-    let mut locals = locals_mut!();
-    match locals.align_group_count.last_mut() {
-      Some(v) => *v -= 1,
-      None => locals.align_group_count.push(-1),
-    }
+  let after = shift_align_group_count(-1);
+  if *TRACE_ALIGN_STATE {
+    trace_align_state("-1", after + 1, after);
   }
-  trace_align_state("-1", before, before - 1);
 }
 
 pub fn state_is_unlocked() -> bool { locals!().unlocked.last().copied().unwrap_or(false) }
