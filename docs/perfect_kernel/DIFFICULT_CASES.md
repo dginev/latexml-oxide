@@ -401,10 +401,14 @@ the mechanism, its witnesses, and the disposition.
   ancestor loss but the equation counter's own `\theequation@ID` formatter missing under a
   binding-less class loaded raw: fixed at the root in batch 56dh (locked `\@definecounter`
   alias + token-body counter formatters, regenerated dumps; Perl parity `equation1`/
-  `equation1.1`). manptp's three jing lines are a separate frontmatter-order defect — raw
-  ptptex's `\maketitle`/`\inst` emits the affiliation as a body `<para>` (p1) BEFORE the
-  `<title>`/`<creator>` elements, which then sit in illegal body position — open lead
-  (`~/data/pk_agents/w23/regr90/manptp/`).
+  `equation1.1`). manptp's three jing lines were a second RUST-ONLY root, fixed in batch 56di: the
+  kernel's beyond-Perl `\providecommand\inst` fallback (#201) pre-existed, so ptptex.cls:616's
+  `\newcommand\inst[1]{\gdef\@inst{#1}}` (the affiliation STORE) was silently refused and the
+  kernel superscript typeset the affiliation into the body ahead of `\maketitle`; `\inst` is now
+  provided around author content only and as an affiliation-link request (56di), and K11
+  (56dj) reroutes every raw class's store-shaped title-page setters to the frontmatter API
+  by kind — ptptex and jpsj2 need no binding (`~/data/pk_agents/w23/regr90/manptp_frontmatter/`,
+  survey `~/data/pk_agents/w23/frontmatter_stores/`).
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so

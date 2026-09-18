@@ -5939,9 +5939,27 @@ Perl 1 = Rust 1, lualatex 0). Rust: the kernel `\providecommand\inst[1]
 beamerbasetitle.sty:262's own fallback (an empty `\inst`; the superscript is what
 beamer's `\insertauthor` renders); class bindings' affiliation-linking `\inst`
 (llncs, sv_support, inst_support) still win. Guard:
-`perfect_kernel_batch56::kernel_inst_fallback_is_a_superscript`.
+`perfect_kernel_batch56::kernel_inst_fallback_is_a_superscript`. **Superseded by
+the addendum below (batch 56di): no kernel-global `\inst` exists any more.**
 
 
+
+
+**Addendum (batch 56di, 2026-09-18).** The fallback is no longer a kernel-global
+`\providecommand` and no longer a superscript: `\lx@author@withinst` provides `\inst`
+inside a group around the author content only (the shape of Perl's
+`\lx@author@withsup`) with its frontmatter meaning, an affiliation-link request
+(`\lx@request@frontmatter@annotation[affiliation]`, llncs.cls.ltxml:50). The global
+form blocked a class that STORES with `\newcommand\inst` (ptptex.cls:616
+`\gdef\@inst{#1}`); that refusal typeset the affiliation into the body ahead of
+`\maketitle` and put the frontmatter after it (manptp, 3 jing lines); K11
+(`frontmatter_stores.rs`) reroutes ptptex's — and any raw class's — store-shaped
+`\inst`/`\subtitle`/`\recdate`/`\abst`/`\pubinfo` setters through the frontmatter API; a footnote-SYMBOL `\inst{*}` keeps its glyph
+(`\lx@frontmatter@keepsup`, the `$^{*}$` rule). Note the two witnesses differ: on
+the poster Perl errors `undefined:\inst`; on ptptex Perl's raw `\inst` works and
+silently drops the affiliation. Guards
+`perfect_kernel_batch56::author_inst_is_an_affiliation_link_request` and
+`kernel_fallbacks_never_block_newcommand::ptptex_inst_store_keeps_the_frontmatter_first`.
 
 ## 202. `\@tabarray` cells are forced into math (Rust fixes)
 

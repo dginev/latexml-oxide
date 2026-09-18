@@ -770,12 +770,47 @@ LoadDefinitions!({
   // careful: the "name", #2, can contain much more than just the name!
   DefMacro!(
     "\\lx@add@creator [] {}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}"
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{\\lx@author@withinst{#2}}}"
   );
   DefMacro!(
     "\\lx@add@author[]{}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}"
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{\\lx@author@withinst{#2}}}"
   );
+  // Author content is digested at `\author` time, before a class's title
+  // box can define `\inst` (bfhsciposter.cls:445,476 sets it to a
+  // superscript inside its title box; beamerbasetitle.sty:262
+  // `\providecommand\inst[1]{}`), so `\inst` is provided for the author
+  // content ONLY — the shape of Perl's `\lx@author@withsup`
+  // (Base_Utility.pool.ltxml:729) — and with its frontmatter MEANING: an
+  // affiliation-link request (llncs.cls.ltxml:50
+  // `\lx@request@frontmatter@annotation[affiliation]`), never a typeset
+  // superscript — except a footnote-SYMBOL mark (`\inst{*}`, `\inst{\dagger}`:
+  // an equal-contribution note, not an affiliation number), which keeps its
+  // glyph exactly as `rewrite_symbol_superscripts` keeps `$^{*}$` (OXIDIZED
+  // #52), so the poster's `*` stays visible as pdflatex renders it.
+  // `\providecommand`, so a class binding's own `\inst` wins; scoped, so a
+  // class's later `\newcommand\inst` (ptptex.cls:616) is not blocked.
+  // SURPASS, KNOWN_PERL_ERRORS #201 (Perl: `undefined:\inst` on the poster
+  // witness, whose class defines `\inst` only inside its title box).
+  // `\def`, not `\providecommand`: inside author content `\inst{n}` ALWAYS
+  // means "link to affiliation n" (llncs' own `\inst` is this same request),
+  // and K11 may have rerouted a raw class's document-level `\inst` (the
+  // affiliation LIST setter, ptptex/jpsj2) before any author is read.
+  DefMacro!(
+    "\\lx@author@withinst{}",
+    "\\bgroup\\def\\inst##1{\\lx@inst@mark{##1}}#1\\egroup"
+  );
+  DefMacro!("\\lx@inst@mark{}", sub[(label)] {
+    let call = if is_footnote_symbol_operand(label.unlist_ref()) {
+      Invocation!(T_CS!("\\lx@frontmatter@keepsup"), vec![Some(label)])
+    } else {
+      Invocation!(
+        T_CS!("\\lx@request@frontmatter@annotation"),
+        vec![Some(Tokens!(T_LETTER!("a"), T_LETTER!("f"), T_LETTER!("f"), T_LETTER!("i"), T_LETTER!("l"), T_LETTER!("i"), T_LETTER!("a"), T_LETTER!("t"), T_LETTER!("i"), T_LETTER!("o"), T_LETTER!("n"))), Some(label)]
+      )
+    };
+    Ok(call)
+  });
   DefMacro!(
     "\\lx@add@editor[]{}",
     "\\lx@add@frontmatter{ltx:creator}[role=editor,#1]{\\lx@personname{#2}}"
@@ -856,7 +891,18 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\lx@add@affiliation[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{#2}"
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{\\lx@affiliation@withinst{#2}}"
+  );
+  // The affiliation-side twin of `\lx@author@withinst`: inside affiliation
+  // content `\inst{n}` SETS the affiliation's label (beamerbasetitle.sty:148
+  // `\institute{\inst{1}Univ A \and \inst{2}Univ B}` marks each institute
+  // with the number the authors' `\inst{1}` request) — the meaning
+  // `\lx@affiliation@withsup` gives a `\textsuperscript` mark, never a
+  // typeset `<sup>`; `\def`, as in `\lx@author@withinst` (a class's
+  // document-level `\inst` is the affiliation LIST, not a label).
+  DefMacro!(
+    "\\lx@affiliation@withinst{}",
+    "\\bgroup\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}#1\\egroup"
   );
   DefMacro!(
     "\\lx@add@altaffiliation[]{}",

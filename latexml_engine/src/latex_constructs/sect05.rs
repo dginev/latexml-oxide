@@ -899,10 +899,13 @@ pub(crate) fn load() -> Result<()> {
   // beamerbasetitle.sty:148/233 likewise) never reach our `\author`, which
   // digests the author content at once — witness bfh-ci/DEMO-BFHSciPoster
   // logged `undefined:\inst` (Perl too; SURPASS, KNOWN_PERL_ERRORS #201).
-  // `\providecommand` so a class binding's `\inst` (llncs, sv_support,
-  // inst_support: the affiliation-LINKING form) still wins, mirroring
-  // beamerbasetitle.sty:262's own `\providecommand\inst[1]{}`.
-  RawTeX!(r"\providecommand\inst[1]{\textsuperscript{#1}}");
+  // The fallback is NOT a kernel-global definition: it lives in
+  // `\lx@author@withinst` (base_utilities.rs), a group around the author
+  // content only — Perl's `\lx@author@withsup` idiom. A global
+  // `\providecommand` pre-existed for the whole document and silently
+  // blocked a class's `\newcommand\inst` (ptptex.cls:616 STORES the
+  // affiliation with it), which then typeset into the body ahead of
+  // `\maketitle` and pushed the frontmatter after it (manptp).
 
   DefPrimitive!("\\lx@authors@oneline", {
     if lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline").is_none() {

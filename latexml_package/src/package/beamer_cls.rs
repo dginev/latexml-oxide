@@ -673,24 +673,15 @@ LoadDefinitions!({
   def_macro_noop("\\column OptionalAngled {}")?;
 
   // Title page macros — Perl L1010-1035
-  DefMacro!(
-    "\\institute OptionalAngled []{}",
-    "\\@add@frontmatter{ltx:creator}{\\@@@affiliation{#3}}"
-  );
-  // beamerbasetitle.sty:148/169 and :233/238: `\inst{n}` is defined locally
-  // inside `\insertauthor`/`\insertinstitute` as the superscript affiliation
-  // mark; our `\author`/`\institute` digest their argument at once
-  // (beamertheme-detlevcm, beamerstructure2; Perl too). The kernel's
-  // `\providecommand\inst[1]{\textsuperscript{#1}}` (sect05.rs, beside
-  // `\author`) is that exact body, so no copy is needed here.
-  // The constructor \institute expands into was never defined here — every
-  // beamer doc using \institute logged `undefined:\@@@affiliation` (sweep-11
-  // cluster: 16 docs, witness beamerthemeconcrete/demo-cbernoulli). Same
-  // ltx:contact form as elsart_support_core / cas_dc_cls.
-  DefConstructor!(
-    "\\@@@affiliation{}",
-    "^ <ltx:contact role='affiliation'>#1</ltx:contact>"
-  );
+  // beamerbasetitle.sty:148/169 and :233/238: `\inst{n}` marks each
+  // institute with the number the authors' `\inst{n}` carry; the kernel's
+  // affiliation list (`\lx@add@affiliations`: `\and`-split, `\inst{n}` in an
+  // institute SETS the label, in an author REQUESTS it — `\lx@affiliation@withinst`
+  // / `\lx@author@withinst`, base_utilities.rs) links each author to its
+  // institute as a `<contact role='affiliation'>`. The former
+  // `\@@@affiliation` constructor attached every institute to every author
+  // and left `\inst` to a typeset superscript.
+  DefMacro!("\\institute OptionalAngled []{}", "\\lx@add@affiliations{#3}");
   // \logo{content} and \titlegraphic{content} typically wrap
   // \includegraphics or similar visual content. Surpass Perl
   // (which doesn't define them) by routing to ltx:note so any
