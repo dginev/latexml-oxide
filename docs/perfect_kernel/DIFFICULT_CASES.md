@@ -397,8 +397,14 @@ the mechanism, its witnesses, and the disposition.
   macro name), raw `\lx@add@class` with `@` names, fontawesome's `fa-*`, and a stray `\par`
   leaking into a class argument (csvsimple-legacy); Perl emits the same invalid values. Fix =
   emitter cleaners in `Document::set_attribute` (class tokens reduced to NameChar; `xml:id`
-  through `clean_id` before dedup). manptp's `xml:id=".1"` is an ancestor-loss defect on top
-  (RUST-ONLY, separate).
+  through `clean_id` before dedup). manptp's `xml:id=".1"` (`X.1` after `clean_id`) was NOT an
+  ancestor loss but the equation counter's own `\theequation@ID` formatter missing under a
+  binding-less class loaded raw: fixed at the root in batch 56dh (locked `\@definecounter`
+  alias + token-body counter formatters, regenerated dumps; Perl parity `equation1`/
+  `equation1.1`). manptp's three jing lines are a separate frontmatter-order defect — raw
+  ptptex's `\maketitle`/`\inst` emits the affiliation as a body `<para>` (p1) BEFORE the
+  `<title>`/`<creator>` elements, which then sit in illegal body position — open lead
+  (`~/data/pk_agents/w23/regr90/manptp/`).
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so

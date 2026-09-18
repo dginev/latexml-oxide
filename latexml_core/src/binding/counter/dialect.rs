@@ -8,7 +8,7 @@
 //! document elements (eg from \section*); this requires an additional counter
 //! (eg. UNsection) and  mechanisms to track it.
 
-use std::{collections::VecDeque, rc::Rc};
+use std::collections::VecDeque;
 
 use crate::{
   BoxOps,
@@ -193,15 +193,16 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     )
   }
 
-  // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
+  // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro:
+  // Perl Package.pm:686 `\the<ctr>` = `\lx@counter@arabic{<ctr>}`, a Token
+  // body the format dump can carry (a closure is opaque to it).
   let ctr_string = ctr.to_string();
   def_macro(
     T_CS!(s!("\\the{}", ctr)),
     None,
-    Some(ExpansionBody::Closure(Rc::new(move |_args| {
-      let counter_value = counter_value(&ctr_string)?.value_of();
-      Ok(Tokens::new(ExplodeText!(counter_value)))
-    }))),
+    Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+      TeXString::assembled(s!("\\lx@counter@arabic{{{ctr_string}}}")),
+    ))),
     Some(ExpandableOptions {
       scope: Some(Scope::Global),
       ..ExpandableOptions::default()
@@ -253,11 +254,16 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 
     let ctr_string = ctr.to_string();
     let thectrid = s!("\\the{}@ID", ctr);
+    // Token bodies, as Perl's `DefMacroI` string bodies (Package.pm:695-703):
+    // a closure here is opaque to the format dump (recorded as an unresolvable
+    // self-alias), so every kernel counter's `\the<ctr>@ID` was lost on the
+    // dump path and a class with no binding (ptptex) generated ids from an
+    // undefined formatter — `subequations` children `.1`/`X.1`, colliding.
     if !idwithin.is_empty() {
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(move |_args| {
+        Some(ExpansionBody::Tokens({
           // Perl Package.pm L696 probes `\lx@empty`, NOT `\@empty` — and
           // deliberately so: `\@empty` is LaTeX-pool-only (latex_base.rs
           // aliases it to `\lx@empty`), while `\lx@empty` is engine-level
@@ -271,14 +277,14 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
           // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
           // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
           // 1 fatal error" with no Fatal: line in the log.
-          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
+          mouth::tokenize_internal(TeXString::assembled(s!(
             "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             idwithin,
             idwithin,
             prefix,
             ctr_string
-          ))))
-        }))),
+          )))
+        })),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
@@ -288,11 +294,9 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       def_macro(
         T_CS!(thectrid),
         None,
-        Some(ExpansionBody::Closure(Rc::new(move |_args| {
-          Ok(mouth::tokenize_internal(TeXString::assembled(s!(
-            "{prefix}\\csname @{ctr_string}@ID\\endcsname",
-          ))))
-        }))),
+        Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+          TeXString::assembled(s!("{prefix}\\csname @{ctr_string}@ID\\endcsname",)),
+        ))),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()

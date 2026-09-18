@@ -46,23 +46,20 @@ LoadDefinitions!({
     let cs_expanded = &Expand!(cs).to_string();
     NewCounter!(cs_expanded, &default.to_string());
   }, locked => true);
-  // Perl uses `DefMacro` here, but the dump overwrites `\newcounter` with
-  // the raw latex.ltx Expandable body that expands to `\@definecounter`.
-  // If `\@definecounter` is a macro that re-expands to `\newcounter`, we
-  // get an infinite loop after dump load. Perl's `DefMacro` is fine
-  // because Perl's Token-list expansion of `\newcounter` is a Token, and
-  // Perl's `installDefinition` would skip the dump-overwrite if our
-  // `\newcounter` were locked (it's not — Perl bypasses lock too). The
-  // working semantics in Perl actually rely on `\@definecounter`
-  // resolving to the bootstrap Primitive at substitution time: by the
-  // time `\@definecounter` is invoked (inside the dump-loaded
-  // `\newcounter` body), the active `\newcounter` is the dump
-  // Expandable — same loop. The Perl loop test shows it doesn't
-  // actually loop in user code because... TODO investigate. For now,
-  // use `Let!` to snapshot the Primitive at bootstrap time, breaking
-  // the cycle. Token-stream-equivalent for downstream callers that
-  // simply invoke `\@definecounter{...}`.
-  Let!("\\@definecounter", "\\newcounter");
+  // Perl latex_bootstrap.pool.ltxml:54: `\@definecounter` is the LOCKED
+  // macro `\newcounter`, so latex.ltx:15736's raw `\def\@definecounter` is
+  // refused during the format build and every kernel counter it creates
+  // (`equation`, `footnote`, `enumi`…, and any package's `\@definecounter`
+  // later) goes through `NewCounter`, which always defines the counter's
+  // `\the<ctr>@ID` formatter (Package.pm:695-703, prefix = the counter
+  // name). An unlocked `Let!` snapshot here was overwritten by the raw
+  // definition: the dump then carried latex.ltx's `\@definecounter` and
+  // no `@ID` formatter at all, so under a class with no binding loaded raw
+  // (ptptex's manptp) `\theequation@ID` was undefined and `subequations`
+  // ids degenerated to `.1` (`X.1` after `clean_id`), colliding across
+  // groups; Perl gives `equation1`/`equation1.1`. No loop is possible:
+  // `\newcounter` is the locked primitive, never latex.ltx's macro.
+  DefMacro!("\\@definecounter", "\\newcounter", locked => true);
   DefMacro!("\\try@load@fontshape", "", locked => true);
   DefMacro!("\\define@newfont", "", locked => true);
 
