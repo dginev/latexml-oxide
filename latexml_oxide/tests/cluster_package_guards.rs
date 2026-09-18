@@ -1063,15 +1063,21 @@ mod frontespizio_inline {
   }
   /// `Preambolo*` (preamble material for the external title-page document,
   /// frontespizio.sty:186-187) is executed inline: its `\newcommand` is live
-  /// for `\Titolo` (examplec's `\compring`), its package loaders are gobbled.
+  /// for `\Titolo` (examplec's `\compring`), its package loaders and that
+  /// document's `\geometry` page layout (toptesi-example-con-frontespizio;
+  /// undefined inline, its argument leaked as body text) are gobbled.
   #[test]
   fn preambolo_material_is_executed_inline() {
     if !latexml::util::test::kpse_has("frontespizio.sty") {
       return;
     }
-    let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\begin{Preambolo*}\n  \\usepackage{fourier}\n  \\newcommand{\\compring}{anelli compatti}\n\\end{Preambolo*}\n\\Universita{Bologna}\n\\Dipartimento{Matematica}\n\\Corso[Dottorato di Ricerca]{Matematica}\n\\Titolo{Sugli \\compring}\n\\Candidato{Nome Cognome}\n\\Relatore{Prof.~Relatore}\n\\Annoaccademico{2000-2001}\n\\end{frontespizio}\nBODY\n\\end{document}\n";
+    let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\begin{Preambolo*}\n  \\usepackage{fourier}\n  \\geometry{a4paper, left=35mm, right=35mm}\n  \\newcommand{\\compring}{anelli compatti}\n\\end{Preambolo*}\n\\Universita{Bologna}\n\\Dipartimento{Matematica}\n\\Corso[Dottorato di Ricerca]{Matematica}\n\\Titolo{Sugli \\compring}\n\\Candidato{Nome Cognome}\n\\Relatore{Prof.~Relatore}\n\\Annoaccademico{2000-2001}\n\\end{frontespizio}\nBODY\n\\end{document}\n";
     let (stderr, xml) = super::convert(tex, true);
     assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("a4paper, left"),
+      "the external document's \\geometry argument leaked:\n{xml}"
+    );
     latexml::util::test::assert_element(
       &xml,
       "titlepage",
@@ -1145,6 +1151,28 @@ mod document_indirection {
       "document",
       &[],
       r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>DRIVER-START ISSUE-BEGIN ISSUE-ONE-BODY ISSUE-END</p></para><para xml:id="p2"><p>DRIVER-AFTER-ISSUE</p></para></document>"##,
+    );
+  }
+
+  /// The absorb-a-subfile idiom (exam-n.cls:1348 `\includequestion`:
+  /// `\begingroup \let\document\@empty \let\enddocument\endinput
+  /// \input{…} \endgroup`): the question's `\begin{document}` is a renewed
+  /// `document` (a group opens), its `\end{document}` runs `\endinput` — a
+  /// closure, not a user macro — and must still close that group (sweep 82:
+  /// `\lx@finalize@document Attempt to end mode internal_vertical`, the
+  /// end side re-deriving the begin's decision from `\enddocument`'s shape).
+  #[test]
+  fn included_subfile_document_closes_its_group() {
+    let driver = "\\documentclass{article}\n\\makeatletter\n\\def\\dummy@dc{\\@ifnextchar[\\dummy@@dc{\\dummy@@dc[]}}\n\\def\\dummy@@dc[#1]#2{}\n\\begin{document}\nMain before.\n\\begingroup\n  \\let\\documentclass\\dummy@dc\n  \\let\\document\\@empty\n  \\let\\enddocument\\endinput\n  \\input{qq}\n\\endgroup\nMain after.\n\\end{document}\n";
+    let question = "\\documentclass{article}\n\\begin{document}\nQuestion body.\n\\end{document}\n";
+    let (stderr, xml) =
+      super::perfect_kernel_batch46::convert_files(driver, &[("qq.tex", question)]);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "document",
+      &[],
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>Main before. Question body.</p></para><para xml:id="p2"><p>Main after.</p></para></document>"##,
     );
   }
 
@@ -19816,6 +19844,24 @@ World
   /// beameruserguide 167 errors, Perl 0). The `\if…` names are the worst case:
   /// an exposed one is auto-defined as a conditional and scans for `\fi` off
   /// the end of the entry.
+  /// A separator inside math is phrase material: `\index{arroba@$@$}`
+  /// (latex-via-exemplos.tex:1042 `\arrobasymbforindex` = `$@$`) is the key
+  /// `arroba` with the display `$@$`; splitting at the inner `@` left a lone
+  /// `$` opening math the bounded `\@index` box never closed (three errors
+  /// per entry, a leaked `<XMath>` swallowing the paragraph; pdflatex clean).
+  #[test]
+  fn index_separator_inside_math_is_phrase_material() {
+    let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{arroba@$@$} Y\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "para",
+      &[],
+      r##"<para xml:id="p1"><p>X<indexmark><indexphrase key="arroba"><Math mode="inline" tex="@" text="@" xml:id="p1.m1"><XMath><XMTok role="UNKNOWN">@</XMTok></XMath></Math></indexphrase></indexmark> Y</p></para>"##,
+    );
+  }
+
   #[test]
   fn index_string_of_undefined_command_stringifies_its_name() {
     let tex = r"\documentclass{article}
@@ -19899,6 +19945,60 @@ mod mbox_argument_is_bounded {
       "para",
       &[],
       r##"<para xml:id="p1"><p>A <text yoffset="1.0pt"><emph font="italic"/></text>x B.</p></para>"##,
+    );
+  }
+}
+
+mod nomencl_inline {
+  //! Batch 56cl: nomencl's list is a makeindex product (`\nomenclature`
+  //! writes `\jobname.nlo`, `\printnomenclature` inputs `\jobname.nls`,
+  //! nomencl.sty:227-245/:277-282), lost silently by the raw load in both
+  //! engines (the five shipped samples at 17-37 % recall, 0 errors). The
+  //! binding turns each entry into a `<glossarydefinition>` and the list
+  //! into a `<glossary role="nomenclature">` that MakeGlossary fills with
+  //! every definition (OXIDIZED_DESIGN_DIVERGENCES #234).
+  use crate::cluster::convert_and_post_clean;
+
+  const TEX: &str = "\\documentclass{article}\n\\usepackage[nocfg]{nomencl}\n\\makenomenclature\n\\begin{document}\n\\section*{Main equations}\n\\begin{equation}\n  a=\\frac{N}{A}\n\\end{equation}%\n\\nomenclature{$a$}{The number of angels per unit area\\nomrefeq}%\n\\nomenclature{$N$}{The number of angels per needle point}%\n\\nomenclature[z]{$A$}{The area of the needle point}%\n\\printnomenclature\n\\end{document}\n";
+
+  /// The core XML: each entry is a definition with its sort/name/description
+  /// phrases (the `\nomrefeq` entry carries ", see equation (1)"), and the
+  /// list is an empty titled glossary for the post stage.
+  #[test]
+  fn nomenclature_entries_become_glossary_definitions() {
+    let (stderr, xml) = super::convert(TEX, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "glossarydefinition",
+      &[r#"key="nomencl.1""#],
+      r##"<glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">a<Math mode="inline" tex="a" text="a" xml:id="Sx1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="a" text="a" xml:id="Sx1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">The number of angels per unit area, see equation (1)</glossaryphrase></glossarydefinition>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "glossarydefinition",
+      &[r#"key="nomencl.3""#],
+      r##"<glossarydefinition inlist="nomenclature" key="nomencl.3"><glossaryphrase key="nomencl.3" role="sort">z<Math mode="inline" tex="A" text="A" xml:id="Sx1.p1.m5"><XMath><XMTok font="italic" role="UNKNOWN">A</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.3" role="name"><Math mode="inline" tex="A" text="A" xml:id="Sx1.p1.m6"><XMath><XMTok font="italic" role="UNKNOWN">A</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.3" role="description">The area of the needle point</glossaryphrase></glossarydefinition>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "glossary",
+      &[],
+      r##"<glossary lists="nomenclature" role="nomenclature" xml:id="glo.nomenclature"><title>Nomenclature</title></glossary>"##,
+    );
+  }
+
+  /// After MakeGlossary: every entry is listed, sorted by prefix + symbol
+  /// (the `z`-prefixed `A` last), though nothing references them. The
+  /// fixture file is `TEX` verbatim (the post helper takes a path).
+  #[test]
+  fn printnomenclature_lists_every_entry() {
+    let xml = convert_and_post_clean("tests/cluster_regressions/nomencl_printnomenclature.tex");
+    latexml::util::test::assert_element(
+      &xml,
+      "glossary",
+      &[],
+      r##"<glossary fragid="glo.nomenclature" lists="nomenclature" role="nomenclature" xml:id="glo.nomenclature"><title>Nomenclature</title><glossarylist><glossaryentry fragid="glo.nomenclature.nomencl.1" key="nomencl.1" lists="nomenclature" xml:id="glo.nomenclature.nomencl.1"><glossaryphrase key="nomencl.1" role="label">a</glossaryphrase><glossaryphrase role="definition">The number of angels per unit area, see equation (1)</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.2" key="nomencl.2" lists="nomenclature" xml:id="glo.nomenclature.nomencl.2"><glossaryphrase key="nomencl.2" role="label">N</glossaryphrase><glossaryphrase role="definition">The number of angels per needle point</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.3" key="nomencl.3" lists="nomenclature" xml:id="glo.nomenclature.nomencl.3"><glossaryphrase key="nomencl.3" role="label">A</glossaryphrase><glossaryphrase role="definition">The area of the needle point</glossaryphrase></glossaryentry></glossarylist></glossary>"##,
     );
   }
 }

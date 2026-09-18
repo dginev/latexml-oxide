@@ -49,7 +49,14 @@ LoadDefinitions!({
   // are gobbled: the external document's packages are not this document's.
   // The environment form collects its body (environ's `\Collect@Body`, as
   // the package itself does) and runs it AFTER the environment's group
-  // closes (`\aftergroup`), so the definitions are not local to it.
+  // closes (`\aftergroup`), so the definitions are not local to it. The
+  // package loaders AND the page-layout call of that external document are
+  // neutralised: frontespizio writes geometry into `\jobname-frn.tex` itself
+  // (frontespizio.sty:120-127 `\front@geometry@standard`) and never loads it
+  // in the infront regime, so a `\geometry{…}` in `Preambolo*` (toptesi's
+  // toptesi-example-con-frontespizio.tex:73-75) configured only that
+  // document's pages; inline it was undefined and its argument leaked as
+  // body text (sweep-82 regression, `~/data/pk_agents/w23/regr82/toptesi`).
   RawTeX!(r"\makeatletter
 \def\frontespizio{\front@thefont}
 \def\endfrontespizio{\csname preparefrontpage\front@shape\endcsname}
@@ -60,15 +67,18 @@ LoadDefinitions!({
   \let\lx@front@saved@RequirePackage\RequirePackage
   \let\lx@front@saved@setmainfont\setmainfont
   \let\lx@front@saved@setsansfont\setsansfont
+  \let\lx@front@saved@geometry\geometry
   \let\usepackage\lx@front@ignorepkg
   \let\RequirePackage\lx@front@ignorepkg
   \let\setmainfont\lx@front@ignorepkg
-  \let\setsansfont\lx@front@ignorepkg}
+  \let\setsansfont\lx@front@ignorepkg
+  \let\geometry\lx@front@ignorepkg}
 \def\lx@front@preamble@end{%
   \let\usepackage\lx@front@saved@usepackage
   \let\RequirePackage\lx@front@saved@RequirePackage
   \let\setmainfont\lx@front@saved@setmainfont
-  \let\setsansfont\lx@front@saved@setsansfont}
+  \let\setsansfont\lx@front@saved@setsansfont
+  \let\geometry\lx@front@saved@geometry}
 \renewcommand{\Preambolo}[1]{\lx@front@preamble@begin#1\lx@front@preamble@end}
 \newtoks\lx@front@preamble@toks
 \def\lx@front@preamble@store#1{\global\lx@front@preamble@toks{#1}}

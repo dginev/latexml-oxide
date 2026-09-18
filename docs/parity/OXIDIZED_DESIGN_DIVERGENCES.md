@@ -7464,6 +7464,16 @@ outranks the binding" rule would turn every `\renewenvironment{abstract}`
 into presentational markup. Guards `document_indirection::*`.
 \n
 
+The begin side's decision is recorded group-locally
+(`\lx@document@indirected` inside the `\begingroup` it opens,
+`\lx@document@direct` inside the constructor's group) and the end side closes
+the group whenever one was opened — running `\enddocument` unless it is the
+original, in which case the finalizer runs after the `\endgroup`. The
+absorb-a-subfile idiom (exam-n.cls:1348 `\includequestion`: `\let\document
+\@empty \let\enddocument\endinput \input{…}`) had its begin open a group its
+end never closed (`\endinput` is a closure, not a user macro; sweep 82). Guard
+`document_indirection::included_subfile_document_closes_its_group`. Batch 56cl.
+
 ### 233. frontespizio typesets its title page inline
 
 **Perl behavior**: no binding; the raw package runs in its default `write` mode,
@@ -7477,6 +7487,37 @@ options plus `nowrite,infront`, so the content macros store their values
 (:311-538), the package's own inline typesetting; xcolor is loaded for the
 `suftesi` shape's colours.
 **Why**: external compilation is out of scope (as shell-escape); the package
-carries the inline route itself, and the PDF is the oracle. Guard
-`frontespizio_inline::standard_shape_title_page_is_typeset_inline`. Batch 56cj.
+carries the inline route itself, and the PDF is the oracle. `Preambolo` /
+`Preambolo*` material — the preamble of that external document — is executed
+inline with its package loaders and its `\geometry` page layout neutralised
+(frontespizio.sty:120-127 writes geometry into the external file itself;
+toptesi-example-con-frontespizio's `\geometry{a4paper,…}` was undefined inline
+and its argument leaked as body text, sweep 82). Guards
+`frontespizio_inline::{standard_shape_title_page_is_typeset_inline,
+preambolo_material_is_executed_inline}`. Batches 56cj, 56cl.
+
+### 234. nomencl entries are glossary definitions listed in full (Perl: lost)
+
+**Perl behavior**: `nomencl.sty.ltxml` raw-loads the package, whose two ends
+only WRITE: `\nomenclature[prefix]{sym}{desc}` is a `\protected@write` of a
+`\nomenclatureentry` line to `\jobname.nlo` (nomencl.sty:205-245) and
+`\printnomenclature` `\@input@`s `\jobname.nls` (:277-282), the output of an
+external makeindex run. No makeindex runs, so the list is silently absent —
+0 errors, 17-37 % recall on the five shipped samples.
+**Rust behavior**: `nomencl_sty.rs` rebinds the two ends onto the glossary
+model: each entry is `<ltx:glossarydefinition inlist="nomenclature">` with the
+phrases the written line carries — `sort` (prefix + symbol, the makeindex key),
+`name`, `description` with `\nomeqref{\theequation}` appended as the written
+line does (", see equation (N)" after `\nomrefeq`), and under `nomentbl` `unit`
+and `note` — and `\printnomenclature` is an empty `<ltx:glossary
+lists="nomenclature" role="nomenclature">` titled `\nomname`. MakeGlossary
+(`make_index.rs::get_glossary_entries`) lists EVERY definition of a
+`role="nomenclature"` glossary, where a glossary lists only the referenced ones
+(Perl MakeIndex.pm:468 `next unless $refs`): a nomenclature has no `\gls`-style
+reference — makeindex prints every written line.
+**Why**: the in-memory route glossaries already takes instead of makeindex;
+the PDF is the oracle (all five samples print the full list).
+**Witnesses**: nomencl/sample01…sample05 (TeX Live doc corpus).
+**Guard**: `cluster_package_guards::nomencl_inline::{nomenclature_entries_become_glossary_definitions,
+printnomenclature_lists_every_entry}`. Batch 56cl.
 

@@ -4332,9 +4332,15 @@ in-group `@`s cut through the braces, emitting UNBALANCED braces into the
 live stream: one mode error + one orphaned `ltx:indexphrase` per use
 (algxpar-doc 162+149 errors; numerica). Real makeindex splits the
 out-of-band .idx string where imbalance cannot corrupt the document.
-Rust honors brace depth (separators at depth 0 only).
+Rust honors brace depth (separators at depth 0 only), and since batch 56cl
+math too: `\index{arroba@$@$}` (latex-via-exemplos.tex:1042
+`\arrobasymbforindex`) is the key `arroba` with the display `$@$`; Perl's flat
+scan splits at the inner `@` and digests the lone `$` silently
+(`<indexphrase key="$"/>`), while here the lone `$` opened inline math the
+bounded `\@index` box never closed (three errors per entry, a leaked
+`<XMath>`). A `$` at brace depth 0 toggles the phrase-material state.
 
-Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `\csdef{r@e@m}{}` + itemize item `\myInd{x}`.
+Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `\csdef{r@e@m}{}` + itemize item `\myInd{x}`; `\index{arroba@$@$}`.
 
 ## 84. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid)
 

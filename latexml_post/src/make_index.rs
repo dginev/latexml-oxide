@@ -510,7 +510,17 @@ impl MakeIndex {
   /// Get glossary entries from the ObjectDB.
   ///
   /// Port of `MakeIndex::getGlossaryEntries`.
-  fn get_glossary_entries(&mut self, lists: &str, glossary_id: &str) -> Vec<GlossaryEntry> {
+  /// `list_unreferenced`: a nomenclature (`<ltx:glossary role="nomenclature">`,
+  /// the nomencl binding) lists EVERY definition — its entries are written
+  /// lines that makeindex prints whole (nomencl.sty:227-245), with no
+  /// `\gls`-style reference; a glossary lists only the referenced ones
+  /// (Perl MakeIndex.pm:468 `next unless $refs && %{$refs}`).
+  fn get_glossary_entries(
+    &mut self,
+    lists: &str,
+    glossary_id: &str,
+    list_unreferenced: bool,
+  ) -> Vec<GlossaryEntry> {
     let list_set: rustc_hash::FxHashSet<&str> = lists.split(',').collect();
     let mut entries = Vec::new();
 
@@ -538,7 +548,7 @@ impl MakeIndex {
           .get_value("referrers")
           .map(|v| v.is_truthy())
           .unwrap_or(false);
-        if !has_refs {
+        if !has_refs && !list_unreferenced {
           continue;
         }
 
@@ -652,7 +662,8 @@ impl Processor for MakeIndex {
         let lists = node
           .get_attribute("lists")
           .unwrap_or_else(|| "glossary".to_string());
-        let entries = self.get_glossary_entries(&lists, &id);
+        let list_unreferenced = node.get_attribute("role").as_deref() == Some("nomenclature");
+        let entries = self.get_glossary_entries(&lists, &id, list_unreferenced);
         if !entries.is_empty() {
           let glist = self.make_glossary_list(&entries);
           let mut node_mut = node.clone();

@@ -3041,17 +3041,32 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // `\OptionInd` (algxpar-doc 162+149 errs, numerica; pdflatex clean —
   // real makeindex splits the out-of-band .idx STRING where imbalance
   // cannot corrupt the document). KNOWN_PERL_ERRORS #83.
+  // Nor inside math: `\index{arroba@$@$}` (latex-via-exemplos.tex:1042
+  // `\arrobasymbforindex` = `$@$`, used at :4238/:4691/:5363) is the key
+  // `arroba` and the display `$@$`; splitting at the `@` inside the math
+  // emitted `\@indexphrase[$]{$}` with a lone `$` that opened inline math
+  // the bounded `\@index` box could never close (three errors per entry and
+  // a leaked `<ltx:XMath>` swallowing the paragraph; Perl digests the lone
+  // `$` silently, pdflatex is clean). A `$` at brace depth 0 toggles the
+  // math state (`$$` twice: display math toggles net zero as it should).
   let mut depth: i32 = 0;
+  let mut in_math = false;
   while i < toks.len() {
     let tok = toks[i];
     match tok.get_catcode() {
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth -= 1,
+      Catcode::MATH if depth == 0 => in_math = !in_math,
       _ => {},
     }
-    if depth > 0 || tok.get_catcode() == Catcode::END && depth == 0 {
-      // Inside a group (or the closing brace returning to depth 0):
-      // plain phrase material, never a separator.
+    if depth > 0
+      || tok.get_catcode() == Catcode::END && depth == 0
+      || in_math
+      || tok.get_catcode() == Catcode::MATH
+    {
+      // Inside a group (or the closing brace returning to depth 0) or
+      // inside math (or its closing `$`): plain phrase material, never a
+      // separator.
       phrase.push(tok);
       i += 1;
       continue;

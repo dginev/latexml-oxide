@@ -154,6 +154,18 @@ pub(crate) fn load() -> Result<()> {
   });
 
   AssignValue!("@unusedoptionlist", Stored::Strings(Rc::new([])));
+  // The group-local record of `\begin{document}`'s decision (divergence
+  // #232, see `\begin`/`\end` below): `\lx@document@indirected` runs inside
+  // the `\begingroup` a renewed `document` gets, `\lx@document@direct` inside
+  // the constructor's group when the original `\document` ran.
+  DefPrimitive!("\\lx@document@indirected", {
+    assign_value("document:indirected", Stored::Bool(true), None);
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\lx@document@direct", {
+    assign_value("document:indirected", Stored::Bool(false), None);
+    Ok(Vec::new())
+  });
   DefPrimitive!("\\warn@unusedclassoptions", {
     if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist")
       && !unused.is_empty()
@@ -401,12 +413,6 @@ pub(crate) fn load() -> Result<()> {
     // a normal environment and gets its `\begingroup`/`\endgroup` below.
     let user_document = name == "document"
       && is_user_document_macro(&T_CS!("\\document"), &T_CS!("\\lx@orig@document"));
-    if name == "document" {
-      // The end side follows this decision (see `\end`): a class that wraps
-      // BOTH macros around the originals (standalone.cls) must not have its
-      // begin wrapper skipped (self-referential here) and its end wrapper run.
-      assign_value("document:indirected", Stored::Bool(user_document), Some(Scope::Global));
-    }
     if user_document {
       // A renewed `document` IS a normal environment: `\begin{document}` =
       // `\begingroup\document`, `\end{document}` = `\enddocument\endgroup`
@@ -419,6 +425,14 @@ pub(crate) fn load() -> Result<()> {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
       tks.push(T_CS!("\\begingroup"));
+      // The end side follows this decision (see `\end`), recorded INSIDE the
+      // group it opens (`document:indirected`, group-local): a class that
+      // wraps BOTH macros around the originals (standalone.cls) must not have
+      // its begin wrapper skipped (self-referential here) and its end wrapper
+      // run, and a nested complete document (exam-n.cls:1348
+      // `\includequestion`: `\let\document\@empty \let\enddocument\endinput
+      // \input{…}`) must not leave a stale decision for the enclosing one.
+      tks.push(T_CS!("\\lx@document@indirected"));
       tks.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
       if let Some(after) = after_opt {
         tks.extend(after.unlist());
@@ -431,6 +445,10 @@ pub(crate) fn load() -> Result<()> {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
       tks.push(T_CS!(begin_name));
+      if name == "document" {
+        // Inside the constructor's own group: this document opened none.
+        tks.push(T_CS!("\\lx@document@direct"));
+      }
       Ok(Tokens::new(tks)) // Magic cs!
     } else {
       let token = T_CS!(format!("\\{name}"));
@@ -530,10 +548,35 @@ pub(crate) fn load() -> Result<()> {
     // wraps both; its begin wrapper is self-referential and skipped, so its
     // end wrapper (`\endstandalone`, closing a minipage the skipped begin
     // never opened) is skipped too.
+    let indirected = name == "document" && lookup_bool("document:indirected");
     let user_enddocument = name == "document"
       && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
-      && (lookup_bool("document:indirected")
-        || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
+      && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
+    if indirected && !user_enddocument {
+      // The begin opened the group, but `\enddocument` is not a user macro
+      // — a closure (exam-n's `\let\enddocument\endinput`, whose `\endinput`
+      // stops the included file after this line while `\end`'s tokens are
+      // already expanded, as in TeX) or the original, untouched. LaTeX's
+      // `\end{document}` = `\enddocument\endgroup` either way; the original
+      // `\enddocument` never returns in TeX, so here the group closes first
+      // and the finalizer (`\end{document}`'s constructor) runs after it.
+      let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+      tks.extend(use_hook("end"));
+      if !orig_end {
+        tks.push(T_CS!("\\enddocument"));
+      }
+      tks.push(T_CS!("\\par"));
+      tks.push(T_CS!("\\endgroup"));
+      if orig_end && is_defined_token(&t) {
+        tks.push(t);
+      }
+      tks.extend(use_hook("after"));
+      if let Some(afterend_toks) = after {
+        tks.extend(afterend_toks.unlist())
+      }
+      return Ok(Tokens::new(tks));
+    }
     if user_enddocument {
       let mut tks = before.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("end"));
