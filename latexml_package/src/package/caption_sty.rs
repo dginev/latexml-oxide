@@ -313,6 +313,16 @@ LoadDefinitions!({
   // bicaption.sty:261,265,361,365 uses \caption@dblarg.
   RawTeX!(r"\def\caption@dblarg{\@dblarg}");
 
+  // caption.sty:300-320 `\caption@settype{type}` — the internal a caption-aware
+  // package calls to declare the float type of the box it builds (wrapstuff.sty
+  // :2382-2384, with `\caption@clearmargin` and `\caption@setoptions{wrap type}`;
+  // latex-via-exemplos' ex15-wrapstuff). Its effect in this model is
+  // `\@captype` (caption.sty:313 `\let\@captype\caption@tempa`, after an `\edef`);
+  // the margin reset (:751) and the per-type option set (caption3.sty:326) are
+  // typographic (`\caption@setoptions` is the existing no-op below). Undefined
+  // here, the raw package's calls stood as errors and the caption lost its type.
+  RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}}");
+  RawTeX!(r"\def\caption@clearmargin{}");
   // Common internal hooks from caption.sty / caption3.sty
   RawTeX!(r"\def\caption@beginex@hook{}");
   RawTeX!(r"\def\caption@xfloat@hook{}");

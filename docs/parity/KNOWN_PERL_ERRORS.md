@@ -6207,3 +6207,18 @@ cms-trad-sample) while the real PDF is clean. Trigger: `@book{k, author={A},
 title={T}, year={2000}, annote={\textt{x}}}` + `\nocite{k}\bibliographystyle{plain}`.
 Perl-origin policy, not a binding gap: the annotation is content LaTeXML chooses
 to keep; a source typo is not defined away. Kept as-is (batch 56ca).
+
+## 219. A Unicode-engine-only manual under pdfTeX emulation: fontsetup's `fspdefault.tex` runs before amsmath (kept)
+
+fontsetup.sty:5 `\iftutex` picks unicode-math (which loads amsmath) only on XeTeX/LuaTeX;
+under pdfTeX it raises "Use Unicode-compliant TeX-engines" (:15) and still `\input`s
+`fspdefault.tex` (:206) when loaded without options, whose line 307
+`\DeclareMathOperator*{\convolution}{…}` therefore precedes any amsmath load:
+`undefined:\DeclareMathOperator` then `undefined:\convolution`. LaTeXML emulates pdfTeX
+(`\iftutex` false: Perl iftex.sty.ltxml:29/44, Rust iftex_sty.rs:31/44) and both engines
+report the pair, as pdflatex does ("Undefined control sequence" at fspdefault.tex:307).
+Trigger: `\documentclass{book}\usepackage{fontsetup}\begin{document}Hello.\end{document}`.
+Witness latex-via-exemplos (which itself demands XeLaTeX at :24). Kept: the only cure is
+reporting a Unicode engine, a parked family with a document-wide blast radius. Corpus
+footprint: this one manual (the other fontsetup users load it with an option and skip
+fspdefault). Root-causer `~/data/pk_agents/w23/regr83/declaremathoperator/NOTES.md`.

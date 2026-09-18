@@ -324,6 +324,43 @@ the mechanism, its witnesses, and the disposition.
   the kernel's aliases (latex.ltx `\begin`/`\end` dynamic `\csname` dispatch), gated on
   `ltx:document` already being open; HIGH-risk core dispatch, two witnesses
   (`base/ltnews`, `base/l3news`). Parked as a surpass-Perl candidate.
+- **A class `\maketitle` built from private fields loses its title page (SHARED, surpass candidate, parked 2026-09-18).**
+  exam-n.cls:609-764 renews `\maketitle` to typeset the exam banner, course title, date,
+  rubric and the base-rubric paragraph from its own `\exambanner`/`\coursetitle`/`\rubric`
+  fields (exam-n.cls:139, :404-424), never `\title`/`\author`. Both engines lock
+  `\maketitle` (Perl latex_constructs.pool.ltxml:1099-1113; Rust state.rs:1320, sect02.rs)
+  — correct, it prevents double titles — so LaTeXML's own `\maketitle` runs on empty
+  frontmatter and every title-page word is lost: exam-n/template-master 0 errors, 36.5 %
+  recall, identical in Perl (root-causer `~/data/pk_agents/w23/regr83/exam-n-recall/NOTES.md`;
+  repro there, 6 lines). Same family as uni-titlepage's `\TitlePageStyle` above. The only
+  fix is a per-class frontmatter binding (`\exambanner`→title, `\coursetitle`→subtitle,
+  date/time/codes→pubnotes, rubric→note via `\lx@add@*`), one class, tiny gain: parked.
+- **jacow/JACoW_LaTeX_A4 and _Letter at 49 % recall are a golden mismatch, not a loss (2026-09-18).**
+  The template comments out its annex (`JACoW_LaTeX_A4.tex:499-501` `%===\include{annexes-A4}`)
+  while the shipped PDF is the complete build with ANNEX A: 484 of the 485 "missing" words are
+  the annex; body-only recall is 469/471 (the two left are the `\LaTeX` logos, which pdftotext
+  reads as one word and the HTML as kerned letters). Rust: 0 errors, 0 warnings; Perl loses the
+  document's `Itemize` list and reports 3 errors. Root-causer `~/data/pk_agents/w23/regr83/jacow/NOTES.md`.
+- **The German letter classes are measurement artifacts, not losses (2026-09-18).**
+  dinbrief/dinbrief (34.8 %): the `.tex` is the `.dtx`'s documentation extraction, its example
+  letters in `verbatim`, while the golden PDF is the full `.dtx` build with the 1,094-line
+  implementation listing and typeset letters — only 1,087 of the PDF's 3,051 words exist in the
+  source and 1,063 are recalled (97.8 % of the ceiling). g-brief/beispiel2 (55.4 %): g-brief2.cls
+  typesets the sender, recipient and bank blocks ONLY in `\thispagestyle{firstpage}`'s
+  `\@oddhead`/`\@oddfoot` (g-brief2.cls:252-253, :310-427), page furniture this engine never puts
+  in the flow (sect05.rs:731-732, the elsart rule) — the letter body itself is complete at 0
+  errors; Perl's higher number is 52 `undefined` errors leaking field arguments as text (OmniBus
+  loads babel before the class, `\sprache` breaks it). The only improvement is a per-class
+  g-brief contrib binding placing those blocks in the flow: gain ≈ 0 on arXiv, parked.
+  Root-causer `~/data/pk_agents/w23/regr83/letters/NOTES.md`.
+- **wrapstuff's wrapped box is dropped whole at 0 errors (RUST content loss, open 2026-09-18).**
+  `\begin{wrapstuff}[type=table,width=3cm]\caption{X}\begin{tabular}…\end{wrapstuff}` yields
+  nothing — no caption, no tabular — while the surrounding text survives (probe
+  `~/data/pk_agents/w23/regr83/lve/wrap.tex`). wrapstuff.sty builds the box with `\vbox`/`\setbox`
+  and places it through `\parshape` machinery this engine does not carry into the flow; Perl
+  cannot load the package at all. wrapstuff-doc-en still reaches 90.7 % (its examples are small);
+  latex-via-exemplos ex15 loses its wrapped table. Candidate: a wrapfig-style binding placing
+  the box as an inline float, as `wrapfig_sty.rs` does.
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so
