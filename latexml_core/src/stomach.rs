@@ -788,23 +788,29 @@ pub fn egroup() -> Result<()> {
     // Don't pop if there's an error; maybe we'll recover?
     // Perl Stomach.pm:347-349 passes currentFrameMessage as a SEPARATE
     // Error detail (its own line), not merged into the primary message.
-    Error!(
-      "unexpected",
-      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
-      s!(
-        "Attempt to close a group that switched to mode {}",
-        lookup_string_from_sym(crate::pin!("MODE"))
-      ),
-      current_frame_message()
-    );
+    // After a resource Fatal the recovery pass only drains pending closers:
+    // that noise is not reported (`error::resource_fatal_latched`).
+    if !resource_fatal_latched() {
+      Error!(
+        "unexpected",
+        get_current_token().unwrap_or_else(|| T_CS!("\\?")),
+        s!(
+          "Attempt to close a group that switched to mode {}",
+          lookup_string_from_sym(crate::pin!("MODE"))
+        ),
+        current_frame_message()
+      );
+    }
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \begingroup
-    Error!(
-      "unexpected",
-      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
-      "Attempt to close boxing group",
-      current_frame_message()
-    );
+    if !resource_fatal_latched() {
+      Error!(
+        "unexpected",
+        get_current_token().unwrap_or_else(|| T_CS!("\\?")),
+        "Attempt to close boxing group",
+        current_frame_message()
+      );
+    }
   } else {
     // Don't pop if there's an error; maybe we'll recover?
     pop_stack_frame(false)?;
@@ -915,24 +921,29 @@ pub fn endgroup() -> Result<()> {
     // dsptricks); the `\globaldefs` bookkeeping exemption was the real msc
     // root (state.rs `assign_local_unconditional`).
     // Perl Stomach.pm:367-369: currentFrameMessage is a SEPARATE detail.
-    Error!(
-      "unexpected",
-      get_current_token()
-        .map(|t| t.to_string())
-        .unwrap_or_else(|| String::from("\\?")),
-      s!("Attempt to close a group that switched to mode {mode}"),
-      current_frame_message()
-    );
+    // Post-resource-Fatal draining is not reported (see `egroup`).
+    if !resource_fatal_latched() {
+      Error!(
+        "unexpected",
+        get_current_token()
+          .map(|t| t.to_string())
+          .unwrap_or_else(|| String::from("\\?")),
+        s!("Attempt to close a group that switched to mode {mode}"),
+        current_frame_message()
+      );
+    }
   } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \bgroup
-    Error!(
-      "unexpected",
-      get_current_token()
-        .map(|t| t.to_string())
-        .unwrap_or_else(|| String::from("\\?")),
-      "Attempt to close non-boxing group",
-      current_frame_message()
-    );
+    if !resource_fatal_latched() {
+      Error!(
+        "unexpected",
+        get_current_token()
+          .map(|t| t.to_string())
+          .unwrap_or_else(|| String::from("\\?")),
+        "Attempt to close non-boxing group",
+        current_frame_message()
+      );
+    }
   } else {
     pop_stack_frame(true)?;
   }
@@ -1148,7 +1159,10 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         );
       }
       let (category, message) = make_mode_error();
-      Error!("unexpected", category, &message, current_frame_message());
+      // Post-resource-Fatal draining is not reported (see `egroup`).
+      if !resource_fatal_latched() {
+        Error!("unexpected", category, &message, current_frame_message());
+      }
     } else {
       // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
       if bound_mode.ends_with("vertical") {
@@ -1171,7 +1185,9 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         // pop target — e.g. a normal document's `\end{document}`), not at the
         // value-guard above. Witness 1703.05010 (svjour3 + bare `\endproof`).
         let (category, message) = make_mode_error();
-        Error!("unexpected", category, &message);
+        if !resource_fatal_latched() {
+          Error!("unexpected", category, &message);
+        }
       } else {
         pop_stack_frame(false)?;
       }
@@ -2422,6 +2438,81 @@ pub fn get_script_level() -> usize {
       boxlevel
     }
   })
+}
+
+#[cfg(test)]
+mod resource_fatal_teardown_tests {
+  use super::{egroup, endgroup};
+  use crate::{
+    common::error::{LogStatus, Result, get_status, initialize_report, resource_fatal_latched},
+    state::{Scope, assign_value, push_frame},
+  };
+
+  /// Once a resource Fatal is latched the document is aborted and the
+  /// recovery pass only drains what is pending; the group closers it meets
+  /// on a mode-switch frame (a box body the fuse interrupted) must not be
+  /// reported — 11-13 non-deterministic `Attempt to close a group that
+  /// switched to mode` lines after glossaries-user's MemoryBudget Fatal
+  /// (sweep 82) made a phantom regression. Before the latch the same closer
+  /// IS an error (Perl Stomach.pm:347-349).
+  #[test]
+  fn group_closers_are_silent_once_a_resource_fatal_is_latched() {
+    initialize_report();
+    // The shape the fuse leaves behind: a mode-switch frame on top.
+    push_frame();
+    assign_value("BOUND_MODE", "restricted_horizontal", Some(Scope::Local));
+    let before = get_status(LogStatus::Error);
+    let _ = egroup();
+    assert_eq!(
+      get_status(LogStatus::Error),
+      before + 1,
+      "a closer on a mode-switch frame is an error before any Fatal"
+    );
+    fn raise() -> Result<()> {
+      Fatal!(Timeout, MemoryBudget, "Memory budget exceeded (synthetic)");
+    }
+    let _ = raise();
+    assert_eq!(
+      get_status(LogStatus::Fatal),
+      1,
+      "the Fatal itself is reported"
+    );
+    let after_fatal = get_status(LogStatus::Error);
+    let _ = egroup();
+    let _ = endgroup();
+    assert_eq!(
+      get_status(LogStatus::Error),
+      after_fatal,
+      "post-Fatal draining of the closers reports nothing"
+    );
+    initialize_report();
+  }
+
+  /// A non-resource Fatal (a Stomach-target box ceiling, recovered by
+  /// `digest_step_guarded`) does not set the latch: digestion goes on and a
+  /// closer on a mode-switch frame is still an error.
+  #[test]
+  fn non_resource_fatals_keep_reporting_closers() {
+    initialize_report();
+    push_frame();
+    assign_value("BOUND_MODE", "restricted_horizontal", Some(Scope::Local));
+    fn raise() -> Result<()> {
+      Fatal!(Stomach, Recursion, "Infinite digestion loop (synthetic)");
+    }
+    let _ = raise();
+    assert!(
+      !resource_fatal_latched(),
+      "a Stomach-target Fatal is not a resource Fatal"
+    );
+    let before = get_status(LogStatus::Error);
+    let _ = egroup();
+    assert_eq!(
+      get_status(LogStatus::Error),
+      before + 1,
+      "closers still report"
+    );
+    initialize_report();
+  }
 }
 
 #[cfg(test)]

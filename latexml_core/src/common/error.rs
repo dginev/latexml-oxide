@@ -173,7 +173,11 @@ pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   // of post-cap records — gckanbun 12.8k, panda-doc 3.6k, past the tikz
   // 1000-cap (perfect-kernel sweep 13). Only the too-many-errors latch
   // gates this: a Timeout/other Fatal still reports the trailing errors
-  // that explain it.
+  // that explain it. The one other post-Fatal suppression is narrower and
+  // sits at its sites: once a RESOURCE Fatal is latched
+  // (`resource_fatal_latched`), digestion has stopped and the group
+  // closers the recovery pass drains are not reported (`stomach::egroup`
+  // / `endgroup` / `end_mode_opt`); everything else still is.
   if matches!(status, LogStatus::Error) && too_many_errors_latched() {
     return;
   }
@@ -378,6 +382,7 @@ pub fn initialize_report() {
   *report = LogState::default();
   reset_consecutive_error_tracker();
   LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
+  RESOURCE_FATAL_SEEN.with(|c| c.set(false));
 }
 
 /// Clear the arena-`SymStr`-keyed report maps (`undefined`, `missing`). MUST be
@@ -402,7 +407,20 @@ thread_local! {
   /// grinding on). The `Fatal!` macro records here at raise time; consumers
   /// `take` it to re-classify a flattened error. PR #249 review P1-4.
   static LAST_RESOURCE_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+  /// Sticky companion of `LAST_RESOURCE_FATAL` (which consumers `take`): has a
+  /// resource fatal been raised in this conversion? Once it has, the
+  /// document is aborted and the recovery pass only drains what is pending;
+  /// the group-closer errors that draining raises (`stomach::egroup` /
+  /// `endgroup` / `end_mode_opt`) are teardown noise, not findings — 11-13
+  /// non-deterministic `Attempt to close a group that switched to mode`
+  /// lines after glossaries-user's MemoryBudget Fatal (sweep 82), a phantom
+  /// regression. Cleared in `initialize_report`.
+  static RESOURCE_FATAL_SEEN: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
+
+/// Whether a resource-class Fatal (timeout, memory budget, runaway limits)
+/// has been raised in this conversion — see `RESOURCE_FATAL_SEEN`.
+pub fn resource_fatal_latched() -> bool { RESOURCE_FATAL_SEEN.with(|c| c.get()) }
 
 /// Record a fatal into the resource-fatal latch — only Timeout-target fatals
 /// with payload-free categories are kept (the latch exists for resource
@@ -429,6 +447,7 @@ pub fn record_last_fatal(e: &Error) {
       message: e.message.clone(),
     });
   });
+  RESOURCE_FATAL_SEEN.with(|c| c.set(true));
 }
 
 /// Take (and clear) the latched resource fatal, if any. Returns the

@@ -185,16 +185,6 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    error-count-only guards; **B2** computed-value marker probes → golden
    `.tex`/`.xml` pairs; **B3** extract-and-compare text; **B4** structural
    absence checks; the 418 unit predicates last. No test is deleted.
-6. **Post-Fatal teardown noise (signal integrity, LOW-MED).** Once a resource
-   Fatal (`MemoryBudget`/timeout) is latched, the recovery pass drains a
-   document's pending `\egroup`/`\endgroup` closers through `stomach::egroup`
-   / `endgroup`, whose mode-switch guard emits one recoverable `Error!` per
-   closer — 11–13 per run on glossaries-user, non-deterministic with the heap
-   high-water (sweep 82's phantom 4→17 "regression";
-   `~/data/pk_agents/w23/regr82/glossaries-user/NOTES.md`). Suppress the
-   `Error!` emission (not the no-pop recovery) while a resource Fatal is
-   latched; guard: a synthesized MemoryBudget Fatal over an open `\hbox` group
-   → 0 "switched to mode" errors, status still fatal.
 
 ## DONE
 
