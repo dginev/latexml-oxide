@@ -97,6 +97,7 @@ pub mod derivative_sty;
 pub mod dhucs_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
+pub mod directory_sty;
 pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
@@ -112,6 +113,7 @@ pub mod examdesign_cls;
 pub mod fairmeta_cls;
 pub mod fancyvrb_ex_sty;
 pub mod fcs_cls;
+pub mod figbib_sty;
 pub mod figcaps_sty;
 pub mod fontawesome5_sty;
 pub mod fontawesome_sty;
@@ -339,6 +341,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("abntex2cite", "sty", abntex2cite_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
+  ("directory", "sty", directory_sty::load_definitions),
+  ("figbib", "sty", figbib_sty::load_definitions),
   ("fontawesome", "sty", fontawesome_sty::load_definitions),
   ("fontawesome5", "sty", fontawesome5_sty::load_definitions),
   ("fp", "sty", fp_sty::load_definitions),

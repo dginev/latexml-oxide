@@ -1512,6 +1512,15 @@ impl CrossRef {
       let show = bibref
         .get_attribute("show")
         .unwrap_or_else(|| "refnum".to_string());
+      // Perl CrossRef.pm:507-508: `\nocite`'s bibref (`show='nothing'`,
+      // latex_constructs.pool.ltxml:4214) only marks its keys for the
+      // bibliography stage; `make_bibcite` returns nothing for it, so the node
+      // is replaced by nothing. Filling it in printed the keys — for
+      // `\nocite{*}` a visible `*` as a missing citation plus its warning.
+      if show == "nothing" {
+        doc.replace_node(bibref, &[]);
+        continue;
+      }
       // natbib emits show patterns like:
       //   "AuthorsPhrase1Year"           → \citep{X} → "Author (Year)"
       //   "Authors Phrase1YearPhrase2"  → \citet{X}/\cite{X} → "Author (Year)"

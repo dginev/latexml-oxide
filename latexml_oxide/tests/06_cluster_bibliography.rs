@@ -3241,6 +3241,81 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
   );
 }
 
+/// directory.sty:235 `\directory[ext]{bibs}` inputs a `.bbl` only bibtex
+/// produces and the `.bib` list lives nowhere else; the contrib binding runs
+/// the kernel `\lx@bibliography` over every entry (a directory is the whole
+/// address list, directory.sty:321 `\nodir{*}`). Whole `<bibitem>`.
+#[test]
+fn directory_lists_every_entry_from_its_bib() {
+  if !latexml::util::test::kpse_has("directory.sty") {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/directory_family.tex");
+  latexml::util::test::assert_element(&x, "bibitem", &["key=\"dir1\""], ALL_ENTRIES_BIBITEM);
+  assert_nocite_star_leaves_no_trace(&x);
+}
+
+/// figbib.sty:330 `\fbList{bibs}` inputs `\jobname.figbib.bbl` (:122), a
+/// bibtex product, and its per-figure citations go to a private `.aux`
+/// stream (:271), never the kernel citation set; the contrib binding runs the
+/// kernel `\lx@bibliography` over every source. Whole `<bibitem>`.
+#[test]
+fn figbib_lists_every_figure_source_from_its_bib() {
+  if !latexml::util::test::kpse_has("figbib.sty") {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/figbib_family.tex");
+  latexml::util::test::assert_element(&x, "bibitem", &["key=\"dir1\""], ALL_ENTRIES_BIBITEM);
+  assert_nocite_star_leaves_no_trace(&x);
+}
+
+/// Perl CrossRef.pm:507-508 replaces a `\nocite` bibref (`show='nothing'`) by
+/// nothing; the Rust fill-in printed its keys — a visible `*` marked as a
+/// missing citation. One `<bibliography>`, the `<cite>` emptied, no `*`.
+fn assert_nocite_star_leaves_no_trace(x: &str) {
+  assert_eq!(
+    x.matches("<bibliography").count(),
+    1,
+    "one reference list:\n{x}"
+  );
+  assert!(
+    !x.contains("ltx_missing_citation") && !x.contains(">*<"),
+    "the \\nocite{{*}} marker leaked into the rendering:\n{x}"
+  );
+  latexml::util::test::assert_element(x, "cite", &[], r##"<cite/>"##);
+}
+
+/// The `\nocite{*}` + `\lx@bibliography` rendering of the one-entry family
+/// `.bib` shared by the directory and figbib fixtures (numeric labels, no
+/// citation, so no "Cited by" block).
+const ALL_ENTRIES_BIBITEM: &str = r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="dir1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Directories</text>.</bibblock></bibitem>"##;
+
+/// nmbib.sty:72 `\multibibliography{bibs}` only records the list into per-view
+/// `.aux` files and each `\printbibliography{type}` (:383) inputs a bibtex
+/// `.bbl`; the contrib binding saves the list at package-load timing and runs
+/// the kernel `\lx@bibliography` once, at the first `\printbibliography`, with
+/// natbib's citations selecting the entries and the kernel `\@biblabel`
+/// restored over nmbib.sty:92's `\NAT@biblabel` alias. Whole `<bibitem>`, and
+/// exactly one bibliography for the two `\printbibliography` calls.
+#[test]
+fn nmbib_prints_the_saved_bib_list_once() {
+  if !latexml::util::test::kpse_has("nmbib.sty") {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/nmbib_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"dir1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="dir1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A listed entry</tag><tag class="ltx_bib_author-year" role="refnum">Author (2003)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A listed entry</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Directories</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  assert_eq!(
+    x.matches("<bibliography").count(),
+    1,
+    "the two \\printbibliography views must render one list:\n{x}"
+  );
+}
+
 /// A class's raw `\def\bibliography#1{…\@input{\jobname.bbl}}` (paper.cls:933
 /// for sfee, ltugboat.cls:1683, abntex2cite.sty:375) inputs a file only a
 /// bibtex run produces, and the `.bib` list lives nowhere else — the native

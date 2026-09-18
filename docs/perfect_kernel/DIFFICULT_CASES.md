@@ -366,7 +366,8 @@ the mechanism, its witnesses, and the disposition.
   (`wrapstuff_sty.rs`; README exception list).
 - **The recall audit's "uncategorized" 45–60 % family, classified (2026-09-18;
   `~/data/pk_agents/w23/regr85/other_recall/NOTES.md`).** pecha and showexpl are PDF-font /
-  verbatim-tokenization artifacts; figbib is a bibtex multipass (`.fig` aux, SHARED); quotchap
+  verbatim-tokenization artifacts; figbib is a bibtex multipass (`.fig` aux, SHARED — its
+  figure-source list now renders via the `\fbList` binding, batch 56dc); quotchap
   and fbithesis are Perl error-dumps (undefined environments leaking their arguments as text
   inflate Perl's recall; both engines lose the epigraph / title page); timeop was already fixed.
   ONE current RUST-ONLY loss: a picture nested in a scaled box inside a picture was never
