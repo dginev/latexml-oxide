@@ -375,6 +375,23 @@ pub fn listings_read_raw_string(
 /// Perl: listingsReadRawFile — read entire file contents as string.
 fn listings_read_raw_file(file: &str) -> Option<String> {
   let filename = file.to_string();
+  // A file that exists only in the session's virtual file store — written by
+  // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
+  // `tcblisting` body goes to `\jobname.listing`, tcblistingscore.code.tex
+  // :275-282, and `\lstinputlisting` reads it back, tcblistings.code.tex
+  // :42-53), `filecontents`, or `\VerbatimOut` — is read from there, as
+  // `\input`/`\openin` already do (content.rs). `find_file` returned the bare
+  // key for such a file and the disk read came back empty, so every
+  // `listing only` box (sim-os-menus' terminal windows; ~33 low-recall
+  // manuals round-trip a listing file) rendered an EMPTY listing at 0
+  // errors — Perl, with no virtual store, reports "Can't read listings file".
+  if let Some(text) = vfs_read(filename.trim()) {
+    return Some(if text.contains('\r') {
+      text.replace("\r\n", "\n").replace('\r', "\n")
+    } else {
+      text
+    });
+  }
   // Perl #2818 (41bd31e8): FindFile(..., noltxml => 1) — when reading a raw file
   // for a listing (\lstinputlisting), never substitute an .ltxml binding for the
   // real source text (Rust spells `noltxml` as `forbid_ltxml`).

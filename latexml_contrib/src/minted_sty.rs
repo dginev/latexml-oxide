@@ -61,8 +61,11 @@ LoadDefinitions!({
   use latexml_core::binding::content::find_file;
   DefMacro!("\\inputminted[]{}{}", sub[(_opts, _lang, file_arg)] {
     let file_str = file_arg.to_string();
-    let contents = find_file(&file_str, None)
-      .and_then(|path| std::fs::read_to_string(&path).ok())
+    // The session's virtual file store first (a file written by
+    // `filecontents`/`\VerbatimOut` lives only there), as `\input` and
+    // `\lstinputlisting` read it (batch 56cv); then disk.
+    let contents = vfs_read(file_str.trim())
+      .or_else(|| find_file(&file_str, None).and_then(|path| std::fs::read_to_string(&path).ok()))
       .unwrap_or_default();
     bgroup();
     assign_value(
