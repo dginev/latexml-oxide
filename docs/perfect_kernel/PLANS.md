@@ -192,11 +192,15 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    gullet/stomach/mouth/document. The corpus token budget
    (`~/data/pk_agents/w23/perf_pgf/token_budget2/`) puts 69 % of the wall on manuals
    loading pgfkeys and 40-55 % of a style-heavy conversion's instructions in raw
-   pgfkeys dispatch. NEXT: the native pgfkeys dispatch, hybrid on the raw `\pgfk@`
-   storage with a loud raw fallback, staged slice 0 (accessors) → 1 (the `\pgfkeys{}`
-   loop) → 2 (`\pgfkeysdef` family), ON/OFF byte-identity harness, bars zx_full 25.42 G
-   / tcb_full 18.23 G / keys_heavy 15.18 G / picC unchanged
+   pgfkeys dispatch. The native pgfkeys dispatch, hybrid on the raw `\pgfk@` storage
+   with the raw handlers kept, has landed slice 0 (accessors, 56dk) and slice 1 (the
+   `\pgfkeys{}` loop as a stream continuation, 56dl): zx_full 25.51 → 10.62 G (−58 %),
+   tcb_full 18.31 → 13.25 G (−28 %), keys_heavy 15.23 → 11.90 G (−22 %), the zx-calculus
+   manual 150 → 72 s; ON/OFF byte-identity harness of ten fixtures
    (`docs/performance/PERFORMANCE.md`, `~/data/pk_agents/w23/perf_pgf/pgfkeys_native/`).
+   NEXT: slice 2 — the `\pgfkeysdef` family and the hottest handlers as natives that
+   store exactly what the raw ones store; profile first (`slice2/` study), one lever per
+   run, the zx/circuitikz/tcolorbox/pgfplots manuals re-converted on and off before landing.
 
 ## DONE
 
