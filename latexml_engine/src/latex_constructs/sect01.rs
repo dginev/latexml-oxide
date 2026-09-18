@@ -397,7 +397,7 @@ pub(crate) fn load() -> Result<()> {
 
     // LaTeX's own indirection for the ONE environment whose `\begin{…}`
     // is a binding constructor here: `\begin{document}` is `\begingroup
-    // \document` (latex.ltx:14780-14790), so a `\document` the document
+    // \document` (latex.ltx:15346-15362), so a `\document` the document
     // redefined — ltnews.tex:236 / l3news.tex:109 `\renewenvironment
     // {document}` around the `\input` of every issue, tools-overview.tex:59
     // `\def\document{\TO@document\maketitle…}` — is what a later
@@ -408,9 +408,11 @@ pub(crate) fn load() -> Result<()> {
     // (`\let\document\begin{document}`, `\ifx`-equal), nothing changes.
     // Beyond Perl, user-approved: OXIDIZED_DESIGN_DIVERGENCES #232. Guard:
     // `cluster_package_guards::document_indirection::*`.
-    // The ORIGINAL `\document` eats `\begin`'s group itself (latex.ltx
-    // :14790), so the constructor path opens none; a RENEWED `document` is
-    // a normal environment and gets its `\begingroup`/`\endgroup` below.
+    // The ORIGINAL `\document` eats `\begin`'s group itself
+    // (`\@execute@begin@hook{document}` `\endgroup`s it, latex.ltx
+    // :15356-15361), so the constructor path opens none; a RENEWED
+    // `document` is a normal environment and gets its
+    // `\begingroup`/`\endgroup` below.
     let user_document = name == "document"
       && is_user_document_macro(&T_CS!("\\document"), &T_CS!("\\lx@orig@document"));
     if user_document {
@@ -552,25 +554,26 @@ pub(crate) fn load() -> Result<()> {
     let user_enddocument = name == "document"
       && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
       && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
-    if indirected && !user_enddocument {
-      // The begin opened the group, but `\enddocument` is not a user macro
-      // — a closure (exam-n's `\let\enddocument\endinput`, whose `\endinput`
+    let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+    if indirected && !user_enddocument && !orig_end {
+      // The begin opened the group and `\enddocument` is a closure, not a
+      // user macro — exam-n's `\let\enddocument\endinput`, whose `\endinput`
       // stops the included file after this line while `\end`'s tokens are
-      // already expanded, as in TeX) or the original, untouched. LaTeX's
-      // `\end{document}` = `\enddocument\endgroup` either way; the original
-      // `\enddocument` never returns in TeX, so here the group closes first
-      // and the finalizer (`\end{document}`'s constructor) runs after it.
-      let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+      // already expanded, as in TeX. LaTeX's `\end{document}` =
+      // `\enddocument\endgroup`: run it, then close the begin's group.
+      // With the ORIGINAL `\enddocument` (a package wrapped `\document`
+      // around the original — dblfnote, etoolbox's `\AtEndPreamble` — and
+      // left the end alone) the finalizer runs as on the constructor path:
+      // in TeX the original never returns, so `\end`'s `\endgroup` is never
+      // reached, and here an explicit one met the document constructor's
+      // mode frame above the begin's group ("\endgroup Attempt to close a
+      // group that switched to mode internal_vertical" at `\end{document}`,
+      // seven manuals in sweep 83: yafoot-man, guitartabs, zanabazr, …).
       let mut tks = before.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("end"));
-      if !orig_end {
-        tks.push(T_CS!("\\enddocument"));
-      }
+      tks.push(T_CS!("\\enddocument"));
       tks.push(T_CS!("\\par"));
       tks.push(T_CS!("\\endgroup"));
-      if orig_end && is_defined_token(&t) {
-        tks.push(t);
-      }
       tks.extend(use_hook("after"));
       if let Some(afterend_toks) = after {
         tks.extend(afterend_toks.unlist())

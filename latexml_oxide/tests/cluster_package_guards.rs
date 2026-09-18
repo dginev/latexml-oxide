@@ -1176,6 +1176,30 @@ mod document_indirection {
     );
   }
 
+  /// A package wrapping `\document` around the original and leaving
+  /// `\enddocument` alone (dblfnote.sty:210-211 `\let\dfn@document\document
+  /// \def\document{\dfn@document …}`; etoolbox's `\AtEndPreamble` likewise):
+  /// the begin opens its group, the wrapper runs the original constructor
+  /// inside it, and `\end{document}` finalizes as on the constructor path —
+  /// in TeX the original `\enddocument` never returns, so `\end`'s
+  /// `\endgroup` is never reached; an explicit one met the constructor's
+  /// mode frame ("\endgroup Attempt to close a group that switched to mode
+  /// internal_vertical", seven manuals in sweep 83: yafoot-man, guitartabs,
+  /// zanabazr, recorder-fingering, …).
+  #[test]
+  fn package_wrapped_document_finalizes_without_closing_the_begin_group() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\let\\dfn@document\\document\n\\def\\document{\\dfn@document\\def\\wrapped{WRAPPED}}\n\\makeatother\n\\begin{document}\nBody \\wrapped.\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("open groups"), "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "document",
+      &[],
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>Body WRAPPED.</p></para></document>"##,
+    );
+  }
+
   /// A renewed `document` is a normal environment, grouped: l3news.tex:109
   /// wraps `\addtocontents` per issue (`\let\saved@addtocontents
   /// \addtocontents` then `\renewcommand`); without the group the wrapper

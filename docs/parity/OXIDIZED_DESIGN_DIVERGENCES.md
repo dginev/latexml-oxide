@@ -7473,6 +7473,17 @@ absorb-a-subfile idiom (exam-n.cls:1348 `\includequestion`: `\let\document
 \@empty \let\enddocument\endinput \input{…}`) had its begin open a group its
 end never closed (`\endinput` is a closure, not a user macro; sweep 82). Guard
 `document_indirection::included_subfile_document_closes_its_group`. Batch 56cl.
+The end side's three cases (batch 56cn): a user-macro `\enddocument` runs
+(then `\par\endgroup` if the begin opened a group); a non-original closure
+(`\endinput`) runs and the group closes; the ORIGINAL `\enddocument` takes
+the finalizer alone even when the begin opened a group — a package that
+wraps `\document` around the original (dblfnote.sty:210-211
+`\let\dfn@document\document \def\document{\dfn@document …}`, etoolbox-style
+patches) runs the constructor inside that group, so its mode frame sits
+above it; in TeX the original never returns and `\end`'s `\endgroup` is
+unreachable, and an explicit one met that frame (seven manuals in sweep
+83: yafoot-man, guitartabs, zanabazr, recorder-fingering, …). Guard
+`document_indirection::package_wrapped_document_finalizes_without_closing_the_begin_group`.
 
 ### 233. frontespizio typesets its title page inline
 
