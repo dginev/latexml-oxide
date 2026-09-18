@@ -20477,13 +20477,12 @@ mod kernel_fallbacks_never_block_newcommand {
       title_at < first_creator && title_at < first_para,
       "frontmatter must precede every body paragraph:\n{xml}"
     );
-    // The class's `\@maketitle` scaffolding is discarded as Perl does: the
-    // body starts at the section, with no deposited empty paragraph or page
-    // break before it.
-    let section_at = xml.find("<section").expect("section");
+    // What the class's `\@maketitle` still typesets beyond the captured stores
+    // (its journal banner, a "(Received )" label) is deposited AFTER the
+    // frontmatter by `\lx@deposit@maketitle`, never before it.
     assert!(
-      first_para > section_at && !xml[..section_at].contains("<pagination"),
-      "no maketitle scaffolding may precede the body:\n{xml}"
+      xml.find("<pubnote>").expect("pubnote") < first_para,
+      "the frontmatter is complete before any deposited paragraph:\n{xml}"
     );
     // The affiliations are frontmatter contacts linked from the authors'
     // `$^{n,}$` superscripts, and the abstract, received date and
@@ -20573,11 +20572,7 @@ mod raw_class_stores_reroute_to_frontmatter {
     );
     let title_at = xml.find("<title>").expect("title");
     let first_para = xml.find("<para").unwrap_or(usize::MAX);
-    let section_at = xml.find("<section").expect("section");
-    assert!(
-      title_at < first_para && first_para > section_at,
-      "frontmatter first, no scaffolding:\n{xml}"
-    );
+    assert!(title_at < first_para, "frontmatter first:\n{xml}");
   }
 
   /// Only table names with a store body are touched: a store named `\logo`
@@ -20605,15 +20600,108 @@ mod raw_class_stores_reroute_to_frontmatter {
       &[],
       r##"<keywords name="Keywords: ">alpha, beta</keywords>"##,
     );
-    assert!(
-      !xml.contains("LOGO"),
-      "a non-metadata store is left to the discarded \\@maketitle:\n{xml}"
+    assert_eq!(
+      xml.matches("LOGO").count(),
+      1,
+      "the uncaptured store deposits once:\n{xml}"
     );
+    assert_eq!(
+      xml.matches("alpha, beta").count(),
+      1,
+      "a captured store is not deposited again:\n{xml}"
+    );
+    latexml::util::test::assert_element(&xml, "p", &["align="], r##"<p align="center">LOGO</p>"##);
+    assert!(
+      xml.contains(r##"<p><text font="bold">12.34</text></p>"##),
+      "the non-store \\pacs stays the class's own:\n{xml}"
+    );
+  }
+}
+
+mod pgfkeys_native_accessors {
+  //! Native pgfkeys dispatch, slice 0 (`pgfkeys_code_tex.rs`): the raw
+  //! `pgfkeys.code.tex` loads whole and only the leaf accessors are native, on
+  //! the raw `\pgfk@<key>` storage. The differential harness converts each
+  //! fixture with the natives ON and OFF (`LATEXML_PGFKEYS_NATIVE=0`) and
+  //! requires byte-identical core XML, so any semantic drift is a diff.
+
+  fn both_ways(fixture: &str) -> String {
+    let tex = std::fs::read_to_string(format!("tests/cluster_regressions/pgfkeys/{fixture}.tex"))
+      .expect("fixture");
+    unsafe { std::env::remove_var("LATEXML_PGFKEYS_NATIVE") };
+    let (stderr_on, on) = super::convert(&tex, true);
+    assert_eq!(super::error_count(&stderr_on), 0, "native ON: {stderr_on}");
+    unsafe { std::env::set_var("LATEXML_PGFKEYS_NATIVE", "0") };
+    let (stderr_off, off) = super::convert(&tex, true);
+    unsafe { std::env::remove_var("LATEXML_PGFKEYS_NATIVE") };
+    assert_eq!(
+      super::error_count(&stderr_off),
+      0,
+      "native OFF: {stderr_off}"
+    );
+    assert_eq!(
+      on, off,
+      "native and raw accessors must give byte-identical XML for {fixture}"
+    );
+    on
+  }
+
+  /// `\pgfkeyssetvalue`/`\pgfkeysaddvalue`/`\pgfkeysgetvalue`/`\pgfkeysvalueof`/
+  /// `\pgfkeysifdefined`/`\pgfkeyslet`/`\pgfkeysifassignable`, including a
+  /// stored value carrying `#` parameter characters.
+  #[test]
+  fn accessors_match_the_raw_engine() {
+    let xml = both_ways("accessors");
     latexml::util::test::assert_element(
       &xml,
       "p",
       &[],
-      r##"<p><text font="bold">12.34</text></p>"##,
+      r##"<p>A:(2cm-3cm). B:(2cm-3cm). C:yes. D:no. E:(2cm-3cm). F:yesG:noH:yes. I:relax. J:undefined. K:[(2cm-3cm)].L:(2cm-3cm). N:yesO:yes.</p>"##,
     );
+  }
+
+  /// `.code`, `.code 2 args`, `.style` with arguments, `.append style`.
+  #[test]
+  fn code_and_style_keys_match() {
+    let xml = both_ways("code_style");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[a:1][b:2;3][a:4][b:x;y] [a:5][b:x;y][a:z] [a:6][b:x;y][a:z]</p>"##,
+    );
+  }
+
+  /// `.initial`, `.default`, `.get`, `.store in`, `.is choice`, `.is if`.
+  #[test]
+  fn initial_default_choice_keys_match() {
+    let xml = both_ways("initial_default");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>A:7. B:9. C:8. D:10. [two] E:on.</p>"##,
+    );
+  }
+
+  /// `/.cd` mid-list, relative keys, `\pgfqkeys`, `\pgfkeysalso`, the
+  /// `.unknown` handler with `\pgfkeyscurrentname`.
+  #[test]
+  fn paths_and_unknown_keys_match() {
+    let xml = both_ways("cd_qkeys");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[ax:1][bx:2] [ax:3][bx:4][ax:5] [bx:6] [unknown nokey:7]</p>"##,
+    );
+  }
+
+  /// A styled tikz node with a `.default` and a tcolorbox style: the real
+  /// consumers of the key tree.
+  #[test]
+  fn tikz_and_tcolorbox_styles_match() {
+    let xml = both_ways("tikz_tcb");
+    assert!(xml.matches("<svg:g").count() > 0, "{xml}");
   }
 }

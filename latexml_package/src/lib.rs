@@ -797,6 +797,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::pgfmath_code_tex::load_definitions,
   ),
   (
+    "pgfkeys",
+    "code.tex",
+    package::pgfkeys_code_tex::load_definitions,
+  ),
+  (
     "pdfmanagement",
     "sty",
     package::pdfmanagement_sty::load_definitions,

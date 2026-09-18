@@ -1,0 +1,16 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+\pgfkeyssetvalue{/pk/len}{2cm-3cm}\pgfkeyssetvalue{/pk/swap}{{#2}{#1}}
+\pgfkeysaddvalue{/pk/len}{(}{)}
+\pgfkeysgetvalue{/pk/len}\mylen A:\mylen.
+B:\pgfkeysvalueof{/pk/len}.
+\pgfkeysifdefined{/pk/len}{C:yes}{C:no}.
+\pgfkeysifdefined{/pk/none}{D:yes}{D:no}.
+\pgfkeyslet{/pk/alias}\mylen E:\pgfkeysvalueof{/pk/alias}.
+\pgfkeys{/pk/cmd/.code={[#1]}, /pk/sty/.style={/pk/cmd=#1}}\pgfkeysifassignable{/pk/cmd}{F:yes}{F:no}\pgfkeysifassignable{/pk/none}{G:yes}{G:no}\pgfkeysifassignable{/pk/sty}{H:yes}{H:no}.
+\pgfkeysgetvalue{/pk/none}\nothing\ifx\nothing\relax I:relax\else I:def\fi.
+J:\pgfkeysvalueof{/pk/undef}\pgfkeysifdefined{/pk/undef}{defined}{undefined}.
+{\pgfkeysaddvalue{/pk/len}{[}{]}K:\pgfkeysvalueof{/pk/len}.}L:\pgfkeysvalueof{/pk/len}.
+\pgfkeyslet{/pk/eq}=\relax\pgfkeysifdefined{/pk/eq}{N:yes}{N:no}\pgfkeysifassignable{/pk/eq}{O:yes}{O:no}.
+\end{document}

@@ -350,6 +350,7 @@ pub mod pdftexcmds_sty;
 pub mod pdfx_sty;
 pub mod pgf_sty;
 pub mod pgfcircutils_tex;
+pub mod pgfkeys_code_tex;
 pub mod pgfkeys_sty;
 pub mod pgfmath_code_tex;
 pub mod pgfmath_sty;

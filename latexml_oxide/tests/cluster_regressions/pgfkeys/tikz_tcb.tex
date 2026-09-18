@@ -1,0 +1,8 @@
+\documentclass{article}
+\usepackage{tikz}\usepackage{tcolorbox}
+\tikzset{pknode/.style={draw, circle, fill=#1, minimum size=4mm}, pknode/.default=gray}
+\tcbset{pkbox/.style={colback=#1, colframe=black, title=T}}
+\begin{document}
+\begin{tikzpicture}\node[pknode] at (0,0) {a}; \node[pknode=red] at (1,0) {b};\end{tikzpicture}
+\begin{tcolorbox}[pkbox=white]Box.\end{tcolorbox}
+\end{document}

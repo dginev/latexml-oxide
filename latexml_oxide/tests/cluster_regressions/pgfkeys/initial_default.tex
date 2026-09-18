@@ -1,0 +1,11 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\newif\ifpkf
+\begin{document}
+\pgfkeys{/pk/w/.initial=7, /pk/w/.default=9, /pk/w/.get=\w}A:\w.
+\pgfkeys{/pk/w}B:\pgfkeysvalueof{/pk/w}.
+\pgfkeys{/pk/w=8}C:\pgfkeysvalueof{/pk/w}.
+\pgfkeys{/pk/v/.store in=\vv, /pk/v=10}D:\vv.
+\pgfkeys{/pk/u/.is choice, /pk/u/one/.code={[one]}, /pk/u/two/.code={[two]}, /pk/u=two}
+\pgfkeys{/pk/f/.is if=pkf, /pk/f=true}\ifpkf E:on\else E:off\fi.
+\end{document}

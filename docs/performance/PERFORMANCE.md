@@ -1017,7 +1017,26 @@ slice 1; `\pgfkeysdef` family: slice 2). Handlers stay raw (they are keys under
 complete than Perl's abandoned engine (its stubbed filtering/family/syntax
 handlers, `pgfkeys.code.tex.ltxml:170/463/522`, run real TeX here). TDD: an
 ON/OFF switch and ten ≤15-line fixtures requiring byte-identical core XML; bars
-zx_full 25.42 G, tcb_full 18.23 G, keys_heavy 15.18 G, picC unchanged. Not lever inputs: chemobabel
+zx_full 25.42 G, tcb_full 18.23 G, keys_heavy 15.18 G, picC unchanged.
+
+**Slice 0 landed (batch 56dk): the eight leaf accessors native**
+(`pgfkeys_code_tex.rs`: `\pgfkeys@ifcsname`, `\pgfkeysifdefined`,
+`\pgfkeysifassignable`, `\pgfkeysgetvalue`, `\pgfkeyslet`, `\pgfkeyssetvalue`,
+`\pgfkeysaddvalue`, `\pgfkeysvalueof`; the raw file loads whole first; values
+stored verbatim, parameter-free and unpacked; `\pgfkeysvalueof` `\relax`-defines
+an undefined name as `\csname` does — the differential harness caught that one).
+Measured, byte-identical XML: zx_full 25.51 G → 23.28 G (−8.7 %), tcb_full
+18.31 G → 17.59 G (−3.9 %), keys_heavy 15.23 G → 14.74 G (−3.2 %), picC unchanged
+(datatool-bound tripwire). Five fixtures under
+`latexml_oxide/tests/cluster_regressions/pgfkeys/` run ON and OFF: the
+`LATEXML_PGFKEYS_NATIVE=0` switch (read once at binding load, a development
+differential like `LATEXML_POST_STREAM_SPLIT`) keeps the raw accessors, and
+the guard requires byte-identical core XML both ways. The review of slice 0
+found two more divergences the first fixtures did not reach — `\pgfkeysvalueof`
+on an undefined key is the raw file's `\pgfkeys@relax`, never a `\csname`
+definition of the key (:193-194), and `\pgfkeysaddvalue` assigns locally
+(:125-135) — both fixed and pinned by the extended accessors fixture. Next: slice 1, the `\pgfkeys{}`/`\pgfkeysalso{}`/
+`\pgfqkeys{}{}` parse+dispatch loop with the three-probe raw fallback. Not lever inputs: chemobabel
 (parked, LuaTeX-ja), lie-hasse (runaway TokenLimit after a mode-frame error —
 separate bug), wheelchart (MemoryBudget runaway), l3kernel/source3 (memory). Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`

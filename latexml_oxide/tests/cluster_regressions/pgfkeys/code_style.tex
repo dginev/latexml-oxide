@@ -1,0 +1,8 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+\pgfkeys{/pk/.cd, a/.code={[a:#1]}, b/.code 2 args={[b:#1;#2]}, s/.style={/pk/a=#1, /pk/b={x}{y}}}
+\pgfkeys{/pk/a=1, /pk/b={2}{3}, /pk/s=4}
+\pgfkeys{/pk/s/.append style={/pk/a=z}}\pgfkeys{/pk/s=5}
+\pgfkeys{/pk/t/.style={/pk/s=#1}, /pk/t=6}
+\end{document}
