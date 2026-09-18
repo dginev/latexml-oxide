@@ -70,10 +70,15 @@ const STORE_SETTERS: &[(&str, &str)] = &[
   ("speaker", "\\lx@add@creator[role=speaker]{#1}"),
 ];
 
-/// Is `body` a pure one-argument store — `\gdef\@x{#1}`, `\def\@x{#1}`,
-/// `\xdef`/`\edef`, `\g@addto@macro\@x{#1}`, with any `\long`/`\global`/
-/// `\protected` prefixes — and nothing else?
-pub fn is_store_body(body: &Tokens) -> bool {
+/// Is `body` a pure one-argument store into the setter's OWN `\@<name>` —
+/// `\gdef\@name{#1}`, `\def\@name{#1}`, `\xdef`/`\edef`,
+/// `\g@addto@macro\@name{#1}`, with any `\long`/`\global`/`\protected`
+/// prefixes — and nothing else? The `\@<name>` convention is the title-page
+/// store (`\@title`, ptptex `\@inst`, jpsj2 `\@abst`); a setter storing
+/// elsewhere feeds some other reader — letter.cls's `\address` fills
+/// `\fromaddress` for `\opening`, afthesis's `\addr@ss` its own title code
+/// (sweep 93: rerouting those left the readers undefined) — and stays raw.
+pub fn is_store_body(name: &str, body: &Tokens) -> bool {
   let toks = body.unlist_ref();
   let mut i = 0;
   while i < toks.len() && toks[i].with_str(|s| matches!(s, "\\long" | "\\global" | "\\protected")) {
@@ -90,8 +95,10 @@ pub fn is_store_body(body: &Tokens) -> bool {
         "\\gdef" | "\\def" | "\\xdef" | "\\edef" | "\\g@addto@macro"
       )
     });
+  let own_store = s!("\\@{name}");
   is_def
     && rest[1].get_catcode() == Catcode::CS
+    && rest[1].with_str(|s| s == own_store)
     && rest[2].get_catcode() == Catcode::BEGIN
     && rest[3].get_catcode() == Catcode::ARG
     && rest[3].with_str(|s| s == "1")
@@ -106,7 +113,9 @@ fn store_setter_body(name: &str) -> Result<Option<Tokens>> {
   };
   let one_arg = defn.get_parameters().is_some_and(|p| p.get_num_args() == 1);
   match defn.get_expansion() {
-    Some(ExpansionBody::Tokens(body)) if one_arg && is_store_body(body) => Ok(Some(body.clone())),
+    Some(ExpansionBody::Tokens(body)) if one_arg && is_store_body(name, body) => {
+      Ok(Some(body.clone()))
+    },
     _ => Ok(None),
   }
 }
@@ -115,22 +124,34 @@ fn store_setter_body(name: &str) -> Result<Option<Tokens>> {
 pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let mut rerouted: Vec<&str> = Vec::new();
   for (name, api) in STORE_SETTERS {
-    if store_setter_body(name)?.is_none() {
+    let Some(store) = store_setter_body(name)? else {
       continue;
-    }
+    };
+    // The API call, then the class's own store as it was: the class's other
+    // readers of `\@<name>` (gaceta checks `\@editor` for its section
+    // editor line) keep seeing the value; only `\@maketitle` is discarded.
     let params = convert_latex_args(1, None)?;
-    let body = mouth::tokenize_internal(TeXString::assembled(s!("{api}")));
-    DefMacro!(T_CS!(&s!("\\{name}")), params, body);
+    let mut body = mouth::tokenize_internal(TeXString::assembled(s!("{api}"))).unlist();
+    body.extend(store.unlist());
+    DefMacro!(T_CS!(&s!("\\{name}")), params, Tokens::new(body));
     rerouted.push(name);
   }
   if !rerouted.is_empty() {
-    // The stores are captured; the class's `\@maketitle` is their typesetter
-    // and nothing else, discarded as Perl's locked `\maketitle` discards it.
-    let_i(
-      &T_CS!("\\@maketitle"),
-      &T_CS!("\\@empty"),
-      Some(Scope::Global),
-    );
+    // Inside the deposit group the captured stores read as empty, so a kept
+    // `\@maketitle` never typesets them twice.
+    let mut nulls: Vec<Token> = Vec::new();
+    for name in &rerouted {
+      nulls.extend(
+        mouth::tokenize_internal(TeXString::assembled(s!("\\let\\@{name}\\@empty"))).unlist(),
+      );
+    }
+    DefMacro!(T_CS!("\\lx@captured@stores"), None, Tokens::new(nulls));
+    // The class's `\@maketitle` is NOT discarded here: `\lx@deposit@maketitle`
+    // (sect05.rs) digests it with the captured stores nulled and keeps the
+    // result only if it typeset anything — ptptex's (every field captured)
+    // yields nothing and is dropped; bfhthesis's degree/advisor block beside
+    // its captured `\@institution` is kept (sweep 93 lost half of two bfh-ci
+    // manuals' recall to an unconditional discard).
     Info!(
       "frontmatter",
       cls,

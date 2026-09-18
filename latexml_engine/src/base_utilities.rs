@@ -795,10 +795,14 @@ LoadDefinitions!({
   // `\def`, not `\providecommand`: inside author content `\inst{n}` ALWAYS
   // means "link to affiliation n" (llncs' own `\inst` is this same request),
   // and K11 may have rerouted a raw class's document-level `\inst` (the
-  // affiliation LIST setter, ptptex/jpsj2) before any author is read.
+  // affiliation LIST setter, ptptex/jpsj2) before any author is read. A
+  // save/restore pair, not a group: author content may carry a `\\` line
+  // break (keyval2e-guide `\author{Name \Email{…}\\Preston, …}`), and an
+  // extra `\bgroup…\egroup` around it adds one more mode-check error per
+  // author.
   DefMacro!(
     "\\lx@author@withinst{}",
-    "\\bgroup\\def\\inst##1{\\lx@inst@mark{##1}}#1\\egroup"
+    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@inst@mark{##1}}#1\\let\\inst\\lx@saved@inst"
   );
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
     let call = if is_footnote_symbol_operand(label.unlist_ref()) {
@@ -902,7 +906,7 @@ LoadDefinitions!({
   // document-level `\inst` is the affiliation LIST, not a label).
   DefMacro!(
     "\\lx@affiliation@withinst{}",
-    "\\bgroup\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}#1\\egroup"
+    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}#1\\let\\inst\\lx@saved@inst"
   );
   DefMacro!(
     "\\lx@add@altaffiliation[]{}",

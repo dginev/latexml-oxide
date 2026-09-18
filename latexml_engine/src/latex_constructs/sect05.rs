@@ -948,10 +948,27 @@ pub(crate) fn load() -> Result<()> {
   // The `\ifx…\@empty` guard makes this a no-op for the vast majority of papers.
   // Witness arXiv:2506.23854 (html_feedback#4281).
   DefMacro!("\\@maketitle", "");
-  DefMacro!(
-    "\\lx@deposit@maketitle",
-    r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\and\relax\@maketitle}\fi"
-  );
+  // `\lx@captured@stores` nulls, inside the deposit group, every store K11
+  // already routed to the frontmatter (`frontmatter_stores.rs` extends it
+  // per rerouted setter), so a kept `\@maketitle` deposits only what the
+  // frontmatter does not carry (bfhthesis's degree/advisor block beside its
+  // captured `\@institution`).
+  DefMacro!("\\lx@captured@stores", "");
+  // A primitive, not a macro: the deposit is digested first and kept only
+  // when it produced content. A class whose `\@maketitle` typesets nothing
+  // but captured stores (ptptex, every field in the frontmatter) yields
+  // empty centred paragraphs and a page break — dropped; bfhthesis's
+  // degree/advisor block beside its captured `\@institution` is kept.
+  DefPrimitive!("\\lx@deposit@maketitle", {
+    let deposit = digest(mouth::tokenize_internal(
+      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\and\relax\lx@captured@stores\@maketitle}\fi",
+    ))?;
+    if deposit.to_string().trim().is_empty() {
+      Ok(vec![])
+    } else {
+      Ok(vec![deposit])
+    }
+  });
 
   // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
