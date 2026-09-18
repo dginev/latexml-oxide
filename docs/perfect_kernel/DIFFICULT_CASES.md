@@ -353,14 +353,17 @@ the mechanism, its witnesses, and the disposition.
   loads babel before the class, `\sprache` breaks it). The only improvement is a per-class
   g-brief contrib binding placing those blocks in the flow: gain ≈ 0 on arXiv, parked.
   Root-causer `~/data/pk_agents/w23/regr83/letters/NOTES.md`.
-- **wrapstuff's wrapped box is dropped whole at 0 errors (RUST content loss, open 2026-09-18).**
+- **wrapstuff's wrapped box was dropped whole at 0 errors (RUST content loss, fixed batch 56cr).**
   `\begin{wrapstuff}[type=table,width=3cm]\caption{X}\begin{tabular}…\end{wrapstuff}` yields
   nothing — no caption, no tabular — while the surrounding text survives (probe
   `~/data/pk_agents/w23/regr83/lve/wrap.tex`). wrapstuff.sty builds the box with `\vbox`/`\setbox`
   and places it through `\parshape` machinery this engine does not carry into the flow; Perl
   cannot load the package at all. wrapstuff-doc-en still reaches 90.7 % (its examples are small);
-  latex-via-exemplos ex15 loses its wrapped table. Candidate: a wrapfig-style binding placing
-  the box as an inline float, as `wrapfig_sty.rs` does.
+  latex-via-exemplos ex15 lost its wrapped table. Root cause (`~/data/pk_agents/w23/regr85/
+  wrapstuff/NOTES.md`): the box is placed from the LaTeX2e paragraph hooks `para/begin`/
+  `para/end` (wrapstuff.sty:334, :539-552, :1905-1939), which neither engine models
+  (`\everypar` inert, `\par` runs no hooks). Fixed as a wrapfig-style inline-float binding
+  (`wrapstuff_sty.rs`; README exception list).
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so

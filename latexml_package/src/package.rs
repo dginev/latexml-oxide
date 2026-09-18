@@ -501,6 +501,7 @@ pub mod vntex_sty;
 pub mod wasysym_sty;
 pub mod wiki_sty;
 pub mod wrapfig_sty;
+pub mod wrapstuff_sty;
 pub mod xargs_sty;
 pub mod xcolor_sty;
 pub mod xfor_sty;

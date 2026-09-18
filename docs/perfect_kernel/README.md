@@ -35,7 +35,10 @@ command inside a `\fancypagestyle` body both engines discard),
 `frontespizio_sty.rs` (the package typesets its title page in a SECOND pdflatex
 run on a generated file and re-includes it as a graphic — external compilation,
 out of scope like shell-escape; the binding forces the package's own inline
-route, batch 56cj). A raw-first
+route, batch 56cj), `wrapstuff_sty.rs` (the package places its box from the
+LaTeX2e paragraph hooks `para/begin`/`para/end` with `\prevgraf`/`\parshape`
+arithmetic — the paragraph builder neither engine models; bound as wrapfig's
+inline float, which Perl binds the same way, batch 56cr). A raw-first
 attempt is still the default for every new cluster; a new binding requires a
 justification of this kind in the file header.
 

@@ -699,6 +699,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("mathdots", "sty", package::mathdots_sty::load_definitions),
   ("wasysym", "sty", package::wasysym_sty::load_definitions),
   ("wrapfig", "sty", package::wrapfig_sty::load_definitions),
+  ("wrapstuff", "sty", package::wrapstuff_sty::load_definitions),
   ("xkeyval", "sty", package::xkeyval_sty::load_definitions),
   ("xfor", "sty", package::xfor_sty::load_definitions),
   ("mfirstuc", "sty", package::mfirstuc_sty::load_definitions),
