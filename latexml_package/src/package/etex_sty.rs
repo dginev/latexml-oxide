@@ -4,6 +4,13 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: etex.sty.ltxml
   LoadPool!("eTeX");
+  // etex.sty:172 `\def\eTeX{$\m@th\varepsilon$-\TeX}` — the engine logo the
+  // package defines beside its register allocation; absent from Perl's
+  // etex.sty.ltxml. (bibleref-parse's manual :138 uses `\eTeX` WITHOUT
+  // loading etex — etoolbox.sty:29-34 skips it once latex.ltx has
+  // `\extrafloats` — so pdflatex reports the same undefined control
+  // sequence there; that one stays.)
+  DefMacro!("\\eTeX", "$\\m@th\\varepsilon$-\\TeX");
   // etex.sty register-allocator macros (etex.sty L332-348). Real defs
   // use `\et@xglob`/`\et@xloc` to allocate from extended register
   // pools (Numbers 256+ for count/dimen/etc.). For our purposes the

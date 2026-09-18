@@ -907,6 +907,35 @@ macro_rules! DefLigature {
 /// `\string`-and-re-read of a word's tokens — under the document's catcodes
 /// (`@` OTHER) as well as a package's (`\lx@accent@.` split into the undefined
 /// `\lx@accent@` in titlecaps and `\lx` in grafcet, sweep 74).
+/// T1's `\DeclareTextComposite` for this engine: the accent applied to ONE
+/// alphabetic letter whose NFC with the combiner is a single character is that
+/// character (the letter's catcode kept); otherwise `None` and the accent
+/// takes the `\lx@applyaccent` primitive. See `DefAccent!`.
+pub fn accent_composite(
+  letter: &[latexml_core::token::Token],
+  combiner: char,
+) -> Option<latexml_core::token::Token> {
+  use latexml_core::token::{Catcode, Token};
+  use unicode_normalization::UnicodeNormalization;
+  let [t] = letter else { return None };
+  if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+    return None;
+  }
+  let c = t.with_str(|s| {
+    let mut it = s.chars();
+    match (it.next(), it.next()) {
+      (Some(c), None) if c.is_alphabetic() => Some(c),
+      _ => None,
+    }
+  })?;
+  let composed: String = format!("{c}{combiner}").nfc().collect();
+  let mut it = composed.chars();
+  match (it.next(), it.next()) {
+    (Some(cc), None) => Some(Token::new(cc.to_string(), t.get_catcode())),
+    _ => None,
+  }
+}
+
 pub fn accent_inner_name(accent: &str) -> String {
   let word = match &accent[1..] {
     "'" => "acute",
@@ -969,11 +998,37 @@ macro_rules! DefAccent {
     // accent; with `\. ` shared, the redefinition overwrote the snapshot's
     // target and `\.o` cycled forever (latexsheet-esmx, 420 s; batch 56bs).
     let inner_cs = T_CS!($crate::setup_binding_language::accent_inner_name($accent));
-    def_macro(inner_cs.clone(), plain_param, ExpansionBody::Tokens(Tokens!(
-        T_CS!("\\lx@applyaccent"), T_OTHER!($accent),
-        T_OTHER_CHAR!($combiningchar), T_OTHER!($standalonechar),
-        T_BEGIN!(), T_ARG!(1), T_END!())),
-      Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}))?;
+    // T1's `\DeclareTextComposite` (t1enc.def; latex.ltx `\DeclareTextComposite`
+    // lowercases the slot into the CHARACTER token): under T1 the accent on
+    // a letter with a precomposed glyph EXPANDS to that character — `\"o`
+    // is the char `ö` after one expansion step, an unexpandable char token
+    // that ends any expand-until-not-a-cs loop. Only letters without a slot
+    // reach `\add@accent` and the `\accent` primitive. Mirror that: a
+    // single letter whose NFC with the combiner is one character expands to
+    // it (the letter's catcode kept); everything else — an empty group, a
+    // multi-letter group, a non-letter, a pair with no precomposed form —
+    // takes `\lx@applyaccent`, the stomach primitive (tex_character.rs).
+    // Without this, bibleref-parse.sty:495-507's `\brp@@expandcs` —
+    // `\expandafter\brp@@expandcs #1` while `#1` is a control sequence —
+    // re-read the inert `\lx@applyaccent` forever (`\brp@parse{IK\"onige}`;
+    // the manual's German book names, 420 s timeout; OT1 pdflatex hangs the
+    // same way, T1 pdflatex finishes: the composite is what terminates it).
+    let accent_str: &'static str = $accent;
+    let combiner: char = $combiningchar;
+    let standalone_str: &'static str = $standalonechar;
+    def_macro(inner_cs.clone(), plain_param, ExpansionBody::Closure(Rc::new(move |args| {
+      let letter = args.first().map(|a| a.unlist_cow().into_owned()).unwrap_or_default();
+      if let Some(composed) = $crate::setup_binding_language::accent_composite(&letter, combiner) {
+        return Ok(Tokens!(composed));
+      }
+      let mut toks = vec![
+        T_CS!("\\lx@applyaccent"), T_OTHER!(accent_str),
+        Token::new(combiner.to_string(), Catcode::OTHER), T_OTHER!(standalone_str), T_BEGIN!(),
+      ];
+      toks.extend(letter);
+      toks.push(T_END!());
+      Ok(Tokens::new(toks))
+    })), Some(ExpandableOptions{protected: true, ..ExpandableOptions::default()}))?;
     def_macro(T_CS!($accent), None, ExpansionBody::Tokens(Tokens!(inner_cs)),
       None)?;
   }};

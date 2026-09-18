@@ -6408,6 +6408,24 @@ family.
 **Upstream**: branch-contained per user directive (perfect_kernel);
 Perl-filing candidate.
 
+**Batch 56cq — the composite step.** The inner accent macro now does what
+T1's `\DeclareTextComposite` does (latex.ltx lowercases the slot into the
+CHARACTER token): applied to one alphabetic letter whose NFC with the
+combiner is a single character, it EXPANDS to that character
+(`setup_binding_language::accent_composite`, the letter's catcode kept); an
+empty or multi-letter group, a digit, or a pair with no precomposed form
+still expands to `\lx@applyaccent`, the stomach primitive. bibleref-parse
+.sty:495-507 `\brp@@expandcs` re-expands a control sequence with
+`\expandafter` until a character comes back: the inert primitive looped for
+the whole 420 s cap on the manual's German book names (`\brp@parse
+{IK\"onige}`); OT1 pdflatex hangs the same way, T1 pdflatex finishes because
+the composite ends the loop. Observable deltas: `\texttt{\~n \^a}` gives
+`ñ â` (T1 pdflatex's glyphs; the former `~n ^a` was Perl's typewriter hack,
+kept for the empty-group idiom `\~{}`), and a math `tex=` reversion shows
+the composed letter. Guards
+`accent_composite_expansion::{expand_until_character_loop_over_an_accent_terminates,
+accent_on_a_letter_expands_to_the_precomposed_character}`.
+
 ### 171. Required-brace hunt expands `\protected` macros (scan_left_brace fidelity)
 
 **Perl/previous Rust behavior**: while hunting the required `{` of a
