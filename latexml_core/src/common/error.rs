@@ -864,11 +864,19 @@ macro_rules! Fatal {
 macro_rules! fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
-    return Err(LatexmlError {
+    let __fatal_err = LatexmlError {
       target:   $target,
       category: $category,
       message:  $message.to_string(),
-    });
+    };
+    // The RSS fuse and the conversion deadline (`stomach::check_timeout`)
+    // raise through THIS form, so the resource-fatal latch must be recorded
+    // here as in `Fatal!` — otherwise `resource_fatal_latched()` never fires
+    // for a memory-budget abort and the post-Fatal closer noise it gates
+    // (batch 56cm) is reported anyway (datatool-user +12,
+    // glossaries-extra-manual +11 in sweep 84).
+    $crate::common::error::record_last_fatal(&__fatal_err);
+    return Err(__fatal_err);
   }};
 }
 
@@ -1278,6 +1286,35 @@ mod tests {
     assert_eq!(get_status(LogStatus::Warning), 2);
     assert_eq!(get_status(LogStatus::Error), 1);
     assert_eq!(get_status(LogStatus::Fatal), 0);
+  }
+
+  /// The lowercase `fatal!` form (the RSS fuse, the conversion deadline)
+  /// latches too; a non-resource target still does not.
+  #[test]
+  fn lowercase_fatal_macro_latches_resource_fatals() {
+    initialize_report();
+    fn fuse() -> Result<()> {
+      fatal!(Timeout, MemoryBudget, "Memory budget exceeded (synthetic)");
+    }
+    let err = fuse().unwrap_err();
+    assert!(matches!(err.category, ErrorCategory::MemoryBudget));
+    assert!(
+      resource_fatal_latched(),
+      "the fuse's fatal must set the latch"
+    );
+    let latched = take_last_resource_fatal().expect("latch holds the fuse's fatal");
+    assert!(matches!(latched.category, ErrorCategory::MemoryBudget));
+    initialize_report();
+    assert!(!resource_fatal_latched(), "cleared per conversion");
+    fn missing() -> Result<()> {
+      fatal!(Mouth, MissingFile, "Can't find file x");
+    }
+    let _ = missing();
+    assert!(
+      !resource_fatal_latched(),
+      "a Mouth-target fatal is not a resource fatal"
+    );
+    initialize_report();
   }
 
   #[test]
