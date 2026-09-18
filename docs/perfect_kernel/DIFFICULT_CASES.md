@@ -364,6 +364,14 @@ the mechanism, its witnesses, and the disposition.
   `para/end` (wrapstuff.sty:334, :539-552, :1905-1939), which neither engine models
   (`\everypar` inert, `\par` runs no hooks). Fixed as a wrapfig-style inline-float binding
   (`wrapstuff_sty.rs`; README exception list).
+- **The recall audit's "uncategorized" 45–60 % family, classified (2026-09-18;
+  `~/data/pk_agents/w23/regr85/other_recall/NOTES.md`).** pecha and showexpl are PDF-font /
+  verbatim-tokenization artifacts; figbib is a bibtex multipass (`.fig` aux, SHARED); quotchap
+  and fbithesis are Perl error-dumps (undefined environments leaking their arguments as text
+  inflate Perl's recall; both engines lose the epigraph / title page); timeop was already fixed.
+  ONE current RUST-ONLY loss: a picture nested in a scaled box inside a picture was never
+  SVG-converted (fixed batch 56ct; simplecd). Residual: sim-os-menus' tcolorbox terminal skins
+  (TermWin/TermUnix/TermMac text) still lost — open.
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so

@@ -518,11 +518,36 @@ impl Processor for SVG {
     if !nodes.is_empty() {
       doc.add_namespace("svg", SVG_URI);
     }
-    for node in &nodes {
-      if let Some(svg) = self.process_svg(&doc, node) {
-        let node_mut = node.clone();
-        doc.replace_node(&node_mut, &[svg]);
+    // Every `ltx:picture` gets converted, as Perl's SVG.pm does: its
+    // `convertNode` MOVES a foreign subtree into the `svg:foreignObject`
+    // (SVG.pm:155-182), so a picture NESTED in that subtree — the
+    // `\makebox(w,h)` inside a `\scalebox`ed box re-opens one — keeps its
+    // identity and is converted by the next iteration in place. Here
+    // `convert_foreign` deep-CLONES the subtree (document.rs `append_clone`)
+    // and `replace_node` detaches the original, so the pre-collected inner
+    // picture was processed detached and its live clone stayed a raw
+    // `ltx:picture` — rendered `as-TeX` into an empty span, its text lost
+    // (`\scalebox{4.5}{\makebox{\parbox{2cm}{…}}}` in a picture; simplecd's
+    // jewel-case labels, sim-os-menus' terminal text). So: convert, then
+    // look for pictures again until none is left — each pass turns at least
+    // one raw picture into `svg:svg`, and nesting is finite.
+    let mut pending = nodes;
+    let mut passes = 0usize;
+    while !pending.is_empty() {
+      for node in &pending {
+        if node.get_parent().is_none() {
+          continue; // detached by an earlier replacement; its clone is live
+        }
+        if let Some(svg) = self.process_svg(&doc, node) {
+          let node_mut = node.clone();
+          doc.replace_node(&node_mut, &[svg]);
+        }
       }
+      passes += 1;
+      if passes > 64 {
+        break; // a picture that never converts must not loop forever
+      }
+      pending = self.to_process(&doc);
     }
     Ok(vec![doc])
   }
