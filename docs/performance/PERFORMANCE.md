@@ -945,6 +945,18 @@ rebuilt by `T_CS!` and dump replay, so a family-named token off the producer
 would misroute in `meaning_key`); MED risk, ≈1.5-2 %. (I) `unread_expansion`'s
 manual reverse-push loop as one `extend` — verify LLVM has not fused it; < 0.5 %.
 
+**Lever G measured and reverted (2026-09-18, design
+`~/data/pk_agents/w23/perf_pgf/leverG/NOTES.md`)**: the second meaning
+resolution costs only 0.72 % of cycles (`lookup_digestable_definition` under
+`invoke_token`; the round-2 2-3 % estimate was wrong), and carrying the
+resolved `Stored` from `read_x_token` to `invoke_token` on the stack — the
+low-risk shape, no cache, no invalidation — measured picC 459.6 G → 466.9 G
+(+1.6 %): the `Stored` clone on the read side costs more than the hashbrown
+probe it saves (`invoke_token` cloned only `entry.front()`; the read-side
+clone runs inside `with_meaning`'s borrow). Dead end; the thread-local-slot
+shape was ruled out in the design for a larger invalidation surface with
+the same clone.
+
 Cumulative on picC since the program opened: 559.5 G → 459.6 G instructions
 (−17.9 %); 4.97× pdflatex's 92.4 G (was 6.07×). The remaining gap is the token
 count itself — the tikz frontend binding emitting fewer tokens — the harder
