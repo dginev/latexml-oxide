@@ -7572,3 +7572,24 @@ on it.
 **Witnesses**: biblatex-apa/biblatex-apa-test, biblatex-apa6/biblatex-apa6-test.
 **Guard**: `06_cluster_bibliography::{pathful_bib_resource_falls_back_to_its_basename,
 refsection_optional_argument_registers_its_resources}`. Batch 56cs.
+
+### 236. `\bibliography` is locked against a raw `\@input{\jobname.bbl}` redefinition (Perl: overridden, nothing rendered)
+
+**Perl behavior**: `\bibliography Semiverbatim` (latex_constructs.pool.ltxml:3895) is
+an ordinary macro; a class or package that redefines it — paper.cls:933 (sfee),
+ltugboat.cls:1683, abntex2cite.sty:375, gbt7714.sty, the curve/fcavtex/
+nxuthesis/thuthesis/uafthesis classes — writes `\bibdata` to the `.aux` and
+`\@input{\jobname.bbl}`, a file only a bibtex run produces, and Perl renders no
+bibliography (its `.bib` list lives only in the consumed argument; the `.aux` is
+never re-read).
+**Rust behavior**: the macro is `locked` (sect11.rs), as `\thebibliography`
+already is: the raw redefinition is refused with an Info and the native route
+runs — a shipped `.bbl` if present, else the `.bib` session at post. A wrapper
+that extends the original loses its extras (a heading, single spacing), never
+the list.
+**Why**: bindings outrank raw; the wrapper's meaning IS "bibliography from
+these `.bib`s", which the native macro renders and the wrapper cannot.
+**Witnesses**: sfee/SFEE_author (Perl: Fatal), abntex2/abntex2cite (+ -alf),
+unbtex/unbtex-example.
+**Guard**: `06_cluster_bibliography::raw_bibliography_override_cannot_lose_the_bib_session`.
+Batch 56cx.

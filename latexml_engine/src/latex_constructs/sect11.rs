@@ -126,9 +126,21 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml L3891 — initial empty value
   def_macro_noop("\\the@lx@bibliography@ID")?;
 
+  // `locked`, beyond Perl (which lets a raw `\def\bibliography` take over —
+  // and then renders nothing): classes and packages redefine it to write
+  // `\bibdata` to the `.aux` and `\@input{\jobname.bbl}` — a file only a
+  // bibtex run produces (paper.cls:933 for sfee, ltugboat.cls:1683,
+  // abntex2cite.sty:375, gbt7714.sty, the curve/fcavtex/nxuthesis/thuthesis/
+  // uafthesis classes) — and the `.bib` list lives nowhere else (the `.aux`
+  // is never re-read), so the reference list vanished at 0 errors. The
+  // binding's route prefers a shipped `.bbl` and otherwise runs the `.bib`
+  // session, which is what every such wrapper means; bindings outrank raw
+  // (OXIDIZED_DESIGN_DIVERGENCES #236). A wrapper that extends the original
+  // is refused with an Info, as `\thebibliography`'s is.
   DefMacro!(
     "\\bibliography Semiverbatim",
-    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#
+    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#,
+    locked => true
   );
 
   DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {

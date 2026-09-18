@@ -3240,3 +3240,21 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
     r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1">1</ref>]</cite>.</p></para>"##,
   );
 }
+
+/// A class's raw `\def\bibliography#1{…\@input{\jobname.bbl}}` (paper.cls:933
+/// for sfee, ltugboat.cls:1683, abntex2cite.sty:375) inputs a file only a
+/// bibtex run produces, and the `.bib` list lives nowhere else — the native
+/// `\bibliography` is locked against it (#236), so the `.bib` session runs.
+/// Whole `<bibitem>`.
+#[test]
+fn raw_bibliography_override_cannot_lose_the_bib_session() {
+  let x = convert_and_post_contrib_clean(
+    "tests/cluster_regressions/bibliography_raw_override_family.tex",
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"abnt1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="abnt1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A numbered reference</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A numbered reference</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Standards</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
