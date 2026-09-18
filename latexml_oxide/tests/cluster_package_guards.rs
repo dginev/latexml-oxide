@@ -20619,9 +20619,10 @@ mod raw_class_stores_reroute_to_frontmatter {
 }
 
 mod pgfkeys_native_accessors {
-  //! Native pgfkeys dispatch, slice 0 (`pgfkeys_code_tex.rs`): the raw
-  //! `pgfkeys.code.tex` loads whole and only the leaf accessors are native, on
-  //! the raw `\pgfk@<key>` storage. The differential harness converts each
+  //! Native pgfkeys dispatch (`pgfkeys_code_tex.rs`): the raw
+  //! `pgfkeys.code.tex` loads whole; the leaf accessors (slice 0) and the
+  //! `\pgfkeys{}`/`\pgfkeysalso{}`/`\pgfqkeys{}{}` loop (slice 1) are native,
+  //! on the raw `\pgfk@<key>` storage and with the raw handlers. The differential harness converts each
   //! fixture with the natives ON and OFF (`LATEXML_PGFKEYS_NATIVE=0`) and
   //! requires byte-identical core XML, so any semantic drift is a diff.
 
@@ -20694,6 +20695,89 @@ mod pgfkeys_native_accessors {
       "p",
       &[],
       r##"<p>[ax:1][bx:2] [ax:3][bx:4][ax:5] [bx:6] [unknown nokey:7]</p>"##,
+    );
+  }
+
+  /// Slice 1's loop shapes: a re-entrant `\\pgfkeysalso` inside a `.code`,
+  /// a style, `/.cd` mid-list with the default path restored after the call,
+  /// `.value required` with a value, `.initial` used as the value, spaces and
+  /// nested braces around values, `.is family`, and — with first-char syntax
+  /// handlers on — an item with two leading spaces (a wrapper's `, #1`), which
+  /// `\\pgfkeys@syntax@handlers` skips whole (pgfkeys.code.tex:340) where the
+  /// plain path drops one (zx-calculus's `\\zxGenericMulti`, 242 errors).
+  #[test]
+  fn loop_shapes_match() {
+    let xml = both_ways("loop_shapes");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[b:1][a:in1][a:2] [a:3][a:4]A:/. [d:5] xB:x. [a:6][a:7][a:8] [ha:9] [b:0][a:in0][a:10][b:0][a:in0][a:11][a:12]</p>"##,
+    );
+  }
+
+  /// The raw loop's territory, handed back untouched: `/handler config=only
+  /// existing`, `\\pgfkeysfiltered`, family activation, first-char syntax
+  /// handlers.
+  #[test]
+  fn raw_fallback_shapes_match() {
+    let xml = both_ways("raw_fallbacks");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[unknown nokey/.code][a:1] [c:2] [a:3][b:4] [a:5] [?:?x]</p>"##,
+    );
+  }
+
+  /// A `.code` body runs IN the token stream (pgfkeys.code.tex:328), so it
+  /// may open an `\hbox` or a `\begin{center}` that later stream tokens
+  /// close — zx-calculus's `/tikz/on layer` shape
+  /// (tikzlibraryzx-calculus.code.tex:2415), which a nested digest of the
+  /// body broke with "Attempt to end mode restricted_horizontal" (29 errors on
+  /// one ZX circuit).
+  #[test]
+  fn code_bodies_run_in_the_stream() {
+    let xml = both_ways("inline_code");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>[in]boxed[after]</p>"##);
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[r#"align="center""#],
+      r##"<p align="center">centered text</p>"##,
+    );
+  }
+
+  /// `\pgfkeysvalueof` keeps the raw `\csname…\endcsname` shape
+  /// (pgfkeys.code.tex:194): the stored macro is reached in TWO expansion
+  /// steps, which circuitikz's `\unexpandedvalueof` counts with a triple
+  /// `\expandafter` (circuitikz-1.7.2-body.tex:987-998). The one-step native
+  /// of batch 56dk handed the checker the value's first token (`[H]ELLO`).
+  #[test]
+  fn valueof_expansion_depth_matches() {
+    let xml = both_ways("valueof_depth");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>[“pgfk@/my/k][ relax][HELLO]</p>"##);
+  }
+
+  /// The consumer itself: a circuitikz flipflop whose pin-presence tests run
+  /// `\unexpandedvalueof` inside `\ifx…\fi` blocks — circuitikzmanual.tex:7749
+  /// gained a stray `\fi` under the one-step native.
+  #[test]
+  fn circuitikz_flipflop_pins_match() {
+    let xml = both_ways("circuitikz_flipflop");
+    assert_eq!(xml.matches("<svg:path").count(), 11, "{xml}");
+    // The pins the `\ifx…\fi` blocks place: `rst` from `td=rst`, `Q` from `t6=Q`.
+    latexml::util::test::assert_element(
+      &xml,
+      "text",
+      &[r#"fontsize="50%""#],
+      r##"<text fontsize="50%">rst </text>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "text",
+      &[r#"fontsize="90%""#],
+      r##"<text fontsize="90%">B </text>"##,
     );
   }
 

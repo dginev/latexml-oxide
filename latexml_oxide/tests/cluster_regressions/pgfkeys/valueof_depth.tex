@@ -1,0 +1,14 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\makeatletter
+\begin{document}
+% `\pgfkeysvalueof{k}` is `\csname…\endcsname` (pgfkeys.code.tex:194): the
+% stored macro `\pgfk@k` is reached in TWO expansion steps, and circuitikz's
+% `\unexpandedvalueof` (circuitikz-1.7.2-body.tex:987-998) counts them with a
+% triple `\expandafter` to hand a checker the cs token, not its body.
+\pgfkeyssetvalue{/my/k}{HELLO}%
+\def\chk#1{[\ifx\relax#1 relax\else\string#1\fi]}%
+\expandafter\expandafter\expandafter\chk\pgfkeysvalueof{/my/k}%
+\expandafter\expandafter\expandafter\chk\pgfkeysvalueof{/my/none}%
+\edef\x{\pgfkeysvalueof{/my/k}}[\x]
+\end{document}

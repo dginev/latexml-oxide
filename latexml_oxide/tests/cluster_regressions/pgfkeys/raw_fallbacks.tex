@@ -1,0 +1,12 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+\pgfkeys{/pk/.cd, a/.code={[a:#1]}, b/.code={[b:#1]}}
+\pgfkeys{/pk/.unknown/.code={[unknown \pgfkeyscurrentname]}}
+\pgfkeys{/handler config=only existing}\pgfkeys{/pk/nokey/.code={[x]}}\pgfkeys{/pk/a=1}
+\pgfkeys{/handler config=all}\pgfkeys{/pk/c/.code={[c:#1]}, /pk/c=2}
+\pgfkeysfiltered{/pk/a=3, /pk/b=4}
+\pgfkeys{/pk/z/.is family}\pgfkeysactivatefamily{/pk/z}\pgfkeys{/pk/a=5}
+\pgfkeysdeactivatefamily{/pk/z}
+\pgfkeys{/handlers/first char syntax=true, /handlers/first char syntax/the character ?/.initial=\pkq}\def\pkq#1{[?:#1]}\pgfkeys{?x}
+\end{document}

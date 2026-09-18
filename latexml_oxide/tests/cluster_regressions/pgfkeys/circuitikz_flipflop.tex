@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{circuitikz}
+\begin{document}
+\begin{circuitikz}
+\tikzset{flipflop AB/.style={flipflop, flipflop def={t1=A, t3=B, t6=Q,
+  t4={\ctikztextnot{Q}}, td=rst, nd=1, c2=1, n2=1, t2={\texttt{CLK}}}}}
+\draw (0,0) node[flipflop AB]{};
+\end{circuitikz}
+\end{document}

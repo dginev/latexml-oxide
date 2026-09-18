@@ -1,0 +1,18 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+\pgfkeys{/pk/.cd, a/.code={[a:#1]}, b/.code={[b:#1]\pgfkeysalso{/pk/a=in#1}}, c/.style={/pk/a=#1}}
+\pgfkeys{/pk/b=1, /pk/c=2}
+\pgfkeys{/pk/.cd, a=3, /q/.cd, /pk/a=4}A:\pgfkeysdefaultpath.
+\pgfkeys{/pk/d/.value required, /pk/d/.code={[d:#1]}}\pgfkeys{/pk/d=5}
+\pgfkeys{/pk/e/.initial=x}\pgfkeys{/pk/e}B:\pgfkeysvalueof{/pk/e}.
+\pgfkeys{ /pk/a = 6 , /pk/a={ 7 }, /pk/a={{8}} }
+\pgfkeys{/pk/h/.is family, /pk/h/.cd, a/.code={[ha:#1]}}\pgfkeys{/pk/h, a=9}
+% With first-char syntax handlers on (pgfkeys.code.tex:340), every leading
+% space of an item is skipped: a wrapper's `, #1` plus the argument's own
+% leading space (zx-calculus's `\zxGenericMulti{<newline> command to run…}`).
+\makeatletter\pgfkeys@syntax@handlerstrue\makeatother
+\def\wrap#1{\pgfkeys{/pk/.cd, b=0, #1}}
+\wrap{
+  a=10}\wrap{ a=11, a=12}
+\end{document}

@@ -1035,8 +1035,46 @@ the guard requires byte-identical core XML both ways. The review of slice 0
 found two more divergences the first fixtures did not reach — `\pgfkeysvalueof`
 on an undefined key is the raw file's `\pgfkeys@relax`, never a `\csname`
 definition of the key (:193-194), and `\pgfkeysaddvalue` assigns locally
-(:125-135) — both fixed and pinned by the extended accessors fixture. Next: slice 1, the `\pgfkeys{}`/`\pgfkeysalso{}`/
-`\pgfqkeys{}{}` parse+dispatch loop with the three-probe raw fallback. Not lever inputs: chemobabel
+(:125-135) — both fixed and pinned by the extended accessors fixture.
+
+**Slice 1 landed (batch 56dl): the parse-and-dispatch loop native.**
+`\pgfkeys{}`, `\pgfkeysalso{}` and `\pgfqkeys{}{}` are primitives that resolve
+ONE item per step — `\pgfkeys@unpack`'s key/value split and `\pgfkeys@spdef`
+space stripping, the default-path prefix, `\pgfkeyscurrentkey`/`RAW`/`name`
+and `\pgfkeys@pathtoks`, the `.@def` default and `\pgfkeysvaluerequired`,
+cases one/two/three and `\pgfkeys@unknown`, first-char syntax handlers — then
+put the handler's invocation tokens back into the stream with the rest of the
+list re-entering BEHIND them through `\lx@pgfkeys@continue{<slot>}`. That is
+the raw chain's own shape (`\pgfkeys@@normal#1,` expands to `<handler>
+\pgfkeys@parse`, :328), and it is load-bearing: a `.code` body runs in the
+main loop, where it may open a box or a group that later stream tokens close.
+The first cut digested each body in a nested mouth and broke zx-calculus's
+`/tikz/on layer/.code={\pgfonlayer{#1}\begingroup\aftergroup\endpgfonlayer
+\aftergroup\endgroup}` (tikzlibraryzx-calculus.code.tex:2415): the `\hbox` it
+opens is closed by the path's own `\endgroup`, and the nested digest hit the
+end of its mouth inside the box (zx_full 0 → 29 errors). The continuation
+carries a slot id — the list's tokens are held once in a thread-local table —
+because a braced `{rest}` argument re-read per item cost tcolorbox's long
+`\tcbset` lists +7 %. With first-char syntax handlers on, every leading space
+of an item is skipped before dispatch (`\pgfkeys@syntax@handlers`, :340 — the
+plain path's `\pgfkeys@spdef` drops exactly one; zx-calculus's wrappers pass
+two, and the manual went 0 → 242 errors until the witness re-conversion
+caught it — fixtures alone did not). Filtering (`\ifpgfkeysfilteringisactive`) and a
+reconfigured case-three dispatch (`\pgfkeys@case@three` ≠ `…@handleall`) hand
+the rest of the list to the raw `\pgfkeys@parse`, re-checked at every step.
+Slice 0's `\pgfkeysvalueof` also learned to keep the raw `\csname…\endcsname`
+shape (:194): the stored macro is reached in TWO expansion steps, which
+circuitikz's `\unexpandedvalueof` (circuitikz-1.7.2-body.tex:987-998) counts
+with a triple `\expandafter` — the one-step native handed its checker the
+value's first token and the circuitikz manual a stray `\fi` (sweep #94).
+Measured, byte-identical XML ON/OFF: zx_full 23.28 G → **10.62 G (−54.4 %)**,
+tcb_full 17.59 G → **13.25 G (−24.7 %)**, keys_heavy 14.74 G → **11.90 G
+(−19.3 %)**, picC 459.6 → 457.4 G (datatool-bound). Cumulative for the two
+slices: zx_full −58 %, tcb_full −28 %, keys_heavy −22 %. Ten fixtures now run
+ON and OFF (`LATEXML_PGFKEYS_TRACE=1` prints one line per dispatched key, the
+bisection aid). Next: slice 2, the `\pgfkeysdef` family and the hottest
+handlers (`.code`, `.style`, `.cd`, `.initial`, `.default`) as natives that
+still store what the raw handlers store. Not lever inputs: chemobabel
 (parked, LuaTeX-ja), lie-hasse (runaway TokenLimit after a mode-frame error —
 separate bug), wheelchart (MemoryBudget runaway), l3kernel/source3 (memory). Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`

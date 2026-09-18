@@ -1,0 +1,16 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+% A `.code` body is expanded INTO the token stream (pgfkeys.code.tex:328): it
+% may open a box or a group that later stream tokens close. zx-calculus's
+% `/tikz/on layer` (tikzlibraryzx-calculus.code.tex:2415) is this shape: an
+% `\hbox` plus an inner group whose `\aftergroup` tokens close the box and the
+% enclosing scope when the scope's own `\endgroup` closes the inner group.
+\pgfkeys{/t/open box/.code={\hbox\bgroup\begingroup\aftergroup\egroup\aftergroup\endgroup},
+  /t/mark/.code={[#1]}}
+\begingroup\pgfkeys{/t/open box, /t/mark=in}boxed\endgroup [after]
+% A second `\pgfkeys` list inside the box, and a nested `\begin`/`\end` pair
+% split across the body and the stream.
+\pgfkeys{/t/open env/.code={\begin{center}}, /t/close env/.code={\end{center}}}
+\pgfkeys{/t/open env}centered text\pgfkeys{/t/close env}
+\end{document}
