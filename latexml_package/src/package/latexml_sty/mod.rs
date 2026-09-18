@@ -687,17 +687,13 @@ LoadDefinitions!({
   if let Some(v) = lookup_value("KV@LTXML@iflimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      assign_value("if_limit", Stored::from(limit as i64), Some(Scope::Global));
+      set_if_limit(limit as i64);
     }
   }
   if let Some(v) = lookup_value("KV@LTXML@absorblimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      assign_value(
-        "absorb_limit",
-        Stored::from(limit as i64),
-        Some(Scope::Global),
-      );
+      set_absorb_limit(limit as i64);
     }
   }
   if let Some(v) = lookup_value("KV@LTXML@pushbacklimit") {

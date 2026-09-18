@@ -149,7 +149,7 @@ is algorithmic:
 - Negative `SymHashMap` probes already use `arena::get`; preserve the invariant.
 - Duty-cycled macro-cycle detection is already implemented; do not add a
   second guard without a new failing witness.
-- Fast-path internal TeX counters (`if_count`, `if_limit`) via typed `State` fields.
+- Fast-path internal TeX counters (`if_count`, `if_limit`) via typed `State` fields — landed (batch 56db, PERFORMANCE.md P4).
 
 ---
 

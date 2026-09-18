@@ -277,6 +277,25 @@ pub struct State {
   // include_styles: bool,
   /// flag to disable math parsing
   pub nomathparse:             bool,
+  /// Perl `Conditional.pm:61-62`: the `if_count` Value entry, assigned
+  /// `'global'` on every `\if…` so the per-conditional id survives group
+  /// exit. A value only ever assigned globally collapses to one base-frame
+  /// binding, so a plain monotonic field is the same counter without the
+  /// per-conditional `assign_internal(Global)` undo-frame walk (measured
+  /// 4.4 % of instructions on `\ifnum`-dense pgf input). Runtime-only, so
+  /// it never enters a dump. Micro-divergence: `\globaldefs<0` demoted
+  /// Perl's assignment to local (ids could repeat after a group); the id is
+  /// the `IfFrame`'s diagnostic tag, never a matching key, so it is unaffected.
+  pub if_count:                i64,
+  /// Perl `$LaTeXML::IF_LIMIT` (`latexml.sty.ltxml:101`): a plain global,
+  /// never a State value. `0` = unlimited.
+  pub if_limit:                i64,
+  /// Perl `Object.pm:165` / `Box.pm:145`: the `absorb_count` Value, assigned
+  /// `'global'` per absorbed box — the same mechanism as [`Self::if_count`]
+  /// (a Perl global-only Value becomes a typed State scalar).
+  pub absorb_count:            i64,
+  /// Perl `$LaTeXML::ABSORB_LIMIT` (`latexml.sty.ltxml:104`), `0` = unlimited.
+  pub absorb_limit:            i64,
   /// flag enabling source-locator (`--source-map`) tracking + emission.
   /// Off by default; gates BOTH the per-token start capture and the
   /// per-element `data-sourcepos` stamping so a normal conversion pays
@@ -368,6 +387,10 @@ impl Default for State {
       graphics_paths:          VecDeque::new(),
       // include_styles: false,
       nomathparse:             false,
+      if_count:                0,
+      if_limit:                0,
+      absorb_count:            0,
+      absorb_limit:            0,
       source_map:              false,
       source_table:            Vec::new(),
       opened_sources:          HashSet::default(),
@@ -1778,11 +1801,33 @@ pub fn lookup_string(key: &str) -> String {
 /// like `lookup_value` but only recognizes Int, Bool and Number variants of Stored (default: 0)
 pub fn lookup_int(key: &str) -> i64 { lookup_int_sym(arena::pin(key)) }
 
+/// Perl `Conditional.pm:61-62`: bump the global conditional counter and
+/// return the new id for the `IfFrame` (see [`State::if_count`]).
+pub fn next_if_id() -> i64 {
+  let mut state = state_mut!();
+  state.if_count += 1;
+  state.if_count
+}
+/// Perl `$LaTeXML::IF_LIMIT`: the runaway ceiling on conditional ids
+/// (`0` = unlimited), set by `latexml.sty`'s `iflimit` option.
+pub fn if_limit() -> i64 { state!().if_limit }
+/// Set [`if_limit`] (Perl `latexml.sty.ltxml:101`).
+pub fn set_if_limit(limit: i64) { state_mut!().if_limit = limit; }
+/// Perl `Object.pm:163-168`: bump the global absorb counter and return it
+/// (see [`State::absorb_count`]).
+pub fn next_absorb_id() -> i64 {
+  let mut state = state_mut!();
+  state.absorb_count += 1;
+  state.absorb_count
+}
+/// Perl `$LaTeXML::ABSORB_LIMIT`: the runaway ceiling on absorbed boxes
+/// (`0` = unlimited), set by `latexml.sty`'s `absorblimit` option.
+pub fn absorb_limit() -> i64 { state!().absorb_limit }
+/// Set [`absorb_limit`] (Perl `latexml.sty.ltxml:104`).
+pub fn set_absorb_limit(limit: i64) { state_mut!().absorb_limit = limit; }
 /// `lookup_int` variant for hot call sites with a pre-pinned SymStr (see
 /// `crate::pin!`). Skips the per-call `arena::pin(key)` hash lookup — the
-/// sibling of [`lookup_bool_sym`], added for the per-conditional
-/// `if_count`/`if_limit` probes (`Conditional::invoke` fires on every
-/// `\if`/`\ifx`/`\ifnum`/…).
+/// sibling of [`lookup_bool_sym`].
 pub fn lookup_int_sym(key: SymStr) -> i64 {
   let state = state!();
   match state.lookup_value_sym(key) {
@@ -4004,6 +4049,44 @@ pub fn get_staged_snapshot(
   name: &str,
 ) -> Option<rustc_hash::FxHashMap<(TableName, SymStr), Stored>> {
   STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
+}
+
+#[cfg(test)]
+mod conditional_counter_tests {
+  use super::*;
+
+  /// Perl `Conditional.pm:61-62` assigns `if_count` *globally* so the
+  /// per-conditional id keeps climbing across group exits; the typed field
+  /// must not revert with the frame it was bumped in, and the limit is a
+  /// plain global (`$LaTeXML::IF_LIMIT`), unlimited when `0`.
+  #[test]
+  fn if_ids_climb_across_group_exits() {
+    reset_thread_state();
+    let first = next_if_id();
+    push_frame();
+    let inner = next_if_id();
+    pop_frame().expect("pop the probe frame");
+    let after = next_if_id();
+    assert_eq!((first, inner, after), (1, 2, 3));
+    assert_eq!(
+      if_limit(),
+      0,
+      "unlimited until latexml.sty's iflimit sets it"
+    );
+    set_if_limit(3_999_999);
+    assert_eq!(if_limit(), 3_999_999);
+    // The absorb counter is the same mechanism (Perl Object.pm:165).
+    push_frame();
+    assert_eq!(next_absorb_id(), 1);
+    pop_frame().expect("pop the probe frame");
+    assert_eq!(next_absorb_id(), 2);
+    set_absorb_limit(7);
+    assert_eq!(absorb_limit(), 7);
+    reset_thread_state();
+    assert_eq!(next_if_id(), 1, "a fresh conversion restarts the counter");
+    assert_eq!(if_limit(), 0, "and forgets the previous limit");
+    assert_eq!((next_absorb_id(), absorb_limit()), (1, 0));
+  }
 }
 
 #[cfg(test)]

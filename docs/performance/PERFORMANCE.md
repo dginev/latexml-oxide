@@ -220,10 +220,10 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   - **Bare `|x|` with ambiguous inner content:** e.g. `|v(x)| ≤ |v(x')|` (625 and-nodes): balanced-pair pre-lexer pass targeting the pairing factor.
   - **Content-addressed formula memoization (BP-5):** Hash normalized formula token stream to reuse parse→XMDual→MathML across identical formulae in tables and matrices.
 
-### P4 — Internal TeX counters in `State` (`if_count` / `if_limit`)
+### P4 — Internal TeX counters in `State` (`if_count` / `if_limit`) — LANDED (batch 56db, 2026-09-18)
 
-* **Current Reality:** `Conditional::invoke` calls `assign_value_sym::<i64>` with `Scope::Global`, walking every undo frame and performing per-frame hashbrown `remove_entry` (2.4% self-time on digest witnesses), plus the per-assignment `\globaldefs` probe (`state.rs:841`).
-* **Fix:** Migrate internal TeX counters (`if_count`, `if_limit`, `tracingcommands`) to dedicated typed fields on `State`, eliminating the undo-frame walk entirely while preserving dump-filter compatibility.
+* **Was:** `Conditional::invoke` called `assign_value_sym::<i64>` with `Scope::Global`, walking every undo frame and performing per-frame hashbrown `remove_entry` (2.4% self-time on digest witnesses), plus the per-assignment `\globaldefs` probe.
+* **Fix:** `if_count`/`if_limit` and `absorb_count`/`absorb_limit` are typed `State` fields (`next_if_id()`, `if_limit()`, `next_absorb_id()`, `absorb_limit()`); the general mechanism is *a Perl plain global, or a Value only ever assigned `'global'` and never dumped, becomes a typed State scalar*. `tracingcommands` is excluded: it is a group-scoped count register (TeX_Debugging.pool.ltxml:213-225), so it must keep the Value table. picC −4.4 % instructions.
 
 ### P5 — tikz-cd / pgf native digest volume & `Tokens` allocation
 
@@ -876,12 +876,31 @@ invocation (the environment lock plus a byte scan of `environ`, longer under the
 parameter.rs — gullet.rs's `TRACE_GROUP_END` idiom). Bars, picC under a loaded
 host (`perf stat` instructions are load-independent): 559.5 G → 497.8 G
 instructions (−11.0 %), wall 37.9 s → 33.3 s (−12.2 %), XML byte-identical;
-tikz-network's manual to be read off sweep 89. Ranked next (structural): (2)
-allocator churn ≈5.5 % self in `substitute_parameters`/`read_balanced`/
-`read_arguments` (`Token` < 8 B first, P5); (3) `assign_internal`'s Global
-undo-frame walk + hashbrown `remove_entry` ≈4.3 % for per-op Global counters
-(if_count/if_limit/align — the typed-State-field item P4); (4)
-`is_noexpand_family`/`noexpand_shadowed` ≈2.3 % per-CS string probes → an
-intern-time flag bit; (5) `local_assignments` align bookkeeping ≈1.9 % per token
-on the non-align path. Beyond these, closing the 6× needs fewer tokens per
-picture (pgf binding emitting less) — the harder program.
+tikz-network's manual to be read off sweep 89.
+
+**Lever A landed (batch 56db): `if_count`/`if_limit` are typed `State` fields**
+(P4; `State::if_count`, `next_if_id()`/`if_limit()`/`set_if_limit()`). Every
+`\if…` paid a Value lookup, an `assign_internal(Global)` — the `\globaldefs`
+probe plus the undo-frame walk with a hashbrown `remove_entry` per open group —
+and a second, always-missing Value lookup for the limit. Perl assigns `if_count`
+`'global'` (Conditional.pm:62) and keeps `$LaTeXML::IF_LIMIT` as a plain global,
+so the typed scalars are the same counter; both keys were already dump-skipped.
+Bar ≤ 487 G, measured picC 497.8 G → 475.7 G instructions (−4.4 %, `perf stat`,
+XML byte-identical, 0 errors).
+
+Ranked next (re-profiled on the lever-1 binary,
+`~/data/pk_agents/w23/perf_pgf/levers/NOTES.md`): (B) `is_noexpand_family`
+memo probe + `noexpand_shadowed` without an early-out ≈2.6 % self → memo
+early-out and intern-time population (bar ≤ 467 G); (C) align bookkeeping on
+every `{`/`}` outside any alignment ≈2.0 % (the counter is dead while
+`reading_alignment` is empty, tex.web §774 pushes a fresh `align_state`; hoist
+the `before` read behind the trace switch, gate the mutation on
+`has_reading_alignment()` symmetrically; bar ≤ 468 G); (D) `substitute_parameters`
+under-sizes its result (template length only) → size to template + used-arg
+lengths (bar ≤ 472 G). Settled dead ends: SmallVec-backed `Tokens` (blocked by
+`Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
+scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
+(net-neutral), LBR call graphs (unsupported on this PMU; use `--call-graph fp`),
+and a full `perf report` call graph on the 610 MB bench binary (> 5 min symbol
+load; use `-g none` flat self). Beyond these, closing the 6× needs fewer tokens
+per picture (pgf binding emitting less) — the harder program.

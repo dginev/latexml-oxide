@@ -15,8 +15,6 @@ use std::{io::Write, path::Path};
 /// Value entries to skip (runtime-specific or cause regressions).
 const SKIP_VALUES: &[&str] = &[
   "INTERPRETING_DEFINITIONS",
-  "if_count",
-  "absorb_count",
   "_loaded",
   "INCLUDE_COMMENTS",
   "INCLUDE_STYLES",

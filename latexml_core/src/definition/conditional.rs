@@ -182,14 +182,14 @@ pub struct IfFrame {
 
 impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
-    // Hot path: fires on every \if/\ifx/\ifnum/…; all state probes use
-    // pin!-cached keys (the per-call arena::pin was ~1% of self-time on
-    // \ifnum-dense pgfplots documents).
-    let mut ifid = lookup_int_sym(pin!("if_count"));
-    ifid += 1;
-    assign_value_sym(pin!("if_count"), ifid, Some(Scope::Global));
+    // Hot path: fires on every \if/\ifx/\ifnum/…. Perl assigns `if_count`
+    // 'global' (Conditional.pm:62) and keeps `$LaTeXML::IF_LIMIT` as a plain
+    // global; both live as typed `State` fields here (`State::if_count`),
+    // so a conditional pays no value-table lookup or global-assignment
+    // undo-frame walk.
+    let ifid = next_if_id();
     // Perl: if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) { Fatal(...) }
-    let if_limit = lookup_int_sym(pin!("if_limit"));
+    let if_limit = if_limit();
     if if_limit > 0 && ifid > if_limit {
       Fatal!(
         Timeout,

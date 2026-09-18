@@ -216,9 +216,7 @@ pub fn write_dump(
     if matches!(*table, TableName::Value)
       && matches!(
         key_str.as_str(),
-        "if_count"
-          | "absorb_count"
-          | "if_stack"
+        "if_stack"
           | "DOCUMENT_REWRITE_RULES"
           | "PARAMETER_TYPES"
           | "TAG_PROPERTIES"

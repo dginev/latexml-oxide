@@ -1408,6 +1408,39 @@ mod latexml_sty_save_parameter {
     );
   }
 
+  /// `iflimit=N` (Perl `latexml.sty.ltxml:101`, `$LaTeXML::IF_LIMIT`) still
+  /// reaches the per-conditional runaway guard now that the counter and its
+  /// ceiling are typed `State` fields: a ceiling below the conditionals that
+  /// `\begin{document}` alone runs trips `Fatal:Timeout:IfLimit`, and the same
+  /// document without the option converts clean.
+  #[test]
+  fn latexml_sty_iflimit_option_trips_the_conditional_guard() {
+    let doc = |opts: &str| {
+      format!(
+        "\\documentclass{{article}}\n\\usepackage{opts}{{latexml}}\n\
+         \\begin{{document}}{{\\ifnum1=1 a\\fi}}{{\\ifnum1=1 b\\fi}}\\end{{document}}\n"
+      )
+    };
+    let (xml, stderr) = convert(&doc("[iflimit=5]"));
+    assert!(
+      stderr.contains("Fatal:Timeout:IfLimit"),
+      "iflimit=5 must trip the conditional guard:\n{stderr}"
+    );
+    let (xml_ok, stderr_ok) = convert(&doc(""));
+    assert!(
+      !stderr_ok.contains("IfLimit") && !stderr_ok.contains("Error:"),
+      "unlimited run must be clean:\n{stderr_ok}"
+    );
+    assert!(
+      xml_ok.contains("<p>ab</p>"),
+      "the conditionals' branches are typeset:\n{xml_ok}"
+    );
+    assert!(
+      !xml.contains("<p>ab</p>"),
+      "the fatal run must not have typeset the body:\n{xml}"
+    );
+  }
+
   /// A direct `\lx@save@parameter{key}{value}` emits its PI and does not error.
   #[test]
   fn latexml_sty_save_parameter_direct_call() {

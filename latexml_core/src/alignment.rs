@@ -595,12 +595,11 @@ impl BoxOps for Alignment {
       return Ok(Vec::new());
     }
 
-    // Guard via the absorb limit to avoid infinite loops (Perl L478-483)
-    let absorb_limit = lookup_int("absorb_limit");
+    // Guard via the absorb limit to avoid infinite loops (Perl L478-483);
+    // the counter and its limit are typed State fields (`State::absorb_count`).
+    let absorb_limit = absorb_limit();
     if absorb_limit > 0 {
-      let mut absorb_count = lookup_int("absorb_count");
-      absorb_count += 1;
-      assign_value("absorb_count", absorb_count, Some(Scope::Global));
+      let absorb_count = next_absorb_id();
       if absorb_count > absorb_limit {
         fatal!(
           Timeout,
