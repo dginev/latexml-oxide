@@ -7593,3 +7593,23 @@ these `.bib`s", which the native macro renders and the wrapper cannot.
 unbtex/unbtex-example.
 **Guard**: `06_cluster_bibliography::raw_bibliography_override_cannot_lose_the_bib_session`.
 Batch 56cx.
+
+### 237. `class` values are NMTOKENs and `xml:id`s are XML Names at the emitter (Perl: invalid values pass through)
+
+**Perl behavior**: `setAttribute` writes `class` and `xml:id` verbatim; listings'
+language literal becomes `ltx_lst_language_{TeX}_LaTeX` / `_C++` / an unexpanded
+`\lexer@cs`, raw `\lx@add@class` with `@` names and a `\par` leaking into a
+class or an id (csvsimple-legacy) all reach the XML and fail RelaxNG (33
+manuals / 3,488 lines; 2 manuals / 1,231 lines).
+**Rust behavior**: `Document::set_attribute`, the one emitter every writer
+(including `add_ss_values`) funnels through, keeps each `class` token's
+NameChars and drops emptied tokens (`nmtokens_clean`), and passes an `xml:id`
+that is not an XML Name through `clean_id`; valid values are untouched.
+**Why**: user ruling 2026-09-18 ("we want our class values to be NMTOKENs"):
+the XML must validate, and a cleaned class beats an invalid one; fixing every
+producer would be a per-package chase.
+**Witnesses**: tutodoc-en/-fr, book-of-common-prayer, tikzcodeblocks, tablor,
+ualberta, gotham-doc, csvsimple-legacy, manptp (TeX Live doc corpus).
+**Guard**: `cluster_schema::listing_language_class_is_an_nmtoken`,
+`latexml_core document::attribute_cleaners::{class_values_become_nmtokens,
+ids_are_xml_names}`. Batch 56cz.

@@ -162,3 +162,21 @@ fn parbox_in_running_text_is_an_inline_logical_block() {
     r##"<para xml:id="p1"><p>X<inline-logical-block class="ltx_parbox" vattach="middle" width="85.4pt"><para class="ltx_noindent" xml:id="p1.p1"><p>A</p></para><para class="ltx_noindent" xml:id="p1.p2"><p>B</p></para></inline-logical-block>Y</p></para>"##,
   );
 }
+
+/// `class` values are NMTOKENs (batch 56cz, user ruling): listings' language
+/// literal `C++` produced `ltx_lst_language_C++`, invalid in both engines; the
+/// emitter now keeps only NameChars. Whole `<listing>`, schema-valid.
+#[test]
+fn listing_language_class_is_an_nmtoken() {
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\usepackage{listings}\n\\begin{document}\n\\begin{lstlisting}[language=C++]\nint x;\n\\end{lstlisting}\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "listing",
+    &[],
+    r##"<listing class="ltx_lst_language_C ltx_lstlisting" data="aW50IHg7" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_keyword" font="bold">int</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>;</listingline></listing>"##,
+  );
+}

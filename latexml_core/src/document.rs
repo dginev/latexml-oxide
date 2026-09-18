@@ -3466,6 +3466,21 @@ impl Document {
     // (`open_text_internal`/`open_math_text_internal`) already stripped NUL;
     // this attribute sink did not. PR #249 review P0-1.
     let value_sanitized = xml_sanitize(value);
+    // `class` is a list of NMTOKENs (LaTeXML-common.rng:94) and `xml:id` an
+    // XML Name (:120); the ONE emitter every writer funnels through
+    // (`add_ss_values` too) makes them so — user ruling 2026-09-18, beyond
+    // Perl, which emits listings' `ltx_lst_language_{TeX}_LaTeX` / `C++` /
+    // an unexpanded `\lexer@cs`, raw `\lx@add@class` `@` names, fontawesome's
+    // `fa-*`, and csvsimple-legacy's `\par` leaking into a class and an id
+    // (33 manuals, 3,488 jing lines; 2 manuals, 1,231). A value that is
+    // already valid is untouched.
+    let value_sanitized: Cow<'_, str> = match key {
+      "class" => Cow::Owned(nmtokens_clean(&value_sanitized)),
+      "xml:id" if !is_xml_name(&value_sanitized) => {
+        Cow::Owned(crate::common::cleaners::clean_id(&value_sanitized))
+      },
+      _ => value_sanitized,
+    };
     let value: &str = &value_sanitized;
     if value.is_empty() {
       return Ok(()); // skip if empty
@@ -6624,4 +6639,89 @@ pub fn get_node_qname(node: &Node) -> SymStr { model::get_node_qname(node) }
 pub fn with_node_qname<R, FnR>(node: &Node, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   model::with_node_qname(node, caller)
+}
+
+/// `class` as a list of NMTOKENs: every whitespace-separated token keeps its
+/// NameChars (letters, digits, `.`, `-`, `_`, `:`) and loses the rest
+/// (`\\ { } @ * +` from listings language literals, raw `@` names, `fa-*`);
+/// emptied tokens drop, and a token the cleaning made a duplicate of an
+/// earlier one drops too (`C++`, `C+` and `C` all clean to `C`). Idempotent on
+/// a valid list.
+fn nmtokens_clean(value: &str) -> String {
+  let mut out = String::with_capacity(value.len());
+  let mut seen: Vec<String> = Vec::new();
+  for token in value.split_whitespace() {
+    let cleaned: String = token.chars().filter(|c| is_name_char(*c)).collect();
+    if cleaned.is_empty() || seen.contains(&cleaned) {
+      continue;
+    }
+    if !out.is_empty() {
+      out.push(' ');
+    }
+    out.push_str(&cleaned);
+    seen.push(cleaned);
+  }
+  out
+}
+
+/// XML `NameChar` (letters, digits, `.`, `-`, `_`, `:`, and the non-ASCII
+/// name ranges, approximated by `is_alphanumeric`).
+fn is_name_char(c: char) -> bool { c.is_alphanumeric() || matches!(c, '.' | '-' | '_' | ':') }
+
+/// XML `Name` without a colon (an `xml:id`): starts with a letter or `_`, then
+/// NameChars only.
+fn is_xml_name(value: &str) -> bool {
+  let mut chars = value.chars();
+  match chars.next() {
+    Some(c) if c.is_alphabetic() || c == '_' => {},
+    _ => return false,
+  }
+  chars.all(|c| is_name_char(c) && c != ':')
+}
+
+#[cfg(test)]
+mod attribute_cleaners {
+  use super::{is_xml_name, nmtokens_clean};
+
+  /// The emitter's `class` cleaner: listings' brace/plus/backslash language
+  /// literals, raw `@` names and a leaked `\par` become NMTOKENs; a valid
+  /// list is untouched.
+  #[test]
+  fn class_values_become_nmtokens() {
+    assert_eq!(
+      nmtokens_clean("ltx_lst_language_{TeX}_LaTeX"),
+      "ltx_lst_language_TeX_LaTeX"
+    );
+    assert_eq!(nmtokens_clean("ltx_lst_language_C++"), "ltx_lst_language_C");
+    assert_eq!(
+      nmtokens_clean("ltx_lst_language_C++ ltx_lst_language_C+ ltx_lst_language_C ltx_lstlisting"),
+      "ltx_lst_language_C ltx_lstlisting"
+    );
+    assert_eq!(
+      nmtokens_clean("ltx_lstlisting \\par\\par ltx_lst_language_\\lexer@cs"),
+      "ltx_lstlisting parpar ltx_lst_language_lexercs"
+    );
+    assert_eq!(nmtokens_clean("fas fa-*"), "fas fa-");
+    assert_eq!(
+      nmtokens_clean("ltx_font_bold ltx_align_center"),
+      "ltx_font_bold ltx_align_center"
+    );
+    assert_eq!(nmtokens_clean("{}"), "");
+  }
+
+  /// `xml:id` values: a valid Name is left alone; the rest go through
+  /// `clean_id` (a leading `.` gets the `X` prefix, a `\par` leak is dropped).
+  #[test]
+  fn ids_are_xml_names() {
+    assert!(is_xml_name("S2.I10.i1"));
+    assert!(is_xml_name("_x-1"));
+    assert!(!is_xml_name(".1"));
+    assert!(!is_xml_name("S2.I10.i1\\par"));
+    assert!(!is_xml_name("a:b"));
+    assert_eq!(crate::common::cleaners::clean_id(".1"), "X.1");
+    assert_eq!(
+      crate::common::cleaners::clean_id("S2.I10.i1\\par"),
+      "S2.I10.i1par"
+    );
+  }
 }
