@@ -9843,6 +9843,24 @@ Text \textlatin{lingua latina} here.
     );
   }
 
+  /// `\overrightarrow`/`\overleftarrow` are `protected` like their siblings
+  /// `\overline`/`\underline` (fontmath.ltx:424 `\DeclareRobustCommand`): the
+  /// `\index` phrase pass froze only their `\ifmmode` and ran the bare
+  /// `\else`/`\fi` against an empty conditional stack (two errors and a
+  /// doubled key `→abc→abc`; latex-via-exemplos' accent table).
+  #[test]
+  fn overrightarrow_is_robust_in_an_index_phrase() {
+    let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{$\\overrightarrow{abc}$} Y\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "indexmark",
+      &[],
+      r##"<indexmark><indexphrase key="→abc"><Math mode="inline" tex="\overrightarrow{abc}" text="overrightarrow@(a * b * c)" xml:id="p1.m1"><XMath><XMApp><XMTok name="overrightarrow" role="OVERACCENT" stretchy="true">→</XMTok><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMath></Math></indexphrase></indexmark>"##,
+    );
+  }
+
   /// A raw class's full `\@maketitle` (ascelike.cls:406-411 `\AB@authlist`)
   /// runs under `\lx@deposit@maketitle` (OD #124); the bindings' semantic
   /// `\author` never fills authblk's visual accumulators, which therefore exist

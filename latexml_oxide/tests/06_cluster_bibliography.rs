@@ -3184,3 +3184,34 @@ fn filecontents_bib_feeds_the_bibliography() {
     r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Written inline</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Written inline</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock></bibitem>"##,
   );
 }
+
+/// A `.bib` named with a directory that does not exist beside the document
+/// (`\addbibresource{../bibtex/bib/x.bib}`: biblatex-apa-test.tex:69 mirrors
+/// the TeX Live source tree while the file ships next to the `.tex`) is found
+/// by its basename once the exact path misses (make_bibliography.rs; Perl's
+/// `pathname_find` misses the same way). The whole `<bibitem>` is pinned.
+#[test]
+fn pathful_bib_resource_falls_back_to_its_basename() {
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_pathful_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"pathful\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="pathful" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">A Pathful Resource</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A Pathful Resource</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Paths</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
+/// `\begin{refsection}[resources]` registers its resources
+/// (biblatex.sty:10757 `\blx@refsection` records them; biblatex-apa6-test:444
+/// declares its only `.bib` this way): the entry cited inside resolves.
+#[test]
+fn refsection_optional_argument_registers_its_resources() {
+  let x =
+    convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_refsection_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"sectioned\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="sectioned" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2002</tag><tag class="ltx_bib_title" role="title">Sectioned Reading</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">W. Writer</text><text class="ltx_bib_year"> (2002)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Sectioned Reading</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Press</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}

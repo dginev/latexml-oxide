@@ -7550,3 +7550,25 @@ the PDF is the oracle (all five samples print the full list).
 **Guard**: `cluster_package_guards::nomencl_inline::{nomenclature_entries_become_glossary_definitions,
 printnomenclature_lists_every_entry}`. Batch 56cl.
 
+
+### 235. biblatex resources resolve by basename and with an implied `.bib` (Perl: no binding)
+
+**Perl behavior**: no `biblatex.sty.ltxml`; the raw package fails to load. Its
+`pathname_find` for a classic `\bibliography{}` would also miss a resource named
+with a directory that does not exist beside the document.
+**Rust behavior**: a resource that misses under its given name is looked up
+again with `.bib` appended when it has no extension (biber tries the name, then
+`name.bib`; a legacy `\begin{refsection}[refs]` names its resources that way),
+and by its basename when the name carries a directory — `\addglobalbib
+{../bibtex/bib/biblatex-apa-test-references.bib}` (biblatex-apa-test.tex:69,
+apa6-test:444) mirrors the TeX Live SOURCE tree while the `.bib` ships beside
+the `.tex`, and no search path climbs out of the document directory
+(`make_bibliography.rs::bib_lookup_candidates`; the exact name always wins).
+`\refsection[resources]`/`\newrefsection[resources]` register their resources
+(biblatex.sty:10757/:10771), where the binding had dropped them.
+**Why**: the PDF is the oracle — the shipped bibliographies are the documents.
+biblatex-apa-test's 283-entry bibliography (16 % recall) and apa6-test's hinged
+on it.
+**Witnesses**: biblatex-apa/biblatex-apa-test, biblatex-apa6/biblatex-apa6-test.
+**Guard**: `06_cluster_bibliography::{pathful_bib_resource_falls_back_to_its_basename,
+refsection_optional_argument_registers_its_resources}`. Batch 56cs.

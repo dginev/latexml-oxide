@@ -302,9 +302,10 @@ impl MakeBibliography {
         if let Some(contents) = latexml_core::binding::virtual_files::vfs_read(&bib_file) {
           rawbibs.push(RawBibSource::Literal(contents));
           loaded = true;
-        } else if let Some(bib_path) = find_file(&bib_file, search_paths)
-          .or_else(|| latexml_core::util::pathname::kpsewhich(&[bib_file.as_str()]))
-        {
+        } else if let Some(bib_path) = bib_lookup_candidates(&bib_file).iter().find_map(|c| {
+          find_file(c, search_paths)
+            .or_else(|| latexml_core::util::pathname::kpsewhich(&[c.as_str()]))
+        }) {
           rawbibs.push(RawBibSource::Path(bib_path));
           loaded = true;
         } else if is_bib_style {
@@ -3504,6 +3505,33 @@ fn force_absolute_url(url: &str) -> String {
   } else {
     format!("https://{}", u)
   }
+}
+
+/// The names a biblatex/bibtex resource is looked up under, in order — the
+/// exact name first, so it always wins: (1) as given; (2) with `.bib` when it
+/// carries no extension (biber tries the name, then `name.bib`; a legacy
+/// `\begin{refsection}[refs]` names its resources that way,
+/// biblatex-apa6-test.tex:444); (3)/(4) the same two by basename when the
+/// name has a directory — `\addglobalbib{../bibtex/bib/biblatex-apa-test-
+/// references.bib}` (biblatex-apa-test.tex:69) mirrors the TeX Live SOURCE
+/// tree while the `.bib` ships beside the `.tex`, and no search path can
+/// climb out of the document directory. Perl's `pathname_find` fails the
+/// same way (SHARED at the file layer); beyond Perl. The whole 283-entry
+/// apa bibliography hinged on it (16 % recall).
+fn bib_lookup_candidates(bib_file: &str) -> Vec<String> {
+  let mut out = vec![bib_file.to_string()];
+  let base = latexml_core::util::pathname::file_name(bib_file);
+  let extensionless = !base.contains('.');
+  if extensionless {
+    out.push(format!("{bib_file}.bib"));
+  }
+  if !base.is_empty() && base != bib_file && bib_file.contains('/') {
+    out.push(base.clone());
+    if extensionless {
+      out.push(format!("{base}.bib"));
+    }
+  }
+  out
 }
 
 #[cfg(test)]

@@ -925,13 +925,23 @@ LoadDefinitions!({
   // EXCEPT underline, overrightarrow and overleftarrow!
   Let!("\\underbar", "\\underline"); // Will anyone notice?
 
+  // `protected`, as `\overline`/`\underline` (tex_math.rs) and LaTeX's own
+  // `\DeclareRobustCommand` (fontmath.ltx:424): a partial expansion — the
+  // `\index` phrase pass (`process_index_phrases`) under `\protect` =
+  // `\@unexpandable@protect` — froze only the `\ifmmode` and let the bare
+  // `\else`/`\fi` run against an empty conditional stack ("Didn't expect a
+  // \else … not in a conditional" ×2 and a doubled index key `→abc→abc`;
+  // latex-via-exemplos' accent table, `\index{$\overrightarrow{abc}$}`; Perl
+  // never expands there). Frozen whole, the macro digests once, live.
   DefMacro!(
     "\\overrightarrow{}",
-    r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi"
+    r"\protect\ifmmode\lx@math@overrightarrow{#1}\else$\lx@math@overrightarrow{#1}$\fi",
+    protected => true
   );
   DefMacro!(
     "\\overleftarrow{}",
-    r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi"
+    r"\protect\ifmmode\lx@math@overleftarrow{#1}\else$\lx@math@overleftarrow{#1}$\fi",
+    protected => true
   );
 
   DefMacro!("\\skew{}{}{}", r"{#2{#3\mkern#1mu}\mkern-#1mu}{}"); // ignore the subtle spacing for now?

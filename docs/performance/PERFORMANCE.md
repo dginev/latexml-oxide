@@ -829,3 +829,21 @@ rulercompass 103 s for 81 KB, tilings, graph35, functional, spath3,
 tkz-grapheur-exemples). The 0-byte-fatal group is the first target: those
 runs are pure waste.
 
+## Closed investigation 2026-09-18 — TikZ-heavy TeX Live manuals (tikz-network 222 s) are intrinsic
+
+`tikz-network.tex` (170 TikZ pictures, 0 errors) is the perfect-kernel corpus's
+largest sanctioned slow call at ~222 s under the sweep; pdflatex needs 34 s for
+the same manual (the intrinsic-cost oracle), so latexml-oxide runs at ~6× native
+on real pgf expansion (every `\Vertex` fires ~10 `\tikzset` + `\ifthenelse` +
+pgfkeys + a pgf scope, tikz-network.sty:407-520). `perf record` over the full run
+(root-causer `~/data/pk_agents/w23/regr85/tikz-network-perf/`, `perf_top40_*`):
+Rust engine 84 % self time with **no symbol above 0.7 %** (token inner loop —
+`read_cs_name_inner`, `Mouth::open`, `read_dimension`), libxml2 0.08 %, no math
+(pictures emit `svg:g`). Not quadratic, not clone churn, not the parser — a diffuse
+constant factor; the only engine-wide gains are the sub-1 % token-throughput
+items above. The one measurable band, kpsewhich subprocesses at 8–15 %, appears
+ONLY when `TEXMF*` is left unpinned (the dual-TL guard, pathname.rs:184, then
+forks `kpsewhich` per candidate list — 108 of them always-missing `*.rhai`
+binding probes); the sweep pins it (`run_doc.sh:42-46`), so the 222 s is already
+the fast path. zx-calculus (191 s) and tkz-grapheur (187 s) are the same family.
+Do not re-attempt a tikz-network lever without new evidence.

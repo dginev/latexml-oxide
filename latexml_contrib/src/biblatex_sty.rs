@@ -1333,13 +1333,19 @@ LoadDefinitions!({
       Some(Scope::Global));
     Ok(Tokens::new(vec![]))
   });
-  // Perl L107-108: \lossort / \refsection — empty stubs.
+  // Perl L107-108: \lossort / \refsection — empty stubs there; `\refsection`
+  // records its resources here (below).
   DefMacro!("\\lossort", "", locked => true);
   // biblatex.sty:10757-10769 `\newrobustcmd*{\refsection}{…\@ifnextchar[{\blx@refsection}
   // {\blx@refsection[]}}`: an OPTIONAL resource list only — a mandatory `{}` here
   // swallowed the `\begin` of the next environment inside `\begin{refsection}[…]`
   // (biblatex-apa-test:1203-1208; batch 56ai).
-  DefMacro!("\\refsection[]", "", locked => true);
+  // biblatex.sty:10757 `\blx@refsection[resources]` records the section's
+  // resources: biblatex-apa6-test.tex:444 declares its only `.bib` as
+  // `\begin{refsection}[../bibtex/bib/…-references]` (dropped, every
+  // citation was "Missing Entry"). The list goes to `\addbibresource`, which
+  // splits the commas; one resource list serves all sections here.
+  DefMacro!("\\refsection[]", "\\addbibresource{#1}", locked => true);
 
   // biblatex `.bbl` files emitted by biber include `\true{moreauthor}` /
   // `\true{morelabelname}` / `\false{...}` flags on multi-author entries.
@@ -2767,10 +2773,12 @@ LoadDefinitions!({
 
   // biblatex internals commonly invoked by user preamble. Witnesses
   // 2406.10485 (\newrefcontext), 2406.01081 (\newrefsection).
-  def_macro_noop("\\newrefsection[]")?;
+  // `\newrefsection[resources]` (biblatex.sty:10771) records resources as
+  // `\refsection` does (defined above).
+  DefMacro!("\\newrefsection[]", "\\addbibresource{#1}", locked => true);
   def_macro_noop("\\endrefcontext")?;
-  def_macro_noop("\\refsection[]")?; // optional-only, biblatex.sty:10757-10769 (batch 56ai)
-  def_macro_noop("\\endrefsection")?;
+  // `\refsection[]` / `\endrefsection` are defined above (batch 56ai/56cs);
+  // the no-ops that stood here overrode them.
 
   // `\refcontext`/`\newrefcontext` take an optional `[...]` and then a
   // mandatory group ONLY IF one actually follows: `\refcontext@i` guards it
