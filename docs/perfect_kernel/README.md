@@ -38,7 +38,10 @@ out of scope like shell-escape; the binding forces the package's own inline
 route, batch 56cj), `wrapstuff_sty.rs` (the package places its box from the
 LaTeX2e paragraph hooks `para/begin`/`para/end` with `\prevgraf`/`\parshape`
 arithmetic — the paragraph builder neither engine models; bound as wrapfig's
-inline float, which Perl binds the same way, batch 56cr). A raw-first
+inline float, which Perl binds the same way, batch 56cr), `abntex2cite_sty.rs`
+(contrib: the package redefines `\bibliography` to input a bibtex-produced
+`.bbl` LaTeXML never has, and the `.bib` list is live only in that command's
+argument — the interception Perl itself makes for bibunits, batch 56cw). A raw-first
 attempt is still the default for every new cluster; a new binding requires a
 justification of this kind in the file header.
 

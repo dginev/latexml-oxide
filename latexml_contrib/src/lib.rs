@@ -35,6 +35,7 @@ pub mod mytemplate_sty;
 
 // ar5iv-bindings ports
 pub mod aamas_cls;
+pub mod abntex2cite_sty;
 pub mod achemso_cls;
 pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
@@ -335,6 +336,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
+  ("abntex2cite", "sty", abntex2cite_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("fontawesome", "sty", fontawesome_sty::load_definitions),

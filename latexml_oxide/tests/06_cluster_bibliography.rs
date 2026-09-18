@@ -3215,3 +3215,28 @@ fn refsection_optional_argument_registers_its_resources() {
     r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="sectioned" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Writer</tag><tag class="ltx_bib_year" role="year">2002</tag><tag class="ltx_bib_title" role="title">Sectioned Reading</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">W. Writer</text><text class="ltx_bib_year"> (2002)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Sectioned Reading</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">Press</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
 }
+
+/// abntex2cite.sty:375 redefines `\bibliography` to `\@input@{\jobname.bbl}`,
+/// a file only a bibtex run produces, so the reference list vanished at 0
+/// errors (its manual is half bibliography; Perl has no binding and loses it
+/// too). The contrib binding repoints `\bibliography` at the native
+/// `\lx@ifusebbl` route, as Perl does for bibunits (#87). Whole `<bibitem>`.
+#[test]
+fn abntex2cite_bibliography_runs_the_bib_session() {
+  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+    return;
+  }
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_family.tex");
+  latexml::util::test::assert_element(
+    &x,
+    "bibitem",
+    &["key=\"abnt1\""],
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="abnt1" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2003</tag><tag class="ltx_bib_title" role="title">A numbered reference</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">A. Author</text><text class="ltx_bib_year"> (2003)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A numbered reference</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Standards</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  latexml::util::test::assert_element(
+    &x,
+    "para",
+    &[],
+    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1">1</ref>]</cite>.</p></para>"##,
+  );
+}
