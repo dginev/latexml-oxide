@@ -46,7 +46,11 @@ argument — the interception Perl itself makes for bibunits, batch 56cw),
 the same shape — `\directory`, `\fbList` and `\multibibliography`/`\printbibliography`
 write the `.bib` list into a `\bibdata` `\write` and input a bibtex `.bbl`;
 satisfying the raw `\@input@` is structurally impossible, so the wrapping
-command runs the kernel `\lx@bibliography`, batch 56dc). A raw-first
+command runs the kernel `\lx@bibliography`, batch 56dc). A raw class's
+title-page STORES (`\inst`, `\abst`, `\recdate`, `\kword`, … — text kept for an
+`\@maketitle` LaTeXML never runs) need no binding at all: K11
+(`latexml_engine/src/frontmatter_stores.rs`, batch 56dj) detects the store-shaped
+setters after the raw load and reroutes them to the frontmatter API by kind. A raw-first
 attempt is still the default for every new cluster; a new binding requires a
 justification of this kind in the file header.
 

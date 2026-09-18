@@ -185,11 +185,18 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    error-count-only guards; **B2** computed-value marker probes → golden
    `.tex`/`.xml` pairs; **B3** extract-and-compare text; **B4** structural
    absence checks; the 418 unit predicates last. No test is deleted.
-7. **pgf/TikZ throughput to pdflatex speed (user directive 2026-09-18).** tikz-network
-   222 s vs pdflatex 34 s (~6×); zx-calculus, tkz-grapheur the same family. The first
-   profile was unsymbolized; a `--profile bench` profile ranks the token loop's real
-   hotspots, then one lever per run with pre-registered bars
-   (`docs/performance/PERFORMANCE.md`, the reopened section).
+7. **pgf/TikZ throughput to pdflatex speed (user directive 2026-09-18).** Constant-factor
+   levers landed (56da/56db/56de/56df/56dg: picC 559.5 G → 459.6 G instructions, −17.9 %;
+   corpus wall 9,531 → 8,729 s); levers B and G reverted as measured losses — the user's
+   rule since: algorithmic and strategic gains only, no caches or carried state in
+   gullet/stomach/mouth/document. The corpus token budget
+   (`~/data/pk_agents/w23/perf_pgf/token_budget2/`) puts 69 % of the wall on manuals
+   loading pgfkeys and 40-55 % of a style-heavy conversion's instructions in raw
+   pgfkeys dispatch. NEXT: the native pgfkeys dispatch, hybrid on the raw `\pgfk@`
+   storage with a loud raw fallback, staged slice 0 (accessors) → 1 (the `\pgfkeys{}`
+   loop) → 2 (`\pgfkeysdef` family), ON/OFF byte-identity harness, bars zx_full 25.42 G
+   / tcb_full 18.23 G / keys_heavy 15.18 G / picC unchanged
+   (`docs/performance/PERFORMANCE.md`, `~/data/pk_agents/w23/perf_pgf/pgfkeys_native/`).
 
 ## DONE
 

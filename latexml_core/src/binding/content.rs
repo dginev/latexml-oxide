@@ -1123,6 +1123,18 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         .and_then(|_| use_load_hooks(name, &as_type, "after"));
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
       hook?;
+      // K11 (`latexml_engine/src/frontmatter_stores.rs`): a class loaded RAW
+      // keeps its title page in stores that only its discarded `\@maketitle`
+      // reads; the kernel reroutes the ones it knows to the frontmatter API.
+      if is_found_raw
+        && !is_binding
+        && as_type == "cls"
+        && lookup_definition(&T_CS!("\\lx@class@loaded@raw"))?.is_some()
+      {
+        digest(crate::mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\lx@class@loaded@raw{{{name}}}"
+        ))))?;
+      }
     }
     // Perl-faithful: Package.pm:2637 —
     //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));

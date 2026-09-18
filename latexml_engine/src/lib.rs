@@ -37,7 +37,8 @@ mod base_deprecated;
 mod base_parameter_types; // Perl: Base_ParameterTypes.pool.ltxml
 mod base_schema; // Perl: Base_Schema.pool.ltxml
 pub mod base_utilities; // Perl: Base_Utility.pool.ltxml
-pub mod base_xmath; // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
+pub mod base_xmath;
+pub mod frontmatter_stores; // K11: raw classes' title-page stores → frontmatter API // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
 
 // TeX_*.pool.ltxml
 pub mod tex_box; // Perl: TeX_Box.pool.ltxml

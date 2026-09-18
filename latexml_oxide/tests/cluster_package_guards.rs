@@ -8596,7 +8596,20 @@ code
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("<sup>1</sup>Univ A"), "{xml}");
+    // `\inst{n}` in an institute SETS the affiliation label and in an author
+    // REQUESTS it: Alice links to Univ A, Bob to Univ B (no typeset `<sup>`).
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &[],
+      r##"<creator role="author"><personname>Alice</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &["before="],
+      r##"<creator before="  " role="author"><personname>Bob</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"##,
+    );
     assert!(xml.contains("<tag>Part I</tag>"), "{xml}");
   }
 
@@ -16216,19 +16229,25 @@ c &= d
     assert!(xml.contains("A:45. ;B:10. ;C:30. ."), "{xml}");
   }
 
-  /// The kernel provides `\inst{n}` as a superscript affiliation mark, so a
-  /// class that defines `\inst` only inside the title-box scope where
-  /// `\@author` expands (bfhsciposter.cls:445,476) still converts
-  /// (witness bfh-ci/DEMO-BFHSciPoster; Perl: `undefined:\inst`).
+  /// `\inst` is provided around author content only (`\lx@author@withinst`)
+  /// with its frontmatter meaning — an affiliation-link request, or, for a
+  /// footnote-SYMBOL mark like `\inst{*}`, the kept glyph — so a class that
+  /// defines `\inst` only inside the title-box scope where `\@author` expands
+  /// (bfhsciposter.cls:445,476) still converts (witness
+  /// bfh-ci/DEMO-BFHSciPoster; Perl: `undefined:\inst`), and the class
+  /// binding's own linking `\inst` (llncs) still wins.
   #[test]
-  fn kernel_inst_fallback_is_a_superscript() {
+  fn author_inst_is_an_affiliation_link_request() {
     let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\@maketitle{\\begingroup\\def\\inst##1{\\textsuperscript{##1}}\\@author\\par\\endgroup}\n\\makeatother\n\\begin{document}\n\\author{Name\\inst{*}}\n\\title{T}\n\\maketitle\nBody.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(
-      xml.contains("<creator role=\"author\">")
-        && xml.contains("<personname>Name<sup>*</sup></personname>"),
-      "{xml}"
+    // `\inst{*}` is a footnote-symbol mark, kept as its glyph (never an
+    // affiliation number to link).
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &[],
+      r##"<creator role="author"><personname>Name<sup>*</sup></personname></creator>"##,
     );
     // A class binding's own `\inst` (the affiliation-LINKING form) beats the
     // `\providecommand` fallback.
@@ -20417,6 +20436,184 @@ mod counter_id_formatters_from_the_dump {
     assert!(
       !xml.contains("xml:id=\"X."),
       "a degenerate `.n` id survived:\n{xml}"
+    );
+  }
+}
+
+mod kernel_fallbacks_never_block_newcommand {
+  //! Batch 56di: the beyond-Perl `\inst` author-superscript fallback
+  //! (KNOWN_PERL_ERRORS #201) is provided only inside a group around author
+  //! content (`\lx@author@withinst`, Perl's `\lx@author@withsup` shape), never
+  //! as a kernel-global definition — so a class's own `\newcommand\inst` is
+  //! never blocked, as in Perl, which has no `\inst`. ptptex.cls:616's
+  //! `\newcommand\inst[1]{\gdef\@inst{#1}}` (the affiliation STORE, never
+  //! typeset) was silently refused, the kernel superscript typeset the
+  //! affiliation into the body before `\maketitle`, and the stored
+  //! `<title>`/`<creator>` frontmatter landed after that paragraph — manptp's
+  //! three jing lines (RUST-ONLY; Perl 0 errors, frontmatter first).
+
+  /// The frontmatter is the document's first content: no `<para>` precedes
+  /// the `<title>`, and the title element is whole.
+  #[test]
+  fn ptptex_inst_store_keeps_the_frontmatter_first() {
+    if !latexml::util::test::kpse_has("ptptex.cls") {
+      return;
+    }
+    let tex =
+      std::fs::read_to_string("tests/cluster_regressions/ptptex_inst_store_frontmatter.tex")
+        .expect("fixture");
+    let (stderr, xml) = super::convert_with(&tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "title",
+      &[],
+      r##"<title>Instruction Title</title>"##,
+    );
+    let title_at = xml.find("<title>").expect("title");
+    let first_para = xml.find("<para").unwrap_or(usize::MAX);
+    let first_creator = xml.find("<creator").expect("creator");
+    assert!(
+      title_at < first_creator && title_at < first_para,
+      "frontmatter must precede every body paragraph:\n{xml}"
+    );
+    // The class's `\@maketitle` scaffolding is discarded as Perl does: the
+    // body starts at the section, with no deposited empty paragraph or page
+    // break before it.
+    let section_at = xml.find("<section").expect("section");
+    assert!(
+      first_para > section_at && !xml[..section_at].contains("<pagination"),
+      "no maketitle scaffolding may precede the body:\n{xml}"
+    );
+    // The affiliations are frontmatter contacts linked from the authors'
+    // `$^{n,}$` superscripts, and the abstract, received date and
+    // publication note carry their kinds.
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &[],
+      r##"<creator role="author"><personname>Shin-Ichiro <text font="smallcaps">Tomonaga</text></personname><contact name="Note: " role="note">Note A.</contact><contact name="Affiliation: " role="affiliation">Physics Dept, Tokyo</contact></creator>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &["before="],
+      r##"<creator before="  " role="author"><personname>Hideki <text font="smallcaps">Yukawa</text></personname><contact name="Note: " role="note">Note B.</contact><contact name="Affiliation: " role="affiliation">Yukawa Institute, Kyoto</contact></creator>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "abstract",
+      &[],
+      r##"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>This is the abstract text.</p></abstract>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "date",
+      &[],
+      r##"<date name="Received " role="received">April 1, 2004</date>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "subtitle",
+      &[],
+      r##"<subtitle>Sub Version</subtitle>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "pubnote",
+      &[],
+      r##"<pubnote>Vol. 120, No. 5, November 2008</pubnote>"##,
+    );
+  }
+}
+
+mod raw_class_stores_reroute_to_frontmatter {
+  //! K11 (batch 56dj): after a `.cls` loads raw, every setter in the surveyed
+  //! table whose macro body is a pure one-argument store (`\gdef\@x{#1}`) is
+  //! rerouted to the frontmatter API of its kind, and the class's
+  //! `\@maketitle` — their typesetter, which LaTeXML's locked `\maketitle`
+  //! never runs — is discarded as Perl does. Perl drops every such store
+  //! (OmniBus's generic table is bypassed under raw class loading).
+  //! `frontmatter_stores.rs`.
+
+  /// jpsj2.cls:841-847 stores `\abst`/`\inst`/`\kword`/`\recdate` with
+  /// `\long\def\abst#1{\long\gdef\@abst{#1}}`; the frontmatter carries them.
+  #[test]
+  fn jpsj2_stores_become_frontmatter() {
+    if !latexml::util::test::kpse_has("jpsj2.cls") {
+      return;
+    }
+    let tex = std::fs::read_to_string("tests/cluster_regressions/jpsj2_stores_frontmatter.tex")
+      .expect("fixture");
+    let (stderr, xml) = super::convert_with(&tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "creator",
+      &[],
+      r##"<creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Department of Physics, Tokyo</contact></creator>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "abstract",
+      &[],
+      r##"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>The abstract text.</p></abstract>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "keywords",
+      &[],
+      r##"<keywords name="Keywords: ">electrons, phonons</keywords>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "date",
+      &[],
+      r##"<date name="Received " role="received">May 1, 2024</date>"##,
+    );
+    let title_at = xml.find("<title>").expect("title");
+    let first_para = xml.find("<para").unwrap_or(usize::MAX);
+    let section_at = xml.find("<section").expect("section");
+    assert!(
+      title_at < first_para && first_para > section_at,
+      "frontmatter first, no scaffolding:\n{xml}"
+    );
+  }
+
+  /// Only table names with a store body are touched: a store named `\logo`
+  /// (not metadata) and a `\kword` whose body is not a store stay the
+  /// class's own, while a real `\kword` store becomes keywords.
+  #[test]
+  fn only_table_names_with_store_bodies_are_rerouted() {
+    let cls = "\\ProvidesClass{pkstore}\n\\LoadClass{article}\n\
+\\newcommand\\kword[1]{\\gdef\\@kword{#1}}\n\
+\\newcommand\\logo[1]{\\gdef\\@logo{#1}}\n\
+\\newcommand\\pacs[1]{\\textbf{#1}}\n\
+\\def\\@kword{}\\def\\@logo{}\n\
+\\def\\@maketitle{\\begin{center}{\\Large\\@title}\\par\\@author\\par\\@kword\\par\\@logo\\end{center}}\n";
+    let tex = "\\documentclass{pkstore}\n\\title{T}\\author{A}\\kword{alpha, beta}\\logo{LOGO}\n\
+\\begin{document}\\maketitle\\pacs{12.34}\\end{document}\n";
+    let (stderr, xml) = super::convert_files_with(
+      tex,
+      &[("pkstore.cls", cls)],
+      Some("[rawstyles,rawclasses]latexml.sty"),
+    );
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "keywords",
+      &[],
+      r##"<keywords name="Keywords: ">alpha, beta</keywords>"##,
+    );
+    assert!(
+      !xml.contains("LOGO"),
+      "a non-metadata store is left to the discarded \\@maketitle:\n{xml}"
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p><text font="bold">12.34</text></p>"##,
     );
   }
 }

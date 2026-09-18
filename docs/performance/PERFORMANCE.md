@@ -958,9 +958,68 @@ shape was ruled out in the design for a larger invalidation surface with
 the same clone.
 
 Cumulative on picC since the program opened: 559.5 G → 459.6 G instructions
-(−17.9 %); 4.97× pdflatex's 92.4 G (was 6.07×). The remaining gap is the token
-count itself — the tikz frontend binding emitting fewer tokens — the harder
-program. Settled dead ends: SmallVec-backed `Tokens` (blocked by
+(−17.9 %); 4.97× pdflatex's 92.4 G (was 6.07×).
+
+**Direction (user, 2026-09-18):** gains must be algorithmic and strategic;
+the gullet, stomach, mouth and document stay ergonomic and idiomatic — no
+caches of resolved state, carried meanings, scratch buffers or unsafe cells
+(levers B and G, both reverted, were that shape and both measured worse).
+The allocator study (`~/data/pk_agents/w23/perf_pgf/alloc/NOTES.md`) confirms
+the residual there is ≈ 8 % of cycles, ~5 % of it values that escape (Perl
+returns them too) and ≤ 2 % scratch-buffer micro-levers — not pursued.
+
+**Where picC's tokens actually go (`~/data/pk_agents/w23/perf_pgf/token_budget/NOTES.md`,
+pdflatex `\tracingmacros` as the oracle, 43.3 M expansions on the one picture):
+97.65 % expl3 — datatool v3's CSV parser, which tikz-network's `\Vertices`/`\Edges`
+re-run per row (`\DTLloaddb` re-parses the file on every call, `\DTLforeach` re-walks
+the db per row, datatool re-types every field each pass); pgf's own layers are
+< 2 % (pgfmath 0.6 %, already native; tikz frontend 0.03 %). Rust and pdflatex
+expand the same raw bodies the same number of times (SHARED cost; 20.5 token
+reads per expansion). So "the pgf case" is the expl3/datatool case, and the
+strategic lever is a native datatool database layer — `\DTLloaddb` (CSV → rows,
+cached by file), `\DTLforeach`/`\DTLforeachkeyinrow`, `\DTLifeq`, the row getters —
+scoped to the used slice, the rest forwarded raw; bar picC ≤ ~30 M token reads.
+General expl3 levers that help every expl3-heavy manual: native `\tl_map_function`
+/ `\__tl_range_*` (33.8 % of the expl3 expansions) and `\int_eval:n` /
+`\int_compare:nNnTF` (27 %). l3regex native is a settled dead end (removed
+2026-06-20).
+
+**Corpus weight (`~/data/pk_agents/w23/perf_pgf/token_budget2/NOTES.md`, the
+same tally on the other slow manuals and over all 2,374 logs):** tikz-network's
+datatool shape is a narrow outlier (21 manuals, 10 % of the pgf wall). The
+dominant pattern is the style-heavy tikz diagram, and there the budget is
+**pgfkeys dispatch** — zx-calculus 74-79 % of expansions (`\pgfkeyscurrentkey`,
+`\pgfkeys@splitter`, `\pgfkeys@spdef`, `\pgfkeys@parse@main`, `\pgfkeys@ifcsname`);
+pgfplots/pgf-interference are l3fp (64 %); tabularray is pure l3 tl/prop. 827
+manuals load `pgfkeys.code.tex` = 6,057 s = **69 % of the corpus wall** (tcolorbox's
+option system is pgfkeys too); estimate 1,500-2,500 s (17-29 %) removable.
+pgfmath is already native on both sides; pgfkeys runs 100 % raw in Rust
+(`pgfkeys_sty.rs`, a 7-line shim) and in Perl, whose own native engine
+(`pgfkeys.code.tex.ltxml:40-544`) is disabled as "not quite right or complete".
+**The strategic lever is a native pgfkeys dispatch, Perl-anchored, with the key
+tree kept in the raw `\csname` storage so every package that pokes it keeps
+working and a raw fallback for the long tail** — design in
+`~/data/pk_agents/w23/perf_pgf/pgfkeys_native/NOTES.md`, MEASURED on the Rust
+side (bench binary, body-present vs body-absent): the style-heavy ZX circuit is
+57.9 % body instructions and a 40-box tcolorbox document 61.6 %, of which the
+per-node option dispatch alone is 35 % of a conversion (300 styled nodes with
+vs without a 9-key style list: 15.18 G vs 9.85 G). Shape: the
+`pgfmath_code_tex.rs` pattern — load the whole raw `pgfkeys.code.tex`, then
+override only the hot entry points natively on the SAME `\pgfk@<key>` csname
+storage (`\pgfkeys@ifcsname`, `\pgfkeysifdefined`, `\pgfkeysgetvalue`,
+`\pgfkeysvalueof`, `\pgfkeyssetvalue`, `\pgfkeyslet` first: slice 0, XML cannot
+change; then the `\pgfkeys{}`/`\pgfkeysalso{}`/`\pgfqkeys{}{}` parse+dispatch loop
+over `.code`/`.style`/`.default`/`.initial`/`.cd`/store keys with a three-probe raw
+fallback — `\ifpgfkeysfilteringisactive`, `\ifpgfkeys@syntax@handlers`,
+`\pgfkeys@case@three` rebound — and per-key unknown → raw `\pgfkeys@unknown`:
+slice 1; `\pgfkeysdef` family: slice 2). Handlers stay raw (they are keys under
+`/handlers/`; the native path invokes their `.@cmd`), so this is strictly more
+complete than Perl's abandoned engine (its stubbed filtering/family/syntax
+handlers, `pgfkeys.code.tex.ltxml:170/463/522`, run real TeX here). TDD: an
+ON/OFF switch and ten ≤15-line fixtures requiring byte-identical core XML; bars
+zx_full 25.42 G, tcb_full 18.23 G, keys_heavy 15.18 G, picC unchanged. Not lever inputs: chemobabel
+(parked, LuaTeX-ja), lie-hasse (runaway TokenLimit after a mode-frame error —
+separate bug), wheelchart (MemoryBudget runaway), l3kernel/source3 (memory). Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
 scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
 (net-neutral), LBR call graphs (unsupported on this PMU; use `--call-graph fp`),

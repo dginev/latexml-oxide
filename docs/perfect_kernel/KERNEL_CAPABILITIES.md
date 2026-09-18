@@ -355,10 +355,66 @@ and gentombow are the `\pdfoutput` persona (K6), not this. Notes
 (hangul special case, then needs kotex's font infrastructure); reassembling
 byte runs inside the mouth (the probes need the bytes as separate tokens).
 
+## K11 — Raw classes' title-page stores reroute to the frontmatter API
+
+**Goal (user, 2026-09-18, APPROVED — surpass Perl).** "Both `\author` and
+`\inst` need to use the latexml provided Frontmatter API so that we can recover
+high-quality semantic XML annotating the metadata kinds" and "we need to surpass
+perl and detect these common mechanisms rerouting them to the Frontmatter API".
+Under LaTeXML's locked `\maketitle` a raw class's `\@maketitle` never runs, so
+everything the class STORED for it — affiliations (`\inst`, `\institute`,
+`\affiliation`, `\address`), abstract (`\abst`, `\abstract`), dates by role
+(`\recdate`, `\received`, `\accepted`), publication info (`\pubinfo`,
+`\journal`), `\subtitle`, `\keywords`, `\email` — is lost in Perl (its ~200
+class bindings are the only route) and was deposited as body paragraphs by the
+Rust `\lx@deposit@maketitle` surpass (sect05.rs:948), presentational and, on
+manptp, ahead of the frontmatter. Batch 56di landed the two per-command forms
+(`\inst` in an author = `\lx@request@frontmatter@annotation[affiliation]`,
+llncs.cls.ltxml:50; a ptptex binding for its five setters); K11 is the general
+rule that makes such bindings unnecessary for the common shape.
+
+**Source of truth.** The store convention is mechanical: a class setter whose
+body is a pure store — `\gdef\@NAME{#1}`, `\def\@NAME{#1}`, `\long`/`\global`
+variants, `\newcommand\NAME[1]{\gdef\@NAME{#1}}` (ptptex.cls:616,
+jpsj2.cls:842, gammas.cls:189 …) — is a metadata setter by construction, a
+check on the macro's token body, never a guess. The KIND comes from a surveyed
+NAME → kind table (evidence: every TL `.cls` scanned; Perl's own class
+bindings' setter → `\lx@add@*` mappings; survey
+`~/data/pk_agents/w23/frontmatter_stores/`). The frontmatter API is Perl's
+(Base_Utility.pool.ltxml:547-640): `\lx@add@{title,subtitle,author,affiliation,
+date[role],abstract,keywords,pubnote,…}`, `\lx@add@affiliations` with `$^n$`
+labels linked from the authors' `$^{n,}$` (`\lx@author@withsup` /
+`\lx@affiliation@withsup`).
+
+**Mechanism (as landed, batch 56dj).** After a raw `.cls` loads
+(`latexml_core/src/binding/content.rs`, the `-h@@k`/after-hook site; bindings
+still precede raw, and a binding's own raw self-load never passes
+`handleoptions`, so it does not fire): `\lx@class@loaded@raw{name}` runs
+`frontmatter_stores::reroute_raw_class_stores` — for each setter of the
+explicit 45-name table that the class defined as a one-argument macro whose
+body is a pure store, REPLACE the setter with the API form of its kind, and,
+once any store was captured, `\let\@maketitle\@empty` exactly as Perl's locked
+`\maketitle` discards it. Off-table stores are therefore dropped with the
+`\@maketitle` that read them (Perl parity; the `\lx@deposit@maketitle` surpass,
+which recovered them as body paragraphs, was the mis-ordering this capability
+replaces) — the `only_table_names_with_store_bodies_are_rerouted` guard pins
+that a `\logo` store leaves no trace. Names on the exclusion list are simply
+not in the table. One whole-element guard per kind, plus the ptptex fixture on
+the general rule. Inside author content `\inst{n}` is always the affiliation
+link request (`\lx@author@withinst` `\def`s it, so a rerouted document-level
+`\inst` list setter cannot shadow it).
+
+**Steps.** (1) survey → table + exclusions + corpus coverage (running); (2) the
+detector on the macro body + the table, behind the raw-class seam; (3) kinds in
+corpus order, each with its guard and a Perl-parity note (Perl loses them);
+(4) retire the per-class bindings whose only content is store rerouting
+(ptptex first), keep those with non-store shapes.
+
 ## Ordering
 
 K1 → K3+K4 → K5 → K2 → K6 → K7/K8 (K7 and K8 are small and slot between
-batches); K9 runs as its own staged batch once the drift source is known; K10 last (surpass-tier, package-scoped). Batch fixes continue in parallel, but a batch item that belongs
+batches); K9 runs as its own staged batch once the drift source is known; K10 last (surpass-tier, package-scoped); K11 (surpass-tier, frontmatter) runs
+as its own staged batches once the survey lands. Batch fixes continue in parallel, but a batch item that belongs
 to a capability is landed *as* that capability's step, with its class-level
 guard, not as a site patch.
 
@@ -366,6 +422,8 @@ guard, not as a site patch.
 
 | Date | Row | Event |
 |---|---|---|
+| 2026-09-18 | K11 | Opened (user-approved surpass): raw classes' store-shaped title-page setters reroute to the frontmatter API by kind; survey running, batch 56di landed the `\inst`/ptptex forms. |
+| 2026-09-18 | K11 | Steps 1-2 landed (batch 56dj): survey of 655 TL classes (`~/data/pk_agents/w23/frontmatter_stores/`: 390 define store setters, explicit 45-name synonym table from OmniBus.cls.ltxml:62-247, exclusion list, jpsj2 the second witness); `frontmatter_stores.rs` — `\lx@class@loaded@raw` fired from the raw `.cls` load, a token-body store check, the table, `\@maketitle` discarded once a store is captured; the ptptex binding retired. Guards `raw_class_stores_reroute_to_frontmatter::{jpsj2_stores_become_frontmatter, only_table_names_with_store_bodies_are_rerouted}` + the ptptex guard now on the general rule. Open: two-argument `[short]{long}` setters, list-append stores (`\g@addto@macro`), the 65 binding-less corpus manuals' setters beyond the table. |
 | 2026-09-05 | all | Program approved by the user; K1/K3/K4 seeds from batch 56i recorded above |
 | 2026-09-05 | K3 | Ordering fixed in 56j (L3 hook before the bindings' private store; bindings outrank raw). OPEN correctness item: lthooks' labeled `\exp_args:Nx` cleanup (latex.ltx:5375, 5401-5416) is not reproduced by the gullet — a `\noexpand`-family token surfaced inside `\csname g__hook_…`; parameter-bearing unlabeled chunks are pinned to the private store meanwhile (`hashful_begin_document_chunk_under_a_package_label`). |
 | 2026-09-05 | K1 | Design fixed (thread-local origin captured at construction; five loader seams). Implementation next, after sweep #42. |
