@@ -477,7 +477,15 @@ pub(crate) fn load() -> Result<()> {
         Ok((w_req.unwrap_or_default(), Dimension::default(), Dimension::default()))
       }
     },
-    mode => "internal_vertical",
+    // Perl latex_constructs.pool.ltxml:4763 `mode => 'inline_internal_vertical'`
+    // — the INLINE flavour, as `{minipage}` below: a plain `internal_vertical`
+    // made `begin_mode` end the enclosing paragraph (stomach.rs `begin_mode_opt`
+    // leaves horizontal mode for any non-inline vertical mode), so a `\parbox`
+    // in running text closed its `<p>` and `insert_block` chose `logical-block`
+    // for a multi-paragraph body in `<para>` context — schema-invalid (the KOMA
+    // letter demos; 54 documents, 381 jing lines, sweep 86). Perl keeps the
+    // `<p>` and emits `inline-logical-block`.
+    mode => "inline_internal_vertical",
     before_digest => {
       // Perl `\@parboxrestore` does `\let\\\@normalcr` (latex_dump L2310): a parbox
       // restores `\\` to the STABLE newline alias, not to the `\lx@newline` CS.

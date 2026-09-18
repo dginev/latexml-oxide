@@ -372,6 +372,27 @@ the mechanism, its witnesses, and the disposition.
   ONE current RUST-ONLY loss: a picture nested in a scaled box inside a picture was never
   SVG-converted (fixed batch 56ct; simplecd). Residual: sim-os-menus' tcolorbox terminal skins
   (TermWin/TermUnix/TermMac text) still lost — open.
+- **S2: dangling `\hyperlink` targets (SHARED; RULED 2026-09-18: keep them, as pdflatex does).**
+  26 documents / 1,058 jing lines of `idref` mismatch (biblatex-gost-examples, biblatex-chicago,
+  elsdoc, Malva, europecv, …): `\hyperlink{name}{text}` emits `<ref idref="name">`
+  unconditionally (hyperref.sty.ltxml:231-234 = hyperref_sty.rs:712) while the matching
+  `\hypertarget` never reaches the core XML — biblatex's `begentry` hook inside the deferred
+  `\printbibliography` (gost's `\hypertarget{back:\thefield{entrykey}}`), endnote anchors typeset
+  at `\theendnotes`, or a target inside `{comment}` (elsdoc.tex:831). Perl's core XML is
+  byte-identical and its post reports the same RelaxNG failure. User ruling: stay
+  consistent with pdflatex — the link is kept with its `idref` (a dangling link may be
+  rebound in JavaScript and has a use); the schema lines are accepted, not fixed. Root-causer
+  `~/data/pk_agents/w23/regr87/s2_idref/NOTES.md`. (nath's 12 dangling `XMRef`s are a separate
+  math-structure defect.)
+- **S2: `class` values that are not NMTOKENs (33 docs, 3,488 lines) and two documents with
+  invalid `xml:id`s (RULED 2026-09-18: surpass — our class values must be NMTOKENs).**
+  Root-causer `regr87/s2_attrs/NOTES.md`: the breaking characters are `\ { } @ * +` from
+  listings' language literals (`ltx_lst_language_{TeX}_LaTeX`, `C++`, an unexpanded lexer
+  macro name), raw `\lx@add@class` with `@` names, fontawesome's `fa-*`, and a stray `\par`
+  leaking into a class argument (csvsimple-legacy); Perl emits the same invalid values. Fix =
+  emitter cleaners in `Document::set_attribute` (class tokens reduced to NameChar; `xml:id`
+  through `clean_id` before dedup). manptp's `xml:id=".1"` is an ancestor-loss defect on top
+  (RUST-ONLY, separate).
 - **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
   `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
   recursive MakeBibliography session on a fresh `Core` with no bindings chain, so

@@ -185,6 +185,11 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    error-count-only guards; **B2** computed-value marker probes → golden
    `.tex`/`.xml` pairs; **B3** extract-and-compare text; **B4** structural
    absence checks; the 418 unit predicates last. No test is deleted.
+7. **pgf/TikZ throughput to pdflatex speed (user directive 2026-09-18).** tikz-network
+   222 s vs pdflatex 34 s (~6×); zx-calculus, tkz-grapheur the same family. The first
+   profile was unsymbolized; a `--profile bench` profile ranks the token loop's real
+   hotspots, then one lever per run with pre-registered bars
+   (`docs/performance/PERFORMANCE.md`, the reopened section).
 
 ## DONE
 

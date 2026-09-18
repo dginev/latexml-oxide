@@ -142,3 +142,23 @@ fn pdfcomment_note_floats_out_of_math() {
   );
   assert_valid(&xml);
 }
+
+/// `\parbox` runs in Perl's `inline_internal_vertical` mode: in running text it
+/// keeps the enclosing `<p>` and a multi-paragraph body becomes an
+/// `inline-logical-block`; as plain `internal_vertical` it ended the paragraph
+/// and `insert_block` emitted a `logical-block` inside `<para>` — the KOMA
+/// letter demos' 381 schema errors (batch 56cy). Whole `<para>`, schema-valid.
+#[test]
+fn parbox_in_running_text_is_an_inline_logical_block() {
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\begin{document}\nX\\parbox{3cm}{\\noindent A\\par\\noindent B}Y\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r##"<para xml:id="p1"><p>X<inline-logical-block class="ltx_parbox" vattach="middle" width="85.4pt"><para class="ltx_noindent" xml:id="p1.p1"><p>A</p></para><para class="ltx_noindent" xml:id="p1.p2"><p>B</p></para></inline-logical-block>Y</p></para>"##,
+  );
+}

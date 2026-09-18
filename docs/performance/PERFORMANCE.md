@@ -829,7 +829,7 @@ rulercompass 103 s for 81 KB, tilings, graph35, functional, spath3,
 tkz-grapheur-exemples). The 0-byte-fatal group is the first target: those
 runs are pure waste.
 
-## Closed investigation 2026-09-18 — TikZ-heavy TeX Live manuals (tikz-network 222 s) are intrinsic
+## OPEN PROGRAM 2026-09-18 — pgf/TikZ throughput: reach pdflatex speed (user directive; the first profile below was UNSYMBOLIZED and proves nothing about flatness)
 
 `tikz-network.tex` (170 TikZ pictures, 0 errors) is the perfect-kernel corpus's
 largest sanctioned slow call at ~222 s under the sweep; pdflatex needs 34 s for
@@ -846,4 +846,16 @@ ONLY when `TEXMF*` is left unpinned (the dual-TL guard, pathname.rs:184, then
 forks `kpsewhich` per candidate list — 108 of them always-missing `*.rhai`
 binding probes); the sweep pins it (`run_doc.sh:42-46`), so the 222 s is already
 the fast path. zx-calculus (191 s) and tkz-grapheur (187 s) are the same family.
-Do not re-attempt a tikz-network lever without new evidence.
+**Reopened the same day (user: "We can be as fast").** The "flat profile" was taken on
+the stripped `--release` binary — every Rust frame was a hex address, so the
+0.7 % ceiling per symbol is an artifact of missing symbols, not evidence of a
+diffuse cost. Program: (1) `cargo build --profile bench` (symbols) in its own
+`CARGO_TARGET_DIR`; (2) `perf record --call-graph lbr` on one heavy picture
+(`~/data/pk_agents/w23/regr85/tikz-network-perf/picC.tex`) and on the manual,
+`perf report --no-inline` ranked by self time; (3) one lever per run with
+pre-registered bars: tikz-network wall (222 s → target 34 s), picC wall, a
+non-TikZ control (a 200-page text manual) unchanged, `perf stat` instructions.
+Suspects to rank: token interning/arena pins per `\csname`, `Tokens` clones in
+`\pgfmath`/`\pgfkeys` expansion, the pushback/mouth structure, per-token state
+lookups (catcode, meaning), `check_timeout` cadence, definition dispatch, the
+SVG driver's path building. Tracked in `docs/perfect_kernel/PLANS.md` item 7.
