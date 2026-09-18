@@ -533,10 +533,25 @@ impl Tokens {
   // Using inline accessors on those assumptions
   /// substitutes the parameters (ARG catcode) in a Tokens list for concrete arguments
   pub fn substitute_parameters(&self, args: &[Option<Cow<Tokens>>]) -> Self {
-    // Pre-size: the substituted result is at least as long as the
-    // template. Expansion bodies can be thousands of tokens in the
-    // expl3 kernel; pre-allocation skips the first several Vec doublings.
-    let mut result = Vec::with_capacity(self.0.len());
+    // Pre-size to the template plus every present argument once: for the
+    // common single-use body that is the result's length plus the parameter
+    // tokens it replaces, so the push/extend loop below never regrows (a
+    // template-only size regrew on every argument-bearing expansion;
+    // expansion bodies can be thousands of tokens in the expl3 kernel). A
+    // body that names no parameter (`\@gobble`, `\use_none:n`, the discarded
+    // halves of `\@firstoftwo`) keeps the template-only size — its result
+    // is the template, and an empty one must stay allocation-free.
+    let args_len: usize =
+      if args.is_empty() || !self.0.iter().any(|t| t.get_catcode() == Catcode::ARG) {
+        0
+      } else {
+        args
+          .iter()
+          .flatten()
+          .map(|arg| arg.as_ref().unlist_ref().len())
+          .sum()
+      };
+    let mut result = Vec::with_capacity(self.0.len() + args_len);
     for token in self.0.iter() {
       if token.get_catcode() != Catcode::ARG {
         // Non-match; copy it

@@ -908,9 +908,19 @@ without a reading alignment (`gullet.rs:2524`, the unit test at
 `local_assignments.rs:333`), so the symmetric-skip argument does not hold as
 stated; revisit only with a tex.web §774-shaped `push_alignment` model.
 
-Ranked next: (D) `substitute_parameters`
-under-sizes its result (template length only) → size to template + used-arg
-lengths (bar ≤ 472 G). Settled dead ends: SmallVec-backed `Tokens` (blocked by
+**Lever D landed (batch 56df): `substitute_parameters` sized to template +
+arguments.** The result `Vec` was sized to the template alone, so every
+argument-bearing expansion regrew; now the template length plus the sum of the
+present arguments' lengths (exact for the single-use body, one regrow for a
+reused argument), and a body naming no parameter (`\@gobble`, `\use_none:n`)
+keeps the template-only size so an empty result stays allocation-free (the
+reviewer's catch: the unguarded bound gave every gobble a malloc/free pair).
+Bar ≤ 472 G, measured picC 467.4 G → 465.2 G (−0.5 %, the bar missed by 0.3
+points; landed as a byte-identical net positive).
+
+Cumulative on picC since the program opened: 559.5 G → 465.2 G instructions
+(−16.9 %). The remaining gap to pdflatex is structural (tokens per picture);
+the next candidates are the B3 family bit in `Token`'s padding byte and P5. Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
 scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
 (net-neutral), LBR call graphs (unsupported on this PMU; use `--call-graph fp`),
