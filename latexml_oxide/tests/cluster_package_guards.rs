@@ -18012,6 +18012,33 @@ Table hooks ok.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("Table hooks ok."), "{xml}");
   }
+
+  /// `\set@fontsize` reads its baselineskip argument through
+  /// `\@defaultunits…pt\relax\@nnil` (latex.ltx:12588), so a class's bare
+  /// `\@setfontsize\normalsize\@xipt{18}` (jpsj2.cls:317; KOMA's
+  /// scrsize11pt.clo:99 the same shape) is 18pt. The binding read
+  /// `\baselineskip#3\relax` bare — one "Illegal unit of measure (pt
+  /// inserted)" warning per size switch, surfaced by K11 typesetting a raw
+  /// class's `\@maketitle` (sweep #94: injpsj2 +6, TUDaPhD +3, BFHThesis +2).
+  #[test]
+  fn setfontsize_baselineskip_defaults_to_pt() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\renewcommand\normalsize{\@setfontsize\normalsize\@xpt{18}}
+\makeatother
+\begin{document}
+\normalsize Body text. \the\baselineskip.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      stderr.matches("Illegal unit of measure").count(),
+      0,
+      "{stderr}"
+    );
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>Body text. 18.0pt.</p>"##);
+  }
 }
 
 mod perfect_kernel_gemini {

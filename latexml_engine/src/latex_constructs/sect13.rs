@@ -1800,10 +1800,15 @@ pub(crate) fn load() -> Result<()> {
   // …and `\set@fontsize` (latex.ltx:12580-12599) sets `\baselineskip` from
   // `#3` and rebuilds `\strutbox` as `.7\baselineskip`/`.3\baselineskip` —
   // the part that keeps `\strut`-based measurements honest (fillwith's line
-  // coffins, see plain_base.rs `\strutbox`).
+  // coffins, see plain_base.rs `\strutbox`). `#3` is read through
+  // `\@defaultunits…pt\relax\@nnil` (latex.ltx:12588): a class passes a bare
+  // number there (jpsj2.cls:317 `\@setfontsize\normalsize\@xipt{18}`, KOMA's
+  // scrsize11pt.clo:99), and a bare `\baselineskip#3` warned "Illegal unit
+  // of measure" once per size switch — surfaced by K11 typesetting a raw
+  // class's `\@maketitle` (sweep #94: injpsj2 +6, TUDaPhD +3, BFHThesis +2).
   DefMacro!(
     "\\@setfontsize{}{}{}",
-    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\baselineskip#3\\relax\\setbox\\strutbox\\hbox{\\vrule\\@height.7\\baselineskip\\@depth.3\\baselineskip\\@width\\z@}\\fi"
+    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\@defaultunits\\baselineskip#3pt\\relax\\@nnil\\setbox\\strutbox\\hbox{\\vrule\\@height.7\\baselineskip\\@depth.3\\baselineskip\\@width\\z@}\\fi"
   );
   // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
   // `\begin{document}` has run `\normalsize` (whose class definition routes
