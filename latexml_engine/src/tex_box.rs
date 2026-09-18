@@ -635,6 +635,29 @@ LoadDefinitions!({
     t.push(T_END!());
     Ok(Tokens::new(t))
   });
+  // Perl `{}` box argument (latex_constructs.pool.ltxml:4649 `\\mbox {}`,
+  // :4658 `\\@makebox[..]{}`, :4689 `\\@framebox[..]{}`, :4800 `\\raisebox
+  // {..}[..][..]{}`): one macro argument — braced, or a single token — digested
+  // by the same live one-frame loop as `HBoxContents` (divergence #188). See
+  // `read_box_arg_contents`.
+  DefParameterType!(HBoxArgContents, sub[_inner, _extra] {
+    read_box_arg_contents(lookup_tokens("\\everyhbox")) },
+  predigest => sub[arg] {
+    match arg {
+      // The unbraced single token: Perl `readArg`'s `Tokens($token)`,
+      // digested from its own mouth (the loop ends at its EOF).
+      ArgWrap::Tokens(body) if !body.is_empty() => reading_from_mouth(Mouth::default(), move || {
+        unread(body);
+        predigest_box_contents_in_mode(ArgWrap::None, "restricted_horizontal")
+      }),
+      _ => predigest_box_contents_in_mode(arg, "restricted_horizontal"),
+    } },
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
     read_box_contents(lookup_tokens("\\everyvbox")) },
   predigest => sub[arg] {
@@ -1497,10 +1520,72 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
       break;
     } // Skip till { or \bgroup
   }
+  unread(box_prefix_tokens(everybox_opt));
+  Ok(Tokens!())
+}
+
+/// Reader for `HBoxArgContents`: ONE macro argument (Perl `Gullet::readArg`,
+/// Gullet.pm:732-741 — skip spaces, a catcode-BEGIN token opens a balanced
+/// group, any other single token IS the argument), positioned for the live
+/// one-frame box loop of `predigest_box_contents_in_mode`. The four Perl
+/// `{}`-argument box constructors (`\mbox`, `\@makebox`, `\@framebox`,
+/// `\raisebox`) are `\hbox{#1}` of a macro argument (latex.ltx:16082
+/// `\DeclareRobustCommand\mbox[1]{\leavevmode\hbox{#1}}`), so `\mbox\qquad` is
+/// `\hbox{\qquad}`. `read_box_contents`'s forward scan to the next `{` is the
+/// `\hbox` primitive's (tex.web §1083 `scan_spec` … `scan_left_brace`), and on
+/// an unbraced argument it consumed the `}` closing an enclosing group and took
+/// a later `{` as the box: `\subsection{… ggg\\\mbox\qquad and packages}` leaked
+/// one group per sectioning re-digest ("\end occurred inside a group at level
+/// 4", the title truncated after the `\\`; ltnews issue 40, an `\endgroup`
+/// error under the renewed `document` of divergence #232). Three cases: a
+/// braced argument leaves the live gullet positioned after its `{` (empty
+/// result, as `read_box_contents`); an implicit begin-group (`\bgroup`) is
+/// re-inserted as `\bgroup }` for the live loop, TeX's `\hbox{\bgroup}` whose
+/// body runs on to the `\egroup`; any other single token comes back as the
+/// result, an ISOLATED list like Perl's `Tokens($token)` — the
+/// `HBoxArgContents` predigest digests it from its own mouth, so an
+/// argument-taking token (`\mbox\emph{x}`: pdflatex rejects it, Perl and this
+/// engine are lenient) finds its argument exhausted rather than swallowing
+/// the box's `}`.
+pub fn read_box_arg_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
+  let prefix = box_prefix_tokens(everybox_opt);
+  match read_non_space()? {
+    Some(t) if t.get_catcode() != Catcode::BEGIN && !t.defined_as(&T_BEGIN!()) => {
+      let mut body = prefix.unlist();
+      body.push(t);
+      Ok(Tokens::new(body))
+    },
+    Some(t) if t.get_catcode() != Catcode::BEGIN => {
+      // An implicit begin-group (`\mbox\bgroup z\egroup`): TeX's `\hbox{\bgroup}`
+      // — the `}` closes the `\bgroup` and the box body runs on in the live
+      // stream up to the `\egroup`, so it is re-inserted as `\bgroup }` for
+      // the live loop (tex.web §1068: a `}` may close a `\bgroup` group).
+      let mut live = prefix.unlist();
+      live.push(t);
+      live.push(T_END!());
+      unread(Tokens::new(live));
+      Ok(Tokens!())
+    },
+    _ => {
+      unread(prefix);
+      Ok(Tokens!())
+    },
+  }
+}
+
+/// The tokens a box body starts with, once its `{` has been consumed:
+/// `\everyhbox` / `\everyvbox`, then the pending `\afterassignment` token
+/// (`BeforeNextBox`) — the order the former two `unread`s produced.
+fn box_prefix_tokens(everybox_opt: Option<Tokens>) -> Tokens {
+  let mut prefix: Vec<Token> = Vec::new();
+  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
+  if let Some(everybox) = everybox_opt {
+    prefix.extend(everybox.unlist());
+  }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
   match remove_value("BeforeNextBox") {
-    Some(Stored::Tokens(tokens)) => unread(tokens),
-    Some(Stored::Token(token)) => unread_one(token),
+    Some(Stored::Tokens(tokens)) => prefix.extend(tokens.unlist()),
+    Some(Stored::Token(token)) => prefix.push(token),
     None | Some(Stored::None) => {},
     Some(other) => emit_warn(
       "internal",
@@ -1508,9 +1593,5 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
       &format!("afterAssignment should be a token, got: {other}"),
     ),
   };
-  // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
-  if let Some(everybox) = everybox_opt {
-    unread(everybox);
-  }
-  Ok(Tokens!())
+  Tokens::new(prefix)
 }

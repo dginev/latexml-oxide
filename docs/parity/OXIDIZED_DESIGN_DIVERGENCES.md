@@ -6623,20 +6623,30 @@ the argument and CLOSES it after (ulem's `\UL@start` = `\setbox\UL@box\hbox
 `\makebox[.5in][r]{\hss}` at :1210) meets the wrong frame: "`\egroup` Attempt
 to close a group that switched to mode restricted_horizontal" then a cascade
 (examdesign examplea/b/c 101 errors each; Perl identical).
-**Rust behavior**: the content parameter is `HBoxContents` — read and digested
-in the SAME list as latex.ltx's `\mbox{#1}` = `\leavevmode\hbox{#1}` (:9967)
-and `\@makebox`/`\@framebox`/`\raisebox`'s `\hb@xt@`/`\hbox`, with the
+**Rust behavior**: the content parameter is `HBoxArgContents` — read and
+digested in the SAME list as latex.ltx's `\mbox{#1}` = `\leavevmode\hbox{#1}`
+(:16082) and `\@makebox`/`\@framebox`/`\raisebox`'s `\hb@xt@`/`\hbox`, with the
 one-frame `readBoxContents` loop (tex.web §1083 `begin_box` pushes nest and
 save level together, §1100 `package` pops both) and `bounded => true` so the
 frame still scopes the box; `sizer` keeps the width/height computation. The
 common shapes (`\makebox[2cm][r]`, `\fbox`, `\raisebox`, `\framebox`, math
-`\fbox{$…$}`) keep their output.
+`\fbox{$…$}`) keep their output. The reader (`read_box_arg_contents`,
+batch 56ck) takes ONE macro argument, as Perl's `{}` and `\mbox[1]` do — a
+braced group on the live gullet, or a single token digested as an isolated
+list (Perl `readArg`'s `Tokens($token)`, so `\mbox\emph{x}` — rejected by
+pdflatex, lenient in both engines — yields Perl's empty `<emph/>` with `x`
+outside the box) — not the
+`\hbox` primitive's forward scan to the next `{` (`read_box_contents`, kept
+for `\hbox`/`\vbox`): that scan swallowed the `}` closing an enclosing group
+on an unbraced argument (`\subsection{… ggg\\\mbox\qquad and packages}`,
+ltnews issue 40: one leaked group per sectioning re-digest, the title cut
+after the `\\`, "\end occurred inside a group at level 4").
 **Why**: kernel-quality: the box body is a TeX list, not an argument; the
 reader/frame shape is tex.web's. Engine-level (four constructors), Perl would
 take the same change.
 **Witnesses**: examdesign/examplea, examplea-b, examplec (TeX Live doc corpus).
 **Guard**: `perfect_kernel_batch54::{box_constructor_content_is_a_live_hbox_body,
-hbox_reader_is_one_frame}`.
+hbox_reader_is_one_frame}`, `mbox_argument_is_bounded::unbraced_box_argument_is_one_token`.
 **Upstream**: not filed.
 
 ### 189. Sectioning units inside a list item or figure insert without a diagnostic (Perl: schema error)

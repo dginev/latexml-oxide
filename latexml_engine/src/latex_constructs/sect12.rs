@@ -164,11 +164,16 @@ pub(crate) fn load() -> Result<()> {
   // ulem reopened. Digesting the `{}` argument in an isolated mouth under a
   // mode frame met that `\egroup` with the frame instead (Perl
   // latex_constructs.pool:4709-4724 shares it; examdesign examplea/b/c). So
-  // the content parameter is `HBoxContents`: `read_box_contents` skips to the
-  // `{` and the one-frame `readBoxContents` loop digests from the live gullet
-  // until the frame closes. `bounded` stays to scope the `$` rebind. Guard:
-  // `perfect_kernel_batch54::box_constructor_content_is_a_live_hbox_body`.
-  DefConstructor!("\\mbox HBoxContents", "<ltx:text _noautoclose='1'>#1</ltx:text>",
+  // the content parameter is `HBoxArgContents`: `read_box_arg_contents` reads
+  // ONE macro argument — the `{` of a braced one, or a single token wrapped
+  // as its own group (`\mbox\qquad` = `\hbox{\qquad}`, latex.ltx:16082; the
+  // `\hbox`-style forward scan of `HBoxContents` swallowed an enclosing
+  // group's `}` there, ltnews issue 40) — and the one-frame `readBoxContents`
+  // loop digests from the live gullet until the frame closes. `bounded`
+  // stays to scope the `$` rebind. Guards:
+  // `perfect_kernel_batch54::box_constructor_content_is_a_live_hbox_body`,
+  // `mbox_argument_is_bounded::unbraced_box_argument_is_one_token`.
+  DefConstructor!("\\mbox HBoxArgContents", "<ltx:text _noautoclose='1'>#1</ltx:text>",
     // `mode` stays, as on `\\hbox` (tex_box.rs): the constructor's own font is
     // the TEXT font, so a box in math carries no `font="italic"` (golden
     // 81_babel numprints).
@@ -190,7 +195,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   // Perl latex_constructs.pool.ltxml L4718-4724: `\@makebox` has NO
   // beforeDigest — the outer T_MATH binding persists.
-  DefConstructor!("\\@makebox[Dimension][] HBoxContents",
+  DefConstructor!("\\@makebox[Dimension][] HBoxArgContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
     mode => "restricted_horizontal", bounded => true, alias => "\\makebox", sizer => "#3",
     properties   => sub[args] {
@@ -242,7 +247,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
-  DefConstructor!("\\@framebox[Dimension][] HBoxContents",
+  DefConstructor!("\\@framebox[Dimension][] HBoxArgContents",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
@@ -577,7 +582,7 @@ pub(crate) fn load() -> Result<()> {
   );
   // Perl latex_constructs.pool.ltxml L4852-4855: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists.
-  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension] HBoxContents",
+  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension] HBoxArgContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode => "restricted_horizontal", bounded => true,
     // TODO
