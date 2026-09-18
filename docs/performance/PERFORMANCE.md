@@ -859,3 +859,29 @@ Suspects to rank: token interning/arena pins per `\csname`, `Tokens` clones in
 `\pgfmath`/`\pgfkeys` expansion, the pushback/mouth structure, per-token state
 lookups (catcode, meaning), `check_timeout` cadence, definition dispatch, the
 SVG driver's path building. Tracked in `docs/perfect_kernel/PLANS.md` item 7.
+
+**Symbolized profile (2026-09-18, `~/data/pk_agents/w23/perf_pgf/NOTES.md`).**
+picC (one heavy picture): 887 M token reads, 35.8 ns and 632 instructions per
+token, IPC 3.17; pdflatex runs 6.07× fewer instructions on the same input — a
+document-model constant factor, linear in pictures. Top self time on the manual:
+`read_internal_token_checked` 9.9 %, `read_x_token` 5.5 %, `read_balanced_with_close`
+4.8 %, `read_arguments` 3.1 %, `substitute_parameters` 3.1 %, `Parameter::read`
+2.6 %, `assign_internal` 2.4 % — and a **14 % inclusive `getenv` band**:
+`Parameters::read_arguments`/`read_arguments_and_digest` called
+`std::env::var("LXML_TRACE_ARGS")` on EVERY macro/primitive/constructor
+invocation (the environment lock plus a byte scan of `environ`, longer under the
+`TEXMF*` pin). The stripped profile had shown it only as ambient libc.
+
+**Lever 1 landed (batch 56da): the trace switch read once** (`Lazy<Option<String>>`,
+parameter.rs — gullet.rs's `TRACE_GROUP_END` idiom). Bars, picC under a loaded
+host (`perf stat` instructions are load-independent): 559.5 G → 497.8 G
+instructions (−11.0 %), wall 37.9 s → 33.3 s (−12.2 %), XML byte-identical;
+tikz-network's manual to be read off sweep 89. Ranked next (structural): (2)
+allocator churn ≈5.5 % self in `substitute_parameters`/`read_balanced`/
+`read_arguments` (`Token` < 8 B first, P5); (3) `assign_internal`'s Global
+undo-frame walk + hashbrown `remove_entry` ≈4.3 % for per-op Global counters
+(if_count/if_limit/align — the typed-State-field item P4); (4)
+`is_noexpand_family`/`noexpand_shadowed` ≈2.3 % per-CS string probes → an
+intern-time flag bit; (5) `local_assignments` align bookkeeping ≈1.9 % per token
+on the non-align path. Beyond these, closing the 6× needs fewer tokens per
+picture (pgf binding emitting less) — the harder program.

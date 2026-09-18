@@ -47,6 +47,15 @@ pub type ReversionClosure =
 /// Perl equivalent: the `reversion` option on DefParameterType, which receives the raw value.
 pub type DigestedReversionClosure = Rc<dyn Fn(&Digested) -> Result<Tokens>>;
 
+/// `LXML_TRACE_ARGS=\cs`, read ONCE: both argument readers below run on every
+/// macro, primitive, conditional and constructor invocation, and
+/// `std::env::var` takes the process environment lock and byte-scans the
+/// environment each call — 14 % of a pgf/TikZ conversion (tikz-network's
+/// 887 M token reads per picture; symbolized profile
+/// `~/data/pk_agents/w23/perf_pgf/NOTES.md`), the same trap gullet.rs's
+/// `TRACE_GROUP_END` records. A debug switch set before launch never changes.
+static TRACE_ARGS: Lazy<Option<String>> = Lazy::new(|| std::env::var("LXML_TRACE_ARGS").ok());
+
 static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
 static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
@@ -656,9 +665,9 @@ impl Parameters {
     // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
     // primitives read their parameters here).
     let traced = fordefn.is_some_and(|d| {
-      std::env::var("LXML_TRACE_ARGS")
-        .map(|want| d.get_cs().to_string() == want)
-        .unwrap_or(false)
+      TRACE_ARGS
+        .as_deref()
+        .is_some_and(|want| d.get_cs().to_string() == want)
     });
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
@@ -687,9 +696,9 @@ impl Parameters {
     // reverted tokens, before it is digested — a bisect aid for "which tokens
     // did the `{}` scan swallow" questions (examdesign's version-loop
     // re-execution; wave 14). Off by default.
-    let traced = std::env::var("LXML_TRACE_ARGS")
-      .map(|want| fordefn.get_cs().to_string() == want)
-      .unwrap_or(false);
+    let traced = TRACE_ARGS
+      .as_deref()
+      .is_some_and(|want| fordefn.get_cs().to_string() == want);
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if traced {
