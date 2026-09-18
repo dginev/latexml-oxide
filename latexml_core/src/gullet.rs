@@ -2822,12 +2822,18 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
     None => Ok(None),
     Some(token) => {
       let cc = token.get_catcode();
-      let mut text = token.to_string();
-      if cc == Catcode::OTHER && text.chars().all(|c| c.is_ascii_digit()) {
+      // tex.web §440-448 `scan_int` inspects the token's command/char codes
+      // and never stringifies it; the decimal arm is the only one that needs
+      // the text, so the common internal-quantity case (`\pgf@x`, a count
+      // register) pays no String — this ran once per number read.
+      let is_decimal_start = cc == Catcode::OTHER
+        && token.with_str(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()));
+      if is_decimal_start {
         // Read decimal literal. Overflow is rare but possible on weird
         // input (digit runs wider than i64::MAX); Perl's TeX silently
         // truncates such values, so we fall back to i64::MAX / MIN on
         // parse failure rather than panicking with .expect().
+        let mut text = token.to_string();
         text.push_str(&read_digits(&DIGIT_RE, true)?);
         let n = text.parse::<i64>().unwrap_or_else(|_| {
           if text.starts_with('-') {
@@ -3673,6 +3679,48 @@ mod token_limit_tests {
 
   /// The runaway backstop grows with the bytes of EVERY opened source, not
   /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).
+  /// tex.web §444 `scan_int`: a decimal run, `'` octal, `"` hex, and a
+  /// first token that is no numeric constant falls through to the internal-
+  /// quantity path (§444's "Missing number, treated as zero" when nothing
+  /// there is a number either). The decimal test is a non-allocating digit
+  /// peek on the token's text (lever E), so the empty-text OTHER token —
+  /// which the old vacuous `all(is_ascii_digit)` mis-read as a decimal and
+  /// parsed to `i64::MAX` — now takes the missing-number route.
+  #[test]
+  fn read_normal_integer_arms_follow_scan_int() {
+    reset_thread_state();
+    initialize_gullet();
+    let read = |tokens: Vec<Token>| -> Option<i64> {
+      reading_from_mouth(Mouth::default(), || {
+        unread_vec(tokens);
+        let n = read_normal_integer()?.map(|n| n.value_of());
+        // Drain whatever the reader left (an unread non-digit).
+        while read_token()?.is_some() {}
+        Ok(n)
+      })
+      .expect("no fatal")
+    };
+    let other = |s: &str| Token::new(s, Catcode::OTHER);
+    assert_eq!(read(vec![other("1"), other("2"), T_SPACE!()]), Some(12));
+    assert_eq!(read(vec![other("12"), other("3"), T_SPACE!()]), Some(123));
+    assert_eq!(
+      read(vec![other("'"), other("1"), other("7"), T_SPACE!()]),
+      Some(15)
+    );
+    assert_eq!(
+      read(vec![other("\""), other("F"), other("F"), T_SPACE!()]),
+      Some(255)
+    );
+    assert_eq!(read(vec![other("`"), T_CS!("\\a"), T_SPACE!()]), Some(97));
+    let dot = read(vec![other("."), T_SPACE!()]);
+    let empty = read(vec![other(""), T_SPACE!()]);
+    assert_eq!(
+      dot, empty,
+      "an empty-text OTHER token is no more a number than `.`"
+    );
+    assert_ne!(empty, Some(i64::MAX), "never the old fabricated i64::MAX");
+  }
+
   #[test]
   fn token_limit_scales_with_cumulative_source_bytes() {
     if std::env::var_os("LATEXML_TOKEN_LIMIT").is_some() {

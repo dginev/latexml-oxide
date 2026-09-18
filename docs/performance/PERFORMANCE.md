@@ -918,9 +918,37 @@ reviewer's catch: the unguarded bound gave every gobble a malloc/free pair).
 Bar ≤ 472 G, measured picC 467.4 G → 465.2 G (−0.5 %, the bar missed by 0.3
 points; landed as a byte-identical net positive).
 
-Cumulative on picC since the program opened: 559.5 G → 465.2 G instructions
-(−16.9 %). The remaining gap to pdflatex is structural (tokens per picture);
-the next candidates are the B3 family bit in `Token`'s padding byte and P5. Settled dead ends: SmallVec-backed `Tokens` (blocked by
+**Lever E landed (batch 56dg): no String per number read.** `read_normal_integer`
+stringified every token it read (`Token::to_string()` = arena `with_str` +
+`fmt::write` + a heap String) to test for a decimal digit, then dropped the
+String on the common internal-quantity path (`\pgf@x`, a count register); now a
+non-allocating `with_str` digit peek, the String built only in the decimal arm
+(tex.web §440-448 `scan_int` inspects codes, never text). Bar ≤ 458 G, measured
+picC 465.2 G → 459.6 G (−1.2 %, bar missed by 0.35 points; byte-identical).
+
+**Round 2 profile (2026-09-18, `~/data/pk_agents/w23/perf_pgf/round2/NOTES.md`,
+on the lever-D binary):** 887,136,902 token reads per picC — unchanged by every
+lever (they cut cost per token, never the count); document-to-package token ratio
+≈ 1:3,000,000, so the cost is the pgf interpreter's macro bodies; pgfmath is
+already a native f64 binding. Self-time bands: token I/O ≈ 32 %
+(`read_internal_token_checked` 12.5 %, `read_x_token` 6.4 %,
+`read_balanced_with_close` 5.7 %), argument read + substitution ≈ 14 %, meaning
+resolution ≈ 8-9 % (every CS resolves twice: `read_x_token` then
+`stomach::invoke_token`, tex.web §340-341 resolves once), allocator ≈ 7 %,
+dispatch ≈ 6 %. Ranked next: (G) resolve each token's meaning once — a
+one-slot resolved-definition cache from `read_x_token` to `invoke_token`,
+invalidated on meaning assignment; HIGH value, HIGH risk; bar ≤ 452 G. (F) the
+no-expand probe as an unchecked per-symbol bitset (`#[thread_local]
+UnsafeCell<Vec<u8>>`) — the naive memo route is lever B's dead end, the residual
+is the `RefCell` borrow; the per-Token pad-byte bit is REJECTED (Token is Copy,
+rebuilt by `T_CS!` and dump replay, so a family-named token off the producer
+would misroute in `meaning_key`); MED risk, ≈1.5-2 %. (I) `unread_expansion`'s
+manual reverse-push loop as one `extend` — verify LLVM has not fused it; < 0.5 %.
+
+Cumulative on picC since the program opened: 559.5 G → 459.6 G instructions
+(−17.9 %); 4.97× pdflatex's 92.4 G (was 6.07×). The remaining gap is the token
+count itself — the tikz frontend binding emitting fewer tokens — the harder
+program. Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
 scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
 (net-neutral), LBR call graphs (unsupported on this PMU; use `--call-graph fp`),
