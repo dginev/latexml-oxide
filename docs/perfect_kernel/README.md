@@ -31,7 +31,11 @@ single-level expansion tolerates — our/Perl recursion guard is load-bearing),
 also invokes at CONSTRUCTION time inside elements — the wrapper leaks tokens
 into the DOM), `titleps_sty.rs`/`schooldocs_sty.rs` (purely presentational
 page-style surfaces with no XML counterpart; schooldocs hides its one semantic
-command inside a `\fancypagestyle` body both engines discard). A raw-first
+command inside a `\fancypagestyle` body both engines discard),
+`frontespizio_sty.rs` (the package typesets its title page in a SECOND pdflatex
+run on a generated file and re-includes it as a graphic — external compilation,
+out of scope like shell-escape; the binding forces the package's own inline
+route, batch 56cj). A raw-first
 attempt is still the default for every new cluster; a new binding requires a
 justification of this kind in the file header.
 

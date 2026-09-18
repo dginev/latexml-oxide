@@ -1014,6 +1014,73 @@ mod graphics_kpsewhich {
   }
 }
 
+mod hyperref_colorlinks {
+  //! A bare `colorlinks` in `\hypersetup` or the package options is
+  //! `colorlinks=true` (hyperref.sty:3204 `\define@key{Hyp}{colorlinks}[true]`),
+  //! and hyperref then loads color (:4532-4536): ltnews's driver does
+  //! `\hypersetup{colorlinks}` and its issues use `\color`/`\textcolor`
+  //! without loading color themselves. Perl shares the `eq 'true'` guard
+  //! (hyperref.sty.ltxml:114); the whole paragraph is pinned.
+
+  #[test]
+  fn bare_colorlinks_loads_color() {
+    let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\hypersetup{colorlinks}\n\\begin{document}\nTest \\textcolor{red}{red} end.\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>Test <text color="#FF0000">red</text> end.</p>"##,
+    );
+  }
+}
+
+mod frontespizio_inline {
+  //! Surpass (user-approved shape, 2026-09-17): frontespizio's default `write`
+  //! mode typesets the title page in a SECOND pdflatex run on a generated
+  //! `\jobname-frn.tex` and re-includes it as a graphic — out of scope like
+  //! shell-escape, so raw-loaded (and in Perl) the environment yielded an
+  //! empty `<titlepage>` and all six shipped manuals lost their whole content
+  //! (S3 0/27). The binding forces the package's own inline route
+  //! (`[nowrite,infront]`, `\preparefrontpage<shape>`); the whole
+  //! `<titlepage>` of the standard shape is pinned.
+
+  #[test]
+  fn standard_shape_title_page_is_typeset_inline() {
+    if !latexml::util::test::kpse_has("frontespizio.sty") {
+      return;
+    }
+    let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\Universita{Padova}\n\\Facolta{Scienze Matematiche, Fisiche e Naturali}\n\\Corso[Laurea]{Matematica}\n\\Titoletto{Tesi di laurea}\n\\Titolo{Equivalenze fra categorie di moduli}\n\\Candidato[145822]{Enrico Gregorio}\n\\Relatore{Ch.mo Prof.~Adalberto Orsatti}\n\\Annoaccademico{1999-2000}\n\\end{frontespizio}\nBODY\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "titlepage",
+      &[],
+      r##"<titlepage><p><text font="bold">Università degli Studi di Padova</text></p><p><rule height="1px" width="100%"/>FACOLTÀ DI SCIENZE MATEMATICHE, FISICHE E NATURALI<break/>Corso di Laurea in Matematica</p><p><text font="smallcaps">Tesi di laurea</text></p><p><text font="bold">Equivalenze fra categorie di moduli</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Enrico Gregorio</text></td></tr><tr><td align="left" class="ltx_nopad_r" cssstyle="padding-bottom: 13.33333pt"><text font="bold">Matricola 145822</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Ch.mo Prof. Adalberto Orsatti</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold">Anno Accademico 1999-2000</text></p></titlepage>"##,
+    );
+  }
+  /// `Preambolo*` (preamble material for the external title-page document,
+  /// frontespizio.sty:186-187) is executed inline: its `\newcommand` is live
+  /// for `\Titolo` (examplec's `\compring`), its package loaders are gobbled.
+  #[test]
+  fn preambolo_material_is_executed_inline() {
+    if !latexml::util::test::kpse_has("frontespizio.sty") {
+      return;
+    }
+    let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\begin{Preambolo*}\n  \\usepackage{fourier}\n  \\newcommand{\\compring}{anelli compatti}\n\\end{Preambolo*}\n\\Universita{Bologna}\n\\Dipartimento{Matematica}\n\\Corso[Dottorato di Ricerca]{Matematica}\n\\Titolo{Sugli \\compring}\n\\Candidato{Nome Cognome}\n\\Relatore{Prof.~Relatore}\n\\Annoaccademico{2000-2001}\n\\end{frontespizio}\nBODY\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "titlepage",
+      &[],
+      r##"<titlepage><p><text font="bold">Università degli Studi di Bologna</text></p><p><rule height="1px" width="100%"/>DIPARTIMENTO DI MATEMATICA<break/>Corso di Dottorato di Ricerca in Matematica</p><p><text font="bold">Sugli anelli compatti</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Nome Cognome</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Prof. Relatore</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold">Anno Accademico 2000-2001</text></p></titlepage>"##,
+    );
+  }
+}
+
 mod graphics_asset_memo {
   //! Batch 56ci: the on-disk image size reads are memoized per path for a
   //! conversion (pdfTeX reads an image file's box once and shares the
@@ -1077,7 +1144,38 @@ mod document_indirection {
       &xml,
       "document",
       &[],
-      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>DRIVER-START ISSUE-BEGIN ISSUE-ONE-BODY ISSUE-END DRIVER-AFTER-ISSUE</p></para></document>"##,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>DRIVER-START ISSUE-BEGIN ISSUE-ONE-BODY ISSUE-END</p></para><para xml:id="p2"><p>DRIVER-AFTER-ISSUE</p></para></document>"##,
+    );
+  }
+
+  /// A renewed `document` is a normal environment, grouped: l3news.tex:109
+  /// wraps `\addtocontents` per issue (`\let\saved@addtocontents
+  /// \addtocontents` then `\renewcommand`); without the group the wrapper
+  /// leaked into the next `\input` issue and the third issue's `\let` captured
+  /// its own wrapper — a self-recursive macro, `PushbackLimit`. Three issues
+  /// through the same wrap must all arrive.
+  #[test]
+  fn renewed_document_environment_scopes_each_issue() {
+    let driver = "\\documentclass{article}\n\\makeatletter\n\\newcommand{\\logline}[1]{}\n\\begin{document}\nDRIVER-START\n\\begingroup\n\\renewcommand*{\\documentclass}[2][]{}\n\\renewenvironment{document}{\\let\\saved@logline\\logline\\renewcommand*{\\logline}[1]{\\saved@logline{##1}}}{}\n\\input{issue1}\\input{issue2}\\input{issue3}\n\\endgroup\nDRIVER-END\n\\end{document}\n";
+    let issue = |n: u32| {
+      format!(
+        "\\documentclass{{article}}\n\\begin{{document}}\n\\section{{Issue {n}}}\n\\logline{{x}}ISSUE-{n}-BODY\n\\end{{document}}\n"
+      )
+    };
+    let files = [
+      ("issue1.tex", issue(1)),
+      ("issue2.tex", issue(2)),
+      ("issue3.tex", issue(3)),
+    ];
+    let refs: Vec<(&str, &str)> = files.iter().map(|(n, t)| (*n, t.as_str())).collect();
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(driver, &refs);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "document",
+      &[],
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para xml:id="p1"><p>DRIVER-START</p></para><section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Issue 1</title><para xml:id="S1.p1"><p>ISSUE-1-BODY</p></para></section><section inlist="toc" xml:id="S2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">§2</tag></tags><title><tag close=" ">2</tag>Issue 2</title><para xml:id="S2.p1"><p>ISSUE-2-BODY</p></para></section><section inlist="toc" xml:id="S3"><tags><tag>3</tag><tag role="refnum">3</tag><tag role="typerefnum">§3</tag></tags><title><tag close=" ">3</tag>Issue 3</title><para xml:id="S3.p1"><p>ISSUE-3-BODY</p></para><para xml:id="S3.p2"><p>DRIVER-END</p></para></section></document>"##,
     );
   }
 

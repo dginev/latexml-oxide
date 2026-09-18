@@ -305,7 +305,12 @@ LoadDefinitions!({
   DefPrimitive!("\\hypersetup RequiredKeyVals:Hyp", sub[(kv)] {
     for (key, value) in kv.get_pairs() {
       let value_str = value.to_string();
-      if key == "colorlinks" && value_str == "true" {
+      // A bare `colorlinks` is `colorlinks=true`: hyperref.sty:3204
+      // `\define@key{Hyp}{colorlinks}[true]` (ltnews's driver `\hypersetup
+      // {colorlinks}`, whose issues then use `\color`). Beyond Perl's
+      // `eq 'true'` guard (hyperref.sty.ltxml:114-115), which the bare form
+      // fails, so Perl leaves `\color` undefined there.
+      if key == "colorlinks" && (value_str == "true" || value_str.is_empty()) {
         RequirePackage!("color");
       }
       // Perl (PR #2767): don't digest \hypersetup keyvals, since they are
@@ -1309,7 +1314,7 @@ LoadDefinitions!({
           // `colorlinks=true` keyval — papers passing the option as
           // `\usepackage[colorlinks=true]{hyperref}` had \textcolor undefined.
           // Witness: 0902.2912.
-          if key == "colorlinks" && value == "true" {
+          if key == "colorlinks" && (value == "true" || value.is_empty()) {
             RequirePackage!("color");
           }
         }

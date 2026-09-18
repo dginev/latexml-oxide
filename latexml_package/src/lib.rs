@@ -552,6 +552,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("hyperxmp", "sty", package::hyperxmp_sty::load_definitions),
   ("nameref", "sty", package::nameref_sty::load_definitions),
   ("nomencl", "sty", package::nomencl_sty::load_definitions),
+  (
+    "frontespizio",
+    "sty",
+    package::frontespizio_sty::load_definitions,
+  ),
   ("verbatim", "sty", package::verbatim_sty::load_definitions),
   ("vntex", "sty", package::vntex_sty::load_definitions),
   ("eucal", "sty", package::eucal_sty::load_definitions),

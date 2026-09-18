@@ -199,6 +199,7 @@ pub mod fourier_sty;
 pub mod framed_sty;
 pub mod french_ldf;
 pub mod frenchb_ldf;
+pub mod frontespizio_sty;
 pub mod fullpage_sty;
 pub mod fvextra_sty;
 pub mod gen_j_l_cls;

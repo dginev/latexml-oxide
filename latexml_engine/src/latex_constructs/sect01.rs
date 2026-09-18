@@ -396,10 +396,9 @@ pub(crate) fn load() -> Result<()> {
     // (`\let\document\begin{document}`, `\ifx`-equal), nothing changes.
     // Beyond Perl, user-approved: OXIDIZED_DESIGN_DIVERGENCES #232. Guard:
     // `cluster_package_guards::document_indirection::*`.
-    // No `\begingroup` here: latex.ltx's `\document` closes `\begin`'s
-    // group at once (:14790), and a renewed `document` body is a whole
-    // typeset document, whose paragraphs this engine's group-mode
-    // bookkeeping would refuse to close (`\endgroup … switched to mode`).
+    // The ORIGINAL `\document` eats `\begin`'s group itself (latex.ltx
+    // :14790), so the constructor path opens none; a RENEWED `document` is
+    // a normal environment and gets its `\begingroup`/`\endgroup` below.
     let user_document = name == "document"
       && is_user_document_macro(&T_CS!("\\document"), &T_CS!("\\lx@orig@document"));
     if name == "document" {
@@ -409,8 +408,17 @@ pub(crate) fn load() -> Result<()> {
       assign_value("document:indirected", Stored::Bool(user_document), Some(Scope::Global));
     }
     if user_document {
+      // A renewed `document` IS a normal environment: `\begin{document}` =
+      // `\begingroup\document`, `\end{document}` = `\enddocument\endgroup`
+      // (latex.ltx `\begin`/`\end`). Without the group every issue's
+      // `\let\saved@addtocontents\addtocontents` + `\renewcommand` of the
+      // l3news driver LEAKED into the next `\input` issue, until
+      // `\saved@addtocontents` captured its own wrapper (a self-recursive
+      // macro → `PushbackLimit`). Only the ORIGINAL `\document` eats
+      // `\begin`'s group itself.
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
+      tks.push(T_CS!("\\begingroup"));
       tks.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
       if let Some(after) = after_opt {
         tks.extend(after.unlist());
@@ -530,6 +538,12 @@ pub(crate) fn load() -> Result<()> {
       let mut tks = before.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("end"));
       tks.push(T_CS!("\\enddocument"));
+      // `\par` first: an issue's last paragraph is still open, and this
+      // engine's group bookkeeping refuses to close a group that switched
+      // mode ("Attempt to close a group that switched to mode horizontal");
+      // TeX ends that paragraph at the next page/vertical material anyway.
+      tks.push(T_CS!("\\par"));
+      tks.push(T_CS!("\\endgroup"));
       tks.extend(use_hook("after"));
       if let Some(afterend_toks) = after {
         tks.extend(afterend_toks.unlist())
@@ -748,9 +762,12 @@ fn is_user_document_macro(cs: &Token, alias: &Token) -> bool {
     return false;
   }
   match lookup_definition(cs) {
-    Ok(Some(defn)) => match defn.get_expansion() {
+    Ok(Some(defn)) if defn.is_expandable() => match defn.get_expansion() {
       Some(ExpansionBody::Tokens(body)) => !body.unlist_ref().iter().any(|t| t == cs),
-      _ => false,
+      // A macro with no body at all — `\renewenvironment{document}{…}{}`'s
+      // empty end code — is a user macro too.
+      None => true,
+      Some(ExpansionBody::Closure(_)) => false,
     },
     _ => false,
   }

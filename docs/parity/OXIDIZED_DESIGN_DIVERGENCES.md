@@ -7444,10 +7444,29 @@ document's own: not `\ifx`-equal to the ORIGINAL constructor (kept as
 `\end{document}` CS itself), not the kernel's post-begin re-let to `\@notprerr`,
 and not a wrapper whose body contains the control sequence itself
 (standalone.cls captures the kernel macro's body, which here is the unexpandable
-alias — a self-loop). No `\begingroup`: latex.ltx's `\document` closes it at
-once. Every ordinary document is unchanged (`sect01.rs`).
+alias — a self-loop). The renewed environment is grouped like any other
+(`\begingroup … \enddocument\par\endgroup`; only the original `\document`
+eats `\begin`'s group), so an issue's local redefinitions revert at its end.
+Every ordinary document is unchanged (`sect01.rs`).
 **Why**: user-approved surpass (2026-09-17); latex.ltx semantics. Not
 generalized to other environments on purpose: a corpus-wide "user environment
 outranks the binding" rule would turn every `\renewenvironment{abstract}`
 into presentational markup. Guards `document_indirection::*`.
 \n
+
+### 233. frontespizio typesets its title page inline
+
+**Perl behavior**: no binding; the raw package runs in its default `write` mode,
+which redirects every content macro to a generated `\jobname-frn.tex`
+(frontespizio.sty:207-229) for a second pdflatex run and re-includes the result
+as a graphic (:606-616) — an empty `<titlepage>` and all six shipped manuals at
+0 % recall.
+**Rust behavior**: `frontespizio_sty.rs` loads the raw package with the document's
+options plus `nowrite,infront`, so the content macros store their values
+(:260-309), and the environment's end runs `\preparefrontpage<shape>`
+(:311-538), the package's own inline typesetting; xcolor is loaded for the
+`suftesi` shape's colours.
+**Why**: external compilation is out of scope (as shell-escape); the package
+carries the inline route itself, and the PDF is the oracle. Guard
+`frontespizio_inline::standard_shape_title_page_is_typeset_inline`. Batch 56cj.
+
