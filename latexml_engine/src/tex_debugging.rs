@@ -122,6 +122,11 @@ LoadDefinitions!({
   // NOTE: Lots of back-and-forth mangle with definition vs cs; don't do that!
   DefMacro!("\\meaning Token", sub[(token)] {
     let mut meaning = String::from("undefined");
+    // A `\noexpand` marker (the `\special_relax` family) is tex.web §358's
+    // `relax` variant with chr `no_expand_flag`, and `print_meaning` shows it
+    // as `\relax` (§266 `print_cmd_chr(relax, …)`) — never the marker's own
+    // name, which Perl prints (divergence #238).
+    let token = if token.is_noexpand_family() { T_CS!("\\relax") } else { token };
     if let Some(definition) = if token == T_ALIGN!() {
       Some(Stored::Token(token))
     } else {
@@ -153,7 +158,12 @@ LoadDefinitions!({
       let definition : Stored = match definition {
         Stored::Primitive(primitive) => {
           let cs = primitive.get_cs_or_alias();
-          if cs.with_str(|s| s == "\\lx@directlua") || token.to_string() == "\\directlua" {
+          if cs.with_str(|s| s == "\\special_relax") {
+            // A `\let` alias of a `\noexpand` marker holds the `relax`
+            // variant itself (tex.web §1221 `define(p, relax, no_expand_flag)`),
+            // whose meaning prints as `\relax` (§266), not the marker's name.
+            Stored::Token(T_CS!("\\relax"))
+          } else if cs.with_str(|s| s == "\\lx@directlua") || token.to_string() == "\\directlua" {
             Stored::Token(T_CS!("\\directlua"))
           } else if cs.with_str(|s| s == "\\lx@luaescapestring") || token.to_string() == "\\luaescapestring" {
             Stored::Token(T_CS!("\\luaescapestring"))

@@ -181,16 +181,16 @@ LoadDefinitions!({
   // Mirrors Perl: CS → explode with escape char; SPACE → keep as space; ESCAPE/COMMENT/INVALID →
   // empty; all other catcodes → T_OTHER with same text.
   DefMacro!("\\string Token", sub[(token)] {
-    // A live \special_relax-family token (a \noexpand marker already in the
-    // stream) must NOT stringify its raw internal name — that leaks the 0x01
-    // separator byte (illegal in XML 1.0) into document text. Print the name
-    // Perl prints for its equivalent representation: \special_relax.
-    // (Real TeX would print the SHADOWED name; both engines share this
-    // cosmetic divergence — see PR_READINESS cluster A.)
-    let token = if token.is_noexpand_family() {
-      T_CS!("\\special_relax")
-    } else {
-      token
+    // A live \special_relax-family token is TeX's `\noexpand` marker (tex.web
+    // §358: cmd `relax`, chr `no_expand_flag`, with `cur_cs` = the shadowed
+    // control sequence), and `\string` prints `cur_cs`'s name (§472
+    // `sprint_cs(cur_cs)`) — the SHADOWED name; the bare marker (no shadow)
+    // prints as `\relax`, the command it is a variant of (§266). Perl prints
+    // its internal `\special_relax` for both (divergence #238).
+    let token = match token.noexpand_shadowed() {
+      Some(shadowed) => shadowed,
+      None if token.is_noexpand_family() => T_CS!("\\relax"),
+      None => token,
     };
     match token.code {
       Catcode::CS => {

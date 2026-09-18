@@ -7594,6 +7594,31 @@ unbtex/unbtex-example.
 **Guard**: `06_cluster_bibliography::raw_bibliography_override_cannot_lose_the_bib_session`.
 Batch 56cx.
 
+### 238. `\meaning` and `\string` of a `\noexpand` marker print TeX's `\relax` / the shadowed name (Perl: `\special_relax`)
+
+**Ground truth**: tex.web §358 — `\noexpand`'s marker makes the next token cmd
+`relax`, chr `no_expand_flag`, with `cur_cs` the shadowed control sequence
+(TeXbook, `background/texbook.tex:13195`: "that token is interpreted as if its
+meaning were `\relax`"); `print_meaning` renders that as `\relax` (§266
+`print_cmd_chr(relax, …)`), `\string` prints `cur_cs`'s name (§472
+`sprint_cs(cur_cs)`), and `\let` stores the `relax` variant itself (§1221
+`define(p, relax, no_expand_flag)`), so `\meaning` of the alias is `\relax` too.
+pdflatex: `\expandafter\meaning\noexpand\foo` → `\relax`,
+`\expandafter\string\noexpand\foo` → `\foo`,
+`\expandafter\let\expandafter\x\noexpand\foo \meaning\x` → `\relax`. Perl
+represents the marker as its internal `\special_relax` (Gullet.pm:315, the shadowed
+token smuggled in the meaning slot) and prints that name in all three. The Rust
+per-token family (`\special_relax\x01<shadowed>`, `Token::noexpand_shadowed`) is
+the same triple made persistent (its transient-vs-persistent residual is K3,
+`docs/perfect_kernel/KERNEL_CAPABILITIES.md`), and every other observable —
+`\ifx` against `\relax` (false, `no_expand_flag` ≠ 256) and between two aliases
+(true, both the same `relax` variant), `\edef` capturing the plain token (§369),
+delimited-argument matching (§392), `\if`/`\ifcat` on an active char (§506) —
+already matched pdflatex; the printing primitives now do too, for a directly
+expanded marker and for its `\let` alias.
+**Guard**: `cluster_package_guards::noexpand_marker_texweb::fourteen_probes_match_pdflatex`
+(the whole probe, one `<p>` per case). Batch 56dd.
+
 ### 237. `class` values are NMTOKENs and `xml:id`s are XML Names at the emitter (Perl: invalid values pass through)
 
 **Perl behavior**: `setAttribute` writes `class` and `xml:id` verbatim; listings'
