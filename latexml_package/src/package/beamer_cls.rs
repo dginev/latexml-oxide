@@ -306,6 +306,16 @@ LoadDefinitions!({
   RequirePackage!("ifpdf");
   RequirePackage!("keyval");
   RequirePackage!("graphicx");
+  // beamerbasemisc.sty:218-238 `\renewcommand<>\includegraphics{…}`: beamer's
+  // `\includegraphics<overlay>[opts]{file}` eats a leading overlay
+  // specification and defers to graphicx's original (`\beameroriginal
+  // \includegraphics` under `\only<overlay>`). Neither binding had the wrapper,
+  // so graphicx read `<` as the file and the rest leaked as text
+  // (`graphic="&lt;"` + `1>basem3-1`; babybeamer10 and 9 more beamer manuals,
+  // identical in Perl). The overlay itself is discarded: one pass here
+  // (DIFFICULT_CASES D14).
+  RawTeX!(r"\let\beamer@orig@includegraphics\includegraphics");
+  DefMacro!("\\includegraphics OptionalAngled", "\\beamer@orig@includegraphics");
   // beamer.cls:343-350 `\RequirePackage[papersize=…,hmargin=1cm,…]{geometry}`:
   // beamerposter.sty:176 calls `\geometry{…}` for poster sizes, which was
   // undefined (beamertheme-mirage posters ×2; SHARED — Perl beamer.cls.ltxml:30-32
