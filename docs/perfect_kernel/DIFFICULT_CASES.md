@@ -371,8 +371,13 @@ the mechanism, its witnesses, and the disposition.
   and fbithesis are Perl error-dumps (undefined environments leaking their arguments as text
   inflate Perl's recall; both engines lose the epigraph / title page); timeop was already fixed.
   ONE current RUST-ONLY loss: a picture nested in a scaled box inside a picture was never
-  SVG-converted (fixed batch 56ct; simplecd). Residual: sim-os-menus' tcolorbox terminal skins
-  (TermWin/TermUnix/TermMac text) still lost — open.
+  SVG-converted (fixed batch 56ct; simplecd). The sim-os-menus terminal skins (TermWin/TermUnix/
+  TermMac) render in full since batch 56cv (45 listings in the sweep XML, 0 errors; Perl loses
+  them entirely — its raw xintexpr load collapses at 108 errors); the manual's remaining 76 %
+  recall is SHARED and unrecoverable: 142 of its 143 missing words are French text inside
+  `\includegraphics[page=…]{ProfLycee-doc.pdf}` pages (sim-os-menus-doc.tex:362-369), which
+  pdftotext reads off the embedded PDF and no HTML conversion can. Closed 2026-09-18
+  (`~/data/pk_agents/w23/regr90/sim_os_menus/`).
 - **S2: dangling `\hyperlink` targets (SHARED; RULED 2026-09-18: keep them, as pdflatex does).**
   26 documents / 1,058 jing lines of `idref` mismatch (biblatex-gost-examples, biblatex-chicago,
   elsdoc, Malva, europecv, …): `\hyperlink{name}{text}` emits `<ref idref="name">`
