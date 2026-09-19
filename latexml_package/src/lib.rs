@@ -708,6 +708,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     package::datatool_base_sty::load_definitions,
   ),
+  ("datatool", "sty", package::datatool_sty::load_definitions),
   ("chemgreek", "sty", package::chemgreek_sty::load_definitions),
   (
     "chemmacros",

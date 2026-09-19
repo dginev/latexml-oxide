@@ -128,6 +128,7 @@ pub mod csquotes_sty;
 pub mod ctable_sty;
 pub mod currfile_sty;
 pub mod datatool_base_sty;
+pub mod datatool_sty;
 pub mod dcolumn_sty;
 pub mod delarray_sty;
 pub mod deluxetable_sty;

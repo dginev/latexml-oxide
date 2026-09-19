@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+% The column type is the maximum datum type over the column's non-empty
+% cells (datatool.sty:12562-12585; datatool-base.sty:3489): `qty` decimal (2),
+% `name`/`note` string (0). The raw path in this engine loses the typing
+% (every column 0), so this golden is pdflatex's, not the raw path's.
+\DTLloaddb{t}{tests/cluster_regressions/datatool/contract.csv}
+K:\detokenize\expandafter{\the\csname dtlkeys@t\endcsname}
+\end{document}

@@ -1125,7 +1125,11 @@ l3regex split and populates the identical DB store the getters read (`\DTLread`
 fields, numeric detection `\@dtl@checknumerical`; HIGH risk, on/off harness on
 picC with `count(svg:g)==83`), (2) native `\DTLforeach`/`\DTLforeachkeyinrow`/
 `\DTLifeq` over that store (MED); together they are the whole picC/tnman gap.
-Porting l3regex natively is the settled dead end above.
+Porting l3regex natively is the settled dead end above. **Lever (1) landed as batch
+56dt** (`datatool_sty.rs`, the design below, byte-identical registers to pdflatex on
+17 probe CSVs): picC 458.2 → 423.4 G (−7.6 %), the tikz-network manual 180.6 →
+165.5 s (−8.3 %) — the load is ~8 % of the document; the `\DTLforeach`/
+`\DTLifeq` walk (lever 2) is the remaining 5×.
 
 **Native datatool load — the design (2026-09-18, `~/data/pk_agents/w23/perf_pgf/datatool/`).**
 A loaded database is four global registers plus per-key indices, and every

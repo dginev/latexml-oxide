@@ -204,10 +204,12 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    handler could observe: an absent handler, a forward scan, a `}` as list, leading
    spaces, the splitter's surplus). The non-pgfkeys floor is profiled (`~/data/pk_agents/w23/perf_pgf/tikzcore/`,
    PERFORMANCE.md): pure TikZ is ~1.1× pdflatex (pgfmath and pgfsys are native);
-   tikz-network's 5.5× is datatool v3's l3regex CSV parse plus `\DTLforeach`. NEXT:
-   a native datatool CSV load populating the identical DB store (HIGH risk, on/off
-   harness) then native `\DTLforeach`/`\DTLifeq`; `.try` (13 % of the tcolorbox
-   manual's dispatches) as pgfkeys slice 3 for USE-heavy documents.
+   tikz-network's 5.5× is datatool v3's l3regex CSV parse plus `\DTLforeach`. The
+   native CSV load landed as 56dt (registers byte-identical to pdflatex; picC −7.6 %,
+   the manual −8.3 % — the load was ~8 % of the document). NEXT: native
+   `\DTLforeach*`/`\DTLforeachkeyinrow`/`\DTLifeq` (design study
+   `~/data/pk_agents/w23/perf_pgf/datatool/foreach/`), the remaining 5×; `.try` (13 %
+   of the tcolorbox manual's dispatches) as pgfkeys slice 3 for USE-heavy documents.
 
 8. **K12 — pTeX kanji control-word names.** LANDED as batch 56ds
    (`KERNEL_CAPABILITIES.md` K12): `PTEX_PROFILE` from `\NeedsTeXFormat{pLaTeX2e}`,

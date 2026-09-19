@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+% A data row wider than the header (a trailing separator) makes a column no
+% header cell covers: its key and header are `Column<n>` (datatool.sty:12305,
+% `\dtldefaultkey` :10844), so the keys register has three entries.
+\DTLloaddb{t}{tests/cluster_regressions/datatool/ragged.csv}
+M:\the\csname dtlrows@t\endcsname/\the\csname dtlcols@t\endcsname/\csname dtl@ci@t@Column3\endcsname.
+K:\detokenize\expandafter{\the\csname dtlkeys@t\endcsname}
+\end{document}
