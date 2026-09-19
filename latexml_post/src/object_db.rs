@@ -423,7 +423,7 @@ impl Default for ObjectDB {
 
 // ======================================================================
 // Perl `--dbfile` parity: SQLite persistence (design 2026-08-02, docs/
-// performance/STREAMING_POST_DESIGN_2026-07-06.md §6). Faithful to the
+// archive/STREAMING_POST_DESIGN_2026-07-06.md §6). Faithful to the
 // OBSERVABLE contract of `LaTeXML::Util::ObjectDB` (ObjectDB.pm):
 // `new(dbfile)` attaches a keyed store (creating it unless readonly),
 // `lookup`/`getKeys` see the union of stored + registered entries, and

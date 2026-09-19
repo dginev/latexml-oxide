@@ -172,7 +172,6 @@ semantics, side-notes …) are cataloged in
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the six kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
 | [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K8 with source of truth, abstraction, landing plan, guards, order |
 | [AGENT_PREAMBLE_W3.md](AGENT_PREAMBLE_W3.md) | Standard instructions & constraints for read-only root-causer subagents |
-| [HANDOFF_2026-09-03.md](HANDOFF_2026-09-03.md) | Advisory notes & Batch-54q handoff: digestion timing, VFS, alignment, SymHashMap and WASM synergy |
 | [WINDOWS_VALIDATION_2026-09-17.md](WINDOWS_VALIDATION_2026-09-17.md) | Windows workflow validation: build + **dump generation on Windows is healthy** (byte-identical to the Linux-origin dump), both TeX Live/MiKTeX resolve, raw-interpretation conversions clean; the direct `--init` dump recipe (make_formats.sh is Linux-only); KOMA-Script guide worked example |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch; not pushed

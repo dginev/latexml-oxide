@@ -94,7 +94,7 @@
 ### 2.3 `libxml2` DOM Memory Footprint & Native Rust DOM Path
 
 * **Current Reality:**
-  - Empirical measurement ([`performance/STREAMING_CORE_DESIGN_2026-07-29.md`](performance/STREAMING_CORE_DESIGN_2026-07-29.md)): `libxml2` DOM nodes account for **~57% of total conversion RSS** (~1.84 GB per MB of TeX source in large multi-megabyte documents).
+  - Empirical measurement ([`archive/STREAMING_CORE_DESIGN_2026-07-29.md`](archive/STREAMING_CORE_DESIGN_2026-07-29.md)): `libxml2` DOM nodes account for **~57% of total conversion RSS** (~1.84 GB per MB of TeX source in large multi-megabyte documents).
   - Each `xmlNode` in C is an individually allocated 144-byte structure with 18 pointer fields (`children`, `parent`, `next`, `prev`, `properties`, `ns`, etc.), plus separate allocations for attributes and strings.
 * **Proposed Strategic Direction:**
   1. **Short-Term (DOM Scratch Pooling):** During temporary measurement runs (e.g. `\widthof`, `\settowidth`, or trial tabular passes), avoid building full `libxml2` nodes if only box metrics or token reverts are inspected.

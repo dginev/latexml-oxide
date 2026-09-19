@@ -48,6 +48,21 @@ citations are why the file is kept.
   split from `../parity/script_bindings_plan.md` (the live surface reference).
 - `STARTUP_COST_ANALYSIS_2026-06-21.md` — ~161 ms startup decomposition + the
   DECLINED dump-parse lever; outcome carried by `../performance/PERFORMANCE.md`.
+- `STREAMING_CORE_DESIGN_2026-07-29.md` — fragmented single-document core
+  conversion (bounded live DOM + disk-backed segments + pass-2 assembly);
+  IMPLEMENTED, guard `113_streaming_core.rs`. Residuals ranked in
+  `../performance/PERFORMANCE_AUDIT_2026-09-03.md`. Cited by `latexml_oxide.rs`,
+  `sxml/mod.rs`, `../performance/{BEYOND_PERL_LEVERS,PERFORMANCE_AUDIT_2026-09-03}.md`.
+- `STREAMING_POST_DESIGN_2026-07-06.md` — two-pass streaming split for very large
+  file inputs (Scan/ObjectDB); IMPLEMENTED, byte-identical guard
+  `118_streaming_split_parity.rs`. Cited by `stream_split.rs`, `render_workers.rs`,
+  `object_db.rs`, `../performance/{MULTIDOC_JOIN,BEYOND_PERL_LEVERS,PERFORMANCE_AUDIT_2026-09-03}.md`.
+- `ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md` — very-large single-doc (#361)
+  RAM+time diagnosis; M1/M2/M4 landed (9.05→5.99 GB), M3 (stream boxes→DOM)
+  reverted as a dead-end. Superseded by `../performance/PERFORMANCE_AUDIT_2026-09-03.md`.
+- `CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md` — Claude→Codex knowledge migration
+  (root `AGENTS.md` + ten `.agents/skills/latexml-*` workflows); durable layer
+  implemented, only the user-run `/import` remains.
 
 ## `--server` editor LSP (landed PR #243, deprioritized — not stale)
 

@@ -1,5 +1,5 @@
 //! Process-parallel page rendering for pass B of the post pipeline
-//! (`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md` §6).
+//! (`docs/archive/STREAMING_POST_DESIGN_2026-07-06.md` §6).
 //!
 //! In-process page threads are blocked twice (`ObjectDB` is `!Send`;
 //! libxslt serializes every transform behind a process-wide lock), so the

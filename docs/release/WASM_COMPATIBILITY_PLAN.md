@@ -1,7 +1,7 @@
 # WebAssembly (WASM) Compatibility Plan — Stage 4
 
 **Status:** Planned / Architecture Locked (2026-09-03).  
-Operationalizes **Stage 4 — WASM** of [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §portability and operationalizes the findings in [`WASM_COMPATIBILITY_AUDIT.md`](WASM_COMPATIBILITY_AUDIT.md).
+Operationalizes **Stage 4 — WASM** of [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) §portability and operationalizes the findings in [`WASM_COMPATIBILITY_AUDIT_2026-09-03.md`](WASM_COMPATIBILITY_AUDIT_2026-09-03.md).
 
 ---
 

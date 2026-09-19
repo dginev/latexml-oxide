@@ -133,9 +133,9 @@ mis-keying silently corrupts output, so gate hard on the output-neutrality diff.
 **BP-6 — Streaming Fragmented Core DOM — IMPLEMENTED.** The fragmented
 digest/build, disk segment store, pass-2 driver, label/id index, assembly splice,
 CLI flag, and auto-activation are live; see
-[`STREAMING_CORE_DESIGN_2026-07-29.md`](STREAMING_CORE_DESIGN_2026-07-29.md).
+[`STREAMING_CORE_DESIGN_2026-07-29.md`](../archive/STREAMING_CORE_DESIGN_2026-07-29.md).
 The two-pass large split front-end is also implemented in
-[`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md).
+[`STREAMING_POST_DESIGN_2026-07-06.md`](../archive/STREAMING_POST_DESIGN_2026-07-06.md).
 
 **Residual, not BP-6 reimplementation:** core XML is still collected into a
 document-sized `String` before post, and pass 2 repeats global map/rule work per

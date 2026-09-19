@@ -3,7 +3,7 @@
 //!
 //! The eager pipeline holds one whole-document DOM from Build to the final
 //! write, so peak RSS scales with document size (measured ~1.84 GB per MB of
-//! source on the 131 MB witness — `docs/performance/STREAMING_CORE_DESIGN_2026-07-29.md`).
+//! source on the 131 MB witness — `docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md`).
 //! Fragmented mode bounds peak RSS by *fragment* size instead: closed subtrees
 //! are serialized to disk ("spilled") during Build and re-materialized one at a
 //! time for the later phases. This module is the substrate both halves stand

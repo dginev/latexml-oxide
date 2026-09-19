@@ -5,7 +5,7 @@
 > subsequently landed as the structural large-document solution; do not resume
 > the original whole-document architecture from this baseline. Current writer,
 > pass-2, split-fallback, and retained-state residuals are ranked in
-> [`PERFORMANCE_AUDIT_2026-09-03.md`](PERFORMANCE_AUDIT_2026-09-03.md).
+> [`PERFORMANCE_AUDIT_2026-09-03.md`](../performance/PERFORMANCE_AUDIT_2026-09-03.md).
 
 Analytical performance investigation of a **legitimately huge single document**
 (reporter nasser1, issue #361): an "Archive of LaTeX StackExchange newsletters"

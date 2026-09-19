@@ -72,7 +72,7 @@ contract.
 Current project state, measured performance, parity status, and architecture
 belong in `docs/`, not agent memory. In particular:
 
-- start at [`README.md`](README.md) and [`SYNC_STATUS.md`](SYNC_STATUS.md);
+- start at [`README.md`](README.md) and [`SYNC_STATUS.md`](../SYNC_STATUS.md);
 - use `performance/PERFORMANCE.md` and dated performance studies for measured
   claims;
 - use `parity/KNOWN_PERL_ERRORS.md`, `parity/WISDOM.md`, and the

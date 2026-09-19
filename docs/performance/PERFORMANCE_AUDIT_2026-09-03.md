@@ -16,10 +16,10 @@ Read first:
   acceptance checklist.
 - [`ARXIV_PERFORMANCE.md`](ARXIV_PERFORMANCE.md) for the empirical campaign and
   the output-neutrality contract.
-- [`ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md`](ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md)
+- [`ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md`](../archive/ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md)
   for the large-document allocation profile and settled dead ends.
-- [`STREAMING_CORE_DESIGN_2026-07-29.md`](STREAMING_CORE_DESIGN_2026-07-29.md)
-  and [`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md)
+- [`STREAMING_CORE_DESIGN_2026-07-29.md`](../archive/STREAMING_CORE_DESIGN_2026-07-29.md)
+  and [`STREAMING_POST_DESIGN_2026-07-06.md`](../archive/STREAMING_POST_DESIGN_2026-07-06.md)
   for the implemented fragmented core and streaming split architectures.
 - [`BEYOND_PERL_LEVERS.md`](BEYOND_PERL_LEVERS.md) for the longer-horizon math
   and XSLT work.

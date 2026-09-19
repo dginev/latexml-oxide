@@ -610,7 +610,7 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// Forced by `--streaming`; otherwise auto-enabled only when the PROJECTED
 /// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
 /// peak RSS per MB of math-heavy source on the 131 MB witness
-/// (`docs/performance/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
+/// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
 /// documents that today would die at the ceiling with certainty. An explicit
 /// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH — the
 /// escape hatch for a caller who would rather have the eager path's Fatal

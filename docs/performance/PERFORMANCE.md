@@ -288,7 +288,7 @@ materialized as a document-sized `String` before the CLI hands it to post.
 
 ### 2026-09-03 — Wave 15 / Batch 54 & WebAssembly audit pass: interner hygiene, macro cycle fast-fail, and thermal budgeting
 
-Investigation during the Wave 15 / Batch 54r sweep series (`perfect_kernel` branch) and the Stage 4 WebAssembly compatibility audit (see [`WASM_COMPATIBILITY_AUDIT.md`](../release/WASM_COMPATIBILITY_AUDIT.md) and [`HANDOFF_2026-09-03.md`](../perfect_kernel/HANDOFF_2026-09-03.md)):
+Investigation during the Wave 15 / Batch 54r sweep series (`perfect_kernel` branch) and the Stage 4 WebAssembly compatibility audit (see [`WASM_COMPATIBILITY_AUDIT_2026-09-03.md`](../release/WASM_COMPATIBILITY_AUDIT_2026-09-03.md)):
 
 1. **`SymHashMap` negative-probe interner pollution — already resolved:**
    The candidate was valid, but the current source already probes with
@@ -451,7 +451,7 @@ name (all-`???` annotation) on this box — use perf instead.
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 
 Post-processing the 40 201-page `index.xml` witness (see
-`docs/performance/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
+`docs/archive/STREAMING_POST_DESIGN_2026-07-06.md`) was dominated by **CrossRef at
 40 min 47 s = 95 % of a 42 min 50 s run**. `CrossRef::process` runs once per
 split page, and two per-page passes scanned *global* state — a latent
 quadratic exposed only once split fires at 40 k-page scale (huge docs used to
