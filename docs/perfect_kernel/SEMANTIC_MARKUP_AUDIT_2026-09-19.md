@@ -25,7 +25,7 @@ by jing message over representative offenders:
 |---|---|---|---|
 | **internal-attr leak** (304k of all errors, 2 docs) — **ROOT-CAUSED, DEFERRED** | tcolorbox (35562), pgf-spectra LSE (268654) | `attribute "_font"/"_autoclose"/… not allowed here` on `svg:g`/`svg:path`/`text`/`p` | RUST-ONLY. The streaming **fatal-stop "cheap partial"** branch (`core_interface.rs:1518-1540`) returns the document before pass-2 finalize, so the `_`-strip (`document.rs:811-822` `finalize_rec` PostWork, mirror of Perl `Document.pm:452`) never runs on the spine, and spilled segments splice in verbatim (`splice_segment_text`, document.rs:1783). Fires ONLY when a memory/timeout Fatal hits in streaming pass 1 — hence only the 2 biggest docs; control: pgf-spectra **NIST** completes pass 2 → 0 leaks, **LSE** hits the cheap partial → 168532. Verified repro (leak.tex: 900 tikz blobs at `--max-memory=1400` → cheap partial → 1105 `_font`). **Deferred: LOW value / MEDIUM risk.** The leak is only in salvage partials of docs that stay Fatal ([[feedback_fatal_stays_fatal]]) — they are FAILED conversions; their real fix is fitting in memory (a perf problem), not the attr strip. Fix plan if pursued: a strip-only DOM walk (`_`-prefixed attrs, memory-neutral) before the cheap-partial return, plus a per-segment strip decision (parse vs splice-time scan); `_font` cannot be stripped at spill time (it is the node→Font linkage, document.rs:5205). |
 | **math content-model** | ~~frege (84+54)~~ **FIXED 56eg**, numerica (45), tikz-network (87) | `element "rule"/"inline-block"/"text"/"logical-block" not allowed here; expected "Math"/"MathBranch"/…` | **frege subclass = bare pieces unwrapped under `<MathFork>`; FIXED 56eg** (`cleanup_math` keeps the `<Math>` wrapper when the unwrap would be an invalid MathFork child — frege 28/80→0/80; witness `TeX_Math.pool.ltxml:219` had no parent guard, surpass-Perl). Remaining: numerica's `inline-block`/`logical-block` and tikz-network are a DISTINCT tier (Math under `text`/`td`/`equation`, not MathFork) — per-construct, heterogeneous |
-| **`<tags>` misplacement** | algorithm2e (221) | `element "tags" not allowed here` | the float/bibitem `<tags>` element in an invalid position (known algorithm2e residual) |
+| **`<tags>` misplacement** | ~~algorithm2e (221)~~ **FIXED 56eh (221→20)** | `element "tags" not allowed here` | **algorithm2e numbered-indented-line rule-before-tags FIXED 56eh** (`\lx@prepend@indentation@` keeps a leading `<tags>` first — RUST-ONLY parity, LaTeXML-block.rnc:189). Residual 20 = double-`\nl` (two tags) + block-end `}`-before-tags, a separate sub-issue |
 | **dangling IDREF** | biblatex-chicago cms-notes-intro (41) | `IDREF "Hendnote." without matching ID` | endnote/footnote cross-refs emit an idref with no matching id (note the malformed trailing-dot id) |
 
 ## Signal 2 — explicit `ltx_ERROR` fallbacks (post HTML)
@@ -53,8 +53,9 @@ violations. There is no single high-leverage fix.
    DISTINCT: numerica's `inline-block`/`logical-block` and tikz-network, where a
    Math sits under `text`/`td`/`equation` (not MathFork) — heterogeneous,
    root-cause per class.
-3. Dangling IDREFs (biblatex-chicago endnotes) and `<tags>` misplacement
-   (algorithm2e) — narrower, per-package.
+3. Dangling IDREFs (biblatex-chicago endnotes) — narrower, per-package;
+   note the biblatex dangling-`\hyperlink` class is RULED-KEEP. **`<tags>`
+   misplacement (algorithm2e) FIXED 56eh (221→20).**
 
 The two biggest schema offenders (tcolorbox, pgf-spectra LSE) are a **memory/perf**
 problem, not a markup problem — they Fatal on memory; the markup axis will only be
