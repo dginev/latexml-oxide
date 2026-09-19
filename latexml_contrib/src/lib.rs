@@ -333,6 +333,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("colt2024", "cls", colt2024_cls::load_definitions),
   ("colt2025", "cls", colt2024_cls::load_definitions),
   ("colt2026", "cls", colt2024_cls::load_definitions),
+  // Sibling PMLR proceedings classes bundled by authors: byte-identical to
+  // colt202x in the load-shape (`\LoadClass[pmlr]{jmlr}` + a `\coltauthor`
+  // `\newcommand`). Witnesses: l4dc2026 = 2605.22207, neus2025 = 2605.05795.
+  ("l4dc2026", "cls", colt2024_cls::load_definitions),
+  ("neus2025", "cls", colt2024_cls::load_definitions),
   ("midl", "cls", midl_cls::load_definitions),
   ("hld", "cls", hld_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),

@@ -391,15 +391,27 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     attempt collapsed multi-author affiliation capture (colt 2→1, midl 7→1) under `\let`; the 56eb
     per-class wrappers cover the current corpus, so the durable bound needs a `Until:`-reader
     EOF-recovery design instead of a `\let` dance; (d) **OmniBus recovers derived-class author wrappers**
-    (`\Xauthor`→`\author` for the whole jmlr/pmlr family) instead of a binding per class; (e)
+    (`\Xauthor`→`\author` for the whole jmlr/pmlr family) instead of a binding per class — the
+    56ed concrete additions `l4dc2026` (2605.22207) and `neus2025` (2605.05795), both identical in the load-shape to colt202x (`\LoadClass[pmlr]{jmlr}` + `\newcommand{\coltauthor}`), are two
+    more registry aliases the general recovery would subsume; (e)
     **`try_spawn_or_degrade`** at every thread spawn (graphics fixed; OPEN: `latexml_oxide.rs:757`,
     `cortex_worker.rs:1729` prewarm, `render_workers`, `api`) — EAGAIN must degrade, never panic;
     (f) **raw-loader bindings carry an idempotent `\providecommand` native fallback** for their
     public macros (tipa; trimmed-host + portability). PROCESS: run the sandbox reruns as a
     RECURRING regression oracle — these sat undetected for weeks (batches 55b/7/51-52).
+    (g) **a raw-TeX binding must not silently drop a Perl semantic guard** — batch 54 replaced
+    Perl's native `\g@addto@macro` (a `DefMacro`+sub carrying `AddToMacro`'s expandability check,
+    Package.pm:2534) with a raw `\long\def` to dodge the numspell `\ifnum` look-ahead, but the raw
+    `\def` dropped the guard, so appending to the `\normalsize` font-switch *primitive* built a
+    self-reference (`recursion:\normalsize`, ~6 papers). Fixed 56ed by rebinding as a non-expandable
+    `DefPrimitive`+`AddToMacro!`: it halts the look-ahead like `\begingroup` did AND restores the
+    guard. Lesson: a State side effect belongs at stomach level (`DefPrimitive`, per the `\newif`
+    precedent); when a raw-TeX shortcut is chosen for one property, re-audit which Perl guard the
+    native binding carried that the shortcut loses.
     LANDED: (e) `try_spawn_or_degrade` (56ec, `latexml_core::util::thread`, both kpathsea-prewarm
-    sites; the graphics drain in 56eb). NEXT: (b) defining-primitives, (a)/(f) audits, (d) OmniBus
-    author-wrapper; revisit (c) as a `Until:`-reader EOF-recovery.
+    sites; the graphics drain in 56eb); (g) `\g@addto@macro` primitive+guard (56ed). NEXT: (b)
+    defining-primitives, (a)/(f) audits, (d) OmniBus author-wrapper; revisit (c) as a `Until:`-reader
+    EOF-recovery.
 
 ## DONE
 

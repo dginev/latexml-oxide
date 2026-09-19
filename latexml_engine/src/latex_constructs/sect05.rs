@@ -552,21 +552,35 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // latex.ltx:1832 `\long\def\g@addto@macro#1#2{\begingroup\toks@\expandafter
-  // {#1#2}\xdef#1{\the\toks@}\endgroup}`: the append happens at DIGESTION
-  // (the `\xdef`), not at expansion. Perl :968 (and the former port) made it
-  // an expandable macro with a side effect, so a `\g@addto@macro` sitting
-  // right after an `\ifnum` operand — `\ifnum\numspell@group@digit@i>0
-  // \numspell@{ hundred}\fi` with `\numspell@#1` = `\g@addto@macro
-  // \thenumspell{#1}` (numspell-english.sty:79-105) — was EXECUTED by the
-  // number scan's one-token look-ahead (tex.web §444) even in a false
-  // branch: every group of "12000" spelled ("hundred and -twotwelve thousand,
-  // nought", then `\StrChar` on the leading space → `\GenericError`;
-  // numspell 12 errors, KPE #170). Trigger: `\def\out{}\ifnum0>0
-  // \g@addto@macro\out{WRONG}\fi[\out]`. Guard:
-  // `perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
-  RawTeX!(
-    r"\long\def\g@addto@macro#1#2{\begingroup\toks@\expandafter{#1#2}\xdef#1{\the\toks@}\endgroup}"
-  );
+  // {#1#2}\xdef#1{\the\toks@}\endgroup}`: append `#2` to the token-body macro
+  // `#1` at DIGESTION (the `\xdef`), not at expansion. This is a State side
+  // effect, so — like `\newif` — the faithful binding is a non-expandable
+  // `DefPrimitive` routed through `AddToMacro!` (Perl `AddToMacro`,
+  // Package.pm:2534-2549). Two behaviors this preserves that a raw
+  // `\def`/expandable macro does not:
+  //  * Perl's expandability GUARD (Package.pm:2534). Appending to a
+  //    non-expandable target — e.g. the `\normalsize` font-switch primitive
+  //    (`DefPrimitive!("\\normalsize", …)`, article_cls.rs:133) — must warn and
+  //    ignore, not `\xdef` the primitive token verbatim into
+  //    `\gdef\normalsize{\normalsize …}`, a self-reference that trips
+  //    `recursion:\normalsize`. The `\g@addto@macro\normalsize{…}` display-skip
+  //    idiom is common; witnesses 2605.04771 / 2605.05185 / 2605.14952 /
+  //    2605.18633 (article papers) go from one Rust error to Perl's exact
+  //    output: 0 errors + one `Warning:unexpected:\normalsize … is not an
+  //    expandable control sequence`.
+  //  * The batch-54 numspell fix (KPE #170): a `\g@addto@macro` right after an
+  //    `\ifnum` operand — `\ifnum\numspell@group@digit@i>0 \numspell@{ hundred}
+  //    \fi` with `\numspell@#1` = `\g@addto@macro\thenumspell{#1}`
+  //    (numspell-english.sty:79-105) — must NOT fire in a false branch (Perl
+  //    :968 made it an expandable macro-with-side-effect, so the number scan's
+  //    one-token look-ahead, tex.web §444, EXECUTED it; numspell 12 errors).
+  //    A non-expandable primitive halts that look-ahead exactly as the former
+  //    raw `\def`'s leading `\begingroup` did. Trigger: `\def\out{}\ifnum0>0
+  //    \g@addto@macro\out{WRONG}\fi[\out]`. Guard:
+  //    `perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
+  DefPrimitive!("\\g@addto@macro DefToken {}", sub[(cs, tokens)] {
+    AddToMacro!(cs, tokens);
+  });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 
   // Alas, we're not tracking versions, so we'll assume it's "later" & cross fingers....

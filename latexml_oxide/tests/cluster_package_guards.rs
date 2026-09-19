@@ -21242,4 +21242,79 @@ Body.
     assert!(!stderr.contains("undefined:\\textipa"), "{stderr}");
     assert_eq!(error_count(&stderr), 0, "{stderr}");
   }
+
+  /// PMLR sibling proceedings classes bundled by authors — l4dc2026, neus2025 —
+  /// are byte-identical to colt202x (`\LoadClass[pmlr]{jmlr}` +
+  /// `\coltauthor`→`\author`) but were unregistered, so OmniBus left
+  /// `\coltauthor` undefined and the downstream jmlr `\addr` scan ran to EOF
+  /// (`Fatal:Mouth:EoF`, no output). Registry dispatch to colt2024_cls now
+  /// defines `\coltauthor`; the class file need not be on disk.
+  #[test]
+  fn l4dc_neus_pmlr_classes_define_coltauthor() {
+    for cls in ["l4dc2026", "neus2025"] {
+      let tex = format!(
+        r"\documentclass{{{cls}}}
+\coltauthor{{\Name{{Alice Smith}} \Email{{a@x.edu}}\\ \addr University A}}
+\title{{T}}
+\begin{{document}}
+\maketitle
+Body.
+\end{{document}}
+"
+      );
+      let (stderr, xml) = convert_with(&tex, Some("ar5iv.sty"));
+      assert!(
+        !stderr.contains("undefined:\\coltauthor"),
+        "{cls}: \\coltauthor must be defined\n{stderr}"
+      );
+      assert_eq!(stderr.matches("Fatal:").count(), 0, "{cls}: {stderr}");
+      assert_eq!(error_count(&stderr), 0, "{cls}: {stderr}");
+      assert!(
+        xml.contains(r#"role="affiliation""#),
+        "{cls}: the \\addr block must land as a bounded affiliation\n{xml}"
+      );
+      assert!(
+        xml.contains("Alice Smith"),
+        "{cls}: the author name must reach the output\n{xml}"
+      );
+    }
+  }
+
+  /// `\g@addto@macro\normalsize{...}` (the common display-skip idiom, ~6
+  /// article papers, e.g. 2605.04771) appended to the `\normalsize` font-switch
+  /// *primitive*. The former raw-`\def` binding `\xdef`'d the primitive token
+  /// verbatim into `\gdef\normalsize{\normalsize ...}` — a self-reference that
+  /// tripped `recursion:\normalsize`. Binding `\g@addto@macro` as a
+  /// non-expandable `DefPrimitive` routed through `AddToMacro!` restores Perl's
+  /// expandability guard (Package.pm:2534): appending to a non-expandable
+  /// target warns and ignores, matching Perl's exact output (0 errors + one
+  /// `unexpected:\normalsize` warning).
+  #[test]
+  fn g_addto_macro_on_normalsize_primitive_warns_not_recurses() {
+    let tex = r"\documentclass[12pt]{article}
+\makeatletter
+\g@addto@macro\normalsize{\setlength\abovedisplayskip{1mm}}
+\makeatother
+\begin{document}
+Hello \normalsize world.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(
+      !stderr.contains("recursion:\\normalsize"),
+      "\\normalsize must not self-recurse\n{stderr}"
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    // Perl emits exactly this warning (the expandability guard fired, so the
+    // primitive was left intact rather than silently mangled).
+    assert!(
+      stderr.contains("is not an expandable control sequence"),
+      "the append to the \\normalsize primitive must warn-and-ignore\n{stderr}"
+    );
+    assert!(
+      xml.contains("world"),
+      "the body after \\normalsize must survive\n{xml}"
+    );
+  }
 }

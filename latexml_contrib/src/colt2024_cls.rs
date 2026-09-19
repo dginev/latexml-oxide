@@ -1,6 +1,11 @@
 //! Stub for colt2024.cls (COLT 2024 — Conference on Learning Theory); also
-//! serves colt2025/colt2026 via the registry (same `\LoadClass[pmlr]{jmlr}` +
-//! `\coltauthor`→`\author` shape).
+//! serves the sibling PMLR proceedings classes via the registry — colt2025,
+//! colt2026, l4dc2026 (Learning for Dynamics & Control), neus2025 (NeuS) — all
+//! identical in the load-shape (`\LoadClass[pmlr]{jmlr}` +
+//! `\coltauthor`→`\author`). This is the concrete instance of the general
+//! "unknown author-bundled PMLR class" pattern (PLANS 13(f): raw-loader native
+//! fallbacks); until that generalization lands, new PMLR proceedings classes are
+//! routed here by name.
 //!
 //! colt2024.cls does `\LoadClass[pmlr]{jmlr}` and defines `\coltauthor` in its
 //! body: the review form `\newcommand{\coltauthor}[1]{}` (anonymizes), the final
