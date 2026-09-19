@@ -39,5 +39,17 @@ pub(crate) fn koma_post_load() -> Result<()> {
   // structural equivalent and keeps the title as
   // `<ltx:paragraph><ltx:title>` (TL doc corpus: 17 bundles).
   DefMacro!("\\minisec{}", "\\paragraph*{#1}");
+  // `\DeclareNewSectionCommand[style=section,level=N]{foo}` routes every KOMA
+  // `style=section` heading — standard AND author-declared — through
+  // `\scr@startsection` (scrartcl.cls:3316), a 6-arg positional drop-in for
+  // `\@startsection` `{name}{level}{indent}{beforeskip}{afterskip}{font}`. Our
+  // sectioning recognition lives only in the native (locked) `\@startsection`
+  // (sect04.rs:89-156), which standard `\section`/`\subsection` still reach; but
+  // a newly-declared command (`\task`) takes KOMA's route and never reaches it,
+  // so the heading degrades to a bold para. Aliasing the single choke point maps
+  // it back onto the SECTION_ELEMENT machinery (reads `level` as #2 → the right
+  // element). RUST-ONLY surpass (no Perl koma binding). Do NOT alias
+  // `\scr@startpart` — different signature.
+  Let!("\\scr@startsection", "\\@startsection");
   Ok(())
 }
