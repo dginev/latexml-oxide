@@ -58,6 +58,8 @@ violations. There is no single high-leverage fix.
    misplacement (algorithm2e) FIXED 56eh+56ei (221→15; residual 15 =
    double-`\nl`, an approved overprint-collapse surpass, separate).**
 
+**`align="stretched"`** (pgf-periodictable, 1419 lines) — the largest single schema-validity offender among rendering docs — is FIXED 56ej: `\makebox[w][s]` now emits schema-valid `align="justified"` (was Perl's invalid `stretched`), a user-approved surpass.
+
 The two biggest schema offenders (tcolorbox, pgf-spectra LSE) are a **memory/perf**
 problem, not a markup problem — they Fatal on memory; the markup axis will only be
 satisfiable for them once they convert completely (PLANS 12 raw-interpreter perf /
