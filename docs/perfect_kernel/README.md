@@ -167,6 +167,7 @@ semantics, side-notes …) are cataloged in
 | [LEDGER.md](LEDGER.md) | Living progress ledger: sweep tallies, tier status, fix log |
 | [CLUSTERS.md](CLUSTERS.md) | Living failure-cluster worklist from the latest sweep |
 | [CONTENT_RECALL_TRIAGE_2026-09-19.md](CONTENT_RECALL_TRIAGE_2026-09-19.md) | S3 word-recall tail triaged genuine-content-loss vs measurement-artifact (sweep #104); the content-preservation-axis worklist |
+| [SEMANTIC_MARKUP_AUDIT_2026-09-19.md](SEMANTIC_MARKUP_AUDIT_2026-09-19.md) | Semantic-markup axis (schema validity 82%): the systemic RelaxNG-violation classes (internal-attr leak, math content-model, dangling IDREFs) ranked as targets |
 | [PLANS.md](PLANS.md) | Detailed, execution-ready improvement-plans ledger (P1…P77+) |
 | [DIFFICULT_CASES.md](DIFFICULT_CASES.md) | Catalog of hard/open-ended cases and their plans |
 | [LUA_REBINDING.md](LUA_REBINDING.md) | LuaTeX-escape strategy: why rebinding IS the emulation; shim tiers, mirror protocol, witnesses |
