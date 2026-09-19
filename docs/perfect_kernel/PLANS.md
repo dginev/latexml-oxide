@@ -198,9 +198,14 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    tcb_full 18.31 → 13.25 G (−28 %), keys_heavy 15.23 → 11.90 G (−22 %), the zx-calculus
    manual 150 → 72 s; ON/OFF byte-identity harness of ten fixtures
    (`docs/performance/PERFORMANCE.md`, `~/data/pk_agents/w23/perf_pgf/pgfkeys_native/`).
-   NEXT: slice 2 — the `\pgfkeysdef` family and the hottest handlers as natives that
-   store exactly what the raw ones store; profile first (`slice2/` study), one lever per
-   run, the zx/circuitikz/tcolorbox/pgfplots manuals re-converted on and off before landing.
+   Slice 2 (56dp) landed the definition handlers: zx_full 25.51 → 9.98 G (−61 % over
+   three slices), tcb_full −27 %, keys_heavy −21 %; slice 1 was corrected to the raw
+   stream token for token (56dn/56dr — the four sweep-95 regressions were all shapes a
+   handler could observe: an absent handler, a forward scan, a `}` as list, leading
+   spaces, the splitter's surplus). NEXT: the non-pgfkeys floor — tikz path
+   construction, `\pgfmath`, soft-path/`\pgfsys@`, node-box digestion (keys_light
+   8.6 of 11.9 G; profile study `~/data/pk_agents/w23/perf_pgf/tikzcore/`) — and `.try`
+   (13 % of the tcolorbox manual's dispatches) as slice 3 for USE-heavy documents.
 
 8. **K12 — pTeX kanji control-word names (lead, 2026-09-18).** pLaTeX classes
    write `\newif\if西暦` (jsarticle.cls:1927): pTeX gives kanji the kanji catcodes
