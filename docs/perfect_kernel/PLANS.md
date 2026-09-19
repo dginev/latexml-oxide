@@ -242,12 +242,29 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    `delarray` without Japanese gives Rust 0 / Perl 3 errors (`aligntab/da.tex`) —
    verify against pdflatex and guard. Scratch `~/data/pk_agents/w23/regr96/aligntab/`.
 
-10. **tcolorbox manual RSS (lead).** The manual trips the `MemoryBudget` fuse at
-    4.8 GB RSS (75 % of `--max-memory=6144`) every sweep, at 50 s before slice 2 and
-    155 s after (the fuse is reached later, not avoided); uncapped it completes in
-    ~390 s with 34 errors. What holds the memory — retained `\tcbset` style trees,
-    the box list, libxml residue? Profile with `--max-memory` raised and `perf`/heap
-    sampling; the corpus's second-heaviest pgfkeys consumer should not need 5 GB.
+10. **tcolorbox manual RSS — VERDICT (2026-09-19, `~/data/pk_agents/w23/perf_pgf/tcb_rss/`):
+    a known-heavy outlier, not a leak.** Uncapped it completes in 349 s at a peak of
+    **37.8 GB**, 78 MB of XML (198,801 `svg:g`, 177,582 `svg:path`, 62,227 `text`,
+    4,604 pictures, 5,477 `listingline`); RSS climbs ~100 MB/s monotonically across
+    all 28 chapters and never drops — the whole document's digested box forest,
+    pinned per element by `node_boxes` (`document.rs:91`, `set_node_box` at
+    :2193/:5244/:5589/:5646/:5797), swept only on the streaming spill path
+    (`core_interface.rs:1296`). Perl keeps the same per-node box (`Document.pm:1654-1671`,
+    refcounted, heavier) — SHARED; the `MemoryBudget` fuse is Rust-only tooling doing
+    its job. Not an accumulator elsewhere: the listings VFS holds 582 temp files under
+    1 MB, pgfkeys/arena/idstore stay small. Forced streaming at 16 GB holds ~4 GB for 17
+    chapters, then creeps 4 → 12 GB through theorems/breakable/magazine/poster and dies
+    at poster: those chapters are un-yielding digestion units (multi-page `breakable`
+    boxes, `tcbposter` layouts) with no seam — the creep already noted at
+    `latexml_oxide.rs:620-623`. Levers: (1) sweep policy — convert this manual on a
+    dedicated high-`--max-memory` pass or exclude it from the 6 GB parity target
+    (LOW); (2) yield seams inside `breakable`/poster digestion and a mid-large-box spill
+    (MED-HIGH, the real prize, a separate initiative with PLANS 11); (3) eager-path
+    release of `node_boxes` for closed subtrees (HIGH: every `get_node_box` consumer —
+    `document.rs:1192-1204` math relocation, :4089 margin repositioning, :4462 root
+    hooks — must be proven not to read a closed node's box; diverges from Perl's
+    refcount-keep). Raising the streaming projection constant would not help (streaming
+    dies too) and would over-stream healthy documents.
 
 11. **Memory: the whole-document box tree is the peak — streaming needs a picture-end
     seam (FINAL, 2026-09-19; `~/data/pk_agents/w23/perf_pgf/periodictable/`).**
