@@ -375,8 +375,61 @@ impl LatexmlWorker {
       return Err(format!("Failed to prepare converter: {}", e).into());
     }
 
-    // 3. Convert
-    let response = converter.convert(main_tex.clone());
+    // 3. Convert — eager first; a memory stop (the restart watermark or the
+    // fuse) reruns the paper under --streaming in a fresh session, as the CLI
+    // does (batches 56dw/56dz). The watermark is thread-local and re-armed per
+    // paper; the stop signal is taken by the decision, so a persistent thread
+    // starts the next paper clean.
+    // Persistent pool thread: a prior paper whose streaming rerun ITSELF
+    // fused leaves a stale `Fuse` signal (the rerun has no take after it).
+    // Clear it before arming so this paper is judged on its own memory, and
+    // so a panic between arm and decide (caught below) cannot carry one over.
+    latexml_core::stomach::take_streaming_restart_signal();
+    latexml_core::stomach::set_streaming_restart_watermark(
+      latexml::streaming_restart::restart_watermark(),
+    );
+    let mut response = converter.convert(main_tex.clone());
+    latexml_core::stomach::set_streaming_restart_watermark(None);
+    let ceiling_mib = self.profile.max_rss_kb / 1024;
+    if let Some(budget) = latexml::streaming_restart::restart_budget(ceiling_mib, &main_tex) {
+      let (rss_mb, cap_mb) = latexml::streaming_restart::release_before_rerun();
+      // The refusal guard trusts post-release RSS to tell a futile rerun (the
+      // memory is held by something streaming won't bound) from a worthwhile
+      // one. mimalloc's `mi_collect` returns the freed pages so the reading is
+      // honest; jemalloc holds them under decay, so RSS reads high even after
+      // the boxes are gone — trusting it would refuse exactly the memory-heavy
+      // papers the jemalloc harness build targets. Under jemalloc, always
+      // attempt the rerun; its own fuse is the backstop.
+      let refuse = cfg!(not(feature = "jemalloc")) && cap_mb > 0 && rss_mb >= cap_mb;
+      if refuse {
+        emit_error(
+          "streaming",
+          "restart",
+          &format!(
+            "the eager conversion stopped for memory and {rss_mb} MB stay resident after \
+             releasing it (cap {cap_mb} MB): not restarting under --streaming"
+          ),
+        );
+      } else {
+        latexml_core::watchdog::reset_memory_fatal();
+        let mut streaming_opts = opts.clone();
+        streaming_opts.streaming = Some(budget);
+        let mut restarted = Converter::from_config(streaming_opts.clone());
+        if let Err(e) = restarted.prepare_session(&streaming_opts) {
+          return Err(format!("Failed to prepare the streaming restart session: {}", e).into());
+        }
+        latexml_core::common::error::emit_info(
+          "streaming",
+          "restart",
+          &format!(
+            "the eager conversion stopped for memory; restarting under --streaming (fragment \
+             budget {budget} boxes, {rss_mb} MB resident after release) on the remaining \
+             wall-clock allowance"
+          ),
+        );
+        response = restarted.convert(main_tex.clone());
+      }
+    }
     let xml = response
       .result
       .ok_or_else(|| format!("Conversion failed for {}", main_tex))?;

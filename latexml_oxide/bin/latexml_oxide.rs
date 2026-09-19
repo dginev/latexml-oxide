@@ -11,7 +11,10 @@ use std::{
 };
 
 use clap::Parser;
-use latexml::converter::Converter;
+use latexml::{
+  converter::Converter,
+  streaming_restart::{release_before_rerun, resolve_streaming, restart_budget, restart_watermark},
+};
 use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat, error::emit_info};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
@@ -652,145 +655,14 @@ fn streaming_restart_eligible(cli: &Cli, opts: &Config) -> bool {
     && !matches!(opts.format, OutputFormat::TeX | OutputFormat::Box)
 }
 
-/// The RSS at which an eligible eager run stops to rerun under `--streaming`:
-/// two thirds of the cooperative fuse (half the `--max-memory` ceiling). Above
-/// it the eager attempt was going to fuse anyway on every witness measured
-/// (pgf-PeriodicTable's manual, source2e, the datatool and glossaries
-/// manuals), and stopping here hands the rerun the wall-clock allowance the
-/// fused attempt used to burn. `None` = no ceiling to derive it from.
-fn streaming_restart_watermark(cli: &Cli) -> Option<u64> {
-  // `--max-memory=0` disables memory limiting entirely (the fuse included):
-  // no watermark either — the single knob governs every ceiling.
-  let fuse = latexml_core::stomach::soft_cap_from_ceiling(resolve_max_memory(cli.max_memory));
-  (fuse > 0).then_some(fuse * 2 / 3)
-}
-
 /// After an EAGER conversion, the fragment budget to restart under when the
 /// run stopped for memory — at the watermark or at the fuse — and streaming
 /// is still available. `None` = keep the eager result.
 fn streaming_restart_budget(cli: &Cli, opts: &Config, source: &str) -> Option<usize> {
-  if !streaming_restart_eligible(cli, opts)
-    || !(latexml_core::watchdog::memory_fatal_seen()
-      || latexml_core::watchdog::streaming_restart_requested())
-  {
+  if !streaming_restart_eligible(cli, opts) {
     return None;
   }
-  resolve_streaming(Some(true), resolve_max_memory(cli.max_memory), source)
-}
-
-fn resolve_streaming(requested: Option<bool>, max_memory_mib: u64, source: &str) -> Option<usize> {
-  const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
-  const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
-  // `--max-memory=0` disables the death ceiling, but the machine is still
-  // finite and such a document may still need to spill. Judge — and size
-  // fragments — against the ceiling we WOULD have derived. Without this the
-  // arithmetic degenerated: `projected > 0` always fired, and
-  // `0 / 8 / 2416 -> max(1)` gave a ONE-BOX budget, i.e. a yield after every
-  // box.
-  let yardstick_mib = if max_memory_mib == 0 {
-    latexml_core::watchdog::default_ceiling_mib()
-  } else {
-    max_memory_mib
-  };
-  // Compare against the cooperative FUSE, not the ceiling: death happens at
-  // 75% of the ceiling, so comparing against the ceiling left a band
-  // (0.75-1.0x) that was judged "fits", took the eager path, and was then
-  // killed by the fuse — 8.1-10.8 MB of source on a 16 GB laptop.
-  let fuse_mib = latexml_core::stomach::soft_cap_from_ceiling(yardstick_mib) / (1024 * 1024);
-  let auto = || {
-    let projected_mib =
-      projected_source_bytes(source).saturating_mul(PEAK_BYTES_PER_SOURCE_BYTE) / (1024 * 1024);
-    (projected_mib > fuse_mib).then_some(())
-  };
-  match requested {
-    // Explicit opt-out: never stream, not even when projected to die.
-    Some(false) => return None,
-    Some(true) => {},
-    None if auto().is_none() => return None,
-    None => {},
-  }
-  // The eighth is MEASURED, not guessed, and shrinking it buys nothing: on the
-  // 19.8 MB witness at an 8192 MiB ceiling, divisors 8/16/32 peak at
-  // 4747/4719/4714 MB with an invariant ramp (3788/3784/3787 MB at fragment 2)
-  // and byte-identical output. Peak there is a STARTUP TRANSIENT that this knob
-  // does not size — see task #158.
-  let budget_boxes = (yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize;
-  Some(budget_boxes.max(1))
-}
-
-/// The byte size the memory projection must reason from: the DOCUMENT, not the
-/// main file.
-///
-/// A 2 KB `index.tex` that `\input`s a thousand chapters is a half-gigabyte
-/// document, but `metadata(main).len()` projects it at 2 KB — "fits easily" —
-/// and the eager path then dies on it. When the main file actually names an
-/// inclusion command, sum the source tree (`.tex`/`.ltx`/`.bbl`) instead.
-///
-/// Gated on the command being present so a SELF-CONTAINED paper sitting in a
-/// directory of unused alternates (a common arXiv bundle shape) still projects
-/// as itself and keeps the eager path.
-///
-/// Known limitation: an inclusion assembled by macro expansion
-/// (`\myinput{ch1}`) names no literal command and is not detected; such a
-/// document needs an explicit `--streaming`.
-fn projected_source_bytes(source: &str) -> u64 {
-  /// Enough of the main file to see its inclusion commands without reading a
-  /// 131 MB self-contained source in full (whose own size already dominates).
-  const SCAN_BYTES: u64 = 4 * 1024 * 1024;
-  /// Backstop against a pathological tree (a home directory as source dir).
-  const WALK_ENTRIES: usize = 50_000;
-  const INCLUSION_COMMANDS: [&str; 6] = [
-    "\\input",
-    "\\include",
-    "\\import",
-    "\\subimport",
-    "\\subfile",
-    "\\includeonly",
-  ];
-
-  let own = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
-  let Some(dir) = Path::new(source).parent() else {
-    return own;
-  };
-  let mut head = Vec::new();
-  if File::open(source)
-    .map(|f| f.take(SCAN_BYTES).read_to_end(&mut head))
-    .is_err()
-  {
-    return own;
-  }
-  let head = String::from_utf8_lossy(&head);
-  if !INCLUSION_COMMANDS.iter().any(|cmd| head.contains(cmd)) {
-    return own;
-  }
-  let mut total = 0u64;
-  let mut seen = 0usize;
-  let mut stack = vec![dir.to_path_buf()];
-  while let Some(d) = stack.pop() {
-    let Ok(entries) = std::fs::read_dir(&d) else {
-      continue;
-    };
-    for entry in entries.flatten() {
-      seen += 1;
-      if seen > WALK_ENTRIES {
-        return total.max(own);
-      }
-      match entry.file_type() {
-        Ok(t) if t.is_dir() => stack.push(entry.path()),
-        Ok(t) if t.is_file() => {
-          let path = entry.path();
-          if matches!(
-            path.extension().and_then(|e| e.to_str()),
-            Some("tex" | "ltx" | "bbl")
-          ) {
-            total = total.saturating_add(entry.metadata().map(|m| m.len()).unwrap_or(0));
-          }
-        },
-        _ => {},
-      }
-    }
-  }
-  total.max(own)
+  restart_budget(resolve_max_memory(cli.max_memory), source)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -1288,7 +1160,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       }
     } else if supplement_sources.is_empty() {
       if streaming_restart_eligible(&cli, &opts) {
-        latexml_core::stomach::set_streaming_restart_watermark(streaming_restart_watermark(&cli));
+        latexml_core::stomach::set_streaming_restart_watermark(restart_watermark());
       }
       let response = converter.convert(source.clone());
       match streaming_restart_budget(&cli, &opts, &source) {
@@ -1302,24 +1174,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // read the OLD peak and fuse again (measured: 807 MB against an 805 MB
           // cap half a second in). Drain and return the memory first, and only
           // rerun when it actually came back below the fuse.
-          drop(latexml_core::stomach::salvage_pending_box_lists(false));
-          unsafe {
-            libmimalloc_sys::mi_collect(true);
-          }
-          let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
-          let cap_mb =
-            latexml_core::stomach::soft_cap_from_ceiling(resolve_max_memory(cli.max_memory))
-              / (1024 * 1024);
+          let (rss_mb, cap_mb) = release_before_rerun();
           if cap_mb > 0 && rss_mb >= cap_mb {
             // A watermark stop abandoned the eager attempt WITHOUT a Fatal:
             // failing to rerun it must not read as a clean, empty document.
-            let emit: fn(&str, &str, &str) =
-              if latexml_core::watchdog::streaming_restart_requested() {
-                latexml_core::common::error::emit_error
-              } else {
-                emit_info
-              };
-            emit(
+            latexml_core::common::error::emit_error(
               "streaming",
               "restart",
               &format!(
@@ -1332,7 +1191,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             let mut streaming_opts = opts.clone();
             streaming_opts.streaming = Some(budget);
             latexml_core::watchdog::reset_memory_fatal();
-            latexml_core::watchdog::reset_streaming_restart();
             latexml_core::stomach::set_streaming_restart_watermark(None);
             let mut restarted = Converter::from_config(streaming_opts.clone());
             if let Err(e) = restarted.prepare_session(&streaming_opts) {
@@ -2020,6 +1878,8 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 mod streaming_activation_tests {
   use std::io::Write;
 
+  use latexml::streaming_restart::projected_source_bytes;
+
   use super::*;
 
   fn write(dir: &Path, name: &str, bytes: usize) -> std::path::PathBuf {
@@ -2086,6 +1946,7 @@ mod streaming_activation_tests {
   /// streaming, and the output builds a document.
   #[test]
   fn fused_eager_run_restarts_under_streaming() {
+    use latexml_core::stomach::RestartSignal;
     let tmp = tempfile::tempdir().expect("tempdir");
     let main = write(tmp.path(), "src.tex", 1024);
     let src = main.to_str().unwrap();
@@ -2099,26 +1960,33 @@ mod streaming_activation_tests {
       streaming: None,
       ..Config::default()
     };
-    latexml_core::watchdog::reset_memory_fatal();
     assert_eq!(
       streaming_restart_budget(&cli(&[]), &eager, src),
       None,
-      "no fuse, no restart"
+      "no memory stop, no restart"
     );
-    latexml_core::watchdog::note_memory_fatal();
-    let budget = streaming_restart_budget(&cli(&[]), &eager, src)
-      .expect("a fused eager run restarts with a fragment budget");
-    assert!(
-      budget > 10_000,
-      "the restart budget derives from the ceiling, got {budget}"
-    );
+    for signal in [RestartSignal::Fuse, RestartSignal::Watermark] {
+      latexml::streaming_restart::note_restart_signal(signal);
+      let budget = streaming_restart_budget(&cli(&[]), &eager, src)
+        .expect("a memory stop restarts with a fragment budget");
+      assert!(
+        budget > 10_000,
+        "the restart budget derives from the ceiling, got {budget}"
+      );
+      assert_eq!(
+        streaming_restart_budget(&cli(&[]), &eager, src),
+        None,
+        "the signal is taken by the decision"
+      );
+    }
+    latexml::streaming_restart::note_restart_signal(RestartSignal::Fuse);
     assert_eq!(
       streaming_restart_budget(&cli(&["--streaming=false"]), &eager, src),
       None,
       "the explicit opt-out wins"
     );
     let already = Config {
-      streaming: Some(budget),
+      streaming: Some(1),
       ..Config::default()
     };
     assert_eq!(
@@ -2136,20 +2004,20 @@ mod streaming_activation_tests {
       None,
       "TeX output never builds a document"
     );
-    latexml_core::watchdog::reset_memory_fatal();
-    // The pre-fuse watermark stop restarts too, and clears like the fuse.
-    latexml_core::watchdog::note_streaming_restart();
-    assert!(streaming_restart_budget(&cli(&[]), &eager, src).is_some());
-    latexml_core::watchdog::reset_streaming_restart();
-    assert_eq!(streaming_restart_budget(&cli(&[]), &eager, src), None);
-    let watermark = streaming_restart_watermark(&cli(&["--max-memory=1024"]))
-      .expect("a ceiling derives a watermark");
-    assert_eq!(watermark, 1024 * 1024 * 1024 * 3 / 4 * 2 / 3);
+    latexml_core::stomach::take_streaming_restart_signal();
+    // The watermark is nine tenths of the fuse in force; none without a fuse.
+    latexml_core::stomach::set_memory_cap(Some(latexml_core::stomach::soft_cap_from_ceiling(1024)));
     assert_eq!(
-      streaming_restart_watermark(&cli(&["--max-memory=0"])),
+      restart_watermark(),
+      Some(1024 * 1024 * 1024 * 3 / 4 * 9 / 10)
+    );
+    latexml_core::stomach::set_memory_cap(Some(0));
+    assert_eq!(
+      restart_watermark(),
       None,
       "memory limiting disabled entirely means no watermark"
     );
+    latexml_core::stomach::set_memory_cap(None);
   }
 
   /// The explicit opt-out wins over auto-activation, however doomed the

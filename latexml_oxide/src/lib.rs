@@ -16,6 +16,7 @@ pub mod main_tex;
 pub mod multidoc;
 pub mod post;
 pub mod render_workers;
+pub mod streaming_restart;
 pub mod util;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime

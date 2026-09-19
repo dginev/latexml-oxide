@@ -313,11 +313,10 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     is the signal — no new threshold, documents that finish eager are untouched); the
     sweep converts through the CLI, so a streaming win now reaches the verdict for any
     document whose streaming peak fits the 6 GB ceiling (the pgf manual does not yet:
-    part three). Open (NEXT): the same restart in `cortex_worker`'s per-paper loop —
-    hoist `resolve_streaming`/`projected_source_bytes` and the eligibility + watermark
-    helpers from the binary into the library, arm the watermark per paper, rerun in a
-    fresh converter with the memory release, and validate against the fleet's
-    per-child ceiling (`profile.max_rss_kb`). Part five SETTLED
+    part three). The `cortex_worker` restart LANDED as 56ea (`streaming_restart.rs`
+    shared by both binaries; thread-local stop signal; watermark at nine tenths of
+    the fuse after sweep #104 showed two thirds cost 330 s for no verdict); the
+    sandbox reruns (11a) validate it against the fleet's ceiling. Part five SETTLED
     2026-09-19 (agent, heaptrack): the constant ~37 MB per in-process conversion is
     the fresh test thread's `#[thread_local]` engine roots (`MODEL`, `GULLET`,
     `STOMACH`, token constants, the reset interner) — Rust memory that the test binary
@@ -331,6 +330,19 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),
     a leaner `Whatsit` (already niche-optimized, issue #361 M4).
+
+11a. **Sandbox reruns as the regression oracle (user 2026-09-19).** With the memory
+    batches landed, rerun `sandbox-arxiv-2605` and `sandbox-arxiv-2606` on cortex with a
+    `cortex_worker` built from this branch (the containerized recipe: `docker build
+    --target worker` from this repo's `Dockerfile`, `docker run --network host` with
+    `WORKERS=72 PROFILE=ar5iv`, then `POST /api/reports/<corpus>/oxidized_tex_to_html/rerun`
+    with the claude-session token, 2605 then 2606; judge only `todo == 0 && queued == 0`
+    runs against the frozen baselines, by category shape and `/api/runs/<c>/<s>/diff`).
+    Baselines at the time of the directive (both complete): 2605 = 30,079 docs,
+    no_problem 6,155 / warning 19,772 / error 3,894 / fatal 258; 2606 = 30,426 docs,
+    no_problem 6,463 / warning 19,742 / error 3,984 / fatal 237. The reruns tell whether
+    the goal is reached without regressing other documents; sequenced right after 56ea
+    (the worker's own restart), before 12.
 
 12. **High-performance raw interpretation (user directive 2026-09-19: "let us do it
     soon, but do not change next steps, add after").** Queued AFTER 11's open parts

@@ -68,10 +68,10 @@ pub fn set_memory_cap(bytes: Option<u64>) { RSS_CAP_OVERRIDE.with(|c| c.set(byte
 /// The streaming-restart watermark (bytes of RSS): set by the CLI for an
 /// EAGER run that may be rerun under `--streaming`. Crossing it stops
 /// digestion with `ErrorCategory::StreamingRestart` — an Info, not a Fatal —
-/// well before the fuse, so the rerun starts with most of the wall-clock
-/// allowance instead of after a fused attempt (pgf-PeriodicTable's manual
-/// under the eager sweep: fuse at ~70 s + a 380 s rerun = 418 s against a
-/// 420 s cap). `None` (the default, and every non-CLI path) = no watermark.
+/// just below the fuse, so the abandoned attempt leaves no Fatal line and no
+/// salvaged partial document behind (`streaming_restart::restart_watermark`
+/// sets where). `None` (the default, and every path that does not rerun) = no
+/// watermark.
 #[thread_local]
 static STREAMING_RESTART_WATERMARK: Cell<Option<u64>> = Cell::new(None);
 
@@ -79,6 +79,29 @@ static STREAMING_RESTART_WATERMARK: Cell<Option<u64>> = Cell::new(None);
 pub fn set_streaming_restart_watermark(bytes: Option<u64>) {
   STREAMING_RESTART_WATERMARK.set(bytes);
 }
+
+/// Why eager digestion stopped for memory on this thread.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RestartSignal {
+  /// The streaming-restart watermark (an Info, no output lost yet).
+  Watermark,
+  /// The cooperative memory fuse (a Fatal; the attempt's output is partial).
+  Fuse,
+}
+
+/// Thread-local, so a worker with several conversion threads never restarts
+/// one paper on another's stop (the watchdog's process-wide memory latch is
+/// for the end-of-run report only).
+#[thread_local]
+static STREAMING_RESTART_SIGNAL: Cell<Option<RestartSignal>> = Cell::new(None);
+
+/// Record a memory stop for the restart decision (`take_streaming_restart_signal`).
+pub fn note_streaming_restart_signal(signal: RestartSignal) {
+  STREAMING_RESTART_SIGNAL.set(Some(signal));
+}
+
+/// The pending memory stop, cleared by the read.
+pub fn take_streaming_restart_signal() -> Option<RestartSignal> { STREAMING_RESTART_SIGNAL.take() }
 
 /// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
 /// ceiling (MiB). The soft fuse sits at 75% of the ceiling, leaving ~25%
@@ -335,7 +358,7 @@ pub fn check_timeout() -> Result<()> {
           {
             // One stop per arming: the rerun is streaming and never armed.
             STREAMING_RESTART_WATERMARK.set(None);
-            crate::watchdog::note_streaming_restart();
+            note_streaming_restart_signal(RestartSignal::Watermark);
             use crate::common::error::{Error as LatexmlError, ErrorCategory, ErrorTarget};
             return Err(LatexmlError {
               target:   ErrorTarget::Timeout,
@@ -392,6 +415,7 @@ pub fn check_timeout() -> Result<()> {
             // binary's end-of-run report add the kernel-tracked peak
             // (`watchdog::peak_memory_report`, emitted only when this fired).
             crate::watchdog::note_memory_fatal();
+            note_streaming_restart_signal(RestartSignal::Fuse);
             fatal!(
               Timeout,
               MemoryBudget,

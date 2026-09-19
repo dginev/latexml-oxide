@@ -191,18 +191,6 @@ pub fn note_memory_fatal() { MEMORY_FATAL_SEEN.store(true, Ordering::Relaxed); }
 /// Did a memory-budget Fatal fire since the last `reset_memory_fatal`?
 pub fn memory_fatal_seen() -> bool { MEMORY_FATAL_SEEN.load(Ordering::Relaxed) }
 
-static STREAMING_RESTART_REQUESTED: AtomicBool = AtomicBool::new(false);
-
-/// Record that eager digestion stopped at the streaming-restart watermark
-/// (`stomach::check_timeout`): the CLI reruns under `--streaming`.
-pub fn note_streaming_restart() { STREAMING_RESTART_REQUESTED.store(true, Ordering::Relaxed); }
-
-/// Did eager digestion stop at the streaming-restart watermark?
-pub fn streaming_restart_requested() -> bool { STREAMING_RESTART_REQUESTED.load(Ordering::Relaxed) }
-
-/// Forget a watermark stop (the rerun starts from a clean latch).
-pub fn reset_streaming_restart() { STREAMING_RESTART_REQUESTED.store(false, Ordering::Relaxed); }
-
 /// Forget a memory-budget Fatal: the CLI restarts a fused EAGER conversion
 /// under `--streaming`, and the end-of-run report must describe the attempt
 /// that produced the output.
