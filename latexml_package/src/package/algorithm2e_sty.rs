@@ -468,10 +468,14 @@ LoadDefinitions!({
   // `floatToElement('ltx:tags')` to climb OUT of that `<ltx:text>` up to the
   // enclosing `<ltx:listingline>` (which can contain tags), emits the tags
   // there, then leaves the cursor restored so following content flows on. This
-  // is the same float used by `\lx@prepend@indentation@` above. We restore the
-  // saved node (rather than Perl's manual childNode remove/re-append prepend)
-  // so the KwInput label's content keeps its wrapper. Witness 2104.02680
-  // (`\SetKwInput{KwInit}{\nl initialize}`).
+  // is the same float used by `\lx@prepend@indentation@` above. We do Perl's
+  // childNode detach/re-append prepend (algorithm2e.sty.ltxml:210-221) so the
+  // `<ltx:tags>` is the listingline's FIRST child even when a leading block-close
+  // `}` marker or KwInput label wrapper is already placed (the model requires tags
+  // first, LaTeXML-block.rnc:189; opening tags at the cursor landed them AFTER such
+  // content — algorithm2e_exgeneric2's `\Else` block-close, 5 jing lines). We ALSO
+  // restore the saved node so the KwInput label's content keeps its wrapper.
+  // Witness 2104.02680 (`\SetKwInput{KwInit}{\nl initialize}`).
   //
   // The printed number is wrapped in `\NlSty` — real algorithm2e.sty L1638/L1644:
   // `\NlSty{#1}` = `\textnormal{\textbf{\relsize{-2}#1}}` — so it renders uniform
@@ -488,12 +492,23 @@ LoadDefinitions!({
   DefConstructor!("\\algocf@printnl@i{}", sub[document, args] {
     let num = args.first().and_then(|a| a.as_ref());
     let savenode = document.float_to_element("ltx:tags", false)?;
+    // Detach the listingline's current children, open the tags into the now-empty
+    // line as its FIRST child, then re-append the saved children (Perl's true
+    // prepend) — so the number tags precede any leading block-close `}` marker.
+    let mut line = document.get_node().clone();
+    let mut saved: Vec<Node> = line.get_child_nodes();
+    for child in saved.iter_mut() {
+      child.unlink();
+    }
     document.open_element("ltx:tags", None, None)?;
     match num {
       Some(n) => { document.insert_element("ltx:tag", vec![n], None)?; },
       None => { document.insert_element("ltx:tag", Vec::new(), None)?; },
     }
     document.close_element("ltx:tags")?;
+    for child in saved.iter_mut() {
+      line.add_child(child)?;
+    }
     if let Some(sn) = savenode { document.set_node(&sn); }
   });
 

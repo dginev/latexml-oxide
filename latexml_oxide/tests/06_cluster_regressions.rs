@@ -1910,6 +1910,38 @@ fn cluster_algorithm2e_tags_precede_indentation_rule() {
   );
 }
 
+/// Schema-validity guard (batch 56ei): with algorithm2e block markers
+/// (`\SetAlgoBlockMarkers`), a numbered line whose first content is the
+/// block-close `}` marker must still carry its line-number `<ltx:tags>` FIRST.
+/// `\algocf@printnl@i` now does Perl's true prepend (detach/re-append,
+/// algorithm2e.sty.ltxml:210-221) so the tags precede a leading `}` marker
+/// instead of landing after it (listingline model requires tags first,
+/// LaTeXML-block.rnc:189). RUST-ONLY parity fix — Perl emits tags-first here.
+#[test]
+fn cluster_algorithm2e_tags_first_after_block_marker() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_block_markers.tex");
+  // Every listingline that carries a <tags> must have it as the FIRST child
+  // element — no `}` marker, rule, or other element may open before it. Compare
+  // positions (not exact spacing) so the guard survives whitespace changes.
+  let mut checked = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    if let Some(tags) = inner.find("<tags") {
+      let first_elt = inner.find('<').unwrap_or(tags);
+      assert!(
+        first_elt == tags,
+        "a numbered listingline opened an element before its <tags> \
+         (schema-invalid; tags must be first):\n{inner}"
+      );
+      checked += 1;
+    }
+  }
+  assert!(
+    checked >= 1,
+    "expected >=1 numbered listingline carrying <tags>; the fixture may have changed:\n{xml}"
+  );
+}
+
 /// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
 /// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
 /// "(N)" bibitem before the real references. The blank line makes
