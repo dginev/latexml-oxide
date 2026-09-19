@@ -4347,15 +4347,53 @@ pub fn insert_block(
     .filter(|candidate| document::can_contain_qsym(context_tag, **candidate))
     .copied()
     .collect::<Vec<_>>();
-  if let Some(final_tag) = allowed_candidates
-    .first()
-    .map_or_else(|| filtered_candidates.first(), Some)
-  {
-    // Rename the capture to the correct container
-    // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
-    // where Symbol tickets and &str are equally intuitive to use without runtime panics from
-    // arena mutability exceptions.
+  // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
+  // where Symbol tickets and &str are equally intuitive to use without runtime panics from
+  // arena mutability exceptions.
+  if let Some(final_tag) = allowed_candidates.first() {
+    // The context can hold this block — rename the capture in place.
     document.rename_node(container, &to_string(*final_tag), true)?;
+  } else if let Some(&final_tag) = filtered_candidates.first() {
+    // Surpass (OXIDIZED_DESIGN #240): the context (e.g. an already-open `<para>`)
+    // cannot hold this Para.class block, but an ancestor can. Climb to the
+    // nearest such ancestor and move the capture there — ending the paragraph —
+    // instead of renaming in place, which yields a schema-invalid
+    // `<para>/<logical-block>` (LaTeXML-para.rnc:16,56). Perl renames in place
+    // (TeX_Box.pool.ltxml:512-513, in insertBlock :449-519), a SHARED schema bug;
+    // we keep the block
+    // rendering (a `<div>`, LaTeXML-para-xhtml.xsl:53) — the inline variant would
+    // wrongly nest block content (a float/table) in a `<span>`. Witnesses:
+    // tikz-network, numerica (framed `{shaded}` / `{minipage}` after inline text).
+    // Only reached on the currently-invalid path (`allowed_candidates` empty in a
+    // non-inline context); the inline/`<p>` path always has a valid candidate.
+    // Restrict the climb to a `<para>` context — the "block box ends the open
+    // paragraph" case (tikz-network/numerica). Other block-holding contexts (an
+    // SVG `foreignObject` / box that wraps its block in place) keep the pre-#4
+    // in-place rename, so a `\parbox` inside a picture stays in its foreignObject.
+    // A `<para>` only ever lives inside a Para.model container (item, section
+    // body, logical-block, …), so the immediate parent holds a `logical-block`
+    // and the climb stops one level up. A `sectional-block` (Para.class content
+    // carrying a `\paragraph`/`\subsection`) instead ends any enclosing section
+    // and lands at body level — valid (document.body.class holds it), a net
+    // improvement over Perl's invalid in-place nesting.
+    if with(context_tag, |t| t == "ltx:para") {
+      let mut child = context.clone();
+      while let Some(parent) = child.get_parent() {
+        if !matches!(parent.get_type(), Some(NodeType::ElementNode)) {
+          break;
+        }
+        if document::can_contain_qsym(document::get_node_qname(&parent), final_tag) {
+          container.unlink();
+          child.add_next_sibling(&mut container)?;
+          document.set_node(&parent);
+          break;
+        }
+        child = parent;
+      }
+    }
+    // If no ancestor can hold it (rare — Para.class always fits the section/body
+    // model), the capture stays where it is and the rename matches Perl's outcome.
+    document.rename_node(container, &to_string(final_tag), true)?;
   } else {
     // we didn't know what to do?
     let message = with(context_tag, |ctxt_str| {

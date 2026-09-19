@@ -7658,3 +7658,31 @@ the XSLT builds the class as `ltx_align_<align>` = `ltx_align_justified`
 **Witnesses**: pgf-periodictable (1419), any `\makebox[…][s]`.
 **Guard**: `picture_makebox_offset::makebox_stretch_is_justified`.
 **Upstream**: not filed.
+
+### 240. A block-box's Para.class content climbs out of a `<para>` that can't hold it (Perl: in-place rename → schema-invalid)
+
+**Perl behavior**: `insertBlock` (`TeX_Box.pool.ltxml:449-519`) ends with
+`my $tag = $allowed_candidates[0] || $filtered_candidates[0];
+renameNode($container,$tag,1)` (the rename at `:512-513`) — a direct IN-PLACE
+rename. When a block box
+(`framed`'s `{shaded}`, a standalone `{minipage}`) whose content is Para.class
+material (a `<float>`/`<table>`/nested `<para>`/`<subsection>`) is inserted while
+a `<para>` is already open from preceding inline text, `<para>` (Block.model)
+cannot hold the `<logical-block>`/`<sectional-block>` chosen, so Perl renames in
+place and emits `<para>…<logical-block>` — schema-invalid (`LaTeXML-para.rnc:16`
+`Para.class = para | logical-block`; `:56` `para_model = Block.model`).
+**Rust behavior**: `insert_block` (`base_utilities.rs`) — when
+`allowed_candidates` is empty but a candidate exists, climb from the context to
+the nearest ancestor that can hold the tag and move the capture there (ending
+the paragraph), then rename. The block ends up a valid child of the section/body.
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19).
+Chosen over renaming to the inline variant (`inline-logical-block`, which IS
+valid in Block.model) because that renders block content — a `<float>`/`<table>`
+— inside an inline `<span>` (`LaTeXML-para-xhtml.xsl:72`), breaking fidelity;
+the block form renders as a `<div>` (`:53`). Only the currently-invalid path is
+touched (empty `allowed_candidates` in a non-inline context); the inline/`<p>`
+path is unchanged.
+**Witnesses**: tikz-network (88→1 jing lines), numerica (framed `{shaded}` /
+`{minipage}` after inline text).
+**Guard**: `perfect_kernel_batch56::logical_block_climbs_out_of_para`.
+**Upstream**: not filed.
