@@ -348,7 +348,14 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     costs — lookup, expansion copying, box allocation — then ONE tex.web-shaped lever
     per run with pre-registered bars (packed tokens / in-place expansion /
     `eqtb`-style hot state), readability of gullet-stomach-mouth as a review criterion.
-    This is the only remaining throughput lever with corpus reach (P5's successor).
+    **Interface constraint (user 2026-09-19):** this codebase will be maintained by
+    LaTeXML developers who know the Perl Gullet/Mouth/Stomach/State abstractions and
+    ergonomics — any representation change (packed tokens, in-place expansion, hot
+    state) must stay behind the Perl-shaped interfaces (`readToken`/`readXToken`,
+    `unread`, `Tokens`, `lookupMeaning`/`assignValue`, mouth push/pop) so the code still
+    reads like the Perl to them; a faster core is not allowed to turn the gullet into
+    something a Perl LaTeXML developer would not recognize. This is the only remaining
+    throughput lever with corpus reach (P5's successor).
 
 ## DONE
 
