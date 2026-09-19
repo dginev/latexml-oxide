@@ -18039,6 +18039,23 @@ Table hooks ok.
     );
     latexml::util::test::assert_element(&xml, "p", &[], r##"<p>Body text. 18.0pt.</p>"##);
   }
+
+  /// `\newif\if西暦` (jsarticle.cls:1927): the kanji is catcode OTHER in both
+  /// engines, so `\newif` names the bare `\if` — an EMPTY conditional name,
+  /// which Perl (Package.pm:1220, `defined $name`) lets to `\iffalse` like any
+  /// `\newif`. Rejecting it installed a test-less conditional and the
+  /// `\if`-heavy tikz→pgf→pgfkeys load collapsed (`\pgfeov` undefined at
+  /// pgfkeys.code.tex:931; jsarticle + tikz 544 errors, Perl 28 — the pTeX
+  /// residual; chuushaku 423/343).
+  #[test]
+  fn newif_with_an_empty_name_lets_if_to_iffalse() {
+    let tex = std::fs::read_to_string("tests/cluster_regressions/newif/empty_name_tikz.tex")
+      .expect("fixture");
+    let (stderr, xml) = convert(&tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<picture"), "{xml}");
+    assert!(xml.contains("<svg:path"), "{xml}");
+  }
 }
 
 mod perfect_kernel_gemini {

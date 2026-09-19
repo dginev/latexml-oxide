@@ -180,7 +180,15 @@ pub fn def_conditional(
       Warn!("misdefined", cs, message);
     }
     if let Some(name) = name_opt {
-      if !name.is_empty() && name != "case" && test.is_none() {
+      // Perl Package.pm:1220 `(defined $name) && ($name ne 'case') &&
+      // (!defined $test)`: an EMPTY name is defined too — `\newif\if西暦`
+      // (jsarticle.cls:1927; the kanji is catcode OTHER in both engines, so
+      // the DefToken argument is the bare `\if`) lets `\if` to `\iffalse`, a
+      // well-formed conditional; rejecting the empty name installed a
+      // test-less `Conditional` that errored on every later `\if`, and the
+      // tikz→pgf→pgfkeys load that follows is `\if`-heavy (jsarticle + tikz:
+      // 544 errors, Perl 28 — the pTeX residual).
+      if name != "case" && test.is_none() {
         // user-defined conditional, like with \newif
         // Note: setting up these macros is compile-time expensive, maybe there is some way to
         // avoid...
