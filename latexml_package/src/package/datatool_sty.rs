@@ -367,6 +367,76 @@ fn load_csv(name: &str, file: &str) -> Result<Option<()>> {
   Ok(Some(()))
 }
 
+/// The comparison form of an operand (`\__datatool_get_compare_sort:Nn`,
+/// datatool-base.sty:8794-8814, under the default `expand-cs=false`, :935):
+/// the operand expanded ONCE (`\exp_args:NNo`, :9053 — its first token, when a
+/// parameterless macro such as a loop's `\dtlkey`, replaced by its body),
+/// every remaining control sequence mapped to one marker character
+/// (`\__datatool_get_compare_sort_fn:n`, :8849, `^^J` — so two operands
+/// wrapped in different formatting commands compare equal and an accented
+/// `\'e` differs from `é`), `~` and a no-break space a space (:8804), the
+/// string form; lowercased for the starred, case-insensitive forms
+/// (`\__datatool_get_icompare_sort:Nn`, :8816).
+fn compare_text(operand: &Tokens, fold: bool) -> Result<String> {
+  let mut toks = operand.clone().unlist();
+  if let Some(first) = toks.first().copied()
+    && first.get_catcode().is_active_or_cs()
+    && let Some(defn) = lookup_expandable(&first, Some(true))?
+    && defn.get_parameters().is_none()
+    && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+  {
+    toks.splice(0..1, body.unlist_ref().iter().copied());
+  }
+  let mut text = String::new();
+  for t in &toks {
+    if t.get_catcode() == Catcode::CS {
+      text.push('\n');
+    } else if t.get_catcode() == Catcode::ACTIVE && t.with_str(|s| s == "~") {
+      text.push(' ');
+    } else {
+      t.with_str(|s| text.push_str(s));
+    }
+  }
+  let text = text.replace('\u{a0}', " ");
+  Ok(if fold { text.to_lowercase() } else { text })
+}
+
+/// `\DTLifnumerical` (datatool-base.sty:8534) on the comparison operand: its
+/// value when the datum parser types it integer or decimal
+/// (`\__datatool_parse_numbers_ii:nnNN` :8640 hands `\l__datatool_datum_value_tl`
+/// on, the thousands groups removed and `.5` as `0.5`).
+fn numeric_value(text: &str) -> Option<f64> {
+  if datum_type(text) > T_STRING {
+    text.replace(',', "").parse::<f64>().ok()
+  } else {
+    None
+  }
+}
+
+/// `\DTLifeq` (datatool-base.sty:9075-9100): both operands numeric →
+/// `\DTLifnumeq` (:8685, an fp equality of literal values); else the string
+/// equality of the comparison forms (`\@DTLifstringeq` :9052,
+/// `\str_compare:eNeTF`), folded under `*`. `\DTLifstringeq` (:9040) is the string branch alone. The raw
+/// numeric branch in this engine misfires (`\DTLifnumerical{5}` says string,
+/// so `\DTLifeq{5}{5.0}` is false where pdflatex says true); the native
+/// follows pdflatex. The chosen branch goes back into the stream.
+fn dtl_ifeq(
+  star: bool,
+  a: &Tokens,
+  b: &Tokens,
+  yes: Tokens,
+  no: Tokens,
+  numeric: bool,
+) -> Result<()> {
+  let (ta, tb) = (compare_text(a, star)?, compare_text(b, star)?);
+  let equal = match (numeric, numeric_value(&ta), numeric_value(&tb)) {
+    (true, Some(x), Some(y)) => x == y,
+    _ => ta == tb,
+  };
+  unread(if equal { yes } else { no });
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("datatool", extension => Some(Cow::Borrowed("sty")), noltxml => true);
@@ -397,6 +467,16 @@ LoadDefinitions!({
         toks.push(T_END!());
         unread(Tokens::new(toks));
       }
+    }, locked => true);
+    // datatool-base.sty:9075 / :9040 — the leaf comparators tikz-network's
+    // `\Vertices`/`\Edges` run ~20 times per row (tikz-network.sty:804-816):
+    // 95 % of a `\Vertices` call, each raw call ~216 M instructions through
+    // `\DTLifnumerical` (l3fp/l3regex) twice and two `\text_purify` passes.
+    DefPrimitive!("\\DTLifeq OptionalMatch:* {}{}{}{}", sub[(star, a, b, yes, no)] {
+      dtl_ifeq(star.is_some(), &a, &b, yes, no, true)?;
+    }, locked => true);
+    DefPrimitive!("\\DTLifstringeq OptionalMatch:* {}{}{}{}", sub[(star, a, b, yes, no)] {
+      dtl_ifeq(star.is_some(), &a, &b, yes, no, false)?;
     }, locked => true);
   }
 });

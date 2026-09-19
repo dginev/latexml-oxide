@@ -20738,6 +20738,34 @@ mod datatool_native_load {
     );
   }
 
+  /// `\\DTLifeq` on strings (datatool-base.sty:9075/:9052): exact, spaces kept,
+  /// folded under `*`; `\\DTLifstringeq` never goes numeric; inside a raw
+  /// `\\DTLforeach*` + `\\DTLforeachkeyinrow` walk (tikz-network's shape,
+  /// tikz-network.sty:804-816) the loop state is untouched.
+  #[test]
+  fn string_comparisons_match_the_raw_engine() {
+    let xml = both_ways("ifeq_strings");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>A:YNYYNNY. B:(12)[hit:3.5](3.5)(-7)(1000).</p>"##,
+    );
+  }
+
+  /// Both operands numeric: an fp equality (`\\DTLifnumeq`, datatool-base.sty:8685).
+  /// The raw path in this engine types `5` as a string and answers N to all
+  /// five; the golden is pdflatex's, so this runs the native comparator only.
+  #[test]
+  fn numeric_comparisons_follow_pdflatex() {
+    let tex = std::fs::read_to_string("tests/cluster_regressions/datatool/ifeq_numbers.tex")
+      .expect("fixture");
+    unsafe { std::env::remove_var("LATEXML_DATATOOL_NATIVE") };
+    let (stderr, xml) = super::convert(&tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>C:YYYYN.</p>"##);
+  }
+
   /// A data row wider than the header (a trailing separator): the uncovered
   /// column's key and header are `Column<n>` (datatool.sty:12305,
   /// `\dtldefaultkey` :10844) and it has an index — three keys entries.

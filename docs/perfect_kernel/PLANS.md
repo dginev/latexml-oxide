@@ -206,10 +206,14 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    PERFORMANCE.md): pure TikZ is ~1.1× pdflatex (pgfmath and pgfsys are native);
    tikz-network's 5.5× is datatool v3's l3regex CSV parse plus `\DTLforeach`. The
    native CSV load landed as 56dt (registers byte-identical to pdflatex; picC −7.6 %,
-   the manual −8.3 % — the load was ~8 % of the document). NEXT: native
-   `\DTLforeach*`/`\DTLforeachkeyinrow`/`\DTLifeq` (design study
-   `~/data/pk_agents/w23/perf_pgf/datatool/foreach/`), the remaining 5×; `.try` (13 %
-   of the tcolorbox manual's dispatches) as pgfkeys slice 3 for USE-heavy documents.
+   the manual −8.3 %), then native `\DTLifeq`/`\DTLifstringeq` as 56du — 95 % of a
+   `\Vertices` call — picC 458 → 16 G, the tikz-network manual 190.7 → 25.0 s against
+   pdflatex's 34.5 s on the same host: **the directive's headline document is past
+   pdflatex speed.**
+   NEXT: the remaining slow calls (`tools/perfect_kernel/slow_calls.sh`: lie-hasse,
+   wheelchart, tabularray, pgf-spectra, circularglyphs, pgf-periodictable, tilings,
+   rulercompass — profile each), `.try` (13 % of the tcolorbox manual's dispatches) as
+   pgfkeys slice 3, and the tcolorbox RSS lead (10).
 
 8. **K12 — pTeX kanji control-word names.** LANDED as batch 56ds
    (`KERNEL_CAPABILITIES.md` K12): `PTEX_PROFILE` from `\NeedsTeXFormat{pLaTeX2e}`,

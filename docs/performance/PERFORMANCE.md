@@ -1128,8 +1128,15 @@ picC with `count(svg:g)==83`), (2) native `\DTLforeach`/`\DTLforeachkeyinrow`/
 Porting l3regex natively is the settled dead end above. **Lever (1) landed as batch
 56dt** (`datatool_sty.rs`, the design below, byte-identical registers to pdflatex on
 17 probe CSVs): picC 458.2 → 423.4 G (−7.6 %), the tikz-network manual 180.6 →
-165.5 s (−8.3 %) — the load is ~8 % of the document; the `\DTLforeach`/
-`\DTLifeq` walk (lever 2) is the remaining 5×.
+165.5 s (−8.3 %) — the load is ~8 % of the document. **Lever (2) landed as batch
+56du**: the walk itself is cheap; 95 % of a `\Vertices` call was `\DTLifeq`
+(~20 per row, ~216 M instructions each: `\DTLifnumerical` ×2 through l3fp/l3regex
+and two `\text_purify` passes). Native `\DTLifeq`/`\DTLifstringeq` (fp equality
+when both operands parse as numbers, else the expanded string forms, folded
+under `*`) with the loop left raw: picC 458.1 → **16.3 G (−96 %)**, 28.2 → 1.1 s;
+the tikz-network manual 190.7 → **25.0 s** (on/off in one run), pdflatex 34.5 s on
+the same host — the directive's headline document is past parity. The raw numeric branch in this engine was also
+wrong (`\DTLifeq{5}{5.0}` false); the native follows pdflatex.
 
 **Native datatool load — the design (2026-09-18, `~/data/pk_agents/w23/perf_pgf/datatool/`).**
 A loaded database is four global registers plus per-key indices, and every
