@@ -325,6 +325,31 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),
     a leaner `Whatsit` (already niche-optimized, issue #361 M4).
 
+12. **High-performance raw interpretation (user directive 2026-09-19: "let us do it
+    soon, but do not change next steps, add after").** Queued AFTER 11's open parts
+    (the pre-fuse restart watermark / cap for restarted documents, the `cortex_worker`
+    restart). Why: raw interpretation is not uniformly slow — pure TikZ manuals run at
+    ~1.1× pdflatex (pgfmath/pgfsys native leaves) — but token-churning macro code runs
+    5-6× slower (tikz-network raw 190.7 s vs pdflatex 34.5 s before the datatool
+    natives), and the last slow-call profiles put the remaining time in the gullet's
+    generic reading (`read_keyword`/`read_x_token`/`read_dimension`) with no native leaf
+    left. pdfTeX's advantage is tex.web's data model, not cleverness: a token is one
+    packed integer (an `eqtb` index for a control sequence, hashed once at
+    tokenization), macro expansion pushes an input level INTO the existing token list
+    (no copy), `\edef`/`\csname` build cells from a free list, registers and
+    conditionals are `eqtb` stores replayed by the save stack, and nodes are freed as
+    pages ship. Our likely costs, by inspection (NOT yet measured): interned-symbol
+    tokens with lookups on every `\csname`/meaning read, expansion that clones token
+    vectors instead of walking in place, ~2.4 KB per `Rc<DigestedData>` box (Perl
+    0.7 KB), and a whole-document box tree until the build. Method (per
+    [[feedback_perf_algorithmic_not_memory_tangles]]): a symbolized `--profile bench`
+    profile on a token-churning witness (datatool-user or glossaries-user with
+    `LATEXML_DATATOOL_NATIVE=0`, plus a plain-macro benchmark) that ranks the three
+    costs — lookup, expansion copying, box allocation — then ONE tex.web-shaped lever
+    per run with pre-registered bars (packed tokens / in-place expansion /
+    `eqtb`-style hot state), readability of gullet-stomach-mouth as a review criterion.
+    This is the only remaining throughput lever with corpus reach (P5's successor).
+
 ## DONE
 
 (moves here with batch number)
