@@ -217,10 +217,23 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    capability, not a class binding: under a pLaTeX class, letters of the kanji
    blocks join control-word names (tex.web §354 with pTeX's `kcatcode`), surpassing
    Perl; measure the jsarticle family before and after.
-9. **Alignment recovery over-reports `Extra alignment tab` (lead).** plextdelarray:
-   27 `unexpected:&` vs Perl's 10 under a corrupted delarray/plext column spec,
-   pre-existing; crosses the shared `MAX_ERRORS` 100 cap into a Fatal now that the
-   `\if` degradation matches Perl. Bound the per-row report as Perl does.
+9. **`\\` under a corrupted alignment template — the align-state guard (lead,
+   root-caused 2026-09-18).** plextdelarray: Rust 27 `Extra alignment tab` vs Perl 10
+   (the +17 cross the shared `MAX_ERRORS` 100 into a Fatal). The classifier
+   (`gullet.rs:3454-3477` ≡ Gullet.pm:266-277) and the overflow recovery
+   (`alignment.rs:265-294` ≡ Alignment.pm:136-144) are identical; the divergence is
+   `\\`: Perl runs raw latex.ltx `\@arraycr` with its `{\ifnum0=`}\fi` align-state
+   guard (latex.ltx:16583-16594) and reaches a real `\cr` per row, Rust `Let!`s
+   `\@arraycr`/`\@tabularcr` to the native `\lx@alignment@newline`
+   (sect10.rs:175/194, tex_tables.rs:359-375) whose `inside_cell_group()` heuristic
+   (tex_tables.rs:1561-1564, self-documented "not there (yet)") misfires on the
+   broken preamble, so a visual row overflows three times. tex.web §792 (change the
+   extra `&` to `\cr`) is implemented by neither engine. Fix = model the real
+   align-state guard for `\\` — HIGH risk (1610.00974, tabularray/ProfSio in-cell
+   `\\`, kbordermatrix guards), LOW gain (one pLaTeX doc): fold into an align-state
+   modeling program with those witnesses, never a report cap. Side find: plain
+   `delarray` without Japanese gives Rust 0 / Perl 3 errors (`aligntab/da.tex`) —
+   verify against pdflatex and guard. Scratch `~/data/pk_agents/w23/regr96/aligntab/`.
 
 10. **tcolorbox manual RSS (lead).** The manual trips the `MemoryBudget` fuse at
     4.8 GB RSS (75 % of `--max-memory=6144`) every sweep, at 50 s before slice 2 and
