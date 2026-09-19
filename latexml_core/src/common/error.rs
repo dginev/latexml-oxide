@@ -165,20 +165,27 @@ pub fn note_consecutive_error(key: &str) -> usize {
 /// count it a second time.
 pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   let _diag_guard = macro_diag_guard();
-  // After a `TooManyErrors` Fatal has latched, drop further Error-level
-  // records entirely (don't log, don't count). Perl dies at the Fatal so
-  // nothing ever logs past it; our recovery machinery keeps converting, and
-  // paths that swallow the `Error!` macro's Err (e.g. tex_logic::compare
-  // inside a bool-returning conditional) otherwise churn tens of thousands
-  // of post-cap records — gckanbun 12.8k, panda-doc 3.6k, past the tikz
-  // 1000-cap (perfect-kernel sweep 13). Only the too-many-errors latch
-  // gates this: a Timeout/other Fatal still reports the trailing errors
-  // that explain it. The one other post-Fatal suppression is narrower and
-  // sits at its sites: once a RESOURCE Fatal is latched
-  // (`resource_fatal_latched`), digestion has stopped and the group
-  // closers the recovery pass drains are not reported (`stomach::egroup`
-  // / `endgroup` / `end_mode_opt`); everything else still is.
-  if matches!(status, LogStatus::Error) && too_many_errors_latched() {
+  // After a `TooManyErrors` Fatal or a RESOURCE Fatal has latched, drop
+  // further Error-level records entirely (don't log, don't count). Perl dies
+  // at the Fatal so nothing ever logs past it; our recovery machinery keeps
+  // converting, and paths that swallow the `Error!` macro's Err (e.g.
+  // tex_logic::compare inside a bool-returning conditional) otherwise churn
+  // tens of thousands of post-cap records — gckanbun 12.8k, panda-doc 3.6k,
+  // past the tikz 1000-cap (perfect-kernel sweep 13). Once a resource Fatal
+  // (MemoryBudget, Timeout) is latched, the document is aborted and the
+  // recovery pass only drains what is pending: every Error that draining
+  // raises is teardown noise, not a finding — the group closers
+  // (`stomach::egroup` / `endgroup` / `end_mode_opt`, sweep 82) and, past
+  // those six site guards, the gullet's own drain errors (`conditional
+  // fell off end`, `unexpected \fi`, recursion of an interrupted pgf path:
+  // glossaries-extra-manual 5 → 6 → 27 errors from one RSS-fuse trip a
+  // megabyte apart, sweep 96). The Fatal line and every pre-Fatal error
+  // still report; Warnings and Info (the `recovery` notes) still do too.
+  // (The `Error!` macro's escalation bookkeeping still runs at the site — a
+  // drain that trips the consecutive-error or MAX_ERRORS check returns
+  // `Err(TooManyErrors)`, which cannot displace the latched resource Fatal:
+  // `record_last_fatal` keeps only `ErrorTarget::Timeout`.)
+  if matches!(status, LogStatus::Error) && (too_many_errors_latched() || resource_fatal_latched()) {
     return;
   }
   let level = match status {
@@ -1313,6 +1320,42 @@ mod tests {
     assert!(
       !resource_fatal_latched(),
       "a Mouth-target fatal is not a resource fatal"
+    );
+    initialize_report();
+  }
+
+  /// Once a resource Fatal is latched, an `Error!` raised by the recovery
+  /// drain is neither counted nor logged (the one rule the six stomach
+  /// closer guards were instances of); before the latch it is.
+  #[test]
+  fn errors_are_silent_once_a_resource_fatal_is_latched() {
+    initialize_report();
+    let before = get_status(LogStatus::Error);
+    emit_record(
+      LogStatus::Error,
+      "expected:\\fi",
+      "Missing \\fi (synthetic)",
+    );
+    assert_eq!(
+      get_status(LogStatus::Error),
+      before + 1,
+      "counted before any Fatal"
+    );
+    fn raise() -> Result<()> {
+      Fatal!(Timeout, MemoryBudget, "Memory budget exceeded (synthetic)");
+    }
+    let _ = raise();
+    assert!(resource_fatal_latched());
+    let after_fatal = get_status(LogStatus::Error);
+    emit_record(
+      LogStatus::Error,
+      "expected:\\fi",
+      "Missing \\fi (synthetic drain)",
+    );
+    assert_eq!(
+      get_status(LogStatus::Error),
+      after_fatal,
+      "not counted after the latch"
     );
     initialize_report();
   }

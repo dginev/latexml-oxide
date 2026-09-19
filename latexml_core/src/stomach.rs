@@ -789,28 +789,25 @@ pub fn egroup() -> Result<()> {
     // Perl Stomach.pm:347-349 passes currentFrameMessage as a SEPARATE
     // Error detail (its own line), not merged into the primary message.
     // After a resource Fatal the recovery pass only drains pending closers:
-    // that noise is not reported (`error::resource_fatal_latched`).
-    if !resource_fatal_latched() {
-      Error!(
-        "unexpected",
-        get_current_token().unwrap_or_else(|| T_CS!("\\?")),
-        s!(
-          "Attempt to close a group that switched to mode {}",
-          lookup_string_from_sym(crate::pin!("MODE"))
-        ),
-        current_frame_message()
-      );
-    }
+    // that noise is not reported — `error::emit_record` drops every Error
+    // once `resource_fatal_latched()`.
+    Error!(
+      "unexpected",
+      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
+      s!(
+        "Attempt to close a group that switched to mode {}",
+        lookup_string_from_sym(crate::pin!("MODE"))
+      ),
+      current_frame_message()
+    );
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \begingroup
-    if !resource_fatal_latched() {
-      Error!(
-        "unexpected",
-        get_current_token().unwrap_or_else(|| T_CS!("\\?")),
-        "Attempt to close boxing group",
-        current_frame_message()
-      );
-    }
+    Error!(
+      "unexpected",
+      get_current_token().unwrap_or_else(|| T_CS!("\\?")),
+      "Attempt to close boxing group",
+      current_frame_message()
+    );
   } else {
     // Don't pop if there's an error; maybe we'll recover?
     pop_stack_frame(false)?;
@@ -921,29 +918,24 @@ pub fn endgroup() -> Result<()> {
     // dsptricks); the `\globaldefs` bookkeeping exemption was the real msc
     // root (state.rs `assign_local_unconditional`).
     // Perl Stomach.pm:367-369: currentFrameMessage is a SEPARATE detail.
-    // Post-resource-Fatal draining is not reported (see `egroup`).
-    if !resource_fatal_latched() {
-      Error!(
-        "unexpected",
-        get_current_token()
-          .map(|t| t.to_string())
-          .unwrap_or_else(|| String::from("\\?")),
-        s!("Attempt to close a group that switched to mode {mode}"),
-        current_frame_message()
-      );
-    }
+    Error!(
+      "unexpected",
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
+      s!("Attempt to close a group that switched to mode {mode}"),
+      current_frame_message()
+    );
   } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \bgroup
-    if !resource_fatal_latched() {
-      Error!(
-        "unexpected",
-        get_current_token()
-          .map(|t| t.to_string())
-          .unwrap_or_else(|| String::from("\\?")),
-        "Attempt to close non-boxing group",
-        current_frame_message()
-      );
-    }
+    Error!(
+      "unexpected",
+      get_current_token()
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| String::from("\\?")),
+      "Attempt to close non-boxing group",
+      current_frame_message()
+    );
   } else {
     pop_stack_frame(true)?;
   }
@@ -1159,10 +1151,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         );
       }
       let (category, message) = make_mode_error();
-      // Post-resource-Fatal draining is not reported (see `egroup`).
-      if !resource_fatal_latched() {
-        Error!("unexpected", category, &message, current_frame_message());
-      }
+      Error!("unexpected", category, &message, current_frame_message());
     } else {
       // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
       if bound_mode.ends_with("vertical") {
@@ -1185,9 +1174,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         // pop target — e.g. a normal document's `\end{document}`), not at the
         // value-guard above. Witness 1703.05010 (svjour3 + bare `\endproof`).
         let (category, message) = make_mode_error();
-        if !resource_fatal_latched() {
-          Error!("unexpected", category, &message);
-        }
+        Error!("unexpected", category, &message);
       } else {
         pop_stack_frame(false)?;
       }
