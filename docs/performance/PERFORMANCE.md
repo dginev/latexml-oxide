@@ -1138,6 +1138,29 @@ the tikz-network manual 190.7 → **25.0 s** (on/off in one run), pdflatex 34.5 
 the same host — the directive's headline document is past parity. The raw numeric branch in this engine was also
 wrong (`\DTLifeq{5}{5.0}` false); the native follows pdflatex.
 
+**The remaining slow calls, profiled (2026-09-19, `~/data/pk_agents/w23/perf_pgf/slow2/`).**
+With tikz-network at pdflatex speed, the eight SUSPECT calls over 60 s were
+profiled against pdflatex on the same host: pgf-spectra (90 s) runs at 0.77×
+pdflatex's 118 s, tabularray (109 s) against a pdflatex that never finishes
+(stuck at page 48 after 21 minutes), circularglyphs 1.4×, tilings 3.4× (62 s vs
+18 s, inline), rulercompass and l3kernel source3 without a fair baseline here.
+Every profile is the generic token interpreter (`read_internal_token_checked`
+8-14 % on top everywhere, token I/O 21-64 %, argument reading 3-12 %, meaning
+resolution 7-13 %); pgfmath, pgfsys and pgfkeys natives are cold, and no native
+leaf remains — the hot code is the raw pgf-core drawing pipeline itself
+(tilings: 63,100 key dispatches, 60 % `.try`, are under 0.5 % of its 1.7 G token
+reads). A native `.try` (pgfkeys.code.tex:1024) is faithful and general but
+worth under 0.5 % of wall — declined as a perf lever. The two real problems are
+blowups, not per-token cost: pgf-PeriodicTable 344 s at 24.8 GB RSS building
+282,289 `svg:g` (53 redraws × 118 cells; document/libxml self-time under 0.5 %,
+the memory is the retained DOM) and wheelchart timing out at 400 s and 10 GB
+(l3regex `\regex_replace_all` per key + `\foreach[parse]` + `\fp_eval`,
+wheelchart.sty:2360-2385; pdflatex itself is stuck at page 20 after 18 minutes).
+Both are single manuals with no arXiv reach; they are stability leads (a bounded
+retained DOM, fewer nodes per cell), not throughput ones. Beyond them the next
+general lever is the token itself (`Token` under 8 bytes and the allocator, P5),
+which reaches every TikZ, pgf and expl3 document and is HARD.
+
 **Native datatool load — the design (2026-09-18, `~/data/pk_agents/w23/perf_pgf/datatool/`).**
 A loaded database is four global registers plus per-key indices, and every
 reader is a delimited-macro consumer of them (datatool.sty): `\dtldb@<name>`
