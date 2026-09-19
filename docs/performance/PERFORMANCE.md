@@ -1160,9 +1160,14 @@ decoration walk whose arc-split step degenerates) spins every engine — pdflate
 produces no PDF in 120 s on a 10-line repro and sticks at page 20/56 on the
 manual, Perl aborts on 100 l3fp errors in 9 s — and the 10 GB is transient
 interpreter working set, not DOM or a leak; the regex at :2347-2351 is ~5 % of
-self-time. Both are single manuals with no arXiv reach; the periodic table is a
-stability lead (a bounded retained DOM: the picture-end streaming seam, 56dv),
-not a throughput one. Beyond them the next
+self-time. The periodic table is settled by three batches (LEDGER 56dv-56dx): the
+picture-end streaming seam plus the resident-wrapper spill bound the box tree,
+a fused eager run restarts under `--streaming` from the CLI, and `remove_node`
+now frees what it removes (the libxml fork left every removed subtree as an
+orphan — ~5-6 MB per tikz picture, eager and streaming alike, a corpus-wide
+memory lever). The manual streams to completion at the 6 GB ceiling (0 fatals,
+3,326 pictures, 379 s); under the eager sweep's 420 s cap the fuse-then-restart
+sequence still runs long, which is the residual for that one witness. Beyond them the next
 general lever is the token itself (`Token` under 8 bytes and the allocator, P5),
 which reaches every TikZ, pgf and expl3 document and is HARD.
 
