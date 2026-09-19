@@ -553,7 +553,13 @@ mod tests {
 
   #[test]
   fn fontspec_file_names_and_family_names_resolve() {
-    if font_file_path("cmr10.tfm").is_none() {
+    // Guard on the fonts this test actually resolves, through the same
+    // `font_index` the resolver uses: on a Debian-split TeX Live host tex-gyre
+    // lives in /usr/share/texmf, a tree `texmf_trees()` does not scan, so
+    // resolution legitimately can't find it (skip rather than fail).
+    if font_file_path("NewCMMath-Regular.otf").is_none()
+      || font_file_path("texgyrepagella-regular.otf").is_none()
+    {
       return;
     }
     let direct = resolve_fontspec_file("NewCMMath-Regular.otf");

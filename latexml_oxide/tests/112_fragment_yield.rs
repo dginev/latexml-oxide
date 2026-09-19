@@ -157,14 +157,18 @@ fn removed_subtrees_leave_no_c_heap_residue() {
   // binary counts only because it links no mimalloc (see
   // `latexml_core::reset_thread_engine`). The leak this guards is the
   // per-picture surplus over that floor: with a bare `unlink` the 2,000
-  // transient groups here cost megabytes; freed, the surplus is tens of
-  // kilobytes (measured 66 KB).
+  // transient groups here cost megabytes; freed, the surplus is well under a
+  // megabyte. The exact residue is libxml2-version-dependent arena/dict memory
+  // (measured 66 KB on older libxml2, ~665 KB on libxml2 2.15) — the threshold
+  // is set comfortably above that band and far below the multi-megabyte leak
+  // signature, so it still catches a regression without tracking libxml2's
+  // allocator.
   let surplus = growth.saturating_sub(prose_growth);
   eprintln!(
     "C heap growth over two conversions: prose {prose_growth} B, pictures {growth} B, surplus {surplus} B"
   );
   assert!(
-    surplus < 512 * 1024,
+    surplus < 1536 * 1024,
     "two more picture conversions grew the C heap {surplus} bytes past the prose control: \
      removed nodes are leaking again"
   );

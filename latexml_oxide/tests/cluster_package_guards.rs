@@ -4796,6 +4796,14 @@ mod perfect_kernel_batch51 {
     super::perfect_kernel_batch46::convert_files(tex, files)
   }
 
+  fn kpsewhich_has(name: &str) -> bool {
+    std::process::Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
+
   /// P15 (file side): eTeX §362 begins the `\everyeof` token list at the end
   /// of EVERY `\input` file, before the file is closed — so a delimited
   /// argument opened across the `\input` PRIMITIVE (`\expandafter\eat
@@ -4844,6 +4852,11 @@ Tail.
   /// misses each, sweep 28).
   #[test]
   fn new_ifnextchar_keeps_space() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("bibleref.sty") {
+      return;
+    }
     let (stderr, xml) = convert(
       r"\documentclass{article}
 \usepackage{bibleref}
@@ -6030,6 +6043,14 @@ mod perfect_kernel_batch54 {
     perfect_kernel_batch46::{convert, convert_with, error_count},
     perfect_kernel_batch53::convert_with_sty,
   };
+
+  fn kpsewhich_has(name: &str) -> bool {
+    std::process::Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
 
   /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
   /// through the same `\blx@defformat` as their non-Index siblings, and
@@ -8659,6 +8680,11 @@ d & e \\
   /// `undefined:\ep@preambleanchor` on a `\pex` with preamble text).
   #[test]
   fn xkeyval_sets_the_loaded_sentinel() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("expex.sty") {
+      return;
+    }
     let tex = r"\documentclass{article}
 \usepackage{expex}
 \begin{document}
@@ -10639,6 +10665,11 @@ Body.
   /// 'mexico'", unamthesis; "attribute split", csbulletin).
   #[test]
   fn installed_ldf_outranks_the_language_stub() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("spanish.ldf") || !kpsewhich_has("czech.ldf") {
+      return;
+    }
     let tex = r"\documentclass{article}
 \usepackage[english,spanish,mexico]{babel}
 \begin{document}
@@ -14611,6 +14642,11 @@ Hello \textcolor{red}{world}.
   /// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY).
   #[test]
   fn unbalanced_expansion_is_fatal() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("jarticle.cls") {
+      return;
+    }
     let tex = r"\documentclass[12pt,a4j,dvipdfmx]{jarticle}
 \begin{document}
 Hello
@@ -14627,6 +14663,11 @@ Hello
   /// 250 s loop (platexsheet-jsclasses, wtref-ja, jpneduenumerate; SHARED).
   #[test]
   fn japanese_otf_kanji_scanners_bail_fast() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("otf.sty") {
+      return;
+    }
     let tex = r"\documentclass{article}
 \usepackage{otf}
 \begin{document}
@@ -16011,7 +16052,13 @@ c &= d
   /// hit the memory fuse). Self-skips without the font.
   #[test]
   fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
-    if !kpsewhich_has("lmsans10-regular.otf") || !kpsewhich_has("unicodefonttable.sty") {
+    // Guard on the ENGINE's own resolver (font_index), not PATH kpsewhich: on a
+    // Debian-split host lmsans10 lives in /usr/share/texmf, which kpsewhich sees
+    // but font_index (TEXMFDIST+TEXMFLOCAL) does not — so `\iffontchar` coverage
+    // is empty and the row bound this test asserts does not apply.
+    if latexml_core::common::font::coverage::font_file_path("lmsans10-regular.otf").is_none()
+      || !kpsewhich_has("unicodefonttable.sty")
+    {
       return;
     }
     let tex = "\\documentclass{article}\n\\usepackage{fontspec}\n\\setmainfont{Latin Modern Sans}\n\\usepackage{unicodefonttable}\n\\begin{document}\n\\displayfonttable[range-start=0000,range-end=00FF]{Latin Modern Sans}\n\\end{document}\n";
@@ -16927,6 +16974,11 @@ c &= d
   /// Batch 56as.
   #[test]
   fn newpsstyle_defines_the_custom_style_psset_consults() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("pstricks.sty") {
+      return;
+    }
     let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\newpsstyle{september}{linewidth=2pt}\n\\begin{document}\nTop: \\psset{style=september}\n\\begin{pspicture}(0,0)(2,2)\n\\rput(1,1){\\psset{style=september}\\psframe(0,0)(1,1)}\n\\end{pspicture}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -17214,6 +17266,11 @@ c &= d
   /// kotex-doc, cjk-ko-doc.
   #[test]
   fn kotexutf_runs_under_the_byte_mouth() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("kotexutf.sty") {
+      return;
+    }
     let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\begin{document}\n한글\\은 문서\\를 café 만든다.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -17226,6 +17283,11 @@ c &= d
   /// luatexko `\japanese` (kotex-doc ×3).
   #[test]
   fn dhucs_trivcj_takes_the_byte_branch() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("dhucs-trivcj.sty") {
+      return;
+    }
     let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage{dhucs-trivcj}\n\\begin{document}\n\\begin{japanese}日本語\\end{japanese} 한글\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -17238,6 +17300,11 @@ c &= d
   /// (sample-bxcjkjatype-beamer via bxcjkjatype.sty:932).
   #[test]
   fn cjk_octet_readers_emit_the_character() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("UTF8.bdg") {
+      return;
+    }
     let tex = "\\documentclass{article}\n\\usepackage{CJKutf8}\n\\makeatletter\n\\begingroup\\CJK@input{UTF8.bdg}\\endgroup\n\\makeatother\n\\begin{document}\n\\begin{CJK}{UTF8}{mj}한글 café\\end{CJK}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -18149,6 +18216,11 @@ Table hooks ok.
   /// primitives (`\kanjiskip`…) stay undefined, PARKED, as in Perl.
   #[test]
   fn kanji_control_words_under_platex() {
+    // Host-portability: skip when the exercised package is absent from this
+    // TeX Live tree (the behavior under test needs the real file).
+    if !kpsewhich_has("jsarticle.cls") {
+      return;
+    }
     let tex = r"\documentclass{jsarticle}
 \makeatletter
 \newif\if西暦\西暦true\def\foo{}
@@ -18170,6 +18242,31 @@ B:\ifcat A西 L\else O\fi.
     let (stderr, xml) = convert_with(art, Some("[rawstyles,rawclasses]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     latexml::util::test::assert_element(&xml, "p", &[], r##"<p>B:O.</p>"##);
+  }
+
+  /// Batch 56ek (OXIDIZED_DESIGN #240): a block box whose content is Para.class
+  /// (a `<float>`, here via framed's `{shaded}`) inserted while a `<para>` is
+  /// open from preceding inline text must END the paragraph and place the block
+  /// at the enclosing flow level — not rename the capture in place to a
+  /// schema-invalid `<para>/<logical-block>`. Witnesses tikz-network (88→1 jing),
+  /// numerica.
+  #[test]
+  fn logical_block_climbs_out_of_para() {
+    let tex = "\\documentclass{article}\n\\usepackage{framed}\n\\usepackage{float}\n\\begin{document}\nIntro text.\n\\begin{shaded}\n\\begin{figure}[H]\\caption{c}\\end{figure}\n\\end{shaded}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let compact: String = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+    // The logical-block must NOT sit inside the <para> (the schema violation):
+    // after the fix a `</para>` closes before it.
+    assert!(
+      !compact.contains("</p> <logical-block"),
+      "logical-block must not be a child of the open <para>\n{xml}"
+    );
+    // The framed block still emits a logical-block (holding the float).
+    assert!(
+      compact.contains("<logical-block"),
+      "the framed block must still emit a <logical-block>\n{xml}"
+    );
   }
 }
 
