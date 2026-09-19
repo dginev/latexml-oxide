@@ -1095,8 +1095,8 @@ impl MathParser {
           let _ = xmref.set_namespace(ns);
         }
         let _ = new_app.add_child(&mut xmref);
-        // replace_tree_free: new_app is a standalone built tree — copied
-        // into place, then both it and the replaced XMRef are freed.
+        // new_app is a standalone built tree — copied into place, then both
+        // it and the replaced XMRef are freed (`replace_tree_deferred`).
         let _ = replace_tree_deferred(document, new_app, ref_node);
       }
     }
@@ -1391,7 +1391,7 @@ impl MathParser {
             if let Some(r) = replace_tree_deferred(document, result.clone(), node)? {
               result = r;
             }
-            // If replace_tree_free returns None, node was already detached
+            // If replace_tree_deferred returns None, node was already detached
             // (nothing copied, nothing freed); keep result as-is.
             // Danger: the above code replaced the id on the parsed result with the one from
             // XMArg,.. If there are any references to `resultid`, we need to point them
@@ -3492,7 +3492,8 @@ fn drain_pending_discards(document: &mut Document, queued: &rustc_hash::FxHashSe
   }
 }
 
-/// `Document::replace_tree_free`, with the FREE deferred to the end of math
+/// `Document::replace_tree` (which frees the replaced original), with the
+/// FREE of both trees deferred to the end of math
 /// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
 /// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
 /// moves.

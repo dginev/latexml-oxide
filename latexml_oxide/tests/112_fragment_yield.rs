@@ -64,6 +64,7 @@ fn convert_with_budget(source: &str, budget: Option<usize>) -> (String, usize) {
 
 #[test]
 fn yield_changes_nothing_but_happens() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
   let source = "tests/streaming/yield_seams.tex";
 
   let (eager_xml, eager_yields) = convert_with_budget(source, None);
@@ -95,6 +96,7 @@ fn yield_changes_nothing_but_happens() {
 /// stays byte-identical to the eager path.
 #[test]
 fn a_picture_end_is_a_seam_request() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
   let source = "tests/streaming/picture_seams.tex";
   let (eager_xml, eager_yields) = convert_with_budget(source, None);
   assert_eq!(eager_yields, 0, "no budget => the eager path never yields");
@@ -106,5 +108,62 @@ fn a_picture_end_is_a_seam_request() {
   assert_eq!(
     eager_xml, streamed_xml,
     "picture-seam yields must not change the XML"
+  );
+}
+
+/// Bytes in use on the C heap (glibc, all arenas): libxml2's, since the Rust
+/// side allocates through mimalloc.
+#[cfg(target_os = "linux")]
+fn c_heap_in_use() -> usize { unsafe { libc::mallinfo2() }.uordblks }
+
+/// The heap guard reads a process-wide counter, so under `cargo test` (one
+/// process, tests in parallel threads) a sibling conversion landing between
+/// its two readings would dwarf the threshold; every test in this binary
+/// takes the lock (nextest isolates per process anyway).
+static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// A removed subtree is freed, not just unlinked. pgfsys wraps every graphics
+/// state change in a transient `svg:g` that `collapse_svg_group` removes once
+/// it proves empty; a bare `unlink` left every one of them as a doc-owned
+/// orphan no free ever reached (~5-6 MB per tikz picture on pgf-PeriodicTable,
+/// 742 MB of orphans by fragment 256 of its manual). Converting the same
+/// 2,000-stroke document repeatedly must leave the C heap where it was.
+#[cfg(target_os = "linux")]
+fn c_heap_growth_over_two_conversions(source: &str) -> (String, usize) {
+  // Warm-up: caches, dumps and font tables settle on the first conversion.
+  let (first, _) = convert_with_budget(source, None);
+  let before = c_heap_in_use();
+  for _ in 0..2 {
+    let (xml, _) = convert_with_budget(source, None);
+    assert_eq!(xml, first, "repeated conversions must agree");
+  }
+  (first, c_heap_in_use().saturating_sub(before))
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn removed_subtrees_leave_no_c_heap_residue() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let (prose, prose_growth) = c_heap_growth_over_two_conversions("tests/streaming/prose_only.tex");
+  assert!(
+    prose.contains("<equation"),
+    "the control fixture must build"
+  );
+  let (first, growth) = c_heap_growth_over_two_conversions("tests/streaming/picture_groups.tex");
+  assert!(first.contains("<svg:path"), "the fixture must draw");
+  // Every in-process conversion leaves a constant ~37 MB on the C heap
+  // regardless of the document (measured 73.3 MB over two prose-only
+  // conversions; a session-level residue, tracked in PLANS 11). The leak this
+  // guards is the per-picture surplus over that floor: with a bare `unlink`
+  // the 2,000 transient groups here cost megabytes; freed, the surplus is
+  // tens of kilobytes (measured 66 KB).
+  let surplus = growth.saturating_sub(prose_growth);
+  eprintln!(
+    "C heap growth over two conversions: prose {prose_growth} B, pictures {growth} B, surplus {surplus} B"
+  );
+  assert!(
+    surplus < 512 * 1024,
+    "two more picture conversions grew the C heap {surplus} bytes past the prose control: \
+     removed nodes are leaking again"
   );
 }

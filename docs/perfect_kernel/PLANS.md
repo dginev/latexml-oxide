@@ -297,17 +297,25 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     trips inside one table there). Guard `112_fragment_yield::a_picture_end_is_a_seam_request`.
     Part two, LANDED in the same batch: the resident-wrapper spill and the wrapper's box
     release (LEDGER 56dv) — without them the seam freed nothing (RSS monotonic 205 → 1,056 MB,
-    the reviewer's catch). Part three OPEN (MED): the manual itself still trips the 6 GB fuse
-    under `--streaming`: glibc `C-live` (libxml's heap) climbs ~6 MB per SPILLED picture
-    (n8: 11 → 47 MB over 12 segments; the manual 22 → 742 MB by fragment 256, fuse at
-    4.8 GB) although `discard_subtree` frees the nodes — find what libxml keeps per freed
-    picture (the doc dict? `xmlAddID` entries? the fork's free path) with
-    `LXML_TRACE_NODE_BOXES=1` (prints the spill's C-heap delta) on `n8.tex`. Part four LANDED as
+    the reviewer's catch). Part three LANDED as 56dx: the ~6 MB per picture was
+    `remove_node` unlinking without freeing (the libxml fork frees only doc-less
+    orphans) — pgfsys's transient `svg:g` groups, eager and streaming alike; n8's C-live
+    is flat at 11 MB now (was 11 → 47). The manual itself now streams to completion at the 6 GB ceiling (0 fatals, 3,326
+    pictures, peak 4.78 GB, 379 s). Under the eager sweep it still fails: the eager
+    attempt fuses at ~70 s, and the 56dw restart's streaming rerun needs ~380 s more,
+    past the 420 s cap — either the cap grows for restarted documents or the restart
+    must trigger earlier than the fuse (a pre-fuse watermark), which is the remaining
+    lever for this witness. Part four LANDED as
     56dw: the CLI restarts a fused eager conversion under `--streaming` (the fuse itself
     is the signal — no new threshold, documents that finish eager are untouched); the
     sweep converts through the CLI, so a streaming win now reaches the verdict for any
     document whose streaming peak fits the 6 GB ceiling (the pgf manual does not yet:
-    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
+    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Part five OPEN
+    (MED, fleet-relevant): every IN-PROCESS conversion leaves a constant ~37 MB on the
+    glibc heap regardless of the document (the 112 guard's prose control: 73.3 MB over
+    two conversions, identical for a 2,000-stroke tikz document) — a session-level
+    residue (candidates: the RelaxNG schema or XSLT parsed per session and never freed,
+    kpathsea's ls-R re-read) that a persistent `cortex_worker` pays per paper. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
     `node_boxes` in the eager path (`Document.pm:1667-1669`; Rust's
     `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),

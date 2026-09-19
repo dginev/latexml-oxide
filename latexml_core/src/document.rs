@@ -5286,7 +5286,7 @@ impl Document {
   /// dangling reference is left behind; and if the insertion point was inside
   /// what is being removed, it is rescued up to the parent — otherwise the
   /// document would go on building into a detached subtree.
-  pub fn remove_node(&mut self, mut node: Node) {
+  pub fn remove_node(&mut self, node: Node) {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
@@ -5302,7 +5302,17 @@ impl Document {
         // Don't remove insertion point!
         self.set_node(&parent);
       }
-      node.unlink();
+      // Perl's `removeChild` hands the node to XML::LibXML's proxy GC, which
+      // frees it with the last reference. Here an unlinked node whose
+      // `node->doc` is still set is freed by NOBODY (the fork's `Drop` frees
+      // only doc-less nodes, and `xmlFreeDoc` never reaches an orphan), so a
+      // bare `unlink` leaked every removed subtree for the process lifetime:
+      // ~5-6 MB per tikz picture of pgfsys transient `svg:g` groups dropped
+      // by `collapse_svg_group`, eager and streaming alike (pgf-PeriodicTable
+      // n8: the glibc heap climbed 11 → 47 MB across eight spilled tables and
+      // the manual reached 742 MB of orphans by fragment 256). The ids are
+      // unrecorded above, so `discard_subtree`'s contract holds.
+      self.discard_subtree(node);
     }
   }
 
@@ -5894,7 +5904,9 @@ impl Document {
             let existing = c0.get_content();
             let added = with_node.get_content();
             c0.set_content(&format!("{existing}{added}"))?;
-            // with_node is still a standalone (unlinked) text node; drop it.
+            // with_node is a standalone (unlinked) text node whose content
+            // now lives in c0: free it (see `remove_node`).
+            self.discard_subtree(with_node);
             c0_opt = Some(c0);
             continue;
           }
@@ -6094,7 +6106,7 @@ impl Document {
     Ok(())
   }
 
-  fn trim_node_right_whitespace(&self, node: &Node) -> Result<()> {
+  fn trim_node_right_whitespace(&mut self, node: &Node) -> Result<()> {
     // Skip trailing empty <text> font wrapper elements to find the real last content.
     // These are artifacts of font change tracking during alignment absorption.
     let mut candidate = node.get_last_child();
@@ -6121,8 +6133,11 @@ impl Document {
           });
           if !content.is_empty() && (trimmed_content != content) {
             if trimmed_content.is_empty() {
-              // Remove the entirely-whitespace text node
-              last_child.unlink();
+              // Remove AND free the entirely-whitespace text node (see
+              // `remove_node`: a bare unlink leaks it), purging its
+              // `node_boxes` entry so a later node at the same address cannot
+              // inherit the phantom box.
+              self.discard_subtree(last_child);
             } else {
               last_child.set_content(trimmed_content)?;
             }
@@ -6498,10 +6513,10 @@ impl Document {
           }
           cursor = cur.get_parent();
         }
-        {
-          let mut old = old;
-          old.unlink();
-        }
+        // `old` is the discarded original of the copy `append_tree` just
+        // inserted: free it (see `remove_node`), its ids were unrecorded
+        // above and no handle into it is used afterwards.
+        self.discard_subtree(old);
         for mut child in following {
           parent.add_child(&mut child)?; // No need for clone
         }
@@ -6509,36 +6524,6 @@ impl Document {
       },
       _ => Ok(None),
     }
-  }
-
-  /// `replace_tree` for a caller that owns BOTH trees as garbage-after-copy
-  /// (the math parser's rebuild sites): the replacement is copied into
-  /// place exactly as `replace_tree` does (Perl appendTree parity —
-  /// elements are re-created, sources abandoned), and then the sources are
-  /// FREED: `old`'s subtree, plus `new`'s detached root when `new` is a
-  /// standalone built tree rather than a node inside `old`. Without the
-  /// frees every replaced formula leaks its pre-parse tree AND the built
-  /// parse tree (see `discard_subtree`).
-  ///
-  /// On the `None` return (old had no parent) nothing was copied and
-  /// NOTHING is freed — the caller keeps using `new` as-is.
-  pub fn replace_tree_free(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
-    // Resolve new's root BEFORE any freeing (walking afterwards would read
-    // freed memory). A chain ending at a Document node means `new` is
-    // inside a live tree — either inside `old` (freed below with it) or
-    // elsewhere (not ours to free).
-    let new_root = xml::detached_root(&new);
-    let inserted = self.replace_tree(new, old.clone())?;
-    if inserted.is_some() {
-      self.discard_subtree(old);
-      if let Some(root) = new_root {
-        // Standalone source tree; disjoint from old's subtree by
-        // construction (a detached root has no parent, every node inside
-        // old's subtree has one).
-        self.discard_subtree(root);
-      }
-    }
-    Ok(inserted)
   }
 
   pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {
