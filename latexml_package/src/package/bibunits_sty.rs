@@ -115,7 +115,19 @@ LoadDefinitions!({
       unit
     };
     assign_value("CITE_UNIT", pin(&cite_unit), None);
-  });
+  },
+  // `{bibunit}` wraps block-level bibliography content — and, via apxproof
+  // (default `bibliography=separate`), whole deferred appendix bodies — so it
+  // is a vertical block. Without a vertical BOUND_MODE, `$$…$$` inside the
+  // wrapped body is not recognized as display math (`tex_math.rs` mirror of
+  // `TeX_Math.pool.ltxml:65`: `$$` consumed only when BOUND_MODE ends in
+  // "vertical"): the second `$` closes the first as empty inline math and the
+  // body lands in text mode, so the equation renders as `<ltx:p>` text (a
+  // semantic-markup loss) and subscripts error `unexpected:_`. Same fix as
+  // `{center}`/`{flushleft}` (sect06.rs) and `{figure}` (sect09.rs). Surpasses
+  // Perl (`bibunits.sty.ltxml:72` has no `mode =>`, sharing the bug); witnesses:
+  // apxproof papers, e.g. 2605.02787 (5 `unexpected:_` → 0, display math restored).
+  mode => "internal_vertical");
 
   // Perl: `\putbib[]` -> `\lx@bibliography[\bu@unitname]{...}`, i.e. the `.bib`
   // route only. But the real package inputs the per-unit `.bbl`

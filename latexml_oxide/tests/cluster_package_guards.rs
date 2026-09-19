@@ -21317,4 +21317,36 @@ Hello \normalsize world.
       "the body after \\normalsize must survive\n{xml}"
     );
   }
+
+  /// `{bibunit}` (used directly and by apxproof's deferred appendix bodies) had
+  /// no vertical bound mode, so `$$…$$` inside it was not recognized as display
+  /// math: the body degraded to text and a subscript errored `unexpected:_`,
+  /// losing the equation's semantic markup (witness 2605.02787, 5 errors).
+  /// Giving `{bibunit}` `mode => "internal_vertical"` (the `{center}` precedent)
+  /// restores display math. A semantic-markup fix, not just an error suppression.
+  #[test]
+  fn bibunit_keeps_display_math_semantic() {
+    let tex = r"\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\begin{bibunit}
+$$ X_{i} = a $$
+\end{bibunit}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(!stderr.contains("unexpected:_"), "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The `$$…$$` must open a SEMANTIC display-math element (not `<p>` text),
+    // and `X_{i}` must parse as a real subscript — the exact degradation the
+    // mode fix repairs (without it the `_` errors and no subscript forms).
+    assert!(
+      xml.contains(r#"<Math mode="display""#),
+      "the $$…$$ inside bibunit must open a display <Math> element, not text\n{xml}"
+    );
+    assert!(
+      xml.contains(r#"role="SUBSCRIPTOP""#),
+      "X_{{i}} must parse as a real subscript, not degrade to text/error\n{xml}"
+    );
+  }
 }
