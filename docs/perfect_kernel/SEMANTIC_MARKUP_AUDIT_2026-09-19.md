@@ -23,7 +23,7 @@ by jing message over representative offenders:
 
 | class | witnesses | jing message | fix locus |
 |---|---|---|---|
-| **internal-attr leak** (304k of all errors, 2 docs) | tcolorbox (35562), pgf-spectra (268654) | `attribute "_font"/"_autoclose"/"_autoopened"/"_fontswitch"/"_scopebegin" not allowed here` on `svg:g`/`svg:path`/`text`/`p` | construction-time `_`-prefixed internals leak into the core XML for the 2 largest (streaming-path) docs; the pre-serialization strip that clears them for the other 2483 docs is bypassed. Under root-cause (streaming/restart finalize skip hypothesis). A SEMANTIC/serialization fix. |
+| **internal-attr leak** (304k of all errors, 2 docs) — **ROOT-CAUSED, DEFERRED** | tcolorbox (35562), pgf-spectra LSE (268654) | `attribute "_font"/"_autoclose"/… not allowed here` on `svg:g`/`svg:path`/`text`/`p` | RUST-ONLY. The streaming **fatal-stop "cheap partial"** branch (`core_interface.rs:1518-1540`) returns the document before pass-2 finalize, so the `_`-strip (`document.rs:811-822` `finalize_rec` PostWork, mirror of Perl `Document.pm:452`) never runs on the spine, and spilled segments splice in verbatim (`splice_segment_text`, document.rs:1783). Fires ONLY when a memory/timeout Fatal hits in streaming pass 1 — hence only the 2 biggest docs; control: pgf-spectra **NIST** completes pass 2 → 0 leaks, **LSE** hits the cheap partial → 168532. Verified repro (leak.tex: 900 tikz blobs at `--max-memory=1400` → cheap partial → 1105 `_font`). **Deferred: LOW value / MEDIUM risk.** The leak is only in salvage partials of docs that stay Fatal ([[feedback_fatal_stays_fatal]]) — they are FAILED conversions; their real fix is fitting in memory (a perf problem), not the attr strip. Fix plan if pursued: a strip-only DOM walk (`_`-prefixed attrs, memory-neutral) before the cheap-partial return, plus a per-segment strip decision (parse vs splice-time scan); `_font` cannot be stripped at spill time (it is the node→Font linkage, document.rs:5205). |
 | **math content-model** | frege (84+54), numerica (45), tikz-network (87) | `element "rule"/"inline-block"/"text"/"logical-block" not allowed here; expected "Math"/"MathBranch"/…` | a block/rule/text node lands inside a math (MathBranch) or logical-block context the schema forbids — a construct emitting into the wrong container; per-construct, heterogeneous |
 | **`<tags>` misplacement** | algorithm2e (221) | `element "tags" not allowed here` | the float/bibitem `<tags>` element in an invalid position (known algorithm2e residual) |
 | **dangling IDREF** | biblatex-chicago cms-notes-intro (41) | `IDREF "Hendnote." without matching ID` | endnote/footnote cross-refs emit an idref with no matching id (note the malformed trailing-dot id) |
@@ -37,12 +37,26 @@ violations above, not `ERROR` elements.
 
 ## Takeaways / ranked targets
 
-1. **Internal-attr leak** — highest error-count, cleanest fix (restore the
-   `_`-prefixed strip on the large/streaming-doc path), clears the 2 worst docs.
-   Generalizes to a serialization guarantee: no `_`-prefixed attribute in output.
-2. **Math content-model violations** — more docs, heterogeneous; each is a
-   construct emitting into a forbidden container. Triage per class.
-3. Dangling IDREFs and `<tags>` misplacement — narrower, per-package.
+Big picture: quality is already largely met — content median 98.5 (recall) and
+82% schema-valid — with a **long heterogeneous tail** of small per-construct
+violations. There is no single high-leverage fix.
+
+1. **Internal-attr leak** — highest error-COUNT but DEFERRED (see table): it lives
+   only in the salvage partials of 2 memory-Fatal docs, which are failed
+   conversions; their real need is fitting in memory (perf), and error-count is
+   the weak proxy we moved away from. Affects 0 successful conversions.
+2. **Math content-model violations** — the real semantic-quality target (affects
+   SUCCESSFUL docs): a `rule`/`inline-block`/`text` node emitted into a
+   `MathBranch`/math container the schema forbids (frege/numerica/tikz-network).
+   Heterogeneous — root-cause per class; a shared cause across them would be
+   high-value.
+3. Dangling IDREFs (biblatex-chicago endnotes) and `<tags>` misplacement
+   (algorithm2e) — narrower, per-package.
+
+The two biggest schema offenders (tcolorbox, pgf-spectra LSE) are a **memory/perf**
+problem, not a markup problem — they Fatal on memory; the markup axis will only be
+satisfiable for them once they convert completely (PLANS 12 raw-interpreter perf /
+streaming memory reduction).
 
 ## Method (reusable)
 
