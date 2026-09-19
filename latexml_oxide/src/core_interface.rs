@@ -180,6 +180,73 @@ fn dir_is_writable(dir: &Path) -> bool {
   }
 }
 
+/// Diagnostic (`LXML_TRACE_FRAGMENT_RC`): after a fragment is absorbed, every
+/// box in it should be referenced by the fragment alone (plus `node_boxes`,
+/// which the streaming sweep drops). Report the boxes with extra holders, by
+/// kind and depth, so a retention can be attributed.
+fn trace_fragment_holders(boxes: &[Digested]) {
+  use latexml_core::digested::DigestedData;
+  fn walk(
+    d: &Digested,
+    depth: usize,
+    expected: usize,
+    out: &mut Vec<String>,
+    seen: &mut rustc_hash::FxHashSet<usize>,
+  ) {
+    // A whatsit reaches its content through an argument AND a property (the
+    // same handle twice): visit each allocation once, or the walk is
+    // exponential in the nesting depth.
+    if !seen.insert(d.as_ptr() as usize) {
+      return;
+    }
+    let (kind, extra) = match d.data() {
+      DigestedData::TBox(_) => ("TBox", String::new()),
+      DigestedData::List(l) => ("List", format!(" n={}", l.borrow().boxes.len())),
+      DigestedData::Whatsit(w) => ("Whatsit", format!(" {}", w.borrow().definition.get_cs())),
+      DigestedData::Alignment(_) => ("Alignment", String::new()),
+      _ => ("other", String::new()),
+    };
+    let rc = d.strong_count();
+    if rc > expected && out.len() < 40 {
+      out.push(format!(
+        "  depth {depth} rc {rc} (expected {expected}) {kind}{extra}"
+      ));
+    }
+    match d.data() {
+      DigestedData::List(l) => {
+        for c in &l.borrow().boxes {
+          walk(c, depth + 1, 1, out, seen);
+        }
+      },
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        for a in w.args.iter().flatten() {
+          walk(a, depth + 1, 1, out, seen);
+        }
+        for (_, v) in w.properties.iter() {
+          if let Stored::Digested(c) = v {
+            walk(c, depth + 1, 1, out, seen);
+          }
+        }
+      },
+      _ => {},
+    }
+  }
+  let mut out = Vec::new();
+  let mut seen = rustc_hash::FxHashSet::default();
+  for b in boxes {
+    walk(b, 0, 1, &mut out, &mut seen);
+  }
+  eprintln!(
+    "fragment holders: {} boxes walked, {} with extra holders",
+    seen.len(),
+    out.len()
+  );
+  for l in out {
+    eprintln!("{l}");
+  }
+}
+
 fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
   match stomach::digest_next_body(None) {
     Ok(next_bodies) => {
@@ -1241,10 +1308,13 @@ impl DigestionAPI for Core {
           true
         },
       };
+      let mut fragment: Option<Digested> = None;
       if !boxes.is_empty() {
         let digested = Digested::from(List::new(boxes));
         let _g_build = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Build);
-        if let Err(e) = document.absorb(&digested, None) {
+        // Interleaved with digestion: base-level build bindings must not
+        // pop with the digestion group open at this seam (`with_build_floor`).
+        if let Err(e) = state::with_build_floor(|| document.absorb(&digested, None)) {
           // Same Fatal contract as the eager Build: announce, latch, keep the
           // partial document (recovery is a FEATURE of Fatal).
           e.log_fatal();
@@ -1259,12 +1329,19 @@ impl DigestionAPI for Core {
           fatal_stop = true;
           stopped = true;
         }
+        fragment = Some(digested);
       }
       // Perl inserts resources directly once a document exists; the eager
       // path's root-hook drain is deferred here, so fold fresh arrivals in
       // per fragment — mid-digestion consumers (the frontmatter fallback's
       // resource[last()] anchor) depend on them being placed.
       document.process_pending_resources_at_top()?;
+      if std::env::var_os("LXML_TRACE_FRAGMENT_RC").is_some()
+        && let Some(f) = fragment.as_ref()
+      {
+        trace_fragment_holders(std::slice::from_ref(f));
+      }
+      drop(fragment);
       let finishing = stopped || (!yielded && !gullet::has_more_input());
       // Spill policy at the end: a conversion that NEVER yielded fits in RAM
       // whole — spilling it would buy no headroom and cost a full
@@ -1277,8 +1354,22 @@ impl DigestionAPI for Core {
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
         let t_spill = std::time::Instant::now();
+        let trace_spill = std::env::var_os("LXML_TRACE_NODE_BOXES").is_some();
+        #[cfg(target_os = "linux")]
+        let c_live_before = if trace_spill {
+          unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024)
+        } else {
+          0
+        };
         let runs_spilled = document.spill_closed_subtrees(&mut index)?;
         let t_spill_dur = t_spill.elapsed();
+        #[cfg(target_os = "linux")]
+        if trace_spill {
+          let c_live_after = unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024);
+          eprintln!(
+            "streaming: spill C-live {c_live_before} -> {c_live_after} MB ({runs_spilled} runs)"
+          );
+        }
         // Self-healing: entries for nodes that build-time discard paths
         // detached without purging pin whole Digested box trees (see
         // sweep_stale_node_boxes). When runs are spilled, the post-spill

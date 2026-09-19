@@ -85,3 +85,26 @@ fn yield_changes_nothing_but_happens() {
     "yielding must be invisible in the output: same box stream, same XML"
   );
 }
+
+/// The end of a picture is a seam request whatever the budget
+/// (`\pgfsys@endpicture` → `stomach::request_fragment_yield`): a
+/// tikzpicture's boxes reach the body as ONE box, invisible to the budget's
+/// count, and pgf-PeriodicTable's ~47,000-box tables ran streaming past the
+/// fuse between seams (PLANS 11). With a budget far above the fixture's box
+/// count, the three pictures alone force at least three yields; the output
+/// stays byte-identical to the eager path.
+#[test]
+fn a_picture_end_is_a_seam_request() {
+  let source = "tests/streaming/picture_seams.tex";
+  let (eager_xml, eager_yields) = convert_with_budget(source, None);
+  assert_eq!(eager_yields, 0, "no budget => the eager path never yields");
+  let (streamed_xml, streamed_yields) = convert_with_budget(source, Some(1_000_000));
+  assert_eq!(
+    streamed_yields, 3,
+    "three picture ends must request exactly three yields (nothing else reaches the budget)"
+  );
+  assert_eq!(
+    eager_xml, streamed_xml,
+    "picture-seam yields must not change the XML"
+  );
+}

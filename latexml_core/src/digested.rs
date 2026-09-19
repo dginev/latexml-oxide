@@ -557,6 +557,14 @@ impl Digested {
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
 
+  /// Number of live `Digested` handles sharing this box (diagnostics: a box
+  /// still referenced after its fragment was absorbed and dropped is retained
+  /// somewhere else).
+  pub fn strong_count(&self) -> usize { Rc::strong_count(&self.0) }
+
+  /// Identity of the shared allocation (diagnostics: visit each box once).
+  pub fn as_ptr(&self) -> *const DigestedData { Rc::as_ptr(&self.0) }
+
   /// A content-aware but COST-BOUNDED fingerprint for the stomach cycle guard
   /// ([`crate::cycle_guard`]).
   ///

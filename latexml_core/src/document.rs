@@ -223,6 +223,33 @@ pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 /// Leading non-sectional root children (title, creators, abstract, resources)
 /// must stay live: the frontmatter fallback and `maybe_promote_leading_title`
 /// operate on them at end-of-build (`base_utilities.rs`).
+/// Root-level children the frontmatter machinery keeps MUTATING after they
+/// close — the schema's `SectionalFrontMatter.class`/`FrontMatter.class`
+/// (LaTeXML-structure.rnc:666-672) plus the resource/RDF/capture nodes: a later
+/// `\maketitle` or `\lx@frontmatter@fallback` re-inserts, merges and retypes
+/// them (`insert_frontmatter`, the `_Capture_` wrapper, contact→note). Their
+/// content is never spilled, even the parts holding no prose (a `personname`
+/// spilled from under a resident `creator` left `\thanks` marks absorbing into
+/// a placeholder: sweep witnesses tests/cluster_regressions/frontmatter_spconf_name,
+/// tests/structure/amsarticle). Body wrappers (`ltx:para`, `ltx:quote`,
+/// `ltx:figure`, …) are closed for good and take `spill_prose_free_children`.
+const ROOT_FRONTMATTER: &[&str] = &[
+  "title",
+  "toctitle",
+  "subtitle",
+  "tags",
+  "creator",
+  "date",
+  "abstract",
+  "keywords",
+  "classification",
+  "pubnote",
+  "acknowledgements",
+  "resource",
+  "rdf",
+  "_Capture_",
+];
+
 const ROOT_SPILLABLE: &[&str] = &[
   "section",
   "chapter",
@@ -3897,6 +3924,7 @@ impl Document {
       .iter()
       .map(|ns| (ns.get_prefix(), ns.get_href()))
       .collect();
+    let aligning = Self::pending_aligning_context();
 
     let mut runs_spilled = 0usize;
     // Every spine level INCLUDING the insertion element itself: at a legal
@@ -3946,12 +3974,20 @@ impl Document {
         elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
       };
       let mut run: Vec<Node> = Vec::new();
+      let pending_from = Self::pending_alignment_from(&parent, &aligning);
+      let mut pending = matches!(pending_from, Some(None));
       for child in parent.get_child_nodes() {
         if Some(&child) == barrier.as_ref() {
           break;
         }
+        // `prev` itself predates the declaration and may spill; its
+        // followers may not.
+        let is_pending_anchor = pending_from
+          .as_ref()
+          .is_some_and(|prev| prev.as_ref() == Some(&child));
         let eligible = child.get_type() == Some(NodeType::ElementNode)
           && child.get_name() != SPILL_PLACEHOLDER
+          && !pending
           && !parent_is_collapse_frame
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
           // A bibliography pins its subtree in RAM: a LATER `\bibstyle`
@@ -3962,20 +3998,41 @@ impl Document {
             .is_empty();
         if eligible {
           run.push(child);
-        } else if !run.is_empty() {
-          // A non-eligible node interrupts the run: flush what precedes it so
-          // each placeholder replaces exactly the contiguous nodes it stands
-          // for, and document order is preserved around the interloper.
-          runs_spilled += self.spill_run(
-            &mut run,
-            level + 1,
-            noindent,
-            &namespaces,
-            &section_id,
-            index,
-          )?;
         } else {
-          run.clear();
+          if !run.is_empty() {
+            // A non-eligible node interrupts the run: flush what precedes it so
+            // each placeholder replaces exactly the contiguous nodes it stands
+            // for, and document order is preserved around the interloper.
+            runs_spilled += self.spill_run(
+              &mut run,
+              level + 1,
+              noindent,
+              &namespaces,
+              &section_id,
+              index,
+            )?;
+          }
+          // A closed NON-sectional root child stays resident for the
+          // frontmatter heuristics, but only its prose is read: spill the
+          // rest of it (`spill_prose_free_children`).
+          let resident_root_child = level == 0
+            && child.get_type() == Some(NodeType::ElementNode)
+            && child.get_name() != SPILL_PLACEHOLDER
+            && !ROOT_SPILLABLE.contains(&child.get_name().as_str())
+            && !ROOT_FRONTMATTER.contains(&child.get_name().as_str());
+          if resident_root_child {
+            runs_spilled += self.spill_prose_free_children(
+              &child,
+              level + 2,
+              &namespaces,
+              &section_id,
+              &aligning,
+              index,
+            )?;
+          }
+        }
+        if is_pending_anchor {
+          pending = true;
         }
       }
       if !run.is_empty() {
@@ -3990,6 +4047,160 @@ impl Document {
       }
     }
     Ok(runs_spilled)
+  }
+
+  /// `ROOT_SPILLABLE` keeps a non-sectional root-level child resident for the
+  /// end-of-build frontmatter heuristics (`maybe_promote_leading_title`,
+  /// `maybe_dedup_leading_title_ink` in `base_utilities.rs`), which read the
+  /// text and font of the leading `ltx:p` paragraphs and nothing else. So its
+  /// closed element children that hold no prose paragraph spill like any other
+  /// closed subtree — a paragraph inside drawn content (an `svg:foreignObject`
+  /// label under `ltx:picture`) is not document prose. A child that does hold
+  /// prose stays resident and is walked the same way, so a wrapper
+  /// (`ltx:quote`, `ltx:logical-block`) keeps its paragraphs and sheds its
+  /// pictures, tables and equations; an `ltx:p` itself is kept whole.
+  ///
+  /// Witness: pgf-PeriodicTable's eight sectionless `\pgfPT` tables (one
+  /// `ltx:para > ltx:picture` each) climbed ~106 MB per table under
+  /// `--streaming` with every picture-end seam honored, because nothing under
+  /// a root-level `ltx:para` ever spilled and the sweep of `node_boxes` found
+  /// every table's boxes still live.
+  fn spill_prose_free_children(
+    &mut self,
+    parent: &Node,
+    depth: usize,
+    namespaces: &[(String, String)],
+    section_id: &Option<String>,
+    aligning: &Option<(Node, Option<Node>)>,
+    index: &mut crate::sxml::FragmentIndex,
+  ) -> Result<usize> {
+    let noindent = model::can_contain_sym(get_node_qname(parent), pin!("#PCDATA"));
+    let mut runs_spilled = 0usize;
+    let mut run: Vec<Node> = Vec::new();
+    let mut resident: Vec<Node> = Vec::new();
+    let pending_from = Self::pending_alignment_from(parent, aligning);
+    let mut pending = matches!(pending_from, Some(None));
+    for child in parent.get_child_nodes() {
+      if pending_from
+        .as_ref()
+        .is_some_and(|prev| prev.as_ref() == Some(&child))
+      {
+        // `prev` itself predates the declaration and may spill; its followers
+        // may not.
+        pending = true;
+      }
+      // Only content the schema admits directly in a paragraph block
+      // (`ltx:para` = Block/Misc/Meta: pictures, tabulars, equations, nested
+      // blocks) may become a segment root: pass 2 re-parses a segment under
+      // the `_lxfragment` wrapper, whose schema decisions cannot host inline
+      // content (a spilled `ltx:sup` from a root-level `ltx:note` failed
+      // there: tests/cluster_regressions/frontmatter_spconf_name).
+      let is_element = child.get_type() == Some(NodeType::ElementNode)
+        && child.get_name() != SPILL_PLACEHOLDER
+        && model::can_contain_sym(pin!("ltx:para"), get_node_qname(&child));
+      let holds_prose = is_element
+        && !self
+          .findnodes(
+            "descendant-or-self::ltx:p[not(ancestor::ltx:picture)]",
+            Some(&child),
+          )
+          .is_empty();
+      let eligible = is_element
+        && !holds_prose
+        && !pending
+        && self
+          .findnodes("descendant-or-self::ltx:bibliography", Some(&child))
+          .is_empty();
+      if eligible {
+        if std::env::var_os("LXML_TRACE_NODE_BOXES").is_some() {
+          eprintln!(
+            "streaming: prose-free spill of {} under {}",
+            child.get_name(),
+            parent.get_name()
+          );
+        }
+        run.push(child);
+        continue;
+      }
+      if !run.is_empty() {
+        runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, section_id, index)?;
+      }
+      if holds_prose && !pending && get_node_qname(&child) != pin!("ltx:p") {
+        resident.push(child);
+      }
+    }
+    if !run.is_empty() {
+      runs_spilled += self.spill_run(&mut run, depth, noindent, namespaces, section_id, index)?;
+    }
+    for wrapper in resident {
+      runs_spilled += self.spill_prose_free_children(
+        &wrapper,
+        depth + 1,
+        namespaces,
+        section_id,
+        aligning,
+        index,
+      )?;
+    }
+    if runs_spilled > 0 {
+      self.release_wrapper_boxes(parent);
+    }
+    Ok(runs_spilled)
+  }
+
+  /// The pending aligning context, if any: `\centering`/`\raggedright`/
+  /// `\raggedleft` record the current element and its last child
+  /// (`setup_aligning_context`, latex_constructs/mod.rs) and stamp the class
+  /// on that element's LATER children when the group ends
+  /// (`apply_aligning_context`). Those children are not closed yet.
+  fn pending_aligning_context() -> Option<(Node, Option<Node>)> {
+    let node = state::with_value("ALIGNING_NODE", |v| match v {
+      Some(Stored::Node(n)) => Some(n.clone()),
+      _ => None,
+    })?;
+    let prev = state::with_value("ALIGNING_PREV_CHILD", |v| match v {
+      Some(Stored::Node(p)) => Some(p.clone()),
+      _ => None,
+    });
+    Some((node, prev))
+  }
+
+  /// For `parent` under a pending aligning context: `Some(prev)` when the
+  /// context's children after `prev` (all of them for `Some(None)`) are still
+  /// to be stamped and must stay resident. Spilling them frees the anchor, and
+  /// a later node allocated at the same address matched it instead
+  /// (tikz-network under tufte-book: `ltx_align_left` moved from the title
+  /// block and the first chapter to a later chapter and an appendix).
+  fn pending_alignment_from(
+    parent: &Node,
+    aligning: &Option<(Node, Option<Node>)>,
+  ) -> Option<Option<Node>> {
+    aligning
+      .as_ref()
+      .filter(|(node, _)| node == parent)
+      .map(|(_, prev)| prev.clone())
+  }
+
+  /// A resident wrapper's recorded box owns what was just spilled beneath it:
+  /// every element a constructor opens records the SAME whatsit
+  /// (`set_node_box` on `ltx:para`, `ltx:p`, `ltx:picture`, `svg:svg` alike),
+  /// so dropping the spilled nodes' entries frees nothing while the wrapper's
+  /// entry still holds the picture whatsit and, through it, the whole box tree
+  /// (the n8 witness kept every table alive this way: the sweep found the
+  /// wrappers live, and their box was the table). Drop the entries of the
+  /// wrapper and its ancestors below the root; the root's own box (the
+  /// `\begin{document}` whatsit) owns no body content. A wrapper's box is
+  /// consulted only while it is the insertion point's ancestor, which a closed
+  /// root-level child never is again.
+  fn release_wrapper_boxes(&mut self, wrapper: &Node) {
+    let mut cursor = Some(wrapper.clone());
+    while let Some(n) = cursor {
+      if n.get_type() != Some(NodeType::ElementNode) || get_node_qname(&n) == pin!("ltx:document") {
+        break;
+      }
+      self.node_boxes.remove(&n.to_hashable());
+      cursor = n.get_parent();
+    }
   }
 
   /// Spill one contiguous run of closed sibling elements as a single segment.

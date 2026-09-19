@@ -564,7 +564,16 @@ LoadDefinitions!({
   RawTeX!(r"\def\pgfsys@typesetpicturebox#1{\pgf@ya=\pgf@shift@baseline\relax\advance\pgf@ya by-\pgf@picminy\relax\advance\pgf@picmaxy by-\pgf@picminy\relax\advance\pgf@picmaxx by-\pgf@picminx\relax\setbox#1=\hbox{\hskip-\pgf@picminx\lower\pgf@picminy\box#1}\ht#1=\pgf@picmaxy\wd#1=\pgf@picmaxx\dp#1=0pt\leavevmode\lxSVG@insertpicture{\box#1\lxSVG@closescope}}");
 
   def_macro_noop("\\pgfsys@beginpicture")?;
-  def_macro_noop("\\pgfsys@endpicture")?;
+  // The end of a picture is a streaming seam request: its boxes reach the
+  // document body as one box, invisible to the fragment budget's count
+  // (`stomach::request_fragment_yield`). pgf also calls this from
+  // `\pgfsys@pictureboxsynced` (pgfsys.code.tex:1552), `\pgfsys@endpurepicture`
+  // (:1599) and every `\matrix` (pgfmodulematrix.code.tex:397) — the request
+  // is an idempotent flag honored only at the next legal top-level seam, so
+  // extra calls change nothing (output verified byte-identical).
+  DefPrimitive!("\\pgfsys@endpicture", {
+    request_fragment_yield();
+  });
 
 
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context

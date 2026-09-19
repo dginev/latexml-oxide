@@ -444,6 +444,19 @@ static FRAGMENT_YIELD_BUDGET: Cell<Option<usize>> = Cell::new(None);
 /// "more to come" from EOF.
 #[thread_local]
 static FRAGMENT_YIELDED: Cell<bool> = Cell::new(false);
+/// A binding's request to yield at the NEXT legal seam regardless of the box
+/// budget (`request_fragment_yield`): the end of a picture. A tikzpicture's
+/// tens of thousands of path, coordinate and scope boxes sit at a deep group
+/// level with no seam until it closes, then reach the body as ONE box — the
+/// budget's count never sees them, and the RSS branch waits for its floor
+/// (pgf-PeriodicTable: ~47,000 boxes and ~106 MB per table on the release
+/// binary; the manual's 53 redraws peak at 24.8 GB eager, and an eight-table
+/// document streamed under a 1 GB cap tripped the fuse mid-table with a
+/// 39-byte output). The completed picture is the natural absorb-and-free
+/// unit. Cleared on yield and whenever a driver sets the budget; inert
+/// without a budget.
+#[thread_local]
+static FRAGMENT_YIELD_REQUESTED: Cell<bool> = Cell::new(false);
 /// Serial of the last stack frame pushed (`lx@frame@id`): the identity a
 /// box reader keys its terminal on (tex.web §1068 dispatches `}` on
 /// `cur_group`, the group itself, never on the save-stack depth).
@@ -483,6 +496,10 @@ pub fn set_fragment_yield_budget(budget: Option<usize>) {
   let enabling = budget.is_some();
   FRAGMENT_YIELD_BUDGET.set(budget);
   FRAGMENT_YIELDED.set(false);
+  // An eager conversion raises requests it never honors (the clearing site
+  // is inside the budgeted branch); a later streaming conversion on the same
+  // thread must not inherit one.
+  FRAGMENT_YIELD_REQUESTED.set(false);
   // The count is a per-conversion probe: reset when a driver ENABLES
   // yielding, and preserved when it disables at end-of-digestion (the driver
   // clears the budget before the tail phases, and telemetry/tests read the
@@ -495,6 +512,11 @@ pub fn set_fragment_yield_budget(budget: Option<usize>) {
 /// Did the last `digest_next_body` return because of the yield budget (rather
 /// than EOF / terminal / depth-drop)? Read-and-clear.
 pub fn take_fragment_yielded() -> bool { FRAGMENT_YIELDED.replace(false) }
+
+/// Ask digestion to yield at the next legal fragment seam whatever the box
+/// count — a binding's signal that a large self-contained unit (a picture)
+/// just closed. Inert under eager digestion.
+pub fn request_fragment_yield() { FRAGMENT_YIELD_REQUESTED.set(true); }
 
 /// How many times digestion has yielded since the budget was last set.
 pub fn fragment_yield_count() -> usize { FRAGMENT_YIELD_COUNT.get() }
@@ -1984,6 +2006,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
         let accumulated = stomach!().box_list.len();
         let rss_kb = LAST_SAMPLED_RSS_KB.get();
         accumulated >= budget
+          || (FRAGMENT_YIELD_REQUESTED.get() && accumulated > 0)
           || (FRAGMENT_YIELD_RSS_SOFT_KB
             .get()
             .is_some_and(|soft| rss_kb > soft)
@@ -2002,6 +2025,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       )
     {
       FRAGMENT_YIELDED.set(true);
+      FRAGMENT_YIELD_REQUESTED.set(false);
       FRAGMENT_YIELD_COUNT.set(FRAGMENT_YIELD_COUNT.get() + 1);
       // No EOF trailer (`ran_out` stays true only through the loop's own
       // exhaustion path — we return before reaching it), and no

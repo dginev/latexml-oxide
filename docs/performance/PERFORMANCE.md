@@ -1153,11 +1153,16 @@ reads). A native `.try` (pgfkeys.code.tex:1024) is faithful and general but
 worth under 0.5 % of wall — declined as a perf lever. The two real problems are
 blowups, not per-token cost: pgf-PeriodicTable 344 s at 24.8 GB RSS building
 282,289 `svg:g` (53 redraws × 118 cells; document/libxml self-time under 0.5 %,
-the memory is the retained DOM) and wheelchart timing out at 400 s and 10 GB
-(l3regex `\regex_replace_all` per key + `\foreach[parse]` + `\fp_eval`,
-wheelchart.sty:2360-2385; pdflatex itself is stuck at page 20 after 18 minutes).
-Both are single manuals with no arXiv reach; they are stability leads (a bounded
-retained DOM, fewer nodes per cell), not throughput ones. Beyond them the next
+the memory is the retained DOM) and wheelchart timing out at 400 s and 10 GB.
+Wheelchart is settled (2026-09-19, DIFFICULT_CASES §D11): multiline `arc data`
+under `arc around text` (wheelchart.sty:2938-3105, a per-line `text along path`
+decoration walk whose arc-split step degenerates) spins every engine — pdflatex
+produces no PDF in 120 s on a 10-line repro and sticks at page 20/56 on the
+manual, Perl aborts on 100 l3fp errors in 9 s — and the 10 GB is transient
+interpreter working set, not DOM or a leak; the regex at :2347-2351 is ~5 % of
+self-time. Both are single manuals with no arXiv reach; the periodic table is a
+stability lead (a bounded retained DOM: the picture-end streaming seam, 56dv),
+not a throughput one. Beyond them the next
 general lever is the token itself (`Token` under 8 bytes and the allocator, P5),
 which reaches every TikZ, pgf and expl3 document and is HARD.
 

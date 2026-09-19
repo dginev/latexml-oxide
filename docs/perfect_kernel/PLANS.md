@@ -214,9 +214,13 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    pgf-spectra and tabularray are FASTER than pdflatex, circularglyphs 1.4×, tilings
    3.4× on the raw pgf-core drawing pipeline (no native leaf left; `.try` is under
    0.5 % of wall — declined). Open: the pgf-periodictable (25 GB retained DOM,
-   282k `svg:g`) and wheelchart (400 s timeout, 10 GB) blowups as stability leads,
+   282k `svg:g`) blowup as a stability lead (11; the picture-end seam landed as 56dv),
    the tcolorbox RSS lead (10), and the generic token/allocator lever (P5) as the
-   only remaining throughput lever with corpus reach.
+   only remaining throughput lever with corpus reach. Wheelchart (420 s timeout,
+   10 GB) is SETTLED 2026-09-19 as pathological for every engine — multiline
+   `arc data` under `arc around text` spins pdflatex too (no PDF in 120 s on a
+   10-line repro) and Perl aborts on l3fp errors before reaching it; registered in
+   DIFFICULT_CASES §D11, no lever.
 
 8. **K12 — pTeX kanji control-word names.** LANDED as batch 56ds
    (`KERNEL_CAPABILITIES.md` K12): `PTEX_PROFILE` from `\NeedsTeXFormat{pLaTeX2e}`,
@@ -283,14 +287,27 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     `--max-memory=6144` the fuse trips at 4.8 GB and writes a 39-byte empty document,
     because `digest_next_body` yields only at a legal seam on the current level
     (`stomach.rs:438-446`) and a tikzpicture's ~46k boxes sit at a deep group level with
-    no seam until the picture closes. Fix (MED): make `\pgfsys@endpicture`/tikzpicture
-    end a forced spill seam (`pgfsys_latexml_def.rs:567`, today a no-op) in the streaming
-    driver (`core_interface.rs:1199-1262`, the yield predicate ~`stomach.rs:1950`) and
-    auto-activate streaming when eager-digest RSS crosses a fraction of `--max-memory`
-    (the source-size projection under-estimates pgf: 30 KB of source → 25 GB). Guard:
-    `n8.tex` (eight `\pgfPT[show title=false,show legend=false]\newpage`) with
-    `--max-memory=1024`: 0 Error/Fatal, exactly 6,264 `svg:g`, peak RSS below the eager
-    1,067 MB. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
+    no seam until the picture closes. Fix, part one LANDED as 56dv: `\pgfsys@endpicture`
+    requests a yield (`stomach::request_fragment_yield`, honored by the yield predicate
+    at the next legal seam whatever the box count; inert under eager digestion), so
+    `n8.tex` (eight `\pgfPT[show title=false,show legend=false]\newpage`) streams at a
+    2 GB cap with one yield per table: 0 Error/Fatal, exactly 6,264 `svg:g`, byte-identical
+    XML, 22 s against the eager path's 166 s, peak 1,088 MB against eager 1,120 MB on the
+    debug binary (whose per-table boxes are larger than release's; the 1 GB cap still
+    trips inside one table there). Guard `112_fragment_yield::a_picture_end_is_a_seam_request`.
+    Part two, LANDED in the same batch: the resident-wrapper spill and the wrapper's box
+    release (LEDGER 56dv) — without them the seam freed nothing (RSS monotonic 205 → 1,056 MB,
+    the reviewer's catch). Part three OPEN (MED): the manual itself still trips the 6 GB fuse
+    under `--streaming`: glibc `C-live` (libxml's heap) climbs ~6 MB per SPILLED picture
+    (n8: 11 → 47 MB over 12 segments; the manual 22 → 742 MB by fragment 256, fuse at
+    4.8 GB) although `discard_subtree` frees the nodes — find what libxml keeps per freed
+    picture (the doc dict? `xmlAddID` entries? the fork's free path) with
+    `LXML_TRACE_NODE_BOXES=1` (prints the spill's C-heap delta) on `n8.tex`. Part four OPEN
+    (MED): auto-activate streaming when eager-digest RSS crosses a fraction of
+    `--max-memory` — a restart into the streaming driver on a distinct pre-fuse signal —
+    since the source-size projection cannot see pgf (30 KB of source → 25 GB); the sweep
+    runs eager (`run_doc.sh --max-memory=6144`), so no streaming win reaches a verdict
+    until then. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
     `node_boxes` in the eager path (`Document.pm:1667-1669`; Rust's
     `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),

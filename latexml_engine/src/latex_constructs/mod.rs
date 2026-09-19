@@ -693,6 +693,12 @@ const FNSYMBOLS: &[&str] = &[
 // C.6 Displayed Paragraphs
 //**********************************************************************
 /// Perl: setupAligningContext — saves [node, lastChild] for deferred class application.
+///
+/// Local scope, like Perl: a nested context (`\centering` in a minipage
+/// panel inside a centered figure) restores the outer one when the panel's
+/// collected frame pops at build time (tests/graphics/graphrot). Under
+/// streaming the build step runs inside `state::with_build_floor`, which keeps
+/// a base-level binding from popping with a DIGESTION group instead.
 fn setup_aligning_context(doc: &mut Document) {
   if let Some(node) = doc.get_element() {
     // Save node and its current last child so we only apply to NEW children later
@@ -738,7 +744,8 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
   }
   // Release the saved node handles: every `assign_value` here PUSHES onto the
   // key's binding stack (build-time assignments sit outside digestion groups,
-  // so nothing ever pops them), and each retained `Stored::Node` pins its
+  // so nothing ever pops them — under streaming `state::with_build_floor`
+  // restores that invariant), and each retained `Stored::Node` pins its
   // whole document — under streaming, a pinned handle into a SPILLED subtree
   // even blocks the `xmlFreeNode` the spill relies on. Overwrite with `None`
   // so the C trees can go; the (empty) stack entries themselves are the cheap

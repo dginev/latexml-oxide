@@ -936,7 +936,7 @@ impl State {
     }
     // TRACE: watch for cleanup:w
     // regular check, local scope is default, unless a global prefix is set
-    let scope = match scope_opt {
+    let mut scope = match scope_opt {
       Some(s) => s,
       None => {
         if self.get_prefix_sym(pin!("global")) {
@@ -946,6 +946,14 @@ impl State {
         }
       },
     };
+    // A build-time local binding at the build's BASE level is global in
+    // effect: eager builds after digestion, when no group can pop it. The
+    // streaming driver interleaves the build with digestion, so the same
+    // binding would land in a digestion frame and vanish at that group's end
+    // (`with_build_floor`).
+    if matches!(scope, Scope::Local) && BUILD_FLOOR.get() == Some(self.undo.len()) {
+      scope = Scope::Global;
+    }
     match scope {
       Scope::Global => {
         let mut undo_count = 0;
@@ -1751,6 +1759,30 @@ where FnR: FnOnce(Option<&mut Stored>) -> R {
 }
 /// Undo-stack depth (open TeX groups) — pass-1 streaming telemetry.
 pub fn undo_depth() -> usize { state!().undo.len() }
+
+/// The save-stack depth at which an interleaved build step began (`None` =
+/// not building, or building after digestion the eager way).
+#[thread_local]
+static BUILD_FLOOR: std::cell::Cell<Option<usize>> = std::cell::Cell::new(None);
+
+/// Run a build step (a fragment's `Document::absorb`) that the streaming
+/// driver interleaves with digestion. Eager Rust and Perl build AFTER
+/// digestion, outside every group, so a constructor's local `assign_value`
+/// (the aligning context's `ALIGNING_NODE`, a frontmatter store, a
+/// counter) never pops; interleaved, the same binding lands in whichever
+/// digestion group is open at the seam and is popped at that group's end —
+/// tikz-network under tufte-book streamed with a stale root-level aligning
+/// context re-exposed by `\end{fullwidth}`, stamping `ltx_align_left` on
+/// chapters 4-5 and the appendices. Bindings made at the depth the step
+/// began at are therefore global for the step; the frames the build itself
+/// pushes above that depth (collected environment frames) keep their local
+/// bindings and pop as in eager.
+pub fn with_build_floor<R>(f: impl FnOnce() -> R) -> R {
+  let previous = BUILD_FLOOR.replace(Some(undo_depth()));
+  let result = f();
+  BUILD_FLOOR.set(previous);
+  result
+}
 
 /// A bit of Perl "existence as truth" semantics mixed in with proper boolean lookup
 pub fn lookup_bool(key: &str) -> bool { lookup_bool_sym(arena::pin(key)) }
