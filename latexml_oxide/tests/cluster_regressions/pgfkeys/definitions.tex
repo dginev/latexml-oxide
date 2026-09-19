@@ -1,0 +1,20 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\makeatletter
+\begin{document}
+% The definition handlers store exactly what the raw ones store
+% (pgfkeys.code.tex:648-652, :772, :826, :842, :852, :994): `.code` packs `#1`
+% and `##`, `/.@body` keeps the code verbatim for `.append style`/`.add code`,
+% `.style` is `.code=\pgfkeysalso{…}`, `.initial`/`.default` set the value and
+% `.@def`, `.cd` the default path; a package that redefines a handler gets its
+% own.
+\pgfkeys{/d/.cd, a/.code={[a:#1]}, h/.code={\def\x##1{<##1>}\x{#1}},
+  s/.style={/d/a=#1, /d/a={#1#1}}, v/.initial={{i}}, v/.default=d}
+\pgfkeys{/d/a=1, /d/h=2, /d/s=3}
+\pgfkeys{/d/s/.append style={/d/a=z}}\pgfkeys{/d/s=4}
+A:\pgfkeysvalueof{/d/v}. B:\pgfkeysvalueof{/d/v/.@def}.
+\pgfkeys{/d/v}D:\pgfkeysvalueof{/d/v}.
+% A redefined `.code` handler is honored (the raw definition is snapshotted).
+\pgfkeysdef{/handlers/.code}{\pgfkeysdef{\pgfkeyscurrentpath}{[mine]#1}}
+\pgfkeys{/d/b/.code={[b:#1]}}\pgfkeys{/d/b=5}
+\end{document}

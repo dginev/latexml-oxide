@@ -1084,7 +1084,26 @@ entry points cost 2-6 %, the price of a stream a handler can scan): zx_full 23.2
 zx-calculus manual 150 → 73 s, the circuitikz manual 74 → 59 s. Cumulative for
 the two slices: zx_full −56 %, tcb_full −26 %, keys_heavy −21 %. Fourteen fixtures now run
 ON and OFF (`LATEXML_PGFKEYS_TRACE=1` prints one line per dispatched key, the
-bisection aid). Next: slice 2. The profile of the slice-1 binary (`~/data/pk_agents/w23/perf_pgf/slice2/`)
+bisection aid). **Slice 2 landed (batch 56dp): the definition handlers native.** `.code`,
+`.style`, `.initial`, `.default` and `.cd` (pgfkeys.code.tex:772, :826, :842,
+:852, :994) and `\pgfkeysdef` under them (:648-652) run in Rust and store
+exactly what the raw handlers store — `\pgfk@<key>/.@cmd` a `\long` macro with
+the parameter text `#1\pgfeov` and a parameter-packed body, `/.@body` the code
+verbatim (what `.append style`/`.add code`/`.show code` read back), `.style` as
+`.code=\pgfkeysalso{…}` with the nested item's `\pgfkeyscurrentkey`/`name`/
+`value` left behind as the raw handler leaves them, the handler's `#1\pgfeov`
+argument as `\pgfkeyscurrentvalue` expanded once with one outer group stripped.
+A native handler runs only while the handler key still holds the raw file's
+definition (a `\let` snapshot `\lx@pgfkeys@raw@<h>` taken at load), so a
+package that redefines `/handlers/.code` gets its own. Byte-identical ON/OFF:
+zx_full 11.29 → **9.98 G (−11.6 %)**, tcb_full 13.57 → 13.39 G (−1.3 %),
+keys_heavy and picC unchanged — the definition-phase lever the histogram
+predicted (72 % of zx's dispatches, 23 % of tcb_full's, 4 % of the tcolorbox
+manual's); the tcolorbox manual converts identically both ways. Cumulative for
+the three slices: zx_full 25.51 → 9.98 G (−61 %), tcb_full 18.31 → 13.39 G
+(−27 %), keys_heavy 15.23 → 12.09 G (−21 %). Fifteen fixtures run ON and OFF.
+
+The profile of the slice-1 binary (`~/data/pk_agents/w23/perf_pgf/slice2/`)
 shows the residual is generic gullet macro machinery serving the RAW handler
 bodies plus allocator churn; the dispatch histograms
 (`LATEXML_PGFKEYS_TRACE=1`) put the definition handlers at 72 % of zx_full's

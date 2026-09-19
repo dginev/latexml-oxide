@@ -202,6 +202,21 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    store exactly what the raw ones store; profile first (`slice2/` study), one lever per
    run, the zx/circuitikz/tcolorbox/pgfplots manuals re-converted on and off before landing.
 
+8. **K12 — pTeX kanji control-word names (lead, 2026-09-18).** pLaTeX classes
+   write `\newif\if西暦` (jsarticle.cls:1927): pTeX gives kanji the kanji catcodes
+   and `\if西暦` is one control word; both LaTeXML engines tokenize `西` as OTHER,
+   so `\newif` lets the bare `\if` to `\iffalse` and every later `\if` is false
+   (SHARED, Perl identical; 56do made the degradation Perl-faithful). Witnesses:
+   chuushaku 73, sample-bxjaprnind (svn-prov.sty:87-107 runs off the end of input,
+   the batch-52 `Until:` Fatal), gentombow-ja, plextdelarray, qworld. A kernel
+   capability, not a class binding: under a pLaTeX class, letters of the kanji
+   blocks join control-word names (tex.web §354 with pTeX's `kcatcode`), surpassing
+   Perl; measure the jsarticle family before and after.
+9. **Alignment recovery over-reports `Extra alignment tab` (lead).** plextdelarray:
+   27 `unexpected:&` vs Perl's 10 under a corrupted delarray/plext column spec,
+   pre-existing; crosses the shared `MAX_ERRORS` 100 cap into a Fatal now that the
+   `\if` degradation matches Perl. Bound the per-row report as Perl does.
+
 ## DONE
 
 (moves here with batch number)

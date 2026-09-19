@@ -20881,6 +20881,22 @@ mod pgfkeys_native_accessors {
     latexml::util::test::assert_element(&xml, "p", &[], r##"<p>XYZ[a:1][end]</p>"##);
   }
 
+  /// Slice 2's native definition handlers store what the raw ones store
+  /// (pgfkeys.code.tex:648-652, :772, :826, :842, :852, :994): `.code` packs
+  /// `#1`/`##`, `/.@body` keeps the code for `.append style`, `.style` is
+  /// `.code=\\pgfkeysalso{…}`, `.initial`/`.default`, `.cd`; a redefined
+  /// `/handlers/.code` is honored (the raw definition is snapshotted at load).
+  #[test]
+  fn definition_handlers_store_the_raw_shape() {
+    let xml = both_ways("definitions");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[a:1]¡2¿[a:3][a:33] [a:4][a:44][a:z] A:i. B:d. D:d. [mine][b:5]</p>"##,
+    );
+  }
+
   /// A styled tikz node with a `.default` and a tcolorbox style: the real
   /// consumers of the key tree.
   #[test]

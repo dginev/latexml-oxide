@@ -263,7 +263,7 @@ fn run_unknown() -> Result<()> {
 /// tokens, with their catcodes: tikz-cd's direction parser compares
 /// `\pgfkeyscurrentname`'s first character with the letter `r` by `\ifx`
 /// (tikzlibrarycd.code.tex:96-98), which a catcode-12 rebuild would fail.
-fn split_path(key_toks: &[Token]) -> Result<String> {
+fn split_path(key_toks: &[Token]) -> Result<(String, Vec<Token>)> {
   let cut = key_toks
     .iter()
     .rposition(|t| is_char_of_catcode_other(t, '/'));
@@ -276,7 +276,116 @@ fn split_path(key_toks: &[Token]) -> Result<String> {
   toks.push(T_END!());
   digest(Tokens::new(toks))?;
   def_verbatim(T_CS!("\\pgfkeyscurrentname"), Tokens::new(name.to_vec()))?;
-  Ok(key_text(&Tokens::new(name.to_vec())))
+  Ok((key_text(&Tokens::new(name.to_vec())), path.to_vec()))
+}
+
+// ---------------------------------------------------------------------------
+// Slice 2: the definition handlers `.code`, `.style`, `.initial`, `.default`
+// and `.cd` (pgfkeys.code.tex:772, :826, :842, :852, :994) natively, storing
+// exactly what the raw handlers store — and `\pgfkeysdef` (:648-652) under
+// them. These are the corpus's definition load: 72 % of a ZX circuit's
+// dispatches, every `\tikzset`/`\tcbset` style library at package load. A
+// native handler runs only while the handler key still holds the raw file's
+// definition, checked against the `\let` snapshot `\lx@pgfkeys@raw@<h>` taken
+// when the file loaded, so a package that redefines `/handlers/.code` gets its
+// own. `\pgfkeysedef`, the `args` forms, `.add code`/`.append style` and every
+// other handler stay raw.
+
+const NATIVE_HANDLERS: [&str; 5] = [".code", ".style", ".initial", ".default", ".cd"];
+
+fn raw_handler_snapshot(name: &str) -> Token { T_CS!(&s!("\\lx@pgfkeys@raw@{name}")) }
+
+/// `\pgfkeysdef{key}{code}` (:648-652): `\pgfk@<key>/.@cmd` is a `\long`
+/// macro with the parameter text `#1\pgfeov` and the code as its body
+/// (parameter-packed, as `\def` reads it: `#1` a reference, `##` a `#`);
+/// `\pgfk@<key>/.@body` holds the code verbatim for `.add code`/`.show code`.
+fn pgfkeysdef(path: &[Token], code: Vec<Token>) -> Result<()> {
+  let key = key_text(&Tokens::new(path.to_vec()));
+  let cmd = T_CS!(&s!("\\pgfk@{key}/.@cmd"));
+  let params = parse_def_parameters(
+    &cmd,
+    Tokens!(
+      Token::new("#", Catcode::PARAM),
+      Token::new("1", Catcode::OTHER),
+      T_CS!("\\pgfeov")
+    ),
+  )?;
+  def_macro(
+    cmd,
+    params,
+    ExpansionBody::Tokens(Tokens::new(code.clone())),
+    Some(ExpandableOptions {
+      long: true,
+      ..ExpandableOptions::default()
+    }),
+  )?;
+  store_value(T_CS!(&s!("\\pgfk@{key}/.@body")), Tokens::new(code))
+}
+
+/// A native definition handler for the current key, if `name` is one and the
+/// handler key still holds the raw definition. `path` is
+/// `\pgfkeyscurrentpath`'s tokens. Returns whether it ran.
+fn native_handler(name: &str, handler: &Token, path: &[Token]) -> Result<bool> {
+  if !NATIVE_HANDLERS.contains(&name)
+    || !matches!(
+      (lookup_meaning(handler), lookup_meaning(&raw_handler_snapshot(name))),
+      (Some(a), Some(b)) if a == b
+    )
+  {
+    return Ok(false);
+  }
+  // The handler's `#1\pgfeov` argument: `\pgfkeyscurrentvalue` expanded once,
+  // a single outer group stripped (a delimited argument). The literal braces
+  // around `#1` in every handler body (`{#1}`) are the group of the next
+  // undelimited argument, so nothing more is stripped.
+  let arg = strip_single_group(
+    stored_value(&T_CS!("\\pgfkeyscurrentvalue"))?
+      .unwrap_or_default()
+      .unlist(),
+  );
+  let key = key_text(&Tokens::new(path.to_vec()));
+  match name {
+    // :772 `\pgfkeysdef{\pgfkeyscurrentpath}{#1}`
+    ".code" => pgfkeysdef(path, arg)?,
+    // :826 `\pgfkeys{\pgfkeyscurrentpath/.code=\pgfkeysalso{#1}}` — the nested
+    // list's one item, `<path>/.code`, is what the raw handler leaves in
+    // `\pgfkeyscurrentkey`/`RAW`/`name`/`value` afterwards.
+    ".style" => {
+      let mut code = vec![T_CS!("\\pgfkeysalso"), T_BEGIN!()];
+      code.extend(arg);
+      code.push(T_END!());
+      let mut nested_key = path.to_vec();
+      nested_key.extend(other_chars("/.code"));
+      def_verbatim(
+        T_CS!("\\pgfkeyscurrentkeyRAW"),
+        Tokens::new(nested_key.clone()),
+      )?;
+      def_verbatim(T_CS!("\\pgfkeyscurrentkey"), Tokens::new(nested_key))?;
+      let_i(
+        &T_CS!("\\ifpgfkeysaddeddefaultpath"),
+        &T_CS!("\\iffalse"),
+        None,
+      );
+      def_verbatim(
+        T_CS!("\\pgfkeyscurrentname"),
+        Tokens::new(other_chars(".code").collect()),
+      )?;
+      def_verbatim(T_CS!("\\pgfkeyscurrentvalue"), Tokens::new(code.clone()))?;
+      pgfkeysdef(path, code)?;
+    },
+    // :842 `\pgfkeyssetvalue{\pgfkeyscurrentpath}{#1}`
+    ".initial" => store_value(T_CS!(&s!("\\pgfk@{key}")), Tokens::new(arg))?,
+    // :852 `\pgfkeyssetvalue{\pgfkeyscurrentpath/.@def}{#1}`
+    ".default" => store_value(T_CS!(&s!("\\pgfk@{key}/.@def")), Tokens::new(arg))?,
+    // :994 `\edef\pgfkeysdefaultpath{\pgfkeyscurrentpath/}`
+    ".cd" => {
+      let mut newpath = path.to_vec();
+      newpath.push(Token::new("/", Catcode::OTHER));
+      def_verbatim(T_CS!("\\pgfkeysdefaultpath"), Tokens::new(newpath))?;
+    },
+    _ => return Ok(false),
+  }
+  Ok(true)
 }
 
 fn is_single_cs(v: &Tokens, name: &str) -> bool {
@@ -391,9 +500,13 @@ fn dispatch_item(item: &[Token]) -> Result<bool> {
     return Ok(true);
   }
   // Case three: a handler named by the last path component.
-  let name = split_path(&full_key_toks)?;
+  let (name, path) = split_path(&full_key_toks)?;
   let handler = T_CS!(&s!("\\pgfk@/handlers/{name}/.@cmd"));
   if has_meaning(&handler) {
+    if native_handler(&name, &handler, &path)? {
+      trace(&full_key, &s!("case three, native {name}"));
+      return Ok(true);
+    }
     trace(&full_key, &s!("case three, handler {name}"));
     run_handler(&handler);
     return Ok(true);
@@ -534,6 +647,11 @@ fn raw_pgfkeys(prefix: Vec<Token>, list: Tokens) -> Vec<Digested> {
 LoadDefinitions!({
   InputDefinitions!("pgfkeys.code", extension => Some(Cow::Borrowed("tex")), noltxml => true, reloadable => true);
   if std::env::var("LATEXML_PGFKEYS_NATIVE").as_deref() != Ok("0") {
+    // Slice 2's guard: the raw definition of each natively handled handler,
+    // as loaded, so a later redefinition is honored.
+    for h in NATIVE_HANDLERS {
+      let_i(&raw_handler_snapshot(h), &T_CS!(&s!("\\pgfk@/handlers/{h}/.@cmd")), None);
+    }
     // :29 — the branch selector every case-dispatch step runs.
     DefMacro!("\\pgfkeys@ifcsname{}", sub[(name)] {
       let name = key_text(&Expand!(name));
