@@ -1873,6 +1873,43 @@ fn cluster_algorithm2e_for_body_indentation() {
   );
 }
 
+/// Schema-validity guard (batch 56eh): a NUMBERED, indented algorithm2e body
+/// line must carry its line-number `<ltx:tags>` as the listingline's FIRST
+/// child, with the indentation `<ltx:rule>` AFTER it. The listingline model is
+/// `tags?, (text | Inline.class | Misc.class | …)*` (LaTeXML-block.rnc:189), so
+/// a `<rule>` before the `<tags>` is schema-invalid. `\lx@prepend@indentation@`
+/// prepends the indentation at endline — AFTER `\algocf@printnl@i` placed the
+/// tags at content-start — and now re-attaches a leading `<tags>` first instead
+/// of burying it behind the rule. Perl emits the valid order; RUST-ONLY parity
+/// fix (algorithm2e manual: 221 → 20 jing lines). Every body line here is
+/// numbered, so none may legitimately open with a bare `<rule>`.
+#[test]
+fn cluster_algorithm2e_tags_precede_indentation_rule() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_numbered_indent.tex");
+  // For every listingline that carries BOTH a line-number <tags> and an
+  // indentation <rule>, the <tags> must appear FIRST. Compare element positions
+  // (not exact spacing) so the guard survives incidental whitespace changes.
+  let mut paired = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    if let (Some(t), Some(r)) = (inner.find("<tags"), inner.find("<rule")) {
+      assert!(
+        t < r,
+        "algorithm2e listingline emitted <rule> (at {r}) before <tags> (at {t}) — \
+         schema-invalid, the listingline model requires tags first:\n{inner}"
+      );
+      paired += 1;
+    }
+  }
+  // The fixture's indented, numbered body lines exercise the tags+rule pairing —
+  // guard that we actually tested it (and did not silently stop emitting one).
+  assert!(
+    paired >= 1,
+    "expected >=1 numbered, indented listingline carrying both <tags> and <rule>; \
+     the fixture may have changed:\n{xml}"
+  );
+}
+
 /// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
 /// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
 /// "(N)" bibitem before the real references. The blank line makes

@@ -434,10 +434,24 @@ LoadDefinitions!({
     for child in saved.iter_mut() {
       child.unlink();
     }
+    // A numbered line already carries its `<ltx:tags>` first (prepended at
+    // content-start by \algocf@printnl@i). The listingline model requires tags
+    // to stay FIRST (LaTeXML-block.rnc:189), so re-attach a leading tags before
+    // the indentation and drop the `<rule>` AFTER it — never in front. (Perl
+    // prepends the tags at endline, AFTER this indentation prepend, so tags win
+    // first position there; ours fire earlier, so a naive re-prepend would bury
+    // them behind the rule — the schema violation this repairs, algorithm2e
+    // manual 221 jing lines.) RUST-ONLY parity fix.
+    let lead_tags = saved
+      .first()
+      .is_some_and(|first| document::with_node_qname(first, |q| q == "ltx:tags"));
+    if lead_tags {
+      line.add_child(&mut saved[0])?;
+    }
     if let Some(indent) = args.first().and_then(|a| a.as_ref()) {
       document.absorb(indent, None)?;
     }
-    for child in saved.iter_mut() {
+    for child in saved.iter_mut().skip(usize::from(lead_tags)) {
       line.add_child(child)?;
     }
   });

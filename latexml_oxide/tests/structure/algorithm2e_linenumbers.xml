@@ -42,9 +42,9 @@
               <XMTok role="UNKNOWN">n</XMTok>
             </XMath>
           </Math></emph> <text font="bold">do</text></listingline>
-      <listingline> <rule height="100%" width="1px"/> <tags>
+      <listingline><tags>
           <tag><text font="bold">3</text></tag>
-        </tags><Math mode="inline" tex="a\leftarrow a+i" text="a leftarrow a + i" xml:id="algorithm1.m4">
+        </tags> <rule height="100%" width="1px"/> <Math mode="inline" tex="a\leftarrow a+i" text="a leftarrow a + i" xml:id="algorithm1.m4">
           <XMath>
             <XMApp>
               <XMTok name="leftarrow" role="ARROW">←</XMTok>
