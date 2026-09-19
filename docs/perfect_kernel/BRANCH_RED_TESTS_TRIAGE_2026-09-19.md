@@ -57,6 +57,10 @@ The 16 that fail under BOTH dumps split into three buckets (full suite now **140
   `\DeclareNewSectionCommand` recognition), `beamer_section_names_slide_counter_and_patch_targets`
   (beamer_cls stub missing `\patchcmd` targets).
 
-**Status:** dump fix (140→16) + capability guards + threshold (16→3). The 3
-residuals are genuine bugs tracked as separate tasks. This doc can move to
-`docs/archive/` once those land.
+**Status: RESOLVED — local suite fully green (2974 pass, 0 fail).** dump fix
+(140→16) + capability guards + libxml2 threshold (16→3) + the 3 genuine bugs
+fixed: `mathtools_test` → **56en** (empty `<MathFork>` main branch unwrapped, a
+56eg regression), `koma_declaresectioncommand…` → **56em** (`\scr@startsection`
+aliased to `\@startsection`), `beamer_section_names…` → **56el** (beamer
+`\patchcmd` targets). Ready to move to `docs/archive/` (durable dump-vs-runtime
+discipline also captured in memory `feedback_dump_must_match_runtime_tree`).
