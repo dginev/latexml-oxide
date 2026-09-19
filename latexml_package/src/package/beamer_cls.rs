@@ -353,13 +353,19 @@ LoadDefinitions!({
   // beamerbasesection.sty:20-22,172,220-222,250,292-294 section-name family,
   // beamerbaseframe.sty:745-746 `\framebreak`, and the internals gotham's font
   // theme `\patchcmd`s (beamerbasetitle.sty:49-84 `\beamer@title`/
-  // `\beamer@subtitle`, beamerbasesection.sty:183-219 `\beamer@section`,
-  // beamerbasenavigation.sty:327 `\sectionentry`): token macros carrying
-  // beamer's assignment lines so the patches find their search strings (they
-  // are never invoked — article sectioning stays in charge). Witnesses
-  // thubeamer-example-en (`\frametitle{\secname}`), beamer-amurmaple-doc,
-  // gotham-example* ("Patching title failed" ×4), tikz-relay/tikz-sfc
-  // BeamerAnimation (`\beamer@slideinframe`).
+  // `\beamer@subtitle`, beamerbasesection.sty `\beamer@part` :110-135 /
+  // `\beamer@section` :189-211 / `\beamer@subsection` :267-285 /
+  // `\beamer@subsubsection` :334-348, beamerbasenavigation.sty:327
+  // `\sectionentry`): token macros carrying beamer's assignment lines so the
+  // patches find their search strings — each body is a faithful subset of the
+  // real beamer def (the `\beamer@sectionintoc`/`secname`/`partname` lines
+  // gotham's `beamerfontthemegotham.sty` patches, error branch). They are never
+  // invoked — article sectioning stays in charge — so they change no output.
+  // `\beamer@@frametitle` deliberately keeps the `\usebeamertemplate*` form
+  // (metropolis guard); gotham's mismatching patch there is a Warning, not an
+  // error. Witnesses thubeamer-example-en (`\frametitle{\secname}`),
+  // beamer-amurmaple-doc, gotham-example* ("Patching … failed" ×11),
+  // tikz-relay/tikz-sfc BeamerAnimation (`\beamer@slideinframe`).
   RawTeX!(
     r"\def\secname{}\def\subsecname{}\def\subsubsecname{}
 \def\lastsection{}\def\lastsubsection{}
@@ -370,10 +376,22 @@ LoadDefinitions!({
 \long\def\beamer@title[#1]#2{\def\inserttitle{#2}\def\beamer@shorttitle{#1}}
 \long\def\beamer@subtitle[#1]#2{\def\insertsubtitle{#2}\def\beamer@shortsubtitle{#1}}
 \def\sectionentry#1#2#3#4#5{\def\insertsectionhead{#2}\def\insertsectionheadnumber{#1}\def\insertpartheadnumber{#5}}
+\long\def\beamer@part[#1]#2{\refstepcounter{part}%
+  \def\beamer@partname{#2}\def\beamer@partnameshort{#1}%
+  \addtocontents{nav}{\protect\headcommand{\protect\partentry{#2}{\the\c@part}}}%
+  \Hy@writebookmark{\the\c@part}{#1}{Outline\the\c@part}{1}{toc}}
+\long\def\beamer@subsubsection[#1]#2{\refstepcounter{subsubsection}%
+  \long\def\subsubsecname{#2}\long\def\lastsubsubsection{#1}%
+  \addtocontents{toc}{\protect\beamer@subsubsectionintoc{\the\c@section}{\the\c@subsection}{\the\c@subsubsection}{#2}{\the\c@page}{\the\c@part}{\the\beamer@tocsectionnumber}}%
+  \edef\insertsubsubsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}
 \long\def\beamer@section[#1]#2{\refstepcounter{section}%
+  \long\def\secname{#2}\long\def\lastsection{#1}%
+  \addtocontents{toc}{\protect\beamer@sectionintoc{\the\c@section}{#2}{\the\c@page}{\the\c@part}{\the\beamer@tocsectionnumber}}%
   \def\insertsectionhead{\hyperlink{Navigation\the\c@page}{#1}}%
   \edef\insertsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}
 \long\def\beamer@subsection[#1]#2{\refstepcounter{subsection}%
+  \long\def\subsecname{#2}\long\def\lastsubsection{#1}%
+  \addtocontents{toc}{\protect\beamer@subsectionintoc{\the\c@section}{\the\c@subsection}{#2}{\the\c@page}{\the\c@part}{\the\beamer@tocsectionnumber}}%
   \def\insertsubsectionhead{\hyperlink{Navigation\the\c@page}{#1}}%
   \edef\insertsubsectionhead{\noexpand\hyperlink{Navigation\the\c@page}{\unexpanded{#1}}}}
 \long\def\beamer@@frametitle[#1]#2{{\gdef\insertframetitle{{#2\ifnum\beamer@autobreakcount>0\relax{}\space\usebeamertemplate*{frametitle continuation}\fi}}\gdef\beamer@frametitle{#2}\gdef\beamer@shortframetitle{#1}}}"
