@@ -12,3 +12,4 @@ pub mod pathname;
 pub mod radix;
 /// helpers for extracting structured data from replacement (and other) strings
 pub mod text;
+pub mod thread;

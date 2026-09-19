@@ -754,9 +754,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // pstool general-protection fault in `getenv`. See `init_kpathsea`.
   latexml_core::util::pathname::init_kpathsea();
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
-    Some(std::thread::spawn(
+    // Degrade instead of panicking if the OS refuses the thread (EAGAIN under
+    // fleet thread exhaustion): the prewarm is best-effort, kpathsea resolves
+    // lazily without it.
+    latexml_core::util::thread::try_spawn_or_degrade(
+      "kpathsea-prewarm",
       latexml_core::util::pathname::prewarm_kpathsea,
-    ))
+    )
   } else {
     None
   };
