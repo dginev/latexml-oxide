@@ -4375,6 +4375,52 @@ pub fn insert_block(
   Ok(nodes)
 }
 
+/// Would `cleanup_math`'s unwrap of a trivial (`XMText`/`XMHint`-only) `<Math>`
+/// produce a schema-valid child of a `<MathFork>` main branch?
+///
+/// The `MathFork` content model is `(Math|text), MathBranch*`
+/// (`LaTeXML/lib/LaTeXML/resources/RelaxNG/LaTeXML-block.rnc:109`): its main
+/// branch admits exactly one leading `<Math>` or `<text>`. The unwrap is safe
+/// there ONLY when it yields that single `<text>` — one `<XMText>` holding one
+/// text run, with no `<XMHint>` spacing and no `<rule>`/`inline-block`. Anything
+/// else (a `<rule>` cell, a second text run, an `inline-block`) would splice a
+/// forbidden node straight under `<MathFork>`, so the caller keeps the `<Math>`
+/// wrapper instead.
+fn cleanup_math_unwrap_valid_under_mathfork(mathnode: &Node) -> bool {
+  // <Math> holds exactly one <XMath>.
+  let xmaths = mathnode.get_child_nodes();
+  let [xmath] = xmaths.as_slice() else {
+    return false;
+  };
+  // <XMath> holds exactly one child, and it is an <XMText> (no XMHint spacing,
+  // no multiple runs).
+  let inner = xmath.get_child_nodes();
+  let [xmtext] = inner.as_slice() else {
+    return false;
+  };
+  if !document::with_node_qname(xmtext, |qname| qname == "ltx:XMText") {
+    return false;
+  }
+  // The <XMText> holds exactly one non-comment child, text-like enough to
+  // become a `<text>` (a text node, or an already-`<text>`/`<Math>` element) —
+  // never a `<rule>`/`inline-block`.
+  let kids: Vec<Node> = xmtext
+    .get_child_nodes()
+    .into_iter()
+    .filter(|kid| kid.get_type() != Some(NodeType::CommentNode))
+    .collect();
+  let [kid] = kids.as_slice() else {
+    return false;
+  };
+  match kid.get_type() {
+    Some(NodeType::TextNode) => true,
+    Some(NodeType::ElementNode) => {
+      document::with_node_qname(kid, |qname| qname == "ltx:text" || qname == "ltx:Math")
+    },
+    _ => false,
+  }
+}
+
 pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
   // But record the oddity with class=ltx_markedasmath
@@ -4388,6 +4434,23 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
     " and not(preceding-sibling::*) and not(following-sibling::*) )]"
   );
   if document.findnodes(xpath, Some(&mathnode)).is_empty() {
+    // Surpass-Perl schema-validity guard (frege.tex witness; batch 56eg). Perl's
+    // cleanup_Math unwraps unconditionally (TeX_Math.pool.ltxml:219) even when
+    // the parent is a <MathFork> main branch, splicing a bare <rule>/<inline-block>
+    // or a second child straight under <MathFork> — which the MathFork model
+    // (Math|text),MathBranch* forbids (LaTeXML-block.rnc:109), yielding
+    // schema-invalid XML in ~14 logic/proof manuals (frege, principia, natded, …).
+    // When the unwrap here would NOT yield a single valid <text>, keep the <Math>
+    // wrapper (the parser's own valid main-branch form) — the same handling the
+    // "real math" else-branch below uses.
+    if mathnode
+      .get_parent()
+      .is_some_and(|parent| document::with_node_qname(&parent, |qname| qname == "ltx:MathFork"))
+      && !cleanup_math_unwrap_valid_under_mathfork(&mathnode)
+    {
+      cleanup_xmtext_outer(document, &mathnode)?;
+      return Ok(());
+    }
     // So unwrap down to the contents of the XMText's.
     let xmath_children: Vec<_> = mathnode
       .get_child_nodes()

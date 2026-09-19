@@ -21349,4 +21349,47 @@ $$ X_{i} = a $$
       "X_{{i}} must parse as a real subscript, not degrade to text/error\n{xml}"
     );
   }
+
+  /// amsmath alignment (`flalign*`/`align`) builds a `<MathFork>` per cell; a
+  /// cell whose content is a trivial "not really math" node (frege's
+  /// `\rule`-based `\Fcontent`, an `inline-block`, or multiple text runs) used
+  /// to unwrap straight under `<MathFork>`, which the schema forbids (MathFork
+  /// model = (Math|text),MathBranch*) — schema-invalid XML in ~14 logic/proof
+  /// manuals (frege, principia, natded, …). The surgical guard keeps the
+  /// `<Math>` wrapper for the invalid shapes while still unwrapping the valid
+  /// single-`<text>` cell. A semantic-markup (schema-validity) fix, batch 56eg.
+  #[test]
+  fn markedasmath_rule_cell_stays_wrapped_under_mathfork() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{flalign*}
+&\mbox{a} & &\rule[3.8pt]{20pt}{0.5pt}\hskip3pt & &\mbox{b}\\
+\end{flalign*}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    // Whitespace-insensitive view of the element sequence.
+    let compact = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+    // The `\rule` cell must NOT be a bare <MathFork> child (the schema
+    // violation): its <Math> wrapper is kept instead.
+    assert!(
+      !compact.contains("<MathFork> <rule"),
+      "a bare <rule> directly under <MathFork> is schema-invalid; keep the <Math> wrapper\n{xml}"
+    );
+    // The `\rule` cell keeps its <Math> wrapper (a valid MathFork first child).
+    assert!(
+      compact.contains("<MathFork> <Math"),
+      "the rule cell must keep its <Math> wrapper as a valid MathFork first child\n{xml}"
+    );
+    // Surgical, not over-applied: the valid text-only cells STILL unwrap to a
+    // first-child <text> (Perl's behavior, which IS valid there) rather than
+    // also getting wrapped.
+    assert!(
+      compact.contains("<MathFork> <text class=\"ltx_markedasmath\""),
+      "the valid single-text cell must still unwrap to a <text> first child\n{xml}"
+    );
+  }
 }
