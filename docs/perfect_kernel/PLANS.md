@@ -302,12 +302,12 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     (n8: 11 → 47 MB over 12 segments; the manual 22 → 742 MB by fragment 256, fuse at
     4.8 GB) although `discard_subtree` frees the nodes — find what libxml keeps per freed
     picture (the doc dict? `xmlAddID` entries? the fork's free path) with
-    `LXML_TRACE_NODE_BOXES=1` (prints the spill's C-heap delta) on `n8.tex`. Part four OPEN
-    (MED): auto-activate streaming when eager-digest RSS crosses a fraction of
-    `--max-memory` — a restart into the streaming driver on a distinct pre-fuse signal —
-    since the source-size projection cannot see pgf (30 KB of source → 25 GB); the sweep
-    runs eager (`run_doc.sh --max-memory=6144`), so no streaming win reaches a verdict
-    until then. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
+    `LXML_TRACE_NODE_BOXES=1` (prints the spill's C-heap delta) on `n8.tex`. Part four LANDED as
+    56dw: the CLI restarts a fused eager conversion under `--streaming` (the fuse itself
+    is the signal — no new threshold, documents that finish eager are untouched); the
+    sweep converts through the CLI, so a streaming win now reaches the verdict for any
+    document whose streaming peak fits the 6 GB ceiling (the pgf manual does not yet:
+    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
     `node_boxes` in the eager path (`Document.pm:1667-1669`; Rust's
     `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),

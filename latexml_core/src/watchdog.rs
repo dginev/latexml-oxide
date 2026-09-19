@@ -188,6 +188,14 @@ static MEMORY_FATAL_SEEN: AtomicBool = AtomicBool::new(false);
 /// memory was actually the problem.
 pub fn note_memory_fatal() { MEMORY_FATAL_SEEN.store(true, Ordering::Relaxed); }
 
+/// Did a memory-budget Fatal fire since the last `reset_memory_fatal`?
+pub fn memory_fatal_seen() -> bool { MEMORY_FATAL_SEEN.load(Ordering::Relaxed) }
+
+/// Forget a memory-budget Fatal: the CLI restarts a fused EAGER conversion
+/// under `--streaming`, and the end-of-run report must describe the attempt
+/// that produced the output.
+pub fn reset_memory_fatal() { MEMORY_FATAL_SEEN.store(false, Ordering::Relaxed); }
+
 /// The end-of-run memory report — emitted ONLY when a memory-budget Fatal
 /// fired during the run (user directive 2026-08-03: alert when needed, stay
 /// quiet on clean runs). `None` otherwise, or when no peak is measurable.

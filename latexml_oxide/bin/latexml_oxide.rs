@@ -621,6 +621,43 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// per-run bookkeeping (FragmentIndex, spine) creeps monotonically — on the
 /// 131 MB witness at a 48 GB ceiling, a quarter-bite steadied at ~33 GB and
 /// the ~5 GB creep then walked it into the 37.7 GB fuse.
+/// Perl Core.pm L48: DOCUMENTID value. Applied to a fresh session (the first
+/// one and a streaming restart's).
+fn apply_document_id(docid: Option<&str>) {
+  if let Some(docid) = docid {
+    latexml_core::state::assign_value(
+      "DOCUMENTID",
+      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
+      Some(latexml_core::state::Scope::Global),
+    );
+  }
+}
+
+/// `--token-limit`: 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT
+/// env convention (`Some(0) => None` at the gullet initializer); passing a
+/// literal `Some(0)` would instead fatal on the first token. A fresh session's
+/// gullet starts from the default, so a streaming restart re-applies it.
+fn apply_token_limit(limit: Option<usize>) {
+  if let Some(limit) = limit {
+    latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
+  }
+}
+
+/// After an EAGER conversion, the fragment budget to restart under when the
+/// memory fuse tripped and streaming is still available: not opted out
+/// (`--streaming=false`), a DOM output (TeX/Box outputs never build a document),
+/// and not already streaming. `None` = keep the eager result.
+fn streaming_restart_budget(cli: &Cli, opts: &Config, source: &str) -> Option<usize> {
+  if opts.streaming.is_some()
+    || cli.streaming == Some(false)
+    || matches!(opts.format, OutputFormat::TeX | OutputFormat::Box)
+    || !latexml_core::watchdog::memory_fatal_seen()
+  {
+    return None;
+  }
+  resolve_streaming(Some(true), resolve_max_memory(cli.max_memory), source)
+}
+
 fn resolve_streaming(requested: Option<bool>, max_memory_mib: u64, source: &str) -> Option<usize> {
   const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
   const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
@@ -1159,14 +1196,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
   apply_document_state(cli.nobibtex, resolved.number_sections);
-  // Perl Core.pm L48: DOCUMENTID value
-  if let Some(ref docid) = cli.documentid {
-    latexml_core::state::assign_value(
-      "DOCUMENTID",
-      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
-      Some(latexml_core::state::Scope::Global),
-    );
-  }
+  apply_document_id(cli.documentid.as_deref());
 
   if cli.init.is_some() {
     // Init mode: process file and dump state
@@ -1214,12 +1244,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
-    if let Some(limit) = cli.token_limit {
-      // 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT env
-      // convention (`Some(0) => None` at the gullet initializer). Passing a
-      // literal `Some(0)` would instead fatal on the first token.
-      latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
-    }
+    apply_token_limit(cli.token_limit);
 
     let source_for_post = source.clone();
     // XML-input mode: when the source is already-converted LaTeXML XML
@@ -1242,7 +1267,64 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         status_code: 0,
       }
     } else if supplement_sources.is_empty() {
-      converter.convert(source)
+      let response = converter.convert(source.clone());
+      match streaming_restart_budget(&cli, &opts, &source) {
+        // The eager attempt tripped the memory fuse; streaming bounds what
+        // eager could not, and the auto-projection only sees source bytes
+        // (30 KB of pgf can need 25 GB eager). Same fresh-session pattern as
+        // a joined supplement below.
+        Some(budget) => {
+          // The fused attempt's boxes still sit in the stomach's lists and its
+          // freed pages in mimalloc's heap: the rerun's first fuse check would
+          // read the OLD peak and fuse again (measured: 807 MB against an 805 MB
+          // cap half a second in). Drain and return the memory first, and only
+          // rerun when it actually came back below the fuse.
+          drop(latexml_core::stomach::salvage_pending_box_lists(false));
+          unsafe {
+            libmimalloc_sys::mi_collect(true);
+          }
+          let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
+          let cap_mb =
+            latexml_core::stomach::soft_cap_from_ceiling(resolve_max_memory(cli.max_memory))
+              / (1024 * 1024);
+          if cap_mb > 0 && rss_mb >= cap_mb {
+            emit_info(
+              "streaming",
+              "restart",
+              &format!(
+                "the eager conversion exceeded its memory budget and {rss_mb} MB stay resident \
+                 after releasing it (cap {cap_mb} MB): not restarting under --streaming"
+              ),
+            );
+            response
+          } else {
+            let mut streaming_opts = opts.clone();
+            streaming_opts.streaming = Some(budget);
+            latexml_core::watchdog::reset_memory_fatal();
+            let mut restarted = Converter::from_config(streaming_opts.clone());
+            if let Err(e) = restarted.prepare_session(&streaming_opts) {
+              eprintln!("Could not prepare the streaming restart session: {}", e);
+              process::exit(1);
+            }
+            // The fresh session starts from an empty State: re-apply every
+            // per-document knob the first session received.
+            apply_document_state(cli.nobibtex, resolved.number_sections);
+            apply_document_id(cli.documentid.as_deref());
+            apply_token_limit(cli.token_limit);
+            emit_info(
+              "streaming",
+              "restart",
+              &format!(
+                "the eager conversion exceeded its memory budget; restarting under --streaming \
+                 (fragment budget {budget} boxes, {rss_mb} MB resident after release) on the \
+                 remaining wall-clock allowance"
+              ),
+            );
+            restarted.convert(source)
+          }
+        },
+        None => response,
+      }
     } else {
       // Multi-document submission (directory with detected supplements, or
       // several files given on the CLI): convert the main, then each supplement
@@ -1964,6 +2046,64 @@ mod streaming_activation_tests {
       budget > 10_000,
       "a no-ceiling run must size fragments from the derived ceiling, got {budget} boxes"
     );
+  }
+
+  /// A fused EAGER conversion restarts under streaming only when the fuse
+  /// really fired, streaming was not opted out, the run was not already
+  /// streaming, and the output builds a document.
+  #[test]
+  fn fused_eager_run_restarts_under_streaming() {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let main = write(tmp.path(), "src.tex", 1024);
+    let src = main.to_str().unwrap();
+    let cli = |flags: &[&str]| {
+      let mut argv = vec!["latexml_oxide"];
+      argv.extend_from_slice(flags);
+      argv.push(src);
+      Cli::parse_from(argv)
+    };
+    let eager = Config {
+      streaming: None,
+      ..Config::default()
+    };
+    latexml_core::watchdog::reset_memory_fatal();
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &eager, src),
+      None,
+      "no fuse, no restart"
+    );
+    latexml_core::watchdog::note_memory_fatal();
+    let budget = streaming_restart_budget(&cli(&[]), &eager, src)
+      .expect("a fused eager run restarts with a fragment budget");
+    assert!(
+      budget > 10_000,
+      "the restart budget derives from the ceiling, got {budget}"
+    );
+    assert_eq!(
+      streaming_restart_budget(&cli(&["--streaming=false"]), &eager, src),
+      None,
+      "the explicit opt-out wins"
+    );
+    let already = Config {
+      streaming: Some(budget),
+      ..Config::default()
+    };
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &already, src),
+      None,
+      "a streaming run that fused does not restart again"
+    );
+    let tex = Config {
+      streaming: None,
+      format: OutputFormat::TeX,
+      ..Config::default()
+    };
+    assert_eq!(
+      streaming_restart_budget(&cli(&[]), &tex, src),
+      None,
+      "TeX output never builds a document"
+    );
+    latexml_core::watchdog::reset_memory_fatal();
   }
 
   /// The explicit opt-out wins over auto-activation, however doomed the
