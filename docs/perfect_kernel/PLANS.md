@@ -300,17 +300,24 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     the reviewer's catch). Part three LANDED as 56dx: the ~6 MB per picture was
     `remove_node` unlinking without freeing (the libxml fork frees only doc-less
     orphans) — pgfsys's transient `svg:g` groups, eager and streaming alike; n8's C-live
-    is flat at 11 MB now (was 11 → 47). The manual itself now streams to completion at the 6 GB ceiling (0 fatals, 3,326
-    pictures, peak 4.78 GB, 379 s). Under the eager sweep it still fails: the eager
-    attempt fuses at ~70 s, and the 56dw restart's streaming rerun needs ~380 s more,
-    past the 420 s cap — either the cap grows for restarted documents or the restart
-    must trigger earlier than the fuse (a pre-fuse watermark), which is the remaining
-    lever for this witness. Part four LANDED as
+    is flat at 11 MB now (was 11 → 47). The manual itself now streams to completion at
+    the 6 GB ceiling (0 fatals, 3,326 pictures, peak 4.78 GB, 379 s). Sweep #103
+    (56dy): six former fuse fatals complete through the 56dw restart, the manual at
+    418 s — 2 s inside the cap. 56dz added the pre-fuse watermark (stop at 2/3 of the
+    fuse, no Fatal, rerun with the remaining allowance): n8 peak 784 → 522 MB, wall
+    33 → 28 s; but the manual's streaming rerun ALONE is ~380 s, so after a ~40 s eager
+    start it still overruns 420 s. Remaining levers for that witness: streaming speed
+    (PLANS 12) or a sweep-cap policy for restarted documents; sweep #104 measures the
+    watermark corpus-wide. Part four LANDED as
     56dw: the CLI restarts a fused eager conversion under `--streaming` (the fuse itself
     is the signal — no new threshold, documents that finish eager are untouched); the
     sweep converts through the CLI, so a streaming win now reaches the verdict for any
     document whose streaming peak fits the 6 GB ceiling (the pgf manual does not yet:
-    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Part five SETTLED
+    part three). Open (NEXT): the same restart in `cortex_worker`'s per-paper loop —
+    hoist `resolve_streaming`/`projected_source_bytes` and the eligibility + watermark
+    helpers from the binary into the library, arm the watermark per paper, rerun in a
+    fresh converter with the memory release, and validate against the fleet's
+    per-child ceiling (`profile.max_rss_kb`). Part five SETTLED
     2026-09-19 (agent, heaptrack): the constant ~37 MB per in-process conversion is
     the fresh test thread's `#[thread_local]` engine roots (`MODEL`, `GULLET`,
     `STOMACH`, token constants, the reset interner) — Rust memory that the test binary
