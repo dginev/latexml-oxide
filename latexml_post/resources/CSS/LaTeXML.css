@@ -214,6 +214,7 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_align_right    { text-align:right; }
 .ltx_align_center   { text-align:center; }
 .ltx_align_justify  { text-align:justify; }
+.ltx_align_justified { text-align:justify; }
 .ltx_align_top      { vertical-align:top; }
 .ltx_align_bottom   { vertical-align:bottom; }
 .ltx_align_middle   { vertical-align:middle; }

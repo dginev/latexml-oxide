@@ -186,8 +186,10 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // Perl #2829: %makebox_alignment = (l=>'left', r=>'right', c=>'center',
-  // s=>'stretched') — 'c' added, 's' renamed justified→stretched; a width
-  // with no explicit alignment now defaults to 'c' (center).
+  // s=>'stretched'); a width with no explicit alignment defaults to 'c'
+  // (center). We map `s` to schema-valid `justified` instead of Perl's
+  // `stretched` (not in the align enum) — OXIDIZED_DESIGN #239, makebox_alignment
+  // in mod.rs.
   // Perl latex_constructs.pool.ltxml L4717: `robust => 1` so \makebox
   // survives \write/\edef contexts (e.g. captions, moving arguments).
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox",

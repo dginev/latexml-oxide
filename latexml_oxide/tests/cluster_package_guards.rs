@@ -1322,6 +1322,27 @@ mod picture_makebox_offset {
       "{xml}"
     );
   }
+
+  /// Batch 56ej: `\makebox[w][s]{…}` (stretch-to-fill) emits schema-valid
+  /// `align="justified"`, NOT Perl's schema-invalid `stretched` — the align enum
+  /// is `left|center|right|justified` (LaTeXML-common.rnc:216). `[s]` justifies
+  /// the inter-word glue to fill the width, which `text-align:justify` (the added
+  /// `.ltx_align_justified` CSS) renders faithfully. Surpass, OXIDIZED_DESIGN #239.
+  #[test]
+  fn makebox_stretch_is_justified() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\noindent\\makebox[3cm][s]{a b c}\\par\n\\makebox[2cm][c]{x}\\par\n\\end{document}\n";
+    let (stderr, xml) = super::convert(tex, true);
+    assert_eq!(super::error_count(&stderr), 0, "{stderr}");
+    // `[s]` → justified (schema-valid), `[c]` → center; never `stretched`.
+    assert!(
+      xml.contains("align=\"justified\""),
+      "\\makebox[w][s] must emit align=\"justified\"\n{xml}"
+    );
+    assert!(
+      !xml.contains("stretched"),
+      "no schema-invalid align=\"stretched\" may be emitted\n{xml}"
+    );
+  }
 }
 
 mod luatex_direction_scan {

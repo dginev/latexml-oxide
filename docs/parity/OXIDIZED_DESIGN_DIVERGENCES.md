@@ -7638,3 +7638,23 @@ ualberta, gotham-doc, csvsimple-legacy, manptp (TeX Live doc corpus).
 **Guard**: `cluster_schema::listing_language_class_is_an_nmtoken`,
 `latexml_core document::attribute_cleaners::{class_values_become_nmtokens,
 ids_are_xml_names}`. Batch 56cz.
+
+### 239. `\makebox[w][s]` alignment emits `align="justified"` (Perl: schema-invalid `stretched`)
+
+**Perl behavior**: `%makebox_alignment` (latex_constructs.pool.ltxml #2829)
+maps `s => 'stretched'`, so `\makebox[w][s]{…}` (and `\framebox`, `\parbox[s]`,
+etc.) emit `align="stretched"` — a value the schema `align` enum forbids
+(`LaTeXML-common.rnc:216` = `left|center|right|justified`). pgf-periodictable's
+manual alone carries 1419 such invalid attributes.
+**Rust behavior**: `makebox_alignment` (`latex_constructs/mod.rs`) maps
+`s => "justified"`. `[s]` justifies the box's inter-word glue to fill the
+width, which the schema value `justified` denotes and `text-align:justify`
+renders — so the output is both schema-valid and render-faithful. A CSS rule
+`.ltx_align_justified { text-align:justify; }` (LaTeXML.css) is added because
+the XSLT builds the class as `ltx_align_<align>` = `ltx_align_justified`
+(distinct from the pre-existing `ltx_align_justify`).
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19);
+`stretched` is not a legal `align` value and rendered as plain left before.
+**Witnesses**: pgf-periodictable (1419), any `\makebox[…][s]`.
+**Guard**: `picture_makebox_offset::makebox_stretch_is_justified`.
+**Upstream**: not filed.

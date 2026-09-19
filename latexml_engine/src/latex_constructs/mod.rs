@@ -3339,13 +3339,19 @@ fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
 }
 
 #[rustfmt::skip]
-/// Perl `%makebox_alignment` (#2829): l/r/c/s → left/right/center/stretched.
+/// `\makebox[w][align]` horizontal alignment (Perl `%makebox_alignment` #2829:
+/// l/r/c/s → left/right/center). The `s` (stretch-to-fill) case is emitted as
+/// `justified` — the schema `align` enum is `left|center|right|justified`
+/// (`LaTeXML-common.rnc:216`), with no `stretched`; `[s]` justifies the box's
+/// inter-word glue to fill the width, which `text-align:justify` renders
+/// faithfully. Perl emits the schema-invalid `stretched` here; this is an
+/// intentional, schema-validity divergence (OXIDIZED_DESIGN #239).
 fn makebox_alignment(key: &str) -> &'static str {
   match key {
     "l" => "left",
     "r" => "right",
     "c" => "center",
-    "s" => "stretched",
+    "s" => "justified",
     _ => "",
   }
 }
