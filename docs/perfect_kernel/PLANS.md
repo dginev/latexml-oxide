@@ -376,6 +376,28 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     something a Perl LaTeXML developer would not recognize. This is the only remaining
     throughput lever with corpus reach (P5's successor).
 
+13. **Generalize the sandbox-regression fixes into kernel capabilities (2026-09-19, from the
+    2605/2606 rerun; user: "take detailed notes, add to our PLAN, proceed to improve").** Batch
+    56eb fixed five regression clusters concretely; each is an instance of a general kernel
+    weakness that should become a capability/guard so the class cannot recur (notes:
+    `~/data/pk_agents/w23/regress_2605/{CLUSTERS,KERNEL_LESSONS}.md`,
+    [[wisdom_sandbox_regression_kernel_lessons]]): (a) **driver-surface completeness** — a probe
+    sentinel defined for `\@ifundefined` (hyperref `\hyper@makecurrent`, 55b) must define its
+    whole companion family or none; audit every driver-probe `def_macro_noop`; (b) **defining
+    primitives must define, never noop** — `\newbibmacro`/`\newcommand`-like/`\NewTaggingSocket`
+    must create a stub target so downstream `\patchcmd`/introspection succeeds (biblatex-ieee, 53
+    papers); (c) **beyond-Perl `Until:` captures need a guaranteed sentinel or a structural bound**
+    (never consume `\end{document}`) — generalize the jmlr `\addr` global no-op with the capturer
+    scoped to `\lx@jmlr@structauthor`; (d) **OmniBus recovers derived-class author wrappers**
+    (`\Xauthor`→`\author` for the whole jmlr/pmlr family) instead of a binding per class; (e)
+    **`try_spawn_or_degrade`** at every thread spawn (graphics fixed; OPEN: `latexml_oxide.rs:757`,
+    `cortex_worker.rs:1729` prewarm, `render_workers`, `api`) — EAGAIN must degrade, never panic;
+    (f) **raw-loader bindings carry an idempotent `\providecommand` native fallback** for their
+    public macros (tipa; trimmed-host + portability). PROCESS: run the sandbox reruns as a
+    RECURRING regression oracle — these sat undetected for weeks (batches 55b/7/51-52). Order:
+    (e) `try_spawn_or_degrade` and (c) the jmlr `\addr` generalization first (both scoped by the
+    56eb root-causers), then (b), (a)/(f) audits, (d).
+
 ## DONE
 
 (moves here with batch number)
