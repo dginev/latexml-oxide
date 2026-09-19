@@ -1103,6 +1103,61 @@ manual's); the tcolorbox manual converts identically both ways. Cumulative for
 the three slices: zx_full 25.51 → 9.98 G (−61 %), tcb_full 18.31 → 13.39 G
 (−27 %), keys_heavy 15.23 → 12.09 G (−21 %). Fifteen fixtures run ON and OFF.
 
+**The non-pgfkeys floor, profiled (2026-09-18, `~/data/pk_agents/w23/perf_pgf/tikzcore/`).**
+keys_light (300 tikz nodes, no keys) runs at 8.47 G / 628 ms against pdflatex's
+394 ms — about 1.1× at steady state once the one-time kpathsea directory scan
+(~30 % of that small run) is set aside: pure TikZ is at parity, because
+pdflatex's heaviest per-node layer, pgfmath (46 % of its expansions), is native
+here (`pgfmath_code_tex.rs`), pgfsys is native, and the raw residual (pgfcore
+soft-path 11 %, tikz@ frontend 3 %) is a fraction of an already-fast
+conversion — there is no tikz-core lever. picC (457 G, 5.55× pdflatex) and the
+tikz-network manual (2,784 G, 161 s vs 29 s, 5.48×) have self-time profiles
+indistinguishable from each other and from a pure token interpreter (42 % token
+I/O, 15 % argument reading, 13 % meaning resolution, native pgf 0.0 %, document
+0.05 %): they are datatool v3, which splits every CSV line with l3regex
+(`datatool.sty:10761-10817`, `\__regex_build_new_state:` 3,630× per two-row
+`\Vertices`; 327,113 expansions per call, 60 % expl3 primitives, the public
+`\DTL*` 0.1 %) and then walks rows with `\DTLforeach`/`\DTLifeq` cascades
+(tikz-network.sty:793-817, :969-997). Perl ships no datatool binding and is as
+slow. NEXT levers, ranked: (1) a native datatool CSV load that bypasses the
+l3regex split and populates the identical DB store the getters read (`\DTLread`
+:12227/:12799 → `\__datatool_load_csv:` :10817; field order, `#`/catcodes in
+fields, numeric detection `\@dtl@checknumerical`; HIGH risk, on/off harness on
+picC with `count(svg:g)==83`), (2) native `\DTLforeach`/`\DTLforeachkeyinrow`/
+`\DTLifeq` over that store (MED); together they are the whole picC/tnman gap.
+Porting l3regex natively is the settled dead end above.
+
+**Native datatool load — the design (2026-09-18, `~/data/pk_agents/w23/perf_pgf/datatool/`).**
+A loaded database is four global registers plus per-key indices, and every
+reader is a delimited-macro consumer of them (datatool.sty): `\dtldb@<name>`
+(toks, one row body per row: `\db@row@elt@w \db@row@id@w<id>\db@row@id@end@
+[\db@col@id@w<i>\db@col@id@end@ \db@col@elt@w<val>\db@col@elt@end@ …]*
+\db@row@id@w<id>… \db@row@elt@end@`, :3493/:3516, written :12473, read by
+`\@dtl@foreachrow` :6843), `\dtlkeys@<name>` (toks, one column body per column:
+`\db@plist@elt@w …col id, key, type, header… \db@plist@elt@end@`, :3465,
+written :12336, read by `\dtlforeachkey` :6932), `\dtlrows@<name>` and
+`\dtlcols@<name>` (ints, :3543-3544), and `\dtl@ci@<name>@<key>` (the column
+index of a key, :12347). So a native load that writes byte-identical register
+contents is transparent to every getter, and datatool's own DBTEX-v3 reload
+(`\@dtl@reconstruct@data` :12073-12093) is the template: one `gset` of each
+toks register, two int sets, one `\csgdef` per key. Measured on picC's 8-row
+CSV ×200: the raw `\DTLloaddb` 0.807 s per load, the same database built by
+`\DTLnewrow`/`\DTLnewdbentry` 0.637 s — the per-entry store's concat-middle
+(:4791) is O(cols²) per row, so a native split that feeds `\DTLnewdbentry`
+would win only 21 %; the lever must write the store directly. Parse rules to
+reproduce byte-exact: separator `,`/delimiter `"` (:12267/:175), split keeping
+spaces then rejoining a separator inside a quoted field (:12730/:12740),
+doubled-delimiter unescape (:10800/:10811), surrounding-space trim (:181/:12759),
+`csv-content=tex` (tikz-network's default: fields keep document catcodes) vs
+`literal` (the six-case `\regex_replace_case_all` + `\tl_set_rescan`,
+:12359-12378) vs `no-parse`, `\__datatool_parse:`/`\DTLdatumtype` column typing
+(:12541, even under `convert-numbers=false`), blank lines ignored (:12401),
+`omitlines`, `noheader`/`headers=`/`keys=` (:12292-12350). Harness:
+`LATEXML_DATATOOL_NATIVE=0`, byte-identical XML on picC (`count(//svg:g)==83`)
+and a datatool-user sample, plus `\DTLdbLog` (:12822) register dumps identical
+on/off; fixtures `fix3.csv` (quoted embedded comma, numeric column, `#` in a
+field, a blank line, `omitlines=1`). Perl has no datatool binding (parity-neutral).
+
 The profile of the slice-1 binary (`~/data/pk_agents/w23/perf_pgf/slice2/`)
 shows the residual is generic gullet macro machinery serving the RAW handler
 bodies plus allocator churn; the dispatch histograms

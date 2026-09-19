@@ -2390,11 +2390,50 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
 /// guards `perfect_kernel_batch56::{non_ascii_letters_stay_other_under_pdftex,
 /// non_ascii_letters_are_letters_under_luatex}`.
 fn unicode_letter_catcode_default(c: char) -> Option<Catcode> {
-  if c > '\x7f' && lookup_bool("LUATEX_PROFILE") && is_unicode_letter_or_mark(c) {
+  if c > '\x7f'
+    && ((lookup_bool("LUATEX_PROFILE") && is_unicode_letter_or_mark(c))
+      || (lookup_bool("PTEX_PROFILE") && is_ptex_kanji_letter(c)))
+  {
     Some(Catcode::LETTER)
   } else {
     None
   }
+}
+
+/// K12 — pTeX's control-word letters. pTeX/upTeX give every non-ASCII code
+/// point a `kcatcode` (upTeX manual §kcatcode: 16 kanji, 17 kana, 18 other
+/// kchar, 19 hangul, 20 modifier; ASCII is always Latin), and a control word
+/// after `\` extends over kanji, kana (and, upTeX, hangul/modifier) characters
+/// — `\if西暦` is one control sequence (jsarticle.cls:1927 `\newif\if西暦`,
+/// ptex-manual `\黄マーカー`); kcatcode 18 (symbols, fullwidth punctuation)
+/// ends it, and Latin-1/Greek/Cyrillic stay inputenc bytes (kcatcode 15), so
+/// this is the block set of the kanji/kana/hangul kcatcodes, not the Unicode
+/// letter class. Under `PTEX_PROFILE` (set by `\NeedsTeXFormat{pLaTeX2e}` /
+/// `{upLaTeX2e}`) these default to LETTER, as the LuaTeX profile letters the
+/// L/M class; under pdfTeX they stay OTHER, where both LaTeXML engines let
+/// `\newif\if西暦`'s bare `\if` to `\iffalse` and every `\if` after it fails.
+pub fn is_ptex_kanji_letter(c: char) -> bool {
+  matches!(c as u32,
+    0x3040..=0x30FF   // Hiragana, Katakana (kana, 17)
+    | 0x31F0..=0x31FF // Katakana phonetic extensions (17)
+    | 0x1AFF0..=0x1B16F // Kana Supplement / Extended-A/B, Small Kana (17)
+    | 0xFF66..=0xFF6F // halfwidth katakana (17; U+FF70 ー is 18)
+    | 0xFF71..=0xFF9D
+    | 0xFF10..=0xFF19 // fullwidth digits and Latin letters (17)
+    | 0xFF21..=0xFF3A
+    | 0xFF41..=0xFF5A
+    | 0x2E80..=0x2FDF // CJK radicals, Kangxi radicals (16)
+    | 0x3105..=0x312F // Bopomofo (16)
+    | 0x3190..=0x31EF // Kanbun, Bopomofo extended, CJK strokes (16)
+    | 0x3400..=0x4DBF // CJK Unified Ideographs Extension A (16)
+    | 0x4E00..=0x9FFF // CJK Unified Ideographs (16)
+    | 0xF900..=0xFAFF // CJK Compatibility Ideographs (16)
+    | 0x20000..=0x3FFFF // CJK Extensions B-J (16)
+    | 0x1100..=0x11FF // Hangul Jamo (19)
+    | 0x3130..=0x318F // Hangul compatibility Jamo (19)
+    | 0xA960..=0xA97F // Hangul Jamo Extended-A (19)
+    | 0xAC00..=0xD7FF // Hangul syllables and Jamo Extended-B (19)
+  )
 }
 
 /// load-unicode-data.tex:134-135 for U+0080–U+00FF: the LuaTeX/XeTeX format

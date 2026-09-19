@@ -202,21 +202,19 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    three slices), tcb_full −27 %, keys_heavy −21 %; slice 1 was corrected to the raw
    stream token for token (56dn/56dr — the four sweep-95 regressions were all shapes a
    handler could observe: an absent handler, a forward scan, a `}` as list, leading
-   spaces, the splitter's surplus). NEXT: the non-pgfkeys floor — tikz path
-   construction, `\pgfmath`, soft-path/`\pgfsys@`, node-box digestion (keys_light
-   8.6 of 11.9 G; profile study `~/data/pk_agents/w23/perf_pgf/tikzcore/`) — and `.try`
-   (13 % of the tcolorbox manual's dispatches) as slice 3 for USE-heavy documents.
+   spaces, the splitter's surplus). The non-pgfkeys floor is profiled (`~/data/pk_agents/w23/perf_pgf/tikzcore/`,
+   PERFORMANCE.md): pure TikZ is ~1.1× pdflatex (pgfmath and pgfsys are native);
+   tikz-network's 5.5× is datatool v3's l3regex CSV parse plus `\DTLforeach`. NEXT:
+   a native datatool CSV load populating the identical DB store (HIGH risk, on/off
+   harness) then native `\DTLforeach`/`\DTLifeq`; `.try` (13 % of the tcolorbox
+   manual's dispatches) as pgfkeys slice 3 for USE-heavy documents.
 
-8. **K12 — pTeX kanji control-word names (lead, 2026-09-18).** pLaTeX classes
-   write `\newif\if西暦` (jsarticle.cls:1927): pTeX gives kanji the kanji catcodes
-   and `\if西暦` is one control word; both LaTeXML engines tokenize `西` as OTHER,
-   so `\newif` lets the bare `\if` to `\iffalse` and every later `\if` is false
-   (SHARED, Perl identical; 56do made the degradation Perl-faithful). Witnesses:
-   chuushaku 73, sample-bxjaprnind (svn-prov.sty:87-107 runs off the end of input,
-   the batch-52 `Until:` Fatal), gentombow-ja, plextdelarray, qworld. A kernel
-   capability, not a class binding: under a pLaTeX class, letters of the kanji
-   blocks join control-word names (tex.web §354 with pTeX's `kcatcode`), surpassing
-   Perl; measure the jsarticle family before and after.
+8. **K12 — pTeX kanji control-word names.** LANDED as batch 56ds
+   (`KERNEL_CAPABILITIES.md` K12): `PTEX_PROFILE` from `\NeedsTeXFormat{pLaTeX2e}`,
+   the kcatcode block set lettered in `state::is_ptex_kanji_letter`. The residual on
+   jsarticle documents is the PARKED pTeX engine-primitive set (`\kanjiskip`…),
+   shared with Perl.
+
 9. **`\\` under a corrupted alignment template — the align-state guard (lead,
    root-caused 2026-09-18).** plextdelarray: Rust 27 `Extra alignment tab` vs Perl 10
    (the +17 cross the shared `MAX_ERRORS` 100 into a Fatal). The classifier

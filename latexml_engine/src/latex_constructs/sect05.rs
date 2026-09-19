@@ -214,8 +214,21 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // Related internal macros for package definition
-  // Internals used in Packages
-  def_macro_noop("\\NeedsTeXFormat{}[]")?;
+  // Internals used in Packages.
+  // K12: a pLaTeX/upLaTeX class or package (`\NeedsTeXFormat{pLaTeX2e}`,
+  // jsarticle.cls:14) declares the pTeX input processor, under which kanji
+  // and kana join control-word names (`state::is_ptex_kanji_letter`) — set
+  // before the class writes `\newif\if西暦` (jsarticle.cls:1927). Global, like
+  // `LUATEX_PROFILE`; never raised by a `LaTeX2e` document, so pdfTeX
+  // documents keep kanji OTHER (both LaTeXML engines' historical behavior and
+  // pdflatex's).
+  DefPrimitive!("\\NeedsTeXFormat{}[]", sub[(format, _date)] {
+    let format = format.to_string();
+    let format = format.trim();
+    if (format == "pLaTeX2e" || format == "upLaTeX2e") && !lookup_bool("PTEX_PROFILE") {
+      AssignValue!("PTEX_PROFILE" => true, Scope::Global);
+    }
+  });
 
   DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));

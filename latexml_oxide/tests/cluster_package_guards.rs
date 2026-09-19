@@ -18056,6 +18056,39 @@ Table hooks ok.
     assert!(xml.contains("<picture"), "{xml}");
     assert!(xml.contains("<svg:path"), "{xml}");
   }
+
+  /// K12: under a pLaTeX class (`\NeedsTeXFormat{pLaTeX2e}`, jsarticle.cls:14)
+  /// kanji and kana join control-word names as in pTeX (upTeX kcatcodes 16/17;
+  /// ptex-manual `\黄マーカー`), so `\newif\if西暦` (jsarticle.cls:1927) defines
+  /// `\if西暦` instead of letting the bare `\if` to `\iffalse` — the shared
+  /// degradation that broke every later `\if` (chuushaku 73 errors,
+  /// sample-bxjaprnind's runaway Fatal). Under `article` kanji stays OTHER
+  /// (`non_ascii_letters_stay_other_under_pdftex`). The pTeX engine
+  /// primitives (`\kanjiskip`…) stay undefined, PARKED, as in Perl.
+  #[test]
+  fn kanji_control_words_under_platex() {
+    let tex = r"\documentclass{jsarticle}
+\makeatletter
+\newif\if西暦\西暦true\def\foo{}
+\begin{document}
+A:\if西暦 YES\else NO\fi. C:\expandafter\string\csname if西暦\endcsname. D:\foo々Y.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert_eq!(stderr.matches("undefined:\\西").count(), 0, "{stderr}");
+    assert_eq!(stderr.matches("undefined:\\if ").count(), 0, "{stderr}");
+    assert_eq!(stderr.matches("undefined:\\foo々").count(), 0, "{stderr}");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>A:YES. C:“if西暦. D:々Y.</p>"##);
+    let art = r"\documentclass{article}
+\begin{document}
+B:\ifcat A西 L\else O\fi.
+\end{document}
+";
+    let (stderr, xml) = convert_with(art, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>B:O.</p>"##);
+  }
 }
 
 mod perfect_kernel_gemini {

@@ -488,3 +488,50 @@ guard, not as a site patch.
 | 2026-09-09 | K10 | Decision (user): the utf8.def equivalent stays a high-quality idiomatic Rust binding (one decoder, one activation table, `\u8:` registration) — Perl's `utf8.def.ltxml` is a binding for the same reason; the raw-utf8.def variant (tried in 56bn) is TeX-macro emulation and is rejected. `Stored::Opaque` landed (56bo) — the whatsit-payload gap behind the forest/animate thread-locals is closed; `find_insertion_point_qsym`'s recoveries are one table. Still open: writable whatsit properties from `before_digest` is NOT needed (the two hooks of one constructor sharing a lexical is Perl's own idiom), `NumberScan` → the scanner's `scanner_status`/`align_state` (item 5), the engine/package/core B items listed in the 56bn row. |
 | 2026-09-07 | K1 | Step 3 pass two (batch 56an): pst-plot refusing stub → argument-consuming binding; pst-all → the real require chain; chemnum/forest KEEP with named blockers. Running tally of the audit: 12 stubs examined, 2 retired-in-spirit (pst-plot, pst-all), 2 silent drops closed (56aj), 0 raw-load retirements. Next by hit count: libertinehologopatch (27 docs, 0 oracle-clean), listings (13, 0), nag/tabu/xr KEEP. |
 
+## K12 — pTeX control-word letters under a pLaTeX class
+
+**Batch 56ds (2026-09-18).** pTeX/upTeX give every non-ASCII code point a
+`kcatcode` (upTeX manual: 16 kanji, 17 kana, 18 other kchar, 19 hangul, 20
+modifier; ASCII always Latin) and a control word after `\` extends over kanji,
+kana (and, upTeX, hangul) characters — `\if西暦` is one control sequence
+(jsarticle.cls:1927 `\newif\if西暦`; ptex-manual `\黄マーカー`, where the JIS-row
+`ー` (kcatcode 18) ends it under pTeX but not upTeX). Both LaTeXML engines tokenize
+kanji as OTHER (Perl State.pm:113-115, Mouth.pm:163), so `\newif` names the bare
+`\if` and lets it to `\iffalse` (Package.pm:1220; batch 56do made Rust faithful to
+that), and every later `\if` in the job is false: chuushaku 73 errors, gentombow,
+plext, qworld, and sample-bxjaprnind's `.`-delimited tokenizer (svn-prov.sty:87-107)
+running off the end of input into the batch-52 `Until:` Fatal. Perl cannot fix it;
+this surpasses Perl.
+
+**Mechanism.** `state::is_ptex_kanji_letter` is the block set of the kanji, kana
+and hangul kcatcodes (Hiragana/Katakana U+3040-30FF and extensions, CJK radicals,
+Bopomofo, Kanbun, CJK Unified Ideographs and extensions A-J, compatibility
+ideographs, Hangul Jamo and syllables, fullwidth digits and Latin; upTeX manual
+`01uptex_doc_utf8.txt:491-533`) — NOT the Unicode letter class, so
+Latin-1/Greek/Cyrillic (kcatcode 15, inputenc bytes under pTeX) and the
+kcatcode-18 symbols stay OTHER: the U+3000 block including 々〆〇 (`\foo々Y` is
+`\foo` then text in platex and uplatex), ー U+30FC under pTeX, halfwidth ー
+U+FF70. The set is upTeX's; pTeX proper joins only BMP kanji and kana (not
+Extension A, Bopomofo, Hangul), an over-approximation no witness reaches — a
+second, narrower profile if a pLaTeX2e witness ever needs it. `\ifcat` on a
+kanji reports LETTER here where real pTeX reports the kanji catcode: the LETTER
+default is the model's means to the control-word scan, not asserted. `unicode_letter_catcode_default` (state.rs) letters
+those code points under `PTEX_PROFILE` exactly as the LuaTeX profile letters the
+L/M class (circledtext's precedent); the mouth's control-word scan
+(`handle_escape`) needs no change, and `\string`/`\csname` follow. The profile is
+raised by `\NeedsTeXFormat{pLaTeX2e}`/`{upLaTeX2e}` (sect05.rs; jsarticle.cls:14,
+before the class's kanji control words) and never by a `LaTeX2e` document, so
+pdfTeX documents keep kanji OTHER, as pdflatex does. Dump-safe: the formats never
+declare pLaTeX2e.
+
+**Residual, PARKED (shared with Perl):** the pTeX engine primitives `\kanjiskip`,
+`\xkanjiskip`, `\prebreakpenalty`, `\postbreakpenalty`, `\inhibitxspcode`,
+`\xspcode`, `\jis`, `\jfam`, `\iftombow`, `\pfmtversion`, `\hour`, `\minute`,
+`\Cwd`/`\Cvs`/`\Cht`/`\Chs`/`\Cdp` — the standing rule never defines them.
+
+**Guard:** `perfect_kernel_batch56::kanji_control_words_under_platex` (jsarticle:
+`\if西暦` true, `\csname if西暦\endcsname` the same token, `\foo々Y` leaves `\foo`
+intact, no Fatal, no `\西`; article: kanji OTHER). Witnesses: js1 (jsarticle +
+tikz) 28 → 27 errors (the parked set), sample-bxjaprnind Fatal → 62 errors = Perl's
+62 and completes, chuushaku-sample 45 → 44 (Perl 56). `\NeedsTeXFormat` is now
+non-expandable like real LaTeX's (Perl's is an empty macro); nothing `\ifx`es it.
