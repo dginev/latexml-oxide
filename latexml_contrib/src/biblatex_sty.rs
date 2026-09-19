@@ -3171,6 +3171,19 @@ fn blx_load_style_file(name: &str, ext: &str) {
     "debug",
     "reading",
     "standard",
+    // IEEE styles (biblatex-ieee): ieee.cbx/ieee-comp.cbx are numeric-comp
+    // derivatives our native numeric pipeline already renders. Raw-loading
+    // them ran `\patchcmd{\abx@macro@cite:comp:*}` against bibmacros our
+    // `\newbibmacro` noop never defines, so biblatex-ieee raised its own
+    // "Failed to update citation style" (~53 sandbox papers, error not
+    // warning). Skip like the other native styles; the bibliography is
+    // unchanged.
+    // Only ieee-comp raised the error; ieee/ieee-alphabetic just
+    // `\RequireCitationStyle{numeric-verb|alphabetic}` (already native), added
+    // for consistency.
+    "ieee",
+    "ieee-comp",
+    "ieee-alphabetic",
   ];
   let name = name.trim();
   if name.is_empty() || NATIVE_STYLES.contains(&name) {

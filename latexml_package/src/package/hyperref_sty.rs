@@ -650,6 +650,7 @@ LoadDefinitions!({
 \@ifundefined{Hy@xspace@end}{\let\Hy@xspace@end\relax}{}
 \let\hyper@linkstart\@gobbletwo \def\hyper@linkend{\Hy@xspace@end}
 \def\hyper@linkfile#1#2#3{#1\Hy@xspace@end}
+\let\hyper@anchor\@gobble \let\hyper@anchorstart\@gobble \def\hyper@anchorend{\Hy@xspace@end}
 \@ifundefined{Hy@backout}{\let\Hy@backout\@gobble}{}
 \def\hyper@natlinkstart#1{\Hy@backout{#1}\hyper@linkstart{cite}{cite.#1}\def\hyper@nat@current{#1}}
 \def\hyper@natlinkend{\hyper@linkend}

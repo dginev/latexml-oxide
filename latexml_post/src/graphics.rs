@@ -1101,28 +1101,49 @@ impl Graphics {
     // stderr open must not hang the worker past the timeout (the reader
     // thread is simply abandoned; it exits at pipe EOF).
     let (stderr_tx, stderr_rx) = std::sync::mpsc::channel::<String>();
-    let stderr_reader = child.stderr.take().map(|mut se| {
-      std::thread::spawn(move || {
-        use std::io::Read;
-        let mut kept: Vec<u8> = Vec::new();
-        let mut chunk = [0u8; 4096];
-        loop {
-          match se.read(&mut chunk) {
-            Ok(0) => break,
-            Ok(n) => {
-              if kept.len() < 8192 {
-                let room = 8192 - kept.len();
-                kept.extend_from_slice(&chunk[..n.min(room)]);
-              }
-            },
-            // EINTR is not EOF — treating it as terminal stopped the drain
-            // and let a chatty converter block on the full pipe.
-            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(_) => break,
+    // BUILDER + handled error, never a bare `spawn` (which panics on EAGAIN
+    // under fleet thread exhaustion — the `worker_panicked` regression that
+    // aborted graphics on ~10 sandbox papers). A failed drain is harmless:
+    // the drained text is delivered over `stderr_rx`, and this handle is only
+    // read as `.is_some()` below, so `None` just means "no captured stderr".
+    let stderr_reader = child.stderr.take().and_then(|mut se| {
+      std::thread::Builder::new()
+        .name("gfx-stderr-drain".into())
+        .spawn(move || {
+          use std::io::Read;
+          let mut kept: Vec<u8> = Vec::new();
+          let mut chunk = [0u8; 4096];
+          loop {
+            match se.read(&mut chunk) {
+              Ok(0) => break,
+              Ok(n) => {
+                if kept.len() < 8192 {
+                  let room = 8192 - kept.len();
+                  kept.extend_from_slice(&chunk[..n.min(room)]);
+                }
+              },
+              // EINTR is not EOF — treating it as terminal stopped the drain
+              // and let a chatty converter block on the full pipe.
+              Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+              Err(_) => break,
+            }
           }
-        }
-        let _ = stderr_tx.send(String::from_utf8_lossy(&kept).trim().to_string());
-      })
+          let _ = stderr_tx.send(String::from_utf8_lossy(&kept).trim().to_string());
+        })
+        // A failed spawn (EAGAIN under fleet thread exhaustion) must not panic
+        // as the bare `spawn` did (the `worker_panicked` regression). Flag it
+        // (`Warn!` is captured on this worker and replayed by the main thread)
+        // and degrade to None: the child still runs and the conversion is
+        // unaffected, only its stderr goes uncaptured.
+        .map_err(|e| {
+          Warn!(
+            "imageprocessing",
+            "stderr_drain",
+            "Graphics: stderr capture thread not spawned ({}); converter stderr not captured",
+            e
+          );
+        })
+        .ok()
     });
     let pid = child.id() as i32;
     let kill_group = || {

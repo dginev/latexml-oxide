@@ -1,4 +1,6 @@
-//! Stub for colt2024.cls (COLT 2024 — Conference on Learning Theory).
+//! Stub for colt2024.cls (COLT 2024 — Conference on Learning Theory); also
+//! serves colt2025/colt2026 via the registry (same `\LoadClass[pmlr]{jmlr}` +
+//! `\coltauthor`→`\author` shape).
 //!
 //! colt2024.cls does `\LoadClass[pmlr]{jmlr}` and defines `\coltauthor` in its
 //! body: the review form `\newcommand{\coltauthor}[1]{}` (anonymizes), the final

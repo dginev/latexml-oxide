@@ -101,6 +101,8 @@ pub mod directory_sty;
 pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
+pub mod hld_cls;
+pub mod midl_cls;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod egpubl_cls;
 pub mod ejpecp_cls;
@@ -329,6 +331,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cprotect", "sty", cprotect_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
   ("colt2024", "cls", colt2024_cls::load_definitions),
+  ("colt2025", "cls", colt2024_cls::load_definitions),
+  ("colt2026", "cls", colt2024_cls::load_definitions),
+  ("midl", "cls", midl_cls::load_definitions),
+  ("hld", "cls", hld_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("daj", "cls", daj_cls::load_definitions),
   (

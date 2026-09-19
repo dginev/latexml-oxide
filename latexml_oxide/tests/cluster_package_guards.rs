@@ -21133,3 +21133,113 @@ mod pgfkeys_native_accessors {
     assert!(xml.matches("<svg:g").count() > 0, "{xml}");
   }
 }
+
+/// Guards for the sandbox-arxiv-2605 rerun regression clusters (2026-09-19).
+/// Each reproduces a cluster of arXiv papers that regressed against the
+/// 2026-08-23 baseline and asserts the fix. Root-cause notes:
+/// `~/data/pk_agents/w23/regress_2605/CLUSTERS.md`.
+#[cfg(test)]
+mod regress_2605_clusters {
+  use super::perfect_kernel_batch46::{convert_with, error_count};
+
+  /// hyperref: batch 55b added a `\hyper@makecurrent` noop, which makes
+  /// pgfplots take its PDF-anchor branch and call `\hyper@anchorstart`/
+  /// `\hyper@anchorend` — undefined until the companion NoHyper-shape defs were
+  /// added (hyperref.sty:6152-6154). A pgfplots crossref `\label` under
+  /// hyperref must not error, and the plot must still render (~39 papers).
+  #[test]
+  fn hyperref_pgfplots_label_anchor_no_error() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}\usepackage{pgfplots}\pgfplotsset{compat=1.18}
+\begin{document}
+\begin{tikzpicture}\begin{axis}
+\addplot coordinates {(0,0) (1,1)}; \label{p1}
+\end{axis}\end{tikzpicture}\ref{p1}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(!stderr.contains("hyper@anchorstart"), "{stderr}");
+    assert!(!stderr.contains("hyper@anchorend"), "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<svg:svg"),
+      "the pgfplots axis must still render\n{xml}"
+    );
+  }
+
+  /// biblatex-ieee: `style=ieee`/`ieee-comp` raw-loaded `ieee.cbx`, which
+  /// `\patchcmd`s bibmacros our `\newbibmacro` noop never defines, so
+  /// biblatex-ieee raised its own "Failed to update citation style" (~53
+  /// papers, error not warning). The IEEE styles are now in NATIVE_STYLES
+  /// (skipped, native pipeline renders the bibliography).
+  #[test]
+  fn biblatex_ieee_comp_style_no_error() {
+    let tex = r"\documentclass{article}
+\usepackage[backend=biber,style=ieee-comp]{biblatex}
+\begin{filecontents}{\jobname.bib}
+@article{a, author={A. Author}, title={T}, journal={J}, year={2020}}
+\end{filecontents}
+\addbibresource{\jobname.bib}
+\begin{document}
+Text~\cite{a}.
+\printbibliography
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(
+      !stderr.contains("Failed to update citation style"),
+      "{stderr}"
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The bibliography itself needs biber's .bbl (LaTeXML does not run biber),
+    // so a self-contained fixture renders no bibitem; the regression was the
+    // spurious biblatex-ieee errors, and the document must still complete.
+    assert!(
+      xml.contains("</document>"),
+      "the document must complete\n{xml}"
+    );
+  }
+
+  /// jmlr-family conference classes (colt/midl/hld) are OmniBus-skipped, so
+  /// their `\Xauthor` wrapper was undefined and the jmlr `\addr
+  /// Until:\lx@jmlr@endaddr` scan ran to EOF (`Fatal:Mouth:EoF`, ~18 papers
+  /// with NO output). The class bindings now define the wrapper, routing
+  /// through the structured-author path that lays the sentinel and bounds the
+  /// scan. The class file need not be on disk (registry dispatch).
+  #[test]
+  fn jmlr_conference_author_bounds_the_addr_scan() {
+    let tex = r"\documentclass{midl}
+\midlauthor{\Name{Alice Smith} \Email{a@x.edu}\\ \addr University A}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert!(!stderr.contains("lx@jmlr@endaddr"), "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"role="affiliation""#),
+      "the \\addr block must land as a bounded affiliation, not eat the doc\n{xml}"
+    );
+  }
+
+  /// tipa: the binding raw-loads tipa.sty; on a trimmed host (no tipa.sty)
+  /// `\textipa` was undefined (~12 papers). An idempotent native fallback
+  /// keeps `\textipa` defined either way. Smoke test (host has tipa.sty, so
+  /// the raw path also defines it): `\textipa{...}` must not error.
+  #[test]
+  fn tipa_textipa_is_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+\textipa{/S/}
+\end{document}
+";
+    let (stderr, _xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert!(!stderr.contains("undefined:\\textipa"), "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+  }
+}
