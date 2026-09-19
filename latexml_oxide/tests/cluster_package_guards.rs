@@ -21510,4 +21510,29 @@ $$ X_{i} = a $$
       "the valid single-text cell must still unwrap to a <text> first child\n{xml}"
     );
   }
+
+  /// Companion boundary case (batch 56eg over-broad-guard fix; mathtools_test
+  /// regression): an EMPTY `<MathFork>` main branch — a leading `&&` empty
+  /// aligned column in alignat — must be UNWRAPPED to nothing so the empty fork
+  /// is pruned downstream (Perl / pre-56eg behavior), NOT kept as a spurious
+  /// `<MathFork><Math text="absent">…<td/><td/>`. `cleanup_math_unwrap_valid_
+  /// under_mathfork` now treats an empty main branch as safe to unwrap.
+  #[test]
+  fn empty_mathfork_main_branch_is_pruned_not_kept() {
+    let tex = r"\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{alignat}{2}
+&& \framebox[1.5cm]{1} &= \framebox[3cm]{2}
+\end{alignat}
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // No spurious empty fork: an `absent`-token Math main branch over empty cells.
+    assert!(
+      !xml.contains("text=\"absent\""),
+      "an empty aligned column must not survive as a spurious <Math text=\"absent\"> MathFork\n{xml}"
+    );
+  }
 }

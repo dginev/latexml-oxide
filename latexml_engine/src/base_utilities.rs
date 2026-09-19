@@ -4430,9 +4430,21 @@ fn cleanup_math_unwrap_valid_under_mathfork(mathnode: &Node) -> bool {
   let [xmath] = xmaths.as_slice() else {
     return false;
   };
-  // <XMath> holds exactly one child, and it is an <XMText> (no XMHint spacing,
-  // no multiple runs).
+  // An EMPTY main branch (an entirely-empty aligned column, e.g. a leading `&&`
+  // in alignat) unwraps to NOTHING — that splices no forbidden node, and
+  // removing the empty <Math> lets the empty <MathFork> be pruned downstream
+  // (Perl / pre-56eg behavior). So an empty main branch is SAFE to unwrap.
+  // (Without this, batch 56eg kept the wrapper and a spurious
+  // <MathFork><Math text="absent">…<td/><td/> survived — mathtools_test S12.E27.)
   let inner = xmath.get_child_nodes();
+  if inner
+    .iter()
+    .all(|n| n.get_type() == Some(NodeType::CommentNode))
+  {
+    return true;
+  }
+  // Otherwise: <XMath> holds exactly one child, and it is an <XMText> (no XMHint
+  // spacing, no multiple runs).
   let [xmtext] = inner.as_slice() else {
     return false;
   };
