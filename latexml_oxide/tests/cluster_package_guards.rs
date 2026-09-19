@@ -20808,6 +20808,62 @@ mod pgfkeys_native_accessors {
     );
   }
 
+  /// A handler that does not exist yet is run as `\relax`: every raw site
+  /// loads `\pgfkeys@code` through `\pgfkeysgetvalue` (pgfkeys.code.tex:175),
+  /// so `\pgfkeys@unknown` (:494) no-ops while `/handlers/.unknown` is absent
+  /// — a rawstyles pgf load reaches `\pgfkeys{/pgf/.is family}`
+  /// (pgfsys.code.tex:19) before the handlers exist (sweep #95: scsnowman-sample
+  /// 318 → 1001 errors, chuushaku 423 → 994, all `undefined:\pgfkeys@code`).
+  #[test]
+  fn missing_handler_runs_as_relax() {
+    let xml = both_ways("missing_handler");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>[a:1][a:2][end]</p>"##);
+  }
+
+  /// A handler that scans forward in the stream sees the raw stream: the
+  /// native step is `\\pgfkeys@parse` itself and the remaining keys lie flat
+  /// behind it (pgfkeys.code.tex:359). robust-externalize's placeholder
+  /// re-scan captured a Rust-side continuation token instead and dispatched it
+  /// as the key `/robExt/\\lx@pgfkeys@continue` (sweep #95: 14 → 204 errors),
+  /// the remaining keys lost with it.
+  #[test]
+  fn forward_scanning_handlers_see_the_raw_stream() {
+    let xml = both_ways("forward_scan");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[grabbed: /t/a=3][a:2] [fi][a:4] [“fi “fi ][a:5][end]</p>"##,
+    );
+  }
+
+  /// `\\pgfkeys@spdef` as this engine runs it strips EVERY leading space of a
+  /// key (its `\\pgfkeys@sp@b` parameter text starts with a space, matched
+  /// against the whole run; Perl the same): a `\\newtcolorbox` body's `, #1`
+  /// meeting an indented `[<newline> title=…]` (neoschool.tex:469; sweep #95
+  /// neoschool 3 → 5 errors with a one-space native).
+  #[test]
+  fn leading_spaces_are_all_stripped() {
+    let xml = both_ways("leading_spaces");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>[a:0][a:1][a:0][a:2][a:3][end]</p>"##,
+    );
+  }
+
+  /// The entry points are macros (pgfkeys.code.tex:320, :589, :607): a
+  /// group-closing `}` where their list should be is refused and left, as
+  /// for any macro argument — `{{\\tikzset}\\marg{options}}` (sa-tikz-doc.tex:336,
+  /// `\\tikzset` = `\\pgfqkeys{/tikz}`); a primitive's `{}` parameter consumed
+  /// it and the enclosing group never closed (sweep #95: 8 → 9 errors).
+  #[test]
+  fn closing_brace_is_not_a_list() {
+    let xml = both_ways("brace_argument");
+    latexml::util::test::assert_element(&xml, "p", &[], r##"<p>XYZ[a:1][end]</p>"##);
+  }
+
   /// A styled tikz node with a `.default` and a tcolorbox style: the real
   /// consumers of the key tree.
   #[test]

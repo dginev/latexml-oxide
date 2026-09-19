@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+% `\pgfkeys@spdef` (pgfkeys.code.tex:506-519) as this engine runs it strips
+% EVERY leading space of a key: `\pgfkeys@sp@b`'s parameter text starts with
+% a space and the gullet matches that against the whole run (Perl the same;
+% real TeX keeps the second). A `\newtcolorbox` body's `, #1` meeting an
+% indented `[<newline> title=…]` is the corpus shape (neoschool.tex:469).
+\pgfkeys{/t/a/.code={[a:#1]}}
+\def\wrap#1{\pgfkeys{/t/.cd, a=0, #1}}
+\wrap{
+  a=1}\wrap{ a=2, a=3}[end]
+\end{document}

@@ -20,8 +20,6 @@
 //! differential harness (`cluster_package_guards::pgfkeys_native_accessors`)
 //! converts every fixture both ways and requires byte-identical core XML;
 //! `LATEXML_PGFKEYS_TRACE=1` prints one line per dispatched key.
-use std::cell::RefCell;
-
 use crate::prelude::*;
 
 /// A key's text: a space token that came from an end of line carries `\n`
@@ -82,24 +80,28 @@ fn store_value(cs: Token, value: Tokens) -> Result<()> {
 // ---------------------------------------------------------------------------
 // Slice 1: the `\pgfkeys{}` / `\pgfkeysalso{}` / `\pgfqkeys{}{}` parse and
 // dispatch loop (pgfkeys.code.tex:318-440, :494-520, :589-607), natively.
-// The loop keeps the raw chain's SHAPE: one item is resolved per step, its
-// handler invocation is put back into the token stream, and the rest of the
-// list re-enters through `\lx@pgfkeys@continue{<slot>}` placed BEHIND those
-// tokens
-// — `\pgfkeys@@normal#1,` expanding to `<handler of #1> \pgfkeys@parse` (:328).
+// The loop keeps the raw chain's SHAPE, token for token: the list sits FLAT in
+// the stream as `<items>,\pgfkeys@mainstop`, `\pgfkeys@parse` (native, the
+// raw macro's name) reads ONE item up to its top-level `,`, puts the item's
+// handler invocation back followed by `\pgfkeys@parse` again — exactly
+// `\pgfkeys@@normal#1,` expanding to `<handler of #1> \pgfkeys@parse` (:359).
 // The main loop therefore digests each handler body inline, where it can open
 // a box or a group that later stream tokens close (zx-calculus's
 // `/tikz/on layer/.code={\pgfonlayer{#1}\begingroup\aftergroup…}`,
 // tikzlibraryzx-calculus.code.tex:2415-2419, opens an `\hbox` the path's own
 // `\endgroup` closes; a nested `digest` of that body would hit the end of its
-// mouth inside the box), and a `/.cd`, a key defined mid-list, or a
-// re-entrant `\pgfkeysalso` inside a `.code` body see the same state at the
-// same time as under the raw chain. The raw file still owns every handler
-// (`/handlers/<h>/.@cmd`), the error keys, filtering, families and first-char
-// syntax handlers: a list under filtering or a reconfigured case-three
-// dispatch (the two probes below) is handed to the raw `\pgfkeys@parse`
-// untouched — re-checked at every step, since a `.code` body may switch
-// filtering on; first-char syntax handlers are dispatched natively.
+// mouth inside the box), a handler that scans FORWARD sees the real remaining
+// keys behind `\pgfkeys@parse` as it does under raw (robust-externalize's
+// placeholder re-scan captured a Rust-side continuation token instead and
+// dispatched it as the key `/robExt/\lx@pgfkeys@continue`, 190 errors), and
+// a `/.cd`, a key defined mid-list, or a re-entrant `\pgfkeysalso` inside a
+// `.code` body see the same state at the same time as under the raw chain.
+// The raw file still owns every handler (`/handlers/<h>/.@cmd`), the error
+// keys, filtering, families and first-char syntax handlers: a list under
+// filtering or a reconfigured case-three dispatch (the two probes below) is
+// handed to the raw step body (`\futurelet…\pgfkeys@parse@main`, :326) — at
+// every step, since a `.code` body may switch filtering on; first-char syntax
+// handlers are dispatched natively.
 
 /// Is `t` the character `c` with catcode OTHER — the only spelling of the
 /// `,` and `=` delimiters the raw `\pgfkeys@@normal#1,` / `\pgfkeys@unpack`
@@ -175,11 +177,16 @@ fn unpack(item: &[Token]) -> (Vec<Token>, Option<Vec<Token>>) {
   (key, value)
 }
 
-/// `\pgfkeys@spdef` (pgfkeys.code.tex:506-519): one leading and one trailing
-/// space dropped, with the delimited-argument brace stripping its two
-/// helper macros perform along the way.
+/// `\pgfkeys@spdef` (pgfkeys.code.tex:506-519) as the raw chain runs it in
+/// THIS engine: every leading space and one trailing space dropped, with the
+/// delimited-argument brace stripping its two helper macros perform along
+/// the way. `\pgfkeys@sp@b`'s parameter text starts with a space, and the
+/// gullet matches a parameter-text-initial space against the whole run
+/// (Perl identical) — real TeX would keep the second space and fail on
+/// `/tcb/ title` where a `\newtcolorbox` body's `, #1` meets an indented
+/// `[<newline> title=…]` (neoschool.tex:469); Perl is clean there.
 fn spdef(mut v: Vec<Token>) -> Vec<Token> {
-  if v.first().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+  while v.first().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
     v.remove(0);
   }
   if v.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
@@ -219,9 +226,18 @@ fn raw_loop_needed() -> bool {
 
 /// `\expandafter\pgfkeys@code\pgfkeyscurrentvalue\pgfeov` with `\pgfkeys@code`
 /// let to the handler under `cs` — put back into the stream for the main
-/// loop, ahead of the list's continuation.
+/// loop, ahead of the list's continuation. The raw sites load `\pgfkeys@code`
+/// through `\pgfkeysgetvalue` (:175-178), which lets it to `\relax` when the
+/// handler is absent, so `\pgfkeys@unknown` (:494-503) no-ops while
+/// `/handlers/.unknown` is not yet defined (a rawstyles pgf load reaches
+/// `\pgfkeys{/pgf/.is family}` before the handlers exist, pgfsys.code.tex:19;
+/// scsnowman-sample: 815 undefined-`\pgfkeys@code` errors).
 fn run_handler(cs: &Token) {
-  let_i(&T_CS!("\\pgfkeys@code"), cs, None);
+  if has_meaning(cs) {
+    let_i(&T_CS!("\\pgfkeys@code"), cs, None);
+  } else {
+    let_i(&T_CS!("\\pgfkeys@code"), &T_CS!("\\relax"), None);
+  }
   unread(Tokens!(
     T_CS!("\\expandafter"),
     T_CS!("\\pgfkeys@code"),
@@ -279,13 +295,16 @@ fn trace(key: &str, what: &str) {
 }
 
 /// One key of the list (`\pgfkeys@unpack` :364-388 onward).
-fn dispatch_item(item: &[Token]) -> Result<()> {
+/// Returns whether the key was dispatched (an empty key is skipped, :372).
+fn dispatch_item(item: &[Token]) -> Result<bool> {
   let (raw_key, value) = unpack(item);
   let key_toks = Expand!(Tokens::new(spdef(raw_key)));
   let key_str = key_text(&key_toks);
   if key_str.is_empty() {
-    return Ok(());
+    return Ok(false);
   }
+  // The inner conditional's `\fi` (:387), behind the handler tokens.
+  unread(Tokens!(T_CS!("\\fi")));
   // \pgfkeys@add@path@as@needed — the key's own tokens are kept (catcodes
   // and all) for `\pgfkeyscurrentkey`/`RAW` and the path split; the string
   // only names control sequences.
@@ -343,18 +362,19 @@ fn dispatch_item(item: &[Token]) -> Result<()> {
     unread(mouth::tokenize_internal(
       r"\def\pgf@marshal{\pgfkeysvalueof{/errors/value required/.@cmd}}\expandafter\pgf@marshal\expandafter{\pgfkeyscurrentkey}{}\pgfeov",
     ));
-    return Ok(());
+    return Ok(true);
   }
   // Case one: a command key.
   let cmd = T_CS!(&s!("\\pgfk@{full_key}/.@cmd"));
   if has_meaning(&cmd) {
     if lookup_meaning(&cmd) == lookup_meaning(&T_CS!("\\relax")) {
       trace(&full_key, "case one, relax -> unknown");
-      return run_unknown();
+      run_unknown()?;
+      return Ok(true);
     }
     trace(&full_key, "case one");
     run_handler(&cmd);
-    return Ok(());
+    return Ok(true);
   }
   // Case two: a stored value.
   if has_meaning(&cs) {
@@ -368,7 +388,7 @@ fn dispatch_item(item: &[Token]) -> Result<()> {
     } else {
       let_i(&cs, &T_CS!("\\pgfkeyscurrentvalue"), None);
     }
-    return Ok(());
+    return Ok(true);
   }
   // Case three: a handler named by the last path component.
   let name = split_path(&full_key_toks)?;
@@ -376,17 +396,16 @@ fn dispatch_item(item: &[Token]) -> Result<()> {
   if has_meaning(&handler) {
     trace(&full_key, &s!("case three, handler {name}"));
     run_handler(&handler);
-    return Ok(());
+    return Ok(true);
   }
   trace(&full_key, &s!("unknown (name {name})"));
-  run_unknown()
+  run_unknown()?;
+  Ok(true)
 }
 
 /// `\pgfkeys@syntax@handlers` (:340-357): with first-char syntax on
-/// (zx-calculus's `?…`/`!…` items) EVERY leading space of the item is skipped
-/// first (`\pgf@keys@utilifnextchar`, an `\@ifnextchar`, :340 — where the
-/// plain path's `\pgfkeys@spdef` drops exactly one, so a `\wrap{ a=1}` whose
-/// body writes `, #1` reaches the key ` a` under pdflatex too), then the
+/// (zx-calculus's `?…`/`!…` items) every leading space of the item is skipped
+/// first (`\pgf@keys@utilifnextchar`, an `\@ifnextchar`, :340), then the
 /// `\meaning` of the first token selects `/handlers/first char syntax/<meaning>`;
 /// when that key holds a handler, the whole item goes to it
 /// (`\pgfkeys@use@handler`) instead of the key=value path. Returns the
@@ -409,77 +428,30 @@ fn syntax_handlers(item: Vec<Token>) -> Result<(Vec<Token>, Option<Token>)> {
   Ok((item, handler))
 }
 
-/// The first top-level `,`-delimited item of `list[from..]` and where the
-/// rest starts (`\pgfkeys@@normal#1,`): `None` when no further comma
-/// follows, so this item is the last.
-fn split_first(list: &[Token], from: usize) -> (Vec<Token>, Option<usize>) {
+/// The next item of the list in the stream: the tokens up to the first
+/// top-level `,` (`\pgfkeys@@normal#1,`, unexpanded, brace groups hiding the
+/// delimiter), or `None` when `\pgfkeys@mainstop` is next (the list is done,
+/// the sentinel consumed — `\pgfkeys@parse@main`, :328-333).
+fn read_item() -> Result<Option<Vec<Token>>> {
+  let mut item = Vec::new();
   let mut depth = 0;
-  for (i, t) in list.iter().enumerate().skip(from) {
+  while let Some(t) = read_token()? {
     match t.get_catcode() {
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth -= 1,
       _ => {},
     }
-    if depth == 0 && is_char_of_catcode_other(t, ',') {
-      return (list[from..i].to_vec(), Some(i + 1));
+    if depth == 0 {
+      if is_char_of_catcode_other(&t, ',') {
+        return Ok(Some(item));
+      }
+      if item.is_empty() && is_cs_named(&t, "\\pgfkeys@mainstop") {
+        return Ok(None);
+      }
     }
+    item.push(t);
   }
-  (list[from..].to_vec(), None)
-}
-
-/// A list whose dispatch is in progress: its tokens, held once, and the
-/// offset of its next item.
-type PendingList = (Vec<Token>, usize);
-
-/// The in-progress lists, one slot per `\pgfkeys`-style call, plus the free
-/// slot ids.
-#[derive(Default)]
-struct PendingLists {
-  slots: Vec<Option<PendingList>>,
-  free:  Vec<usize>,
-}
-
-thread_local! {
-  /// The lists whose dispatch is in progress. The stream carries only
-  /// `\lx@pgfkeys@continue{<slot>}` between items — the raw chain's
-  /// `\pgfkeys@parse` continuation, without its re-scan of the remaining
-  /// list at every step (a braced `{rest}` argument re-read per item cost
-  /// tcolorbox's long `\tcbset` lists +7 % instructions). A slot is freed
-  /// when its list is exhausted or handed to the raw loop; one whose
-  /// continuation token a broken `.code` body swallows as an argument (the
-  /// raw chain's `\pgfkeys@parse` would be swallowed the same way) stays
-  /// allocated — a leak of one list, never a wrong resumption, since ids
-  /// are never reused while live.
-  static PENDING: RefCell<PendingLists> = RefCell::new(PendingLists::default());
-}
-
-fn pending_alloc(list: Vec<Token>, offset: usize) -> usize {
-  PENDING.with_borrow_mut(|p| {
-    if p.free.len() == p.slots.len() {
-      // Nothing live: a fresh table, so a slot leaked by a swallowed
-      // continuation (above) is reclaimed at the next top-level call rather
-      // than kept for the process, across conversions.
-      p.slots.clear();
-      p.free.clear();
-    }
-    if let Some(id) = p.free.pop() {
-      p.slots[id] = Some((list, offset));
-      id
-    } else {
-      p.slots.push(Some((list, offset)));
-      p.slots.len() - 1
-    }
-  })
-}
-
-fn pending_take(id: usize) -> Option<PendingList> {
-  PENDING.with_borrow_mut(|p| {
-    let entry = p.slots.get_mut(id).and_then(Option::take);
-    if entry.is_some() {
-      p.free.push(id);
-    }
-    entry
-  })
+  Ok(Some(item))
 }
 
 /// The characters of `s` as OTHER-catcode tokens (a `\csname` name).
@@ -487,30 +459,31 @@ fn other_chars(s: &str) -> impl Iterator<Item = Token> + '_ {
   s.chars().map(|c| Token::new(c.to_string(), Catcode::OTHER))
 }
 
-/// `\lx@pgfkeys@continue{<slot>}` behind the current item's handler tokens.
-fn unread_continuation(id: usize) {
-  let mut toks = vec![T_CS!("\\lx@pgfkeys@continue"), T_BEGIN!()];
-  toks.extend(other_chars(&id.to_string()));
-  toks.push(T_END!());
+/// `<list>,\pgfkeys@mainstop` into the stream (:323, :590, :607).
+fn unread_list(list: Tokens) {
+  let mut toks = list.unlist();
+  toks.push(Token::new(",", Catcode::OTHER));
+  toks.push(T_CS!("\\pgfkeys@mainstop"));
   unread(Tokens::new(toks));
 }
 
-/// One step of `\pgfkeys@parse … ,\pgfkeys@mainstop` (:328-333): the item at
-/// `from` dispatched, the rest of the list re-entering behind its handler
-/// tokens through `\lx@pgfkeys@continue{<slot>}`.
-fn parse_step(list: Vec<Token>, from: usize) -> Result<()> {
+/// One step of `\pgfkeys@parse` (:326-333): the next item read from the
+/// stream and dispatched, its handler tokens followed by `\pgfkeys@parse`
+/// again for the rest of the list.
+fn parse_step() -> Result<()> {
   if raw_loop_needed() {
-    let mut toks = vec![T_CS!("\\pgfkeys@parse")];
-    toks.extend_from_slice(&list[from..]);
-    toks.push(Token::new(",", Catcode::OTHER));
-    toks.push(T_CS!("\\pgfkeys@mainstop"));
-    unread(Tokens::new(toks));
+    // The raw step's own body (:326); the list is already in the stream.
+    unread(Tokens!(
+      T_CS!("\\futurelet"),
+      T_CS!("\\pgfkeys@possiblerelax"),
+      T_CS!("\\pgfkeys@parse@main")
+    ));
     return Ok(());
   }
-  let (item, rest) = split_first(&list, from);
-  if let Some(next) = rest {
-    unread_continuation(pending_alloc(list, next));
-  }
+  let Some(item) = read_item()? else {
+    return Ok(());
+  };
+  unread(Tokens!(T_CS!("\\pgfkeys@parse")));
   let (item, handler) = syntax_handlers(item)?;
   if let Some(handler) = handler {
     let_i(&T_CS!("\\pgfkeys@the@handler"), &handler, None);
@@ -520,7 +493,22 @@ fn parse_step(list: Vec<Token>, from: usize) -> Result<()> {
     unread(Tokens::new(toks));
     return Ok(());
   }
-  dispatch_item(&item)
+  // `\pgfkeys@unpack` runs the case dispatch inside TWO open conditionals,
+  // `\ifx\pgfkeyscurrentkey\pgfkeys@empty…\else … \fi` (:372/:388) and, in
+  // its else branch, `\ifx\pgfkeyscurrentvalue\pgfkeysvaluerequired…\else …
+  // \fi` (:382/:387), so the tokens that trail a handler body are `\fi\fi`
+  // (one `\fi` after an empty key's skip), with `\pgfkeys@parse` beyond: a
+  // handler that over-grabs a token takes an inert `\fi`. robust-externalize's
+  // `\robExtArgumentList` m-grab (sty:4230) does, and detokenizes it; a grabbed
+  // continuation became the key `/robExt/\lx@pgfkeys@set{@}parse` and a
+  // recursion Fatal.
+  unread(Tokens!(T_CS!("\\fi")));
+  let dispatched = dispatch_item(&item)?;
+  unread(Tokens!(T_CS!("\\iftrue")));
+  if dispatched {
+    unread(Tokens!(T_CS!("\\iftrue")));
+  }
+  Ok(())
 }
 
 /// The `\def\pgfkeysdefaultpath{#1}` a `\pgfkeys`/`\pgfqkeys` list leaves
@@ -595,22 +583,39 @@ LoadDefinitions!({
       store_value(cs, Tokens::new(body))?;
     }, locked => true);
     // ----- slice 1: the dispatch loop -----
+    // The three entry points are MACROS, as in the raw file (:320, :589,
+    // :607): their list is read as a macro argument — a group-closing `}` in
+    // its place is refused and left (`{{\tikzset}\marg{options}}`,
+    // sa-tikz-doc.tex:336, where `\tikzset` is `\pgfqkeys{/tikz}`), which a
+    // primitive's `{}` parameter would consume — and handed, braced, to the
+    // internal primitive that runs the list.
     // :318-323 `\pgfkeys`: path reset to `/` for the list, restored after.
-    DefPrimitive!("\\pgfkeys{}", sub[(list)] {
+    DefMacro!("\\pgfkeys{}", sub[(list)] {
+      Ok(Tokens!(T_CS!("\\lx@pgfkeys@set"), T_BEGIN!(), list, T_END!()))
+    }, locked => true);
+    DefPrimitive!("\\lx@pgfkeys@set{}", sub[(list)] {
       if raw_loop_needed() {
         return Ok(raw_pgfkeys(vec![T_CS!("\\expandafter"), T_CS!("\\pgfkeys@@set"), T_CS!("\\expandafter"), T_BEGIN!(), T_CS!("\\pgfkeysdefaultpath"), T_END!()], list));
       }
       let saved = Expand!(Tokens!(T_CS!("\\pgfkeysdefaultpath")));
       let_i(&T_CS!("\\pgfkeysdefaultpath"), &T_CS!("\\pgfkeys@root"), None);
       unread_path_restore(saved);
-      parse_step(list.unlist(), 0)?;
+      unread_list(list);
+      parse_step()?;
     }, locked => true);
     // :607 `\pgfkeysalso`: the current path kept.
-    DefPrimitive!("\\pgfkeysalso{}", sub[(list)] {
-      parse_step(list.unlist(), 0)?;
+    DefMacro!("\\pgfkeysalso{}", sub[(list)] {
+      Ok(Tokens!(T_CS!("\\lx@pgfkeys@also"), T_BEGIN!(), list, T_END!()))
+    }, locked => true);
+    DefPrimitive!("\\lx@pgfkeys@also{}", sub[(list)] {
+      unread_list(list);
+      parse_step()?;
     }, locked => true);
     // :589-590 `\pgfqkeys{path}{list}`: path `#1/` for the list, restored after.
-    DefPrimitive!("\\pgfqkeys{}{}", sub[(path, list)] {
+    DefMacro!("\\pgfqkeys{}{}", sub[(path, list)] {
+      Ok(Tokens!(T_CS!("\\lx@pgfkeys@qset"), T_BEGIN!(), path, T_END!(), T_BEGIN!(), list, T_END!()))
+    }, locked => true);
+    DefPrimitive!("\\lx@pgfkeys@qset{}{}", sub[(path, list)] {
       if raw_loop_needed() {
         let mut prefix = vec![T_CS!("\\expandafter"), T_CS!("\\pgfkeys@@qset"), T_CS!("\\expandafter"), T_BEGIN!(), T_CS!("\\pgfkeysdefaultpath"), T_END!(), T_BEGIN!()];
         prefix.extend(path.unlist());
@@ -622,15 +627,14 @@ LoadDefinitions!({
       newpath.push(Token::new("/", Catcode::OTHER));
       def_verbatim(T_CS!("\\pgfkeysdefaultpath"), Tokens::new(newpath))?;
       unread_path_restore(saved);
-      parse_step(list.unlist(), 0)?;
+      unread_list(list);
+      parse_step()?;
     }, locked => true);
-    // The loop's continuation and the path restore — internal, locked.
-    DefPrimitive!("\\lx@pgfkeys@continue{}", sub[(slot)] {
-      // The slot id is one this file wrote; anything else is a swallowed
-      // and re-emitted continuation, which has no list to resume.
-      if let Some((list, from)) = slot.to_string().trim().parse().ok().and_then(pending_take) {
-        parse_step(list, from)?;
-      }
+    // :326 the step itself, under the raw macro's own name so the stream a
+    // handler may scan is the raw stream; the raw `\pgfkeysalsofrom` and
+    // `\pgfkeysalsofiltered` (:610-620) reach it too.
+    DefPrimitive!("\\pgfkeys@parse", sub[()] {
+      parse_step()?;
     }, locked => true);
     DefPrimitive!("\\lx@pgfkeys@restorepath{}", sub[(saved)] {
       def_verbatim(T_CS!("\\pgfkeysdefaultpath"), saved)?;

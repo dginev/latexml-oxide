@@ -1,0 +1,22 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+% A handler that scans FORWARD in the stream sees what the raw chain leaves
+% there: `\pgfkeys@parse` and then the real remaining keys, flat
+% (pgfkeys.code.tex:359). robust-externalize's placeholder re-scan is this
+% shape; a Rust-side continuation token in its place was dispatched as a key
+% and the remaining keys were lost.
+\pgfkeys{/t/a/.code={[a:#1]}, /t/grab/.code={\grab}, /t/one/.code={\grabone}}
+\def\grab#1,#2,{[grabbed:\detokenize{#2}]#1,}
+\pgfkeys{/t/grab, /t/a=2, /t/a=3}
+% A handler that over-grabs ONE token takes the `\fi` of `\pgfkeys@unpack`'s
+% `\ifx…\else…\fi` (:382-388), never the continuation (robust-externalize's
+% `\robExtArgumentList` m-grab, sty:4230).
+\def\grabone#1{\ifx#1\fi[fi]\else[other]\fi#1}
+\pgfkeys{/t/one, /t/a=4}
+% Two tokens: both of `\pgfkeys@unpack`'s conditionals close behind the body
+% (:387 and :388), so an over-grab of two takes `\fi\fi`.
+\pgfkeys{/t/two/.code={\grabtwo}}
+\def\grabtwo#1#2{[\detokenize{#1#2}]#1#2}
+\pgfkeys{/t/two, /t/a=5}[end]
+\end{document}
