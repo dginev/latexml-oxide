@@ -6479,7 +6479,15 @@ impl Document {
   // THESE SHOULD BE PART OF A COMMON BASE CLASS; DUPLICATED IN Post::Document
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-  pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
+  /// `replace_tree`, minus the free: the detached original stays alive and
+  /// the CALLER owns it. The math parser needs this — parsing one formula
+  /// rebuilds its tree while later formulae, queued up front, may sit inside
+  /// the replaced subtree (a `\text{…$x$…}` inside math), so it defers every
+  /// free to the end of the parse (`replace_tree_deferred` /
+  /// `data::defer_discard`); freeing here handed those formulae to the parser
+  /// detached and lost whole documents (sweep 102: glosmathtools, prftree,
+  /// t-angles).
+  pub fn replace_tree_detach(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
     match old.get_parent() {
       Some(mut parent) => {
         let mut following = VecDeque::new(); // Collect the matching and following nodes
@@ -6513,10 +6521,12 @@ impl Document {
           }
           cursor = cur.get_parent();
         }
-        // `old` is the discarded original of the copy `append_tree` just
-        // inserted: free it (see `remove_node`), its ids were unrecorded
-        // above and no handle into it is used afterwards.
-        self.discard_subtree(old);
+        // Detach `old` (the original of the copy `append_tree` just
+        // inserted); `replace_tree` frees it, the parser defers that.
+        {
+          let mut old = old;
+          old.unlink();
+        }
         for mut child in following {
           parent.add_child(&mut child)?; // No need for clone
         }
@@ -6524,6 +6534,18 @@ impl Document {
       },
       _ => Ok(None),
     }
+  }
+
+  /// Replace `old` by `new` (copied into place) and FREE the original: its
+  /// ids were unrecorded before the copy and no handle into it is used
+  /// afterwards (see `remove_node` for why a bare unlink leaks). Callers that
+  /// must keep the original alive use `replace_tree_detach`.
+  pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
+    let inserted = self.replace_tree_detach(new, old.clone())?;
+    if inserted.is_some() {
+      self.discard_subtree(old);
+    }
+    Ok(inserted)
   }
 
   pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {

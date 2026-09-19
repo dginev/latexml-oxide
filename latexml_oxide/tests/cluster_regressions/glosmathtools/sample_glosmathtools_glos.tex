@@ -1,0 +1,162 @@
+% !TeX encoding = UTF-8
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Glossary entry definitions
+%% - symbol : units or dimension (for matrices)
+%% - descseclang : second language description for bilangual nomennclature
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ==================================================================
+% ======================= MATH SYMBOLS =============================
+% ==================================================================
+
+% ----------------------- LATIN SYMBOLS ----------------------------
+\newglossaryentry{latin}{name={latin},
+	description={Latin symbols},descseclang={Symboles latins},sort=1}
+{%	
+	\newglosentrymath{k}{k}{
+		description={discrete time},
+		descseclang={temps discret},
+		sort=k,
+		parent=latin,
+	}
+	\newglosentrymath{T}{T}{
+		description={temperature},
+		symbol=\si{\kelvin},
+		descseclang={température},
+		sort=T,
+		parent=latin,
+	}
+	\newglosentrymath{z}{z}{
+		description={height},
+		symbol=\si{\meter},
+		descseclang={hauteur},
+		sort=z,
+		parent=latin,
+	}
+	\newglosentrymath{d}{d}{
+		description={diameter},
+		symbol=\si{\meter},
+		descseclang={diamètre},
+		sort=d,
+		parent=latin,
+	}
+	\newglosentrymath{D}{D}{
+		description={molecular diffusion coefficient},
+		symbol=\si{\meter\squared\per\second},
+		descseclang={coefficient de diffusion moléculaire},
+		sort=D,
+		parent=latin,
+	}
+	\newglosentrymath{m}{m}{
+		description={mass},
+		symbol=\si{\kilogram},
+		descseclang={masse},
+		sort=m,
+		parent=latin,
+	}
+}%
+
+% ---------------------- GREEK SYMBOLS -----------------------------
+\newglossaryentry{greek}{name={greek},
+	description={Greek symbols},descseclang={Symboles grecs},sort=2}
+{%
+	\newglosentrymath{rho}{\rho}{
+		description={density},
+		symbol=\si{\kilogram\per\meter\cubed},
+		descseclang={masse volumique},
+		sort=17,      % rho : 17th letter in greek alphabet
+		parent=greek,
+	}
+	\newglosentrymath{mu}{\mu}{
+		description={dynamic viscosity},
+		symbol=\si{\kilogram\per\meter\per\second},
+		descseclang={viscosité dynamique},
+		sort=12,	 % mu  : 12th letter in greek alphabet
+		parent=greek,
+	}
+}%
+
+
+% ---------------------- VECTORS AND MATRICES ----------------------
+\newglossaryentry{vecMat}{name={vecMat},
+	description={Vectors and matrices},descseclang={Vecteurs et matrices},sort=3}
+{%
+	\newglosentrymath{mat.b}{\mathbf{b}}{
+		description={vector},
+		symbol=$(2 \times 1)$,
+		descseclang={vecteur},
+		sort=b,
+		parent=vecMat,
+	}
+	\newglosentrymath{mat.A}{\mathbf{A}}{
+		description={matrix},
+		symbol=$(2 \times 2)$,
+		descseclang={matrice},
+		sort=A,
+		parent=vecMat,
+	}
+}%
+
+% ---------------------- SUBSCRIPTS --------------------------------
+\newglossaryentry{subscript}{name={subscript},
+	description={Subscripts},descseclang={Indices},sort=4}
+{%
+	\newglosentrymath{sub.w}{\mathrm{w}}{
+		description={water},
+		descseclang={eau},
+		parent=subscript
+	}
+	\newglosentrymath{sub.a}{\mathrm{a}}{
+		description={air},
+		descseclang={air},
+		parent=subscript
+	}
+	\newglosentrymath{sub.v}{\mathrm{v}}{
+		description={vessel},
+		descseclang={réservoir},
+		parent=subscript
+	}
+}%
+
+
+% ---------------------- OPERATORS --------------------------------
+\newglossaryentry{operator}{name={operator},
+	description={Operators},descseclang={Opérateurs},sort=5}
+{%
+	\newglosentrymath{op.dot}{\dot{\bullet}}{
+		description={flow rate of $\bullet$},
+		descseclang={débit de $\bullet$},
+		symbol=\si{\per\second},
+		sort=01,
+		parent=operator
+	}
+	\newglosentrymath{op.bar}{\bar{\bullet}}{
+		description={average of $\bullet$},
+		descseclang={moyenne de $\bullet$},
+		sort=02,
+		parent=operator
+	}
+	\newglosentrymath{op.comma}{\bullet,\!\circ}{
+		description={in subscript : from $\bullet$ to $\circ$},
+		descseclang={en indice : de $\bullet$ vers $\circ$},
+		sort=03,
+		parent=operator
+	}
+}%
+
+% ==================================================================
+% ========================= ACRONYMS ===============================
+% ==================================================================
+
+\newglossaryentry{abbrv}{name={abbrv},
+	description={Abbreviations},descseclang={Abréviations},sort=6}
+{%
+	\newacronym[%
+		descseclang={équation différentielle ordinaire},%
+		parent=abbrv%
+	]{ODE}{ODE}{ordinary differential equation}
+	\newacronym[%
+		descseclang={transformation de Laplace},%
+		parent=abbrv%
+	]{TL}{TL}{Laplace transform}
+}%

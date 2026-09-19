@@ -130,9 +130,14 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 /// already been serialized to owned data and nothing will read a
 /// pre-reset symbol again. The test harness satisfies this (each test
 /// serializes to owned `String`s, then resets before its thread exits).
-/// It does **not** reclaim libxml2's process-global C state (parser
-/// dictionaries) — that residual (~24 MB/test) is left as-is rather than
-/// risk the global `xmlCleanupParser`.
+/// What it does **not** reclaim (measured 2026-09-19, heaptrack + the
+/// glibc-allocator test binary): the `#[thread_local]` `MODEL`, `GULLET`,
+/// `STOMACH`, the token constants and the fresh interner — ~37 MB of RUST
+/// state leaked per fresh test thread (attribute statics run no destructor;
+/// it counts on glibc only because test binaries link no mimalloc) — and
+/// kpathsea's ls-R/cnf hash tables, 8.6 MB of C heap allocated once per
+/// process. The libxml2 document tree itself is fully freed. A persistent
+/// worker (`cortex_worker`) reuses its thread and pays neither per paper.
 ///
 /// THREAD-LIFECYCLE CONTRACT (PR_READINESS review): several SymStr-holding
 /// statics are NOT reset here — `pin!` call-site OnceCells (no registry;

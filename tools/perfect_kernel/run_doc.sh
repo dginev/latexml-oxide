@@ -103,14 +103,27 @@ fi
 end=$(date +%s.%N)
 secs=$(printf '%.1f' "$(echo "$end $start" | awk '{print $1-$2}')")
 
+# A fused eager conversion restarts under --streaming (batch 56dw) and the
+# stderr log then holds BOTH attempts: the first one's memory Fatal and errors
+# belong to an attempt that produced no output. Count from the last restart
+# marker on, so the verdict describes the attempt whose document was written
+# (sweep 102 doubled the error counts of every fuse document before this).
+counted="$out/$name.counted.log"
+if grep -q '^Info:streaming:restart' "$out/$name.log"; then
+  awk '/^Info:streaming:restart/ {buf=""; next} {buf=buf $0 "\n"} END {printf "%s", buf}' \
+    "$out/$name.log" >"$counted"
+else
+  counted="$out/$name.log"
+fi
 # Strict error grep (feedback_strict_vs_lax_error_grep).
-errors=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
+errors=$(grep -c '^Error:[a-z]' "$counted" || true)
 # Fatal TARGETS are capitalized (`Fatal:Timeout:TokenLimit`,
 # `Fatal:TooManyErrors:MaxLimit`, `Fatal:Mouth:EoF`); only `Fatal:oom:` is
 # lowercase, so a `[a-z]` class here counted 25 of sweep 28's ~290 fatals
 # (status stayed right only via the exit code). Match any target letter.
-fatals=$(grep -c '^Fatal:[A-Za-z]' "$out/$name.log" || true)
-warnings=$(grep -c '^Warning:[a-z]' "$out/$name.log" || true)
+fatals=$(grep -c '^Fatal:[A-Za-z]' "$counted" || true)
+warnings=$(grep -c '^Warning:[a-z]' "$counted" || true)
+[[ "$counted" != "$out/$name.log" ]] && rm -f "$counted"
 
 if [[ $exit_code == 124 ]]; then
   status=124 # timeout

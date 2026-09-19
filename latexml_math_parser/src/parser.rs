@@ -3492,16 +3492,17 @@ fn drain_pending_discards(document: &mut Document, queued: &rustc_hash::FxHashSe
   }
 }
 
-/// `Document::replace_tree` (which frees the replaced original), with the
-/// FREE of both trees deferred to the end of math
-/// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
-/// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
-/// moves.
+/// `Document::replace_tree`, with the FREE of both trees deferred to the end
+/// of math parsing — see [`crate::data::defer_discard`] for why freeing
+/// mid-parse is a use-after-free (a later formula queued up front may sit
+/// inside `old`: nested `\text{…$x$…}`). The tree ends up identical; only the
+/// moment of `xmlFreeNode` moves. Hence `replace_tree_detach`, never the
+/// freeing `replace_tree`.
 fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Result<Option<Node>> {
-  // Resolve new's standalone root BEFORE the swap, exactly as
-  // `replace_tree_free` does — afterwards the chain may no longer be walkable.
+  // Resolve new's standalone root BEFORE the swap — afterwards the chain may
+  // no longer be walkable.
   let new_root = detached_root(&new);
-  let inserted = document.replace_tree(new, old.clone())?;
+  let inserted = document.replace_tree_detach(new, old.clone())?;
   if inserted.is_some() {
     crate::data::defer_discard(old);
     if let Some(root) = new_root {

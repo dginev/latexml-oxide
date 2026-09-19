@@ -18063,6 +18063,67 @@ Table hooks ok.
   /// `\if西暦` instead of letting the bare `\if` to `\iffalse` — the shared
   /// degradation that broke every later `\if` (chuushaku 73 errors,
   /// sample-bxjaprnind's runaway Fatal). Under `article` kanji stays OTHER
+  /// Batch 56dy, the witness: the math parser queues every formula up front
+  /// and rebuilds each in place, freeing replaced originals only after the
+  /// whole parse (`replace_tree_deferred`). `replace_tree` freeing the
+  /// original immediately (56dx) handed a still-queued formula inside it to
+  /// the parser detached — a Fatal and an EMPTY document for four sweep-102
+  /// documents. The glosmathtools sample (TeX Live doc, two files) is the
+  /// smallest of them and reproduces only on the raw-styles path; the
+  /// synthetic nested-`\text` fixture below does not, so this is the guard.
+  #[test]
+  fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
+    if !kpsewhich_has("glosmathtools.sty") || !kpsewhich_has("ulthese.cls") {
+      eprintln!("skipping: glosmathtools.sty / ulthese.cls not in the host TeX tree");
+      return;
+    }
+    let tex = include_str!("cluster_regressions/glosmathtools/sample_glosmathtools_en.tex");
+    let glos = include_str!("cluster_regressions/glosmathtools/sample_glosmathtools_glos.tex");
+    let (stderr, xml) = convert_files(tex, &[("sample_glosmathtools_glos.tex", glos)]);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert!(
+      !stderr.contains("detached before it could be parsed"),
+      "{stderr}"
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The whole document, not an empty result: sweep 101's output holds 47
+    // formulae, 21 of them with nested text.
+    assert!(xml.contains("</document>"), "{xml}");
+    assert_eq!(xml.matches("<Math ").count(), 47, "{xml}");
+    assert_eq!(xml.matches("<XMText").count(), 21, "{xml}");
+  }
+
+  /// Nested `\text{…$x$…}` inside math: three inner formulae under XMText
+  /// survive their outer formulae's rebuild (a structural check; it does NOT
+  /// reproduce the 56dx failure, which needs the witness above).
+  #[test]
+  fn nested_text_math_survives_the_outer_rebuild() {
+    let tex = include_str!("cluster_regressions/math_nested_text_math.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("detached before it could be parsed"),
+      "{stderr}"
+    );
+    // Two outer formulae and the three inner ones (each its own `ltx:Math`
+    // under an `XMText`) all parsed: the inner relations survive.
+    assert_eq!(xml.matches("<Math ").count(), 5, "{xml}");
+    assert_eq!(xml.matches("<XMText>").count(), 3, "{xml}");
+    assert!(
+      xml.contains(r#"<XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<XMTok meaning="not-equals" name="neq" role="RELOP">≠</XMTok>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>"#),
+      "{xml}"
+    );
+  }
+
   /// (`non_ascii_letters_stay_other_under_pdftex`). The pTeX engine
   /// primitives (`\kanjiskip`…) stay undefined, PARKED, as in Perl.
   #[test]

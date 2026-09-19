@@ -310,12 +310,16 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     is the signal — no new threshold, documents that finish eager are untouched); the
     sweep converts through the CLI, so a streaming win now reaches the verdict for any
     document whose streaming peak fits the 6 GB ceiling (the pgf manual does not yet:
-    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Part five OPEN
-    (MED, fleet-relevant): every IN-PROCESS conversion leaves a constant ~37 MB on the
-    glibc heap regardless of the document (the 112 guard's prose control: 73.3 MB over
-    two conversions, identical for a 2,000-stroke tikz document) — a session-level
-    residue (candidates: the RelaxNG schema or XSLT parsed per session and never freed,
-    kpathsea's ls-R re-read) that a persistent `cortex_worker` pays per paper. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
+    part three). Open: the same restart in `cortex_worker`'s per-paper loop. Part five SETTLED
+    2026-09-19 (agent, heaptrack): the constant ~37 MB per in-process conversion is
+    the fresh test thread's `#[thread_local]` engine roots (`MODEL`, `GULLET`,
+    `STOMACH`, token constants, the reset interner) — Rust memory that the test binary
+    counts on glibc only because it links no mimalloc; the C heap's only residue is
+    kpathsea's 8.6 MB ls-R/cnf tables, once per process; the libxml document tree is
+    fully freed. `cortex_worker` reuses its thread and pays neither per paper. The real
+    fleet lever is different and OPEN (MED-HIGH): per-paper State additions
+    accumulate because the daemon-frame port (`state.rs` `push_daemon_frame`, Perl
+    State.pm:607-627) is unused — wrap each paper's convert in push/pop. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
     `node_boxes` in the eager path (`Document.pm:1667-1669`; Rust's
     `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
     Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),

@@ -1,0 +1,112 @@
+% !TeX encoding = UTF-8
+% !TeX spellcheck = en_US
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Main document for glosmathtool sample
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% manually load hyperref with nohyperref
+\documentclass[projet,nohyperref,article,english,french]{ulthese}
+%% ===================== packages ============================================
+\ifxetex\else \usepackage[utf8]{inputenc} \fi
+\usepackage{mathtools,siunitx,amsmath,amsfonts}
+\usepackage{hyperref} %  loaded last except glosmathtools
+% toc ocption passed to glossaries : add nomenclature to PDF bookmarks
+\usepackage[qtmarkupright,singlelineskip,toc]{glosmathtools}
+%% ===================== preamble ============================================
+%% ------------- glosmathtools -----------------------------------------------
+\makeglossaries% executed in first
+\setacronymlang{L1}% first language abbreviations
+\setglossarystyle{nomencl-L1L2}% bilingual description
+\loadglsentries{sample_glosmathtools_glos} % definition file
+\glssetwidest{LOOP}  % IMPORTANT : widest entry in nomenclature
+\renewcommand*{\glscatnamefmt}[1]{\textbf{#1}} % category text format
+%% ------------- ulthese ----------------------------------------------------
+\titre{\texttt{glosmathtools} documentation and sample in \texttt{ulthese}}
+\soustitre{v1.0.0}
+\auteur{Francis Gagnon}
+\makeatletter\renewcommand*{\UL@typeofdoc}{}\makeatother
+%% ============================================================================
+
+\begin{document}
+\selectlanguage{english} % babel-related (not glosmathtool)
+\frontmatter  
+\frontispice
+
+\printglossary[title=Nomenclature]
+
+\mainmatter                     
+
+\chapter{\texttt{glosmathtools} documentation and sample}
+
+\section{Compilation}
+The \texttt{glosmathtools} package is based on \texttt{glossaries} included in MiKTeX and TeX Live. Like a bibliography, the glossary compilation is done by executing the commands in the following order:
+\begin{enumerate}
+	\item \texttt{pdflatex}
+	\item \texttt{makeglossaries}
+	\item \texttt{pdflatex}
+\end{enumerate}
+The \texttt{makeglossaries} command is directly available in TeXstudio menus or with \texttt{F9}. For other editors, add a custom command. For example, in TexMaker, go to \texttt{User > User Commands > Edit User Commands}:
+\begin{itemize}
+	\item Menu Item : \texttt{glossaries} 
+	\item Command : \texttt{makeglossaries \%}
+\end{itemize}
+On Windows with MiKTeX, the \texttt{makeglossaries} script may requires an installation of Perl (see \url{https://tinyurl.com/ybnoyqjp}). Once Perl installed, you should run \texttt{perltex.exe} available in the MiKTeX installation directory.
+
+\section{Package options}
+The options of the \texttt{glosmathtools} package are summarized by:
+\begin{description}
+	\item[qtmarkupright] character \texttt{<">} shortcut for subscript without italics
+	\item[singlelineskip] force single line spacing in nomenclature
+	\item[nodefop] use operators and accents without definitions
+	\item[{[other options]}] passed to \texttt{glossaries} package
+\end{description}
+For example, the \textbf{toc} option of \texttt{glossaries} can be added to include the nomenclature in the table of contents.
+
+\section{Using the package}
+By default, mathematical symbols must be used in the text so that they are added to the nomenclature, which encourages the author to introduce his variables. It is still possible to manually add a symbol without referring to it with the \texttt{\textbackslash glsadd\{label\}} macro, or \texttt{\textbackslash glsaddall}, to add everything.
+
+\subsection{Symbols, subscripts and accents}
+The insertion of a simple mathematical symbol with hyperlink is done with the \texttt{\textbackslash gls} macro of \texttt{glossaries}: \gls{k}, \gls{mat.A} and \gls{mat.b}. The same goes for abbreviations: the \gls{ODE}. Abbreviations are only defined at their first use: the \gls{ODE}.
+
+Subscripts must be labeled \texttt{sub.restOfTheLabel}: the subscript \gls{sub.a} indicates air. The \texttt{\textbackslash glsub} macro allows to add subscripts to variables: \glsub{d}{v}, \glsub{z}{v}, \glsub{T}{v}, \glsub{D}{a}, \glsub{rho}{w} and \glsub{mu}{v}. By defining mathematical symbols with \texttt{\textbackslash newglosentrymath}, all macros can be used in text mode and math mode (with \texttt{\$\$}). Still, it is better to write explicit symbols in equations to ease code reading (no hyperlink):
+\begin{equation}
+d"v + \glsub{d}{v} = \SI{10.0}{\centi\meter} = 3.937\qtmark
+\end{equation}
+The package can be loaded with the \texttt{qtmarkupright} option. The \texttt{<">} character is then configured as a shortcut for writing an index without italics in \texttt{math} mode (\texttt{<\_>} for italic index) \footnote{The \texttt{\textbackslash qtmark} macro inserts the character <">. In ISO, subscripts representing the abbreviation of a word are written without italics, and those representing a variable, in italics.}.
+
+The \texttt{\textbackslash glsvi} macro appends a variable in index to another variable, and \texttt{\textbackslash glsvisub}, an indexed variable to another variable: \glsvi{T}{k} and \glsvisub{T}{z}{v}. Finally, it is possible to add two subscripts separated by comma with \texttt{\textbackslash glsubs}:  \glsubs{D}{w}{a}. In this case, the comma operator is added to the nomenclature, which must be defined in the glossary under \texttt{op.comma} label.
+
+Accents can also be added to variables with \texttt{\textbackslash glsac} macro: \glsac[dot]{m} and \glsac[bar]{T}. At their respective use, an operator is added to the nomenclature. They must therefore be defined at their respective labels. The available accents are:
+\begin{description} 
+\item[dot] $\dot{\bullet}$ (defined at label \texttt{op.dot})
+\item[ddot] $\ddot{\bullet}$ (defined at label \texttt{op.ddot})
+\item[bar] $\bar{\bullet}$ (defined at label \texttt{op.bar})
+\item[hat] $\widehat{\bullet}$ (defined at label \texttt{op.hat})
+\item[vec] $\vec{\bullet}$ (defined at label \texttt{op.vec})
+\item[tilde] $\widetilde{\bullet}$ (defined at label \texttt{op.tilde})
+\end{description}
+Moreover, an optional argument makes it possible to add accents to all the aforementioned macros: \glsub[bar]{T}{v} and \glsubs[dot]{m}{v}{a}. There are two optional arguments for \texttt{\textbackslash glsvi} and \texttt{\textbackslash glsvisub} cases: \glsvi[dot]{m}{k}, \glsvi[bar][dot]{T}{m} and \glsvisub[][dot]{T}{m}{w}. Finally, the \texttt{nodefop} option makes it possible to use accents without nomenclature definitions.
+
+\subsection{Language, abbreviations and nomenclature}
+If there are language changes throughout the document, you must change the language for acronyms. The \texttt{descseclang} key must be defined in the glossary beforehand. Afterward, the \texttt{\textbackslash setacronymlang} macro allows to choose among 4 language options:
+\begin{description}
+	\item[L1] main language description (abbreviation) : \setacronymlang{L1}\acrfull{TL}
+	\item[L2] second language description (abbreviation) : \setacronymlang{L2}\acrfull{TL}
+	\item[L1L2] bilingual description, main language (abbreviation, \textit{second language}) : \setacronymlang{L1L2}\acrfull{TL}
+	\item[L2L1] bilingual description, second language (abbreviation, \textit{main language}) : \setacronymlang{L2L1}\acrfull{TL}
+\end{description}
+\setacronymlang{L1}% back to document language
+The \texttt{acronymlang} environment works in a similar way: \begin{acronymlang}{L1L2}\acrfull{TL}\end{acronymlang}. The \texttt{\textbackslash glslang} macro displays the acronym in the specified language: \glslang[L1L2]{TL}. Second descriptions are also available with \texttt{\textbackslash glsdescsec}: \textit{le \glsdescsec{TL}}.
+
+For the nomenclature (or list of symbols), the widest entry must be defined in the preamble with \texttt{\textbackslash glssetwidest}. Like abbreviations, it is possible to change your language with 4 style options for \texttt{\textbackslash setglossarystyle}:
+\begin{description}
+	\item[nomencl-L1] (or \textbf{nomencl}) main language description
+	\item[nomencl-L2] second language description
+	\item[nomencl-L1L2] bilingual description, main language (abbreviation, \textit{second language})
+	\item[nomencl-L2L1] bilingual description, second language (abbreviation, \textit{main language})
+\end{description}
+The \texttt{singlespaceglos} package option forces single line spacing in the nomenclature (requires \texttt{ulthese}/\texttt{memoir} or the \texttt{setspace} package). The \texttt{\textbackslash glscatnamefmt} macro can be redefined in the preamble to modify header format for categories. The example on page ii is a bilingual nomenclature \textbf{nomencl-L2L1} with single line spacing.
+
+If defined, the content of \texttt{symbol} key is appended to descriptions (for units or dimensions). Note that the mathematical symbols are not saved in this key, but at the \texttt{name} key.
+
+\end{document}

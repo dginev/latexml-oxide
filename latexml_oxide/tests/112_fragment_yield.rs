@@ -151,12 +151,14 @@ fn removed_subtrees_leave_no_c_heap_residue() {
   );
   let (first, growth) = c_heap_growth_over_two_conversions("tests/streaming/picture_groups.tex");
   assert!(first.contains("<svg:path"), "the fixture must draw");
-  // Every in-process conversion leaves a constant ~37 MB on the C heap
-  // regardless of the document (measured 73.3 MB over two prose-only
-  // conversions; a session-level residue, tracked in PLANS 11). The leak this
-  // guards is the per-picture surplus over that floor: with a bare `unlink`
-  // the 2,000 transient groups here cost megabytes; freed, the surplus is
-  // tens of kilobytes (measured 66 KB).
+  // Every conversion here leaves a constant ~37 MB regardless of the
+  // document (73.3 MB over two prose-only conversions): the fresh thread's
+  // `#[thread_local]` engine roots, which are RUST memory that this test
+  // binary counts only because it links no mimalloc (see
+  // `latexml_core::reset_thread_engine`). The leak this guards is the
+  // per-picture surplus over that floor: with a bare `unlink` the 2,000
+  // transient groups here cost megabytes; freed, the surplus is tens of
+  // kilobytes (measured 66 KB).
   let surplus = growth.saturating_sub(prose_growth);
   eprintln!(
     "C heap growth over two conversions: prose {prose_growth} B, pictures {growth} B, surplus {surplus} B"
