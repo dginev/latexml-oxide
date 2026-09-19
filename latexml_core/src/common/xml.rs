@@ -216,6 +216,19 @@ impl XPath {
     match self.context.findnodes(xpath, node) {
       Ok(nodes) => nodes,
       Err(e) => {
+        // A relative query whose context node has been detached from the tree
+        // reaches here with a NULL node pointer — e.g. a stale `ltx:_Capture_`
+        // cell wrapper left by eqnarray/MathFork row surgery (base_xmath.rs
+        // `equationgroup_join_rows` counting `ltx:Math` per cell). The null is
+        // the known detached-wrapper hazard (a handle captured live, then freed
+        // while still held; see `Node::node_ptr_mut`). Such a node has no
+        // descendants, so the empty result is correct and NOT an error: Perl
+        // never logs it (its wrappers stay live). Recover silently. Keep the
+        // diagnostic for a genuine failure (malformed expression, growth limit)
+        // on a live context node.
+        if node.is_some_and(|n| n.is_null()) {
+          return Vec::new();
+        }
         let message = s!(
           "XPath {xpath:?} failed (context node: {}): {e:?}",
           node.is_some()
@@ -239,6 +252,11 @@ impl XPath {
     match self.context.findvalues(xpath, node) {
       Ok(vals) => vals,
       Err(e) => {
+        // A null (detached) context node has no descendants: empty, not an
+        // error (see `findnodes`).
+        if node.is_some_and(|n| n.is_null()) {
+          return Vec::new();
+        }
         let message = s!(
           "XPath {xpath:?} failed (context node: {}): {e:?}",
           node.is_some()
@@ -502,6 +520,35 @@ mod tests {
     assert!(
       !is_descendant_or_self(&kids[0], &kids[1]),
       "a is not a descendant of b"
+    );
+  }
+
+  /// A relative XPath query whose context node is a detached (null-pointer)
+  /// wrapper — as eqnarray/MathFork row surgery leaves stale `ltx:_Capture_`
+  /// cells (base_xmath.rs `equationgroup_join_rows`; the A&A `aa.cls` cluster,
+  /// witness 2605.02723) — must recover as an empty result WITHOUT logging an
+  /// `Error`: a null node has no descendants, so the empty result is correct
+  /// and Perl never reports it. Without the null-context arm this errors and
+  /// bumps `REPORT.error`.
+  #[test]
+  fn findnodes_on_a_null_context_node_recovers_without_an_error() {
+    use crate::common::error::snapshot_report_counts;
+    let doc = Document::new().unwrap();
+    let mut xpath = XPath::new(&doc, HashMap::default());
+    let null_node = Node::null();
+    assert!(
+      null_node.is_null(),
+      "precondition: the context node is null"
+    );
+
+    let before = snapshot_report_counts().error;
+    let found = xpath.findnodes("ltx:Math", Some(&null_node));
+    let after = snapshot_report_counts().error;
+
+    assert!(found.is_empty(), "a null-context query yields no nodes");
+    assert_eq!(
+      after, before,
+      "the null context node must be recovered silently, not logged as an Error"
     );
   }
 }
