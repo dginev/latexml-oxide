@@ -1084,9 +1084,26 @@ entry points cost 2-6 %, the price of a stream a handler can scan): zx_full 23.2
 zx-calculus manual 150 → 73 s, the circuitikz manual 74 → 59 s. Cumulative for
 the two slices: zx_full −56 %, tcb_full −26 %, keys_heavy −21 %. Fourteen fixtures now run
 ON and OFF (`LATEXML_PGFKEYS_TRACE=1` prints one line per dispatched key, the
-bisection aid). Next: slice 2, the `\pgfkeysdef` family and the hottest
-handlers (`.code`, `.style`, `.cd`, `.initial`, `.default`) as natives that
-still store what the raw handlers store. Not lever inputs: chemobabel
+bisection aid). Next: slice 2. The profile of the slice-1 binary (`~/data/pk_agents/w23/perf_pgf/slice2/`)
+shows the residual is generic gullet macro machinery serving the RAW handler
+bodies plus allocator churn; the dispatch histograms
+(`LATEXML_PGFKEYS_TRACE=1`) put the definition handlers at 72 % of zx_full's
+16,556 dispatches (`.code` 6,008, `.style` 4,891 — each `.style` a nested
+`\pgfkeys{…/.code=\pgfkeysalso{#1}}`), ~50 % of a pgfplots example, 23 % of
+tcb_full, and only 4 % of the tcolorbox manual, whose 2.39 M dispatches are 79 %
+case one (USE) and 13 % `.try`. Ranked: (1) native `\pgfkeysdef` (:648) with
+native `.code` (:772) and `.style` (:826) — the `/.@cmd` macro is `\long` with
+parameter text `#1\pgfeov` and a PARAMETER-PACKED body, `/.@body` holds the
+value verbatim (:651) and later `.append style`/`.add code`/`.show code`
+(:783/:806/:837) read it, `.style` skips the nested `\pgfkeys`; keep
+`\pgfkeysedef` (:653) raw first (the `\edef` timing seam); (2) `\pgfkeysdefargs`
+(:675) / `\pgfkeysdefnargs` (:727) for the `n args` forms (three slots,
+`/.@args` = `{pattern}\pgfeov`, the `/.@@body` indirection :753); (3) `.initial`/
+`.default`/`.cd` as thin natives over `\pgfkeyssetvalue`/`\pgfkeysdefaultpath`;
+(4) `.append style`/`.add code` deferred. For USE-heavy documents `.try` (:1024, a
+full re-dispatch under `\ifpgfkeyssuccess`) is a natural slice 3, and the tikz
+path-construction/`\pgfmath`/node-box floor (keys_heavy: 8.6 of 12.1 G is not
+pgfkeys at all) outranks every remaining pgfkeys slice. Not lever inputs: chemobabel
 (parked, LuaTeX-ja), lie-hasse (runaway TokenLimit after a mode-frame error —
 separate bug), wheelchart (MemoryBudget runaway), l3kernel/source3 (memory). Settled dead ends: SmallVec-backed `Tokens` (blocked by
 `Token == 8 B`, P5), pooled `Tokens` allocator and a reused `read_balanced`
