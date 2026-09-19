@@ -359,7 +359,12 @@ impl Converter {
         },
         Err(e) => {
           // Same resource-fatal surfacing as the eager DOM arm below.
-          if matches!(e.target, ErrorTarget::Timeout) {
+          if matches!(e.category, ErrorCategory::StreamingRestart) {
+            // Not a failure: the CLI reruns this document under --streaming
+            // (the watermark crossed during the build; the digest arm above
+            // handles the common digestion crossing).
+            emit_info("streaming", "restart_watermark", &e.message);
+          } else if matches!(e.target, ErrorTarget::Timeout) {
             e.log_fatal();
           } else {
             let message = s!("{:?}", e);
@@ -393,6 +398,13 @@ impl Converter {
       )
     };
     let digested = match digest_result {
+      Err(e) if matches!(e.category, ErrorCategory::StreamingRestart) => {
+        // Not a failure: eager digestion stopped at the streaming-restart
+        // watermark and the CLI reruns this document under --streaming. No
+        // salvage (that would digest on), no Fatal line, no status change.
+        emit_info("streaming", "restart_watermark", &e.message);
+        return self.finish_response(String::new());
+      },
       Err(e) => {
         report_mut!().status_code = 3;
         e.log_fatal();
@@ -452,7 +464,10 @@ impl Converter {
             // propagated out of math parsing, P1-4) must surface as the
             // standard `Fatal:` log line, not a generic document error;
             // otherwise the summary counts a fatal the log never shows.
-            if matches!(e.target, ErrorTarget::Timeout) {
+            if matches!(e.category, ErrorCategory::StreamingRestart) {
+              // Not a failure: the CLI reruns this document under --streaming.
+              emit_info("streaming", "restart_watermark", &e.message);
+            } else if matches!(e.target, ErrorTarget::Timeout) {
               e.log_fatal();
             } else {
               let message = s!("{:?}", e);
@@ -653,7 +668,12 @@ impl Converter {
           // same way `convert` does so it composes in this `-> ConversionResponse` fn.
           // Timeout-target resource fatals get the standard `Fatal:` line
           // (see the sibling handler in `convert` — P1-4).
-          if matches!(e.target, ErrorTarget::Timeout) {
+          if matches!(e.category, ErrorCategory::StreamingRestart) {
+            // Not a failure: the CLI reruns this document under --streaming
+            // (the watermark crossed during the build; the digest arm above
+            // handles the common digestion crossing).
+            emit_info("streaming", "restart_watermark", &e.message);
+          } else if matches!(e.target, ErrorTarget::Timeout) {
             e.log_fatal();
           } else {
             let message = s!("{:?}", e);

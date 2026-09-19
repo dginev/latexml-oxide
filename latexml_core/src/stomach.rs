@@ -65,6 +65,21 @@ thread_local! {
 /// for the precedence order.
 pub fn set_memory_cap(bytes: Option<u64>) { RSS_CAP_OVERRIDE.with(|c| c.set(bytes)); }
 
+/// The streaming-restart watermark (bytes of RSS): set by the CLI for an
+/// EAGER run that may be rerun under `--streaming`. Crossing it stops
+/// digestion with `ErrorCategory::StreamingRestart` — an Info, not a Fatal —
+/// well before the fuse, so the rerun starts with most of the wall-clock
+/// allowance instead of after a fused attempt (pgf-PeriodicTable's manual
+/// under the eager sweep: fuse at ~70 s + a 380 s rerun = 418 s against a
+/// 420 s cap). `None` (the default, and every non-CLI path) = no watermark.
+#[thread_local]
+static STREAMING_RESTART_WATERMARK: Cell<Option<u64>> = Cell::new(None);
+
+/// Arm (or clear) the streaming-restart watermark for this thread.
+pub fn set_streaming_restart_watermark(bytes: Option<u64>) {
+  STREAMING_RESTART_WATERMARK.set(bytes);
+}
+
 /// Derive the cooperative soft-RSS budget (bytes) from the hard `--max-memory`
 /// ceiling (MiB). The soft fuse sits at 75% of the ceiling, leaving ~25%
 /// headroom for the post-processing phase (libxml DOM + XSLT) that runs above
@@ -315,6 +330,24 @@ pub fn check_timeout() -> Result<()> {
           // test setup (latexml_oxide `util::test::init_test_rss_cap`).
           // Any other single-process-many-conversion driver should do the
           // same.
+          if let Some(watermark) = STREAMING_RESTART_WATERMARK.get()
+            && rss_bytes > watermark
+          {
+            // One stop per arming: the rerun is streaming and never armed.
+            STREAMING_RESTART_WATERMARK.set(None);
+            crate::watchdog::note_streaming_restart();
+            use crate::common::error::{Error as LatexmlError, ErrorCategory, ErrorTarget};
+            return Err(LatexmlError {
+              target:   ErrorTarget::Timeout,
+              category: ErrorCategory::StreamingRestart,
+              message:  format!(
+                "eager digestion reached the streaming-restart watermark: RSS {} MB > {} MB; \
+                 rerunning under --streaming",
+                rss_bytes / 1_000_000,
+                watermark / 1_000_000
+              ),
+            });
+          }
           if let Some(cap) = resolve_rss_cap()
             && rss_bytes > cap
           {

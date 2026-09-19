@@ -274,6 +274,12 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // underneath it. So the stomach's memory guards stay on the recovery
       // path — a graceful end with as much of the document as was already
       // digested, and the Fatal announced and latched below.
+      // A streaming-restart watermark stop is not a failure at all: the CLI
+      // reruns the document under --streaming. No salvage, no Fatal line, no
+      // recovery warning — the converter reports it as an Info.
+      if matches!(e.category, ErrorCategory::StreamingRestart) {
+        return Err(e);
+      }
       if matches!(
         (&e.target, &e.category),
         (ErrorTarget::Timeout, ErrorCategory::MemoryBudget)

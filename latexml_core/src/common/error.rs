@@ -1036,6 +1036,10 @@ pub enum ErrorCategory {
   PushbackLimit,
   IfLimit,
   MemoryBudget,
+  /// Not a failure: an eager digestion stopped at the streaming-restart
+  /// watermark so the CLI can rerun the document under `--streaming` before
+  /// the memory fuse (batch 56dz). Reported as an Info, never a Fatal.
+  StreamingRestart,
 }
 
 #[derive(Debug)]
@@ -1089,6 +1093,7 @@ impl fmt::Display for ErrorCategory {
       PushbackLimit => write!(f, "pushback_limit"),
       IfLimit => write!(f, "if_limit"),
       MemoryBudget => write!(f, "memory_budget"),
+      StreamingRestart => write!(f, "streaming-restart"),
     }
   }
 }

@@ -643,15 +643,35 @@ fn apply_token_limit(limit: Option<usize>) {
   }
 }
 
-/// After an EAGER conversion, the fragment budget to restart under when the
-/// memory fuse tripped and streaming is still available: not opted out
+/// May this EAGER run be rerun under `--streaming`? Not opted out
 /// (`--streaming=false`), a DOM output (TeX/Box outputs never build a document),
-/// and not already streaming. `None` = keep the eager result.
+/// and not already streaming.
+fn streaming_restart_eligible(cli: &Cli, opts: &Config) -> bool {
+  opts.streaming.is_none()
+    && cli.streaming != Some(false)
+    && !matches!(opts.format, OutputFormat::TeX | OutputFormat::Box)
+}
+
+/// The RSS at which an eligible eager run stops to rerun under `--streaming`:
+/// two thirds of the cooperative fuse (half the `--max-memory` ceiling). Above
+/// it the eager attempt was going to fuse anyway on every witness measured
+/// (pgf-PeriodicTable's manual, source2e, the datatool and glossaries
+/// manuals), and stopping here hands the rerun the wall-clock allowance the
+/// fused attempt used to burn. `None` = no ceiling to derive it from.
+fn streaming_restart_watermark(cli: &Cli) -> Option<u64> {
+  // `--max-memory=0` disables memory limiting entirely (the fuse included):
+  // no watermark either — the single knob governs every ceiling.
+  let fuse = latexml_core::stomach::soft_cap_from_ceiling(resolve_max_memory(cli.max_memory));
+  (fuse > 0).then_some(fuse * 2 / 3)
+}
+
+/// After an EAGER conversion, the fragment budget to restart under when the
+/// run stopped for memory — at the watermark or at the fuse — and streaming
+/// is still available. `None` = keep the eager result.
 fn streaming_restart_budget(cli: &Cli, opts: &Config, source: &str) -> Option<usize> {
-  if opts.streaming.is_some()
-    || cli.streaming == Some(false)
-    || matches!(opts.format, OutputFormat::TeX | OutputFormat::Box)
-    || !latexml_core::watchdog::memory_fatal_seen()
+  if !streaming_restart_eligible(cli, opts)
+    || !(latexml_core::watchdog::memory_fatal_seen()
+      || latexml_core::watchdog::streaming_restart_requested())
   {
     return None;
   }
@@ -1267,6 +1287,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         status_code: 0,
       }
     } else if supplement_sources.is_empty() {
+      if streaming_restart_eligible(&cli, &opts) {
+        latexml_core::stomach::set_streaming_restart_watermark(streaming_restart_watermark(&cli));
+      }
       let response = converter.convert(source.clone());
       match streaming_restart_budget(&cli, &opts, &source) {
         // The eager attempt tripped the memory fuse; streaming bounds what
@@ -1288,12 +1311,20 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             latexml_core::stomach::soft_cap_from_ceiling(resolve_max_memory(cli.max_memory))
               / (1024 * 1024);
           if cap_mb > 0 && rss_mb >= cap_mb {
-            emit_info(
+            // A watermark stop abandoned the eager attempt WITHOUT a Fatal:
+            // failing to rerun it must not read as a clean, empty document.
+            let emit: fn(&str, &str, &str) =
+              if latexml_core::watchdog::streaming_restart_requested() {
+                latexml_core::common::error::emit_error
+              } else {
+                emit_info
+              };
+            emit(
               "streaming",
               "restart",
               &format!(
-                "the eager conversion exceeded its memory budget and {rss_mb} MB stay resident \
-                 after releasing it (cap {cap_mb} MB): not restarting under --streaming"
+                "the eager conversion stopped for memory and {rss_mb} MB stay resident after \
+                 releasing it (cap {cap_mb} MB): not restarting under --streaming"
               ),
             );
             response
@@ -1301,6 +1332,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             let mut streaming_opts = opts.clone();
             streaming_opts.streaming = Some(budget);
             latexml_core::watchdog::reset_memory_fatal();
+            latexml_core::watchdog::reset_streaming_restart();
+            latexml_core::stomach::set_streaming_restart_watermark(None);
             let mut restarted = Converter::from_config(streaming_opts.clone());
             if let Err(e) = restarted.prepare_session(&streaming_opts) {
               eprintln!("Could not prepare the streaming restart session: {}", e);
@@ -1315,9 +1348,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               "streaming",
               "restart",
               &format!(
-                "the eager conversion exceeded its memory budget; restarting under --streaming \
-                 (fragment budget {budget} boxes, {rss_mb} MB resident after release) on the \
-                 remaining wall-clock allowance"
+                "the eager conversion stopped for memory (at the restart watermark or the fuse); \
+                 restarting under --streaming (fragment budget {budget} boxes, {rss_mb} MB \
+                 resident after release) on the remaining wall-clock allowance"
               ),
             );
             restarted.convert(source)
@@ -2104,6 +2137,19 @@ mod streaming_activation_tests {
       "TeX output never builds a document"
     );
     latexml_core::watchdog::reset_memory_fatal();
+    // The pre-fuse watermark stop restarts too, and clears like the fuse.
+    latexml_core::watchdog::note_streaming_restart();
+    assert!(streaming_restart_budget(&cli(&[]), &eager, src).is_some());
+    latexml_core::watchdog::reset_streaming_restart();
+    assert_eq!(streaming_restart_budget(&cli(&[]), &eager, src), None);
+    let watermark = streaming_restart_watermark(&cli(&["--max-memory=1024"]))
+      .expect("a ceiling derives a watermark");
+    assert_eq!(watermark, 1024 * 1024 * 1024 * 3 / 4 * 2 / 3);
+    assert_eq!(
+      streaming_restart_watermark(&cli(&["--max-memory=0"])),
+      None,
+      "memory limiting disabled entirely means no watermark"
+    );
   }
 
   /// The explicit opt-out wins over auto-activation, however doomed the
