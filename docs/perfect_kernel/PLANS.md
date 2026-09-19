@@ -249,6 +249,36 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
     the box list, libxml residue? Profile with `--max-memory` raised and `perf`/heap
     sampling; the corpus's second-heaviest pgfkeys consumer should not need 5 GB.
 
+11. **Memory: the whole-document box tree is the peak — streaming needs a picture-end
+    seam (FINAL, 2026-09-19; `~/data/pk_agents/w23/perf_pgf/periodictable/`).**
+    pgf-PeriodicTableManual: 24.8 GB RSS, and it is not the DOM (2.8 MB XML for 8 tables ≈
+    30 MB) nor a drawing excess (141,157 `svg:g` against pdflatex's 419,452 graphics
+    scopes — we already elide same-colour path wrappers as Perl does,
+    `pgfsys_latexml_def.rs:753` ≡ pgfsys-latexml.def.ltxml L397). RSS is linear in
+    tables (216 MB + ~106 MB per table, ~47,000 boxes per table of which ~92 % are
+    non-element pgf path/coordinate/scope whatsits) and peaks at the END of digestion,
+    before Build: `digest_internal` (`core_interface.rs:1541-1549`) materializes the
+    whole document as one `List` before `convert_document` absorbs it (:1521) — the
+    same shape as Perl `Core.pm:214-235` → `Document.pm:564-604` (SHARED), with a
+    per-box footprint ~2.4 KB (`Rc<DigestedData>`, `stomach.rs:1592` calibration) against
+    Perl's ~0.7 KB, so Rust peaks where Perl merely crawls. The streaming path is the
+    only mechanism that can bound it, and today it FAILS on this document: with
+    `--max-memory=6144` the fuse trips at 4.8 GB and writes a 39-byte empty document,
+    because `digest_next_body` yields only at a legal seam on the current level
+    (`stomach.rs:438-446`) and a tikzpicture's ~46k boxes sit at a deep group level with
+    no seam until the picture closes. Fix (MED): make `\pgfsys@endpicture`/tikzpicture
+    end a forced spill seam (`pgfsys_latexml_def.rs:567`, today a no-op) in the streaming
+    driver (`core_interface.rs:1199-1262`, the yield predicate ~`stomach.rs:1950`) and
+    auto-activate streaming when eager-digest RSS crosses a fraction of `--max-memory`
+    (the source-size projection under-estimates pgf: 30 KB of source → 25 GB). Guard:
+    `n8.tex` (eight `\pgfPT[show title=false,show legend=false]\newpage`) with
+    `--max-memory=1024`: 0 Error/Fatal, exactly 6,264 `svg:g`, peak RSS below the eager
+    1,067 MB. Secondary (LOW, output-neutral): Perl-parity refcount pruning of
+    `node_boxes` in the eager path (`Document.pm:1667-1669`; Rust's
+    `document.rs::sweep_stale_node_boxes` is streaming-gated) — ~340 MB on the manual.
+    Dead ends: fewer `svg:g` (already 0.34×), draining during Build (too late),
+    a leaner `Whatsit` (already niche-optimized, issue #361 M4).
+
 ## DONE
 
 (moves here with batch number)
