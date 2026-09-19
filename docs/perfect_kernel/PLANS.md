@@ -217,6 +217,13 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    pre-existing; crosses the shared `MAX_ERRORS` 100 cap into a Fatal now that the
    `\if` degradation matches Perl. Bound the per-row report as Perl does.
 
+10. **tcolorbox manual RSS (lead).** The manual trips the `MemoryBudget` fuse at
+    4.8 GB RSS (75 % of `--max-memory=6144`) every sweep, at 50 s before slice 2 and
+    155 s after (the fuse is reached later, not avoided); uncapped it completes in
+    ~390 s with 34 errors. What holds the memory — retained `\tcbset` style trees,
+    the box list, libxml residue? Profile with `--max-memory` raised and `perf`/heap
+    sampling; the corpus's second-heaviest pgfkeys consumer should not need 5 GB.
+
 ## DONE
 
 (moves here with batch number)

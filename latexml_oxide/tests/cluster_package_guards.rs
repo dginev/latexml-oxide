@@ -20897,6 +20897,23 @@ mod pgfkeys_native_accessors {
     );
   }
 
+  /// `\\pgfkeys@split@path` (pgfkeys.code.tex:547-570) names the first segment
+  /// followed by an empty one and leaves a key's surplus text (`/p/q/` → `/`,
+  /// `/p//r` → `r//`) in the stream, typeset before the handler — pdflatex
+  /// prints it too; the native split had named the empty last segment. A
+  /// segment that is exactly a brace group loses its braces and, re-supplied
+  /// to the splitter, splits on the `/` it hid (`/a/{x/y}/c` → path `/a/x/y`).
+  #[test]
+  fn path_split_leaves_the_surplus_in_the_stream() {
+    let xml = both_ways("path_split");
+    latexml::util::test::assert_element(
+      &xml,
+      "p",
+      &[],
+      r##"<p>/[U:/p—q] /[U:/p—q] /[U:/p—q] r//[U:—p] [U:/a/x/y—c] /[U:/a—x,y]</p>"##,
+    );
+  }
+
   /// A styled tikz node with a `.default` and a tcolorbox style: the real
   /// consumers of the key tree.
   #[test]

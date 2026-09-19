@@ -258,25 +258,95 @@ fn run_unknown() -> Result<()> {
   Ok(())
 }
 
-/// `\pgfkeys@split@path` (:547-570): `\pgfkeys@pathtoks` = the key's tokens up
-/// to the last `/`, `\pgfkeyscurrentname` = the tokens after it. The ORIGINAL
-/// tokens, with their catcodes: tikz-cd's direction parser compares
-/// `\pgfkeyscurrentname`'s first character with the letter `r` by `\ifx`
-/// (tikzlibrarycd.code.tex:96-98), which a catcode-12 rebuild would fail.
-fn split_path(key_toks: &[Token]) -> Result<(String, Vec<Token>)> {
-  let cut = key_toks
-    .iter()
-    .rposition(|t| is_char_of_catcode_other(t, '/'));
-  let (path, name): (&[Token], &[Token]) = match cut {
-    Some(i) => (&key_toks[..i], &key_toks[i + 1..]),
-    None => (&[], key_toks),
+/// `\pgfkeys@split@path` (:547-570): the key's `/`-segments walk through
+/// `\pgfkeys@splitter#1/#2/` with `//` appended; the first segment followed by
+/// an EMPTY one is `\pgfkeyscurrentname`, the segments before it (joined, the
+/// trailing `/` removed) are `\pgfkeys@pathtoks`, and whatever text follows
+/// the empty segment stays in the stream — a key with an empty segment
+/// (`/p/q/`, `/p//q`) leaves its surplus behind, typeset before the handler
+/// runs, in pdflatex too. The ORIGINAL tokens, with their catcodes: tikz-cd's
+/// direction parser compares `\pgfkeyscurrentname`'s first character with
+/// the letter `r` by `\ifx` (tikzlibrarycd.code.tex:96-98), which a
+/// catcode-12 rebuild would fail. Returns (name, path tokens, leftover).
+fn split_path(key_toks: &[Token]) -> Result<(String, Vec<Token>, Vec<Token>)> {
+  // Segments at brace depth 0 (`#1/#2/` are delimited arguments), plus the
+  // two appended empty ones.
+  let mut segs: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth = 0;
+  for t in key_toks {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && is_char_of_catcode_other(t, '/') {
+      segs.push(Vec::new());
+    } else {
+      segs.last_mut().unwrap().push(*t);
+    }
+  }
+  // `#1`/`#2` are delimited arguments: a segment that is exactly one brace
+  // group loses its braces, and a `#2` is re-supplied to the splitter, so a
+  // `/` the braces hid then delimits (`/a/{x/y}/c` walks as `/a/x/y/c`).
+  segs[0] = strip_single_group(std::mem::take(&mut segs[0]));
+  let mut i = 1;
+  while i < segs.len() {
+    let seg = &segs[i];
+    let braced = seg.len() >= 2
+      && seg[0].get_catcode() == Catcode::BEGIN
+      && seg[seg.len() - 1].get_catcode() == Catcode::END;
+    if braced {
+      let stripped = strip_single_group(segs[i].clone());
+      if stripped.len() != seg.len() {
+        let mut parts: Vec<Vec<Token>> = vec![Vec::new()];
+        let mut d = 0;
+        for t in &stripped {
+          match t.get_catcode() {
+            Catcode::BEGIN => d += 1,
+            Catcode::END => d -= 1,
+            _ => {},
+          }
+          if d == 0 && is_char_of_catcode_other(t, '/') {
+            parts.push(Vec::new());
+          } else {
+            parts.last_mut().unwrap().push(*t);
+          }
+        }
+        segs.splice(i..=i, parts);
+        continue; // the re-supplied segment is examined again
+      }
+    }
+    i += 1;
+  }
+  segs.push(Vec::new());
+  segs.push(Vec::new());
+  let k = (0..segs.len() - 1)
+    .find(|&i| segs[i + 1].is_empty())
+    .unwrap_or(segs.len() - 2);
+  let slash = || Token::new("/", Catcode::OTHER);
+  let join = |parts: &[Vec<Token>]| -> Vec<Token> {
+    let mut out = Vec::new();
+    for (i, p) in parts.iter().enumerate() {
+      if i > 0 {
+        out.push(slash());
+      }
+      out.extend_from_slice(p);
+    }
+    out
+  };
+  let name = segs[k].clone();
+  let path = join(&segs[..k]);
+  let leftover = if k + 2 < segs.len() {
+    join(&segs[k + 2..])
+  } else {
+    Vec::new()
   };
   let mut toks = vec![T_CS!("\\pgfkeys@pathtoks"), T_BEGIN!()];
-  toks.extend_from_slice(path);
+  toks.extend_from_slice(&path);
   toks.push(T_END!());
   digest(Tokens::new(toks))?;
-  def_verbatim(T_CS!("\\pgfkeyscurrentname"), Tokens::new(name.to_vec()))?;
-  Ok((key_text(&Tokens::new(name.to_vec())), path.to_vec()))
+  def_verbatim(T_CS!("\\pgfkeyscurrentname"), Tokens::new(name.clone()))?;
+  Ok((key_text(&Tokens::new(name)), path, leftover))
 }
 
 // ---------------------------------------------------------------------------
@@ -500,19 +570,23 @@ fn dispatch_item(item: &[Token]) -> Result<bool> {
     return Ok(true);
   }
   // Case three: a handler named by the last path component.
-  let (name, path) = split_path(&full_key_toks)?;
+  let (name, path, leftover) = split_path(&full_key_toks)?;
   let handler = T_CS!(&s!("\\pgfk@/handlers/{name}/.@cmd"));
   if has_meaning(&handler) {
     if native_handler(&name, &handler, &path)? {
       trace(&full_key, &s!("case three, native {name}"));
-      return Ok(true);
+    } else {
+      trace(&full_key, &s!("case three, handler {name}"));
+      run_handler(&handler);
     }
-    trace(&full_key, &s!("case three, handler {name}"));
-    run_handler(&handler);
-    return Ok(true);
+  } else {
+    trace(&full_key, &s!("unknown (name {name})"));
+    run_unknown()?;
   }
-  trace(&full_key, &s!("unknown (name {name})"));
-  run_unknown()?;
+  // The splitter's surplus text sits in front of the handler tokens (:550).
+  if !leftover.is_empty() {
+    unread(Tokens::new(leftover));
+  }
   Ok(true)
 }
 
