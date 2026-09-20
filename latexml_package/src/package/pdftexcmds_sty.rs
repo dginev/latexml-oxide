@@ -16,15 +16,23 @@ LoadDefinitions!({
   // e.g. hep-paper.sty's `\ifnum\pdf@strcmp{\hep@bibliography}{false}=0`
   // skipped loading its whole bibliography layer (`undefined
   // \printbibliography` across the hep-* manuals, 2026-08-31 corpus).
-  DefMacro!("\\pdf@strcmp{}{}", "\\pdfstrcmp{#1}{#2}");
-  DefMacro!("\\pdf@mdfivesum{}", "\\pdfmdfivesum{#1}");
+  // `\let`, not a macro that re-invokes the primitive BY NAME: a package that
+  // aliases the other way round — annotate-equations.sty:16 `\let\pdfstrcmp
+  // \pdf@strcmp` under its `\ifluatex` branch — would otherwise give
+  // `\pdfstrcmp` the body `\pdfstrcmp{#1}{#2}`, i.e. itself, and every
+  // `\ifnum\pdfstrcmp{#1}{south}=0` then expands without end
+  // (`Fatal:Timeout:TokenLimit`; latex-via-exemplos under the luatex identity,
+  // 300 s, batch 56ey). With the primitive's meaning aliased, re-aliasing is
+  // idempotent exactly as in pdfTeX.
+  Let!("\\pdf@strcmp", "\\pdfstrcmp");
+  Let!("\\pdf@mdfivesum", "\\pdfmdfivesum");
   DefMacro!("\\pdf@filemdfivesum{}", "\\pdfmdfivesum file {#1}");
-  DefMacro!("\\pdf@filesize{}", "\\pdffilesize{#1}");
-  DefMacro!("\\pdf@filemoddate{}", "\\pdffilemoddate{#1}");
-  DefMacro!("\\pdf@escapehex{}", "\\pdfescapehex{#1}");
-  DefMacro!("\\pdf@unescapehex{}", "\\pdfunescapehex{#1}");
-  DefMacro!("\\pdf@escapestring{}", "\\pdfescapestring{#1}");
-  DefMacro!("\\pdf@escapename{}", "\\pdfescapename{#1}");
+  Let!("\\pdf@filesize", "\\pdffilesize");
+  Let!("\\pdf@filemoddate", "\\pdffilemoddate");
+  Let!("\\pdf@escapehex", "\\pdfescapehex");
+  Let!("\\pdf@unescapehex", "\\pdfunescapehex");
+  Let!("\\pdf@escapestring", "\\pdfescapestring");
+  Let!("\\pdf@escapename", "\\pdfescapename");
   // \pdf@shellescape reports the shell-escape state; 0 (disabled) is the
   // CORRECT value here — matches pdflatex run without -shell-escape, and we
   // never execute \write18. Justified stub, not an approximation.

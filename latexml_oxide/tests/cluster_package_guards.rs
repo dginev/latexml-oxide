@@ -18696,6 +18696,24 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// Batch 56ey: pdftexcmds' `\pdf@strcmp` (and siblings) must be `\let` to the
+  /// primitive, not a macro that re-invokes it by name — annotate-equations.sty:16
+  /// aliases the other way round (`\let\pdfstrcmp\pdf@strcmp` under `\ifluatex`), and
+  /// a by-name delegation then made `\pdfstrcmp` expand to itself without end
+  /// (`Fatal:Timeout:TokenLimit`; latex-via-exemplos under the luatex identity, 300 s).
+  #[test]
+  fn pdfstrcmp_realiased_through_pdftexcmds_does_not_recurse() {
+    let tex = "\\documentclass{article}\n\\usepackage{pdftexcmds}\n\\makeatletter\n\
+               \\let\\pdfstrcmp\\pdf@strcmp\n\\makeatother\n\\begin{document}\n\
+               \\ifnum\\pdfstrcmp{south}{south}=0 EQUAL\\else DIFFERENT\\fi\n\
+               \\ifnum\\pdfstrcmp{north}{south}=0 SAME\\else OTHER\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("EQUAL") && xml.contains("OTHER"), "{xml}");
+    assert!(!xml.contains("DIFFERENT") && !xml.contains("SAME"), "{xml}");
+  }
+
   /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
   /// a `picture` digests into the positioned `<g>` group. The box is an LR-box, but
   /// `insert_block` emitted a schema-invalid `<block>` there (`g_model` is inline-only —
