@@ -57,6 +57,31 @@ mod single_binary_smoke {
                            \\end{document}\n";
 
   #[test]
+  fn worker_panic_ends_with_a_fatal_line_and_the_verdict() {
+    // Diagnostics audit 2026-09-20 (s107 texproposal): a panic on the worker
+    // thread used to abort with a bare `worker thread panicked` — no
+    // `Fatal:` line, no summary — so only the exit code knew. The run must
+    // end like any other Fatal: a classed `Fatal:panic:caught` line, the
+    // `Conversion failed` verdict, and a non-zero exit.
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let output = Command::new(bin)
+      .arg("--version")
+      .env("LATEXML_INJECT_PANIC", "1")
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      stderr.contains("Fatal:panic:caught"),
+      "the panic gets its classed Fatal line:\n{stderr}"
+    );
+    assert!(
+      stderr.contains("Conversion failed"),
+      "and the end-of-run verdict:\n{stderr}"
+    );
+    assert_eq!(output.status.code(), Some(1), "non-zero exit:\n{stderr}");
+  }
+
+  #[test]
   fn binary_runs_without_source_tree() {
     let bin = env!("CARGO_BIN_EXE_latexml_oxide");
     assert!(

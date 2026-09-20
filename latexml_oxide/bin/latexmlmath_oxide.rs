@@ -268,7 +268,11 @@ fn real_main() -> Result<()> {
             }
           },
           Err(e) => {
-            eprintln!("MathML post-processing failed: {}", e);
+            latexml_core::common::error::emit_error(
+              "latexmlmath",
+              "postprocess",
+              &format!("MathML post-processing failed: {e}"),
+            );
             process::exit(1);
           },
         }

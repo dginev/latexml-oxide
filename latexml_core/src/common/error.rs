@@ -115,6 +115,46 @@ pub fn is_demote_fatals() -> bool { DEMOTE_FATALS.with(|c| c.get()) }
 /// Returns true if log output is currently suppressed.
 pub fn is_log_output_suppressed() -> bool { SUPPRESS_LOG_OUTPUT.get() }
 
+#[thread_local]
+static IGNORE_DIAGNOSTICS: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// Perl `$LaTeXML::IGNORE_ERRORS` (Common/Error.pm L362/L380/L396: `Error`,
+/// `Warn` and `Info` all `return if $LaTeXML::IGNORE_ERRORS`): inside a probing
+/// scope every diagnostic is dropped WHOLE — neither its line nor its count —
+/// so the log and the status can never disagree about it. This is the only
+/// sanctioned way to silence a scope; muting lines while keeping counts (or
+/// the reverse) is exactly the log/status inconsistency the pipeline must not
+/// produce. Returns the previous value; restore it on every exit path.
+pub fn set_ignore_diagnostics(ignore: bool) -> bool {
+  let prev = IGNORE_DIAGNOSTICS.get();
+  IGNORE_DIAGNOSTICS.set(ignore);
+  prev
+}
+/// Whether an `IGNORE_ERRORS`-style probing scope is active (see
+/// `set_ignore_diagnostics`).
+pub fn diagnostics_ignored() -> bool { IGNORE_DIAGNOSTICS.get() }
+
+/// Perl `local $LaTeXML::IGNORE_ERRORS = 1` as a scope: ignores diagnostics
+/// while alive and restores the previous state on drop — panic-safe, unlike a
+/// manual restore after the probed call.
+pub struct IgnoreDiagnosticsScope(bool);
+impl IgnoreDiagnosticsScope {
+  pub fn new() -> Self { Self(set_ignore_diagnostics(true)) }
+}
+impl Default for IgnoreDiagnosticsScope {
+  fn default() -> Self { Self::new() }
+}
+impl Drop for IgnoreDiagnosticsScope {
+  fn drop(&mut self) { set_ignore_diagnostics(self.0); }
+}
+
+thread_local! {
+  /// The `target:category:message` of the last `Fatal:` line written, so the
+  /// raise site (`Fatal!`/`fatal!`) and the catch site (`Error::log_fatal`)
+  /// together print it exactly once.
+  static LAST_FATAL_LOGGED: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
 /// Per-thread tracker for the most recently emitted error's
 /// `category:object` signature, plus the count of how many
 /// consecutive errors share the same signature. Used to detect
@@ -165,6 +205,11 @@ pub fn note_consecutive_error(key: &str) -> usize {
 /// count it a second time.
 pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   let _diag_guard = macro_diag_guard();
+  // Perl `IGNORE_ERRORS`: a probing scope drops the record whole (no line, no
+  // count) — see `set_ignore_diagnostics`.
+  if diagnostics_ignored() {
+    return;
+  }
   // After a `TooManyErrors` Fatal or a RESOURCE Fatal has latched, drop
   // further Error-level records entirely (don't log, don't count). Perl dies
   // at the Fatal so nothing ever logs past it; our recovery machinery keeps
@@ -185,6 +230,11 @@ pub fn emit_record(status: LogStatus, target: &str, message: &str) {
   // drain that trips the consecutive-error or MAX_ERRORS check returns
   // `Err(TooManyErrors)`, which cannot displace the latched resource Fatal:
   // `record_last_fatal` keeps only `ErrorTarget::Timeout`.)
+  // After a resource Fatal or the error cap has latched, Error records are
+  // dropped (Perl `Fatal` sets `$LaTeXML::IGNORE_ERRORS = 1` after
+  // `hardYankProcessing`, Common/Error.pm L315, and `Error` returns at L362).
+  // Digestion stops at the Fatal (`core_interface::hard_yank_processing`), so
+  // what still reaches this gate is teardown noise, never a finding.
   if matches!(status, LogStatus::Error) && (too_many_errors_latched() || resource_fatal_latched()) {
     return;
   }
@@ -234,7 +284,9 @@ pub fn emit_warn(category: &str, object: &str, message: &str) {
 /// conversion's verdict and status code report the fatal honestly.
 pub fn emit_error(category: &str, object: &str, message: &str) {
   emit_record(LogStatus::Error, &format!("{category}:{object}"), message);
-  if is_demote_fatals() {
+  // Perl `IGNORE_ERRORS` (Error.pm L362): an ignored record does nothing,
+  // not even cap bookkeeping.
+  if is_demote_fatals() || diagnostics_ignored() {
     return;
   }
   let maxerrors = match crate::state::try_lookup_int("MAX_ERRORS") {
@@ -243,6 +295,12 @@ pub fn emit_error(category: &str, object: &str, message: &str) {
     Some(_) => 100,
   };
   let consec = note_consecutive_error(&format!("{category}:{object}"));
+  // Once latched, `emit_record` drops the repeats and the count freezes at
+  // the cap, so the crossing test below would stay true and re-fire the
+  // `Fatal:TooManyErrors` line on every later call. One Fatal, like Perl.
+  if too_many_errors_latched() {
+    return;
+  }
   let over_total = get_status(LogStatus::Error) > maxerrors;
   let over_consec = consec > MAX_CONSECUTIVE_ERRORS;
   // Latch exactly at the crossing, not on every error past it.
@@ -306,16 +364,6 @@ macro_rules! report_mut {
   () => {
     (*$crate::common::error::REPORT).borrow_mut()
   };
-}
-
-/// Clear the sticky `report.fatal` flag. Used by best-effort
-/// helpers (e.g. `\maketitle`'s deferred frontmatter digest) that
-/// silently swallow a digest error and want to undo the
-/// `note_status(Fatal)` side-effect so the overall conversion
-/// status reflects the silently-handled fact.
-pub fn clear_fatal_flag() {
-  let mut report = REPORT.borrow_mut();
-  report.fatal = false;
 }
 
 pub fn note_status(status: LogStatus, what: Option<&str>) {
@@ -390,6 +438,10 @@ pub fn initialize_report() {
   reset_consecutive_error_tracker();
   LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
   RESOURCE_FATAL_SEEN.with(|c| c.set(false));
+  LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = None);
+  // A probing scope that unwound without its restore must not silence the
+  // next conversion.
+  IGNORE_DIAGNOSTICS.set(false);
 }
 
 /// Clear the arena-`SymStr`-keyed report maps (`undefined`, `missing`). MUST be
@@ -786,7 +838,11 @@ macro_rules! Error {
     // an error multiplier (run-233 follow-up: 470 self-feeding
     // "Too many errors" lines on 2605.02213). The bib interpreter has its
     // own bounded failure latch instead.
-    if !$crate::common::error::is_demote_fatals() {
+    // An ignored record (Perl `IGNORE_ERRORS`, Error.pm L362) does nothing at
+    // all — no count, no cap bookkeeping: 500 identical forward-reference
+    // errors inside the degraded expl3 raw-load must not trip the consecutive
+    // cap on the first error after the scope.
+    if !$crate::common::error::is_demote_fatals() && !$crate::common::error::diagnostics_ignored() {
     // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
     // scope (e.g. push_value's BUG branch, a constructor's after_digest),
     // where a plain `lookup_int` would panic "RefCell already mutably
@@ -820,6 +876,9 @@ macro_rules! Error {
     let __consec_key = format!("{}:{}", $category, $object);
     let __consec = $crate::common::error::note_consecutive_error(&__consec_key);
     if __consec > $crate::common::error::MAX_CONSECUTIVE_ERRORS {
+      // Latch here too, so the runaway Fatal fires ONCE (the frozen count
+      // otherwise re-fires it on every later occurrence — 502, 503, …).
+      $crate::common::error::latch_too_many_errors();
       Fatal!(
         TooManyErrors,
         MaxLimit($crate::common::error::MAX_CONSECUTIVE_ERRORS),
@@ -837,20 +896,6 @@ macro_rules! Error {
 #[macro_export]
 macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
-    if $crate::common::error::is_demote_fatals() {
-      // Demoted context (bibliography post-processing): count and log as
-      // an ERROR — the problem is real and must be visible/accounted —
-      // but never latch the document's sticky fatal. The Err return below
-      // still aborts the failing digestion; its caller degrades
-      // gracefully. A document must not be lost to a broken bibliography.
-      $crate::common::error::emit_record(
-        $crate::common::error::LogStatus::Error,
-        "demoted_fatal",
-        &format!("{}", $message),
-      );
-    } else {
-      $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
-    }
     {
       use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
       let __fatal_err = LatexmlError {
@@ -858,6 +903,25 @@ macro_rules! Fatal {
         category: $category,
         message:  $message.to_string(),
       };
+      if $crate::common::error::is_demote_fatals() {
+        // Demoted context (bibliography post-processing): count and log as
+        // an ERROR — the problem is real and must be visible/accounted —
+        // but never latch the document's sticky fatal. The Err return below
+        // still aborts the failing digestion; its caller degrades
+        // gracefully. A document must not be lost to a broken bibliography.
+        $crate::common::error::emit_record(
+          $crate::common::error::LogStatus::Error,
+          "demoted_fatal",
+          &format!("{}", $message),
+        );
+      } else {
+        // Perl `Fatal` (Common/Error.pm L297+L312) counts AND prints in the
+        // same call, before it dies. Log here, at the raise, so a caller
+        // that swallows the `Err` (`let _ = digest(..)` in a binding) cannot
+        // leave a counted-but-unlogged "phantom fatal"; the catch-site
+        // `log_fatal` is idempotent for this same fatal.
+        __fatal_err.log_fatal();
+      }
       // Latch resource-class fatals so layers that flatten errors to strings
       // (e.g. the marpa semantics boundary) can still recover the STRUCTURED
       // identity downstream. See `take_last_resource_fatal`.
@@ -876,6 +940,10 @@ macro_rules! fatal {
       category: $category,
       message:  $message.to_string(),
     };
+    // Same contract as `Fatal!`: the `Fatal:` line and the sticky count are
+    // written HERE, at the raise (Perl `Fatal` prints before it dies), so a
+    // swallowed `Err` can neither lose the line nor the status.
+    __fatal_err.log_fatal();
     // The RSS fuse and the conversion deadline (`stomach::check_timeout`)
     // raise through THIS form, so the resource-fatal latch must be recorded
     // here as in `Fatal!` — otherwise `resource_fatal_latched()` never fires
@@ -1114,11 +1182,22 @@ impl Error {
     // `Fatal:Timeout:MemoryBudget` etc. printed but the runtime status_code
     // stayed at 0 — canvas would classify the worker as OK with an empty
     // HTML output. R35.A.
+    //
+    // Idempotent per fatal: `Fatal!`/`fatal!` log at the raise and the
+    // converter/post sinks call this again on the propagated `Err`; the
+    // same `target:category:message` prints once. A fatal built by hand
+    // (`Error { .. }` literals) is logged here for the first time.
+    let key = s!("{:?}:{:?}:{}", self.target, self.category, self.message);
+    let already = LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()));
+    if already {
+      return;
+    }
     emit_record(
       LogStatus::Fatal,
       &s!("Fatal:{:?}:{:?} ", self.target, self.category),
       &self.message,
     );
+    LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
   }
   pub fn todo() -> Self {
     Error {
@@ -1331,7 +1410,8 @@ mod tests {
 
   /// Once a resource Fatal is latched, an `Error!` raised by the recovery
   /// drain is neither counted nor logged (the one rule the six stomach
-  /// closer guards were instances of); before the latch it is.
+  /// closer guards were instances of; Perl `IGNORE_ERRORS`); before the
+  /// latch it is.
   #[test]
   fn errors_are_silent_once_a_resource_fatal_is_latched() {
     initialize_report();
@@ -1362,6 +1442,87 @@ mod tests {
       after_fatal,
       "not counted after the latch"
     );
+    initialize_report();
+  }
+
+  fn fatal_lines(log: &str) -> usize { log.matches("Fatal:").count() }
+
+  /// `Fatal!` prints its `Fatal:` line AT THE RAISE (Perl `Fatal` prints
+  /// before it dies), so a caller that swallows the `Err` cannot leave a
+  /// counted-but-unlogged "phantom fatal"; the catch-site `log_fatal` on the
+  /// same fatal is a no-op. Witness 1903.01633 (`base_utilities.rs`), the 11
+  /// `let _ = digest(..)` sites in bindings.
+  #[test]
+  fn fatal_macro_logs_its_line_at_the_raise_exactly_once() {
+    let _ = crate::util::logger::init(log::LevelFilter::Warn);
+    initialize_report();
+    crate::util::logger::bind_log();
+    fn raise() -> Result<()> {
+      Fatal!(Internal, EoF, "synthetic fatal, swallowed by the caller");
+    }
+    let err = raise().unwrap_err();
+    assert_eq!(
+      fatal_lines(&crate::util::logger::flush_log()),
+      1,
+      "logged at the raise"
+    );
+    assert_eq!(get_status(LogStatus::Fatal), 1, "and counted");
+    crate::util::logger::bind_log();
+    err.log_fatal();
+    assert_eq!(
+      fatal_lines(&crate::util::logger::flush_log()),
+      0,
+      "the sink does not print it twice"
+    );
+    // The lowercase form (RSS fuse, deadline) has the same contract.
+    crate::util::logger::bind_log();
+    fn raise_lower() -> Result<()> {
+      fatal!(Internal, EoF, "synthetic lowercase fatal");
+    }
+    let _ = raise_lower();
+    assert_eq!(fatal_lines(&crate::util::logger::flush_log()), 1);
+    initialize_report();
+  }
+
+  /// Perl `IGNORE_ERRORS`: a probing scope drops line AND count together.
+  #[test]
+  fn ignored_diagnostics_scope_drops_line_and_count_together() {
+    let _ = crate::util::logger::init(log::LevelFilter::Warn);
+    initialize_report();
+    crate::util::logger::bind_log();
+    let prev = set_ignore_diagnostics(true);
+    emit_record(LogStatus::Error, "undefined:\\probe", "probe (ignored)");
+    emit_record(LogStatus::Warning, "expected:probe", "probe (ignored)");
+    set_ignore_diagnostics(prev);
+    emit_record(LogStatus::Error, "undefined:\\real", "real");
+    let log = crate::util::logger::flush_log();
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Warning), 0);
+    assert!(
+      !log.contains("probe"),
+      "ignored records leave no line:\n{log}"
+    );
+    assert!(log.contains("undefined:\\real"), "{log}");
+    initialize_report();
+  }
+
+  /// The function-form cap fires `Fatal:TooManyErrors` exactly once.
+  #[test]
+  fn emit_error_fires_the_too_many_errors_fatal_once() {
+    let _ = crate::util::logger::init(log::LevelFilter::Warn);
+    initialize_report();
+    crate::util::logger::bind_log();
+    for _ in 0..(MAX_CONSECUTIVE_ERRORS + 60) {
+      emit_error("unexpected", "}", "synthetic repeat");
+    }
+    let log = crate::util::logger::flush_log();
+    assert_eq!(
+      log.matches("Fatal:TooManyErrors").count(),
+      1,
+      "{}",
+      log.len()
+    );
+    assert!(too_many_errors_latched());
     initialize_report();
   }
 

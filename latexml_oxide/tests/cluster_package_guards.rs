@@ -18865,6 +18865,50 @@ B:\ifcat A西 L\else O\fi.
     assert!(xml.contains("<p>done</p>"), "{xml}");
   }
 
+  /// 56fc — Perl `hardYankProcessing` (Common/Error.pm L320-348): a resource
+  /// Fatal ends digestion. The bodies digested before it are rescued into the
+  /// document, the input after it is never read, so no content is produced
+  /// whose diagnostics the post-Fatal latch would then mute — the asternote
+  /// shape (PushbackLimit inside jlreq.cls, then luatexja and the body
+  /// converted with `\kanjiskip` tallied but unlogged). Every message the run
+  /// prints is accounted for: exactly one `Fatal:` line, and the undefined CS
+  /// after the fatal appears neither as a line nor in the summary tally.
+  #[test]
+  fn a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input() {
+    // The jlreq shape itself, WITHOUT the pTeX profile: `\西` is a control
+    // symbol delimited by the catcode-12 `暦`, and every expansion re-matches
+    // its own body and appends one more `true` — pushback and token counts
+    // grow without a repeating window, so this trips a RESOURCE fatal
+    // (`Timeout:TokenLimit` under the test budget, `Timeout:PushbackLimit` in
+    // the binary) — the `Err` arm of `digest_step_guarded` that calls
+    // `hard_yank_processing`. (`Timeout:Recursion` and the stomach box cap
+    // take the older `Ok(false)` stop and would not exercise it.)
+    let tex = "\\documentclass{article}\n\\begin{document}\nBefore the fatal.\n\n\
+               \\def\\西暦{\\西暦true}\\西暦\n\n\
+               After the fatal. \\undefinedafterthefatal\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(
+      stderr.matches("Fatal:Timeout:").count(),
+      1,
+      "one resource Fatal line, printed once:\n{stderr}"
+    );
+    // The partial body in progress is not salvaged for a resource Fatal
+    // (`digest_step_guarded`: reviving it re-entered the loop during build on
+    // arXiv:2605.25400); only COMPLETED bodies are rescued, and a `document`
+    // environment is one body — so "Before" is lost here, as in the old
+    // 39-byte stub. What the yank guarantees is that nothing PAST the Fatal
+    // is read: before it, the salvage pass re-entered the live mouth and
+    // converted "After" with its Error records muted.
+    assert!(
+      !xml.contains("After the fatal"),
+      "nothing after the fatal is digested:\n{xml}"
+    );
+    assert!(
+      !stderr.contains("undefinedafterthefatal"),
+      "an unread CS is neither reported nor tallied:\n{stderr}"
+    );
+  }
+
   /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
   /// `\subsection` would), and the post-box text ends up inside that subsection.
   #[test]

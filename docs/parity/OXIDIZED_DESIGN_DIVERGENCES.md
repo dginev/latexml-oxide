@@ -8059,3 +8059,60 @@ semantics. Valid, and faithful to LaTeX's own structure (visible order unchanged
 subsection_in_a_block_minipage_nests_in_the_enclosing_section,
 section_in_a_minipage_inside_a_quote_keeps_perl_parity, section_in_a_center_environment_floats_out_and_keeps_its_alignment_class}`.
 **Upstream**: not filed.
+
+### 251. A Fatal ends digestion and its diagnostics stay lossless: `hardYankProcessing`, `Fatal:` at the raise, `IGNORE_ERRORS` scopes (Perl: the same, then `die`)
+
+**Perl**: `Fatal` (Common/Error.pm L297-L318) counts, prints, calls
+`hardYankProcessing` (L320-348: stash `@LaTeXML::LIST` as `rescued_boxes`,
+reset pushback / mouth stack / mouth) and sets `$LaTeXML::IGNORE_ERRORS = 1`, so
+`Error`/`Warn`/`Info` (L362/L380/L396) drop every later record whole; the
+`finishDigestion` retry (LaTeXML.pm L251-259, Core.pm L214-226) re-collects the
+rescue and finds no input. **Rust** recovers a partial document instead of dying,
+and until 2026-09-20 the salvage `digest_internal` kept reading the LIVE mouth
+past a resource Fatal (`Timeout:{PushbackLimit,TokenLimit,Recursion,…}`) while
+`emit_record` muted every Error record — so jlreq's `PushbackLimit` fired inside
+the class, luatexja then loaded and the whole body was converted with
+`\kanjiskip` and 7 more undefined names tallied in the summary but never logged
+(asternote, hideanswer-doc, inlinelabel, jpnedumathsymbols-doc). The user
+directive "we depend on the messages for establishing success" is met by making
+the pipeline Perl-shaped rather than by admitting more post-Fatal messages:
+
+1. **`core_interface::hard_yank_processing`**: on a resource Fatal,
+   `digest_internal` rescues the completed bodies (`RESCUED_BOXES`, Perl's
+   `rescued_boxes`) and `gullet::flush()`es the input; the converter's salvage
+   pass re-collects the rescue and reads nothing more. The in-progress body is
+   still not salvaged for `Timeout:Recursion` (2605.25400: reviving it
+   re-entered the loop during build) — only the stomach box-cap path salvages
+   pending lists, as before.
+2. **`Fatal!` / `fatal!` write their `Fatal:` line at the raise** (Perl L312);
+   `Error::log_fatal` at the converter/post sinks is idempotent per fatal.
+   Before, only the sink logged, so a binding swallowing the `Err`
+   (`let _ = digest(..)`, 11 sites) could leave a counted-but-unlogged phantom
+   fatal (witness 1903.01633).
+3. **`IgnoreDiagnosticsScope`** (`set_ignore_diagnostics`) is the one
+   sanctioned silence — Perl's `IGNORE_ERRORS`, dropping line AND count
+   together and skipping the cap bookkeeping (Error.pm L362 returns before
+   the MAX_ERRORS check), RAII-restored and reset per conversion. The degraded
+   no-dump expl3 raw-load (`expl3_sty.rs`, #651) uses it, together with the
+   state-level `SUPPRESS_UNDEFINED_ERRORS`/`SUPPRESS_UNEXPECTED_ERRORS` the
+   dump build sets, instead of restoring counters while its unconditional
+   `Error:` lines had already reached the log.
+4. **`emit_error` fires `Fatal:TooManyErrors` once** (the frozen post-latch
+   count kept the crossing test true on every later call).
+5. **A worker-thread panic ends like any Fatal** (`bin/latexml_oxide.rs`):
+   `Fatal:panic:caught` + the `Conversion failed` verdict + exit 1 (s107
+   texproposal aborted with a bare `worker thread panicked`, visible only to
+   the exit code).
+
+The post-Fatal Error mute itself stays (Perl `IGNORE_ERRORS`); with the yank,
+what reaches it is teardown noise. Warnings are not muted (fail toward
+flagging). Measured on s107 (2,371 logs): zero counted-but-unlogged Errors or
+Warnings and zero fatal counters without a `Fatal:` line — the code defects were
+latent; the observed gaps were the continuation (jlreq family) and the panic.
+**Guards**: `perfect_kernel_batch56::a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input`,
+`common::error::tests::{fatal_macro_logs_its_line_at_the_raise_exactly_once,
+ignored_diagnostics_scope_drops_line_and_count_together,
+emit_error_fires_the_too_many_errors_fatal_once,
+errors_are_silent_once_a_resource_fatal_is_latched}`,
+`cluster_cli::worker_panic_ends_with_a_fatal_line_and_the_verdict`.
+**Upstream**: not filed (Rust recovers where Perl dies).

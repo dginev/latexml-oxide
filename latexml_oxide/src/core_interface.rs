@@ -247,6 +247,30 @@ fn trace_fragment_holders(boxes: &[Digested]) {
   }
 }
 
+thread_local! {
+  /// Perl `$$stomach{rescued_boxes}` (Common/Error.pm `hardYankProcessing`
+  /// L336-338): the bodies digested before a resource Fatal, kept for the
+  /// salvage pass that `finishDigestion` re-collects them from.
+  static RESCUED_BOXES: std::cell::RefCell<Vec<Digested>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Perl `hardYankProcessing` (Common/Error.pm L320-348): after a Fatal there
+/// is nothing left to do in the main processing — rescue the digested bodies
+/// and reset the gullet (pushback, mouth stack, mouth), so the salvage
+/// `digest_internal` re-collects the rescue and reads NO further input. Until
+/// this existed the salvage pass kept reading the live mouth past the Fatal:
+/// jlreq's `PushbackLimit` fired inside the class, then luatexja and the whole
+/// body were converted with every Error record muted by the post-Fatal latch
+/// (asternote, hideanswer-doc, inlinelabel, jpnedumathsymbols-doc: 8 of 22
+/// undefined macros tallied with no `Error:` line — diagnostics audit
+/// 2026-09-20). Perl also `\relax`es the busy token; with the input gone the
+/// loop cannot resume, so that step is not needed here.
+fn hard_yank_processing(boxes: Vec<Digested>) {
+  RESCUED_BOXES.with(|r| *r.borrow_mut() = boxes);
+  gullet::flush();
+}
+
 fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
   match stomach::digest_next_body(None) {
     Ok(next_bodies) => {
@@ -924,6 +948,10 @@ impl DigestionAPI for Core {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()> {
     // reset the error REPORT singleton
     error::initialize_report();
+    // A rescue (`hard_yank_processing`) belongs to the conversion that failed,
+    // never to the next one a long-lived worker runs — a `.bib` session's
+    // `digest_file` propagates a resource fatal without a salvage pass.
+    RESCUED_BOXES.with(|r| r.borrow_mut().clear());
     // Per-conversion notice state in the math parser (the persistent
     // cortex_worker converts many documents per process).
     latexml_math_parser::reset_conversion_notices();
@@ -1635,11 +1663,24 @@ impl DigestionAPI for Core {
   }
 
   fn digest_internal(&mut self) -> Result<Digested> {
-    let mut boxes = Vec::new();
+    use latexml_core::common::error::ErrorCategory;
+    // Perl `finishDigestion` (Core.pm L214-226): re-collect what a Fatal
+    // rescued, then digest whatever input is left — which, after
+    // `hard_yank_processing`, is nothing.
+    let mut boxes = RESCUED_BOXES.with(|r| std::mem::take(&mut *r.borrow_mut()));
     while gullet::has_more_input() {
-      // Perl finishDigestion L219-220: loop consuming input even after errors.
-      if !digest_step_guarded(&mut boxes)? {
-        break;
+      match digest_step_guarded(&mut boxes) {
+        Ok(true) => {},
+        Ok(false) => break,
+        Err(e) => {
+          // A streaming-restart stop is not a failure: the CLI reruns the
+          // document from the top, so nothing is rescued and the gullet is
+          // left for the rerun to rebuild.
+          if !matches!(e.category, ErrorCategory::StreamingRestart) {
+            hard_yank_processing(boxes);
+          }
+          return Err(e);
+        },
       }
     }
     gullet::flush();

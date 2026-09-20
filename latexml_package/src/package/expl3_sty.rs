@@ -77,19 +77,31 @@ LoadDefinitions!({
   // reach the conversion verdict. Dump mode short-circuits the re-load
   // (`raw_load_will_run == false`), so this is scoped strictly to the degraded
   // fallback; canvas/parity always run on the dump.
-  use latexml_core::common::error::{REPORT, set_suppress_log_output};
-  let report_snapshot = raw_load_will_run.then(|| REPORT.borrow().clone());
-  let prev_suppress = raw_load_will_run.then(|| set_suppress_log_output(true));
+  // Perl `local $LaTeXML::IGNORE_ERRORS = 1`: the scope drops each record
+  // WHOLE (line and count together), so the log can never show `Error:` lines
+  // the summary does not count. (It used to snapshot/restore the counts while
+  // the unconditional Error/Fatal lines still reached the log — a log/status
+  // inconsistency, diagnostics audit 2026-09-20.)
+  // The `undefined`/`unexpected` tallies are direct `note_status` calls gated
+  // by the state-level suppressors (as the dump build sets them, ini_tex.rs),
+  // so those ride along: a summary naming an undefined macro with no
+  // `Error:undefined:` line is the very inconsistency this scope exists to
+  // prevent.
+  use latexml_core::common::error::IgnoreDiagnosticsScope;
+  let ignore_scope = raw_load_will_run.then(IgnoreDiagnosticsScope::new);
+  if raw_load_will_run {
+    assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
+    assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
+  }
 
   let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))));
 
-  if let Some(snapshot) = report_snapshot {
-    *REPORT.borrow_mut() = snapshot;
+  if raw_load_will_run {
+    assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
+    assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, None);
   }
-  if let Some(prev) = prev_suppress {
-    set_suppress_log_output(prev);
-  }
+  drop(ignore_scope);
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
   // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }

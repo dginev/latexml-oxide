@@ -2837,3 +2837,22 @@ Sibling rule: a leftover-key store (`\XKV@rm`) is fetched ONE STEP
 runs (chessboard.sty:1439 `trimarea=\board`, `\board` \edef'd at :1087).
 Guards: `perfect_kernel_batch54::{keyval_key_is_brace_aware,
 setrmkeys_keeps_leftover_values_unexpanded, xkeyval_usevalue_*}`.
+
+## 85. Read a conversion log by its counters, and match diagnostics anywhere in the line
+
+A conversion's own summary (`Conversion failed: N warnings; M errors; K fatal
+error; L undefined macros[…]`) and `Status:conversion:N` are computed from the
+same `REPORT` counters `emit_record` increments, so the check for a lossy
+pipeline is mechanical: `#Warning:` lines must equal N, `#Error:` lines M, and
+K≥1 must have a `Fatal:` line — per pass (a `--streaming` retry concatenates two
+passes, each internally consistent). Match with `(Warning|Error|Fatal):[A-Za-z_]+:`
+**anywhere** in the line: progress markers (`(Loading …)`, `(Finalizing… )`)
+prefix diagnostics on the same line, so a `^Error:` anchor under-counts — that
+anchor once made 8 muted `undefined` names look like a parser gap (asternote,
+2026-09-20). Two shapes to recognise: a name in `undefined macros[…]` with no
+`Error:undefined:` line means digestion went on past a Fatal with the Error
+mute latched (now impossible — `hard_yank_processing` stops the input at the
+Fatal, DIVERGENCES #251); a `Fatal:` count with no line was the sink-only
+`Fatal!` logging (now logged at the raise). Scripts: the s107 cross-check
+lives at `~/data/pk_agents/w56/s107_diag_audit/{audit,agg}.py` (per-doc JSON cache).
+Guards: DIVERGENCES #251's list.

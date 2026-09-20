@@ -681,7 +681,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   // nested math trees don't overflow the OS-default 8 MB main-thread
   // stack during finalize/post-processing. See cortex_worker.rs for
   // full rationale (sandbox 0711.4787 et al, #17).
-  std::thread::Builder::new()
+  match std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(|| {
       // Default pushback cap ON THE WORKER THREAD (the gullet is
@@ -699,8 +699,39 @@ fn main() -> Result<(), Box<dyn Error>> {
     })
     .expect("spawn worker thread")
     .join()
-    .expect("worker thread panicked")
-    .map_err(|s| s.into())
+  {
+    Ok(result) => result.map_err(|s| s.into()),
+    Err(payload) => {
+      // A panic on the worker thread is a Fatal like any other: it gets its
+      // `Fatal:` line, its count and the end-of-run verdict, so a log grep
+      // and the status agree (the s107 texproposal run ended in a bare
+      // `worker thread panicked` abort — no `Fatal:` line, no summary — and
+      // was visible only through the exit code). Same target as
+      // cortex_worker's `Fatal:panic:caught`. The worker's own REPORT and
+      // log buffer died with its thread, so this is the main thread's
+      // verdict: fatal, with the panic message as the reason.
+      let reason = payload
+        .downcast_ref::<&str>()
+        .map(|s| (*s).to_string())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| String::from("non-string panic payload"));
+      // The logger is initialised inside `real_main`; a panic before that
+      // point (or on a thread that never reached it) must still print.
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+      latexml_core::common::error::emit_fatal(
+        "panic",
+        "caught",
+        &format!("worker thread panicked: {reason}"),
+      );
+      eprintln!(
+        "{}",
+        latexml_core::common::error::conversion_verdict(
+          latexml_core::common::error::get_status_code().max(3)
+        )
+      );
+      process::exit(1);
+    },
+  }
 }
 
 fn real_main() -> Result<(), Box<dyn Error>> {
@@ -712,6 +743,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   #[cfg(feature = "dhat-heap")]
   let mut _dhat = Some(dhat::Profiler::new_heap());
 
+  // Guard hook for the worker-panic verdict path (`cluster_cli`): a panic
+  // injected here must surface as `Fatal:panic:caught` + the final verdict.
+  if std::env::var_os("LATEXML_INJECT_PANIC").is_some() {
+    panic!("LATEXML_INJECT_PANIC");
+  }
   let wall_start = std::time::Instant::now();
   // Set when the post-processing phase runs; drives the end-of-run combined
   // verdict (see the exit guard at the bottom of `main`).
@@ -1262,7 +1298,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               status_code: status_max,
             },
             Err(e) => {
-              eprintln!("Warning: multi-document join failed: {e}; rendering main only");
+              latexml_core::common::error::emit_warn(
+                "multidoc",
+                "join",
+                &format!("multi-document join failed: {e}; rendering main only"),
+              );
               main_resp
             },
           }
