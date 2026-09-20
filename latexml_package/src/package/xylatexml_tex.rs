@@ -162,8 +162,11 @@ fn xy_capture_stroke_fill() -> (String, String, String) {
 /// Helper: read SVG path attributes from props at construction time and emit element.
 fn xy_emit_path(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
   let path = match props.get("xy_path") {
-    Some(Stored::String(s)) => to_string(*s),
-    _ => return Ok(()), // no path → skip
+    Some(Stored::String(s)) if !with(*s, |p| p.trim().is_empty()) => to_string(*s),
+    // No path, or an empty one: `set_attribute` drops an empty `d` (Perl too,
+    // Document.pm:1381) and a `<svg:path>` without its required `d` is schema-
+    // invalid (xytree-doc-en); nothing to draw either way.
+    _ => return Ok(()),
   };
   let stroke = match props.get("xy_stroke") {
     Some(Stored::String(s)) => to_string(*s),

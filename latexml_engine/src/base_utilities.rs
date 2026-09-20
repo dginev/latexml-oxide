@@ -5226,10 +5226,23 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
         .collect();
       for cell in cells {
         let cell = document.rename_node(cell, "ltx:XMCell", false)?;
+        // Perl iterates `$cell->childNodes` — TEXT nodes included — and wraps every
+        // non-Math child in XMText. A cell that escaped the `${}##{}$` template
+        // (`\multispan{n}\upbracefill`, oubraces.sty:40-41; halloweenmath's arrows,
+        // nath's braces) holds its glyph as a bare text node, which an
+        // elements-only filter left as raw #PCDATA in the XMCell — schema-invalid
+        // (`text not allowed here`) where Perl emits `<XMText>⏟</XMText>`. Text nodes
+        // are taken as Perl takes them (a whitespace-only cell becomes
+        // `<XMText> </XMText>` there too); only comments are skipped (batch 56ez).
         let cell_kids: Vec<Node> = cell
           .get_child_nodes()
           .into_iter()
-          .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+          .filter(|n| {
+            matches!(
+              n.get_type(),
+              Some(NodeType::ElementNode | NodeType::TextNode)
+            )
+          })
           .collect();
         for m in cell_kids {
           if model::with_node_qname(&m, |qn| qn == "ltx:Math") {

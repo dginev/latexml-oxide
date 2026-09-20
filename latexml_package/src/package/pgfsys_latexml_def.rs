@@ -808,18 +808,28 @@ LoadDefinitions!({
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
-      document.insert_element("svg:path", Vec::new(), Some(string_map!(
-        "id" => format!("pgfpath{}", obj),
-        "d" => d
-      )))?;
-      document.close_element("svg:clipPath")?;
-      let mut use_attrs = string_map!(
-        "xlink:href" => format!("#pgfpath{}", obj)
-      );
-      if !style.is_empty() {
-        use_attrs.insert("style".to_string(), style);
+      // A degenerate clip (`\path[clip];` — no path operations) has nothing to
+      // draw or reference: `set_attribute` drops an empty `d` (Perl too,
+      // Document.pm:1381), which left a `<svg:path>` without its required `d`
+      // (circuitikzmanual, xytree-doc-en — SHARED with Perl). An EMPTY
+      // <clipPath> clips everything away, as the empty PDF clip does, so the
+      // clip group below stays and only the path/use pair is omitted.
+      if !d.is_empty() {
+        document.insert_element("svg:path", Vec::new(), Some(string_map!(
+          "id" => format!("pgfpath{}", obj),
+          "d" => d
+        )))?;
       }
-      document.insert_element("svg:use", Vec::new(), Some(use_attrs))?;
+      document.close_element("svg:clipPath")?;
+      if !d.is_empty() {
+        let mut use_attrs = string_map!(
+          "xlink:href" => format!("#pgfpath{}", obj)
+        );
+        if !style.is_empty() {
+          use_attrs.insert("style".to_string(), style);
+        }
+        document.insert_element("svg:use", Vec::new(), Some(use_attrs))?;
+      }
       document.open_element("svg:g", Some(string_map!(
         "clip-path" => format!("url(#pgfcp{})", obj),
         "_autoclose" => "1".to_string()
@@ -854,7 +864,10 @@ LoadDefinitions!({
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
-      document.insert_element("svg:path", Vec::new(), Some(string_map!("d" => d)))?;
+      // Same degenerate-clip guard as `\lxSVG@drawpath@clipped`: no path, no `<svg:path>`.
+      if !d.is_empty() {
+        document.insert_element("svg:path", Vec::new(), Some(string_map!("d" => d)))?;
+      }
       document.close_element("svg:clipPath")?;
       document.open_element("svg:g", Some(string_map!(
         "clip-path" => format!("url(#pgfcp{})", obj),

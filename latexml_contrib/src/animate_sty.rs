@@ -3,7 +3,8 @@
 //! Replaces the unbounded/many-frame loops of animate.sty with a single
 //! representative frame (the first frame), avoiding memory exhaustion on
 //! multi-frame animations (e.g. tikz-among-us with 180 frames).
-//! Exposes `frame-count` as an attribute on `<ltx:block class="ltx_animate">`.
+//! Exposes the frame count as RDFa `property="ltx:frameCount" content="N"` on
+//! `<ltx:block class="ltx_animate">` (schema-legal Common.attributes).
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
@@ -101,7 +102,6 @@ LoadDefinitions!({
   ANIM_STACK.with(|s| s.borrow_mut().clear());
   RequirePackage!("graphicx");
 
-  model::add_tag_attribute("ltx:block", vec!["frame-count"]);
   // animate.sty:3197-3201: the per-frame `begin`/`end` code keys (the ones
   // the single-frame model consumes; the rest are read and skipped).
   DefKeyVal!("animate", "begin", "UndigestedKey");
@@ -174,7 +174,13 @@ LoadDefinitions!({
       };
       let mut attrs = HashMap::default();
       attrs.insert("class".to_string(), "ltx_animate".to_string());
-      attrs.insert("frame-count".to_string(), frame_count.to_string());
+      // The collapsed animation's frame count rides as RDFa (`property`/`content`
+      // are Common.attributes and the XSLT passes them through) — the ad-hoc
+      // `frame-count` attribute lived only in the RUNTIME model, so every
+      // animate document failed schema validation (chessboard, liftarm, movie15,
+      // tikz-among-us, tikz-mirror-lens ×2; batch 56ez).
+      attrs.insert("property".to_string(), "ltx:frameCount".to_string());
+      attrs.insert("content".to_string(), frame_count.to_string());
       document.open_element("ltx:block", Some(attrs), None)?;
       if let Some(Stored::Digested(body)) = props.get("body") {
         document.absorb(body, None)?;

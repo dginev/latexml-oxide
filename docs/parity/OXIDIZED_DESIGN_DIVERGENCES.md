@@ -7990,3 +7990,38 @@ from a leaked command's argument text (8 docs).
 `structure/{promote_center_title,faketitlepage,titlepage,svabstract,amsarticle}`;
 `114_streaming_structure` (eager ≡ streaming); `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924`.
 **Upstream**: not filed.
+
+### 248. animate's frame count rides as RDFa `property="ltx:frameCount" content="N"` (Perl: no animate binding)
+
+**Perl behavior**: no `animate.sty` binding at all; the environment's frames are raw
+interpretation.
+**Rust behavior**: the `animate` contrib binding collapses an animation to one representative
+frame and records the frame count on `<ltx:block class="ltx_animate">`. It used to do so with an
+ad-hoc `frame-count` attribute registered only in the RUNTIME model
+(`model::add_tag_attribute`), so it survived construction but every document with an animation
+failed the static schema (`attribute "frame-count" not allowed here`: chessboard, liftarm,
+movie15, tikz-among-us, tikz-mirror-lens ×2). The count now rides as RDFa —
+`property`/`content` are `Common.attributes` on every element and `LaTeXML-common.xsl` passes
+both through to HTML — so the metadata is kept and the XML validates.
+**Why**: schema validity without losing the one piece of metadata the collapse leaves behind
+(user preference: capture metadata). Nothing consumed `frame-count` downstream.
+**Witnesses**: chessboard, liftarm, movie15, tikz-among-us, tikz-mirror-lens(-PT) — the
+`frame-count` rng-error gone. **Guard**: the seven `perfect_kernel_batch56` animate guards now
+assert `content="N"`.
+**Upstream**: n/a (no Perl binding).
+
+### 249. A degenerate SVG clip or xy path emits no `<svg:path>` (Perl: `<svg:path>` without `d`)
+
+**Perl behavior**: `\lxSVG@drawpath@clipped`/`\lxSVG@discardpath@clipped`
+(`pgfsys-latexml.def.ltxml:342-371`) and `xylatexml.tex.ltxml`'s path emitter set `d="#1"`
+unconditionally; `setAttribute` skips an empty value (`Document.pm:1381-1382`), so a clip with no
+path operations (`\path[clip];`) or an empty xy path yields `<svg:path/>` with no `d` —
+schema-invalid (`d` is required). SHARED with Rust (`document.rs` skips empty values the same way).
+**Rust behavior**: when `d` is empty the clipped constructors emit the `<svg:clipPath>` without
+its path and skip the `<svg:use>` (an EMPTY clipPath clips everything away, as the empty PDF clip
+does; the clip group stays), and `xy_emit_path` emits nothing (nothing to draw). The unclipped
+path already had this guard (`?#1(...)()` in Perl, `!d.is_empty()` here).
+**Why**: schema validity; render-neutral (an empty path draws nothing; an empty clip keeps
+clipping everything).
+**Witnesses**: circuitikz/circuitikzmanual, xytree/xytree-doc-en (`svg:path missing required
+attribute d` gone). **Upstream**: not filed.

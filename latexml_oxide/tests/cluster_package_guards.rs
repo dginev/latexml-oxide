@@ -17377,7 +17377,7 @@ c &= d
 
   /// Batch 56bo (`Stored::Opaque`): an `{animateinline}` deferred inside a
   /// float constructs after the animate that follows it in the source; its
-  /// `frame-count` rides on its own whatsit (the shared context in
+  /// the frame count (`content=`) rides on its own whatsit (the shared context in
   /// `anim_ctx`), so construction order no longer matters (the old LIFO pop
   /// at construction handed the float's animate the later count).
   #[test]
@@ -17387,8 +17387,8 @@ c &= d
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     let fig = xml.find("<figure").unwrap();
     let fig_end = xml[fig..].find("</figure>").unwrap() + fig;
-    assert!(xml[fig..fig_end].contains("frame-count=\"3\""), "{xml}");
-    assert!(xml[fig_end..].contains("frame-count=\"1\""), "{xml}");
+    assert!(xml[fig..fig_end].contains("content=\"3\""), "{xml}");
+    assert!(xml[fig_end..].contains("content=\"1\""), "{xml}");
   }
 
   /// Batch 56bn review: a colour defined under a whitespace-padded name is
@@ -18712,6 +18712,38 @@ B:\ifcat A西 L\else O\fi.
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("EQUAL") && xml.contains("OTHER"), "{xml}");
     assert!(!xml.contains("DIFFERENT") && !xml.contains("SAME"), "{xml}");
+  }
+
+  /// Batch 56ez (RUST-ONLY parity fix): a math `\halign` cell that escapes the
+  /// `${}##{}$` template via `\multispan` holds its `\upbracefill` glyph as a bare text
+  /// node; the tabular→XMArray conversion in `cleanup_xmtext` filtered cell children to
+  /// elements, so the glyph stayed raw #PCDATA inside `<XMCell>` (schema: `XMCell_model
+  /// = XMath.class*`). Perl wraps every non-Math child, text included, in `<XMText>`.
+  /// Witnesses oubraces/oubraces, halloweenmath/halloweenmath-man, nath/nathguide.
+  #[test]
+  fn multispan_glyph_in_a_math_halign_cell_is_wrapped_in_xmtext() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\
+               $\\vbox{\\halign{&\\hfil${}##{}$\\hfil\\cr\n  x&y\\cr\n  \\multispan{2}\\upbracefill\\cr\n  a&b\\cr}}=\\pi r^2$\n\
+               \\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let cell = xml
+      .find("colspan=\"2\"")
+      .expect("the \\multispan cell must be present");
+    let cell_start = xml[..cell]
+      .rfind("<XMCell")
+      .expect("the spanning cell must be an XMCell");
+    let cell_end = xml[cell..].find("</XMCell>").map(|k| cell + k).unwrap();
+    let inner = &xml[cell_start..cell_end];
+    assert!(
+      inner.contains("<XMText>") && inner.contains('\u{23DF}'),
+      "the spanning cell's glyph must sit inside <XMText>, not as bare text:\n{inner}"
+    );
+    let after_open = &inner[inner.find('>').unwrap() + 1..];
+    assert!(
+      after_open.trim_start().starts_with("<XMText"),
+      "no raw #PCDATA may precede the XMText in the XMCell:\n{inner}"
+    );
   }
 
   /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
@@ -20488,7 +20520,7 @@ Marks stub
   }
 
   /// animate: single representative frame for multi-frame animations (witness: among-us repro.tex).
-  /// Exposes frame-count on wrapper block, avoiding memory budget exhaustion.
+  /// Exposes the frame count (RDFa `content`) on the wrapper block, avoiding memory budget exhaustion.
   #[test]
   fn animate_multiframe_single_frame() {
     let tex = r"\documentclass{article}
@@ -20507,7 +20539,7 @@ Marks stub
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
-    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+    assert!(xml.contains("content=\"10\""), "{xml}");
     assert!(xml.contains("class=\"ltx_animate\""), "{xml}");
     // Batch 56aw (liftarm 1→813, sweep 63): the option list's `begin`/`end`
     // code wraps EVERY frame (animate.sty:2314-2340) and the first `\newframe`
@@ -20530,7 +20562,7 @@ Marks stub
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(xml.matches("<svg:svg").count(), 1, "{xml}");
-    assert!(xml.contains("frame-count=\"3\""), "{xml}");
+    assert!(xml.contains("content=\"3\""), "{xml}");
 
     // Task N4: \newframe* and \newframe[fps] consumed silently, counting frames.
     let tex = r"\documentclass{article}
@@ -20549,7 +20581,7 @@ Frame 4
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("frame-count=\"4\""), "{xml}");
+    assert!(xml.contains("content=\"4\""), "{xml}");
 
     // Task N4: reverse playback \animategraphics with first > last (|last-first|+1 frames).
     // Missing frame file emits a warning, not an error.
@@ -20561,7 +20593,7 @@ Frame 4
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("frame-count=\"10\""), "{xml}");
+    assert!(xml.contains("content=\"10\""), "{xml}");
 
     // Reverse playback selecting an existing file candidate (e.g. example-image-a).
     let tex = r"\documentclass{article}
@@ -20572,7 +20604,7 @@ Frame 4
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(xml.contains("frame-count=\"5\""), "{xml}");
+    assert!(xml.contains("content=\"5\""), "{xml}");
   }
 
   /// chemnum: sequential compound numbering model (Task N5, Task N2).
