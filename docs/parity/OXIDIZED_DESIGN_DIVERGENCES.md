@@ -7710,3 +7710,44 @@ faithful to the PDF's single visible (overprinted) number.
 + explicit `\nl` document. algorithm2e manual 221→0 jing lines across 56eh/ei/eo.
 **Guard**: `cluster_algorithm2e_double_nl_collapses_to_one_leading_tag`.
 **Upstream**: not filed.
+
+### 242. Frontmatter hoists above a content-free leading pagination (Perl: emitted in place → schema-invalid)
+
+**Perl behavior**: `\title`/`\author`/`\date` queue frontmatter (`\lx@add@*` →
+`queue_front_matter`); `\maketitle` flushes it at the CURRENT insertion point
+(`\lx@frontmatterhere` → `insertFrontMatter`, `Base_Utility.pool.ltxml:824,918`).
+When a content-free pagebreak precedes `\maketitle` — a class `\frontmatter`/
+`\clearpage`/`\newpage` emitting `<ltx:pagination role="newpage"/>` before the
+title — the frontmatter lands AFTER that pagination. The document model requires
+frontmatter to lead (`LaTeXML-structure.rnc:34`:
+`(FrontMatter.class|…|titlepage)*, (document.body.class|…)*`), so every following
+`<title>`/`<creator>`/`<date>` is schema-invalid. Perl (native AND raw-class) does
+the same and is invalid against its own schema (verified same-host, Perl LaTeXML
+0.8.8).
+**Rust behavior**: `\lx@frontmatterhere` (`base_utilities.rs`) gates on
+`leading_document_nodes_content_free` — true when every `<ltx:document>` child
+after the last `<ltx:resource>` is content-free (a self-closing `<ltx:pagination>`,
+or an empty `<ltx:para>`/`<ltx:p>`/`<ltx:break>`). If so it flushes via
+`insert_frontmatter_after_resources` (the `_Capture_`-after-last-resource machinery
+`\lx@frontmatter@fallback` already uses), placing the frontmatter ahead of the
+pagebreak so it leads. Otherwise it inserts at the current point unchanged.
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19). Safe
+because the demoted node is a pagebreak — invisible in HTML, faithful to the PDF
+(the `\clearpage` still opens the title on a fresh page). Genuine pre-title content
+(a real `<para>`, an author masthead) or an undefined-command `<ltx:ERROR>` para
+fails the content-free gate and keeps the Perl-parity in-place placement, so no
+visible content is ever reordered.
+**Witnesses**: amsmath/amsldoc, amsldoc-it/itamsldoc,
+tkz-doc, tkzexample, tuda-ci/DEMO-TUDaPhD, bfh-ci/DEMO-BFHThesis, fbithesis/example,
+commedit/sample, ifmslide/ifmman, istgame/istgame-doc, latex-refsheet/thesis,
+se2thesis, biblatex-cheatsheet, tzplot/tzplot-doc — 14 s105 docs recovered to 0
+rng-errors. NOT covered: a directly-built `<ltx:titlepage>` element after a leading
+pagination (toptesi/* frontispiece — 4 docs; distinct mechanism, the titlepage is
+its own content not queued frontmatter, tracked separately, cf. #233); and a leading
+sequence whose intervening para is not provably empty at construct time
+(gitinfo2/gitlog, 2 docs — conservatively declined rather than risk hoisting over
+hidden content). A general document-finalization demotion pass would cover both
+residuals uniformly (follow-up).
+**Guard**: `frontmatter_hoists_above_content_free_leading_pagination` (+ the negative
+control `frontmatter_does_not_hoist_above_a_leading_graphic`).
+**Upstream**: not filed.

@@ -18268,6 +18268,65 @@ B:\ifcat A西 L\else O\fi.
       "the framed block must still emit a <logical-block>\n{xml}"
     );
   }
+
+  /// Batch 56ep (OXIDIZED_DESIGN #242): a content-free leading `<pagination>`
+  /// (from `\clearpage`/`\newpage`/`\frontmatter` before `\maketitle`) must not
+  /// precede the document frontmatter. The schema requires frontmatter to lead
+  /// (`LaTeXML-structure.rnc:34`), so a `<pagination>` before `<title>` invalidates
+  /// every following frontmatter element. Render-safe surpass beyond Perl (Perl-raw
+  /// leaves this invalid too): a pagebreak reorders nothing visible, so
+  /// `\lx@frontmatterhere` hoists the QUEUED frontmatter above the content-free
+  /// leading nodes. Witnesses: amsmath/amsldoc, tkz-doc/tkz-doc, tuda-ci/DEMO-TUDaPhD,
+  /// tzplot/tzplot-doc (14 s105 docs recovered to 0 rng-errors). NOT hoisted (all
+  /// stay invalid by design): genuine pre-title content (corpus B-subclass); a
+  /// directly-built <titlepage> element after a leading pagination (toptesi
+  /// frontispiece — distinct mechanism); and a leading sequence whose intervening
+  /// para is not provably empty at construct time (gitinfo2/gitlog — conservatively
+  /// declined rather than risk hoisting over hidden content).
+  #[test]
+  fn frontmatter_hoists_above_content_free_leading_pagination() {
+    let tex = "\\documentclass{book}\n\\title{T}\\author{A}\n\\begin{document}\n\
+               \\frontmatter\n\\clearpage\n\\maketitle\n\\chapter{C}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let title = xml
+      .find("<title>")
+      .expect("frontmatter <title> must be present");
+    let pagination = xml
+      .find("<pagination")
+      .expect("the \\clearpage <pagination> must still be present (not dropped)");
+    assert!(
+      title < pagination,
+      "frontmatter <title> must lead — hoisted above the content-free leading \
+       <pagination> pagebreak, not emitted after it:\n{xml}"
+    );
+  }
+
+  /// Batch 56ep control (OXIDIZED_DESIGN #242): the content-free gate must NOT hoist
+  /// frontmatter above a visually non-empty leading block. A `\includegraphics` logo —
+  /// a text-empty `<para>` holding only `<graphics>`, a common cover-top — renders
+  /// above the title in the PDF, so the title must stay BELOW it (faithful, no faux
+  /// fidelity). Regression guard for the pre-commit review's fidelity finding: an
+  /// earlier gate keyed only on `get_content()` (text) and wrongly hoisted here.
+  #[test]
+  fn frontmatter_does_not_hoist_above_a_leading_graphic() {
+    let tex = "\\documentclass{book}\n\\usepackage{graphicx}\n\\title{T}\\author{A}\n\
+               \\begin{document}\n\\noindent\\includegraphics{logo}\n\\clearpage\n\
+               \\maketitle\n\\chapter{C}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    let graphics = xml
+      .find("<graphics")
+      .expect("the leading \\includegraphics <graphics> must be present");
+    let title = xml
+      .find("<title>")
+      .expect("frontmatter <title> must be present");
+    assert!(
+      graphics < title,
+      "a visible leading <graphics> (logo) must stay ABOVE the frontmatter <title> — \
+       the content-free gate must not hoist the title over it:\n{xml}"
+    );
+  }
 }
 
 mod perfect_kernel_gemini {

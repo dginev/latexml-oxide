@@ -1468,7 +1468,27 @@ LoadDefinitions!({
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
   // This should be where ALL the digestion of frontmatter happens
-  DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
+  DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] {
+    // Subclass-A render-safe surpass (OXIDIZED_DESIGN #242): if the only nodes
+    // between the last <ltx:resource> and here are content-free — a
+    // \clearpage/\newpage/\frontmatter <ltx:pagination> pagebreak, or an empty
+    // <ltx:para>/<ltx:p> — hoist the QUEUED frontmatter (title/creator/date) ABOVE
+    // them so it leads. The schema requires frontmatter strictly first
+    // (LaTeXML-structure.rnc:34), so a leading <pagination> before <title>
+    // invalidates every following frontmatter element (amsmath/amsldoc, tkz-doc,
+    // tuda-ci/DEMO-TUDaPhD, tzplot, … — 14 s105 docs recovered to 0 rng-errors).
+    // Beyond Perl (Perl-raw leaves these invalid too), and safe because a pagebreak
+    // reorders nothing visible. Genuine pre-title content, or an undefined-command
+    // <ltx:ERROR> para, fails the content-free gate → insert at the current point
+    // unchanged (faithful parity). NOT handled here: a directly-built <ltx:titlepage>
+    // element after a leading pagination (toptesi/* frontispiece — a distinct
+    // mechanism, since the titlepage is not queued frontmatter and is itself content).
+    if leading_document_nodes_content_free(doc) {
+      insert_frontmatter_after_resources(doc)?;
+    } else {
+      insert_frontmatter(doc)?;
+    }
+  },
   after_digest => {
     digest_front_matter()?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
@@ -1500,31 +1520,10 @@ LoadDefinitions!({
       maybe_promote_leading_title(document)?;
       insert_frontmatter(document)?;
     } else {
-    let savenode = document.get_node().clone();
-    // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the
-    // DOCUMENT node (Perl's default xpath context). The Rust cached XPath
-    // context evaluates relative to the root ELEMENT, so use the equivalent
-    // absolute path.
-    let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
-    if let Some(p) = point.take() {
-      point = p.get_next_sibling();
-    }
-    let wrapper = if let Some(point) = point {
-      Some(document.insert_element_before(&point, "ltx:_Capture_", None)?)
-    } else { match document.get_document().get_root_element() { Some(mut document_element) => {
-      Some(document.open_element_at(&mut document_element, "ltx:_Capture_", None, None)?)
-    } _ => {
-      None
-    }}};
-    if let Some(wrapper) = wrapper {
-      document.set_node(&wrapper);
-      insert_frontmatter(document)?;
-      document.unwrap_nodes(wrapper)?;
-      document.set_node(&savenode);
-    }
-    // With the structured <ltx:title> now in the tree, drop a redundant leading
-    // hand-typeset copy of it (no \maketitle; #6924). Author/abstract ink stays.
-    maybe_dedup_leading_title_ink(document)?;
+      insert_frontmatter_after_resources(document)?;
+      // With the structured <ltx:title> now in the tree, drop a redundant leading
+      // hand-typeset copy of it (no \maketitle; #6924). Author/abstract ink stays.
+      maybe_dedup_leading_title_ink(document)?;
     }
   },
   after_digest => {
@@ -2524,6 +2523,105 @@ fn has_element_child(node: &Node) -> bool {
     .get_child_nodes()
     .iter()
     .any(|c| c.get_type() == Some(NodeType::ElementNode))
+}
+
+/// Flush the queued frontmatter at the document TOP — immediately after the last
+/// `<ltx:resource>` (Perl `findnode('ltx:document/ltx:resource[last()]')`) — via a
+/// transient `_Capture_` wrapper: insert it before the first post-resource sibling,
+/// fill it, then unwrap, so the frontmatter lands ahead of any leading pagebreak
+/// while the current insertion node is restored. Shared by `\lx@frontmatter@fallback`
+/// (no `\maketitle`) and by `\lx@frontmatterhere` for the subclass-A hoist.
+fn insert_frontmatter_after_resources(document: &mut Document) -> Result<()> {
+  let savenode = document.get_node().clone();
+  // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the DOCUMENT
+  // node (Perl's default xpath context). The Rust cached XPath context evaluates
+  // relative to the root ELEMENT, so use the equivalent absolute path.
+  let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
+  if let Some(p) = point.take() {
+    point = p.get_next_sibling();
+  }
+  let wrapper = if let Some(point) = point {
+    Some(document.insert_element_before(&point, "ltx:_Capture_", None)?)
+  } else {
+    match document.get_document().get_root_element() {
+      Some(mut document_element) => {
+        Some(document.open_element_at(&mut document_element, "ltx:_Capture_", None, None)?)
+      },
+      _ => None,
+    }
+  };
+  if let Some(wrapper) = wrapper {
+    document.set_node(&wrapper);
+    insert_frontmatter(document)?;
+    document.unwrap_nodes(wrapper)?;
+    document.set_node(&savenode);
+  }
+  Ok(())
+}
+
+/// True when every `<ltx:document>` child after the last `<ltx:resource>` is a
+/// content-free node — a self-closing `<ltx:pagination>` (`\clearpage`/`\newpage`)
+/// or an empty `<ltx:para>`/`<ltx:p>`/`<ltx:break>` — and at least one such node is
+/// present. Gate for the subclass-A frontmatter hoist (`\lx@frontmatterhere`): such
+/// leading nodes carry no visible content, so moving the frontmatter above them is
+/// invisible in HTML and faithful to the PDF pagebreak; genuine pre-title content, or
+/// an undefined-command `<ltx:ERROR>` para, is NOT content-free, so the frontmatter
+/// stays in place (faithful Perl parity).
+fn leading_document_nodes_content_free(document: &mut Document) -> bool {
+  let anchor = document.findnode("/ltx:document/ltx:resource[last()]", None);
+  let mut cur = match anchor {
+    Some(resource) => resource.get_next_sibling(),
+    // No <ltx:resource> at all: walk from the first document child (non-resource).
+    None => document
+      .get_document()
+      .get_root_element()
+      .and_then(|root| root.get_child_nodes().into_iter().next()),
+  };
+  let mut saw_content_free = false;
+  while let Some(node) = cur {
+    if node.get_type() == Some(NodeType::ElementNode) {
+      if !node_is_content_free(&node) {
+        return false;
+      }
+      saw_content_free = true;
+    }
+    cur = node.get_next_sibling();
+  }
+  saw_content_free
+}
+
+/// A `<ltx:pagination>` (self-closing pagebreak) or a truly empty `<ltx:para>`/
+/// `<ltx:p>`/`<ltx:break>` wrapper — a node with no visible content. "Empty" means no
+/// text AND no *visible* element descendant: a `<graphics>`/`<rule>`/`<svg>`/
+/// `<tabular>`/`<text>`/image inside an otherwise text-empty para (a logo- or
+/// rule-only cover top) renders above the title in the PDF, so it is NOT content-free
+/// and must block the hoist — only nested empty `<para>`/`<p>`/`<break>` wrappers are
+/// transparent. See [`leading_document_nodes_content_free`].
+fn node_is_content_free(node: &Node) -> bool {
+  let is_pagination = with(document::get_node_qname(node), |q| q == "ltx:pagination");
+  if is_pagination {
+    return true;
+  }
+  let is_wrapper = with(document::get_node_qname(node), |q| {
+    matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
+  });
+  is_wrapper && node.get_content().trim().is_empty() && subtree_elements_all_invisible(node)
+}
+
+/// Every element descendant of `node` is itself a structural wrapper
+/// (`ltx:para`/`ltx:p`/`ltx:break`) — i.e. the subtree renders nothing visible. Any
+/// other element (`ltx:graphics`, `ltx:rule`, `ltx:svg`, `ltx:tabular`, `ltx:text`, an
+/// image, …) is visible content even with no text. Text nodes are ignored here: the
+/// caller has already required the subtree's text to be whitespace-only, and LaTeXML
+/// wraps loose document text in `<para><p>`, so a bare non-whitespace text child does
+/// not occur at this level.
+fn subtree_elements_all_invisible(node: &Node) -> bool {
+  node.get_child_nodes().iter().all(|c| {
+    c.get_type() != Some(NodeType::ElementNode)
+      || (with(document::get_node_qname(c), |q| {
+        matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
+      }) && subtree_elements_all_invisible(c))
+  })
 }
 
 /// Beyond-Perl heuristic: recover a document title from a hand-formatted leading
