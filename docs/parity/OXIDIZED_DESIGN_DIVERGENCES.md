@@ -8025,3 +8025,37 @@ path already had this guard (`?#1(...)()` in Perl, `!d.is_empty()` here).
 clipping everything).
 **Witnesses**: circuitikz/circuitikzmanual, xytree/xytree-doc-en (`svg:path missing required
 attribute d` gone). **Upstream**: not filed.
+
+### 250. A sectioning unit inside a block-mode box floats out as a real section (Perl: `<sectional-block>` inside the enclosing section, schema-invalid)
+
+**Perl behavior**: `insertBlock` (`TeX_Box.pool.ltxml:504-524`) tries the block candidates
+(block, logical-block, sectional-block, figure); only `sectional-block` can hold a `<section>`,
+so a `minipage[t]`/`framed`/`tcolorbox` whose body ran `\section` is renamed to
+`<sectional-block>` in place — inside the enclosing `<section>`/`<chapter>`/`<quote>`, where the
+schema admits no `sectional-block` (`document.body.class` only, LaTeXML-structure.rnc:23-47,99).
+0 build errors, invalid tree. SHARED with Rust before this batch.
+**Rust behavior**: in LaTeX a `\section` inside a box IS a section: `\@startsection` ran, the
+counter advanced, and text after `\end{minipage}` belongs to the new unit. `insert_block`
+(`base_utilities.rs`) now checks, before the candidate machinery, whether the captured content
+holds a sectioning unit (schema-read: admitted by `ltx:sectional-block`, not by
+`ltx:logical-block` — part…subparagraph, slide, sidebar; never a float/theorem/para) and whether
+the insertion context has an auto-closeable path to an ancestor that admits it
+(`sectioning_floatable`: walk up while the node admits the unit or `can_auto_close` — a
+`<quote>`, a list `<item>`, a `<figure>` stop the walk and keep Perl's shape). If so every
+built unit is MOVED to the point `find_insertion_point_qsym` chooses for it live — closing the
+enclosing unit for a same-or-higher level, nesting a deeper one — and made the insertion node,
+so trailing box content and the post-box text nest inside; non-sectioning lead content stays
+where the box was; the box's `class` (`ltx_minipage`) and any attributes
+`Sectional.attributes` admit (`framed`/`framecolor`/`cssstyle`) ride the first floated unit
+(`width`/`vattach` are dropped, as the old `sectional-block` already dropped them). Numbering
+needs no repair: the unit already carries its digest-time `<tags>`.
+**Why**: user ruling 2026-09-20 — "we should not treat a section in a minipage as a schema
+extension … convert the minipage into an annotation via class attribute to the usual
+ltx:section … semantics usually is better." The box is presentation; the sectioning is
+semantics. Valid, and faithful to LaTeX's own structure (visible order unchanged).
+**Witnesses**: aguplus (quote-gated — the box sits in `\begin{quote}`, Perl shape kept by design, jing 1→1), fancyvrb-doc 5→4, latex-via-exemplos 23→5 (36 `<sectional-block>` → 0; residual is frontmatter `creator`/`title`), phonenumbers-de 1→0, phonenumbers-en 1→0, recorder-fingering 2→0, tasks-manual 1→0, unamth-template/tesis 2→0 (jing errors, s107 → this branch; the `<sectional-block>` count in every non-quote witness is 0). **Golden**: `tests/graphics/framed.xml` (a `\paragraph` in a
+`framed` env now nests directly in its section, frame attributes on the paragraph).
+**Guard**: `perfect_kernel_batch56::{section_in_a_block_minipage_floats_out_as_a_sibling_section,
+subsection_in_a_block_minipage_nests_in_the_enclosing_section,
+section_in_a_minipage_inside_a_quote_keeps_perl_parity, section_in_a_center_environment_floats_out_and_keeps_its_alignment_class}`.
+**Upstream**: not filed.

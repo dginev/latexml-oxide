@@ -4507,6 +4507,39 @@ fn demote_para_class_content(document: &mut Document, node: &Node) -> Result<()>
   Ok(())
 }
 
+/// A sectioning unit, read from the schema: admitted by `ltx:sectional-block` (model
+/// `document.body.class*`) but not by `ltx:logical-block` (`Para.model`) — part,
+/// chapter, section, subsection, subsubsection, paragraph, slide, slidesequence,
+/// sidebar, sectional-block; never a figure/table/theorem/para (those are
+/// Para.model). `ltx:subparagraph` is not in `document.body` (LaTeXML.model), so a
+/// lone top-level `\subparagraph` in a box keeps Perl's shape; one under a floated
+/// `\paragraph` rides along inside it.
+fn is_sectioning_unit(node: &Node) -> bool {
+  let q = document::get_node_qname(node);
+  document::can_contain_qsym(pin_static("ltx:sectional-block"), q)
+    && !document::can_contain_qsym(pin_static("ltx:logical-block"), q)
+}
+
+/// Can `unit` be floated out of `context`? Walk up while each node either admits
+/// the unit (then a live `\\section` would open there) or auto-closes (a section,
+/// a paragraph, the box's own wrappers). A `<quote>`, a list, a `<figure>` does
+/// neither, so a box inside one keeps Perl's shape (#250).
+fn sectioning_floatable(context: &Node, unit: SymStr) -> bool {
+  let mut n = context.clone();
+  loop {
+    if document::can_contain_qsym(document::get_node_qname(&n), unit) {
+      return true;
+    }
+    if !document::can_auto_close(&n) {
+      return false;
+    }
+    match n.get_parent() {
+      Some(p) if p.get_type() == Some(NodeType::ElementNode) => n = p,
+      _ => return false,
+    }
+  }
+}
+
 pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
@@ -4599,6 +4632,63 @@ pub fn insert_block(
   document.close_to_node(&container, true)?;
   document.close_node(&container)?;
   document.close_to_node(&context, true)?;
+
+  // A sectioning unit inside a block-mode box (`\\section` in a `minipage[t]`, a
+  // `framed`/`tcolorbox`) is a REAL section in LaTeX: `\\@startsection` ran, the
+  // counter advanced, and the text after the box belongs to the new unit. Perl's
+  // `insertBlock` (TeX_Box.pool.ltxml:512) instead wraps the box as
+  // `<sectional-block>` and leaves it inside the enclosing section, where the
+  // schema admits no `sectional-block` (only `document.body.class` does,
+  // LaTeXML-structure.rnc:99) — SHARED, and invalid. User ruling (2026-09-20): the
+  // box is presentation, the sectioning is semantics — never bend the schema to a
+  // layout container. So when the captured content holds a sectioning unit and the
+  // insertion context has an auto-closeable path to an ancestor that admits it, every
+  // built unit is MOVED to where a live `\\section` would open (closing the enclosing
+  // unit for a same-or-higher level, nesting a deeper one) and becomes the insertion
+  // node, so trailing box content and post-box document text nest inside it; the
+  // box's own annotation (`class="ltx_minipage"` and the frame attributes
+  // `Sectional.attributes` admit — `width`/`vattach` are not, as `sectional-block`
+  // already dropped them) rides the FIRST floated unit. A box inside a `<quote>`, a
+  // list `<item>` or a `<figure>` has no such path (none auto-closes to a section
+  // holder) and keeps today's Perl-parity shape. Witnesses: aguplus, fancyvrb-doc,
+  // latex-via-exemplos, phonenumbers-{de,en}, recorder-fingering, tasks-manual,
+  // unamth-template/tesis (8 s106 docs). OXIDIZED_DESIGN #250.
+  if !is_inline
+    && let Some(first_unit) = nodes.iter().find(|n| is_sectioning_unit(n))
+    && sectioning_floatable(&context, document::get_node_qname(first_unit))
+  {
+    document.set_node(&context);
+    // The floated units are what the caller gets back: `aligning_environment`
+    // ({center}, {flushleft}, {flushright}) stamps its alignment on them.
+    let mut floated: Vec<Node> = Vec::new();
+    for child in nodes.iter().cloned() {
+      if child.get_type() != Some(NodeType::ElementNode) {
+        continue;
+      }
+      let q = document::get_node_qname(&child);
+      let mut point = document.find_insertion_point_qsym(q, None)?;
+      let mut c = child;
+      c.unlink();
+      point.add_child(&mut c)?;
+      if is_sectioning_unit(&c) {
+        floated.push(c.clone());
+        document.set_node(&c);
+      }
+    }
+    if let Some(mut unit) = floated.first().cloned() {
+      let unit_q = document::get_node_qname(&unit);
+      for (k, v) in block_attr.iter() {
+        if k == "class" {
+          document.add_class(&mut unit, v)?;
+        } else if document::sym_can_have_attribute(unit_q, pin(k)) {
+          document.set_attribute(&mut unit, k, v)?;
+        }
+      }
+    }
+    // Everything of substance has been moved out; the capture is spent.
+    document.remove_node(container);
+    return Ok(floated);
+  }
 
   // Perl `insertBlock` (TeX_Box.pool.ltxml:406-472): the first candidate, in
   // preference order, that can hold ALL of the box's content becomes the

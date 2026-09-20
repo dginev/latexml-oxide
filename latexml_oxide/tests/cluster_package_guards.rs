@@ -18746,6 +18746,150 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// SVG DOM invariant for the pgfsys marker constructors (`\lxSVG@setlinewidth`,
+  /// `buttcap`, `miterjoin`, `stroke`, …): whatever their definition kind, a `\draw`
+  /// yields exactly one `<svg:path>` and the paired `\lxSVG@begingroup` carries the
+  /// marker's state. (A 2026-09-20 flip of the markers to primitives left peak RSS
+  /// unchanged — 772 vs 769 MB on a 20k-path picture — and was reverted; the boxes on
+  /// the picture's box list are not the markers.)
+  #[test]
+  fn pgfsys_markers_leave_the_svg_dom_unchanged() {
+    let mut tex = String::from(
+      "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\\begin{tikzpicture}\n",
+    );
+    for i in 0..200 {
+      tex.push_str(&format!("\\draw[line width=0.5pt,line cap=round,line join=round,dashed] ({i}pt,0) -- ({i}pt,10pt);\n"));
+    }
+    tex.push_str("\\end{tikzpicture}\n\\end{document}\n");
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("<svg:path").count(),
+      200,
+      "one svg:path per \\draw:\n{}",
+      &xml[..xml.len().min(2000)]
+    );
+    assert_eq!(
+      xml.matches("<svg:svg").count(),
+      1,
+      "one svg root:\n{}",
+      &xml[..xml.len().min(2000)]
+    );
+    assert!(
+      xml.contains("stroke-dasharray") && xml.contains("stroke-linecap=\"round\""),
+      "the paired begingroup attributes still carry the marker's state:\n{}",
+      &xml[..xml.len().min(2000)]
+    );
+  }
+
+  /// Batch 56fb (OXIDIZED_DESIGN #250): a `\section*` inside a block-mode `minipage`
+  /// is a real section — the counter advanced, text after the box belongs to it. Perl
+  /// wraps the box as `<sectional-block>` INSIDE the enclosing `<section>` (invalid:
+  /// only `document.body.class` admits it). The unit floats out to where a live
+  /// `\section` opens — a sibling of the enclosing section — carrying the box as
+  /// `class="ltx_minipage"`; the post-box text nests inside it (user ruling
+  /// 2026-09-20: the box is presentation, the sectioning is semantics).
+  #[test]
+  fn section_in_a_block_minipage_floats_out_as_a_sibling_section() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Outer}\nBefore.\n\n\
+               \\begin{minipage}[t]{5cm}\n\n\\section*{In the box}\nInner text.\n\\end{minipage}\n\n\
+               After box.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("<sectional-block"),
+      "no sectional-block wrapper may remain:\n{xml}"
+    );
+    let outer = xml.find("<section ").expect("the outer section");
+    let outer_end = xml[outer..].find("</section>").map(|k| outer + k).unwrap();
+    let inner = xml
+      .find("ltx_minipage")
+      .expect("the floated section carries the box class");
+    assert!(
+      inner > outer_end,
+      "the boxed section must be a SIBLING after the outer one, not nested:\n{xml}"
+    );
+    let after = xml.find("After box.").unwrap();
+    assert!(
+      after > inner,
+      "text after the box nests in the new section:\n{xml}"
+    );
+    assert!(xml[..outer_end].contains("Before."), "{xml}");
+  }
+
+  /// #250, review follow-up: `{center}` routes its captured body through
+  /// `insert_block` and stamps `class="ltx_centering"` on the nodes it gets back
+  /// (`aligning_environment`, sect06.rs). A floated sectioning unit must be among
+  /// those nodes, or the alignment class is silently lost on the float-out path.
+  #[test]
+  fn section_in_a_center_environment_floats_out_and_keeps_its_alignment_class() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Outer}\nBefore.\n\n\
+               \\begin{center}\n\\section*{Centered heading}\nInner text.\n\\end{center}\n\n\
+               After.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<sectional-block"), "{xml}");
+    let outer = xml.find("<section ").expect("the outer section");
+    let outer_end = xml[outer..].find("</section>").map(|k| outer + k).unwrap();
+    let inner = xml[outer_end..]
+      .find("<section ")
+      .map(|k| outer_end + k)
+      .expect("the centered section is a later sibling");
+    let inner_tag_end = xml[inner..].find('>').map(|k| inner + k).unwrap();
+    assert!(
+      xml[inner..inner_tag_end].contains("ltx_centering"),
+      "the floated section keeps the {{center}} alignment class:\n{}",
+      &xml[inner..inner_tag_end]
+    );
+    assert!(xml.find("After.").unwrap() > inner, "{xml}");
+  }
+
+  /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
+  /// `\subsection` would), and the post-box text ends up inside that subsection.
+  #[test]
+  fn subsection_in_a_block_minipage_nests_in_the_enclosing_section() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Outer}\nBefore.\n\n\
+               \\begin{minipage}[t]{5cm}\n\n\\subsection{Sub}\nInner.\n\\end{minipage}\n\n\
+               After box.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<sectional-block"), "{xml}");
+    let outer_end = xml.find("</section>").unwrap();
+    let sub = xml.find("<subsection").expect("the subsection");
+    let sub_end = xml[sub..].find("</subsection>").map(|k| sub + k).unwrap();
+    let after = xml.find("After box.").unwrap();
+    assert!(
+      sub < outer_end && sub_end < outer_end,
+      "the subsection nests inside the outer section:\n{xml}"
+    );
+    assert!(
+      sub < after && after < sub_end,
+      "post-box text nests in the subsection:\n{xml}"
+    );
+    assert!(
+      xml.contains("<tag>1.1</tag>"),
+      "numbering is the digest-time counter (1.1):\n{xml}"
+    );
+  }
+
+  /// Batch 56fb control: a box inside a `quote` has no auto-close path to a section
+  /// holder (`quote` does not auto-close), so the SHARED Perl shape is kept unchanged.
+  #[test]
+  fn section_in_a_minipage_inside_a_quote_keeps_perl_parity() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Outer}\n\\begin{quote}\n\
+               \\begin{minipage}[t]{5cm}\n\n\\section*{Boxed}\nInner.\n\\end{minipage}\n\\end{quote}\n\
+               After.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    let quote = xml.find("<quote").expect("the quote");
+    let quote_end = xml[quote..].find("</quote>").map(|k| quote + k).unwrap();
+    let boxed = xml.find("Boxed").unwrap();
+    assert!(
+      quote < boxed && boxed < quote_end,
+      "the boxed section stays inside the quote (Perl parity):\n{xml}"
+    );
+  }
+
   /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
   /// a `picture` digests into the positioned `<g>` group. The box is an LR-box, but
   /// `insert_block` emitted a schema-invalid `<block>` there (`g_model` is inline-only —

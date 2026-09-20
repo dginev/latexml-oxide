@@ -28,17 +28,15 @@
         <p>And it can hold multiple paragraphs.</p>
       </para>
     </logical-block>
-    <sectional-block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle">
-      <para xml:id="S1.p4">
-        <p>And even stuff in multiple Paragraphs.</p>
+    <para xml:id="S1.p4">
+      <p>And even stuff in multiple Paragraphs.</p>
+    </para>
+    <paragraph cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle" inlist="toc" xml:id="S1.SS0.SSS0.Px1">
+      <title>Does this work?</title>
+      <para xml:id="S1.SS0.SSS0.Px1.p1">
+        <p>But not in LaTeXML!</p>
       </para>
-      <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1">
-        <title>Does this work?</title>
-        <para xml:id="S1.SS0.SSS0.Px1.p1">
-          <p>But not in LaTeXML!</p>
-        </para>
-      </paragraph>
-    </sectional-block>
+    </paragraph>
   </section>
   <section inlist="toc" xml:id="S2">
     <tags>
