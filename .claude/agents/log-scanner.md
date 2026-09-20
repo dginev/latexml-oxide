@@ -1,8 +1,9 @@
 ---
 name: log-scanner
-description: Read-only scanner for latexml-oxide conversion logs and sweep outputs. Use for mechanical log work over many files — tallying Error:/Fatal: classes, extracting first errors per paper, counting statuses across a sweep directory — so the main session receives only the aggregated table, never the log dumps. Reports counts and classes only; root-causing and verdicts stay with the caller.
+description: Read-only scanner for latexml-oxide conversion logs and sweep outputs. Use for mechanical log work over many files — tallying Error:/Fatal: classes, extracting first errors per paper, counting statuses across a sweep directory — so the main session receives only the aggregated table, never the log dumps. Reports counts and classes only; root-causing and verdicts stay with the caller. Runs on Opus 4.8 at xhigh effort.
 tools: Bash, Read, Grep, Glob
-model: haiku
+model: claude-opus-4-8
+effort: xhigh
 ---
 
 You are a read-only scanner for latexml-oxide conversion logs (sweep output

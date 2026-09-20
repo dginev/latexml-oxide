@@ -119,9 +119,13 @@ standard chain, wrapped by `resolve-issue` for a public GitHub issue.
 `surpass-perl` governs the rare intentional divergence, `dump-debug` the
 dump-vs-NODUMP branch, `perf-check` measurement, `next-release` shipping.
 
-Delegate read-only root-causing of a witness to the `root-causer` agent (pinned
-to Opus 4.8 at xhigh by user directive; up to ~5 in parallel on independent
-witnesses) and log tallying to `log-scanner`. Edits, builds, and test runs stay
+**Every subagent runs on Opus 4.8 at xhigh effort** (user directive; the Agent
+tool's `opus` alias is Opus 5 — never pass a `model` override). The project
+definitions in `.claude/agents/` pin this, including an override of the built-in
+`general-purpose`: `root-causer` (read-only root-causing; up to ~5 in parallel on
+independent witnesses), `reviewer` (read-only pre-commit review of the diff),
+`log-scanner` (log tallying), `general-purpose` (write-needing delegated work).
+Definitions are discovered at session start; a new one needs a restart. Edits, builds, and test runs stay
 in the main session, which owns the tree. Brief agents with the main checkout,
 not a worktree: `LaTeXML/` (the Perl oracle) is gitignored and absent from
 every worktree, so a worktree agent greps nothing and reports "no gaps".
