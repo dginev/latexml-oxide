@@ -95,9 +95,27 @@ run_once
 # message are retried, so the clean-oracle gate's guard against pdfLaTeX-
 # authored stale docs is untouched.
 rm -f "$out/retried_luatex"
-if [[ "$PRELOAD" != *luatex* ]] && grep -q -e 'cannot \\read from terminal in nonstop modes' -e 'You need to run LuaTeX to use the graph drawing library' "$out/$name.log"; then
+if [[ "$PRELOAD" != *luatex* ]] && grep -q -e 'cannot \\read from terminal in nonstop modes' -e 'You need to run LuaTeX to use the graph drawing library' -e 'LuaTeX is required for this package' "$out/$name.log"; then
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
   printf 'first run (pdfTeX identity) hit a wrong-engine halt or a LuaTeX-required library gate; retried under luatex\n' >"$out/retried_luatex"
+  run_once
+fi
+# Third signal (batch 56eu, 2026-09-20): a Unicode-engine manual whose lualatex
+# oracle did NOT compile cleanly on this host (missing fonts) fails the clean-
+# oracle gate above and runs under the pdfTeX identity, where its font setup
+# takes the pdfTeX branch — libertinus.sty:15-22 / neoschool.cls branch on
+# \iftutex (honestly false) to a Type1 path that never defines \setmonofont — so
+# the leaked argument becomes a leading <para> and every frontmatter element
+# after it is schema-invalid (hvfloat/wide2s2c + 10 siblings, beamerthemeCelestia;
+# identical in Perl and real pdflatex). The doc's REQUIRED engine is recorded by
+# the oracle regardless of cleanliness; a demonstrated Unicode-font dependency in
+# the pdfTeX run is the discriminator that keeps the +78k-error trap of trusting
+# engine=lualatex alone (sweep 9) shut: BOTH must hold.
+if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
+   && grep -qP "^$bundle\t$name\t(lualatex|xelatex)\t" "$ORACLE" \
+   && grep -qE 'undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua) ' "$out/$name.log"; then
+  PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
+  printf 'first run (pdfTeX identity) leaked a Unicode-engine font command and the oracle engine is lualatex/xelatex; retried under luatex\n' >"$out/retried_luatex"
   run_once
 fi
 end=$(date +%s.%N)
