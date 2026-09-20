@@ -437,11 +437,9 @@ pub(crate) fn load() -> Result<()> {
         return Ok(());
       }
       AssignValue!("lx@document@closed" => true, Some(Scope::Global));
-      // The `@at@end@document` fallback above has flushed any queued
-      // frontmatter; now make it LEAD past a content-free pagebreak/empty
-      // paragraph that was built before it (OXIDIZED_DESIGN #245).
-      remove_frontmatter_marks(document); // #246 position markers never reach the output
-      relocate_leading_content_free_past_frontmatter(document)?;
+      // #246/#247 position markers never reach the output (the core finalize
+      // sweeps stragglers too).
+      remove_frontmatter_marks(document);
       if lookup_bool("lx@end@document@open@groups") {
         document.close_element_lenient("ltx:document", "groups still open at \\end{document}")?;
       } else {

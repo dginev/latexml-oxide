@@ -7751,6 +7751,7 @@ residuals uniformly (follow-up).
 **Guard**: `frontmatter_hoists_above_content_free_leading_pagination` (+ the negative
 control `frontmatter_does_not_hoist_above_a_leading_graphic`).
 **Follow-up**: the two shapes this hoist cannot see (a directly-built `<titlepage>`; an empty-box paragraph whose `<ltx:text>` folds away only at paragraph close) are settled by #245's `\end{document}` pass.
+**Superseded (mechanism)**: the placement logic now lives in #247's single `place_frontmatter` pass; the behavior and witnesses above are unchanged.
 **Upstream**: not filed.
 
 ### 243. A `\put`-positioned box in a picture group is `<inline-block>`, not `<block>` (Perl: schema-invalid `<block>`)
@@ -7869,6 +7870,7 @@ cover, correctly left).
 titlepage_relocates_past_a_leading_pagination, titlepage_stays_below_a_visible_leading_cover,
 pagebreak_before_a_leading_bibliography_stays_put,
 frontmatter_stays_below_a_leading_framed_empty_box}`.
+**Superseded (mechanism)**: the placement logic now lives in #247's single `place_frontmatter` pass; the behavior and witnesses above are unchanged.
 **Upstream**: not filed.
 
 ### 246. Abstract-only fallback: title-page layout wraps as `<titlepage>`, the abstract follows (Perl: abstract at the top; Rust had it trailing the body)
@@ -7945,4 +7947,46 @@ sectionless_body_after_the_abstract_is_not_cover_layout,
 late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing}`; fixture `structure/promote_center_title`
 (re-blessed to `title, titlepage, abstract, section`); `class_redefined_abstract_defers_its_argument`
 (a class `\abstract{}` store, sectionless) unchanged.
+**Superseded (mechanism)**: the placement logic now lives in #247's single `place_frontmatter` pass; the behavior and witnesses above are unchanged.
+**Upstream**: not filed.
+
+### 247. One frontmatter placement pass (consolidates #242, #245 and #246's anchor plumbing; zero behavior change)
+
+**Perl behavior**: `\lx@frontmatterhere` places the queued frontmatter at the current point;
+`\lx@frontmatter@fallback` places it at the top after `ltx:resource[last()]`; nothing else
+(`Base_Utility.pool.ltxml:824-944`). Whatever precedes the placement stays where it is.
+**Rust behavior**: `place_frontmatter(document, wrap_layout, anchor, on_stop)`
+(`base_utilities.rs`) runs at every placement point — `\lx@frontmatterhere`, both
+`\lx@frontmatter@fallback` branches, the `{titlepage}` environment's `after_construct` — and
+classifies the LEADING REGION (root children between the resources and the bound: the
+abstract's `ltx:_Frontmatter_Capture_` position marker when present, else everything built so
+far): a first-group element (`is_frontmatter_group_element`) is the anchor candidate; a
+content-free node (`node_is_content_free`) is moved after the placed frontmatter if it
+preceded it; hand-typeset layout (`para` / demotable `logical-block` / `pagination` with
+visible ink, `wrap_layout` = the abstract-only fallback only) is wrapped in `<titlepage>` in
+its exact order; anything else ends the region and the pass places exactly as Perl does
+(`on_stop`: current point for `\maketitle` and the titlepage flush, top for the fallback).
+With nothing queued the content-free normalization around a built `<titlepage>` still runs,
+so a `\clearpage` before a `{titlepage}` settles when the titlepage is built.
+**Why**: the 2026-09-20 consolidation study (Opus 4.8, ~60 corpus docs, every pinning test,
+the Perl baseline) found #242's `\maketitle` content-free gate, #245's `\end{document}`
+relocation and #246's wrap/anchor helpers keyed on four slightly different notions of "what
+may precede the frontmatter", interacting (a build-then-finalize two-step for the toptesi
+frontispieces; gitinfo2 fixed only at finalize) and producing the s107 regressions. User
+ruling: "consolidate only, no policy flip" — same behavior, less code. Deleted:
+`leading_document_nodes_content_free`, `relocate_leading_content_free_past_frontmatter` (+ its
+`\lx@finalize@document` call), `wrap_leading_layout_in_titlepage`,
+`last_frontmatter_before_abstract_mark`, `insert_frontmatter_after_node`,
+`insert_frontmatter_after_resources` (four code files 227+/287−, net −60 lines; 5 mechanisms → 1). Accepted superset on the `\maketitle` path: a built `<titlepage>` ahead of `\maketitle` now anchors the flush even when a content-free node sits between them (#242 placed at the current point there; no corpus doc has the shape, the anchored tree is the valid one). The pass drains `frontmatter_raw` first so `frontmatter_pending` and the flush agree under streaming at the `{titlepage}` `after_construct`, which has no digest hook of its own. Kept, not redundant:
+the marker + `remove_frontmatter_marks` + core `finalize_rec` sweep (the bound), the
+conservative title promotion (#246), `maybe_dedup_leading_title_ink` (#6924),
+`insert_late_frontmatter`. NOT adopted (needs its own ruling): wrapping VISIBLE leading layout
+on the `\maketitle` path — it would flip three fidelity controls
+(`frontmatter_does_not_hoist_above_a_leading_graphic`, `titlepage_stays_below_a_visible_leading_cover`,
+`frontmatter_stays_below_a_leading_framed_empty_box`) and cannot tell a genuine cover (9 docs)
+from a leaked command's argument text (8 docs).
+**Witnesses**: all 45 cataloged docs identical to s107 (rng counts and leading shapes) — the 56ep 14, 56es 6, 56et 16, P4 2, the fidelity/ERROR controls (toptesi-it 1→1, ltnews 1→1, l3news 1→1, pgf-spectraManual 8→8, oubraces 6→6, a4wide 4→4, eqnnumwarn 2→2, turnstile 3→3, lua-tikz3dtools 3→3); the only differences are 56et.1's marker-leak fix that s107 predates (forest-doc 4→3, lips 1→0). 22 targeted tests (14 guards + 5 fixtures + streaming eager≡streaming + title-ink dedup + class-abstract store); full suite 2993/2993; clippy + rustdoc clean.
+**Guard**: the 14 `perfect_kernel_batch56` frontmatter guards of #242/#245/#246 unchanged; fixtures
+`structure/{promote_center_title,faketitlepage,titlepage,svabstract,amsarticle}`;
+`114_streaming_structure` (eager ≡ streaming); `06_cluster_regressions::cluster_frontmatter_title_ink_dedup_6924`.
 **Upstream**: not filed.

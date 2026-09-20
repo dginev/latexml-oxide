@@ -1207,7 +1207,9 @@ pub(crate) fn load() -> Result<()> {
       digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?
     },
     after_construct => sub[doc, _whatsit] {
-      insert_frontmatter(doc)?;
+      // The one placement pass (#247): a `\clearpage` pagebreak built before this
+      // titlepage settles behind the frontmatter here, at construction time.
+      place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter, OnStop::Current)?;
     },
     // NOT locked: report/book define `{titlepage}` with `\newenvironment`, so
     // a class may legitimately `\def\titlepage{…}` as a plain vertical macro

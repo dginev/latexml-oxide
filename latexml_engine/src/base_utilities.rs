@@ -1494,27 +1494,15 @@ LoadDefinitions!({
   // deferring it from document begin.
   // This should be where ALL the digestion of frontmatter happens
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] {
-    // Subclass-A render-safe surpass (OXIDIZED_DESIGN #242): if the only nodes
-    // between the last <ltx:resource> and here are content-free — a
-    // \clearpage/\newpage/\frontmatter <ltx:pagination> pagebreak, or an empty
-    // <ltx:para>/<ltx:p> — hoist the QUEUED frontmatter (title/creator/date) ABOVE
-    // them so it leads. The schema requires frontmatter strictly first
-    // (LaTeXML-structure.rnc:34), so a leading <pagination> before <title>
-    // invalidates every following frontmatter element (amsmath/amsldoc, tkz-doc,
-    // tuda-ci/DEMO-TUDaPhD, tzplot, … — 14 s105 docs recovered to 0 rng-errors).
-    // Beyond Perl (Perl-raw leaves these invalid too), and safe because a pagebreak
-    // reorders nothing visible. Genuine pre-title content, or an undefined-command
-    // <ltx:ERROR> para, fails the content-free gate → insert at the current point
-    // unchanged (faithful parity). NOT handled here: a directly-built <ltx:titlepage>
-    // element after a leading pagination (toptesi/* frontispiece — a distinct
-    // mechanism, since the titlepage is not queued frontmatter and is itself content);
-    // that, and any shape that only settles after this flush, is covered by the
-    // `\end{document}` pass `relocate_leading_content_free_past_frontmatter` (#245).
-    if leading_document_nodes_content_free(doc) {
-      insert_frontmatter_after_resources(doc)?;
-    } else {
-      insert_frontmatter(doc)?;
-    }
+    // The `\maketitle` flush: the one placement pass (OXIDIZED_DESIGN #247). A
+    // content-free lead (a `\clearpage`/`\frontmatter` pagebreak, an empty box
+    // paragraph) ends up behind the frontmatter; a built <titlepage> ahead of it
+    // anchors it (a superset of #242, which placed at the current point when a
+    // pagebreak sat between the titlepage and `\maketitle` — no corpus doc has that
+    // shape; the anchored tree is the valid one); visible content ahead of it means
+    // Perl's current-point placement (faithful: no visible reordering —
+    // amsldoc/tkz-doc/tuda-ci/tzplot vs the logo-cover controls).
+    place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter, OnStop::Current)?;
   },
   after_digest => {
     digest_front_matter()?;
@@ -1533,8 +1521,8 @@ LoadDefinitions!({
     // was deposited as ordinary body BEFORE the abstract was queued, so a blind
     // top-flush would float the abstract ABOVE the title. `maybe_promote_leading_title`
     // turns that block into a real <ltx:title> when it is unambiguous, the rest of the
-    // hand-typeset cover is wrapped as <ltx:titlepage> (`wrap_leading_layout_in_titlepage`),
-    // and the flush lands right after them (`insert_frontmatter_after_node`); with
+    // hand-typeset cover is wrapped as <ltx:titlepage> (`place_frontmatter (the titlepage wrap)`),
+    // and the flush lands right after them (`insert_frontmatter_at`); with
     // neither, the flush goes to the top. An earlier
     // rescue flushed the abstract at the CURRENT position instead — which, when the
     // body had emitted a cover block/TOC/pagebreak by then, left `<abstract>` trailing
@@ -1562,25 +1550,16 @@ LoadDefinitions!({
       // later abstract-only queue is a LATE abstract — what precedes its marker is
       // body, not cover, and `insert_late_frontmatter` places it beside the
       // existing frontmatter. (`frontmatter_done` is reset by that path itself.)
-      let anchor = if lookup_bool("frontmatter_done") {
-        None
-      } else {
+      // First flush only: promote an unambiguous hand-made title, then let the pass
+      // wrap the rest of the cover (before the abstract's marker) as <titlepage>. A
+      // LATE abstract (after `\maketitle`) is filed by `insert_late_frontmatter`.
+      let first_flush = !lookup_bool("frontmatter_done");
+      if first_flush {
         maybe_promote_leading_title(document)?;
-        match wrap_leading_layout_in_titlepage(document)? {
-          Some(titlepage) => Some(titlepage),
-          // No cover to wrap: sit right after whatever first-group element (a
-          // promoted title, a built titlepage) precedes the abstract's position.
-          None => last_frontmatter_before_abstract_mark(document),
-        }
-      };
-      match anchor {
-        Some(anchor) => insert_frontmatter_after_node(document, &anchor)?,
-        None => insert_frontmatter_after_resources(document)?,
       }
+      place_frontmatter(document, first_flush, FrontmatterAnchor::LeadingFrontmatter, OnStop::Top)?;
     } else {
-      insert_frontmatter_after_resources(document)?;
-      // With the structured <ltx:title> now in the tree, drop a redundant leading
-      // hand-typeset copy of it (no \maketitle; #6924). Author/abstract ink stays.
+      place_frontmatter(document, false, FrontmatterAnchor::Top, OnStop::Top)?;
       maybe_dedup_leading_title_ink(document)?;
     }
   },
@@ -2602,64 +2581,80 @@ fn has_element_child(node: &Node) -> bool {
     .any(|c| c.get_type() == Some(NodeType::ElementNode))
 }
 
-/// Flush the queued frontmatter at the document TOP — immediately after the last
-/// `<ltx:resource>` (Perl `findnode('ltx:document/ltx:resource[last()]')`) — via a
-/// transient `_Capture_` wrapper: insert it before the first post-resource sibling,
-/// fill it, then unwrap, so the frontmatter lands ahead of any leading pagebreak
-/// while the current insertion node is restored. Shared by `\lx@frontmatter@fallback`
-/// (no `\maketitle`) and by `\lx@frontmatterhere` for the subclass-A hoist.
-fn insert_frontmatter_after_resources(document: &mut Document) -> Result<()> {
-  let savenode = document.get_node().clone();
-  // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the DOCUMENT
-  // node (Perl's default xpath context). The Rust cached XPath context evaluates
-  // relative to the root ELEMENT, so use the equivalent absolute path.
-  let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
-  if let Some(p) = point.take() {
-    point = p.get_next_sibling();
-  }
-  let wrapper = if let Some(point) = point {
-    Some(document.insert_element_before(&point, "ltx:_Capture_", None)?)
-  } else {
-    match document.get_document().get_root_element() {
-      Some(mut document_element) => {
-        Some(document.open_element_at(&mut document_element, "ltx:_Capture_", None, None)?)
-      },
-      _ => None,
-    }
-  };
-  if let Some(wrapper) = wrapper {
-    document.set_node(&wrapper);
-    insert_frontmatter(document)?;
-    document.unwrap_nodes(wrapper)?;
-    document.set_node(&savenode);
-  }
-  Ok(())
+/// Where a frontmatter flush lands relative to what the document already holds.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FrontmatterAnchor {
+  /// Right after the resources, before everything else — Perl's fallback placement.
+  Top,
+  /// Right after the document's leading run of first-group elements (a directly built
+  /// `<titlepage>`, a promoted `<title>`), so the frontmatter group stays contiguous.
+  LeadingFrontmatter,
 }
 
-/// Wrap a document's leading hand-typeset cover in `<ltx:titlepage>` (OXIDIZED_DESIGN
-/// #246; user ruling 2026-09-20). Used by the abstract-only `\lx@frontmatter@fallback`
-/// branch: with no `\title`/`\maketitle`, whatever the author typeset before the
-/// first `\section` — a `center` block with the title/author/version lines, a logo
-/// paragraph, pagebreaks — is title-page LAYOUT, not body, and it must not precede
-/// the queued `<abstract>` as body (frontmatter leads, LaTeXML-structure.rnc:34).
-/// `titlepage_model = (FrontMatter.class | SectionalFrontMatter.class | Block.class)*`
-/// is the schema's container for exactly that layout, so the leading run of
-/// `pagination` / `para` / demotable `logical-block` children (after the resources
-/// and any promoted `<title>`, and BEFORE the abstract's own position — the
-/// `ltx:_Frontmatter_Capture_` marker `\lx@frontmatter@mark` left where the abstract
-/// was queued; with no marker at document level nothing is wrapped) is moved into a new `<titlepage>` in its exact
-/// order, each `para` renamed to `<block>` and each `logical-block` demoted with
-/// #244's `demote_para_class_content` (Block.model keeps their content valid;
-/// `.ltx_para`/`.ltx_block` are both `display:block`, render-neutral). The run stops
-/// at the first node that is not layout (a `<TOC>`, a section, a float) and is
-/// skipped entirely when it holds nothing visible (a lone pagebreak — #245's pass
-/// handles that). Everything before the marker is closed (the marker was built after
-/// it), so no open node is ever renamed. Returns the titlepage, the node the abstract is then flushed after.
-/// No element names beyond the schema-level para/block family are involved; nothing
-/// is guessed about the layout's meaning (a wrong `<title>` is worse than none).
-fn wrap_leading_layout_in_titlepage(document: &mut Document) -> Result<Option<Node>> {
+/// What a flush does when something it may not reorder stands before it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum OnStop {
+  /// Place at the current insertion point — Perl's `\maketitle` (`Base_Utility.pool.ltxml:918`).
+  Current,
+  /// Place at the top — Perl's fallback (`Base_Utility.pool.ltxml:927-945`).
+  Top,
+}
+
+/// The ONE frontmatter placement pass (OXIDIZED_DESIGN #247). The schema wants every
+/// frontmatter-group element before all `document.body.class` content
+/// (`LaTeXML-structure.rnc:34`), and `Para.class` — hence the body group — includes
+/// `pagination`, `rule` and `para` (`LaTeXML-para.rnc:18-20`). Perl only ever places at
+/// the current point (`\maketitle`) or at the top (fallback) and leaves whatever that
+/// yields. This pass looks at the LEADING REGION — the root children between the
+/// resources and the bound (the abstract's own `ltx:_Frontmatter_Capture_` position
+/// marker when it has one, else everything built so far) — and classifies each node:
+///
+/// * a first-group element (`is_frontmatter_group_element`) stays and becomes the
+///   anchor candidate;
+/// * a content-free node (`node_is_content_free`: a pagebreak, an empty paragraph, an
+///   ink-free empty box) is left in place and, if it preceded the anchor, moved after
+///   the placed frontmatter — it carries no ink, so nothing visible reorders;
+/// * hand-typeset title-page LAYOUT — `para` / demotable `logical-block` / `pagination`
+///   with visible ink, `wrap_layout` only (the abstract-only fallback: a cover typeset
+///   before a `\begin{abstract}` with no `\maketitle`) — is wrapped, in its exact order,
+///   into `<ltx:titlepage>` (`titlepage_model = (FrontMatter.class |
+///   SectionalFrontMatter.class | Block.class)*` is the schema's container for exactly
+///   that; `para`→`block`, `logical-block` demoted bottom-up as in #244);
+/// * anything else — a `<TOC>`, a section, a float, a root `<rule>`, an undefined-
+///   command `<ERROR>` para, a VISIBLE paragraph on the `\maketitle` path — ends the
+///   region: the pass then places exactly as Perl does (`on_stop`), reordering nothing.
+///
+/// The frontmatter is inserted after the wrapped titlepage, else after the leading
+/// first-group run (`FrontmatterAnchor::LeadingFrontmatter`) or at the top, via the
+/// same `_Capture_` insert→fill→unwrap machinery Perl's fallback uses. Run at every
+/// placement point — `\lx@frontmatterhere`, both `\lx@frontmatter@fallback` branches,
+/// the `{titlepage}` environment's `after_construct` — so a leading pagebreak before a
+/// built titlepage is settled when that titlepage is built, not by a later pass. The
+/// bound matters: without the marker a sectionless manual's whole body would read as
+/// cover (jourcl's cover LETTER, derivative's after-abstract cover). Superseded by this
+/// pass: #242's content-free gate, #245's `\end{document}` relocation, #246's anchor
+/// helpers. Kept beside it: the conservative title promotion (`maybe_promote_leading_title`,
+/// user-ruled), `maybe_dedup_leading_title_ink` (#6924), `insert_late_frontmatter`, the
+/// marker sweep in `insert_frontmatter` and the core `finalize_rec`.
+///
+/// Witnesses: amsldoc/tkz-doc/tzplot (#242, 14 docs), gitinfo2/gitlog/FrontespizioScudo/
+/// toptesi-example-* (#245, 6), toptesi-example-magistrale/tipfr-doc/isosigns-docs/
+/// bootstrapicons-docs/derivative/jourcl (#246, 16), the faketitlepage /
+/// promote_center_title / svabstract fixtures, `114_streaming_structure` (eager ≡ streaming).
+pub fn place_frontmatter(
+  document: &mut Document,
+  wrap_layout: bool,
+  anchor: FrontmatterAnchor,
+  on_stop: OnStop,
+) -> Result<()> {
+  // Drain the raw frontmatter queue first, as `insert_frontmatter` does, so
+  // `frontmatter_pending` and the flush agree: the `{titlepage}` environment's
+  // `after_construct` is the one placement point without its own digest hook, and
+  // under `--streaming` (digestion interleaved with construction) a `\title` given
+  // after `\end{titlepage}` may still sit undigested there.
+  digest_front_matter()?;
   let Some(root) = document.get_document().get_root_element() else {
-    return Ok(None);
+    return insert_frontmatter(document);
   };
   let kids: Vec<Node> = root
     .get_child_nodes()
@@ -2667,47 +2662,112 @@ fn wrap_leading_layout_in_titlepage(document: &mut Document) -> Result<Option<No
     .filter(|n| n.get_type() == Some(NodeType::ElementNode))
     .collect();
   let mut i = 0;
-  while i < kids.len()
-    && (document::get_node_qname(&kids[i]) == pin_static("ltx:resource")
-      || is_frontmatter_group_element(&kids[i]))
-  {
+  while i < kids.len() && document::get_node_qname(&kids[i]) == pin_static("ltx:resource") {
     i += 1;
   }
-  let start = i;
-  // Only what precedes the abstract's own position is cover layout.
-  let Some(mark) = kids[start..]
+  let bound = kids[i..]
     .iter()
     .position(|n| document::get_node_qname(n) == pin_static("ltx:_Frontmatter_Capture_"))
-    .map(|k| start + k)
-  else {
-    return Ok(None);
-  };
-  let mut saw_visible = false;
-  while i < mark {
-    let q = document::get_node_qname(&kids[i]);
-    let is_layout = q == pin_static("ltx:pagination")
-      || q == pin_static("ltx:para")
-      || (q == pin_static("ltx:logical-block") && subtree_is_block_demotable(&kids[i]));
-    if !is_layout {
+    .map_or(kids.len(), |k| i + k);
+  // The leading prefix: first-group elements and content-free nodes, in any order.
+  let mut last_first: Option<Node> = None;
+  let mut movers: Vec<Node> = Vec::new();
+  while i < bound {
+    if is_frontmatter_group_element(&kids[i]) {
+      last_first = Some(kids[i].clone());
+    } else if node_is_content_free(&kids[i]) {
+      movers.push(kids[i].clone());
+    } else {
       break;
     }
-    saw_visible |= !node_is_content_free(&kids[i]);
     i += 1;
   }
-  if !saw_visible {
-    return Ok(None);
+  // Hand-typeset cover before the abstract → <titlepage>, in order.
+  let mut titlepage: Option<Node> = None;
+  if wrap_layout && i < bound {
+    let start = i;
+    let mut saw_visible = false;
+    while i < bound && is_titlepage_layout(&kids[i]) {
+      saw_visible |= !node_is_content_free(&kids[i]);
+      i += 1;
+    }
+    if saw_visible {
+      titlepage = Some(wrap_as_titlepage(document, &root, &kids[start..i])?);
+    } else {
+      i = start;
+    }
   }
+  // Nothing queued (or the abstract-only deferral): `insert_frontmatter` keeps its
+  // side effects; a leading pagebreak before a built titlepage still settles here.
+  if !frontmatter_pending() {
+    insert_frontmatter(document)?;
+    if let Some(tail) = last_first {
+      move_content_free_after(&movers, tail)?;
+    }
+    return Ok(());
+  }
+  // Visible content the pass may not reorder on a non-wrapping path: Perl placement.
+  let stopped = kids[i..bound].iter().any(|k| !node_is_content_free(k));
+  if stopped && !wrap_layout {
+    return match on_stop {
+      OnStop::Current => insert_frontmatter(document),
+      OnStop::Top => insert_frontmatter_at(document, None).map(|_| ()),
+    };
+  }
+  let after = titlepage.or(match anchor {
+    FrontmatterAnchor::Top => None,
+    FrontmatterAnchor::LeadingFrontmatter => last_first.clone(),
+  });
+  let placed = insert_frontmatter_at(document, after.as_ref())?;
+  // Content-free nodes that preceded the placed run now follow it, in their order.
+  let tail = match (placed.last().cloned(), last_first) {
+    (Some(p), Some(f)) => Some(if node_precedes(&p, &f) { f } else { p }),
+    (p, f) => p.or(f),
+  };
+  if let Some(tail) = tail {
+    move_content_free_after(&movers, tail)?;
+  }
+  Ok(())
+}
+
+/// Would `insert_frontmatter` place anything right now? Mirrors its three early
+/// returns (already done; nothing queued; the abstract-only first-call deferral).
+fn frontmatter_pending() -> bool {
+  if lookup_bool("frontmatter_done") {
+    return false;
+  }
+  let keys: Vec<String> = with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt.keys().cloned().collect(),
+    _ => Vec::new(),
+  });
+  !(keys.is_empty()
+    || (keys.len() == 1 && keys[0] == "ltx:abstract" && !lookup_bool("frontmatter_deferred")))
+}
+
+/// A root child that is title-page layout when it stands before the abstract: a
+/// pagebreak, a paragraph, or a `logical-block` whose content survives #244's demotion
+/// to `<block>`.
+fn is_titlepage_layout(node: &Node) -> bool {
+  let q = document::get_node_qname(node);
+  q == pin_static("ltx:pagination")
+    || q == pin_static("ltx:para")
+    || (q == pin_static("ltx:logical-block") && subtree_is_block_demotable(node))
+}
+
+/// Move `run` (consecutive root children) into a new `<ltx:titlepage>` in place, in
+/// order; `para` → `block` as is (its content is already Block.model), `logical-block`
+/// demoted bottom-up then renamed. Returns the titlepage (its own handle stays live —
+/// only children are renamed).
+fn wrap_as_titlepage(document: &mut Document, root: &Node, run: &[Node]) -> Result<Node> {
   // Bare tag + root namespace, as `maybe_promote_leading_title` does for <title>.
-  let mut titlepage = document.insert_element_before(&kids[start], "titlepage", None)?;
+  let mut titlepage = document.insert_element_before(&run[0], "titlepage", None)?;
   if let Some(rns) = root.get_namespace() {
     let _ = titlepage.set_namespace(&rns);
   }
-  for mut n in kids[start..i].iter().cloned() {
+  for mut n in run.iter().cloned() {
     n.unlink();
     titlepage.add_child(&mut n)?;
   }
-  // Para.class children → Block.class: `para` becomes `<block>` as is (its content is
-  // already Block.model); a `logical-block` is demoted bottom-up, then renamed.
   for child in titlepage.get_child_nodes() {
     if child.get_type() != Some(NodeType::ElementNode) {
       continue;
@@ -2720,97 +2780,71 @@ fn wrap_leading_layout_in_titlepage(document: &mut Document) -> Result<Option<No
       document.rename_node(child, "ltx:block", true)?;
     }
   }
-  // Only CHILDREN were renamed (`rename_node` recreates the renamed node, not its
-  // parent), so the titlepage handle itself is still live.
-  Ok(Some(titlepage))
+  Ok(titlepage)
 }
 
-/// The last element of the document's LEADING first-group run — a promoted `<title>`,
-/// a directly built `<titlepage>` — counting only what stands before the abstract's
-/// own position marker and skipping content-free nodes. The abstract belongs right
-/// after it: with nothing but frontmatter and content-free nodes between, that is its
-/// source position; when body content (a `<TOC>`, a section) intervenes before the
-/// marker, it is the last valid frontmatter slot (the title stays first —
-/// isosigns/bootstrapicons print their TOC before the abstract). `None` when no
-/// first-group element leads (the flush then goes to the top, like Perl). Keeps eager and
-/// streaming builds identical: in an eager build the `{titlepage}` environment's own
-/// `after_construct` flush already files a LATER-queued abstract right behind the
-/// titlepage (digestion completed first), while a streaming build reaches the
-/// fallback with the abstract still queued (114_streaming_structure, faketitlepage).
-fn last_frontmatter_before_abstract_mark(document: &mut Document) -> Option<Node> {
-  let root = document.get_document().get_root_element()?;
-  let mut last: Option<Node> = None;
-  for kid in root.get_child_nodes() {
-    if kid.get_type() != Some(NodeType::ElementNode) {
-      continue;
-    }
-    let q = document::get_node_qname(&kid);
-    if q == pin_static("ltx:_Frontmatter_Capture_") {
-      return last;
-    }
-    if q == pin_static("ltx:resource") || node_is_content_free(&kid) {
-      continue;
-    }
-    if is_frontmatter_group_element(&kid) {
-      last = Some(kid);
-    } else {
-      return last;
-    }
-  }
-  last
-}
-
-/// Flush the queued frontmatter immediately AFTER `anchor` (a top-level document
-/// child): the `_Capture_` insert→fill→unwrap machinery of
-/// [`insert_frontmatter_after_resources`], anchored on a node instead of the last
-/// resource. Used by the abstract-only fallback when `maybe_promote_leading_title`
-/// recovered a hand-formatted title: the abstract lands right after that `<title>`,
-/// not above it (#246, arXiv 1609.07638).
-fn insert_frontmatter_after_node(document: &mut Document, anchor: &Node) -> Result<()> {
+/// Flush the queued frontmatter right after `after` (a root child), or — `None` — at
+/// the top, after `/ltx:document/ltx:resource[last()]` exactly as Perl's fallback
+/// (`Base_Utility.pool.ltxml:927-945`; Perl's `findnode` is document-relative, the Rust
+/// cached XPath context is root-relative, hence the absolute path). The `_Capture_`
+/// wrapper is filled by `insert_frontmatter` and unwrapped; the placed elements are
+/// returned (their handles survive the unwrap — `unwrap_nodes` splices children up).
+fn insert_frontmatter_at(document: &mut Document, after: Option<&Node>) -> Result<Vec<Node>> {
   let savenode = document.get_node().clone();
-  let wrapper = match anchor.get_next_sibling() {
-    Some(next) => document.insert_element_before(&next, "ltx:_Capture_", None)?,
-    None => match anchor.get_parent() {
-      Some(mut parent) => document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?,
-      None => return Ok(()),
+  let point = match after {
+    Some(a) => a.get_next_sibling(),
+    None => document
+      .findnode("/ltx:document/ltx:resource[last()]", None)
+      .and_then(|r| r.get_next_sibling()),
+  };
+  let wrapper = match point {
+    Some(point) => document.insert_element_before(&point, "ltx:_Capture_", None)?,
+    None => {
+      let parent = match after {
+        Some(a) => a.get_parent(),
+        None => document.get_document().get_root_element(),
+      };
+      match parent {
+        Some(mut parent) => document.open_element_at(&mut parent, "ltx:_Capture_", None, None)?,
+        None => return Ok(Vec::new()),
+      }
     },
   };
   document.set_node(&wrapper);
   insert_frontmatter(document)?;
+  let placed: Vec<Node> = wrapper
+    .get_child_nodes()
+    .into_iter()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+    .collect();
   document.unwrap_nodes(wrapper)?;
   document.set_node(&savenode);
+  Ok(placed)
+}
+
+/// Re-attach, in order, every node of `movers` that precedes `tail` to right after it.
+/// Elements only, so `add_next_sibling` never meets libxml2's text-merge-and-free.
+fn move_content_free_after(movers: &[Node], mut tail: Node) -> Result<()> {
+  for mut m in movers.iter().cloned() {
+    if node_precedes(&m, &tail) {
+      m.unlink();
+      tail.add_next_sibling(&mut m)?;
+      tail = m;
+    }
+  }
   Ok(())
 }
 
-/// True when every `<ltx:document>` child after the last `<ltx:resource>` is a
-/// content-free node — a self-closing `<ltx:pagination>` (`\clearpage`/`\newpage`)
-/// or an empty `<ltx:para>`/`<ltx:p>`/`<ltx:break>` — and at least one such node is
-/// present. Gate for the subclass-A frontmatter hoist (`\lx@frontmatterhere`): such
-/// leading nodes carry no visible content, so moving the frontmatter above them is
-/// invisible in HTML and faithful to the PDF pagebreak; genuine pre-title content, or
-/// an undefined-command `<ltx:ERROR>` para, is NOT content-free, so the frontmatter
-/// stays in place (faithful Perl parity).
-fn leading_document_nodes_content_free(document: &mut Document) -> bool {
-  let anchor = document.findnode("/ltx:document/ltx:resource[last()]", None);
-  let mut cur = match anchor {
-    Some(resource) => resource.get_next_sibling(),
-    // No <ltx:resource> at all: walk from the first document child (non-resource).
-    None => document
-      .get_document()
-      .get_root_element()
-      .and_then(|root| root.get_child_nodes().into_iter().next()),
-  };
-  let mut saw_content_free = false;
-  while let Some(node) = cur {
-    if node.get_type() == Some(NodeType::ElementNode) {
-      if !node_is_content_free(&node) {
-        return false;
-      }
-      saw_content_free = true;
+/// True when `a` comes before `b` among the same parent's children.
+fn node_precedes(a: &Node, b: &Node) -> bool {
+  let mut cur = a.get_next_sibling();
+  while let Some(n) = cur {
+    if n == *b {
+      return true;
     }
-    cur = node.get_next_sibling();
+    cur = n.get_next_sibling();
   }
-  saw_content_free
+  false
 }
 
 /// A `<ltx:pagination>` (self-closing pagebreak) or a truly empty `<ltx:para>`/
@@ -2819,7 +2853,7 @@ fn leading_document_nodes_content_free(document: &mut Document) -> bool {
 /// `<tabular>`/`<text>`/image inside an otherwise text-empty para (a logo- or
 /// rule-only cover top) renders above the title in the PDF, so it is NOT content-free
 /// and must block the hoist — only nested empty `<para>`/`<p>`/`<break>` wrappers are
-/// transparent. See [`leading_document_nodes_content_free`].
+/// transparent. See `place_frontmatter`.
 fn node_is_content_free(node: &Node) -> bool {
   let is_pagination = with(document::get_node_qname(node), |q| q == "ltx:pagination");
   if is_pagination {
@@ -2872,98 +2906,13 @@ fn text_is_ink_free(text: &Node) -> bool {
 /// admits BackMatter.class (bibliography/appendix/index/glossary) that the body group
 /// takes — either `titlepage` or something `ltx:bibliography` admits (its model LEADS
 /// with exactly `FrontMatter.class*, SectionalFrontMatter.class*`). A Meta.class element
-/// (allowed in both groups) is NOT one. Used by the `\end{document}` relocation pass (#245).
+/// (allowed in both groups) is NOT one. Used by `place_frontmatter` (#247).
 fn is_frontmatter_group_element(node: &Node) -> bool {
   let q = document::get_node_qname(node);
   document::can_contain_qsym(pin_static("ltx:document"), q)
     && !document::can_contain_qsym(pin_static("ltx:sectional-block"), q)
     && (q == pin_static("ltx:titlepage")
       || document::can_contain_qsym(pin_static("ltx:bibliography"), q))
-}
-
-/// Document-finalization safety net for the frontmatter-leads invariant
-/// (OXIDIZED_DESIGN #245). The schema requires every frontmatter-group element
-/// (`title`/`creator`/`date`/`abstract`/`titlepage`/…) to precede all
-/// `document.body.class` content (`LaTeXML-structure.rnc:34`), and `Para.class`
-/// — hence the body group — includes `pagination` and `para`
-/// (`LaTeXML-para.rnc:18-20`). So a content-free node emitted BEFORE the
-/// frontmatter — a `\clearpage`/`\cleardoublepage` `<pagination>` or the empty
-/// `<para><p/></para>` an `\hbox{}`/`\null` leaves behind — opens the body group
-/// and invalidates every frontmatter element after it.
-///
-/// The construct-time hoist in `\lx@frontmatterhere` (#242) misses two shapes
-/// that only settle later in the build: (1) an empty box's `<ltx:text>` is folded
-/// into its `<p>` by `auto_collapse_children` when the paragraph CLOSES, so at
-/// flush time the gate sees an element and declines (memoir `\frontmatter`
-/// `\cleardoublepage`, gitinfo2/gitlog); (2) a `{titlepage}` environment is not
-/// queued frontmatter at all — it is built in place after the pagebreak, and its
-/// `after_construct` flush lands the `\title`/`\author` right behind it (toptesi
-/// frontispiece: FrontespizioScudo, toptesi-example-*). Both leave the SAME final
-/// tree: `resource*, content-free+, frontmatter+, body*`.
-///
-/// Run once at `\end{document}` (`\lx@finalize@document`, after the
-/// `@at@end@document` fallback flush): move the leading run of content-free
-/// nodes (per `node_is_content_free`) to just after the contiguous run of
-/// frontmatter-only elements that follows it. "Frontmatter-only" is the document
-/// model's first group, read from the schema: admitted by `ltx:document`, not by
-/// body-only `ltx:sectional-block` (model `document.body.class*`), and — to exclude
-/// the BackMatter.class the document also admits — `titlepage` or something
-/// `ltx:bibliography`'s leading `FrontMatter.class*, SectionalFrontMatter.class*`
-/// admits. No element names are hard-coded; a Meta.class element (allowed in both
-/// groups) simply ends the run. Fidelity: the moved nodes carry no ink — an
-/// empty paragraph renders nothing and a `<pagination>` is a pagebreak whose only
-/// HTML trace is the 2em gap of `.ltx_pagination.ltx_role_newpage`, which now
-/// falls below the title instead of above it (the same result #242's hoist
-/// produces); the frontmatter and body keep their order. A leading node with visible ink (a logo
-/// `<graphics>`, a `<rule>`, text) is NOT content-free and blocks the pass — the
-/// frontmatter then stays where the source put it (faithful; toptesi-it's
-/// hand-built cover). Perl-raw leaves all of these invalid. Guards:
-/// `perfect_kernel_batch56::{frontmatter_relocates_past_a_leading_empty_box_pagebreak,
-/// titlepage_relocates_past_a_leading_pagination,
-/// titlepage_stays_below_a_visible_leading_cover,
-/// pagebreak_before_a_leading_bibliography_stays_put,
-/// frontmatter_stays_below_a_leading_framed_empty_box}`.
-pub fn relocate_leading_content_free_past_frontmatter(document: &mut Document) -> Result<()> {
-  let Some(root) = document.get_document().get_root_element() else {
-    return Ok(());
-  };
-  if document::get_node_qname(&root) != pin_static("ltx:document") {
-    return Ok(());
-  }
-  let kids: Vec<Node> = root
-    .get_child_nodes()
-    .into_iter()
-    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-    .collect();
-  let mut i = 0;
-  while i < kids.len() && document::get_node_qname(&kids[i]) == pin_static("ltx:resource") {
-    i += 1;
-  }
-  let lead_start = i;
-  while i < kids.len() && node_is_content_free(&kids[i]) {
-    i += 1;
-  }
-  let lead_end = i;
-  if lead_start == lead_end {
-    return Ok(());
-  }
-  // The frontmatter run (a `\clearpage` before a leading `thebibliography` stays put).
-  while i < kids.len() && is_frontmatter_group_element(&kids[i]) {
-    i += 1;
-  }
-  if i == lead_end {
-    return Ok(()); // no frontmatter follows the leading nodes: nothing to relocate
-  }
-  // Re-attach the leading nodes, in order, right after the last frontmatter
-  // element. Elements only (no adjacent text nodes), so `add_next_sibling`
-  // cannot trigger libxml2's text-merge-and-free.
-  let mut anchor = kids[i - 1].clone();
-  for mut n in kids[lead_start..lead_end].iter().cloned() {
-    n.unlink();
-    anchor.add_next_sibling(&mut n)?;
-    anchor = n;
-  }
-  Ok(())
 }
 
 /// Beyond-Perl heuristic: recover a document title from a hand-formatted leading
@@ -3034,7 +2983,7 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<Option<Node>> 
   // (a `VERSION 2.1` badge inside a tcolorbox → nested box), tipfr-doc (its real
   // `tipfr.sty` title also sits in a tcolorbox — declined rather than coin-flipped).
   // Whatever is not promoted stays hand-typeset layout and is wrapped as
-  // `<ltx:titlepage>` by `wrap_leading_layout_in_titlepage`.
+  // `<ltx:titlepage>` by `place_frontmatter (the titlepage wrap)`.
   let is_plain_block = with(anchor_q, |q| matches!(q, "ltx:logical-block" | "ltx:para"));
   if !is_plain_block {
     return Ok(None);
