@@ -114,9 +114,30 @@ fi
 if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
    && grep -qP "^$bundle\t$name\t(lualatex|xelatex)\t" "$ORACLE" \
    && grep -qE 'undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua) ' "$out/$name.log"; then
+  # This retry is SPECULATIVE (the oracle was not clean), so keep whichever run is
+  # better: s107 turned latex-via-exemplos (pdfTeX: 2 errors, 10 s) into a 300 s
+  # TokenLimit Fatal under luatex, and pmhanguljamo-kdoc (PARKED luatexko) from
+  # 3 errors into 5. A retry that Fatals/times out where the first run did not,
+  # or that logs MORE errors, is discarded and the pdfTeX artifacts restored.
+  for ext in xml log stdout; do cp -f "$out/$name.$ext" "$out/$name.pdftex.$ext" 2>/dev/null || true; done
+  first_exit=$exit_code
+  first_err=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
+  first_fatal=$(grep -c '^Fatal:' "$out/$name.log" || true)
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
   printf 'first run (pdfTeX identity) leaked a Unicode-engine font command and the oracle engine is lualatex/xelatex; retried under luatex\n' >"$out/retried_luatex"
   run_once
+  new_exit=$exit_code
+  new_err=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
+  new_fatal=$(grep -c '^Fatal:' "$out/$name.log" || true)
+  if (( new_exit == 124 && first_exit != 124 )) || (( new_fatal > first_fatal )) \
+     || (( new_fatal == first_fatal && new_err > first_err )); then
+    for ext in xml log stdout; do mv -f "$out/$name.pdftex.$ext" "$out/$name.$ext" 2>/dev/null || true; done
+    exit_code=$first_exit
+    printf 'luatex retry was WORSE (exit %s, %s fatals, %s errors vs pdfTeX exit %s, %s fatals, %s errors); kept the pdfTeX run\n' \
+      "$new_exit" "$new_fatal" "$new_err" "$first_exit" "$first_fatal" "$first_err" >>"$out/retried_luatex"
+  else
+    rm -f "$out/$name.pdftex."{xml,log,stdout}
+  fi
 fi
 end=$(date +%s.%N)
 secs=$(printf '%.1f' "$(echo "$end $start" | awk '{print $1-$2}')")
