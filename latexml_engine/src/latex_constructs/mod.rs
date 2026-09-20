@@ -20,6 +20,7 @@ use latexml_core::{
 ///**********************************************************************
 use crate::base_utilities::{
   already_reported, insert_frontmatter, relocate_leading_content_free_past_frontmatter,
+  remove_frontmatter_marks,
 };
 use crate::{
   prelude::*,

@@ -7870,3 +7870,68 @@ titlepage_relocates_past_a_leading_pagination, titlepage_stays_below_a_visible_l
 pagebreak_before_a_leading_bibliography_stays_put,
 frontmatter_stays_below_a_leading_framed_empty_box}`.
 **Upstream**: not filed.
+
+### 246. Abstract-only fallback: title-page layout wraps as `<titlepage>`, the abstract follows (Perl: abstract at the top; Rust had it trailing the body)
+
+**Perl behavior**: with no `\maketitle`, queued frontmatter is flushed by
+`\lx@frontmatter@fallback` (first `\section` via `\@startsection@hook`, or `\end{document}`),
+which ALWAYS inserts at the document top after `ltx:resource[last()]`
+(`Base_Utility.pool.ltxml:927-945`); the abstract-only case is merely deferred to that
+fallback (`:830-834`). A manual whose only frontmatter is an `{abstract}` gets
+`abstract, (hand-typeset cover as body), TOC, section` — schema-valid, cover below the abstract.
+**Rust behavior (before)**: a beyond-Perl rescue for arXiv 1609.07638 (a hand-formatted
+`\begin{center}` title above the abstract, no `\maketitle`) promoted the first centered
+display-font paragraph to `<title>` and flushed the abstract at the CURRENT position so it
+would not float above that title. When the body had emitted a cover block, `\tableofcontents`
+or `\clearpage` before the first `\section`, the `<abstract>` landed after them —
+schema-invalid (`Para.class |= TOC`, LaTeXML-structure.rnc:682) and later than the source
+order. RUST-ONLY: same-host Perl validates all 16 witnesses. The promotion itself was also
+unreliable: tikz-mirror-lens got `<title>FHZ</title>` (the author, from an author-first cover
+whose `\Large{#1}` leaks onto the title paragraph), isosigns/bootstrapicons got
+`<title>VERSION 2.1</title>` (a badge in a tcolorbox) — layout mis-read as metadata.
+**Rust behavior (now)** (`\lx@frontmatter@fallback`, `base_utilities.rs`; user ruling
+2026-09-20 — a regular document needs no body `logical-block(author)`; titlepage layout is
+not semantic, the frontmatter metadata schema is): (1) `maybe_promote_leading_title` promotes
+ONLY the unambiguous 1609.07638 shape — a plain `center`/paragraph block at document level
+whose FIRST paragraph is centered, has letters, and is set in a display font no other
+paragraph of the block shares (`first_plain_paragraph`/`collect_plain_paragraphs` descend
+through `logical-block`/`para` only — never into a tcolorbox/parbox/tabular). FHZ
+(two display paragraphs) and VERSION 2.1 (nested box) are declined; so is tipfr-doc's real
+`tipfr.sty` (also in a tcolorbox — declined rather than coin-flipped; no title metadata beats
+a wrong one). (2) `wrap_leading_layout_in_titlepage` moves the remaining leading run of
+`pagination`/`para`/demotable `logical-block` children (after resources and the promoted
+title, and BEFORE the abstract's own source position — `\lx@add@abstract`/`\lx@begin@abstract`
+now construct an empty `ltx:_Frontmatter_Capture_` marker where the abstract was queued,
+removed again by `insert_frontmatter`/`remove_frontmatter_marks`; the flush point cannot be
+the bound, since a sectionless manual flushes at `\end{document}` and would see its whole
+body as cover) into a new `<ltx:titlepage>` in its exact order — `titlepage_model = (FrontMatter.class
+| SectionalFrontMatter.class | Block.class)*` is the schema's container for exactly this
+layout — renaming `para`→`block` and demoting `logical-block` with #244's bottom-up
+`demote_para_class_content`; the run stops at the first non-layout node (`<TOC>`, section,
+float) and is skipped when nothing in it is visible. (3) The abstract is flushed right after
+the titlepage (or the bare title), else at the TOP like Perl (`insert_frontmatter_after_node`
+/ `insert_frontmatter_after_resources`). Result: `title?, titlepage?, abstract, TOC, …` — all
+first-group, valid; the cover stays above the abstract in its exact order, and only trailing
+body that cannot be frontmatter (a `<TOC>`, a document-level `<rule>`) sinks below the hoisted
+abstract, as any frontmatter-leads transform must (Perl's direction too).
+**Why**: schema validity + faithful semantics. The cover's visible order is preserved exactly
+(it stays above the abstract, as in the PDF; `.ltx_para`/`.ltx_block` are both `display:block`),
+no metadata is guessed, and the HTML front-matter order (title, authors, metadata, abstract,
+body) is the XSLT's job from schema-valid core XML. Better than Perl on both counts (Perl
+floats the abstract above the cover and never promotes).
+**Not covered (SHARED, fidelity-blocked)**: pgf-spectraManual (abstract after visible ink
+inside a `{titlepage}` whose `after_construct` already flushed title/creator) and five docs
+whose leading VISIBLE para is a leaked/undefined command before `\maketitle` (iodhbwm
+glossaries `\glsnonextpages`, psvectorian `\DeclareDocumentMetadata`, forest-doc
+`\@escapeifif`, biocon noweb `\nwfilename`, cnbpaper 2-arg `\author`) — Perl leaks them
+identically.
+**Witnesses**: 13 → 0 rng-errors (toptesi-example-magistrale, tipfr-doc, schulmathematik, russ_doc, PRTEC24-template, pgf-interference-{en,de}, jourcl, isosigns-docs, derivative, democodetools, bootstrapicons-docs, axodraw2-man); 3 improved (tikz-mirror-lens 5→4, tikz-mirror-lens-PT 5→4, tikz-among-us 2→1 — residual = the animate `frame-count` attribute cluster); pgf-spectraManual 8→8 unchanged (SHARED, left); controls amsldoc 0→0, gitinfo2 3→0 and FrontespizioScudo 3→0 (56es) unchanged; 1609.07638 shape → `title, abstract, section`; the fixture shape → `title, titlepage, abstract, section`. Same-host Perl 0.8.8 validates the 13 too (parity on validity; ours keeps the cover above the abstract and the title as metadata).
+**Guard**: `perfect_kernel_batch56::{abstract_only_fallback_floats_to_top,
+promoted_title_stays_above_the_top_flushed_abstract,
+promoted_title_remainder_becomes_titlepage_layout_before_the_abstract,
+ambiguous_display_font_cover_is_titlepage_layout_not_a_title,
+version_badge_in_a_box_is_not_promoted_to_a_title,
+sectionless_body_after_the_abstract_is_not_cover_layout}`; fixture `structure/promote_center_title`
+(re-blessed to `title, titlepage, abstract, section`); `class_redefined_abstract_defers_its_argument`
+(a class `\abstract{}` store, sectionless) unchanged.
+**Upstream**: not filed.

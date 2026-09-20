@@ -18466,6 +18466,201 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// Batch 56et (OXIDIZED_DESIGN #246): with no `\maketitle`, an abstract-only
+  /// document's frontmatter is flushed by `\lx@frontmatter@fallback` at the first
+  /// `\section`. A beyond-Perl rescue flushed it at the CURRENT position, so the
+  /// `<abstract>` landed after every cover block, `<TOC>` and pagebreak the body had
+  /// emitted — schema-invalid (`Para.class |= TOC`) and later than the source order;
+  /// RUST-ONLY (Perl top-places: Base_Utility.pool.ltxml:927-945). Witnesses
+  /// tikz-mirror-lens, tipfr-doc, pgf-interference-{en,de}, axodraw2-man, derivative,
+  /// russ_doc, schulmathematik, jourcl, isosigns-docs, bootstrapicons-docs (16 s106 docs).
+  #[test]
+  fn abstract_only_fallback_floats_to_top() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{center}\n\
+               {\\large A Package Manual}\n\\end{center}\n\\begin{abstract}\nThis is the \
+               abstract of the manual.\n\\end{abstract}\n\\tableofcontents\n\
+               \\section{Introduction}\nBody text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    let toc = xml
+      .find("<TOC")
+      .expect("the \\tableofcontents <TOC> must be present");
+    let section = xml.find("<section").expect("<section> must be present");
+    assert!(
+      abstract_ < toc && toc < section,
+      "the queued <abstract> must lead the document (above the <TOC>), not trail the \
+       body at the first-\\section flush point:\n{xml}"
+    );
+  }
+
+  /// Batch 56et must-not-regress witness (arXiv 1609.07638, the case the old
+  /// current-position rescue was written for): a hand-formatted `\begin{center}` title
+  /// above an abstract with no `\maketitle`. `maybe_promote_leading_title` makes it a
+  /// real `<title>` (here the `\\`-joined author line is part of that one paragraph, so
+  /// it is folded INTO the title), and the flush lands the `<abstract>` right after it
+  /// via `insert_frontmatter_after_node`.
+  #[test]
+  fn promoted_title_stays_above_the_top_flushed_abstract() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{center}\n\
+               {\\Large\\bfseries My Hand Made Title}\\\\[1ex]\nSome Author\n\\end{center}\n\
+               \\begin{abstract}\nThis is the abstract body text.\n\\end{abstract}\n\
+               \\section{Introduction}\nBody of intro.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let title = xml
+      .find("<title>")
+      .expect("the promoted hand-made <title> must be present");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    let section = xml.find("<section").expect("<section> must be present");
+    let author = xml
+      .find("Some Author")
+      .expect("the hand-formatted author line must survive");
+    assert!(
+      title < author && author < abstract_ && abstract_ < section,
+      "the promoted <title> AND the rest of its hand-formatted block (the author line) \
+       must stay ABOVE the flushed <abstract> — visible content is never reordered:\n{xml}"
+    );
+    let title_end = xml.find("</title>").expect("<title> must be closed");
+    assert!(
+      xml[title..title_end].contains("My Hand Made Title"),
+      "the promoted title text must sit INSIDE the <title> element:\n{xml}"
+    );
+  }
+
+  /// Batch 56et (OXIDIZED_DESIGN #246): a hand-formatted cover whose title is
+  /// unambiguous (plain `center`, first paragraph, unique display font) is promoted to
+  /// `<title>`; its REMAINDER (the author paragraph) is title-page LAYOUT, wrapped in
+  /// `<titlepage>` in its exact visible order, and the queued `<abstract>` follows —
+  /// `title, titlepage, abstract, section`, all first-group, schema-valid. Same shape as
+  /// the fixture `structure/promote_center_title`. A regular document has no body
+  /// `logical-block(author)` construct (user ruling 2026-09-20).
+  #[test]
+  fn promoted_title_remainder_becomes_titlepage_layout_before_the_abstract() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{center}\n\
+               {\\Large A Hand-Formatted Title}\n\nAn Author\n\\end{center}\n\
+               \\begin{abstract}\nThe abstract text.\n\\end{abstract}\n\
+               \\section{Introduction}\nBody text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let title = xml
+      .find("<title>")
+      .expect("the promoted <title> must be present");
+    let title_end = xml.find("</title>").unwrap();
+    assert!(
+      xml[title..title_end].contains("A Hand-Formatted Title"),
+      "{xml}"
+    );
+    let titlepage = xml
+      .find("<titlepage")
+      .expect("<titlepage> must wrap the cover remainder");
+    let titlepage_end = xml.find("</titlepage>").unwrap();
+    let author = xml.find("An Author").expect("the author line must survive");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    let section = xml.find("<section").expect("<section> must be present");
+    assert!(
+      title_end < titlepage
+        && titlepage < author
+        && author < titlepage_end
+        && titlepage_end < abstract_
+        && abstract_ < section,
+      "expected title, titlepage(author line), abstract, section:\n{xml}"
+    );
+    assert!(
+      !xml[..abstract_].contains("<logical-block")
+        && !xml[..abstract_].contains("<para ")
+        && !xml[..abstract_].contains("<para>"),
+      "no body para/logical-block may remain above the abstract — the cover is layout:\n{xml}"
+    );
+  }
+
+  /// Batch 56et control (OXIDIZED_DESIGN #246): an author-first cover where `\Large`
+  /// leaks onto the title paragraph too (tikz-mirror-lens
+  /// `\FHZCapaArticleCabecalho`: `\Large{#1}` then `{#2}`) has TWO display-font
+  /// paragraphs — ambiguous, so nothing is promoted (no `<title>FHZ</title>`); the
+  /// whole cover is `<titlepage>` layout in order, and the abstract follows it.
+  #[test]
+  fn ambiguous_display_font_cover_is_titlepage_layout_not_a_title() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{center}\n\
+               \\Large{\\textbf{FHZ}}\n\n{Spherical mirrors and lenses}\n\\end{center}\n\
+               \\begin{abstract}\nThe abstract text.\n\\end{abstract}\n\
+               \\section{Introduction}\nBody text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let titlepage = xml
+      .find("<titlepage")
+      .expect("<titlepage> must wrap the cover");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    let fhz = xml.find("FHZ").unwrap();
+    let real = xml.find("Spherical mirrors").unwrap();
+    assert!(
+      !xml[..abstract_].contains("<title>"),
+      "an ambiguous cover must not be promoted to a document <title>:\n{xml}"
+    );
+    assert!(
+      titlepage < fhz && fhz < real && real < abstract_,
+      "the cover must be titlepage layout in its visible order, above the abstract:\n{xml}"
+    );
+  }
+
+  /// Batch 56et control (OXIDIZED_DESIGN #246): a display-font badge inside a nested box
+  /// (isosigns' `VERSION 2.1` tcolorbox; here a `\fbox{\parbox}`) is not a plain-center
+  /// paragraph, so it is never read as a title — layout, wrapped in `<titlepage>`.
+  #[test]
+  fn version_badge_in_a_box_is_not_promoted_to_a_title() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{flushright}\n\
+               \\fbox{\\parbox{4cm}{\\centering\\Large\\textbf{VERSION 2.1}}}\n\\end{flushright}\n\
+               \\begin{abstract}\nThe abstract text.\n\\end{abstract}\n\
+               \\section{Introduction}\nBody text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    assert!(
+      !xml[..abstract_].contains("<title>"),
+      "a boxed version badge must not become the document <title>:\n{xml}"
+    );
+    let titlepage = xml
+      .find("<titlepage")
+      .expect("<titlepage> must wrap the badge");
+    let badge = xml.find("VERSION 2.1").unwrap();
+    assert!(titlepage < badge && badge < abstract_, "{xml}");
+  }
+
+  /// Batch 56et control (OXIDIZED_DESIGN #246): the cover is what precedes the
+  /// abstract's OWN position (the `\lx@frontmatter@mark` marker), never what precedes
+  /// the flush point. A sectionless manual flushes at `\end{document}` — its whole body
+  /// would otherwise be swallowed into the titlepage (and the still-open last paragraph
+  /// renamed, `malformed`). Body after the abstract stays body; the promoted title +
+  /// abstract lead; no `<titlepage>` is made for a cover that is only the title.
+  #[test]
+  fn sectionless_body_after_the_abstract_is_not_cover_layout() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{center}\n\
+               {\\Large A Hand-Formatted Title}\n\\end{center}\n\
+               \\begin{abstract}\nThe abstract text.\n\\end{abstract}\n\
+               First body paragraph.\n\nSecond body paragraph.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let title = xml
+      .find("<title>")
+      .expect("the promoted <title> must be present");
+    let abstract_ = xml.find("<abstract").expect("<abstract> must be present");
+    let first = xml.find("First body paragraph.").unwrap();
+    assert!(title < abstract_ && abstract_ < first, "{xml}");
+    assert!(
+      !xml.contains("<titlepage"),
+      "no titlepage for a title-only cover:\n{xml}"
+    );
+    assert!(
+      !xml.contains("_Frontmatter_Capture_"),
+      "markers must never reach the output:\n{xml}"
+    );
+    let body_start = xml.find("First body").unwrap();
+    assert!(
+      xml[body_start..].contains("<p>") || xml[..body_start].contains("<para"),
+      "{xml}"
+    );
+  }
+
   /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
   /// a `picture` digests into the positioned `<g>` group. The box is an LR-box, but
   /// `insert_block` emitted a schema-invalid `<block>` there (`g_model` is inline-only —
