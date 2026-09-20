@@ -18,7 +18,9 @@ use latexml_core::{
 ///**********************************************************************
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
-use crate::base_utilities::{already_reported, insert_frontmatter};
+use crate::base_utilities::{
+  already_reported, insert_frontmatter, relocate_leading_content_free_past_frontmatter,
+};
 use crate::{
   prelude::*,
   tex_box::{FramedOptions, framed_properties},

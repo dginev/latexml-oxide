@@ -7750,6 +7750,7 @@ hidden content). A general document-finalization demotion pass would cover both
 residuals uniformly (follow-up).
 **Guard**: `frontmatter_hoists_above_content_free_leading_pagination` (+ the negative
 control `frontmatter_does_not_hoist_above_a_leading_graphic`).
+**Follow-up**: the two shapes this hoist cannot see (a directly-built `<titlepage>`; an empty-box paragraph whose `<ltx:text>` folds away only at paragraph close) are settled by #245's `\end{document}` pass.
 **Upstream**: not filed.
 
 ### 243. A `\put`-positioned box in a picture group is `<inline-block>`, not `<block>` (Perl: schema-invalid `<block>`)
@@ -7822,4 +7823,50 @@ partially improved (l2tabu 2→1, webquiz 2→1, suanpan-l3 2→1 — residuals 
 clusters); stanli unchanged (float content, correctly skipped — no regression). Also fixes
 the `caption_in_inline_parbox` sibling (heria, inline-block context).
 **Guard**: `para_class_box_in_titlepage_demotes_to_block_not_logical_block`.
+**Upstream**: not filed.
+
+### 245. Leading content-free nodes relocate past the frontmatter at `\end{document}` (Perl: frontmatter schema-invalid after a pagebreak)
+
+**Perl behavior**: the document model is `(FrontMatter.class | SectionalFrontMatter.class |
+Meta.class | titlepage)*, (document.body.class | BackMatter.class)*` (LaTeXML-structure.rnc:34)
+and `Para.class` — hence the body group — includes `pagination` and `para`
+(LaTeXML-para.rnc:18-20). Two constructs deposit a content-free body node BEFORE the
+frontmatter and so invalidate every `<title>`/`<creator>`/`<date>`/`<titlepage>` after it:
+(1) `\cleardoublepage` (memoir `\frontmatter`, gitinfo2/gitlog) = `\clearpage \hbox{}
+\newpage` → `<pagination>, <para><p/></para>, <pagination>` ahead of the `\maketitle`
+flush; (2) a `{titlepage}` environment after a `\clearpage` (toptesi frontispiece) — the
+`<titlepage>` is built in place, not queued, and its `after_construct` `insert_frontmatter`
+lands the `\title`/`\author` right behind it. Perl (native and raw-class) leaves both invalid.
+**Rust behavior**: #242's construct-time hoist cannot see either: the empty box's
+`<ltx:text>` is folded into its `<p>` only when the paragraph CLOSES
+(`auto_collapse_children`), so at flush time the content-free gate sees an element and
+declines; a titlepage is never queued. Both settle into the same final tree
+`resource*, content-free+, frontmatter+, body*`, so `\lx@finalize@document` (sect02.rs,
+after the `@at@end@document` fallback flush) runs
+`relocate_leading_content_free_past_frontmatter` (`base_utilities.rs`): the leading run of
+content-free nodes (per `node_is_content_free` — `<pagination>`, or an empty
+`<para>`/`<p>`/`<break>` with no visible descendant) moves, in order, to just after the
+contiguous run of frontmatter-only elements that follows it. "Frontmatter-only" is the
+document model's first group, read from the schema — admitted by `ltx:document`, not by
+`ltx:sectional-block` (model `document.body.class*`), and, to exclude the BackMatter.class
+the document also admits, `titlepage` or something `ltx:bibliography`'s leading
+`FrontMatter.class*, SectionalFrontMatter.class*` admits — so no element names are
+hard-coded; a Meta.class element (allowed in both groups) ends the run, and a pagebreak
+before a leading `thebibliography` stays put (guard). #242 stays as the construct-time fast path; this is
+the finalization safety net that covers what it structurally cannot.
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19). Render-safe:
+the moved nodes carry no ink — an empty paragraph renders nothing, a `<pagination>`'s only
+HTML trace is the 2em gap of `.ltx_pagination.ltx_role_newpage`, which now falls below the
+title instead of above it (exactly #242's result); frontmatter and body keep their order. A
+leading node with visible ink (a logo `<graphics>`, a `<rule>`, text) is not content-free
+and blocks the pass, so a hand-typeset cover (toptesi-it's TeX-logo page) stays above the
+`<titlepage>` — invalid but faithful; the pass never reorders visible content. Streaming:
+a spilled document top simply yields no leading run (no-op).
+**Witnesses**: gitinfo2, gitlog (3→0 rng-errors each); toptesi/FrontespizioScudo (3→0),
+toptesi-example-{sss,triennale,con-frontespizio} (1→0); toptesi-it unchanged (visible
+cover, correctly left).
+**Guard**: `perfect_kernel_batch56::{frontmatter_relocates_past_a_leading_empty_box_pagebreak,
+titlepage_relocates_past_a_leading_pagination, titlepage_stays_below_a_visible_leading_cover,
+pagebreak_before_a_leading_bibliography_stays_put,
+frontmatter_stays_below_a_leading_framed_empty_box}`.
 **Upstream**: not filed.

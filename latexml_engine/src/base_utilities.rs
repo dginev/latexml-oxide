@@ -1482,7 +1482,9 @@ LoadDefinitions!({
     // <ltx:ERROR> para, fails the content-free gate → insert at the current point
     // unchanged (faithful parity). NOT handled here: a directly-built <ltx:titlepage>
     // element after a leading pagination (toptesi/* frontispiece — a distinct
-    // mechanism, since the titlepage is not queued frontmatter and is itself content).
+    // mechanism, since the titlepage is not queued frontmatter and is itself content);
+    // that, and any shape that only settles after this flush, is covered by the
+    // `\end{document}` pass `relocate_leading_content_free_past_frontmatter` (#245).
     if leading_document_nodes_content_free(doc) {
       insert_frontmatter_after_resources(doc)?;
     } else {
@@ -2609,19 +2611,136 @@ fn node_is_content_free(node: &Node) -> bool {
 }
 
 /// Every element descendant of `node` is itself a structural wrapper
-/// (`ltx:para`/`ltx:p`/`ltx:break`) — i.e. the subtree renders nothing visible. Any
-/// other element (`ltx:graphics`, `ltx:rule`, `ltx:svg`, `ltx:tabular`, `ltx:text`, an
-/// image, …) is visible content even with no text. Text nodes are ignored here: the
-/// caller has already required the subtree's text to be whitespace-only, and LaTeXML
-/// wraps loose document text in `<para><p>`, so a bare non-whitespace text child does
-/// not occur at this level.
+/// (`ltx:para`/`ltx:p`/`ltx:break`, or an ink-free `ltx:text`) — i.e. the subtree
+/// renders nothing visible. Any other element (`ltx:graphics`, `ltx:rule`, `ltx:svg`,
+/// `ltx:tabular`, an image, …) is visible content even with no text. An `ltx:text` is
+/// transparent only when it can draw nothing on its own: the empty `<ltx:text>` an
+/// `\hbox{}`/`\null`/`\mbox{}` leaves in a paragraph (`\cleardoublepage`'s blank
+/// page; memoir `\frontmatter`) is folded away by `auto_collapse_children`/`finalize`
+/// later anyway, but a `\fbox{}`/`\colorbox{..}{}` — `framed`/`backgroundcolor`, or a
+/// `class`/`cssstyle` a stylesheet may paint — has ink and stays visible. Text nodes
+/// are ignored here: the caller has already required the subtree's text to be
+/// whitespace-only, and LaTeXML wraps loose document text in `<para><p>`, so a bare
+/// non-whitespace text child does not occur at this level.
 fn subtree_elements_all_invisible(node: &Node) -> bool {
   node.get_child_nodes().iter().all(|c| {
     c.get_type() != Some(NodeType::ElementNode)
-      || (with(document::get_node_qname(c), |q| {
+      || ((with(document::get_node_qname(c), |q| {
         matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
-      }) && subtree_elements_all_invisible(c))
+      }) || (document::get_node_qname(c) == pin_static("ltx:text") && text_is_ink_free(c)))
+        && subtree_elements_all_invisible(c))
   })
+}
+
+/// An `ltx:text` with none of the attributes that can paint without content.
+fn text_is_ink_free(text: &Node) -> bool {
+  ![
+    "framed",
+    "framecolor",
+    "backgroundcolor",
+    "class",
+    "cssstyle",
+  ]
+  .iter()
+  .any(|attr| text.has_attribute(attr))
+}
+
+/// Document-finalization safety net for the frontmatter-leads invariant
+/// (OXIDIZED_DESIGN #245). The schema requires every frontmatter-group element
+/// (`title`/`creator`/`date`/`abstract`/`titlepage`/…) to precede all
+/// `document.body.class` content (`LaTeXML-structure.rnc:34`), and `Para.class`
+/// — hence the body group — includes `pagination` and `para`
+/// (`LaTeXML-para.rnc:18-20`). So a content-free node emitted BEFORE the
+/// frontmatter — a `\clearpage`/`\cleardoublepage` `<pagination>` or the empty
+/// `<para><p/></para>` an `\hbox{}`/`\null` leaves behind — opens the body group
+/// and invalidates every frontmatter element after it.
+///
+/// The construct-time hoist in `\lx@frontmatterhere` (#242) misses two shapes
+/// that only settle later in the build: (1) an empty box's `<ltx:text>` is folded
+/// into its `<p>` by `auto_collapse_children` when the paragraph CLOSES, so at
+/// flush time the gate sees an element and declines (memoir `\frontmatter`
+/// `\cleardoublepage`, gitinfo2/gitlog); (2) a `{titlepage}` environment is not
+/// queued frontmatter at all — it is built in place after the pagebreak, and its
+/// `after_construct` flush lands the `\title`/`\author` right behind it (toptesi
+/// frontispiece: FrontespizioScudo, toptesi-example-*). Both leave the SAME final
+/// tree: `resource*, content-free+, frontmatter+, body*`.
+///
+/// Run once at `\end{document}` (`\lx@finalize@document`, after the
+/// `@at@end@document` fallback flush): move the leading run of content-free
+/// nodes (per `node_is_content_free`) to just after the contiguous run of
+/// frontmatter-only elements that follows it. "Frontmatter-only" is the document
+/// model's first group, read from the schema: admitted by `ltx:document`, not by
+/// body-only `ltx:sectional-block` (model `document.body.class*`), and — to exclude
+/// the BackMatter.class the document also admits — `titlepage` or something
+/// `ltx:bibliography`'s leading `FrontMatter.class*, SectionalFrontMatter.class*`
+/// admits. No element names are hard-coded; a Meta.class element (allowed in both
+/// groups) simply ends the run. Fidelity: the moved nodes carry no ink — an
+/// empty paragraph renders nothing and a `<pagination>` is a pagebreak whose only
+/// HTML trace is the 2em gap of `.ltx_pagination.ltx_role_newpage`, which now
+/// falls below the title instead of above it (the same result #242's hoist
+/// produces); the frontmatter and body keep their order. A leading node with visible ink (a logo
+/// `<graphics>`, a `<rule>`, text) is NOT content-free and blocks the pass — the
+/// frontmatter then stays where the source put it (faithful; toptesi-it's
+/// hand-built cover). Perl-raw leaves all of these invalid. Guards:
+/// `perfect_kernel_batch56::{frontmatter_relocates_past_a_leading_empty_box_pagebreak,
+/// titlepage_relocates_past_a_leading_pagination,
+/// titlepage_stays_below_a_visible_leading_cover,
+/// pagebreak_before_a_leading_bibliography_stays_put,
+/// frontmatter_stays_below_a_leading_framed_empty_box}`.
+pub fn relocate_leading_content_free_past_frontmatter(document: &mut Document) -> Result<()> {
+  let Some(root) = document.get_document().get_root_element() else {
+    return Ok(());
+  };
+  if document::get_node_qname(&root) != pin_static("ltx:document") {
+    return Ok(());
+  }
+  let kids: Vec<Node> = root
+    .get_child_nodes()
+    .into_iter()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+    .collect();
+  let mut i = 0;
+  while i < kids.len() && document::get_node_qname(&kids[i]) == pin_static("ltx:resource") {
+    i += 1;
+  }
+  let lead_start = i;
+  while i < kids.len() && node_is_content_free(&kids[i]) {
+    i += 1;
+  }
+  let lead_end = i;
+  if lead_start == lead_end {
+    return Ok(());
+  }
+  // The frontmatter run = the document model's FIRST group, read from the schema:
+  // admitted by `ltx:document` but not by body-only content (`ltx:sectional-block`,
+  // model `document.body.class*`), and — since `ltx:document` also admits
+  // BackMatter.class (bibliography/appendix/index/glossary) that the body group
+  // takes — either `titlepage` or something `ltx:bibliography` admits (its model
+  // LEADS with exactly `FrontMatter.class*, SectionalFrontMatter.class*`). A
+  // `\clearpage` before a leading `thebibliography` therefore stays put.
+  let is_frontmatter_only = |node: &Node| {
+    let q = document::get_node_qname(node);
+    document::can_contain_qsym(pin_static("ltx:document"), q)
+      && !document::can_contain_qsym(pin_static("ltx:sectional-block"), q)
+      && (q == pin_static("ltx:titlepage")
+        || document::can_contain_qsym(pin_static("ltx:bibliography"), q))
+  };
+  while i < kids.len() && is_frontmatter_only(&kids[i]) {
+    i += 1;
+  }
+  if i == lead_end {
+    return Ok(()); // no frontmatter follows the leading nodes: nothing to relocate
+  }
+  // Re-attach the leading nodes, in order, right after the last frontmatter
+  // element. Elements only (no adjacent text nodes), so `add_next_sibling`
+  // cannot trigger libxml2's text-merge-and-free.
+  let mut anchor = kids[i - 1].clone();
+  for mut n in kids[lead_start..lead_end].iter().cloned() {
+    n.unlink();
+    anchor.add_next_sibling(&mut n)?;
+    anchor = n;
+  }
+  Ok(())
 }
 
 /// Beyond-Perl heuristic: recover a document title from a hand-formatted leading

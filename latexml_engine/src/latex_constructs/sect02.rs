@@ -437,6 +437,10 @@ pub(crate) fn load() -> Result<()> {
         return Ok(());
       }
       AssignValue!("lx@document@closed" => true, Some(Scope::Global));
+      // The `@at@end@document` fallback above has flushed any queued
+      // frontmatter; now make it LEAD past a content-free pagebreak/empty
+      // paragraph that was built before it (OXIDIZED_DESIGN #245).
+      relocate_leading_content_free_past_frontmatter(document)?;
       if lookup_bool("lx@end@document@open@groups") {
         document.close_element_lenient("ltx:document", "groups still open at \\end{document}")?;
       } else {

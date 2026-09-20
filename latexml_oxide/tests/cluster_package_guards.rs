@@ -18277,12 +18277,11 @@ B:\ifcat A西 L\else O\fi.
   /// leaves this invalid too): a pagebreak reorders nothing visible, so
   /// `\lx@frontmatterhere` hoists the QUEUED frontmatter above the content-free
   /// leading nodes. Witnesses: amsmath/amsldoc, tkz-doc/tkz-doc, tuda-ci/DEMO-TUDaPhD,
-  /// tzplot/tzplot-doc (14 s105 docs recovered to 0 rng-errors). NOT hoisted (all
-  /// stay invalid by design): genuine pre-title content (corpus B-subclass); a
+  /// tzplot/tzplot-doc (14 s105 docs recovered to 0 rng-errors). NOT hoisted here:
+  /// genuine pre-title content (corpus B-subclass — stays invalid by design); a
   /// directly-built <titlepage> element after a leading pagination (toptesi
-  /// frontispiece — distinct mechanism); and a leading sequence whose intervening
-  /// para is not provably empty at construct time (gitinfo2/gitlog — conservatively
-  /// declined rather than risk hoisting over hidden content).
+  /// frontispiece) and a leading empty-box paragraph (gitinfo2/gitlog) — both now
+  /// settled by the `\end{document}` relocation pass of batch 56es (#245, below).
   #[test]
   fn frontmatter_hoists_above_content_free_leading_pagination() {
     let tex = "\\documentclass{book}\n\\title{T}\\author{A}\n\\begin{document}\n\
@@ -18325,6 +18324,145 @@ B:\ifcat A西 L\else O\fi.
       graphics < title,
       "a visible leading <graphics> (logo) must stay ABOVE the frontmatter <title> — \
        the content-free gate must not hoist the title over it:\n{xml}"
+    );
+  }
+
+  /// Batch 56es (OXIDIZED_DESIGN #245): the `\end{document}` relocation pass. A
+  /// `\cleardoublepage` (memoir `\frontmatter`; gitinfo2/gitlog) emits `\clearpage
+  /// \hbox{} \newpage` → `<pagination>, <para><p/></para>, <pagination>` BEFORE the
+  /// `\maketitle` flush, and #242's construct-time gate declined because the empty
+  /// box's `<ltx:text>` is only folded into its `<p>` when the paragraph closes (now an
+  /// ink-free `<ltx:text>` is transparent to the gate too). The finalization pass sees
+  /// the settled tree and moves the content-free run past the frontmatter, so `<title>`
+  /// leads (0 rng-errors) and nothing is dropped.
+  #[test]
+  fn frontmatter_relocates_past_a_leading_empty_box_pagebreak() {
+    let tex = "\\documentclass{report}\n\\begin{document}\n\\clearpage\\hbox{}\\newpage\n\
+               \\title{T}\\author{A}\\date{D}\n\\maketitle\nBody text.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    // `error_count` only rules out gross binding errors: the core stage's model check
+    // is order-insensitive, so the pre-fix misordering emitted no Error — the ORDER
+    // asserts below are the teeth (the sweep's jing validation is what counts rng-errors).
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let title = xml
+      .find("<title>")
+      .expect("frontmatter <title> must be present");
+    let date = xml
+      .find("<date")
+      .expect("frontmatter <date> must be present");
+    let pagination = xml
+      .find("<pagination")
+      .expect("the pagebreak <pagination> must still be present (not dropped)");
+    let empty_para = xml
+      .find("<p/>")
+      .expect("the empty-box paragraph must still be present (not dropped)");
+    assert!(
+      title < date && date < pagination && pagination < empty_para,
+      "frontmatter (<title>…<date>) must lead, with the content-free pagination + \
+       empty paragraph relocated after it in their original order:\n{xml}"
+    );
+    assert!(
+      xml.find("Body text.").unwrap() > empty_para,
+      "the body must stay after the relocated nodes:\n{xml}"
+    );
+  }
+
+  /// Batch 56es (OXIDIZED_DESIGN #245): a `{titlepage}` environment is not queued
+  /// frontmatter — it is built in place, so a preceding `\clearpage` `<pagination>`
+  /// opens the body group and makes the `<titlepage>` (and the `\title`/`\author`
+  /// its `after_construct` flushes right behind it) schema-invalid (toptesi
+  /// frontispiece: FrontespizioScudo, toptesi-example-*). The relocation pass moves
+  /// the pagination past the whole contiguous frontmatter run.
+  #[test]
+  fn titlepage_relocates_past_a_leading_pagination() {
+    let tex = "\\documentclass{report}\n\\begin{document}\n\\clearpage\n\
+               \\begin{titlepage}\\title{T}\\author{A}\nCover line.\\end{titlepage}\n\
+               \\chapter{C}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let titlepage = xml.find("<titlepage").expect("<titlepage> must be present");
+    let creator = xml
+      .find("<creator")
+      .expect("the flushed <creator> must be present");
+    let pagination = xml
+      .find("<pagination")
+      .expect("the \\clearpage <pagination> must still be present (not dropped)");
+    let chapter = xml.find("<chapter").expect("<chapter> must be present");
+    assert!(
+      titlepage < creator && creator < pagination && pagination < chapter,
+      "the <titlepage> + flushed frontmatter must lead, the pagebreak relocated after \
+       them and before the body:\n{xml}"
+    );
+  }
+
+  /// Batch 56es control (OXIDIZED_DESIGN #245): a leading node with visible ink is
+  /// NOT content-free, so the pass leaves the tree alone — a hand-typeset cover line
+  /// above a `{titlepage}` (toptesi-it's TeX-logo cover) stays above it, invalid but
+  /// faithful; the pass never reorders visible content.
+  #[test]
+  fn titlepage_stays_below_a_visible_leading_cover() {
+    let tex = "\\documentclass{report}\n\\begin{document}\n\\noindent Cover line.\\clearpage\n\
+               \\begin{titlepage}Title page.\\end{titlepage}\n\\chapter{C}\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    let cover = xml
+      .find("Cover line.")
+      .expect("the cover line must be present");
+    let titlepage = xml.find("<titlepage").expect("<titlepage> must be present");
+    assert!(
+      cover < titlepage,
+      "a visible leading cover line must stay ABOVE the <titlepage> — the relocation \
+       pass must not move visible content:\n{xml}"
+    );
+  }
+
+  /// Batch 56es control (OXIDIZED_DESIGN #245): the frontmatter run is the document
+  /// model's FIRST group only. `ltx:document` also admits BackMatter.class
+  /// (`bibliography`/`appendix`/`index`/`glossary`) that body-only content does not,
+  /// so a naive "document admits it, sectional-block doesn't" test would carry a
+  /// leading pagebreak past a whole bibliography. It must stay where the source put it.
+  #[test]
+  fn pagebreak_before_a_leading_bibliography_stays_put() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\clearpage\n\
+               \\begin{thebibliography}{9}\\bibitem{a} An entry.\\end{thebibliography}\n\
+               \\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let pagination = xml
+      .find("<pagination")
+      .expect("the \\clearpage <pagination> must be present");
+    let bibliography = xml
+      .find("<bibliography")
+      .expect("<bibliography> must be present");
+    assert!(
+      pagination < bibliography,
+      "a pagebreak before a leading <bibliography> (BackMatter, not frontmatter) must \
+       not be relocated past it:\n{xml}"
+    );
+  }
+
+  /// Batch 56es control (OXIDIZED_DESIGN #245): pins `text_is_ink_free`, the one
+  /// predicate deciding whether an EMPTY box paints. A text-empty leading paragraph
+  /// holding a `\fbox{}` — an `<ltx:text framed="rectangle">` — draws a frame above
+  /// the title in the PDF, so it is NOT content-free: neither the construct-time gate
+  /// nor the `\end{document}` pass may move the frontmatter above it (the review-
+  /// flagged faux-fidelity surface; the visible-text control above never reaches it).
+  #[test]
+  fn frontmatter_stays_below_a_leading_framed_empty_box() {
+    let tex = "\\documentclass{report}\n\\begin{document}\n\\noindent\\fbox{}\\clearpage\n\
+               \\title{T}\\author{A}\n\\maketitle\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    let framed = xml
+      .find("framed=")
+      .expect("the \\fbox{} <text framed> must be present");
+    let title = xml
+      .find("<title>")
+      .expect("frontmatter <title> must be present");
+    assert!(
+      framed < title,
+      "a leading framed (ink-bearing) empty box must stay ABOVE the frontmatter — it is \
+       not content-free:\n{xml}"
     );
   }
 
