@@ -179,6 +179,25 @@ LoadDefinitions!({
   // Same probe-safety class as the \directlua prohibition
   // (project_lua_bridge_directive).
   //   \Umathcode <num>[=]<class><fam><ucode>  /  \Umathchardef <cs>[=]<c><f><u>
+  // (e-)pTeX's input-encoding primitive (`\epTeXinputencoding utf8`, ptex
+  // manual §e-pTeX: reads a file-name-like keyword — `utf8`/`euc`/`sjis`/
+  // `jis`/`ascii`). It exists ONLY under the pTeX input processor, so a class
+  // invoking it (jlreq.cls:494, after `\NeedsTeXFormat{LaTeX2e}` at :7 and a
+  // runtime engine guess in jlreq-helpers.sty:377-388) declares exactly what
+  // `\NeedsTeXFormat{pLaTeX2e}` declares for jsarticle: kanji join control
+  // words (`PTEX_PROFILE`, K12 — `state::is_ptex_kanji_letter`). Without it
+  // `\def\西暦{\西暦true}` (jlreq.cls:6446) tokenizes as the control SYMBOL
+  // `\西` delimited by the catcode-12 `暦`, a self-referential delimited macro
+  // that spins to `Fatal:Timeout:PushbackLimit` at `\jlreqsetup{year_style=
+  // seireki}` (:6780) — SHARED with Perl, which hangs without a cap. Not an
+  // engine-detection probe (those stay PARKED, see `\directlua`); the
+  // encoding itself is a byte-mouth concern (K10) and needs nothing here.
+  // Witnesses asternote, hideanswer-doc, inlinelabel, jpnedumathsymbols-doc.
+  DefPrimitive!("\\epTeXinputencoding TeXFileName", sub[(_encoding)] {
+    if !lookup_bool("PTEX_PROFILE") {
+      AssignValue!("PTEX_PROFILE" => true, Scope::Global);
+    }
+  });
   DefPrimitive!("\\Umathcode Number SkipMatch:= Number Number Number", sub[(_a,_b,_c,_d)] {});
   DefPrimitive!("\\Umathchardef DefToken SkipSpaces SkipMatch:= Number Number Number", sub[(cs,_c,_f,_u)] {
     let _ = def_macro(cs, None, ExpansionBody::Tokens(Tokens!()), None);

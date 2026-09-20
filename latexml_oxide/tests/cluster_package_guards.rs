@@ -18844,6 +18844,27 @@ B:\ifcat A西 L\else O\fi.
     assert!(xml.find("After.").unwrap() > inner, "{xml}");
   }
 
+  /// 56fd — `\epTeXinputencoding` (pTeX-only) raises `PTEX_PROFILE`, so kanji
+  /// join control words and jlreq.cls:6446 `\def\西暦{\西暦true}` is a control
+  /// WORD macro, not the self-referential `\西`+`暦`-delimited one that spun to
+  /// `Fatal:Timeout:PushbackLimit` (SHARED with Perl, which hangs). Witnesses
+  /// asternote, hideanswer-doc, inlinelabel, jpnedumathsymbols-doc.
+  #[test]
+  fn eptex_input_encoding_letters_kanji_so_jlreq_year_style_terminates() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\epTeXinputencoding utf8\n\
+               \\newif\\if西暦\n\\def\\西暦{\\西暦true}\n\\makeatother\n\
+               \\begin{document}\n\\西暦\\if西暦 seireki\\else wareki\\fi\n\n\
+               done\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(
+      xml.contains("<p>seireki</p>"),
+      "the \\if西暦 conditional was set by \\西暦 → \\西暦true:\n{xml}"
+    );
+    assert!(xml.contains("<p>done</p>"), "{xml}");
+  }
+
   /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
   /// `\subsection` would), and the post-box text ends up inside that subsection.
   #[test]
