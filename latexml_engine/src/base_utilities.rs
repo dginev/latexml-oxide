@@ -850,10 +850,22 @@ LoadDefinitions!({
   // body as cover. `_Capture_`-suffixed names are admitted anywhere by the model
   // (model.rs) so no paragraph is auto-opened; every marker is removed by
   // `insert_frontmatter`/`remove_frontmatter_marks` before output. OXIDIZED_DESIGN #246.
-  DefConstructor!(
-    "\\lx@frontmatter@mark{}",
-    "<ltx:_Frontmatter_Capture_ tag='#1'></ltx:_Frontmatter_Capture_>"
-  );
+  DefConstructor!("\\lx@frontmatter@mark{}", sub[document, _args] {
+    // Only meaningful BEFORE the frontmatter is placed: a later abstract (lips'
+    // `\DocInput`-ed `\begin{abstract}` after `\maketitle`) is handled by
+    // `insert_late_frontmatter`, and a marker built then would outlive every
+    // removal point (s107: 8 docs leaked `<_Frontmatter_Capture_>`).
+    // …and only once there is an open element to sit in: a preamble `\abstract{…}`
+    // (svjour's setter, fixture structure/svabstract) is constructed BEFORE the
+    // whatsit that opens <ltx:document>, and inserting anything there auto-creates
+    // the root early (a duplicated RelaxNGSchema PI). Construction runs after
+    // digestion, so the digest-time `inPreamble` flag is useless here — ask the
+    // tree via the current element (which, unlike the root element, also holds
+    // inside a streaming fragment; 114_streaming_structure faketitlepage).
+    if !lookup_bool("frontmatter_done") && document.get_element().is_some() {
+      document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
+    }
+  });
   DefMacro!(
     "\\lx@add@abstract[]{}",
     "\\lx@frontmatter@mark{ltx:abstract}\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter{ltx:abstract}[#1]{#2}"
@@ -1546,9 +1558,22 @@ LoadDefinitions!({
       // (tikz-mirror-lens, tipfr-doc, pgf-interference, axodraw2-man, derivative,
       // russ_doc, schulmathematik, jourcl, isosigns-docs, bootstrapicons-docs — 16
       // s106 docs; OXIDIZED_DESIGN #246).
-      let title = maybe_promote_leading_title(document)?;
-      let titlepage = wrap_leading_layout_in_titlepage(document)?;
-      match titlepage.or(title) {
+      // Only on the FIRST flush: once frontmatter has been placed (`\maketitle`), a
+      // later abstract-only queue is a LATE abstract — what precedes its marker is
+      // body, not cover, and `insert_late_frontmatter` places it beside the
+      // existing frontmatter. (`frontmatter_done` is reset by that path itself.)
+      let anchor = if lookup_bool("frontmatter_done") {
+        None
+      } else {
+        maybe_promote_leading_title(document)?;
+        match wrap_leading_layout_in_titlepage(document)? {
+          Some(titlepage) => Some(titlepage),
+          // No cover to wrap: sit right after whatever first-group element (a
+          // promoted title, a built titlepage) precedes the abstract's position.
+          None => last_frontmatter_before_abstract_mark(document),
+        }
+      };
+      match anchor {
         Some(anchor) => insert_frontmatter_after_node(document, &anchor)?,
         None => insert_frontmatter_after_resources(document)?,
       }
@@ -2698,6 +2723,41 @@ fn wrap_leading_layout_in_titlepage(document: &mut Document) -> Result<Option<No
   // Only CHILDREN were renamed (`rename_node` recreates the renamed node, not its
   // parent), so the titlepage handle itself is still live.
   Ok(Some(titlepage))
+}
+
+/// The last element of the document's LEADING first-group run — a promoted `<title>`,
+/// a directly built `<titlepage>` — counting only what stands before the abstract's
+/// own position marker and skipping content-free nodes. The abstract belongs right
+/// after it: with nothing but frontmatter and content-free nodes between, that is its
+/// source position; when body content (a `<TOC>`, a section) intervenes before the
+/// marker, it is the last valid frontmatter slot (the title stays first —
+/// isosigns/bootstrapicons print their TOC before the abstract). `None` when no
+/// first-group element leads (the flush then goes to the top, like Perl). Keeps eager and
+/// streaming builds identical: in an eager build the `{titlepage}` environment's own
+/// `after_construct` flush already files a LATER-queued abstract right behind the
+/// titlepage (digestion completed first), while a streaming build reaches the
+/// fallback with the abstract still queued (114_streaming_structure, faketitlepage).
+fn last_frontmatter_before_abstract_mark(document: &mut Document) -> Option<Node> {
+  let root = document.get_document().get_root_element()?;
+  let mut last: Option<Node> = None;
+  for kid in root.get_child_nodes() {
+    if kid.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let q = document::get_node_qname(&kid);
+    if q == pin_static("ltx:_Frontmatter_Capture_") {
+      return last;
+    }
+    if q == pin_static("ltx:resource") || node_is_content_free(&kid) {
+      continue;
+    }
+    if is_frontmatter_group_element(&kid) {
+      last = Some(kid);
+    } else {
+      return last;
+    }
+  }
+  last
 }
 
 /// Flush the queued frontmatter immediately AFTER `anchor` (a top-level document

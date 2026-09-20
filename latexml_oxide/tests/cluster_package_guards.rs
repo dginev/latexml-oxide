@@ -18661,6 +18661,41 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// Batch 56et regression control (s107: 8 docs leaked `<_Frontmatter_Capture_>`): an
+  /// abstract queued AFTER `\maketitle` placed the frontmatter (lips: a `\DocInput`-ed
+  /// `\begin{abstract}`) is a LATE abstract. No position marker is built once the
+  /// frontmatter is placed, the abstract-only fallback neither promotes nor wraps (what
+  /// precedes it is body, not cover), `insert_late_frontmatter` files the abstract beside
+  /// the existing frontmatter, and the core finalize drops any stranded `*_Capture_`
+  /// scaffolding even when `\end{document}` is never reached.
+  #[test]
+  fn late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing() {
+    let tex = "\\documentclass{article}\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle\n\
+               First body paragraph.\n\nSecond body paragraph.\n\
+               \\begin{abstract}\nA late abstract.\n\\end{abstract}\n\
+               Third body paragraph.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("_Capture_"),
+      "no internal marker may reach the output:\n{xml}"
+    );
+    assert!(
+      !xml.contains("<titlepage"),
+      "body before a LATE abstract is not cover:\n{xml}"
+    );
+    let creator = xml.find("<creator").expect("<creator> must be present");
+    let abstract_ = xml
+      .find("<abstract")
+      .expect("the late abstract must be placed");
+    let first = xml.find("First body paragraph.").unwrap();
+    let third = xml.find("Third body paragraph.").unwrap();
+    assert!(
+      creator < abstract_ && abstract_ < first && first < third,
+      "the late abstract joins the existing frontmatter (after <creator>), body stays body:\n{xml}"
+    );
+  }
+
   /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
   /// a `picture` digests into the positioned `<g>` group. The box is an LR-box, but
   /// `insert_block` emitted a schema-invalid `<block>` there (`g_model` is inline-only —

@@ -724,6 +724,34 @@ impl Document {
           // never read.
           stack.push(Work::PostWork { node: current.clone() });
 
+          // Leftover `*_Capture_` wrappers/markers (`ltx:_Capture_`, the frontmatter
+          // position marker `ltx:_Frontmatter_Capture_`) are construction-time
+          // scaffolding that a document ending abnormally (a Fatal, `\end{document}`
+          // swallowed by an unbalanced conditional, a streaming spill) can strand in
+          // the tree; the schema admits them nowhere ("not allowed anywhere"). Unwrap
+          // the ones with content, drop the empty ones, then snapshot the children.
+          // ONE pass over the direct children only — no re-scan after an unwrap and
+          // no `_CaptureBlock_`: under streaming a fragment is finalized MID-BUILD
+          // (spill threshold 3 in `114_streaming_*`), when an `insert_frontmatter`
+          // `_Capture_` wrapper or an `insert_block` box capture can be legitimately
+          // live; chasing wrappers exposed by an unwrap re-ordered faketitlepage's
+          // abstract above its titlepage. One `ends_with` per child on the common
+          // no-scrap path (this is the streaming hot path — see the
+          // `get_attributes` note above). `_lxfragment` is not one.
+          let scraps: Vec<Node> = current
+            .get_child_nodes()
+            .into_iter()
+            .filter(|c| {
+              c.get_type() == Some(NodeType::ElementNode) && c.get_name().ends_with("_Capture_")
+            })
+            .collect();
+          for scrap in scraps {
+            if scrap.get_first_element_child().is_some() || !scrap.get_content().trim().is_empty() {
+              self.unwrap_nodes(scrap)?;
+            } else {
+              self.remove_node(scrap);
+            }
+          }
           let children = current.get_child_nodes();
           // Collect work items forward, then push in reverse for left-to-right processing
           let mut child_work: Vec<Work> = Vec::new();

@@ -7901,16 +7901,26 @@ through `logical-block`/`para` only — never into a tcolorbox/parbox/tabular). 
 a wrong one). (2) `wrap_leading_layout_in_titlepage` moves the remaining leading run of
 `pagination`/`para`/demotable `logical-block` children (after resources and the promoted
 title, and BEFORE the abstract's own source position — `\lx@add@abstract`/`\lx@begin@abstract`
-now construct an empty `ltx:_Frontmatter_Capture_` marker where the abstract was queued,
-removed again by `insert_frontmatter`/`remove_frontmatter_marks`; the flush point cannot be
-the bound, since a sectionless manual flushes at `\end{document}` and would see its whole
-body as cover) into a new `<ltx:titlepage>` in its exact order — `titlepage_model = (FrontMatter.class
+construct an empty `ltx:_Frontmatter_Capture_` marker where the abstract was queued — only
+while no frontmatter has been placed yet; removed by `insert_frontmatter`, and any stranded
+`*_Capture_` scaffolding is dropped by the core `finalize_rec` (the s107 sweep leaked the
+marker in 8 docs whose abstract came AFTER `\maketitle`, e.g. lips' `\DocInput`-ed
+`% \begin{abstract}`, or whose `\end{document}` was swallowed by an unbalanced conditional —
+an end-of-document hook is not a reliable cleanup point, the core finalize is). The flush
+point cannot be the bound, since a sectionless manual flushes at `\end{document}` and would
+see its whole body as cover; and promotion/wrap run only on the FIRST flush — a LATE abstract's
+preceding content is body, `insert_late_frontmatter` files it beside the existing frontmatter) into a new `<ltx:titlepage>` in its exact order — `titlepage_model = (FrontMatter.class
 | SectionalFrontMatter.class | Block.class)*` is the schema's container for exactly this
 layout — renaming `para`→`block` and demoting `logical-block` with #244's bottom-up
 `demote_para_class_content`; the run stops at the first non-layout node (`<TOC>`, section,
 float) and is skipped when nothing in it is visible. (3) The abstract is flushed right after
-the titlepage (or the bare title), else at the TOP like Perl (`insert_frontmatter_after_node`
-/ `insert_frontmatter_after_resources`). Result: `title?, titlepage?, abstract, TOC, …` — all
+the wrapped titlepage, else after the last first-group element standing before its marker
+with only content-free nodes between (a promoted `<title>`, a directly built `<titlepage>` —
+`last_frontmatter_before_abstract_mark`, which also keeps eager and streaming builds
+identical: an eager build's `{titlepage}` `after_construct` files a later-queued abstract
+right behind the titlepage because digestion completed first, a streaming build reaches the
+fallback with it still queued), else at the TOP like Perl (`insert_frontmatter_after_node` /
+`insert_frontmatter_after_resources`). Result: `title?, titlepage?, abstract, TOC, …` — all
 first-group, valid; the cover stays above the abstract in its exact order, and only trailing
 body that cannot be frontmatter (a `<TOC>`, a document-level `<rule>`) sinks below the hoisted
 abstract, as any frontmatter-leads transform must (Perl's direction too).
@@ -7931,7 +7941,8 @@ promoted_title_stays_above_the_top_flushed_abstract,
 promoted_title_remainder_becomes_titlepage_layout_before_the_abstract,
 ambiguous_display_font_cover_is_titlepage_layout_not_a_title,
 version_badge_in_a_box_is_not_promoted_to_a_title,
-sectionless_body_after_the_abstract_is_not_cover_layout}`; fixture `structure/promote_center_title`
+sectionless_body_after_the_abstract_is_not_cover_layout,
+late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing}`; fixture `structure/promote_center_title`
 (re-blessed to `title, titlepage, abstract, section`); `class_redefined_abstract_defers_its_argument`
 (a class `\abstract{}` store, sectionless) unchanged.
 **Upstream**: not filed.
