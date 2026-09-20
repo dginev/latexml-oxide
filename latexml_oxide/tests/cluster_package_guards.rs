@@ -18360,6 +18360,43 @@ B:\ifcat A西 L\else O\fi.
       "the \\parbox body text must be preserved:\n{xml}"
     );
   }
+
+  /// Batch 56er (OXIDIZED_DESIGN #244): a box-forming construct (`\begin{center}`/
+  /// minipage/`\parbox`) whose body auto-opens a `<para>` (a genuine block — here a
+  /// centered `tabular` — sits mid-content), placed in a Block.model container
+  /// (titlepage/quote/figure/abstract/inline-block), was renamed in place by
+  /// `insert_block` to a schema-invalid `<logical-block>` (Block.model has no Para.class;
+  /// LaTeXML-structure.rnc:585 etc.). Fix: when the context holds `<block>` but not the
+  /// Para.class element, emit `<block>` and recursively demote — rename descendant
+  /// logical-block/sectional-block → block (KEEPING the minipage `width`), unwrap
+  /// descendant `<para>`. In place, no reorder (ltx_para/block/logical-block are all
+  /// `display:block`). SHARED with Perl (TeX_Box.pool.ltxml:512), surpass like #240/#243.
+  /// Witnesses: webquiz, tabularcalc, short-math-guide, heria (~12 s105 docs).
+  #[test]
+  fn para_class_box_in_titlepage_demotes_to_block_not_logical_block() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{titlepage}\n\
+               \\begin{center}\n\\begin{minipage}{0.85\\linewidth}\n\
+               \\noindent\\textbf{Abstract}\\par\nGiven a list of numbers:\n\
+               \\begin{center}\\begin{tabular}{|c|c|}\\hline $x$ & 1 \\\\\\hline\\end{tabular}\\end{center}\n\
+               Other effects are possible.\n\\end{minipage}\n\\end{center}\n\\end{titlepage}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // No Para.class element may survive under the <titlepage> (Block.model): the
+    // center/minipage captures are demoted to <block>, not left as <logical-block>.
+    assert!(
+      !xml.contains("<logical-block"),
+      "Para.class box must demote to <block>, not emit a schema-invalid <logical-block>:\n{xml}"
+    );
+    assert!(
+      xml.contains("<block") && xml.contains("ltx_minipage"),
+      "the minipage must survive as a <block> (its width/class kept):\n{xml}"
+    );
+    // Content preserved (recall): the abstract text and the tabular survive the demotion.
+    assert!(
+      xml.contains("Abstract") && xml.contains("<tabular") && xml.contains("Other effects"),
+      "the box body (text + tabular) must be preserved through the demotion:\n{xml}"
+    );
+  }
 }
 
 mod perfect_kernel_gemini {

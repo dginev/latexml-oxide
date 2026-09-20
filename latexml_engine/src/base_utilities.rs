@@ -4110,6 +4110,72 @@ fn is_v_attached(node: &Node) -> bool {
   }
 }
 
+/// Make `node`'s content Block.class-valid so `node` can safely become a `<ltx:block>`,
+/// demoting the Para.class descendants in place. Every direct `<ltx:logical-block>`/
+/// `<ltx:sectional-block>` child is renamed to `<ltx:block>` — KEEPING its attributes (a
+/// minipage's `width`, alignment, …) — and every direct `<ltx:para>` child is unwrapped
+/// (its Block.model children float up, already valid in a block; a `<para>` never
+/// directly holds Para.class, so no pre-demotion is needed). Other children (a `<p>`,
+/// `<tabular>`, `<itemize>`, a nested `<block>`, …) are valid there and left untouched,
+/// so paragraphs inside a still-valid Para.model container (an `<item>`) are never
+/// over-flattened.
+///
+/// BOTTOM-UP: a logical-block child is demoted (its own Para.class content fixed) BEFORE
+/// it is renamed to `<block>`, and the caller renames `node` itself only AFTER calling
+/// this — so no Para.class node is ever moved into a `<block>` while still Para.class,
+/// which would fire the constructor's `malformed`-content check (a spurious `Error:`).
+///
+/// Memory-safe snapshot iteration: `rename_node` recreates the child (its handle dies —
+/// we recurse into the child BEFORE renaming, via the live handle) and `unwrap_nodes`
+/// splices the child's kids up; neither moves the SIBLING handles held in the
+/// `get_child_nodes` snapshot, and floated/renamed nodes are never revisited through it.
+/// True when `node`'s content can be losslessly demoted into a `<ltx:block>`: every
+/// element that would end up as a direct child of the block is valid there. Descends
+/// only through the transformable Para.class wrappers (`ltx:para`/`ltx:logical-block`/
+/// `ltx:sectional-block` — para is unwrapped, the others renamed to `<block>`), whose
+/// own content must likewise be demotable; any OTHER element is a leaf kept as-is, so it
+/// must itself be block-valid. A container holding a Para.model-only element that
+/// `<block>` cannot hold — a `<float>`, `<TOC>`, a sectioning unit, a `<figure>`/`<table>`
+/// — is NOT demotable (renaming to block would strand it, e.g. stanli/webquiz), so the
+/// caller leaves it at Perl-parity rather than emitting a fresh `malformed` error.
+fn subtree_is_block_demotable(node: &Node) -> bool {
+  node.get_child_nodes().iter().all(|c| {
+    if c.get_type() != Some(NodeType::ElementNode) {
+      return true;
+    }
+    let transformable = with(document::get_node_qname(c), |q| {
+      matches!(q, "ltx:para" | "ltx:logical-block" | "ltx:sectional-block")
+    });
+    if transformable {
+      subtree_is_block_demotable(c)
+    } else {
+      document::can_contain_qsym(pin_static("ltx:block"), document::get_node_qname(c))
+    }
+  })
+}
+
+fn demote_para_class_content(document: &mut Document, node: &Node) -> Result<()> {
+  for child in node.get_child_nodes() {
+    if child.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let kind = with(document::get_node_qname(&child), |q| match q {
+      "ltx:logical-block" | "ltx:sectional-block" => 1u8,
+      "ltx:para" => 2,
+      _ => 0,
+    });
+    match kind {
+      1 => {
+        demote_para_class_content(document, &child)?; // fix content while child still allows Para.class
+        document.rename_node(child, "ltx:block", true)?; // THEN rename (content now Block.class-valid)
+      },
+      2 => document.unwrap_nodes(child)?,
+      _ => {},
+    }
+  }
+  Ok(())
+}
+
 pub fn insert_block(
   document: &mut Document,
   contents: &Digested,
@@ -4506,8 +4572,37 @@ pub fn insert_block(
       }
     }
     // If no ancestor can hold it (rare — Para.class always fits the section/body
-    // model), the capture stays where it is and the rename matches Perl's outcome.
-    document.rename_node(container, &to_string(final_tag), true)?;
+    // model), the capture stays where it is. Perl renames in place to the invalid
+    // Para.class element (TeX_Box.pool.ltxml:512); instead, if the current context
+    // holds `<block>` but not `final_tag`, emit a schema-valid `<block>` and recursively
+    // demote the Para.model content (surpass #244) — a box-forming construct
+    // (`\begin{center}`/minipage/`\parbox`) whose body auto-opened a `<para>` when a
+    // genuine block sat mid-content, placed in a Block.model container (titlepage,
+    // quote, figure, abstract, inline-block). Demotion is IN PLACE (no reorder; render:
+    // ltx_para/block/logical-block all `display:block`, only a redundant `<para>`
+    // grouping + its auto-`xml:id` drop). The #240 `ltx:para` climb above already moved
+    // the capture to an ancestor that holds `final_tag`, so this branch is false there
+    // (parent holds `final_tag`) and that path is untouched. Witnesses: webquiz,
+    // tabularcalc, short-math-guide, heria (+ the `caption_in_inline_parbox` sibling).
+    let demote_para = !is_inline
+      && container.get_parent().is_some_and(|parent| {
+        let pq = document::get_node_qname(&parent);
+        !document::can_contain_qsym(pq, final_tag)
+          && document::can_contain_qsym(pq, pin_static("ltx:block"))
+      })
+      // Only demote when the result is provably valid: a container holding a
+      // Para.model-only element `<block>` can't take (a float, a TOC, a sectioning
+      // unit) stays at Perl-parity rather than acquiring a fresh `malformed` error.
+      && subtree_is_block_demotable(&container);
+    if demote_para {
+      // Bottom-up: demote the Para.class content while the container still allows it,
+      // THEN rename the container to <block> — so nothing is ever moved into a <block>
+      // while still Para.class (which would emit a spurious `malformed` Error).
+      demote_para_class_content(document, &container)?;
+      document.rename_node(container, "ltx:block", true)?;
+    } else {
+      document.rename_node(container, &to_string(final_tag), true)?;
+    }
   } else {
     // we didn't know what to do?
     let message = with(context_tag, |ctxt_str| {

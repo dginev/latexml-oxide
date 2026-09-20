@@ -7788,3 +7788,38 @@ re-blessed: `parbox_inside_a_picture_renders_as_a_foreign_object` (cluster_xslt_
 `picture_nested_in_a_scaled_box_is_converted` (cluster_package_guards).
 **Guard**: `put_parbox_in_picture_is_inline_block_not_block`.
 **Upstream**: not filed.
+
+### 244. A Para.class box in a Block.model context demotes to `<block>` (Perl: schema-invalid `<logical-block>`)
+
+**Perl behavior**: a box-forming construct (`\begin{center}`/flushleft/flushright via
+`aligningEnvironment`→`insertBlock`, or minipage/`\parbox`) whose digested content is
+Para.class (a `<para>` auto-opens when a genuine block — a centered `tabular`, a display
+`picture`, a nested minipage — sits mid-content) is inserted into a Block.model container
+(titlepage/quote/figure/table/float/abstract/inline-block). `insertBlock`
+(`TeX_Box.pool.ltxml:512`) picks `$allowed_candidates[0] || $filtered_candidates[0]`; with
+no allowed candidate it renames in place to an invalid `<logical-block>` (`Block.model =
+Block.class|Misc.class|Meta.class` has no Para.class; LaTeXML.rnc:37). Perl (native AND
+raw-class) emits the same invalid nesting.
+**Rust behavior**: `insert_block` (`base_utilities.rs`) — when the context holds `<block>`
+but not the Para.class `final_tag`, AND `subtree_is_block_demotable` — emits `<block>` and
+recursively demotes the Para.model content BOTTOM-UP: rename descendant `logical-block`/
+`sectional-block` → `block` (KEEPING attributes — a minipage's `width`), unwrap descendant
+`<para>` (its Block.model children float up, valid in a block). Bottom-up, container
+renamed LAST, so no Para.class node is ever transiently moved into a `<block>` (which would
+emit a `malformed` Error). The `subtree_is_block_demotable` gate LEAVES at Perl-parity any
+container holding a Para.model-only element `<block>` can't take — a `<float>`, `<TOC>`, a
+sectioning unit (stanli, webquiz's TOC branch) — rather than stranding it as a fresh error.
+Sibling of #240's climb (which reorders content out of a `<para>`) and #243's inline
+demotion; this is the in-place BLOCK demotion. SHARED Perl bug, surpass on the
+schema-validity axis.
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19). Render-safe:
+`.ltx_para`/`.ltx_block`/`.ltx_logical-block` are all `display:block` (LaTeXML.css:205)
+with no distinguishing layout; the demotion preserves child order and attributes, dropping
+only a redundant `<para>` grouping div + its auto-`xml:id`.
+**Witnesses**: 11 s105 docs → 0 rng (tabularcalc_doc_{en,fr,vn}, short-math-guide,
+pinoutikz, msc, listparskip, heria-proposal, fepslatex, kaytannollista, l2tabufr); 3
+partially improved (l2tabu 2→1, webquiz 2→1, suanpan-l3 2→1 — residuals are separate
+clusters); stanli unchanged (float content, correctly skipped — no regression). Also fixes
+the `caption_in_inline_parbox` sibling (heria, inline-block context).
+**Guard**: `para_class_box_in_titlepage_demotes_to_block_not_logical_block`.
+**Upstream**: not filed.
