@@ -4173,7 +4173,23 @@ pub fn insert_block(
     context = document.open_element("ltx:XMText", None, None)?;
     context_tag = document::get_node_qname(&context);
   }
-  let is_inline = is_svg || document::can_contain(&context, "#PCDATA");
+  // An inline-only container that holds `inline-block` (Misc.class) but neither
+  // `#PCDATA` nor `block` (Block.class): the picture family `ltx:g`/`ltx:picture`/
+  // `ltx:clippath`, plus `ltx:creator`/`ltx:equation`/`ltx:inline-item` (the full set
+  // this clause flips — verified against LaTeXML.model). `<block>` is schema-invalid in
+  // every one, and `<inline-block>` is valid there AND holds full Block.class content,
+  // so a `\put`-positioned `\parbox`/`\makebox` digested there — an LR-box, never a
+  // block — is renamed to a schema-valid `<inline-block>` IN PLACE: no move, so the
+  // `\put` position in the enclosing `<g transform="translate(x,y)">` is preserved
+  // (fidelity-safe). Emitting `<block>` here is invalid (e.g. `g_model`,
+  // LaTeXML-picture.rng) — a shared Perl bug (`TeX_Box.pool.ltxml:493`), surpassed on
+  // the schema-validity axis like #240. A `<para>`/`<inline-block>`/`<float>`/`<note>`
+  // holds BOTH block and inline-block, so this clause is false there and the #240
+  // block-climb (`context_tag == "ltx:para"`) stays untouched.
+  let is_inline = is_svg
+    || document::can_contain(&context, "#PCDATA")
+    || (document::can_contain_qsym(context_tag, pin_static("ltx:inline-block"))
+      && !document::can_contain_qsym(context_tag, pin_static("ltx:block")));
   let container_attr = block_attr.clone();
   let mut container = document.open_element("ltx:_CaptureBlock_", Some(container_attr), None)?;
   document.absorb(contents, None)?;

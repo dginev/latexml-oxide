@@ -18327,6 +18327,39 @@ B:\ifcat A西 L\else O\fi.
        the content-free gate must not hoist the title over it:\n{xml}"
     );
   }
+
+  /// Batch 56eq (OXIDIZED_DESIGN #243): a `\put`-positioned `\parbox`/`\makebox` inside
+  /// a `picture` digests into the positioned `<g>` group. The box is an LR-box, but
+  /// `insert_block` emitted a schema-invalid `<block>` there (`g_model` is inline-only —
+  /// it holds `<inline-block>`, not `<block>`; LaTeXML-picture.rng). Fix: a container
+  /// that holds `inline-block` but neither `block` nor `#PCDATA` is treated as inline,
+  /// so the capture is renamed to `<inline-block>` IN PLACE (the `\put` position in the
+  /// enclosing `<g transform>` is preserved — fidelity-safe). SHARED with Perl
+  /// (`TeX_Box.pool.ltxml:493`), surpassed like #240; a sibling of 56ek's block-climb,
+  /// NOT the same move (climbing would destroy `\put` layout). Witnesses:
+  /// ticket/ex_flashcard (88→0 jing), elzcards/elzcards-examples (41→0) — 36 s105 docs.
+  #[test]
+  fn put_parbox_in_picture_is_inline_block_not_block() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\
+               \\setlength{\\unitlength}{1mm}\n\\begin{picture}(60,40)\n\
+               \\put(3,30){\\parbox{58mm}{\\textbf{word:} a definition here}}\n\
+               \\end{picture}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let compact: String = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+    // The \put'd \parbox in the picture <g> must be a schema-valid <inline-block>,
+    // not the invalid <block> (g_model is inline-only).
+    assert!(
+      compact.contains("<inline-block") && !compact.contains("<block"),
+      "a \\put'd \\parbox inside a picture must emit <inline-block> (valid in g_model), \
+       not the schema-invalid <block>:\n{xml}"
+    );
+    // Content preserved (recall): the parbox body survives the rename.
+    assert!(
+      compact.contains("definition"),
+      "the \\parbox body text must be preserved:\n{xml}"
+    );
+  }
 }
 
 mod perfect_kernel_gemini {
@@ -20568,7 +20601,12 @@ mod svg_nested_picture {
   }
 
   /// The inner picture becomes an `svg` inside the outer picture's
-  /// `foreignObject`, its text intact (the whole inner `foreignObject`).
+  /// `foreignObject`, its text intact (the whole inner `foreignObject`). Since
+  /// 56eq (#243) the `\parbox` in the picture `<g>` is a schema-valid
+  /// `<inline-block>` (an LR-box), so the inner foreignObject holds
+  /// `<span class="ltx_inline-block">` (was the schema-invalid `<div class="ltx_block">`);
+  /// the foreignObject dimensions (15.83×75.58) and the box width (56.9pt) are
+  /// unchanged (render-faithful).
   #[test]
   fn picture_nested_in_a_scaled_box_is_converted() {
     let xml = convert_to_xml("tests/cluster_regressions/picture_scaled_nested.tex");
@@ -20577,7 +20615,7 @@ mod svg_nested_picture {
       &html,
       "foreignObject",
       &[r#"width="75.58""#],
-      r##"<foreignObject height="15.83" overflow="visible" width="75.58"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><div class="ltx_block ltx_parbox ltx_align_middle" style="width:56.9pt;"><p class="ltx_p ltx_align_center">SCALEDTEXTWORD box</p></div></span></span></foreignObject>"##,
+      r##"<foreignObject height="15.83" overflow="visible" width="75.58"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:56.9pt;"><span class="ltx_p ltx_align_center">SCALEDTEXTWORD box</span></span></span></span></foreignObject>"##,
     );
   }
 }

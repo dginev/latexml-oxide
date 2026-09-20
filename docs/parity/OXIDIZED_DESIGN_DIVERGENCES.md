@@ -7751,3 +7751,40 @@ residuals uniformly (follow-up).
 **Guard**: `frontmatter_hoists_above_content_free_leading_pagination` (+ the negative
 control `frontmatter_does_not_hoist_above_a_leading_graphic`).
 **Upstream**: not filed.
+
+### 243. A `\put`-positioned box in a picture group is `<inline-block>`, not `<block>` (Perl: schema-invalid `<block>`)
+
+**Perl behavior**: a `\put(x,y){\parbox…}`/`\makebox` inside a `picture` digests into
+the positioned `<ltx:g transform>` group and calls `insertBlock`
+(`TeX_Box.pool.ltxml:493`) with context `ltx:g`. `$inline = $is_svg ||
+canContain($context,'#PCDATA')` is false for `ltx:g` (it holds no `#PCDATA`), so the
+block candidate family is chosen; `g_model` has no block element, so it falls through
+to an in-place rename to `<block>`. But `g_model` (LaTeXML-picture.rng) is inline-only
+(`Picture.class | Inline.class | Misc.class | Meta.class`) — `<block>` (Block.class) is
+NOT in it, `<inline-block>` (Misc.class) IS — so `<g>/<block>` is schema-invalid. Perl
+(native AND raw-class) emits the same.
+**Rust behavior**: `insert_block` (`base_utilities.rs`) treats a container that holds
+`<inline-block>` but neither `<block>` nor `#PCDATA` as inline
+(`can_contain_qsym(ctx,"ltx:inline-block") && !can_contain_qsym(ctx,"ltx:block")`), so
+the capture is renamed IN PLACE to `<inline-block>` — valid in `g_model`, and the box
+keeps its `\put` position inside `<g transform="translate(x,y)">` (no move). A
+`<para>`/`<inline-block>` holds BOTH block and inline-block, so the clause is false
+there and the #240 block-climb (`context_tag == "ltx:para"`) is untouched — this is a
+SIBLING branch of the same `insert_block` candidate logic, not a generalization of the
+climb (climbing would hoist the card text out of the picture and destroy the layout).
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19). A
+`\parbox`/`\makebox` is an LR-box, semantically an inline-block; the in-place rename is
+fidelity-safe (no reorder).
+**Witnesses**: ticket/ex_flashcard + ex_flashcard_rm (88→0 each), ffslides/ffslides-doc
+(135→0), elzcards/elzcards-examples (41→0), simplecd/examples (32→0), flacards/flacards_ex,
+bytefield/bf-example, bookcover — 36 s105 docs (sub-cluster A), each block-only invalid.
+NOT covered: `<block>` directly in a list (`itemize`/`enumerate`) — colorframed (RUST-ONLY
+framed-in-list nesting) + tableaux (SHARED), 2 docs, distinct root cause (list nesting).
+**Render**: a `\parbox` in a picture still renders as a `<foreignObject>` of the SAME
+dimensions/position; only the inner wrapper flips `<div class="ltx_block">`→`<span
+class="ltx_inline-block" style="width:…">` (and its `<p>`→`<span class="ltx_p">`) — a
+100pt/56.9pt fixed-width box wraps text identically, so render-faithful. Two SVG goldens
+re-blessed: `parbox_inside_a_picture_renders_as_a_foreign_object` (cluster_xslt_split),
+`picture_nested_in_a_scaled_box_is_converted` (cluster_package_guards).
+**Guard**: `put_parbox_in_picture_is_inline_block_not_block`.
+**Upstream**: not filed.

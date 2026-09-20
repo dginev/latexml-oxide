@@ -1517,11 +1517,14 @@ mod picture_svg_on_the_live_dom {
   }
 
   /// A `\parbox` inside a picture is wrapped in `<foreignObject>` with the
-  /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), its
-  /// block markup intact, and sized from the containing `<g>`'s
-  /// `innerheight`/`innerdepth` (the parbox carries no height of its own):
-  /// height 17.14 px, y-offset 27.63 = height + depth — Perl's 17.85 / 28.78
-  /// at its 100 dpi basis.
+  /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), and
+  /// sized from the containing `<g>`'s `innerheight`/`innerdepth` (the parbox
+  /// carries no height of its own): height 17.14 px, y-offset 27.63 = height +
+  /// depth — Perl's 17.85 / 28.78 at its 100 dpi basis. Since 56eq (#243) the
+  /// `\parbox` capture in the picture `<g>` is a schema-valid `<inline-block>`
+  /// (an LR-box), so the foreignObject holds `<span class="ltx_inline-block">`
+  /// (was Perl's schema-invalid `<block>`/`<div class="ltx_block">`); the
+  /// foreignObject dimensions and position are unchanged (render-faithful).
   #[test]
   fn parbox_inside_a_picture_renders_as_a_foreign_object() {
     let html = html_of(
@@ -1538,11 +1541,11 @@ mod picture_svg_on_the_live_dom {
       r##"<foreignObject height="17.14" overflow="visible" width="132.84">"##,
       r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
       "\n",
-      r##"<div class="ltx_block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
+      r##"<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
       "\n",
-      r##"<p class="ltx_p">PARBOXVISIBLEWORD inside picture</p>"##,
+      r##"<span class="ltx_p">PARBOXVISIBLEWORD inside picture</span>"##,
       "\n",
-      r##"</div></span></span></foreignObject></g></g></g></svg>"##,
+      r##"</span></span></span></foreignObject></g></g></g></svg>"##,
     );
     assert!(html.contains(expected), "{html}");
   }
