@@ -56,7 +56,15 @@ pub fn resolve_streaming(
   max_memory_mib: u64,
   source: &str,
 ) -> Option<usize> {
-  const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 1900; // ~1.84 GB/MB, measured
+  // Peak RSS per source byte, an UPPER envelope over the corpus (batch 56ew): the
+  // NLCT manuals (datatool-user 1.71 MB → 5.5 GB, glossaries-user, glossaries-
+  // extra-manual: `\createexample*` retains ~2.3 MB per block) run at ~3200 B/B,
+  // source2e's kernel `.dtx` prose at ~1500. At 1900 the three manuals projected
+  // "fits" (3.2 GB < the 4.6 GB fuse), ran eager to the restart watermark (~46 s,
+  // 37% of their wall) and re-digested everything under `--streaming`; at 3200
+  // exactly those three cross the fuse and stream from the start (memoir/memman
+  // 1.44 MB lands on the line and stays eager; every other manual is ≤ 1.05 MB).
+  const PEAK_BYTES_PER_SOURCE_BYTE: u64 = 3200;
   const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
   // `--max-memory=0` disables the death ceiling, but the machine is still
   // finite and such a document may still need to spill. Judge — and size
@@ -116,13 +124,15 @@ pub fn projected_source_bytes(source: &str) -> u64 {
   const SCAN_BYTES: u64 = 4 * 1024 * 1024;
   /// Backstop against a pathological tree (a home directory as source dir).
   const WALK_ENTRIES: usize = 50_000;
-  const INCLUSION_COMMANDS: [&str; 6] = [
+  const INCLUSION_COMMANDS: [&str; 8] = [
     "\\input",
     "\\include",
     "\\import",
     "\\subimport",
     "\\subfile",
     "\\includeonly",
+    "\\DocInput",
+    "\\DocInclude",
   ];
 
   let own = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
@@ -140,7 +150,18 @@ pub fn projected_source_bytes(source: &str) -> u64 {
   if !INCLUSION_COMMANDS.iter().any(|cmd| head.contains(cmd)) {
     return own;
   }
-  let mut total = 0u64;
+  // doc.sty's `\DocInput{x}` / `\DocInclude{x}` pull `x.dtx` from the SOURCE tree
+  // (`texmf-dist/source/…`), which the directory walk below never sees: source2e.tex
+  // is a 15 KB driver over 57 `.dtx` = 3.5 MB, source3.tex 2 KB over 65 = 4.0 MB
+  // (batch 56ew). Resolve each named file through kpathsea and count it; a
+  // same-directory `.dtx` is also counted by the walk (extension list below).
+  // source3.tex keeps its `\DocInclude`s in `\input{source3body}`: follow one
+  // level of `\input`/`\include` from the head as well (same directory, else
+  // kpathsea; bounded), so a two-file driver projects like a one-file one.
+  let mut total = doc_input_dtx_bytes(&head);
+  for sub in included_heads(&head, dir).iter().take(32) {
+    total = total.saturating_add(doc_input_dtx_bytes(sub));
+  }
   let mut seen = 0usize;
   let mut stack = vec![dir.to_path_buf()];
   while let Some(d) = stack.pop() {
@@ -158,7 +179,7 @@ pub fn projected_source_bytes(source: &str) -> u64 {
           let path = entry.path();
           if matches!(
             path.extension().and_then(|e| e.to_str()),
-            Some("tex" | "ltx" | "bbl")
+            Some("tex" | "ltx" | "bbl" | "dtx")
           ) {
             total = total.saturating_add(entry.metadata().map(|m| m.len()).unwrap_or(0));
           }
@@ -168,4 +189,144 @@ pub fn projected_source_bytes(source: &str) -> u64 {
     }
   }
   total.max(own)
+}
+
+/// The heads (first `SCAN_BYTES`) of the files `\input{…}` / `\include{…}` in `head`
+/// name, one level deep: resolved in `dir` first (with and without `.tex`), else through
+/// kpathsea. Macro-assembled names are skipped.
+fn included_heads(head: &str, dir: &Path) -> Vec<String> {
+  const SCAN_BYTES: u64 = 4 * 1024 * 1024;
+  let mut out = Vec::new();
+  for cmd in ["\\input{", "\\include{"] {
+    for (idx, _) in head.match_indices(cmd) {
+      let rest = &head[idx + cmd.len()..];
+      let Some(end) = rest.find('}') else {
+        continue;
+      };
+      let name = rest[..end].trim();
+      if name.is_empty() || name.contains('\\') || name.contains('#') {
+        continue;
+      }
+      let candidates = [dir.join(name), dir.join(format!("{name}.tex"))];
+      let path = candidates
+        .iter()
+        .find(|p| p.is_file())
+        .map(|p| p.to_string_lossy().into_owned())
+        .or_else(|| {
+          let with_ext = format!("{name}.tex");
+          latexml_core::util::pathname::kpsewhich(&[with_ext.as_str(), name])
+        });
+      let Some(path) = path else {
+        continue;
+      };
+      let mut buf = Vec::new();
+      if File::open(&path)
+        .map(|f| f.take(SCAN_BYTES).read_to_end(&mut buf))
+        .is_ok()
+      {
+        out.push(String::from_utf8_lossy(&buf).into_owned());
+      }
+    }
+  }
+  out
+}
+
+/// Bytes of every `.dtx` a `\DocInput{…}` / `\DocInclude{…}` in `head` names, resolved
+/// through kpathsea (`kpsewhich`), so a doc.sty driver projects as its documented
+/// sources rather than as its own few kilobytes. A name already carrying an
+/// extension is tried as given first. Unresolvable names count as zero.
+fn doc_input_dtx_bytes(head: &str) -> u64 {
+  let mut total = 0u64;
+  for cmd in ["\\DocInput{", "\\DocInclude{"] {
+    for (idx, _) in head.match_indices(cmd) {
+      let rest = &head[idx + cmd.len()..];
+      let Some(end) = rest.find('}') else {
+        continue;
+      };
+      let name = rest[..end].trim();
+      if name.is_empty() || name.contains('\\') || name.contains('#') {
+        continue; // a macro-assembled name: not statically resolvable
+      }
+      let with_ext = if Path::new(name).extension().is_some() {
+        name.to_string()
+      } else {
+        format!("{name}.dtx")
+      };
+      if let Some(found) = latexml_core::util::pathname::kpsewhich(&[with_ext.as_str(), name]) {
+        total = total.saturating_add(std::fs::metadata(&found).map(|m| m.len()).unwrap_or(0));
+      }
+    }
+  }
+  total
+}
+
+#[cfg(test)]
+mod tests {
+  use super::projected_source_bytes;
+
+  /// Batch 56ew: a doc.sty driver projects as the `.dtx` it documents, not as its
+  /// own few kilobytes — otherwise the eager attempt overruns the memory fuse and
+  /// the whole conversion re-digests under `--streaming` (source2e: 15 KB driver,
+  /// 3.5 MB of `.dtx`, 170 s → 85 s once streamed from the start). A same-directory
+  /// `.dtx` is found by the walk; a kpathsea-resolvable one by name.
+  #[test]
+  fn docinput_driver_projects_its_dtx_volume() {
+    let dir = std::env::temp_dir().join(format!("pk56ew-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let driver = dir.join("driver.tex");
+    std::fs::write(
+      &driver,
+      "\\documentclass{ltxdoc}\n\\begin{document}\n\\DocInput{zz-probe-56ew.dtx}\n\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("zz-probe-56ew.dtx"), vec![b'%'; 200_000]).unwrap();
+    let projected = projected_source_bytes(driver.to_str().unwrap());
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+      projected >= 200_000,
+      "the .dtx volume must be counted (projected {projected} bytes)"
+    );
+  }
+
+  /// source3.tex shape: the driver only `\input`s a body file that holds the
+  /// `\DocInclude`s — one level of inclusion is followed.
+  #[test]
+  fn docinclude_behind_an_input_is_followed_one_level() {
+    let dir = std::env::temp_dir().join(format!("pk56ew-body-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let driver = dir.join("driver.tex");
+    std::fs::write(
+      &driver,
+      "\\documentclass{ltxdoc}\\begin{document}\\input{body}\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("body.tex"), "\\DocInclude{zz-probe-56ew-body}\n").unwrap();
+    std::fs::write(dir.join("zz-probe-56ew-body.dtx"), vec![b'%'; 300_000]).unwrap();
+    let projected = projected_source_bytes(driver.to_str().unwrap());
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+      projected >= 300_000,
+      "the .dtx behind \\input{{body}} must be counted (got {projected})"
+    );
+  }
+
+  /// Control: a self-contained file with no inclusion command projects as itself.
+  #[test]
+  fn self_contained_source_projects_as_itself() {
+    let dir = std::env::temp_dir().join(format!("pk56ew-solo-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let main = dir.join("solo.tex");
+    std::fs::write(
+      &main,
+      "\\documentclass{article}\\begin{document}x\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("unused.dtx"), vec![b'%'; 100_000]).unwrap();
+    let projected = projected_source_bytes(main.to_str().unwrap());
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+      projected < 1_000,
+      "no inclusion command: own size only (got {projected})"
+    );
+  }
 }
