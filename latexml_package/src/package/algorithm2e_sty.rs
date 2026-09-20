@@ -44,6 +44,35 @@ fn renumber_algo_lines(document: &mut Document) {
   else {
     return;
   };
+  // Overprint-collapse, FIRST-wins (batch 56eo, OXIDIZED_DESIGN #241): a line
+  // that fires numbering more than once — `\LinesNumbered` (auto `\nl` at
+  // content-start) PLUS an explicit `\nl` — accrues multiple `<ltx:tags>`, which
+  // the listingline model forbids (`tags?`, LaTeXML-block.rnc:189). Real
+  // algorithm2e `\llap`/`\rlap`-overprints the numbers (algorithm2e.sty:1647/1654)
+  // so only one is visible; keep the FIRST `<tags>` per line and remove the rest.
+  // First, not last: the listingline model requires tags first and 56eh's endline
+  // indentation-prepend seats the leading (first-fired) tags at child 0 (before
+  // the `<rule>`), so a later tags sits AFTER the rule; the visible NUMBER is
+  // corrected by the renumber-to-1..N below. Known limitation: an explicit
+  // `\nlset{custom}` coinciding with the auto `\nl` on one line loses the custom
+  // reference to the sequential number — real algorithm2e garbles that too
+  // (both overprint at the same kern), and keep-last would be schema-invalid.
+  // Done here (post-construct, stable DOM) — NOT in `\algocf@printnl@i`, where
+  // the rapid double-fire's mid-construction cursor state makes an in-place
+  // remove corrupt the tree. Perl keeps them all (SHARED schema bug); surpass.
+  for line in listing.get_child_elements() {
+    if document::get_node_qname(&line) != pin!("ltx:listingline") {
+      continue;
+    }
+    let tags: Vec<Node> = line
+      .get_child_elements()
+      .into_iter()
+      .filter(|c| document::get_node_qname(c) == pin!("ltx:tags"))
+      .collect();
+    for stale in tags.iter().skip(1) {
+      document.remove_node(stale.clone());
+    }
+  }
   // Collect the numeric number-tag nodes in document order.
   let mut numeric_tags: Vec<Node> = Vec::new();
   for line in listing.get_child_elements() {

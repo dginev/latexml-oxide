@@ -7686,3 +7686,27 @@ path is unchanged.
 `{minipage}` after inline text).
 **Guard**: `perfect_kernel_batch56::logical_block_climbs_out_of_para`.
 **Upstream**: not filed.
+
+### 241. algorithm2e double-`\nl` line-number tags collapse to one (Perl: multiple `<tags>`, schema-invalid)
+
+**Perl behavior**: a line that fires numbering more than once — `\LinesNumbered`
+(auto `\nl` via `\everypar`) PLUS an explicit `\nl` — runs `\algocf@printnl`
+each time, so `LaTeXML/lib/LaTeXML/Package/algorithm2e.sty.ltxml` emits a
+separate `<ltx:tags>` per fire (2 in Perl, up to 3 in our content-start timing),
+which the listingline model forbids (`tags?`, `LaTeXML-block.rnc:189`). Real
+algorithm2e overprints the numbers with `\llap`/`\rlap` (`algorithm2e.sty:1647,
+1654`) so only one is visible.
+**Rust behavior**: a post-construct pass (`renumber_algo_lines`,
+`algorithm2e_sty.rs`) keeps the FIRST `<ltx:tags>` per listingline and removes
+the rest (`document.remove_node`), then renumbers the survivors 1..N. First, not
+last, so the surviving tags keeps the schema-required leading position that the
+endline indentation-prepend (#… batch 56eh) seats it at, ahead of any `<rule>`;
+the visible number is corrected by the renumber. Done post-construct on the
+stable DOM — an in-place remove inside `\algocf@printnl@i` corrupts the tree
+(the rapid double-fire's mid-construction cursor state).
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19),
+faithful to the PDF's single visible (overprinted) number.
+**Witnesses**: algorithm2e manual (`algorithm2e_exnlsty`); any `\LinesNumbered`
++ explicit `\nl` document. algorithm2e manual 221→0 jing lines across 56eh/ei/eo.
+**Guard**: `cluster_algorithm2e_double_nl_collapses_to_one_leading_tag`.
+**Upstream**: not filed.

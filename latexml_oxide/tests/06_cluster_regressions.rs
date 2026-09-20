@@ -1942,6 +1942,37 @@ fn cluster_algorithm2e_tags_first_after_block_marker() {
   );
 }
 
+/// Schema-validity guard (batch 56eo): a line that fires numbering more than
+/// once — `\LinesNumbered` (auto `\nl`) PLUS an explicit `\nl` — must collapse
+/// to a SINGLE line-number `<ltx:tags>`, kept as the FIRST child. The listingline
+/// model allows one (`tags?`, LaTeXML-block.rnc:189); real algorithm2e overprints
+/// the numbers (`\rlap`/`\llap`) so only one is visible. `renumber_algo_lines`
+/// keeps the first per line and removes the rest, post-construct. RUST-surpass
+/// (Perl keeps them all, invalid). OXIDIZED_DESIGN #241.
+#[test]
+fn cluster_algorithm2e_double_nl_collapses_to_one_leading_tag() {
+  let xml = convert_to_xml("tests/cluster_regressions/algorithm2e_double_nl.tex");
+  // Every listingline has at most ONE <tags>, and it is the first element child.
+  let mut numbered = 0;
+  for seg in xml.split("<listingline").skip(1) {
+    let inner = seg.split_once("</listingline>").map_or("", |(i, _)| i);
+    let tags_count = inner.matches("<tags").count();
+    assert!(
+      tags_count <= 1,
+      "a double-\\nl listingline kept {tags_count} <tags> (schema allows one):\n{inner}"
+    );
+    if let Some(tags) = inner.find("<tags") {
+      let first_elt = inner.find('<').unwrap_or(tags);
+      assert_eq!(
+        first_elt, tags,
+        "the surviving <tags> must be the first child (not after a rule/content):\n{inner}"
+      );
+      numbered += 1;
+    }
+  }
+  assert!(numbered >= 1, "expected numbered listinglines:\n{xml}");
+}
+
 /// GREEN guard: a `.bbl` preamble (macro defs + a blank line before the first
 /// `\bibitem`, ACM-Reference-Format style) must NOT emit a spurious empty keyless
 /// "(N)" bibitem before the real references. The blank line makes
