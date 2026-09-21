@@ -221,6 +221,17 @@ fn choose_kpaths(
 /// the choice for [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
 fn select_kpaths() -> Option<Kpaths> {
+  // Re-anchor the linked libkpathsea to the ambient TeX Live tree before
+  // construction if TEXMFROOT is not already set. In-process libkpathsea checks
+  // $TEXMFROOT in texmf.cnf, avoiding a fallback to the slow subprocess backend
+  // on dual-TL hosts (e.g. system libkpathsea in /usr/share/texlive vs vendor TL on PATH).
+  if env::var_os("TEXMFROOT").is_none()
+    && let Some(root) = ambient_texlive_root()
+  {
+    unsafe {
+      env::set_var("TEXMFROOT", root);
+    }
+  }
   let (kpse, backend, why) = choose_kpaths(
     ambient_kpsewhich_version(),
     Kpaths::new,
