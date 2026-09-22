@@ -1071,7 +1071,79 @@ LoadDefinitions!({
   // NOTE: This is a mess! really should use role, so could apply to editors also
   // AND, matching \\ this way fails to catch \\[1em], so really should Let it
 
-  DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
+  // 56fl (OXIDIZED_DESIGN #253) — the raw-class `\author` surplus. `\author` is
+  // locked to the kernel shape `[short]{name}` (Perl latex_constructs.pool.ltxml
+  // :1076 too), so a raw class's own redefinition is refused and recorded as
+  // `\author:redefined` (state.rs `install_definition`). Such a class declared
+  // MORE arguments — a trailing `[keyval]` (cas-common.sty:895 `O{} m O{}`:
+  // `[type=editor, orcid=…]`) or a second mandatory `{affiliation}`
+  // (cnbwp.cls:273 `\def\author{\@ifnextchar[…}` → `\CNB@authorLong#1#2`) —
+  // which the kernel shape left in the stream to typeset as a `<para>` before
+  // the frontmatter (schema-invalid, faux content; Perl leaks identically).
+  // Running the class body instead would LOSE the authors: cas-common/cnbwp/
+  // aomart store names in class-private accumulators laid out only by their
+  // own (locked) `\maketitle` (verified: zero <creator>). So the locked
+  // `\author` keeps the semantics and, ONLY when a class redefined it, (a)
+  // absorbs the trailing argument into the frontmatter API — `orcid=` →
+  // `ltx:contact role=orcid`, a trailing group → `role=affiliation`, other
+  // keys (type, auid, bioid, prefix, suffix, role, style) are presentational
+  // and dropped — and (b) APPENDS creators (`\lx@add@author`) instead of the
+  // LaTeX-faithful dequeue-replace, since such a class calls `\author` once
+  // per author (cnbwp: 3 creators, each with its affiliation). A document that
+  // never redefined `\author` is byte-identical: `\@ifnextchar` is never even
+  // reached. Twins carrying the tail: kernel `\author` (sect05.rs),
+  // inst_support, sv_support, llncs. Residual risk, documented: with a same-
+  // shape class redefinition, a brace group immediately after `\author{…}` on
+  // the same paragraph is read as the class's affiliation argument (`\par`
+  // stops `\@ifnextchar`).
+  DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
+    add_authors_calls(stuff, !lookup_bool("\\author:redefined"))
+  });
+  DefMacro!("\\lx@author@trailing", sub[()] {
+    if lookup_bool("\\author:redefined") {
+      Ok(TokenizeInternal!(
+        r"\@ifnextchar[{\lx@author@trailing@opt}{\@ifnextchar\bgroup{\lx@author@trailing@mand}{}}"
+      ))
+    } else {
+      Ok(Tokens!())
+    }
+  });
+  DefMacro!(
+    "\\lx@author@trailing@opt[]",
+    r"\lx@add@author@keyvals{#1}\lx@author@trailing"
+  );
+  // An author keyval block (`type=editor, auid=000, orcid=0000-…`, the
+  // cas-common `stm/author` key family, .sty:686) → frontmatter contacts:
+  // `orcid=` is identity (`ltx:contact role=orcid`); `type`, `auid`, `bioid`,
+  // `alt`, `style`, `prefix`, `suffix`, `role` are layout/production keys
+  // and are dropped. Shared by the raw-class tail above and the cas-dc/cas-sc
+  // binding's `\author[marks]{name}[keyvals]` (cas_dc_cls.rs).
+  DefMacro!("\\lx@add@author@keyvals{}", sub[(keyvals)] {
+    let mut out: Vec<Token> = Vec::new();
+    let keyvals = keyvals.to_string();
+    for item in keyvals.split(',') {
+      if let Some((key, value)) = item.split_once('=')
+        && key.trim() == "orcid"
+      {
+        let value = value.trim().trim_matches(|c| c == '{' || c == '}').trim();
+        if !value.is_empty() {
+          let value = mouth::tokenize(TeXString::assembled(value.to_string()));
+          out.extend(Invocation!(T_CS!("\\lx@add@orcid"), vec![None, Some(value)]).unlist());
+        }
+      }
+    }
+    Ok(Tokens::new(out))
+  });
+  DefMacro!(
+    "\\lx@author@trailing@mand{}",
+    r"\lx@add@affiliation{#1}\lx@author@trailing"
+  );
+
+  /// The `\lx@add@authors` machinery (author-line parsing: `\and`/`and`
+  /// splitting, `$^{1,}$` affiliation marks, tabular/minipage lines, ijcai
+  /// `\affiliations`) as a function, so both the replacing kernel `\author`
+  /// and the appending raw-class mode share it.
+  fn add_authors_calls(stuff: Tokens, replace: bool) -> Result<Tokens> {
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -1094,7 +1166,11 @@ LoadDefinitions!({
       return Ok(Tokens::new(out));
     }
     let mut calls: Vec<Token> = Vec::new();
-    dequeue_front_matter("ltx:creator", &[("role", "author")]);
+    // LaTeX-faithful `\author` REPLACES (the last call wins); a raw class that
+    // redefined `\author` to call it once per author appends instead (56fl).
+    if replace {
+      dequeue_front_matter("ltx:creator", &[("role", "author")]);
+    }
     // Consume any `\\[len]` / `\\*[len]` row-break optionals up front so the line
     // splits below see a bare `\\` (KNOWN_PERL_ERRORS #75, witness 2605.23553). This
     // also runs ahead of the tabular/minipage fallback: that fallback is a
@@ -1206,13 +1282,13 @@ LoadDefinitions!({
         match kind {
           AuthorLineKind::Author => {
             let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
-            calls.extend(
-              Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
+            calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
           },
           AuthorLineKind::Affiliation => {
             let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
             calls.extend(
-              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
+              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist(),
+            );
           },
           AuthorLineKind::Email => {
             // A shared email line otherwise attaches to whatever creator is
@@ -1240,13 +1316,15 @@ LoadDefinitions!({
                 }
                 let opts = mouth::tokenize_internal("labelseq=author");
                 calls.extend(
-                  Invocation!(T_CS!("\\lx@add@email"), vec![Some(opts), Some(Tokens::new(toks))])
-                    .unlist(),
+                  Invocation!(T_CS!("\\lx@add@email"), vec![
+                    Some(opts),
+                    Some(Tokens::new(toks))
+                  ])
+                  .unlist(),
                 );
               }
             } else {
-              calls.extend(
-                Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
+              calls.extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist());
             }
           },
         }
@@ -1299,12 +1377,18 @@ LoadDefinitions!({
             }
           }
           calls.extend(
-            Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(Tokens::new(body))]).unlist());
+            Invocation!(T_CS!("\\lx@add@author"), vec![
+              None,
+              Some(Tokens::new(body))
+            ])
+            .unlist(),
+          );
         }
       }
     }
     Ok(Tokens::new(calls))
-  });
+  }
+  DefMacro!("\\lx@add@authors{}", sub[(stuff)] { add_authors_calls(stuff, true) });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
   // (ijcai97.sty and its derivatives): one `\author{}` holding names, then

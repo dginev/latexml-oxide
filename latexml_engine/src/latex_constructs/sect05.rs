@@ -918,8 +918,11 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\shortauthor", "\\@shortauthor");
   DefMacro!("\\shorttitle", "\\@shorttitle");
   // Perl (PR #2767): '\def\@shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}'.
+  // 56fl: `\lx@add@authors@adaptive` appends when a raw class redefined
+  // `\author`, and `\lx@author@trailing` absorbs the class's surplus argument
+  // (base_utilities.rs, OXIDIZED_DESIGN #253); both are no-ops otherwise.
   DefMacro!("\\author[]{}",
-    r"\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors\expandafter{\@author}",
+    r"\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@trailing",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically

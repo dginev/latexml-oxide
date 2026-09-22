@@ -8138,3 +8138,45 @@ inside `item`/`figure` (the 56fb carve-out; 14 docs, Perl-identical tree,
 PDF-faithful — ruled "leave" the same day). **Guard**:
 `perfect_kernel_batch56::a_top_level_subparagraph_is_admitted_by_the_document_body`.
 **Upstream**: worth filing (schema asymmetry).
+
+### 253. The locked kernel `\author` absorbs a raw class's trailing argument and appends per call when the class redefined `\author` (Perl: the surplus typesets, the creators collapse)
+
+**Perl** (`latex_constructs.pool.ltxml:1076`, `\author[]{}` locked) and Rust
+(`sect05.rs`) refuse a raw class's own redefinition of `\author`, so under
+`[rawclasses]` a class that declares MORE arguments leaves them in the stream:
+`cas-common.sty:895 \RenewDocumentCommand\author{O{} m O{}}` (els-cas
+cas-sc/cas-dc-sample: `\author[1]{Name}[type=editor, orcid=…]`) typesets
+`[type=editor, orcid=…]` as a `<para>` before the title, and
+`cnbwp.cls:273 \def\author{\@ifnextchar[…}` → `\CNB@authorLong#1#2`
+(`\author{Name}{Affiliation}` once per author) typesets every `{Affiliation}`
+and, because the kernel `\author` dequeue-replaces, collapses three authors to
+the last one. Both engines leak identically (SHARED); pdflatex honours the
+class. User ruling 2026-09-22: surpass. Letting the class body run is NOT the
+fix — verified: cas-common, cnbwp and aomart store names in class-private
+accumulators (`\g_stm_prelimsau_seq`, `\CNB@authors`, `\@names`) laid out only
+by their own `\maketitle`, which stays locked, so the authors vanish. **Rust**
+(`base_utilities.rs`, `\lx@add@authors@adaptive`, `\lx@author@trailing`; the
+kernel `\author` and its `inst_support`/`sv_support`/`llncs` twins carry the
+tail): ONLY when `\author:redefined` is set (the lock recorded a refused
+redefinition, `state.rs install_definition`) — (a) the trailing `[keyval]`
+is absorbed: `orcid=` → `ltx:contact role=orcid`; every other key (the
+cas-common `stm/author` family: `type`, `auid`, `bioid`, `alt`, `prefix`,
+`suffix`, `role`, `style`, …) is production metadata and is dropped; a
+trailing `{…}` → `ltx:contact role=affiliation`; (b) creators APPEND
+(`add_authors_calls(stuff, replace=false)` — the same author-line parser
+as `\lx@add@authors`, minus the dequeue), so a class calling `\author` once per
+author keeps every creator with its affiliation. A document that never
+redefined `\author` is byte-identical (`\@ifnextchar` is never reached).
+Residual, documented: with a same-shape class redefinition, a brace group on
+the same paragraph right after `\author{…}` reads as the class's affiliation
+argument (`\par` stops `\@ifnextchar`). **Guards**:
+`perfect_kernel_batch56::{raw_class_author_trailing_keyval_becomes_frontmatter,
+raw_class_author_per_author_calls_accumulate_with_affiliations,
+same_shape_author_redefinition_absorbs_nothing}`; the ptptex/quantumview
+author guards pin the replacing path. **Bindings note**: the els-cas witnesses
+actually load the contrib binding `cas_dc_cls.rs` (bindings precede raw), which
+inherited inst_support's `\author[]{}` and leaked the same `[keyvals]`; it now
+carries cas-common's `\author[marks]{name}[keyvals]` shape through the shared
+`\lx@add@author@keyvals` (guard `cas_author_trailing_keyvals_are_frontmatter`).
+**Upstream**: not filed (Perl leaks the
+same way; a class-shape-aware `\author` would be the upstream fix).

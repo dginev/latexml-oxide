@@ -9010,6 +9010,66 @@ Body text.
     assert!(xml.contains(r#"<note role="graphicalabstract">"#), "{xml}");
   }
 
+  /// cas-common.sty:895 `\author{O{} m O{}}` — the trailing `[keyvals]` block
+  /// (cas-sc-sample.tex:58) is frontmatter (`orcid=` → contact), never a
+  /// `<para>` before the title; four calls give four creators.
+  #[test]
+  fn cas_author_trailing_keyvals_are_frontmatter() {
+    let tex = "\\documentclass{cas-sc}
+\\begin{document}
+\\title{T}
+               \\author[1,3]{J.K. Krishnan}[type=editor,
+ auid=000,bioid=1,
+ prefix=Sir,
+ role=Researcher,
+ orcid=0000-0001-0000-0000]
+               \\author[2,4]{Han Thane}[style=chinese]
+               \\author[2,3]{William {J. Hansen}}[%
+   role=Co-ordinator,
+   suffix=Jr,
+   ]
+               \\author[1,3]{T. Rafeeq}
+\\maketitle
+Body.
+\\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    for leak in ["type=editor", "style=chinese", "suffix=Jr"] {
+      assert!(!xml.contains(leak), "`{leak}` is not ink:\n{xml}");
+    }
+    let title = xml.find("<title>T</title>").expect("title");
+    assert!(
+      !xml[..title].contains("<para"),
+      "no paragraph precedes the title:\n{xml}"
+    );
+    assert_eq!(
+      xml.matches("role=\"author\">").count(),
+      4,
+      "four creators:\n{xml}"
+    );
+    for name in [
+      "J.K. Krishnan",
+      "Han Thane",
+      "William J. Hansen",
+      "T. Rafeeq",
+    ] {
+      assert!(
+        xml.contains(&format!("<personname>{name}</personname>")),
+        "{name}:\n{xml}"
+      );
+    }
+    assert!(
+      xml.contains("<contact role=\"orcid\">") && xml.contains("0000-0001-0000-0000"),
+      "the orcid is a contact:\n{xml}"
+    );
+    assert_eq!(
+      xml.matches("role=\"orcid\"").count(),
+      1,
+      "one orcid:\n{xml}"
+    );
+  }
+
   /// spanish.ldf:680 `\deactivatetilden` (gaceta.cls:1612).
   #[test]
   fn babel_spanish_deactivatetilden_is_defined() {
@@ -19110,6 +19170,91 @@ B:\ifcat A西 L\else O\fi.
          <text class=\"ltx_lst_identifier\">two</text></listingline>"
       ),
       "the gobbled line keeps its second character and drops the first:\n{xml}"
+    );
+  }
+
+  /// 56fl (#253) — els-cas shape: the class's `\RenewDocumentCommand\author{O{} m O{}}`
+  /// is refused by the lock, so its trailing `[keyval]` used to typeset as a
+  /// `<para>` before the title (SHARED with Perl). Now `orcid=` becomes a
+  /// contact and the presentational keys are dropped.
+  #[test]
+  fn raw_class_author_trailing_keyval_becomes_frontmatter() {
+    let tex = "\\documentclass{article}\n\\usepackage{xparse}\n\\makeatletter\n\
+               \\RenewDocumentCommand\\author{O{} m O{}}{\\def\\@author{#2}}\n\\makeatother\n\
+               \\begin{document}\n\\title{T}\n\\author[1]{Jane Doe}[type=editor, orcid=0000-0001]\n\\maketitle\n\
+               Body.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("type=editor"),
+      "the keyval surplus is not ink:\n{xml}"
+    );
+    let title = xml.find("<title>T</title>").expect("title");
+    let body = xml.find("Body.").unwrap();
+    assert!(title < body, "frontmatter precedes the body:\n{xml}");
+    assert!(xml.contains("<personname>Jane Doe</personname>"), "{xml}");
+    assert!(
+      xml.contains("<contact role=\"orcid\">") && xml.contains("0000-0001"),
+      "the orcid is a contact:\n{xml}"
+    );
+  }
+
+  /// 56fl (#253) — cnbwp shape: a class `\def\author` taking `{name}{affiliation}`
+  /// once per author. The kernel shape orphaned every `{affiliation}` and
+  /// dequeue-replaced the creators down to the last one (SHARED). Now each
+  /// call appends a creator carrying its affiliation.
+  #[test]
+  fn raw_class_author_per_author_calls_accumulate_with_affiliations() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\
+               \\def\\author{\\@ifnextchar[{\\CNBs}{\\CNBl}}\n\\def\\CNBs[#1]#2#3{}\n\\def\\CNBl#1#2{\\def\\@author{#1}}\n\
+               \\makeatother\n\\begin{document}\n\\title{T}\n\
+               \\author{Ann One}{Alpha Institute}\n\\author{Bob Two}{Beta Lab}\n\\author{Cid Three}{Gamma Center}\n\
+               \\maketitle\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      xml.matches("role=\"author\">").count(),
+      3,
+      "three creators:\n{xml}"
+    );
+    for (name, affil) in [
+      ("Ann One", "Alpha Institute"),
+      ("Bob Two", "Beta Lab"),
+      ("Cid Three", "Gamma Center"),
+    ] {
+      assert!(
+        xml.contains(&format!(
+          "<personname>{name}</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{affil}</contact>"
+        )),
+        "the affiliation is a contact of its own creator:\n{xml}"
+      );
+      assert!(
+        !xml.contains(&format!("<p>{affil}</p>")),
+        "no orphaned affiliation paragraph:\n{xml}"
+      );
+    }
+    let title = xml.find("<title>T</title>").unwrap();
+    assert!(title < xml.find("Body.").unwrap(), "{xml}");
+  }
+
+  /// Control — a class redefinition of the SAME shape, one `\author`, and a
+  /// brace group in the next paragraph: one creator, the paragraph stays body
+  /// text (`\par` stops `\@ifnextchar`), nothing absorbed.
+  #[test]
+  fn same_shape_author_redefinition_absorbs_nothing() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\
+               \\renewcommand\\author[1]{\\gdef\\@author{#1}}\n\\makeatother\n\\begin{document}\n\
+               \\title{T}\n\\author{Only One}\n\n{\\bfseries Braced} text.\n\n\\maketitle\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("role=\"author\">").count(), 1, "{xml}");
+    assert!(
+      !xml.contains("role=\"affiliation\""),
+      "nothing absorbed:\n{xml}"
+    );
+    assert!(
+      xml.contains("Braced</text> text."),
+      "the braced paragraph is body text:\n{xml}"
     );
   }
 

@@ -93,6 +93,19 @@ LoadDefinitions!({
   );
   def_macro_noop("\\cormark[]")?; // mark only, no body
   def_macro_noop("\\corref[]")?;
+  // cas-common.sty:895 `\RenewDocumentCommand\author{O{} m O{}}` —
+  // `\author[affil-marks]{name}[type=editor, auid=…, orcid=…]`, once per
+  // author (cas-sc-sample.tex:58-97: four calls). The inst_support shape
+  // `[marks]{name}` left every `[keyvals]` block in the stream, typeset as a
+  // `<para>` before the title (els-cas-templates/cas-sc-sample, cas-dc-sample:
+  // three such paragraphs, schema-invalid). Same name splitting and
+  // accumulation as inst_support; the keyvals go through the shared
+  // `\lx@add@author@keyvals` (base_utilities.rs: `orcid=` → contact, the
+  // production keys dropped).
+  DefMacro!(
+    "\\author[]{}[]",
+    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}\\lx@add@author@keyvals{#3}"
+  );
   // \affiliation[id]{text} — affiliation string author typed.
   DefMacro!(
     "\\affiliation[]{}",

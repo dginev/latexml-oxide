@@ -30,7 +30,7 @@ LoadDefinitions!({
   // The `[marks]` (author↔affiliation label) are dropped, matching Perl's own
   // handling; wiring them to the affiliation annotation is a separate follow-up.
   DefMacro!("\\author[]{}",
-    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}");
+    "\\lx@splitting{\\lx@add@author}{\\and\\And,}{#2}\\lx@author@trailing");
   DefMacro!("\\institute{}",
     "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
   DefMacro!("\\inst{}", "\\lx@request@frontmatter@annotation[affiliation]{#1}");

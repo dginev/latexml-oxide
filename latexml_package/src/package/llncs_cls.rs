@@ -45,7 +45,7 @@ LoadDefinitions!({
   // row break in place of \and ("A\inst{1} \\ B\inst{2}"), which upstream merges
   // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
   DefMacro!("\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,\\\\}{#1}");
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,\\\\}{#1}\\lx@author@trailing");
   // Single \institute, with multiple institutions separated by \and (Perl
   // llncs.cls.ltxml L46-48). The n-th institution is attached to the author
   // which has that n in its \inst labels.

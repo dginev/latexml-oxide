@@ -22,7 +22,7 @@ LoadDefinitions!({
   // Single \author containing multiple authors separated by \and  (Perl PR #2767)
   DefMacro!(
     "\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}"
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}\\lx@author@trailing"
   );
   // Single \institute containing name \at institute \and ... repeating.
   // Note that the name corresponds to (but probably won't match exactly!) an author name
