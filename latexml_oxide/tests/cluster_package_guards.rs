@@ -14896,6 +14896,46 @@ Some text.
     assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
   }
 
+  /// Streaming: the root's `xmlns:PREFIX` declarations were computed from the
+  /// RESIDENT DOM only (`apply_document_namespace_declarations`), so a prefix
+  /// used solely inside spilled segments — `xlink:href` on `svg:pattern`/
+  /// `svg:use` — was serialized unbound (six TikZ manuals flipped invalid in
+  /// s109 at the transition watermark: atableau, circuitikzmanual,
+  /// tikzlings-doc, tkz-grapheur-doc-en/-fr, tzplot-doc). Eager and Perl
+  /// declare it exactly when used.
+  #[test]
+  fn streaming_declares_namespaces_used_only_in_spilled_segments() {
+    let mut tex = String::from(
+      r"\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{patterns}
+\newcommand\pic{\begin{center}\begin{tikzpicture}
+\fill[pattern=north east lines] (0,0) rectangle (2,2);
+\end{tikzpicture}\end{center}}
+\begin{document}
+This is a prose paragraph with real text content that stays resident.
+
+",
+    );
+    for _ in 0..20 {
+      tex.push_str("\\pic ");
+    }
+    tex.push_str("\n\\end{document}\n");
+    let (stderr, xml) = convert_args(&tex, &["--streaming", "--max-memory=800"]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Warning:"), "{stderr}");
+    assert!(xml.matches("xlink:href=").count() >= 20, "{}", xml.len());
+    let root_end = xml
+      .find("<document")
+      .map(|i| i + xml[i..].find('>').unwrap())
+      .expect("root");
+    assert!(
+      xml[..root_end].contains(r#"xmlns:xlink="http://www.w3.org/1999/xlink""#),
+      "the root declares xlink:\n{}",
+      &xml[..root_end]
+    );
+  }
+
   /// Streaming pass 1: an inline centered picture closes under
   /// `ltx:para > ltx:p > ltx:text > ltx:picture` (no `\par` inside the
   /// paragraph). `spill_prose_free_children` kept every such `ltx:p` whole

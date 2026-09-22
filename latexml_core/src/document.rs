@@ -97,6 +97,16 @@ pub struct Document {
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
   pub spilled_ids:               rustc_hash::FxHashSet<String>,
+  /// Streaming pass 1: every namespace PREFIX (`xlink`, `svg`, …) an element
+  /// or attribute of a spilled subtree used. `apply_document_namespace_
+  /// declarations` declares a prefix on the root only when it is used
+  /// (Perl behaviour) and scans the RESIDENT DOM; a prefix used solely inside
+  /// spilled segments (`xlink:href` on `svg:pattern`/`svg:use`) was serialized
+  /// unbound — six TikZ manuals flipped schema-invalid at the transition
+  /// watermark (atableau, circuitikzmanual, tikzlings-doc, tkz-grapheur-doc-en/
+  /// -fr, tzplot-doc; batch 56fr). Guard
+  /// `streaming_declares_namespaces_used_only_in_spilled_segments`.
+  pub spilled_ns_prefixes:       rustc_hash::FxHashSet<String>,
   // the rewrite labels used to be in each rewrite rule, but they make more sense in doc
   pub rewrite_labels:            HashMap<String, String>,
   /// Document-wide labels SHARED by every streaming pass-2 fragment, consulted
@@ -303,6 +313,7 @@ impl Document {
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
+      spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
       rewrite_labels:              HashMap::default(),
       rewrite_labels_shared:       None,
       pending:                     Vec::new(),
@@ -529,7 +540,10 @@ impl Document {
       }
       // Check if any descendant element uses this namespace prefix
       // by looking for namespace declarations on descendant elements
-      let has_usage = self.has_namespace_usage(root, &prefix);
+      // …on the resident DOM, or inside a subtree that streaming pass 1
+      // spilled to disk before this pass ran (`spilled_ns_prefixes`).
+      let has_usage =
+        self.spilled_ns_prefixes.contains(&prefix) || self.has_namespace_usage(root, &prefix);
       if has_usage {
         let attr_name = format!("xmlns:{prefix}");
         root.set_attribute(&attr_name, &ns_uri).ok();
@@ -4486,6 +4500,22 @@ impl Document {
     self.node_boxes.remove(&node.to_hashable());
     if node.get_type() != Some(NodeType::ElementNode) {
       return;
+    }
+    // Namespace prefixes this subtree uses leave the resident DOM with it;
+    // the root declaration pass consults `spilled_ns_prefixes` for them.
+    if let Some(ns) = node.get_namespace() {
+      let prefix = ns.get_prefix();
+      if !prefix.is_empty() {
+        self.spilled_ns_prefixes.insert(prefix);
+      }
+    }
+    for (key, _) in node.get_attributes() {
+      if let Some(colon) = key.find(':') {
+        let prefix = &key[..colon];
+        if !self.spilled_ns_prefixes.contains(prefix) {
+          self.spilled_ns_prefixes.insert(prefix.to_string());
+        }
+      }
     }
     for attr in [
       "about", "resource", "property", "typeof", "rel", "rev", "datatype",
