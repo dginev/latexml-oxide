@@ -119,7 +119,7 @@ pdflatex or lualatex only (no xelatex). Two readings of the set, both on s110:
 | completes with 0 Error lines | 1,241 (99.4 %), 7 short | 1,534 (99.1 %), 14 short |
 | ≥ 1 Warning line | 636 | 859 |
 | schema-valid | 1,216 (97.4 %), 32 invalid | 1,499 (96.8 %), 49 invalid |
-| content recall (s111, new auditor) | mean 93.2, **median 98.8**, 270 < 95, 172 < 90, **104 < 80** | corpus median 98.4; 93 docs < 60 |
+| content recall **of record** (s111, post-mono HTML, Unicode auditor) | mean 94.4, **median 98.9**, 242 < 95, 148 < 90, **88 < 80**, 38 < 60 | corpus median 98.6; 57 docs < 60 |
 
 Corrections to the first cut: "1,251 joined" was a sort-locale artifact (1,248 join); the
 loose `exit 0` filter admitted 4 docs whose pdflatex run logged `!` errors (typog-example
@@ -135,14 +135,13 @@ newpax external PDF-page inclusion, rusnat-ex1 bibliography empty, notebeamer de
 absent, biblatex2bibitem empty citations; a0poster's umlaut splits are the artifact case).
 
 Honest projection per bar (pdflatex-clean):
-1. **Error-free: near, not guaranteed.** The 7: bibarts and chessboard_and_beamer
-   (`Fatal:Mouth:EoF` on a scan-delimiter runaway, plus an undefined-CS gap — fixable
-   kernel items), bxcoloremoji-shortnames (graphicx not registered as loaded — binding),
-   upmethodology-doc (a figure file the bundle lacks but pdflatex resolved — search-path
-   divergence), and three engine/geometry probes that are likely out of scope or SHARED:
-   scanpages ("must be processed with pdf[la]tex"), gentombow ("pdfbox is driver-
-   dependent"), elzcards ("no space to print a card"). Perl parity on the 7 is unchecked
-   (`canvas-triage` first). Realistic: 4 fixes, 3 rulings.
+1. **Error-free: gated entirely on rulings, no open kernel item (triaged 2026-09-22).** All 7
+   are SHARED with Perl and already ruled: four are the K6 PDF-mode persona (`\pdfoutput=0`,
+   `\ifpdf` false — bxcoloremoji, gentombow, scanpages, upmethodology; a `\pdfoutput=1` persona
+   is a corpus-wide surpass needing a fresh ruling and sweep), chessboard_and_beamer is the
+   single-pass overlay model, elzcards is OD #99 (geometry body box), bibarts is the
+   write/rescan residue. Two small RUST-ONLY geometry side defects (eager `landscape` swap,
+   brace-comma option splitting) are open but do not move any document.
 2. **Schema-valid: reachable only as "valid or invalid by ruling".** The 32 split: 8 ruled
    dangling IDREF, 7 SHARED frontmatter-after-body (surpass decision), 6 mechanical
    (zx-calculus 8 `paragraph` in a list, principia 6 `angle`/`innerdepth` attributes,
@@ -151,7 +150,16 @@ Honest projection per bar (pdflatex-clean):
    chessboard: no root), 2 aomart M4/M5, 2 thuaslogos duplicate ids, 2 M4/M5-tension
    (ltnews, l3news — Perl places them cleanly). Work: 6 mechanical + 2 Fatals; decisions:
    dangling IDREF, frontmatter surpass, inline-leak surpass, thuaslogos, M4/M5 reopen.
-3. **Content: measured on s111 with the Unicode-aware auditor (the tail is real loss).** Then the sub-80 tail (100 docs) is themed work —
+3. **Content: measured on s111 with the Unicode-aware auditor over the post-mono HTML (the
+   recall of record — a core-XML pass mis-files every bibliography as loss, since the
+   bibliography is a post-stage artifact in both engines).** The remaining sub-80 tail on the
+   healthy set (88 docs) is, by the two triages of 2026-09-22, SHARED or artifact: locked
+   `\maketitle` title-page fields (14, Perl identical; a keyval `\maketitle` for uni-titlepage
+   would need a new binding file → ruling), letterheads in page heads (3, no page-head model),
+   beamer/grid/calendar furniture (17), code rendered to images (11), non-Latin script absent
+   (3: arabi, shipunov/russ — the one genuine kernel lead), external-PDF inclusion (1),
+   golden-PDF mismatches and pdftotext artifacts, and five Rust-WINS where Perl crashes. No
+   clean Rust-only recall lever remains in the tail. Then the sub-80 tail (100 docs) is themed work —
    bibliography rendering (27), beamer/slide/grid/titlepage furniture (37), non-Latin
    scripts (3), external PDF inclusion — each a real content class, not a metric fix. The
    auditor still needs umlaut/ligature normalization for the 90–95 band to be readable.
