@@ -59,7 +59,13 @@ for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at onc
 is **8 GB** from s110 on (`--max-memory=8192`, `ulimit -v 8912896`, user ruling).
 
 **Measured (axis 2):** s107 270 → s108 248 → s109 241 → s110 229 → **s111 222 invalid (2145/2367,
-90.6 %)**; binary 3e039d304c, 0 newly invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
+90.6 %)**; binary 3e039d304c, 0 newly invalid. Landed after s111: 56fx (ERROR-marker hoist, 8 → 0),
+56fy (XMText attribute gate, principia 6 → 0), 56ga (bib-resource scanner skips `\jobname`-style
+names; gitlog/incgraph post errors → 0), the Unicode-aware recall auditor, the 8 GB cap. Withdrawn:
+56fz (Perl's `FontDecodeString` map_max port: faithful, fixes russ_doc's Cyrillic, but Rust's accent
+composite emits precomposed char TOKENS that the digester cannot tell from raw bytes — 11 encoding
+fixtures red; needs the composite-token marker or an inputenc-table mouth decode, plus a utf8 default
+for `INPUT_ENCODING` — LEDGER row). Projection for s112 ≈ 212 invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
 pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
 trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
 56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
