@@ -16947,6 +16947,32 @@ c &= d
     assert!(!xml.contains("\\mybibfile"), "{xml}");
   }
 
+  /// 56ga: a raw package's `\addbibresource{\jobname.bib}` (incgraph-doc.sty:58,
+  /// gitlog.sty:111 `\gitLog@bibfile`) was recorded TWICE — expanded by the
+  /// native primitive and as the literal by the beyond-Perl dependency
+  /// scanner — and MakeBibliography then reported the literal as a missing
+  /// bibliography. The scanner leaves control-sequence names to the runtime.
+  /// (Core stage: the literal landed in the `files` attribute; the post error
+  /// was downstream of it.)
+  #[test]
+  fn addbibresource_macro_name_in_a_raw_package_resolves_once() {
+    let tex = "\\documentclass{article}\n\\usepackage{filecontents}\n\\begin{filecontents}{t.bib}\n\
+               @book{knuth84, author={Donald Knuth}, title={The TeXbook}, year={1984}}\n\\end{filecontents}\n\
+               \\usepackage{adbres}\n\\begin{document}\nSee \\cite{knuth84}.\n\\printbibliography\n\\end{document}\n";
+    let sty =
+      "\\ProvidesPackage{adbres}\n\\RequirePackage{biblatex}\n\\addbibresource{\\jobname.bib}\n";
+    let (stderr, xml) = convert_files(tex, &[("adbres.sty", sty)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("files=\"t.bib\""),
+      "the expanded resource is recorded once:\n{xml}"
+    );
+    assert!(
+      !xml.contains("\\jobname"),
+      "no literal control sequence in the resources:\n{xml}"
+    );
+  }
+
   /// biblatex.sty:11277-11283 `\addglobalbib`/`\addsectionbib` record
   /// resources like `\addbibresource` (biblatex-apa-test, shtthesis).
   #[test]

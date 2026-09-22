@@ -2528,7 +2528,14 @@ fn scan_bib_resources(code: &str) -> Vec<String> {
   for cap in BIBRES_RE.captures_iter(code) {
     for part in cap[1].split(',') {
       let name = part.trim();
-      if !name.is_empty() && !out.iter().any(|o: &String| o == name) {
+      // A name holding a control sequence (`\jobname.bib`, incgraph-doc.sty:58;
+      // `\gitLog@bibfile`, gitlog.sty:111; cleanthesis `\cthesis@bibfile`) is
+      // resolvable only at runtime, where the native `\addbibresource[]
+      // Expanded` (biblatex_sty.rs) already pushes its expansion; the literal
+      // can never name a file, and `\biblatex@printbibliography`'s exact-string
+      // dedup kept both, so MakeBibliography reported the literal as a
+      // missing bibliography (`Error:missing_file:\jobname.bib`; batch 56ga).
+      if !name.is_empty() && !name.contains('\\') && !out.iter().any(|o: &String| o == name) {
         out.push(name.to_string());
       }
     }
@@ -2539,6 +2546,17 @@ fn scan_bib_resources(code: &str) -> Vec<String> {
 #[cfg(test)]
 mod bib_resource_scan_tests {
   use super::scan_bib_resources;
+
+  /// A resource named through a control sequence is left to the runtime path.
+  #[test]
+  fn unexpanded_macro_names_are_skipped() {
+    assert_eq!(
+      scan_bib_resources(
+        "\\addbibresource{\\jobname.bib}\n\\addbibresource{\\gitLog@bibfile}\n\\addbibresource{refs.bib}"
+      ),
+      vec!["refs.bib".to_string()]
+    );
+  }
 
   /// A journal class shipped with the paper declares the bibliography itself —
   /// `journaleducation.cls` (witness 2605.23724, 0 -> 35 entries),
