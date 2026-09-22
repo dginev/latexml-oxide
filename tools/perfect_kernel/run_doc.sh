@@ -120,9 +120,10 @@ fi
 # 25/1 → 13/0, emoji-doc 3 → 0). Keep-the-better-run below discards the ones
 # that regress (jpnedumathsymbols-doc, pmhanguljamo-doc). Raw pTeX/encTeX/XeTeX
 # primitives are never defined (DIFFICULT_CASES D9).
+LEAK_RE='undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua|setCJKmainfont|newCJKfontfamily|setemojifont|kanjiskip|xkanjiskip|ltjsetparameter|reDeclareMathAlphabet|fontid|pagedir|bodydir) '
 if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
    && grep -qP "^$bundle\t$name\t(lualatex|xelatex)\t" "$ORACLE" \
-   && grep -qE 'undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua|setCJKmainfont|newCJKfontfamily|setemojifont|kanjiskip|xkanjiskip|ltjsetparameter|reDeclareMathAlphabet|fontid|pagedir|bodydir) ' "$out/$name.log"; then
+   && grep -qE "$LEAK_RE" "$out/$name.log"; then
   # This retry is SPECULATIVE (the oracle was not clean), so keep whichever run is
   # better: s107 turned latex-via-exemplos (pdfTeX: 2 errors, 10 s) into a 300 s
   # TokenLimit Fatal under luatex, and pmhanguljamo-kdoc (PARKED luatexko) from
@@ -132,19 +133,38 @@ if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
   first_exit=$exit_code
   first_err=$(grep -cE 'Error:[a-z_]+:' "$out/$name.log" || true)
   first_fatal=$(grep -cE 'Fatal:[A-Za-z_]+:' "$out/$name.log" || true)
+  first_leak=$(grep -cE "$LEAK_RE" "$out/$name.log" || true)
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
   printf 'first run (pdfTeX identity) leaked a Unicode-engine font command and the oracle engine is lualatex/xelatex; retried under luatex\n' >"$out/retried_luatex"
   run_once
   new_exit=$exit_code
   new_err=$(grep -cE 'Error:[a-z_]+:' "$out/$name.log" || true)
   new_fatal=$(grep -cE 'Fatal:[A-Za-z_]+:' "$out/$name.log" || true)
+  new_leak=$(grep -cE "$LEAK_RE" "$out/$name.log" || true)
+  # The error-line count is anti-correlated with schema validity here (batch
+  # 56fq, 2026-09-22): the pdfTeX run's font leak is TWO Error lines but the
+  # leaked arguments form a leading <para> that makes every frontmatter element
+  # after it invalid (4 jing errors), while the luatex run's extra Error lines
+  # are inline <ERROR> ink that the schema admits. pgfornament-han-doc went
+  # newly invalid in s108 because a pdfTeX-path improvement (16 < 19 errors)
+  # flipped this choice to the invalid run. A retry that RESOLVED the leak
+  # (no leaked font command left) and did not Fatal or time out is kept
+  # regardless of the error-line count; the error-count tie-break stays for
+  # retries that did not resolve it (pmhanguljamo-kdoc: luatexko primitives
+  # never defined → still leaking → falls through → pdfTeX kept).
+  leak_resolved=0
+  if (( first_leak > 0 && new_leak == 0 )); then leak_resolved=1; fi
   if (( new_exit == 124 && first_exit != 124 )) || (( new_fatal > first_fatal )) \
-     || (( new_fatal == first_fatal && new_err > first_err )); then
+     || (( new_fatal == first_fatal && new_err > first_err && leak_resolved == 0 )); then
     for ext in xml log stdout; do mv -f "$out/$name.pdftex.$ext" "$out/$name.$ext" 2>/dev/null || true; done
     exit_code=$first_exit
     printf 'luatex retry was WORSE (exit %s, %s fatals, %s errors vs pdfTeX exit %s, %s fatals, %s errors); kept the pdfTeX run\n' \
       "$new_exit" "$new_fatal" "$new_err" "$first_exit" "$first_fatal" "$first_err" >>"$out/retried_luatex"
   else
+    if (( leak_resolved == 1 && new_err > first_err )); then
+      printf 'luatex retry resolved the Unicode-font leak (%s → 0 leaked commands) and is kept although it logs more errors (%s vs %s): the leak is a leading <para> that invalidates the frontmatter, the extra errors are inline ink\n' \
+        "$first_leak" "$new_err" "$first_err" >>"$out/retried_luatex"
+    fi
     rm -f "$out/$name.pdftex."{xml,log,stdout}
   fi
 fi
