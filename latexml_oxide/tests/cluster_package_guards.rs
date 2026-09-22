@@ -14031,6 +14031,46 @@ Hello colored box.
     assert!(xml.contains("font=\"bold\""), "{xml}");
   }
 
+  /// Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): when the delimiter
+  /// never arrives, every scanned token is unread and the body is empty. A
+  /// `\verb` inside a pre-tokenized argument (`\footnote{…}`) can never meet
+  /// its ACTIVE delimiter (the `+` was frozen as OTHER), so Rust's reader ran
+  /// to the end of the argument and swallowed the rest of the note — a
+  /// `<item>` inside `<verbatim>` (platex-tools/plarray.tex:20, RUST-ONLY).
+  #[test]
+  fn verb_inside_pretokenized_argument_unreads_instead_of_running_away() {
+    let tex = r"\documentclass{article}
+\begin{document}
+Body\footnote{intro
+\begin{itemize}
+\item Remove extra \verb+abc+ around tabular environment
+\item Inhibit JFM glue
+\end{itemize}
+The package re-adds these.}.
+
+After the footnote, top-level \verb+abc+ works fine.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Warning:"), "{stderr}");
+    assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
+    // The footnote's `\verb` is an EMPTY verbatim (Perl's shape), not one
+    // that swallowed the second item.
+    assert!(
+      xml.contains("<verbatim/>"),
+      "the footnote \\verb is empty:\n{xml}"
+    );
+    assert!(
+      xml.contains("The package re-adds these."),
+      "the note tail survives:\n{xml}"
+    );
+    assert!(
+      xml.contains(r#"<verbatim font="typewriter">abc</verbatim>"#),
+      "top-level \\verb is unchanged:\n{xml}"
+    );
+  }
+
   /// latex.ltx:15504 `\verb@eol@error`: an unterminated `\verb` stops at the
   /// end of its line with ONE recoverable error instead of scanning across
   /// lines and swallowing a later `{verbatim}` (bigints manual; SHARED).

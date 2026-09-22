@@ -3537,15 +3537,30 @@ pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
     let eol = T_ACTIVE!('\r');
     let par = T_CS!("\\par");
     let mut body = Vec::new();
+    let mut terminated = false;
     while let Some(token) = read_token()? {
       if token == delim {
+        terminated = true;
         break;
       }
       if token == eol || token == par {
         Error!("unexpected", "\\verb", "\\verb ended by end of line", "");
+        terminated = true;
         break;
       }
       body.push(token);
+    }
+    if !terminated {
+      // Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens
+      // before the delimiter — unread everything scanned and return an EMPTY
+      // body. That is where a `\verb` inside a pre-tokenized argument
+      // (`\footnote{… \verb+x+ …}`) lands: the closing `+` was frozen as OTHER
+      // when the argument was read, so the ACTIVE delimiter never matches and
+      // the scan hits the end of the argument. Keeping the scanned tokens as
+      // the body swallowed the rest of the note (an `<item>` inside
+      // `<verbatim>`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
+      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
+      unread(Tokens::new(std::mem::take(&mut body)));
     }
     let body = Tokens::new(body);
     end_semiverbatim()?;
