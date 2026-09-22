@@ -472,13 +472,23 @@ pub(crate) fn load() -> Result<()> {
 
   DefConditional!("\\if@nmbrlist");
   def_macro_noop("\\@listctr")?;
-  DefPrimitive!("\\usecounter{}", sub[(counter)] {
-    let counter = Expand!(counter).to_string();
-    let counter_opt = if counter.is_empty() { None } else { Some(counter.as_str()) };
-    begin_itemize("list", counter_opt, BeginItemizeOptions {
-      nolevel: !counter.is_empty(),
-      ..BeginItemizeOptions::default() })?;
-  });
+  // latex.ltx:16048 verbatim: `\usecounter` is counter-only. Perl
+  // (latex_constructs.pool.ltxml:1642) made it the "start a list" hook —
+  // `beginItemize('list', …)`, whose `Let('\item' => '\list@item')` clobbers
+  // a raw package's own `\let\item\Bitem` (fancybox.sty:251; `\Benumerate`
+  // = `\Blist` + `\usecounter{\@enumctr}`, .sty:316, an `\halign` list whose
+  // items are `\cr`/`&`) into the `<ltx:item>` constructor: three nested
+  // `<item>`s inside one `<td>` (fancybox-doc.tex:542, 3 schema errors;
+  // Perl-origin, though Perl's own fancybox binding never reaches the raw
+  // code). The list-start moved to `\@trivlist`, where latex.ltx:15862 puts
+  // it (`\lx@trivlist@setup` below reads `\@listctr`). OXIDIZED_DESIGN #254;
+  // guards `perfect_kernel_batch56::{raw_halign_list_keeps_its_own_item,
+  // list_setup_counter_value_survives_into_the_items}` and
+  // tests/structure/itemize.tex.
+  DefMacro!(
+    "\\usecounter{}",
+    r"\@nmbrlisttrue\def\@listctr{#1}\setcounter{#1}\z@"
+  );
 
   // `\@listdepth` accounting mirrors latex.ltx:15852 (`\list` … `\global
   // \advance\@listdepth\@ne`) and :15913 (`\endlist` … `\global\advance
@@ -490,9 +500,21 @@ pub(crate) fn load() -> Result<()> {
   // nested" (memman: 88 errors from `adjustwidth`, memoir.cls:11268). Perl
   // (latex_constructs.pool.ltxml:1644/1651) shares the leak. Guard:
   // `perfect_kernel_batch54::endlist_decrements_listdepth`.
+  // latex.ltx:15848 `\list#1#2{… #2 … \@trivlist}` (numbered-ness there is
+  // `\if@nmbrlist`, :15860/:16024; the `\let\@listctr\@empty` proxy is Perl's,
+  // latex_constructs.pool.ltxml:1650) —
+  // the setup body runs first (a numbered list's `\usecounter` binds
+  // `\@listctr`), then `\@trivlist` starts the itemization (56fo; Perl
+  // called `\usecounter{}` itself for the unnumbered case and let the numbered
+  // case's `\usecounter` start the list from inside `#2`).
+  // The label lands in `\fnum@<\@listctr>` AFTER `\@trivlist`: an unnumbered
+  // list's `\@listctr` is the `@item` + level postfix `begin_itemize` assigns (`@itemi`,
+  // …), so defining it earlier, against the empty `\@listctr`, lost
+  // `\begin{list}{$\star$}…`'s label to the default bullet
+  // (tests/structure/itemize.tex, fonts/ding.tex).
   DefMacro!(
     r"\list{}{}",
-    r"\global\advance\@listdepth\@ne\let\@listctr\@empty#2\ifx\@listctr\@empty\usecounter{}\fi\expandafter\def\csname fnum@\@listctr\endcsname{#1}\lx@list"
+    r"\global\advance\@listdepth\@ne\let\@listctr\@empty#2\@trivlist\expandafter\def\csname fnum@\@listctr\endcsname{#1}"
   );
   DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
 
@@ -612,9 +634,24 @@ pub(crate) fn load() -> Result<()> {
   // ran `\usecounter`, which binds `itemcounter` in this frame) and opens
   // `\lx@list`. The kernel body's `\@noitemerr` paths are not reproduced
   // (a bare `\@trivlist` before any `\item` is fine).
+  // The counter is whatever `\list`'s setup body bound in `\@listctr`
+  // (latex.ltx:16048 `\usecounter`), with the VALUE that body left — the
+  // real `\usecounter` already zeroed it and a following `\setcounter` may
+  // have moved it (a continued list), so `begin_itemize` is told to start
+  // from that value instead of resetting (`start` = value + 1, the option's
+  // "first item gets" convention).
   DefPrimitive!("\\lx@trivlist@setup", {
     if !is_value_bound("itemcounter", Some(0)) {
-      begin_itemize("list", None, BeginItemizeOptions::default())?;
+      let counter = Expand!(Tokens!(T_CS!("\\@listctr"))).to_string();
+      if counter.is_empty() {
+        begin_itemize("list", None, BeginItemizeOptions::default())?;
+      } else {
+        let current = counter_value(&counter)?;
+        begin_itemize("list", Some(&counter), BeginItemizeOptions {
+          nolevel: true,
+          start: Some(Number(current.0 + 1)),
+          ..BeginItemizeOptions::default() })?;
+      }
     }
   });
   DefMacro!("\\@trivlist", "\\lx@trivlist@setup\\lx@list");

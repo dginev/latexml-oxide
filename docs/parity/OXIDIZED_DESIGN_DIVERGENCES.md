@@ -8180,3 +8180,35 @@ carries cas-common's `\author[marks]{name}[keyvals]` shape through the shared
 `\lx@add@author@keyvals` (guard `cas_author_trailing_keyvals_are_frontmatter`).
 **Upstream**: not filed (Perl leaks the
 same way; a class-shape-aware `\author` would be the upstream fix).
+### 254. `\usecounter` is counter-only (latex.ltx:16048); the list starts at `\@trivlist` (Perl: `\usecounter` starts the list)
+
+**Perl** (`latex_constructs.pool.ltxml:1642`) defines `\usecounter{ctr}` as
+`beginItemize('list', ctr, nolevel)` and its `\list` (`:1650`) calls
+`\usecounter{}` itself when the setup body bound no counter — the list-start
+hook lives in `\usecounter`. `beginItemize` does `Let('\item' => '\list@item')`
+(`:1312`), so a raw package that uses `\usecounter` for what LaTeX says it
+does — set `\@nmbrlist`, bind `\@listctr`, zero the counter — while running
+its OWN list machinery has its `\item` clobbered: fancybox.sty:251 `\let\item
+\Bitem` + :316 `\Benumerate` → `\usecounter{\@enumctr}`, an `\halign` list
+whose items are `\cr`/`&`, rendered three nested `<ltx:item>` inside one
+`<ltx:td>` (fancybox-doc.tex:542; 3 schema errors). The mechanism is
+Perl-origin (probe: `\let\item\myitem \usecounter{enumi} \item` raises
+`malformed:ltx:item` in both engines), but Perl's own fancybox binding never
+reaches the raw code (it defines four boxes and errors on every
+`B*` environment: 101 errors on the manual), whereas Rust loads fancybox raw
+(`fancybox_sty.rs`, `noltxml`). **Rust** (`latex_constructs/sect06.rs`):
+`\usecounter` is latex.ltx:16048 verbatim
+(`\@nmbrlisttrue\def\@listctr{#1}\setcounter{#1}\z@`); `\list{}{}` runs its
+setup body and ends in `\@trivlist` (latex.ltx:15848/15862); `\lx@trivlist@setup`
+reads `\@listctr` and calls `begin_itemize("list", ctr, nolevel)` — with
+`start` = the counter's current value + 1, so the value the setup body left
+(zeroed by the real `\usecounter`, possibly moved by a following
+`\setcounter` to continue a list) reaches the items instead of being reset
+again. `itemize`/`enumerate`/`description` call `begin_itemize` directly and
+are untouched; `enumitem` builds its own lists. **Guards**:
+`perfect_kernel_batch56::{raw_halign_list_keeps_its_own_item,
+list_setup_counter_value_survives_into_the_items}`, `tests/structure/itemize.tex`
+(five `\begin{list}…\usecounter` shapes), the `endlist_*` guards. **Upstream**:
+worth filing — a raw `\usecounter` outside `\list` starts a phantom list in
+Perl.
+

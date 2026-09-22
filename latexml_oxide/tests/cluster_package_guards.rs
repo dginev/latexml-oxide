@@ -14117,6 +14117,56 @@ After.
     assert!(xml.contains("bad."), "{xml}");
   }
 
+  /// latex.ltx:16048 `\usecounter` is counter-only; LaTeXML made it the
+  /// list-start hook, whose `\let\item\list@item` clobbered fancybox's
+  /// `\let\item\Bitem` (fancybox.sty:251, 316: `\Benumerate` is an `\halign`
+  /// list) — three nested `<item>`s inside one `<td>` (fancybox-doc.tex:542).
+  #[test]
+  fn raw_halign_list_keeps_its_own_item() {
+    let tex = r"\documentclass{article}
+\usepackage{fancybox}
+\begin{document}
+\fbox{\begin{Benumerate}\item Groceries\item Hamster cages\end{Benumerate}}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("<item"),
+      "no <item> in an \\halign list:\n{xml}"
+    );
+    assert_eq!(xml.matches("<tr").count(), 2, "one row per \\Bitem:\n{xml}");
+    assert!(
+      xml.contains("Groceries") && xml.contains("Hamster cages"),
+      "{xml}"
+    );
+  }
+
+  /// The list-start moved from `\usecounter` to `\@trivlist` (latex.ltx:15862):
+  /// the counter value the setup body left (`\usecounter` zeroes it, a later
+  /// `\setcounter` continues a list) must reach the items unchanged.
+  #[test]
+  fn list_setup_counter_value_survives_into_the_items() {
+    let tex = r"\documentclass{article}
+\newcounter{ctr}
+\begin{document}
+\begin{list}{\arabic{ctr}.}{\usecounter{ctr}\setcounter{ctr}{5}}
+\item Six
+\item Seven
+\end{list}
+\begin{list}{\arabic{ctr}.}{\usecounter{ctr}}
+\item One
+\end{list}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<item ").count(), 3, "{xml}");
+    for tag in ["<tag>6.</tag>", "<tag>7.</tag>", "<tag>1.</tag>"] {
+      assert!(xml.contains(tag), "{tag}:\n{xml}");
+    }
+  }
+
   /// `\endlist` = `\endlx@list` = endMode('internal_vertical') (Perl
   /// latex_constructs.pool.ltxml:1651-1653) also closes an enumerate opened
   /// by its begin macro: nih/denselists.sty:16 `\newenvironment{Enumerate}
