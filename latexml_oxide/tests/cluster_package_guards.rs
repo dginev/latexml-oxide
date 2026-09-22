@@ -14117,6 +14117,58 @@ After.
     assert!(xml.contains("bad."), "{xml}");
   }
 
+  /// A `\list` nested in a list that never rebound `\@listctr` (memoir.cls:4580
+  /// `\list` has no `\let\@listctr\@empty`; `adjustwidth` = `\begin{list}`,
+  /// memoir.cls:11267) inherits the OUTER list's counter. Routing that into
+  /// `begin_itemize` made `\the<ctr>@ID` point through the new list's id back
+  /// to itself — `Fatal:Timeout:PushbackLimit` (memman, dlfltxbcodetips in
+  /// s109). Perl's `\list` skips its list-start when the setup body left a
+  /// counter bound, so an inherited counter never starts a numbered list.
+  #[test]
+  fn list_inheriting_the_outer_counter_starts_an_unnumbered_list() {
+    let tex = r"\documentclass{memoir}
+\begin{document}
+\begin{description}
+\item[x] a
+\begin{adjustwidth}{1cm}{1cm}
+nested
+\end{adjustwidth}
+\end{description}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("<item ") && xml.contains("nested"), "{xml}");
+  }
+
+  /// jmlrutils.sty:408 `{enumerate*}` = `\list{…}{\@nmbrlisttrue\def\@listctr{enumi}…}`
+  /// — continuous numbering, so a NESTED `enumerate*` reuses `enumi`. Same
+  /// self-referential id chain (pmlr-sample in s109).
+  #[test]
+  fn list_reusing_the_outer_counter_does_not_loop() {
+    let tex = r"\documentclass[pmlr]{jmlr}
+\jmlrvolume{1}\jmlryear{2010}\jmlrworkshop{W}
+\title{T}\author{\Name{A} \Email{a@b.com}}
+\begin{document}\maketitle
+\begin{enumerate*}
+  \item outer
+  \begin{enumerate*}
+    \item inner
+    \begin{enumerate*}
+      \item[] innermost
+    \end{enumerate*}
+  \end{enumerate*}
+\end{enumerate*}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert_eq!(xml.matches("<item ").count(), 3, "{xml}");
+    assert!(xml.contains("innermost"), "{xml}");
+  }
+
   /// latex.ltx:16048 `\usecounter` is counter-only; LaTeXML made it the
   /// list-start hook, whose `\let\item\list@item` clobbered fancybox's
   /// `\let\item\Bitem` (fancybox.sty:251, 316: `\Benumerate` is an `\halign`

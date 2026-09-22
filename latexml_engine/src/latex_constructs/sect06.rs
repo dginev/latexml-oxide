@@ -640,10 +640,65 @@ pub(crate) fn load() -> Result<()> {
   // have moved it (a continued list), so `begin_itemize` is told to start
   // from that value instead of resetting (`start` = value + 1, the option's
   // "first item gets" convention).
+  // A counter that an ENCLOSING list (at any depth) already numbers with — inherited, because a raw
+  // `\list` (memoir.cls:4580, latex.ltx verbatim) never rebinds `\@listctr`
+  // and `adjustwidth` (memoir.cls:11267) is `\begin{list}` nested in an
+  // itemize/description; or reused on purpose, jmlrutils.sty:408
+  // `{enumerate*}` = `\def\@listctr{enumi}` for continuous numbering — must
+  // NOT start a numbered list on it: `begin_itemize` builds
+  // `\the<ctr>@ID` relative to the new list's id, which is relative to the
+  // outer `\the<ctr>@ID` — a self-referential pair that expands forever
+  // (`Fatal:Timeout:PushbackLimit`: memman, dlfltxbcodetips, pmlr-sample in
+  // s109; batch 56fs). Perl's `\list` (latex_constructs.pool.ltxml:1643)
+  // skips its list-start whenever the setup body left a counter bound and
+  // its `\@trivlist` is `\relax`, so an inherited counter never reaches
+  // `beginItemize` there. Guards
+  // `list_inheriting_the_outer_counter_starts_an_unnumbered_list`,
+  // `list_reusing_the_outer_counter_does_not_loop`.
+  /// Does the `\the<start>@ID` formatter chain reach `\the<target>@ID`?
+  /// `begin_itemize` defines each list's `\the<usecounter>@ID` through its
+  /// own `\the<listcounter>@ID`, which is defined through the enclosing
+  /// list's `\the<outerusecounter>@ID` — so the open lists form a chain of
+  /// `\the…@ID` macros. Walking the bodies (never expanding) is bounded by
+  /// the nesting depth.
+  fn list_id_chain_reaches(start: &str, target: &str) -> Result<bool> {
+    let target_cs = T_CS!(s!("\\the{target}@ID"));
+    let mut frontier = vec![T_CS!(s!("\\the{start}@ID"))];
+    let mut seen: Vec<Token> = Vec::new();
+    while let Some(cs) = frontier.pop() {
+      if cs == target_cs {
+        return Ok(true);
+      }
+      if seen.contains(&cs) || seen.len() > 64 {
+        continue;
+      }
+      seen.push(cs);
+      if let Some(defn) = lookup_definition(&cs)?
+        && defn.is_expandable()
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        for t in body.unlist_ref() {
+          if t.get_catcode() == Catcode::CS
+            && t.with_cs_name(|n| n.starts_with("\\the") && n.ends_with("@ID"))
+          {
+            frontier.push(*t);
+          }
+        }
+      }
+    }
+    Ok(false)
+  }
   DefPrimitive!("\\lx@trivlist@setup", {
     if !is_value_bound("itemcounter", Some(0)) {
       let counter = Expand!(Tokens!(T_CS!("\\@listctr"))).to_string();
-      if counter.is_empty() {
+      // Numbering this list with `counter` would define `\the<counter>@ID`
+      // relative to the enclosing list's `\the<itemcounter>@ID`; if that
+      // chain already leads back to `\the<counter>@ID` — the counter is the
+      // enclosing list's own, or an ancestor's (three nested `enumerate*`
+      // reach `enumi` through the middle, unnumbered level:
+      // pmlr-sample.tex:619) — the pair would be self-referential.
+      let outer = lookup_string("itemcounter");
+      if counter.is_empty() || (!outer.is_empty() && list_id_chain_reaches(&outer, &counter)?) {
         begin_itemize("list", None, BeginItemizeOptions::default())?;
       } else {
         let current = counter_value(&counter)?;
