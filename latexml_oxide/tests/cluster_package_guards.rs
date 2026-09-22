@@ -14967,6 +14967,23 @@ Some text.
     assert!(xml.contains("<document"), "the root survives:\n{xml}");
     assert!(xml.contains("Body survives."), "{xml}");
   }
+  /// A conversion whose document never opened its root (an undefined `\ifX`
+  /// in the main file skipped `\begin{document}` through EOF: xwatermark-guide,
+  /// skeyval-pokayoke2) wrote a bare XML declaration and reported status 2.
+  /// Empty output is a Fatal — the messages are the success signal.
+  #[test]
+  fn document_without_a_root_is_a_fatal() {
+    let tex = "\\documentclass{article}\n\\ifdefTF\\relax{}{}\n\\begin{document}\nBody eaten.\n\\end{document}\n";
+    // The CLI path (`Converter::convert`), which the corpus harness and
+    // cortex_worker use; the editor's in-process fragment fallback is exempt.
+    let (stderr, xml) = convert_args(tex, &[]);
+    assert!(stderr.contains("Error:expected:\\fi"), "{stderr}");
+    assert!(
+      stderr.contains("Fatal:Document:Malformed"),
+      "an output with no root element is a Fatal:\n{stderr}"
+    );
+    assert!(!xml.contains("<document"), "{xml}");
+  }
   /// Streaming: the root's `xmlns:PREFIX` declarations were computed from the
   /// RESIDENT DOM only (`apply_document_namespace_declarations`), so a prefix
   /// used solely inside spilled segments — `xlink:href` on `svg:pattern`/

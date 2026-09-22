@@ -8236,3 +8236,24 @@ schema errors); it now stays in the box and is reported exactly as Perl reports
 it, and the list keeps its five siblings. Guard
 `perfect_kernel_batch56::bibliography_in_a_list_item_box_keeps_the_list`.
 **Upstream**: none (Perl's placement is the conservative one).
+### 256. A built document with no root element is a Fatal (Perl: status 2 with a bare XML declaration)
+
+**Perl** writes the 39-byte `<?xml version="1.0" encoding="UTF-8"?>` when
+`\begin{document}` was never digested — typically an undefined `\ifX`
+auto-`\newif`ed to `\iffalse` (State.pm:532) whose skip ran to EOF and
+swallowed the body (`Missing \fi or \else, conditional fell off end`) — and
+reports status 2: errors, but "output". xwatermark-guide (its class is
+missing, so etoolbox's `\ifdefTF` is undefined) and skeyval-pokayoke2 are the
+corpus witnesses; both engines produce the same empty file. **Rust**
+(`converter.rs` `note_rootless_document`, at the three build-success sites of
+the full-document `convert` path — CLI, corpus harness, cortex_worker; the
+editor's in-process fragment fallback is exempt, a snippet without
+`\begin{document}` being a legitimate state) raises `Fatal:Document:Malformed`
+when the built document has no root element and no Fatal is already on record
+(a `TooManyErrors` or resource fuse explains the loss itself), so the run is
+status 3 and the loss is named — the messages are the success signal (user rule 2026-09-22: every
+Warning/Error/Fatal emitted and counted; an empty output without a Fatal is a
+silent whole-document loss). The empty file is still written. Formats that
+serialize digested boxes rather than a DOM (TeX/Box) are not checked. Guard
+`perfect_kernel_batch56::document_without_a_root_is_a_fatal`. **Upstream**:
+worth proposing — Perl's `Fatal` on an empty document would cost nothing.

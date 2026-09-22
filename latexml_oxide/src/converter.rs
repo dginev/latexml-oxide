@@ -354,6 +354,7 @@ impl Converter {
       };
       let serialized = match dom_result {
         Ok(dom) => {
+          note_rootless_document(&dom);
           let _g = telemetry::phase(Phase::Serialize);
           dom.serialize_to_string()
         },
@@ -406,6 +407,7 @@ impl Converter {
     let digest_result = match digest_result {
       Ok(crate::core_interface::AdaptiveOutcome::Streamed(dom)) => {
         let dom = *dom;
+        note_rootless_document(&dom);
         // Pass 1 + pass 2 + finalize already ran; serialize like the
         // `--streaming` branch above.
         let serialized = {
@@ -476,6 +478,7 @@ impl Converter {
         };
         match dom_result {
           Ok(dom) => {
+            note_rootless_document(&dom);
             let _g = telemetry::phase(Phase::Serialize);
             dom.serialize_to_string()
           },
@@ -680,6 +683,9 @@ impl Converter {
       let _g = telemetry::phase(Phase::Build);
       match self.core.convert_document(digested) {
         Ok(dom) => {
+          // No `note_rootless_document` here: this in-process entry is also
+          // the editor's fallback for a fragment without `\begin{document}`
+          // (lsp_server/server.rs), a legitimate transient state.
           let _g = telemetry::phase(Phase::Serialize);
           dom.serialize_to_string()
         },
@@ -828,6 +834,34 @@ pub(crate) fn resolve_amble(
       ),
     ),
     _ => (None, None),
+  }
+}
+
+/// A built document with no root element — `\begin{document}` was never
+/// digested, typically because an unbalanced `\ifX` (an undefined conditional
+/// auto-`\newif`ed to `\iffalse`) skipped it through EOF — is a FATAL, not
+/// an output. Both engines write the bare XML declaration for it (Perl too:
+/// xwatermark-guide), but reporting it as status 2 with "output" hid a whole-
+/// document loss behind an `Error:expected:\fi` line (skeyval-pokayoke2,
+/// thesis-sample, xwatermark-guide in sweeps s109/s110). The messages are the
+/// success signal, so the loss is named here — on the full-document `convert`
+/// path (CLI, corpus harness, cortex_worker); the editor's in-process
+/// fragment fallback is exempt. `Fatal!` logs and latches the sticky fatal at
+/// the raise; the `Err` is not needed — serialization of the empty document
+/// proceeds as before. Guard
+/// `perfect_kernel_batch56::document_without_a_root_is_a_fatal`.
+fn note_rootless_document(dom: &Document) {
+  // A Fatal already on record (TooManyErrors, a resource fuse) explains the
+  // loss; do not add a second line for the same event.
+  if dom.get_document().get_root_element().is_none() && get_status_code() < 3 {
+    let _: Result<()> = (|| {
+      Fatal!(
+        Document,
+        Malformed,
+        "The conversion built a document with no root element: \\begin{document} was never \
+         reached (an unbalanced conditional skipped it?); the output is empty"
+      );
+    })();
   }
 }
 
