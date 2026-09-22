@@ -19002,6 +19002,79 @@ B:\ifcat A西 L\else O\fi.
     assert!(xml.contains("<title>Contents</title>"), "{xml}");
   }
 
+  /// 56fh — `\left`/`\right` reached in text mode are plain characters, as in
+  /// Perl (`TeXDelimiter` digests the delimiter in the current mode; the XMTok
+  /// decoration applies only to an element). A beamer frame strips `$$`, so
+  /// `$$\left[ x \right]$$` is text there (hitszbeamer/main), and egpeirce's
+  /// `\marginnote{…\left\lfloor…\right\rfloor…}` likewise; the constructor used
+  /// to emit `<ltx:XMTok>` under `<p>` (RUST-ONLY, schema-invalid).
+  #[test]
+  fn left_right_in_text_mode_are_plain_text() {
+    let tex = "\\documentclass{article}\n\\begin{document}\nText \\left[ x \\right] done.\n\n\
+               Math $\\left[ x \\right]$ too.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let p_end = xml.find("done.</p>").expect("the text paragraph");
+    assert!(
+      !xml[..p_end].contains("<XMTok"),
+      "no XMTok before/inside the text paragraph:\n{xml}"
+    );
+    assert!(xml.contains("<p>Text [ x ] done.</p>"), "{xml}");
+    // The math-mode path is untouched: the fences are XMToks with roles.
+    assert!(xml.contains("role=\"OPEN\""), "{xml}");
+    assert!(xml.contains("role=\"CLOSE\""), "{xml}");
+  }
+
+  /// 56fh — ascmac's boxed environments are block boxes through `insert_block`
+  /// (as framed/mdframed): in a `<figure>` the box is a `<block>`, not a bare
+  /// `<para>` (schema-invalid; chemobabel-en/-ja, RUST-ONLY). The itembox title
+  /// rides along as the block's first `ltx:note`.
+  #[test]
+  fn ascmac_screen_inside_a_figure_is_a_block() {
+    let tex = "\\documentclass{article}\n\\usepackage{ascmac}\n\\begin{document}\n\
+               \\begin{figure}[ht]\n\\centering\nBelow is a short description:\\par\n\
+               \\begin{screen}\nThis package provides a way to convert graphics.\n\\end{screen}\n\
+               \\caption{A figure}\n\\end{figure}\n\n\
+               \\begin{itembox}[l]{Note title}\nBoxed note body.\n\\end{itembox}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let fig = xml.find("<figure ").expect("figure");
+    let fig_end = xml[fig..].find("</figure>").map(|k| fig + k).unwrap();
+    let figure = &xml[fig..fig_end];
+    assert!(
+      !figure.contains("<para "),
+      "no bare para in the figure:\n{figure}"
+    );
+    // `insert_block` picks the figure's own panel shape (Perl's raw ascmac run
+    // yields the same `ltx_figure_panel` p), carrying the box class + frame.
+    assert!(
+      figure.contains(
+        "<p align=\"center\" class=\"ltx_ascmac_screen ltx_figure_panel\" framed=\"rectangle\">\
+         This package provides a way to convert graphics.</p>"
+      ),
+      "the screen is a framed figure panel:\n{figure}"
+    );
+    // The title is the FIRST child of the box content, before the body text
+    // (`insert_block` returns the content `<p>`; the note is prepended there).
+    assert!(
+      xml.contains("<p><note role=\"itembox-title\">Note title</note>Boxed note body.</p>"),
+      "the itembox title precedes its body inside the box:\n{xml}"
+    );
+  }
+
+  /// 56fh — a `\left.` / `\right.` reached in text mode emits nothing (its
+  /// math-only `<ltx:XMHint/>` would be as invalid under `<p>` as the XMTok).
+  #[test]
+  fn left_dot_in_text_mode_emits_no_math_hint() {
+    let tex = "\\documentclass{article}\n\\begin{document}\nText \\left. x \\right. done.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<XMHint"), "{xml}");
+    // The hint's own tokens leave nothing behind (the two spaces flank where
+    // the `\left.`/`\right.` stood).
+    assert!(xml.contains("<p>Text  x  done.</p>"), "{xml}");
+  }
+
   /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
   /// `\subsection` would), and the post-box text ends up inside that subsection.
   #[test]

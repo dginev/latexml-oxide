@@ -1076,9 +1076,18 @@ LoadDefinitions!({
     reversion => Tokens!());
 
   DefConstructor!("\\@left Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
-      (?#hint(<ltx:XMHint/>)(#1))",
+    "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
+      (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
+      // Perl `TeXDelimiter` (TeX_Math.pool.ltxml:712-724) digests the delimiter
+      // in the CURRENT mode and `augmentDelimiterProperties` (:804-811)
+      // decorates it only when it is an element: a `\left[ x \right]` reached
+      // in text mode (a beamer frame that strips `$$`, egpeirce's
+      // `\marginnote{…\left\lfloor…}`) is plain text there, while this
+      // constructor emitted `<ltx:XMTok>` unconditionally — an XMTok under
+      // `<p>`, schema-invalid (hitszbeamer/main, egpeirce-doc). Guard:
+      // `perfect_kernel_batch56::left_right_in_text_mode_are_plain_text`.
+      whatsit.set_property("inmath", lookup_bool("IN_MATH"));
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       if delim == "." {
         whatsit.set_property("hint", true); }
@@ -1133,9 +1142,18 @@ LoadDefinitions!({
     },
     alias => "\\left");
   DefConstructor!("\\@right Token",
-    "?#char(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)\
-      (?#hint(<ltx:XMHint/>)(#1))",
+    "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
+      (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
+      // Perl `TeXDelimiter` (TeX_Math.pool.ltxml:712-724) digests the delimiter
+      // in the CURRENT mode and `augmentDelimiterProperties` (:804-811)
+      // decorates it only when it is an element: a `\left[ x \right]` reached
+      // in text mode (a beamer frame that strips `$$`, egpeirce's
+      // `\marginnote{…\left\lfloor…}`) is plain text there, while this
+      // constructor emitted `<ltx:XMTok>` unconditionally — an XMTok under
+      // `<p>`, schema-invalid (hitszbeamer/main, egpeirce-doc). Guard:
+      // `perfect_kernel_batch56::left_right_in_text_mode_are_plain_text`.
+      whatsit.set_property("inmath", lookup_bool("IN_MATH"));
       let delim = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       if delim == "." {
         whatsit.set_property("hint", true); }
