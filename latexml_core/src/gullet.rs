@@ -2376,22 +2376,16 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
         }
       },
       CheckedRead::Exhausted => {
-        // Current mouth exhausted. Try closing if autoclosable and there are
-        // more mouths on the stack (TeX continues reading across input boundaries).
-        let (autoclose, stack_len) = {
-          let gullet = gullet!();
-          let ac = gullet
-            .runtime
-            .as_ref()
-            .map(|r| r.autoclose)
-            .unwrap_or(false);
-          let sl = gullet.mouthstack.len();
-          (ac, sl)
-        };
-        if autoclose && stack_len > 0 {
-          close_mouth(false)?;
-          continue;
-        }
+        // The current mouth is exhausted: the skip ENDS here, like Perl's
+        // `skipConditionalBody` (Core/Definition/Conditional.pm:127), which
+        // reads `$$gullet{mouth}->readToken()` — the current mouth only —
+        // and reports "conditional fell off end". Only `read_x_token`'s
+        // normal reading crosses an input boundary (Perl `readXToken`,
+        // Gullet.pm:393); `read_token` (above) does not either. Crossing here
+        // let an `\ifX` left open by an `\input`ed preamble file devour the
+        // PARENT file's `\begin{document}` through EOF — a 39-byte output
+        // with no root (thesis-sample; RUST-ONLY, Perl keeps the body). Guard
+        // `conditional_skip_stops_at_the_input_file_boundary`.
         return Ok(None);
       },
     }

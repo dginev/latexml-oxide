@@ -14948,6 +14948,25 @@ Some text.
     assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
   }
 
+  /// Perl `skipConditionalBody` (Core/Definition/Conditional.pm:127) reads the
+  /// CURRENT mouth only, so an `\ifX` left open by an `\input`ed preamble
+  /// file "falls off the end" of that file; Rust's skipper crossed into the
+  /// parent and devoured `\begin{document}` through EOF — a 39-byte output
+  /// with no root (thesis-sample; RUST-ONLY).
+  #[test]
+  fn conditional_skip_stops_at_the_input_file_boundary() {
+    let tex = "\\documentclass{article}\n\\input{openif.tex}\n\\begin{document}\nBody survives.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[("openif.tex", "\\ifmadeupcond\n")]);
+    assert!(
+      stderr.contains("Error:undefined:\\ifmadeupcond"),
+      "{stderr}"
+    );
+    assert!(stderr.contains("Error:expected:\\fi"), "{stderr}");
+    assert_eq!(error_count(&stderr), 2, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(xml.contains("<document"), "the root survives:\n{xml}");
+    assert!(xml.contains("Body survives."), "{xml}");
+  }
   /// Streaming: the root's `xmlns:PREFIX` declarations were computed from the
   /// RESIDENT DOM only (`apply_document_namespace_declarations`), so a prefix
   /// used solely inside spilled segments — `xlink:href` on `svg:pattern`/
