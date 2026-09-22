@@ -474,7 +474,19 @@ impl Mouth {
       let metadata = std::fs::metadata(pathname);
       match &metadata {
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-          fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
+          // Perl Mouth/file.pm:32-41 `openFile`: an unreadable/unopenable file
+          // is a recoverable `Error('I/O', …)` and the mouth stays empty —
+          // callers pre-check with FindFile, so this is a race or a stale
+          // path, not a reason to abort the document. (It was a `fatal!`
+          // here, which since 56fc logs at the raise: a probing `\openin`
+          // then surfaced `Fatal:Mouth:MissingFile` — s108, four docs.)
+          Error!(
+            "I/O",
+            pathname,
+            s!("Can't find file {}", pathname),
+            "Reading it as empty"
+          );
+          return Ok(());
         },
         Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
           Error!(

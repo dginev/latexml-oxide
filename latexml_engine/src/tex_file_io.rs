@@ -59,29 +59,28 @@ LoadDefinitions!({
     // Perl: NOT noltxml! \openin is often used to check file existence,
     // and we SHOULD find .ltxml (binding) versions too.
     if let Some(path) = find_file(&filename, None) {
-      let content_str = vfs_read(&path).unwrap_or_default();
-      let content = if content_str.is_empty() {
-        None
-      } else {
-        Some(content_str)
+      // `\openin` is a PROBE (tex.web §1275: a file that cannot be opened
+      // just leaves the stream closed, `\ifeof` true) — it must never reach
+      // the mouth's open-failure diagnostics. A virtual file that `\openout`
+      // registered and has not been written yet is a real, EMPTY file (Perl
+      // parity: the raw name resolves to an empty mouth), so `Some("")` is kept
+      // as content; a path that is neither virtual nor on disk (a binding-only
+      // name find_file admits) gets an empty mouth WITHOUT touching the disk —
+      // minitoc's `\openin\@inputcheck\jobname.mtc0`, frenchle's `.aux_LE`,
+      // chapterbib's `.cb` made `Fatal:Mouth:MissingFile` in sweep s108 once
+      // the open-failure `fatal!` logged at the raise (cahierprof-doc,
+      // fepslatex, pst-eucl-docBG, ArsClassica-de; 0 diagnostics in Perl).
+      // Guard: `perfect_kernel_batch56::openin_of_a_missing_or_unwritten_file_is_silent`.
+      let content = match vfs_read(&path) {
+        Some(virtual_content) => Some(virtual_content),
+        None if std::path::Path::new(&path).is_file() => None,
+        None => Some(String::new()),
       };
-      // Try to create a Mouth for the file. If it fails (e.g., binding-only
-      // file with no disk counterpart), create an empty Mouth so \ifeof
-      // returns false (file exists but has no content to read).
-      match Mouth::create(&path, MouthOptions {
+      let mouth = Mouth::create(&path, MouthOptions {
         content,
         .. MouthOptions::default()
-      }) {
-        Ok(mouth) => {
-          AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
-        }
-        Err(_) => {
-          // File was found by find_file (possibly as a binding) but
-          // doesn't exist on disk. Create an empty mouth so \ifeof=false.
-          let empty_mouth = Mouth::create("literal:", MouthOptions::default())?;
-          AssignValue!(&s!("input_file:{}", port), empty_mouth, Some(Scope::Global));
-        }
-      }
+      })?;
+      AssignValue!(&s!("input_file:{}", port), mouth, Some(Scope::Global));
     }
   });
   DefPrimitive!("\\closein Number", sub[(port)] {

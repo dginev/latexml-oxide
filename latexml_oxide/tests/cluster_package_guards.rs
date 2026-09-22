@@ -19062,6 +19062,36 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56fi — `\openin` is a probe (tex.web §1275): a file that cannot be
+  /// opened leaves `\ifeof` true, with NO diagnostic; a file `\openout`
+  /// registered but has not written yet is a real, empty file (`\ifeof` false
+  /// until read). Sweep s108 showed `Fatal:Mouth:MissingFile` on exactly this
+  /// probe (minitoc `.mtc0`, frenchle `.aux_LE`, chapterbib `.cb`: cahierprof-doc,
+  /// fepslatex, pst-eucl-docBG, ArsClassica-de) once the mouth's open-failure
+  /// `fatal!` logged at the raise (56fc); Perl reports nothing there.
+  #[test]
+  fn openin_of_a_missing_or_unwritten_file_is_silent() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\
+               \\newread\\probe\n\
+               \\openin\\probe=definitely-not-here.mtc0\\relax\n\
+               \\ifeof\\probe Missing.\\else Present.\\fi\\closein\\probe\n\n\
+               \\newwrite\\out\\immediate\\openout\\out=\\jobname.mtc0\\relax\n\
+               \\openin\\probe=\\jobname.mtc0\\relax\n\
+               \\ifeof\\probe Unopened.\\else Opened.\\fi\\closein\\probe\\immediate\\closeout\\out\n\
+               \\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !stderr.contains("Fatal:"),
+      "a probe is never fatal:\n{stderr}"
+    );
+    assert!(xml.contains("<p>Missing.</p>"), "{xml}");
+    assert!(
+      xml.contains("<p>Opened.</p>"),
+      "an \\openout-registered file exists (empty):\n{xml}"
+    );
+  }
+
   /// 56fh — a `\left.` / `\right.` reached in text mode emits nothing (its
   /// math-only `<ltx:XMHint/>` would be as invalid under `<p>` as the XMTok).
   #[test]
