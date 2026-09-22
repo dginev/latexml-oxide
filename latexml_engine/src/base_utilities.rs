@@ -5472,9 +5472,19 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
     let child = children.pop().unwrap();
     document.copy_node_font(&child, &mut text_node)?;
     for (key, value) in child.get_attributes() {
-      // Copy the child's attributes (should Merge!!)
-      if key != "xml:id" {
-        text_node.set_attribute(&key, &value)?;
+      // Copy the child's attributes (should Merge!!) — through the schema-gated
+      // setter: a collapsed `\rotatebox`/`\raisebox` inline-block hands over
+      // `angle`/`innerdepth`/`innerwidth`/`xtranslate`…, none of which
+      // `XMText_attributes` (LaTeXML-math.rnc:223) admits. Perl's own copy here
+      // (TeX_Math.pool.ltxml:260) is raw too, yet its OUTPUT keeps only the
+      // model's attributes (`depth height width yoffset rpadding …`; verified on
+      // the forced-unparsed witness) — this setter reproduces that output. The
+      // raw copy showed only when the math failed to parse (`ltx_math_unparsed`
+      // keeps this XMText; a parse rebuilds it): principia's `\pmcexists`, six
+      // schema errors on one XMText, Perl clean (batch 56fy). `xml:id` arrives
+      // from rust-libxml under its LOCAL name `id`; Perl skips it (`:260`).
+      if key != "id" && key != "xml:id" {
+        document.set_attribute(&mut text_node, &key, &value)?;
       }
     }
     document.unwrap_nodes(child)?;

@@ -18791,6 +18791,37 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56fy: `cleanup_xmtext` collapses a sole inline-block child into the
+  /// `XMText` and copied its attributes raw — a `\rotatebox`/`\raisebox` in a
+  /// `\text{}` of UNPARSED math left `angle`/`innerdepth`/… on `XMText`, which
+  /// its model forbids (principia's `\pmcexists`: six schema errors; Perl's
+  /// schema-gated setter drops them). Now the schema-gated setter.
+  #[test]
+  fn rotated_box_in_unparsed_math_text_keeps_no_transform_attributes() {
+    let tex = "\\documentclass{article}\n\\usepackage{amsmath,graphicx}\n\\begin{document}\n\
+               \\[ \\text{\\raisebox{5.0pt}{\\rotatebox{180.0}{{E}}}}\\hskip-1.00006pt\\mathop{\\textbf{!}} \\]\n\
+               \\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The defect lives on the unparsed path only (a parse rebuilds the XMText);
+    // pin it so a future parser gain cannot make this guard vacuous.
+    assert!(xml.contains("ltx_math_unparsed"), "{xml}");
+    let xmtext = xml.find("<XMText").expect("XMText");
+    let end = xmtext + xml[xmtext..].find('>').unwrap();
+    let tag = &xml[xmtext..end];
+    for attr in [
+      "angle=",
+      "innerdepth=",
+      "innerheight=",
+      "innerwidth=",
+      "xtranslate=",
+      "ytranslate=",
+    ] {
+      assert!(!tag.contains(attr), "{attr} on XMText:\n{tag}\n{xml}");
+    }
+    assert!(xml.contains(">E<"), "the rotated glyph survives:\n{xml}");
+  }
+
   /// OXIDIZED_DESIGN #258: a leading paragraph holding ONLY undefined-command
   /// markers (`<ERROR class="undefined">\foo</ERROR>`, no text outside them) is
   /// content-free for the frontmatter hoist — the marker is diagnostic ink, not
