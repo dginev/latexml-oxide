@@ -18909,6 +18909,76 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56ff (M2) — the kernel `\title`/`\author` set only the `@`-forms, as
+  /// Perl does (latex_constructs.pool.ltxml:1060/1077); the bare
+  /// `\shorttitle`/`\shortauthor` are aliases of them. Before, `\title` also
+  /// `\gdef`'d `\shorttitle{#1}`, turning a class's own `\def\shorttitle#1`
+  /// (gaceta.cls:744) into a 0-arg macro, so the class's later
+  /// `\shorttitle{RUNNING HEAD}` typeset its argument as a `<para>` before the
+  /// frontmatter (gaceta/plantilla-articulo-suelto; RUST-ONLY, Perl clean).
+  #[test]
+  fn a_class_shorttitle_survives_the_kernel_title() {
+    let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\shorttitle#1{\\gdef\\@run{#1}}\n\\makeatother\n\
+               \\begin{document}\n\\title{Full Title}\n\\author{A. Author}\n\\shorttitle{RUNNING HEAD}\n\\maketitle\n\
+               Body.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      !xml.contains("RUNNING HEAD"),
+      "the class's \\shorttitle argument is not ink:\n{xml}"
+    );
+    assert!(xml.contains("<title>Full Title</title>"), "{xml}");
+    let title = xml.find("<title>Full Title</title>").unwrap();
+    let first_para = xml.find("<para ").unwrap();
+    assert!(title < first_para, "frontmatter precedes the body:\n{xml}");
+  }
+
+  /// Control for the alias: arxiv.sty:64 `\hypersetup{pdfauthor={\shortauthor}}`
+  /// (witness 2406.14142) reads the bare `\shortauthor` — before `\author` fires
+  /// it must be defined (empty), and afterwards it is the stored `\@shortauthor`,
+  /// i.e. the OPTIONAL short form of `\author[short]{long}` (Perl PR #2767:
+  /// `\def\@shortauthor{#1}`; empty when no short form was given).
+  #[test]
+  fn bare_shortauthor_resolves_to_the_stored_short_author() {
+    let tex = "\\documentclass{article}\n\\begin{document}\nEarly: [\\shortauthor]\n\n\
+               \\title{T}\n\\author[A. Author]{Ann Author}\n\\maketitle\n\
+               Short: \\shortauthor.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>Early: []</p>"),
+      "defined and empty before \\author:\n{xml}"
+    );
+    assert!(xml.contains("<p>Short: A. Author.</p>"), "{xml}");
+  }
+
+  /// 56ff (M3) — the oup-authoring-template contrib stub matched the raw class's
+  /// arities: `\authormark##1` only sets `\leftmark` (cls:810), `\corresp` is
+  /// `\@@corresp[2][]` (cls:1145), `\received#1#2#3` is a date triple (cls:1085).
+  /// The old one-arg stubs typeset "Author Name et al." / "]Corresponding…" /
+  /// "0Year 0Year 0Year" as leading `<para>`s before the title (RUST-ONLY; Perl
+  /// loads the raw class and emits the title first).
+  #[test]
+  fn oup_stub_arities_match_the_raw_class_so_nothing_leaks_before_the_title() {
+    let tex = "\\documentclass{oup-authoring-template}\n\
+               \\title{A Title}\n\\author{Author Name}\n\\authormark{Author Name et al.}\n\
+               \\corresp[$\\ast$]{Corresponding author. mail@example.org}\n\
+               \\received{20}{9}{2026}\n\\revised{21}{9}{2026}\n\\accepted{22}{9}{2026}\n\
+               \\begin{document}\n\\maketitle\nBody.\n\\end{document}\n";
+    let (_stderr, xml) = convert(tex, true);
+    for leak in ["Author Name et al.", "]Corresponding", "0Year", "<p>20"] {
+      assert!(!xml.contains(leak), "leaked `{leak}` into the body:\n{xml}");
+    }
+    assert!(xml.contains("<title>A Title</title>"), "{xml}");
+    assert!(
+      xml.contains("<note role=\"received\">20 9 2026</note>"),
+      "the date triple is a frontmatter note:\n{xml}"
+    );
+    let title = xml.find("<title>A Title</title>").unwrap();
+    let body = xml.find("Body.").unwrap();
+    assert!(title < body, "{xml}");
+  }
+
   /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
   /// `\subsection` would), and the post-box text ends up inside that subsection.
   #[test]

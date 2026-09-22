@@ -832,7 +832,7 @@ pub(crate) fn load() -> Result<()> {
     // `\date{\def\$##1: ##2 ##3${##2}\$Revision: 3.1 $}` (ulineno.tex:16, 2
     // errors; Perl pool:1066 shares the raw copy). KNOWN_PERL_ERRORS #145.
     // Guard: `perfect_kernel_batch54::frontmatter_copies_the_halved_macro`.
-    r"\gdef\@shorttitle{#1}\gdef\shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}",
+    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\expandafter\lx@add@title\expandafter{\@title}",
     locked => true);
   DefMacro!("\\@date", "\\@empty");
   DefMacro!(
@@ -905,17 +905,21 @@ pub(crate) fn load() -> Result<()> {
   // \shortauthor / \shorttitle: many journal classes (mnras, arxiv,
   // ICML, NeurIPS templates) reference \shortauthor in
   // \hypersetup{pdfauthor=...} and similar before \author has run.
-  // Without an initial empty definition, the reference errors out.
-  // (Rust-only; Perl PR #2767 only pre-defines the @-forms. Driver:
-  // 2406.14142 arxiv.sty L64 `\hypersetup{pdfauthor={\shortauthor}}`
-  // before \author fires.)
-  DefMacro!("\\shortauthor", "\\@empty");
-  DefMacro!("\\shorttitle", "\\@empty");
+  // Without an initial definition, the reference errors out. (Rust-only; Perl
+  // PR #2767 only pre-defines the @-forms. Driver: 2406.14142 arxiv.sty L64
+  // `\hypersetup{pdfauthor={\shortauthor}}` before \author fires.) The bare
+  // forms are ALIASES of the @-forms, and `\title`/`\author` set only the
+  // @-forms as Perl does (latex_constructs.pool.ltxml:1060/1077): the earlier
+  // `\gdef\shorttitle{#1}` inside `\title` clobbered a class's own
+  // `\def\shorttitle#1{…}` (gaceta.cls:744) into a 0-arg macro, so the later
+  // `\shorttitle{RUNNING HEAD}` left its argument to typeset as a `<para>`
+  // before the frontmatter (gaceta/plantilla-articulo-suelto, RUST-ONLY).
+  // Guard: `perfect_kernel_batch56::a_class_shorttitle_survives_the_kernel_title`.
+  DefMacro!("\\shortauthor", "\\@shortauthor");
+  DefMacro!("\\shorttitle", "\\@shorttitle");
   // Perl (PR #2767): '\def\@shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}'.
-  // Rust-only: also \gdef the non-@ \shortauthor for user-style references
-  // (see note above; our \author is locked so renewcommand can't add it).
   DefMacro!("\\author[]{}",
-    r"\def\@shortauthor{#1}\gdef\shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors\expandafter{\@author}",
+    r"\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors\expandafter{\@author}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically

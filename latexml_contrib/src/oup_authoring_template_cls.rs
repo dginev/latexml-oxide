@@ -44,10 +44,17 @@ LoadDefinitions!({
     "\\appnotes{}",
     "\\@add@frontmatter{ltx:note}[role=appnotes]{#1}"
   );
-  DefMacro!("\\authormark{}", "\\textsuperscript{#1}");
+  // Line numbers cite the vendor TL2025 tree (/usr/local/texlive/2025), not
+  // the distro copy. oup-authoring-template.cls:810 `\def\authormark##1{\gdef\leftmark{##1}}`:
+  // a running-head setter, no output — the earlier `\textsuperscript{#1}`
+  // typeset "Author Name et al." as a leading `<para>` before the title.
+  DefMacro!("\\authormark{}", "");
+  // cls:1145 `\def\corresp{\@@corresp}` → `\newcommand{\@@corresp}[2][]`: an
+  // optional mark then the text; the one-arg stub took `[` as the argument
+  // and leaked `$\ast$]Corresponding author…` into the body.
   DefMacro!(
-    "\\corresp{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+    "\\corresp[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
   );
   DefMacro!(
     "\\firstpage{}",
@@ -61,17 +68,22 @@ LoadDefinitions!({
     "\\runninghead{}",
     "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}"
   );
+  // cls:1085-1087 `\def\received#1#2#3`: a day/month-switch/year triple
+  // (`\myswitch`, cls:1059, maps the month number to its name when the raw
+  // class is loaded; the number stands in otherwise).
   DefMacro!(
-    "\\received{}",
-    "\\@add@frontmatter{ltx:note}[role=received]{#1}"
+    "\\received{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=received]{#1 \\ifdefined\\myswitch\\myswitch{#2}\\else#2\\fi\\ #3}"
   );
+  // cls:1085-1087 `\def\revised#1#2#3`: a day/month-switch/year triple.
   DefMacro!(
-    "\\revised{}",
-    "\\@add@frontmatter{ltx:note}[role=revised]{#1}"
+    "\\revised{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=revised]{#1 \\ifdefined\\myswitch\\myswitch{#2}\\else#2\\fi\\ #3}"
   );
+  // cls:1085-1087 `\def\accepted#1#2#3`: a day/month-switch/year triple.
   DefMacro!(
-    "\\accepted{}",
-    "\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
+    "\\accepted{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=accepted]{#1 \\ifdefined\\myswitch\\myswitch{#2}\\else#2\\fi\\ #3}"
   );
   DefMacro!(
     "\\editor{}",
