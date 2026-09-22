@@ -3023,7 +3023,45 @@ fn node_is_content_free(node: &Node) -> bool {
   let is_wrapper = with(document::get_node_qname(node), |q| {
     matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
   });
-  is_wrapper && node.get_content().trim().is_empty() && subtree_elements_all_invisible(node)
+  is_wrapper
+    && text_outside_error_markers(node).trim().is_empty()
+    && subtree_elements_all_invisible(node)
+}
+
+/// The text of `node`'s subtree with every `ltx:ERROR` subtree left out. An
+/// undefined-command marker (`<ERROR class="undefined">\foo</ERROR>`) carries the
+/// control-sequence NAME as its text — diagnostic ink, not document content (pdflatex
+/// had a definition and typeset nothing for it). A leading paragraph holding only such
+/// markers is therefore content-free for the frontmatter hoist (OXIDIZED_DESIGN #258;
+/// pst-calendar-doc's `\DeclareDocumentMetadata`, forest-doc's `\@escapeifif`,
+/// pmhanguljamo's `\fontid`, 8 docs): the marker stays in the output, relocated below
+/// the frontmatter like any other content-free mover. A marker whose ARGUMENTS were
+/// typeset as text (`\foo{Real words}` → `<ERROR>\foo</ERROR>Real words`) is not
+/// content-free — that text is visible and stays where it is.
+fn text_outside_error_markers(node: &Node) -> String {
+  fn walk(node: &Node, out: &mut String) {
+    for c in node.get_child_nodes() {
+      match c.get_type() {
+        Some(NodeType::TextNode) => out.push_str(&c.get_content()),
+        Some(NodeType::ElementNode) if !is_undefined_command_marker(&c) => {
+          walk(&c, out);
+        },
+        _ => {},
+      }
+    }
+  }
+  let mut out = String::new();
+  walk(node, &mut out);
+  out
+}
+
+/// `<ltx:ERROR class="undefined">\foo</ltx:ERROR>` — the marker `make_error` leaves for
+/// an undefined control sequence; its text is the CS NAME. Only this class is
+/// diagnostic ink: `\lx@ERROR{cls}{text}` markers and constructor failures carry
+/// arbitrary text and stay visible content.
+fn is_undefined_command_marker(node: &Node) -> bool {
+  document::get_node_qname(node) == pin_static("ltx:ERROR")
+    && node.get_attribute("class").as_deref() == Some("undefined")
 }
 
 /// Every element descendant of `node` is itself a structural wrapper
@@ -3041,6 +3079,8 @@ fn node_is_content_free(node: &Node) -> bool {
 fn subtree_elements_all_invisible(node: &Node) -> bool {
   node.get_child_nodes().iter().all(|c| {
     c.get_type() != Some(NodeType::ElementNode)
+      // An undefined-command marker is diagnostic ink (`text_outside_error_markers`).
+      || is_undefined_command_marker(c)
       || ((with(document::get_node_qname(c), |q| {
         matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
       }) || (document::get_node_qname(c) == pin_static("ltx:text") && text_is_ink_free(c)))

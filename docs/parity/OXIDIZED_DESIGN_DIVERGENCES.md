@@ -8282,3 +8282,25 @@ control `titlepage_stays_below_a_visible_leading_cover` ("invalid but
 faithful" → valid and faithful). Guards
 `perfect_kernel_batch56::stranded_titlepage_becomes_a_layout_paragraph`,
 `titlepage_stays_below_a_visible_leading_cover`. **Upstream**: worth proposing.
+### 258. A leading paragraph holding only undefined-command markers is content-free for the frontmatter hoist (Perl: the frontmatter strands behind it)
+
+**Perl** typesets an undefined control sequence as an `<ltx:ERROR>` marker in
+place; when the first such marker precedes `\maketitle` (a preamble command
+whose package or engine is missing under `[rawstyles]`: pst-calendar-doc's
+`\DeclareDocumentMetadata`, forest-doc's `\@escapeifif`, pmhanguljamo's
+`\fontid`), the marker opens the body and every frontmatter element after it
+is schema-invalid — or Perl produces no XML at all (7 of the 8 witnesses).
+**Rust** (`base_utilities.rs` `text_outside_error_markers`,
+`subtree_elements_all_invisible`): for the placement pass (#242/#247) a
+`para`/`p` whose only element descendants are `ltx:ERROR class="undefined"` markers
+(only that class carries a control-sequence name; `\lx@ERROR` markers and constructor
+failures carry arbitrary text and stay visible) and whose text outside them is
+whitespace is content-free — the marker's text is the control
+sequence NAME, diagnostic ink that pdflatex never typeset — so it is a mover:
+the frontmatter is placed above it and the marker follows, unchanged and still
+reported as `Error:undefined`. A marker whose arguments were typeset as text
+(`\foo{Real words}`) is visible content and the pass declines as before, matching
+Perl's placement. Guard
+`perfect_kernel_batch56::frontmatter_hoists_over_an_error_marker_only_paragraph`
+(with the typeset-argument control). **Upstream**: none (Perl's placement is
+conservative; the marker is a LaTeXML artifact either way).

@@ -18791,6 +18791,52 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// OXIDIZED_DESIGN #258: a leading paragraph holding ONLY undefined-command
+  /// markers (`<ERROR class="undefined">\foo</ERROR>`, no text outside them) is
+  /// content-free for the frontmatter hoist — the marker is diagnostic ink, not
+  /// document content — so `\title`/`\author` placed after it lead the document
+  /// and the marker follows them (pst-calendar-doc, forest-doc, pmhanguljamo;
+  /// 8 docs). A marker whose argument was typeset as text is NOT content-free.
+  #[test]
+  fn frontmatter_hoists_over_an_error_marker_only_paragraph() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\ThisCommandIsUndefined\n\
+               \\title{Sample Title}\n\\author{An Author}\n\\maketitle\n\\section{Intro}\nBody text here.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(
+      stderr.contains("Error:undefined:\\ThisCommandIsUndefined"),
+      "{stderr}"
+    );
+    let title = xml.find("<title>Sample Title</title>").expect("title");
+    let marker = xml
+      .find("<ERROR class=\"undefined\">\\ThisCommandIsUndefined</ERROR>")
+      .expect("marker");
+    let section = xml.find("<section").unwrap();
+    assert!(
+      title < marker && marker < section,
+      "the marker follows the frontmatter:\n{xml}"
+    );
+    assert!(
+      !xml[..title].contains("<para"),
+      "no paragraph precedes the title:\n{xml}"
+    );
+    // Control: typeset argument text is visible content — the hoist declines.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\ThisCommandIsUndefined{Visible words}\n\
+               \\title{Sample Title}\n\\author{An Author}\n\\maketitle\n\\section{Intro}\nBody text here.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(
+      xml.contains("<ERROR class=\"undefined\">\\ThisCommandIsUndefined</ERROR>"),
+      "the marker is still reported:\n{xml}"
+    );
+    let title = xml.find("<title>Sample Title</title>").expect("title");
+    let words = xml.find("Visible words").expect("argument text");
+    assert!(
+      words < title,
+      "visible text stays above the frontmatter (Perl placement):\n{xml}"
+    );
+  }
+
   /// 56fw (OXIDIZED_DESIGN #257): a `{titlepage}` entered after leaked leading text
   /// (chemexec_en:119, stanli, l2picfaq, pst-calendar-doc) was emitted as a stranded
   /// `<titlepage>` after the body's first paragraph — Perl identical, one schema
