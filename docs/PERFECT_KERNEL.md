@@ -72,21 +72,21 @@ egpeirce 1→0, hitszbeamer 4→0, chemobabel-en 3→0, smf-edoc/fdoc →0. Proj
 
 **Load-bearing next steps, in order:**
 
-1. **Memory lever B** (pgf-spectra LSE 6.36 GB / 108 s, pgf-PeriodicTable, tcolorbox,
-   wheelchart): single-pass eager→streaming continuation — design in the 2026-09-22
-   root-causer report (LEDGER 56fe row): arm `spill_watermark_bytes` (RAM/8) at
-   `--max-memory=0`, accumulate in the eager loop, on a `request_fragment_yield` seam with
-   RSS over the watermark hand the boxes to the streaming pass-1 body (`stream_setup`/
-   `stream_pass1`/`stream_finish` factored out of `convert_streaming`) and continue from the
-   same gullet position; keep `StreamingRestart` as the no-seam fallback. Guards: ~40 tiny
-   `\pgfpicture`s under a low `LATEXML_RSS_CAP_BYTES` → all `svg:path` present,
-   `fragment_yield_count()>0`, a new `digest_setup_count()==1`; control with a huge cap →
-   byte-identical eager output. Falsification: LSE peak < 4.5 GB, wall < 180 s. Lever A
-   (isEmpty field) measured −0.27 GB only — the DOM, not the Rust heap, dominates.
-   Secondary target after B: the streaming pass creep 271 → 2361 MB (suspect
-   `Document.node_fonts: HashMap<u64, Font>` by-value, never swept) — dhat the `--streaming`
-   run.
-2. **Raw `\author` surpass (56fk)** — ruling "surpass now", mechanism corrected by the
+1. **Streaming-pass creep** (task #23). Lever B LANDED as 56fk: the single-pass
+   eager→streaming continuation fires at an RSS-driven yield seam (growth floor ≥ 64 MB since
+   the last yield, baselined when the soft trigger is armed). Measured at the SWEEP cap
+   (`--max-memory=6144`, 6 GB ulimit): pgf-PeriodicTable transitions and completes in 315 s
+   with 42,275 paths (s108: 180 s timeout, nothing); LSE neutral — transition at 1.59 GB,
+   pass 1 creeps to 4.79 GB and stops at the fuse, the from-scratch restart fallback stops
+   there too (168 s, 79,278 paths vs s108 165 s / 80,324, both Fatal); wheelchart neutral.
+   The bar (< 180 s, < 4.5 GB) is blocked in all three by pass 1's own growth: ~+250 MB per
+   fragment while C-live and `node_boxes` stay flat. NEXT: dhat the `--streaming` run of LSE
+   at 6144 (bench binary `~/data/pk_target_dhat/release/latexml_oxide`, `--features
+   dhat-heap`); suspects `Document.node_fonts: HashMap<u64, Font>` held by value and never
+   swept (cloned wholesale per fragment in pass 2), then `idstore`. Never measure at
+   `--max-memory=0` on the 246 GB host: the watermark is RAM/8 ≈ 30 GB there, the lever is
+   inert and tcolorbox balloons to 35 GB. Lever A (isEmpty field) measured −0.27 GB only.
+2. **Raw `\author` surpass (56fl)** — ruling "surpass now", mechanism corrected by the
    2026-09-22 root-causer: the class body must NOT run (private accumulators, locked
    `\maketitle` → authors lost); instead the locked kernel/binding `\author` ABSORBS a
    trailing `[…]`/`{…}` (`\lx@author@trailing`: `orcid=` → `ltx:contact role=orcid`, a

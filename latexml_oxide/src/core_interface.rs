@@ -76,6 +76,15 @@ pub struct DigestionOptions {
   pub postamble:    Option<String>,
 }
 
+/// What `DigestionAPI::digest_adaptive` produced: the whole eager box list, or a
+/// finished streamed document when the run crossed the spill watermark.
+pub enum AdaptiveOutcome {
+  Eager(Digested),
+  /// Boxed: a `Document` is large next to the `Rc` handle (clippy
+  /// `large_enum_variant`).
+  Streamed(Box<Document>),
+}
+
 pub trait DigestionAPI {
   fn initialize_singletons(&mut self, preloads: Vec<String>) -> Result<()>;
   fn digest(
@@ -95,6 +104,41 @@ pub trait DigestionAPI {
   ) -> Result<String>;
   fn digest_file(&mut self, request: String, options: DigestionOptions) -> Result<Digested>;
   fn digest_internal(&mut self) -> Result<Digested>; // used to be "finishDigestion"
+  /// Eager digestion that turns into streaming pass 1 at an RSS-driven yield
+  /// seam (single pass, bounded memory) instead of restarting from the top;
+  /// a document that never crosses the spill watermark comes back whole as
+  /// `AdaptiveOutcome::Eager`.
+  fn digest_adaptive(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    transition_budget: usize,
+  ) -> Result<AdaptiveOutcome>;
+  /// Streaming front half (spill store, deferred root, yield knobs); returns
+  /// the fragment index. See the `Core` impl.
+  fn stream_setup(
+    &mut self,
+    document: &mut Document,
+    budget: usize,
+  ) -> Result<latexml_core::sxml::FragmentIndex>;
+  /// Streaming pass 1 (digest → absorb → spill at legal seams), optionally
+  /// seeded with already-digested bodies; returns whether a fatal stopped it.
+  fn stream_pass1(
+    &mut self,
+    document: &mut Document,
+    index: &mut latexml_core::sxml::FragmentIndex,
+    seed: Option<Vec<Digested>>,
+  ) -> Result<bool>;
+  /// Streaming tail: root hooks, pass 2 over the spilled segments, finalize.
+  fn stream_finish(
+    &mut self,
+    document: Document,
+    index: latexml_core::sxml::FragmentIndex,
+    fatal_stop: bool,
+    phase_clock: std::time::Instant,
+  ) -> Result<Document>;
   fn convert_file(&mut self, filepath: String) -> Result<Document>;
   /// Streaming (fragmented) conversion: interleaved digest→build with
   /// spill-to-disk, a streaming pass 2, and placeholder-spliced assembly.
@@ -246,6 +290,15 @@ fn trace_fragment_holders(boxes: &[Digested]) {
     eprintln!("{l}");
   }
 }
+
+thread_local! {
+  /// How many times `digest_setup` ran on this thread: the adaptive transition
+  /// must digest ONCE (a from-scratch streaming restart runs it twice).
+  static DIGEST_SETUP_COUNT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// See `DIGEST_SETUP_COUNT`.
+pub fn digest_setup_count() -> usize { DIGEST_SETUP_COUNT.with(|c| c.get()) }
 
 thread_local! {
   /// Perl `$$stomach{rescued_boxes}` (Common/Error.pm `hardYankProcessing`
@@ -1052,6 +1105,7 @@ impl DigestionAPI for Core {
     postamble: Option<String>,
     mode: Option<DigestionMode>,
   ) -> Result<String> {
+    DIGEST_SETUP_COUNT.with(|c| c.set(c.get() + 1));
     let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
@@ -1197,17 +1251,15 @@ impl DigestionAPI for Core {
     }
   }
 
-  fn convert_streaming(
+  /// The streaming front half: spill store + disk gate, deferred root,
+  /// literal placeholders, flat spill, the fragment index and the yield
+  /// knobs. Shared by `convert_streaming` and the adaptive transition.
+  fn stream_setup(
     &mut self,
-    request: String,
-    preamble: Option<String>,
-    postamble: Option<String>,
-    mode: Option<DigestionMode>,
+    document: &mut Document,
     budget: usize,
-  ) -> Result<Document> {
+  ) -> Result<latexml_core::sxml::FragmentIndex> {
     use latexml_core::sxml::{FragmentIndex, SegmentStore};
-    let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
-    let mut document = build_document_head(&self.preload)?;
     latexml_core::document::reset_spilled_segment_count();
     // The spill area lives beside the source when that directory is WRITABLE
     // (same volume as the output in the by-far-common layout, so the
@@ -1279,7 +1331,7 @@ impl DigestionAPI for Core {
     // indentation pass 1 used to emit was generated, written, read back,
     // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
     document.spill_flat = true;
-    let mut index = FragmentIndex::default();
+    let index = FragmentIndex::default();
     stomach::set_fragment_yield_budget(Some(budget));
     // Soft-RSS yield: fire regardless of box count once RSS crosses the
     // watermark — the box budget assumes a per-box footprint, and math-dense
@@ -1290,27 +1342,40 @@ impl DigestionAPI for Core {
       stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
     }
 
-    // Phase clock. A streamed run's cost splits across pass 1 (digest →
-    // absorb → spill), pass 2 (per-segment tail) and assembly, and the log
-    // carried NO timing at all — the 131 MB witness's 70-minute wall could
-    // only be attributed by extrapolating between two segment checkpoints, or
-    // by running a paired control binary for another 70 minutes. One elapsed
-    // figure per phase seam makes every run self-attributing.
-    let phase_clock = std::time::Instant::now();
-    // Pass 1: interleaved digest → absorb → spill, at legal seams only.
+    Ok(index)
+  }
+
+  /// Streaming pass 1: interleaved digest → absorb → spill, at legal seams only.
+  /// `seed` = bodies already digested by the eager loop (the adaptive
+  /// transition), absorbed as fragment 1. Returns whether a fatal stopped it.
+  fn stream_pass1(
+    &mut self,
+    document: &mut Document,
+    index: &mut latexml_core::sxml::FragmentIndex,
+    mut seed: Option<Vec<Digested>>,
+  ) -> Result<bool> {
     let mut fatal_stop = false;
     loop {
       let mut boxes = Vec::new();
-      let step = {
-        // Streaming had NO telemetry phases at all — every `phase()` guard in
-        // the tree is on the eager path — so `TELEMETRY.md`'s "sum of phase
-        // wall ≈ total wall, median ≥ 0.92" was silently unmet for every
-        // streamed conversion. Reuse the eager phases rather than adding
-        // streaming-specific ones: pass 1 IS digest + build, interleaved.
-        let _g = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Digest);
-        digest_step_guarded(&mut boxes)
+      // A seeded first iteration (the adaptive eager→streaming transition,
+      // `digest_adaptive`) absorbs the bodies the eager loop had already
+      // accumulated instead of digesting: they were cut at a legal yield seam,
+      // so they are fragment 1, and the gullet continues where it stopped.
+      let (step, yielded) = if let Some(seed_boxes) = seed.take() {
+        boxes = seed_boxes;
+        (Ok(true), true)
+      } else {
+        let step = {
+          // Streaming had NO telemetry phases at all — every `phase()` guard in
+          // the tree is on the eager path — so `TELEMETRY.md`'s "sum of phase
+          // wall ≈ total wall, median ≥ 0.92" was silently unmet for every
+          // streamed conversion. Reuse the eager phases rather than adding
+          // streaming-specific ones: pass 1 IS digest + build, interleaved.
+          let _g = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::Digest);
+          digest_step_guarded(&mut boxes)
+        };
+        (step, stomach::take_fragment_yielded())
       };
-      let yielded = stomach::take_fragment_yielded();
       let mut stopped = match step {
         Ok(keep_going) => !keep_going,
         Err(e) => {
@@ -1395,7 +1460,7 @@ impl DigestionAPI for Core {
         } else {
           0
         };
-        let runs_spilled = document.spill_closed_subtrees(&mut index)?;
+        let runs_spilled = document.spill_closed_subtrees(index)?;
         let t_spill_dur = t_spill.elapsed();
         #[cfg(target_os = "linux")]
         if trace_spill {
@@ -1510,32 +1575,17 @@ impl DigestionAPI for Core {
         break;
       }
     }
-    stomach::set_fragment_yield_budget(None);
-    stomach::set_fragment_yield_rss_soft_kb(None);
-    gullet::flush();
-    note_end(&digestion_note);
-    let pass1_elapsed = phase_clock.elapsed();
-    emit_info(
-      "streaming",
-      "progress",
-      &format!(
-        "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) staged to disk, RSS ~{} MB",
-        pass1_elapsed,
-        stomach::fragment_yield_count(),
-        latexml_core::document::spilled_segment_count(),
-        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
-      ),
-    );
+    Ok(fatal_stop)
+  }
 
-    // The ROOT's after-open hooks were DEFERRED during pass 1
-    // (`set_defer_root_after_open`): eager semantics guarantee every hook
-    // runs with digestion complete, and firing them at fragment 1 was not
-    // merely incomplete but harmful — the frontmatter hook consumed EMPTY
-    // frontmatter state and marked it done (losing the abstract; sweep
-    // witness tests/structure/abstract.tex), and the root-classes hook read
-    // a `DOCUMENT_CLASSES` mapping `\maketitle` had not populated yet
-    // (dropping `ltx_authors_1line`; gate witness). Dispatch exactly once,
-    // now, with digestion finished — the eager timing.
+  /// Streaming tail: root hooks, pass 2 over the spilled segments, finalize.
+  fn stream_finish(
+    &mut self,
+    mut document: Document,
+    index: latexml_core::sxml::FragmentIndex,
+    fatal_stop: bool,
+    phase_clock: std::time::Instant,
+  ) -> Result<Document> {
     document.set_defer_root_after_open(false);
     // Late-arrived frontmatter first (canonically positioned after what the
     // mid-digestion insertion already placed), then the root's deferred late
@@ -1626,6 +1676,190 @@ impl DigestionAPI for Core {
     document.spill_flat = false;
     document.set_spill_store(store);
     Ok(document)
+  }
+
+  fn convert_streaming(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    budget: usize,
+  ) -> Result<Document> {
+    let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
+    let mut document = build_document_head(&self.preload)?;
+    let mut index = self.stream_setup(&mut document, budget)?;
+    // Phase clock starts after setup (spill store, disk gate), as it always did.
+    let phase_clock = std::time::Instant::now();
+    let fatal_stop = self.stream_pass1(&mut document, &mut index, None)?;
+    stomach::set_fragment_yield_budget(None);
+    stomach::set_fragment_yield_rss_soft_kb(None);
+    gullet::flush();
+    note_end(&digestion_note);
+    let pass1_elapsed = phase_clock.elapsed();
+    emit_info(
+      "streaming",
+      "progress",
+      &format!(
+        "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) staged to disk, RSS ~{} MB",
+        pass1_elapsed,
+        stomach::fragment_yield_count(),
+        latexml_core::document::spilled_segment_count(),
+        latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+      ),
+    );
+
+    // The ROOT's after-open hooks were DEFERRED during pass 1
+    // (`set_defer_root_after_open`): eager semantics guarantee every hook
+    // runs with digestion complete, and firing them at fragment 1 was not
+    // merely incomplete but harmful — the frontmatter hook consumed EMPTY
+    // frontmatter state and marked it done (losing the abstract; sweep
+    // witness tests/structure/abstract.tex), and the root-classes hook read
+    // a `DOCUMENT_CLASSES` mapping `\maketitle` had not populated yet
+    // (dropping `ltx_authors_1line`; gate witness). Dispatch exactly once,
+    // now, with digestion finished — the eager timing.
+    self.stream_finish(document, index, fatal_stop, phase_clock)
+  }
+
+  fn digest_adaptive(
+    &mut self,
+    request: String,
+    preamble: Option<String>,
+    postamble: Option<String>,
+    mode: Option<DigestionMode>,
+    transition_budget: usize,
+  ) -> Result<AdaptiveOutcome> {
+    use latexml_core::common::error::ErrorCategory;
+    let digestion_note = self.digest_setup(request, preamble, postamble, mode)?;
+    // Arm the fragment-yield seam unless a caller already did (the yield
+    // tests pre-set their own knobs): the box budget is never the trigger
+    // here — only the soft-RSS watermark (`spill_watermark_bytes`, live at
+    // `--max-memory=0` as RAM/8) and the constructs that request a seam
+    // (`\pgfsys@endpicture`). A yield below the watermark just returns the
+    // accumulated top-level bodies, which this loop keeps collecting: the
+    // concatenation of the yielded fragments is the eager box list
+    // (`114_streaming_*`).
+    // Only the soft-RSS trigger is armed here — never a box budget, so a
+    // picture seam with room to spare does not yield (the eager path stays
+    // exactly the eager path until the watermark). A caller that pre-armed
+    // the knobs (the yield tests) keeps pure eager yield semantics: no
+    // transition.
+    let armed_here =
+      stomach::fragment_yield_budget().is_none() && stomach::fragment_yield_rss_soft_kb().is_none();
+    if armed_here && let Some(watermark) = stomach::spill_watermark_bytes() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
+      // The growth floor measures the DOCUMENT's accumulation: baseline on
+      // the resident set now, after the engine/dump load.
+      stomach::rebaseline_soft_yield_growth();
+    }
+    let disarm = |armed: bool| {
+      if armed {
+        stomach::set_fragment_yield_rss_soft_kb(None);
+      }
+    };
+    let mut boxes = RESCUED_BOXES.with(|r| std::mem::take(&mut *r.borrow_mut()));
+    while gullet::has_more_input() {
+      match digest_step_guarded(&mut boxes) {
+        Ok(true) => {},
+        Ok(false) => break,
+        Err(e) => {
+          disarm(armed_here);
+          if !matches!(e.category, ErrorCategory::StreamingRestart) {
+            hard_yank_processing(boxes);
+          }
+          return Err(e);
+        },
+      }
+      // TRANSITION: an RSS-driven yield — the process is over the spill
+      // watermark at a legal seam. Hand what is accumulated to streaming
+      // pass 1 as fragment 1 and continue digesting from the same gullet
+      // position: one digest, bounded memory, no from-scratch restart (which
+      // re-read the whole source: the >180 s component on source2e/source3/
+      // datatool/glossaries/pgf-spectra LSE). Yields below the watermark (a
+      // picture seam with room to spare) keep accumulating — a document that
+      // never crosses it finishes exactly as before, whole, with no spill.
+      if stomach::take_fragment_yielded()
+        && armed_here
+        && stomach::fragment_yield_rss_soft_kb()
+          .is_some_and(|soft| stomach::last_sampled_rss_kb() > soft)
+      {
+        stomach::set_streaming_restart_watermark(None);
+        emit_info(
+          "streaming",
+          "transition",
+          &format!(
+            "streaming: eager digestion crossed the spill watermark at a yield seam (RSS ~{} MB, {} top-level bodies) — continuing as streaming pass 1",
+            stomach::last_sampled_rss_kb() / 1024,
+            boxes.len()
+          ),
+        );
+        // Every failure inside the transition (the spill disk gate, a spill or
+        // resource error in pass 1, pass 2) must leave NO yield knob armed —
+        // they are thread-locals a persistent worker (cortex_worker) carries
+        // into its next paper, where an armed knob would silently disable this
+        // lever (`armed_here` false) — and must not fall into the eager
+        // `digest_internal` salvage, which would re-digest the gullet tail
+        // into a fresh document while the spilled front is gone: the gullet is
+        // flushed, so the salvage finds nothing, and the Fatal is reported
+        // exactly as `convert_streaming`'s own failure would be.
+        let seed = std::mem::take(&mut boxes);
+        let transition = |this: &mut Self| -> Result<(Document, bool)> {
+          let phase_clock = std::time::Instant::now();
+          let mut document = build_document_head(&this.preload)?;
+          let mut index = this.stream_setup(&mut document, transition_budget)?;
+          let fatal_stop = this.stream_pass1(&mut document, &mut index, Some(seed))?;
+          stomach::set_fragment_yield_budget(None);
+          stomach::set_fragment_yield_rss_soft_kb(None);
+          gullet::flush();
+          emit_info(
+            "streaming",
+            "progress",
+            &format!(
+              "streaming: PASS 1 done in {:.1?} — {} yield(s), {} segment(s) staged to disk, RSS ~{} MB",
+              phase_clock.elapsed(),
+              stomach::fragment_yield_count(),
+              latexml_core::document::spilled_segment_count(),
+              latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024,
+            ),
+          );
+          this
+            .stream_finish(document, index, fatal_stop, phase_clock)
+            .map(|document| (document, fatal_stop))
+        };
+        let outcome = transition(self);
+        stomach::set_fragment_yield_budget(None);
+        stomach::set_fragment_yield_rss_soft_kb(None);
+        note_end(&digestion_note);
+        return match outcome {
+          Ok((document, false)) => {
+            // Finished in ONE pass: a restart signal latched along the way
+            // must not make the binary rerun the document from scratch.
+            let _ = stomach::take_streaming_restart_signal();
+            Ok(AdaptiveOutcome::Streamed(Box::new(document)))
+          },
+          Ok((document, true)) => {
+            // Pass 1 hit the fuse: the seed (everything the eager phase held
+            // when it crossed the watermark) plus pass 1's own growth did not
+            // fit, and the document is the cheap partial. Leave the restart
+            // signal alone: the binary's from-scratch `--streaming` rerun
+            // starts far below the watermark and is the proven fallback
+            // (pgf-spectra LSE at --max-memory=6144: transition at 1.59 GB,
+            // pass 1 crept to 4.79 GB and stopped at 71 % of the paths; the
+            // restart completes it in 165 s). The streaming-pass creep is
+            // the residual to attribute next.
+            Ok(AdaptiveOutcome::Streamed(Box::new(document)))
+          },
+          Err(e) => {
+            gullet::flush();
+            Err(e)
+          },
+        };
+      }
+    }
+    disarm(armed_here);
+    gullet::flush();
+    note_end(&digestion_note);
+    Ok(AdaptiveOutcome::Eager(Digested::from(List::new(boxes))))
   }
 
   /// Restriction: convert_document runs on a single thread, and should never try branching out.

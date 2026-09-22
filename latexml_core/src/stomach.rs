@@ -181,6 +181,37 @@ fn soft_yield_urgency(rss_kb: u64, watermark: Option<u64>, fuse: Option<u64>) ->
   }
 }
 
+thread_local! {
+  /// RSS (KB) at the last fragment yield (or at digestion start): the soft-RSS
+  /// seam's GROWTH floor measures accumulation directly as resident memory
+  /// gained since then — the box-count floor never fires for a few huge
+  /// top-level bodies (pgf-spectra LSE: ~194 pictures, 6.4 GB, never 1024
+  /// boxes), with no fuse (`--max-memory=0`) nothing is ever "urgent", and a
+  /// box-tree byte ESTIMATE is a per-box-capped lower bound that undercounts
+  /// such pictures ~100× (measured: 6.36 GB, no transition).
+  static LAST_YIELD_RSS_KB: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The growth floor of the soft-RSS yield, in KB: once over the watermark, a
+/// seam yields when at least this much resident memory was gained since the
+/// last yield — enough to be worth a spill, and far above the degenerate
+/// regime's 5.5 KB segments.
+const SOFT_YIELD_MIN_GROWTH_KB: u64 = 64 * 1024;
+
+/// Record the RSS baseline the growth floor measures from (digestion start
+/// and every yield).
+fn note_yield_rss_baseline(rss_kb: u64) { LAST_YIELD_RSS_KB.set(rss_kb); }
+
+/// Re-baseline the growth floor on the CURRENT resident set — called where the
+/// adaptive eager phase arms the soft trigger, i.e. after the engine load, so
+/// the first growth window measures the document alone.
+pub fn rebaseline_soft_yield_growth() {
+  if let Some(rss_kb) = crate::watchdog::process_rss_kb() {
+    LAST_SAMPLED_RSS_KB.set(rss_kb);
+    note_yield_rss_baseline(rss_kb);
+  }
+}
+
 /// Cached: this sits on the per-seam yield predicate, which the 131 MB witness
 /// evaluates tens of millions of times — an `std::env::var` there would be its
 /// own hotspot.
@@ -195,6 +226,19 @@ pub fn soft_yield_min_boxes() -> usize {
     .unwrap_or(DEFAULT);
   SOFT_YIELD_MIN_BOXES.set(Some(resolved));
   resolved
+}
+
+thread_local! {
+  /// In-process override of the spill watermark (bytes), consulted before the
+  /// operator-facing `LATEXML_SPILL_AT_MIB` env. The environment is READ-ONLY
+  /// for this code base — a test or an embedder that needs a different
+  /// watermark sets this knob instead of mutating the process env.
+  static SPILL_WATERMARK_OVERRIDE: Cell<Option<u64>> = const { Cell::new(None) };
+}
+
+/// See `SPILL_WATERMARK_OVERRIDE`; `None` restores the env/default policy.
+pub fn set_spill_watermark_override(bytes: Option<u64>) {
+  SPILL_WATERMARK_OVERRIDE.with(|c| c.set(bytes));
 }
 
 /// The RAM watermark, in bytes, at which streaming pass 1 begins spilling
@@ -214,6 +258,9 @@ pub fn soft_yield_min_boxes() -> usize {
 /// the machine run out". Fall back to an eighth of physical RAM, which lands
 /// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
 pub fn spill_watermark_bytes() -> Option<u64> {
+  if let Some(bytes) = SPILL_WATERMARK_OVERRIDE.with(|c| c.get()) {
+    return Some(bytes);
+  }
   // Calibration override (`LATEXML_SPILL_AT_MIB`), deliberately env-only and
   // NOT a CLI flag: a user-settable watermark could be raised above the fuse,
   // producing a run that Fatals before it ever spills. It exists so the
@@ -540,8 +587,12 @@ static LAST_SAMPLED_RSS_KB: Cell<u64> = Cell::new(0);
 
 /// Set (or clear) the soft-RSS yield threshold, in KiB.
 pub fn set_fragment_yield_rss_soft_kb(kb: Option<u64>) { FRAGMENT_YIELD_RSS_SOFT_KB.set(kb); }
+/// The armed soft-RSS yield watermark (KB), if any — see `set_fragment_yield_rss_soft_kb`.
+pub fn fragment_yield_rss_soft_kb() -> Option<u64> { FRAGMENT_YIELD_RSS_SOFT_KB.get() }
 
-/// The most recent sampled RSS in KiB (0 until the first sample).
+/// The most recent sampled RSS in KiB — seeded with the real RSS at
+/// `initialize_stomach` / `rebaseline_soft_yield_growth`, then refreshed by the
+/// periodic sampler in `check_timeout`.
 pub fn last_sampled_rss_kb() -> u64 { LAST_SAMPLED_RSS_KB.get() }
 
 /// Ask digestion to yield at legal fragment seams once `budget` boxes have
@@ -565,6 +616,8 @@ pub fn set_fragment_yield_budget(budget: Option<usize>) {
     FRAGMENT_YIELD_COUNT.set(0);
   }
 }
+/// The armed fragment-yield box budget, if any — see `set_fragment_yield_budget`.
+pub fn fragment_yield_budget() -> Option<usize> { FRAGMENT_YIELD_BUDGET.get() }
 
 /// Did the last `digest_next_body` return because of the yield budget (rather
 /// than EOF / terminal / depth-drop)? Read-and-clear.
@@ -591,6 +644,13 @@ macro_rules! stomach_mut {
 
 /// Initialize various stomach parameters, preload, etc.
 pub fn initialize_stomach() {
+  // The soft-RSS growth floor measures from digestion start: sample the real
+  // RSS now (nothing has sampled it yet), else the first seam over the
+  // watermark would read the whole resident set as "growth" and yield once
+  // regardless of the box-count floor (115_soft_yield_floor).
+  let baseline = crate::watchdog::process_rss_kb().unwrap_or_else(|| LAST_SAMPLED_RSS_KB.get());
+  LAST_SAMPLED_RSS_KB.set(baseline);
+  note_yield_rss_baseline(baseline);
   let mut stomach = stomach_mut!();
   stomach.boxing = Vec::new();
   stomach.token_stack = Vec::new();
@@ -2049,28 +2109,43 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     //
     // Checked AFTER the terminal/depth exits so a real exit always wins, and
     // before the next `read_x_token` so nothing is consumed-then-unread.
-    if let Some(budget) = FRAGMENT_YIELD_BUDGET.get()
+    if (FRAGMENT_YIELD_BUDGET.get().is_some() || FRAGMENT_YIELD_RSS_SOFT_KB.get().is_some())
       && init_depth == 0
       && terminal_opt.is_none()
       && alignment_opt.is_none()
       && {
-        // The box budget yields on its own. The soft-RSS branch additionally
-        // requires a MINIMUM accumulation: it is a level test (`rss > soft`)
-        // with no hysteresis, so a document whose resident floor sits above
-        // the watermark latches it on for the whole run and yields at every
-        // seam with nothing accumulated — see `soft_yield_min_boxes` for the
-        // measured degeneracy (24 M yields / 5.5 KB segments on the witness).
+        // The box budget yields on its own, and so does a construct's seam
+        // request (`\pgfsys@endpicture`) — both only while a box budget is
+        // armed (streaming pass 1). The soft-RSS branch is armed on its own by
+        // the adaptive eager phase (`digest_adaptive`): there, a picture seam
+        // with room to spare must NOT yield, only crossing the watermark does.
+        // The soft branch additionally requires a MINIMUM accumulation: it is
+        // a level test (`rss > soft`) with no hysteresis, so a document whose
+        // resident floor sits above the watermark latches it on for the whole
+        // run and yields at every seam with nothing accumulated — see
+        // `soft_yield_min_boxes` for the measured degeneracy (24 M yields /
+        // 5.5 KB segments on the witness).
         let accumulated = stomach!().box_list.len();
         let rss_kb = LAST_SAMPLED_RSS_KB.get();
-        accumulated >= budget
-          || (FRAGMENT_YIELD_REQUESTED.get() && accumulated > 0)
+        let budget = FRAGMENT_YIELD_BUDGET.get();
+        budget.is_some_and(|b| accumulated >= b)
+          || (budget.is_some() && FRAGMENT_YIELD_REQUESTED.get() && accumulated > 0)
           || (FRAGMENT_YIELD_RSS_SOFT_KB
             .get()
             .is_some_and(|soft| rss_kb > soft)
             // The floor is waived once pressure is urgent, so pathological
             // per-box footprints keep the immediate response this branch
-            // exists to give (`soft_yield_is_urgent`).
-            && (accumulated >= soft_yield_min_boxes() || soft_yield_is_urgent(rss_kb)))
+            // exists to give (`soft_yield_is_urgent`) — and once the
+            // accumulation is WORTH a spill by size: a few huge top-level
+            // bodies (pgf-spectra LSE: ~194 pictures, 6.4 GB) never reach a
+            // box-count floor, and with no fuse (`--max-memory=0`) nothing
+            // is ever "urgent", so the adaptive transition never fired on
+            // its own witness. The GROWTH floor (resident memory gained since
+            // the last yield) keeps the degenerate regime out (5.5 KB segments
+            // ≪ 64 MB) and measures the retention a spill would free.
+            && (accumulated >= soft_yield_min_boxes()
+              || soft_yield_is_urgent(rss_kb)
+              || rss_kb.saturating_sub(LAST_YIELD_RSS_KB.get()) >= SOFT_YIELD_MIN_GROWTH_KB))
       }
       && stomach!().boxing.is_empty()
       && lookup_alignment().is_none()
@@ -2084,6 +2159,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
       FRAGMENT_YIELDED.set(true);
       FRAGMENT_YIELD_REQUESTED.set(false);
       FRAGMENT_YIELD_COUNT.set(FRAGMENT_YIELD_COUNT.get() + 1);
+      note_yield_rss_baseline(LAST_SAMPLED_RSS_KB.get());
       // No EOF trailer (`ran_out` stays true only through the loop's own
       // exhaustion path — we return before reaching it), and no
       // `gullet::flush()`: both are end-of-input actions, and input remains.

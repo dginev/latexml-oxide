@@ -19,6 +19,25 @@ use latexml_core::stomach::{self, RestartSignal};
 /// bounded by its ~380 s streaming rerun, not by where the eager attempt
 /// stops). `None` when memory limiting is disabled (`--max-memory=0`): the
 /// single knob governs every ceiling.
+/// The box budget a mid-run eager→streaming transition (`digest_adaptive`)
+/// hands to pass 1: the same yardstick `resolve_streaming` uses — the resolved
+/// RSS cap when one is set, else this machine's default ceiling — over the
+/// per-box footprint. Never `None`: the transition happens BECAUSE memory is
+/// under pressure, so the budget must be finite.
+pub fn transition_budget() -> usize {
+  const BYTES_PER_BOX: u64 = 2416; // stomach::BYTES_PER_LIGHT_BOX's basis
+  // `resolve_streaming` sizes against the RAW ceiling (`--max-memory=N`);
+  // what is resolvable here is the fuse `apply_memory_ceiling` derived from it
+  // (`soft_cap_from_ceiling` = 3/4 of N), so invert that to the same yardstick.
+  // With no cap at all (`--max-memory=0`) both use this machine's default
+  // ceiling. (An embedder that sets only `LATEXML_RSS_CAP_BYTES` — the cap IS
+  // the fuse there — gets a yardstick 4/3 of it; a slightly larger budget.)
+  let yardstick_mib = stomach::resolve_rss_cap()
+    .map(|fuse| fuse.saturating_mul(4) / 3 / (1024 * 1024))
+    .unwrap_or_else(latexml_core::watchdog::default_ceiling_mib);
+  ((yardstick_mib.saturating_mul(1024 * 1024) / 8 / BYTES_PER_BOX) as usize).max(1)
+}
+
 pub fn restart_watermark() -> Option<u64> { stomach::resolve_rss_cap().map(|cap| cap * 9 / 10) }
 
 /// After an eager attempt on this thread: the fragment budget to rerun under

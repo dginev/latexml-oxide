@@ -387,15 +387,35 @@ impl Converter {
       return self.finish_response(serialized);
     }
 
+    // Adaptive digestion (single pass): eager, until an RSS-driven yield seam
+    // says the process is over the spill watermark — then the accumulated
+    // bodies become streaming fragment 1 and digestion CONTINUES as pass 1,
+    // instead of the from-scratch `StreamingRestart` (kept as the no-seam
+    // fallback). A document that never crosses the watermark is built whole,
+    // exactly as before.
     let digest_result = {
       let _g = telemetry::phase(Phase::Digest);
-      self.core.digest(
+      self.core.digest_adaptive(
         source,
         current_preamble,
         current_postamble,
         self.opts.mode.clone(),
-        true,
+        crate::streaming_restart::transition_budget(),
       )
+    };
+    let digest_result = match digest_result {
+      Ok(crate::core_interface::AdaptiveOutcome::Streamed(dom)) => {
+        let dom = *dom;
+        // Pass 1 + pass 2 + finalize already ran; serialize like the
+        // `--streaming` branch above.
+        let serialized = {
+          let _g = telemetry::phase(Phase::Serialize);
+          dom.serialize_to_string()
+        };
+        return self.finish_response(serialized);
+      },
+      Ok(crate::core_interface::AdaptiveOutcome::Eager(d)) => Ok(d),
+      Err(e) => Err(e),
     };
     let digested = match digest_result {
       Err(e) if matches!(e.category, ErrorCategory::StreamingRestart) => {
