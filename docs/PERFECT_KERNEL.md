@@ -52,50 +52,61 @@ recall = real content loss) and from semantic-markup gaps, NOT from error-cluste
 mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
 56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
 etc. were stale-log false-positives that reproduce 0 errors on the current binary).
-## Continuation — state and next steps (2026-09-22)
+## Continuation — state and next steps (2026-09-22, end of session)
 
-Branch `perfect_kernel` (check `git branch --show-current` first — the tree was found on
-`gemini/pk-helpers-11` once). Batches 56fe–56fj landed 2026-09-22 (LEDGER rows); Gemini is
-out of quota for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once.
+Branch `perfect_kernel` (check `git branch --show-current` first). Gemini is out of quota
+for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once. Memory cap
+is **8 GB** from s110 on (`--max-memory=8192`, `ulimit -v 8912896`, user ruling).
 
-**Measured (axis 2):** s107 270 → s108 248 → **s109 241 invalid**; since s109 landed 56fq (harness: pgfornament-han-doc 4 → 0), 56fr (streaming `xmlns` for spilled-only prefixes: the six TikZ manuals 1 → 0), 56fs (the PushbackLimit trio: memman, dlfltxbcodetips, pmlr-sample back to clean/s108 shape) — **s110 MEASURED 229 invalid (2138/2367 valid, 90.3 %, 8 GB cap, 12 newly valid, 0 newly invalid)**. Open residual after the ruled sets (s109 clustering): 97 docs, of which 69 are frontmatter placed after body content (`title` 47) — the next cluster to triage against the M4/M5 rulings. Earlier detail: (2127/2368 valid, binary fb9db2b0dc = 56fl–56fp; 16 newly valid incl. pgf-spectra LSE, 8 newly invalid: six TikZ manuals with an unbound `xlink` prefix after a streaming spill — batch 56fr — and two PushbackLimit Fatals with memman, prime suspect 56fo; 56fq harness fix landed after the sweep). Earlier: s107 270 → s108 248 invalid (of 2,371; release at `b4968da63f`,
-JOBS=4, 180 s timeout — s107 used 300 s, so 3 slow docs now read as timeouts): 21 newly
-valid, 1 newly invalid (pgfornament-han-doc, `\setsansfont` font leak, no lualatex oracle
-so no retry), 0 real code regressions after 56fi (the `Fatal:Mouth:MissingFile` cluster was
-56fc surfacing a caught `\openin` probe — fixed). Diagnostics integrity: 0 silent
-Errors/Warnings, 0 fatal counters without a line, 1 caught panic (listings gobble, fixed
-56fj). Since s108, verified per witness with the RESOLVED jing schema (`~/data/pk_agents/
-rngdir_56fg`, built like `validate.sh` — a raw copy of the `.rng` files makes jing throw
-and `grep -c error:` read 0): gaceta 2→0, oup 9→0, emoji-doc 4→0, asternote 3→0,
-egpeirce 1→0, hitszbeamer 4→0, chemobabel-en 3→0, smf-edoc/fdoc →0. Projection for s109
-≈ 238 invalid.
+**Measured (axis 2):** s107 270 → s108 248 → s109 241 → **s110 229 invalid (2138/2367,
+90.3 %)**; binary 7a4edd02c7. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
+pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
+trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
+56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
+Projection for s111 ≈ 218 invalid. Axes 1/3 not re-measured this session (recall 98.3 at
+the last reading, `s3_sweep.sh`).
 
-**Load-bearing next steps, in order:**
+**Where the 229 stand** (clustering `~/data/pk_agents/w58/s109_residual/summary.md`,
+triage `~/data/pk_agents/w58/frontmatter69/triage.tsv`, LEDGER triage rows 2026-09-22):
+- Ruled: truncations of Fatal/timeout runs 84, dangling IDREF 25, engine-primitive ink 14,
+  section-in-item 11.
+- SHARED with Perl (a fix is a surpass, each a judgment call): 55 of the 69
+  frontmatter-after-body docs (a leaked undefined preamble command's argument opens the body
+  before `\maketitle`; Perl fails harder or strands identically), every list-structure and
+  math-leak case, 5 of the 7 remaining loop Fatals.
+- **Open, mechanically fixable (~15 docs), ranked:**
+  1. ERROR-marker hoist (8 docs, surpass, 7 beyond Perl): a leading para whose only
+     elements are `<ltx:ERROR>` markers with whitespace-only text outside them is
+     content-free for `place_frontmatter` (`node_is_content_free` /
+     `subtree_elements_all_invisible`, base_utilities.rs); the marker stays, relocated below
+     the frontmatter. Repro `~/data/pk_agents/w58/frontmatter69/repro_erronly_hoist.tex`.
+     Needs a DIVERGENCES entry.
+  2. Block-class child of a list-only container → auto-opened `item` (qworld 24 errors,
+     colorframed, tableaux; surpass): an `AUTO_OPEN_BRIDGES` row `itemize|enumerate|
+     description → item → para` for Block-class non-item children, and `insert_block`
+     routing its final placement through `find_insertion_point` when the context is a list.
+     Repros `~/data/pk_agents/w58/listmath/{m_ii,repro_blockinlist}.tex`.
+  3. uspatent/PatentApplicationGuide: `latexml_contrib/src/refstyle_sty.rs` stub shadows
+     the on-disk refstyle.sty without `\RS@ifundefined` (kernel gap: `\@ifundefined` vs
+     `\let\x\@undefined`). macros2e: `\MakeSpecialShortVerb` undefined.
+  4. Rust-only loops: carbohydrates_en (chemfig's stale `\CF@atom@sep` — an undefined CS
+     recovered as a macro in a dimen context must yield a once-only "not a register" and
+     ADVANCE); the store-verbatim-then-re-input family (frankenstein/titles is the clean
+     driver, Perl clean; tikzfxgraph, xsim). Repros `~/data/pk_agents/w58/pushback/`.
+  5. tikzviolinplots `Error:unexpected:\else Extra \else already saw \else` (a Rust
+     conditional bug, line 182); xytree-doc-en recursion through our `\lx@xy@svg` binding.
+- Perf ceiling (>180 s at 8 GB): lie-hasse (E8 loop), pgf-interference-de/-en (360 s =
+  luatex retry ×2), pgf-PeriodicTableManual, tcolorbox, wheelchart (now runs to the wall
+  instead of the memory fuse). Open follow-up: pass 2 clones `node_fonts` per segment.
+- Ruling tension to surface: l3news/ltnews/lua-tikz3dtools sit on the M4/M5 do-not-reopen
+  list, but Perl places their frontmatter cleanly — mechanically fixable, not fidelity-bound.
 
-1. **Streaming-pass creep — LANDED as 56fm** (LEDGER row): the driver was `node_boxes`, not
-   `node_fonts` — inline centered pictures close under `ltx:para > ltx:p > ltx:text >
-   ltx:picture`, and `spill_prose_free_children`'s prose test matched the `ltx:p` itself, so
-   those paragraphs were kept whole and their digested boxes pinned (163,636 entries, ~4.4 GB
-   on LSE). A text-less `ltx:p` now spills whole. LSE at the sweep cap: `--streaming` 107 s /
-   0.40 GB / all 112,295 paths (s108: Fatal at 165 s); default adaptive 106 s / 1.73 GB.
-   Open follow-up: pass 2 clones `node_fonts` per segment (`core_interface.rs`), a real but
-   pass-2-only quadratic. Never measure at `--max-memory=0` on the 246 GB host (RAM/8 watermark).
-   **Memory cap = 8 GB from s110 on** (`--max-memory=8192`, `ulimit -v 8912896`; user ruling
-   2026-09-22: test against production-grade hardware, 8 GB is allowable). s108/s109 ran at 6144.
-2. **Raw `\author` surpass — LANDED as 56fl** (853f7b2434, DIVERGENCES #253): the locked
-   `\author` absorbs a class's trailing `[keyval]`/`{affiliation}` and appends creators only
-   when `\author:redefined`; the els-cas witnesses turned out to load the contrib binding
-   `cas_dc_cls.rs`, which now carries cas-common's `\author[marks]{name}[keyvals]`.
-   cnbwp 3 → 0, cas-sc/cas-dc 8 → 0 schema errors. Check a witness's `(Loading …)` log lines
-   before assuming the raw-class path.
-3. **Open RUST-ONLY singletons — three of four LANDED** (LEDGER rows): plarray `\verb` in
-   `\footnote` → 56fn (Perl `readUntil` run-out unreads; schema 1 → 0); fancybox `\Benumerate`
-   → 56fo (`\usecounter` counter-only per latex.ltx:16048, list starts at `\@trivlist`;
-   DIVERGENCES #254; 3 → 0); biblatex-ext list float-out → 56fp (the `insert_block` hoist
-   never leaves a list; DIVERGENCES #255; 4 → 1 SHARED). robust-externalize is shell-escape
-   (`shell_escape_excluded.tsv:24`), OUT. Remaining: pgfornament-han `\setsansfont` leak (no
-   lualatex oracle → consider the font-command signal without the oracle gate). Then **s109**
-   (release binary built at HEAD in `~/data/pk_target_s109/release/`; rebuild after these land).
+**Method notes that saved time today** (memory `wisdom_perfect_kernel_batch56fl_fp_recipes`):
+read a witness's `(Loading …)` lines before assuming the raw-class path; count per-yield
+(`node_boxes`, C-live) on the release binary instead of dhat; never lower the cap to make a
+doc fit; every scan-until-delimiter loop needs Perl's run-out branch; stage by line
+(`scratchpad/stage_lines.py`) when batches share a file; a rewrite of pushed backup commits
+is a lease push after a backup ref.
 
 **Ruled / documented, do not re-open:** engine-primitive ink (21 docs) out of scope +
 harness retry only; section-in-item/figure (14) Perl parity; thuaslogos duplicate `pgfcp*`

@@ -8258,6 +8258,7 @@ silent whole-document loss). The empty file is still written. Formats that
 serialize digested boxes rather than a DOM (TeX/Box) are not checked. Guard
 `perfect_kernel_batch56::document_without_a_root_is_a_fatal`. **Upstream**:
 worth proposing — Perl's `Fatal` on an empty document would cost nothing.
+
 ### 257. A `{titlepage}` built after body content is a layout paragraph, not a stranded `<titlepage>` (Perl: the element, schema-invalid)
 
 **Perl**'s `{titlepage}` is `<ltx:titlepage>#body` with the Info "When using
