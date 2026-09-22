@@ -1879,8 +1879,11 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
         // Handle gobble
         let gobble = lst_get_number("gobble");
         for _ in 0..gobble {
-          if !ctx.listing.is_empty() {
-            ctx.listing = ctx.listing[1..].to_string();
+          // Drop one CHARACTER, not one byte: a multibyte first char (`本`,
+          // texproposal) made `[1..]` panic on a non-char boundary — the one
+          // caught worker panic of sweep s108.
+          if let Some(c) = ctx.listing.chars().next() {
+            ctx.listing = ctx.listing[c.len_utf8()..].to_string();
           }
         }
         lst_process_start_line(ctx);

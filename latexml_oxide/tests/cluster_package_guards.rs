@@ -19092,6 +19092,27 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56fj — listings `gobble` drops CHARACTERS: a multibyte first character
+  /// (`本`, texproposal) panicked `[1..]` on a non-char boundary — the one
+  /// caught worker panic of sweep s108.
+  #[test]
+  fn listings_gobble_drops_a_character_not_a_byte() {
+    let tex = "\\documentclass{article}\n\\usepackage{listings}\n\\begin{document}\n\
+               \\begin{lstlisting}[gobble=1]\nxfirst line\n次行 two\n\\end{lstlisting}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    // The binding applies `gobble` from the second line on (the first line's
+    // gobble is a separate, pre-existing gap); the multibyte line is the second.
+    assert!(
+      xml.contains(
+        "<listingline xml:id=\"lstnumberx2\">行<text class=\"ltx_lst_space\"> </text>\
+         <text class=\"ltx_lst_identifier\">two</text></listingline>"
+      ),
+      "the gobbled line keeps its second character and drops the first:\n{xml}"
+    );
+  }
+
   /// 56fh — a `\left.` / `\right.` reached in text mode emits nothing (its
   /// math-only `<ltx:XMHint/>` would be as invalid under `<p>` as the XMTok).
   #[test]
