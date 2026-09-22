@@ -2814,6 +2814,74 @@ pub fn place_frontmatter(
   Ok(())
 }
 
+/// A `{titlepage}` built AFTER body content began cannot be the schema's leading
+/// `ltx:titlepage` (`document_model` admits it only in the front group): a leaked
+/// preamble argument, an undefined-command marker or genuine prose before it has
+/// already opened the body, so the element stands stranded — `element "titlepage"
+/// not allowed here` — in both engines (Perl's `{titlepage}` is the same
+/// `<ltx:titlepage>#body` constructor, latex_constructs.pool.ltxml:1167, with only an
+/// Info: "Frontmatter will not be well-structured"; verified on the minimal repro:
+/// identical output, one jing error). Its content is hand-typeset layout, so it is
+/// demoted in place to an `ltx:para` carrying `class="ltx_titlepage"` — the same
+/// text in the same order, no wrapper the schema forbids (OXIDIZED_DESIGN #257;
+/// chemexec_de/en, stanli, l2picfaq, pst-calendar-doc, classicthesis in sweep s110).
+/// A titlepage in its proper leading position, or one whose children `ltx:para`
+/// cannot hold (a `\maketitle` unwound inside it), is left alone.
+pub fn demote_stranded_titlepage(document: &mut Document) -> Result<()> {
+  let Some(root) = document.get_document().get_root_element() else {
+    return Ok(());
+  };
+  let kids: Vec<Node> = root
+    .get_child_nodes()
+    .into_iter()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+    .collect();
+  let Some(pos) = kids
+    .iter()
+    .rposition(|n| document::get_node_qname(n) == pin_static("ltx:titlepage"))
+  else {
+    return Ok(());
+  };
+  let stranded = kids[..pos].iter().any(|k| {
+    document::get_node_qname(k) != pin_static("ltx:resource")
+      && !is_frontmatter_group_element(k)
+      && !node_is_content_free(k)
+  });
+  if !stranded {
+    return Ok(());
+  }
+  let titlepage = kids[pos].clone();
+  // The same child normalization `wrap_as_titlepage` applies: a `center`'s
+  // `logical-block` and a `para` become `block`s (#244's demotion), which
+  // `ltx:para` — like `ltx:titlepage` — admits. Only when every such child
+  // SURVIVES the demotion (`subtree_is_block_demotable`: no float/figure
+  // inside — stanli's cover holds `\begin{figure}`s in its `center`); else the
+  // titlepage is left as Perl leaves it, nothing touched.
+  let children: Vec<Node> = titlepage
+    .get_child_nodes()
+    .into_iter()
+    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+    .collect();
+  // Decide BEFORE mutating: every layout child must survive the demotion, and
+  // every child — as it will be after it (`logical-block`/`para` → `block`) —
+  // must be something `ltx:para` holds. Otherwise nothing is touched.
+  let layout = |q: SymStr| q == pin_static("ltx:logical-block") || q == pin_static("ltx:para");
+  let demotable = children
+    .iter()
+    .all(|c| !layout(document::get_node_qname(c)) || subtree_is_block_demotable(c));
+  let holdable = children.iter().all(|c| {
+    let q = document::get_node_qname(c);
+    layout(q) || document::can_contain_qsym(pin_static("ltx:para"), q)
+  });
+  if !(demotable && holdable) {
+    return Ok(());
+  }
+  normalize_titlepage_layout_children(document, &titlepage)?;
+  let mut para = document.rename_node(titlepage, "ltx:para", true)?;
+  document.add_class(&mut para, "ltx_titlepage")?;
+  Ok(())
+}
+
 /// Would `insert_frontmatter` place anything right now? Mirrors its three early
 /// returns (already done; nothing queued; the abstract-only first-call deferral).
 fn frontmatter_pending() -> bool {
@@ -2852,6 +2920,15 @@ fn wrap_as_titlepage(document: &mut Document, root: &Node, run: &[Node]) -> Resu
     n.unlink();
     titlepage.add_child(&mut n)?;
   }
+  normalize_titlepage_layout_children(document, &titlepage)?;
+  Ok(titlepage)
+}
+
+/// The layout children of a title page as the schema's `titlepage_model`
+/// (`Block.class*`) — and `ltx:para` — hold them: a `center`'s `logical-block`
+/// and a `para` become `block`s (#244's demotion, content first, rename after).
+/// Shared by `wrap_as_titlepage` and `demote_stranded_titlepage`.
+fn normalize_titlepage_layout_children(document: &mut Document, titlepage: &Node) -> Result<()> {
   for child in titlepage.get_child_nodes() {
     if child.get_type() != Some(NodeType::ElementNode) {
       continue;
@@ -2864,7 +2941,7 @@ fn wrap_as_titlepage(document: &mut Document, root: &Node, run: &[Node]) -> Resu
       document.rename_node(child, "ltx:block", true)?;
     }
   }
-  Ok(titlepage)
+  Ok(())
 }
 
 /// Flush the queued frontmatter right after `after` (a root child), or — `None` — at

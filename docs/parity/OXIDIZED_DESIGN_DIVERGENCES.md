@@ -8258,3 +8258,26 @@ silent whole-document loss). The empty file is still written. Formats that
 serialize digested boxes rather than a DOM (TeX/Box) are not checked. Guard
 `perfect_kernel_batch56::document_without_a_root_is_a_fatal`. **Upstream**:
 worth proposing — Perl's `Fatal` on an empty document would cost nothing.
+### 257. A `{titlepage}` built after body content is a layout paragraph, not a stranded `<titlepage>` (Perl: the element, schema-invalid)
+
+**Perl**'s `{titlepage}` is `<ltx:titlepage>#body` with the Info "When using
+titlepage, Frontmatter will not be well-structured"
+(`latex_constructs.pool.ltxml:1167`); the Rust binding is the same constructor
+(`sect05.rs`). `document_model` admits `ltx:titlepage` only in the leading
+front group, so when body content precedes the environment — a leaked
+preamble argument or undefined-command marker (chemexec_en.tex:119, stanli,
+l2picfaq, pst-calendar-doc), a hand-typeset cover line (toptesi-it), genuine
+prose — both engines emit a stranded `<titlepage>` after the first `<para>`:
+`element "titlepage" not allowed here` (verified identical on the minimal
+repro). **Rust** (`base_utilities.rs` `demote_stranded_titlepage`, run from the
+environment's `after_construct` after the placement pass): when any preceding
+root child is neither a resource, a frontmatter-group element nor content-free,
+and every child of the titlepage is something `ltx:para` can hold, the element
+is renamed in place to `ltx:para` with `class="ltx_titlepage"` — the same text
+in the same order, no wrapper the schema forbids there. A titlepage at its
+proper leading position keeps its element; one carrying frontmatter children (a
+`\maketitle` unwound inside it) is left as Perl leaves it. Refines the #245
+control `titlepage_stays_below_a_visible_leading_cover` ("invalid but
+faithful" → valid and faithful). Guards
+`perfect_kernel_batch56::stranded_titlepage_becomes_a_layout_paragraph`,
+`titlepage_stays_below_a_visible_leading_cover`. **Upstream**: worth proposing.

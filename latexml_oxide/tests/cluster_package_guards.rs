@@ -18774,16 +18774,50 @@ B:\ifcat A西 L\else O\fi.
     let tex = "\\documentclass{report}\n\\begin{document}\n\\noindent Cover line.\\clearpage\n\
                \\begin{titlepage}Title page.\\end{titlepage}\n\\chapter{C}\nBody.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
-    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
     let cover = xml
       .find("Cover line.")
       .expect("the cover line must be present");
-    let titlepage = xml.find("<titlepage").expect("<titlepage> must be present");
+    // 56fw (#257): the stranded `{titlepage}` is demoted in place to a layout
+    // paragraph — same text, same order, no wrapper the schema forbids there.
+    assert!(!xml.contains("<titlepage"), "{xml}");
+    let titlepage = xml
+      .find(r#"<para class="ltx_titlepage""#)
+      .expect("the demoted titlepage paragraph must be present");
     assert!(
-      cover < titlepage,
-      "a visible leading cover line must stay ABOVE the <titlepage> — the relocation \
-       pass must not move visible content:\n{xml}"
+      cover < titlepage && titlepage < xml.find("Title page.").unwrap(),
+      "a visible leading cover line must stay ABOVE the title-page content — the \
+       relocation pass must not move visible content:\n{xml}"
     );
+  }
+
+  /// 56fw (OXIDIZED_DESIGN #257): a `{titlepage}` entered after leaked leading text
+  /// (chemexec_en:119, stanli, l2picfaq, pst-calendar-doc) was emitted as a stranded
+  /// `<titlepage>` after the body's first paragraph — Perl identical, one schema
+  /// error. It is now a layout paragraph; a titlepage at its proper leading position
+  /// keeps its element.
+  #[test]
+  fn stranded_titlepage_becomes_a_layout_paragraph() {
+    let tex = "\\documentclass{article}\n\\begin{document}\nLeaked leading text.\n\
+               \\begin{titlepage}\\centering{\\Large A Hand-Typeset Cover}\\end{titlepage}\n\
+               \\section{Intro}\nBody text here.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<titlepage"), "{xml}");
+    let leaked = xml.find("Leaked leading text.").unwrap();
+    let para = xml
+      .find(r#"<para class="ltx_titlepage""#)
+      .expect("demoted paragraph");
+    let cover = xml.find("A Hand-Typeset Cover").unwrap();
+    let section = xml.find("<section").unwrap();
+    assert!(leaked < para && para < cover && cover < section, "{xml}");
+    // Control: at the leading position the element is kept.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\
+               \\begin{titlepage}\\centering{\\Large A Hand-Typeset Cover}\\end{titlepage}\n\
+               \\section{Intro}\nBody text here.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<titlepage>"), "{xml}");
   }
 
   /// Batch 56es control (OXIDIZED_DESIGN #245): the frontmatter run is the document
