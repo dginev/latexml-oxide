@@ -8327,3 +8327,27 @@ pushback limit (carbohydrates_en, a pdflatex-clean manual; Perl never draws it).
 by the same mechanism; no witness). Guard
 `perfect_kernel_batch56::pgfmath_division_by_zero_returns_the_dividend`.
 **Upstream**: worth proposing (the epsilon is the port's invention).
+### 260. A space token's character code is 32, an end-of-line space included (Perl: 10)
+
+**Perl** tokenizes an end-of-line inside an argument as a SPACE token whose text
+is `"\n"` (Mouth.pm:230, `PRESERVE_NEWLINES`) and `getCharcode` returns
+`ord("\n")` = 10 (Token.pm:243), so `\if` (TeX_Logic.pool.ltxml:51) compares it
+unequal to a typed space. tex.web §289 defines `space_token = 2^8·spacer + " "`
+and §349 makes an end-of-line a space with `cur_chr := " "`: every space token
+has character code 32. Character-processing packages depend on it —
+stringstrings' `\@DiscardNextChar` (`\if\BlankSpace#1\else\@gobble#1\fi`,
+stringstrings.sty:1556) and `\testmatchingchar` — so a `\@for` item that was a
+lone newline (tikzviolinplots.sty:201 `\violinsetoptions` over an axis-option
+list ending in `,` + newline) took the wrong branch, desynchronised the
+conditional stack (`Error:unexpected:\else` ×4) and left the axis state
+undefined, after which the KDE loop ran away (`Fatal:Timeout:Recursion`).
+Perl fails identically at the character-code level but never runs raw
+stringstrings. **Rust** (`token.rs` `get_charcode`): a `Catcode::SPACE` token
+reports 32 whatever its text; the text stays `"\n"` (Perl's data model, the
+`tex=` reversion). Callers of `get_charcode`: `\if` (tex_logic.rs), inputenc's and
+cjk's byte reads, the counter-style char read, forest's grammar-char test; the numeric
+backtick read (`read_normal_integer`, gullet.rs) builds its code from the token text
+and received the same normalization. `\ifx` was already TeX-correct: `Token::eq`
+ignores the text of SPACE tokens. Guards `charcode_tests::end_of_line_space_has_character_code_32`,
+`perfect_kernel_batch56::end_of_line_space_compares_equal_to_a_space_in_if`.
+**Upstream**: worth proposing to Perl LaTeXML.

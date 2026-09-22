@@ -18817,6 +18817,28 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56gc (OXIDIZED_DESIGN #260): an end-of-line space token has character
+  /// code 32 like any space (tex.web §289/§349); Perl and this port reported
+  /// 10, so stringstrings' `\if\BlankSpace#1` took the wrong branch on a
+  /// `\@for` item that was a lone newline and desynchronised the conditional
+  /// stack (`Extra \else` ×4 in tikzviolinplots, then a runaway KDE loop).
+  #[test]
+  fn end_of_line_space_compares_equal_to_a_space_in_if() {
+    let tex = "\\documentclass{article}\n\\usepackage{ifthen}\n\\usepackage{stringstrings}\n\\makeatletter\n\
+               \\begin{document}\n\\def\\vao{xmin=0,\n}\n\\@for\\kdeoption:=\\vao\\do{\\whereisword[q]{\\kdeoption}{xmin}}\n\
+               \\makeatother\nBody.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Extra"), "{stderr}");
+    assert!(xml.contains("<document") && xml.contains("Body."), "{xml}");
+    // The kernel form: `\if` on an end-of-line space and a typed space is TRUE.
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\def\\a{\n}\\def\\b{ }\n\
+               \\expandafter\\expandafter\\expandafter\\if\\expandafter\\a\\b YES\\else NO\\fi\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("YES") && !xml.contains("NO"), "{xml}");
+  }
+
   /// 56gb: pgf's `divide(x, 0)` is `x` — TeX's `\divide` by zero leaves the
   /// register unchanged (tex.web §107/§1240; pgfmathfunctions.basic.code.tex:66).
   /// Our epsilon divisor returned `x / 0.00001`, so a decoration whose segment

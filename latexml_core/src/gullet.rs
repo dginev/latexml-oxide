@@ -2888,7 +2888,14 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
               Catcode::END => increment_align_group_count(),
               _ => {},
             }
-            (next.to_string(), next.get_catcode() == Catcode::CS)
+            // A space token's character code is 32 whatever its text
+            // (tex.web §289; an end-of-line space carries "\n" — batch 56gc,
+            // the same normalization as `Token::get_charcode`).
+            if next.get_catcode() == Catcode::SPACE {
+              (" ".to_string(), false)
+            } else {
+              (next.to_string(), next.get_catcode() == Catcode::CS)
+            }
           },
         };
         if is_cs && s.starts_with('\\') {

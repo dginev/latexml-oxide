@@ -937,10 +937,21 @@ impl Token {
   }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
-  /// sequence
+  /// sequence. A SPACE token's code is always 32: tex.web §289 `space_token =
+  /// 2^8·spacer + " "` and §349 (`mid_line + car_ret` → `cur_chr := " "`) — an
+  /// end-of-line becomes a space with character code 32, whatever produced it.
+  /// This token keeps its `"\n"` TEXT (Perl's data model, `PRESERVE_NEWLINES`,
+  /// the `tex=` reversion) but Perl's `getCharcode` returned `ord("\n")` = 10
+  /// for it (Token.pm:243), so `\if` compared an end-of-line space unequal to a
+  /// typed one: stringstrings' `\if\BlankSpace#1` took the wrong branch on a
+  /// `\@for` item that was a lone newline and desynchronised the conditional
+  /// stack (`Extra \else`), then tikzviolinplots' KDE loop ran away
+  /// (batch 56gc, OXIDIZED_DESIGN #260).
   pub fn get_charcode(&self) -> u32 {
     if self.code == Catcode::CS {
       256
+    } else if self.code == Catcode::SPACE {
+      32
     } else {
       self.with_str(|text| {
         if let Some(c) = text.chars().next() {
@@ -1426,5 +1437,19 @@ mod tests {
     // ARG catcode prepends # in Display.
     let t = Token::new("1", Catcode::ARG);
     assert_eq!(format!("{t}"), "#1");
+  }
+}
+
+#[cfg(test)]
+mod charcode_tests {
+  use super::{Catcode, Token};
+
+  /// tex.web §289/§349: every space token has character code 32, an
+  /// end-of-line space included (its text stays "\n").
+  #[test]
+  fn end_of_line_space_has_character_code_32() {
+    assert_eq!(Token::new("\n", Catcode::SPACE).get_charcode(), 32);
+    assert_eq!(Token::new(" ", Catcode::SPACE).get_charcode(), 32);
+    assert_eq!(Token::new("A", Catcode::LETTER).get_charcode(), 65);
   }
 }
