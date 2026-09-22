@@ -65,7 +65,13 @@ names; gitlog/incgraph post errors → 0), the Unicode-aware recall auditor, the
 56fz (Perl's `FontDecodeString` map_max port: faithful, fixes russ_doc's Cyrillic, but Rust's accent
 composite emits precomposed char TOKENS that the digester cannot tell from raw bytes — 11 encoding
 fixtures red; needs the composite-token marker or an inputenc-table mouth decode, plus a utf8 default
-for `INPUT_ENCODING` — LEDGER row). Projection for s112 ≈ 212 invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
+for `INPUT_ENCODING` — LEDGER row). Also landed: 56gb (pgfmath `divide(x, 0)` = x per
+tex.web §107/§1240; carbohydrates_en Fatal → valid), 56gc (a space token's character code is 32,
+tex.web §289; tikzviolinplots' `Extra \else` gone, Fatal → completes). Open kernel leads from the
+loop triage: frankenstein/titles — an engine `\aftergroup` × url-`\Url` push-back × active `^^M`
+re-digestion loop (17-line repro, needs a stepping session); stringstrings under raw interpretation —
+`\whereisword` returns 0 and `\noblanks[e]` swallows the body (root-causer running). s112 sweep
+(with post pass + HTML recall) running; projection ≈ 210 invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
 pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
 trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
 56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
