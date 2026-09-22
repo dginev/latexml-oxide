@@ -58,7 +58,7 @@ Branch `perfect_kernel` (check `git branch --show-current` first — the tree wa
 `gemini/pk-helpers-11` once). Batches 56fe–56fj landed 2026-09-22 (LEDGER rows); Gemini is
 out of quota for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once.
 
-**Measured (axis 2):** s107 270 → **s108 248 invalid** (of 2,371; release at `b4968da63f`,
+**Measured (axis 2):** s107 270 → s108 248 → **s109 241 invalid** (2127/2368 valid, binary fb9db2b0dc = 56fl–56fp; 16 newly valid incl. pgf-spectra LSE, 8 newly invalid: six TikZ manuals with an unbound `xlink` prefix after a streaming spill — batch 56fr — and two PushbackLimit Fatals with memman, prime suspect 56fo; 56fq harness fix landed after the sweep). Earlier: s107 270 → s108 248 invalid (of 2,371; release at `b4968da63f`,
 JOBS=4, 180 s timeout — s107 used 300 s, so 3 slow docs now read as timeouts): 21 newly
 valid, 1 newly invalid (pgfornament-han-doc, `\setsansfont` font leak, no lualatex oracle
 so no retry), 0 real code regressions after 56fi (the `Fatal:Mouth:MissingFile` cluster was
@@ -80,6 +80,8 @@ egpeirce 1→0, hitszbeamer 4→0, chemobabel-en 3→0, smf-edoc/fdoc →0. Proj
    0.40 GB / all 112,295 paths (s108: Fatal at 165 s); default adaptive 106 s / 1.73 GB.
    Open follow-up: pass 2 clones `node_fonts` per segment (`core_interface.rs`), a real but
    pass-2-only quadratic. Never measure at `--max-memory=0` on the 246 GB host (RAM/8 watermark).
+   **Memory cap = 8 GB from s110 on** (`--max-memory=8192`, `ulimit -v 8912896`; user ruling
+   2026-09-22: test against production-grade hardware, 8 GB is allowable). s108/s109 ran at 6144.
 2. **Raw `\author` surpass — LANDED as 56fl** (853f7b2434, DIVERGENCES #253): the locked
    `\author` absorbs a class's trailing `[keyval]`/`{affiliation}` and appends creators only
    when `\author:redefined`; the els-cas witnesses turned out to load the contrib binding

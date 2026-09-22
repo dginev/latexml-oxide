@@ -20,7 +20,7 @@ Two workloads were running simultaneously from separate Claude sessions:
 
 | Workload | Parallelism | Effective cost |
 |---|---|---|
-| `tools/perfect_kernel/sweep.sh` | `xargs -P 10`, each doc up to 6 GB (`--max-memory=6144`) | 10+ cores, up to 60 GB memory ceiling |
+| `tools/perfect_kernel/sweep.sh` | `xargs -P 10`, each doc up to 8 GB (`--max-memory=8192`, production-grade hardware — user ruling 2026-09-22) | 10+ cores, up to 80 GB memory ceiling |
 | `cargo nextest run -j 8 --workspace` | 8 test binaries; cluster-regression tests fork their own `latexml_oxide` | 8+ cores |
 
 Result: 22–24 `latexml_oxide` processes at 100 % CPU on 20 threads, load
@@ -39,7 +39,7 @@ the memory pressure came from the sweep, which nextest knows nothing about.
    - alone: `JOBS=8` is the practical ceiling — and still throttles: sweep #32
      (2026-09-02, `JOBS=8`, nothing else running) sat at 95 °C with ~700
      package-throttle events per 5 s; `JOBS=6` is the quiet setting. `JOBS=12` will throttle and
-     can exhaust swap because 12 × 6 GB > 31 GB + 8 GB.
+     can exhaust swap because 12 × 8 GB > 31 GB + 8 GB.
    - alongside anything else: `JOBS=4`.
 3. **nextest:** `-j 8` is fine alone. Use `-j 4` if a sweep is running,
    and remember the `*_cluster_regressions` tests spawn extra converters.

@@ -27,8 +27,8 @@ bundle=$(basename "$(dirname "$TEX")")
 out="$OUTROOT/$bundle/$name"
 mkdir -p "$out"
 
-# RAM guard (see memory feedback_sandbox_run_discipline § feedback_sandbox_ram_guard): 6 GiB virtual.
-ulimit -v 6291456
+# RAM guard (memory feedback_max_memory_8gb_production): 8 GB per document, production-grade hardware.
+ulimit -v 8912896  # 8.5 GB address space: --max-memory=8192 (production-grade hardware, user ruling 2026-09-22) plus headroom for the mmap arenas
 
 # Pin kpathsea to the SAME TeX Live the corpus comes from. The binary's linked
 # (in-process) libkpathsea anchors on its compile-time distro tree — on a host
@@ -68,7 +68,7 @@ run_once() {
     --preload="$PRELOAD" \
     --xml \
     --timeout="$TIMEOUT_S" \
-    --max-memory=6144 \
+    --max-memory=8192 \
     --dest="$out/$name.xml" \
     "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log"
   exit_code=$?

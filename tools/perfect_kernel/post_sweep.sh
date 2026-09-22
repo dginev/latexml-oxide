@@ -52,12 +52,12 @@ post_one() {
     tex=$(awk -F'\t' -v b="$bundle" -v n="$name" '$1==b {k=split($2,p,"/"); if (p[k]==n".tex") {print $2; exit}}' "$CORPUS")
     opts=$(grep -m1 -o '<?latexml package="latexml" options="[^"]*"' "$XMLROOT/$bundle/$name/$name.xml" | sed 's/.*options="//; s/"$//')
     preload="[${opts:-rawstyles,rawclasses}]latexml.sty"
-    ( cd "$out" && ulimit -v 6291456 && timeout "$((TIMEOUT_S + 30))" "$BIN" \
-        --preload="$preload" --max-memory=6144 --dest="$out/$name.html" \
+    ( cd "$out" && ulimit -v 8912896 && timeout "$((TIMEOUT_S + 30))" "$BIN" \
+        --preload="$preload" --max-memory=8192 --dest="$out/$name.html" \
         --nodefaultresources --timeout="$TIMEOUT_S" "$tex" \
         2>&1 | sed 's/\x1b\[[0-9;]*m//g' > "$out/$name.post.log" )
   else
-    ( cd "$out" && ulimit -v 6291456 && timeout "$((TIMEOUT_S + 30))" "$BIN" --whatsin=xml \
+    ( cd "$out" && ulimit -v 8912896 && timeout "$((TIMEOUT_S + 30))" "$BIN" --whatsin=xml \
         "$XMLROOT/$bundle/$name/$name.xml" --dest="$out/$name.html" \
         --sourcedirectory="$DOCROOT/$bundle" --nodefaultresources --timeout="$TIMEOUT_S" \
         2>&1 | sed 's/\x1b\[[0-9;]*m//g' > "$out/$name.post.log" )
