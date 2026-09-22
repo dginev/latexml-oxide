@@ -14806,6 +14806,48 @@ Some text.
     assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
   }
 
+  /// Streaming pass 1: an inline centered picture closes under
+  /// `ltx:para > ltx:p > ltx:text > ltx:picture` (no `\par` inside the
+  /// paragraph). `spill_prose_free_children` kept every such `ltx:p` whole
+  /// because its prose test matched the `ltx:p` itself, so nothing under a
+  /// closed root `ltx:para` spilled and each picture's digested box tree
+  /// stayed pinned in `node_boxes` (pgf-spectra LSE: 163,636 entries, ~4.4 GB
+  /// at the 6 GB fuse). A text-less `ltx:p` is never a leading-title
+  /// candidate and spills whole.
+  #[test]
+  fn inline_pictures_in_paragraphs_stay_memory_bounded() {
+    let tex = r"\documentclass{article}
+\usepackage{tikz}
+\newcount\ct \ct=0
+\newcount\dr
+\begin{document}
+A real leading paragraph of prose.
+
+\loop\ifnum\ct<INLINE_N
+  \noindent\makebox[\linewidth][c]{\begin{tikzpicture}
+    \dr=0
+    \loop\ifnum\dr<INLINE_D
+      \draw[color=red!\the\dr!blue] (0,\the\dr pt) -- (2,\the\dr pt);
+      \advance\dr by 1
+    \repeat
+  \end{tikzpicture}}\par
+  \advance\ct by 1
+\repeat
+\end{document}
+"
+    .replace("INLINE_N", "300")
+    .replace("INLINE_D", "40");
+    let (stderr, xml) = convert_args(&tex, &["--streaming", "--max-memory=800"]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("MemoryBudget"), "{stderr}");
+    assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
+    assert!(
+      xml.contains("A real leading paragraph of prose."),
+      "{}",
+      xml.len()
+    );
+  }
+
   /// Under the luatex profile `\DeclareUnicodeCharacter` declares nothing
   /// (latex.ltx:22168/22203 — utf8.def is 8-bit-engine only), so a class's
   /// `\cs_new_protected:Npn ·` finds the native character free

@@ -4126,10 +4126,21 @@ impl Document {
       let is_element = child.get_type() == Some(NodeType::ElementNode)
         && child.get_name() != SPILL_PLACEHOLDER
         && model::can_contain_sym(pin!("ltx:para"), get_node_qname(&child));
+      // Prose = an `ltx:p` outside any picture that holds non-space text
+      // outside any picture. A text-less `ltx:p` — an inline centered picture
+      // closing under `ltx:para > ltx:p > ltx:text > ltx:picture` (no `\par`
+      // inside the paragraph; pgf-spectra LSE emits 141 spectra that way) —
+      // is never a leading-title candidate (`maybe_dedup_leading_title_ink`
+      // needs alphabetic text) and spills whole like a bare picture would.
+      // Matching the `ltx:p` itself kept every such paragraph resident and
+      // pinned its digested boxes in `node_boxes` (163,636 entries, ~4.4 GB
+      // of the 4.8 GB fuse on LSE); guard
+      // `inline_pictures_in_paragraphs_stay_memory_bounded`.
       let holds_prose = is_element
         && !self
           .findnodes(
-            "descendant-or-self::ltx:p[not(ancestor::ltx:picture)]",
+            "descendant-or-self::ltx:p[not(ancestor::ltx:picture)]\
+             [.//text()[normalize-space()][not(ancestor::ltx:picture)]]",
             Some(&child),
           )
           .is_empty();
