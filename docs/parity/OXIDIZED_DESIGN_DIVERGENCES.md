@@ -8282,6 +8282,7 @@ control `titlepage_stays_below_a_visible_leading_cover` ("invalid but
 faithful" → valid and faithful). Guards
 `perfect_kernel_batch56::stranded_titlepage_becomes_a_layout_paragraph`,
 `titlepage_stays_below_a_visible_leading_cover`. **Upstream**: worth proposing.
+
 ### 258. A leading paragraph holding only undefined-command markers is content-free for the frontmatter hoist (Perl: the frontmatter strands behind it)
 
 **Perl** typesets an undefined control sequence as an `<ltx:ERROR>` marker in

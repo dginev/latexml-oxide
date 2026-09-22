@@ -58,8 +58,8 @@ Branch `perfect_kernel` (check `git branch --show-current` first). Gemini is out
 for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once. Memory cap
 is **8 GB** from s110 on (`--max-memory=8192`, `ulimit -v 8912896`, user ruling).
 
-**Measured (axis 2):** s107 270 → s108 248 → s109 241 → **s110 229 invalid (2138/2367,
-90.3 %)**; binary 7a4edd02c7. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
+**Measured (axis 2):** s107 270 → s108 248 → s109 241 → s110 229 → **s111 222 invalid (2145/2367,
+90.6 %)**; binary 3e039d304c, 0 newly invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
 pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
 trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
 56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
@@ -119,7 +119,7 @@ pdflatex or lualatex only (no xelatex). Two readings of the set, both on s110:
 | completes with 0 Error lines | 1,241 (99.4 %), 7 short | 1,534 (99.1 %), 14 short |
 | ≥ 1 Warning line | 636 | 859 |
 | schema-valid | 1,216 (97.4 %), 32 invalid | 1,499 (96.8 %), 49 invalid |
-| content recall (s105, STALE) | mean 93.1, **median 98.6**, 283 < 95, 170 < 90, 100 < 80 | not computed |
+| content recall (s111, new auditor) | mean 93.2, **median 98.8**, 270 < 95, 172 < 90, **104 < 80** | corpus median 98.4; 93 docs < 60 |
 
 Corrections to the first cut: "1,251 joined" was a sort-locale artifact (1,248 join); the
 loose `exit 0` filter admitted 4 docs whose pdflatex run logged `!` errors (typog-example
@@ -151,8 +151,7 @@ Honest projection per bar (pdflatex-clean):
    chessboard: no root), 2 aomart M4/M5, 2 thuaslogos duplicate ids, 2 M4/M5-tension
    (ltnews, l3news — Perl places them cleanly). Work: 6 mechanical + 2 Fatals; decisions:
    dangling IDREF, frontmatter surpass, inline-leak surpass, thuaslogos, M4/M5 reopen.
-3. **Content: not projectable until re-measured.** No `s3_verdicts` exists for s106–s110;
-   56fq–56fw changed membership. Then the sub-80 tail (100 docs) is themed work —
+3. **Content: measured on s111 with the Unicode-aware auditor (the tail is real loss).** Then the sub-80 tail (100 docs) is themed work —
    bibliography rendering (27), beamer/slide/grid/titlepage furniture (37), non-Latin
    scripts (3), external PDF inclusion — each a real content class, not a metric fix. The
    auditor still needs umlaut/ligature normalization for the 90–95 band to be readable.
