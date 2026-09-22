@@ -20,6 +20,12 @@ name=$(basename "$DOC")
 S3_EXT="${S3_EXT:-xml}"
 xml="$OUTROOT/$DOC/$name.$S3_EXT"
 # The golden PDF sits in the source bundle dir.
+# The golden PDFs live in the SWEEP's TeX tree: honour TL_ROOT (as run_doc.sh
+# does — the distro kpsewhich on PATH has only 32 doc PDFs, so every audit
+# read "no PDF") before falling back to the ambient tree.
+if [[ -z "${DOCROOT:-}" && -n "${TL_ROOT:-}" && -d "$TL_ROOT/texmf-dist/doc/latex" ]]; then
+  DOCROOT="$TL_ROOT/texmf-dist/doc/latex"
+fi
 DOCROOT="${DOCROOT:-$(kpsewhich -var-value=TEXMFDIST)/doc/latex}"
 pdf="$DOCROOT/$DOC.pdf"
 [[ -f "$xml" ]] || { echo "no XML: $xml" >&2; exit 1; }
@@ -35,19 +41,28 @@ pdftotext -q "$pdf" "$tmp/pdf.txt"
 # rendered text only (they could only inflate "found").
 perl -0pe 's{<(m:)?annotation\b.*?</(m:)?annotation>}{ }gs; s{<[^>]*>}{ }g' "$xml" > "$tmp/xml.txt" 2>/dev/null
 
+# Word extraction is Unicode-aware on BOTH sides (the byte-wise `tr -cs
+# '[:alpha:]'` split every non-ASCII letter: "Schriftgröße" → "schriftgr",
+# "e" — a false missing word per umlaut, the artifact that dominated the
+# 90–95 % band of the s105 reading): NFKC folds ligatures (ﬁ → fi) and
+# compatibility forms, the pdftotext line-break hyphen ("in-\nput") is
+# rejoined, then lowercase letter runs of length ≥ 4 in any script.
 words() {
-  tr -cs '[:alpha:]' '\n' < "$1" | tr '[:upper:]' '[:lower:]' |
-    awk 'length($0)>=4' | sort -u
+  perl -CSD -MUnicode::Normalize -0777 -ne '
+    $_ = NFKC($_);
+    s/(\p{L})-\n(\p{L})/$1$2/g;
+    print lc($_) =~ s/[^\p{L}]+/\n/gr;
+  ' "$1" | awk 'length($0)>=4' | LC_ALL=C sort -u
 }
 words "$tmp/pdf.txt" > "$tmp/pdf.words"
 words "$tmp/xml.txt" > "$tmp/xml.words"
 
 total=$(wc -l < "$tmp/pdf.words")
-missing=$(comm -23 "$tmp/pdf.words" "$tmp/xml.words" | wc -l)
+missing=$(LC_ALL=C comm -23 "$tmp/pdf.words" "$tmp/xml.words" | wc -l)
 found=$((total - missing))
 pct=$(awk -v f="$found" -v t="$total" 'BEGIN{printf "%.1f", t? 100*f/t : 0}')
 printf '%s\trecall=%s%%\t(%d/%d distinct pdf words; %d missing)\n' \
   "$DOC" "$pct" "$found" "$total" "$missing"
 if [[ "$missing" -gt 0 ]]; then
-  echo "  missing sample:" $(comm -23 "$tmp/pdf.words" "$tmp/xml.words" | head -15)
+  echo "  missing sample:" $(LC_ALL=C comm -23 "$tmp/pdf.words" "$tmp/xml.words" | head -15)
 fi
