@@ -58,8 +58,7 @@ Branch `perfect_kernel` (check `git branch --show-current` first). Gemini is out
 for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once. Memory cap
 is **8 GB** from s110 on (`--max-memory=8192`, `ulimit -v 8912896`, user ruling).
 
-**Measured (axis 2):** s107 270 → s108 248 → s109 241 → s110 229 → **s111 222 invalid (2145/2367,
-90.6 %)**; binary 3e039d304c, 0 newly invalid. Landed after s111: 56fx (ERROR-marker hoist, 8 → 0),
+**Measured (axis 2):** s107 270 → s108 248 → s109 241 → s110 229 → s111 222 → **s112 211 invalid (2156/2367, 91.1 %)**; binary 71bdc190b9. Landed after s111: 56fx (ERROR-marker hoist, 8 → 0),
 56fy (XMText attribute gate, principia 6 → 0), 56ga (bib-resource scanner skips `\jobname`-style
 names; gitlog/incgraph post errors → 0), the Unicode-aware recall auditor, the 8 GB cap. Withdrawn:
 56fz (Perl's `FontDecodeString` map_max port: faithful, fixes russ_doc's Cyrillic, but Rust's accent
@@ -70,8 +69,7 @@ tex.web §107/§1240; carbohydrates_en Fatal → valid), 56gc (a space token's c
 tex.web §289; tikzviolinplots' `Extra \else` gone, Fatal → completes). Open kernel leads from the
 loop triage: frankenstein/titles — an engine `\aftergroup` × url-`\Url` push-back × active `^^M`
 re-digestion loop (17-line repro, needs a stepping session); stringstrings under raw interpretation —
-`\whereisword` returns 0 and `\noblanks[e]` swallows the body (root-causer running). s112 sweep
-(with post pass + HTML recall) running; projection ≈ 210 invalid. Landed AFTER s110, not yet swept: 56fq (harness keep-better:
+`\whereisword` returns 0 and `\noblanks[e]` swallows the body (root-causer running). **s112 MEASURED: 211 invalid (2156/2367, 91.1 %)**, newly invalid none; pdflatex-clean set error-free 1241/1,248, invalid 31; recall of record unchanged (median 98.6). Landed AFTER s110, not yet swept: 56fq (harness keep-better:
 pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
 trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
 56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
