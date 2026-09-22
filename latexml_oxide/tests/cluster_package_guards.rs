@@ -14967,6 +14967,7 @@ Some text.
     assert!(xml.contains("<document"), "the root survives:\n{xml}");
     assert!(xml.contains("Body survives."), "{xml}");
   }
+
   /// A conversion whose document never opened its root (an undefined `\ifX`
   /// in the main file skipped `\begin{document}` through EOF: xwatermark-guide,
   /// skeyval-pokayoke2) wrote a bare XML declaration and reported status 2.
@@ -14984,6 +14985,7 @@ Some text.
     );
     assert!(!xml.contains("<document"), "{xml}");
   }
+
   /// Streaming: the root's `xmlns:PREFIX` declarations were computed from the
   /// RESIDENT DOM only (`apply_document_namespace_declarations`), so a prefix
   /// used solely inside spilled segments — `xlink:href` on `svg:pattern`/

@@ -8236,6 +8236,7 @@ schema errors); it now stays in the box and is reported exactly as Perl reports
 it, and the list keeps its five siblings. Guard
 `perfect_kernel_batch56::bibliography_in_a_list_item_box_keeps_the_list`.
 **Upstream**: none (Perl's placement is the conservative one).
+
 ### 256. A built document with no root element is a Fatal (Perl: status 2 with a bare XML declaration)
 
 **Perl** writes the 39-byte `<?xml version="1.0" encoding="UTF-8"?>` when
