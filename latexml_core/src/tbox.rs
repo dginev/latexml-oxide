@@ -24,25 +24,34 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Tbox {
   /// plain-text content
-  pub text:       SymStr,
+  pub text:         SymStr,
   /// associated font for `text`
-  pub font:       Rc<Font>,
+  pub font:         Rc<Font>,
   /// source location where the box originated (`None` = unknown)
-  pub locator:    Option<Locator>,
+  pub locator:      Option<Locator>,
   /// misc properties, such as sizing information
-  pub properties: HashMap<Stored>,
+  pub properties:   HashMap<Stored>,
   /// a Tokens list containing the TeX that created (or could have) the Tbox.
-  pub tokens:     Tokens,
+  pub tokens:       Tokens,
+  /// `isEmpty`, lifted off the property map. The `{`/`}` group markers
+  /// (`tex_box.rs`) and the no-op primitive box carry exactly one property,
+  /// `isEmpty => true`; as a map entry it cost a heap-allocated hashbrown
+  /// table per marker — 1.24 M tables / 421 MB, 16 % of the Rust-heap peak on
+  /// pgf-spectra LSE (dhat, 2026-09-20). `Tbox::new` drains the key into this
+  /// field, so a text-mode marker's map stays empty (no allocation); the
+  /// `isEmpty` readers below consult the field first.
+  pub empty_marker: bool,
 }
 
 impl Default for Tbox {
   fn default() -> Self {
     Tbox {
-      text:       pin!(""),
-      font:       Rc::new(Font::text_default()),
-      locator:    None,
-      properties: HashMap::default(),
-      tokens:     Tokens!(),
+      text:         pin!(""),
+      font:         Rc::new(Font::text_default()),
+      locator:      None,
+      properties:   HashMap::default(),
+      tokens:       Tokens!(),
+      empty_marker: false,
     }
   }
 }
@@ -141,19 +150,26 @@ impl Tbox {
       }
       font = Rc::new(arena::with(text, |text_str| font.specialize(text_str)));
     }
+    // Lift `isEmpty` off the map (see the field doc); every writer keeps
+    // passing it as a property, so no call site changes.
+    let empty_marker = matches!(properties.get("isEmpty"), Some(Stored::Bool(true)));
+    if empty_marker {
+      properties.remove("isEmpty");
+    }
     Tbox {
       text,
       font,
       locator,
       properties,
       tokens,
+      empty_marker,
     }
   }
   /// checks if the text content is empty
   pub fn is_empty(&self) -> bool {
     // 1. A space-like thing
     // 2. empty (or whitespace) text content
-    self.get_property_bool("isEmpty")
+    self.empty_marker
       || self.get_property_bool("isSpace")
       || arena::with(self.text, |text| text.trim().is_empty())
   }
@@ -199,7 +215,9 @@ impl BoxOps for Tbox {
   fn get_properties(&self) -> &HashMap<Stored> { &self.properties }
   fn get_property(&self, key: &str) -> Option<Cow<'_, Stored>> {
     let props = &self.properties;
-    if key == "isSpace" {
+    if key == "isEmpty" && self.empty_marker {
+      Some(Cow::Owned(Stored::Bool(true)))
+    } else if key == "isSpace" {
       match props.get(key) {
         Some(value) => Some(Cow::Owned(value.clone())),
         None => {
@@ -224,6 +242,13 @@ impl BoxOps for Tbox {
     caller(&self.properties)
   }
   fn get_properties_mut(&mut self) -> &mut HashMap<Stored> { &mut self.properties }
+  fn has_property(&self, key: &str) -> bool {
+    (key == "isEmpty" && self.empty_marker) || self.properties.contains_key(key)
+  }
+  fn get_property_bool(&self, key: &str) -> bool {
+    (key == "isEmpty" && self.empty_marker)
+      || matches!(self.properties.get(key), Some(Stored::Bool(true)))
+  }
   fn get_string(&self) -> Result<Cow<'_, str>> {
     // TODO: Should we switch these to symbols? are they used often?
     Ok(Cow::Owned(arena::with(self.text, |text| text.to_string())))
@@ -369,5 +394,44 @@ mod tests {
     // A Default locator points at the crate source file/line where
     // Default::default was called; just verify it's not nonsense.
     let _ = t.locator;
+  }
+}
+
+#[cfg(test)]
+mod empty_marker_tests {
+  use super::*;
+
+  /// A `{`/`}` group marker carries `isEmpty` as a field, not as a one-entry
+  /// heap map (the 421 MB class on pgf-spectra LSE), and every reader still
+  /// sees the property.
+  #[test]
+  fn is_empty_marker_lives_off_the_property_map() {
+    arena::force_init();
+    // A bare unit test has no engine: supply the font and locator the
+    // constructor would otherwise read from State/gullet.
+    let font = Some(Rc::new(Font::text_default()));
+    let here = Some(Locator::default());
+    let t = Tbox::new(
+      pin!(""),
+      font.clone(),
+      here,
+      Tokens!(),
+      stored_map!("isEmpty" => true),
+    );
+    assert!(
+      t.properties.is_empty(),
+      "no heap map for the marker: {:?}",
+      t.properties
+    );
+    assert!(t.empty_marker);
+    assert!(t.is_empty());
+    assert!(t.get_property_bool("isEmpty"));
+    assert!(t.has_property("isEmpty"));
+    assert!(matches!(
+      t.get_property("isEmpty").as_deref(),
+      Some(Stored::Bool(true))
+    ));
+    let plain = Tbox::new(pin!("x"), font, here, Tokens!(), HashMap::default());
+    assert!(!plain.empty_marker && !plain.is_empty() && !plain.has_property("isEmpty"));
   }
 }

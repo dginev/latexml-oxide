@@ -749,6 +749,7 @@ pub fn def_math_primitive(
             scriptpos_override,
           ),
           locator: Some(locator),
+          empty_marker: false,
         })])
       })),
       options,
