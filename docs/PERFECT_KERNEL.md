@@ -72,35 +72,28 @@ egpeirce 1→0, hitszbeamer 4→0, chemobabel-en 3→0, smf-edoc/fdoc →0. Proj
 
 **Load-bearing next steps, in order:**
 
-1. **Streaming-pass creep** (task #23). Lever B LANDED as 56fk: the single-pass
-   eager→streaming continuation fires at an RSS-driven yield seam (growth floor ≥ 64 MB since
-   the last yield, baselined when the soft trigger is armed). Measured at the SWEEP cap
-   (`--max-memory=6144`, 6 GB ulimit): pgf-PeriodicTable transitions and completes in 315 s
-   with 42,275 paths (s108: 180 s timeout, nothing); LSE neutral — transition at 1.59 GB,
-   pass 1 creeps to 4.79 GB and stops at the fuse, the from-scratch restart fallback stops
-   there too (168 s, 79,278 paths vs s108 165 s / 80,324, both Fatal); wheelchart neutral.
-   The bar (< 180 s, < 4.5 GB) is blocked in all three by pass 1's own growth: ~+250 MB per
-   fragment while C-live and `node_boxes` stay flat. NEXT: dhat the `--streaming` run of LSE
-   at 6144 (bench binary `~/data/pk_target_dhat/release/latexml_oxide`, `--features
-   dhat-heap`); suspects `Document.node_fonts: HashMap<u64, Font>` held by value and never
-   swept (cloned wholesale per fragment in pass 2), then `idstore`. Never measure at
-   `--max-memory=0` on the 246 GB host: the watermark is RAM/8 ≈ 30 GB there, the lever is
-   inert and tcolorbox balloons to 35 GB. Lever A (isEmpty field) measured −0.27 GB only.
-2. **Raw `\author` surpass (56fl)** — ruling "surpass now", mechanism corrected by the
-   2026-09-22 root-causer: the class body must NOT run (private accumulators, locked
-   `\maketitle` → authors lost); instead the locked kernel/binding `\author` ABSORBS a
-   trailing `[…]`/`{…}` (`\lx@author@trailing`: `orcid=` → `ltx:contact role=orcid`, a
-   trailing group → `role=affiliation`) and, when `\author:redefined`, appends via
-   `\lx@splitting{\lx@add@author}` instead of dequeue-replace. Patch the four twins together
-   (`sect05.rs`, `inst_support_sty.rs:33`, `sv_support_sty.rs:25`, `llncs_cls.rs:48`).
-   Witnesses els-cas cas-sc/cas-dc (+3 creators with orcid), cnbwp (1 → 3 creators).
-   Repros `~/data/pk_agents/w57/author_redef/`.
-3. **Open RUST-ONLY singletons** (one batch each): fancybox `Bitemize` in the doc's
-   re-`\input` example env (list binding in `fancybox_sty.rs`); plarray `\verb` inside
-   `\footnote` running past its delimiter; biblatex-ext / robust-externalize residual list
-   float-out (unreduced — `LXML_TRACE_INSERT_BLOCK=1` on the real docs); pgfornament-han
-   `\setsansfont` leak (no oracle → consider the font-command signal without the oracle
-   gate). Then s109.
+1. **Streaming-pass creep — LANDED as 56fm** (LEDGER row): the driver was `node_boxes`, not
+   `node_fonts` — inline centered pictures close under `ltx:para > ltx:p > ltx:text >
+   ltx:picture`, and `spill_prose_free_children`'s prose test matched the `ltx:p` itself, so
+   those paragraphs were kept whole and their digested boxes pinned (163,636 entries, ~4.4 GB
+   on LSE). A text-less `ltx:p` now spills whole. LSE at the sweep cap: `--streaming` 107 s /
+   0.40 GB / all 112,295 paths (s108: Fatal at 165 s); default adaptive 106 s / 1.73 GB.
+   Open follow-up: pass 2 clones `node_fonts` per segment (`core_interface.rs`), a real but
+   pass-2-only quadratic. Never measure at `--max-memory=0` on the 246 GB host (RAM/8 watermark).
+2. **Raw `\author` surpass — LANDED as 56fl** (853f7b2434, DIVERGENCES #253): the locked
+   `\author` absorbs a class's trailing `[keyval]`/`{affiliation}` and appends creators only
+   when `\author:redefined`; the els-cas witnesses turned out to load the contrib binding
+   `cas_dc_cls.rs`, which now carries cas-common's `\author[marks]{name}[keyvals]`.
+   cnbwp 3 → 0, cas-sc/cas-dc 8 → 0 schema errors. Check a witness's `(Loading …)` log lines
+   before assuming the raw-class path.
+3. **Open RUST-ONLY singletons — three of four LANDED** (LEDGER rows): plarray `\verb` in
+   `\footnote` → 56fn (Perl `readUntil` run-out unreads; schema 1 → 0); fancybox `\Benumerate`
+   → 56fo (`\usecounter` counter-only per latex.ltx:16048, list starts at `\@trivlist`;
+   DIVERGENCES #254; 3 → 0); biblatex-ext list float-out → 56fp (the `insert_block` hoist
+   never leaves a list; DIVERGENCES #255; 4 → 1 SHARED). robust-externalize is shell-escape
+   (`shell_escape_excluded.tsv:24`), OUT. Remaining: pgfornament-han `\setsansfont` leak (no
+   lualatex oracle → consider the font-command signal without the oracle gate). Then **s109**
+   (release binary built at HEAD in `~/data/pk_target_s109/release/`; rebuild after these land).
 
 **Ruled / documented, do not re-open:** engine-primitive ink (21 docs) out of scope +
 harness retry only; section-in-item/figure (14) Perl parity; thuaslogos duplicate `pgfcp*`

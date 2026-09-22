@@ -17896,6 +17896,54 @@ c &= d
     assert!(xml.contains("T=[8.53581pt] B=[19.91692pt]"), "{xml}");
   }
 
+  /// The hoist climb never leaves a list (Perl floats nothing out of one —
+  /// latex_constructs.pool.ltxml:3936 cannot cross a drawing's `svg:g`). A
+  /// bibliography alone in a tcolorbox inside an `\item` climbed to the
+  /// section, closed the itemize and nested the remaining items
+  /// (biblatex-ext.tex:1301/1326). The one remaining error is Perl's own
+  /// `ltx:bibliography` in `ltx:block`.
+  #[test]
+  fn bibliography_in_a_list_item_box_keeps_the_list() {
+    let tex = r"\documentclass{article}
+\usepackage[skins]{tcolorbox}
+\newtcolorbox{bibexample}{enhanced}
+\begin{document}
+\begin{itemize}
+\item First option.
+\begin{bibexample}
+\begin{thebibliography}{9}
+\bibitem{a} Reference A.
+\end{thebibliography}
+\end{bibexample}
+\item Second option.
+\item Third option.
+\end{itemize}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(
+      stderr.contains("Error:malformed:ltx:bibliography"),
+      "{stderr}"
+    );
+    assert!(!stderr.contains("malformed:ltx:item"), "{stderr}");
+    assert_eq!(xml.matches("<itemize").count(), 1, "{xml}");
+    assert_eq!(xml.matches("<item ").count(), 3, "{xml}");
+    // The three items are siblings: no `<item` opens while another is open.
+    let mut depth = 0i32;
+    for tag in regex::Regex::new(r"<item |</item>")
+      .unwrap()
+      .find_iter(&xml)
+    {
+      if tag.as_str() == "<item " {
+        depth += 1;
+        assert_eq!(depth, 1, "nested item:\n{xml}");
+      } else {
+        depth -= 1;
+      }
+    }
+  }
+
   /// Batch 56bq: a bibliography issued inside a pgf node (xebaposter's
   /// References `\headerbox`) floats out of the drawing to the document,
   /// as from a plain minipage, because nothing else in the box would be

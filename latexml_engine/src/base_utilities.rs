@@ -4863,6 +4863,34 @@ pub fn insert_block(
           document::can_contain_somehow(t, "ltx:p")
         })
     };
+    // LIST: the climb never leaves a list. Perl floats nothing out of a list
+    // (`adjustBackmatterElement` autocloses only `canAutoClose` nodes and a
+    // drawing's `svg:g` is not one, latex_constructs.pool.ltxml:3936 /
+    // Document.pm find_insertion_point): a bibliography arriving ALONE from a
+    // tcolorbox inside an `\item` (`kept` empty, so the TEXT guard above did
+    // not hold it) climbed through the `ltx:item`/`ltx:itemize` to the
+    // section, which closed the list under the remaining items — they then
+    // nested inside one another (biblatex-ext.tex:1301/1326 `optionlist` +
+    // `bibexample`, 4 schema errors; RUST-ONLY). The block stays in the box
+    // and the model reports it, as Perl does (SHARED `ltx:bibliography` in
+    // `ltx:block`). The list-free hoists keep their surpass (xebaposter,
+    // juradiss, the parbox caption). Guard
+    // `bibliography_in_a_list_item_box_keeps_the_list`.
+    let list_boundary = |n: &Node| {
+      with(document::get_node_qname(n), |t| {
+        matches!(
+          t,
+          "ltx:item"
+            | "ltx:inline-item"
+            | "ltx:itemize"
+            | "ltx:enumerate"
+            | "ltx:description"
+            | "ltx:inline-itemize"
+            | "ltx:inline-enumerate"
+            | "ltx:inline-description"
+        )
+      })
+    };
     let mut anchor = container.clone();
     let mut ancestor = context.clone();
     let mut placed = false;
@@ -4874,7 +4902,7 @@ pub fn insert_block(
         placed = true;
         break;
       }
-      if !flow(&ancestor) && !kept_empty {
+      if list_boundary(&ancestor) || (!flow(&ancestor) && !kept_empty) {
         break;
       }
       match ancestor.get_parent() {

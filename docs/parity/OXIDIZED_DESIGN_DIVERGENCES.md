@@ -8180,6 +8180,7 @@ carries cas-common's `\author[marks]{name}[keyvals]` shape through the shared
 `\lx@add@author@keyvals` (guard `cas_author_trailing_keyvals_are_frontmatter`).
 **Upstream**: not filed (Perl leaks the
 same way; a class-shape-aware `\author` would be the upstream fix).
+
 ### 254. `\usecounter` is counter-only (latex.ltx:16048); the list starts at `\@trivlist` (Perl: `\usecounter` starts the list)
 
 **Perl** (`latex_constructs.pool.ltxml:1642`) defines `\usecounter{ctr}` as
@@ -8212,3 +8213,26 @@ list_setup_counter_value_survives_into_the_items}`, `tests/structure/itemize.tex
 worth filing — a raw `\usecounter` outside `\list` starts a phantom list in
 Perl.
 
+### 255. A block captured in a drawing may hoist out of the box — but never out of a list (Perl: stays in the box, reported)
+
+**Perl** places a block-level element that turns up inside a captured box
+(`svg:g`/`svg:foreignObject` of a tikz node, an mdframed or tcolorbox skin)
+where the model puts it: `adjustBackmatterElement`
+(`latex_constructs.pool.ltxml:3936`) and `find_insertion_point`
+(`Document.pm:960-1011`) autoclose only `canAutoClose` nodes and a drawing's
+`svg:g` is not one, so an `ltx:bibliography` built inside a tikz node stays
+there and is reported (`<ltx:bibliography> isn't allowed in <ltx:block>`).
+**Rust** (`base_utilities.rs` `insert_block`, batch 56bq) hoists such a
+block out of the drawing when no kept node carries text (a graphic in the box
+is drawing content and stays): xebaposter's bibliography in a top-level tikz
+node floats after the `svg:svg` (guard
+`bibliography_in_a_drawing_floats_to_the_document`), juradiss's mdframed
+bibliography and a parbox caption reach their figure. **Boundary (56fp)**: the
+climb never crosses `ltx:item`/`ltx:inline-item`/`ltx:itemize`/`ltx:enumerate`
+/`ltx:description` (or their inline forms). A bibliography arriving alone from
+a tcolorbox inside an `\item` (biblatex-ext.tex:1301/1326) had climbed to the
+subsection, closed the itemize under the remaining items and nested them (4
+schema errors); it now stays in the box and is reported exactly as Perl reports
+it, and the list keeps its five siblings. Guard
+`perfect_kernel_batch56::bibliography_in_a_list_item_box_keeps_the_list`.
+**Upstream**: none (Perl's placement is the conservative one).
