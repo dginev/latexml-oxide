@@ -18817,6 +18817,42 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
+  /// 56gb: pgf's `divide(x, 0)` is `x` — TeX's `\divide` by zero leaves the
+  /// register unchanged (tex.web §107/§1240; pgfmathfunctions.basic.code.tex:66).
+  /// Our epsilon divisor returned `x / 0.00001`, so a decoration whose segment
+  /// length degraded to 0 computed a ~1 sp step from `len / int(len / 0)` and
+  /// pgf's automaton walked into the pushback limit (carbohydrates_en, RUST-ONLY).
+  #[test]
+  fn pgfmath_division_by_zero_returns_the_dividend() {
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\begin{document}\n\
+               \\pgfmathparse{16.61/0}A\\pgfmathresult B\\pgfmathparse{int(16.61/0)}\\pgfmathresult C\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Perl warns on every zero divisor (pgfmath.code.tex.ltxml:255); so do we.
+    assert!(
+      stderr.contains("Warning:unexpected:<number> pgfmath: divisor should never be zero!"),
+      "{stderr}"
+    );
+    // TeX gobbles the space after `\pgfmathresult`.
+    assert!(xml.contains("A16.61B16C"), "{xml}");
+    let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usetikzlibrary{decorations}\n\
+               \\pgfdeclaredecoration{cf loop}{initial}{\n\
+               \\state{initial}[width=+0pt,next state=seg,persistent precomputation={\n\
+               \\pgfmathsetmacro\\ml{\\pgfdecoratedinputsegmentlength/int(\\pgfdecoratedinputsegmentlength/\\pgfdecorationsegmentlength)}\n\
+               \\setlength{\\pgfdecorationsegmentlength}{\\ml pt}}]{}\n\
+               \\state{seg}[width=\\pgfdecorationsegmentlength]{\\pgfpathlineto{\\pgfpoint{\\pgfdecorationsegmentlength}{0pt}}}\n\
+               \\state{final}{}}\n\\begin{document}\n\
+               \\begin{tikzpicture}\\draw[decorate,decoration={cf loop,segment length=0pt}](0,0)--(3,0);\\end{tikzpicture}\n\
+               \\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(
+      xml.contains("<svg:svg") && xml.contains("<svg:path"),
+      "the decorated path is drawn:\n{xml}"
+    );
+  }
+
   /// 56fy: `cleanup_xmtext` collapses a sole inline-block child into the
   /// `XMText` and copied its attributes raw — a `\rotatebox`/`\raisebox` in a
   /// `\text{}` of UNPARSED math left `angle`/`innerdepth`/… on `XMText`, which

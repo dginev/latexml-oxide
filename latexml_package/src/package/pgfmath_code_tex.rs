@@ -90,8 +90,48 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
   toks
 }
 
-/// Safe divisor — avoid division by zero
-fn pgfmath_divisor(v: f64) -> f64 { if v == 0.0 { EPSILON } else { v } }
+/// Safe divisor — avoid division by zero. Perl `pgfmath.code.tex.ltxml:255`
+/// warns on every zero divisor ("pgfmath: divisor should never be zero!"),
+/// as pgf itself raises a Math Error; this port had gone silent.
+fn pgfmath_divisor(v: f64) -> f64 {
+  if v == 0.0 {
+    Warn!(
+      "unexpected",
+      "<number>",
+      "pgfmath: divisor should never be zero!"
+    );
+    EPSILON
+  } else {
+    v
+  }
+}
+
+/// pgf's `divide`: `\pgfmath@x` is divided by the integer divisor with TeX's
+/// `\divide` (pgfmathfunctions.basic.code.tex:66-80), and a zero divisor
+/// leaves the register UNCHANGED — tex.web §107 `x_over_n` sets `arith_error`
+/// and §1240 `do_register_command` returns after the error without storing —
+/// so `divide(x, 0)` is `x` (pdflatex: "You've asked me to divide 'x' by
+/// '0.0'", recoverable). The EPSILON divisor gave `x / 0.00001` instead: a
+/// decoration whose `segment length` had degraded to 0 (carbohydrates.sty:158
+/// reads chemfig's renamed `\CF@atom@sep`) then set its step from
+/// `len / int(len / 0)` — ~1 sp instead of pgf's ~1 pt — and pgf's decoration
+/// automaton walked a 16 pt path a million steps into the pushback limit
+/// (batch 56gb; RUST-ONLY, Perl never draws it).
+/// Also pgf's `mod`: the same `\divide` leaves its dividend, so `mod(x, 0)` is `x`.
+/// Perl's port returned `x / epsilon` here (and warned); the dividend is the
+/// pgf/pdflatex value — OXIDIZED_DESIGN #259.
+fn pgfmath_divide(a: f64, b: f64) -> f64 {
+  if b == 0.0 {
+    Warn!(
+      "unexpected",
+      "<number>",
+      "pgfmath: divisor should never be zero!"
+    );
+    a
+  } else {
+    a / b
+  }
+}
 
 /// Convert degrees to radians (pgf default is degrees)
 fn pgfmath_arg_radians(arg: f64) -> f64 { arg.to_radians() }
@@ -398,8 +438,8 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "subtract" => a - b,
     "neg" => -a,
     "multiply" => a * b,
-    "divide" => a / pgfmath_divisor(b),
-    "div" => (a / pgfmath_divisor(b)) as i64 as f64,
+    "divide" => pgfmath_divide(a, b),
+    "div" => pgfmath_divide(a, b) as i64 as f64,
     "pow" => a.powf(b),
     "abs" => a.abs(),
     "round" => a.round(),
@@ -410,7 +450,13 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
     "mod" | "Mod" => {
       // Perl: pgfmath_mod_trunc for mod, pgfmath_mod_floor for Mod
       if name == "mod" {
-        a % pgfmath_divisor(b) // truncated mod (like Perl %)
+        // truncated mod (like Perl %); pgf's `\divide` by zero leaves the
+        // dividend, so `mod(x, 0)` is `x` (pgfmathfunctions.basic.code.tex:271)
+        if b == 0.0 {
+          pgfmath_divide(a, b)
+        } else {
+          a % b
+        }
       } else {
         // floor mod
         let b_abs = b.abs();
@@ -717,7 +763,7 @@ mod pgfmath_grammar {
 
   use super::{
     PGF_UNITS, is_builtin_constant, is_builtin_function, is_user_constant, is_user_function,
-    pgfmath_apply_fn, pgfmath_cmp_op, pgfmath_convert, pgfmath_divisor, pgfmath_factorial,
+    pgfmath_apply_fn, pgfmath_cmp_op, pgfmath_convert, pgfmath_divide, pgfmath_factorial,
     pgfmath_register_lookup,
   };
 
@@ -838,7 +884,8 @@ mod pgfmath_grammar {
         },
         Some(b'/') => {
           bump(i, 1);
-          result /= pgfmath_divisor(factor(i)?);
+          // Infix `/` is pgf's `divide`: a zero divisor leaves the dividend.
+          result = pgfmath_divide(result, factor(i)?);
           i.state.int_result = false;
         },
         _ => break,
@@ -1585,7 +1632,7 @@ LoadDefinitions!({
     pgfmath_result_tokens(parse_pgf_number(&a) * parse_pgf_number(&b))
   });
   DefMacro!("\\pgfmathdivide@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a) / pgfmath_divisor(parse_pgf_number(&b)))
+    pgfmath_result_tokens(pgfmath_divide(parse_pgf_number(&a), parse_pgf_number(&b)))
   });
   DefMacro!("\\pgfmathpow@ {} {}", sub[(a, b)] {
     pgfmath_result_tokens(parse_pgf_number(&a).powf(parse_pgf_number(&b)))

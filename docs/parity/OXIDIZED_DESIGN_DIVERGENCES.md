@@ -8305,3 +8305,24 @@ Perl's placement. Guard
 `perfect_kernel_batch56::frontmatter_hoists_over_an_error_marker_only_paragraph`
 (with the typeset-argument control). **Upstream**: none (Perl's placement is
 conservative; the marker is a LaTeXML artifact either way).
+### 259. pgfmath division by zero returns the dividend (Perl: dividend ÷ 0.00001)
+
+**Perl**'s pgfmath accelerator (`pgfmath.code.tex.ltxml:255` `pgfmath_divisor`)
+replaces a zero divisor by an epsilon, so `divide(x, 0)` is `x / 0.00001`,
+`int(x / 0)` a six-digit integer, `mod(x, 0)` ≈ 0 — with a Warning. Real pgf
+(`pgfmathfunctions.basic.code.tex:66-80`, `:271`) divides with TeX's `\divide`,
+whose zero divisor sets `arith_error` and leaves the register unchanged
+(tex.web §107 `x_over_n`, §1240 `do_register_command`), so `divide(x, 0)` is
+`x`, `div`/`int` its integer part, `mod(x, 0)` is `x`, and pdflatex raises the
+recoverable "You've asked me to divide 'x' by '0'". **Rust**
+(`pgfmath_code_tex.rs` `pgfmath_divide`, used by the infix `/`, `divide`, `div`,
+`\pgfmathdivide@` and `mod`) returns the dividend and emits Perl's Warning. The
+epsilon value was not harmless: carbohydrates.sty:119-125 seeds a decoration's
+step from `len / int(len / segmentlength)` with a segment length that degraded
+to 0 (chemfig renamed `\CF@atom@sep`), pdflatex's step is ≈ 1 pt (16 automaton
+steps), the epsilon step ≈ 1 sp walked pgf's automaton into the 5,000,000
+pushback limit (carbohydrates_en, a pdflatex-clean manual; Perl never draws it).
+`reciprocal`, `sec`, `cosec`, `cot` keep the epsilon (pgf: `reciprocal(0)` is 1
+by the same mechanism; no witness). Guard
+`perfect_kernel_batch56::pgfmath_division_by_zero_returns_the_dividend`.
+**Upstream**: worth proposing (the epsilon is the port's invention).
