@@ -8116,3 +8116,25 @@ emit_error_fires_the_too_many_errors_fatal_once,
 errors_are_silent_once_a_resource_fatal_is_latched}`,
 `cluster_cli::worker_panic_ends_with_a_fatal_line_and_the_verdict`.
 **Upstream**: not filed (Rust recovers where Perl dies).
+
+### 252. `document.body` admits `ltx:subparagraph` (Perl's schema: `paragraph` but not `subparagraph` at document level)
+
+**Perl** (`LaTeXML-structure.rnc:23`): `document.body.class = Para.model | paragraph |
+subsubsection | subsection | section | chapter | part | slide | slidesequence |
+sidebar | sectional-block` — every other sectional container (part, chapter,
+section, subsection, subsubsection, paragraph, appendix) admits `subparagraph`;
+`document.body` alone lists `paragraph` and omits it, an asymmetry with no semantic
+ground (LaTeX permits a top-level `\subparagraph`). It bites when a class typesets a
+heading through `\@startsection` at level `\@M` — smfart.cls:873 for the
+`\tableofcontents` title — which both engines clamp to the deepest unit, so
+`<subparagraph inlist="toc"><title>Contents</title>` lands as a `<document>` child
+and the document is schema-invalid (smflatex/smf-edoc, smf-fdoc; identical tree in
+Perl). **Rust**: `ltx:subparagraph` is added to `document.body` (user ruling
+2026-09-22) in `latexml_core/resources/RelaxNG/LaTeXML.model` (`document.body`, and
+the flattened `ltx:document`/`ltx:sectional-block`/`ltx:inline-sectional-block`
+lines), `LaTeXML-structure.rnc:23` and `LaTeXML-structure.rng`. Pure widening: no
+document that validated before becomes invalid. Not extended: sectioning units
+inside `item`/`figure` (the 56fb carve-out; 14 docs, Perl-identical tree,
+PDF-faithful — ruled "leave" the same day). **Guard**:
+`perfect_kernel_batch56::a_top_level_subparagraph_is_admitted_by_the_document_body`.
+**Upstream**: worth filing (schema asymmetry).

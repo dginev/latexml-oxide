@@ -111,9 +111,18 @@ fi
 # the oracle regardless of cleanliness; a demonstrated Unicode-font dependency in
 # the pdfTeX run is the discriminator that keeps the +78k-error trap of trusting
 # engine=lualatex alone (sweep 9) shut: BOTH must hold.
+# Signal widened 2026-09-22 (user ruling: engine-primitive ink is out of scope by
+# the intended-engine gate, but the speculative retry is the one safe lever): the
+# luatexja/jlreq/xeCJK/kotex/emoji undefined-CS set (\kanjiskip, \setCJKmainfont,
+# \fontid, …). Under the pdfTeX identity these manuals take their pTeX branch and
+# leak the primitives' arguments as a leading <para>; under [luatex] jlreq/
+# luatexja route around it (chemobabel-en 101 err/1 fatal → 25/0, asternote
+# 25/1 → 13/0, emoji-doc 3 → 0). Keep-the-better-run below discards the ones
+# that regress (jpnedumathsymbols-doc, pmhanguljamo-doc). Raw pTeX/encTeX/XeTeX
+# primitives are never defined (DIFFICULT_CASES D9).
 if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
    && grep -qP "^$bundle\t$name\t(lualatex|xelatex)\t" "$ORACLE" \
-   && grep -qE 'undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua) ' "$out/$name.log"; then
+   && grep -qE 'undefined:\\(setmonofont|setmainfont|setsansfont|setmathfont|IfFontExistsTF|directlua|setCJKmainfont|newCJKfontfamily|setemojifont|kanjiskip|xkanjiskip|ltjsetparameter|reDeclareMathAlphabet|fontid|pagedir|bodydir) ' "$out/$name.log"; then
   # This retry is SPECULATIVE (the oracle was not clean), so keep whichever run is
   # better: s107 turned latex-via-exemplos (pdfTeX: 2 errors, 10 s) into a 300 s
   # TokenLimit Fatal under luatex, and pmhanguljamo-kdoc (PARKED luatexko) from
@@ -121,14 +130,14 @@ if [[ "$PRELOAD" != *luatex* ]] && [[ -f "$ORACLE" ]] \
   # or that logs MORE errors, is discarded and the pdfTeX artifacts restored.
   for ext in xml log stdout; do cp -f "$out/$name.$ext" "$out/$name.pdftex.$ext" 2>/dev/null || true; done
   first_exit=$exit_code
-  first_err=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
-  first_fatal=$(grep -c '^Fatal:' "$out/$name.log" || true)
+  first_err=$(grep -cE 'Error:[a-z_]+:' "$out/$name.log" || true)
+  first_fatal=$(grep -cE 'Fatal:[A-Za-z_]+:' "$out/$name.log" || true)
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
   printf 'first run (pdfTeX identity) leaked a Unicode-engine font command and the oracle engine is lualatex/xelatex; retried under luatex\n' >"$out/retried_luatex"
   run_once
   new_exit=$exit_code
-  new_err=$(grep -c '^Error:[a-z]' "$out/$name.log" || true)
-  new_fatal=$(grep -c '^Fatal:' "$out/$name.log" || true)
+  new_err=$(grep -cE 'Error:[a-z_]+:' "$out/$name.log" || true)
+  new_fatal=$(grep -cE 'Fatal:[A-Za-z_]+:' "$out/$name.log" || true)
   if (( new_exit == 124 && first_exit != 124 )) || (( new_fatal > first_fatal )) \
      || (( new_fatal == first_fatal && new_err > first_err )); then
     for ext in xml log stdout; do mv -f "$out/$name.pdftex.$ext" "$out/$name.$ext" 2>/dev/null || true; done
@@ -155,13 +164,13 @@ else
   counted="$out/$name.log"
 fi
 # Strict error grep (feedback_strict_vs_lax_error_grep).
-errors=$(grep -c '^Error:[a-z]' "$counted" || true)
+errors=$(grep -cE 'Error:[a-z_]+:' "$counted" || true)
 # Fatal TARGETS are capitalized (`Fatal:Timeout:TokenLimit`,
 # `Fatal:TooManyErrors:MaxLimit`, `Fatal:Mouth:EoF`); only `Fatal:oom:` is
 # lowercase, so a `[a-z]` class here counted 25 of sweep 28's ~290 fatals
 # (status stayed right only via the exit code). Match any target letter.
-fatals=$(grep -c '^Fatal:[A-Za-z]' "$counted" || true)
-warnings=$(grep -c '^Warning:[a-z]' "$counted" || true)
+fatals=$(grep -cE 'Fatal:[A-Za-z_]+:' "$counted" || true)
+warnings=$(grep -cE 'Warning:[a-z_]+:' "$counted" || true)
 [[ "$counted" != "$out/$name.log" ]] && rm -f "$counted"
 
 if [[ $exit_code == 124 ]]; then

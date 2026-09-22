@@ -20,7 +20,7 @@ element document { document_attributes, document_model }
 
 
 ## The content allowable as the main body of the document.
-document.body.class = Para.model | paragraph | subsubsection
+document.body.class = Para.model | paragraph | subparagraph | subsubsection
   | subsection | section | chapter | part | slide | slidesequence | sidebar
   | sectional-block
 

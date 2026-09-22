@@ -26,6 +26,7 @@
     <choice>
       <ref name="Para.model"/>
       <ref name="paragraph"/>
+      <ref name="subparagraph"/>
       <ref name="subsubsection"/>
       <ref name="subsection"/>
       <ref name="section"/>

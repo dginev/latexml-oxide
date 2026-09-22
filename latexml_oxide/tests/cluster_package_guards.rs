@@ -18979,6 +18979,29 @@ B:\ifcat A西 L\else O\fi.
     assert!(title < body, "{xml}");
   }
 
+  /// 56fg — `document.body` admits `ltx:subparagraph` (user ruling 2026-09-22;
+  /// every other sectional container already admitted it, `document.body` alone
+  /// listed `paragraph` but not `subparagraph` — a model asymmetry shared with
+  /// Perl's schema). smflatex's `\tableofcontents` heading is an `\@startsection`
+  /// at level `\@M`, clamped to the deepest unit, so it lands at document level
+  /// (smflatex/smf-edoc, smf-fdoc). LaTeX permits a top-level `\subparagraph`.
+  #[test]
+  fn a_top_level_subparagraph_is_admitted_by_the_document_body() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\subparagraph{Contents}\nList.\n\n\\section{One}\nText.\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(
+      error_count(&stderr),
+      0,
+      "no malformed-content error:\n{stderr}"
+    );
+    let sp = xml
+      .find("<subparagraph ")
+      .expect("the subparagraph is emitted");
+    let sec = xml.find("<section ").expect("the section follows");
+    assert!(sp < sec, "{xml}");
+    assert!(xml.contains("<title>Contents</title>"), "{xml}");
+  }
+
   /// Batch 56fb: a `\subsection` in the box NESTS in the enclosing section (a live
   /// `\subsection` would), and the post-box text ends up inside that subsection.
   #[test]
