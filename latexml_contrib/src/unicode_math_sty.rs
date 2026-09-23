@@ -22,7 +22,19 @@ LoadDefinitions!({
   ))?;
   RequirePackage!("amsmath");
   RequirePackage!("fontspec");
-  def_macro_noop("\\setmathfont[]{}[]")?;
+  // unicode-math-luatex.sty:1585-1592: the `version=<name>` key declares the
+  // math version the font is set for (`\DeclareMathVersion`), in either option
+  // list (`\setmathfont[…]{font}` or `\setmathfont{font}[…]`); asmeconf.cls
+  // :698-750 declares `sansbold` so and `\mathversion{sansbold}`s its title
+  // (asmeconf-template: "Unknown math version"). The font stays presentation.
+  // Guard: `perfect_kernel_batch56::setmathfont_version_declares_the_math_version`.
+  DefPrimitive!("\\setmathfont[]{}[]", sub[(pre, _font, post)] {
+    for opts in [pre, post] {
+      if let Some(name) = opts.and_then(|o| setmathfont_version(&o.to_string())) {
+        assign_value(&s!("MATH_VERSION_{name}"), Stored::Bool(true), Some(Scope::Global));
+      }
+    }
+  });
   def_macro_noop("\\setmathfontface DefToken []{}[]")?;
   def_macro_noop("\\unimathsetup{}")?;
   // unicode-math-luatex.sty:329 `\NewDocumentCommand\setoperatorfont{m}`:
@@ -154,3 +166,14 @@ LoadDefinitions!({
   );
   DefMacro!("\\mathbfit{}", "\\symbfit{#1}");
 });
+
+/// The `version=<name>` value of a fontspec-style option list, if any.
+fn setmathfont_version(opts: &str) -> Option<String> {
+  opts
+    .split(',')
+    .find_map(|kv| {
+      let (key, value) = kv.split_once('=')?;
+      (key.trim() == "version").then(|| value.trim().trim_matches(['{', '}']).trim().to_string())
+    })
+    .filter(|name| !name.is_empty())
+}

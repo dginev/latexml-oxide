@@ -1530,11 +1530,15 @@ LoadDefinitions!({
 "#
   );
 
-  // hyperref.sty L6132: \NoHyper/\endNoHyper temporarily disables
-  // hyperlinking. In our XML output it's a no-op group.
+  // hyperref.sty:6147-6177 \NoHyper/\endNoHyper temporarily disables
+  // hyperlinking. In our XML output it's a no-op group. The macros
+  // themselves too: asmeconf.cls:2033/2045 writes `\NoHyper\footnotemark[#1]
+  // \endNoHyper` directly, which left both undefined (asmeconf-template).
   // Witness 2406.02150.
   DefMacro!(T_CS!("\\begin{NoHyper}"), None, "");
   DefMacro!(T_CS!("\\end{NoHyper}"), None, "");
+  DefMacro!("\\NoHyper", "");
+  DefMacro!("\\endNoHyper", "");
 
   // hyperref \let\ltx@label\label when loaded. Make available as
   // alias for downstream packages (smartref, nccmath) that check.

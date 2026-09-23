@@ -1,0 +1,16 @@
+% witness: ukbill/immigration-bill (ukbill.cls:497 \maketitle typesets \textbf{\title}, the SETTER,
+%   where \@title was meant; memoir base class; reached by the 56gj \maketitle deposit)
+% oracle:  lualatex also errors on the class bug (! Argument of \reserved@a has an extra }); Perl 0
+%   (Perl never runs the class body)
+% engines: rust (56gj) = Error:unexpected:} Attempt to close boxing group per \maketitle
+% expect:  0 errors; <title>T</title> at the head; "Fields" once
+% status:  GREEN (batch 56gm)
+% mechanism: the deposit nulled \@title/\@author/\@date but left the setters live; memoir's two-
+%   argument \title then read the deposit's braces. The setters are relaxed in the deposit group too.
+\documentclass{memoir}
+\title{T}
+\renewcommand{\maketitle}{\begin{center}{\Huge\textbf{\title}}\\ Fields\end{center}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

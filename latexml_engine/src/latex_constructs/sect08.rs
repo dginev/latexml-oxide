@@ -1164,6 +1164,8 @@ pub(crate) fn load() -> Result<()> {
 
       DefMacro!(name_cs, converted_args, begin);
       DefMacro!(end_name_cs, None, end);
+    } else {
+      record_dropped_environment_stores(&name, &[&begin, &end])?;
     }
     Ok(Vec::new())
   });
@@ -1498,4 +1500,78 @@ pub(crate) fn load() -> Result<()> {
   });
 
   Ok(())
+}
+
+/// A class that `\renewenvironment`s a locked frontmatter environment keeps
+/// that field in its own stores, which the lock never lets it fill — wkmgr.cls
+/// :190 `{abstract}` = `\global\setbox\abspagebox\vbox\bgroup…`, read by its
+/// `\maketitle` (:157 `\ifvoid\abspagebox` → "*** Nie podano streszczenia ***");
+/// mcmthesis.cls:165 `\RenewEnviron{abstract}{\xdef\@abstract{…}}` (environ
+/// renews through `\renewenvironment`), read by `\make@abstract` ("\@abstract
+/// undefined"). The frontmatter carries the field, so inside the class
+/// `\maketitle` deposit (sect05.rs) those stores read GIVEN AND EMPTY — the
+/// environment analogue of K11's `\lx@captured@stores` (frontmatter_stores.rs):
+/// every `\setbox` target of the dropped bodies an empty box, every
+/// `\def`-family target and the field's conventional `\@<name>` store (as
+/// `\@title` is) empty. Appended to `\lx@dropped@env@stores`, which the
+/// deposit runs in its group. Guard:
+/// `perfect_kernel_batch56::class_maketitle_reads_a_dropped_environment_store_as_given`.
+fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<()> {
+  let mut nulls: Vec<Token> = Vec::new();
+  for body in bodies {
+    let toks = body.unlist_ref();
+    for (i, t) in toks.iter().enumerate() {
+      if t.get_catcode() != Catcode::CS {
+        continue;
+      }
+      let target = toks[i + 1..]
+        .iter()
+        .find(|n| n.get_catcode() != Catcode::SPACE);
+      let Some(target) = target.filter(|n| n.get_catcode() == Catcode::CS) else {
+        continue;
+      };
+      if t.with_str(|s| s == "\\setbox") {
+        // Only a store that exists when the deposit runs: resphilosophica's
+        // renewal writes amsart's `\abstractbox`, which our amsart binding
+        // never allocates.
+        nulls.extend([
+          T_CS!("\\ifdefined"),
+          *target,
+          T_CS!("\\setbox"),
+          *target,
+          T_CS!("\\hbox"),
+          T_BEGIN!(),
+          T_END!(),
+          T_CS!("\\fi"),
+        ]);
+      } else if t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef")) {
+        nulls.extend([T_CS!("\\let"), *target, T_CS!("\\@empty")]);
+      }
+    }
+  }
+  let store = T_CS!(s!("\\@{name}"));
+  nulls.extend([
+    T_CS!("\\ifdefined"),
+    store,
+    T_CS!("\\else"),
+    T_CS!("\\let"),
+    store,
+    T_CS!("\\@empty"),
+    T_CS!("\\fi"),
+  ]);
+  let acc = T_CS!("\\lx@dropped@env@stores");
+  let mut body = match lookup_definition(&acc)?.and_then(|d| d.get_expansion().cloned()) {
+    Some(ExpansionBody::Tokens(prev)) => prev.unlist(),
+    _ => Vec::new(),
+  };
+  body.extend(nulls);
+  def_macro(
+    acc,
+    None,
+    ExpansionBody::from(Tokens::new(body)),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )
 }

@@ -1,0 +1,25 @@
+% witness: przechlewski-book/wkmgr1, wkmgr2 (wkmgr.cls:190 \renewenvironment{abstract}{\global\setbox
+%   \abspagebox\vbox\bgroup…}; :157 \ifvoid\abspagebox → "*** Nie podano streszczenia ***"), and
+%   mcmthesis/mcmthesis-demo (the \@abstract store, see the guard)
+% oracle:  pdflatex 0 warnings (the author gave an abstract)
+% engines: rust (56gj) = 1 class warning; Perl never runs the class \maketitle
+% expect:  0 errors, 0 warnings; "Field Line" once; the abstract once (the frontmatter's)
+% status:  GREEN (batch 56gm)
+% mechanism: the lock drops the class's {abstract}, so its store is never filled; inside the class
+%   \maketitle deposit the dropped environment's stores read GIVEN AND EMPTY (sect08.rs
+%   record_dropped_environment_stores → \lx@dropped@env@stores).
+\begin{filecontents*}{boxthesis.cls}
+\ProvidesClass{boxthesis}
+\LoadClass{report}
+\newbox\abs@box
+\renewenvironment{abstract}{\global\setbox\abs@box\vbox\bgroup}{\egroup}
+\renewcommand{\maketitle}{\begin{center}Field Line\end{center}%
+  \ifvoid\abs@box\ClassWarning{boxthesis}{No abstract given}\fi\unvbox\abs@box}
+\end{filecontents*}
+\documentclass{boxthesis}
+\title{T}
+\begin{document}
+\begin{abstract}The abstract.\end{abstract}
+\maketitle
+Body.
+\end{document}

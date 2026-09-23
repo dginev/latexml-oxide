@@ -1,0 +1,16 @@
+% witness: asmejour/asmejour-template (asmejour.cls:1388-1404 author block on l3coffins; reached by the
+%   56gj \maketitle deposit)
+% oracle:  pdflatex 0 errors; "XY"
+% engines: rust=1 (Error:expected:<box>) perl=n/a (Perl errors on any void box operand)
+% expect:  0 errors; <p>X<text yoffset="2.0pt"/>Y</p> (the void box raised, like \copy\strutbox)
+% status:  GREEN (batch 56gm)
+% mechanism: MoveableBox's void-box tolerance matched \box/\copy/\lastbox by SPELLING; expl3's
+%   \box_use:N is \cs_new_eq to \tex_copy:D = \copy (expl3-code.tex:30507), and l3coffins raises it
+%   over a void box (\box_move_up:nn, :34575). Now by meaning (x_equals).
+\documentclass{article}
+\ExplSyntaxOn
+\box_new:N \l_void_box
+\ExplSyntaxOff
+\begin{document}
+X\ExplSyntaxOn\tex_raise:D 2pt \box_use:N \l_void_box \ExplSyntaxOff Y
+\end{document}

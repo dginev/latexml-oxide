@@ -1170,8 +1170,15 @@ LoadDefinitions!({
       // \lower1pt\copy\strutbox...}` × ~50 rows → 100+ errors → FATAL_3 abort,
       // where Perl completes; both engines share the spurious error, real TeX
       // emits none — see docs/parity/KNOWN_PERL_ERRORS.md).
+      // By MEANING, not spelling (tex.web §1084 box specs `\box`, `\copy`,
+      // `\lastbox`, `\vsplit`): expl3's `\box_use:N` is `\cs_new_eq:NN` to
+      // `\tex_copy:D` = `\copy` (expl3-code.tex:30507), and l3coffins raises
+      // it over a void coffin box (`\box_move_up:nn`, :34575 — asmejour.cls
+      // :1388-1404's author block, deposited by 56gj).
       let is_box_register_op = token.get_catcode() == Catcode::CS
-        && token.with_str(|s| matches!(s, "\\box" | "\\copy" | "\\lastbox"));
+        && ["\\box", "\\copy", "\\lastbox", "\\vsplit"]
+          .iter()
+          .any(|op| x_equals(&token, &T_CS!(*op)));
       if !is_box_register_op {
         let message = s!("A <box> was supposed to be here.\nGot none.");
         Error!("expected","<box>", message);

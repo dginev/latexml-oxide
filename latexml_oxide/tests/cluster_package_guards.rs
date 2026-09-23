@@ -18289,7 +18289,8 @@ Body.
       )),
       "{flat}"
     );
-    // The real class, where the tree has it: its `{titlepage}` becomes one.
+    // The real class, where the tree has it: its `{titlepage}` fields follow the
+    // frontmatter (no `ltx:titlepage` — see the next guard).
     if kpsewhich_has("ryethesis.cls") {
       let tex = r"\documentclass{ryethesis}
 \title{T}\author{A. E. Ryerson}
@@ -18300,13 +18301,13 @@ Body.
 ";
       let (stderr, xml) = convert(tex, true);
       assert_eq!(error_count(&stderr), 0, "{stderr}");
-      let tp = &xml[xml.find("<titlepage>").unwrap()..xml.find("</titlepage>").unwrap()];
+      assert!(!xml.contains("<titlepage"), "{xml}");
       for field in [
         "presented to Ryerson University",
         "Doctor of Philosophy",
         "Toronto, Ontario, Canada, 1847",
       ] {
-        assert!(tp.contains(field), "{field}: {xml}");
+        assert!(xml.contains(field), "{field}: {xml}");
       }
       assert_eq!(
         xml.matches("A. E. Ryerson").count(),
@@ -18314,6 +18315,227 @@ Body.
         "the author once: {xml}"
       );
     }
+  }
+
+  /// Batch 56gm (56gj follow-up): a class `\maketitle` that lays its fields out on
+  /// `\begin{titlepage}` (edmaths.sty:166-181) is deposited with the title, author
+  /// and date nulled — so its titlepage must not become an `ltx:titlepage`: the
+  /// XSLT drops the document's title block whenever one exists (it takes a
+  /// titlepage to carry the title), and edmaths lost title/author/date from the
+  /// HTML. The fields follow the frontmatter; the title block stays.
+  #[test]
+  fn class_maketitle_titlepage_keeps_the_title_block() {
+    let cls = r"\ProvidesClass{pagethesis}
+\LoadClass{report}
+\renewcommand{\maketitle}{\begin{titlepage}\begin{center}{\LARGE\@title}\\ \@author\\
+  Doctor of Philosophy\\ The University of Nowhere\\ \@date\end{center}\end{titlepage}}
+";
+    let tex = r"\documentclass{pagethesis}
+\title{T}\author{A. N. Author}\date{1999}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("pagethesis.cls", cls)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<titlepage"), "{xml}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<title>T</title><creator role="author"><personname>A. N. Author</personname></creator>"#,
+        r#"<date role="creation">1999</date>"#
+      )),
+      "{flat}"
+    );
+    for field in ["Doctor of Philosophy", "The University of Nowhere"] {
+      assert_eq!(xml.matches(field).count(), 1, "{field}: {xml}");
+    }
+    assert_eq!(
+      xml.matches("A. N. Author").count(),
+      1,
+      "the author once: {xml}"
+    );
+  }
+
+  /// Batch 56gm: a void box register is a box operand (TeXbook p.388) whatever
+  /// its SPELLING — expl3's `\box_use:N` is `\copy` (expl3-code.tex:30507), and
+  /// l3coffins `\raise`s it over a void coffin box (asmejour.cls:1388-1404).
+  #[test]
+  fn raise_accepts_an_aliased_void_box_register() {
+    let tex = r"\documentclass{article}
+\ExplSyntaxOn
+\box_new:N \l_void_box
+\ExplSyntaxOff
+\begin{document}
+X\ExplSyntaxOn\tex_raise:D 2pt \box_use:N \l_void_box \ExplSyntaxOff Y
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The void box raised, as `\raise1pt\copy\strutbox` is.
+    assert!(xml.contains(r#"<p>X<text yoffset="2.0pt"/>Y</p>"#), "{xml}");
+    // A non-box operand (an assignment, which yields nothing) is still an error.
+    let tex = r"\documentclass{article}
+\begin{document}
+X\raise2pt\count0=1 Y
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(
+      stderr
+        .lines()
+        .filter(|l| l.contains("Error:expected:<box>"))
+        .count(),
+      1,
+      "{stderr}"
+    );
+  }
+
+  /// Batch 56gm: unicode-math's `version=<name>` key declares the math version
+  /// (unicode-math-luatex.sty:1585-1592); the `\setmathfont` no-op left
+  /// `\mathversion{<name>}` unknown (asmeconf.cls:698-750, :1698).
+  #[test]
+  fn setmathfont_version_declares_the_math_version() {
+    let tex = r"\documentclass{article}
+\usepackage{unicode-math}
+\setmathfont{XITSMath-Regular}[version=myver]
+\setmathfont[version={other}, Scale=1]{XITSMath-Regular}
+\begin{document}
+Text. \mathversion{myver} more. \mathversion{other} end.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+  }
+
+  /// Batch 56gm: the class `\maketitle` deposit relaxes the frontmatter SETTERS
+  /// as well as their stores — ukbill.cls:497 typesets `\textbf{\title}` (the
+  /// setter) where `\@title` was meant, and memoir's two-argument `\title` ate
+  /// the deposit's braces ("Attempt to close boxing group", immigration-bill).
+  #[test]
+  fn class_maketitle_deposit_relaxes_the_setters() {
+    if !kpsewhich_has("memoir.cls") {
+      return;
+    }
+    let tex = r"\documentclass{memoir}
+\title{T}
+\renewcommand{\maketitle}{\begin{center}{\Huge\textbf{\title}}\\ Fields\end{center}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // memoir's own `\@iffirstamp` (a conditional not spelled `\if…`).
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(
+      stderr.contains("Warning:misdefined:\\@iffirstamp"),
+      "{stderr}"
+    );
+    assert!(xml.contains("<title>T</title>"), "{xml}");
+    assert_eq!(xml.matches("Fields").count(), 1, "{xml}");
+  }
+
+  /// Batch 56gm (OXIDIZED_DESIGN #268): a counter allocated with a raw
+  /// `\newcount` (doc.sty:870 `\c@CodelineNo`) has no LaTeXML `UN` companion,
+  /// so resetting it from a reset list (l3doc.cls:463 `\@addtoreset{CodelineNo}
+  /// {part}`) must not assign one — "not a register" at every `\part`
+  /// (ltx-talk-code, 20 warnings; Perl `ResetCounter` shares it).
+  #[test]
+  fn reset_list_skips_a_missing_un_companion() {
+    if !kpsewhich_has("l3doc.cls") {
+      return;
+    }
+    let tex = r"\documentclass{l3doc}
+\begin{document}
+\part{Alpha}
+Body one.
+\part{Beta}
+Body two.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<part ").count(), 2, "{xml}");
+  }
+
+  /// Batch 56gm: a class that renews the locked `{abstract}` keeps the abstract in
+  /// its own store, which the lock never lets it fill; inside the class
+  /// `\maketitle` deposit that store reads GIVEN AND EMPTY (the frontmatter
+  /// carries the abstract). A box store (wkmgr.cls:190 `\global\setbox
+  /// \abspagebox\vbox\bgroup`, :157 `\ifvoid` → "Nie podano streszczenia") and
+  /// the conventional `\@abstract` of an environ-collected body (mcmthesis.cls
+  /// :165, "\@abstract undefined").
+  #[test]
+  fn class_maketitle_reads_a_dropped_environment_store_as_given() {
+    let cls = r"\ProvidesClass{boxthesis}
+\LoadClass{report}
+\newbox\abs@box
+\renewenvironment{abstract}{\global\setbox\abs@box\vbox\bgroup}{\egroup}
+\renewcommand{\maketitle}{\begin{center}Field Line\end{center}%
+  \ifvoid\abs@box\ClassWarning{boxthesis}{No abstract given}\fi\unvbox\abs@box}
+";
+    let tex = r"\documentclass{boxthesis}
+\title{T}
+\begin{document}
+\begin{abstract}The abstract.\end{abstract}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("boxthesis.cls", cls)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("Field Line").count(), 1, "{xml}");
+    assert_eq!(xml.matches("The abstract.").count(), 1, "{xml}");
+    if !kpsewhich_has("environ.sty") {
+      return;
+    }
+    let cls = r"\ProvidesClass{envthesis}
+\LoadClass{report}
+\RequirePackage{environ}
+\RenewEnviron{abstract}{\xdef\@abstract{\expandonce\BODY}}
+\def\make@abstract{\begin{center}Summary Sheet\end{center}\@abstract\par}
+\renewcommand{\maketitle}{\make@abstract}
+";
+    let tex = r"\documentclass{envthesis}
+\title{T}
+\begin{document}
+\begin{abstract}The abstract.\end{abstract}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("envthesis.cls", cls)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("Summary Sheet").count(), 1, "{xml}");
+    assert_eq!(xml.matches("The abstract.").count(), 1, "{xml}");
+  }
+
+  /// Batch 56gm: hyperref's `\NoHyper`/`\endNoHyper` are macros a class may call
+  /// directly (asmeconf.cls:2033 `\NoHyper\footnotemark[#1]\endNoHyper`); the
+  /// binding had only `\begin{NoHyper}`/`\end{NoHyper}`.
+  #[test]
+  fn nohyper_macros_are_defined() {
+    let tex = r"\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+A\NoHyper B\endNoHyper C
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>ABC</p>"), "{xml}");
   }
 
   /// Batch 56gi: doclicense loads raw — the stub made `\doclicenseThis` and every
@@ -20583,8 +20805,8 @@ Second line references \lineref{l1}, offset \lineref[+1]{l1}, \linerefp[+2]{l1},
 \g@addto@macro\caption@LT@setup{\relax}
 \caption@ifundefined\undefined@cmd{\def\undef@branch{1}}{\def\undef@branch{0}}
 \caption@ifundefined\caption@beginhook{\def\def@branch{0}}{\def\def@branch{1}}
-\caption@dblarg{\def\test@dblarg[#1]#2{#1:#2}}
-\test@dblarg{My Title}
+\def\test@dblarg[#1]#2{\def\dbl@got{#1:#2}}
+\caption@dblarg\test@dblarg{My Title}
 \captionsetup[figure][bi-second]{name=Figure}
 \captionsetup*[table][bi-second]{name=Table}
 \makeatother

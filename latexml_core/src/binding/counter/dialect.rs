@@ -689,14 +689,26 @@ pub fn ref_current_id(ctype: &str) -> Result<HashMap<Stored>> {
 pub fn reset_counter(ctr: &Token) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
+  let exists = |cs: &str| lookup_register(cs, Vec::new()).ok().flatten().is_some();
+  // A reset list names each child and its `UN` companion (Package.pm:674); a
+  // companion never allocated (below) has nothing to reset.
+  if ctr.with_str(|cstr| cstr.starts_with("UN")) && !exists(&c_ctr) {
+    return Ok(());
+  }
   assign_register(
     &c_ctr,
     Number::new(0).into(),
     Some(Scope::Global),
     Vec::new(),
   )?;
-  if !ctr.with_str(|cstr| cstr.starts_with("UN")) {
-    // but not UN
+  // but not UN — and only a companion that exists: `\c@UN<ctr>` is LaTeXML's
+  // (`new_counter`), so a raw `\newcount\c@CodelineNo` (doc.sty:870) in a reset
+  // list (l3doc.cls:463 `\@addtoreset{CodelineNo}{part}`) has none, and
+  // assigning it warned "not a register" at every `\part` (ltx-talk-code, 20).
+  // Perl `ResetCounter` (Package.pm:886) assigns unconditionally and warns
+  // too; the same existence test guards `ref_step_id` above (Package.pm:863).
+  // OXIDIZED_DESIGN #268.
+  if !ctr.with_str(|cstr| cstr.starts_with("UN")) && exists(&c_un_ctr) {
     assign_register(
       &c_un_ctr,
       Number::new(0).into(),

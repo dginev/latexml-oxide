@@ -1,0 +1,14 @@
+% witness: asmeconf/asmeconf-template (asmeconf.cls:698-750 \setmathfont{…}[version=sansbold];
+%   :1698 \mathversion{sansbold} in the title, reached by the 56gj \maketitle deposit)
+% oracle:  lualatex 0 errors
+% engines: rust=1 (Error:unexpected:myver Unknown math version) perl=n/a
+% expect:  0 errors; no ERROR node
+% status:  GREEN (batch 56gm)
+% mechanism: unicode_math_sty.rs bound \setmathfont as a no-op; unicode-math-luatex.sty:1585-1592's
+%   `version` key runs \DeclareMathVersion{<name>}.
+\documentclass{article}
+\usepackage{unicode-math}
+\setmathfont{XITSMath-Regular}[version=myver]
+\begin{document}
+Text. \mathversion{myver} more.
+\end{document}

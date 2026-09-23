@@ -8461,8 +8461,25 @@ bail, sect08.rs). `\lx@deposit@maketitle` (sect05.rs) runs a captured argument-f
 which the lock drops alike — in a group with `\@title`/`\@author`/`\@date`/`\@thanks` nulled (the
 frontmatter carries them — no duplication), `\@maketitle` relaxed, not re-entrant, and
 keeps the output only when it typesets something (a hard error in the replay still
-propagates — Fatal stays Fatal); a class `{titlepage}` becomes an
-`ltx:titlepage`, other layout lands as block paragraphs after the frontmatter. Only a
+propagates — Fatal stays Fatal); the replay's layout lands as block paragraphs after the
+frontmatter — a class `{titlepage}` builds NO `ltx:titlepage` inside the replay (56gm:
+the XSLT drops the document's title block whenever a titlepage exists, taking it to
+carry the title, which the nulled replay never does — edmaths and ten other manuals
+lost title/author/date from the HTML; `?#fields` in the `{titlepage}` constructor). The
+replay also relaxes the SETTERS `\title`/`\author`/`\date` (ukbill.cls:497 typesets
+`\textbf{\title}` for `\@title`; memoir's two-argument `\title` ate the replay's braces),
+and the stores of a frontmatter ENVIRONMENT the class renewed but the lock kept read
+given-and-empty (sect08.rs `record_dropped_environment_stores`: each `\setbox` target of
+the dropped bodies an empty box, each `\def`-family target and the conventional
+`\@<name>` empty — wkmgr.cls's `\ifvoid\abspagebox` "no abstract" warning, mcmthesis's
+`\@abstract` undefined; the environment analogue of K11's `\lx@captured@stores`; a box
+store is emptied only if it exists at deposit time). Caveat: a document that gives NO
+abstract no longer gets such a class's own "no abstract" warning inside the replay. The
+replay's class code met three genuine kernel/binding gaps, fixed at their source:
+hyperref's `\NoHyper` macros, `MoveableBox` recognising a void box register by meaning
+(expl3 `\box_use:N` = `\copy`), and unicode-math's `version=` key declaring the math
+version. After 56gm every one of the 54 deposit-touched manuals has diagnostics at or
+below its pre-56gj level. Only a
 body whose every TOP-LEVEL control sequence is defined at deposit time runs (a nested
 missing internal still reports a soft `Error:undefined`; measured on the 20
 maketitle-redefining manuals, arXiv document preambles not yet measured) — a derivative
@@ -8472,7 +8489,10 @@ generic replay. Bodies that only build shipout pictures (uantwerpen) yield nothi
 are dropped. Label text next to a nulled field stays ("by"), as it is in the PDF.
 Witnesses: exam-n/template-master recall 36.5 → 100, ryethesis/ryesample 89.1 → 93.7;
 18 other maketitle-redefining manuals unchanged; 0 errors, 0 validity changes, 0 words
-lost. Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
+lost. Guards `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`,
+`class_maketitle_titlepage_keeps_the_title_block`,
+`class_maketitle_deposit_relaxes_the_setters`,
+`class_maketitle_reads_a_dropped_environment_store_as_given`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
@@ -8511,3 +8531,15 @@ T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_d
 (recall 69.9 → 82.7; `Çäðàâåé`-style mojibake → Cyrillic); 150 other 8-bit-input corpus
 manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`
 (its UTF-8 control line reads `Cafй na й.` without the line-provenance gate).
+
+### 268. Resetting a counter skips a `UN` companion that was never allocated (Perl: assigns it, "not a register")
+
+LaTeXML pairs each `\newcounter` counter with `\c@UN<ctr>` for unnumbered-item ids, and a
+reset list names both (Package.pm:674). A counter allocated with a raw `\newcount`
+(doc.sty:870 `\c@CodelineNo`) has no companion, but l3doc.cls:463
+`\@addtoreset{CodelineNo}{part}` still resets it at every `\part`; Perl `ResetCounter`
+(Package.pm:886) assigns the companion unconditionally and warns "\c@UNCodelineNo is
+not a register" (Rust did the same; ltx-talk-code, 20 warnings once 56gj's deposit ran
+its `\part`). Rust resets only an existing companion — the existence test Perl itself
+applies in `RefStepID` (Package.pm:863). Guard
+`perfect_kernel_batch56::reset_list_skips_a_missing_un_companion`.

@@ -988,15 +988,23 @@ pub(crate) fn load() -> Result<()> {
   // frontmatter does not carry (bfhthesis's degree/advisor block beside its
   // captured `\@institution`).
   DefMacro!("\\lx@captured@stores", "");
+  // The stores of a frontmatter ENVIRONMENT the class renewed and the lock kept
+  // (sect08.rs `record_dropped_environment_stores`): given and empty here too.
+  DefMacro!("\\lx@dropped@env@stores", "");
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
   // but captured stores (ptptex, every field in the frontmatter) yields
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
+    // Both deposits null the title fields, so a `{titlepage}` either lays out
+    // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
+    AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
     let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\and\relax\lx@captured@stores\@maketitle}\fi",
-    ))?;
+      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\title\relax\let\author\relax\let\date\relax\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
+    ));
+    AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
+    let deposit = deposit?;
     let mut out = Vec::new();
     if !deposit.to_string().trim().is_empty() {
       out.push(deposit);
@@ -1006,7 +1014,10 @@ pub(crate) fn load() -> Result<()> {
     // frontmatter API never sees) had its body dropped by the lock; the dropped
     // definition is kept as `\lx@dropped@maketitle` (state.rs). Run it the way the
     // `\@maketitle` deposit runs: in a group, the title/author/date/thanks nulled
-    // (the frontmatter already carries them — no duplication), `\@maketitle` relaxed
+    // (the frontmatter already carries them — no duplication) and their setters
+    // relaxed (ukbill.cls:497 typesets `\textbf{\title}` where `\@title` was meant;
+    // memoir's two-argument `\title` ate the deposit's braces — "Attempt to close
+    // boxing group", immigration-bill), `\@maketitle` relaxed
     // (no second deposit), not re-entrant, kept only when it
     // typesets something. Argument-free bodies only: a `\maketitle[#1]` would
     // read the kernel's own continuation as its argument. A body that builds
@@ -1040,14 +1051,16 @@ pub(crate) fn load() -> Result<()> {
     // would record that redefinition as the dropped body.)
     if argless && !lookup_bool("lx_depositing_class_maketitle") {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
+      AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
       let body = digest(mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@maketitle}",
+        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\title\relax\let\author\relax\let\date\relax\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle}",
       ));
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
       // is a soft `Error:undefined` inside the digest.
       AssignValue!("lx_depositing_class_maketitle" => false, Some(Scope::Global));
+      AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
       let body = body?;
       if !body.to_string().trim().is_empty() {
         out.push(body);
@@ -1240,7 +1253,23 @@ pub(crate) fn load() -> Result<()> {
   // Presumably the earlier, larger one is title, rest are authors/affiliations...
   // Particularly, if they start with a pseudo superscript or other "marker", they're probably
   // affil! For now, we just give an info message
-  DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
+  // Inside a `\maketitle` deposit (`\lx@deposit@maketitle`, class `\@maketitle` or
+  // dropped `\maketitle` body) the title,
+  // author and date are nulled — the frontmatter carries them — so a class body
+  // that lays its fields out on `\begin{titlepage}` (edmaths.sty:166-181,
+  // ryethesis, wkmgr) builds no `ltx:titlepage`: the page layout means nothing
+  // there, and the XSLT drops the document's title block whenever a titlepage
+  // exists (it takes the titlepage to carry the title; LaTeXML-structure-xhtml.xsl
+  // `ltx:title`), which lost edmaths' title/author/date from the HTML. The fields
+  // stay, in place. Guard `perfect_kernel_batch56::class_maketitle_titlepage_keeps_the_title_block`.
+  DefEnvironment!("{titlepage}", "?#fields(#body)(<ltx:titlepage>#body)",
+    properties => sub[_args] {
+      let mut map = stored_map!();
+      if lookup_bool("lx_depositing_frontmatter_fields") {
+        map.insert("fields", Stored::String(pin("true")));
+      }
+      Ok(map)
+    },
     before_digest => {
       Let!("\\centering", "\\relax");
       assign_value("frontmatter_deferred", true, Some(Scope::Global));
