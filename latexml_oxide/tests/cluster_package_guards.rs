@@ -8084,13 +8084,14 @@ content
     );
   }
 
-  /// OXIDIZED_DESIGN #182: a `\caption` with `\@captype` set inside an `lrbox`
-  /// minipage (tufte-common.def:1110-1133 `marginfigure`: pgfornament 40+40,
-  /// memman 46+46 errors) has no float ancestor; it degrades to the inline
-  /// `ltx_caption` text instead of `<ltx:caption> isn't allowed in <ltx:block>`.
-  /// A real `figure` keeps the tagged `ltx:caption` + `ltx:toccaption`.
+  /// OXIDIZED_DESIGN #182 → batch 56gs: a `\caption` with `\@captype` set inside
+  /// an `lrbox` minipage (tufte-common.def:1110-1133 `marginfigure`; pgfornament
+  /// ornaments ×40, memman) has no float ancestor. It was degraded to inline
+  /// `ltx_caption` text (unnumbered, its `\label` a dangling target); it is now
+  /// the float of its type, placed where the box admits one, numbered and
+  /// labelled as in LaTeX ("Figure 1:"). A real `figure` keeps its own float.
   #[test]
-  fn caption_without_a_float_ancestor_degrades_to_text() {
+  fn caption_outside_a_float_becomes_its_float() {
     let tex = r"\documentclass{article}
 \makeatletter
 \newsavebox\mybox
@@ -8099,17 +8100,26 @@ content
 \begin{document}
 \begin{marginfig}
 X
-\caption{A caption}
+\caption{A caption}\label{fig:m}
 \end{marginfig}
+See \ref{fig:m}.
 \begin{figure}\centering Y\caption{Real float}\end{figure}
 \end{document}
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let flat = gaps.replace_all(&xml, "><").into_owned();
     assert!(
-      xml.contains(r#"<text class="ltx_caption">A caption</text>"#),
-      "{xml}"
+      flat.contains(concat!(
+        r#"<p>X</p></para><figure inlist="lof" labels="LABEL:fig:m" xml:id="S0.F1"><tags>"#,
+        r#"<tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>"#,
+        r#"<caption><tag close=": ">Figure 1</tag>A caption</caption></figure>"#
+      )),
+      "{flat}"
     );
+    assert!(!xml.contains("ltx_caption"), "{xml}");
     assert!(
       xml.contains(
         r#"<caption class="ltx_centering"><tag close=": ">Figure 2</tag>Real float</caption>"#
@@ -11299,13 +11309,23 @@ See the docs.\fnurl{https://ctan.org/pkg/biblatex#frag~x}
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    // Outside a float the kernel degrades the caption to inline text (guard
-    // `caption_without_a_float_ancestor_degrades_to_text`); the point here is
-    // that `\@captype` is defined, so no "outside any known float" error.
-    assert_eq!(
-      xml.matches(r#"<text class="ltx_caption">"#).count(),
-      2,
-      "{xml}"
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    // `\@captype` is defined, so no "outside any known float" error; outside a
+    // float each caption is its type's float (batch 56gs, guard
+    // `caption_outside_a_float_becomes_its_float`), the tabular kept beside it.
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let flat = gaps.replace_all(&xml, "><").into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag>"#,
+        r#"<tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A table</caption></table>"#,
+        r#"<para xml:id="p1"><tabular vattach="middle">"#
+      )),
+      "{flat}"
+    );
+    assert!(
+      flat.contains(r#"<caption><tag close=": ">Figure 1</tag>A figure</caption></figure>"#),
+      "{flat}"
     );
   }
 
@@ -22960,8 +22980,8 @@ mod latex_via_exemplos_residue {
   /// internals (`\caption@settype{table}`, `\caption@clearmargin`,
   /// `\caption@setoptions{wrap table}`); with the binding replacing raw
   /// caption.sty they were undefined (two errors per box). The internals are
-  /// exercised directly: the type reaches `\@captype` and the caption is
-  /// typeset. (wrapstuff's own box is still dropped whole — a separate
+  /// exercised directly: the type reaches `\@captype` and the caption is its
+  /// table (batch 56gs: "Table 1", no longer an inline caption text). (wrapstuff's own box is still dropped whole — a separate
   /// content-loss finding, DIFFICULT_CASES D15.)
   #[test]
   fn caption_settype_declares_the_float_type() {
@@ -22970,9 +22990,9 @@ mod latex_via_exemplos_residue {
     assert_eq!(super::error_count(&stderr), 0, "{stderr}");
     latexml::util::test::assert_element(
       &xml,
-      "para",
+      "table",
       &[r#"class="ltx_minipage""#],
-      r##"<para class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="p1"><p><text class="ltx_caption">A wrapped table caption</text></p></para>"##,
+      r##"<table class="ltx_minipage" inlist="lot" vattach="middle" width="142.3pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>A wrapped table caption</caption></table>"##,
     );
   }
 }

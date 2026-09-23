@@ -1,0 +1,23 @@
+% witness: pgfornament/ornaments (tufte-handout marginfigure ×40), tikzpeople ×29, pgfornament/tikzrput ×8,
+%   nonfloat-en, istgame-doc, threeparttablex, xltabular-doc, the tufte-latex/xtufte samples, bfh/tuda posters
+% oracle:  pdflatex 0 errors; "Figure 1: A margin figure", \ref → 1
+% engines: rust (s115) = <text class="ltx_caption">A margin figure</text>, no number, \ref dangling
+% expect:  0 errors; <figure labels="LABEL:fig:m" xml:id="S0.F1"> with tags + "Figure 1:" caption
+% status:  GREEN (batch 56gs)
+% mechanism: tufte-common.def:1110-1133 — a minipage in an lrbox with \def\@captype{figure}, then
+%   \marginpar{\usebox}; the caption has no float ancestor. It now builds its type's float at the
+%   nearest ancestor that admits one (DIVERGENCES #182 update; was: degrade to text).
+\documentclass{tufte-handout}
+\begin{document}
+Text before.
+\begin{marginfigure}
+\rule{1cm}{1cm}
+\caption{A margin figure}
+\label{fig:m}
+\end{marginfigure}
+See Figure~\ref{fig:m}.
+\begin{figure}
+\rule{1cm}{1cm}
+\caption{A main figure}
+\end{figure}
+\end{document}

@@ -1997,6 +1997,9 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
     None,
   )
   .ok();
+  // Scoped to the float's group: a `\caption` digested with `\@captype` set but
+  // without this marker is outside any float (sect09.rs `\@@caption`).
+  assign_value("lx@in@float", true, Some(Scope::Local));
   // Perl #2775: rebind \\ to \lx@newline in floats to prevent
   // alignment-token early-return when floats are inside tabulars.
   Let!("\\\\", "\\lx@newline");

@@ -93,7 +93,7 @@ pub(crate) fn load() -> Result<()> {
   // sibling: pgfornament ornaments 40+40, memman 46+46, xltabular). Degrade to
   // the inline `\@@generic@caption` shape (an `ltx:text class="ltx_caption"`,
   // no counter tag, no toc entry) — what Perl's own no-`\@captype` path emits.
-  // Guard: `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
+  // Guard: `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
   DefMacro!(
     "\\@caption@@@{}{}{}",
     r"\@@add@caption@counters\@@toccaption{\lx@format@toctitle@@{#1}{\ifx.#2.#3\else#2\fi}}\@@caption{\lx@format@title@@{#1}{#3}}"
@@ -163,13 +163,57 @@ pub(crate) fn load() -> Result<()> {
   // `ltx:caption`, so the float form errored once per caption
   // (`<ltx:caption> isn't allowed in <ltx:block>`, plus its `ltx:toccaption`
   // sibling and the `ltx:tag`: pgfornament ornaments 40+40, memman 46+46).
-  // Degrade to the inline shape Perl's own no-`\@captype` path emits — an
+  // When a float of the caption's type can be placed, the caption becomes that
+  // float (56gs, below); otherwise degrade to the inline shape Perl's own
+  // no-`\@captype` path emits — an
   // `ltx:text class="ltx_caption"` holding the title, minus the counter tag
   // (which no inline element may carry) — and drop the toc entry. Guard:
-  // `perfect_kernel_batch54::caption_without_a_float_ancestor_degrades_to_text`.
-  DefConstructor!("\\@@caption{}", sub[document, args] {
+  // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+  DefConstructor!("\\@@caption{}", sub[document, args, props] {
     let body = args[0].clone();
-    if caption_can_float(document, "ltx:caption") {
+    // A caption whose `\@captype` is set in a box that is not a float
+    // (tufte-common.def:1110-1133 `marginfigure`: a minipage with `\def\@captype
+    // {figure}` inside `\marginpar`; the `\def\@captype{figure}` minipage idiom)
+    // IS that type's caption in LaTeX — numbered "Figure 1:", the target of a
+    // following `\label` — so it becomes one: a float element of its type at the
+    // nearest ancestor that admits it (the minipage's `inline-logical-block`, whose
+    // model is `Para.model`), carrying the counter tags and id the caption stepped,
+    // the shape `\captionof` already gives (OXIDIZED_DESIGN #89). Before, #182
+    // degraded it to `ltx:text class="ltx_caption"`: no number, and a `\ref` to
+    // its `\label` dangled (pgfornament ornaments ×40, the tufte manuals). Guard:
+    // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+    let float_tag = props.get("captype").map(|t| match t.to_string().as_str() {
+      "figure" => "ltx:figure",
+      "table" => "ltx:table",
+      _ => "ltx:float",
+    });
+    if !caption_can_float(document, "ltx:caption")
+      && let Some(float_tag) = float_tag
+      && let Some(Stored::String(id)) = props.get("float_id")
+      && caption_can_float(document, float_tag)
+    {
+      let save = document.float_to_element(float_tag, true)?;
+      let mut attrs = string_map!("xml:id" => with(*id, |s| s.to_string()));
+      if let Some(inlist) = props.get("float_inlist") {
+        let inlist = inlist.to_string();
+        if !inlist.trim().is_empty() {
+          attrs.insert("inlist".to_string(), inlist);
+        }
+      }
+      document.open_element(float_tag, Some(attrs), None)?;
+      if let Some(Stored::Digested(tags)) = props.get("float_tags") {
+        document.absorb(tags, None)?;
+      }
+      document.open_element("ltx:caption", None, None)?;
+      if let Some(ref body) = body {
+        document.absorb(body, None)?;
+      }
+      document.close_element("ltx:caption")?;
+      document.close_element(float_tag)?;
+      if let Some(save) = save {
+        document.set_node(&save);
+      }
+    } else if caption_can_float(document, "ltx:caption") {
       // `^^`: float up, closing what can be closed on the way.
       let save = document.float_to_element("ltx:caption", true)?;
       document.open_element("ltx:caption", None, None)?;
@@ -191,7 +235,28 @@ pub(crate) fn load() -> Result<()> {
       }
       document.maybe_close_node(&node)?;
     }
-  }, mode => "text");
+  },
+  // Outside any float (`before_float`'s scoped `lx@in@float` absent), the
+  // caption TAKES the counter values `\@@add@caption@counters` just stored — no
+  // float's `after_float` will, and a later caption-less float would otherwise
+  // rescue them and repeat this caption's id.
+  properties => sub[_args] {
+    let mut map = stored_map!();
+    if !lookup_bool("lx@in@float") && lookup_meaning(&T_CS!("\\@captype")).is_some() {
+      // Keyed exactly as `\@@add@caption@counters` stores them (untrimmed).
+      let captype = do_expand(T_CS!("\\@captype"))?.to_string();
+      if !captype.trim().is_empty() {
+        for (prop, suffix) in [("float_tags", "tags"), ("float_id", "id"), ("float_inlist", "inlist")] {
+          if let Some(value) = remove_value(&s!("{captype}_{suffix}")) {
+            map.insert(prop, value);
+          }
+        }
+        map.insert("captype", Stored::String(pin(captype.trim())));
+      }
+    }
+    Ok(map)
+  },
+  mode => "text");
   DefConstructor!("\\@@toccaption{}", sub[document, args] {
     if caption_can_float(document, "ltx:toccaption") {
       let body = args[0].clone();

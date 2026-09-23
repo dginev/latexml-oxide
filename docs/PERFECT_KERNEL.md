@@ -110,13 +110,9 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
    graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the
    graphics family (36 docs short) and the multi-family deficit docs, most of which are also
    status-2 (error) documents.
-4. **Caption outside a float (Axis 2b)** — `\@captype` set in a non-float box (tufte-common.def
-   :1110-1133 `marginfigure`/`margintable` = minipage + `\def\@captype{figure}` + `\marginpar`;
-   the arXiv `\def\@captype{figure}` minipage hack) degrades to `ltx:text class="ltx_caption"`
-   (DIVERGENCES #182 — chosen to stop an error flood): no `ltx:figure`, no number (pgfornament
-   ornaments 40 captions, 7 tufte manuals). Surpass candidate: promote the enclosing box to the
-   figure; needs a design (schema placement of a figure inside an inline-block/paragraph).
-   Found alongside: 56gr (`\VerbatimEnvironment` around minted swallowed a document).
+4. **Caption outside a float — landed 56gs**: a `\caption` with `\@captype` set in a non-float box
+   is now its type's numbered float (15 manuals, 0 words lost). Residual: the box's other content
+   stays beside the float rather than inside it.
 5. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
    `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
    engines too (277 s, > 900 s).
