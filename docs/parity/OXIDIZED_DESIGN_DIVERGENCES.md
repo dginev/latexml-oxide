@@ -8488,18 +8488,26 @@ ambiguous in a Unicode-native engine: codes 128–255 also arrive as Unicode fro
 bindings (`\flqq` → `«` U+00AB, the German `"`-shorthand's `ä`/`ß`, accent composites
 `\"y` → `ÿ` U+00FF) and T1 puts `ń`/`ż`/`ß` in exactly those slots — tried here, it
 turned l2tabu's »…« into ż…ń. **Rust**: the byte is decoded where its provenance is
-known, in the mouth (`mouth.rs` `eight_bit_input_char`): a character 0x80–0xFF read from
-input BYTES (a file, or a document handed over as content — never an engine string),
-with catcode letter/other, under a declared 8-bit `INPUT_ENCODING` and outside the
-pdfTeX byte mouth, becomes the character its own inputenc declaration produces — the
-active definition followed to its LICR name, then LaTeX's text-command dispatch
-`\<current encoding><name>` (a `\DeclareTextSymbol` glyph decoded from that encoding's
-font map). The catcode stays the byte's, so recatcoded Cyrillic command names stay
-consistent. Downstream every code is Unicode, the font map keeps its lower half only
-(unchanged), and no token carries provenance. Rejected: a `composed` flag on `Token`
+known, in the mouth (`mouth.rs` `eight_bit_input_char`): a character 0x80–0xFF that IS
+an input byte — on a file/content line that is not UTF-8 (so decoded as its bytes), or a
+`^^xx` code (tex.web §355; its position is remembered for the line, so a peek and re-read
+keeps it a byte) — never an engine string, never a character of a valid UTF-8 line (an
+`\input` UTF-8 file keeps its `é` inside a cp1251 document), with catcode letter/other,
+under a declared 8-bit `INPUT_ENCODING` and outside the pdfTeX byte mouth, becomes the
+character its own inputenc declaration produces — the active definition followed to its
+LICR name, then LaTeX's text-command dispatch `\<encoding><name>` for the font encoding
+current when the byte is READ (TeX resolves it when the letter is typeset; the two agree
+unless the encoding changes between). The catcode stays the byte's, so recatcoded
+Cyrillic command names stay consistent. Downstream every code is Unicode, the font map
+keeps its lower half only (unchanged), and no token carries provenance. Limitation:
+tables keyed by character code (`\uccode`/`\lccode`, `\sfcode`, `\mathcode`, a `` \ifnum`З ``
+comparison) now see the Unicode code point, where the pdfTeX setup keys them by byte —
+`\MakeUppercase` over recatcoded Cyrillic keeps the case (before, it upper-cased the
+mojibake). Rejected: a `composed` flag on `Token`
 (the most primitive structure, for a problem that is the input's); composites emitting
 TeX slots (faithful for composites, but binding-produced Unicode stays ambiguous).
 Divergence from pdflatex: a latin1 byte 0xFF deliberately recatcoded to a letter under
 T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_doc
 (recall 69.9 → 82.7; `Çäðàâåé`-style mojibake → Cyrillic); 150 other 8-bit-input corpus
-manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`.
+manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`
+(its UTF-8 control line reads `Cafй na й.` without the line-provenance gate).

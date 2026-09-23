@@ -18226,11 +18226,17 @@ Side.
 \catcode`^^e2=11 \catcode`^^e5=11 \catcode`^^e9=11
 \begin{document}
 ^^c7^^e4^^f0^^e0^^e2^^e5^^e9, ^^e4^^e0.
+
+Café na é.
 \end{document}
 ";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>Здравей, да.</p>"), "{xml}");
+    // A valid UTF-8 line is not bytes: its `é` (U+00E9, code 233 recatcoded to a
+    // letter above) stays `é`, not cp1251 byte 233 `й`.
+    assert!(xml.contains("<p>Café na é.</p>"), "{xml}");
     // Controls: an active byte and an accent composite are untouched — latin1 + T1
     // `\"y` stays `ÿ` (T1 slot 255 is `ß`), `\ss` stays `ß`.
     let tex = r#"\documentclass{article}

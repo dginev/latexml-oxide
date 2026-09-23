@@ -125,6 +125,16 @@ pub struct Mouth {
   /// This mouth reads input BYTES (a file, or a document handed over as content),
   /// not an engine string: see [`eight_bit_input_char`].
   reads_input_bytes:      bool,
+  /// The line in `buffer` was decoded as the Latin-1 image of its bytes (it is
+  /// not UTF-8, or the input encoding is a byte encoding) — see `line_is_bytes`.
+  buffered_line_is_bytes: bool,
+  /// The current line's characters in U+0080..U+00FF ARE its input bytes, not
+  /// UTF-8-decoded characters: only those reach [`eight_bit_input_char`].
+  line_is_bytes:          bool,
+  /// Positions in `chars` of the current line where a `^^xx` / `^^X` code was
+  /// reduced to its byte (tex.web §355) — bytes even on a UTF-8 line, and still
+  /// bytes when the reduced character is read again after a peek.
+  caret_bytes:            Vec<usize>,
 }
 
 impl PartialEq for Mouth {
@@ -169,6 +179,9 @@ impl Default for Mouth {
       raw_buffer:             VecDeque::new(),
       reader:                 None,
       reads_input_bytes:      false,
+      buffered_line_is_bytes: false,
+      line_is_bytes:          false,
+      caret_bytes:            Vec::new(),
     }
   }
 }
@@ -352,18 +365,20 @@ pub fn decode_input_bytes(raw: &[u8]) -> String {
 /// Unicode-native — a byte is decoded where it enters, as utf8 input already is — so
 /// the byte becomes the character its own inputenc declaration produces: the active
 /// definition followed through single-token macros (`\IeC{…}` unwrapped) to one
-/// character (`\CYRZ` → `З`, fontenc_sty.rs). Only for a mouth reading input bytes,
-/// under a declared 8-bit input encoding, outside the pdfTeX byte mouth (K10); the
+/// character (`\CYRZ` → `З`, fontenc_sty.rs). Only for a genuine input byte — a
+/// character of a file line that is not UTF-8 (decoded as its bytes), or a `^^xx`
+/// code — under a declared 8-bit input encoding, outside the pdfTeX byte mouth (K10);
+/// a valid UTF-8 line keeps its characters (é stays é in an `\input` UTF-8 file). The
 /// catcode stays the byte's. Everything downstream is then Unicode, so the font map
 /// never has to guess whether a code in 128–255 is a slot or a character.
 /// `None` keeps the byte (no declaration, or one that is not a single character).
 /// OXIDIZED_DESIGN #266.
 fn eight_bit_input_char(byte: char) -> Option<char> {
   use crate::definition::Definition;
-  if lookup_bool("PDFTEX_BYTE_MOUTH") {
+  if lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
     return None;
   }
-  let encoding = lookup_string("INPUT_ENCODING");
+  let encoding = lookup_string_from_sym(crate::pin!("INPUT_ENCODING"));
   if encoding.is_empty() || encoding == "utf8" {
     return None;
   }
@@ -396,9 +411,10 @@ fn eight_bit_input_char(byte: char) -> Option<char> {
       },
       Catcode::CS => {
         // A LaTeX text command (`\CYRZ` = the `\cf@encoding` dispatch,
-        // latex.ltx `\DeclareTextSymbol`): its glyph is `\<encoding>\CYRZ`, a
-        // one-character primitive decoded from that encoding's font map when the
-        // symbol was declared (sect08.rs) — T2A slot 199 → `З`.
+        // latex.ltx `\DeclareTextSymbol`): its glyph is `\<encoding>\CYRZ` for
+        // the font encoding current when the byte is READ (TeX resolves it when
+        // the letter is typeset), a one-character primitive decoded from that
+        // encoding's font map (sect08.rs) — T2A slot 199 → `З`.
         if let Some(c) = text_symbol_char(t) {
           return Some(c);
         }
@@ -737,6 +753,8 @@ impl Mouth {
     self.buffer = VecDeque::new();
     self.raw_buffer = VecDeque::new();
     self.chars = VecDeque::new();
+    self.line_is_bytes = false;
+    self.caret_bytes.clear();
     self.lineno = 0;
     self.colno = 0;
     self.nchars = 0;
@@ -804,8 +822,10 @@ impl Mouth {
   }
 
   /// Decode a raw byte line using the current encoding setting.
-  /// Matches Perl's per-line decode behavior.
-  fn decode_bytes(raw_line: &[u8], location: String) -> String {
+  /// Matches Perl's per-line decode behavior. The flag says whether the line's
+  /// characters are the Latin-1 image of its bytes (a byte encoding, or a line
+  /// that is not UTF-8) rather than UTF-8-decoded characters.
+  fn decode_bytes(raw_line: &[u8], location: String) -> (String, bool) {
     if let Some(ref encoding_sym) = get_input_encoding() {
       // Probe the encoding without allocating — this fires per input
       // line, so even a small heap alloc per call adds up on large
@@ -849,7 +869,7 @@ impl Mouth {
       // explicit `contains` is cheaper and lets us avoid the
       // unconditional `replace` walk on every input line.
       let has_fffd = file_str.contains('\u{FFFD}');
-      if has_fffd {
+      let file_str = if has_fffd {
         let encoding_name = crate::common::arena::to_string(*encoding_sym);
         Info!(
           "misdefined",
@@ -862,13 +882,17 @@ impl Mouth {
         file_str.replace('\u{FFFD}', " ")
       } else {
         file_str
-      }
+      };
+      (file_str, is_latin1)
     } else {
       // No encoding set — interpret as UTF-8, falling back to a Latin-1
       // passthrough for non-UTF-8 bytes. This happens after inputenc
       // disables PERL_INPUT_ENCODING and the remaining file lines contain
-      // high bytes.
-      decode_input_bytes(raw_line)
+      // high bytes. (`decode_input_bytes` for one line.)
+      match str::from_utf8(raw_line) {
+        Ok(s) => (s.to_string(), false),
+        Err(_) => (raw_line.iter().map(|&b| b as char).collect(), true),
+      }
     }
   }
 
@@ -886,7 +910,8 @@ impl Mouth {
       // that is active at the time the line is read, allowing inputenc to
       // change encoding mid-file.
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
     }
@@ -910,10 +935,15 @@ impl Mouth {
       self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
       // Decode the first line now
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
     }
+    // A raw line is decoded into an empty `buffer` and popped here at once, so
+    // the flag set by the decode belongs to this line.
+    self.line_is_bytes = std::mem::take(&mut self.buffered_line_is_bytes);
+    self.caret_bytes.clear();
     self.buffer.pop_front()
   }
 
@@ -1001,9 +1031,13 @@ impl Mouth {
           self.nchars -= 2;
         }
         cc = self.catcode_of(ch);
+        self.caret_bytes.push(self.colno - 1);
       }
+      // Only an input byte: a character of a byte-decoded line, or a `^^xx` /
+      // `^^X` code (tex.web §355 — a byte even on a UTF-8 line).
       if self.reads_input_bytes
         && ('\u{80}'..='\u{FF}').contains(&ch)
+        && (self.line_is_bytes || self.caret_bytes.contains(&(self.colno - 1)))
         && matches!(cc, Catcode::LETTER | Catcode::OTHER)
         && let Some(decoded) = eight_bit_input_char(ch)
       {
