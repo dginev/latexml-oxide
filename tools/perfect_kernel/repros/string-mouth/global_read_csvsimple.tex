@@ -1,0 +1,20 @@
+% witness: csvsimple/csvsimple-legacy (csvsimple-legacy.sty:296 \csvreadnext = \global\read)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- silent: labels="LABEL:sec:b\par\par", xml:id="S1par" before 56ge
+% expect:  0 errors; <section ... labels="LABEL:sec:b" xml:id="S1">
+% status:  GREEN (56ge 2026-09-23; was RED on structure)
+% mechanism: \read's PRESERVE_NEWLINES=2 bookkeeping took the live \global prefix and
+%   left the MAIN mouth in read mode; explicit local scope (tex_file_io.rs).
+\begin{filecontents*}{grade.csv}
+name,grade
+Maier,1.0
+\end{filecontents*}
+\documentclass{article}
+\newread\myf
+\begin{document}
+\openin\myf=grade.csv
+\global\read\myf to\lineA
+\closein\myf
+\section{B}\label{sec:b}
+See \ref{sec:b}.
+\end{document}

@@ -106,8 +106,16 @@ LoadDefinitions!({
     });
     if let Some(mouth_obj) = mouth_opt {
       bgroup();
-      AssignValue!("PRESERVE_NEWLINES", 2); // Special EOL/EOF treatment for \read
-      AssignValue!("INCLUDE_COMMENTS", false);
+      // Special EOL/EOF treatment for \read — bookkeeping for THIS read, undone by
+      // the `egroup` below. Explicitly local: a `\global` prefix is still live here
+      // (prefixes clear after the primitive), and an unscoped assignment would take
+      // it — `\global\read` (csvsimple-legacy.sty:296 `\csvreadnext`) then left the
+      // MAIN mouth in read mode for the rest of the document, and its stray `\par`
+      // tokens landed in every later label and id (`labels="LABEL:x\par\par"`,
+      // `xml:id="S2par"`; RUST-ONLY, Perl clean). The prefix still globalizes the
+      // target macro below. Guard `perfect_kernel_batch56::global_read_leaves_the_main_mouth_alone`.
+      AssignValue!("PRESERVE_NEWLINES", 2, Some(Scope::Local));
+      AssignValue!("INCLUDE_COMMENTS", false, Some(Scope::Local));
       let mut tokens = Vec::new();
       let mut level: i32 = 0;
       let mut discard = false;

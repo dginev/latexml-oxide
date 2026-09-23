@@ -18181,6 +18181,40 @@ Side.
     );
   }
 
+  /// Batch 56ge: `\global\read` keeps its read-mode bookkeeping local. The
+  /// `\global` prefix is still live inside the primitive, so `\read`'s unscoped
+  /// `PRESERVE_NEWLINES=2` became global and the MAIN mouth stayed in read mode:
+  /// stray `\par` tokens landed in every later label and id
+  /// (`labels="LABEL:sec:b\par\par"`, `xml:id="S1par"`). Witness
+  /// csvsimple/csvsimple-legacy (`\csvreadnext` = `\global\read`,
+  /// csvsimple-legacy.sty:296; ~1,600 corrupted attributes, 10 schema errors).
+  /// The target macro itself is still global.
+  #[test]
+  fn global_read_leaves_the_main_mouth_alone() {
+    let tex = r"\documentclass{article}
+\newread\myf
+\begin{document}
+\openin\myf=grade.csv
+\begingroup\global\read\myf to\lineA\endgroup
+\closein\myf
+\section{B}\label{sec:b}
+See \ref{sec:b} [\lineA].
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("grade.csv", "name,grade\nMaier,1.0\n")]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<section inlist="toc" labels="LABEL:sec:b" xml:id="S1">"#),
+      "{xml}"
+    );
+    assert!(
+      // The line's end-of-line space keeps its "\n" text (Perl's data model, #260).
+      xml.contains("<p>See <ref labelref=\"LABEL:sec:b\"/> [name,grade\n].</p>"),
+      "{xml}"
+    );
+  }
+
   /// Batch 56gd: refstyle loads the real refstyle.sty (with refstyle.cfg), in
   /// raw and default mode alike: the `\newref` templates build `\secref`, the
   /// amsmath `\eqref` is replaced without refstyle's "already defined" error,
