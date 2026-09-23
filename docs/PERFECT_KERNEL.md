@@ -92,7 +92,7 @@ counting in guards/tools, and the content tooling.
 The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
 quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 
-**Open leads (ranked; updated after sweep 114 and batches 56gl-56gq):**
+**Open leads (ranked; updated after sweep 114 and batches 56gl-56gr):**
 1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
    delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
    it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
@@ -110,10 +110,17 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
    graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the
    graphics family (36 docs short) and the multi-family deficit docs, most of which are also
    status-2 (error) documents.
-4. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
+4. **Caption outside a float (Axis 2b)** — `\@captype` set in a non-float box (tufte-common.def
+   :1110-1133 `marginfigure`/`margintable` = minipage + `\def\@captype{figure}` + `\marginpar`;
+   the arXiv `\def\@captype{figure}` minipage hack) degrades to `ltx:text class="ltx_caption"`
+   (DIVERGENCES #182 — chosen to stop an error flood): no `ltx:figure`, no number (pgfornament
+   ornaments 40 captions, 7 tufte manuals). Surpass candidate: promote the enclosing box to the
+   figure; needs a design (schema placement of a figure inside an inline-block/paragraph).
+   Found alongside: 56gr (`\VerbatimEnvironment` around minted swallowed a document).
+5. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
    `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
    engines too (277 s, > 900 s).
-5. Rulings still wanted from the user: section-in-item (#189), the quote model, inline-leak,
+6. Rulings still wanted from the user: section-in-item (#189), the quote model, inline-leak,
    dangling IDREF — the schema axis is at its ruled ceiling (s114 2219/2367).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
