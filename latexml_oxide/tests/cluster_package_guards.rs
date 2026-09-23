@@ -11719,6 +11719,10 @@ a & b & c \\
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Default mode: raw doclicense requires ccicons, which has no binding and is
+    // not raw-loaded there — one honest missing_file warning, nothing else.
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(stderr.contains("Warning:missing_file:ccicons"), "{stderr}");
     assert!(xml.contains("DRIVER-OK"), "{xml}");
   }
 

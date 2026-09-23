@@ -1015,7 +1015,8 @@ pub(crate) fn load() -> Result<()> {
     // Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
     let dropped = T_CS!("\\lx@dropped@maketitle");
     // Replay only a body whose vocabulary exists here: every control sequence it
-    // names must be defined at deposit time. A derivative class whose body leans on
+    // names at its TOP level must be defined at deposit time (a defined macro whose
+    // own expansion needs a missing internal still reports it, softly). A derivative class whose body leans on
     // internals our binding of its base class does not provide (resphilosophica.cls
     // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
     // would otherwise error and leave groups open — the backfire that retired an
@@ -1041,8 +1042,13 @@ pub(crate) fn load() -> Result<()> {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       let body = digest(mouth::tokenize_internal(
         r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@maketitle}",
-      ))?;
+      ));
+      // Reset before propagating an error, so a failed deposit does not disable
+      // every later one. A hard error still propagates on purpose (Fatal stays
+      // Fatal): only a recursion/resource Fatal gets here — an undefined internal
+      // is a soft `Error:undefined` inside the digest.
       AssignValue!("lx_depositing_class_maketitle" => false, Some(Scope::Global));
+      let body = body?;
       if !body.to_string().trim().is_empty() {
         out.push(body);
       }

@@ -8457,11 +8457,15 @@ city, subject, teacher — never reach the XML (ryethesis.cls:282, exam-n; SHARE
 errors, silent content loss). **Rust**: the lock keeps every dropped MACRO definition
 as `\lx@dropped@<name>` (state.rs `install_definition`; `\newcommand`'s own locked
 bail, sect08.rs). `\lx@deposit@maketitle` (sect05.rs) runs a captured argument-free
-`\maketitle` body in a group with `\@title`/`\@author`/`\@date`/`\@thanks` nulled (the
+`\maketitle` body — a class's, or a document preamble's own `\renewcommand\maketitle`,
+which the lock drops alike — in a group with `\@title`/`\@author`/`\@date`/`\@thanks` nulled (the
 frontmatter carries them — no duplication), `\@maketitle` relaxed, not re-entrant, and
-keeps the output only when it typesets something; a class `{titlepage}` becomes an
+keeps the output only when it typesets something (a hard error in the replay still
+propagates — Fatal stays Fatal); a class `{titlepage}` becomes an
 `ltx:titlepage`, other layout lands as block paragraphs after the frontmatter. Only a
-body whose every control sequence is defined at deposit time runs — a derivative
+body whose every TOP-LEVEL control sequence is defined at deposit time runs (a nested
+missing internal still reports a soft `Error:undefined`; measured on the 20
+maketitle-redefining manuals, arXiv document preambles not yet measured) — a derivative
 class leaning on internals our binding of its base class lacks (resphilosophica over
 the amsart binding) keeps the lock's behaviour, the backfire that retired an earlier
 generic replay. Bodies that only build shipout pictures (uantwerpen) yield nothing and
