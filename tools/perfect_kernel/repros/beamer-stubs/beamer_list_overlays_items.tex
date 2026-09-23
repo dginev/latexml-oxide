@@ -1,0 +1,36 @@
+% witness: beamerthemecelestia demos (27 \item → 7 <item>), beamer-theme-albi-doc (65 → 25), latex-course
+%   LaTeX-Course (93 → 0), shipunov lecture-slides-ex, uantwerpen beamer guide, cursolatex (286 → 0),
+%   beamertheme-metropolis demo (`\item<2-| alert@2>`), math-into-latex-4 babybeamer*
+% oracle:  pdflatex 0 errors; separate items, bullets / (a) (b) / i. labels, no overlay text
+% engines: rust (s116) = no ltx:item per \item (one tagless item or none); overlay specs leaked as
+%   OT1 glyphs (`¡2-¿ Two`, `[¡+-¿]`); perl = correct items (beamer.cls.ltxml:1110-1179)
+% expect:  0 errors; 11 tagged items; no `¡`, `¿`, `alert@`, `[i.]` in the output
+% status:  GREEN (batch 56gu)
+% mechanism: beamer_cls.rs's {itemize}/{enumerate}/{description} lacked Perl's beginBeamerItemize
+%   properties, so \item stayed raw beamerbaseoverlay.sty:485's (the kernel default \par).
+\documentclass{beamer}
+\begin{document}
+\begin{frame}{T}
+\begin{itemize}
+\item One
+\item<2-> Two
+\item<3-| alert@3> Three
+\item[x]<4-> Four
+\item<5->[y] Five
+\end{itemize}
+\begin{itemize}[<+->]
+\item A
+\item B
+\end{itemize}
+\begin{enumerate}[(a)]
+\item E1
+\item E2
+\end{enumerate}
+\begin{enumerate}[<+->][i.]
+\item F1
+\end{enumerate}
+\begin{description}
+\item[Key]<2-> Value
+\end{description}
+\end{frame}
+\end{document}

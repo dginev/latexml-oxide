@@ -1063,20 +1063,73 @@ LoadDefinitions!({
   DefMacro!("\\beamerreturnbutton{}", "#1");
   def_macro_noop("\\hypersetup{}")?;
 
-  // Beamer list environments — Perl L1160-1179
-  DefEnvironment!("{itemize} OptionalAngled",
+  // Beamer list environments — Perl beamer.cls.ltxml:1110-1179. The kernel's
+  // item machinery is started as in the kernel environments (`begin_itemize`:
+  // `\item` → `\itemize@item`, the list counter and its tags), then — Perl
+  // `beginBeamerItemize` — `\item` is `\beamer@item`, which takes beamer's
+  // overlay forms (`\item<2->`, `\item[x]<2->`, `\item<2->[x]`) and calls the
+  // saved item. Without the `properties`, `\item` stayed raw
+  // beamerbaseoverlay.sty:485's, whose `\beamer@origitem` is the kernel default
+  // `\par`: every list became ONE tagless item holding one paragraph per `\item`
+  // (Celestia demos 27 items → 7, beamer-theme-albi-doc 65 → 25, LaTeX-Course,
+  // lecture-slides-ex; 0 errors either way). Overlay specs are consumed and not
+  // acted on — the static output shows every item, as beamer's handout mode
+  // does (Perl wraps overlaid items in `actionenv`, whose `*env`s are no-ops
+  // here). The list's own default overlay is beamer's `[<+->]` (Perl
+  // `[BeamerAngled]`); for `enumerate`, an optional argument that is not an
+  // overlay is the enumerate package's label template (beamerbaselocalstructure
+  // passes it on; Perl drops a lone one — OXIDIZED_DESIGN #270). Guard:
+  // `perfect_kernel_batch56::beamer_list_items_open_their_own_item`.
+  RawTeX!(r"\def\beamer@item{\@ifnextchar<{\beamer@item@skip}{\beamer@item@}}
+\def\beamer@item@skip<#1>{\beamer@item@}
+\def\beamer@item@{\@ifnextchar[{\beamer@item@@}{\beamer@item@org}}
+\def\beamer@item@@[#1]{\@ifnextchar<{\beamer@item@@@[#1]}{\beamer@item@org[#1]}}
+\def\beamer@item@@@[#1]<#2>{\beamer@item@org[#1]}");
+  DefEnvironment!("{itemize}[]",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
+    properties => sub[_args] {
+      let props = BeginItemize!("itemize", "@item")?;
+      Let!("\\beamer@item@org", "\\item");
+      Let!("\\item", "\\beamer@item");
+      Ok(props)
+    },
     mode => "internal_vertical", locked => true);
-  DefEnvironment!("{enumerate} OptionalAngled []",
+  DefEnvironment!("{enumerate} OptionalUndigested OptionalUndigested",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
-    mode => "internal_vertical");
+    before_digest => { def_macro_identity("\\makelabel{}")?; },
+    properties => sub[_args] {
+      let props = BeginItemize!("enumerate", "enum")?;
+      Let!("\\beamer@item@org", "\\item");
+      Let!("\\item", "\\beamer@item");
+      Ok(props)
+    },
+    after_digest_begin => sub[whatsit] {
+      // The label template is the optional argument that is not an overlay.
+      for i in [1, 2] {
+        if let Some(arg) = whatsit.get_arg(i)
+          && let Some(toks) = arg.raw_tokens()
+          && toks.unlist_ref().first().is_some_and(|t| t.with_str(|s| s != "<"))
+        {
+          set_enumeration_style(Some(toks), None)?;
+          break;
+        }
+      }
+    },
+    mode => "internal_vertical", locked => true);
   // Perl beamer.cls.ltxml L1174-1179: description's \item[label] renders
   // labels via \makelabel which beamer rebinds to \descriptionlabel
   // (defined in ams_support_sty:188 as bold+space). Same pattern
   // enumitem_sty:444 and ieeetran_cls:287 use.
-  DefEnvironment!("{description} OptionalAngled",
+  DefEnvironment!("{description}[]",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
+    properties => sub[_args] {
+      let props = BeginItemize!("description", "@desc")?;
+      Let!("\\beamer@item@org", "\\item");
+      Let!("\\item", "\\beamer@item");
+      Ok(props)
+    },
     mode => "internal_vertical", locked => true);
 
   // Theorems — Perl L1193-1230

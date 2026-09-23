@@ -8576,3 +8576,9 @@ untouched. Residual: ctex's localized part label ("第一部分") becomes the st
 tag (beautybook-cn, pgfornament-han). 24 of the 31 part-short s114 manuals gain their
 parts, validity unchanged (27/31), no diagnostic change. Guard
 `perfect_kernel_batch56::koma_part_is_a_part`.
+
+### 270. Beamer lists: an overlay spec is consumed, not acted on, and enumerate's lone `[template]` is kept (Perl: overlays wrapped in `actionenv`; a lone template dropped)
+
+**Perl** (beamer.cls.ltxml:1110-1179): `beginBeamerItemize` starts the kernel item machinery and routes `\item` through `\beamer@item`, which wraps an overlaid item in `\begin{actionenv}<spec>` → `uncoverenv` → `<ltx:inline-block class="ltx_covered">`. `{enumerate} [BeamerAngled] OptionalUndigested` reads the first `[…]` unconditionally as the overlay (`readOptional` + reparse), so a sole `\begin{enumerate}[(a)]` loses its template and renders `1.` (pdflatex: `(a)`).
+**Rust** (batch 56gu, `beamer_cls.rs`): the same item machinery and `\item` routing (`\beamer@item` consumes `\item<…>`, `\item[x]<…>`, `\item<…>[x]`), but the overlay is not acted on — the static output shows every item, as beamer's handout mode does (Rust's `*env` overlay environments are no-ops; no `ltx_covered` wrapper). Enumerate takes two undigested optionals and applies the first that is not an overlay as the label template, so `[(a)]` and `[<+->][(a)]` both give `(a)`, `[<+->]` alone keeps `1.` — pdflatex's labels. Before 56gu the list environments had no item machinery at all (one tagless item per list, specs leaked as `¡2-¿`).
+**Guard**: `perfect_kernel_batch56::beamer_list_items_open_their_own_item`.

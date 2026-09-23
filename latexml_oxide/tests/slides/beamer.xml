@@ -173,15 +173,34 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection>
       <para xml:id="S4.p7">
-        <itemize>
-          <item>
-            <para xml:id="S4.p7.p1">
+        <itemize xml:id="S4.I1">
+          <item xml:id="S4.I1.i1">
+            <tags>
+              <tag>•</tag>
+              <tag role="autoref">item </tag>
+              <tag role="typerefnum">1st item</tag>
+            </tags>
+            <para xml:id="S4.I1.i1.p1">
               <p>First</p>
             </para>
-            <para xml:id="S4.p7.p2">
-              <p>¡2-—alert@3¿Second</p>
+          </item>
+          <item xml:id="S4.I1.i2">
+            <tags>
+              <tag>•</tag>
+              <tag role="autoref">item </tag>
+              <tag role="typerefnum">2nd item</tag>
+            </tags>
+            <para xml:id="S4.I1.i2.p1">
+              <p>Second</p>
             </para>
-            <para xml:id="S4.p7.p3">
+          </item>
+          <item xml:id="S4.I1.i3">
+            <tags>
+              <tag>•</tag>
+              <tag role="autoref">item </tag>
+              <tag role="typerefnum">3rd item</tag>
+            </tags>
+            <para xml:id="S4.I1.i3.p1">
               <p>Third</p>
             </para>
           </item>
@@ -290,15 +309,37 @@ Slide 1Slide 2<break/></p>
     <title><tag close=" ">6</tag>Enumerate</title>
     <subsection>
       <para xml:id="S6.p1">
-        <enumerate>
-          <item>
-            <para xml:id="S6.p1.p1">
+        <enumerate xml:id="S6.I1">
+          <item xml:id="S6.I1.i1">
+            <tags>
+              <tag>1.</tag>
+              <tag role="autoref">item 1</tag>
+              <tag role="refnum">1</tag>
+              <tag role="typerefnum">item 1</tag>
+            </tags>
+            <para xml:id="S6.I1.i1.p1">
               <p>First</p>
             </para>
-            <para xml:id="S6.p1.p2">
+          </item>
+          <item xml:id="S6.I1.i2">
+            <tags>
+              <tag>2.</tag>
+              <tag role="autoref">item 2</tag>
+              <tag role="refnum">2</tag>
+              <tag role="typerefnum">item 2</tag>
+            </tags>
+            <para xml:id="S6.I1.i2.p1">
               <p>First also</p>
             </para>
-            <para xml:id="S6.p1.p3">
+          </item>
+          <item xml:id="S6.I1.i3">
+            <tags>
+              <tag>3.</tag>
+              <tag role="autoref">item 3</tag>
+              <tag role="refnum">3</tag>
+              <tag role="typerefnum">item 3</tag>
+            </tags>
+            <para xml:id="S6.I1.i3.p1">
               <p>And another first</p>
             </para>
           </item>
@@ -307,15 +348,37 @@ Slide 1Slide 2<break/></p>
     </subsection>
     <subsection>
       <para xml:id="S6.p2">
-        <enumerate>
-          <item>
-            <para xml:id="S6.p2.p1">
+        <enumerate xml:id="S6.I2">
+          <item xml:id="S6.I2.i1">
+            <tags>
+              <tag>1.</tag>
+              <tag role="autoref">item 1</tag>
+              <tag role="refnum">1</tag>
+              <tag role="typerefnum">item 1</tag>
+            </tags>
+            <para xml:id="S6.I2.i1.p1">
               <p>First</p>
             </para>
-            <para xml:id="S6.p2.p2">
+          </item>
+          <item xml:id="S6.I2.i2">
+            <tags>
+              <tag>2.</tag>
+              <tag role="autoref">item 2</tag>
+              <tag role="refnum">2</tag>
+              <tag role="typerefnum">item 2</tag>
+            </tags>
+            <para xml:id="S6.I2.i2.p1">
               <p>Second</p>
             </para>
-            <para xml:id="S6.p2.p3">
+          </item>
+          <item xml:id="S6.I2.i3">
+            <tags>
+              <tag>3.</tag>
+              <tag role="autoref">item 3</tag>
+              <tag role="refnum">3</tag>
+              <tag role="typerefnum">item 3</tag>
+            </tags>
+            <para xml:id="S6.I2.i3.p1">
               <p>Third</p>
             </para>
           </item>
@@ -324,16 +387,38 @@ Slide 1Slide 2<break/></p>
     </subsection>
     <subsection>
       <para xml:id="S6.p3">
-        <enumerate>
-          <item>
-            <para xml:id="S6.p3.p1">
+        <enumerate xml:id="S6.I3">
+          <item xml:id="S6.I3.i1">
+            <tags>
+              <tag>1.</tag>
+              <tag role="autoref">item 1</tag>
+              <tag role="refnum">1</tag>
+              <tag role="typerefnum">item 1</tag>
+            </tags>
+            <para xml:id="S6.I3.i1.p1">
               <p>First</p>
             </para>
-            <para xml:id="S6.p3.p2">
+          </item>
+          <item xml:id="S6.I3.i2">
+            <tags>
+              <tag>2.</tag>
+              <tag role="autoref">item 2</tag>
+              <tag role="refnum">2</tag>
+              <tag role="typerefnum">item 2</tag>
+            </tags>
+            <para xml:id="S6.I3.i2.p1">
               <p>First also</p>
             </para>
-            <para xml:id="S6.p3.p3">
-              <p>¡2¿ Second</p>
+          </item>
+          <item xml:id="S6.I3.i3">
+            <tags>
+              <tag>3.</tag>
+              <tag role="autoref">item 3</tag>
+              <tag role="refnum">3</tag>
+              <tag role="typerefnum">item 3</tag>
+            </tags>
+            <para xml:id="S6.I3.i3.p1">
+              <p>Second</p>
             </para>
           </item>
         </enumerate>
@@ -341,31 +426,75 @@ Slide 1Slide 2<break/></p>
     </subsection>
     <subsection>
       <para xml:id="S6.p4">
-        <enumerate>
-          <item>
-            <para xml:id="S6.p4.p1">
+        <enumerate xml:id="S6.I4">
+          <item xml:id="S6.I4.i1">
+            <tags>
+              <tag>1.</tag>
+              <tag role="autoref">item 1</tag>
+              <tag role="refnum">1</tag>
+              <tag role="typerefnum">item 1</tag>
+            </tags>
+            <para xml:id="S6.I4.i1.p1">
               <p>First</p>
             </para>
-            <para xml:id="S6.p4.p2">
+          </item>
+          <item xml:id="S6.I4.i2">
+            <tags>
+              <tag>2.</tag>
+              <tag role="autoref">item 2</tag>
+              <tag role="refnum">2</tag>
+              <tag role="typerefnum">item 2</tag>
+            </tags>
+            <para xml:id="S6.I4.i2.p1">
               <p>Second</p>
             </para>
-            <para xml:id="S6.p4.p3">
-              <p>¡4-¿ Fourth</p>
+          </item>
+          <item xml:id="S6.I4.i3">
+            <tags>
+              <tag>3.</tag>
+              <tag role="autoref">item 3</tag>
+              <tag role="refnum">3</tag>
+              <tag role="typerefnum">item 3</tag>
+            </tags>
+            <para xml:id="S6.I4.i3.p1">
+              <p>Fourth</p>
             </para>
           </item>
         </enumerate>
       </para>
       <para xml:id="S6.p5">
-        <enumerate>
-          <item>
-            <para xml:id="S6.p5.p1">
+        <enumerate xml:id="S6.I5">
+          <item xml:id="S6.I5.i1">
+            <tags>
+              <tag>1.</tag>
+              <tag role="autoref">item 1</tag>
+              <tag role="refnum">1</tag>
+              <tag role="typerefnum">item 1</tag>
+            </tags>
+            <para xml:id="S6.I5.i1.p1">
               <p>Third</p>
             </para>
-            <para xml:id="S6.p5.p2">
+          </item>
+          <item xml:id="S6.I5.i2">
+            <tags>
+              <tag>2.</tag>
+              <tag role="autoref">item 2</tag>
+              <tag role="refnum">2</tag>
+              <tag role="typerefnum">item 2</tag>
+            </tags>
+            <para xml:id="S6.I5.i2.p1">
               <p>Also Third</p>
             </para>
-            <para xml:id="S6.p5.p3">
-              <p>¡4-¿ Also Fouth</p>
+          </item>
+          <item xml:id="S6.I5.i3">
+            <tags>
+              <tag>3.</tag>
+              <tag role="autoref">item 3</tag>
+              <tag role="refnum">3</tag>
+              <tag role="typerefnum">item 3</tag>
+            </tags>
+            <para xml:id="S6.I5.i3.p1">
+              <p>Also Fouth</p>
             </para>
           </item>
         </enumerate>

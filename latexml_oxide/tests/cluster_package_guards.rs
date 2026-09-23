@@ -18383,6 +18383,100 @@ Body.
     );
   }
 
+  /// Batch 56gu: beamer's list environments start the kernel's item machinery
+  /// (Perl beamer.cls.ltxml:1110-1179 `beginBeamerItemize`) and route `\item`
+  /// through `\beamer@item`, which consumes every overlay form. Without it
+  /// `\item` was raw beamerbaseoverlay.sty:485's (the kernel default `\par`):
+  /// each list was ONE tagless item, and every overlay spec leaked into the text
+  /// as OT1 glyphs (`¡2-¿ Two`, `[¡+-¿]`). Pinned here: `\item<2->`, a spec with
+  /// an action (`<3-| alert@3>`, metropolis), `\item[x]<4->`, `\item<5->[y]`, the
+  /// list default `[<+->]`, enumerate's label template alone (`[(a)]`) and after
+  /// a default overlay (`[<+->][i.]`), and `\item[Key]<2->` in a description.
+  #[test]
+  fn beamer_list_items_open_their_own_item() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}{T}
+\begin{itemize}
+\item One
+\item<2-> Two
+\item<3-| alert@3> Three
+\item[x]<4-> Four
+\item<5->[y] Five
+\end{itemize}
+\begin{itemize}[<+->]
+\item A
+\item B
+\end{itemize}
+\begin{enumerate}[(a)]
+\item E1
+\item E2
+\end{enumerate}
+\begin{enumerate}[<+->][i.]
+\item F1
+\end{enumerate}
+\begin{description}
+\item[Key]<2-> Value
+\end{description}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    for list in [
+      r##"<itemize><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para><p>One</p></para></item><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">2nd item</tag></tags><para><p>Two</p></para></item><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">3rd item</tag></tags><para><p>Three</p></para></item><item><tags><tag>x</tag><tag role="autoref">item </tag><tag role="typerefnum">item x</tag></tags><para><p>Four</p></para></item><item><tags><tag>y</tag><tag role="autoref">item </tag><tag role="typerefnum">item y</tag></tags><para><p>Five</p></para></item></itemize>"##,
+      r##"<itemize><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para><p>A</p></para></item><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">2nd item</tag></tags><para><p>B</p></para></item></itemize>"##,
+      r##"<enumerate><item><tags><tag>(a)</tag><tag role="autoref">item a</tag><tag role="refnum">a</tag><tag role="typerefnum">item a</tag></tags><para><p>E1</p></para></item><item><tags><tag>(b)</tag><tag role="autoref">item b</tag><tag role="refnum">b</tag><tag role="typerefnum">item b</tag></tags><para><p>E2</p></para></item></enumerate>"##,
+      r##"<enumerate><item><tags><tag>i.</tag><tag role="autoref">item i</tag><tag role="refnum">i</tag><tag role="typerefnum">item i</tag></tags><para><p>F1</p></para></item></enumerate>"##,
+      r##"<description><item><tags><tag><text font="bold">Key</text></tag><tag role="autoref">item </tag><tag role="typerefnum">item Key</tag></tags><para><p>Value</p></para></item></description>"##,
+    ] {
+      assert!(flat.contains(list), "{list}\n{flat}");
+    }
+    // No overlay spec reaches the text, in any spelling.
+    for leak in ["¡", "¿", "alert@", "&lt;", "[i.]", "[(a)]"] {
+      assert!(!xml.contains(leak), "{leak}: {xml}");
+    }
+    // A space before the overlay (`\@ifnextchar` skips it), both optionals with a
+    // label template, and an overlay-only default that must keep the arabic labels.
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}{T}
+\begin{itemize}
+\item <2-> Spaced
+\item Plain
+\end{itemize}
+\begin{enumerate}[<+->][(a)]
+\item G1
+\item G2
+\end{enumerate}
+\begin{enumerate}[<+->]
+\item H1
+\item H2
+\end{enumerate}
+\end{frame}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    for list in [
+      r##"<itemize><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">1st item</tag></tags><para><p>Spaced</p></para></item><item><tags><tag>•</tag><tag role="autoref">item </tag><tag role="typerefnum">2nd item</tag></tags><para><p>Plain</p></para></item></itemize>"##,
+      r##"<enumerate><item><tags><tag>(a)</tag><tag role="autoref">item a</tag><tag role="refnum">a</tag><tag role="typerefnum">item a</tag></tags><para><p>G1</p></para></item><item><tags><tag>(b)</tag><tag role="autoref">item b</tag><tag role="refnum">b</tag><tag role="typerefnum">item b</tag></tags><para><p>G2</p></para></item></enumerate>"##,
+      r##"<enumerate><item><tags><tag>1.</tag><tag role="autoref">item 1</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>H1</p></para></item><item><tags><tag>2.</tag><tag role="autoref">item 2</tag><tag role="refnum">2</tag><tag role="typerefnum">item 2</tag></tags><para><p>H2</p></para></item></enumerate>"##,
+    ] {
+      assert!(flat.contains(list), "{list}\n{flat}");
+    }
+  }
+
   /// Batch 56gt: etoolbox's `\patchcmd` re-tokenizes the patched body; a nested
   /// macro's parameter (`##1` of an inner `\def`) came back as the OUTER `#1`
   /// (pgfornament.sty:47-51's path operators in pgfornament-han's patched
