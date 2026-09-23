@@ -92,22 +92,29 @@ counting in guards/tools, and the content tooling.
 The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
 quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 
-**Open leads (ranked):**
-1. jlreq heading levels — every jlreq run logs `Missing number` at jlreq.cls:6584: jlreq's heading
-   declarations meet the kernel's predefined `\section` ("Command \section already defined") and
-   never set `\jlreq@heading@level@<name>`; likely a kernel-vs-class boundary (latex.ltx defines
-   no `\section`). Root-causer running; the jlreq guard pins the warning set until it lands.
-2. Non-Latin text via font-encoding decode (russ_doc/rusnat Cyrillic, arabi) — 56fz withdrawn over
-   the accent-composite token collision; design investigation running.
-3. Repro catalog re-grade: 142 headers say RED but convert with 0 errors, 6 GREEN headers error
-   identically on s112 (never really checked — the runner's relative-`--bin` bug), 4 CONTROLs now
-   clean, 61 repros below 100 % PDF recall; classification running (`~/data/pk_agents/w59/regrade/`).
-4. frankenstein/titles loop (RUST-ONLY, a +1 group per compsci `\cs` feeding titles' walk-out
-   scanner; MED-HIGH, one manual).
-5. Perf ceiling (> 180 s at 8 GB): lie-hasse, pgf-interference ×2, pgf-PeriodicTableManual,
-   tcolorbox, wheelchart (6 timeouts in s113).
-6. Axis 2b — a semantic-markup coverage measure (constructs in the source vs elements in the XML)
-   is still unbuilt.
+**Open leads (ranked; updated after sweep 114 and batches 56gl-56gp):**
+1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
+   delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
+   it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
+   strict check (`~/data/pk_agents/w59/main/56gn_macro_delimiter.patch` + `56gn_guard.rs` +
+   `56gn_NOTES.md`) surfaced ~30 latent clusters in 29 manuals on a partial sweep; the largest,
+   `\??? Match:?` ×2034, is l3msg's expandable-error sentinel — every one a REAL expl3 error the
+   engine swallowed (mercatormap 661, pgfornament-han 501, …). Root-cause the clusters (56gp and
+   56go were two; a root-causer is on the top documents), then land 56gn.
+2. **KOMA-Script `\part` → bold paragraph** (Axis 2b's first finding): scrartcl/scrbook/cnltx-doc
+   under raw loading emit `<p><text font="sansserif bold">` for `\part`, no `ltx:part`
+   (glossaries-user, hvfloat, cnltx, exsheets, leadsheets, ClassicThesis …; 31 docs short on
+   `\part`).
+3. **Axis 2b is now measured** — `tools/perfect_kernel/semantic_coverage.py <corpus.tsv>
+   <sweep_dir>`: s114, 2,274 completed docs — sections/lists/floats/refs 93-98 %, equations 93 %,
+   graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the
+   graphics family (36 docs short) and the multi-family deficit docs, most of which are also
+   status-2 (error) documents.
+4. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
+   `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
+   engines too (277 s, > 900 s).
+5. Rulings still wanted from the user: section-in-item (#189), the quote model, inline-leak,
+   dangling IDREF — the schema axis is at its ruled ceiling (s114 2219/2367).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);

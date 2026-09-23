@@ -1,0 +1,18 @@
+% witness: frankenstein/titles (compsci \cs under ltxdoc: doc.sty:623 leaves \code the identity
+%   macro, so \cs\def runs \def\aftergroup<delim>{...}; titles.sty's \ti@q@check then calls it)
+% oracle:  pdflatex "! Use of \lp doesn't match its definition." once, 1 page
+% engines: rust=Fatal:Recursion (s114, infinite expansion) perl=101 errors + too_many_errors
+% expect:  exactly 1 Error:expected:Match (\lp ignored, tex.web §398) + \y undefined; <p>A\y B</p>
+% status:  RED — fix held back: ~/data/pk_agents/w59/main/56gn_macro_delimiter.patch (+ 56gn_guard.rs)
+%   makes the miss an error and ignores the call (tex.web §398), but sweep 115 (partial) showed it
+%   surfacing ~30 latent Match-miss clusters across 29 manuals (`\??? Match:?` x2034, `\l Match:1 `,
+%   `\do Match:\S`, `\XINT_zapsp_b`, greektonoi `\ε Match:ε`; match_miss_s115partial_*.txt) — each a
+%   Rust divergence to root-cause first. Lands after those.
+% mechanism: a \def parameter text's leading delimiter is a value-less required Match; its miss
+%   raised no error (parameter.rs `!self.novalue`) and the macro expanded anyway -> self-call loop.
+%   Now reported (Perl Parameter.pm:94) and the call IGNORED as in TeX (Parameters::read_macro_arguments).
+\documentclass{article}
+\def\lp\x{\lp}
+\begin{document}
+A\lp\y B
+\end{document}
