@@ -123,8 +123,10 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 5. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
    `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
    engines too (277 s, > 900 s).
-6. Rulings still wanted from the user: section-in-item (#189), the quote model, inline-leak,
-   dangling IDREF — the schema axis is at its ruled ceiling (s114 2219/2367).
+6. Rulings: dangling IDREF (KEEP, 24 docs) and sectioning inside an item/figure (LEAVE, #189,
+   13 docs) are ruled; still open — the `quote` content model (`quote_model = Para.model`, 3 docs:
+   aguplus, webquiz, one more) and inline-leak (note/indexmark/glossarydefinition inside XMText,
+   3 docs). The schema axis is at its ruled ceiling (s116: 2221/2368).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);
