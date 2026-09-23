@@ -4,7 +4,6 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
-use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
 
 // use std::mem;
@@ -37,9 +36,13 @@ use crate::{
   tokens::Tokens,
 };
 
-static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
-static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
-static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
+/// The digit classes of tex.web §444-445 (Perl `readDigits`' `[0-9]`,
+/// `[0-7]`, `[0-9A-F]` ranges). Plain predicates, not regexes: every digit of
+/// every number scan passes through `read_digits`, and a regex match there
+/// was ~11% of a pgfmath-heavy run (pgf-interference-en, 2026-09-23 profile).
+fn is_decimal_digit(c: char) -> bool { c.is_ascii_digit() }
+fn is_octal_digit(c: char) -> bool { ('0'..='7').contains(&c) }
+fn is_hex_digit(c: char) -> bool { c.is_ascii_digit() || ('A'..='F').contains(&c) }
 
 /// Cached snapshot of `LXML_TRACE_GROUP_END` env var, sampled exactly
 /// once per process. Inlining `std::env::var(...)` on the hot
@@ -2828,7 +2831,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         // truncates such values, so we fall back to i64::MAX / MIN on
         // parse failure rather than panicking with .expect().
         let mut text = token.to_string();
-        text.push_str(&read_digits(&DIGIT_RE, true)?);
+        text.push_str(&read_digits(is_decimal_digit, true)?);
         let n = text.parse::<i64>().unwrap_or_else(|_| {
           if text.starts_with('-') {
             i64::MIN
@@ -2843,7 +2846,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
         // error. Mirror that, and clamp overflow to i64::MAX like the
         // decimal arm rather than propagating a ParseIntError.
-        let digits = read_digits(&OCT_RE, true)?;
+        let digits = read_digits(is_octal_digit, true)?;
         let decimal = if digits.is_empty() {
           0
         } else {
@@ -2856,7 +2859,7 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
         // raw-load reads a bare `"` with no hex digit → previously a
         // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
-        let digits = read_digits(&HEX_RE, true)?;
+        let digits = read_digits(is_hex_digit, true)?;
         let decimal = if digits.is_empty() {
           0
         } else {
@@ -2921,10 +2924,10 @@ pub fn read_float() -> Result<Float> {
   let _scan = NumberScan::begin();
   let is_negative = read_optional_signs()?;
   let s = if is_negative { -1.0 } else { 1.0 };
-  let mut string = read_digits(&DIGIT_RE, true)?;
+  let mut string = read_digits(is_decimal_digit, true)?;
   let mut token = read_x_token(None, false, None)?;
   if token.is_some() && token.as_ref().unwrap().get_sym() == pin!(".") {
-    string = s!("{string}.{}", read_digits(&DIGIT_RE, true)?);
+    string = s!("{string}.{}", read_digits(is_decimal_digit, true)?);
     token = read_x_token(None, false, None)?;
   }
   let n_opt: Option<f64> = if !string.is_empty() {
@@ -3356,14 +3359,14 @@ pub fn read_optional_signs() -> Result<bool> {
   Ok(sign)
 }
 
-fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
+fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
   let mut result = String::new();
   while let Some(token) = read_x_token(None, false, None)? {
     let digit_opt = token.with_str(|s| {
-      if s.len() == 1 && range_regex.is_match(s) {
-        s.chars().next()
-      } else {
-        None
+      let mut chars = s.chars();
+      match (chars.next(), chars.next()) {
+        (Some(c), None) if is_digit(c) => Some(c),
+        _ => None,
       }
     });
     if let Some(digit) = digit_opt {
@@ -3384,12 +3387,12 @@ fn read_digits(range_regex: &Regex, skip: bool) -> Result<String> {
 // ```
 /// Return a number (Rust f64 number)
 pub fn read_factor() -> Result<Option<f64>> {
-  let mut factor = read_digits(&DIGIT_RE, false)?;
+  let mut factor = read_digits(is_decimal_digit, false)?;
   let mut token_opt = read_x_token(None, false, None)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
     if sym == pin!(".") || sym == pin!(",") {
-      factor = s!("{}.{}", factor, read_digits(&DIGIT_RE, false)?);
+      factor = s!("{}.{}", factor, read_digits(is_decimal_digit, false)?);
       token_opt = read_x_token(None, false, None)?;
     }
   }
