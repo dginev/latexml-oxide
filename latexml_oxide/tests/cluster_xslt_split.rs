@@ -1484,7 +1484,7 @@ mod picture_svg_on_the_live_dom {
     assert!(
       !stderr
         .lines()
-        .any(|l| l.starts_with("Error:") || l.starts_with("Fatal:")),
+        .any(|l| regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap().is_match(l)),
       "{stderr}"
     );
     std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")

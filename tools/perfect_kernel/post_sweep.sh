@@ -65,8 +65,8 @@ post_one() {
   local rc=${PIPESTATUS[0]}
   [[ -s "$out/$name.html" ]] || rc=${rc:-1}; [[ -s "$out/$name.html" ]] || [[ $rc -ne 0 ]] || rc=99
   local errs warns
-  errs=$(grep -c '^Error:' "$out/$name.post.log")
-  warns=$(grep -c '^Warning:' "$out/$name.post.log")
+  errs=$(grep -cE '(Error|Fatal):[A-Za-z_]+:' "$out/$name.post.log")
+  warns=$(grep -cE 'Warning:[A-Za-z_]+:' "$out/$name.post.log")
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$bundle" "$name" "$rc" "$errs" "$warns" "$((SECONDS - t0))" >> "$HTMLROOT/post_verdicts.tsv"
 }
 export -f post_one

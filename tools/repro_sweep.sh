@@ -41,8 +41,8 @@ for f in "$REPRO_DIR"/$FILTER.tex; do
   log="$TMP/$base.log"
   timeout 180 "$BIN" --includestyles --dest="$TMP/$base.html" "$f" >"$log" 2>&1
   rc=$?
-  err=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^Error:')
-  fat=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^Fatal:')
+  err=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE 'Error:[A-Za-z_]+:')
+  fat=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE 'Fatal:[A-Za-z_]+:')
   if [ "$rc" = 124 ]; then status="TIMEOUT";  failing=$((failing+1))
   elif [ "$fat" -gt 0 ]; then status="FATAL";  failing=$((failing+1))
   elif [ "$err" -gt 0 ]; then status="errors"; failing=$((failing+1))

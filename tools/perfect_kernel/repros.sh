@@ -40,8 +40,8 @@ OUT=${OUT:-${TMPDIR:-/tmp}/pk_repros_$topic}
 mkdir -p "$OUT"
 
 strip() { sed 's/\x1b\[[0-9;]*m//g'; }
-errs() { strip <"$1" | grep -cE '^(Error|Fatal):' ; }
-first() { strip <"$1" | grep -E '^(Error|Fatal):' | head -1 | cut -c1-90; }
+errs() { strip <"$1" | grep -cE '(Error|Fatal):[A-Za-z_]+:' ; }
+first() { strip <"$1" | grep -E '(Error|Fatal):[A-Za-z_]+:' | head -1 | cut -c1-90; }
 
 rc=0
 printf '%-8s %-8s %5s' status expect rust

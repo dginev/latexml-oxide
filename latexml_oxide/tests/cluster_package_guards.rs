@@ -2582,10 +2582,8 @@ mod stex_raw_ltxml {
   }
 
   fn error_count(log: &str) -> usize {
-    log
-      .lines()
-      .filter(|l| l.starts_with("Error:") || l.starts_with("Fatal:"))
-      .count()
+    let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    log.lines().filter(|l| re.is_match(l)).count()
   }
 
   fn kpsewhich_has(name: &str) -> bool {
@@ -3420,7 +3418,9 @@ mod perfect_kernel_batch40_43 {
   }
 
   fn error_count(stderr: &str) -> usize {
-    stderr.lines().filter(|l| l.starts_with("Error:")).count()
+    // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85).
+    let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    stderr.lines().filter(|l| re.is_match(l)).count()
   }
 
   /// Batch 40: the xparse TCB listing trio takes a LEADING `[init-options]`
@@ -4064,7 +4064,9 @@ pub(crate) mod perfect_kernel_batch46 {
   }
 
   pub(crate) fn error_count(stderr: &str) -> usize {
-    stderr.lines().filter(|l| l.starts_with("Error:")).count()
+    // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85).
+    let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    stderr.lines().filter(|l| re.is_match(l)).count()
   }
 
   const MEMOIR: &str = r"\documentclass{memoir}
@@ -5067,7 +5069,8 @@ text
 ",
       true,
     );
-    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    // One `Error:` (the missing Until argument) plus the one `Fatal:Mouth:EoF`.
+    assert_eq!(error_count(&stderr), 2, "{stderr}");
     assert!(
       stderr.contains("Missing argument Until:\\prg_break_point:Nn at end of input"),
       "{stderr}"
