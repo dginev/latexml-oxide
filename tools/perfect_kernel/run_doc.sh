@@ -16,10 +16,10 @@
 # Exit code of this script is the status (0 also for warnings) — 124 = timeout.
 set -uo pipefail
 
-TEX="$1"
-OUTROOT="${2:-$HOME/data/perfect_kernel}"
+TEX=$(readlink -f "$1")
+OUTROOT=$(readlink -m "${2:-$HOME/data/perfect_kernel}")
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-BIN="${WORKER_BIN:-$REPO/target/debug/latexml_oxide}"
+BIN=$(readlink -f "${WORKER_BIN:-$REPO/target/debug/latexml_oxide}")
 TIMEOUT_S="${TIMEOUT_S:-300}"
 
 name=$(basename "$TEX" .tex)
@@ -63,14 +63,18 @@ if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t0\t0$" "$ORACLE"; 
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
 fi
 
+# The conversion runs from the document's output directory: packages that write
+# side files relative to the working directory (chemobabel's shell-escape image dir)
+# then write beside the output, never into the caller's directory (a sweep's working
+# directory is the repo root). TEX and OUTROOT are absolute (above).
 run_once() {
-  timeout "$TIMEOUT_S" "$BIN" \
+  (cd "$out" && timeout "$TIMEOUT_S" "$BIN" \
     --preload="$PRELOAD" \
     --xml \
     --timeout="$TIMEOUT_S" \
     --max-memory=8192 \
     --dest="$out/$name.xml" \
-    "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log"
+    "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log")
   exit_code=$?
   # ANSI-strip the log (older/current binaries may color when not TTY-gated).
   sed 's/\x1b\[[0-9;]*m//g' "$out/$name.raw.log" >"$out/$name.log"
