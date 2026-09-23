@@ -422,9 +422,20 @@ LoadDefinitions!({
     "\\lx@beamer@frame@start",
     "\\csname beamer@@tmpl@background\\endcsname"
   );
+  // beamerbaseframe.sty:30 `\let\framelatex=\frame` — the kernel box `\frame`,
+  // saved before beamer's frame command takes the name (below).
+  Let!("\\framelatex", "\\frame");
   DefEnvironment!("{frame}[][]",
     "<ltx:subsection _noautoclose='1'>#body</ltx:subsection>",
-    before_digest => { Let!("\\ifbeamer@inframe", "\\iftrue"); },
+    // beamerbaseframe.sty:92 `\let\frame=\framelatex% inside frames, use LaTeX's
+    // \frame command`: `\frame{\includegraphics…}` in a frame is the kernel box
+    // frame, not a nested slide (trigon_demo frames.tex:43-58: a `<subsection>`
+    // inside `<figure>`, RUST-ONLY — Perl never binds the `\frame` command).
+    // Local to the frame's group, like `\ifbeamer@inframe`.
+    before_digest => {
+      Let!("\\ifbeamer@inframe", "\\iftrue");
+      Let!("\\frame", "\\framelatex");
+    },
     after_digest_begin => sub[whatsit] {
       let is_fragile = whatsit.get_args().iter().flatten().any(|arg| {
         arg.to_string().contains("fragile")

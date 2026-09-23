@@ -1,0 +1,16 @@
+% witness: beamertheme-trigon/trigon_demo (frames.tex:43-58, \frame{\includegraphics} in a subfigure)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- before 56gg: <subsection> inside <figure> (RUST-ONLY; Perl binds no \frame command)
+% expect:  0 errors; the figure holds a <picture> boxing the rule, no <subsection>
+% status:  GREEN (56gg 2026-09-23; was RED on the schema axis)
+% mechanism: beamerbaseframe.sty:92 `\let\frame=\framelatex` inside frames; the binding
+%   now saves \framelatex (:30) and lets \frame back to it in the frame env's group.
+\documentclass{beamer}
+\begin{document}
+\begin{frame}{Demo}
+\begin{figure}
+\frame{\rule{2cm}{1cm}}
+\caption{plain}
+\end{figure}
+\end{frame}
+\end{document}

@@ -186,7 +186,7 @@ pub(crate) fn load() -> Result<()> {
       // mst-stylefile.sty in 1608.04650) opened `<ltx:Proof>` and cascaded
       // 1500+ malformed errors on every nested element.
       let tagname = section_element_for_type(&stype, true);
-      document.open_element(&tagname,
+      let section = document.open_element(&tagname,
         Some(string_map!("xml:id" => clean_id, "inlist" => inlist)),
         None,
           )?;
@@ -222,6 +222,7 @@ pub(crate) fn load() -> Result<()> {
       if !toctitle.is_empty() {
         document.insert_element("ltx:toctitle", toctitle, None)?;
       }
+      precede_heading_with_its_pagebreaks(&section)?;
     },
     properties => sub[args] {
       let stype = args[0].as_ref().unwrap();
@@ -285,7 +286,7 @@ pub(crate) fn load() -> Result<()> {
       // Cluster A: strip trailing CS (e.g. \par) from stype.
       let stype_str = section_type_name(stype);
       let tagname = section_element_for_type(&stype_str, false);
-      document.open_element(&tagname,
+      let section = document.open_element(&tagname,
         Some(string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
@@ -297,6 +298,7 @@ pub(crate) fn load() -> Result<()> {
       if !toctitle.is_empty() {
         document.insert_element("ltx:toctitle", toctitle, None)?;
       }
+      precede_heading_with_its_pagebreaks(&section)?;
     },
     properties => sub[args] {
       use DigestedData::*;
@@ -492,5 +494,61 @@ pub(crate) fn load() -> Result<()> {
   //======================================================================
   NewCounter!("tocdepth");
 
+  Ok(())
+}
+
+/// A page break digested INSIDE a section heading — titlesec's `\titleformat{…}
+/// {\clearpage…}` runs its format while the title is built — floats out of
+/// `<ltx:title>` and lands between the title and the `<ltx:toctitle>`, where the
+/// section model has no room for it (bmstu-iu8/bmstu-example,
+/// IU8-02-construction.sty:26-27: `element "toctitle" not allowed here`; SHARED,
+/// Perl places it identically). In TeX the break comes BEFORE the heading, so each
+/// `<ltx:pagination>` among the section's leading heading elements is moved in front
+/// of the section when its parent admits it, else after the headings. Content-free:
+/// nothing visible moves. OXIDIZED_DESIGN #264. Guard `perfect_kernel_batch56::pagebreak_in_a_title_format_precedes_the_section`.
+fn precede_heading_with_its_pagebreaks(section: &Node) -> Result<()> {
+  use latexml_core::document::{can_contain_qsym, get_node_qname};
+  let heading = |q: SymStr| {
+    q == pin_static("ltx:tags") || q == pin_static("ltx:title") || q == pin_static("ltx:toctitle")
+  };
+  let pagination = pin_static("ltx:pagination");
+  let kids: Vec<Node> = section
+    .get_child_nodes()
+    .into_iter()
+    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+    .collect();
+  // The leading run of headings and page breaks; only breaks BEFORE the last heading move.
+  let run = kids
+    .iter()
+    .take_while(|k| {
+      let q = get_node_qname(k);
+      heading(q) || q == pagination
+    })
+    .count();
+  let Some(last_heading) = kids[..run].iter().rposition(|k| heading(get_node_qname(k))) else {
+    return Ok(());
+  };
+  let breaks: Vec<Node> = kids[..last_heading]
+    .iter()
+    .filter(|k| get_node_qname(k) == pagination)
+    .cloned()
+    .collect();
+  if breaks.is_empty() {
+    return Ok(());
+  }
+  let parent_admits = section
+    .get_parent()
+    .is_some_and(|p| can_contain_qsym(get_node_qname(&p), pagination));
+  let mut anchor = kids[last_heading].clone();
+  for mut b in breaks {
+    b.unlink();
+    if parent_admits {
+      let mut s = section.clone();
+      s.add_prev_sibling(&mut b)?;
+    } else {
+      anchor.add_next_sibling(&mut b)?;
+      anchor = b;
+    }
+  }
   Ok(())
 }

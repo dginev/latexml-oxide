@@ -8416,3 +8416,34 @@ frontmatter_leads_a_leading_framed_empty_box,
 frontmatter_hoists_over_an_error_marker_only_paragraph}`,
 `perfect_kernel_batch54::maketitle_inside_a_box_goes_to_the_head`; goldens revtex4_endpage
 (now valid), aliceblog.
+
+### 263. `\unwind@titlepage` re-homes what it unwraps through the content model (Perl: children spliced in place)
+
+**Perl** (latex_constructs.pool.ltxml:1187-1193) closes the innermost open
+`ltx:titlepage` and `unwrapNodes` it: the children are spliced into the parent with no
+model check. When a class's own `\maketitle` opens a titlepage inside the document's
+`{titlepage}` (jlreq.cls:5501-5527 under `\begin{titlepage}\maketitle\end{titlepage}`),
+its empty centered paragraphs land as bare `<ltx:p>` under `<ltx:document>` —
+schema-invalid (`element "p" not allowed here`). **Rust** (`sect05.rs`): after the
+unwrap, each child the new parent cannot hold is wrapped in the element the model
+auto-opens for it there (`can_contain_indirect`: `<p>` → `<para>`), the shape ordinary
+paragraph flow gives it; admissible children are untouched. Witnesses
+gckanbun/gckanbun-doc and kksymbols/kksymbols-doc (2 schema errors each → 0; Perl
+Fatals on both under the pdfTeX identity). Guard
+`perfect_kernel_batch56::unwound_titlepage_rehomes_its_paragraphs` (self-skips without
+jlreq.cls).
+
+### 264. A page break digested inside a section heading precedes the section (Perl: left between the headings)
+
+**Perl** builds `<ltx:title>` and then `<ltx:toctitle>`; a `\clearpage` executed while
+the title is digested — titlesec's `\titleformat{…}{\clearpage…}` runs its format
+there (bmstu-iu8 IU8-02-construction.sty:26-27) — floats its `<ltx:pagination>` out of
+the title, and it stands between the two headings: `element "toctitle" not allowed
+here` (SHARED, verified on the minimal repro). **Rust** (`sect04.rs`
+`precede_heading_with_its_pagebreaks`, both section constructors): a pagination found
+among the section's leading heading run (tags/title/toctitle, before the last heading)
+is moved in front of the section when its parent admits `pagination`, else after the
+headings. In TeX the break comes before the heading, so the page-level shape is the
+faithful one; a break after the headings (body content) is untouched. Content-free:
+nothing visible moves. Witness bmstu-iu8/bmstu-example (4 schema errors → 0). Guard
+`perfect_kernel_batch56::pagebreak_in_a_title_format_precedes_the_section`.

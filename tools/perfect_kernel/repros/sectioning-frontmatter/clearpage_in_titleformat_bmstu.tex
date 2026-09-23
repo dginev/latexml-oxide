@@ -1,0 +1,15 @@
+% witness: bmstu-iu8/bmstu-example (IU8-02-construction.sty:26-27 \titleformat{\structure}{\clearpage...})
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- before 56gg: <pagination> between <title> and <toctitle> (SHARED)
+% expect:  0 errors; the pagination precedes <section>, <title><toctitle> adjacent
+% status:  GREEN (56gg 2026-09-23; was RED on the schema axis)
+% mechanism: the title format's \clearpage runs while the heading is built; the break
+%   floated out of <title>. sect04.rs precede_heading_with_its_pagebreaks moves it
+%   before the section, where TeX puts it.
+\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[hang]{\clearpage\normalfont\bfseries\centering}{}{0em}{}
+\begin{document}
+\section[Short]{Terms}
+Body text here.
+\end{document}

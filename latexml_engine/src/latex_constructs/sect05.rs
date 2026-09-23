@@ -1241,9 +1241,37 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\maybe@end@titlepage", sub[document,_args,_props] {
     document.maybe_close_element("ltx:titlepage")?;
   });
+  // Perl latex_constructs.pool.ltxml:1187-1193 unwraps the titlepage in place
+  // (`unwrapNodes` = `replaceNode`, no model check). When the class's own
+  // `\maketitle` opened a titlepage inside the document's `{titlepage}`
+  // (jlreq.cls:5501-5527 under `\begin{titlepage}\maketitle\end{titlepage}`:
+  // gckanbun-doc, kksymbols-doc), the unwound children land where their
+  // parent cannot hold them — an empty `<p>` straight under `<document>`,
+  // schema-invalid. Each such child is wrapped in the element the model
+  // auto-opens for it there (`<p>` → `<para>`), the shape ordinary paragraph
+  // flow gives it; admissible children stay as they are. OXIDIZED_DESIGN #263.
+  // Guard `perfect_kernel_batch56::unwound_titlepage_rehomes_its_paragraphs`.
   DefConstructor!("\\unwind@titlepage", sub[document,_args,_props] {
     if let Some(titlepage) = document.maybe_close_element("ltx:titlepage")? {
+      let parent = titlepage.get_parent();
+      let children: Vec<Node> = titlepage
+        .get_child_nodes()
+        .into_iter()
+        .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+        .collect();
       document.unwrap_nodes(titlepage)?;
+      if let Some(parent) = parent {
+        let pq = document::get_node_qname(&parent);
+        for child in children {
+          let cq = document::get_node_qname(&child);
+          if !document::can_contain_qsym(pq, cq)
+            && let Some(inter) = document::can_contain_indirect(pq, cq)
+          {
+            let inter = to_string(inter);
+            document.wrap_nodes(&inter, vec![child])?;
+          }
+        }
+      }
     }
   });
 

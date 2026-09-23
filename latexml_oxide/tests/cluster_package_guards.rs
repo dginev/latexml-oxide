@@ -18204,6 +18204,137 @@ Side.
     );
   }
 
+  /// Batch 56gg: a `\clearpage` inside a titlesec `\titleformat` runs while the
+  /// heading is built; its `<pagination>` floated out of `<title>` and stood
+  /// between the headings (`element "toctitle" not allowed here`, bmstu-example;
+  /// SHARED). As in TeX, the break now precedes the section.
+  #[test]
+  fn pagebreak_in_a_title_format_precedes_the_section() {
+    let tex = r"\documentclass{article}
+\usepackage{titlesec}
+\titleformat{\section}[hang]{\clearpage\normalfont\bfseries\centering}{}{0em}{}
+\begin{document}
+\section[Short]{Terms}
+Body text here.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    let section = flat.find("<section").unwrap();
+    assert!(
+      flat[..section].ends_with(r#"<pagination role="newpage"/>"#),
+      "{flat}"
+    );
+    let body = &flat[section..];
+    assert!(!body.contains("<pagination"), "{flat}");
+    assert!(
+      body.contains(r#"<title><text align="center" font="bold">Terms</text></title><toctitle>"#),
+      "the headings stay adjacent: {flat}"
+    );
+  }
+
+  /// Batch 56gg: `\unwind@titlepage` (the `{titlepage}` env's `\maketitle` hook)
+  /// re-homes the unwound children the new parent cannot hold. jlreq's own
+  /// `\maketitle` opens a titlepage inside the document's `{titlepage}`
+  /// (jlreq.cls:5501-5527); its empty centered paragraphs were unwrapped straight
+  /// under `<document>` — `element "p" not allowed here` ×2, the only schema errors
+  /// of gckanbun-doc and kksymbols-doc. Now each is wrapped in a `<para>`.
+  #[test]
+  fn unwound_titlepage_rehomes_its_paragraphs() {
+    if !kpsewhich_has("jlreq.cls") {
+      return;
+    }
+    let tex = r"\documentclass[luatex,fontsize=10pt,paper=b5]{jlreq}
+\title{\texttt{KKsymbols} Package Documentation}
+\author{Kosei Kawaguchi}
+\date{Version 1.1.1}
+\begin{document}
+\begin{titlepage}
+  \maketitle
+\end{titlepage}
+\newpage
+\section{Acknowledgements}
+Hello.
+\end{document}
+";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The warning set is pinned exactly: jlreq's own `b5` notice (lualatex prints
+    // it too) plus the OPEN jlreq heading-level lead — jlreq's `\NewBlockHeading`
+    // finds the kernel's predefined `\section` ("Command \section already defined")
+    // and never sets `\jlreq@heading@level@section`, so jlreq.cls:6584's
+    // `\ifnum` reads `\relax` (LEDGER 2026-09-23 56gg row). When that lead lands,
+    // this becomes `warning_count == 1`.
+    let missing_number = stderr
+      .matches("Warning:expected:<number> Missing number")
+      .count();
+    assert_eq!(warning_count(&stderr), 1 + missing_number, "{stderr}");
+    assert!(
+      stderr.contains("Class jlreq Warning: The option `b5' means"),
+      "{stderr}"
+    );
+    // Structure, not indentation: flattened, the two empty centered paragraphs are
+    // each wrapped, and no `<p` follows a root-level sibling's close directly.
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    assert!(
+      flat.contains(r#"<para><p/></para><para><p align="center"/></para>"#),
+      "{flat}"
+    );
+    let bare = regex::Regex::new(r"</(?:title|creator|date|pagination|para)><p[ />]").unwrap();
+    assert!(
+      !bare.is_match(&flat),
+      "no <p> directly under <document>:\n{flat}"
+    );
+    assert!(
+      xml.contains("<title>KKsymbols Package Documentation</title>"),
+      "{xml}"
+    );
+    assert!(xml.contains("<p>Hello.</p>"), "{xml}");
+  }
+
+  /// Batch 56gg: inside a frame `\frame` is the kernel box frame
+  /// (beamerbaseframe.sty:92 `\let\frame=\framelatex`), not a nested slide.
+  /// Witness beamertheme-trigon/trigon_demo (frames.tex:43-58,
+  /// `\frame{\includegraphics…}` in a subfigure): a `<subsection>` inside
+  /// `<figure>`, schema-invalid, RUST-ONLY. The top-level short form still opens
+  /// a frame.
+  #[test]
+  fn frame_inside_a_frame_is_the_kernel_box_frame() {
+    let tex = r"\documentclass{beamer}
+\begin{document}
+\begin{frame}{Demo}
+\begin{figure}
+\frame{\rule{2cm}{1cm}}
+\caption{plain}
+\end{figure}
+\end{frame}
+\frame{Short form.}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let figure = &xml[xml.find("<figure").unwrap()..xml.find("</figure>").unwrap()];
+    assert!(!figure.contains("<subsection"), "{xml}");
+    assert!(
+      figure.contains(r#"<rule height="28.5pt" width="56.9pt"/>"#) && figure.contains("<picture"),
+      "the kernel \\frame boxes the rule: {xml}"
+    );
+    // Outside a frame the command form still builds a frame of its own.
+    assert_eq!(xml.matches("<subsection").count(), 2, "{xml}");
+    assert!(xml.contains("<p>Short form.</p>"), "{xml}");
+  }
+
   /// Batch 56gf control: the flush ends a PARAGRAPH, never a frontmatter
   /// container — `\begin{titlepage}\maketitle\end{titlepage}` (a common manual
   /// shape) relies on `\unwind@titlepage` finding the titlepage open; closing it at
