@@ -1386,17 +1386,9 @@ impl Drop for ArgDigestScope {
 /// the listingline. Errors are swallowed (this rides the infallible mode-switch
 /// path); a genuine fatal is re-detected at the next digest-loop checkpoint.
 fn fire_everypar() {
-  if EVERYPAR_FIRING.with(|f| f.get()) || ARG_DIGEST_DEPTH.with(|d| d.get()) > 0 {
+  let Some(toks) = pending_everypar() else {
     return;
-  }
-  let toks = match lookup_register("\\everypar", Vec::new()) {
-    Ok(Some(RegisterValue::Tokens(t))) if !t.is_empty() => t,
-    _ => return, // empty \everypar — the normal body paragraph
   };
-  // Skip the preamble/kernel-load para-hook \everypar (see doc comment).
-  if !x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
-    return;
-  }
   EVERYPAR_FIRING.with(|f| f.set(true));
   if let Ok(digested) = digest(toks) {
     // A List box is unwound (flattened) on absorption, so `\nl`'s tag-whatsit runs
@@ -1404,6 +1396,47 @@ fn fire_everypar() {
     push_box_list(digested);
   }
   EVERYPAR_FIRING.with(|f| f.set(false));
+}
+
+/// The `\everypar` a paragraph started here would fire (see `fire_everypar` for
+/// the two guards), or `None`.
+fn pending_everypar() -> Option<Tokens> {
+  if EVERYPAR_FIRING.with(|f| f.get()) || ARG_DIGEST_DEPTH.with(|d| d.get()) > 0 {
+    return None;
+  }
+  let toks = match lookup_register("\\everypar", Vec::new()) {
+    Ok(Some(RegisterValue::Tokens(t))) if !t.is_empty() => t,
+    _ => return None, // empty \everypar — the normal body paragraph
+  };
+  // Skip the preamble/kernel-load para-hook \everypar (see doc comment).
+  if !x_equals(&T_CS!("\\@nodocument"), &T_CS!("\\relax")) {
+    return None;
+  }
+  Some(toks)
+}
+
+/// tex.web §1090-1091: a character in vertical mode is backed up (`back_input`)
+/// and `new_graf` inserts `\everypar` IN FRONT of it, so the paragraph hook reads
+/// the very token that started the paragraph, its catcode already fixed.
+/// syntax.sty:264-274's grammar relies on it — `\everypar{…\catcode`\<\active
+/// \gr@implitem}` whose `\gr@implitem<#1> #2 ` then reads the catcode-12 `<`
+/// that began the line; digesting `\everypar` beside an already-absorbed `<` left
+/// the macro nothing to match (`¡ab¿`). Returns whether it backed the token up: the
+/// mode is horizontal, and `\everypar` then `token` are the next input.
+/// Other paragraph starters (constructors, `\leavevmode`) still fire
+/// `\everypar` in place (`fire_everypar`). OXIDIZED_DESIGN #267; guard
+/// `perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
+fn back_input_for_new_graf(token: Token) -> bool {
+  if !lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
+    return false;
+  }
+  let Some(toks) = pending_everypar() else {
+    return false;
+  };
+  assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
+  gullet::unread_one(token);
+  gullet::unread(toks);
+  true
 }
 
 /// Switch to horizontal mode without stacking the mode.
@@ -2272,7 +2305,11 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         if cc == Catcode::CS {
           result = invoke_token_undefined(&token)?;
         } else if cc.is_absorbable() {
-          if let Some(digested) = invoke_token_simple(meaning)? {
+          let starts_paragraph = matches!(cc, Catcode::LETTER | Catcode::OTHER)
+            && !lookup_bool_sym(crate::pin!("IN_MATH"));
+          if starts_paragraph && back_input_for_new_graf(token) {
+            // `\everypar`, then this token again, in horizontal mode.
+          } else if let Some(digested) = invoke_token_simple(meaning)? {
             result.push(digested);
           }
         } else {

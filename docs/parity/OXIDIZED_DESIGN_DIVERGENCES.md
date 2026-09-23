@@ -8532,6 +8532,21 @@ T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_d
 manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`
 (its UTF-8 control line reads `Cafй na й.` without the line-provenance gate).
 
+### 267. `\everypar` runs in front of the character that starts a paragraph (Perl: `\everypar` never fires)
+
+**TeX** (tex.web §1090-1091): a character in vertical mode is backed up (`back_input`)
+and `new_graf` inserts `\everypar` in front of it, so the hook reads the very token that
+started the paragraph, its catcode already fixed. **Perl** declares the register
+(TeX_Paragraph.pool.ltxml:42) and never fires it. **Rust** fires it at `new_graf`
+(`stomach.rs` `fire_everypar`, for algorithm2e's `\nl` & co.), but digested it as an
+isolated list BESIDE the already-absorbed character, so a hook that reads the paragraph's
+first token found nothing: syntax.sty:264-274's grammar (`\everypar{…\catcode`\<\active
+\gr@implitem}`, `\gr@implitem<#1> #2 `) typeset `¡ab¿` and its delimiter matched past the
+line. Now a LETTER/OTHER character that starts a paragraph is backed up and `\everypar`
+unread in front of it (`back_input_for_new_graf`); other paragraph starters
+(constructors, `\leavevmode`) keep the in-place firing. Guard
+`perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
+
 ### 268. Resetting a counter skips a `UN` companion that was never allocated (Perl: assigns it, "not a register")
 
 LaTeXML pairs each `\newcounter` counter with `\c@UN<ctr>` for unnumbered-item ids, and a

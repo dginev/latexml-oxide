@@ -18363,6 +18363,26 @@ Body.
     );
   }
 
+  /// Batch 56go: a character that starts a paragraph is backed up and
+  /// `\everypar` runs IN FRONT of it (tex.web §1090-1091), so the hook reads that
+  /// very token with its catcode already fixed. syntax.sty's grammar
+  /// (`\everypar{…\catcode`\<\active\gr@implitem}`, `\gr@implitem<#1> #2 `)
+  /// depends on it; digesting `\everypar` beside the absorbed `<` gave `¡ab¿`.
+  #[test]
+  fn everypar_reads_the_token_that_started_the_paragraph() {
+    let tex = r"\documentclass{article}
+\def\imp<#1>{[#1]}
+\begin{document}
+\catcode`\<=12
+\everypar{\everypar{}\catcode`\<\active\imp}
+<ab> text
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[ab] text</p>"), "{xml}");
+  }
+
   /// Batch 56gm: a void box register is a box operand (TeXbook p.388) whatever
   /// its SPELLING — expl3's `\box_use:N` is `\copy` (expl3-code.tex:30507), and
   /// l3coffins `\raise`s it over a void coffin box (asmejour.cls:1388-1404).
