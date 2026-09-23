@@ -18271,6 +18271,52 @@ A[\"y] C[\ss] D[\"u]
     assert!(xml.contains("<p>A[ÿ] C[ß] D[ü]</p>"), "{xml}");
   }
 
+  /// titling's `\pretitle`…`\postdate` hooks: Perl's binding stores them and
+  /// never reads them (titling.sty.ltxml:28-33), so a class that builds its
+  /// title page in them lost it (lion-msc/minimal 24 % → 70 % PDF recall).
+  /// The binding's `\@maketitle` is titling.sty:166-180's field/hook sequence,
+  /// deposited with the fields emptied: hook text lands after the frontmatter,
+  /// titling's default (layout-only) hooks add nothing. OXIDIZED_DESIGN #275.
+  #[test]
+  fn titling_hooks_reach_the_output() {
+    let flat = |xml: &str| {
+      let gaps = regex::Regex::new(r">\s+<").unwrap();
+      let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+      gaps
+        .replace_all(&ids.replace_all(xml, ""), "><")
+        .into_owned()
+    };
+    let head = r#"<title>A Title</title><creator role="author"><personname>Ann Author</personname></creator><date role="creation">2026</date>"#;
+    let tex = r"\documentclass{article}
+\usepackage{titling}
+\pretitle{\begin{center}Master Thesis\par\LARGE}
+\posttitle{\par\end{center}in Physics\par}
+\title{A Title}\author{Ann Author}\date{2026}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let want = format!(
+      r#"{head}<para><p align="center">Master Thesis</p></para><para><p>in Physics</p></para><para><p>Body.</p></para>"#
+    );
+    assert!(flat(&xml).contains(&want), "{}", flat(&xml));
+    // The default hooks typeset only layout around the (emptied) fields.
+    let tex = tex
+      .replace("\\pretitle{\\begin{center}Master Thesis\\par\\LARGE}\n", "")
+      .replace("\\posttitle{\\par\\end{center}in Physics\\par}\n", "");
+    let (stderr, xml) = convert(&tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      flat(&xml).contains(&format!("{head}<para><p>Body.</p></para>")),
+      "{}",
+      flat(&xml)
+    );
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
