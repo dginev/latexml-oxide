@@ -1,0 +1,17 @@
+% witness: keyval2e/keyval2e-examples, concepts/concepts (101 errors each, Fatal cap), any
+%   catoptions/ltxkeys user: \robust@def* = \protected\relax\def (catoptions.sty:375-381)
+% oracle:  pdflatex 0 errors; `XQYWZ macro:->\B`
+% engines: rust (56ha) = `XQ[]YWZ macro:->XB`, 0 errors (silent); perl = the same (KPE #223)
+% expect:  0 errors; <p>XQYWZ <text font="typewriter">macro:-&gt;\B </text></p>
+% status:  GREEN (batch 56hb)
+% mechanism: stomach.rs cleared the prefixes at \relax / a space; tex.web §1211 reads on to the
+%   next non-blank non-relax token after a prefix.
+\documentclass{article}
+\makeatletter
+\protected\relax\def\foo#1[#2]{X#1Y#2Z}
+\edef\bad{\noexpand\@testopt{\foo{Q}}{}}
+\protected\space\def\B{XB}\edef\PB{\B}
+\makeatother
+\begin{document}
+\bad[W] \texttt{\meaning\PB}
+\end{document}

@@ -6288,3 +6288,22 @@ already collapsed source spaces. xint relies on the second space surviving
 `(X)`. Witnesses: xint/xinttools users (ipsum/ipsum-doc: 70 `Match` errors under the strict
 delimiter check of batch 56gn). **Rust (FIXED, batch 56gy):** `gullet.rs` `read_match`
 consumes exactly the delimiter's tokens. Guard `perfect_kernel_batch56::prefix_space_delimiter_matches_one_space`.
+
+## 223. A `\relax` or space between a prefix and its command drops the prefix (FIXED in Rust)
+
+Perl's Stomach clears the pending prefixes after any non-prefix primitive, `\relax`
+included (Stomach.pm:212 `clearPrefixes unless $meaning->isPrefix`), and at every
+space character (:234). TeX reads on to the next non-blank non-relax token after a
+prefix (tex.web §1211, §404), so `\protected\relax\def\foo` defines a protected
+`\foo`, and a space there is skipped, not typeset. catoptions defines every
+`\robust@def*` macro as `\protected\relax\def` (catoptions.sty:375-381, :771-773):
+unprotected, `\cpt@newv@riables` expanded inside `\cpt@newvariables`' `\edef`
+(:1277), ran off its `[#4]` delimiter, and every later internal came out undefined.
+That is 70 errors per `\usepackage{catoptions}` in Rust and 103 in Perl (keyval2e,
+concepts, other ltxkeys users). The failure can also be silent. Trigger:
+`\protected\relax\def\foo#1[#2]{X#1Y#2Z}\edef\bad{\noexpand\@testopt{\foo{Q}}{}}`
+then `\bad[W]` gives pdflatex `XQYWZ`, and Rust and Perl `XQ[]YWZ` with no error.
+**Rust (FIXED, batch 56hb):** `stomach.rs` keeps the prefixes across a `\relax`
+(its definition, so `\let` copies too) and skips a space while one of TeX's
+prefixes is pending (`state::has_tex_prefixes`; LaTeXML's own `didpar` keeps Perl's clearing). Guard
+`perfect_kernel_batch56::relax_after_a_prefix_keeps_the_prefix`.

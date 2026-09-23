@@ -3180,6 +3180,15 @@ pub fn get_prefix_sym(prefix: SymStr) -> bool { state!().get_prefix_sym(prefix) 
 
 /// clears the global prefixes
 pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
+/// Whether one of TeX's own prefixes (`\global`, `\long`, `\outer`,
+/// `\protected`) is waiting for its command. LaTeXML's internal prefixes (the
+/// algorithm2e binding's `didpar`) are not TeX's and keep Perl's clearing.
+pub fn has_tex_prefixes() -> bool {
+  let state = state!();
+  ["global", "long", "outer", "protected"]
+    .iter()
+    .any(|p| state.get_prefix(p))
+}
 
 // #======================================================================
 /// Named scope bracketing a subfile LaTeXML included itself — a `standalone`

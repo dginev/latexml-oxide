@@ -2388,7 +2388,13 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
       Some(Stored::Primitive(meaning)) => {
         // Otherwise, a normal primitive or constructor
         result = meaning.invoke_primitive()?;
-        if !meaning.is_prefix() {
+        // After a prefix TeX reads on to the next non-blank non-relax token
+        // (tex.web §1211, §404), so a `\relax` there keeps the prefixes:
+        // catoptions' `\protected\relax\def` (its `\robust@def*`, :375-381)
+        // defines a protected macro. Perl clears them (Stomach.pm:212), and the
+        // unprotected `\cpt@newv@riables` ran inside an `\edef`: 70 errors per
+        // `\usepackage{catoptions}` (keyval2e, concepts, ltxkeys). KPE #223.
+        if !meaning.is_prefix() && !(has_tex_prefixes() && *meaning.get_cs() == T_CS!("\\relax")) {
           clear_prefixes(); // Clear prefixes unless we just set one.
         }
       },
@@ -2539,6 +2545,10 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
   let origin_loc: Option<crate::common::locator::Locator> = None;
   match cc {
     Catcode::SPACE => {
+      // A space after a prefix is skipped, not typeset (tex.web §1211, §404).
+      if has_tex_prefixes() {
+        return Ok(None);
+      }
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
       let mode = lookup_string_from_sym(crate::pin!("MODE"));

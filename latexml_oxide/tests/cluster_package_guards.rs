@@ -18574,6 +18574,34 @@ Body.
     assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
   }
 
+  /// Batch 56hb: after a prefix TeX reads on to the next non-blank non-relax
+  /// token (tex.web §1211, §404), so `\protected\relax\def` and
+  /// `\protected<space>\def` define protected macros. Both engines cleared the
+  /// prefix at the `\relax`/space (Perl Stomach.pm:212, KPE #223): catoptions'
+  /// `\robust@def*` (catoptions.sty:375-381) left `\cpt@newv@riables`
+  /// unprotected, an `\edef` expanded it, 70 errors per `\usepackage{catoptions}`
+  /// (keyval2e, concepts). pdflatex: `XQYWZ macro:->\B`.
+  #[test]
+  fn relax_after_a_prefix_keeps_the_prefix() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\protected\relax\def\foo#1[#2]{X#1Y#2Z}
+\edef\bad{\noexpand\@testopt{\foo{Q}}{}}
+\protected\space\def\B{XB}\edef\PB{\B}
+\makeatother
+\begin{document}
+\bad[W] \texttt{\meaning\PB}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<p>XQYWZ <text font="typewriter">macro:-&gt;\B </text></p>"#),
+      "{xml}"
+    );
+  }
+
   /// Batch 56gz: a package or class load keeps ltfilehook's file-name stack
   /// (`\@expl@@@filehook@file@push@@`/`…@pop@@` around the file hooks, latex.ltx
   /// :18772/18789). scrlfile-hook.sty:146-158 seeds its own stack from the
