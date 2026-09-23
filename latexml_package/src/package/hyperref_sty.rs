@@ -1548,6 +1548,32 @@ LoadDefinitions!({
   // hyperref.sty:229-230 — the `\AfterBeginDocument` fallback when no
   // scrlfile/KOMA defined it (iodhbwm under skdoc).
   RawTeX!(r"\@ifundefined{AfterBeginDocument}{\def\AfterBeginDocument{\AtBeginDocument}}{}");
+  // hyperref.sty:2172-2189 — the document-properties store (unless the kernel
+  // provides `\AddToDocumentProperties`). tudapub.cls:993-999 copies
+  // `\g__hyp_documentproperties_prop` into `\l_tmpa_prop` to test for a
+  // `pdftitle`; left undefined, the copy made `\l_tmpa_prop` undefined too
+  // (DEMO-TUDaReport, once 56he replayed its `\maketitle[1][1]`).
+  RawTeX!(
+    r"\ExplSyntaxOn
+\@ifundefined{AddToDocumentProperties}
+  {
+   \prop_new:N \g__hyp_documentproperties_prop
+   \NewDocumentCommand\AddToDocumentProperties{O{\@currname}mm}
+    {
+      \exp_args:NNx
+      \prop_gput:Nnn \g__hyp_documentproperties_prop
+        {
+          \tl_if_blank:eTF {#1}{top-level/}{#1/} #2
+        }
+        { #3}
+    }
+   \NewExpandableDocumentCommand\GetDocumentProperties{m}
+     {
+       \prop_item:Nn \g__hyp_documentproperties_prop {#1}
+     }
+  }{}
+\ExplSyntaxOff"
+  );
 });
 
 /// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current

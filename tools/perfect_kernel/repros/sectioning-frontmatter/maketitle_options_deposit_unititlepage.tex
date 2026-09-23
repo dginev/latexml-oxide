@@ -1,0 +1,16 @@
+% witness: uni-titlepage/titlepage-WWUM (51.4 → 100), -DHBW (64.0 → 100), -UKoLa (77.8 → 100);
+%   13 manuals use \maketitle[title=…,author=…]
+% oracle:  pdflatex 0 errors; "TITLE: Hello"
+% engines: rust (56hdm) = the class body dropped (locked \maketitle), "[Hello]" leaked as text;
+%   perl = the same leak
+% expect:  0 errors; <title>Kept</title><para><p>TITLE: Hello</p></para>
+% status:  GREEN (batch 56he, OXIDIZED_DESIGN #265)
+\documentclass{article}
+\makeatletter
+\renewcommand*{\maketitle}[1][]{\begingroup\title{#1}\par TITLE: \@title\par\endgroup}
+\makeatother
+\title{Kept}
+\begin{document}
+\maketitle[Hello]
+Body.
+\end{document}

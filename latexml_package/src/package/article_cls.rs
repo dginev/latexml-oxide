@@ -61,7 +61,7 @@ LoadDefinitions!( {
   // This makes the authors appear on 1 line;
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
 
-  AddToMacro!("\\maketitle", "\\ltx@authors@oneline");
+  AddToMacro!("\\lx@maketitle@body", "\\ltx@authors@oneline");
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
   DefMacro!("\\@pnumwidth", "1.55em");

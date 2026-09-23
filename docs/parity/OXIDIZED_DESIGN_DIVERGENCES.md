@@ -8492,14 +8492,26 @@ picture never runs (batch 56ha: uantwerpendocs' exam `\@extrainfo` rules, the ph
 jury, contact and integrity blocks, the bamathesis copyright notice; 6 manuals gain
 37-384 words, 0 lost, 0 errors, 0 validity changes over the 544 maketitle-dropping
 manuals). The shipout picture itself (exam cover fields, bamathesis title page) stays
-lost, as in both engines. Label text next to a nulled field stays ("by"), as it is in the PDF.
+lost, as in both engines. A body whose `\maketitle` takes a plain optional argument
+(uni-titlepage.sty:97 `\renewcommand*{\maketitle}[1][]`, KOMA's page number) is also
+replayed (batch 56he). The kernel `\maketitle` is then a dispatcher that reads the
+`[<options>]` for it (`\iflx@maketitle@options`, `\lx@maketitle@withopt`), so
+they no longer leak as a paragraph. Bindings extend `\lx@maketitle@body`, not
+`\maketitle`, because an appended token would stand between the peek and the `[`. Inside
+both deposits the frontmatter setters fill the field a class body reads
+(`\lx@deposit@setters`: `\title{…}` → `\gdef\@title{…}`, an optional `[…]`
+skipped, a bare `\title` nothing, as the former `\relax`). The setters are
+`\let`, because `\title` is locked and the lock ignores a `\def`. KOMA's re-targeted
+setters join through `\g@addto@macro\lx@deposit@setters`. uni-titlepage's
+WWUM/DHBW/UKoLa recall goes 51.4/64.0/77.8 → 100/100/100, 0 errors. Label text next to a nulled field stays ("by"), as it is in the PDF.
 Witnesses: exam-n/template-master recall 36.5 → 100, ryethesis/ryesample 89.1 → 93.7;
 18 other maketitle-redefining manuals unchanged; 0 errors, 0 validity changes, 0 words
 lost. Guards `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`,
 `class_maketitle_titlepage_keeps_the_title_block`,
 `class_maketitle_deposit_relaxes_the_setters`,
 `class_maketitle_reads_a_dropped_environment_store_as_given`,
-`class_maketitle_deposit_skips_a_shipout_picture`.
+`class_maketitle_deposit_skips_a_shipout_picture`,
+`class_maketitle_deposit_threads_its_options`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 

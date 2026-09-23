@@ -31,7 +31,19 @@ pub(crate) fn koma_post_load() -> Result<()> {
     RawTeX!(&s!(
       r"\def\{role}#1{{\@add@frontmatter{{ltx:note}}[role={role}]{{#1}}}}"
     ));
+    // Inside a maketitle deposit the setter fills KOMA's own field, as
+    // scrartcl.cls's `\gdef\@<role>{#1}` does (uni-titlepage's `subject=`
+    // key reads `\@subject`; sect05.rs `\lx@deposit@setters`). The field is
+    // set globally and outlives the deposit, unlike `\@title`/`\@author`/`\@date`
+    // that the kernel `\maketitle` empties: only a replayed class body reads it,
+    // and the frontmatter never takes it from there.
+    RawTeX!(&s!(
+      r"\def\lx@deposit@{role}{{\lx@deposit@field\@{role}}}\g@addto@macro\lx@deposit@setters{{\let\{role}\lx@deposit@{role}}}"
+    ));
   }
+  RawTeX!(
+    r"\def\lx@deposit@subtitle{\lx@deposit@field\@subtitle}\g@addto@macro\lx@deposit@setters{\let\subtitle\lx@deposit@subtitle}"
+  );
   // `\minisec{title}` (scrartcl.cls L5081-5100): an unnumbered, un-TOC'd
   // freestanding heading. The real body is `\usekomafont{minisec}{#1\par}`
   // inside a `\parbox`-free group — a bold sans paragraph in the XML, no

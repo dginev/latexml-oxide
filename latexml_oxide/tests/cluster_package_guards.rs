@@ -18574,6 +18574,48 @@ Body.
     assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
   }
 
+  /// Batch 56he: a class `\maketitle[<options>]` (uni-titlepage.sty:97, 13
+  /// manuals) had its body dropped by the lock and its options leaked as a
+  /// paragraph. The kernel `\maketitle` now reads the options for the dropped body
+  /// and the deposit replays it with them. Inside the deposit `\title{…}` fills
+  /// `\@title` (uni-titlepage's `title=` key), and the frontmatter title stays.
+  #[test]
+  fn class_maketitle_deposit_threads_its_options() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\renewcommand{\maketitle}[1][]{\par DEKANLABEL: #1\par}
+\maketitle[foo=bar]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      latexml::util::test::normalize_markup(&xml)
+        .contains(r#"<para xml:id="p1"><p>DEKANLABEL: foo=bar</p></para></document>"#),
+      "{xml}"
+    );
+    let tex = r"\documentclass{article}
+\makeatletter
+\renewcommand*{\maketitle}[1][]{\begingroup\title{#1}\par TITLE: \@title\par\endgroup}
+\makeatother
+\title{Kept}
+\begin{document}
+\maketitle[Hello]
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      latexml::util::test::normalize_markup(&xml).contains(
+        r#"<title>Kept</title><para xml:id="p1"><p>TITLE: Hello</p></para><para xml:id="p2"><p>Body.</p></para>"#
+      ),
+      "{xml}"
+    );
+  }
+
   /// Batch 56hf: microtype with `babel` and `kerning` switches off French
   /// babel's active `:;!?` at `\begin{document}` (microtype.sty:3162-3195), which
   /// preamble code relies on: cahierprof.sty:366-388 freezes a `\tikzmath{…; …}`

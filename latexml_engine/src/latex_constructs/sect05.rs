@@ -1001,7 +1001,7 @@ pub(crate) fn load() -> Result<()> {
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
     let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\title\relax\let\author\relax\let\date\relax\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
+      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\@maketitle}\fi",
     ));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
     let deposit = deposit?;
@@ -1036,7 +1036,8 @@ pub(crate) fn load() -> Result<()> {
     // skipped too.
     let argless = match lookup_meaning(&dropped) {
       Some(Stored::Expandable(ref d)) => {
-        d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+        (d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+          || dropped_maketitle_takes_options())
           && match d.get_expansion() {
             Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref()),
             _ => false,
@@ -1051,9 +1052,19 @@ pub(crate) fn load() -> Result<()> {
     if argless && !lookup_bool("lx_depositing_class_maketitle") {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
-      let body = digest(mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\title\relax\let\author\relax\let\date\relax\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle}",
-      ));
+      // A `\maketitle[<options>]` body gets the options the kernel `\maketitle`
+      // read for it (`\lx@maketitle@withopt`); without them, its default.
+      let mut replay = mouth::tokenize_internal(
+        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@dropped@maketitle",
+      )
+      .unlist();
+      if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
+        && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
+      {
+        replay.extend(opts.unlist_ref().iter().copied());
+      }
+      replay.push(T_END!());
+      let body = digest(Tokens::new(replay));
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
@@ -1088,9 +1099,72 @@ pub(crate) fn load() -> Result<()> {
   // `\lx@deposit@maketitle` runs after `\lx@frontmatterhere` (so injected content
   // lands right after the title) and before `\global\let\@maketitle\relax` (while
   // `\@maketitle` still holds its content).
+  // A class whose own `\maketitle` takes `[<options>]` (uni-titlepage.sty:97
+  // `\renewcommand*{\maketitle}[1][]{…\TitleOptions{##1}…}`, 13 manuals; KOMA's
+  // `[<page number>]`) had its body dropped by the lock, and the options leaked
+  // into the text as a paragraph. The kernel `\maketitle` reads them for the
+  // dropped body, as the class's own would, and the deposit replays the body
+  // with them (batch 56he). Only when that body takes a plain optional argument.
+  // `\maketitle` is only this dispatcher: bindings extend `\lx@maketitle@body`
+  // (Perl's `AddToMacro('\maketitle', …)` in article/report/book), since tokens
+  // appended here would stand between the peek and the document's `[`.
+  DefConditional!("\\iflx@maketitle@options", { dropped_maketitle_takes_options() });
   DefMacro!(
     "\\maketitle",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\and\relax\lx@maketitle@cleanup",
+    r"\iflx@maketitle@options\expandafter\lx@maketitle@peek\else\expandafter\lx@maketitle@body\fi",
+    locked => true
+  );
+  DefMacro!("\\lx@maketitle@peek", r"\@ifnextchar[\lx@maketitle@withopt\lx@maketitle@body");
+  DefMacro!("\\lx@maketitle@withopt[]", r"\def\lx@maketitle@opts{[#1]}\lx@maketitle@body");
+  // Inside a deposit the frontmatter setters only set the field a class body
+  // reads, as the class's own setters would: uni-titlepage's `title=` key runs
+  // `\title{…}` and `\usenonemptytitleelement{title}` reads `\@title`. A bare
+  // `\title` (ukbill.cls:497 `\textbf{\title}`) is nothing, as the `\relax` it
+  // used to be; memoir's `\title[<short>]{…}` skips the short form.
+  // Reads its own lookahead rather than `\@ifnextchar`: a constructor digests
+  // `\textbf{\title}`'s argument as an isolated list, whose end reads as nothing.
+  DefMacro!("\\lx@deposit@field DefToken", sub[(field)] {
+    let mut next = read_non_space()?;
+    if next == Some(T_OTHER!("[")) {
+      let mut depth = 0i32;
+      while let Some(t) = read_token()? {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ if depth == 0 && t == T_OTHER!("]") => break,
+          _ => {},
+        }
+      }
+      next = read_non_space()?;
+    }
+    match next {
+      Some(t) if t.get_catcode() == Catcode::BEGIN => {
+        unread_one(t);
+        let value = read_balanced(ExpansionLevel::Off, false, true)?;
+        let mut out = vec![T_CS!("\\gdef"), field, T_BEGIN!()];
+        // A `#` in the value is text here, not a parameter of the `\gdef`.
+        for t in value.unlist() {
+          if t.get_catcode() == Catcode::PARAM {
+            out.push(t);
+          }
+          out.push(t);
+        }
+        out.push(T_END!());
+        out
+      },
+      Some(t) => {
+        unread_one(t);
+        vec![]
+      },
+      None => vec![],
+    }
+  });
+  // `\let`, not `\def`: `\title` and friends are locked, and the lock ignores a
+  // redefinition.
+  RawTeX!(r"\def\lx@deposit@title{\lx@deposit@field\@title}\def\lx@deposit@author{\lx@deposit@field\@author}\def\lx@deposit@date{\lx@deposit@field\@date}\def\lx@deposit@setters{\let\title\lx@deposit@title\let\author\lx@deposit@author\let\date\lx@deposit@date}");
+  DefMacro!(
+    "\\lx@maketitle@body",
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\and\relax\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -1272,7 +1346,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       Let!("\\centering", "\\relax");
       assign_value("frontmatter_deferred", true, Some(Scope::Global));
-      AddToMacro!("\\maketitle", "\\unwind@titlepage");
+      AddToMacro!("\\lx@maketitle@body", "\\unwind@titlepage");
       // In titlepage, abstract is simpler: direct body. The
       // surrounding titlepage is internal_vertical, but if we leave
       // this redefinition without an explicit mode, paragraph entry
@@ -1482,4 +1556,17 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
     });
   }
   i + 1
+}
+
+/// Whether the class `\maketitle` the lock dropped takes a plain optional
+/// argument (`\renewcommand*{\maketitle}[1][]{…}`) and nothing else.
+fn dropped_maketitle_takes_options() -> bool {
+  match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
+    Some(Stored::Expandable(ref d)) => d.get_parameters().is_some_and(|p| {
+      let params = p.get_parameters();
+      // `Optional` is the plain `[…]` (with or without a default); not `OptionalMatch`.
+      params.len() == 1 && params[0].name == pin!("Optional")
+    }),
+    _ => false,
+  }
 }
