@@ -110,16 +110,22 @@ mechanical singletons and the content/semantic axes below.
    pdflatex stops at 9, so a re-trigger remains), bfh-ci 11, guitar 10; mercatormap shell-escape
    excluded; greektonoi/chinesechess/bxjaholiday SHARED. catoptions residual: 1 option-stack-limit
    error per load.
-1b. **Recall tail (s116) — findings 2026-09-23**: 983 manuals' scrlfile-hook underflow warnings
-   (56gz, landed); uantwerpendocs title-page flow content (56ha, landed, 6 manuals); babel main
-   language from class options (56hd: 36 French/German manuals switch `xml:lang`/captions,
-   colortbl-DE recall 86 → 99; cahierprof ×2 errors under French being root-caused). Open,
-   root-caused: uni-titlepage `\maketitle[opts]` (13 manuals — thread the options into the deposit;
-   setters inside a deposit should set `\@title` rather than be `\relax`), titling
-   `\pretitle`/`\posttitle` material (lion-msc; titling's default author hooks would leave an
-   empty tabular — needs a design), quotchap `savequote` (locked `\chapter`), nomencl `nomentbl`
-   unit/note columns (make_index.rs `get_glossary_entries`), g-brief letter fields (page
-   furniture, SHARED, 2 docs, low priority).
+1b. **Recall tail (s116) — landed 2026-09-23**: scrlfile-hook underflow warnings in 983 manuals
+   (56gz); uantwerpendocs title-page flow content (56ha, 6 manuals); babel main language from
+   class options (56hd, 36 French/German manuals, colortbl-DE recall 86 → 99) with microtype's
+   French shorthand switch-off (56hf, cahierprof); uni-titlepage `\maketitle[opts]` (56he, all 13
+   manuals at 100 % recall); `\verbatim@start` + verbbox (56hc); `\protected\relax\def` (56hb,
+   catoptions 70 → 1); titling `\pretitle`/`\posttitle` material (56hg, lion-msc/minimal 24 → 70 %);
+   glossary phrases keep their markup and acronym refs show their phrase (56hi). Open,
+   root-caused: quotchap `savequote` (locked `\chapter`), nomencl `nomentbl` unit/note columns
+   (the XSLT renders only a glossary entry's label and definition), the glossaries binding's
+   `absorb_string` of each key value (math/`\emph` reach the XML as TeX source), g-brief letter
+   fields (page furniture, SHARED, 2 docs), catoptions' residual option-stack-limit error.
+   arXiv sandboxes 2605/2606 rerun on worker `cortex-worker:56he` (HEAD 4c8a916fdb), runs 311/312 vs
+   309/310. 2605: 53 `%auto-ignore` placeholders newly Fatal and 20 PoS papers with a `\q_no_value`
+   recursion, both fixed in 56hh, plus 34 siunitx `detect-all` warnings (key registered); the 68
+   `\endminipage` warnings are SHARED. 2606 has the same two roots at a larger scale: 154
+   `\q_no_value` papers (pos.sty, aaskaiid.sty) and 28 placeholders, all clean on 56hh.
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's

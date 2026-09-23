@@ -722,13 +722,27 @@ impl Scan {
 
     for list in lists.split_whitespace() {
       let gkey = format!("GLOSSARY:{}:{}", list, key);
+      // Perl Scan.pm:442 stores each phrase NODE, so MakeIndex and CrossRef
+      // re-render it with its markup: a nomenclature symbol is math, and its
+      // flattened text content (the XMath token text) is not the symbol.
+      // Adopted before `register` borrows the entry (as the index phrases
+      // above); a failed copy degrades to the flattened text.
+      let values: Vec<(String, Value)> = phrases
+        .iter()
+        .map(|phrase| {
+          let role = phrase
+            .get_attribute("role")
+            .unwrap_or_else(|| "label".to_string());
+          let value = self
+            .db
+            .adopt_xml(phrase)
+            .unwrap_or_else(|| Value::from(phrase.get_content()));
+          (format!("phrase:{role}"), value)
+        })
+        .collect();
       let entry = self.db.register(&gkey, vec![]);
-      for phrase in &phrases {
-        let role = phrase
-          .get_attribute("role")
-          .unwrap_or_else(|| "label".to_string());
-        let prop_key = format!("phrase:{}", role);
-        entry.set_value(&prop_key, Value::from(phrase.get_content()));
+      for (prop_key, value) in values {
+        entry.set_value(&prop_key, value);
       }
       if let Some(ref id_str) = id {
         entry.set_value("id", Value::from(id_str.as_str()));

@@ -23476,7 +23476,8 @@ mod nomencl_inline {
   }
 
   /// After MakeGlossary: every entry is listed, sorted by prefix + symbol
-  /// (the `z`-prefixed `A` last), though nothing references them. The
+  /// (the `z`-prefixed `A` last), though nothing references them; each label
+  /// is the symbol's `Math`, cloned (batch 56hi, Perl MakeIndex.pm:477-478). The
   /// fixture file is `TEX` verbatim (the post helper takes a path).
   #[test]
   fn printnomenclature_lists_every_entry() {
@@ -23485,7 +23486,37 @@ mod nomencl_inline {
       &xml,
       "glossary",
       &[],
-      r##"<glossary fragid="glo.nomenclature" lists="nomenclature" role="nomenclature" xml:id="glo.nomenclature"><title>Nomenclature</title><glossarylist><glossaryentry fragid="glo.nomenclature.nomencl.1" key="nomencl.1" lists="nomenclature" xml:id="glo.nomenclature.nomencl.1"><glossaryphrase key="nomencl.1" role="label">a</glossaryphrase><glossaryphrase role="definition">The number of angels per unit area, see equation (1)</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.2" key="nomencl.2" lists="nomenclature" xml:id="glo.nomenclature.nomencl.2"><glossaryphrase key="nomencl.2" role="label">N</glossaryphrase><glossaryphrase role="definition">The number of angels per needle point</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.3" key="nomencl.3" lists="nomenclature" xml:id="glo.nomenclature.nomencl.3"><glossaryphrase key="nomencl.3" role="label">A</glossaryphrase><glossaryphrase role="definition">The area of the needle point</glossaryphrase></glossaryentry></glossarylist></glossary>"##,
+      r##"<glossary fragid="glo.nomenclature" lists="nomenclature" role="nomenclature" xml:id="glo.nomenclature"><title>Nomenclature</title><glossarylist><glossaryentry fragid="glo.nomenclature.nomencl.1" key="nomencl.1" lists="nomenclature" xml:id="glo.nomenclature.nomencl.1"><glossaryphrase key="nomencl.1" role="label"><Math mode="inline" tex="a" text="a" xml:id="Sx1.p1.m2a"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></glossaryphrase><glossaryphrase role="definition">The number of angels per unit area, see equation (1)</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.2" key="nomencl.2" lists="nomenclature" xml:id="glo.nomenclature.nomencl.2"><glossaryphrase key="nomencl.2" role="label"><Math mode="inline" tex="N" text="N" xml:id="Sx1.p1.m4a"><XMath><XMTok font="italic" role="UNKNOWN">N</XMTok></XMath></Math></glossaryphrase><glossaryphrase role="definition">The number of angels per needle point</glossaryphrase></glossaryentry><glossaryentry fragid="glo.nomenclature.nomencl.3" key="nomencl.3" lists="nomenclature" xml:id="glo.nomenclature.nomencl.3"><glossaryphrase key="nomencl.3" role="label"><Math mode="inline" tex="A" text="A" xml:id="Sx1.p1.m6a"><XMath><XMTok font="italic" role="UNKNOWN">A</XMTok></XMath></Math></glossaryphrase><glossaryphrase role="definition">The area of the needle point</glossaryphrase></glossaryentry></glossarylist></glossary>"##,
+    );
+  }
+}
+
+mod glossary_refs_post {
+  //! Batch 56hi: the post stage keeps glossary phrases as NODES (Perl
+  //! Scan.pm:442, MakeIndex.pm:477-480, CrossRef.pm:906-925) and fills an
+  //! empty `ltx:glossaryref` from its entry (CrossRef.pm:469-476).
+  use crate::cluster::convert_and_post_clean;
+
+  /// acronym.sty's `\ac`/`\acl`/`\acs` emit an EMPTY `<ltx:glossaryref
+  /// show=…>`; CrossRef fills it with the entry's `phrase:<show>`. The port
+  /// never called `generateGlossaryRefTitle`, so every acronym rendered as its
+  /// key with `ltx_missing` ("NN (NN)" for "Neural Network (NN)") and an empty
+  /// tooltip (it read `phrase:description`; acronym's role is `definition`).
+  #[test]
+  fn acronym_refs_show_their_phrase() {
+    let xml = convert_and_post_clean("tests/cluster_regressions/acronym_glossaryref_phrase.tex");
+    assert!(!xml.contains("ltx_missing"), "{xml}");
+    latexml::util::test::assert_element(
+      &xml,
+      "glossaryref",
+      &[r#"show="long""#],
+      r##"<glossaryref idref="id1" inlist="acronym" key="NN" show="long" title="Neural Network"><text class="ltx_glossary_long">Neural Network</text></glossaryref>"##,
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "glossaryref",
+      &[r#"show="short""#],
+      r##"<glossaryref idref="id1" inlist="acronym" key="NN" show="short" title="Neural Network"><text class="ltx_glossary_short">NN</text></glossaryref>"##,
     );
   }
 }

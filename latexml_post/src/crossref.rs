@@ -505,59 +505,51 @@ impl CrossRef {
 
   /// Generate content for a glossary reference.
   ///
-  /// Port of `CrossRef::generateGlossaryRefTitle`.
+  /// Port of `CrossRef::generateGlossaryRefTitle` (CrossRef.pm:906-925): the
+  /// entry's `phrase:<show>` — failing that, `<base>-plural` appends an `s` and
+  /// `<base>-indefinite` prefixes `a`/`an` to `phrase:<base>` — wrapped in an
+  /// `ltx_glossary_<show>` text, its content `prepRefText` (the stored node's
+  /// trimmed children, cloned: markup survives).
   fn generate_glossary_ref_title(&self, entry_key: &str, show: &str) -> Vec<NodeData> {
-    let entry = match self.db.lookup(entry_key) {
-      Some(e) => e,
-      None => return vec![],
+    let Some(entry) = self.db.lookup(entry_key) else {
+      return vec![];
     };
-
-    let phrase_key = format!("phrase:{}", show);
-    if let Some(val) = entry.get_value(&phrase_key) {
-      return vec![NodeData::Element {
-        tag:        "ltx:text".to_string(),
+    let wrap = |children: Vec<NodeData>| {
+      vec![NodeData::Element {
+        tag: "ltx:text".to_string(),
         attributes: Some(HashMap::from_iter([(
           "class".to_string(),
-          format!("ltx_glossary_{}", show),
+          format!("ltx_glossary_{show}"),
         )])),
-        children:   vec![NodeData::Text(val.to_string())],
-      }];
+        children,
+      }]
+    };
+    if let Some(val) = entry.get_value(&format!("phrase:{show}")) {
+      return wrap(ref_content_children(val));
     }
-
-    // Handle -plural and -indefinite suffixes
-    if let Some(base_show) = show.strip_suffix("-plural") {
-      let base_key = format!("phrase:{}", base_show);
-      if let Some(val) = entry.get_value(&base_key) {
-        return vec![NodeData::Element {
-          tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from_iter([(
-            "class".to_string(),
-            format!("ltx_glossary_{}", show),
-          )])),
-          children:   vec![NodeData::Text(format!("{}s", val))],
-        }];
-      }
+    if let Some(base) = show.strip_suffix("-plural")
+      && let Some(val) = entry.get_value(&format!("phrase:{base}"))
+    {
+      let mut children = ref_content_children(val);
+      children.push(NodeData::Text("s".to_string()));
+      return wrap(children);
     }
-    if let Some(base_show) = show.strip_suffix("-indefinite") {
-      let base_key = format!("phrase:{}", base_show);
-      if let Some(val) = entry.get_value(&base_key) {
-        let text = val.to_string();
-        let article = if text.starts_with(|c: char| "aeiouAEIOU".contains(c)) {
-          "an "
-        } else {
-          "a "
-        };
-        return vec![NodeData::Element {
-          tag:        "ltx:text".to_string(),
-          attributes: Some(HashMap::from_iter([(
-            "class".to_string(),
-            format!("ltx_glossary_{}", show),
-          )])),
-          children:   vec![NodeData::Text(article.to_string()), NodeData::Text(text)],
-        }];
-      }
+    if let Some(base) = show.strip_suffix("-indefinite")
+      && let Some(val) = entry.get_value(&format!("phrase:{base}"))
+    {
+      // Perl tests `$phrase->textContent` against `/^[aeiou]/i`.
+      let article = if val
+        .as_string()
+        .starts_with(|c: char| "aeiouAEIOU".contains(c))
+      {
+        "an "
+      } else {
+        "a "
+      };
+      let mut children = vec![NodeData::Text(article.to_string())];
+      children.extend(ref_content_children(val));
+      return wrap(children);
     }
-
     vec![]
   }
 
@@ -1393,37 +1385,60 @@ impl CrossRef {
   }
 
   fn fill_in_glossaryrefs(&mut self, doc: &mut PostDocument) {
-    // Mirrors Perl CrossRef.pm L454-481 fill_in_glossaryrefs:
-    //   - resolve `<ltx:glossaryref key=… inlist=…>` against the GLOSSARY:list:key DB entry
-    //     registered by Scan + MakeIndex,
-    //   - copy the entry's id into `idref` so a later fill_in_refs pass converts it to `href`,
-    //   - copy `phrase:description` into `title` so the XSLT inline template renders a tooltip,
-    //   - fall back to the bare key + `ltx_missing` class when the entry is not in the DB or has no
-    //     displayable content.
+    // Port of Perl CrossRef.pm:454-482 fill_in_glossaryrefs: resolve each
+    // `<ltx:glossaryref key=… inlist=… show=…>` against the GLOSSARY:list:key
+    // entry registered by Scan (+ MakeIndex), set `idref` (a later fill_in_refs
+    // pass turns it into `href`) and the `title` tooltip, and fill an EMPTY ref
+    // with the entry's `show` phrase (acronym.sty's `\ac`/`\acs`/`\acl` emit
+    // empty refs: without this they rendered as their key, "NN (NN)").
     for ref_node in &doc.findnodes("descendant::ltx:glossaryref") {
       let mut ref_mut = ref_node.clone();
       let key = ref_node.get_attribute("key").unwrap_or_default();
       let list = ref_node.get_attribute("inlist").unwrap_or_default();
+      let show = ref_node
+        .get_attribute("show")
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "name".to_string());
+      let is_empty = |n: &Node| n.get_content().is_empty() && n.get_first_element_child().is_none();
 
       let gkey = format!("GLOSSARY:{}:{}", list, key);
-      if let Some(entry) = self.db.lookup(&gkey) {
-        if let Some(id) = entry.get_string("id") {
-          ref_mut.set_attribute("idref", id).ok();
+      let found = self.db.lookup(&gkey).map(|entry| {
+        // Perl L464-466: the tooltip is `phrase:definition`'s text (acronym's
+        // role); glossaries and nomencl call it `phrase:description`, which the
+        // Rust port has always used, so it stands as the fallback. The text is
+        // `value_text`'s whitespace-collapsed, math-aware form (issue #761),
+        // where Perl copies the raw `textContent`.
+        let title = entry
+          .get_value("phrase:definition")
+          .or_else(|| entry.get_value("phrase:description"))
+          .map(|val| value_text(doc, val))
+          .filter(|t| !t.is_empty());
+        (title, entry.get_string("id").map(str::to_string))
+      });
+      if let Some((title, id)) = found {
+        if ref_mut.get_attribute("title").is_none()
+          && let Some(title) = title
+        {
+          ref_mut.set_attribute("title", &title).ok();
         }
-        // Perl L465-467: copy phrase:definition (Rust schema uses
-        // phrase:description) into `title` if not already set.
-        if ref_mut.get_attribute("title").is_none() {
-          if let Some(desc) = entry.get_string("phrase:description") {
-            if !desc.is_empty() {
-              ref_mut.set_attribute("title", desc).ok();
-            }
+        if let Some(id) = id {
+          ref_mut.set_attribute("idref", &id).ok();
+        }
+        if is_empty(&ref_mut) {
+          let stuff = self.generate_glossary_ref_title(&gkey, &show);
+          if stuff.is_empty() {
+            self.note_missing("warn", &format!("Glossary contents ({show}) for key"), &key);
+            doc.add_nodes(&mut ref_mut, &[NodeData::Text(key.clone())]);
+            PostDocument::add_class(&mut ref_mut, "ltx_missing");
+          } else {
+            doc.add_nodes(&mut ref_mut, &stuff);
           }
         }
       } else {
         self.note_missing("warn", "Glossary Entry for key", &key);
       }
 
-      if ref_mut.get_first_child().is_none() {
+      if is_empty(&ref_mut) {
         doc.add_nodes(&mut ref_mut, &[NodeData::Text(key.clone())]);
         PostDocument::add_class(&mut ref_mut, "ltx_missing");
       }

@@ -552,7 +552,13 @@ impl MakeIndex {
           continue;
         }
 
-        let sort_key = entry.get_string("phrase:sort").unwrap_or(key).to_string();
+        // The sort phrase's text content is the sort key (Perl MakeIndex.pm:471
+        // `getValue('phrase:sort') || $key`); the phrase itself is now a node.
+        let sort_key = entry
+          .get_value("phrase:sort")
+          .map(Value::as_string)
+          .filter(|s| !s.is_empty())
+          .unwrap_or_else(|| key.to_string());
         let initial = sort_key
           .chars()
           .next()
@@ -560,11 +566,18 @@ impl MakeIndex {
           .map(|c| c.to_uppercase().to_string())
           .unwrap_or_else(|| "*".to_string());
         let id = format!("{}.{}", glossary_id, key);
-        let term = entry.get_string("phrase:name").unwrap_or(key).to_string();
-        let desc = entry
-          .get_string("phrase:description")
-          .unwrap_or("")
-          .to_string();
+        // Perl MakeIndex.pm:477-480: the label and definition are CLONES of
+        // the stored phrase nodes' trimmed children, so math and styled
+        // text survive (a nomenclature symbol is math).
+        let phrase_children = |role: &str, default: &str| -> Vec<NodeData> {
+          match entry.get_value(role) {
+            Some(Value::Xml(node)) => trimmed_child_nodes(node),
+            Some(other) => vec![NodeData::Text(other.as_string())],
+            None => vec![NodeData::Text(default.to_string())],
+          }
+        };
+        let term = phrase_children("phrase:name", key);
+        let desc = phrase_children("phrase:description", "");
 
         entries.push(GlossaryEntry {
           initial,
@@ -591,7 +604,7 @@ impl MakeIndex {
                   ("role".to_string(), "label".to_string()),
                   ("key".to_string(), key.to_string()),
                 ])),
-                children:   vec![NodeData::Text(term)],
+                children:   term,
               },
               NodeData::Element {
                 tag:        "ltx:glossaryphrase".to_string(),
@@ -599,7 +612,7 @@ impl MakeIndex {
                   "role".to_string(),
                   "definition".to_string(),
                 )])),
-                children:   vec![NodeData::Text(desc)],
+                children:   desc,
               },
             ],
           },
