@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (caesar_example.pdf)
 % engines: rust=RUNAWAY perl=RUNAWAY (both hang; 2026-09-04)
 % expect:  0 errors; <ltx:p> with numlines=1 (loop terminates, box0 voids)
-% status:  RED (times out)
+% status:  RED (2026-09-23: the loop now terminates, but numlines=2 vs pdflatex 1 -- \lastbox pops whatever item is last (tex_box.rs; Perl TeX_Box.pool.ltxml:596 identical, SHARED), and LaTeXML paragraphs have no line boxes to count; a faithful \lastbox needs a box-kind model first)
 % mechanism: \loop...\setbox0\lastbox...\ifvoid0...\repeat counts title lines.
 %   \unpenalty is def_primitive_noop (tex_penalties.rs:19); a no-op primitive
 %   digests to a Whatsit box pushed onto box_list. Two \unpenalty per iteration
