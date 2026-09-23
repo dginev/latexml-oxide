@@ -10,7 +10,9 @@ use latexml_core::{
   document::Document,
   list::List,
   report_mut, s,
-  state::{add_binding_names, set_bindings_dispatch, source_map_enabled, source_table_snapshot},
+  state::{
+    self, add_binding_names, set_bindings_dispatch, source_map_enabled, source_table_snapshot,
+  },
   telemetry::{self, Phase},
 };
 
@@ -848,12 +850,21 @@ pub(crate) fn resolve_amble(
 /// path (CLI, corpus harness, cortex_worker); the editor's in-process
 /// fragment fallback is exempt. `Fatal!` logs and latches the sticky fatal at
 /// the raise; the `Err` is not needed — serialization of the empty document
-/// proceeds as before. Guard
-/// `perfect_kernel_batch56::document_without_a_root_is_a_fatal`.
+/// proceeds as before. Only a LaTeX document — one whose `\documentclass`
+/// loaded a class (`document_class_filename`) — has a `\begin{document}` to
+/// miss: a source that is all comments (arXiv's `%auto-ignore` placeholders,
+/// 53 papers of sandbox 2605, e.g. 2605.00131; 28 of 2606) or a plain-TeX
+/// file that typesets nothing lost no content, and stays clean as in Perl.
+/// Guards
+/// `perfect_kernel_batch56::document_without_a_root_is_a_fatal`,
+/// `perfect_kernel_batch56::comment_only_source_is_not_a_fatal`.
 fn note_rootless_document(dom: &Document) {
   // A Fatal already on record (TooManyErrors, a resource fuse) explains the
   // loss; do not add a second line for the same event.
-  if dom.get_document().get_root_element().is_none() && get_status_code() < 3 {
+  if dom.get_document().get_root_element().is_none()
+    && get_status_code() < 3
+    && state::has_value("document_class_filename")
+  {
     let _: Result<()> = (|| {
       Fatal!(
         Document,

@@ -353,6 +353,42 @@ static TOO_MANY_ERRORS_LATCHED: std::cell::Cell<bool> = std::cell::Cell::new(fal
 pub fn latch_too_many_errors() { TOO_MANY_ERRORS_LATCHED.set(true); }
 /// Whether the too-many-errors latch is set (see `latch_too_many_errors`).
 pub fn too_many_errors_latched() -> bool { TOO_MANY_ERRORS_LATCHED.get() }
+
+/// The whole diagnostic tally of this thread: the [`REPORT`] plus the gates
+/// that live beside it — the consecutive-error runaway tracker, the
+/// too-many-errors latch and the Fatal-line dedupe. A discarded speculative
+/// scope (`logger::DiagnosticsHold`) restores all of them together, so the
+/// errors it dropped can neither count nor trip a cap that would then mute the
+/// document's own errors.
+#[derive(Clone, Default)]
+pub struct DiagnosticGates {
+  /// The report counters at the snapshot.
+  pub report:        LogState,
+  last_error_key:    Option<String>,
+  consecutive:       usize,
+  too_many_errors:   bool,
+  last_fatal_logged: Option<String>,
+}
+
+/// Snapshot this thread's [`DiagnosticGates`].
+pub fn save_diagnostic_gates() -> DiagnosticGates {
+  DiagnosticGates {
+    report:            REPORT.borrow().clone(),
+    last_error_key:    LAST_ERROR_KEY.borrow().clone(),
+    consecutive:       CONSECUTIVE_ERROR_COUNT.get(),
+    too_many_errors:   TOO_MANY_ERRORS_LATCHED.get(),
+    last_fatal_logged: LAST_FATAL_LOGGED.with(|c| c.borrow().clone()),
+  }
+}
+
+/// Restore this thread's [`DiagnosticGates`] from a snapshot.
+pub fn restore_diagnostic_gates(gates: DiagnosticGates) {
+  *REPORT.borrow_mut() = gates.report;
+  *LAST_ERROR_KEY.borrow_mut() = gates.last_error_key;
+  CONSECUTIVE_ERROR_COUNT.set(gates.consecutive);
+  TOO_MANY_ERRORS_LATCHED.set(gates.too_many_errors);
+  LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = gates.last_fatal_logged);
+}
 #[macro_export]
 macro_rules! report {
   () => {
@@ -1503,6 +1539,51 @@ mod tests {
       "ignored records leave no line:\n{log}"
     );
     assert!(log.contains("undefined:\\real"), "{log}");
+    initialize_report();
+  }
+
+  /// A speculative scope's diagnostics (`DiagnosticsHold`): a discard drops
+  /// its lines AND restores its counts; a commit writes the held lines in
+  /// order, counted once; a nested hold commits into the enclosing one.
+  #[test]
+  fn diagnostics_hold_commits_or_discards_lines_and_counts_together() {
+    use crate::util::logger::DiagnosticsHold;
+    let _ = crate::util::logger::init(log::LevelFilter::Warn);
+    initialize_report();
+    crate::util::logger::bind_log();
+    let hold = DiagnosticsHold::begin();
+    emit_record(LogStatus::Error, "recursion:\\q_no_value", "speculative");
+    emit_record(LogStatus::Warning, "expected:held", "speculative");
+    latch_too_many_errors();
+    assert_eq!(hold.errors_raised(), 1);
+    assert_eq!(hold.discard(), 2);
+    assert_eq!(get_status(LogStatus::Error), 0);
+    assert_eq!(get_status(LogStatus::Warning), 0);
+    // The runaway gates are restored too: a latch the discarded scope tripped
+    // must not mute the document's own errors.
+    assert!(!too_many_errors_latched());
+    assert_eq!(CONSECUTIVE_ERROR_COUNT.get(), 0);
+    let outer = DiagnosticsHold::begin();
+    emit_record(LogStatus::Warning, "expected:first", "kept");
+    let inner = DiagnosticsHold::begin();
+    emit_record(LogStatus::Error, "undefined:\\second", "kept");
+    assert_eq!(inner.errors_raised(), 1);
+    inner.commit();
+    assert!(
+      !crate::util::logger::flush_log().contains("kept"),
+      "an inner commit writes into the enclosing hold"
+    );
+    crate::util::logger::bind_log();
+    outer.commit();
+    let log = crate::util::logger::flush_log();
+    assert!(!log.contains("speculative"), "{log}");
+    let first = log.find("expected:first").expect("first record written");
+    let second = log
+      .find("undefined:\\second")
+      .expect("second record written");
+    assert!(first < second, "held records keep their order:\n{log}");
+    assert_eq!(get_status(LogStatus::Error), 1);
+    assert_eq!(get_status(LogStatus::Warning), 1);
     initialize_report();
   }
 

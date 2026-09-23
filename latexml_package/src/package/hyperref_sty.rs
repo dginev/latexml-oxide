@@ -204,6 +204,38 @@ LoadDefinitions!({
     "pdfproducer",
     "pdfkeywords",
     "pdflang",
+    // hyperref.sty (TL 2025) `\define@key{Hyp}{…}` keys newer than the manual
+    // sections Perl's list follows: accepted and ignored like the rest, so the
+    // Warn below stays meaningful (`allcolors=` in 4 papers of arXiv 2606,
+    // e.g. 2606.17809; `linktoc`, `pdfborderstyle`).
+    "addtopdfcreator",
+    "allbordercolors",
+    "allcolors",
+    "bookmarksdepth",
+    "bookmarkstype",
+    "bordercolor",
+    "customdriver",
+    "destlabel",
+    "driverfallback",
+    "linkfileprefix",
+    "linktoc",
+    "localanchorname",
+    "ocgcolorlinks",
+    "pdfa",
+    "pdfborderstyle",
+    "pdfcreationdate",
+    "pdfencoding",
+    "pdfescapeform",
+    "pdfinfo",
+    "pdflinkmargin",
+    "pdfmoddate",
+    "pdfpageduration",
+    "pdfremotestartview",
+    "pdftrapped",
+    "pdfusetitle",
+    "pdfversion",
+    "psdextra",
+    "setpagesize",
   ] {
     DeclareOption!(option, None);
     // Rust-only divergence (paired with `21e730e71e` Info→Warn promotion):

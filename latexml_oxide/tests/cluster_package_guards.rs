@@ -15045,6 +15045,20 @@ Some text.
     assert!(!xml.contains("<document"), "{xml}");
   }
 
+  /// …but only a LaTeX document has a `\begin{document}` to miss. A source
+  /// that is all comments — arXiv's `%auto-ignore` withdrawal placeholders, 53
+  /// papers of cortex sandbox 2605 (e.g. 2605.00131) — loads no class and
+  /// lost nothing; Perl reports no problems, and so do we.
+  #[test]
+  fn comment_only_source_is_not_a_fatal() {
+    let (stderr, xml) = convert_args("%auto-ignore", &[]);
+    assert!(
+      !stderr.contains("Fatal:") && !stderr.contains("Error:"),
+      "a comment-only source is not a failure:\n{stderr}"
+    );
+    assert!(!xml.contains("<document"), "{xml}");
+  }
+
   /// Streaming: the root's `xmlns:PREFIX` declarations were computed from the
   /// RESIDENT DOM only (`apply_document_namespace_declarations`), so a prefix
   /// used solely inside spilled segments — `xlink:href` on `svg:pattern`/
@@ -18271,6 +18285,35 @@ A[\"y] C[\ss] D[\"u]
     assert!(xml.contains("<p>A[ÿ] C[ß] D[ü]</p>"), "{xml}");
   }
 
+  /// Batch 56hh (OXIDIZED_DESIGN #265): a class-body replay that raises an
+  /// error is dropped. A class that keeps its authors in its own store (pos.sty:88,
+  /// an expl3 seq the locked `\author` never fills) pops that empty store in its
+  /// `\maketitle` and expands `\q_no_value` (2× "Token \q_no_value expands into
+  /// itself!" in 20 papers of arXiv 2605, e.g. 2605.02049, and 154 of 2606;
+  /// pdflatex and Perl clean). The replay's diagnostics are held and dropped with
+  /// it; the frontmatter still carries the title and author.
+  #[test]
+  fn class_maketitle_replay_that_errors_is_dropped() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/class_maketitle_own_author_store_pos.tex"
+    );
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("q_no_value"), "{stderr}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<title>T</title><creator role="author"><personname>Ann</personname></creator>"#,
+        r#"<para><p>Body text.</p></para>"#
+      )),
+      "{flat}"
+    );
+  }
+
   /// titling's `\pretitle`…`\postdate` hooks: Perl's binding stores them and
   /// never reads them (titling.sty.ltxml:28-33), so a class that builds its
   /// title page in them lost it (lion-msc/minimal 24 % → 70 % PDF recall).
@@ -18314,6 +18357,33 @@ Body.
       flat(&xml).contains(&format!("{head}<para><p>Body.</p></para>")),
       "{}",
       flat(&xml)
+    );
+  }
+
+  /// Keys the packages define but the bindings did not register, which the
+  /// Rust port reports as `Warning:undefined` (Perl: an Info): siunitx's
+  /// `detect-all`/`detect-none` meta choices (siunitx-v2.sty:393-437; 34
+  /// papers of arXiv 2605, e.g. 2605.00471) and hyperref.sty's newer `Hyp`
+  /// keys (`allcolors` in 4 papers of 2606, e.g. 2606.17809).
+  #[test]
+  fn package_keys_the_bindings_accept() {
+    let tex = r"\documentclass{article}
+\usepackage{siunitx}
+\usepackage[allcolors=blue,linktoc=all,pdfborderstyle={/S/U/W 1}]{hyperref}
+\sisetup{detect-all}
+\hypersetup{allcolors=red,pdfusetitle}
+\begin{document}
+\SI{1}{\metre}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "Math",
+      &[r#"text="1 * meter""#],
+      r##"<Math mode="inline" tex="1\text{\,}\mathrm{m}" text="1 * meter" xml:id="p1.m1"><XMath><XMApp><XMText meaning="times" role="MULOP" xml:id="p1.m1.1"> </XMText><XMTok meaning="1" role="NUMBER">1</XMTok><XMTok class="ltx_unit" meaning="meter" role="ID">m</XMTok></XMApp></XMath></Math>"##,
     );
   }
 

@@ -8258,6 +8258,12 @@ silent whole-document loss). The empty file is still written. Formats that
 serialize digested boxes rather than a DOM (TeX/Box) are not checked. Guard
 `perfect_kernel_batch56::document_without_a_root_is_a_fatal`. **Upstream**:
 worth proposing — Perl's `Fatal` on an empty document would cost nothing.
+Only a LaTeX document has a `\begin{document}` to miss, so the Fatal requires a loaded
+document class (`document_class_filename`, set when `\documentclass` loads one; batch
+56hh). A source that is all comments, like arXiv's `%auto-ignore` withdrawal
+placeholders (53 papers of sandbox 2605, e.g. 2605.00131, and 28 of 2606), lost nothing. So does a
+plain-TeX file that typesets nothing. Both stay clean, as in Perl. Guard
+`comment_only_source_is_not_a_fatal`.
 
 ### 257. A `{titlepage}` built after body content is a layout paragraph, not a stranded `<titlepage>` (Perl: the element, schema-invalid)
 
@@ -8512,6 +8518,24 @@ lost. Guards `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`,
 `class_maketitle_reads_a_dropped_environment_store_as_given`,
 `class_maketitle_deposit_skips_a_shipout_picture`,
 `class_maketitle_deposit_threads_its_options`.
+A replay that raises an error is dropped along with its diagnostics (batch 56hh). The
+replay's premise, fields emptied, is a state the class never faces. PoS proceedings'
+pos.sty:88 keeps its authors in an expl3 seq that the locked `\author` never fills.
+Its `\printAuthors` (:171-190) pops the empty seq inside `\bool_do_until:nn` and
+expands the `\q_no_value` quark: "Token \q_no_value expands into itself!" ×2 in 20
+papers of arXiv sandbox 2605 (2605.02049) and 154 of 2606 (aaskaiid.sty too, 2606.25043),
+where pdflatex and Perl are clean. The
+replay runs under a `DiagnosticsHold` (logger.rs). It holds the formatted records;
+`commit` writes them. `discard` drops them and restores the report counts, together
+with the runaway guards beside them (the consecutive-error tracker, the too-many-errors
+latch). So the log and the status agree, as with `IgnoreDiagnosticsScope`, and a
+dropped replay cannot trip a cap that would mute the document's own errors. Only
+diagnostics are rolled back: the replay's group undoes its local assignments (pos.sty's
+seq pops), but a global one it made stays. A kept replay's own
+diagnostics are written as before, and a Fatal still propagates after a commit. The
+drop is noted as `Info:ignore:\maketitle`. The 10 deposit repros are unchanged.
+Guards `class_maketitle_replay_that_errors_is_dropped`, `error.rs`
+`diagnostics_hold_commits_or_discards_lines_and_counts_together`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 

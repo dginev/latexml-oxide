@@ -375,76 +375,189 @@ impl log::Log for LatexmlLogger {
         _ => paint(ANSI_WHITE, &message),
       } + &details.to_string();
 
-      // Capture to log buffer if active (strip ANSI for clean log text).
-      // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
-      // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
-      // matches and the record never glues onto an in-flight progress note
-      // (notes no longer force a trailing newline — see append_note).
-      if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
-        && let Some(ref mut log) = *buf
-      {
-        if !log.is_empty() && !log.ends_with('\n') {
-          log.push('\n');
-        }
-        log.push_str(&strip_ansi(&painted_message));
-        // Exactly one trailing newline — a multi-detail message (e.g.
-        // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
-        // unconditional push would double it into a blank line before the next
-        // `(Loading …` note.
-        if !log.ends_with('\n') {
-          log.push('\n');
-        }
-      }
-
-      // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
-      // line in both TTY and file output. The previous `\r` prefix made
-      // log lines visually overlay any in-flight progress indicator like
-      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
-      // but produced `(...)<CR>Error:...` byte sequences in log files,
-      // breaking line-anchored counts in canvas harnesses
-      // (`grep -cE '^...Error:'` silently returned 0 even when errors
-      // were present). Trade-off: progress indicators in a TTY no longer
-      // get overwritten, but they were not really self-erasing anyway
-      // (they always emitted ` )` to close their parens), so the visual
-      // change is small.
-      // Colorize for an interactive terminal only; when stderr is redirected
-      // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
-      // grep-clean (matches the captured `.latexml.log` buffer above).
-      // Break onto a fresh line ONLY when a note left the cursor mid-line —
-      // an unconditional leading '\n' was 45.8% of the witness's log (see
-      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
-      // republish it while holding the stderr lock, so the "record starts at
-      // line start" guarantee survives concurrent loggers.
-      //
-      // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
-      // subject only to the Info floor). The STDERR echo is gated on the decoupled
-      // console verbosity so `--quiet` reduces the console without touching the log
-      // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
-      // project's deliberate always-emit-errors divergence, since cortex aggregates
-      // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
-      // value and Fatal records are emitted at `Level::Error`, so `<= Error`
-      // captures both.
-      let to_stderr = record.level() <= Level::Error || stderr_admits(record.level());
-      if to_stderr {
-        use std::io::Write;
-        let text = if stderr_use_color() {
-          painted_message
-        } else {
-          strip_ansi(&painted_message)
-        };
-        let mut err = std::io::stderr().lock();
-        if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
-          let _ = err.write_all(b"\n");
-        }
-        let _ = err.write_all(text.as_bytes());
-        let _ = err.write_all(b"\n");
-        let _ = err.flush();
-        STDERR_AT_LINE_START.store(true, Ordering::Release);
+      if !hold_record(record.level(), &painted_message) {
+        write_record(record.level(), painted_message);
       }
     }
   }
 
   fn flush(&self) {}
+}
+
+/// Write one formatted diagnostic record: the log-file buffer (always) and the
+/// STDERR echo (gated). The tail of [`LatexmlLogger::log`], shared with
+/// [`DiagnosticsHold::commit`], which writes records it held back.
+fn write_record(level: Level, painted_message: String) {
+  // Capture to log buffer if active (strip ANSI for clean log text).
+  // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
+  // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
+  // matches and the record never glues onto an in-flight progress note
+  // (notes no longer force a trailing newline — see append_note).
+  if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+    && let Some(ref mut log) = *buf
+  {
+    if !log.is_empty() && !log.ends_with('\n') {
+      log.push('\n');
+    }
+    log.push_str(&strip_ansi(&painted_message));
+    // Exactly one trailing newline — a multi-detail message (e.g.
+    // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
+    // unconditional push would double it into a blank line before the next
+    // `(Loading …` note.
+    if !log.ends_with('\n') {
+      log.push('\n');
+    }
+  }
+
+  // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
+  // line in both TTY and file output. The previous `\r` prefix made
+  // log lines visually overlay any in-flight progress indicator like
+  // `(Loading "foo.sty" definitions... )` — convenient in a terminal
+  // but produced `(...)<CR>Error:...` byte sequences in log files,
+  // breaking line-anchored counts in canvas harnesses
+  // (`grep -cE '^...Error:'` silently returned 0 even when errors
+  // were present). Trade-off: progress indicators in a TTY no longer
+  // get overwritten, but they were not really self-erasing anyway
+  // (they always emitted ` )` to close their parens), so the visual
+  // change is small.
+  // Colorize for an interactive terminal only; when stderr is redirected
+  // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
+  // grep-clean (matches the captured `.latexml.log` buffer above).
+  // Break onto a fresh line ONLY when a note left the cursor mid-line —
+  // an unconditional leading '\n' was 45.8% of the witness's log (see
+  // STDERR_AT_LINE_START). One critical section: read the flag, write, and
+  // republish it while holding the stderr lock, so the "record starts at
+  // line start" guarantee survives concurrent loggers.
+  //
+  // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
+  // subject only to the Info floor). The STDERR echo is gated on the decoupled
+  // console verbosity so `--quiet` reduces the console without touching the log
+  // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
+  // project's deliberate always-emit-errors divergence, since cortex aggregates
+  // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
+  // value and Fatal records are emitted at `Level::Error`, so `<= Error`
+  // captures both.
+  let to_stderr = level <= Level::Error || stderr_admits(level);
+  if to_stderr {
+    use std::io::Write;
+    let text = if stderr_use_color() {
+      painted_message
+    } else {
+      strip_ansi(&painted_message)
+    };
+    let mut err = std::io::stderr().lock();
+    if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
+      let _ = err.write_all(b"\n");
+    }
+    let _ = err.write_all(text.as_bytes());
+    let _ = err.write_all(b"\n");
+    let _ = err.flush();
+    STDERR_AT_LINE_START.store(true, Ordering::Release);
+  }
+}
+
+/// Diagnostic records held back by an active [`DiagnosticsHold`], in order.
+#[thread_local]
+static HELD: RefCell<Option<Vec<(Level, String)>>> = RefCell::new(None);
+
+/// Hold a formatted record when a [`DiagnosticsHold`] is active on this
+/// thread; `false` means "write it now".
+fn hold_record(level: Level, painted_message: &str) -> bool {
+  match HELD.try_borrow_mut() {
+    Ok(mut held) => match held.as_mut() {
+      Some(records) => {
+        records.push((level, painted_message.to_string()));
+        true
+      },
+      None => false,
+    },
+    // Never lose a record to a contended cell: write it.
+    Err(_) => false,
+  }
+}
+
+/// A speculative scope's diagnostics, held until the caller decides whether
+/// the scope's RESULT is kept. For work the engine runs on its own initiative
+/// in a state the document never produces — the `\maketitle` deposit replays
+/// a class's dropped title body with the title fields emptied — so that its
+/// diagnostics are the document's exactly when its output is:
+///
+/// * [`commit`](Self::commit) writes the held records, in order, as if never
+///   held (the counts were taken at raise time and stand);
+/// * [`discard`](Self::discard) drops them AND restores the report counts —
+///   and the runaway guards beside them — to the snapshot, so the log and the
+///   status agree that nothing was raised (the whole-diagnostic rule of
+///   `set_ignore_diagnostics`). Only diagnostics are rolled back: the scope's
+///   own side effects (a global assignment it made) stay.
+///
+/// Holds nest (a commit writes into the enclosing hold). Dropping an
+/// unresolved hold commits it, so a panic or an early return cannot lose a
+/// diagnostic. Progress notes (`(Loading …)`) are never held.
+#[must_use = "resolve the hold with commit() or discard()"]
+pub struct DiagnosticsHold {
+  outer:    Option<Vec<(Level, String)>>,
+  snapshot: crate::common::error::DiagnosticGates,
+  resolved: bool,
+}
+
+impl DiagnosticsHold {
+  /// Start holding this thread's diagnostic records.
+  pub fn begin() -> Self {
+    let snapshot = crate::common::error::save_diagnostic_gates();
+    let outer = HELD.borrow_mut().replace(Vec::new());
+    DiagnosticsHold {
+      outer,
+      snapshot,
+      resolved: false,
+    }
+  }
+
+  /// Errors (a Fatal counts as one) raised since [`begin`](Self::begin).
+  pub fn errors_raised(&self) -> usize {
+    let now = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    now.error.saturating_sub(then.error) + usize::from(now.fatal && !then.fatal)
+  }
+
+  fn take_held(&mut self) -> Vec<(Level, String)> {
+    self.resolved = true;
+    let mut held = HELD.borrow_mut();
+    let records = held.take().unwrap_or_default();
+    *held = self.outer.take();
+    records
+  }
+
+  /// Keep the scope's diagnostics: write the held records.
+  pub fn commit(mut self) {
+    for (level, message) in self.take_held() {
+      if !hold_record(level, &message) {
+        write_record(level, message);
+      }
+    }
+  }
+
+  /// Drop the scope's diagnostics, records and counts alike — with the
+  /// runaway gates beside the counts ([`DiagnosticGates`]). Returns how many
+  /// records were dropped.
+  ///
+  /// [`DiagnosticGates`]: crate::common::error::DiagnosticGates
+  pub fn discard(mut self) -> usize {
+    let dropped = self.take_held().len();
+    crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
+    dropped
+  }
+}
+
+impl Drop for DiagnosticsHold {
+  fn drop(&mut self) {
+    if !self.resolved {
+      for (level, message) in self.take_held() {
+        if !hold_record(level, &message) {
+          write_record(level, message);
+        }
+      }
+    }
+  }
 }
 
 /// initialize the logger at a given STDERR verbosity `level`

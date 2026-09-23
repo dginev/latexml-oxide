@@ -1,0 +1,27 @@
+% witness: arXiv 2605.02049 (and 19 more of sandbox 2605: PoS proceedings, the paper-bundled
+%   pos.sty:88 \RenewDocumentCommand\author{som} keeps authors in an expl3 seq; its \maketitle
+%   (:449) calls \printAuthors (:136), whose \bool_do_until:nn (:171-190) pops that seq)
+% oracle:  pdflatex 0 errors (the seq holds the authors); Perl 0 (Perl never runs the class body)
+% engines: rust (56gj..56he) = 2x Error:recursion:\q_no_value "Token \q_no_value expands into itself!"
+% expect:  0 errors; <title>T</title>, the author Ann once (frontmatter); Body text.
+% status:  RED (56he) -> GREEN (56hh)
+% mechanism: the locked \author drops the redefinition, so the seq stays empty; the 56gj deposit
+%   replays the dropped \maketitle body, whose do-until pops the empty seq (\q_no_value) and
+%   expands the quark. A replay that raises an error is now dropped with its held diagnostics.
+\documentclass{article}
+\makeatletter
+\ExplSyntaxOn
+\seq_new:N \l_pos_authors_seq
+\RenewDocumentCommand\author{m}{\seq_put_right:Nn \l_pos_authors_seq {#1}}
+\renewcommand\maketitle{\begin{center}{\LARGE\@title\par}
+  \bool_do_until:nn {\seq_if_empty_p:N \l_pos_authors_seq}
+    {\seq_pop_left:NN \l_pos_authors_seq \l_tmpa_tl \tl_use:N \l_tmpa_tl \par}
+  \end{center}}
+\ExplSyntaxOff
+\makeatother
+\title{T}
+\author{Ann}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

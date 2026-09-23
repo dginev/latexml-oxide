@@ -2350,6 +2350,12 @@ LoadDefinitions!({
     "add-arc-degree-zero", "add-arc-minute-zero", "add-arc-second-zero",
     "angle-symbol-over-decimal",
     "sticky-per", "prefixes-as-symbols",
+    // siunitx-v2.sty:393-437: the two meta choices (default `true`) that set
+    // the five `detect-*` keys above at once; fonts are modelled structurally,
+    // so accepted and ignored like them. Missing from Perl's list too (an
+    // Info there, a Warn here): `\sisetup{detect-all}` warned in 34 papers of
+    // arXiv 2605 (2605.00471) and 2 of 2606.
+    "detect-all", "detect-none",
   ] {
     DefKeyVal!("SIX", key, "", "true");
   }

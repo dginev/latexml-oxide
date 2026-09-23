@@ -1064,6 +1064,16 @@ pub(crate) fn load() -> Result<()> {
         replay.extend(opts.unlist_ref().iter().copied());
       }
       replay.push(T_END!());
+      // The replay is speculative — the body runs with its fields emptied, a
+      // state the class never faces — so its diagnostics are held and are the
+      // document's only if the replay is kept. A replay that raises an error is
+      // dropped with them: pos.sty:88 (bundled with the paper) keeps its authors
+      // in an expl3 seq that the locked `\author` never fills, and its
+      // `\printAuthors` (:171-190) pops the empty seq inside `\bool_do_until:nn`
+      // and expands the `\q_no_value` quark — "Token \q_no_value expands into
+      // itself!" ×2 in 20 papers of arXiv 2605 (2605.02049) and 154 of 2606
+      // (aaskaiid.sty too). Perl never replays (State.pm:502-517).
+      let hold = util::logger::DiagnosticsHold::begin();
       let body = digest(Tokens::new(replay));
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
@@ -1071,9 +1081,26 @@ pub(crate) fn load() -> Result<()> {
       // is a soft `Error:undefined` inside the digest.
       AssignValue!("lx_depositing_class_maketitle" => false, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
-      let body = body?;
-      if !body.to_string().trim().is_empty() {
-        out.push(body);
+      let body = match body {
+        Ok(body) => body,
+        Err(err) => {
+          hold.commit();
+          return Err(err);
+        },
+      };
+      let errors = hold.errors_raised();
+      if errors > 0 {
+        hold.discard();
+        Info!(
+          "ignore",
+          "\\maketitle",
+          s!("The class's \\maketitle body was not replayed: with its title fields in the frontmatter it raised {errors} error(s)")
+        );
+      } else {
+        hold.commit();
+        if !body.to_string().trim().is_empty() {
+          out.push(body);
+        }
       }
     }
     Ok(out)
