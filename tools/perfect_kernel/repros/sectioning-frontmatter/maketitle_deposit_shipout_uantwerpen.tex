@@ -1,0 +1,17 @@
+% witness: uantwerpendocs/uantwerpenexam-example1 (\@extrainfo rules, 42 % of the doc),
+%   -example2, uantwerpenphdthesis-example1/-2 (jury, contact), bamathesis, report
+% oracle:  pdflatex 0 errors; "Flow block kept." after the title
+% engines: rust (56gz) = flow block lost (the deposit gate saw \undefineddrawing inside the
+%   no-op \AddToShipoutPicture*{…}); perl = the whole class \maketitle body dropped (locked)
+% expect:  0 errors; <title>T</title><para><p>Flow block kept.</p></para><para><p>Body.</p></para>
+% status:  GREEN (batch 56ha, OXIDIZED_DESIGN #265)
+\documentclass{article}
+\usepackage{eso-pic}
+\makeatletter
+\renewcommand\maketitle{\AddToShipoutPicture*{\put(0,0){\undefineddrawing (0,0) rectangle (1,1);}}\par Flow block kept.\par}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

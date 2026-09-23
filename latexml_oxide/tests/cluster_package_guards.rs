@@ -18337,6 +18337,37 @@ Body.
     }
   }
 
+  /// Batch 56ha: the deposit's vocabulary gate skips what a no-op macro
+  /// absorbs. uantwerpendocs' classes draw their title page inside eso-pic's
+  /// `\AddToShipoutPicture*{…}` (a no-op here), so the undefined tikz in that
+  /// argument rejected the whole dropped `\maketitle` body, with the flow
+  /// content beside it (uantwerpenexam's `\@extrainfo` rules, 42 % of the doc;
+  /// phdthesis jury and contact blocks). OXIDIZED_DESIGN #265.
+  #[test]
+  fn class_maketitle_deposit_skips_a_shipout_picture() {
+    let tex = r"\documentclass{article}
+\usepackage{eso-pic}
+\makeatletter
+\renewcommand\maketitle{\AddToShipoutPicture*{\put(0,0){\undefineddrawing (0,0) rectangle (1,1);}}\par Flow block kept.\par}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    // The title, then the deposited flow block, then the body.
+    assert!(
+      latexml::util::test::normalize_markup(&xml).contains(
+        r#"<title>T</title><para xml:id="p1"><p>Flow block kept.</p></para><para xml:id="p2"><p>Body.</p></para>"#
+      ),
+      "{xml}"
+    );
+  }
+
   /// Batch 56gm (56gj follow-up): a class `\maketitle` that lays its fields out on
   /// `\begin{titlepage}` (edmaths.sty:166-181) is deposited with the title, author
   /// and date nulled — so its titlepage must not become an `ltx:titlepage`: the

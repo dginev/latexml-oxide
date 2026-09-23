@@ -1026,8 +1026,9 @@ pub(crate) fn load() -> Result<()> {
     // Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
     let dropped = T_CS!("\\lx@dropped@maketitle");
     // Replay only a body whose vocabulary exists here: every control sequence it
-    // names at its TOP level must be defined at deposit time (a defined macro whose
-    // own expansion needs a missing internal still reports it, softly). A derivative class whose body leans on
+    // would run must be defined at deposit time (`body_vocabulary_is_defined`; a
+    // no-op's arguments are skipped, and a defined macro whose own expansion needs
+    // a missing internal still reports it, softly). A derivative class whose body leans on
     // internals our binding of its base class does not provide (resphilosophica.cls
     // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
     // would otherwise error and leave groups open — the backfire that retired an
@@ -1037,9 +1038,7 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::Expandable(ref d)) => {
         d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
           && match d.get_expansion() {
-            Some(ExpansionBody::Tokens(body)) => body.unlist_ref().iter().all(|t| {
-              !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || lookup_meaning(t).is_some()
-            }),
+            Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref()),
             _ => false,
           }
       },
@@ -1394,4 +1393,93 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
     map.insert("options", Stored::String(pin(text)));
   }
   map
+}
+
+/// Whether every control sequence a dropped class body would run is defined
+/// here (the `\lx@deposit@maketitle` replay gate). The arguments of a no-op
+/// macro (a macro with parameters and an empty expansion, as `def_macro_noop`
+/// builds) are discarded unread, so their tokens are skipped: eso-pic's
+/// `\AddToShipoutPicture*{…}` holds a class's tikz title-page drawing that
+/// never runs here, and its `\clip`/`\node`/`\foreach` rejected the whole
+/// body with the flow content beside it (uantwerpendocs exam `\@extrainfo`,
+/// phdthesis jury and contact blocks; batch 56ha, OXIDIZED_DESIGN #265).
+fn body_vocabulary_is_defined(body: &[Token]) -> bool {
+  let mut i = 0;
+  while i < body.len() {
+    let t = &body[i];
+    i += 1;
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+      continue;
+    }
+    let Some(meaning) = lookup_meaning(t) else {
+      return false;
+    };
+    // An empty expansion is stored as `None`.
+    if let Stored::Expandable(ref d) = meaning
+      && d
+        .get_expansion()
+        .is_none_or(|e| matches!(e, ExpansionBody::Tokens(x) if x.unlist_ref().is_empty()))
+      && let Some(params) = d.get_parameters()
+    {
+      for p in params.get_parameters() {
+        i = skip_no_op_argument(body, i, p);
+      }
+    }
+  }
+  true
+}
+
+/// The index past what parameter `p` of a no-op macro absorbs from `body[i..]`:
+/// an optional match token (`OptionalMatch:*`), an optional `[…]`, or a
+/// required balanced group or single token. Only single-token matches and
+/// default-free `[…]` optionals are read exactly; anything else under-skips, and
+/// the tokens left over stay checked, so the gate errs toward not replaying.
+fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
+  while body
+    .get(i)
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    i += 1;
+  }
+  let Some(next) = body.get(i) else {
+    return i;
+  };
+  let group_end =
+    |open: usize, is_open: &dyn Fn(&Token) -> bool, is_close: &dyn Fn(&Token) -> bool| {
+      let mut depth = 0usize;
+      for (k, t) in body.iter().enumerate().skip(open) {
+        if is_open(t) {
+          depth += 1;
+        } else if is_close(t) {
+          depth -= 1;
+          if depth == 0 {
+            return k + 1;
+          }
+        }
+      }
+      body.len()
+    };
+  if p.optional {
+    if let Some(m) = p.extra.first() {
+      if m.unlist_ref().first() == Some(next) {
+        return i + 1;
+      }
+      return i;
+    }
+    let (lbrack, rbrack) = (T_OTHER!("["), T_OTHER!("]"));
+    if *next == lbrack {
+      return group_end(
+        i,
+        &|t| t.get_catcode() == Catcode::BEGIN || *t == lbrack,
+        &|t| t.get_catcode() == Catcode::END || *t == rbrack,
+      );
+    }
+    return i;
+  }
+  if next.get_catcode() == Catcode::BEGIN {
+    return group_end(i, &|t| t.get_catcode() == Catcode::BEGIN, &|t| {
+      t.get_catcode() == Catcode::END
+    });
+  }
+  i + 1
 }

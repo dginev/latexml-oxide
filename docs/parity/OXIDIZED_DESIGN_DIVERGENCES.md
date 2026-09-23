@@ -8480,19 +8480,26 @@ hyperref's `\NoHyper` macros, `MoveableBox` recognising a void box register by m
 (expl3 `\box_use:N` = `\copy`), and unicode-math's `version=` key declaring the math
 version. After 56gm every one of the 54 deposit-touched manuals has diagnostics at or
 below its pre-56gj level. Only a
-body whose every TOP-LEVEL control sequence is defined at deposit time runs (a nested
-missing internal still reports a soft `Error:undefined`; measured on the 20
-maketitle-redefining manuals, arXiv document preambles not yet measured) — a derivative
-class leaning on internals our binding of its base class lacks (resphilosophica over
-the amsart binding) keeps the lock's behaviour, the backfire that retired an earlier
-generic replay. Bodies that only build shipout pictures (uantwerpen) yield nothing and
-are dropped. Label text next to a nulled field stays ("by"), as it is in the PDF.
+body whose every control sequence it would run is defined at deposit time is replayed
+(`body_vocabulary_is_defined`, sect05.rs; measured on the 20 maketitle-redefining
+manuals, arXiv document preambles not yet measured). A derivative class leaning on
+internals our binding of its base class lacks (resphilosophica over the amsart binding)
+keeps the lock's behaviour: that backfire retired an earlier generic replay. The
+arguments of a no-op macro (parameters, empty expansion) are skipped by the scan, since
+they are discarded unread. So a body drawing its title page inside eso-pic's
+`\AddToShipoutPicture*{…}` replays its flow content, and the undefined tikz in the
+picture never runs (batch 56ha: uantwerpendocs' exam `\@extrainfo` rules, the phdthesis
+jury, contact and integrity blocks, the bamathesis copyright notice; 6 manuals gain
+37-384 words, 0 lost, 0 errors, 0 validity changes over the 544 maketitle-dropping
+manuals). The shipout picture itself (exam cover fields, bamathesis title page) stays
+lost, as in both engines. Label text next to a nulled field stays ("by"), as it is in the PDF.
 Witnesses: exam-n/template-master recall 36.5 → 100, ryethesis/ryesample 89.1 → 93.7;
 18 other maketitle-redefining manuals unchanged; 0 errors, 0 validity changes, 0 words
 lost. Guards `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`,
 `class_maketitle_titlepage_keeps_the_title_block`,
 `class_maketitle_deposit_relaxes_the_setters`,
-`class_maketitle_reads_a_dropped_environment_store_as_given`.
+`class_maketitle_reads_a_dropped_environment_store_as_given`,
+`class_maketitle_deposit_skips_a_shipout_picture`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
