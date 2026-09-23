@@ -1310,6 +1310,23 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         }
       }
     }
+    // Keep the dropped definition itself, as `\lx@dropped@<name>`: a locked
+    // binding may run what the class wrote where its own semantics leave a gap —
+    // `\lx@deposit@maketitle` (sect05.rs) runs a class's title-page body for the
+    // fields the frontmatter does not carry (ryethesis.cls:282 degree/program/
+    // university). Nothing runs it unless a binding asks. OXIDIZED_DESIGN #265.
+    // Macros only: a later `\let<cs>\relax` (article-style classes end their
+    // `\maketitle` with one) must not overwrite the body it follows.
+    if matches!(definition, Stored::Expandable(_)) {
+      let dropped_key =
+        arena::pin(token.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
+      state_mut!().assign_internal(
+        TableName::Meaning,
+        dropped_key,
+        definition.clone(),
+        Some(Scope::Global),
+      );
+    }
     // Record that a redefinition was dropped: a locked binding may consult
     // `<cs>:redefined` to yield the parts of its behaviour the class took
     // over (see `\lx@maketitle@cleanup`).

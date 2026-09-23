@@ -18206,6 +18206,71 @@ Side.
     );
   }
 
+  /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
+  /// itself had its body dropped by the lock, and with it every title-page field
+  /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
+  /// "presented to Ryerson University", "Toronto, Ontario, Canada"). The dropped
+  /// body is kept as `\lx@dropped@maketitle` and deposited with the title/author
+  /// nulled: the fields follow the frontmatter, the title and author appear once.
+  #[test]
+  fn class_maketitle_body_deposits_its_fields() {
+    let cls = r"\ProvidesClass{fieldthesis}
+\LoadClass{report}
+\newcommand\degree[1]{\gdef\ft@degree{#1}}
+\renewcommand{\maketitle}{\begin{center}{\LARGE\@title}\\ by \\ {\@author}\\
+  presented to Field University\\ for the degree of\\ \ft@degree\\ Toronto, Ontario, Canada\end{center}}
+";
+    let tex = r"\documentclass{fieldthesis}
+\title{T}\author{A. E. Field}\degree{Doctor of Philosophy}
+\begin{document}
+\maketitle
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert_files(tex, &[("fieldthesis.cls", cls)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let flat = gaps
+      .replace_all(&ids.replace_all(&xml, ""), "><")
+      .into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<title>T</title><creator role="author"><personname>A. E. Field</personname></creator>"#,
+        r#"<logical-block><para><p align="center">by</p><p align="center">presented to Field University</p>"#,
+        r#"<p align="center">for the degree of</p><p align="center">Doctor of Philosophy</p>"#,
+        r#"<p align="center">Toronto, Ontario, Canada</p></para></logical-block><para><p>Body.</p></para>"#
+      )),
+      "{flat}"
+    );
+    // The real class, where the tree has it: its `{titlepage}` becomes one.
+    if kpsewhich_has("ryethesis.cls") {
+      let tex = r"\documentclass{ryethesis}
+\title{T}\author{A. E. Ryerson}
+\degreeName{Doctor of Philosophy}\degreeYear{1847}\program{Education}
+\begin{document}
+\maketitle
+\end{document}
+";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      let tp = &xml[xml.find("<titlepage>").unwrap()..xml.find("</titlepage>").unwrap()];
+      for field in [
+        "presented to Ryerson University",
+        "Doctor of Philosophy",
+        "Toronto, Ontario, Canada, 1847",
+      ] {
+        assert!(tp.contains(field), "{field}: {xml}");
+      }
+      assert_eq!(
+        xml.matches("A. E. Ryerson").count(),
+        1,
+        "the author once: {xml}"
+      );
+    }
+  }
+
   /// Batch 56gi: doclicense loads raw — the stub made `\doclicenseThis` and every
   /// accessor a no-op, so the license statement never reached the XML (beautynote;
   /// PDF-to-XML recall 0 %). The statement, its link and the license image survive.

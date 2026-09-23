@@ -997,11 +997,57 @@ pub(crate) fn load() -> Result<()> {
     let deposit = digest(mouth::tokenize_internal(
       r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\and\relax\lx@captured@stores\@maketitle}\fi",
     ))?;
-    if deposit.to_string().trim().is_empty() {
-      Ok(vec![])
-    } else {
-      Ok(vec![deposit])
+    let mut out = Vec::new();
+    if !deposit.to_string().trim().is_empty() {
+      out.push(deposit);
     }
+    // A class that redefined `\maketitle` ITSELF (ryethesis.cls:282, wsemclassic,
+    // exam-n, coverpage — the body lays out degree/program/university fields the
+    // frontmatter API never sees) had its body dropped by the lock; the dropped
+    // definition is kept as `\lx@dropped@maketitle` (state.rs). Run it the way the
+    // `\@maketitle` deposit runs: in a group, the title/author/date/thanks nulled
+    // (the frontmatter already carries them — no duplication), `\@maketitle` relaxed
+    // (no second deposit), not re-entrant, kept only when it
+    // typesets something. Argument-free bodies only: a `\maketitle[#1]` would
+    // read the kernel's own continuation as its argument. A body that builds
+    // only a shipout picture or boxes yields nothing and is dropped. Surpass
+    // (Perl drops the class body, State.pm:502-517); OXIDIZED_DESIGN #265.
+    // Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
+    let dropped = T_CS!("\\lx@dropped@maketitle");
+    // Replay only a body whose vocabulary exists here: every control sequence it
+    // names must be defined at deposit time. A derivative class whose body leans on
+    // internals our binding of its base class does not provide (resphilosophica.cls
+    // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
+    // would otherwise error and leave groups open — the backfire that retired an
+    // earlier generic replay. Conservative: a body that defines its own helpers is
+    // skipped too.
+    let argless = match lookup_meaning(&dropped) {
+      Some(Stored::Expandable(ref d)) => {
+        d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+          && match d.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => body.unlist_ref().iter().all(|t| {
+              !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || lookup_meaning(t).is_some()
+            }),
+            _ => false,
+          }
+      },
+      _ => false,
+    };
+    // Not re-entrant: a class body that calls `\maketitle` again reaches the
+    // kernel `\maketitle` (locked), whose deposit must not run the body twice.
+    // (`\maketitle` itself is NOT redefined here — it is locked, and the lock
+    // would record that redefinition as the dropped body.)
+    if argless && !lookup_bool("lx_depositing_class_maketitle") {
+      AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
+      let body = digest(mouth::tokenize_internal(
+        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@maketitle}",
+      ))?;
+      AssignValue!("lx_depositing_class_maketitle" => false, Some(Scope::Global));
+      if !body.to_string().trim().is_empty() {
+        out.push(body);
+      }
+    }
+    Ok(out)
   });
 
   // Doesn't produce anything (we're already inserting frontmatter),

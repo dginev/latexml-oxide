@@ -1,0 +1,13 @@
+% witness: ryethesis/ryesample (ryethesis.cls:282 \renewcommand{\maketitle}{\begin{titlepage}...}); exam-n/template-master
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- before 56gj: degree/program/university/city silently dropped (SHARED)
+% expect:  0 errors; a <titlepage> holding "Doctor of Philosophy" and "Toronto, Ontario, Canada, 1847"; the author once
+% status:  GREEN (56gj 2026-09-23)
+% mechanism: the locked kernel \maketitle drops the class body; it is kept as
+%   \lx@dropped@maketitle and deposited (sect05.rs) with the frontmatter fields nulled. #265.
+\documentclass{ryethesis}
+\title{T}\author{A. E. Ryerson}
+\degreeName{Doctor of Philosophy}\degreeYear{1847}\program{Education}
+\begin{document}
+\maketitle
+\end{document}

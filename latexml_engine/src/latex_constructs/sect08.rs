@@ -71,6 +71,11 @@ pub(crate) fn load() -> Result<()> {
         let redefined_nargs = s!("{}:redefined@nargs", cs_token.to_string());
         AssignValue!(&redefined => true, Some(Scope::Global));
         AssignValue!(&redefined_nargs => Number::new(nargs as i64), Some(Scope::Global));
+        // …and the dropped definition itself, as `\lx@dropped@<name>` (the same
+        // record `install_definition` keeps for a dropped `\def`/`\renewcommand`).
+        let dropped = T_CS!(s!("\\lx@dropped@{}", cs_token.to_string().trim_start_matches('\\')));
+        let macro_args = convert_latex_args(nargs, opt)?;
+        DefMacro!(dropped, macro_args, body, scope => Some(Scope::Global));
       }
       return Ok(vec![]);
     }
