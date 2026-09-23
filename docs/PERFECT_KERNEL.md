@@ -92,7 +92,7 @@ counting in guards/tools, and the content tooling.
 The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
 quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 
-**Open leads (ranked; updated after sweep 114 and batches 56gl-56gp):**
+**Open leads (ranked; updated after sweep 114 and batches 56gl-56gq):**
 1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
    delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
    it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
@@ -101,10 +101,10 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
    `\??? Match:?` ×2034, is l3msg's expandable-error sentinel — every one a REAL expl3 error the
    engine swallowed (mercatormap 661, pgfornament-han 501, …). Root-cause the clusters (56gp and
    56go were two; a root-causer is on the top documents), then land 56gn.
-2. **KOMA-Script `\part` → bold paragraph** (Axis 2b's first finding): scrartcl/scrbook/cnltx-doc
-   under raw loading emit `<p><text font="sansserif bold">` for `\part`, no `ltx:part`
-   (glossaries-user, hvfloat, cnltx, exsheets, leadsheets, ClassicThesis …; 31 docs short on
-   `\part`).
+2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
+   `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
+   31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's
+   localized part label becomes "Part I".
 3. **Axis 2b is now measured** — `tools/perfect_kernel/semantic_coverage.py <corpus.tsv>
    <sweep_dir>`: s114, 2,274 completed docs — sections/lists/floats/refs 93-98 %, equations 93 %,
    graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the

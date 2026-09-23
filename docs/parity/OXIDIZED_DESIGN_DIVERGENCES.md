@@ -8558,3 +8558,21 @@ not a register" (Rust did the same; ltx-talk-code, 20 warnings once 56gj's depos
 its `\part`). Rust resets only an existing companion — the existence test Perl itself
 applies in `RefStepID` (Package.pm:863). Guard
 `perfect_kernel_batch56::reset_list_skips_a_missing_un_companion`.
+
+### 269. The part internals `\@part`/`\@spart` are locked sectioning hooks (Perl: not defined; `\part` unlocked)
+
+Perl leaves `\part` unlocked ("sometimes redefined as partition", latex_constructs.pool
+.ltxml:558 — exam.cls:3303's `\def\part` is a question part) and defines no `\@part`; it
+never loads KOMA-Script raw (OmniBus → article). Under raw class loading KOMA's
+`\@namedef{part}{\scr@startpart{part}}` therefore replaced our `\part` and typeset
+`<p><text font="sansserif bold">Part I</text></p>` — no `ltx:part` in scrartcl/scrbook/
+scrreprt/cnltx-doc/toptesi documents (Axis 2b: `\part` 59.5 % coverage on s114). KOMA still
+dispatches through LaTeX's part internals (`\SecDef\@part\@spart`, scrartcl.cls:4884,
+its own `\@part` = `\scr@@startpart`, :4069-4071), as article.cls does (`\secdef\@part\@spart`,
+:273-294). **Rust** defines `\@part[#1]#2` / `\@spart#1` → `\@startsection{part}{-1}…`,
+LOCKED like `\section` (latex_constructs_rust_only.rs): the class's typesetting `\@part` is
+dropped and the part is an `ltx:part`; `\part` stays unlocked, so exam's question parts are
+untouched. Residual: ctex's localized part label ("第一部分") becomes the standard "Part I"
+tag (beautybook-cn, pgfornament-han). 24 of the 31 part-short s114 manuals gain their
+parts, validity unchanged (27/31), no diagnostic change. Guard
+`perfect_kernel_batch56::koma_part_is_a_part`.

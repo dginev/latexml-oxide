@@ -38,6 +38,24 @@ use crate::prelude::*;
 // `perfect_kernel_batch56::tagpdf_base_redeclares_the_stubbed_api_cleanly`.
 LoadDefinitions!({
   //======================================================================
+  // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
+  //
+  // article.cls:273-294 dispatches `\part` through `\secdef\@part\@spart`,
+  // KOMA-Script through `\SecDef\@part\@spart` (scrartcl.cls:4884) with its own
+  // typesetting `\@part` = `\scr@@startpart` (:4069-4071). `\part` itself stays
+  // unlocked (Perl latex_constructs.pool.ltxml:558, sect04.rs — exam.cls:3303's
+  // `\def\part` is a question part, not sectioning), so KOMA's `\part` replaced
+  // ours and typeset `<p><text font="sansserif bold">Part I</text></p>`: no
+  // `ltx:part` in glossaries-user, hvfloat, cnltx-doc manuals, ClassicThesis …
+  // (Axis 2b, semantic_coverage.py: `\part` 59.5 %). These internals are the
+  // sectioning hook, locked as `\section` is: a class's layout redefinition is
+  // dropped and a part dispatched through them is an `ltx:part`. Guard:
+  // `perfect_kernel_batch56::koma_part_is_a_part`.
+  //======================================================================
+  DefMacro!("\\@part[]{}", "\\@startsection{part}{-1}{}{}{}{}[#1]{#2}", locked => true);
+  DefMacro!("\\@spart{}", "\\@startsection{part}{-1}{}{}{}{}*{#1}", locked => true);
+
+  //======================================================================
   // 1. Modern LaTeX kernel — `\If…AtLeast/LoadedTF` family
   //
   // Latex.ltx L15252-15256: LaTeX3-style aliases for the file-load

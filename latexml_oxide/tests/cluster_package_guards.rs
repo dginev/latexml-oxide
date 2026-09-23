@@ -18363,6 +18363,72 @@ Body.
     );
   }
 
+  /// Batch 56gq: KOMA-Script replaces the (unlocked) `\part` with a typesetting
+  /// `\scr@startpart`, but still dispatches through LaTeX's part internals
+  /// (`\SecDef\@part\@spart`, scrartcl.cls:4884); the kernel's locked `\@part`/
+  /// `\@spart` make that an `ltx:part` (it was a bold paragraph — glossaries-
+  /// user, hvfloat, cnltx-doc manuals). exam.cls's question `\part` (its own
+  /// `\def\part`) is untouched.
+  #[test]
+  fn koma_part_is_a_part() {
+    if !kpsewhich_has("scrartcl.cls") {
+      return;
+    }
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" (?:xml:id|inlist|labels)="[^"]*""#).unwrap();
+    let flat = |xml: &str| {
+      gaps
+        .replace_all(&ids.replace_all(xml, ""), "><")
+        .into_owned()
+    };
+    let tex = r"\documentclass{scrartcl}
+\begin{document}
+\part{Alpha}
+\section{Beta}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      flat(&xml).contains(concat!(
+        r#"<part><tags><tag>Part I</tag><tag role="refnum">I</tag>"#,
+        r#"<tag role="typerefnum">Part I</tag></tags>"#,
+        r#"<title><tag close=" ">Part I</tag>Alpha</title>"#,
+        r#"<toctitle><tag close=" ">I</tag>Alpha</toctitle><section><tags>"#
+      )),
+      "{xml}"
+    );
+    assert!(!xml.contains("sansserif bold"), "{xml}");
+    let tex = r"\documentclass{scrbook}
+\begin{document}
+\part{Alpha}
+\chapter{Gamma}
+Text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<part") && xml.contains("<chapter"), "{xml}");
+    if !kpsewhich_has("exam.cls") {
+      return;
+    }
+    let tex = r"\documentclass{exam}
+\begin{document}
+\begin{questions}
+\question First question
+\begin{parts}
+\part Part one
+\end{parts}
+\end{questions}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<part"), "{xml}");
+    assert!(xml.contains("Part one"), "{xml}");
+  }
+
   /// Batch 56gp: the dvips-backend pagecount hook (latexml_sty/mod.rs) defined
   /// `\__graphics_backend_get_pagecount:n` with `##1` inside `\AddToHook`, which
   /// stores its code verbatim — the constant came out `c__graphics_#1_pages_int`
