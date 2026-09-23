@@ -81,11 +81,21 @@ FAMILIES = {
 }
 
 
+# Declarations of a document's OWN verbatim-like environments (their bodies are
+# example code): listings, fancyvrb, minted, tcolorbox, and verbatim's comment.
+OWN_VERBATIM_DECL = re.compile(
+    r"\\(?:lstnewenvironment|DefineVerbatimEnvironment|CustomVerbatimEnvironment|"
+    r"newtcblisting|NewTCBListing|DeclareTCBListing|newminted|newmintedfile|"
+    r"specialcomment|excludecomment|includecomment)\*?\s*\{\\?([A-Za-z@*]+)\}")
+
+
 def strip_source(tex: str) -> str:
     """Drop comments, verbatim-like bodies and inline verbatim/code macros."""
     # Comments: an unescaped % to end of line (keep `\%`).
     tex = re.sub(r"(?<!\\)%.*", "", tex)
-    tex = re.sub(r"\\begin\{(" + VERBATIM_ENVS + r")\}.*?\\end\{\1\}", " ", tex, flags=re.S)
+    own = {re.escape(n) for n in OWN_VERBATIM_DECL.findall(tex)}
+    envs = VERBATIM_ENVS + ("|" + "|".join(sorted(own)) if own else "")
+    tex = re.sub(r"\\begin\{(" + envs + r")\}.*?\\end\{\1\}", " ", tex, flags=re.S)
     tex = VERB_RE.sub(" ", tex)
     # `\MakeShortVerb{\|}` (shortvrb/doc/newverbs): `|…|` spans are code (grfguide).
     for ch in set(re.findall(r"\\MakeShortVerb\*?\s*\{?\\(.)", tex)):
