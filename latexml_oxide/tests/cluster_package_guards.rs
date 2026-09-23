@@ -18383,6 +18383,27 @@ Body.
     );
   }
 
+  /// Batch 56gv: `\typeout` expands its argument PARTIALLY (Perl
+  /// `\typeout ExpandedPartially`, latex_constructs.pool.ltxml:4538), so a
+  /// `\protected` xparse command is written by name. Full expansion ran its
+  /// peek-based `s` grabber in an expansion-only context: `\IfBooleanTF` got an
+  /// empty argument (expl3's expandable `cmd/if-boolean` error) and the run fell
+  /// into an infinite-expansion recovery (leporello/jsonparse/euclideangeometry
+  /// class).
+  #[test]
+  fn typeout_leaves_protected_commands_unexpanded() {
+    let tex = r"\documentclass{article}
+\NewDocumentCommand{\foo}{s}{[\IfBooleanTF{#1}{STAR}{NOSTAR}]}
+\begin{document}
+\typeout{[\foo]}
+\end{document}
+";
+    let (stderr, _xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(stderr.contains("[\\foo]"), "{stderr}");
+  }
+
   /// Batch 56gu: beamer's list environments start the kernel's item machinery
   /// (Perl beamer.cls.ltxml:1110-1179 `beginBeamerItemize`) and route `\item`
   /// through `\beamer@item`, which consumes every overlay form. Without it

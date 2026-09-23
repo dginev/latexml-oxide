@@ -1066,10 +1066,18 @@ pub(crate) fn load() -> Result<()> {
   // `\hv@ex@typeout{Running BodyVerbatim with fontsize=\small,…}`
   // (witness hvextern manual, `Fatal:Timeout:PushbackLimit`). Guard:
   // `perfect_kernel_batch53::typeout_writes_robust_commands_by_name`.
+  // PARTIAL expansion, as Perl's `\typeout ExpandedPartially`
+  // (latex_constructs.pool.ltxml:4538) and as the `\edef` of latex.ltx's
+  // `\typeout`: a `\protected` command is written, not run. Full expansion ran
+  // the peek-based argument grabber of an xparse `s` command
+  // (`\NewDocumentCommand\foo{s}{…\IfBooleanTF{#1}…}`) in an expansion-only
+  // context, handing `\IfBooleanTF` an empty argument — expl3's expandable
+  // `cmd/if-boolean` error, silent here (`\??? Match:?` under the strict
+  // delimiter check). Guard `perfect_kernel_batch56::typeout_leaves_protected_commands_unexpanded`.
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
     bgroup();
     let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
-    let content = Expand!(stuff);
+    let content = do_expand_partially(stuff)?;
     egroup()?;
     Note!(s!("{content}"));
   });
