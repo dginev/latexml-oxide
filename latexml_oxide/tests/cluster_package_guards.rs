@@ -11705,7 +11705,9 @@ a & b & c \\
   /// layout wrapper (beautynote), listings' `\lst@XConvert` consumer.
   #[test]
   fn singleton_internal_surface() {
-    let tex = r"\documentclass{article}\usepackage{hyperref}\usepackage{doclicense}\usepackage{listings}
+    // doclicense needs its type/modifier/version options (the real package errors
+    // without them, as pdflatex does; the former stub accepted anything).
+    let tex = r"\documentclass{article}\usepackage{hyperref}\usepackage[type={CC},modifier={by},version={4.0}]{doclicense}\usepackage{listings}
 \makeatletter
 \def\hrefhide@driver{hpdftex}
 \begin{document}
@@ -18200,6 +18202,36 @@ Side.
         r#"</tags><para><p>First.</p></para></item></itemize></block>"#,
         r#"<p class="ltx_minipage" vattach="middle" width="85.4pt">Side.</p></para></item></enumerate>"#
       ),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56gi: doclicense loads raw — the stub made `\doclicenseThis` and every
+  /// accessor a no-op, so the license statement never reached the XML (beautynote;
+  /// PDF-to-XML recall 0 %). The statement, its link and the license image survive.
+  #[test]
+  fn doclicense_statement_reaches_the_xml() {
+    if !kpsewhich_has("doclicense.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage[type={CC},modifier={by-sa},version={4.0}]{doclicense}
+\begin{document}
+\doclicenseThis
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(concat!(
+        r#"This work is licensed under a <ref class="ltx_href" href="https://creativecommons.org/licenses/by-sa/4.0/deed.en">"#,
+        "Creative Commons <text class=\"ltx_inline-quote ltx_outerquote\">\u{201c}Attribution-ShareAlike 4.0 International\u{201d}</text></ref> license.</p>"
+      )),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"graphic="doclicense-CC-by-sa-88x31""#),
       "{xml}"
     );
   }

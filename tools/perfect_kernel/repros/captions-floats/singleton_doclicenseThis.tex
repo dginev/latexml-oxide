@@ -1,6 +1,6 @@
 % witness: beautynote — sweep36 (6 errs). oracle: pdflatex CLEAN.
-% class: binding gap — doclicense_sty.rs omits \doclicenseThis.
-% status: GREEN (batch 54)
+% class: binding gap -- the doclicense_sty.rs stub made \doclicenseThis a no-op (content loss).
+% status:  GREEN (56gi 2026-09-23: doclicense loads raw; the stub had 0 errors but 0 % PDF recall -- the whole license statement was dropped)
 % mechanism: doclicense.sty:222 \newcommand{\doclicenseThis}{...center/minipage with
 %   \doclicenseImage + license text...} — LAYOUT. beautynote loads doclicense and calls it.
 \documentclass{article}
