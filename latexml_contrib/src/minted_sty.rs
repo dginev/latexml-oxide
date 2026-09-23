@@ -291,7 +291,25 @@ LoadDefinitions!({
               .collect(),
           ));
         }
-        let text = listings_read_raw_lines("minted");
+        // fancyvrb.sty:295-297/386-403: a user environment that wraps minted
+        // with `\VerbatimEnvironment` (RetoMatematico.cls:174 `{codigo}` =
+        // `{\VerbatimEnvironment\begin{minted}[…]{#1}}{\end{minted}}`) names the
+        // environment whose `\end` closes the verbatim body — the OUTERMOST, as
+        // `\FV@EnvironName` is set only while still `\relax` — and the name is
+        // reset once read. Reading to a literal `\end{minted}` ran past
+        // `\end{codigo}` and swallowed the rest of the document
+        // (retomatematico-ejemplo, recall 53 %). Guard:
+        // `perfect_kernel_batch56::verbatim_environment_wrapper_ends_minted`.
+        let fv_name = T_CS!("\\FV@EnvironName");
+        let env_name =
+          if lookup_meaning(&fv_name).is_some() && !x_equals(&fv_name, &T_CS!("\\relax")) {
+            let name = Expand!(Tokens!(fv_name)).to_string();
+            Let!(fv_name, T_CS!("\\relax"), Scope::Global);
+            name
+          } else {
+            "minted".to_string()
+          };
+        let text = listings_read_raw_lines(&env_name);
         // Beyond-Perl: if a `_minted/` frozencache holds this block's Pygments
         // colors (content-match on the normalized body), emit colored listing
         // lines; otherwise keep the exact uncolored listings path.
@@ -306,7 +324,7 @@ LoadDefinitions!({
         let mut out = lst_group_opener("minted", None)?;
         out.extend(result);
         let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
-        end_tokens.extend(ExplodeText!("minted"));
+        end_tokens.extend(ExplodeText!(env_name));
         end_tokens.push(T_END!());
         unread_expansion(Tokens::new(end_tokens));
         Ok(Tokens::new(out))

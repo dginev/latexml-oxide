@@ -1,0 +1,20 @@
+% witness: retosmatematicos/retomatematico-ejemplo (RetoMatematico.cls:174 {codigo} =
+%   {\VerbatimEnvironment\begin{minted}[…]{#1}}{\end{minted}}); found by Axis 2b (equations 7→0,
+%   figures 3→0) and S3 recall 53.2
+% oracle:  pdflatex (-shell-escape) 0 errors; "After." is typeset text
+% engines: rust (s115) — the listing runs to the end of the document, "After." inside it
+% expect:  0 errors; one listing line, then <p>After.</p>
+% status:  GREEN (batch 56gr)
+% mechanism: fancyvrb.sty:295-297/386-403 — \VerbatimEnvironment names the environment whose \end
+%   closes the verbatim body (the outermost: \FV@EnvironName is set only while \relax); the minted
+%   binding read to a literal \end{minted}.
+\documentclass{article}
+\usepackage{minted}
+\newenvironment{codigo}[1]{\VerbatimEnvironment\begin{minted}{#1}}{\end{minted}}
+\begin{document}
+Before.
+\begin{codigo}{latex}
+\textbf{x}
+\end{codigo}
+After.
+\end{document}

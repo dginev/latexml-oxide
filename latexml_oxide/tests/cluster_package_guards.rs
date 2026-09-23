@@ -18363,6 +18363,33 @@ Body.
     );
   }
 
+  /// Batch 56gr: fancyvrb's `\VerbatimEnvironment` in a user environment that
+  /// wraps minted (RetoMatematico.cls:174 `{codigo}`) names the environment whose
+  /// `\end` closes the verbatim body (fancyvrb.sty:295-297/386-403); the minted
+  /// binding read to a literal `\end{minted}` and swallowed the rest of the
+  /// document (retomatematico-ejemplo, recall 53 %).
+  #[test]
+  fn verbatim_environment_wrapper_ends_minted() {
+    if !kpsewhich_has("minted.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{minted}
+\newenvironment{codigo}[1]{\VerbatimEnvironment\begin{minted}{#1}}{\end{minted}}
+\begin{document}
+Before.
+\begin{codigo}{latex}
+\textbf{x}
+\end{codigo}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<listingline").count(), 1, "{xml}");
+    assert!(xml.contains("<p>After.</p>"), "{xml}");
+  }
+
   /// Batch 56gq: KOMA-Script replaces the (unlocked) `\part` with a typesetting
   /// `\scr@startpart`, but still dispatches through LaTeX's part internals
   /// (`\SecDef\@part\@spart`, scrartcl.cls:4884); the kernel's locked `\@part`/
