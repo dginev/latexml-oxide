@@ -1,0 +1,18 @@
+% witness: notebeamer/notebeamer-demo (notebeamer.sty:67 \graphics_get_pagecount:nN under the dvips backend)
+% oracle:  pdflatex reads the count (its own pgf errors on this doc come from notebeamer passing an
+%   int variable to a tl-returning function — not this)
+% engines: rust (before 56gp) PAGES=. — the count never read back; with 56gn's strict delimiter check
+%   it surfaces as `\??? Match:?`, l3msg's expandable "bad-variable" error (expl3-code.tex:11596-11606)
+% expect:  0 errors; PAGES=1.
+% status:  GREEN (batch 56gp)
+% mechanism: latexml_sty/mod.rs's `file/l3backend-dvips.def/after` hook defines
+%   \__graphics_backend_get_pagecount:n with `##1`; \AddToHook stores code verbatim and runs it at top
+%   level, so the body kept `##1` and the constant was c__graphics_#1_pages_int.
+\documentclass{article}
+\usepackage{notebeamer}
+\begin{document}
+\ExplSyntaxOn
+\graphics_get_pagecount:nN {example-image-a4.pdf} \l_tmpa_tl
+PAGES=\tl_use:N \l_tmpa_tl.
+\ExplSyntaxOff
+\end{document}

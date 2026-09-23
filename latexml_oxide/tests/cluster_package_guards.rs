@@ -18363,6 +18363,30 @@ Body.
     );
   }
 
+  /// Batch 56gp: the dvips-backend pagecount hook (latexml_sty/mod.rs) defined
+  /// `\__graphics_backend_get_pagecount:n` with `##1` inside `\AddToHook`, which
+  /// stores its code verbatim — the constant came out `c__graphics_#1_pages_int`
+  /// and `\graphics_get_pagecount:nN` read back nothing (l3msg's silent
+  /// expandable "bad-variable" error; notebeamer-demo).
+  #[test]
+  fn dvips_backend_pagecount_reads_back_the_count() {
+    if !kpsewhich_has("notebeamer.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{notebeamer}
+\begin{document}
+\ExplSyntaxOn
+\graphics_get_pagecount:nN {example-image-a4.pdf} \l_tmpa_tl
+PAGES=\tl_use:N \l_tmpa_tl.
+\ExplSyntaxOff
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>PAGES=1.</p>"), "{xml}");
+  }
+
   /// Batch 56go: a character that starts a paragraph is backed up and
   /// `\everypar` runs IN FRONT of it (tex.web §1090-1091), so the hook reads that
   /// very token with its catcode already fixed. syntax.sty's grammar

@@ -1319,10 +1319,17 @@ LoadDefinitions!({
   // loaded l3backend-dvips.def at preload time — a later `\pdfoutput=1` /
   // `\sys_load_backend:n{pdftex}` then hit "Backend configuration already set"
   // (`backend_load_follows_pdfoutput_and_prior_choice`).
+  // ONE `#`: `\AddToHook` stores its code verbatim and runs it at top level (no
+  // enclosing `\def` halves the hashes), so `##1` made the body read `##1` and
+  // the constant came out as `c__graphics_#1_pages_int`; the caller's `\tl_set:Nv`
+  // readback then met an undefined variable — l3msg's expandable "bad-variable"
+  // error (notebeamer-demo; `\??? Match:?`, the `\???` sentinel of
+  // expl3-code.tex:11596-11606). Guard
+  // `perfect_kernel_gemini::notebeamer_pagecount_dvips_fallback`.
   RawTeX!(
     r"\AddToHook{file/l3backend-dvips.def/after}{%
-  \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname##1{%
-    \pdfximage{##1}\csname int_const:cn\endcsname{c__graphics_##1_pages_int}{\pdflastximagepages}}%
+  \protected\long\expandafter\def\csname __graphics_backend_get_pagecount:n\endcsname#1{%
+    \pdfximage{#1}\csname int_const:cn\endcsname{c__graphics_#1_pages_int}{\pdflastximagepages}}%
 }"
   );
 });
