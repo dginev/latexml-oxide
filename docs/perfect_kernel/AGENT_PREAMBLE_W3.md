@@ -14,16 +14,18 @@ latexml_package/src/package/*_sty.rs (package bindings), latexml_contrib/src.
 Mission: PERFECT KERNEL EMULATION. The corpus is the TeX Live doc manuals converted
 via raw interpretation of the real .sty/.cls files:
 
-    cd <TL>/texmf-dist/doc/<bundle>/ && \
+    cp -r <TL>/texmf-dist/doc/<bundle>/. <YOUR_SCRATCH>/src/ && cd <YOUR_SCRATCH>/src && \
     <BINARY> --timeout=300 \
       --preload='[rawstyles,rawclasses]latexml.sty' --dest=<YOUR_SCRATCH>/<name>.xml <name>.tex \
       2> <YOUR_SCRATCH>/<name>.stderr
+    # NEVER run any engine (latexml_oxide, pdflatex, lualatex, …) with its cwd in the
+    # TeX Live doc tree: it holds the corpus GOLDEN PDFs, and a lualatex run there
+    # deleted one even with -output-directory elsewhere (2026-09-23, neoschool).
     # errors: sed 's/\x1b\[[0-9;]*m//g' <name>.stderr | grep '^Error:\|^Fatal:'
-    # (a trailing `Error: "Permission denied"` after "Wrote ..." is the log write into
-    #  the read-only doc dir — ignore it)
 
 A same-host Perl LaTeXML (0.8.8) is on PATH for SHARED-vs-RUST-ONLY classification:
     latexml --preload='[rawstyles,rawclasses]latexml.sty' --dest=<scratch>/<name>.perl.xml <name>.tex 2> <name>.perl.stderr
+(Run it, and pdflatex/lualatex, from the same scratch copy.)
 (Perl caps at 100 errors; a Perl timeout is not an error. Use `timeout 300`.)
 
 ## Rules
