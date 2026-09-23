@@ -1,0 +1,18 @@
+% witness: cahierprof/cahierprof-doc, cahierprof-exemple (0 → 11/12 errors once 56hd made the
+%   class-option French real)
+% oracle:  pdflatex 0 errors (microtype turns French :;!? off at \begin{document})
+% engines: rust (56hd) = `\s` undefined + Fatal timeout; perl = 15 errors (same stub)
+% expect:  0 errors; xml:lang="fr"; <p>x</p>
+% status:  GREEN (batch 56hf)
+% mechanism: microtype.sty:3162-3195 \shorthandoff{:;!?} when babel=true,kerning=true and a French
+%   option is in \opt@babel.sty/\@classoptionslist; our microtype_sty.rs was a stub.
+\documentclass[french]{article}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{tikz}\usetikzlibrary{math}
+\usepackage[babel=true,kerning=true]{microtype}
+\newcommand\calc{\tikzmath{\cc=int(5); \s=int(6);}}
+\AtBeginDocument{\calc}
+\begin{document}
+x
+\end{document}

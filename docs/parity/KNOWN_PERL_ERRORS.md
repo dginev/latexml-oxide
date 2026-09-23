@@ -6322,3 +6322,19 @@ recall 20.7). Trigger: the line above plus `\usepackage{blindtext}` and `\blindt
 pdflatex prints "Dies hier ist ein Blindtext". **Rust (FIXED, batch 56hd):** with no
 babel package options, `\bbl@loaded`'s first language is the main one. Guard
 `perfect_kernel_batch56::bare_babel_takes_the_class_language`.
+
+## 225. microtype's `babel`+`kerning` never switch off French babel's active characters (FIXED in Rust)
+
+microtype.sty:3162-3195: with `babel=true,kerning=true` and a French-family (or
+Turkish) option among babel's or the class's options, microtype runs
+`\shorthandoff{:;!?}` (`:!=`) at `\begin{document}`. Perl's microtype binding (and
+Rust's until 56hf) is a stub. Code frozen in the preamble relies on the switch-off:
+cahierprof.sty:366-388's `\tikzmath{…; …}`, run from its `\AtBeginDocument` hook,
+needs an other-catcode `;`, or tikzmath (tikzlibrarymath.code.tex:131-136) picks the
+active-`;` delimiter and the statements leak as undefined control sequences. Perl
+gives 15 errors; Rust gave 11-12 plus a timeout once 56hd made the class-option French real.
+Trigger: `\documentclass[french]{article}\usepackage{babel}\usepackage{tikz}\usetikzlibrary{math}`
+`\usepackage[babel=true,kerning=true]{microtype}\newcommand\calc{\tikzmath{\cc=int(5); \s=int(6);}}`
+`\AtBeginDocument{\calc}`. **Rust (FIXED, batch 56hf):** `microtype_sty.rs` sets
+`\ifMT@babel`/`\ifMT@kerning` from its options and registers that begin-document
+switch-off. Guard `perfect_kernel_batch56::microtype_babel_kerning_switches_off_french_shorthands`.

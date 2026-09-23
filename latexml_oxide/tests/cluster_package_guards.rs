@@ -18574,6 +18574,42 @@ Body.
     assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
   }
 
+  /// Batch 56hf: microtype with `babel` and `kerning` switches off French
+  /// babel's active `:;!?` at `\begin{document}` (microtype.sty:3162-3195), which
+  /// preamble code relies on: cahierprof.sty:366-388 freezes a `\tikzmath{…; …}`
+  /// run from its `\AtBeginDocument` hook. Our microtype stub never did, so once
+  /// 56hd made the class-option French real, tikzmath picked the active-`;`
+  /// delimiter and the statements leaked (cahierprof-doc 11 errors).
+  #[test]
+  fn microtype_babel_kerning_switches_off_french_shorthands() {
+    if !kpsewhich_has("tikzlibrarymath.code.tex") {
+      return;
+    }
+    let tex = r"\documentclass[french]{article}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{tikz}\usetikzlibrary{math}
+\usepackage[babel=true,kerning=true]{microtype}
+\newcommand\calc{\tikzmath{\cc=int(5); \s=int(6);}}
+\AtBeginDocument{\calc}
+\begin{document}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="fr">"#),
+      "{xml}"
+    );
+    assert!(
+      latexml::util::test::normalize_markup(&xml)
+        .contains(r#"<para xml:id="p1"><p>x</p></para></document>"#),
+      "{xml}"
+    );
+  }
+
   /// Batch 56hd: a bare `\usepackage{babel}` takes its main language from the
   /// class options (babel.sty:4197-4245), loads it last, and prepends it to
   /// `\bbl@loaded` (:4130-4132). Our `.ldf` bindings never run `\main@language`,

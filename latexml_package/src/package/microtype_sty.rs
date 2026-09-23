@@ -65,4 +65,57 @@ LoadDefinitions!({
 \newif\ifMT@noligatures \newif\ifMT@draft \newif\ifMT@disable \newif\ifMT@spacing
 \newif\ifMT@kerning \newif\ifMT@tracking \newif\ifMT@babel \newif\ifMT@document \newif\ifMT@fontspec"
   );
+  // microtype.sty:3162-3195: with `babel` and `kerning` both on (default off)
+  // and babel loaded, microtype's setup switches off French babel's active
+  // `:;!?` (Turkish: `:!=`) at `\begin{document}`, since its own kerning does
+  // that job. Code written in the preamble relies on it: cahierprof.sty:366-388
+  // freezes a `\tikzmath{…; …}` whose `;` must stay other-catcode when its
+  // `\AtBeginDocument` hook runs (:671-676), or tikzmath picks the active-`;`
+  // delimiter and the statements leak (cahierprof-doc, -exemple; SHARED with
+  // Perl's stub). Registered at load, so it runs before a later package's hook.
+  if let Some(opts) = lookup_vecdeque("opt@microtype.sty") {
+    for opt in opts.iter() {
+      let opt = opt.to_string();
+      let (key, value) = opt
+        .split_once('=')
+        .map_or((opt.trim(), "true"), |(k, v)| (k.trim(), v.trim()));
+      if matches!(key, "babel" | "kerning") {
+        RawTeX!(&s!(
+          "\\MT@{key}{}",
+          if value == "false" { "false" } else { "true" }
+        ));
+      }
+    }
+  }
+  DefMacro!("\\lx@MT@babel@shorthandoff", {
+    // `\ifMT@babel`/`\ifMT@kerning` true and babel loaded; a switch that is gone
+    // (microtype loaded inside a group: fullwidth) counts as off.
+    let on = |cs: &str| x_equals(&T_CS!(cs), &T_CS!("\\iftrue"));
+    if !on("\\ifMT@babel")
+      || !on("\\ifMT@kerning")
+      || lookup_meaning(&T_CS!("\\ver@babel.sty")).is_none()
+    {
+      return Ok(Tokens::default());
+    }
+    let listed = |name: &str| -> Result<bool> {
+      let opts = do_expand(TokenizeInternal!(
+        r"\csname opt@babel.sty\endcsname,\@classoptionslist"
+      ))?
+      .to_string();
+      Ok(opts.split(',').any(|o| o.trim() == name))
+    };
+    let mut out = Tokens::default();
+    if ["french", "frenchb", "francais", "canadien", "acadian"]
+      .iter()
+      .map(|n| listed(n))
+      .collect::<Result<Vec<_>>>()?
+      .contains(&true)
+    {
+      out = Tokenize!(r"\shorthandoff{:;!?}");
+    } else if listed("turkish")? {
+      out = Tokenize!(r"\shorthandoff{:!=}");
+    }
+    Ok(out)
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@MT@babel@shorthandoff}");
 });
