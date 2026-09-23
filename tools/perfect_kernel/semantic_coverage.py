@@ -24,7 +24,10 @@ no-XML set, not a markup gap).
 Known false deficits (read before acting on a ranking): `\\item` inside a
 hand-typeset `theindex` is `\\@idxitem` (xdoc/xdocdemo, 557 "items");
 exam.cls's `\\part[5]` is a question part, not sectioning (exam/examdoc);
-`$$`-redefining packages (nath) turn displays into inline Math on purpose.
+`$$`-redefining packages (nath) turn displays into inline Math on purpose;
+sectioning/cite commands inside a manual's own example environments that are
+not in VERBATIM_ENVS (l3doc/ltxdockit example code: postnotes-doc, biblatex)
+count as source constructs. Math `array` is an XMArray, not a tabular.
 First run (s114, 2,274 completed docs, 2026-09-23): sections/lists/floats
 93-98 %, equations 93 %, `\\part` 59.5 % — KOMA-Script's `\\part` became a bold
 paragraph (scrartcl/scrbook/cnltx-doc).
@@ -61,7 +64,7 @@ FAMILIES = {
     "enumerate": (r"\\begin\{enumerate\}", r"<enumerate[\s>]"),
     "description": (r"\\begin\{description\}", r"<description[\s>]"),
     "item": (r"\\item\b", r"<item[\s>]"),
-    "tabular": (r"\\begin\{(?:tabular[x*]?|tabulary|longtable\*?|tabu|array)\}", r"<tabular[\s>]"),
+    "tabular": (r"\\begin\{(?:tabular[x*]?|tabulary|longtable\*?|tabu)\}", r"<tabular[\s>]"),
     # `$$…$$` is counted per PAIR in count_source.
     "equation": (r"\\begin\{(?:equation|displaymath)\*?\}|(?<!\\)\\\[",
                  r"<equation[\s>]|<equationgroup[\s>]"),
@@ -84,6 +87,10 @@ def strip_source(tex: str) -> str:
     tex = re.sub(r"(?<!\\)%.*", "", tex)
     tex = re.sub(r"\\begin\{(" + VERBATIM_ENVS + r")\}.*?\\end\{\1\}", " ", tex, flags=re.S)
     tex = VERB_RE.sub(" ", tex)
+    # `\MakeShortVerb{\|}` (shortvrb/doc/newverbs): `|…|` spans are code (grfguide).
+    for ch in set(re.findall(r"\\MakeShortVerb\*?\s*\{?\\(.)", tex)):
+        c = re.escape(ch)
+        tex = re.sub(c + r"[^" + c + r"\n]*" + c, " ", tex)
     # Anything before \begin{document} is the preamble (definitions, not markup).
     m = re.search(r"\\begin\{document\}", tex)
     return tex[m.end():] if m else tex
