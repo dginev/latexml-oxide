@@ -2722,7 +2722,6 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
       match read_token()? {
         None => break,
         Some(token) => {
-          let cc = token.get_catcode();
           // Perl: also check smuggled \special_relax token (Gullet.pm line 612)
           let was_last_match = if let Some(&&want) = to_match.last() {
             token == want || special_relax_matches(&token, &want)
@@ -2735,21 +2734,12 @@ pub fn read_match(choices: &[&Tokens]) -> Result<Option<Tokens>> {
           } else {
             break;
           }
-
-          if cc == Catcode::SPACE
-            && to_match.last().map(|w| w.get_catcode()) != Some(Catcode::SPACE)
-          {
-            // If this was space and no more spaces are expected next in this run, SKIP any following!
-            while let Some(space_token) = read_token()? {
-              if space_token.get_catcode() != Catcode::SPACE {
-                // Unread non-space and end — use unread_one for proper agc adjustment
-                unread_one(space_token);
-                break;
-              } else {
-                matched.push(space_token);
-              }
-            }
-          }
+          // A space in the delimiter matches exactly one space token (tex.web §392:
+          // the delimiter tokens are matched one for one). Perl then skips every
+          // following space (Gullet.pm:614-617, KNOWN_PERL_ERRORS #222), which eats the
+          // space xint's `\XINT_zapsp_b`-style macros leave for the next call: a `\def`
+          // prefix delimiter `\B<space>` met by `\B<space><space>X` must leave
+          // `<space>X` (pdflatex `| X|`, Perl `|X|`).
         },
       }
     }

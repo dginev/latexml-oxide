@@ -1,11 +1,15 @@
 \documentclass{article}
 \usepackage{pgfkeys}
 \begin{document}
-% `\pgfkeys@spdef` (pgfkeys.code.tex:506-519) as this engine runs it strips
-% EVERY leading space of a key: `\pgfkeys@sp@b`'s parameter text starts with
-% a space and the gullet matches that against the whole run (Perl the same;
-% real TeX keeps the second). A `\newtcolorbox` body's `, #1` meeting an
-% indented `[<newline> title=…]` is the corpus shape (neoschool.tex:469).
+% A key reaches `\pgfkeys` with TWO leading spaces when a `, #1` body meets an
+% argument that starts on a new line (neoschool.cls:4557 `\newtcolorbox` body
+% + neoschool.tex:468). The default path trims ONE (`\pgfkeys@spdef`,
+% pgfkeys.code.tex:506-518) and pdflatex reports `/t/ a` unknown; under
+% `first char syntax` (set by tikz's quotes library, which neoschool loads
+% under LuaTeX) `\pgfkeys@syntax@handlers` skips them all (:342). The native
+% binding strips all, as Perl's (pgfkeys.code.tex.ltxml:216-241), so the
+% fixture turns the handlers on and both loads agree with real TeX.
+\pgfkeys{/handlers/first char syntax=true}
 \pgfkeys{/t/a/.code={[a:#1]}}
 \def\wrap#1{\pgfkeys{/t/.cd, a=0, #1}}
 \wrap{

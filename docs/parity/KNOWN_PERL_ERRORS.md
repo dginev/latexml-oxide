@@ -6273,3 +6273,18 @@ pgfornament.sty:47-51's `\def\m ##1 ##2 {…}` path operators inside the patched
 batch 56gt):** the body string doubles each PARAM token (`##`, as `\meaning` and etoolbox's own
 patterns write it), so the re-pack is exact; `etoolbox_sty.rs` `\patchcmd`. Guard
 `perfect_kernel_batch56::patchcmd_keeps_nested_macro_parameters`.
+
+## 222. A space in a macro's prefix delimiter swallows every following space (FIXED in Rust)
+
+Perl's `readMatch` (Gullet.pm:614-617), which matches a `\def`'s literal tokens before its
+first parameter (the `Match` parameter), skips every space token that follows a matched
+space: "If this was space, SKIP any following!!!". TeX matches delimiter tokens one for one
+(tex.web §392), and consecutive space tokens only arise from expansion, the mouth having
+already collapsed source spaces. xint relies on the second space surviving
+(`\xintZapSpaces`' `\XINT_zapsp_b`-style loop). Trigger:
+`\long\def\myfirstofone#1{#1}\long\def\showit#1\stop{(\detokenize{#1})}`
+`\myfirstofone{\def\again\Bdelim} {\showit}\def\Bdelim{}`
+`\def\mk#1{\def\mk{\again\Bdelim#1#1X\stop}}\mk{ }`, then `\mk`. pdflatex prints `( X)`, Perl
+`(X)`. Witnesses: xint/xinttools users (ipsum/ipsum-doc: 70 `Match` errors under the strict
+delimiter check of batch 56gn). **Rust (FIXED, batch 56gy):** `gullet.rs` `read_match`
+consumes exactly the delimiter's tokens. Guard `perfect_kernel_batch56::prefix_space_delimiter_matches_one_space`.

@@ -18519,6 +18519,30 @@ Body.
     assert!(xml.contains("<p>(a—b]</p>"), "{xml}");
   }
 
+  /// Batch 56gy: a space in a `\def`'s prefix delimiter matches exactly one space
+  /// token (tex.web §392). `read_match` skipped every following space, as Perl's
+  /// readMatch does (KPE #222), so `\again\Bdelim<sp><sp>X` lost the space xint's
+  /// zap loops leave for the next call (ipsum-doc: 70 `Match` errors under the
+  /// strict delimiter check). pdflatex: `( X) [a b]`.
+  #[test]
+  fn prefix_space_delimiter_matches_one_space() {
+    let tex = r"\documentclass{article}
+\usepackage{xinttools}
+\long\def\myfirstofone#1{#1}
+\long\def\showit#1\stop{(\detokenize{#1})}
+\myfirstofone{\def\again\Bdelim} {\showit}
+\def\Bdelim{}
+\def\mk#1{\def\mk{\again\Bdelim#1#1X\stop}}\mk{ }
+\begin{document}
+\edef\z{\mk}\z\ [\xintZapSpaces{ a b }]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
+  }
+
   /// Batch 56gz: a package or class load keeps ltfilehook's file-name stack
   /// (`\@expl@@@filehook@file@push@@`/`…@pop@@` around the file hooks, latex.ltx
   /// :18772/18789). scrlfile-hook.sty:146-158 seeds its own stack from the
@@ -23985,11 +24009,13 @@ mod pgfkeys_native_accessors {
     );
   }
 
-  /// `\\pgfkeys@spdef` as this engine runs it strips EVERY leading space of a
-  /// key (its `\\pgfkeys@sp@b` parameter text starts with a space, matched
-  /// against the whole run; Perl the same): a `\\newtcolorbox` body's `, #1`
-  /// meeting an indented `[<newline> title=…]` (neoschool.tex:469; sweep #95
-  /// neoschool 3 → 5 errors with a one-space native).
+  /// Under `first char syntax` every leading space of a key is skipped
+  /// (`\\pgfkeys@syntax@handlers`, pgfkeys.code.tex:342), as the native binding
+  /// (and Perl's, pgfkeys.code.tex.ltxml:216-241) always does: a `\\newtcolorbox`
+  /// body's `, #1` meeting an indented `[<newline> title=…]` (neoschool.tex:469,
+  /// which loads tikz's quotes library under LuaTeX). The default path trims
+  /// exactly one (`\\pgfkeys@spdef`), a delimiter space matching one space
+  /// token since batch 56gy; pdflatex matches the fixture byte for byte.
   #[test]
   fn leading_spaces_are_all_stripped() {
     let xml = both_ways("leading_spaces");
