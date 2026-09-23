@@ -1,0 +1,16 @@
+% witness: russ/russ_doc (russ.sty:26 [cp1251]{inputenc}, :58-63 \catcode 192-255=11)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 perl=0 (2026-09-23)   <- before 56gk: Latin-1 mojibake "Çäðàâåé" (silent)
+% expect:  0 errors; <p>Здравей, да.</p>
+% status:  GREEN (56gk 2026-09-23)
+% mechanism: a recatcoded input byte bypasses its active inputenc definition; the mouth
+%   decodes it through that declaration (\CYRZ -> \T2A\CYRZ -> З). #266.
+%   ^^c7 is byte 199 exactly as a file byte.
+\documentclass{article}
+\usepackage[cp1251]{inputenc}
+\usepackage[T2A]{fontenc}
+\catcode`^^c7=11 \catcode`^^e4=11 \catcode`^^f0=11 \catcode`^^e0=11
+\catcode`^^e2=11 \catcode`^^e5=11 \catcode`^^e9=11
+\begin{document}
+^^c7^^e4^^f0^^e0^^e2^^e5^^e9, ^^e4^^e0.
+\end{document}

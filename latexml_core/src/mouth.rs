@@ -122,6 +122,9 @@ pub struct Mouth {
   buffer:                 VecDeque<String>,
   raw_buffer:             VecDeque<Vec<u8>>,
   reader:                 Option<BufReader<File>>,
+  /// This mouth reads input BYTES (a file, or a document handed over as content),
+  /// not an engine string: see [`eight_bit_input_char`].
+  reads_input_bytes:      bool,
 }
 
 impl PartialEq for Mouth {
@@ -165,6 +168,7 @@ impl Default for Mouth {
       buffer:                 VecDeque::new(),
       raw_buffer:             VecDeque::new(),
       reader:                 None,
+      reads_input_bytes:      false,
     }
   }
 }
@@ -332,6 +336,98 @@ pub fn decode_input_bytes(raw: &[u8]) -> String {
       }
       out
     },
+  }
+}
+
+/// The character an 8-bit input byte stands for, when it reaches the tokenizer as a
+/// plain letter or other character instead of through its active inputenc
+/// definition.
+///
+/// inputenc makes every upper byte active (`\DeclareInputText{199}{\CYRZ}`,
+/// cp1251.def:54), and the active definition yields the character. A package that
+/// hands the bytes back to the letter class (russ.sty:58-63 `\catcode…=11`, so
+/// Cyrillic words can form control-sequence names) bypasses that definition: in TeX
+/// the byte then goes straight to the font as a slot, and T2A's letter block is laid
+/// out like cp1251, so the glyph is still the letter the author typed. LaTeXML is
+/// Unicode-native — a byte is decoded where it enters, as utf8 input already is — so
+/// the byte becomes the character its own inputenc declaration produces: the active
+/// definition followed through single-token macros (`\IeC{…}` unwrapped) to one
+/// character (`\CYRZ` → `З`, fontenc_sty.rs). Only for a mouth reading input bytes,
+/// under a declared 8-bit input encoding, outside the pdfTeX byte mouth (K10); the
+/// catcode stays the byte's. Everything downstream is then Unicode, so the font map
+/// never has to guess whether a code in 128–255 is a slot or a character.
+/// `None` keeps the byte (no declaration, or one that is not a single character).
+/// OXIDIZED_DESIGN #266.
+fn eight_bit_input_char(byte: char) -> Option<char> {
+  use crate::definition::Definition;
+  if lookup_bool("PDFTEX_BYTE_MOUTH") {
+    return None;
+  }
+  let encoding = lookup_string("INPUT_ENCODING");
+  if encoding.is_empty() || encoding == "utf8" {
+    return None;
+  }
+  let mut meaning = lookup_meaning(&T_ACTIVE!(byte))?;
+  for _ in 0..6 {
+    let Stored::Expandable(ref defn) = meaning else {
+      return None;
+    };
+    let Some(crate::definition::ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      return None;
+    };
+    let toks: Vec<Token> = body
+      .unlist_ref()
+      .iter()
+      .copied()
+      .filter(|t| {
+        !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END) && !t.with_str(|s| s == "\\IeC")
+      })
+      .collect();
+    let [t] = toks.as_slice() else {
+      return None;
+    };
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => {
+        let mut it = t.with_str(|s| s.chars().collect::<Vec<char>>()).into_iter();
+        return match (it.next(), it.next()) {
+          (Some(c), None) if c != byte => Some(c),
+          _ => None,
+        };
+      },
+      Catcode::CS => {
+        // A LaTeX text command (`\CYRZ` = the `\cf@encoding` dispatch,
+        // latex.ltx `\DeclareTextSymbol`): its glyph is `\<encoding>\CYRZ`, a
+        // one-character primitive decoded from that encoding's font map when the
+        // symbol was declared (sect08.rs) — T2A slot 199 → `З`.
+        if let Some(c) = text_symbol_char(t) {
+          return Some(c);
+        }
+        meaning = lookup_meaning(t)?;
+      },
+      Catcode::ACTIVE => meaning = lookup_meaning(t)?,
+      _ => return None,
+    }
+  }
+  None
+}
+
+/// The single character `\<current encoding><cs>` typesets, if it is a
+/// `\DeclareTextSymbol` glyph (a primitive with a one-character string body).
+fn text_symbol_char(cs: &Token) -> Option<char> {
+  use crate::definition::PrimitiveBody;
+  // `\cf@encoding` is the current font's encoding (a computed macro here).
+  let encoding = lookup_font()?.get_encoding()?.to_string();
+  let glyph_cs = T_CS!(format!("\\{}{}", encoding.trim(), cs.to_string()));
+  let Some(Stored::Primitive(prim)) = lookup_meaning(&glyph_cs) else {
+    return None;
+  };
+  let Some(PrimitiveBody::String(sym)) = prim.replacement else {
+    return None;
+  };
+  let mut it = crate::common::arena::with(sym, |s| s.chars().collect::<Vec<char>>()).into_iter();
+  match (it.next(), it.next()) {
+    (Some(c), None) => Some(c),
+    _ => None,
   }
 }
 
@@ -553,6 +649,7 @@ impl Mouth {
       };
       let reader = BufReader::new(f);
       self.reader = Some(reader);
+      self.reads_input_bytes = true;
       self.buffer = VecDeque::new();
       self.raw_buffer = VecDeque::new();
     }
@@ -563,6 +660,7 @@ impl Mouth {
       // A document handed over as content: bytes, decoded per line on read
       // (`get_next_line`), like a file.
       self.raw_buffer = Mouth::split_raw_lines(content.as_bytes());
+      self.reads_input_bytes = true;
     } else {
       self.buffer = Mouth::split_lines(content);
     }
@@ -903,6 +1001,13 @@ impl Mouth {
           self.nchars -= 2;
         }
         cc = self.catcode_of(ch);
+      }
+      if self.reads_input_bytes
+        && ('\u{80}'..='\u{FF}').contains(&ch)
+        && matches!(cc, Catcode::LETTER | Catcode::OTHER)
+        && let Some(decoded) = eight_bit_input_char(ch)
+      {
+        return Some((decoded, cc));
       }
       Some((ch, cc))
     } else {

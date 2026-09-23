@@ -8473,3 +8473,33 @@ are dropped. Label text next to a nulled field stays ("by"), as it is in the PDF
 Witnesses: exam-n/template-master recall 36.5 → 100, ryethesis/ryesample 89.1 → 93.7;
 18 other maketitle-redefining manuals unchanged; 0 errors, 0 validity changes, 0 words
 lost. Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
+
+### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
+
+**TeX** has no Unicode: every character that reaches a font is a slot of its
+encoding. inputenc makes each upper byte active (`\DeclareInputText{199}{\CYRZ}`,
+cp1251.def:54) and even a text composite is a slot (`\DeclareTextComposite{\"}{T1}{y}
+{184}`, t1enc.def:219, built by the `\lccode` trick of latex.ltx:9949). A package that
+recatcodes the bytes to letters (russ.sty:58-63, so Cyrillic words can name commands)
+sends byte 199 straight to the font, where T2A's letter block — laid out like cp1251 —
+shows `З`. **Perl** (`FontDecodeString`, Package.pm:2895-2916) maps codes 128–255 through
+the font map whenever the input encoding is 8-bit and the map is full. That reading is
+ambiguous in a Unicode-native engine: codes 128–255 also arrive as Unicode from our own
+bindings (`\flqq` → `«` U+00AB, the German `"`-shorthand's `ä`/`ß`, accent composites
+`\"y` → `ÿ` U+00FF) and T1 puts `ń`/`ż`/`ß` in exactly those slots — tried here, it
+turned l2tabu's »…« into ż…ń. **Rust**: the byte is decoded where its provenance is
+known, in the mouth (`mouth.rs` `eight_bit_input_char`): a character 0x80–0xFF read from
+input BYTES (a file, or a document handed over as content — never an engine string),
+with catcode letter/other, under a declared 8-bit `INPUT_ENCODING` and outside the
+pdfTeX byte mouth, becomes the character its own inputenc declaration produces — the
+active definition followed to its LICR name, then LaTeX's text-command dispatch
+`\<current encoding><name>` (a `\DeclareTextSymbol` glyph decoded from that encoding's
+font map). The catcode stays the byte's, so recatcoded Cyrillic command names stay
+consistent. Downstream every code is Unicode, the font map keeps its lower half only
+(unchanged), and no token carries provenance. Rejected: a `composed` flag on `Token`
+(the most primitive structure, for a problem that is the input's); composites emitting
+TeX slots (faithful for composites, but binding-produced Unicode stays ambiguous).
+Divergence from pdflatex: a latin1 byte 0xFF deliberately recatcoded to a letter under
+T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_doc
+(recall 69.9 → 82.7; `Çäðàâåé`-style mojibake → Cyrillic); 150 other 8-bit-input corpus
+manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`.

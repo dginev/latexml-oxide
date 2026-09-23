@@ -18210,6 +18210,41 @@ Side.
     );
   }
 
+  /// Batch 56gk (OXIDIZED_DESIGN #266): an 8-bit input byte that a package hands
+  /// back to the letter class (russ.sty:58-63 recatcodes cp1251's Cyrillic bytes so
+  /// words can name commands) bypasses its active inputenc definition. It is
+  /// decoded where it enters, as utf8 input is: the character its own declaration
+  /// produces (`\DeclareInputText{199}{\CYRZ}` → `\T2A\CYRZ` → `З`). Before, the
+  /// byte stayed its Latin-1 image: `Çäðàâåé` (russ_doc recall 69.9 → 82.7).
+  /// `^^c7` is byte 199 exactly as a file byte would be.
+  #[test]
+  fn recatcoded_input_bytes_decode_through_their_declaration() {
+    let tex = r"\documentclass{article}
+\usepackage[cp1251]{inputenc}
+\usepackage[T2A]{fontenc}
+\catcode`^^c7=11 \catcode`^^e4=11 \catcode`^^f0=11 \catcode`^^e0=11
+\catcode`^^e2=11 \catcode`^^e5=11 \catcode`^^e9=11
+\begin{document}
+^^c7^^e4^^f0^^e0^^e2^^e5^^e9, ^^e4^^e0.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Здравей, да.</p>"), "{xml}");
+    // Controls: an active byte and an accent composite are untouched — latin1 + T1
+    // `\"y` stays `ÿ` (T1 slot 255 is `ß`), `\ss` stays `ß`.
+    let tex = r#"\documentclass{article}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\begin{document}
+A[\"y] C[\ss] D[\"u]
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>A[ÿ] C[ß] D[ü]</p>"), "{xml}");
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
