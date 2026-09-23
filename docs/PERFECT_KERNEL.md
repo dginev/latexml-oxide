@@ -92,15 +92,19 @@ counting in guards/tools, and the content tooling.
 The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
 quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 
-**Open leads (ranked; updated after sweep 114 and batches 56gl-56gr):**
+**Open leads (ranked; updated after sweep 114 and batches 56gl-56gv):**
 1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
    delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
    it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
    strict check (`~/data/pk_agents/w59/main/56gn_macro_delimiter.patch` + `56gn_guard.rs` +
-   `56gn_NOTES.md`) surfaced ~30 latent clusters in 29 manuals on a partial sweep; the largest,
-   `\??? Match:?` ×2034, is l3msg's expandable-error sentinel — every one a REAL expl3 error the
-   engine swallowed (mercatormap 661, pgfornament-han 501, …). Root-cause the clusters (56gp and
-   56go were two; a root-causer is on the top documents), then land 56gn.
+   `56gn_NOTES.md`) surfaced ~30 latent clusters in 29 manuals; `\??? Match:?` is l3msg's
+   expandable-error sentinel — each a REAL expl3 error the engine swallowed. Fixed so far: 56gt
+   (etoolbox `\patchcmd` `##` → pgfornament-han 501 → 0, biblatex-gost 88 → 0), 56gv (`\typeout`
+   partial), 56gp (notebeamer), 56go (`\everypar`). Open (re-measure with a strict build: apply
+   the patch, build, `git apply -R`): mercatormap 661, euclideangeometry 101, leporello 74 +
+   jsonparse 60 (native pgfkeys `Expand!` of protected xparse commands — `\csname` does expand
+   `\protected` in real TeX, so study raw pgf first), xint `\XINT_zapsp_b` ×10 in six French
+   manuals (root-causer running), concepts `\cptfor`, keyval2e; greektonoi/chinesechess SHARED.
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's
@@ -110,6 +114,9 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
    graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the
    graphics family (36 docs short) and the multi-family deficit docs, most of which are also
    status-2 (error) documents.
+3b. **Beamer lists — landed 56gu**: list environments open one tagged item per `\item` and
+   consume overlay specs (61 manuals; cursolatex 0 → 286 items). Residual: overlays not acted
+   on (Perl's `ltx_covered` wrapper, #270).
 4. **Caption outside a float — landed 56gs**: a `\caption` with `\@captype` set in a non-float box
    is now its type's numbered float (15 manuals, 0 words lost). Residual: the box's other content
    stays beside the float rather than inside it.
