@@ -1,7 +1,7 @@
 % witness: verifica/example4 (italian.ldf:156 nested ##1 hook vs verifica.cls:65), hep-paper-documentation
 % oracle: pdflatex (clean); engines: pdflatex
 % expect: "Order: ABC" — \AtBeginDocument chunks run in registration order whether or not they carry #
-% status: RED before batch 56r (the #-chunk store fired first: "BAC")
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 \documentclass{article}
 \makeatletter
 \def\lxorder{}

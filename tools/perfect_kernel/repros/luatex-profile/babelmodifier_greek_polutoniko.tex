@@ -3,7 +3,7 @@
 % oracle:  lualatex 0 errors (pdflatex 0 too — engine-independent: SHARED-surpass)
 % engines: rust=RED perl=? (2026-09-03)
 % expect:  0 errors; body <ltx:p> present (Greek text digests)
-% status:  GREEN (b54r, batch 54n: KPE #161 \opt@ macro)
+% status:  RED (re-graded 2026-09-23 on s113, was GREEN but never re-verified: genuine luatex gap: \textgreek undefined under [luatex]; clean under pdfTeX; not a regression)
 % mechanism: babel.sty:322-347 preprocesses \usepackage[greek.polutoniko]{babel}: splits
 %   greek.polutoniko on '.', stores \bbl@mod@greek=polutoniko, rewrites the MACRO
 %   \opt@babel.sty to the modifier-stripped "greek,english" (babel.sty:347), then

@@ -2,7 +2,7 @@
 % oracle: pdflatex (clean; typesets the bibliography inside the References box)
 % engines: pdflatex
 % expect: 0 Error:/Fatal: lines; ltx:bibliography placed at a schema-legal parent (NOT inside svg/ltx:block)
-% status: RED  (identical on b56ac AND Perl LaTeXML 0.8.8 -> SHARED)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % emits today: Error:malformed:ltx:bibliography <ltx:bibliography> isn't allowed in <ltx:block>
 % mechanism: bibliography (BackMatter.class) is only legal under a sectional/document/sidebar parent;
 %   trapped in a pgf-node foreignObject (a drawing, svg:g) insert_block cannot hoist it out

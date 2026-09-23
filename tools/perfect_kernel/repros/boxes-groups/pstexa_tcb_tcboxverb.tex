@@ -2,7 +2,7 @@
 % oracle: pdflatex -interaction=batchmode -> 0 '!' lines
 % engines: pdflatex
 % expect: 0 Error/Fatal; \tcboxverb{hello} renders as a verbatim tcolorbox containing "hello".
-% status: RED under b56a. first errors: `} Attempt to close a group that switched to mode vertical`
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 %         + orphan `\else`(pst-exa.sty:172) + orphan `\fi`(pst-exa.sty:310).
 % mechanism: \usepackage[tcb]{pst-exa} -> \RequirePackage{showexpl}(pst-exa.sty:21) then the
 %   swpl/tcb selector \ifpstexa@swpl(pst-exa.sty:60,69) \else(172) \fi(310). Under [tcb] the swpl

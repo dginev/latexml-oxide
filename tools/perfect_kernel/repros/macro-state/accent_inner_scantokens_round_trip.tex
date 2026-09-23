@@ -2,7 +2,7 @@
 % oracle: lualatex exit=1/2err (Latin-1 file fed to a UTF-8 engine; broken-doc, out of surpass scope) — LaTeXML handles the Latin-1 byte gracefully
 % engines: n/a (this isolates the LaTeXML accent-inner round-trip, not a pdf/lua feature)
 % expect: <p>caf followed by e-acute</p>, 0 errors
-% status: RED on 822232c304 (batch 56bs, inner=\lx@accent@X) -> Error:undefined:\lx ; GREEN on working tree (inner=\lxaccentacute) and on 5bd2a8e9b4 (inner=control-symbol)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: active high-byte e-acute expands to \' under \edef; our \' (plain macro) pre-expands to its protected inner; \scantokens detokenizes that inner and re-reads it under document catcodes (@ OTHER), splitting \lx@accent@X into undefined \lx + junk. Faithful DefAccent inner must be letters-only so it round-trips.
 \documentclass{article}
 \usepackage[T1]{fontenc}

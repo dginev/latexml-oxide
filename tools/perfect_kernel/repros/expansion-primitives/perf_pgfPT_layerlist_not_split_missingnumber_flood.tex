@@ -3,7 +3,7 @@
 % engines: pdflatex/lualatex complete; Rust floods 189K "Missing number" over the doc's many draws.
 % expect: a periodic table drawn once; here ONE \pgfPT already emits 2722 "Missing number"
 %   + 2 "layer not part of the layer list" errors. The full manual calls \pgfPT ~40x -> >300s.
-% status: RED on sweep42 (this minimal draw: 2722 warnings + 2 layer errors; the doc: 189K + cap).
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: RAW pgf layer shipout (no engine binding for pgf layers). pgf-PeriodicTable does
 %   \pgfdeclarelayer{pgfPTbacklayer}/{pgfPTpaperlayer} + \pgfsetlayers{pgfPTpaperlayer,pgfPTbacklayer,...,main}.
 %   Our engine's per-layer iteration over the \pgfsetlayers comma-list does NOT split it:

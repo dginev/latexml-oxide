@@ -2,7 +2,7 @@
 % oracle: pdflatex/lualatex terminate (doc fails with 2 layout errors, not a clean target); Perl LaTeXML: 0 errors, renders <p>ȯ</p>
 % engines: latexml_oxide.debug (this tree), --preload=[rawstyles,rawclasses]latexml.sty
 % expect: 0 errors, output <p>ȯ</p>  (dot-accented o, U+022F)
-% status: RED  (silent RUNAWAY: at default token limit hangs >60s; with a token cap emits `Fatal:Timeout:TokenLimit ... infinite loop?`; sweep-72 killed at 420s, log ends at `\@nameuse{es@quoting}`)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: babel-spanish spanish.ldf:329-331 `\let\es@save@dot\.` + `\es@sDRC\.{...\es@save@dot}`
 %   (=\babel@save + \DeclareRobustCommand*\.). Our DefAccent (setup_binding_language.rs:942)
 %   binds `\.` two-level with inner `\. ` (dot+space) — the SAME control-symbol inner name

@@ -5,7 +5,7 @@
 %   \blx@patchsection@switch biblatex.sty:10930/10939, \AtEndPreamble-deferred).
 % engines: pdflatex/lualatex
 % expect: 0 errors on THIS root (the cmsendnotes cascade is a separate package, out of biblatex scope)
-% status: RED (b56o/q: 1 undefined \blx@refpatch@sect) -> want GREEN
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism 3: biblatex.sty sectioning-patch internals \blx@refpatch@sect#1#2#3 /
 %   \blx@refpatch@part#1 / \blx@refpatch@chapter#1 are reached by refsection/noteref section
 %   patching AND by the cmsendnotes companion; the binding never ported them.

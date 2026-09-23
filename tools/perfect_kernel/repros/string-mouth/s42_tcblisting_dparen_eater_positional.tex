@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=5(b56n) rust=0(b56l/56i) pdflatex=0 (2026-09-05)
 % expect:  0 errors; egcite listing renders (no "Can't find color named")
-% status:  RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: batch 56j tcb_xparse_listing (tcolorbox_sty.rs:272-311) gives every non-leading
 %   xparse specifier an \lxtcbifnext eater that DISCARDS its value (\lxtcbeatparen for D(),
 %   tcolorbox_sty.rs:116). The env arity becomes [#mandatory], so the definition body's

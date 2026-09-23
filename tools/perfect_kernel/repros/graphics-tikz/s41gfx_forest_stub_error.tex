@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (forest draws trees); WE cannot render forest (huge bracket DSL)
 % engines: rust=1 (stub Error) perl=3 (mainline has NO ar5iv forest stub -> tries pgf, 3 errs)
 % expect:  0 Error/Fatal; {forest} body silently discarded, no <ltx:ERROR>/Error line
-% status:  RED (b56l) — PERL-ORIGIN (ar5iv-bindings/forest.sty.ltxml:37-38 deliberately Errors)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: latexml_contrib/src/discard_env.rs report_stub_once() emits Error!("undefined",...)
 %   once per kind (faithful port of ar5iv forest.sty.ltxml:36-42). Downgrade Error!->Warn!:
 %   the discard is otherwise clean, and the Error only pollutes the corpus metric. Surpasses Perl.

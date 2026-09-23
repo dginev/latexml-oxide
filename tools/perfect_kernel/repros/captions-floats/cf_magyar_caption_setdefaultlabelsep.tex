@@ -4,7 +4,7 @@
 %   both undefined in Rust -> ifx TRUE -> calls undefined \caption@setdefaultlabelsep.
 %   Real caption3 2023 (caption3.sty:767) defines \caption@lsep@default -> ifx FALSE.
 % expect: 0 errors, an <ltx:caption> with the label separator
-% status: RED (b56d)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 \documentclass{article}
 \usepackage[hungarian]{babel}
 \usepackage{caption}

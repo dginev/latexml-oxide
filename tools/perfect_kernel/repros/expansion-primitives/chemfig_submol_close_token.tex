@@ -2,7 +2,7 @@
 % oracle: pdflatex/lualatex render the molecule; Perl LaTeXML = 1 Error (Until:\_nil miss), completes
 % engines: pdflatex clean; Perl 1 err; latexml_oxide 5bd2a8e9b4 (s73) 0 err -> 822232c304 (56bs) FATAL
 % expect: 0 Error/Fatal, an <ltx:picture> (chemfig molecule) in the body
-% status: RED (56bs: Fatal:Mouth:EoF "File ended while scanning use of a Until:\_nil argument")
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: chemfig \CF_grabsubmol nested \scantokens + \everyeof{\_nil} + \CF_grabsubmola#1\_nil
 %   (chemfig.tex:1315-1325,180). 56bs delivers the everyeof payload (etex.rs:483 mark_everyeof_mouth,
 %   gullet.rs:886 eof_seen) so the delimited scan now CAPTURES the submol group; that exposes

@@ -2,7 +2,7 @@
 % oracle: pdflatex (clean; lualatex in the doc but pdflatex compiles this repro clean)
 % engines: pdflatex, lualatex
 % expect: 0 Error: lines; the tikz lower lower part runs inside a tikzpicture
-% status: RED with b56g
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: tcolorbox.sty:712 `tikz lower/.style={before lower*={...\begin{tikzpicture}},after lower*=\end{tikzpicture}}`
 %            wraps the EXECUTED (lower) part of a listing-and-text tcblisting; our
 %            lst_run_body_via_input inputs the raw body with no tikzpicture scope,

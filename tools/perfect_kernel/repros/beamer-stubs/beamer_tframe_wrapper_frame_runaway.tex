@@ -2,7 +2,7 @@
 % oracle: pdflatex/xelatex clean; Perl LaTeXML completes (no-ops \usetheme)
 % engines: [rawstyles,rawclasses]latexml.sty
 % expect: 0 errors; both frames present, \verb content verbatim
-% status: RED (b56x c2d3d88f63)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: beamerthemeTorinoTh.sty:97 \newenvironment{tframe}{\begin{frame}[t]}{\end{frame}}
 %   opens a NON-fragile frame; collect_frame_body (beamer_cls.rs:205) scans literal
 %   \begin/\end{frame} and never sees \end{tframe} (expands to \end{frame}), so the

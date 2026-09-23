@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1(No shape) perl=0 (2026-09-04)
 % expect:  0 errors; picture1 \coordinate executes -> shape registered -> picture2 ref OK
-% status:  RED (b56f)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: DemoCode's `listing options={commentstyle=...}` false-matches the
 %   substring "comment" in tcolorbox_sty.rs:55, so LISTINGS_EXECUTE_BODY=false and
 %   the tcblisting body is DISPLAYED but NOT executed; the \coordinate never runs.

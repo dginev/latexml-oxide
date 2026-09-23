@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=FATAL(Until:][ + Mouth:EoF) perl=0 (2026-09-05); REGRESSION batch 56i, clean at b56j
 % expect:  0 errors; document has <ltx:equation labels="LABEL:pyth">
-% status:  RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: cleveref binding (cleveref_sty.rs:8-26, Perl cleveref.sty.ltxml:21-30)
 %   AtBeginDocument-defers `\let\label\lx@cleverref@label` (an Optional [] reader).
 %   Under rawstyles the RAW cleveref.sty (cleveref.sty:66-92 in an \AtBeginDocument)

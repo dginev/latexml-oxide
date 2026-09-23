@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (subeqnarray = eqnarray with subnumbering)
 % engines: rust=1 perl=6 (SHARED/PERL-ORIGIN — subeqnarray.sty.ltxml:21-22 maps to display math)
 % expect:  0 Error/Fatal; <ltx:equationgroup> with subnumbered rows (1a,1b)
-% status:  RED (b56l) — SHARED/PERL-ORIGIN.
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: subeqnarray.sty.ltxml:21-22 (& Rust subeqnarray_sty.rs:10-14) map \subeqnarray to
 %   \lx@equationgroup@subnumbering@begin\bgroup\lx@begin@display@math — plain DISPLAY MATH,
 %   NO eqnarray alignment, so every & is stray. Fix: rebind to subnumbering + eqnarray machinery

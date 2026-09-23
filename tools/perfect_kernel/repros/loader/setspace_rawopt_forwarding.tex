@@ -1,7 +1,7 @@
 % witness: ijsra/ijsra (arXiv-class); regressed sweep 71->72 (batch 56bp)
 % oracle: pdflatex clean (ijsra oracle-clean per s71); engines: pdflatex
 % expect: 0 errors; setspaceenhanced loads with empty setspace raw-opts
-% status: RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: latex.ltx:18521-18523 \@pass@ptions \gdef's \@raw@opt@setspace.sty
 %   to EMPTY even for an option-less \RequirePackage{setspace}; scrhack.sty:288
 %   forwards \use:c{@raw@opt@setspace.sty} into setspaceenhanced's option list.

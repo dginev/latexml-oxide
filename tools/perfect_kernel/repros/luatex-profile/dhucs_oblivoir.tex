@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors (dhucs->kotexutf 8-bit path defines \dhucs@hu)
 % engines: rust=3 perl=99 (2026-09-04) both leave \dhucs@hu undefined
 % expect:  0 errors; XML has a <ltx:document> root with the body text
-% status:  RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: dhucs.sty:44 \ifx 가가 is TRUE for a native-UTF-8 engine (Rust &
 %   Perl tokenize 가 as ONE codepoint) -> \else branch; then dhucs.sty:58
 %   \csname directlua\endcsname and dhucs.sty:78 \csname XeTeXrevision\endcsname

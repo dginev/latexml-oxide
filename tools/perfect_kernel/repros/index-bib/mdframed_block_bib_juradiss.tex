@@ -6,7 +6,7 @@
 %   sectioning command are block-level and legal around/after it).
 % engines: pdflatex/lualatex
 % expect: 0 errors
-% status: RED (b56o/q: malformed ltx:section + ltx:bibliography in inline-logical-block)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism 5: contrib mdframed_sty.rs:102-104 wraps the mdframed body in
 %   <ltx:inline-logical-block framed='rectangle' _noautoclose='1'> (Misc.class, Para.model).
 %   When mdframed starts MID-PARAGRAPH its body is inline; a block child

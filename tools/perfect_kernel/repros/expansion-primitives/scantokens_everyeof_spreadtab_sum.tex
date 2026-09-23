@@ -2,7 +2,7 @@
 % oracle: pdflatex/lualatex build it (sum over a1 = 1); Perl LaTeXML shares the primitive gap
 % engines: raw spreadtab.sty via [rawstyles,rawclasses]latexml.sty
 % expect: c1 = sum(a1:b1) = 3; NO hang
-% status: RED (internal --timeout fires: Fatal:Timeout:Convert; 420s runaway in sweep-72)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: spreadtab macro-functions call \ST_scan_func_arg (spreadtab.sty:1493),
 %   which relies on \everyeof{\ST_nil} being inserted at the \scantokens pseudo-file EOF.
 %   Our \scantokens (etex.rs:468) does NOT wire gullet::mark_everyeof_mouth, so

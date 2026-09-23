@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors
 % engines: rust=1 perl=1 (2026-09-06, SHARED -> surpass opportunity)
 % expect:  0 errors; two <ltx:bibitem> under an <ltx:bibliography>/<ltx:biblist>
-% status:  RED (b56aa) Error:malformed:ltx:enumerate Attempt to close </ltx:enumerate>, which isn't open (document.rs:1302)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: denselists \begin{Enumerate}=\Onumerate(=\enumerate)+\Nospacing, \end{Enumerate}=\endlist.
 %   The bare \enumerate opens <ltx:enumerate>; a \bibitem inside floats up to an auto-opened
 %   <ltx:bibliography>/<ltx:biblist>, closing the enumerate; the enumerate's later close (frame/group

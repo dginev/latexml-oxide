@@ -1,7 +1,7 @@
 % witness: lshort-german/l2kurz (l2kurz.tex:58-65 copies real booktabs \midrule)
 % oracle:  pdflatex 0 !   engines: pdflatex
 % expect:  0 Error/Fatal, <tabular> with 2 rows + rule borders
-% status:  RED on b56d/sweep37/sweep38 (14 errors); NOT a regression (longstanding)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: booktabs.sty:67-71 \midrule = \noalign{\ifnum0=`}\fi ... \@BTrule[..];
 %   the \noalign group is closed by \@BTrule->\@BTnormal->\@BTendrule (booktabs.sty:84-119,
 %   ends \ifnum0=`{\fi}). The Rust binding booktabs_sty.rs maps \midrule=\hline and never

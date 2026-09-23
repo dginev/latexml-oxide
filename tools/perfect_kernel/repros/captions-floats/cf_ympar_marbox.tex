@@ -8,7 +8,7 @@
 %   \@marbox/\@currbox (real \marginpar does \@next\@marbox\@freelist first,
 %   latex.ltx:17585-88; Rust's \marginpar omits that allocation).
 % expect: 0 Error; <ltx:note role="margin"> emitted (\marginpar content kept)
-% status: RED (b56b): Error:undefined:\@marbox ; Error:undefined:\@captype ;
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 %   2x Error:unexpected:\vbox Attempt to end mode internal_vertical ;
 %   Error:malformed:ltx:_CaptureBlock_ ; Error:malformed:ltx:document  (6 err)
 \documentclass{article}

@@ -3,7 +3,7 @@
 % oracle: pdflatex WITH -shell-escape (TeX Live doc-build env) = clean; renders inline
 % engines: pdflatex (shell-escape), lualatex (shell-escape)
 % expect: 0 errors; tikzpicture typeset INLINE (svg/picture), no system call
-% status: RED on b56d (1 Error per externalized picture)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: \usetikzlibrary{external}+\tikzexternalize -> every tikzpicture is
 %   intercepted; the external file is absent, so tikz attempts a shell-escape
 %   system call (\immediate\write18). LaTeXML no-ops write18, tikz finds no output

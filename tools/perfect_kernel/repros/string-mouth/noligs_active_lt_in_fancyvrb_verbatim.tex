@@ -2,7 +2,7 @@
 % oracle: pdflatex interface3.tex => 0 '!'  (real \@noligs neutralises active < >)
 % engines: pdflatex/lualatex (l3doc). preload [rawstyles,rawclasses]latexml.sty
 % expect: 0 Error/Fatal; verbatim body captured as ltx_verbatim, < rendered literally
-% status: RED b56d (Error:unexpected:} Attempt to close boxing group, line ~13)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: l3doc \begin{function} makes < active = \@@_shorthand_meta:w #1 > (l3doc.dtx:2570).
 %   fancyvrb verbatim (fallback of undef \begin{verbatim}) calls \@noligs (fancyvrb.sty:379)
 %   which in real LaTeX (latex.ltx:15515-21) reactivates ` < > , ' - as literal chars,

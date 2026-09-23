@@ -2,7 +2,7 @@
 % inside style `tutodoc-full-listing-style`, used by `tdoccode` (cls:1230).
 % oracle: pdflatex 0 (listing-only => body typeset verbatim, NOT executed).
 % expect: 0 Error; body shown as <ltx:verbatim>, NOT executed as math/groups.
-% status: RED (regression batch56f) — listing-only body run via \input.
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: tcolorbox_sty.rs \lxtcblistingmode NO_TEXT_MODES scan misses the
 %   `listing only` hidden behind a user tcbset .style alias.
 \documentclass{article}

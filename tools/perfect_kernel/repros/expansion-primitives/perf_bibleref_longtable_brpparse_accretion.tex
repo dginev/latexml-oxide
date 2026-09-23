@@ -2,7 +2,7 @@
 % oracle: lualatex exit 1 (compiles). Genuine RUST perf bug.
 % engines: pdflatex/lualatex complete; Rust super-linear accretion.
 % expect: a longtable of book-name rows; each \checkbook parses a name via \brp@parse.
-% status: RED on sweep42 (20 rows exceed the 60s internal --timeout; 10 rows=11s, 20 rows>60s).
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: SUPER-LINEAR accretion. \addrow builds a longtable row whose cells run many
 %   \checkbook/\checkbooksilent -> bibleref-parse.sty:519 \brp@parse -> :583 recursive
 %   \brp@parse@book, via pgffor \foreach. ISOLATED: 400x \pbibleverse in a paragraph = fast;

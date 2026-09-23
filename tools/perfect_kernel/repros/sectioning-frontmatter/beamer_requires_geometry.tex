@@ -3,7 +3,7 @@
 %   Perl FAILS identically (beamer.cls.ltxml omits geometry too) => SHARED
 % engines: (lua)latex clean; latexml_oxide.b56h RED; Perl RED (1 error)
 % expect: 0 errors; \geometry defined (no-op layout parse) and call processed
-% status: RED (Error:undefined:\geometry)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: beamer.cls:343-350 \RequirePackage[...]{geometry} defines \geometry;
 %   our beamer_cls.rs (RequirePackage list) omits geometry, as does Perl
 %   beamer.cls.ltxml:30-32. beamerposter.sty:176 \geometry{...} (raw, no

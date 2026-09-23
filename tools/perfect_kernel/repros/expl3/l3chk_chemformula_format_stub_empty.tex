@@ -2,7 +2,7 @@
 % oracle: pdflatex CLEAN (\setchemformula{format=\bfseries} -> 0 err; chemformula.sty:3165 'format .code:n')
 % engines: pdflatex 0 err; Perl 0 err (raw-loads real chemformula.sty); our binary emits Error:errmessage
 % expect: 0 Error/Fatal
-% status: RED today (b56j) — Error:errmessage:\errmessage LaTeX Error: The key 'chemformula/format' is unknown and is being ignored.
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: contrib stub latexml_contrib/src/chemformula_sty.rs REPLACES chemformula.sty (\ch->\ce, \setchemformula noop)
 %            and does NOT raw-load it, so the expl3 'chemformula' l3keys module is empty. Classification: RUST-ONLY.
 \documentclass{article}

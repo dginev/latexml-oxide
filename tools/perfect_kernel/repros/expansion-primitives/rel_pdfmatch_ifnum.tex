@@ -2,7 +2,7 @@
 % oracle:  pdflatex (pdfTeX has \pdfmatch, expands to 0/1) — clean
 % engines: pdflatex
 % expect:  0 errors; \pdfmatch{b}{abc} expands to 1, prints "yes"
-% status:  RED (b56i) — Error:expected:<relationaltoken> Got "\pdfmatch"
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: \pdfmatch is an unimplemented expandable pdfTeX primitive; \ifnum
 %   reads the bare CS as its relational token.
 \documentclass{article}

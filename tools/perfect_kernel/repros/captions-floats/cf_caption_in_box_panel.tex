@@ -3,7 +3,7 @@
 % oracle: pdflatex+lualatex CLEAN (0 errors)
 % engines: article
 % expect: 0 errors; <ltx:figure> with a DIRECT <ltx:caption> child (not nested in a block)
-% status: RED (b56d) — SHARED: same-host Perl emits the identical 2 malformed
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 %   errors AND the identical malformed tree (caption trapped in <ltx:block>).
 % mechanism: \caption inside a \parbox/\minipage/box that is NOT the float's sole
 %   collapsible panel (here an \mbox{X} precedes it). \@@caption/\@@toccaption

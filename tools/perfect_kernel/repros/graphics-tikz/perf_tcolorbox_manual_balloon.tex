@@ -2,7 +2,7 @@
 % oracle: lualatex (oracle_verdicts col3), pdflatex/lualatex CLEAN, 0 errors
 % engines: rust FATAL, perl FATAL (perl worse: 3.4 MB/box vs rust 0.8 MB/box)
 % expect: 0 errors, converts to <ltx:picture>-per-box document (NOT a MemoryBudget fatal)
-% status: RED on sweep42 — Fatal:Timeout:MemoryBudget, 0-byte XML
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: each tcolorbox is a pgf->SVG <picture>; ~0.5 MB retained per box in an
 %   untracked global structure (NOT box_list/token_stack/pushback/arena/tree), so a
 %   manual with ~1000-1500 boxes (nlctuserguide) balloons past the RSS fuse.

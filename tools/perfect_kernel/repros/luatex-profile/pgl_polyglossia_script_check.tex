@@ -5,7 +5,7 @@
 % engines: rust=RED(1; witnesses 11/11/16/98) perl=0-of-this (Perl fails earlier: \addfontfeature,
 %          \fontspec_if_language:nT, \providehyphenmins undefined) (2026-09-05, b56g)
 % expect:  0 errors; body <ltx:p> keeps the Greek text "ασδφ"
-% status:  RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: polyglossia.sty:719-721 \__xpg_setup_font:nn {rm}/{sf}/{tt} redefines \rmfamily/
 %   \sffamily/\ttfamily (:690-718) so that, in a non-Latin (Greek) language, a font switch calls
 %   \__xpg_add_font_feature_script:nnn (:632). That runs \xpg_if_script:nTF{scripttag} (:641);

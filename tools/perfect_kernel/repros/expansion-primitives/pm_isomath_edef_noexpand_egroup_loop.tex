@@ -2,7 +2,7 @@
 % oracle: pdflatex clean
 % engines: pdflatex
 % expect: 0 errors; <ltx:Math> for $\mathrmbf{x}$
-% status: RED (56j build): Error:undefined:\y, \x "at Anonymous String", then Fatal:Timeout:Recursion (window of 2 tokens)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: \NewDocumentCommand\MathLatin{m g O{m} D(){it}}{\bgroup\edef\y{\IfNoValueTF{#2}{\ISOfam}{#2}}\edef\x{\noexpand\egroup\noexpand\MLatin{\noexpand#1}{\y}}\x{#3}{#4}} — the \edef\x with \noexpand#1 (#1 a letter) inside an ltcmd body; \x is undefined afterwards and the expansion loops. Root not yet found.
 \documentclass{article}
 \usepackage{amsmath}

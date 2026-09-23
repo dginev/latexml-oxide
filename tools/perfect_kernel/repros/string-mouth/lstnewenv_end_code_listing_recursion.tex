@@ -2,7 +2,7 @@
 %   (exsheets-listings.sty:95-108: \lst@BeginWriteFile ... \lst@EndWriteFile\lstinputlisting{same file})
 % oracle: pdflatex (0 errors); engines: pdflatex
 % expect: 0 errors, one <ltx:listing> block
-% status: RED b56h (timeout / infinite loop); exsheets_en itself -> Fatal:Stomach:Recursion (\mdframed{{{...)
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: same LISTINGS_POSTAMBLE re-read; here the round-trip .lst file is written by the
 %   writefile aspect (implemented in Rust, absent in Perl) so \lstinputlisting reads real content.
 \documentclass{article}

@@ -2,7 +2,7 @@
 % oracle: pdflatex clean (ko.TeX utf8 active-char path)
 % engines: pdflatex (bytes) vs LaTeXML (unicode-native)
 % expect: \dhucs@hu defined after \RequirePackage{dhucs}
-% status: RED b56a
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: dhucs.sty:42 `\ifx 가가\else\RequirePackage{kotexutf}\endinput\fi`
 %   is a byte-level engine probe; unicode-native LaTeXML sees `가` as ONE token
 %   so \ifx is TRUE, skips kotexutf, never defines \dhucs@hu (kotexutf-core.tex:177)

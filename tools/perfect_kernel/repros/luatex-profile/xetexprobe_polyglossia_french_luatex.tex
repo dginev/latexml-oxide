@@ -3,6 +3,7 @@
 % engines: lualatex,xelatex
 % expect: 0 errors (b56c fixed: \ifluatex true -> gloss-french.ldf:37 \directlua branch)
 % status: GREEN (control, confirms ROOT A fixed)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
 % mechanism: gloss-french.ldf:36 \ifluatex must be TRUE under [luatex]; iftex_sty.rs
 \documentclass{article}
 \usepackage{fontspec}

@@ -5,7 +5,7 @@
 % oracle:  lualatex 0 errors
 % engines: rust=3 perl=n/a(needs showexpl) ; witness rust=6 perl=3(unrelated) (2026-09-04)
 % expect:  0 errors; body marker RESULTMARK present (proves end code ran)
-% status:  RED
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: listings_sty.rs \lx@lstenv@body (:2589) write-file-DIVERT branch
 %   (`if !lst_writefile_tee(&text)` :2597) returns ONLY `\endgroup`, DROPPING the
 %   env end code. When the start code opened `\setbox\@tempboxa=\hbox\bgroup`

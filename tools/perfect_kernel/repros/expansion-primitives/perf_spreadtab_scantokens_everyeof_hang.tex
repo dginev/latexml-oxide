@@ -2,7 +2,7 @@
 % oracle: lualatex exit 1 (compiles; our engine + Perl both fail)
 % engines: pdflatex/lualatex clean-ish (oracle 1 err); Rust HANGS; Perl aborts 102 err no-output
 % expect: a 1x3 spreadtab table computing gcd(24,18)=6, XML with the tabular
-% status: RED on b56n (timeout 124 = infinite loop), RED on sweep42
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism: any cell FORMULA CONTAINING A FUNCTION (sum/gcd/lcm/...) routes through
 %   spreadtab.sty:1492 \ST_scan_func_arg -> \scantokens + \everyeof{\ST_nil} +
 %   \afterassignment\ST_eat_to_nil (spreadtab.sty:315-323, \let\ST_toks= eat-loop).

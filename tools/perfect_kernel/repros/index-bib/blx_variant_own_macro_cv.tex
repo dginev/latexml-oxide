@@ -3,7 +3,7 @@
 %   \RequirePackage{biblatex})
 % engines: pdflatex/lualatex
 % expect: 0 errors
-% status: RED (b56o: 1 undefined \highlightname) -> want GREEN
+% status:  GREEN (re-graded 2026-09-23 on s113: 0 errors + structural check verified; was RED)
 % mechanism E (== same root class as B): the biblatex-* blanket dispatch (contrib
 %   lib.rs:730-736) runs the biblatex binding INSTEAD of raw-loading the variant's own
 %   .sty, so biblatex-cv.sty's own user macros (\highlightname biblatex-cv.sty:565) and
