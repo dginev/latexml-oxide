@@ -44,5 +44,5 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `string-mouth` | tokens re-read from a string (`SanitizedVerbatim`, `\scantokens`, `\write`+`\input`, pre-tokenized bodies): lost catcodes, invented EOFs, conditionals cut at a mouth boundary |
 | `sectioning-frontmatter` | `\@startsection` seam, `\maketitle`/`\@maketitle`, class-owned `\section`, sectioning inside lists/items |
 | `luatex-profile` | LuaTeX-oracle docs under `[luatex]`: engine probes, `\directlua` bridge, Unicode text commands |
-| `block-model` | schema content models: which block containers a container admits (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271) |
+| `block-model` | schema content models: what a container admits, and where an inadmissible child goes (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271; `Meta.class` out of math text, #272) |
 | `expl3` | l3 kernel behaviour under raw load: regex, keys, hooks, `\mode_if_math`, file boundaries |

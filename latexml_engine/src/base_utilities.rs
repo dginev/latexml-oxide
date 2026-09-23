@@ -5330,7 +5330,108 @@ fn cleanup_math_unwrap_valid_under_mathfork(mathnode: &Node) -> bool {
   }
 }
 
+/// The schema's `Meta.class` (LaTeXML-meta.rnc:17): side content that math text
+/// never admits (`XMText_model = (text | Inline.class | Misc.class)*`).
+pub(crate) const META_CLASS: [&str; 7] = [
+  "ltx:note",
+  "ltx:indexmark",
+  "ltx:glossarydefinition",
+  "ltx:declare",
+  "ltx:rdf",
+  "ltx:resource",
+  "ltx:navigation",
+];
+
+/// Float the `Meta.class` content of a Math's text out of the math (user ruling
+/// 2026-09-23, OXIDIZED_DESIGN #272). `\footnote`/`\index`/`\gls` inside `\text{}`
+/// construct in the `ltx:text` that `\text` opens, which admits a note, so their `^`
+/// float stops there. `cleanup_xmtext` then unwraps that `ltx:text`, and the marker
+/// is left as a direct `XMText` child: schema-invalid, with the footnote's text read
+/// into the formula's `text=`. Perl gives the same tree (ribbonproofs, sidenotesplus,
+/// ryethesis). Each outermost Meta element moves, in document order, to just after
+/// the Math at the nearest ancestor level that admits it. That is where a bare
+/// `\footnote` in math floats: the `p` for inline math, the `equation` for a display.
+/// Nothing moves when no level admits it.
+fn float_meta_out_of_math(document: &mut Document, mathnode: &Node) -> Result<()> {
+  let is_meta = |n: &Node| with(document::get_node_qname(n), |t| META_CLASS.contains(&t));
+  let movers: Vec<Node> = document
+    .findnodes(
+      "descendant::ltx:XMText//*[self::ltx:note or self::ltx:indexmark or \
+       self::ltx:glossarydefinition or self::ltx:declare or self::ltx:rdf or \
+       self::ltx:resource or self::ltx:navigation]",
+      Some(mathnode),
+    )
+    .into_iter()
+    .filter(|m| {
+      // Outermost only: a Meta element inside another moves with it.
+      let mut up = m.get_parent();
+      while let Some(p) = up {
+        if p == *mathnode {
+          return true;
+        }
+        if is_meta(&p) {
+          return false;
+        }
+        up = p.get_parent();
+      }
+      true
+    })
+    .collect();
+  let mut last: Option<(Node, Node)> = None; // (anchor, last node placed after it)
+  for mut m in movers {
+    let qname = document::get_node_qname(&m);
+    let mut anchor = mathnode.clone();
+    let placed = loop {
+      match anchor.get_parent() {
+        Some(p) if p.get_type() == Some(NodeType::ElementNode) => {
+          if with(qname, |t| document::can_contain(&p, t)) {
+            break true;
+          }
+          anchor = p;
+        },
+        _ => break false,
+      }
+    };
+    if !placed {
+      continue;
+    }
+    let mut prev = match &last {
+      Some((a, p)) if *a == anchor => p.clone(),
+      _ => anchor.clone(),
+    };
+    let mut emptied = m.get_parent();
+    // Elements only, so `add_next_sibling` never meets libxml2's text merge.
+    m.unlink();
+    prev.add_next_sibling(&mut m)?;
+    last = Some((anchor, m));
+    // A math-text wrapper the move leaves empty goes too: an empty `XMText` would
+    // parse as a term of the formula (`a * [] * b`).
+    while let Some(w) = emptied {
+      let (is_text, is_xmtext) = with(document::get_node_qname(&w), |t| {
+        (t == "ltx:text", t == "ltx:XMText")
+      });
+      let blank = w.get_child_nodes().iter().all(|c| match c.get_type() {
+        Some(NodeType::TextNode) => c.get_content().trim().is_empty(),
+        Some(NodeType::CommentNode) => true,
+        _ => false,
+      });
+      // Never the insertion point: the Math's after_close restores it afterwards.
+      if !(is_text || is_xmtext)
+        || !blank
+        || w.get_attribute_ns("id", XML_NS).is_some()
+        || w == *document.get_node()
+      {
+        break;
+      }
+      emptied = if is_xmtext { None } else { w.get_parent() };
+      document.remove_node(w);
+    }
+  }
+  Ok(())
+}
+
 pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
+  float_meta_out_of_math(document, &mathnode)?;
   // Cleanup ltx:Math elements; particularly if they aren't "really" math.
   // But record the oddity with class=ltx_markedasmath
 

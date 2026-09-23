@@ -1734,6 +1734,11 @@ pub fn add_column_to_math_fork(
       }
     } else if node.get_type() == Some(NodeType::CommentNode) {
       // Skip comments
+    } else if with(qname, |t| META_CLASS.contains(&t)) {
+      // A footnote/index/glossary marker the cell's Math floated out
+      // (`float_meta_out_of_math`, OXIDIZED_DESIGN #272) has no math reading. Perl
+      // clones it into the main branch's `XMText` like any other element, so the
+      // fork held it twice (a `.mf` duplicate). It stays in the td only.
     } else {
       if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
         assign_value("ID_SUFFIX", Stored::String(pin!(".mf")), None);

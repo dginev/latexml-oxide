@@ -32,6 +32,30 @@ fn convert(tex: &str) -> (String, String) {
   (log, xml)
 }
 
+/// As `convert`, through the html5 post-processor.
+fn convert_html(tex: &str) -> (String, String) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  let out = Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.html",
+      "--format=html5",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ])
+    .current_dir(workdir.path())
+    .env("NO_COLOR", "1")
+    .output()
+    .expect("spawn latexml_oxide");
+  let log = String::from_utf8_lossy(&out.stderr).to_string();
+  let html = std::fs::read_to_string(workdir.path().join("t.html")).unwrap_or_default();
+  (log, html)
+}
+
 fn assert_valid(xml: &str) {
   if let Some(n) = rng_error_count(xml) {
     assert_eq!(n, 0, "schema-invalid core XML:\n{xml}");
@@ -204,4 +228,93 @@ fn quote_holds_paragraph_and_box_blocks() {
     &["xml:id=\"p1\""],
     r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></logical-block></quote><quote><sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></sectional-block></quote></para>"##,
   );
+}
+
+/// `\footnote`/`\index`/`\nomenclature` inside `\text{}` in math float out of the Math (batch 56gx,
+/// user ruling 2026-09-23, OXIDIZED_DESIGN #272). They constructed in the
+/// `ltx:text` that `\text` opens; `cleanup_xmtext` unwrapped it and left the marker a
+/// direct `XMText` child: schema-invalid, and the footnote read into the formula's
+/// `text=` (`[b11footnote 1fn]`). Both engines (ribbonproofs, sidenotesplus,
+/// ryethesis). Whole `<p>`: each marker right after its Math, schema-valid.
+#[test]
+fn meta_in_math_text_floats_out_of_the_math() {
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{makeidx}\n\\makeindex\n\
+     \\usepackage{nomencl}\n\\makenomenclature\n\\begin{document}\n\
+     A $a = \\text{b\\footnote{fn}} + c$ B.\nC $x \\text{y\\index{idx}} z$ D.\n\
+     E $u \\text{v\\nomenclature{$u$}{speed}} w$ F.\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p>A <Math mode="inline" tex="a=\text{b}+c" text="a = [b] + c" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMText>b</XMText><XMTok font="italic" role="UNKNOWN">c</XMTok></XMApp></XMApp></XMath></Math><note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>fn</note> B.
+C <Math mode="inline" tex="x\text{y{\@index{\@indexphrase{idx}}}}z" text="x * [y] * z" xml:id="p1.m2"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMText>y</XMText><XMTok font="italic" role="UNKNOWN">z</XMTok></XMApp></XMath></Math><indexmark><indexphrase key="idx">idx</indexphrase></indexmark> D.
+E <Math mode="inline" tex="u\text{v\lx@nomencl@definition{a}{$u$}{{speed}}{}{}}w" text="u * [v] * w" xml:id="p1.m3"><XMath><XMApp><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">u</XMTok><XMText>v</XMText><XMTok font="italic" role="UNKNOWN">w</XMTok></XMApp></XMath></Math><glossarydefinition inlist="nomenclature" key="nomencl.1"><glossaryphrase key="nomencl.1" role="sort">a<Math mode="inline" tex="u" text="u" xml:id="p1.m3.m1"><XMath><XMTok font="italic" role="UNKNOWN">u</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="name"><Math mode="inline" tex="u" text="u" xml:id="p1.m3.m2"><XMath><XMTok font="italic" role="UNKNOWN">u</XMTok></XMath></Math></glossaryphrase><glossaryphrase key="nomencl.1" role="description">speed</glossaryphrase></glossarydefinition> F.</p>"##,
+  );
+}
+
+const DISPLAY_NOTES: &str = "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\
+  \\[ d = \\text{e\\footnote{disp}} \\]\n\\begin{align}\nf &= \\text{g\\footnote{al}}\\\\\n\
+  h &= k\\footnote{bare}\n\\end{align}\n\\end{document}\n";
+
+/// In display math the floated footnote lands where a bare `\footnote` does: in the
+/// `equation` after its Math. In an `align` cell it stays in the presentation `td`;
+/// the MathFork no longer clones it into the main branch's math as a second `.mf`
+/// note (batch 56gx, #272). Whole display `<equation>`, one note per footnote.
+#[test]
+fn footnote_in_display_math_text_floats_to_the_equation() {
+  let (stderr, xml) = convert(DISPLAY_NOTES);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "equation",
+    &["xml:id=\"S0.Ex1\""],
+    r##"<equation xml:id="S0.Ex1"><Math mode="display" tex="d=\text{e}" text="d = [e]" xml:id="S0.Ex1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok><XMText>e</XMText></XMApp></XMath></Math><note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>disp</note></equation>"##,
+  );
+  assert_eq!(
+    xml.matches("<note ").count(),
+    3,
+    "one note per footnote:\n{xml}"
+  );
+  assert_element(
+    &xml,
+    "td",
+    &["align=\"left\""],
+    r##"<td align="left"><Math mode="inline" tex="\displaystyle=\text{g}" text="absent = [g]" xml:id="S0.E1.m2"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok meaning="absent"/><XMText>g</XMText></XMApp></XMath></Math><note mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>al</note></td>"##,
+  );
+}
+
+/// The equation-level notes render in HTML (batch 56gx, #272). Perl's XSLT renders
+/// "all of equation_model EXCEPT Meta", so a footnote in display math, a bare
+/// `\footnote` included, was dropped from the page. Now it renders after the math in
+/// the equation's cell, and in an aligned row in the row's right padding cell.
+/// Whole note spans, each inside its own equation's table.
+#[test]
+fn footnote_in_display_math_renders_in_html() {
+  let (stderr, html) = convert_html(DISPLAY_NOTES);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  for (n, text, table) in [
+    (1, "disp", "S0.Ex1"),
+    (2, "al", "S0.EGx1"),
+    (3, "bare", "S0.EGx1"),
+  ] {
+    assert_element(
+      &html,
+      "span",
+      &[&format!("id=\"footnote{n}\"")],
+      &format!(
+        r##"<span id="footnote{n}" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">{n}</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">{n}</sup><span class="ltx_tag ltx_tag_note">{n}</span>{text}</span></span></span>"##
+      ),
+    );
+    let t = latexml::util::test::xml_element(&html, "table", &[&format!("id=\"{table}\"")])
+      .expect("equation table");
+    assert!(
+      t.contains(&format!("id=\"footnote{n}\"")),
+      "footnote {n} outside {table}:\n{t}"
+    );
+  }
 }

@@ -326,11 +326,14 @@
       <xsl:element name="span" namespace="{$html_ns}">
         <xsl:variable name="context" select="'inline'"/><!-- override -->
         <!-- This should cover: ltx:Math, ltx:MathFork, ltx:text & Misc
-             (ie. all of equation_model EXCEPT Meta & EquationMeta) -->
+             (ie. all of equation_model EXCEPT Meta & EquationMeta)
+             (latexml-oxide) plus ltx:note, the one visible Meta element: a footnote
+             in display math floats to the equation, and was dropped here
+             (OXIDIZED_DESIGN #272). -->
         <xsl:apply-templates select="ltx:Math | ltx:MathFork | ltx:text
                                      | ltx:inline-block | ltx:verbatim | ltx:break
                                      | ltx:graphics | ltx:svg | ltx:rawhtml | ltx:inline-logical-block
-                                     | ltx:tabular | ltx:picture" >
+                                     | ltx:tabular | ltx:picture | ltx:note" >
           <xsl:with-param name="context" select="$context"/>
         </xsl:apply-templates>
       </xsl:element>
@@ -627,6 +630,10 @@
     <xsl:param name="eqpos"
                select="f:if(ancestor-or-self::*[contains(@class,'ltx_fleqn')],'left','center')"/>
     <xsl:param name="extrapad" select="0"/>
+    <!-- (latexml-oxide) an aligned equation's own ltx:note children (a footnote in an
+         align row floats to the equation, beside the MathFork): rendered in the row's
+         right padding cell, since a tr holds only cells (OXIDIZED_DESIGN #272). -->
+    <xsl:param name="notes" select="/.."/>
     <xsl:text>&#x0A;</xsl:text>
     <xsl:element name="{f:blockelement($context,'td')}" namespace="{$html_ns}">
       <xsl:attribute name="class">
@@ -636,6 +643,9 @@
           <xsl:value-of select="$extrapad+1"/>
         </xsl:attribute>
       </xsl:if>
+      <xsl:apply-templates select="$notes">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:apply-templates>
     </xsl:element>
     <xsl:call-template name="eqnumtd">
       <xsl:with-param name="context" select="$context"/>
@@ -864,6 +874,7 @@
           <xsl:call-template name="eq-right">
             <xsl:with-param name="context" select="$context"/>
             <xsl:with-param name="extrapad" select="$ncolumns - f:countcolumns(ltx:MathFork/ltx:MathBranch[1]/tr[1])"/>
+            <xsl:with-param name="notes" select="ltx:note"/>
           </xsl:call-template>
         </xsl:element>
         <xsl:for-each select="ltx:MathFork/ltx:MathBranch[1]/ltx:tr[position() &gt; 1]">
@@ -910,6 +921,7 @@
           <xsl:call-template name="eq-right">
             <xsl:with-param name="context" select="$context"/>
             <xsl:with-param name="extrapad" select="$ncolumns - f:countcolumns(ltx:MathFork/ltx:MathBranch[1])"/>
+            <xsl:with-param name="notes" select="ltx:note"/>
           </xsl:call-template>
         </xsl:element>
       </xsl:when>
@@ -940,11 +952,12 @@
             </xsl:if>
             <!-- Hopefully, ltx:MathFork has been handled by the above cases;
                  This should cover: ltx:Math, ltx:text & Misc
-                 (ie. all of equation_model EXCEPT Meta & EquationMeta) -->
+                 (ie. all of equation_model EXCEPT Meta & EquationMeta)
+                 (latexml-oxide) plus ltx:note, as in the unaligned case (#272). -->
             <xsl:apply-templates select="ltx:Math | ltx:text
                                          | ltx:inline-block | ltx:verbatim | ltx:break
                                          | ltx:graphics | ltx:svg | ltx:rawhtml | ltx:inline-logical-block
-                                         | ltx:tabular | ltx:picture" >
+                                         | ltx:tabular | ltx:picture | ltx:note" >
               <xsl:with-param name="context" select="$context"/>
             </xsl:apply-templates>
           </xsl:element>

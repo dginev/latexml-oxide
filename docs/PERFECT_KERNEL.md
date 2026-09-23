@@ -83,14 +83,16 @@ counting in guards/tools, and the content tooling.
 - 24 dangling IDREF (RULED KEEP); 2 duplicate ids (thuaslogos, ruled).
 - 13 sectioning inside an item/figure (`paragraph`/`subsubsection`/`section`; RULED LEAVE, #189 —
   note #189 also inserts WITHOUT a diagnostic, so these docs are silently invalid).
-- 3 block inside `quote` (aguplus `sectional-block`, webquiz/… `logical-block`) — needs the
-  `quote_model = Para.model` ruling (LaTeXML-block.rnc:142 already floats it).
+- 2 block inside `quote` (aguplus `sectional-block`, webquiz `logical-block`) — LANDED 56gw
+  (user ruling: `quote_model` widened, #271).
 - SHARED / document bugs, one each: item-in-math ×2, bibliography-in-box ×2 (biblatex-ext,
-  biblatex-cv), note/indexmark/glossarydefinition in XMText (inline-leak ×3), swfigure, msgguide
+  biblatex-cv), note/indexmark/glossarydefinition in XMText (inline-leak ×3 — LANDED 56gx, user
+  ruling: `Meta.class` floats out of math text, #272), swfigure, msgguide
   TOC-in-date, pgf-spectra late abstract, thalie/ndsu text-in-listing, brochure block-in-text,
   stanli figure-in-titlepage, philex anchor.
-The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
-quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
+The schema axis is at its ruled ceiling; the four rulings (section-in-item LEAVE, dangling IDREF
+KEEP, quote model and inline-leak LANDED 56gw/56gx) are all decided, so the remaining levers are the
+mechanical singletons and the content/semantic axes below.
 
 **Open leads (ranked; updated after sweep 114 and batches 56gl-56gv):**
 1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
@@ -123,10 +125,10 @@ quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
 5. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
    `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
    engines too (277 s, > 900 s).
-6. Rulings: dangling IDREF (KEEP, 24 docs) and sectioning inside an item/figure (LEAVE, #189,
-   13 docs) are ruled; still open — the `quote` content model (`quote_model = Para.model`, 3 docs:
-   aguplus, webquiz, one more) and inline-leak (note/indexmark/glossarydefinition inside XMText,
-   3 docs). The schema axis is at its ruled ceiling (s116: 2221/2368).
+6. Rulings — all decided: dangling IDREF (KEEP, 24 docs), sectioning inside an item/figure
+   (LEAVE, #189, 13 docs), the `quote` content model (LANDED 56gw, #271: webquiz, aguplus valid)
+   and inline-leak (LANDED 56gx, #272: ribbonproofs, sidenotesplus, ryethesis valid; equation-level
+   footnotes now render in HTML). Expected schema-valid after both: 2226/2368 (s117: 2221).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);
