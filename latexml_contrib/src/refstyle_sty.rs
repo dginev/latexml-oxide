@@ -1,43 +1,28 @@
 //! refstyle.sty — flexible cross-reference styling (`\newref{type}{...}`,
-//! `\vref`, `\Vref`, `\Ref`, ...).
+//! `\figref`, `\vref`, `\Vref`, `\Ref`, ...).
 //!
-//! refstyle.sty's refstyle.cfg has `\newref{eq}{...}` which tries
-//! to redefine `\eqref` after `\RS@removedef{eqref}`. The
-//! `\RS@removedef` does `\let\eqref\@undefined` — in TeX this
-//! makes `\eqref` effectively undefined, but our `\@ifundefined`
-//! test (`\ifx\csname...\endcsname\relax`) doesn't recognize
-//! `\@undefined` as `\relax`, so the test sees `\eqref` as still
-//! defined and refstyle's `\RS@notdefinable` fires
-//! `\PackageError{refstyle}{Command \eqref already defined}`.
+//! The real package is loaded raw, with its options: refstyle.sty and its
+//! refstyle.cfg are pure TeX that the engine runs clean — the `\newref`
+//! templates define `\figref`/`\secref`/`\eqref`/…, and `\RS@removedef`
+//! (`\let\eqref\@undefined`) is seen as undefined by `\@ifundefined`
+//! (latex.ltx:1729-1735), so the amsmath `\eqref` redefinition does not fire
+//! refstyle's "already defined" error. The former stub (`\newref` a no-op,
+//! `\vref` → `\ref`) rested on a mis-probed `\@ifundefined` gap; it left every
+//! `\newref`-built command undefined and lacked the internals documents call
+//! directly — LyX preambles emit `\RS@ifundefined{subref}{…}` (refstyle.sty:51-57;
+//! uspatent/PatentApplicationGuide: an `<ERROR>` in the preamble stranded the
+//! title, 3 schema errors). Perl has no refstyle binding (raw only under
+//! `--includestyles`, 0 errors on that witness).
 //!
-//! Witnesses: arXiv:2009.10518, arXiv:1804.06350 — both load
-//! refstyle (and additionally `cleveref` which provides
-//! `\eqref` anyway). Perl LaTeXML has no refstyle binding
-//! (INCLUDE_STYLES=false skips), zero errors.
-//!
-//! Stub: no-op binding. The user-facing `\newref` / `\vref` /
-//! `\Vref` / `\Ref` are stubbed to passthrough `\ref`.
+//! Witnesses: arXiv:2009.10518, arXiv:1804.06350 (refstyle + amsmath +
+//! cleveref), uspatent/PatentApplicationGuide.
+//! Guard: `perfect_kernel_batch56::refstyle_loads_raw_with_its_internals`.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "refstyle.sty",
-    "refstyle.sty is minimally stubbed — \\newref/\\Vref/\\vref pass through to \\ref."
-  );
-  // refstyle's main public API. We don't honor the per-type
-  // templating; just dispatch to plain \ref so the labels still
-  // render correctly (just without the type-prefix prose).
-  DefMacro!("\\newref [] {} []", "");
-  DefMacro!("\\Vref {}", "\\ref{#1}");
-  DefMacro!("\\vref {}", "\\ref{#1}");
-  DefMacro!("\\Ref {}", "\\ref{#1}");
-  DefMacro!("\\refstyle {}", "");
-  DefMacro!("\\rangeref {} {}", "\\ref{#1}~--~\\ref{#2}");
-  DefMacro!("\\Rangeref {} {}", "\\ref{#1}~--~\\ref{#2}");
-  DefMacro!("\\nrefrange [] {} {}", "\\ref{#2}~--~\\ref{#3}");
-  DefMacro!("\\extdef {} {}", "");
-  // \refstylefirst — toggles "use long-form name on first ref"; no-op.
-  def_macro_noop("\\refstylefirst")?;
-  // RSfooform — formatter templates; ignored.
+  let opts: Vec<String> = lookup_vecdeque("opt@refstyle.sty")
+    .map(|v| v.iter().map(|o| o.to_string()).collect())
+    .unwrap_or_default();
+  InputDefinitions!("refstyle", noltxml => true, extension => Some(Cow::Borrowed("sty")),
+    handleoptions => true, options => opts);
 });

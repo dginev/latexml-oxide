@@ -1,0 +1,19 @@
+% witness: colorframed/colorframed-doc (colorframed-doc.tex:176); tableaux/exemples (exemples.tex:71)
+% oracle:  pdflatex 0 errors (tableaux shape); colorframed-doc lualatex oracle clean
+% engines: rust=0 perl=0 (2026-09-23)   <- schema-invalid before 56gd: <block> in <enumerate>
+% expect:  0 errors; <enumerate><item><para><block class="ltx_minipage"> (schema-valid)
+% status:  GREEN (56gd 2026-09-23; was RED on the schema axis)
+% mechanism: a box opened in a list before an \item; the list's model is item*.
+%   insert_block (base_utilities.rs) routes it through find_insertion_point,
+%   which auto-opens item -> para (OXIDIZED_DESIGN #261).
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\begin{minipage}{3cm}
+\item First.
+\end{minipage}\hfill
+\begin{minipage}{3cm}
+Side.
+\end{minipage}
+\end{enumerate}
+\end{document}

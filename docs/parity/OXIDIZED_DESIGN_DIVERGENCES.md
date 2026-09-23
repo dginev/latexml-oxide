@@ -8352,3 +8352,26 @@ and received the same normalization. `\ifx` was already TeX-correct: `Token::eq`
 ignores the text of SPACE tokens. Guards `charcode_tests::end_of_line_space_has_character_code_32`,
 `perfect_kernel_batch56::end_of_line_space_compares_equal_to_a_space_in_if`.
 **Upstream**: worth proposing to Perl LaTeXML.
+
+### 261. A block or same-kind list arriving in a list before an `\item` gets an auto-opened item (Perl: placed in the list, schema-invalid)
+
+**Perl** `insertBlock` (TeX_Box.pool.ltxml:449-519) renames its capture in place
+(:512) without consulting the model's indirect routes, so a box opened in a list
+before its first `\item` — framed.sty's `shaded` wrapping an `\item`
+(colorframed-doc:176), a minipage of `\item`s beside a table minipage
+(tableaux/exemples:71) — becomes `<block>` directly in `<itemize>`, whose model
+is `item*`. And `computeIndirectModel` skips a same-tag route (the `$tag ne $kid`
+guard, mirrored in `state.rs` `compute_indirect_model`), so an `itemize` opened
+directly in an `itemize` (legal LaTeX after an empty item: iitem's `\Pseudo@item`,
+lost in qworld because ltjsarticle.cls redefines the kernel `\@item`) is also
+placed in the list. Both are SHARED schema errors. **Rust**: `insert_block`
+(base_utilities.rs) moves a capture that a list container cannot hold through
+`find_insertion_point`, which opens `item` → `para` exactly as for text arriving
+before the first `\item`; `find_insertion_point`'s bridge table (document.rs)
+gains a row `item → para` for a child whose tag equals the current list's. The
+auto-opened item carries no tag; the next `\item` closes it. pdflatex reports
+"Something's wrong--perhaps a missing \item" only for the empty-list case and
+typesets the material as list content — the item is the closest valid shape.
+Witnesses qworld (24 schema errors), colorframed-doc (6), tableaux/exemples (2).
+Guards `perfect_kernel_batch56::block_in_a_list_before_an_item_gets_an_auto_item`,
+`perfect_kernel_batch56::nested_list_before_an_item_gets_an_auto_item`.

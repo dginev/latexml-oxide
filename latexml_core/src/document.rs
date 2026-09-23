@@ -3361,6 +3361,11 @@ impl Document {
             applies: |_cur, qsym| qsym == "ltx:item",
             attrs:   &[],
           },
+          AutoOpenBridge {
+            chain:   &["ltx:item", "ltx:para"],
+            applies: |cur, qsym| cur == qsym,
+            attrs:   &[],
+          },
         ];
         for bridge in AUTO_OPEN_BRIDGES {
           let first = arena::pin(bridge.chain[0]);

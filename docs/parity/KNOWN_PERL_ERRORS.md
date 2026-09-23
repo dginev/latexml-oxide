@@ -6240,3 +6240,21 @@ Witness latex-via-exemplos (which itself demands XeLaTeX at :24). Kept: the only
 reporting a Unicode engine, a parked family with a document-wide blast radius. Corpus
 footprint: this one manual (the other fontsetup users load it with an option and skip
 fspdefault). Root-causer `~/data/pk_agents/w23/regr83/declaremathoperator/NOTES.md`.
+
+## 220. xytree's `\xyconnect` inside `\xymatrix` under the SVG `\xy` overlay: `\xy@@ix@` never bound, digest runaway (kept)
+
+xytree.sty:41-66 drives each tree through `\xymatrix` (xymatrix.tex:54/60, text mode:
+`\xy \nter@\endxy`), and LaTeXML's `\xy` = `\if\inxy@\lx@xy@svgnested\else\lx@xy@svg\fi
+\lx@xy@original` (Perl xy.tex.ltxml:148, Rust xy_sty.rs:382, byte-identical) digests the
+picture through a Stomach constructor. Inside the matrix `\halign` the overlay
+desynchronises xy's conditional/group nesting ("not in a conditional" `\else`/`\fi`,
+"Attempt to close a group that switched to mode restricted_horizontal"), so
+`\xy@@ix@` — only ever `\let`-bound by `\plainxy@` (xy.tex:269) or `\xyqall@`
+(xymatrix.tex:309) — is undefined when `\entry@@norm` (:296) calls it; the `<ERROR>`
+leaves its entry argument's braces unconsumed and the box nesting runs away. Both
+engines: 10 Errors + 1 Fatal (Perl `deep_recursion` in `digestUntil`, Rust
+`Fatal:Stomach:Recursion`). Trigger:
+`\documentclass{article}\usepackage{xytree}\begin{document}\xytree[2]{\xyconnect[->](R,L){0,1}"^<{x}" &}\end{document}`.
+Witness xytree/xytree-doc-en (pdflatex clean). Kept: the fix is the xy emulation itself
+(bind `\xy@@ix@` before the entry loop, keep the `\halign` group), HIGH risk, one doc.
+Root-causer `~/data/pk_agents/w59/xytree/`.

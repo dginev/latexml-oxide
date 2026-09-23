@@ -5220,6 +5220,29 @@ pub fn insert_block(
         }
         child = parent;
       }
+    } else if document::can_contain_qsym(context_tag, pin_static("ltx:item"))
+      && document::can_contain_indirect(context_tag, final_tag).is_some()
+    {
+      // A list container (`itemize`/`enumerate`/`description`, model `item*`) holds
+      // no block, so a box opened in a list before its first `\item`, or between
+      // items, lands where the model has no room for it. LaTeX typesets such a box
+      // as list material (framed.sty's `shaded` around an `\item`, colorframed-doc
+      // :176; a `minipage` of `\item`s beside a table minipage, tableaux/exemples
+      // :71). The only schema-valid home is an item, which is autoOpen
+      // (latex_constructs.pool.ltxml:1277): place the capture through
+      // `find_insertion_point`, which opens `item` → `para` from the list exactly
+      // as it does for text arriving before the first `\item` (Perl's
+      // `computeIndirectModel` route). Perl's `insertBlock` renames in place
+      // (TeX_Box.pool.ltxml:512), a SHARED schema error; the next `\item` closes the
+      // auto-opened item. Only where such a route exists: a `sectional-block` has
+      // none (no item holds it) and keeps Perl's in-place rename. OXIDIZED_DESIGN
+      // #261. Guard
+      // `perfect_kernel_batch56::block_in_a_list_before_an_item_gets_an_auto_item`.
+      container.unlink();
+      document.set_node(&context);
+      let mut point = document.find_insertion_point_qsym(final_tag, None)?;
+      point.add_child(&mut container)?;
+      document.set_node(&point);
     }
     // If no ancestor can hold it (rare — Para.class always fits the section/body
     // model), the capture stays where it is. Perl renames in place to the invalid

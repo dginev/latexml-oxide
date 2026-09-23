@@ -37,6 +37,7 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 
 | Topic | Mechanism |
 |---|---|
+| `list-structure` | list containers and what may stand in them before/between `\item`s — auto-opened items (OXIDIZED_DESIGN #261) |
 | `alignment` | `&`/`\\`/`\cr` handling, the per-cell hidden `$` pairing (`\lx@dollar@in@mathmode`), `\halign` templates, column types |
 | `boxes-groups` | a box/group opened in one macro and closed in another (`\hbox\bgroup…\egroup`, ulem word boxes, `\begingroup`/`\endgroup` across mode frames), mode-frame errors |
 | `index` | `\index` entry writing/expansion (`\protected@write`), makeindex-round-trip packages, `\edef`+`\write` of mode-dependent conditionals |

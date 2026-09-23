@@ -10,7 +10,8 @@
 //! `\verb` is the same reader and fails identically). Here the command reads
 //! the verbatim argument through the same reader as `\verb`
 //! (`read_verb_invocation`) and puts `before`/`after` inside the one hidden
-//! group. `\fverb`/`\qverb` (:100-108) are provided the same way.
+//! group. `\fverb`/`\qverb` (:100-108) are provided the same way, and the
+//! `\MakeShortVerb`/`\MakeSpecialShortVerb` family (:112-137) verbatim.
 //! Guard: `perfect_kernel_batch54::newverbcommand_wraps_the_verb_body`.
 use latexml_engine::latex_constructs::read_verb_invocation;
 
@@ -54,4 +55,18 @@ LoadDefinitions!({
   DefMacro!("\\qverbbeginquote", "``");
   DefMacro!("\\qverbendquote", "''");
   RawTeX!(r"\newverbcommand{\qverb}{\qverbbeginquote}{\qverbendquote}\newverbcommand{\fverb}{}{}");
+  // newverbs.sty:112-137 verbatim: `\MakeShortVerb` takes an optional verb
+  // command, and `\MakeSpecialShortVerb\cmd\char` makes `\char` a short form of
+  // any verb command (`\qverb`, `\fverb`), through shortvrb's `\@MakeShortVerb`
+  // reading `\@shortvrbdef`. macros2e.tex:10 `\MakeSpecialShortVerb\qverb\"`
+  // (undefined before: an `<ERROR>` in the preamble stranded the frontmatter,
+  // 4 schema errors). Guard
+  // `perfect_kernel_batch56::make_special_short_verb_is_defined`.
+  RawTeX!(
+    r"\def\MakeShortVerb{\@ifstar{\newverbs@MakeShortVerb*}{\newverbs@MakeShortVerb{}}}
+\def\newverbs@MakeShortVerb#1{\@ifnextchar[{\newverbs@@MakeShortVerb{#1}}{\@MakeSpecialShortVerb{#1}{\verb}}}
+\def\newverbs@@MakeShortVerb#1[#2]{\@MakeSpecialShortVerb{#1}{#2}}
+\def\@MakeSpecialShortVerb#1#2#3{\def\@shortvrbdef{#2#1}\@MakeShortVerb{#3}}
+\newcommand*\MakeSpecialShortVerb{\@ifstar{\@MakeSpecialShortVerb{*}}{\@MakeSpecialShortVerb{}}}"
+  );
 });

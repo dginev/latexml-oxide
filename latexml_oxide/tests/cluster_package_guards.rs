@@ -18100,6 +18100,190 @@ c &= d
     }
   }
 
+  /// Count of lines carrying a `Warning:<class>:` diagnostic ANYWHERE in the line
+  /// (WISDOM 85: a diagnostic can follow other output on the same line).
+  fn warning_count(stderr: &str) -> usize {
+    let re = regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap();
+    stderr.lines().filter(|l| re.is_match(l)).count()
+  }
+
+  /// The outermost list element of `xml`, with `xml:id`s and inter-tag
+  /// whitespace removed, for whole-element comparisons.
+  fn outer_list(xml: &str, tag: &str) -> String {
+    let start = xml.find(&format!("<{tag}")).unwrap();
+    let close = format!("</{tag}>");
+    let end = xml.rfind(&close).unwrap() + close.len();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    gaps
+      .replace_all(&ids.replace_all(&xml[start..end], ""), "><")
+      .into_owned()
+  }
+
+  /// Batch 56gd (OXIDIZED_DESIGN #261): a block box opened in a list before an
+  /// `\item` has no room in the list's `item*` model; it gets an auto-opened
+  /// `item` → `para`, and the next `\item` closes it. Witnesses colorframed-doc
+  /// (`shaded` around each `\item`, 6 schema errors) and tableaux/exemples (a
+  /// minipage of `\item`s beside a table minipage, 2).
+  #[test]
+  fn block_in_a_list_before_an_item_gets_an_auto_item() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{itemize}
+\begin{minipage}{3cm}
+Boxed text.
+\end{minipage}
+\item Real item.
+\end{itemize}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      outer_list(&xml, "itemize"),
+      concat!(
+        r#"<itemize><item><para><block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
+        r#"<p>Boxed text.</p></block></para></item>"#,
+        r#"<item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags>"#,
+        r#"<para><p>Real item.</p></para></item></itemize>"#
+      ),
+      "{xml}"
+    );
+    // The tableaux shape: a minipage of `\item`s beside a second minipage.
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\begin{minipage}{3cm}
+\item First.
+\end{minipage}\hfill
+\begin{minipage}{3cm}
+Side.
+\end{minipage}
+\end{enumerate}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      outer_list(&xml, "enumerate"),
+      concat!(
+        r#"<enumerate><item><para><block class="ltx_minipage" vattach="middle" width="85.4pt">"#,
+        r#"<itemize><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag>"#,
+        r#"</tags><para><p>First.</p></para></item></itemize></block>"#,
+        r#"<p class="ltx_minipage" vattach="middle" width="85.4pt">Side.</p></para></item></enumerate>"#
+      ),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56gd: refstyle loads the real refstyle.sty (with refstyle.cfg), in
+  /// raw and default mode alike: the `\newref` templates build `\secref`, the
+  /// amsmath `\eqref` is replaced without refstyle's "already defined" error,
+  /// and the internals a LyX preamble calls directly (`\RS@ifundefined`,
+  /// refstyle.sty:51-57) exist. The former stub left an `<ERROR>` in the
+  /// preamble that stranded the title (uspatent/PatentApplicationGuide, 3
+  /// schema errors). Witnesses arXiv:2009.10518, arXiv:1804.06350.
+  #[test]
+  fn refstyle_loads_raw_with_its_internals() {
+    if !kpsewhich_has("refstyle.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{amsmath,refstyle}
+\makeatletter
+\RS@ifundefined{subref}{\newref{sub}{name=section~}}{}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+\section{A}\label{sec:a}
+See \secref{a} and \eqref{e}.
+\begin{equation}\label{eq:e}x\end{equation}
+\end{document}
+";
+    for raw in [true, false] {
+      let (stderr, xml) = convert(tex, raw);
+      assert_eq!(error_count(&stderr), 0, "raw={raw}: {stderr}");
+      assert_eq!(warning_count(&stderr), 0, "raw={raw}: {stderr}");
+      assert!(!xml.contains("<ERROR"), "raw={raw}: {xml}");
+      // The document title precedes the body: nothing stranded it.
+      let title = xml.find("<title>T</title>").unwrap();
+      assert!(title < xml.find("<section").unwrap(), "raw={raw}: {xml}");
+      assert!(!xml[..title].contains("<para"), "raw={raw}: {xml}");
+      assert!(
+        xml.contains(concat!(
+          r#"<p>See section §<ref labelref="LABEL:sec:a"/> and equation "#,
+          r#"(<ref labelref="LABEL:eq:e"/>).</p>"#
+        )),
+        "raw={raw}: {xml}"
+      );
+    }
+  }
+
+  /// Batch 56gd: newverbs.sty:112-137 — `\MakeSpecialShortVerb\qverb\"` makes
+  /// `"…"` a short `\qverb` (macros2e.tex:10; undefined before, the preamble
+  /// `<ERROR>` stranded the frontmatter, 4 schema errors).
+  #[test]
+  fn make_special_short_verb_is_defined() {
+    if !kpsewhich_has("newverbs.sty") {
+      return;
+    }
+    let tex = r#"\documentclass{article}
+\usepackage{newverbs}
+\MakeSpecialShortVerb\qverb\"
+\title{T}
+\begin{document}
+\maketitle
+Use "x_y" here.
+\end{document}
+"#;
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<ERROR"), "{xml}");
+    assert!(
+      xml.contains(concat!(
+        r#"<p>Use “<verbatim font="typewriter">x_y</verbatim>"#,
+        r#"<text font="typewriter">''</text> here.</p>"#
+      )),
+      "{xml}"
+    );
+  }
+
+  /// Batch 56gd: a list opened directly inside a list of the same kind (iitem's
+  /// `\Pseudo@item` lost to a raw class's `\@item`, qworld: 24 schema errors)
+  /// is placed in an auto-opened `item` → `para`, the shape the empty item
+  /// gives it. The indirect model skips a same-tag route (Perl Document.pm:206),
+  /// so the find_insertion_point bridge table carries it.
+  #[test]
+  fn nested_list_before_an_item_gets_an_auto_item() {
+    let tex = r"\documentclass{article}
+\begin{document}
+\begin{itemize}
+\begin{itemize}
+\item Inner.
+\end{itemize}
+\item Outer.
+\end{itemize}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(
+      outer_list(&xml, "itemize"),
+      concat!(
+        r#"<itemize><item><para><itemize><item><tags><tag><text font="bold">–</text></tag>"#,
+        r#"<tag role="typerefnum">1st item</tag></tags><para><p>Inner.</p></para></item>"#,
+        r#"</itemize></para></item><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag>"#,
+        r#"</tags><para><p>Outer.</p></para></item></itemize>"#
+      ),
+      "{xml}"
+    );
+  }
+
   /// Batch 56bq: a bibliography issued inside a pgf node (xebaposter's
   /// References `\headerbox`) floats out of the drawing to the document,
   /// as from a plain minipage, because nothing else in the box would be
