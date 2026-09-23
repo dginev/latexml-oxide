@@ -94,7 +94,7 @@ The schema axis is at its ruled ceiling; the four rulings (section-in-item LEAVE
 KEEP, quote model and inline-leak LANDED 56gw/56gx) are all decided, so the remaining levers are the
 mechanical singletons and the content/semantic axes below.
 
-**Open leads (ranked; updated after sweep 114 and batches 56gl-56gv):**
+**Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
    delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
    it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
@@ -102,11 +102,24 @@ mechanical singletons and the content/semantic axes below.
    `56gn_NOTES.md`) surfaced ~30 latent clusters in 29 manuals; `\??? Match:?` is l3msg's
    expandable-error sentinel — each a REAL expl3 error the engine swallowed. Fixed so far: 56gt
    (etoolbox `\patchcmd` `##` → pgfornament-han 501 → 0, biblatex-gost 88 → 0), 56gv (`\typeout`
-   partial), 56gp (notebeamer), 56go (`\everypar`). Open (re-measure with a strict build: apply
-   the patch, build, `git apply -R`): mercatormap 661, euclideangeometry 101, leporello 74 +
-   jsonparse 60 (native pgfkeys `Expand!` of protected xparse commands — `\csname` does expand
-   `\protected` in real TeX, so study raw pgf first), xint `\XINT_zapsp_b` ×10 in six French
-   manuals (root-causer running), concepts `\cptfor`, keyval2e; greektonoi/chinesechess SHARED.
+   partial), 56gp (notebeamer), 56go (`\everypar`), 56gy (one-space delimiter: the whole xint
+   `\XINT_zapsp_b` cluster, 9 manuals), 56hb (`\protected\relax\def`: catoptions 70 → 1,
+   keyval2e-examples 101 → 2). Strict re-measure after 56gy (`~/data/pk_agents/w59/main/strict3/`,
+   binary `latexml_oxide.strict3`): euclideangeometry 101, leporello 74 + jsonparse 60 (native
+   pgfkeys `Expand!`), titles 101 (with 56gn the loop becomes 101 `\aftergroup` Match errors;
+   pdflatex stops at 9, so a re-trigger remains), bfh-ci 11, guitar 10; mercatormap shell-escape
+   excluded; greektonoi/chinesechess/bxjaholiday SHARED. catoptions residual: 1 option-stack-limit
+   error per load.
+1b. **Recall tail (s116) — findings 2026-09-23**: 983 manuals' scrlfile-hook underflow warnings
+   (56gz, landed); uantwerpendocs title-page flow content (56ha, landed, 6 manuals); babel main
+   language from class options (56hd: 36 French/German manuals switch `xml:lang`/captions,
+   colortbl-DE recall 86 → 99; cahierprof ×2 errors under French being root-caused). Open,
+   root-caused: uni-titlepage `\maketitle[opts]` (13 manuals — thread the options into the deposit;
+   setters inside a deposit should set `\@title` rather than be `\relax`), titling
+   `\pretitle`/`\posttitle` material (lion-msc; titling's default author hooks would leave an
+   empty tabular — needs a design), quotchap `savequote` (locked `\chapter`), nomencl `nomentbl`
+   unit/note columns (make_index.rs `get_glossary_entries`), g-brief letter fields (page
+   furniture, SHARED, 2 docs, low priority).
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's
@@ -128,7 +141,7 @@ mechanical singletons and the content/semantic axes below.
 6. Rulings — all decided: dangling IDREF (KEEP, 24 docs), sectioning inside an item/figure
    (LEAVE, #189, 13 docs), the `quote` content model (LANDED 56gw, #271: webquiz, aguplus valid)
    and inline-leak (LANDED 56gx, #272: ribbonproofs, sidenotesplus, ryethesis valid; equation-level
-   footnotes now render in HTML). Expected schema-valid after both: 2226/2368 (s117: 2221).
+   footnotes now render in HTML). Measured on sweep #118: 2226/2368 (s117: 2221).
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);

@@ -85,27 +85,34 @@ LoadDefinitions!({
   );
   def_macro_noop("\\endcomment")?;
 
-  // verbatim.sty:107-112 `\verbatim@start#1` consumes the token that
-  // follows it when `\if\noexpand#1\noexpand~` holds — the active `^^M`
-  // ending the `\begin{…}` line in the normal case, but ANY control
-  // sequence too (`\noexpand` renders it `\relax`-like, char code 256 on
-  // both sides). That is the documented idiom `\verbatim@start\relax` for
-  // starting a capture from inside a macro body (curve2e-manual.tex:95
-  // `{Esempio}`, memoir, digiconfigs): the `\relax` stands in for the
-  // line end. Perl's `\verbatim@start` = `\lx@verbatim@\verbatim@` (:76)
-  // never looks, so `read_raw_line` serialised the pending `\relax` (gullet
-  // pushback + line remainder) as the FIRST captured line. Only the PUSHBACK
-  // is inspected: a `\relax` from a macro body lives there, while the mouth's
-  // line remainder after `\begin{verbatim}` must stay unread — Perl's first
-  // raw line is that (empty) remainder, which is the leading newline every
-  // `<ltx:verbatim>` golden carries (`tests/tokenize/verbata.xml`). Guard
-  // `perfect_kernel_batch50::verbatim_start_relax_idiom`.
+  // verbatim.sty:107-112 `\verbatim@start#1` tests `\if\noexpand#1\noexpand~`,
+  // `~` being the active end-of-line: only that line end is dropped. Any
+  // control sequence compares as code 256 against its 13 (tex.web §506) and is
+  // PREPENDED to line 1 (`\def\next{\verbatim@#1}`), where `\verbatim@processline`
+  // runs it with the line's text after it. So `\verbatim@start\relax`, the idiom
+  // for starting a capture from a macro body (curve2e-manual.tex:95 `{Esempio}`,
+  // memoir, digiconfigs), makes an empty first line (dropped here: a no-op, and
+  // our default `\verbatim@processline` would print it; only a `\relax` meaning,
+  // OXIDIZED_DESIGN #274), and verbatimbox's
+  // `\verbatim\verbbox@inner` (verbatimbox.sty:90/107) consumes the environment's
+  // `[\footnotesize]` from line 1 (readarray.tex:440). The swallowed command lost
+  // both: the bracket was captured as text and the size never set. Perl's
+  // `\verbatim@start` = `\lx@verbatim@\verbatim@` (:76) never looks. A pending
+  // character is a body character and goes back. Only the PUSHBACK is inspected:
+  // the mouth's line remainder after `\begin{verbatim}` is line 1, the leading
+  // newline every `<ltx:verbatim>` golden carries (`tests/tokenize/verbata.xml`).
+  // Guards `perfect_kernel_batch50::verbatim_start_relax_idiom`,
+  // `perfect_kernel_batch56::verbatim_start_runs_a_prepended_command`.
   DefMacro!("\\verbatim@start", {
     if pushback_holds_nonspace()
       && let Some(t) = read_token()?
-      && t.get_catcode() != Catcode::CS
     {
-      unread_one(t);
+      if t.get_catcode() != Catcode::CS {
+        unread_one(t);
+      } else if !matches!(lookup_meaning(&t), Some(Stored::Primitive(ref p)) if *p.get_cs() == T_CS!("\\relax"))
+      {
+        return read_verbatim_lines(vec![t]);
+      }
     }
     Ok(Tokens!(T_CS!("\\verbatim@")))
   });
@@ -117,45 +124,7 @@ LoadDefinitions!({
   // Well, we have to dance a bit...
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
-  DefMacro!("\\verbatim@", {
-    let env = lookup_string_from_sym(pin!("current_environment"));
-    // Note: This should allow a regexp, since there can be spaces between \end and { !!!
-    let mut lines = Vec::new();
-    // TODO: UGH!!! Isn't there a better way to approximate
-    // the Perl simplicity of writing an inline regex?
-    // the escaping is very easy to get wrong!
-    let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
-    while let Some(line) = read_raw_line() {
-      if let Some(caps) = env_re.captures(&line) {
-        let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
-        let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
-        lines.push(pre);
-        if !post.is_empty() {
-          let message = s!("Characters dropped after '\\end{{{}}}'", env);
-          Info!("unexpected", "stuff", message);
-        }
-        break;
-      } else {
-        lines.push(line);
-      }
-    }
-    if lines.last() == Some(&String::new()) {
-      lines.pop();
-    }
-    let mut tokens = Vec::new();
-    for line in &lines {
-      tokens.push(T_CS!("\\verbatim@startline"));
-      tokens.extend(
-        Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(
-          ExplodeText!(line)
-        )])
-        .unlist(),
-      );
-      tokens.push(T_CS!("\\verbatim@processline"));
-    }
-    tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)]).unlist());
-    Ok(Tokens::new(tokens))
-  });
+  DefMacro!("\\verbatim@", { read_verbatim_lines(Vec::new()) });
 
   // //======================================================================
   // // Read verbatim material from file.
@@ -298,3 +267,47 @@ LoadDefinitions!({
   // may address directly (ltug notes-for-authors).
   RawTeX!(r"\newread\verbatim@in@stream");
 });
+
+/// Read the raw lines up to `\end{<current environment>}` as verbatim.sty's
+/// line loop: `\verbatim@startline`, `\verbatim@addtoline{<line>}`,
+/// `\verbatim@processline` per line, then `\end{<env>}`. `first` is prepended to
+/// line 1 (the control sequence `\verbatim@start` found pending).
+fn read_verbatim_lines(first: Vec<Token>) -> Result<Tokens> {
+  let env = lookup_string_from_sym(pin!("current_environment"));
+  // Note: This should allow a regexp, since there can be spaces between \end and { !!!
+  let mut lines = Vec::new();
+  // TODO: UGH!!! Isn't there a better way to approximate
+  // the Perl simplicity of writing an inline regex?
+  // the escaping is very easy to get wrong!
+  let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
+  while let Some(line) = read_raw_line() {
+    if let Some(caps) = env_re.captures(&line) {
+      let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
+      let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
+      lines.push(pre);
+      if !post.is_empty() {
+        let message = s!("Characters dropped after '\\end{{{}}}'", env);
+        Info!("unexpected", "stuff", message);
+      }
+      break;
+    } else {
+      lines.push(line);
+    }
+  }
+  if lines.last() == Some(&String::new()) {
+    lines.pop();
+  }
+  let mut tokens = Vec::new();
+  if !first.is_empty() && lines.is_empty() {
+    lines.push(String::new());
+  }
+  for (n, line) in lines.iter().enumerate() {
+    let mut content = if n == 0 { first.clone() } else { Vec::new() };
+    content.extend(ExplodeText!(line));
+    tokens.push(T_CS!("\\verbatim@startline"));
+    tokens.extend(Invocation!(T_CS!("\\verbatim@addtoline"), vec![Tokens::new(content)]).unlist());
+    tokens.push(T_CS!("\\verbatim@processline"));
+  }
+  tokens.extend(Invocation!(T_CS!("\\end"), vec![T_OTHER!(env)]).unlist());
+  Ok(Tokens::new(tokens))
+}

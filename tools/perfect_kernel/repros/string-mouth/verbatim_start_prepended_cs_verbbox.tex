@@ -1,0 +1,19 @@
+% witness: readarray/readarray (readarray.tex:440 \begin{verbbox}[\footnotesize]), verbatimbox,
+%   stackengine, tabstackengine, numberedblock manuals
+% oracle:  pdflatex 0 errors; "hello world" (and verbbox: "gamma env" in \footnotesize)
+% engines: rust (56hb) = "[X]\nhello world" — \verbatim@start swallowed the pending \vbi, the
+%   bracket leaked into the capture; perl = the same bracket, 6 errors on the verbbox witness
+% expect:  0 errors; <verbatim font="typewriter">hello world\n</verbatim>
+% status:  GREEN (batch 56hc)
+% mechanism: verbatim.sty:107-112 prepends a control sequence after \verbatim@start to line 1
+%   (tex.web §506: \if\noexpand#1\noexpand~ holds only for the active line end); verbatim_sty.rs
+%   read_verbatim_lines puts it at the head of line 1's \verbatim@addtoline.
+\documentclass{article}
+\usepackage{verbatim}
+\newcommand\vbi[1][]{}
+\newenvironment{vc}{\verbatim\vbi}{\endverbatim}
+\begin{document}
+\begin{vc}[X]
+hello world
+\end{vc}
+\end{document}

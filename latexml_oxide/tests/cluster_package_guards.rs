@@ -18574,6 +18574,53 @@ Body.
     assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
   }
 
+  /// Batch 56hc: verbatim.sty's `\verbatim@start#1` drops only the active line
+  /// end; a control sequence after it is prepended to line 1 and runs with the
+  /// line's remainder (verbatim.sty:107-112, tex.web §506). verbatimbox's
+  /// `\verbatim\verbbox@inner` (verbatimbox.sty:90/107) consumes the environment's
+  /// `[\footnotesize]` that way; our reader swallowed the command, so the
+  /// bracket leaked into the verbatim and the size was lost (readarray.tex:440).
+  #[test]
+  fn verbatim_start_runs_a_prepended_command() {
+    let tex = r"\documentclass{article}
+\usepackage{verbatim}
+\newcommand\vbi[1][]{}
+\newenvironment{vc}{\verbatim\vbi}{\endverbatim}
+\begin{document}
+\begin{vc}[X]
+hello world
+\end{vc}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<verbatim font=\"typewriter\">hello world\n</verbatim>"),
+      "{xml}"
+    );
+    if !kpsewhich_has("verbatimbox.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{verbatimbox}
+\begin{document}
+Two:
+\begin{verbbox}[\footnotesize]
+gamma env
+\end{verbbox}
+\theverbbox
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<verbatim font="typewriter" fontsize="80%">gamma env</verbatim>"#),
+      "{xml}"
+    );
+  }
+
   /// Batch 56hb: after a prefix TeX reads on to the next non-blank non-relax
   /// token (tex.web §1211, §404), so `\protected\relax\def` and
   /// `\protected<space>\def` define protected macros. Both engines cleared the
