@@ -2,7 +2,7 @@
 % oracle: pdflatex -> "! Dimension too large." result clamped to 16383.99998pt (max_dimen)
 % engines: pdflatex TL2025
 % expect: kernel clamps overflowing scan_dimen to max_dimen + arith_error, no garbage, no panic
-% status: RED  (today: B=[100899720527872.0pt] garbage from i128->i64 truncation)
+% status:  KEPT (2026-09-23: a deliberate divergence -- batch 56bq clamps only past the i64 range, keeping LaTeXML headroom above max_dimen for pgf intermediates re-scanned as <factor><internal dimen>; pinned by perfect_kernel_batch56::dimension_overflow_clamps_to_max_dimen. TeX clamps at 2^30 sp (tex.web 460) and caps integers at 2^31-1 (445); tightening needs a pgf audit first)
 % mechanism: fixpoint_unit numeric_ops.rs:80 (fix*num/den) as i64 TRUNCATES (wraps); read_dimension gullet.rs:3020
 \documentclass{article}
 \begin{document}
