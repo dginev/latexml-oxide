@@ -1,0 +1,17 @@
+% witness: pgfornament-han/pgfornament-han-doc (pgfornament.sty:47-51 `\def\m ##1 ##2 {…}` inside
+%   \pgf@@ornament, patched by pgfornament-han with etoolbox \pretocmd/\patchcmd); ~1000 hidden
+%   delimiter misses (`\l Match:1 `…) under the strict check (56gn), ornaments drawn as a point
+% oracle:  pdflatex 0 errors; "(a—b]"
+% engines: rust (s115) = "(a—a]b" — the nested ##1 became the outer #1
+% expect:  0 errors; <p>(a—b]</p>
+% status:  GREEN (batch 56gt)
+% mechanism: etoolbox_sty.rs \patchcmd round-trips the body through untex() → string → re-tokenize +
+%   pack_parameters; a stored nested PARAM was written as a single `#` and re-packed as the outer
+%   parameter. It is now written `##`, as \meaning and etoolbox's own patterns do.
+\documentclass{article}
+\usepackage{etoolbox}
+\def\outer#1{\def\inner##1{[#1|##1]}\inner{b}}
+\patchcmd{\outer}{[}{(}{}{\typeout{PATCHFAIL}}
+\begin{document}
+\outer{a}
+\end{document}

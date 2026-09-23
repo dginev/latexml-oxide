@@ -18383,6 +18383,27 @@ Body.
     );
   }
 
+  /// Batch 56gt: etoolbox's `\patchcmd` re-tokenizes the patched body; a nested
+  /// macro's parameter (`##1` of an inner `\def`) came back as the OUTER `#1`
+  /// (pgfornament.sty:47-51's path operators in pgfornament-han's patched
+  /// ornament macro: every point collapsed, the ornaments drew nothing).
+  #[test]
+  fn patchcmd_keeps_nested_macro_parameters() {
+    let tex = r"\documentclass{article}
+\usepackage{etoolbox}
+\def\outer#1{\def\inner##1{[#1|##1]}\inner{b}}
+\patchcmd{\outer}{[}{(}{}{\typeout{PATCHFAIL}}
+\begin{document}
+\outer{a}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("PATCHFAIL"), "{stderr}");
+    assert!(xml.contains("<p>(a—b]</p>"), "{xml}");
+  }
+
   /// Batch 56gr: fancyvrb's `\VerbatimEnvironment` in a user environment that
   /// wraps minted (RetoMatematico.cls:174 `{codigo}`) names the environment whose
   /// `\end` closes the verbatim body (fancyvrb.sty:295-297/386-403); the minted

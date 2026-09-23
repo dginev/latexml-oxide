@@ -1365,7 +1365,25 @@ LoadDefinitions!({
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
-    let string        = expansion_tokens.untex();
+    // A stored body keeps a nested macro's parameter (`##1` of an inner `\def`)
+    // as one PARAM token, which `untex` writes as a single `#`; re-tokenized and
+    // packed below it became the OUTER parameter — pgfornament.sty:47-51's
+    // `\def\m ##1 ##2 {…}` in the patched `\pgf@@ornamenthan` turned into
+    // `\def\m #1 #2`, the ornament number, so every path operator of
+    // pgfornament-han missed its delimiter and the ornaments drew nothing.
+    // Written as `##`, as `\meaning` and etoolbox's own patterns do (`#1` the
+    // macro's parameter, `##1` a nested one), the round trip is exact. Perl
+    // shares the corruption (KNOWN_PERL_ERRORS #221).
+    let string = Tokens::new(
+      expansion_tokens
+        .unlist_ref()
+        .iter()
+        .flat_map(|t| {
+          if t.get_catcode() == Catcode::PARAM { vec![*t, *t] } else { vec![*t] }
+        })
+        .collect(),
+    )
+    .untex();
     let search_string = search.untex();
     // All characters are meant to be matched as literal, avoid regex interpretation
     // search_string = quotemeta(search_string);

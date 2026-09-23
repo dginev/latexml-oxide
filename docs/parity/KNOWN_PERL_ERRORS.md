@@ -6258,3 +6258,18 @@ engines: 10 Errors + 1 Fatal (Perl `deep_recursion` in `digestUntil`, Rust
 Witness xytree/xytree-doc-en (pdflatex clean). Kept: the fix is the xy emulation itself
 (bind `\xy@@ix@` before the entry loop, keep the `\halign` group), HIGH risk, one doc.
 Root-causer `~/data/pk_agents/w59/xytree/`.
+
+## 221. A successful etoolbox `\patchcmd` turns a nested macro's parameter into the outer one (FIXED in Rust)
+
+Perl's native `\patchcmd` (etoolbox.sty.ltxml:1290-1310) patches the `UnTeX` string of the
+stored body and re-installs it through `TokenizeInternal(...)->packParameters`
+(Expandable.pm:31). `Token.pm:306-308` renders a stored `CC_ARG` as `#1` and a `CC_PARAM` as a
+bare `#`, so a nested macro's `##1` (stored as one PARAM + digit) comes out as `#1` — and
+`packParameters` (Tokens.pm:122-140) re-packs it as the OUTER parameter. Trigger:
+`\usepackage{etoolbox}\def\outer#1{\def\inner##1{[#1|##1]}\inner{b}}\patchcmd{\outer}{[}{(}{}{}`
+then `\outer{a}` — pdflatex `(a—b]`, Perl `(a—a]b`. Witness pgfornament-han/pgfornament-han-doc:
+pgfornament.sty:47-51's `\def\m ##1 ##2 {…}` path operators inside the patched
+`\pgf@@ornamenthan` read the ornament number — every SVG point collapsed. **Rust (FIXED,
+batch 56gt):** the body string doubles each PARAM token (`##`, as `\meaning` and etoolbox's own
+patterns write it), so the re-pack is exact; `etoolbox_sty.rs` `\patchcmd`. Guard
+`perfect_kernel_batch56::patchcmd_keeps_nested_macro_parameters`.
