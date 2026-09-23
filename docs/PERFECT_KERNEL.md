@@ -52,71 +52,67 @@ recall = real content loss) and from semantic-markup gaps, NOT from error-cluste
 mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
 56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
 etc. were stale-log false-positives that reproduce 0 errors on the current binary).
-## Continuation — state and next steps (2026-09-22, end of session)
+## Continuation — state and next steps (2026-09-23)
 
-Branch `perfect_kernel` (check `git branch --show-current` first). Gemini is out of quota
-for a week — delegate to Opus 4.8 `root-causer`/`reviewer` agents, ≤4 at once. Memory cap
-is **8 GB** from s110 on (`--max-memory=8192`, `ulimit -v 8912896`, user ruling).
+Branch `perfect_kernel` (check `git branch --show-current` first). Delegate read-only work
+to Opus 4.8 `root-causer`/`reviewer`/`log-scanner` agents (≤4 at once). Memory cap 8 GB
+(`--max-memory=8192`, `ulimit -v 8912896`). Sweeps: `~/data/pk_agents/w59/main/sweep113_launch.sh`
+is the current recipe (vendor TL + `LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63;
+validate → post mono → HTML recall in one chain).
 
-**Measured (axis 2):** s107 270 → s108 248 → s109 241 → s110 229 → s111 222 → **s112 211 invalid (2156/2367, 91.1 %)**; binary 71bdc190b9. Landed after s111: 56fx (ERROR-marker hoist, 8 → 0),
-56fy (XMText attribute gate, principia 6 → 0), 56ga (bib-resource scanner skips `\jobname`-style
-names; gitlog/incgraph post errors → 0), the Unicode-aware recall auditor, the 8 GB cap. Withdrawn:
-56fz (Perl's `FontDecodeString` map_max port: faithful, fixes russ_doc's Cyrillic, but Rust's accent
-composite emits precomposed char TOKENS that the digester cannot tell from raw bytes — 11 encoding
-fixtures red; needs the composite-token marker or an inputenc-table mouth decode, plus a utf8 default
-for `INPUT_ENCODING` — LEDGER row). Also landed: 56gb (pgfmath `divide(x, 0)` = x per
-tex.web §107/§1240; carbohydrates_en Fatal → valid), 56gc (a space token's character code is 32,
-tex.web §289; tikzviolinplots' `Extra \else` gone, Fatal → completes). Open kernel leads from the
-loop triage: frankenstein/titles — an engine `\aftergroup` × url-`\Url` push-back × active `^^M`
-re-digestion loop (17-line repro, needs a stepping session); stringstrings under raw interpretation —
-`\whereisword` returns 0 and `\noblanks[e]` swallows the body (root-causer running). **s112 MEASURED: 211 invalid (2156/2367, 91.1 %)**, newly invalid none; pdflatex-clean set error-free 1241/1,248, invalid 31; recall of record unchanged (median 98.6). Landed AFTER s110, not yet swept: 56fq (harness keep-better:
-pgfornament-han), 56fr (`xmlns` for spilled-only prefixes: 9 docs), 56fs (PushbackLimit
-trio), 56ft (conditional skip stops at the input boundary), 56fu (rootless document = Fatal),
-56fw (stranded `{titlepage}` → layout paragraph: chemexec ×2, l2picfaq, ClassicThesis).
-Projection for s111 ≈ 218 invalid. Axes 1/3 not re-measured this session (recall 98.3 at
-the last reading, `s3_sweep.sh`).
+**Working rules added 2026-09-23 (user):** every fix is catalogued as a minimal `.tex` repro in
+`tools/perfect_kernel/repros/<mechanism>/` AND a red/green guard (a generalizing refactor pass is
+planned at the end); a schema win counts only if content is preserved — run
+`tools/perfect_kernel/content_diff.py old.xml new.xml` on every witness and
+`pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
 
-**Where the 229 stand** (clustering `~/data/pk_agents/w58/s109_residual/summary.md`,
-triage `~/data/pk_agents/w58/frontmatter69/triage.tsv`, LEDGER triage rows 2026-09-22):
-- Ruled: truncations of Fatal/timeout runs 84, dangling IDREF 25, engine-primitive ink 14,
-  section-in-item 11.
-- SHARED with Perl (a fix is a surpass, each a judgment call): 55 of the 69
-  frontmatter-after-body docs (a leaked undefined preamble command's argument opens the body
-  before `\maketitle`; Perl fails harder or strands identically), every list-structure and
-  math-leak case, 5 of the 7 remaining loop Fatals.
-- **Open, mechanically fixable (~15 docs), ranked:**
-  1. ERROR-marker hoist (8 docs, surpass, 7 beyond Perl): a leading para whose only
-     elements are `<ltx:ERROR>` markers with whitespace-only text outside them is
-     content-free for `place_frontmatter` (`node_is_content_free` /
-     `subtree_elements_all_invisible`, base_utilities.rs); the marker stays, relocated below
-     the frontmatter. Repro `~/data/pk_agents/w58/frontmatter69/repro_erronly_hoist.tex`.
-     Needs a DIVERGENCES entry.
-  2. Block-class child of a list-only container → auto-opened `item` (qworld 24 errors,
-     colorframed, tableaux; surpass): an `AUTO_OPEN_BRIDGES` row `itemize|enumerate|
-     description → item → para` for Block-class non-item children, and `insert_block`
-     routing its final placement through `find_insertion_point` when the context is a list.
-     Repros `~/data/pk_agents/w58/listmath/{m_ii,repro_blockinlist}.tex`.
-  3. uspatent/PatentApplicationGuide: `latexml_contrib/src/refstyle_sty.rs` stub shadows
-     the on-disk refstyle.sty without `\RS@ifundefined` (kernel gap: `\@ifundefined` vs
-     `\let\x\@undefined`). macros2e: `\MakeSpecialShortVerb` undefined.
-  4. Rust-only loops: carbohydrates_en (chemfig's stale `\CF@atom@sep` — an undefined CS
-     recovered as a macro in a dimen context must yield a once-only "not a register" and
-     ADVANCE); the store-verbatim-then-re-input family (frankenstein/titles is the clean
-     driver, Perl clean; tikzfxgraph, xsim). Repros `~/data/pk_agents/w58/pushback/`.
-  5. tikzviolinplots `Error:unexpected:\else Extra \else already saw \else` (a Rust
-     conditional bug, line 182); xytree-doc-en recursion through our `\lx@xy@svg` binding.
-- Perf ceiling (>180 s at 8 GB): lie-hasse (E8 loop), pgf-interference-de/-en (360 s =
-  luatex retry ×2), pgf-PeriodicTableManual, tcolorbox, wheelchart (now runs to the wall
-  instead of the memory fuse). Open follow-up: pass 2 clones `node_fonts` per segment.
-- Ruling tension to surface: l3news/ltnews/lua-tikz3dtools sit on the M4/M5 do-not-reopen
-  list, but Perl places their frontmatter cleanly — mechanically fixable, not fidelity-bound.
+**Measured:** s110 229 → s111 222 → s112 211 → **s113 148 invalid (2219/2367, 93.7 %)**, 63 newly
+valid, 0 newly invalid, 0 tally regressions, recall of record unchanged (median 98.6, mean 93.72,
+no doc down > 0.5). Landed this session: 56gd (auto-opened `item` for a block / same-kind list in
+a list, #261; refstyle loads raw; newverbs `\MakeSpecialShortVerb`), 56ge (`\global\read`
+bookkeeping stays local — csvsimple-legacy's ~1,600 `\par`-corrupted attributes), **56gf (the
+frontmatter always opens the document — preamble residue marked at `\begin{document}`, visible
+pre-flush content follows the head-placed frontmatter; user-approved surpass #262; 55 of the 59
+title-after-body manuals valid)**, 56gg (beamer in-frame `\frame` = kernel box frame; titlepage
+unwind re-homes children #263; heading page breaks precede the section #264), stricter diagnostic
+counting in guards/tools, and the content tooling.
 
-**Method notes that saved time today** (memory `wisdom_perfect_kernel_batch56fl_fp_recipes`):
-read a witness's `(Loading …)` lines before assuming the raw-class path; count per-yield
-(`node_boxes`, C-live) on the release binary instead of dhat; never lower the cap to make a
-doc fit; every scan-until-delimiter loop needs Perl's run-out branch; stage by line
-(`scratchpad/stage_lines.py`) when batches share a file; a rewrite of pushed backup commits
-is a lease push after a backup ref.
+**Where the 148 stand** (`~/data/pk_agents/w59/main/jing113/`):
+- 91 no-XML Fatal/timeout runs — 89 fail in their own intended engine (oracle not clean), the
+  other 2 (bibarts, chessboard_and_beamer) are ruled; `~/data/pk_agents/w59/noxml/`.
+- 24 dangling IDREF (RULED KEEP); 2 duplicate ids (thuaslogos, ruled).
+- 13 sectioning inside an item/figure (`paragraph`/`subsubsection`/`section`; RULED LEAVE, #189 —
+  note #189 also inserts WITHOUT a diagnostic, so these docs are silently invalid).
+- 3 block inside `quote` (aguplus `sectional-block`, webquiz/… `logical-block`) — needs the
+  `quote_model = Para.model` ruling (LaTeXML-block.rnc:142 already floats it).
+- SHARED / document bugs, one each: item-in-math ×2, bibliography-in-box ×2 (biblatex-ext,
+  biblatex-cv), note/indexmark/glossarydefinition in XMText (inline-leak ×3), swfigure, msgguide
+  TOC-in-date, pgf-spectra late abstract, thalie/ndsu text-in-listing, brochure block-in-text,
+  stanli figure-in-titlepage, philex anchor.
+The schema axis is at its ruled ceiling; the remaining levers are rulings (section-in-item,
+quote model, inline-leak, dangling IDREF) and the content/semantic axes below.
+
+**Open leads (ranked):**
+1. jlreq heading levels — every jlreq run logs `Missing number` at jlreq.cls:6584: jlreq's heading
+   declarations meet the kernel's predefined `\section` ("Command \section already defined") and
+   never set `\jlreq@heading@level@<name>`; likely a kernel-vs-class boundary (latex.ltx defines
+   no `\section`). Root-causer running; the jlreq guard pins the warning set until it lands.
+2. Non-Latin text via font-encoding decode (russ_doc/rusnat Cyrillic, arabi) — 56fz withdrawn over
+   the accent-composite token collision; design investigation running.
+3. Repro catalog re-grade: 142 headers say RED but convert with 0 errors, 6 GREEN headers error
+   identically on s112 (never really checked — the runner's relative-`--bin` bug), 4 CONTROLs now
+   clean, 61 repros below 100 % PDF recall; classification running (`~/data/pk_agents/w59/regrade/`).
+4. frankenstein/titles loop (RUST-ONLY, a +1 group per compsci `\cs` feeding titles' walk-out
+   scanner; MED-HIGH, one manual).
+5. Perf ceiling (> 180 s at 8 GB): lie-hasse, pgf-interference ×2, pgf-PeriodicTableManual,
+   tcolorbox, wheelchart (6 timeouts in s113).
+6. Axis 2b — a semantic-markup coverage measure (constructs in the source vs elements in the XML)
+   is still unbuilt.
+
+**Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
+MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);
+stage by line when batches share a file (`git hash-object` of a HEAD+hunk file into the index);
+a `git stash --keep-index` pop can meet the committed half — resolve with the stash's copy.
 
 **Healthy-subset projection (audited 2026-09-22; root-causer audit of the main
 session's first cut, which was wrong on several counts — recomputed with `LC_ALL=C`
