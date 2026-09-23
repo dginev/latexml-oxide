@@ -138,9 +138,13 @@ quote_attributes =
   attribute role { text }?
 
 ## Content model for \elementref{quote}.
-quote_model = Block.model
+quote_model = (Block.class | Misc.class | Meta.class | para | logical-block | sectional-block)*
 # This was Inline.model, but since quotes can be arbitrarily complex
 # including equations, etc, not just verse, should be Block.model, perhaps even Para.model?
+# (latexml-oxide) Block.model widened with para, logical-block and sectional-block (user
+# ruling 2026-09-23, OXIDIZED_DESIGN #271): a quote holding a logical-block (webquiz) or a
+# sectional-block (aguplus) is valid; a bare <p> stays valid. Floats still escape a quote
+# (they float to the page), bare sectioning units stay out.
 
 #======================================================================
 

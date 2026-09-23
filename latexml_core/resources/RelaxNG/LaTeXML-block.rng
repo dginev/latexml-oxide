@@ -219,7 +219,16 @@ for example being table rows or cells arising from an eqnarray.</a:documentation
   </define>
   <define name="quote_model">
     <a:documentation>Content model for \elementref{quote}.</a:documentation>
-    <ref name="Block.model"/>
+    <zeroOrMore>
+      <choice>
+        <ref name="Block.class"/>
+        <ref name="Misc.class"/>
+        <ref name="Meta.class"/>
+        <ref name="para"/>
+        <ref name="logical-block"/>
+        <ref name="sectional-block"/>
+      </choice>
+    </zeroOrMore>
   </define>
   <!--
     This was Inline.model, but since quotes can be arbitrarily complex

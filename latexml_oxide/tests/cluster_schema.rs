@@ -180,3 +180,28 @@ fn listing_language_class_is_an_nmtoken() {
     r##"<listing class="ltx_lst_language_C ltx_lstlisting" data="aW50IHg7" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_keyword" font="bold">int</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">x</text>;</listingline></listing>"##,
   );
 }
+
+/// A quote admits the paragraph and box containers a quotation can hold (batch
+/// 56gw, user ruling 2026-09-23, OXIDIZED_DESIGN #271). Perl's `quote_model` is
+/// `Block.model` (LaTeXML-block.rnc): a minipage holding `\tableofcontents`
+/// (`logical-block`, webquiz) or `\section*` (`sectional-block`, aguplus) made
+/// the document invalid, and a `\noindent` paragraph lost its `ltx:para` (and its
+/// `ltx_noindent` class) to the auto-close (tagpair/sample). Whole `<para>`,
+/// schema-valid.
+#[test]
+fn quote_holds_paragraph_and_box_blocks() {
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\n\\begin{document}\n\\begin{quote}\n\\noindent Quoted.\n\\end{quote}\n\
+     \\begin{quote}\n\\begin{minipage}{0.8\\linewidth}\n\\tableofcontents\n\\end{minipage}\n\\end{quote}\n\
+     \\begin{quote}\n\\begin{minipage}{\\linewidth}\n\\section*{Notation}\nBody.\n\\end{minipage}\n\\end{quote}\n\
+     \\end{document}\n",
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_valid(&xml);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></logical-block></quote><quote><sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></sectional-block></quote></para>"##,
+  );
+}
