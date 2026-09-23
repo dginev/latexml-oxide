@@ -20,7 +20,11 @@ use std::cell::Cell;
 pub enum DefinitionOrigin {
   /// Made before any loader seam set an origin (engine bootstrap) — ours.
   Unknown,
-  /// Restored from the plain format dump (`<embedded:plain>`).
+  /// The PLAIN layer: restored from the plain format dump (embedded or a
+  /// `plain.YYYY.dump.txt` on disk), or made by a plain pool (`plain_*`). Perl
+  /// tells the same layer by its definitions' source (`isDefinableLaTeX`,
+  /// latex_constructs.pool.ltxml:2512-2517: `getShortSource =~ /^plain/`): LaTeX's
+  /// `\newcommand`/`\@ifdefinable` may redefine what plain defined.
   Plain,
   /// Restored from the LaTeX format dump (`<embedded:latex>`).
   LatexDump,

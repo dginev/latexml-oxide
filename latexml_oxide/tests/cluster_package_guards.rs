@@ -18204,6 +18204,45 @@ Side.
     );
   }
 
+  /// Batch 56gh: `\@ifdefinable` tests Perl's `isDefinableLaTeX`
+  /// (latex_constructs.pool.ltxml:2512-2517, :5461-5468): a command the PLAIN
+  /// layer defined (`\proclaim`, `\beginsection` — plain_constructs pool) is
+  /// definable for LaTeX; a kernel LaTeX command (`\section`) is not. Rust pools
+  /// carry no `plain_*` locator, so the plain layer is read from the definition's
+  /// provenance (a plain pool, or the plain dump — embedded or on disk).
+  #[test]
+  fn ifdefinable_accepts_a_plain_macro() {
+    let tex = r"\documentclass{article}
+\makeatletter
+\@ifdefinable\proclaim{\def\resultA{plain-ok}}
+\@ifdefinable\beginsection{\def\resultB{plain-ok}}
+\@ifdefinable\zzznew{\def\resultC{new-ok}}
+\makeatother
+\begin{document}
+[\resultA][\resultB][\resultC]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[plain-ok][plain-ok][new-ok]</p>"), "{xml}");
+    // A kernel LaTeX command stays not-definable: `\@notdefinable` reports it.
+    let tex = r"\documentclass{article}
+\makeatletter
+\@ifdefinable\section{\def\resultD{wrong}}
+\providecommand\resultD{kept}
+\makeatother
+\begin{document}
+[\resultD]
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert!(
+      stderr.contains("Command \\section already defined"),
+      "{stderr}"
+    );
+    assert!(xml.contains("<p>[kept]</p>"), "{xml}");
+  }
+
   /// Batch 56gg: a `\clearpage` inside a titlesec `\titleformat` runs while the
   /// heading is built; its `<pagination>` floated out of `<title>` and stood
   /// between the headings (`element "toctitle" not allowed here`, bmstu-example;

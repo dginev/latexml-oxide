@@ -66,10 +66,16 @@ macro_rules! InnerPool {
         true,
         Some($crate::prelude::state::Scope::Global),
       );
-      ::latexml_core::definition::origin::with_origin(
-        ::latexml_core::definition::origin::DefinitionOrigin::Pool,
-        || $crate::$name::load_definitions(),
-      )?;
+      // A plain pool's definitions belong to the plain layer (Perl: their source is
+      // `plain_*.pool`, which `isDefinableLaTeX` lets LaTeX redefine).
+      let __origin = if stringify!($name).starts_with("plain") {
+        ::latexml_core::definition::origin::DefinitionOrigin::Plain
+      } else {
+        ::latexml_core::definition::origin::DefinitionOrigin::Pool
+      };
+      ::latexml_core::definition::origin::with_origin(__origin, || {
+        $crate::$name::load_definitions()
+      })?;
     }
   }};
 }

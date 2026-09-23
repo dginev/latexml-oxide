@@ -225,8 +225,12 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if has_value(&s!("{}:autoload", cs.to_string())) {
     return Ok((true, false));
   }
-  let plain = lookup_definition(cs)?
-    .is_some_and(|prev| prev.get_locator().is_some_and(is_plain_definition_source));
+  // Perl reads the definition's source (`=~ /^plain/`); Rust pools carry no such
+  // locator, so the plain LAYER is also read from the definition's provenance.
+  let plain = lookup_definition(cs)?.is_some_and(|prev| {
+    prev.get_origin() == definition::origin::DefinitionOrigin::Plain
+      || prev.get_locator().is_some_and(is_plain_definition_source)
+  });
   Ok((plain, plain))
 }
 

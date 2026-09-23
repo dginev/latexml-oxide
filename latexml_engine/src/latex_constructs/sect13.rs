@@ -1526,8 +1526,11 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
+  // Perl latex_constructs.pool.ltxml:5461-5468 tests `isDefinableLaTeX`: a CS whose
+  // prior definition came from the PLAIN pool is definable too (LaTeX redefines plain
+  // macros freely). Guard `perfect_kernel_batch56::ifdefinable_accepts_a_plain_macro`.
   DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
-    if is_definable(&token) {
+    if is_definable_latex(&token)?.0 {
       iftoken.unlist()
     } else {
       let token_str = token.to_string();
