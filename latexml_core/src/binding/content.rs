@@ -119,17 +119,17 @@ impl Default for InputDefinitionOptions {
 /// `\addchap`, DEMO-TUDaPhD) never ran. Only when lthooks is loaded
 /// (`\UseHook` defined) and only for package/class loads. Guard:
 /// `perfect_kernel_batch54::package_after_hook_fires_for_a_binding_load`.
+///
+/// The load is bracketed, as in `\@onefilewithoptions` (latex.ltx:18772/18789)
+/// and `\InputIfFileExists` (:19649/19655), by ltfilehook's file-name stack
+/// (`push_load_file_stack` before, `…@pop@@` after the hooks), which packages
+/// read to learn which files are open: scrlfile-hook.sty:146-158 seeds its own
+/// stack from it and pops once per `file/after`, so with the kernel stack left
+/// empty every file already open when it loaded underflowed ("More file names
+/// popped from stack than put to", 983 corpus manuals, 5 per nomencl load).
+/// Guard: `perfect_kernel_batch56::file_hooks_keep_the_file_name_stack`.
 fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
-  if lookup_definition(&T_CS!("\\UseHook"))?.is_none() {
-    return Ok(());
-  }
-  // latex.ltx:18766-18827 runs no hooks for a file that does not exist
-  // (`\@missing@onefilewithoptions`); a request whose name is a control
-  // sequence (frankenstein lips/slemph/blkcntrl/achicago `\usepackage{…}`
-  // reached with `\aftergroup` as the name — already a `missing_file`
-  // error) would otherwise put that CS inside every `\csname __hook…` label,
-  // 12 more errors per document.
-  if name.contains('\\') {
+  if !load_hooks_active(name)? {
     return Ok(());
   }
   let kind = if as_type == "cls" { "class" } else { "package" };
@@ -146,6 +146,35 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
   };
   digest(crate::mouth::tokenize_internal(TeXString::assembled(code)))?;
   Ok(())
+}
+
+/// Push the load onto ltfilehook's file-name stack, outermost as in latex.ltx
+/// (before the `before` hooks); true when pushed. The caller pops exactly when
+/// this pushed, whether or not the file was found: the decision is taken once,
+/// before the load, since the load itself can define the kernel (the
+/// `latexml.sty` preload brings in LaTeX.pool).
+fn push_load_file_stack(name: &str) -> Result<bool> {
+  let active = load_hooks_active(name)?
+    && lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some();
+  if active {
+    digest(T_CS!("\\@expl@@@filehook@file@push@@"))?;
+  }
+  Ok(active)
+}
+
+/// Whether `use_load_hooks` runs for this load: lthooks is loaded, and the
+/// name is a file name.
+fn load_hooks_active(name: &str) -> Result<bool> {
+  if lookup_definition(&T_CS!("\\UseHook"))?.is_none() {
+    return Ok(false);
+  }
+  // latex.ltx:18766-18827 runs no hooks for a file that does not exist
+  // (`\@missing@onefilewithoptions`); a request whose name is a control
+  // sequence (frankenstein lips/slemph/blkcntrl/achicago `\usepackage{…}`
+  // reached with `\aftergroup` as the name — already a `missing_file`
+  // error) would otherwise put that CS inside every `\csname __hook…` label,
+  // 12 more errors per document.
+  Ok(!name.contains('\\'))
 }
 
 /// TODO: Flesh out with the full infrastructure, incremental functionality for now.
@@ -582,6 +611,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
   // `\errmessage` since batch 56g). Witness: every `[luatex]` profile run.
   // Guard: `perfect_kernel_batch56::preload_that_pulls_in_the_format_pops_with_the_native_stack`.
   let mut pushpop = false;
+  let mut file_stack_pushed = false;
   if options.handleoptions {
     pushpop = before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
     def_macro(
@@ -655,6 +685,7 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         }),
       )?;
     }
+    file_stack_pushed = push_load_file_stack(name)?;
     use_load_hooks(name, &as_type, "before")?;
   }
   // No `else` branch: Perl Package.pm L2580-2611 only mutates
@@ -1135,6 +1166,9 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
           "\\lx@class@loaded@raw{{{name}}}"
         ))))?;
       }
+    }
+    if file_stack_pushed {
+      digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
     }
     // Perl-faithful: Package.pm:2637 —
     //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));

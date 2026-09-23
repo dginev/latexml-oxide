@@ -18519,6 +18519,32 @@ Body.
     assert!(xml.contains("<p>(a—b]</p>"), "{xml}");
   }
 
+  /// Batch 56gz: a package or class load keeps ltfilehook's file-name stack
+  /// (`\@expl@@@filehook@file@push@@`/`…@pop@@` around the file hooks, latex.ltx
+  /// :18772/18789). scrlfile-hook.sty:146-158 seeds its own stack from the
+  /// kernel's and pops it once per `file/after`; with the kernel stack empty
+  /// every file already open when it loaded underflowed: nomencl → tocbasic →
+  /// scrbase → scrlfile → scrlfile-hook, 5 "More file names popped from stack
+  /// than put to" warnings (983 corpus manuals).
+  #[test]
+  fn file_hooks_keep_the_file_name_stack() {
+    if !kpsewhich_has("scrlfile-hook.sty") {
+      return;
+    }
+    let tex = r"\documentclass{article}
+\usepackage{nomencl}
+\begin{document}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("popped from stack"), "{stderr}");
+    assert!(!stderr.contains("should not happen"), "{stderr}");
+    assert!(xml.contains("<p>x</p>"), "{xml}");
+  }
+
   /// Batch 56gr: fancyvrb's `\VerbatimEnvironment` in a user environment that
   /// wraps minted (RetoMatematico.cls:174 `{codigo}`) names the environment whose
   /// `\end` closes the verbatim body (fancyvrb.sty:295-297/386-403); the minted
