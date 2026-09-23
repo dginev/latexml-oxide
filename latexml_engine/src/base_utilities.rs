@@ -1583,10 +1583,11 @@ LoadDefinitions!({
     // paragraph) ends up behind the frontmatter; a built <titlepage> ahead of it
     // anchors it (a superset of #242, which placed at the current point when a
     // pagebreak sat between the titlepage and `\maketitle` — no corpus doc has that
-    // shape; the anchored tree is the valid one); visible content ahead of it means
-    // Perl's current-point placement (faithful: no visible reordering —
-    // amsldoc/tkz-doc/tuda-ci/tzplot vs the logo-cover controls).
-    place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter, OnStop::Current)?;
+    // shape; the anchored tree is the valid one); preamble residue ahead of it moves
+    // behind it, and visible body content ahead of it stays in order after the
+    // head-placed frontmatter (#262; Perl's current-point placement stranded the
+    // title — amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
+    place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
   },
   after_digest => {
     digest_front_matter()?;
@@ -1641,9 +1642,9 @@ LoadDefinitions!({
       if first_flush {
         maybe_promote_leading_title(document)?;
       }
-      place_frontmatter(document, first_flush, FrontmatterAnchor::LeadingFrontmatter, OnStop::Top)?;
+      place_frontmatter(document, first_flush, FrontmatterAnchor::LeadingFrontmatter)?;
     } else {
-      place_frontmatter(document, false, FrontmatterAnchor::Top, OnStop::Top)?;
+      place_frontmatter(document, false, FrontmatterAnchor::Top)?;
       maybe_dedup_leading_title_ink(document)?;
     }
   },
@@ -2675,14 +2676,57 @@ pub enum FrontmatterAnchor {
   LeadingFrontmatter,
 }
 
-/// What a flush does when something it may not reorder stands before it.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum OnStop {
-  /// Place at the current insertion point — Perl's `\maketitle` (`Base_Utility.pool.ltxml:918`).
-  Current,
-  /// Place at the top — Perl's fallback (`Base_Utility.pool.ltxml:927-945`).
-  Top,
+/// Attribute marking a root child built before `\begin{document}` (see
+/// [`mark_preamble_residue`]). Internal (`_`-prefixed): stripped from the output.
+const PREAMBLE_RESIDUE: &str = "_preamble";
+
+/// Mark every element child of the document root as PREAMBLE residue. Called by the
+/// `\begin{document}` constructor when the root already exists — the preamble opened
+/// it, so each child was typeset where LaTeX forbids typesetting (`\@nodocument`).
+/// [`place_frontmatter`] moves such nodes below the frontmatter and never wraps them
+/// as a cover (OXIDIZED_DESIGN #262).
+pub fn mark_preamble_residue(root: &Node) {
+  for mut child in root.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode)
+      && document::get_node_qname(&child) != pin_static("ltx:resource")
+    {
+      let _ = child.set_attribute(PREAMBLE_RESIDUE, "true");
+    }
+  }
 }
+
+/// End the paragraph the flush interrupts: close the open elements between the
+/// insertion point and the document root when every one of them auto-closes (a `p`
+/// in a `para`) and none is a frontmatter-group element; otherwise leave the point
+/// alone. An open `{titlepage}` is not a paragraph — `\begin{titlepage}\maketitle
+/// \end{titlepage}` relies on the `\unwind@titlepage` hook finding it open (closing
+/// it here left an empty `<titlepage/>` behind).
+fn close_auto_closable_to_root(document: &mut Document, root: &Node) -> Result<()> {
+  let mut n = document.get_node().clone();
+  if n.get_type() != Some(NodeType::ElementNode) {
+    match n.get_parent() {
+      Some(p) => n = p,
+      None => return Ok(()),
+    }
+  }
+  let mut cur = n;
+  while &cur != root {
+    if cur.get_type() != Some(NodeType::ElementNode)
+      || !document::can_auto_close(&cur)
+      || is_frontmatter_group_element(&cur)
+    {
+      return Ok(());
+    }
+    match cur.get_parent() {
+      Some(p) => cur = p,
+      None => return Ok(()),
+    }
+  }
+  document.close_to_node(root, true)
+}
+
+/// Was `node` built before `\begin{document}`? ([`mark_preamble_residue`])
+fn is_preamble_residue(node: &Node) -> bool { node.has_attribute(PREAMBLE_RESIDUE) }
 
 /// The ONE frontmatter placement pass (OXIDIZED_DESIGN #247). The schema wants every
 /// frontmatter-group element before all `document.body.class` content
@@ -2696,17 +2740,20 @@ pub enum OnStop {
 /// * a first-group element (`is_frontmatter_group_element`) stays and becomes the
 ///   anchor candidate;
 /// * a content-free node (`node_is_content_free`: a pagebreak, an empty paragraph, an
-///   ink-free empty box) is left in place and, if it preceded the anchor, moved after
-///   the placed frontmatter — it carries no ink, so nothing visible reorders;
+///   ink-free empty box) or PREAMBLE residue (`is_preamble_residue`: built before
+///   `\begin{document}`, where LaTeX forbids typesetting) is left in place and, if it
+///   preceded the anchor, moved after the placed frontmatter;
 /// * hand-typeset title-page LAYOUT — `para` / demotable `logical-block` / `pagination`
 ///   with visible ink, `wrap_layout` only (the abstract-only fallback: a cover typeset
 ///   before a `\begin{abstract}` with no `\maketitle`) — is wrapped, in its exact order,
 ///   into `<ltx:titlepage>` (`titlepage_model = (FrontMatter.class |
 ///   SectionalFrontMatter.class | Block.class)*` is the schema's container for exactly
 ///   that; `para`→`block`, `logical-block` demoted bottom-up as in #244);
-/// * anything else — a `<TOC>`, a section, a float, a root `<rule>`, an undefined-
-///   command `<ERROR>` para, a VISIBLE paragraph on the `\maketitle` path — ends the
-///   region: the pass then places exactly as Perl does (`on_stop`), reordering nothing.
+/// * anything else — a `<TOC>`, a section, a float, a root `<rule>`, a VISIBLE body
+///   paragraph on the `\maketitle` path — ends the region: it stays where it is and the
+///   frontmatter is placed ahead of it, so the document still opens with its front
+///   group (Perl places at the current point and strands the title; user-approved
+///   surpass, OXIDIZED_DESIGN #262).
 ///
 /// The frontmatter is inserted after the wrapped titlepage, else after the leading
 /// first-group run (`FrontmatterAnchor::LeadingFrontmatter`) or at the top, via the
@@ -2729,7 +2776,6 @@ pub fn place_frontmatter(
   document: &mut Document,
   wrap_layout: bool,
   anchor: FrontmatterAnchor,
-  on_stop: OnStop,
 ) -> Result<()> {
   // Drain the raw frontmatter queue first, as `insert_frontmatter` does, so
   // `frontmatter_pending` and the flush agree: the `{titlepage}` environment's
@@ -2759,7 +2805,7 @@ pub fn place_frontmatter(
   while i < bound {
     if is_frontmatter_group_element(&kids[i]) {
       last_first = Some(kids[i].clone());
-    } else if node_is_content_free(&kids[i]) {
+    } else if node_is_content_free(&kids[i]) || is_preamble_residue(&kids[i]) {
       movers.push(kids[i].clone());
     } else {
       break;
@@ -2769,16 +2815,13 @@ pub fn place_frontmatter(
   // Hand-typeset cover before the abstract → <titlepage>, in order.
   let mut titlepage: Option<Node> = None;
   if wrap_layout && i < bound {
-    let start = i;
-    let mut saw_visible = false;
-    while i < bound && is_titlepage_layout(&kids[i]) {
-      saw_visible |= !node_is_content_free(&kids[i]);
-      i += 1;
-    }
-    if saw_visible {
-      titlepage = Some(wrap_as_titlepage(document, &root, &kids[start..i])?);
-    } else {
-      i = start;
+    let end = i
+      + kids[i..bound]
+        .iter()
+        .take_while(|k| is_titlepage_layout(k))
+        .count();
+    if kids[i..end].iter().any(|k| !node_is_content_free(k)) {
+      titlepage = Some(wrap_as_titlepage(document, &root, &kids[i..end])?);
     }
   }
   // Nothing queued (or the abstract-only deferral): `insert_frontmatter` keeps its
@@ -2790,14 +2833,19 @@ pub fn place_frontmatter(
     }
     return Ok(());
   }
-  // Visible content the pass may not reorder on a non-wrapping path: Perl placement.
-  let stopped = kids[i..bound].iter().any(|k| !node_is_content_free(k));
-  if stopped && !wrap_layout {
-    return match on_stop {
-      OnStop::Current => insert_frontmatter(document),
-      OnStop::Top => insert_frontmatter_at(document, None).map(|_| ()),
-    };
-  }
+  // Visible body content before the flush (prose or a class-drawn cover before
+  // `\maketitle`, a section before a late `\title`) does not hold the frontmatter
+  // back: the schema's document model puts the frontmatter group first
+  // (`LaTeXML-structure.rnc:34`), so it goes to the head and that content follows
+  // it in its own order. Perl places at the current point (`\maketitle`,
+  // Base_Utility.pool.ltxml:918), stranding `<title>` after the body — schema-invalid
+  // (user-approved surpass 2026-09-23, OXIDIZED_DESIGN #262). The flush ends the
+  // paragraph it interrupts, as every flush point does in LaTeX (`\maketitle`:
+  // article.cls:203 opens with `\par`, report/book with `\begin{titlepage}`;
+  // `\section`; `\end{document}`) and as the current-point insertion did by
+  // auto-closing: text after `\maketitle` starts a new paragraph instead of
+  // continuing one that now stands after the frontmatter.
+  close_auto_closable_to_root(document, &root)?;
   let after = titlepage.or(match anchor {
     FrontmatterAnchor::Top => None,
     FrontmatterAnchor::LeadingFrontmatter => last_first.clone(),
@@ -3423,17 +3471,12 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     .collect();
   all_keys.extend(custom_keys);
 
-  // A `\maketitle` run inside a box capture — ltx-talk.cls:515 builds every
-  // frame in `\vbox_set:Nw`, unifront likewise, `\parbox{…}{\maketitle}` —
-  // has no ancestor that can hold frontmatter (the capture wrapper admits
-  // none; the title's `\lx@frontmatter@fallback` is cleared right after, so
-  // deferring would lose it). Degrade each element to the inline shape
-  // OXIDIZED_DESIGN #182 gives a caption without a float: `ltx:text
-  // class="ltx_<name>"` holding the content, toc-only entries dropped (both
-  // engines erred `<ltx:title> isn't allowed in <ltx:_CaptureBlock_>` ×5-6:
-  // footer-text, titlepage-styling, unifront-example). Guard:
-  // `perfect_kernel_batch54::maketitle_inside_a_box_degrades_to_text`.
-  let trapped = frontmatter_trapped_in_capture(document);
+  // A `\maketitle` run inside a box capture (ltx-talk.cls:515 frames, unifront,
+  // `\parbox{…}{\maketitle}`) no longer reaches here trapped: `place_frontmatter`
+  // always inserts through a root-level `_Capture_` (#262), so the frontmatter lands
+  // at the head as real elements. (Before 56gf a current-point flush degraded each
+  // entry to `ltx:text class="ltx_<name>"` inside the box.) Guard
+  // `perfect_kernel_batch54::maketitle_inside_a_box_goes_to_the_head`.
   for key in &all_keys {
     if let Some(list) = frontmatter.remove(key) {
       // Dubious, but assures that frontmatter appears in text mode...
@@ -3448,11 +3491,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
         .into(),
       );
       for item in list {
-        if trapped {
-          insert_frontmatter_entry_degraded(document, &item)?;
-        } else {
-          insert_frontmatter_entry(document, &item)?;
-        }
+        insert_frontmatter_entry(document, &item)?;
       }
       document.expire_box_to_absorb();
     }
@@ -3725,68 +3764,6 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   document.close_element_if_open(tag)?;
   // At this time, the frontmatter element should really carry the actual literal values intended.
   // (Perl PR #2767 disables the former empty-element pruning here.)
-  Ok(())
-}
-
-/// True when the insertion point sits inside a box capture (`ltx:_Capture_`
-/// / `ltx:_CaptureBlock_`) with no frontmatter-capable ancestor below it.
-fn frontmatter_trapped_in_capture(document: &Document) -> bool {
-  let Some(mut node) = document.get_element() else {
-    return false;
-  };
-  // A capture whose model admits the frontmatter is fine: the end-of-document
-  // path (`\end{document}` above) inserts through a temporary `ltx:_Capture_`
-  // placed under `ltx:document`, and an hbox capture likewise takes any
-  // element. Trapped is a capture that cannot hold it (`ltx:_CaptureBlock_`,
-  // blocks only): open_element cannot auto-close through a capture, so the
-  // insertion would fail there.
-  loop {
-    if document::can_contain(&node, "ltx:title") {
-      return false;
-    }
-    if node.get_name().starts_with('_') {
-      return true;
-    }
-    match node.get_parent() {
-      Some(parent) if parent.get_type() == Some(NodeType::ElementNode) => node = parent,
-      _ => return false,
-    }
-  }
-}
-
-/// The trapped form of `insert_frontmatter_entry`: an `ltx:text` carrying the
-/// element's local name as class; toc-only entries vanish.
-fn insert_frontmatter_entry_degraded(document: &mut Document, entry: &TagData) -> Result<()> {
-  let TagData { tag, content, .. } = entry;
-  let local = tag.strip_prefix("ltx:").unwrap_or(tag);
-  if local.starts_with("toc") {
-    return Ok(());
-  }
-  let node = document.open_element(
-    "ltx:text",
-    Some(string_map!("class" => s!("ltx_{local}"))),
-    None,
-  )?;
-  for item in content {
-    match item {
-      TagContent::Entry(inner) => insert_frontmatter_entry_degraded(document, inner)?,
-      // The content's own constructors (`\lx@author` → `ltx:personname`…)
-      // are frontmatter-only too: keep its TEXT.
-      TagContent::Box(digested) => {
-        let text = digested.to_string();
-        if !text.trim().is_empty() {
-          let font = digested
-            .get_font()?
-            .or_else(lookup_font)
-            .map(|f| (*f).clone())
-            .unwrap_or_default();
-          document.open_text(&text, &font)?;
-        }
-      },
-      _ => {},
-    }
-  }
-  document.maybe_close_node(&node)?;
   Ok(())
 }
 

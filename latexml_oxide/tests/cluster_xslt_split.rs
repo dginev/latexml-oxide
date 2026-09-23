@@ -1481,12 +1481,8 @@ mod picture_svg_on_the_live_dom {
       "conversion failed (status {:?}):\n{stderr}",
       out.status.code()
     );
-    assert!(
-      !stderr
-        .lines()
-        .any(|l| regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap().is_match(l)),
-      "{stderr}"
-    );
+    let diagnostic = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    assert!(!stderr.lines().any(|l| diagnostic.is_match(l)), "{stderr}");
     std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")
   }
 

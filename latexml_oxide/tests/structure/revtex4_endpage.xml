@@ -4,14 +4,14 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <para xml:id="p1">
-    <p><ref labelref="LABEL:FirstPage"/>1
-<ref labelref="LABEL:LastPage"/>9</p>
-  </para>
   <title>Title</title>
   <creator role="author">
     <personname>Author</personname>
   </creator>
+  <para xml:id="p1">
+    <p><ref labelref="LABEL:FirstPage"/>1
+<ref labelref="LABEL:LastPage"/>9</p>
+  </para>
   <para xml:id="p2">
     <p>Body text.</p>
   </para>

@@ -54,6 +54,16 @@ pub(crate) fn load() -> Result<()> {
         let id_s = with(id, |s| s.to_string());
         document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
+      // The document was opened by the PREAMBLE: whatever it holds now was built
+      // before `\begin{document}` — an undefined command's `<ERROR>` and its
+      // argument text, a mis-emulated engine primitive's parameters. LaTeX forbids
+      // typesetting there (`\@nodocument`, latex.ltx `\everypar` in the preamble:
+      // "Missing \begin{document}"), so none of it is body. Mark it for the
+      // frontmatter placement pass, which moves it below the frontmatter and never
+      // reads it as a cover (OXIDIZED_DESIGN #262).
+      // Its open paragraph stays open: `\begin{document}` issues no `\par`, so
+      // the first body words continue it, as in TeX.
+      mark_preamble_residue(&docel);
     } _ => {
       let props = with(id, |id_str| string_map!("xml:id" => id_str));
       document.open_element("ltx:document", Some(props), None)?;

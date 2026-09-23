@@ -89,10 +89,8 @@ fn midscale_streams_splits_and_reports_faithfully() {
     "expected the anchored 1-warning verdict as the final line, got: {last}"
   );
   let log = std::fs::read_to_string(workdir.path().join("midscale.log")).expect("log written");
-  let warning_lines = log
-    .lines()
-    .filter(|l| regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap().is_match(l))
-    .count();
+  let warning = regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap();
+  let warning_lines = log.lines().filter(|l| warning.is_match(l)).count();
   assert_eq!(
     warning_lines, 1,
     "the log must carry exactly the anchored warning (tally agreement)"

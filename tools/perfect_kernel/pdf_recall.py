@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""PDF-to-XML content recall: does every word that reaches the PDF reach the XML?
+r"""PDF-to-XML content recall: does every word that reaches the PDF reach the XML?
 
     pdf_recall.py DOC.xml DOC.pdf [--min-len N] [--show N] [--strict]
 
 The PDF comes from the document's intended engine (pdflatex, xelatex or lualatex).
 Both sides are normalized exactly as `s3_audit.sh` does for the corpus manuals:
 NFKC (ligatures, compatibility forms), the pdftotext line-break hyphen re-joined
-("in-\\nput" -> "input"), lowercase runs of letters in any script. Digits are not
+("in-\nput" -> "input"), lowercase runs of letters in any script. Digits are not
 words, so page numbers and footnote marks drop out. The XML is tag-stripped with a
 space per tag, so text in adjacent elements is never glued; MathML/`tex` annotation
 bodies are removed so math counts as rendered text only.

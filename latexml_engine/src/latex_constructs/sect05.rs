@@ -1216,7 +1216,7 @@ pub(crate) fn load() -> Result<()> {
     after_construct => sub[doc, _whatsit] {
       // The one placement pass (#247): a `\clearpage` pagebreak built before this
       // titlepage settles behind the frontmatter here, at construction time.
-      place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter, OnStop::Current)?;
+      place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
       // Built after body content began → a hand-typeset layout paragraph, not
       // the schema's leading titlepage (56fw, OXIDIZED_DESIGN #257).
       demote_stranded_titlepage(doc)?;

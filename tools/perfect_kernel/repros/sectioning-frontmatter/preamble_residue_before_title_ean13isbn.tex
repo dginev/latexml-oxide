@@ -1,0 +1,15 @@
+% witness: ean13isbn/ean13isbn, makebarcode, zwgetfdate, zwpagelayout (\mubytein 0 ... encTeX), a4wide, hebdomon, ~33 docs (frontmatter-69 class E)
+% oracle:  pdflatex "Missing \begin{document}" for preamble text (CONTROL for the error); structure is the target
+% engines: rust=1 perl=1 (2026-09-23)   <- before 56gf: <title> after the leaked <para>, schema-invalid (SHARED)
+% expect:  1 error; <title> leads <document>, the ERROR para follows, "Body text." its own para
+% status:  GREEN (56gf 2026-09-23; was RED on the schema axis)
+% mechanism: whatever the PREAMBLE typesets is marked preamble residue at \begin{document}
+%   (sect02.rs mark_preamble_residue); place_frontmatter moves it below the frontmatter
+%   and never wraps it as a cover. OXIDIZED_DESIGN #262.
+\documentclass{article}
+\undefinedpreamblecmd{leaked argument}
+\title{The Title}\author{An Author}\date{Spring}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

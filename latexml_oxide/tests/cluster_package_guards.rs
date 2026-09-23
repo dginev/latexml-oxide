@@ -4063,6 +4063,13 @@ pub(crate) mod perfect_kernel_batch46 {
       .expect("test worker panicked")
   }
 
+  /// Count of lines carrying a `Warning:<class>:` diagnostic ANYWHERE in the line
+  /// (WISDOM 85: a diagnostic can follow other output on the same line).
+  pub(crate) fn warning_count(stderr: &str) -> usize {
+    let re = regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap();
+    stderr.lines().filter(|l| re.is_match(l)).count()
+  }
+
   pub(crate) fn error_count(stderr: &str) -> usize {
     // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85).
     let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
@@ -6043,7 +6050,7 @@ mod perfect_kernel_batch54 {
   //! was vetted separately.
   use super::{
     perfect_kernel_batch40_43::convert_with_files,
-    perfect_kernel_batch46::{convert, convert_with, error_count},
+    perfect_kernel_batch46::{convert, convert_with, error_count, warning_count},
     perfect_kernel_batch53::convert_with_sty,
   };
 
@@ -8850,10 +8857,13 @@ Text\index{foo@\string\verb\string"bar}. More text here.
   }
 
   /// `\maketitle` inside a box capture (ltx-talk.cls:515 frames, unifront,
-  /// `\parbox{…}{\maketitle}`) degrades its frontmatter to `ltx:text`
-  /// elements instead of `<ltx:title> isn't allowed in <ltx:_CaptureBlock_>`.
+  /// `\parbox{…}{\maketitle}`): the flush goes to the document head (56gf,
+  /// OXIDIZED_DESIGN #262) as real `<title>`/`<creator>` elements — never
+  /// `<ltx:title> isn't allowed in <ltx:_CaptureBlock_>` — and the box keeps the
+  /// rest of its own content. (Before 56gf it degraded to `ltx:text` in the box,
+  /// leaking `\lx@personname{Alice}` as text.)
   #[test]
-  fn maketitle_inside_a_box_degrades_to_text() {
+  fn maketitle_inside_a_box_goes_to_the_head() {
     let tex = r"\documentclass{article}
 \title[Short]{My Title}
 \author{Alice}
@@ -8864,12 +8874,32 @@ After.
 ";
     let (stderr, xml) = convert(tex, false);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
-    assert!(!xml.contains("<title>"), "{xml}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("ltx_title"), "{xml}");
+    let title = xml.find("<title>My Title</title>").expect("a real title");
+    assert!(!xml[..title].contains("<para"), "the title leads:\n{xml}");
+    assert!(xml.contains("<personname>Alice</personname>"), "{xml}");
+    assert!(!xml.contains("lx@personname"), "{xml}");
+    // Content around `\maketitle` in the box stays in the box, in order.
+    let tex = r"\documentclass{article}
+\title{My Title}
+\author{Alice}
+\begin{document}
+Before.
+\parbox{5cm}{Inside before. \maketitle Inside after.}
+After.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(
-      xml.contains(r#"<text class="ltx_title">My Title</text>"#),
+      xml.contains(concat!(
+        r#"<inline-block class="ltx_parbox" vattach="middle" width="142.3pt">"#,
+        "\n        <p>Inside before. Inside after.</p>\n      </inline-block>"
+      )),
       "{xml}"
     );
-    assert!(xml.contains("Alice"), "{xml}");
   }
 
   /// keyval.sty reads each option as a delimited argument, so a `{…}` inside
@@ -12749,7 +12779,7 @@ mod perfect_kernel_batch56 {
   //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
   //! environment invocation and outer listing scanning, and unicode-math table loading).
   use super::perfect_kernel_batch46::{
-    convert, convert_args, convert_files, convert_with, error_count,
+    convert, convert_args, convert_files, convert_with, error_count, warning_count,
   };
 
   /// Self-skip helper: is this file in the host TeX tree?
@@ -18103,13 +18133,6 @@ c &= d
     }
   }
 
-  /// Count of lines carrying a `Warning:<class>:` diagnostic ANYWHERE in the line
-  /// (WISDOM 85: a diagnostic can follow other output on the same line).
-  fn warning_count(stderr: &str) -> usize {
-    let re = regex::Regex::new(r"Warning:[A-Za-z_]+:").unwrap();
-    stderr.lines().filter(|l| re.is_match(l)).count()
-  }
-
   /// The outermost list element of `xml`, with `xml:id`s and inter-tag
   /// whitespace removed, for whole-element comparisons.
   fn outer_list(xml: &str, tag: &str) -> String {
@@ -18179,6 +18202,85 @@ Side.
       ),
       "{xml}"
     );
+  }
+
+  /// Batch 56gf control: the flush ends a PARAGRAPH, never a frontmatter
+  /// container — `\begin{titlepage}\maketitle\end{titlepage}` (a common manual
+  /// shape) relies on `\unwind@titlepage` finding the titlepage open; closing it at
+  /// the flush left an empty `<titlepage/>` ahead of the title.
+  #[test]
+  fn titlepage_around_maketitle_leaves_no_empty_titlepage() {
+    let tex = r"\documentclass{article}
+\title{T}\author{A}\date{D}
+\begin{document}
+\begin{titlepage}
+\maketitle
+\end{titlepage}
+\section{S}
+Body.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("<titlepage"), "{xml}");
+    // After the resources, the document opens with its title.
+    let first = xml
+      .lines()
+      .skip_while(|l| !l.starts_with("<document"))
+      .skip(1)
+      .find(|l| !l.trim_start().starts_with("<resource"))
+      .unwrap();
+    assert_eq!(first.trim(), "<title>T</title>", "{xml}");
+  }
+
+  /// Batch 56gf (OXIDIZED_DESIGN #262): what the PREAMBLE typesets (an undefined
+  /// command's marker and argument — the leak behind ~33 frontmatter-after-body
+  /// manuals: `\mubytein`, `\XeTeXgenerateactualtext`, a missing sibling file's
+  /// macros) is preamble residue, marked at `\begin{document}`: the frontmatter
+  /// leads, the residue follows it whole, and `\maketitle` ends its paragraph.
+  #[test]
+  fn preamble_residue_follows_the_frontmatter() {
+    let tex = r"\documentclass{article}
+\undefinedpreamblecmd{leaked argument}
+\title{The Title}\author{An Author}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      stderr.contains("Error:undefined:\\undefinedpreamblecmd"),
+      "{stderr}"
+    );
+    let body = xml.find("<document").unwrap();
+    let doc = xml[body..].split_once('>').unwrap().1;
+    let gaps = regex::Regex::new(r">\s+<").unwrap();
+    let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+    let doc = gaps
+      .replace_all(&ids.replace_all(doc, ""), "><")
+      .into_owned();
+    assert!(
+      doc.contains(concat!(
+        r#"<title>The Title</title><creator role="author"><personname>An Author</personname></creator>"#,
+        r#"<para><ERROR class="undefined">\undefinedpreamblecmd</ERROR><p>leaked argument</p></para>"#,
+        r#"<para><p>Body text.</p></para></document>"#
+      )),
+      "{doc}"
+    );
+    // Control: `\begin{document}` issues no `\par` — without a flush the preamble
+    // text and the first body words share one paragraph, as in TeX.
+    let tex = r"\documentclass{article}
+\undefinedpreamblecmd{leaked}
+\begin{document}
+body
+\end{document}
+";
+    let (_stderr, xml) = convert(tex, true);
+    assert!(xml.contains("<p>leaked\nbody</p>"), "{xml}");
   }
 
   /// Batch 56ge: `\global\read` keeps its read-mode bookkeeping local. The
@@ -18918,14 +19020,12 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
-  /// Batch 56ep control (OXIDIZED_DESIGN #242): the content-free gate must NOT hoist
-  /// frontmatter above a visually non-empty leading block. A `\includegraphics` logo —
-  /// a text-empty `<para>` holding only `<graphics>`, a common cover-top — renders
-  /// above the title in the PDF, so the title must stay BELOW it (faithful, no faux
-  /// fidelity). Regression guard for the pre-commit review's fidelity finding: an
-  /// earlier gate keyed only on `get_content()` (text) and wrongly hoisted here.
+  /// Batch 56gf (OXIDIZED_DESIGN #262, user-approved surpass; supersedes the 56ep
+  /// control): visible content before `\maketitle` — a `\includegraphics` logo on
+  /// the cover — no longer holds the frontmatter back. The schema puts the front
+  /// group first, so `<title>` leads and the logo follows it, kept whole.
   #[test]
-  fn frontmatter_does_not_hoist_above_a_leading_graphic() {
+  fn frontmatter_leads_a_leading_graphic() {
     let tex = "\\documentclass{book}\n\\usepackage{graphicx}\n\\title{T}\\author{A}\n\
                \\begin{document}\n\\noindent\\includegraphics{logo}\n\\clearpage\n\
                \\maketitle\n\\chapter{C}\n\\end{document}\n";
@@ -18938,9 +19038,12 @@ B:\ifcat A西 L\else O\fi.
       .find("<title>")
       .expect("frontmatter <title> must be present");
     assert!(
-      graphics < title,
-      "a visible leading <graphics> (logo) must stay ABOVE the frontmatter <title> — \
-       the content-free gate must not hoist the title over it:\n{xml}"
+      title < graphics,
+      "the frontmatter leads; the logo follows it:\n{xml}"
+    );
+    assert!(
+      !xml[..title].contains("<para"),
+      "nothing precedes the title:\n{xml}"
     );
   }
 
@@ -19156,7 +19259,8 @@ B:\ifcat A西 L\else O\fi.
       !xml[..title].contains("<para"),
       "no paragraph precedes the title:\n{xml}"
     );
-    // Control: typeset argument text is visible content — the hoist declines.
+    // Typeset argument text is visible content: since 56gf (#262) the frontmatter
+    // leads it too, and the text follows, whole.
     let tex = "\\documentclass{article}\n\\begin{document}\n\\ThisCommandIsUndefined{Visible words}\n\
                \\title{Sample Title}\n\\author{An Author}\n\\maketitle\n\\section{Intro}\nBody text here.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
@@ -19168,8 +19272,8 @@ B:\ifcat A西 L\else O\fi.
     let title = xml.find("<title>Sample Title</title>").expect("title");
     let words = xml.find("Visible words").expect("argument text");
     assert!(
-      words < title,
-      "visible text stays above the frontmatter (Perl placement):\n{xml}"
+      title < words,
+      "the frontmatter leads the visible text (#262):\n{xml}"
     );
   }
 
@@ -19227,14 +19331,11 @@ B:\ifcat A西 L\else O\fi.
     );
   }
 
-  /// Batch 56es control (OXIDIZED_DESIGN #245): pins `text_is_ink_free`, the one
-  /// predicate deciding whether an EMPTY box paints. A text-empty leading paragraph
-  /// holding a `\fbox{}` — an `<ltx:text framed="rectangle">` — draws a frame above
-  /// the title in the PDF, so it is NOT content-free: neither the construct-time gate
-  /// nor the `\end{document}` pass may move the frontmatter above it (the review-
-  /// flagged faux-fidelity surface; the visible-text control above never reaches it).
+  /// Batch 56gf (OXIDIZED_DESIGN #262; supersedes the 56es control): an ink-bearing
+  /// empty box before `\maketitle` (`\fbox{}`, an `<ltx:text framed="rectangle">`)
+  /// is visible body content; the frontmatter still leads and the box follows it.
   #[test]
-  fn frontmatter_stays_below_a_leading_framed_empty_box() {
+  fn frontmatter_leads_a_leading_framed_empty_box() {
     let tex = "\\documentclass{report}\n\\begin{document}\n\\noindent\\fbox{}\\clearpage\n\
                \\title{T}\\author{A}\n\\maketitle\nBody.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
@@ -19246,9 +19347,8 @@ B:\ifcat A西 L\else O\fi.
       .find("<title>")
       .expect("frontmatter <title> must be present");
     assert!(
-      framed < title,
-      "a leading framed (ink-bearing) empty box must stay ABOVE the frontmatter — it is \
-       not content-free:\n{xml}"
+      title < framed,
+      "the frontmatter leads; the framed box follows it:\n{xml}"
     );
   }
 
