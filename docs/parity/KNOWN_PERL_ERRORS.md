@@ -6307,3 +6307,18 @@ then `\bad[W]` gives pdflatex `XQYWZ`, and Rust and Perl `XQ[]YWZ` with no error
 (its definition, so `\let` copies too) and skips a space while one of TeX's
 prefixes is pending (`state::has_tex_prefixes`; LaTeXML's own `didpar` keeps Perl's clearing). Guard
 `perfect_kernel_batch56::relax_after_a_prefix_keeps_the_prefix`.
+
+## 224. A bare `\usepackage{babel}` ignores the language given as a class option (FIXED in Rust)
+
+`\documentclass[ngerman]{article}\usepackage{babel}`: babel takes the main language
+from the class options (babel.sty:4197-4245), loads it last and prepends it to
+`\bbl@loaded` (:4130-4132). Its `.ldf` then runs `\main@language` (ngermanb.ldf:255
+`\ldf@finish`). Perl's babel binding runs no `\extras<lang>` at all, so blindtext
+prints its Latin default. Rust's `.ldf` bindings (lib.rs `ngerman`/`french`/… interception)
+never run `\main@language`, and `\lx@babel@activate@mainlang` read the language only
+from `\opt@babel.sty`, so it fell back to english. The result was `xml:lang="en"`,
+English captions, and English blindtext in a German letter (scrlttr2copy/letter-copy-test,
+recall 20.7). Trigger: the line above plus `\usepackage{blindtext}` and `\blindtext`;
+pdflatex prints "Dies hier ist ein Blindtext". **Rust (FIXED, batch 56hd):** with no
+babel package options, `\bbl@loaded`'s first language is the main one. Guard
+`perfect_kernel_batch56::bare_babel_takes_the_class_language`.

@@ -130,6 +130,26 @@ LoadDefinitions!({
       && babel_support_sty::babel_language_to_iso(&main)
          == babel_support_sty::babel_language_to_iso(&pkg_last)
       && babel_support_sty::babel_language_to_iso(&main).is_some();
+    // A bare `\usepackage{babel}` whose language is a CLASS option
+    // (`\documentclass[ngerman]{scrlttr2}`, letter-copy-test): `\opt@babel.sty`
+    // is empty. babel took the main language from the class options
+    // (TL 2025 babel.sty:4197-4245) and loaded it last, prepending it to `\bbl@loaded`
+    // (:4129-4133); that `.ldf` is our binding, which never runs `\main@language`,
+    // so `\bbl@main@language` kept the english default: the document got
+    // `xml:lang="en"`, English captions, and blindtext's English text.
+    let loaded_first = if pkg_last.is_empty() {
+      // babel.sty:4129 `\let\bbl@loaded\@empty`: always defined here.
+      do_expand(T_CS!("\\bbl@loaded"))
+        .map(|t| t.to_string())
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .find(|s| is_lang_candidate(s) && babel_support_sty::babel_language_to_iso(s).is_some())
+        .unwrap_or_default()
+        .to_string()
+    } else {
+      String::new()
+    };
     let lang = if let Some(m) = main_kv {
       m
     } else if same_alias_class {
@@ -137,6 +157,8 @@ LoadDefinitions!({
       main
     } else if !pkg_last.is_empty() {
       pkg_last
+    } else if !loaded_first.is_empty() {
+      loaded_first
     } else if main != "nil" && !main.is_empty() {
       main
     } else {

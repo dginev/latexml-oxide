@@ -18574,6 +18574,55 @@ Body.
     assert!(xml.contains("<p>( X) [a b]</p>"), "{xml}");
   }
 
+  /// Batch 56hd: a bare `\usepackage{babel}` takes its main language from the
+  /// class options (babel.sty:4197-4245), loads it last, and prepends it to
+  /// `\bbl@loaded` (:4130-4132). Our `.ldf` bindings never run `\main@language`,
+  /// so the main language stayed english: `xml:lang="en"`, English captions,
+  /// blindtext's English text (scrlttr2copy/letter-copy-test, recall 20.7; about
+  /// 36 French/German manuals). `\bbl@loaded`'s first language now wins when
+  /// babel has no options of its own.
+  #[test]
+  fn bare_babel_takes_the_class_language() {
+    if !kpsewhich_has("blindtext.sty") {
+      return;
+    }
+    let tex = r"\documentclass[ngerman]{article}
+\usepackage{babel}
+\usepackage{blindtext}
+\begin{document}
+\blindtext
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="de">"#),
+      "{xml}"
+    );
+    assert!(xml.contains("<p>Dies hier ist ein Blindtext"), "{xml}");
+    let tex = r"\documentclass[french]{article}
+\usepackage{babel}
+\begin{document}
+\tableofcontents
+\section{A}
+x
+\end{document}
+";
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:lang="fr">"#),
+      "{xml}"
+    );
+    latexml::util::test::assert_element(
+      &xml,
+      "TOC",
+      &[],
+      r#"<TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Table des matières</title></TOC>"#,
+    );
+  }
+
   /// Batch 56hc: verbatim.sty's `\verbatim@start#1` drops only the active line
   /// end; a control sequence after it is prepended to line 1 and runs with the
   /// line's remainder (verbatim.sty:107-112, tex.web §506). verbatimbox's
