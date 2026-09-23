@@ -71,7 +71,10 @@ FAMILIES = {
     "eqgroup": (r"\\begin\{(?:align|gather|multline|flalign|alignat|eqnarray)\*?\}",
                 r"<equationgroup[\s>]|<equation[\s>]"),
     "footnote": (r"\\footnote\b", r"<note[^>]*role=\"footnote\""),
-    "cite": (r"\\(?:cite|citep|citet|parencite|textcite|autocite|footcite)\w*\*?\s*[\[{]",
+    # An explicit list: `\\cite\\w*` also matched a document's own `\\citem` (drsdoc).
+    "cite": (r"\\(?:[cC]ite|citep|citet|citealp|citealt|citeauthor|citeyear|citeyearpar|"
+             r"citeasnoun|citenum|[pP]arencite|[tT]extcite|[aA]utocite|[fF]ootcite|smartcite|"
+             r"supercite|fullcite|footfullcite)\*?\s*[\[{]",
              r"<cite[\s>]"),
     "ref": (r"\\(?:ref|eqref|autoref|cref|Cref|pageref|nameref|vref)\*?\s*\{", r"<ref[\s>]"),
     "caption": (r"\\caption\*?\s*[\[{]", r"<caption[\s>]"),
