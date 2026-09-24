@@ -66,6 +66,14 @@ LoadDefinitions!({
     "options", "ruled", "boxed",
     "above", "below", "outside", "inside",
     "centerlast", "centering", "raggedright", "raggedleft",
+    // caption.sty/caption3.sty (TL 2025) `\DeclareCaptionOption` keys missing
+    // above: `hypcap` warned in 3 papers of arXiv 2605 (2605.14865, the NeurIPS
+    // and ACL templates' `\usepackage[hypcap=true]{caption}`).
+    "box", "boxcolor", "boxsep", "calcwidth", "config", "debug", "figurename",
+    "figurewithin", "FPlist", "FPref", "hypcap", "hypcapspace", "indent",
+    "indention", "list-entry", "listfigurename", "listof", "listtablename",
+    "listtype", "listtype+", "lofdepth", "lotdepth", "parbox", "parindent",
+    "size", "slc", "strut", "tablename", "tablewithin", "within",
   ] {
     DefKeyVal!("caption", key, "");
   }

@@ -18412,6 +18412,35 @@ Body.
     );
   }
 
+  /// natbib's `\setcitestyle` acts on the words it knows and ignores the rest
+  /// (natbib.sty:303-335): a package option passed there (`sort&compress`,
+  /// 2606.03886) warned "unknown KeyVals key" and — through Perl's fall-through
+  /// to authoryear — cost the `numbers` style; natbib's own `colon` (:315-316,
+  /// the `;` separator) was not known at all.
+  #[test]
+  fn natbib_setcitestyle_ignores_unknown_words() {
+    let tex = r"\documentclass{article}
+\usepackage{natbib}
+\setcitestyle{numbers,sort&compress,colon,square}
+\begin{document}
+See \citep{a,b}.
+\begin{thebibliography}{2}
+\bibitem{a} A. Author. First. 2001.
+\bibitem{b} B. Author. Second. 2002.
+\end{thebibliography}
+\end{document}
+";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "cite",
+      &[],
+      r##"<cite class="ltx_citemacro_citep">[<bibref bibrefs="a,b" separator=";" show="Number" yyseparator=","/>]</cite>"##,
+    );
+  }
+
   /// `\NewTCBListing{…}{ s … }`: the absorbed star is a boolean to the options
   /// (`\BooleanFalse` unstarred), never empty. The empty slot made
   /// `IfBooleanT={#1}` run `\IfBooleanT{}` — l3's `cmd/if-boolean` expandable

@@ -55,6 +55,10 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       "semicolon" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
       },
+      // natbib.sty:315-316: `colon` sets the separator to `;` too (Perl omits it).
+      "colon" => {
+        assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(";")), None);
+      },
       // Perl L398:
       "comma" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(",")), None);
@@ -642,19 +646,42 @@ LoadDefinitions!({
   DefKeyVal!("natbib", "yysep", "");
   DefKeyVal!("natbib", "notesep", "");
 
-  // \setcitestyle — Perl L407-408: DefPrimitive('\setcitestyle RequiredKeyVals:natbib',
-  //   sub { setCitationStyle($_[1]->getPairs); });
-  DefPrimitive!("\\setcitestyle RequiredKeyVals:natbib", sub[(kv)] {
-    // Own each pair so the helper can borrow &str slices safely.
-    let owned: Vec<(String, Option<Tokens>)> = kv
-      .get_pairs()
-      .map(|(k, v)| {
-        let toks = v.as_tokens().ok().flatten().map(|c| c.into_owned());
-        (k.clone(), toks)
+  // \setcitestyle — natbib.sty:303-335 walks its comma list with `\@for`, acts
+  // on the words it knows and does NOTHING for any other. Perl reads it as
+  // `RequiredKeyVals:natbib` (L407-408), whose unknown key is an Info there and
+  // a warning under the Rust Warn promotion: a package option passed here
+  // (`\setcitestyle{numbers,sort&compress}`, 2606.03886) warned. The list is
+  // split as natbib splits it; `<word>=<value>` carries its value.
+  DefPrimitive!("\\setcitestyle{}", sub[(list)] {
+    let owned: Vec<(String, Option<Tokens>)> = split_tokens(list, vec![T_OTHER!(",").into()])
+      .into_iter()
+      .filter_map(|item| {
+        let toks = item.unlist();
+        match toks.iter().position(|t| *t == T_OTHER!("=")) {
+          Some(i) => {
+            let key = Tokens::new(toks[..i].to_vec()).to_string().trim().to_string();
+            Some((key, Some(Tokens::new(toks[i + 1..].to_vec()))))
+          },
+          None => {
+            let key = Tokens::new(toks).to_string().trim().to_string();
+            (!key.is_empty()).then_some((key, None))
+          },
+        }
       })
       .collect();
-    let pairs: Vec<(&str, Option<Tokens>)> =
-      owned.iter().map(|(k, v)| (k.as_str(), v.clone())).collect();
+    // natbib.sty's `\@for` tests each word against its own list and ignores
+    // any other; Perl's fall-through (natbib.sty.ltxml:402-404) instead resets
+    // the style to authoryear, so `numbers,sort&compress` lost `numbers`.
+    // Only natbib's words reach the style (OXIDIZED_DESIGN #278).
+    const WORDS: [&str; 15] = [
+      "round", "square", "angle", "curly", "semicolon", "colon", "comma", "authoryear",
+      "numbers", "super", "open", "close", "aysep", "yysep", "notesep",
+    ];
+    let pairs: Vec<(&str, Option<Tokens>)> = owned
+      .iter()
+      .filter(|(k, _)| WORDS.contains(&k.as_str()))
+      .map(|(k, v)| (k.as_str(), v.clone()))
+      .collect();
     set_citation_style(&pairs);
   });
 
