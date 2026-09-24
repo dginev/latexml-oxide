@@ -19080,6 +19080,33 @@ PAGES=\tl_use:N \l_tmpa_tl.
     assert!(xml.contains("<p>[ab] text</p>"), "{xml}");
   }
 
+  /// …and a vertical command in horizontal mode runs a REDEFINED `\par` whole
+  /// before it reads its own arguments (tex.web §1094 `head_for_vmode`).
+  /// syntax.sty:264-273's grammar `\par` ends with `\@@par \catcode`\<12
+  /// \everypar{…}`; `leave_horizontal` ran it through `invoke_token`, which
+  /// stops at the first primitive, so `\vskip`'s glue scan read the leftover
+  /// `\@@par` ("Missing number") and the glue's stray digit fired the re-armed
+  /// `\everypar`, whose `\gr@implitem` never found its catcode-12 `<` (11
+  /// errors; arXiv 2605.07451 ended in `Fatal:Timeout:PushbackLimit`).
+  #[test]
+  fn everypar_grammar_survives_vertical_material_between_productions() {
+    if !kpsewhich_has("syntax.sty") {
+      return;
+    }
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/block-model/leave_horizontal_runs_a_redefined_par_whole.tex"
+    );
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "item",
+      &[r#"xml:id="S0.I1.ix2""#],
+      r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok font="upright" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
+    );
+  }
+
   /// Batch 56gm: a void box register is a box operand (TeXbook p.388) whatever
   /// its SPELLING — expl3's `\box_use:N` is `\copy` (expl3-code.tex:30507), and
   /// l3coffins `\raise`s it over a void coffin box (asmejour.cls:1388-1404).

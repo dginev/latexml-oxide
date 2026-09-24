@@ -1,0 +1,22 @@
+% witness: arXiv 2605.07451 (mdwtools syntax.sty grammar, \grammarShrink = \vspace between
+%   productions; warning -> Fatal:Timeout:PushbackLimit in sandbox run 311)
+% oracle:  pdflatex 0 errors, both productions typeset; Perl 1 error (no raw syntax.sty:
+%   {grammar} undefined)
+% engines: rust (56go..56hj) = 11 errors (Missing argument Match:< for \gr@implitem, then
+%   "Attempt to close boxing group" cascade); 56gm clean
+% expect:  0 errors, 0 warnings; two grammar items, "foo" and "bar"
+% status:  RED (56hj) -> GREEN (56hk)
+% mechanism: \vskip's leave_horizontal ran the grammar's redefined \par (syntax.sty:264-273)
+%   through invoke_token, which stops at the first primitive; \@@par and the \everypar re-arm
+%   leaked into the glue scan, and the glue's stray digit fired \everypar's \gr@implitem.
+%   tex.web §1094 head_for_vmode runs the whole \par first.
+\documentclass{article}
+\usepackage[nounderscore]{syntax}
+\begin{document}
+\begin{grammar}
+<shape> ::= foo
+\vspace{0em}
+
+<model> ::= bar
+\end{grammar}
+\end{document}

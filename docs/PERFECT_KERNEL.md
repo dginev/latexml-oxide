@@ -130,9 +130,10 @@ mechanical singletons and the content/semantic axes below.
    .02664, .14423) are fleet memory pressure: byte-identical output and peak memory on 56ec and 56he,
    0 errors locally at the 8 GB cap. 2605.15407's rootless Fatal is an unclosed `\ifpdf`, which
    pdflatex runs as TRUE; ours is FALSE, like Perl's. That is the open K6 PDF-mode question.
-   2605.19748 is XeLaTeX-only (an unclosed `\ifXeTeX`), SHARED. Open: 2605.07451, where 56go's
-   `\everypar` breaks syntax.sty's grammar productions; 2605.31475, a tikz `PushbackLimit` that
-   began between 56ec and s113.
+   2605.19748 is XeLaTeX-only (an unclosed `\ifXeTeX`), SHARED. 2605.07451 (56go's `\everypar` vs
+   syntax.sty grammars) is fixed in 56hk. 2605.31475's tikz `PushbackLimit` is SHARED: the lock on
+   amsmath's `\tag` refuses pgffor's loop variable. Open: a group-local `\def` of a locked CS, and
+   Rust's empty root where Perl keeps a partial document.
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's

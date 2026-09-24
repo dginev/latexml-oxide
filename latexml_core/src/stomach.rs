@@ -1467,8 +1467,36 @@ pub fn leave_horizontal() -> Result<()> {
   if mode == "horizontal" && bound.ends_with("vertical") {
     // This needs to be an invisible, and slightly gentler, \par
     assign_value("INTERNAL_PAR", true, Some(Scope::Local));
-    let par_result = invoke_token(&T_CS!("\\par"))?;
-    push_box_list_vec(par_result);
+    let par = T_CS!("\\par");
+    if matches!(lookup_meaning(&par), Some(Stored::Expandable(_))) {
+      // tex.web §1094 `head_for_vmode`: TeX backs the vertical command up and
+      // inserts `\par` in front of it, so a redefined `\par` runs its WHOLE
+      // body before the command reads its arguments. `invoke_token` stops at
+      // the macro's first primitive and leaves the rest in the gullet, where
+      // `\vskip`'s glue scan read it: syntax.sty:264-273's grammar `\par`
+      // (`\parshape…\@@par \catcode`\<12 \everypar{…}`) lost `\@@par` to the
+      // scan ("Missing number"), and the glue's stray digit then started a
+      // paragraph that fired the re-armed `\everypar`, whose `\gr@implitem`
+      // never found its catcode-12 `<` (2605.07451: `\grammarShrink` =
+      // `\vspace` between productions). The body is read from a mouth of its
+      // own, in no group (its assignments stand), and invoked against the
+      // CURRENT box list, so `\@@par`'s repack still sees the paragraph and
+      // the vertical-mode `\par` whatsit stays a bare paragraph boundary. The
+      // one departure from §1094: a body that reads past its own end finds
+      // end of input here, not the vertical command behind it.
+      gullet::reading_from_mouth(Mouth::default(), || {
+        gullet::unread(Tokens!(par));
+        while let Some(token) = gullet::read_x_token(Some(true), false, None)? {
+          check_timeout()?;
+          let invoked = invoke_token(&token)?;
+          extend_box_list(invoked);
+        }
+        Ok(())
+      })?;
+    } else {
+      let par_result = invoke_token(&par)?;
+      push_box_list_vec(par_result);
+    }
     assign_value("INTERNAL_PAR", false, Some(Scope::Local));
   }
   Ok(())
