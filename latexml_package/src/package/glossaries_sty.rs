@@ -53,7 +53,12 @@ LoadDefinitions!({
   Let!("\\lx@orig@glossaries@gls@link", "\\@gls@link");
   DefMacro!("\\@gls@link[]{}{}",
     "\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}");
-  DefConstructor!("\\lx@glossaries@gls@link{}{}{}",
+  // The entry label (arg 2) is only a `key=` string: read it as
+  // ExpandedSemiverbatim, never digested, as `\label` reads its label. A
+  // digested `beat_frequency` raised "_ can only appear in math mode" per entry
+  // (arXiv 2605.01773: 122 underscore labels in a notations glossary, Fatal;
+  // Perl's binding digests it too, glossaries.sty.ltxml:30/:89).
+  DefConstructor!("\\lx@glossaries@gls@link{} ExpandedSemiverbatim {}",
     "<ltx:glossaryref inlist='#list' key='#2'>#3</ltx:glossaryref>",
     enter_horizontal => true,
     properties => sub[args] {
@@ -102,7 +107,8 @@ longplural=\\@glo@longpl\
   // Iterate the keyvals in sorted-by-key order and insert one
   // `<ltx:glossaryphrase>` per non-empty value (matches Perl's
   // `if ToString($value)` guard).
-  DefConstructor!("\\lx@glossaries@newentry{}{} RequiredKeyVals",
+  // Arg 2, the label `\glslabel`, is ExpandedSemiverbatim (see `\lx@glossaries@gls@link`).
+  DefConstructor!("\\lx@glossaries@newentry{} ExpandedSemiverbatim RequiredKeyVals",
     sub[document, args, _props] {
       let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();

@@ -1,0 +1,16 @@
+% witness: arXiv 2605.04530 (IEEEtran; method.tex:161 \seqsplit{\texttt{infra\_sweep.py}}, 17 uses)
+% oracle:  pdflatex 0 errors (latex.ltx \DeclareTextFontCommand: …##1\check@icr\expandafter\egroup\fi);
+%          seqsplit separates \texttt from its argument, so the text is roman (CMR10), as here
+% engines: rust (56hu) = Fatal:Timeout:IfLimit; Perl the same once seqsplit is defined inline
+%          (Perl has no seqsplit binding, so \seqsplit is undefined there)
+% preload: ar5iv.sty (seqsplit is raw-loaded)
+% expect:  0 errors; "infra_sweep.py and" then bold and italic text
+% status:  RED (56hu) -> GREEN (56hv, KNOWN_PERL_ERRORS #232)
+% mechanism: \texttt's text branch was {\ttfamily #1}: seqsplit's \futurelet scanner peeked the
+%   catcode-2 } after the last character and never met its end sentinel. The branch closes
+%   with \expandafter\egroup\fi now, an implicit end-group token, as latex.ltx does.
+\documentclass{article}
+\usepackage{seqsplit}
+\begin{document}
+\seqsplit{\texttt{infra\_sweep.py}} and \textbf{bold} \textit{it}.
+\end{document}

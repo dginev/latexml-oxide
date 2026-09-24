@@ -224,8 +224,10 @@ LoadDefinitions!({
   DefRegister!("\\lastnodetype", Number::new(0));
 
   // \fontcharht / \fontcharwd / \fontchardp / \fontcharic — Perl L86-113
+  // tex.web §577 `scan_font_ident`: read with expansion, skipping blanks, as
+  // `FontToken` (tex_fonts.rs) does.
   DefParameterType!(FontDef, sub[_inner, _extra] {
-    read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
+    read_x_non_space()?.unwrap_or_else(|| T_CS!("\\relax"))
   });
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
   readonly => true,

@@ -1044,16 +1044,24 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!("\\f@shape",  "n"); });
 
   // These really should be robust! which is a source of expand timing issues!
-  DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else{\\mdseries #1}\\fi",       protected => true);
-  DefMacro!("\\textbf{}",     "\\ifmmode\\textbf@math{#1}\\else{\\bfseries #1}\\fi",       protected => true);
-  DefMacro!("\\textrm{}",     "\\ifmmode\\textrm@math{#1}\\else{\\rmfamily #1}\\fi",       protected => true);
-  DefMacro!("\\textsf{}",     "\\ifmmode\\textsf@math{#1}\\else{\\sffamily #1}\\fi",       protected => true);
-  DefMacro!("\\texttt{}",     "\\ifmmode\\texttt@math{#1}\\else{\\ttfamily #1}\\fi",       protected => true);
-  DefMacro!("\\textup{}",     "\\ifmmode\\textup@math{#1}\\else{\\upshape #1}\\fi",        protected => true);
-  DefMacro!("\\textit{}",     "\\ifmmode\\textit@math{#1}\\else{\\itshape #1}\\fi",        protected => true);
-  DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else{\\slshape #1}\\fi",        protected => true);
-  DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else{\\scshape #1}\\fi",        protected => true);
-  DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else{\\normalfont #1}\\fi", protected => true);
+  // The text branch closes with `\expandafter\egroup\fi`, as latex.ltx's
+  // `\DeclareTextFontCommand` does (`\hmode@bgroup…##1…\expandafter\egroup\fi`):
+  // an implicit end-group token, not a `}` character. A `\futurelet` scanner
+  // reading the argument's characters one by one (seqsplit's `\SQSPL@scan`)
+  // peeks the token after the last one; a catcode-2 `}` there made
+  // `\seqsplit{\texttt{infra\_sweep.py}}` loop to the conditional limit
+  // (arXiv 2605.04530; Perl's `{…}`, latex_constructs.pool.ltxml:5272-5281,
+  // loops the same once seqsplit loads). pdflatex converts it.
+  DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else\\bgroup\\mdseries #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textbf{}",     "\\ifmmode\\textbf@math{#1}\\else\\bgroup\\bfseries #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textrm{}",     "\\ifmmode\\textrm@math{#1}\\else\\bgroup\\rmfamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textsf{}",     "\\ifmmode\\textsf@math{#1}\\else\\bgroup\\sffamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\texttt{}",     "\\ifmmode\\texttt@math{#1}\\else\\bgroup\\ttfamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textup{}",     "\\ifmmode\\textup@math{#1}\\else\\bgroup\\upshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textit{}",     "\\ifmmode\\textit@math{#1}\\else\\bgroup\\itshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else\\bgroup\\slshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else\\bgroup\\scshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else\\bgroup\\normalfont #1\\expandafter\\egroup\\fi", protected => true);
 
   // Perl: latex_constructs.pool.ltxml line 5365
   // \DeclareOldFontCommand{\cmd}{text-font-switch}{math-font-cmd}

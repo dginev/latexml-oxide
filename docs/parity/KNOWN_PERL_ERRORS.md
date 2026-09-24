@@ -6387,3 +6387,31 @@ the package's loaded-flag is global. OmniBus.cls.ltxml:49-51 autoloads natbib on
 Fatal. **Rust (FIXED, batch 56hu):** OXIDIZED_DESIGN #282. Guard
 `regress_2605_clusters::autoloaded_package_outlives_the_group`.
 
+## 231. `\fontdimen`'s font identifier is read unexpanded (FIXED in Rust)
+
+tex.web §577 `scan_font_ident` gets the next non-blank non-call token, expanding; Perl's
+`FontToken` (TeX_Fonts.pool.ltxml) reads it raw. `\fontdimen8 \ifx\x\y\textfont\else
+\scriptfont\fi 3` then takes `\ifx` as the font and leaves `\else`/`\fi` outside any
+conditional. Trigger: the `\mathpalette` underline macro of arXiv 2605.21425 (1000
+"not in a conditional", Fatal in both engines). **Rust (FIXED, batch 56hv):**
+`tex_fonts.rs` `FontToken` reads with `read_x_non_space`. Guard
+`regress_2605_clusters::fontdimen_font_identifier_is_expanded`.
+
+## 232. `\textbf`/`\texttt`/… end with a `}` character (FIXED in Rust)
+
+latex.ltx's `\DeclareTextFontCommand` closes the text branch with `\expandafter\egroup
+\fi`; latex_constructs.pool.ltxml:5272-5281 uses `{\ttfamily #1}`. A `\futurelet`
+character scanner run over the argument peeks the catcode-2 `}`: `\usepackage{seqsplit}`
+`\seqsplit{\texttt{a\_b}}` loops to the conditional limit (arXiv 2605.04530; Perl lacks
+a seqsplit binding, so only an inline copy shows it there). **Rust (FIXED, batch 56hv):**
+`sect13.rs` `\text..` close with `\expandafter\egroup\fi`. Guard
+`regress_2605_clusters::text_font_command_ends_with_egroup`.
+
+## 233. glossaries labels are digested to build `key=` (FIXED in Rust)
+
+glossaries.sty.ltxml:30/:89 read the entry label as a `{}` argument, digested, where
+only its string is used. `\newglossaryentry{beat_frequency}{name={x},description={y}}`
+gives "_ can only appear in math mode" (arXiv 2605.01773: 122 such labels, Fatal).
+**Rust (FIXED, batch 56hv):** `glossaries_sty.rs` reads it ExpandedSemiverbatim, as
+`\label` reads its label. Guard `regress_2605_clusters::glossaries_underscore_label_is_a_key`.
+

@@ -859,22 +859,28 @@ LoadDefinitions!({
   // Only used for active math characters, so far
   DefRegister!("\\mathcode Number", Number::new(0),
     getter => sub[args] {
-      let ch_code   = args.remove(0).expect_number().value_of() as u8;
-      let ch : char = ch_code as char;
+      let ch_code = args.remove(0).expect_number().value_of();
+      let ch = char::from_u32(ch_code as u32).unwrap_or('\0');
       // Avoid `ch.to_string()` alloc per call — encode_utf8 writes into
       // a stack buffer and returns a borrowed &str. `\mathcode` is read
       // per math-token during tokenization.
       let mut buf = [0u8; 4];
       let key = ch.encode_utf8(&mut buf);
+      // The whole 15-bit code (tex.web §1151: up to "8000), not its low byte:
+      // `\mathcode`\'` is "8000 (plain.tex:88), and read back as 0 it sent
+      // babel's `\initiate@active@char{'}` (babel.def:1347-1351) down the
+      // branch where the active `'` stands for itself — `$x'$` under
+      // czech/slovak looped to the conditional limit (arXiv 2605.05181,
+      // 2605.16660; Perl reads the full code).
       let code = match lookup_mathcode(key) {
         None => ch_code,
-        Some(code) => code as u8
+        Some(code) => i64::from(code),
       };
       Number!(code)
-    },    // defaults to the char's code itself(?)
+    },    // defaults to the char's code itself
     setter => sub[value, scope, args] {
-      let ch = args.remove(0).expect_number().value_of() as u8;
-      let ch : char = ch as char;
+      let ch_code = args.remove(0).expect_number().value_of();
+      let ch = char::from_u32(ch_code as u32).unwrap_or('\0');
       assign_mathcode(ch, value.value_of() as u16, scope);
     }
   );

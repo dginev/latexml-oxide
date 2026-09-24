@@ -23,10 +23,22 @@ LoadDefinitions!({
   // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
   // number and looks up the stored font CS token.  For \font, returns current_FontDef.
   DefParameterType!(FontToken, sub[_inner, _extra] {
+    // tex.web §577 `scan_font_ident` gets the next non-blank non-call token: the
+    // identifier is read WITH expansion, so `\fontdimen8 \ifx#1\displaystyle
+    // \textfont\else…\fi 3` selects `\textfont` and the conditional completes.
+    // Perl reads it unexpanded (TeX_Fonts.pool.ltxml), which took `\ifx` as the
+    // font and orphaned its `\else`/`\fi` (arXiv 2605.21425: a `\mathpalette`
+    // underline macro, 1000 "not in a conditional", Fatal).
     // \textfont/\scriptfont/\scriptscriptfont/\font require a following token; on
     // input-exhaustion emit the parity "file ended" error and fall back to the
     // default font CS (which flows through the `else` arm below) rather than panic.
-    let token = read_token_required("\\font")?.unwrap_or_else(|| T_CS!("\\lx@default@font"));
+    let token = match read_x_non_space()? {
+      Some(token) => token,
+      None => {
+        Error!("expected", "\\font", "input ended while scanning use of \\font");
+        T_CS!("\\lx@default@font")
+      },
+    };
     if let Some(font_type) = token.with_str(|ts| {
       if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
       else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }

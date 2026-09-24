@@ -1,0 +1,21 @@
+% witness: arXiv 2605.01773 (tex/preamble.tex:45 \ifCLASSOPTIONcompsoc; {IEEEkeywords},
+%          \IEEEPARstart, \IEEEpubidadjcol), 2405.01673, 2603.04284 ({IEEEkeywords} undefined)
+% oracle:  pdflatex 0 errors (ieeetj.cls is IEEEtran V1.7a inline + a numbered \affil store)
+% engines: rust (56hu) = undefined \ifCLASSOPTIONcompsoc/{IEEEkeywords}/\IEEEPARstart (OmniBus stub);
+%          Perl the same (OmniBus)
+% expect:  0 errors; two creators, one affiliation, keywords, "y" from \ifCLASSOPTIONcompsoc
+% status:  RED (56hu) -> GREEN (56hv)
+% mechanism: ieeetj_cls.rs loaded OmniBus; it loads IEEEtran now, with inst_support's \author
+%   (the flat list, \\ a line break) and ieeetj.cls:4858's \affil.
+\documentclass{ieeetj}
+\title{T}
+\author{Alice Smith\authorrefmark{1}, Bob Jones\authorrefmark{1}}
+\affil{University A}
+\corresp{Corresponding author: Alice Smith.}
+\begin{document}
+\maketitle
+\begin{IEEEkeywords}
+radar, navigation
+\end{IEEEkeywords}
+\IEEEPARstart{T}{his} is \ifCLASSOPTIONcompsoc x\else y\fi.
+\end{document}

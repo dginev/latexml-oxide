@@ -25134,4 +25134,123 @@ $$ X_{i} = a $$
     // The group's italic stays in the group.
     assert_eq!(xml.matches(r#"font="italic""#).count(), 1, "{xml}");
   }
+
+  fn kpsewhich_has(name: &str) -> bool {
+    std::process::Command::new("kpsewhich")
+      .arg(name)
+      .output()
+      .map(|o| o.status.success() && !o.stdout.is_empty())
+      .unwrap_or(false)
+  }
+
+  /// tex.web §577 `scan_font_ident` expands: `\fontdimen8 \ifx#1\displaystyle
+  /// \textfont\else…\fi 3` selects `\textfont` (arXiv 2605.21425's `\mathpalette`
+  /// underline macro: the unexpanded read took `\ifx` as the font, 1000 orphaned
+  /// `\else`/`\fi`, Fatal; Perl the same).
+  #[test]
+  fn fontdimen_font_identifier_is_expanded() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/fontdimen_font_ident_expands.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"tex="\underline{\hbox{$\textstyle\underline{\sigma}$}}""#),
+      "{xml}"
+    );
+  }
+
+  /// `\texttt` & co. close their text branch with `\expandafter\egroup\fi`, as
+  /// latex.ltx's `\DeclareTextFontCommand` does: seqsplit's `\futurelet` scanner
+  /// peeked a `}` character and looped (arXiv 2605.04530, `Fatal:Timeout:IfLimit`).
+  #[test]
+  fn text_font_command_ends_with_egroup() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/text_font_command_ends_with_egroup.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // seqsplit splits `\texttt` from its argument, so the text is roman in
+    // pdflatex too (CMR10 only).
+    assert!(
+      xml.contains(r#">infra_sweep.py and <text font="bold""#),
+      "{xml}"
+    );
+  }
+
+  /// glossaries entry labels are keys, never digested: an underscore label
+  /// raised "_ can only appear in math mode" per entry (arXiv 2605.01773: 122
+  /// labels, Fatal; Perl the same).
+  #[test]
+  fn glossaries_underscore_label_is_a_key() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/index-bib/glossaries_underscore_label.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<glossarydefinition inlist="main" key="beat_frequency">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<glossaryref inlist="main" key="beat_frequency">"#),
+      "{xml}"
+    );
+  }
+
+  /// `\mathcode` reads back the whole code: `\mathcode`\'` is "8000
+  /// (plain.tex:88). Its low byte, 0, sent babel's `\initiate@active@char{'}`
+  /// down the branch where the active `'` is itself, and `$x'$` under
+  /// czech/slovak looped (arXiv 2605.05181, 2605.16660, `Fatal:Timeout:IfLimit`).
+  #[test]
+  fn mathcode_reads_the_whole_code() {
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\the\\mathcode`\\' \\ifnum\\mathcode`\\'=\"8000 yes\\else no\\fi\n\\mathcode`\\z=32768 \\the\\mathcode`\\z.\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>32768yes32768.</p>"), "{xml}");
+    if kpsewhich_has("slovak.ldf") {
+      let tex = include_str!(
+        "../../tools/perfect_kernel/repros/expansion-primitives/mathcode_reads_the_whole_code.tex"
+      );
+      let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+      assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains(r#"tex="x^{\prime}""#), "{xml}");
+    }
+  }
+
+  /// ieeetj.cls is IEEEtran V1.7a inline plus a numbered `\affil` store: bound
+  /// on IEEEtran (with inst_support's `\author`), not OmniBus, so IEEEtran's
+  /// `\ifCLASSOPTION…`, `{IEEEkeywords}` and `\IEEEPARstart` exist (arXiv
+  /// 2605.01773; 2405.01673 and 2603.04284 lost their keywords).
+  #[test]
+  fn ieeetj_is_ieeetran() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetj_is_ieeetran.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<personname>Alice Smith<sup>1</sup></personname>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<personname>Bob Jones<sup>1</sup></personname>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University A</contact>"
+      ),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<keywords name=\"Index Terms:\u{a0}\">radar, navigation"),
+      "{xml}"
+    );
+    assert!(xml.contains("<p>This is y.</p>"), "{xml}");
+  }
 }

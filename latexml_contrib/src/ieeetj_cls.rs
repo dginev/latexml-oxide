@@ -1,13 +1,22 @@
 //! ieeetj.cls — IEEE Transactions journal template (author-bundled, ~4900 lines;
-//! not raw-loaded). OmniBus renders the authors (`\author`, `\affil` via
-//! inst_support) fine, but the class's late-defined journal-metadata frontmatter
-//! macros are undefined and leak as literal text (witness 2405.01673, 2603.04284
-//! → `\corresp \authornote \receiveddate …`). Bind just those frontmatter
-//! macros; everything else falls through to OmniBus.
+//! not raw-loaded). The class is IEEEtran V1.7a copied inline (its header,
+//! ieeetj.cls:209) plus its own `\affil{…}` store (:4856-4858, numbered
+//! affiliations after a flat `\author` list), so it is IEEEtran with that
+//! `\affil` (authblk's would attach every affiliation to every author). As an
+//! OmniBus stub, IEEEtran's `\ifCLASSOPTION…`
+//! conditionals, `{IEEEkeywords}`, `\IEEEPARstart` and `\IEEEpubidadjcol` were
+//! undefined (arXiv 2605.01773). The class's late-defined journal-metadata
+//! frontmatter macros are bound below; they leaked as literal text before
+//! (witness 2405.01673, 2603.04284 → `\corresp \authornote \receiveddate …`).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  LoadClass!("IEEEtran");
+  // The author list is flat, with `\\` as a line break inside it (2405.01673);
+  // inst_support's `\author` reads it that way, as under OmniBus.
+  RequirePackage!("inst_support");
+  // ieeetj.cls:4858 `\affil{text}` stores one numbered affiliation block.
+  DefMacro!("\\affil{}", "\\lx@add@affiliation{#1}");
 
   // Corresponding-author byline and author/funding note — preserve as notes.
   DefMacro!(

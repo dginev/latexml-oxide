@@ -1,0 +1,14 @@
+% witness: arXiv 2605.05181, 2605.16660 (babel[…,czech,slovak]; any prime in math: $x'$, x'\le y')
+% oracle:  pdflatex 0 errors; Perl 0 errors (the full mathcode is read)
+% engines: rust (56hu) = Fatal:Timeout:IfLimit (babel's active ' stood for itself)
+% env:     the babel line needs slovak.ldf (vendor TL 2025); the rest is TL-independent
+% expect:  0 errors; "32768 yes"; x with a prime superscript
+% status:  RED (56hu) -> GREEN (56hv; Rust-only)
+% mechanism: the \mathcode register getter returned the code's low byte, so "8000 read back
+%   as 0; babel.def:1347-1351 then built \normal@char' as the active ' itself.
+\documentclass{article}
+\usepackage[slovak,english]{babel}
+\begin{document}
+\the\mathcode`\' \ifnum\mathcode`\'="8000 yes\else no\fi
+$x'$
+\end{document}
