@@ -18519,6 +18519,27 @@ See \citep{a,b}.
     }
   }
 
+  /// `\let\@left\left` + a `\left` wrapper (mathtools-style) must not loop: the
+  /// Rust `\left` trampoline re-emitted a constructor named `\@left`, which the
+  /// `\let` turned into the trampoline itself (arXiv 2605.21750,
+  /// `Fatal:Timeout:PushbackLimit`). TeX and Perl have no `\@left`.
+  #[test]
+  fn let_at_left_left_does_not_loop() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/let_at_left_left_loop.tex"
+    );
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"role="OPEN" stretchy="true">(</XMTok>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"role="CLOSE" stretchy="true">)</XMTok>"#),
+      "{xml}"
+    );
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,

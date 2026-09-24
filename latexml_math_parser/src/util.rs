@@ -222,8 +222,8 @@ fn node_to_grammar_lexemes_ctx(
       {
         // `\left|...\right|` produces a balanced pair of VERTBAR tokens
         // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
-        // Further distinguish by side: the `\@left` constructor tags
-        // the emitted XMTok with `role_side="left"`, `\@right` with
+        // Further distinguish by side: the `\lx@delim@left` constructor tags
+        // the emitted XMTok with `role_side="left"`, `\lx@delim@right` with
         // `role_side="right"` (tex_math.rs). This refines the `role`
         // attribute (delimiter direction) without changing it, so
         // the grammar can use distinct LEFT_STRETCHY_VERTBAR /
@@ -235,7 +235,7 @@ fn node_to_grammar_lexemes_ctx(
         // docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md §2) and unlocks task #263's
         // norm-fenced grammar rules.
         // Defensive fallback: if `role_side` is missing — legacy DOM
-        // input or a path that bypassed `\@left`/`\@right` — keep the
+        // input or a path that bypassed `\lx@delim@left`/`\lx@delim@right` — keep the
         // old undirected STRETCHY_VERTBAR lexeme so legacy rules
         // (eval_at, modulus fence) still work.
         match node.get_attribute("role_side").as_deref() {

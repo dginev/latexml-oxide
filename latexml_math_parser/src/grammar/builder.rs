@@ -51,8 +51,8 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   // single `VERTBAR:|` for `||x||`). Used by the `\|x\|` norm rule below.
   token!(doublevertbar = "VERTBAR:||");
   // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`.
-  // The lexer (util.rs) further distinguishes those emitted by `\@left`
-  // from those emitted by `\@right` via the `lx@side` property set in
+  // The lexer (util.rs) further distinguishes those emitted by `\lx@delim@left`
+  // from those emitted by `\lx@delim@right` via the `lx@side` property set in
   // the respective constructors (tex_math.rs). Side-distinct lexemes
   // (LEFT_STRETCHY_VERTBAR / RIGHT_STRETCHY_VERTBAR) eliminate
   // combinatorial pairing ambiguity for the kerned-stack norm idioms
@@ -63,7 +63,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(left_stretchy_vertbar ~ "LEFT_STRETCHY_VERTBAR");
   token!(right_stretchy_vertbar ~ "RIGHT_STRETCHY_VERTBAR");
   // Fallback for stretchy bars that arrived without a side tag
-  // (legacy DOM input, or a code path that bypassed `\@left`/`\@right`).
+  // (legacy DOM input, or a code path that bypassed `\lx@delim@left`/`\lx@delim@right`).
   // The lexer in util.rs emits this when `role_side` is absent.
   // Rules that legitimately accept any side (eval_at) enumerate both
   // alternatives explicitly rather than relying on a union token —
@@ -560,10 +560,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | singlevertbar expression singlevertbar => fenced
              // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
              // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).
-             // The lexer in util.rs distinguishes bars emitted by `\@left`
-             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\@right`
+             // The lexer in util.rs distinguishes bars emitted by `\lx@delim@left`
+             // (LEFT_STRETCHY_VERTBAR) from those emitted by `\lx@delim@right`
              // (RIGHT_STRETCHY_VERTBAR) via the `lx@side` property set in
-             // those constructors (tex_math.rs:\@left and :\@right). This
+             // those constructors (tex_math.rs:\lx@delim@left and :\lx@delim@right). This
              // pre-distinction collapses what would be a combinatorial
              // pairing of identical stretchy bars into a single ungrammatical
              // shape — the parser never enumerates `right-...-left` invalid
@@ -1111,11 +1111,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         | tight_term close_pipe postsuperarg postsubarg => eval_at
         // \left.expr\right|_… — the closing \right| is stretchy VERTBAR
         // tagged RIGHT_STRETCHY_VERTBAR by the lexer (util.rs) via the
-        // `role_side="right"` property set in `\@right` (tex_math.rs).
+        // `role_side="right"` property set in `\lx@delim@right` (tex_math.rs).
         // The `\left.` null-delimiter doesn't appear in the lexeme
         // stream, so the resulting shape is `tight_term RIGHT_STRETCHY_VERTBAR
         // postsubarg`. The undirected variant covers legacy DOM input
-        // or code paths that bypassed `\@right`.
+        // or code paths that bypassed `\lx@delim@right`.
         | tight_term right_stretchy_vertbar postsubarg => eval_at
         | tight_term right_stretchy_vertbar postsubarg postsuperarg => eval_at
         | tight_term right_stretchy_vertbar postsuperarg postsubarg => eval_at

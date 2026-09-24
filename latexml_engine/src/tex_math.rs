@@ -1006,7 +1006,7 @@ LoadDefinitions!({
   // split is a DefMacro `\left XToken` trampoline + inline handling of
   // the \delimiter<Number> case via `gullet::read_number` + the
   // `decode_math_char` delimiter table. Same approach for `\lx@right
-  // XToken` at L1192 (which wraps `\@right` to handle the Number form).
+  // XToken` at L1192 (which wraps `\lx@delim@right` to handle the Number form).
   //
   // Intentional DefConstructor → DefMacro kind divergence for both
   // `\left` and `\lx@right` (audit tex_math.rs:836, tex_math.rs:1192)
@@ -1026,13 +1026,13 @@ LoadDefinitions!({
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           // Found the delimiter — unread it as a token
           let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           // Unknown glyph, use dot delimiter
-          unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
         }
       } else {
-        unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+        unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
       }
     } else if delim_str == "\\Udelimiter" {
       let _class = read_number()?;
@@ -1043,15 +1043,15 @@ LoadDefinitions!({
         let glyph_key = ch.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
-          unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
         }
       } else {
-        unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+        unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
       }
     } else {
-      unread(Tokens::new(vec![T_CS!("\\@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
+      unread(Tokens::new(vec![T_CS!("\\lx@delim@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
     }
   });
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
@@ -1075,7 +1075,16 @@ LoadDefinitions!({
     // Empty reversion — \lx@right provides the actual \right reversion via alias
     reversion => Tokens!());
 
-  DefConstructor!("\\@left Token",
+  // The delimiter constructors behind the `\left`/`\right` trampolines are
+  // private names: the Rust port splits `\left` (Perl: one `TeXDelimiter`
+  // constructor) into a macro that re-emits this constructor, and when it was
+  // called `\@left`, a paper's mathtools-style `\let\@left\left
+  // \renewcommand\left{\mathopen{}\mathclose\bgroup\@left}` made the re-emitted
+  // token the trampoline itself — an endless `\lx@hidden@bgroup` push
+  // (arXiv 2605.21750, `Fatal:Timeout:PushbackLimit`). TeX and Perl leave
+  // `\@left`/`\@right` undefined. Guard:
+  // `perfect_kernel_batch56::let_at_left_left_does_not_loop`.
+  DefConstructor!("\\lx@delim@left Token",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
@@ -1141,7 +1150,7 @@ LoadDefinitions!({
       Ok(Vec::new())
     },
     alias => "\\left");
-  DefConstructor!("\\@right Token",
+  DefConstructor!("\\lx@delim@right Token",
     "?#char(?#inmath(<ltx:XMTok role='#role' name='#name' ?#meaning(meaning='#meaning') stretchy='#stretchy' ?#role_side(role_side='#role_side')>#char</ltx:XMTok>)(#char))\
       (?#hint(?#inmath(<ltx:XMHint/>)())(#1))",
     after_digest => sub[whatsit] {
@@ -1160,7 +1169,7 @@ LoadDefinitions!({
       else if let Some(entry) = DELIMITER_MAP.get(delim.as_str()) {
         whatsit.set_property("role", entry.right_role);
         whatsit.set_property("char", entry.char);
-        // See `\@left` for the side-tagging rationale. Task #263.
+        // See `\lx@delim@left` for the side-tagging rationale. Task #263.
         if entry.right_role == "VERTBAR" {
           whatsit.set_property("role_side", "right");
         }
@@ -1427,8 +1436,8 @@ LoadDefinitions!({
 
   // \lx@left/\lx@right: like \left/\right but without extra grouping.
   // Perl uses TeXDelimiter param type; we handle \delimiter specially.
-  Let!("\\lx@left", "\\@left");
-  // \lx@right wraps \@right to handle \delimiter<Number> (TeXDelimiter logic)
+  Let!("\\lx@left", "\\lx@delim@left");
+  // \lx@right wraps \lx@delim@right to handle \delimiter<Number> (TeXDelimiter logic)
   DefMacro!("\\lx@right XToken", sub[(delim)] {
     let delim_str = delim.to_string();
     if delim_str == "\\delimiter" {
@@ -1439,12 +1448,12 @@ LoadDefinitions!({
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
         } else {
-          unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
         }
       } else {
-        unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+        unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
       }
     } else if delim_str == "\\Udelimiter" {
       let _class = read_number()?;
@@ -1455,15 +1464,15 @@ LoadDefinitions!({
         let glyph_key = ch.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), tok]));
         } else {
-          unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+          unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
         }
       } else {
-        unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+        unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), T_OTHER!(".")]));
       }
     } else {
-      unread(Tokens::new(vec![T_CS!("\\@right"), delim]));
+      unread(Tokens::new(vec![T_CS!("\\lx@delim@right"), delim]));
     }
   });
 
@@ -1525,18 +1534,18 @@ LoadDefinitions!({
       use latexml_core::definition::argument::ArgWrap;
       // Digest left/right delimiter tokens.
       // Replace \lx@left/\lx@right (which may resolve to \left/\right with egroup
-      // semantics) with \@left/\@right (Constructors without grouping).
+      // semantics) with \lx@delim@left/\lx@delim@right (Constructors without grouping).
       for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
         if let Some(val) = val_opt {
           if let ArgWrap::Tokens(ts) = val {
-            // Rewrite tokens: replace any left/right CS with \@left/\@right
+            // Rewrite tokens: replace any left/right CS with \lx@delim@left/\lx@delim@right
             let mut new_tokens = Vec::new();
             for tok in ts.unlist_ref().iter() {
               let s = tok.to_string();
               if s.ends_with("left") && s.starts_with('\\') {
-                new_tokens.push(T_CS!("\\@left"));
+                new_tokens.push(T_CS!("\\lx@delim@left"));
               } else if s.ends_with("right") && s.starts_with('\\') {
-                new_tokens.push(T_CS!("\\@right"));
+                new_tokens.push(T_CS!("\\lx@delim@right"));
               } else {
                 new_tokens.push(*tok);
               }

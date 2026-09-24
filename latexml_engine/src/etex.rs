@@ -513,7 +513,7 @@ LoadDefinitions!({
   // / middle rules can pair it without ambiguity. We also stamp
   // `role_side="middle"` on the emitted XMTok — symmetry with
   // \left's `role_side="left"` and \right's `role_side="right"` set
-  // in tex_math.rs:\@left and :\@right, giving a uniform 3-way side
+  // in tex_math.rs:\lx@delim@left and :\lx@delim@right, giving a uniform 3-way side
   // discriminator on side-aware fence-pair delimiters. Task #263.
   DefConstructor!("\\middle Token", "#1",
   after_construct => sub[document, _whatsit] {
