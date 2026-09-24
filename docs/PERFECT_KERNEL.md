@@ -141,6 +141,21 @@ mechanical singletons and the content/semantic axes below.
    syntax.sty grammars) is fixed in 56hk. 2605.31475's tikz `PushbackLimit` is SHARED: the lock on
    amsmath's `\tag` refuses pgffor's loop variable. Open: a group-local `\def` of a locked CS, and
    Rust's empty root where Perl keeps a partial document.
+1c. **arXiv 2605 Fatal roots (run 313: 144 Fatals, run 315: 136) — root-caused 2026-09-24**
+   (root-causers `~/data/pk_agents/w65/`, `w66/`). Landed, each with a repro and guard:
+   - 56hq: sn-jnl, mdpi, `\include{x.tex}`, newpxmath.
+   - 56hr: XeLaTeX-only packages under the default persona (11 papers).
+   - 56hs: `\let\@left\left`.
+   - 56ht: the ByteDance Seed `\author` loop (the no-result cluster).
+   - 56hu: algorithm2e procedure captions; jmlr `\addr`; ungrouped `\subimport`; listings `\lst@ifdisplaystyle`; the xcolor name sets and active separators; the autoload hoist.
+   - 56hv: `scan_font_ident` expansion; `\text..` closes with `\egroup`; the full `\mathcode`; glossaries labels; ieeetj on IEEEtran.
+
+   Most of the rest is SHARED with Perl: els-mrw bibitems, class-body macros under OmniBus, the enumitem `label=\theenumi` self-reference, `\theequation` in `\tag*`, the mode-frame family, and missing packages. Open and Rust-reachable:
+   - polytable needs array.sty's `\@mkpream`/`\@classz` builder (2605.08990).
+   - 621 raw-mhchem `\ce` exceed the 16M conditional cap (2605.27177, volume, not a loop).
+   - three pgf/tikz loops (2605.00058, .04377, .12601).
+   - the cycle-guard false positive on a large repetitive table (2605.11798).
+   - the autoload hoist's redesign as a load at group level 0 (DIVERGENCES #282).
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's
