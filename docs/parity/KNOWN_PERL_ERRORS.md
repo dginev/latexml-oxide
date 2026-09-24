@@ -6415,3 +6415,14 @@ gives "_ can only appear in math mode" (arXiv 2605.01773: 122 such labels, Fatal
 **Rust (FIXED, batch 56hv):** `glossaries_sty.rs` reads it ExpandedSemiverbatim, as
 `\label` reads its label. Guard `regress_2605_clusters::glossaries_underscore_label_is_a_key`.
 
+## 234. orcidlink's emptiness test ends a p-column cell (FIXED in Rust)
+
+orcidlink.sty.ltxml:28 tests `\orcidlinkX`'s optional texts with `\ifx&#1&`, where the
+real package uses etoolbox's `\ifstrempty`. A bare `&` read at alignment brace level 0 is a
+column end (tex.web §342, Gullet.pm:223-226/399-402), and `\bgroup` does not raise that
+level: `\begin{tabular}{p{3cm}}\bgroup A\orcidlinkX{}{0}{}\egroup\\\end{tabular}` gives 7
+errors in both engines. Perl's `\textbf` is `{\bfseries #1}`, which shields
+`\textbf{A~\orcidlink{…}}`; Rust's is latex.ltx's `\bgroup…\egroup` since batch 56hv (KPE
+#232), which exposed it (arXiv 2605.21922). **Rust (FIXED, batch 56hw):** the test is
+`\if\relax\detokenize{#1}\relax`. Guard `regress_2605_clusters::orcidlink_in_a_p_cell_keeps_the_cell`.
+

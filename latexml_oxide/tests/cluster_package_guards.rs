@@ -25253,4 +25253,38 @@ $$ X_{i} = a $$
     );
     assert!(xml.contains("<p>This is y.</p>"), "{xml}");
   }
+
+  /// orcidlink's emptiness tests carry no bare `&`: `\ifx&#1&` read a column end
+  /// at alignment brace level 0 (tex.web §342), so `\textbf{Name~\orcidlink{…}}`
+  /// in a `p{…}` cell — `\textbf` is `\bgroup…\egroup` since 56hv, which does not
+  /// raise that level — ended the cell early (arXiv 2605.21922, 7 errors).
+  #[test]
+  fn orcidlink_in_a_p_cell_keeps_the_cell() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/alignment/orcidlink_textbf_in_p_cell.tex");
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(
+        "<text font=\"bold\" xml:id=\"p1.1.1.1.1.1.1\">Alice\u{a0}<ref class=\"ltx_orcid\" \
+         href=\"https://orcid.org/0000-0002-7342-2090\""
+      ),
+      "{xml}"
+    );
+  }
+
+  /// revtex4-2's `\close@column@grid` (cls:7424, `\onecolumngrid` when balancing)
+  /// is a layout no-op like `\onecolumngrid`; a paper's `\balancecolsandclearpage`
+  /// calls it (arXiv 2605.07942).
+  #[test]
+  fn revtex_close_column_grid_is_defined() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_close_column_grid.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Text.\nMore.</p>"), "{xml}");
+  }
 }

@@ -17,8 +17,14 @@ LoadDefinitions!({
   // Perl orcidlink.sty.ltxml L29 passes `robust => 1` so \orcidlinkX
   // survives \write/\edef contexts (e.g. being rendered inside PDF
   // metadata or saved footnote text). Rust was missing the flag.
+  // The emptiness tests stand for orcidlink.sty's `\ifstrempty` (etoolbox). They
+  // are `\if\relax\detokenize{#1}\relax`, not Perl's `\ifx&#1&`
+  // (orcidlink.sty.ltxml:28): a bare `&` is a column end when read at alignment
+  // brace level 0 (tex.web §342), so `\textbf{Name~\orcidlink{…}}` in a
+  // `p{…}` cell, whose `\bgroup` does not raise that level, ended the cell early
+  // and left its mode-switch open (arXiv 2605.21922, 7 errors).
   DefMacro!("\\orcidlinkX{}{}{}",
-    "\\lx@orcidlink{#2}{\\ifx&#1&\\else#1\\,\\fi\\orcidlogo\\ifx&#3&\\else\\,#3\\fi}",
+    "\\lx@orcidlink{#2}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
     robust => true);
 
   // Default, Full, Compact and Inline versions

@@ -131,6 +131,10 @@ LoadDefinitions!({
   // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
   // before our stub binding loads).
   def_macro_noop("\\do@columngrid{}{}")?;
+  // revtex4-2.cls:7424 `\close@column@grid` ends the current column grid before
+  // a page break; layout-only. A paper's own `\balancecolsandclearpage`
+  // (`\close@column@grid\clearpage\twocolumngrid`) calls it: arXiv 2605.07942.
+  def_macro_noop("\\close@column@grid")?;
   def_primitive_noop("\\twocolumn")?;
   DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
   def_macro_noop("\\pagesofar")?;

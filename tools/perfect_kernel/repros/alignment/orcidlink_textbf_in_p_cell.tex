@@ -1,0 +1,20 @@
+% witness: arXiv 2605.21922 (author tabular: >{\centering\arraybackslash}p{…} cells holding
+%          \textbf{Name~\orcidlink{0000-…}})
+% oracle:  pdflatex 0 errors (raw orcidlink.sty tests emptiness with etoolbox's \ifstrempty)
+% engines: rust (56hv) = 7 errors (\@end@tabular "Attempt to close a group that switched to mode
+%          horizontal", …); rust (56ht) 0 and Perl 0, only because \textbf's brace group hid it;
+%          \bgroup A\orcidlinkX{}{0}{}\egroup gives 7 in Perl and 56ht too
+% preload: ar5iv.sty
+% expect:  0 errors; the bold name and the ORCID ref in the cell
+% status:  RED (56hv) -> GREEN (56hw, KNOWN_PERL_ERRORS #234)
+% mechanism: the binding's \ifx&#1& read a bare & at alignment brace level 0 — a column end
+%   (tex.web §342); 56hv's \textbf = \bgroup…\egroup (latex.ltx) does not raise that level.
+%   The test is \if\relax\detokenize{#1}\relax now.
+\documentclass{article}
+\usepackage{array}\usepackage{orcidlink}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\begin{document}
+\begin{tabular}{C{3cm}}
+\textbf{Alice~\orcidlink{0000-0002-7342-2090}}\\
+\end{tabular}
+\end{document}

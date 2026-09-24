@@ -1,0 +1,16 @@
+% witness: arXiv 2605.07942 (revtex4-2; main.tex \newcommand*{\balancecolsandclearpage}{%
+%          \close@column@grid\clearpage\twocolumngrid}, used after \putbib)
+% oracle:  pdflatex 0 errors (revtex4-2.cls:7424 \close@column@grid = \balancelastpage@sw{\onecolumngrid}{})
+% engines: rust (56hv) = Error:undefined:\close@column@grid (the paper's body appeared with 56hq's
+%          \include{x.tex} fix; before it the paper converted empty)
+% expect:  0 errors
+% status:  RED (56hv) -> GREEN (56hw)
+\documentclass[aps,pra]{revtex4-2}
+\makeatletter
+\newcommand*{\balancecolsandclearpage}{\close@column@grid\clearpage\twocolumngrid}
+\makeatother
+\begin{document}
+Text.
+\balancecolsandclearpage
+More.
+\end{document}
