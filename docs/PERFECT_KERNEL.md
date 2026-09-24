@@ -143,10 +143,12 @@ mechanical singletons and the content/semantic axes below.
    Rust's empty root where Perl keeps a partial document.
 1d. **Raw class loading (user direction 2026-09-24) — the class census**
    (`~/data/pk_agents/w67/clscensus/census.tsv`; LEDGER 2026-09-24):
-   - **457 of the 501 usable TeX Live 2025 classes (91.2%) convert through the raw `.cls` path.** 219 of the 720 are exempt because no engine compiles them.
-   - The manual sweeps exercised only 253 classes.
-   - Re-run the census after each class batch; it is the measure for this axis.
-   - Clusters are being fixed in census order: persona engine checks (luatexja, fduthesis, xtufte, jlreq), binding-shadowed internals (xeCJK, varioref `\vref@addto`, mdframed `\mdtheorem`), tudscr `\columnsep`, catoptions, and the singletons.
+   - 219 of the 720 classes are exempt because no engine compiles them; the manual sweeps exercised only 253.
+   - Each class runs under its intended engine's persona (`xetex`/`luatex` where the oracle is xelatex/lualatex).
+   - **Census on 56ia (`~/data/pk_agents/w67/clscensus3/census3.tsv`): 489 of 501 usable classes clean (97.6 %; 85.4 % on 56ht, 92.8 % on 56hy), 9 with errors, 3 failed.** 459 convert cleanly through the raw `.cls` path.
+   - Re-run the census after each class batch (`clscensus3/run.sh <class> <binary>`, `xargs -P 16`, cores 64-127); it is the measure for this axis and catches lateral regressions (it caught four in 56ia).
+   - Landed (56hx-56ia): kernel lengths as allocated `\dimen`s, the `xetex` profile, binding internals that raw classes call, `\chardef`'s expanding `=`, env/document/begin, `\pagestyle` running `\ps@…`, raw option tokens, the kernel `\@ifpackagelater`, titlesec records, patchable `\tableofcontents`, lazy listings colours.
+   - Residual: dtk, univie-ling-poster, neoschool, novel (Fatal), letgut (timeout) under root-cause; imsproc (NFSS `.fd` loading); isodoc/nddiss2e (DVI persona, SHARED); FUbeamer (dvips-only graphicx-psmin); tikzposter (parked); udesoftec (`\abstract` constructor); upmethodology-document (SHARED).
 1c. **arXiv 2605 Fatal roots (run 313: 144 Fatals, run 315: 136) — root-caused 2026-09-24**
    (root-causers `~/data/pk_agents/w65/`, `w66/`). Landed, each with a repro and guard:
    - 56hq: sn-jnl, mdpi, `\include{x.tex}`, newpxmath.
