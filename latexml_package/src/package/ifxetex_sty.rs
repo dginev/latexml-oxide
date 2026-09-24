@@ -4,7 +4,8 @@ use crate::prelude::*;
 
 LoadDefinitions!({
   // ifxetex.sty:4-5 is a legacy wrapper: `\RequirePackage{iftex}` provides
-  // `\ifxetex` and the halting `\RequireXeTeX` (the former no-op here let
-  // XeTeX-only packages load; batch 56ak).
+  // `\ifxetex` and `\RequireXeTeX`, which passes and installs XeTeX's
+  // inter-character primitives for the requesting package (iftex_sty.rs,
+  // OXIDIZED_DESIGN #220 update, batch 56hr).
   RequirePackage!("iftex");
 });

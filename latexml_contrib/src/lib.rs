@@ -142,6 +142,7 @@ pub mod ifacconf_cls;
 // ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
 pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
+pub mod bidi_sty;
 pub mod czipreprint_cls;
 pub mod gauss_sty;
 pub mod hvfloat_sty;
@@ -175,6 +176,7 @@ pub mod ltxdockit_cls;
 pub mod luacode_sty;
 pub mod luatexbase_sty;
 pub mod mathpartir_sty;
+pub mod mathspec_sty;
 pub mod mciteplus_sty;
 pub mod mdframed_sty;
 pub mod mdpi_cls;
@@ -240,6 +242,7 @@ pub mod titleref_sty;
 pub mod tocbasic_sty;
 pub mod typearea_sty;
 pub mod unicode_math_sty;
+pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
 pub mod ltxtable_sty;
@@ -609,6 +612,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
+  ("bidi", "sty", bidi_sty::load_definitions),
+  ("mathspec", "sty", mathspec_sty::load_definitions),
+  ("xeCJK", "sty", xecjk_sty::load_definitions),
   ("openmoss", "cls", openmoss_cls::load_definitions),
   (
     "optica-article",

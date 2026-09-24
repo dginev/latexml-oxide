@@ -18495,6 +18495,30 @@ See \citep{a,b}.
     assert!(xml.contains("<p>A [ok].</p>"), "{xml}");
   }
 
+  /// XeLaTeX documents convert under the default (pdfTeX) persona: the input is
+  /// Unicode-native, so `\RequireXeTeX` passes (Perl makes it a no-op) and
+  /// installs XeTeX's inter-character primitives as argument-reading no-ops for
+  /// the package that asked — ucharclasses' `\XeTeXcharclass` loops over whole
+  /// Unicode blocks ended in a 6.3 GB `alloc_failed` on the undefined primitive
+  /// (latexbangla). bidi, xeCJK and mathspec are bound. Without a request the
+  /// primitives stay undefined, since amsmath & co. probe them to detect XeTeX.
+  /// 11 papers of arXiv 2605 (2605.02089, 2605.16477 …) halted, 28 TL manuals.
+  #[test]
+  fn xetex_only_packages_load_under_the_default_persona() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/backend-persona/xelatex_packages_default_persona.tex"
+    );
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>A abc B 日本 C no.</p>"), "{xml}");
+    if kpsewhich_has("ucharclasses.sty") {
+      let tex = "\\documentclass{article}\n\\usepackage{ucharclasses}\n\\begin{document}\nText \\ifx\\XeTeXcharclass\\undefined no\\else yes\\fi.\n\\end{document}\n";
+      let (stderr, xml) = convert(tex, true);
+      assert_eq!(error_count(&stderr), 0, "{stderr}");
+      assert!(xml.contains("<p>Text yes.</p>"), "{xml}");
+    }
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
@@ -19959,12 +19983,14 @@ Use "x_y" here.
       "{stderr}"
     );
     if kpsewhich_has("iftex.sty") {
+      // A non-Unicode-native engine still halts (`\RequireXeTeX` passes: see
+      // `xetex_only_packages_load_under_the_default_persona`).
       let (stderr, _) = convert(
-        "\\documentclass{article}\n\\usepackage{iftex}\n\\RequireXeTeX\n\\begin{document}\nx\n\\end{document}\n",
+        "\\documentclass{article}\n\\usepackage{iftex}\n\\RequirepTeX\n\\begin{document}\nx\n\\end{document}\n",
         true,
       );
       assert!(
-        stderr.contains("Fatal:") && stderr.contains("XeTeX is required"),
+        stderr.contains("Fatal:") && stderr.contains("pTeX is required"),
         "{stderr}"
       );
       // The engine we DO present passes its own guard.

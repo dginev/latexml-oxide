@@ -7281,6 +7281,26 @@ documents are converted under the `luatex` profile, where it passes
 (handout, latexbangla, lshort-persian, texnegar-xetex-bidi-leaders-hrule…);
 `repros/backend-persona/xetex_only_package_batchmode_read_halt.tex`.
 **Guards**: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.
+**Update (batch 56hr, user direction 2026-09-24)**: the default persona converts XeLaTeX
+documents. The input is Unicode-native, so what XeTeX gives a document is already there:
+UTF-8 text, and OpenType fonts and script switching via the fontspec/polyglossia bindings.
+`\RequireXeTeX` and `\RequireTUTeX` therefore pass, as in Perl. The loop the halt guarded
+against is fixed at its source: `\RequireXeTeX` installs XeTeX's inter-character
+primitives (`\XeTeXcharclass`, `\XeTeXinterchartoks`, `\XeTeXinterchartokenstate`, and
+latex.ltx:22025's `\newXeTeXintercharclass`) as argument-reading no-ops. They are
+installed only once some package requests XeTeX, because amsmath, mathastext, minted2 and
+others probe `\XeTeXcharclass` to detect XeTeX. Only the setter forms are emulated, not
+`\XeTeXcharclass <n>` as a getter (zxjatype's `\int_compare`), and two TL packages drive the
+primitives without calling `\RequireXeTeX` (unicode-bidi.sty:20-21, xetexko.sty:55-57), so
+they remain exposed to the loop. bidi, xeCJK and mathspec, whose raw files check
+the engine themselves or drive those primitives directly, get bindings that keep content
+and drop the font and direction switches. arXiv 2605: 11 halting papers now convert, 10 of
+them with 0 errors. TL manuals: 18 of the 28 halting ones now convert, latexbangla clean
+where it previously hit the 6.3 GB `alloc_failed`. The other 10 fail as before, in
+xepersian's and quran's own expl3 engine checks under the luatex profile, and in stex-doc's
+missing archive. `\Require…` for an engine the persona is not (LuaTeX, pTeX, upTeX, VTeX …) still halts;
+`\RequirePDFTeX`/`\RequireeTeX` pass as before.
+Guard `perfect_kernel_batch56::xetex_only_packages_load_under_the_default_persona`.
 
 ### 221. `\@roman` & co. are latex.ltx token macros; a `{Type}` re-parse is isolated
 

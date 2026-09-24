@@ -1,0 +1,23 @@
+% witness: arXiv 2605 XeLaTeX-requiring papers (11 Fatal:…cannot \read from terminal; 10 now clean);
+%          TL manuals via ucharclasses/bidi/xeCJK (18 of 28 halted manuals convert)
+% oracle:  xelatex 0 errors; pdflatex refuses (\RequireXeTeX); Perl has no \RequireXeTeX halt
+% engines: rust (56hq) = one Fatal "cannot \read from terminal in nonstop modes" (iftex.sty:51)
+% expect:  0 errors; <p>A abc B 日本 C no.</p> — the input is Unicode-native, so the default
+%          persona passes \RequireXeTeX; \XeTeXcharclass stays undefined for engine probes
+%          (it is installed only by a package that \RequireXeTeX's, e.g. ucharclasses)
+% status:  RED (56hq) -> GREEN (56hr, OXIDIZED_DESIGN #220 update)
+% mechanism: iftex's \RequireXeTeX halts under a pdfTeX persona (\batchmode\read-1). It now
+%   passes and installs inert \XeTeXcharclass/\XeTeXinterchartoks/\XeTeXinterchartokenstate
+%   and latex.ltx:22025-22031 \newXeTeXintercharclass; mathspec/xeCJK/bidi are bindings over
+%   fontspec (fonts are presentational; the characters are already Unicode).
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{mathspec}
+\setmathsfont(Digits,Latin)[Numbers=Lining]{Minion Pro}
+\usepackage{xeCJK}
+\setCJKmainfont{Noto Serif CJK JP}
+\newCJKfontfamily\jfont{Noto Sans CJK JP}
+\usepackage{bidi}
+\begin{document}
+A \RL{abc} B {\jfont 日本} C \ifx\XeTeXcharclass\undefined no\else yes\fi.
+\end{document}
