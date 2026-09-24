@@ -122,8 +122,14 @@ LoadDefinitions!({
   // OTHER) loads, so the Latin-1 letters are re-lettered here at the seam;
   // code points >= U+0100 come lazily from `state::lookup_catcode`.
   // Guard: `perfect_kernel_batch56::non_ascii_letters_are_letters_under_luatex`.
-  if lookup_bool("LUATEX_PROFILE") {
+  if ::latexml_core::state::unicode_engine_profile() {
     ::latexml_core::state::assign_luatex_latin1_letters();
+  }
+  // The `xetex` profile's inter-character primitives (latexml.sty, iftex_sty.rs
+  // `define_xetex_interchar`): their `\newXeTeXintercharclass` allocator needs the
+  // format's `\e@alloc`/`\newcount`, so it is set up here, once the format is in.
+  if lookup_bool("XETEX_PROFILE") && IsDefined!(&T_CS!("\\lx@xetex@interchar")) {
+    digest(Tokens!(T_CS!("\\lx@xetex@interchar")))?;
   }
 
   // Format-layering rule: real LaTeX (INITEX-based) never defines plain.tex's

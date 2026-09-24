@@ -8709,3 +8709,37 @@ Two gaps in the xcolor binding, both shared with Perl, where pdflatex is clean.
 ### 282. A package an autoload loads inside a group outlives the group (Perl: popped with it)
 
 `def_autoload` (and OmniBus's `\lx@late@usepackage`, and the LaTeX-pool autoload) clears its trigger and sets the package's loaded-flag GLOBALLY. It then hoisted the load's meaning-delta to global so the package lives as long, which is the 1711.11576 fix. Issue #348 later restricted the shared hoist to conditionals, for #65's sibling subfiles, and that restriction reached the autoload callers too. So natbib autoloaded by a `\citep` inside `{\itshape …}` lost `\citep` at the `}`, while its lock (`\citep:locked`) survived. Every later `\citep` was then undefined and could not be redefined: arXiv 2605.08349, 2605.10423, 2605.14513 and 2605.04028, `undefined:\citep` ×100, Fatal. Perl fails the same way (OmniBus.cls.ltxml:49-51; 101 errors + Fatal on 08349 and 14513). **Rust** (batch 56hu, `state.rs`): the autoload callers hoist the whole load with `snapshot_top_frame_keys` + `hoist_top_frame_package_load`: its meanings, and its values, so natbib's citation style does not revert after the group either. The subfile bracket keeps the conditionals-only `hoist_top_frame_conditional_delta` (#65). The snapshot-diff is an approximation. A key the group had already bound is not promoted. Catcode, mathcode and the other code tables are not covered. A value the package sets that the group had not bound yet, such as the current font, would become global. The planned replacement runs the load as if at group level 0: set the group's frames aside for the load and restore them after. **Guard**: `regress_2605_clusters::autoloaded_package_outlives_the_group`; repro `repros/loader/autoload_in_group_survives_the_group.tex`.
+
+### 283. An opt-in `xetex` profile, the counterpart of `luatex` (Perl: no engine personas)
+
+The default persona is pdfTeX-model, and since #220's update it passes iftex's `\RequireXeTeX`. It cannot pass an engine test on l3sys, whose identity was frozen to pdftex when the format was built (expl3-code.tex:7846-7861). Examples:
+- fduthesis.cls:69-71 and njuthesis.cls:62-63: `\sys_if_engine_xetex:F{\sys_if_engine_luatex:F{\msg_fatal…}}`;
+- exam-zh.cls:22;
+- fontspec's gate, inlined in xtufte-common.def:20-24, so no binding reaches it.
+
+Each of these halted (TeX Live class census, 2026-09-24). Flipping the default persona is not an option: l3sys's engine is a single value, so `\sys_if_engine_pdftex` would turn false for the 436 pdflatex classes.
+
+**Rust** (batch 56hx, `latexml_sty/mod.rs`): `\usepackage[xetex]{latexml}` (preload `[…,xetex]latexml.sty`) makes the document XeTeX-authored:
+- iftex's `\ifxetex`/`\iftutex` read true and `\ifpdftex` false;
+- l3sys reports `xetex` and `xelatex` (`set_l3sys_engine`, shared with `luatex`);
+- `\XeTeXversion`/`\XeTeXrevision`, `\Uchar` and the inert inter-character primitives are defined;
+- the Unicode-engine behaviours are on (`state::unicode_engine_profile`: non-ASCII letter catcodes, `\char` above 255, no utf8 byte mouth).
+
+fontspec, unicode-math and xeCJK stay bindings, so the raw XeTeX font backends are never reached. Their bindings gained the expl3 internals that classes call directly (`\__fontspec_main_set…font:nn`, `\__um_setmathfont:nn`, the `unicode-math` key family, `\xeCJK_declare_node:n` and friends), and ulem's `\ULC@box`.
+
+Census classes under the profile: xtufte-book, xtufte-handout, fduthesis-en, xduugtp and bitbeamer go from Fatal or errors to 0. fduthesis, njuthesis, exam-zh, xdupgthesis and xduugthesis go from Fatal to converting, with 1-8 residual errors.
+
+`run_doc.sh` routes clean-xelatex-oracle documents to the profile, as it routes lualatex ones to `luatex`. The TL-manual oracle does not yet try xelatex, so that routing is inert there for now.
+
+**Guards**: `class_census::xetex_profile_engine_identity`, `xetex_class_calls_binding_internals`.
+
+### 284. A kernel length keeps latex.ltx's register allocation (Perl: renamed to its CS name)
+
+latex.ltx allocates its lengths with `\newdimen`/`\newskip` (`\columnsep` is `\dimen124`), and the format dump records the allocation. The Rust pools that run after the dump re-`DefRegister!` about 54 of them to give them their default values. Perl's `DefRegisterI` (Package.pm:1346-1348), which `def_register` follows, sets the address to the CS name when no `address`/`allocate` option is given. So `\meaning\columnsep` printed `\columnsep`, where tex.web §1224 prints `\dimen124`. etoolbox's `\ifdefdimen`/`\ifdeflength` split `\meaning` for `\dimen`/`\skip` (etoolbox.sty:421-456), and tudscrbase's length store (tudscrbase.sty:160-170, 435-445) then raised "`\columnsep` is not a defined length" (tudscrartcl, tudscrbook, tudscrposter, tudscrreprt).
+
+**Rust** (batch 56hx):
+- `def_register`: a bare re-definition of a register that already has an allocated address keeps that address. The default value is still assigned, as Perl assigns when no address is given.
+- `state::lookup_dimension`/`lookup_glue` resolve a CS name to its register's address (`register_value_key`), so name-keyed readers such as `lookup_dimension("\\textwidth")` in the float and graphics code read the live value.
+
+**Guard**: `class_census::kernel_length_is_an_allocated_dimen`.
+

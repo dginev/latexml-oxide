@@ -57,4 +57,21 @@ LoadDefinitions!({
   // select a font: no-ops, reading their arguments.
   DefMacro!("\\CJKfamily OptionalMatch:+ OptionalMatch:- {}", "");
   DefMacro!("\\addCJKfontfeatures OptionalMatch:* []{}", "");
+  // `\xeCJKDeclareCharClass*{<class>}{<chars>}` (xeCJK.sty:548) assigns characters
+  // to a spacing class: no-op, reading its arguments.
+  DefMacro!("\\xeCJKDeclareCharClass OptionalMatch:* {}{}", "");
+  // The expl3 internals that classes and xeCJKfntef call (njuthesis, exam-zh,
+  // xdupgthesis, xduugthesis, xduugtp, bitbeamer; class census 2026-09-24):
+  // xeCJK.sty:87 `\__xeCJK_msg_new:nn` is `\msg_new:nnn{xeCJK}`; :139
+  // `\xeCJK_add_to_shipout:n` and :977 `\xeCJK_declare_node:n` drive the page
+  // builder and inter-character nodes (no-ops here); :159 `\xeCJK_cs_clear:N`
+  // empties a command.
+  RawTeX!(
+    r"\expandafter\def\csname __xeCJK_msg_new:nn\endcsname{\csname msg_new:nnn\endcsname{xeCJK}}
+\expandafter\def\csname __xeCJK_msg_new:nnn\endcsname{\csname msg_new:nnnn\endcsname{xeCJK}}
+\expandafter\def\csname xeCJK_add_to_shipout:n\endcsname#1{}
+\expandafter\def\csname xeCJK_declare_node:n\endcsname#1{}
+\expandafter\def\csname xeCJK_cs_clear:N\endcsname#1{\def#1{}}
+\expandafter\def\csname xeCJK_cs_gclear:N\endcsname#1{\gdef#1{}}"
+  );
 });

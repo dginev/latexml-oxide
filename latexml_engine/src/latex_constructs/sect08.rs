@@ -1000,7 +1000,7 @@ pub(crate) fn load() -> Result<()> {
     if hex_str.chars().all(|c| c.is_ascii_hexdigit()) && !hex_str.is_empty() {
       if let Ok(cp) = u32::from_str_radix(hex_str, 16) {
         if cp <= 0x10FFFF {
-          if lookup_bool("LUATEX_PROFILE") {
+          if unicode_engine_profile() {
             // native character on the Unicode engine: nothing to declare
           } else if lookup_bool("PDFTEX_BYTE_MOUTH") {
             // The pdfTeX byte mouth (KERNEL_CAPABILITIES K10): utf8.def:253-265

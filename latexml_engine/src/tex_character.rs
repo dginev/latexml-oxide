@@ -71,11 +71,11 @@ LoadDefinitions!({
     // `<enc>_<family>_fontmap` only on the branch that looked the font up
     // itself (Perl assigns `$font` solely inside `if (!$encoding)`), so an
     // explicit encoding costs `\ttfamily\char11` its `OT1_typewriter` ↑.
-    // Under the `luatex` profile the engine is Unicode: `\char"0329` is the
+    // Under the `luatex`/`xetex` profiles the engine is Unicode: `\char"0329` is the
     // code point itself (tuenc.def:108 `\add@unicode@accent` appends the
     // combining mark that way; tipauni). pdfTeX-model stays 8-bit.
     let value = number.value_of();
-    let decoded = if value > 255 && lookup_bool("LUATEX_PROFILE") {
+    let decoded = if value > 255 && unicode_engine_profile() {
       char::from_u32(value as u32).map(pin_char).unwrap_or_else(|| pin!(""))
     } else {
       u8::try_from(value)

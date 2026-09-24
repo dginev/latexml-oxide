@@ -149,15 +149,7 @@ LoadDefinitions!({
     // a Unicode-engine probe), so they exist only in this profile. Guards:
     // `perfect_kernel_batch55::uchar_primitive_and_expl3_alias` (luatex),
     // `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
-    DefMacro!(T_CS!("\\Uchar"), None, {
-      let charcode = read_number()?.value_of();
-      match char::from_u32(charcode as u32) {
-        Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
-        Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
-        None => Vec::new(),
-      }
-    });
-    Let!("\\tex_Uchar:D", "\\Uchar");
+    define_uchar()?;
     DefMacro!("\\primitive Token", sub[(token)] { Ok(Tokens::new(vec![token])) });
     // LuaTeX manual §2.8.3 `\csstring`: like `\string` but without the escape
     // character (`\csstring\\` is a lone catcode-12 `\`; abntexto-uece.tex:49
@@ -199,24 +191,7 @@ LoadDefinitions!({
     // way :7860 does, with the engine now known; `\c_sys_engine_exec_str` (:7868-7884)
     // and `\c_sys_engine_format_str` (:7886-7916, LaTeX2e format) follow.
     // Guard: `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
-    RawTeX!(
-      r"\ExplSyntaxOn
-        \tl_gset:Nn \c_sys_engine_str { luatex }
-        \tl_map_inline:nn { { pdftex } { ptex } { uptex } { xetex } }
-          {
-            \cs_gset_eq:cN { sys_if_engine_ #1 :T }  \use_none:n
-            \cs_gset_eq:cN { sys_if_engine_ #1 :F }  \use:n
-            \cs_gset_eq:cN { sys_if_engine_ #1 :TF } \use_ii:nn
-            \cs_gset_eq:cN { sys_if_engine_ #1 _p: } \c_false_bool
-          }
-        \cs_gset_eq:cN { sys_if_engine_luatex :T }  \use:n
-        \cs_gset_eq:cN { sys_if_engine_luatex :F }  \use_none:n
-        \cs_gset_eq:cN { sys_if_engine_luatex :TF } \use_i:nn
-        \cs_gset_eq:cN { sys_if_engine_luatex _p: } \c_true_bool
-        \tl_gset:Nn \c_sys_engine_exec_str { luatex }
-        \tl_gset:Nn \c_sys_engine_format_str { lualatex }
-        \ExplSyntaxOff"
-    );
+    set_l3sys_engine("luatex", "lualatex")?;
     // The lualatex FORMAT surface: latex.ltx:107-110 enables the LuaTeX
     // extra primitives and :896-1058 (= ltluatex.dtx `2ekernel`) defines the
     // allocators every LuaTeX-branch package assumes — luaotfload.sty:38
@@ -615,6 +590,33 @@ LoadDefinitions!({
 \def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
 \def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
     );
+  });
+
+  // Opt-in XeTeX profile, the counterpart of `luatex` for XeLaTeX-authored
+  // documents (the TL-manual sweeps pass it when the document's oracle is a clean
+  // xelatex run, `run_doc.sh`). The default persona already passes iftex's
+  // `\RequireXeTeX` (#220 update); what it cannot pass is an engine test on
+  // l3sys, frozen at format-build time to pdftex (expl3-code.tex:7846-7861):
+  // fduthesis.cls:69-71 and njuthesis.cls:62-63 `\sys_if_engine_xetex:F{\msg_fatal…}`,
+  // exam-zh.cls:22, and fontspec's gate inlined in xtufte-common.def:20-24 (class
+  // census 2026-09-24). Under this profile the engine reads as XeTeX everywhere:
+  // iftex, l3sys, `\XeTeXversion`, the inter-character primitives, `\Uchar` and
+  // the Unicode letter catcodes of the XeTeX format. fontspec, unicode-math and
+  // xeCJK stay bindings, so the raw XeTeX font backends are never reached.
+  // Rust-only option; OXIDIZED_DESIGN #283.
+  DeclareOption!("xetex", {
+    AssignValue!("XETEX_PROFILE" => true, Scope::Global);
+    assign_luatex_latin1_letters();
+    RawTeX!(
+      r"\let\iftutex\iftrue \let\ifxetex\iftrue \let\ifXeTeX\iftrue \let\ifpdftex\iffalse \let\ifPDFTeX\iffalse"
+    );
+    define_uchar()?;
+    // XeTeX's version primitives (xetex.web: `\XeTeXversion` an integer, `\XeTeXrevision`
+    // expanding to the revision string); l3sys and iftex probe them.
+    DefRegister!("\\XeTeXversion" => Number::new(0), readonly => true);
+    RawTeX!(r"\def\XeTeXrevision{.999997}");
+    iftex_sty::define_xetex_interchar()?;
+    set_l3sys_engine("xetex", "xelatex")?;
   });
 
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
@@ -1384,4 +1386,63 @@ fn scan_direction() -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// `\Uchar <n>` (LuaTeX manual §2.1; XeTeX has it too): expands to the character
+/// with category 12 (10 for a space). pdfTeX has none (`\ifdefined\Uchar` is a
+/// Unicode-engine probe), so only the `luatex`/`xetex` profiles define it.
+/// Guards: `perfect_kernel_batch55::uchar_primitive_and_expl3_alias` (luatex),
+/// `perfect_kernel_batch56::unicode_engine_primitives_stay_undefined_under_pdftex`.
+fn define_uchar() -> Result<()> {
+  DefMacro!(T_CS!("\\Uchar"), None, {
+    let charcode = read_number()?.value_of();
+    match char::from_u32(charcode as u32) {
+      Some(' ') => vec![CharToken!(' ', Catcode::SPACE)],
+      Some(ch) => vec![CharToken!(ch, Catcode::OTHER)],
+      None => Vec::new(),
+    }
+  });
+  Let!("\\tex_Uchar:D", "\\Uchar");
+  Ok(())
+}
+
+/// l3sys froze its engine identity at FORMAT-build time (expl3-code.tex:7846-7861:
+/// `\str_const:Ne \c_sys_engine_str {…}` and one `\__sys_const:nn
+/// {sys_if_engine_<e>}` per engine), under our pdfTeX-model format. A Unicode-engine
+/// profile re-derives the constants the way :7860 does, with `engine` known;
+/// `\c_sys_engine_exec_str` (:7868-7884) and `\c_sys_engine_format_str`
+/// (:7886-7916, LaTeX2e format) follow. Without it polyglossia's
+/// gloss-latin.ldf:125 took its XeTeX branch under `luatex` (`\newXeTeXintercharclass`
+/// ×12; hang, sample), and fduthesis/fontspec's `\sys_if_engine_xetex:F` halted
+/// under `xetex`. Guard:
+/// `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+fn set_l3sys_engine(engine: &str, format: &str) -> Result<()> {
+  let others: Vec<&str> = ["pdftex", "ptex", "uptex", "xetex", "luatex"]
+    .into_iter()
+    .filter(|e| *e != engine)
+    .collect();
+  let others = others
+    .iter()
+    .map(|e| s!("{{ {e} }}"))
+    .collect::<Vec<_>>()
+    .join(" ");
+  let tex = s!(
+    r"\ExplSyntaxOn
+        \tl_gset:Nn \c_sys_engine_str {{ {engine} }}
+        \tl_map_inline:nn {{ {others} }}
+          {{
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :T }}  \use_none:n
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :F }}  \use:n
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 :TF }} \use_ii:nn
+            \cs_gset_eq:cN {{ sys_if_engine_ #1 _p: }} \c_false_bool
+          }}
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :T }}  \use:n
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :F }}  \use_none:n
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} :TF }} \use_i:nn
+        \cs_gset_eq:cN {{ sys_if_engine_{engine} _p: }} \c_true_bool
+        \tl_gset:Nn \c_sys_engine_exec_str {{ {engine} }}
+        \tl_gset:Nn \c_sys_engine_format_str {{ {format} }}
+        \ExplSyntaxOff"
+  );
+  ::latexml_core::stomach::raw_tex(&tex)
 }

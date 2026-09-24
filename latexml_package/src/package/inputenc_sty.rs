@@ -16,10 +16,10 @@ use crate::prelude::*;
 /// for the rest of the run and install utf8.def's activation, so their raw
 /// code runs as under pdfTeX; the packages' own funnels are then bound to
 /// emit the reassembled code point (`kotexutf_sty.rs`, `cjk_sty.rs`).
-/// No-op under the LuaTeX persona (a Unicode engine). Returns whether the
+/// No-op under the LuaTeX and XeTeX personas (Unicode engines). Returns whether the
 /// byte mouth is on.
 pub fn enable_pdftex_byte_mouth() -> Result<bool> {
-  if lookup_bool("LUATEX_PROFILE") {
+  if unicode_engine_profile() {
     return Ok(false);
   }
   if lookup_bool("PDFTEX_BYTE_MOUTH") {

@@ -55,6 +55,13 @@ LoadDefinitions!({
   });
   def_macro_noop("\\setsansfont[]{}[]")?;
   def_macro_noop("\\setmonofont[]{}[]")?;
+  // fontspec-xetex.sty:688-720: the expl3 implementations behind `\setmainfont`,
+  // `\setsansfont` and `\setmonofont` (`{<features>}{<font>}`), which classes call
+  // directly (fduthesis, njuthesis under the `xetex` profile; class census
+  // 2026-09-24). They are the public commands here.
+  RawTeX!(r"\expandafter\def\csname __fontspec_main_setmainfont:nn\endcsname#1#2{\setmainfont[#1]{#2}}
+\expandafter\def\csname __fontspec_main_setsansfont:nn\endcsname#1#2{\setsansfont[#1]{#2}}
+\expandafter\def\csname __fontspec_main_setmonofont:nn\endcsname#1#2{\setmonofont[#1]{#2}}");
   // The face/family definers (fontspec-xetex.sty:575-605, all `{ m O{} m
   // O{} }`) DEFINE their target: `\__fontspec_main_newfontfamily:NnnN`
   // (L755-767) issues `\NewDocumentCommand #1 {} {\fontfamily{…}

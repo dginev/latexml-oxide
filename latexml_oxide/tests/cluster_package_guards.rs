@@ -25288,3 +25288,64 @@ $$ X_{i} = a $$
     assert!(xml.contains("<p>Text.\nMore.</p>"), "{xml}");
   }
 }
+
+/// The TeX Live 2025 class census (2026-09-24, `docs/perfect_kernel/LEDGER.md`):
+/// every TL class in a hello-world document, raw-loaded. Each guard is the
+/// minimal repro of one failure cluster among the usable classes.
+mod class_census {
+  use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
+
+  /// A kernel length is latex.ltx's allocated `\dimen<n>`, as the dump records it:
+  /// the post-dump pools' `DefRegister!` renamed it to its own CS name, so
+  /// etoolbox's `\ifdefdimen` (a `\meaning` test) said "not a length" — the
+  /// tudscrbase error of tudscrartcl/tudscrbook/tudscrposter/tudscrreprt.
+  #[test]
+  fn kernel_length_is_an_allocated_dimen() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/macro-state/kernel_length_is_an_allocated_dimen.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("dimen124 yes yes 345.0pt</p>"), "{xml}");
+  }
+
+  /// The `xetex` profile: iftex, l3sys and the XeTeX primitives read XeTeX, so
+  /// classes gated on `\sys_if_engine_xetex:F{\msg_fatal…}` (fduthesis, njuthesis,
+  /// exam-zh, xtufte) convert.
+  #[test]
+  fn xetex_profile_engine_identity() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/backend-persona/xetex_profile_engine_identity.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,xetex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>[xetex][X][N][xelatex]yes yes yes no</p>"),
+      "{xml}"
+    );
+    // The default persona is unchanged.
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>[pdftex][L][P][latex]no no no yes</p>"),
+      "{xml}"
+    );
+  }
+
+  /// Classes call the expl3 internals of fontspec, unicode-math, xeCJK and ulem,
+  /// whose bindings shadow the raw packages (fduthesis, njuthesis, exam-zh,
+  /// xdupgthesis, xduugtp, bitbeamer).
+  #[test]
+  fn xetex_class_calls_binding_internals() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/xetex_class_calls_binding_internals.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,xetex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Text.</p>"), "{xml}");
+  }
+}

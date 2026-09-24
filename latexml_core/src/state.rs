@@ -1979,14 +1979,45 @@ pub fn lookup_float(key: &str) -> Option<Float> {
 }
 /// a variant of `lookup_value` that casts the value into `Dimension`
 pub fn lookup_dimension(key: &str) -> Option<Dimension> {
-  match state!().lookup_value(key) {
+  let key = register_value_key(key);
+  match state!().lookup_value(&key) {
     None | Some(Stored::None) => None,
     Some(v) => v.into(),
   }
 }
+/// Whether `address` is a slot of a primitive register bank — `\count<n>`,
+/// `\dimen<n>`, `\skip<n>`, `\muskip<n>`, `\toks<n>`, `\box<n>` — i.e. what
+/// `\newdimen` & co. allocate (tex.web §1224), as opposed to a register named
+/// after its own (or another) control sequence.
+pub fn is_allocated_register_address(address: &str) -> bool {
+  [
+    "\\count", "\\dimen", "\\skip", "\\muskip", "\\toks", "\\box",
+  ]
+  .iter()
+  .any(|bank| {
+    address
+      .strip_prefix(bank)
+      .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+  })
+}
+
+/// Where a register's value lives: its address, which is not its CS name once the
+/// format allocated it (latex.ltx's `\newdimen\columnsep` is `\dimen124`; the
+/// dump records it and `def_register` keeps it). Name-keyed readers of a kernel
+/// length (`lookup_dimension("\\textwidth")`) go through the address.
+fn register_value_key(key: &str) -> Cow<'_, str> {
+  if key.starts_with('\\')
+    && let Some(register) = lookup_register_definition(&T_CS!(key))
+    && is_allocated_register_address(&register.address)
+  {
+    return Cow::Owned(register.address.clone());
+  }
+  Cow::Borrowed(key)
+}
 /// a variant of `lookup_value` that only recognizes a `Stored::Glue`
 pub fn lookup_glue(key: &str) -> Option<Glue> {
-  match state!().lookup_value(key) {
+  let key = register_value_key(key);
+  match state!().lookup_value(&key) {
     Some(Stored::Glue(v)) => Some(*v),
     None | Some(Stored::None) => None,
     Some(other) => panic!("State lookup expected Glue, found: {other:?}"),
@@ -2424,6 +2455,14 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
   }
 }
 
+/// Whether the document's engine persona is a Unicode engine: the `luatex` or
+/// `xetex` profile of latexml.sty. Both formats load load-unicode-data
+/// (latex.ltx:22071-22076), take `\char` code points above 255 natively and
+/// have no utf8.def byte model; the engine-identity probes stay per-profile.
+pub fn unicode_engine_profile() -> bool {
+  lookup_bool("LUATEX_PROFILE") || lookup_bool("XETEX_PROFILE")
+}
+
 /// The format-time Unicode letter catcodes of the LuaTeX/XeTeX kernels, as a
 /// lazy default for code points the catcode table does not pin.
 ///
@@ -2440,7 +2479,7 @@ pub fn lookup_catcode(c: char) -> Option<Catcode> {
 /// non_ascii_letters_are_letters_under_luatex}`.
 fn unicode_letter_catcode_default(c: char) -> Option<Catcode> {
   if c > '\x7f'
-    && ((lookup_bool("LUATEX_PROFILE") && is_unicode_letter_or_mark(c))
+    && ((unicode_engine_profile() && is_unicode_letter_or_mark(c))
       || (lookup_bool("PTEX_PROFILE") && is_ptex_kanji_letter(c)))
   {
     Some(Catcode::LETTER)
@@ -2489,7 +2528,7 @@ pub fn is_ptex_kanji_letter(c: char) -> bool {
 /// letters every L/M code point, but the latex dump pins that range OTHER
 /// (pdfTeX's utf8.def model), so the lazy default in `lookup_catcode` never
 /// reaches it. Called at the format seam (`latexml_engine::latex`) and by the
-/// `luatex` option of latexml.sty; 65 global assignments.
+/// `luatex`/`xetex` options of latexml.sty; 65 global assignments.
 pub fn assign_luatex_latin1_letters() {
   for n in 0x80u32..=0xFF {
     if let Some(ch) = char::from_u32(n)

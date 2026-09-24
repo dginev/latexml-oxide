@@ -319,6 +319,19 @@ pub fn def_register<T: Into<RegisterValue>>(
       None => String::new(),
     },
   };
+  // A bare re-definition of a register that is already allocated keeps its
+  // allocation: latex.ltx's `\newdimen\columnsep` is `\dimen124` (tex.web §1224),
+  // which the format dump records, and the post-dump pools re-`DefRegister!`
+  // ~54 kernel lengths only to give them their default values. Renamed to their
+  // own CS names, `\meaning\columnsep` printed `\columnsep`, so etoolbox's
+  // `\ifdefdimen` (a `\meaning` test, etoolbox.sty:443-456) said "not a length"
+  // (tudscrbase: tudscrartcl, tudscrbook, tudscrposter, tudscrreprt).
+  if address.is_empty()
+    && let Some(existing) = lookup_register_definition(&cs)
+    && is_allocated_register_address(&existing.address)
+  {
+    address = existing.address.to_string();
+  }
   // by adding this check here, we no longer need to use Register::new in the Rust version
   if address.is_empty() {
     address = cs.to_string();

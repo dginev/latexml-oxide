@@ -36,6 +36,15 @@ LoadDefinitions!({
     }
   });
   def_macro_noop("\\setmathfontface DefToken []{}[]")?;
+  // unicode-math-xetex.sty:1203 `\__um_setmathfont:nn {<options>}{<font>}`, the
+  // implementation behind `\setmathfont`, called directly by classes (fduthesis,
+  // njuthesis under the `xetex` profile; class census 2026-09-24).
+  RawTeX!(r"\expandafter\def\csname __um_setmathfont:nn\endcsname#1#2{\setmathfont[#1]{#2}}");
+  // The `unicode-math` key family (unicode-math.sty's `\keys_define:nn
+  // {unicode-math}` options: math-style, bold-style, partial, …), set directly by
+  // classes with `\keys_set:nn {unicode-math}` (fduthesis, njuthesis; class census
+  // 2026-09-24). The keys choose glyph styles, which are presentation: accept them.
+  RawTeX!(r"\ExplSyntaxOn \keys_define:nn { unicode-math } { unknown .code:n = { } } \ExplSyntaxOff");
   def_macro_noop("\\unimathsetup{}")?;
   // unicode-math-luatex.sty:329 `\NewDocumentCommand\setoperatorfont{m}`:
   // operator-font bookkeeping (asmeconf.cls). Witness asmeconf-template.

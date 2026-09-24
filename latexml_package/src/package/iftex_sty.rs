@@ -12,8 +12,8 @@ LoadDefinitions!({
   // because this binding may load after latexml.sty processed its options.
   DefConditional!("\\ifetex", { true });
   DefConditional!("\\ifeTeX", { true });
-  DefConditional!("\\ifpdftex", { !lookup_bool("LUATEX_PROFILE") });
-  DefConditional!("\\ifPDFTeX", { !lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\ifpdftex", { !unicode_engine_profile() });
+  DefConditional!("\\ifPDFTeX", { !unicode_engine_profile() });
   DefConditional!("\\ifluatex", { lookup_bool("LUATEX_PROFILE") });
   DefConditional!("\\ifLuaTeX", { lookup_bool("LUATEX_PROFILE") });
   // iftex.sty:272-291: `\ifpdf` is TRUE on LuaTeX whenever
@@ -26,9 +26,10 @@ LoadDefinitions!({
   DefConditional!("\\ifpdf", { lookup_bool("LUATEX_PROFILE") });
   // iftex.sty:269-270: the legacy ifpdf.sty setters.
   RawTeX!(r"\def\pdftrue{\let\ifpdf\iftrue}\def\pdffalse{\let\ifpdf\iffalse}");
+  // The opt-in `xetex` profile (latexml.sty, OXIDIZED_DESIGN #283).
+  DefConditional!("\\ifxetex", { lookup_bool("XETEX_PROFILE") });
+  DefConditional!("\\ifXeTeX", { lookup_bool("XETEX_PROFILE") });
   // All others are false
-  DefConditional!("\\ifxetex");
-  DefConditional!("\\ifXeTeX");
   DefConditional!("\\ifluahbtex");
   DefConditional!("\\ifLuaHBTeX");
   DefConditional!("\\ifptex");
@@ -41,39 +42,14 @@ LoadDefinitions!({
   DefConditional!("\\ifVTeX");
   DefConditional!("\\ifalephtex");
   DefConditional!("\\ifAlephTeX");
-  DefConditional!("\\iftutex", { lookup_bool("LUATEX_PROFILE") });
-  DefConditional!("\\ifTUTeX", { lookup_bool("LUATEX_PROFILE") });
+  DefConditional!("\\iftutex", { unicode_engine_profile() });
+  DefConditional!("\\ifTUTeX", { unicode_engine_profile() });
   DefConditional!("\\iftexpadtex");
   DefConditional!("\\ifTexpadTeX");
   DefConditional!("\\ifhint");
   DefConditional!("\\ifHINT");
 
-  // XeTeX's inter-character primitives, for the packages that DECLARE themselves
-  // XeTeX-only: `\RequireXeTeX` installs them (ucharclasses.sty:987, then its
-  // `\XeTeXcharclass` loops over whole Unicode blocks). With them undefined, the
-  // loop `\XeTeXcharclass \count \class` degraded into a spurious assignment and
-  // never ended (latexbangla: 95k warnings, then a 6.3 GB `alloc_failed`; the
-  // sweep-57 cluster). They read their real arguments — `<number> [=] <number>`,
-  // `<number> <number> [=] {<tokens>}`, an integer parameter — and change nothing:
-  // the classes drive font switching the Unicode-native engine does not need.
-  // Installed only on request, because amsmath, mathastext, minted2 and others
-  // probe `\XeTeXcharclass` to detect XeTeX (ordinary pdfLaTeX documents must not
-  // take those branches). `\newXeTeXintercharclass` is latex.ltx:22025-22031's
-  // allocator, over a fresh counter (latex.ltx `\countdef`s register 257, which
-  // the pdfTeX-persona format may already use).
-  DefPrimitive!("\\lx@XeTeXcharclass Number OptionalMatch:= Number", sub[(_c, _eq, _k)] {});
-  DefPrimitive!("\\lx@XeTeXinterchartoks Number Number OptionalMatch:= {}", sub[(_a, _b, _eq, _t)] {});
-  DefRegister!("\\lx@XeTeXinterchartokenstate" => Number::new(0));
-  RawTeX!(
-    r"\def\lx@xetex@interchar{\ifx\XeTeXcharclass\@undefined
-  \let\XeTeXcharclass\lx@XeTeXcharclass
-  \let\XeTeXinterchartoks\lx@XeTeXinterchartoks
-  \let\XeTeXinterchartokenstate\lx@XeTeXinterchartokenstate
-  \chardef\e@alloc@intercharclass@top=4095
-  \newcount\xe@alloc@intercharclass
-  \def\newXeTeXintercharclass{\e@alloc\XeTeXcharclass\chardef\xe@alloc@intercharclass\m@ne\e@alloc@intercharclass@top}%
-\fi}"
-  );
+  define_xetex_interchar()?;
   // `\RequireXeTeX` and `\RequireTUTeX` pass (Perl makes every `\Require<engine>` a
   // no-op, iftex.sty.ltxml:52-64): what XeTeX gives a document — UTF-8 input,
   // OpenType font selection, script switching — the Unicode-native engine and
@@ -105,3 +81,34 @@ LoadDefinitions!({
 \protected\def\RequireHINT{\IFTEX@Require\ifhint{HINT}\fi}"
   );
 });
+
+/// XeTeX's inter-character primitives, for the packages that DECLARE themselves
+/// XeTeX-only: `\RequireXeTeX` installs them (ucharclasses.sty:987, then its
+/// `\XeTeXcharclass` loops over whole Unicode blocks). With them undefined, the
+/// loop `\XeTeXcharclass \count \class` degraded into a spurious assignment and
+/// never ended (latexbangla: 95k warnings, then a 6.3 GB `alloc_failed`; the
+/// sweep-57 cluster). They read their real arguments — `<number> [=] <number>`,
+/// `<number> <number> [=] {<tokens>}`, an integer parameter — and change nothing:
+/// the classes drive font switching the Unicode-native engine does not need.
+/// Installed on request, or by latexml.sty's `xetex` profile (run at the format
+/// seam, `latex.rs`), because amsmath, mathastext, minted2 and others probe
+/// `\XeTeXcharclass` to detect XeTeX (ordinary pdfLaTeX documents must not take
+/// those branches). `\newXeTeXintercharclass` is latex.ltx:22025-22031's
+/// allocator, over a fresh counter (latex.ltx `\countdef`s register 257, which
+/// the pdfTeX-persona format may already use).
+pub fn define_xetex_interchar() -> Result<()> {
+  DefPrimitive!("\\lx@XeTeXcharclass Number OptionalMatch:= Number", sub[(_c, _eq, _k)] {});
+  DefPrimitive!("\\lx@XeTeXinterchartoks Number Number OptionalMatch:= {}", sub[(_a, _b, _eq, _t)] {});
+  DefRegister!("\\lx@XeTeXinterchartokenstate" => Number::new(0));
+  RawTeX!(
+    r"\def\lx@xetex@interchar{\ifx\XeTeXcharclass\@undefined
+  \let\XeTeXcharclass\lx@XeTeXcharclass
+  \let\XeTeXinterchartoks\lx@XeTeXinterchartoks
+  \let\XeTeXinterchartokenstate\lx@XeTeXinterchartokenstate
+  \chardef\e@alloc@intercharclass@top=4095
+  \newcount\xe@alloc@intercharclass
+  \def\newXeTeXintercharclass{\e@alloc\XeTeXcharclass\chardef\xe@alloc@intercharclass\m@ne\e@alloc@intercharclass@top}%
+  \fi}"
+  );
+  Ok(())
+}

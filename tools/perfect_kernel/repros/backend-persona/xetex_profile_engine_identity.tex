@@ -1,0 +1,15 @@
+% witness: TL class census 2026-09-24 — fduthesis, fduthesis-en, njuthesis, exam-zh (expl3
+%          \sys_if_engine_xetex:F{\msg_fatal…}), xtufte-book/-handout (fontspec's gate inlined)
+% oracle:  xelatex 0 errors
+% engines: rust (56hw) = Fatal (the l3sys engine string is frozen to pdftex at format build)
+% preload: [rawstyles,rawclasses,xetex]latexml.sty
+% expect:  0 errors; "[xetex][X][N][xelatex] yes yes yes no"
+% status:  RED (56hw, no xetex profile) -> GREEN (56hx, OXIDIZED_DESIGN #283)
+\documentclass{article}
+\usepackage{iftex}
+\begin{document}
+\ExplSyntaxOn
+[\c_sys_engine_str][\sys_if_engine_xetex:TF{X}{L}][\sys_if_engine_pdftex:TF{P}{N}][\c_sys_engine_format_str]
+\ExplSyntaxOff
+\ifxetex yes\else no\fi{} \iftutex yes\else no\fi{} \ifdefined\XeTeXcharclass yes\else no\fi{} \ifpdftex yes\else no\fi
+\end{document}

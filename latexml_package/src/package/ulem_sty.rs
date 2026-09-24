@@ -92,4 +92,8 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(out))
   });
+  // ulem.sty:221 `\newbox\ULC@box`, the box the `\sout`-family builders measure in;
+  // xeCJKfntef.sty sets it directly (xdupgthesis, xduugthesis, xduugtp; class
+  // census 2026-09-24).
+  RawTeX!(r"\newbox\ULC@box");
 });

@@ -61,6 +61,10 @@ ORACLE="${ORACLE:-$HOME/data/perfect_kernel/oracle_verdicts.tsv}"
 # regressed the whole corpus (+78k error mass, sweep 9 first run).
 if [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\tlualatex\t0\t0$" "$ORACLE"; then
   PRELOAD='[rawstyles,rawclasses,luatex]latexml.sty'
+# XeLaTeX-authored docs (a clean xelatex oracle) opt into the `xetex` profile the
+# same way: engine probes, l3sys included, read XeTeX (OXIDIZED_DESIGN #283).
+elif [[ -f "$ORACLE" ]] && grep -qP "^$bundle\t$name\txelatex\t0\t0$" "$ORACLE"; then
+  PRELOAD='[rawstyles,rawclasses,xetex]latexml.sty'
 fi
 
 # The conversion runs from the document's output directory: packages that write

@@ -1,0 +1,26 @@
+% witness: TL class census 2026-09-24 — fduthesis/njuthesis (\__fontspec_main_setmainfont:nn,
+%          \__um_setmathfont:nn, \keys_set:nn{unicode-math}), njuthesis/exam-zh/xdupgthesis/
+%          xduugtp/bitbeamer (\xeCJK_declare_node:n, \__xeCJK_msg_new:nn, \xeCJK_cs_gclear:N,
+%          \xeCJKDeclareCharClass), xeCJKfntef (\ULC@box)
+% oracle:  xelatex 0 errors
+% engines: rust (56hw) = undefined internals: the fontspec, unicode-math, xeCJK and ulem bindings
+%          shadow the raw packages and lacked the internals that classes call directly
+% preload: [rawstyles,rawclasses,xetex]latexml.sty
+% expect:  0 errors; "Text."
+% status:  RED (56hw) -> GREEN (56hx)
+\documentclass{article}
+\usepackage{fontspec}\usepackage{unicode-math}\usepackage{xeCJK}\usepackage{ulem}
+\ExplSyntaxOn
+\__fontspec_main_setmainfont:nn {} {Latin~Modern~Roman}
+\__um_setmathfont:nn {} {Latin~Modern~Math}
+\keys_set:nn { unicode-math } { math-style = ISO , bold-style = ISO }
+\__xeCJK_msg_new:nn { lx-test } { text }
+\xeCJK_declare_node:n { lx-node }
+\cs_new:Npn \lx_tmp: { x }
+\xeCJK_cs_gclear:N \lx_tmp:
+\ExplSyntaxOff
+\xeCJKDeclareCharClass{Default}{"0-"FF}
+\makeatletter\setbox\ULC@box\hbox{u}\makeatother
+\begin{document}
+Text.
+\end{document}
