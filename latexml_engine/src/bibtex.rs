@@ -1828,6 +1828,43 @@ LoadDefinitions!({
     "\\bib@@field{ltx:bib-edition}"
   );
   DefMacro!("\\bib@field@default@address", "\\bib@@field{ltx:bib-place}");
+  // biblatex's field names (biblatex manual §2.2.2), read when the biblatex
+  // binding renders a `.bib` without biber (`\printbibliography` falls back to
+  // `\bibliography{…}`, biblatex_sty.rs `\biblatex@printbibliography`). The
+  // classic reader filed them as unprinted `ltx:bib-data`, losing about 7,000
+  // words of reference text in 78 manuals of sweep 120 (publisher locations,
+  // journal names, access dates, addenda). Rust-only: Perl has no biblatex
+  // binding and prints no bibliography without a `.bbl`. An entry giving both
+  // `journal` and `journaltitle` (or `subtitle` and `titleaddon`) gets both;
+  // biber rejects such entries.
+  DefMacro!(
+    "\\bib@field@default@journaltitle",
+    "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@default@location",
+    "\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@location",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@location",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@default@urldate",
+    "\\bib@@field{ltx:bib-date}[role=accessed]"
+  );
+  DefMacro!(
+    "\\bib@field@default@titleaddon",
+    "\\bib@@field{ltx:bib-subtitle}"
+  );
+  DefMacro!(
+    "\\bib@field@default@addendum",
+    "\\bib@@field{ltx:bib-note}[role=addendum]"
+  );
   DefMacro!(
     "\\bib@field@default@publisher",
     "\\bib@@field{ltx:bib-publisher}"

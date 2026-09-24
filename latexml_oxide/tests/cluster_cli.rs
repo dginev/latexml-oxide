@@ -781,6 +781,57 @@ mod whatsinout {
     );
   }
 
+  /// biblatex's field names reach the reference list when the binding renders
+  /// a `.bib` without biber: `location` (a book's place), and an `@inbook`
+  /// host's publisher and place, which the `.bib` reader nests under
+  /// `ltx:bib-related` and the formatter now prints (sweep 120: 78 biblatex
+  /// manuals lost about 7,000 reference words — biblatex-ieee,
+  /// biblatex-chicago, biblatex-apa). pdflatex + biber (ieee style): "New
+  /// York: Springer-Verlag, 2000" / "Moscow: Energia Press, 1964".
+  #[test]
+  fn biblatex_bib_fields_reach_the_reference_list() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("fields.tex"),
+      "\\documentclass{article}\n\\usepackage[style=ieee,backend=biber]{biblatex}\n\
+       \\addbibresource{refs.bib}\n\\begin{document}\nHello \\cite{ander} \\cite{bul}.\n\
+       \\printbibliography\n\\end{document}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      work.path().join("refs.bib"),
+      "@inbook{ander, author=\"J. B. Anderson and K. Tepe\",\n  title=\"Properties of the \
+       Tailbiting BCJR Decoder\",\n  booktitle=\"Codes, Systems and Graphical Models\",\n  \
+       series=\"IMA Volumes in Mathematics\", publisher=\"Springer-Verlag\",\n  \
+       location=\"New York\", year=\"2000\"}\n@book{bul, author=\"B. K. Bul\", title=\"Design \
+       of Magnetic Circuits\",\n  publisher=\"Energia Press\", location=\"Moscow\", \
+       year=\"1964\"}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["fields.tex", "--dest", "fields.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    let html = std::fs::read_to_string(work.path().join("fields.html")).expect("read fields.html");
+    // The class carries more classes (`ltx_bibitem ltx_bib_inbook`).
+    let items: Vec<&str> = html.split("class=\"ltx_bibitem").skip(1).collect();
+    assert_eq!(items.len(), 2, "{html}");
+    let ander = items
+      .iter()
+      .find(|i| i.contains("Tailbiting"))
+      .expect("ander");
+    let ander = &ander[..ander.find("</li>").unwrap_or(ander.len())];
+    assert!(
+      ander.contains("Springer-Verlag") && ander.contains("New York"),
+      "the @inbook host's publisher and place are missing:\n{ander}"
+    );
+    let bul = items.iter().find(|i| i.contains("Magnetic")).expect("bul");
+    let bul = &bul[..bul.find("</li>").unwrap_or(bul.len())];
+    assert!(
+      bul.contains("Moscow"),
+      "the biblatex location is missing:\n{bul}"
+    );
+  }
+
   #[test]
   fn whatsin_math_wraps_literal_as_mathml() {
     // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168

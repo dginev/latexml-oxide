@@ -1,0 +1,19 @@
+% witness: arXiv 2605.20533 (cortex run 318; 20260120-arXiv-optimization-algorithm.tex:52-75 renews
+%          \algocf@Vline/\algocf@Vsline with raw box code for algorithm2e before 2017/07/19)
+% oracle:  pdflatex 0 errors (installed algorithm2e 2017/07/18, so the renewal runs)
+% engines: rust (56ic) = 8× "Attempt to close ltx:_CaptureBlock_, which isn't open" (56ia's correct
+%          \@ifpackagelater now takes the renewal branch; Perl's always-true test skipped it, and Perl
+%          errs alike when the renewal runs)
+% expect:  0 errors; the loop body in a listing line
+% status:  RED (56ic) -> GREEN (56ie)
+% mechanism: the binding's \algocf@Vline/\algocf@Vsline/\algocf@Noline are the listing's block
+%   structure, locked; a document's redefinition only restyles the drawn rule.
+\documentclass{article}
+\usepackage[linesnumbered]{algorithm2e}
+\makeatletter
+\@ifpackagelater{algorithm2e}{2017/07/19}{}{%
+  \renewcommand{\algocf@Vsline}[1]{\algocf@bblockcode\hbox{\vrule\vtop{#1}}\algocf@eblockcode}}
+\makeatother
+\begin{document}
+\begin{algorithm}\For{$i=1$ to $n$}{update $x$\;}\end{algorithm}
+\end{document}

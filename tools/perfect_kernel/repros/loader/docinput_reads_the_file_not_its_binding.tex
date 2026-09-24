@@ -1,0 +1,20 @@
+% witness: sweep 120 — frankenstein/newclude (newclude.tex:65 \DocInput{newclude.sty}: recall 1.1 %,
+%          body empty, because the Rust-only newclude_sty.rs binding answered the \input)
+% oracle:  pdflatex 0 errors; the documentation body
+% engines: rust (56id) = empty body (the binding loaded instead of the raw file); Perl drops it too
+%          (Package.pm:2299 loadTeXDefinitions); binding-less siblings (attrib, compsci) typeset
+% expect:  0 errors; <p>BEGIN</p>, <p>Documented body.</p>, <p>END</p>
+% status:  RED (56id) -> GREEN (56ie)
+% mechanism: doc.sty:895-897 \DocInput = \MakePercentIgnore\input{#1}\MakePercentComment: with `%` not
+%   a comment character the raw file is documentation content, which a binding does not carry.
+% Needs a newclude.sty whose `%` lines are the documentation; the guard writes it beside the document:
+%   % Documented body.
+%   \endinput
+\documentclass{ltxdoc}
+\begin{document}
+BEGIN
+
+\DocInput{newclude.sty}
+
+END
+\end{document}

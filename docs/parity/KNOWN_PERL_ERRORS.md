@@ -6576,3 +6576,17 @@ PushbackLimit Fatal; TeX Live class census 2026-09-24). **Rust (FIXED, batches 5
 both return the job's date as catcode-12 characters (`pdftex::pdf_creation_date`). Guards
 `class_census::{pdfcreationdate_is_other_catcode, luatex_pdffeedback_creationdate}`.
 
+## 245. Box code in an algorithm2e listing line closes its capture block twice (MITIGATED in Rust)
+
+A document that redefines algorithm2e's block macros with box drawing — arXiv 2605.20533
+`\renewcommand{\algocf@Vsline}[1]{\algocf@bblockcode\hbox{\vrule\vtop{#1}}\algocf@eblockcode}`
+for algorithm2e releases before 2017/07/19 — has that `\hbox`/`\vtop` digested inside the
+`ltx:listingline` the binding is building; the box's capture block is closed by the nested box
+and then closed again ("Attempt to close ltx:_CaptureBlock_, which isn't open", 8× in the
+witness). Perl errs the same way when the renewal runs, but its always-true `\@ifpackagelater`
+(KPE #238) skips the renewal; Rust takes it since 56ia. Trigger: the repro
+`captions-floats/algorithm2e_block_macros_locked.tex`. **Rust (MITIGATED, batch 56ie):** the
+binding's `\algocf@Vline`/`\algocf@Vsline`/`\algocf@Noline`, the listing's block structure, are
+locked, so the restyling is ignored; the capture bug itself is open. Guard
+`class_census::algorithm2e_block_macros_locked`.
+

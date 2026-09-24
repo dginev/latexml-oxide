@@ -1,0 +1,28 @@
+% witness: sweep 120 recall tail — 78 biblatex manuals, ~7,000 missing reference words (biblatex-ieee
+%          75.1 %, biblatex-chicago/cms-notes-sample 66.2 %, biblatex-apa/biblatex-apa-test 72.6 %)
+% oracle:  pdflatex + biber (ieee style): "… New York: Springer-Verlag, 2000." / "… Moscow: Energia Press,
+%          1964, p. 464, (in Russian)."
+% engines: rust (56id) = both places and the @inbook host's publisher dropped: without a .bbl the binding
+%          renders the .bib through the classic reader, which filed biblatex's `location` (and
+%          journaltitle, urldate, titleaddon, addendum) as unprinted bib-data, and the formatter never read
+%          publisher/place nested under the @inbook host; Perl prints no bibliography without a .bbl
+% expect:  0 errors; entry [1] holds "Springer-Verlag" and "New York", entry [2] "Moscow" (HTML)
+% status:  RED (56id) -> GREEN (56ie); recall biblatex-ieee 78.3 %, cms-notes-sample 74.9 %,
+%          biblatex-apa-test 78.4 %
+\begin{filecontents*}[overwrite]{biblatex_bib_fields.bib}
+@inbook{ander, author="J. B. Anderson and K. Tepe",
+  title="Properties of the Tailbiting BCJR Decoder",
+  booktitle="Codes, Systems and Graphical Models",
+  series="IMA Volumes in Mathematics", publisher="Springer-Verlag",
+  location="New York", year="2000"}
+@book{bul, author="B. K. Bul", title="Design of Magnetic Circuits",
+  publisher="Energia Press", location="Moscow", year="1964",
+  pages="464", note="(in Russian)"}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=ieee,backend=biber]{biblatex}
+\addbibresource{biblatex_bib_fields.bib}
+\begin{document}
+Hello \cite{ander} \cite{bul}.
+\printbibliography
+\end{document}

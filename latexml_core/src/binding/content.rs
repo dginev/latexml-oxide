@@ -1676,7 +1676,17 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
           s!("{}.tex", clean_req)
         };
         load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
-      } else if is_binding_extension(ext) {
+      } else if is_binding_extension(ext)
+        && !(lookup_catcode('%') != Some(Catcode::COMMENT) && find_file(&clean_req, None).is_some())
+      {
+        // Not while `%` is ignored or other: doc.sty:895-897 `\DocInput{#1}` is
+        // `\MakePercentIgnore\input{#1}\MakePercentComment`, reading the raw
+        // file as its documentation, which a binding (standing in for the
+        // package's definitions) does not carry. frankenstein/newclude.tex:65
+        // `\DocInput{newclude.sty}` came out empty (recall 1.1 %) because the
+        // Rust-only newclude_sty.rs answered, where its binding-less siblings
+        // typeset (attrib 93 %, compsci 98 %, sweep 120). `\usepackage` does not
+        // come here, so the binding still serves the package.
         // Route through input_definitions for fallback-aware dispatch.
         // The `name` arg expects no extension, so split it off.
         let name = clean_req

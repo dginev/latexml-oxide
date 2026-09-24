@@ -25747,4 +25747,39 @@ mod class_census {
         .unwrap();
     assert!(shape.is_match(&xml), "{xml}");
   }
+
+  /// doc.sty:895-897 `\DocInput` reads the raw file as documentation (`%`
+  /// ignored), not the package binding that stands in for its definitions
+  /// (frankenstein/newclude: recall 1.1 % → 98.5 %).
+  #[test]
+  fn docinput_reads_the_file_not_its_binding() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/docinput_reads_the_file_not_its_binding.tex"
+    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files(tex, &[(
+      "newclude.sty",
+      "% Documented body.\n\\endinput\n",
+    )]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Documented body.</p>"), "{xml}");
+    assert!(xml.contains("<p>END</p>"), "{xml}");
+  }
+
+  /// algorithm2e's block macros are the listing's structure, locked against a
+  /// document's box-drawing redefinition (arXiv 2605.20533).
+  #[test]
+  fn algorithm2e_block_macros_locked() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/captions-floats/algorithm2e_block_macros_locked.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!xml.contains("_CaptureBlock_"), "{xml}");
+    // The loop body is a listing line of its own.
+    let line = regex::Regex::new(r"(?s)<listingline[^>]*>(.*?)</listingline>").unwrap();
+    assert!(
+      line.captures_iter(&xml).any(|c| c[1].contains("update")),
+      "{xml}"
+    );
+  }
 }

@@ -8785,3 +8785,22 @@ pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
 
 **Guards**: `class_census::ifpdf_follows_pdfoutput`,
 `core_interface::tests::postscript_figures_select_dvi_output`.
+
+### 286. The bibliography formatter prints subtitles, a host's publisher and place, and access dates (Perl: dropped)
+
+The `.bib` reader files `subtitle` as `ltx:bib-subtitle` (BibTeX.pool.ltxml:571) and, for
+`@inbook`/`@incollection`/`@inproceedings`, the host's `publisher`/`address` under
+`ltx:bib-related` (:402-403, :437). Perl's formatter reads neither: MakeBibliography.pm has no
+subtitle spec, and its incollection block reads only the direct `ltx:bib-publisher`/`ltx:bib-place`
+(:742-744). The structure is captured and then not printed.
+
+**Rust** (batch 56ie, `latexml_post::make_bibliography::get_fmt_spec`, shared by every `.bib`
+bibliography): a `ltx:bib-subtitle` spec after each title ("Title. Subtitle."), the incollection
+block's `ltx:bib-related/ltx:bib-publisher` and `ltx:bib-related/ltx:bib-place`, and a metadata
+line for `ltx:bib-date[@role='accessed']` ("Accessed: …", biblatex's `urldate`). The `.bib` reader
+also reads biblatex's field names (`journaltitle`, `location`, `urldate`, `titleaddon`,
+`addendum`) for the biblatex binding's no-biber path. Witnesses: 78 biblatex manuals of sweep 120
+(biblatex-ieee 75.1 → 78.3 %, biblatex-chicago/cms-notes-sample 66.2 → 74.9 %,
+biblatex-apa-test 72.6 → 78.4 % recall). No existing golden carries these fields.
+
+**Guard**: `cluster_cli::whatsinout::biblatex_bib_fields_reach_the_reference_list`.

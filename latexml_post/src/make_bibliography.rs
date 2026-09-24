@@ -1884,6 +1884,15 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
       formatter: Formatter::Any,
       post:      "",
     }],
+    // biblatex's `urldate` (bibtex.rs `\bib@field@default@urldate`).
+    vec![FieldSpec {
+      xpath:     "ltx:bib-date[@role='accessed']",
+      punct:     "",
+      pre:       "Accessed: ",
+      class:     "accessed",
+      formatter: Formatter::Any,
+      post:      "",
+    }],
     vec![FieldSpec {
       xpath:     "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url",
       punct:     "",
@@ -1916,14 +1925,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         },
       ],
       // Block 2: title
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
       // Block 3: journal details
       vec![
         FieldSpec {
@@ -2019,14 +2038,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
       vec![
         FieldSpec {
           xpath:     "ltx:bib-type",
@@ -2137,14 +2166,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
       vec![
         FieldSpec {
           xpath:     "ltx:bib-type",
@@ -2228,6 +2267,21 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Any,
           post:      "",
         },
+        // The host's publisher and place: the `.bib` reader files them under
+        // `ltx:bib-related` for `@inbook`/`@incollection`/`@inproceedings`
+        // (bibtex.rs `\bib@field@incollection@publisher`, BibTeX.pool.ltxml:402),
+        // which the direct-child specs never reached. Perl's formatter
+        // (MakeBibliography.pm:742-744) reads only the direct children too, so it
+        // drops the host's publisher and place (DIVERGENCES #286): the biblatex
+        // manuals' "New York: Springer-Verlag" (sweep 120).
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-publisher",
+          punct:     ", ",
+          pre:       " ",
+          class:     "publisher",
+          formatter: Formatter::Any,
+          post:      "",
+        },
         FieldSpec {
           xpath:     "ltx:bib-organization",
           punct:     ", ",
@@ -2238,6 +2292,14 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         },
         FieldSpec {
           xpath:     "ltx:bib-place",
+          punct:     ", ",
+          pre:       "",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-place",
           punct:     ", ",
           pre:       "",
           class:     "place",
@@ -2305,14 +2367,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
       vec![FieldSpec {
         xpath:     "ltx:bib-type",
         punct:     "",
@@ -2431,14 +2503,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
       vec![
         FieldSpec {
           xpath:     "ltx:bib-type",
@@ -2541,6 +2623,14 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
         FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
           xpath:     "ltx:bib-type",
           punct:     "",
           pre:       "",
@@ -2603,14 +2693,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Any,
-        post:      "",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      "",
+        },
+      ],
       vec![
         FieldSpec {
           xpath:     "ltx:bib-organization",
@@ -2658,14 +2758,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
       ],
-      vec![FieldSpec {
-        xpath:     "ltx:bib-title",
-        punct:     "",
-        pre:       "",
-        class:     "title",
-        formatter: Formatter::Title,
-        post:      ".",
-      }],
+      vec![
+        FieldSpec {
+          xpath:     "ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "title",
+          formatter: Formatter::Title,
+          post:      ".",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Any,
+          post:      ".",
+        },
+      ],
     ],
   };
   blocks.extend(meta_block);

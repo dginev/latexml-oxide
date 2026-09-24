@@ -424,9 +424,17 @@ LoadDefinitions!({
   // vertical rule then dangles past the block. The previous port dropped the
   // `\lx@strippar` wrap. Any phantom empty listingline the trailing pars create
   // is removed by the blank-line drop in `\lx@algo@@endline` + the renumber pass.
-  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation");
-  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}");
+  // Locked: they are the block structure of the listing, and a document's
+  // redefinition only restyles the drawn rule. arXiv 2605.20533 renews
+  // `\algocf@Vline`/`\algocf@Vsline` with raw `\hbox{\vrule\vtop{…}}` code for
+  // algorithm2e releases before 2017/07/19 (its `\@ifpackagelater` branch, taken
+  // since 56ia compares the installed 2017/07/18 date); digested inside a
+  // listing line that box code closed the capture block twice (8×
+  // `_CaptureBlock_ … isn't open`, a capture bug Perl shares when the renewal
+  // runs).
+  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
+  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
+  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}", locked => true);
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {
