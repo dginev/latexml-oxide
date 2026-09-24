@@ -20190,10 +20190,12 @@ Table hooks ok.
     );
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     // The whole document, not an empty result: sweep 101's output holds 47
-    // formulae, 21 of them with nested text.
+    // formulae, 21 of them with nested text — plus, since the glossaries fields
+    // are absorbed digested (batch 56hm), the 30 symbol formulae (3 with nested
+    // text) of the glossary definitions, which were flattened text before.
     assert!(xml.contains("</document>"), "{xml}");
-    assert_eq!(xml.matches("<Math ").count(), 47, "{xml}");
-    assert_eq!(xml.matches("<XMText").count(), 21, "{xml}");
+    assert_eq!(xml.matches("<Math ").count(), 77, "{xml}");
+    assert_eq!(xml.matches("<XMText").count(), 24, "{xml}");
   }
 
   /// Nested `\text{…$x$…}` inside math: three inner formulae under XMText
@@ -23590,6 +23592,22 @@ mod glossary_refs_post {
     );
   }
 
+  /// glossaries' `\newglossaryentry` fields are the DIGESTED values (Perl
+  /// glossaries.sty.ltxml:96 inserts `$value` after KeyVals::beDigested): a
+  /// `$\alpha$` name is math and an `\emph` description emphasis. The binding
+  /// absorbed each value's string, so the definition, the glossary list and the
+  /// `\gls` tooltip carried the TeX source (`angle \emph{in} radians`).
+  #[test]
+  fn glossaries_fields_keep_their_markup() {
+    let xml = convert_and_post_clean("tests/cluster_regressions/glossaries_field_markup.tex");
+    assert!(!xml.contains("\\emph"), "{xml}");
+    latexml::util::test::assert_element(
+      &xml,
+      "glossaryentry",
+      &[],
+      r##"<glossaryentry fragid="glo.main.al" key="al" lists="main" xml:id="glo.main.al"><glossaryphrase key="al" role="label"><Math mode="inline" tex="\alpha" text="alpha" xml:id="m1a"><XMath><XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok></XMath></Math></glossaryphrase><glossaryphrase role="definition">angle <emph font="italic">in</emph> radians</glossaryphrase></glossaryentry>"##,
+    );
+  }
 }
 
 mod latex_via_exemplos_residue {

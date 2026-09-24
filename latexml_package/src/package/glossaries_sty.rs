@@ -117,10 +117,21 @@ longplural=\\@glo@longpl\
           for (role, val) in pairs {
             let val_str = val.to_string();
             if val_str.is_empty() { continue; }
-            // Insert <ltx:glossaryphrase key=key role=role>val</ltx:glossaryphrase>
+            // Insert <ltx:glossaryphrase key=key role=role>val</ltx:glossaryphrase>.
+            // Perl inserts the DIGESTED value (glossaries.sty.ltxml:96,
+            // `insertElement('ltx:glossaryphrase', $value, …)` after
+            // KeyVals::beDigested), so a `$\alpha$` name is math and an
+            // `\emph` description is emphasis; absorbing `val_str` wrote the
+            // TeX source (`\emph{in}`) as text. The string is the fallback.
+            let digested = kvs.get_value_digested(&role).cloned();
             document.open_element("ltx:glossaryphrase",
               Some(string_map!("key" => key.clone(), "role" => role)), None)?;
-            document.absorb_string(&val_str, &NO_PROPERTIES)?;
+            match digested {
+              Some(value) => document.absorb(&value, None)?,
+              None => {
+                document.absorb_string(&val_str, &NO_PROPERTIES)?;
+              },
+            }
             document.close_element("ltx:glossaryphrase")?;
           }
         }
