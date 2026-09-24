@@ -180,20 +180,7 @@ LoadDefinitions!({
   // fixed-width fields (L1500+); an empty expansion (the old no-op) left
   // `\@dtm@currentminute`… undefined and `\DTMnow` erroring (chemformula /
   // cnltx manuals). Same clock as `\year`/`\time` (SOURCE_DATE_EPOCH honored).
-  DefMacro!("\\pdfcreationdate", sub[_args] {
-    let year = lookup_register("\\year", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
-    let month = lookup_register("\\month", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
-    let day = lookup_register("\\day", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
-    let time = lookup_register("\\time", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
-    let (hh, mm) = (time / 60, time % 60);
-    let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
-    // tex.web §464 `str_toks`: a conversion's characters are catcode 12, so the
-    // `D:` is not letters. pdfx.sty-style parsers delimit with a catcode-12 `D:`
-    // (novel-pdfx.sty:298 `\gdef\pdfx@getYear D:#1#2#3#4` under `\catcode`\D=12`);
-    // letter tokens missed it and the date parse ran away (novel, class census
-    // 2026-09-24).
-    Ok(Tokens::new(Explode!(&stamp)))
-  });
+  DefMacro!("\\pdfcreationdate", sub[_args] { pdf_creation_date() });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
   def_macro_noop("\\pdffontname Token")?;
@@ -869,4 +856,27 @@ fn pdftex_random_next() -> u64 {
     c.set(x);
     x.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 1
   })
+}
+
+/// pdfTeX manual §8.11 `\pdfcreationdate` (and LuaTeX's `\pdffeedback
+/// creationdate`): the PDF date string `D:YYYYMMDDhhmmssZ` of the job start, on
+/// the clock `\year`/`\month`/`\day`/`\time` keep (SOURCE_DATE_EPOCH honored).
+/// tex.web §464 `str_toks`: a conversion's characters are catcode 12, so the `D:`
+/// is not letters. pdfx.sty-style parsers delimit with a catcode-12 `D:`
+/// (novel-pdfx.sty:298 `\gdef\pdfx@getYear D:#1#2#3#4` under `\catcode`\D=12`);
+/// letter tokens missed it and the date parse ran away (novel, class census
+/// 2026-09-24).
+pub fn pdf_creation_date() -> Result<Tokens> {
+  let register = |name: &str| -> Result<i64> {
+    Ok(lookup_register(name, Vec::new())?.map_or(0, |v| Number::from(&v).value_of()))
+  };
+  let (year, month, day, time) = (
+    register("\\year")?,
+    register("\\month")?,
+    register("\\day")?,
+    register("\\time")?,
+  );
+  let (hh, mm) = (time / 60, time % 60);
+  let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
+  Ok(Tokens::new(Explode!(&stamp)))
 }

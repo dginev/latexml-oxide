@@ -554,7 +554,13 @@ fn lx_change_case_tokens(req_case: &str, tokens: &Tokens) -> Result<Vec<Token>> 
 fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
   let mut result = vec![];
   let mut in_math = false;
-  let mut is_upper = req_case == "upper" || req_case == "sentence" || req_case == "title";
+  let is_upper = req_case == "upper" || req_case == "sentence" || req_case == "title";
+  // `sentence`/`title` (`\text_titlecase_first:n`/`_all:n`, which
+  // `\MakeTitlecase` is in the kernel) uppercase the first letter (of each
+  // word, for `title`) and leave the rest as it is (l3text, TeX Live 2025:
+  // `\text_titlecase_all:n{hELLO wORLD}` is `HELLO WORLD`). Perl lowercases the
+  // rest (latex_constructs.pool.ltxml:5507-5516 notes the ambiguity).
+  let mut keep = false;
   loop {
     let tok = match read_x_token(Some(false), false, None)? {
       None => break,
@@ -591,6 +597,8 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       } else {
         result.push(tok);
       }
+    } else if keep && (cc == Catcode::LETTER || cc == Catcode::OTHER) {
+      result.push(tok);
     } else if cc == Catcode::LETTER || cc == Catcode::OTHER {
       let new_str: String = tok.with_str(|s| {
         if is_upper {
@@ -607,12 +615,12 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       };
       result.push(new_tok);
       if req_case == "sentence" || req_case == "title" {
-        is_upper = false;
+        keep = true;
       }
     } else if cc == Catcode::SPACE {
       result.push(T_SPACE!());
       if req_case == "title" {
-        is_upper = true;
+        keep = false;
       }
     } else if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
       if let Some(next_tok) = read_token()? {
@@ -638,6 +646,10 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           result.push(T_BEGIN!());
           result.extend(arg.unlist());
           result.push(T_END!());
+        } else if keep {
+          result.push(tok);
+          result.push(T_CS!("\\dont_expand"));
+          result.push(next_tok);
         } else {
           match lookup_mapping(
             if is_upper {
@@ -655,7 +667,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
                 result.push(next_tok);
               }
               if req_case == "sentence" || req_case == "title" {
-                is_upper = false;
+                keep = true;
               }
             },
             _ => {

@@ -1,0 +1,14 @@
+% witness: TL class census 2026-09-24 — novel (novel-pdfx.sty:487-488 \Hy@DisableOption{pdfauthor},
+%          hyperref.sty:2234-2248)
+% oracle:  pdflatex 0 errors; Text.
+% engines: rust (56ia) = "\Hy@DisableOption undefined" (the hyperref binding lacked it)
+% expect:  0 errors; <p>Text.</p>
+% status:  RED (56ia) -> GREEN (56ic)
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\Hy@DisableOption{pdfauthor}
+\makeatother
+\begin{document}
+Text.
+\end{document}

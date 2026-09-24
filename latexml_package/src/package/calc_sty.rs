@@ -35,6 +35,20 @@ impl CalcValue {
   }
 }
 
+/// calc.sty:51-56 `\calc@assign@generic`: evaluate `expression` as `kind` and
+/// assign it to the register `variable` names (silently nothing when it names
+/// none, as `\setlength` here).
+fn calc_assign(variable: ArgWrap, expression: Tokens, kind: &str) -> Result<()> {
+  if let ArgWrap::RegisterDefinition(dbox) = variable {
+    let (rtoken, params) = *dbox;
+    if let Some(defn) = rtoken.to_register() {
+      let value = read_expression(kind, expression)?;
+      defn.set_value(value, None, params);
+    }
+  }
+  Ok(())
+}
+
 fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
   let reader_mouth = Mouth::new("", None)?;
   reading_from_mouth(reader_mouth, move || {
@@ -531,6 +545,21 @@ LoadDefinitions!({
         defn.set_value(value, None, params);
       }
     }
+  });
+
+  // calc.sty:54-56 `\calc@assign@count`/`@dimen`/`@skip<register>{<expression>}`,
+  // the assignments behind `\setcounter`/`\setlength`, which packages call
+  // directly: xifthen.sty:41-42/76-77 `\numtest`/`\dimtest` evaluate their
+  // operands into `\@tempcnta`/`\@tempskipa` with them (novel's layout sanity
+  // check, novel-CalculateLayout.sty:289; TeX Live class census 2026-09-24).
+  DefPrimitive!("\\calc@assign@count{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Number")?;
+  });
+  DefPrimitive!("\\calc@assign@dimen{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Dimension")?;
+  });
+  DefPrimitive!("\\calc@assign@skip{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Glue")?;
   });
 
   // \addtolength{Variable}{} — Perl parity: silently no-op on undefined variable.

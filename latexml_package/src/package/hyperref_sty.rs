@@ -7,6 +7,13 @@ use libxml::tree::NodeType;
 use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 
 LoadDefinitions!({
+  // hyperref.sty:2234-2248: an option that can no longer take effect is
+  // redefined to warn (novel-pdfx.sty:487-488 `\Hy@DisableOption{pdfauthor}`;
+  // TeX Live class census 2026-09-24).
+  RawTeX!(
+    r"\def\Hy@DisableOption#1{\@ifundefined{KV@Hyp@#1@default}{\define@key{Hyp}{#1}}{\define@key{Hyp}{#1}[]}{\Hy@WarnOptionDisabled{#1}}}
+\def\Hy@WarnOptionDisabled#1{\PackageWarning{hyperref}{Option `#1' has already been used,\MessageBreak setting the option has no effect}}"
+  );
   // hyperref.sty:2190-2205 `\IfHyperBooleanExists`/`\IfHyperBoolean`
   // (enumext.sty:455 `\IfHyperBoolean{hyperfootnotes}`; lua-tikz3dtools,
   // whatsnote). Undefined `\Hy@…false`/defaults fall to the false branch.

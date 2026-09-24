@@ -1,0 +1,22 @@
+% witness: TL class census 2026-09-24 — letgut (letgut.cls:1711 \text_lowercase:n on acronym keys;
+%          `INSPÉ` in letgut-acronyms.tex never finished: timeout)
+% oracle:  pdflatex 0 errors; [inspé][ÉÀÜ STRASSE][Élan][HELLO WORLD][HELLO wORLD] (titlecase leaves
+%          the rest of a word as it is)
+% engines: rust (56ia) = the dump's 8-bit l3text reads É as a UTF-8 lead byte, takes the next
+%          tokens as continuation bytes, and runs into its recursion quarks (expl3-code.tex:
+%          35892-35925); Perl fails alike and recovers with errors
+% expect:  0 errors; <p>[inspé][ÉÀÜ STRASSE][Élan][HELLO WORLD][HELLO wORLD]</p>
+% status:  RED (56ia) -> GREEN (56ic)
+% mechanism: our tokens are whole code points (the Unicode engines' model), so the l3text case
+%   changers route to the native case mapping \lx@latex@changecase, as \MakeUppercase does.
+\documentclass{article}
+\ExplSyntaxOn
+\tl_set:Nx \l_tmpa_tl { \text_lowercase:n {INSPÉ} }
+\tl_set:Nx \l_tmpb_tl { \text_uppercase:n {éàü~straße} }
+\tl_set:Nx \l_tmpc_tl { \text_titlecase_first:n {élan} }
+\tl_set:Nx \l_tmpd_tl { \text_titlecase_all:n {hELLO~wORLD} }
+\cs_new:Npn \lxa { [\l_tmpa_tl][\l_tmpb_tl][\l_tmpc_tl][\l_tmpd_tl] }
+\ExplSyntaxOff
+\begin{document}
+\lxa[\MakeTitlecase{hELLO wORLD}]
+\end{document}

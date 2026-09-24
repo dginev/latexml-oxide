@@ -1,0 +1,17 @@
+% witness: TL class census 2026-09-24 — novel (luatex85.sty:62 \xdef\pdfcreationdate{\pdffeedback
+%          creationdate}; novel-pdfx.sty:293-323 parses it by a catcode-12 `D:`; novel-TextMacros.sty:
+%          268-276 calls the LuaTeX primitive \savepos)
+% oracle:  lualatex 0 errors; year-ok pos-ok
+% engines: rust (56ia, luatex profile) = \pdffeedback creationdate read `0`, the date parse ran away
+%          (PushbackLimit Fatal); \savepos undefined
+% expect:  0 errors; <p>year-ok pos-ok</p>
+% status:  RED (56ia) -> GREEN (56ic)
+\documentclass{article}
+\begingroup\catcode`\D=12
+\gdef\getYear D:#1#2#3#4#5\relax{#1#2#3#4}
+\endgroup
+\edef\stamp{\pdffeedback creationdate}
+\edef\yr{\expandafter\getYear\stamp\relax}
+\begin{document}
+\ifnum\yr>1999 year-ok\else year-bad\fi\ \ifdefined\savepos\savepos pos-ok\else pos-missing\fi
+\end{document}

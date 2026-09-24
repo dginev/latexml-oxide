@@ -25629,4 +25629,71 @@ mod class_census {
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>Text.</p>"), "{xml}");
   }
+
+  /// The l3text case changers route to the native case mapping: the dump's
+  /// 8-bit l3text reads an accented code point as a UTF-8 lead byte and never
+  /// finished (letgut's `\text_lowercase:n {INSPÉ}`).
+  #[test]
+  fn l3text_case_change_accented() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/l3text_case_change_accented.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>[inspé][ÉÀÜ STRASSE][Élan][HELLO WORLD][HELLO wORLD]</p>"),
+      "{xml}"
+    );
+  }
+
+  /// Under the `luatex` profile `\pdffeedback creationdate` is the PDF date
+  /// string (luatex85's `\pdfcreationdate`; novel-pdfx's `D:` parser) and
+  /// `\savepos` is LuaTeX's `\pdfsavepos` (novel).
+  #[test]
+  fn luatex_pdffeedback_creationdate() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/backend-persona/luatex_pdffeedback_creationdate.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>year-ok pos-ok</p>"), "{xml}");
+  }
+
+  /// calc's `\calc@assign@count`/`@dimen`/`@skip`, which xifthen's
+  /// `\cnttest`/`\dimtest` call directly (novel's layout check).
+  #[test]
+  fn xifthen_calc_assign() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/xifthen_calc_assign.tex");
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[yes][yes][no]</p>"), "{xml}");
+  }
+
+  /// hyperref's `\Hy@DisableOption` (novel-pdfx.sty:487).
+  #[test]
+  fn binding_internals_classes_call_4() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/binding_internals_classes_call_4.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Text.</p>"), "{xml}");
+  }
+
+  /// `\DocumentMetadata` records pdfmanagement-testphase's version (which
+  /// documentmetadata-support.ltx:39 loads; the layer itself stays absorbed),
+  /// so packages' version tests on it pass (zugferd.sty:101).
+  #[test]
+  fn documentmetadata_loads_pdfmanagement() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/documentmetadata_loads_pdfmanagement.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[ok]</p>"), "{xml}");
+  }
 }

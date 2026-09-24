@@ -6547,3 +6547,32 @@ into the text. univie-ling-poster.cls:822/835 `\AfterPackage*{csquotes}{\SetCite
 (Perl and Rust: `\AfterPackage` undefined; pdflatex clean). **Rust (FIXED, batch 56ib):** the
 binding requires scrlfile. Guard `class_census::beamer_loads_scrlfile`.
 
+## 243. expl3's l3text case changers loop on accented input (FIXED in Rust)
+
+The LaTeX format's l3text is built for pdfTeX: `\__text_codepoint_process:nN`
+(expl3-code.tex:35892-35925) reads a character above `"80` as a UTF-8 lead byte and takes the
+next one to three tokens as continuation bytes, and the output side re-encodes results as bytes.
+LaTeXML's tokens are whole code points (the Unicode engines' model), so `\text_lowercase:n {É}`
+consumes the recursion quarks as "bytes": `\q__text_recursion_tail` expands into itself and
+`Until:\q__text_recursion_stop` runs out. Perl reports the errors and recovers; Rust ran away,
+and letgut (letgut.cls:1711 lowercases acronym keys; `INSPÉ` in letgut-acronyms.tex) never
+finished (TeX Live class census 2026-09-24). Trigger:
+`\ExplSyntaxOn\tl_set:Nx\l_tmpa_tl{\text_lowercase:n{É}}` (pdflatex `é`). **Rust (FIXED, batch
+56ic):** `\text_lowercase:n`, `\text_uppercase:n`, `\text_titlecase_first:n`,
+`\text_titlecase_all:n` and their `:nn` forms route to the native mapping `\MakeUppercase`
+already uses (`\lx@latex@changecase`, sect13.rs). Titlecasing (`\MakeTitlecase` is
+`\text_titlecase_first:n` in the kernel) now leaves the rest of the text as it is, as l3text does:
+Perl lowercases it (latex_constructs.pool.ltxml:5507-5523; `\MakeTitlecase{hELLO wORLD}` is
+`Hello world` there, `HELLO wORLD` in pdflatex). Guard `class_census::l3text_case_change_accented`.
+
+## 244. `\pdfcreationdate` is empty (FIXED in Rust)
+
+pdfTeX's `\pdfcreationdate` (LuaTeX: `\pdffeedback creationdate`, which luatex85.sty:62
+`\xdef`s into `\pdfcreationdate`) is the PDF date string `D:YYYYMMDDhhmmss…` in catcode-12
+characters. Perl defines it empty (pdfTeX.pool.ltxml:94), so pdfx-style parsers delimited by
+`D:` fail: novel-pdfx.sty:293-323 `\pdfx@getYear D:#1#2#3#4` (Perl: "Missing argument
+Match:D:", 28 errors and a Fatal; Rust's luatex profile answered `0` and ran away to a
+PushbackLimit Fatal; TeX Live class census 2026-09-24). **Rust (FIXED, batches 56hz/56ic):**
+both return the job's date as catcode-12 characters (`pdftex::pdf_creation_date`). Guards
+`class_census::{pdfcreationdate_is_other_catcode, luatex_pdffeedback_creationdate}`.
+

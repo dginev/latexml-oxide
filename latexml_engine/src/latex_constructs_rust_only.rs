@@ -115,9 +115,25 @@ LoadDefinitions!({
   // template types/instances and tagging sockets raw classes edit and use
   // (ltx-talk.cls:1860 `\EditInstance{item}{basic}`, tagpdfdocu-patches
   // .sty:127,146): bound in latex_lab_testphase_{block,minipage}_sty.rs.
+  // documentmetadata-support.ltx:39 first loads pdfmanagement-testphase (and
+  // :62-68 its backend layer). That layer writes PDF objects and stays absorbed
+  // here (the stubbed l3pdf API above), but packages test its version
+  // (zugferd.sty:101 `\IfPackageAtLeastTF{pdfmanagement-testphase}{2024/09/13}
+  // {}{…too old}`; zugferd DEMOs, sweep 120), so its `\ver@` records the
+  // installed file's `\ProvidesExplPackage` date.
+  DefPrimitive!("\\lx@record@provided{}", sub[(file)] {
+    let file = file.to_string();
+    let ver_cs = T_CS!(s!("\\ver@{file}"));
+    if lookup_definition(&ver_cs)?.is_none()
+      && let Some(version) = provides_version_of(&file)
+    {
+      DefMacro!(ver_cs, None, Tokenize!(TeXString::assembled(version)),
+        scope => Some(Scope::Global));
+    }
+  });
   DefMacro!(
     "\\DocumentMetadata{}",
-    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
+    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\lx@record@provided{pdfmanagement-testphase.sty}\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
   );
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists

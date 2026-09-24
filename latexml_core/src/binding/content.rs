@@ -4025,9 +4025,11 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
 
 /// The `[<date> <version> <info>]` a package or class declares with
 /// `\ProvidesPackage{name}[…]` / `\ProvidesClass{name}[…]` (ltclass:
-/// `\ver@name.ext` is that text), read from the installed file so a binding
-/// exposes the same string as the raw file would; `None` when no file is on
-/// disk or it declares nothing.
+/// `\ver@name.ext` is that text), or the `date v<version> <info>` that
+/// `\ProvidesExplPackage{name}{date}{version}{info}` makes of its groups
+/// (expl3.sty:35-48), read from the installed file so a binding exposes the
+/// same string as the raw file would; `None` when no file is on disk or it
+/// declares nothing.
 pub fn provides_version_of(filename: &str) -> Option<String> {
   let path = find_file(filename, None)?;
   let text = std::fs::read(&path).ok()?;
@@ -4051,6 +4053,26 @@ pub fn provides_version_of(filename: &str) -> Option<String> {
       continue;
     }
     let tail = arg[close + 1..].trim_start();
+    // expl3.sty:35-48 `\ProvidesExpl…{name}{date}{version}{description}` stores
+    // `date v<version> description` (the `v` kept once, left out with no version).
+    if kw.starts_with("Expl") {
+      let mut groups = Vec::with_capacity(3);
+      let mut rest_groups = tail;
+      for _ in 0..3 {
+        let (group, after) = leading_brace_group(rest_groups)?;
+        groups.push(group.split_whitespace().collect::<Vec<_>>().join(" "));
+        rest_groups = after;
+      }
+      let (date, version, description) = (&groups[0], &groups[1], &groups[2]);
+      let version = if version.is_empty() {
+        String::new()
+      } else if version.starts_with('v') {
+        s!("{version} ")
+      } else {
+        s!("v{version} ")
+      };
+      return Some(s!("{date} {version}{description}"));
+    }
     let bracket = tail.strip_prefix('[')?;
     let end = bracket.find(']')?;
     let version: String = bracket[..end]
@@ -4064,6 +4086,31 @@ pub fn provides_version_of(filename: &str) -> Option<String> {
     } else {
       Some(version)
     };
+  }
+  None
+}
+
+/// The leading `{…}` group of `text` (after optional whitespace and `%`
+/// comments; nested braces balanced) and the text after it.
+fn leading_brace_group(text: &str) -> Option<(&str, &str)> {
+  // Whitespace and `%` comments may separate the groups (fontspec.sty:
+  // `\ProvidesExplPackage{fontspec}%` then the date group on the next line).
+  let mut text = text.trim_start();
+  while let Some(comment) = text.strip_prefix('%') {
+    text = comment
+      .split_once('\n')
+      .map_or("", |(_, next)| next)
+      .trim_start();
+  }
+  let body = text.strip_prefix('{')?;
+  let mut depth = 0usize;
+  for (i, c) in body.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' if depth == 0 => return Some((&body[..i], &body[i + 1..])),
+      '}' => depth -= 1,
+      _ => {},
+    }
   }
   None
 }

@@ -297,8 +297,12 @@ LoadDefinitions!({
       ])?;
       Vec::new()
     });
+    // `\pdffeedback creationdate` is the job's PDF date string, as pdfTeX's
+    // `\pdfcreationdate` (luatex85.sty:62 `\xdef\pdfcreationdate{\pdffeedback
+    // creationdate}`; novel-pdfx.sty parses it by its `D:`; novel, TeX Live
+    // class census 2026-09-24). The other queries read 0.
     DefMacro!(T_CS!("\\pdffeedback"), None, {
-      let _ = read_keyword(&[
+      let keyword = read_keyword(&[
         "lastlink",
         "lastannot",
         "lastobj",
@@ -317,8 +321,18 @@ LoadDefinitions!({
         "version",
         "revision",
       ])?;
-      vec![T_OTHER!("0")]
+      if keyword.as_deref() == Some("creationdate") {
+        return latexml_engine::pdftex::pdf_creation_date();
+      }
+      Ok(Tokens!(T_OTHER!("0")))
     });
+    // LuaTeX's names for pdfTeX's position primitives (LuaTeX manual §15.3:
+    // `\savepos`, `\lastxpos`, `\lastypos`); luatex85.sty maps the `\pdf…`
+    // names back onto them. novel-TextMacros.sty:268-276 calls `\savepos` as the
+    // primitive (TeX Live class census 2026-09-24).
+    Let!("\\savepos", "\\pdfsavepos");
+    Let!("\\lastxpos", "\\pdflastxpos");
+    Let!("\\lastypos", "\\pdflastypos");
     DefPrimitive!("\\pdfextension Token", sub[(_name)] {});
     DefRegister!("\\prehyphenchar"     => Number::new(0));
     DefRegister!("\\posthyphenchar"    => Number::new(0));
