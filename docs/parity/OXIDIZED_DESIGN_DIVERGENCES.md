@@ -7543,7 +7543,10 @@ lists="nomenclature" role="nomenclature">` titled `\nomname`. MakeGlossary
 (`make_index.rs::get_glossary_entries`) lists EVERY definition of a
 `role="nomenclature"` glossary, where a glossary lists only the referenced ones
 (Perl MakeIndex.pm:468 `next unless $refs`): a nomenclature has no `\gls`-style
-reference — makeindex prints every written line.
+reference — makeindex prints every written line. The list renders only an entry's label
+and definition, so a `nomentbl` entry's `unit` and `note` phrases follow the description
+as `<ltx:text class="ltx_glossary_unit">`/`ltx_glossary_note` rather than being dropped
+(batch 56hn).
 **Why**: the in-memory route glossaries already takes instead of makeindex;
 the PDF is the oracle (all five samples print the full list).
 **Witnesses**: nomencl/sample01…sample05 (TeX Live doc corpus).

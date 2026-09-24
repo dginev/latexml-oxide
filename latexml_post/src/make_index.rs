@@ -577,7 +577,32 @@ impl MakeIndex {
           }
         };
         let term = phrase_children("phrase:name", key);
-        let desc = phrase_children("phrase:description", "");
+        let mut desc = phrase_children("phrase:description", "");
+        // nomencl's `nomentbl` entries carry `unit` and `note` columns
+        // (nomencl.sty:228-235, the binding's `unit`/`note` phrases). The list
+        // renders only a label and a definition, so they follow the
+        // description as classed text (`ltx_glossary_unit`/`_note`) rather than
+        // being dropped. Surpass (Perl has no nomencl list at all);
+        // OXIDIZED_DESIGN #234.
+        for role in ["unit", "note"] {
+          if let Some(value) = entry.get_value(&format!("phrase:{role}")) {
+            let children = match value {
+              Value::Xml(node) => trimmed_child_nodes(node),
+              other => vec![NodeData::Text(other.as_string())],
+            };
+            if !children.is_empty() {
+              desc.push(NodeData::Text(" ".to_string()));
+              desc.push(NodeData::Element {
+                tag: "ltx:text".to_string(),
+                attributes: Some(HashMap::from_iter([(
+                  "class".to_string(),
+                  format!("ltx_glossary_{role}"),
+                )])),
+                children,
+              });
+            }
+          }
+        }
 
         entries.push(GlossaryEntry {
           initial,
