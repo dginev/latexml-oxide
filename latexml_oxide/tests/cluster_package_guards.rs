@@ -18540,6 +18540,19 @@ See \citep{a,b}.
     );
   }
 
+  /// bytedance_seed's binding defined `\author[]{}` as `\author{#2}` — itself: a
+  /// wall-clock hang on every ByteDance Seed paper (arXiv 2605.24117 and four
+  /// more; Perl and pdflatex complete). It is the frontmatter author API now.
+  #[test]
+  fn bytedance_author_is_a_creator() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/bytedance_author_self_loop.tex"
+    );
+    let (stderr, xml) = convert_args(tex, &[]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<personname>Alice"), "{xml}");
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
