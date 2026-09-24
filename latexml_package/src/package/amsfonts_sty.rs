@@ -1,5 +1,9 @@
 use crate::prelude::*;
 LoadDefinitions!({
+  // amsfonts.sty:59-60: the AMS symbol fonts, whose `\symAMSa`/`\symAMSb` math
+  // groups classes read (imsproc.cls:1655 `\hexnumber@\symAMSb`; class census
+  // 2026-09-24). `\DeclareSymbolFont` defines them (sect08.rs).
+  RawTeX!(r"\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareSymbolFont{AMSb}{U}{msb}{m}{n}");
   //
   // See amsfndoc
   //

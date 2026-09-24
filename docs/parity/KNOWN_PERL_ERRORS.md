@@ -6426,3 +6426,28 @@ errors in both engines. Perl's `\textbf` is `{\bfseries #1}`, which shields
 #232), which exposed it (arXiv 2605.21922). **Rust (FIXED, batch 56hw):** the test is
 `\if\relax\detokenize{#1}\relax`. Guard `regress_2605_clusters::orcidlink_in_a_p_cell_keeps_the_cell`.
 
+## 235. Bindings drop internals that raw classes call (FIXED in Rust)
+
+A hand-written binding replaces the raw package or class, so the internal
+macros the real file defines are missing when a raw class (loaded under
+`[rawclasses]`) uses them. The Perl bindings lack them too:
+- `report.cls:277`/`book.cls:283` `\@chapapp`;
+- `amsmath.sty:1073` `\env@matrix`;
+- `hyperref.sty:3106` `\HyLang@addto`;
+- `lineno.sty:1254` `\linenumberdisplaymath`;
+- `amsfonts.sty:59-60` `\DeclareSymbolFont{AMSa|AMSb}` (so `\symAMSb`);
+- `natbib.sty:344` `\NAT@find@eq`;
+- `varioref.sty:58` `\vref@addto`.
+
+book/report also defaulted `\@titlepagefalse` where the classes set `\@titlepagetrue`
+(book.cls:51), so jurabook's "does not support notitlepage" fired. mdframed's
+`\mdtheorem` was missing from the Rust binding (Perl loads mdframed raw).
+
+Trigger: `\documentclass{utexasthesis}` (TeX Live class census 2026-09-24:
+utexasthesis, willowtreebook, unbtex, ascelike, acmart-tagged, univie-ling-*,
+rbt-mathnotes*, jurabook, hausarbeit-jura, newlfm).
+
+**Rust (FIXED, batch 56hy):** each binding carries the real definition, and
+newlfm's fancyhdr marker `\ps@@empty` (fancyhdr.sty:849-851) is set too. Guard
+`class_census::binding_internals_classes_call`.
+

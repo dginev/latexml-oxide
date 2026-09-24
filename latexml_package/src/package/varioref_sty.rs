@@ -47,4 +47,9 @@ LoadDefinitions!({
   def_macro_noop("\\fullref")?;
   def_macro_noop("\\vrefshowerrors")?;
   def_macro_noop("\\vrefwarning")?;
+  // varioref.sty:58-68 `\vref@addto\extras<lang>{<code>}`: run the code and
+  // append it to the language hook, creating the hook when undefined. Classes
+  // call it (univie-ling-expose/-paper/-thesis; class census 2026-09-24). Its
+  // `\@onlypreamble` is dropped: those classes call it from `\AtBeginDocument`.
+  RawTeX!(r"\def\vref@addto#1#2{#2\@temptokena{#2}\ifx#1\undefined\edef#1{\the\@temptokena}\else\toks@\expandafter{#1}\edef#1{\the\toks@\the\@temptokena}\fi\@temptokena{}\toks@\@temptokena}");
 });

@@ -25348,4 +25348,36 @@ mod class_census {
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>Text.</p>"), "{xml}");
   }
+
+  /// Raw classes call internals that our bindings reimplement without:
+  /// `\@chapapp`, `\env@matrix`, `\HyLang@addto`, `\linenumberdisplaymath`,
+  /// `\symAMSb`, `\NAT@find@eq`, `\vref@addto`, `\mdtheorem`, and book/report's
+  /// `\@titlepagetrue` default (utexasthesis, willowtreebook, unbtex, ascelike,
+  /// acmart-tagged, univie-ling-*, rbt-mathnotes*, jurabook, hausarbeit-jura).
+  #[test]
+  fn binding_internals_classes_call() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/binding_internals_classes_call.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Only mdframed's own "minimally stubbed" notice.
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(
+      xml.contains("<p>Chapter Appendix yes X a=b Y T</p>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        r#"<title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag></title>"#
+      ),
+      "{xml}"
+    );
+    // mdframed's unnumbered `thm*`.
+    assert!(
+      xml.contains(
+        r#"<title class="ltx_runin"><tag><text font="bold">Theorem</text></tag></title>"#
+      ),
+      "{xml}"
+    );
+  }
 }

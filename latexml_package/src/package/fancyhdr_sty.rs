@@ -40,6 +40,11 @@ LoadDefinitions!({
   // probes (`seminar.cls:760 \@ifgoodps{fancy}`) or `\let`s — headers are not
   // modelled, so the styles are empty.
   RawTeX!(r"\def\ps@fancy{}\def\ps@fancyplain{}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}");
+  // fancyhdr.sty:849-851: under the newlfm class, `\ps@@empty` is fancyhdr's
+  // version marker, which newlfm.cls:41 tests with `\@ifundefined` (class census
+  // 2026-09-24). fancyhdr lets it to `\f@nch@ps@empty`, which is not modelled here:
+  // `\ps@empty` stands in, as a `\let` to an undefined name would read undefined.
+  RawTeX!(r"\@ifclassloaded{newlfm}{\let\ps@@empty\ps@empty}{}");
 
   // extramarks.sty not implemented, as its commands can only be used in headers and footers
 

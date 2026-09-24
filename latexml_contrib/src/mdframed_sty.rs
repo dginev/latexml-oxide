@@ -34,6 +34,20 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(toks))
   });
+  // mdframed.sty:616-660 `\mdtheorem[opts]{env}[like]{caption}[within]` defines
+  // the numbered `env` and the unnumbered `env*` (rbt-mathnotes.sty:766-795 builds
+  // its thm/lem/cor/prop/defn with it; class census 2026-09-24).
+  DefMacro!("\\mdtheorem [] {} [] {} []", sub[(opts, env, like, caption, within)] {
+    let mut toks =
+      Invocation!(T_CS!("\\newmdtheoremenv"), vec![opts, Some(env.clone()), like, Some(caption.clone()), within])
+        .unlist();
+    toks.extend([T_CS!("\\newtheorem"), T_OTHER!("*"), T_BEGIN!()]);
+    toks.extend(env.unlist());
+    toks.extend([T_OTHER!("*"), T_END!(), T_BEGIN!()]);
+    toks.extend(caption.unlist());
+    toks.push(T_END!());
+    Ok(Tokens::new(toks))
+  });
   // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
   // `mdframed` (mdframed.sty L578-585:
   //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).

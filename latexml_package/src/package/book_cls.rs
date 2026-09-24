@@ -85,7 +85,7 @@ LoadDefinitions!({
     r"
 \newif\if@restonecol
 \newif\if@titlepage
-\@titlepagefalse"
+\@titlepagetrue"
   );
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm
@@ -141,10 +141,14 @@ LoadDefinitions!({
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:chapter");
 
   Tag!("ltx:appendix", auto_close => true);
-  DefMacro!("\\appendix", "\\@appendix");
+  DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
   DefPrimitive!("\\@appendix", {
     start_appendices("chapter");
   });
+  // book.cls:283 `\newcommand\@chapapp{\chaptername}` (`\appendix` re-points it to
+  // `\appendixname`): classes built on this one print it in their headings
+  // (utexasthesis; class census 2026-09-24).
+  DefMacro!("\\@chapapp", "\\chaptername");
 
   // General document structure:
   // \documentclass{..}

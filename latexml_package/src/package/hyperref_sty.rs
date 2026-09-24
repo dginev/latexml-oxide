@@ -1357,6 +1357,11 @@ LoadDefinitions!({
 
   TeX!(
     r#"
+% hyperref.sty:3106-3120 \HyLang@addto: babel-language hooks; classes call it
+% (unbtex; class census 2026-09-24).
+\def\HyLang@addto#1#2{#2\@temptokena{#2}\ifx#1\relax\let#1\@empty\fi
+  \ifx#1\@undefined\edef#1{\the\@temptokena}\else\toks@\expandafter{#1}\edef#1{\the\toks@\the\@temptokena}\fi
+  \@temptokena{}\toks@\@temptokena}
 \def\HyLang@afrikaans{%
   \def\equationautorefname{Vergelyking}%
   \def\footnoteautorefname{Voetnota}%

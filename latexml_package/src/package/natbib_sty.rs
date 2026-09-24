@@ -213,6 +213,11 @@ LoadDefinitions!({
   NewCounter!("NAT@ctr");
   def_macro_noop("\\NAT@set@cites")?;
   def_macro_noop("\\NAT@@setcites")?;
+  // natbib.sty:344-345: split a `key=value` option word (acmart-tagged calls it;
+  // class census 2026-09-24).
+  RawTeX!(
+    r"\def\NAT@find@eq#1=#2\@nil{\def\@tempa{#1}\def\@tempc{#2}}\def\NAT@rem@eq#1={\def\@tempc{#1}}"
+  );
 
   //======================================================================
   // 2.3 Basic Citation Commands

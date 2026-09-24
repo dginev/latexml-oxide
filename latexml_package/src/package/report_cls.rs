@@ -81,7 +81,7 @@ LoadDefinitions!({
     r"
 \newif\if@restonecol
 \newif\if@titlepage
-\@titlepagefalse"
+\@titlepagetrue"
   );
 
   //**********************************************************************
@@ -138,10 +138,14 @@ LoadDefinitions!({
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:chapter");
 
   Tag!("ltx:appendix", auto_close => true);
-  DefMacro!("\\appendix", "\\@appendix");
+  DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
   DefPrimitive!("\\@appendix", {
     start_appendices("chapter");
   });
+  // report.cls:277 `\newcommand\@chapapp{\chaptername}` (`\appendix` re-points it to
+  // `\appendixname`): classes built on this one print it in their headings
+  // (utexasthesis; class census 2026-09-24).
+  DefMacro!("\\@chapapp", "\\chaptername");
 
   //======================================================================
   DefPrimitive!("\\tiny",         None, font => {size => 5 });

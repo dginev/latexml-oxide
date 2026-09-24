@@ -29,6 +29,12 @@ LoadDefinitions!({
   // tests reliably pick the no-linenumbers branch.
   DefMacro!("\\linenomathWithnumbers", "\\relax");
   DefMacro!("\\linenomathNonumbers",   "\\@empty");
+  // lineno.sty:1254-1263 `\linenumberdisplaymath`/`\nolinenumberdisplaymath` choose
+  // whether display math is numbered; line numbers are not modelled, and
+  // `\linenomath` stays the environment above (ascelike.cls:312; class census
+  // 2026-09-24).
+  def_macro_noop("\\linenumberdisplaymath")?;
+  def_macro_noop("\\nolinenumberdisplaymath")?;
 
   // \internallinenumbers (lineno.sty:2732) is a macro with optional * and [Number].
   // lineno.sty also defines `\let\endinternallinenumbers\endlinenumbers` and

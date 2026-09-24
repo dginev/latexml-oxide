@@ -390,6 +390,13 @@ LoadDefinitions!({
   // code doesn't currently consult it.
   NewCounter!("MaxMatrixCols");
   SetCounter!("MaxMatrixCols", Number::new(10));
+  // amsmath.sty:1073-1075 `\env@matrix`, the array set-up the matrix environments
+  // start with. The matrices here are built without it, but classes renew it
+  // (willowtreebook.cls:66 `\RenewDocumentCommand\env@matrix{O{\arraystretch}}…`),
+  // which needs it defined (class census 2026-09-24).
+  RawTeX!(
+    r"\def\env@matrix{\hskip -\arraycolsep\let\@ifnextchar\new@ifnextchar\array{*\c@MaxMatrixCols c}}"
+  );
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
