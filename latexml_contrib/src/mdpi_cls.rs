@@ -33,6 +33,43 @@ LoadDefinitions!({
   RequirePackage!("makecell");
   RequirePackage!("array");
   RequirePackage!("colortbl");
+  // mdpi.cls:34 `\RequirePackage{fancyhdr}` and :1537-1559 geometry (per page
+  // layout): papers restyle the page with `\fancyhead`/`\fancypagestyle` and
+  // `\newgeometry` — undefined floods into `Fatal:TooManyErrors` (arXiv
+  // 2605.22427, 2605.29102). Layout only; the bindings accept them.
+  RequirePackage!("fancyhdr");
+  RequirePackage!("geometry");
+  // mdpi.cls:178-262: amsthm with the `mdpi` style and the capitalised
+  // environments on their own counters (`\begin{Proposition}`, `{Remark}`,
+  // `{Lemma}` …). `{Algorithm}` is left out: its `algorithm` counter would
+  // collide with a paper's own `\usepackage{algorithm}` float.
+  RequirePackage!("amsthm");
+  RawTeX!(
+    r"\newtheoremstyle{mdpi}{12pt}{12pt}{\itshape}{}{\bfseries}{.}{.5em}{}
+\theoremstyle{mdpi}
+\newcounter{theorem}\newtheorem{Theorem}[theorem]{Theorem}
+\newcounter{lemma}\newtheorem{Lemma}[lemma]{Lemma}
+\newcounter{corollary}\newtheorem{Corollary}[corollary]{Corollary}
+\newcounter{proposition}\newtheorem{Proposition}[proposition]{Proposition}
+\newcounter{characterization}\newtheorem{Characterization}[characterization]{Characterization}
+\newcounter{property}\newtheorem{Property}[property]{Property}
+\newcounter{problem}\newtheorem{Problem}[problem]{Problem}
+\newcounter{example}\newtheorem{Example}[example]{Example}
+\newcounter{examplesanddefinitions}\newtheorem{ExamplesandDefinitions}[examplesanddefinitions]{Examples and Definitions}
+\newcounter{remark}\newtheorem{Remark}[remark]{Remark}
+\newcounter{definition}\newtheorem{Definition}[definition]{Definition}
+\newcounter{hypothesis}\newtheorem{Hypothesis}[hypothesis]{Hypothesis}
+\newcounter{notation}\newtheorem{Notation}[notation]{Notation}
+\newcounter{assumption}\newtheorem{Assumption}[assumption]{Assumption}"
+  );
+  // mdpi.cls:1655-1657: the template's `tabularx` column types. Without them
+  // `\begin{tabularx}{\textwidth}{CCC}` has one column and every `&` is an
+  // "Extra alignment tab" (arXiv 2605.17530 ×501, 2605.22427, 2605.29102).
+  RawTeX!(
+    r"\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}"
+  );
 
   // mdpi.cls L1297-1298: `\newlength{\fulllength}` (page-rule width).
   // Pure layout — define as a register so `\rule{\fulllength}{..}` and
@@ -290,6 +327,10 @@ LoadDefinitions!({
   // shipping a local Definitions/mdpi.cls. Witness 2412.13512, 2503.13839.
   DefMacro!("\\isAPAStyle{}{}", "#2");
   DefMacro!("\\isChicagoStyle{}{}", "#2");
+  // mdpi.cls:170-175 `\isPreprints`, the same brancher on `\@journal`
+  // (preprints / preprintschicago / preprintsapa): a journal paper takes the
+  // second branch (`\isPreprints{\centering}{}`, arXiv 2605.17530).
+  DefMacro!("\\isPreprints{}{}", "#2");
   // \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
   // Render as structural ltx:acknowledgements so post-processors map it
   // to the canonical role/styling (vs flattening to a generic section).

@@ -18482,6 +18482,19 @@ See \citep{a,b}.
     assert!(xml.contains("PLAINNODE prose and"), "{xml}");
   }
 
+  /// `\include{preamble.tex}` reads `preamble.tex`: latex.ltx:9557-9585 strips
+  /// a `.tex` extension before `\@include` appends one. Appending blindly
+  /// asked for `preamble.tex.tex`, and a whole preamble never loaded (arXiv
+  /// 2605.05505, 2605.24122 flooded into `Fatal:TooManyErrors`).
+  #[test]
+  fn include_strips_a_tex_extension() {
+    let tex = "\\documentclass{article}\n\\include{sub.tex}\n\\begin{document}\nA \\mytext{ok}.\n\\end{document}\n";
+    let (stderr, xml) = convert_files(tex, &[("sub.tex", "\\newcommand\\mytext[1]{[#1]}\n")]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("sub.tex.tex"), "{stderr}");
+    assert!(xml.contains("<p>A [ok].</p>"), "{xml}");
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,

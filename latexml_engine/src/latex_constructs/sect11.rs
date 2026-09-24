@@ -738,7 +738,15 @@ pub(crate) fn load() -> Result<()> {
 
   // Perl L4313-4315: \include — input a file, respecting \includeonly
   DefPrimitive!("\\include{}", sub[(path)] {
-    let path_str = Expand!(path).to_string();
+    // latex.ltx:9557-9562: `\include` strips a `.tex` extension
+    // (`\@strip@tex@ext`, :9577-9585) before `\@include` appends one, so
+    // `\include{preamble.tex}` reads `preamble.tex`; appending blindly asked
+    // for `preamble.tex.tex` ("No file"), and a whole preamble of amsmath,
+    // siunitx, physics … never loaded (arXiv 2605.05505, 2605.24122 flooded
+    // into `Fatal:TooManyErrors`). Guard:
+    // `perfect_kernel_batch56::include_strips_a_tex_extension`.
+    let expanded = Expand!(path).to_string();
+    let path_str = expanded.strip_suffix(".tex").unwrap_or(&expanded).to_string();
     // Check if \includeonly restricts inclusion
     let table = lookup_value("including@only");
     let should_include = match table {
@@ -764,7 +772,9 @@ pub(crate) fn load() -> Result<()> {
     let paths_str = Expand!(paths).to_string();
     let mut map = rustc_hash::FxHashMap::default();
     for part in paths_str.split(',') {
-      let trimmed = part.trim().to_string();
+      // latex.ltx:9565-9575: each entry is `\@strip@tex@ext`ed too.
+      let trimmed = part.trim();
+      let trimmed = trimmed.strip_suffix(".tex").unwrap_or(trimmed).to_string();
       if !trimmed.is_empty() {
         map.insert(trimmed, "1".to_string());
       }

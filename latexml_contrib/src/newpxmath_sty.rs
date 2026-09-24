@@ -7,6 +7,10 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // newpxmath.sty:23 `\RequirePackage{amsmath}`: the binding shadows the raw
+  // load, so a document that relies on it (`\text`, `\tfrac` via a style
+  // that loads only newpxmath — arXiv 2605.27258) flooded undefined.
+  RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   // Map newpxmath variant font macros to their standard equivalents.
   Let!("\\varmathbb", "\\mathbb");

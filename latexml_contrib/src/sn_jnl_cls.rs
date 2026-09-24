@@ -18,13 +18,44 @@ LoadDefinitions!({
   // call \\geometry{margin=2cm} without an explicit usepackage.
   // Witness 2503.06846.
   RequirePackage!("geometry");
-  // sn-jnl.cls L615-618 raw-loads algorithm + algorithmicx +
+  // Older sn-jnl.cls versions (L615-618) raw-load algorithm + algorithmicx +
   // algpseudocode so papers can use `\begin{algorithm}` and
-  // `\begin{algorithmic}` (along with `\State`/`\If`/`\For`/`\While`)
-  // without an explicit `\usepackage{...}`. Witness 2201.08889.
-  RequirePackage!("algorithm");
-  RequirePackage!("algorithmicx");
-  RequirePackage!("algpseudocode");
+  // `\begin{algorithmic}` (`\State`/`\If`/`\For`) without a `\usepackage`
+  // (witness 2201.08889); newer ones do not. The class ships with the paper,
+  // so load them only when ITS file requires them: forcing algorithmicx defines
+  // `\algorithmic`, and a paper's own `\usepackage{algorithmic}` (the
+  // algorithms bundle, `\STATE`/`\FOR`) is then refused (algorithmic_sty.rs,
+  // Perl algorithmic.sty.ltxml:20-23) — a flood of undefined `\STATE` into
+  // `Fatal:TooManyErrors` (arXiv 2605.00003, 2605.10685).
+  // The package names the class file requires, read once: the `{…}` list of
+  // every uncommented `\RequirePackage`/`\usepackage`, split into whole names
+  // (so `algorithm2e` is not `algorithm`).
+  let required: Vec<String> = find_file("sn-jnl.cls", None)
+    .and_then(|path| std::fs::read_to_string(path).ok())
+    .map(|src| {
+      src
+        .lines()
+        .map(|line| line.split('%').next().unwrap_or(""))
+        .filter(|code| code.contains("\\RequirePackage") || code.contains("\\usepackage"))
+        .filter_map(|code| {
+          let open = code.rfind('{')?;
+          let close = code[open..].find('}')? + open;
+          Some(code[open + 1..close].to_string())
+        })
+        .flat_map(|list| {
+          list
+            .split(',')
+            .map(|n| n.trim().to_string())
+            .collect::<Vec<_>>()
+        })
+        .collect()
+    })
+    .unwrap_or_default();
+  for pkg in ["algorithm", "algorithmicx", "algpseudocode"] {
+    if required.iter().any(|name| name == pkg) {
+      RequirePackage!(pkg);
+    }
+  }
   // Real sn-jnl.cls L298/301/302 raw-loads multirow, mathrsfs and
   // `[figuresright]{rotating}`. Because this binding short-circuits the
   // unbound-class dependency scan (a real `.cls` binding is responsible for
