@@ -1,0 +1,16 @@
+% witness: TL class census 2026-09-24 — univie-ling-poster (univie-ling-poster.cls:822/835
+%          \AfterPackage*{csquotes}{\SetCiteCommand{\parencite}}, csquotes loaded at :885)
+% oracle:  pdflatex 0 errors; After: ok. (beamerbasefont.sty:307-308 → sansmathaccent.sty:49-56 load
+%          scrlfile in a beamer document)
+% engines: rust (56ia) and Perl 0.8.8 = "\AfterPackage undefined", its arguments spilled into
+%          the text (Perl's beamer binding comments the sansmathaccent load out, :1315)
+% expect:  0 errors; <p>After: ok.</p> in the frame
+% status:  RED (56ia) -> GREEN (56ib)
+\documentclass{beamer}
+\AfterPackage*{csquotes}{\gdef\afterok{ok}}
+\usepackage{csquotes}
+\begin{document}
+\begin{frame}
+After: \afterok.
+\end{frame}
+\end{document}

@@ -1180,6 +1180,12 @@ LoadDefinitions!({
   RequirePackage!("amsthm");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
+  // beamerbasefont.sty:307-308 loads sansmathaccent, which in a beamer document
+  // loads scrlfile (sansmathaccent.sty:49-56): classes built on beamer use its
+  // `\AfterPackage`/`\BeforePackage` (univie-ling-poster.cls:822/835
+  // `\AfterPackage*{csquotes}{…}`; TeX Live class census 2026-09-24). Perl's
+  // binding comments the load out (beamer.cls.ltxml:1315).
+  RequirePackage!("scrlfile");
   // Perl beamer.cls.ltxml L1311: beamer always loads hyperref (real beamer
   // does too, via hyperref's kernel hooks). Without it `\url`/`\href` are
   // undefined in every beamer document that doesn't load hyperref itself —

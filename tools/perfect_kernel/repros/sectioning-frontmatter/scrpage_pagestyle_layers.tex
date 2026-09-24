@@ -1,0 +1,15 @@
+% witness: sweep 120 — l2picfaq, oscola, stanli, koma-moderncvclassic/cvbasic, mdframed examples and
+%          ~15 other manuals using scrpage2 (served by the scrpage binding; the file left TeX Live)
+% oracle:  pdflatex (TL 2024 scrpage2) 0 errors
+% engines: rust (56ia, --preload=[rawstyles,rawclasses]latexml.sty) = "\ps@@scrheadings undefined":
+%          \pagestyle runs \ps@<style> since 56hz, and the binding's \ps@scrheadings called layout
+%          layers it never defined
+% expect:  0 errors; <p>Text.</p>
+% status:  RED (56ia) -> GREEN (56ib)
+\documentclass{scrartcl}
+\usepackage{scrpage2}
+\pagestyle{scrheadings}
+\begin{document}
+\pagestyle{scrplain}
+Text.
+\end{document}

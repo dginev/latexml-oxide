@@ -25591,4 +25591,42 @@ mod class_census {
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>Text.</p>"), "{xml}");
   }
+
+  /// biblatex.sty:15-21's version strings, which third-party style files echo
+  /// in their `\ProvidesFile` (dtk.cbx:12 `[\abx@cbxid]`; dtk).
+  #[test]
+  fn biblatex_style_version_strings() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/biblatex_style_version_strings.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hello. [3.21]</p>"), "{xml}");
+  }
+
+  /// beamer loads scrlfile, as beamerbasefont → sansmathaccent does, so a
+  /// beamer-based class's `\AfterPackage` hooks run (univie-ling-poster).
+  #[test]
+  fn beamer_loads_scrlfile() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/beamer_loads_scrlfile.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>After: ok.</p>"), "{xml}");
+  }
+
+  /// The scrpage binding's page styles run their layout layers
+  /// (`\ps@@scrheadings`, `\ps@scrplain`), which `\pagestyle` reaches since
+  /// 56hz (l2picfaq, oscola and ~20 KOMA manuals, sweep 120).
+  #[test]
+  fn scrpage_pagestyle_layers() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/scrpage_pagestyle_layers.tex"
+    );
+    // The raw scrartcl (the sweep's persona) reaches `\pagestyle`; its KOMA
+    // warnings (type area, `\@startsection`) are its own.
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Text.</p>"), "{xml}");
+  }
 }

@@ -6536,3 +6536,14 @@ pdflatex clean). **Rust (FIXED, batch 56ia):** the keys keep the tokens and
 `lst_extract_color` resolves them at the listing. Guard
 `class_census::listings_color_resolved_at_listing`.
 
+## 242. The beamer binding does not load scrlfile (FIXED in Rust)
+
+Real beamer loads scrlfile through its font setup: beamerbasefont.sty:307-308 requires
+sansmathaccent, which in a beamer document requires scrlfile (sansmathaccent.sty:49-56). Perl's
+beamer binding comments the sansmathaccent load out (beamer.cls.ltxml:1315), so KOMA's
+`\AfterPackage`/`\BeforePackage` are undefined in a beamer document, and their arguments spill
+into the text. univie-ling-poster.cls:822/835 `\AfterPackage*{csquotes}{\SetCiteCommand{\parencite}}`
+(TeX Live class census 2026-09-24). Trigger: `\documentclass{beamer}\AfterPackage*{csquotes}{…}`
+(Perl and Rust: `\AfterPackage` undefined; pdflatex clean). **Rust (FIXED, batch 56ib):** the
+binding requires scrlfile. Guard `class_census::beamer_loads_scrlfile`.
+

@@ -755,10 +755,13 @@ LoadDefinitions!({
   // set `\ver@biblatex-chicago.sty`, leaving the guard's `\ver@biblatex.sty`
   // undefined. Setting it in the binding itself covers every load path.
   // Witness arXiv 2605.11180 (html_feedback #6601): biber `.bbl` format 3.3,
-  // empty References before this marker.
+  // empty References before this marker. The string is biblatex.sty:34-35's
+  // (`\abx@date\space v\abx@version\space programmable bibliographies`, the
+  // version the `\abx@*` strings below carry); `\@ifpackagelater{biblatex}`
+  // compares its date since batch 56ia.
   {
     let ver_cs = T_CS!("\\ver@biblatex.sty");
-    DefMacro!(ver_cs, None, "2023/03/05 v3.19 Sophisticated Bibliographies (PK/MW)",
+    DefMacro!(ver_cs, None, "2025/07/10 v3.21 programmable bibliographies (PK/MW)",
       scope => Some(Scope::Global));
   }
 
@@ -816,6 +819,19 @@ LoadDefinitions!({
   // `\NewDocumentCommand … { o u\q__nwejm }` needs xparse's `u` argument type
   // (TeX Live class census 2026-09-24).
   RequirePackage!("xparse");
+  // biblatex.sty:15-21: the version strings every biblatex style file echoes in
+  // its `\ProvidesFile` (dtk.cbx:12 `\ProvidesFile{dtk.cbx}[\abx@cbxid]`, a
+  // third-party style the binding raw-loads below; dtk, TeX Live class census
+  // 2026-09-24).
+  RawTeX!(
+    r"\def\abx@date{2025/07/10}
+\def\abx@version{3.21}
+\def\abx@bbxid{\abx@date\space v\abx@version\space biblatex bibliography style (PK/MW)}
+\def\abx@cbxid{\abx@date\space v\abx@version\space biblatex citation style (PK/MW)}
+\def\abx@lbxid{\abx@date\space v\abx@version\space biblatex localization (PK/MW)}
+\def\abx@cptid{\abx@date\space v\abx@version\space biblatex compatibility (PK/MW)}
+\def\abx@dmid{\abx@date\space v\abx@version\space biblatex datamodel (PK/MW)}"
+  );
 
   // Cite commands — the three-family architecture from ar5iv-bindings
   // PRs #20/#21 (+ 0911aec repairs). Every command is a code closure over
