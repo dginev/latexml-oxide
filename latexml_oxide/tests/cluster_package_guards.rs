@@ -18387,6 +18387,31 @@ Body.
     );
   }
 
+  /// compsci.sty:510's `\code` (verbatim typewriter through url's `\Url`) is
+  /// refused because modern doc.sty:623 made `\code` the identity, so the
+  /// frankenstein manuals executed the macros they document: `\cs\Wrapquotes`
+  /// ran titles.sty's quote wrapper, whose look-ahead looped
+  /// (`Fatal:Stomach:Recursion`). A `file/compsci.sty/after` first-aid hook
+  /// restores compsci's `\code` (OXIDIZED_DESIGN #276; 12 manuals 204 → 1
+  /// errors, titles and abbrevs 0 → 97 % PDF recall).
+  #[test]
+  fn compsci_code_is_verbatim() {
+    if !kpsewhich_has("compsci.sty") {
+      return;
+    }
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/compsci_code_identity_titles.tex");
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    latexml::util::test::assert_element(
+      &xml,
+      "ref",
+      &[r#"href="\Wrapquotes""#],
+      r##"<ref class="ltx_nolink ltx_Url" font="typewriter" href="\Wrapquotes">\Wrapquotes</ref>"##,
+    );
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,

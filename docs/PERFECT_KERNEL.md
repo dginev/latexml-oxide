@@ -125,7 +125,14 @@ mechanical singletons and the content/semantic axes below.
    309/310. 2605: 53 `%auto-ignore` placeholders newly Fatal and 20 PoS papers with a `\q_no_value`
    recursion, both fixed in 56hh, plus 34 siunitx `detect-all` warnings (key registered); the 68
    `\endminipage` warnings are SHARED. 2606 has the same two roots at a larger scale: 154
-   `\q_no_value` papers (pos.sty, aaskaiid.sty) and 28 placeholders, all clean on 56hh.
+   `\q_no_value` papers (pos.sty, aaskaiid.sty) and 28 placeholders, all clean on 56hh. Triaged
+   2605 singletons: four post-stage `post:parse`/XPath `NO_MEMORY` failures (2605.15130, .21663,
+   .02664, .14423) are fleet memory pressure: byte-identical output and peak memory on 56ec and 56he,
+   0 errors locally at the 8 GB cap. 2605.15407's rootless Fatal is an unclosed `\ifpdf`, which
+   pdflatex runs as TRUE; ours is FALSE, like Perl's. That is the open K6 PDF-mode question.
+   2605.19748 is XeLaTeX-only (an unclosed `\ifXeTeX`), SHARED. Open: 2605.07451, where 56go's
+   `\everypar` breaks syntax.sty's grammar productions; 2605.31475, a tikz `PushbackLimit` that
+   began between 56ec and s113.
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
    31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's

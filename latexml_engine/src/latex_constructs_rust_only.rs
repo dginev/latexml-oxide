@@ -946,4 +946,25 @@ LoadDefinitions!({
   ] {
     AssignMapping!("INTERPRETABLE_SOURCES", name => 1);
   }
+
+  //======================================================================
+  // 11. First aid for external packages, the way the kernel's own
+  // latex2e-first-aid-for-external-files.ltx patches them: a
+  // `file/<name>/after` hook, so the file still loads raw and a manual that
+  // `\DocInput`s it still reads it as content.
+  //
+  // compsci.sty:510-514 defines `\code` (verbatim typewriter through url's
+  // `\Url`) with `\newcommand*`, but modern doc.sty:623 already made `\code`
+  // the identity (`\@ifundefined{code}{\def\code#1{#1}}{}`): pdflatex stops
+  // with "Command \code already defined", Perl and Rust skip it with an Info.
+  // The frankenstein manuals then EXECUTE the macros they document —
+  // `\cs\Wrapquotes` = `\code{\Wrapquotes}` ran titles.sty's quote wrapper,
+  // whose look-ahead looped (`Fatal:Stomach:Recursion`, titles); abbrevs,
+  // attrib, lips, moredefs … errored or lost their text. Their PDFs, built
+  // before doc.sty took `\code`, show the names verbatim. Surpass;
+  // OXIDIZED_DESIGN #276. Guard `perfect_kernel_batch56::compsci_code_is_verbatim`.
+  //======================================================================
+  RawTeX!(
+    r"\AddToHook{file/compsci.sty/after}[latexml]{\def\code{\begingroup\urlstyle{ttnobreak}\Url}}"
+  );
 });
