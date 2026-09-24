@@ -6476,3 +6476,63 @@ control sequences (idcc, ijdc-v14, ijdc-v9; TeX Live class census 2026-09-24). T
 (an unknown style stays silent, as before); `\thispagestyle` stays a no-op. Guard
 `class_census::pagestyle_runs_its_ps_macro`.
 
+## 238. `\@ifpackagelater` is always true, and `\ver@<file>` is stored unexpanded (FIXED in Rust)
+
+latex.ltx:18405-18411 `\@ifpackagelater{pkg}{date}` compares the date in `\ver@pkg.sty`,
+which `\ProvidesPackage`/`\ProvidesClass` store by `\protected@xdef` (:18481-18483) and
+`\ProvidesFile` by `\xdef` (:22454-22457). Perl answers "later" unconditionally
+(latex_constructs.pool.ltxml:972-973 `DefMacro('\@ifpackagelater{}{}{}{}', '#3')`) and
+stores the version unexpanded. A package not loaded yet then counts as recent:
+yathesis.cls:459 passes `main=\YAD@mainlanguage` to babel inside
+`\@ifpackagelater{babel}{2013/04/15}`, passes it again at :519, and babel refuses the
+second ("Bad option 'main=french' … previous setting of 'main'"). Trigger:
+`\makeatletter\@ifpackagelater{babel}{2013/04/15}{T}{F}` before babel loads (pdflatex F,
+Perl T). The unexpanded storage matters once the test is real: expl3.sty's
+`\ProvidesExplPackage{expl3}{\ExplFileDate}…` stored `\ExplFileDate \space …`, whose
+date parse reads the year alone, so ctex, xparse and l3keys2e called expl3 "too old".
+**Rust (FIXED, batch 56ia):** the kernel's `\@ifl@ter` definitions, and the versions stored
+expanded. The loader defines `\ver@<file>` for every file it loads (content.rs:
+`provides_version_of`, else `\fmtversion`). Guard
+`class_census::ifpackagelater_reads_the_loaded_version`.
+
+## 239. titlesec keeps no `\ttls@<section>` record (FIXED in Rust)
+
+titlesec stores each title's spacing as `\ttls@<section>` =
+`{left}{right}{before}{after}{afterindent}` (titlesec.sty:640-658) and fills it at load for
+`\section`…`\subparagraph` (`\ttl@extract`, :1579-1628). The Perl binding
+(titlesec.sty.ltxml) maps only `\titleformat`/`\titlespacing`/`\titleclass`, so the record
+is undefined. ctex reads it when titlesec finishes loading
+(ctex-heading-article.def:490-528 `\__ctex_titlesec_spacing:nnnnnn` takes its five groups
+plus the name); with nothing there the six-argument grab ran away across the headings map
+into `\csname CTEX@…` (mynsfc, qyxf-book, bjfuthesis; TeX Live class census 2026-09-24).
+ctex-heading-book.def:669 also resets `\ttl@chapterout` (titlesec.sty:402). Trigger:
+`\usepackage{titlesec}` then `\@ifundefined{ttls@section}{MISSING}{}` (Perl 0.8.8 and Rust
+MISSING, pdflatex defined). **Rust (FIXED, batch 56ia):** the binding defines the five
+records with titlesec's fallback for a command not built on `\@startsection` (:1587-1590
+`\titlespacing*#1{\z@}{*3}{*2}`), and `\ttl@chapterout`. Guard
+`class_census::titlesec_spacing_record`.
+
+## 240. `\tableofcontents` holds no `\@starttoc{toc}` for etoolbox to patch (FIXED in Rust)
+
+book.cls/article.cls `\tableofcontents` typeset the list with `\@starttoc{toc}`
+(`\listoffigures`/`\listoftables` with `{lof}`/`{lot}`), and classes patch that call:
+exam-zh.cls:272-278 `\patchcmd{\tableofcontents}{\@starttoc{toc}}{…}{}{\fail}`, whose
+failure branch runs the undefined `\fail`. Perl's `\tableofcontents` is a constructor
+(latex_constructs.pool.ltxml:724), so `\patchcmd` fails outright; Rust's delegating macro
+held no `\@starttoc{toc}` either. **Rust (FIXED, batch 56ia):** the body carries the call as
+the argument of `\lx@kernel@listbody`, which discards it (the ToC is built in
+post-processing, and our `\@starttoc` would read a stale `\jobname.toc`). Guard
+`class_census::patchcmd_tableofcontents_starttoc`.
+
+## 241. listings resolves `rulecolor`/`backgroundcolor` at `\lstset` time (FIXED in Rust)
+
+listings stores the colour command of `rulecolor`/`backgroundcolor` and runs it when a
+listing is drawn. Perl's `lstExtractColor` (listings.sty.ltxml:945-953) digests it when the
+key is set, so a colour defined later in the preamble errs: easybase.sty:2419
+`rulecolor = \color{ctex@frame}` under the `\lstset{style=…}` at :2431, `ctex@frame`
+defined at :2439 (easybook). Trigger: `\lstset{frame=single, rulecolor=\color{later}}`
+then `\definecolor{later}{HTML}{C00000}` (Perl and Rust: "color 'later' is undefined",
+pdflatex clean). **Rust (FIXED, batch 56ia):** the keys keep the tokens and
+`lst_extract_color` resolves them at the listing. Guard
+`class_census::listings_color_resolved_at_listing`.
+

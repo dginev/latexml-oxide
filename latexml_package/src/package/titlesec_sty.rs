@@ -92,6 +92,23 @@ LoadDefinitions!({
 
   DefMacro!("\\chaptertitlename",                        "\\chaptername");
   def_macro_noop("\\titlespacing OptionalMatch:* {}{}{}{}[]")?;
+  // titlesec stores each title's spacing in `\ttls@<section>` =
+  // `{left}{right}{before}{after}{afterindent}` (titlesec.sty:640-658) and
+  // fills it at load for the five standard sectioning commands
+  // (`\ttl@extract`, :1579-1628). Ours are not built on `\@startsection`, so
+  // titlesec's own fallback for such a command applies (:1587-1590
+  // `\titlespacing*#1{\z@}{*3}{*2}`). The spacing is not rendered, but ctex
+  // reads the record at the end of titlesec's load: ctex-heading-article.def:
+  // 490-528 `\__ctex_titlesec_spacing:nnnnnn` takes its five groups plus the
+  // name, and on an undefined record ran away across the headings map into a
+  // `\csname CTEX@…` (mynsfc, qyxf-book, bjfuthesis; TeX Live class census
+  // 2026-09-24; Perl's binding lacks the record too). ctex-heading-book.def:669
+  // also resets `\ttl@chapterout` (titlesec.sty:402).
+  for name in ["section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
+    def_macro(T_CS!(s!("\\ttls@{name}")), None,
+      TokenizeInternal!(r"{\z@}{\z@}{*3}{*2}{\z@}"), None)?;
+  }
+  DefMacro!("\\ttl@chapterout", "\\typeout{\\chaptertitlename\\space\\thechapter.}");
 
   DefMacro!("\\filright",  "\\raggedright");
   DefMacro!("\\filcenter", "\\centering");

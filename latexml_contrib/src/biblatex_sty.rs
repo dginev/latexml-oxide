@@ -810,6 +810,12 @@ LoadDefinitions!({
   RequirePackage!("ifthen");
   RequirePackage!("etoolbox");
   RequirePackage!("babel_support");
+  // biblatex.sty:16305-16339: under the default UTF-8 input encoding,
+  // `casechanger=auto` selects the expl3 case changer, whose
+  // blx-case-expl3.sty:2 loads xparse. Classes rely on it: nwejmart.cls:462
+  // `\NewDocumentCommand … { o u\q__nwejm }` needs xparse's `u` argument type
+  // (TeX Live class census 2026-09-24).
+  RequirePackage!("xparse");
 
   // Cite commands — the three-family architecture from ar5iv-bindings
   // PRs #20/#21 (+ 0911aec repairs). Every command is a code closure over
@@ -2961,6 +2967,12 @@ LoadDefinitions!({
   // takes the false branch. 6-bundle cluster (biblatex-abnt/-juradiss …).
   def_macro_noop("\\DeclareBibliographyCategory{}")?;
   def_macro_noop("\\addtocategory{}{}")?;
+  // biblatex.sty:9955-9966 `\bibbycategory[<options>]` prints one bibliography
+  // per declared category under its own heading. Categories are not modelled
+  // (`\addtocategory` files nothing), so it prints the one bibliography there
+  // is. gztarticle.cls:2580-2581 saves and renews it (TeX Live class census
+  // 2026-09-24).
+  DefMacro!("\\bibbycategory[]", "\\printbibliography[#1]");
   DefMacro!("\\ifcategory{}{}{}", "#3");
   DefMacro!("\\ifentrycategory{}{}{}", "#3");
   // biber never sentence-cases a title at the `.bib` layer (BibTeX's

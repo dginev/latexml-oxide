@@ -1,0 +1,18 @@
+% witness: TL class census 2026-09-24 — my-thesis (my-thesis.cls:153-160: its \ps@headings sets
+%          \chaptermark to amsbook's \@secmark\markboth\chapterrunhead{}; \pagestyle{headings}
+%          then \chaptermark{})
+% oracle:  pdflatex 0 errors
+% engines: rust (56ia before this fix) = "\@secmark undefined" (exposed by 56hz, where
+%          \pagestyle started running \ps@<style>)
+% expect:  0 errors; <p>Text.</p>
+% status:  RED (56ia pre) -> GREEN (56ia)
+% mechanism: amsbook.cls:303-313 \@nilgobble, \@secmark, \@secnumber.
+\documentclass{amsbook}
+\makeatletter
+\def\chapterrunhead#1#2#3{#1 #2 #3}
+\def\chaptermark{\@secmark\markboth\chapterrunhead{}}
+\makeatother
+\chaptermark{Title}
+\begin{document}
+Text.
+\end{document}

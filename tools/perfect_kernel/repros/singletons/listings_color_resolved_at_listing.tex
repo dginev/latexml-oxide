@@ -1,0 +1,17 @@
+% witness: TL class census 2026-09-24 — easybook (easybase.sty:2419 rulecolor = \color{ctex@frame}
+%          in the style \lstset activates at :2431; :2439 \definecolorset defines ctex@frame later)
+% oracle:  pdflatex 0 errors (listings runs the colour command when a listing is drawn)
+% engines: rust (56hy) = "Can't find color named 'later'; assuming Black" at \lstset; Perl 0.8.8
+%          errs alike (listings.sty.ltxml:945-953 digests at \lstset time)
+% expect:  0 errors; the listing's framecolor="#C00000"
+% status:  RED (56hy) -> GREEN (56ia)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{frame=single, rulecolor=\color{later}}
+\definecolor{later}{HTML}{C00000}
+\begin{document}
+\begin{lstlisting}
+x = 1
+\end{lstlisting}
+\end{document}

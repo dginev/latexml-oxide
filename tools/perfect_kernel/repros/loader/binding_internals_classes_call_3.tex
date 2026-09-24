@@ -1,0 +1,23 @@
+% witness: TL class census 2026-09-24 — nwejmart (nwejmart.cls:462 \NewDocumentCommand with a `u`
+%          argument, which xparse provides; biblatex loads it: biblatex.sty:16305-16339 casechanger=auto
+%          → blx-case-expl3.sty:2 \RequirePackage{xparse}; nwejmart.cls:2283
+%          \setkeys{\MT_options_name:}{original-intertext=false,…}, mathtools.sty:88/1458/1533),
+%          gztarticle (gztarticle.cls:2580-2581 saves and renews biblatex's \bibbycategory,
+%          biblatex.sty:9955)
+% oracle:  pdflatex 0 errors; [a/b] [ok]
+% engines: rust (56hy) = "Invalid argument type 'u'", \MT_options_name: undefined, \bibbycategory
+%          undefined
+% expect:  0 errors; <p>[a/b] [ok]</p>
+% status:  RED (56hy) -> GREEN (56ia)
+\documentclass{article}
+\usepackage{mathtools}
+\usepackage{biblatex}
+\ExplSyntaxOn
+\setkeys{\MT_options_name:}{ original-intertext=false, original-shortintertext=false }
+\NewDocumentCommand \lxsplit { u; m } { [#1/#2] }
+\cs_set_eq:NN \__lx_bibbycategory \bibbycategory
+\RenewDocumentCommand \bibbycategory { O{} } { \__lx_bibbycategory [#1] }
+\ExplSyntaxOff
+\begin{document}
+\lxsplit a;{b} [ok]
+\end{document}

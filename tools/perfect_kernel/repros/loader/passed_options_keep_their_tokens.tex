@@ -1,0 +1,35 @@
+% witness: TL class census 2026-09-24 — fduthesis, hustthesis (fduthesis.cls:193-202
+%          \PassOptionsToClass{…, linespread = \c__fdu_line_spread_fp, …}{ctexbook};
+%          ctexbook.cls:336 \ProcessKeyOptions[ctex/option] reads \@raw@opt@ctexbook.cls)
+% oracle:  pdflatex 0 errors; [1.5][x] macro:->a=\myval ,b,c
+% engines: rust (56hy, [rawstyles,rawclasses]) = [0][x] \relax + 4 errors (\s undefined,
+%          \the\s, \the\_ ×2): the record was rebuilt at load time from the x-expanded,
+%          stringified option list, and did not exist before the load
+% expect:  0 errors; <p>[1.5][x] macro:-&gt;a=\myval ,b,c</p>
+% status:  RED (56hy) -> GREEN (56ia)
+% mechanism: latex.ltx:18521-18525 \@pass@ptions stores the argument tokens (\expandafter{#2},
+%   the first token expanded once) in \@raw@opt@<file> at pass time, appending ,#2 afterwards.
+\begin{filecontents*}[overwrite]{rawoptpkg.sty}
+\ProvidesExplPackage{rawoptpkg}{2026/09/24}{1.0}{raw option record test}
+\fp_new:N \l_rawopt_fp
+\tl_new:N \l_rawopt_tl
+\keys_define:nn { rawopt }
+  { spread .fp_set:N = \l_rawopt_fp , mode .tl_set:N = \l_rawopt_tl }
+\ProcessKeyOptions [ rawopt ]
+\cs_new:Npn \rawoptshow { [\fp_to_decimal:N \l_rawopt_fp][\l_rawopt_tl] }
+\end{filecontents*}
+\documentclass{article}
+\ExplSyntaxOn
+\fp_const:Nn \c_rawopt_spread_fp { 1.5 }
+\PassOptionsToPackage { spread = \c_rawopt_spread_fp } { rawoptpkg }
+\ExplSyntaxOff
+\makeatletter
+\def\myval{VAL}
+\PassOptionsToPackage{a=\myval,b}{other}
+\PassOptionsToPackage{c}{other}
+\edef\rawother{\expandafter\meaning\csname @raw@opt@other.sty\endcsname}
+\makeatother
+\usepackage[mode=x]{rawoptpkg}
+\begin{document}
+\rawoptshow\ \texttt{\rawother}
+\end{document}

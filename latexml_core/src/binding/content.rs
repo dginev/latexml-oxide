@@ -15,7 +15,7 @@ use crate::{
     font::{Font, Fontmap},
     model,
   },
-  definition::expandable::ExpandableOptions,
+  definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
   document::{
     resource::*,
     tag::{TagOptionName, TagOptions},
@@ -620,71 +620,10 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
       options.after,
       None,
     )?;
-    // OXIDIZED_DESIGN #164: record the raw option list as the kernel does.
-    // latex.ltx (ltkeys era, 2022+) stores every load's UNPROCESSED options
-    // in `\@raw@opt@<name>.<ext>` (L18521-18525 `\@pass@ptions`, and the
-    // `\@onefilewithoptions` load path), and `\ProcessKeyOptions` reads that
-    // clist (L19398 `\cs_if_free:cF {@raw@opt@\@currname.\@currext}`) —
-    // nothing else. LaTeXML's binding-level \usepackage bypasses the raw
-    // kernel loader, so the record was never made and EVERY
-    // `\ProcessKeyOptions` package silently dropped its options (both
-    // engines: Perl 0.8.8 verified same-host; witness codedescribe's
-    // `[strict,infograb]` → `\PkgInfo` never aliased, 10 TL-doc bundles).
-    // The kernel's `\@pass@ptions` (L18509-18526) is the SINGLE writer of
-    // that record and is reached both from `\PassOptionsToPackage` /
-    // `\PassOptionsToClass` (L18528-18529) and from `\@onefilewithoptions`
-    // (L18832) for the explicit `[…]` list — so `\@raw@opt@` accumulates
-    // passed-then-explicit options in load order, exactly the merged
-    // `opt@<name>.<ext>` value list `before_input_handle_options` just
-    // finished building (`\opt@<file>` is defined from the same list). Read
-    // that list rather than only `options.options`: with the explicit list
-    // alone, every option routed through `\PassOptionsToPackage` was
-    // invisible to `\ProcessKeyOptions` (witness tudapub.cls L194
-    // `\exp_args:Nx \PassOptionsToPackage{paper=…}{tudarules}` → tudarules
-    // `\ProcessKeyOptions[ptxcd/rules]` never ran `paper/a4`, leaving
-    // `\c_ptxcd_{large,small}rule_dim`/`\c_ptxcd_rulesep_dim` undefined in
-    // DEMO-TUDaPhD/TUDaThesis). Guard:
-    // `perfect_kernel_batch53::process_key_options_sees_passed_options`.
-    let merged_opts: Vec<String> = with_vecdeque(&s!("opt@{}.{}", name, as_type), |vdq| {
-      let mut out = Vec::new();
-      if let Some(vdq) = vdq {
-        for x in vdq.iter() {
-          match x {
-            Stored::String(val) => out.push(arena::with(*val, |s| s.to_string())),
-            Stored::Strings(vals) => {
-              out.extend(vals.iter().map(|val| arena::with(*val, |s| s.to_string())))
-            },
-            _ => {},
-          }
-        }
-      }
-      out
-    });
-    // Defined for EVERY load, an option-less one included: latex.ltx:18521-
-    // 18523 `\@pass@ptions` `\gdef`s `\@raw@opt@<file>` empty when no record
-    // exists, and scrhack.sty:284-293 forwards `\use:c{@raw@opt@setspace.sty}`
-    // as the first option of setspaceenhanced — undefined, the csname became
-    // `\relax`, survived the `\protected@xdef` store and re-read as the option
-    // `\@raw@opt@setspace .sty` (ijsra, sweep 72; batch 56bq).
-    {
-      let raw_opt_cs = T_CS!(s!("\\@raw@opt@{}", filename));
-      let joined = merged_opts.join(",");
-      // Standard-catcode tokenization (as `\@classoptionslist` above): the
-      // kernel stores the ARGUMENT tokens, so `{`/`}` group and letters are
-      // letters — `Explode!` (all OTHER) made `thesis={type=dr,dr=rernat}`
-      // split at its inner comma and every downstream `\ifx` value match
-      // fail (witness DEMO-TUDaPhD).
-      let body = crate::mouth::tokenize_internal(TeXString::assembled(joined));
-      def_macro(
-        raw_opt_cs,
-        None,
-        body,
-        Some(ExpandableOptions {
-          scope: Some(Scope::Global),
-          ..ExpandableOptions::default()
-        }),
-      )?;
-    }
+    // `\@raw@opt@<name>.<ext>` (OXIDIZED_DESIGN #164) is written by
+    // `pass_options`, which `before_input_handle_options` just called for the
+    // explicit `[…]` list, as the kernel's `\load@onefile@withoptions` calls
+    // `\@pass@ptions` (latex.ltx:18832).
     file_stack_pushed = push_load_file_stack(name)?;
     use_load_hooks(name, &as_type, "before")?;
   }
@@ -983,6 +922,16 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
         });
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+          // latex.ltx:18484-18486 `\@pr@videpackage`: the requested name takes the
+          // loaded file's version (`\ver@\@currpkg@reqd`), so a date test on it
+          // reads the substitute's: floatrow.sty:40 `\@ifpackagelater{caption3}
+          // {2007/04/11 v3.0q}` after caption3 fell back to caption (iaria,
+          // iaria-lite, langscibook, letgut; TeX Live class census 2026-09-24).
+          let_i(
+            &T_CS!(s!("\\ver@{filename}")),
+            &T_CS!(s!("\\ver@{fallback_name}.{as_type}")),
+            Some(Scope::Global),
+          );
           // NOTE: do NOT set `{filename}.ltxml_loaded` here. The
           // fallback name is a DIFFERENT binding (e.g. article for
           // myclass); the original `{filename}` (myclass.cls) has
@@ -2034,11 +1983,76 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
 /// or class $name (if $ext is 'cls').
 /// Perl Package.pm: PassOptions($name, $ext, @options)
 /// Stores options to be processed when the package/class is loaded.
+///
+/// The raw record is the options re-read with standard catcodes
+/// ([`option_argument_tokens`]): these lists come from the loader's explicit
+/// `[…]` or from a binding, already expanded. `\PassOptionsToPackage` /
+/// `\PassOptionsToClass` keep their argument tokens instead, through
+/// [`pass_options_with_raw`].
 pub fn pass_options(name: &str, ext: &str, options: Vec<String>) -> Result<()> {
+  let raw = option_argument_tokens(&options.join(","));
+  pass_options_with_raw(name, ext, options, raw)
+}
+
+/// latex.ltx:18509-18526 `\@pass@ptions`, the single writer of both option
+/// records. `\opt@<name>.<ext>` is the `\protected@xdef`ed list the loader
+/// and `\ProcessOptions` read (here a State list of strings). `\@raw@opt@<name>.<ext>`
+/// holds the unprocessed argument tokens, accumulated comma-separated
+/// (:18521-18525): `\gdef` on the first pass, `\g@addto@macro{,#2}` after.
+/// ltkeys' `\ProcessKeyOptions` reads only this record (:19398, :19457-19470).
+///
+/// OXIDIZED_DESIGN #164. LaTeXML's binding-level loader bypasses the kernel's,
+/// so the record was never made and every `\ProcessKeyOptions` package dropped
+/// its options (codedescribe `[strict,infograb]`, 10 TL-doc bundles). It is
+/// written from `\PassOptionsTo*` too, so tudapub.cls:194's `\exp_args:Nx
+/// \PassOptionsToPackage{paper=…}{tudarules}` reaches tudarules
+/// (DEMO-TUDaPhD). It is written at pass time, so it exists before the load and
+/// holds the tokens themselves: fduthesis.cls:193-202 and hustthesis.cls:197
+/// pass `linespread = \c__fdu_line_spread_fp` to ctexbook, whose
+/// x-expanded, re-tokenized spelling fell apart into `\s`, `__fp`… at
+/// ctexbook.cls:336 `\ProcessKeyOptions` (TeX Live class census 2026-09-24).
+/// It is defined for every load, an option-less one included (the empty
+/// explicit list): scrhack.sty:284-293 forwards `\use:c{@raw@opt@setspace.sty}`
+/// as an option of setspaceenhanced (ijsra, sweep 72; batch 56bq). Guards:
+/// `perfect_kernel_batch53::process_key_options_sees_passed_options`,
+/// `class_census::passed_options_keep_their_tokens`.
+pub fn pass_options_with_raw(
+  name: &str,
+  ext: &str,
+  options: Vec<String>,
+  raw: Tokens,
+) -> Result<()> {
   let key = s!("opt@{}.{}", name, ext);
   for opt in options {
     push_value(&key, arena::pin(&opt))?;
   }
+  let raw_opt_cs = T_CS!(s!("\\@raw@opt@{}.{}", name, ext));
+  // `\@ifundefined`: a macro is a record, anything else (`\relax`) is not.
+  let previous = match lookup_meaning(&raw_opt_cs) {
+    Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(tokens)) => Some(tokens.clone().unlist()),
+      None => Some(Vec::new()),
+      Some(_) => None,
+    },
+    _ => None,
+  };
+  let body = match previous {
+    Some(mut tokens) => {
+      tokens.push(T_OTHER!(","));
+      tokens.extend(raw.unlist());
+      Tokens::new(tokens)
+    },
+    None => raw,
+  };
+  def_macro(
+    raw_opt_cs,
+    None,
+    body,
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..ExpandableOptions::default()
+    }),
+  )?;
   Ok(())
 }
 

@@ -66,7 +66,13 @@ LoadDefinitions!({
   // `\xeCJK_add_to_shipout:n` and :977 `\xeCJK_declare_node:n` drive the page
   // builder and inter-character nodes, and :553 `\xeCJK_declare_char_class:nn`
   // the spacing classes (sjtuthesis, sjtuarticle, sjtureport) — no-ops here; :159 `\xeCJK_cs_clear:N`
-  // empties a command.
+  // empties a command. The family layer that classes drive directly
+  // (fduthesis.cls:278-306 `\cs_new_eq:NN \__fdu_set_family:nnn
+  // \xeCJK_set_family:nnn` on `{\CJKrmdefault}`): :4566-4568 name the default
+  // families `rm`/`sf`/`tt` unless already set, :4580 makes `\CJKfamilydefault`
+  // the main one, and :3316 `\xeCJK_set_family:nnn` / :3660
+  // `\xeCJK_switch_family:n` declare and select a CJK font family — no-ops here,
+  // as `\setCJKfamilyfont` above.
   RawTeX!(
     r"\expandafter\def\csname __xeCJK_msg_new:nn\endcsname{\csname msg_new:nnn\endcsname{xeCJK}}
 \expandafter\def\csname __xeCJK_msg_new:nnn\endcsname{\csname msg_new:nnnn\endcsname{xeCJK}}
@@ -74,6 +80,14 @@ LoadDefinitions!({
 \expandafter\def\csname xeCJK_declare_node:n\endcsname#1{}
 \expandafter\def\csname xeCJK_declare_char_class:nn\endcsname#1#2{}
 \expandafter\def\csname xeCJK_cs_clear:N\endcsname#1{\def#1{}}
-\expandafter\def\csname xeCJK_cs_gclear:N\endcsname#1{\gdef#1{}}"
+\expandafter\def\csname xeCJK_cs_gclear:N\endcsname#1{\gdef#1{}}
+\ifdefined\CJKrmdefault\else\gdef\CJKrmdefault{rm}\fi
+\ifdefined\CJKsfdefault\else\gdef\CJKsfdefault{sf}\fi
+\ifdefined\CJKttdefault\else\gdef\CJKttdefault{tt}\fi
+\ifdefined\CJKfamilydefault\else\gdef\CJKfamilydefault{\CJKrmdefault}\fi
+\expandafter\def\csname xeCJK_set_family:nnn\endcsname#1#2#3{}
+\expandafter\def\csname xeCJK_set_family:enn\endcsname#1#2#3{}
+\expandafter\def\csname xeCJK_set_family:onn\endcsname#1#2#3{}
+\expandafter\def\csname xeCJK_switch_family:n\endcsname#1{}"
   );
 });

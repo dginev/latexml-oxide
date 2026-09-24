@@ -46,4 +46,22 @@ LoadDefinitions!({
   // Perl L64-66: description end alias and \upn = \textup
   Let!("\\enddescription", "\\endlist");
   Let!("\\upn", "\\textup");
+
+  // amsbook.cls:303-313: the running-head mark builder the class's
+  // `\ps@headings` gives `\chaptermark`/`\sectionmark`/`\partmark`
+  // (`\@secmark\markboth\chapterrunhead{}`), and the section number it reads.
+  // Marks have no XML form (`\@mkboth` is `\@gobbletwo`), but a class may call
+  // its marks: my-thesis.cls:153-160 `\pagestyle{headings}\chaptermark{}` (TeX
+  // Live class census 2026-09-24).
+  RawTeX!(r"\long\def\@nilgobble#1\@nil{}
+\let\@secnumber\@empty
+\def\@secmark#1#2#3#4{%
+  \begingroup \let\protect\@unexpandable@protect
+  \edef\@tempa{\endgroup \toks@{\protect#2{#3}{\@secnumber}}}%
+  \@tempa
+  \toks@\@xp{\the\toks@{#4}}%
+  \afterassignment\@nilgobble\@temptokena\@themark{}\@nil
+  \edef\@tempa{\@nx\@mkboth{%
+    \ifx\markright#1\the\@temptokena\else\the\toks@\fi}{\the\toks@}}%
+  \@tempa}");
 });

@@ -60,6 +60,7 @@ LoadDefinitions!({
     "shortvdotsadjustabove", "shortvdotsadjustbelow",
     "firstline-afterskip", "lastline-preskip",
     "centered-mhchem-above-below",
+    "original-intertext", "original-shortintertext",
   ] {
     DefKeyVal!("mt", key, "");
   }
@@ -80,6 +81,15 @@ LoadDefinitions!({
       def_macro(T_CS!(&cs_name), None, Tokenize!(val_tex), None)?;
     }
   });
+
+  // mathtools.sty:88 names its keyval family; classes set mathtools keys
+  // through it (nwejmart.cls:2283 `\setkeys{\MT_options_name:}{original-intertext=false,
+  // original-shortintertext=false}`; TeX Live class census 2026-09-24). The two
+  // keys (:1458, :1533) choose mathtools' or amsmath's `\intertext`/
+  // `\shortintertext`; ours are native, so both values keep them.
+  RawTeX!(r"\expandafter\def\csname MT_options_name:\endcsname{mathtools}
+\define@key{mathtools}{original-intertext}[true]{}
+\define@key{mathtools}{original-shortintertext}[true]{}");
 
   // Lookup function for mathtoolsset
   DefMacro!("\\@mt@getmtoption{}",

@@ -6230,9 +6230,17 @@ finding it free, it processes nothing, so every key-option package silently lose
 its load-time options (verified same-host on Perl 0.8.8: `[flag]` bool option
 stays false).
 
-**Rust behavior**: `input_definitions` (handleoptions path) globally defines
-`\@raw@opt@<name>.<ext>` to the comma-joined raw options, appending when already
-present — mirroring latex.ltx L18521-18525.
+**Rust behavior**: `pass_options_with_raw` (content.rs) is the single writer, as
+the kernel's `\@pass@ptions` is (latex.ltx L18509-18526): `\gdef` on the first
+pass, `\g@addto@macro{,#2}` after. `\PassOptionsToPackage`/`\PassOptionsToClass`
+record their argument tokens at pass time, with the first expanded once
+(`\expandafter{#2}`, computed by an `\edef` of `\unexpanded\expandafter{…}`);
+the loader's explicit `[…]` list and bindings' string lists are re-read with
+standard catcodes. Batch 56ia moved the writes there from a load-time rebuild of
+the x-expanded string list, which re-tokenized an expl3 value
+(`linespread = \c__fdu_line_spread_fp`, fduthesis.cls:193-202 →
+ctexbook.cls:336) into `\s`, `__fp`… and did not exist before the load. Guard:
+`class_census::passed_options_keep_their_tokens`.
 
 **Why**: kernel-contract restoration for the growing class of `\ProcessKeyOptions`
 packages. Minimal 12-line repro: a local .sty with `\keys_define:nn` +

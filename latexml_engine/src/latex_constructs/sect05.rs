@@ -230,22 +230,27 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
+  // The version is stored expanded: `\protected@xdef` for a package or class
+  // (latex.ltx:18481-18483 `\@pr@videpackage`), `\xdef` for a file (:22454-22457
+  // `\@providesfile`). Date tests parse it (`\@ifpackagelater` → `\@ifl@t@r`):
+  // expl3.sty's `\ProvidesExplPackage{expl3}{\ExplFileDate}…` stored unexpanded
+  // read as the year alone, "too old" for ctex, xparse and l3keys2e.
   DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
-    let version = version_opt.unwrap_or_default();
+    let version = protected_xdef_options(version_opt.unwrap_or_default())?;
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
   });
 
   // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
   DefMacro!("\\ProvidesPackage{}[]", sub[(package, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
-    let version = version_opt.unwrap_or_default();
+    let version = protected_xdef_options(version_opt.unwrap_or_default())?;
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
   });
 
   DefMacro!("\\ProvidesFile{}[]", sub[(file, version_opt)] {
     let ver_cs = T_CS!(s!("\\ver@{file}"));
-    let version = version_opt.unwrap_or_default();
+    let version = do_expand(version_opt.unwrap_or_default())?;
     DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
   });
 
@@ -360,16 +365,21 @@ pub(crate) fn load() -> Result<()> {
   // (latex.ltx L18509-18526) stores the argument tokens, so
   // `\PassOptionsToPackage{paper={a4},x}{p}` is two options, not three, and
   // `\ProcessKeyOptions` reads them back with their braces intact.
+  //
+  // The raw record `\@raw@opt@<file>` keeps the argument tokens themselves
+  // (`pass_options_with_raw`, latex.ltx:18521-18525).
   DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
+    let raw = raw_option_argument(options.clone())?;
     let opts = split_trim_options(&protected_xdef_options(options)?.untex());
-    pass_options(&name_str, "sty", opts)?;
+    pass_options_with_raw(&name_str, "sty", opts, raw)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
+    let raw = raw_option_argument(options.clone())?;
     let opts = split_trim_options(&protected_xdef_options(options)?.untex());
-    pass_options(&name_str, "cls", opts)?;
+    pass_options_with_raw(&name_str, "cls", opts, raw)?;
   });
 
   // Perl `latex_constructs.pool.ltxml`:
@@ -583,9 +593,17 @@ pub(crate) fn load() -> Result<()> {
   });
   DefMacro!("\\addto@hook DefToken {}", "#1\\expandafter{\\the#1#2}");
 
-  // Alas, we're not tracking versions, so we'll assume it's "later" & cross fingers....
-  DefMacro!("\\@ifpackagelater{}{}{}{}", "#3");
-  DefMacro!("\\@ifclasslater{}{}{}{}", "#3");
+  // latex.ltx:18405-18411: compare the file's `\ver@<file>` date, which the
+  // loader defines for every package and class it loads (the file's own
+  // `\ProvidesPackage` date, else `\fmtversion`; content.rs). Perl assumes
+  // "later" (latex_constructs.pool.ltxml:972), so a package not loaded yet
+  // answered true as well: yathesis.cls:459 `\@ifpackagelater{babel}{2013/04/15}
+  // {\PassOptionsToPackage{main=…}{babel}}` ran before babel was loaded, the
+  // class passed `main=` again at :519, and babel refused the second (TeX Live
+  // class census 2026-09-24; KPE #238).
+  DefMacro!("\\@ifpackagelater", "\\@ifl@ter\\@pkgextension");
+  DefMacro!("\\@ifclasslater", "\\@ifl@ter\\@clsextension");
+  DefMacro!("\\@ifl@ter{}{}", "\\expandafter\\@ifl@t@r\\csname ver@#2.#1\\endcsname");
   Let!("\\AtEndOfClass", "\\AtEndOfPackage");
 
   def_macro_noop("\\AtBeginDvi {}")?;
@@ -1487,6 +1505,34 @@ pub(crate) fn load() -> Result<()> {
 /// `perfect_kernel_batch56::package_options_are_stored_by_protected_xdef`.
 pub(crate) fn protected_xdef_options<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   with_unexpandable_protect(|| do_expand_partially(tokens))
+}
+
+/// latex.ltx:18523 `\expandafter{#2}`: the raw option record holds the
+/// argument tokens with only the first expanded once (`\PassOptionsToClass
+/// {\CurrentOption}{…}` records the option's name), computed as the kernel
+/// would, by `\edef\lx@raw@opt@arg{\unexpanded\expandafter{…}}` (a local
+/// scratch macro).
+fn raw_option_argument(tokens: Tokens) -> Result<Tokens> {
+  let scratch = T_CS!("\\lx@raw@opt@arg");
+  let mut edef = vec![
+    T_CS!("\\edef"),
+    scratch,
+    T_BEGIN!(),
+    T_CS!("\\unexpanded"),
+    T_CS!("\\expandafter"),
+    T_BEGIN!(),
+  ];
+  edef.extend(tokens.unlist());
+  edef.push(T_END!());
+  edef.push(T_END!());
+  digest(Tokens::new(edef))?;
+  Ok(match lookup_meaning(&scratch) {
+    Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.clone(),
+      _ => Tokens::default(),
+    },
+    _ => Tokens::default(),
+  })
 }
 
 /// The `<?latexml … options=?>` PI spelling of an option list: what digesting

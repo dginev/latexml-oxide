@@ -25463,4 +25463,132 @@ mod class_census {
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>before after</p>"), "{xml}");
   }
+
+  /// latex.ltx:18521-18525 `\@pass@ptions`: `\@raw@opt@<file>` holds the
+  /// argument tokens from pass time on (the first expanded once), so an expl3
+  /// value reaches `\ProcessKeyOptions` intact (fduthesis.cls:193-202 and
+  /// hustthesis.cls:197 → ctexbook.cls:336). pdflatex:
+  /// `[1.5][x] macro:->a=\myval ,b,c`.
+  #[test]
+  fn passed_options_keep_their_tokens() {
+    let repro =
+      include_str!("../../tools/perfect_kernel/repros/loader/passed_options_keep_their_tokens.tex");
+    // The sidecar package is the repro's `filecontents*` body; the guard writes
+    // it into the conversion's own directory instead.
+    let open = "\\begin{filecontents*}[overwrite]{rawoptpkg.sty}\n";
+    let close = "\\end{filecontents*}\n";
+    let start = repro.find(open).expect("filecontents start") + open.len();
+    let end = repro.find(close).expect("filecontents end");
+    let (sty, doc) = (&repro[start..end], &repro[end + close.len()..]);
+    let (stderr, xml) =
+      super::perfect_kernel_batch46::convert_files(doc, &[("rawoptpkg.sty", sty)]);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<p>[1.5][x] <text font="typewriter">macro:-&gt;a=\myval ,b,c</text></p>"#),
+      "{xml}"
+    );
+  }
+
+  /// latex.ltx:18405-18411 `\@ifpackagelater` compares the loaded file's
+  /// `\ver@<file>`, stored expanded (:18481-18483, :22454-22457): false for a
+  /// package not loaded yet (yathesis.cls:459 → babel `main=` passed twice).
+  #[test]
+  fn ifpackagelater_reads_the_loaded_version() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/ifpackagelater_reads_the_loaded_version.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[F][T][F][ok]</p>"), "{xml}");
+  }
+
+  /// titlesec keeps each title's spacing in a five-group `\ttls@<section>`
+  /// (titlesec.sty:640-658, filled at load) that ctex reads after titlesec
+  /// loads (mynsfc, qyxf-book, bjfuthesis), plus `\ttl@chapterout` (:402).
+  #[test]
+  fn titlesec_spacing_record() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/titlesec_spacing_record.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[5][5][5][5][5][ok]</p>"), "{xml}");
+  }
+
+  /// Binding internals, third pass: biblatex loads xparse (its expl3 case
+  /// changer; nwejmart's `u` argument), mathtools' `\MT_options_name:` keyval
+  /// family (nwejmart), biblatex's `\bibbycategory` (gztarticle).
+  #[test]
+  fn binding_internals_classes_call_3() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/binding_internals_classes_call_3.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[a/b] [ok]</p>"), "{xml}");
+  }
+
+  /// `\tableofcontents` (and the `lof`/`lot` pair) carry the kernel's
+  /// `\@starttoc{…}` call, discarded, so etoolbox patches of it succeed
+  /// (exam-zh.cls:272) and the ToC still comes from post-processing.
+  #[test]
+  fn patchcmd_tableofcontents_starttoc() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/patchcmd_tableofcontents_starttoc.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches(r#"<TOC lists="toc""#).count(), 1, "{xml}");
+    assert!(xml.contains("<p>[P-ok]</p>"), "{xml}");
+  }
+
+  /// listings resolves `rulecolor`/`backgroundcolor` when the listing is
+  /// drawn, so a colour defined after the `\lstset` applies (easybase.sty:2419
+  /// vs :2439; easybook).
+  #[test]
+  fn listings_color_resolved_at_listing() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/singletons/listings_color_resolved_at_listing.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(
+        r##"<listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain" framecolor="#C00000" framed="rectangle">"##
+      ),
+      "{xml}"
+    );
+  }
+
+  /// latex.ltx:18484-18486: a file served by the versioned-package fallback
+  /// takes the loaded file's version under its requested name, so floatrow's
+  /// `\@ifpackagelater{caption3}{…}` passes (iaria, iaria-lite, langscibook,
+  /// letgut).
+  #[test]
+  fn fallback_load_keeps_the_requested_version() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/fallback_load_keeps_the_requested_version.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[T]</p>"), "{xml}");
+  }
+
+  /// amsbook's running-head mark builder `\@secmark` (amsbook.cls:303-313),
+  /// which a class's `\ps@headings` marks call (my-thesis).
+  #[test]
+  fn amsbook_secmark() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/sectioning-frontmatter/amsbook_secmark.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Text.</p>"), "{xml}");
+  }
 }

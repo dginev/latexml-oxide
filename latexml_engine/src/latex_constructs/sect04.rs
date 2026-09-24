@@ -400,7 +400,15 @@ pub(crate) fn load() -> Result<()> {
   // a self-recursive def ("expands into itself", TOC lost; Perl shares).
   // Layer: user name = macro delegating to the internal constructor, so
   // one-step expansion yields a patchable body — the real kernel shape.
-  DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents");
+  // The body also carries the kernel's `\@starttoc{toc}` (book.cls/article.cls
+  // `\tableofcontents`, likewise `{lof}`/`{lot}`) as the argument of
+  // `\lx@kernel@listbody`, which discards it: classes patch that call
+  // (exam-zh.cls:272 `\patchcmd{\tableofcontents}{\@starttoc{toc}}{…}{}{\fail}`,
+  // whose failure branch runs an undefined `\fail`; TeX Live class census
+  // 2026-09-24), but running it would read a stale `\jobname.toc` from disk
+  // (sect08.rs `\@starttoc`). The TOC element is built in post-processing.
+  RawTeX!(r"\long\def\lx@kernel@listbody#1{}");
+  DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents\\lx@kernel@listbody{\\@starttoc{toc}}");
   DefConstructor!("\\lx@kernel@tableofcontents",
     "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => {
@@ -437,12 +445,12 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
-  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures");
+  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
   DefConstructor!("\\lx@kernel@listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\listfigurename"))?)) });
 
-  DefMacro!("\\listoftables", "\\lx@kernel@listoftables");
+  DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
   DefConstructor!("\\lx@kernel@listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\listtablename"))?)) });

@@ -19,6 +19,10 @@
 \cs_new:Npn \lx_tmp: { x }
 \xeCJK_cs_gclear:N \lx_tmp:
 \xeCJK_declare_char_class:nn { lx-class } { "0 }
+\cs_new_eq:NN \__lx_set_family:nnn \xeCJK_set_family:nnn
+\cs_generate_variant:Nn \__lx_set_family:nnn { x }
+\__lx_set_family:xnn { \CJKrmdefault } { } { FandolSong }
+\xeCJK_switch_family:n { \CJKfamilydefault }
 \ExplSyntaxOff
 \xeCJKDeclareCharClass{Default}{"0-"FF}
 \makeatletter\setbox\ULC@box\hbox{u}\makeatother

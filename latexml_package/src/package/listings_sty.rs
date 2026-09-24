@@ -3568,12 +3568,17 @@ LoadDefinitions!({
       stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
-  // Background color handler
+  // Background color handler. listings stores the colour command and runs it
+  // when a listing is drawn (listings.sty `\lst@bkgcolor`, `\lst@rulecolor`), so
+  // the tokens are kept here and resolved by `lst_extract_color` at the listing:
+  // a class may name a colour it defines later in the preamble (easybase.sty:
+  // 2419 `rulecolor = \color{ctex@frame}` under `\lstset{style=…}`, :2439 defines
+  // it; easybook, TeX Live class census 2026-09-24). Perl digests at `\lstset`
+  // time (listings.sty.ltxml:945-953) and errs alike.
   DefPrimitive!("\\lst@@backgroundcolor Until:\\end", sub [args] {
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    let color = lst_extract_color(&cmd_toks);
-    if let Some(c) = color {
-      assign_value("LISTINGS_BACKGROUND", Stored::String(pin(&c)), Some(Scope::Global));
+    if !cmd_toks.is_empty() {
+      assign_value("LISTINGS_BACKGROUND", Stored::Tokens(cmd_toks), Some(Scope::Global));
     }
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
@@ -3587,8 +3592,9 @@ LoadDefinitions!({
     // when an inline listing runs first — so a following block listing still
     // renders its background, matching Perl.
     if lookup_value("LISTINGS_INLINE").is_none() {
-      if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
-        && let Some(c) = with(bg, common::color::Color::from_stored) {
+      if let Some(Stored::Tokens(cmd)) = lookup_value("LISTINGS_BACKGROUND")
+        && let Some(bg) = lst_extract_color(&cmd)
+        && let Some(c) = common::color::Color::from_stored(&bg) {
           merge_font(Font { bg: Some(c), ..Font::default() });
         }
       // Clear after use so subsequent listings don't inherit
@@ -3599,9 +3605,8 @@ LoadDefinitions!({
   // Rule color handler
   DefPrimitive!("\\lst@@rulecolor Until:\\end", sub [args] {
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    let color = lst_extract_color(&cmd_toks);
-    if let Some(c) = color {
-      assign_value("LISTINGS_RULECOLOR", Stored::String(pin(&c)), None);
+    if !cmd_toks.is_empty() {
+      assign_value("LISTINGS_RULECOLOR", Stored::Tokens(cmd_toks), None);
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@rulecolor")]);
   });
@@ -3617,7 +3622,10 @@ LoadDefinitions!({
       }
     },
     properties => {
-      let color = lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
+      let color = match lookup_value("LISTINGS_RULECOLOR") {
+        Some(Stored::Tokens(cmd)) => lst_extract_color(&cmd).unwrap_or_default(),
+        _ => String::new(),
+      };
       stored_map!("color" => Stored::String(pin(&color)))
     });
 
