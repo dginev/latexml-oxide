@@ -359,14 +359,30 @@ pub(crate) fn tcb_xparse_listing(
   // Known gap: a `!`-leading optional FOLLOWED by a mandatory (`{ !O{} m }`)
   // is not expressible in the `[n][]` arity — the `[` is consumed as the
   // mandatory argument (silent, wrong options); pure `!O{}` is correct.
+  // An absorbed boolean (`s`, `t<c>`) is `\BooleanTrue`/`\BooleanFalse` to the
+  // options, never empty: its eater `\let`s a per-slot stand-in (before
+  // `\lxtcbeatone`, which gobbles the NEXT token — the `*`), and
+  // `\IfBooleanTF` (latex.ltx:4945-4961) tests the stand-in's MEANING against
+  // `\c_true_bool`/`\c_false_bool` (a `\def` would fail that test). The empty
+  // default this slot had made `IfBooleanT={#1}` run `\IfBooleanT{}` — l3's
+  // `cmd/if-boolean` expandable error (`\???`) at every `\begin{macrodef}`
+  // (leporello-doc ×74, jsonparse-doc ×60) and a star that never reached the
+  // box. Guard: `perfect_kernel_batch56::tcb_listing_star_is_a_boolean`.
+  let bool_slot = |i: usize| format!("\\lxtcbbool{}", char::from(b'a' + (i as u8 % 26)));
   let mut eaters = String::new();
   for (i, (c, d, bang)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {
       continue;
     }
     match c {
-      's' => eaters.push_str("\\lxtcbifnext*{\\lxtcbeatone}{}"),
-      't' => eaters.push_str(&format!("\\lxtcbifnext{}{{\\lxtcbeatone}}{{}}", d)),
+      's' => eaters.push_str(&format!(
+        "\\lxtcbifnext*{{\\let{0}\\BooleanTrue\\lxtcbeatone}}{{\\let{0}\\BooleanFalse}}",
+        bool_slot(i)
+      )),
+      't' => eaters.push_str(&format!(
+        "\\lxtcbifnext{d}{{\\let{0}\\BooleanTrue\\lxtcbeatone}}{{\\let{0}\\BooleanFalse}}",
+        bool_slot(i)
+      )),
       'G' | 'g' => eaters.push_str("\\lxtcbifnext\\bgroup{\\lxtcbeatone}{}"),
       'O' | 'o' => {
         if *bang && i == 0 {
@@ -414,6 +430,9 @@ pub(crate) fn tcb_xparse_listing(
     } else if i == 0 && bang_leading {
       renumber.push(0);
       slots.push(Some("\\lxtcbbangopt".to_string()));
+    } else if matches!(c, 's' | 't') {
+      renumber.push(0);
+      slots.push(Some(bool_slot(i)));
     } else {
       renumber.push(0);
       slots.push(Some(default.clone()));

@@ -1,0 +1,22 @@
+% witness: leporello-doc (74), jsonparse-doc (60): `\NewTCBListing{macrodef}{ s o }{…IfBooleanT={#1}…}`
+% oracle:  pdflatex 0 errors; the star picks the starred options. Perl: no if-boolean error
+%   (its tcolorbox listing path fails on an unrelated .listing read).
+% engines: rust (56hk) = the absorbed `s` slot substituted EMPTY: \IfBooleanT{} = l3
+%   cmd/if-boolean expandable error (`\???`, visible under the strict 56gn check, swallowed
+%   otherwise): `\meaning#1` shows the empty slot.
+% expect:  0 errors; the slot is \BooleanFalse ("\char"0", pdflatex: "\char"0" too).
+%   Known gap: a STARRED call also reads \BooleanFalse — the `*` is consumed as
+%   \begin-line leftover (listings_sty.rs) before the start code's eater peeks.
+% status:  RED (56hk) -> GREEN (56hl)
+% mechanism: tcolorbox_sty.rs tcb_xparse_listing: the eater \lets a per-slot stand-in to
+%   \BooleanTrue/\BooleanFalse, which \IfBooleanTF's meaning test (latex.ltx:4945-4961) accepts.
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,listings}
+\NewTCBListing{macrodef}{ s }{listing only, code={\xdef\seen{\meaning#1}}}
+\begin{document}
+\begin{macrodef}
+foo
+\end{macrodef}
+Slot: \texttt{\seen}.
+\end{document}

@@ -18412,6 +18412,24 @@ Body.
     );
   }
 
+  /// `\NewTCBListing{…}{ s … }`: the absorbed star is a boolean to the options
+  /// (`\BooleanFalse` unstarred), never empty. The empty slot made
+  /// `IfBooleanT={#1}` run `\IfBooleanT{}` — l3's `cmd/if-boolean` expandable
+  /// error at every `\begin{macrodef}` (leporello-doc ×74, jsonparse-doc ×60,
+  /// visible under the strict 56gn delimiter check). Known gap: a starred call
+  /// reads `\BooleanFalse` too (the `*` is consumed as `\begin`-line leftover).
+  #[test]
+  fn tcb_listing_star_is_a_boolean() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/expl3/tcb_listing_star_is_a_boolean.tex");
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("Slot: <text font=\"typewriter\">\\char\"0</text>."),
+      "{xml}"
+    );
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,
@@ -23571,6 +23589,7 @@ mod glossary_refs_post {
       r##"<glossaryref idref="id1" inlist="acronym" key="NN" show="short" title="Neural Network"><text class="ltx_glossary_short">NN</text></glossaryref>"##,
     );
   }
+
 }
 
 mod latex_via_exemplos_residue {

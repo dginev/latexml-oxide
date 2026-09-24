@@ -109,7 +109,14 @@ mechanical singletons and the content/semantic axes below.
    pgfkeys `Expand!`), titles 101 (with 56gn the loop becomes 101 `\aftergroup` Match errors;
    pdflatex stops at 9, so a re-trigger remains), bfh-ci 11, guitar 10; mercatormap shell-escape
    excluded; greektonoi/chinesechess/bxjaholiday SHARED. catoptions residual: 1 option-stack-limit
-   error per load.
+   error per load. Root-caused 2026-09-23 (`~/data/pk_agents/w63/`): leporello 74 + jsonparse 60 are
+   NOT pgfkeys. `\NewTCBListing` substituted an absorbed `s` argument as empty, so `\IfBooleanT{}` hit
+   l3's `if-boolean` error (fixed in 56hl). titles is gone with 56hj. euclideangeometry is curve2e's own
+   `\MV@c` error, which pdflatex reports 34 times (SHARED). guitar is SHARED with Perl. bfh-ci SciPoster
+   is SHARED at the origin, but we keep less of the poster than Perl (l3 `\dim` registers in
+   pgfmath; an open content target). **Landing hazard:** with 56gn, euclideangeometry's
+   `\???` misses reach the 100-error cap and the Fatal empties a complete 1.4 MB document. Before
+   landing, keep the l3 sentinel's SHARED misses from turning good output into a Fatal.
 1b. **Recall tail (s116) — landed 2026-09-23**: scrlfile-hook underflow warnings in 983 manuals
    (56gz); uantwerpendocs title-page flow content (56ha, 6 manuals); babel main language from
    class options (56hd, 36 French/German manuals, colortbl-DE recall 86 → 99) with microtype's
