@@ -830,17 +830,26 @@ pub(crate) fn load() -> Result<()> {
   //======================================================================
   // C.15.1 Changing the Type Style
   //======================================================================
-  // Text styles.
+  // Text styles. The family/series/shape codes are LOCKED, as in Perl
+  // (latex_constructs.pool.ltxml:5146-5154): LaTeXML maps these CM names to its
+  // abstract fonts and loads no `.fd`, so a font package's
+  // `\renewcommand*{\rmdefault}{Nunito-TOsF}` (nunito.sty:64; ~186 TL font
+  // packages do the same) named a family `\selectfont` cannot map. Outside a
+  // picture the prior font persisted; inside one pgf's `\nullfont` regime
+  // (pgfcorescopes.code.tex:244, 748-755) was never left, and every node's text
+  // was dropped as nullfont (bfh-ci DEMO-BFHSciPoster lost its poster body;
+  // tuda-ci DEMO-TUDaSciPoster via roboto). `\familydefault` & co. stay open.
+  // Guard: `perfect_kernel_batch56::font_defaults_are_locked`.
 
-  DefMacro!("\\rmdefault", "cmr");
-  DefMacro!("\\sfdefault", "cmss");
-  DefMacro!("\\ttdefault", "cmtt");
-  DefMacro!("\\bfdefault", "bx");
-  DefMacro!("\\mddefault", "m");
-  DefMacro!("\\itdefault", "it");
-  DefMacro!("\\sldefault", "sl");
-  DefMacro!("\\scdefault", "sc");
-  DefMacro!("\\updefault", "n");
+  DefMacro!("\\rmdefault", "cmr", locked => true);
+  DefMacro!("\\sfdefault", "cmss", locked => true);
+  DefMacro!("\\ttdefault", "cmtt", locked => true);
+  DefMacro!("\\bfdefault", "bx", locked => true);
+  DefMacro!("\\mddefault", "m", locked => true);
+  DefMacro!("\\itdefault", "it", locked => true);
+  DefMacro!("\\sldefault", "sl", locked => true);
+  DefMacro!("\\scdefault", "sc", locked => true);
+  DefMacro!("\\updefault", "n", locked => true);
   DefMacro!("\\encodingdefault", "OT1");
   DefMacro!("\\familydefault", "\\rmdefault");
   DefMacro!("\\seriesdefault", "\\mddefault");

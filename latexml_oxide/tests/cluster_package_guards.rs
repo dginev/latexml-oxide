@@ -18459,6 +18459,29 @@ See \citep{a,b}.
     );
   }
 
+  /// The font-default codes are locked, as in Perl (latex_constructs.pool.ltxml:
+  /// 5146-5154). nunito.sty:64's `\renewcommand*{\rmdefault}{Nunito-TOsF}` took
+  /// effect, named a family `\selectfont` cannot map, and inside pgf's `\nullfont`
+  /// regime every node's plain text was dropped (bfh-ci DEMO-BFHSciPoster lost its
+  /// poster body).
+  #[test]
+  fn font_defaults_are_locked() {
+    let (_, xml) = convert(
+      "\\documentclass{article}\n\\renewcommand*{\\rmdefault}{Foo}\n\\begin{document}\n[\\rmdefault]\n\\end{document}\n",
+      true,
+    );
+    assert!(xml.contains("<p>[cmr]</p>"), "{xml}");
+    if !kpsewhich_has("nunito.sty") {
+      return;
+    }
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/graphics-tikz/font_default_lock_nunito_node_text.tex"
+    );
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("PLAINNODE prose and"), "{xml}");
+  }
+
   /// Batch 56gj (OXIDIZED_DESIGN #265): a class that redefines `\maketitle`
   /// itself had its body dropped by the lock, and with it every title-page field
   /// the frontmatter API never sees (ryethesis.cls:282: degree, program,

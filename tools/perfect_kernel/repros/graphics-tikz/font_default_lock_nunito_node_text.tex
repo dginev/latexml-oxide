@@ -1,0 +1,18 @@
+% witness: bfh-ci DEMO-BFHSciPoster (bfhfonts -> nunito), tuda-ci DEMO-TUDaSciPoster (roboto):
+%   every tcbposter box title and body sentence lost
+% oracle:  pdflatex typesets the node text; Perl keeps it (\rmdefault is locked, Info:ignore)
+% engines: rust (56hk) = 0 errors, the node's plain text DROPPED (only \texttt survives)
+% expect:  0 errors; the tikz node keeps "PLAINNODE prose and ttword here"
+% status:  RED (56hk) -> GREEN (56hp)
+% mechanism: nunito.sty:64 \renewcommand*{\rmdefault}{Nunito-TOsF} took effect (Rust left the
+%   font defaults unlocked; Perl latex_constructs.pool.ltxml:5146-5154 locks them); the family is
+%   unmappable, so inside pgf's \nullfont regime \selectfont never leaves nullfont and
+%   document.rs open_text drops the text.
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{nunito}
+\begin{document}
+\begin{tikzpicture}
+\node at (0,0) {PLAINNODE prose and \texttt{ttword} here};
+\end{tikzpicture}
+\end{document}
