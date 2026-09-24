@@ -804,10 +804,12 @@ LoadDefinitions!({
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+  DefPrimitive!("\\mathchardef Token SkipSpaces", sub[(newcs)] {
     // Let w/o AfterAssignment
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);
+    // tex.web §405 `scan_optional_equals`, expanding (see `\chardef`).
+    read_keyword(&["="])?;
     let value = read_number().unwrap_or_default();
     let props = decode_math_char(value.value_of() as u16, None)?;
     install_definition(

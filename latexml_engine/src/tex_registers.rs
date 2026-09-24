@@ -31,19 +31,19 @@ LoadDefinitions!({
   // \skipdef          c  creates a symbolic name for a \skip register.
   // \muskipdef        c  creates a symbolic name for a \muskip register.
   // \toksdef          c  creates a symbolic name for a \toks register.
-  DefPrimitive!("\\countdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\countdef SkipSpaces Token SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\count", Number::new(0).into())
   });
-  DefPrimitive!("\\dimendef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\dimendef SkipSpaces Token SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\dimen", Dimension::new(0).into())
   });
-  DefPrimitive!("\\skipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\skipdef SkipSpaces Token SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\skip", Glue::new(0).into())
   });
-  DefPrimitive!("\\muskipdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\muskipdef SkipSpaces Token SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\muskip", MuGlue::new(0).into())
   });
-  DefPrimitive!("\\toksdef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+  DefPrimitive!("\\toksdef SkipSpaces Token SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\toks", Tokens!().into())
   });
 
@@ -166,6 +166,8 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Resu
   // Let w/o AfterAssign
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
   assign_meaning(&cs, relax_meaning, None);
+  // tex.web §1224: the optional `=` is read with expansion (§405), as for `\chardef`.
+  read_keyword(&["="])?;
   // define
   let num = read_number()?;
   let address = s!("{address_type}{}", num.value_of());

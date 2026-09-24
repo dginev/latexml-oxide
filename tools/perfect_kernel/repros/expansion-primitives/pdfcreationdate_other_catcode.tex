@@ -1,0 +1,12 @@
+% \pdfcreationdate is a conversion (tex.web §464 str_toks): its characters are
+% catcode 12, so a parser delimited by a catcode-12 `D:` matches it
+% (novel-pdfx.sty:298 \pdfx@getYear; the novel class, class census 2026-09-24).
+\documentclass{article}
+\begingroup\catcode`\D=12
+\gdef\getYear D:#1#2#3#4#5\relax{#1#2#3#4}
+\endgroup
+\edef\stamp{\pdfcreationdate}
+\edef\yr{\expandafter\getYear\stamp\relax}
+\begin{document}
+\ifnum\yr>1999 year-ok\else year-bad\fi
+\end{document}

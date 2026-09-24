@@ -210,7 +210,7 @@ LoadDefinitions!({
     // the catcode-table switches scan their <number> and do nothing (catcode
     // tables are engine state with no XML meaning); `\luadef` binds a Lua
     // function slot the bridge cannot run → the command is a no-op.
-    DefPrimitive!("\\attributedef SkipSpaces Token SkipSpaces SkipMatch:=", sub[(cs)] {
+    DefPrimitive!("\\attributedef SkipSpaces Token SkipSpaces", sub[(cs)] {
       shorthand_def(cs, "\\attribute", Number::new(0).into())
     });
     DefPrimitive!("\\initcatcodetable Number", sub[(_n)] {});

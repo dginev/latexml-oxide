@@ -6451,3 +6451,28 @@ rbt-mathnotes*, jurabook, hausarbeit-jura, newlfm).
 newlfm's fancyhdr marker `\ps@@empty` (fancyhdr.sty:849-851) is set too. Guard
 `class_census::binding_internals_classes_call`.
 
+## 236. `\chardef` & co. match their optional `=` unexpanded (FIXED in Rust)
+
+tex.web §1224 `shorthand_def` reads the optional `=` with `scan_optional_equals` (§405),
+whose `get_x_token` expands. Perl's `\chardef`/`\mathchardef`/`\countdef`… prototypes
+(`SkipMatch:=`, TeX_Character.pool.ltxml:150; Gullet.pm:604 `readMatch` uses the
+non-expanding `readToken`) do not. Trigger: `\def\eqfour{=4\relax}\chardef\x\eqfour`
+gives "Missing number, treated as zero", `\x` = 0 and a leaked `=4`. catoptions.sty:215/1756
+sets its option-stack limit that way, so the second option-state push errs (cv4tw,
+arabic-book; TeX Live class census 2026-09-24). `\let`'s optional `=` stays unexpanded
+(§1221). **Rust (FIXED, batch 56hz):** the shorthand definitions read it with
+`read_keyword(&["="])`. Guard `class_census::chardef_optional_equals_expands`.
+
+## 237. `\pagestyle` runs no `\ps@<style>` (FIXED in Rust)
+
+latex.ltx:18297-18300 `\pagestyle{#1}` runs `\ps@#1`. Perl makes it a no-op
+(latex_constructs.pool.ltxml:997 `DefPrimitive('\pagestyle{}', undef)`), so a class
+that defines macros inside its page-style body never gets them. dccpaper-base.sty:387-470
+defines `\TitleHead`/`\TitleFoot`/`\NormalHead`/`\NormalFoot` inside
+`\ps@title`/`\ps@dccpaper`, and its `\AtEndPreamble` code then uses them: 4 undefined
+control sequences (idcc, ijdc-v14, ijdc-v9; TeX Live class census 2026-09-24). Trigger:
+`\makeatletter\def\ps@mine{\def\Head{HEAD}}\makeatother\pagestyle{mine}` then `\Head`.
+**Rust (FIXED, batch 56hz):** `\pagestyle` is `\@ifundefined{ps@#1}{}{\@nameuse{ps@#1}}`
+(an unknown style stays silent, as before); `\thispagestyle` stays a no-op. Guard
+`class_census::pagestyle_runs_its_ps_macro`.
+

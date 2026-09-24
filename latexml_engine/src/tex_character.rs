@@ -135,10 +135,16 @@ LoadDefinitions!({
 
   // Almost like a register (and \countdef), but different...
   // (including the preassignment to \relax!)
-  DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
+  // tex.web §1224: `\relax` first, then `scan_optional_equals` (§405), which reads
+  // the `=` with EXPANSION: catoptions.sty:215/1756 `\chardef\cpt@optionstacklimit
+  // \reserved@a` with `\reserved@a` = `=4\relax` set the limit to 0 when the `=` was
+  // matched unexpanded (cv4tw, arabic-book; class census 2026-09-24). The same holds
+  // for `\mathchardef` and the `\countdef` family (`shorthand_def`).
+  DefPrimitive!("\\chardef Token SkipSpaces", sub[(newcs)] {
     // Let w/o AfterAssignment
     let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, relax_meaning, None);
+    read_keyword(&["="])?;
     let value = read_number()?;
     install_definition(
       Register::new_chardef(newcs, Some(value.into()), None, None), None);

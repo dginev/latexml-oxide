@@ -1,0 +1,19 @@
+% witness: TL class census 2026-09-24 — xdupgthesis, xduugthesis (ctex's
+%          \ctex_gadd_ltxhook:nn{env/document/begin}{\RequirePackage{biblatex}}, then
+%          \printbibliography from \AtEndDocument: undefined)
+% oracle:  pdflatex 0 errors; [A][B][C]
+% engines: rust (56hy) = [][][C]: the env/document/begin code is dropped (the \begin{document}
+%          constructor is not a DefEnvironment, whose closure fires `begin`)
+% expect:  0 errors; <p>[A][B][C]</p>
+% status:  RED (56hy) -> GREEN (56hz)
+% mechanism: latex.ltx:15362 \UseHook{env/document/begin} precedes \document; \begin now emits
+%   it before the constructor.
+\documentclass{article}
+\ExplSyntaxOn
+\hook_gput_code:nnn{env/document/begin}{x}{\def\lxA{A}}
+\ExplSyntaxOff
+\AddToHook{env/document/begin}{\def\lxB{B}}
+\AddToHook{begindocument}{\def\lxC{C}}
+\begin{document}
+[\ifdefined\lxA A\fi][\ifdefined\lxB B\fi][\ifdefined\lxC C\fi]
+\end{document}

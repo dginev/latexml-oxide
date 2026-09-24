@@ -2398,6 +2398,10 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareRedundantLanguages{}{}")?;
   def_macro_noop("\\printbibheading[]")?;
   def_macro_noop("\\defbibheading OptionalMatch:* {}[]{}")?;
+  // biblatex.sty:9780 `\DeclarePrintbibliographyDefaults{<options>}` sets the
+  // default `\printbibliography` options (njuthesis, omgtudoc-asoiu; class census
+  // 2026-09-24); the options are presentational here.
+  def_macro_noop("\\DeclarePrintbibliographyDefaults{}")?;
   def_macro_noop("\\defbibenvironment OptionalMatch:* {}{}{}{}")?;
   def_macro_noop("\\restorecommand OptionalMatch:* {}")?;
   def_macro_noop("\\savecommand OptionalMatch:* {}")?;

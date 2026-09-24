@@ -187,7 +187,12 @@ LoadDefinitions!({
     let time = lookup_register("\\time", Vec::new())?.map_or(0, |v| Number::from(&v).value_of());
     let (hh, mm) = (time / 60, time % 60);
     let stamp = s!("D:{year:04}{month:02}{day:02}{hh:02}{mm:02}00Z");
-    Ok(Tokens::new(ExplodeText!(&stamp)))
+    // tex.web §464 `str_toks`: a conversion's characters are catcode 12, so the
+    // `D:` is not letters. pdfx.sty-style parsers delimit with a catcode-12 `D:`
+    // (novel-pdfx.sty:298 `\gdef\pdfx@getYear D:#1#2#3#4` under `\catcode`\D=12`);
+    // letter tokens missed it and the date parse ran away (novel, class census
+    // 2026-09-24).
+    Ok(Tokens::new(Explode!(&stamp)))
   });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;

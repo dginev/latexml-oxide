@@ -25380,4 +25380,87 @@ mod class_census {
       "{xml}"
     );
   }
+
+  /// latex.ltx:15362 `\UseHook{env/document/begin}` runs before `\document`: code
+  /// queued there (`\AddToHook`, or ctex's `\hook_gput_code:nnn` deferral of
+  /// `\RequirePackage{biblatex}` in xdupgthesis/xduugthesis) was dropped, since
+  /// the `\begin{document}` constructor is not a DefEnvironment.
+  #[test]
+  fn env_document_begin_hook_fires() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/env_document_begin_hook_fires.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[A][B][C]</p>"), "{xml}");
+  }
+
+  /// More binding internals raw classes call: biblatex
+  /// `\DeclarePrintbibliographyDefaults`, listings `\lst@InputCatcodes`/
+  /// `\lst@RestoreCatcodes`, caption `\AtCaptionPackage`, datetime's time
+  /// machinery (`\newtimeformat`, `\twodigit`, `\THEHOUR`).
+  #[test]
+  fn binding_internals_classes_call_2() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/binding_internals_classes_call_2.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Only datetime's own "partially ported" notice.
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(xml.contains("<p>09:05 Text.</p>"), "{xml}");
+  }
+
+  /// tex.web §1224/§405: `\chardef`/`\mathchardef`/`\countdef`… read the optional
+  /// `=` with expansion. catoptions' `\chardef\cpt@optionstacklimit\reserved@a`
+  /// (`\reserved@a` = `=4\relax`) set its option-stack limit to 0 (cv4tw,
+  /// arabic-book: "Current option/key state is being pushed").
+  #[test]
+  fn chardef_optional_equals_expands() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/chardef_optional_equals_expands.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[4][4]</p>"), "{xml}");
+  }
+
+  /// latex.ltx:18297-18300: `\pagestyle{#1}` runs `\ps@#1`, where classes define
+  /// macros (dccpaper-base.sty's `\TitleHead`: idcc, ijdc-v14, ijdc-v9).
+  #[test]
+  fn pagestyle_runs_its_ps_macro() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/pagestyle_runs_ps_macro.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>HEAD</p>"), "{xml}");
+  }
+
+  /// `\pdfcreationdate` is a conversion (tex.web §464 `str_toks`): catcode-12
+  /// characters, so novel-pdfx.sty's `D:`-delimited date parser matches it.
+  #[test]
+  fn pdfcreationdate_is_other_catcode() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/pdfcreationdate_other_catcode.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>year-ok</p>"), "{xml}");
+  }
+
+  /// `\defbeamertemplate`'s trailing `[action]{code}` and
+  /// `\defbeamertemplateparent`'s full argument list are consumed
+  /// (beamerbasetemplates.sty:54-89; univie-ling-poster).
+  #[test]
+  fn beamer_template_action_is_consumed() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/beamer_template_action.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>before after</p>"), "{xml}");
+  }
 }

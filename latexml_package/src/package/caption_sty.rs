@@ -20,6 +20,9 @@ const VERBATIM_BODY_ENVS: &[&str] = &[
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // caption.sty:170 `\let\AtCaptionPackage\@firstofone`: code a class hands it runs
+  // at once, caption being loaded (langscibook.cls; class census 2026-09-24).
+  Let!("\\AtCaptionPackage", "\\@firstofone");
   // Perl: caption.sty.ltxml
   // Basically all of this is ignorable (other than needing the macros defined).
   // In principle, we could make use of some of the fonts...

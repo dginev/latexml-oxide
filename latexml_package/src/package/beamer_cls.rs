@@ -932,6 +932,9 @@ LoadDefinitions!({
     r"\long\def\beamer@dokv#1[#2]#3{\define@key{\@currname}{#1}[{#2}]{#3}}",
     r"\def\ExecuteOptionsBeamer#1{\setkeys{\@currname}{#1}}"
   ));
+  // beamerbaseoptions.sty:55 `\defbeameroption` = `\define@key{beamer@option}`: a
+  // beamer option key (beamer-rl.cls; class census 2026-09-24).
+  RawTeX!(r"\def\defbeameroption{\define@key{beamer@option}}");
   RawTeX!(concat!(
     r"\DeclareOptionBeamer{bigger}{\def\beamer@size{{size12.clo}}}",
     r"\DeclareOptionBeamer{smaller}{\def\beamer@size{{size10.clo}}}",
@@ -944,7 +947,9 @@ LoadDefinitions!({
     r"\DeclareOptionBeamer{17pt}{\def\beamer@size{{size17.clo}}}",
     r"\DeclareOptionBeamer{20pt}{\def\beamer@size{{size20.clo}}}"
   ));
-  def_macro_noop("\\defbeamertemplateparent{}[]{}[]")?;
+  // beamerbasetemplates.sty:76-89 `\defbeamertemplateparent{name}[option]{children}
+  // [nargs][default]{arguments}`.
+  def_macro_noop("\\defbeamertemplateparent{}[]{}[][]{}")?;
   def_macro_noop("\\defbeamertemplatealias{}{}{}")?;
   DefConditional!("\\ifbeamer@compress");
   // Beamer's full `\newif` surface (grep `\newif\if…` over the real beamer
@@ -1041,7 +1046,14 @@ LoadDefinitions!({
   // `\beamer@@tmpop@<name>@<option>` (beamerbasetemplates.sty L59) — themes
   // (gotham) probe it from `\setbeamertemplate{name}[option]` and error
   // "template ... does not exist" otherwise.
-  DefPrimitive!("\\defbeamertemplate OptionalMatch:* {}{}[][]{}", sub[(_star, name, option, _n, _od, _body)] {
+  // beamerbasetemplates.sty:54-56: the declaration ends with an optional
+  // `[action]{<code>}`, which themes use (beamerinnerthemedefault.sty:76-95
+  // `…{body}[action]{\setbeamertemplate{title}[default][#1]…}`); left unread, its
+  // `#1` reached the text (univie-ling-poster; class census 2026-09-24).
+  DefMacro!("\\defbeamertemplate OptionalMatch:* {}{}[][]{}",
+    "\\lx@beamer@deftemplate{#2}{#3}\\@ifnextchar[{\\lx@beamer@eataction}{}");
+  RawTeX!(r"\long\def\lx@beamer@eataction[#1]#2{}");
+  DefPrimitive!("\\lx@beamer@deftemplate{}{}", sub[(name, option)] {
     let name = do_expand(name)?.to_string().trim().to_string();
     let option = do_expand(option)?.to_string().trim().to_string();
     let marker = T_CS!(s!("\\beamer@@tmpop@{name}@{option}"));

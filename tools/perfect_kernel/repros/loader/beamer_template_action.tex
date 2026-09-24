@@ -1,0 +1,14 @@
+% beamerbasetemplates.sty:54-56 and 76-89: \defbeamertemplate ends with an
+% optional [action]{code}; \defbeamertemplateparent reads
+% {name}[option]{children}[nargs][default]{arguments}. Left unread, the action's
+% #1 reached the text (univie-ling-poster; class census 2026-09-24).
+\documentclass{beamer}
+\defbeamertemplate{mytpl}{default}{BODY}[action]{X#1Y}
+\defbeamertemplate*{other}{plain}[1][x]{B#1}
+\defbeamertemplateparent{parent}[fancy]{mytpl,other}[1][y]{[#1]}
+\defbeameroption{lxtest}{}
+\begin{document}
+\begin{frame}
+before after
+\end{frame}
+\end{document}

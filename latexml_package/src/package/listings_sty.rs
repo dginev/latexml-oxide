@@ -2237,6 +2237,11 @@ LoadDefinitions!({
   DefMacro!("\\lst@true", None, r"\let\lst@if\iftrue");
   DefMacro!("\\lst@false", None, r"\let\lst@if\iffalse");
   Let!("\\lst@if", "\\iffalse");
+  // listings.sty:28-41 `\lst@InputCatcodes`/`\lst@RestoreCatcodes` set and restore
+  // the catcodes of listings' own file reader, which this binding replaces (dtk.cls
+  // :551/:570 calls them around a UTF-8 workaround; class census 2026-09-24).
+  def_macro_noop("\\lst@InputCatcodes")?;
+  def_macro_noop("\\lst@RestoreCatcodes")?;
   // listings.sty:1742 `\let\lst@ifdisplaystyle\iffalse` (flipped by the
   // `DisplayStyle` hook, :1740-1741, which this binding does not run). A style
   // may test it, e.g. `basicstyle=\ttfamily\lst@ifdisplaystyle\scriptsize\else\fi`

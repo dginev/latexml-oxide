@@ -446,6 +446,15 @@ pub(crate) fn load() -> Result<()> {
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
+      if name == "document" {
+        // latex.ltx:15362 `\UseHook{env/document/begin}` precedes `\document`
+        // (so every `begindocument` hook). The constructor is not a
+        // DefEnvironment, whose own closure fires `begin` (dialect.rs), so the
+        // hook's code was dropped: ctex classes queue their deferred
+        // `\RequirePackage{biblatex}` there with `\ctex_gadd_ltxhook:nn`
+        // (xdupgthesis.cls:1733, xduugthesis.cls:1502; class census 2026-09-24).
+        tks.extend(use_hook("begin"));
+      }
       tks.push(T_CS!(begin_name));
       if name == "document" {
         // Inside the constructor's own group: this document opened none.

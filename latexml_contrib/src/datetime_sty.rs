@@ -4,7 +4,7 @@ LoadDefinitions!({
   Warn!(
     "missing_file",
     "datetime.sty",
-    "datetime.sty is only minimally stubbed and will not be interpreted raw."
+    "datetime.sty is only partially ported (date and time formats) and will not be interpreted raw."
   );
 
   // datetime.sty:181-188 `\newdateformat{name}{format}` DEFINES `\<name>`,
@@ -24,9 +24,37 @@ LoadDefinitions!({
 \def\newdateformat#1#2{\@ifundefined{#1}{\expandafter\def\csname #1\endcsname{\def\formatdate{\dateformat{#2}}}}{}}
 \def\formatdate{\dateformat{\THEDAY/\THEMONTH/\THEYEAR}}"
   );
-  // Companion format setters as no-ops.
-  def_macro_noop("\\settimeformat{}")?;
-  DefMacro!("\\formattime{}{}{}", "#1:#2:#3");
+  // datetime.sty:188-258 verbatim: the time counters (`\THEHOUR`, `\THEMINUTE`, …),
+  // `\currenttime` from `\time`, `\formattime`/`\settimeformat`, and
+  // `\newtimeformat{name}{format}` defining `\<name>` and `\timeformat@<name>`
+  // (huawei.cls:176-177 `\newtimeformat{daytime}{\twodigit{\THEHOUR}:…}`; class
+  // census 2026-09-24). `\@FCmodulo` is fmtcount.sty:244's (datetime.sty:44-48 takes
+  // it from there); the `\pdfcreationdate` branch is not taken here.
+  RawTeX!(
+    r"\let\twodigit\two@digits
+\@ifundefined{@FCmodulo}{\newcount\@DT@modctr
+  \def\@FCmodulo#1#2{\@DT@modctr=#1\relax\divide\@DT@modctr by #2\relax
+    \multiply\@DT@modctr by #2\relax\advance #1 by -\@DT@modctr}}{}
+\DeclareRobustCommand*{\currenttime}{\formattime{\currenthour}{\currentminute}{\currentsecond}}
+\newcommand*{\formattime}[3]{\protect\@formattime{#1}{#2}{#3}}
+\newcommand*{\@formattime}[3]{\csname timeformat@xxivtime\endcsname{#1}{#2}{#3}}
+\newcommand*{\timeseparator}{:}
+\providecommand*{\settimeformat}[1]{\@ifundefined{timeformat@#1}{\PackageError{datetime}{Unknown time format `#1'}{}}{\renewcommand*{\@formattime}[3]{\csname timeformat@#1\endcsname{##1}{##2}{##3}}}}
+\newcount\c@HOUR \newcount\c@HOURXII \newcount\c@MINUTE \newcount\c@TOHOUR \newcount\c@TOMINUTE \newcount\c@SECOND
+\def\THEHOUR{\the\c@HOUR}\def\THEHOURXII{\the\c@HOURXII}\def\THEMINUTE{\the\c@MINUTE}
+\def\THETOHOUR{\the\c@TOHOUR}\def\THETOMINUTE{\the\c@TOMINUTE}\def\THESECOND{\the\c@SECOND}
+\newcount\currenthour \newcount\currentminute \newcount\currentsecond
+\currenthour=\time\relax \divide\currenthour by 60\relax
+\currentminute=\time\relax \@FCmodulo{\currentminute}{60}\currentsecond=0\relax
+\providecommand*{\newtimeformat}[2]{\@ifundefined{#1}{%
+\expandafter\def\csname#1\endcsname{\csname timeformat@#1\endcsname{\currenthour}{\currentminute}{\currentsecond}}%
+\expandafter\def\csname timeformat@#1\endcsname##1##2##3{\c@HOUR=##1\c@HOURXII=\c@HOUR
+\ifnum\c@HOURXII>12 \advance\c@HOURXII by -12\relax\fi
+\c@MINUTE=##2\c@TOHOUR=\c@HOURXII\advance\c@TOHOUR by 1\relax\@FCmodulo{\c@TOHOUR}{12}%
+\c@TOMINUTE=\c@MINUTE\advance\c@TOMINUTE by -60\relax\multiply\c@TOMINUTE by -1\relax
+\c@SECOND=##3\relax #2\relax}}{\PackageError{datetime}{Command \textbackslash#1 already defined}{}}}
+\newtimeformat{xxivtime}{\twodigit\THEHOUR\timeseparator\twodigit\THEMINUTE}"
+  );
   // datetime.sty `\monthname[num]` / `\shortmonthname[num]` (default
   // `[\month]`) — were content-losing noops; emit the English month name
   // via \ifcase like the package's english definitions (datetime.sty /

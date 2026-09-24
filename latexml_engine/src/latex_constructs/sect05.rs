@@ -755,7 +755,14 @@ pub(crate) fn load() -> Result<()> {
   // gullet-expandability is restored. Witness DEMO-TUDaPhD/TUDaThesis,
   // neoschool, bfh-ci (raw scrlayer-scrpage). KNOWN_PERL_ERRORS #121; guard
   // `perfect_kernel_batch53::pagestyle_expandafter_freeze_terminates`.
-  def_macro_noop("\\pagestyle{}")?;
+  // latex.ltx:18297-18300 `\pagestyle{#1}` runs `\ps@#1`. A page style's body only
+  // `\def`s/`\let`s the head/foot macros (inert here), but classes define macros
+  // there: dccpaper-base.sty:387-470 sets `\TitleHead`/`\NormalHead` inside
+  // `\ps@title`/`\ps@dccpaper` (idcc, ijdc-v14, ijdc-v9; class census 2026-09-24).
+  // An undefined style stays silent (no `\undefinedpagestyle`), and it stays an
+  // expandable macro for the freeze above. `\thispagestyle` (latex.ltx:18301-18304,
+  // deferred to the page builder) stays a no-op. Beyond Perl (:997, a no-op).
+  DefMacro!("\\pagestyle{}", "\\@ifundefined{ps@#1}{}{\\@nameuse{ps@#1}}");
   def_macro_noop("\\thispagestyle{}")?;
   def_primitive_noop("\\markright{}")?;
   def_primitive_noop("\\markboth{}{}")?;

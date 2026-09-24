@@ -1,0 +1,18 @@
+% witness: TL class census 2026-09-24 — idcc, ijdc-v14, ijdc-v9 (dccpaper-base.sty:387-470
+%          defines \TitleHead/\TitleFoot/\NormalHead/\NormalFoot inside \ps@title/\ps@dccpaper,
+%          armed by \pagestyle{title}/\pagestyle{dccpaper}; \AtEndPreamble then typesets them)
+% oracle:  pdflatex 0 errors without the \pagestyle{nosuchstyle} line, which raises
+%          "Undefined control sequence" there (\undefinedpagestyle); Rust and Perl stay silent
+% engines: rust (56hy) = 4× undefined (\pagestyle a no-op, as in Perl latex_constructs.pool:997)
+% expect:  0 errors; <p>HEAD</p>
+% status:  RED (56hy) -> GREEN (56hz)
+% mechanism: latex.ltx:18297-18300 \pagestyle{#1} runs \ps@#1 (kept an expandable macro).
+\documentclass{article}
+\makeatletter
+\def\ps@title{\def\@oddhead{HEAD}\let\TitleHead=\@oddhead}
+\pagestyle{title}
+\pagestyle{nosuchstyle}
+\makeatother
+\begin{document}
+\TitleHead
+\end{document}

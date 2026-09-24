@@ -1,0 +1,18 @@
+% witness: TL class census 2026-09-24 (re-run on 56hy) — njuthesis/omgtudoc-asoiu
+%          \DeclarePrintbibliographyDefaults (biblatex.sty:9780), dtk \lst@InputCatcodes/
+%          \lst@RestoreCatcodes (listings.sty:28-41), langscibook \AtCaptionPackage (caption.sty:170),
+%          beamer-rl \defbeameroption (beamerbaseoptions.sty:55), huawei \newtimeformat/\twodigit/
+%          \THEHOUR (datetime.sty:188-258), sjtuthesis/-article/-report \xeCJK_declare_char_class:nn
+% oracle:  pdflatex / xelatex 0 errors
+% engines: rust (56hy) = one undefined control sequence per line
+% expect:  0 errors; <p>09:05 Text.</p>
+% status:  RED (56hy) -> GREEN (56hz)
+\documentclass{article}
+\usepackage{biblatex,listings,caption,datetime}
+\DeclarePrintbibliographyDefaults{heading=bibintoc}
+\makeatletter\lst@InputCatcodes\lst@RestoreCatcodes\makeatother
+\AtCaptionPackage{\captionsetup{font=small}}
+\newtimeformat{daytime}{\twodigit{\THEHOUR}:\twodigit{\THEMINUTE}}
+\begin{document}
+\settimeformat{daytime}\formattime{9}{5}{0} Text.
+\end{document}
