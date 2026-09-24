@@ -1,0 +1,19 @@
+% witness: arXiv 2605.12091 (code.sty: \lstdefinelanguage{splay}{basicstyle=\color{basic}\ttfamily
+%          \lst@ifdisplaystyle\scriptsize\else\fi,…} \lstset{language=splay})
+% oracle:  pdflatex 0 errors (listings.sty:1742 \let\lst@ifdisplaystyle\iffalse)
+% engines: rust (56ht) = 3 errors per listing (undefined + \else + \fi; the paper: Fatal:TooManyErrors);
+%          Perl: the same 3 (its binding lacks it too)
+% expect:  0 errors; the listing's text kept
+% status:  RED (56ht) -> GREEN (56hu; Perl-origin, KNOWN_PERL_ERRORS)
+\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\lstdefinelanguage{splay}{%
+  basicstyle=\ttfamily\lst@ifdisplaystyle\scriptsize\else\fi}
+\makeatother
+\lstset{language=splay}
+\begin{document}
+\begin{lstlisting}
+hello world
+\end{lstlisting}
+\end{document}

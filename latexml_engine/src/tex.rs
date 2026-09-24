@@ -104,9 +104,9 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // earlier round-17 fix is subsumed by the delta-hoist (since the
       // trigger CS is itself a meaning-key newly-installed by the package
       // load). (1711.11576: cleanly converts post-fix.)
-      let pre_keys = snapshot_top_frame_meaning_keys();
+      let pre_keys = snapshot_top_frame_keys();
       require_package(&pkg_name, RequireOptions::default())?;
-      hoist_top_frame_meaning_delta(&pre_keys);
+      hoist_top_frame_package_load(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
@@ -175,12 +175,12 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
       assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
-      let pre_keys = snapshot_top_frame_meaning_keys();
+      let pre_keys = snapshot_top_frame_keys();
       input_definitions(&pool_name, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
       })?;
-      hoist_top_frame_meaning_delta(&pre_keys);
+      hoist_top_frame_package_load(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,

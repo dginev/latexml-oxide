@@ -2247,7 +2247,8 @@ duplicated class-copy block. Guard: `13_split_css_links`.
 
 **When:** code must ask *"am I inside a bracket LaTeXML itself opened?"* — the
 `standalone` child preamble (`standalone_sty.rs`, after its `bgroup()`),
-`import.sty`'s `\lx@activate@subfile@scope` `{…}` — so a package loaded there
+and, until batch 56hu removed that group (OXIDIZED_DESIGN #280), `import.sty`'s
+`\lx@activate@subfile@scope` `{…}` — so a package loaded there
 survives the pop (OXIDIZED_DESIGN #65, KNOWN_PERL_ERRORS #55, issue #311).
 
 **Mechanic:** `activate_scope(subfile_scope_here())` marks `StashActive`

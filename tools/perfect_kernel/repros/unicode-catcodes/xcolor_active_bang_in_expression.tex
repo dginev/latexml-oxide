@@ -1,0 +1,15 @@
+% witness: arXiv 2605.30133 (generated ablation tables: \catcode`!=13\def!{\itshape} in a cell,
+%          then \textcolor{red!100.0!black}{…} throughout)
+% oracle:  pdflatex 0 errors (xcolor.sty:104-116 \XC@edef: active separators stand for themselves)
+% engines: rust (56ht) = "Can't find color named 'red\not@math@alphabet@@{it}…black'" per use (Fatal);
+%          Perl: the same, misdefined (xcolor.sty.ltxml:561 expands unprotected)
+% expect:  0 errors; HELLO in #FF0000; the active ! still italicizes x
+% status:  RED (56ht) -> GREEN (56hu, OXIDIZED_DESIGN #281)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\begin{tabular}{l}
+\catcode`! = 13\def!{\itshape}
+\textcolor{red!100.0!black}{HELLO} !x \\
+\end{tabular}
+\end{document}

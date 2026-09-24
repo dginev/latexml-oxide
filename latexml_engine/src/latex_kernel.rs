@@ -180,7 +180,7 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
   // fire at top level), and definitions popped by the enclosing `}` would
   // leave `LaTeX.pool_loaded` set with the format gone. Same guard
   // `def_autoload` uses in `tex.rs`.
-  let pre_keys = snapshot_top_frame_meaning_keys();
+  let pre_keys = snapshot_top_frame_keys();
   if let Err(e) = load_latex_pool() {
     Warn!(
       "autoload",
@@ -189,7 +189,7 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
     );
     return false;
   }
-  hoist_top_frame_meaning_delta(&pre_keys);
+  hoist_top_frame_package_load(&pre_keys);
   // The format may still not define it (e.g. a dump key our own LaTeX pool
   // later clears). Then this was a no-op and the caller reports it undefined,
   // exactly as before.

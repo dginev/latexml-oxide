@@ -24698,7 +24698,7 @@ mod pgfkeys_native_accessors {
 /// `~/data/pk_agents/w23/regress_2605/CLUSTERS.md`.
 #[cfg(test)]
 mod regress_2605_clusters {
-  use super::perfect_kernel_batch46::{convert_with, error_count};
+  use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
   /// hyperref: batch 55b added a `\hyper@makecurrent` noop, which makes
   /// pgfplots take its PDF-anchor branch and call `\hyper@anchorstart`/
@@ -24974,5 +24974,164 @@ $$ X_{i} = a $$
       !xml.contains("text=\"absent\""),
       "an empty aligned column must not survive as a spurious <Math text=\"absent\"> MathFork\n{xml}"
     );
+  }
+
+  /// algorithm2e `{procedure}`/`{function}`: the raw environment lets `\@caption`
+  /// be `\algocf@caption@proc#1[#2]#3` (algorithm2e.sty:2402), and our `\caption`
+  /// passes no `[short]`, so the `[` scan ran to the end of the document
+  /// (arXiv 2605.00743, 2605.06384: `Fatal:Mouth:EoF`). Bound like `{algorithm}`,
+  /// the caption is algorithm2e's own: "Procedure Name(args)", unnumbered, the
+  /// name as the refnum, `\Name` declared as a function keyword.
+  #[test]
+  fn algorithm2e_procedure_caption_is_bound() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/captions-floats/algorithm2e_procedure_caption.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml
+        .contains("<caption><text font=\"bold\">Procedure</text>\u{a0}SetMiniDisk(S, R)</caption>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("<caption><text font=\"bold\">Function</text>\u{a0}Empty</caption>"),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(
+        "<float class=\"ltx_algorithm\" framed=\"top\" labels=\"LABEL:p:a\" xml:id=\"algorithmx1\">
+    <tags>
+      <tag role=\"refnum\">SetMiniDisk</tag>
+    </tags>
+    <toccaption>Procedure\u{a0}SetMiniDisk</toccaption>"
+      ),
+      "{xml}"
+    );
+    assert!(
+      xml.contains("We call <text font=\"typewriter\">SetMiniDisk(<emph font=\"serif italic\">a</emph>)</text> in Procedure\u{a0}<ref labelref=\"LABEL:p:a\"/>."),
+      "{xml}"
+    );
+    // {algorithm} keeps its numbered caption.
+    assert!(xml.contains(r#"<tag role="refnum">1</tag>"#), "{xml}");
+  }
+
+  /// `\subimport` runs the imported file ungrouped, as import.sty:65-92 does: its
+  /// `\newcommand`s and the packages it loads (whose loaded-flags are global)
+  /// outlive the import. The grouped binding popped them (arXiv 2605.20598:
+  /// hyperref → etoolbox loaded in a subimport, biblatex's `\newbool` then
+  /// undefined, `Fatal:TooManyErrors`).
+  #[test]
+  fn subimport_keeps_definitions() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/loader/subimport_keeps_definitions.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>MACRO Y</p>"), "{xml}");
+  }
+
+  /// jmlr's `\addr` scans to the author sentinel only inside the structured
+  /// author block; elsewhere it is jmlr.cls:344's empty macro. Under an undefined
+  /// class wrapper (`\coltauthor`, class-body in arXiv 2605.25859) it ran to the
+  /// end of the document (`Fatal:Mouth:EoF`).
+  #[test]
+  fn jmlr_addr_outside_the_author_block_is_empty() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/jmlr_addr_outside_author_block.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(stderr.matches("Fatal:").count(), 0, "{stderr}");
+    // The undefined `\coltauthor` only (Perl: the same).
+    assert_eq!(error_count(&stderr), 1, "{stderr}");
+    assert!(stderr.contains("undefined:\\coltauthor"), "{stderr}");
+    assert!(xml.contains("<personname>Ido Nachum</personname>"), "{xml}");
+    assert!(xml.contains("<p>University of Haifa</p>"), "{xml}");
+    assert!(xml.contains("<p>Body.</p>"), "{xml}");
+  }
+
+  /// listings.sty:1742 `\let\lst@ifdisplaystyle\iffalse`: a style that tests it
+  /// (arXiv 2605.12091's `basicstyle=…\lst@ifdisplaystyle\scriptsize\else\fi`)
+  /// raised three errors per listing, Fatal on the paper (Perl the same).
+  #[test]
+  fn lst_ifdisplaystyle_is_false() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/parameter-conditional/lst_ifdisplaystyle_in_basicstyle.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<text class="ltx_lst_identifier" font="typewriter">hello</text><text class="ltx_lst_space" font="typewriter"> </text><text class="ltx_lst_identifier" font="typewriter">world</text></listingline>"#),
+      "{xml}"
+    );
+  }
+
+  /// A repeat `\usepackage[dvipsnames]{xcolor}` loads the name set (xcolor.sty:
+  /// 171-193), so tikz finds `Maroon` (arXiv 2605.28926: `/tikz/Maroon` unknown
+  /// key per use, Fatal; Perl the same).
+  #[test]
+  fn xcolor_reload_loads_dvipsnames() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/graphics-tikz/xcolor_reload_dvipsnames_tikz.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains(r##"fill="#AD1737""##), "{xml}");
+    assert!(xml.contains(r##"color="#AD0000">M</text>"##), "{xml}");
+  }
+
+  /// xcolor.sty `\XC@edef`: an active `!` stands for itself in a colour
+  /// expression (arXiv 2605.30133: `\catcode`!=13\def!{\itshape}` tables turned
+  /// `red!100.0!black` into font switches, Fatal; Perl the same).
+  #[test]
+  fn xcolor_expression_ignores_an_active_bang() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/unicode-catcodes/xcolor_active_bang_in_expression.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(
+        r##"<td align="left"><text color="#FF0000">HELLO</text> <text font="italic">x</text></td>"##
+      ),
+      "{xml}"
+    );
+  }
+
+  /// A package an autoload trigger loads inside a group outlives the group, as
+  /// its global loaded-flag and lock do: natbib's `\citep` (and its citation
+  /// style) survived only until the `}` (arXiv 2605.08349, 2605.10423,
+  /// 2605.14513, 2605.04028: `undefined:\citep` ×100, Fatal).
+  #[test]
+  fn autoloaded_package_outlives_the_group() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/loader/autoload_in_group_survives_the_group.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Only the missing class (OmniBus fallback).
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert_eq!(
+      xml.matches(r#"<cite class="ltx_citemacro_citep">"#).count(),
+      2,
+      "{xml}"
+    );
+    assert_eq!(
+      xml.matches(r#"<cite class="ltx_citemacro_citet">"#).count(),
+      1,
+      "{xml}"
+    );
+    // One citation style throughout: natbib's author-year, set by the load.
+    assert_eq!(
+      xml.matches(r#"show="AuthorsPhrase1Year""#).count(),
+      2,
+      "{xml}"
+    );
+    // The group's italic stays in the group.
+    assert_eq!(xml.matches(r#"font="italic""#).count(), 1, "{xml}");
   }
 }

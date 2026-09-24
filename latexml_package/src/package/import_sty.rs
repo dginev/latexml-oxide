@@ -4,28 +4,12 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: import.sty.ltxml — `AssignValue(SEARCHPATHS => …)`, local-by-default,
-  // reverted by the `{…}` group each `\import`/`\subimport` wraps its body in.
-  // SEARCHPATHS is now a group-scoped value in Rust too (state::get/set with
-  // `Scope::Local`), so no explicit save/restore stack is needed — the group
-  // handles the revert, faithful to Perl. Witnesses: arXiv:2604.09744,
-  // 2603.04457 (sibling `\subimport{Chapter/}{File}` calls — the second must
-  // NOT concat Chapter/ onto the first call's Chapter/).
-
-  // Mark the `{…}` each `\import`/`\subimport` opens as a LaTeXML subfile scope.
-  // OXIDIZED_DESIGN #65 (#311): the group is a LaTeXML artifact — the real
-  // import.sty never groups the input (`\@import` restores `\input@path`/
-  // `\Ginput@path` by plain `\def` AFTER the `\input`, at the caller's level;
-  // "input files must have balanced grouping", L42). Naming the region lets
-  // `require_package` give a package loaded in there the outermost-level lifetime
-  // real LaTeX would (content.rs `is_scope_active(subfile_scope_here())`). The
-  // marker is `Scope::Local`, so the region ends with the group. (This primitive
-  // formerly also saved SEARCHPATHS; that is now handled by group-scoping the
-  // value itself — see `\lx@set@path`/`\lx@append@path`.) Mirror of
-  // `standalone_sty.rs`'s inline `activate_scope(subfile_scope_here())`.
-  DefPrimitive!("\\lx@activate@subfile@scope", {
-    activate_scope(subfile_scope_here());
-  });
+  // Perl: import.sty.ltxml — `AssignValue(SEARCHPATHS => …)`, local-by-default.
+  // The paths are saved before and restored after each import's input
+  // (`\lx@import@save`/`\lx@import@restore` below), so sibling
+  // `\subimport{Chapter/}{File}` calls each start from the base paths (the
+  // second must NOT concat Chapter/ onto the first call's Chapter/). Witnesses:
+  // arXiv:2604.09744, 2603.04457.
 
   // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {}
   //   path = ToString(Expand(#2)); if relative, resolve vs SOURCEDIRECTORY.
@@ -42,7 +26,7 @@ LoadDefinitions!({
       }
     }
     let canonical = pathname::canonical(&path);
-    // LOCAL: reverted by the enclosing `\import`/`\subimport` `{…}` group,
+    // LOCAL, restored by `\lx@import@save`/`\lx@import@restore` around the input,
     // matching Perl's default-local `AssignValue(SEARCHPATHS…)`.
     if star.is_some() {
       set_search_paths_local(vec![canonical]);
@@ -78,7 +62,7 @@ LoadDefinitions!({
     } else {
       pathname::concat(&lead, &path)
     };
-    // LOCAL (see `\lx@set@path`): the `{…}` group reverts it.
+    // LOCAL (see `\lx@set@path`): restored after the input.
     if star.is_some() {
       set_search_paths_local(vec![new_lead]);
     } else {
@@ -88,13 +72,18 @@ LoadDefinitions!({
     }
   });
 
-  // Each `\import`/`\subimport` wraps its body in a `{…}` group (with
-  // `\lx@activate@subfile@scope` naming the subfile scope). The path change is LOCAL, so the
-  // group reverts it at `}` — each sibling starts from the BASE search paths,
-  // exactly as Perl's default-local `AssignValue(SEARCHPATHS…)` does. Without
-  // group-local paths, two sibling `\subimport{Chapter/}{Abstract}` +
-  // `\subimport{Chapter/}{Poster}` would concat Chapter/ onto the first call's
-  // still-mutated lead → "Chapter/Chapter/Poster". Witnesses 2604.09744, 2603.04457.
+  // No group around the input (import.sty:65-92): `\@sub@import` closes its own
+  // group before `\@import` runs the `\input`/`\include` at the caller's level,
+  // then restores `\input@path`/`\Ginput@path` by plain `\def`. Perl's binding
+  // (import.sty.ltxml L44-47) wraps the input in `{…}`, so every definition the
+  // imported file makes — its `\newcommand`s, and the packages it loads, whose
+  // loaded-flags are global — was popped at the `}`: `\subimport{}{macros}` left
+  // the paper's macros undefined, and a package loaded there (hyperref → etoolbox)
+  // was "already loaded" but gone when biblatex asked for `\newbool` (arXiv
+  // 2605.20598, `Fatal:TooManyErrors`). The search paths are saved before and
+  // restored after the input instead, so each sibling `\subimport{Chapter/}{…}`
+  // still starts from the base paths (witnesses 2604.09744, 2603.04457).
+  // OXIDIZED_DESIGN #280.
   //
   // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
   // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
@@ -105,14 +94,31 @@ LoadDefinitions!({
   // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
   // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
   // name as #7), so the arity below is the real package's, not Perl's typo.
+  DefPrimitive!("\\lx@import@save", {
+    let saved = lookup_value("SEARCHPATHS").unwrap_or(Stored::None);
+    let mut stack = match lookup_value("lx@import@saved@paths") {
+      Some(Stored::VecDequeStored(stack)) => stack,
+      _ => VecDeque::new(),
+    };
+    stack.push_front(saved);
+    assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@import@restore", {
+    if let Some(Stored::VecDequeStored(mut stack)) = lookup_value("lx@import@saved@paths")
+      && let Some(saved) = stack.pop_front()
+    {
+      assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
+      assign_value("SEARCHPATHS", saved, Some(Scope::Local));
+    }
+  });
   DefMacro!("\\import OptionalMatch:* {}{}",
-    "{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\input{#3}}");
+    "\\lx@import@save\\lx@set@path #1{#2} \\input{#3}\\lx@import@restore");
   DefMacro!("\\includefrom OptionalMatch:* {}{}",
-    "{\\lx@activate@subfile@scope\\lx@set@path #1{#2} \\include{#3}}");
+    "\\lx@import@save\\lx@set@path #1{#2} \\include{#3}\\lx@import@restore");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
-    "{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\input{#3}}");
+    "\\lx@import@save\\lx@append@path #1{#2} \\input{#3}\\lx@import@restore");
   DefMacro!("\\subincludefrom OptionalMatch:* {}{}",
-    "{\\lx@activate@subfile@scope\\lx@append@path #1{#2} \\include{#3}}");
+    "\\lx@import@save\\lx@append@path #1{#2} \\include{#3}\\lx@import@restore");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");
 });

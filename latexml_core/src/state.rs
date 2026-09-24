@@ -2976,12 +2976,47 @@ pub fn snapshot_top_frame_meaning_keys() -> Vec<SymStr> {
     .unwrap_or_default()
 }
 
-/// Hoist every Meaning binding installed at the topmost frame since
-/// `pre_snapshot` was taken to GLOBAL scope. Idempotent: keys already
-/// in `pre_snapshot` are skipped. Operates on the Meaning table only —
-/// callers that need to promote Value/Catcode/etc. should add parallel
-/// helpers (none required so far).
-pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
+/// The keys bound at the topmost frame for the Meaning and Value tables, taken
+/// before an autoloaded package loads; see [`hoist_top_frame_package_load`].
+pub struct TopFrameKeys {
+  meaning: Vec<SymStr>,
+  value:   Vec<SymStr>,
+}
+pub fn snapshot_top_frame_keys() -> TopFrameKeys {
+  let state = state!();
+  let frame = state.undo.front();
+  TopFrameKeys {
+    meaning: frame
+      .map(|f| f.meaning.keys().copied().collect())
+      .unwrap_or_default(),
+    value:   frame
+      .map(|f| f.value.keys().copied().collect())
+      .unwrap_or_default(),
+  }
+}
+
+/// Hoist what an autoloaded package installed at the topmost frame since
+/// `pre` was taken — its meanings and its values — to GLOBAL scope. The
+/// trigger (`def_autoload`, OmniBus's `\lx@late@usepackage`, the LaTeX-pool
+/// autoload) is cleared and the package's loaded-flag set globally, so what the
+/// package defines must live as long. Fired inside a group, natbib's locked
+/// `\citep` was otherwise popped while its lock survived, every later `\citep`
+/// undefined (arXiv 2605.08349, 2605.10423, 2605.14513, 2605.04028:
+/// `Fatal:TooManyErrors`), and its citation style reverted after the group.
+pub fn hoist_top_frame_package_load(pre: &TopFrameKeys) {
+  hoist_top_frame_delta(TableName::Meaning, &pre.meaning, false);
+  hoist_top_frame_delta(TableName::Value, &pre.value, false);
+}
+
+/// Hoist the conditionals installed at the topmost frame since `pre_snapshot`
+/// was taken to GLOBAL scope: for a package loaded inside a LaTeXML subfile
+/// bracket (`require_package`, OXIDIZED_DESIGN #65). Idempotent: keys already
+/// in `pre_snapshot` are skipped.
+pub fn hoist_top_frame_conditional_delta(pre_snapshot: &[SymStr]) {
+  hoist_top_frame_delta(TableName::Meaning, pre_snapshot, true);
+}
+
+fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals_only: bool) {
   let pre: rustc_hash::FxHashSet<SymStr> = pre_snapshot.iter().copied().collect();
   let new_keys: Vec<SymStr> = {
     let state = state!();
@@ -2989,7 +3024,7 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
       .undo
       .front()
       .map(|f| {
-        f.meaning
+        f.table(table)
           .keys()
           .copied()
           .filter(|k| !pre.contains(k))
@@ -3001,12 +3036,12 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
     let current = {
       let state = state!();
       state
-        .meaning
+        .table(table)
         .get(&key)
         .and_then(|stack| stack.front().cloned())
     };
     if let Some(value) = current {
-      // CONDITIONALS ONLY. The failure this exists for is a definition destroyed
+      // CONDITIONALS ONLY, for a subfile bracket. The failure this exists for is a definition destroyed
       // while a GLOBAL document hook still reads it, and every witness is a
       // `\newif` conditional (`\ifpgf@external@grabshipout`, OXIDIZED_DESIGN
       // #65). Hoisting a package's ordinary macros too is what makes a second
@@ -3016,7 +3051,7 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
       // than Perl, which scopes both. `\newif` installs `\ifX` as a Conditional
       // (`\Xtrue`/`\Xfalse` are plain macros the hooks do not read), so this
       // filter keeps every witness working while leaving macros scoped.
-      if !matches!(value, Stored::Conditional(_)) {
+      if conditionals_only && !matches!(value, Stored::Conditional(_)) {
         continue;
       }
       // Direct re-bind via assign_internal so we don't need to round-trip a
@@ -3024,7 +3059,7 @@ pub fn hoist_top_frame_meaning_delta(pre_snapshot: &[SymStr]) {
       // any future read via `assign_meaning(token, ...)` would reach the
       // same cell. Scope::Global removes higher-frame undo entries and
       // installs at the lowest non-locked frame.
-      state_mut!().assign_internal(TableName::Meaning, key, value, Some(Scope::Global));
+      state_mut!().assign_internal(table, key, value, Some(Scope::Global));
     }
   }
 }

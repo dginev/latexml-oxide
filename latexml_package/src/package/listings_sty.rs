@@ -2237,6 +2237,12 @@ LoadDefinitions!({
   DefMacro!("\\lst@true", None, r"\let\lst@if\iftrue");
   DefMacro!("\\lst@false", None, r"\let\lst@if\iffalse");
   Let!("\\lst@if", "\\iffalse");
+  // listings.sty:1742 `\let\lst@ifdisplaystyle\iffalse` (flipped by the
+  // `DisplayStyle` hook, :1740-1741, which this binding does not run). A style
+  // may test it, e.g. `basicstyle=\ttfamily\lst@ifdisplaystyle\scriptsize\else\fi`
+  // (arXiv 2605.12091: undefined, so every listing raised its `\else` and `\fi`,
+  // `Fatal:TooManyErrors`; Perl's binding lacks it too).
+  Let!("\\lst@ifdisplaystyle", "\\iffalse");
   // listings.sty:908 `\lst@CCPutMacro{<class>}{<char>}{<code>}…\@empty\z@\@empty`
   // (character-class conversion table) and the per-character hooks
   // `\lst@ProcessOther`/`\lst@ttfamily` an add-on `\lstnewenvironment`

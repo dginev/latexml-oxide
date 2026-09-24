@@ -2037,11 +2037,11 @@ tikz (divergence #63). The package is then split in half: frame-local
 definitions, global hooks. Anatomy, minimal trigger and the upstream verdict:
 KNOWN_PERL_ERRORS #55.
 
-**`require_package` hoists the load's meaning-delta past the bracket**
-(`snapshot_top_frame_meaning_keys` + `hoist_top_frame_meaning_delta`), as
-`tex.rs::def_autoload` already did for the mirror-image autoload failure (witness
+**`require_package` hoists the load's conditionals past the bracket**
+(`snapshot_top_frame_meaning_keys` + `hoist_top_frame_conditional_delta`), as
+`tex.rs::def_autoload` does for the mirror-image autoload failure (witness
 1711.11576) — note that one is UNGATED, since an autoload fires from arbitrary
-body depth and has no bracket to be inside. We keep LaTeX's *invariant*, not its *enforcement*: refusing the
+body depth and has no bracket to be inside, and hoists the whole load (#282). We keep LaTeX's *invariant*, not its *enforcement*: refusing the
 load would discard divergence #63.
 
 **Only our own brackets.** An author's group keeps real LaTeX's verdict —
@@ -2050,7 +2050,8 @@ so hoisting there would emit *fewer* errors than Perl on an authoring mistake.
 What separates them is *where* the bracket was opened, so the region is named
 `subfile:<frame depth>` — Perl's own `section:4` / `label:foo` convention
 (State.pm L965-975) — and activated by `standalone_sty.rs` right after its
-`bgroup()` and by `import_sty.rs`'s `\lx@activate@subfile@scope` inside the `{…}`. Activity
+`bgroup()` (`import_sty.rs` activated it inside its `{…}` until batch 56hu, which
+removed that group: #280). Activity
 alone is NOT enough: `StashActive` is `Scope::Local` at the bracket's frame, so a
 plain "am I in a subfile?" test is also true at every *deeper* frame, and an
 author's `{\usepackage{…}}` written **inside** a subfile preamble was hoisted too
@@ -8683,3 +8684,28 @@ Measured on the 11 affected s117 manuals: schema errors 7 → 0 (ribbonproofs, s
 ### 278. natbib's `\setcitestyle` ignores words it does not know (Perl: keyvals, an unknown word resets the style to authoryear)
 
 **natbib.sty:303-335** walks the `\setcitestyle` list with `\@for` and tests each word against its own set (`round`, `square`, `angle`, `curly`, `semicolon`, `colon`, `comma`, `authoryear`, `numbers`, `super`, and `open=`/`close=`/`aysep=`/`yysep=`/`notesep=`). Any other word does nothing. **Perl** reads the argument as `RequiredKeyVals:natbib`, and its `setCitationStyle` fall-through (natbib.sty.ltxml:402-404) sets `CITE_STYLE` to authoryear for an unknown word. So `\setcitestyle{numbers,sort&compress}`, a package option passed here, loses `numbers`, and `colon` (natbib.sty:315-316, the `;` separator) is not known at all. The Rust port also warned "Encountered unknown KeyVals key" (2606.03886 and three more papers). **Rust** (batch 56ho, `natbib_sty.rs`): the list is split as natbib splits it, and only natbib's own words reach the style, `colon` included. **Guard**: `perfect_kernel_batch56::natbib_setcitestyle_ignores_unknown_words`.
+
+### 279. algorithm2e's `{procedure}`/`{function}` are bound like `{algorithm}` (Perl: raw, the caption lost)
+
+**algorithm2e.sty:2786-2830** opens `algocf@algorithm` for these environments with `algocf@procenvironment` true. Its `\algocf@setcaption` (:2428-2441) lets `\@caption` be `\algocf@caption@proc#1[#2]#3` (:2402), which assumes LaTeX's `\@dblarg` calling convention. Our `\caption` calls `\@caption{<type>}{<text>}` with no `[short]`, so the `[` scan ran to the end of the document (arXiv 2605.00743, 2605.06384: `Fatal:Mouth:EoF`). **Perl** raw-loads these environments too. It reaches the same scan, reports it (14 errors on the repro), and emits a flat float: no caption, and the listing flattened into text. **Rust** (batch 56hu, `algorithm2e_sty.rs`): the four environments share `{algorithm}`'s `DefEnvironment`, with `algocf@procenvironment`/`algocf@func` set and `\caption` let to `\lx@algocf@proccaption`. That caption follows `\algocf@caption@proc` + `\algocf@captionproctext` (:2775-2785):
+- the name before the first `(` is declared a function keyword (`\SetKwFunction`, unless `nokwfunc`);
+- the caption reads "Procedure Name(args)rest", dropping the parentheses when the arguments are empty;
+- a trailing `\label` moves into the caption, as `\@caption@postlabel` does.
+
+A `procnumbered` procedure takes the float counter. Otherwise the float gets an id and a `refnum` tag holding the name, as :2418 makes `\@currentlabel` the name, so `\ref` prints the name, as in pdflatex. **Guard**: `regress_2605_clusters::algorithm2e_procedure_caption_is_bound`; repro `repros/captions-floats/algorithm2e_procedure_caption.tex`.
+
+### 280. `\import`/`\subimport` run the file ungrouped (Perl: a `{…}` around the input)
+
+**import.sty:65-92**: `\@sub@import` closes its own group before `\@import` runs the `\input`/`\include` at the caller's level. The search paths are then restored by plain `\def`. **Perl** (import.sty.ltxml L44-47) wraps the input in `{…}`, so everything the imported file defines is popped at the `}`. That includes its `\newcommand`s (`\subimport{}{macros}` leaves the paper's macros undefined) and the packages it loads, whose loaded-flags are global. arXiv 2605.20598: `\subimport{}{…for_preamble.tex}` loads hyperref, which loads etoolbox. The main file's biblatex then found etoolbox "loaded" but `\newbool` gone, 92 cascade errors, `Fatal:TooManyErrors`. Perl survives only because it cannot load biblatex. **Rust** (batch 56hu, `import_sty.rs`): no group. `\lx@import@save`/`\lx@import@restore` bracket the input with the search paths (a stack, so imports nest), so sibling `\subimport{Chapter/}{…}` calls still start from the base paths (witnesses 2604.09744, 2603.04457). A `standalone` child keeps the bracket `standalone_sty.rs` opens itself (#65). **Guard**: `regress_2605_clusters::subimport_keeps_definitions`; repro `repros/loader/subimport_keeps_definitions.tex`.
+
+### 281. xcolor: a repeat load processes its name sets, and active separators stand for themselves (Perl: neither)
+
+Two gaps in the xcolor binding, both shared with Perl, where pdflatex is clean.
+- **Name sets on a repeat load.** xcolor.sty:171-193 (`\XC@declarenames`) makes `dvipsnames`/`svgnames`/`x11names` keys whose code inputs the `.def`, on a repeat load too. Our `DeclareOption!` handlers are cleared to `\relax` by `ProcessOptions`, so the repeat-load recovery (#43) had nothing to run. `\usepackage[dvipsnames]{xcolor}` after tcolorbox had loaded xcolor defined no `Maroon`, and tikz's `\fill[Maroon]` failed its `\color@Maroon` probe: arXiv 2605.28926, one `/tikz/Maroon` unknown-key error per use, Fatal. **Rust** (batch 56hu, `xcolor_sty.rs`): durable `\ds@<names>` handlers are re-asserted after `ProcessOptions`, as `\ds@table` already was.
+- **Active separators.** xcolor.sty:104-120 `\XC@edef`/`\XC@mdef` expand a colour name, model or expression with each of `! : - + ; " >` (and a model list's `/`) that is currently active standing for itself. Perl (xcolor.sty.ltxml:561) and our binding expanded it unprotected. Generated tables that make `!` an active `\itshape` turned `red!100.0!black` into font switches: arXiv 2605.30133, 101 "Can't find color named", Fatal. **Rust** (batch 56hu): `xc_expand` lets the active separators to their other-catcode selves in a scoped frame for every colour argument the binding expands.
+
+**Guards**: `regress_2605_clusters::xcolor_reload_loads_dvipsnames`, `xcolor_expression_ignores_an_active_bang`; repros `repros/graphics-tikz/xcolor_reload_dvipsnames_tikz.tex`, `repros/unicode-catcodes/xcolor_active_bang_in_expression.tex`.
+
+### 282. A package an autoload loads inside a group outlives the group (Perl: popped with it)
+
+`def_autoload` (and OmniBus's `\lx@late@usepackage`, and the LaTeX-pool autoload) clears its trigger and sets the package's loaded-flag GLOBALLY. It then hoisted the load's meaning-delta to global so the package lives as long, which is the 1711.11576 fix. Issue #348 later restricted the shared hoist to conditionals, for #65's sibling subfiles, and that restriction reached the autoload callers too. So natbib autoloaded by a `\citep` inside `{\itshape …}` lost `\citep` at the `}`, while its lock (`\citep:locked`) survived. Every later `\citep` was then undefined and could not be redefined: arXiv 2605.08349, 2605.10423, 2605.14513 and 2605.04028, `undefined:\citep` ×100, Fatal. Perl fails the same way (OmniBus.cls.ltxml:49-51; 101 errors + Fatal on 08349 and 14513). **Rust** (batch 56hu, `state.rs`): the autoload callers hoist the whole load with `snapshot_top_frame_keys` + `hoist_top_frame_package_load`: its meanings, and its values, so natbib's citation style does not revert after the group either. The subfile bracket keeps the conditionals-only `hoist_top_frame_conditional_delta` (#65). The snapshot-diff is an approximation. A key the group had already bound is not promoted. Catcode, mathcode and the other code tables are not covered. A value the package sets that the group had not bound yet, such as the current font, would become global. The planned replacement runs the load as if at group level 0: set the group's frames aside for the load and restore them after. **Guard**: `regress_2605_clusters::autoloaded_package_outlives_the_group`; repro `repros/loader/autoload_in_group_survives_the_group.tex`.

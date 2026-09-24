@@ -2476,7 +2476,7 @@ pub fn require_package(name: &str, mut options: RequireOptions) -> Result<()> {
     ..InputDefinitionOptions::default()
   });
   if let Some(pre_keys) = pre_keys {
-    hoist_top_frame_meaning_delta(&pre_keys);
+    hoist_top_frame_conditional_delta(&pre_keys);
   }
   // Perl Package.pm L2679 maybeRequireDependencies is invoked from
   // input_definitions's miss-handler. But that handler only runs when

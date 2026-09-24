@@ -6338,3 +6338,52 @@ Trigger: `\documentclass[french]{article}\usepackage{babel}\usepackage{tikz}\use
 `\AtBeginDocument{\calc}`. **Rust (FIXED, batch 56hf):** `microtype_sty.rs` sets
 `\ifMT@babel`/`\ifMT@kerning` from its options and registers that begin-document
 switch-off. Guard `perfect_kernel_batch56::microtype_babel_kerning_switches_off_french_shorthands`.
+
+## 226. `\import`/`\subimport` pop everything the imported file defines (FIXED in Rust)
+
+import.sty.ltxml L44-47 wraps the imported `\input` in `{…}`; real import.sty:65-92
+runs it at the caller's level. The file's `\newcommand`s vanish at the `}`, and so do
+the definitions of any package it loads, although the package's loaded-flag is global.
+Trigger: a file `m.tex` holding `\newcommand{\mymac}{M}`, then
+`\usepackage{import}\subimport{}{m.tex}` and `\mymac` in the body gives
+`Error:undefined:\mymac`; pdflatex prints M. **Rust (FIXED, batch 56hu):** the input
+runs ungrouped, with the search paths saved and restored around it (OXIDIZED_DESIGN
+#280). Guard `regress_2605_clusters::subimport_keeps_definitions`.
+
+## 227. listings binding lacks `\lst@ifdisplaystyle` (FIXED in Rust)
+
+listings.sty:1742 `\let\lst@ifdisplaystyle\iffalse`; the Perl binding never defines it.
+A style that tests it, `\lstdefinelanguage{x}{basicstyle=\ttfamily\lst@ifdisplaystyle\scriptsize\else\fi}`
+with `\lstset{language=x}`, gives three errors per listing (undefined, `\else`, `\fi`):
+arXiv 2605.12091, Fatal. **Rust (FIXED, batch 56hu):** `listings_sty.rs` lets it to
+`\iffalse`. Guard `regress_2605_clusters::lst_ifdisplaystyle_is_false`.
+
+## 228. xcolor: a repeat load drops its name sets; active separators corrupt expressions (FIXED in Rust)
+
+(a) `\usepackage{xcolor}\usepackage[dvipsnames]{xcolor}` defines no `Maroon`: the option's
+handler is `\relax` after the first `ProcessOptions` (xcolor.sty.ltxml:52-53), where real
+xcolor processes the key again (xcolor.sty:171-193). (b) `\catcode`!=13\def!{\itshape}`
+then `\textcolor{red!50!black}{x}`: xcolor.sty.ltxml:561 expands the expression with the
+active `!`, where real xcolor's `\XC@edef` (xcolor.sty:104-116) makes it stand for itself.
+arXiv 2605.28926 and 2605.30133 fatal in both engines. **Rust (FIXED, batch 56hu):**
+OXIDIZED_DESIGN #281. Guards `regress_2605_clusters::xcolor_reload_loads_dvipsnames`,
+`xcolor_expression_ignores_an_active_bang`.
+
+## 229. algorithm2e `{procedure}`/`{function}` lose their caption (FIXED in Rust)
+
+Perl raw-loads these environments; their `\algocf@setcaption` lets `\@caption` be
+`\algocf@caption@proc#1[#2]#3` (algorithm2e.sty:2402, :2436), and LaTeXML's `\caption`
+supplies no `[short]`. Trigger: `\usepackage[ruled]{algorithm2e}`
+`\begin{procedure}\caption{P(x)}\KwData{x}\end{procedure}` gives 14 "Missing argument"
+errors and a float with no caption. **Rust (FIXED, batch 56hu):** OXIDIZED_DESIGN #279.
+Guard `regress_2605_clusters::algorithm2e_procedure_caption_is_bound`.
+
+## 230. An autoload fired inside a group loses the package at the `}` (FIXED in Rust)
+
+`DefAutoload` (Package.pm:1086-1105) requires the package in the current frame, while
+the package's loaded-flag is global. OmniBus.cls.ltxml:49-51 autoloads natbib on
+`\citep`: `\documentclass{nosuchclass}` then `{\itshape a \citep{x}} b \citep{y}` gives
+`Error:undefined:\citep` for the second. arXiv 2605.08349 and 2605.14513: 101 errors +
+Fatal. **Rust (FIXED, batch 56hu):** OXIDIZED_DESIGN #282. Guard
+`regress_2605_clusters::autoloaded_package_outlives_the_group`.
+

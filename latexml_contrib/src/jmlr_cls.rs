@@ -49,13 +49,22 @@ LoadDefinitions!({
   // Digest the structured body in a group so the row separators (\\, \and, \AND)
   // collapse to spaces; a sentinel is appended so a trailing \addr can capture
   // the (shared) affiliation up to it.
+  // `\addr` scans to the sentinel only inside that group; elsewhere it is
+  // jmlr.cls:344's empty `\newcommand{\addr}{}` (:337 gives it meaning only
+  // while the author block is typeset). An `\addr` outside the block — a class
+  // wrapper such as `\coltauthor` left undefined — ran to the end of the
+  // document (arXiv 2605.25859, `Fatal:Mouth:EoF`).
   DefMacro!(
     "\\lx@jmlr@structauthor{}",
-    "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }#1\\lx@jmlr@endaddr\\endgroup"
+    "\\begingroup\\def\\\\{ }\\def\\and{ }\\def\\AND{ }\\let\\addr\\lx@jmlr@addr#1\\lx@jmlr@endaddr\\endgroup"
   );
   DefMacro!("\\Name[]{}", "\\lx@add@creator[role=author]{#2}");
   DefMacro!("\\Email{}", "\\lx@add@email{#1}");
-  DefMacro!("\\addr Until:\\lx@jmlr@endaddr", "\\lx@add@affiliation{#1}");
+  DefMacro!(
+    "\\lx@jmlr@addr Until:\\lx@jmlr@endaddr",
+    "\\lx@add@affiliation{#1}"
+  );
+  def_macro_noop("\\addr")?;
   def_macro_noop("\\lx@jmlr@endaddr")?;
   // jmlr.cls \nametag{tag} appends a marker (typically a \thanks) next to an
   // author name inside \Name{... \nametag{\thanks{...}}}. Render its content

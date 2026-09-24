@@ -1,0 +1,15 @@
+% witness: arXiv 2605.08349, 2605.10423, 2605.14513 (unbound custom classes → OmniBus; the first
+%          \citep sits inside a group), 2605.04028 (cup-journal.cls)
+% oracle:  pdflatex 0 errors (the class loads natbib); Perl: 101 errors + Fatal (08349, 14513)
+% engines: rust (56ht) = Error:undefined:\citep ×100 + Fatal:TooManyErrors
+% expect:  0 errors; three author-year citations
+% status:  RED (56ht) -> GREEN (56hu, OXIDIZED_DESIGN #282)
+% mechanism: the \citep autoload fired inside {\itshape …}; natbib's definitions and values
+%   were popped at the }, while the trigger was cleared, the loaded-flag set and \citep locked
+%   GLOBALLY. The load's meanings and values are hoisted to global, as def_autoload intends;
+%   #348's conditionals-only filter stays with the subfile bracket.
+\documentclass{lx_no_such_class}
+\begin{document}
+{\itshape first \citep{a}}
+Second \citep{b} and \citet{c}.
+\end{document}

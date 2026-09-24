@@ -157,7 +157,7 @@ LoadDefinitions!({
   // 2002.09766 (`\usepackage{algorithm,algorithmic}` + `[algo2e]{algorithm2e}`,
   // `\begin{algorithm*}`). Same 40-line body for every name → local macro.
   macro_rules! def_algo2e_env {
-    ($name:literal) => {
+    ($name:literal $(, $setup:literal)?) => {
       DefEnvironment!($name,
         "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
         mode => "internal_vertical",
@@ -199,6 +199,8 @@ LoadDefinitions!({
           // locally (`\@tabularcr`), shadowing this. Witness arXiv 2002.09766
           // Algorithm 1 (`\For{…}{ …\\ …\;\\ }`). KNOWN_PERL_ERRORS #109.
           Let!("\\\\", "\\lx@algo@par");
+          // {procedure}/{function}: their own caption (see `\lx@algocf@proccaption`).
+          $( DigestIf!(T_CS!($setup))?; )?
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;
@@ -253,6 +255,113 @@ LoadDefinitions!({
   def_algo2e_env!("{algorithm*}[]");
   def_algo2e_env!("{algorithm2e}[]");
   def_algo2e_env!("{algorithm2e*}[]");
+
+  // {procedure}/{function} and their starred forms (algorithm2e.sty:2786-2830)
+  // are the same listing float with `algocf@procenvironment` set. The raw
+  // environments open `algocf@algorithm`, whose `\algocf@setcaption` lets
+  // `\@caption` be `\algocf@caption@proc#1[#2]#3` (:2402, :2436) — LaTeX's
+  // `\@dblarg` calling convention, which our `\caption` does not follow, so the
+  // `[` scan ran to the end of the document (arXiv 2605.00743, 2605.06384:
+  // `Fatal:Mouth:EoF`; Perl reaches the same scan and loses the caption and the
+  // listing structure). Bound like `{algorithm}`, the caption is algorithm2e's
+  // own procedure caption. OXIDIZED_DESIGN #279.
+  def_algo2e_env!("{procedure}[]", "\\lx@algocf@procsetup@proc");
+  def_algo2e_env!("{procedure*}[]", "\\lx@algocf@procsetup@proc");
+  def_algo2e_env!("{function}[]", "\\lx@algocf@procsetup@func");
+  def_algo2e_env!("{function*}[]", "\\lx@algocf@procsetup@func");
+  RawTeX!(r"\def\lx@algocf@procsetup@proc{\setboolean{algocf@procenvironment}{true}%
+  \setboolean{algocf@func}{false}\def\algocf@procname{\@algocf@procname}%
+  \let\caption\lx@algocf@proccaption}
+\def\lx@algocf@procsetup@func{\setboolean{algocf@procenvironment}{true}%
+  \setboolean{algocf@func}{true}\def\algocf@procname{\@algocf@funcname}%
+  \let\caption\lx@algocf@proccaption}");
+  // An unnumbered procedure is referenced by its name (algorithm2e.sty:2418
+  // `\gdef\@currentlabel{\algocf@captname#3@}`): the float gets an id and a
+  // refnum tag holding the name, where `\@@add@caption@counters` would step the
+  // counter.
+  DefPrimitive!("\\lx@algocf@proc@counters{}", sub[(name)] {
+    let props = ref_step_id("algorithm")?;
+    let tags = digest(Invocation!(r"\lx@tags{\lx@tag@intags[refnum]{#1}}", vec![Some(name)]))?;
+    assign_value("algorithm_tags", tags, Some(Scope::Global));
+    assign_value("algorithm_id", props.get("id"), Some(Scope::Global));
+  });
+  // `\caption{Name(args)rest}` in a procedure: algorithm2e.sty:2402-2425
+  // `\algocf@caption@proc` declares `\Name` as a function keyword (`\SetKwFunction`,
+  // unless `nokwfunc`) and captions with `\algocf@captionproctext` (:2775-2785) —
+  // "Procedure Name(args)rest", the parentheses dropped when args is empty. Only a
+  // `procnumbered` procedure takes a number; otherwise the float counter is left
+  // alone (:2415 undoes the `\refstepcounter`). The split is :2771-2773's
+  // `#1(#2)#3@`; a caption with no `(` is all name.
+  DefMacro!("\\lx@algocf@proccaption[]{}",
+    r"\@ifnextchar\label{\lx@algocf@proccaption@postlabel{#2}}{\lx@algocf@proccaption@{#2}}");
+  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label Semiverbatim",
+    r"\lx@algocf@proccaption@{#1\label{#2}}");
+  DefMacro!("\\lx@algocf@proccaption@{}", sub[(long)] {
+    let toks = long.unlist();
+    let mut labels = Vec::new();
+    let mut in_label = 0; // tokens of a `\label{…}` still to move: 1 = its argument
+    let mut name = Vec::new();
+    let mut args = Vec::new();
+    let mut rest = Vec::new();
+    let mut part = 0; // 0 = name, 1 = args, 2 = rest
+    let mut depth = 0i32;
+    for t in toks {
+      let cc = t.get_catcode();
+      // A `\label` goes to the caption's end, out of the name and arguments.
+      if in_label > 0 {
+        labels.push(t);
+        if cc == Catcode::BEGIN {
+          in_label += 1;
+        } else if cc == Catcode::END {
+          in_label -= 1;
+          if in_label == 1 {
+            in_label = 0;
+          }
+        }
+        continue;
+      }
+      if depth == 0 && t == T_CS!("\\label") {
+        labels.push(t);
+        in_label = 1;
+        continue;
+      }
+      if cc == Catcode::BEGIN {
+        depth += 1;
+      } else if cc == Catcode::END {
+        depth -= 1;
+      } else if depth == 0 && part == 0 && t == T_OTHER!("(") {
+        part = 1;
+        continue;
+      } else if depth == 0 && part == 1 && t == T_OTHER!(")") {
+        part = 2;
+        continue;
+      }
+      match part {
+        0 => name.push(t),
+        1 => args.push(t),
+        _ => rest.push(t),
+      }
+    }
+    let mut text = TokenizeInternal!(r"\ProcNameSty{\ProcNameFnt ").unlist();
+    text.extend(name.iter().cloned());
+    text.push(T_END!());
+    if !args.is_empty() {
+      text.extend(TokenizeInternal!(r"\ProcNameSty{\ProcNameFnt(}\ProcArgSty{\ProcArgFnt ").unlist());
+      text.extend(args);
+      text.extend(TokenizeInternal!(r"}\ProcNameSty{\ProcNameFnt)}").unlist());
+    }
+    text.extend(rest);
+    text.extend(labels);
+    Ok(Invocation!(
+      r"\lx@donecaptiontrue\ifthenelse{\boolean{algocf@nokwfunc}}{}{\SetKwFunction{#1}{#1}}%
+\ifthenelse{\boolean{algocf@procnumbered}}{\@@add@caption@counters
+  \@@toccaption{\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator\nobreakspace#1}%
+  \@@caption{{\ProcSty{\ProcFnt\algocf@procname\nobreakspace\thealgorithm\algocf@typo\algocf@capseparator}\nobreakspace#2}}}%
+{\lx@algocf@proc@counters{#1}\@@toccaption{\algocf@procname\nobreakspace#1}%
+  \@@caption{{\ProcSty{\ProcFnt\algocf@procname}\nobreakspace#2}}}",
+      vec![Some(Tokens::new(name)), Some(Tokens::new(text))]
+    ))
+  });
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;

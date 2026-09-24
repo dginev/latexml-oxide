@@ -114,9 +114,9 @@ LoadDefinitions!({
     // GLOBAL so they survive the group pop (matching a top-level
     // `\usepackage{natbib}`). Witness: 2209.11799 (sn-jnl, `\citep` after a
     // `\citeauthoryear` `\bibitem`-triggered natbib load).
-    let pre_keys = snapshot_top_frame_meaning_keys();
+    let pre_keys = snapshot_top_frame_keys();
     require_package(&pkg.to_string(), RequireOptions::default())?;
-    hoist_top_frame_meaning_delta(&pre_keys);
+    hoist_top_frame_package_load(&pre_keys);
   });
   DefMacro!("\\bibitem",
     "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}");
