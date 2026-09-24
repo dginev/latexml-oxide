@@ -9,6 +9,8 @@ LoadDefinitions!({
 
   // Integer Registers
   DefRegister!("\\pdfoutput"                => Number::new(0));
+  // pdfTeX 1.40.19+ `\pdfmajorversion` (the PDF major version, 1).
+  DefRegister!("\\pdfmajorversion"          => Number::new(1));
   DefRegister!("\\pdfminorversion"          => Number::new(4));
   DefRegister!("\\pdfoptionpdfminorversion" => Number::new(4)); // obsolete name
   DefRegister!("\\pdfcompresslevel"         => Number::new(9));
@@ -581,6 +583,27 @@ LoadDefinitions!({
       }
     }
   );
+  // pdfTeX manual §8.13 `\pdfcolorstackinit [page] [direct] {<general text>}`
+  // expands to the number of a new colour stack (0 is the default page stack).
+  // No PDF colour operators are written here, but expl3's pdftex backend keeps
+  // the number (l3backend-pdftex.def `\__kernel_color_backend_stack_init:Nnn`
+  // `\int_const:Nn #1 {\tex_pdfcolorstackinit:D …}`), and its alias exists only
+  // when the primitive does at format time (expl3-code.tex:675). With PDF
+  // output the default (the K6 ruling, 2026-09-24) that backend is the one
+  // expl3 loads.
+  DefMacro!("\\pdfcolorstackinit", sub[_args] {
+    let _ = read_keyword(&["page"])?;
+    let _ = read_keyword(&["direct"])?;
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let stack = lookup_int("pdfcolorstack_count") + 1;
+    assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
+    Ok(Tokens::new(Explode!(stack.to_string())))
+  });
+  // `\pdfrunninglinkoff`/`\pdfrunninglinkon` suspend and resume a link across
+  // page breaks; links are not paginated here.
+  def_primitive_noop("\\pdfrunninglinkoff")?;
+  def_primitive_noop("\\pdfrunninglinkon")?;
   def_macro_noop("\\pdfsetmatrix")?;
   def_macro_noop("\\pdfsave")?;
   def_macro_noop("\\pdfrestore")?;

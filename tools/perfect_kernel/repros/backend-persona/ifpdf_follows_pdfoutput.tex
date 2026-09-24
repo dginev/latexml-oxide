@@ -1,0 +1,14 @@
+% witness: TL class census 2026-09-24 — neoschool (neoschool.cls:9020-9027 \AtBeginDocument{\ifpdf\else
+%          … \setmathfont …\fi}: the DVI branch calls unicode-math's \setmathfont under pdfTeX);
+%          arXiv 2605 scan: 1,646 pdflatex papers test \ifpdf, 925 set \pdfoutput=1 themselves
+% oracle:  pdflatex 0 errors; [pdf][1]
+% engines: rust (56ic) and Perl = [dvi][0]: \pdfoutput defaulted to 0 and \ifpdf was a static FALSE
+% expect:  0 errors; <p>[pdf][1]</p>
+% status:  RED (56ic) -> GREEN (56id; K6 ruling 2026-09-24)
+% mechanism: iftex.sty:290-291 \ifpdf = \ifnum\pdfoutput>0; pdflatex's format sets \pdfoutput=1, and a
+%   source shipping EPS/PS figures keeps DVI output (arXiv's latex+dvips rule).
+\documentclass{article}
+\usepackage{ifpdf}
+\begin{document}
+[\ifpdf pdf\else dvi\fi][\the\pdfoutput]
+\end{document}

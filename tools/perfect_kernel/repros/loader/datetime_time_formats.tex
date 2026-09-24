@@ -1,0 +1,15 @@
+% witness: arXiv 2605.13807, 2606.01587 (cortex runs 318/319: `\settimeformat{hhmmsstime}` →
+%          "Unknown time format 'hhmmsstime'"; the 56hz datetime port kept only xxivtime)
+% oracle:  pdflatex 0 errors; [HH:MM:SS][H:MMam|pm][HH:MM] (the job's time)
+% engines: rust (56ic) = Error:latex:(datetime) Unknown time format 'hhmmsstime' (+ ampmtime)
+% expect:  0 errors; <p>[dd:dd:dd][d:ddam][dd:dd]</p> shape
+% status:  RED (56ic) -> GREEN (56id)
+% mechanism: datetime.sty:261-304 hhmmsstime/ampmtime and their English strings; the
+%   hhmmss/24hr/12hr options select them (:479-481). oclock needs fmtcount's \Numberstring
+%   (no binding), so it stays undeclared.
+\documentclass{article}
+\usepackage{datetime}
+\settimeformat{hhmmsstime}
+\begin{document}
+[\currenttime]\settimeformat{ampmtime}[\currenttime]\settimeformat{xxivtime}[\currenttime]
+\end{document}

@@ -7004,14 +7004,21 @@ the loader (`content.rs` `already_handled`, `_load_binding`, the option-clash
 check, `\ver@` relax) and `\@ifl@aded` honour it. Guard:
 `perfect_kernel_batch56::fontenc_reloads_with_new_encodings`.
 
-### 204. `\ifpdf` is true under the luatex profile
+### 204. `\ifpdf` follows the output mode (Perl: static FALSE)
 
 Extends #168: iftex.sty:272-291 answers `\ifpdf` TRUE on LuaTeX whenever the
 output mode is PDF — always, LuaTeX's default — so a lualatex-oracle document
 takes the PDF branch (tikzrput.sty defines `\rput` only there: pgfornament
-ornaments/tikzrput). The pdfTeX persona keeps Perl's FALSE; the K6 PDF-mode
-persona question for pdfTeX documents is separate. Guard:
-`perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`.
+ornaments/tikzrput). On pdfTeX it is `\ifnum\pdfoutput>0` (:290-291), and under
+the `xetex` profile it is FALSE (XeTeX has no `\pdfoutput`). Since batch 56id
+(the K6 ruling, #285) the pdfTeX persona reads `\pdfoutput` too, whose default
+is set per document. The value is read when `\ifpdf` is tested, not frozen when
+iftex loads as the real package does: our format loads iftex before a
+document's own `\pdfoutput=1`. The one observable difference is a document that
+changes `\pdfoutput` after loading iftex (real `\ifpdf` keeps the load-time
+answer); `\pdftrue`/`\pdffalse` still override. Guards:
+`perfect_kernel_batch56::{ifpdf_is_true_under_the_luatex_profile,
+ifpdf_delegates_to_iftex}`, `class_census::ifpdf_follows_pdfoutput`.
 
 ### 205. A box keeps what it can hold; the rest is placed after it (`insertBlock`)
 
@@ -8751,3 +8758,30 @@ latex.ltx allocates its lengths with `\newdimen`/`\newskip` (`\columnsep` is `\d
 
 **Guard**: `class_census::kernel_length_is_an_allocated_dimen`.
 
+### 285. PDF output is the default; a source shipping EPS/PS figures keeps DVI (Perl: always DVI)
+
+Perl sets `\pdfoutput=0` (pdfTeX.pool.ltxml:23) and `\ifpdf` FALSE, so every
+document takes its DVI branches. pdflatex's own format sets `\pdfoutput=1`
+(pdftexconfig.tex), and arXiv compiles a source with pdflatex unless it ships
+EPS/PS figures, which AutoTeX runs through latex+dvips (a `\pdfoutput=1` in
+the first lines still selects pdflatex). arXiv 2605 (30,079 sources): 95.8 % are
+pdflatex ones; 1,692 test `\ifpdf`, 1,646 of them pdflatex papers that took
+their DVI branch here; 925 set `\pdfoutput=1` themselves and still saw
+`\ifpdf` FALSE. User ruling 2026-09-24 (K6).
+
+**Rust** (batch 56id): `core_interface::establish_pdf_output_mode`, run for
+each document where its source context is set, assigns `\pdfoutput` = 1 unless
+the source directory tree (a bounded walk: depth 4, 20,000 entries) holds an
+`.eps`/`.ps`/`.epsf`/`.epsi` file. The `luatex` profile is always PDF and the
+`xetex` profile untouched. A document's own `\pdfoutput=…` still wins. With PDF
+output, expl3 selects its pdftex backend (l3backend-pdftex.def), which needs
+the pdfTeX primitives `\pdfcolorstackinit`, `\pdfmajorversion`,
+`\pdfrunninglinkoff/on` (added; the dumps bind expl3's `\tex_…:D` aliases to
+them, expl3-code.tex:674-675). pgf, graphicx and hyperref keep their bindings'
+drivers.
+
+**Known limitation**: a source with EPS figures that its author compiles with
+pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
+
+**Guards**: `class_census::ifpdf_follows_pdfoutput`,
+`core_interface::tests::postscript_figures_select_dvi_output`.

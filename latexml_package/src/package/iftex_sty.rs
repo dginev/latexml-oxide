@@ -20,10 +20,22 @@ LoadDefinitions!({
   // `tex.outputmode`/`tex.pdfoutput` > 0 — always, LuaTeX defaults to PDF
   // output — so a lualatex-oracle document sees the PDF branch
   // (tikzrput.sty defines `\rput` only inside `\ifpdf…\fi`: pgfornament
-  // ornaments/tikzrput). The pdfTeX persona keeps FALSE (Perl; the K6
-  // PDF-mode question is separate). Guard:
-  // `perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`.
-  DefConditional!("\\ifpdf", { lookup_bool("LUATEX_PROFILE") });
+  // ornaments/tikzrput). On pdfTeX it is `\ifnum\pdfoutput>0` (:290-291), and
+  // XeTeX has no `\pdfoutput` (false). Perl makes it a static FALSE, so the 925
+  // arXiv 2605 papers that set `\pdfoutput=1` themselves took their DVI branch;
+  // the default output mode is set per document (the K6 ruling, 2026-09-24:
+  // `core_interface::establish_pdf_output_mode`). Read when tested, not at
+  // load: our format loads iftex before the document's own `\pdfoutput=1`.
+  // Guards: `perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`,
+  // `class_census::ifpdf_follows_pdfoutput`.
+  DefConditional!("\\ifpdf", {
+    lookup_bool("LUATEX_PROFILE")
+      || (!lookup_bool("XETEX_PROFILE")
+        && lookup_register("\\pdfoutput", Vec::new())
+          .ok()
+          .flatten()
+          .is_some_and(|v| Number::from(&v).value_of() > 0))
+  });
   // iftex.sty:269-270: the legacy ifpdf.sty setters.
   RawTeX!(r"\def\pdftrue{\let\ifpdf\iftrue}\def\pdffalse{\let\ifpdf\iffalse}");
   // The opt-in `xetex` profile (latexml.sty, OXIDIZED_DESIGN #283).

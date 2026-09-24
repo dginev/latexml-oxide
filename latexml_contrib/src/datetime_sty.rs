@@ -55,6 +55,25 @@ LoadDefinitions!({
 \c@SECOND=##3\relax #2\relax}}{\PackageError{datetime}{Command \textbackslash#1 already defined}{}}}
 \newtimeformat{xxivtime}{\twodigit\THEHOUR\timeseparator\twodigit\THEMINUTE}"
   );
+  // datetime.sty:261-304: the other predefined time formats and their English
+  // strings (arXiv 2605.13807, 2606.01587 `\settimeformat{hhmmsstime}`: "Unknown
+  // time format" since the 56hz port kept only `xxivtime`). `oclock` (:271-290)
+  // spells the time with fmtcount's `\Numberstring`, and fmtcount has no binding
+  // (it loads only under `[rawstyles]`), so it is not declared and its option
+  // stays a no-op.
+  RequirePackage!("ifthen");
+  RawTeX!(
+    r"\newtimeformat{hhmmsstime}{\twodigit\THEHOUR\timeseparator\twodigit\THEMINUTE\timeseparator\twodigit\THESECOND}
+\newtimeformat{ampmtime}{\ifthenelse{\value{HOUR}=0}{12}{\THEHOURXII}\timeseparator\twodigit\THEMINUTE
+\ifthenelse{\value{HOUR}<12}{\amname}{\ifthenelse{\value{HOUR}=12}{ \noon}{\pmname}}}
+\providecommand*{\amname}{am}\providecommand*{\pmname}{pm}
+\providecommand*{\amorpmname}{\ifthenelse{\value{HOUR}>11}{\pmname}{\amname}}
+\providecommand*{\amstring}{in the morning}\providecommand*{\pmstring}{in the afternoon}
+\providecommand*{\amorpmstring}{\ifthenelse{\value{HOUR}>12}{\pmstring}{\amstring}}
+\providecommand*{\halfpast}{Half past}\providecommand*{\quarterpast}{Quarter past}
+\providecommand*{\quarterto}{Quarter to}\providecommand*{\noon}{Noon}
+\providecommand*{\midnight}{Midnight}\providecommand*{\oclockstring}{O'Clock}"
+  );
   // datetime.sty `\monthname[num]` / `\shortmonthname[num]` (default
   // `[\month]`) — were content-losing noops; emit the English month name
   // via \ifcase like the package's english definitions (datetime.sty /
@@ -112,7 +131,7 @@ LoadDefinitions!({
 \DeclareOption{mdyy}{\setdefaultdate{\mdyydate}}
 \DeclareOption{iso}{\setdefaultdate{\yyyymmdddate}}
 \DeclareOption{level}{}\DeclareOption{raise}{}\DeclareOption{dayofweek}{}\DeclareOption{nodayofweek}{}
-\DeclareOption{nodate}{}\DeclareOption{hhmmss}{}\DeclareOption{24hr}{}\DeclareOption{12hr}{}\DeclareOption{oclock}{}
+\DeclareOption{nodate}{}\DeclareOption{hhmmss}{\settimeformat{hhmmsstime}}\DeclareOption{24hr}{\settimeformat{xxivtime}}\DeclareOption{12hr}{\settimeformat{ampmtime}}\DeclareOption{oclock}{}
 \ProcessOptions\relax"
   );
 

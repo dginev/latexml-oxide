@@ -1181,6 +1181,7 @@ impl DigestionAPI for Core {
         dir_str.to_string()
       };
       state::assign_value("SOURCEDIRECTORY", arena::pin(&resolved_dir), None);
+      establish_pdf_output_mode(&resolved_dir);
       // Perl Core.pm L195-200: `$state->unshiftValue(SEARCHPATHS => $dir)`.
       // `unshift` puts the source dir at the FRONT so it's the new "lead"
       // — the same lead `\lx@append@path` reads as the basis for
@@ -2043,6 +2044,74 @@ impl DigestionAPI for Core {
   }
 }
 
+/// The output mode a document is compiled in (K6 ruling, 2026-09-24).
+/// pdflatex's format sets `\pdfoutput=1` (pdftexconfig.tex), and arXiv
+/// compiles a source with pdflatex unless it ships EPS/PS figures, which it
+/// runs through latex+dvips (a document's own `\pdfoutput=1` in its first lines
+/// still selects pdflatex, and still sets the register here). So PDF output
+/// is the default, DVI the exception for a source directory holding
+/// PostScript figures. Under the `luatex` profile the output is always PDF
+/// (luatex85's `\pdfoutput` is `\outputmode`); under `xetex` there is no
+/// `\pdfoutput` and `\ifpdf` stays false. arXiv 2605: 95.8 % of 30,079
+/// sources are pdflatex ones, and 1,646 of the 1,692 that test `\ifpdf` had
+/// taken their DVI branch here.
+fn establish_pdf_output_mode(dir: &str) {
+  if state::lookup_bool("XETEX_PROFILE") {
+    return;
+  }
+  // The colour stacks `\pdfcolorstackinit` numbers belong to one document.
+  state::assign_value("pdfcolorstack_count", 0i64, Some(Scope::Global));
+  let pdf = state::lookup_bool("LUATEX_PROFILE") || !source_ships_postscript_figures(dir);
+  let _ = state::assign_register(
+    "\\pdfoutput",
+    latexml_core::common::number::Number(i64::from(pdf)).into(),
+    Some(Scope::Global),
+    Vec::new(),
+  );
+}
+
+/// Whether the source directory tree holds an EPS/PS figure (arXiv's cue for
+/// latex+dvips). The walk is bounded: a document converted from a large
+/// directory (a home directory, say) is not read end to end.
+fn source_ships_postscript_figures(dir: &str) -> bool {
+  const MAX_DEPTH: usize = 4;
+  const MAX_ENTRIES: usize = 20_000;
+  if dir.is_empty() {
+    return false;
+  }
+  let mut stack = vec![(std::path::PathBuf::from(dir), 0usize)];
+  let mut seen = 0usize;
+  while let Some((path, depth)) = stack.pop() {
+    let Ok(entries) = std::fs::read_dir(&path) else {
+      continue;
+    };
+    for entry in entries.flatten() {
+      seen += 1;
+      if seen > MAX_ENTRIES {
+        return false;
+      }
+      let entry_path = entry.path();
+      if entry.file_type().is_ok_and(|t| t.is_dir()) {
+        if depth < MAX_DEPTH {
+          stack.push((entry_path, depth + 1));
+        }
+      } else if entry_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| {
+          matches!(
+            e.to_ascii_lowercase().as_str(),
+            "eps" | "ps" | "epsf" | "epsi"
+          )
+        })
+      {
+        return true;
+      }
+    }
+  }
+  false
+}
+
 /// Establish the document-global *source context* for a **top-level** document
 /// load — `SOURCEFILE`, `SOURCEDIRECTORY`, the front of `SEARCHPATHS`,
 /// `GRAPHICSPATHS`, and `\jobname` (Perl Core.pm L195-200). Shared by
@@ -2063,6 +2132,7 @@ pub(crate) fn establish_source_context(source_file: Option<&str>, jobname: &str,
   if !dir.is_empty() {
     state::assign_value("SOURCEDIRECTORY", dir.to_string(), None);
   }
+  establish_pdf_output_mode(dir);
   state::search_paths_push_front(dir.to_string());
   // Perl Core.pm L200: unshift GRAPHICSPATHS => $dir unless already present.
   if !state::graphics_paths_contains(dir) {
@@ -2469,7 +2539,24 @@ fn renumber_collect_dfs(
 
 #[cfg(test)]
 mod tests {
-  use super::{LATEXML_VERSION, parse_preload_spec};
+  use super::{LATEXML_VERSION, parse_preload_spec, source_ships_postscript_figures};
+
+  /// arXiv's latex+dvips cue (the K6 ruling): an EPS/PS figure anywhere in the
+  /// source tree keeps DVI output; a PDF/PNG-only source and a literal (no
+  /// directory) take PDF output.
+  #[test]
+  fn postscript_figures_select_dvi_output() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let root = dir.path();
+    std::fs::write(root.join("paper.tex"), "x").expect("write");
+    std::fs::write(root.join("fig.png"), "x").expect("write");
+    let root_str = root.to_str().expect("utf-8 path");
+    assert!(!source_ships_postscript_figures(root_str));
+    std::fs::create_dir(root.join("figs")).expect("mkdir");
+    std::fs::write(root.join("figs").join("plot.EPS"), "x").expect("write");
+    assert!(source_ships_postscript_figures(root_str));
+    assert!(!source_ships_postscript_figures(""));
+  }
 
   fn opts(v: &[&str]) -> Vec<String> { v.iter().map(|s| s.to_string()).collect() }
 

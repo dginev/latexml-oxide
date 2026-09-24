@@ -16523,7 +16523,13 @@ c &= d
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains(">PDF<") || xml.contains("PDF\n"), "{xml}");
+    // The pdfTeX persona answers from `\pdfoutput` (the K6 ruling,
+    // 2026-09-24): PDF by default, DVI when the document selects it.
     let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("PDF"), "{xml}");
+    let dvi = tex.replace("\\documentclass", "\\pdfoutput=0\n\\documentclass");
+    let (stderr, xml) = convert(&dvi, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("DVI"), "{xml}");
   }
@@ -16773,7 +16779,13 @@ c &= d
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("PDF;DVI."), "{xml}");
+    // The pdfTeX persona answers from `\pdfoutput`: PDF by default (the K6
+    // ruling, 2026-09-24), DVI when the document selects it.
     let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("PDF;DVI."), "{xml}");
+    let dvi = tex.replace("\\documentclass", "\\pdfoutput=0\n\\documentclass");
+    let (stderr, xml) = convert(&dvi, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("DVI;DVI."), "{xml}");
     if kpsewhich_has("tikzrput.sty") && kpsewhich_has("tufte-handout.cls") {
@@ -25695,5 +25707,44 @@ mod class_census {
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(xml.contains("<p>[ok]</p>"), "{xml}");
+  }
+
+  /// The K6 ruling (2026-09-24): pdflatex's `\pdfoutput=1` is the default
+  /// output mode and `\ifpdf` follows `\pdfoutput` (iftex.sty:290-291); a
+  /// document may still select DVI itself, and XeTeX has no PDF mode test.
+  #[test]
+  fn ifpdf_follows_pdfoutput() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/backend-persona/ifpdf_follows_pdfoutput.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[pdf][1]</p>"), "{xml}");
+    let dvi = tex.replace(
+      "\\documentclass{article}",
+      "\\pdfoutput=0\n\\documentclass{article}",
+    );
+    let (stderr, xml) = convert_with(&dvi, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>[dvi][0]</p>"), "{xml}");
+  }
+
+  /// datetime.sty:261-304's predefined time formats (arXiv 2605.13807,
+  /// 2606.01587 `\settimeformat{hhmmsstime}`); the time is the job's own.
+  #[test]
+  fn datetime_time_formats() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/datetime_time_formats.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // Only datetime's own "partially ported" notice.
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(
+      stderr.contains("datetime.sty is only partially ported"),
+      "{stderr}"
+    );
+    let shape =
+      regex::Regex::new(r"<p>\[\d\d:\d\d:\d\d\]\[\d{1,2}:\d\d(am| Noon|pm)\]\[\d\d:\d\d\]</p>")
+        .unwrap();
+    assert!(shape.is_match(&xml), "{xml}");
   }
 }
