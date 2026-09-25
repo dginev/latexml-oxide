@@ -47,3 +47,20 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `block-model` | schema content models: what a container admits, and where an inadmissible child goes (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271; `Meta.class` out of math text, #272) |
 | `expl3` | l3 kernel behaviour under raw load: regex, keys, hooks, `\mode_if_math`, file boundaries |
 | `streaming` | streaming-mode bookkeeping (yields, spills, `node_boxes` sweeps); run with `--streaming`, as `repros.sh` runs eager only |
+| `kernel-alignment` | kernel `\halign`/`\noalign` behaviour: periodic and non-periodic templates, `\omit`, `\noalign` placement and brace hacks, `\everycr`, longtable page breaks, ragged rows |
+| `alignment-ledger` | the per-cell ledger: the hidden `$` pairing and brace groups in a cell, `\\`/`\arraycr` read inside a cell, `&` reached through `\expandafter` |
+| `alignment-bindings` | package-level tables (nicematrix `\CodeBefore`/`\CodeAfter`/cell nodes, tabularray, ltablex, listings in a `p` column) |
+| `captions-floats` | `\caption` and floats: captions outside or inside boxes, rotated and side floats, subcaptions, class-owned float environments |
+| `expansion-primitives` | expansion and assignment primitives: `\everyeof`/`\endinput`/`\noexpand` at input ends, `\afterassignment`, `\ifnum` lookahead, `\csname`, dimension scanning, hooks |
+| `parameter-conditional` | macro parameter delimiters and conditionals: delimiter mismatches, `\ifx`/`\fi` balance across boxes, conditionals read in style parameters |
+| `macro-state` | definitions and state that outlive (or fail to reach) their scope: catcodes leaking through `\input`, hook order, allocated registers, `\patchcmd` bodies, scoped knowledge |
+| `unicode-catcodes` | bytes and catcodes: the byte mouth for 8-bit encodings (T1, cp1251, UTF-8 lead bytes), `\DeclareUnicodeCharacter`, font encodings in force |
+| `fonts-nfss` | NFSS state: the preloaded encoding, `\fontsize`/`\selectfont`, a raw class's nominal `\normalsize` |
+| `loader` | package and class loading: options passed and kept, versions, `\AtEndOfPackage`/hooks, file-name stacks, bindings that call a class's internals, raw loading vs binding |
+| `babel-lang` | babel/polyglossia/language options and shorthands under the pdflatex/lualatex oracle |
+| `backend-persona` | the engine persona: `\ifpdf`/`\pdfoutput`, pdfTeX/XeTeX/LuaTeX primitives, backend selection, engine-only packages |
+| `beamer-stubs` | beamer frames, overlays and mode specs, with the stubs beamer's bindings stand on |
+| `index-bib` | bibliographies and citations: `.bib` field formatting, biblatex/biber `.bbl`, bibliography styles |
+| `graphics-tikz` | drawing: picture, pstricks, TikZ/pgf keys and nodes, SVG conversion, graphics inclusion |
+| `math-parse` | the math parser: fences and their matching closes |
+| `singletons` | one-off package defects whose mechanism has no topic of its own |
