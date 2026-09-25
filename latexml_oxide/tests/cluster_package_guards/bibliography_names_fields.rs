@@ -4,7 +4,7 @@
 //! session the corpus uses (`t.tex → t.xml`, then `--whatsin=xml t.xml`).
 use std::process::Command;
 
-use super::perfect_kernel_batch46::{error_count, warning_count};
+use super::perfect_kernel_batch46::{convert_files, error_count, warning_count};
 
 const RAW: &str = "--preload=[rawstyles,rawclasses]latexml.sty";
 
@@ -537,4 +537,322 @@ fn classic_host_rows_are_unchanged() {
     let selector = format!(r#"id="{id}""#);
     latexml::util::test::assert_element(&html, "li", &[selector.as_str()], bibitem);
   }
+}
+
+const QUESTION_BIB: &str =
+  include_str!("../../../tools/perfect_kernel/repros/index-bib/bib_title_question_period.bib");
+
+/// The two entries of `bib_title_question_period.bib`, whole.
+const QUESTION_BIBITEMS: [(&str, &str); 2] = [
+  (
+    "bib.bib1",
+    r#"<li id="bib.bib1" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Alice Adams</span><span class="ltx_text ltx_bib_year"> (2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What is X?</span> <span class="ltx_text ltx_bib_subtitle">A survey</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pub</span>.
+</span></li>"#,
+  ),
+  (
+    "bib.bib2",
+    r#"<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Bob Brown</span><span class="ltx_text ltx_bib_year"> (2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Is it so?</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pub</span>.
+</span></li>"#,
+  ),
+];
+
+fn assert_question_bibitems(stderr: &str, html: &str) {
+  assert_eq!(error_count(stderr), 0, "{stderr}");
+  assert_eq!(warning_count(stderr), 0, "{stderr}");
+  assert_eq!(html.matches("class=\"ltx_bibitem ").count(), 2, "{html}");
+  for (id, bibitem) in QUESTION_BIBITEMS {
+    let selector = format!(r#"id="{id}""#);
+    latexml::util::test::assert_element(html, "li", &[selector.as_str()], bibitem);
+  }
+}
+
+/// A title that already ends in a mark takes no added period under biblatex:
+/// its punctuation tracker (biblatex.sty:2118-2130 `\blx@addpunct`, :2026
+/// `\DeclarePunctuationPairs{period}{}`) drops the period after any mark, so
+/// pdflatex + biber print "What is X? A survey" and "Is it so? Pub". Perl's
+/// rows add their "." unconditionally (MakeBibliography.pm:527-531) and print
+/// "What is X?. A survey".
+#[test]
+fn title_mark_takes_no_period_biblatex() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/bib_title_question_period.tex");
+  let files = [("bib_title_question_period.bib", QUESTION_BIB)];
+  let (stderr, html) = convert_html(tex, &files);
+  assert_question_bibitems(&stderr, &html);
+  let (stderr, html) = convert_split_html(tex, &files);
+  assert_question_bibitems(&stderr, &html);
+}
+
+/// The same under a `.bst`, by BibTeX's own rule: `add.period$` adds "."
+/// only "if the last non-`}` character isn't a `.`, `?`, or `!`"
+/// (btxhak.tex:326-329). pdflatex + bibtex (plain.bst) print "What is this?
+/// Pub, 2001.", "Is it so? Journal of Y, …" and "Stop! Pub, Inc., 2003." —
+/// the last one also the ".." of a publisher ending in an abbreviation.
+#[test]
+fn title_mark_takes_no_period_bst() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/bib_title_question_period_plain.tex"
+  );
+  let bib = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/bib_title_question_period_plain.bib"
+  );
+  let (stderr, html) = convert_html(tex, &[("bib_title_question_period_plain.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(html.matches("class=\"ltx_bibitem ").count(), 3, "{html}");
+  for (id, bibitem) in [
+    (
+      "bib.bib1",
+      r#"<li id="bib.bib1" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Alice Adams</span><span class="ltx_text ltx_bib_year"> (2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">What is this?</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pub</span>.
+</span></li>"#,
+    ),
+    (
+      "bib.bib2",
+      r#"<li id="bib.bib2" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[2]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Bob Brown</span><span class="ltx_text ltx_bib_year"> (2002)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Is it so?</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Y</span> <span class="ltx_text ltx_bib_volume">3</span>, <span class="ltx_text ltx_bib_pages">pp. 1–10</span>.
+</span></li>"#,
+    ),
+    (
+      "bib.bib3",
+      r#"<li id="bib.bib3" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[3]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Carl Cole</span><span class="ltx_text ltx_bib_year"> (2003)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Stop!</span>
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pub, Inc.</span>
+</span></li>"#,
+    ),
+  ] {
+    let selector = format!(r#"id="{id}""#);
+    latexml::util::test::assert_element(&html, "li", &[selector.as_str()], bibitem);
+  }
+}
+
+/// A shipped biblatex `.bbl` (biber's output, the arXiv submission shape)
+/// prints what the `.bib` it came from prints: its records are read back into
+/// the BibTeX entry and formatted alike (biblatex_sty.rs `bbl_flush`), so the
+/// `.bbl` of `bib_title_question_period.bib` gives the same two bibitems,
+/// `subtitle` included. The ar5iv binding's `\bibitem` rebuild
+/// (biblatex.sty.ltxml:495-690) dropped the subtitle: "Alice Adams “What is
+/// X?” Pub, 2001". pdflatex, reading the same `.bbl`: "Alice Adams. What is X?
+/// A survey. Pub, 2001."
+#[test]
+fn bbl_prints_what_its_bib_prints() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_subtitle.tex");
+  let bbl =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_subtitle.bbl");
+  let files = [("t.bbl", bbl)];
+  let (stderr, html) = convert_html(tex, &files);
+  assert_question_bibitems(&stderr, &html);
+  let (stderr, html) = convert_split_html(tex, &files);
+  assert_question_bibitems(&stderr, &html);
+}
+
+/// The alphabetic labels of a `.bbl` are biber's, in the `.bbl`'s order, and
+/// the citations print them: `labelalpha` + `extraalpha` as alphabetic.bbx:22-25
+/// prints them (`\mknumalph`, biblatex.def:476), "Knu84a"/"Knu84b", a label
+/// holding TeX typeset ("Böh66" from `B\"{o}h66`) — pdflatex prints "See
+/// [Knu84b] and [Ada+01] and [Knu84a] and [Böh66]." with the References in
+/// label order. Witnesses arXiv 2605.10053, 2605.14864, 2605.18215,
+/// 2605.21199, 1212.4446.
+#[test]
+fn bbl_keeps_bibers_alphabetic_labels_and_order() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_alphabetic.tex");
+  let bbl =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_alphabetic.bbl");
+  let (stderr, html) = convert_html(tex, &[("t.bbl", bbl)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(html.matches("class=\"ltx_bibitem ").count(), 4, "{html}");
+  latexml::util::test::assert_element(
+    &html,
+    "p",
+    &[r#"class="ltx_p""#],
+    r##"<p class="ltx_p">See <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib4" title="" class="ltx_ref">Knu84b</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">Ada+01</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="" class="ltx_ref">Knu84a</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="" class="ltx_ref">Böh66</a>]</cite>.</p>"##,
+  );
+  let cited_by = r##"<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span>"##;
+  for (id, bibitem) in [
+    (
+      "bib.bib1",
+      format!(
+        r#"<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[Ada+01]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Alice Adams, Bob Brown, Carl Cole, and Dora Dunn</span><span class="ltx_text ltx_bib_year"> (2001)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">On Many Authors</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Journal of Y</span>.
+</span>
+{cited_by}</li>"#
+      ),
+    ),
+    (
+      "bib.bib2",
+      format!(
+        r#"<li id="bib.bib2" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[Böh66]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Corrado Böhm</span><span class="ltx_text ltx_bib_year"> (1966)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Flow Diagrams</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Pub</span>.
+</span>
+{cited_by}</li>"#
+      ),
+    ),
+    (
+      "bib.bib3",
+      format!(
+        r#"<li id="bib.bib3" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[Knu84a]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Donald E. Knuth</span><span class="ltx_text ltx_bib_year"> (1984)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Fundamental Algorithms</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Addison-Wesley</span>.
+</span>
+{cited_by}</li>"#
+      ),
+    ),
+    (
+      "bib.bib4",
+      format!(
+        r#"<li id="bib.bib4" class="ltx_bibitem ltx_bib_book"><span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[Knu84b]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Donald E. Knuth</span><span class="ltx_text ltx_bib_year"> (1984)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Seminumerical Algorithms</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Addison-Wesley</span>.
+</span>
+{cited_by}</li>"#
+      ),
+    ),
+  ] {
+    let selector = format!(r#"id="{id}""#);
+    latexml::util::test::assert_element(&html, "li", &[selector.as_str()], &bibitem);
+  }
+}
+
+/// Of a `.bbl`'s datalists, `\printbibliography` prints the default
+/// refcontext's (`nyt/global//global/global/global`) once — not every list
+/// biber wrote (biblatex-apa's `nyt/apasortcite//…` sorts citations); here the
+/// other list comes first, reversed. It printed both, as two bibliographies of
+/// four bibitems. Witness arXiv 2605.17646.
+#[test]
+fn bbl_prints_the_default_refcontext_datalist() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_two_datalists.tex");
+  let bbl =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_two_datalists.bbl");
+  let (stderr, html) = convert_html(tex, &[("t.bbl", bbl)]);
+  assert_eq!(
+    html.matches(r#"class="ltx_bibliography"#).count(),
+    1,
+    "{html}"
+  );
+  assert_question_bibitems(&stderr, &html);
+}
+
+/// A `.bbl`'s `[list]` datalist is a biblist (the shorthands
+/// `\printshorthands` prints), not the bibliography, even when it comes first
+/// and its name reads like the default refcontext's; an entry whose options
+/// say `skipbib` (or `dataonly`: biber's related-entry clones) is left out
+/// (biblatex.sty:8712-8723).
+#[test]
+fn bbl_skips_its_biblists_and_skipbib_entries() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_biblist.tex");
+  let bbl = include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_biblist.bbl");
+  let (stderr, html) = convert_html(tex, &[("t.bbl", bbl)]);
+  assert!(!html.contains("Skipped title"), "{html}");
+  assert_question_bibitems(&stderr, &html);
+}
+
+/// A format-2 `.bbl` (`\sortlist`, names as positional parts) reads as its
+/// `.bib` does: `van der Berg, Pieter and King, Jr., Martin Luther and
+/// others`, the date range rejoined from its parts, the pages range list and
+/// the `\verb` doi.
+#[test]
+fn bbl_format2_reads_as_its_bib() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_format2.tex");
+  let bbl = include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_format2.bbl");
+  let (stderr, xml) = convert_files(tex, &[("t.bbl", bbl)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let compact: String = xml.split('\n').map(str::trim).collect();
+  for element in [
+    "<bib-name role=\"author\"><surname>van der Berg</surname><givenname>Pieter</givenname></bib-name>",
+    "<bib-name role=\"author\"><surname>King</surname><givenname>Martin Luther</givenname><lineage>Jr.</lineage></bib-name>",
+    "<bib-name role=\"author\"><surname>others</surname></bib-name>",
+    "<bib-part role=\"pages\">1–10, 15</bib-part>",
+    "<bib-identifier href=\"https://dx.doi.org/10.1000/old%5F1\" id=\"10.1000/old_1\" scheme=\"doi\">Document</bib-identifier>",
+    "<bib-date role=\"publication\">1999-05-06/1999-05-08</bib-date>",
+  ] {
+    assert!(compact.contains(element), "{element}\n{xml}");
+  }
+  let (stderr, html) = convert_html(tex, &[("t.bbl", bbl)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "li",
+    &[r#"id="bib.bib1""#],
+    r##"<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Pieter van der Berg, Martin Luther King, <span class="ltx_text ltx_bib_etal">et al.</span></span><span class="ltx_text ltx_bib_year"> (1999)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Old Format</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">J. Old</span>, <span class="ltx_text ltx_bib_pages">pp. 1–10, 15</span>.
+</span>
+<span class="ltx_bibblock">External Links: <span class="ltx_text ltx_bib_links"><a href="https://dx.doi.org/10.1000/old%5F1" title="" class="ltx_ref doi ltx_bib_external">Document</a></span>
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+  );
+}
+
+/// Two bare `\thebibliography…\endthebibliography` pairs (no environment, so
+/// no group) must neither re-arm the pseudo-`\bibitem` rescue on its own
+/// redirection — an unconditional `\let` loop, `Fatal:Timeout:TokenLimit`
+/// (KNOWN_PERL_ERRORS #57; `setup_pseudo_bibitem`'s re-arm check,
+/// latex_constructs/mod.rs) — nor leave it armed after `\endthebibliography`
+/// (its disarm, sect11.rs), where the blank line's `\par` would deposit a stray
+/// bibitem outside the list. A biblatex `.bbl` expanded to this shape until
+/// round 12 (W6-B), which was this guard's only fixture
+/// (`06_cluster_bibliography::cluster_biblatex_two_datalists`); witness arXiv
+/// 2605.17646.
+#[test]
+fn bare_thebibliography_twice_arms_once() {
+  let tex = "\\documentclass{article}\n\\begin{document}\nSee \\cite{a} and \\cite{b}.\n\
+             \\thebibliography{9}\\bibitem{a}Alpha.\\endthebibliography\n\
+             \\thebibliography{9}\\bibitem{b}Beta.\\endthebibliography\n\nAfter.\n\\end{document}\n";
+  let (stderr, xml) = super::perfect_kernel_batch46::convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(xml.matches("<bibliography").count(), 2, "{xml}");
+  assert_eq!(xml.matches("<bibitem ").count(), 2, "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><p>See <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="b" separator="," yyseparator=","/>]</cite>.</p></para>"#,
+  );
+  assert!(xml.contains("<p>After.</p>"), "{xml}");
 }

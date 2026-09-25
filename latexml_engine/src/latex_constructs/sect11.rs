@@ -351,8 +351,9 @@ pub(crate) fn load() -> Result<()> {
     // has no teardown: it relies on `\begin`/`\end{thebibliography}` popping
     // the group the `\let`s were made in. That covers hand-written
     // bibliographies, but NOT the bare-CS `\thebibliography …
-    // \endthebibliography` pair that the biblatex `.bbl` rebuilder expands to
-    // (`biblatex_sty.rs::bib_as_thebibliography`), which opens no group. There
+    // \endthebibliography` pair that the biblatex `.bbl` rebuilder expanded to
+    // (`bib_as_thebibliography`, replaced by the `.bbl` reader in batch 56jc),
+    // which opens no group. There
     // the redirection outlived the bibliography, so the next `\par` — a blank
     // line after `\printbibliography` — still expanded to
     // `\par@in@bibliography` and deposited a stray empty `\save@bibitem{}`

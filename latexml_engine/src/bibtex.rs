@@ -1908,6 +1908,15 @@ LoadDefinitions!({
     "\\bib@field@default@titleaddon",
     "\\bib@@field{ltx:bib-subtitle}"
   );
+  // biber's alphabetic label, which a `.bbl`'s entries carry
+  // (biblatex_sty.rs); MakeBibliography prints it as the entry's refnum
+  // (`given_label`). It is TeX like a title — `B{\"o}t01`, `{\v C}re+05`
+  // (arXiv 1212.4446), `AAP\textsuperscript {+}96` (arXiv 1512.08147) — so it
+  // is digested, not kept as raw `bib-data` text.
+  DefMacro!(
+    "\\bib@field@default@labelalpha",
+    "\\bib@@field{ltx:bib-data}[role=labelalpha]"
+  );
   DefMacro!(
     "\\bib@field@default@addendum",
     "\\bib@@field{ltx:bib-note}[role=addendum]"

@@ -1,0 +1,46 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 2.5 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+\refsection{0}
+  \sortlist[entry]{nty/global/}
+    \entry{a1}{article}{}
+      \true{moreauthor}
+      \name{author}{2}{}{%
+        {{uniquename=0,hash=abc}{Berg}{B\bibinitperiod}{Pieter}{P\bibinitperiod}{van\bibnamedelima der}{v\bibinitperiod\bibinitdelim d\bibinitperiod}{}{}}%
+        {{uniquename=0,hash=def}{King}{K\bibinitperiod}{Martin\bibnamedelima Luther}{M\bibinitperiod\bibinitdelim L\bibinitperiod}{}{}{Jr.}{J\bibinitperiod}}%
+      }
+      \strng{namehash}{abcdef}
+      \field{sortinit}{B}
+      \field{labelyear}{1999}
+      \field{title}{Old Format}
+      \field{journaltitle}{J. Old}
+      \field{year}{1999}
+      \field{month}{5}
+      \field{day}{6}
+      \field{endyear}{1999}
+      \field{endmonth}{5}
+      \field{endday}{8}
+      \field{pages}{1\bibrangedash 10\bibrangessep 15}
+      \range{pages}{11}
+      \verb{doi}
+      \verb 10.1000/old_1
+      \endverb
+    \endentry
+  \endsortlist
+\endrefsection
+\endinput

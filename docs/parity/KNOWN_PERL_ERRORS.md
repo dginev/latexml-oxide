@@ -2358,12 +2358,14 @@ true in **both** engines, so the latent defect is shared.
 
 It stays latent upstream because Perl's biblatex binding
 (`ar5iv-bindings/biblatex.sty.ltxml`) never defines `\printbibliography`, so
-Perl never reads a real `.bbl` through this path. Rust's binding does, and a
-biber `.bbl` reaches it routinely: biblatex's apa style requests two sorting
-schemes, so the `.bbl` carries **two `\datalist` blocks** with the same
-references, and each `\enddatalist` expands to a whole bare
-`\thebibliography…\endthebibliography` (`biblatex_sty.rs::bib_as_thebibliography`,
-mirroring Perl's `biblatex_as_thebibliography` L105-119).
+Perl never reads a real `.bbl` through this path. Rust's binding did until batch
+56jc, and a biber `.bbl` reached it routinely: biblatex's apa style requests two
+sorting schemes, so the `.bbl` carries **two `\datalist` blocks** with the same
+references, and each `\enddatalist` expanded to a whole bare
+`\thebibliography…\endthebibliography` (`bib_as_thebibliography`, mirroring
+Perl's `biblatex_as_thebibliography` L105-119). Since 56jc the `.bbl` is read into
+bibentries (OXIDIZED_DESIGN_DIVERGENCES #306); a hand-written bare pair still
+reaches it.
 
 **Fixed in Rust**, in two symmetric halves:
 * `setup_pseudo_bibitem` guards the three captures on

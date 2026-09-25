@@ -2599,13 +2599,14 @@ fn setup_pseudo_bibitem() -> Result<()> {
   // latent upstream only because Perl's biblatex binding never defines
   // `\printbibliography`, so Perl never reads a real `.bbl` this way.
   //
-  // We do reach it: a biber `.bbl` carries one `\datalist` per sorting scheme
-  // (apa emits `nyt/apasortcite//…` *and* `nyt/global//…`), and every
-  // `\enddatalist` expands to a whole `\thebibliography…\endthebibliography`.
-  // Neither of those is an environment — no group — so the first arming is
-  // still in force when the second `\thebibliography` opens. Witness:
-  // arXiv 2605.17646 (`Fatal:Timeout:TokenLimit`, 1e9 tokens), guarded by
-  // `tests/cluster_regressions/biblatex_two_datalists`.
+  // Rust's `.bbl` rebuilder used to reach it: a biber `.bbl` carries one
+  // `\datalist` per sorting scheme (apa emits `nyt/apasortcite//…` *and*
+  // `nyt/global//…`), and every `\enddatalist` expanded to a whole bare
+  // `\thebibliography…\endthebibliography`, so the first arming was still in
+  // force when the second opened. Witness: arXiv 2605.17646
+  // (`Fatal:Timeout:TokenLimit`, 1e9 tokens). Since batch 56jc the `.bbl` is
+  // read into bibentries instead; the hand-written bare pair stays guarded by
+  // `bare_thebibliography_twice_arms_once`.
   if !x_equals(&T_CS!("\\bibitem"), &T_CS!("\\restoring@bibitem")) {
     Let!("\\save@bibitem", "\\bibitem");
     Let!("\\save@par", "\\par");

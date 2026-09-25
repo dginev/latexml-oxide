@@ -1,0 +1,17 @@
+% A biber .bbl's `[list]` datalist is a biblist (the shorthands \printshorthands prints), not the
+% bibliography, and an entry marked `skipbib` (or `dataonly`, as biber's related-entry clones
+% are) is kept out of it (biblatex.sty:8712-8723 \blx@bbl@entry). The .bbl beside it is
+% bib_title_question_period's biber output with a shorthand biblist of a2 put first and a third
+% entry a3 with `{skipbib}` options.
+% witness: reviewer probe (round 12, W6-B); biblatex.sty:9280-9287 \blx@bbl@dlist
+% oracle:  biblatex prints the entry datalist less a3: [1] Alice Adams …, [2] Bob Brown …
+% engines: rust (56iy) printed both datalists; the first W6-B draft printed only the biblist
+% expect:  0 errors; Adams then Brown, no "Skipped title" (HTML)
+% status:  GREEN (round 12, W6-B)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_bbl_biblist_absent.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

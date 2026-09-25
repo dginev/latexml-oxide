@@ -1714,9 +1714,11 @@ Confirmed identical on the installed **and** the vendored Perl 0.8.8
 (rev `51fea96a`): witness 2605.01646 (`AIPFa.tex`) gives Perl `ltx_bibitem: 0` /
 `ltx_missing_citation: 81`. Recorded upstream as KNOWN_PERL_ERRORS #49.
 
-**Why this is safe.** A paper with an external `.bib`/`.bbl` carries no inline
+**Why this is safe.** A paper with an external `.bib` carries no inline
 `ltx:bibentry` in the main document at this point in the pipeline, so the extra
-scan contributes nothing and the entry map is byte-identical. The scan runs
+scan contributes nothing and the entry map is byte-identical. A biblatex `.bbl`
+is read into inline bibentries since batch 56jc (#306), and those are exactly the
+entries the bibliography formats. The scan runs
 *after* the external documents, so a key defined both externally and inline
 resolves to the inline one — matching upstream's own last-source-wins loop.
 
@@ -9306,3 +9308,33 @@ them the way initex does:
 release-dumps.yml pattern), so CI catches an init regression whenever the engine changes.
 
 **Guards**: `dump_gate_init::*` (6).
+
+### 306. A biblatex `.bbl` is read into bibentries and formatted like its `.bib`; a bibliography row adds no period after a mark (Perl: `.bbl` rebuilt as `\bibitem`s, periods unconditional)
+
+- **`.bbl` reader.** Perl's ar5iv biblatex binding (biblatex.sty.ltxml:495-690) rebuilds a `.bbl`
+  as a `\thebibliography` of `\bibitem`s, and so did Rust, dropping every field its layout did not
+  know (subtitles, title addons, events). **Rust** (batch 56jc, worker W6) reads the `.bbl`'s
+  `\entry`/`\name`/`\list`/`\field`/`\keyw`/`\verb` data into the BibTeX pool's `BibEntry` (field
+  tables from blx-dm.def:473-634) and runs `\ProcessBibTeXEntry`, so a `.bbl` gives the same
+  `ltx:bibentry` as its `.bib`, formatted by MakeBibliography with the `.bib` path's rules. biber's
+  choices are kept: labels (`labelalpha` + `extraalpha`, used as the refnum, so `\cite` prints
+  `[Knu84]`), the `.bbl`'s entry order (a biblatex bibliography of inline entries is printed whole
+  with `sort='false'`), one datalist (the default refcontext's; biblatex prints one), `skipbib`
+  and biblists. Filtered `\printbibliography` calls and per-refsection printing are not modelled.
+  Inline bibentry ids are released before formatting (`PostDocument::release_id`), which also
+  resolves amsrefs' bibliography links (amshelp: 24 of 25 dangling → 0).
+- **Row periods.** Perl's `formatBibEntry` adds its "." / ". " unconditionally
+  (MakeBibliography.pm:527-531): "What is X?. A survey", "Pub, Inc..". Rust drops the period after
+  a mark by the bibliography engine's own rule, picked by the `bibstyle`: BibTeX's `add.period$`
+  (no period after `.` `?` `!`, btxhak.tex:326-329) for a `.bst` or no style; biblatex's
+  punctuation tracker (biblatex.sty:2118-2130, :2026, :1749-1754) for biblatex. A formula, or a
+  reference CrossRef fills in later, counts as ending in no mark. Checked with pdflatex+bibtex and
+  pdflatex+biber.
+
+Measured (POST_MODE=mono, 340 bibliography manuals): recall up 0, down 0; mark-plus-period in
+bibliographies 356 → 1. arXiv: the 7 papers of the 3,003 sample that ship a biblatex `.bbl` keep
+their bibitem counts, 5 gain words (up to +50 %), labels are biber's; 2605.17646's duplicate
+datalist is gone (58 → 29 bibitems). Residuals: the `.bib` path's alphabetic labels (it prints
+`[1]`; porting biber's labelalpha would fix it), "Jr.", `maxbibnames`, apa's "&".
+
+**Guards**: `bibliography_names_fields::{title_mark_takes_no_period_biblatex, title_mark_takes_no_period_bst, bbl_prints_what_its_bib_prints, bbl_keeps_bibers_alphabetic_labels_and_order, bbl_prints_the_default_refcontext_datalist, bbl_skips_its_biblists_and_skipbib_entries, bbl_format2_reads_as_its_bib, bare_thebibliography_twice_arms_once}`, unit test `make_bibliography::test_period_rule`.

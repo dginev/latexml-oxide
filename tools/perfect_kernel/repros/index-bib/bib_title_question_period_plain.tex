@@ -1,0 +1,17 @@
+% A title that already ends in a mark takes no added period under a .bst too: BibTeX's
+% add.period$ adds "." only "if the last non-} character isn't a ., ?, or !"
+% (btxhak.tex:326-329), which plain.bst's new.block/fin.entry call after every block. The
+% Rust bibliography rows (latexml_post make_bibliography.rs) added their "." unconditionally,
+% as Perl's MakeBibliography does (MakeBibliography.pm:527-531).
+% witness: pdflatex + bibtex probe 2026-09-25; companion of bib_title_question_period (biblatex)
+% oracle:  pdflatex + bibtex 0 errors: "Alice Adams. What is this? Pub, 2001.", "Bob Brown. Is it
+%          so? Journal of Y, 3:1--10, 2002.", "Carl Cole. Stop! Pub, Inc., 2003."
+% engines: rust=0 errors but "What is this?.", "Is it so?.", "Stop!." and "Pub, Inc.." (HTML)
+% expect:  0 errors; no "?." / "!." / ".." in the bibliography (HTML)
+% status:  RED (56iy) -> GREEN (round 12, W6-A)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{bib_title_question_period_plain}
+\end{document}

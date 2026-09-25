@@ -540,3 +540,52 @@ GAIN: windycity 7->0, biblatex-sbl 5->0, biblatex-juradiss 6->~1 (toggle residua
   language-dependent.
 - Repros: bib_given_names_style_format.tex, biblatex_title_units_events.{tex,bib},
   bib_names_etal.{tex,bib}.
+
+### W6-A — a unit ending in a mark takes no added period (beyond Perl)
+- Perl's `formatBibEntry` pushes every row's `$punct`/`$post` unconditionally
+  (MakeBibliography.pm:527-531): "What is X?. A survey", "Pub, Inc..". Both engines skip it,
+  each by its own rule, chosen by the bibliography's `bibstyle` (`PeriodRule`, make_bibliography.rs):
+  a `.bst` (or no style) = BibTeX's `add.period$`, no "." after `.`/`?`/`!` (btxhak.tex:326-329);
+  biblatex = the punctuation tracker (`ends_with_punctuation`: also `,;:…`, closers and quotes
+  transparent; biblatex.sty:2118-2130, :2026, :1749-1754). Applies to every "." / ". " row
+  text; a formula or a not-yet-filled reference ends in no mark.
+- A/B (POST_MODE=mono, 340 bibliography manuals): recall up 0 / down 0, errors unchanged;
+  mark+period in bibliography items 356 -> 1 (276 "..", 71 "?.", 9 "!."). The one left is a
+  "Cited by:" block's "." after a reference whose text CrossRef fills later (asmeconf-template).
+- Repros: bib_title_question_period.{tex,bib} (biblatex), bib_title_question_period_plain.{tex,bib}
+  (plain.bst); guards `bibliography_names_fields::title_mark_takes_no_period_{biblatex,bst}`.
+
+### W6-B — a biblatex .bbl gives the ltx:bibentry its .bib gives (beyond Perl)
+- The ar5iv binding (biblatex.sty.ltxml:495-690) rebuilt one `\bibitem` per `\entry` from a
+  dozen fields: subtitle/titleaddon/booksubtitle/… (the P3 fields), editors, series, … were
+  dropped, the title quoted, no `bibstyle` recorded, collision suffixes of its own.
+- Now (`biblatex_sty.rs`, top): `\field`/`\list`/`\name`/`\verb`/`\keyw`/`\true{more…}` are read
+  back into a bibtex.rs `BibEntry` — biblatex's data-model fields (blx-dm.def:473-634) under their
+  own names, date parts rejoined (`date`, `urldate`, `eventdate`, `origdate`), names as
+  "von Last, Jr, First", lists joined with "and" — and digested by `\ProcessBibTeXEntry` inside
+  `<ltx:bibliography bibstyle="biblatex[-giveninits]" citestyle=… sort="false">`. The repro
+  .bibs give identical bibitems through either path.
+- Kept from biber: the list order (the `.bbl` order is the PDF's: MakeBibliography's
+  `given_listing` — a biblatex bibliography with `sort='false'` + inline entries = the backend's
+  listing, printed whole in its order) and the alphabetic label (`labelalpha` +
+  `\mknumalph{extraalpha}`; `labelalpha` is digested as TeX by bibtex.rs
+  `\bib@field@default@labelalpha` — `B{\"o}t01` -> "Böt01", 1212.4446 — printed as the refnum and
+  cited as such; no number tag, like `\bibitem[label]`). One entry datalist per refsection is
+  printed, the default refcontext's (`<sorting>/global//global/global…`); `[list]` datalists
+  (biblists) and `skipbib`/`dataonly` entries are not.
+- MakeBibliography releases inline bibentry ids before formatting: the bibitem had been renamed
+  `bib.bib1a` on the clash, losing its HTML id (links dangled) — amsrefs too.
+- arXiv (k6ab 3003 zips, 7 ship a biblatex .bbl): bibitems equal on all 7; biber's labels kept
+  (2605.14864 DW4 = "DW19b" as biber, was "DW19a"); errors unchanged. Shared .bib-path gaps seen:
+  article/inproceedings publisher and organization rows (2605.18215 PDF recall 67.1 -> 66.1),
+  "Jr." suffix dropped, apa "&", maxbibnames not applied.
+- Named witnesses (56iy -> W6-B, errors unchanged): 2605.17646 (apa, two datalists) 58 -> 29
+  bibitems (biblatex prints one list; 58 was the duplicate); 1212.4446 756 = 756 (three filtered
+  `\printbibliography`, filters not modelled) with 80 labels now biber's (Bos12a/b, Böt01, Čre+05);
+  1004.4538, 2605.11180 equal bibitems, more words; 2509.15629, 2509.21728, 2510.00068 ship no
+  .bbl now, unchanged.
+- Residuals: a numeric style with `labelalpha=true` would print the alpha label (rare); the
+  bibliography filters (`keyword=`, `type=`) and per-refsection printing are not modelled.
+- Repros: biblatex_bbl_{subtitle,alphabetic,two_datalists,biblist,format2}.{tex,bbl}; guards
+  `bibliography_names_fields::bbl_*`, `::bare_thebibliography_twice_arms_once` (the KNOWN_PERL_ERRORS
+  #57 re-arm/disarm, whose only fixture had been the `.bbl` rebuild).

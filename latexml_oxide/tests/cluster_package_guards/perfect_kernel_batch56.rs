@@ -7436,8 +7436,9 @@ fn refsection_takes_only_an_optional_resource_list() {
     let tex = "\\documentclass{article}\n\\usepackage[style=authoryear]{biblatex}\n\\addbibresource{x.bib}\n\\begin{document}\nCite \\cite{smith2020}.\n\\printbibliography\n\\end{document}\n";
     let (stderr, xml) = convert_files(tex, &[("t.bbl", bbl)]);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The `.bbl`'s entries (biblatex_sty.rs `bbl_flush`).
     assert!(
-      xml.contains("<bibitem") || xml.contains("<ltx:bibitem"),
+      xml.contains("<bibentry") || xml.contains("<ltx:bibentry"),
       "{xml}"
     );
     let mut text = String::new();

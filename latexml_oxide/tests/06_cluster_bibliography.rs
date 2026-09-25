@@ -126,7 +126,9 @@ fn bib_nocite_star_includes_the_whole_library() {
 /// semantics and dropping only the author's bespoke label format.
 #[test]
 fn biblatex_declarecitecommand_defines_its_command() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/declarecite.tex");
+  // The `.bbl`'s entries are formatted in post, as a `.bib`'s are
+  // (biblatex_sty.rs `bbl_flush`); the rendered bibitem is pinned.
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/declarecite.tex");
   assert!(
     !x.contains("ERROR"),
     "the declared cite command stayed undefined:\n{x}"
@@ -136,7 +138,7 @@ fn biblatex_declarecitecommand_defines_its_command() {
     &x,
     "bibitem",
     &[],
-    r##"<bibitem key="smith2020" xml:id="bib.bibx1"><tags><tag role="year">2020</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2020)</tag></tags><bibblock>John Smith</bibblock><bibblock>“A study of things”</bibblock><bibblock>In <emph font="italic">Journal of Testing</emph> <text font="bold">12</text>, 2020, pp. 1–20</bibblock></bibitem>"##,
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="smith2020" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A study of things</tag><tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A study of things</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text> <text class="ltx_bib_volume">12</text>, <text class="ltx_bib_pages">pp. 1–20</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("Smith"),
@@ -467,13 +469,13 @@ fn biblatex_declaresourcemap_does_not_leak_the_preamble() {
 /// entries), 2606.02676 (0 -> 93), 2605.27263 (0 -> 58). Audit family F4(a)/(b).
 #[test]
 fn biblatex_refcontext_block_keeps_its_printbibliography() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/refctx.tex");
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/refctx.tex");
   // refcontext swallowed \\printbibliography — no bibliography at all: the WHOLE first <bibitem> element is pinned.
   latexml::util::test::assert_element(
     &x,
     "bibitem",
     &[],
-    r##"<bibitem key="smith2020" xml:id="bib.bibx1"><tags><tag role="year">2020</tag><tag role="authors">Smith</tag><tag role="fullauthors">Smith</tag><tag role="refnum">Smith (2020)</tag></tags><bibblock>John Smith</bibblock><bibblock>“A study of things”</bibblock><bibblock>In <emph font="italic">Journal of Testing</emph> <text font="bold">12</text>, 2020, pp. 1–20</bibblock></bibitem>"##,
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="smith2020" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">A study of things</tag><tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">A study of things</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Journal of Testing</text> <text class="ltx_bib_volume">12</text>, <text class="ltx_bib_pages">pp. 1–20</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     x.contains("Smith"),
@@ -535,38 +537,44 @@ fn bib_missing_file_is_an_error_not_just_an_info() {
 
 /// A biber `.bbl` with more than one `\datalist` (biblatex's apa style asks for
 /// two sorting schemes, so the same references are emitted twice) used to hang
-/// the engine: each `\enddatalist` expands to a bare
+/// the engine: each `\enddatalist` expanded to a bare
 /// `\thebibliography…\endthebibliography`, neither of which opens a group, so
 /// the second one re-entered `setupPseudoBibitem` while the first arming was
 /// live and captured `\save@bibitem` ← `\restoring@bibitem` — a self-referential
 /// `\let` that expands forever (`Fatal:Timeout:TokenLimit`, 1e9 tokens).
-/// The blank line after `\printbibliography` covers the second half of the fix:
-/// `\endthebibliography` now disarms the redirection, so that `\par` no longer
-/// expands to `\par@in@bibliography` and deposits a stray empty bibitem outside
-/// the biblist. Witness: arXiv 2605.17646 (Perl converts it — its biblatex
-/// binding never defines `\printbibliography`, so upstream never reaches this —
-/// but Perl hangs identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
+/// The blank line after `\printbibliography` covers the second half: a `\par`
+/// there must not deposit a stray empty bibitem outside the biblist. Witness:
+/// arXiv 2605.17646 (Perl converts it — its biblatex binding never defines
+/// `\printbibliography`, so upstream never reaches this — but Perl hangs
+/// identically on the bare-CS form; KNOWN_PERL_ERRORS #57).
+///
+/// `\printbibliography` prints ONE of the datalists, the default refcontext's
+/// (`nyt/global//global/global/global`; biblatex-apa's `nyt/apasortcite//…`
+/// sorts citations), as biblatex does — each of its entries once, as an
+/// `ltx:bibentry` MakeBibliography formats (biblatex_sty.rs `bbl_flush`); no
+/// `\bibitem` machinery is involved.
 #[test]
 fn cluster_biblatex_two_datalists() {
   let x =
     convert_to_xml_contrib_clean("tests/cluster_regressions/biblatex_two_datalists/twolists.tex");
-  // One bibliography per \datalist, each holding its own biblist.
+  // One bibliography, of the default refcontext's datalist.
   assert_eq!(
     x.matches("<bibliography").count(),
-    2,
-    "expected one <bibliography> per \\datalist:\n{x}"
+    1,
+    "expected the one <bibliography> \\printbibliography prints:\n{x}"
   );
   assert_eq!(
     x.matches("<biblist>").count(),
-    2,
-    "expected one <biblist> per \\datalist:\n{x}"
+    1,
+    "expected one <biblist>:\n{x}"
   );
-  // 2 entries × 2 datalists, and NOT a 5th stray from the trailing blank line.
+  // Its 2 entries, once each, and NOT a stray bibitem from the trailing blank line.
   assert_eq!(
-    x.matches("<bibitem").count(),
-    4,
-    "expected exactly 4 bibitems (2 entries x 2 datalists, no stray):\n{x}"
+    x.matches("<bibentry ").count(),
+    2,
+    "expected exactly the 2 entries of the printed datalist:\n{x}"
   );
+  assert_eq!(x.matches("<bibitem").count(), 0, "a stray bibitem:\n{x}");
 }
 /// biblatex must NOT globally define `\type` (nor `\subtype`). Real biblatex
 /// defines `\def\type#1{type=#1}` only inside a `\begingroup` bibliography-filter
@@ -700,44 +708,51 @@ fn cluster_bib_long_author_list_refnum() {
   );
 }
 /// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
-/// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
+/// 0911aec): style=apa documents with a biber .bbl get "Surname (Year)"
 /// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
 /// three citation families; style=numeric documents keep sequential
 /// labels, core [ ] brackets, and plain-\cite fallbacks (multicite keys
-/// comma-joined).
+/// comma-joined). The `.bbl`'s entries are formatted in post by
+/// MakeBibliography's author-year path, as a `.bib`'s are (biblatex_sty.rs
+/// `bbl_flush`), so the tags are those of the formatted bibitems.
 #[test]
 fn cluster_biblatex_authoryear() {
-  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
-  // Structured tags with author/year roles (single-author, 2-author "&",
+  let p = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/ay.tex");
+  // Structured tags with author/year roles (single-author, 2-author "and",
   // 3+-author "et al." short form vs full list, prefix-name surname).
-  assert!(
-    x.contains(r#"<tag role="year">2020</tag>"#),
-    "year tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Smith</tag>"#),
-    "authors tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="refnum">Smith (2020)</tag>"#),
-    "refnum tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Jones &amp; Brown</tag>"#),
-    "2-author tag missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Adams et al.</tag>"#),
-    "et-al short form missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="fullauthors">Adams, Baker &amp; Clark</tag>"#),
-    "fullauthors missing:\n{x}"
-  );
-  assert!(
-    x.contains(r#"<tag role="authors">Berg</tag>"#),
-    "prefix-name surname missing:\n{x}"
-  );
+  for (tag, what) in [
+    (
+      r#"<tag class="ltx_bib_year" role="year">2020</tag>"#,
+      "year tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Smith</tag>"#,
+      "authors tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author-year" role="refnum">Smith (2020)</tag>"#,
+      "refnum tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Jones and Brown</tag>"#,
+      "2-author tag",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">Adams<text class="ltx_bib_etal"> et al.</text></tag>"#,
+      "et-al short form",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="fullauthors">Adams, Baker and Clark</tag>"#,
+      "fullauthors",
+    ),
+    (
+      r#"<tag class="ltx_bib_author" role="authors">van den Berg</tag>"#,
+      "prefix-name surname",
+    ),
+  ] {
+    assert!(p.contains(tag), "{what} missing:\n{p}");
+  }
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
   // Citation families: parenthetical vs textual vs bare, with show= specs.
   assert!(
     x.contains("citemacro_citep"),
@@ -787,9 +802,16 @@ fn cluster_biblatex_authoryear() {
     !x.contains("Smith, 2020"),
     "numeric doc must not get author-year labels:\n{x}"
   );
+  let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/num.tex");
+  // (Its bibitems carry `authors`/`fullauthors` tags, as every formatted entry
+  // does — MakeBibliography.pm:431-448 — but its labels are numbers.)
   assert!(
-    !x.contains(r#"role="fullauthors""#),
-    "numeric doc must not get author-year tags:\n{x}"
+    !x.contains("ltx_bib_author-year"),
+    "numeric doc must not get author-year labels:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag>"#),
+    "numeric doc must get sequential labels:\n{x}"
   );
 }
 
@@ -813,7 +835,7 @@ fn cluster_bib_biblatex_variant_loads_and_renders() {
     "preamble \\DeclareFieldFormat leaked raw / errored (biblatex-chicago did not load biblatex):\n{x}"
   );
   assert!(
-    x.contains(r#"<bibitem key="smith2020""#),
+    x.contains(r#"<bibentry key="smith2020""#),
     "biblatex-chicago produced no References (biber .bbl guard emptied the list):\n{x}"
   );
   assert!(
@@ -907,11 +929,15 @@ fn amsrefs_inline_bibliography_is_not_dropped() {
   let x = convert_and_post("tests/cluster_regressions/amsrefs_inline_bibliography.tex");
   // The inline entries became real bibitems (post ran and collected them).
   // amsrefs inline bibliography was dropped whole — no bibitem survived: the WHOLE first <bibitem> element is pinned.
+  // Its id is its own (`bib.bib1`, with the `fragid` that gives the HTML list
+  // item its id): the inline entry releases its id before formatting
+  // (make_bibliography.rs `process`); it had been renamed `bib.bib3a` on a clash
+  // with the entry, and every citation link to it dangled.
   latexml::util::test::assert_element(
     &x,
     "bibitem",
     &[],
-    r##"<bibitem class="ltx_bib_article" key="Bartnik" type="article" xml:id="bib.bib3a"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bartnik</tag><tag class="ltx_bib_year" role="year">1986</tag><tag class="ltx_bib_title" role="title">The mass of an asymptotically flat manifold</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">R. Bartnik</text><text class="ltx_bib_year"> (1986)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">The mass of an asymptotically flat manifold</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Comm. Pure Appl. Math.</text>, <text class="ltx_bib_pages">pp. 661–693</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="https://doi.org/10.1002/cpa.3160390505">Link</ref>,<text class=" ltx_bib_external">Review <ref class="ltx_mathreviews" href="http://www.ams.org/mathscinet-getitem?mr=849427">MathReviews</ref></text></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="Bartnik" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Bartnik</tag><tag class="ltx_bib_year" role="year">1986</tag><tag class="ltx_bib_title" role="title">The mass of an asymptotically flat manifold</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">R. Bartnik</text><text class="ltx_bib_year"> (1986)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">The mass of an asymptotically flat manifold</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">Comm. Pure Appl. Math.</text>, <text class="ltx_bib_pages">pp. 661–693</text>.</bibblock><bibblock xml:space="preserve">External Links: <text class="ltx_bib_links"><ref class="ltx_bib_external" href="https://doi.org/10.1002/cpa.3160390505">Link</ref>,<text class=" ltx_bib_external">Review <ref class="ltx_mathreviews" href="http://www.ams.org/mathscinet-getitem?mr=849427">MathReviews</ref></text></text></bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   // Both entries, with their content, are present. amsrefs titles keep their
   // case ("On Examples"; OXIDIZED_DESIGN #201 — Perl sentence-cased them).
@@ -964,7 +990,7 @@ fn amsrefs_bibsection_environment_renders() {
     &x,
     "bibitem",
     &[],
-    r##"<bibitem class="ltx_bib_article" key="CG" type="article" xml:id="bib.bib1a"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chakerian</tag><tag class="ltx_bib_year" role="year">1983</tag><tag class="ltx_bib_title" role="title">Convex bodies of constant width</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">G. D. Chakerian</text><text class="ltx_bib_year"> (1983)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Convex bodies of constant width</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Math</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+    r##"<bibitem class="ltx_bib_article" fragid="bib.bib1" key="CG" type="article" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Chakerian</tag><tag class="ltx_bib_year" role="year">1983</tag><tag class="ltx_bib_title" role="title">Convex bodies of constant width</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">G. D. Chakerian</text><text class="ltx_bib_year"> (1983)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Convex bodies of constant width</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Math</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
   assert!(
     !x.contains("<bibentry"),
@@ -2681,10 +2707,11 @@ fn cluster_cite_numeric_inline_matches_reference_label() {
 #[test]
 fn cluster_biblatex_authoryear_inline_matches_reference_label() {
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/biblatex_ay/ay.tex");
-  // biblatex's `.bbl`-formatted list carries author-year refnum labels (not the
-  // MakeBibliography `ltx_bib_author-year` class, which this path skips).
+  // The `.bbl`'s entries are formatted by MakeBibliography's author-year path,
+  // as a `.bib`'s are (biblatex_sty.rs `bbl_flush`): "Jones and Brown (2019)"
+  // where biblatex-apa prints "Jones & Brown, 2019".
   assert!(
-    x.contains("Smith (2020)") && x.contains("Jones &amp; Brown (2019)"),
+    x.contains("Smith (2020)") && x.contains("Jones and Brown (2019)"),
     "expected author-year labels in the biblatex References list:\n{x}"
   );
   let cites = inline_cite_texts(&x);

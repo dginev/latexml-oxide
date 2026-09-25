@@ -1,0 +1,17 @@
+% A biber .bbl carries one \datalist per refcontext the document uses (biblatex-apa asks for
+% `nyt/apasortcite//…` to sort citations besides the bibliography's `nyt/global//…`);
+% \printbibliography prints the default refcontext's list (biblatex.sty:9280-9287
+% \blx@bbl@dlist names it), once. The .bbl beside it is bib_title_question_period's biber output
+% with a second, reversed `apasortcite` datalist put first.
+% witness: arXiv 2605.17646 (apa, two datalists); tests/cluster_regressions/biblatex_two_datalists
+% oracle:  biblatex prints the nyt/global list: [1] Alice Adams …, [2] Bob Brown …
+% engines: rust (56iy) printed both lists, 4 bibitems in 2 bibliographies
+% expect:  0 errors; one bibliography, Adams then Brown (HTML)
+% status:  RED (56iy) -> GREEN (round 12, W6-B)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_bbl_two_datalists_absent.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

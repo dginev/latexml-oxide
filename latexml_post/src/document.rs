@@ -1270,6 +1270,15 @@ impl PostDocument {
     self.idcache_reusable.remove(id);
   }
 
+  /// Take `node`'s `xml:id` off it and out of the idcache, freeing the id for
+  /// another element. Returns the id it had.
+  pub fn release_id(&mut self, node: &mut Node) -> Option<String> {
+    let id = get_xml_id(node)?;
+    self.idcache.remove(&id);
+    let _ = node.remove_attribute_ns("id", "http://www.w3.org/XML/1998/namespace");
+    Some(id)
+  }
+
   /// Find a node by its xml:id.
   ///
   /// Port of `Post::Document::findNodeByID`.

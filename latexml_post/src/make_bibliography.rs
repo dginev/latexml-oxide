@@ -83,6 +83,49 @@ thread_local! {
   /// ([`style_given_name_form`]); set per `ltx:bibliography`, read by [`do_name`].
   static GIVEN_NAME_FORM: std::cell::Cell<GivenNameForm> =
     const { std::cell::Cell::new(GivenNameForm::Initials) };
+  /// Which marks already end a unit for the bibliography being formatted
+  /// ([`PeriodRule`]); set per `ltx:bibliography`, read by `format_blocks`.
+  static PERIOD_RULE: std::cell::Cell<PeriodRule> =
+    const { std::cell::Cell::new(PeriodRule::AddPeriod) };
+}
+
+/// Which marks already end a unit, so that the period a row adds after it
+/// (a `post` or `punct` of "." or ". ") is not printed twice: "What is X?
+/// A survey", not "What is X?. A survey". Perl's `formatBibEntry`
+/// (MakeBibliography.pm:527-531) pushes every `$punct` and `$post`
+/// unconditionally, so a title ending in a mark prints "?." there; both
+/// bibliography engines skip the period, each by its own rule, which the
+/// style decides. Beyond Perl; guards
+/// `cluster_package_guards::bibliography_names_fields` (`title_mark_*`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PeriodRule {
+  /// BibTeX's `add.period$`: a period is added "if the last non-`}`
+  /// character isn't a `.`, `?`, or `!`" (btxhak.tex:326-329) — every
+  /// `.bst`, and the rule when the style is unknown.
+  AddPeriod,
+  /// biblatex's punctuation tracker ([`ends_with_punctuation`]).
+  Tracker,
+}
+
+impl PeriodRule {
+  /// The rule of the style an `ltx:bibliography` records in `bibstyle`:
+  /// the biblatex binding records `biblatex` or `biblatex-giveninits`
+  /// ([`style_given_name_form`]); any other name is a `.bst`.
+  fn of_style(bibstyle: Option<&str>) -> Self {
+    if bibstyle.is_some_and(|style| style.starts_with("biblatex")) {
+      PeriodRule::Tracker
+    } else {
+      PeriodRule::AddPeriod
+    }
+  }
+
+  /// Whether `text` already ends in a mark that takes the place of a period.
+  fn absorbs_period(self, text: &str) -> bool {
+    match self {
+      PeriodRule::AddPeriod => text.trim_end().ends_with(['.', '?', '!']),
+      PeriodRule::Tracker => ends_with_punctuation(text),
+    }
+  }
 }
 
 /// How a bibliography style prints an author's given names.
@@ -647,6 +690,15 @@ impl MakeBibliography {
       all.sort();
       queue.extend(all);
     }
+    // A backend's listing ([`given_listing`]) is the entry list: the backend
+    // already selected what the document cites (and reported what it could not
+    // find — biblatex_sty.rs `\blx@bbl@missing`), so it is printed whole and a
+    // citation outside it is not looked for again.
+    if let Some(listing) = given_listing(doc, bib_node) {
+      let listed: HashSet<String> = listing.iter().map(|key| key.to_lowercase()).collect();
+      queue.retain(|key| listed.contains(&key.to_lowercase()));
+      queue.extend(listing);
+    }
 
     // Step 3: Process queue — transitively include cited entries.
     // For each key, extract names/year/title from bibentry XML.
@@ -961,15 +1013,20 @@ impl MakeBibliography {
     // --- Tags ---
     let mut tags = Vec::new();
 
-    // Number tag
-    tags.push(NodeData::Element {
-      tag:        "ltx:tag".to_string(),
-      attributes: Some(HashMap::from_iter([
-        ("role".to_string(), "number".to_string()),
-        ("class".to_string(), "ltx_bib_number".to_string()),
-      ])),
-      children:   vec![NodeData::Text(entry.number.to_string())],
-    });
+    // Number tag — except for an entry its backend labelled
+    // ([`entry_given_label`]), which, like a `\bibitem[label]`, has none: its
+    // citations print the label.
+    let given_label = entry_given_label(entry, style);
+    if given_label.is_none() {
+      tags.push(NodeData::Element {
+        tag:        "ltx:tag".to_string(),
+        attributes: Some(HashMap::from_iter([
+          ("role".to_string(), "number".to_string()),
+          ("class".to_string(), "ltx_bib_number".to_string()),
+        ])),
+        children:   vec![NodeData::Text(entry.number.to_string())],
+      });
+    }
 
     // Authors/fullauthors tags — extracted from bibentry XML if available
     let (author_tag_nodes, has_names, has_key, has_year, has_typetag) =
@@ -987,6 +1044,18 @@ impl MakeBibliography {
     // Author-year only: keep the first block but drop its (redundant) year field.
     let mut drop_first_block_year = false;
     match effective_style {
+      _ if given_label.is_some() => {
+        tags.push(NodeData::Element {
+          tag:        "ltx:tag".to_string(),
+          attributes: Some(HashMap::from_iter([
+            ("role".to_string(), "refnum".to_string()),
+            ("class".to_string(), "ltx_bib_abbrv".to_string()),
+            ("open".to_string(), "[".to_string()),
+            ("close".to_string(), "]".to_string()),
+          ])),
+          children:   vec![NodeData::Text(given_label.unwrap_or_default())],
+        });
+      },
       CitationStyle::Numbers => {
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
@@ -1497,7 +1566,7 @@ impl MakeBibliography {
 
         // Add punctuation if there are preceding items
         if !field_spec.punct.is_empty() && !items.is_empty() {
-          items.push(NodeData::Text(field_spec.punct.to_string()));
+          push_unit_text(&mut items, field_spec.punct);
         }
         // Pre-text
         if !field_spec.pre.is_empty() {
@@ -1529,7 +1598,7 @@ impl MakeBibliography {
         }
         // Post-text
         if !field_spec.post.is_empty() {
-          items.push(NodeData::Text(field_spec.post.to_string()));
+          push_unit_text(&mut items, field_spec.post);
         }
       }
 
@@ -1553,6 +1622,18 @@ impl Processor for MakeBibliography {
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> { doc.findnodes("//ltx:bibliography") }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
+    // An inline `ltx:bibentry` (amsrefs' `\bib`, a biblatex `.bbl`,
+    // biblatex_sty.rs) is the document's own element, and its id — `bib.bib1`,
+    // from the `@bibitem` counter — is the one the bibitem made from it is
+    // given (`format_bib_entry`, `bib.bib<number>` once released). Held by the
+    // entry, which is removed only after formatting, it made the bibitem's id
+    // clash: the bibitem was renamed `bib.bib1a`, while its citations and the
+    // ObjectDB point at `bib.bib1`, so the list item lost its HTML id and every
+    // link to it dangled. An external `.bib`'s entries live in their own
+    // document. Beyond Perl, which reads no inline entries (KNOWN_PERL_ERRORS #49).
+    for mut entry in doc.findnodes("//ltx:bibentry[@xml:id]") {
+      doc.release_id(&mut entry);
+    }
     for bib in &nodes {
       // Skip if already populated
       if !doc.findnodes_at(".//ltx:bibitem", Some(bib)).is_empty() {
@@ -1654,6 +1735,19 @@ impl Processor for MakeBibliography {
           .as_deref()
           .is_some_and(is_citation_order_style);
       let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
+      // A backend's listing keeps its own order in every style: biber applied
+      // the style's sorting scheme (the `.bbl` order is the PDF's), and biblatex
+      // numbers in list order.
+      let cite_order = given_listing(&doc, bib)
+        .map(|listing| {
+          let mut order: HashMap<String, usize> = HashMap::default();
+          for key in listing {
+            let next = order.len();
+            order.entry(key.to_lowercase()).or_insert(next);
+          }
+          order
+        })
+        .or(cite_order);
       let prints_urls = bib
         .get_attribute("bibstyle")
         .as_deref()
@@ -1665,6 +1759,8 @@ impl Processor for MakeBibliography {
           style_given_name_form(&style, doc.get_search_paths())
         });
       GIVEN_NAME_FORM.with(|form| form.set(given_names));
+      let period_rule = PeriodRule::of_style(bib.get_attribute("bibstyle").as_deref());
+      PERIOD_RULE.with(|rule| rule.set(period_rule));
 
       if self.split {
         // Split by initial letter
@@ -1760,15 +1856,19 @@ impl Processor for MakeBibliography {
         // fill phase needs is registered by the rescan below, read from the
         // bibitem's own `<ltx:tag>` children — see the rescan comment.
         let location = doc.site_relative_destination().unwrap_or_default();
-        self.db.register(&format!("ID:{}", bibitem_id), vec![
+        let mut values = vec![
           ("type", crate::object_db::Value::from("ltx:bibitem")),
           ("location", crate::object_db::Value::from(location.as_str())),
           ("fragid", crate::object_db::Value::from(bibitem_id.as_str())),
-          (
+        ];
+        // A labelled entry is cited by its label (its refnum), not a number.
+        if entry_given_label(entry, &style).is_none() {
+          values.push((
             "number",
             crate::object_db::Value::from(entry.number.to_string().as_str()),
-          ),
-        ]);
+          ));
+        }
+        self.db.register(&format!("ID:{}", bibitem_id), values);
       }
     }
 
@@ -3101,6 +3201,72 @@ fn ends_with_punctuation(text: &str) -> bool {
     .ends_with(['.', '?', '!', ',', ';', ':', '…'])
 }
 
+/// Push a row's `punct` or `post` text onto the block's `items`. A leading
+/// period ("." ending a unit, ". " separating two) is dropped when the text
+/// before it already ends in a mark, by the style's [`PeriodRule`].
+fn push_unit_text(items: &mut Vec<NodeData>, text: &str) {
+  let text = match text.strip_prefix('.') {
+    Some(rest)
+      if trailing_text(items)
+        .is_some_and(|last| PERIOD_RULE.with(std::cell::Cell::get).absorbs_period(&last)) =>
+    {
+      rest
+    },
+    _ => text,
+  };
+  if !text.is_empty() {
+    items.push(NodeData::Text(text.to_string()));
+  }
+}
+
+/// The last non-blank text of `items`, as it will print. A formula ends in
+/// no mark — "$n!$" ends in math: after `$` BibTeX's `add.period$` sees no
+/// mark, and the space factor biblatex's tracker reads is reset — and
+/// neither does a reference whose text the cross-referencer fills in later;
+/// both read as the empty text.
+fn trailing_text(items: &[NodeData]) -> Option<String> {
+  items.iter().rev().find_map(|item| match item {
+    NodeData::Text(text) => (!text.trim().is_empty()).then(|| text.clone()),
+    NodeData::Element { tag, children, .. } => {
+      element_trailing_text(tag, || trailing_text(children))
+    },
+    NodeData::XmlNode(node) => node_trailing_text(node),
+  })
+}
+
+fn node_trailing_text(node: &Node) -> Option<String> {
+  match node.get_type() {
+    Some(libxml::tree::NodeType::ElementNode) => element_trailing_text(&node.get_name(), || {
+      let mut child = node.get_last_child();
+      while let Some(n) = child {
+        if let Some(text) = node_trailing_text(&n) {
+          return Some(text);
+        }
+        child = n.get_prev_sibling();
+      }
+      None
+    }),
+    Some(libxml::tree::NodeType::TextNode) | Some(libxml::tree::NodeType::CDataSectionNode) => {
+      let text = node.get_content();
+      (!text.trim().is_empty()).then_some(text)
+    },
+    _ => None,
+  }
+}
+
+/// [`trailing_text`] of an element named `tag` (qualified or not), whose
+/// children give `children_text`.
+fn element_trailing_text(
+  tag: &str,
+  children_text: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+  match tag.rsplit(':').next().unwrap_or(tag) {
+    "Math" => Some(String::new()),
+    "ref" | "bibref" | "cite" => children_text().or(Some(String::new())),
+    _ => children_text(),
+  }
+}
+
 /// Apply a formatter function to the given nodes.
 ///
 /// Port of the various `do_*` functions.
@@ -3461,6 +3627,72 @@ fn order_entry_keys(
       unisort(&mut keys);
       keys
     },
+  }
+}
+
+/// The entries of a backend's listing, in its order: the `ltx:bibentry`s a
+/// biblatex bibliography holds when it says `sort='false'` — a biber `.bbl`
+/// read by biblatex_sty.rs (`bbl_flush`), whose list biber already selected
+/// and sorted by the style's scheme. `None` for any other bibliography: an
+/// external `.bib` under an unsorted style takes its order from the
+/// citations, and amsrefs' inline entries (whose `sort` a `\bibliographystyle`
+/// can set) are selected and sorted as a `.bib`'s are.
+fn given_listing(doc: &PostDocument, bib: &Node) -> Option<Vec<String>> {
+  if bib.get_attribute("sort").as_deref() != Some("false")
+    || !bib
+      .get_attribute("bibstyle")
+      .is_some_and(|style| style.starts_with("biblatex"))
+  {
+    return None;
+  }
+  let keys: Vec<String> = doc
+    .findnodes_at(".//ltx:bibentry", Some(bib))
+    .iter()
+    .filter_map(|entry| entry.get_attribute("key"))
+    .collect();
+  (!keys.is_empty()).then_some(keys)
+}
+
+/// The label a backend gave the entry, as its style prints it: biber's
+/// `labelalpha` and `extraalpha`, which a `.bbl`'s entries carry
+/// (biblatex_sty.rs) — alphabetic.bbx:22-25 prints
+/// `\printfield{labelalpha}\printfield{extraalpha}`, the latter through
+/// `\mknumalph` (biblatex.def:476): "Knu84", "Knu84a". Perl has no such
+/// label; its alphabetic refnum is its own (`make_alpha_label`).
+fn given_label(bibentry: &Node) -> Option<String> {
+  let field = |role: &str| {
+    PostDocument::findnodes_foreign(&format!("ltx:bib-data[@role='{role}']"), bibentry)
+      .first()
+      .map(|node| node.get_content().trim().to_string())
+      .filter(|text| !text.is_empty())
+  };
+  let mut label = field("labelalpha")?;
+  if let Some(extra) = field("extraalpha").and_then(|n| n.parse::<u32>().ok()) {
+    label.push_str(&mknumalph(extra));
+  }
+  Some(label)
+}
+
+/// [`given_label`] of an entry of a bibliography cited in `style`: an
+/// author-year bibliography labels by author and year instead.
+fn entry_given_label(entry: &BibEntryData, style: &CitationStyle) -> Option<String> {
+  if matches!(style, CitationStyle::AuthorYear) {
+    return None;
+  }
+  entry.bibentry.as_ref().and_then(given_label)
+}
+
+/// biblatex's `\mknumalph` (biblatex.sty:13285-13303): 1-26 as "a"-"z",
+/// 27-702 as two letters ("aa" … "zz"), beyond that the number.
+fn mknumalph(n: u32) -> String {
+  let letter = |i: u32| char::from(b'a' + (i - 1) as u8);
+  match n {
+    1..=26 => letter(n).to_string(),
+    27..=702 => {
+      let first = (n - 1) / 26;
+      format!("{}{}", letter(first), letter(n - first * 26))
+    },
+    _ => n.to_string(),
   }
 }
 
@@ -4103,6 +4335,47 @@ mod tests {
     assert_eq!(suffix_to_counter("b"), 2);
     assert_eq!(suffix_to_counter("z"), 26);
     assert_eq!(suffix_to_counter("aa"), 27);
+  }
+
+  #[test]
+  fn test_period_rule() {
+    use PeriodRule::{AddPeriod, Tracker};
+    assert_eq!(PeriodRule::of_style(None), AddPeriod);
+    assert_eq!(PeriodRule::of_style(Some("plainnat")), AddPeriod);
+    assert_eq!(PeriodRule::of_style(Some("biblatex-giveninits")), Tracker);
+    // add.period$: `.`, `?`, `!` only; a closer or quote is not skipped.
+    for text in ["What is X?", "Stop!", "Pub, Inc.", "Inc. "] {
+      assert!(AddPeriod.absorbs_period(text), "{text}");
+    }
+    for text in ["Title", "Ends with colon:", "Second (2nd ed.)", "“Quoted.”"] {
+      assert!(!AddPeriod.absorbs_period(text), "{text}");
+    }
+    // biblatex's tracker: every mark, seen through closers and quotes.
+    for text in [
+      "What is X?",
+      "Ends with colon:",
+      "Second (2nd ed.)",
+      "“Quoted.”",
+    ] {
+      assert!(Tracker.absorbs_period(text), "{text}");
+    }
+    assert!(!Tracker.absorbs_period("Title"));
+    // A formula ends in no mark; neither does a reference filled in later.
+    let items = vec![
+      NodeData::Text("Bounds on ".to_string()),
+      NodeData::Element {
+        tag:        "ltx:Math".to_string(),
+        attributes: None,
+        children:   vec![NodeData::Text("n!".to_string())],
+      },
+    ];
+    assert_eq!(trailing_text(&items).as_deref(), Some(""));
+    let items = vec![NodeData::Text("What?".to_string()), NodeData::Element {
+      tag:        "ltx:bibref".to_string(),
+      attributes: None,
+      children:   vec![],
+    }];
+    assert_eq!(trailing_text(&items).as_deref(), Some(""));
   }
 
   #[test]

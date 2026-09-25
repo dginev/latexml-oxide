@@ -1,126 +1,447 @@
+use latexml_engine::bibtex::{BibEntry, register_entry};
 use latexml_package::prelude::*;
 
-// === biblatex .bbl entry-pipeline helpers ===
-// Mirror Perl ar5iv-bindings/biblatex.sty.ltxml entry/endentry/name/list/field
-// closures (L127-340). The .bbl file emits \entry{key}{type}{} … \endentry per
-// reference; between them \field/\strng/\list/\name records metadata into the
-// `biblatex_entry` HashStored, and \endentry flushes a `\bibitem[label]{key}
-// authors. \newblock title. \newblock In: journal. year, pages.` token stream
-// onto `rebuilt_bibtex_variant`. The list-end macros (\enddatalist etc.) wrap
-// the accumulated variant in `\thebibliography{count}…\endthebibliography`.
+// === biblatex .bbl reader ===
+// biber writes each entry of a `.bbl` as `\entry{key}{type}{options}` …
+// `\endentry`, its data in `\field`/`\list`/`\name`/`\verb`/`\keyw` records
+// and its truncated name lists as `\true{more<list>}` (biblatex.sty:7862-8360
+// the record definitions, :8681 `\blx@bbl@entry`). The records are read back
+// into the BibTeX entry they came from ([`BblEntry`]): the fields of
+// biblatex's data model (blx-dm.def:473-634) under their own names, the date
+// parts rejoined into the dates, the name and literal lists into BibTeX's
+// "and" lists. Each entry is then digested by the BibTeX reader
+// (`\ProcessBibTeXEntry`, bibtex.rs), so a `.bbl` yields the same
+// `ltx:bibentry` as the `.bib` it was made from, and MakeBibliography formats
+// the two alike. What biber adds is kept where biblatex prints it: the list
+// order (biber applied the style's sorting, `sort='false'` on the
+// bibliography) and the alphabetic label (`labelalpha`, `extraalpha`;
+// alphabetic.bbx:22-25). The rest of biber's records — hashes, sort keys,
+// `extra*` counters, `\range` — only drive biblatex's typesetting and are
+// dropped. Beyond Perl: the ar5iv binding (biblatex.sty.ltxml:495-690
+// `\entry`/`\endentry`, :705 `\name`, :821-842 `\verb`) rebuilds a
+// `\bibitem` per entry from a dozen fields, dropping the rest, and suffixes
+// colliding labels itself where biber's `extraalpha` now does (its
+// z-wraparound, arXiv 1212.4446). Witnesses arXiv 2605.08378, 2605.10053,
+// 2605.11417, 2605.14864, 2605.18215, 2605.21199, 2605.28832.
 
-fn bib_entry_get() -> SymHashMap<Stored> {
-  match lookup_value("biblatex_entry") {
-    Some(Stored::HashStored(map)) => map,
-    _ => SymHashMap::default(),
-  }
+/// One `.bbl` entry being read, between `\entry` and `\endentry`.
+struct BblEntry {
+  key:        String,
+  entry_type: String,
+  /// Whether the bibliography lists it: not when its options say `skipbib`
+  /// or `dataonly` (biblatex.sty:8715-8717; biber's clones of related
+  /// entries are `dataonly`).
+  listed:     bool,
+  /// BibTeX fields in record order: `(name, BibTeX source)`.
+  fields:     Vec<(String, String)>,
+  /// The date parts (`year`, `urlmonth`, `eventendday`, …), rejoined into
+  /// the dates at `\endentry` ([`bbl_date`]).
+  date_parts: Vec<(String, String)>,
+  /// The lists biber marks as cut short (`\true{moreauthor}`): they end in
+  /// BibTeX's "and others".
+  more:       Vec<String>,
 }
 
-fn bib_entry_save(map: SymHashMap<Stored>) {
-  assign_value(
-    "biblatex_entry",
-    Stored::HashStored(map),
-    Some(Scope::Global),
-  );
+/// The datalists of the refsection being read (biblatex.sty:9280-9287
+/// `\blx@bbl@dlist[type]{name}`) and the entries it prints.
+#[derive(Default)]
+struct BblDatalists {
+  /// The datalist being read: its type (`entry`; `list` for a biblist, the
+  /// shorthands of `\printshorthands`) and its name.
+  kind:  String,
+  name:  String,
+  /// Its entries, as each `\endentry` is read.
+  keys:  Vec<String>,
+  /// The entries the refsection prints ([`bbl_end_datalist`]), and whether
+  /// they are the default refcontext's.
+  print: Option<(Vec<String>, bool)>,
 }
 
-fn bib_entry_set_tokens(name: &str, val: Tokens) {
-  let mut entry = bib_entry_get();
-  entry.insert(name, Stored::Tokens(val));
-  bib_entry_save(entry);
+thread_local! {
+  /// The entry the `.bbl` is reading; replaced at every `\entry`, taken at
+  /// its `\endentry`.
+  static BBL_ENTRY: std::cell::RefCell<Option<BblEntry>> = const { std::cell::RefCell::new(None) };
+  /// The refsection's datalists; emptied by [`bbl_flush`] and at package load.
+  static BBL_DATALISTS: std::cell::RefCell<BblDatalists> =
+    std::cell::RefCell::new(BblDatalists::default());
 }
 
-fn bib_entry_get_tokens(map: &SymHashMap<Stored>, name: &str) -> Option<Tokens> {
-  map.get(name).and_then(|s| match s {
-    Stored::Tokens(t) => Some(t.clone()),
-    _ => None,
-  })
+/// The fields of biblatex's default data model (blx-dm.def:473-634) that a
+/// `.bbl` carries as `\field` and `\verb` records — every field and verbatim
+/// field, less the `skipout` ones biber never writes. The `date` fields come as
+/// parts ([`BBL_DATES`]). `labelalpha` and `extraalpha` are biber's own: the
+/// label an alphabetic style prints (alphabetic.bbx:22-25), which
+/// MakeBibliography prints too.
+const BBL_FIELDS: &[&str] = &[
+  "sortyear",
+  "volume",
+  "volumes",
+  "abstract",
+  "addendum",
+  "annotation",
+  "booksubtitle",
+  "booktitle",
+  "booktitleaddon",
+  "chapter",
+  "edition",
+  "eid",
+  "entrysubtype",
+  "eprintclass",
+  "eprinttype",
+  "eventtitle",
+  "eventtitleaddon",
+  "gender",
+  "howpublished",
+  "indexsorttitle",
+  "indextitle",
+  "isan",
+  "isbn",
+  "ismn",
+  "isrn",
+  "issn",
+  "issue",
+  "issuesubtitle",
+  "issuetitle",
+  "issuetitleaddon",
+  "iswc",
+  "journalsubtitle",
+  "journaltitle",
+  "journaltitleaddon",
+  "label",
+  "langid",
+  "langidopts",
+  "library",
+  "mainsubtitle",
+  "maintitle",
+  "maintitleaddon",
+  "nameaddon",
+  "note",
+  "number",
+  "origtitle",
+  "pagetotal",
+  "part",
+  "relatedstring",
+  "relatedtype",
+  "reprinttitle",
+  "series",
+  "shorthandintro",
+  "subtitle",
+  "title",
+  "titleaddon",
+  "usera",
+  "userb",
+  "userc",
+  "userd",
+  "usere",
+  "userf",
+  "venue",
+  "version",
+  "shorthand",
+  "shortjournal",
+  "shortseries",
+  "shorttitle",
+  "authortype",
+  "editoratype",
+  "editorbtype",
+  "editorctype",
+  "editortype",
+  "bookpagination",
+  "nameatype",
+  "namebtype",
+  "namectype",
+  "pagination",
+  "pubstate",
+  "type",
+  "crossref",
+  "xref",
+  "related",
+  "keywords",
+  "pages",
+  "execute",
+  "doi",
+  "eprint",
+  "file",
+  "verba",
+  "verbb",
+  "verbc",
+  "url",
+  "labelalpha",
+  "extraalpha",
+];
+
+/// The literal lists of the data model (blx-dm.def:552-564, :604).
+const BBL_LISTS: &[&str] = &[
+  "institution",
+  "lista",
+  "listb",
+  "listc",
+  "listd",
+  "liste",
+  "listf",
+  "location",
+  "organization",
+  "origlocation",
+  "origpublisher",
+  "publisher",
+  "language",
+  "origlanguage",
+];
+
+/// The name lists of the data model (blx-dm.def:566-586).
+const BBL_NAMES: &[&str] = &[
+  "afterword",
+  "annotator",
+  "author",
+  "bookauthor",
+  "commentator",
+  "editor",
+  "editora",
+  "editorb",
+  "editorc",
+  "foreword",
+  "holder",
+  "introduction",
+  "namea",
+  "nameb",
+  "namec",
+  "translator",
+  "shortauthor",
+  "shorteditor",
+];
+
+/// The date fields of the data model (blx-dm.def:610-614) by the prefix of
+/// the parts biber writes for them: `year`/`month`/`day` and their `end*`
+/// forms (`urlyear`, `eventendday`, …).
+const BBL_DATES: &[(&str, &str)] = &[
+  ("", "date"),
+  ("event", "eventdate"),
+  ("orig", "origdate"),
+  ("url", "urldate"),
+];
+
+/// Run `f` on the entry being read, if any.
+fn with_bbl_entry(f: impl FnOnce(&mut BblEntry)) {
+  BBL_ENTRY.with(|slot| {
+    if let Some(entry) = slot.borrow_mut().as_mut() {
+      f(entry);
+    }
+  });
 }
 
-fn bib_state_int(key: &str) -> i64 {
-  match lookup_value(key) {
-    Some(Stored::Int(n)) => n,
-    _ => 0,
-  }
+/// The BibTeX source of a `.bbl` value: its tokens as TeX, with biber's range
+/// markup read back — `\bibrangedash` is the `--` and `\bibrangessep` the
+/// ", " of a `pages` range list (biber writes "1\bibrangedash 10\bibrangessep
+/// 15" for "1--10, 15").
+fn bbl_source(value: Tokens) -> String {
+  bbl_replace_macros(&value.untex(), &[
+    ("bibrangedash", "--"),
+    ("bibrangessep", ", "),
+  ])
 }
 
-fn bib_state_set_int(key: &str, value: i64) {
-  assign_value(key, Stored::Int(value), Some(Scope::Global));
-}
-
-fn bib_variant_push(toks: Vec<Token>) {
-  let mut acc: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => Vec::new(),
-  };
-  acc.extend(toks);
-  assign_value(
-    "rebuilt_bibtex_variant",
-    Stored::Tokens(Tokens::new(acc)),
-    Some(Scope::Global),
-  );
-}
-
-fn bib_as_thebibliography() -> Tokens {
-  let variant: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => return Tokens::default(),
-  };
-  if variant.is_empty() {
-    return Tokens::default();
-  }
-  // Reset variant and entry-count so re-invocation is idempotent (matches
-  // Perl L113-115).
-  assign_value(
-    "rebuilt_bibtex_variant",
-    Stored::Tokens(Tokens::default()),
-    Some(Scope::Global),
-  );
-  let count = bib_state_int("biblatex_entry_count");
-  bib_state_set_int("biblatex_entry_count", 0);
-  let preamble: Vec<Token> = match lookup_value("biblatex_preamble") {
-    Some(Stored::Tokens(t)) => t.unlist(),
-    _ => Vec::new(),
-  };
-  let mut result: Vec<Token> = Vec::with_capacity(variant.len() + 16);
-  result.push(T_CS!("\\thebibliography"));
-  result.push(T_BEGIN!());
-  result.extend(preamble);
-  result.extend(ExplodeText!(&count.to_string()));
-  result.push(T_END!());
-  result.extend(variant);
-  result.push(T_CS!("\\endthebibliography"));
-  Tokens::new(result)
-}
-
-/// Perl `$fullname =~ s/\\\w+|[}{]//g` (ar5iv biblatex.sty.ltxml L324):
-/// strip leftover control sequences (`\bibinitperiod`, …) and braces from a
-/// name fragment, then trim. `\w` is Perl-ASCII (`[A-Za-z0-9_]`) — a backslash
-/// NOT followed by a word char (e.g. the `\"` of an accent) is preserved, as
-/// in Perl.
-fn bib_clean_name(s: &str) -> String {
-  let mut out = String::with_capacity(s.len());
-  let mut chars = s.chars().peekable();
-  while let Some(ch) = chars.next() {
-    if ch == '\\' {
-      if chars
-        .peek()
-        .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
-      {
-        while chars
-          .peek()
-          .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
-        {
-          chars.next();
-        }
-      } else {
-        out.push(ch);
-      }
-    } else if ch != '{' && ch != '}' {
-      out.push(ch);
+/// Replace the named control words of `text` (with the space that ends one).
+fn bbl_replace_macros(text: &str, macros: &[(&str, &str)]) -> String {
+  let mut out = String::with_capacity(text.len());
+  let mut rest = text;
+  while let Some(at) = rest.find('\\') {
+    out.push_str(&rest[..at]);
+    let tail = &rest[at + 1..];
+    let len = tail
+      .find(|c: char| !c.is_ascii_alphabetic())
+      .unwrap_or(tail.len());
+    match macros.iter().find(|(name, _)| *name == &tail[..len]) {
+      Some((_, replacement)) if len > 0 => {
+        out.push_str(replacement);
+        rest = &tail[len..];
+        rest = rest.strip_prefix(' ').unwrap_or(rest);
+      },
+      _ => {
+        out.push('\\');
+        rest = tail;
+      },
     }
   }
-  out.trim().to_string()
+  out.push_str(rest);
+  out
+}
+
+/// A part of a name as BibTeX source: biblatex's delimiters (biblatex.def
+/// `\bibnamedelima`-`d`, `\bibnamedelimi`, `\bibinitdelim`) are the spaces the
+/// `.bib` had.
+fn bbl_name_part(part: &str) -> String {
+  let text = bbl_replace_macros(part, &[
+    ("bibnamedelima", " "),
+    ("bibnamedelimb", " "),
+    ("bibnamedelimc", " "),
+    ("bibnamedelimd", " "),
+    ("bibnamedelimi", " "),
+    ("bibinitdelim", " "),
+    ("bibinithyphendelim", "-"),
+    ("bibinitperiod", "."),
+  ]);
+  text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// One name as BibTeX writes it, "von Last, Jr, First": the comma forms keep
+/// a many-word family name one last name. A name with no given part is
+/// braced when it has several words, so none of them reads as a first name.
+fn bbl_bibtex_name(given: &str, prefix: &str, family: &str, suffix: &str) -> String {
+  let family =
+    if given.is_empty() && suffix.is_empty() && family.contains(' ') && !family.starts_with('{') {
+      format!("{{{family}}}")
+    } else {
+      family.to_string()
+    };
+  let last = if prefix.is_empty() {
+    family
+  } else {
+    format!("{prefix} {family}")
+  };
+  match (suffix.is_empty(), given.is_empty()) {
+    (true, true) => last,
+    (true, false) => format!("{last}, {given}"),
+    (false, _) => format!("{last}, {suffix}, {given}"),
+  }
+}
+
+/// The top-level `{…}` groups of `tokens`, spaces between them skipped.
+fn bbl_groups(tokens: &[Token]) -> Vec<Vec<Token>> {
+  let mut groups = Vec::new();
+  let mut i = 0usize;
+  while i < tokens.len() {
+    if tokens[i].code != Catcode::BEGIN {
+      i += 1;
+      continue;
+    }
+    i += 1;
+    let mut depth = 1usize;
+    let mut group = Vec::new();
+    while i < tokens.len() {
+      match tokens[i].code {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        },
+        _ => {},
+      }
+      group.push(tokens[i]);
+      i += 1;
+    }
+    i += 1;
+    groups.push(group);
+  }
+  groups
+}
+
+/// A `.bbl` date, rejoined from biber's parts as biblatex's ISO form
+/// "YYYY-MM-DD", a range "…/…" (an empty end year is an open range).
+fn bbl_date(parts: &[(String, String)], prefix: &str) -> Option<String> {
+  let get = |part: &str| {
+    let name = format!("{prefix}{part}");
+    parts
+      .iter()
+      .find(|(key, _)| *key == name)
+      .map(|(_, value)| value.as_str())
+  };
+  let one = |year: &str, month: Option<&str>, day: Option<&str>| {
+    let mut date = year.to_string();
+    if let Some(month) = month.filter(|m| !m.is_empty()) {
+      date.push_str(&format!("-{month:0>2}"));
+      if let Some(day) = day.filter(|d| !d.is_empty()) {
+        date.push_str(&format!("-{day:0>2}"));
+      }
+    }
+    date
+  };
+  let mut date = one(get("year")?, get("month"), get("day"));
+  if let Some(end) = get("endyear") {
+    date.push('/');
+    if !end.is_empty() {
+      date.push_str(&one(end, get("endmonth"), get("endday")));
+    }
+  }
+  Some(date)
+}
+
+/// Whether a datalist is the one `\printbibliography` prints: the default
+/// refcontext's, `<sorting>/global//global/global[/global]` — every template
+/// after the sorting scheme `global`, no label prefix. biber writes another
+/// for each further refcontext (biblatex-apa's `nyt/apasortcite//…` sorts
+/// citations).
+fn bbl_default_datalist(name: &str) -> bool {
+  name
+    .split('/')
+    .skip(1)
+    .all(|part| part.is_empty() || part == "global")
+}
+
+/// End of a datalist: its entries are the ones the refsection prints if it is
+/// the first entry datalist, or the first of the default refcontext
+/// ([`bbl_default_datalist`]). A biblist (`[list]`) or an empty list is not.
+fn bbl_end_datalist() {
+  BBL_DATALISTS.with(|lists| {
+    let mut lists = lists.borrow_mut();
+    let keys = std::mem::take(&mut lists.keys);
+    let kind = std::mem::take(&mut lists.kind);
+    let is_default = bbl_default_datalist(&std::mem::take(&mut lists.name));
+    if kind == "list" || keys.is_empty() {
+      return;
+    }
+    match lists.print {
+      None => lists.print = Some((keys, is_default)),
+      Some((_, false)) if is_default => lists.print = Some((keys, true)),
+      Some(_) => {},
+    }
+  });
+}
+
+/// The bibliography of the refsection read so far: a `ltx:bibliography` of
+/// the chosen datalist's entries ([`bbl_end_datalist`]; entries outside any
+/// datalist, in an old `.bbl`, are one list), each digested by the BibTeX
+/// reader. Resets the refsection's state.
+fn bbl_flush() -> Tokens {
+  bbl_end_datalist();
+  BBL_ENTRY.with(|entry| *entry.borrow_mut() = None);
+  let Some((keys, _)) = BBL_DATALISTS.with(|lists| std::mem::take(&mut *lists.borrow_mut()).print)
+  else {
+    return Tokens::default();
+  };
+  assign_value("BIBSTYLE", pin(blx_bibstyle()), Some(Scope::Global));
+  let mut tokens = vec![T_CS!("\\biblatex@bbl@thebibliography")];
+  for key in keys {
+    tokens.push(T_CS!("\\ProcessBibTeXEntry"));
+    tokens.push(T_BEGIN!());
+    tokens.extend(Explode!(&key));
+    tokens.push(T_END!());
+  }
+  tokens.push(T_CS!("\\endthebibliography"));
+  Tokens::new(tokens)
+}
+
+/// A datalist starts (`\datalist[type]{name}`, `\sortlist` in a format-2
+/// `.bbl`); an absent type is an entry list.
+fn bbl_start_datalist(kind: Option<Tokens>, name: Tokens) {
+  BBL_DATALISTS.with(|lists| {
+    let mut lists = lists.borrow_mut();
+    lists.kind = kind
+      .map(|kind| kind.to_string().trim().to_string())
+      .unwrap_or_default();
+    lists.name = name.to_string().trim().to_string();
+    lists.keys.clear();
+  });
+}
+
+/// Whether an `\entry`'s options (`skipbib`, `dataonly=true`, …) keep it out
+/// of the bibliography (biblatex.sty:8715-8717 `blx@skipbib`; `dataonly` sets
+/// it too).
+fn bbl_skips_bib(options: &str) -> bool {
+  options.split(',').any(|option| {
+    let (name, value) = option.split_once('=').unwrap_or((option, "true"));
+    matches!(name.trim(), "skipbib" | "dataonly") && value.trim() != "false"
+  })
 }
 
 /// Parse a biblatex keyval name block — the inner sub-group of a modern
@@ -168,35 +489,6 @@ fn parse_name_keyvals(s: &str) -> Vec<(String, String)> {
   }
   flush(&cur, &mut pairs);
   pairs
-}
-
-/// Perl L232-237 / L253-258: strip leading SPACE/`{` and trailing SPACE/`}`
-/// tokens from a captured DOI/eprint field value before splicing it into an
-/// `\href{…}` target, so a `\field{doi}{ {10.x/y} }`-style value yields a
-/// clean URI.
-fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
-  let mut v = toks.unlist();
-  let mut start = 0usize;
-  while start < v.len() {
-    let t = &v[start];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "{") {
-      start += 1;
-    } else {
-      break;
-    }
-  }
-  let mut end = v.len();
-  while end > start {
-    let t = &v[end - 1];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "}") {
-      end -= 1;
-    } else {
-      break;
-    }
-  }
-  v.truncate(end);
-  v.drain(..start);
-  v
 }
 
 // === biblatex author-year citation machinery ===
@@ -636,28 +928,6 @@ fn blx_opt_kv(opt: &str) -> Option<(String, String)> {
   Some((k.trim().to_string(), v.trim().to_string()))
 }
 
-/// Perl label split `/^(.+),\s*(\d{4}\w*)$/` — greedy `.+` means the LAST
-/// comma whose tail is a 4-digit year plus an optional disambiguation
-/// suffix wins. Returns (author_part, year_with_suffix).
-fn blx_split_ay_label(label: &str) -> Option<(String, String)> {
-  for (idx, _) in label.char_indices().rev().filter(|(_, c)| *c == ',') {
-    if idx == 0 {
-      continue;
-    }
-    let tail = label[idx + 1..].trim_start();
-    if tail.len() >= 4
-      && tail.chars().take(4).all(|c| c.is_ascii_digit())
-      && tail
-        .chars()
-        .skip(4)
-        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-    {
-      return Some((label[..idx].to_string(), tail.to_string()));
-    }
-  }
-  None
-}
-
 #[rustfmt::skip]
 /// The `.bbl` command set (biblatex.sty:8995-9024 `\\blx@bblstart`): saved
 /// and rebound around the `.bbl` input, restored after it.
@@ -666,51 +936,21 @@ const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@
 
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
-  // (803 lines). All macro definitions, conditionals, registers, the
-  // trailing RawTeX toggle block, AND the deep-closure bibliography
-  // rebuilder (Perl L110-263 \entry/\endentry, L270-340 \name,
-  // L367-397 \verb) are now ported — the `.bbl` is assembled into a
-  // real `\thebibliography`.
+  // (803 lines): its macro definitions, conditionals, registers, the
+  // trailing RawTeX toggle block, the author-year citation commands
+  // (\parencite/\textcite/\cite families as \@@cite/\@@bibref closures,
+  // `blx_cite_*`, greedy multicite readers, \citeauthor/\citetitle/
+  // \citeyear/\citeyearpar — gated on style=/citestyle= author-year
+  // detection, with a saved-core-\cite fallback), `\addbibresource` and
+  // `\printbibliography` (biber's `.bbl` when present, the resources through
+  // `\bibliography` otherwise; `&` catcode guard).
   //
-  // Audit cycle 2: caught Rust-only bugs vs Perl source
-  //   * duplicate `\providetoggle{blx@citation}` (etoolbox toggle redef)
-  //   * missing 38 of 60 toggles in trailing RawTeX
-  //   * missing `\addbibresource` / `\printbibliography` /
-  //     `Let \bibliography → \addbibresource` chain
-  //   * 60+ DefMacro/DefRegister/DefConditional declarations missing
-  //
-  // Audit cycle 3 (full Perl-parity pass of the rebuilder closures):
-  //   * \name: ported the keyval-name branch (Perl L301-306) gated on
-  //     `biblatex_with_keyvals`. Modern biber .bbl (format ≥ 3.x) encodes
-  //     authors as `{{meta,hash}{family={…},given={…}}}`; the old port only
-  //     handled the positional form and leaked the whole keyval blob as the
-  //     "family" string (`family=…,familyi=…,given=…`) into the HTML.
-  //   * \endentry: ported the label collision-suffixing (L148-162) and the
-  //     previously-dropped fields — series (L220-222), howpublished (L227),
-  //     organization (L230), eprintclass (L248), the DOI/eprint leading-{/
-  //     trailing-} URI trim (L232-237/L253-258), and the url-branch
-  //     eprinttype label (L240-244).
-  //   * \bibrangedash: restored the Perl/real-biblatex en-dash (a late
-  //     redefinition had clobbered it to a hyphen).
-  //   KNOWN LIMITATION: the 3-arg `\name` variant is not auto-detected
-  //   (we declare the 4-arg modern shape).
-  //
-  // Audit cycle 4 (2026-07-03, ar5iv-bindings PRs #20/#21 + repair 0911aec):
-  //   * author-year citation commands: \parencite/\textcite/\cite families
-  //     as \@@cite/\@@bibref closures (blx_cite_*), greedy multicite
-  //     readers (\cites/\parencites/\textcites + capitalized forms), and
-  //     \citeauthor/\citetitle/\citeyear/\citeyearpar — all gated on
-  //     style=/citestyle= author-year detection, with a saved-core-\cite
-  //     fallback so numeric documents are unchanged.
-  //   * author-year "Surname, Year" labels for label-less biber .bbl
-  //     entries, emitted as \blx@lbibitem + a single role-tagged \bbl@tags
-  //     (schema-valid, natbib \NAT@@wrout shape) so Post::CrossRef renders
-  //     "(Smith, 2020)" / "Jones & Brown (2019)".
-  //   * \name: prefix/suffix name parts; surnames recorded for labels.
-  //   * \printbibliography[]: biber .bbl is ground truth when present,
-  //     resource-based \bibliography fallback otherwise; & catcode guard.
-  //   * maxbibnames= package option now wired (opt@ scan), closing the
-  //     earlier limitation.
+  // Beyond the ar5iv binding: its `\entry`/`\endentry` rebuilder
+  // (biblatex.sty.ltxml:495-690, `\name` :705, `\verb` :821-842), which typeset a
+  // `\bibitem` from a dozen fields, is replaced by the `.bbl` reader at the
+  // top of this file: a `.bbl`'s entries become the `ltx:bibentry`s their
+  // `.bib` gives, formatted by MakeBibliography with biber's labels and order
+  // (round 12, W6-B).
 
   // ar5iv-bindings biblatex.sty.ltxml L14-15 opens with
   //   Warn('missing_file', 'biblatex.sty',
@@ -722,9 +962,9 @@ LoadDefinitions!({
   //     warning made biblatex.sty the #1 `missing_file` "what" in the corpus
   //     (1,167 papers across sandboxes 2605+2606, second only to arydshln),
   //     drowning genuinely missing files in bibliography surveys.
-  //   * "only minimally stubbed" stopped being true across audit cycles 1-4
-  //     above: author-year cite families, biber .bbl as ground truth,
-  //     \printbibliography, maxbibnames, structured \name parts.
+  //   * "only minimally stubbed" stopped being true long ago (above):
+  //     author-year cite families, biber .bbl as ground truth,
+  //     \printbibliography, a `.bbl` read into BibTeX entries.
   // It also fires UNCONDITIONALLY at load, so it says nothing about the paper
   // in hand — no diagnostic value, yet it downgraded every biblatex paper from
   // `no_problem` to `warning`.
@@ -798,11 +1038,6 @@ LoadDefinitions!({
       };
       match k.as_str() {
         "style" | "citestyle" => blx_set_style(&v),
-        "maxbibnames" => {
-          if let Ok(n) = v.parse::<i64>() {
-            bib_state_set_int("biblatex_maxbibnames", n);
-          }
-        },
         _ => {},
       }
     }
@@ -1342,18 +1577,19 @@ LoadDefinitions!({
   DefMacro!("\\bibnamedelimd", "\\addlowpenspace");
   DefMacro!("\\bibnamedelimi", "\\addnbspace");
 
-  // Perl L101-106: \datalist / \sortlist set the `biblatex_with_keyvals`
-  // flag globally — Perl's `\name` closure (Cycle 9) reads it to choose
-  // 3-arg vs 4-arg / keyval-vs-positional dispatch.
-  DefMacro!("\\biblatex@bbl@datalist[]{}", sub[_args] {
-    assign_value("biblatex_with_keyvals", Stored::from(1),
-      Some(Scope::Global));
-    Ok(Tokens::new(vec![]))
+  // biblatex.sty:9280-9283 `\blx@bbl@dlist[type]{name}` (a format-2
+  // `.bbl`'s `\sortlist`): a datalist starts; its name says which refcontext
+  // it is for ([`bbl_default_datalist`]), its type whether it is the
+  // bibliography's (`entry`) or a biblist's (`list`). (The ar5iv binding,
+  // biblatex.sty.ltxml:428-434, set a keyval flag for its `\name`; the reader
+  // tells the name forms apart by their content.)
+  DefMacro!("\\biblatex@bbl@datalist[]{}", sub[(kind, name)] {
+    bbl_start_datalist(kind, name);
+    Ok(Tokens::default())
   });
-  DefMacro!("\\sortlist[]{}", sub[_args] {
-    assign_value("biblatex_with_keyvals", Stored::from(1),
-      Some(Scope::Global));
-    Ok(Tokens::new(vec![]))
+  DefMacro!("\\sortlist[]{}", sub[(kind, name)] {
+    bbl_start_datalist(kind, name);
+    Ok(Tokens::default())
   });
   // Perl L107-108: \lossort / \refsection — empty stubs there; `\refsection`
   // records its resources here (below).
@@ -1379,7 +1615,15 @@ LoadDefinitions!({
   // `Error:undefined:\true` on every multi-author bibitem (witness:
   // arXiv:2509.15629 / 2509.21728 — biblatex `.bbl` v3.3 format with
   // multi-author entries).
-  DefMacro!("\\blx@bbl@booltrue{}", "", locked => true);
+  // biblatex.sty:8316 `\blx@bbl@booltrue`: `\true{more<list>}` marks a name or
+  // literal list the `.bib` ended with "and others" ([`BblEntry::more`]).
+  DefMacro!("\\blx@bbl@booltrue{}", sub[(flag)] {
+    if let Some(list) = flag.to_string().trim().strip_prefix("more") {
+      let list = list.to_string();
+      with_bbl_entry(|entry| entry.more.push(list));
+    }
+    Ok(Tokens::default())
+  }, locked => true);
   DefMacro!("\\blx@bbl@boolfalse{}", "", locked => true);
   Let!("\\true", "\\blx@bbl@booltrue");
   Let!("\\false", "\\blx@bbl@boolfalse");
@@ -1422,370 +1666,85 @@ LoadDefinitions!({
     Ok(Tokens::default())
   }, locked => true);
   Let!("\\missing", "\\blx@bbl@missing");
-  // Perl L122-125: \enddatalist / \endsortlist / \endlossort / \endrefsection
-  // → biblatex_as_thebibliography rebuilder. Wraps the accumulated bibitems
-  // emitted by repeated \endentry calls in `\thebibliography{count}…
-  // \endthebibliography`.
+  // biblatex.sty:9285-9287: a datalist (`\sortlist` in a format-2 `.bbl`)
+  // ends; the refsection prints one of them ([`bbl_end_datalist`]), and prints
+  // it at its end ([`bbl_flush`]). `\lossort` lists shorthands, not entries.
   DefMacro!("\\biblatex@bbl@enddatalist", sub[_args] {
-    Ok(bib_as_thebibliography())
+    bbl_end_datalist();
+    Ok(Tokens::default())
   }, locked => true);
   DefMacro!("\\endsortlist", sub[_args] {
-    Ok(bib_as_thebibliography())
+    bbl_end_datalist();
+    Ok(Tokens::default())
   }, locked => true);
-  DefMacro!("\\endlossort", sub[_args] {
-    Ok(bib_as_thebibliography())
-  }, locked => true);
+  def_macro_noop("\\endlossort")?;
+  // The document's `\end{refsection}` prints what a `.bbl` read inside it left.
   DefMacro!("\\endrefsection", sub[_args] {
-    Ok(bib_as_thebibliography())
+    Ok(bbl_flush())
+  }, locked => true);
+  DefMacro!("\\biblatex@bbl@flush", sub[_args] {
+    Ok(bbl_flush())
   }, locked => true);
 
-  // Author-year bibitem support, mirroring natbib's \@@lbibitem +
-  // \NAT@@wrout: \blx@lbibitem opens the <ltx:bibitem> (no tags, no
-  // bibblock — ltx:bibblock is autoOpen, so the following entry text opens
-  // one), and \bbl@tags emits the bibitem's single <ltx:tags> with the
-  // role="authors"/"year"/... tags that Post::CrossRef uses to build
-  // author-year citations with phrase support. The schema model is
-  // bibitem = (tags?, bibblock*): one tags element, first.
-  DefConstructor!("\\blx@lbibitem Semiverbatim",
-  "<ltx:bibitem key='#key' xml:id='#id'>",
-  after_digest => sub[whatsit] {
-    let key = whatsit.get_arg(1)
-      .map(|a| clean_bib_key(&a.to_string()))
-      .unwrap_or_default();
-    let mut properties = RefStepID!("@bibitem")?;
-    properties.insert("key", key.into());
-    whatsit.set_properties(properties);
-  });
-  // Perl `bounded => 1` + `beforeDigest => Let(T_ALIGN, '\&')`; like the
-  // Rust NAT@@wrout port, the bgroup/soft-egroup pair replaces `bounded`
-  // (whose egroup mode-frame check trips on inner mode switches) while
-  // still scope-isolating the T_ALIGN Let to argument digestion.
-  DefConstructor!("\\bbl@tags{}{}{}{}",
-  "<ltx:tags>\
-    ?#1(<ltx:tag role='year'>#1</ltx:tag>)\
-    ?#2(<ltx:tag role='authors'>#2</ltx:tag>)\
-    ?#3(<ltx:tag role='fullauthors'>#3</ltx:tag>)\
-    ?#4(<ltx:tag role='refnum'>#4</ltx:tag>)\
-  </ltx:tags>",
+  // The bibliography a `.bbl` prints ([`bbl_flush`]): `\thebibliography`'s
+  // element and placement, with the `bibstyle`/`citestyle` a `.bib`'s
+  // `\bibliography` records, and `sort='false'` — biber sorted the list, so
+  // MakeBibliography keeps its order. Its entries are `ltx:bibentry`, which
+  // MakeBibliography formats; no `\bibitem`, so `\thebibliography`'s
+  // pseudo-`\bibitem` rescue is not armed (as for `{bibtex@bibliography}`,
+  // OXIDIZED_DESIGN #75). `\endthebibliography` closes it.
+  DefConstructor!("\\biblatex@bbl@thebibliography",
+  "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='false'>\
+   <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
   before_digest => {
-    bgroup();
-    Let!(T_ALIGN!(), T_CS!("\\&"));
+    latexml_engine::latex_constructs::before_digest_bibliography()?;
   },
-  after_digest => sub[_whatsit] {
-    pop_stack_frame(false)?;
-    Ok(Vec::new())
+  after_digest => sub[whatsit] {
+    latexml_engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+  },
+  before_construct => sub[doc, whatsit] {
+    latexml_engine::latex_constructs::adjust_backmatter_element(doc, whatsit)?;
   });
 
-  // Perl L127-130: \entry{key}{type}{} initializes the entry hash so that the
-  // following \field/\strng/\name/\list directives have a place to record
-  // metadata. The 3rd arg is options (Perl ignores it).
-  DefMacro!("\\biblatex@bbl@entry{}{}{}", sub[(key, ty, _opts)] {
-    let mut entry: SymHashMap<Stored> = SymHashMap::default();
-    entry.insert("key", Stored::Tokens(key));
-    entry.insert("type", Stored::Tokens(ty));
-    bib_entry_save(entry);
+  // biblatex.sty:8681 `\blx@bbl@entry{key}{type}{options}`: an entry starts.
+  DefMacro!("\\biblatex@bbl@entry{}{}{}", sub[(key, ty, options)] {
+    BBL_ENTRY.with(|slot| {
+      *slot.borrow_mut() = Some(BblEntry {
+        key: key.to_string().trim().to_string(),
+        entry_type: ty.to_string().trim().to_string(),
+        listed: !bbl_skips_bib(&options.to_string()),
+        fields: Vec::new(),
+        date_parts: Vec::new(),
+        more: Vec::new(),
+      });
+    });
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L132-263: \endentry — flush the accumulated entry hash as a
-  // `\bibitem[label]{key} authors. \newblock title. \newblock In: journal.
-  // year, pages.` token stream onto rebuilt_bibtex_variant.
-  // Simplified port: handles label-or-auto-label, key, authors (if collected
-  // by \name as plain "fullname" tokens), title, journal/booktitle, year,
-  // pages, doi/url/eprint. Pre-typeset name strings (the `{names}` array
-  // form) are emitted comma-joined.
+  // The entry ends: its dates are rejoined and its cut-short name lists end
+  // in "and others", and it is registered for the BibTeX reader under its key
+  // and listed in its datalist — only now, so an entry with no `\endentry`
+  // is never printed from an earlier registration.
   DefMacro!("\\biblatex@bbl@endentry", sub[_args] {
-    let entry = bib_entry_get();
-    assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
-
-    // label: labelalpha if present, else label; strip CSes + braces.
-    // For author-year styles (apa, nyt, ...) biber emits NO labelalpha —
-    // construct a "Surname, Year" label from the recorded name/year data
-    // (ar5iv-bindings PR #21 + 0911aec). Gated on the detected style:
-    // numeric documents keep their sequential [1],[2],... labels.
-    // If still empty, fall back to an incrementing counter; else ensure
-    // uniqueness with a/b/.../z suffixing.
-    let mut ay_label = false;
-    let year_str = bib_entry_get_tokens(&entry, "year")
-      .map(|t| bib_clean_name(&t.to_string()))
-      .unwrap_or_default();
-    let surnames: Vec<String> = match entry.get("authors_surnames") {
-      Some(Stored::String(s)) => to_string(*s)
-        .split('\u{1f}').filter(|p| !p.is_empty()).map(String::from).collect(),
-      _ => Vec::new(),
+    let Some(mut bbl) = BBL_ENTRY.with(|slot| slot.borrow_mut().take()) else {
+      return Ok(Tokens::default());
     };
-    let label_str: String = {
-      let mut cleaned = bib_entry_get_tokens(&entry, "labelalpha")
-        .or_else(|| bib_entry_get_tokens(&entry, "label"))
-        .map(|t| bib_clean_name(&t.to_string()))
-        .filter(|s| !s.is_empty());
-      if cleaned.is_none() && blx_is_authoryear() && !surnames.is_empty() && !year_str.is_empty() {
-        let author_part = match surnames.len() {
-          1 => surnames[0].clone(),
-          2 => format!("{} & {}", surnames[0], surnames[1]),
-          _ => format!("{} et al.", surnames[0]),
-        };
-        cleaned = Some(format!("{author_part}, {year_str}"));
-        ay_label = true;
-      }
-      match cleaned {
-        Some(label) => {
-          // Perl L148-162: collision-avoidance suffixing, tracked globally in
-          // `biblatex_author_labels`. The `z`-wraparound (append another base
-          // 'a' and restart) is faithfully ported — see arXiv:1212.4446.
-          let mut labels: SymHashMap<Stored> = match lookup_value("biblatex_author_labels") {
-            Some(Stored::HashStored(m)) => m,
-            _ => SymHashMap::default(),
-          };
-          let final_label = if labels.contains_key(&label) {
-            let mut base = label;
-            let mut suffix = b'a';
-            while labels.contains_key(&format!("{base}{}", suffix as char)) {
-              if suffix == b'z' { base.push('a'); suffix = b'a'; }
-              else { suffix += 1; }
-            }
-            format!("{base}{}", suffix as char)
-          } else {
-            label
-          };
-          labels.insert(&final_label, Stored::from(1));
-          assign_value("biblatex_author_labels",
-            Stored::HashStored(labels), Some(Scope::Global));
-          final_label
-        },
-        None => {
-          // Perl L144-147: no usable label → simple incrementing counter.
-          let n = bib_state_int("biblatex_auto_label") + 1;
-          bib_state_set_int("biblatex_auto_label", n);
-          n.to_string()
-        },
-      }
-    };
-
-    // Bump entry count for thebibliography wrapper.
-    bib_state_set_int("biblatex_entry_count", bib_state_int("biblatex_entry_count") + 1);
-
-    let mut variant: Vec<Token> = Vec::with_capacity(64);
-    let key_toks = bib_entry_get_tokens(&entry, "key").unwrap_or_default();
-    if ay_label {
-      // Author-year entry: open the bibitem via \blx@lbibitem (no tags, no
-      // bibblock — ltx:bibblock is autoOpen) and emit the single
-      // structured <ltx:tags> with the role="authors"/"year"/... tags that
-      // Post::CrossRef needs to resolve \textcite / \parencite with phrase
-      // support. Mirrors natbib's \@@lbibitem + \NAT@@wrout; keeps the
-      // schema model bibitem = (tags?, bibblock*) valid.
-      let (author_part, ay_year) = blx_split_ay_label(&label_str)
-        .unwrap_or_else(|| (label_str.clone(), year_str.clone()));
-      // The year part carries any disambiguation suffix (2020a, ...) so
-      // same-author-same-year entries stay distinct.
-      let refnum_str = if author_part == label_str {
-        label_str
-      } else {
-        format!("{author_part} ({ay_year})")
-      };
-      let full_author_part = match surnames.len() {
-        0 => author_part.clone(),
-        1 | 2 => surnames.join(" & "),
-        _ => format!("{} & {}",
-          surnames[..surnames.len() - 1].join(", "),
-          surnames[surnames.len() - 1]),
-      };
-      variant.push(T_CS!("\\blx@lbibitem"));
-      variant.push(T_BEGIN!());
-      variant.extend(key_toks.unlist());
-      variant.push(T_END!());
-      variant.push(T_CS!("\\bbl@tags"));
-      for tag in [&ay_year, &author_part, &full_author_part, &refnum_str] {
-        variant.push(T_BEGIN!());
-        variant.extend(ExplodeText!(tag));
-        variant.push(T_END!());
-      }
-    } else {
-      // Numeric / alphabetic / sequential-fallback entry: plain \bibitem,
-      // exactly as before author-year support was added.
-      variant.push(T_CS!("\\bibitem"));
-      variant.push(T_OTHER!("["));
-      variant.extend(ExplodeText!(&label_str));
-      variant.push(T_OTHER!("]"));
-      variant.push(T_BEGIN!());
-      variant.extend(key_toks.unlist());
-      variant.push(T_END!());
-    }
-
-    // Authors: if \name stashed a comma-joined string under "authors_str",
-    // emit it. Defer the et-al / per-author re-tokenization for now — most
-    // .bbl files give us pre-formatted author tokens.
-    let authors_toks = bib_entry_get_tokens(&entry, "authors_str");
-    let mut have_authors = false;
-    if let Some(toks) = authors_toks
-      && !toks.is_empty() {
-        variant.extend(toks.unlist());
-        have_authors = true;
-      }
-
-    // Title
-    if let Some(title) = bib_entry_get_tokens(&entry, "title")
-      && !title.is_empty() {
-        if have_authors {
-          variant.push(T_CS!("\\newblock"));
-        }
-        variant.push(T_OTHER!("`"));
-        variant.push(T_OTHER!("`"));
-        variant.extend(title.unlist());
-        variant.push(T_OTHER!("'"));
-        variant.push(T_OTHER!("'"));
-      }
-    // Note
-    if let Some(note) = bib_entry_get_tokens(&entry, "note")
-      && !note.is_empty() {
-        variant.push(T_SPACE!());
-        variant.extend(note.unlist());
-      }
-    // Journal / booktitle
-    let journal = bib_entry_get_tokens(&entry, "booktitle")
-      .or_else(|| bib_entry_get_tokens(&entry, "journaltitle"))
-      .or_else(|| bib_entry_get_tokens(&entry, "journal"));
-    if let Some(j) = journal.as_ref()
-      && !j.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        variant.extend(ExplodeText!("In "));
-        variant.push(T_CS!("\\emph"));
-        variant.push(T_BEGIN!());
-        variant.extend(j.clone().unlist());
-        variant.push(T_END!());
-      }
-    // Volume + (number) — Perl L217-219: gated on a booktitle/journaltitle/series.
-    let series = bib_entry_get_tokens(&entry, "series");
-    let has_volume = bib_entry_get_tokens(&entry, "volume")
-      .map(|v| !v.is_empty()).unwrap_or(false);
-    if let Some(volume) = bib_entry_get_tokens(&entry, "volume")
-      && !volume.is_empty() && (journal.is_some() || series.is_some()) {
-        variant.push(T_SPACE!());
-        variant.push(T_CS!("\\textbf"));
-        variant.push(T_BEGIN!());
-        variant.extend(volume.unlist());
-        if let Some(num) = bib_entry_get_tokens(&entry, "number")
-          && !num.is_empty() {
-            variant.push(T_OTHER!("."));
-            variant.extend(num.unlist());
-          }
-        variant.push(T_END!());
-      }
-    // Series — Perl L220-222. Trailing number only when there is no volume.
-    if let Some(series) = series.as_ref()
-      && !series.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(series.clone().unlist());
-        if !has_volume
-          && let Some(num) = bib_entry_get_tokens(&entry, "number")
-            && !num.is_empty() {
-              variant.push(T_SPACE!());
-              variant.extend(num.unlist());
-            }
-      }
-    // Publisher / location
-    if let Some(publisher) = bib_entry_get_tokens(&entry, "publisher")
-      && !publisher.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        if let Some(loc) = bib_entry_get_tokens(&entry, "location")
-          && !loc.is_empty() {
-            variant.extend(loc.unlist());
-            variant.push(T_OTHER!(":"));
-            variant.push(T_SPACE!());
-          }
-        variant.extend(publisher.unlist());
-      }
-    // howpublished — Perl L227.
-    if let Some(howpub) = bib_entry_get_tokens(&entry, "howpublished")
-      && !howpub.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(howpub.unlist());
-      }
-    // Year
-    if let Some(year) = bib_entry_get_tokens(&entry, "year")
-      && !year.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(year.unlist());
-      }
-    // Pages
-    if let Some(pages) = bib_entry_get_tokens(&entry, "pages")
-      && !pages.is_empty() {
-        variant.push(T_OTHER!(","));
-        variant.push(T_SPACE!());
-        variant.extend(ExplodeText!("pp. "));
-        variant.extend(pages.unlist());
-      }
-    // organization — Perl L230.
-    if let Some(org) = bib_entry_get_tokens(&entry, "organization")
-      && !org.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        variant.extend(org.unlist());
-      }
-    // DOI / URL / eprint — Perl L231-260.
-    if let Some(doi) = bib_entry_get_tokens(&entry, "doi").filter(|t| !t.is_empty()) {
-      // Perl L232-237: trim leading/trailing space + braces for a clean URI.
-      let doi_toks = bib_trim_url_tokens(doi);
-      variant.push(T_CS!("\\newblock"));
-      variant.extend(ExplodeText!("DOI: "));
-      variant.push(T_CS!("\\href"));
-      variant.push(T_BEGIN!());
-      variant.extend(ExplodeText!("https://dx.doi.org/"));
-      variant.extend(doi_toks.clone());
-      variant.push(T_END!());
-      variant.push(T_BEGIN!());
-      variant.extend(doi_toks);
-      variant.push(T_END!());
-    } else if let Some(url) = bib_entry_get_tokens(&entry, "url").filter(|t| !t.is_empty()) {
-      // Perl L240-244: label from eprinttype (uppercased), default URL, arXiv if ARXIV.
-      let etype = bib_entry_get_tokens(&entry, "eprinttype")
-        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
-      let etype = if etype.is_empty() { "URL".to_string() }
-        else if etype == "ARXIV" { "arXiv".to_string() }
-        else { etype };
-      variant.push(T_CS!("\\newblock"));
-      variant.extend(ExplodeText!(&format!("{etype}: ")));
-      variant.push(T_CS!("\\url"));
-      variant.push(T_BEGIN!());
-      variant.extend(url.unlist());
-      variant.push(T_END!());
-    } else if let Some(eprint) = bib_entry_get_tokens(&entry, "eprint").filter(|t| !t.is_empty()) {
-      // Perl L245-260.
-      let etype = bib_entry_get_tokens(&entry, "eprinttype")
-        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
-      let is_arxiv = etype == "ARXIV";
-      let etype = if etype.is_empty() { "eprint".to_string() }
-        else if is_arxiv { "arXiv".to_string() }
-        else { etype };
-      let eprint_class = bib_entry_get_tokens(&entry, "eprintclass").filter(|t| !t.is_empty());
-      variant.push(T_CS!("\\newblock"));
-      // Perl L260: no space between the "type:" label and the target.
-      variant.extend(ExplodeText!(&format!("{etype}:")));
-      if is_arxiv {
-        let eprint_toks = bib_trim_url_tokens(eprint);
-        variant.push(T_CS!("\\href"));
-        variant.push(T_BEGIN!());
-        variant.extend(ExplodeText!("https://arxiv.org/abs/"));
-        variant.extend(eprint_toks.clone());
-        variant.push(T_END!());
-        variant.push(T_BEGIN!());
-        variant.extend(eprint_toks);
-        // Perl L248: eprintclass → " [class]" suffix, inside the link text.
-        if let Some(cls) = eprint_class {
-          variant.push(T_SPACE!());
-          variant.push(T_OTHER!("["));
-          variant.extend(cls.unlist());
-          variant.push(T_OTHER!("]"));
-        }
-        variant.push(T_END!());
-      } else {
-        variant.extend(eprint.unlist());
+    for &(prefix, date) in BBL_DATES {
+      if let Some(value) = bbl_date(&bbl.date_parts, prefix) {
+        bbl.fields.push((date.to_string(), value));
       }
     }
-
-    bib_variant_push(variant);
+    let mut entry = BibEntry::new(bbl.key.clone(), bbl.entry_type);
+    for (name, mut value) in bbl.fields {
+      if bbl.more.contains(&name) {
+        value.push_str(" and others");
+      }
+      entry.add_raw_field(name, value);
+    }
+    register_entry(&bbl.key, entry);
+    if bbl.listed {
+      BBL_DATALISTS.with(|lists| lists.borrow_mut().keys.push(bbl.key));
+    }
     Ok(Tokens::default())
   }, locked => true);
 
@@ -1804,191 +1763,106 @@ LoadDefinitions!({
   DefKeyVal!("BiblatexAuthor", "suffixi", "");
   DefKeyVal!("BiblatexAuthor", "nameun", "");
 
-  // Perl L270-346: \name{type}{count}{maybe-content} — biblatex's author
-  // record. The TeX-2.5+ .bbl shape is `\name{author}{N}{}{ {{}{Family}…} }`
-  // where the 3rd arg is empty and the 4th is the author body. Older variants
-  // pass 3 args. Simplified port: declare 4 mandatory args; the 4th-arg
-  // capture covers the modern shape used by the vast majority of arxiv .bbl
-  // files. The body holds N inner-author groups, each of the form
-  // `{hash}{family}{familyi}{given}{giveni}{}{}{}{}` — we extract family +
-  // given pairs into "Given Family" strings (no Perl-faithful keyval/hash
-  // ordering yet) and stash them comma-joined under `authors_str` /
-  // `editors_str` in the entry hash for `\endentry` to emit verbatim.
-  DefMacro!("\\biblatex@bbl@name{}{}{}{}", sub[(ty, _count, _maybe, body)] {
-    let type_str = ty.to_string();
-    // The body's tokens start with `{` `{}` (empty hash) or `{hash=…}` then
-    // `{family}{familyi}{given}{giveni}{}{}{}{}` repeated, separated by
-    // optional whitespace. Walk top-level groups.
-    let body_toks: Vec<Token> = body.unlist();
-    // Helper: scan one balanced {...} group, advancing index.
-    fn read_group(tokens: &[Token], i: &mut usize) -> Option<Vec<Token>> {
-      while *i < tokens.len() {
-        let cc = tokens[*i].code;
-        if cc == Catcode::SPACE { *i += 1; continue; }
-        if cc == Catcode::BEGIN { break; }
-        return None; // not a group
-      }
-      if *i >= tokens.len() { return None; }
-      *i += 1; // consume BEGIN
-      let mut depth = 1usize;
-      let mut out = Vec::new();
-      while *i < tokens.len() {
-        let cc = tokens[*i].code;
-        if cc == Catcode::BEGIN {
-          depth += 1;
-          out.push(tokens[*i]);
-        } else if cc == Catcode::END {
-          depth -= 1;
-          if depth == 0 { *i += 1; return Some(out); }
-          out.push(tokens[*i]);
-        } else {
-          out.push(tokens[*i]);
-        }
-        *i += 1;
-      }
-      Some(out) // unterminated: best effort
+  // biblatex.sty:8339 `\blx@bbl@namedef{list}{count}{options}{names}`: a name
+  // list, one `{{<meta>}{<parts>}}` group per name. A format-3 `.bbl` (a
+  // `\datalist` one) gives the parts as keys, `family={…},given={…},
+  // prefix={…},suffix={…}` and their `…i` initials; an older one gives them in
+  // place, `{family}{familyi}{given}{giveni}{prefix}{prefixi}{suffix}{suffixi}`.
+  // The full parts are read back into BibTeX's "von Last, Jr, First" form
+  // ([`bbl_bibtex_name`]) and the names joined with "and".
+  DefMacro!("\\biblatex@bbl@name{}{}{}{}", sub[(role, _count, _options, body)] {
+    let role = role.to_string().trim().to_string();
+    if !BBL_NAMES.contains(&role.as_str()) {
+      return Ok(Tokens::default());
     }
-    // Perl L286: `$keyvals_flag = LookupValue('biblatex_with_keyvals')`, set
-    // by \datalist / \sortlist. Modern biber .bbl (format ≥ 3.x) encodes each
-    // author as `{{meta,hash}{family={…},given={…},…}}` (keyval block); older
-    // .bbl uses positional `{{hash}{family}{familyi}{given}{giveni}…}`. Without
-    // this dispatch the keyval block was grabbed wholesale as "family" and
-    // leaked verbatim into the bibliography (`family=…,familyi=…,given=…`).
-    let keyvals_flag = bib_state_int("biblatex_with_keyvals") != 0;
     let mut names: Vec<String> = Vec::new();
-    // Family name parts recorded alongside the full names, for author-year
-    // label construction (\endentry): "van der Berg, Pieter" must label as
-    // "Berg, YEAR", and "Martin Luther King Jr." as "King", not "Jr.".
-    let mut surnames: Vec<String> = Vec::new();
-    let mut idx = 0usize;
-    while idx < body_toks.len() {
-      // Skip space tokens between author groups.
-      while idx < body_toks.len() &&
-            body_toks[idx].code == Catcode::SPACE {
-        idx += 1;
-      }
-      if idx >= body_toks.len() { break; }
-      // Read the per-author group.
-      let author_grp = match read_group(&body_toks, &mut idx) {
-        Some(g) => g,
-        None => break,
-      };
-      // First sub-group is always the per-author metadata/hash block
-      // (`{hash=…}` or `{un=0,uniquepart=base,hash=…}`); skip it (Perl L294).
-      let mut j = 0usize;
-      let _meta = read_group(&author_grp, &mut j);
-      let (given, prefix, family, suffix) = if keyvals_flag {
-        // Keyval form: the next sub-group is the keyval block. Prefer the
-        // full name parts over the `i`-initial forms; prefix/suffix are
-        // optional (PR #21).
-        let kv_str = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        let kvs = parse_name_keyvals(&kv_str);
-        let get = |k: &str| kvs.iter().find(|(kk, _)| kk == k).map(|(_, v)| v.clone());
-        let given = get("given").or_else(|| get("giveni")).unwrap_or_default();
-        let prefix = get("prefix").or_else(|| get("prefixi")).unwrap_or_default();
-        let family = get("family").or_else(|| get("familyi")).unwrap_or_default();
-        let suffix = get("suffix").or_else(|| get("suffixi")).unwrap_or_default();
-        (given, prefix, family, suffix)
-      } else {
-        // Positional form (Perl L308-321): {family}{familyi}{given}{giveni}…
-        let family = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        let _familyi = read_group(&author_grp, &mut j);
-        let given = read_group(&author_grp, &mut j)
-          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        (given, String::new(), family, String::new())
-      };
-      // Perl L324: strip leftover CSes/braces, then trim.
-      let family = bib_clean_name(family.trim());
-      let given = bib_clean_name(given.trim());
-      let prefix = bib_clean_name(prefix.trim());
-      let suffix = bib_clean_name(suffix.trim());
-      // Perl: join(' ', grep { $_ ne '' } (given, prefix, family, suffix)).
-      let fullname = [given, prefix, family.clone(), suffix]
+    for name in bbl_groups(&body.unlist()) {
+      // The first group is the name's metadata (`hash=…`, `un=0,…`).
+      let parts: Vec<String> = bbl_groups(&name)
         .into_iter()
-        .filter(|p| !p.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ");
-      if fullname.is_empty() {
-        continue;
-      }
-      // Surname for label construction: the family part; fall back to the
-      // last word of the full name (pre-typeset corporate authors etc.).
-      let surname = if family.is_empty() {
-        fullname.split_whitespace().last().unwrap_or_default().to_string()
+        .skip(1)
+        .map(|part| Tokens::new(part).untex())
+        .collect();
+      let keyvals = parts.first().is_some_and(|p| p.contains("family=") || p.contains("given="));
+      let (given, prefix, family, suffix) = if keyvals {
+        let kvs = parts.first().map(|kv| parse_name_keyvals(kv)).unwrap_or_default();
+        let get = |k: &str| {
+          kvs.iter().find(|(key, _)| key == k).map(|(_, v)| bbl_name_part(v)).unwrap_or_default()
+        };
+        (get("given"), get("prefix"), get("family"), get("suffix"))
       } else {
-        family
+        let get = |i: usize| parts.get(i).map(|p| bbl_name_part(p)).unwrap_or_default();
+        (get(2), get(4), get(0), get(6))
       };
-      surnames.push(surname);
-      names.push(fullname);
-    }
-    // Format with et-al limit (default 4 per Perl L192).
-    let etal_limit = bib_state_int("biblatex_maxbibnames");
-    let etal_limit = if etal_limit > 0 { etal_limit as usize } else { 4 };
-    let joined = if names.len() > etal_limit {
-      format!("{} et al.", names[0])
-    } else {
-      let mut acc = String::new();
-      let n = names.len();
-      for (k, name) in names.iter().enumerate() {
-        if k > 0 {
-          if k + 1 == n {
-            acc.push_str(" and ");
-          } else {
-            acc.push_str(", ");
-          }
-        }
-        acc.push_str(name);
+      if !(family.is_empty() && given.is_empty()) {
+        names.push(bbl_bibtex_name(&given, &prefix, &family, &suffix));
       }
-      acc
-    };
-    // Stash under "authors_str" or "editors_str" depending on type.
-    let is_editor = type_str.trim() == "editor";
-    let key = if is_editor { "editors_str" } else { "authors_str" };
-    if !joined.is_empty() {
-      let toks = Tokens::new(ExplodeText!(&joined));
-      bib_entry_set_tokens(key, toks);
     }
-    // Record the author surnames (US-separated) for the author-year label
-    // construction in \endentry.
-    if !is_editor && !surnames.is_empty() {
-      let mut entry = bib_entry_get();
-      entry.insert("authors_surnames",
-        Stored::String(pin(surnames.join("\u{1f}"))));
-      bib_entry_save(entry);
+    if !names.is_empty() {
+      with_bbl_entry(|entry| entry.fields.push((role, names.join(" and "))));
     }
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L342-346: \list{name}{count}{value} — record value under `name` in
-  // the entry hash. Perl ignores `count` for count==1 and notes "more
-  // support needed" for >1. Same here.
-  DefMacro!("\\biblatex@bbl@list{}{}{}", sub[(name, _count, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
+  // biblatex.sty:8325 `\blx@bbl@listdef{list}{count}{items}`: a literal list,
+  // one `{…}` group per item, joined with "and" as the `.bib` wrote it; an item
+  // holding an "and" of its own is braced (biber's `{Smith and Sons}`).
+  DefMacro!("\\biblatex@bbl@list{}{}{}", sub[(name, _count, items)] {
+    let name = name.to_string().trim().to_string();
+    if !BBL_LISTS.contains(&name.as_str()) {
+      return Ok(Tokens::default());
+    }
+    let items: Vec<String> = bbl_groups(&items.unlist())
+      .into_iter()
+      .map(|item| {
+        let item = bbl_source(Tokens::new(item));
+        if item.split_whitespace().any(|word| word.eq_ignore_ascii_case("and")) {
+          format!("{{{item}}}")
+        } else {
+          item
+        }
+      })
+      .filter(|item| !item.is_empty())
+      .collect();
+    if !items.is_empty() {
+      with_bbl_entry(|entry| entry.fields.push((name, items.join(" and "))));
+    }
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L355-363: \field{name}{value} / \strng{name}{value} — record value
-  // under `name` in the entry hash. Perl uses DefPrimitive (immediate
-  // side-effect, no expansion). DefMacro with sub gives equivalent behavior
-  // at digestion time since the body is empty.
-  DefMacro!("\\biblatex@bbl@field{}{}", sub[(name, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
+  // biblatex.sty:7871 `\blx@bbl@fielddef{field}{value}`: a data-model field
+  // ([`BBL_FIELDS`]) or a date part ([`BBL_DATES`]); biber's own fields
+  // (sort keys, `extra*` counters, `label*source`) are dropped.
+  DefMacro!("\\biblatex@bbl@field{}{}", sub[(name, value)] {
+    let name = name.to_string().trim().to_string();
+    let is_date_part = BBL_DATES.iter().any(|(prefix, _)| {
+      name.strip_prefix(prefix).is_some_and(|part| {
+        matches!(part, "year" | "month" | "day" | "endyear" | "endmonth" | "endday")
+      })
+    });
+    if is_date_part {
+      let value = value.to_string().trim().to_string();
+      with_bbl_entry(|entry| entry.date_parts.push((name, value)));
+    } else if BBL_FIELDS.contains(&name.as_str()) {
+      // (`labelalpha` is TeX, digested by the BibTeX reader: bibtex.rs
+      // `\bib@field@default@labelalpha`.)
+      let value = bbl_source(value);
+      with_bbl_entry(|entry| entry.fields.push((name, value)));
+    }
     Ok(Tokens::default())
   }, locked => true);
-  DefMacro!("\\biblatex@bbl@strng{}{}", sub[(name, val)] {
-    let name_s = name.to_string();
-    bib_entry_set_tokens(name_s.trim(), val);
-    Ok(Tokens::default())
-  }, locked => true);
+  // Name-list hashes and the like: nothing biblatex prints.
+  def_macro_noop("\\biblatex@bbl@strng{}{}")?;
 
   // Perl L348-354
   def_macro_noop("\\AtEveryBibitem{}")?;
   def_macro_noop("\\AtEveryCitekey{}")?;
-  def_macro_noop("\\biblatex@bbl@keyw{}")?;
+  // biblatex.sty:8385 `\blx@bbl@keyw{keywords}`: the entry's `keywords` field.
+  DefMacro!("\\biblatex@bbl@keyw{}", sub[(keywords)] {
+    let keywords = bbl_source(keywords);
+    with_bbl_entry(|entry| entry.fields.push(("keywords".to_string(), keywords)));
+    Ok(Tokens::default())
+  }, locked => true);
   def_macro_noop("\\bibinitdelim")?;
   // biblatex.def L219 defines `\bibsetup` as a no-arg user-overridable
   // hook for low-level bibliography layout (interlinepenalty,
@@ -2007,14 +1881,9 @@ LoadDefinitions!({
   // Perl L364
   def_macro_noop("\\biblatex@bbl@range{}{}")?;
 
-  // Perl L367-369: \preamble{...} stashes the arg into biblatex_preamble
-  // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
-  // $_[1]) so the preamble is digested in the current context too.
-  DefMacro!("\\biblatex@bbl@preamble{}", sub[(arg)] {
-    assign_value("biblatex_preamble",
-      Stored::Tokens(arg.clone()), Some(Scope::Global));
-    Ok(arg)
-  });
+  // ar5iv biblatex.sty.ltxml:814: \preamble{...} is digested where it stands
+  // (the ar5iv binding also stashed it for the `\thebibliography` it rebuilt).
+  DefMacro!("\\biblatex@bbl@preamble{}", "#1");
 
   // Perl L371-397: \biblatex@verb{key}…\endverb captures a verbatim field
   // that biblatex's .bbl emits in the form
@@ -2061,11 +1930,9 @@ LoadDefinitions!({
     }
     // Sanitize: biblatex `\verb` is a verbatim primitive — its body is a
     // literal string. The mouth tokenized chars with their normal catcodes
-    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). When `\endentry`
-    // later splices these tokens into `\href{URL}{text}` the SUB chars
-    // trigger `Script _ can only appear in math mode` during horizontal
-    // digestion. Reset structural catcodes to OTHER so the captured string
-    // round-trips through the bibitem variant safely.
+    // (so `_` is SUB, `^` is SUPER, `#` is PARAM, etc.). Reset structural
+    // catcodes to OTHER so the captured string is the field's text, which the
+    // BibTeX reader reads verbatim (`doi`, `url`, `eprint`).
     //
     // Also detokenize CS tokens (e.g. `\href`, an inner `\verb`) and
     // brace tokens to literal OTHER characters: biblatex .bbl files
@@ -2106,7 +1973,11 @@ LoadDefinitions!({
       }
     }
     let value = Tokens::new(value_vec);
-    bib_entry_set_tokens(key_str.trim(), value);
+    let name = key_str.trim().to_string();
+    if BBL_FIELDS.contains(&name.as_str()) {
+      let value = value.to_string();
+      with_bbl_entry(|entry| entry.fields.push((name, value)));
+    }
     Ok(Tokens::default())
   }, locked => true);
   // \biblatex@endverb is consumed by the Until: delimiter on \biblatex@verb,
@@ -2194,6 +2065,7 @@ LoadDefinitions!({
     "\\biblatex@bblstart\
      \\catcode`\\&=12\\relax\
      \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
+     \\biblatex@bbl@flush\
      \\catcode`\\&=4\\relax\
      \\biblatex@bblend"
   );
@@ -2236,18 +2108,7 @@ LoadDefinitions!({
     None,
   )?;
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
-    // The style the bibliography formatter keys on (`bibstyle`): biblatex's
-    // standard styles print URLs, which the `.bst` path's "Link" does not
-    // (make_bibliography.rs `style_prints_urls`; OXIDIZED_DESIGN_DIVERGENCES #289),
-    // and spell given names out unless the style's name format or `giveninits`
-    // asks for initials ([`blx_prints_given_initials`]; make_bibliography.rs
-    // `style_given_name_form`).
-    let bibstyle = if blx_prints_given_initials() {
-      "biblatex-giveninits"
-    } else {
-      "biblatex"
-    };
-    assign_value("BIBSTYLE", pin(bibstyle), Some(Scope::Global));
+    assign_value("BIBSTYLE", pin(blx_bibstyle()), Some(Scope::Global));
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
     // the same file, for instance — and naming it twice makes
@@ -2290,8 +2151,12 @@ LoadDefinitions!({
     "\\begingroup\\c@refsection#1\\relax"
   );
   // (biblatex.sty:8638-8642 also flushes `blx@addset` cross-reference sets
-  // here; the binding models no `\set`/`\inset`, so only the group close remains.)
-  DefMacro!("\\biblatex@bbl@endrefsection", "\\endgroup");
+  // here; the binding models no `\set`/`\inset`.) The refsection's
+  // bibliography is printed as it ends ([`bbl_flush`]).
+  DefMacro!(
+    "\\biblatex@bbl@endrefsection",
+    "\\biblatex@bbl@flush\\endgroup"
+  );
 
   // biblatex source-mapping API (a biber pre-processing stage LaTeXML does not
   // run): gobble the whole rule argument WITHOUT expanding it, so the nested
@@ -2614,8 +2479,6 @@ LoadDefinitions!({
 
   // Perl L641-645: bool stubs + AtBeginDocument-guarded \true/\false bind.
   // documents such as 1811.01740 conflict with unconditional binding.
-  DefMacro!("\\blx@bbl@booltrue{}",  "\\relax", locked => true);
-  DefMacro!("\\blx@bbl@boolfalse{}", "\\relax", locked => true);
   at_begin_document(TokenizeInternal!(
     r"\@ifundefined{true}{\let\true\blx@bbl@booltrue}{}\@ifundefined{false}{\let\false\blx@bbl@boolfalse}{}"
   ))?;
@@ -3034,6 +2897,12 @@ LoadDefinitions!({
   // shortmathj), `The \TeX book` keeps its `\TeX`. Guard:
   // `06_cluster_bibliography::biblatex_title_case_is_as_entered`.
   AssignValue!("BibTeX_title_case" => "asis");
+  // The BibTeX reader digests the entries of a `.bbl` ([`bbl_flush`]), as it
+  // does amsrefs' `\bib` entries (amsrefs_sty.rs). The reader's per-thread
+  // state starts empty in every document.
+  LoadPool!("BibTeX");
+  BBL_ENTRY.with(|entry| *entry.borrow_mut() = None);
+  BBL_DATALISTS.with(|lists| *lists.borrow_mut() = BblDatalists::default());
   DefMacro!("\\mkbibquote{}", "\u{201C}#1\u{201D}");
   DefMacro!("\\mkbibparens{}", "(#1)");
   DefMacro!("\\mkbibbrackets{}", "[#1]");
@@ -3252,6 +3121,21 @@ fn blx_name_format_given_form(code: &str) -> &'static str {
     "full"
   } else {
     "switch"
+  }
+}
+
+/// The style the bibliography formatter keys on (`bibstyle`), for a `.bib`
+/// and a `.bbl` alike: biblatex's standard styles print URLs, which the `.bst`
+/// path's "Link" does not (make_bibliography.rs `style_prints_urls`;
+/// OXIDIZED_DESIGN_DIVERGENCES #289), spell given names out unless the style's
+/// name format or `giveninits` asks for initials ([`blx_prints_given_initials`];
+/// make_bibliography.rs `style_given_name_form`), and follow biblatex's
+/// punctuation tracker (make_bibliography.rs `PeriodRule`).
+fn blx_bibstyle() -> &'static str {
+  if blx_prints_given_initials() {
+    "biblatex-giveninits"
+  } else {
+    "biblatex"
   }
 }
 
@@ -3599,5 +3483,86 @@ fn blx_load_style_file(name: &str, ext: &str) {
       noerror: true,
       ..InputDefinitionOptions::default()
     });
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn bbl_dates_rejoin_bibers_parts() {
+    let parts = |list: &[(&str, &str)]| -> Vec<(String, String)> {
+      list
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect()
+    };
+    let date = parts(&[
+      ("year", "2001"),
+      ("month", "5"),
+      ("day", "6"),
+      ("endyear", "2001"),
+      ("endmonth", "5"),
+      ("endday", "8"),
+      ("urlyear", "2020"),
+      ("urlmonth", "3"),
+      ("urlday", "4"),
+    ]);
+    assert_eq!(
+      bbl_date(&date, "").as_deref(),
+      Some("2001-05-06/2001-05-08")
+    );
+    assert_eq!(bbl_date(&date, "url").as_deref(), Some("2020-03-04"));
+    assert_eq!(bbl_date(&date, "event"), None);
+    // An empty end year is an open range.
+    let open = parts(&[("year", "1990"), ("endyear", "")]);
+    assert_eq!(bbl_date(&open, "").as_deref(), Some("1990/"));
+  }
+
+  #[test]
+  fn bbl_names_read_back_as_bibtex() {
+    assert_eq!(
+      bbl_name_part(r"Martin\bibnamedelima Luther"),
+      "Martin Luther"
+    );
+    assert_eq!(bbl_name_part(r"van\bibnamedelima der"), "van der");
+    assert_eq!(
+      bbl_bibtex_name("Pieter", "van der", "Berg", ""),
+      "van der Berg, Pieter"
+    );
+    assert_eq!(
+      bbl_bibtex_name("Martin Luther", "", "King", "Jr."),
+      "King, Jr., Martin Luther"
+    );
+    assert_eq!(
+      bbl_bibtex_name("", "", "{World Health Organization}", ""),
+      "{World Health Organization}"
+    );
+    assert_eq!(
+      bbl_bibtex_name("", "", "García Márquez", ""),
+      "{García Márquez}"
+    );
+  }
+
+  #[test]
+  fn bbl_ranges_and_default_datalist() {
+    assert_eq!(
+      bbl_replace_macros(r"1\bibrangedash 10\bibrangessep 15", &[
+        ("bibrangedash", "--"),
+        ("bibrangessep", ", ")
+      ]),
+      "1--10, 15"
+    );
+    // Other control words are kept, and a longer name is not a prefix match.
+    assert_eq!(
+      bbl_replace_macros(r"\bibrangedashes x \emph{y}", &[("bibrangedash", "--")]),
+      r"\bibrangedashes x \emph{y}"
+    );
+    assert!(bbl_default_datalist("nyt/global//global/global/global"));
+    assert!(bbl_default_datalist("anyt/global//global/global"));
+    assert!(!bbl_default_datalist(
+      "nyt/apasortcite//global/global/global"
+    ));
   }
 }

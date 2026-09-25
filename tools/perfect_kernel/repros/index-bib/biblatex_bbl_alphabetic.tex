@@ -1,0 +1,23 @@
+% A shipped biblatex .bbl (biber output) keeps biber's labels and order: an alphabetic style
+% prints labelalpha + extraalpha ("Knu84a", "Knu84b"; alphabetic.bbx:22-25, biblatex.def:476
+% \mknumalph), in the .bbl's order (biber applied the style's anyt sorting), and \cite prints
+% the same label. A label holding TeX (`B\"{o}h66`, as biber --output-safechars and the bibtex
+% backend write it) is typeset, "Böh66". The entries are read into ltx:bibentry and formatted by
+% MakeBibliography, as a .bib's are.
+% witness: pdflatex + biber probe 2026-09-25; arXiv 2605.10053, 2605.14864, 2605.18215,
+%   2605.21199 (alphabetic .bbl submissions), 1212.4446 (TeX in labels: B{\"o}t01, {\v C}re+05);
+%   the .bbl beside it is `biber --output-safechars` 2.x output for {k2, k1: Knuth 1984;
+%   a1: Adams, Brown, Cole, Dunn 2001; b1: B{\"o}hm 1966}, renamed
+% oracle:  pdflatex 0 errors: "See [Knu84b] and [Ada+01] and [Knu84a] and [Böh66]."; References
+%          [Ada+01], [Böh66], [Knu84a] Fundamental Algorithms, [Knu84b] Seminumerical Algorithms
+% engines: rust (56iy) = the ar5iv-shape \bibitem rebuild: [Ada+01], [Knu84], [Knu84a] (its own
+%          collision suffixes), fields beyond a dozen dropped
+% expect:  0 errors; the labels, order and citations of the PDF (HTML)
+% status:  RED (56iy) -> GREEN (round 12, W6-B)
+\documentclass{article}
+\usepackage[style=alphabetic]{biblatex}
+\addbibresource{biblatex_bbl_alphabetic_absent.bib}
+\begin{document}
+See \cite{k1} and \cite{a1} and \cite{k2} and \cite{b1}.
+\printbibliography
+\end{document}
