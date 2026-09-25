@@ -9274,14 +9274,8 @@ Scope, and where it stops short of TeX:
 - Only an autoclose file level with an enclosing input recovers: an `\input` file, a filecontents
   or `\openout` file, catchfile's opener. A package or class file read through
   `reading_from_mouth` (not autoclose) and the main document keep Perl's stop.
-- Only a definition body recovers (`is_macrodef`: `\def`, `\edef` and their global forms).
-  TeX also inserts a `}` for a token-list text (§339 `absorbing`: `\message`, `\write`, `\toks=`,
-  `\expanded`, `\detokenize`, `\unexpanded`) and a `\par` for a macro argument (`matching`);
-  those keep the stop and the error (SYNC_STATUS lead: a scanner-status value in place of the
-  `is_macrodef` flag).
-- `is_macrodef` also marks the body arguments of `\lstnewenvironment` and
-  `\newtcbinputlisting` (listings_sty.rs, tcolorbox), which TeX reads as macro arguments: a file
-  ending inside one gets the definition recovery. `\scantokens` stays crossable (the cprotect binding wraps text in it without
+- Batch 56jg (#310) extends the recovery to every scan status TeX has at a file end: token-list
+  texts, macro arguments and `\halign` preambles. `\scantokens` stays crossable (the cprotect binding wraps text in it without
 `\protect`, cprotect.sty:180-185), as does any `\everyeof{\noexpand}` read (batch 56ix).
 Error counts equal pdflatex's on the six cases of `vfs_file_end` and the 56ix control.
 
@@ -9441,3 +9435,32 @@ text keeps its case where pdflatex uppercases it) and lacks `\begin`, `\end`, `\
 `\l__text_expand_*` tables exist only when expl3 is loaded (dump vs NODUMP runs differ).
 
 **Guards**: `case_change_equivalents::*`.
+
+### 310. A file ending inside a text, a macro argument or a preamble recovers as TeX does (Perl: the read stops at the mouth's end)
+
+Batch 56ja (#304) gave a definition body TeX's file-end recovery. **Rust** (batch 56jg, worker W9)
+models tex.web's scanner status (§305) for every balanced read at an autoclose file level's end
+(the same scope as #304), with TeX's messages and recovery (§338-339):
+
+| status | set by | message | recovery |
+|---|---|---|---|
+| defining | `\def`/`\edef` bodies (`read_definition_body`) | "File ended while scanning definition" | insert `}` |
+| absorbing | `GeneralText`/`XGeneralText`, `\toks=`/`\everyX=`, the pdfTeX text reads (incl. `\pdfescapehex`…`\pdffiledump`, read with `scan_pdf_ext_toks` in pdfTeX) | "…scanning text of \X" | insert `}` |
+| matching | macro arguments (`Expandable::read_call_arguments`) | "…scanning use of \X"; for a non-`\long` call whose runaway holds a `\par`, "Paragraph ended before \X was complete" (§396) | the call is dropped (§392); after a `\par` the text from the `\par` on is kept; the ended file is closed |
+| aligning | the `\halign` preamble | "…scanning preamble of \halign" | insert `\cr}` |
+
+Perl's `readBalanced` stops at the mouth's end (Gullet.pm:470-472), reports "ran out" (:525) and
+runs the macro on the partial argument (:683), so a runaway argument now loses what Perl kept, as
+pdfTeX does. The status is saved and restored by a guard type on every exit path and reset per
+conversion; `\long` survives the dump. Error counts, messages and text equal pdflatex's on the
+repros (`expansion-primitives/file_end_*`). Not modelled (residuals, SYNC_STATUS): `\message`,
+`\errmessage`, `\mark` and Rust's `\special {}` keep Perl's stop; `\lstnewenvironment`/
+`\newtcbinputlisting` bodies and LaTeX-level commands Rust implements as primitives or constructors
+(e.g. `\setcounter`) keep Perl's stop (a primitive-level abort would be needed); TeX's `skipping`
+status; the defining message does not name the macro; the inserted `\cr` is not TeX's frozen one; a
+parameterless closure macro running during an enclosing macro's typed-argument read has its runaway
+charged to the enclosing call; a Rust `DefMacro` binding of a `\long` LaTeX original is non-`\long`
+(it keeps the text after a `\par`, where pdflatex drops it).
+
+**Guards**: `scanner_status::*` (8), `vfs_file_end::*`, re-pinned
+`binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents` (pdflatex's "Before. After.").

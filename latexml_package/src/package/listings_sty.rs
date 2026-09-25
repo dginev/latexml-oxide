@@ -2667,7 +2667,15 @@ LoadDefinitions!({
   // then reads raw lines and processes the listing display.
   // Standard LaTeX and listings.sty:2204-2207 also define the bare \name and \endname
   // (e.g. codebox.sty:347 \codeviewaux / \endcodeviewaux within an outer environment).
-  DefPrimitive!("\\lstnewenvironment {}[Number][] DefPlain DefPlain", sub[(name, n_arg, opt_arg, start_code, end_code)] {
+  // The two codes are read as `{}` and packed here rather than as Perl's
+  // `DefPlain`: listings.sty:2194-2198 reads them as macro ARGUMENTS
+  // (`\lstnewenvironment@`), not as definition bodies, so a file that ends
+  // inside one is not tex.web's "File ended while scanning definition" (whose
+  // recovery `}` would let the end code read on into the enclosing file); it
+  // keeps the stop at the file's end (scanner_status, batch W9).
+  DefPrimitive!("\\lstnewenvironment {}[Number][] {} {}", sub[(name, n_arg, opt_arg, start_code, end_code)] {
+    let start_code = start_code.pack_parameters()?;
+    let end_code = end_code.pack_parameters()?;
     let env_name = name.to_string();
     let n: usize = n_arg.value_of() as usize;
     // Build parameter spec matching Perl's convertLaTeXArgs($n, $opt).

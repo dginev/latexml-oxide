@@ -1,0 +1,29 @@
+% A file that ends inside a balanced text is a runaway at tex.web's `absorbing` status (§473
+% `scan_toks(false, _)`): TeX reports "File ended while scanning text of \toks", closes the file,
+% inserts a `}` (§338-339) and goes on in the enclosing input, so the text ends at the file's end.
+% witness: batch 56ja residual (SYNC_STATUS "Balanced reads other than definitions ...")
+% oracle:  pdflatex 4 errors ("File ended while scanning text of" \toks, \write, \uppercase,
+%          \message), prints "A B [abc ] C ABC D E"
+% engines: rust=4 errors "Gullet->readBalanced ran out of input in an unbalanced state", same text:
+%          the read stopped at the file's end without TeX's report (56ja-rel, 2026-09-25)
+% expect:  4 errors; \toks, \write, \uppercase name TeX's "text of"; \message ({} in Perl and
+%          Rust, a primitive argument) keeps Perl's stop and message; "A B [abc ] C ABC D E"
+% status:  GREEN (W9: ScannerStatus::Absorbing, read_balanced_text; guard
+%          scanner_status::a_file_ending_inside_a_text_ends_the_text)
+\documentclass{article}
+\begin{filecontents*}{file_end_absorbing_toks.tex}
+\toks0={abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_absorbing_write.tex}
+\immediate\write16{abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_absorbing_upper.tex}
+\uppercase{abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_absorbing_message.tex}
+\message{abc
+\end{filecontents*}
+\begin{document}
+A \input file_end_absorbing_toks.tex B [\the\toks0] \input file_end_absorbing_write.tex C
+\input file_end_absorbing_upper.tex D \input file_end_absorbing_message.tex E
+\end{document}

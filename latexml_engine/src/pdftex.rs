@@ -199,7 +199,12 @@ LoadDefinitions!({
   //                                 bytes <33 or >126 as \nnn octal)
   //   \pdfescapename{a b/c#d}  → a#20b#2Fc#23d         (#XX uppercase hex for
   //                                 bytes outside !..~ and PDF delimiters)
-  DefMacro!("\\pdfescapehex {}", sub[(arg)] {
+  // pdfTeX reads the text of these, `\pdfmdfivesum`, `\pdffilesize`,
+  // `\pdffilemoddate` and `\pdffiledump` with `scan_pdf_ext_toks` (tex.web
+  // §473 `scan_toks(false, true)` at `absorbing` status), hence `GeneralText`
+  // (Perl's pdfTeX.pool:100-124 reads them as `{}`, which a file's end would
+  // make a macro argument's "use of", batch W9).
+  DefMacro!("\\pdfescapehex GeneralText", sub[(arg)] {
     let s = Expand!(arg).to_string();
     let mut out = String::with_capacity(s.len() * 2);
     for b in s.bytes() {
@@ -207,7 +212,7 @@ LoadDefinitions!({
     }
     Tokens!(Explode!(out))
   });
-  DefMacro!("\\pdfunescapehex {}", sub[(arg)] {
+  DefMacro!("\\pdfunescapehex GeneralText", sub[(arg)] {
     let s = Expand!(arg).to_string();
     let hex: Vec<u8> = s.bytes().filter(u8::is_ascii_hexdigit).collect();
     let mut out = String::with_capacity(hex.len() / 2);
@@ -223,7 +228,7 @@ LoadDefinitions!({
     }
     Tokens!(Explode!(out))
   });
-  DefMacro!("\\pdfescapestring {}", sub[(arg)] {
+  DefMacro!("\\pdfescapestring GeneralText", sub[(arg)] {
     let s = Expand!(arg).to_string();
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
@@ -238,7 +243,7 @@ LoadDefinitions!({
     }
     Tokens!(Explode!(out))
   });
-  DefMacro!("\\pdfescapename {}", sub[(arg)] {
+  DefMacro!("\\pdfescapename GeneralText", sub[(arg)] {
     let s = Expand!(arg).to_string();
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
@@ -290,7 +295,7 @@ LoadDefinitions!({
   // UPPERCASE hex (`\pdfmdfivesum{abc}` → 900150983CD24FB0D6963F7D28E17F72,
   // verified TL2025 2026-08-31). Witness 2407.02288 (pdfx.sty's
   // `\edef\xmp@docid{\pdfx@mdfivesum{\jobname}}`).
-  DefMacro!("\\pdfmdfivesum OptionalMatch:file {}", sub[(file_kw, arg)] {
+  DefMacro!("\\pdfmdfivesum OptionalMatch:file GeneralText", sub[(file_kw, arg)] {
     let text = Expand!(arg).to_string();
     let digest = if file_kw.is_some() {
       match find_file(&text, None).and_then(|p| std::fs::read(&p).ok()) {
@@ -303,7 +308,7 @@ LoadDefinitions!({
     };
     Tokens!(Explode!(digest))
   });
-  DefMacro!("\\pdffilesize{}", sub[(file)] {
+  DefMacro!("\\pdffilesize GeneralText", sub[(file)] {
     // used in expl3's \__file_full_name:n , among others
     let filepath = Expand!(file).to_string();
     if let Some(path) = find_file(&filepath, None) {
@@ -324,7 +329,7 @@ LoadDefinitions!({
   // `D:YYYYMMDDhhmmss±hh'mm'` in LOCAL time — verified against live pdfTeX
   // (TL2025 2026-08-31: `D:20260831120047-04'00'`). Empty expansion for a
   // file that does not resolve, matching pdfTeX.
-  DefMacro!("\\pdffilemoddate {}", sub[(file)] {
+  DefMacro!("\\pdffilemoddate GeneralText", sub[(file)] {
     use chrono::{DateTime, Local};
     let filepath = Expand!(file).to_string();
     let formatted = find_file(&filepath, None)
@@ -340,7 +345,7 @@ LoadDefinitions!({
       .unwrap_or_default();
     Tokens!(Explode!(formatted))
   });
-  def_macro_noop("\\pdffiledump {}")?;
+  def_macro_noop("\\pdffiledump GeneralText")?;
   // DefMacro(""\pdfcolorstackinit {}",None);
 
   // Read-only registers
@@ -380,7 +385,10 @@ LoadDefinitions!({
       }
     }
     skip_spaces()?;
-    let file = read_balanced(ExpansionLevel::Off, false, true)?.to_string();
+    // pdfTeX reads every `<general text>` with `scan_pdf_ext_toks`, i.e.
+    // tex.web's `scan_toks(false, true)` at `absorbing` status, hence
+    // `read_balanced_text` here and below.
+    let file = read_balanced_text(ExpansionLevel::Off, true)?.to_string();
     let name = file.trim().trim_matches(|c| c == '{' || c == '}').trim().to_string();
     let pages = find_file(&name, None)
       .or_else(|| {
@@ -424,7 +432,7 @@ LoadDefinitions!({
     for keyword in ["attr", "resources"] {
       if read_keyword(&[keyword])?.is_some() {
         skip_filler()?;
-        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+        let _ = read_balanced_text(ExpansionLevel::Off, true)?;
       }
     }
     let number = read_number()?;
@@ -452,14 +460,14 @@ LoadDefinitions!({
   DefParameterType!(OutlineSpecification, reader => reader!(_args, _extra, {
     if read_keyword(&["attr"])?.is_some() {
       skip_spaces()?;
-      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
     }
     read_action_spec()?;
     if read_keyword(&["count"])?.is_some() {
       let _ = read_number()?;
     }
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   }), optional => true);
   def_primitive_noop("\\pdfoutline OutlineSpecification")?;
   DefParameterType!(DestSpecification, reader => reader!(_args, _extra, {
@@ -467,7 +475,7 @@ LoadDefinitions!({
       let _ = read_number()?;
     } else if read_keyword(&["name"])?.is_some() {
       skip_spaces()?;
-      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
     }
     if read_keyword(&["xyz"])?.is_some() {
       if read_keyword(&["zoom"])?.is_some() {
@@ -523,14 +531,14 @@ LoadDefinitions!({
     }
     if read_keyword(&["stream"])?.is_some() && read_keyword(&["attr"])?.is_some() {
       skip_filler()?;
-      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
     }
     let _ = read_keyword(&["file"])?;
     while read_keyword(&["width", "height", "depth"])?.is_some() {
       let _ = read_dimension()?;
     }
     skip_filler()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
@@ -565,7 +573,7 @@ LoadDefinitions!({
     let _ = read_keyword(&["shipout"])?;
     let _ = read_keyword(&["direct", "page"])?;
     skip_filler()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   });
   // \special pdfspecial spec
   // \pdfresettimer
@@ -618,7 +626,7 @@ LoadDefinitions!({
       // Otherwise read and discard the general-text argument.
       if pop.is_none() {
         skip_spaces()?;
-        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+        let _ = read_balanced_text(ExpansionLevel::Off, true)?;
       }
     }
   );
@@ -634,7 +642,7 @@ LoadDefinitions!({
     let _ = read_keyword(&["page"])?;
     let _ = read_keyword(&["direct"])?;
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
     let stack = lookup_int("pdfcolorstack_count") + 1;
     assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
     Ok(Tokens::new(Explode!(stack.to_string())))
@@ -722,9 +730,9 @@ LoadDefinitions!({
       -1
     };
     skip_filler()?;
-    let pattern = read_balanced(ExpansionLevel::Partial, false, true)?.to_string();
+    let pattern = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
     skip_filler()?;
-    let subject = read_balanced(ExpansionLevel::Partial, false, true)?.to_string();
+    let subject = read_balanced_text(ExpansionLevel::Partial, true)?.to_string();
     let pattern = if icase { format!("(?i){pattern}") } else { pattern };
     let mut groups: Vec<String> = Vec::new();
     let flag = match Regex::new(&pattern) {
@@ -786,24 +794,24 @@ fn read_action_spec() -> Result<()> {
   };
   skip_spaces()?;
   if kind == "user" {
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
     return Ok(());
   }
   if read_keyword(&["file"])?.is_some() {
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   }
   if read_keyword(&["num"])?.is_some() {
     let _ = read_number()?;
   } else if read_keyword(&["name"])?.is_some() {
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   } else if kind == "goto" {
     if read_keyword(&["page"])?.is_some() {
       let _ = read_number()?;
     }
     skip_spaces()?;
-    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
   }
   let _ = read_keyword(&["newwindow", "nonewwindow"])?;
   Ok(())

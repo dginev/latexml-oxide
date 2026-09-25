@@ -136,9 +136,103 @@ pub enum BalancedBoundary {
   /// The mouth is a self-contained input. A balanced read stops at its end, as
   /// Perl always does — an unbalanced argument loses the rest of *this* mouth
   /// and nothing more. An Opaque mouth that is also a file level (catchfile's
-  /// opener) gets TeX's file-end recovery inside a definition, like any file
-  /// (see `read_balanced_with_close`).
+  /// opener) gets TeX's file-end recovery, like any file
+  /// ([`recover_at_file_end`]).
   Opaque,
+}
+
+/// What the scanner is reading, for the recovery TeX makes when a file ends in
+/// the middle of it: tex.web §305 `scanner_status` (with `warning_index`, the
+/// command it names). A scan that owns a status sets it for its duration with
+/// [`set_scanner_status`] and restores the enclosing one after, as tex.web
+/// saves and restores it (§389 `macro_call`, §473 `scan_toks`); every nested
+/// read that sets none inherits it. [`recover_at_file_end`] consults it.
+///
+/// tex.web's `skipping` (conditional text) is not modelled: a skip that runs
+/// off an input level stops there, as Perl's does (`read_next_conditional`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ScannerStatus {
+  /// Not inside any of the scans below: a file's end is not a runaway.
+  #[default]
+  Normal,
+  /// `defining`: a definition body, `\def`/`\edef` (§473 `scan_toks(true, _)`).
+  Defining,
+  /// `matching`: a macro's arguments (§389-391 `macro_call`).
+  Matching,
+  /// `aligning`: an alignment preamble (§777 `init_align`).
+  Aligning,
+  /// `absorbing`: a balanced text, `\message`, `\write`, `\toks=`,
+  /// `\detokenize` … (§473 `scan_toks(false, _)`, eTeX `scan_general_text`).
+  Absorbing,
+}
+
+impl ScannerStatus {
+  /// The word tex.web §339 prints after "while scanning".
+  fn scanning_what(self) -> &'static str {
+    match self {
+      ScannerStatus::Normal => "input",
+      ScannerStatus::Defining => "definition",
+      ScannerStatus::Matching => "use",
+      ScannerStatus::Aligning => "preamble",
+      ScannerStatus::Absorbing => "text",
+    }
+  }
+}
+
+/// Restores the enclosing [`ScannerStatus`] (and `warning_index`) when it
+/// drops, on every exit path of the scan that set it, `?` included.
+/// The runaway argument ([`argument_runaway`]) is scoped the same way: a scan
+/// starts without one, and the enclosing scan's comes back when it ends.
+#[must_use = "the scanner status is restored when this guard drops"]
+pub struct ScannerStatusGuard {
+  status:           ScannerStatus,
+  warning_index:    Option<Token>,
+  runaway_argument: Option<Vec<Token>>,
+  ended:            bool,
+}
+
+impl ScannerStatusGuard {
+  /// End the scan now and hand back the macro argument that ran off a file
+  /// inside it, if one did ([`argument_runaway`]): the tokens it had read,
+  /// for [`abandon_runaway_call`]. A `macro_call` abandons itself then
+  /// (tex.web §392; `Expandable::read_call_arguments`).
+  pub fn end_taking_runaway_argument(mut self) -> Option<Vec<Token>> {
+    let mut gullet = GULLET.borrow_mut();
+    gullet.scanner_status = self.status;
+    gullet.warning_index = self.warning_index.take();
+    self.ended = true;
+    std::mem::replace(&mut gullet.runaway_argument, self.runaway_argument.take())
+  }
+}
+
+impl Drop for ScannerStatusGuard {
+  fn drop(&mut self) {
+    if self.ended {
+      return;
+    }
+    // `try_`: a guard dropped while unwinding from a panic that holds the
+    // gullet must not panic again; `initialize_gullet` resets the status.
+    if let Ok(mut gullet) = GULLET.try_borrow_mut() {
+      gullet.scanner_status = self.status;
+      gullet.warning_index = self.warning_index.take();
+      gullet.runaway_argument = self.runaway_argument.take();
+    }
+  }
+}
+
+/// What [`recover_at_file_end`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FileEndRecovery {
+  /// Not a runaway: the scan is at [`ScannerStatus::Normal`], or the input
+  /// level that ended is not a file with an enclosing input. The caller keeps
+  /// its own end-of-input behaviour.
+  NotARunaway,
+  /// The file is closed and TeX's recovery tokens are the next input: a `}`
+  /// for a definition or a text, `\cr}` for a preamble. Read on.
+  Inserted,
+  /// A macro argument ran off: the call is abandoned, so the reader stops and
+  /// returns what it has, which the call discards.
+  Abandoned,
 }
 
 #[derive(PartialEq, Debug)]
@@ -214,6 +308,13 @@ pub struct Gullet {
   pub ctx_serial:           u64,
   ctx_next:                 u64,
   ctx_stack:                Vec<u64>,
+  /// tex.web `scanner_status` (see [`ScannerStatus`]).
+  scanner_status:           ScannerStatus,
+  /// tex.web `warning_index`: the command a runaway report names.
+  warning_index:            Option<Token>,
+  /// The tokens of a macro argument that ran off the end of a file, as read
+  /// (see [`argument_runaway`]).
+  runaway_argument:         Option<Vec<Token>>,
 }
 
 thread_local! {
@@ -293,6 +394,42 @@ macro_rules! gullet_mut {
     (*GULLET).borrow_mut()
   };
 }
+
+/// Enter a scan at `status`, naming `warning_index` (the command TeX's runaway
+/// message names: the macro whose arguments are read, the primitive whose text
+/// is absorbed). tex.web saves and restores the status around such a scan;
+/// the returned guard does the restoring.
+pub fn set_scanner_status(
+  status: ScannerStatus,
+  warning_index: Option<Token>,
+) -> ScannerStatusGuard {
+  let mut gullet = gullet_mut!();
+  ScannerStatusGuard {
+    status:           std::mem::replace(&mut gullet.scanner_status, status),
+    warning_index:    std::mem::replace(&mut gullet.warning_index, warning_index),
+    runaway_argument: gullet.runaway_argument.take(),
+    ended:            false,
+  }
+}
+
+/// The current [`ScannerStatus`].
+pub fn scanner_status() -> ScannerStatus { gullet!().scanner_status }
+
+/// Whether a macro argument has run off the end of a file and the call is to
+/// be abandoned (see [`FileEndRecovery::Abandoned`]); readers stop at once.
+pub fn argument_runaway() -> bool { gullet!().runaway_argument.is_some() }
+
+/// A reader stopping at a runaway argument puts in front of the runaway
+/// tokens the ones it had read itself, so that [`abandon_runaway_call`] sees
+/// the argument as it was read: a delimited reader's text before a brace group
+/// that ran off, then the group's own.
+pub fn note_runaway_tokens(mut read: Vec<Token>) {
+  if let Some(ref mut runaway) = gullet_mut!().runaway_argument {
+    read.append(runaway);
+    *runaway = read;
+  }
+}
+
 /// Set the token limit and reset progress. Returns previous (limit, progress) for restoration.
 pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
   let mut g = gullet_mut!();
@@ -415,6 +552,9 @@ pub fn initialize_gullet() {
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
+  gullet.scanner_status = ScannerStatus::Normal;
+  gullet.warning_index = None;
+  gullet.runaway_argument = None;
 }
 
 /// Get the current location of input getting read
@@ -655,6 +795,142 @@ pub fn close_mouth(forced: bool) -> Result<()> {
   }
   Ok(())
 }
+/// A file has just ended under the current read: tex.web §362 closes it and
+/// calls §336 `check_outer_validity`, which, when the [`ScannerStatus`] is not
+/// normal, reports the runaway (§338 "File ended while scanning definition /
+/// use / preamble / text of \cs") and inserts the tokens that should lead to
+/// recovery (§339).
+///
+/// Only an autoclose file level with an enclosing input ends like this: an
+/// `\input` file, a file held in memory (filecontents, an `\openout` file),
+/// catchfile's opener ([`crate::mouth::Mouth::is_file_level`]). A package or
+/// class read through `reading_from_mouth` (not autoclose) and the main
+/// document keep Perl's stop at their end; string mouths (`\scantokens`,
+/// RawTeX) are no file levels (`read_balanced` crosses them).
+///
+/// - `defining`, `absorbing`: a `}` — the definition or text ends at the
+///   file's end and the enclosing input goes on;
+/// - `aligning`: `\cr` and `}` — the preamble, and with it the alignment, ends;
+/// - `matching`: TeX inserts `\par` with `long_state:=outer_call`, and
+///   `macro_call` abandons the call and drops its arguments on reading it
+///   (§392 "Report a runaway argument and abort", which consumes the `\par`).
+///   Modelled without the token: [`FileEndRecovery::Abandoned`] marks
+///   [`argument_runaway`] and the reader stops; the report and the file's
+///   close wait for the call ([`abandon_runaway_call`]), which alone knows
+///   whether TeX would have stopped earlier, at a `\par`. Until then the ended
+///   file stays current, so a reader loop that does not look at the mark meets
+///   the same end again rather than reading on into the enclosing input.
+///
+/// The inserted tokens enter as `ins_list` inserts them, as input never
+/// scanned (`unread_expansion`): the brace ledger counts the `}` when it is
+/// read, which balances the definition's opening `{`.
+pub fn recover_at_file_end() -> Result<FileEndRecovery> {
+  let (status, warning_index, file_end, runaway) = {
+    let gullet = gullet!();
+    let file_end = !gullet.mouthstack.is_empty()
+      && gullet
+        .runtime
+        .as_ref()
+        .is_some_and(|r| r.autoclose && r.mouth.is_file_level());
+    (
+      gullet.scanner_status,
+      gullet.warning_index,
+      file_end,
+      gullet.runaway_argument.is_some(),
+    )
+  };
+  if status == ScannerStatus::Normal || !file_end {
+    return Ok(FileEndRecovery::NotARunaway);
+  }
+  if status == ScannerStatus::Matching {
+    // Met again by a reader that went on, the same end is the same runaway.
+    if !runaway {
+      gullet_mut!().runaway_argument = Some(Vec::new());
+    }
+    return Ok(FileEndRecovery::Abandoned);
+  }
+  let of = warning_index.map(|cs| s!(" of {cs}")).unwrap_or_default();
+  let message = s!("File ended while scanning {}{of}", status.scanning_what());
+  Error!("expected", "}", message);
+  close_mouth(false)?;
+  unread_expansion(if status == ScannerStatus::Aligning {
+    // TeX inserts `frozen_cr`, the primitive whatever `\cr` means now; this
+    // is the `\cr` token (a redefined `\cr` is not modelled).
+    Tokens!(T_CS!("\\cr"), T_END!())
+  } else {
+    Tokens!(T_END!())
+  });
+  Ok(FileEndRecovery::Inserted)
+}
+
+/// [`recover_at_file_end`] for a reader of macro arguments only (a single
+/// token, a delimited argument; tex.web §392): whether the call is abandoned.
+/// At any other status such a reader keeps its own end-of-input behaviour.
+pub fn argument_ran_off_a_file() -> Result<bool> {
+  Ok(
+    scanner_status() == ScannerStatus::Matching
+      && recover_at_file_end()? == FileEndRecovery::Abandoned,
+  )
+}
+
+/// Abandon the call of `cs` whose argument ran off the end of a file, given
+/// the `runaway` tokens it had read ([`ScannerStatusGuard::end_taking_runaway_argument`]).
+///
+/// TeX checks every token of a non-`\long` macro's argument for `\par`
+/// (tex.web §392, §399) and at the first one abandons the call, "Paragraph
+/// ended before \cs was complete", putting the `\par` back (§396
+/// `back_error`): the call and its argument up to there are dropped, and the
+/// rest is read again. Neither Perl nor this kernel makes that check while it
+/// reads (Perl's `isLong` is stored, Expandable.pm:46, and never read), so it
+/// is made here, on the runaway only: the argument ran to the file's end, past
+/// the `\par` where TeX stopped, and without the check the call would drop
+/// everything after it too. The tokens from that `\par` on go back into the
+/// file, which then ends later, under the enclosing scan.
+///
+/// Otherwise (a `\long` macro, or no `\par`) it is the file's end: "File ended
+/// while scanning use of \cs" (§338-339), and the file is closed now, as
+/// tex.web §362 closes it (`end_file_reading`) before recovering, so the next
+/// read is from the enclosing input (`\expandafter\a\foo{…` gives `\a` the
+/// next token after `\input`).
+pub fn abandon_runaway_call(cs: Token, is_long: bool, runaway: Vec<Token>) -> Result<()> {
+  let par = T_CS!("\\par");
+  match runaway.iter().position(|t| !is_long && *t == par) {
+    Some(at) => {
+      Error!(
+        "unexpected",
+        "\\par",
+        s!("Paragraph ended before {cs} was complete")
+      );
+      // Never scanned, as far as the brace ledger knows: the readers
+      // retracted the argument's braces when they stopped.
+      unread_expansion(Tokens::new(runaway[at..].to_vec()));
+    },
+    None => {
+      Error!(
+        "expected",
+        "\\par",
+        s!("File ended while scanning use of {cs}")
+      );
+      // Only the file that ended: still current, nothing left in it.
+      let ended_file = {
+        let mut gullet = gullet_mut!();
+        let has_parent = !gullet.mouthstack.is_empty();
+        gullet.runtime.as_mut().is_some_and(|r| {
+          has_parent
+            && r.autoclose
+            && r.mouth.is_file_level()
+            && r.pushback.is_empty()
+            && !r.mouth.has_more_input()
+        })
+      };
+      if ended_file {
+        close_mouth(false)?;
+      }
+    },
+  }
+  Ok(())
+}
+
 /// This flushes a mouth so that it will be automatically closed, next time it's read
 /// Corresponds to TeX's \endinput
 pub fn flush_mouth() {
@@ -1044,9 +1320,9 @@ fn cycle_trip_fatal(period: usize, nextt: &Token) -> Result<CheckedRead> {
 /// on in the enclosing level. Crosses exactly what `read_x_token` drains:
 /// autoclose mouths with a parent (`\input` files, `\scantokens`
 /// pseudo-files, line remainders), never a `reading_from_mouth` context. A
-/// definition or delimited argument that runs off a file's end is still a §338
-/// runaway: `read_until` and [`read_token`] stop there, and `read_balanced`
-/// reports it and, inside a definition, inserts TeX's `}` (§339, batch 56ja).
+/// definition, text, preamble or macro argument that runs off a file's end is
+/// still a §338 runaway: [`read_token`] stops there, and the scan recovers by
+/// its [`ScannerStatus`] ([`recover_at_file_end`]).
 /// This is what `\everyeof{\noexpand}` relies on
 /// (catchfile.sty:251-261, morewrites.sty:465, l3build regression-test.tex:101).
 /// Guards: `noexpand_input_ends::*`.
@@ -1680,17 +1956,40 @@ pub enum ExpansionLevel {
 /// and only optionally requires the openning "{".
 ///
 /// It may return comments in the token lists.
-/// The `is_macrodef` flag affects whether # parameters are "packed" for macro bodies.
+/// `pack_parameters` packs the `#` parameters of a macro body (Perl's
+/// `$macrodef`, `Tokens::pack_parameters`). What happens when a file ends
+/// inside the read is the [`ScannerStatus`]'s business, not this flag's: see
+/// [`read_definition_body`] and [`read_balanced_text`] for the scans that set
+/// one, and [`recover_at_file_end`].
 /// If `require_open` is true, the opening T_BEGIN has not yet been read, and is required.
 ///
 /// If `toplevel` is true, it will automatically close empty mouths as it reads,
 /// and will also fully expand macros (unless overridden by `expansion_level` being explicitly Off).
 pub fn read_balanced(
   expansion_level: ExpansionLevel,
-  is_macrodef: bool,
+  pack_parameters: bool,
   require_open: bool,
 ) -> Result<Tokens> {
-  Ok(read_balanced_with_close(expansion_level, is_macrodef, require_open)?.0)
+  Ok(read_balanced_with_close(expansion_level, pack_parameters, require_open)?.0)
+}
+
+/// A definition body: tex.web §473 `scan_toks(true, xpand)`, read at
+/// `defining` status with its `#` parameters packed (`\def`, `\edef`, via the
+/// `DefPlain`/`DefExpanded` parameter types). A file that ends inside it ends
+/// the definition there (§339). TeX names the macro being defined; the body
+/// reader does not know it, so the report says "definition" alone.
+pub fn read_definition_body(expansion_level: ExpansionLevel) -> Result<Tokens> {
+  let _status = set_scanner_status(ScannerStatus::Defining, None);
+  read_balanced(expansion_level, true, true)
+}
+
+/// A balanced text: tex.web §473 `scan_toks(false, xpand)` (eTeX
+/// `scan_general_text`), read at `absorbing` status for the command being
+/// executed (`\write`, `\uppercase`, `\detokenize`, `\toks=`, the pdfTeX
+/// texts …). A file that ends inside it ends the text there (§339).
+pub fn read_balanced_text(expansion_level: ExpansionLevel, require_open: bool) -> Result<Tokens> {
+  let _status = set_scanner_status(ScannerStatus::Absorbing, get_current_token());
+  read_balanced(expansion_level, false, require_open)
 }
 
 /// [`read_balanced`] that also hands back the CLOSE token that ended the
@@ -1705,7 +2004,7 @@ pub fn read_balanced(
 /// `\scantokens`, unbalancing it (chemexec/chemnum, sweep 74).
 pub fn read_balanced_with_close(
   expansion_level: ExpansionLevel,
-  is_macrodef: bool,
+  pack_parameters: bool,
   require_open: bool,
 ) -> Result<(Tokens, Option<Token>)> {
   use ExpansionLevel::*;
@@ -1816,15 +2115,12 @@ pub fn read_balanced_with_close(
       // What counts as a file is the input LEVEL, not how it is read: a file
       // held in memory (filecontents, an `\openout` file) is read from a
       // string but ends like any file ([`crate::mouth::Mouth::is_file_level`]).
-      // At a file's end inside a definition TeX closes the file, reports
-      // "File ended while scanning definition", inserts a `}` and carries on in
-      // the enclosing input (tex.web §362 `check_outer_validity`, §338-339
-      // `ins_list`), so the definition ends there and the rest of the document
-      // is kept. Other balanced reads keep the stop and the error below,
-      // short of TeX: §339 inserts `\par` for a macro argument (`matching`)
-      // and a `}` for a token-list text (`absorbing`), which a scanner-status
-      // value in place of `is_macrodef` would model (SYNC_STATUS).
-      // Guards: `vfs_file_end::*`.
+      // At a file's end TeX closes the file and recovers by the scanner status
+      // (tex.web §362 `check_outer_validity`, §338-339; [`recover_at_file_end`]):
+      // a definition or a text gets a `}` and the enclosing input goes on, so
+      // the rest of the document is kept; a macro argument abandons its call.
+      // At normal status the read keeps the stop and the error below.
+      // Guards: `vfs_file_end::*`, `scanner_status::*`.
       None => {
         let (autoclosed, file_level, transparent) = {
           let gullet = gullet!();
@@ -1841,13 +2137,17 @@ pub fn read_balanced_with_close(
           close_mouth(false)?;
           continue;
         }
-        if autoclosed && file_level && is_macrodef {
-          Error!("expected", "}", "File ended while scanning definition");
-          close_mouth(false)?;
-          unread_one(T_END!());
-          continue;
+        match recover_at_file_end()? {
+          FileEndRecovery::Inserted => continue,
+          FileEndRecovery::Abandoned => {
+            // The call drops this argument; retract its unmatched braces from
+            // the alignment ledger as §392 does (`align_state-unbalance`).
+            set_align_group_count(align_group_count() - level);
+            note_runaway_tokens(tokens);
+            return Ok((Tokens!(), None));
+          },
+          FileEndRecovery::NotARunaway => break,
         }
-        break;
       },
       Some(token) => match token.get_catcode() {
         Catcode::CS if token.text == pin!("\\dont_expand") => {
@@ -1930,7 +2230,7 @@ pub fn read_balanced_with_close(
                   for t in expansion.unlist() {
                     match t.get_catcode() {
                       Catcode::MARKER => handle_marker(t),
-                      Catcode::PARAM if is_macrodef => {
+                      Catcode::PARAM if pack_parameters => {
                         // "unpack" to cover the packParameters at end!
                         tokens.push(t);
                         tokens.push(t);
@@ -1985,7 +2285,7 @@ pub fn read_balanced_with_close(
     Ok((Tokens!(), close))
   } else {
     Ok((
-      if is_macrodef {
+      if pack_parameters {
         Tokens::new(tokens).pack_parameters()?
       } else {
         Tokens::new(tokens)
@@ -2092,6 +2392,12 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
       let token = match read_token()? {
         Some(t) => t,
         None => {
+          // A delimited macro argument that runs off a file's end abandons
+          // its call (`recover_at_file_end`), which drops the argument.
+          if argument_ran_off_a_file()? {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
           // Ran out! Unread and report the distinguishable EOF. A marked
           // `\scantokens` mouth has already delivered its `\everyeof`
           // payload as its last tokens (`eof_seen`), so this is the true end.
@@ -2113,6 +2419,10 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           nbraces += 1;
           tokens.push(token);
           let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+          if argument_runaway() {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
           if !balanced_arg.is_empty() {
             tokens.extend(balanced_arg.unlist());
           }
@@ -2132,6 +2442,11 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
         let token = match read_token()? {
           Some(t) => t,
           None => {
+            if argument_ran_off_a_file()? {
+              tokens.extend(ring);
+              note_runaway_tokens(tokens);
+              return Ok(Some(Tokens!()));
+            }
             // Ran out! Unread and report the distinguishable EOF.
             // The partial ring is DROPPED, not unread — replaying a
             // half-matched delimiter prefix into the stream re-tokenizes
@@ -2150,6 +2465,10 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           }
           tokens.push(token);
           let (balanced_arg, close) = read_balanced_with_close(ExpansionLevel::Off, false, false)?;
+          if argument_runaway() {
+            note_runaway_tokens(tokens);
+            return Ok(Some(Tokens!()));
+          }
           if !balanced_arg.is_empty() {
             tokens.append(&mut balanced_arg.unlist());
           }
@@ -2199,6 +2518,11 @@ pub fn read_x_until(until: &Token) -> Result<Tokens> {
     } else if token.get_catcode() == Catcode::BEGIN {
       tokens.push(token);
       tokens.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+      if argument_runaway() {
+        // The group ran off a file's end: the call is abandoned (§392).
+        note_runaway_tokens(tokens);
+        return Ok(Tokens!());
+      }
       tokens.push(T_END!());
     } else if token.get_catcode().is_active_or_cs() {
       tokens.push(token.noexpand_shadowed().unwrap_or(token));
@@ -2216,12 +2540,21 @@ pub fn read_until_token(t: Token) -> Result<Tokens> {
 /// Note: Perl uses `$$token[1] == CC_BEGIN` (catcode check, not defined_as)
 pub fn read_until_brace() -> Result<Option<Tokens>> {
   let mut tokens = Vec::new();
-  while let Some(token) = read_token()? {
-    if token.get_catcode() == Catcode::BEGIN {
-      unread_one(token); // Unread with proper agc adjustment
-      break;
-    } else {
-      tokens.push(token);
+  loop {
+    match read_token()? {
+      Some(token) if token.get_catcode() == Catcode::BEGIN => {
+        unread_one(token); // Unread with proper agc adjustment
+        break;
+      },
+      Some(token) => tokens.push(token),
+      None => {
+        // A `#{`-delimited macro argument that runs off a file's end: the
+        // call is abandoned (tex.web §392).
+        if argument_ran_off_a_file()? {
+          note_runaway_tokens(std::mem::take(&mut tokens));
+        }
+        break;
+      },
     }
   }
   if tokens.is_empty() {
@@ -2545,7 +2878,12 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
 ///  it will **not** read any macro arguments from the following input!
 pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
   match read_non_space()? {
-    None => Ok(Tokens!()),
+    None => {
+      // `\foo` as a file's last token, `\foo` taking an argument: a runaway
+      // argument (tex.web §392), which abandons the call.
+      argument_ran_off_a_file()?;
+      Ok(Tokens!())
+    },
     Some(token) => {
       // Perl: $$token[1] == CC_BEGIN — checks actual catcode, NOT defined_as.
       // \bgroup (catcode CS) does NOT match here; only literal { does.
@@ -3376,7 +3714,9 @@ pub fn read_tokens_value() -> Result<Tokens> {
     Some(token) => {
       // Perl: $$token[1] == CC_BEGIN — direct catcode check
       if token.get_catcode() == Catcode::BEGIN {
-        Ok(read_balanced(ExpansionLevel::Off, false, false)?)
+        // tex.web §1226: `scan_toks(false, false)` for the token-list
+        // parameter or register being assigned (`absorbing`).
+        read_balanced_text(ExpansionLevel::Off, false)
       } else {
         match lookup_register_definition(&token) {
           Some(defn) => {

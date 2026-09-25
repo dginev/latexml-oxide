@@ -1694,7 +1694,16 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   let mut nexttabskip = tabskip;
   // Only expand certain things; See TeX book p.238
   local_align_group_count(1000000);
-  while let Some(t) = read_token()? {
+  // tex.web §777 `init_align` scans the preamble at `aligning` status: a file
+  // that ends inside it is "File ended while scanning preamble of \halign",
+  // and TeX's `\cr}` ends the preamble and the alignment there (§339).
+  let aligning = set_scanner_status(ScannerStatus::Aligning, get_current_token());
+  loop {
+    let t = match read_token()? {
+      Some(t) => t,
+      None if recover_at_file_end()? == FileEndRecovery::Inserted => continue,
+      None => break,
+    };
     let cc = t.get_catcode();
     if t == T_CS!("\\tabskip") {
       // Read the tabskip assignment
@@ -1769,6 +1778,7 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
       tokens.push(t);
     }
   }
+  drop(aligning);
   expire_align_group_count();
   // Store the template's token representation for reversion
   let template_tokens = Tokens::new(tokens.clone());

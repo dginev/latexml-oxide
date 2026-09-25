@@ -382,7 +382,8 @@ impl Parameter {
     });
 
     // Perl: experiment: skip spaces after a successful OptionalMatch read
-    if !value_arg.is_none() && self.optional && is_optional_match {
+    // (not when the call is being abandoned: nothing more is read).
+    if !value_arg.is_none() && self.optional && is_optional_match && !gullet::argument_runaway() {
       gullet::skip_spaces()?;
     }
 
@@ -391,6 +392,8 @@ impl Parameter {
     let checked_value = if !self.optional
       && (!self.novalue || self.is_macro_delimiter())
       && (value_arg.is_none() && self.predigest.is_none())
+      // A call being abandoned (tex.web §392) has nothing more to report.
+      && !gullet::argument_runaway()
     {
       // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
       // when the delimiter never appeared; a matched-but-empty arg is
@@ -420,7 +423,10 @@ impl Parameter {
           },
           None => true,
         };
-      if ran_out {
+      if ran_out && gullet::argument_ran_off_a_file()? {
+        // At a file's end the call is abandoned instead (tex.web §392).
+        value_arg
+      } else if ran_out {
         ArgWrap::Tokens(Tokens::new(Vec::new()))
       } else if !is_until {
         let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
@@ -692,7 +698,11 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
-    Ok(self.read_macro_arguments(fordefn)?.unwrap_or_default())
+    Ok(
+      self
+        .read_parameter_list(fordefn, false)?
+        .unwrap_or_default(),
+    )
   }
 
   /// `read_arguments` for a macro call: `None` when the call does not match its
@@ -704,9 +714,27 @@ impl Parameters {
   /// Arguments after the miss are not read (TeX stops at the mismatch).
   /// OXIDIZED_DESIGN #295; guard
   /// `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
+  ///
+  /// `None` too when an argument ran off the end of a file
+  /// ([`gullet::argument_runaway`]): tex.web §392 "Report a runaway argument
+  /// and abort" abandons the call and drops the arguments read so far; the
+  /// caller that set the `matching` status consumes the mark
+  /// (`Expandable::read_call_arguments`). Guards: `scanner_status::*`.
   pub fn read_macro_arguments(
     &self,
     fordefn: Option<&dyn Definition>,
+  ) -> Result<Option<Vec<ArgWrap>>> {
+    self.read_parameter_list(fordefn, true)
+  }
+
+  /// The parameter loop of [`Self::read_macro_arguments`] (`macro_call`) and
+  /// [`Self::read_arguments`]. Only a macro call stops at a runaway argument:
+  /// a nested re-parse of an argument already read (`reparse_argument`) must
+  /// deliver its values.
+  fn read_parameter_list(
+    &self,
+    fordefn: Option<&dyn Definition>,
+    macro_call: bool,
   ) -> Result<Option<Vec<ArgWrap>>> {
     let mut args = Vec::with_capacity(self.0.len());
     // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
@@ -729,6 +757,9 @@ impl Parameters {
         //   target: &s!("parameter:{}", parameter.name),
         //   "parameter with predigest closure was invoked in an expandable context. Parameter
         // digestion won't execute." );
+      }
+      if macro_call && gullet::argument_runaway() {
+        return Ok(None);
       }
       if parameter.is_macro_delimiter() && values.is_none() {
         return Ok(None);

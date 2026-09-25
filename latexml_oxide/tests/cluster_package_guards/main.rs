@@ -130,6 +130,7 @@ pub(crate) mod perfect_kernel_batch46;
 mod perfect_kernel_batch47;
 mod perfect_kernel_batch48;
 mod perfect_kernel_batch49;
+mod scanner_status;
 mod unicode_format_encoding;
 mod vfs_file_end;
 mod xkeyval_internals;

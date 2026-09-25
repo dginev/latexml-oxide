@@ -154,7 +154,11 @@ impl Definition for Expandable {
       Some(ExpansionBody::Closure(closure)) => {
         // Harder to emulate \tracingmacros here.
         let args = if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(Some(self))?
+          // An argument that ran off a file's end abandons the call.
+          match self.read_call_arguments(parms)? {
+            Some(args) => args,
+            None => return Ok(Tokens!()),
+          }
         } else {
           Vec::new()
         };
@@ -261,8 +265,9 @@ impl Definition for Expandable {
         } else {
           let args = if let Some(ref parms) = self.paramlist {
             // A call that does not match its `\def` (tex.web §398): reported,
-            // and the macro is ignored.
-            match parms.read_macro_arguments(Some(self))? {
+            // and the macro is ignored; so is one whose argument ran off a
+            // file's end (§392).
+            match self.read_call_arguments(parms)? {
               Some(args) => args,
               None => return Ok(Tokens!()),
             }
@@ -289,7 +294,7 @@ impl Definition for Expandable {
       None => {
         // we always need to read the arguments, for e.g. things like \@gobble
         if let Some(ref parms) = self.paramlist {
-          parms.read_arguments(Some(self))?;
+          self.read_call_arguments(parms)?;
         }
         Ok(NO_TOKENS)
       },
@@ -310,6 +315,31 @@ impl Definition for Expandable {
 }
 
 impl Expandable {
+  /// Read this macro's arguments as tex.web §389-391 `macro_call` does, at
+  /// `matching` status naming the invoked token (an alias's own name, as
+  /// TeX's `warning_index:=cur_cs`). `None` abandons the call: a delimiter
+  /// that does not match (§398), or an argument that ran off the end of a file
+  /// ("File ended while scanning use of \foo", §338-339 and §392; or, for a
+  /// non-`\long` macro whose argument held a `\par`, "Paragraph ended before
+  /// \foo was complete", §396: [`crate::gullet::abandon_runaway_call`]).
+  /// Guards: `scanner_status::*`.
+  fn read_call_arguments(
+    &self,
+    parms: &Parameters,
+  ) -> Result<Option<Vec<crate::definition::argument::ArgWrap>>> {
+    let cs = get_current_token().unwrap_or(self.cs);
+    let matching =
+      crate::gullet::set_scanner_status(crate::gullet::ScannerStatus::Matching, Some(cs));
+    let args = parms.read_macro_arguments(Some(self))?;
+    match matching.end_taking_runaway_argument() {
+      None => Ok(args),
+      Some(runaway) => {
+        crate::gullet::abandon_runaway_call(cs, self.is_long, runaway)?;
+        Ok(None)
+      },
+    }
+  }
+
   pub fn new(
     cs: Token,
     paramlist: Option<Parameters>,

@@ -98,7 +98,11 @@ LoadDefinitions!({
   // as a listing. Witness: incgraph-doc.sty L128 `\newtcbinputlisting[use
   // counter from=texexptitled]{\inputexamplelisting}[3][]{…listing
   // file={#2}…}`.
-  DefPrimitive!("\\newtcbinputlisting []{}[Number][] DefPlain", sub[(_init, cmd, n, default, opts)] {
+  // The options are a macro ARGUMENT in TeX (`\NewDocumentCommand`, L379),
+  // not a definition body, so they are read as `{}` and packed here (see
+  // `\lstnewenvironment`, listings_sty.rs).
+  DefPrimitive!("\\newtcbinputlisting []{}[Number][] {}", sub[(_init, cmd, n, default, opts)] {
+    let opts = opts.pack_parameters()?;
     let cmd_tok = cmd
       .unlist_ref()
       .iter()

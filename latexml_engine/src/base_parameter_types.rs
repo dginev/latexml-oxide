@@ -68,7 +68,8 @@ pub fn with_unexpandable_protect<R>(body: impl FnOnce() -> Result<R>) -> Result<
 LoadDefinitions!({
   DefParameterType!(Plain, sub[inner, _extra] {
     let mut value = ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?);
-    if let Some(inner_ps) = inner {
+    // An argument that ran off a file's end is dropped with its call: no re-parse.
+    if let Some(inner_ps) = inner.filter(|_| !argument_runaway()) {
       // TODO: How many arguments can we expect back? One? Many?
       //       Currently only passing through the first
       value = inner_ps.reparse_argument(value)?.remove(0);
@@ -96,8 +97,9 @@ LoadDefinitions!({
     // `\lstnewenvironment{x}[1][]` body sits on the NEXT line (the standard
     // doc style; ~148 TL-doc manuals). `\def`/`\gdef` reach here after
     // `UntilBrace`, where the skip is a no-op.
+    // A `\def` body, read at tex.web's `defining` status (`read_definition_body`).
     skip_spaces()?;
-    let mut value = ArgWrap::Tokens(read_balanced(ExpansionLevel::Off, true, true)?);
+    let mut value = ArgWrap::Tokens(read_definition_body(ExpansionLevel::Off)?);
     if let Some(inner_ps) = inner {
       value = inner_ps.reparse_argument( value)?.remove(0);
     }
@@ -145,15 +147,17 @@ LoadDefinitions!({
   //   <general text> = <filler>{<balanced text><right brace>
   // however, <filler> does get expanded while searching for the initial {
   // which IS required in contrast to a general argument; ie a single token is not correct.
+  // Read at tex.web's `absorbing` status (`scan_toks(false, _)`): a file that
+  // ends inside the text ends it there with a `}` (§339; `read_balanced_text`).
   DefParameterType!(GeneralText, sub[_inner, _extra] {
     skip_filler()?;
-    read_balanced(ExpansionLevel::Off,false,true)
+    read_balanced_text(ExpansionLevel::Off, true)
   });
 
   // This is like GeneralText, but it Partially expands the argument (not `\protected`, nor `\the`)
   DefParameterType!(XGeneralText, sub[_inner, _extra] {
     skip_filler()?;
-    read_balanced(ExpansionLevel::Partial,false,true)
+    read_balanced_text(ExpansionLevel::Partial, true)
   });
 
   DefParameterType!(Until, sub[_inner, until_extra] {
@@ -544,7 +548,7 @@ LoadDefinitions!({
   // but expanding \the-like commands only once,
   // and also packing # parameters
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      read_balanced(ExpansionLevel::Partial, true, true)
+      read_definition_body(ExpansionLevel::Partial)
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }

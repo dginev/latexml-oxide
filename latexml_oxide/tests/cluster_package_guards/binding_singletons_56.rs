@@ -262,26 +262,25 @@ fn catchfile_expands_the_name_and_reads_filecontents() {
     Before. \\CatchFileDef\\cu{unbalanced.txt}{}After.\n\nNext paragraph.\n\\end{document}\n";
   let (stderr, xml) = convert(control, true);
   assert!(!stderr.contains("Fatal:"), "{stderr}");
-  // The runaway at the file's end, then the recovery from the half-read
-  // argument (pdflatex reports five). The warning is the unclosed
-  // `\begingroup` of `\CatchFileDef` at `\end{document}` — pdflatex's
+  // The runaway at the file's end abandons the `\CatchFile@Do` call and drops
+  // its argument, the file's `A{B` and the `\everyeof` delimiter read into it
+  // (tex.web §392; batch W9, `scanner_status::*`), so the text is pdflatex's
+  // "Before. After.". pdflatex reports four more errors, all from
+  // `\end{document}` reading the `.aux` while the unclosed group's `\everyeof`
+  // (`@@\CatchFile@Finish`) still holds; LaTeXML reads no `.aux` there. The
+  // warning is that unclosed `\begingroup` of `\CatchFileDef` — pdflatex's
   // "(\end occurred inside a group at level 1)".
-  assert_eq!(error_count(&stderr), 4, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert!(
-    stderr.contains("Error:expected:} Gullet->readBalanced ran out of input"),
+    stderr.contains("File ended while scanning use of \\CatchFile@Do"),
     "{stderr}"
   );
-  // NOT pdflatex's "Before. After.": tex.web §396 discards the runaway
-  // argument, while the kernel's delimited read unreads it (gullet.rs
-  // `read_until` "Ran out! Unread", Perl Gullet.pm:683-685 `readUntil`), so the
-  // file's `A{B` and the `\CatchFile@EOF` delimiter (`@@`, catcodes 8 and 3:
-  // the `_`) are typeset. Pinned as it is; the paragraph after survives.
   assert_element(
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    "<para xml:id=\"p1\"><p>Before. AB\n_After.</p></para>",
+    r#"<para xml:id="p1"><p>Before. After.</p></para>"#,
   );
   assert_element(
     &xml,
