@@ -5,7 +5,7 @@
 % oracle:  pdflatex 0 errors; [same]
 % engines: rust=0 errors but [different]: \bar was expanded (\z = abcBAR), a silent content error
 % expect:  0 errors; [same]
-% status:  RED
+% status:  GREEN (batch 56ix, guard noexpand_input_ends::*)
 \documentclass{article}
 \def\bar{BAR}\def\want{abc\bar}
 \begin{document}

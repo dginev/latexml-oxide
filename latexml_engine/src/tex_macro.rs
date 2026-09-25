@@ -229,7 +229,10 @@ LoadDefinitions!({
   // (Gullet rewrites `\dont_expand X` into `\special_relax` with `X`
   // smuggled in slot[2]; that asymmetry is the whole point).
   DefMacro!(T_CS!("\\noexpand"), None, {
-    if let Some(token) = read_token()? {
+    // tex.web §367: the token is read under normal scanner status, so it may
+    // be the first token after the end of the current input level
+    // (`\everyeof{\noexpand}`; `read_token_across_input_ends`).
+    if let Some(token) = read_token_across_input_ends()? {
       let cc = token.get_catcode();
       if matches!(cc, Catcode::CS | Catcode::ACTIVE) && is_dont_expandable(&token) {
         vec![T_CS!("\\dont_expand"), token]
@@ -240,7 +243,8 @@ LoadDefinitions!({
         vec![token]
       }
     } else {
-      // Missing token likely the result of "{\noexpand}" for which TeX would be unperturbed
+      // The end of a `reading_from_mouth` context (e.g. "{\noexpand}" read as
+      // an argument), for which TeX would be unperturbed.
       Vec::new()
     }
   });

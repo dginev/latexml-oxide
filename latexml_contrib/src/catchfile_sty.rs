@@ -37,45 +37,29 @@ use latexml_package::prelude::*;
 /// `\space` of `\CatchFileEdef` (:259) — is consumed, anything else — the
 /// `\relax` of `\CatchFileDef` (:299) — is backed up to follow the file.
 ///
-/// `boundary` is whether a scan may run past the file's end, which TeX decides
-/// by the scanner status. `\CatchFileDef` reads the file as one delimited
-/// argument, and a file end inside it is a runaway ("File ended while scanning
-/// use of `\CatchFile@Do`", tex.web §338): [`BalancedBoundary::Opaque`], so an
-/// unbalanced brace in the file cannot swallow the document after it.
-/// `\CatchFileEdef` sets `\everyeof{\noexpand}` (:257) so that its `\xdef`
-/// crosses the end into the `}` after it (`\noexpand` reads that token under a
-/// normal scanner status, tex.web §367): [`BalancedBoundary::Transparent`],
-/// over the text as a string, since a balanced read never crosses a file
-/// mouth. That is the kernel gap this stands in for (`\noexpand` at a file
-/// end: `\everyeof{\noexpand}\edef\x{\@@input file }` errors "readBalanced
-/// ran out of input", repro
-/// `tools/perfect_kernel/repros/expansion-primitives/everyeof_noexpand_input_end.tex`).
-/// Its two costs go with it: a non-UTF-8 disk file is read lossily (the String
-/// is then decoded again under the input encoding — RED repro
-/// `repros/singletons/catchfile_edef_latin1.tex`), and the file skips a file
-/// mouth's binary-file check (`Mouth::open_file`). With `\noexpand` crossing a
-/// file end, `\CatchFileEdef` could open the same file mouth as `\CatchFileDef`.
-fn open_caught_file(file: Tokens, boundary: BalancedBoundary) -> Result<()> {
+/// The file's end is opaque to a balanced read ([`BalancedBoundary::Opaque`]):
+/// a scan that meets it is a runaway, as TeX's is (tex.web §338), so an
+/// unbalanced brace in the file cannot swallow the document after it. Only
+/// `\noexpand` reads past it (tex.web §367, `read_token_across_input_ends`):
+/// that is how `\CatchFileEdef`'s `\everyeof{\noexpand}` (:257) carries its
+/// `\xdef` into the `}` after the file. A disk file is read as a file mouth, so
+/// its bytes are decoded under the input encoding and checked for binary
+/// content. Guard: `noexpand_input_ends::catchfile_edef_reads_the_file_bytes`
+/// (Latin-1 `café`).
+fn open_caught_file(file: Tokens) -> Result<()> {
   let path = do_expand(file)?.to_string();
   if let Some(next) = read_x_token(Some(false), false, Some(true))?
     && next.get_catcode() != Catcode::SPACE
   {
     unread_one(next);
   }
-  let mut content = vfs_read(&path);
-  if content.is_none() && boundary == BalancedBoundary::Transparent {
-    // An unreadable file stays a file mouth, which reports the I/O error.
-    content = std::fs::read(&path)
-      .ok()
-      .map(|bytes| String::from_utf8_lossy(&bytes).into_owned());
-  }
   open_mouth_with(
     Mouth::create(&path, MouthOptions {
-      content,
+      content: vfs_read(&path),
       ..MouthOptions::default()
     })?,
     true,
-    boundary,
+    BalancedBoundary::Opaque,
   );
   mark_everyeof_mouth();
   Ok(())
@@ -111,14 +95,10 @@ LoadDefinitions!({
 }"
   );
   DefMacro!("\\lx@catchfile@input{}", sub[(file)] {
-    open_caught_file(file, BalancedBoundary::Opaque)?;
+    open_caught_file(file)?;
     Ok(Tokens!())
   });
-  DefMacro!("\\lx@catchfile@edef@input{}", sub[(file)] {
-    open_caught_file(file, BalancedBoundary::Transparent)?;
-    Ok(Tokens!())
-  });
-  // catchfile.sty:251-261, `\CatchFile@Input` being `\lx@catchfile@edef@input`.
+  // catchfile.sty:251-261, `\CatchFile@Input` being `\lx@catchfile@input`.
   RawTeX!(
     r"\long\def\CatchFileEdef#1#2#3{%
   \CatchFile@CheckFileExists{#2}%
@@ -128,7 +108,7 @@ LoadDefinitions!({
     \begingroup
       \everyeof{\noexpand}%
       #3%
-      \xdef\CatchFile@Contents{\lx@catchfile@edef@input\CatchFile@File\space}%
+      \xdef\CatchFile@Contents{\lx@catchfile@input\CatchFile@File\space}%
     \endgroup
     \let#1\CatchFile@Contents
   \fi}"

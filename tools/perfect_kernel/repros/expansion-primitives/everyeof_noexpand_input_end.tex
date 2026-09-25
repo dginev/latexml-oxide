@@ -1,18 +1,17 @@
-% witness: catchfile.sty:251-261 \CatchFileEdef (makron.sty:61, arXiv 1611.01359);
-%   latexml_contrib catchfile_sty.rs open_caught_file stands in with a string mouth
+% witness: catchfile.sty:251-261 \CatchFileEdef (makron.sty:61, arXiv 1611.01359), which
+%   stood in with a string mouth until batch 56ix
 % oracle:  pdflatex 0 errors; [AFOOB ] (without \everyeof{\noexpand} TeX errors
 %   too: "File ended while scanning definition of \x")
 % engines: rust=2 (56ir-rel2, 2026-09-25): Error:expected:} "readBalanced ran out
 %   of input in an unbalanced state", then Error:unexpected:}
 % expect:  0 errors; [AFOOB ]
-% status:  RED — kernel (latexml_engine tex_macro.rs \noexpand, latexml_core
-%   gullet.rs read_balanced)
+% status:  GREEN (batch 56ix, guard noexpand_input_ends::noexpand_crosses_a_file_end_in_an_edef)
 % mechanism: tex.web §367 \noexpand reads its token with scanner_status:=normal,
 %   so the file end it meets (§362, the eTeX \everyeof list already read) passes
 %   check_outer_validity and the \edef scan continues in the parent file, where
-%   the } is. Rust's \noexpand returns nothing at an exhausted mouth, and
-%   read_balanced never crosses a FoodType::File mouth, so the body stops at the
-%   file's end. (A filecontents file is a string mouth, which it does cross.)
+%   the } is. Rust's \noexpand returned nothing at an exhausted mouth, and
+%   read_balanced never crosses a FoodType::File mouth; since batch 56ix it reads
+%   with gullet.rs read_token_across_input_ends.
 \documentclass{article}
 \def\foo{FOO}
 \begin{document}

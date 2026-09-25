@@ -9096,12 +9096,10 @@ is native (`\lx@catchfile@input`). It builds the name as the kernel's `\IfFileEx
 TeX's does (tex.web §338).
 - **Missing file:** it raises catchfile's own `\CatchFile@NotFound` package error (catchfile.sty:
   240-245), one Error.
-- **`\CatchFileEdef`:** it is catchfile.sty:251-261 over a STRING input
-  (`\lx@catchfile@edef@input`), because the kernel's `\noexpand` cannot yet carry an `\edef` across
-  a file's end (tex.web §367; KNOWN_PERL_ERRORS-class kernel gap, task in SYNC_STATUS; red repro
-  `expansion-primitives/everyeof_noexpand_input_end`). A non-UTF-8 disk file is read lossily there:
-  under `inputenc[latin1]` a caught `é` prints `�` (red repro `singletons/catchfile_edef_latin1`,
-  pdflatex `[café][café ]`).
+- **`\CatchFileEdef`:** it is catchfile.sty:251-261 over the same file opener, since batch 56ix
+  lets `\noexpand` carry its `\xdef` across the file's end (tex.web §367; KNOWN_PERL_ERRORS #259).
+  A Latin-1 file decodes as in pdflatex (`[café][café ]`). Batch 56iv had stood in with a string
+  copy of the file, which read non-UTF-8 bytes lossily.
 - **`\CatchFile@File`:** it holds the resolved path, not the name as written.
 - **An unbalanced caught file:** the partial argument goes back into the input, as Perl's readUntil
   recovery does (Gullet.pm:683-685), where TeX discards it (tex.web §396). pdflatex prints

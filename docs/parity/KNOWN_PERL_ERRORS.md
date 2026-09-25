@@ -6798,3 +6798,25 @@ Each of these errors in Perl and in Rust before batch 56iv. pdflatex is clean on
 **Rust (FIXED, batch 56iv):** guards
 `binding_singletons_56::{includepdf_file_name_is_semiverbatim, listings_the_h_lstnumber_is_defined,
 varioref_handlespace_switch_exists}`.
+
+## 259. `\everyeof` is never inserted, so `\everyeof{\noexpand}` cannot carry a scan past a file's end (FIXED in Rust)
+
+tex.web §367 reads `\noexpand`'s token under normal scanner status, so the end of a file or
+`\scantokens` pseudo-file it meets closes without a runaway (§362, §336) and the token comes from the
+enclosing input. `\everyeof{\noexpand}` relies on it to let an `\edef`, `\message` or x-expansion
+take a whole file:
+```latex
+\everyeof{\noexpand}\edef\x{\@@input f }   % f.tex: A\foo B
+```
+pdflatex defines `\x` as `AFOOB ` (0 errors). Perl never inserts the `\everyeof` tokens at all
+(eTeX.pool.ltxml:256-258, "These tokens are NOT used anywhere (yet?)"), and its `readBalanced` stops
+at the mouth's end (Gullet.pm:470-472): 2 errors, "readBalanced ran out of input" and a stray `}`.
+Witnesses: catchfile.sty:251-261 `\CatchFileEdef` (makron, arXiv 1611.01359), morewrites.sty:465,
+l3build regression-test.tex:101.
+**Rust (FIXED, batch 56ix):** Rust did insert `\everyeof`, but its `\noexpand` returned nothing at the
+spent input. gullet.rs `read_token_across_input_ends` (closes autoclose mouths with a parent) is now
+what `\noexpand` reads with; `read_balanced`, `read_until` and `read_token` are unchanged, so a
+definition that runs off a file's end is still the §338 runaway. Two Rust-only defects of the same
+mechanism went with it: over `\scantokens` the next token was expanded
+(`\xdef\z{\scantokens{abc}\bar}` gave `abcBAR`, pdflatex `abc\bar`), and `\endinput` inserted
+`\everyeof` (eTeX's `force_eof` does not, §362). Guards `noexpand_input_ends::*`.

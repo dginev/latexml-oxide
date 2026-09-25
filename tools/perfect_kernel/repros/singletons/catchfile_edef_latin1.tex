@@ -4,16 +4,11 @@
 % engines: rust=0 (56ir-rel2, 2026-09-25): [caf�][caf� ]; pk/w3-bindings:
 %   [café][caf�] — \CatchFileDef reads the bytes, \CatchFileEdef garbles them
 % expect:  0 errors; [café][café ]
-% status:  RED — kernel (latexml_engine tex_macro.rs \noexpand at a file end;
-%   repros/expansion-primitives/everyeof_noexpand_input_end.tex)
+% status:  GREEN (batch 56ix, guard noexpand_input_ends::catchfile_edef_reads_the_file_bytes)
 % mechanism: \CatchFileEdef's \xdef must cross the file's end (catchfile.sty:257
-%   \everyeof{\noexpand}), which the kernel's balanced read does only for a
-%   string mouth, so the binding reads a disk file into a String:
-%   from_utf8_lossy turns the latin1 byte into U+FFFD, which the string mouth
-%   (Mouth::create sets lazy_decode) then decodes again under the input
-%   encoding. MouthOptions.content is a String, so raw bytes cannot be handed
-%   over without a latexml_core change; a file mouth keeps them, as
-%   \CatchFileDef's does.
+%   \everyeof{\noexpand}). Before batch 56ix the kernel's \noexpand could not, so
+%   the binding read a disk file into a String (from_utf8_lossy turned the latin1
+%   byte into U+FFFD); since then it opens the same file mouth as \CatchFileDef.
 \documentclass{article}
 \usepackage[T1]{fontenc}
 \usepackage[latin1]{inputenc}

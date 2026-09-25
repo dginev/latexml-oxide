@@ -143,8 +143,8 @@ pub enum BalancedBoundary {
 pub struct MouthRuntime {
   pub autoclose:       bool,
   pub mouth:           Mouth,
-  /// eTeX `\everyeof`: when this mouth (a `\scantokens` pseudo-file) is
-  /// exhausted, the CURRENT `\everyeof` register tokens are inserted as
+  /// eTeX `\everyeof`: when this mouth (an `\input` file or a `\scantokens`
+  /// pseudo-file) is exhausted, the CURRENT `\everyeof` register tokens are inserted as
   /// TOKENS (not retokenized text — l3tl's rescan quarks and xint's
   /// captures depend on their token identity). Read at CLOSE time, per
   /// eTeX's file-end evaluation.
@@ -154,6 +154,8 @@ pub struct MouthRuntime {
   /// first time it runs dry — the mouth stays current until the payload is
   /// read, so a delimited scan inside the pseudo-file sees the payload as
   /// the file's last tokens and never crosses into the parent stream.
+  /// `\endinput` sets it too (eTeX's `force_eof` ends the file without the
+  /// payload, §362).
   pub eof_seen:        bool,
   /// See [`BalancedBoundary`]. Only consulted when `autoclose` is set and the
   /// mouth is not a file.
@@ -599,9 +601,8 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
 
 /// Mark the CURRENT mouth as an eTeX file level whose end inserts the
 /// `\everyeof` token list (see [`MouthRuntime::insert_everyeof`]). Every
-/// `\input` file mouth is marked (`content.rs::load_tex_content`); the
-/// `\scantokens` pseudo-file stays unmarked (settled dead-ends at its
-/// definition in `etex.rs`).
+/// `\input` file mouth is marked (`content.rs::load_tex_content`), and so is
+/// the `\scantokens` pseudo-file (`etex.rs`).
 pub fn mark_everyeof_mouth() {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     runtime.insert_everyeof = true;
@@ -641,9 +642,9 @@ pub fn close_mouth(forced: bool) -> Result<()> {
     }
   }
   // Insurance for a marked mouth closed before it ever ran dry (a forced
-  // teardown is excluded above; `\endinput` only stops the reader, so the
-  // next read still takes the file-level branch): insert the payload where
-  // reading continues. Token-identity preserved — expansion flavor push.
+  // teardown is excluded above, and `\endinput` sets `eof_seen`): insert the
+  // payload where reading continues. Token-identity preserved — expansion
+  // flavor push.
   if wants_everyeof
     && let Ok(Some(RegisterValue::Tokens(eof_toks))) = lookup_register("\\everyeof", Vec::new())
     && !eof_toks.is_empty()
@@ -674,6 +675,11 @@ pub fn flush_mouth() {
     // Catcodes are restored by close_mouth → finish() when the mouth is
     // properly popped from the stack.
     runtime.mouth.stop_reading();
+    // eTeX inserts `\everyeof` only when a file really ends: `\endinput` sets
+    // `force_eof`, and §362 then ends the file without the list (pdflatex
+    // `[X]` for `X\endinput`; the payload came out as `[X[EOF]]`). Guard:
+    // `noexpand_input_ends::endinput_does_not_insert_everyeof`.
+    runtime.eof_seen = true;
   }
 }
 
@@ -1028,6 +1034,33 @@ fn cycle_trip_fatal(period: usize, nextt: &Token) -> Result<CheckedRead> {
     });
   }
   Fatal!(Timeout, Recursion, msg);
+}
+
+/// Read a token as tex.web §367 `\noexpand` does: `get_token` under
+/// `scanner_status := normal`, so an input level that ends here closes
+/// without a runaway (§362 `end_file_reading`, §336 passes) and the read goes
+/// on in the enclosing level. Crosses exactly what `read_x_token` drains:
+/// autoclose mouths with a parent (`\input` files, `\scantokens`
+/// pseudo-files, line remainders), never a `reading_from_mouth` context. A
+/// definition or delimited argument that runs off a file's end still stops
+/// there (`read_balanced`, `read_until` and [`read_token`] are unchanged: the
+/// §338 runaway). This is what `\everyeof{\noexpand}` relies on
+/// (catchfile.sty:251-261, morewrites.sty:465, l3build regression-test.tex:101).
+/// Guards: `noexpand_input_ends::*`.
+pub fn read_token_across_input_ends() -> Result<Option<Token>> {
+  loop {
+    if let Some(token) = read_token()? {
+      return Ok(Some(token));
+    }
+    let crossable = {
+      let gullet = gullet!();
+      gullet.runtime.as_ref().is_some_and(|r| r.autoclose) && !gullet.mouthstack.is_empty()
+    };
+    if !crossable {
+      return Ok(None);
+    }
+    close_mouth(false)?;
+  }
 }
 
 /// Read a token that the calling macro/primitive REQUIRES, holding the

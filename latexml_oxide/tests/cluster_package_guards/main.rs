@@ -53,6 +53,7 @@ mod natbib_label_dotless_i;
 mod neurips_anonymous;
 mod newtcblisting_verbatim;
 mod nicetabular_binding;
+mod noexpand_input_ends;
 mod nul_byte_input;
 mod openright_kernel_contract;
 mod picture_makebox_offset;
