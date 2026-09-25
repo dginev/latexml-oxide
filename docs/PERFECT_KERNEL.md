@@ -99,7 +99,7 @@ names the scoreboard column it must move.
 | 0 | Sweep #123: baseline for 56in–56iq | — | all columns | compute |
 | A | Recall tail | 404 of 1,890 scored manuals below 95 %, 26,310 missing words; the worst 50 hold 16,246 | recall mean, %≥95, missing | analysis → implement |
 | B | Manuals that finish with errors | 388 docs at status 2 | clean, errors | analysis → implement |
-| C | 180 s ceiling: PLANS 12 raw-interpretation speed | 8 timeouts + slow manuals; the same hot paths on arXiv | timeout, wall time | analysis → implement |
+| C | **Performance** (user, 2026-09-25: part of goal completion). C1, the 180 s ceiling: PLANS 12 raw-interpretation speed. C2, throughput of the typical document, which the 2.8M-paper arXiv rerun pays. C3, peak memory at the 8 GB cap | C1: 7 timeouts, 29 docs > 60 s. C2: corpus 2.42 h, arXiv sample 1.60 s/paper; cpu_h drifted 2.10 → 2.42 h over s118-s123 (+15 %, part of it more docs completing, not yet attributed). C3: not yet recorded per doc | timeout, >60s, >120s, cpu_h, p90/p99; arXiv secs | analysis → implement |
 | D | Architectural generalizations: virtual file store, `\everyeof`, expl3 file boundaries, PLANS 13 | taken up when A–C hit them | neutral-or-better + less special-case code | implement |
 | E | Guard strength (PLANS 5: B1 `assert_element`, B5, B2–B4) | 938 weak assertions | weak-assertion count | implement, 1 batch per sweep cycle |
 | F | K6 DVI cue from a `dvips`/`dvipdfmx` class option: RULED 2026-09-25, correct in principle but low priority (we always build XML); only when a witness shows a content or diagnostic difference | 4 manuals, 2 arXiv papers | — | implement on evidence |
@@ -114,6 +114,9 @@ names the scoreboard column it must move.
   value order and batches 3-5 fixes.
 - A, B and C analyse in parallel. D is triggered by their findings. E runs while a sweep occupies
   the compute lane.
+- Performance has two drivers: C1 on the outliers, and C2 on a representative arXiv sample (median
+  papers, not outliers). C2 attributes the s118→s123 cpu_h drift per batch and finds the hot paths
+  that every paper pays: tokenizer, expansion, fonts, DOM, math parse, post.
 
 **Gate ladder (every fix, every batch):**
 1. L0 red: the repro in `tools/perfect_kernel/repros/<mechanism>/` shows the defect on today's binary.
@@ -128,17 +131,27 @@ names the scoreboard column it must move.
    and none newly invalid, unless classified faithful to pdflatex.
 7. L6 periodically, the cortex reruns of sandboxes 2605/2606. L7 at the end, stream G.
 
-**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1):
+**Performance rules** (stream C; `docs/performance/PERFORMANCE.md`, memory perf notes):
+- Levers are algorithmic or strategic only, with no caches or carried state in gullet/stomach/mouth/document.
+- Stay behind the Perl-shaped interfaces.
+- Profile first, with `--profile bench` symbols.
+- One lever per measurement, with error bars; instructions are steadier than wall time under load.
+- pdflatex's time on the same source is the throughput oracle.
+- A document over 60 s needs a stated reason (`slow_calls.sh`).
 
-| sweep | clean | fatal | timeout | errors | valid | recall mean | median | %≥95 | missing |
-|---|---|---|---|---|---|---|---|---|---|
-| 113 | 1881 | 94 | 6 | 11252 | 2219 | 93.72 | 98.6 | 75.8 | 45359 |
-| 118 | 1881 | 94 | 5 | 11139 | 2226 | 93.93 | 98.6 | 76.7 | 44570 |
-| 119 | 1902 | 67 | 7 | 10654 | 2249 | 94.20 | 98.6 | 77.2 | 46052 |
-| 120 | 1895 | 69 | 6 | 10548 | 2250 | 94.27 | 98.6 | 77.4 | 45398 |
-| 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 |
-| 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 |
-| 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 |
+**Speed gate:** every batch's L3 arXiv A/B prints `secs A→B` and the papers slower by more than 50 % and 5 s (`arxiv_ab_compare.py`). Each slow paper needs a reason. L5 must not raise cpu_h by more than 3 %, or the >60 s / >120 s counts, without an attributed cause. Manual-subset timings run beside another A/B are not comparable: re-time a flagged document alone.
+
+**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1; cpu_h = the sum of per-document conversion seconds):
+
+| sweep | clean | fatal | timeout | errors | valid | recall mean | median | %≥95 | missing | cpu_h | p90 s | p99 s | >60 s | >120 s |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 113 | 1881 | 94 | 6 | 11252 | 2219 | 93.72 | 98.6 | 75.8 | 45359 | 2.31 | 4.0 | 62.2 | 27 | 15 |
+| 118 | 1881 | 94 | 5 | 11139 | 2226 | 93.93 | 98.6 | 76.7 | 44570 | 2.10 | 3.4 | 61.2 | 26 | 15 |
+| 119 | 1902 | 67 | 7 | 10654 | 2249 | 94.20 | 98.6 | 77.2 | 46052 | 2.20 | 3.5 | 62.7 | 27 | 16 |
+| 120 | 1895 | 69 | 6 | 10548 | 2250 | 94.27 | 98.6 | 77.4 | 45398 | 2.25 | 3.5 | 66.7 | 28 | 18 |
+| 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 | 2.31 | 3.6 | 71.1 | 30 | 19 |
+| 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 | 2.41 | 3.6 | 67.0 | 28 | 17 |
+| 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 | 2.42 | 3.5 | 69.6 | 29 | 18 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading

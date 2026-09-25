@@ -19,3 +19,8 @@ print('status better:',len(better),'worse:',len(worse))
 for name,cond in [('fatal+',lambda a,b:b['fatal']>a['fatal']),('fatal-',lambda a,b:b['fatal']<a['fatal']),('err+',lambda a,b:b['err']>a['err']),('err-',lambda a,b:b['err']<a['err']),('bib-',lambda a,b:b['bib']<a['bib']),('bib+',lambda a,b:b['bib']>a['bib']),('words-1%',lambda a,b:b['words']<a['words']*0.99),('words+1%',lambda a,b:b['words']>a['words']*1.01),('tab-',lambda a,b:b['tab']<a['tab']),('tab+',lambda a,b:b['tab']>a['tab'])]:
     ids=[i for i in both if cond(rows[i]['A'],rows[i]['B'])]
     print(f'{name}: {len(ids)}', ' '.join(f"{i}({rows[i]['A'][name.rstrip('+-1%').replace('words','words')]}->{rows[i]['B'][name.rstrip('+-1%')]})" for i in ids[:25]))
+# Performance (the per-paper wall seconds each binary took, same run, same cores):
+# totals, and the papers slower by more than 50 % and 5 s (gate: each needs a reason).
+print(f"secs: A={tot('A','sec')} B={tot('B','sec')} ({100*(tot('B','sec')-tot('A','sec'))/max(tot('A','sec'),1):+.1f} %)")
+slow=[i for i in both if rows[i]['B']['sec']>rows[i]['A']['sec']*1.5 and rows[i]['B']['sec']-rows[i]['A']['sec']>5]
+print(f"slower >50% and >5s: {len(slow)}", ' '.join(f"{i}({rows[i]['A']['sec']}->{rows[i]['B']['sec']})" for i in slow[:25]))

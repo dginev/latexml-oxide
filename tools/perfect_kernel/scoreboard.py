@@ -11,7 +11,9 @@ are compacted:
 
 Columns: docs; clean = status 0-1 (no Error, no Fatal); fatal = status 3; timeout = status 124
 or 137; errors = the sum of Error lines; valid = XMLs with 0 jing errors; scored = docs with an
-HTML recall; recall mean / median / share >= 95 %; missing = distinct PDF words missing, summed.
+HTML recall; recall mean / median / share >= 95 %; missing = distinct PDF words missing, summed;
+then performance (per-document wall seconds of the conversion, core XML): cpu_h = their sum in
+hours, p90 / p99, and the count over 60 s and over 120 s (the 180 s ceiling's approach).
 The roadmap's gates read this table (docs/PERFECT_KERNEL.md "Roadmap").
 """
 import os
@@ -38,6 +40,10 @@ def row(n):
     fatal = sum(1 for r in st if r[2] == '3')
     tout = sum(1 for r in st if r[2] in ('124', '137'))
     errs = sum(int(r[4]) for r in st if r[4].isdigit())
+    secs = sorted(num(r[7]) for r in st if len(r) > 7 and num(r[7]) is not None)
+    q = lambda x: secs[int(x * (len(secs) - 1))] if secs else 0.0
+    perf = (f'{sum(secs) / 3600:.2f}', f'{q(0.9):.1f}', f'{q(0.99):.1f}',
+            sum(1 for x in secs if x > 60), sum(1 for x in secs if x > 120))
     vv = f'{d}/validate_verdicts.tsv'
     valid = (sum(1 for l in open(vv) if l.rstrip('\n').split('\t')[2] == '0')
              if os.path.exists(vv) else '-')
@@ -54,14 +60,14 @@ def row(n):
                 f'{100 * sum(1 for x in rec if x >= 95) / len(rec):.1f}', miss)
     else:
         tail = ('-',) * 5
-    return (n, len(st), clean, fatal, tout, errs, valid) + tail
+    return (n, len(st), clean, fatal, tout, errs, valid) + tail + perf
 
 
 def main():
     first = int(sys.argv[1]) if len(sys.argv) > 1 else 105
     last = int(sys.argv[2]) if len(sys.argv) > 2 else 999
     print('sweep\tdocs\tclean\tfatal\ttimeout\terrors\tvalid\tscored\trecall_mean\tmedian\t'
-          '%>=95\tmissing')
+          '%>=95\tmissing\tcpu_h\tp90_s\tp99_s\t>60s\t>120s')
     for n in range(first, last + 1):
         r = row(n)
         if r:
