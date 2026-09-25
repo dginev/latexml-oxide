@@ -2025,6 +2025,13 @@ LoadDefinitions!({
     "\\bib@field@default@annote",
     "\\bib@@field{ltx:bib-note}[role=annotation]"
   );
+  // biblatex's name for BibTeX's `annote` (biblatex manual §2.2.2 "annotation";
+  // `annote` is its alias there): docsurvey's 126 annotated entries were read
+  // and dropped (OXIDIZED_DESIGN_DIVERGENCES #289).
+  DefMacro!(
+    "\\bib@field@default@annotation",
+    "\\bib@@field{ltx:bib-note}[role=annotation]"
+  );
 
   // crossref — Perl L684-686: emit a `<ltx:bib-related role='host'
   // bibrefs='<key>'>` empty placeholder. Used by post-processing to

@@ -1,0 +1,27 @@
+% witness: sweep #121 recall tail (root-causer rc_bib, 2026-09-25): biblatex-apa-test (URLs, 281 words),
+%          biblatex-chicago cms samples (URLs, translators), docsurvey (126 `annotation` fields)
+% oracle:  pdflatex + biber (standard style): "… Trans. by M. A. S. Abdel Haleem … URL: https://example.org/translated"
+%          and the style-specific annotation (docsurvey prints it)
+% engines: rust (56ih) = "External Links: Link" (the URL only in href), no translator, no annotation; Perl
+%          identical (BibTeX.pool.ltxml:740 `Link`; no FMT_SPEC row for translator; no `annotation` field)
+% expect:  0 errors; the entry shows "https://example.org/translated", "Translated by M. A. S. Abdel Haleem",
+%          and "A detailed and authoritative introduction." (HTML)
+% status:  RED (56ih) -> GREEN (56ii); a `plain` bibliography keeps "Link" (plain.bst prints no url)
+\begin{filecontents*}[overwrite]{bib_url_translator_annotation.bib}
+@book{tr,
+  author = {Jane Original},
+  translator = {Abdel Haleem, M. A. S.},
+  title = {The Translated Book},
+  publisher = {Pub},
+  year = {2004},
+  url = {https://example.org/translated},
+  annotation = {A detailed and authoritative introduction.}
+}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{bib_url_translator_annotation.bib}
+\begin{document}
+See \cite{tr}.
+\printbibliography
+\end{document}

@@ -76,6 +76,9 @@ pub type BibConverterFn = fn(&BibConversionRequest) -> Option<PostDocument>;
 thread_local! {
   static BIB_CONVERTER: std::cell::Cell<Option<BibConverterFn>> =
     const { std::cell::Cell::new(None) };
+  /// Whether the bibliography being formatted prints its URLs
+  /// ([`style_prints_urls`]); set per `ltx:bibliography`, read by `format_links`.
+  static URLS_AS_TEXT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// Install the recursive-BibTeX-session implementation for this thread.
@@ -1628,6 +1631,11 @@ impl Processor for MakeBibliography {
           .as_deref()
           .is_some_and(is_citation_order_style);
       let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
+      let prints_urls = bib
+        .get_attribute("bibstyle")
+        .as_deref()
+        .is_some_and(style_prints_urls);
+      URLS_AS_TEXT.with(|flag| flag.set(prints_urls));
 
       if self.split {
         // Split by initial letter
@@ -1876,6 +1884,18 @@ enum Formatter {
 /// Get the FMT_SPEC block specifications for a bibliography type.
 fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
   let meta_block: Vec<Vec<FieldSpec>> = vec![
+    // A translator (bibtex.rs `\bib@field@default@translator`) is read into
+    // `ltx:bib-name[@role='translator']` and was never printed (Perl's
+    // FMT_SPEC has no row either); biblatex's standard styles print
+    // "Trans. by …" (OXIDIZED_DESIGN_DIVERGENCES #289).
+    vec![FieldSpec {
+      xpath:     "ltx:bib-name[@role='translator']",
+      punct:     "",
+      pre:       "Translated by ",
+      class:     "translator",
+      formatter: Formatter::Authors,
+      post:      "",
+    }],
     vec![FieldSpec {
       xpath:     "ltx:bib-note",
       punct:     "",
@@ -3044,6 +3064,15 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
       },
       "ltx:bib-url" => {
         if let Some(href) = href {
+          // A style that prints its URLs (biblatex, the natbib `*nat` styles)
+          // shows the address itself where the reader's `Link` placeholder
+          // stands (bibtex.rs `\bib@field@default@url`; Perl always prints
+          // `Link`). OXIDIZED_DESIGN_DIVERGENCES #289.
+          let children = if URLS_AS_TEXT.with(|flag| flag.get()) && content_text.trim() == "Link" {
+            vec![NodeData::Text(href.clone())]
+          } else {
+            children
+          };
           links.push(NodeData::Element {
             tag: "ltx:ref".to_string(),
             attributes: Some(HashMap::from_iter([
@@ -3111,6 +3140,16 @@ fn unisort(keys: &mut [String]) {
 /// are the surpass-Perl additions matching the real IEEE `.bst` + PDF.
 fn is_citation_order_style(bibstyle: &str) -> bool {
   matches!(bibstyle, "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran")
+}
+
+/// Whether a bibliography style prints an entry's `url` field. biblatex's
+/// standard styles do (`url=true`, the biblatex binding records `biblatex` as
+/// the style), and so do natbib's `plainnat`/`abbrvnat`/`unsrtnat` ("URL …",
+/// plainnat.bst `format.url`); the classic `plain`/`alpha`/`unsrt` know no
+/// `url` field. Other url-printing `.bst`s (IEEEtran, achemso, …) keep the
+/// "Link" placeholder until they are listed here.
+fn style_prints_urls(bibstyle: &str) -> bool {
+  matches!(bibstyle, "biblatex" | "plainnat" | "abbrvnat" | "unsrtnat")
 }
 
 /// First-citation order of bib keys (lowercased) → 0-based rank, read from the

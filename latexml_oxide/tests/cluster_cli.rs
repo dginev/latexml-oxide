@@ -832,6 +832,54 @@ mod whatsinout {
     );
   }
 
+  /// A style that prints URLs (biblatex) shows the address, not "Link"; a
+  /// translator and a biblatex `annotation` reach the entry; a `plain`
+  /// bibliography keeps "Link" (plain.bst prints no url).
+  #[test]
+  fn bib_urls_translators_and_annotations() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/index-bib/bib_url_translator_annotation.tex");
+    std::fs::write(work.path().join("blx.tex"), tex).unwrap();
+    let out = run(work.path(), &["blx.tex", "--dest", "blx.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("blx.html")).expect("read blx.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    for needle in [
+      ">https://example.org/translated</a>",
+      r#"Translated by <span class="ltx_text ltx_bib_translator">M. A. S. Abdel Haleem</span>"#,
+      "A detailed and authoritative introduction.",
+    ] {
+      assert!(item.contains(needle), "missing {needle:?} in:\n{item}");
+    }
+    // plain.bst prints no url: the placeholder stays.
+    let plain = tex
+      .replace(
+        "\\usepackage{biblatex}\n\\addbibresource{bib_url_translator_annotation.bib}\n",
+        "",
+      )
+      .replace(
+        "\\printbibliography",
+        "\\bibliographystyle{plain}\n\\bibliography{bib_url_translator_annotation}",
+      );
+    std::fs::write(work.path().join("pl.tex"), plain).unwrap();
+    let out = run(work.path(), &["pl.tex", "--dest", "pl.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("pl.html")).expect("read pl.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    assert!(item.contains(">Link</a>"), "{item}");
+    assert!(
+      !item.contains(">https://example.org/translated</a>"),
+      "{item}"
+    );
+  }
+
   #[test]
   fn whatsin_math_wraps_literal_as_mathml() {
     // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168

@@ -2236,6 +2236,10 @@ LoadDefinitions!({
     None,
   )?;
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
+    // The style the bibliography formatter keys on (`bibstyle`): biblatex's
+    // standard styles print URLs, which the `.bst` path's "Link" does not
+    // (make_bibliography.rs `style_prints_urls`; OXIDIZED_DESIGN_DIVERGENCES #289).
+    assign_value("BIBSTYLE", pin("biblatex"), Some(Scope::Global));
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
     // the same file, for instance — and naming it twice makes

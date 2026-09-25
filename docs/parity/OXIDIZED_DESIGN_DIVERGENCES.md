@@ -8853,3 +8853,28 @@ at 10 pt instead of 10.95 pt and warns "Bad type area settings!" (765 KOMA-Scrip
 The binding classes still ignore the `10pt`/`11pt`/`12pt` option (Perl too).
 
 **Guards**: `class_census::{fontsize_selectfont_size_state, raw_class_normalsize_nominal}`.
+
+### 289. The bibliography formatter prints URLs where the style does, translators, and biblatex annotations (Perl: "Link", dropped)
+
+Perl's `.bib` reader writes every `url` as `<ltx:bib-url href='…'>Link</ltx:bib-url>`
+(BibTeX.pool.ltxml:740-741). MakeBibliography then prints "External Links: Link", so the address
+survives only in the `href`. A `translator` is read into `ltx:bib-name[@role='translator']` (:560-562)
+and never printed, since its FMT_SPEC has no row for it. biblatex's `annotation` field, the name
+biblatex gives BibTeX's `annote`, is not read at all. biblatex's standard styles print all three:
+"URL: …", "Trans. by …", and the annotation in annotating styles. Witnesses (sweep #121 recall):
+biblatex-apa-test, the biblatex-chicago samples, and docsurvey's 126 annotated entries.
+
+**Rust** (batch 56ii):
+- `latexml_post::make_bibliography` shows the address itself in place of "Link" when the
+  bibliography's style prints URLs (`style_prints_urls`: biblatex, which the binding now records as
+  `bibstyle='biblatex'`, and natbib's `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285
+  `format.url`). The classic `plain`/`alpha`/`unsrt` keep "Link".
+- A "Translated by …" row sits in the shared field block.
+- `annotation` reads like `annote`, as a `role=annotation` note.
+
+Only the URL change is style-gated; the translator row and the `annotation` field print for every
+style, like the `note`/`annote` row before them (#286's pattern: captured `.bib` content is printed).
+Recall on the witnesses: biblatex-apa-test 81.0 → 92.1 %, cms-dates-intro 83.0 → 97.8 %,
+cms-dates-sample, cms-trad-sample and cms-notes-sample +2.6 to +3.5 points, docsurvey 78.0 → 92.7 %.
+
+**Guard**: `cluster_cli::whatsinout::bib_urls_translators_and_annotations`.
