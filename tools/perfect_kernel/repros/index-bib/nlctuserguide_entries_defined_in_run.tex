@@ -1,0 +1,21 @@
+% witness: glossaries-extra-manual (recall 50.9 %, sweep #121), datatool-user (67.4 %),
+%          glossaries-user (68.0 %), mfirstuc-manual (76.6 %): nlctuserguide's `\nlctuserguidegls`
+%          entries are written to `\jobname-gls.bib` for bib2gls; no `.glstex` ships in TeX Live
+% oracle:  pdflatex + bib2gls: the entry is defined; its description reads "identifies an exclusion command"
+% engines: rust (56ih) = no entry defined, 4 glossaries-extra warnings ("No file `…glstex'", "Glossary entry
+%          `MFUexcl' has not been defined"); Perl: no binding (same loss)
+% expect:  0 errors, 0 warnings;
+%          <glossarydefinition inlist="index" key="MFUexcl"><glossaryphrase key="MFUexcl" role="description">identifies
+%          an exclusion command</glossaryphrase>…</glossarydefinition>
+%          (the description references `exclusion`, defined AFTER it: definitions are emitted once all entries exist)
+% status:  RED (56ih) -> GREEN (56il)
+\documentclass{article}
+\usepackage{nlctuserguide}
+\nlctuserguidegls
+{
+  \gcmd{MFU\-excl}{\syntax{\margm{cs}}\desc{identifies an \idx{exclusion} command}}
+  \gidx{exclusion}{}
+}
+\begin{document}
+Use \gls{MFUexcl} for an \idx{exclusion}.
+\end{document}

@@ -276,7 +276,21 @@ LoadDefinitions!({
         // Load fontmap BEFORE the enc def file, so \DeclareTextSymbol
         // can look up glyph positions during def loading.
         let has_fontmap = load_font_map(&encoding).is_some();
-        InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
+        // fontenc.sty:81-83 (formats from 2020/02/02 on): the `.def` is input
+        // only while `\T@<enc>` is undefined. The format preloads T1, OT1,
+        // TS1, OML, OMS and OMX (the dump carries `\T@T1` …), and Perl skips
+        // them through the dumped `t1enc.def_loaded` flag (Package.pm:2328-
+        // 2330), which our dump reader drops. Re-inputting t1enc.def re-ran
+        // `\DeclareFontEncoding{T1}` and t1enc.dfu at document time, making
+        // `ș`/`ț` active `\textcommabelow s` — the kernel's `\ooalign` fallback,
+        // so "Roșca" came out as a two-row tabular, and inside a natbib
+        // `\bibitem` label, whose author list is split at commas, a
+        // PushbackLimit Fatal (arXiv 2605.20924, 2605.08338, 2605.19649,
+        // 2605.23281, 2605.13873, 2605.31401, 2605.21804; Perl and pdflatex
+        // clean). Guard: `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+        if !is_defined(&s!("\\T@{encoding}")) {
+          InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
+        }
         if has_fontmap {
           MergeFont!(encoding => encoding);
         }

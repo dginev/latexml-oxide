@@ -1289,7 +1289,7 @@ impl Mouth {
 
   /// [`read_raw_line`](Self::read_raw_line) with the line's input bytes turned
   /// into the characters the declared input encoding makes of them
-  /// ([`eight_bit_input_char`], as the tokenizer does for a byte line). For a
+  /// (`eight_bit_input_char`, as the tokenizer does for a byte line). For a
   /// consumer that parses raw lines itself: a `.bib`, whose bytes real `bibtex`
   /// copies into the `.bbl` for the document's inputenc to decode. A cp1251
   /// `.bib` under `\usepackage[cp1251]{inputenc}` read `Ò. Ñ. Ãåéäåìàí` for

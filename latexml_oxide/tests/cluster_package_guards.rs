@@ -140,19 +140,18 @@ mod natbib_label_dotless_i {
   //! `malformed:ltx:bibitem in <ltx:bibblock>` errors. Perl's `Expand`
   //! (natbib.sty.ltxml:564) happens to terminate on these; ours did not.
   //!
-  //! Fix: extend `\lx@NAT@parselabel`'s "don't force-expand" guard (already
-  //! covering `\cite`/`\href`/`\bibinfo`) to text-encoding symbol commands
-  //! (`\i`, `\j`, `\ss`, `\oe`, …). The `(year)` is always a literal paren in
-  //! natbib/BibTeX output, so the raw label is sufficient.
+  //! Fix: `\lx@NAT@parselabel` splits the label unexpanded, as natbib's
+  //! `\NAT@bare` does (KNOWN_PERL_ERRORS #252, batch 56il). This replaces an
+  //! earlier exemption list of text symbols (`\i`, `\j`, `\ss`, `\oe`, …).
   //!
   //! Fixture faithfulness: the label wraps its author in `\citenamefont`, which
   //! is supplied by the revtex4-1 `.bbl` `\providecommand` preamble
   //! (aipnum4-1.bst), NOT by natbib/revtex. The distilled reproducer originally
   //! dropped that preamble, so the conversion logged a (parity, both-engine)
   //! `undefined:\citenamefont` Error that the test silently tolerated. Restoring
-  //! the preamble mirrors a real `.bbl`, drops the run to 0 errors, AND
-  //! strengthens the guard test — `\citenamefont{…}` now expands to the dotless
-  //! `\i` inside `\lx@NAT@parselabel`, the exact path that must not loop.
+  //! the preamble mirrors a real `.bbl` and drops the run to 0 errors; the
+  //! label's `\citenamefont{M{\'\i}guez}` then reaches the dotless `\i` when
+  //! `\NAT@wrout` digests the author pieces.
   //!
   //! Conditional: needs the kernel dump (so expl3/pgf load cleanly) AND
   //! revtex4-1 + mathptmx + pgfplots installed (the exact package set drives
@@ -1058,7 +1057,7 @@ mod frontespizio_inline {
       &xml,
       "titlepage",
       &[],
-      r##"<titlepage><p><text font="bold">Università degli Studi di Padova</text></p><p><rule height="1px" width="100%"/>FACOLTÀ DI SCIENZE MATEMATICHE, FISICHE E NATURALI<break/>Corso di Laurea in Matematica</p><p><text font="smallcaps">Tesi di laurea</text></p><p><text font="bold">Equivalenze fra categorie di moduli</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Enrico Gregorio</text></td></tr><tr><td align="left" class="ltx_nopad_r" cssstyle="padding-bottom: 13.33333pt"><text font="bold">Matricola 145822</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Ch.mo Prof. Adalberto Orsatti</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold">Anno Accademico 1999-2000</text></p></titlepage>"##,
+      r##"<titlepage><p><text font="bold" fontsize="140%">Università degli Studi di Padova</text></p><p><rule height="1px" width="100%"/><text fontsize="120%">FACOLTÀ DI SCIENZE MATEMATICHE, FISICHE E NATURALI<break/>Corso di Laurea in Matematica</text></p><p><text font="smallcaps">Tesi di laurea</text></p><p><text font="bold" fontsize="170%">Equivalenze fra categorie di moduli</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Enrico Gregorio</text></td></tr><tr><td align="left" class="ltx_nopad_r" cssstyle="padding-bottom: 15.99994pt"><text font="bold" fontsize="90%">Matricola 145822</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Ch.mo Prof. Adalberto Orsatti</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold" fontsize="120%">Anno Accademico 1999-2000</text></p></titlepage>"##,
     );
   }
   /// `Preambolo*` (preamble material for the external title-page document,
@@ -1082,7 +1081,7 @@ mod frontespizio_inline {
       &xml,
       "titlepage",
       &[],
-      r##"<titlepage><p><text font="bold">Università degli Studi di Bologna</text></p><p><rule height="1px" width="100%"/>DIPARTIMENTO DI MATEMATICA<break/>Corso di Dottorato di Ricerca in Matematica</p><p><text font="bold">Sugli anelli compatti</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Nome Cognome</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold">Prof. Relatore</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold">Anno Accademico 2000-2001</text></p></titlepage>"##,
+      r##"<titlepage><p><text font="bold" fontsize="140%">Università degli Studi di Bologna</text></p><p><rule height="1px" width="100%"/><text fontsize="120%">DIPARTIMENTO DI MATEMATICA<break/>Corso di Dottorato di Ricerca in Matematica</text></p><p><text font="bold" fontsize="170%">Sugli anelli compatti</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Nome Cognome</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Prof. Relatore</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold" fontsize="120%">Anno Accademico 2000-2001</text></p></titlepage>"##,
     );
   }
 }
@@ -4632,12 +4631,14 @@ x
   /// — supplied by CJK.enc:291 / `*.chr` in real CJK, never loaded behind the
   /// CJK binding. RED: 2 `undefined` per doc across 18 ctex manuals
   /// (Perl identical). Witnesses: jnuexam/jnuexam (2→0), joinbox/joinbox,
-  /// suanpan-l3/suanpan-l3.
+  /// suanpan-l3/suanpan-l3. `fontset=none`: the default fandol fontset depends
+  /// on the host tree, and on the TL 2025 vendor tree pdflatex itself stops with
+  /// "CTeX fontset `fandol' is unavailable in current mode".
   #[test]
   fn ctex_cjkpunct_unicode_punctuation() {
     let (stderr, xml) = convert(
       r"\documentclass{article}
-\usepackage[scheme=plain]{ctex}
+\usepackage[scheme=plain,fontset=none]{ctex}
 \begin{document}
 A“B”C—D…E‘F’G
 \end{document}
@@ -13885,6 +13886,19 @@ After.
     assert!(xml.contains("Tagged."), "{xml}");
   }
 
+  /// A `\luadef` slot whose Lua function scans its operand (luatexja-core.sty:
+  /// 408-421 `\ltjsetkanjiskip`, `token.scan_glue()`) reads and absorbs it; as a
+  /// bare no-op the glue was typeset as text, "0pt plus 0.25minus 0pt" on every
+  /// jlreq size change (`LUA_SLOT_OPERANDS`, latexml_sty/mod.rs).
+  #[test]
+  fn lua_slot_absorbs_its_scanned_operand() {
+    let tex = "\\documentclass{article}\n\\luadef\\ltjsetkanjiskip 7\n\\begin{document}\nA\\ltjsetkanjiskip 0pt plus 0.25em minus 0pt B\n\\end{document}\n";
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>AB</p>"), "{xml}");
+  }
+
   /// expl3-code.tex:34944-34966 stubs `\lua_*` on a non-Lua format; the luatex
   /// profile rebinds them to the bridge.
   #[test]
@@ -16486,6 +16500,35 @@ c &= d
     assert!(!stderr.contains("Option clash"), "{stderr}");
     assert!(stderr.contains("FE:unloaded"), "{stderr}");
     assert!(xml.contains("done."), "{xml}");
+  }
+
+  /// fontenc.sty:81-83 inputs `<enc>enc.def` only while `\T@<enc>` is
+  /// undefined, and the format preloads T1: `ș` stays a character (Perl too),
+  /// not t1enc.dfu's `\textcommabelow s` re-armed at document time. natbib
+  /// splits a bare label unexpanded (`\NAT@bare`, KNOWN_PERL_ERRORS #252), and
+  /// `\textcommabelow` is the combining comma below (DIVERGENCES #291). Before:
+  /// "Roșca" was a two-row tabular and both labels a PushbackLimit Fatal (arXiv
+  /// 2605.20924 / 2605.08338).
+  #[test]
+  fn fontenc_keeps_preloaded_encoding() {
+    let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{natbib}\n\\begin{document}\nM[\\meaning ș] Roșca, \\textcommabelow{S}tefan and Țurcanu.\n\\begin{thebibliography}{99}\n\\bibitem[{Roșca et~al.(2024)Roșca and Li}]{k1} First.\n\\bibitem[{Mari\\textcommabelow{s} et~al.(2020)Mari\\textcommabelow{s}, Li, and Wu}]{k2} Second.\n\\end{thebibliography}\n\\end{document}\n";
+    let (stderr, xml) = convert(tex, false);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>M[the character ș] Roșca, Ștefan and Țurcanu.</p>"),
+      "{xml}"
+    );
+    for tag in [
+      "<tag role=\"authors\">Roșca et\u{a0}al.</tag>",
+      "<tag role=\"fullauthors\">Roșca and Li</tag>",
+      "<tag role=\"year\">2024</tag>",
+      "<tag role=\"authors\">Mariș et\u{a0}al.</tag>",
+      "<tag role=\"fullauthors\">Mariș, Li, and Wu</tag>",
+      "<tag role=\"year\">2020</tag>",
+    ] {
+      assert!(xml.contains(tag), "missing {tag}:\n{xml}");
+    }
   }
 
   /// `\psset` is pst-xkey's family-aware `\setkeys+[psset]`; a no-op lost the
@@ -25794,6 +25837,69 @@ mod class_census {
       "{xml}"
     );
     assert!(xml.contains("Body word alpha."), "{xml}");
+  }
+
+  /// A glossaries field may name an entry defined after it: the definitions of
+  /// preamble entries are emitted at `\begin{document}` (`\iflx@glossaries@defer`),
+  /// when every entry exists, as `\printglossary` typesets them (arXiv 2605.14032:
+  /// "Glossary entry `nr' has not been defined", and endc's long form borrowed
+  /// "Dual Connectivity"; Perl identical).
+  #[test]
+  fn glossaries_preamble_forward_reference() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/index-bib/glossaries_preamble_forward_reference.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let flat = regex::Regex::new(r">\s+<")
+      .unwrap()
+      .replace_all(&xml, "><")
+      .into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<glossaryphrase key="endc" role="long">E-UTRAN-"#,
+        r#"<glossaryref inlist="main" key="nr">NR</glossaryref>"#,
+        r#"<glossaryref inlist="main" key="dc">DC</glossaryref></glossaryphrase>"#
+      )),
+      "{flat}"
+    );
+  }
+
+  /// nlctuserguide's `\nlctuserguidegls` entries are defined in the run, as
+  /// bib2gls's `.glstex` would define them, and their definitions are emitted
+  /// once every entry exists: the description's `\idx{exclusion}` names an entry
+  /// defined after it (Talbot's manuals: glossaries-extra-manual, datatool-user,
+  /// glossaries-user, mfirstuc-manual).
+  #[test]
+  fn nlctuserguide_entries_defined_in_run() {
+    if !latexml::util::test::kpse_has("nlctuserguide.sty") {
+      return;
+    }
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/index-bib/nlctuserguide_entries_defined_in_run.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let flat = regex::Regex::new(r">\s+<")
+      .unwrap()
+      .replace_all(&xml, "><")
+      .into_owned();
+    assert!(
+      flat.contains(concat!(
+        r#"<glossarydefinition inlist="index" key="MFUexcl">"#,
+        r#"<glossaryphrase key="MFUexcl" role="description">identifies an exclusion command</glossaryphrase>"#,
+        r#"<glossaryphrase key="MFUexcl" role="name"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
+        r#"<glossaryphrase key="MFUexcl" role="sort"><text font="typewriter">\MFUexcl</text></glossaryphrase>"#,
+        r#"</glossarydefinition>"#
+      )),
+      "{flat}"
+    );
+    assert!(
+      flat.contains(r#"<p>Use <text font="typewriter">\MFUexcl</text> for an exclusion.</p>"#),
+      "{flat}"
+    );
   }
 
   /// fontenc's `\usefont\encodingdefault` (fontenc.sty:116): the encoding in

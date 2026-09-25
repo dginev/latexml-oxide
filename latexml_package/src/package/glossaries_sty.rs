@@ -82,26 +82,54 @@ LoadDefinitions!({
   // a structured `<ltx:glossarydefinition>` with one `<ltx:glossaryphrase>`
   // per field. The keys mirror Perl exactly; the closing `}` is required
   // because the hook body is interpreted as a single argument group.
+  // The field macros are copied before the keyvals are digested: they are
+  // digested in key order, `description` first, and a `\gls{…}` inside a
+  // description runs glossaries' `\ifglshasshort`/`\ifglshaslong`
+  // (glossaries.sty:2166-2180), which `\letcs` the same `\@glo@short`/`\@glo@long`
+  // to ANOTHER entry's value (undefined when it has none): "\@glo@short
+  // undefined" and a wrong short form (Talbot's user guides, whose term
+  // descriptions reference abbreviations).
+  //
+  // In the preamble (`\iflx@glossaries@defer`) the call is queued instead, with
+  // the field VALUES, in `\lx@glossaries@deferred`, and the queue runs at
+  // `\begin{document}`. LaTeX typesets a field only in `\printglossary`, once
+  // every entry exists, so a field may name an entry defined after it:
+  // `\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} …}` before `\newacronym{nr}…`
+  // (arXiv 2605.14032, 2605.21831), nlctuserguide's `\desc{… \idx{exclusion} …}`
+  // before `\gidx{exclusion}` (bib2gls's `.glstex` defines all entries before
+  // anything is typeset). Digested at definition each raised "Glossary entry
+  // `nr' has not been defined" and lost the reference's text. Entries defined
+  // in the body are emitted at once. OXIDIZED_DESIGN_DIVERGENCES #293; guard
+  // `class_census::glossaries_preamble_forward_reference`. (A conversion that
+  // never reaches `\begin{document}` emits no preamble definitions.)
+  // (`\@glo@<field>` suffix, key)
+  const GLO_FIELDS: [(&str, &str); 17] = [
+    ("name", "name"), ("desc", "description"), ("symbol", "symbol"),
+    ("symbolplural", "symbolplural"), ("text", "text"), ("plural", "plural"),
+    ("first", "first"), ("firstplural", "firstplural"), ("sort", "sort"),
+    ("counter", "counter"), ("see", "see"), ("parent", "parent"),
+    ("prefix", "prefix"), ("short", "short"), ("shortpl", "shortplural"),
+    ("long", "long"), ("longpl", "longplural"),
+  ];
+  let snapshot: String = GLO_FIELDS.iter()
+    .map(|(f, _)| format!("\\let\\lx@glo@{f}\\@glo@{f}")).collect();
+  let by_macro: Vec<String> = GLO_FIELDS.iter()
+    .map(|(f, k)| format!("{k}=\\lx@glo@{f}")).collect();
+  let by_value: Vec<String> = GLO_FIELDS.iter()
+    .map(|(f, k)| format!("{k}={{\\unexpanded\\expandafter{{\\@glo@{f}}}}}")).collect();
+  RawTeX!(r"\newif\iflx@glossaries@defer \gdef\lx@glossaries@deferred{}%
+\global\lx@glossaries@defertrue
+\def\lx@glossaries@flush{\global\lx@glossaries@deferfalse
+  \let\lx@glo@defs\lx@glossaries@deferred\gdef\lx@glossaries@deferred{}\lx@glo@defs}%
+\AtBeginDocument{\lx@glossaries@flush}");
   DefMacro!("\\@newglossaryentryposthook",
-    "\\lx@glossaries@newentry{\\@glo@type}{\\glslabel}{\
-name=\\@glo@name,\
-description=\\@glo@desc,\
-symbol=\\@glo@symbol,\
-symbolplural=\\@glo@symbolplural,\
-text=\\@glo@text,\
-plural=\\@glo@plural,\
-first=\\@glo@first,\
-firstplural=\\@glo@firstplural,\
-sort=\\@glo@sort,\
-counter=\\@glo@counter,\
-see=\\@glo@see,\
-parent=\\@glo@parent,\
-prefix=\\@glo@prefix,\
-short=\\@glo@short,\
-shortplural=\\@glo@shortpl,\
-long=\\@glo@long,\
-longplural=\\@glo@longpl\
-}");
+    "\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
+\\else\\expandafter\\lx@glossaries@postentry\\fi");
+  RawTeX!(&s!("\\def\\lx@glossaries@postentry{{{snapshot}\
+\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}", by_macro.join(",")));
+  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\xdef\\lx@glossaries@deferred{{\
+\\unexpanded\\expandafter{{\\lx@glossaries@deferred}}\
+\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}}}", by_value.join(",")));
 
   // Perl L85-97: DefConstructor that emits the structured definition.
   // Iterate the keyvals in sorted-by-key order and insert one
@@ -192,9 +220,9 @@ longplural=\\@glo@longpl\
     }
   );
 
-  // glossaries-extra label-prefix management (glossaries-extra.sty) —
-  // raw-loaded extra layers call these (mfirstuc/glossaries manuals).
-  def_macro_noop("\\glsxtraddlabelprefix{}")?;
-  def_macro_noop("\\glsxtrprependlabelprefix{}")?;
-  def_macro_noop("\\glsxtrclearlabelprefixes")?;
+  // glossaries-extra's label-prefix commands are NOT stubbed here: the raw
+  // glossaries-extra-bib2gls.sty (:430-452) defines them, and `\dgls`
+  // (:564-576) resolves a label through the list they build. No-op stubs here
+  // (batch 22) kept that list empty, so every `\dgls`/`\idx` reference of the
+  // Talbot manuals fell back to "??" (nlctuserguide's `\idx` = `\dgls`).
 });

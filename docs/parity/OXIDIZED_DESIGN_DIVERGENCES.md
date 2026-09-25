@@ -8886,3 +8886,48 @@ shipout hook sets it on the facing verso page (:217-254). A single pass never re
 both engines every note is lost (versonotes/sample, recall 61.5 %: 30 annotations). **Rust** (batch
 56ij, `latexml_contrib::versonotes_sty`): the package loads raw, and `\versonote` is `\marginpar`, an
 `ltx:note role='margin'` at the point the note is written. **Guard**: `class_census::versonote_is_a_margin_note`.
+
+### 291. `\textcommabelow` is a combining accent (Perl: an `\ooalign` table)
+
+latex.ltx:10097-10100 defines `\textcommabelow` as an `\ooalign` that overprints a raised comma.
+Perl keeps that kernel default unless latin10.def is loaded (latin10.def.ltxml:22 then makes it
+`DefAccent('\textcommabelow', "\x{0326}", ",")`). So `Mari\textcommabelow{s}`, BibTeX's usual
+spelling of `ș`, becomes a two-row `<ltx:tabular>` whose text reads "Maris,". **Rust** (batch 56il,
+`latex_constructs_rust_only.rs` §12) installs latin10's accent for every document:
+`\textcommabelow{s}` is `ș` (U+0219 after NFC), and `ț`, `Ș` and `Ț` likewise. Witnesses: arXiv
+2605.08338, 2605.21804. **Guard**: `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+
+### 292. nlctuserguide defines its glossary entries in the run (Perl: none defined)
+
+Nicola Talbot's user guides (glossaries, glossaries-extra, datatool, mfirstuc, tracklang, …) declare
+every command, option and term in one `\nlctuserguidegls{…}` block. The writer macros serialize each
+item as a bib2gls record into `\jobname-gls.bib` (nlctuserguide.sty:2883-2892, 2928-3016), and
+`\nlctuserguideloadgls` (:3062-3160) inputs the `.glstex` that the external bib2gls writes. TeX Live
+ships no `.glstex`, and neither engine runs bib2gls, so no entry was ever defined: the command
+summaries, term lists and every `\gls`/`\idx` reference text were lost (Perl has no binding).
+**Rust** (batch 56il, `latexml_contrib::nlctuserguide_sty`) redefines the two writers to define the
+entries in the run, as the `.glstex` would with its `\newglossaryentry`/`\newabbreviation` calls. The
+record type becomes the category, the glossary follows the resource's `entry-type-aliases`, parents
+are defined before children, and the icon entries come from `\symboldefinitions`. The glossary
+definitions are emitted at `\begin{document}`, once every entry exists (#293), as the `.glstex`
+defines everything before anything is typeset: a description may name an entry defined after it. The glossaries binding no longer stubs glossaries-extra's label-prefix
+commands (glossaries-extra-bib2gls.sty:430-452), through which `\dgls`, and so `\idx`, resolves a
+label. Recall against the shipped PDFs (LuaTeX persona, sweep #121 → 56il): glossaries-extra-manual
+50.9 → 86.6 %, datatool-user 67.4 → 90.6 %, glossaries-user 68.0 → 91.1 %, mfirstuc-manual 79.3 → 96.9 %.
+**Guard**: `class_census::nlctuserguide_entries_defined_in_run`.
+
+### 293. glossaries: preamble entries are emitted at `\begin{document}` (Perl: at definition)
+
+Perl's binding (glossaries.sty.ltxml:52-97) emits each entry's `<ltx:glossarydefinition>` from
+`\@newglossaryentryposthook`, digesting its fields when the entry is defined. LaTeX typesets a field
+only in `\printglossary`, once every entry exists. So a field that names a later entry, such as
+`\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} \gls{dc}}` before `\newacronym{nr}…`, raised "Glossary entry
+`nr' has not been defined" in Perl and in Rust and lost its text. A `\gls` inside a field also runs
+glossaries' `\ifglshasshort`/`\ifglshaslong` (glossaries.sty:2166-2180), which `\letcs` `\@glo@short`/
+`\@glo@long` to the referenced entry's values, so the entry being defined carried them: endc's long
+form read "Dual Connectivity". **Rust** (batch 56il, glossaries_sty.rs) snapshots the field values in
+the posthook. For an entry defined in the preamble it queues the definition
+(`\iflx@glossaries@defer`) and emits the queue at `\begin{document}`; that is where Perl places
+preamble definitions anyway. Entries defined in the body are emitted at once. arXiv 2605 (all 281
+glossaries papers): errors 854 → 774, 7 papers better status, none worse; LEDGER 2026-09-25, 56il.
+**Guard**: `class_census::glossaries_preamble_forward_reference`.

@@ -195,6 +195,7 @@ pub mod needspace_sty;
 pub mod newpxmath_sty;
 pub mod nicematrix_sty;
 pub mod nicseries_cls;
+pub mod nlctuserguide_sty;
 pub mod nmbib_sty;
 pub mod oldgerm_sty;
 pub mod oldlfont_sty;
@@ -383,6 +384,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("unicode-math", "sty", unicode_math_sty::load_definitions),
   ("luatexbase", "sty", luatexbase_sty::load_definitions),
   ("needspace", "sty", needspace_sty::load_definitions),
+  ("nlctuserguide", "sty", nlctuserguide_sty::load_definitions),
   ("phyzzx", "plus", phyzzx_plus::load_definitions),
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),

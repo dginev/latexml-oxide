@@ -954,55 +954,21 @@ LoadDefinitions!({
     }
 
     if bare {
-      // If the label contains "complex" CSes (e.g. `\cite`, `\href`) that
-      // expand into Constructor invocations whose parameter readers
-      // would drain the wrapping `do_expand` gullet hunting for absent
-      // arguments, the resulting `readBalanced ran out of input`
-      // diagnostic is spurious — extracting an author/year out of such
-      // a cite-bearing label is meaningless anyway. Skip the expansion
-      // and just walk the raw label tokens for the `(year)` pattern.
-      // Perl on the same input is silent (`natbib.sty.ltxml:564`'s
-      // `Expand` runs the macros differently for these cases). Driver:
-      // 2404.06289 `\bibitem [{...\cite{a}...}]{key}`.
-      // Text-encoding *symbol* commands (`\i`, `\j`, `\ss`, `\oe`, …) must
-      // ALSO be kept un-expanded, for a different reason: under `\usepackage
-      // [T1]{fontenc}` (here via mathptmx) the LaTeX kernel redefines them to
-      // the `\@changed@cmd` dispatcher `\<enc>-cmd <cs> \<enc><cs>` (e.g. `\i`
-      // → `\T1-cmd \i \T1\i`). The dispatcher's typeset branch re-injects the
-      // original CS through `\csname\cf@encoding\string#1\endcsname`, which
-      // under FULL `Expand!` re-expands forever (PushbackLimit / box-list
-      // runaway). Accented author names — `M{\'\i}guez`, `Pati{\~n}o`,
-      // `M\"uller` — are exactly where this bites in a natbib label. Perl's
-      // `Expand` (natbib.sty.ltxml:564) happens to terminate on these; ours
-      // does not. The `(year)` we look for is always a *literal* `(` in
-      // natbib/BibTeX output, so walking the raw label is sufficient — no
-      // expansion needed. Witness 2111.00584 (revtex4-1 + mathptmx,
-      // `\bibitem[{\citenamefont{...}\ \emph{et~al.}(2009)...\citenamefont
-      // {M{\'\i}guez}}]{porteiro2009}`).
-      let has_text_symbol = label.unlist_ref().iter().any(|t| {
-        if t.get_catcode() != Catcode::CS { return false; }
-        matches!(t.to_string().as_str(),
-          "\\i" | "\\j" | "\\l" | "\\L" | "\\o" | "\\O"
-          | "\\aa" | "\\AA" | "\\ss" | "\\ae" | "\\AE" | "\\oe" | "\\OE"
-          | "\\dh" | "\\DH" | "\\dj" | "\\DJ" | "\\th" | "\\TH"
-          | "\\ng" | "\\NG"
-        )
-      });
-      let has_complex_cs = label.unlist_ref().iter().any(|t| {
-        if t.get_catcode() != Catcode::CS { return false; }
-        let n = t.to_string();
-        matches!(n.as_str(),
-          "\\cite" | "\\citet" | "\\citep" | "\\citeauthor" | "\\citeyear"
-          | "\\href" | "\\hyperref" | "\\url" | "\\nolinkurl"
-          | "\\BibitemOpen" | "\\BibitemShut" | "\\bibinfo" | "\\bibfield"
-        )
-      });
-      let expanded = if has_complex_cs || has_text_symbol {
-        label
-      } else {
-        Expand!(label)
-      };
-      let exp_tokens = expanded.unlist();
+      // A bare label is split UNEXPANDED at its literal `(year)`, as natbib's
+      // `\NAT@bare#1(#2)#3(@)#4\@nil#5` (natbib.sty:811, via `\@lbibitem` :827) splits it by
+      // delimited-parameter matching. Perl expands it first
+      // (`natbib.sty.ltxml:564` `Expand($label)`, KNOWN_PERL_ERRORS #252),
+      // which descends into whatever the label's commands are made of:
+      //   - `\cite`/`\href`/`\bibinfo` constructors drained the expansion
+      //     gullet hunting for absent arguments (2404.06289);
+      //   - a T1 text symbol `\i` (`\T1-cmd \i \T1\i`) re-expanded itself
+      //     forever (2111.00584, revtex4-1 + mathptmx, `M{\'\i}guez`);
+      //   - `\textcommabelow` (latex.ltx:10097-10100) became its `\ooalign{…\hbox{…
+      //     \selectfont,}}` body, whose `,` the author split then cut through
+      //     (PushbackLimit: 2605.08338 `Mari{\textcommabelow s}`, 2605.21804
+      //     `M\u{a}lina\textcommabelow{s}`).
+      // The pieces are digested by `\NAT@wrout` later, as natbib typesets them.
+      let exp_tokens = label.unlist();
       let mut author_toks = Vec::new();
       let mut year_toks = Vec::new();
       let mut rest_idx = 0;

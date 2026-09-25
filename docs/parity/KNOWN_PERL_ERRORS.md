@@ -6676,3 +6676,20 @@ directly, so such a group leaks. arXiv 2606.00334 (accessibility, activated by P
 "Attempt to close boxing group" errors for `\verb` in tabular cells. **Rust (FIXED, batch 56ij):** the
 verb group closes through `\verb@egroup`, by default `\lx@hidden@egroup` (sect06.rs). Guard
 `class_census::verb_egroup_closes_package_wrappers`.
+
+## 252. natbib expands a bare `\bibitem` label before splitting it (FIXED in Rust)
+
+natbib splits a bare label at its literal `(year)` without expanding it: `\@lbibitem` →
+`\NAT@ifcmd` → `\NAT@bare#1(#2)#3(@)#4\@nil#5` (natbib.sty:809-818, 827), a delimited-parameter
+match. Perl's binding runs `Expand($label)` first (natbib.sty.ltxml:564). That expansion descends into
+whatever the label's commands are made of. A text command becomes its typesetting code:
+`\textcommabelow` (latex.ltx:10097-10100) turns into `\ooalign{…\hbox{…\selectfont,}}`, and the author
+split then cuts through that `,`. Trigger: `\usepackage{natbib}` +
+`\bibitem[{Mari\textcommabelow{s} et~al.(2020)Mari\textcommabelow{s}, Li, and Wu}]{k1} Body.`
+Perl: 5 errors (`readBalanced ran out of input`, missing `\NAT@wrout` arguments) and an author of
+`MariΩ`; pdflatex: clean. Rust hit a PushbackLimit Fatal on the same input (arXiv 2605.08338 via
+`Mari{\textcommabelow s}`, 2605.21804 via `M\u{a}lina\textcommabelow{s}`).
+**Rust (FIXED, batch 56il):** `\lx@NAT@parselabel` splits the unexpanded label, as `\NAT@bare`
+does. This replaces two lists of commands that the binding had already been exempting from the
+expansion: `\cite`/`\href`/`\bibinfo` (2404.06289) and the T1 text symbols `\i`, `\ss`, …
+(2111.00584). Guard `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.

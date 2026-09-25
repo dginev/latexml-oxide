@@ -1104,4 +1104,15 @@ LoadDefinitions!({
   RawTeX!(
     r"\AddToHook{file/compsci.sty/after}[latexml]{\def\code{\begingroup\urlstyle{ttnobreak}\Url}}"
   );
+
+  //======================================================================
+  // 12. `\textcommabelow` is the combining comma below, as Perl's own
+  // latin10.def.ltxml:22 models it. The kernel default (latex.ltx:10097-10100)
+  // is an `\ooalign` that overprints a raised `,`: a two-row `<tabular>` in
+  // the XML, so a Romanian `Mari\textcommabelow{s}` (BibTeX's usual spelling
+  // of ș) read "Maris,". Surpass; OXIDIZED_DESIGN_DIVERGENCES #291 (arXiv
+  // 2605.08338, 2605.21804). Guard
+  // `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+  //======================================================================
+  DefAccent!("\\textcommabelow", '\u{0326}', ",", below => true);
 });

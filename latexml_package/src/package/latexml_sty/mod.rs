@@ -5,6 +5,19 @@ use crate::prelude::*;
 mod declare;
 use declare::*;
 
+/// `\luadef` slots whose Lua function scans its own operand from the input
+/// (`token.scan_glue()` …). The bridge cannot run the slot, so the command reads
+/// that operand and absorbs it: an intent with no XML meaning, as
+/// `docs/perfect_kernel/LUA_REBINDING.md`'s absorb tier describes. As a bare
+/// no-op, the operand stayed in the input as text. luatexja-core.sty:408-421
+/// `\ltjsetkanjiskip`/`\ltjsetxkanjiskip` (inter-character glue): jlreq.cls:1227-
+/// 1249 runs them from `\size@update` on every size change, so each
+/// `\selectfont` typeset "0pt plus 0.25minus 0pt" (kksymbols-doc, gckanbun-doc).
+const LUA_SLOT_OPERANDS: &[(&str, &str)] = &[
+  ("\\ltjsetkanjiskip", "Glue"),
+  ("\\ltjsetxkanjiskip", "Glue"),
+];
+
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys
@@ -209,7 +222,8 @@ LoadDefinitions!({
     // bank (NOT `\count`: attributes 0,1,2… would alias the page registers);
     // the catcode-table switches scan their <number> and do nothing (catcode
     // tables are engine state with no XML meaning); `\luadef` binds a Lua
-    // function slot the bridge cannot run → the command is a no-op.
+    // function slot the bridge cannot run → the command is a no-op, or absorbs
+    // the operand its function scans (`LUA_SLOT_OPERANDS`).
     DefPrimitive!("\\attributedef SkipSpaces Token SkipSpaces", sub[(cs)] {
       shorthand_def(cs, "\\attribute", Number::new(0).into())
     });
@@ -232,6 +246,15 @@ LoadDefinitions!({
           cs,
           Some(Parameters::new(vec![Parameter::new("Plain", "{}", None)?])),
           ExpansionBody::Tokens(Tokens!(T_CS!("\\z@"))),
+          None,
+        );
+      } else if let Some((_, operand)) =
+        LUA_SLOT_OPERANDS.iter().find(|(name, _)| *name == cs_str)
+      {
+        let _ = def_macro(
+          cs,
+          Some(Parameters::new(vec![Parameter::new(*operand, *operand, None)?])),
+          ExpansionBody::Tokens(Tokens!()),
           None,
         );
       } else {

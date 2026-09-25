@@ -77,6 +77,12 @@ New open leads: **NFSS size state** (`\f@size` constant 10, `\fontsize` a no-op 
 from a `dvips`/`dvipdfmx` class option: 4 manuals, 2 arXiv papers — pdflatex fails them alike);
 nlctuserguide's bib2gls-deferred glossary content (glossaries-extra-manual 50.9 % recall); KOMA's
 `\@sect`/`\@startsection` identity warnings are expected (LEDGER 56ig).
+**Since (56ih–56il):** NFSS size state landed (DIVERGENCES #288); the 7-paper 2605 PushbackLimit it
+exposed is fixed at its root (fontenc re-input the preloaded t1enc.def; natbib expanded its labels,
+KPE #252). A 3,003-paper arXiv A/B shows 0 status changes, and a 281-paper glossaries A/B 854 → 774
+errors with 0 papers worse. nlctuserguide entries are defined in the run (#292): the Talbot manuals
+reach 86.6-96.9 % recall. Open: those manuals take 212-334 s (> 180 s ceiling); the `\newacronym`
+long-form space; the ctex `fandol` fontset under vendor-tree pdfTeX (pdflatex fails alike).
 
 **Measured:** s110 229 → s111 222 → s112 211 → **s113 148 invalid (2219/2367, 93.7 %)**, 63 newly
 valid, 0 newly invalid, 0 tally regressions, recall of record unchanged (median 98.6, mean 93.72,

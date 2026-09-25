@@ -1,0 +1,17 @@
+% witness: arXiv 2605.14032 (`\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} \gls{dc}}` before `\newacronym{nr}`),
+%          2605.27360, 2605.29772 (18 errors each), 2605.21831, 2605.22242
+% oracle:  pdflatex 0 errors (fields are typeset in `\printglossary`, after every entry exists)
+% engines: rust (56ik) = 6 "Glossary entry `nr'/`dc' has not been defined" and endc's long form
+%          "Dual Connectivity" (another entry's, `\letcs` by the nested `\gls`); Perl identical
+% expect:  0 errors, 0 warnings; endc's long phrase is E-UTRAN-<glossaryref key="nr">NR</glossaryref>…
+%          <glossaryref key="dc">DC</glossaryref>
+% status:  RED (56ik) -> GREEN (56il)
+\documentclass{article}
+\usepackage{glossaries}
+\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} \gls{dc}}
+\newacronym{nr}{NR}{New Radio}
+\newacronym{dc}{DC}{Dual Connectivity}
+\begin{document}
+First: \gls{endc}. Then \gls{nr} and \gls{dc}.
+\printglossary
+\end{document}
