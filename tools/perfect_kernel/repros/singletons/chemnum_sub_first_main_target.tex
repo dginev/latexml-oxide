@@ -1,0 +1,26 @@
+% witness: chemnum/chemnum_en (round-10 guard doc `chemnum_compound_numbering`)
+% oracle:  pdflatex 0 errors, 0 warnings (second run) — prints
+%          "3 4 3 3a 3a 3 and 4 1 and 2 / 5a is declared by its sub-compound; 5 refers to it."
+%          (with hyperref, \refcmpd{fourth} links to the number printed by \cmpd{fourth.a})
+% engines: rust=0 (tip 56ir: HTML `<span class="ltx_ref ltx_cmpd ltx_ref_self">5</span>`, no href)
+% expect:  0 errors; HTML conversion (--dest x.html) has <a href="#cmpd.first">3</a> and
+%          <a href="#cmpd.fourth">5</a>
+% status:  GREEN
+% mechanism: chemnum.sty:1324 writes the MAIN label of a `main.sub` spec first
+%   (`\chemnum_write_main:nnnn`, :1358); its first printed use is the main compound's
+%   hyper target (:1373-1378), unless `\cmpd*` or `sub-only` (:1370-1371). The binding only
+%   gave the sub-compound (`cmpd.fourth.a`) an id when `\cmpd{fourth.a}` was the first use.
+\documentclass{article}
+\usepackage{chemnum}
+\initcmpd{initA, initB}
+\begin{document}
+\cmpd{first}
+\cmpd{second}
+\refcmpd{first}
+\cmpd{first.a}
+\refcmpd{first.a}
+\cmpd{first,second}
+\cmpd{initA} and \cmpd{initB}
+
+\cmpd{fourth.a} is declared by its sub-compound; \refcmpd{fourth} refers to it.
+\end{document}

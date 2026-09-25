@@ -9160,3 +9160,49 @@ psset_lengths_read_bare_numbers_in_psunit, pstricks_objects_follow_the_parameter
 pstricks_coordinates_that_cannot_be_placed_draw_nothing, plain_input_pstricks_sizes_its_pictures,
 pstricks_objects_read_macro_keys_colour_models_and_cells, pstricks_coordinate_modes_are_the_raw_ones,
 hexgame_board_converts, pstricks_macro_colour_keys_in_tabularx_cells}`.
+
+---
+### 302. forest trees are nested inline lists with bounded key processing; chemnum's first use of a compound carries its id (Perl: no forest or chemnum binding)
+
+Perl has no forest binding and no chemnum binding. **Rust** (batch 56iz, round-12 P6-P8,
+`latexml_contrib/src/forest_sty.rs`, `chemnum_sty.rs`) models the parts of forest that carry
+content and structure, and departs from forest.sty and pdflatex as follows:
+
+- **Output shape:** every form (`{forest}`, `\Forest`, `\Forest*`) is an `ltx:inline-block`
+  holding nested inline lists. forest draws a picture. pdflatex draws every form as an inline box,
+  and the star only drops `\forest@group@env`'s group (forest.sty:8506-8514, :8528). So a tree in
+  running text stays in its paragraph. The star is read and ignored: styles and names stay local
+  to a tree for every form.
+- **Node keys:** only `edge label`, `tier`, `phantom` and `name` are modelled. Node specs become
+  `content=<spec>` (forest.sty:1423-1426) and are processed with pgfkeys' rules
+  (pgfkeys.code.tex:357, 369, 507-520).
+  - A phantom node hides its own edge label and its children's (forest.sty:7643-7651).
+  - Everything else is layout and is ignored: the `+`/`'` forms (forest.sty:2413-2418),
+    `.expanded`, `/.cd`, `content=`, `delay`, `where`, `replace by`, `draw`.
+  - Afterthoughts are dropped, and `(config)` is not interpreted.
+  - Edge labels keep only TikZ `node{…}` texts.
+- **Styles:** `\forestset` records `.style`, `.append style`, `.prefix style` and `.try`, and
+  `default preamble` (:3793, :6045-6049). Bare node keys in `\forestset` are not tree-wide
+  defaults (:130).
+- **Action characters are not executed** (:1598-1627). A tree whose text holds one is marked, and
+  its labels keep the raw action text: forest-doc.tex:1784-1795 shows `@@[×1[f]]…` in one node
+  where pdflatex draws 13. In a marked tree, `phantom` is not applied, so no text pdflatex prints
+  is hidden. The marking compares by token (charcode and catcode), not by meaning as `\ifx` does
+  (a control sequence `\let` to `[` does not match; forest.sty:1416). `\bracketResume` is `\relax`.
+- **Key runaway:** one `Error` where pdflatex dies fatally ("TeX capacity exceeded", or 100
+  errors). Style expansion stops after 64 nested styles. All keylist processing in a tree or
+  `\forestset` stops when a work budget is spent: 1,000,000 units plus 10,000 per node (or
+  1,000,000 per `\forestset` / per library's defaults), charged per key (name and value, again
+  for every replay from an ancestor's `for tree`) and per token an expansion or definition copies.
+  Inherited `for tree` keylists live on one stack shared by the tree, and the replay stops once
+  the budget is spent. Measured needs: forest-doc ≤ 1,206 per node, milsymb 12,534 per tree,
+  prooftrees.sty 34,260 per `\forestset`.
+- **Other:** `\forestoption` and its relatives are `\relax`. `\useforestlibrary` records the
+  library (forest.sty:173-177) but loads no library file. The bare `\forest … \endforest` form
+  emits `<ltx:ERROR>` and discards the body; prooftrees and neoschool reach forest this way.
+- **chemnum:** when `\cmpd{x.a}` is a compound's first use, its output is wrapped in
+  `xml:id="cmpd.x"`, so a later `\refcmpd{x}` resolves (chemnum.sty:1324, 1358, 1370-1378).
+  chemnum with hyperref places a point target instead. `\cmpdinit` is accepted without
+  chemnum.sty:181-191's deprecation warning.
+
+**Guards**: `forest_chemnum::*` (11), `perfect_kernel_batch56::forest_*`.

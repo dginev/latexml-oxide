@@ -1,0 +1,43 @@
+% witness: forest/forest-doc (forest-doc.tex:1784-1795, the `@@`/`\bracketResume` node
+%          enumeration example; pdftotext of forest-doc.pdf prints ×1 … ×6 over f o r e s t)
+% oracle:  pdflatex 0 errors, 0 warnings — 13 nodes on two tiers: the phantom (undrawn) root,
+%          its six children ×1 … ×6 and their six children f o r e s t; no `@`, no brackets;
+%          then the CONTROL tree's "kid"
+% engines: rust tip 56ir: every token kept, garbled into the root's label; P6 (9e77ecafe7): the
+%          root is phantom, so its label — all twelve texts — was dropped
+% expect:  0 errors; the root <inline-item class="ltx_forest_node"> (no phantom class) keeps a
+%          label holding ×1 … ×6 (Math) and f o r e s t; the CONTROL tree's root is phantom, with
+%          no label, above "kid"
+% status:  GREEN
+% residue: the text pdflatex prints is kept, but not forest's structure: one root label
+%          `@@[×1[f]]@@[×2[o]]…` (action characters and bracket text pdflatex does not print)
+%          where pdflatex draws 13 nodes (graphics-tikz/NOTES.md, forest)
+% mechanism: `\bracketset{action character=@}` (forest.sty:1419) makes `@` an action of the
+%   bracket parser (:1491): `@+` expands every later token (:1612-1614), and `\x`'s `@@`
+%   (:1622-1623) stops the parse until `\bracketResume` (:1450) resumes it on `\xtemp`, so
+%   each `\x{c}` builds the root's children `[$\times_n$[c]]`. The binding's token-level
+%   parser performs no action and reads all of it as the root's label; a tree whose text
+%   holds the action character at brace depth 0 therefore does not apply `phantom`, which
+%   hides only the (empty) root in forest.
+\documentclass{article}
+\usepackage{forest}
+\begin{document}
+\bracketset{action character=@}
+\newcount\xcount
+\def\x#1{@@\advance\xcount1
+  \edef\xtemp{[$\noexpand\times_{\the\xcount}$[#1]]}%
+  \expandafter\bracketResume\xtemp
+}
+\begin{forest}
+  phantom,
+  delay={where level=1{content={\strut #1}}{}}
+  @+
+  [\x{f}\x{o}\x{r}\x{e}\x{s}\x{t}]
+\end{forest}
+
+% CONTROL: an action character set as a LETTER `@` (prooftrees.sty:940, neoschool.cls:8568)
+% does not match the document's OTHER `@` (`\ifx`, forest.sty:1491), so this tree is read as
+% written and its phantom root stays hidden: pdflatex prints only "kid".
+\makeatletter\bracketset{action character=@}\makeatother
+\begin{forest}[root @x, phantom [kid]]\end{forest}
+\end{document}

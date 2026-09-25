@@ -1,0 +1,20 @@
+% witness: none (delta review of P6: the work budget had no guard of its own)
+% oracle:  pdflatex FATAL "TeX capacity exceeded, sorry [main memory size=5000000]" — the value
+%          doubles without end
+% engines: rust tip 56ir: 0 errors (styles ignored); P6 (9e77ecafe7): the value doubles at
+%          each of 64 levels (2^64 tokens)
+% expect:  1 error (Error:misdefined:a, "ran out of the keylist work budget"), at about depth 18,
+%          long before the 64-level nesting bound; finishes at once; the tree is still emitted
+%          with its node x
+% status:  GREEN
+% mechanism: a pgfkeys `.style` is the code `\pgfkeysalso{<body>}` of a one-parameter key
+%   (pgfkeys.code.tex:826), so `a={#1#1}` hands the next level a value twice as long. The
+%   binding pays one unit per key plus its name and value tokens, and one per token an
+%   expansion copies, from a pool of 1000000 units plus 10000 per tree node; this one-node
+%   tree's pool runs out at depth ~18 (a value of 2^18 tokens).
+\documentclass{article}
+\usepackage{forest}
+\forestset{a/.style={a={#1#1}}}
+\begin{document}
+\begin{forest}[x, a=y]\end{forest}
+\end{document}

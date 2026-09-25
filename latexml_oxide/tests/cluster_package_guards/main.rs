@@ -33,6 +33,7 @@ mod expanded_protected_brace_hunt;
 mod expl3_nested_raw_load_catcodes;
 mod fatal_salvages_partial_document;
 mod filelist_letter_catcodes;
+mod forest_chemnum;
 mod frontespizio_inline;
 mod graphics_asset_memo;
 mod graphics_kpsewhich;

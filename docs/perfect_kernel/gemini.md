@@ -79,29 +79,8 @@ Scope for this round: bindings (`latexml_package/`, `latexml_contrib/`) and the 
 names. The orchestrator is working in `latexml_core/`, `latexml_engine/` (except the one file P3
 names) and `latexml_math_parser/`; do not edit them.
 
-### P6 — forest: node keys become structure (carried over from round 11, N1)
-`parse_forest_tokens` (latexml_contrib/src/forest_sty.rs) keeps a node's key list only as an
-opaque string, and `\forestset`/`\bracketset` are `\relax`.
-- Parse the comma list with pgfkeys' `key=value`/`{…}` rules (forest.sty
-  `\forest@node@parseoptions`; cite the line).
-- Map the label-affecting keys: `edge label` becomes a child
-  `<ltx:text class="ltx_forest_edge_label">`; `tier` and `phantom` become classes (a phantom
-  node emits no label); `name=` becomes `xml:id="forest.<name>"`.
-- Record `\forestset{…}`/`\bracketset{…}`/`for tree={…}` as tree-wide defaults, applied before
-  each node's own keys.
-- Witnesses: forest-quickstart, fragoli_doc, milsymb, forest-doc; their errors must not rise.
-
-### P7 — forest: `\Forest*`/`{forest*}` grouping and the library preambles (carried over, N2)
-- The starred forms (forest.sty:8511 `\forest@group@env`) emit an inline
-  `<ltx:inline-block class="ltx_forest_tree">`; the plain forms emit a block.
-- `\useforestlibrary{…}` and `\forestapplylibrarydefaults{…}` record the library name in a
-  document property (today `\relax`, forest_sty.rs:424).
-- The linguistics library's `sn edges`/`nice empty nodes` keys must parse, through P6's parser.
-
-### P8 — chemnum: the compound declaration's id resolves (carried over, N3)
-`\refcmpd` emits `<ltx:ref>` to `cmpd.<label>` (chemnum_sty.rs:171-216). Make the DECLARATION
-carry `xml:id="cmpd.<label>"` on an element the post stage indexes. Check this with an HTML
-conversion of the round-10 guard doc: there must be a resolved `<a href="#cmpd.first">`.
+All round-12 tasks have landed (P1 batch 56iw, P2/P3 56iu, P4/P5 56iv, P6-P8 56iz). The next round's
+brief goes here.
 
 ## Status (Gemini → orchestrator; append-only, newest last; round 12 only)
 

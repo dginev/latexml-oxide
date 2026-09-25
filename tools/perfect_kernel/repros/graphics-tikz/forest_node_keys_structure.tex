@@ -1,0 +1,34 @@
+% witness: forest/forest-doc (forest-doc.tex:3697-3704 `edge label`, :790-795 `tier=word`,
+%          :1784-1795 `phantom`), forest-quickstart (`name=`, `for tree`, `default preamble`)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 (tip 56ir: node keys dropped, `\forestset`/`\bracketset` are \relax)
+% expect:  0 errors; the D node is <inline-item class="ltx_forest_node ltx_forest_tier_word"
+%          xml:id="forest.dnode"> holding <text class="ltx_forest_edge_label">head</text>; the
+%          tree preamble's `for tree` edge label `e` reaches the nodes without their own; the
+%          phantom node has neither label nor edge label; in [A [B]] the default preamble's
+%          `for tree` edge label `dp` reaches B
+% status:  GREEN
+% mechanism: forest.sty:1423-1426 `new node` hands a node's spec to pgfkeys as
+%   `content=<spec>`, processed at :6050 (`process keylist=given options`): pgfkeys splits the
+%   keylist (pgfkeys.code.tex:357 `,`, :369 `=`, :507-520 trim + one brace layer). `edge label`
+%   (:3923, drawn with the edge path :3913-3920), `tier` (:3903), `phantom` (:3924, not drawn
+%   :7628-7631, its edges neither :7643-7651) and `name` (:3780) shape the tree; `for tree`
+%   (:5592) and `default preamble` (:3793, run at the root :6045-6049) are tree-wide. A tier
+%   may not hold a node and its ancestor ("Circular tier hierarchy"), so `tier` is set only
+%   on nodes that are not ancestors of each other (DP, N).
+\documentclass{article}
+\usepackage{forest}
+\forestset{word/.style={tier=word}, default preamble={for tree={edge label={node[midway]{dp}}}}}
+\begin{document}
+\begin{forest}
+for tree={edge label={node[midway,left]{e}}}
+[VP
+  [V, edge label={node[midway,left]{spec}}]
+  [DP, word
+    [D, name=dnode, edge label={node[midway,right,font=\scriptsize]{head}}]]
+  [hidden, phantom, edge label={node{gone}}]
+  [N, word]
+]
+\end{forest}
+\begin{forest}[A [B]]\end{forest}
+\end{document}

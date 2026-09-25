@@ -1,0 +1,32 @@
+% witness: none (delta review 3 of P6: a style definition must be paid for)
+% oracle:  pdflatex FATAL after 100 errors "Missing number, treated as zero" (a bare `x` is TikZ's
+%          `x=<dimension>` key without its value)
+% engines: 22d7fae7e7 (definitions free, one unit per expansion): `t` grows by 10 keys per use,
+%          O(uses^2) work and O(uses) memory — ~20 s for 1 node, ~1 h for this 10-node tree
+% expect:  1 error (Error:misdefined:<key>, "ran out of the keylist work budget"), finishes in
+%          well under a second; the tree is still emitted with its 10 nodes
+% status:  GREEN
+% mechanism: each use of `t` appends 10 keys to `t` itself (pgfkeys `.append style`,
+%   pgfkeys.code.tex:836), and `e12` uses `t` 2^13 times per node. The binding pays for the
+%   new body of every definition and for every expansion's tokens, so the growing style runs
+%   out of the pool (1000000 units plus 10000 per tree node).
+\documentclass{article}
+\usepackage{forest}
+\forestset{
+  t/.style={t/.append style={x,x,x,x,x,x,x,x,x,x}},
+  e0/.style={t,t},
+  e1/.style={e0,e0},
+  e2/.style={e1,e1},
+  e3/.style={e2,e2},
+  e4/.style={e3,e3},
+  e5/.style={e4,e4},
+  e6/.style={e5,e5},
+  e7/.style={e6,e6},
+  e8/.style={e7,e7},
+  e9/.style={e8,e8},
+  e10/.style={e9,e9},
+  e11/.style={e10,e10},
+  e12/.style={e11,e11}}
+\begin{document}
+\begin{forest}for tree={e12} [n0 [n1] [n2] [n3] [n4] [n5] [n6] [n7] [n8] [n9]]\end{forest}
+\end{document}

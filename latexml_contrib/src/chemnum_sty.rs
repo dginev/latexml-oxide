@@ -157,19 +157,35 @@ fn register_compound(main_label: &str, sub_label: Option<&str>) {
   });
 }
 
+/// A compound's rendering: its target id, the displayed number, whether this
+/// occurrence is the target (the first printed use), and — for a
+/// sub-compound spec that is also its MAIN compound's first printed use —
+/// the main compound's target id, which this occurrence must carry too.
+struct CompoundUse {
+  id:          String,
+  display:     String,
+  is_target:   bool,
+  main_target: Option<String>,
+}
+
 fn lookup_or_register(
   main_label: &str,
   sub_label: Option<&str>,
   is_ref: bool,
   sub_only: bool,
-) -> (String, String, bool) {
+) -> CompoundUse {
   CHEMNUM_STATE.with(|st| {
     let mut state = st.borrow_mut();
     if !state.compounds.contains_key(main_label) {
       if is_ref {
         let sub_part = sub_label.map(|s| format!(".{s}")).unwrap_or_default();
         let clean_target_id = clean_id(&format!("cmpd.{main_label}{sub_part}"));
-        return (clean_target_id, "??".to_string(), false);
+        return CompoundUse {
+          id:          clean_target_id,
+          display:     "??".to_string(),
+          is_target:   false,
+          main_target: None,
+        };
       }
       state.counter += 1;
       let counter = state.counter;
@@ -194,7 +210,12 @@ fn lookup_or_register(
           } else {
             format!("{main_num}??")
           };
-          return (clean_target_id, display_text, false);
+          return CompoundUse {
+            id:          clean_target_id,
+            display:     display_text,
+            is_target:   false,
+            main_target: None,
+          };
         }
         entry.sub_counter += 1;
         let sub_counter = entry.sub_counter;
@@ -205,6 +226,16 @@ fn lookup_or_register(
             target_emitted: false,
           });
       }
+      // chemnum.sty:1324 writes the MAIN label of a `main.sub` spec first
+      // (`\chemnum_write_main:nnnn`, :1358), and its first printed use is the
+      // main compound's hyper target (:1373-1378) — unless the label is only
+      // registered (`\cmpd*`) or printed `sub-only` (:1370-1371). So the
+      // declaration `\cmpd{first.a}` must carry `cmpd.first` for a later
+      // `\refcmpd{first}` to resolve.
+      let main_target = (!is_ref && !sub_only && !entry.target_emitted).then(|| {
+        entry.target_emitted = true;
+        clean_id(&format!("cmpd.{main_label}"))
+      });
       let sub_entry = entry.sub_compounds.get_mut(sub_name).unwrap();
       let sub_index = sub_entry.index;
       let sub_str = format_sub(sub_index);
@@ -218,7 +249,12 @@ fn lookup_or_register(
       if emit_as_target {
         sub_entry.target_emitted = true;
       }
-      (clean_target_id, display_text, emit_as_target)
+      CompoundUse {
+        id: clean_target_id,
+        display: display_text,
+        is_target: emit_as_target,
+        main_target,
+      }
     } else {
       let display_text = format!("{main_num}");
       let clean_target_id = clean_id(&format!("cmpd.{main_label}"));
@@ -226,7 +262,12 @@ fn lookup_or_register(
       if emit_as_target {
         entry.target_emitted = true;
       }
-      (clean_target_id, display_text, emit_as_target)
+      CompoundUse {
+        id:          clean_target_id,
+        display:     display_text,
+        is_target:   emit_as_target,
+        main_target: None,
+      }
     }
   })
 }
@@ -258,18 +299,29 @@ fn chemnum_process_labels(
       }
       first_item = false;
 
-      let (id, display, is_target) = lookup_or_register(&main, sub.as_deref(), is_ref, sub_only);
-      result_toks.push(if is_target {
+      let found = lookup_or_register(&main, sub.as_deref(), is_ref, sub_only);
+      // The main compound's target wraps the sub-compound's rendering.
+      if let Some(main_id) = &found.main_target {
+        result_toks.push(T_CS!("\\chemnumEmitTarget"));
+        result_toks.push(T_BEGIN!());
+        result_toks.extend(Explode!(main_id));
+        result_toks.push(T_END!());
+        result_toks.push(T_BEGIN!());
+      }
+      result_toks.push(if found.is_target {
         T_CS!("\\chemnumEmitTarget")
       } else {
         T_CS!("\\chemnumEmitRef")
       });
       result_toks.push(T_BEGIN!());
-      result_toks.extend(Explode!(id));
+      result_toks.extend(Explode!(found.id));
       result_toks.push(T_END!());
       result_toks.push(T_BEGIN!());
-      result_toks.extend(Explode!(display));
+      result_toks.extend(Explode!(found.display));
       result_toks.push(T_END!());
+      if found.main_target.is_some() {
+        result_toks.push(T_END!());
+      }
     }
   }
 
@@ -376,7 +428,7 @@ LoadDefinitions!({
     "\\cmpdplain {}",
     sub[(label)] {
       let label_str = label.to_string();
-      let (_id, display, _) = lookup_or_register(label_str.trim(), None, true, false);
+      let display = lookup_or_register(label_str.trim(), None, true, false).display;
       let mut toks = Vec::new();
       toks.extend(Explode!(display));
       Ok(Tokens::new(toks))
@@ -389,8 +441,7 @@ LoadDefinitions!({
     sub[(main_lab, sub_lab)] {
       let main_str = main_lab.to_string();
       let sub_str = sub_lab.to_string();
-      let (_id, display, _) =
-        lookup_or_register(main_str.trim(), Some(sub_str.trim()), true, true);
+      let display = lookup_or_register(main_str.trim(), Some(sub_str.trim()), true, true).display;
       let mut toks = Vec::new();
       toks.extend(Explode!(display));
       Ok(Tokens::new(toks))
@@ -403,8 +454,7 @@ LoadDefinitions!({
     sub[(main_lab, sub_lab)] {
       let main_str = main_lab.to_string();
       let sub_str = sub_lab.to_string();
-      let (_id, display, _) =
-        lookup_or_register(main_str.trim(), Some(sub_str.trim()), true, false);
+      let display = lookup_or_register(main_str.trim(), Some(sub_str.trim()), true, false).display;
       let mut toks = Vec::new();
       toks.extend(Explode!(display));
       Ok(Tokens::new(toks))

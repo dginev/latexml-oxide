@@ -83,3 +83,45 @@ PARKED-adjacent: luapstricks/\directlua (dsptricks, newpax), pTeX families.
   it is xcolor `\color@none` lookup via ydoc-desc.
 - Minimal `\psmatrix` hits "Stray alignment `&`" (alignment topic) BEFORE `\psk@mnodesize`; the
   `\ifx\psk@mnodesize\@undefined` probe isolates the real pstricks root cleanly.
+
+## forest binding (round 12, P6-P8) — `latexml_contrib/src/forest_sty.rs`
+
+The binding reads the tree body as tokens (no TeX run of forest.sty) and emits every form
+(`{forest}`, `\Forest`, `\Forest*`) as `<ltx:inline-block class="ltx_forest_tree">` holding nested
+`inline-enumerate`/`inline-item`s (forest.sty:8506-8514: the star only drops a group). Guards:
+`cluster_package_guards/forest_chemnum.rs`.
+- `forest_node_keys_structure` — GREEN. Node options are a pgfkeys keylist (forest.sty:1423-1426,
+  pgfkeys.code.tex:357/369/507-520); `edge label`, `tier`, `phantom`, `name`, `for tree`,
+  `default preamble` and `\forestset` styles become structure. A tier may not hold a node and its
+  ancestor (pdflatex "Circular tier hierarchy"), so the repro sets `tier` on siblings only.
+- `forest_starred_inline_and_libraries` — GREEN. Every form inline; library options,
+  `\useforestlibrary`, `\forestapplylibrarydefaults`, `\forest@iflibraryloaded` (:140-177).
+- `forest_action_character_phantom` — GREEN with RESIDUE. A tree holding the bracket parser's
+  action character at brace depth 0 (`\bracketset{action character=@}`, :1419, matched by token at
+  :1491) is not read as forest reads it: actions expand macros (`@+`, `@<token>`, `@{…}`,
+  :1598-1627) or hand the parse to user code resumed by `\bracketResume` (`@@`, :1622-1623,
+  :1450). Such a tree does not apply `phantom`, so the text pdflatex prints (×1…×6, f o r e s t)
+  is kept; RESIDUE: it is one root label `@@[×1[f]]@@[×2[o]]…` carrying action characters and
+  bracket text pdflatex does not print, where pdflatex draws 13 nodes on two tiers, and a phantom
+  node's label and its children's edge labels show (forest.sty:7628-7651 hides them). Reach:
+  forest-doc's two phantom action trees (forest-doc.tex:1784-1795, :5379-5410). Fix site for the
+  residue: run the actions (a TeX-level bracket parser), not a token rewrite. The CONTROL tree
+  shows a letter-`@` action character (prooftrees.sty:940, neoschool.cls:8568) not matching an
+  other `@`.
+- `forest_style_runaway_budget`, `_value_growth_budget`, `_fanout_budget`, `_append_budget`,
+  `_inherited_budget` — GREEN. pdflatex dies on each ("TeX capacity exceeded", or 100 errors from
+  the bare TikZ `x`); the binding stops with ONE Error (a documented surpass of the fatal): at 64
+  nested styles style expansion stops; when the work budget is spent all keylist processing
+  stops. The budget pays for every piece of work: one unit per key plus its name and value
+  tokens (a key replayed from an ancestor's `for tree` pays again at every node), and one per
+  token a key copies (an expansion, measured before it is built; a style or `default preamble`
+  definition). Pool: 1,000,000 units plus 10,000 per tree node; 1,000,000 per `\forestset` and
+  per library's defaults. Inherited `for tree` keylists sit on one stack shared by the tree (no
+  per-node copy), so work and live memory are O(pool). Measured need: ≤1,206 units per node,
+  ≤12,534 per tree (forest-doc, milsymb), 34,260 for prooftrees.sty's largest `\forestset`
+  (6,704 for prooftrees-debug.sty's).
+- Dead ends: counting expansions instead of work (fan-out over a large body, a self-appending
+  style: 16 s to hours); charging a replayed key 1 unit and copying the inherited keylists per
+  node (a 4.2M-token value down a 250-level chain passed the 8 GB cap); flagging a style found on its own expansion stack (`a/.style={#1}` used
+  as `a=a` ends when its value runs out); `tier`/`draw` to test `for tree` (circular tier /
+  not modelled — `edge label` is legal tree-wide and visible).

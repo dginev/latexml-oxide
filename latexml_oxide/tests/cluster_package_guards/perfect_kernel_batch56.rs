@@ -1984,27 +1984,32 @@ fn forest_three_level_semantic_tree() {
     "inline forest list missing: {xml}"
   );
   // Sweep 63: a block wrapper was rejected inside text, cells and figures
-  // (forest-doc 13→133, milsymb 0→1); the tree is an inline object.
+  // (forest-doc 13→133, milsymb 0→1); every form's `ltx_forest_tree`
+  // wrapper is an inline-block, as pdflatex draws the tree as an inline box
+  // (forest.sty:8506-8514, P7).
   let tex = "\\documentclass{article}\n\\usepackage{forest}\n\\begin{document}\n\\fbox{\\begin{forest}[A[B][C]]\\end{forest}}\n\\begin{tabular}{c}\\begin{forest}[D[E]]\\end{forest}\\\\\\end{tabular}\n\\begin{figure}\\centering\\begin{forest}[F[G]]\\end{forest}\\caption{c}\\end{figure}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // The `\fbox` frame lands on the list itself, `\centering` merges into
-  // its class list, and the cell holds it directly.
+  // The `\fbox` frame lands on the wrapper, the cell holds the wrapper
+  // directly, and `\centering` aligns it in the figure.
   assert!(
-    xml.contains("<inline-enumerate class=\"ltx_forest\" framed=\"rectangle\">"),
+    xml.contains("<inline-block class=\"ltx_forest_tree\" framed=\"rectangle\">"),
     "fbox: {xml}"
   );
   assert!(
-    xml.contains("<td align=\"center\"><inline-enumerate class=\"ltx_forest\">"),
+    xml.contains("<td align=\"center\"><inline-block class=\"ltx_forest_tree\">"),
     "cell: {xml}"
   );
   let fig = xml
     .find("<figure")
     .unwrap_or_else(|| panic!("figure: {xml}"));
   assert!(
-    xml[fig..].contains("<inline-enumerate class=\"ltx_centering ltx_forest\">"),
+    xml[fig..].contains("<inline-block align=\"center\" class=\"ltx_forest_tree\">"),
     "figure: {xml}"
   );
+  if let Some(n) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(n, 0, "schema-invalid: {xml}");
+  }
   for label in ["A", "B", "C", "D", "E", "F", "G"] {
     assert!(
       xml.contains(&format!("ltx_forest_node_content\">{label}<")),
