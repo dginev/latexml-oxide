@@ -30,6 +30,7 @@ mod currsize_default;
 mod deferred_load_retry;
 mod defplain_skips_blanks_before_brace;
 mod document_indirection;
+mod dump_gate_init;
 mod expanded_protected_brace_hunt;
 mod expl3_nested_raw_load_catcodes;
 mod fatal_salvages_partial_document;

@@ -164,6 +164,18 @@ pub fn dump_format(
   // This digests the file through the engine, creating definitions.
   let (_, name, ext) = split_path(init_file);
   eprintln!("[ini_tex] Loading {} (ext: {})", name, ext);
+  // Use the full filename with extension for proper file resolution
+  let load_name = if ext.is_empty() {
+    name.clone()
+  } else {
+    format!("{}.{}", name, ext)
+  };
+  // Perl `DumpFile` (TeX_Job.pool.ltxml:141-144): no file, no dump —
+  // `Fatal('expected', $file, "Couldn't find definitions file $file")`. The load
+  // below only warns `missing_file`, and the dump would carry the braces at 12.
+  if latexml_core::binding::content::find_file(&load_name, None).is_none() {
+    return Err(format!("Couldn't find definitions file {init_file}"));
+  }
 
   // Lift the token limit for format dumps — expl3-code.tex alone uses ~5M tokens.
   let saved_limit = latexml_core::gullet::set_token_limit(None);
@@ -190,12 +202,22 @@ pub fn dump_format(
   // regardless of error count.
   state::assign_value("MAX_ERRORS", 1_000_000_i64, None);
 
-  // Use the full filename with extension for proper file resolution
-  let load_name = if ext.is_empty() {
-    name.clone()
-  } else {
-    format!("{}.{}", name, ext)
-  };
+  // Read the format file with the braces as initex has them: initex starts with
+  // every character but `\`, `%`, space, the letters, `^^M`, `^^@` and `^^?` at
+  // catcode 12 (tex.web §232), and latex.ltx:98-101 (ltdirchk.dtx) refuses a
+  // preloaded format by `\ifnum\catcode`\{=1 \errmessage{LaTeX must be made
+  // using an initex with no format preloaded}\fi`, then sets `{`/`}` to 1/2
+  // itself (latex.ltx:102-103; plain.tex:11-12 likewise). The State starts from
+  // the standard table (state.rs `State::new`, as Perl State.pm:105-112), which
+  // Base.pool and the bootstrap need — so the two braces go to 12 only here,
+  // after the snapshot (Perl `DumpFile`, TeX_Job.pool.ltxml:132-138) and before
+  // the file is read (:141-144). The file restores both before the snapshot
+  // diff, so the dump is unchanged. Perl reads the file with `{` at 1 and logs
+  // the `\errmessage` as a Note (TeX_Debugging.pool.ltxml:71-74). Guard:
+  // `dump_gate_init::latex_ltx_init_has_zero_errors`.
+  state::assign_catcode('{', latexml_core::token::Catcode::OTHER, None);
+  state::assign_catcode('}', latexml_core::token::Catcode::OTHER, None);
+
   let result = input_definitions(&load_name, InputDefinitionOptions {
     noltxml: true,
     ..InputDefinitionOptions::default()

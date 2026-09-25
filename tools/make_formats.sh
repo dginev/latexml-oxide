@@ -100,11 +100,34 @@ if [ -n "$TL_ROOT" ] && [ -d "$TL_ROOT/texmf-dist" ]; then
   echo "[make_formats] pinned TEXMFROOT=$TL_ROOT (dual-TL guard)"
 fi
 
+# CLAUDE.md parity rule 4: both inits must log ZERO errors, as Perl's do. The
+# init's diagnostics are suppressed unless LATEXML_INIT_DEBUG=1 (ini_tex.rs), so
+# each init runs with it and its ANSI-stripped log is gated exactly as
+# release-dumps.yml does. CI runs this script whenever the engine sources
+# change (the dump-cache key), which is when an init regression can appear:
+# batch 56g's `\errmessage` → Error made `--init=latex.ltx` log 6 errors that
+# went unnoticed from 2026-07-20 until the release gate.
+run_init() {
+  local init="$1" log
+  log="$(mktemp)"
+  LATEXML_INIT_DEBUG=1 "$BIN" --init="$init" >"$log" 2>&1
+  local status=$?
+  local errors
+  errors=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^(Error|Fatal):' || true)
+  if [ "$status" -ne 0 ] || [ "$errors" -ne 0 ]; then
+    echo "[make_formats] --init=$init: exit=$status errors=$errors" >&2
+    sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -aE '^(Error|Fatal):' | head -20 >&2
+    rm -f "$log"
+    exit 4
+  fi
+  rm -f "$log"
+}
+
 echo "[make_formats] generating plain.${TL_YEAR}.dump.txt (--init=plain.tex)..."
-"$BIN" --init=plain.tex
+run_init plain.tex
 
 echo "[make_formats] generating latex.${TL_YEAR}.dump.txt (--init=latex.ltx)..."
-"$BIN" --init=latex.ltx
+run_init latex.ltx
 
 if [ -n "${LATEXML_DUMP_DIR:-}" ]; then
   mkdir -p "$LATEXML_DUMP_DIR"

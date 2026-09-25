@@ -516,13 +516,51 @@ LoadDefinitions!({
   //======================================================================
   // NOT YET IMPLEMENTED !?!?!
   //----------------------------------------------------------------------
-  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math
-  // field. \muskipdef              c  creates a symbolic name for a \muskip register.
+  // \muskipdef              c  creates a symbolic name for a \muskip register.
   // \muskip                 iq assigns <muglue> to a \muskip register.
   // \nonscript              c  ignores immediately following glue or kern in script and
   // scriptscript styles.
   // Should discard following skip/glue; for now a no-op stub.
   DefPrimitive!("\\nonscript", None);
+
+  // \radical                c  makes a radical atom from the delimiter (27-bit number) and the math
+  // field (tex.web §1163 `math_radical`). Perl leaves it unimplemented
+  // (TeX_Math.pool.ltxml:28), and so undefined; then latex.ltx's
+  // `\DeclareMathRadical` (latex.ltx:13650-13698) — `\let#1\radical`, then
+  // `\in@{radical}{\meaning#1}` — raised "Command `\sqrtsign' already defined"
+  // (fontmath.ltx:423) in every format build, and the dump carried `\sqrtsign`
+  // undefined; a document's own `\radical` (arXiv 1012.3836, amstex's
+  // `\def\sqrt#1{\radical"270370 {#1}}`) was an undefined macro. The delimiter
+  // only picks the glyph, and LaTeXML's radical is `\sqrt`, so the math field is
+  // scanned as tex.web §1151 `scan_math` does — the next non-blank non-`\relax`
+  // expanded token: a braced subformula, or one character, or `\char`,
+  // `\mathchar`, `\delimiter` with its number — and handed to the `\sqrt`
+  // constructor under its private name (math_common.rs `\lx@radical@sqrt`: a
+  // `\let\sqrt\sqrtsign` would otherwise loop). Known limit: an implicit
+  // `\bgroup` opening the field is taken as a one-token field. A primitive, not a
+  // macro: latex.ltx:13683 `\xdef#1{\radical"…\relax}` keeps it unexpanded, as
+  // TeX does. Guards: `dump_gate_init::radical_is_a_primitive_radical`,
+  // `dump_gate_init::radical_survives_a_let_sqrt`.
+  DefPrimitive!("\\radical Number", sub[(_delimiter)] {
+    let mut field = read_x_non_space()?;
+    while field.as_ref().is_some_and(|t| t.defined_as(&T_CS!("\\relax"))) {
+      field = read_x_non_space()?;
+    }
+    if let Some(t) = field {
+      let mut tokens = vec![T_CS!("\\lx@radical@sqrt")];
+      if t.get_catcode() == Catcode::BEGIN {
+        tokens.push(t);
+      } else {
+        tokens.extend([T_BEGIN!(), t]);
+        if ["\\char", "\\mathchar", "\\delimiter"].iter().any(|cs| t.defined_as(&T_CS!(*cs))) {
+          tokens.extend(Explode!(&read_number()?.value_of().to_string()));
+          tokens.push(T_SPACE!());
+        }
+        tokens.push(T_END!());
+      }
+      unread(Tokens::new(tokens));
+    }
+  });
 
   //======================================================================
   // The next two sections are the basic LaTeXML Infrastructure for math.

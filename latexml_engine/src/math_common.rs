@@ -1178,8 +1178,8 @@ LoadDefinitions!({
 
   // This is actually LaTeX's definition, but let's just do it this way.
   // Locked to prevent raw plain-TeX/amstex overrides that expand via
-  // the \radical primitive (undefined in LaTeXML) — arxiv 1012.3836
-  // uses amstex's `\def\sqrt#1{\radical"270370 {#1}}`.
+  // the \radical primitive — arxiv 1012.3836 uses amstex's
+  // `\def\sqrt#1{\radical"270370 {#1}}`.
   DefConstructor!(
     "\\sqrt OptionalInScriptStyle Digested",
     "?#1(<ltx:XMApp><ltx:XMTok meaning='nth-root'/>\
@@ -1187,6 +1187,13 @@ LoadDefinitions!({
     (<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>)",
     locked => true
   );
+  // The radical `\radical` (tex_math.rs) builds: this `\sqrt`, under a name no
+  // document redefines. The lock stops only the `\def` family, not `\let`, so a
+  // `\let\sqrt\sqrtsign` (mathfixs.sty:139 `\let\sqrt=\mafx@sqrt`, whose body
+  // reaches `\radical\z@{#2}` (:109) and `\sqrtsign` (:117, :130)) would turn `\radical` → `\sqrt` →
+  // `\sqrtsign` → `\radical` into a loop. Guard:
+  // `dump_gate_init::radical_survives_a_let_sqrt`.
+  Let!("\\lx@radical@sqrt", "\\sqrt");
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
     Ok(ArgWrap::Tokens(read_until(&until[0])?.unwrap_or_default())) },

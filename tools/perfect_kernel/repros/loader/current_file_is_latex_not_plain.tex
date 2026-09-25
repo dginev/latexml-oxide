@@ -1,0 +1,13 @@
+% witness: every format build (--init=latex.ltx; latex.ltx:19582-19585 `\tl_new:N \CurrentFile`
+%   ... logged "Control sequence \CurrentFile already defined" x4); arXiv 2204.03209,
+%   2205.10749, 2311.06870 (read \CurrentFile under LaTeX)
+% oracle:  pdftex (plain) 0 errors; [undefined]
+% engines: rust=0 perl=0 (2026-09-25); rust printed [macro:->], perl [undefined]
+% expect:  0 errors; \CurrentFile is undefined in plain TeX (a LaTeX kernel token list)
+% status:  GREEN (guard dump_gate_init::current_file_comes_from_latex_not_plain)
+% mechanism: tex_file_io.rs (Base) defined the \CurrentFile family, so latex.ltx's \tl_new:N
+%   found it taken. It belongs to latex.ltx (the latex dump carries it empty, as Perl's
+%   blib latex_dump.pool.ltxml:2716-2719), and latex.rs covers NODUMP.
+\message{[\meaning\CurrentFile]}
+[\meaning\CurrentFile]
+\bye

@@ -839,44 +839,36 @@ fn rle_encode_i64(values: &[i64]) -> String {
 /// file ("latex.ltx") — Perl's `\input` leaves them at the `\@empty`
 /// baseline its latex_dump records (latex_dump.pool.ltxml:24122-24123).
 /// `\@currnamestack` is the `\@pushfilename`/`\@popfilename` stack
-/// (tex_file_io.rs:32-40) and carries `\the\catcode`\@`; Perl never dumps it
+/// (tex_file_io.rs:20-31) and carries `\the\catcode`\@`; Perl never dumps it
 /// because its serialized form equals the bootstrap's (`diff_from_snapshot`
 /// now makes the same comparison — this list is the belt to that brace).
-/// `\CurrentFile*` are ltfilehook's per-file names (latex.ltx
-/// `\set@curr@file`); Perl dumps them EMPTY, which is what the bootstrap
-/// already defines (tex_file_io.rs:26-29), so omitting them is equivalent.
 /// All describe the file being read at dump time, not the format.
+/// ltfilehook's `\CurrentFile*` token lists are NOT in the family: latex.ltx
+/// (:19582-19585) creates them, so the dump carries them EMPTY, as Perl's
+/// blib latex_dump.pool.ltxml:2716-2719 does.
 pub(crate) fn is_file_io_bookkeeping(key: &str) -> bool {
-  matches!(
-    key,
-    "\\@currname"
-      | "\\@currext"
-      | "\\@currnamestack"
-      | "\\CurrentFile"
-      | "\\CurrentFilePath"
-      | "\\CurrentFileUsed"
-      | "\\CurrentFilePathUsed"
-  )
+  matches!(key, "\\@currname" | "\\@currext" | "\\@currnamestack")
 }
 
 #[cfg(test)]
 mod tests {
   #[test]
   fn file_io_bookkeeping_family_is_skipped() {
+    for k in ["\\@currname", "\\@currext", "\\@currnamestack"] {
+      assert!(is_file_io_bookkeeping(k), "{k}");
+    }
+    // The static popper macro is part of the format and stays; so do
+    // latex.ltx's `\CurrentFile*` token lists (its `\tl_new:N`, dumped empty).
     for k in [
-      "\\@currname",
-      "\\@currext",
-      "\\@currnamestack",
+      "\\@p@pfilename",
+      "\\@array",
       "\\CurrentFile",
       "\\CurrentFilePath",
       "\\CurrentFileUsed",
       "\\CurrentFilePathUsed",
     ] {
-      assert!(is_file_io_bookkeeping(k), "{k}");
+      assert!(!is_file_io_bookkeeping(k), "{k}");
     }
-    // The static popper macro is part of the format and stays.
-    assert!(!is_file_io_bookkeeping("\\@p@pfilename"));
-    assert!(!is_file_io_bookkeeping("\\@array"));
   }
 
   use super::*;

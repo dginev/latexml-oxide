@@ -1,0 +1,16 @@
+% witness: every format build (--init=latex.ltx; fontmath.ltx:423 \DeclareMathRadical{\sqrtsign});
+%   arXiv 1012.3836 (amstex's `\def\sqrt#1{\radical"270370 {#1}}`)
+% oracle:  pdflatex 0 errors; [\radical] [macro:->\radical "270370\relax ]
+% engines: rust=1 perl=1 (2026-09-25; undefined \radical, 3 uses); Perl \meaning\sqrtsign = \sqrtsign
+% expect:  0 errors; \radical"270370{x}, \radical"270370\relax y and \sqrtsign{z} are square roots
+% status:  GREEN (guard dump_gate_init::radical_is_a_primitive_radical)
+% mechanism: \radical was undefined (Perl TeX_Math.pool.ltxml:28, NOT YET IMPLEMENTED), so
+%   latex.ltx:13654 `\let\sqrtsign\radical` left \sqrtsign undefined, its
+%   `\in@{radical}{\meaning\sqrtsign}` test failed, and the format build logged "Command
+%   `\sqrtsign' already defined". tex.web §1163 math_radical; §1151 scan_math skips blanks and
+%   \relax before the math field.
+\documentclass{article}
+\begin{document}
+\texttt{[\meaning\radical][\meaning\sqrtsign]}
+$\radical"270370{x}+\radical"270370\relax y+\sqrtsign{z}$
+\end{document}

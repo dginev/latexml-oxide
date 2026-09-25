@@ -1,0 +1,12 @@
+% witness: arXiv 2204.03209, 2205.10749, 2311.06870 (read \CurrentFile under LaTeX)
+% oracle:  pdflatex 0 errors; [macro:->][macro:->] same
+% engines: rust=0 perl=0 (2026-09-25)
+% expect:  0 errors; the \CurrentFile family is defined and empty, with and without a dump
+% status:  GREEN (guard dump_gate_init::current_file_is_defined_empty_under_latex)
+% mechanism: latex.ltx:19582-19585 `\tl_new:N`; the latex dump carries them empty (Perl
+%   blib latex_dump.pool.ltxml:2716-2719); under NODUMP latex.rs defines them.
+\documentclass{article}
+\begin{document}
+\texttt{[\meaning\CurrentFile][\meaning\CurrentFilePathUsed]
+\ifx\CurrentFile\CurrentFileUsed same\else differ\fi}
+\end{document}

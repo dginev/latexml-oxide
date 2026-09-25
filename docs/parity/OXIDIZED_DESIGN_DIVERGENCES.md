@@ -9277,3 +9277,32 @@ Scope, and where it stops short of TeX:
 Error counts equal pdflatex's on the six cases of `vfs_file_end` and the 56ix control.
 
 **Guards**: `vfs_file_end::*`, `noexpand_input_ends::a_definition_still_runs_off_a_file_end`.
+
+### 305. The format is read as initex reads it, and `\radical` is a primitive (Perl: `{` at catcode 1, `\radical` undefined)
+
+`--init=latex.ltx` must log zero errors (CLAUDE.md parity rule 4). Since batch 56g made
+`\errmessage` an Error, three kernel checks failed there; **Rust** (batch 56jb, worker W5) meets
+them the way initex does:
+
+- **Braces at catcode 12.** initex has `{`/`}` at catcode 12 (tex.web §232), and latex.ltx:98-101
+  stops with "LaTeX must be made using an initex with no format preloaded" when `{` is already 1;
+  latex.ltx:102-103 (plain.tex:11-12) then set them to 1/2. `ini_tex.rs` sets both to 12 after the
+  bootstrap snapshot and before reading the format file, so the dump carries no brace records.
+  Perl reads the format with `{` at 1 (State.pm:105-112) and logs the `\errmessage` as a Note
+  (TeX_Debugging.pool.ltxml:71-74). A missing format file now fails the dump, as Perl's
+  `DumpFile` does (TeX_Job.pool.ltxml:141-144).
+- **`\radical`.** Perl lists it as not implemented (TeX_Math.pool.ltxml:28), so
+  `\DeclareMathRadical` (latex.ltx:13650-13698) failed its `\meaning` test and fontmath.ltx:423
+  reported `\sqrtsign` already defined. `tex_math.rs` defines the primitive: it scans the math
+  field as tex.web §1151 does (blanks and `\relax` skipped; `\char`/`\mathchar`/`\delimiter` with
+  their number) and hands it to the `\sqrt` constructor under the private `\lx@radical@sqrt`, so
+  `\let\sqrt\sqrtsign` does not loop. The dump carries `\sqrtsign` = `\radical"270370\relax`, what
+  pdflatex's `\meaning` prints. A field that opens with an implicit `\bgroup` is read as one token.
+- **`\CurrentFile` family** (latex.ltx:19582-19585): defined by latex.ltx, not by the Base pool
+  (tex_file_io.rs defined it, Rust-only), so plain TeX has it undefined, as pdftex; the dump
+  carries it empty, as Perl's (latex_dump.pool.ltxml:2716-2719).
+
+`tools/make_formats.sh` now fails when either init logs an `Error:`/`Fatal:` (the
+release-dumps.yml pattern), so CI catches an init regression whenever the engine changes.
+
+**Guards**: `dump_gate_init::*` (6).

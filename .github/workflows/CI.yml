@@ -234,7 +234,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -350,7 +350,9 @@ jobs:
       # are NOT in the base dump and are deliberately EXCLUDED from the key —
       # otherwise the common case (editing a package binding) would needlessly
       # bust the cache. The dump is thus a deterministic function of
-      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # latexml_{core,engine,codegen}/src, the init driver
+      # (latexml_oxide/src/ini_tex.rs: it sets initex's brace catcodes before
+      # the format is read) + the TeX Live release, so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
@@ -363,7 +365,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -459,7 +461,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:

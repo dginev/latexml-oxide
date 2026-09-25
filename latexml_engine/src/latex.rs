@@ -115,6 +115,31 @@ LoadDefinitions!({
     InnerPool!(latex_base);
   }
 
+  // ltfilehook's current-file token lists (latex.ltx:19582-19585 `\tl_new:N
+  // \CurrentFile` …, `\tl_set` per file by `\@filehook@set@CurrentFile` and
+  // `\__filehook_file_pop_assign:nnnn`). The dump carries them empty, as Perl's
+  // does (blib latex_dump.pool.ltxml:2716-2719); under NODUMP, or a dump built before
+  // they were dumped, nothing defines them, and packages reading them
+  // (scrlfile-hook, achemso/koma chains, hyperref driver detection:
+  // `\ifx\CurrentFile\CurrentFileUsed`) hit `undefined:\CurrentFile`
+  // (witnesses 2204.03209, 2205.10749, 2311.06870) — as does the dumped
+  // `\__filehook_file_push:` of `latex_constructs`' own `RequirePackage!("textcomp")`
+  // (sect13.rs), so they are made here, before it.
+  // Not in Base: there latex.ltx's `\tl_new:N` found them taken and every
+  // format build logged "Control sequence \CurrentFile already defined".
+  // Guards: `dump_gate_init::current_file_comes_from_latex_not_plain`,
+  // `dump_gate_init::current_file_is_defined_empty_under_latex`.
+  for name in [
+    "\\CurrentFile",
+    "\\CurrentFilePath",
+    "\\CurrentFileUsed",
+    "\\CurrentFilePathUsed",
+  ] {
+    if !IsDefined!(&T_CS!(name)) {
+      DefMacro!(T_CS!(name), None, Tokens!());
+    }
+  }
+
   // latex.ltx:22071-22076: under LuaTeX/XeTeX the format inputs
   // `load-unicode-data`, lettering every General_Category L/M code point
   // (load-unicode-data.tex:98-99,134-135). The profile option is a preload,
