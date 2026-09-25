@@ -8878,3 +8878,11 @@ Recall on the witnesses: biblatex-apa-test 81.0 → 92.1 %, cms-dates-intro 83.0
 cms-dates-sample, cms-trad-sample and cms-notes-sample +2.6 to +3.5 points, docsurvey 78.0 → 92.7 %.
 
 **Guard**: `cluster_cli::whatsinout::bib_urls_translators_and_annotations`.
+
+### 290. versonotes' notes are margin notes where they are written (Perl: lost)
+
+`\versonote{text}` writes its note to the `.aux` (versonotes.sty:42-45), and the next run's
+shipout hook sets it on the facing verso page (:217-254). A single pass never reads it back, so in
+both engines every note is lost (versonotes/sample, recall 61.5 %: 30 annotations). **Rust** (batch
+56ij, `latexml_contrib::versonotes_sty`): the package loads raw, and `\versonote` is `\marginpar`, an
+`ltx:note role='margin'` at the point the note is written. **Guard**: `class_census::versonote_is_a_margin_note`.

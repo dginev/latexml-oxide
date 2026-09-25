@@ -1,0 +1,13 @@
+% witness: greek-fontenc/test-tuenc-greek (sweep #121 recall 25.1 %): `\usepackage[LGR,TU]{fontenc}`
+%          transliterated the whole English body into Greek letters (root-causer rc_s3tail)
+% oracle:  pdflatex 0 errors; "Hello world alphabet" (tuenc.def under pdfTeX: "Defaulting to T1
+%          encoding"); with [T1,LGR] pdflatex itself prints Ηελλο ωορλδ αλπηαβετ (LGR last)
+% engines: rust (56ii) = Ηελλο ωορλδ αλπηαβετ: only mapped encodings were merged, so LGR stayed in
+%          force; Perl identical (fontenc.sty.ltxml:90-99, no final \usefont)
+% expect:  <p>Hello world alphabet</p>; fontenc's own TU warning remains (pdflatex prints it too)
+% status:  RED (56ii) -> GREEN (56ij)
+\documentclass{article}
+\usepackage[LGR,TU]{fontenc}
+\begin{document}
+Hello world alphabet
+\end{document}

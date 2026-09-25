@@ -25756,6 +25756,107 @@ mod class_census {
     assert!(xml.contains("<p>ABCDEFG</p>"), "{xml}");
   }
 
+  /// `\verb` closes its group through `\verb@egroup` (latex.ltx:15501), so a
+  /// package's `\verb` wrapper closes too (accessibility's tagging).
+  #[test]
+  fn verb_egroup_closes_package_wrappers() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/verb_egroup_closes_package_wrappers.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+    let bare = regex::Regex::new(r#" xml:id="[^"]*""#)
+      .unwrap()
+      .replace_all(&xml, "");
+    assert!(
+      bare.contains(r#"<td align="left"><verbatim font="typewriter">a_b</verbatim></td>"#),
+      "{xml}"
+    );
+  }
+
+  /// versonotes' `\versonote` is a margin note where it is written: the
+  /// package's own `.aux` round trip needs a second run (versonotes/sample).
+  #[test]
+  fn versonote_is_a_margin_note() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/versonote_is_a_margin_note.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    let note = xml
+      .split(r#"<note class="ltx_marginpar" role="margin""#)
+      .nth(1)
+      .expect("a margin note");
+    let note = &note[..note.find("</note>").expect("closed note")];
+    assert!(
+      note.contains(r#"<emph font="italic">Aeneid</emph>: the epic of Vergil."#),
+      "{xml}"
+    );
+    assert!(xml.contains("Body word alpha."), "{xml}");
+  }
+
+  /// fontenc's `\usefont\encodingdefault` (fontenc.sty:116): the encoding in
+  /// force after `[LGR,TU]` is the default one, not the last mapped one
+  /// (greek-fontenc's test-tuenc-greek came out transliterated into Greek).
+  #[test]
+  fn fontenc_last_encoding_in_force() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/unicode-catcodes/fontenc_last_encoding_in_force.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hello world alphabet</p>"), "{xml}");
+    let lgr_last = tex.replace("[LGR,TU]", "[T1,LGR]");
+    let (_, xml) = convert_with(&lgr_last, None);
+    assert!(xml.contains("<p>Ηελλο ωορλδ αλπηαβετ</p>"), "{xml}");
+  }
+
+  /// epstopdf loads grfext (epstopdf.sty:150): `\PrependGraphicsExtensions` and
+  /// its siblings are defined (arXiv 2606.05709).
+  #[test]
+  fn epstopdf_loads_grfext() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/epstopdf_loads_grfext.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Figure text.</p>"), "{xml}");
+  }
+
+  /// underscore's first aid (underscore-ltx): a file name keeps its `_`
+  /// because `\input` expands it as a `\csname` does (arXiv 2606.31852).
+  #[test]
+  fn underscore_first_aid_file_name() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/unicode-catcodes/underscore_first_aid_file_name.tex"
+    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files_with(
+      tex,
+      &[("sections/logic_T.tex", "Included text.\n")],
+      None,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The kernel's first aid loaded (the dump's `file/underscore.sty/after` hook).
+    assert!(
+      stderr.contains("First Aid for underscore.sty applied"),
+      "{stderr}"
+    );
+    assert!(xml.contains("<p>Included text.</p>"), "{xml}");
+    assert!(xml.contains("<p>Text a_b and <Math"), "{xml}");
+    // `\InputIfFileExists` reads the same name.
+    let tex = tex.replace(
+      "\\input{sections/logic_T}",
+      "\\InputIfFileExists{sections/logic_T}{}{}",
+    );
+    let (stderr, xml) = super::perfect_kernel_batch46::convert_files_with(
+      &tex,
+      &[("sections/logic_T.tex", "Included text.\n")],
+      None,
+    );
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Included text.</p>"), "{xml}");
+  }
+
   /// NFSS size state: `\fontsize{…}{…}\selectfont` sizes the text, `\f@size`
   /// follows the size switches, and a `\selectfont` with no pending
   /// `\fontsize` (`\bfseries`) keeps the current size.

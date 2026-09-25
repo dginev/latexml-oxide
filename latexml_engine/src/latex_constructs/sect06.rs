@@ -837,12 +837,25 @@ pub(crate) fn load() -> Result<()> {
 
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
+  //
+  // The verb group closes through `\verb@egroup`, as latex.ltx:15492/15501 has
+  // the closing delimiter do: a package that wraps `\verb` puts its own closing
+  // code there. accessibility.sty:1566-1577 opens `\begin{PDFInlineObjInText}`
+  // in `\verb` and ends it in `\verb@egroup`; with our group closed directly
+  // that environment leaked (arXiv 2606.00334, `\verb` in a tagged tabular
+  // cell: 35 errors once PDF output activated the tagging). Perl's `\verb`
+  // (latex_constructs.pool.ltxml:1797-1829) closes directly too. The default is
+  // the kernel's (latex.ltx:15501): it also clears `\verb@balance@group`, which
+  // syntax.sty's `\readupto` (:144-156) arms with `\aftergroup` and disarms
+  // through `\verb@egroup`; a MACRO, as packages append to it
+  // (`\g@addto@macro`, newverbs.sty:58).
+  DefMacro!("\\verb@egroup", "\\global\\let\\verb@balance@group\\@empty\\lx@hidden@egroup");
   DefMacro!("\\verb", {
     match read_verb_invocation()? {
       Some(inner) => {
         let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
         result.extend(inner);
-        result.push(T_CS!("\\lx@hidden@egroup"));
+        result.push(T_CS!("\\verb@egroup"));
         Ok(Tokens::new(result))
       },
       None => Ok(Tokens!()),

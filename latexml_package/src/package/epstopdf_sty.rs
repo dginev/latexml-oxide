@@ -5,6 +5,14 @@ LoadDefinitions!({
   // Perl: epstopdf.sty.ltxml
   // Nothing to do here!
   DefMacro!("\\epstopdfsetup{}", None);
+  // epstopdf.sty:150 `\RequirePackage{grfext}`: its `\AppendGraphicsExtensions`/
+  // `\PrependGraphicsExtensions`/`\RemoveGraphicsExtensions` edit
+  // `\Gin@extensions` (grfext.sty:153-237), which a document may call once
+  // epstopdf is loaded. Perl's stub leaves them undefined; they surfaced once
+  // PDF output made `\ifpdf\usepackage{epstopdf}\PrependGraphicsExtensions{.svg}\fi`
+  // run (arXiv 2606.05709, sweep of run 322). Our graphics lookup does not
+  // read the list, so loading the real package raw is enough.
+  InputDefinitions!("grfext", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   // `\epstopdfDeclareGraphicsRule{ext}{type}{ext-out}{cmd}` (epstopdf-base.sty)
   // registers an EPS→<other> conversion command for graphics inclusion.
   // We delegate graphics format conversion to mutool/gs at the post-

@@ -260,7 +260,7 @@ impl PreBibTeX {
     use latexml_core::gullet;
     let mut lines: Vec<String> = Vec::new();
     while gullet::has_more_input() {
-      while let Some(line) = gullet::read_raw_line() {
+      while let Some(line) = gullet::read_raw_line_decoded() {
         lines.push(s!("{line}\n"));
       }
       // `close_mouth` may pop a stacked mouth; we then re-check

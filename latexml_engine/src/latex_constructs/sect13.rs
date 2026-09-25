@@ -1485,8 +1485,10 @@ pub(crate) fn load() -> Result<()> {
   \newif\ifin@"
   );
 
+  // The file name is expanded as `\set@curr@file` (latex.ltx) does, inside a
+  // `\csname` (`gullet::expand_as_csname_text`), as `\input` does it.
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
-    let file_string = Expand!(file).to_string();
+    let file_string = ::latexml_core::gullet::expand_as_csname_text(file)?.to_string();
     // latex.ltx:19794 file substitution applies before the existence test.
     let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
     // Disk-search variant first (matches Perl FindFile default).
@@ -1523,7 +1525,7 @@ pub(crate) fn load() -> Result<()> {
   // last). Removed duplicate identical-body DefMacro here.
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
-    let file_tks = Expand!(file);
+    let file_tks = ::latexml_core::gullet::expand_as_csname_text(file)?;
     let file_string = file_tks.to_string();
     // latex.ltx:19794 file substitution applies before the existence test;
     // `input()` re-applies it to the name we hand `\ltx@input`.

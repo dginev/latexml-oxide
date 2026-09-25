@@ -1,0 +1,20 @@
+% witness: shipunov/rusnat-ex1-ru (sweep #121 recall 78.0 %): a cp1251-encoded .bib under
+%          \usepackage[cp1251]{inputenc} rendered its Russian authors and titles as Latin-1
+%          mojibake ("Ò. Ñ. Ãåéäåìàí" for "Т. С. Гейдеман") (root-causer rc_s3tail)
+% oracle:  pdflatex + bibtex 0 errors: bibtex copies the bytes into the .bbl, the document's
+%          inputenc decodes them
+% engines: rust (56ii) = mojibake in author and title (fields the reader rebuilds from its raw
+%          lines); the document body decoded fine (the tokenizer maps a byte line's bytes)
+% expect:  0 errors; the entry shows "Т. С. Гейдеман" and "Определитель растений" (HTML); the guard
+%          writes gey.bib as cp1251 bytes:
+%          @book{gey, author={Гейдеман, Т. С.}, title={Определитель растений}, publisher={Штиинца}, year={1986}}
+% status:  RED (56ii) -> GREEN (56ij)
+\documentclass{article}
+\usepackage[cp1251]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\begin{document}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{gey}
+\end{document}

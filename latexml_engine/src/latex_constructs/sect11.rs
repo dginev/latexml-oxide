@@ -720,7 +720,12 @@ pub(crate) fn load() -> Result<()> {
   // LaTeX's \input is a bit different...
 
   // Input, now
-  DefPrimitive!("\\ltx@input {}", sub[(arg)] { Input!(&Expand!(arg).to_string()); });
+  // The file name is expanded as `\set@curr@file` (latex.ltx) does it, inside a
+  // `\csname` (`\ifincsname` true): underscore's first-aid `_` stays `_` there
+  // (arXiv 2606.31852 `\input{sections/logic_T}`).
+  DefPrimitive!("\\ltx@input {}", sub[(arg)] {
+    Input!(&::latexml_core::gullet::expand_as_csname_text(arg)?.to_string());
+  });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
   Let!("\\@iinput", "\\ltx@input");
   DefMacro!(
@@ -745,7 +750,7 @@ pub(crate) fn load() -> Result<()> {
     // siunitx, physics … never loaded (arXiv 2605.05505, 2605.24122 flooded
     // into `Fatal:TooManyErrors`). Guard:
     // `perfect_kernel_batch56::include_strips_a_tex_extension`.
-    let expanded = Expand!(path).to_string();
+    let expanded = ::latexml_core::gullet::expand_as_csname_text(path)?.to_string();
     let path_str = expanded.strip_suffix(".tex").unwrap_or(&expanded).to_string();
     // Check if \includeonly restricts inclusion
     let table = lookup_value("including@only");

@@ -880,6 +880,40 @@ mod whatsinout {
     );
   }
 
+  /// A cp1251 `.bib` read under `\usepackage[cp1251]{inputenc}` decodes its
+  /// bytes as the document's input encoding makes them (bibtex copies them
+  /// into the `.bbl`): shipunov/rusnat-ex1-ru read Latin-1 mojibake.
+  #[test]
+  fn bib_bytes_follow_the_document_input_encoding() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex = include_str!("../../tools/perfect_kernel/repros/index-bib/bib_cp1251_inputenc.tex");
+    std::fs::write(work.path().join("ru.tex"), tex).unwrap();
+    // cp1251: А..я are 0xC0..0xFF in order.
+    let cp1251 = |text: &str| -> Vec<u8> {
+      text
+        .chars()
+        .map(|c| match c as u32 {
+          0x410..=0x44F => (c as u32 - 0x410 + 0xC0) as u8,
+          code => u8::try_from(code).expect("ASCII or Cyrillic"),
+        })
+        .collect()
+    };
+    let bib = "@book{gey,\n  author = {Гейдеман, Т. С.},\n  title = {Определитель растений},\n  \
+               publisher = {Штиинца},\n  year = {1986}\n}\n";
+    std::fs::write(work.path().join("gey.bib"), cp1251(bib)).unwrap();
+    let out = run(work.path(), &["ru.tex", "--dest", "ru.html"]);
+    let err = stderr_of(&out);
+    assert!(out.status.success(), "conversion failed:\n{err}");
+    assert_eq!(err.matches("Error:").count(), 0, "{err}");
+    let html = std::fs::read_to_string(work.path().join("ru.html")).expect("read ru.html");
+    let item = html.split("class=\"ltx_bibitem").nth(1).expect("bibitem");
+    let item = &item[..item.find("</li>").unwrap_or(item.len())];
+    for needle in ["Т. С. Гейдеман", "Определитель растений", "Штиинца"]
+    {
+      assert!(item.contains(needle), "missing {needle:?} in:\n{item}");
+    }
+  }
+
   #[test]
   fn whatsin_math_wraps_literal_as_mathml() {
     // `--whatsin=math` must digest the literal AS math (Perl LaTeXML.pm:166-168

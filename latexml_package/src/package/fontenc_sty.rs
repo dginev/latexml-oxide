@@ -253,6 +253,7 @@ LoadDefinitions!({
     && !font_encodings.is_empty()
   {
     setup_cyrillic()?;
+    let mut any_encoding = false;
     for encoding_stored in font_encodings.into_iter() {
       if let Stored::String(enc_sym) = encoding_stored {
         let encoding = to_string(enc_sym);
@@ -279,12 +280,25 @@ LoadDefinitions!({
         if has_fontmap {
           MergeFont!(encoding => encoding);
         }
+        any_encoding = true;
       } else {
         let message = s!(
           "Only strings should be stored as font encoding names, at: {:?}",
           encoding_stored
         );
         Error!("fontenc", "font_encodings", message);
+      }
+    }
+    // fontenc.sty:116 `\usefont\encodingdefault…`: the encoding in force is
+    // `\encodingdefault` after the last option, fontmap or not. Only the
+    // mapped ones were merged above (Perl fontenc.sty.ltxml:90-99 alike), so
+    // `[LGR,TU]` left LGR active and every Latin letter of the body came out
+    // Greek (greek-fontenc's test-tuenc-greek, recall 25 %). Under pdfTeX,
+    // tuenc.def itself turns the default to T1 ("Defaulting to T1 encoding").
+    if any_encoding {
+      let encoding = Expand!(T_CS!("\\encodingdefault")).to_string();
+      if !encoding.is_empty() && encoding != "ASCII" {
+        MergeFont!(encoding => encoding);
       }
     }
   }

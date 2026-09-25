@@ -6628,3 +6628,51 @@ became the default (56id, sweep #121). Trigger:
 `\RequirePackage{pdfmanagement}\SetKeys[document/metadata]{pdfstandard=a-2b}\documentclass{article}\begin{document}Hello\end{document}`
 (pdflatex: 0 errors). **Rust (FIXED, batch 56ig):** the keywords are read in sequence and `file` is
 consumed (pdftex.rs `OpenAnnotSpecification`). Guard `class_census::pdfobj_stream_file_spec`.
+
+## 248. epstopdf does not load grfext (FIXED in Rust)
+
+epstopdf.sty:150 `\RequirePackage{grfext}`, whose `\AppendGraphicsExtensions`,
+`\PrependGraphicsExtensions` and `\RemoveGraphicsExtensions` (grfext.sty:153-237) edit
+`\Gin@extensions`. Perl's binding (epstopdf.sty.ltxml:19) is a stub that loads nothing, so a document
+calling them after `\usepackage{epstopdf}` meets undefined commands. arXiv 2606.05709 does it inside
+`\ifpdf`, which runs since PDF output became the default (56id). Trigger:
+`\usepackage{graphicx}\usepackage{epstopdf}\PrependGraphicsExtensions{.svg}` (pdflatex: 0 errors).
+**Rust (FIXED, batch 56ij):** the binding loads the real grfext raw; the graphics lookup does not read
+the list. Guard `class_census::epstopdf_loads_grfext`.
+
+## 249. underscore's active `_` breaks file names (FIXED in Rust)
+
+The LaTeX kernel replaces underscore.sty's active `_` with its first aid
+(latex2e-first-aid-for-external-files.ltx:176-177 loads underscore-ltx.sty): `\protected`, and a
+literal `_` inside a `\csname` (underscore-ltx.sty:38-51). `\input` expands its file name within a
+`\csname` (`\set@curr@file`), so `\input{sections/logic_T}` reads that file. Perl's binding
+(underscore.sty.ltxml:20) defines `_` as `\ifmmode\sb\else\textunderscore\fi`, and the name becomes
+`sections/logic\textunderscoreT`: missing file (arXiv 2606.31852, whose `\usepackage{underscore}` sits
+in `\ifpdf`). **Rust (FIXED, batch 56ij):** an `underscore-ltx` binding (latexml_contrib) carries the
+first-aid `_`. The kernel's own `file/underscore.sty/after` hook loads it: the format dump holds that
+hook, since it is made from raw latex.ltx, first-aid file included; the degraded no-dump branch has no
+hook and keeps Perl's `_`. `\input`, `\include`, `\IfFileExists` and `\InputIfFileExists` expand
+the name with `\ifincsname` true (`gullet::expand_as_csname_text`). Guard
+`class_census::underscore_first_aid_file_name`.
+
+## 250. fontenc leaves the last mapped encoding in force (FIXED in Rust)
+
+fontenc.sty:116 ends with `\usefont\encodingdefault\familydefault\seriesdefault\shapedefault`: the
+encoding in force is `\encodingdefault`, i.e. the last option, whatever it is. Perl's binding
+(fontenc.sty.ltxml:90-99) merges an encoding into the font only when it has a font map and never
+does the final `\usefont`, so `\usepackage[LGR,TU]{fontenc}` leaves LGR active: every Latin letter of
+the body comes out as its LGR Greek letter (greek-fontenc's test-tuenc-greek, recall 25 %). Trigger:
+`\usepackage[LGR,TU]{fontenc}` + `Hello` (pdflatex: "Hello"; under pdfTeX tuenc.def turns the default
+to T1). With `[T1,LGR]` pdflatex itself prints Greek. **Rust (FIXED, batch 56ij):** after the options,
+the font takes `\encodingdefault` (fontenc_sty.rs). Guard `class_census::fontenc_last_encoding_in_force`.
+
+## 251. `\verb` never runs `\verb@egroup` (FIXED in Rust)
+
+LaTeX's closing `\verb` delimiter runs `\verb@egroup` (latex.ltx:15492, 15501), the hook packages use
+to close what their `\verb` wrapper opened: accessibility.sty:1566-1577 begins `PDFInlineObjInText` in
+`\verb` and ends it in `\verb@egroup`; newverbs appends its `\egroup` there (newverbs.sty:58,64). Perl's
+`\verb` (latex_constructs.pool.ltxml:1797-1829) reads the body itself and closes its hidden group
+directly, so such a group leaks. arXiv 2606.00334 (accessibility, activated by PDF output) gave 35
+"Attempt to close boxing group" errors for `\verb` in tabular cells. **Rust (FIXED, batch 56ij):** the
+verb group closes through `\verb@egroup`, by default `\lx@hidden@egroup` (sect06.rs). Guard
+`class_census::verb_egroup_closes_package_wrappers`.

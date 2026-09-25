@@ -242,7 +242,9 @@ pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod tocbasic_sty;
 pub mod typearea_sty;
+pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
+pub mod versonotes_sty;
 pub mod xecjk_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
@@ -386,6 +388,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
   ("quotchap", "sty", quotchap_sty::load_definitions),
+  (
+    "underscore-ltx",
+    "sty",
+    underscore_ltx_sty::load_definitions,
+  ),
+  ("versonotes", "sty", versonotes_sty::load_definitions),
   ("scrlfile", "sty", scrlfile_sty::load_definitions),
   ("scrbase", "sty", scrbase_sty::load_definitions),
   ("scrkbase", "sty", scrkbase_sty::load_definitions),

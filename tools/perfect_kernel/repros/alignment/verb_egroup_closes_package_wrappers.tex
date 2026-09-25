@@ -1,0 +1,18 @@
+% witness: arXiv 2606.00334 (cortex run 322, PDF output by default): FLAIRS's flairs.sty loads
+%          \usepackage[tagged,highstructure]{accessibility}; `\verb` in a tabular cell: 35 errors
+% oracle:  pdflatex 0 errors: the closing delimiter runs \verb@egroup (latex.ltx:15492/15501), where
+%          accessibility.sty:1566-1577 ends the \begin{PDFInlineObjInText} its \verb opened
+% engines: rust (56ii) = 5 errors ("Attempt to close boxing group" at \lx@begin@alignment): our \verb
+%          closed its group directly and never ran \verb@egroup, so the environment group leaked;
+%          Perl's \verb (latex_constructs.pool.ltxml:1797-1829) is the same reader, Perl does not
+%          load accessibility raw
+% expect:  0 errors; two rows, row 1 cell 2 = <verbatim font="typewriter">a_b</verbatim>
+% status:  RED (56ii) -> GREEN (56ij)
+\documentclass{article}
+\usepackage[tagged]{accessibility}
+\begin{document}
+\begin{tabular}{r l}
+1 & \verb|a_b| \\
+2 & plain \\
+\end{tabular}
+\end{document}

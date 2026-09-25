@@ -1500,6 +1500,25 @@ pub fn read_raw_current_line_from_start() -> Option<String> {
   }
 }
 
+/// [`read_raw_line`] from the current mouth with its input bytes decoded
+/// through the declared input encoding (`Mouth::read_raw_line_decoded`); the
+/// `.bib` reader's line source. Pending pushback is taken as `read_raw_line`
+/// takes it.
+pub fn read_raw_line_decoded() -> Option<String> {
+  let has_pushback = gullet!()
+    .runtime
+    .as_ref()
+    .is_some_and(|runtime| !runtime.pushback.is_empty());
+  if has_pushback {
+    return read_raw_line();
+  }
+  let mut gullet = gullet_mut!();
+  gullet
+    .runtime
+    .as_mut()
+    .and_then(|runtime| runtime.mouth.read_raw_line_decoded(false))
+}
+
 pub fn read_raw_line() -> Option<String> {
   // If we've got unread tokens, they presumably should come before the Mouth's raw data
   // but we'll convert them back to string.
@@ -2128,6 +2147,17 @@ impl Drop for CsnameScope {
 }
 /// True while a `\csname…\endcsname` name is being scanned.
 pub fn in_csname() -> bool { CSNAME_DEPTH.get() > 0 }
+
+/// Fully expand `tokens` as the name inside a `\csname…\endcsname`
+/// (`\ifincsname` true), the way LaTeX reads a file name: `\set@curr@file`
+/// (latex.ltx) expands `\input`'s argument within `\csname`, so an active
+/// character guarded by `\ifincsname` keeps its literal form there
+/// (underscore-ltx.sty's `_`, utf8.def's octets).
+pub fn expand_as_csname_text<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);
+  let _csname_scope = CsnameScope;
+  do_expand(tokens)
+}
 
 fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);

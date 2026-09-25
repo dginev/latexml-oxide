@@ -1287,6 +1287,32 @@ impl Mouth {
     Some(line)
   }
 
+  /// [`read_raw_line`](Self::read_raw_line) with the line's input bytes turned
+  /// into the characters the declared input encoding makes of them
+  /// ([`eight_bit_input_char`], as the tokenizer does for a byte line). For a
+  /// consumer that parses raw lines itself: a `.bib`, whose bytes real `bibtex`
+  /// copies into the `.bbl` for the document's inputenc to decode. A cp1251
+  /// `.bib` under `\usepackage[cp1251]{inputenc}` read `Ò. Ñ. Ãåéäåìàí` for
+  /// "Т. С. Гейдеман" (shipunov/rusnat-ex1-ru, sweep #121).
+  pub fn read_raw_line_decoded(&mut self, noread: bool) -> Option<String> {
+    let line = self.read_raw_line(noread)?;
+    if !self.line_is_bytes {
+      return Some(line);
+    }
+    Some(
+      line
+        .chars()
+        .map(|c| {
+          if ('\u{80}'..='\u{ff}').contains(&c) {
+            eight_bit_input_char(c).unwrap_or(c)
+          } else {
+            c
+          }
+        })
+        .collect(),
+    )
+  }
+
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {
