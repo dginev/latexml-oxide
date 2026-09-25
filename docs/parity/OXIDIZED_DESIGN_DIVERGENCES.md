@@ -9147,9 +9147,9 @@ parameters from the raw `\psset` state. It departs from Perl where Perl disagree
 | 17 | any xcolor model parsed; bare names to hex (except black/white) | `setGraphParams` (:336-338) looks `[HTML]FF8000` up as a name: Error, black | the colour |
 | 18 | `\SpecialCoor`/`\NormalCoor` are the raw pstricks modes (pstricks.tex:746-806), since `\pssetlength` is raw; the coordinate reader always accepts the `\SpecialCoor` forms, pstricks' default since :806 | no-ops (:1037-1038): pst-poly's `\NormalCoor` around an empty `\pssetlength` (pst-poly.tex:68-71) read past `\@nil` (hexgame 1 error) | under `\NormalCoor` reads cartesian coordinates only |
 
-Residuals: an object in an inner box inside a `{pspicture}` auto-opens an unsized nested picture
-(the engine's `ltx:picture` has no `afterClose` sizing; SYNC_STATUS); row 14 would draw at the
-current point once each outside object gets its own zero-size picture; `\multirput` is a no-op
+Residuals: an object outside any picture could draw at the current point through an auto-opened
+picture sized from its box, as Perl does (batch 56iy ports that sizing; for text-argument
+constructors the sizes still differ from Perl's, SYNC_STATUS); `\multirput` is a no-op
 and drops its text bodies; pstricks_sty.rs's `\psclip{}` no-op overrides the support file's
 `{psclip}` on the LaTeX path. The SVG post does not draw arrow markers, arc strokes or dot fills
 yet (latexml_post svg.rs). Colours pstricks defines itself (plain `\input pstricks`,

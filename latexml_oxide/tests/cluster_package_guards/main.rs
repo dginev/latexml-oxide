@@ -57,6 +57,7 @@ mod noexpand_input_ends;
 mod nul_byte_input;
 mod openright_kernel_contract;
 mod picture_makebox_offset;
+mod picture_sizing;
 mod preclass_kernel_autoload;
 mod process_key_options_sees_load_options;
 mod pstricks_drawing;

@@ -8,7 +8,8 @@
 % oracle:  pdflatex 0 errors; the frame is drawn inside the 3x2 picture
 % engines: rust=0 errors but a nested <picture> with no width/height (56iw)
 % expect:  0 errors; every <picture> carries width and height
-% status:  RED
+% status:  GREEN (batch 56iy, guard picture_sizing::auto_opened_picture_is_sized_from_its_box;
+%          the nested picture is width="0" height="0", as in same-host Perl)
 \documentclass{article}
 \usepackage{pstricks}
 \begin{document}

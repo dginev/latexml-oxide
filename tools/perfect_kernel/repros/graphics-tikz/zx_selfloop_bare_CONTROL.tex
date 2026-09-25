@@ -3,7 +3,8 @@
 % engines: rust=0 (2026-09-06)
 % expect:  0 errors; ZX diagram renders. \ar[loop] WITHOUT explicit in/out does not
 %          trigger the intersection wire loop -- marks the mechanism boundary.
-% status:  CONTROL
+% status:  GREEN (a boundary check pdflatex passes, so not a CONTROL: CONTROL marks a shape that
+%          must keep erroring, README.md; the file name keeps its old tag)
 \documentclass{article}
 \usepackage{tikz}
 \makeatletter

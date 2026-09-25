@@ -106,11 +106,40 @@ pub(crate) fn load() -> Result<()> {
   // reach the target element. Picture is selected only for picture-specific
   // primitives (\line, \circle, \vector, \put) used bare inside a {figure}
   // or similar context where no fuller wrapper fits.
+  // Perl latex_constructs.pool.ltxml:4943-4950: a picture that was
+  // auto-opened (a drawing object outside any explicit picture) has no size
+  // of its own, so `afterClose` gives it the size of its node's box — width,
+  // and height plus depth, in px — unless it has one. Without it the SVG had
+  // no width or height, which a browser draws as a 300×150 box, flipped
+  // (pst-flags-doc: 517 such pictures; egameps: 162). The box is read through
+  // `Digested::compute_size` (a shared borrow, no clone). `\put(0,0){Hello}`
+  // measures as in Perl (31.13×9.61). Residual: Perl's `openElementAt` also
+  // extends the box of every auto-opened ancestor (`appendNodeBox`,
+  // Document.pm:1685-1700), and a constructor that digests its coordinates
+  // as text (`\line`, `\vector`, `\qbezier`, `\rput` outside a pspicture,
+  // `\frame`) measures that text here, so those sizes differ from Perl's
+  // (SYNC_STATUS). Guard:
+  // `picture_sizing::auto_opened_picture_is_sized_from_its_box`.
   Tag!("ltx:picture",
     auto_open  => true,
     auto_close => true,
     after_open => sub[document, node] {
       document.generate_id(node, "pic")?;
+    },
+    after_close => sub[_document, node, whatsit] {
+      let (has_width, has_height) =
+        (node.get_attribute("width").is_some(), node.get_attribute("height").is_some());
+      if let Some(whatsit) = whatsit
+        && !(has_width && has_height)
+      {
+        let (width, height, depth) = whatsit.compute_size(SymHashMap::default())?;
+        if !has_width {
+          node.set_attribute("width", &fmt_px(width.px_value(None)))?;
+        }
+        if !has_height {
+          node.set_attribute("height", &fmt_px(height.add(depth).px_value(None)))?;
+        }
+      }
     }
   );
 
