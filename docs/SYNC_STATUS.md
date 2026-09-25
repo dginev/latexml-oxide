@@ -127,6 +127,7 @@ High-impact fatal seeds and major publisher class fixes take priority.
 ### Corpus Triage Quick Wins
 - **`newunicodechar` four-hex `^^^^` caret support** (~119 docs, e.g. `2606.00241`): Adding 4-hex/6-hex caret parsing to `mouth.rs:get_next_char` allows `newunicodechar` to take its Unicode branch cleanly.
 - **`floatrow` raw-load (witness `2606.10047`)**: Floatrow reroutes subcaption placement, causing 18 `malformed` errors in Rust vs 0 in Perl.
+- **Post xpath matcher ignores predicates with `(`** (`latexml_post/src/document.rs:1111-1116`): Perl's `not(../ltx:bib-related[@bibrefs])` guard (MakeBibliography.pm:732) never applies, so a crossref'd `@incollection` prints both "See [x]" and the copied "In <booktitle>". Predates batch 56iu.
 
 ---
 

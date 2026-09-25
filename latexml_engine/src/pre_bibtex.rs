@@ -279,10 +279,11 @@ impl PreBibTeX {
     let mut me = Self::new_from_string(&joined);
     me.source = Some(name.to_string());
     me.file_label = name.to_string();
-    // `BIBSTYLE` is set by `\printbibliography` in the one-process run; a
-    // split post session (`--whatsin=xml`) only has biblatex loaded from the
-    // preloads.
-    me.percent_comments = latexml_core::state::lookup_string("BIBSTYLE") == "biblatex"
+    // `BIBSTYLE` is set by `\printbibliography` in the one-process run
+    // (`biblatex`, or `biblatex-giveninits`: biblatex_sty.rs
+    // `\biblatex@printbibliography`); a split post session (`--whatsin=xml`)
+    // only has biblatex loaded from the preloads.
+    me.percent_comments = latexml_core::state::lookup_string("BIBSTYLE").starts_with("biblatex")
       || latexml_core::state::lookup_bool("biblatex.sty_loaded");
     me
   }

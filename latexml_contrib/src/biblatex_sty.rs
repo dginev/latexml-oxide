@@ -2238,8 +2238,16 @@ LoadDefinitions!({
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
     // The style the bibliography formatter keys on (`bibstyle`): biblatex's
     // standard styles print URLs, which the `.bst` path's "Link" does not
-    // (make_bibliography.rs `style_prints_urls`; OXIDIZED_DESIGN_DIVERGENCES #289).
-    assign_value("BIBSTYLE", pin("biblatex"), Some(Scope::Global));
+    // (make_bibliography.rs `style_prints_urls`; OXIDIZED_DESIGN_DIVERGENCES #289),
+    // and spell given names out unless the style's name format or `giveninits`
+    // asks for initials ([`blx_prints_given_initials`]; make_bibliography.rs
+    // `style_given_name_form`).
+    let bibstyle = if blx_prints_given_initials() {
+      "biblatex-giveninits"
+    } else {
+      "biblatex"
+    };
+    assign_value("BIBSTYLE", pin(bibstyle), Some(Scope::Global));
     // DEDUPLICATE. The same `.bib` can be registered twice — a document that
     // declares `\addbibresource{refs.bib}` while its shipped `.cls` declares
     // the same file, for instance — and naming it twice makes
@@ -2309,8 +2317,13 @@ LoadDefinitions!({
   def_macro_noop("\\UndefineBibliographyExtras{}{}")?;
   def_macro_noop("\\DefineBibliographyStrings{}{}")?;
 
-  // Perl L436-438
-  def_macro_noop("\\DeclareNameFormat OptionalMatch:* []{}{}")?;
+  // Perl L436-438. A name format is also recorded for the given-name form
+  // ([`blx_record_name_format`]); `[<entrytype>]` formats are not modelled.
+  DefPrimitive!("\\DeclareNameFormat OptionalMatch:* []{}{}", sub[(_star, types, name, code)] {
+    if blx_untyped(types.as_ref()) {
+      blx_record_name_format(&name.to_string(), blx_name_format_given_form(&code.to_string()));
+    }
+  });
   def_macro_noop("\\DeclareListFormat OptionalMatch:* []{}{}")?;
   def_macro_noop("\\DeclareFieldFormat OptionalMatch:* []{}{}")?;
   // biblatex.sty:4407-4425: the `\DeclareIndex{Name,List,Field}Format` forms
@@ -2333,7 +2346,13 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareSortingNamekeyScheme[]{}")?;
   def_macro_noop("\\namepart[]{}")?;
   def_macro_noop("\\DeclareLabelalphaNameTemplate[]{}")?;
-  def_macro_noop("\\DeclareNameAlias{}{}")?;
+  // `\DeclareNameAlias[<entrytype>]{<alias>}[<entrytype>]{<format>}`
+  // (biblatex.sty:4494-4505, :4545), recorded like a name format.
+  DefPrimitive!("\\DeclareNameAlias[]{}[]{}", sub[(types, alias, _format_types, format)] {
+    if blx_untyped(types.as_ref()) {
+      blx_record_name_alias(&alias.to_string(), &format.to_string());
+    }
+  });
   def_macro_noop("\\DeclareIndexNameAlias{}{}")?;
   def_macro_noop("\\DeclareListAlias{}{}")?;
   def_macro_noop("\\DeclareIndexListAlias{}{}")?;
@@ -2385,7 +2404,17 @@ LoadDefinitions!({
   def_macro_noop("\\InheritBibliographyStrings{}")?;
   def_macro_noop("\\UndeclareBibliographyExtras{}")?;
   DefMacro!("\\NewCount", "\\newcount");
-  def_macro_noop("\\ExecuteBibliographyOptions[]{}")?;
+  // `\ExecuteBibliographyOptions{<options>}` (biblatex.sty:15080) sets the
+  // global defaults, from a style's `.bbx` (phys.bbx:49, lncs.bbx:5,
+  // chem-acs.bbx:51) or the preamble. Only `giveninits` reaches the native
+  // bibliography ([`blx_record_giveninits`]); a per-type list (`[misc]{…}`,
+  // fiwi.bbx:328) is scoped to those entry types and not modelled (no TL
+  // style sets `giveninits` per type).
+  DefPrimitive!("\\ExecuteBibliographyOptions[]{}", sub[(types, options)] {
+    if blx_options_untyped(types.as_ref().map(|t| t.to_string()).as_deref()) {
+      blx_execute_options(&options.to_string());
+    }
+  });
   def_macro_noop("\\AtBeginBibliography{}")?;
   def_macro_noop("\\AtEveryEntrykey{}{}{}")?;
   def_macro_noop("\\UseBibitemHook")?;
@@ -3121,13 +3150,140 @@ LoadDefinitions!({
       citestyle_name = Some(style.to_string());
     }
   }
+  // biblatex.def's name formats (the binding stands in for the file): the
+  // `author` list falls back to `default`, the `given-family` format
+  // (biblatex.def:953/991), which, like `family-given` and
+  // `family-given/given-family` (:878-935), follows `giveninits`; `initsonly`
+  // (:944-950) always abbreviates. A style's declarations override these.
+  for (alias, format) in [
+    ("default", "given-family"),
+    ("sortname", "family-given/given-family"),
+    ("author", "default"),
+    ("editor", "default"),
+  ] {
+    blx_record_name_alias(alias, format);
+  }
+  blx_record_name_format("initsonly", "initials");
   if let Some(s) = &bibstyle {
     blx_load_style_file(s, "bbx");
   }
   if let Some(s) = &citestyle_name {
     blx_load_style_file(s, "cbx");
   }
+  // The package options apply AFTER the style's `\ExecuteBibliographyOptions`
+  // defaults (biblatex.sty:16439-16446: `\RequireBibliographyStyle`, then
+  // `\blx@processoptions`), so `[style=phys,giveninits=false]` spells names out.
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      blx_record_giveninits(&opt.to_string());
+    }
+  }
 });
+
+/// Whether a format's optional `[<entrytype>]` argument is absent or biblatex's
+/// `*`, every type (biblatex.sty:4442-4445 `\blx@defformat`). A blank `[]`
+/// names no type, so it defines nothing (:4447-4462 `\forcsvlist`).
+fn blx_untyped(types: Option<&Tokens>) -> bool { types.is_none_or(|t| t.to_string().trim() == "*") }
+
+/// Whether `\ExecuteBibliographyOptions`'s `[<entrytype>]` is absent or blank:
+/// biblatex.sty:15081-15084 tests `\ifblank` only, so `*` names a type there.
+fn blx_options_untyped(types: Option<&str>) -> bool { types.is_none_or(|t| t.trim().is_empty()) }
+
+/// `\ExecuteBibliographyOptions{<key=value,...>}` without an entry type.
+fn blx_execute_options(options: &str) {
+  for opt in options.split(',') {
+    blx_record_giveninits(opt);
+  }
+}
+
+/// Record the name format `name`, printing given names as `form`
+/// ([`blx_name_format_given_form`]). biblatex keeps formats and aliases in one
+/// namespace (`\abx@nfd@*@<name>`, biblatex.sty:4462-4463 and :4502-4505), so
+/// the later declaration of a name wins either way.
+fn blx_record_name_format(name: &str, form: &str) {
+  assign_value(
+    &s!("blx@nfd@{}", name.trim()),
+    Stored::from(s!("format:{form}")),
+    Some(Scope::Global),
+  );
+}
+
+/// Record `\DeclareNameAlias{alias}{format}` (see [`blx_record_name_format`]).
+fn blx_record_name_alias(alias: &str, format: &str) {
+  assign_value(
+    &s!("blx@nfd@{}", alias.trim()),
+    Stored::from(s!("alias:{}", format.trim())),
+    Some(Scope::Global),
+  );
+}
+
+/// How a name format's code prints given names: `switch` when it tests
+/// `\ifgiveninits` (or the legacy `\iffirstinits`, blx-compat.def:217-222), as
+/// biblatex.def's own formats do (:878-935); else `initials` when it prints the
+/// given-name initials `\namepartgiveni` (apa.bbx:613-631, whose
+/// `name:apa:family-given` prints the full name only to disambiguate,
+/// :1034-1044; lncs.bbx:173); else `full` when it prints `\namepartgiven`
+/// (biblatex-cse.bbx:61-68, although the style sets `giveninits`); else
+/// `switch`, a format that prints no given name or leaves it to a bibmacro.
+/// (A style-private switch between the two, geschichtsfrkl.bbx:105
+/// `\ifbool{bbx:nurinit}`, reads as `initials`.)
+fn blx_name_format_given_form(code: &str) -> &'static str {
+  // `\<cs>` in `code`, not as the prefix of a longer name.
+  let names_cs = |cs: &str| {
+    code.match_indices(cs).any(|(at, _)| {
+      !code[at + cs.len()..].starts_with(|c: char| c.is_ascii_alphabetic() || c == '@')
+    })
+  };
+  if names_cs("\\ifgiveninits") || names_cs("\\iffirstinits") {
+    "switch"
+  } else if names_cs("\\namepartgiveni") {
+    "initials"
+  } else if names_cs("\\namepartgiven") {
+    "full"
+  } else {
+    "switch"
+  }
+}
+
+/// Whether the bibliography prints given names as initials. biblatex prints an
+/// entry's `author` list in the name format of that name (`\printnames{author}`,
+/// standard.bbx; `\blx@getformat`, biblatex.sty:4509-4522), found through the
+/// recorded aliases; a format that follows `\ifgiveninits` leaves it to the
+/// `giveninits` option ([`blx_record_giveninits`]).
+fn blx_prints_given_initials() -> bool {
+  let mut name = String::from("author");
+  // An alias cycle is an error in biblatex too; stop rather than loop.
+  for _ in 0..32 {
+    let declared = lookup_string(&s!("blx@nfd@{name}"));
+    if let Some(target) = declared.strip_prefix("alias:") {
+      name = target.to_string();
+      continue;
+    }
+    match declared.as_str() {
+      "format:initials" => return true,
+      "format:full" => return false,
+      _ => break,
+    }
+  }
+  lookup_bool("biblatex_giveninits")
+}
+
+/// Record one biblatex `key[=value]` option if it is `giveninits` or its legacy
+/// alias `firstinits` (blx-compat.def:224-229): print given names as initials.
+/// biblatex's default is false; a bare key means true, and the last setting wins
+/// (biblatex.def:878 `\ifgiveninits` reads the one switch). The bibliography
+/// formatter learns it through the `bibstyle` marker set by
+/// `\biblatex@printbibliography`.
+fn blx_record_giveninits(opt: &str) {
+  let (key, value) = blx_opt_kv(opt).unwrap_or_else(|| (opt.trim().to_string(), "true".into()));
+  if matches!(key.as_str(), "giveninits" | "firstinits") {
+    assign_value(
+      "biblatex_giveninits",
+      Stored::Bool(value == "true"),
+      Some(Scope::Global),
+    );
+  }
+}
 
 /// `biblatex-<x>.sty` routed to this binding (`latexml_contrib::dispatch`):
 /// the binding stands in for the `\RequirePackage{biblatex}` the variant
@@ -3169,6 +3325,140 @@ pub fn load_variant(variant: &str) -> Result<()> {
 /// Is the biblatex binding being loaded on behalf of `biblatex-<x>.sty`
 /// (the `latexml_contrib::dispatch` variant route, recorded by [`load_variant`])?
 fn blx_variant_requested(variant: &str) -> bool { lookup_string("blx@variant") == variant }
+
+/// A native style's `.bbx` is not loaded ([`blx_load_style_file`]), but the
+/// option defaults it sets still apply: ieee.bbx:26-34 `\ExecuteBibliographyOptions
+/// {giveninits, …}`, which pdflatex + biber print as "A.-T. Castro". Read the
+/// file's top-level `\ExecuteBibliographyOptions` and `\RequireBibliographyStyle`
+/// in file order (ieee-alphabetic.bbx:13 requires ieee before its own options),
+/// as loading it would run them. A call nested in a group (ieee.bbx:21, the
+/// body of `\DeclareBibliographyOption{dashed}`) runs only with that code.
+fn blx_read_native_style_options(name: &str) {
+  // A `.bbx` written by `filecontents` lives in the virtual file store.
+  let Some(path) = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed("bbx")),
+      ..Default::default()
+    }),
+  ) else {
+    return;
+  };
+  let Some(text) = vfs_read(&path).or_else(|| {
+    std::fs::read(&path)
+      .ok()
+      .map(|b| String::from_utf8_lossy(&b).into_owned())
+  }) else {
+    return;
+  };
+  for (cs, types, arg) in toplevel_calls(&text, &[
+    "ExecuteBibliographyOptions",
+    "RequireBibliographyStyle",
+  ]) {
+    if cs == "RequireBibliographyStyle" {
+      blx_load_style_file(&arg, "bbx");
+    } else if blx_options_untyped(types.as_deref()) {
+      blx_execute_options(&arg);
+    }
+  }
+}
+
+/// The calls of the control sequences `names` at brace depth 0 of the TeX
+/// source `text`, in order: (name, optional `[…]` argument, `{…}` argument).
+/// `%` starts a comment; `\{`, `\}` and `\%` are escapes.
+fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, String)> {
+  let code: String = text
+    .lines()
+    .map(|line| {
+      let mut end = line.len();
+      let mut chars = line.char_indices();
+      while let Some((i, c)) = chars.next() {
+        match c {
+          '\\' => {
+            chars.next();
+          },
+          '%' => {
+            end = i;
+            break;
+          },
+          _ => {},
+        }
+      }
+      &line[..end]
+    })
+    .collect::<Vec<_>>()
+    .join("\n");
+  let chars: Vec<char> = code.chars().collect();
+  // The balanced group opening at `chars[at]`, and the index after it.
+  let group = |at: usize| -> (String, usize) {
+    let mut depth = 0usize;
+    let mut i = at;
+    while i < chars.len() {
+      match chars[i] {
+        '\\' => i += 1,
+        '{' => depth += 1,
+        '}' => {
+          depth -= 1;
+          if depth == 0 {
+            return (chars[at + 1..i].iter().collect(), i + 1);
+          }
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    (chars[at + 1..].iter().collect(), chars.len())
+  };
+  let skip_space = |mut i: usize| {
+    while chars.get(i).is_some_and(|c| c.is_whitespace()) {
+      i += 1;
+    }
+    i
+  };
+  let mut calls = Vec::new();
+  let mut depth = 0usize;
+  let mut i = 0;
+  while i < chars.len() {
+    match chars[i] {
+      '\\' => {
+        let start = i + 1;
+        let mut end = start;
+        while chars
+          .get(end)
+          .is_some_and(|c| c.is_ascii_alphabetic() || *c == '@')
+        {
+          end += 1;
+        }
+        let name: String = chars[start..end].iter().collect();
+        i = end.max(start + 1);
+        if depth > 0 || !names.contains(&name.as_str()) {
+          continue;
+        }
+        let mut at = skip_space(i);
+        let mut types = None;
+        if chars.get(at) == Some(&'[') {
+          let close = chars[at..]
+            .iter()
+            .position(|c| *c == ']')
+            .map_or(chars.len(), |p| at + p);
+          types = Some(chars[at + 1..close.min(chars.len())].iter().collect());
+          at = skip_space(close + 1);
+        }
+        if chars.get(at) == Some(&'{') {
+          let (arg, next) = group(at);
+          calls.push((name, types, arg));
+          i = next;
+        }
+        continue;
+      },
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    i += 1;
+  }
+  calls
+}
 
 /// Raw-load `<name>.bbx` / `<name>.cbx` once (biblatex.sty `\blx@inputonce`,
 /// L2256-2258 / L11428-11435). Style files chain (`sbl.bbx` L1 inputs
@@ -3222,7 +3512,7 @@ fn blx_load_style_file(name: &str, ext: &str) {
     "ieee-alphabetic",
   ];
   let name = name.trim();
-  if name.is_empty() || NATIVE_STYLES.contains(&name) {
+  if name.is_empty() {
     return;
   }
   let guard = s!("blx@styleloaded@{name}.{ext}");
@@ -3230,6 +3520,12 @@ fn blx_load_style_file(name: &str, ext: &str) {
     return;
   }
   assign_value(&guard, Stored::from(true), Some(Scope::Global));
+  if NATIVE_STYLES.contains(&name) {
+    if ext == "bbx" {
+      blx_read_native_style_options(name);
+    }
+    return;
+  }
   let _ = input_definitions(name, InputDefinitionOptions {
     extension: Some(Cow::Owned(ext.to_string())),
     noltxml: true,

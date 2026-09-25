@@ -1,0 +1,24 @@
+% biblatex's subtitle and title addon are two units, "Subtitle. Addon" (biblatex.def:3159-3199
+% `\setunit{\subtitlepunct}` subtitle `\newunit` titleaddon), for the title, the book title and
+% the main title alike; and an event of an @incollection/@inbook prints once. Shared .bib:
+% biblatex_title_units_events.bib (salam from biblatex-examples.bib:1347-1359).
+% witness: biblatex-examples.bib `salam` (biblatex manual examples), biblatex-chicago cms-*-sample
+% oracle:  pdflatex + biber: "Alpha Title. Bravo Subtitle? Charlie Addon." (the punctuation
+%          tracker drops the period after "?"); "In: Foxtrot Works.
+%          Golf Subtitle. Hotel Addon. Echo Volume."; "In: Elementary particle theory.
+%          Relativistic groups and analyticity. Proceedings of the Eighth Nobel Symposium
+%          (Aspenäsgarden, Lerum, May 19–25, 1968)." (standard.bbx prints no event for
+%          @incollection/@inbook)
+% engines: rust (P3) = "Bravo Subtitle?Charlie Addon", "Golf SubtitleHotel Addon",
+%          "Relativistic groups and analyticityProceedings of …"; the @incollection/@inbook event
+%          title printed as the book title ("In Juliet CollectionKilo Workshop"), its venue as
+%          the place, then the event again; perl has no biblatex binding
+% expect:  0 errors; ". " between the units; each event once, after the book title (HTML)
+% status:  RED (P3) -> GREEN (P2/P3 review)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_title_units_events.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

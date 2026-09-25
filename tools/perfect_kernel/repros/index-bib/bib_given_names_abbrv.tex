@@ -1,0 +1,14 @@
+% Control for bib_given_names_plain.tex: abbrv.bst:191 `{f.~}{vv~}{ll}{, jj}` asks for
+% initials, so the given names stay abbreviated (Perl's form). Shared .bib: bib_given_names.bib.
+% witness: the abbrv/ieeetr/siam/elsarticle-num styles (`{f.~}` templates)
+% oracle:  pdflatex + bibtex: "A.-T. Castro and T. Morrison. With Unclean Hands. Pub, 2003."
+%          (bibtex also abbreviates each hyphen-joined part; Perl's per-word rule gives "A.")
+% engines: rust (56ir) = "A. Castro and T. Morrison"; perl = the same
+% expect:  0 errors; first bibblock "A. Castro and T. Morrison (2003)" (HTML)
+% status:  GREEN (a control: initials before and after P2)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{abbrv}
+\bibliography{bib_given_names}
+\end{document}

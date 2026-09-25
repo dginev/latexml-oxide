@@ -478,3 +478,65 @@ GAIN: windycity 7->0, biblatex-sbl 5->0, biblatex-juradiss 6->~1 (toggle residua
   not juradiss — inherits biblatex-dw standard-dw.{bbx,cbx}).
 - \clearfield is NOT a top-level def — it's \blx@imc@clearfield (biblatex.sty:2538) imc-registered.
 - \except never leaks if \DefaultInheritance gobbles its optional arg (windycity.bbx:742).
+
+## Round 12 — bibliography names and fields (P2/P3)
+
+### P2 — given names follow the style (PERL-ORIGIN, surpass)
+- Perl `MakeBibliography.pm:555-566` `do_name` always abbreviates (its :557 NOTE: "should be a
+  formatting option"); pdflatex prints what the style says: `.bst` name template (plain.bst:191
+  `{ff~}` full, abbrv.bst:191 `{f.~}` initials; btxhak.tex:580-581) or biblatex `giveninits`
+  (default false; package option, or `\ExecuteBibliographyOptions` in a .bbx / the preamble).
+- Fix: `make_bibliography.rs` one `do_name` + thread-local `GIVEN_NAME_FORM` set per
+  `ltx:bibliography` from `bibstyle` (`.bst` found beside the doc or via kpsewhich; first
+  given-name-bearing `format.name$` literal; a variable template or no .bst = Perl initials);
+  `biblatex_sty.rs` records `giveninits`/`firstinits` and marks `bibstyle="biblatex-giveninits"`.
+- Repros: bib_given_names_{plain,abbrv,biblatex}.tex + bib_given_names.bib; guards
+  `cluster_package_guards::bibliography_names_fields::*`.
+- Residuals: hyphenated initials ("A.-T." in bibtex/biber, Perl's per-word rule gives "A.").
+  (The apa residual is closed by the review below.)
+
+### P3 — biblatex second-tier fields are printed (RUST-ONLY; Perl has no biblatex binding)
+- The .bib reader (`latexml_engine/src/bibtex.rs`) filed maintitle/mainsubtitle/maintitleaddon,
+  booksubtitle/booktitleaddon, issuetitle/issuesubtitle, eventtitle/eventtitleaddon/venue/
+  eventdate and editora-c as unprinted `ltx:bib-data`; biblatex's standard styles print them
+  (standard.bbx:211/260/309/311/578/710, biblatex.def:2999-3017/3173-3185/3230-3240).
+- Structure: main title = `bib-related type=mvbook role=host`, nested in the part's book
+  (proceedings: `mvproceedings`) host, else the entry's own; book subtitle in the book
+  (proceedings) host; issue = `bib-related type=issue role=part` in the journal host (directly in
+  a `@periodical`); event = `bib-related type=event role=event` (in the proceedings host for
+  `@inproceedings`); editora-c = `bib-name role=<editor[abc]type|editor>`.
+- Formatter (`make_bibliography.rs`): main title before the title in every format; the
+  incollection "In" row split so the main title precedes the book title; issue after the
+  journal's number; entry-level events, a periodical's issue and typed editors in the meta block.
+- Trap: the bibliography xpath matcher (`PostDocument::findnodes_foreign`, document.rs) reads only
+  `[@a]`/`[@a='v']` predicates and ignores every `not(…)` — including Perl's own
+  `[not(../ltx:bib-related[@bibrefs])]` crossref guard. New objects are therefore nested where
+  the old direct-child rows cannot see them, and the article journal row is narrowed with
+  `[@type='journal']`.
+- Repros: biblatex_second_tier_fields.{tex,bib} (recall vs pdflatex+biber 39.1 -> 95.7 %),
+  control bib_host_rows_classic.{tex,bib} (identical before/after).
+
+### P2/P3 review fixes
+- Native (skipped) styles: `blx_load_style_file` still reads a skipped `.bbx`'s top-level
+  `\ExecuteBibliographyOptions` and `\RequireBibliographyStyle` in file order (ieee.bbx:26-34
+  `giveninits`; ieee-alphabetic.bbx:13 -> ieee). Nested calls (ieee.bbx:21, inside
+  `\DeclareBibliographyOption{dashed}`) are not read.
+- Name formats: `\DeclareNameFormat`/`\DeclareNameAlias` (untyped) are recorded in one namespace
+  (`blx@nfd@<name>`, as biblatex's `\abx@nfd@*@<name>`), seeded with biblatex.def:953/989-993.
+  `author` is resolved through the aliases; a format naming `\ifgiveninits` follows the option,
+  else `\namepartgiveni` = initials (apa, accursius, BibBreeze, lncs, science), else
+  `\namepartgiven` = full (biblatex-cse, dtk). Known miss: geschichtsfrkl.bbx:105
+  `\ifbool{bbx:nurinit}{giveni}{given}` (default false, pdflatex full) reads as initials.
+  Per-type `[<type>]` options/formats are not modelled (no TL style sets `giveninits` per type).
+- `.bst` reader skips a `format.name$` whose result is compared with `"others"` (achemso.bst:514,
+  biochem.bst:514); over the 395 TL 2025 .bst files this changes exactly those two (Full -> Initials).
+- `ltx:bib-subtitle` rows join their matches with ". " (`Formatter::Units`; biblatex.def:3159-3199
+  `\newunit` before `titleaddon`). Fields keep `.bib` order (an addon listed before its subtitle
+  prints first).
+- Event of `@incollection`/`@inbook` nests in the book host (bibtex.rs), so the "In" rows no
+  longer print it as the book title/place. standard.bbx prints no event for these types.
+- eventdate stays ISO ("1968-05-19/1968-05-25" = biblatex's `eventdate=iso`, biblatex.sty:6421-6440);
+  biblatex's default is `eventdate=comp` (biblatex.sty:16401) -> "May 19–25, 1968" (english.lbx),
+  language-dependent.
+- Repros: bib_given_names_style_format.tex, biblatex_title_units_events.{tex,bib},
+  bib_names_etal.{tex,bib}.

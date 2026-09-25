@@ -1,0 +1,15 @@
+% Control for biblatex_second_tier_fields.tex: classic BibTeX entries whose host rows the P3
+% formatter change touched (the incollection "In" row split in two, the article journal row
+% narrowed to the journal host) render exactly as before — Perl's FMT_SPEC rows
+% (MakeBibliography.pm:688-744). Shared .bib: bib_host_rows_classic.bib.
+% witness: every classic @incollection/@inproceedings/@article bibliography
+% oracle:  pdflatex + bibtex (abbrv): 0 errors
+% engines: rust (56ir) = the same bibitems as after P3
+% expect:  0 errors; the three bibitems unchanged (HTML)
+% status:  GREEN (a control: unchanged by P3)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{abbrv}
+\bibliography{bib_host_rows_classic}
+\end{document}

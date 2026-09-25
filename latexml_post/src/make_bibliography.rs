@@ -79,6 +79,29 @@ thread_local! {
   /// Whether the bibliography being formatted prints its URLs
   /// ([`style_prints_urls`]); set per `ltx:bibliography`, read by `format_links`.
   static URLS_AS_TEXT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  /// How the bibliography being formatted prints given names
+  /// ([`style_given_name_form`]); set per `ltx:bibliography`, read by [`do_name`].
+  static GIVEN_NAME_FORM: std::cell::Cell<GivenNameForm> =
+    const { std::cell::Cell::new(GivenNameForm::Initials) };
+}
+
+/// How a bibliography style prints an author's given names.
+///
+/// Perl's `do_name` (MakeBibliography.pm:555-566) always abbreviates, and its
+/// :557 NOTE says this "should be a formatting option". The style decides in
+/// pdflatex: the `.bst` name template (plain.bst:191 `{ff~}` spells them out,
+/// abbrv.bst:191 `{f.~}` abbreviates) or biblatex's `giveninits` option
+/// (default false). Beyond Perl; guards
+/// `cluster_package_guards::bibliography_names_fields` (witnesses
+/// bookshelf/spines, windycity, biblatex-chicago cms-*-sample, biblatex-fiwi).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GivenNameForm {
+  /// Initials, each whitespace-separated given name reduced to its first
+  /// character plus "." — Perl's form, and the fallback whenever the style
+  /// is unknown or its template unreadable.
+  Initials,
+  /// The given names as written.
+  Full,
 }
 
 /// Install the recursive-BibTeX-session implementation for this thread.
@@ -1636,6 +1659,12 @@ impl Processor for MakeBibliography {
         .as_deref()
         .is_some_and(style_prints_urls);
       URLS_AS_TEXT.with(|flag| flag.set(prints_urls));
+      let given_names = bib
+        .get_attribute("bibstyle")
+        .map_or(GivenNameForm::Initials, |style| {
+          style_given_name_form(&style, doc.get_search_paths())
+        });
+      GIVEN_NAME_FORM.with(|form| form.set(given_names));
 
       if self.split {
         // Split by initial letter
@@ -1867,9 +1896,20 @@ struct FieldSpec {
 #[derive(Clone, Copy)]
 enum Formatter {
   Any,
+  /// Each matched field a unit of its own, joined by biblatex's
+  /// `\newunitpunct` ". ": the rows of `ltx:bib-subtitle`, which holds both a
+  /// title's `subtitle` and its `titleaddon` (bibtex.rs; `booksubtitle` and
+  /// `booktitleaddon`, `mainsubtitle` and `maintitleaddon` likewise). biblatex
+  /// prints the subtitle inside the title unit and the addon after `\newunit`
+  /// (biblatex.def:3159-3171 `title`, :3173-3185 `booktitle`, :3187-3199
+  /// `maintitle`): "Relativistic groups and analyticity. Proceedings of the
+  /// Eighth Nobel Symposium" (biblatex-examples.bib `salam`). The fields keep
+  /// their `.bib` order.
+  Units,
   Authors,
   EditorsA,
   EditorsB,
+  OtherNames,
   Year,
   Type,
   Title,
@@ -1896,6 +1936,90 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
       formatter: Formatter::Authors,
       post:      "",
     }],
+    // biblatex's `editora`-`editorc` under their `editor[abc]type` roles
+    // (bibtex.rs `\bib@field@default@editora`): "Karl Kilo (compiler)" where
+    // biblatex prints "Comp. by Karl Kilo" (biblatex.def:2999-3017). The
+    // formatter selects the names the rows above do not print.
+    vec![FieldSpec {
+      xpath:     "ltx:bib-name",
+      punct:     "",
+      pre:       "",
+      class:     "editor",
+      formatter: Formatter::OtherNames,
+      post:      "",
+    }],
+    // biblatex's event (`eventtitle`, `venue`, `eventdate`; bibtex.rs
+    // `\bib@field@default@eventtitle`): "Delta Symposium (Echo City),
+    // 2002-05-06." (biblatex.def `event+venue+date`).
+    vec![
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='event']/ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "event",
+        formatter: Formatter::Title,
+        post:      "",
+      },
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='event']/ltx:bib-subtitle",
+        punct:     ". ",
+        pre:       "",
+        class:     "subtitle",
+        formatter: Formatter::Units,
+        post:      "",
+      },
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='event']/ltx:bib-place",
+        punct:     " ",
+        pre:       "(",
+        class:     "place",
+        formatter: Formatter::Any,
+        post:      ")",
+      },
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='event']/ltx:bib-date",
+        punct:     ", ",
+        pre:       "",
+        class:     "date",
+        formatter: Formatter::Any,
+        post:      "",
+      },
+      FieldSpec {
+        xpath:     "true",
+        punct:     ".",
+        pre:       "",
+        class:     "",
+        formatter: Formatter::None,
+        post:      "",
+      },
+    ],
+    // A `@periodical`'s issue (an article's is in the journal block).
+    vec![
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='issue']/ltx:bib-title",
+        punct:     "",
+        pre:       "",
+        class:     "issuetitle",
+        formatter: Formatter::Title,
+        post:      "",
+      },
+      FieldSpec {
+        xpath:     "ltx:bib-related[@type='issue']/ltx:bib-subtitle",
+        punct:     ". ",
+        pre:       "",
+        class:     "subtitle",
+        formatter: Formatter::Units,
+        post:      "",
+      },
+      FieldSpec {
+        xpath:     "true",
+        punct:     ".",
+        pre:       "",
+        class:     "",
+        formatter: Formatter::None,
+        post:      "",
+      },
+    ],
     vec![FieldSpec {
       xpath:     "ltx:bib-note",
       punct:     "",
@@ -1959,7 +2083,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
@@ -1973,8 +2097,13 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::Any,
           post:      "",
         },
+        // The journal host's title: an article's only titled related object
+        // until biblatex's main title (`mvbook`) and event (bibtex.rs
+        // `\bib@field@default@maintitle` / `@eventtitle`) became two more.
+        // (The bibliography matcher, `PostDocument::findnodes_foreign`, reads
+        // `[@attr]`/`[@attr='v']` predicates only; a `not(…)` is ignored.)
         FieldSpec {
-          xpath:     "ltx:bib-related/ltx:bib-title",
+          xpath:     "ltx:bib-related[@type='journal']/ltx:bib-title",
           punct:     ", ",
           pre:       "",
           class:     "journal",
@@ -1996,6 +2125,24 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           class:     "number",
           formatter: Formatter::Any,
           post:      ")",
+        },
+        // biblatex's issue title, a part of the journal host: "Journal Name
+        // (2003): Foxtrot Special Issue" (biblatex.def:3230-3240 `issue`).
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-related[@type='issue']/ltx:bib-title",
+          punct:     ": ",
+          pre:       "",
+          class:     "issuetitle",
+          formatter: Formatter::Title,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related/ltx:bib-related[@type='issue']/ltx:bib-subtitle",
+          punct:     ". ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Units,
+          post:      "",
         },
         FieldSpec {
           xpath:     "ltx:bib-status",
@@ -2072,7 +2219,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
@@ -2200,7 +2347,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
@@ -2221,13 +2368,89 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           formatter: Formatter::CrossRef,
           post:      ",",
         },
+        // "In <main title>. <main subtitle>. <book title>, <book subtitle>,":
+        // biblatex's main title is the host of the book, nested in it (bibtex.rs
+        // `\bib@field@inbook@maintitle`), and precedes it (biblatex.def
+        // `maintitle+booktitle`, standard.bbx:260). The "In " is its own row so
+        // that whichever title comes first carries it; an entry without a
+        // main title prints exactly Perl's row (MakeBibliography.pm:720-721).
         FieldSpec {
           xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-title",
           punct:     " ",
           pre:       "In ",
+          class:     "",
+          formatter: Formatter::None,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@role='host']/ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "maintitle",
+          formatter: Formatter::Title,
+          post:      ". ",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@role='host']/ltx:bib-subtitle",
+          punct:     "",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Units,
+          post:      ". ",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-title",
+          punct:     "",
+          pre:       "",
           class:     "inbook",
           formatter: Formatter::Title,
           post:      ",",
+        },
+        // biblatex's `booksubtitle`/`booktitleaddon` (bibtex.rs
+        // `\bib@field@default@booksubtitle`).
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-subtitle",
+          punct:     " ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Units,
+          post:      ",",
+        },
+        // The event of the proceedings (biblatex's `eventtitle`/`venue`/
+        // `eventdate` of an `@inproceedings`, bibtex.rs
+        // `\bib@field@inproceedings@eventtitle`): "Delta Symposium (Echo City),
+        // 2002-05-06" (biblatex.def `event+venue+date`).
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-title",
+          punct:     " ",
+          pre:       "",
+          class:     "event",
+          formatter: Formatter::Title,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-subtitle",
+          punct:     ". ",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Units,
+          post:      "",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-place",
+          punct:     " ",
+          pre:       "(",
+          class:     "place",
+          formatter: Formatter::Any,
+          post:      ")",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-date",
+          punct:     ", ",
+          pre:       "",
+          class:     "date",
+          formatter: Formatter::Any,
+          post:      "",
         },
         FieldSpec {
           xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-name[@role='editor']",
@@ -2401,7 +2624,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
@@ -2537,7 +2760,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
@@ -2647,7 +2870,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      "",
         },
         FieldSpec {
@@ -2727,7 +2950,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      "",
         },
       ],
@@ -2792,12 +3015,40 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           punct:     " ",
           pre:       "",
           class:     "subtitle",
-          formatter: Formatter::Any,
+          formatter: Formatter::Units,
           post:      ".",
         },
       ],
     ],
   };
+  // biblatex's main title, the multi-volume work (an entry's own `mvbook` host
+  // unless the entry is a part, whose book host carries it; bibtex.rs
+  // `\bib@field@default@maintitle`), precedes the title in every format:
+  // "Hotel Collected Papers. Golf Letters." (standard.bbx:211 `maintitle+title`).
+  for block in &mut blocks {
+    if let Some(at) = block.iter().position(|spec| spec.xpath == "ltx:bib-title") {
+      let main_title = [
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type='mvbook']/ltx:bib-title",
+          punct:     "",
+          pre:       "",
+          class:     "maintitle",
+          formatter: Formatter::Title,
+          post:      ". ",
+        },
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type='mvbook']/ltx:bib-subtitle",
+          punct:     "",
+          pre:       "",
+          class:     "subtitle",
+          formatter: Formatter::Units,
+          post:      ". ",
+        },
+      ];
+      block.splice(at..at, main_title);
+      break;
+    }
+  }
   blocks.extend(meta_block);
   blocks
 }
@@ -2836,24 +3087,85 @@ fn field_content(node: &Node) -> Vec<NodeData> {
   }
 }
 
+/// biblatex's punctuation tracker (biblatex.sty:2118-2130 `\blx@addpunct`):
+/// `\addperiod` adds nothing after a text that already ends in a mark, since
+/// `\DeclarePunctuationPairs{period}{}` (:2026) pairs the period with none of
+/// them. Closing brackets and quotes are transparent (space-factor code 0,
+/// biblatex.sty:549, :1749-1754). pdflatex + biber print "What is X? A
+/// survey", "Second (2nd ed.) Addon", "In the U.S.A. Addon", "Ends with colon:
+/// Addon".
+fn ends_with_punctuation(text: &str) -> bool {
+  text
+    .trim_end()
+    .trim_end_matches([')', ']', '>', '\'', '`', '’', '”', '"'])
+    .ends_with(['.', '?', '!', ',', ';', ':', '…'])
+}
+
 /// Apply a formatter function to the given nodes.
 ///
 /// Port of the various `do_*` functions.
 fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> Vec<NodeData> {
   match formatter {
     Formatter::Any => nodes.iter().flat_map(field_content).collect(),
-    Formatter::Authors => format_author_nodes(doc, nodes),
-    Formatter::EditorsA => {
-      let mut result = format_author_nodes(doc, nodes);
-      let suffix = if nodes.len() > 1 { " (Eds.)" } else { " (Ed.)" };
+    // biblatex's `\newunit` between the units of one title: `\newunitpunct`
+    // is `\addperiod\space` (biblatex.def:173), which the punctuation tracker
+    // drops after a unit that already ends in a mark ([`ends_with_punctuation`]).
+    // A blank unit prints nothing.
+    Formatter::Units => {
+      let mut result = Vec::new();
+      let mut previous: Option<String> = None;
+      for node in nodes {
+        let text = node.get_content();
+        if text.trim().is_empty() {
+          continue;
+        }
+        if let Some(previous) = &previous {
+          let separator = if ends_with_punctuation(previous) {
+            " "
+          } else {
+            ". "
+          };
+          result.push(NodeData::Text(separator.to_string()));
+        }
+        result.extend(field_content(node));
+        previous = Some(text);
+      }
+      result
+    },
+    Formatter::Authors => do_names(nodes.to_vec()),
+    Formatter::EditorsA => do_editors_a(nodes.to_vec()),
+    Formatter::EditorsB => {
+      let mut result = vec![NodeData::Text("(".to_string())];
+      result.extend(do_names(nodes.to_vec()));
+      let suffix = if nodes.len() > 1 { " Eds.)" } else { " Ed.)" };
       result.push(NodeData::Text(suffix.to_string()));
       result
     },
-    Formatter::EditorsB => {
-      let mut result = vec![NodeData::Text("(".to_string())];
-      result.extend(format_author_nodes(doc, nodes));
-      let suffix = if nodes.len() > 1 { " Eds.)" } else { " Ed.)" };
-      result.push(NodeData::Text(suffix.to_string()));
+    Formatter::OtherNames => {
+      // The names in a role other than the author, editor and translator the
+      // specs print: one `do_names` list per role, in order of appearance, each
+      // followed by its role; biblatex-chicago's `none` type prints no role.
+      let mut groups: Vec<(String, Vec<Node>)> = Vec::new();
+      for node in nodes {
+        let role = node.get_attribute("role").unwrap_or_default();
+        if matches!(role.as_str(), "author" | "editor" | "translator") {
+          continue;
+        }
+        match groups.iter_mut().find(|(r, _)| *r == role) {
+          Some((_, group)) => group.push(node.clone()),
+          None => groups.push((role, vec![node.clone()])),
+        }
+      }
+      let mut result = Vec::new();
+      for (role, names) in groups {
+        if !result.is_empty() {
+          result.push(NodeData::Text("; ".to_string()));
+        }
+        result.extend(do_names(names));
+        if role != "none" {
+          result.push(NodeData::Text(format!(" ({role})")));
+        }
+      }
       result
     },
     Formatter::Year => {
@@ -2921,74 +3233,6 @@ fn apply_formatter(doc: &PostDocument, formatter: Formatter, nodes: &[Node]) -> 
     Formatter::Links => format_links(doc, nodes),
     Formatter::None => Vec::new(),
   }
-}
-
-/// Format author name nodes.
-///
-/// Port of `do_names` / `do_name`.
-fn format_author_nodes(_doc: &PostDocument, name_nodes: &[Node]) -> Vec<NodeData> {
-  let mut result: Vec<NodeData> = Vec::new();
-  let mut names: Vec<Node> = name_nodes.to_vec();
-
-  // Check for "others" sentinel (et al.)
-  let etal = names
-    .last()
-    .map(|n| n.get_content().trim() == "others")
-    .unwrap_or(false);
-  if etal {
-    names.pop();
-  }
-
-  let sep = if names.len() > 2 { ", " } else { " " };
-
-  for (i, name) in names.iter().enumerate() {
-    if i > 0 {
-      result.push(NodeData::Text(sep.to_string()));
-      if !etal && i == names.len() - 1 {
-        result.push(NodeData::Text("and ".to_string()));
-      }
-    }
-    // Format single name: initials + surname
-    if let Some(givenname) = PostDocument::findnodes_foreign("ltx:givenname", name)
-      .into_iter()
-      .next()
-    {
-      let given_text = givenname.get_content();
-      let initials: String = given_text
-        .split_whitespace()
-        .map(|word| {
-          if word.ends_with('.') {
-            format!("{} ", word)
-          } else if let Some(first) = word.chars().next() {
-            format!("{}. ", first)
-          } else {
-            String::new()
-          }
-        })
-        .collect();
-      result.push(NodeData::Text(initials));
-    }
-    if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", name)
-      .into_iter()
-      .next()
-    {
-      result.push(NodeData::Text(surname.get_content()));
-    }
-  }
-
-  if etal {
-    result.push(NodeData::Text(sep.to_string()));
-    result.push(NodeData::Element {
-      tag:        "ltx:text".to_string(),
-      attributes: Some(HashMap::from_iter([(
-        "class".to_string(),
-        "ltx_bib_etal".to_string(),
-      )])),
-      children:   vec![NodeData::Text("et al.".to_string())],
-    });
-  }
-
-  result
 }
 
 /// Format external links.
@@ -3143,13 +3387,14 @@ fn is_citation_order_style(bibstyle: &str) -> bool {
 }
 
 /// Whether a bibliography style prints an entry's `url` field. biblatex's
-/// standard styles do (`url=true`, the biblatex binding records `biblatex` as
-/// the style), and so do natbib's `plainnat`/`abbrvnat`/`unsrtnat` ("URL …",
-/// plainnat.bst `format.url`); the classic `plain`/`alpha`/`unsrt` know no
-/// `url` field. Other url-printing `.bst`s (IEEEtran, achemso, …) keep the
-/// "Link" placeholder until they are listed here.
+/// standard styles do (`url=true`, the biblatex binding records `biblatex` —
+/// or `biblatex-giveninits`, [`style_given_name_form`] — as the style), and so
+/// do natbib's `plainnat`/`abbrvnat`/`unsrtnat` ("URL …", plainnat.bst
+/// `format.url`); the classic `plain`/`alpha`/`unsrt` know no `url` field.
+/// Other url-printing `.bst`s (IEEEtran, achemso, …) keep the "Link"
+/// placeholder until they are listed here.
 fn style_prints_urls(bibstyle: &str) -> bool {
-  matches!(bibstyle, "biblatex" | "plainnat" | "abbrvnat" | "unsrtnat")
+  bibstyle.starts_with("biblatex") || matches!(bibstyle, "plainnat" | "abbrvnat" | "unsrtnat")
 }
 
 /// First-citation order of bib keys (lowercased) → 0-based rank, read from the
@@ -3292,36 +3537,179 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
   (sort_names, short_names, full_names)
 }
 
-/// Perl MakeBibliography `do_name` (L555-566): the given-name rendered as
-/// initials followed by the surname text — e.g. givenname "Aaron D." + surname
-/// "Ames" → "A. D. Ames". Each whitespace-split given-name word already ending
-/// in "." is kept verbatim (+ space); otherwise its first char + ". " is used.
+/// Perl MakeBibliography `do_name` (L555-566): the given name, in the
+/// style's [`GivenNameForm`], followed by the surname — givenname "Aaron D." +
+/// surname "Ames" gives "A. D. Ames" (initials) or "Aaron D. Ames" (full). For
+/// initials, each whitespace-split given-name word already ending in "." is
+/// kept verbatim (+ space); otherwise its first char + ". " is used. The one
+/// name renderer: the `ltx:bib-name` formatters ([`do_name_node`]) and the
+/// ObjectDB "Surname, Given" strings ([`format_single_name`]) both come here.
 /// (We flatten the surname to text, consistent with the rest of this file's
 /// name handling; Perl clones the surname's child nodes to preserve any markup,
 /// which bibliography surnames essentially never carry.)
-fn do_name_text(namenode: &Node) -> String {
+fn do_name(given: Option<&str>, surname: &str) -> String {
   let mut out = String::new();
-  if let Some(given) = PostDocument::findnodes_foreign("ltx:givenname", namenode)
-    .into_iter()
-    .next()
-  {
-    for word in given.get_content().split_whitespace() {
-      if word.ends_with('.') {
-        out.push_str(word);
-        out.push(' ');
-      } else if let Some(c) = word.chars().next() {
-        out.push(c);
-        out.push_str(". ");
-      }
+  if let Some(given) = given {
+    match GIVEN_NAME_FORM.with(std::cell::Cell::get) {
+      GivenNameForm::Full => {
+        for word in given.split_whitespace() {
+          out.push_str(word);
+          out.push(' ');
+        }
+      },
+      GivenNameForm::Initials => {
+        for word in given.split_whitespace() {
+          if word.ends_with('.') {
+            out.push_str(word);
+            out.push(' ');
+          } else if let Some(c) = word.chars().next() {
+            out.push(c);
+            out.push_str(". ");
+          }
+        }
+      },
     }
   }
-  if let Some(surname) = PostDocument::findnodes_foreign("ltx:surname", namenode)
-    .into_iter()
-    .next()
-  {
-    out.push_str(&surname.get_content());
-  }
+  out.push_str(surname);
   out
+}
+
+/// [`do_name`] for one `ltx:bib-name` node.
+fn do_name_node(namenode: &Node) -> String {
+  let first_text = |xpath: &str| {
+    PostDocument::findnodes_foreign(xpath, namenode)
+      .into_iter()
+      .next()
+      .map(|n| n.get_content())
+  };
+  let given = first_text("ltx:givenname");
+  let surname = first_text("ltx:surname").unwrap_or_default();
+  do_name(given.as_deref(), &surname)
+}
+
+/// The given-name form of the style an `ltx:bibliography` records in its
+/// `bibstyle` attribute. The biblatex binding records `biblatex`, or
+/// `biblatex-giveninits` when the `giveninits`/`firstinits` option is on
+/// (biblatex_sty.rs `\biblatex@printbibliography`; biblatex's default is
+/// full names). Any other name is a `.bst`, found beside the document or
+/// through kpsewhich as a `.bib` is ([`bst_given_name_form`]).
+fn style_given_name_form(bibstyle: &str, search_paths: &[String]) -> GivenNameForm {
+  match bibstyle {
+    "biblatex" => GivenNameForm::Full,
+    "biblatex-giveninits" => GivenNameForm::Initials,
+    _ => {
+      let bst = if bibstyle.ends_with(".bst") {
+        bibstyle.to_string()
+      } else {
+        format!("{bibstyle}.bst")
+      };
+      find_file(&bst, search_paths)
+        .or_else(|| latexml_core::util::pathname::kpsewhich(&[bst.as_str()]))
+        .and_then(|path| std::fs::read(path).ok())
+        .map_or(GivenNameForm::Initials, |bytes| {
+          bst_given_name_form(&String::from_utf8_lossy(&bytes))
+        })
+    },
+  }
+}
+
+/// The given-name form a `.bst` asks for, read off the name template of its
+/// author list: plain.bst:191 `"{ff~}{vv~}{ll}{, jj}" format.name$` spells the
+/// given names out (`ff`), abbrv.bst:191 `"{f.~}{vv~}{ll}{, jj}"` abbreviates
+/// them (`f`, as do `{f~}`, `{f}` and apalike.bst:215 `{, f.}`): "Within
+/// each piece a double letter tells BibTeX to use whole tokens, and a single
+/// letter, to abbreviate them (these letters must be at brace-level 1)"
+/// (btxhak.tex:580-581).
+///
+/// The walk takes the `format.name$` calls in file order, skipping literal
+/// templates without a given-name part (a label's `"{vv~}{ll}"`) and calls
+/// whose result is compared with `"others"`, and stops at the first that has
+/// one. A template held in a variable (IEEEtran.bst:1213
+/// `name.format.string`, apsrev4-2.bst:1469) is unreadable, and so is a style
+/// with no template at all: both give Perl's initials. Stopping there, rather
+/// than reading on, keeps the later sort templates (plain.bst's
+/// `sort.format.names` `"{vv{ } }{ll{ }}{  ff{ }}{  jj{ }}"`, which every
+/// base style carries) from deciding.
+fn bst_given_name_form(bst: &str) -> GivenNameForm {
+  let code: String = bst
+    .lines()
+    .map(strip_bst_comment)
+    .collect::<Vec<_>>()
+    .join("\n");
+  let mut rest = code.as_str();
+  while let Some(at) = rest.find("format.name$") {
+    let before = rest[..at].trim_end();
+    rest = &rest[at + "format.name$".len()..];
+    // A name compared with "others" is the "et al." test, not the printed
+    // form (achemso.bst:514 `"{ff }{vv }{ll}{ jj}" format.name$ "others" =`,
+    // which prints `{,~f.}` at :874; biochem.bst:514 likewise).
+    if rest.trim_start().starts_with("\"others\"") {
+      continue;
+    }
+    // The template is the string literal right before the call.
+    let Some(open) = before.strip_suffix('"').and_then(|body| body.rfind('"')) else {
+      return GivenNameForm::Initials;
+    };
+    let template = &before[open + 1..before.len() - 1];
+    if let Some(form) = template_given_name_form(template) {
+      return form;
+    }
+  }
+  GivenNameForm::Initials
+}
+
+/// A `.bst` line without its `%` comment (a `%` inside a string literal is
+/// data).
+fn strip_bst_comment(line: &str) -> &str {
+  let mut in_string = false;
+  for (i, c) in line.char_indices() {
+    match c {
+      '"' => in_string = !in_string,
+      '%' if !in_string => return &line[..i],
+      _ => {},
+    }
+  }
+  line
+}
+
+/// The given-name part of one `format.name$` template: the brace-level-1
+/// piece whose name-part letters start with `f`. `None` when the template
+/// prints no given names.
+fn template_given_name_form(template: &str) -> Option<GivenNameForm> {
+  let mut depth = 0usize;
+  let mut letters = String::new();
+  // This piece's letters are read (any later letter in it is verbatim text).
+  let mut read = false;
+  for c in template.chars() {
+    if depth == 1 && !read {
+      if c.is_ascii_alphabetic() {
+        letters.push(c);
+        continue;
+      }
+      if !letters.is_empty() {
+        read = true;
+        if letters.starts_with('f') {
+          return Some(if letters == "ff" {
+            GivenNameForm::Full
+          } else {
+            GivenNameForm::Initials
+          });
+        }
+      }
+    }
+    match c {
+      '{' => {
+        depth += 1;
+        if depth == 1 {
+          letters.clear();
+          read = false;
+        }
+      },
+      '}' => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+  }
+  None
 }
 
 /// The SHORT author form used for the author-year citation label: surnames
@@ -3406,7 +3794,7 @@ fn do_names(mut names: Vec<Node>) -> Vec<NodeData> {
         out.push(NodeData::Text("and ".to_string()));
       }
     }
-    out.push(NodeData::Text(do_name_text(name)));
+    out.push(NodeData::Text(do_name_node(name)));
   }
   if etal {
     out.push(NodeData::Text(sep.to_string()));
@@ -3546,27 +3934,12 @@ fn format_authors_text(authors: &str) -> String {
   result
 }
 
-/// Format a single author name.
-///
-/// Port of `do_name`.
+/// Format a single "Surname, Given" author string (the ObjectDB path, where
+/// no `ltx:bib-name` node exists) through [`do_name`].
 fn format_single_name(name: &str) -> String {
-  if let Some((surname, given)) = name.split_once(',') {
-    let surname = surname.trim();
-    let initials: String = given
-      .split_whitespace()
-      .map(|word| {
-        if word.ends_with('.') {
-          format!("{} ", word)
-        } else if let Some(first) = word.chars().next() {
-          format!("{}. ", first)
-        } else {
-          String::new()
-        }
-      })
-      .collect();
-    format!("{}{}", initials, surname)
-  } else {
-    name.to_string()
+  match name.split_once(',') {
+    Some((surname, given)) => do_name(Some(given), surname.trim()),
+    None => name.to_string(),
   }
 }
 
@@ -3738,6 +4111,63 @@ mod tests {
     assert_eq!(format_single_name("Smith, J."), "J. Smith");
     assert_eq!(format_single_name("Smith, John Robert"), "J. R. Smith");
     assert_eq!(format_single_name("Smith"), "Smith");
+  }
+
+  #[test]
+  fn test_format_single_name_full_given_names() {
+    GIVEN_NAME_FORM.with(|form| form.set(GivenNameForm::Full));
+    assert_eq!(
+      format_single_name("Smith, John Robert"),
+      "John Robert Smith"
+    );
+    assert_eq!(format_single_name("Smith, J."), "J. Smith");
+    assert_eq!(format_single_name("Smith"), "Smith");
+    GIVEN_NAME_FORM.with(|form| form.set(GivenNameForm::Initials));
+    assert_eq!(format_single_name("Smith, John Robert"), "J. R. Smith");
+  }
+
+  #[test]
+  fn test_bst_given_name_form() {
+    use GivenNameForm::{Full, Initials};
+    let call = |template: &str| format!("{{ s nameptr \"{template}\" format.name$ 't := }}");
+    // plain.bst:191, abbrv.bst:191, bookshelf.bst:29, asmeconf.bst:689,
+    // apalike.bst:215, splncs04.bst:471.
+    assert_eq!(bst_given_name_form(&call("{ff~}{vv~}{ll}{, jj}")), Full);
+    assert_eq!(bst_given_name_form(&call("{f.~}{vv~}{ll}{, jj}")), Initials);
+    assert_eq!(
+      bst_given_name_form(&call("{ff{ } }{vv{ } }{ll{ }}{, jj}")),
+      Full
+    );
+    assert_eq!(bst_given_name_form(&call("{vv~}{ll}{, ff}{, jj}")), Full);
+    assert_eq!(
+      bst_given_name_form(&call("{vv~}{ll}{, jj}{, f.}")),
+      Initials
+    );
+    assert_eq!(
+      bst_given_name_form(&call("{vv~}{ll}{, jj}{, f{.}.}")),
+      Initials
+    );
+    assert_eq!(bst_given_name_form(&call("{f}{ll}")), Initials);
+    // A label template without given names is skipped; the author list's decides.
+    let label_first = format!("{}\n{}", call("{vv~}{ll}"), call("{ff~}{ll}"));
+    assert_eq!(bst_given_name_form(&label_first), Full);
+    // A comment is not a template.
+    let commented = format!("% \"{{ff~}}{{ll}}\" format.name$\n{}", call("{f.~}{ll}"));
+    assert_eq!(bst_given_name_form(&commented), Initials);
+    // A template held in a variable (IEEEtran.bst:1213) is unreadable: Perl's
+    // initials, and the later sort template (`{  ff{ }}`) does not decide.
+    let variable = format!(
+      "{{ s nameptr name.format.string format.name$ }}\n{}",
+      call("{vv{ } }{ll{ }}{  ff{ }}{  jj{ }}")
+    );
+    assert_eq!(bst_given_name_form(&variable), Initials);
+    assert_eq!(bst_given_name_form("ENTRY { author } {} {}"), Initials);
+    // The "et al." test is not the printed form (achemso.bst:514, :874).
+    let others_test = format!(
+      "{{ names.str #2 \"{{ff }}{{vv }}{{ll}}{{ jj}}\" format.name$\n  \"others\" = }}\n{}",
+      call("{vv~}{ll}{,~f.}{,~jj}")
+    );
+    assert_eq!(bst_given_name_form(&others_test), Initials);
   }
 
   #[test]

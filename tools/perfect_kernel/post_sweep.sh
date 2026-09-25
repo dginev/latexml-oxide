@@ -24,8 +24,11 @@
 # and is the audit's post pass of record (LEDGER 2026-09-17). `CORPUS`
 # (default `~/data/perfect_kernel/corpus.tsv`) supplies each doc's `.tex`.
 set -uo pipefail
+# Absolute: each doc runs from its own output directory (`cd "$out"`), so a
+# relative root broke every --dest and log path.
 XMLROOT="${1:?xmlroot}"
-HTMLROOT="${2:-${XMLROOT}_html}"
+XMLROOT="$(realpath -ms "$XMLROOT")"
+HTMLROOT="$(realpath -ms "${2:-${XMLROOT}_html}")"
 JOBS="${JOBS:-4}"
 TIMEOUT_S="${TIMEOUT_S:-180}"
 BIN="${WORKER_BIN:-$HOME/data/pk_bin/latexml_oxide.sweep75}"

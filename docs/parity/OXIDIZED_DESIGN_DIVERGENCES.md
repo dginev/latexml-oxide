@@ -9028,3 +9028,59 @@ measures 0pt high and 56.9055pt deep, as pdflatex prints. The attribute
 strings are unchanged. Before this batch Rust stored only the strings, and the box measured 0×0.
 bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` then divided by zero (bfh-ci SciPoster, 11
 errors). **Guard**: `perfect_kernel_batch56::rule_box_has_its_size`.
+
+---
+### 299. Bibliography given names follow the style; biblatex's second-tier fields are printed (Perl: always initials, fields dropped)
+
+Perl's MakeBibliography always prints given names as initials (MakeBibliography.pm:555-566; its note
+at :557 says this should be an option). biblatex's title units, host titles and events have no rows
+there, so `subtitle`, `titleaddon`, `booksubtitle`, `maintitle`, `eventtitle`, `venue` and
+`eventdate` are dropped. Witnesses: the biblatex-apa, biblatex-chicago (cms-*-sample) and fiwi
+manuals, spines, and biblatex-examples.bib `salam`.
+
+**Rust** (batch 56iu, round-12 P2/P3):
+- **The given-name form comes from the style.**
+  - **BibTeX:** the `.bst`'s first literal `format.name$` template with an `f` piece decides: `ff` is
+    full, a single `f` is initials. Templates with no given-name piece are skipped, and so are calls
+    whose result is compared with `"others"` (the "and others" test; achemso.bst:514, biochem.bst).
+    A template held in a variable, or a missing `.bst`, falls back to Perl's initials. A survey of
+    TL 2025 found achemso and biochem are the only two changed by the `"others"` rule.
+  - **biblatex:** the resolved `author` name format decides first. A format that tests
+    `\ifgiveninits` follows the option; otherwise `\namepartgiveni` is initials and `\namepartgiven`
+    is full. Seeds and aliases follow biblatex.def:953, 989-993 and biblatex.sty:4494-4545. The
+    `giveninits` option comes next; `initsonly` is always initials.
+  - **Native styles:** for a style whose `.bbx` the binding does not load, its top-level
+    `\ExecuteBibliographyOptions` and `\RequireBibliographyStyle` are still read, in file order
+    (ieee.bbx:26-34 `giveninits`, reached from ieee-alphabetic.bbx:13).
+- **Name lists:** they use Perl's separator rule, "A. X, B. Y, et al." (MakeBibliography.pm:568-584).
+- **Second-tier fields:**
+  - biblatex's subtitle and title addon are printed as two units, for the title, the book title and
+    the main title.
+  - The units are joined as `\newunit` joins them: ". " (biblatex.def:173), or " " after a unit that
+    already ends in a mark (`.` `?` `!` `,` `;` `:` `…`), looking through closing brackets and quotes
+    (biblatex.sty:2118-2130 `\blx@addpunct`, :2026, :1749-1754). A blank unit prints nothing.
+    pdflatex + biber: "Second (2nd ed.) Addon", "In the U.S.A. Addon", "Ends with colon: Addon".
+  - An `@inproceedings`' event, venue and date print once. An `@incollection` or `@inbook` event is
+    nested in the book host and prints once. biblatex's standard drivers print no event for those
+    two (standard.bbx:311/578/710); sbl.bbx:293 does.
+- **Residuals:**
+  - `eventdate` and `urldate` print in ISO form, which is biblatex's `eventdate=iso`. Its default
+    `comp` form ("May 19–25, 1968") depends on the document language.
+  - Hyphenated initials print "A." where biblatex prints "A.-T.".
+  - Per-type options and name formats are not modelled.
+  - geschichtsfrkl's private switch (`\ifbool{bbx:nurinit}`, geschichtsfrkl.bbx:105) is read as
+    initials.
+  - A title addon listed before its subtitle in the `.bib` prints first.
+  - The book subtitle's `,` before the place's `(` ("Symposium, (…"), and the event date running
+    into the editor with no punctuation.
+  - A row's trailing `.` is unconditional, as in Perl, so a title ending in `?` prints "What is
+    X?. A survey"; biblatex and BibTeX's `add.period$` print "What is X? A survey".
+
+**Guards**:
+- `bibliography_names_fields::{bst_full_name_template_spells_given_names_out,
+  bst_initials_template_abbreviates_given_names, biblatex_default_spells_given_names_out,
+  biblatex_giveninits_abbreviates_given_names, biblatex_style_decides_given_names,
+  bst_name_list_with_others_is_comma_separated, biblatex_giveninits_keeps_percent_comment_entries,
+  biblatex_second_tier_fields_are_printed, biblatex_title_units_and_events_print_once,
+  classic_host_rows_are_unchanged}`;
+- the 06_cluster_bibliography goldens (15 updated to the style's own name form).

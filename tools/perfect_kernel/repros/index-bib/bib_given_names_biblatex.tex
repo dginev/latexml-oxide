@@ -1,0 +1,20 @@
+% biblatex prints full given names unless `giveninits` is set (biblatex default
+% `giveninits=false`; the package option, `\ExecuteBibliographyOptions` in a .bbx such as
+% phys.bbx:49 / lncs.bbx:5 / chem-acs.bbx:51, or in the preamble). Shared .bib:
+% bib_given_names.bib. The guard also runs this with `[giveninits=true]` and with a preamble
+% `\ExecuteBibliographyOptions{giveninits}`.
+% witness: biblatex-chicago/cms-notes-sample, cms-dates-sample, cms-trad-sample, windycity,
+%          biblatex-fiwi ×4 (none sets giveninits)
+% oracle:  pdflatex + biber: "Adam-Troy Castro and Toni Morrison. With Unclean Hands. Pub, 2003.";
+%          with giveninits: "A.-T. Castro and T. Morrison. …"
+% engines: rust (56ir) = "A. Castro and T. Morrison" either way; perl has no biblatex binding
+% expect:  0 errors; first bibblock "Adam-Troy Castro and Toni Morrison (2003)" (HTML)
+% status:  RED (56ir) -> GREEN (P2, round 12); example-biblatex-fiwi recall 68.7 -> 81.0 %,
+%          cms-notes-sample 80.1 -> 87.4 %, windycity 92.0 -> 96.7 % (HTML)
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{bib_given_names.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

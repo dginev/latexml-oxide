@@ -22,6 +22,7 @@ mod acmart_description_aria;
 mod aligned_overset_includestyles;
 mod bib_field_digest_once;
 mod biblatex_fallback_no_cite_loop;
+mod bibliography_names_fields;
 mod cleveref_class_stubs;
 mod currsize_default;
 mod deferred_load_retry;

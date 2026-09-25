@@ -1,0 +1,17 @@
+% The bibliography prints given names the way the style's name template says:
+% plain.bst:191 `{ff~}{vv~}{ll}{, jj}` spells them out (abbrv.bst:191 `{f.~}` gives
+% initials, see bib_given_names_abbrv.tex). Shared .bib: bib_given_names.bib.
+% witness: bookshelf/spines (bookshelf.bst:29 `{ff{ } }`), asmeconf/asmeconf-template
+%          (asmeconf.bst:689 `{, ff}`); ~1,650 words over 87 manuals (sweep 123, HTML)
+% oracle:  pdflatex + bibtex: "Adam-Troy Castro and Toni Morrison. With Unclean Hands. Pub, 2003."
+% engines: rust (56ir) = "A. Castro and T. Morrison"; perl = the same (MakeBibliography.pm:555-566
+%          `do_name` always abbreviates; its :557 NOTE says it "should be a formatting option")
+% expect:  0 errors; first bibblock "Adam-Troy Castro and Toni Morrison (2003)" (HTML)
+% status:  RED (56ir) -> GREEN (P2, round 12); spines recall 84.3 -> 97.1 %, asmeconf-template
+%          90.9 -> 94.5 % (HTML)
+\documentclass{article}
+\begin{document}
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{bib_given_names}
+\end{document}
