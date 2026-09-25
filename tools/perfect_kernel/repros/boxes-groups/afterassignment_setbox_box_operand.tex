@@ -1,0 +1,13 @@
+% `\afterassignment` before `\setbox<n>` with a `\box`/`\copy` operand fires right after the
+% assignment (tex.web §1211, §1269), not inside some later box: luatexja's `\raise` via
+% `\ltj@afterbox` emptied every pgf picture. pdflatex prints both raised boxes.
+\documentclass{article}
+\newbox\afb
+\def\grab{\ifnum\lvl<\currentgrouplevel\expandafter\aftergroup\fi\place}
+\def\place{\raise2pt\box\afb}
+% luatexja-core.sty:686-692 / ltj-base.sty:232-237 shape: \raise<dim> via \setbox\afb<box><token>
+\def\lraise{\edef\lvl{\number\currentgrouplevel}\afterassignment\grab\setbox\afb}
+\begin{document}
+\setbox2\hbox{Echo words}\setbox2\hbox{\lraise\box2}\box2
+\setbox4\hbox{Foxtrot words}\hbox{\lraise\copy4}
+\end{document}

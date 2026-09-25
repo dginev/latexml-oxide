@@ -1502,15 +1502,23 @@ pub fn read_raw_current_line_from_start() -> Option<String> {
 
 /// [`read_raw_line`] from the current mouth with its input bytes decoded
 /// through the declared input encoding (`Mouth::read_raw_line_decoded`); the
-/// `.bib` reader's line source. Pending pushback is taken as `read_raw_line`
-/// takes it.
+/// `.bib` reader's and `{verbatim}`'s line source. Pending pushback is taken
+/// as `read_raw_line` takes it, and decoded with the rest of the line: a
+/// pushed-back active byte prints as its Latin-1 character (a `{verbatim}`
+/// wrapper whose optional-argument check peeked the body's first character
+/// left a cp1251 first line as mojibake).
 pub fn read_raw_line_decoded() -> Option<String> {
   let has_pushback = gullet!()
     .runtime
     .as_ref()
     .is_some_and(|runtime| !runtime.pushback.is_empty());
   if has_pushback {
-    return read_raw_line();
+    let line = read_raw_line()?;
+    let gullet = gullet!();
+    return Some(match gullet.runtime.as_ref() {
+      Some(runtime) => runtime.mouth.decode_eight_bit(line),
+      None => line,
+    });
   }
   let mut gullet = gullet_mut!();
   gullet

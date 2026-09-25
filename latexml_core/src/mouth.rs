@@ -1296,21 +1296,26 @@ impl Mouth {
   /// "Т. С. Гейдеман" (shipunov/rusnat-ex1-ru, sweep #121).
   pub fn read_raw_line_decoded(&mut self, noread: bool) -> Option<String> {
     let line = self.read_raw_line(noread)?;
+    Some(self.decode_eight_bit(line))
+  }
+
+  /// `text` with its upper-half bytes (read as U+0080..U+00FF) turned into
+  /// the characters the declared input encoding makes of them, when this
+  /// mouth reads a byte line; unchanged otherwise.
+  pub fn decode_eight_bit(&self, text: String) -> String {
     if !self.line_is_bytes {
-      return Some(line);
+      return text;
     }
-    Some(
-      line
-        .chars()
-        .map(|c| {
-          if ('\u{80}'..='\u{ff}').contains(&c) {
-            eight_bit_input_char(c).unwrap_or(c)
-          } else {
-            c
-          }
-        })
-        .collect(),
-    )
+    text
+      .chars()
+      .map(|c| {
+        if ('\u{80}'..='\u{ff}').contains(&c) {
+          eight_bit_input_char(c).unwrap_or(c)
+        } else {
+          c
+        }
+      })
+      .collect()
   }
 
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {

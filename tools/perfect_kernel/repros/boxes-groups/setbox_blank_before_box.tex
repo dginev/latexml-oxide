@@ -1,0 +1,6 @@
+% `\setbox0 = \hbox{...}`: scan_box skips blanks and \relax before the box (tex.web §1084, §404);
+% the space after `=` was the operand and the box was typeset in place. pdflatex prints [xx].
+\documentclass{article}
+\begin{document}
+\setbox0 = \hbox{xx}[\box0]
+\end{document}

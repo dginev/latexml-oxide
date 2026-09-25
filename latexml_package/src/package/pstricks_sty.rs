@@ -152,6 +152,12 @@ fn pspicture_properties(
 
 /// `\lx@ps@put(x,y){body}` — the LaTeX `\put` transform; a node reference
 /// (no numeric pair) places at the origin rather than failing.
+/// Whether a framed box is drawn inside a `{pspicture}` (set locally by its
+/// `before_digest`), where the frame is a picture group.
+fn ps_frame_properties() -> Result<SymHashMap<Stored>> {
+  Ok(stored_map!("inpicture" => Stored::Bool(lookup_bool("lx_in_pspicture"))))
+}
+
 fn ps_put_properties(coords: &Option<Digested>) -> Result<SymHashMap<Stored>> {
   let (x, y) = ps_pair_pt(coords).unwrap_or((0.0, 0.0));
   Ok(stored_map!(
@@ -352,11 +358,43 @@ LoadDefinitions!({
   RawTeX!("\\def\\cput{\\@ifstar\\lx@put@start\\lx@put@start}");
 
   // Box commands
-  DefMacro!("\\psframebox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psovalbox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "#2");
+  // Framed boxes (Perl pstricks_support.sty.ltxml:955-980, `DefPSConstructor`):
+  // the `[<params>]` are set locally (only when given, Perl :501) and the BODY
+  // is framed. The former `#2` expansion printed the params and dropped the
+  // body (ffslides.cls:262-275 `\btext` via `\newpsobject{btextbox}{psframebox}`;
+  // pst-poker-doc, sesamath-doc-fr). Inside a `{pspicture}` the frame is a
+  // `framed` `ltx:g`, as in Perl. In running text it is an inline framed
+  // `ltx:text`, as pdflatex draws it: Perl's `ltx:g` there auto-opens an
+  // `ltx:picture` that swallows the rest of the paragraph, and the unsized SVG
+  // overprints it (DIVERGENCES #297). Fill and stroke colours are not modelled
+  // (no PS parameter state), hence no `fillframe` (its SVG filter is not ported).
+  // Guard: `perfect_kernel_batch56::psframebox_keeps_its_body`.
+  RawTeX!(r"\def\lx@ps@set#1{\if\relax\detokenize{#1}\relax\else\psset{#1}\fi}");
+  DefMacro!("\\psframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@framebox{#3}}");
+  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@dblframebox{#3}}");
+  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@shadowbox{#3}}");
+  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@circlebox{#3}}");
+  DefMacro!("\\psovalbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@ovalbox{#3}}");
+  DefConstructor!("\\lx@ps@framebox{}",
+    "?#inpicture(<ltx:g framed='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
+    alias => "\\psframebox", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@dblframebox{}",
+    "?#inpicture(<ltx:g framed='true' doubleline='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
+    alias => "\\psdblframebox", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@shadowbox{}",
+    "?#inpicture(<ltx:g framed='true' shadowbox='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
+    alias => "\\psshadowbox", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@circlebox{}",
+    "?#inpicture(<ltx:g framed='true' frametype='circle'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
+    alias => "\\pscirclebox", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@ovalbox{}",
+    "?#inpicture(<ltx:g framed='true' frametype='oval'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
+    alias => "\\psovalbox", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
 
   // Environment — Perl pstricks_support.sty.ltxml:520-560: `\begin{pspicture}
   // *[baseline](x0,y0)(x1,y1)` is an `<ltx:picture>` sized by the two corners
@@ -379,7 +417,7 @@ LoadDefinitions!({
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
     mode => "inline_internal_vertical",
-    before_digest => { Let!("\\par", "\\relax"); },
+    before_digest => { Let!("\\par", "\\relax"); assign_value("lx_in_pspicture", Stored::Bool(true), None); },
     properties => sub[args] { pspicture_properties(&args[2], &args[3]) }
   );
   DefEnvironment!("{pspicture*} OptionalMatch:* [] PSCoord OptionalPSCoord",
@@ -388,7 +426,7 @@ LoadDefinitions!({
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
     mode => "inline_internal_vertical",
-    before_digest => { Let!("\\par", "\\relax"); },
+    before_digest => { Let!("\\par", "\\relax"); assign_value("lx_in_pspicture", Stored::Bool(true), None); },
     properties => sub[args] { pspicture_properties(&args[2], &args[3]) }
   );
   // `\rput`-family bodies (Perl :879-888 `\rput@start` → `<ltx:g transform>`

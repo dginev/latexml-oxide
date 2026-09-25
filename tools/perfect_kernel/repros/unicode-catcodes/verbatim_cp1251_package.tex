@@ -1,0 +1,13 @@
+% A cp1251 verbatim.sty body whose first line a wrapper's optional-argument check pushed
+% back is decoded too (the pushback branch of read_raw_line_decoded).
+\documentclass{article}
+\usepackage[T2A]{fontenc}
+\usepackage[cp1251]{inputenc}
+\usepackage{verbatim}
+\newenvironment{code}[1][]{\verbatim}{\endverbatim}
+\begin{document}
+\begin{code}
+Конец листинга один
+Вторая строка
+\end{code}
+\end{document}

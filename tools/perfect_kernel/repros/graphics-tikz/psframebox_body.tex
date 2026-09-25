@@ -1,0 +1,14 @@
+% `\psframebox[<params>]{<body>}` frames its BODY (Perl DefPSConstructor); it printed the
+% params and dropped the body. In running text it is inline framed text (DIVERGENCES #297);
+% inside a pspicture a framed group (ffslides' `\btext` under `\rput`).
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+Before \psframebox{Bravo framed words} after.
+
+\psframebox[linecolor=red]{Foxtrot words}
+
+\begin{pspicture}(0,0)(3,1)
+\rput(1.5,0.5){\psframebox{Golf boxed words}}
+\end{pspicture}
+\end{document}

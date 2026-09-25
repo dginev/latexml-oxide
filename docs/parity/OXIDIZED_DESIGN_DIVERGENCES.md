@@ -8621,6 +8621,7 @@ T1 gives the typed `ÿ` where pdflatex prints slot 255 `ß`. Witness russ/russ_d
 (recall 69.9 → 82.7; `Çäðàâåé`-style mojibake → Cyrillic); 150 other 8-bit-input corpus
 manuals unchanged. Guard `perfect_kernel_batch56::recatcoded_input_bytes_decode_through_their_declaration`
 (its UTF-8 control line reads `Cafй na й.` without the line-provenance gate).
+The raw-line readers decode the same way (`Mouth::read_raw_line_decoded`, `decode_eight_bit`): the `.bib` reader and, since batch 56ir, `{verbatim}` and verbatim.sty bodies. Their text reaches the output as typeset, including a first line that a wrapper's optional-argument check pushed back. Readers that WRITE a file (filecontents, `VerbatimOut`, `\writeverbatim`: `capture_raw_lines_until`) stay byte-exact, as TeX writes the bytes and decodes them when the file is read. Guard `perfect_kernel_batch56::verbatim_decodes_the_input_encoding`.
 
 ### 267. `\everypar` runs in front of the character that starts a paragraph (Perl: `\everypar` never fires)
 
@@ -8985,3 +8986,29 @@ and pdflatex reports the same mismatches. Of 29 TeX Live manuals with swallowed 
 unchanged, and greektonoi, bfh-ci's SciPoster and guitar gain errors. euclideangeometry-man (curve2e's `\MV@c`),
 chinesechess (a removed l3draw API) and mercatormap reach the 100-error limit, as pdflatex and
 lualatex do. **Guard**: `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
+
+---
+### 296. biber's `%` comments inside a `.bib` entry (Perl: the entry is lost)
+
+biber's reader takes `%` to the end of the line as a comment between an entry's tokens
+(`@Book{a2004,% see also 14.110`); bibtex 0.99d does not ("You're missing a field name"), and
+neither does Perl's `skipWhite` (LaTeXML/lib/LaTeXML/Pre/BibTeX.pm:320-330), which loses the entry.
+**Rust** (batch 56ir, pre_bibtex.rs `skip_white`): when the document uses biblatex (`BIBSTYLE` =
+`biblatex`, or `biblatex.sty` loaded, which a split post session has from its preloads), `%` to
+the end of the line is skipped there. A `%` inside a field value is untouched: values are read by
+`parse_string`/`parse_balanced_braces`, which never skip white. It applies to biblatex whatever
+its `backend=` option says. windycity recovers 27 entries; biblatex-iso690 and frankenstein recover
+some too. **Guard**: `perfect_kernel_batch56::biber_bib_percent_comments_keep_the_entry`.
+
+---
+### 297. An inline pstricks framed box is framed text (Perl: an auto-opened picture swallows the paragraph)
+
+Perl's `\psframebox` family always builds `<ltx:g framed='true'>` (pstricks_support.sty.ltxml:955-980).
+Outside a `{pspicture}` that auto-opens an `ltx:picture` in the paragraph, and the rest of the
+paragraph goes inside it. Each further box nests one level deeper. The post stage renders an unsized
+SVG in which the text overprints and cannot wrap. **Rust** (batch 56ir, pstricks_sty.rs) keeps the
+`ltx:g` inside a `{pspicture}` (the `\rput` / `\psframebox` drawings of ffslides). In running text
+it emits `<ltx:text framed='rectangle'>`, an inline bordered box, as pdflatex draws it (pst-poker-doc,
+sesamath-doc-fr, pst-pdf-example). Circle, oval, shadow and double frames are drawn as a rectangle
+in running text. Fill and stroke colours are not modelled, and neither is `fillframe`, whose SVG
+filter is not ported. **Guard**: `perfect_kernel_batch56::psframebox_keeps_its_body`.

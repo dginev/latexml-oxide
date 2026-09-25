@@ -834,7 +834,12 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     ("\\end{verbatim}", ' ')
   };
   let mut lines: Vec<_> = Vec::new();
-  while let Some(next_line) = read_raw_line() {
+  // The body is decoded through the document's 8-bit input encoding (inputenc's
+  // active upper-half characters keep their meaning: latex.ltx:15441-15459
+  // `\@verbatim` resets only `\dospecials`), as `.bib` lines are. A cp1251
+  // listing came out as Latin-1 mojibake (russ_doc, serbian-apostrophe).
+  // Guard: `perfect_kernel_batch56::verbatim_decodes_the_input_encoding`.
+  while let Some(next_line) = read_raw_line_decoded() {
     let mut line = next_line.as_str();
     let mut exiting = false;
     if let Some((final_line, remaining)) = line.split_once(end) {

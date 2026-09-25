@@ -102,7 +102,7 @@ names the scoreboard column it must move.
 | C | 180 s ceiling: PLANS 12 raw-interpretation speed | 8 timeouts + slow manuals; the same hot paths on arXiv | timeout, wall time | analysis → implement |
 | D | Architectural generalizations: virtual file store, `\everyeof`, expl3 file boundaries, PLANS 13 | taken up when A–C hit them | neutral-or-better + less special-case code | implement |
 | E | Guard strength (PLANS 5: B1 `assert_element`, B5, B2–B4) | 938 weak assertions | weak-assertion count | implement, 1 batch per sweep cycle |
-| F | Rulings: K6 DVI cue (`dvips`/`dvipdfmx` class option) | 4 manuals, 2 arXiv papers | — | user |
+| F | K6 DVI cue from a `dvips`/`dvipdfmx` class option: RULED 2026-09-25, correct in principle but low priority (we always build XML); only when a witness shows a content or diagnostic difference | 4 manuals, 2 arXiv papers | — | implement on evidence |
 | G | Endgame: the full arXiv corpus rerun on the fleet | ~2.8M papers | fleet status distribution | compute |
 
 **Parallel lanes.**
@@ -138,6 +138,7 @@ names the scoreboard column it must move.
 | 120 | 1895 | 69 | 6 | 10548 | 2250 | 94.27 | 98.6 | 77.4 | 45398 |
 | 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 |
 | 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 |
+| 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading
@@ -218,9 +219,9 @@ names the scoreboard column it must move.
    (LEAVE, #189, 13 docs), the `quote` content model (LANDED 56gw, #271: webquiz, aguplus valid)
    and inline-leak (LANDED 56gx, #272: ribbonproofs, sidenotesplus, ryethesis valid; equation-level
    footnotes now render in HTML). Measured on sweep #118: 2226/2368 (s117: 2221).
-   Open ruling (K6 refinement): a DVI cue from a `dvips`/`dvipdfmx` class option (4 manuals, 2 arXiv
-   papers; pdflatex fails them alike). Also: the ctex `fandol` fontset under vendor-tree pdfTeX
-   fails in pdflatex too.
+   K6 refinement RULED 2026-09-25: a DVI cue from a `dvips`/`dvipdfmx` class option is correct in
+   principle and low priority (4 manuals, 2 arXiv papers; pdflatex fails them alike in PDF mode).
+   Also: the ctex `fandol` fontset under vendor-tree pdfTeX fails in pdflatex too.
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);

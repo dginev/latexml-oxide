@@ -8992,3 +8992,197 @@ fn macro_delimiter_mismatch_ignores_the_call() {
   );
   assert!(xml.contains("<p>Y</p>"), "{xml}");
 }
+
+/// Convert raw bytes (a non-UTF-8 source) or a document with side files to the
+/// given destination (`.xml` core, `.html` through the post stage), in a
+/// tempdir with the raw preload. Returns (stderr, output).
+fn convert_bytes_to(tex: &[u8], files: &[(&str, &[u8])], dest: &str) -> (String, String) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  for (name, content) in files {
+    std::fs::write(workdir.path().join(name), content).expect("write side file");
+  }
+  let output = std::process::Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      dest,
+      "--nocomments",
+      "--timeout=110",
+      "--preload=[rawstyles,rawclasses]latexml.sty",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let out = std::fs::read_to_string(workdir.path().join(dest)).unwrap_or_default();
+  (stderr, out)
+}
+
+/// `\afterassignment` before `\setbox<n>` whose operand is `\box`/`\copy` (no
+/// body to take the token) fires right after the assignment (tex.web §1211
+/// `done:`, §1269); it stayed pending and fired inside some later box.
+/// luatexja's `\raise`/`\lower` via `\ltj@afterbox` (luatexja-core.sty:684-702)
+/// emptied every pgf picture (suanpan-l3, qworld, codebox-doc-en). Perl
+/// (TeX_Box.pool.ltxml:599-617) has the same gap. pdflatex prints both boxes.
+#[test]
+fn afterassignment_setbox_box_operand() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/boxes-groups/afterassignment_setbox_box_operand.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p><text yoffset="2.0pt">Echo words</text><text yoffset="2.0pt">Foxtrot words</text></p>"#,
+  );
+}
+
+/// A `{verbatim}` body is decoded through the document's 8-bit input encoding,
+/// as inputenc's active characters keep their meaning in `\@verbatim`
+/// (latex.ltx:15441-15459). A cp1251 listing came out as Latin-1 mojibake
+/// (russ_doc, serbian-apostrophe; Perl drops the body). Inline `\verb` already
+/// decoded.
+#[test]
+fn verbatim_decodes_the_input_encoding() {
+  let tex =
+    include_bytes!("../../../tools/perfect_kernel/repros/unicode-catcodes/verbatim_cp1251.tex");
+  let (stderr, xml) = convert_bytes_to(tex, &[], "t.xml");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains("<verbatim font=\"typewriter\">\nКонец листинга\n</verbatim>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("<verbatim font=\"typewriter\">Мир слово</verbatim>"),
+    "{xml}"
+  );
+  // verbatim.sty, with the first body line pushed back by a wrapper's
+  // optional-argument check (`read_raw_line_decoded`'s pushback branch).
+  let tex = include_bytes!(
+    "../../../tools/perfect_kernel/repros/unicode-catcodes/verbatim_cp1251_package.tex"
+  );
+  let (stderr, xml) = convert_bytes_to(tex, &[], "t.xml");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    xml.contains("<verbatim font=\"typewriter\">Конец листинга один\nВторая строка\n</verbatim>"),
+    "{xml}"
+  );
+}
+
+/// `\psframebox[<params>]{<body>}` frames its BODY (Perl pstricks_support.sty.ltxml
+/// :955-980 `DefPSConstructor`); the `#2` expansion printed the params and dropped
+/// the body (ffslides.cls `\btext`, pst-poker-doc). In running text it is inline
+/// framed text (DIVERGENCES #297) and the paragraph continues; inside a
+/// `{pspicture}` it is a framed group.
+#[test]
+fn psframebox_keeps_its_body() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/psframebox_body.tex");
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>Before <text framed="rectangle">Bravo framed words</text> after.</p>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "g",
+    &["framed=\"true\""],
+    r#"<g framed="true"><text>Golf boxed words</text></g>"#,
+  );
+  assert!(
+    xml.contains(r#"<p><text framed="rectangle">Foxtrot words</text></p>"#),
+    "{xml}"
+  );
+  assert!(
+    !xml.contains("linecolor=red") && !xml.contains("fillframe"),
+    "{xml}"
+  );
+}
+
+/// `\setbox0 = \hbox{…}`: `scan_box` skips blanks and `\relax` before its box
+/// (tex.web §1084, §404). The space after `=` was the operand, and the box was
+/// typeset in place (KPE #254; 19 TL files spell it so). pdflatex prints `[xx]`.
+#[test]
+fn setbox_skips_blanks_before_the_box() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/setbox_blank_before_box.tex");
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>[xx]</p>");
+}
+
+/// biber reads `%` to the end of the line as a comment between a `.bib`
+/// entry's tokens (`@Book{a2004,% see also …`); the reader lost the entry
+/// (windycity 27 entries, biblatex-iso690; Perl and bibtex 0.99d lose it too).
+#[test]
+fn biber_bib_percent_comments_keep_the_entry() {
+  let tex =
+    include_bytes!("../../../tools/perfect_kernel/repros/index-bib/biber_percent_comments.tex");
+  let bib =
+    include_bytes!("../../../tools/perfect_kernel/repros/index-bib/biber_percent_comments.bib");
+  let (stderr, html) = convert_bytes_to(tex, &[("biber_percent_comments.bib", bib)], "t.html");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(html.matches("class=\"ltx_bibitem").count(), 1, "{html}");
+  assert!(
+    html.contains(r#"<span class="ltx_text ltx_bib_title">Beloved Things</span>"#),
+    "{html}"
+  );
+  assert!(
+    html.contains(r#"<span class="ltx_text ltx_bib_year"> (2004)</span>"#),
+    "{html}"
+  );
+  // The split post session (`--whatsin=xml`, post_sweep.sh's default) reads the
+  // `.bib` with biblatex loaded from the preloads, not from `\printbibliography`.
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  std::fs::write(workdir.path().join("biber_percent_comments.bib"), bib).expect("write bib");
+  let raw = "--preload=[rawstyles,rawclasses]latexml.sty";
+  let core = std::process::Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      raw,
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn core");
+  assert!(
+    core.status.success(),
+    "{}",
+    String::from_utf8_lossy(&core.stderr)
+  );
+  let post = std::process::Command::new(bin)
+    .args([
+      "--whatsin=xml",
+      "t.xml",
+      "--dest",
+      "p.html",
+      "--timeout=110",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn post");
+  let stderr = String::from_utf8_lossy(&post.stderr).replace('\u{1b}', "");
+  let html = std::fs::read_to_string(workdir.path().join("p.html")).unwrap_or_default();
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(
+    html.contains(r#"<span class="ltx_text ltx_bib_title">Beloved Things</span>"#),
+    "{html}"
+  );
+}

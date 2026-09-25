@@ -6693,3 +6693,36 @@ Perl: 5 errors (`readBalanced ran out of input`, missing `\NAT@wrout` arguments)
 does. This replaces two lists of commands that the binding had already been exempting from the
 expansion: `\cite`/`\href`/`\bibinfo` (2404.06289) and the T1 text symbols `\i`, `\ss`, …
 (2111.00584). Guard `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+
+## 253. `\afterassignment` is lost when `\setbox` takes `\box`/`\copy` (FIXED in Rust)
+
+TeX inserts the `\afterassignment` token right after the next assignment (tex.web §1211 `done:`,
+§1269). For `\setbox<n>=\hbox{…}` that is inside the box, after its `{`. For
+`\setbox<n>=\box<m>`, `\copy`, `\lastbox` or `\vsplit` there is no body, so the token runs
+immediately after the assignment. Perl's `\setbox` (TeX_Box.pool.ltxml:599-617) parks the token for
+the next box body (`BeforeNextBox`, consumed at :171-172). With a `\box` operand nothing consumes
+it, so it fires inside some later, unrelated box. luatexja's `\raise`/`\lower`/`\moveleft`/
+`\moveright` (luatexja-core.sty:684-702, ltj-base.sty:232-237 `\ltj@afterbox`) take exactly this
+path. So every pgf/TikZ/tcolorbox picture under luatexja came out as an empty `<svg:g/>`, at 0
+errors.
+```latex
+\newbox\afb
+\def\grab{\ifnum\lvl<\currentgrouplevel\expandafter\aftergroup\fi\place}
+\def\place{\raise2pt\box\afb}
+\def\lraise{\edef\lvl{\number\currentgrouplevel}\afterassignment\grab\setbox\afb}
+\setbox2\hbox{Echo words}\setbox2\hbox{\lraise\box2}\box2
+```
+pdflatex prints "Echo words" raised by 2pt; Perl and Rust before the fix print nothing.
+**Rust (FIXED, batch 56ir):** `\setbox` unreads a still-pending token after the assignment.
+Witnesses: suanpan-l3 (2,342 empty pictures), qworld, kksymbols, codebox-doc-en, qyxf-book.
+Guard `perfect_kernel_batch56::afterassignment_setbox_box_operand`.
+
+## 254. `\setbox<n> = <box>` with a space after `=` loses the box (FIXED in Rust)
+
+`scan_box` reads the next non-blank non-relax non-call token (tex.web §1084, §404), so
+`\setbox0 = \hbox{xx}` stores the box. Perl's `\setbox` (TeX_Box.pool.ltxml:599-617) reads the very
+next token as the operand. The space is taken instead, and the `\hbox` is typeset in place:
+`\setbox0 = \hbox{xx}[\box0]` prints `xx[]` in Perl and Rust before the fix, and `[xx]` in pdflatex.
+19 files under TL `tex/latex` and `tex/generic` spell `\setbox… = \hbox`.
+**Rust (FIXED, batch 56ir):** `\setbox` skips spaces and `\relax` before its box operand, as the
+`Variable` reader already does. Guard `perfect_kernel_batch56::setbox_skips_blanks_before_the_box`.

@@ -155,27 +155,33 @@ type BibFieldList = Vec<(String, String)>;
 /// * `macros`    → `macros`
 /// * `parsed` flag → `parsed`
 pub struct PreBibTeX {
-  pub source:     Option<String>,
-  pub file_label: String,
+  pub source:       Option<String>,
+  pub file_label:   String,
   /// The unread tail, popped from the FRONT one physical line at a time.
   /// A `VecDeque` (not a `Vec`) because `Vec::remove(0)` shifts the whole
   /// remainder per line, making a `.bib` parse O(lines²): a 16k-entry file
   /// took 1.42 s, 15× the per-entry cost of a 1k-entry one. `pop_front` is
   /// O(1) and makes it linear.
-  lines:          VecDeque<String>,
-  line:           String,
-  lineno:         usize,
-  pub preamble:   Vec<String>,
-  pub entries:    Vec<ParsedEntry>,
-  macros:         HashMap<String, String>,
-  parsed:         bool,
+  lines:            VecDeque<String>,
+  line:             String,
+  lineno:           usize,
+  pub preamble:     Vec<String>,
+  pub entries:      Vec<ParsedEntry>,
+  macros:           HashMap<String, String>,
+  parsed:           bool,
   /// Raw-source witness for `parse_value`. When `Some`, it holds the
   /// value's starting `line` plus every continuation `extend_line`
   /// has appended since — so `line` stays a true *suffix* of it, and
   /// the consumed span is `witness[..witness.len() - line.len()]`.
   /// Without this, a value spanning physical lines made `line` longer
   /// than (and unrelated to) the snapshot it was diffed against.
-  raw_witness:    Option<String>,
+  raw_witness:      Option<String>,
+  /// biber's reader treats `%` to the end of the line as a comment between an
+  /// entry's tokens (`@Book{a2004,% see also …`); bibtex 0.99d, and Perl's
+  /// `skipWhite` (BibTeX.pm:320-330), do not, and lose the entry (windycity: 27
+  /// entries). Set when the document uses biblatex, whose `.bib` biber reads
+  /// (DIVERGENCES #296).
+  percent_comments: bool,
 }
 
 /// One parsed entry. Mirrors Perl `LaTeXML::Pre::BibTeX::Entry` (only
@@ -228,6 +234,7 @@ impl PreBibTeX {
       macros: default_macros(),
       parsed: false,
       raw_witness: None,
+      percent_comments: false,
     }
   }
 
@@ -272,6 +279,11 @@ impl PreBibTeX {
     let mut me = Self::new_from_string(&joined);
     me.source = Some(name.to_string());
     me.file_label = name.to_string();
+    // `BIBSTYLE` is set by `\printbibliography` in the one-process run; a
+    // split post session (`--whatsin=xml`) only has biblatex loaded from the
+    // preloads.
+    me.percent_comments = latexml_core::state::lookup_string("BIBSTYLE") == "biblatex"
+      || latexml_core::state::lookup_bool("biblatex.sty_loaded");
     me
   }
 
@@ -659,6 +671,9 @@ impl PreBibTeX {
       let trimmed = self.line.trim_start_matches(char::is_whitespace);
       if trimmed.len() < self.line.len() {
         self.line = trimmed.to_string();
+      }
+      if self.percent_comments && self.line.starts_with('%') {
+        self.line.clear();
       }
       if !self.line.is_empty() {
         return true;

@@ -1064,7 +1064,19 @@ LoadDefinitions!({
       None
     };
     clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = read_x_token(None, false, None)? {
+    // `scan_box` reads the next non-blank non-relax token (tex.web §1084,
+    // §404): `\setbox0 = \hbox{…}` typesets the box, where the space after
+    // `=` was taken as the operand and the box landed in the text (19 files
+    // under TL tex/latex and tex/generic spell it so; Perl alike, KPE #254).
+    let mut xtoken = read_x_token(None, false, None)?;
+    while let Some(ref t) = xtoken {
+      if t.get_catcode() == Catcode::SPACE || *t == T_CS!("\\relax") {
+        xtoken = read_x_token(None, false, None)?;
+      } else {
+        break;
+      }
+    }
+    let mut rest = if let Some(xtoken) = xtoken {
         invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
@@ -1073,6 +1085,18 @@ LoadDefinitions!({
       Stored::None
     };
     assign_value(&format!("box{}", number.value_of()), stuff, scope);
+    // A `\box`/`\copy`/`\lastbox`/`\vsplit` operand has no body to take the
+    // pending `\afterassignment` token: TeX inserts it right after the
+    // assignment (tex.web §1211 `done:`, §1269). Left pending, it fired inside
+    // some later box: luatexja's `\raise`/`\lower` via `\ltj@afterbox`
+    // (luatexja-core.sty:684-702) emptied every pgf picture. Perl
+    // (TeX_Box.pool.ltxml:599-617) has the same gap (KNOWN_PERL_ERRORS #253).
+    // Witnesses: suanpan-l3 (2,342 empty pictures), arXiv 2605.30618.
+    // Guard: `perfect_kernel_batch56::afterassignment_setbox_box_operand`.
+    let pending = box_prefix_tokens(None);
+    if !pending.is_empty() {
+      unread(pending);
+    }
     rest
   });
 
