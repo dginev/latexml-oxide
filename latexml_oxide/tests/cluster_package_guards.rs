@@ -25839,6 +25839,35 @@ mod class_census {
     assert!(xml.contains("Body word alpha."), "{xml}");
   }
 
+  /// enumitem's `shortlabels`: a list's first key with no `=` that names no
+  /// enumitem key is a label template (enumitem.sty:660-681 `\enit@first`), not
+  /// an unknown key: `[(a)]` warned and kept arabic labels.
+  #[test]
+  fn enumitem_shortlabels() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/list-structure/enumitem_shortlabels.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let tags: Vec<&str> = regex::Regex::new(r#"<tag(?: role="refnum")?>[^<]*</tag>"#)
+      .unwrap()
+      .find_iter(&xml)
+      .map(|m| m.as_str())
+      .collect();
+    assert_eq!(
+      tags,
+      [
+        "<tag>(a)</tag>",
+        r#"<tag role="refnum">a</tag>"#,
+        "<tag>(b)</tag>",
+        r#"<tag role="refnum">b</tag>"#,
+        "<tag>(i)</tag>",
+        r#"<tag role="refnum">i</tag>"#,
+      ],
+      "{xml}"
+    );
+  }
+
   /// A glossaries field may name an entry defined after it: the definitions of
   /// preamble entries are emitted at `\begin{document}` (`\iflx@glossaries@defer`),
   /// when every entry exists, as `\printglossary` typesets them (arXiv 2605.14032:
@@ -25852,17 +25881,15 @@ mod class_census {
     let (stderr, xml) = convert_with(tex, None);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
-    let flat = regex::Regex::new(r">\s+<")
-      .unwrap()
-      .replace_all(&xml, "><")
-      .into_owned();
+    // Raw, not whitespace-normalized: the space between the two references is
+    // part of the field (glossaries.sty stores `E-UTRAN-\gls {nr} \gls {dc}`).
     assert!(
-      flat.contains(concat!(
+      xml.contains(concat!(
         r#"<glossaryphrase key="endc" role="long">E-UTRAN-"#,
-        r#"<glossaryref inlist="main" key="nr">NR</glossaryref>"#,
-        r#"<glossaryref inlist="main" key="dc">DC</glossaryref></glossaryphrase>"#
+        r#"<glossaryref inlist="main" key="nr">NR</glossaryref> "#,
+        r#"<glossaryref inlist="main" key="dc">DC</glossaryref> </glossaryphrase>"#
       )),
-      "{flat}"
+      "{xml}"
     );
   }
 

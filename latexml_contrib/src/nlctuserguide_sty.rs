@@ -30,7 +30,7 @@ use latexml_package::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("nlctuserguide", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  RawTeX!(r"\gdef\lx@nlct@entries{}%
+  RawTeX!(r"\def\lx@nlct@push{\lx@queue@gpush{nlct}}%
 \renewcommand{\glsbibwritefield}[2]{%
   \def\lx@nlct@key{#1}%
   \ifx\lx@nlct@key\lx@nlct@k@parent \g@addto@macro\lx@nlct@parent{#2}%
@@ -44,17 +44,17 @@ LoadDefinitions!({
   \let\dhyphen\empty\let\dsb\dunderscore
   \gdef\lx@nlct@fields{}\gdef\lx@nlct@parent{}\gdef\lx@nlct@short{}\gdef\lx@nlct@long{}%
   #3%
-  \xdef\lx@nlct@entries{\unexpanded\expandafter{\lx@nlct@entries}%
-    \noexpand\lx@nlct@entry{\entrylabel}{#1}%
+  \edef\lx@nlct@record{\noexpand\lx@nlct@entry{\entrylabel}{#1}%
     {\unexpanded\expandafter{\lx@nlct@parent}}%
     {\unexpanded\expandafter{\lx@nlct@short}}{\unexpanded\expandafter{\lx@nlct@long}}%
-    {\unexpanded\expandafter{\lx@nlct@fields}}}}}%
+    {\unexpanded\expandafter{\lx@nlct@fields}}}%
+  \expandafter\lx@nlct@push\expandafter{\lx@nlct@record}}}%
 \renewcommand{\nlctuserguideloadgls}[1]{%
   {\def\symbolentry##1{\lx@nlct@icon{##1}}\symboldefinitions}%
-  \def\lx@nlct@pass{1}\lx@nlct@entries
-  \def\lx@nlct@pass{2}\lx@nlct@entries
-  \def\lx@nlct@pass{3}\lx@nlct@entries
-  \gdef\lx@nlct@entries{}}%
+  \def\lx@nlct@pass{1}\lx@queue@use{nlct}%
+  \def\lx@nlct@pass{2}\lx@queue@use{nlct}%
+  \def\lx@nlct@pass{3}\lx@queue@use{nlct}%
+  \lx@queue@clear{nlct}}%
 \def\lx@nlct@entry#1#2#3#4#5#6{%
   \ifglsentryexists{#1}{}{%
     \if\relax\detokenize{#3}\relax

@@ -91,7 +91,8 @@ LoadDefinitions!({
   // descriptions reference abbreviations).
   //
   // In the preamble (`\iflx@glossaries@defer`) the call is queued instead, with
-  // the field VALUES, in `\lx@glossaries@deferred`, and the queue runs at
+  // the field VALUES, in the `glossaries` token queue (latex_constructs_rust_only.rs
+  // §13), and the queue runs at
   // `\begin{document}`. LaTeX typesets a field only in `\printglossary`, once
   // every entry exists, so a field may name an entry defined after it:
   // `\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} …}` before `\newacronym{nr}…`
@@ -117,19 +118,20 @@ LoadDefinitions!({
     .map(|(f, k)| format!("{k}=\\lx@glo@{f}")).collect();
   let by_value: Vec<String> = GLO_FIELDS.iter()
     .map(|(f, k)| format!("{k}={{\\unexpanded\\expandafter{{\\@glo@{f}}}}}")).collect();
-  RawTeX!(r"\newif\iflx@glossaries@defer \gdef\lx@glossaries@deferred{}%
+  RawTeX!(r"\newif\iflx@glossaries@defer
 \global\lx@glossaries@defertrue
+\def\lx@glossaries@push{\lx@queue@gpush{glossaries}}%
 \def\lx@glossaries@flush{\global\lx@glossaries@deferfalse
-  \let\lx@glo@defs\lx@glossaries@deferred\gdef\lx@glossaries@deferred{}\lx@glo@defs}%
+  \lx@queue@use{glossaries}\lx@queue@clear{glossaries}}%
 \AtBeginDocument{\lx@glossaries@flush}");
   DefMacro!("\\@newglossaryentryposthook",
     "\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
 \\else\\expandafter\\lx@glossaries@postentry\\fi");
   RawTeX!(&s!("\\def\\lx@glossaries@postentry{{{snapshot}\
 \\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}", by_macro.join(",")));
-  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\xdef\\lx@glossaries@deferred{{\
-\\unexpanded\\expandafter{{\\lx@glossaries@deferred}}\
-\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}}}", by_value.join(",")));
+  RawTeX!(&s!("\\def\\lx@glossaries@deferentry{{\\edef\\lx@glo@entry{{\
+\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}}}}}\
+\\expandafter\\lx@glossaries@push\\expandafter{{\\lx@glo@entry}}}}", by_value.join(",")));
 
   // Perl L85-97: DefConstructor that emits the structured definition.
   // Iterate the keyvals in sorted-by-key order and insert one

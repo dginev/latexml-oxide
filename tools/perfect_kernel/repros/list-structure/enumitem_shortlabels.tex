@@ -1,0 +1,19 @@
+% witness: sweep #121: 27 manuals with an enumitem "unknown KeyVals key" warning, the shortlabel
+%          subset (`[(a)]`, `[(i)]`, `[\bfseries1.]`) also losing its label
+% oracle:  pdflatex 0 warnings, labels (a) (b) and (i) (enumitem.sty:660-681 `\enit@first`,
+%          run by the `shortlabels` option :1787-1794, sets the template as `label=`)
+% engines: rust (56il) = "Encountered unknown KeyVals key '(a)'" ×2 and labels 1. 2. 1.;
+%          Perl 0 warnings, labels (a) (b) (i) (its KeyVals_aux never warns for a one-keyset form)
+% expect:  0 errors, 0 warnings; <tag>(a)</tag>, <tag role="refnum">a</tag>, <tag>(b)</tag>, <tag>(i)</tag>
+% status:  RED (56il) -> GREEN (56im)
+\documentclass{article}
+\usepackage[shortlabels]{enumitem}
+\begin{document}
+\begin{enumerate}[(a)]
+\item x
+\item y
+\end{enumerate}
+\begin{enumerate}[(i), noitemsep]
+\item p
+\end{enumerate}
+\end{document}

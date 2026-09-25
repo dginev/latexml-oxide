@@ -3,8 +3,8 @@
 % oracle:  pdflatex 0 errors (fields are typeset in `\printglossary`, after every entry exists)
 % engines: rust (56ik) = 6 "Glossary entry `nr'/`dc' has not been defined" and endc's long form
 %          "Dual Connectivity" (another entry's, `\letcs` by the nested `\gls`); Perl identical
-% expect:  0 errors, 0 warnings; endc's long phrase is E-UTRAN-<glossaryref key="nr">NR</glossaryref>…
-%          <glossaryref key="dc">DC</glossaryref>
+% expect:  0 errors, 0 warnings; endc's long phrase is E-UTRAN-<glossaryref key="nr">NR</glossaryref>
+%          <glossaryref key="dc">DC</glossaryref> (the space between the two references kept)
 % status:  RED (56ik) -> GREEN (56il)
 \documentclass{article}
 \usepackage{glossaries}

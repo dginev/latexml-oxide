@@ -1115,4 +1115,32 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
   //======================================================================
   DefAccent!("\\textcommabelow", '\u{0326}', ",", below => true);
+
+  //======================================================================
+  // 13. Token queues. `\lx@queue@gpush{<name>}{<tokens>}` appends the tokens to a
+  // queue held in the State; `\lx@queue@use{<name>}` expands to everything queued,
+  // in order, and leaves the queue as it is; `\lx@queue@clear{<name>}` empties it.
+  // The TeX idiom `\xdef\q{\unexpanded\expandafter{\q}<new>}` (and `\g@addto@macro`)
+  // re-reads the whole list at every append: quadratic. 2,000 glossary entries
+  // queued that way took 30.6 s, 6 s without the queue (glossaries_sty.rs's
+  // preamble definitions, nlctuserguide_sty.rs's entry records).
+  //======================================================================
+  DefPrimitive!("\\lx@queue@gpush{}{}", sub[(name, toks)] {
+    push_value(&s!("lx@queue@{}", name.to_string()), Stored::Tokens(toks))?;
+  });
+  DefMacro!("\\lx@queue@use{}", sub[(name)] {
+    let mut queued = Vec::new();
+    if let Some(queue) = lookup_vecdeque(&s!("lx@queue@{}", name.to_string())) {
+      for item in queue {
+        if let Stored::Tokens(toks) = item {
+          queued.extend(toks.unlist());
+        }
+      }
+    }
+    Ok(Tokens::new(queued))
+  });
+  DefPrimitive!("\\lx@queue@clear{}", sub[(name)] {
+    assign_value(&s!("lx@queue@{}", name.to_string()),
+      Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
+  });
 });

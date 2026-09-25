@@ -26,20 +26,12 @@ fn begin_enum_itemize(
   // Merge defaults with argument keyvals
   let hash = merged_enumitem_keyvals(itype, level, keys);
 
-  // Deal with shortlabels — Perl L88-93
-  if let Some(kv) = keys {
-    let pairs: Vec<_> = kv.get_pairs().collect();
-    if let Some((first_key, first_val)) = pairs.first()
-      && matches!(first_val, ArgWrap::None)
-      && has_value("enumitem@shortlabels")
-      && lookup_definition(&T_CS!(s!("\\KV@enumitem@{first_key}")))
-        .ok()
-        .flatten()
-        .is_none()
-    {
-      let toks = mouth::tokenize_internal(TeXString::assembled(first_key.to_string()));
-      set_enumeration_style(Some(&toks), Some(level as i32))?;
-    }
+  // Deal with shortlabels — Perl L88-93: the label template the `EnumitemKeyVals`
+  // parameter found (enumitem.sty's `\enit@first`).
+  if let Some(template) = keys.and_then(|kv| kv.get_value(SHORTLABEL_KEY))
+    && let Some(toks) = argwrap_to_tokens(template)
+  {
+    set_enumeration_style(Some(&toks), Some(level as i32))?;
   }
 
   // label / label* — Perl L94-101
@@ -392,7 +384,7 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
 
   // Create the environment
   let env_cs = T_CS!(s!("\\begin{{{listname}}}"));
-  let paramlist = parse_parameters("OptionalKeyVals:enumitem", &env_cs, true)?;
+  let paramlist = parse_parameters("EnumitemKeyVals", &env_cs, true)?;
 
   let elem_open = s!("ltx:{elementname}");
   let elem_close = elem_open.clone();
@@ -454,6 +446,45 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
 }
 
 /// Extract KeyVals from a digested argument
+/// The internal key under which `EnumitemKeyVals` passes a short label.
+const SHORTLABEL_KEY: &str = "lx@shortlabel";
+
+/// enumitem.sty:660-681 `\enit@first`, run by the `shortlabels` option
+/// (:1787-1794): the first element of a list's key list, when it holds no `=`
+/// and names no enumitem key, is a label template, which enumitem sets as
+/// `label=`. Read as a key, `[(a)]` raised "unknown KeyVals key '(a)'".
+fn mark_short_label(list: Tokens) -> Tokens {
+  let toks = list.unlist();
+  let mut depth = 0i32;
+  let mut end = toks.len();
+  for (i, t) in toks.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::OTHER if depth == 0 && *t == T_OTHER!(",") => {
+        end = i;
+        break;
+      },
+      _ => {},
+    }
+  }
+  let first = &toks[..end];
+  let key = Tokens::new(first.to_vec()).to_string();
+  let key = key.trim();
+  if key.is_empty()
+    || first.contains(&T_OTHER!("="))
+    || has_meaning(&T_CS!(s!("\\KV@enumitem@{key}")))
+  {
+    return Tokens::new(toks);
+  }
+  let mut marked = mouth::tokenize_internal(TeXString::assembled(s!("{SHORTLABEL_KEY}="))).unlist();
+  marked.push(T_BEGIN!());
+  marked.extend_from_slice(first);
+  marked.push(T_END!());
+  marked.extend_from_slice(&toks[end..]);
+  Tokens::new(marked)
+}
+
 fn extract_keyvals(args: &[Option<Digested>]) -> Option<KeyVals> {
   args.first().and_then(|a| {
     a.as_ref().and_then(|d| {
@@ -488,7 +519,30 @@ LoadDefinitions!({
   RequirePackage!("keyval");
   DefMacro!("\\enitkv@key{}{}", "\\define@key{enumitem}{#2}");
 
+  // A list's `[keys]`, with enumitem's short label marked when `shortlabels` is on.
+  DefParameterType!(EnumitemKeyVals, sub[_inner, _extra] {
+    if if_next(T_OTHER!("["))? {
+      if has_value("enumitem@shortlabels") {
+        let list = read_optional(None)?.unwrap_or(Tokens!());
+        let mut again = vec![T_OTHER!("[")];
+        again.extend(mark_short_label(list).unlist());
+        again.push(T_OTHER!("]"));
+        unread(Tokens::new(again));
+      }
+      Some(keyvals_aux(Some(T_OTHER!("]")), KVSpec {
+        prefix: Some("enumitem".to_string()),
+        ..KVSpec::default()
+      })?)
+    } else {
+      None
+    }
+  }, optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    Ok(Tokens!(T_OTHER!("["), Tokens::new(arg).revert(), T_OTHER!("]")))
+  });
+
   // KeyVals
+  DefKeyVal!("enumitem", SHORTLABEL_KEY, "UndigestedKey");
   DefKeyVal!("enumitem", "label", "UndigestedKey");
   DefKeyVal!("enumitem", "label*", "UndigestedKey");
   DefKeyVal!("enumitem", "ref", "UndigestedKey");
@@ -535,7 +589,7 @@ LoadDefinitions!({
   // Each list locally resets `\makelabel` (latex.ltx:16061/16072) — see the
   // matching note on `{itemize}` in latex_constructs.rs.
   if !has_value("enumitem@loadonly") {
-    DefEnvironment!("{itemize} OptionalKeyVals:enumitem",
+    DefEnvironment!("{itemize} EnumitemKeyVals",
       "<ltx:itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:itemize>",
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
@@ -546,7 +600,7 @@ LoadDefinitions!({
       mode => "internal_vertical",
       locked => true
     );
-    DefEnvironment!("{enumerate} OptionalKeyVals:enumitem",
+    DefEnvironment!("{enumerate} EnumitemKeyVals",
       "<ltx:enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:enumerate>",
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
@@ -557,7 +611,7 @@ LoadDefinitions!({
       mode => "internal_vertical",
       locked => true
     );
-    DefEnvironment!("{description} OptionalKeyVals:enumitem",
+    DefEnvironment!("{description} EnumitemKeyVals",
       "<ltx:description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:description>",
       before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
       properties => sub[args] {
@@ -571,7 +625,7 @@ LoadDefinitions!({
   }
 
   if has_value("enumitem@inline") {
-    DefEnvironment!("{itemize*} OptionalKeyVals:enumitem",
+    DefEnvironment!("{itemize*} EnumitemKeyVals",
       "<ltx:inline-itemize xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-itemize>",
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
@@ -583,7 +637,7 @@ LoadDefinitions!({
       // leaveHorizontal (they stay inside the surrounding paragraph).
       mode => "inline_internal_vertical"
     );
-    DefEnvironment!("{enumerate*} OptionalKeyVals:enumitem",
+    DefEnvironment!("{enumerate*} EnumitemKeyVals",
       "<ltx:inline-enumerate xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-enumerate>",
       before_digest => { def_macro_identity("\\makelabel{}")?; },
       properties => sub[args] {
@@ -594,7 +648,7 @@ LoadDefinitions!({
       // Perl #2798: inline lists stay inside the surrounding paragraph.
       mode => "inline_internal_vertical"
     );
-    DefEnvironment!("{description*} OptionalKeyVals:enumitem",
+    DefEnvironment!("{description*} EnumitemKeyVals",
       "<ltx:inline-description xml:id='#id' class='#class' cssstyle='#cssstyle'>#body</ltx:inline-description>",
       properties => sub[args] {
         let kv = extract_keyvals(args);
