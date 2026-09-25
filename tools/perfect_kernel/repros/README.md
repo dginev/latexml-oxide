@@ -46,3 +46,4 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `luatex-profile` | LuaTeX-oracle docs under `[luatex]`: engine probes, `\directlua` bridge, Unicode text commands |
 | `block-model` | schema content models: what a container admits, and where an inadmissible child goes (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271; `Meta.class` out of math text, #272) |
 | `expl3` | l3 kernel behaviour under raw load: regex, keys, hooks, `\mode_if_math`, file boundaries |
+| `streaming` | streaming-mode bookkeeping (yields, spills, `node_boxes` sweeps); run with `--streaming`, as `repros.sh` runs eager only |

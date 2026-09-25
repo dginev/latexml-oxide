@@ -1,0 +1,22 @@
+% Streaming bookkeeping is amortized: a resident glossary block (600 entries flushed at
+% \begin{document}) must not make every yield sweep the whole live DOM (roadmap stream C,
+% batch 56it): 300 yields swept 301 times before, once after, XML identical to eager. Run
+% with --streaming and LXML_TRACE_NODE_BOXES=1 to count sweeps.
+% witness: datatool/datatool-user, glossaries-extra/glossaries-extra-manual (resident glossary)
+% oracle:  pdflatex 0 errors
+% engines: rust=0 (2026-09-25)
+% expect:  0 errors; streaming XML == eager XML (600 glossarydefinition, 300 picture)
+% status:  GREEN
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{glossaries}
+\newcounter{i}\newcounter{j}
+\loop\ifnum\value{i}<600 \stepcounter{i}%
+  \edef\x{\noexpand\newglossaryentry{e\thei}{name={Name \thei},description={Desc \thei}}}\x
+\repeat
+\begin{document}
+\section{A}
+\loop\ifnum\value{j}<300 \stepcounter{j}%
+  P\thej\ \tikz\draw (0,0)--(1,1);\par
+\repeat
+\end{document}

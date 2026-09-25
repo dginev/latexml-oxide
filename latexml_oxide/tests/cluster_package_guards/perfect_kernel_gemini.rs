@@ -1,4 +1,4 @@
-use super::perfect_kernel_batch46::{convert, error_count};
+use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
 fn kpsewhich_has(name: &str) -> bool {
   std::process::Command::new("kpsewhich")
@@ -136,9 +136,10 @@ fn convert_env_args(tex: &str, extra: &[&str], envs: &[(&str, &str)]) -> (String
   (stderr, xml)
 }
 
-/// Spill-gated node_boxes sweep (K8 memory lever): sweeps run after spills
-/// (runs_spilled > 0) to reclaim stale node_boxes, keeping the map bounded
-/// without futile full-DOM traversals when nothing spilled.
+/// node_boxes stays bounded under streaming (K8 memory lever): spilled subtrees
+/// purge their own entries as they spill. This fixture leaves no stale entries
+/// (its finishing sweep drops none), so it guards spill-time purging; the sweep
+/// itself is guarded by `align_stale_node_boxes_are_swept`.
 #[test]
 fn spill_gated_node_boxes_stays_bounded() {
   let tex = r"\documentclass{article}
@@ -160,15 +161,84 @@ fn spill_gated_node_boxes_stays_bounded() {
     "1",
   )]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  let sizes: Vec<usize> = stderr
+    .lines()
+    .filter_map(|line| line.rsplit_once("; node_boxes ")?.1.trim().parse().ok())
+    .collect();
+  assert!(!sizes.is_empty(), "no streaming progress report:\n{stderr}");
+  assert!(sizes.iter().all(|&n| n < 256), "node_boxes grew: {sizes:?}");
   assert!(
     stderr.contains("node_boxes sweep"),
-    "expected trace output from spill-gated sweep:\n{stderr}"
-  );
-  assert!(
-    stderr.contains("dropped:"),
-    "expected dropped entries in trace:\n{stderr}"
+    "no finishing sweep:\n{stderr}"
   );
   assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
+}
+
+/// The backstop sweep reclaims `node_boxes` entries that a build-time discard
+/// path detached without purging: alignment rearrangement leaves ~23 stale
+/// entries per `align` (7,203 → 303 here). The finishing yield sweeps, so none
+/// is pinned through pass 2 and the spine tail (batch 56it).
+#[test]
+fn align_stale_node_boxes_are_swept() {
+  let body: String = (0..300)
+    .map(|i| format!("Text {i}.\n\\begin{{align}}a_{{{i}}}&=b+c\\\\d&=e\\end{{align}}\n\n"))
+    .collect();
+  let tex = format!(
+    "\\documentclass{{article}}\n\\usepackage{{amsmath}}\n\\begin{{document}}\n{body}\\end{{document}}\n"
+  );
+  let (stderr, xml) = convert_env_args(&tex, &["--streaming", "--max-memory=768"], &[(
+    "LXML_TRACE_NODE_BOXES",
+    "1",
+  )]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let dropped: usize = stderr
+    .lines()
+    .filter_map(|line| {
+      line
+        .split_once("dropped: ")?
+        .1
+        .split(')')
+        .next()?
+        .parse::<usize>()
+        .ok()
+    })
+    .sum();
+  assert!(dropped > 0, "no stale entry was swept:\n{stderr}");
+  let sizes: Vec<usize> = stderr
+    .lines()
+    .filter_map(|line| line.rsplit_once("; node_boxes ")?.1.trim().parse().ok())
+    .collect();
+  assert!(
+    sizes.iter().all(|&n| n < 1000),
+    "node_boxes grew: {sizes:?}"
+  );
+  assert_eq!(xml.matches("<equation ").count(), 600, "{}", xml.len());
+}
+
+/// A resident glossary block does not make every yield sweep the whole live
+/// DOM: the backstop sweep is gated on node_boxes growth, not on each spill
+/// (roadmap stream C, batch 56it). The repro swept 301 times for 300 yields;
+/// datatool-user ran 149.8 s → 103.3 s and glossaries-extra-manual 217.5 s →
+/// 149.3 s with identical XML. Streaming output stays identical to eager.
+#[test]
+fn resident_glossary_does_not_sweep_every_yield() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/streaming/resident_glossary_sweeps.tex");
+  let (stderr, streamed) =
+    convert_env_args(tex, &["--streaming"], &[("LXML_TRACE_NODE_BOXES", "1")]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // It must actually stream: 300 yields, reported at powers of two.
+  assert!(stderr.contains("fragment 256 absorbed"), "{stderr}");
+  let sweeps = stderr.matches("sweep took").count();
+  assert!(sweeps <= 10, "{sweeps} sweeps (301 before 56it):\n{stderr}");
+  assert_eq!(streamed.matches("<glossarydefinition").count(), 600);
+  assert_eq!(streamed.matches("<picture").count(), 300);
+  let (stderr, eager) = convert_env_args(tex, &[], &[]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(streamed == eager, "streaming XML differs from eager");
 }
 
 /// Native ctable binding: \ctable with keyvals, captions, tabular/tabularx,

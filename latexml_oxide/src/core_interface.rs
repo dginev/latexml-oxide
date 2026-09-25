@@ -773,10 +773,10 @@ fn apply_rewrite_rules(
   Ok(())
 }
 
-/// Stale-entry sweep growth threshold for `Document::node_boxes` during streaming
-/// pass 1 when no runs were spilled (default 50,000 entries; `LXML_NODE_BOXES_SWEEP=<n>`
-/// overrides it for memory probes). When runs_spilled > 0, the sweep runs unconditionally
-/// since the post-spill spine is small and mark is cheap.
+/// Absolute cap on the `node_boxes` growth that triggers a stale-entry sweep during
+/// streaming pass 1 (default 50,000 entries). The sweep runs at the smaller of this
+/// cap and an eighth of the size after the last sweep (at least 256), so
+/// `LXML_NODE_BOXES_SWEEP=<n>` can only lower the gate (memory probes).
 fn node_boxes_sweep_threshold() -> usize {
   static THRESHOLD: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
   *THRESHOLD.get_or_init(|| {
@@ -1486,16 +1486,31 @@ impl DigestionAPI for Core {
         }
         // Self-healing: entries for nodes that build-time discard paths
         // detached without purging pin whole Digested box trees (see
-        // sweep_stale_node_boxes). When runs are spilled, the post-spill
-        // spine mark is cheap and drops detached nodes immediately.
-        // Otherwise, rate-limit sweeps by node_boxes growth threshold
-        // to avoid futile full-DOM traversals on live trees.
+        // sweep_stale_node_boxes). Spilled subtrees are purged as they spill
+        // (`index_and_purge_spilled`, `discard_subtree`), so the sweep is only
+        // this backstop. It marks the whole live DOM, so it runs when
+        // `node_boxes` has grown by an eighth since the last sweep (at least
+        // 256 entries, and never more than the absolute threshold). That is
+        // amortized O(1) per entry while the live DOM is proportional to
+        // `node_boxes`; resident nodes whose entries were released make each
+        // sweep cost more. Sweeping after every spill cost O(resident DOM) on
+        // each of 3,000-5,500 yields once a glossary block of ~3,000
+        // definitions stayed resident at the root (datatool-user 11.6 s,
+        // glossaries-extra-manual 82.4 s; roadmap stream C, 2026-09-25). A
+        // spill that purged live entries lowers the baseline with them, so
+        // stale entries cannot regrow to the old high-water mark; and the
+        // finishing yield sweeps, so none is pinned through pass 2 and the
+        // spine tail.
+        document.last_swept_node_boxes_len = document
+          .last_swept_node_boxes_len
+          .min(document.node_boxes.len());
         let growth = document
           .node_boxes
           .len()
           .saturating_sub(document.last_swept_node_boxes_len);
-        let should_sweep = (runs_spilled > 0 && !document.node_boxes.is_empty())
-          || growth >= node_boxes_sweep_threshold();
+        let relative = (document.last_swept_node_boxes_len / 8).max(256);
+        let should_sweep =
+          (finishing && runs_spilled > 0) || growth >= relative.min(node_boxes_sweep_threshold());
         if should_sweep {
           let t_sweep = std::time::Instant::now();
           document.sweep_stale_node_boxes();

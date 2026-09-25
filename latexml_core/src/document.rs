@@ -209,8 +209,8 @@ pub struct Document {
   /// document's abstract when the real content arrived. The streaming driver
   /// dispatches the root's hooks exactly once, after digestion finishes.
   defer_root_after_open:         bool,
-  /// Size of `node_boxes` after the last sweep, used to rate-limit
-  /// sweeps when no runs were spilled.
+  /// Size of `node_boxes` after the last sweep (lowered when a spill purges
+  /// below it); the streaming sweep gate measures growth from it.
   pub last_swept_node_boxes_len: usize,
 }
 impl Default for Document {
@@ -290,6 +290,64 @@ impl Object for Document {
 enum Placement_ {
   AppendChild,
   PrevSibling,
+}
+
+/// Whether `node`'s subtree (itself included) holds a paragraph with visible
+/// text outside any picture: `descendant-or-self::ltx:p[not(ancestor::ltx:picture)]
+/// [.//text()[normalize-space()][not(ancestor::ltx:picture)]]`, walked with an
+/// early exit instead of collecting every match. The streaming spill asks it for
+/// every resident root child on every yield (roadmap stream C, 2026-09-25).
+fn subtree_holds_prose(node: &Node) -> bool {
+  fn is_ltx(node: &Node, local: &str) -> bool {
+    node.get_type() == Some(NodeType::ElementNode)
+      && node.get_name() == local
+      && node
+        .get_namespace()
+        .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
+  }
+  fn text_outside_pictures(node: &Node) -> bool {
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      let holds = match c.get_type() {
+        // `normalize-space()` strips XML whitespace only (#x20 #x9 #xD #xA),
+        // so a no-break space is visible text.
+        Some(NodeType::TextNode | NodeType::CDataSectionNode) => c
+          .get_content()
+          .contains(|ch: char| !matches!(ch, ' ' | '\t' | '\r' | '\n')),
+        Some(NodeType::ElementNode) => !is_ltx(&c, "picture") && text_outside_pictures(&c),
+        _ => false,
+      };
+      if holds {
+        return true;
+      }
+      child = c.get_next_sibling();
+    }
+    false
+  }
+  fn walk(node: &Node) -> bool {
+    if node.get_type() != Some(NodeType::ElementNode) || is_ltx(node, "picture") {
+      return false;
+    }
+    if is_ltx(node, "p") && text_outside_pictures(node) {
+      return true;
+    }
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      if walk(&c) {
+        return true;
+      }
+      child = c.get_next_sibling();
+    }
+    false
+  }
+  let mut up = node.get_parent();
+  while let Some(a) = up {
+    if is_ltx(&a, "picture") {
+      return false;
+    }
+    up = a.get_parent();
+  }
+  walk(node)
 }
 
 impl Document {
@@ -4155,14 +4213,7 @@ impl Document {
       // pinned its digested boxes in `node_boxes` (163,636 entries, ~4.4 GB
       // of the 4.8 GB fuse on LSE); guard
       // `inline_pictures_in_paragraphs_stay_memory_bounded`.
-      let holds_prose = is_element
-        && !self
-          .findnodes(
-            "descendant-or-self::ltx:p[not(ancestor::ltx:picture)]\
-             [.//text()[normalize-space()][not(ancestor::ltx:picture)]]",
-            Some(&child),
-          )
-          .is_empty();
+      let holds_prose = is_element && subtree_holds_prose(&child);
       let eligible = is_element
         && !holds_prose
         && !pending
@@ -4611,8 +4662,8 @@ impl Document {
   /// Measured: ~518k stale entries before the FIRST spill, growing past
   /// 1.75M — the dominant residual pass-1 creep after the C-side frees.
   /// A mark-and-retain against the live tree is immune to every such path,
-  /// including future ones. Runs when the map is large; the post-spill
-  /// spine is small, so the mark phase is cheap.
+  /// including future ones. The mark phase walks the whole live DOM, so the
+  /// streaming driver gates it on `node_boxes` growth (core_interface.rs).
   pub fn sweep_stale_node_boxes(&mut self) {
     let t_start = std::time::Instant::now();
     fn mark(node: &Node, live: &mut rustc_hash::FxHashSet<usize>) {

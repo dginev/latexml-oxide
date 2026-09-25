@@ -155,7 +155,7 @@ pub fn projected_source_bytes(source: &str) -> u64 {
   ];
 
   let own = std::fs::metadata(source).map(|m| m.len()).unwrap_or(0);
-  let Some(dir) = Path::new(source).parent() else {
+  let Some(dir) = source_dir(source) else {
     return own;
   };
   let mut head = Vec::new();
@@ -208,6 +208,18 @@ pub fn projected_source_bytes(source: &str) -> u64 {
     }
   }
   total.max(own)
+}
+
+/// The directory a source file lives in. A bare file name's parent is the EMPTY
+/// path, which `read_dir` cannot read: the projection then skipped the
+/// example-file walk, the document ran eager, and under an address-space cap
+/// libxml2 died at build start (roadmap stream C, 2026-09-25: datatool-user run
+/// as `datatool-user.tex`). It is the current directory.
+fn source_dir(source: &str) -> Option<&Path> {
+  match Path::new(source).parent() {
+    Some(d) if d.as_os_str().is_empty() => Some(Path::new(".")),
+    other => other,
+  }
 }
 
 /// The heads (first `SCAN_BYTES`) of the files `\input{…}` / `\include{…}` in `head`
@@ -281,7 +293,14 @@ fn doc_input_dtx_bytes(head: &str) -> u64 {
 
 #[cfg(test)]
 mod tests {
-  use super::projected_source_bytes;
+  use super::{projected_source_bytes, source_dir};
+
+  /// A bare file name lives in the current directory, not in the empty path.
+  #[test]
+  fn bare_source_name_is_in_the_current_directory() {
+    assert_eq!(source_dir("x.tex"), Some(std::path::Path::new(".")));
+    assert_eq!(source_dir("d/x.tex"), Some(std::path::Path::new("d")));
+  }
 
   /// Batch 56ew: a doc.sty driver projects as the `.dtx` it documents, not as its
   /// own few kilobytes — otherwise the eager attempt overruns the memory fuse and
