@@ -1,0 +1,27 @@
+% witness: nomencl/sample03 (sample03.tex:13, :28 `{\watt\per(\square\meter\kelvin)}`);
+%   arXiv 2602.18218 (main1.tex:408 `\SI{1}{\milli\electronvolt\per\cancel{c^2}}`)
+% oracle:  pdflatex 0 errors; A[W/(m² K)] B[m s⁻¹] C[3 kg] D[1 meV/c²] E[km²]
+%   F[1 c³m] G[m³/(s)]
+% engines: rust=0 errors (56jg-rel, 2026-09-25): A "W^{-1}", D "meV cancel(^{-1})",
+%   E "^2", F "1 ^3", G "m^3 ^{-1}" — everything after the first non-unit token lost;
+%   perl=0, A = W/(^2 m K)
+% expect:  0 errors; A = \mathrm{W}\mathrm{/}\mathrm{(}{\mathrm{m}}^{2}\mathrm{K}\mathrm{)},
+%   D-G as pdflatex; B and C unchanged (symbolic)
+% status:  GREEN (W14, guard package_leads_56::siunitx_mixed_unit_input_is_literal)
+% mechanism: input holding anything but unit macros is LITERAL (siunitx.sty
+%   :6596-6613 `\__siunitx_unit_if_symbolic:n`; Perl six_convertUnits returns
+%   undef, siunitx.sty.ltxml:903-927). six_convert_units_from_tokens kept the
+%   units before the `(` and dropped the rest. In the literal branch a
+%   pre-power raises the item after it (siunitx.sty:6633-6641, :6801), and a
+%   style (`\cancel`) prints nothing (:6698-6700).
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+A[\unit{\watt\per(\square\meter\kelvin)}]
+B[\unit{\meter\per\second}]
+C[\qty{3}{\kilo\gram}]
+D[\SI{1}{\milli\electronvolt\per\cancel{c^2}}]
+E[\unit{\square{\kilo\meter}}]
+F[\SI{1}{\cubic cm}]
+G[\unit{\raiseto{3}\meter\per(\second)}]
+\end{document}

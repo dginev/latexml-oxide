@@ -1,0 +1,18 @@
+% witness: crossreftools/crossreftools_doc (crossreftools_doc.tex:587, :899
+%   `\tcbinputlisting{…listing file=labelstuff.tex}` — a file TL does not ship)
+% oracle:  pdflatex "! Package Listings Error: File `listings-nonexistent-a(.txt)'
+%   not found." (listings.sty:2074-2086), then an Emergency stop at its
+%   `\read\m@ne` in nonstop mode; Perl Error:I/O (listings.sty.ltxml:333)
+% engines: rust=0 errors, 2 warnings (56jg-rel, 2026-09-25)
+% expect:  2 errors (Error:I/O:listings-nonexistent-a.txt, …-b.txt); both
+%   listings kept, empty
+% status:  GREEN (W14, guard package_leads_56::missing_listing_file_is_an_io_error)
+% mechanism: listings_read_raw_file (listings_sty.rs) warned where Perl's
+%   listingsReadRawFile raises Error('I/O'); the direct \tcbinputlisting reaches
+%   it through \tcbuselistinglisting → \lstinputlisting (tcblistings.code.tex:42-53).
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\begin{document}
+A \lstinputlisting{listings-nonexistent-a.txt}
+B \tcbinputlisting{listing only,listing file=listings-nonexistent-b.txt}
+\end{document}

@@ -174,14 +174,14 @@ LoadDefinitions!({
           .unwrap_or_default();
         let file = file.trim();
         // Perl reads every listing file through listingsReadRawFile
-        // (`FindFile(…, noltxml => 1)`, listings.sty.ltxml:305-315): the session's
+        // (`FindFile(…, noltxml => 1)`, listings.sty.ltxml:322-334): the session's
         // virtual store first (a round-tripped `\jobname.<n>.listing`), then
         // kpathsea and the source directory. A read relative to the working
         // directory missed both a tex-tree file (commalists-tools-doc
         // `\DemoCodeFile{commalists-tools.sty}`) and one beside the document
         // (csvsimple-legacy `\xmllisting{namesort}`), and the listing came out
         // empty with no diagnostic.
-        let text = listings_read_raw_file(file).unwrap_or_default();
+        let text = listings_read_raw_file(file)?.unwrap_or_default();
         bgroup();
         Ok(Tokens::new(lst_process_display(
           Some(Tokens::new(ExplodeText!(file))),

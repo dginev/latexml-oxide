@@ -25,7 +25,7 @@ fn convert(doc: &str) -> String {
 }
 
 fn error_count(log: &str) -> usize {
-  let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+  let re = regex::Regex::new(r"(Error|Fatal):[^:\s]+:").unwrap();
   log.lines().filter(|l| re.is_match(l)).count()
 }
 

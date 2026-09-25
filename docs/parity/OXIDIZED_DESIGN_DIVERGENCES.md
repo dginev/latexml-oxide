@@ -9464,3 +9464,25 @@ charged to the enclosing call; a Rust `DefMacro` binding of a `\long` LaTeX orig
 
 **Guards**: `scanner_status::*` (8), `vfs_file_end::*`, re-pinned
 `binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents` (pdflatex's "Before. After.").
+
+### 311. siunitx units mixing macros with literal material are parsed as literal units; listing files are decoded (Perl: pre-power before its item; raw bytes)
+
+- **siunitx mixed input.** `six_convert_units_from_tokens` stopped at the first token that was not a
+  unit macro and dropped the rest, silently: `\unit{\watt\per(\square\meter\kelvin)}` gave "W^{-1}".
+  It now hands the whole input to the literal parser, as siunitx's symbolic test does
+  (siunitx.sty:6596-6613; Perl siunitx.sty.ltxml:903-927). In the literal branch a pre-power
+  (`\square`, `\cubic`, `\raiseto`) raises the item after it (siunitx.sty:6633-6641, :6801), where
+  Perl renders `\mathrm{^{2}}\mathrm{m}`; a braced item has its units resolved; `\cancel` prints
+  nothing (:6698-6700). Output as pdflatex: W/(m² K). arXiv: 30 unit expressions in 22 papers regain
+  content ("4500 km" → "4500 km/s", 2605.00984; "100 G" → "100 GOps/s", 2605.15423; 2602.18218's
+  `\cancel` "meV cancel(^{-1})" → "1 meV/c²").
+- **nomencl `nomentbl` unit column** is `\unit{#4}` (nomencl.sty:232), so a siunitx unit prints (a
+  bare `\meter` is `\relax` outside `\unit`, Perl siunitx.sty.ltxml:1352).
+- **Listing files.** A missing `\lstinputlisting`/`\tcbinputlisting` file is `Error:I/O`, as Perl
+  (listings.sty.ltxml:322-334) and pdflatex ("Package Listings Error: File … not found",
+  listings.sty:2074-2086); Rust warned. A listing file that is not UTF-8 is decoded
+  (`mouth::decode_input_bytes`) where it came out empty; Perl slurps the raw bytes.
+
+Measured (worker W14): 19 s123 manuals turn 182 missing-listing warnings into errors (hvextern 75,
+out of scope; underoverlap/concepts 18 each from a `'#1'` substitution in dry.sty/with.sty);
+recall unchanged. Guards: `package_leads_56::*` (4), `nomencl_nomentbl`.

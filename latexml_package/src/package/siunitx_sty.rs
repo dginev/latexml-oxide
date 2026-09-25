@@ -2192,10 +2192,49 @@ fn six_process_units(expr: &Tokens) -> Tokens {
 
 /// Replace \lx@six@unitobject{name} tokens with \mathrm{presentation} tokens.
 /// Must be called while siunitx_macros mapping is active (inside \SI{}{} processing).
+///
+/// A PRE-power (`\square`, `\cubic`, `\raiseto{n}`) raises the item that
+/// FOLLOWS it, as siunitx's literal branch does: `\siunitx_declare_power:NNn`
+/// gives the prefix form `\__siunitx_unit_literal_power:nn {n}` =
+/// `#2 ^ {n}`, taking the next token (or braced group) as `#2`
+/// (siunitx.sty:6633-6641, :6801; `\raiseto`, :6707-6709). Perl emits the
+/// power in place, before its unit (`\mathrm{^{2}}\mathrm{m}`);
+/// `\watt\per(\square\meter\kelvin)` is "W/(m² K)" in pdflatex. A power with
+/// no item to raise — at the end, before a `}`, or before another pre-power —
+/// stays where it was written.
 fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
   let mut result = Vec::new();
   let mut iter = tokens.unlist_ref().iter().copied().peekable();
   let mut had_substitution = false;
+  // The power a pre-power object left for the next item.
+  let mut pending_power: Option<Tokens> = None;
+  // Push one item, raised by the pending pre-power if there is one.
+  let push_item = |result: &mut Vec<Token>, pending: &mut Option<Tokens>, item: Vec<Token>| {
+    match pending.take() {
+      Some(power) => {
+        result.push(T_BEGIN!());
+        result.extend(item);
+        result.push(T_END!());
+        result.push(T_SUPER!());
+        result.push(T_BEGIN!());
+        result.extend(power.unlist());
+        result.push(T_END!());
+      },
+      None => result.extend(item),
+    }
+  };
+  // A pre-power with no item to raise, kept in place (Perl's rendering).
+  let power_in_place = |result: &mut Vec<Token>, pending: &mut Option<Tokens>| {
+    if let Some(power) = pending.take() {
+      result.push(T_CS!("\\mathrm"));
+      result.push(T_BEGIN!());
+      result.push(T_SUPER!());
+      result.push(T_BEGIN!());
+      result.extend(power.unlist());
+      result.push(T_END!());
+      result.push(T_END!());
+    }
+  };
   // Pre-intern the two dispatch CS names so the per-token check is
   // u32 equality (not `t.to_string()` alloc + string compare).
   let unitobject_sym = pin!("\\lx@six@unitobject");
@@ -2208,6 +2247,14 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
           // Decode directly from the arena-borrowed &str — was
           // cloning via `.to_string()` into a temporary String.
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
+            if defn.unit_type == "prepower"
+              && let Some(power) = defn.power.clone()
+            {
+              power_in_place(&mut result, &mut pending_power);
+              pending_power = Some(power);
+              had_substitution = true;
+              continue;
+            }
             let pres = defn.presentation;
             if !pres.is_empty() {
               // Mirror Perl L1216 (`siunitx.sty.ltxml`):
@@ -2217,17 +2264,21 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
               // prepower/postpower presentations like `^{3}` (from `\cubic`)
               // bare, which the math digester then sees as a second
               // superscript on the preceding atom (driver: 2304.12803).
-              result.push(T_CS!("\\mathrm"));
-              result.push(T_BEGIN!());
-              result.extend(pres.unlist());
-              result.push(T_END!());
-              had_substitution = true;
-              continue;
+              let mut item = vec![T_CS!("\\mathrm"), T_BEGIN!()];
+              item.extend(pres.unlist());
+              item.push(T_END!());
+              push_item(&mut result, &mut pending_power, item);
             }
+            // A known object with an empty presentation (`\cancel`, a
+            // style) prints nothing in the literal branch (siunitx.sty
+            // :6698-6700; Perl `\mathrm{}`): `\per\cancel{c^2}` is "/c²"
+            // (witness 2602.18218), not "/cancelc²".
+            had_substitution = true;
+            continue;
           }
         }
         // Fallback: emit name as raw text
-        result.extend(ExplodeText!(&name));
+        push_item(&mut result, &mut pending_power, ExplodeText!(&name));
         had_substitution = true;
       }
     } else if t.text == unitobject_arg_sym {
@@ -2236,24 +2287,71 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name)
         && let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded)
       {
+        if defn.unit_type == "prepower" {
+          // Re-tokenized, as the symbolic path reads the argument.
+          power_in_place(&mut result, &mut pending_power);
+          pending_power = Some(Tokenize!(TeXString::assembled(arg)));
+          had_substitution = true;
+          continue;
+        }
         let pres = defn.presentation;
         if !pres.is_empty() {
           // Perl L1223: `Tokens($pres, T_BEGIN, $data, T_END)` — the
           // presentation here takes the data as its argument (e.g.
           // `\tothe{2}` → `^{2}`). The presentation already supplies
           // its own grouping so we don't add a `\mathrm{...}` wrapper.
-          result.extend(pres.unlist());
-          result.push(T_BEGIN!());
-          result.extend(ExplodeText!(&arg));
-          result.push(T_END!());
+          let mut item = pres.unlist();
+          item.push(T_BEGIN!());
+          item.extend(ExplodeText!(&arg));
+          item.push(T_END!());
+          push_item(&mut result, &mut pending_power, item);
           had_substitution = true;
           continue;
         }
       }
-    } else {
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::SPACE {
+      // `#2` of `\__siunitx_unit_literal_power:nn` skips spaces.
       result.push(t);
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::BEGIN {
+      // A braced group is one `#2`; the unit objects inside it are resolved
+      // like any others (`\square{\kilo\meter}` is km²).
+      let mut inner = Vec::new();
+      let mut level = 1;
+      for t2 in iter.by_ref() {
+        match t2.get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => {
+            level -= 1;
+            if level == 0 {
+              break;
+            }
+          },
+          _ => {},
+        }
+        inner.push(t2);
+      }
+      let mut item = vec![T_BEGIN!()];
+      item.extend(six_resolve_unit_objects(&Tokens::new(inner)).unlist());
+      item.push(T_END!());
+      push_item(&mut result, &mut pending_power, item);
+    } else if pending_power.is_some() && t.get_catcode() == Catcode::END {
+      power_in_place(&mut result, &mut pending_power);
+      result.push(t);
+    } else if pending_power.is_some() && matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+    {
+      // A literal character is upright, as `six_parse_literalunits` sets
+      // it; the raising braces would otherwise hide it from that pass.
+      push_item(&mut result, &mut pending_power, vec![
+        T_CS!("\\mathrm"),
+        T_BEGIN!(),
+        t,
+        T_END!(),
+      ]);
+    } else {
+      push_item(&mut result, &mut pending_power, vec![t]);
     }
   }
+  power_in_place(&mut result, &mut pending_power);
 
   if had_substitution {
     Tokens::new(result)
@@ -2302,13 +2400,16 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       }
     } else if t.get_catcode() == Catcode::SPACE || t.text == dot_sym {
       iter.next(); // skip spaces and dots (unit product separators)
-    } else if !defns.is_empty() {
-      // Non-unit content after some units found — stop here, use what we have.
-      // Perl handles mixed content (e.g., \pi\per\milli\meter) by parsing units
-      // and passing non-unit content through. We stop at the first unrecognized token.
-      break;
     } else {
-      return None; // No units found yet — fall back to literal
+      // Any other token makes the whole input LITERAL: Perl six_convertUnits
+      // `else { return; }` (siunitx.sty.ltxml:903-927), as siunitx's own test
+      // does (`\__siunitx_unit_if_symbolic:n`, siunitx.sty:6596-6613: symbolic
+      // only when nothing but unit macros is left). Keeping the units read so
+      // far and stopping here dropped the rest: `\watt\per(\square\meter
+      // \kelvin)` came out "W^{-1}" at 0 errors (nomencl sample03.tex:13;
+      // pdflatex "W/(m² K)"). Guard:
+      // `package_leads_56::siunitx_mixed_unit_input_is_literal`.
+      return None;
     }
   }
 

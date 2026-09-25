@@ -71,8 +71,9 @@ LoadDefinitions!({
     // session's virtual file store first (a file written by
     // `filecontents`/`\VerbatimOut` lives only there, batch 56cv), then
     // `find_file` — whose extensionless hit may itself be a store key
-    // (tutodoc-en/fr) — and a warning when the file is nowhere.
-    let contents = listings_read_raw_file(file_str.trim()).unwrap_or_default();
+    // (tutodoc-en/fr) — and an `I/O` error when the file is nowhere (minted.sty
+    // :1420 `\minted@error{Cannot find input file …}`).
+    let contents = listings_read_raw_file(file_str.trim())?.unwrap_or_default();
     bgroup();
     assign_value(
       "current_environment",

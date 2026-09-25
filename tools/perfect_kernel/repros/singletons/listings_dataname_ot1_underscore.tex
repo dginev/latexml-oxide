@@ -1,0 +1,19 @@
+% witness: none in the corpus yet; any \lstinputlisting of a file whose name
+%   has `_`, under the default OT1 encoding (crossreftools_doc is fine: T1)
+% oracle:  Perl 0.8.8 dataname="lstu_x.txt"
+% engines: rust dataname="lstu˙x.txt" (56jg-rel and W14, 2026-09-25)
+% expect:  dataname="lstu_x.txt"
+% status:  RED (side finding of W14, not fixed)
+% mechanism: the listing name is exploded to catcode-12 tokens
+%   (listings_sty.rs \lstinputlisting `ExplodeText!(&filename)`) and digested as
+%   `\@@listings@block`'s #3; the `_` other char is font-decoded through OT1,
+%   whose slot 0x5F is the dot accent U+02D9, and `dataname='#3'` takes the
+%   decoded string. Perl keeps the file name (listings.sty.ltxml:262).
+\begin{filecontents*}{lstu_x.txt}
+x = 1
+\end{filecontents*}
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+\lstinputlisting{lstu_x.txt}
+\end{document}

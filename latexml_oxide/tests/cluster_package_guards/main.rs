@@ -62,6 +62,7 @@ mod nicetabular_binding;
 mod noexpand_input_ends;
 mod nul_byte_input;
 mod openright_kernel_contract;
+mod package_leads_56;
 mod picture_makebox_offset;
 mod picture_sizing;
 mod preclass_kernel_autoload;

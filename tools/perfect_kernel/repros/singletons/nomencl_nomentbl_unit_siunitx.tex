@@ -1,0 +1,20 @@
+% witness: nomencl/sample03 (sample03.tex:15-30 `{\square\meter}`, `{\meter}`,
+%   `{\kelvin}`, `{\watt\per\kelvin}` unit columns)
+% oracle:  pdflatex 0 errors; the list row reads "L length m SI base quantity"
+% engines: rust=0 errors, unit phrase absent (56jg-rel, 2026-09-25)
+% expect:  0 errors; glossaryphrase role=unit holds Math m (meaning meter); the
+%   blank unit of the second entry (sample03.tex:29 `{}`) keeps no unit phrase
+% status:  GREEN (W14, guard package_leads_56::nomentbl_unit_column_is_a_siunitx_unit)
+% mechanism: nomentbl writes the unit column as `\unit{#4}` (nomencl.sty:232;
+%   nomentbl loads siunitx, :182-184). The binding passed #4 bare, and outside
+%   `\unit` siunitx's `\meter` is `\relax` (Perl siunitx.sty.ltxml:1352), so the
+%   unit vanished. A bare `\meter` is not "Undefined control sequence" here:
+%   pdflatex never typesets it outside `\unit`.
+\documentclass{article}
+\usepackage[nomentbl]{nomencl}
+\makenomenclature
+\begin{document}
+\nomenclature[aL]{$L$}{length}{\meter}{SI base quantity}
+\nomenclature[zi]{i}{in}{ }{}
+\printnomenclature
+\end{document}

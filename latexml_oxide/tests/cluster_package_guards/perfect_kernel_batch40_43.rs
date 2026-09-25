@@ -19,7 +19,7 @@ pub(crate) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, 
 
 fn error_count(stderr: &str) -> usize {
   // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85).
-  let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+  let re = regex::Regex::new(r"(Error|Fatal):[^:\s]+:").unwrap();
   stderr.lines().filter(|l| re.is_match(l)).count()
 }
 

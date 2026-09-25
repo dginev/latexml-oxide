@@ -37,11 +37,21 @@ LoadDefinitions!({
   // and `nomentbl` (:41-42) makes the entry `{sym}{desc}{unit}{note}`
   // (:228-235). The arguments are read WITHOUT the raw macro's
   // `\begingroup\@sanitize` (that serves the written string), so `$a$`
-  // digests as math and the description as text.
+  // digests as math and the description as text. The unit column is
+  // `\unit{#4}`, as the written line carries it (:232 `&\unit{#4}&`;
+  // `nomentbl` loads siunitx, :182-184): a unit macro is a unit only inside
+  // it. Bare, siunitx's `\meter` is `\relax` (siunitx.sty.ltxml:1352) and the
+  // entry's unit vanished — pdflatex prints "m", "K", "W K−1" (nomencl
+  // sample03.tex:11-30, `{\meter}`, `{\kelvin}`, `{\watt\per\kelvin}`).
+  // A blank unit (`{}`, sample03.tex:29) prints nothing and keeps no phrase;
+  // the test is ltcmd's `\IfBlankF` (blank = empty or spaces), not
+  // `\ifx\relax#1`, which is true of `\meter`.
+  // Guard: `package_leads_56::nomentbl_unit_column_is_a_siunitx_unit`.
   DefMacro!("\\nomenclature", "\\@ifnextchar[{\\lx@nomencl@entry}{\\lx@nomencl@entry[\\nomprefix]}");
   RawTeX!(r"\makeatletter
 \def\lx@nomencl@entry[#1]#2#3{\if@nomentbl\expandafter\lx@nomencl@entrytbl\else\expandafter\lx@nomencl@entryplain\fi{#1}{#2}{#3}}
-\def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{#4}{#5}}
+\def\lx@nomencl@entrytbl#1#2#3#4#5{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{\lx@nomencl@unit{#4}}{#5}}
+\def\lx@nomencl@unit#1{\IfBlankF{#1}{\unit{#1}}}
 \def\lx@nomencl@entryplain#1#2#3{\lx@nomencl@definition{#1}{#2}{{#3\nomeqref{\theequation}}}{}{}}
 \makeatother");
   DefConstructor!("\\lx@nomencl@definition{}{}{}{}{}",

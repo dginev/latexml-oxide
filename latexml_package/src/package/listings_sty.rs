@@ -373,7 +373,17 @@ pub fn listings_read_raw_string(
 }
 
 /// Perl: listingsReadRawFile — read entire file contents as string.
-pub fn listings_read_raw_file(file: &str) -> Option<String> {
+///
+/// A file that is nowhere, or that cannot be opened, is Perl's
+/// `Error('I/O', $filename, …, "Can't read listings file '$filename'", $!)`
+/// (listings.sty.ltxml:322-334); real listings stops with "Package Listings
+/// Error: File `x(.ext)' not found" (listings.sty:2074-2086; its `\read\m@ne`
+/// at :2090 is an Emergency stop in nonstop mode), and tcolorbox's
+/// `\tcbinputlisting` reaches it through `\lstinputlisting`
+/// (tcblistings.code.tex:42-53). It was a warning (crossreftools-doc:
+/// `labelstuff.tex`, `addcontentslineforlistoflabels.tex`, which the package
+/// does not ship). Guard: `package_leads_56::missing_listing_file_is_an_io_error`.
+pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
   let filename = file.to_string();
   // A file that exists only in the session's virtual file store — written by
   // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
@@ -386,11 +396,11 @@ pub fn listings_read_raw_file(file: &str) -> Option<String> {
   // manuals round-trip a listing file) rendered an EMPTY listing at 0
   // errors — Perl, with no virtual store, reports "Can't read listings file".
   if let Some(text) = vfs_read(filename.trim()) {
-    return Some(if text.contains('\r') {
+    return Ok(Some(if text.contains('\r') {
       text.replace("\r\n", "\n").replace('\r', "\n")
     } else {
       text
-    });
+    }));
   }
   // Perl #2818 (41bd31e8): FindFile(..., noltxml => 1) — when reading a raw file
   // for a listing (\lstinputlisting), never substitute an .ltxml binding for the
@@ -407,11 +417,11 @@ pub fn listings_read_raw_file(file: &str) -> Option<String> {
     // can read: tutodoc's `\tdoclatexinput{examples-…}` listings (a
     // `filecontents` file, read by `\inputminted`) came out empty.
     if let Some(text) = vfs_read(&path) {
-      return Some(if text.contains('\r') {
+      return Ok(Some(if text.contains('\r') {
         text.replace("\r\n", "\n").replace('\r', "\n")
       } else {
         text
-      });
+      }));
     }
     // Normalize line terminators to bare LF.
     //
@@ -432,20 +442,40 @@ pub fn listings_read_raw_file(file: &str) -> Option<String> {
     // (measured: 9 green vs 69 black glyph groups), while BOTH LaTeXML engines
     // paint the whole snippet green — Perl identically, so this is a shared
     // upstream bug we are fixing rather than a Rust regression.
-    std::fs::read_to_string(&path).ok().map(|text| {
-      if text.contains('\r') {
-        text.replace("\r\n", "\n").replace('\r', "\n")
-      } else {
-        text
-      }
-    })
+    //
+    // The bytes are decoded by `decode_input_bytes`, the Mouth's reader for a
+    // file with no declared encoding (UTF-8, else each line's Latin-1 image;
+    // Perl slurps the bytes undecoded). A declared 8-bit input encoding
+    // (cp1251, cp1252) is not applied here. `read_to_string` refused a
+    // non-UTF-8 file outright, and a latin1 source came out an EMPTY listing
+    // with no diagnostic. Guard:
+    // `package_leads_56::latin1_listing_file_is_read`.
+    match std::fs::read(&path) {
+      Ok(bytes) => {
+        let text = mouth::decode_input_bytes(&bytes);
+        Ok(Some(if text.contains('\r') {
+          text.replace("\r\n", "\n").replace('\r', "\n")
+        } else {
+          text
+        }))
+      },
+      Err(err) => {
+        Error!(
+          "I/O",
+          filename,
+          format!("Can't read listings file '{filename}'"),
+          err.to_string()
+        );
+        Ok(None)
+      },
+    }
   } else {
-    emit_warn(
-      "missing_file",
-      "listings",
-      &format!("Can't read listings file '{filename}'"),
+    Error!(
+      "I/O",
+      filename,
+      format!("Can't read listings file '{filename}'")
     );
-    None
+    Ok(None)
   }
 }
 
@@ -2608,7 +2638,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::raw_tcblisting_environment_round_trips_its_listing_file`.
   DefMacro!("\\lstinputlisting OptionalKeyVals:LST Semiverbatim", sub[(kv, file)] {
     let filename = Expand!(file).to_string();
-    let text = listings_read_raw_file(&filename).unwrap_or_default();
+    let text = listings_read_raw_file(&filename)?.unwrap_or_default();
     bgroup();
     lst_activate(kv.as_ref());
     let mut name = lst_get_tokens("name");

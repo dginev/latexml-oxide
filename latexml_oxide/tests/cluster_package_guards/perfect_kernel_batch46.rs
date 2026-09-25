@@ -148,8 +148,10 @@ pub(crate) fn warning_count(stderr: &str) -> usize {
 }
 
 pub(crate) fn error_count(stderr: &str) -> usize {
-  // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85).
-  let re = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+  // Any `Error:`/`Fatal:` diagnostic, anywhere in the line (WISDOM 85), whatever its
+  // category spells: `Error:I/O:` and `Error:<char>:` count too (a `[A-Za-z_]` category
+  // missed them).
+  let re = regex::Regex::new(r"(Error|Fatal):[^:\s]+:").unwrap();
   stderr.lines().filter(|l| re.is_match(l)).count()
 }
 

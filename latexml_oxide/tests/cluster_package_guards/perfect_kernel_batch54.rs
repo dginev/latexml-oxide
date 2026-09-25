@@ -6228,7 +6228,15 @@ After.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  // The one error is the missing file, Perl's `Error:I/O` (listings.sty.ltxml:333,
+  // batch 56jh): pinned by name as well.
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  let io = "Error:I/O:no-such-file-for-this-guard.tex";
+  assert_eq!(
+    stderr.lines().filter(|l| l.starts_with(io)).count(),
+    1,
+    "{stderr}"
+  );
   assert!(
     xml.contains("Still inside.") && xml.contains("After."),
     "{xml}"
@@ -6345,7 +6353,16 @@ fn minted_in_a_p_column_keeps_the_cell() {
       "\\documentclass{{article}}\n\\usepackage{{minted}}\n\\begin{{document}}\n\\begin{{tabular}}{{p{{4cm}}l}}\n{body} & next \\\\\nrow2 & x \\\\\n\\end{{tabular}}\n\\end{{document}}\n"
     );
     let (stderr, xml) = convert(&tex, false);
-    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // The only error is the missing file, Perl's `Error:I/O` (batch 56jh), for the
+    // `\inputminted` body: pinned by name as well.
+    let io = "Error:I/O:no-such-file-for-this-guard.tex";
+    let want = usize::from(body.contains("inputminted"));
+    assert_eq!(error_count(&stderr), want, "{stderr}");
+    assert_eq!(
+      stderr.lines().filter(|l| l.starts_with(io)).count(),
+      want,
+      "{stderr}"
+    );
     assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
     assert_eq!(xml.matches("<td").count(), 4, "{xml}");
   }

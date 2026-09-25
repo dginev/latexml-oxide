@@ -1,0 +1,15 @@
+% witness: none in the corpus; \lstinputlisting of a latin1 (non-UTF-8) file
+% oracle:  pdflatex 0 errors; the listing shows "café = 1" / "second line"
+% engines: rust=0 errors, 0 warnings, EMPTY listing (56jg-rel, 2026-09-25)
+% expect:  0 errors; two listing lines, the first "café = 1"
+% status:  GREEN (W14, guard package_leads_56::latin1_listing_file_is_read)
+% mechanism: listings_read_raw_file read the file with read_to_string, which
+%   refuses non-UTF-8 bytes; the listing came out empty with no diagnostic.
+%   Perl slurps the bytes (listings.sty.ltxml:328-331); the Mouth's
+%   decode_input_bytes (UTF-8, else each line's Latin-1 image) now decodes them.
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\usepackage{listings}
+\begin{document}
+\lstinputlisting{lstlatin1.txt}
+\end{document}
