@@ -415,6 +415,26 @@ LoadDefinitions!({
   // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
   def_primitive_noop("\\pdfrefobj Number")?;
   def_primitive_noop("\\pdfrefxform Number")?;
+  // \pdfxform [attr <general text>] [resources <general text>] <box number>
+  // makes a form XObject of the box and numbers it in `\pdflastxform`. Nothing
+  // is written here; the number is what the caller keeps (media9's pdfbase
+  // `\pbs_pdfxform:nnnnn`, pdfbase.sty:426, in PDF output: arXiv 2605.10543).
+  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`).
+  DefPrimitive!("\\pdfxform", sub[_args] {
+    for keyword in ["attr", "resources"] {
+      if read_keyword(&[keyword])?.is_some() {
+        skip_filler()?;
+        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+      }
+    }
+    let number = read_number()?;
+    remove_value(&format!("box{}", number.value_of()));
+    let next = match lookup_register("\\pdflastxform", Vec::new())? {
+      Some(RegisterValue::Number(n)) => n.0 + 1,
+      _ => 1,
+    };
+    assign_register("\\pdflastxform", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
+  });
   // \pdfannot annot type spec (h, v, m)
   // \pdfstartlink [ rule spec ] [ attr spec ] action spec (h, m)
   def_primitive_noop("\\pdfstartlink")?;
@@ -523,11 +543,21 @@ LoadDefinitions!({
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   def_macro_noop("\\quitvmode")?;
-  // \pdfliteral [ pdfliteral spec ] general text (h, v, m)
-  DefPrimitive!(
-    "\\pdfliteral OptionalMatch:direct OptionalMatch:page GeneralText",
-    None
-  );
+  // \pdfliteral [ pdfliteral spec ] general text (h, v, m). The spec keyword
+  // is scanned with expansion, as pdfTeX's `scan_keyword` does: accsupp's
+  // pdftex driver writes `\pdfliteral\ACCSUPP@pdfliteral{…}` with the keyword
+  // `page` behind a macro (accsupp.sty:193, accsupp-pdftex.def), which the
+  // unexpanded match missed, leaving the `{` unread ("Expected opening '{'",
+  // 480× in arXiv 2605.21262 once PDF output became the default; Perl's
+  // binding, pdfTeX.pool.ltxml:199, is the same unexpanded match).
+  // `shipout` (pdfTeX 1.40.25) precedes the spec (pdftex manual §`\pdfliteral`);
+  // the general text's `<filler>` is skipped as for the GeneralText parameter.
+  DefPrimitive!("\\pdfliteral", sub[_args] {
+    let _ = read_keyword(&["shipout"])?;
+    let _ = read_keyword(&["direct", "page"])?;
+    skip_filler()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+  });
   // \special pdfspecial spec
   // \pdfresettimer
   def_primitive_noop("\\pdfresettimer")?;

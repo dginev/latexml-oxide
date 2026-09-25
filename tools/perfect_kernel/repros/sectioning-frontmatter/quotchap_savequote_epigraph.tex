@@ -1,0 +1,17 @@
+% witness: sweep 120 — quotchap/document (recall 44.4 %: both savequote quotations and their authors,
+%          Anatole France / Colette / The Cars, missing)
+% oracle:  pdflatex 0 errors; the quotation and "Anatole France" above the chapter head
+% engines: rust (56ie) and Perl 0.8.8 = no quotation: quotchap.sty:112-116 prints the saved box from its
+%          own \chapter, which is ignored because \chapter is locked (latex_constructs.pool.ltxml:557)
+% expect:  0 errors; <quote class="ltx_epigraph ltx_quotchap"><p>All changes have their melancholy.</p>
+%          <block class="ltx_epigraph_source"><p>Anatole France</p></block></quote> before the chapter
+% status:  RED (56ie) -> GREEN (56if; DIVERGENCES #287)
+\documentclass{report}
+\usepackage[grey,utopia]{quotchap}
+\begin{document}
+\begin{savequote}[8cm]
+All changes have their melancholy.\qauthor{Anatole France}
+\end{savequote}
+\chapter{Quote to be quoted}
+Body text.
+\end{document}

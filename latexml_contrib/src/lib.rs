@@ -214,6 +214,7 @@ pub mod program_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
+pub mod quotchap_sty;
 pub mod refstyle_sty;
 pub mod robustindex_sty;
 pub mod rotfloat_sty;
@@ -384,6 +385,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("phyzzx", "tex", phyzzx_tex::load_definitions),
   ("pinlabel", "sty", pinlabel_sty::load_definitions),
   ("program", "sty", program_sty::load_definitions),
+  ("quotchap", "sty", quotchap_sty::load_definitions),
   ("scrlfile", "sty", scrlfile_sty::load_definitions),
   ("scrbase", "sty", scrbase_sty::load_definitions),
   ("scrkbase", "sty", scrkbase_sty::load_definitions),

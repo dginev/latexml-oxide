@@ -6557,13 +6557,26 @@ consumes the recursion quarks as "bytes": `\q__text_recursion_tail` expands into
 `Until:\q__text_recursion_stop` runs out. Perl reports the errors and recovers; Rust ran away,
 and letgut (letgut.cls:1711 lowercases acronym keys; `INSPÉ` in letgut-acronyms.tex) never
 finished (TeX Live class census 2026-09-24). Trigger:
-`\ExplSyntaxOn\tl_set:Nx\l_tmpa_tl{\text_lowercase:n{É}}` (pdflatex `é`). **Rust (FIXED, batch
-56ic):** `\text_lowercase:n`, `\text_uppercase:n`, `\text_titlecase_first:n`,
-`\text_titlecase_all:n` and their `:nn` forms route to the native mapping `\MakeUppercase`
-already uses (`\lx@latex@changecase`, sect13.rs). Titlecasing (`\MakeTitlecase` is
-`\text_titlecase_first:n` in the kernel) now leaves the rest of the text as it is, as l3text does:
-Perl lowercases it (latex_constructs.pool.ltxml:5507-5523; `\MakeTitlecase{hELLO wORLD}` is
-`Hello world` there, `HELLO wORLD` in pdflatex). Guard `class_census::l3text_case_change_accented`.
+`\ExplSyntaxOn\tl_set:Nx\l_tmpa_tl{\text_lowercase:n{É}}` (pdflatex `é`); a medial accent leaves
+the letters after it uncased (`\text_uppercase:n{élan}` → `élaN`). **Rust (FIXED, batch 56if):**
+expl3's own Unicode-engine codepoint layer (the `\sys_if_engine_opentype:TF` true branches) is
+installed over the format's 8-bit one after the dump (latex_constructs_rust_only.rs):
+`\c_max_char_int` = `"10FFFF` (:7376; `\char_generate:nn` then builds any code point through
+the dump's `\tex_Ucharcat:D` branch), `\codepoint_generate:nn` (:34994-35002),
+`\__text_codepoint_process:nN`, `\__text_codepoint_compare:nNn`,
+`\__text_codepoint_from_chars:Nw` (:35894, :35931-35938), `\__text_change_case_catcode:nn`
+(:36929) and `\__codepoint_to_nfd:n` (:35171). `\codepoint_str_generate:n` stays 8-bit: it only
+keys the SpecialCasing tables, built with it when the format was made (`ß` → `SS`). One
+adaptation: the final-sigma test (:36829-36840) counts a catcode-12 character above `"80` as a
+letter, as the pdfTeX branch counts an active one (our letters are neither catcode 11 nor
+active), so `\text_lowercase:n{ΣΑΣ}` is `σας` as in lualatex. 56ic had routed the changers to
+the native `\MakeUppercase` mapping instead; that broke mfirstuc's `\capitalisewords` over an
+arrayjob array (ftc-notebook's example-notebook.tex timed out, sweep #121) and missed text held
+in token lists. Titlecasing (`\MakeTitlecase` is `\text_titlecase_first:n` in the kernel) leaves
+the rest of the text as it is, as l3text does: Perl lowercases it
+(latex_constructs.pool.ltxml:5507-5523; `\MakeTitlecase{hELLO wORLD}` is `Hello world` there,
+`HELLO wORLD` in pdflatex). Guards `class_census::{l3text_case_change_accented,
+l3text_codepoint_layer_token_lists, mfirstuc_capitalisewords_arrayjob}`.
 
 ## 244. `\pdfcreationdate` is empty (FIXED in Rust)
 
@@ -6589,4 +6602,16 @@ witness). Perl errs the same way when the renewal runs, but its always-true `\@i
 binding's `\algocf@Vline`/`\algocf@Vsline`/`\algocf@Noline`, the listing's block structure, are
 locked, so the restyling is ignored; the capture bug itself is open. Guard
 `class_census::algorithm2e_block_macros_locked`.
+
+## 246. `\pdfliteral` matches its spec keyword unexpanded (FIXED in Rust)
+
+pdfTeX's `\pdfliteral [direct|page] <general text>` scans the keyword with `scan_keyword`,
+which expands. Perl's binding (pdfTeX.pool.ltxml:199) matches it with `OptionalMatch`, which does
+not, so a keyword behind a macro is missed and the general text's `{` is not found. accsupp's
+pdftex driver writes `\pdfliteral\ACCSUPP@pdfliteral{\ACCSUPP@span BDC}` with `page` stored in
+`\ACCSUPP@pdfliteral` (accsupp.sty:193). Perl never reaches it (its `\ifpdf` is false, so accsupp
+takes its dvips driver); Rust does since PDF output became the default (56id): arXiv 2605.21262
+gave 480 "Expected opening '{'" errors, 2605.04642 and 2605.10085 a few. Trigger:
+`\def\mm{page}\pdfliteral\mm{x}`. **Rust (FIXED, batch 56if):** the keyword is read with
+`read_keyword` (expanding). Guard `class_census::pdfliteral_keyword_expands`.
 

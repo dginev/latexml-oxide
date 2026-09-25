@@ -1383,28 +1383,6 @@ pub(crate) fn load() -> Result<()> {
 \protected@edef\MakeTitlecase#1{\MakeTitlecase{#1}}"
   );
 
-  // The l3text case changers these commands call in the real kernel
-  // (latex.ltx `\MakeUppercase` → `\text_uppercase:n`), routed to the same
-  // native mapping. The dump's l3text is the 8-bit build: its
-  // `\__text_codepoint_process:nN` (expl3-code.tex:35892-35925) reads a
-  // character above "80 as a UTF-8 lead byte and takes the next tokens as
-  // continuation bytes, and its output side re-encodes results as bytes. Our
-  // tokens are whole code points, as in the Unicode engines, so on accented
-  // input the loop ran into its own recursion quarks and never ended: letgut's
-  // acronym keys (`\text_lowercase:n {INSPÉ}`, letgut.cls:1711; TeX Live class
-  // census 2026-09-24; Perl fails alike and recovers with errors). The `:nn`
-  // forms take a language, which the native mapping does not model.
-  TeX!(
-    r"\expandafter\long\expandafter\def\csname text_lowercase:n\endcsname#1{\lx@latex@changecase{lower}{#1}}%
-\expandafter\long\expandafter\def\csname text_uppercase:n\endcsname#1{\lx@latex@changecase{upper}{#1}}%
-\expandafter\long\expandafter\def\csname text_titlecase_first:n\endcsname#1{\lx@latex@changecase{sentence}{#1}}%
-\expandafter\long\expandafter\def\csname text_titlecase_all:n\endcsname#1{\lx@latex@changecase{title}{#1}}%
-\expandafter\long\expandafter\def\csname text_lowercase:nn\endcsname#1#2{\lx@latex@changecase{lower}{#2}}%
-\expandafter\long\expandafter\def\csname text_uppercase:nn\endcsname#1#2{\lx@latex@changecase{upper}{#2}}%
-\expandafter\long\expandafter\def\csname text_titlecase_first:nn\endcsname#1#2{\lx@latex@changecase{sentence}{#2}}%
-\expandafter\long\expandafter\def\csname text_titlecase_all:nn\endcsname#1#2{\lx@latex@changecase{title}{#2}}%"
-  );
-
   // Perl L5913,5916: fixltx2e defaults
   DefMacro!("\\eminnershape", None, None);
   DefMacro!("\\TextOrMath{}{}", "\\ifmmode#2\\else#1\\fi");

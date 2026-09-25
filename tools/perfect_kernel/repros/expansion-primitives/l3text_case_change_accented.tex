@@ -6,9 +6,10 @@
 %          tokens as continuation bytes, and runs into its recursion quarks (expl3-code.tex:
 %          35892-35925); Perl fails alike and recovers with errors
 % expect:  0 errors; <p>[inspé][ÉÀÜ STRASSE][Élan][HELLO WORLD][HELLO wORLD]</p>
-% status:  RED (56ia) -> GREEN (56ic)
-% mechanism: our tokens are whole code points (the Unicode engines' model), so the l3text case
-%   changers route to the native case mapping \lx@latex@changecase, as \MakeUppercase does.
+% status:  RED (56ia) -> GREEN (56ic; 56if by l3text itself)
+% mechanism: our tokens are whole code points (the Unicode engines' model); 56if installs expl3's
+%   Unicode-engine codepoint layer over the format's 8-bit one (latex_constructs_rust_only.rs), so
+%   l3text itself changes the case (56ic-56if routed to the native \lx@latex@changecase instead)
 \documentclass{article}
 \ExplSyntaxOn
 \tl_set:Nx \l_tmpa_tl { \text_lowercase:n {INSPÉ} }

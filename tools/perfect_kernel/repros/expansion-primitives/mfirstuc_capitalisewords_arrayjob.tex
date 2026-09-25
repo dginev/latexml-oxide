@@ -1,0 +1,17 @@
+% witness: TeX Live doc ftc-notebook (example-notebook.tex; sweep 121, 56ie): ftc-notebook.sty:361
+%          `\capitalisewords{\textbf{... \TaskTitle(\theTaskSection).}}` with an arrayjob array
+% oracle:  pdflatex 0 errors; Task 1: robot drive.
+% engines: rust (56ic-56ie, every l3text case change on the native mapping) = 4 errors
+%          (`Missing \fi`, `Extra \else ... \ifmmode`) and the notebook timed out at 180 s;
+%          the native mapping expands arrayjob's array access outside l3text's expander
+% expect:  0 errors; <p><text font="bold">Task 1: robot drive.</text></p>
+% status:  RED (56ie) -> GREEN (56if: no native routing; l3text runs on code points through
+%          expl3's Unicode-engine codepoint layer, latex_constructs_rust_only.rs)
+\documentclass{article}
+\usepackage{arrayjob}
+\usepackage{mfirstuc}
+\newarray\Title
+\Title(1)={robot drive}
+\begin{document}
+\capitalisewords{\textbf{Task 1: \Title(1).}}
+\end{document}

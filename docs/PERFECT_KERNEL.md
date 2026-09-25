@@ -167,8 +167,8 @@ mechanical singletons and the content/semantic axes below.
    - the autoload hoist's redesign as a load at group level 0 (DIVERGENCES #282).
 2. **KOMA-Script `\part` — landed 56gq** (Axis 2b's first finding): the kernel's `\@part`/
    `\@spart` are locked sectioning hooks, so KOMA's `\SecDef\@part\@spart` yields `ltx:part` (24 of
-   31 part-short manuals). Residuals: KOMA `\addpart` (`\@addpart`) is still a paragraph; ctex's
-   localized part label becomes "Part I".
+   31 part-short manuals). KOMA `\addpart`/`\addpart*` follow, since `\@addpart` calls `\part` (re-probed 56if).
+   Residual: ctex's localized part label becomes "Part I".
 3. **Axis 2b is now measured** — `tools/perfect_kernel/semantic_coverage.py <corpus.tsv>
    <sweep_dir>`: s114, 2,274 completed docs — sections/lists/floats/refs 93-98 %, equations 93 %,
    graphics 88 %, `\part` 59.5 %. Known false deficits are listed in its docstring. Next: the

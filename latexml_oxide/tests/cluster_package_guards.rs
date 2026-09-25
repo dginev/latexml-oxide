@@ -25642,9 +25642,9 @@ mod class_census {
     assert!(xml.contains("<p>Text.</p>"), "{xml}");
   }
 
-  /// The l3text case changers route to the native case mapping: the dump's
-  /// 8-bit l3text reads an accented code point as a UTF-8 lead byte and never
-  /// finished (letgut's `\text_lowercase:n {INSPÉ}`).
+  /// l3text case changes on accented text finish and map it: the dump's 8-bit
+  /// l3text read it as a UTF-8 lead byte and never finished (letgut's
+  /// `\text_lowercase:n {INSPÉ}`).
   #[test]
   fn l3text_case_change_accented() {
     let tex = include_str!(
@@ -25655,6 +25655,40 @@ mod class_census {
     assert_eq!(warning_count(&stderr), 0, "{stderr}");
     assert!(
       xml.contains("<p>[inspé][ÉÀÜ STRASSE][Élan][HELLO WORLD][HELLO wORLD]</p>"),
+      "{xml}"
+    );
+  }
+
+  /// mfirstuc's `\capitalisewords` over an arrayjob element reaches l3text's
+  /// own case changer (ftc-notebook's example-notebook.tex broke when the
+  /// changers took the native mapping, sweep #121).
+  #[test]
+  fn mfirstuc_capitalisewords_arrayjob() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/mfirstuc_capitalisewords_arrayjob.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<p><text font="bold">Task 1: robot drive.</text></p>"#),
+      "{xml}"
+    );
+  }
+
+  /// l3text changes the case of accented text held in a token list: expl3's
+  /// Unicode-engine codepoint layer reads one token as one code point (the
+  /// format's 8-bit layer took `é` as a UTF-8 lead byte).
+  #[test]
+  fn l3text_codepoint_layer_token_lists() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/expansion-primitives/l3text_codepoint_layer_token_lists.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains("<p>[HELLO ÉLAN][Élan De Vie][σας inspé]</p>"),
       "{xml}"
     );
   }
@@ -25781,5 +25815,52 @@ mod class_census {
       line.captures_iter(&xml).any(|c| c[1].contains("update")),
       "{xml}"
     );
+  }
+
+  /// quotchap's `savequote` becomes an epigraph before the chapter it opens:
+  /// the package prints it from its own `\chapter`, which ours (locked) never
+  /// runs (quotchap manual; DIVERGENCES #287).
+  #[test]
+  fn quotchap_savequote_epigraph() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/quotchap_savequote_epigraph.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let flat = regex::Regex::new(r">\s+<").unwrap().replace_all(&xml, "><");
+    assert!(
+      flat.contains(
+        "<quote class=\"ltx_epigraph ltx_quotchap\"><p>All changes have their melancholy.</p>\
+         <block class=\"ltx_epigraph_source\"><p>Anatole France</p></block></quote>"
+      ),
+      "{xml}"
+    );
+  }
+
+  /// `\pdfliteral` scans its spec keyword with expansion, as pdfTeX does
+  /// (accsupp's pdftex driver: `\pdfliteral\ACCSUPP@pdfliteral{…}`; arXiv
+  /// 2605.21262, 480 errors once PDF output became the default).
+  #[test]
+  fn pdfliteral_keyword_expands() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/backend-persona/pdfliteral_keyword_expands.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>XY</p>"), "{xml}");
+  }
+
+  /// `\pdfxform` numbers a form in `\pdflastxform` and voids its box (pdfbase
+  /// in PDF output; arXiv 2605.10543).
+  #[test]
+  fn pdfxform_numbers_a_form() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/backend-persona/pdfxform_numbers_a_form.tex");
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>Hello. [void](2)</p>"), "{xml}");
   }
 }

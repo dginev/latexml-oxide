@@ -945,6 +945,82 @@ LoadDefinitions!({
 \ExplSyntaxOff"
   );
 
+  // expl3's Unicode-engine codepoint layer (the `\sys_if_engine_opentype:TF`
+  // true branches of expl3-code.tex). The format's l3unicode and l3text are
+  // the pdfTeX build, which reads a character above "7F as a UTF-8 byte:
+  // `\__text_codepoint_process:nN` (:35892-35925) takes the tokens after it as
+  // continuation bytes, and `\codepoint_generate:nn` (:35031) answers with
+  // byte tokens. Our tokens are whole code points, as in XeTeX and LuaTeX, so
+  // l3text case changes lost their way on accented text. A trailing `É`
+  // swallowed the recursion quarks and never finished: letgut's
+  // `\text_lowercase:n {INSPÉ}` (letgut.cls:1711; TeX Live class census
+  // 2026-09-24). A medial one left the letters after it uncased (`élan` →
+  // `élaN`). Perl loads the same 8-bit branch (KPE #243). The Unicode engines'
+  // definitions are installed in its place:
+  // - `\c_max_char_int` (:7376) is "10FFFF, so `\char_generate:nn` builds any
+  //   code point (through `\tex_Ucharcat:D`, which the dump's
+  //   `\__char_generate_aux:nnw` already uses);
+  // - `\codepoint_generate:nn` (:34994-35002) answers with one token;
+  // - `\__text_codepoint_process:nN`, `\__text_codepoint_compare:nNn` and
+  //   `\__text_codepoint_from_chars:Nw` (:35894, :35931-35938) read one token
+  //   as one code point;
+  // - `\__text_change_case_catcode:nn` (:36929) and `\__codepoint_to_nfd:n`
+  //   (:35171) take the character's own catcode;
+  // - a capital sigma lowercases to the medial `σ` before any letter
+  //   (`\__text_change_case_lower_sigma:nnnnN`, :36829-36840): XeTeX's letters
+  //   are catcode 11 and pdfTeX's UTF-8 bytes are active above "80, while ours
+  //   are catcode 12, so a catcode-12 character above "80 counts as well
+  //   (`ΣΑΣ` → `σας`, not `ςας`).
+  // The block runs at group level 0, so the local `\prg_set_conditional:Npnn`
+  // is global here (`\prg_gset_conditional:Npnn` is newer than TeX Live
+  // 2025's expl3). `\codepoint_str_generate:n` stays the 8-bit one: it only builds the keys of
+  // the SpecialCasing tables, written with it when the format was made and
+  // read with it now (`ß` → `SS`).
+  RawTeX!(
+    r#"\ExplSyntaxOn
+\cs_if_exist:NT \__text_codepoint_process:nN
+  {
+    \cs_undefine:N \c_max_char_int
+    \int_const:Nn \c_max_char_int { "10FFFF }
+    \cs_gset:Npn \codepoint_generate:nn #1#2
+      {
+        \int_compare:nNnTF {#1} = { `\  }
+          { ~ }
+          {
+            \__kernel_exp_not:w \exp_after:wN \exp_after:wN \exp_after:wN
+              { \char_generate:nn {#1} {#2} }
+          }
+      }
+    \cs_gset:Npn \__text_codepoint_process:nN #1#2 { #1 {#2} }
+    \prg_set_conditional:Npnn \__text_codepoint_compare:nNn #1#2#3 { TF , p }
+      {
+        \int_compare:nNnTF {`#1} #2 {#3}
+          \prg_return_true: \prg_return_false:
+      }
+    \cs_gset:Npn \__text_codepoint_from_chars:Nw #1 {`#1}
+    \cs_gset:Npn \__text_change_case_catcode:nn #1#2 { \__text_char_catcode:N #1 }
+    \cs_gset:Npn \__codepoint_to_nfd:n #1
+      { \__codepoint_to_nfd:nn {#1} { \char_value_catcode:n {#1} } }
+    \cs_gset:Npn \__text_change_case_lower_sigma:nnnnN #1#2#3#4#5
+      {
+        \bool_lazy_or:nnTF
+          { \token_if_letter_p:N #5 }
+          {
+            \bool_lazy_and_p:nn
+              {
+                \bool_lazy_or_p:nn
+                  { \token_if_active_p:N #5 } { \token_if_other_p:N #5 }
+              }
+              { \int_compare_p:nNn {`#5} > { "80 } }
+          }
+          { \codepoint_generate:nn { "03C3 } { \__text_char_catcode:N #1 } }
+          { \codepoint_generate:nn { "03C2 } { \__text_char_catcode:N #1 } }
+        \__text_change_case_loop:nnnw {#2} {#3} {#4} #5
+      }
+  }
+\ExplSyntaxOff"#
+  );
+
   for name in [
     "physics2.sty",
     "phy-ab.sty",

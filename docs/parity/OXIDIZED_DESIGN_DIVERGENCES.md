@@ -8804,3 +8804,17 @@ also reads biblatex's field names (`journaltitle`, `location`, `urldate`, `title
 biblatex-apa-test 72.6 → 78.4 % recall). No existing golden carries these fields.
 
 **Guard**: `cluster_cli::whatsinout::biblatex_bib_fields_reach_the_reference_list`.
+
+### 287. quotchap's quotations are epigraphs where they are written (Perl: lost)
+
+quotchap typesets each `savequote` into a box that its redefined `\chapter` prints at the next
+chapter head (quotchap.sty:97-132). `\chapter` is locked in both engines
+(latex_constructs.pool.ltxml:557; sect04.rs), so that redefinition is ignored and the box is never
+printed: the quotations and their authors are silently lost (quotchap manual, recall 44 %).
+
+**Rust** (batch 56if, `latexml_contrib::quotchap_sty`): the package loads raw, then `savequote` is an
+`ltx:quote class='ltx_epigraph ltx_quotchap'` at its source position — just before the chapter it
+opens — and `\qauthor` its `ltx_epigraph_source` block (the epigraph binding's structure). The
+optional box width is read and dropped.
+
+**Guard**: `class_census::quotchap_savequote_epigraph`.

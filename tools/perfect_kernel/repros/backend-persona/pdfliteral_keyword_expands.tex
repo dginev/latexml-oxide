@@ -1,0 +1,14 @@
+% witness: arXiv 2605.21262 (480 errors), 2605.04642, 2605.10085 — cortex run 320 (56id, PDF output):
+%          accsupp's pdftex driver, selected once \ifpdf is true, writes
+%          \pdfliteral\ACCSUPP@pdfliteral{\ACCSUPP@span BDC} with the keyword `page` behind a macro
+%          (accsupp.sty:193, accsupp-pdftex.def)
+% oracle:  pdflatex 0 errors; X
+% engines: rust (56id) = 2× "Expected opening '{'" (the spec keyword matched unexpanded, Perl alike:
+%          pdfTeX.pool.ltxml:199); pdfTeX's scan_keyword expands
+% expect:  0 errors; <p>XY</p> (also the `shipout` keyword and a \relax filler before the text)
+% status:  RED (56id) -> GREEN (56if)
+\documentclass{article}
+\usepackage{accsupp}
+\begin{document}
+\BeginAccSupp{method=hex,unicode,ActualText=2983}X\EndAccSupp{}\pdfliteral shipout direct \relax {0 g}Y
+\end{document}
