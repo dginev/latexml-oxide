@@ -1,0 +1,13 @@
+% witness: 765 KOMA-Script manuals, sweep #121: "Package typearea Warning: Bad type area settings!"
+%          (typearea.sty:1252 measures its good width with \normalsize at 10 pt, not scrsize11pt.clo's
+%          10.95 pt, since \@setfontsize never reached the font)
+% oracle:  pdflatex 0 errors, no typearea warning; \large = 12 pt and \small = 10 pt of a 10.95 pt body
+% engines: rust (56ig) = the typearea warning, and KOMA's \large/\small sizes lost; SHARED with Perl
+% expect:  0 errors, no "Bad type area settings"; <p>Body <text fontsize="110%">L</text> and
+%          <text fontsize="91%">s</text>.</p> (the class's \normalsize is the nominal size: body
+%          text carries no size); KOMA's two \@sect/\@startsection identity warnings remain (LEDGER 56ig)
+% status:  RED (56ig) -> GREEN (56ih); convert with [rawstyles,rawclasses]
+\documentclass{scrartcl}
+\begin{document}
+Body {\large L} and {\small s}.
+\end{document}

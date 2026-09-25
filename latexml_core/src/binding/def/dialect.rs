@@ -444,10 +444,28 @@ pub fn def_primitive(
         && chosen_font.shape.is_none();
       // Perf: capture Rc<Font> directly; closure borrows through it.
       // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
+      // `\f@size` follows the switch as well: `\@setfontsize` goes on to
+      // `\fontsize{#2}{#3}`, which records the size there (latex.ltx:12587).
+      // A later `\fontsize{\f@size}{…}\selectfont` (line spacing) then keeps
+      // the switched size (OXIDIZED_DESIGN_DIVERGENCES #288).
+      let points = chosen_font
+        .size
+        .filter(|_| is_size_switch)
+        .map(format_points);
       let merge_font_closure = before_digest_simple!({
         merge_font_ref(&chosen_font);
         if is_size_switch {
           let_i(&T_CS!("\\@currsize"), &cs, None);
+        }
+        if let Some(ref points) = points {
+          def_macro(
+            T_CS!("\\f@size"),
+            None,
+            Some(ExpansionBody::Tokens(mouth::tokenize_internal(
+              TeXString::assembled(points.clone()),
+            ))),
+            None,
+          )?;
         }
       });
       before_digest_env.push(merge_font_closure);
@@ -1947,4 +1965,12 @@ pub fn allocate_register(rtype: &str, cs: &str) -> Result<Option<String>> {
     );
     Ok(None)
   }
+}
+
+/// A font size in points as LaTeX writes `\f@size`: `12`, `14.4`, `10.95`
+/// (`\strip@pt`, latex.ltx:12587).
+fn format_points(points: f64) -> String {
+  let text = format!("{points:.2}");
+  let text = text.trim_end_matches('0').trim_end_matches('.');
+  text.to_string()
 }

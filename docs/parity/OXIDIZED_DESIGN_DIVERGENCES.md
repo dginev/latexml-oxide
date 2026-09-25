@@ -8818,3 +8818,38 @@ opens — and `\qauthor` its `ltx_epigraph_source` block (the epigraph binding's
 optional box width is read and dropped.
 
 **Guard**: `class_census::quotchap_savequote_epigraph`.
+
+### 288. NFSS size state: `\fontsize`, `\selectfont` and `\f@size` carry the font size (Perl: fixed at 10)
+
+Perl's `\fontsize{}{}` swallows its arguments and its `\f@size` is a constant `10`
+(latex_constructs.pool.ltxml:5167, :5620); `\selectfont` merges family, series and shape only. So a
+document's `{\fontsize{24}{28}\selectfont …}` keeps no size, `\f@size` reads 10 after `\large`,
+and a raw class whose size commands run `\@setfontsize` (the `.clo` files: size11.clo,
+KOMA's scrsize11pt.clo) never changes the text size. typearea then measures its good text width
+at 10 pt instead of 10.95 pt and warns "Bad type area settings!" (765 KOMA-Script manuals, sweep
+#121). Perl's `\baselinestretch` is the kernel's macro `1` (L1050); ours was a register.
+
+**Rust** (batch 56ih): the kernel's mechanism, latex.ltx:10527-10528, 12585-12601 and 14103-14107.
+- `\fontsize` is the kernel's, and `\set@fontsize` records `\f@size`, `\f@baselineskip` and
+  `\f@linespread` and arms `\size@update`.
+- The next `\selectfont` runs the update once: `\baselineskip`, `\strutbox`, and the current font
+  takes `\f@size` points (`\lx@fontsize@merge`, the size half of `\selectfont`'s font choice).
+- A `\selectfont` with no pending update (`\bfseries` after `\large`) leaves the size alone, as the
+  kernel's deferral does. The update disarms itself before its `\hbox`, not after, so it cannot
+  re-enter.
+- `\@setfontsize` runs `\fontsize{#2}{#3}\selectfont` inside its `\@typeset@protect` guard.
+- The class bindings' size switches (`font => {size => …}`) also define `\f@size`.
+- A preamble `\@setfontsize\normalsize…` sets `NOMINAL_FONT_SIZE`, as a0poster's binding does, so an
+  11pt raw class's body text carries no `fontsize` and `\large`/`\small` read 110 %/91 %.
+- `\baselinestretch` is a macro again.
+- `\check@mathfonts` is the size half of the kernel's `\glb@settings` (Perl's is a no-op):
+  `\tf@size`, `\sf@size` and `\ssf@size` for `\f@size`, from fontmath.ltx's table or
+  `\calculate@math@sizes`. It runs at load and after each size update; the kernel runs it at math
+  entry. Both come with the dump; without one (`LATEXML_NODUMP`) they, `\ifmath@fonts` and the
+  script ratios are defined from latex.ltx (:10467, :10472-10489, :10742-10754). Needed once `\fontsize` reads its arguments: `\@textsuperscript` and the logos'
+  `\fontsize\sf@size…` (latex.ltx:17643, :10076) met an undefined `\sf@size` (program-doc,
+  uhrzeit-doc, memman in the A/B).
+
+The binding classes still ignore the `10pt`/`11pt`/`12pt` option (Perl too).
+
+**Guards**: `class_census::{fontsize_selectfont_size_state, raw_class_normalsize_nominal}`.

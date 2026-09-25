@@ -865,6 +865,36 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
+  // The size half of `\selectfont`'s font choice (latex.ltx:12576-12578,
+  // `\curr@fontshape/\f@size`), run from `\set@fontsize`'s `\size@update`
+  // (sect13.rs; OXIDIZED_DESIGN_DIVERGENCES #288): the current font takes
+  // `\f@size` points.
+  DefPrimitive!("\\lx@fontsize@merge", {
+    let size = Expand!(T_CS!("\\f@size")).to_string();
+    if let Ok(points) = size.trim().parse::<f64>()
+      && points > 0.0
+    {
+      MergeFont!(size => points);
+    }
+  });
+
+  // A class's `\normalsize` is its body size: `\@setfontsize\normalsize…` run
+  // in the preamble (size11.clo, KOMA's scrsize11pt.clo) makes that size the
+  // nominal one that output font sizes are measured against, as a0poster's
+  // binding does with `NOMINAL_FONT_SIZE` (a0poster_cls.rs). Without it every
+  // paragraph of an 11pt raw class read `fontsize="110%"` once `\fontsize`
+  // took effect (OXIDIZED_DESIGN_DIVERGENCES #288).
+  DefPrimitive!("\\lx@nominal@fontsize{}", sub[(size_cs)] {
+    if lookup_bool("inPreamble") && size_cs.to_string().trim() == "\\normalsize" {
+      let size = Expand!(T_CS!("\\f@size")).to_string();
+      if let Ok(points) = size.trim().parse::<f64>()
+        && points > 0.0
+      {
+        AssignValue!("NOMINAL_FONT_SIZE", Float(points));
+      }
+    }
+  });
+
   // `\ClassNote`/`\PackageNote` (latex.ltx:8897-8912) are infos that the
   // kernel shows on the terminal: their text reads "Class/Package <name>
   // Info:", and they go through `\GenericWarning` only so that TeX prints them

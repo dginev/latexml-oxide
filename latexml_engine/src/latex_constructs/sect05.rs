@@ -825,7 +825,12 @@ pub(crate) fn load() -> Result<()> {
   DefRegister!("\\marginparsep"    => Dimension::new(0));
   DefRegister!("\\columnwidth"     => Dimension!("6in"));
   DefRegister!("\\linewidth"       => Dimension!("6in"));
-  DefRegister!("\\baselinestretch" => Dimension::new(0));
+  // Perl L1050 `DefMacro('\baselinestretch' => '1')`, the kernel's
+  // `\def\baselinestretch{1}` (latex.ltx:12619). A register here made
+  // `\set@fontsize`'s `\edef\f@linespread{\baselinestretch}` keep the register
+  // token, and its `\let\baselinestretch\f@linespread` then left a macro that
+  // expands to itself (OXIDIZED_DESIGN_DIVERGENCES #288).
+  DefMacro!("\\baselinestretch", "1");
   // \columnsep / \columnseprule / \mathindent registers live in
   // `latex_constructs_rust_only.rs` section 8 (Perl
   // `latex_base.pool.ltxml` L309-311).

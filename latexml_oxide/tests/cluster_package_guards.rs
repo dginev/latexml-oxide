@@ -25756,6 +25756,51 @@ mod class_census {
     assert!(xml.contains("<p>ABCDEFG</p>"), "{xml}");
   }
 
+  /// NFSS size state: `\fontsize{…}{…}\selectfont` sizes the text, `\f@size`
+  /// follows the size switches, and a `\selectfont` with no pending
+  /// `\fontsize` (`\bfseries`) keeps the current size.
+  #[test]
+  fn fontsize_selectfont_size_state() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/fonts-nfss/fontsize_selectfont_size_state.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(
+        r#"<p><text fontsize="120%">[12]</text> <text fontsize="240%">[24]</text> <text font="bold" fontsize="120%">c</text></p>"#
+      ),
+      "{xml}"
+    );
+  }
+
+  /// A raw class's `\normalsize` (scrsize11pt.clo through `\@setfontsize`)
+  /// sizes the text and is the nominal size: body text carries no size,
+  /// `\large`/`\small` are relative to 10.95 pt, and typearea's good-width
+  /// measure no longer warns "Bad type area settings!".
+  #[test]
+  fn raw_class_normalsize_nominal() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/fonts-nfss/raw_class_normalsize_nominal.tex");
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert!(!stderr.contains("Bad type area settings"), "{stderr}");
+    // Only KOMA's two sectioning-identity warnings may remain (LEDGER 56ig).
+    let other_warnings = stderr
+      .lines()
+      .filter(|l| l.contains("Warning:"))
+      .filter(|l| !l.contains("has been") && !l.contains("Unexpected definition of"))
+      .count();
+    assert_eq!(other_warnings, 0, "{stderr}");
+    assert!(
+      xml.contains(
+        r#"<p>Body <text fontsize="110%">L</text> and <text fontsize="91%">s</text>.</p>"#
+      ),
+      "{xml}"
+    );
+  }
+
   /// `\PackageNote`/`\ClassNote` are infos (their text reads "Info:"), logged
   /// at Info, not counted as warnings (typearea's classic-DIV note).
   #[test]

@@ -996,6 +996,14 @@ pub(crate) fn load() -> Result<()> {
       let message = s!("Unrecognized font shape {:?}.", shape);
       Info!("unexpected", shape, message);
     }
+    // latex.ltx:12581: `\selectfont` ends by running the size update a
+    // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
+    // #288). It is read next from the input, in this same group, as the
+    // kernel's macro would have it.
+    let update = T_CS!("\\size@update");
+    if lookup_definition(&update)?.is_some() && !update.defined_as(&TOKEN_RELAX) {
+      unread_one(update);
+    }
     Ok(Vec::new())
   });
 
@@ -1808,8 +1816,107 @@ pub(crate) fn load() -> Result<()> {
   // @-internal safety filter rejects public-CS macros, so public
   // kernel CSes like `\fontsize` must live in always-loaded
   // `_constructs.rs`).
-  def_macro_noop("\\check@mathfonts")?;
-  def_macro_noop("\\fontsize{}{}")?;
+  // NFSS size state (OXIDIZED_DESIGN_DIVERGENCES #288; Perl's `\fontsize`
+  // swallows its arguments, `\f@size` is a constant `10`): `\fontsize` is the
+  // kernel's (latex.ltx:10527-10528), and `\set@fontsize` (latex.ltx:12585-
+  // 12601) records `\f@size`, `\f@baselineskip` and `\f@linespread` and arms
+  // `\size@update`, which the next `\selectfont` runs once. The update also
+  // merges `\f@size` into the current font (`\lx@fontsize@merge`), the size
+  // half of `\selectfont`'s font choice (latex.ltx:12576-12578): a document's
+  // `{\fontsize{24}{28}\selectfont …}` kept no size, and a raw class's
+  // `\normalsize` (scrsize11pt.clo, `\@setfontsize\normalsize\@xipt{13.6}`)
+  // left the text at 10 pt, so typearea's good-width measure warned "Bad type
+  // area settings!" in 765 KOMA-Script manuals (sweep #121). A `\selectfont`
+  // with no pending update (`\bfseries` after `\large`) leaves the size alone,
+  // as the kernel's deferral does. The update disarms itself first (the
+  // kernel does it last), so a `\selectfont` met inside its `\hbox` cannot
+  // run it again. The class bindings' size switches keep `\f@size` in step
+  // (binding/def/dialect.rs).
+  TeX!(
+    r"\protected\def\fontsize#1#2{\set@fontsize\baselinestretch{#1}{#2}}%
+\def\set@fontsize#1#2#3{%
+  \@defaultunits\@tempdimb#2pt\relax\@nnil
+  \edef\f@size{\strip@pt\@tempdimb}%
+  \@defaultunits\@tempskipa#3pt\relax\@nnil
+  \edef\f@baselineskip{\the\@tempskipa}%
+  \edef\f@linespread{#1}%
+  \let\baselinestretch\f@linespread
+  \def\size@update{%
+    \let\size@update\relax
+    \lx@fontsize@merge
+    \check@mathfonts
+    \baselineskip\f@baselineskip\relax
+    \baselineskip\f@linespread\baselineskip
+    \normalbaselineskip\baselineskip
+    \setbox\strutbox\hbox{\vrule\@height.7\baselineskip\@depth.3\baselineskip\@width\z@}}}%
+\let\size@update\relax"
+  );
+  // `\check@mathfonts` (latex.ltx:12622-12629; Perl's is a no-op) is the size
+  // half of the kernel's `\glb@settings` (:12603-12618): `\tf@size`,
+  // `\sf@size` and `\ssf@size` for `\f@size`, from fontmath.ltx's table
+  // (:75-86, replayed through the kernel's `\@DeclareMathSizes`, as our
+  // `\DeclareMathSizes` is Perl's no-op) or from `\calculate@math@sizes`. The
+  // math-font loading half has no counterpart here. The kernel runs it at
+  // every math entry (`\frozen@everymath`, :10568-10579); here it runs at load
+  // and after each size update, so `\@textsuperscript`'s and the logos'
+  // `\fontsize\sf@size…` (:17643, :10076) read a defined size, as they did
+  // while `\fontsize` swallowed its arguments (\hologo{AmSLaTeX} in
+  // program-doc, `\uhr` in uhrzeit-doc; OXIDIZED_DESIGN_DIVERGENCES #288).
+  // The kernel's math-size machinery comes with the dump (latex.ltx raw);
+  // without one (`LATEXML_NODUMP`) the base pool lacks it, so it is defined
+  // here from latex.ltx:10467, :10472-10489 and :10742-10754.
+  if lookup_definition(&T_CS!("\\@DeclareMathSizes"))?.is_none() {
+    TeX!(
+      r"\expandafter\newif\csname ifmath@fonts\endcsname \math@fontstrue
+\expandafter\ifx\csname @font@info\endcsname\relax\def\@font@info#1{}\fi
+\def\@DeclareMathSizes #1#2#3#4#5{%
+  \@defaultunits\dimen@ #2pt\relax\@nnil
+  \if $#3$%
+    \expandafter\let\csname S@\strip@pt\dimen@\endcsname\math@fontsfalse
+  \else
+    \@defaultunits\dimen@ii #3pt\relax\@nnil
+    \@defaultunits\@tempdima #4pt\relax\@nnil
+    \@defaultunits\@tempdimb #5pt\relax\@nnil
+    \toks@{#1}%
+    \expandafter\xdef\csname S@\strip@pt\dimen@\endcsname{%
+      \gdef\noexpand\tf@size{\strip@pt\dimen@ii}%
+      \gdef\noexpand\sf@size{\strip@pt\@tempdima}%
+      \gdef\noexpand\ssf@size{\strip@pt\@tempdimb}%
+      \the\toks@}%
+  \fi}%
+\gdef\calculate@math@sizes{%
+  \@font@info{Calculating\space math\space sizes\space for\space size\space <\f@size>}%
+  \dimen@\f@size \p@
+  \@tempdimb \defaultscriptratio \dimen@
+  \dimen@ \defaultscriptscriptratio \dimen@
+  \expandafter\xdef\csname S@\f@size\endcsname{%
+    \gdef\noexpand\tf@size{\f@size}%
+    \gdef\noexpand\sf@size{\strip@pt\@tempdimb}%
+    \gdef\noexpand\ssf@size{\strip@pt\dimen@}%
+    \noexpand\math@fontstrue}}%
+\def\defaultscriptratio{.7}%
+\def\defaultscriptscriptratio{.5}"
+    );
+  }
+  TeX!(
+    r"\@DeclareMathSizes{}{5}{5}{5}{5}%
+\@DeclareMathSizes{}{6}{6}{5}{5}%
+\@DeclareMathSizes{}{7}{7}{5}{5}%
+\@DeclareMathSizes{}{8}{8}{6}{5}%
+\@DeclareMathSizes{}{9}{9}{6}{5}%
+\@DeclareMathSizes{}{\@xpt}{\@xpt}{7}{5}%
+\@DeclareMathSizes{}{\@xipt}{\@xipt}{8}{6}%
+\@DeclareMathSizes{}{\@xiipt}{\@xiipt}{8}{6}%
+\@DeclareMathSizes{}{\@xivpt}{\@xivpt}{\@xpt}{7}%
+\@DeclareMathSizes{}{\@xviipt}{\@xviipt}{\@xiipt}{\@xpt}%
+\@DeclareMathSizes{}{\@xxpt}{\@xxpt}{\@xivpt}{\@xiipt}%
+\@DeclareMathSizes{}{\@xxvpt}{\@xxvpt}{\@xxpt}{\@xviipt}%
+\def\check@mathfonts{\ifx\glb@currsize\f@size\else
+  \expandafter\ifx\csname S@\f@size\endcsname\relax\calculate@math@sizes\fi
+  \csname S@\f@size\endcsname
+  \global\let\glb@currsize\f@size\fi}%
+\check@mathfonts"
+  );
   // latex.ltx:14103-14107 guards the `\let` with `\ifx\protect\@typeset@protect`
   // so `\@setfontsize` is a no-op inside `\protected@edef`; unguarded (Perl
   // latex_constructs.pool:5622 identical, OOMs same-host) a raw class whose
@@ -1826,9 +1933,14 @@ pub(crate) fn load() -> Result<()> {
   // scrsize11pt.clo:99), and a bare `\baselineskip#3` warned "Illegal unit
   // of measure" once per size switch — surfaced by K11 typesetting a raw
   // class's `\@maketitle` (sweep #94: injpsj2 +6, TUDaPhD +3, BFHThesis +2).
+  // Now `\fontsize{#2}{#3}\selectfont`, as latex.ltx:14107 has it, inside the
+  // same guard (the `\set@fontsize` update above does the `\baselineskip` and
+  // `\strutbox` work, and reads `#3` through `\@defaultunits`). A preamble
+  // `\normalsize` also sets the nominal size (`\lx@nominal@fontsize`,
+  // latex_constructs_rust_only.rs).
   DefMacro!(
     "\\@setfontsize{}{}{}",
-    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\@defaultunits\\baselineskip#3pt\\relax\\@nnil\\setbox\\strutbox\\hbox{\\vrule\\@height.7\\baselineskip\\@depth.3\\baselineskip\\@width\\z@}\\fi"
+    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fontsize{#2}{#3}\\lx@nominal@fontsize{#1}\\selectfont\\fi"
   );
   // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
   // `\begin{document}` has run `\normalsize` (whose class definition routes

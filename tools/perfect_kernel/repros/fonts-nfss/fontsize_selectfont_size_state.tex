@@ -1,0 +1,14 @@
+% witness: NFSS size state (sweep #121 root-cause 2026-09-25): a document's
+%          `{\fontsize{24}{28}\selectfont …}` kept no size and `\f@size` stayed `10` after `\large`
+% oracle:  pdflatex 0 errors; [12] at \large, [24] at \fontsize{24}{28}, c bold at \large
+% engines: rust (56ig) = no size on the \fontsize text, `[10]` twice; Perl identical (`\fontsize`
+%          swallows its arguments, `\f@size` is a constant, latex_constructs.pool.ltxml:5167/5620)
+% expect:  0 errors, 0 warnings;
+%          <p><text fontsize="120%">[12]</text> <text fontsize="240%">[24]</text> <text font="bold" fontsize="120%">c</text></p>
+%          (a \selectfont with no pending \fontsize — \bfseries — keeps the \large size)
+% status:  RED (56ig) -> GREEN (56ih)
+\documentclass{article}
+\makeatletter
+\begin{document}
+{\large [\f@size]} {\fontsize{24}{28}\selectfont [\f@size]} {\large\bfseries c}
+\end{document}
