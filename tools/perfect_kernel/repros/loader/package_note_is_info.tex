@@ -1,0 +1,17 @@
+% witness: TeX Live manuals with typearea's classic DIV (68 in sweep #121; typearea.sty:1416
+%          `\@ifundefined{PackageNote}{\PackageInfo}{\PackageNote}{typearea}{DIV calculation for
+%          classic typearea.}`), e.g. \documentclass[DIV=classic]{scrartcl}
+% oracle:  pdflatex 0 errors, 0 warnings; the notes are "Package demo Info: …" and
+%          "Class demo Info: …" lines
+% engines: rust (56if) = two warnings: the kernel's notes (latex.ltx:8897-8912) go through
+%          \GenericWarning, which our logger ranks as a warning; Perl defines neither macro
+% expect:  0 errors, 0 warnings; both notes logged at Info
+% status:  RED (56if) -> GREEN (56ig)
+\documentclass{article}
+\makeatletter
+\PackageNote{demo}{a package note}
+\ClassNote{demo}{a class note}
+\makeatother
+\begin{document}
+Text.
+\end{document}

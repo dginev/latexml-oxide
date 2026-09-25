@@ -66,6 +66,18 @@ planned at the end); a schema win counts only if content is preserved — run
 `tools/perfect_kernel/content_diff.py old.xml new.xml` on every witness and
 `pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
 
+**State 2026-09-25 (batches 56hz–56ig; LEDGER rows of those dates):** class census 492 / 501 usable
+classes clean (98.2 %, `clscensus4`); **K6 landed (56id, user ruling): PDF output mode by default**,
+`\ifpdf` follows `\pdfoutput`, DVI only when the source ships EPS/PS (DIVERGENCES #285; arXiv 2605
+A/B on 201 `\ifpdf` papers: 0 content losses). Sweep #121 (56ie): fully done 1848 (s120 1838),
+recall mean 94.47, 61 manuals up, 0 down; its regressions are fixed (56if/56ig) or pdflatex-faithful
+in PDF mode. l3text now runs on code points (expl3's Unicode-engine codepoint layer, KPE #243).
+New open leads: **NFSS size state** (`\f@size` constant 10, `\fontsize` a no-op — SHARED; typearea's
+"Bad type area settings!" in 765 manuals and lost `\fontsize` sizes); a K6 refinement ruling (DVI cue
+from a `dvips`/`dvipdfmx` class option: 4 manuals, 2 arXiv papers — pdflatex fails them alike);
+nlctuserguide's bib2gls-deferred glossary content (glossaries-extra-manual 50.9 % recall); KOMA's
+`\@sect`/`\@startsection` identity warnings are expected (LEDGER 56ig).
+
 **Measured:** s110 229 → s111 222 → s112 211 → **s113 148 invalid (2219/2367, 93.7 %)**, 63 newly
 valid, 0 newly invalid, 0 tally regressions, recall of record unchanged (median 98.6, mean 93.72,
 no doc down > 0.5). Landed this session: 56gd (auto-opened `item` for a block / same-kind list in

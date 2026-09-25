@@ -1,0 +1,17 @@
+% witness: tuda-ci DEMO-TUDaLetter/PhD/Pub/Thesis (sweep #121, PDF output by default): \DocumentMetadata
+%          with pdfstandard=a-2b; l3backend-pdftex.def:274-302 writes the PDF/A colour profile as
+%          \pdfobj useobjnum <n> stream attr {…} file {…}. Minimal document witness:
+%          \RequirePackage{pdfmanagement}\SetKeys[document/metadata]{pdfstandard=a-2b}
+%          \documentclass{article}\begin{document}Hello\end{document}
+% oracle:  pdflatex 0 errors; ABCDEFG
+% engines: rust (56if) = 2× "Expected opening '{'": the object/annot spec reader took useobjnum and
+%          stream as alternatives and knew no `file`; Perl's reader has the same elsif
+%          (pdfTeX.pool.ltxml:156-171)
+% expect:  0 errors, 0 warnings; <p>ABCDEFG</p> (every object/annot type spec form of the pdftex
+%          manual's grammar, pdftex.tex:4224-4246)
+% status:  RED (56if) -> GREEN (56ig)
+\documentclass{article}
+\begin{document}
+A\pdfobj useobjnum 1 stream attr {/N 3} file {test.icc}B\pdfobj stream {data}C\pdfobj reserveobjnum\relax
+D\pdfobj {<< /Type /X >>}E\pdfannot width 1cm {/Subtype /Text}F\pdfobj file {test.icc}G
+\end{document}

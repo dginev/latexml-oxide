@@ -865,6 +865,21 @@ LoadDefinitions!({
     let pool = lookup_definition(&cs)?.is_some_and(|prev| prev.get_origin().is_latexml_owned());
     Ok(if pool { if_tks } else { else_tks })
   });
+  // `\ClassNote`/`\PackageNote` (latex.ltx:8897-8912) are infos that the
+  // kernel shows on the terminal: their text reads "Class/Package <name>
+  // Info:", and they go through `\GenericWarning` only so that TeX prints them
+  // there. Our logger ranks a message by the primitive it goes through, so a
+  // note counted as a warning: typearea's "DIV calculation for classic
+  // typearea" (typearea.sty:1416, `\@ifundefined{PackageNote}{\PackageInfo}
+  // {\PackageNote}`) in 68 TeX Live manuals, sweep #121. Perl defines neither,
+  // so that fallback reached `\PackageInfo` there. The NoLine forms are the
+  // kernel's, restated for the no-dump branch, whose base lacks `\ClassNoteNoLine`.
+  RawTeX!(
+    r"\def\ClassNote#1#2{\GenericInfo{(#1) \space\space\@spaces\@spaces}{Class #1 Info: #2}}
+\def\PackageNote#1#2{\GenericInfo{(#1) \@spaces\@spaces\@spaces}{Package #1 Info: #2}}
+\def\ClassNoteNoLine#1#2{\ClassNote{#1}{#2\@gobble}}
+\def\PackageNoteNoLine#1#2{\PackageNote{#1}{#2\@gobble}}"
+  );
   // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
   // guard, then blank auto-select in PDF output or `dvips` in DVI output.
   // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`

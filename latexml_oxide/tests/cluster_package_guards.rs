@@ -25743,6 +25743,36 @@ mod class_census {
     assert!(xml.contains("<p>[ok]</p>"), "{xml}");
   }
 
+  /// `\pdfobj`/`\pdfannot` read every type spec form of the pdftex grammar,
+  /// keywords in sequence: `useobjnum <n> stream attr {…} file {…}` is
+  /// pdfmanagement's PDF/A colour profile (tuda-ci DEMOs).
+  #[test]
+  fn pdfobj_stream_file_spec() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/backend-persona/pdfobj_stream_file_spec.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>ABCDEFG</p>"), "{xml}");
+  }
+
+  /// `\PackageNote`/`\ClassNote` are infos (their text reads "Info:"), logged
+  /// at Info, not counted as warnings (typearea's classic-DIV note).
+  #[test]
+  fn package_note_is_info() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/loader/package_note_is_info.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let plain = stderr.replace("\x1b[0m", "");
+    assert!(
+      plain.contains("Package demo Info: a package note"),
+      "{stderr}"
+    );
+    assert!(plain.contains("Class demo Info: a class note"), "{stderr}");
+    assert!(xml.contains("<p>Text.</p>"), "{xml}");
+  }
+
   /// The K6 ruling (2026-09-24): pdflatex's `\pdfoutput=1` is the default
   /// output mode and `\ifpdf` follows `\pdfoutput` (iftex.sty:290-291); a
   /// document may still select DVI itself, and XeTeX has no PDF mode test.

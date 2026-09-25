@@ -498,9 +498,16 @@ LoadDefinitions!({
       } }), optional => true);
 
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
-  // Reads and discards the pdfTeX annotation-spec prefix:
-  //   reserveobjnum  | useobjnum <n>  | stream [attr <text>]
-  // then the `annot type spec`'s optional `rule spec` — `(width|height|depth)
+  // Reads and discards pdfTeX's object/annotation type spec (pdftex manual
+  // syntax, pdftex.tex:4224-4246):
+  //   reserveobjnum | [useobjnum <n>] [stream [attr <text>]] [file] <text>
+  // The keywords follow one another: l3backend-pdftex.def:274-302 writes
+  // `\pdfobj useobjnum <n> stream attr {…} file {…}` for pdfmanagement's
+  // PDF/A colour profile, which met `stream` where it wanted `{` when the
+  // reader took `useobjnum` and `stream` as alternatives and knew no `file`
+  // (tuda-ci DEMOs ×4, sweep #121, once PDF output was the default; Perl's
+  // reader, pdfTeX.pool:156-171, has the same `elsif`). Then
+  // the `annot type spec`'s optional `rule spec` — `(width|height|depth)
   // dimension [rule spec]`, the same loop as `RuleSpecification` (tex_box.rs)
   // — which Perl pdfTeX.pool:156-171 omits: pdfmarginpar.sty:142
   // `\expandafter\pdfannot\pdfmarginpar@rulespec{…}` with a `width=`/`height=`
@@ -510,17 +517,19 @@ LoadDefinitions!({
   DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
     if read_keyword(&["reserveobjnum"])?.is_some() {
       return Ok(ArgWrap::None);
-    } else if read_keyword(&["useobjnum"])?.is_some() {
+    }
+    if read_keyword(&["useobjnum"])?.is_some() {
       let _ = read_number()?;
-    } else if read_keyword(&["stream"])?.is_some()
-      && read_keyword(&["attr"])?.is_some() {
-        skip_spaces()?;
-        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
-      }
+    }
+    if read_keyword(&["stream"])?.is_some() && read_keyword(&["attr"])?.is_some() {
+      skip_filler()?;
+      let _ = read_balanced(ExpansionLevel::Off, false, true)?;
+    }
+    let _ = read_keyword(&["file"])?;
     while read_keyword(&["width", "height", "depth"])?.is_some() {
       let _ = read_dimension()?;
     }
-    skip_spaces()?;
+    skip_filler()?;
     let _ = read_balanced(ExpansionLevel::Off, false, true)?;
   }), optional => true);
 

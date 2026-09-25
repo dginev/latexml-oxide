@@ -6615,3 +6615,16 @@ gave 480 "Expected opening '{'" errors, 2605.04642 and 2605.10085 a few. Trigger
 `\def\mm{page}\pdfliteral\mm{x}`. **Rust (FIXED, batch 56if):** the keyword is read with
 `read_keyword` (expanding). Guard `class_census::pdfliteral_keyword_expands`.
 
+
+## 247. `\pdfobj` object spec: `useobjnum` and `stream` taken as alternatives, `file` unknown (FIXED in Rust)
+
+pdfTeX's object type spec is `reserveobjnum | [useobjnum <n>] [stream [attr <text>]] <object contents>`,
+with `<object contents>` = `file <text>` or `<text>` (pdftex manual, pdftex.tex:4224-4246). Perl's
+`OpenAnnotSpecification` reader (pdfTeX.pool.ltxml:156-171) reads `useobjnum` and `stream` in one
+`if/elsif` chain and never reads `file`, so `\pdfobj useobjnum 1 stream attr {/N 3} file {x.icc}`
+meets `stream` where it wants `{`. l3backend-pdftex.def:274-302 writes exactly that for
+pdfmanagement's PDF/A colour profile; the tuda-ci DEMOs (pdfstandard=a-2b) hit it once PDF output
+became the default (56id, sweep #121). Trigger:
+`\RequirePackage{pdfmanagement}\SetKeys[document/metadata]{pdfstandard=a-2b}\documentclass{article}\begin{document}Hello\end{document}`
+(pdflatex: 0 errors). **Rust (FIXED, batch 56ig):** the keywords are read in sequence and `file` is
+consumed (pdftex.rs `OpenAnnotSpecification`). Guard `class_census::pdfobj_stream_file_spec`.
