@@ -10,7 +10,7 @@
 % engines: rust=<text fontsize="90%">“defbeamertemplate–footline˝</text>;
 %          Perl the same (SHARED)
 % expect:  <text font="typewriter" fontsize="90%">\defbeamertemplate{footline}</text>
-% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+% status:  RED -> GREEN (W8, guard nfss_font_state)
 \documentclass{ltxdoc}
 \begin{document}
 {\MacroFont \string\defbeamertemplate\string{footline\string}}

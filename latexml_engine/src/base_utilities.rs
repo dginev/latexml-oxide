@@ -3982,8 +3982,17 @@ pub fn reenter_text_mode(vertical_mode: bool) {
 /// box. The assignments are group-local, so use this inside a group (or a
 /// `bounded => 1` definition), otherwise the reset outlives the construct that
 /// wanted it.
+///
+/// The NFSS codes follow, as `\reset@font` (`\normalfont`, latex.ltx:14122)
+/// sets them where LaTeX resets a note's font (`\@footnotetext`,
+/// latex.ltx:17658-17659 `\reset@font\footnotesize`): else a size switch in
+/// the note, which ends in `\selectfont`, re-selected the surrounding family,
+/// series or shape (`\textit{A\footnote{\footnotesize note}}` came out
+/// italic).
 pub fn neutralize_font() {
-  assign_value("font", Font::text_default(), Some(Scope::Local));
+  let font = Font::text_default();
+  sync_nfss_font_codes(&font);
+  assign_value("font", font, Some(Scope::Local));
   assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 

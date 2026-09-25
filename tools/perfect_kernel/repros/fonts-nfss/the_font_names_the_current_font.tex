@@ -7,7 +7,7 @@
 % oracle:  pdflatex \foo{x} in CMTT10
 % engines: rust=<p>“foo–x˝</p>; Perl identical (SHARED)
 % expect:  <text font="typewriter">\foo{x}</text>
-% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+% status:  RED -> GREEN (W8, guard nfss_font_state)
 \documentclass{article}
 \begin{document}
 {\ttfamily\global\expandafter\let\expandafter\myttf\the\font}

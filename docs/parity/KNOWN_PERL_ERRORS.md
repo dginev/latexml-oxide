@@ -6822,3 +6822,13 @@ definition that runs off a file's end is still the §338 runaway. Two Rust-only 
 mechanism went with it: over `\scantokens` the next token was expanded
 (`\xdef\z{\scantokens{abc}\bar}` gave `abcBAR`, pdflatex `abc\bar`), and `\endinput` inserted
 `\everyeof` (eTeX's `force_eof` does not, §362). Guards `noexpand_input_ends::*`.
+
+## 260. `\textnormal` in math sets `\f@family` to `cmtt` (FIXED in Rust)
+
+latex_constructs.pool.ltxml:5267 defines `\textnormal@math` with `\f@family` = `cmtt`, contradicting
+the serif font it selects:
+```latex
+$\textnormal{\selectfont x}$
+```
+Perl gives `<text class="ltx_markedasmath" font="typewriter">x</text>`; pdflatex prints x in cmr10.
+Rust (batch 56je) sets `cmr` (sect13.rs `\textnormal@math`). Guard `nfss_font_state::size_switch_reselects_named_families`.

@@ -444,28 +444,33 @@ pub fn def_primitive(
         && chosen_font.shape.is_none();
       // Perf: capture Rc<Font> directly; closure borrows through it.
       // Previously: `(*chosen_font).clone()` cloned the Font per invocation.
-      // `\f@size` follows the switch as well: `\@setfontsize` goes on to
-      // `\fontsize{#2}{#3}`, which records the size there (latex.ltx:12587).
-      // A later `\fontsize{\f@size}{…}\selectfont` (line spacing) then keeps
-      // the switched size (OXIDIZED_DESIGN_DIVERGENCES #288).
-      let points = chosen_font
-        .size
-        .filter(|_| is_size_switch)
-        .map(format_points);
+      // `\@setfontsize` goes on to `\fontsize{#2}{#3}\selectfont`. The merge
+      // records the size in `\f@size` (latex.ltx:12587; content.rs
+      // `merge_font_ref`), so a later `\fontsize{\f@size}{…}\selectfont`
+      // (line spacing) keeps the switched size (OXIDIZED_DESIGN_DIVERGENCES
+      // #288). The `\selectfont` puts the pending family, series and shape in
+      // force: doc.sty's `\MacroFont` (doc.sty:149-153) is `\fontfamily
+      // \ttdefault` … `\small` with no `\selectfont` of its own, so its
+      // macrocode came out roman (moloch, frankenstein, ftnxtra; Perl
+      // article.cls.ltxml:111 the same). It is read next, in this group, as
+      // whatever `\selectfont` means there — inside a pgf picture that is
+      // `\pgf@selectfont`, which returns to `\nullfont`
+      // (pgfcorescopes.code.tex:243, 309). In math the font in force is the
+      // math font, which `\selectfont` does not choose (`\@nomath` only
+      // warns there): math keeps it.
+      // A switch with parameters reads them after this step, so it would take
+      // the `\selectfont` as its argument; only the parameterless one reads it.
+      let ends_in_selectfont = is_size_switch && paramlist.is_none();
       let merge_font_closure = before_digest_simple!({
         merge_font_ref(&chosen_font);
         if is_size_switch {
           let_i(&T_CS!("\\@currsize"), &cs, None);
         }
-        if let Some(ref points) = points {
-          def_macro(
-            T_CS!("\\f@size"),
-            None,
-            Some(ExpansionBody::Tokens(mouth::tokenize_internal(
-              TeXString::assembled(points.clone()),
-            ))),
-            None,
-          )?;
+        if ends_in_selectfont && !lookup_bool_sym(pin!("IN_MATH")) {
+          let selectfont = T_CS!("\\selectfont");
+          if lookup_definition(&selectfont)?.is_some() {
+            gullet::unread_one(selectfont);
+          }
         }
       });
       before_digest_env.push(merge_font_closure);
@@ -1965,12 +1970,4 @@ pub fn allocate_register(rtype: &str, cs: &str) -> Result<Option<String>> {
     );
     Ok(None)
   }
-}
-
-/// A font size in points as LaTeX writes `\f@size`: `12`, `14.4`, `10.95`
-/// (`\strip@pt`, latex.ltx:12587).
-fn format_points(points: f64) -> String {
-  let text = format!("{points:.2}");
-  let text = text.trim_end_matches('0').trim_end_matches('.');
-  text.to_string()
 }

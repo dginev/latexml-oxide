@@ -299,15 +299,10 @@ LoadDefinitions!({
               None => Ok(Tokens!()),
             };
           } else if defn.get_cs_name() == "\\font" {
-            // HACK to get the \fontcmd that would have selected the current font (see FontDef)
-            match lookup_value("current_FontDef") {
-              Some(Stored::Token(t)) => {
-                return Ok(Tokens!(t));
-              },
-              _ => {
-                return Ok(Tokens!(T_CS!("\\lx@default@font")));
-              },
-            }
+            // Perl's HACK (TeX_Macro.pool.ltxml:272) answers the last `\font`
+            // identifier invoked, else `\lx@default@font`; TeX answers the
+            // current font's identifier (tex_fonts.rs `current_font_identifier`).
+            return Ok(Tokens!(crate::tex_fonts::current_font_identifier()?));
           } else {
             // Perl: elsif ($defn->isFontDef) { return $defn->getCS; }
             // Check if this is a font CS defined by \font (has fontinfo in state)

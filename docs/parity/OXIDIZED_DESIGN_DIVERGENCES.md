@@ -8859,7 +8859,8 @@ at 10 pt instead of 10.95 pt and warns "Bad type area settings!" (765 KOMA-Scrip
   kernel's deferral does. The update disarms itself before its `\hbox`, not after, so it cannot
   re-enter.
 - `\@setfontsize` runs `\fontsize{#2}{#3}\selectfont` inside its `\@typeset@protect` guard.
-- The class bindings' size switches (`font => {size => …}`) also define `\f@size`.
+- The class bindings' size switches (`font => {size => …}`) record `\f@size` through the font merge
+  (content.rs `merge_font_ref`, #309) and end in `\selectfont` (dialect.rs).
 - A preamble `\@setfontsize\normalsize…` sets `NOMINAL_FONT_SIZE`, as a0poster's binding does, so an
   11pt raw class's body text carries no `fontsize` and `\large`/`\small` read 110 %/91 %.
 - `\baselinestretch` is a macro again.
@@ -9381,3 +9382,35 @@ nodes). So `et al.` in a citation loses Perl's `ltx_bib_etal` wrapper. Perl's tr
 string "0" as false (a key, title or year suffix of "0") is not copied.
 
 **Guards**: `bibref_show::*` (6), `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
+
+### 309. NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10)
+
+Perl keeps LaTeX's NFSS codes (`\f@family`, `\f@series`, `\f@shape`) only where `\fontfamily` and
+its relatives write them, and its class bindings' size switches set the size alone
+(article.cls.ltxml:111; latex_constructs.pool.ltxml:5622). So doc.sty's `\MacroFont`
+(`\fontfamily\ttdefault … \small`, doc.sty:149-153), which relies on `\small`'s `\selectfont`
+(latex.ltx:14103-14107), never applied cmtt, and a later `\selectfont` reset a plain `\tt`/`\bf`
+to the stale codes: code printed `\ { }` through OT1 roman as “ – ˝. **Rust** (batch 56je, worker
+W8), each checked against pdflatex with `\typeout` probes:
+
+1. Every font merge writes the NFSS codes, locally and in text mode only (content.rs
+   `sync_nfss_font_state`, reverse maps in `common/font.rs`); a code already in force that names
+   the same font is kept (`pcr` survives `\ttfamily`). A raw `\font\x=cmtt10 \x` writes them too,
+   where TeX leaves them to NFSS.
+2. A class binding's size switch ends in `\selectfont`, pushed back into the input (dialect.rs), so
+   whatever `\selectfont` means there runs (pgf's `\nullfont` in a picture stays).
+3. `\the\font`, `\fontname\font` and `\fontdimen`/`\hyphenchar` of `\font` use the current
+   font's identifier (`current_font_identifier`, tex_fonts.rs), defined once as the kernel names it
+   (`\OT1/cmtt/m/n/10`), where Perl returns the last `\font` identifier or `\lx@default@font`
+   (TeX_Macro.pool.ltxml:272, TeX_Fonts.pool.ltxml:41-43). ltxdoc's `\oc@ttf` (ltxdoc.cls:136) and
+   short-math-guide's `\ttfont` print in typewriter.
+4. `\emph`'s `\f@shape` toggle hook (latex_constructs.pool.ltxml:414-416) is subsumed by (1); plain
+   `\em` (plain_base.pool.ltxml:604-609) and `neutralize_font` (notes, tags) go through the same
+   sync, the latter as `\reset@font` does (latex.ltx:14122, :17658-17659).
+
+Measured (worker W8): OT1 mis-glyphs in code, “ – ˝: moloch 690/554/554 → 11/0/0, achicago-bst
+102/671/665 → 45/2/0, short-math-guide 496/29/26 → 19/3/0, source2e 2761/534/397 → 281/89/0;
+typewriter runs up 3-15×; recall, errors and goldens unchanged. Left: `\fontname` names a scaled
+base font (`cmr10 at 14.4pt`, pdflatex `cmr12`); the default codes are fixed to cmr/cmss/cmtt/bx.
+
+**Guards**: `nfss_font_state::*` (9), `math_text_font_restore::*`.

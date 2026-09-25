@@ -1003,24 +1003,26 @@ pub(crate) fn load() -> Result<()> {
     let family = Expand!(T_CS!("\\f@family")).to_string();
     let series = Expand!(T_CS!("\\f@series")).to_string();
     let shape = Expand!(T_CS!("\\f@shape")).to_string();
+    // The merges take the codes as they are: they ARE the NFSS state
+    // (content.rs `merge_selected_font`).
     if let Some(sh) = font::lookup_font_family(&family) {
-      MergeFont!(sh.clone());
+      merge_selected_font(sh);
     } else if load_font_map(&family).is_some() {
       // Special case hack: Tentatively treat family as the encoding!
       // (typically "U" encoding)
-      MergeFont!(encoding => family);
+      merge_selected_font(&fontmap!(encoding => family));
     } else if !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
       let message = s!("Unrecognized font family {:?}.", family);
       Info!("unexpected", family, message);
     }
     if let Some(sh) = font::lookup_font_series(&series) {
-      MergeFont!(sh.clone());
+      merge_selected_font(sh);
     } else if !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
       let message = s!("Unrecognized font series {:?}.", series);
       Info!("unexpected", series, message);
     }
     if let Some(sh) = font::lookup_font_shape(&shape) {
-      MergeFont!(sh.clone());
+      merge_selected_font(sh);
     } else if !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
       let message = s!("Unrecognized font shape {:?}.", shape);
       Info!("unexpected", shape, message);
@@ -1073,10 +1075,14 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
     bounded      => true, font => { shape => "smallcaps" }, alias => "\\textsc",
     before_digest => { DefMacro!("\\f@shape", "sc"); });
+  // `\f@family` is `\normalfont`'s `\rmdefault` (latex.ltx `\textnormal`);
+  // Perl's `cmtt` (latex_constructs.pool.ltxml:5267) contradicts its own
+  // serif font and, now that a size switch re-selects `\f@family`
+  // (dialect.rs), would turn `\textnormal{\small x}` typewriter.
   DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode =>
   "text",   bounded => true, font => { family => "serif", series => "medium", shape => "upright"
   }, alias => "\\textnormal",   before_digest => {
-    DefMacro!("\\f@family", "cmtt");
+    DefMacro!("\\f@family", "cmr");
     DefMacro!("\\f@series", "m");
     DefMacro!("\\f@shape",  "n"); });
 

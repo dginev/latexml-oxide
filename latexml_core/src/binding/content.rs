@@ -12,7 +12,7 @@ use crate::{
     BindingSource, arena,
     arena::SymStr,
     error::{emit_error, *},
-    font::{Font, Fontmap},
+    font::{self, Font, Fontmap},
     model,
   },
   definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
@@ -3760,16 +3760,182 @@ pub fn select_relaxng_schema(schema: &str, namespaces: Option<HashMap<String, St
 /// (`AssignValue(font => LookupValue('font')->merge(@kv), 'local')`). Only the
 /// attributes `font` actually specifies are taken; the rest are inherited from
 /// the font in force. See [`merge_font_ref`] to merge without moving the font.
-pub fn merge_font(font: Font) {
-  let new_font = lookup_font().unwrap().merge_ref(&font);
-  assign_font(Rc::new(new_font), Some(Scope::Local));
-}
+///
+/// In text, NFSS's font state follows the merge (`sync_nfss_font_state`).
+pub fn merge_font(font: Font) { merge_font_ref(&font); }
 
 /// Like `merge_font` but borrows the font. Saves a clone when the caller
 /// has a shared reference (e.g. via Rc) to the font being merged.
 pub fn merge_font_ref(font: &Font) {
+  let current = lookup_font().unwrap();
+  let new_font = current.merge_ref(font);
+  sync_nfss_font_state(&current, font, &new_font);
+  assign_font(Rc::new(new_font), Some(Scope::Local));
+}
+
+/// Merge the font `\selectfont` chose from the NFSS codes (sect13.rs): those
+/// codes are the state already, so nothing is written back — a family whose
+/// table entry also carries a shape (`cmsltt`) must not overwrite the
+/// `\f@shape` the next step selects.
+pub fn merge_selected_font(font: &Font) {
   let new_font = lookup_font().unwrap().merge_ref(font);
   assign_font(Rc::new(new_font), Some(Scope::Local));
+}
+
+/// Name `font` in `\f@family`, `\f@series`, `\f@shape` and `\f@size`, every
+/// component as if selected: the NFSS half of a font reset that assigns the
+/// font directly (base_utilities.rs `neutralize_font`), as `\reset@font` —
+/// `\normalfont`, latex.ltx:14122 — does in `\@footnotetext`
+/// (latex.ltx:17658-17659 `\reset@font\footnotesize`).
+pub fn sync_nfss_font_codes(font: &Font) { sync_nfss_font_state(font, font, font); }
+
+/// Keep LaTeX's text-font state — `\f@family`, `\f@series`, `\f@shape`,
+/// `\f@size` — naming the font a merge puts in force.
+///
+/// In LaTeX every text font change goes through those macros: `\bfseries` is
+/// `\fontseries\bfdefault\selectfont`, `\tt` is `\normalfont\ttfamily`
+/// (article.cls:490-493), `\small` is `\@setfontsize`, whose `\fontsize`
+/// records `\f@size` (latex.ltx:12587, 14103-14107). The class and package
+/// bindings switch the font directly, so a later `\selectfont` — a raw class's
+/// `\small`, a size switch (dialect.rs) — re-selected stale codes: under
+/// scrartcl `{\tt\small \foo}` came out roman (repro
+/// `fonts-nfss/old_font_switch_then_size.tex`).
+///
+/// A component the merge specifies, or changes, is written back as an NFSS
+/// code unless the code in force already denotes it, so `pcr` or `zi4`
+/// survives a `\ttfamily`. A family with no NFSS code (`nullfont`, `graphic`,
+/// `math`, and binding-only ones such as `oldstyle`) leaves `\f@family`
+/// alone, as a raw TeX font switch leaves LaTeX's. A `\font`-defined
+/// identifier merges through here too, so unlike TeX (where only NFSS writes
+/// the codes) `\font\x=cmtt10 \x\small` stays typewriter. Math fonts are not
+/// NFSS's text font (`\mathbf` leaves `\f@series`), so in math only an
+/// explicit size is recorded, as `\@setfontsize`'s `\fontsize` does there
+/// (latex.ltx:14103-14107). The writes are local, like the font assignment.
+fn sync_nfss_font_state(current: &Font, merged: &Font, new_font: &Font) {
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    if let Some(points) = merged.size {
+      sync_nfss_size(points);
+    }
+    return;
+  }
+  let touched = |specified: bool, old: Option<&str>, new: Option<&str>| specified || old != new;
+  if touched(
+    merged.family.is_some(),
+    current.family.as_deref(),
+    new_font.family.as_deref(),
+  ) && let Some(family) = new_font.family.as_deref()
+  {
+    sync_nfss_code(
+      T_CS!("\\f@family"),
+      family,
+      |code| font::lookup_font_family(code).and_then(|f| f.family.as_deref()),
+      font::nfss_family_code,
+    );
+  }
+  if touched(
+    merged.series.is_some() || merged.forcebold == Some(true),
+    current.series.as_deref(),
+    new_font.series.as_deref(),
+  ) && let Some(series) = new_font.series.as_deref()
+  {
+    sync_nfss_code(
+      T_CS!("\\f@series"),
+      series,
+      |code| font::lookup_font_series(code).and_then(|f| f.series.as_deref()),
+      font::nfss_series_code,
+    );
+  }
+  if touched(
+    merged.shape.is_some() || merged.emph == Some(true),
+    current.shape.as_deref(),
+    new_font.shape.as_deref(),
+  ) && let Some(shape) = new_font.shape.as_deref()
+  {
+    sync_nfss_code(
+      T_CS!("\\f@shape"),
+      shape,
+      |code| font::lookup_font_shape(code).and_then(|f| f.shape.as_deref()),
+      font::nfss_shape_code,
+    );
+  }
+  let size_touched =
+    merged.size.is_some() || merged.scale.is_some() || current.size != new_font.size;
+  if size_touched && let Some(points) = new_font.size {
+    sync_nfss_size(points);
+  }
+}
+
+/// Write `points` into `\f@size` unless it already holds that size.
+fn sync_nfss_size(points: f64) {
+  if points > 0.0
+    && let Some(in_force) = nfss_code_text(T_CS!("\\f@size"))
+    && !in_force
+      .trim()
+      .parse::<f64>()
+      .is_ok_and(|p| (p - points).abs() < 0.005)
+  {
+    define_nfss_code(T_CS!("\\f@size"), &font::format_points(points));
+  }
+}
+
+/// Write `value`'s NFSS code into `cs` unless the code there already denotes
+/// `value` (`denotes`) or `value` has none (`code_of`).
+fn sync_nfss_code(
+  cs: Token,
+  value: &str,
+  denotes: impl Fn(&str) -> Option<&'static str>,
+  code_of: fn(&str) -> Option<&'static str>,
+) {
+  // A value with no code leaves the macro alone; plain TeX has no NFSS state.
+  let Some(code) = code_of(value) else {
+    return;
+  };
+  let Some(in_force) = nfss_code_text(cs) else {
+    return;
+  };
+  if denotes(&in_force) != Some(value) {
+    define_nfss_code(cs, code);
+  }
+}
+
+/// `\edef`-like local definition of an NFSS state macro to `code`.
+fn define_nfss_code(cs: Token, code: &str) {
+  let body = ExpansionBody::Tokens(crate::mouth::tokenize_internal(TeXString::assembled(
+    code.to_string(),
+  )));
+  let options = ExpandableOptions {
+    scope: Some(Scope::Local),
+    ..ExpandableOptions::default()
+  };
+  // Only an unbalanced body can fail to define; a code is characters.
+  let _ = def_macro(cs, None, Some(body), Some(options));
+}
+
+/// The text an NFSS state macro (`\f@family`, …) holds, `None` while it is
+/// undefined (plain TeX). An `\edef` leaves a parameterless list of
+/// characters, read directly; anything else is expanded, as `\selectfont`
+/// reads it.
+pub fn nfss_code_text(cs: Token) -> Option<String> {
+  let direct = with_meaning(&cs, |meaning| match meaning {
+    None => Some(None),
+    Some(Stored::Expandable(e)) if e.paramlist.is_none() => match &e.expansion {
+      None => Some(Some(String::new())),
+      Some(ExpansionBody::Tokens(body))
+        if body
+          .unlist_ref()
+          .iter()
+          .all(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)) =>
+      {
+        Some(Some(body.to_string()))
+      },
+      _ => None,
+    },
+    _ => None,
+  });
+  match direct {
+    Some(text) => text,
+    None => Some(do_expand(Tokens::from(cs)).map_or_else(|_| String::new(), |t| t.to_string())),
+  }
 }
 
 /// Define a named color (Perl: DefColor).

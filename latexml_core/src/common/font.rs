@@ -153,6 +153,12 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
     "xylubt" => fontmap!(family => "graphic"),
     "eur"   => fontmap!(family => "serif"),      "eus"   => fontmap!(family => "script"),
     "euf"   => fontmap!(family => "fraktur"),    "euex"  => fontmap!(encoding => "OMX"),
+    // yfonts' families (yfonts.sty `\gothdefault` ygoth, `\swabdefault` yswab,
+    // `\frakdefault` yfrak), which yfonts_sty.rs selects as gothic, schwabacher
+    // and fraktur: a size switch re-selects `\f@family` (dialect.rs), so these
+    // codes must map back. Absent from Perl's %font_family.
+    "ygoth" => fontmap!(family => "gothic"),     "yswab" => fontmap!(family => "schwabacher"),
+    "yfrak" => fontmap!(family => "fraktur"),
     // The following are actually math fonts.
     "ccm"   => fontmap!(family => "serif", shape => "italic"),
     "cmm"   => fontmap!(family => "math", shape => "italic", encoding => "OML"),
@@ -325,7 +331,7 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
 // which is the faithful #2798 source — not a static font-size→baseline map.)
 
 /// Global auxiliary for font family lookup
-pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
+pub fn lookup_font_family(code: &str) -> Option<&'static Font> { FONT_FAMILY.get(code) }
 
 /// Whether `encoding`'s slots are Unicode code points: `TU`, the encoding of
 /// the Unicode engines (tuenc.def; fonttext.ltx:57-68,93). A slot past the
@@ -334,10 +340,88 @@ pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
 pub fn is_unicode_encoding(encoding: &str) -> bool { encoding == "TU" }
 
 /// Global auxiliary for font series lookup
-pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
+pub fn lookup_font_series(code: &str) -> Option<&'static Font> { FONT_SERIES.get(code) }
 
 /// Global auxiliary for font shape lookup
-pub fn lookup_font_shape(code: &str) -> Option<&Font> { FONT_SHAPE.get(code) }
+pub fn lookup_font_shape(code: &str) -> Option<&'static Font> { FONT_SHAPE.get(code) }
+
+/// The NFSS family code that selects an abstract font family: the inverse of
+/// [`lookup_font_family`], giving the code LaTeX's own defaults would put in
+/// `\f@family` (`\rmdefault` `cmr`, `\sfdefault` `cmss`, `\ttdefault` `cmtt`,
+/// all locked in sect13.rs; yfonts' `\gothdefault`/`\swabdefault`) or the one
+/// code the table maps to a symbol or display family. `None` for a family no
+/// NFSS code selects — `nullfont`, `graphic`, `math`, and the binding-only
+/// `oldstyle`, `caligraphic`, `italic`, `smallcaps` families: switching to it
+/// leaves `\f@family` alone, as a raw TeX font switch does.
+pub fn nfss_family_code(family: &str) -> Option<&'static str> {
+  match family {
+    "serif" => Some("cmr"),
+    "sansserif" => Some("cmss"),
+    "typewriter" => Some("cmtt"),
+    "script" => Some("pzc"),
+    "symbol" => Some("psy"),
+    "dingbats" => Some("pzd"),
+    "fraktur" => Some("euf"),
+    "gothic" => Some("ygoth"),
+    "schwabacher" => Some("yswab"),
+    "blackboard" => Some("bbm"),
+    _ => None,
+  }
+}
+
+/// The NFSS series code of an abstract series (`\mddefault` `m`,
+/// `\bfdefault` `bx`), inverse of [`lookup_font_series`].
+pub fn nfss_series_code(series: &str) -> Option<&'static str> {
+  match series {
+    "medium" => Some("m"),
+    "bold" => Some("bx"),
+    _ => None,
+  }
+}
+
+/// The NFSS shape code of an abstract shape (`\updefault` `n`, `\itdefault`
+/// `it`, `\sldefault` `sl`, `\scdefault` `sc`), inverse of
+/// [`lookup_font_shape`]. `normal` is the upright shape plain's `\em` switches
+/// back to (plain_base.pool.ltxml:607).
+pub fn nfss_shape_code(shape: &str) -> Option<&'static str> {
+  match shape {
+    "upright" | "normal" => Some("n"),
+    "italic" => Some("it"),
+    "slanted" => Some("sl"),
+    "smallcaps" => Some("sc"),
+    _ => None,
+  }
+}
+
+/// A font size in points as LaTeX writes `\f@size`: `12`, `14.4`, `10.95`
+/// (`\strip@pt`, latex.ltx:12587).
+pub fn format_points(points: f64) -> String {
+  let text = format!("{points:.2}");
+  let text = text.trim_end_matches('0').trim_end_matches('.');
+  text.to_string()
+}
+
+/// The TeX font file of a text font, as `\font` names one: `cmtt10`, `cmbx9`,
+/// and `cmr10` loaded `at 10.95pt` (`Some` second part) for a size with no
+/// file of its own — the Computer Modern font of the family, series and shape
+/// (`None` for a combination with none). LaTeX's OT1 `.fd` files pick the
+/// nearest design size (ot1cmr.fd); this keeps the size or falls back to 10.
+pub fn tex_font_file_name(
+  family: &str,
+  series: &str,
+  shape: &str,
+  points: f64,
+) -> Option<(String, Option<String>)> {
+  let base = lookup_metric_name(family, series, shape)?;
+  Some(if points.fract() == 0.0 {
+    (format!("{base}{points}"), None)
+  } else {
+    (
+      format!("{base}10"),
+      Some(format!("{}pt", format_points(points))),
+    )
+  })
+}
 
 /// Combine family/series/shape lookups into a single Font (Perl lookupTeXFont)
 pub fn lookup_tex_font(fontname: &str, seriescode: &str, shapecode: &str) -> Font {

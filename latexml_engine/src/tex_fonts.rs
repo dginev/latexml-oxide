@@ -54,11 +54,9 @@ LoadDefinitions!({
         _ => token,
       })
     } else if token.with_str(|ts| ts == "\\font") {
-      // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font')
-      with_value("current_FontDef", |v| match v {
-        Some(Stored::Token(t)) => *t,
-        _ => T_CS!("\\lx@default@font"),
-      })
+      // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font'),
+      // the current font's identifier here (`current_font_identifier`).
+      current_font_identifier()?
     } else {
       token
     }
@@ -102,10 +100,6 @@ LoadDefinitions!({
       None
     };
     skip_spaces()?;
-    let cs_str = cs.to_string();
-    if let Some(ref props) = props_opt {
-      AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
-    }
     // When `scaled <N>` was used, derive `at_sp` from the resolved size
     // so two `\font` declarations resolving to the same effective size
     // (e.g. `at 5pt` vs `scaled 500` of cmr10) share the same shared
@@ -115,19 +109,7 @@ LoadDefinitions!({
       && let Some(sz_pt) = props_opt.as_ref().and_then(|p| p.size) {
         at_sp = Some((sz_pt * 65536.0).round() as i64);
       }
-    // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
-    // Shared font key: fonts with same name+size share hyphenchar/skewchar.
-    // Precision matters here — expl3's intarray font-hack creates a
-    // distinct `\font \foo = cmr10 at <N> sp` for each intarray, where
-    // <N> is a unique integer (the intarray table index). Rounding to
-    // `.1pt` (or any pt-decimal precision) collapses all these to
-    // `0.0pt` and breaks intarray storage because all "different"
-    // intarrays then share the same fontdimen backing. Use the raw
-    // sp integer (lossless) in the key so e.g. `at 23 sp` and `at 24 sp`
-    // are guaranteed distinct. Keep the pt-formatted form for `\meaning`
-    // display, but separate the two concerns.
     // `at_str_opt` is used only for the `\meaning` display ("at 5.0pt").
-    // The shared key uses `at_sp` (lossless sp count) for uniqueness.
     let at_str_opt = if let Some(at_val) = at_pt {
       Some(s!("{at_val:.1}pt"))
     } else if let Some(_sc) = scaled {
@@ -135,90 +117,7 @@ LoadDefinitions!({
     } else {
       None
     };
-    // Compose the shared key using exact sp value (or `at_str_opt` for
-    // the `scaled` branch which has no sp). Two `\font` calls with
-    // different sp sizes produce different shared keys, so their
-    // fontdimen/hyphenchar/skewchar state stays independent.
-    let shared_key = if let Some(sp) = at_sp {
-      s!("fontinfo_{name} at {sp}sp")
-    } else if let Some(ref at_str) = at_str_opt {
-      s!("fontinfo_{name} at {at_str}")
-    } else {
-      s!("fontinfo_{name}")
-    };
-    // Store CS → shared key mapping
-    assign_value(
-      &s!("font_shared_key_{cs_str}"),
-      Stored::String(pin(&shared_key)),
-      None,
-    );
-    // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
-    if let Some(ref at_str) = at_str_opt {
-      assign_value(
-        &s!("fontinfo_at_{cs_str}"),
-        Stored::String(pin(at_str)),
-        None,
-      );
-    }
-    // Perl: only initialize hyphenchar/skewchar if this font key hasn't been seen before
-    // (shared fontinfo means second \font with same name+size reuses existing values)
-    let hc_key = s!("hyphenchar_{shared_key}");
-    if !has_value(&hc_key) {
-      let default_hyphen = lookup_int("\\defaulthyphenchar");
-      assign_value(
-        &hc_key,
-        Stored::Number(Number::new(default_hyphen as i64)),
-        Some(Scope::Global),
-      );
-      let default_skew = lookup_int("\\defaultskewchar");
-      assign_value(
-        &s!("skewchar_{shared_key}"),
-        Stored::Number(Number::new(default_skew as i64)),
-        Some(Scope::Global),
-      );
-    }
-    // Perl: installDefinition(FontDef->new($cs, $key))
-    //   FontDef.pm L42: assignValue(current_FontDef => $$self{cs}, 'local')
-    // Perl's State::installDefinition with $scope undef → assign_internal
-    // defaults to local-with-\global-prefix-promotion (State.pm L152).
-    // Rust DefPrimitive! defaults match. TODO (SYNC_STATUS): rewrite this
-    // primitive to a strict Perl-faithful translation — see Work Plan.
-    let is_global = get_prefix("global");
-    let cs_for_fontdef = cs;
-    let font_id_key = pin(s!("fontinfo_{cs_str}").as_str());
-    // SYNC_STATUS Cluster C: do NOT bypass the lock here. If the target CS
-    // is locked (e.g. `\abstract`, `\title`), `\font\<cs>=<file>` is a
-    // documented no-op — state::install_definition emits an
-    // Info!("ignore", "<cs>:locked", ...) and skips. Witnesses are ~46
-    // pre-2000 plain-TeX-style papers that misuse `\font\abstract=cmr8`
-    // expecting a font-switch group; both Perl and Rust LaTeXML treat
-    // `\font` on a locked primitive as a no-op (SHARED-FAILURE on the
-    // downstream `{\abstract ...}` mode-switch). The author's source
-    // violates a LaTeX convention (shadowing a class-provided macro;
-    // should have used `\newfont` which does an `\@ifundefined` check).
-    // User directive 2026-05-19: "\font on a locked primitive shouldn't
-    // work" — do not surpass Perl here.
-    DefPrimitive!(cs, None, None, font => props_opt,
-      before_digest => sub {
-        AssignValue!("current_FontDef", cs_for_fontdef, None);
-      }
-    );
-    // Tag the just-installed primitive with its fontinfo lookup key — this
-    // is the Rust `font_id` (Perl `LaTeXML::Core::Definition::FontDef::fontID`)
-    // that lets dump_writer emit `FD\t<font_id>` (Perl `dump_primitive` path
-    // L383-389) instead of the generic Primitive serialization. Without the
-    // tag, the writer falls into the `PA\t<self_cs>` self-alias path which
-    // dump_reader skips, leaving the CS undefined post-dump.
-    if let Some(Stored::Primitive(p)) = lookup_meaning(&cs) {
-      let mut p_owned: Primitive = (*p).clone();
-      p_owned.font_id = Some(font_id_key);
-      assign_meaning(&cs, Stored::Primitive(Rc::new(p_owned)),
-        if is_global { Some(Scope::Global) } else { None });
-    }
-    if is_global
-      && let Some(meaning) = lookup_meaning(&cs) {
-        assign_meaning(&cs, meaning, Some(Scope::Global));
-      }
+    install_font_def(cs, &name, props_opt, at_sp, at_str_opt, None)?;
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
@@ -229,12 +128,8 @@ LoadDefinitions!({
     let cs_str = token.to_string();
     // Determine which font CS to look up
     let lookup_cs = if cs_str == "\\font" {
-      // Current font — look up current_FontDef, fallback to \lx@default@font.
-      // with_value avoids the Stored envelope clone; Token is Copy.
-      with_value("current_FontDef", |v| match v {
-        Some(Stored::Token(t)) => t.to_string(),
-        _ => s!("\\lx@default@font"),
-      })
+      // The current font (Perl: current_FontDef, else \lx@default@font).
+      current_font_identifier()?.to_string()
     } else {
       cs_str
     };
@@ -628,4 +523,276 @@ fn non_typewriter_t1(font: &Font) -> bool {
   let encoding = font.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
   non_typewriter(font)
     && (matches!(encoding.as_ref(), "OT1" | "T1") || font::is_unicode_encoding(encoding))
+}
+
+/// Install `cs` as a font identifier selecting `props` — Perl's `FontDef`
+/// (FontDef.pm; `\font`, TeX_Fonts.pool.ltxml:82-127), whose fontinfo other
+/// primitives read under `fontinfo_<cs>` (`\fontname`, `\meaning`) and whose
+/// `\fontdimen`/`\hyphenchar`/`\skewchar` state is shared by every identifier
+/// of the same font file and size. `scope` `None` is `\font`'s own
+/// (local, or global under `\global`).
+fn install_font_def(
+  cs: Token,
+  name: &str,
+  props_opt: Option<Font>,
+  at_sp: Option<i64>,
+  at_str_opt: Option<String>,
+  scope: Option<Scope>,
+) -> Result<()> {
+  let cs_str = cs.to_string();
+  if let Some(ref props) = props_opt {
+    assign_value(&s!("fontinfo_{cs_str}"), props.clone(), scope);
+  }
+  // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
+  // Shared font key: fonts with same name+size share hyphenchar/skewchar.
+  // Precision matters here — expl3's intarray font-hack creates a
+  // distinct `\font \foo = cmr10 at <N> sp` for each intarray, where
+  // <N> is a unique integer (the intarray table index). Rounding to
+  // `.1pt` (or any pt-decimal precision) collapses all these to
+  // `0.0pt` and breaks intarray storage because all "different"
+  // intarrays then share the same fontdimen backing. Use the raw
+  // sp integer (lossless) in the key so e.g. `at 23 sp` and `at 24 sp`
+  // are guaranteed distinct. Keep the pt-formatted form for `\meaning`
+  // display, but separate the two concerns.
+  // Compose the shared key using exact sp value (or `at_str_opt` for
+  // the `scaled` branch which has no sp). Two `\font` calls with
+  // different sp sizes produce different shared keys, so their
+  // fontdimen/hyphenchar/skewchar state stays independent.
+  let shared_key = if let Some(sp) = at_sp {
+    s!("fontinfo_{name} at {sp}sp")
+  } else if let Some(ref at_str) = at_str_opt {
+    s!("fontinfo_{name} at {at_str}")
+  } else {
+    s!("fontinfo_{name}")
+  };
+  // Store CS → shared key mapping
+  assign_value(
+    &s!("font_shared_key_{cs_str}"),
+    Stored::String(pin(&shared_key)),
+    scope,
+  );
+  // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
+  if let Some(ref at_str) = at_str_opt {
+    assign_value(
+      &s!("fontinfo_at_{cs_str}"),
+      Stored::String(pin(at_str)),
+      scope,
+    );
+  }
+  // Perl: only initialize hyphenchar/skewchar if this font key hasn't been seen before
+  // (shared fontinfo means second \font with same name+size reuses existing values)
+  let hc_key = s!("hyphenchar_{shared_key}");
+  if !has_value(&hc_key) {
+    let default_hyphen = lookup_int("\\defaulthyphenchar");
+    assign_value(
+      &hc_key,
+      Stored::Number(Number::new(default_hyphen)),
+      Some(Scope::Global),
+    );
+    let default_skew = lookup_int("\\defaultskewchar");
+    assign_value(
+      &s!("skewchar_{shared_key}"),
+      Stored::Number(Number::new(default_skew)),
+      Some(Scope::Global),
+    );
+  }
+  // Perl: installDefinition(FontDef->new($cs, $key))
+  //   FontDef.pm L42: assignValue(current_FontDef => $$self{cs}, 'local')
+  // Perl's State::installDefinition with $scope undef → assign_internal
+  // defaults to local-with-\global-prefix-promotion (State.pm L152).
+  // Rust DefPrimitive! defaults match. TODO (SYNC_STATUS): rewrite this
+  // primitive to a strict Perl-faithful translation — see Work Plan.
+  let is_global = scope == Some(Scope::Global) || get_prefix("global");
+  let cs_for_fontdef = cs;
+  let font_id_key = pin(s!("fontinfo_{cs_str}").as_str());
+  // SYNC_STATUS Cluster C: do NOT bypass the lock here. If the target CS
+  // is locked (e.g. `\abstract`, `\title`), `\font\<cs>=<file>` is a
+  // documented no-op — state::install_definition emits an
+  // Info!("ignore", "<cs>:locked", ...) and skips. Witnesses are ~46
+  // pre-2000 plain-TeX-style papers that misuse `\font\abstract=cmr8`
+  // expecting a font-switch group; both Perl and Rust LaTeXML treat
+  // `\font` on a locked primitive as a no-op (SHARED-FAILURE on the
+  // downstream `{\abstract ...}` mode-switch). The author's source
+  // violates a LaTeX convention (shadowing a class-provided macro;
+  // should have used `\newfont` which does an `\@ifundefined` check).
+  // User directive 2026-05-19: "\font on a locked primitive shouldn't
+  // work" — do not surpass Perl here.
+  DefPrimitive!(cs, None, None, font => props_opt,
+    before_digest => sub {
+      AssignValue!("current_FontDef", cs_for_fontdef, None);
+    }
+  );
+  // Tag the just-installed primitive with its fontinfo lookup key — this
+  // is the Rust `font_id` (Perl `LaTeXML::Core::Definition::FontDef::fontID`)
+  // that lets dump_writer emit `FD\t<font_id>` (Perl `dump_primitive` path
+  // L383-389) instead of the generic Primitive serialization. Without the
+  // tag, the writer falls into the `PA\t<self_cs>` self-alias path which
+  // dump_reader skips, leaving the CS undefined post-dump.
+  if let Some(Stored::Primitive(p)) = lookup_meaning(&cs) {
+    let mut p_owned: Primitive = (*p).clone();
+    p_owned.font_id = Some(font_id_key);
+    assign_meaning(
+      &cs,
+      Stored::Primitive(Rc::new(p_owned)),
+      if is_global { Some(Scope::Global) } else { None },
+    );
+  }
+  if is_global && let Some(meaning) = lookup_meaning(&cs) {
+    assign_meaning(&cs, meaning, Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// The font identifier of the current font: what `\the\font` yields and what
+/// the `<font>` `\font` denotes in `\fontdimen`, `\hyphenchar`, `\fontname`
+/// (tex.web §577 `scan_font_ident`, §465: `cur_font`).
+///
+/// Perl remembers only the last `\font`-defined identifier invoked
+/// (`current_FontDef`, FontDef.pm:42, "HACK") and otherwise answers the
+/// default `\lx@default@font` (TeX_Macro.pool.ltxml:272,
+/// TeX_Fonts.pool.ltxml:41-43), so a font chosen through NFSS or a binding
+/// was cmr10: ltxdoc's `\let\oc@ttf\the\font` (ltxdoc.cls:136, source2e) and
+/// short-math-guide's `\ttfont` (short-math-guide.tex:195-198) printed their
+/// typewriter text in roman OT1 (repro
+/// `fonts-nfss/the_font_names_the_current_font.tex`). In LaTeX `\selectfont`
+/// selects `\font@name`, `\curr@fontshape/\f@size` (latex.ltx:12576-12579),
+/// so the identifier names the font in force. The remembered identifier is
+/// kept while it still selects the current font; otherwise the current font
+/// gets its own, named as the kernel names it (`\OT1/cmtt/m/n/10`), installed
+/// once — globally, as `\define@newfont` does — to select the current
+/// family, series, shape, size and encoding, and remembered as the one in
+/// force. In math the font in force is the math font, not TeX's current text
+/// font, so Perl's answer stands there.
+pub fn current_font_identifier() -> Result<Token> {
+  let last = with_value("current_FontDef", |v| match v {
+    Some(Stored::Token(t)) => *t,
+    _ => T_CS!("\\lx@default@font"),
+  });
+  if lookup_bool_sym(pin!("IN_MATH")) {
+    return Ok(last);
+  }
+  let Some(font) = lookup_font() else {
+    return Ok(last);
+  };
+  if font_def_selects(&last, &font) {
+    return Ok(last);
+  }
+  // Inside a pgf picture the font in force is TeX's `\nullfont`.
+  if font.get_family().is_some_and(|f| f == "nullfont") {
+    return Ok(T_CS!("\\nullfont"));
+  }
+  let (Some(family), Some(series), Some(shape), Some(points)) = (
+    font.get_family().map(|f| f.to_string()),
+    font.get_series().map(|f| f.to_string()),
+    font.get_shape().map(|f| f.to_string()),
+    font.get_size(),
+  ) else {
+    return Ok(last);
+  };
+  let encoding = font
+    .get_encoding()
+    .map_or_else(|| s!("OT1"), |e| e.to_string());
+  // The NFSS codes: those in force when they name this font (a `pcr` from
+  // courier.sty stays `pcr`), else LaTeX's default code for it; plain TeX has
+  // no NFSS state.
+  let code = |cs: &str,
+              value: &str,
+              denotes: fn(&str) -> Option<&'static str>,
+              default: fn(&str) -> Option<&'static str>| {
+    match nfss_code_text(T_CS!(cs)) {
+      Some(in_force) if denotes(&in_force) == Some(value) => in_force,
+      _ => default(value).map_or_else(|| value.to_string(), str::to_string),
+    }
+  };
+  let family_code = code(
+    "\\f@family",
+    &family,
+    |c| font::lookup_font_family(c).and_then(|f| f.family.as_deref()),
+    font::nfss_family_code,
+  );
+  let series_code = code(
+    "\\f@series",
+    &series,
+    |c| font::lookup_font_series(c).and_then(|f| f.series.as_deref()),
+    font::nfss_series_code,
+  );
+  let shape_code = code(
+    "\\f@shape",
+    &shape,
+    |c| font::lookup_font_shape(c).and_then(|f| f.shape.as_deref()),
+    font::nfss_shape_code,
+  );
+  let size = font::format_points(points);
+  let identifier = T_CS!(s!(
+    "\\{encoding}/{family_code}/{series_code}/{shape_code}/{size}"
+  ));
+  // `\pickup@font` (latex.ltx:10582-10585): the identifier is defined when it
+  // is undefined or `\relax` — the kernel's `\error@fontshape` leaves
+  // `\OT1/cmr/m/n/10` `\relax` in the format (latex.ltx dump), and returning
+  // it made `\let\x\the\font` a `\relax`.
+  if lookup_definition(&identifier)?.is_none() || identifier.defined_as(&TOKEN_RELAX) {
+    let (name, at_str) =
+      font::tex_font_file_name(&family, &series, &shape, points).unwrap_or_else(|| {
+        (
+          s!("{encoding}/{family_code}/{series_code}/{shape_code}/{size}"),
+          None,
+        )
+      });
+    let typewriter = family == "typewriter";
+    let props = Font {
+      family: Some(Cow::Owned(family)),
+      series: Some(Cow::Owned(series)),
+      shape: Some(Cow::Owned(shape)),
+      size: Some(points),
+      encoding: Some(Cow::Owned(encoding)),
+      name: Some(Cow::Owned(name.clone())),
+      ..Font::default()
+    };
+    let at_sp = (points * 65536.0).round() as i64;
+    install_font_def(
+      identifier,
+      &name,
+      Some(props),
+      Some(at_sp),
+      at_str,
+      Some(Scope::Global),
+    )?;
+    // ot1cmtt.fd:3 `\DeclareFontFamily{OT1}{cmtt}{\hyphenchar \font\m@ne}`:
+    // the typewriter fonts are loaded without a hyphen character.
+    if typewriter {
+      assign_value(
+        &s!("hyphenchar_fontinfo_{name} at {at_sp}sp"),
+        Stored::Number(Number::new(-1)),
+        Some(Scope::Global),
+      );
+    }
+  }
+  assign_value(
+    "current_FontDef",
+    Stored::Token(identifier),
+    Some(Scope::Local),
+  );
+  Ok(identifier)
+}
+
+/// Whether the font identifier `cs` selects `font`: every family, series,
+/// shape, encoding and size its fontinfo sets is the font's. One without
+/// fontinfo (an unrecognized `\font` file name) changed no property, so it
+/// still names the font in force, as in TeX.
+fn font_def_selects(cs: &Token, font: &Font) -> bool {
+  with_value(&s!("fontinfo_{cs}"), |v| match v {
+    Some(Stored::Font(info)) => {
+      let same = |info: Option<&Cow<'_, str>>, font: Option<&Cow<'_, str>>| {
+        info.is_none_or(|i| font.is_some_and(|f| f == i))
+      };
+      same(info.get_family(), font.get_family())
+        && same(info.get_series(), font.get_series())
+        && same(info.get_shape(), font.get_shape())
+        && same(info.get_encoding(), font.get_encoding())
+        && info
+          .get_size()
+          .is_none_or(|i| font.get_size().is_some_and(|f| (f - i).abs() < 0.005))
+    },
+    _ => true,
+  })
 }

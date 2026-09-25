@@ -751,7 +751,13 @@ LoadDefinitions!({
     let font = LookupFont!().unwrap();
     let shape = font.get_shape().unwrap_or(&Cow::Borrowed(""));
     let shapevariant = if shape == "italic" { "normal" } else { "italic" };
-    AssignValue!("font", font.merge(fontmap!(shape => shapevariant)), Some(Scope::Local));
+    // Perl assigns the merged font directly (plain_base.pool.ltxml:604-609);
+    // `MergeFont` is that same local merge, and also keeps `\f@shape` naming
+    // it, as LaTeX's `\em` does through `\itshape`/`\eminnershape`
+    // (latex.ltx:14048-14058) — else a later size switch re-selected the
+    // stale shape and `{\em\small x}` came out upright (content.rs
+    // `merge_font_ref`).
+    MergeFont!(shape => shapevariant);
   });
 
   // Change math font while still in text!

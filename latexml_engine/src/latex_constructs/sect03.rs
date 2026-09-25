@@ -90,13 +90,8 @@ pub(crate) fn load() -> Result<()> {
     enter_horizontal => true,
     font=> { emph => true },
     alias => "\\emph",
-    before_digest => {
-      if Expand!(T_CS!("\\f@shape")).eq_text("it") {
-        DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("n")));
-      } else {
-        DefMacro!(T_CS!("\\f@shape"), None, Tokens!(T_LETTER!("i"),T_LETTER!("t")));
-      }
-    },
+    // Perl's `\f@shape` it/n toggle (latex_constructs.pool.ltxml:414-416) is
+    // subsumed by the font merge's NFSS sync (content.rs `merge_font_ref`).
     after_construct => sub[doc,_args] {
       doc.maybe_close_element("ltx:emph")?; }
   );

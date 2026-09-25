@@ -7,7 +7,7 @@
 % engines: rust=<text fontsize="91%">“foo</text> <text fontsize="91%">x</text>;
 %          Perl font="typewriter" / font="bold" (RUST-ONLY)
 % expect:  typewriter \foo, bold x
-% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+% status:  RED -> GREEN (W8, guard nfss_font_state)
 \documentclass{scrartcl}
 \begin{document}
 {\tt\small \string\foo} {\bf\small x}

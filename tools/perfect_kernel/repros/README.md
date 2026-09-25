@@ -55,7 +55,7 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `parameter-conditional` | macro parameter delimiters and conditionals: delimiter mismatches, `\ifx`/`\fi` balance across boxes, conditionals read in style parameters |
 | `macro-state` | definitions and state that outlive (or fail to reach) their scope: catcodes leaking through `\input`, hook order, allocated registers, `\patchcmd` bodies, scoped knowledge |
 | `unicode-catcodes` | bytes and catcodes: the byte mouth for 8-bit encodings (T1, cp1251, UTF-8 lead bytes), `\DeclareUnicodeCharacter`, font encodings in force |
-| `fonts-nfss` | NFSS state: the preloaded encoding, `\fontsize`/`\selectfont`, a raw class's nominal `\normalsize` |
+| `fonts-nfss` | NFSS state: the preloaded encoding, `\fontsize`/`\selectfont`, a raw class's nominal `\normalsize`, `\f@family`/`\f@series`/`\f@shape` following every text font switch, `\the\font` |
 | `loader` | package and class loading: options passed and kept, versions, `\AtEndOfPackage`/hooks, file-name stacks, bindings that call a class's internals, raw loading vs binding |
 | `babel-lang` | babel/polyglossia/language options and shorthands under the pdflatex/lualatex oracle |
 | `backend-persona` | the engine persona: `\ifpdf`/`\pdfoutput`, pdfTeX/XeTeX/LuaTeX primitives, backend selection, engine-only packages |
