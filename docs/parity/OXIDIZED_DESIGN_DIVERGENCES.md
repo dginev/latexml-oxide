@@ -8931,3 +8931,27 @@ the posthook. For an entry defined in the preamble it queues the definition
 preamble definitions anyway. Entries defined in the body are emitted at once. arXiv 2605 (all 281
 glossaries papers): errors 854 → 774, 7 papers better status, none worse; LEDGER 2026-09-25, 56il.
 **Guard**: `class_census::glossaries_preamble_forward_reference`.
+
+### 294. siunitx v3 keys that change the printed number (Perl: not handled)
+
+Perl's siunitx binding predates siunitx v3. It registers only the v2 key vocabulary
+(siunitx.sty.ltxml:38-54) and lists `retain-unity-mantissa` and the rounding keys as "NOT YET
+HANDLED" (:302-306), so v3 documents lost settings that change the printed number.
+`\sisetup{locale=DE}\num{3.14}` gives "3,14" under pdflatex but "3.14" in Perl. **Rust** (batch
+56in, siunitx_sty.rs):
+- `locale` sets the decimal marker and the exponent and inter-unit products from siunitx's
+  table (siunitx.sty:4956-5013; BR/FR/IT/SI, DE, PL, ZA, UK/US).
+- `drop-zero-decimal` (and its deprecated form `zero-decimal-to-integer`) drops an all-zero
+  decimal part unless an uncertainty follows; `minimum-decimal-digits` pads the decimal part.
+  Both act on the value, never the exponent, in siunitx's order (:1000-1001).
+- `uncertainty-mode` maps onto `separate-uncertainty` (:8676-8689).
+- `retain-unity-mantissa = false` (v3 `print-unity-mantissa`) prints `\num{1e3}` as 10³.
+- The v3 names of v2 keys are routed to them (`print-zero-exponent`, `print-zero-integer`,
+  `drop-uncertainty`, `bracket-ambiguous-numbers`).
+- The font-matching keys (`reset-text-series`, `text-series-to-math`, `propagate-math-font`, …)
+  are accepted and ignored, as `reset-text-family` already was.
+
+Keys that siunitx v3 itself removed or never had (`load-configurations`, `obeybold`, …) still
+warn: pdflatex warns or errors on them too. The uncertainty conversions are Perl's, ported
+(siunitx.sty.ltxml:329-375), with one difference: an integer value's separate uncertainty prints
+as `123 ± 45`, as siunitx does, where Perl prints `123 ± 45.`. **Guard**: `class_census::siunitx_v3_keys`.

@@ -25839,6 +25839,47 @@ mod class_census {
     assert!(xml.contains("Body word alpha."), "{xml}");
   }
 
+  /// siunitx v3 keys: `locale` sets the decimal marker and products
+  /// (siunitx.sty:4956-5013), `drop-zero-decimal` / `minimum-decimal-digits` /
+  /// `uncertainty-mode` format the number, font-matching keys are accepted, and
+  /// an uncertainty is converted to the requested form (Perl
+  /// six_compute_separate_uncertainty / six_compute_relative_uncertainty):
+  /// `12.3(4)` separate is `12.3 ± 0.4`, not `12.3 ± 4`.
+  #[test]
+  fn siunitx_v3_keys() {
+    let tex = include_str!("../../tools/perfect_kernel/repros/macro-state/siunitx_v3_keys.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let texs: Vec<String> = regex::Regex::new(r#"<Math [^>]*tex="([^"]*)""#)
+      .unwrap()
+      .captures_iter(&xml)
+      .map(|c| c[1].to_string())
+      .collect();
+    assert_eq!(
+      texs,
+      [
+        "3,14",
+        r"1,5\text{\cdot}{10}^{3}",
+        "3.14",
+        "1",
+        "2",
+        "1.50",
+        "1.50",
+        "5.00",
+        r"1.00\text{\times}{10}^{3}",
+        r"12.3\pm 0.4",
+        "12.0(4)",
+        "5",
+        "{10}^{3}",
+        "12.3(4)",
+        "12.30(45)",
+        r"(1.23\pm 0.04)\text{\times}{10}^{3}",
+      ],
+      "{xml}"
+    );
+  }
+
   /// enumitem's `shortlabels`: a list's first key with no `=` that names no
   /// enumitem key is a label template (enumitem.sty:660-681 `\enit@first`), not
   /// an unknown key: `[(a)]` warned and kept arabic labels.

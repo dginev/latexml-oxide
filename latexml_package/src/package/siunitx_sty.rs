@@ -224,14 +224,74 @@ fn six_canonical_key(key: &str) -> &str {
     // Separator between the number and its unit. Witness 2606.13010, whose
     // `\qtyhy` sets `quantity-product = \text{-}` for attributive "10-MHz".
     "quantity-product" => "number-unit-product",
+    // siunitx.sty:8670-8824, v3's names for v2 keys this binding reads: the
+    // v2 key is kept there as a deprecated alias setting the v3 one.
+    "print-unity-mantissa" => "retain-unity-mantissa",
+    "print-zero-exponent" => "retain-zero-exponent",
+    "print-zero-integer" => "add-integer-zero",
+    "drop-uncertainty" => "omit-uncertainty",
+    "bracket-ambiguous-numbers" => "bracket-numbers",
+    // :8817-8824: deprecated in v3 for `drop-zero-decimal`.
+    "zero-decimal-to-integer" => "drop-zero-decimal",
     other => other,
   }
+}
+
+/// siunitx.sty:4956-5013 `locale`: each locale is a `.meta:n` setting three keys
+/// (decimal marker, exponent product, inter-unit product). False for a value that
+/// names no locale (an l3keys error in siunitx).
+fn six_apply_locale(locale: &str) -> bool {
+  let (marker, exponent, inter_unit) = match locale.trim() {
+    "BR" | "FR" | "IT" | "SI" => (",", "\\times", "\\,"),
+    "DE" => (",", "\\cdot", "\\,"),
+    "PL" => (",", "\\cdot", "\\cdot"),
+    "ZA" => (",", "\\times", "\\cdot"),
+    "UK" | "US" => (".", "\\times", "\\,"),
+    _ => return false,
+  };
+  for (key, value) in [
+    ("output-decimal-marker", marker),
+    ("exponent-product", exponent),
+    ("inter-unit-product", inter_unit),
+  ] {
+    let toks = Tokenize!(TeXString::assembled(value.to_string()));
+    assign_value(&format!("SIX_{key}"), Stored::Tokens(toks), None);
+  }
+  true
 }
 
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
     let key_str = six_canonical_key(key).to_string();
+    if key_str == "locale" {
+      let locale = value.to_string();
+      if !six_apply_locale(&locale) {
+        // siunitx.sty:4958 `locale .choice:`: l3keys errors on an unknown choice.
+        // (`six_setup` returns no Result, so the record is emitted directly.)
+        emit_record(
+          LogStatus::Error,
+          "unexpected:locale",
+          &s!(
+            "siunitx: the key 'locale' only accepts BR, DE, FR, IT, PL, SI, UK, US or ZA, not '{}'",
+            locale.trim()
+          ),
+        );
+      }
+      continue;
+    }
+    // siunitx.sty:2202-2204 `uncertainty-mode`, and its v2 alias table (:8676-
+    // 8689: `separate-uncertainty = true` is `uncertainty-mode = separate`, `false`
+    // is `compact`). The binding prints `compact`, `compact-marker` and `full` alike.
+    if key_str == "uncertainty-mode" {
+      let separate = value.to_string().trim() == "separate";
+      assign_value(
+        "SIX_separate-uncertainty",
+        Stored::from(if separate { "true" } else { "false" }),
+        None,
+      );
+      continue;
+    }
     match value {
       ArgWrap::Tokens(t) => {
         if t.is_empty() {
@@ -726,11 +786,122 @@ fn six_postprocess(number: Option<SixNumber>) -> Option<SixNumber> {
   number.map(six_postprocess_aux)
 }
 
-fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
+/// Which digits of a number a `Simple` part is: v3 pads and drops only the
+/// decimal part of a value (siunitx.sty:1306-1330 `\__siunitx_number_digits:nnnnnnn`
+/// touches #4, not the exponent), and drops a zero decimal only when there is no
+/// uncertainty (:2078-2089).
+#[derive(Clone, Copy, PartialEq)]
+enum SixDigits {
+  /// A value with no uncertainty.
+  Value,
+  /// The value of an `uncertain` operator.
+  UncertainValue,
+  /// An exponent or an uncertainty.
+  Other,
+}
+
+/// Perl `six_compute_separate_uncertainty` (siunitx.sty.ltxml:329-351): the
+/// compact uncertainty of `12.3(4)` as a value of its own, `0.4` — its digits
+/// count from the value's last decimal place. An uncertainty given with a sign
+/// (`12.3 \pm 0.4`) is already separate.
+fn six_compute_separate_uncertainty(value: &SixNumber, uncertainty: &SixNumber) -> SixNumber {
+  let SixNumber::Simple { sign: None, integer, .. } = uncertainty else {
+    return uncertainty.clone();
+  };
+  let mut digits: Vec<Token> = integer
+    .as_ref()
+    .map(|i| i.clone().unlist())
+    .unwrap_or_default();
+  let n = digits.len();
+  let places = value.get_fraction().map_or(0, |f| f.unlist_ref().len());
+  let pm = Some(Tokens::new(vec![T_CS!("\\pm")]));
+  if n <= places {
+    digits.splice(0..0, std::iter::repeat_n(T_OTHER!("0"), places - n));
+    SixNumber::simple(
+      pm,
+      Some(Tokens::new(vec![T_OTHER!("0")])),
+      Some(Tokens::default()),
+      Some(Tokens::new(digits)),
+    )
+  } else {
+    let fraction = digits.split_off(n - places);
+    // An integer value's uncertainty is an integer: `123 ± 45` as siunitx prints
+    // it (Perl returns an empty fraction and prints `123 ± 45.`).
+    let (decimal, fraction) = if fraction.is_empty() {
+      (None, None)
+    } else {
+      (Some(Tokens::default()), Some(Tokens::new(fraction)))
+    };
+    SixNumber::simple(pm, Some(Tokens::new(digits)), decimal, fraction)
+  }
+}
+
+/// Perl `six_compute_relative_uncertainty` (siunitx.sty.ltxml:353-375): the
+/// separate uncertainty of `12.3 \pm 0.4` in compact form, `4`. When it has more
+/// decimals than the value, the value is padded (`12.3 \pm 0.45` → `12.30(45)`).
+fn six_compute_relative_uncertainty(value: &mut SixNumber, uncertainty: &SixNumber) -> SixNumber {
+  let SixNumber::Simple {
+    sign: Some(_),
+    integer,
+    fraction,
+    ..
+  } = uncertainty
+  else {
+    return uncertainty.clone();
+  };
+  let mut digits: Vec<Token> = fraction
+    .as_ref()
+    .map(|f| f.clone().unlist())
+    .unwrap_or_default();
+  let decimals = digits.len();
+  let places = value.get_fraction().map_or(0, |f| f.unlist_ref().len());
+  digits.extend(std::iter::repeat_n(
+    T_OTHER!("0"),
+    places.saturating_sub(decimals),
+  ));
+  if let Some(int) = integer {
+    digits.splice(0..0, int.clone().unlist());
+  }
+  let zeros = digits.iter().take_while(|t| **t == T_OTHER!("0")).count();
+  digits.drain(..zeros);
+  if decimals > places
+    && let SixNumber::Simple {
+      decimal,
+      fraction: value_fraction,
+      ..
+    } = value
+  {
+    let mut padded = value_fraction
+      .take()
+      .map(|f| f.unlist())
+      .unwrap_or_default();
+    padded.extend(std::iter::repeat_n(T_OTHER!("0"), decimals - places));
+    *value_fraction = Some(Tokens::new(padded));
+    if decimal.is_none() {
+      *decimal = Some(Tokens::default());
+    }
+  }
+  SixNumber::simple(None, Some(Tokens::new(digits)), None, None)
+}
+
+fn six_postprocess_aux(number: SixNumber) -> SixNumber {
+  six_postprocess_digits(number, SixDigits::Value)
+}
+
+fn six_postprocess_digits(mut number: SixNumber, role: SixDigits) -> SixNumber {
   match &mut number {
-    SixNumber::Operator { arg1, arg2, .. } => {
-      *arg1 = arg1.take().map(|n| Box::new(six_postprocess_aux(*n)));
-      *arg2 = arg2.take().map(|n| Box::new(six_postprocess_aux(*n)));
+    SixNumber::Operator { operator, arg1, arg2, .. } => {
+      let (role1, role2) = match operator.as_str() {
+        "uncertain" if role == SixDigits::Value => (SixDigits::UncertainValue, SixDigits::Other),
+        "uncertain" | "exponent" => (role, SixDigits::Other),
+        _ => (role, role),
+      };
+      *arg1 = arg1
+        .take()
+        .map(|n| Box::new(six_postprocess_digits(*n, role1)));
+      *arg2 = arg2
+        .take()
+        .map(|n| Box::new(six_postprocess_digits(*n, role2)));
     },
     SixNumber::Simple {
       decimal,
@@ -741,6 +912,32 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
     } => {
       if six_get_bool_sym(six_pin!("add-decimal-zero")) && decimal.is_some() && fraction.is_none() {
         *fraction = Some(Tokens::new(vec![T_OTHER!("0")]));
+      }
+      // siunitx.sty:1000-1001: `drop-zero-decimal` (:2068-2090) drops an
+      // all-zero decimal part, then `minimum-decimal-digits` (:1301-1330) pads
+      // the decimal part with zeros.
+      if role == SixDigits::Value
+        && six_get_bool_sym(six_pin!("drop-zero-decimal"))
+        && fraction
+          .as_ref()
+          .is_some_and(|f| f.unlist_ref().iter().all(|t| *t == T_OTHER!("0")))
+      {
+        *fraction = None;
+        *decimal = None;
+      }
+      if role != SixDigits::Other {
+        let min_decimal: usize = six_get_choice_sym(six_pin!("minimum-decimal-digits"))
+          .parse()
+          .unwrap_or(0);
+        let have = fraction.as_ref().map_or(0, |f| f.unlist_ref().len());
+        if min_decimal > have {
+          let mut padded = fraction.take().map(|f| f.unlist()).unwrap_or_default();
+          padded.extend(std::iter::repeat_n(T_OTHER!("0"), min_decimal - have));
+          *fraction = Some(Tokens::new(padded));
+          if decimal.is_none() {
+            *decimal = Some(Tokens::new(vec![T_OTHER!(".")]));
+          }
+        }
       }
       if six_get_bool_sym(six_pin!("add-integer-zero")) && decimal.is_some() && integer.is_none() {
         *integer = Some(Tokens::new(vec![T_OTHER!("0")]));
@@ -1161,20 +1358,32 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
             .map(|n| six_format_number_inner(n, 0))
             .unwrap_or_default();
         }
-        let fa1 = a1
-          .map(|n| six_format_number_inner(n, 0))
-          .unwrap_or_default();
-        let fa2 = a2
-          .map(|n| six_format_number_inner(n, 0))
-          .unwrap_or_default();
+        let (Some(a1), Some(a2)) = (a1, a2) else {
+          return Tokens::default();
+        };
+        // Perl six_format_uncertainnumber (siunitx.sty.ltxml:528-553): the
+        // uncertainty is converted to the requested form first.
         if six_get_bool_sym(six_pin!("separate-uncertainty")) {
-          six_format_infix(Tokens::new(vec![T_CS!("\\pm")]), None, None, vec![fa1, fa2])
+          let mut separate = six_compute_separate_uncertainty(a1, a2);
+          let sign = separate.get_sign().cloned();
+          separate.set_sign(None);
+          six_format_infix(
+            sign.unwrap_or_else(|| Tokens::new(vec![T_CS!("\\pm")])),
+            (bracket > 0).then(|| six_get_tokens_sym(six_pin!("open-bracket"))),
+            (bracket > 0).then(|| six_get_tokens_sym(six_pin!("close-bracket"))),
+            vec![
+              six_format_number_inner(a1, 0),
+              six_format_number_inner(&separate, 0),
+            ],
+          )
         } else {
+          let mut value = a1.clone();
+          let relative = six_compute_relative_uncertainty(&mut value, a2);
           let open = six_get_tokens_sym(six_pin!("output-open-uncertainty"));
           let close = six_get_tokens_sym(six_pin!("output-close-uncertainty"));
-          let mut tks = fa1.unlist();
+          let mut tks = six_format_number_inner(&value, 0).unlist();
           tks.extend(open.unlist());
-          tks.extend(fa2.unlist());
+          tks.extend(six_format_number_inner(&relative, 0).unlist());
           tks.extend(close.unlist());
           Tokens::new(tks)
         }
@@ -1266,6 +1475,20 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
           .map(|n| six_format_number_inner(n, 0))
           .unwrap_or_default();
         let power = i_superscript(&[("operator_meaning", Tokenize!("power"))], base, fa2);
+        // `retain-unity-mantissa = false` (v3 `print-unity-mantissa`): a mantissa
+        // of exactly 1 is not printed, nor its product: `\num{1e3}` is 10³.
+        // Perl leaves the key unhandled (siunitx.sty.ltxml:304).
+        if !six_get_bool_sym(six_pin!("retain-unity-mantissa"))
+          && let Some(SixNumber::Simple {
+            sign: None,
+            integer: Some(int),
+            fraction: None,
+            ..
+          }) = a1
+          && int.to_string() == "1"
+        {
+          return power;
+        }
 
         let has_mantissa = a1.is_some_and(|n| {
           n.get_integer().is_some() || n.get_fraction().is_some() || n.is_operator()
@@ -2420,6 +2643,19 @@ LoadDefinitions!({
     // Warn meaningful. Witness 2606.13010 `\sisetup{reset-text-family,
     // unit-font-command}`.
     "reset-text-family", "unit-font-command",
+    // siunitx.sty:5095-5114, the rest of v3's font-matching keys (`\l__siunitx_
+    // print_*`), and :931 `round-pad`, which only acts when rounding (the
+    // rounding keys above are accepted without rounding, as in Perl).
+    "reset-text-series", "reset-text-shape", "reset-math-version",
+    "text-series-to-math", "text-family-to-math", "propagate-math-font",
+    "text-font-command", "text-superscript-command", "text-subscript-command",
+    "round-pad",
+    // v3 keys this binding implements (`six_setup`, `six_postprocess_aux`).
+    "locale", "uncertainty-mode", "minimum-decimal-digits", "drop-zero-decimal",
+    "zero-decimal-to-integer",
+    // v3 names routed to their v2 keys by `six_canonical_key`.
+    "print-unity-mantissa", "print-zero-exponent", "print-zero-integer",
+    "drop-uncertainty", "bracket-ambiguous-numbers",
     // v3 spellings routed to their v2 names by `six_canonical_key`.
     "quantity-product",
   ] {
