@@ -87,7 +87,7 @@ LoadDefinitions!({
     }
   });
 
-  DefPrimitive!("\\read Number SkipKeyword:to SkipSpaces Token", sub[(port, token)] {
+  DefPrimitive!("\\read Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
     // Same with_value pattern as etex.rs \readline: Rc::clone the mouth
     // ref instead of cloning the Stored envelope around it.
     let mouth_opt = with_value(&format!("input_file:{port}"), |v| match v {
@@ -244,7 +244,9 @@ LoadDefinitions!({
   // Special output
   //----------------------------------------------------------------------
   // \special          c  sends material to the dvi file for special processing.
-  DefPrimitive!("\\special {}", sub[(arg)] {
+  // The text is tex.web §1354 `scan_toks(false, true)`, expanded as it is read
+  // (Perl `\special XGeneralText`, TeX_FileIO.pool.ltxml:177).
+  DefPrimitive!("\\special XGeneralText", sub[(arg)] {
     let special_str = arg.to_string();
     // recognize one special graphics inclusion case
     if let Some(cap) = PSFILE_REGEX.captures(&special_str) {

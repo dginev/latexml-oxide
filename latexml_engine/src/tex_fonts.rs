@@ -68,10 +68,10 @@ LoadDefinitions!({
   DefRegister!("\\defaulthyphenchar", Number!(45)); // ord('-') = 45
 
   // Perl: \font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName
-  // (TeX_Fonts.pool.ltxml:82). Token does NOT auto-skip spaces in Rust gullet
-  // (parity with Perl readToken), so the leading SkipSpaces is the
-  // Perl-faithful guard for inputs like `\font  \foo  =  cmr10`.
-  DefPrimitive!("\\font SkipSpaces Token SkipSpaces SkipMatch:= SkipSpaces TeXFileName",
+  // (TeX_Fonts.pool.ltxml:82). The name is tex.web §1257's `get_r_token`
+  // (`RedefinableToken`), which skips the spaces before it (`\font  \foo  =
+  // cmr10`) and crosses the end of an input file.
+  DefPrimitive!("\\font RedefinableToken SkipSpaces SkipMatch:= SkipSpaces TeXFileName",
   sub[(cs, name_arg)] {
     let name = name_arg.to_string();
     // Read optional "at <dimen>" or "scaled <number>" — Perl: TeX_Fonts.pool.ltxml L88-94

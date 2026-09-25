@@ -1,0 +1,30 @@
+% mechanism: tex.web §1226-1227 a token-list assignment (`\toks<n>=`, `\everypar=`, a \newtoks
+%   register) takes, after its optional `=`, the next non-blank non-\relax token, expanding
+%   (§404 get_x_token, which crosses the end of an \input file at `normal` status); a left
+%   brace there may be implicit (`\bgroup`, cur_cmd=left_brace), then scan_toks(false,false)
+%   reads the text up to the matching explicit `}`; a token-list register gives its value.
+%   Rust (and Perl, Gullet.pm:824-842 readTokensValue) read the token unexpanded and required
+%   a catcode-1 `{`: `\bgroup` became the value, `\relax` too, and a file ending in `\toks0=`
+%   assigned nothing.
+% witness: arXiv 2605.02221, 2605.25087 (Paul Taylor's diagrams.sty:15 `\toks0=\bgroup}`: 1 error → 0)
+% oracle:  pdflatex 0 errors, "[abc] [def] [ghi] [xyz] [ghi] I [jkl]"
+% engines: rust=1 error ("Attempt to close a group that switched to mode horizontal"),
+%          "abc[] def[] ghi[] [xyz] [] I jkl []" (56jg-rel, 2026-09-25)
+% expect:  0 errors, "[abc] [def] [ghi] [xyz] [ghi] I [jkl]"
+% status:  GREEN (56jj: gullet.rs read_tokens_value; guard
+%          token_kernel_gaps::a_token_list_assignment_takes_an_implicit_brace)
+\documentclass{article}
+\begin{filecontents*}{toks_implicit_left_brace_in.tex}
+\toks8=
+\end{filecontents*}
+\newtoks\mytoks
+\def\foo{{xyz}}
+\makeatletter
+\begin{document}
+\toks0=\bgroup abc}[\the\toks0]
+\toks2 = \relax \bgroup d{e}f}[\the\toks2]
+\mytoks\bgroup ghi}[\the\mytoks]
+\toks4=\foo[\the\toks4]
+\toks6=\mytoks[\the\toks6]
+I \@@input toks_implicit_left_brace_in.tex {jkl}[\the\toks8]
+\end{document}

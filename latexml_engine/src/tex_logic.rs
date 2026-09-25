@@ -41,7 +41,7 @@ LoadDefinitions!({
   DefConditional!("\\if ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_charcode() == right.get_charcode()
   });
-  DefConditional!("\\ifx Token Token", sub[(left,right)] { x_equals(&left, &right) });
+  DefConditional!("\\ifx NormalToken NormalToken", sub[(left,right)] { x_equals(&left, &right) });
   DefConditional!("\\ifcat ExpandedIfToken ExpandedIfToken", sub[(left,right)] {
     left.get_catcode() == right.get_catcode()
   });

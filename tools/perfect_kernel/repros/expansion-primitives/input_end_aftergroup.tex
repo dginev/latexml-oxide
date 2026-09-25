@@ -1,0 +1,19 @@
+% mechanism: tex.web §1271 \aftergroup reads its token with get_token; at `normal` status the
+%   read crosses the end of an \input file (§362), so a file ending in \aftergroup saves the
+%   first token after the file for the end of the group.
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "H XFOO"
+% engines: rust=0 errors, "H FOOX": \aftergroup saved \relax and \foo ran at once
+%          (56jg-rel, 2026-09-25)
+% expect:  0 errors, "H XFOO"
+% status:  GREEN (56jj: the `Token` parameter reads with read_primitive_token; guard
+%          token_kernel_gaps::aftergroup_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_aftergroup_in.tex}
+\aftergroup
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+H {\@@input input_end_aftergroup_in.tex \foo X}
+\end{document}

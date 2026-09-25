@@ -1,0 +1,14 @@
+% mechanism: \message's text is scan_toks(false,true) (tex.web §1279, §477-478): `\the\toks0`
+%   inserts the register's tokens unexpanded, and a \protected macro is not expanded; the log
+%   line is print_meaning's form of the list, each control word followed by a space. Before
+%   56jj Rust read a `{}` argument and expanded it fully: "FP".
+% witness: batch 56jj review (Full → Partial expansion of \message)
+% oracle:  pdflatex 0 errors, log line "\foo \p " (then " [1" of the shipout on the same line)
+% engines: rust=0 errors, log line "FP" (56jg-rel, 2026-09-25)
+% expect:  0 errors, a log line "\foo \p "
+% status:  GREEN (56jj: \message XGeneralText; guard token_kernel_gaps::message_keeps_the_and_protected)
+\documentclass{article}
+\begin{document}
+\toks0{\foo}\protected\def\p{P}\def\foo{F}\message{\the\toks0 \p}
+A
+\end{document}

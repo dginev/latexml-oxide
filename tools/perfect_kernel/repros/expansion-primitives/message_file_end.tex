@@ -1,0 +1,18 @@
+% mechanism: \message's text is scan_toks(false,true) (tex.web §1279), read at `absorbing`
+%   status: a file that ends inside it is a runaway, "File ended while scanning text of
+%   \message" (§338), and TeX inserts a `}` (§339), so the text ends at the file's end and the
+%   enclosing input goes on. Rust read a `{}` argument, whose read stops at the file's end
+%   with Perl's "readBalanced ran out of input" error.
+% witness: batch 56jg (W9) residual, repro file_end_absorbing_text.tex
+% oracle:  pdflatex 1 error "File ended while scanning text of \message", "A B"; log "abc"
+% engines: rust=1 error "Gullet->readBalanced ran out of input in an unbalanced state", "A B"
+%          (56jg-rel, 2026-09-25)
+% expect:  1 error "File ended while scanning text of \message", "A B", log "abc"
+% status:  GREEN (56jj: XGeneralText; guard token_kernel_gaps::a_file_ending_inside_a_message)
+\documentclass{article}
+\begin{filecontents*}{message_file_end_in.tex}
+\message{abc
+\end{filecontents*}
+\begin{document}
+A \input message_file_end_in.tex B
+\end{document}

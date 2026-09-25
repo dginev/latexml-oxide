@@ -242,7 +242,38 @@ LoadDefinitions!({
     // "Error:expected:argument: try_to_token: empty Tokens" at the
     // primitive's arg-coerce step (witness: 0910.2125 sub/superscript
     // cascade where 13 errors match Perl + 1 extra Rust empty-Tokens).
-    match read_token()? {
+    //
+    // A primitive's token (`\afterassignment`, `\aftergroup`, `\futurelet`
+    // …) is its `get_token`, which at `normal` scanner status crosses the end
+    // of an input level (tex.web §362): `read_primitive_token`. A macro's
+    // `Token` argument, read at `matching`, stops at the file's end and the
+    // macro gets `\relax`.
+    match read_primitive_token()? {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
+    }
+  });
+
+  // A token read at `normal` scanner status whatever the enclosing scan:
+  // tex.web §507 saves the status and sets `normal` for `\ifx`'s two
+  // `get_next`s (eTeX's `\ifdefined` likewise), so they cross the end of an
+  // input level even inside a definition (`\edef\y{\ifx\foo` as a file's
+  // last line compares `\foo` with the next file's first token, pdflatex).
+  // Guard: `token_kernel_gaps::ifx_reads_at_normal_status_in_a_definition`.
+  DefParameterType!(NormalToken, sub[_inner, _extra] {
+    match read_token_across_input_ends()? {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
+    }
+  });
+
+  // The name a definition gives: tex.web §1215 `get_r_token`, the next
+  // non-space token, crossing the end of an input level as `Token` does
+  // (`read_redefinable_token`). `\def`, `\let`, `\futurelet`, `\chardef`, the
+  // `\countdef` family, `\read … to`, `\font`; a bare `\def` as a file's last
+  // token names the first non-space token after the file.
+  DefParameterType!(RedefinableToken, sub[_inner, _extra] {
+    match read_redefinable_token()? {
       Some(t) => Ok(ArgWrap::Token(t)),
       None => Ok(ArgWrap::Token(T_CS!("\\relax"))),
     }

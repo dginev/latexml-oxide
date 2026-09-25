@@ -6850,3 +6850,39 @@ returns for a file already `_loaded` (:2363); TeX re-reads. Trigger: two package
 greek-fontenc.def for TU after lgrenc.def read it for LGR, so the TU Greek declarations never exist
 and babel-greek falls back to LGR (a plain `U` prints ϒ). Rust (batch 56ji, OXIDIZED_DESIGN_DIVERGENCES #312).
 Guard `greek_text::input_rereads_a_raw_definitions_file`.
+
+## 262. A primitive's token read at the end of an `\input` file finds nothing (FIXED in Rust)
+
+`Gullet.pm` `readToken` returns undef at the mouth's end instead of crossing into the enclosing
+input (tex.web §362: at `scanner_status=normal` every `get_token` does). A file whose last token is
+`\expandafter`, `\string` or `\meaning` is a Fatal ("Can't call method 'defined_as' / 'getCatcode'
+on an undefined value"); `\afterassignment`, `\aftergroup`, `\let`, `\futurelet` there are "Missing
+argument Token". Trigger: `x.tex` = `\expandafter\x`, main `\def\x#1{[#1]}\def\foo{FOO}` and
+`\@@input x \foo` — pdflatex prints "[F]OO" (LaTeX's `\input{x}` would hand `\expandafter` its own
+file hooks instead). Repro `expansion-primitives/input_end_expandafter.tex`. Rust (batch 56jj, OXIDIZED_DESIGN_DIVERGENCES #313).
+Guards `token_kernel_gaps::*_crosses_a_file_end`.
+
+## 263. `\let` skips only an explicit space after `=` (FIXED in Rust)
+
+Perl's `\let` reads `SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token`
+(TeX_Macro.pool.ltxml:184); tex.web §1221 skips every token whose command is a spacer, which
+includes an implicit space. Trigger: `\let\c\@sptoken=\b` — Perl and pre-56jj Rust give `\c` = `=`,
+TeX gives `\c` = `\b`. Rust (batch 56jj, #313). Guard `token_kernel_gaps::let_crosses_a_file_end`.
+
+## 264. A token-list assignment takes no implicit left brace (FIXED in Rust)
+
+`readTokensValue` (Gullet.pm:824-842) accepts only an explicit catcode-1 token or a token register;
+tex.web §1226-1227 scans for a left brace by expanding, so `\bgroup` opens the list. Trigger:
+`\toks0=\bgroup abc}` — Perl stores `\bgroup` as the value and typesets `abc}`. Witnesses 2605.02221,
+2605.25087 (`diagrams.sty:15`, `\toks0=\bgroup}`). Rust (batch 56jj, #313). Repro
+`expansion-primitives/toks_implicit_left_brace.tex`; guard
+`token_kernel_gaps::a_token_list_assignment_takes_an_implicit_brace`.
+
+## 265. `\message`, `\errmessage` and `\mark` read a `{}` argument, not `scan_toks` (FIXED in Rust)
+
+Perl declares them with `{}` (TeX_Debugging.pool.ltxml:65,71, TeX_Marks.pool.ltxml:30), so the
+brace is not found by expansion, `\message` expands its text a second time, and `\mark` does not
+expand at all (an undefined macro in a mark is silent). Trigger:
+`\def\foo{hi}\message\expandafter{\foo}` — TeX logs `hi`; Perl reads `\expandafter` as the argument
+and typesets `hi`. Rust reads `XGeneralText` (batch 56jj, #313); an unbraced text is an error
+with the token put back (Perl takes it silently as the text). Repros `expansion-primitives/message_*.tex`, `mark_unbraced.tex`.

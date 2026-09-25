@@ -88,22 +88,22 @@ LoadDefinitions!({
   //                  text are expanded when the definition is made.
   // \gdef         d  is equivalent to `\global\def'.
   // \xdef         d  is equivalent to `\global\edef'.
-  DefPrimitive!("\\def SkipSpaces Token UntilBrace DefPlain",
+  DefPrimitive!("\\def RedefinableToken UntilBrace DefPlain",
     sub[(cs,params,body)] {
       do_def(false,cs,params,body)?;
     },
     locked => true);
-  DefPrimitive!("\\gdef SkipSpaces Token UntilBrace DefPlain",
+  DefPrimitive!("\\gdef RedefinableToken UntilBrace DefPlain",
     sub[(cs,params,body)] {
       do_def(true,cs,params,body)?;
     },
     locked => true);
-  DefPrimitive!("\\edef SkipSpaces Token UntilBrace DefExpanded",
+  DefPrimitive!("\\edef RedefinableToken UntilBrace DefExpanded",
     sub[(cs,params,body)] {
       do_def(false,cs,params,body)?;
     },
     locked => true);
-  DefPrimitive!("\\xdef SkipSpaces Token UntilBrace DefExpanded",
+  DefPrimitive!("\\xdef RedefinableToken UntilBrace DefExpanded",
     sub[(cs,params,body)] {
       do_def(true,cs,params,body)?;
     },
@@ -123,27 +123,30 @@ LoadDefinitions!({
   //   `\let SkipSpaces Token SkipSpaces SkipMatch:= Skip1Space Token`
   // which in our engine routed the optional-`=` consumption through
   // the generic Match parameter type's unread-on-no-match recovery.
-  // Implementing the read sequence explicitly here is Perl-faithful
-  // and TeX-faithful, and avoids a subtle interaction with the
-  // generic recovery path: `<one optional space>` is always tried,
-  // independent of whether `=` was consumed.
-  DefPrimitive!("\\let SkipSpaces Token", sub[(token1)] {
-    // <equals> = optional-spaces ['=']
-    skip_spaces()?;
-    if let Some(t) = read_token()? {
-      let is_eq =
-        t.get_catcode() == Catcode::OTHER && t.text == pin!("=");
-      if !is_eq {
-        unread_one(t);
+  // The reads are tex.web §1221's instead: `repeat get_token until
+  // cur_cmd<>spacer`, and after an `=` one more `get_token`, repeated once
+  // if it is a space. A space there is explicit or implicit (`cur_cmd`), so
+  // `\let\c\@sptoken=\b` lets `\c` to `\b` (pdflatex; Rust let it to `=`).
+  // Each read is the primitive's `get_token`, which at a file's end goes on
+  // in the enclosing input (`read_primitive_token`): a file ending in
+  // `\let\y=` lets `\y` to the next token after it. The name is §1215
+  // `get_r_token` (`RedefinableToken`), which skips spaces, also after a file
+  // that ends in a bare `\let`.
+  DefPrimitive!("\\let RedefinableToken", sub[(token1)] {
+    let is_spacer = |t: &Option<Token>| t.as_ref().is_some_and(is_space_or_implicit_space);
+    let mut token2 = read_primitive_token()?;
+    while is_spacer(&token2) {
+      token2 = read_primitive_token()?;
+    }
+    if token2.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.text == pin!("=")) {
+      token2 = read_primitive_token()?;
+      if is_spacer(&token2) {
+        token2 = read_primitive_token()?;
       }
     }
-    // <one optional space>
-    skip_one_space(false)?;
-    // <token>
-    let token2 = read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
-    Let!(token1, token2);
+    Let!(token1, token2.unwrap_or_else(|| T_CS!("\\relax")));
   });
-  DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
+  DefPrimitive!("\\futurelet RedefinableToken Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
     unread(Tokens!(token1,token2));
     Let!(cs, token2);
@@ -153,13 +156,20 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \expandafter      c  `<token1><token2>' is equivalent to `<token1> expansion of <token2>'.
   // \noexpand         c  prevents the expansion of the following token.
-  DefMacro!("\\expandafter Token Token", sub[(tok, xtok)] {
-    let mut xtok = xtok;
-    let mut skipped : Vec<Token> = vec![tok];
+  //
+  // The two tokens are read by the primitive itself (tex.web §368 `get_token;
+  // t:=cur_tok; get_token`), at the scanner status of the scan it expands in,
+  // not as a macro's arguments (`matching`): at `normal` status a file's end
+  // is crossed, so a file ending in `\expandafter\x` expands the first token
+  // after it (`read_primitive_token`).
+  DefMacro!(T_CS!("\\expandafter"), None, {
+    let tok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let mut xtok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let mut skipped: Vec<Token> = vec![tok];
     while xtok.defined_as(&TOKEN_EXPANDAFTER) {
-      if let Some(ntok) = read_token()? {
+      if let Some(ntok) = read_primitive_token()? {
         skipped.push(ntok);
-        if let Some(nxtok) = read_token()? {
+        if let Some(nxtok) = read_primitive_token()? {
           xtok = nxtok;
         } else {
           // Stream ended mid-chain (an isolated argument mouth ran out —
@@ -171,12 +181,20 @@ LoadDefinitions!({
           // error and stop — the missing-token recovery mirrors the
           // undefined-`xtok` stub arm below. (Perl instead crashes:
           // "Can't call defined_as on undefined", TeX_Macro.pool L207.)
-          Error!("expected","expandafter", "\\expandafter wrongly used without 2 arguments.");
+          Error!(
+            "expected",
+            "expandafter",
+            "\\expandafter wrongly used without 2 arguments."
+          );
           retract_scanned_braces(&skipped);
           return Ok(Tokens::new(skipped));
         }
       } else {
-        Error!("expected", "expandafter", "\\expandafter wrongly used without 2 arguments.");
+        Error!(
+          "expected",
+          "expandafter",
+          "\\expandafter wrongly used without 2 arguments."
+        );
         retract_scanned_braces(&skipped);
         return Ok(Tokens::new(skipped));
       }
@@ -194,29 +212,34 @@ LoadDefinitions!({
     // 83, tablists-rus 101, mhchem 14; Perl identical). Without any
     // retraction the idiom double-counts and the ledger drifts positive.
     // Guard: `perfect_kernel_batch54::argument_scan_is_align_state_neutral`.
-    match lookup_expandable(&xtok, None)? { Some(defn) => {
-      local_current_token(xtok);
-      let invoked = defn.invoke(true)?;
-      expire_current_token();
-      retract_scanned_braces(&skipped);
-      if !invoked.is_empty() {
-        skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
-      }
-    } _ => if !has_meaning(&xtok) {
-      retract_scanned_braces(&skipped);
-      // Undefined token is an error, as expansion is expected.
-      // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
-      // since probably in a real TeX run it would have been defined.
-      generate_error_stub(&xtok)?;
-      retract_scanned_brace(&xtok);
-      skipped.push(xtok);
-    } else {
-      // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
-      // counted, and re-enters via our expansion — retract like the prefix.
-      retract_scanned_braces(&skipped);
-      retract_scanned_brace(&xtok);
-      skipped.push(xtok);
-    }};
+    match lookup_expandable(&xtok, None)? {
+      Some(defn) => {
+        local_current_token(xtok);
+        let invoked = defn.invoke(true)?;
+        expire_current_token();
+        retract_scanned_braces(&skipped);
+        if !invoked.is_empty() {
+          skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
+        }
+      },
+      _ => {
+        if !has_meaning(&xtok) {
+          retract_scanned_braces(&skipped);
+          // Undefined token is an error, as expansion is expected.
+          // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
+          // since probably in a real TeX run it would have been defined.
+          generate_error_stub(&xtok)?;
+          retract_scanned_brace(&xtok);
+          skipped.push(xtok);
+        } else {
+          // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
+          // counted, and re-enters via our expansion — retract like the prefix.
+          retract_scanned_braces(&skipped);
+          retract_scanned_brace(&xtok);
+          skipped.push(xtok);
+        }
+      },
+    };
     Ok(Tokens::new(skipped))
   });
   // If next token is expandable, prefix it with the internal marker \dont_expand

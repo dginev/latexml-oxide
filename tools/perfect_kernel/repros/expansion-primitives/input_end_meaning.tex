@@ -1,0 +1,18 @@
+% mechanism: tex.web §471 \meaning reads its token at `normal` scanner status, as \string does,
+%   so at the end of an \input file the token is the first one after the file (§362). Rust read
+%   it as a macro's `Token` argument, which stops at the file's end (and yielded \relax).
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "C [macro:->FOO]"
+% engines: rust=0 errors, "C [\relaxFOO]" (56jg-rel, 2026-09-25)
+% expect:  0 errors, "C [macro:->FOO]"
+% status:  GREEN (56jj: \meaning reads with read_token_across_input_ends; guard
+%          token_kernel_gaps::meaning_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_meaning_in.tex}
+\meaning
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+C [\@@input input_end_meaning_in.tex \foo]
+\end{document}

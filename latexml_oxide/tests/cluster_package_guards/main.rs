@@ -133,6 +133,7 @@ mod perfect_kernel_batch47;
 mod perfect_kernel_batch48;
 mod perfect_kernel_batch49;
 mod scanner_status;
+mod token_kernel_gaps;
 mod unicode_format_encoding;
 mod vfs_file_end;
 mod xkeyval_internals;

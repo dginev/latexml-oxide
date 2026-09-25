@@ -842,7 +842,7 @@ LoadDefinitions!({
   });
 
   // Almost like a register, but different...
-  DefPrimitive!("\\mathchardef Token SkipSpaces", sub[(newcs)] {
+  DefPrimitive!("\\mathchardef RedefinableToken SkipSpaces", sub[(newcs)] {
     // Let w/o AfterAssignment
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);

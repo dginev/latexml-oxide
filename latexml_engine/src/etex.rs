@@ -438,7 +438,9 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.6 Additional Registers and Marks — Perl L221-226
-  def_primitive_noop("\\marks Number GeneralText")?;
+  // Its text is eTeX's `scan_toks(false, true)`, as `\mark`'s (Perl reads a
+  // `GeneralText`, eTeX.pool.ltxml:221).
+  def_primitive_noop("\\marks Number XGeneralText")?;
   def_macro_noop("\\topmarks Number")?;
   def_macro_noop("\\firstmarks Number")?;
   def_macro_noop("\\botmarks Number")?;
@@ -542,7 +544,7 @@ LoadDefinitions!({
 
   //======================================================================
   // 3.12 Expandable Commands — Perl L330-357
-  DefConditional!("\\ifdefined Token", sub[(t)] {
+  DefConditional!("\\ifdefined NormalToken", sub[(t)] {
     has_meaning(&t)
   });
 

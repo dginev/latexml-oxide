@@ -1342,6 +1342,65 @@ pub fn read_token_across_input_ends() -> Result<Option<Token>> {
   }
 }
 
+/// Read a token as a primitive reads one: tex.web §365 `get_token` under the
+/// current [`ScannerStatus`] (`\let`, `\futurelet`, `\afterassignment`,
+/// `\aftergroup`, `\expandafter`, a `Token` parameter). An input level
+/// that ends here closes (§362 `end_file_reading`) and §336
+/// `check_outer_validity` looks at the status:
+/// - `normal`: no runaway; the read goes on in the enclosing input, as
+///   [`read_token_across_input_ends`] reads, so a primitive that is the last
+///   token of an `\input` file takes its token from the input that follows;
+/// - `defining`, `absorbing`, `aligning`: the scan in progress ran off the file,
+///   and the primitive's read meets it: the runaway is reported there and
+///   TeX's recovery tokens are read ([`recover_at_file_end`]), so an
+///   `\edef\x{\expandafter` at a file's end reads the inserted `}` and
+///   `\x` is empty, as in pdflatex;
+/// - `matching`: TeX reads a macro's arguments without expanding, so it gives
+///   no primitive's read this status, but Rust does: an expandable primitive
+///   with typed parameters (`\csname CSName`, `\number Number`, `\readline …
+///   Token`) reads them at `matching`, set by `Expandable::read_call_arguments`.
+///   The read stops at the file's end (a residual: `\csname a\expandafter` as
+///   a file's last tokens does not cross), and so does a macro's `Token`
+///   argument (the macro gets `\relax`, the `Token` parameter's end value).
+///
+/// `\ifx` and `\ifdefined` read at `normal` whatever the status (§507), with
+/// [`read_token_across_input_ends`]. The status is consulted only once the
+/// current input has run out.
+///
+/// Guards: `token_kernel_gaps::*`.
+pub fn read_primitive_token() -> Result<Option<Token>> {
+  if let Some(token) = read_token()? {
+    return Ok(Some(token));
+  }
+  match scanner_status() {
+    ScannerStatus::Normal => read_token_across_input_ends(),
+    ScannerStatus::Matching => Ok(None),
+    _ => loop {
+      if let Some(token) = read_token()? {
+        return Ok(Some(token));
+      }
+      if recover_at_file_end()? != FileEndRecovery::Inserted {
+        return Ok(None);
+      }
+    },
+  }
+}
+
+/// The control sequence a definition names: tex.web §1215 `get_r_token`,
+/// `repeat get_token until cur_tok<>space_token` (`\def`, `\let`, `\futurelet`,
+/// `\chardef`, `\countdef` …). Each read is [`read_primitive_token`], so a
+/// bare `\let` or `\def` as a file's last token takes its name from the input
+/// after the file, skipping the spaces there. (TeX's "Missing control sequence
+/// inserted" for a name that is not one is not modelled.)
+pub fn read_redefinable_token() -> Result<Option<Token>> {
+  loop {
+    match read_primitive_token()? {
+      Some(token) if token.get_catcode() == Catcode::SPACE => {},
+      other => return Ok(other),
+    }
+  }
+}
+
 /// Read a token that the calling macro/primitive REQUIRES, holding the
 /// "argument expected but input ended" diagnostic in one place.
 ///
@@ -3707,55 +3766,62 @@ fn read_internal_mu_glue() -> Result<Option<MuGlue>> {
   }
 }
 
-/// Apparent behaviour of a token value (ie `\toks#=<arg>`)
+/// The right-hand side of a token-list assignment, `\toks<n>=…`, `\everypar=…`
+/// (tex.web §1226-1227), after its optional `=`: the next non-blank
+/// non-`\relax` token, expanding (§404, `get_x_token`, which at a file's end
+/// goes on in the enclosing input). A left brace, explicit or implicit
+/// (`\toks0=\bgroup abc}`), opens the balanced text, read at `absorbing`
+/// status (`scan_toks(false, false)`, [`read_balanced_text`]); a token-list
+/// register or parameter gives its value. Any other token is the value
+/// itself, as in Perl (Gullet.pm:824-842 `readTokensValue`), after TeX's
+/// error, "Missing { inserted" (§403 `scan_left_brace`; TeX then absorbs up to
+/// the next `}`).
+/// Perl reads the token unexpanded and recurses on an expandable one, so a
+/// `\relax`, an implicit brace or a file end before the text lost it:
+/// Paul Taylor's diagrams.sty:15 `\toks0=\bgroup}` stored `\bgroup`, and its
+/// `}` closed a group (arXiv 2605.02221, 2605.25087).
+/// Guards: `token_kernel_gaps::*`.
 pub fn read_tokens_value() -> Result<Tokens> {
-  match read_non_space()? {
-    None => Ok(Tokens!()),
-    Some(token) => {
-      // Perl: $$token[1] == CC_BEGIN — direct catcode check
-      if token.get_catcode() == Catcode::BEGIN {
-        // tex.web §1226: `scan_toks(false, false)` for the token-list
-        // parameter or register being assigned (`absorbing`).
-        read_balanced_text(ExpansionLevel::Off, false)
-      } else {
-        match lookup_register_definition(&token) {
-          Some(defn) => {
-            match defn.register_type() {
-              Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
-                // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
-                // value_of feels incorrect       but in which direction should it be
-                // resolved?
-                let args = defn.read_arguments()?;
-                match defn.value_of(args) {
-                  None => Ok(Tokens!()),
-                  Some(v) => Ok(v.into()),
-                }
-              },
-              _ => Ok(Tokens!(token)),
-            }
-          },
-          _ => {
-            match lookup_definition(&token)? {
-              Some(defn) => {
-                // TODO: we are doing two lookups to avoid the type restriction of .read_arguments,
-                // any way to circumvent? Is it slow in the first place?
-                if defn.is_expandable() {
-                  let x = defn.invoke(false)?;
-                  if !x.is_empty() {
-                    unread_expansion(x);
-                  }
-                  read_tokens_value()
-                } else {
-                  Ok(Tokens!(token))
-                }
-              },
-              _ => Ok(Tokens!(token)),
-            }
-          },
-        }
-      }
+  let token = loop {
+    match read_x_token(Some(false), false, Some(true))? {
+      None => return Ok(Tokens!()),
+      // A `\noexpand`ed token is `relax` too (§358).
+      Some(t)
+        if is_space_or_implicit_space(&t)
+          || t.defined_as(&TOKEN_RELAX)
+          || t.is_noexpand_family() => {},
+      Some(t) => break t,
+    }
+  };
+  if is_left_brace(&token) {
+    return read_balanced_text(ExpansionLevel::Off, false);
+  }
+  match lookup_register_definition(&token) {
+    Some(defn)
+      if matches!(
+        defn.register_type(),
+        Some(RegisterType::Tokens) | Some(RegisterType::Token)
+      ) =>
+    {
+      let args = defn.read_arguments()?;
+      Ok(defn.value_of(args).map(Into::into).unwrap_or_default())
+    },
+    _ => {
+      Error!("expected", "{", "Missing { inserted");
+      Ok(Tokens!(token))
     },
   }
+}
+
+/// tex.web's `cur_cmd=left_brace`: a character of catcode 1, or a control
+/// sequence or active character `\let` to one (`\bgroup`).
+pub fn is_left_brace(token: &Token) -> bool {
+  token.get_catcode() == Catcode::BEGIN
+    || (token.get_catcode().is_active_or_cs()
+      && with_meaning(
+        token,
+        |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::BEGIN),
+      ))
 }
 
 /// Discard any run of spaces at the head of the input — Perl
@@ -3774,7 +3840,8 @@ pub fn skip_spaces() -> Result<()> {
 /// Check if a token is a space token (catcode SPACE) or an "implicit space"
 /// (a CS or ACTIVE token `\let` to a space token).
 /// See TeXbook p269: `<one optional space>` absorbs both explicit and implicit spaces.
-fn is_space_or_implicit_space(token: &Token) -> bool {
+/// (tex.web's `cur_cmd=spacer`.)
+pub fn is_space_or_implicit_space(token: &Token) -> bool {
   if token.get_catcode() == Catcode::SPACE {
     return true;
   }

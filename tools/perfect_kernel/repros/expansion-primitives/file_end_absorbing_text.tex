@@ -6,8 +6,8 @@
 %          \message), prints "A B [abc ] C ABC D E"
 % engines: rust=4 errors "Gullet->readBalanced ran out of input in an unbalanced state", same text:
 %          the read stopped at the file's end without TeX's report (56ja-rel, 2026-09-25)
-% expect:  4 errors; \toks, \write, \uppercase name TeX's "text of"; \message ({} in Perl and
-%          Rust, a primitive argument) keeps Perl's stop and message; "A B [abc ] C ABC D E"
+% expect:  4 errors, each TeX's "text of" (\message since 56jj: XGeneralText, where Perl reads a
+%          `{}` argument and keeps its stop); "A B [abc ] C ABC D E"
 % status:  GREEN (W9: ScannerStatus::Absorbing, read_balanced_text; guard
 %          scanner_status::a_file_ending_inside_a_text_ends_the_text)
 \documentclass{article}

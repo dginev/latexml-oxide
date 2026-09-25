@@ -1,0 +1,20 @@
+% mechanism: \meaning of a primitive prints its name (tex.web §296 print_meaning →
+%   print_cmd_chr): `\expandafter`, `\string`, `\noexpand`, also through a \let alias. Rust
+%   and Perl implement these expandable primitives as closure-backed macros and printed
+%   "macro:<params>->CODE(<address>)", a heap address that changes from run to run (Perl
+%   "CODE(0x…)"). tex_debugging.rs EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING names them while
+%   the definition is still the kernel's closure; a \def\string{S} is a macro again.
+% witness: batch 56jj side finding (\expandafter, \string, \meaning read their own tokens
+%   since 56jj and lost their parameter lists, "macro:#1#2->" → "macro:->")
+% oracle:  pdflatex 0 errors, "[\expandafter] [\string] [\meaning] [\noexpand] [\let]
+%          [\expandafter] [macro:->S]" (OT1 prints \ as a quote, > as ¿)
+% engines: rust=0 errors, "[macro:->CODE(Pointer – addr: 0x…)] …" (56jj, before the fix,
+%          2026-09-25); perl "[macro:#1#2->CODE(0x…)] [macro:#1->CODE(0x…)] …"
+% expect:  0 errors, pdflatex's text
+% status:  GREEN (56jj: EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING; guard
+%          token_kernel_gaps::meaning_names_an_expandable_primitive)
+\documentclass{article}
+\begin{document}
+[\meaning\expandafter] [\meaning\string] [\meaning\meaning] [\meaning\noexpand] [\meaning\let]
+\let\xa\expandafter [\meaning\xa] {\def\string{S}[\meaning\string]}
+\end{document}

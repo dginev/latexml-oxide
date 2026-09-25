@@ -140,7 +140,7 @@ LoadDefinitions!({
   // \reserved@a` with `\reserved@a` = `=4\relax` set the limit to 0 when the `=` was
   // matched unexpanded (cv4tw, arabic-book; class census 2026-09-24). The same holds
   // for `\mathchardef` and the `\countdef` family (`shorthand_def`).
-  DefPrimitive!("\\chardef Token SkipSpaces", sub[(newcs)] {
+  DefPrimitive!("\\chardef RedefinableToken SkipSpaces", sub[(newcs)] {
     // Let w/o AfterAssignment
     let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, relax_meaning, None);
@@ -186,7 +186,12 @@ LoadDefinitions!({
   // suggests all characters except spaces are returned in category code Other, i.e. Explode()
   // Mirrors Perl: CS → explode with escape char; SPACE → keep as space; ESCAPE/COMMENT/INVALID →
   // empty; all other catcodes → T_OTHER with same text.
-  DefMacro!("\\string Token", sub[(token)] {
+  //
+  // tex.web §471 reads the token at `normal` scanner status (`scanner_status:=
+  // normal; get_token`), so at a file's end it is the first token of the
+  // enclosing input: `read_token_across_input_ends`, as `\noexpand` reads.
+  DefMacro!(T_CS!("\\string"), None, {
+    let token = read_token_across_input_ends()?.unwrap_or_else(|| T_CS!("\\relax"));
     // A live \special_relax-family token is TeX's `\noexpand` marker (tex.web
     // §358: cmd `relax`, chr `no_expand_flag`, with `cur_cs` = the shadowed
     // control sequence), and `\string` prints `cur_cs`'s name (§472
@@ -205,10 +210,15 @@ LoadDefinitions!({
           s = escapechar() + &s[1..];
         }
         Explode!(s)
-      }
+      },
       Catcode::SPACE => vec![token],
       Catcode::ESCAPE | Catcode::COMMENT | Catcode::INVALID => vec![],
-      _ => vec![Token { text: token.text, code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 }],
+      _ => vec![Token {
+        text: token.text,
+        code: Catcode::OTHER,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
+      }],
     }
   });
 

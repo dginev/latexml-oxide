@@ -9453,8 +9453,9 @@ Perl's `readBalanced` stops at the mouth's end (Gullet.pm:470-472), reports "ran
 runs the macro on the partial argument (:683), so a runaway argument now loses what Perl kept, as
 pdfTeX does. The status is saved and restored by a guard type on every exit path and reset per
 conversion; `\long` survives the dump. Error counts, messages and text equal pdflatex's on the
-repros (`expansion-primitives/file_end_*`). Not modelled (residuals, SYNC_STATUS): `\message`,
-`\errmessage`, `\mark` and Rust's `\special {}` keep Perl's stop; `\lstnewenvironment`/
+repros (`expansion-primitives/file_end_*`). Since batch 56jj (#313) `\message`, `\errmessage`,
+`\mark`, `\marks` and `\special` read their text at absorbing status, and a primitive's own token
+reads follow the status too. Not modelled (residuals, SYNC_STATUS): `\lstnewenvironment`/
 `\newtcbinputlisting` bodies and LaTeX-level commands Rust implements as primitives or constructors
 (e.g. `\setcounter`) keep Perl's stop (a primitive-level abort would be needed); TeX's `skipping`
 status; the defining message does not name the macro; the inserted `\cr` is not TeX's frozen one; a
@@ -9518,3 +9519,57 @@ errors, fatals and warnings unchanged; 8 recall gains, 0 losses (test-athnum 78.
 (luababel.def; red repro `babel-lang/luababel_language_tag_luatex.tex`).
 
 **Guards**: `greek_text::*` (9), `perfect_kernel_batch54` (θ as pdflatex).
+
+### 313. A primitive's token read crosses a file end; a token-list assignment takes an implicit brace; `\message` and `\mark` read their text as `scan_toks` (Perl: Fatal or "Missing argument"; a `{}` argument)
+
+**Rust** (batch 56jj, worker W13) follows tex.web where a primitive reads its own tokens:
+
+- **A primitive's `get_token` crosses the end of an input level** (§362): every autoclose level
+  with a parent (`\input` files, `\scantokens` pseudo-files, verbatim/listings line remainders,
+  bibtex entry mouths). `gullet.rs` `read_primitive_token` serves the `Token` parameter
+  (`\afterassignment`, `\aftergroup`, `\futurelet`), `\expandafter` (which now reads its own two
+  tokens, §368) and `\let` (§1221). At `normal` status it crosses the level's end as `\noexpand`'s
+  reader does. At `defining`/`absorbing`/`aligning` the end is the enclosing scan's runaway,
+  reported where the primitive meets it and followed by TeX's inserted tokens (§336-339):
+  `\edef\x{\expandafter` as a file's last line is one error and an empty `\x`, as pdflatex. At
+  `matching` it stops and a macro's `Token` argument is `\relax` (see residual).
+  `\let\c\@sptoken=\b` gives `\b`, as pdflatex (KNOWN_PERL_ERRORS #263).
+- **`\string`, `\meaning` (§471), `\ifx` (§507) and `\ifdefined` read at `normal` whatever the
+  enclosing scan** (`read_token_across_input_ends`, the `NormalToken` parameter), so inside an
+  `\edef` body they cross a file end instead of meeting the definition's runaway.
+- **A definition's name crosses a file end** (§1215 `get_r_token`): `RedefinableToken` /
+  `read_redefinable_token` for `\def \gdef \edef \xdef \let \futurelet \chardef \mathchardef
+  \countdef \dimendef \skipdef \muskipdef \toksdef \read \font` skips the spaces after the name.
+- **A token-list assignment** (`read_tokens_value`, §1226-1227) finds its brace by expanding,
+  skipping blanks and `\relax`; `\bgroup` counts as the left brace and a token register gives its
+  value. Any other token is "Missing { inserted" (§403) and is kept as the value (Perl stores it
+  silently).
+  Witnesses 2605.02221, 2605.25087 (Paul Taylor's `diagrams.sty:15`, `\toks0=\bgroup}`): 1 error → 0.
+- **`\message`, `\errmessage`, `\mark`, `\marks` and `\special` read `XGeneralText`**
+  (`scan_toks(false, true)`): the brace is found by expanding, the text is expanded once (not a
+  second time), and a file end is "File ended while scanning text of \X". An unbraced text is
+  Rust's `read_balanced` recovery (error, token put back, empty text; Perl's `{}` argument takes
+  the single token silently) where pdflatex inserts `{` and absorbs up to the next `}`, which would
+  swallow the rest of a document after a top-level unbraced `\message`.
+  Every TL use of `\message\x`/`\mark\x`/`\special\x` is a `\let` or an `\expandafter` chain
+  (`gentombow.sty:641`, `qrcode.sty:3044`, `frhyphex.tex:13`).
+- **`\meaning` names `\expandafter`, `\noexpand`, `\string`, `\meaning`** (also through a `\let`
+  alias) while they are the kernel's closures (§296), where both engines printed `macro:…->CODE(<address>)`.
+
+Perl: `Gullet.pm` `readToken` returns undef at the mouth's end, so `\expandafter`, `\string` and
+`\meaning` there are a Fatal and the others "Missing argument Token" (KNOWN_PERL_ERRORS #262);
+`\let` skips only an explicit space after `=` (#263); `readTokensValue` (Gullet.pm:824-842) takes
+no implicit brace (#264); `\message`/`\errmessage` (TeX_Debugging.pool.ltxml:65,71) and `\mark`
+(TeX_Marks.pool.ltxml:30) read a `{}` argument, and `\mark` does not expand its text (#265).
+
+Measured (worker W13): 40 arXiv papers heavy in these primitives: 2 go from 1 error to 0, the rest
+byte-identical once `xml:id`s are ignored; `--init` dumps byte-identical. Residual: a file end in a
+`GeneralText`/`XGeneralText` brace hunt (`\uppercase`, `\lowercase`, `\detokenize`, `\message`,
+`\errmessage`, `\mark`, `\marks`, `\special` as a file's last token: pdflatex 2 errors, Rust and
+Perl 0; the hunt runs at the caller's status) and the `matching` status Rust sets around expandable primitives' typed
+parameters (`\csname`, `\number`, `\readline`), which TeX never reads at `matching`; red repro
+`expansion-primitives/uppercase_brace_hunt_file_end.tex`. Settled dead ends: making `read_token`
+itself cross file ends (tried three times, see its doc); a runaway at `matching` in
+`read_primitive_token` (it abandons `\csname`/`\number` calls whose tokens run to a file end).
+
+**Guards**: `token_kernel_gaps::*` (18), `scanner_status::a_file_ending_inside_a_text_ends_the_text`.

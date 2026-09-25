@@ -31,19 +31,19 @@ LoadDefinitions!({
   // \skipdef          c  creates a symbolic name for a \skip register.
   // \muskipdef        c  creates a symbolic name for a \muskip register.
   // \toksdef          c  creates a symbolic name for a \toks register.
-  DefPrimitive!("\\countdef SkipSpaces Token SkipSpaces", sub[(cs)] {
+  DefPrimitive!("\\countdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\count", Number::new(0).into())
   });
-  DefPrimitive!("\\dimendef SkipSpaces Token SkipSpaces", sub[(cs)] {
+  DefPrimitive!("\\dimendef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\dimen", Dimension::new(0).into())
   });
-  DefPrimitive!("\\skipdef SkipSpaces Token SkipSpaces", sub[(cs)] {
+  DefPrimitive!("\\skipdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\skip", Glue::new(0).into())
   });
-  DefPrimitive!("\\muskipdef SkipSpaces Token SkipSpaces", sub[(cs)] {
+  DefPrimitive!("\\muskipdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\muskip", MuGlue::new(0).into())
   });
-  DefPrimitive!("\\toksdef SkipSpaces Token SkipSpaces", sub[(cs)] {
+  DefPrimitive!("\\toksdef RedefinableToken SkipSpaces", sub[(cs)] {
     shorthand_def(cs, "\\toks", Tokens!().into())
   });
 

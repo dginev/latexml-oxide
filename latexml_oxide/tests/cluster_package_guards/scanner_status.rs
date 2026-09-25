@@ -21,10 +21,9 @@ fn assert_para(xml: &str, expected_ps: &str) {
 
 fn occurrences(stderr: &str, message: &str) -> usize { stderr.matches(message).count() }
 
-/// `absorbing`: `\toks0={abc`, `\write16{abc`, `\uppercase{abc` each end at
-/// their file's end and the document goes on (pdflatex 4 errors, "A B [abc ] C
-/// ABC D E"). `\message{abc` reads a primitive's `{}` argument, not a text, so
-/// it keeps Perl's stop, with the same count and text.
+/// `absorbing`: `\toks0={abc`, `\write16{abc`, `\uppercase{abc`, `\message{abc`
+/// each end at their file's end and the document goes on (pdflatex 4 errors,
+/// "A B [abc ] C ABC D E"). `\message` reads a text since 56jj (`XGeneralText`).
 #[test]
 fn a_file_ending_inside_a_text_ends_the_text() {
   let tex = include_str!(
@@ -33,7 +32,7 @@ fn a_file_ending_inside_a_text_ends_the_text() {
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 4, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  for cs in [r"\toks", r"\write", r"\uppercase"] {
+  for cs in [r"\toks", r"\write", r"\uppercase", r"\message"] {
     let message = format!("File ended while scanning text of {cs}");
     assert_eq!(occurrences(&stderr, &message), 1, "{message}:\n{stderr}");
   }
