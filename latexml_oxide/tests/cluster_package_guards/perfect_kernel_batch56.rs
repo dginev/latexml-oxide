@@ -3273,9 +3273,9 @@ fn luatex_csstring_primitive() {
 ";
   let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // A catcode-12 `\` in the OT1 text font is the left-quote glyph (pdflatex
-  // prints the same), so the escape char renders as U+201C.
-  assert!(xml.contains("[foo][\u{201C}][\u{201C}foo][a]"), "{xml}");
+  // The luatex profile's text encoding is TU (batch 56ja), so a catcode-12 `\`
+  // prints as itself, as lualatex prints it.
+  assert!(xml.contains("<p>[foo][\\][\\foo][a]</p>"), "{xml}");
 }
 
 /// A wrapper environment whose end code produces `\end{frame}` by expansion

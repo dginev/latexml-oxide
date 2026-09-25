@@ -22,6 +22,7 @@ mod acmart_description_aria;
 mod aligned_overset_includestyles;
 mod bib_field_digest_once;
 mod biblatex_fallback_no_cite_loop;
+mod bibliography_crossref;
 mod bibliography_names_fields;
 mod binding_singletons_56;
 mod cleveref_class_stubs;
@@ -114,6 +115,7 @@ mod autoload_trigger_identity;
 mod expl3_state_and_param_replay;
 mod input_routing_and_bbx;
 mod kernel_language_and_part_contracts;
+mod math_text_font_restore;
 /// minted binding quality (follow-up to #520): the inline `\mintinline{lang}{code}`
 /// brace form must render without erroring or swallowing following content, and
 /// `\begin{minted}{language}` must activate listings' syntax highlighting.
@@ -124,6 +126,8 @@ pub(crate) mod perfect_kernel_batch46;
 mod perfect_kernel_batch47;
 mod perfect_kernel_batch48;
 mod perfect_kernel_batch49;
+mod unicode_format_encoding;
+mod vfs_file_end;
 mod xkeyval_internals;
 
 mod accent_composite_expansion;

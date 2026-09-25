@@ -1,0 +1,17 @@
+% doc.sty's \MacroFont is \fontencoding\encodingdefault \fontfamily\ttdefault
+% \fontseries\mddefault \fontshape\shapedefault \small (doc.sty:149-153): it
+% relies on \small's \selectfont (latex.ltx:14103-14107 \@setfontsize) to put
+% cmtt in force. A class binding's \small only sets the size, so the pending
+% family never applies, and macrocode prints `\ { }` through OT1 roman.
+% witness: moloch (141 hits), frankenstein achicago-bst/newclude/compsci/
+%          abbrevs/titles/achicago/blkcntrl/lips/dialogue/slemph/attrib,
+%          moreverb-de, ftnxtra (~16 manuals, ~400 hits of “ – ˝)
+% oracle:  pdflatex \defbeamertemplate{footline} in CMTT9
+% engines: rust=<text fontsize="90%">“defbeamertemplate–footline˝</text>;
+%          Perl the same (SHARED)
+% expect:  <text font="typewriter" fontsize="90%">\defbeamertemplate{footline}</text>
+% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+\documentclass{ltxdoc}
+\begin{document}
+{\MacroFont \string\defbeamertemplate\string{footline\string}}
+\end{document}

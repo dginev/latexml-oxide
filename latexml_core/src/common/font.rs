@@ -327,6 +327,12 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
 /// Global auxiliary for font family lookup
 pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
 
+/// Whether `encoding`'s slots are Unicode code points: `TU`, the encoding of
+/// the Unicode engines (tuenc.def; fonttext.ltx:57-68,93). A slot past the
+/// 8-bit table is then the character itself, and the Latin Modern text fonts
+/// of that format carry the TeX ligatures (tuenc.def:60 `+tlig;`).
+pub fn is_unicode_encoding(encoding: &str) -> bool { encoding == "TU" }
+
 /// Global auxiliary for font series lookup
 pub fn lookup_font_series(code: &str) -> Option<&Font> { FONT_SERIES.get(code) }
 

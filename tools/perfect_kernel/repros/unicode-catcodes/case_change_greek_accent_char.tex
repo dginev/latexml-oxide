@@ -1,0 +1,18 @@
+% \MakeUppercase over a TU Greek accent: textalpha declares case-change
+% equivalents that drop the breathing in uppercase (textalpha.sty:213
+% \DeclareCaseChangeEquivalent{\<}{\CaseSwitch{\<}{\LGR@accdropped}{\<}{\<}}),
+% and tuenc.def:106-108 builds the accent as `\char"0313\relax`. Our case
+% changer splits `\char` from its number ("Missing number", the digits
+% printed as text) and keeps the accent. Run with the luatex profile.
+% witness: greek-fontenc char-list (lualatex), 74 Missing-number warnings once
+%          TU is in force (batch 56ja)
+% oracle:  lualatex 0 errors: [Ὰ] [X]
+% engines: rust=1 warning, [`”0313Α] [X̓]
+% expect:  0 warnings, [Ὰ] [X]
+% status:  RED
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{textalpha}
+\begin{document}
+[\MakeUppercase{\>\`α}] [\MakeUppercase{\accpsili x}]
+\end{document}

@@ -135,7 +135,9 @@ pub enum BalancedBoundary {
   Transparent,
   /// The mouth is a self-contained input. A balanced read stops at its end, as
   /// Perl always does — an unbalanced argument loses the rest of *this* mouth
-  /// and nothing more.
+  /// and nothing more. An Opaque mouth that is also a file level (catchfile's
+  /// opener) gets TeX's file-end recovery inside a definition, like any file
+  /// (see `read_balanced_with_close`).
   Opaque,
 }
 
@@ -1042,9 +1044,10 @@ fn cycle_trip_fatal(period: usize, nextt: &Token) -> Result<CheckedRead> {
 /// on in the enclosing level. Crosses exactly what `read_x_token` drains:
 /// autoclose mouths with a parent (`\input` files, `\scantokens`
 /// pseudo-files, line remainders), never a `reading_from_mouth` context. A
-/// definition or delimited argument that runs off a file's end still stops
-/// there (`read_balanced`, `read_until` and [`read_token`] are unchanged: the
-/// §338 runaway). This is what `\everyeof{\noexpand}` relies on
+/// definition or delimited argument that runs off a file's end is still a §338
+/// runaway: `read_until` and [`read_token`] stop there, and `read_balanced`
+/// reports it and, inside a definition, inserts TeX's `}` (§339, batch 56ja).
+/// This is what `\everyeof{\noexpand}` relies on
 /// (catchfile.sty:251-261, morewrites.sty:465, l3build regression-test.tex:101).
 /// Guards: `noexpand_input_ends::*`.
 pub fn read_token_across_input_ends() -> Result<Option<Token>> {
@@ -1774,22 +1777,39 @@ pub fn read_balanced_with_close(
       // the whole bibliography while reporting a single error. Perl keeps all
       // the other entries. Such a mouth declares itself
       // [`BalancedBoundary::Opaque`].
+      //
+      // What counts as a file is the input LEVEL, not how it is read: a file
+      // held in memory (filecontents, an `\openout` file) is read from a
+      // string but ends like any file ([`crate::mouth::Mouth::is_file_level`]).
+      // At a file's end inside a definition TeX closes the file, reports
+      // "File ended while scanning definition", inserts a `}` and carries on in
+      // the enclosing input (tex.web §362 `check_outer_validity`, §338-339
+      // `ins_list`), so the definition ends there and the rest of the document
+      // is kept. Other balanced reads keep the stop and the error below,
+      // short of TeX: §339 inserts `\par` for a macro argument (`matching`)
+      // and a `}` for a token-list text (`absorbing`), which a scanner-status
+      // value in place of `is_macrodef` would model (SYNC_STATUS).
+      // Guards: `vfs_file_end::*`.
       None => {
-        let cross = {
+        let (autoclosed, file_level, transparent) = {
           let gullet = gullet!();
-          gullet
-            .runtime
-            .as_ref()
-            .map(|r| {
-              r.autoclose
-                && r.boundary == BalancedBoundary::Transparent
-                && r.mouth.foodtype() != crate::mouth::FoodType::File
-            })
-            .unwrap_or(false)
-            && !gullet.mouthstack.is_empty()
+          let has_parent = !gullet.mouthstack.is_empty();
+          gullet.runtime.as_ref().map_or((false, false, false), |r| {
+            (
+              r.autoclose && has_parent,
+              r.mouth.is_file_level(),
+              r.boundary == BalancedBoundary::Transparent,
+            )
+          })
         };
-        if cross {
+        if autoclosed && transparent && !file_level {
           close_mouth(false)?;
+          continue;
+        }
+        if autoclosed && file_level && is_macrodef {
+          Error!("expected", "}", "File ended while scanning definition");
+          close_mouth(false)?;
+          unread_one(T_END!());
           continue;
         }
         break;

@@ -1090,7 +1090,21 @@ pub fn endgroup() -> Result<()> {
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
-  let prevmode = lookup_string_from_sym(crate::pin!("MODE"));
+  let prevbound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+  set_mode_from(mode, &prevbound)
+}
+
+/// [`set_mode`] with the bound mode that was in force before the caller bound
+/// the new one: [`begin_mode_opt`] binds `BOUND_MODE` first and reads the
+/// previous value before it does (Perl `beginMode` reads `$prevbound` before
+/// its `assignValue`, Stomach.pm:503-507).
+fn set_mode_from(mode: &str, prevbound: &str) -> Result<()> {
+  // Perl reads `$wasmath` from MODE (Stomach.pm:504); there MODE differs from
+  // BOUND_MODE only by the vertical/horizontal toggle, never in math. Rust
+  // forces MODE to `internal_vertical` inside a math-level `\noalign`
+  // (tex_tables.rs), so the bound mode is the faithful test: an `\hbox` in
+  // `$$\eqalignno{…\noalign{\hbox{where}}…}$$` gets the pre-math font back.
+  let wasmath = prevbound.ends_with("math");
   let ismath = mode.ends_with("math");
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
@@ -1105,7 +1119,13 @@ pub fn set_mode(mode: &str) -> Result<()> {
   assign_frame_value("BOUND_MODE", arena::pin(bound_mode));
   assign_frame_value("MODE", arena::pin(bound_mode));
   assign_value("IN_MATH", ismath, Some(Scope::Local));
-  if mode == prevmode {
+  // Perl Stomach.pm:514-535: nothing when the bound mode is unchanged; the
+  // math font on entering math; and the pre-math text font back ONLY when
+  // leaving math (`elsif ($wasmath)`). Restoring it on every other change
+  // undid a text font switch at the next `\hbox` inside a `\vbox` inside
+  // math: fancyvrb's `BVerbatim[baseline=c]` (`$\vcenter\bgroup`,
+  // fancyvrb.sty:1103-1105) lost its `\ttfamily` (cascade-french).
+  if bound_mode == prevbound {
   } else if ismath {
     let curfont = lookup_font().unwrap();
     // When entering math mode, we set the font to the default math font,
@@ -1136,7 +1156,7 @@ pub fn set_mode(mode: &str) -> Result<()> {
     // Resets `\fam` (whose getter reads `fontfamily`) on math entry so that
     // text-mode `\rm` (which sets `fontfamily=0`) doesn't leak into math.
     assign_value("fontfamily", -1_i64, Some(Scope::Local));
-  } else {
+  } else if wasmath {
     let curfont = lookup_font().unwrap();
     // When entering text mode, we should set the font to the text font in use before the math
     // but inherit color and size
@@ -1206,6 +1226,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         std::backtrace::Backtrace::force_capture()
       );
     }
+    let prevbound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     // Perl: $STATE->assignValue(BOUND_MODE => $mode, 'local');
     assign_frame_value("BOUND_MODE", arena::pin(bound_mode));
     // tex.web §211's inner sign, kept as a frame-bound flag: a FRAMED mode
@@ -1221,7 +1242,7 @@ pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     if !noframe {
       assign_frame_value_sym(crate::pin!("INNER_BOX"), bound_mode != "display_math");
     }
-    set_mode(bound_mode)?;
+    set_mode_from(bound_mode, &prevbound)?;
     // Perl Stomach.pm lines 504-507: inject \everymath or \everydisplay tokens
     // Display math gets \everydisplay, inline math gets \everymath (not both).
     if bound_mode.contains("math") {

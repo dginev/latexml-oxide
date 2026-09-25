@@ -1,0 +1,22 @@
+% A crossref'd @incollection that carries its own booktitle. Two defects:
+% (1) the child inherits its parent's year and publisher: BibTeX.pool.ltxml
+%     runs the entry's preparers (copyCrossrefFields, :213-225) BEFORE it reads
+%     the field list (:111-167); Rust read the list first, so the inherited
+%     fields reached only <bib-data> (batch 56ja).
+% (2) the entry prints "See [the parent]" and NOT a second "In <booktitle>":
+%     MakeBibliography.pm:732 guards the host fields with
+%     `ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]`, and the post
+%     stage's foreign-node XPath matcher treated not() as satisfied.
+% witness: resphilosophica rpsample (Rao 2007)
+% oracle:  Perl 0.8.8 (same host): "[1] B. Author (2001) One chapter. See The
+%          whole volume, Editor, pp. 1–10."
+% engines: rust=no year, "See 2, In The Whole Volume, pp. 1–10" (56iz)
+% expect:  the child's bibentry equals Perl's; no "In <booktitle>" row
+% status:  (1) GREEN, guard bibliography_crossref::crossref_child_inherits_its_fields;
+%          (2) RED until the post XPath port lands (task 54)
+\documentclass{article}
+\begin{document}
+Cite \cite{part} and \cite{whole}.
+\bibliographystyle{plain}
+\bibliography{bib_crossref_host_title}
+\end{document}

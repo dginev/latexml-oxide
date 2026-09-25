@@ -9206,3 +9206,74 @@ content and structure, and departs from forest.sty and pdflatex as follows:
   chemnum.sty:181-191's deprecation warning.
 
 **Guards**: `forest_chemnum::*` (11), `perfect_kernel_batch56::forest_*`.
+
+### 303. The Unicode-engine profiles typeset in the TU encoding (Perl: no TU encoding, OT1 throughout)
+
+A LuaTeX or XeTeX format inputs tuenc.def and makes `TU` the default encoding (fonttext.ltx:57-68,
+93); its slots are Unicode code points. Perl has no TU fontmap, so `\lx@fontencoding{TU}` falls back
+to OT1 (TeX_Fonts.pool.ltxml:169-175), and text and `\char` decode through OT1 even in a document
+that only lualatex or xelatex can compile: `\char`\{` prints "–", a typed `<` prints "¡".
+**Rust** (batch 56ja) follows the Unicode format under the `luatex` and `xetex` profiles
+(`latexml_sty` `install_unicode_format_encoding`, `tu_fontmap.rs`):
+
+- The TU map is the identity on printable slots, with the TeX ligatures of the format's Latin
+  Modern text fonts (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`): `"` `'` `` ` `` are ” ’ ‘,
+  and the quote ligatures (`non_typewriter_t1`, Perl TeX_Fonts.pool.ltxml:344 OT1/T1) also apply
+  under TU. The typewriter map is the plain identity (tulmtt.fd loads no ligatures).
+- A text symbol, accent or composite declared for TU at a slot above 255 is that code point
+  (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`),
+  where the 8-bit rule gives no glyph.
+- The `xetex` profile installs the same format encoding, after `\XeTeXrevision` so that tuenc.def
+  takes its XeTeX branch.
+- The pdfTeX-model default keeps OT1, as pdflatex. The TU map is registered for every profile,
+  though, so an explicit TU selection under it (`\fontencoding{TU}`, `\UseTextSymbol{TU}`,
+  fontenc's `[TU]`, the fontspec binding's `\latinencoding`=TU reached through babel's
+  `\latintext`) now decodes through TU where Perl falls back to OT1. pdflatex has no TU
+  (tuenc.def:49-57 defaults to T1); xelatex prints TU.
+
+Measured against lualatex and xelatex (repro
+`tools/perfect_kernel/repros/unicode-catcodes/tu_encoding_char_and_tlig.tex`): identical output.
+Manual A/B over the 339 manuals with a clean lualatex/xelatex oracle: tipauni-example 80.1 → 93.4,
+greek-fontenc char-list 64.6 → 65.8, pgfornament tikzrput 97.7 → 98.1, no recall loss; errors
+375 → 375, warnings 15,829 → 15,902 (char-list +74, ijsra −1).
+
+**Regression this batch introduces, on one manual**: greek-fontenc char-list. TU routes textalpha's
+Greek accents through tuenc.def's `\add@unicode@accent` (`\char"0313\relax`), and our case changer
+(`lx_read_and_change_case`, latex_constructs/mod.rs) expands robust text commands and ignores
+l3text's case-change equivalents (textalpha.sty:213 `\DeclareCaseChangeEquivalent`), so in
+`\MakeUppercase{\>\`α}` it separates `\char` from its number: 74 "Missing number" warnings, and
+`”0313` printed as text in the uppercase column where lualatex prints Ὰ. Before the batch the same
+cells were empty or a stray combining mark. Red repro
+`unicode-catcodes/case_change_greek_accent_char.tex`; SYNC_STATUS lead.
+
+**Guards**: `unicode_format_encoding::*`, `perfect_kernel_batch56::luatex_csstring_primitive`.
+
+### 304. A file that ends inside a definition inserts a `}` and the document goes on (Perl: the read stops at the file's end)
+
+TeX, at the end of a file read while scanning a definition, closes the file, reports "File ended
+while scanning definition", inserts a `}` and carries on in the enclosing input (tex.web §362 calls
+§336 `check_outer_validity`; §338-339 `ins_list`): the definition ends at the file's end and the rest
+of the document is kept. Perl's `readBalanced` stops at the mouth's end (Gullet.pm:470-472), then
+errors (:525), and the definition is lost (`misdefined`). Rust stopped the same way for a file on
+disk, one error more than pdflatex (the document's `}` then stray), and read a file held in memory
+(filecontents, an `\openout` file) as a string, crossing its end: the `\edef` swallowed the rest
+of the document. **Rust** (batch 56ja) marks every mouth that reads a file, on disk or in memory,
+as a file level (`Mouth::is_file_level`, tex.web's `name>17`). A balanced read never crosses a
+file level's end, and inside a definition it recovers as TeX does (`read_balanced_with_close`).
+Scope, and where it stops short of TeX:
+
+- Only an autoclose file level with an enclosing input recovers: an `\input` file, a filecontents
+  or `\openout` file, catchfile's opener. A package or class file read through
+  `reading_from_mouth` (not autoclose) and the main document keep Perl's stop.
+- Only a definition body recovers (`is_macrodef`: `\def`, `\edef` and their global forms).
+  TeX also inserts a `}` for a token-list text (§339 `absorbing`: `\message`, `\write`, `\toks=`,
+  `\expanded`, `\detokenize`, `\unexpanded`) and a `\par` for a macro argument (`matching`);
+  those keep the stop and the error (SYNC_STATUS lead: a scanner-status value in place of the
+  `is_macrodef` flag).
+- `is_macrodef` also marks the body arguments of `\lstnewenvironment` and
+  `\newtcbinputlisting` (listings_sty.rs, tcolorbox), which TeX reads as macro arguments: a file
+  ending inside one gets the definition recovery. `\scantokens` stays crossable (the cprotect binding wraps text in it without
+`\protect`, cprotect.sty:180-185), as does any `\everyeof{\noexpand}` read (batch 56ix).
+Error counts equal pdflatex's on the six cases of `vfs_file_end` and the 56ix control.
+
+**Guards**: `vfs_file_end::*`, `noexpand_input_ends::a_definition_still_runs_off_a_file_end`.

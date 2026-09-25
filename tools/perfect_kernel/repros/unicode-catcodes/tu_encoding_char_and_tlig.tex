@@ -1,0 +1,16 @@
+% A Unicode-engine format makes TU the default encoding (fonttext.ltx:57-68,93),
+% whose slots are Unicode code points: `\char`\{` is "{" and a typed `<` is "<".
+% The Latin Modern text fonts load with TeX ligatures (tuenc.def:60 +tlig,
+% :100 tex-text), so " ' ` become ” ’ ‘ and `` '' -- --- build “ ” – —; the
+% typewriter fonts load without (tulmtt.fd). Run with the luatex or xetex
+% profile. Without a TU fontmap the profile fell back to OT1, so `\char`\{`
+% printed "–" and `<` "¡" — nlctuserguide's `\marg` (nlctuserguide.sty:2044)
+% in glossaries-user (lualatex): "\name–first-name˝–surname˝"; latexbangla
+% (xelatex) ×62. lualatex and xelatex print, line by line:
+%   A{x}B C{y}D \_<|” / lt < gt > bar | quote ” dash – em — “q” b< s< / [TU][TU]
+\documentclass{article}
+\begin{document}
+A\char`\{x\char`\}B \texttt{C\char`\{y\char`\}D} \char92 \char`\_ \char`\< \char`\| \char34
+lt < gt > bar | quote " dash -- em --- ``q'' \textbf{b<} \textsf{s<}
+\makeatletter[\cf@encoding][\f@encoding]\makeatother
+\end{document}

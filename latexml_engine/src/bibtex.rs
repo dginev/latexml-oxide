@@ -207,11 +207,10 @@ pub fn current_entry() -> Option<Rc<RefCell<BibEntry>>> {
 /// Divergence B1 (see `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`): Perl stores this
 /// as a State Value `CURRENT@BIBKEY` (group-scoped via Perl
 /// `\bgroup`/`\egroup`); Rust stores it as a thread-local, which
-/// does NOT auto-pop on group exit. The current Phase 1-3 code never
-/// nests `\bib{...}` calls so this divergence is latent; will need
-/// to be revisited when Phase 4's `\bibentry@prepare` DefPrimitive
-/// ports the `$stomach->bgroup; AssignValue; ...; $stomach->egroup`
-/// dance from Perl L126-132.
+/// does NOT auto-pop on group exit. `\bibentry@prepare` runs the
+/// preparers in a group as Perl L126-132 does, and the key stays set after
+/// its `\egroup`: latent, since `\bibentry@create`'s `{bib@entry}` sets it
+/// again and entries never nest.
 pub fn current_bib_key() -> Option<String> { CURRENT_ENTRY_KEY.with(|k| k.borrow().clone()) }
 
 /// Look up a *registered* entry by raw (un-normalized) key. Perl
@@ -222,6 +221,40 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
   use latexml_core::common::cleaners::normalize_bib_key;
   let normkey = normalize_bib_key(key);
   BIB_ENTRIES.with(|m| m.borrow().get(&normkey).cloned())
+}
+
+/// Resolve an entry type through its alias: `\bib@entry@<type>@alias`, when
+/// defined, expands to the type the entry is processed as (Perl L119-122,
+/// L139-142). Most aliases are pure-text macros ("thesis"), so one expansion
+/// is enough.
+fn resolve_entry_type(origtype: &str) -> Result<String> {
+  let alias_tok = T_CS!(format!("\\bib@entry@{origtype}@alias").as_str());
+  Ok(match lookup_definition(&alias_tok)? {
+    Some(_) => match do_expand(alias_tok) {
+      Ok(toks) => toks.to_string(),
+      Err(_) => origtype.to_string(),
+    },
+    None => origtype.to_string(),
+  })
+}
+
+/// The defined `\bib@entry@<type>@<phase>` hooks for `phase` "prepare" or
+/// "complete", in Perl's order: the resolved type, the original type when an
+/// alias changed it, then `default` (Perl L127-130, L158-164).
+fn entry_hooks(resolved_type: &str, origtype: &str, phase: &str) -> Result<Vec<String>> {
+  let mut types = vec![resolved_type];
+  if origtype != resolved_type {
+    types.push(origtype);
+  }
+  types.push("default");
+  let mut defined = Vec::new();
+  for t in types {
+    let cs_name = format!("\\bib@entry@{t}@{phase}");
+    if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
+      defined.push(cs_name);
+    }
+  }
+  Ok(defined)
 }
 
 /// Perl: `currentBibEntryField('fieldname')` — get the *processed*
@@ -2547,23 +2580,50 @@ LoadDefinitions!({
   });
 
   // -------- Phase 6: orchestration (Perl L111-190) --------
-  // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline:
-  //   1. resolve type alias chain
-  //   2. dispatch prepare macros (type → alias → default)
-  //   3. open `<ltx:bibentry>` (via the `{bib@entry}` environment)
-  //   4. dispatch each field via the most specific handler
-  //   5. dispatch complete macros (type → alias → default)
-  //   6. close `<ltx:bibentry>`
+  // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline in Perl's two
+  // steps (L111-112):
+  //   `\bibentry@prepare` — resolve the type alias; run ALL entry preparers
+  //     (type → alias → default) in a group, now;
+  //   `\bibentry@create` — open `<ltx:bibentry>` (the `{bib@entry}`
+  //     environment), dispatch each field via its most specific handler, run
+  //     the completers, close.
+  // The order is load-bearing: a preparer's `copyCrossrefFields` adds the
+  // fields a crossref'd entry inherits (a child `@incollection`'s `year`,
+  // `publisher`, `booktitle`), and `\bibentry@create` must read the field list
+  // AFTER that, or the inherited fields get no handler (they reached only
+  // `<bib-data>`). Guard: `bibliography_crossref::crossref_child_inherits_its_fields`.
   //
-  // The Perl pool splits this across two DefPrimitives
-  // (`\bibentry@prepare` + `\bibentry@create`) with a `\stomach->bgroup;
-  // AssignValue('CURRENT@BIBKEY' => $key); ...; egroup` dance that
-  // gives the per-entry state automatic group-scope restore. The
-  // Rust port does it all in one DefMacro returning a Tokens stream,
-  // since our gullet handles the tokens-back path natively (no
-  // openMouth needed). Divergence is documented under audit B1
-  // (`current_bib_key` rustdoc + `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`).
-  DefMacro!("\\ProcessBibTeXEntry Semiverbatim", sub[args] {
+  // CURRENT@BIBKEY is a thread-local here, not a group-scoped state value:
+  // audit divergence B1 (`current_bib_key` rustdoc +
+  // `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`).
+  DefMacro!(
+    "\\ProcessBibTeXEntry Semiverbatim",
+    "\\bibentry@prepare{#1}\\bibentry@create{#1}"
+  );
+
+  // Perl L114-132.
+  DefPrimitive!("\\bibentry@prepare Semiverbatim", sub[args] {
+    let key = args[0].to_string();
+    let Some(entry_rc) = lookup_entry(&key) else {
+      return Ok(Vec::new());
+    };
+    let origtype = entry_rc.borrow().entry_type.clone();
+    let resolved_type = resolve_entry_type(&origtype)?;
+    let preparers: Vec<Token> = entry_hooks(&resolved_type, &origtype, "prepare")?
+      .iter()
+      .map(|cs| T_CS!(cs.as_str()))
+      .collect();
+    bgroup();
+    set_current_entry(&key);
+    // `egroup` before propagating, so a failing preparer does not leak the frame.
+    let digested = digest(Tokens::from(preparers));
+    egroup()?;
+    digested?;
+    Ok(Vec::new())
+  });
+
+  // Perl L134-167.
+  DefMacro!("\\bibentry@create Semiverbatim", sub[args] {
     let key = if args[0].is_some() { args[0].to_string() } else {
       return Ok(Tokens!());
     };
@@ -2574,22 +2634,7 @@ LoadDefinitions!({
     let entry = entry_rc.borrow();
     let origtype = entry.entry_type.clone();
 
-    // Alias resolution: if `\bib@entry@<origtype>@alias` is defined,
-    // its expansion is the resolved type. Otherwise resolved == orig.
-    let alias_cs_name = format!("\\bib@entry@{}@alias", origtype);
-    let alias_tok = T_CS!(alias_cs_name.as_str());
-    let resolved_type = match lookup_definition(&alias_tok)? {
-      Some(_) => {
-        // Expand the alias CS via the gullet to get the target type
-        // name. Most aliases are pure-text DefMacros (e.g. "thesis"),
-        // so a single do_expand is enough.
-        match do_expand(alias_tok) {
-          Ok(toks) => toks.to_string(),
-          Err(_) => origtype.clone(),
-        }
-      },
-      None => origtype.clone(),
-    };
+    let resolved_type = resolve_entry_type(&origtype)?;
 
     // Set the current bib key so the per-field handlers (which call
     // `current_entry_field` etc.) see the right entry.
@@ -2612,20 +2657,6 @@ LoadDefinitions!({
     let mut lines: Vec<String> = Vec::new();
     // `\begin{bib@entry}{<type>}{<key>}`
     lines.push(format!("\\begin{{bib@entry}}{{{}}}{{{}}}", resolved_type, key));
-
-    // Dispatch prepare macros. Perl L128-131: prepare for the
-    // resolved type, then the orig type if different, then default.
-    let prepare_csnames = [
-      format!("\\bib@entry@{}@prepare", resolved_type),
-      if origtype != resolved_type { format!("\\bib@entry@{}@prepare", origtype) } else { String::new() },
-      "\\bib@entry@default@prepare".to_string(),
-    ];
-    for cs_name in &prepare_csnames {
-      if cs_name.is_empty() { continue; }
-      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
-        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
-      }
-    }
 
     // Dispatch each field via the most specific handler. Perl L147-157.
     for (field, value) in entry.raw_fields.iter() {
@@ -2660,16 +2691,8 @@ LoadDefinitions!({
     }
 
     // Dispatch complete macros (Perl L158-164).
-    let complete_csnames = [
-      format!("\\bib@entry@{}@complete", resolved_type),
-      if origtype != resolved_type { format!("\\bib@entry@{}@complete", origtype) } else { String::new() },
-      "\\bib@entry@default@complete".to_string(),
-    ];
-    for cs_name in &complete_csnames {
-      if cs_name.is_empty() { continue; }
-      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
-        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
-      }
+    for cs_name in entry_hooks(&resolved_type, &origtype, "complete")? {
+      lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
     }
 
     // `\end{bib@entry}`

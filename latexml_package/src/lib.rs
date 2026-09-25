@@ -639,6 +639,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("t2b", "fontmap", package::t2b_fontmap::load_definitions),
   ("t2c", "fontmap", package::t2c_fontmap::load_definitions),
   ("ts1", "fontmap", package::ts1_fontmap::load_definitions),
+  ("tu", "fontmap", package::tu_fontmap::load_definitions),
   ("pzd", "fontmap", package::pzd_fontmap::load_definitions),
   ("pifont", "sty", package::pifont_sty::load_definitions),
   ("pict2e", "sty", package::pict2e_sty::load_definitions),

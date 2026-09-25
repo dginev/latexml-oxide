@@ -620,13 +620,12 @@ fn non_typewriter(font: &Font) -> bool {
   font.get_family().unwrap_or(&Cow::Borrowed("")) != "typewriter"
 }
 
+// Perl: TeX_Fonts.pool.ltxml L344 accepts OT1 and T1. TU is added: Perl has no
+// TU encoding, and the Unicode formats' Latin Modern fonts load with TeX
+// ligatures (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`), which build
+// “ ” ¡ ¿ from ‘ ’ exactly as the 8-bit fonts do.
 fn non_typewriter_t1(font: &Font) -> bool {
+  let encoding = font.get_encoding().unwrap_or(&Cow::Borrowed("OT1"));
   non_typewriter(font)
-    && matches!(
-      font
-        .get_encoding()
-        .unwrap_or(&Cow::Borrowed("OT1"))
-        .as_ref(),
-      "OT1" | "T1"
-    )
+    && (matches!(encoding.as_ref(), "OT1" | "T1") || font::is_unicode_encoding(encoding))
 }

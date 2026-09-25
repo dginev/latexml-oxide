@@ -595,38 +595,7 @@ LoadDefinitions!({
 \cs_gset_protected:Npn \lua_load_module:n #1 { }
 \ExplSyntaxOff"
     );
-    // fonttext.ltx:57-68,93: a Unicode-engine format inputs tuenc.def (which
-    // declares the `TU` encoding, `\UnicodeEncodingName`), substitutes Latin
-    // Modern for it and makes TU `\encodingdefault`. The pdflatex-shaped
-    // format has none of that, so xunicode-addon.sty:59-113
-    // (`\cs_if_exist:NTF \UnicodeEncodingName`, then the `\T@TU` check) raised
-    // `Encoding scheme "TU" unknown` (codebox-doc-en ×3, an `\errmessage`
-    // counted since batch 56g). This runs here, not at the `latex.rs` seam:
-    // the LaTeX pool loads while latexml.sty pulls in expl3, BEFORE this
-    // option body, so the seam would see neither `\newprotectedluacmd`
-    // (tuenc.def:77, defined above) nor the constructs' `\encodingdefault`.
-    // Idempotent on a second `\usepackage[luatex]{latexml}`.
-    // Guard: `perfect_kernel_batch56::tu_encoding_is_declared_under_luatex`.
-    RawTeX!(
-      r"\ifcsname T@TU\endcsname\else
-  \input{tuenc.def}\fontencoding{TU}\def\@fontenc@load@list{\@elt{TU}}%
-  \DeclareFontSubstitution{TU}{lmr}{m}{n}\LoadFontDefinitionFile{TU}{lmr}%
-  \renewcommand\encodingdefault{TU}%
-\fi"
-    );
-    // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
-    // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
-    // appends `\char code` to its argument (NBSP base when empty). Re-asserted
-    // AFTER the tuenc.def load above, whose own version declares for the `TU`
-    // encoding only — our font model has no TU map (`\cf@encoding` stays OT1,
-    // as in Perl), so the command is declared as the encoding DEFAULT.
-    RawTeX!(
-      r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
-\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
-  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
-\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
-\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
-    );
+    install_unicode_format_encoding()?;
   });
 
   // Opt-in XeTeX profile, the counterpart of `luatex` for XeLaTeX-authored
@@ -658,6 +627,8 @@ LoadDefinitions!({
     RawTeX!(r"\let\strcmp\pdfstrcmp");
     iftex_sty::define_xetex_interchar()?;
     set_l3sys_engine("xetex", "xelatex")?;
+    // After `\XeTeXrevision`: tuenc.def:49 takes its XeTeX branch on it.
+    install_unicode_format_encoding()?;
   });
 
   // Perl latexml.sty.ltxml L34-41: tracing / profiling options manipulate
@@ -1426,6 +1397,48 @@ fn scan_direction() -> Result<()> {
       None => break,
     }
   }
+  Ok(())
+}
+
+/// fonttext.ltx:57-68,93: a Unicode-engine format (LuaTeX or XeTeX) inputs
+/// tuenc.def (which declares the `TU` encoding, `\UnicodeEncodingName`),
+/// substitutes Latin Modern for it and makes TU `\encodingdefault`; the TU
+/// fontmap (`tu_fontmap.rs`) then decodes text and `\char` as Unicode. The
+/// pdflatex-shaped format has none of that, so xunicode-addon.sty:59-113
+/// (`\cs_if_exist:NTF \UnicodeEncodingName`, then the `\T@TU` check) raised
+/// `Encoding scheme "TU" unknown` (codebox-doc-en ×3, an `\errmessage` counted
+/// since batch 56g), and nlctuserguide's `\marg` printed its `\char` braces
+/// through OT1 (glossaries-user, lualatex: "\name–first-name˝").
+///
+/// Called from the profile's option body, not the `latex.rs` seam: the LaTeX
+/// pool loads while latexml.sty pulls in expl3, BEFORE the option body, so the
+/// seam would see neither `\newprotectedluacmd` (tuenc.def:77, which the
+/// `luatex` option defines first) nor the constructs' `\encodingdefault`.
+/// Idempotent on a second `\usepackage[luatex]{latexml}`. Guards:
+/// `perfect_kernel_batch56::tu_encoding_is_declared_under_luatex`,
+/// `unicode_format_encoding::*`.
+fn install_unicode_format_encoding() -> Result<()> {
+  RawTeX!(
+    r"\ifcsname T@TU\endcsname\else
+  \input{tuenc.def}\fontencoding{TU}\def\@fontenc@load@list{\@elt{TU}}%
+  \DeclareFontSubstitution{TU}{lmr}{m}{n}\LoadFontDefinitionFile{TU}{lmr}%
+  \renewcommand\encodingdefault{TU}%
+\fi"
+  );
+  // tuenc.def:106-121 `\DeclareUnicodeAccent{\cs}[{enc}]{code}` (tipauni.sty
+  // :349+ `\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}`): the accent
+  // appends `\char code` to its argument (NBSP base when empty). Re-asserted
+  // AFTER the tuenc.def load above, whose own version declares for the `TU`
+  // encoding only; declared as the encoding DEFAULT instead, the accent also
+  // serves a document that selects another encoding (`\usepackage[T1]{fontenc}`),
+  // where LaTeX would report it unavailable.
+  RawTeX!(
+    r#"\def\add@unicode@accent#1#2{\if\relax\detokenize{#2}\relax^^a0\else#2\fi\char#1\relax}
+\def\DeclareUnicodeAccent#1#2{\edef\reserved@a{#2}\def\reserved@b{TU}%
+  \ifx\reserved@a\reserved@b\expandafter\lx@DeclareUnicodeAccent@iii\else\expandafter\lx@DeclareUnicodeAccent@ii\fi{#1}{#2}}
+\def\lx@DeclareUnicodeAccent@iii#1#2#3{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#3}}}
+\def\lx@DeclareUnicodeAccent@ii#1#2{\DeclareTextCommandDefault{#1}{\add@unicode@accent{#2}}}"#
+  );
   Ok(())
 }
 

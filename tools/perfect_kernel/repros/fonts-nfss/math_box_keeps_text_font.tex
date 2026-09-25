@@ -1,0 +1,18 @@
+% Entering text mode restores the pre-math text font only when leaving math
+% (Perl Stomach.pm:514-535 `elsif ($wasmath)`), not at an \hbox inside a \vbox
+% inside math. fancyvrb's BVerbatim[baseline=c] is `$\vcenter\bgroup` +
+% \ttfamily + one \hbox per line (fancyvrb.sty:1103-1105).
+% Controls: a script in plain math (math entry itself), a text box directly in
+% math (the font IS restored), and an \hbox in a math-level \noalign (restored:
+% the bound mode is still math there).
+% witness: cascade-french (2 lines of code in OT1 roman: “foo–x˝)
+% oracle:  pdflatex \foo\{x\} in CMTT10, bold "a" and "where"; Perl
+%          <text font="typewriter">
+% engines: rust=“foo“–x“˝ (roman OT1) before batch 56ja
+% expect:  typewriter \foo\{x\}; x_1 a script; bold a; bold where
+% status:  GREEN (batch 56ja, guard math_text_font_restore)
+\documentclass{article}
+\begin{document}
+$\vbox{\ttfamily\hbox{\string\foo\string\{x\string\}}}$ $x_1$ \textbf{$\mbox{a}$}
+{\bfseries $$\eqalignno{a&=b\cr\noalign{\hbox{where}}c&=d\cr}$$}
+\end{document}

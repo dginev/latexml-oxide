@@ -1,0 +1,14 @@
+% Plain's \tt / \bf never update \f@family / \f@series, so the \selectfont a
+% later size switch runs (Rust's \fontsize, OXIDIZED_DESIGN_DIVERGENCES #288)
+% resets the font to the stale NFSS values. In LaTeX \tt is
+% \normalfont\ttfamily (article.cls:490-493): \f@family is cmtt afterwards.
+% witness: root-causer 2026-09-25 (KOMA classes, scrartcl)
+% oracle:  pdflatex \foo in CMTT10, x in CMBX10
+% engines: rust=<text fontsize="91%">“foo</text> <text fontsize="91%">x</text>;
+%          Perl font="typewriter" / font="bold" (RUST-ONLY)
+% expect:  typewriter \foo, bold x
+% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+\documentclass{scrartcl}
+\begin{document}
+{\tt\small \string\foo} {\bf\small x}
+\end{document}

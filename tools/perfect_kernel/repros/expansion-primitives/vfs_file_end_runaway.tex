@@ -9,7 +9,8 @@
 %          crossed the in-memory file's end and swallowed the rest of the document, so the
 %          output is an empty document and "After." is lost (56iw-rel2, 2026-09-25)
 % expect:  1 error, reported at the file's end; "After." kept
-% status:  RED
+% status:  GREEN (batch 56ja: file-level mouths, tex.web §339 `}` insertion;
+%          guard vfs_file_end::filecontents_end_inside_a_definition)
 \documentclass{article}
 \begin{filecontents*}{vfs_file_end_runaway.txt}
 A{B

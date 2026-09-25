@@ -30,18 +30,21 @@ fn noexpand_crosses_a_file_end_in_an_edef() {
 
 /// The control: without `\everyeof{\noexpand}` the same `\edef` is a runaway
 /// in pdflatex too ("File ended while scanning definition of \x"), and so it
-/// stays here.
+/// stays here. TeX then inserts a `}` (tex.web §339), which ends the body at
+/// the file's end, so the document's own `}` is one too many ("Too many }'s"):
+/// two errors and `[AFOOB ]`, as pdflatex (batch 56ja; `vfs_file_end`).
 #[test]
 fn a_definition_still_runs_off_a_file_end() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/expansion-primitives/everyeof_absent_input_runaway.tex"
   );
-  let (stderr, _xml) = convert_files(tex, &[("everyeof_noexpand_input_end.txt", INPUT_END_TXT)]);
+  let (stderr, xml) = convert_files(tex, &[("everyeof_noexpand_input_end.txt", INPUT_END_TXT)]);
   assert_eq!(error_count(&stderr), 2, "{stderr}");
   assert!(
-    stderr.contains("Error:expected:} Gullet->readBalanced ran out of input"),
+    stderr.contains("Error:expected:} File ended while scanning definition"),
     "{stderr}"
   );
+  assert_element(&xml, "p", &[], "<p>[AFOOB ]</p>");
 }
 
 /// At the end of a `\scantokens` pseudo-file the `\noexpand` reads the next

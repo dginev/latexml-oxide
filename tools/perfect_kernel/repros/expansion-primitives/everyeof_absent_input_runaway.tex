@@ -3,7 +3,8 @@
 % cross a file end must not let every definition cross it.
 % witness: root-causer 2026-09-25 (control for everyeof_noexpand_input_end)
 % oracle:  pdflatex errors (File ended while scanning definition of \x)
-% engines: rust=errors (readBalanced ran out of input in an unbalanced state)
+% engines: rust=errors ("File ended while scanning definition" + the stray }, as pdflatex, since
+%          batch 56ja; before, "readBalanced ran out of input in an unbalanced state")
 % expect:  the runaway stays reported
 % status:  CONTROL
 \documentclass{article}

@@ -1,0 +1,15 @@
+% \the\font names the current font: \selectfont executes \font@name =
+% \curr@fontshape/\f@size (latex.ltx:12576-12579), so after \ttfamily it is
+% cmtt10. Rust (and Perl, TeX_Macro.pool.ltxml:272 "HACK") return the default
+% \lx@default@font (cmr10), so a \let copy of it prints in roman OT1.
+% witness: source2e 221 (ltxdoc.cls:136 \oc@ttf), short-math-guide 25
+%          (\ttfont, short-math-guide.tex:195-198)
+% oracle:  pdflatex \foo{x} in CMTT10
+% engines: rust=<p>“foo–x˝</p>; Perl identical (SHARED)
+% expect:  <text font="typewriter">\foo{x}</text>
+% status:  RED (SYNC_STATUS "Text-font state is not synchronised with NFSS")
+\documentclass{article}
+\begin{document}
+{\ttfamily\global\expandafter\let\expandafter\myttf\the\font}
+{\myttf \char`\\foo\char`\{x\char`\}}
+\end{document}

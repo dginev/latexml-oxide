@@ -287,10 +287,7 @@ pub(crate) fn load() -> Result<()> {
     // the 4 GiB OOM boundary. With this Perl-faithful chain in place,
     // mathtext's override produces an equivalent chain that terminates
     // at the same `\T2A\i` primitive.
-    // `u8::try_from`, not `as u8`: Perl hands the Number straight to
-    // `CharDef->new` and the decode indexes the map, so an out-of-range code
-    // yields no glyph. A truncating cast wrapped it onto a valid slot instead.
-    let code_value = u8::try_from(code.value_of()).ok();
+    // The slot decodes through [`decode_slot`].
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
@@ -302,9 +299,7 @@ pub(crate) fn load() -> Result<()> {
     // with `decode` silently dropped the second character: T2B slot 128 came
     // out as `Ӷ` (U+04F6) instead of `Ӷ̶` (U+04F6 U+0336), i.e. a DIFFERENT
     // letter with its stroke removed, where Perl keeps the pair.
-    if let Some(replacement_value) =
-      code_value.and_then(|c| font::decode_str(c, Some(encoding_str), false))
-    {
+    if let Some(replacement_value) = decode_slot(code.value_of(), &encoding_str) {
       // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::String(replacement_value)),
         PrimitiveOptions::default())?;
@@ -367,8 +362,7 @@ pub(crate) fn load() -> Result<()> {
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
-    let standalone = u8::try_from(code.value_of()).ok()
-      .and_then(|c| font::decode_str(c, Some(encoding_str.clone()), false))
+    let standalone = decode_slot(code.value_of(), &encoding_str)
       .map(|sym| with(sym, |s| s.to_string()))
       .unwrap_or_default();
     let combining: Option<&str> = match standalone.as_str() {
@@ -523,9 +517,7 @@ pub(crate) fn load() -> Result<()> {
     let encoding_str = Expand!(encoding).to_string();
     let cs_str = cs.to_string();
     let key = T_CS!(s!("\\{encoding_str}{cs_str}-{}", ch.to_string()));
-    if let Some(glyph) = u8::try_from(code.value_of()).ok()
-      .and_then(|c| font::decode_str(c, Some(encoding_str.clone()), false))
-    {
+    if let Some(glyph) = decode_slot(code.value_of(), &encoding_str) {
       def_primitive(key, None, Some(PrimitiveBody::String(glyph)), PrimitiveOptions::default())?;
       wrap_text_command_for_composites(&encoding_str, &cs_str)?;
     }
@@ -1574,4 +1566,26 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
       ..ExpandableOptions::default()
     }),
   )
+}
+
+/// The glyph at `code` in `encoding`'s fontmap, for the text-command
+/// declarations. Perl hands the Number straight to `CharDef->new` and the
+/// decode indexes the map, so an out-of-range code yields no glyph
+/// (`u8::try_from`, not `as u8`: a truncating cast wrapped it onto a valid
+/// slot). TU's slots are Unicode code points (tuenc.def), so a TU slot past
+/// the 8-bit table is the character itself: tuenc-greek.def:204
+/// `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}` (greek-fontenc
+/// char-list under lualatex).
+///
+/// `decode_str`, not `decode`: a fontmap slot may hold more than one
+/// character (the `_fontmap_multichar` side table).
+fn decode_slot(code: i64, encoding: &str) -> Option<SymStr> {
+  match u8::try_from(code) {
+    Ok(slot) => font::decode_str(slot, Some(encoding.to_string()), false),
+    Err(_) if font::is_unicode_encoding(encoding) => u32::try_from(code)
+      .ok()
+      .and_then(char::from_u32)
+      .map(pin_char),
+    Err(_) => None,
+  }
 }

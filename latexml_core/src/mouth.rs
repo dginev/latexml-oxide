@@ -74,6 +74,11 @@ pub struct MouthOptions {
   /// switched on by a package mid-document reaches the document's own text.
   /// Internal strings (`Tokenize!` bodies, `\scantokens`) stay pre-decoded.
   pub lazy_decode:    bool,
+  /// The mouth reads a FILE — on disk or held in memory (filecontents, an
+  /// `\openout` file): tex.web's `name>17` input level. Its end is an end of
+  /// file for a balanced read (runaway, §338-339), whatever `foodtype` says
+  /// about how it is read. Set by [`Mouth::create`]'s file paths.
+  pub file_level:     bool,
   pub foodtype:       Option<FoodType>,
   pub source:         Option<String>,
   pub shortsource:    Option<String>,
@@ -106,6 +111,8 @@ pub struct Mouth {
   bib_data_literals:      bool,
   /// See [`MouthOptions::lazy_decode`].
   lazy_decode:            bool,
+  /// See [`MouthOptions::file_level`].
+  file_level:             bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -173,6 +180,7 @@ impl Default for Mouth {
       foodtype:               FoodType::File,
       bib_data_literals:      false,
       lazy_decode:            false,
+      file_level:             false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
@@ -465,6 +473,7 @@ impl Mouth {
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
       options.lazy_decode = true;
+      options.file_level = true;
       // Read-log: a named cached-content open (filecontents / LSP overlay).
       record_opened_source(crate::common::arena::pin(source));
       Mouth::new(&content, Some(options))
@@ -479,6 +488,7 @@ impl Mouth {
     } else {
       let (_dir, name, ext) = pathname::split(source);
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
+      options.file_level = true;
       options.source = Some(source.to_string());
       if options.shortsource.is_none() {
         options.shortsource = Some(if ext.is_empty() {
@@ -498,6 +508,9 @@ impl Mouth {
   /// What kind of source feeds this mouth (file vs literal/string injection).
   pub fn foodtype(&self) -> FoodType { self.foodtype }
 
+  /// Whether this mouth reads a file (see [`MouthOptions::file_level`]).
+  pub fn is_file_level(&self) -> bool { self.file_level }
+
   pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {
@@ -513,6 +526,7 @@ impl Mouth {
           at_letter: opts.at_letter,
           notes: opts.notes,
           lazy_decode: opts.lazy_decode,
+          file_level: opts.file_level,
           source_sym: crate::common::arena::pin(&source),
           source,
           shortsource,
