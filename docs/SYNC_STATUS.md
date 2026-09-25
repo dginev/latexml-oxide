@@ -127,6 +127,8 @@ High-impact fatal seeds and major publisher class fixes take priority.
 ### Corpus Triage Quick Wins
 - **`newunicodechar` four-hex `^^^^` caret support** (~119 docs, e.g. `2606.00241`): Adding 4-hex/6-hex caret parsing to `mouth.rs:get_next_char` allows `newunicodechar` to take its Unicode branch cleanly.
 - **`floatrow` raw-load (witness `2606.10047`)**: Floatrow reroutes subcaption placement, causing 18 `malformed` errors in Rust vs 0 in Perl.
+- **`\noexpand` cannot carry an `\edef` across a file's end** (`\everyeof{\noexpand}\edef\x{\@@input f }`: Rust 2 errors, pdflatex 0): tex.web §367 reads `\noexpand`'s token under normal scanner status, so the file end passes; Rust's `\noexpand` returns nothing at a spent input (tex_macro.rs `\noexpand`) and `read_balanced` never crosses a file input. Red repro `tools/perfect_kernel/repros/expansion-primitives/everyeof_noexpand_input_end.tex`; witness catchfile.sty:251-261 `\CatchFileEdef` (makron, arXiv 1611.01359), whose binding stands in with a string input until this lands (DIVERGENCES #300).
+- **Auto-opened `ltx:picture` is unsized** (Perl sizes it 0×0 in `afterClose`, latex_constructs.pool.ltxml:4943-4950; Rust's Tag at sect13.rs has no such step): a drawing object in an inner box inside `{pspicture}` opens an unsized nested picture (pst-flags 517 unsized pictures; egameps 162 from `\rput` outside pictures). Red repro `\begin{pspicture}(3,2)\rput(1,1){\makebox[0pt]{\psframe(0,0)(1,1)}}\end{pspicture}`.
 - **Post xpath matcher ignores predicates with `(`** (`latexml_post/src/document.rs:1111-1116`): Perl's `not(../ltx:bib-related[@bibrefs])` guard (MakeBibliography.pm:732) never applies, so a crossref'd `@incollection` prints both "See [x]" and the copied "In <booktitle>". Predates batch 56iu.
 
 ---

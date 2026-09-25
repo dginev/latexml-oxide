@@ -1,53 +1,159 @@
 //! catchfile.sty (H. Oberdiek) — `\CatchFileDef` / `\CatchFileEdef`.
 //!
-//! catchfile.sty:251-296: `\CatchFileDef\cs{file}{setup}` opens a group,
+//! catchfile.sty:251-301: `\CatchFileDef\cs{file}{setup}` opens a group,
 //! runs `setup` (catcode changes, `\endlinechar`), reads the whole file's
-//! tokens under those catcodes into a global scratch macro via `\everyeof`,
-//! closes the group and `\let`s `\cs` to it at the outer level — unexpanded
-//! for `\CatchFileDef`, `\xdef`-expanded with a trailing `\space` for
-//! `\CatchFileEdef` (L251-261). A missing file defines `\cs` empty and
-//! errors (L240-245; ar5iv's catchfile.sty.ltxml defines it empty too).
+//! tokens under those catcodes, closes the group and defines `\cs` with them
+//! at the outer level — unexpanded for `\CatchFileDef`, `\xdef`-expanded for
+//! `\CatchFileEdef` (L251-261). A missing file defines `\cs` empty and is a
+//! package error (L240-245).
 //!
 //! The setup argument is what makes the read faithful: codehigh's
 //! `\dochighinput` reads a `.sty` with `\catcode`\#=12` so parameter
 //! characters survive as text (fontscale-code, cistercian manuals), makron.sty
 //! L61 reads `\jobname.runs` for a counter (arXiv 1611.01359), mnras tables
-//! (arXiv 2210.08043). Guard:
-//! `perfect_kernel_batch54::catchfiledef_reads_under_setup_catcodes_and_edef_expands`.
-use latexml_core::{binding::content::find_file, mouth::Mouth};
+//! (arXiv 2210.08043). Guards:
+//! `perfect_kernel_batch54::catchfiledef_reads_under_setup_catcodes_and_edef_expands`,
+//! `binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents`.
+//!
+//! Both keep catchfile's own protocol, because the setup may replace its
+//! parts: catchfilebetweentags.sty `\CatchFBT@Work` redefines `\CatchFile@Do`
+//! (the reader of the file's tokens, delimited by `\CatchFile@EOF`) and
+//! `\everyeof` to capture only the text between two tags
+//! (factura-ejemplo-prefactura: `undefined:\CatchFile@EOF`). Only the file
+//! opening is native: `\lx@catchfile@input` opens the file as an `\input`
+//! would (a mouth whose end inserts `\everyeof`), without `\input`'s binding
+//! lookup — a `.sty` is caught as text, never loaded. Guard:
+//! `binding_singletons_56::catchfilebetweentags_uses_the_eof_protocol`.
+use latexml_core::mouth::{Mouth, MouthOptions};
 use latexml_package::prelude::*;
 
+/// catchfile's `\CatchFile@Input` (catchfile.sty:175-183: the `\input`
+/// primitive) applied to `\CatchFile@File`: the found file becomes the next
+/// input level, read under the catcodes in force, and its end inserts
+/// `\everyeof` (as content.rs `load_tex_content` opens an `\input` file).
+///
+/// `\input` scans a file name (tex.web §526). The name is complete here (it is
+/// `\CatchFile@File`), so the scan ends at the next token: a space — the
+/// `\space` of `\CatchFileEdef` (:259) — is consumed, anything else — the
+/// `\relax` of `\CatchFileDef` (:299) — is backed up to follow the file.
+///
+/// `boundary` is whether a scan may run past the file's end, which TeX decides
+/// by the scanner status. `\CatchFileDef` reads the file as one delimited
+/// argument, and a file end inside it is a runaway ("File ended while scanning
+/// use of `\CatchFile@Do`", tex.web §338): [`BalancedBoundary::Opaque`], so an
+/// unbalanced brace in the file cannot swallow the document after it.
+/// `\CatchFileEdef` sets `\everyeof{\noexpand}` (:257) so that its `\xdef`
+/// crosses the end into the `}` after it (`\noexpand` reads that token under a
+/// normal scanner status, tex.web §367): [`BalancedBoundary::Transparent`],
+/// over the text as a string, since a balanced read never crosses a file
+/// mouth. That is the kernel gap this stands in for (`\noexpand` at a file
+/// end: `\everyeof{\noexpand}\edef\x{\@@input file }` errors "readBalanced
+/// ran out of input", repro
+/// `tools/perfect_kernel/repros/expansion-primitives/everyeof_noexpand_input_end.tex`).
+/// Its two costs go with it: a non-UTF-8 disk file is read lossily (the String
+/// is then decoded again under the input encoding — RED repro
+/// `repros/singletons/catchfile_edef_latin1.tex`), and the file skips a file
+/// mouth's binary-file check (`Mouth::open_file`). With `\noexpand` crossing a
+/// file end, `\CatchFileEdef` could open the same file mouth as `\CatchFileDef`.
+fn open_caught_file(file: Tokens, boundary: BalancedBoundary) -> Result<()> {
+  let path = do_expand(file)?.to_string();
+  if let Some(next) = read_x_token(Some(false), false, Some(true))?
+    && next.get_catcode() != Catcode::SPACE
+  {
+    unread_one(next);
+  }
+  let mut content = vfs_read(&path);
+  if content.is_none() && boundary == BalancedBoundary::Transparent {
+    // An unreadable file stays a file mouth, which reports the I/O error.
+    content = std::fs::read(&path)
+      .ok()
+      .map(|bytes| String::from_utf8_lossy(&bytes).into_owned());
+  }
+  open_mouth_with(
+    Mouth::create(&path, MouthOptions {
+      content,
+      ..MouthOptions::default()
+    })?,
+    true,
+    boundary,
+  );
+  mark_everyeof_mouth();
+  Ok(())
+}
+
 LoadDefinitions!({
-  DefMacro!(
-    "\\CatchFileDef DefToken {}{}",
-    r"\begingroup#3\relax\lx@catchfile@slurp{#2}\endgroup\let#1\CatchFile@gtemp"
-  );
-  DefMacro!(
-    "\\CatchFileEdef DefToken {}{}",
-    r"\begingroup#3\relax\lx@catchfile@slurp{#2}\xdef\CatchFile@gtemp{\CatchFile@gtemp\space}\endgroup\let#1\CatchFile@gtemp"
-  );
-  // Read the file under the CURRENT catcodes (the setup ran in this group)
-  // into the global `\CatchFile@gtemp`, as catchfile's `\CatchFile@Do` does.
-  DefPrimitive!("\\lx@catchfile@slurp{}", sub[(path)] {
-    let path_str = path.to_string();
-    let body = match find_file(&path_str, None).and_then(|disk| std::fs::read(&disk).ok()) {
-      Some(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
-      None => {
-        Warn!("missing_file", &path_str, s!("CatchFile: File `{path_str}' not found"));
-        String::new()
+  // catchfile.sty:157: infwarerr's `\@PackageError`, which
+  // `\CatchFile@NotFound` raises.
+  RequirePackage!("infwarerr");
+  // catchfile.sty:224-238 (the `\IfFileExists` branch): `\CatchFile@File` is
+  // the found file, or `\relax`. The name is built as the kernel's
+  // `\IfFileExists` builds it (sect13.rs): expanded inside a `\csname`, as
+  // `\set@curr@file` does, then file-substituted — so `\jobname.runs` names
+  // the job's file (makron.sty:61, arXiv 1611.01359).
+  DefPrimitive!("\\CatchFile@CheckFileExists{}", sub[(path)] {
+    let name = expand_as_csname_text(path)?.to_string();
+    let name = substitute_file_request(&name).unwrap_or(name);
+    match find_file(&name, None) {
+      Some(found) => {
+        def_macro(T_CS!("\\CatchFile@File"), None, Tokens::new(ExplodeText!(found)), None)?;
       },
-    };
-    let tokens = if body.is_empty() {
-      Tokens::new(Vec::new())
-    } else {
-      Mouth::new(&body, None)?.read_tokens()
-    };
-    def_macro(
-      T_CS!("\\CatchFile@gtemp"),
-      None,
-      tokens,
-      Some(ExpandableOptions { scope: Some(Scope::Global), long: true, ..Default::default() }),
-    )?;
+      None => let_i(&T_CS!("\\CatchFile@File"), &T_CS!("\\relax"), None),
+    }
     Ok(())
   });
+  // catchfile.sty:240-245.
+  RawTeX!(
+    r"\def\CatchFile@NotFound#1#2{%
+  \def#1{}%
+  \@PackageError{catchfile}{%
+    File `#2' not found%
+  }\@ehc
+}"
+  );
+  DefMacro!("\\lx@catchfile@input{}", sub[(file)] {
+    open_caught_file(file, BalancedBoundary::Opaque)?;
+    Ok(Tokens!())
+  });
+  DefMacro!("\\lx@catchfile@edef@input{}", sub[(file)] {
+    open_caught_file(file, BalancedBoundary::Transparent)?;
+    Ok(Tokens!())
+  });
+  // catchfile.sty:251-261, `\CatchFile@Input` being `\lx@catchfile@edef@input`.
+  RawTeX!(
+    r"\long\def\CatchFileEdef#1#2#3{%
+  \CatchFile@CheckFileExists{#2}%
+  \ifx\CatchFile@File\relax
+    \CatchFile@NotFound{#1}{#2}%
+  \else
+    \begingroup
+      \everyeof{\noexpand}%
+      #3%
+      \xdef\CatchFile@Contents{\lx@catchfile@edef@input\CatchFile@File\space}%
+    \endgroup
+    \let#1\CatchFile@Contents
+  \fi}"
+  );
+  // catchfile.sty:264-301 (the e-TeX branch), `\CatchFile@Input` being
+  // `\lx@catchfile@input`.
+  RawTeX!(
+    r"\long\def\CatchFileDef#1#2#3{%
+  \CatchFile@CheckFileExists{#2}%
+  \ifx\CatchFile@File\relax
+    \CatchFile@NotFound{#1}{#2}%
+  \else
+    \begingroup
+      \everyeof\expandafter{\CatchFile@EOF\expandafter\CatchFile@Finish\noexpand}%
+      \expandafter\long\expandafter\def\expandafter\CatchFile@Do
+          \expandafter##\expandafter1\CatchFile@EOF{%
+        \edef\CatchFile@Finish{\endgroup\unexpanded{\edef#1{\unexpanded{##1}}}}}%
+      #3\relax
+    \expandafter\CatchFile@Do\lx@catchfile@input\CatchFile@File\relax
+  \fi}"
+  );
+  // catchfile.sty:302-309: the delimiter is `@@` with catcodes 8 and 3, which
+  // no file text can contain.
+  RawTeX!(
+    r"\begingroup\lccode65=64 \lccode66=64 \catcode65=8 \catcode66=3
+\lowercase{\endgroup\def\CatchFile@EOF{AB}}"
+  );
 });

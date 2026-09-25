@@ -1,0 +1,19 @@
+% witness: factura/factura-ejemplo-prefactura (factura-ejemplo-aux.tex:56)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 (56ir-rel2, 2026-09-25)
+% expect:  0 errors; [Hello tagged] is caught from between the tags
+%   (the red run dumped this whole file into the paragraph: 101 errors + Fatal)
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: catchfilebetweentags.sty \CatchFBT@Work passes a setup to
+%   \CatchFileDef that redefines \CatchFile@Do (delimited by the file's
+%   content up to \CatchFile@EOF) and \everyeof — catchfile.sty:264-306's
+%   protocol. The catchfile binding slurped the file natively, so
+%   \CatchFile@EOF was undefined and the setup's reader never ran.
+\documentclass{article}
+\usepackage{catchfilebetweentags}
+\begin{document}
+\CatchFileBetweenTags\caught{\jobname.tex}{tagA}\relax[\caught]
+\end{document}
+%<*tagA>
+Hello tagged
+%</tagA>

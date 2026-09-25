@@ -1,0 +1,15 @@
+% witness: biblatex-ext/biblatex-ext (29 toggle errors),
+%   biblatex-socialscienceshuberlin/socialscienceshuberlin (\mkbibacro)
+% oracle:  pdflatex 0 errors
+% engines: rust=3 (56ir-rel2, 2026-09-25)
+% expect:  0 errors; bbx toggles default true, \mkbibacro typesets its text
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: the native biblatex binding skips standard.bbx (NATIVE_STYLES),
+%   so standard.bbx:4-8's \newtoggle{bbx:isbn|url|doi|eprint|related} (set
+%   true by :20 \ExecuteBibliographyOptions) never exist, and biblatex.def:402
+%   \mkbibacro is not defined.
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\begin{document}
+[\iftoggle{bbx:doi}{doi}{nodoi}][\iftoggle{bbx:isbn}{isbn}{noisbn}][\mkbibacro{NASA}]
+\end{document}

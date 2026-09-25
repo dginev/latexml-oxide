@@ -20,6 +20,10 @@ LoadDefinitions!({
   // are presentational — dropped.
   // hvfloat.sty's real dependency chain (caption/graphicx/…).
   RequirePackage!("caption");
+  // hvfloat.sty:45 — documents call atbegshi's `\AtBeginShipoutNext`
+  // without loading it themselves (hvfloat fullpage1s1c/fullpage1s2c:
+  // `Error:undefined:\AtBeginShipoutNext`).
+  RequirePackage!("atbegshi");
   RequirePackage!("graphicx");
   // \hvFloat*?[keys]{type}{object}[shortcap]{caption}{label}
   // (hvfloat.sty L535-550), plus the multiFloat form where each sub-float

@@ -63,21 +63,24 @@ LoadDefinitions!({
   DefMacro!("\\cormark[]", "\\textsuperscript{*#1}");
   DefMacro!("\\corref[]", "\\textsuperscript{*#1}");
 
-  // Affiliation / address — route the user-visible text to a
-  // ltx:note (allowed at document/frontmatter level; ltx:contact is
-  // not). The semantic role is captured in the role attribute so a
-  // downstream processor can still recognize an affiliation/address.
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-  );
-  DefMacro!(
-    "\\address[]{}[]",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // Affiliation / address: ceurart.cls:1477 `\address[label]{text}[keys]` is
+  // the affiliation of the authors whose `\author[labels]` name that label.
+  // Routed as Perl routes aas affiliations (aas_support.sty.ltxml:118
+  // `\lx@add@affiliation`), with the label matched against the creators'
+  // annotations (the elsarticle mechanism, elsart_support_core.sty.ltxml:38-42),
+  // so each lands as a `<contact role="affiliation">` inside its `<creator>`
+  // instead of a document-level `<note>` (witness arXiv 2511.11770). Guard:
+  // `binding_singletons_56::ceurart_contacts_attach_to_creators`.
+  DefMacro!("\\affiliation[]{}", "\\lx@add@affiliation[label={#1}]{#2}");
+  DefMacro!("\\address[]{}[]", "\\lx@add@affiliation[label={#1}]{#2}");
 
-  // Email-address-of-author. Preserved as a ltx:note.
-  DefMacro!("\\ead[]{}", "\\@add@frontmatter{ltx:note}[role=email]{#2}");
+  // ceurart.cls:640-643 `\ead[opt]{addr}`: an email of the preceding author,
+  // or its URL when an option is given (`\@uad`). Perl
+  // aas_support.sty.ltxml:122 `\lx@add@email` (witness arXiv 2511.11770).
+  DefMacro!(
+    "\\ead[] Semiverbatim",
+    "\\if\\relax\\detokenize{#1}\\relax\\lx@add@email{#2}\\else\\lx@add@url{#2}\\fi"
+  );
   def_macro_noop("\\eadsep")?;
   def_macro_noop("\\eadauthor")?;
 
@@ -95,8 +98,8 @@ LoadDefinitions!({
   RequirePackage!("keyval");
   RawTeX!(
     r"\define@key{lx@ceur@au}{orcid}{\lx@add@orcid{#1}}%
-\define@key{lx@ceur@au}{email}{\@add@frontmatter{ltx:note}[role=email]{#1}}%
-\define@key{lx@ceur@au}{url}{\@add@frontmatter{ltx:note}[role=url]{#1}}%
+\define@key{lx@ceur@au}{email}{\lx@add@email{#1}}%
+\define@key{lx@ceur@au}{url}{\lx@add@url{#1}}%
 \define@key{lx@ceur@au}{twitter}{\@add@frontmatter{ltx:note}[role=twitter]{#1}}%
 \define@key{lx@ceur@au}{facebook}{\@add@frontmatter{ltx:note}[role=facebook]{#1}}%
 \define@key{lx@ceur@au}{linkedin}{\@add@frontmatter{ltx:note}[role=linkedin]{#1}}%
@@ -119,14 +122,11 @@ LoadDefinitions!({
   // [role=orcid]` → clickable orcid.org link + logo icon (vs a dagger note).
   // The contact attaches to the most-recent creator. html_feedback#6571.
   DefMacro!("\\orcidauthor{}{}", "\\lx@add@orcid{#2}");
-  DefMacro!(
-    "\\urlauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=url]{#2}"
-  );
-  DefMacro!(
-    "\\emailauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#2}"
-  );
+  // ceurart.cls:665/689 `\urlauthor{url}{name}` / `\emailauthor{email}{name}`
+  // (written to the .aux by `\ead`): the address is #1 (witness arXiv
+  // 2511.11770).
+  DefMacro!("\\urlauthor{}{}", "\\lx@add@url{#1}");
+  DefMacro!("\\emailauthor{}{}", "\\lx@add@email{#1}");
   DefMacro!(
     "\\creditauthor{}{}",
     "\\@add@frontmatter{ltx:note}[role=credit]{#2}"

@@ -7138,9 +7138,12 @@ Use "x_y" here.
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(!xml.contains("<ERROR"), "{xml}");
   assert!(
+    // Both quotes in the verbatim font, as pdflatex prints them: ‘‘x_y’’
+    // (newverbs.sty:52-69;
+    // `binding_singletons_56::qverb_quotes_share_the_verbatim_font`).
     xml.contains(concat!(
-      r#"<p>Use “<verbatim font="typewriter">x_y</verbatim>"#,
-      r#"<text font="typewriter">''</text> here.</p>"#
+      r#"<p>Use <text font="typewriter">‘‘<verbatim>x_y</verbatim>"#,
+      r#"’’</text> here.</p>"#
     )),
     "{xml}"
   );

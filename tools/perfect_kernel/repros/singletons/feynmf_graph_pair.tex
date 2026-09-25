@@ -1,0 +1,19 @@
+% witness: arXiv 2309.07343 (feynmf; no feynmf user in the TL corpus)
+% oracle:  pdflatex 0 errors (feynmf.sty:180 \def\fmfgraph(#1,#2))
+% engines: rust=0 (56ir-rel2, 2026-09-25) — structural: "(Feynman diagram, (x3)"
+% expect:  0 errors; note reads (Feynman diagram, 30x20)
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: `{fmfgraph}{}{}` read `(30,20)` as two single-token arguments
+%   `(` and `3`; the (w,h) pair is `Match:( Until:, Until:)`, as \put reads its.
+\documentclass{article}
+\usepackage{feynmf}
+\begin{document}
+\begin{fmffile}{graphs}
+\begin{fmfgraph*}(30,20)
+  \fmfleft{i1}\fmfright{o1}\fmf{fermion}{i1,o1}
+\end{fmfgraph*}
+\begin{fmfgraph}(40,25)
+  \fmfleft{i1}\fmfright{o1}\fmf{photon}{i1,o1}
+\end{fmfgraph}
+\end{fmffile}
+\end{document}

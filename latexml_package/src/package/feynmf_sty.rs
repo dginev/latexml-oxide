@@ -6,23 +6,32 @@ use crate::prelude::*;
 LoadDefinitions!({
   InputDefinitions!("feynmf", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  // feynmf {fmfgraph}/{fmfgraph*} environments: 2-arg-on-begin
-  // `(width,height)` followed by Feynman diagram body. Real package
-  // emits a Metafont diagram. For HTML rendering we drop the graphics
-  // body (no Metafont in our pipeline) but preserve the env so the
-  // surrounding equation/figure context still parses cleanly. Witness
-  // 2309.07343 (15 errors all from {fmfgraph*} undefined).
-  DefEnvironment!("{fmfgraph}{}{}",
-    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
+  feynmf_graph_environments()?;
+  feynmf_diagram_stubs()?;
+});
+
+/// feynmf/feynmp `{fmfgraph}`/`{fmfgraph*}` environments: a `(width,height)`
+/// pair (feynmf.sty:180 `\def\fmfgraph(#1,#2)`, :193 `fmfgraph*`) followed by
+/// the diagram body. The real package emits a Metafont/MetaPost diagram. For
+/// HTML rendering we drop the graphics body (neither runs in our pipeline) but
+/// preserve the env so the surrounding equation/figure context still parses
+/// cleanly. Witness 2309.07343 (15 errors all from {fmfgraph*} undefined).
+/// The pair is `Match:( Until:, Until:)`, as `\put` reads its: the former
+/// `{}{}` took `(` and `3` of `(30,20)`, so the note read
+/// "(Feynman diagram, (x3)". Guard:
+/// `binding_singletons_56::fmfgraph_reads_its_size_pair`.
+pub(crate) fn feynmf_graph_environments() -> Result<()> {
+  DefEnvironment!("{fmfgraph} Match:( Until:, Until:)",
+    "<ltx:note role='feynman-diagram'>(Feynman diagram, #2x#3)</ltx:note>",
     mode => "internal_vertical");
-  DefEnvironment!("{fmfgraph*}{}{}",
-    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
+  DefEnvironment!("{fmfgraph*} Match:( Until:, Until:)",
+    "<ltx:note role='feynman-diagram'>(Feynman diagram, #2x#3)</ltx:note>",
     mode => "internal_vertical");
   // {fmffile}{name} - wraps a Feynman-diagram session. Render as no-op
   // env (the diagrams inside are rendered by {fmfgraph}/{fmfgraph*}).
   DefEnvironment!("{fmffile}{}", "#body", mode => "internal_vertical");
-  feynmf_diagram_stubs()?;
-});
+  Ok(())
+}
 
 /// Diagram-content macros used inside `{fmfgraph}`/`{fmfgraph*}` (shared by the
 /// `feynmf` and `feynmp` packages — feynmp is the MetaPost/PDF variant with the

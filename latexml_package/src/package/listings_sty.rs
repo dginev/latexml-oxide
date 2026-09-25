@@ -2628,6 +2628,18 @@ LoadDefinitions!({
   NewCounter!("lstnumber");
   DefMacro!("\\thelstnumber", "\\arabic{lstnumber}");
   DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
+  // lstmisc.sty:1236-1239 (`labels` aspect): a listing line's hyperref anchor
+  // name, set `\AtBeginDocument` — `\lst@neglisting` (listings.sty:1693, the
+  // count of uncaptioned listings) or, for a captioned listing, `\theHlstlisting`,
+  // then `.\thelstnumber`. The binding keeps captions natively and never sets
+  // `\lst@@caption` (and must not define it: `\lst@@<key>` names the binding's
+  // key handlers, so an `\@empty` one hijacked the `caption` key), so the
+  // uncaptioned branch is the definition. SASnRdisplay.sty:265-275
+  // `\SnRHrefNumber` expands it once to prefix a series name (SASnRdisplay:
+  // `undefined:\theHlstnumber`; Perl listings.sty.ltxml lacks it too). Guard:
+  // `binding_singletons_56::listings_the_h_lstnumber_is_defined`.
+  DefMacro!("\\lst@neglisting", "\\z@");
+  at_begin_document(TokenizeInternal!(r"\def\theHlstnumber{\lst@neglisting.\thelstnumber}"))?;
 
   // listings.sty:320 `\let\lst@UserCommand\gdef` — the definer listings'
   // own `\lst@…` user-command declarations and third-party patches use

@@ -1,0 +1,25 @@
+% witness: none in the corpus; the \CatchFileEdef reader (catchfile_sty.rs
+%   open_caught_file) on a non-UTF-8 disk file
+% oracle:  pdflatex 0 errors; [café][café ]
+% engines: rust=0 (56ir-rel2, 2026-09-25): [caf�][caf� ]; pk/w3-bindings:
+%   [café][caf�] — \CatchFileDef reads the bytes, \CatchFileEdef garbles them
+% expect:  0 errors; [café][café ]
+% status:  RED — kernel (latexml_engine tex_macro.rs \noexpand at a file end;
+%   repros/expansion-primitives/everyeof_noexpand_input_end.tex)
+% mechanism: \CatchFileEdef's \xdef must cross the file's end (catchfile.sty:257
+%   \everyeof{\noexpand}), which the kernel's balanced read does only for a
+%   string mouth, so the binding reads a disk file into a String:
+%   from_utf8_lossy turns the latin1 byte into U+FFFD, which the string mouth
+%   (Mouth::create sets lazy_decode) then decodes again under the input
+%   encoding. MouthOptions.content is a String, so raw bytes cannot be handed
+%   over without a latexml_core change; a file mouth keeps them, as
+%   \CatchFileDef's does.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{catchfile}
+\begin{document}
+\CatchFileDef\cafedef{catchfile_edef_latin1.txt}{\endlinechar=-1 }%
+\CatchFileEdef\cafeedef{catchfile_edef_latin1.txt}{}%
+[\cafedef][\cafeedef]
+\end{document}

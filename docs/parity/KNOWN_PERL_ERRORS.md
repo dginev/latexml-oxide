@@ -6782,3 +6782,19 @@ pdflatex prints `[F1.0pt]`; Perl and Rust printed `[1.0pt]`. pstricks' raw `\psa
 it (lsc).
 **Rust (FIXED, batch 56is):** tex_registers.rs `\advance`/`\multiply`/`\divide` call
 `after_assignment()`. Guard `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
+
+## 258. Three bindings miss a definition their raw package makes (FIXED in Rust)
+
+Each of these errors in Perl and in Rust before batch 56iv. pdflatex is clean on all three.
+- **pdfpages.** Perl's `\includepdf` reads its file name as `{}` (pdfpages.sty.ltxml:30), so
+  `\includepdf{a_b.pdf}` tokenizes `_` as a subscript: "Script _" outside math. Rust reads it as
+  `Semiverbatim`, as Perl's own `\includegraphics` does (graphicx.sty.ltxml:52). Witness: latex4wp.
+- **listings.** Perl defines `\thelstnumber` only (listings.sty.ltxml:879-880), with no
+  `\theHlstnumber`, so hyperref's anchor for a listing line is undefined (SASnRdisplay). Rust defines
+  the uncaptioned branch of lstmisc.sty:1236-1239.
+- **varioref.** Perl defines no `\if@vrefhandlespace` (varioref.sty.ltxml:24-44), which varioref.sty
+  :799-802 tests (tikz-cookingsymbols-doc).
+
+**Rust (FIXED, batch 56iv):** guards
+`binding_singletons_56::{includepdf_file_name_is_semiverbatim, listings_the_h_lstnumber_is_defined,
+varioref_handlespace_switch_exists}`.

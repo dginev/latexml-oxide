@@ -1,0 +1,24 @@
+% witness: accessibility.sty:1566-1577 (the `pdf' option wraps \verb in
+%   \begin{PDFInlineObjInText}{Code} and closes it in \verb@egroup); here a
+%   minimal stand-in pair, the {codeobj} environment
+% oracle:  pdflatex 0 errors; Say ‘‘[abc]’’ and <[x_y]> here.
+% engines: rust (b3ba88bf47, pk/w3-bindings): the newverbs command read the
+%   verbatim argument itself but ran \verb@egroup, so \end{codeobj} was unmatched
+% expect:  0 errors; both halves of the pair run, inside the command's group
+% status:  GREEN (guard binding_singletons_56, 2026-09-25)
+% mechanism: newverbs.sty:56-67 appends `after' and the group's end to
+%   \verb@egroup and then calls #3, the \verb in force; the redefined \verb
+%   opens what the redefined \verb@egroup closes.
+\documentclass{article}
+\usepackage{newverbs}
+\newenvironment{codeobj}{[}{]}
+\makeatletter
+\let\originalverb\verb
+\renewcommand{\verb}{\begin{codeobj}\originalverb}
+\let\originalverb@egroup\verb@egroup
+\renewcommand{\verb@egroup}{\originalverb@egroup\end{codeobj}}
+\makeatother
+\newverbcommand{\cverb}{<}{>}
+\begin{document}
+Say \qverb|abc| and \cverb|x_y| here.
+\end{document}

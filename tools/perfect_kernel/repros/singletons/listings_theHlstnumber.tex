@@ -1,0 +1,20 @@
+% witness: sasnrdisplay/SASnRdisplay (SASnRdisplay.sty:265-275 \SnRHrefNumber)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 (56ir-rel2, 2026-09-25)
+% expect:  0 errors; \theHlstnumber is lstmisc.sty:1236-1239's uncaptioned branch
+%   (pdflatex prints the whole conditional; the binding never sets \lst@@caption)
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: lstmisc.sty:1236 `\AtBeginDocument{\def\theHlstnumber{…}}` is
+%   missing from the listings binding; SASnRdisplay expands it once
+%   (`\toks@\expandafter{\theHlstnumber}`) to prefix a series name.
+\documentclass{article}
+\usepackage{listings}
+\makeatletter
+\newcommand*{\SnRHrefNumber}[1]{\begingroup
+  \global\let\gtmp@theHlstnumber\theHlstnumber
+  \toks@\expandafter{\theHlstnumber}\xdef\gtmp@theHlstnumber{#1-\the\toks@}%
+  \endgroup\let\theHlstnumber\gtmp@theHlstnumber}
+\makeatother
+\begin{document}
+\SnRHrefNumber{R}[\texttt{\detokenize\expandafter{\theHlstnumber}}]
+\end{document}

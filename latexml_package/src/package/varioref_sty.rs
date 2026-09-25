@@ -52,4 +52,11 @@ LoadDefinitions!({
   // call it (univie-ling-expose/-paper/-thesis; class census 2026-09-24). Its
   // `\@onlypreamble` is dropped: those classes call it from `\AtBeginDocument`.
   RawTeX!(r"\def\vref@addto#1#2{#2\@temptokena{#2}\ifx#1\undefined\edef#1{\the\@temptokena}\else\toks@\expandafter{#1}\edef#1{\the\toks@\the\@temptokena}\fi\@temptokena{}\toks@\@temptokena}");
+  // varioref.sty:799-802: the `space`/`nospace` switch, true by default
+  // (`\ExecuteOptions{english,final,space}`). zref-vario.sty:486 clears it in
+  // its varioref setup (tikz-cookingsymbols-doc `\zvref`: undefined
+  // `\@vrefhandlespacefalse`; Perl varioref.sty.ltxml lacks it too). The
+  // binding models no page-reference spacing, so only the switch is needed.
+  // Guard: `binding_singletons_56::varioref_handlespace_switch_exists`.
+  RawTeX!(r"\newif\if@vrefhandlespace\@vrefhandlespacetrue");
 });

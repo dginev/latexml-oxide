@@ -97,32 +97,6 @@ parameter types and `DefPSConstructor`.
   corpus sources), e.g. pst-poker-doc, egameps, lsc, pst-vowel, dsptricks.
 - Guard: whole `<g>`/`<rect>`/`<line>` elements for a 4-primitive pspicture, 0 errors.
 
-### P4 — binding singletons (each clears one manual; all verified RUST-ONLY)
-- `latexml_contrib/src/hvfloat_sty.rs`: add `RequirePackage!("atbegshi")`, as hvfloat.sty:45 does.
-  Repro: `\usepackage{hvfloat}` then `\AtBeginShipoutNext{x}` gives `Error:undefined:\AtBeginShipoutNext`.
-  Witnesses: hvfloat fullpage1s1c/1s2c (lualatex).
-- `latexml_package/src/package/pdfpages_sty.rs:104`: `\includepdf OptionalKeyVals {}` becomes
-  `OptionalKeyVals Semiverbatim`, as graphicx.sty.ltxml:52 does. Today `\includepdf{a_b.pdf}`
-  errors "Script _ can only appear in math mode". Witness latex4wp. Guard the whole
-  `<resource src="a_b.pdf" type="application/pdf"/>`.
-- listings binding: lstmisc.sty:1236 `\theHlstnumber` is missing (SASnRdisplay).
-- varioref binding: varioref.sty:799 `\newif\if@vrefhandlespace` is missing (tikz-cookingsymbols).
-- biblatex binding: biblatex.def:402 `\mkbibacro` is missing, and so are standard.bbx:4-8's toggles
-  when the native style is skipped (biblatex-ext: 29 of its 40 errors; socialscienceshuberlin).
-- catchfile binding: the `\CatchFile@EOF` protocol that catchfilebetweentags uses is missing
-  (factura-ejemplo-prefactura).
-
-Repros for each are in `~/data/pk_agents/w69/drivers/streamB_rep/`.
-
-### P5 — small binding leads (from the guard-strength audit; all RUST-ONLY)
-- `latexml_contrib/src/ceurart_cls.rs:75-80, 98, 127`: email and address become document-level
-  `<note role="email|address">`. Route them through `\lx@add@email` / `\lx@add@affiliation`
-  (the pattern of Perl aas_support.sty.ltxml:118,122), so they land inside `<creator>`.
-- `latexml_package/src/package/newverbs_sty.rs:17-26`: `\qverb` sets its opening quote in roman
-  and its closing quote in typewriter. newverbs.sty:52-69 sets `\verbatim@font` before both.
-- `latexml_package/src/package/feynmf_sty.rs:15-20`: `(30,20)` is read as two single-token
-  arguments, so the note reads `(Feynman diagram, (x3)`. Read the `(w,h)` pair.
-
 ### P6 — forest: node keys become structure (carried over from round 11, N1)
 `parse_forest_tokens` (latexml_contrib/src/forest_sty.rs) keeps a node's key list only as an
 opaque string, and `\forestset`/`\bracketset` are `\relax`.

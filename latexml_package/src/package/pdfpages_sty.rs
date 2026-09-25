@@ -101,7 +101,12 @@ LoadDefinitions!({
   // defaults are absorbed (tutodoc-en/fr :1339; Perl pdfpages.sty.ltxml lacks
   // it too). Guard: `perfect_kernel_batch56::includepdfset_is_absorbed`.
   DefMacro!("\\includepdfset{}", "");
-  DefConstructor!("\\includepdf OptionalKeyVals {}",
+  // The file name is Semiverbatim, as Perl graphicx.sty.ltxml:52 reads
+  // `\@includegraphicx`'s: Perl's `{}` tokenized `\includepdf{a_b.pdf}` under
+  // document catcodes and errored "Script _ can only appear in math mode"
+  // (latex4wp, `pandoc_template.pdf`; pdflatex reads the name as a file
+  // name). Guard: `binding_singletons_56::includepdf_file_name_is_semiverbatim`.
+  DefConstructor!("\\includepdf OptionalKeyVals Semiverbatim",
     "<ltx:resource src='#src' type='application/pdf'/>See #pages<ltx:ref href='#src'>#src</ltx:ref>",
     properties => sub[args] {
       let pages = args[0].as_ref().and_then(|d| {

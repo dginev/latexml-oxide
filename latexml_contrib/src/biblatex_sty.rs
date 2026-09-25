@@ -3056,6 +3056,13 @@ LoadDefinitions!({
   DefMacro!("\\mkbibbold{}", "\\textbf{#1}");
   DefMacro!("\\mkbibitalic{}", "\\textit{#1}");
   DefMacro!("\\mkbibsuperscript{}", "\\textsuperscript{#1}");
+  // biblatex.def:401-404 — acronyms in small caps when the current font has a
+  // small-caps shape. Documents use it outside any bibliography
+  // (socialscienceshuberlin.tex:441 `\mkbibacro{CTAN}`). Guard:
+  // `binding_singletons_56::biblatex_mkbibacro_and_standard_toggles`.
+  RawTeX!(
+    r"\newcommand*{\mkbibacro}[1]{\ifcsundef{\f@encoding/\f@family/\f@series/sc}{#1}{\textsc{\MakeLowercase{#1}}}}"
+  );
   def_macro_noop("\\nopunct")?;
   def_macro_noop("\\isdot")?;
   def_macro_noop("\\newunit")?;
@@ -3164,6 +3171,9 @@ LoadDefinitions!({
     blx_record_name_alias(alias, format);
   }
   blx_record_name_format("initsonly", "initials");
+  // biblatex.sty:16387 `\blx@kv@setkeys{blx@opt@ldt}{style=numeric}`: the
+  // default style, whose numeric.bbx chains standard.bbx (its toggles, below).
+  let bibstyle = bibstyle.or_else(|| Some("numeric".to_string()));
   if let Some(s) = &bibstyle {
     blx_load_style_file(s, "bbx");
   }
@@ -3460,6 +3470,45 @@ fn toplevel_calls(text: &str, names: &[&str]) -> Vec<(String, Option<String>, St
   calls
 }
 
+/// standard.bbx:4-8 allocates the toggles every standard-derived style tests
+/// (`\iftoggle{bbx:doi}`, 20 + 9 errors in biblatex-ext's ext-*.bbx), and :21
+/// `\ExecuteBibliographyOptions{isbn,url,doi,eprint,related}` sets them true
+/// (each option's `[true]` default, :10-19); a load-time `<key>=false`
+/// clears one. The native pipeline skips standard.bbx, so the skip allocates
+/// them, once: the mark stands in for the file's own once-mark, which
+/// biblatex.sty:1260-1274 `\blx@inputonce` sets globally
+/// (`\global\cslet{blx@file@#1}\@empty`); the toggles are made as the file
+/// makes them (etoolbox.sty:1169-1181). Guard:
+/// `binding_singletons_56::biblatex_mkbibacro_and_standard_toggles`.
+fn blx_standard_bbx_toggles() {
+  const TOGGLES: [&str; 5] = ["isbn", "url", "doi", "eprint", "related"];
+  if lookup_value("blx@standardtoggles").is_some() {
+    return;
+  }
+  assign_value(
+    "blx@standardtoggles",
+    Stored::from(true),
+    Some(Scope::Global),
+  );
+  let mut values = TOGGLES.map(|key| (key, true));
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      if let Some((k, v)) = blx_opt_kv(&opt.to_string())
+        && let Some(entry) = values.iter_mut().find(|(key, _)| *key == k)
+      {
+        entry.1 = v != "false";
+      }
+    }
+  }
+  let mut tex = String::new();
+  for (key, on) in values {
+    tex.push_str(&s!(
+      "\\providetoggle{{bbx:{key}}}\\settoggle{{bbx:{key}}}{{{on}}}"
+    ));
+  }
+  let _ = raw_tex(&tex);
+}
+
 /// Raw-load `<name>.bbx` / `<name>.cbx` once (biblatex.sty `\blx@inputonce`,
 /// L2256-2258 / L11428-11435). Style files chain (`sbl.bbx` L1 inputs
 /// `biblatex-sbl.def`; ext-*.bbx `\RequireBibliographyStyle{standard}`), so
@@ -3523,6 +3572,14 @@ fn blx_load_style_file(name: &str, ext: &str) {
   if NATIVE_STYLES.contains(&name) {
     if ext == "bbx" {
       blx_read_native_style_options(name);
+      // Every built-in bibliography style but debug.bbx chains standard.bbx
+      // (`\RequireBibliographyStyle{standard}`: numeric/alphabetic/authoryear/
+      // authortitle/reading/draft.bbx:4; the others through those), and so do
+      // third-party ones (ext-standard.bbx), so skipping it must still allocate
+      // its toggles.
+      if name != "debug" {
+        blx_standard_bbx_toggles();
+      }
     }
     return;
   }

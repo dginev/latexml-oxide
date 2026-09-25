@@ -1467,8 +1467,11 @@ fn catchfiledef_reads_under_setup_catcodes_and_edef_expands() {
        \\end{document}\n";
   let (stderr, xml) = super::perfect_kernel_batch46::convert_files(tex, &[("caught.txt", txt)]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // `\detokenize`'s backslash renders through OT1 as `“`.
-  assert!(xml.contains("[A#1“foo BC][A#1FOOBC ]"), "{xml}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // `\detokenize`'s backslash renders through OT1 as `“`. `\CatchFileEdef`'s
+  // `\space` (catchfile.sty:259) ends `\input`'s file name (tex.web §526), so
+  // with `\endlinechar=-1` nothing trails the text — pdflatex: [A#1FOOBC].
+  assert!(xml.contains("[A#1“foo BC][A#1FOOBC]"), "{xml}");
 }
 
 /// OXIDIZED_DESIGN #177: `\usepackage{../tex/pkg}` (CTAN source layout,

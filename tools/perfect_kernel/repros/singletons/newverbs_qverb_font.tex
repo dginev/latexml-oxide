@@ -1,0 +1,17 @@
+% witness: macros2e/macros2e (\MakeSpecialShortVerb\qverb\"), newverbs users
+% oracle:  pdflatex 0 errors; ‘‘abc’’ — both quotes OT1 typewriter (cmtt)
+% engines: rust=0 (56ir-rel2, 2026-09-25) — structural: opening quote roman “,
+%   closing quote ASCII ''
+% expect:  0 errors; <text font="typewriter">‘‘<verbatim>abc</verbatim>’’</text>
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: newverbs.sty:52-69 \new@@verbcommand runs \verbatim@font (and
+%   \let\verbatim@font\relax) BEFORE `before` (#4) and the verb, so
+%   \qverbbeginquote/\qverbendquote (:100-107) are typewriter; the binding ran
+%   `before` in the surrounding font. The quotes keep the document encoding
+%   (OT1), not \verbatim@font's ASCII (OXIDIZED_DESIGN #144, meant for the
+%   verbatim body), and `after` runs once \verb's own group has closed.
+\documentclass{article}
+\usepackage{newverbs}
+\begin{document}
+Say \qverb|abc| here.
+\end{document}

@@ -9084,3 +9084,37 @@ manuals, spines, and biblatex-examples.bib `salam`.
   biblatex_second_tier_fields_are_printed, biblatex_title_units_and_events_print_once,
   classic_host_rows_are_unchanged}`;
 - the 06_cluster_bibliography goldens (15 updated to the style's own name form).
+
+---
+### 300. catchfile reads the file as catchfile.sty does; newverbs' own code prints in the document encoding (Perl: raw catchfile, ASCII quotes)
+
+Perl has no catchfile binding, so it raw-loads catchfile.sty. Rust (batch 56iv, round-12 P4/P5,
+`latexml_contrib/src/catchfile_sty.rs`) ports catchfile.sty:224-309 literally. Only the file opener
+is native (`\lx@catchfile@input`). It builds the name as the kernel's `\IfFileExists` does, so
+`\CatchFileDef\x{\jobname.aux}{}` finds the file. It reads virtual files written by `filecontents` or
+`\openout`. It opens the file with an opaque boundary: a delimited read stops at the file's end, as
+TeX's does (tex.web §338).
+- **Missing file:** it raises catchfile's own `\CatchFile@NotFound` package error (catchfile.sty:
+  240-245), one Error.
+- **`\CatchFileEdef`:** it is catchfile.sty:251-261 over a STRING input
+  (`\lx@catchfile@edef@input`), because the kernel's `\noexpand` cannot yet carry an `\edef` across
+  a file's end (tex.web §367; KNOWN_PERL_ERRORS-class kernel gap, task in SYNC_STATUS; red repro
+  `expansion-primitives/everyeof_noexpand_input_end`). A non-UTF-8 disk file is read lossily there:
+  under `inputenc[latin1]` a caught `é` prints `�` (red repro `singletons/catchfile_edef_latin1`,
+  pdflatex `[café][café ]`).
+- **`\CatchFile@File`:** it holds the resolved path, not the name as written.
+- **An unbalanced caught file:** the partial argument goes back into the input, as Perl's readUntil
+  recovery does (Gullet.pm:683-685), where TeX discards it (tex.web §396). pdflatex prints
+  "Before. After."; Rust prints "Before. AB␤_After." (a control case in
+  `binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents` pins the actual output).
+
+newverbs (`latexml_package/src/package/newverbs_sty.rs`) ports newverbs.sty:52-69 as written: the
+command appends its `after` code to the `\verb@egroup` in force and calls the `\verb` in force (or
+the given `[\verbcmd]`), so a package that redefines the `\verb`/`\verb@egroup` pair still works.
+The before and after code print in the document encoding. Only the verbatim body keeps the ASCII
+font of #144. pdflatex prints ‘‘x_y’’ for `\qverb`. The earlier output was ASCII `` `` `` ... `''`.
+
+**Guards:** `binding_singletons_56::{catchfilebetweentags_uses_the_eof_protocol,
+catchfile_expands_the_name_and_reads_filecontents, qverb_quotes_share_the_verbatim_font,
+qverb_keeps_a_redefined_verb_pair}`, `perfect_kernel_batch54` catchfile guards,
+`perfect_kernel_batch56::make_special_short_verb_is_defined`.

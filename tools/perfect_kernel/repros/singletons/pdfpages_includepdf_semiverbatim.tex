@@ -1,0 +1,15 @@
+% witness: latex4wp/latex4wp (\includepdf{pandoc_template.pdf})
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (Perl pdfpages.sty.ltxml:30 reads the file as `{}`)
+% expect:  0 errors; <resource src="a_b.pdf" type="application/pdf"/>
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: `\includepdf OptionalKeyVals {}` tokenizes the file name under
+%   document catcodes, so `_` is a subscript character ("Script _ can only
+%   appear in math mode"). A file name is Semiverbatim, as Perl
+%   graphicx.sty.ltxml:52 reads \includegraphics's.
+\documentclass{article}
+\usepackage{pdfpages}
+\begin{document}
+See the template.
+\includepdf[fitpaper]{a_b.pdf}
+\end{document}
