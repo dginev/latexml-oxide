@@ -18,6 +18,8 @@
 # under xelatex). A clean first run is kept as before. Producer-first for such runs
 # would change the persona of ~750 manuals whose golden came from another engine;
 # that is a measured experiment of its own (roadmap stream A, char-list).
+# When no engine is clean, a pdflatex run without a PDF records lualatex, as before
+# batch 56is (run_doc.sh's luatex retry reads the column as the required engine).
 # REFRESH=<file of tex paths>: drop those docs' rows and re-run only them.
 # Writes <outroot>/oracle_verdicts.tsv:  bundle name engine exit errors
 #   errors = count of '^!' lines in the engine log (0 = clean oracle)
@@ -66,20 +68,34 @@ oracle_one() {
     exit_code=$?
     errors=0
     [[ -f "$tmp/$name.log" ]] && errors=$(grep -c '^!' "$tmp/$name.log" || true)
+    has_pdf=0
+    [[ -f "$tmp/$name.pdf" ]] && has_pdf=1
   }
   run_engine "$engine"
-  local first="$engine" first_exit=$exit_code first_errors=$errors
+  local first="$engine" first_exit=$exit_code first_errors=$errors first_pdf=$has_pdf
+  local lua_exit="" lua_errors=""
+  [[ $first == lualatex ]] && lua_exit=$exit_code lua_errors=$errors
   if [[ $exit_code -ne 0 || $errors -ne 0 ]]; then
     for e in $order; do
       [[ $e == "$first" ]] && continue
       run_engine "$e"
+      [[ $e == lualatex ]] && lua_exit=$exit_code lua_errors=$errors
       if [[ $exit_code -eq 0 && $errors -eq 0 ]]; then
         engine=$e
         break
       fi
     done
     if [[ $exit_code -ne 0 || $errors -ne 0 ]]; then
-      engine=$first exit_code=$first_exit errors=$first_errors
+      # No engine is clean. The engine column still names the engine the
+      # document needs, which run_doc.sh reads for its luatex retry: as before
+      # batch 56is, a pdflatex run that makes no PDF records lualatex (with its
+      # own result), otherwise the first engine. Recording pdflatex there (56is)
+      # dropped the retry for 76 documents (sweep #124: +568 errors).
+      if [[ $first == pdflatex && $first_pdf -eq 0 && -n $lua_exit ]]; then
+        engine=lualatex exit_code=$lua_exit errors=$lua_errors
+      else
+        engine=$first exit_code=$first_exit errors=$first_errors
+      fi
     fi
   fi
   printf '%s\t%s\t%s\t%s\t%s\n' "$bundle" "$name" "$engine" "$exit_code" "$errors" >>"$V"
