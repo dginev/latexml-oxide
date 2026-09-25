@@ -59,8 +59,8 @@ to Opus 4.8 `root-causer`/`reviewer`/`log-scanner` agents (≤4 at once). Memory
 (`--max-memory=8192`, `ulimit -v 8912896`, per conversion only, never on the test runner).
 Sweeps: `~/data/pk_agents/w68/main/sweep122_launch.sh` is the current recipe (vendor TL +
 `LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63; sweep → validate → post mono → HTML
-recall in one chain). arXiv A/B: `~/data/pk_agents/ab56il/ab.sh <run> <binA> <binB>` (3,003 papers,
-README there). Never run an engine with its cwd in the vendor TL doc tree. `run_doc.sh` removes
+recall in one chain). arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh <run> <binA> <binB>` (3,003 papers; manual-corpus
+A/B: `manual_ab.sh`; scoreboard: `scoreboard.py`). Never run an engine with its cwd in the vendor TL doc tree. `run_doc.sh` removes
 dead runs' spill directories there.
 
 **Working rules (user, 2026-09-23):** every fix is catalogued as a minimal `.tex` repro in
@@ -87,6 +87,57 @@ planned at the end); a schema win counts only if content is preserved — run
 - Settled, do not re-mine:
   - The empty margin notes: tufte's citations `\marginpar`, SHARED (LEDGER 56ip).
   - The silent-loss structural scan: empty `<p/>`, icon inline-blocks and struts.
+
+## Roadmap — ranked streams, parallel lanes, acceptance gates (user-accepted 2026-09-25)
+
+This is the single ranked order for the program. PLANS.md, KERNEL_CAPABILITIES.md and the open
+leads below feed it; they do not rank on their own. Every stream is sized on the latest sweep and
+names the scoreboard column it must move.
+
+| # | Stream | Size at s122 | Moves | Lane |
+|---|---|---|---|---|
+| 0 | Sweep #123: baseline for 56in–56iq | — | all columns | compute |
+| A | Recall tail | 404 of 1,890 scored manuals below 95 %, 26,310 missing words; the worst 50 hold 16,246 | recall mean, %≥95, missing | analysis → implement |
+| B | Manuals that finish with errors | 388 docs at status 2 | clean, errors | analysis → implement |
+| C | 180 s ceiling: PLANS 12 raw-interpretation speed | 8 timeouts + slow manuals; the same hot paths on arXiv | timeout, wall time | analysis → implement |
+| D | Architectural generalizations: virtual file store, `\everyeof`, expl3 file boundaries, PLANS 13 | taken up when A–C hit them | neutral-or-better + less special-case code | implement |
+| E | Guard strength (PLANS 5: B1 `assert_element`, B5, B2–B4) | 938 weak assertions | weak-assertion count | implement, 1 batch per sweep cycle |
+| F | Rulings: K6 DVI cue (`dvips`/`dvipdfmx` class option) | 4 manuals, 2 arXiv papers | — | user |
+| G | Endgame: the full arXiv corpus rerun on the fleet | ~2.8M papers | fleet status distribution | compute |
+
+**Parallel lanes.**
+- **Compute:** one sweep or A/B at a time on cores 0-63 (`systemd-run`, JOBS=16).
+- **Analysis:** up to 4 read-only Opus 5.5 (xhigh) drivers, one per stream, probing on cores
+  64-127. Each returns execution-ready plans: witnesses, a red repro, file:line root cause, a fix
+  shape, a guard design, the expected metric delta and a risk.
+- **Implementation:** the main session is the single writer. It takes the drivers' plans in
+  value order and batches 3-5 fixes.
+- A, B and C analyse in parallel. D is triggered by their findings. E runs while a sweep occupies
+  the compute lane.
+
+**Gate ladder (every fix, every batch):**
+1. L0 red: the repro in `tools/perfect_kernel/repros/<mechanism>/` shows the defect on today's binary.
+2. L1 green: the guard (whole-element assertions, pinned diagnostics) passes; full nextest,
+   clippy and rustdoc pass.
+3. L2 manual A/B: the manuals that exercise the mechanism, by grep
+   (`tools/perfect_kernel/manual_ab.sh` + `manual_ab_compare.py`). No manual may lose recall.
+4. L3 arXiv A/B: `tools/perfect_kernel/arxiv_ab.sh`, 3,003 papers; results in `~/data/pk_agents/ab56il/results/`. No status or word loss that
+   pdflatex does not explain.
+5. L4 reviewer, then one commit per batch.
+6. L5 full sweep every 2-3 batches, with a scoreboard row. No manual down by more than 0.5 recall
+   and none newly invalid, unless classified faithful to pdflatex.
+7. L6 periodically, the cortex reruns of sandboxes 2605/2606. L7 at the end, stream G.
+
+**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1):
+
+| sweep | clean | fatal | timeout | errors | valid | recall mean | median | %≥95 | missing |
+|---|---|---|---|---|---|---|---|---|---|
+| 113 | 1881 | 94 | 6 | 11252 | 2219 | 93.72 | 98.6 | 75.8 | 45359 |
+| 118 | 1881 | 94 | 5 | 11139 | 2226 | 93.93 | 98.6 | 76.7 | 44570 |
+| 119 | 1902 | 67 | 7 | 10654 | 2249 | 94.20 | 98.6 | 77.2 | 46052 |
+| 120 | 1895 | 69 | 6 | 10548 | 2250 | 94.27 | 98.6 | 77.4 | 45398 |
+| 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 |
+| 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading
