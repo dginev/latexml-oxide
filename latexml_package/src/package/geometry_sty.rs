@@ -61,10 +61,16 @@ LoadDefinitions!({
 \def\Gm@pair@#1,#2,#3\@nil{\def\Gm@vA{#1}\def\Gm@vB{#2}}
 
 %% ---- keys (family Gm, prefix KV) -----------------------------------------
+% A length value is set with \setlength, which calc makes take an expression,
+% as geometry.sty:369 \Gm@setlength does: bookcover.cls:188 passes
+% paperwidth=2\marklength+2\bleedwidth+...+\spinewidth, and a register
+% assignment read `2\marklength' and ran the rest as arithmetic on the
+% operands (\spinewidth became 0: the cover's spine and flaps vanished).
+% (geometry defers each \setlength to \Gm@expandlengths; here it runs at the key.)
 % Paper sizes
-\define@key{Gm}{paperwidth}{\Gm@ppw=#1\relax\Gm@setpaper}
-\define@key{Gm}{paperheight}{\Gm@pph=#1\relax\Gm@setpaper}
-\define@key{Gm}{papersize}{\Gm@pair{#1}\Gm@ppw=\Gm@vA\relax\Gm@pph=\Gm@vB\relax\Gm@setpaper}
+\define@key{Gm}{paperwidth}{\setlength\Gm@ppw{#1}\Gm@setpaper}
+\define@key{Gm}{paperheight}{\setlength\Gm@pph{#1}\Gm@setpaper}
+\define@key{Gm}{papersize}{\Gm@pair{#1}\setlength\Gm@ppw{\Gm@vA}\setlength\Gm@pph{\Gm@vB}\Gm@setpaper}
 \define@key{Gm}{letterpaper}[]{\Gm@ppw=8.5in\Gm@pph=11in \Gm@setpaper}
 \define@key{Gm}{legalpaper}[]{\Gm@ppw=8.5in\Gm@pph=14in \Gm@setpaper}
 \define@key{Gm}{executivepaper}[]{\Gm@ppw=7.25in\Gm@pph=10.5in \Gm@setpaper}
@@ -74,34 +80,34 @@ LoadDefinitions!({
 \define@key{Gm}{landscape}[true]{\csname Gm@landscape#1\endcsname\Gm@setpaper}
 \define@key{Gm}{portrait}[true]{\ifx f#1\Gm@landscapetrue\else\Gm@landscapefalse\fi\Gm@setpaper}
 % Margins (each with the aliases geometry accepts)
-\define@key{Gm}{left}{\Gm@l=#1\relax\Gm@lsettrue}
-\define@key{Gm}{lmargin}{\Gm@l=#1\relax\Gm@lsettrue}
-\define@key{Gm}{inner}{\Gm@l=#1\relax\Gm@lsettrue}
-\define@key{Gm}{right}{\Gm@r=#1\relax\Gm@rsettrue}
-\define@key{Gm}{rmargin}{\Gm@r=#1\relax\Gm@rsettrue}
-\define@key{Gm}{outer}{\Gm@r=#1\relax\Gm@rsettrue}
-\define@key{Gm}{top}{\Gm@t=#1\relax\Gm@tsettrue}
-\define@key{Gm}{tmargin}{\Gm@t=#1\relax\Gm@tsettrue}
-\define@key{Gm}{bottom}{\Gm@b=#1\relax\Gm@bsettrue}
-\define@key{Gm}{bindingoffset}{\Gm@bindingoffset=#1\relax}
-\define@key{Gm}{bmargin}{\Gm@b=#1\relax\Gm@bsettrue}
+\define@key{Gm}{left}{\setlength\Gm@l{#1}\Gm@lsettrue}
+\define@key{Gm}{lmargin}{\setlength\Gm@l{#1}\Gm@lsettrue}
+\define@key{Gm}{inner}{\setlength\Gm@l{#1}\Gm@lsettrue}
+\define@key{Gm}{right}{\setlength\Gm@r{#1}\Gm@rsettrue}
+\define@key{Gm}{rmargin}{\setlength\Gm@r{#1}\Gm@rsettrue}
+\define@key{Gm}{outer}{\setlength\Gm@r{#1}\Gm@rsettrue}
+\define@key{Gm}{top}{\setlength\Gm@t{#1}\Gm@tsettrue}
+\define@key{Gm}{tmargin}{\setlength\Gm@t{#1}\Gm@tsettrue}
+\define@key{Gm}{bottom}{\setlength\Gm@b{#1}\Gm@bsettrue}
+\define@key{Gm}{bindingoffset}{\setlength\Gm@bindingoffset{#1}}
+\define@key{Gm}{bmargin}{\setlength\Gm@b{#1}\Gm@bsettrue}
 % margin={h,v}: h -> left+right, v -> top+bottom (scalar -> all four)
 \define@key{Gm}{margin}{\Gm@pair{#1}%
-  \Gm@l=\Gm@vA\relax\Gm@lsettrue \Gm@r=\Gm@vA\relax\Gm@rsettrue
-  \Gm@t=\Gm@vB\relax\Gm@tsettrue \Gm@b=\Gm@vB\relax\Gm@bsettrue}
+  \setlength\Gm@l{\Gm@vA}\Gm@lsettrue \setlength\Gm@r{\Gm@vA}\Gm@rsettrue
+  \setlength\Gm@t{\Gm@vB}\Gm@tsettrue \setlength\Gm@b{\Gm@vB}\Gm@bsettrue}
 % hmargin={l,r}
 \define@key{Gm}{hmargin}{\Gm@pair{#1}%
-  \Gm@l=\Gm@vA\relax\Gm@lsettrue \Gm@r=\Gm@vB\relax\Gm@rsettrue}
+  \setlength\Gm@l{\Gm@vA}\Gm@lsettrue \setlength\Gm@r{\Gm@vB}\Gm@rsettrue}
 % vmargin={t,b}
 \define@key{Gm}{vmargin}{\Gm@pair{#1}%
-  \Gm@t=\Gm@vA\relax\Gm@tsettrue \Gm@b=\Gm@vB\relax\Gm@bsettrue}
+  \setlength\Gm@t{\Gm@vA}\Gm@tsettrue \setlength\Gm@b{\Gm@vB}\Gm@bsettrue}
 % Body dimensions given directly
-\define@key{Gm}{textwidth}{\Gm@tw=#1\relax\Gm@twsettrue}
-\define@key{Gm}{width}{\Gm@tw=#1\relax\Gm@twsettrue}
-\define@key{Gm}{totalwidth}{\Gm@tw=#1\relax\Gm@twsettrue}
-\define@key{Gm}{textheight}{\Gm@th=#1\relax\Gm@thsettrue}
-\define@key{Gm}{height}{\Gm@th=#1\relax\Gm@thsettrue}
-\define@key{Gm}{totalheight}{\Gm@th=#1\relax\Gm@thsettrue}
+\define@key{Gm}{textwidth}{\setlength\Gm@tw{#1}\Gm@twsettrue}
+\define@key{Gm}{width}{\setlength\Gm@tw{#1}\Gm@twsettrue}
+\define@key{Gm}{totalwidth}{\setlength\Gm@tw{#1}\Gm@twsettrue}
+\define@key{Gm}{textheight}{\setlength\Gm@th{#1}\Gm@thsettrue}
+\define@key{Gm}{height}{\setlength\Gm@th{#1}\Gm@thsettrue}
+\define@key{Gm}{totalheight}{\setlength\Gm@th{#1}\Gm@thsettrue}
 % scale=s (or {sh,sv}) — fraction of the paper size
 \define@key{Gm}{scale}{\Gm@pair{#1}%
   \Gm@tw=\Gm@vA\Gm@pw\Gm@twsettrue \Gm@th=\Gm@vB\Gm@ph\Gm@thsettrue}

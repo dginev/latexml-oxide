@@ -5898,6 +5898,13 @@ Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-aut
 frontmatter is preserved). A forward-port of the upstream fix; a surpass over the
 vendored Perl.
 
+**Refined (batch 56io).** Only entries with the SAME `name` as the new one are replaced. An
+entry under another name is another element and stays: a bilingual document's `Abstract` and
+`摘要` abstracts are two abstracts (beamertheme-mirage-doc lost its English one, which vendored
+Perl keeps). So are a journal's `Received` / `Revised` / `Accepted` dates, which the dedup had
+collapsed to the last (14 of 3,003 arXiv 2605 papers). Re-emissions (a second `\icmltitle`, which
+has no name) are still replaced. Guard `class_census::two_named_abstracts`.
+
 **Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
 creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
 re-entrancy guard leaves the malformed-nesting case exactly as before.

@@ -14104,6 +14104,29 @@ Hello colored box.
     assert!(xml.contains("font=\"bold\""), "{xml}");
   }
 
+  /// The minted listing engine reads the listing back through `\inputminted`
+  /// from `\minted@outputdir <jobname>.listing` (tcbminted.code.tex:49-55);
+  /// the file name is expanded, so the listing holds the source (it was an
+  /// empty `<listing/>`: tkz-grapheur-examples-integrals, 32 manuals).
+  #[test]
+  fn raw_tcblisting_minted_engine_reads_its_listing_file() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/tcblisting_minted_listing_file.tex"
+    );
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    // base64 of `\DrawZorp[Colors=blue]{h(x)}`
+    assert!(
+      xml.contains(r#"<listing class="ltx_lstlisting" data="XERyYXdab3JwW0NvbG9ycz1ibHVlXXtoKHgpfQ==" dataencoding="base64" datamimetype="text/plain">"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r##"<text class="ltx_lst_identifier" color="#000000">DrawZorp</text>"##),
+      "{xml}"
+    );
+  }
+
   /// Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): when the delimiter
   /// never arrives, every scanned token is unread and the body is empty. A
   /// `\verb` inside a pre-tokenized argument (`\footnote{…}`) can never meet
@@ -25837,6 +25860,56 @@ mod class_census {
       "{xml}"
     );
     assert!(xml.contains("Body word alpha."), "{xml}");
+  }
+
+  /// Two abstracts under different names are two abstracts: the replaceable-
+  /// frontmatter dedup (OXIDIZED_DESIGN #154) replaces only a same-name
+  /// re-emission (beamertheme-mirage-doc lost its English abstract).
+  #[test]
+  fn two_named_abstracts() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/two_named_abstracts.tex"
+    );
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let abstracts: Vec<String> = regex::Regex::new(r"(?s)<abstract [^>]*>.*?</abstract>")
+      .unwrap()
+      .find_iter(&xml)
+      .map(|m| {
+        let a = m.as_str();
+        let head = &a[..a.find('>').unwrap() + 1];
+        let text = regex::Regex::new(r"<[^>]+>")
+          .unwrap()
+          .replace_all(&a[head.len()..], " ");
+        format!(
+          "{head} {}",
+          text.split_whitespace().collect::<Vec<_>>().join(" ")
+        )
+      })
+      .collect();
+    assert_eq!(
+      abstracts,
+      [
+        r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> FIRSTABSTRACT english text here"#,
+        r#"<abstract inlist="toc" name="Second" xml:id="abstract2"> SECONDABSTRACT chinese text here"#,
+      ],
+      "{xml}"
+    );
+  }
+
+  /// geometry's length keys take a calc expression without touching its
+  /// operands (geometry.sty:369,461 `\Gm@setlength` → `\setlength`):
+  /// bookcover.cls:188 `paperwidth=2\marklength+…+\spinewidth` zeroed
+  /// `\spinewidth`, and the cover's spine and flaps vanished.
+  #[test]
+  fn geometry_length_expression() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/macro-state/geometry_length_expression.tex");
+    let (stderr, xml) = convert_with(tex, None);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(xml.contains("<p>FLAPKEPTSPINEKEPT</p>"), "{xml}");
   }
 
   /// siunitx v3 keys: `locale` sets the decimal marker and products

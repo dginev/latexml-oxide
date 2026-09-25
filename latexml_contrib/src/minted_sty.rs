@@ -60,7 +60,12 @@ LoadDefinitions!({
   // place of the read_raw_lines call.
   use latexml_core::binding::content::find_file;
   DefMacro!("\\inputminted[]{}{}", sub[(_opts, _lang, file_arg)] {
-    let file_str = file_arg.to_string();
+    // The file name is expanded, as minted's `\input` of it does and as
+    // `\lstinputlisting` does: tcolorbox's minted library reads a listing back
+    // from `\minted@outputdir <jobname>.listing` (tcbminted.code.tex:49-55), and
+    // the unexpanded `\minted@outputdir` missed the file, an empty listing
+    // (tkz-grapheur-examples-integrals, 32 manuals of sweep #122; Perl alike).
+    let file_str = Expand!(file_arg).to_string();
     // The session's virtual file store first (a file written by
     // `filecontents`/`\VerbatimOut` lives only there), as `\input` and
     // `\lstinputlisting` read it (batch 56cv); then disk.

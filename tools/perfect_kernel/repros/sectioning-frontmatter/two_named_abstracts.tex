@@ -1,0 +1,19 @@
+% witness: beamertheme-mirage/beamertheme-mirage-doc (English + Chinese abstracts in paracol; the
+%          English one was lost)
+% oracle:  pdflatex prints both abstracts; Perl keeps both (its frontmatter push never replaces)
+% engines: rust (56in) = only the second abstract (the #154 dedup replaced the first)
+% expect:  0 errors, 0 warnings; <abstract … name="Abstract"> with FIRSTABSTRACT and
+%          <abstract … name="Second"> with SECONDABSTRACT
+% status:  RED (56in) -> GREEN (56io)
+\documentclass{article}
+\begin{document}
+\begin{abstract}
+FIRSTABSTRACT english text here
+\end{abstract}
+\renewcommand*{\abstractname}{Second}
+\begin{abstract}
+SECONDABSTRACT chinese text here
+\end{abstract}
+\section{Body}
+Body text.
+\end{document}

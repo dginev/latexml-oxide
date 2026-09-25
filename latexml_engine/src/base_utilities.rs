@@ -443,7 +443,7 @@ LoadDefinitions!({
     // (the vendored copy pushes unconditionally → duplicate <title> when a document
     // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
     if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) {
-      frontmatter_clear(&tag);
+      frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
     }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
@@ -499,7 +499,7 @@ LoadDefinitions!({
     if REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str())
       && !frontmatter_has_open_placekeeper(&tag)
     {
-      frontmatter_clear(&tag);
+      frontmatter_clear_same_name(&tag, entry.attr.get("name").map(String::as_str));
     }
     let index = frontmatter_push(&tag, entry);
     // A terminal reached INSIDE a nested group (`\section`'s
@@ -2438,15 +2438,18 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
   })
 }
 
-/// Empty `frontmatter{tag}` in place (Perl: `$$frontmatter{$tag} = []`), so a later
-/// `REPLACEABLE_FRONTMATTER_TAGS` entry replaces the earlier ones. No-op if the tag
-/// has no entries yet. OXIDIZED_DESIGN #154.
-fn frontmatter_clear(tag: &str) {
+/// Drop the `frontmatter{tag}` entries that carry the same `name` as a new one (Perl:
+/// `$$frontmatter{$tag} = []`), so a later `REPLACEABLE_FRONTMATTER_TAGS` entry
+/// replaces a re-emission of itself (arXiv 2002.09766's second `\icmltitle`). An
+/// entry under another name is another element and stays: a bilingual document's
+/// "Abstract" and "摘要" abstracts (beamertheme-mirage-doc lost its English one).
+/// OXIDIZED_DESIGN #154.
+fn frontmatter_clear_same_name(tag: &str, name: Option<&str>) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
       && let Some(list) = frnt.get_mut(tag)
     {
-      list.clear();
+      list.retain(|e| e.attr.get("name").map(String::as_str) != name);
     }
   });
 }
