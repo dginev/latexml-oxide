@@ -1,0 +1,16 @@
+% An object drawn in an inner box inside a {pspicture} auto-opens an ltx:picture; Perl sizes an
+% auto-opened picture from its whatsit in the tag's afterClose (latex_constructs.pool.ltxml
+% :4943-4950), and the SVG post draws it overflow-visible (Post/SVG.pm:110). The Rust
+% ltx:picture tag (latex_constructs/sect13.rs) has no afterClose: the nested picture has no
+% width or height, which a browser draws as a 300x150 box, flipped.
+% witness: pst-flags-doc (flags drawn in \makebox[0pt] inside \rput; 517 unsized pictures),
+%   egameps (162 from \rput outside pictures); W1b 2026-09-25
+% oracle:  pdflatex 0 errors; the frame is drawn inside the 3x2 picture
+% engines: rust=0 errors but a nested <picture> with no width/height (56iw)
+% expect:  0 errors; every <picture> carries width and height
+% status:  RED
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+\begin{pspicture}(3,2)\rput(1,1){\makebox[0pt]{\psframe(0,0)(1,1)}}\end{pspicture}
+\end{document}

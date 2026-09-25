@@ -1,0 +1,20 @@
+% A file that ends inside a definition is a runaway (tex.web §338 "File ended while scanning
+% definition"), whether it is on disk or written by filecontents in the same run: the input
+% level is a file either way. An in-memory file is opened as a string mouth, which read_balanced
+% crosses, so the \edef silently swallowed the rest of the document.
+% witness: root-causer 2026-09-25 (mouth.rs string-type mouth for virtual files)
+% oracle:  pdflatex 1 error at the file's end ("File ended while scanning definition of \y"),
+%          then prints "After."
+% engines: rust=1 error at the END OF THE DOCUMENT ("readBalanced ran out of input"): the \edef
+%          crossed the in-memory file's end and swallowed the rest of the document, so the
+%          output is an empty document and "After." is lost (56iw-rel2, 2026-09-25)
+% expect:  1 error, reported at the file's end; "After." kept
+% status:  RED
+\documentclass{article}
+\begin{filecontents*}{vfs_file_end_runaway.txt}
+A{B
+\end{filecontents*}
+\begin{document}
+\makeatletter
+\edef\y{\@@input vfs_file_end_runaway.txt }After.
+\end{document}

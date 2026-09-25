@@ -1,0 +1,14 @@
+% \noexpand at the end of a \scantokens pseudo-file reads the NEXT token of the enclosing input
+% under normal scanner status (tex.web §367, §362) and leaves it unexpanded: \bar stays \bar.
+% witness: the \everyeof{\noexpand}+\scantokens idiom (biblatex.sty:1253, xintexpr.sty:4719,
+%   tabu.sty:165, chemfig.tex:665); root-causer 2026-09-25
+% oracle:  pdflatex 0 errors; [same]
+% engines: rust=0 errors but [different]: \bar was expanded (\z = abcBAR), a silent content error
+% expect:  0 errors; [same]
+% status:  RED
+\documentclass{article}
+\def\bar{BAR}\def\want{abc\bar}
+\begin{document}
+{\everyeof{\noexpand}\endlinechar-1 \xdef\z{\scantokens{abc}\bar}}%
+[\ifx\z\want same\else different\fi]
+\end{document}

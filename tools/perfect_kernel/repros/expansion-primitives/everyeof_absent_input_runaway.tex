@@ -1,0 +1,15 @@
+% Without \everyeof{\noexpand}, an \edef whose body runs off the end of an \input file is a
+% runaway (tex.web §338 "File ended while scanning definition"): the fix that lets \noexpand
+% cross a file end must not let every definition cross it.
+% witness: root-causer 2026-09-25 (control for everyeof_noexpand_input_end)
+% oracle:  pdflatex errors (File ended while scanning definition of \x)
+% engines: rust=errors (readBalanced ran out of input in an unbalanced state)
+% expect:  the runaway stays reported
+% status:  CONTROL
+\documentclass{article}
+\def\foo{FOO}
+\begin{document}
+\makeatletter
+\edef\x{\@@input everyeof_noexpand_input_end.txt }%
+[\detokenize\expandafter{\x}]
+\end{document}

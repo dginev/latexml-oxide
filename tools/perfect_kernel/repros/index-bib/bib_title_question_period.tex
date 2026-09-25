@@ -1,0 +1,18 @@
+% A title that already ends in a mark takes no added period: biblatex's punctuation tracker
+% (biblatex.sty:2118-2130 \blx@addpunct, :2026) and BibTeX's add.period$ both skip it. The Rust
+% bibliography rows (latexml_post make_bibliography.rs) add their trailing "." unconditionally,
+% as Perl's MakeBibliography does.
+% witness: pdflatex + biber probe 2026-09-25 (What is X? A survey); DIVERGENCES #299 residual
+% oracle:  pdflatex + biber 0 errors: "Alice Adams. What is X? A survey. Pub, 2001." and
+%          "Bob Brown. Is it so? Pub, 2002."
+% engines: rust=0 errors but "Alice Adams (2001) What is X?. A survey. Pub." and "Bob Brown (2002)
+%          Is it so?. Pub." (HTML, 56iw-rel2, .bib read directly)
+% expect:  0 errors; no "?." in the bibliography (HTML)
+% status:  RED
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{bib_title_question_period.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}

@@ -1,0 +1,12 @@
+% \everyeof is inserted only when a file really ends (eTeX), not after \endinput: the input level
+% is then removed at the end of the current line without the \everyeof tokens.
+% witness: root-causer 2026-09-25 (gullet.rs flush_mouth does not set eof_seen)
+% oracle:  pdflatex 0 errors; [X]
+% engines: rust=0 errors but [X[EOF]]
+% expect:  0 errors; [X]
+% status:  RED
+\documentclass{article}
+\begin{document}
+\makeatletter
+[{\everyeof{[EOF]}\@@input everyeof_endinput.txt }]
+\end{document}

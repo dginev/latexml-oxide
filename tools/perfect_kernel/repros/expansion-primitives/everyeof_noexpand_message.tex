@@ -1,0 +1,14 @@
+% \message{\@@input f } with \everyeof{\noexpand}: the \message scan expands the whole file and
+% the \noexpand crosses its end into the parent input (tex.web §367), where the } is.
+% witness: l3build regression-test.tex:101 (\message{\@@input #1 }); root-causer 2026-09-25
+% oracle:  pdflatex 0 errors; the log shows L1FOOL2
+% engines: rust=1 error (the \message argument ran out at the file end)
+% expect:  0 errors
+% status:  RED
+\documentclass{article}
+\def\foo{FOO}
+\begin{document}
+\makeatletter
+{\everyeof{\noexpand}\message{[M:\@@input everyeof_noexpand_message.txt ]}}%
+done
+\end{document}

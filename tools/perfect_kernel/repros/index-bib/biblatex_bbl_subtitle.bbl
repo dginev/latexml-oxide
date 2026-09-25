@@ -1,0 +1,82 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global/global}
+    \entry{a1}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=4af4cfbe312650284afd806e0b65e87a}{%
+           family={Adams},
+           familyi={A\bibinitperiod},
+           given={Alice},
+           giveni={A\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Pub}%
+      }
+      \strng{namehash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{fullhash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{fullhashraw}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{bibnamehash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{authorbibnamehash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{authornamehash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{authorfullhash}{4af4cfbe312650284afd806e0b65e87a}
+      \strng{authorfullhashraw}{4af4cfbe312650284afd806e0b65e87a}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{subtitle}{A survey}
+      \field{title}{What is X?}
+      \field{year}{2001}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+    \entry{a2}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=68daf6a0f5044b721bd1b19645b725d7}{%
+           family={Brown},
+           familyi={B\bibinitperiod},
+           given={Bob},
+           giveni={B\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Pub}%
+      }
+      \strng{namehash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{fullhash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{fullhashraw}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{bibnamehash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{authorbibnamehash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{authornamehash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{authorfullhash}{68daf6a0f5044b721bd1b19645b725d7}
+      \strng{authorfullhashraw}{68daf6a0f5044b721bd1b19645b725d7}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Is it so?}
+      \field{year}{2002}
+      \field{dateera}{ce}
+      \true{nocite}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

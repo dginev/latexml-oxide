@@ -1,0 +1,16 @@
+% A shipped biblatex .bbl (biber output, the arXiv submission shape) must keep every field it
+% carries: \field{subtitle}{A survey} is dropped when Rust reads the .bbl instead of the .bib,
+% and the entry loses its biblatex layout (quoted title, no author period).
+% witness: pdflatex + biber probe 2026-09-25; the .bbl beside it is biber 2.x output for
+%   bib_title_question_period.bib, renamed
+% oracle:  pdflatex 0 errors: "Alice Adams. What is X? A survey. Pub, 2001."
+% engines: rust=0 errors but "Alice Adams “What is X?” Pub, 2001" (HTML, 56iw-rel2)
+% expect:  0 errors; the subtitle "A survey" is printed (HTML)
+% status:  RED
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_bbl_subtitle_absent.bib}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}
