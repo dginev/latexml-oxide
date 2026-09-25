@@ -1,8 +1,8 @@
 ---
 name: general-purpose
-description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks in latexml-oxide. Project override of the built-in type so that it runs on Opus 4.8 at xhigh effort (user directive 2026-09-20 — every subagent, no exceptions). Prefer `root-causer` for read-only root-causing and `reviewer` for pre-commit review; use this for delegated work that genuinely needs to write files.
+description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks in latexml-oxide. Project override of the built-in type so that it runs on Opus 5.5 at xhigh effort (user directive 2026-09-25 — every subagent, no exceptions). Prefer `root-causer` for read-only root-causing and `reviewer` for pre-commit review; use this for delegated work that genuinely needs to write files.
 tools: "*"
-model: claude-opus-4-8
+model: claude-opus-5-5
 effort: xhigh
 ---
 

@@ -1,8 +1,8 @@
 ---
 name: reviewer
-description: Read-only pre-commit reviewer for latexml-oxide. Reviews the staged/working-tree diff (or a named commit range) for correctness, Perl-parity fidelity, faux-fidelity risk (reordering or dropping visible content), rust-libxml DOM-surgery hazards, generalization (no package/class special-casing), guard-test rigor and doc accuracy; returns numbered findings with severity + file:line + concrete fix and a SHIP/NO-SHIP verdict. Never edits, builds or runs tests. Runs on Opus 4.8 at xhigh effort.
+description: Read-only pre-commit reviewer for latexml-oxide. Reviews the staged/working-tree diff (or a named commit range) for correctness, Perl-parity fidelity, faux-fidelity risk (reordering or dropping visible content), rust-libxml DOM-surgery hazards, generalization (no package/class special-casing), guard-test rigor and doc accuracy; returns numbered findings with severity + file:line + concrete fix and a SHIP/NO-SHIP verdict. Never edits, builds or runs tests. Runs on Opus 5.5 at xhigh effort.
 tools: Bash, Read, Grep, Glob
-model: claude-opus-4-8
+model: claude-opus-5-5
 effort: xhigh
 ---
 
