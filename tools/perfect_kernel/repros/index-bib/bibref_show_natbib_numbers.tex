@@ -1,0 +1,14 @@
+% natbib numbers mode through Perl's `make_bibcite` show walk (CrossRef.pm
+% :564-643): `\citet`'s `Authors Phrase1NumberPhrase2` links each number
+% (:617-622) and absorbs the following same-author entries into one author
+% label, "Smith [2, 3]" (:620); an entry with no authors, full authors or key
+% (`anon`) demotes the whole citation to refnum (:542). The tip linked
+% "Smith [2]" per entry and repeated the author. Same-host Perl 0.8.8 renders
+% this paragraph byte-identically.
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \citet{smith1,smith2} and \citep{smith1,smith2} and \citet{smith1,anon}.
+\bibliographystyle{plainnat}
+\bibliography{bibref_show_natbib_numbers}
+\end{document}

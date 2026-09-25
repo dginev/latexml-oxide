@@ -24,6 +24,7 @@ mod bib_field_digest_once;
 mod biblatex_fallback_no_cite_loop;
 mod bibliography_crossref;
 mod bibliography_names_fields;
+mod bibref_show;
 mod binding_singletons_56;
 mod cleveref_class_stubs;
 mod currsize_default;

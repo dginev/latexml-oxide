@@ -5,9 +5,10 @@
 //! referenced IDs in the ObjectDB and filling in the reference text,
 //! titles, and navigation links.
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::LazyLock};
 
 use libxml::tree::{Node, NodeType};
+use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 use crate::{
@@ -93,16 +94,7 @@ fn ref_content_children(val: &Value) -> Vec<NodeData> {
     Value::Xml(node) => node,
     other => return vec![NodeData::Text(other.to_string())],
   };
-  let mut out: Vec<NodeData> = Vec::new();
-  let mut child = node.get_first_child();
-  while let Some(c) = child {
-    match c.get_type() {
-      Some(NodeType::TextNode) => out.push(NodeData::Text(c.get_content())),
-      Some(NodeType::ElementNode) => out.push(NodeData::XmlNode(c.clone())),
-      _ => {},
-    }
-    child = c.get_next_sibling();
-  }
+  let mut out = child_nodes_data(node);
   // trimChildNodes: left-trim the first text child, right-trim the last; drop
   // either if it becomes empty.
   if let Some(NodeData::Text(s)) = out.first_mut() {
@@ -249,82 +241,244 @@ pub struct CrossRef {
   child_pages:    RefCell<HashMap<String, Rc<ChildPages>>>,
 }
 
-/// Render a natbib bibref `show` format into its visible label by interleaving
-/// the resolved `authors`/`year`/`number`/`refnum` values with the bibref's
-/// `<ltx:bibrefphrase>` children (`Phrase1`, `Phrase2`, …) and any literal
-/// characters. `\citet`/`\cite` use `show="Authors Phrase1YearPhrase2"` (phrases
-/// `(` / `)` → "Beta (2002)"); `\citep` uses `show="AuthorsPhrase1Year"` (phrase
-/// `, ` → "Beta, 2002", the surrounding macro adding the outer parens). Mirrors
-/// Perl `CrossRef.pm` `make_bibcite`'s show walk.
-///
-/// Returns `(label, resolved_ay)`: `resolved_ay` is true iff an `Authors`/
-/// `Fullauthors`/`Year` token resolved to a non-empty value, so the caller can
-/// fall back to the bare number for entries that carry no author-year metadata.
-fn render_bibref_show(
-  show: &str,
-  authors: Option<&str>,
-  fullauthors: Option<&str>,
-  year: Option<&str>,
-  number: Option<&str>,
-  refnum: Option<&str>,
-  phrases: &[String],
-) -> (String, bool) {
-  let lower = show.to_ascii_lowercase();
-  let lb = lower.as_bytes();
-  let mut out = String::new();
-  let mut resolved_ay = false;
-  let mut i = 0;
-  while i < show.len() {
-    // Phrase token: "phrase" + digits → the Nth <ltx:bibrefphrase> child.
-    if lb[i..].starts_with(b"phrase") {
-      let ds = i + "phrase".len();
-      let mut j = ds;
-      while j < lb.len() && lb[j].is_ascii_digit() {
-        j += 1;
+/// One cited entry as Perl `make_bibcite` collects it (`CrossRef.pm` L516-562):
+/// the trimmed display parts each `show` role clones, and the attributes of
+/// every `<ltx:ref>` made for it.
+struct BibciteDatum {
+  key:         String,
+  authors:     Vec<NodeData>,
+  fullauthors: Vec<NodeData>,
+  /// Text of `authors || fullauthors` — the key that groups consecutive
+  /// same-author entries under one author label (L610). `''` without either,
+  /// and for a missing entry (whose undef compares `eq` to `''`).
+  authortext:  String,
+  year:        Vec<NodeData>,
+  /// The `(\d\d\d\d)(\w)` split of a suffixed year (`2001a`), so a same-author
+  /// run shows `2001a, b` (L613).
+  rawyear:     Option<String>,
+  suffix:      Option<String>,
+  number:      Vec<NodeData>,
+  refnum:      Vec<NodeData>,
+  title:       Vec<NodeData>,
+  attr:        HashMap<String, String>,
+  /// A key with no bibliography entry (L559-561): one `ltx_missing_citation`
+  /// ref showing the key, whatever the `show`.
+  missing:     bool,
+}
+
+/// Perl `Post::Document::trimChildNodes` (`Post.pm` L1374-1397) of a stored
+/// bibitem tag value: its children with the leading whitespace of the first
+/// text child and the trailing whitespace of the last trimmed away, a child left
+/// empty dropped. A string value stands for the tag's text: trimmed, or nothing.
+fn trim_child_nodes(val: Option<&Value>) -> Vec<NodeData> {
+  match val {
+    None | Some(Value::Null) => Vec::new(),
+    Some(v @ Value::Xml(_)) => ref_content_children(v),
+    Some(v) => {
+      let s = v.to_string();
+      let t = s.trim();
+      if t.is_empty() {
+        Vec::new()
+      } else {
+        vec![NodeData::Text(t.to_string())]
       }
-      if j > ds {
-        if let Ok(n) = show[ds..j].parse::<usize>() {
-          if n >= 1 && n <= phrases.len() {
-            out.push_str(&phrases[n - 1]);
-          }
-        }
-        i = j;
-        continue;
-      }
+    },
+  }
+}
+
+/// A node's children as insertable data, untrimmed: text by value, elements by
+/// reference (deep-copied on insertion). Perl hands `addNodes` the live
+/// `childNodes`, which it copies the same way.
+fn child_nodes_data(node: &Node) -> Vec<NodeData> {
+  let mut out: Vec<NodeData> = Vec::new();
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    match c.get_type() {
+      Some(NodeType::TextNode) => out.push(NodeData::Text(c.get_content())),
+      Some(NodeType::ElementNode) => out.push(NodeData::XmlNode(c.clone())),
+      _ => {},
     }
-    // Value keyword (fullauthors before authors — distinct first letters, so
-    // order is not load-bearing, but keep the longest name first for clarity).
-    let mut matched = false;
-    for (kw, val, is_ay) in [
-      ("fullauthors", fullauthors.or(authors), true),
-      ("authors", authors, true),
-      ("year", year, true),
-      ("number", number, false),
-      ("refnum", refnum, false),
-    ] {
-      if lb[i..].starts_with(kw.as_bytes()) {
-        if let Some(v) = val {
-          if !v.is_empty() {
-            out.push_str(v);
-            if is_ay {
-              resolved_ay = true;
+    child = c.get_next_sibling();
+  }
+  out
+}
+
+/// `['ltx:ref', $attr, @children]`.
+fn bib_ref(attr: &HashMap<String, String>, children: Vec<NodeData>) -> NodeData {
+  NodeData::Element {
+    tag: "ltx:ref".to_string(),
+    attributes: Some(attr.clone()),
+    children,
+  }
+}
+
+/// Perl `make_bibcite`'s show walk (`CrossRef.pm` L564-643) for one cited
+/// entry, returning `(stuff, didref)`. The show string is a sequence of role
+/// words — lowercased with one trailing `s` stripped (L585), so `Authors`,
+/// `author` and `authors` are one role — among `{literal}` text, `~` (a
+/// no-break space), whitespace and other punctuation, which pass through.
+/// `author`/`fullauthor`/`title`/`refnum`/`phraseN` clone their values;
+/// `year`/`number`/`super` make the `<ltx:ref>` link themselves (`didref`),
+/// and absorb the following entries of the same authors when `checkdups`
+/// (`Smith (2001a, b)`). Without a link made inside, the caller wraps the
+/// whole label in one.
+fn bibcite_show_walk(
+  saveshow: &str,
+  datum: &BibciteDatum,
+  data: &mut VecDeque<BibciteDatum>,
+  preformatted: &[NodeData],
+  phrases: &[Node],
+  yysep: &str,
+  checkdups: bool,
+) -> (Vec<NodeData>, bool) {
+  static YEAR_DELIM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(\w)year").unwrap());
+  static PHRASE_DELIM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(\w)phrase").unwrap());
+  static PHRASE_NUM_DELIM: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)phrase(\d)(\w)").unwrap());
+  static ROLE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\w+").unwrap());
+  static LITERAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\{([^}]*)\}").unwrap());
+  static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s+").unwrap());
+  static PUNCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\W+").unwrap());
+  static EMPTY_YEAR_PHRASE2: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^\{\}year\{\}phrase2").unwrap());
+
+  let mut didref = false;
+  let mut stuff: Vec<NodeData> = Vec::new();
+  let mut show = saveshow;
+  if show == "none" && !preformatted.is_empty() {
+    stuff = preformatted.to_vec();
+    show = "";
+  } else if datum.missing {
+    stuff = vec![bib_ref(&datum.attr, vec![NodeData::Text(
+      datum.key.clone(),
+    )])];
+    didref = true;
+    show = "";
+  }
+  // Add delimiters for parsing (L579-582): `Phrase1Year` → `Phrase1{}year`.
+  let show = YEAR_DELIM.replace_all(show, "${1}{}year");
+  let show = PHRASE_DELIM.replace_all(&show, "${1}{}phrase");
+  let show = PHRASE_NUM_DELIM.replace_all(&show, "phrase${1}{}${2}");
+  let mut rest: &str = &show;
+  // The same-author run after `datum` (L610, L620, L627): the entries
+  // `year`/`number`/`super` absorb.
+  let same_authors = |data: &VecDeque<BibciteDatum>| {
+    data
+      .front()
+      .is_some_and(|n| n.authortext == datum.authortext)
+  };
+  while !rest.is_empty() {
+    if let Some(m) = ROLE.find(rest) {
+      let mut role = m.as_str().to_lowercase();
+      rest = &rest[m.end()..];
+      if role.ends_with('s') {
+        role.pop();
+      }
+      match role.as_str() {
+        "author" => stuff.extend(datum.authors.iter().cloned()),
+        "fullauthor" => stuff.extend(datum.fullauthors.iter().cloned()),
+        "title" => stuff.extend(datum.title.iter().cloned()),
+        "refnum" => stuff.extend(datum.refnum.iter().cloned()),
+        "year" => {
+          // (L605-606's "Date for citation" warning is unreachable: the year
+          // list is always defined, possibly empty.)
+          if !datum.year.is_empty() {
+            stuff.push(bib_ref(&datum.attr, datum.year.clone()));
+            didref = true;
+            while checkdups && same_authors(data) {
+              let next = data.pop_front().unwrap();
+              stuff.push(NodeData::Text(yysep.to_string()));
+              stuff.push(NodeData::Text(" ".to_string()));
+              let same_year = datum.rawyear.as_deref().unwrap_or("no_year_1")
+                == next.rawyear.as_deref().unwrap_or("no_year_2");
+              match next.suffix {
+                Some(ref suffix) if same_year => {
+                  stuff.push(bib_ref(&next.attr, vec![NodeData::Text(suffix.clone())]))
+                },
+                _ => stuff.push(bib_ref(&next.attr, next.year.clone())),
+              }
             }
           }
-        }
-        i += kw.len();
-        matched = true;
-        break;
+        },
+        "number" | "super" => {
+          let mut r = vec![bib_ref(&datum.attr, datum.number.clone())];
+          didref = true;
+          while checkdups && same_authors(data) {
+            let next = data.pop_front().unwrap();
+            r.push(NodeData::Text(yysep.to_string()));
+            r.push(NodeData::Text(" ".to_string()));
+            r.push(bib_ref(&next.attr, next.number.clone()));
+          }
+          if role == "super" {
+            stuff.push(NodeData::Element {
+              tag:        "ltx:sup".to_string(),
+              attributes: None,
+              children:   r,
+            });
+          } else {
+            stuff.extend(r);
+          }
+        },
+        _ => match role.strip_prefix("phrase").and_then(|d| {
+          let mut ds = d.chars();
+          ds.next()
+            .and_then(|c| c.to_digit(10))
+            .filter(|_| ds.next().is_none())
+        }) {
+          // L594-603. HACK (Perl's): an author-year show frozen before the
+          // entry had a year drops the empty `( )` of `Phrase1{}Year{}Phrase2`.
+          Some(n) => {
+            let short = |i: usize| {
+              phrases
+                .get(i)
+                .is_none_or(|p| p.get_content().chars().count() <= 1)
+            };
+            if n == 1
+              && datum.year.is_empty()
+              && short(0)
+              && short(1)
+              && let Some(m) = EMPTY_YEAR_PHRASE2.find(rest)
+            {
+              rest = &rest[m.end()..];
+            } else {
+              // `$phrases[$n - 1]`: `phrase0` is Perl's index -1, the last.
+              let phrase = match n {
+                0 => phrases.last(),
+                n => phrases.get(n as usize - 1),
+              };
+              if let Some(phrase) = phrase {
+                stuff.extend(child_nodes_data(phrase));
+              }
+            }
+          },
+          None => Info!("unexpected", role, "CITE ignoring show key '{}'", role),
+        },
       }
+    } else if let Some(c) = LITERAL.captures(rest) {
+      // Pass-thru literal, quoted with {}.
+      if !c[1].is_empty() {
+        stuff.push(NodeData::Text(c[1].to_string()));
+      }
+      rest = &rest[c[0].len()..];
+    } else if let Some(r) = rest.strip_prefix('~') {
+      if !stuff.is_empty() {
+        stuff.push(NodeData::Text("\u{A0}".to_string()));
+      }
+      rest = r;
+    } else if let Some(m) = SPACES.find(rest) {
+      if !stuff.is_empty() {
+        stuff.push(NodeData::Text(m.as_str().to_string()));
+      }
+      rest = &rest[m.end()..];
+    } else if let Some(m) = PUNCT.find(rest) {
+      stuff.push(NodeData::Text(m.as_str().to_string()));
+      rest = &rest[m.end()..];
+    } else {
+      // Unreachable: every character is `\w` or `\W`.
+      break;
     }
-    if matched {
-      continue;
-    }
-    // Literal character.
-    let ch = show[i..].chars().next().unwrap();
-    out.push(ch);
-    i += ch.len_utf8();
   }
-  (out, resolved_ay)
+  (stuff, didref)
 }
 
 impl CrossRef {
@@ -1520,216 +1674,256 @@ impl CrossRef {
     }
   }
 
+  /// Port of Perl `CrossRef::fill_in_bibrefs` (`CrossRef.pm` L486-493): every
+  /// `<ltx:bibref>` is replaced by the citation
+  /// [`make_bibcite`](Self::make_bibcite) builds for it — by nothing, when that
+  /// is empty.
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
     let bibrefs = doc.findnodes("//ltx:bibref");
     for bibref in &bibrefs {
-      let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
-      let show = bibref
-        .get_attribute("show")
-        .unwrap_or_else(|| "refnum".to_string());
-      // Perl CrossRef.pm:507-508: `\nocite`'s bibref (`show='nothing'`,
-      // latex_constructs.pool.ltxml:4214) only marks its keys for the
-      // bibliography stage; `make_bibcite` returns nothing for it, so the node
-      // is replaced by nothing. Filling it in printed the keys — for
-      // `\nocite{*}` a visible `*` as a missing citation plus its warning.
-      if show == "nothing" {
-        doc.replace_node(bibref, &[]);
-        continue;
-      }
-      // natbib emits show patterns like:
-      //   "AuthorsPhrase1Year"           → \citep{X} → "Author (Year)"
-      //   "Authors Phrase1YearPhrase2"  → \citet{X}/\cite{X} → "Author (Year)"
-      //   "refnum"                       → numeric / default
-      // Anything containing "Author" or "Year" wants the author-year
-      // text built from the bibentry's `authors`/`year` fields; the
-      // legacy refnum-only path serves the numeric case.
-      let show_wants_ay = show.contains("Author") || show.contains("Year");
-      // The lists to search, most-specific first. Perl CrossRef.pm L515 reads
-      // `inlist || 'bibliography'` — an *exclusive* choice, which strands every
-      // citation of a document that loads `bibunits`/`chapterbib` but keeps a
-      // single main `\bibliography`: `\cite` stamps CITE_UNIT=bu0 onto the
-      // bibref, while the bibitems register under the default `bibliography`
-      // list, so the unit-only lookup never matches (witness 2303.06077: 93
-      // bibitems, 93 dangling keys, 0 links).
-      //
-      // Perl's own Scan.pm L379-380 spells the intended chain — unit lists
-      // PLUS the main one ("Citation specifies main 'bibliography', as well as
-      // any specific others (eg. per chapter)") — and registers the reference
-      // under both. We follow Scan's convention here so the two agree; the unit
-      // list still wins, since the search breaks on the first list that yields
-      // an id. OXIDIZED_DESIGN #59, KNOWN_PERL_ERRORS #50.
-      let inlist = bibref.get_attribute("inlist").unwrap_or_default();
-      let mut lists: Vec<&str> = inlist.split_whitespace().collect();
-      if !lists.contains(&"bibliography") {
-        lists.push("bibliography");
-      }
-      // \NAT@force@numbers (natbib): a numeric `.bbl` — plain `\bibitem{key}`
-      // with no `[author(year)]` label — forces numbers mode globally, so every
-      // `\cite` prints the bracketed number `[N]`/`[N, M]` even when a numeric
-      // `\bibliographystyle{unsrt}` sits AFTER the cites (witness arXiv:2308.06262
-      // / html_feedback#62). Single-pass LaTeXML froze this bibref's author-year
-      // `show`; Perl `CrossRef.pm:542` keeps it because its `|| $keytag` guard is
-      // always satisfied, so both engines render the raw key. When the show wants
-      // author-year yet EVERY cited entry is numeric-only (has a number, no real
-      // author/year), collapse to natbib's numeric form. SURPASS-PERL:
-      // OXIDIZED_DESIGN #123, KNOWN_PERL_ERRORS #89.
-      let force_numeric = show_wants_ay && {
-        let keys: Vec<&str> = keys_str.split(',').filter(|k| !k.is_empty()).collect();
-        !keys.is_empty()
-          && keys.iter().all(|key| {
-            let mut id = None;
-            for list in &lists {
-              if let Some(be) = self.db.lookup(&format!("BIBLABEL:{}:{}", list, key)) {
-                id = be.get_string("id").map(String::from);
-                if id.is_some() {
-                  break;
-                }
-              }
-            }
-            let Some(id) = id else { return false };
-            match self.db.lookup(&format!("ID:{}", id)) {
-              Some(e) => {
-                let nonempty = |k: &str| {
-                  e.get_value(k)
-                    .is_some_and(|v| !v.to_string().trim().is_empty())
-                };
-                !nonempty("authors")
-                  && !nonempty("fullauthors")
-                  && !nonempty("year")
-                  && (nonempty("number") || nonempty("refnum"))
-              },
-              None => false,
-            }
-          })
-      };
-      // Do the frozen author-year delimiters sit INSIDE the bibref (a Phrase
-      // after Year — `\cite`/`\citet` carry their own `( )`) or as sibling text
-      // (`\citep`, whose macro adds the parens outside the bibref)? Only bracket
-      // our numeric group in the former case, else `\citep`'s parens double up.
-      let internal_delims = show
-        .find("Year")
-        .is_some_and(|yp| show[yp + "Year".len()..].contains("Phrase"));
-      // Numeric collapse joins with ", " (natbib numbers mode) and drops the
-      // author-year path; otherwise the loop keeps the bibref's own separator.
-      let want_authoryear = show_wants_ay && !force_numeric;
-      let sep = if force_numeric {
-        ",".to_string()
-      } else {
-        bibref
-          .get_attribute("separator")
-          .unwrap_or_else(|| ",".to_string())
-      };
+      let cite = self.make_bibcite(doc, bibref);
+      doc.replace_node(bibref, &cite);
+    }
+  }
 
-      let mut refs: Vec<NodeData> = Vec::new();
-      for key in keys_str.split(',').filter(|k| !k.is_empty()) {
-        let mut found_id = None;
-        for list in &lists {
-          let bkey = format!("BIBLABEL:{}:{}", list, key);
-          if let Some(bentry) = self.db.lookup(&bkey) {
-            found_id = bentry.get_string("id").map(String::from);
-            if found_id.is_some() {
-              break;
-            }
-          }
+  /// Port of Perl `CrossRef::make_bibcite` (`CrossRef.pm` L495-644): the links
+  /// to a bibref's keys, each labelled by the bibref's `show` pattern filled
+  /// with that entry's bibliography data (see [`bibcite_show_walk`]). Every link
+  /// carries the entry's title as its `title` (L530-539, L555-557): the
+  /// tooltip naming the work behind a bare `[1]`.
+  fn make_bibcite(&mut self, doc: &PostDocument, bibref: &Node) -> Vec<NodeData> {
+    let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
+    let keys: Vec<&str> = keys_str.split(',').filter(|k| !k.is_empty()).collect();
+    let preformatted = child_nodes_data(bibref);
+    let mut show = bibref
+      .get_attribute("show")
+      .filter(|s| !s.is_empty())
+      .unwrap_or_else(|| "refnum".to_string());
+    if show == "none" && preformatted.is_empty() {
+      show = "refnum".to_string();
+    }
+    // Perl CrossRef.pm:507-508: `\nocite`'s bibref (`show='nothing'`,
+    // latex_constructs.pool.ltxml:4214) only marks its keys for the
+    // bibliography stage; `make_bibcite` returns nothing for it, so the node
+    // is replaced by nothing. Filling it in printed the keys — for
+    // `\nocite{*}` a visible `*` as a missing citation plus its warning.
+    if show == "nothing" {
+      return Vec::new();
+    }
+    let attr_or_comma = |name: &str| {
+      bibref
+        .get_attribute(name)
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| ",".to_string())
+    };
+    let sep = attr_or_comma("separator");
+    let yysep = attr_or_comma("yyseparator");
+    // The `<ltx:bibrefphrase>`s that `phraseN` selects.
+    let phrases = crate::document::element_children(bibref);
+    // The lists to search, most-specific first. Perl CrossRef.pm L515 reads
+    // `inlist || 'bibliography'` — an *exclusive* choice, which strands every
+    // citation of a document that loads `bibunits`/`chapterbib` but keeps a
+    // single main `\bibliography`: `\cite` stamps CITE_UNIT=bu0 onto the
+    // bibref, while the bibitems register under the default `bibliography`
+    // list, so the unit-only lookup never matches (witness 2303.06077: 93
+    // bibitems, 93 dangling keys, 0 links).
+    //
+    // Perl's own Scan.pm L379-380 spells the intended chain — unit lists
+    // PLUS the main one ("Citation specifies main 'bibliography', as well as
+    // any specific others (eg. per chapter)") — and registers the reference
+    // under both. We follow Scan's convention here so the two agree; the unit
+    // list still wins, since the search breaks on the first list that yields
+    // an id. OXIDIZED_DESIGN #59, KNOWN_PERL_ERRORS #50.
+    let inlist = bibref.get_attribute("inlist").unwrap_or_default();
+    let mut lists: Vec<&str> = inlist.split_whitespace().collect();
+    if !lists.contains(&"bibliography") {
+      lists.push("bibliography");
+    }
+    // Each key's bibitem id: from the first list that has it.
+    let ids: Vec<Option<String>> = keys
+      .iter()
+      .map(|key| {
+        lists.iter().find_map(|list| {
+          self
+            .db
+            .lookup(&format!("BIBLABEL:{}:{}", list, key))
+            .and_then(|be| be.get_string("id"))
+            .map(String::from)
+        })
+      })
+      .collect();
+    // \NAT@force@numbers (natbib): a numeric `.bbl` — plain `\bibitem{key}`
+    // with no `[author(year)]` label — forces numbers mode globally, so every
+    // `\cite` prints the bracketed number `[N]`/`[N, M]` even when a numeric
+    // `\bibliographystyle{unsrt}` sits AFTER the cites (witness arXiv:2308.06262
+    // / html_feedback#62). Single-pass LaTeXML froze this bibref's author-year
+    // `show`; Perl `CrossRef.pm:542` keeps it because its `|| $keytag` guard is
+    // always satisfied, so both engines render the raw key. When natbib's frozen
+    // show (its capitalized `Authors`/`Year` keywords) wants author-year yet
+    // EVERY cited entry is numeric-only (has a number, no real author/year),
+    // collapse to natbib's numeric form. SURPASS-PERL: OXIDIZED_DESIGN #123,
+    // KNOWN_PERL_ERRORS #89.
+    let show_wants_ay = show.contains("Author") || show.contains("Year");
+    let force_numeric = show_wants_ay
+      && !ids.is_empty()
+      && ids.iter().all(|id| {
+        let Some(id) = id else {
+          return false;
+        };
+        match self.db.lookup(&format!("ID:{}", id)) {
+          Some(e) => {
+            let nonempty = |k: &str| {
+              e.get_value(k)
+                .is_some_and(|v| !v.to_string().trim().is_empty())
+            };
+            !nonempty("authors")
+              && !nonempty("fullauthors")
+              && !nonempty("year")
+              && (nonempty("number") || nonempty("refnum"))
+          },
+          None => false,
         }
-        if !refs.is_empty() {
-          refs.push(NodeData::Text(format!("{} ", sep)));
+      });
+    // Do the frozen author-year delimiters sit INSIDE the bibref (a Phrase
+    // after Year — `\cite`/`\citet` carry their own `( )`) or as sibling text
+    // (`\citep`, whose macro adds the parens outside the bibref)? Only bracket
+    // our numeric group in the former case, else `\citep`'s parens double up.
+    let internal_delims = show
+      .find("Year")
+      .is_some_and(|yp| show[yp + "Year".len()..].contains("Phrase"));
+
+    // Collect all the data from the bibliography (L516-562).
+    static SUFFIXED_YEAR: LazyLock<Regex> =
+      LazyLock::new(|| Regex::new(r"^(\d\d\d\d)(\w)$").unwrap());
+    let mut data: Vec<BibciteDatum> = Vec::new();
+    for (key, id) in keys.iter().zip(ids) {
+      let found = id.and_then(|id| {
+        let entry = self.db.lookup(&format!("ID:{}", id))?;
+        let val = |k: &str| entry.get_value(k).filter(|v| !matches!(v, Value::Null));
+        let (authors, fauthors, keytag) = (val("authors"), val("fullauthors"), val("keytag"));
+        let (year, typetag, title) = (val("year"), val("typetag"), val("title"));
+        let titlestring = title
+          .map(|t| {
+            t.to_string()
+              .split_whitespace()
+              .collect::<Vec<_>>()
+              .join(" ")
+          })
+          .filter(|s| !s.is_empty());
+        let (rawyear, suffix) = year
+          .and_then(|y| {
+            let text = y.to_string();
+            SUFFIXED_YEAR
+              .captures(&text)
+              .map(|c| (Some(c[1].to_string()), Some(c[2].to_string())))
+          })
+          .unwrap_or_default();
+        // Disable the author-year format (L542) for an entry with nothing to
+        // name it by. Perl's `$show` persists: the whole citation turns refnum.
+        if !(show == "none" || authors.is_some() || fauthors.is_some() || keytag.is_some()) {
+          show = "refnum".to_string();
         }
-        if let Some(id) = found_id {
-          let mut attrs = HashMap::default();
-          attrs.insert("idref".to_string(), id.clone());
+        let mut attr = HashMap::default();
+        attr.insert("idref".to_string(), id.clone());
+        if let Some(title) = titlestring {
+          attr.insert("title".to_string(), title);
+        }
+        Some((id, BibciteDatum {
+          key: key.to_string(),
+          authors: trim_child_nodes(authors.or(fauthors).or(keytag)),
+          fullauthors: trim_child_nodes(fauthors.or(authors).or(keytag)),
+          authortext: authors
+            .or(fauthors)
+            .map(Value::to_string)
+            .unwrap_or_default(),
+          year: trim_child_nodes(year.or(typetag)),
+          rawyear,
+          suffix,
+          number: trim_child_nodes(val("number")),
+          refnum: trim_child_nodes(val("refnum")),
+          title: trim_child_nodes(title.or(keytag)),
+          attr,
+          missing: false,
+        }))
+      });
+      match found {
+        Some((id, mut datum)) => {
           if let Some(url) = self.generate_url(doc, &id) {
-            attrs.insert("href".to_string(), url);
+            datum.attr.insert("href".to_string(), url);
           }
-          // Build the display text: author-year when natbib's `show`
-          // requests it AND the bibentry has the author/year metadata;
-          // otherwise fall back to the numeric `number`/`refnum`
-          // (matches the legacy path).
-          // Perl: use 'number' field for numeric citations (bare number without brackets).
-          // The 'refnum' field includes brackets like "[13]", causing double brackets [[13]].
-          let entry = self.db.lookup(&format!("ID:{}", id));
-          // Pull the entry's citation metadata into owned strings (ends the
-          // `entry` borrow before we touch `doc`/`bibref` below).
-          let get = |k: &str| {
-            entry
-              .and_then(|e| e.get_value(k))
-              .map(|v| v.to_string())
-              .map(|s| s.trim().to_string())
-              .filter(|s| !s.is_empty())
-          };
-          let authors = get("authors");
-          let fullauthors = get("fullauthors");
-          let keytag = get("keytag");
-          let year = get("year");
-          let typetag = get("typetag");
-          let number = get("number");
-          let refnum = get("refnum");
-          let number_or_refnum = || {
-            number
-              .clone()
-              .or_else(|| refnum.clone())
-              .unwrap_or_else(|| key.to_string())
-          };
-          let display = if want_authoryear {
-            // The `<ltx:bibrefphrase>` children supply Phrase1/Phrase2 (the
-            // `(`/`)` for \citet, the `, ` for \citep). Interleave them with the
-            // authors/year per the `show` format — Perl CrossRef.pm make_bibcite.
-            let phrases: Vec<String> = crate::document::element_children(bibref)
-              .iter()
-              .filter(|c| doc.get_qname(c).as_deref() == Some("ltx:bibrefphrase"))
-              .map(|c| c.get_content())
-              .collect();
-            let a = authors
-              .as_deref()
-              .or(fullauthors.as_deref())
-              .or(keytag.as_deref());
-            let y = year.as_deref().or(typetag.as_deref());
-            let (text, resolved) = render_bibref_show(
-              &show,
-              a,
-              fullauthors.as_deref(),
-              y,
-              number.as_deref(),
-              refnum.as_deref(),
-              &phrases,
-            );
-            // No author/year metadata (e.g. an entry with only a number) → fall
-            // back to the bare number so the inline label still resolves.
-            if resolved && !text.trim().is_empty() {
-              text
-            } else {
-              number_or_refnum()
-            }
-          } else {
-            number_or_refnum()
-          };
-          refs.push(NodeData::Element {
-            tag:        "ltx:ref".to_string(),
-            attributes: Some(attrs),
-            children:   vec![NodeData::Text(display)],
-          });
-        } else {
+          data.push(datum);
+        },
+        None => {
           self.note_missing("warn", "Entry for citation", key);
-          refs.push(NodeData::Element {
-            tag:        "ltx:ref".to_string(),
-            attributes: Some(HashMap::from_iter([
+          data.push(BibciteDatum {
+            key:         key.to_string(),
+            authors:     Vec::new(),
+            fullauthors: Vec::new(),
+            authortext:  String::new(),
+            year:        Vec::new(),
+            rawyear:     None,
+            suffix:      None,
+            number:      Vec::new(),
+            refnum:      vec![NodeData::Text(key.to_string())],
+            title:       vec![NodeData::Text(key.to_string())],
+            attr:        HashMap::from_iter([
               ("idref".to_string(), key.to_string()),
+              ("title".to_string(), key.to_string()),
               ("class".to_string(), "ltx_missing_citation".to_string()),
-            ])),
-            children:   vec![NodeData::Text(key.to_string())],
+            ]),
+            missing:     true,
           });
-        }
+        },
       }
-      // Bracket the numeric group as a whole ([1, 2]), matching natbib's numbers
-      // mode; \citep-style external parens (no internal delimiter) are left be.
-      if force_numeric && internal_delims && !refs.is_empty() {
+    }
+
+    let mut refs: Vec<NodeData> = Vec::new();
+    if force_numeric {
+      // Numeric collapse (#123): each entry's number, joined with ", " (natbib
+      // numbers mode), bracketed as a group ([1, 2]) unless `\citep`'s external
+      // parens already enclose it.
+      for datum in &data {
+        if !refs.is_empty() {
+          refs.push(NodeData::Text(", ".to_string()));
+        }
+        let label = [&datum.number, &datum.refnum]
+          .into_iter()
+          .find(|l| !l.is_empty())
+          .cloned()
+          .unwrap_or_else(|| vec![NodeData::Text(datum.key.clone())]);
+        refs.push(bib_ref(&datum.attr, label));
+      }
+      if internal_delims && !refs.is_empty() {
         refs.insert(0, NodeData::Text("[".to_string()));
         refs.push(NodeData::Text("]".to_string()));
       }
+      return refs;
+    }
+    let lower = show.to_lowercase();
+    let checkdups =
+      lower.contains("author") && (lower.contains("year") || lower.contains("number"));
+    let mut data: VecDeque<BibciteDatum> = data.into();
+    while let Some(datum) = data.pop_front() {
+      let (stuff, didref) = bibcite_show_walk(
+        &show,
+        &datum,
+        &mut data,
+        &preformatted,
+        &phrases,
+        &yysep,
+        checkdups,
+      );
       if !refs.is_empty() {
-        doc.replace_node(bibref, &refs);
+        refs.push(NodeData::Text(sep.clone()));
+        refs.push(NodeData::Text(" ".to_string()));
+      }
+      if didref {
+        refs.extend(stuff);
+      } else {
+        refs.push(bib_ref(&datum.attr, stuff));
       }
     }
+    refs
   }
 
   fn fill_in_mathlinks(&mut self, doc: &PostDocument) {

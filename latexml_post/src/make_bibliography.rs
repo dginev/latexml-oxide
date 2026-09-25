@@ -2200,8 +2200,6 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         // The journal host's title: an article's only titled related object
         // until biblatex's main title (`mvbook`) and event (bibtex.rs
         // `\bib@field@default@maintitle` / `@eventtitle`) became two more.
-        // (The bibliography matcher, `PostDocument::findnodes_foreign`, reads
-        // `[@attr]`/`[@attr='v']` predicates only; a `not(…)` is ignored.)
         FieldSpec {
           xpath:     "ltx:bib-related[@type='journal']/ltx:bib-title",
           punct:     ", ",
@@ -2521,7 +2519,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         // `\bib@field@inproceedings@eventtitle`): "Delta Symposium (Echo City),
         // 2002-05-06" (biblatex.def `event+venue+date`).
         FieldSpec {
-          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-title",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@type='event']/ltx:bib-title",
           punct:     " ",
           pre:       "",
           class:     "event",
@@ -2529,7 +2527,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
         FieldSpec {
-          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-subtitle",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@type='event']/ltx:bib-subtitle",
           punct:     ". ",
           pre:       "",
           class:     "subtitle",
@@ -2537,7 +2535,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
         FieldSpec {
-          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-place",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@type='event']/ltx:bib-place",
           punct:     " ",
           pre:       "(",
           class:     "place",
@@ -2545,7 +2543,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      ")",
         },
         FieldSpec {
-          xpath:     "ltx:bib-related[@type]/ltx:bib-related[@type='event']/ltx:bib-date",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-related[@type='event']/ltx:bib-date",
           punct:     ", ",
           pre:       "",
           class:     "date",
@@ -2616,9 +2614,11 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         // which the direct-child specs never reached. Perl's formatter
         // (MakeBibliography.pm:742-744) reads only the direct children too, so it
         // drops the host's publisher and place (DIVERGENCES #286): the biblatex
-        // manuals' "New York: Springer-Verlag" (sweep 120).
+        // manuals' "New York: Springer-Verlag" (sweep 120). Gated like Perl's
+        // other host rows (:732-734): a crossref'd entry shows "See [parent]"
+        // instead, as plain.bst's `format.incoll.inproc.crossref` does.
         FieldSpec {
-          xpath:     "ltx:bib-related/ltx:bib-publisher",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-publisher",
           punct:     ", ",
           pre:       " ",
           class:     "publisher",
@@ -2642,7 +2642,7 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
           post:      "",
         },
         FieldSpec {
-          xpath:     "ltx:bib-related/ltx:bib-place",
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-place",
           punct:     ", ",
           pre:       "",
           class:     "place",

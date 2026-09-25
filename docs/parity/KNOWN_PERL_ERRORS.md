@@ -3584,7 +3584,7 @@ See \cite{alpha}, \cite{beta}, \cite{alpha,beta}.
 → Perl `alpha `, pre-fix Rust `alpha ()`; pdflatex `[1]`. Reported as arXiv/html_feedback#62
 (witness 2308.06262, a NeurIPS-2023 paper: 263 `\cite`s all rendered `key ()`). Rust **surpasses**
 (OXIDIZED_DESIGN #123): when a frozen author-year bibref resolves to entries that are all
-numeric-only, `CrossRef::fill_in_bibrefs` collapses to the bracketed number `[N]`/`[N, M]`, matching
+numeric-only, `CrossRef::make_bibcite` (called by `fill_in_bibrefs`) collapses to the bracketed number `[N]`/`[N, M]`, matching
 `\NAT@force@numbers`. Guard:
 `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
 

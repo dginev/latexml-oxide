@@ -689,7 +689,7 @@ fn bbl_keeps_bibers_alphabetic_labels_and_order() {
     &html,
     "p",
     &[r#"class="ltx_p""#],
-    r##"<p class="ltx_p">See <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib4" title="" class="ltx_ref">Knu84b</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">Ada+01</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="" class="ltx_ref">Knu84a</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="" class="ltx_ref">Böh66</a>]</cite>.</p>"##,
+    r##"<p class="ltx_p">See <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib4" title="Seminumerical Algorithms" class="ltx_ref">Knu84b</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="On Many Authors" class="ltx_ref">Ada+01</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="Fundamental Algorithms" class="ltx_ref">Knu84a</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="Flow Diagrams" class="ltx_ref">Böh66</a>]</cite>.</p>"##,
   );
   let cited_by = r##"<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
 </span>"##;

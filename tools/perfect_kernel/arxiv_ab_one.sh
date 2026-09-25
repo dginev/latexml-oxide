@@ -1,6 +1,7 @@
 #!/bin/bash
 # One arXiv zip, two binaries: arxiv_ab_one.sh <zip> <binA> <binB> <run> (driven by arxiv_ab.sh)
 # Outputs (out.{A,B}.xml, log.{A,B}) stay in work_<run>/<id>/; one TSV row per binary on stdout.
+# Env: DUMP_A / DUMP_B give each side its own LATEXML_DUMP_DIR (default: the shared one).
 export PATH=/usr/local/texlive/2025/bin/x86_64-linux:$PATH TEXMFROOT=/usr/local/texlive/2025 TEXMFDIST=/usr/local/texlive/2025/texmf-dist TEXMFCNF=/usr/local/texlive/2025/texmf-dist/web2c LATEXML_DUMP_DIR=${LATEXML_DUMP_DIR:-$HOME/data/pk_agents/vendor_dumps56id/resources/dumps}
 ulimit -v 8912896
 zip=$1; A=$2; B=$3; run=$4
@@ -12,8 +13,11 @@ main=$(python3 -c "import json;d=json.load(open('00README.json'));print(next((s[
 [ -z "$main" ] && { echo -e "$id\tNOMAIN"; exit 0; }
 for tag in A B; do
   bin=$A; [ $tag = B ] && bin=$B
+  # Per-side dumps (DUMP_A / DUMP_B), for a change that alters the dump itself;
+  # both default to LATEXML_DUMP_DIR.
+  dumps=${DUMP_A:-$LATEXML_DUMP_DIR}; [ $tag = B ] && dumps=${DUMP_B:-$LATEXML_DUMP_DIR}
   s0=$(date +%s)
-  timeout 330 taskset -c 64-127 $bin --preload=ar5iv.sty --timeout=300 --nocomments --dest=out.$tag.xml "$main" > log.$tag 2>&1
+  LATEXML_DUMP_DIR=$dumps timeout 330 taskset -c 64-127 $bin --preload=ar5iv.sty --timeout=300 --nocomments --dest=out.$tag.xml "$main" > log.$tag 2>&1
   rc=$?; s1=$(date +%s)
   sed -i 's/\x1b\[[0-9;]*m//g' log.$tag
   e=$(grep -ac '^Error:' log.$tag); f=$(grep -ac '^Fatal:' log.$tag); wn=$(grep -ac '^Warning:' log.$tag)

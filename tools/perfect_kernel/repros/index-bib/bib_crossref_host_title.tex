@@ -11,9 +11,10 @@
 % oracle:  Perl 0.8.8 (same host): "[1] B. Author (2001) One chapter. See The
 %          whole volume, Editor, pp. 1–10."
 % engines: rust=no year, "See 2, In The Whole Volume, pp. 1–10" (56iz)
-% expect:  the child's bibentry equals Perl's; no "In <booktitle>" row
-% status:  (1) GREEN, guard bibliography_crossref::crossref_child_inherits_its_fields;
-%          (2) RED until the post XPath port lands (task 54)
+% expect:  the child's bibentry equals Perl's; "See [parent]" and no host row
+%          (no "In <booktitle>", no host publisher/place)
+% status:  GREEN: (1) bibliography_crossref::crossref_child_inherits_its_fields
+%          (56ja); (2) ::crossref_child_sees_its_parent_and_skips_the_host_title (56jd)
 \documentclass{article}
 \begin{document}
 Cite \cite{part} and \cite{whole}.

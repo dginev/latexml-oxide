@@ -1,0 +1,16 @@
+% A biblatex `.bbl` field is digested exactly once. The `.bbl` reader digests
+% it into the bibentry (batch 56jc) and MakeBibliography copies the title into
+% the bibitem's `<ltx:tag role='title'>` — the tag CrossRef reads for
+% `\citetitle` — so no second digest doubles its errors or reruns its side
+% effects. `\hline` is the probe: it raises `\noalign cannot be used here` on
+% EVERY digest, where an undefined macro heals itself after the first (see
+% bib_field_digest_once.rs). Expected: exactly one such error, and
+% `\citetitle` shows "A study of things".
+% The .bbl is bibref_show_biblatex_bbl_once.bbl (copy it to <jobname>.bbl).
+\documentclass{article}
+\usepackage[style=apa]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Title \citetitle{smith2020}.
+\printbibliography
+\end{document}

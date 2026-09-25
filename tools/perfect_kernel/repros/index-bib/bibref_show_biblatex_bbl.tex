@@ -1,0 +1,14 @@
+% A biblatex `.bbl`'s entries must carry a `title` tag: the post
+% cross-referencer's `title` show role reads it for `\citetitle` (`show="Title"`),
+% falling back only to a key tag (Perl CrossRef.pm:554 `$title || $keytag`), and
+% every citation link carries it as `title=` (:530-539, :555-557). The `.bbl`
+% is read into bibentries (batch 56jc) and MakeBibliography tags each one
+% (MakeBibliography.pm:473-475). pdflatex + biber print the title
+% "A study of things". The .bbl is tests/cluster_regressions/biblatex_ay/ay.bbl.
+\documentclass{article}
+\usepackage[style=apa]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Title \citetitle{smith2020}; textual \textcite{jones2019}.
+\printbibliography
+\end{document}

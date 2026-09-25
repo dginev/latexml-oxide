@@ -1,0 +1,15 @@
+% Post-stage citation labels follow the bibref's `show` pattern (Perl
+% CrossRef.pm:498-644 `make_bibcite`): every citation link carries its entry's
+% title as `title=` (:530-539, :555-557), and the bibliography's crossref
+% bibref (MakeBibliography.pm:639-642 `show => 'title, author'`) prints
+% "<title>, <authors>" — role words are case-folded with a trailing `s`
+% stripped (:585), punctuation passes through (:639). The Rust gate only knew
+% capitalized natbib keywords, so this printed the number "2" with no title.
+% Perl 0.8.8 (same host): `[<a href="#bib.bib2" title="One chapter">1</a>]`;
+% the crossref reads "See The whole volume, Editor".
+\documentclass{article}
+\begin{document}
+Cite \cite{part} and \cite{whole}.
+\bibliographystyle{plain}
+\bibliography{bibref_show_crossref}
+\end{document}

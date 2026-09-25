@@ -1,0 +1,12 @@
+% natbib super mode through Perl's `make_bibcite` show walk: the `super` role
+% (CrossRef.pm:623-631) wraps its number links in one `<ltx:sup>`, and
+% `\citet`'s `Authors Phrase1SuperPhrase2` names the authors before it. The
+% tip had no `super` role and printed the literal word "Super" ("Smith Super").
+% Same-host Perl 0.8.8 renders this paragraph byte-identically.
+\documentclass{article}
+\usepackage[super]{natbib}
+\begin{document}
+Text \citet{smith1,smith2} and \citep{smith1,smith2}.
+\bibliographystyle{plainnat}
+\bibliography{bibref_show_natbib_numbers}
+\end{document}

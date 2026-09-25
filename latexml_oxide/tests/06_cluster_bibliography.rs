@@ -621,10 +621,14 @@ fn cluster_bib_long_author_list_refnum() {
   // The refnum tag of the <bibitem> that carries a given entry's title. NOTE
   // the refnum is pushed LAST within <tags>, so it follows the title — scope to
   // the enclosing bibitem rather than searching backwards from the title.
+  // Search the bibliography only: every citation link carries its entry's
+  // title as `title=` (Perl CrossRef.pm:555-557), ahead of the list.
+  let bib = x.find("<bibliography").expect("a bibliography");
   let refnum = |title: &str| -> String {
-    let i = x
-      .find(title)
-      .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
+    let i = bib
+      + x[bib..]
+        .find(title)
+        .unwrap_or_else(|| panic!("no entry titled {title} in:\n{x}"));
     let start = x[..i].rfind("<bibitem").unwrap_or(0);
     let end = x[start..]
       .find("</bibitem>")
@@ -692,7 +696,7 @@ fn cluster_bib_long_author_list_refnum() {
   // as the `<tags>` metadata year (CrossRef reads it, and the numeric style
   // emits it too), in `key="Collab2025"`, and as this entry's journal VOLUME.
   let first_block = {
-    let i = x.find("science goals and forecasts").expect("entry");
+    let i = bib + x[bib..].find("science goals and forecasts").expect("entry");
     let start = x[..i].rfind("<bibitem").expect("bibitem start");
     let b = start + x[start..].find("<bibblock").expect("first bibblock");
     let e = b + x[b..].find("</bibblock>").expect("bibblock end");
@@ -2193,10 +2197,14 @@ fn cluster_bib_alpha_style_labels() {
   // so the letter never reaches the entry body; same-host Perl 0.8.8 prints
   // ` (1999)` here, and `alpha.bst` agrees. Pinned so a future reader of
   // L613-615 does not "fix" it back.
+  // Search the bibliography only: every citation link carries its entry's
+  // title as `title=` (Perl CrossRef.pm:555-557), ahead of the list.
+  let bib = x.find("<bibliography").expect("a bibliography");
   for needle in ["An alpha study", "A beta study"] {
-    let i = x
-      .find(needle)
-      .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
+    let i = bib
+      + x[bib..]
+        .find(needle)
+        .unwrap_or_else(|| panic!("no entry titled {needle} in:\n{x}"));
     let start = x[..i].rfind("<bibitem").expect("bibitem start");
     let end = x[start..]
       .find("</bibitem>")
@@ -3264,7 +3272,7 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
     &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1">1</ref>]</cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="A numbered reference">1</ref>]</cite>.</p></para>"##,
   );
 }
 

@@ -40,7 +40,8 @@
   deleted 2026-07-26 when a raw `.bib` became a recursive engine conversion
   ([`BIBLIOGRAPHY_WORKLIST.md`](BIBLIOGRAPHY_WORKLIST.md) re-port item 1), so
   name splitting is now `bibtex.rs`'s port of `BibTeX.pool`. `findnodes_by_traversal`
-  is unaffected. **No named guard survives for the corporate-author half**
+  was replaced by real XPath in batch 56jd (`findnodes_foreign`, DIVERGENCES #307);
+  this witness's bibliography is unchanged by it (13 items identical, without the `.bbl`). **No named guard survives for the corporate-author half**
   (`grep` for "corporate" / "W3C Math Working Group" across the tests returns
   nothing), so re-verify it on this witness before relying on it.
 

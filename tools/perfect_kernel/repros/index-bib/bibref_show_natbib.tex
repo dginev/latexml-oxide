@@ -1,0 +1,15 @@
+% natbib author-year citations through Perl's `make_bibcite` show walk
+% (CrossRef.pm:564-643): only the year (or number) is the link (:608, :618),
+% the authors and the bibrefphrase delimiters stay outside it, and consecutive
+% entries of the same authors share one author label with their years joined
+% by the yyseparator, a same-year run showing only the suffix (:610-616):
+% "(Smith, 2001a, b)". Perl 0.8.8 (same host) renders this paragraph
+% byte-identically.
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+Text \citet{jones} and \citep{jones} and \citep{smith1,smith2} and \citet{smith1,smith2}
+and \citeauthor{jones} and \citeyear{jones} and \cite{jones}.
+\bibliographystyle{plainnat}
+\bibliography{bibref_show_natbib}
+\end{document}

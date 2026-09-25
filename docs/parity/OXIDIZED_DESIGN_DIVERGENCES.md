@@ -1756,7 +1756,7 @@ parser keeps both the faithful grammar and the BibTeX-grade error recovery.
 
 ### 59. A citation also searches the main `bibliography` list, not just its bibunit
 
-**Decision:** `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`) searches
+**Decision:** `CrossRef::make_bibcite` (`latexml_post/src/crossref.rs`, called by `fill_in_bibrefs`) searches
 the bibref's `inlist` units **and then the main `bibliography` list**. Perl
 `CrossRef.pm` L515 reads `inlist || 'bibliography'` — an *exclusive* choice that
 searches the unit list alone whenever `inlist` is set.
@@ -4647,7 +4647,7 @@ at digest time (natbib's mode isn't yet numeric, especially when the
 satisfied), so the citation prints the key (`alpha ()` / `alpha `). latexml-oxide
 reproduced this exactly (SHARED-FAILURE, verified same-host on 0.8.8).
 
-**Rust behavior**: in `CrossRef::fill_in_bibrefs` (`latexml_post/src/crossref.rs`),
+**Rust behavior**: in `CrossRef::make_bibcite` (`latexml_post/src/crossref.rs`, called by `fill_in_bibrefs`),
 when a bibref's frozen `show` wants author-year yet EVERY cited entry is
 numeric-only (a `number`/`refnum`, no real `authors`/`fullauthors`/`year`), the
 citation collapses to natbib's numeric form: the bracketed number `[N]`, or `[N, M]`
@@ -8820,6 +8820,12 @@ biblatex-apa-test 72.6 → 78.4 % recall). No existing golden carries these fiel
 
 **Guard**: `cluster_cli::whatsinout::biblatex_bib_fields_reach_the_reference_list`.
 
+**Crossref (batch 56jd).** The host publisher/place rows carry Perl's host-row step
+`ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]` (MakeBibliography.pm:732-734): an
+entry with a `crossref` prints "See [parent]" and no host fields, as plain.bst's
+`format.incoll.inproc.crossref` does ("In [1], pages 1–10"); the biblatex event rows are gated the
+same way. Guard: `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
+
 ### 287. quotchap's quotations are epigraphs where they are written (Perl: lost)
 
 quotchap typesets each `savequote` into a box that its redefined `\chapter` prints at the next
@@ -9335,6 +9341,43 @@ Measured (POST_MODE=mono, 340 bibliography manuals): recall up 0, down 0; mark-p
 bibliographies 356 → 1. arXiv: the 7 papers of the 3,003 sample that ship a biblatex `.bbl` keep
 their bibitem counts, 5 gain words (up to +50 %), labels are biber's; 2605.17646's duplicate
 datalist is gone (58 → 29 bibitems). Residuals: the `.bib` path's alphabetic labels (it prints
-`[1]`; porting biber's labelalpha would fix it), "Jr.", `maxbibnames`, apa's "&".
+`[1]`; porting biber's labelalpha would fix it), "Jr.", `maxbibnames`, apa's "&" in the
+bibliography and `\parencite` (apa.cbx:496-497, :727; `\textcite` joins with "and", :50-55).
 
 **Guards**: `bibliography_names_fields::{title_mark_takes_no_period_biblatex, title_mark_takes_no_period_bst, bbl_prints_what_its_bib_prints, bbl_keeps_bibers_alphabetic_labels_and_order, bbl_prints_the_default_refcontext_datalist, bbl_skips_its_biblists_and_skipbib_entries, bbl_format2_reads_as_its_bib, bare_thebibliography_twice_arms_once}`, unit test `make_bibliography::test_period_rule`.
+
+### 307. Citation labels follow Perl's `make_bibcite`; the bibliography's XPath is real XPath (Perl: the same; cloned tag nodes)
+
+Batch 56jd ports two Perl mechanisms the post stage had approximated. Both are faithful; this entry
+records what changed visibly and what stays different.
+
+- **Foreign-node XPath.** `PostDocument::findnodes_foreign` evaluated a hand-rolled subset of
+  XPath that treated any predicate with `(` as satisfied and never matched `.//`. It now
+  evaluates real XPath in the node's own document (`Context::from_node`, `ltx` bound), as Perl's
+  `$XPATH->findnodes($path, $node)` does (Post.pm:1019-1021), and a failed evaluation raises
+  `Error:post:xpath`. MakeBibliography's `[not(../ltx:bib-related[@bibrefs])]` host rows
+  (MakeBibliography.pm:729-734) now apply, so a crossref'd entry prints "See [parent]" and no
+  second "In <booktitle>". The Rust-only host publisher/place rows (#286) and the biblatex event
+  rows carry the same step, so a crossref'd entry does not print half of its host again. The sort
+  `ERROR` removal (Step 6) uses `.//` (the entry's subtree) where Perl uses `//`
+  (MakeBibliography.pm:377); no binding emits `ltx:ERROR[@class='sort']`, so it changes no output.
+- **The show walk** (`CrossRef::make_bibcite`, a port of CrossRef.pm:486-644): each citation link
+  carries its entry's title as `title=` (:530-557; a missing citation's carries its key), the show
+  roles are matched lower-cased with a trailing `s` stripped (:585), and
+  `title`/`author`/`fullauthor`/`refnum`/`phraseN`/`year`/`number`/`super` render as Perl's.
+  natbib author-year cites link only the year and merge same-author entries ("Smith, 2001a, b"),
+  natbib `super` superscripts, and a crossref shows "The whole volume, Editor" (`do_crossref`,
+  MakeBibliography.pm:638-642). Also as Perl: a bibref with no keys is removed; an entry without
+  authors, full authors or a key demotes the whole citation to its refnum (:542); unknown show words
+  are dropped (with an Info) instead of printed; `phraseN` indexes all element children. The `.bbl`
+  route's title tag comes from MakeBibliography (#306). #59 and #123 are unchanged (#123's gate
+  stays on natbib's capitalized `Author`/`Year`).
+
+Kept divergences: the cloned labels of the `title`, `author` and `fullauthor` roles
+(`\citetitle`, `\citeauthor`) are text, where Perl clones nodes: MakeBibliography builds the
+title and authors tags as text (Perl clones child nodes, MakeBibliography.pm:473-475, :435-437), and
+Scan stores their content as strings (scan.rs `bibitem_tag_props`; Perl Scan.pm:474-482 stores the
+nodes). So `et al.` in a citation loses Perl's `ltx_bib_etal` wrapper. Perl's treatment of the
+string "0" as false (a key, title or year suffix of "0") is not copied.
+
+**Guards**: `bibref_show::*` (6), `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
