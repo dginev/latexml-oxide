@@ -386,37 +386,68 @@ impl Parameter {
       gullet::skip_spaces()?;
     }
 
-    let checked_value =
-      if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
-        // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
-        // when the delimiter never appeared; a matched-but-empty arg is
-        // Some(empty)). Real TeX's runaway-argument ERROR applies to REAL
-        // file ends — but many of our mouth ends are ARTIFICIAL (isolated
-        // constructor-argument mouths, reading_from_mouth), where real TeX
-        // would keep scanning the enclosing stream and find the delimiter
-        // (l3tl replace sentinels: spath3/litetable/zref-check — a
-        // per-iteration Error here regressed 63 corpus docs, sweep 23).
-        // So: stay QUIET for Until misses; zero-progress delimited-scan
-        // loops terminate via the stomach cycle guard instead. Perl errors
-        // here (Parameter.pm L93-97) and equally mis-fires on the
-        // artificial-EOF shapes. (The `Until` reader itself never yields
-        // None — it maps a miss to an empty argument, and reports the one
-        // REAL runaway, a miss at `gullet::at_end_of_all_input`, itself.)
-        if !is_until {
-          let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
-          Error!(
-            "expected",
-            self,
-            s!("Missing argument {} for {}", self.stringify(), fordefn_str)
-          );
-          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+    // A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) is a
+    // value-less required `Match`: its miss IS an improper macro call (below).
+    let checked_value = if !self.optional
+      && (!self.novalue || self.is_macro_delimiter())
+      && (value_arg.is_none() && self.predigest.is_none())
+    {
+      // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
+      // when the delimiter never appeared; a matched-but-empty arg is
+      // Some(empty)). Real TeX's runaway-argument ERROR applies to REAL
+      // file ends — but many of our mouth ends are ARTIFICIAL (isolated
+      // constructor-argument mouths, reading_from_mouth), where real TeX
+      // would keep scanning the enclosing stream and find the delimiter
+      // (l3tl replace sentinels: spath3/litetable/zref-check — a
+      // per-iteration Error here regressed 63 corpus docs, sweep 23).
+      // So: stay QUIET for Until misses; zero-progress delimited-scan
+      // loops terminate via the stomach cycle guard instead. Perl errors
+      // here (Parameter.pm L93-97) and equally mis-fires on the
+      // artificial-EOF shapes. (The `Until` reader itself never yields
+      // None — it maps a miss to an empty argument, and reports the one
+      // REAL runaway, a miss at `gullet::at_end_of_all_input`, itself.)
+      // A `\def` delimiter missed because an ISOLATED token list ran out (an
+      // index phrase digested at `\index` time, a constructor argument) is the
+      // same artificial end: real TeX would read on — manyind.sty:98
+      // `\def\mgobblepgeref, #1 {}` eats makeindex's `, <page>`, which never
+      // follows here. Quiet, and the call proceeds as before. Only a present,
+      // different token is TeX's improper call (tex.web §398).
+      let ran_out = self.is_macro_delimiter()
+        && match gullet::read_token()? {
+          Some(next) => {
+            gullet::unread_one(next);
+            false
+          },
+          None => true,
+        };
+      if ran_out {
+        ArgWrap::Tokens(Tokens::new(Vec::new()))
+      } else if !is_until {
+        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
+        Error!(
+          "expected",
+          self,
+          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
+        );
+        if self.novalue {
+          ArgWrap::None
         } else {
-          value_arg
+          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
         }
       } else {
         value_arg
-      };
+      }
+    } else {
+      value_arg
+    };
     Ok(checked_value)
+  }
+
+  /// The leading delimiter of a `\def` parameter text (`\def\lp\x{…}`,
+  /// base_utilities.rs `parse_def_parameters`): a required `Match` that carries
+  /// no value. Binding `Match:to`-style parameters carry their value.
+  fn is_macro_delimiter(&self) -> bool {
+    self.novalue && !self.optional && self.name == crate::pin!("Match")
   }
 
   pub fn digest(
@@ -661,6 +692,22 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
+    Ok(self.read_macro_arguments(fordefn)?.unwrap_or_default())
+  }
+
+  /// `read_arguments` for a macro call: `None` when the call does not match its
+  /// definition — a `\def` parameter text's leading delimiter is not there
+  /// (tex.web §397-398 "Use of \x doesn't match its definition": reported, the
+  /// token backed up, the macro IGNORED). Perl reports it and expands the macro
+  /// anyway, so a self-calling `\def\lp\x{\lp}` met with `\lp\y` re-reports to
+  /// its error cap; the expansion loop has no cap and ran to the digestion fuse.
+  /// Arguments after the miss are not read (TeX stops at the mismatch).
+  /// OXIDIZED_DESIGN #295; guard
+  /// `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
+  pub fn read_macro_arguments(
+    &self,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<Option<Vec<ArgWrap>>> {
     let mut args = Vec::with_capacity(self.0.len());
     // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
     // primitives read their parameters here).
@@ -683,11 +730,14 @@ impl Parameters {
         //   "parameter with predigest closure was invoked in an expandable context. Parameter
         // digestion won't execute." );
       }
+      if parameter.is_macro_delimiter() && values.is_none() {
+        return Ok(None);
+      }
       if !parameter.novalue {
         args.push(values);
       }
     }
-    Ok(args)
+    Ok(Some(args))
   }
 
   pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {

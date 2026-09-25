@@ -8966,3 +8966,29 @@ fn para_class_box_in_titlepage_demotes_to_block_not_logical_block() {
     "the box body (text + tabular) must be preserved through the demotion:\n{xml}"
   );
 }
+
+/// A macro call that does not match its `\def` (the parameter text's leading
+/// delimiter absent: `\def\lp\x{…}` met with `\lp\y`) is reported and IGNORED,
+/// as TeX does (tex.web §397-398 "Use of \lp doesn't match its definition").
+/// The miss raised nothing and the macro expanded anyway, so a self-calling one
+/// looped to the digestion fuse (frankenstein/titles via compsci's `\cs\def`).
+/// A matching call still expands. Every expl3 expandable error goes through
+/// this path (`\???`, expl3-code.tex:11596-11606).
+#[test]
+fn macro_delimiter_mismatch_ignores_the_call() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/parameter-conditional/macro_delimiter_mismatch.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  let mismatches = stderr
+    .lines()
+    .filter(|l| l.starts_with("Error:expected:Match"))
+    .count();
+  assert_eq!(mismatches, 1, "{stderr}");
+  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert!(
+    xml.contains(r#"<p>A<ERROR class="undefined">\y</ERROR>B</p>"#),
+    "{xml}"
+  );
+  assert!(xml.contains("<p>Y</p>"), "{xml}");
+}

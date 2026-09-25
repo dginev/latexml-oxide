@@ -152,3 +152,53 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
     xml.len(),
   );
 }
+
+/// A `TooManyErrors` Fatal keeps everything digested before it: Perl's
+/// `hardYankProcessing` rescues `@LaTeXML::LIST` for every Fatal
+/// (Common/Error.pm:336-338) and latexmlc builds it (LaTeXML.pm:251-259). The
+/// run wrote a 39-byte stub (27 TeX Live manuals, e.g. acro-manual, 120 KB in
+/// Perl). The input after the Fatal stays unread, as in Perl, and the Fatal
+/// stays the run's verdict.
+#[test]
+fn too_many_errors_keeps_the_already_digested_document() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(
+    workdir.path().join("tme.tex"),
+    include_str!("../../../tools/perfect_kernel/repros/loader/too_many_errors_partial.tex"),
+  )
+  .expect("write tme.tex");
+  let output = Command::new(bin)
+    .args([
+      "tme.tex",
+      "--dest",
+      "tme.xml",
+      "--nocomments",
+      "--timeout",
+      "120",
+    ])
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&output.stderr);
+  let xml = std::fs::read_to_string(workdir.path().join("tme.xml")).unwrap_or_default();
+
+  assert_eq!(
+    stderr
+      .lines()
+      .filter(|l| l.starts_with("Fatal:TooManyErrors:MaxLimit(100)"))
+      .count(),
+    1,
+    "{stderr}"
+  );
+  let verdict = stderr
+    .lines()
+    .find(|l| l.contains("Conversion failed:"))
+    .unwrap_or_else(|| panic!("no failed verdict:\n{stderr}"));
+  assert!(
+    verdict.contains("errors; 1 fatal error"),
+    "{verdict}\n{stderr}"
+  );
+  assert!(xml.contains("<p>KEEPMEBEFOREMARKER prose.</p>"), "{xml}");
+  assert!(!xml.contains("KEEPMEAFTERMARKER"), "{xml}");
+}

@@ -260,7 +260,12 @@ impl Definition for Expandable {
           }
         } else {
           let args = if let Some(ref parms) = self.paramlist {
-            parms.read_arguments(Some(self))?
+            // A call that does not match its `\def` (tex.web §398): reported,
+            // and the macro is ignored.
+            match parms.read_macro_arguments(Some(self))? {
+              Some(args) => args,
+              None => return Ok(Tokens!()),
+            }
           } else {
             Vec::new()
           };

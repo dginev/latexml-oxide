@@ -1,0 +1,13 @@
+% A macro call that does not match its \def's parameter text is reported and
+% ignored (tex.web §397-398 "Use of \lp doesn't match its definition"): the
+% miss used to raise nothing and the macro expanded anyway, so a self-calling
+% one looped to the digestion fuse (frankenstein/titles). A matching call
+% still expands.
+\documentclass{article}
+\def\lp\x{\lp}
+\def\ok\x{Y}
+\begin{document}
+A\lp\y B
+
+\ok\x
+\end{document}

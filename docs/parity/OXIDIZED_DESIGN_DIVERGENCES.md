@@ -8963,3 +8963,25 @@ Keys that siunitx v3 itself removed or never had (`load-configurations`, `obeybo
 warn: pdflatex warns or errors on them too. The uncertainty conversions are Perl's, ported
 (siunitx.sty.ltxml:329-375), with one difference: an integer value's separate uncertainty prints
 as `123 ± 45`, as siunitx does, where Perl prints `123 ± 45.`. **Guard**: `class_census::siunitx_v3_keys`.
+
+---
+### 295. A macro call that does not match its `\def` is reported and ignored (Perl: reported, then expanded)
+
+A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) must be the next thing at a call.
+When it is not, TeX reports "Use of \lp doesn't match its definition" and abandons the call
+(tex.web §397-398); the macro does not expand. **Perl** reports "Missing argument" (Parameter.pm
+:93-97), but `readArguments` goes on and the macro expands anyway. **Rust** (batch 56iq,
+parameter.rs `Parameter::read`, expandable.rs) reports the miss with Perl's message and then
+abandons the call, as TeX does. The macro expanding anyway had looped a self-calling macro to the
+digestion fuse (frankenstein/titles via compsci's `\cs\def`). Before this batch the miss was
+silent, which swallowed every expl3 expandable error: those go through `\???`, a `?`-delimited
+macro (expl3-code.tex:11596-11606). A leading delimiter missed because an isolated token list ran
+out (an index phrase, a constructor argument) is the artificial end of that list, not an improper
+call: real TeX would read on. It stays quiet and the call proceeds (manyind.sty:98).
+
+Measured: the 3,003-paper arXiv sample changes in one paper. 2605.24084 gains 51 errors with
+identical words: `dot spacing/.store in=\dot@spacing` without `\makeatletter` redefines `\dot`,
+and pdflatex reports the same mismatches. Of 29 TeX Live manuals with swallowed misses, 20 are
+unchanged, and greektonoi, bfh-ci's SciPoster and guitar gain errors. euclideangeometry-man (curve2e's `\MV@c`),
+chinesechess (a removed l3draw API) and mercatormap reach the 100-error limit, as pdflatex and
+lualatex do. **Guard**: `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.

@@ -421,10 +421,24 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // loop during build and turned an 8.7 s fatal into a 2 m 12 s
       // wall-clock timeout writing a ZERO-byte file — strictly worse than
       // the 39-byte stub, for a 1.7 KB gain on the one paper it helped.
-      // Same reasoning bars `TooManyErrors`; widening to either needs its
-      // own measurement, not an assumption that more salvage is better.
-      if matches!(e.target, ErrorTarget::Stomach) {
-        let salvaged = stomach::salvage_pending_box_lists(true);
+      //
+      // `TooManyErrors` keeps everything digested before it, as Perl's
+      // `hardYankProcessing` rescues `@LaTeXML::LIST` for every Fatal
+      // (Common/Error.pm:336-338) and the daemon's retry of `finishDigestion`
+      // (LaTeXML.pm:251-259, Core.pm:222-224) builds it: latexmlc writes the
+      // partial document where this wrote a 39-byte stub (acro-manual 120 KB
+      // in Perl; 27 TeX Live manuals and 5 of 7 Fatals in a 3,003-paper arXiv
+      // sample hit this Fatal). Its token stream is healthy — each error ends
+      // in an `<ERROR>` box — so there is no loop to re-enter, and the
+      // current level is honest content (the paragraph in progress). Input
+      // after the Fatal stays unread, as in Perl.
+      let drop_innermost = match e.target {
+        ErrorTarget::Stomach => Some(true),
+        ErrorTarget::TooManyErrors => Some(false),
+        _ => None,
+      };
+      if let Some(drop_innermost) = drop_innermost {
+        let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
         if !salvaged.is_empty() {
           emit_info(
             "recovery",

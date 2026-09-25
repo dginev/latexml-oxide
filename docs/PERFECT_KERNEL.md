@@ -52,89 +52,50 @@ recall = real content loss) and from semantic-markup gaps, NOT from error-cluste
 mining — the arXiv error histograms proved a weak, partly-stale proxy (batches
 56ed/56ee genuine fixes were spurious-diagnostic suppressions; `\NewTaggingSocket`
 etc. were stale-log false-positives that reproduce 0 errors on the current binary).
-## Continuation — state and next steps (2026-09-23)
+## Continuation — state and next steps (2026-09-25)
 
 Branch `perfect_kernel` (check `git branch --show-current` first). Delegate read-only work
 to Opus 4.8 `root-causer`/`reviewer`/`log-scanner` agents (≤4 at once). Memory cap 8 GB
-(`--max-memory=8192`, `ulimit -v 8912896`). Sweeps: `~/data/pk_agents/w59/main/sweep113_launch.sh`
-is the current recipe (vendor TL + `LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63;
-validate → post mono → HTML recall in one chain).
+(`--max-memory=8192`, `ulimit -v 8912896`, per conversion only, never on the test runner).
+Sweeps: `~/data/pk_agents/w68/main/sweep122_launch.sh` is the current recipe (vendor TL +
+`LATEXML_DUMP_DIR` vendor dumps, JOBS=16, 180 s, cores 0-63; sweep → validate → post mono → HTML
+recall in one chain). arXiv A/B: `~/data/pk_agents/ab56il/ab.sh <run> <binA> <binB>` (3,003 papers,
+README there). Never run an engine with its cwd in the vendor TL doc tree. `run_doc.sh` removes
+dead runs' spill directories there.
 
-**Working rules added 2026-09-23 (user):** every fix is catalogued as a minimal `.tex` repro in
+**Working rules (user, 2026-09-23):** every fix is catalogued as a minimal `.tex` repro in
 `tools/perfect_kernel/repros/<mechanism>/` AND a red/green guard (a generalizing refactor pass is
 planned at the end); a schema win counts only if content is preserved — run
 `tools/perfect_kernel/content_diff.py old.xml new.xml` on every witness and
 `pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
 
-**State 2026-09-25 (batches 56hz–56ig; LEDGER rows of those dates):** class census 492 / 501 usable
-classes clean (98.2 %, `clscensus4`); **K6 landed (56id, user ruling): PDF output mode by default**,
-`\ifpdf` follows `\pdfoutput`, DVI only when the source ships EPS/PS (DIVERGENCES #285; arXiv 2605
-A/B on 201 `\ifpdf` papers: 0 content losses). Sweep #121 (56ie): fully done 1848 (s120 1838),
-recall mean 94.47, 61 manuals up, 0 down; its regressions are fixed (56if/56ig) or pdflatex-faithful
-in PDF mode. l3text now runs on code points (expl3's Unicode-engine codepoint layer, KPE #243).
-New open leads: **NFSS size state** (`\f@size` constant 10, `\fontsize` a no-op — SHARED; typearea's
-"Bad type area settings!" in 765 manuals and lost `\fontsize` sizes); a K6 refinement ruling (DVI cue
-from a `dvips`/`dvipdfmx` class option: 4 manuals, 2 arXiv papers — pdflatex fails them alike);
-nlctuserguide's bib2gls-deferred glossary content (glossaries-extra-manual 50.9 % recall); KOMA's
-`\@sect`/`\@startsection` identity warnings are expected (LEDGER 56ig).
-**Since (56ih–56il):** NFSS size state landed (DIVERGENCES #288); the 7-paper 2605 PushbackLimit it
-exposed is fixed at its root (fontenc re-input the preloaded t1enc.def; natbib expanded its labels,
-KPE #252). A 3,003-paper arXiv A/B shows 0 status changes, and a 281-paper glossaries A/B 854 → 774
-errors with 0 papers worse. nlctuserguide entries are defined in the run (#292): the Talbot manuals
-reach 86.6-96.9 % recall. Open: those manuals take 212-334 s (> 180 s ceiling); the ctex `fandol` fontset under
-vendor-tree pdfTeX (pdflatex fails alike).
-
-**Measured:** s110 229 → s111 222 → s112 211 → **s113 148 invalid (2219/2367, 93.7 %)**, 63 newly
-valid, 0 newly invalid, 0 tally regressions, recall of record unchanged (median 98.6, mean 93.72,
-no doc down > 0.5). Landed this session: 56gd (auto-opened `item` for a block / same-kind list in
-a list, #261; refstyle loads raw; newverbs `\MakeSpecialShortVerb`), 56ge (`\global\read`
-bookkeeping stays local — csvsimple-legacy's ~1,600 `\par`-corrupted attributes), **56gf (the
-frontmatter always opens the document — preamble residue marked at `\begin{document}`, visible
-pre-flush content follows the head-placed frontmatter; user-approved surpass #262; 55 of the 59
-title-after-body manuals valid)**, 56gg (beamer in-frame `\frame` = kernel box frame; titlepage
-unwind re-homes children #263; heading page breaks precede the section #264), stricter diagnostic
-counting in guards/tools, and the content tooling.
-
-**Where the 148 stand** (`~/data/pk_agents/w59/main/jing113/`):
-- 91 no-XML Fatal/timeout runs — 89 fail in their own intended engine (oracle not clean), the
-  other 2 (bibarts, chessboard_and_beamer) are ruled; `~/data/pk_agents/w59/noxml/`.
-- 24 dangling IDREF (RULED KEEP); 2 duplicate ids (thuaslogos, ruled).
-- 13 sectioning inside an item/figure (`paragraph`/`subsubsection`/`section`; RULED LEAVE, #189 —
-  note #189 also inserts WITHOUT a diagnostic, so these docs are silently invalid).
-- 2 block inside `quote` (aguplus `sectional-block`, webquiz `logical-block`) — LANDED 56gw
-  (user ruling: `quote_model` widened, #271).
-- SHARED / document bugs, one each: item-in-math ×2, bibliography-in-box ×2 (biblatex-ext,
-  biblatex-cv), note/indexmark/glossarydefinition in XMText (inline-leak ×3 — LANDED 56gx, user
-  ruling: `Meta.class` floats out of math text, #272), swfigure, msgguide
-  TOC-in-date, pgf-spectra late abstract, thalie/ndsu text-in-listing, brochure block-in-text,
-  stanli figure-in-titlepage, philex anchor.
-The schema axis is at its ruled ceiling; the four rulings (section-in-item LEAVE, dangling IDREF
-KEEP, quote model and inline-leak LANDED 56gw/56gx) are all decided, so the remaining levers are the
-mechanical singletons and the content/semantic axes below.
+**State 2026-09-25:**
+- Sweep #122 (`latexml_oxide.56im`): S0∧S1 1912 / 2365 (80.5 %), recall mean 94.73, median 98.7,
+  schema-valid 2246, and 63 manuals up with 0 down vs s121.
+- Class census: 492 / 501 usable classes clean. K6 PDF mode landed (56id, DIVERGENCES #285).
+- Since s122:
+  - 56in: siunitx v3 keys.
+  - 56io: minted listing files, geometry length expressions, named frontmatter.
+  - 56ip: listing files through kpathsea and the virtual store, shared listings escapes, K11 class
+    defaults. Recall: timeop 56 → 100, commalists-tools 77 → 100, randintlist 68 → 99.5.
+  - 56iq: the TooManyErrors salvage (27 manuals from an empty document to partial content) and 56gn.
+  - Every batch's 3,003-paper arXiv A/B shows no content loss.
+- Next: sweep #123 to measure 56in–56iq. The schema axis is at its ruled ceiling
+  (`~/data/pk_agents/w59/main/jing113/`). The remaining invalid documents are no-XML runs that fail
+  in their own intended engine, dangling IDREF (RULED KEEP), sectioning in an item (RULED LEAVE,
+  #189) and SHARED singletons. The levers left are the content and semantic axes below.
+- Settled, do not re-mine:
+  - The empty margin notes: tufte's citations `\marginpar`, SHARED (LEDGER 56ip).
+  - The silent-loss structural scan: empty `<p/>`, icon inline-blocks and struts.
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
-1. **Hidden macro-delimiter misses (56gn, held back).** A `\def` parameter text's leading
-   delimiter that is missing at a call is silent here and the macro expands anyway (Perl reports
-   it; TeX reports and IGNORES the call, tex.web §397-398) — the frankenstein/titles loop. The
-   strict check (`~/data/pk_agents/w59/main/56gn_macro_delimiter.patch` + `56gn_guard.rs` +
-   `56gn_NOTES.md`) surfaced ~30 latent clusters in 29 manuals; `\??? Match:?` is l3msg's
-   expandable-error sentinel — each a REAL expl3 error the engine swallowed. Fixed so far: 56gt
-   (etoolbox `\patchcmd` `##` → pgfornament-han 501 → 0, biblatex-gost 88 → 0), 56gv (`\typeout`
-   partial), 56gp (notebeamer), 56go (`\everypar`), 56gy (one-space delimiter: the whole xint
-   `\XINT_zapsp_b` cluster, 9 manuals), 56hb (`\protected\relax\def`: catoptions 70 → 1,
-   keyval2e-examples 101 → 2). Strict re-measure after 56gy (`~/data/pk_agents/w59/main/strict3/`,
-   binary `latexml_oxide.strict3`): euclideangeometry 101, leporello 74 + jsonparse 60 (native
-   pgfkeys `Expand!`), titles 101 (with 56gn the loop becomes 101 `\aftergroup` Match errors;
-   pdflatex stops at 9, so a re-trigger remains), bfh-ci 11, guitar 10; mercatormap shell-escape
-   excluded; greektonoi/chinesechess/bxjaholiday SHARED. catoptions residual: 1 option-stack-limit
-   error per load. Root-caused 2026-09-23 (`~/data/pk_agents/w63/`): leporello 74 + jsonparse 60 are
-   NOT pgfkeys. `\NewTCBListing` substituted an absorbed `s` argument as empty, so `\IfBooleanT{}` hit
-   l3's `if-boolean` error (fixed in 56hl). titles is gone with 56hj. euclideangeometry is curve2e's own
-   `\MV@c` error, which pdflatex reports 34 times (SHARED). guitar is SHARED with Perl. bfh-ci SciPoster
-   is SHARED at the origin, but we keep less of the poster than Perl (l3 `\dim` registers in
-   pgfmath; an open content target). **Landing hazard:** with 56gn, euclideangeometry's
-   `\???` misses reach the 100-error cap and the Fatal empties a complete 1.4 MB document. Before
-   landing, keep the l3 sentinel's SHARED misses from turning good output into a Fatal.
+1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading
+   delimiter is reported and ignored (tex.web §397-398, DIVERGENCES #295), which surfaces the expl3
+   expandable errors (`\???`) that the lax engine swallowed. It landed together with the
+   TooManyErrors salvage, which keeps the pre-Fatal document as latexmlc does. The misses were fixed
+   at their roots along the way (56gt, 56gv, 56gp, 56go, 56gy, 56hb, 56hl). The documents that now
+   reach the 100-error limit (euclideangeometry-man, chinesechess, mercatormap) are Fatal in
+   pdflatex and lualatex too (LEDGER 56iq). Notes: `~/data/pk_agents/w59/main/56gn_NOTES.md`.
 1b. **Recall tail (s116) — landed 2026-09-23**: scrlfile-hook underflow warnings in 983 manuals
    (56gz); uantwerpendocs title-page flow content (56ha, 6 manuals); babel main language from
    class options (56hd, 36 French/German manuals, colortbl-DE recall 86 → 99) with microtype's
@@ -200,11 +161,15 @@ mechanical singletons and the content/semantic axes below.
    stays beside the float rather than inside it.
 5. Perf ceiling (> 180 s at 8 GB): pgf-interference is a flat expansion profile once
    `read_digits`' regex went (56gl, −3 %); lie-hasse and wheelchart exceed the budget in their own
-   engines too (277 s, > 900 s).
+   engines too (277 s, > 900 s). The Talbot manuals (datatool-user, glossaries-extra-manual,
+   212-334 s) and tcolorbox are digest-bound: the lever is native l3 int/tl primitives (PLANS 12).
 6. Rulings — all decided: dangling IDREF (KEEP, 24 docs), sectioning inside an item/figure
    (LEAVE, #189, 13 docs), the `quote` content model (LANDED 56gw, #271: webquiz, aguplus valid)
    and inline-leak (LANDED 56gx, #272: ribbonproofs, sidenotesplus, ryethesis valid; equation-level
    footnotes now render in HTML). Measured on sweep #118: 2226/2368 (s117: 2221).
+   Open ruling (K6 refinement): a DVI cue from a `dvips`/`dvipdfmx` class option (4 manuals, 2 arXiv
+   papers; pdflatex fails them alike). Also: the ctex `fandol` fontset under vendor-tree pdfTeX
+   fails in pdflatex too.
 
 **Method notes:** read a witness's `(Loading …)` lines before assuming the raw-class path; probes
 MUST pin the vendor TL (an unpinned run reads the distro tree — qworld reproduced only pinned);
