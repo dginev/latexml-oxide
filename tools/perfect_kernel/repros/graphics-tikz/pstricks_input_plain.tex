@@ -1,0 +1,28 @@
+% witness: plain-TeX `\input pstricks` (pstricks_tex.rs); a `\psline` in
+%   running text
+% oracle:  etex: the 2x1 picture with its line; the stray `\psline` draws
+%   over the text from the current point, in no box of its own (etex's own 2
+%   errors are pst-code-pspicture.tex's `\ExplSyntaxOn` under plain)
+% engines: rust(P1 c29f1eb2cf)=0 errors, but the raw `\pspicture` ran (only
+%   pstricks.sty's binding defined `{pspicture}`), so the line auto-opened an
+%   unsized `ltx:picture`, and the stray `\psline` another that swallowed
+%   " here."; perl: pstricks_support defines `{pspicture}` (:527-563)
+% expect:  0 errors, 0 warnings; a sized picture with the green line, pstricks'
+%   #00FF00 (pstricks-color.tex:111; SVG's `green` is #008000), and the darkgray
+%   one #404040 (the support file's `\definecolor{darkgray}{gray}{.25}`); the paragraph
+%   "A line here." with no picture
+% status:  GREEN (w1-pstricks, P1 review)
+% mechanism: `{pspicture}`, `{pspicture*}` and the `\rput` family move to
+%   pstricks_support_sty.rs, as in Perl, which both pstricks.sty and
+%   pstricks.tex load; a drawing object outside a picture draws nothing
+%   (`ps_in_picture`): Perl's auto-opened picture is sized by an `afterClose`
+%   (latex_constructs.pool.ltxml:4943-4950) the Rust `ltx:picture` tag lacks.
+\input iftex.sty
+\input pstricks
+\psset{linecolor=green}
+\pspicture(0,0)(2,1)
+\psline(0,0)(1,1)
+\psline[linecolor=darkgray](0,0)(2,1)
+\endpspicture
+A line \psline(0,0)(1,1) here.
+\bye

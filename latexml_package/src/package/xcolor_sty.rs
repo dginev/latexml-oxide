@@ -530,7 +530,7 @@ fn convert_to_target_model(color: Color) -> Result<Color> {
 }
 
 /// Perl: ParseXColor($models, $specs, $tomodel)
-fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
+pub(crate) fn parse_xcolor(models: Option<&str>, specs: &str, tomodel: Option<&str>) -> Color {
   // Perl ParseXColor (xcolor.sty.ltxml L218-241) has NO entry trim at all;
   // keep only whitespace normalization here.
   let specs = specs.trim();

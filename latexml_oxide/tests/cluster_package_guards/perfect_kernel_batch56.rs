@@ -7216,7 +7216,7 @@ fn pstricks_coordinates_take_units_nodes_and_optional_pairs() {
     "P1: {xml}"
   );
   assert!(
-    xml.contains("<g transform=\"translate(78.73,39.37)\">"),
+    xml.contains("<g transform=\"translate(78.74,39.37)\">"),
     "P2: {xml}"
   );
   assert!(
@@ -7277,15 +7277,15 @@ fn pspicture_is_a_picture_and_rput_keeps_its_body() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<picture").count(), 2, "{xml}");
   assert!(
-    xml.contains("width=\"113.8pt\"") && xml.contains("height=\"85.35pt\""),
+    xml.contains("width=\"113.81pt\"") && xml.contains("height=\"85.36pt\""),
     "{xml}"
   );
   assert!(
-    xml.contains("origin-x=\"-28.45pt\"") && xml.contains("width=\"142.25pt\""),
+    xml.contains("origin-x=\"-28.45pt\"") && xml.contains("width=\"142.26pt\""),
     "{xml}"
   );
   assert!(
-    xml.contains("<g transform=\"translate(78.73,78.73)\">"),
+    xml.contains("<g transform=\"translate(78.74,78.74)\">"),
     "{xml}"
   );
   for label in ["R1", "R2", "R3"] {

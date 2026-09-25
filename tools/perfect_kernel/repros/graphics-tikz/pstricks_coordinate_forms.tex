@@ -1,0 +1,38 @@
+% witness: pst-eucl, egpeirce-doc (`\rput(N){…}` node references); the P1
+%   review of pstricks drawing objects
+% oracle:  latex 0 errors; `\pscircle(A)` is centred on node A and the
+%   `(A|B)`/`([angle=45,nodesep=1]A)`/`(!1 2)` lines join the nodes or the
+%   PostScript point; `(1;45)` is the polar point 1cm at 45 degrees;
+%   `(1,2|3,4)` is (1,4); `\radians` makes 3.14159 half a turn
+% engines: rust(P1 c29f1eb2cf)=0 errors, 4 "Missing number" warnings; the
+%   circle at the origin, every unresolved line from (0,0), the polar line to
+%   the origin, `(1,2|3,4)` as (1,2), `\radians` stored as the integer 6
+%   (angle2 "188.5");
+%   perl=Error-free but "Missing number" warnings and every coordinate after
+%   a node reference misread (ReadPair reads on past `)` for a comma)
+% expect:  0 errors, 0 warnings; an object at a coordinate that cannot be
+%   placed (node, PostScript, algebraic) draws nothing, `\rput` places at the
+%   origin; polar and mixed coordinates resolve; wedge angle2="180"
+% status:  GREEN (w1-pstricks, P1 review)
+% mechanism: pstricks_support_sty.rs `read_ps_coord` turned any comma-less
+%   coordinate into (0,0), and split `([angle=45,nodesep=1]A)` at the comma
+%   inside its brackets. It now classifies the coordinate as pstricks'
+%   `\SpecialCoor` does (pstricks.tex:830-949, `\pst@@CheckCoorType`) into a
+%   `PsCoord`, and a drawing object with an `Unresolved` one draws nothing;
+%   `\radians` stores a float 2π (Perl `Float(6.28319)`, :654), not
+%   `Stored::from(f64)`, which floors to a `Number`.
+\documentclass{article}
+\usepackage{pstricks,pst-node}
+\begin{document}
+\begin{pspicture}(0,0)(4,3)
+\rput(1,1){\rnode{A}{X}}
+\pscircle(A){0.3}
+\psline(1,0)(1;45)
+\psline(!1 2)(2,2)
+\psline(A|B)(2,2)
+\psline(1,2|3,4)(2,2)
+\psline([angle=45,nodesep=1]A)(2,2)
+\rput([angle=45,nodesep=1]A){L}
+\radians\pswedge(0,0){1}{0}{3.14159}\degrees
+\end{pspicture}
+\end{document}

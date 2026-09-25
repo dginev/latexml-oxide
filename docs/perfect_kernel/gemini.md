@@ -79,24 +79,6 @@ Scope for this round: bindings (`latexml_package/`, `latexml_contrib/`) and the 
 names. The orchestrator is working in `latexml_core/`, `latexml_engine/` (except the one file P3
 names) and `latexml_math_parser/`; do not edit them.
 
-### P1 — pstricks drawing commands produce nothing (Rust-only)
-`latexml_package/src/package/pstricks_sty.rs:276-298` and `pstricks_support_sty.rs:92+` swallow
-the arguments of `\psline`, `\psframe`, `\pscircle`, `\psellipse`, `\psarc`, `\pspolygon`,
-`\psdot(s)`, `\psbezier`, `\pscurve`, `\psgrid` and similar. The header comment says "DVI-only".
-Perl builds the SVG primitives (LaTeXML/lib/LaTeXML/Package/pstricks_support.sty.ltxml:661-812:
-`<ltx:rect>`, `<ltx:line>`, `<ltx:circle>`, …) through its PSCoord / PSDimension / PSAngle
-parameter types and `DefPSConstructor`.
-- Repro: `\documentclass{article}\usepackage{pstricks}\begin{document}\begin{pspicture}(0,0)(2,2)\psframe(0,0)(1,1)\end{pspicture}\end{document}`.
-  Rust gives an empty `<picture … width="56.9pt"/>`. Perl gives
-  `<g><rect fill="none" height="39.37" stroke="black" stroke-width="0.8" width="39.37" x="0" y="0"/></g>`.
-- Also: `\pscircle[linewidth=1pt]{0.5}` leaks `.5` as text.
-- Port the parameter types and the constructors, following Perl's line order.
-- Batch 56ir (e79e23ec0d) just changed the framed boxes in the same file (`\psframebox` family,
-  `lx_in_pspicture`, DIVERGENCES #297): keep them.
-- Witnesses: the pstricks manuals under `~/data/perfect_kernel_s123` (grep `pstricks` in
-  corpus sources), e.g. pst-poker-doc, egameps, lsc, pst-vowel, dsptricks.
-- Guard: whole `<g>`/`<rect>`/`<line>` elements for a 4-primitive pspicture, 0 errors.
-
 ### P6 — forest: node keys become structure (carried over from round 11, N1)
 `parse_forest_tokens` (latexml_contrib/src/forest_sty.rs) keeps a node's key list only as an
 opaque string, and `\forestset`/`\bracketset` are `\relax`.

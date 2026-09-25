@@ -9118,3 +9118,47 @@ font of #144. pdflatex prints ‘‘x_y’’ for `\qverb`. The earlier output w
 catchfile_expands_the_name_and_reads_filecontents, qverb_quotes_share_the_verbatim_font,
 qverb_keeps_a_redefined_verb_pair}`, `perfect_kernel_batch54` catchfile guards,
 `perfect_kernel_batch56::make_special_short_verb_is_defined`.
+
+---
+### 301. pstricks drawing objects draw into the picture (Perl: pt geometry in a px picture, several parameters lost)
+
+Perl's pstricks_support.sty.ltxml draws `\psline`, `\psframe`, `\pscircle`, `\psarc`, `\pswedge`,
+`\psdots`, `\pspolygon`, `\pscurve`, `\psgrid` and their relatives as `ltx:line`/`rect`/`circle`/…
+elements. Rust had gobbling stubs instead: every such object vanished. **Rust** (batch 56iw, round-12
+P1, `latexml_package/src/package/pstricks_support_sty.rs`) ports the constructors and reads the
+parameters from the raw `\psset` state. It departs from Perl where Perl disagrees with pdflatex:
+
+| # | Rust | Perl (pstricks_support.sty.ltxml) | pdflatex |
+|---|---|---|---|
+| 1 | points and radii in px | `ptValue` into the px picture (:663, :675, :701, :717, :733, :756, :784, :805): objects at 72.27 % size | objects meet the frame |
+| 2 | `{->}` arrows kept (`terminators`, `arrowlength`) | the `psTerminators` hook (:495) receives the stomach, never sets them | draws the heads |
+| 3 | `framearc` rounds corners | `arcValue` (:430-443) takes `ptValue` of a Float: 0 | rounds (pstricks.tex:2175-2184) |
+| 4 | `\qline` stroked | `DefSimplePSConstructor` (:509-514) never attaches parameters: invisible | strokes |
+| 5 | `\psgrid` reads `*[…]` | no `OptionalMatch:* []` (:826): options printed as text | draws the grid |
+| 6 | negative units normalised | `c1-c0` (:693-694) gives a negative height, which SVG does not draw | draws |
+| 7 | hatch fill styles do not paint the white default | `psGetFill` (:363-373) fills anything but `none` | hatch lines only |
+| 8 | dash only for `linestyle=dashed` | `psGetDash` (:344-355) dashes a solid line that has `dash` set | dashes only dashed |
+| 9 | raw `\pssetlength`/`\psaddtolength` | `Let` to `\setlength`/`\addtolength` (:641-651): a bare number is pt, with warnings | a bare number is in `\psunit` |
+| 10 | `\newpsobject` keys kept as tokens | `Explode(ToString)` (:849-861): egameps 1 error, black lines | resolves the macros |
+| 11 | object group `\begingroup`…`\endgroup` | `{`…`Digest(T_END)` (:479, :500) unbalances the alignment brace ledger (dspTricksManual 0 → 17 errors + Fatal) | no brace in the ledger |
+| 12 | `angle1="0"` emitted | `trunc2` (:425-427) drops 0 | 0 is an angle |
+| 13 | polar `(r;a)` and mixed `(A|B)` resolved; node, `(!…)`, `(*…)`, `(+…)` objects not drawn, `\rput` at the origin | `ReadPair` cartesian only (:103-105): a node reads past `)`, `(!…)` errors, `(1;45)` leaks as text | places every form |
+| 14 | objects outside any picture not drawn | an auto-opened picture sized 0×0 (latex_constructs.pool.ltxml:4943-4950) that the SVG post draws overflow-visible (Post/SVG.pm:110), swallowing the paragraph | draws at the current point |
+| 15 | `\degrees` without argument = 360 | stores undef (:653); angles ×360 | resets to 360 (pstricks.tex:763) |
+| 16 | `\psarcn{->}` → `<-` | the `reverseArrow` regex (:452-459) gives `-<` | head at the clockwise end |
+| 17 | any xcolor model parsed; bare names to hex (except black/white) | `setGraphParams` (:336-338) looks `[HTML]FF8000` up as a name: Error, black | the colour |
+| 18 | `\SpecialCoor`/`\NormalCoor` are the raw pstricks modes (pstricks.tex:746-806), since `\pssetlength` is raw; the coordinate reader always accepts the `\SpecialCoor` forms, pstricks' default since :806 | no-ops (:1037-1038): pst-poly's `\NormalCoor` around an empty `\pssetlength` (pst-poly.tex:68-71) read past `\@nil` (hexgame 1 error) | under `\NormalCoor` reads cartesian coordinates only |
+
+Residuals: an object in an inner box inside a `{pspicture}` auto-opens an unsized nested picture
+(the engine's `ltx:picture` has no `afterClose` sizing; SYNC_STATUS); row 14 would draw at the
+current point once each outside object gets its own zero-size picture; `\multirput` is a no-op
+and drops its text bodies; pstricks_sty.rs's `\psclip{}` no-op overrides the support file's
+`{psclip}` on the LaTeX path. The SVG post does not draw arrow markers, arc strokes or dot fills
+yet (latexml_post svg.rs). Colours pstricks defines itself (plain `\input pstricks`,
+pstricks-color.tex:23-27 `\@newcolor`) are read from its own storage: `green` is #00FF00.
+
+**Guards**: `pstricks_drawing::{pstricks_objects_draw_into_the_picture,
+psset_lengths_read_bare_numbers_in_psunit, pstricks_objects_follow_the_parameter_state,
+pstricks_coordinates_that_cannot_be_placed_draw_nothing, plain_input_pstricks_sizes_its_pictures,
+pstricks_objects_read_macro_keys_colour_models_and_cells, pstricks_coordinate_modes_are_the_raw_ones,
+hexgame_board_converts, pstricks_macro_colour_keys_in_tabularx_cells}`.
