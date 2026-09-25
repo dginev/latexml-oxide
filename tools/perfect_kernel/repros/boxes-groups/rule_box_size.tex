@@ -1,0 +1,15 @@
+% \rule sizes its box from Dimensions (Perl latex_constructs.pool.ltxml:4797-4799); the
+% attribute strings measured 0x0, and bfhsciposter.cls:171 then divided by 0 in
+% \box_gresize_to_ht_plus_dp (11 l3 errors). Raise per latex.ltx:16360-16368 \@rule; hpack
+% floors a negative height or depth at 0 (tex.web §653). pdflatex prints
+% [28.45274pt][1.0pt][0.0pt][26.45274pt][2.0pt][0.0pt][56.9055pt].
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{\rule{1pt}{1cm}}\setbox2\hbox{\rule[-2pt]{1pt}{1cm}}%
+\setbox4\hbox{\rule[-2cm]{1pt}{1cm}}%
+[\the\ht0][\the\wd0][\the\dp0][\the\ht2][\the\dp2][\the\ht4][\the\dp4] \rule{2pt}{3pt}
+\ExplSyntaxOn
+\box_new:N \g_x_box \hbox_gset:Nn \g_x_box {\rule{0pt}{1cm}}
+\box_gresize_to_ht_plus_dp:Nn \g_x_box {2cm}
+\ExplSyntaxOff
+\end{document}

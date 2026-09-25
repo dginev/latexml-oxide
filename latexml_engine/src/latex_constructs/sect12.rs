@@ -579,14 +579,28 @@ pub(crate) fn load() -> Result<()> {
     }
   );
 
+  // The box takes its size from Dimensions, as Perl stores them (latex_constructs
+  // .pool.ltxml:4797-4799). The attribute strings were stored instead, so the
+  // box measured 0×0: bfhsciposter.cls:171 `\hbox_gset:Nn … {\rule{0pt}{1cm}}`
+  // then `\box_gresize_to_ht_plus_dp` divided by 0 and raised 11 l3 `\???`
+  // errors (bfh-ci DEMO-BFHSciPoster). The raise follows latex.ltx:16360-16368
+  // `\@rule`: height h + raise, depth -raise, each floored at 0 by hpack
+  // (tex.web §653; Perl ignores the raise; DIVERGENCES #298). Guard:
+  // `perfect_kernel_batch56::rule_box_has_its_size`.
   DefConstructor!("\\rule[Dimension]{Dimension}{Dimension}",
-    "<ltx:rule ?#offset(yoffset='#offset') width='#width' height='#height'/>",
+    "<ltx:rule ?#offset(yoffset='#offset') width='#rwidth' height='#rheight'/>",
     enter_horizontal => true,
     properties => sub[args] {
+      let dim = |i: usize| args[i].as_ref().and_then(|a| a.get_dimension()).unwrap_or_default();
+      let (raise, width, height) = (dim(0), dim(1), dim(2));
+      let depth = Dimension::new((-raise.value_of()).max(0));
       Ok(stored_map!(
         "offset" => args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
-        "width" => args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
-        "height" => args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default()
+        "rwidth" => args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+        "rheight" => args[2].as_ref().map(|a| a.to_attribute()).unwrap_or_default(),
+        "width" => width,
+        "height" => Dimension::new((height.value_of() + raise.value_of()).max(0)),
+        "depth" => depth
       ))
     }
   );

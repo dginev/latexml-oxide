@@ -6726,3 +6726,59 @@ next token as the operand. The space is taken instead, and the `\hbox` is typese
 19 files under TL `tex/latex` and `tex/generic` spell `\setbox… = \hbox`.
 **Rust (FIXED, batch 56ir):** `\setbox` skips spaces and `\relax` before its box operand, as the
 `Variable` reader already does. Guard `perfect_kernel_batch56::setbox_skips_blanks_before_the_box`.
+
+## 255. A `\noexpand`'d token keeps its no-expand marker after a scanner puts it back (FIXED in Rust)
+
+`\noexpand` suppresses expansion only for the read that meets it (tex.web:7509-7514). get_x_token
+leaves the plain control sequence in `cur_tok` (:7837-7838), and a scanner that reads one token too
+many, such as the optional space after a number (:8755-8757), puts that plain token back. When it is
+read again, it expands. Perl and Rust put back the marked token instead (Rust `\special_relax`
+family), so a later `\csname` met it:
+```latex
+\def\foo{FOO}\expandafter\def\csname a\romannumeral-`\q\noexpand\foo b\endcsname{Y}
+```
+Rust errored `unexpected:\special_relax\foo`; pdflatex defines `\aFOOb`. trimspaces' `\trim@spaces`
+on an argument that starts with a macro takes exactly this path. yquant-doc's 501-error runaway went
+through it.
+**Rust (FIXED, batch 56is):** gullet.rs `unread_scanned` puts back the shadowed plain token from
+`skip_one_space` (expanded) and the digit scanner; `read_keyword` backs up its read tokens plain, as
+scan_keyword does (tex.web §407); and `read_factor` tests the token that ended its digits for the
+point and puts it back once, as scan_dimen tests `cur_tok` (§448, §452). `read_float`, which is not
+a TeX scanner, re-reads the terminator with expansion, so a `\noexpand`'d terminator now expands
+there. The sign scanner keeps the marker: TeX's scan_int examines `cur_tok` right after the signs
+without re-reading it (§440, §444), so there it still acts as `\relax`. Guard
+`perfect_kernel_batch56::noexpand_marker_does_not_survive_a_scan`.
+
+## 256. A braced file name keeps scanning past its `}` (FIXED in Rust)
+
+TeX Live reads `\input{name}` / `\tex_input:D {name}` as a braced file name: the expanded group up to
+its matching `}`, spaces included. Perl's `TeXFileName` (Base_ParameterTypes.pool.ltxml:296-307)
+reads on past the `}` until a space or control sequence, expanding the next macro before the file is
+read:
+```latex
+\begin{filecontents*}{tfnini.tex}
+\def\tfnloaded{LOADED}
+\end{filecontents*}
+\makeatletter\@@input{tfnini.tex}\tfnloaded
+```
+Perl and Rust before the fix: `undefined:\tfnloaded`. pdflatex prints LOADED. The witness is
+texnegar-luatex.sty:17 `\tex_input:D { texnegar-ini.tex }` followed by `\bool_if:NT …`.
+**Rust (FIXED, batch 56is):** base_parameter_types.rs `TeXFileName` reads a braced name to its
+matching brace and stops. The braces stay on the name, so `\input` still strips them and
+auto-loads LaTeX.pool (TeX_FileIO.pool.ltxml:164-169). The group expands as `\edef` does, and
+spaces inside it are kept. Guards `perfect_kernel_batch56::braced_file_name_stops_at_its_brace` and
+`braced_input_of_a_fragment_loads_latex`.
+
+## 257. `\advance`, `\multiply` and `\divide` do not fire `\afterassignment` (FIXED in Rust)
+
+An arithmetic assignment is a prefixed command, so TeX inserts the `\afterassignment` token right
+after it (tex.web §1211 `done:`, §1269; §1236 do_register_command). Perl's primitives in
+TeX_Registers.pool.ltxml set the value and never fire it; Rust kept it pending until a later
+assignment:
+```latex
+\def\f{F}\newdimen\x [\afterassignment\f\advance\x 1pt \the\x]
+```
+pdflatex prints `[F1.0pt]`; Perl and Rust printed `[1.0pt]`. pstricks' raw `\psaddtolength` depends on
+it (lsc).
+**Rust (FIXED, batch 56is):** tex_registers.rs `\advance`/`\multiply`/`\divide` call
+`after_assignment()`. Guard `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.

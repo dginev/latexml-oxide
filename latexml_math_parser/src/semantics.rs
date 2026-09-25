@@ -14,7 +14,11 @@ use rustc_hash::FxHashMap as HashMap;
 
 use self::tree::lookup_lex_node;
 pub use self::tree::{Args, Operator, XM, XProps};
-use crate::{pragmatics::ValidationPragmatics, util::create_xmrefs};
+use crate::{
+  parser::{p_get_value, realize_xmnode},
+  pragmatics::ValidationPragmatics,
+  util::create_xmrefs,
+};
 
 mod curry;
 mod from;
@@ -2263,6 +2267,63 @@ pub fn empty_fenced(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// Perl `%balanced` (MathParser.pm:1348-1356): the close each open delimiter
+/// balances.
+fn balanced_close(open: &str) -> Option<&'static str> {
+  Some(match open {
+    "(" => ")",
+    "[" => "]",
+    "{" => "}",
+    "|" => "|",
+    "||" => "||",
+    "\u{2016}" => "\u{2016}",
+    "\u{2980}" => "\u{2980}",
+    "\u{230A}" => "\u{230B}", // lfloor, rfloor
+    "\u{2308}" => "\u{2309}", // lceil, rceil
+    "\u{2329}" => "\u{232A}", // angle brackets (deprecated code points)
+    "\u{27E8}" => "\u{27E9}", // angle brackets
+    "\u{2225}" => "\u{2225}", // lVert, rVert
+    _ => return None,
+  })
+}
+
+/// Perl `isMatchingClose` (MathParser.pm:1379-1384): the close's value is the
+/// one the open's value balances, each read through `realizeXMNode`, so a
+/// delimiter that is an `XMRef` answers with the value of the node it names.
+fn is_matching_close(open: &XM, close: &XM, ctxt: &ActionContext) -> bool {
+  let value = |xm: &XM| match xm {
+    XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes)
+      .ok()
+      .map(|node| p_get_value(&realize_xmnode(node, ctxt.document))),
+    other => other.get_value(ctxt.nodes).ok().map(Cow::into_owned),
+  };
+  let (Some(open), Some(close)) = (value(open), value(close)) else {
+    return false;
+  };
+  balanced_close(&open).is_some_and(|expect| expect == close)
+}
+
+/// An empty fence from GENERIC open and close delimiters: only when the close
+/// balances the open (Perl MathGrammar:463-464 `balancedClose`, :729). Any other
+/// pair fails the parse, as in Perl, which leaves the formula unparsed with its
+/// content kept. `\mathopen{}\mathclose{\left(x\right)}` lexes as an empty OPEN
+/// and a CLOSE that CARRIES the `x`; building `list@()` from them dropped the
+/// `x` from the content tree (arXiv 2605.13448, 2605.22010, 2605.21750;
+/// guard `perfect_kernel_batch56::empty_fence_needs_a_balanced_close`).
+pub fn balanced_empty_fenced(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  prag: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let (Some(Some(open)), Some(Some(close))) = (args.first(), args.get(1))
+    && !is_matching_close(open, close, &ctxt)
+  {
+    return Err("empty fence: the close does not balance the open (Perl balancedClose)".into());
+  }
+  empty_fenced(rule_id, args, prag, ctxt)
 }
 
 // similar to fenced but the operator is a kind of tuple or interval, such as "open-interval"

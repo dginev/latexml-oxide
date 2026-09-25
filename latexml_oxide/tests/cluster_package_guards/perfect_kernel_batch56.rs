@@ -3,7 +3,8 @@
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
 use super::perfect_kernel_batch46::{
-  convert, convert_args, convert_files, convert_with, error_count, warning_count,
+  convert, convert_args, convert_files, convert_files_with, convert_with, error_count,
+  warning_count,
 };
 
 /// Self-skip helper: is this file in the host TeX tree?
@@ -5869,6 +5870,10 @@ fn let_at_left_left_does_not_loop() {
     xml.contains(r#"role="CLOSE" stretchy="true">)</XMTok>"#),
     "{xml}"
   );
+  // The `\mathopen{}\mathclose\bgroup\left` idiom is left unparsed, as in Perl,
+  // not parsed into an empty `list@()` that drops the operands (56is).
+  assert!(!xml.contains("list@()"), "{xml}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
 }
 
 /// bytedance_seed's binding defined `\author[]{}` as `\author{#2}` — itself: a
@@ -9185,4 +9190,145 @@ fn biber_bib_percent_comments_keep_the_entry() {
     html.contains(r#"<span class="ltx_text ltx_bib_title">Beloved Things</span>"#),
     "{html}"
   );
+}
+
+/// An empty fence parses only when its close balances its open (Perl
+/// MathGrammar:463-464 `balancedClose`; MathParser.pm:1348-1384 `%balanced`,
+/// `isMatchingClose`). `\mathopen{}\mathclose{\left(x\right)}` lexes as an empty
+/// OPEN and a CLOSE that carries the `x`: the generic `open close` alternative
+/// built `list@()` and dropped the `x` from the content tree, silently (arXiv
+/// 2605.13448: 98 formulas; 2605.22010: 160). Perl leaves it unparsed with its
+/// content kept, and warns once; so do we. A balanced empty fence still parses.
+#[test]
+fn empty_fence_needs_a_balanced_close() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/empty_fence_balanced_close.tex");
+  let (stderr, xml) = convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr.matches("Warning:unparsed_math:").count(),
+    1,
+    "{stderr}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMTok meaning="absent" role="OPEN"/><XMDual role="CLOSE"><XMRef idref="p1.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.m1.1">x</XMTok><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath>"#,
+  );
+  assert!(!xml.contains("list@()"), "{xml}");
+  let (stderr, xml) = convert(
+    "\\documentclass{article}\\begin{document}$\\lfloor\\rfloor$\\end{document}\n",
+    false,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(xml.contains(r#"text="list@()""#), "{xml}");
+  latexml::util::test::assert_element(
+    &xml,
+    "XMath",
+    &[],
+    r#"<XMath><XMDual><XMApp><XMTok meaning="list"/></XMApp><XMWrap><XMTok name="lfloor" role="OPEN" stretchy="false">⌊</XMTok><XMTok name="rfloor" role="CLOSE" stretchy="false">⌋</XMTok></XMWrap></XMDual></XMath>"#,
+  );
+}
+
+/// `\rule` sizes its box from Dimensions, as Perl stores them
+/// (latex_constructs.pool.ltxml:4797-4799); the attribute strings measured 0×0,
+/// so bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` divided by zero (11 l3
+/// `\???` errors, bfh-ci DEMO-BFHSciPoster). The raise follows latex.ltx
+/// :16360-16368 `\@rule`, floored at 0 by hpack; pdflatex prints the same seven
+/// sizes.
+#[test]
+fn rule_box_has_its_size() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/boxes-groups/rule_box_size.tex");
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>[28.45274pt][1.0pt][0.0pt][26.45274pt][2.0pt][0.0pt][56.9055pt] <rule height="3.0pt" width="2.0pt"/></p>"#,
+  );
+}
+
+/// A braced file name ends at its matching `}` (TeX Live's braced names); the
+/// scan read on past it, expanding the next macro before the file was read, so
+/// `\@@input{tfnini.tex}\tfnloaded` met an undefined `\tfnloaded`
+/// (texnegar-luatex.sty:17 `\tex_input:D { texnegar-ini.tex }`; Perl alike).
+#[test]
+fn braced_file_name_stops_at_its_brace() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/braced_file_name.tex");
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>LOADED X Y</p>");
+}
+
+/// `\advance`, `\multiply` and `\divide` are assignments: the `\afterassignment`
+/// token goes in right after each (tex.web §1211 `done:`, §1269). It stayed
+/// pending and fired at a later assignment (pstricks' raw `\psaddtolength`,
+/// lsc; Perl never fires it, KNOWN_PERL_ERRORS #257). pdflatex prints the same.
+#[test]
+fn afterassignment_fires_after_arithmetic() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/afterassignment_arithmetic.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>[F1.0pt][F2.0pt][F1.0pt][F3]</p>");
+}
+
+/// A braced `\input{…}` keeps its braces through the file-name scan, so `\input`
+/// still strips them and loads LaTeX.pool (TeX_FileIO.pool.ltxml:164-169): a
+/// LaTeX fragment input by a main file with no `\documentclass` keeps its
+/// `\section`. Stopping the scan at the `}` must not drop that.
+#[test]
+fn braced_input_of_a_fragment_loads_latex() {
+  let (stderr, xml) = convert_files_with(
+    "\\input{tfnfrag}\n\\bye\n",
+    &[("tfnfrag.tex", "\\section{Intro}Fragment text.\n")],
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "section",
+    &[],
+    r#"<section inlist="toc" xml:id="section1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Intro</title><para xml:id="section1.p1"><p>Fragment text.</p></para></section>"#,
+  );
+}
+
+/// A scanner puts back a `\noexpand`'d token it read but does not use as its
+/// plain self: `\noexpand` suppresses expansion only for the read that met it
+/// (tex.web:7509-7514, :8755-8757). The `\special_relax` marker survived the
+/// optional-space check of `\romannumeral-`\q`, and `\csname` met it: trimspaces'
+/// `\trim@spaces` on an argument starting with a macro (yquant-doc's 501-error
+/// runaway; Perl alike). pdflatex prints `[macro:->FOO][Y]`.
+#[test]
+fn noexpand_marker_does_not_survive_a_scan() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/noexpand_marker_scan_putback.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>[macro:-¿FOO][Y]</p>");
+}
+
+/// Under the XeTeX persona `\strcmp` is XeTeX's name for `\pdfstrcmp`
+/// (expl3-code.tex:141-143); documents call it by that name
+/// (cdcmd-test.tex:42-55, input by cdcmd-cn.tex:144).
+#[test]
+fn xetex_persona_has_strcmp() {
+  let tex = "\\documentclass{article}\\begin{document}\
+             [\\ifnum\\strcmp{ab}{ab}=0 same\\else different\\fi]\
+             [\\number\\strcmp{a}{b}]\\end{document}\n";
+  let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,xetex]latexml.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>[same][-1]</p>");
 }

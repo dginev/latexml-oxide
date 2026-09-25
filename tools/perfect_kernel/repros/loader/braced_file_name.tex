@@ -1,0 +1,8 @@
+% A braced file name ends at its matching brace (TeX Live braced names); the scan read on and
+% expanded the next macro before the file was read (texnegar-luatex.sty:17). pdflatex: LOADED.
+\documentclass{article}
+\begin{filecontents*}{tfnini.tex}
+\def\tfnloaded{LOADED}
+\end{filecontents*}
+\begin{document}\makeatletter\@@input{tfnini.tex}\tfnloaded\makeatother
+\input{tfnini} X\input tfnini.tex Y\end{document}

@@ -1304,7 +1304,9 @@ pub fn read_x_token(
         // readXToken returns a bare `\special_relax`, dropping the identity;
         // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
         // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
-        // 1804.01117 — survives a number/macro scan for the surrounding parser.)
+        // 1804.01117 — reaches the surrounding parser as itself. The marker
+        // lasts for this one read: a scanner that puts the token back puts
+        // back its plain self (`unread_scanned`, KNOWN_PERL_ERRORS #255).)
         return Ok(Some(crate::token::noexpand_family(&unexpanded)));
       }
     }
@@ -1945,6 +1947,13 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
     if ok {
       return Ok(Some(keyword.to_string()));
     } else {
+      // scan_keyword backs up the plain tokens it read (tex.web §407): a
+      // `\noexpand`'d one goes back as its plain self (see `unread_scanned`).
+      for token in &mut matched {
+        if let Some(plain) = token.noexpand_shadowed() {
+          *token = plain;
+        }
+      }
       unread(matched.into());
     }
   }
@@ -3351,6 +3360,18 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   false
 }
 
+/// Put back a token an EXPANDING scan read but does not use (TeX's
+/// `back_input` of `cur_tok`). A `\noexpand`'d token goes back as its plain
+/// self: `\noexpand` suppresses expansion only for the read that met it
+/// (tex.web:7509-7514); get_x_token leaves the plain control sequence in
+/// `cur_tok` (:7837-7838), and the optional-space check just calls `back_input`
+/// (:8755-8757). The marker survived instead, and a later `\csname` met
+/// `\special_relax\foo`: trimspaces' `\trim@spaces` on an argument starting with
+/// a macro (`\romannumeral-`\q\noexpand\foo`), yquant-doc's 501-error runaway.
+/// Perl alike (KNOWN_PERL_ERRORS #255). Guard:
+/// `perfect_kernel_batch56::noexpand_marker_does_not_survive_a_scan`.
+fn unread_scanned(token: Token) { unread_one(token.noexpand_shadowed().unwrap_or(token)); }
+
 /// Skip one optional space.
 /// If `expanded` is true, acts like `<one optional space>` and expands tokens (readXToken).
 /// Perl: skip1Space($self, $expanded)
@@ -3363,7 +3384,11 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
   if let Some(t) = token
     && !is_space_or_implicit_space(&t)
   {
-    unread_one(t);
+    if expanded {
+      unread_scanned(t);
+    } else {
+      unread_one(t);
+    }
   }
   Ok(())
 }
@@ -3387,7 +3412,9 @@ pub fn read_optional_signs() -> Result<bool> {
   Ok(sign)
 }
 
-fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
+/// Scan digits with expansion, returning them with the token that ended them
+/// (TeX's `cur_tok`), which is NOT put back.
+fn scan_digits(is_digit: fn(char) -> bool) -> Result<(String, Option<Token>)> {
   let mut result = String::new();
   while let Some(token) = read_x_token(None, false, None)? {
     let digit_opt = token.with_str(|s| {
@@ -3397,16 +3424,22 @@ fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
         _ => None,
       }
     });
-    if let Some(digit) = digit_opt {
-      result.push(digit);
-    } else {
-      if !(skip && is_space_or_implicit_space(&token)) {
-        unread_one(token);
-      }
-      break;
+    match digit_opt {
+      Some(digit) => result.push(digit),
+      None => return Ok((result, Some(token))),
     }
   }
-  Ok(result)
+  Ok((result, None))
+}
+
+fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
+  let (digits, end) = scan_digits(is_digit)?;
+  if let Some(token) = end
+    && !(skip && is_space_or_implicit_space(&token))
+  {
+    unread_scanned(token);
+  }
+  Ok(digits)
 }
 
 // ```
@@ -3415,13 +3448,16 @@ fn read_digits(is_digit: fn(char) -> bool, skip: bool) -> Result<String> {
 // ```
 /// Return a number (Rust f64 number)
 pub fn read_factor() -> Result<Option<f64>> {
-  let mut factor = read_digits(is_decimal_digit, false)?;
-  let mut token_opt = read_x_token(None, false, None)?;
+  // scan_dimen tests the token that ended the digits (`cur_tok`) for the
+  // decimal point without reading it again (tex.web §448, §452), then puts it
+  // back once, a `\noexpand`'d token as its plain self (`unread_scanned`).
+  let (mut factor, mut token_opt) = scan_digits(is_decimal_digit)?;
   if let Some(ref token) = token_opt {
     let sym = token.get_sym();
     if sym == pin!(".") || sym == pin!(",") {
-      factor = s!("{}.{}", factor, read_digits(is_decimal_digit, false)?);
-      token_opt = read_x_token(None, false, None)?;
+      let (fraction, end) = scan_digits(is_decimal_digit)?;
+      factor = s!("{factor}.{fraction}");
+      token_opt = end;
     }
   }
 
@@ -3431,12 +3467,13 @@ pub fn read_factor() -> Result<Option<f64>> {
     if let Some(token) = token_opt
       && token.get_catcode() != Catcode::SPACE
     {
-      unread_one(token);
+      unread_scanned(token);
     }
     Ok(Some(factor_f64))
   } else {
+    // No digits: back_input, and scan_int reads the token again (§448).
     if let Some(token) = token_opt {
-      unread_one(token);
+      unread_scanned(token);
     }
     match read_normal_integer()? {
       None => Ok(None),

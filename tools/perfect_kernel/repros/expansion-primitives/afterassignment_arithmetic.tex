@@ -1,0 +1,11 @@
+% \advance, \multiply and \divide are assignments: the \afterassignment token is inserted right
+% after them (tex.web §1211 prefixed_command done:, §1269, §1236). It stayed pending
+% and fired at some later assignment; pstricks' raw \psaddtolength depends on it (lsc).
+% Perl never fires it. pdflatex prints
+% [F1.0pt][F2.0pt][F1.0pt][F3].
+\documentclass{article}
+\begin{document}
+\def\f{F}\newdimen\x \newcount\n
+[\afterassignment\f\advance\x 1pt \the\x][\afterassignment\f\multiply\x 2 \the\x]%
+[\afterassignment\f\divide\x by 2 \the\x][\afterassignment\f\global\advance\n 3 \the\n]
+\end{document}

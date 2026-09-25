@@ -115,6 +115,13 @@ LoadDefinitions!({
         expire_current_token();
       }
     }
+    // An arithmetic assignment is a prefixed command: the `\afterassignment`
+    // token goes in right after it (tex.web §1211 `done:`, §1269), reached
+    // after §1236 do_register_command even on an error. It stayed pending and fired
+    // at a later assignment; pstricks' raw `\psaddtolength` depends on it
+    // (lsc). Perl never fires it (KNOWN_PERL_ERRORS #257). Guard:
+    // `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
+    after_assignment();
   });
 
   DefPrimitive!("\\multiply Variable SkipKeyword:by Number", sub[(var,scale)] {
@@ -134,6 +141,7 @@ LoadDefinitions!({
       let message = s!("\\multiply expected a Variable argument, but got nothing.");
       Error!("expected","variable", message);
     }
+    after_assignment(); // tex.web §1269, as for `\advance`
   });
 
   DefPrimitive!("\\divide Variable SkipKeyword:by Number", sub[(var,scale)] {
@@ -158,6 +166,7 @@ LoadDefinitions!({
       let message = s!("\\divide expected a Variable argument, but got nothing.");
       Error!("expected","variable", message);
     }
+    after_assignment(); // tex.web §1269, as for `\advance`
   });
 });
 

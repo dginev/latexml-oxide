@@ -684,7 +684,7 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lbracket rbracket => empty_fenced
              | lbrace rbrace => empty_fenced
              | langle_open rangle_close => empty_fenced
-             | open close => empty_fenced;
+             | open close => balanced_empty_fenced;
       factor += fenced_factor;
 
       // Perl: addTrigFunArgs → trigBarearg → aTrigBarearg moreTrigBareargs

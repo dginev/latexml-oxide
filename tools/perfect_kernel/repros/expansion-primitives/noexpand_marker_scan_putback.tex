@@ -1,0 +1,7 @@
+% A scanner puts a \noexpand-ed token back as its plain self (tex.web:7509-7514, :8755-8757);
+% the marker survived and \csname met \special_relax\foo (trimspaces \trim@spaces; yquant-doc).
+\documentclass{article}
+\def\foo{FOO}
+\expandafter\def\csname a\romannumeral-`\q\noexpand\foo b\endcsname{Y}
+\edef\x{\romannumeral-`\q\noexpand\foo}
+\begin{document}[\meaning\x][\csname aFOOb\endcsname]\end{document}

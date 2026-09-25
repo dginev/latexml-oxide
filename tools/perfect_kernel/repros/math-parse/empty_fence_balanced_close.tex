@@ -1,0 +1,8 @@
+% An empty fence parses only when the close balances the open (Perl MathGrammar:463-464
+% balancedClose, MathParser.pm:1348-1384). \mathopen{}\mathclose{\left(x\right)} lexes as an
+% empty OPEN and a CLOSE carrying the x; building list@() from them dropped the x from the
+% content tree (arXiv 2605.13448, 2605.22010, 2605.21750). Perl leaves it unparsed, x kept.
+\documentclass{article}
+\begin{document}
+$\mathopen{}\mathclose{\left( x \right)}$
+\end{document}

@@ -6866,8 +6866,12 @@ expansion in the `\openout` filename scan, is clean).
 **Rust behavior**: `base_parameter_types.rs` `TeXFileName` reads with
 `read_x_token(…, Some(true))`, expanding protected macros too (tex.web §526
 `scan_file_name` expands the filename with `get_x_token`, which is why TeX itself
-sees the expansion). The brace-depth tracking Gemini's original commit added is
-NOT kept: braced `\input{…}` is stripped by `tex_file_io.rs` already.
+sees the expansion). That covers an unbraced name. A braced name (`\input{…}`,
+`\tex_input:D {…}`) follows TeX Live's braced scan (`scan_toks(false,true)`): it
+stops at the matching `}`, keeps its spaces and a `\protected` macro, and keeps
+its braces, which `\input` strips (batch 56is, KNOWN_PERL_ERRORS #256). The
+witness below is unaffected: LaTeX's `\input{…}` goes through `\ltx@input`'s
+`\csname` expansion (sect11.rs), not `TeXFileName`.
 **Why**: TeX's own filename scan; a same-run write-then-read of a generated file
 (the K7/VFS lane) depends on it.
 **Witnesses**: proof-at-the-end/proof-at-the-end_demo (2 → 0).
@@ -9012,3 +9016,15 @@ it emits `<ltx:text framed='rectangle'>`, an inline bordered box, as pdflatex dr
 sesamath-doc-fr, pst-pdf-example). Circle, oval, shadow and double frames are drawn as a rectangle
 in running text. Fill and stroke colours are not modelled, and neither is `fillframe`, whose SVG
 filter is not ported. **Guard**: `perfect_kernel_batch56::psframebox_keeps_its_body`.
+
+---
+### 298. `\rule[raise]` sizes its box as latex.ltx does (Perl: the raise is ignored)
+
+Perl stores `\rule`'s Dimensions as its width and height (latex_constructs.pool.ltxml:4797-4799) and
+ignores the raise. latex.ltx:16360-16368 `\@rule` builds `\vrule` with height h + raise and depth
+−raise; hpack floors each at 0 (tex.web §653). **Rust** (batch 56is, sect12.rs) sizes the box that
+way: `\rule[-2pt]{1pt}{1cm}` measures 26.45274pt high and 2.0pt deep, and `\rule[-2cm]{1pt}{1cm}`
+measures 0pt high and 56.9055pt deep, as pdflatex prints. The attribute
+strings are unchanged. Before this batch Rust stored only the strings, and the box measured 0×0.
+bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` then divided by zero (bfh-ci SciPoster, 11
+errors). **Guard**: `perfect_kernel_batch56::rule_box_has_its_size`.

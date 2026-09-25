@@ -652,6 +652,10 @@ LoadDefinitions!({
     // expanding to the revision string); l3sys and iftex probe them.
     DefRegister!("\\XeTeXversion" => Number::new(0), readonly => true);
     RawTeX!(r"\def\XeTeXrevision{.999997}");
+    // XeTeX spells pdfTeX's `\pdfstrcmp` as `\strcmp` (expl3-code.tex:141-143
+    // lets the one to the other); documents call it by that name
+    // (cdcmd-test.tex:42-55, input by cdcmd-cn.tex:144).
+    RawTeX!(r"\let\strcmp\pdfstrcmp");
     iftex_sty::define_xetex_interchar()?;
     set_l3sys_engine("xetex", "xelatex")?;
   });

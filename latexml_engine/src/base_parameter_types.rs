@@ -974,7 +974,38 @@ LoadDefinitions!({
     // filename expands (proof-at-the-end.sty:112/127
     // `\pratendGeneratePrefixFile`); Perl's `readXToken(0)` leaves it
     // unexpanded. OXIDIZED_DESIGN_DIVERGENCES #197.
-    while let Some(token) = read_x_token(Some(false), false, Some(true))? {
+    let mut next = read_x_token(Some(false), false, Some(true))?;
+    // TeX Live's braced file name (`\input{name}`, `\tex_input:D {name}`):
+    // the group up to its matching `}` IS the name, spaces included, and the
+    // scan stops there. It read on past the `}` until a space or control
+    // sequence, expanding the next macro before the file was read:
+    // texnegar-luatex.sty:17 `\tex_input:D { texnegar-ini.tex }` followed by
+    // `\bool_if:NT …` (texnegar-luatex ×3; Perl Base_ParameterTypes.pool
+    // .ltxml:296-307 alike, KNOWN_PERL_ERRORS #256). The braces stay on the
+    // name, as before: `\input` strips them and auto-loads LaTeX.pool from them
+    // (TeX_FileIO.pool.ltxml:164-169). The group expands as `\edef` does (a
+    // `\protected` macro is kept), as TeX Live's braced scan does. An unclosed `{`
+    // runs to the end of the input, as it does in pdflatex. Guard:
+    // `perfect_kernel_batch56::braced_file_name_stops_at_its_brace`.
+    if let Some(open) = next.take_if(|t| t.get_catcode() == BEGIN) {
+      tokens.push(open);
+      let mut depth = 1usize;
+      while let Some(token) = read_x_token(Some(false), false, None)? {
+        match token.get_catcode() {
+          BEGIN => depth += 1,
+          END => {
+            depth -= 1;
+            if depth == 0 {
+              tokens.push(token);
+              break;
+            }
+          },
+          _ => {},
+        }
+        tokens.push(token);
+      }
+    }
+    while let Some(token) = next {
       let cc = token.get_catcode();
       if matches!(cc, SPACE | EOL | COMMENT | CS) {
         if matches!(cc, CS) {
@@ -983,6 +1014,7 @@ LoadDefinitions!({
         break
       }
       tokens.push(token);
+      next = read_x_token(Some(false), false, Some(true))?;
     }
     // Strip outer "" ???
     let quote = T_OTHER!("\"");
