@@ -9246,7 +9246,7 @@ Manual A/B over the 339 manuals with a clean lualatex/xelatex oracle: tipauni-ex
 greek-fontenc char-list 64.6 → 65.8, pgfornament tikzrput 97.7 → 98.1, no recall loss; errors
 375 → 375, warnings 15,829 → 15,902 (char-list +74, ijsra −1).
 
-**Regression this batch introduces, on one manual**: greek-fontenc char-list. TU routes textalpha's
+**Regression this batch introduced, on one manual (resolved in 56jf, #308)**: greek-fontenc char-list. TU routes textalpha's
 Greek accents through tuenc.def's `\add@unicode@accent` (`\char"0313\relax`), and our case changer
 (`lx_read_and_change_case`, latex_constructs/mod.rs) expands robust text commands and ignores
 l3text's case-change equivalents (textalpha.sty:213 `\DeclareCaseChangeEquivalent`), so in
@@ -9414,3 +9414,30 @@ typewriter runs up 3-15×; recall, errors and goldens unchanged. Left: `\fontnam
 base font (`cmr10 at 14.4pt`, pdflatex `cmr12`); the default codes are fixed to cmr/cmss/cmtt/bx.
 
 **Guards**: `nfss_font_state::*` (9), `math_text_font_restore::*`.
+
+### 308. `\MakeUppercase`/`\MakeLowercase` follow l3text's declarations (Perl: `latexChangeCase` expands everything)
+
+Perl's `latexChangeCase` (latex_constructs.pool.ltxml:5520-5563) reads the argument with
+`readXToken`, so every command is expanded before it is case-changed; it consults the exclusion
+list only after `\protect` and builds `\@uclclist` last-wins (:5491-5500). The kernel's
+`\MakeUppercase` has been l3text's `\text_uppercase:n` since 2022: `\text_expand:n`
+(expl3-code.tex:36164-36384) and the case loop (:36622-36767). **Rust** (batch 56je, worker W10)
+follows l3text in one loop: for each command, read unexpanded, it checks the exclusion list (bare
+commands too, so `\label` keeps its key), l3text's expand-equivalents (`\l__text_expand_<cs>_tl`,
+`\exp_not:n`), the case-change equivalent (`\l__text_case_<cs>_tl`, written by
+`\DeclareCaseChangeEquivalent`, latex.ltx:22400), `\CaseSwitch`, the letter-like table (l3text's
+constants plus `\@uclclist`, first-wins, :37921-37977), and otherwise expands one level and checks
+again. Checking declarations before expanding any command approximates l3text, which leaves only
+robust, protected and encoding commands unexpanded. An excluded command's arguments are taken up to
+the first `{`, as `\__text_change_case_exclude:nnnNw` does.
+
+Consequences that match pdflatex but change our output: textalpha's Greek accents drop in
+uppercase (`\MakeUppercase{\>\`α}` → Ὰ; greek-fontenc char-list 84 warnings → 0); a user-redefined
+`\v`/`\d`/`\b`/`\c`/`\r` stays unexpanded and its argument is case-changed;
+`\renewcommand\th{\textsuperscript{th}}` + `\MakeUppercase{5\th}` gives `5Þ` (was `5TH`). Where we
+differ from l3text: our exclusion list adds `\thanks`, `\@ensuremath`, `\NoCaseChange` (so `\thanks`
+text keeps its case where pdflatex uppercases it) and lacks `\begin`, `\end`, `\babelshorthand`,
+`\cite␣`; `\DeclareUppercaseMapping` (code-point mappings, lgrenc.def:875-896) stays a no-op; the
+`\l__text_expand_*` tables exist only when expl3 is loaded (dump vs NODUMP runs differ).
+
+**Guards**: `case_change_equivalents::*`.

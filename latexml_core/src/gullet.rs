@@ -1266,6 +1266,103 @@ fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
   }
 }
 
+/// Whether `defn` expands when met by a reader that `fully_expand`s or not:
+/// the gate `read_x_token` applies (protected macros, and binding-defined
+/// optional-argument macros outside typesetting, wait unless fully
+/// expanding; see [`optional_arg_protected`]).
+#[inline]
+fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
+  defn.is_expandable() && (fully_expand || (!defn.is_protected() && !optional_arg_protected(defn)))
+}
+
+/// Expand `token` (defined as `defn`) ONE level and push the expansion back
+/// onto the input, as `read_x_token` does for each expandable token it meets.
+#[inline]
+fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<()> {
+  local_current_token(token);
+  // Grow the native stack ahead of deep expansion recursion (xint
+  // `\XINT_…` number-arg chains nest tens of thousands deep) so
+  // finite-deep recursion completes instead of overflowing the conversion
+  // thread's 256 MB stack → SIGABRT (Perl degrades via `$MAXSTACK`). This
+  // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
+  // of `read_x_token` / `expand_once_partial`. Same idiom as the recursive walks in `document.rs`
+  // / the math parser; params in `crate::stack_guard`.
+  #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
+  let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
+  // token-locators: fill-only origin inheritance. A macro that
+  // expands into synthesized tokens with no origin — e.g.
+  // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
+  // would leave its output unlocatable. Attribute such tokens to
+  // the invocation site so the rendered text is source-mapped.
+  // The inherited handle is flagged `inherited` (one push per
+  // expansion, shared by every result token), so `child_span`'s
+  // genuine-origin-first scan never lets a macro's structural body
+  // literals widen its arguments' content-exact span. We also never
+  // overwrite a token that already carries an origin. See
+  // SOURCE_PROVENANCE.md §3.1.3.
+  #[cfg(feature = "token-locators")]
+  {
+    let inv_loc = token.loc;
+    if inv_loc != 0 {
+      let mut inherited = 0u32;
+      for t in invoked.unlist_mut() {
+        if t.loc == 0 {
+          if inherited == 0 {
+            inherited = crate::token::push_inherited_origin(inv_loc);
+          }
+          t.loc = inherited;
+        }
+      }
+    }
+  }
+  if *TRACE_GROUP_END {
+    // Print per-event {macro, delta} so post-processing can sum
+    // by-macro to find which expandable CS contributes net +/- 1
+    // imbalance across the run. Format: TRACE_GE delta CS
+    let (mut begs, mut ends) = (0, 0);
+    for t in invoked.unlist_ref() {
+      if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
+        begs += 1;
+      } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
+        ends += 1;
+      }
+    }
+    if begs > 0 || ends > 0 {
+      eprintln!(
+        "TRACE_GE delta={} begs={} ends={} cs={}",
+        begs - ends,
+        begs,
+        ends,
+        token
+      );
+    }
+  }
+  unread_expansion(invoked);
+  expire_current_token();
+  Ok(())
+}
+
+/// Expand `token`, just read, ONE level if `read_x_token(Some(false), ..)`
+/// would expand it, pushing the expansion back onto the input, and report
+/// whether it did. A reader that must look at every token an expansion yields
+/// before expanding it further (the case changer's l3text checks) steps with
+/// this; a token it leaves alone is still the caller's to handle (unread it
+/// for `read_x_token` to return, stub or resolve).
+pub fn expand_once_partial(token: Token) -> Result<bool> {
+  let _depth_guard = ExpandDepthGuard::enter()?;
+  let defn = with_meaning(&token, |defn_opt| match defn_opt {
+    Some(Stored::Token(_)) | Some(Stored::None) | None => None,
+    Some(other) => other.to_definition(),
+  });
+  match defn {
+    Some(defn) if expands_now(&defn, false) => {
+      invoke_expansion(token, &defn)?;
+      Ok(true)
+    },
+    _ => Ok(false),
+  }
+}
+
 /// Read the next non-expandable token, expanding until one appears. Hot path —
 /// `read_token` is folded in. `toplevel` (default true): on mouth exhaustion,
 /// step to the containing mouth. `fully_expand` (default = toplevel): expand
@@ -1389,13 +1486,10 @@ pub fn read_x_token(
         Some(Stored::None) | None => Outcome::Undefined,
         Some(other) => match other.to_definition() {
           Some(defn) => {
-            if !defn.is_expandable()
-              || (defn.is_protected() && !fully_expand)
-              || (!fully_expand && optional_arg_protected(&defn))
-            {
-              Outcome::NonExpandable
-            } else {
+            if expands_now(&defn, fully_expand) {
               Outcome::Invoke(defn)
+            } else {
+              Outcome::NonExpandable
             }
           },
           None => Outcome::Undefined,
@@ -1425,66 +1519,7 @@ pub fn read_x_token(
           return Ok(Some(token));
         },
         Outcome::Invoke(defn) => {
-          local_current_token(token);
-          // Grow the native stack ahead of deep expansion recursion (xint
-          // `\XINT_…` number-arg chains nest tens of thousands deep) so
-          // finite-deep recursion completes instead of overflowing the conversion
-          // thread's 256 MB stack → SIGABRT (Perl degrades via `$MAXSTACK`). This
-          // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
-          // of `read_x_token`. Same idiom as the recursive walks in `document.rs`
-          // / the math parser; params in `crate::stack_guard`.
-          #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
-          let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
-          // token-locators: fill-only origin inheritance. A macro that
-          // expands into synthesized tokens with no origin — e.g.
-          // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —
-          // would leave its output unlocatable. Attribute such tokens to
-          // the invocation site so the rendered text is source-mapped.
-          // The inherited handle is flagged `inherited` (one push per
-          // expansion, shared by every result token), so `child_span`'s
-          // genuine-origin-first scan never lets a macro's structural body
-          // literals widen its arguments' content-exact span. We also never
-          // overwrite a token that already carries an origin. See
-          // SOURCE_PROVENANCE.md §3.1.3.
-          #[cfg(feature = "token-locators")]
-          {
-            let inv_loc = token.loc;
-            if inv_loc != 0 {
-              let mut inherited = 0u32;
-              for t in invoked.unlist_mut() {
-                if t.loc == 0 {
-                  if inherited == 0 {
-                    inherited = crate::token::push_inherited_origin(inv_loc);
-                  }
-                  t.loc = inherited;
-                }
-              }
-            }
-          }
-          if *TRACE_GROUP_END {
-            // Print per-event {macro, delta} so post-processing can sum
-            // by-macro to find which expandable CS contributes net +/- 1
-            // imbalance across the run. Format: TRACE_GE delta CS
-            let (mut begs, mut ends) = (0, 0);
-            for t in invoked.unlist_ref() {
-              if *t == T_CS!("\\group_begin:") || *t == T_CS!("\\begingroup") {
-                begs += 1;
-              } else if *t == T_CS!("\\group_end:") || *t == T_CS!("\\endgroup") {
-                ends += 1;
-              }
-            }
-            if begs > 0 || ends > 0 {
-              eprintln!(
-                "TRACE_GE delta={} begs={} ends={} cs={}",
-                begs - ends,
-                begs,
-                ends,
-                token
-              );
-            }
-          }
-          unread_expansion(invoked);
-          expire_current_token();
+          invoke_expansion(token, &defn)?;
           continue;
         },
       }

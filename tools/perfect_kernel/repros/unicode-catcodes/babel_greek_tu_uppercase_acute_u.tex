@@ -1,0 +1,23 @@
+% Under babel-greek with fontspec (TU), Rust typesets Greek-language text in the
+% LGR encoding where lualatex stays in TU: a plain `U` comes out as LGR slot
+% 0x55 (ϒ) instead of U. Root (W11's): babel-greek's encoding set-up is cut
+% short by the skipped `\input` W11 is fixing, so the TU branch (tuenc-greek.def)
+% never takes effect. Since W10 the case changer maps `\'` to `\accACUTE`
+% (babel-greek's \@uclclist extension, greek.ldf:588, which l3text's letter-like
+% table honours, expl3-code.tex:37953-37988), so `\MakeUppercase{\'u}` reaches
+% the LGR composite too; the tip gave Ú only because it expanded `\'` before
+% casing its argument.
+% witness: greek-fontenc test-tuenc-greek (lualatex): "ύύ úú ὺὺ ùù→ ΥΥ UÚ ΥΥ UÙ"
+% oracle:  lualatex 0 errors: [U] [Ú] [ú] [Ú] [UÚ]
+% engines: rust (56ja) = [ϒ] [Ú] [ú] [Ú] [ϒÚ]; rust (W10) = [ϒ] [Ú] [ú] [ϒ] [ϒϒ]
+% expect:  [U] [Ú] [ú] [Ú] [UÚ]
+% status:  RED (root: W11's skipped \input in babel-greek's TU set-up)
+\documentclass{article}
+\usepackage[LGR,TU]{fontenc}
+\usepackage{fontspec}
+\usepackage[normalize-symbols]{textalpha}
+\usepackage[greek,english]{babel}
+\begin{document}
+\selectlanguage{greek}
+[U] [\'U] [\'u] [\MakeUppercase{\'u}] [\MakeUppercase{u\'u}]
+\end{document}

@@ -1340,22 +1340,53 @@ pub(crate) fn load() -> Result<()> {
     // the pair members (\ae, \oe, ...) are robust-wrapped: deep-expanding
     // would unfold each to `\protect <cs-munged>`, shifting pair indices
     // and mis-registering the case mapping.
-    let pairs: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
+    let listed: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
       Some(Stored::Expandable(exp)) => match exp.get_expansion() {
         Some(ExpansionBody::Tokens(tks)) => tks.clone().unlist(),
         _ => Vec::new(),
       },
       _ => Vec::new(),
     };
-    let mut i = 0;
-    while i + 1 < pairs.len() {
-      let lower = pairs[i];
-      let upper = pairs[i + 1];
+    // l3text's letter-like table (expl3-code.tex:37926-37952) starts from
+    // fixed `<upper> <lower>` constants and `\i`/`\j` -> I/J, then adds the
+    // `\@uclclist` pairs (`<lower> <upper>`) FIRST-wins at begin-document: a
+    // later pair for a command already mapped is skipped (37953-37988,
+    // `\cs_if_exist:cF` at 37965/37972). greek-fontenc lists
+    // defaults first (greek-fontenc.def:326-327 "Since 2022, \MakeUppercase
+    // expects the default for ambiguous mappings in first position"), so
+    // `\MakeLowercase{\textEpsilon}` is `\textepsilon`, not the later
+    // `\textvarepsilon`. Perl assigns every pair, last-wins.
+    const FIXED_UPPER_LOWER: [(&str, &str); 11] = [
+      ("\\AA", "\\aa"),
+      ("\\AE", "\\ae"),
+      ("\\DH", "\\dh"),
+      ("\\DJ", "\\dj"),
+      ("\\IJ", "\\ij"),
+      ("\\L", "\\l"),
+      ("\\NG", "\\ng"),
+      ("\\O", "\\o"),
+      ("\\OE", "\\oe"),
+      ("\\SS", "\\ss"),
+      ("\\TH", "\\th"),
+    ];
+    let mut pairs: Vec<(Token, Token)> = FIXED_UPPER_LOWER
+      .iter()
+      .map(|(upper, lower)| (T_CS!(*lower), T_CS!(*upper)))
+      .collect();
+    pairs.extend(listed.as_chunks::<2>().0.iter().map(|&[lower, upper]| (lower, upper)));
+    // `\i`/`\j` (assigned above) are constants too: a pair for them loses.
+    let mut mapped_upper: std::collections::HashSet<String> =
+      ["\\i ", "\\j "].into_iter().map(String::from).collect();
+    let mut mapped_lower = std::collections::HashSet::new();
+    for (lower, upper) in pairs {
       let lower_key = lower.with_str(|s| format!("{} ", s));
       let upper_key = upper.with_str(|s| format!("{} ", s));
-      assign_mapping("text_uppercase", &lower_key, Some(upper));
-      assign_mapping("text_lowercase", &upper_key, Some(lower));
-      i += 2;
+      if mapped_upper.insert(lower_key.clone()) {
+        assign_mapping("text_uppercase", &lower_key, Some(upper));
+      }
+      if mapped_lower.insert(upper_key.clone()) {
+        assign_mapping("text_lowercase", &upper_key, Some(lower));
+      }
     }
   });
 

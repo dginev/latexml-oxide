@@ -9,7 +9,8 @@
 % oracle:  lualatex 0 errors: [Ὰ] [X]
 % engines: rust=1 warning, [`”0313Α] [X̓]
 % expect:  0 warnings, [Ὰ] [X]
-% status:  RED
+% guard:   case_change_equivalents::declared_equivalent_is_substituted_before_expansion
+% status:  GREEN (W10, 2026-09-25; was RED)
 \documentclass{article}
 \usepackage{fontspec}
 \usepackage{textalpha}

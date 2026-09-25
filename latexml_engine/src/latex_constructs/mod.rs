@@ -541,17 +541,336 @@ pub fn tabular_bindings(
 /// Port of Perl's `latexChangeCase` function.
 /// Applies Unicode case conversion (not TeX uccode/lccode tables) to tokens.
 /// Converts CC_SPACE to T_SPACE (matching latex3 behavior).
-/// Handles \protect + excluded CS tokens (text_case_exclude mapping).
+/// Handles \protect + excluded CS tokens (text_case_exclude mapping), and the
+/// l3text case-change declarations a CS can carry (see [`lx_case_change_cs`]).
 fn lx_change_case_tokens(req_case: &str, tokens: &Tokens) -> Result<Vec<Token>> {
+  let mut keep = false;
+  lx_change_case_in_mouth(req_case, tokens, true, &mut keep, 0)
+}
+
+/// Case-change `tokens` from a mouth of their own. `expand` is false for a
+/// `\DeclareCaseChangeEquivalent` replacement, which l3text walks with its
+/// case loop only, never re-expanding it (`\__text_change_case_replace:nnnn`,
+/// expl3-code.tex:36693-36694), as is the material before an excluded
+/// command's argument. `keep` carries the sentence/title
+/// "rest of the word is left alone" state across such a nested walk.
+fn lx_change_case_in_mouth(
+  req_case: &str,
+  tokens: &Tokens,
+  expand: bool,
+  keep: &mut bool,
+  depth: usize,
+) -> Result<Vec<Token>> {
   let mouth = Mouth::new("", None)?;
   open_mouth(mouth, false);
   unread(tokens.clone());
-  let result = lx_read_and_change_case(req_case)?;
+  let result = lx_read_and_change_case(req_case, expand, keep, depth);
   close_mouth(true)?;
-  Ok(result)
+  result
 }
 
-fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
+/// What [`lx_case_change_cs`] did with a CS or active token.
+enum CaseChangeCs {
+  /// The token (and whatever it consumed) is accounted for in the result.
+  Done,
+  /// The token carries no case-change declaration; the caller reads it as
+  /// Perl's `latexChangeCase` does.
+  Plain,
+}
+
+/// Push a token the case changer passes through VERBATIM (l3text
+/// `\exp_not:n`/`\exp_not:v`). The result is re-read by the `\edef` in
+/// `\MakeUppercase`, so a CS or active token is shielded with `\dont_expand`:
+/// expanding it there would run it on the already case-changed tokens after
+/// it (textalpha's `\LGR@hiatus` composites, `\CaseSwitch` branches).
+fn push_case_verbatim(result: &mut Vec<Token>, tok: Token) {
+  if tok.get_catcode().is_active_or_cs() {
+    result.push(T_CS!("\\dont_expand"));
+  }
+  result.push(tok);
+}
+
+/// l3text's replacement for `\DeclareCaseChangeEquivalent{<cs>}{<replacement>}`
+/// (latex.ltx:22400 `\cs_new_eq:NN \DeclareCaseChangeEquivalent
+/// \text_declare_case_equivalent:Nn`), stored in the tl
+/// `\l__text_case_<\token_to_str:N cs>_tl` (expl3-code.tex:36952-36956) and
+/// read at change time (`\__text_change_case_replace:nnnN`,
+/// expl3-code.tex:36684-36692). `name` is the token's string, `\>` for `\>`.
+fn case_change_equivalent(name: &str) -> Result<Option<Tokens>> {
+  // `\cs_if_exist:cTF` — a `\relax` left by a `\csname` probe is not a tl.
+  Ok(
+    match lookup_definition_stored(&T_CS!(s!("\\l__text_case_{name}_tl")))? {
+      Some(Stored::Expandable(tl)) => match tl.get_expansion() {
+        Some(ExpansionBody::Tokens(replacement)) => Some(replacement.clone()),
+        _ => None,
+      },
+      _ => None,
+    },
+  )
+}
+
+/// Whether `tok` is `\CaseSwitch` (latex.ltx:22399 `\cs_new_eq:NN \CaseSwitch
+/// \text_case_switch:nnnn`): l3text's case loop tests the meaning
+/// (expl3-code.tex:36698 `\cs_if_eq:NNTF #4 \text_case_switch:nnnn`).
+fn is_case_switch(tok: &Token) -> bool {
+  let switch = T_CS!("\\text_case_switch:nnnn");
+  has_meaning(&switch) && x_equals(tok, &switch)
+}
+
+/// The letter-like mapping of the CS named `name` in `map` (`text_uppercase`
+/// or `text_lowercase`, keyed `"<cs> "` by `\lx@prepare@case@mapping`): l3text's
+/// `c__text_<case>case_<cs>_tl` constants (expl3-code.tex:36749-36768
+/// `\__text_change_case_letterlike:nnnnnN`).
+fn case_letterlike(map: &str, name: &str) -> Option<Token> {
+  match lookup_mapping(map, &s!("{name} ")) {
+    Some(Stored::Token(mapped)) => Some(mapped),
+    _ => None,
+  }
+}
+
+/// l3text's exclusion list (`\AddToNoCaseChangeList`, `\l_text_case_exclude_arg_tl`,
+/// expl3-code.tex:36002-36007), the first check of both its passes
+/// (`\__text_expand_exclude:N`, 36192-36233; `\__text_change_case_exclude:nnnN`,
+/// 36632-36683). The command passes unchanged; everything up to its first `{`
+/// (a star, optional arguments: `#5` of `\__text_change_case_exclude:nnnNw`,
+/// 36668-36669) is case-changed without expansion, and the braced argument is
+/// kept as is (36670-36683). So `\MakeUppercase{\cite[see][p.~5]{k}}` is
+/// `\cite[SEE][P.~5]{k}`, and `\cite*{k}` keeps its star. Perl reads one
+/// `[opt]` and cases it with an expanding changer. `prefix` is the `\protect`
+/// of a robust command, whose output keeps Perl's shape.
+fn lx_case_change_excluded(
+  req_case: &str,
+  tok: Token,
+  name: &str,
+  prefix: Option<Token>,
+  depth: usize,
+  result: &mut Vec<Token>,
+) -> Result<bool> {
+  if lookup_mapping("text_case_exclude", name).is_none() {
+    return Ok(false);
+  }
+  let mut before_arg = Vec::new();
+  while let Some(t) = read_token_across_input_ends()? {
+    if t.get_catcode() == Catcode::BEGIN {
+      unread_one(t);
+      break;
+    }
+    before_arg.push(t);
+  }
+  match prefix {
+    Some(protect) => {
+      result.push(protect);
+      result.push(tok);
+    },
+    None => push_case_verbatim(result, tok),
+  }
+  if !before_arg.is_empty() {
+    let mut keep = false;
+    result.extend(lx_change_case_in_mouth(
+      req_case,
+      &Tokens::new(before_arg),
+      false,
+      &mut keep,
+      depth + 1,
+    )?);
+  }
+  let arg = read_arg(ExpansionLevel::Off)?;
+  result.push(T_BEGIN!());
+  result.extend(arg.unlist());
+  result.push(T_END!());
+  Ok(true)
+}
+
+/// l3text's case-change declarations on a CS met by its case loop, in its
+/// order: a `\DeclareCaseChangeEquivalent` replacement (expl3-code.tex:
+/// 36684-36695), `\CaseSwitch` (36696-36717), then the letter-like table built
+/// from `\@uclclist` (36749-36768). l3text runs them on the output of
+/// `\text_expand:n`, in which robust, protected and encoding commands survive
+/// unexpanded (36274-36367) while other macros are expanded away. The changer
+/// here expands as it reads, so, approximating the two passes, it checks the
+/// declarations of EVERY command before expanding it. Without that,
+/// `\MakeUppercase{\>\`α}` expanded textalpha's `\>` (equivalent
+/// `\CaseSwitch{\>}{\LGR@hiatus}{\>}{\>}`, textalpha.sty:213-214) into
+/// `\add@unicode@accent{"0313}{\`}`, whose accent then took `\char` as its
+/// argument ("Missing number", `”0313` printed). Witness: greek-fontenc
+/// char-list (lualatex).
+///
+/// In the sentence/title "rest of the word" state (`keep`), l3text copies
+/// tokens verbatim (`\__text_change_case_skip:nnw`, 36718-36740), so a declared
+/// token is passed through unexpanded rather than acted on. `name` is the
+/// token's string without the trailing space of a robust command's inner name.
+fn lx_case_change_cs(
+  req_case: &str,
+  tok: Token,
+  name: &str,
+  prefix: Option<Token>,
+  keep: &mut bool,
+  depth: usize,
+  result: &mut Vec<Token>,
+) -> Result<CaseChangeCs> {
+  let titling = req_case == "sentence" || req_case == "title";
+  let push_self = |result: &mut Vec<Token>| {
+    if let Some(protect) = prefix {
+      result.push(protect);
+    }
+    push_case_verbatim(result, tok);
+  };
+  if let Some(replacement) = case_change_equivalent(name)? {
+    if *keep {
+      push_self(result);
+    } else if depth >= MAX_CASE_EQUIVALENT_DEPTH {
+      Error!(
+        "recursion",
+        name,
+        s!(
+          "Case-change equivalent of {name} nests deeper than {MAX_CASE_EQUIVALENT_DEPTH} levels; it is left unchanged"
+        )
+      );
+      push_self(result);
+    } else {
+      result.extend(lx_change_case_in_mouth(
+        req_case,
+        &replacement,
+        false,
+        keep,
+        depth + 1,
+      )?);
+    }
+    return Ok(CaseChangeCs::Done);
+  }
+  if prefix.is_none() && is_case_switch(&tok) {
+    // `\CaseSwitch{<normal>}{<upper>}{<lower>}{<title>}`
+    let args = [
+      read_arg(ExpansionLevel::Off)?,
+      read_arg(ExpansionLevel::Off)?,
+      read_arg(ExpansionLevel::Off)?,
+      read_arg(ExpansionLevel::Off)?,
+    ];
+    if *keep {
+      push_case_verbatim(result, tok);
+      for arg in args {
+        result.push(T_BEGIN!());
+        for t in arg.unlist() {
+          push_case_verbatim(result, t);
+        }
+        result.push(T_END!());
+      }
+    } else {
+      let [_, upper, lower, title] = args;
+      let chosen = match req_case {
+        "upper" => upper,
+        "lower" => lower,
+        _ => title,
+      };
+      for t in chosen.unlist() {
+        push_case_verbatim(result, t);
+      }
+      if titling {
+        *keep = true;
+      }
+    }
+    return Ok(CaseChangeCs::Done);
+  }
+  let is_upper = req_case == "upper" || titling;
+  let (map, other_map) = if is_upper {
+    ("text_uppercase", "text_lowercase")
+  } else {
+    ("text_lowercase", "text_uppercase")
+  };
+  if let Some(mapped) = case_letterlike(map, name) {
+    if *keep {
+      push_self(result);
+    } else {
+      push_case_verbatim(result, mapped);
+      if titling {
+        *keep = true;
+      }
+    }
+    return Ok(CaseChangeCs::Done);
+  }
+  // Already in the requested case: l3text still counts it as the letter that
+  // starts a title-cased word (expl3-code.tex:36758-36766).
+  if case_letterlike(other_map, name).is_some() {
+    push_self(result);
+    if titling {
+      *keep = true;
+    }
+    return Ok(CaseChangeCs::Done);
+  }
+  Ok(CaseChangeCs::Plain)
+}
+
+/// l3text's `\text_declare_expand_equivalent:Nn` replacement, stored in
+/// `\l__text_expand_<\token_to_str:N cs>_tl` (expl3-code.tex:36395-36399) and
+/// re-scanned by `\text_expand:n` in place of the CS (`\__text_expand_replace:N`,
+/// 36339-36354). The kernel
+/// declares every text accent and `\AA`…`\th` as themselves under `\exp_not:n`
+/// (36401-36418): an accent reaches typesetting with its cased argument, as in
+/// LaTeX (`\MakeUppercase{\'e}` typesets `\'E`), instead of being expanded
+/// before its argument is cased.
+fn case_expand_equivalent(name: &str) -> Result<Option<Tokens>> {
+  Ok(
+    match lookup_definition_stored(&T_CS!(s!("\\l__text_expand_{name}_tl")))? {
+      Some(Stored::Expandable(tl)) => match tl.get_expansion() {
+        Some(ExpansionBody::Tokens(replacement)) => Some(replacement.clone()),
+        _ => None,
+      },
+      _ => None,
+    },
+  )
+}
+
+/// Whether `tok` means `\unexpanded` (`\exp_not:n`): `\text_expand:n` keeps its
+/// argument unexpanded, the case loop still changes it
+/// (`\__text_expand_cs_expand:N`/`\__text_expand_unexpanded:w`,
+/// expl3-code.tex:36355-36394).
+fn is_unexpanded(tok: &Token) -> bool {
+  let unexpanded = T_CS!("\\unexpanded");
+  has_meaning(&unexpanded) && x_equals(tok, &unexpanded)
+}
+
+/// l3text `\__text_expand_explicit:N` (expl3-code.tex:36165-36191): an active
+/// character is expanded unless it is protected, or its expansion starts with a
+/// babel shorthand's `\active@prefix` or a UTF-8 octet handler; its case is then
+/// that of the character (36622-36631), with no case-change declarations. A
+/// babel shorthand kept whole composes as typed: babel-greek's `~` in
+/// textalpha's `\>~` (greek-fontenc char-list-alphabeta).
+fn active_char_kept(tok: &Token) -> Result<bool> {
+  let Some(defn) = lookup_expandable(tok, None)? else {
+    return Ok(false);
+  };
+  if defn.is_protected() {
+    return Ok(true);
+  }
+  let head = match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => body.unlist_ref().first().copied(),
+    _ => None,
+  };
+  Ok(head.is_some_and(|head| {
+    [
+      "\\UTFviii@two@octets",
+      "\\UTFviii@three@octets",
+      "\\UTFviii@four@octets",
+      "\\active@prefix",
+    ]
+    .into_iter()
+    .any(|marker| {
+      let marker = T_CS!(marker);
+      has_meaning(&marker) && x_equals(&head, &marker)
+    })
+  }))
+}
+
+/// Bound on nested `\DeclareCaseChangeEquivalent` replacements (an equivalent
+/// naming its own command would otherwise recurse without end; l3text loops).
+const MAX_CASE_EQUIVALENT_DEPTH: usize = 32;
+
+fn lx_read_and_change_case(
+  req_case: &str,
+  expand: bool,
+  keep: &mut bool,
+  depth: usize,
+) -> Result<Vec<Token>> {
   let mut result = vec![];
   let mut in_math = false;
   let is_upper = req_case == "upper" || req_case == "sentence" || req_case == "title";
@@ -560,12 +879,79 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
   // word, for `title`) and leave the rest as it is (l3text, TeX Live 2025:
   // `\text_titlecase_all:n{hELLO wORLD}` is `HELLO WORLD`). Perl lowercases the
   // rest (latex_constructs.pool.ltxml:5507-5516 notes the ambiguity).
-  let mut keep = false;
   loop {
-    let tok = match read_x_token(Some(false), false, None)? {
+    // Outside math a CS is read unexpanded first, so its case-change
+    // declarations are seen before it is expanded (`lx_case_change_cs`), and
+    // each expansion step is re-checked (`\__text_expand_cs_expand:N` expands
+    // one step and re-enters its loop, expl3-code.tex:36355-36367). The read
+    // crosses the end of an `\input` file or `\scantokens` pseudo-file into
+    // the argument, as `read_x_token` does.
+    let next = if in_math && expand {
+      read_x_token(Some(false), false, None)?
+    } else {
+      read_token_across_input_ends()?
+    };
+    let mut tok = match next {
       None => break,
       Some(t) => t,
     };
+    if !in_math && tok.get_catcode() == Catcode::ACTIVE {
+      if active_char_kept(&tok)? || !expand {
+        push_case_verbatim(&mut result, tok);
+        continue;
+      }
+      if expand_once_partial(tok)? {
+        continue;
+      }
+      unread_one(tok);
+      tok = match read_x_token(Some(false), false, None)? {
+        None => break,
+        Some(t) => t,
+      };
+    } else if !in_math && tok.get_catcode() == Catcode::CS && !tok.with_str(|s| s == "\\protect") {
+      let name = tok.with_str(|s| s.to_string());
+      if lx_case_change_excluded(req_case, tok, &name, None, depth, &mut result)? {
+        continue;
+      }
+      // `\text_expand:n` replaces or shields the token before the case loop
+      // ever sees it (expl3-code.tex:36339-36394).
+      if expand {
+        if let Some(replacement) = case_expand_equivalent(&name)? {
+          unread_expansion(replacement);
+          continue;
+        }
+        if is_unexpanded(&tok) {
+          let unexpanded = read_arg(ExpansionLevel::Off)?;
+          result.extend(lx_change_case_in_mouth(
+            req_case,
+            &unexpanded,
+            false,
+            keep,
+            depth + 1,
+          )?);
+          continue;
+        }
+      }
+      match lx_case_change_cs(req_case, tok, &name, None, keep, depth, &mut result)? {
+        CaseChangeCs::Done => continue,
+        CaseChangeCs::Plain if !expand => {
+          push_case_verbatim(&mut result, tok);
+          continue;
+        },
+        CaseChangeCs::Plain => {
+          if expand_once_partial(tok)? {
+            continue;
+          }
+          // Unexpandable, undefined or `\let` to a character: the reader
+          // Perl uses decides (an undefined CS becomes its error stub).
+          unread_one(tok);
+          tok = match read_x_token(Some(false), false, None)? {
+            None => break,
+            Some(t) => t,
+          };
+        },
+      }
+    }
     let cc = tok.get_catcode();
     if cc == Catcode::MATH {
       in_math = !in_math;
@@ -587,17 +973,19 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       // `\edef` via `\noexpand`. Plain math symbols (`\alpha`, …) are not
       // `\protect`-prefixed, so normal math is unaffected.
       if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
-        if let Some(next) = read_token()? {
+        if let Some(next) = read_token_across_input_ends()? {
           result.push(tok);
           result.push(T_CS!("\\dont_expand"));
           result.push(next);
         } else {
           result.push(tok);
         }
-      } else {
+      } else if expand {
         result.push(tok);
+      } else {
+        push_case_verbatim(&mut result, tok);
       }
-    } else if keep && (cc == Catcode::LETTER || cc == Catcode::OTHER) {
+    } else if *keep && (cc == Catcode::LETTER || cc == Catcode::OTHER) {
       result.push(tok);
     } else if cc == Catcode::LETTER || cc == Catcode::OTHER {
       let new_str: String = tok.with_str(|s| {
@@ -615,81 +1003,63 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       };
       result.push(new_tok);
       if req_case == "sentence" || req_case == "title" {
-        keep = true;
+        *keep = true;
       }
     } else if cc == Catcode::SPACE {
       result.push(T_SPACE!());
       if req_case == "title" {
-        keep = false;
+        *keep = false;
       }
     } else if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
-      if let Some(next_tok) = read_token()? {
+      if let Some(next_tok) = read_token_across_input_ends()? {
         // Perl: $cs->getString (full CS name). Munged-robust CSes carry a
         // trailing space — canonicalise to NO trailing space for the
-        // exclude lookup (matches \AddToNoCaseChangeList storage format),
-        // and to "CS + trailing space" for the case-mapping lookup
-        // (matches `\lx@prepare@case@mapping` storage format, which is
-        // `$lower->getString . ' '` in Perl).
+        // exclude and equivalent lookups (matches \AddToNoCaseChangeList
+        // storage format, and l3text's `\__text_expand_protect:Nw`, which
+        // hands the case loop the user-level `\foo` for `\protect\foo `,
+        // expl3-code.tex:36308-36318), and to "CS + trailing space" for the
+        // case-mapping lookup (matches `\lx@prepare@case@mapping` storage
+        // format, which is `$lower->getString . ' '` in Perl).
         let next_key_bare = next_tok.with_str(|s| s.trim_end().to_string());
-        let next_key_case = format!("{} ", next_key_bare);
-        if lookup_mapping("text_case_exclude", &next_key_bare).is_some() {
-          let opt = read_optional(None)?;
-          let arg = read_arg(ExpansionLevel::Off)?;
-          result.push(tok);
-          result.push(next_tok);
-          if let Some(opt_tokens) = opt {
-            let converted = lx_change_case_tokens(req_case, &opt_tokens)?;
-            result.push(T_OTHER!("["));
-            result.extend(converted);
-            result.push(T_OTHER!("]"));
-          }
-          result.push(T_BEGIN!());
-          result.extend(arg.unlist());
-          result.push(T_END!());
-        } else if keep {
+        if lx_case_change_excluded(
+          req_case,
+          next_tok,
+          &next_key_bare,
+          Some(tok),
+          depth,
+          &mut result,
+        )? {
+          continue;
+        }
+        let declared = lx_case_change_cs(
+          req_case,
+          next_tok,
+          &next_key_bare,
+          Some(tok),
+          keep,
+          depth,
+          &mut result,
+        )?;
+        if let CaseChangeCs::Plain = declared {
+          // Fall-through: not in exclude list, not in case-mapping. Pass
+          // both `\protect` and the munged CS through, but mark the CS
+          // un-expandable via `\dont_expand` so the OUTER `\edef`'s
+          // `Partial` body-reader doesn't re-invoke it. Without
+          // `\dont_expand`, the captured tokens go through `\edef` body
+          // expansion which would re-trigger the robust macro (whose
+          // body contains another `\edef\reserved@a{...}`), mangling
+          // the saved tokens and dropping content during the outer
+          // `\reserved@a` invocation. Driver: nested
+          // `\MakeLowercase{\MakeUppercase{...}}`.
           result.push(tok);
           result.push(T_CS!("\\dont_expand"));
           result.push(next_tok);
-        } else {
-          match lookup_mapping(
-            if is_upper {
-              "text_uppercase"
-            } else {
-              "text_lowercase"
-            },
-            &next_key_case,
-          ) {
-            Some(changed) => {
-              if let Stored::Token(changed_tok) = changed {
-                result.push(changed_tok);
-              } else {
-                result.push(tok);
-                result.push(next_tok);
-              }
-              if req_case == "sentence" || req_case == "title" {
-                keep = true;
-              }
-            },
-            _ => {
-              // Fall-through: not in exclude list, not in case-mapping. Pass
-              // both `\protect` and the munged CS through, but mark the CS
-              // un-expandable via `\dont_expand` so the OUTER `\edef`'s
-              // `Partial` body-reader doesn't re-invoke it. Without
-              // `\dont_expand`, the captured tokens go through `\edef` body
-              // expansion which would re-trigger the robust macro (whose
-              // body contains another `\edef\reserved@a{...}`), mangling
-              // the saved tokens and dropping content during the outer
-              // `\reserved@a` invocation. Driver: nested
-              // `\MakeLowercase{\MakeUppercase{...}}`.
-              result.push(tok);
-              result.push(T_CS!("\\dont_expand"));
-              result.push(next_tok);
-            },
-          }
         }
       }
-    } else {
+    } else if expand {
       result.push(tok);
+    } else {
+      push_case_verbatim(&mut result, tok);
     }
   }
   Ok(result)

@@ -1,0 +1,18 @@
+% A text composite keyed on an OTHER character: greek-fontenc.def:227
+% \DeclareTextCompositeCommand{\~}{\LastDeclaredEncoding}{>}{\accpsiliperispomeni}
+% (and :221 {<} -> \accdasiaperispomeni) makes `\~>{\alpha}` the psili +
+% perispomeni accent on alpha. Rust applies the plain tilde accent to `>` and
+% prints the alpha bare. Not a case-change issue: plain text shows it (found
+% while fixing W10's \MakeLowercase{\~>{\alpha}} in char-list-alphabeta).
+% Run with the luatex profile.
+% witness: greek-fontenc char-list-alphabeta, alphabeta-doc (lualatex)
+% oracle:  lualatex 0 errors: [ἆ] [ἇ] (psili/dasia + perispomeni + alpha)
+% engines: rust (56ja + W10) = [>̃α] [<̃α]
+% expect:  [ἆ] [ἇ]
+% status:  RED
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage[normalize-symbols]{alphabeta}
+\begin{document}
+[\~>{\alpha}] [\~<{\alpha}]
+\end{document}

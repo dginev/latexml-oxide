@@ -26,6 +26,7 @@ mod bibliography_crossref;
 mod bibliography_names_fields;
 mod bibref_show;
 mod binding_singletons_56;
+mod case_change_equivalents;
 mod cleveref_class_stubs;
 mod currsize_default;
 mod deferred_load_retry;
