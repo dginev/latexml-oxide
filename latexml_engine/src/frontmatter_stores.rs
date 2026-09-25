@@ -131,21 +131,42 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
     // readers of `\@<name>` (gaceta checks `\@editor` for its section
     // editor line) keep seeing the value; only `\@maketitle` is discarded.
     let params = convert_latex_args(1, None)?;
-    let mut body = mouth::tokenize_internal(TeXString::assembled(s!("{api}"))).unlist();
+    let mut body =
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@set{{{name}}}{api}"))).unlist();
     body.extend(store.unlist());
     DefMacro!(T_CS!(&s!("\\{name}")), params, Tokens::new(body));
     rerouted.push(name);
   }
   if !rerouted.is_empty() {
+    // A raw class that `\LoadClass`es another raw class reroutes twice: the
+    // list accumulates, so the base class's stores stay captured too.
+    let prior = lookup_string("lx_rerouted_stores");
+    let mut captured: Vec<&str> = prior.split(',').filter(|n| !n.is_empty()).collect();
+    for name in &rerouted {
+      if !captured.contains(name) {
+        captured.push(name);
+      }
+    }
     // Inside the deposit group the captured stores read as empty, so a kept
     // `\@maketitle` never typesets them twice.
     let mut nulls: Vec<Token> = Vec::new();
-    for name in &rerouted {
+    for name in &captured {
       nulls.extend(
         mouth::tokenize_internal(TeXString::assembled(s!("\\let\\@{name}\\@empty"))).unlist(),
       );
     }
     DefMacro!(T_CS!("\\lx@captured@stores"), None, Tokens::new(nulls));
+    // A store the document never set keeps the class's default (lion-msc.cls:
+    // 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`),
+    // which `\@maketitle` typesets; nulled in the deposit, it reached neither
+    // the frontmatter nor the body. The kernel `\maketitle` hands it to the
+    // frontmatter (`\lx@store@defaults` in `\lx@maketitle@body`, sect05.rs),
+    // as pdflatex prints it only there.
+    assign_value(
+      "lx_rerouted_stores",
+      Stored::String(pin(captured.join(","))),
+      Some(Scope::Global),
+    );
     // The class's `\@maketitle` is NOT discarded here: `\lx@deposit@maketitle`
     // (sect05.rs) digests it with the captured stores nulled and keeps the
     // result only if it typeset anything — ptptex's (every field captured)
@@ -164,7 +185,67 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   Ok(())
 }
 
+/// The rerouted stores the document left at their class default, handed to
+/// the frontmatter API as their setter would have been: whatever non-blank
+/// default pdflatex's `\@maketitle` would typeset, placeholder text included.
+fn harvest_store_defaults() -> Result<Vec<Digested>> {
+  let names = lookup_string("lx_rerouted_stores");
+  let mut calls: Vec<Token> = Vec::new();
+  for name in names.split(',').filter(|n| !n.is_empty()) {
+    if lookup_bool(&s!("lx_store_set_{name}")) {
+      continue;
+    }
+    let Some(api) = STORE_SETTERS
+      .iter()
+      .find(|(n, _)| *n == name)
+      .map(|(_, api)| *api)
+    else {
+      continue;
+    };
+    let Some(defn) = lookup_definition(&T_CS!(&s!("\\@{name}")))? else {
+      continue;
+    };
+    let value = match defn.get_expansion() {
+      // A `\newcommand`-defined default carries an empty parameter list
+      // (as in `\lx@deposit@maketitle`, sect05.rs).
+      Some(ExpansionBody::Tokens(body))
+        if defn
+          .get_parameters()
+          .is_none_or(|p| p.get_parameters().is_empty()) =>
+      {
+        body.clone()
+      },
+      _ => continue,
+    };
+    if value
+      .unlist_ref()
+      .iter()
+      .all(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      continue;
+    }
+    // Harvested once: a second `\maketitle` finds it set.
+    assign_value(&s!("lx_store_set_{name}"), true, Some(Scope::Global));
+    let (before, after) = api.split_once("#1").unwrap_or((api, ""));
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+    calls.extend(value.unlist());
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+  }
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest(Tokens::new(calls))?])
+}
+
 LoadDefinitions!({
+  // A rerouted setter records that the document set its store.
+  DefPrimitive!("\\lx@store@set{}", sub[(name)] {
+    assign_value(&s!("lx_store_set_{}", name.to_string()), true, Some(Scope::Global));
+  });
+  DefPrimitive!("\\lx@store@defaults", sub[_args] {
+    let harvested = harvest_store_defaults()?;
+    Ok(harvested)
+  });
   // Fired by `input_definitions` after a `.cls` is loaded raw
   // (latexml_core/src/binding/content.rs).
   DefPrimitive!("\\lx@class@loaded@raw{}", sub[(cls)] {

@@ -1,0 +1,13 @@
+% `escapeinside={}{}` clears an inherited escape, as listings'
+% `\let\lst@DefEsc\@empty` does (lstmisc.sty:343-347); the `!…!` spans and the
+% `!` of `red!50` stay verbatim (codeanatomy.lstlisting `\inputlisting`).
+\documentclass{article}
+\usepackage{listings}
+\lstset{escapeinside={!}{!}}
+\begin{filecontents*}[overwrite]{inner2.tex}
+alpha !\textbf{ESCAPED}! omega
+fill=red!50] tail
+\end{filecontents*}
+\begin{document}
+\lstinputlisting[escapeinside={}{}]{inner2.tex}
+\end{document}

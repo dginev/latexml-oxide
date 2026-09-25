@@ -1,0 +1,11 @@
+% `\inputminted` of an extensionless `filecontents` file: `find_file` resolves
+% `snip` to the virtual store's `snip.tex`, which only the store can read
+% (tutodoc-en/fr `\tdoclatexinput`).
+\documentclass{article}
+\usepackage{minted}
+\begin{filecontents*}[overwrite]{snip.tex}
+hello world listing content
+\end{filecontents*}
+\begin{document}
+\inputminted{text}{snip}
+\end{document}

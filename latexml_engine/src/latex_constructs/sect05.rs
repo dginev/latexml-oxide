@@ -1153,6 +1153,8 @@ pub(crate) fn load() -> Result<()> {
   // string concatenation (no `\`+eol), so its `\maketitle` has no control-space
   // and is robust. Keep it single-line here to match.
   //
+  // `\lx@store@defaults` (frontmatter_stores.rs) first hands a raw class's
+  // unset title-page stores to the frontmatter at their class default.
   // `\lx@deposit@maketitle` runs after `\lx@frontmatterhere` (so injected content
   // lands right after the title) and before `\global\let\@maketitle\relax` (while
   // `\@maketitle` still holds its content).
@@ -1221,7 +1223,7 @@ pub(crate) fn load() -> Result<()> {
   RawTeX!(r"\def\lx@deposit@title{\lx@deposit@field\@title}\def\lx@deposit@author{\lx@deposit@field\@author}\def\lx@deposit@date{\lx@deposit@field\@date}\def\lx@deposit@setters{\let\title\lx@deposit@title\let\author\lx@deposit@author\let\date\lx@deposit@date}");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\and\relax\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\and\relax\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters

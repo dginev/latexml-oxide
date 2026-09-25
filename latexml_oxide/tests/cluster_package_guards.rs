@@ -14127,6 +14127,24 @@ Hello colored box.
     );
   }
 
+  /// `\newtcbinputlisting` reads its `listing file` as Perl's
+  /// listingsReadRawFile does (`FindFile(…, noltxml => 1)`): through kpathsea
+  /// and the source directory, not relative to the working directory. The
+  /// listing was an empty `<listing/>` with no diagnostic (commalists-tools-doc
+  /// `\DemoCodeFile{commalists-tools.sty}`, timeop-doc, csvsimple-legacy).
+  #[test]
+  fn newtcbinputlisting_finds_its_file_through_kpathsea() {
+    let tex =
+      include_str!("../../tools/perfect_kernel/repros/alignment/tcbinputlisting_kpathsea_file.tex");
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<listingline xml:id="lstnumberx15"><text class="ltx_lst_space">  </text>\<text class="ltx_lst_identifier">ProvidesPackage</text>{<text class="ltx_lst_identifier">ifpdf</text>}[2019/10/25<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">v3</text>.4<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">ifpdf</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">legacy</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">package</text>.<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">Use</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">iftex</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">instead</text>.]</listingline>"#),
+      "{xml}"
+    );
+  }
+
   /// Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): when the delimiter
   /// never arrives, every scanned token is unread and the body is empty. A
   /// `\verb` inside a pre-tokenized argument (`\footnote{…}`) can never meet
@@ -16409,6 +16427,44 @@ a *\textbf{bold}* b
     assert!(xml.contains("undefinedcs") && xml.contains("bold"), "{xml}");
     assert!(
       !xml.contains("never run") || xml.contains("typeout"),
+      "{xml}"
+    );
+  }
+
+  /// `escapeinside={}{}` clears an inherited escape too: `escapechar` and
+  /// `escapeinside` set the one `\lst@DefEsc` (lstmisc.sty:336-347).
+  /// codeanatomy.lstlisting's `\inputlisting` ran the file's `!…!` spans.
+  #[test]
+  fn listings_escapeinside_empty_clears() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/listings_escapeinside_empty_clears.tex"
+    );
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">alpha</text><text class="ltx_lst_space"> </text>!\<text class="ltx_lst_identifier">textbf</text>{<text class="ltx_lst_identifier">ESCAPED</text>}!<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">omega</text></listingline>"#),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r#"<listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">fill</text>=<text class="ltx_lst_identifier">red</text>!50]<text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">tail</text></listingline>"#),
+      "{xml}"
+    );
+  }
+
+  /// `\inputminted` of an extensionless `filecontents` file: `find_file`
+  /// resolves `snip` to the virtual store's `snip.tex`, read from the store
+  /// (tutodoc-en/fr `\tdoclatexinput`, 8 empty listings).
+  #[test]
+  fn inputminted_reads_extensionless_vfs_file() {
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/inputminted_extensionless_vfs_file.tex"
+    );
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    assert!(
+      xml.contains(r#"<listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">hello</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">world</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">listing</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">content</text></listingline>"#),
       "{xml}"
     );
   }
@@ -25860,6 +25916,31 @@ mod class_census {
       "{xml}"
     );
     assert!(xml.contains("Body word alpha."), "{xml}");
+  }
+
+  /// K11: a rerouted title-page store the document never set keeps the class's
+  /// default, which reaches the frontmatter at `\maketitle` (lion-msc.cls:
+  /// 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`).
+  #[test]
+  fn k11_class_default_store() {
+    if !latexml::util::test::kpse_has("lion-msc.cls") {
+      return;
+    }
+    let tex = include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/k11_class_default_store.tex"
+    );
+    let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    // lion-msc `\RequirePackage{datetime}`: the one expected diagnostic.
+    assert_eq!(warning_count(&stderr), 1, "{stderr}");
+    assert!(
+      xml.contains(r##"<contact name="Affiliation: " role="affiliation"><text color="#000000">Huygens-Kamerlingh Onnes Laboratory, Leiden University</text></contact>"##),
+      "{xml}"
+    );
+    assert!(
+      xml.contains(r##"<contact name="Address: " role="address"><text color="#000000">P.O. Box 9500, 2300 RA Leiden, The Netherlands</text></contact>"##),
+      "{xml}"
+    );
   }
 
   /// Two abstracts under different names are two abstracts: the replaceable-

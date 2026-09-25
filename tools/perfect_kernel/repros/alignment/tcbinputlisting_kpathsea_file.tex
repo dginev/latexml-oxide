@@ -1,0 +1,10 @@
+% \newtcbinputlisting reads its `listing file` through kpathsea and the source
+% directory, as listingsReadRawFile does (commalists-tools-doc
+% `\DemoCodeFile{commalists-tools.sty}`; the listing was empty, 0 diagnostics).
+\documentclass{article}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings}
+\newtcbinputlisting\DemoCodeFile[1]{listing only,listing file={#1}}
+\begin{document}
+\DemoCodeFile{ifpdf.sty}
+\end{document}

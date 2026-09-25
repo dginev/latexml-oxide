@@ -1,0 +1,15 @@
+% witness: lion-msc/minimal (recall 70.3 %: the default affiliation "Huygens-Kamerlingh Onnes
+%          Laboratory, Leiden University" lost); lion-msc.cls:196-203 sets store defaults
+% oracle:  pdflatex prints the default affiliation and address on the title page
+% engines: rust (56io) = neither in frontmatter nor body (K11 nulls the store in the deposit);
+%          Perl = loses the whole titling title page
+% profile: [rawstyles,rawclasses]latexml.sty
+% expect:  0 errors; <contact name="Affiliation: " role="affiliation">…Huygens-Kamerlingh Onnes
+%          Laboratory, Leiden University…</contact> and the address contact
+% status:  RED (56io) -> GREEN (56ip)
+\documentclass[twoside,single]{lion-msc}
+\title{Title}
+\author{A. Uthor}
+\begin{document}
+\maketitle
+\end{document}

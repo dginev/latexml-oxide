@@ -1,5 +1,7 @@
 use latexml_package::{
-  package::listings_sty::{lst_group_opener, lst_process_display_scoped, lst_scoped},
+  package::listings_sty::{
+    listings_read_raw_file, lst_group_opener, lst_process_display_scoped, lst_scoped,
+  },
   prelude::*,
 };
 
@@ -58,7 +60,6 @@ LoadDefinitions!({
   // lst_process_display directly with the file contents, mirroring
   // what `\begin{lstlisting}` does internally but with our string in
   // place of the read_raw_lines call.
-  use latexml_core::binding::content::find_file;
   DefMacro!("\\inputminted[]{}{}", sub[(_opts, _lang, file_arg)] {
     // The file name is expanded, as minted's `\input` of it does and as
     // `\lstinputlisting` does: tcolorbox's minted library reads a listing back
@@ -66,12 +67,12 @@ LoadDefinitions!({
     // the unexpanded `\minted@outputdir` missed the file, an empty listing
     // (tkz-grapheur-examples-integrals, 32 manuals of sweep #122; Perl alike).
     let file_str = Expand!(file_arg).to_string();
-    // The session's virtual file store first (a file written by
-    // `filecontents`/`\VerbatimOut` lives only there), as `\input` and
-    // `\lstinputlisting` read it (batch 56cv); then disk.
-    let contents = vfs_read(file_str.trim())
-      .or_else(|| find_file(&file_str, None).and_then(|path| std::fs::read_to_string(&path).ok()))
-      .unwrap_or_default();
+    // Read as `\lstinputlisting` reads (Perl listingsReadRawFile): the
+    // session's virtual file store first (a file written by
+    // `filecontents`/`\VerbatimOut` lives only there, batch 56cv), then
+    // `find_file` — whose extensionless hit may itself be a store key
+    // (tutodoc-en/fr) — and a warning when the file is nowhere.
+    let contents = listings_read_raw_file(file_str.trim()).unwrap_or_default();
     bgroup();
     assign_value(
       "current_environment",

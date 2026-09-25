@@ -14,7 +14,7 @@ use latexml_core::keyval::split_keyval_source;
 
 use crate::{
   package::{
-    listings_sty::lst_process_display,
+    listings_sty::{listings_read_raw_file, lst_process_display},
     tcolorbox_sty::{tcb_listing_startend, tcb_xparse_listing},
   },
   prelude::*,
@@ -169,9 +169,15 @@ LoadDefinitions!({
           .map(|t| t.to_string())
           .unwrap_or_default();
         let file = file.trim();
-        let text = vfs_read(file)
-          .or_else(|| std::fs::read_to_string(file).ok())
-          .unwrap_or_default();
+        // Perl reads every listing file through listingsReadRawFile
+        // (`FindFile(…, noltxml => 1)`, listings.sty.ltxml:305-315): the session's
+        // virtual store first (a round-tripped `\jobname.<n>.listing`), then
+        // kpathsea and the source directory. A read relative to the working
+        // directory missed both a tex-tree file (commalists-tools-doc
+        // `\DemoCodeFile{commalists-tools.sty}`) and one beside the document
+        // (csvsimple-legacy `\xmllisting{namesort}`), and the listing came out
+        // empty with no diagnostic.
+        let text = listings_read_raw_file(file).unwrap_or_default();
         bgroup();
         Ok(Tokens::new(lst_process_display(
           Some(Tokens::new(ExplodeText!(file))),

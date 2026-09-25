@@ -373,7 +373,7 @@ pub fn listings_read_raw_string(
 }
 
 /// Perl: listingsReadRawFile — read entire file contents as string.
-fn listings_read_raw_file(file: &str) -> Option<String> {
+pub fn listings_read_raw_file(file: &str) -> Option<String> {
   let filename = file.to_string();
   // A file that exists only in the session's virtual file store — written by
   // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
@@ -402,6 +402,17 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
       ..Default::default()
     }),
   ) {
+    // `find_file` resolves an extensionless name to the virtual store's key
+    // (`snip` → `snip.tex`, content.rs `find_file_aux`), which only the store
+    // can read: tutodoc's `\tdoclatexinput{examples-…}` listings (a
+    // `filecontents` file, read by `\inputminted`) came out empty.
+    if let Some(text) = vfs_read(&path) {
+      return Some(if text.contains('\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+      } else {
+        text
+      });
+    }
     // Normalize line terminators to bare LF.
     //
     // DIVERGENCE (OXIDIZED_DESIGN #69) — Perl slurps the file verbatim, so a
@@ -616,6 +627,39 @@ fn lst_push_value_locally(list: &str, values: Vec<Token>) {
   let mut combined = prev;
   combined.extend(values);
   assign_value(key, Stored::Tokens(Tokens::new(combined)), None);
+}
+
+/// `escapechar` and `escapeinside` set the one `\lst@DefEsc` (lstmisc.sty:
+/// 336-347): either key first drops the escape delimiter the other (or an
+/// inherited `\lstset`) installed, then installs its own, if any. `next` is
+/// the new delimiter's key, empty when the key clears the escape.
+fn lst_set_defesc(next: &str) {
+  if let Some(Stored::String(prev)) = lookup_value("LST_DEFESC_CURRENT") {
+    let prev = to_string(prev);
+    if prev != next {
+      for k in ["open", "close", "class", "escape"] {
+        assign_value(&s!("LST_DELIM@{prev}@{k}"), Stored::None, None);
+      }
+      if let Some(Stored::Tokens(keys)) = lookup_value("LST_DELIM_KEYS") {
+        let kept: Vec<Token> = keys
+          .unlist_ref()
+          .iter()
+          .filter(|t| t.to_string() != prev)
+          .copied()
+          .collect();
+        assign_value("LST_DELIM_KEYS", Stored::Tokens(Tokens::new(kept)), None);
+      }
+    }
+  }
+  assign_value(
+    "LST_DEFESC_CURRENT",
+    if next.is_empty() {
+      Stored::None
+    } else {
+      Stored::String(pin(next))
+    },
+    None,
+  );
 }
 
 /// Perl: lstSetClassStyle — define properties of a styling class.
@@ -3689,19 +3733,7 @@ LoadDefinitions!({
     // `\typeout{* Missing: \PAX@file}` as LaTeX — newpax, `\PAX` undefined).
     // Perl's listings.sty.ltxml:1069 has the same latent gap (SHARED).
     // Guard: `perfect_kernel_batch56::listings_escapechar_empty_clears`.
-    if let Some(Stored::String(prev)) = lookup_value("LST_ESCAPECHAR_CURRENT") {
-      let prev = to_string(prev);
-      if prev != esc {
-        for k in ["open", "close", "class", "escape"] {
-          assign_value(&s!("LST_DELIM@{prev}@{k}"), Stored::None, None);
-        }
-        if let Some(Stored::Tokens(keys)) = lookup_value("LST_DELIM_KEYS") {
-          let kept: Vec<Token> = keys.unlist_ref().iter().filter(|t| t.to_string() != prev).copied().collect();
-          assign_value("LST_DELIM_KEYS", Stored::Tokens(Tokens::new(kept)), None);
-        }
-      }
-    }
-    assign_value("LST_ESCAPECHAR_CURRENT", if esc.is_empty() { Stored::None } else { Stored::String(pin(&esc)) }, None);
+    lst_set_defesc(&esc);
     if !esc.is_empty() {
       let esc_re = regex::escape(&esc);
       assign_value(&s!("LST_DELIM@{esc}@open"), Stored::String(pin(&esc_re)), None);
@@ -3718,11 +3750,21 @@ LoadDefinitions!({
   });
 
   // escapeinside handler
-  DefMacro!("\\lst@@escapeinside Until:\\end", "\\ifx.#1.\\else\\lst@@escapeinside@#1\\end\\fi");
+  // `escapeinside={}{}` (or an empty value) clears the escape, as listings'
+  // `\let\lst@DefEsc\@empty` does before it installs a non-empty pair
+  // (lstmisc.sty:343-347). codeanatomy.lstlisting's `\inputlisting`
+  // (`escapeinside={}{}`) otherwise kept the preamble's `!…!` escape live, ran
+  // the file's `!…!` spans as LaTeX and emptied its listing. Perl's
+  // listings.sty.ltxml:1080-1088 has the same gap (SHARED).
+  // Guard: `perfect_kernel_batch56::listings_escapeinside_empty_clears`.
+  DefMacro!("\\lst@@escapeinside Until:\\end",
+    "\\ifx.#1.\\lst@@escapeinside@{}{}\\end\\else\\lst@@escapeinside@#1\\end\\fi");
   DefMacro!("\\lst@@escapeinside@ {} {} Until:\\end", sub [args] {
     let esc1 = lst_deslash(&args[0].to_string());
     let esc2 = lst_deslash(&args[1].to_string());
-    if !esc1.is_empty() && !esc2.is_empty() {
+    let installs = !esc1.is_empty() && !esc2.is_empty();
+    lst_set_defesc(if installs { &esc1 } else { "" });
+    if installs {
       assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(pin(regex::escape(&esc1))), None);
       assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(pin(regex::escape(&esc2))), None);
       assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(pin("evaluate")), None);

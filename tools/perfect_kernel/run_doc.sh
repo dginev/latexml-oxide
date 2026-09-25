@@ -80,6 +80,19 @@ run_once() {
     --dest="$out/$name.xml" \
     "$TEX" >"$out/$name.stdout" 2>"$out/$name.raw.log")
   exit_code=$?
+  # A streaming run spills beside its SOURCE (core_interface.rs `stream_setup`,
+  # `.latexml-spill-<pid>-<seq>`), and the store removes the directory on Drop,
+  # which a run killed by `timeout` never reaches: by sweep #122 the corpus tree
+  # held 82 such directories (1.9 GB; tcolorbox, datatool, glossaries-extra, …).
+  # Remove every one whose process is gone; a live pid's belongs to a concurrent
+  # run of a sibling document.
+  local spill pid
+  for spill in "$(dirname "$TEX")"/.latexml-spill-*; do
+    [[ -d "$spill" ]] || continue
+    pid=${spill##*/.latexml-spill-}
+    pid=${pid%%-*}
+    kill -0 "$pid" 2>/dev/null || rm -rf -- "$spill"
+  done
   # ANSI-strip the log (older/current binaries may color when not TTY-gated).
   sed 's/\x1b\[[0-9;]*m//g' "$out/$name.raw.log" >"$out/$name.log"
   rm -f "$out/$name.raw.log"

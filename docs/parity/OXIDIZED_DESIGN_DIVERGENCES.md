@@ -8582,6 +8582,7 @@ diagnostics are written as before, and a Fatal still propagates after a commit. 
 drop is noted as `Info:ignore:\maketitle`. The 10 deposit repros are unchanged.
 Guards `class_maketitle_replay_that_errors_is_dropped`, `error.rs`
 `diagnostics_hold_commits_or_discards_lines_and_counts_together`.
+A K11-rerouted store (`frontmatter_stores.rs`) is nulled in the deposit, so a class default the document never replaced would reach neither the frontmatter nor the body. lion-msc.cls:196-203 is the witness: a default affiliation and address that `\@maketitle` prints. The kernel `\maketitle` therefore hands each unset, non-blank default to its frontmatter setter first (`\lx@store@defaults` in `\lx@maketitle@body`, batch 56ip). It runs only at `\maketitle`, where pdflatex prints the default. A setter the document does call replaces the default, and a second `\maketitle` finds the store set. The list of rerouted stores accumulates across a raw class and a raw class it `\LoadClass`es. Guard `class_census::k11_class_default_store`.
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
