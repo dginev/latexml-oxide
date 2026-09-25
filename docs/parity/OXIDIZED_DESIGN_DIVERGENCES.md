@@ -7196,7 +7196,7 @@ retracting it; assignments in the tag execute in place.
 
 **Why it's safe.** Surpasses Perl on unbound package, eliminates undefined CS errors on `\LComment`/`\BeginBox`/`\EndBox`/`\BoxedString`, and preserves exact line and break structure.
 
-**Witnesses**: arXiv 2511.21969. Guarded by `algpseudocodex_produces_clean_comments_and_boxes` and `statex_continues_the_open_line_box` in `cluster_package_guards.rs`.
+**Witnesses**: arXiv 2511.21969. Guarded by `algpseudocodex_produces_clean_comments_and_boxes` and `statex_continues_the_open_line_box` in the `cluster_package_guards` binary.
 
 ### 215. The save-frame bookkeeping is exempt from `\globaldefs`
 

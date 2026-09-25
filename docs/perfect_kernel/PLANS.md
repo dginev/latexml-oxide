@@ -175,7 +175,7 @@ Subagent budget raised to 20 (user, 2026-09-01). Lanes are read-only
    multi-element) 421 = 367 `tex_tests!` pairs + 54 handwritten; B (one full
    element, count or absence) 1,508; **C (short substring, attribute-only,
    bare tag, error-count-only) 938 = 520 on XML output + 418 typed-value unit
-   predicates**. 371 of the 520 live in `cluster_package_guards.rs`. The three
+   predicates**. 371 of the 520 live in the `cluster_package_guards` binary. The three
    golden harnesses differ in strictness: `tex_tests!` exact line-by-line
    (`util/test.rs:371-405`), `post_test` normalized LCS diff
    (`90_latexmlpost.rs:47-120`), `streaming_sweep` byte-equal eager-vs-streamed.

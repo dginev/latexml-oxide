@@ -350,8 +350,8 @@ do NOT pursue (b). B's fix already halves algpseudocodex without touching A.
   (fixture cluster_regressions/listing_in_minipage_keeps_class.tex): single-node unwrap + class MERGE.
 - `parbox_nested_math_converts_to_presentation_mathml` — cluster_sizing.rs:655.
 - `hphantom_braceless_minipage_does_not_swallow_endminipage` — 06_cluster_regressions.rs:1175.
-- `memoir_keeps_native_endminipage` — cluster_package_guards.rs:6260.
-- `fancybox_verbatim_layer_raw` — cluster_package_guards.rs:4507 (verbatim-in-box; closest to B).
+- `memoir_keeps_native_endminipage` — cluster_package_guards/perfect_kernel_batch54.rs.
+- `fancybox_verbatim_layer_raw` — cluster_package_guards/perfect_kernel_batch48.rs (verbatim-in-box; closest to B).
 
 ### Guard assertions
 - B (numberedblock_verbatim_capture.tex): 0 Error lines AND `count(//ltx:verbatim)=1` inside an

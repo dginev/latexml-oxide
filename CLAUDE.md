@@ -177,7 +177,9 @@ a per-binary tally. **Test binaries are grouped by concern**: single/double-test
 files were consolidated 2026-08 into `cluster_*.rs` binaries (one link unit per
 subsystem — `cluster_cli`, `cluster_fontmap`, `cluster_xslt_split`,
 `cluster_package_guards`, `cluster_sizing`, `cluster_frontmatter_classes`, plus the
-existing `06_cluster_*`) to cut link steps. **Do NOT merge the fixture-sweep
+existing `06_cluster_*`) to cut link steps. A large binary keeps its modules one
+per file under a directory with a `main.rs` root (`tests/cluster_package_guards/`):
+one link unit, and test paths stay `<module>::<test>`. **Do NOT merge the fixture-sweep
 binaries** (`tex_tests!` harness stubs, `114_streaming_*`): each is a separate
 process on purpose — co-locating their many conversions in one `cargo test` process
 accretes unreclaimable libxml2 residue past the RSS fuse (see `streaming_sweep/mod.rs`).

@@ -7,7 +7,7 @@ to green at a time and re-checked as a unit. Run a topic with
 
 This directory is deliberately outside `latexml_oxide/tests/` — a `.tex` under a
 fixture root without a golden `.xml` silently passes. A repro that turns green
-gets a real guard test (`cluster_package_guards.rs`, `perfect_kernel_batchNN`)
+gets a real guard test (`cluster_package_guards/`, module `perfect_kernel_batchNN`)
 and STAYS here as a topic regression check.
 
 ## File conventions

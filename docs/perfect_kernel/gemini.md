@@ -39,7 +39,7 @@ pdflatex (lualatex for lualatex-oracle manuals) is the surpass oracle.
   HEAD (the round-7 merge + its fixup commit); rebase before every push; one commit per task, footer
   `Co-Authored-By: Gemini <noreply@google.com>`; never push to `perfect_kernel`.
 - **File ownership:** only the files a task names. Guards in
-  `latexml_oxide/tests/cluster_package_guards.rs` module `perfect_kernel_gemini`.
+  `latexml_oxide/tests/cluster_package_guards/perfect_kernel_gemini.rs`.
   Do not edit `LEDGER.md`, `KERNEL_CAPABILITIES.md`, `SYNC_STATUS.md`,
   `OXIDIZED_DESIGN_DIVERGENCES.md` — report in Status; the orchestrator lifts rows.
   Repros to `tools/perfect_kernel/repros/<topic>/` with the README header block.
