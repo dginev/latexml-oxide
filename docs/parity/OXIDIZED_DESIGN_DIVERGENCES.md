@@ -6606,7 +6606,7 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 
 **Perl behavior**: `\DeclareTextAccent{\cs}{enc}{slot}` is `ignoredDefinition` (Base_Utility), so greek-fontenc's `\accdasia`/`\accperispomeni`/… (lgrenc.def:439-470) never exist: teubner.sty:165 `\let\~\accperispomeni` makes `\~` undefined (teubner-doc 1→87 errors once the encoding is live), textalpha's breathings `\<`/`\>` error.
 **Rust behavior**: `\<enc>\cs{#1}` appends the combining mark(s) the slot's standalone glyph stands for (the kernel accent combiner map plus a Greek diacritics table: varia, oxia/tonos, perispomeni, dialytika, psili, dasia and their composites); the bare `\cs` becomes the `\fi`-free encoding dispatcher. A bare command that already exists (the kernel accents, `DefAccent`'d natively) and its encoding slot are left alone, so the native accent path keeps its dotless-i and typewriter rules. The dispatcher shape shared with `\DeclareTextCommand`/`\ProvideTextCommand`/`\DeclareTextSymbol` is `…\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}`: Perl's `…\else…\fi` shape hands the trailing `\fi` to an argument-taking text command as its argument.
-**Why**: kernel-quality: LGR/Greek documents get their accents instead of an undefined-CS cascade; no output changes for documents whose accents come from the kernel.
+**Why**: kernel-quality: LGR/Greek documents get their accents instead of an undefined-CS cascade. Since batch 56ji (#312) a kernel accent whose argument has no precomposed form takes the encoding's declared composite, which changes some Latin output as pdflatex does (T1 `\"{ab}` → ä).
 **Witnesses**: teubner/teubner-doc, greek-fontenc (char-list, textalpha-doc), any babel-greek + polytonic text.
 **Guard**: `perfect_kernel_batch54::declare_text_accent_defines_greek_diacritics`.
 **Upstream**: not filed.
@@ -9486,3 +9486,35 @@ charged to the enclosing call; a Rust `DefMacro` binding of a `\long` LaTeX orig
 Measured (worker W14): 19 s123 manuals turn 182 missing-listing warnings into errors (hvextern 75,
 out of scope; underoverlap/concepts 18 each from a `'#1'` substitution in dry.sty/with.sty);
 recall unchanged. Guards: `package_leads_56::*` (4), `nomencl_nomentbl`.
+
+### 312. `\input` re-reads a raw definitions file; a kernel accent takes the encoding's declared composite (Perl: skips the re-read; ignores `\DeclareTextComposite`)
+
+- **`\input` re-read.** While reading definitions, `\input` of a raw file that was already read
+  reads it again, as TeX does. Perl routes such an `\input` to InputDefinitions
+  (Package.pm:2287-2288), which returns for a file already `_loaded` (:2363). A binding stays
+  once-only, and the re-read never goes through binding dispatch or the `\@currname` directory
+  resolution (`InputDefinitionOptions::reread`). Consequence: when a binding raw-loads a file under
+  another name and then overrides its definitions (epstopdf_sty.rs:15 with grfext,
+  beamer_cls.rs:1477, unicode_math_sty.rs:103), a later raw `\input` of that file re-runs it and
+  overwrites those overrides, which Perl's skip would have kept. Witness: greek-fontenc
+  test-tuenc-greek (tuenc-greek.def:126 re-inputs greek-fontenc.def for TU, so `\TU\greekscript`
+  and the TU hiatus composites exist: babel-greek stays in TU under the luatex profile, `ΑΫΛΟΣ`).
+  A re-declared text command is wrapped for its composites again (latex.ltx:9923-9932).
+- **Kernel accents and declared composites.** A native accent (`\' \" \~` …) whose argument has
+  no precomposed form looks up the composite the current encoding declares, keyed as the kernel
+  keys it (latex.ltx:9933-9940, `\string\<enc>\<accent>-\string<first token>`, `\@empty` for an
+  empty argument); the Rust composite keys and wrapper now have the kernel's spelling and shape
+  (`\@text@composite` first, latex.ltx:9925-9932), so the dumped T1/OT1 composites are found. If
+  the key exists it replaces the whole argument and the rest is dropped, as pdflatex (T1 `\"{ab}` →
+  ä; OT1 → äb). A glyph composite is returned as its decoded character (a `tex=` attribute stays
+  valid TeX); a command composite expands. The native precomposition applies only to letters the
+  current font prints as themselves (LGR `\"i` → ϊ). Perl ignores `\DeclareTextComposite` (#184).
+
+Measured (worker W11): 176 manuals (68 Greek, 8 babel-greek, 100 random) and 60 arXiv papers:
+errors, fatals and warnings unchanged; 8 recall gains, 0 losses (test-athnum 78.4 → 100, usage
+95.7 → 98.9, teubner-doc 96.8 → 98.4, hyperref-with-greek 92.4 → 93.7). Residuals: LGR `\~a` →
+α̃ (pdflatex ᾶ; LGR's own `\~`, lgrenc.def:484-487), final sigma (KPE #148), ἀͺ → ᾀ, a
+`\textgreek{t'eqnh}` ligature (apprends-latex), babel language tags under the luatex profile
+(luababel.def; red repro `babel-lang/luababel_language_tag_luatex.tex`).
+
+**Guards**: `greek_text::*` (9), `perfect_kernel_batch54` (θ as pdflatex).

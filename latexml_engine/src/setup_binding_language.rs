@@ -914,14 +914,18 @@ macro_rules! DefLigature {
 /// (`@` OTHER) as well as a package's (`\lx@accent@.` split into the undefined
 /// `\lx@accent@` in titlecaps and `\lx` in grafcet, sweep 74).
 /// T1's `\DeclareTextComposite` for this engine: the accent applied to ONE
-/// alphabetic letter whose NFC with the combiner is a single character is that
-/// character (the letter's catcode kept); otherwise `None` and the accent
-/// takes the `\lx@applyaccent` primitive. See `DefAccent!`.
+/// alphabetic letter, which the current font prints as itself, whose NFC with
+/// the combiner is a single character is that character (the letter's catcode
+/// kept); otherwise `None` and the accent takes the `\lx@applyaccent`
+/// primitive. See `DefAccent!`.
 pub fn accent_composite(
   letter: &[latexml_core::token::Token],
   combiner: char,
 ) -> Option<latexml_core::token::Token> {
-  use latexml_core::token::{Catcode, Token};
+  use latexml_core::{
+    common::{arena::pin_char, font::decode_string},
+    token::{Catcode, Token},
+  };
   use unicode_normalization::UnicodeNormalization;
   let [t] = letter else { return None };
   if !matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
@@ -934,12 +938,116 @@ pub fn accent_composite(
       _ => None,
     }
   })?;
+  // Only a letter the current font prints as itself: LGR's `i` is ι
+  // (lgr_fontmap.rs), so `\"i` is ϊ in pdflatex and in Perl, whose accent
+  // combines with the digested (font-decoded) letter; composing the raw `i`
+  // gave the Latin ï (greek-fontenc test-lgrenc, char-list). `\lx@applyaccent`
+  // digests first, as Perl does. Guard:
+  // `greek_text::lgr_accent_combines_with_the_decoded_letter`.
+  if decode_string(pin_char(c), None, true) != pin_char(c) {
+    return None;
+  }
   let composed: String = format!("{c}{combiner}").nfc().collect();
   let mut it = composed.chars();
   match (it.next(), it.next()) {
     (Some(cc), None) => Some(Token::new(cc.to_string(), t.get_catcode())),
     _ => None,
   }
+}
+
+/// The composite the current font encoding declares for this accent and
+/// argument, when the argument has no precomposed form (`accent_composite`
+/// returned `None`): latex.ltx:9938-9947 `\@text@composite` looks up the key
+/// `\csname\string\<enc>\<accent>-\string<first token>\endcsname` (the spelling
+/// of `latex_constructs` sect08 and of the dumped t1enc.def/ot1enc.def keys)
+/// and, when it exists, uses it in place of the accent — the rest of the
+/// argument is dropped, as there (T1 `\"{ab}` is ä, pdflatex alike).
+/// greek-fontenc.def:221/226
+/// `\DeclareTextCompositeCommand{\~}{\LastDeclaredEncoding}{>}{\accpsiliperispomeni}`
+/// makes `\~>{\alpha}` the psili + perispomeni on alpha (ἆ, lualatex and
+/// pdflatex); without the lookup the tilde landed on the `>` (">̃α",
+/// greek-fontenc char-list-alphabeta, alphabeta-doc). A letter the font prints
+/// as itself keeps the native path above, so Latin accents on letters are
+/// unchanged in every encoding.
+///
+/// A glyph composite (`\DeclareTextComposite`: sect08's glyph primitive, or a
+/// dumped key whose body is the catcode-11 slot character, latex.ltx:9948-9955)
+/// is returned as that character, decoded through the encoding — a catcode-11
+/// token, as the kernel's is. Returning the KEY made the box revert to the
+/// key's name (`$\text{Mart\'{\i}nez}$` under LY1 wrote
+/// `tex="…\LY1\'-\i nez…"`) and left an unexpandable token where
+/// bibleref-parse.sty:495-507's expand-until-character loop needs a character
+/// (`\"\i`). A `\DeclareTextCompositeCommand` key is returned as the key and
+/// expands to its commands. `None`: no composite, or a glyph the font would
+/// re-map when typeset (an ASCII slot it does not print as itself). Guards:
+/// `greek_text::declared_composite_on_a_punctuation_key`,
+/// `greek_text::glyph_composite_is_a_character`.
+pub fn declared_text_composite(
+  accent: &str,
+  arg: &[latexml_core::token::Token],
+) -> Option<Vec<latexml_core::token::Token>> {
+  use latexml_core::{
+    common::{
+      arena::{self, pin_char},
+      font::{decode_str, decode_string, is_unicode_encoding},
+      store::Stored,
+    },
+    definition::{Definition, ExpansionBody, PrimitiveBody},
+    state::{lookup_font, lookup_meaning},
+    token::{Catcode, Token},
+  };
+  // `\string` of the first token, `\@empty` for an empty argument
+  // (latex.ltx:9938-9940 appends `\@empty` to the argument).
+  let first = arg
+    .first()
+    .map_or_else(|| "\\@empty".to_string(), |t| t.to_string());
+  // `\cf@encoding` (latex_constructs sect08): the font's encoding, OT1 when
+  // it has none.
+  let encoding = lookup_font().map(|font| {
+    font
+      .get_encoding()
+      .map(|e| e.to_string())
+      .unwrap_or_else(|| "OT1".to_string())
+  })?;
+  let key = latexml_core::T_CS!(format!("\\\\{encoding}{accent}-{first}"));
+  if !latexml_core::binding::def::dialect::is_defined_token(&key) {
+    return None;
+  }
+  let glyph: String = match lookup_meaning(&key) {
+    Some(Stored::Primitive(p)) => match p.replacement {
+      Some(PrimitiveBody::String(glyph)) => arena::with(glyph, |g| g.to_string()),
+      _ => return Some(vec![key]),
+    },
+    Some(Stored::Expandable(m)) => match m.get_expansion() {
+      Some(ExpansionBody::Tokens(body))
+        if body.unlist_ref().len() == 1
+          && matches!(
+            body.unlist_ref()[0].get_catcode(),
+            Catcode::LETTER | Catcode::OTHER
+          ) =>
+      {
+        let code = body.unlist_ref()[0].get_charcode();
+        match u8::try_from(code) {
+          Ok(slot) if !is_unicode_encoding(&encoding) => {
+            arena::with(decode_str(slot, Some(encoding.clone()), false)?, |g| {
+              g.to_string()
+            })
+          },
+          _ => body.unlist_ref()[0].to_string(),
+        }
+      },
+      _ => return Some(vec![key]),
+    },
+    _ => return Some(vec![key]),
+  };
+  let mut chars = Vec::new();
+  for c in glyph.chars() {
+    if c.is_ascii() && decode_string(pin_char(c), None, true) != pin_char(c) {
+      return None;
+    }
+    chars.push(Token::new(c.to_string(), Catcode::LETTER));
+  }
+  (!chars.is_empty()).then_some(chars)
 }
 
 pub fn accent_inner_name(accent: &str) -> String {
@@ -1026,6 +1134,11 @@ macro_rules! DefAccent {
       let letter = args.first().map(|a| a.unlist_cow().into_owned()).unwrap_or_default();
       if let Some(composed) = $crate::setup_binding_language::accent_composite(&letter, combiner) {
         return Ok(Tokens!(composed));
+      }
+      if let Some(composite) =
+        $crate::setup_binding_language::declared_text_composite(accent_str, &letter)
+      {
+        return Ok(Tokens::new(composite));
       }
       let mut toks = vec![
         T_CS!("\\lx@applyaccent"), T_OTHER!(accent_str),

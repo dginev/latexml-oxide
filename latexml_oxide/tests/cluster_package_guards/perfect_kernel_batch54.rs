@@ -3288,7 +3288,9 @@ $25\unit{m}$
 /// override of `\LGR\textbetasymbol` reaches `\textbetasymbol`
 /// (greek-fontenc char-list, hyperref-with-greek); `\UseTextSymbol` runs
 /// the encoding-specific body inside its encoding (`\textsigma` under T1
-/// is σ, not a Latin `s`; KPE #148 slot 0x73).
+/// is σ, not a Latin `s`; KPE #148 slot 0x73). `normalize-symbols` makes
+/// `\textthetasymbol` the LGR `\texttheta`, θ (pdflatex `XβYθZ σα`; the LGR
+/// `j` is CB.enc /theta, not Perl's ϑ).
 #[test]
 fn provide_text_command_dispatches_on_encoding() {
   let tex = r"\documentclass{article}
@@ -3300,7 +3302,8 @@ X\textbetasymbol Y\textthetasymbol Z \textsigma\textalpha
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("<p>XβYϑZ σα</p>"), "{xml}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(&xml, "p", &[], "<p>XβYθZ σα</p>");
 }
 
 /// ctex-heading-article.def:747 makes `\p@section` argument-taking; the

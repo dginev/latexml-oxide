@@ -1,0 +1,24 @@
+% tuenc.def:122-145 `\DeclareUnicodeComposite{\'}{\i}{"00ED}` makes the
+% composite `\iffontchar\font"00ED í\else <default>\fi`, the default taken by
+% `\extract@default@composite` from the current `\TU\'`: a kernel wrapper
+% (head `\@text@composite`) gives its fallback, anything else is taken whole.
+% Rust's former composite wrapper began `\expandafter\ifx…`, so the default was
+% the wrapper itself and `\'{\i}` in a font without í re-entered the composite
+% forever. The wrapper now has the kernel's shape (latex.ltx:9925-9932).
+% Needs a fontspec font lacking í; without the font file `\iffontchar` is true
+% and the composite prints í.
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: reviewer probe (W11 follow-up); any `\'{\i}` under the luatex
+%          profile with a font lacking U+00ED
+% oracle:  lualatex 0 errors: [N] [ı́] [é] (the font lacks the glyphs)
+% engines: rust 56jd = [N] [í] [é] (no composite lookup); W11 829ecd3e67 =
+%          Fatal:Timeout:PushbackLimit
+% expect:  0 errors; [N] [ı́] [é] (or [Y] [í] [é] without the font file)
+% guard:   greek_text::unicode_composite_default_is_the_accent
+% status:  GREEN (W11 follow-up, 2026-09-25; was RED)
+\documentclass{article}
+\usepackage{fontspec}
+\setmainfont{FontAwesome5Free-Solid-900.otf}
+\begin{document}
+[\iffontchar\font"00ED Y\else N\fi] [\'{\i}] [\'e]
+\end{document}

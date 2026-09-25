@@ -1,0 +1,21 @@
+% Under a Unicode-engine profile babel.sty inputs luababel.def (xebabel.def),
+% not babel.def, so the babel_support binding that tags a language switch
+% (babel_def.rs `RequirePackage!("babel_support")`, Perl babel.def.ltxml:31
+% and txtbabel.def.ltxml:31) never loads: `\foreignlanguage` and
+% `\selectlanguage` produce no xml:lang. The pdfTeX profile tags it.
+% babel_support_sty.rs:243-254 also forces LGR (and an active `~`) for Greek
+% regardless of greek.ldf's `\greekfontencoding` (TU under LuaTeX,
+% greek.ldf:111-117); once the hook loads under luatex that must follow
+% `\greekfontencoding` (or go: greek.ldf's `\extrasgreek` does it already).
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: babel-greek/test-greek-ini, greek-fontenc/test-tuenc-greek (luatex)
+% oracle:  lualatex 0 errors
+% engines: rust (W11) = <p>English. Deutsch.</p> (no xml:lang); pdfTeX profile
+%          <text xml:lang="de">Deutsch.</text>
+% expect:  0 errors; <text xml:lang="de">Deutsch.</text>
+% status:  RED (found by W11, 2026-09-25)
+\documentclass{article}
+\usepackage[ngerman,english]{babel}
+\begin{document}
+English. \foreignlanguage{ngerman}{Deutsch.}
+\end{document}

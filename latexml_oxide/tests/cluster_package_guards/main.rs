@@ -42,6 +42,7 @@ mod frontespizio_inline;
 mod graphics_asset_memo;
 mod graphics_kpsewhich;
 mod graphicx_internals;
+mod greek_text;
 mod href_edef_loop;
 mod href_semiverbatim_loop;
 mod hyperlink_bounded;

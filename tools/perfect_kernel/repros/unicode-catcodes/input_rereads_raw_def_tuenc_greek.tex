@@ -1,0 +1,24 @@
+% `\input` of a raw definitions file that was already read: TeX reads it
+% again. `\usepackage[LGR,TU]{fontenc}` reads greek-fontenc.def for LGR
+% (lgrenc.def), then textalpha's tuenc-greek.def:126 inputs it again with
+% `\LastDeclaredEncoding` = TU. Rust (like Perl, Package.pm:2287-2288 +
+% :2363) skipped the second read, so `\TU\greekscript` and `\TU\LGR@hiatus`
+% were never declared: babel-greek's `\greekscript` (greek.ldf:147-153) fell
+% back to textalpha's default, which selects LGR (`U` → ϒ), and the uppercase
+% hiatus lost its dialytika.
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: greek-fontenc/test-tuenc-greek (lualatex; "ΥΥ UÚ ΥΥ UÙ", ΑΫΛΟΣ)
+% oracle:  lualatex 0 errors: [Ú] [ΑΫΛΟΣ]
+% engines: rust 56jd = [Ú] [άυΛΟΣ]; 56jd+W10 = [ϒ] [ΑϔΛΟΣ]
+% expect:  0 errors, 0 warnings; [Ú] [ΑΫΛΟΣ]
+% guard:   greek_text::input_rereads_a_raw_definitions_file
+% status:  GREEN (W11, 2026-09-25; was RED)
+\documentclass{article}
+\usepackage[LGR,TU]{fontenc}
+\usepackage{fontspec}
+\usepackage{textalpha}
+\usepackage[greek,english]{babel}
+\begin{document}
+\selectlanguage{greek}
+[\MakeUppercase{\'u}] [\MakeUppercase{\acctonos\textalpha\textupsilon λος}]
+\end{document}

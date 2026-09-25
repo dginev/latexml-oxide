@@ -476,47 +476,75 @@ pub(crate) fn load() -> Result<()> {
 
   // #------------------------------------------------------------
   // ltoutenc.dtx `\@text@composite`: an accent applied to a declared
-  // argument uses the composite (`\<enc>\cs-<char>`) instead of the generic
-  // mark — lgrenc.def:530-700 (`\DeclareTextComposite{\accdasia}{LGR}{a}
-  // {129}`, `\DeclareTextCompositeCommand{\>}{LGR}{'}{\accpsilioxia}` from
+  // argument uses the composite instead of the generic mark — lgrenc.def:530-700
+  // (`\DeclareTextComposite{\accdasia}{LGR}{a}{129}`,
+  // `\DeclareTextCompositeCommand{\>}{LGR}{'}{\accpsilioxia}` from
   // textalpha.sty:189-194). Perl ignores both; the accent bodies installed by
   // `\DeclareTextAccent` above consult the composite first (OXIDIZED_DESIGN
-  // #184). The key is `\string` of the argument's first token, as in the
-  // kernel (`\csname\string#1-\string#2\endcsname`).
-  // The first composite declared for `\<enc>\cs` wraps it (ltoutenc.dtx
-  // `\@text@composite`): the original body moves to `\<enc>\cs@orig`, and
-  // `\<enc>\cs{#1}` takes the composite when one exists for `#1`.
+  // #184). Keys and wrapper take the kernel's shape, so the composites the
+  // format dumped (t1enc.def, ot1enc.def: `\\T1\'-a`) and the ones read at run
+  // time are one set, and code that inspects a wrapper recognises ours:
+  // * the key is latex.ltx:9933-9934 `\csname\string\<enc>\cs-\string<first
+  //   token>\endcsname` (the name starts with a backslash);
+  // * the first composite declared for a plain `\<enc>\cs` wraps it as
+  //   latex.ltx:9925-9932 does, `\<enc>\cs #1` → `\@text@composite\<enc>\cs
+  //   #1\@empty\@text@composite{<old body>{#1}}` (:9938-9947 look the key up
+  //   from the argument's first token and drop the rest when it exists); the
+  //   old body moves to `\<enc>\cs@orig` (it may be a closure). tuenc.def:136-145
+  //   `\extract@default@composite` recognises only this head: behind the
+  //   former `\expandafter\ifx…` wrapper it took the whole wrapper as the
+  //   default, so `\DeclareUnicodeComposite{\'}{\i}{"00ED}` fell back to
+  //   itself and `\'{\i}` in a font without í (`\iffontchar` false) looped
+  //   (PushbackLimit; lualatex ı́). Guard:
+  //   `greek_text::unicode_composite_default_is_the_accent`.
+  // Whether `\<enc>\cs` is a wrapper: latex.ltx:9923-9924 tests the CURRENT
+  // definition (`\@car` of it is `\@text@composite`), not whether it was ever
+  // wrapped. A `\DeclareTextCommand` re-declaration makes it plain again, and
+  // the next composite re-wraps it: textalpha.sty inputs tuenc-greek.def after
+  // babel-greek's greek.ldf did, and the second read of greek-fontenc.def:464
+  // re-declares `\TU\LGR@hiatus`; left plain, the uppercase of `\>` + grave +
+  // `\textalpha` printed the grave as ‘ (‘Α, lualatex Α; greek-fontenc
+  // hyperref-with-greek). Guard: `greek_text::redeclared_text_command_is_rewrapped`.
+  fn is_composite_wrapper(ecs: &Token) -> Result<bool> {
+    let head = T_CS!("\\@text@composite");
+    Ok(match lookup_definition(ecs)? {
+      Some(defn) => matches!(defn.get_expansion(),
+        Some(ExpansionBody::Tokens(body)) if body.unlist_ref().first() == Some(&head)),
+      None => false,
+    })
+  }
   fn wrap_text_command_for_composites(encoding_str: &str, cs_str: &str) -> Result<()> {
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
     let orig = T_CS!(s!("\\{encoding_str}{cs_str}@orig"));
-    if IsDefined!(&orig) || !IsDefined!(&ecs) {
+    if !IsDefined!(&ecs) || is_composite_wrapper(&ecs)? {
       return Ok(());
     }
     Let!(orig, ecs);
-    // `\lx@text@composite@key{#1}` is the `\string` of the argument's first
-    // token, and EMPTY for an empty argument (`\accpsili{}` typesets the bare
-    // mark; a raw `\string#1` would stringify the `\endcsname`).
-    let body = mouth::tokenize_internal(TeXString::assembled(s!(
-      "\\expandafter\\ifx\\csname {encoding_str}\\string{cs_str}-\\lx@text@composite@key{{#1}}\\endcsname\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{{\\csname {encoding_str}\\string{cs_str}@orig\\endcsname{{#1}}}}{{\\csname {encoding_str}\\string{cs_str}-\\lx@text@composite@key{{#1}}\\endcsname}}"
-    )));
+    let mut body = vec![T_CS!("\\@text@composite"), ecs];
+    body.extend(mouth::tokenize_internal(TeXString::assembled(s!("#1\\@empty\\@text@composite{{"))).unlist());
+    body.push(orig);
+    body.extend(mouth::tokenize_internal(TeXString::assembled(s!("{{#1}}}}"))).unlist());
     def_macro(
       ecs,
       parse_parameters("{}", &ecs, true)?,
-      ExpansionBody::Tokens(body),
+      ExpansionBody::Tokens(Tokens::new(body)),
       None,
     )?;
     Ok(())
   }
-  DefMacro!("\\lx@text@composite@key{}", sub[(arg)] {
-    Ok(match arg.unlist_ref().first() {
-      Some(t) => Tokens::new(Explode!(t.to_string())),
-      None => Tokens!(),
-    })
-  });
+  /// latex.ltx:9933-9934: the composite key for `\<enc>\cs` and the argument
+  /// `ch`, `\csname\string\<enc>\cs-\string<ch>\@empty\endcsname` — for an
+  /// empty `ch` the `\string` falls on `\@empty` (tuenc-greek.def:174
+  /// `\DeclareUnicodeComposite{\acctonos}{}{"0384}` is `\TU\acctonos-\@empty`, the
+  /// key `\acctonos{}` finds).
+  fn text_composite_key(encoding_str: &str, cs_str: &str, ch: &Tokens) -> Token {
+    let ch_str = if ch.is_empty() { s!("\\@empty") } else { ch.to_string() };
+    T_CS!(s!("\\\\{encoding_str}{cs_str}-{ch_str}"))
+  }
   DefPrimitive!("\\DeclareTextComposite DefToken {} Undigested {Number}", sub[(cs, encoding, ch, code)] {
     let encoding_str = Expand!(encoding).to_string();
     let cs_str = cs.to_string();
-    let key = T_CS!(s!("\\{encoding_str}{cs_str}-{}", ch.to_string()));
+    let key = text_composite_key(&encoding_str, &cs_str, &ch);
     if let Some(glyph) = decode_slot(code.value_of(), &encoding_str) {
       def_primitive(key, None, Some(PrimitiveBody::String(glyph)), PrimitiveOptions::default())?;
       wrap_text_command_for_composites(&encoding_str, &cs_str)?;
@@ -525,7 +553,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareTextCompositeCommand DefToken {} Undigested Undigested", sub[(cs, encoding, ch, cmd)] {
     let encoding_str = Expand!(encoding).to_string();
     let cs_str = cs.to_string();
-    let key = T_CS!(s!("\\{encoding_str}{cs_str}-{}", ch.to_string()));
+    let key = text_composite_key(&encoding_str, &cs_str, &ch);
     def_macro(key, None, ExpansionBody::Tokens(cmd), None)?;
     wrap_text_command_for_composites(&encoding_str, &cs_str)?;
   }, locked => true);

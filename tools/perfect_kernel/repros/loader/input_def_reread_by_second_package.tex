@@ -1,0 +1,28 @@
+% `\input` of a raw `.def` that another package already read: TeX reads it
+% again (only `\usepackage`/`\RequirePackage` load once, latex.ltx
+% `\@ifl@aded`). Rust, like Perl (Package.pm:2287-2288 `\input` in definitions
+% → InputDefinitions, :2363 skips a file already loaded), dropped the second
+% read, so whatever the file declares relative to the caller's state (here the
+% counter; in greek-fontenc.def, `\LastDeclaredEncoding`) was declared once.
+% witness: greek-fontenc/test-tuenc-greek (lgrenc.def and tuenc-greek.def both
+%          `\input{greek-fontenc.def}`); unicode-catcodes/input_rereads_raw_def_tuenc_greek
+% oracle:  pdflatex 0 errors: [1][2]
+% engines: rust (56jd) = [1]; perl = [1]
+% expect:  0 errors, 0 warnings; [1][2]
+% guard:   greek_text::input_rereads_a_raw_definitions_file
+% status:  GREEN (W11, 2026-09-25; was RED)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{w11reread.def}
+\global\advance\count@ 1 \xdef\seenlist{\seenlist[\the\count@]}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{w11pa.sty}
+\ProvidesPackage{w11pa}\input{w11reread.def}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{w11pb.sty}
+\ProvidesPackage{w11pb}\input{w11reread.def}
+\end{filecontents*}
+\makeatletter\count@=0 \gdef\seenlist{}\makeatother
+\usepackage{w11pa,w11pb}
+\begin{document}
+\seenlist
+\end{document}

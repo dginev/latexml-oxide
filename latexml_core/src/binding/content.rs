@@ -77,6 +77,10 @@ pub struct InputDefinitionOptions {
   pub raw:              bool,
   /// flag to allow reloading a previously loaded definitions file
   pub reloadable:       bool,
+  /// `\input` of a raw file already read while reading definitions: TeX
+  /// reads it again. Forbids binding dispatch like `noltxml`, without the
+  /// `\@currname` directory resolution `noltxml` also implies (see `input`).
+  pub reread:           bool,
   /// flag: set @ catcode to LETTER during loading (default true).
   /// Set to false for packages like xy.tex that need @ to stay as OTHER.
   pub at_letter:        bool,
@@ -98,6 +102,7 @@ impl Default for InputDefinitionOptions {
       noltxml:          false,
       raw:              false,
       reloadable:       false,
+      reread:           false,
       withoptions:      None,
       handleoptions:    false,
       as_class:         false,
@@ -232,6 +237,10 @@ fn input_definitions_impl(raw_file: &str, mut options: InputDefinitionOptions) -
     None
   };
   let name: &str = currname_request.as_deref().unwrap_or(trimmed);
+  // A re-read (`input`) is raw-only, but not a binding loading its own name.
+  if options.reread {
+    options.noltxml = true;
+  }
 
   // Guard: prevent infinite recursion from circular or runaway package loading.
   // When a binding is missing, raw TeX loading can trigger macro loops.
@@ -1593,6 +1602,24 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
+    // TeX's `\input` reads the file on every call; only `\usepackage` /
+    // `\RequirePackage` load once (latex.ltx `\@ifl@aded`). Perl routes an
+    // `\input` met while reading definitions to InputDefinitions
+    // (Package.pm:2287-2288), whose loadTeXDefinitions skips a file already
+    // read (:2363 `return if LookupValue($request.'_loaded') && !reloadable`).
+    // tuenc-greek.def:126 re-inputs greek-fontenc.def with `\LastDeclaredEncoding`
+    // = TU after lgrenc.def read it for LGR (`\usepackage[LGR,TU]{fontenc}`);
+    // the skipped read left `\TU\greekscript` and `\TU\LGR@hiatus` undeclared,
+    // so babel-greek's `\greekscript` fell back to textalpha's switch to LGR
+    // (`\MakeUppercase{\'u}` → ϒ) and the uppercase hiatus lost its dialytika
+    // (ΑΥΛΟΣ; greek-fontenc test-tuenc-greek, lualatex ΑΫΛΟΣ). A file read RAW
+    // before is therefore read again; a binding stands for the whole package
+    // and stays once-only (the re-read never reaches the binding
+    // dispatch, `reread` not `noltxml`: no `\@currname` directory
+    // resolution). Guard: `greek_text::input_rereads_a_raw_definitions_file`.
+    let reread_raw = |filename: &str| {
+      lookup_bool(&s!("{filename}_raw_loaded")) && !lookup_bool(&s!("{filename}_loaded"))
+    };
     // Split a binding extension off the request so input_definitions sees
     // (name, extension) — matches Perl Package.pm `FindFile` / `Input`
     // semantics. Without the split, `find_file_fallback` runs with
@@ -1609,10 +1636,12 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
       && let Some((stem, ext)) = clean_req.rsplit_once('.')
       && is_binding_extension(ext)
     {
+      let reread = reread_raw(&clean_req);
       return input_definitions(stem, InputDefinitionOptions {
         extension: Some(Cow::Owned(ext.to_string())),
         // A content `.tex` re-reads every time (see below).
-        reloadable: ext == "tex",
+        reloadable: ext == "tex" || reread,
+        reread,
         ..InputDefinitionOptions::default()
       });
     }
@@ -1626,8 +1655,10 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // `\ieme`) never loaded (paresse-fra; `\documentclass[french]{…}` +
     // `main=french`). Guard: `perfect_kernel_batch54::content_tex_reinput_during_definitions_rereads`.
     let is_plain_tex = clean_req.ends_with(".tex") || !clean_req.contains('.');
+    let reread = reread_raw(&clean_req);
     return input_definitions(&clean_req, InputDefinitionOptions {
-      reloadable: is_plain_tex,
+      reloadable: is_plain_tex || reread,
+      reread,
       ..InputDefinitionOptions::default()
     });
   }

@@ -5233,6 +5233,15 @@ dialytika (¨, U+00A8).
 Rust: `lgr_fontmap.rs` slots 0x73 = U+03C3, 0x22 = U+00A8. Guard:
 `perfect_kernel_batch54::provide_text_command_dispatches_on_encoding`.
 
+**Extension (batch 56ji).** lgr.fontmap.ltxml maps 12 LGR slots to symbol variants or other letters
+where the CB fonts (CB.enc) and lgrenc.def have the plain letter: 85 `U` ϒ → Υ; 106 and 107 `j k`
+ϑ ϰ → θ κ; 223 ϔ → Ϋ; 184 ὼ → ώ; and 6, 13, 15, 18, 21, 26, 38. It leaves 7 glyphs unmapped (2–5,
+16, 17, 22), decodes the breathings, tonos and ypogegrammeni (60, 62, 39, 124) as quotation marks
+rather than the Greek spacing marks ῾ ᾿ ΄ ͺ, and its accent table lists the omicron and upsilon
+rows with a stray `|`, so those ligatures never form. Trigger:
+`{\fontencoding{LGR}\selectfont U jk l'ogos >En}` gives Perl `ϒ ϑϰ λ´ογος ’Εν`, pdflatex
+`Υ θκ λόγος ᾿Εν`. Fixed in Rust (lgr_fontmap.rs). Guard `greek_text::lgr_slots_decode_to_the_font_glyphs`.
+
 ## 149. The refnum formatter cannot take an argument-taking `\p@<ctr>` (ctex) (Rust fixes)
 
 `Base_Utility.pool.ltxml:1027-1028` `\lx@@therefnum@@` = `{\normalfont\csname
@@ -6832,3 +6841,12 @@ $\textnormal{\selectfont x}$
 ```
 Perl gives `<text class="ltx_markedasmath" font="typewriter">x</text>`; pdflatex prints x in cmr10.
 Rust (batch 56je) sets `cmr` (sect13.rs `\textnormal@math`). Guard `nfss_font_state::size_switch_reselects_named_families`.
+
+## 261. `\input` of a raw definitions file already read is skipped (FIXED in Rust)
+
+While reading definitions, Perl routes `\input` to InputDefinitions (Package.pm:2287-2288), which
+returns for a file already `_loaded` (:2363); TeX re-reads. Trigger: two packages each
+`\input{x.def}` — Perl reads it once. greek-fontenc's tuenc-greek.def:126 re-inputs
+greek-fontenc.def for TU after lgrenc.def read it for LGR, so the TU Greek declarations never exist
+and babel-greek falls back to LGR (a plain `U` prints ϒ). Rust (batch 56ji, OXIDIZED_DESIGN_DIVERGENCES #312).
+Guard `greek_text::input_rereads_a_raw_definitions_file`.

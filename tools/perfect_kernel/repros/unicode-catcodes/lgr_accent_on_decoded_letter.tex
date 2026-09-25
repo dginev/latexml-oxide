@@ -1,0 +1,17 @@
+% A kernel accent on a letter the font does not print as itself: in LGR `i` is
+% ι, so `\"i` is ϊ. The native accent composed the RAW letter with its combining
+% mark before the font decoded it (setup_binding_language.rs `accent_composite`,
+% the T1 composite shortcut): Latin ï, á, è, Ü. Perl combines with the digested
+% letter (ϊ ά ὲ). `\~a` stays α̃ as in Perl: lgrenc.def:487 makes `\~` the
+% perispomeni in LGR (pdflatex ᾶ), which our native `\~` does not consult.
+% witness: greek-fontenc test-lgrenc, char-list (pdflatex)
+% oracle:  pdflatex 0 errors: [ϊ] [ά] [ὲ] [Ϋ] [ᾶ]; perl [ϊ] [ά] [ὲ] [ϔ] [α̃]
+% engines: rust (56jd) = [ï] [á] [è] [Ü] [ã]
+% expect:  0 errors, 0 warnings; [ϊ] [ά] [ὲ] [Ϋ] [α̃]
+% guard:   greek_text::lgr_accent_combines_with_the_decoded_letter
+% status:  GREEN (W11, 2026-09-25; was RED) except `\~a` (Perl parity)
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\begin{document}
+{\fontencoding{LGR}\selectfont [\"i] [\'a] [\`e] [\"U] [\~a]}
+\end{document}
