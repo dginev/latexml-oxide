@@ -70,20 +70,17 @@ planned at the end); a schema win counts only if content is preserved — run
 `pdf_recall.py` (PDF from the INTENDED engine; `repros.sh <topic> --recall` per repro).
 
 **State 2026-09-25:**
-- Sweep #122 (`latexml_oxide.56im`): S0∧S1 1912 / 2365 (80.5 %), recall mean 94.73, median 98.7,
-  schema-valid 2246, and 63 manuals up with 0 down vs s121.
+- Sweep #124 (`latexml_oxide.56jg-rel`): clean 1923 / 2374, recall mean 95.27, median 98.8,
+  ≥95 % 80.4 %, missing words 32,133, schema-valid 2269; 74 manuals up with 0 down vs s123.
 - Class census: 492 / 501 usable classes clean. K6 PDF mode landed (56id, DIVERGENCES #285).
-- Since s122:
-  - 56in: siunitx v3 keys.
-  - 56io: minted listing files, geometry length expressions, named frontmatter.
-  - 56ip: listing files through kpathsea and the virtual store, shared listings escapes, K11 class
-    defaults. Recall: timeop 56 → 100, commalists-tools 77 → 100, randintlist 68 → 99.5.
-  - 56iq: the TooManyErrors salvage (27 manuals from an empty document to partial content) and 56gn.
-  - Every batch's 3,003-paper arXiv A/B shows no content loss.
-- Next: sweep #123 to measure 56in–56iq. The schema axis is at its ruled ceiling
-  (`~/data/pk_agents/w59/main/jing113/`). The remaining invalid documents are no-XML runs that fail
-  in their own intended engine, dangling IDREF (RULED KEEP), sectioning in an item (RULED LEAVE,
-  #189) and SHARED singletons. The levers left are the content and semantic axes below.
+- Since s123: batches 56ir–56jj (LEDGER), run as trains with one arXiv A/B per train
+  (56ja–56jd and 56je–56jg: identical tallies, no content loss). 56jh–56jj await the next train's
+  A/B. The sweep #124 error movers are handed out: yquant-doc (`\patchcmd` prefix, `\def{` target: W17), `\shipout` and
+  parskip's etoolbox (W15), `\@ifnextchar` in a number scan (W16).
+- The schema axis is at its ruled ceiling (`~/data/pk_agents/w59/main/jing113/`). The remaining
+  invalid documents are no-XML runs that fail in their own intended engine, dangling IDREF (RULED
+  KEEP), sectioning in an item (RULED LEAVE, #189) and SHARED singletons. The levers left are the
+  content and semantic axes below.
 - Settled, do not re-mine:
   - The empty margin notes: tufte's citations `\marginpar`, SHARED (LEDGER 56ip).
   - The silent-loss structural scan: empty `<p/>`, icon inline-blocks and struts.
@@ -152,6 +149,7 @@ names the scoreboard column it must move.
 | 121 | 1901 | 67 | 8 | 11255 | 2249 | 94.47 | 98.7 | 78.0 | 43072 | 2.31 | 3.6 | 71.1 | 30 | 19 |
 | 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 | 2.41 | 3.6 | 67.0 | 28 | 17 |
 | 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 | 2.42 | 3.5 | 69.6 | 29 | 18 |
+| 124 | 1923 | 67 | 8 | 12045 | 2269 | 95.27 | 98.8 | 80.4 | 32133 | 2.45 | 4.1 | 74.7 | 31 | 17 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading
