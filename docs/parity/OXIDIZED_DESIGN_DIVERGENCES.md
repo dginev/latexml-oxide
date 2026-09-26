@@ -5444,7 +5444,8 @@ reporter). MWE: `\setlength{\parindent}{0pt}` + two paragraphs → both `ltx_noi
 
 **Guards**: `06_cluster_regressions::cluster_first_para_noindent_719` (first paragraph
 `ltx_noindent` under `\parindent=0`; a control fixture confirms default `\parindent` marks no
-paragraph); `cluster_first_para_noindent_nodump_719` (the same via `LATEXML_NODUMP=1` subprocess —
+paragraph); `cluster_package_guards::dump_gate_init::nodump_latex_branch_converts_healthily` (the
+same via a `LATEXML_NODUMP=1` subprocess, sharing one raw kernel load with the other NODUMP guards —
 guards the exact stray-`\par` path that broke the state-flag first landing);
 `50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
 

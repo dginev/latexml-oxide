@@ -23,11 +23,34 @@
 # guard could fire: non-zero exit but no Fatal line, failing
 # `115_streaming_cli` after 209 s. Caught by this change's own CI.
 #
-# `threads-required = "num-test-threads"` makes each of them occupy the WHOLE
-# concurrency budget, so it runs alone — exactly the guarantee `cargo test` gave
-# them implicitly. A `max-threads = 1` group would only stop the two from
-# overlapping EACH OTHER, leaving a heavy tikz/pgf sibling free to spike GBs
-# beside them, which is the same hazard by another name.
+# In the `ci` profile, `threads-required = "num-test-threads"` makes each of them
+# occupy the WHOLE concurrency budget, so it runs alone — exactly the guarantee
+# `cargo test` gave them implicitly. A `max-threads = 1` group would only stop the
+# two from overlapping EACH OTHER, leaving a heavy tikz/pgf sibling free to spike
+# GBs beside them, which is the same hazard by another name — on a 7-16 GB runner.
+# A dev box has the headroom for a sibling, and there `threads-required` costs
+# far more: the pool drains before each of the two can start and nothing runs
+# beside it. So the `default` profile only keeps them off EACH OTHER (the
+# `rss-serial` group).
+#
+# Scheduling: nextest starts tests in `priority` order (higher first; ties keep
+# list order), so the slow ones below start first instead of trailing a shard.
+# The RSS pair has the top priority: a `threads-required` test queued behind
+# others waits for the pool to drain and blocks everything behind it, while at
+# the head of the queue it finds the pool empty. Tiers are by measured duration
+# on a CI-shaped build (the `test` profile's are close): the RSS pair ≈ 17 s,
+# 90 ≈ 60-67 s, 80 ≈ 28-32 s, 70 = the other streaming sweeps and the 8-17 s
+# scale tests, 60 ≈ 2.5-5 s, 50 = the rest of what took >= 10 s at opt-level 0
+# (<= 2.5 s now); no untiered test takes over 2 s. A stale name here only loses
+# its head start — overrides never select or skip tests. Re-derive the tiers
+# from a JUnit run (`[profile.<p>.junit]`) when the slow set changes.
+
+# `priority` and the scheduling above were verified with this version; an older
+# cargo-nextest warns here rather than silently ignoring them.
+nextest-version = { recommended = "0.9.137" }
+
+[test-groups]
+rss-serial = { max-threads = 1 }
 
 [profile.default]
 # A failing run should report EVERY failure, not stop at the first binary —
@@ -39,9 +62,56 @@ failure-output = "immediate-final"
 # and thrashing swap. Capping default profile at 8 keeps RAM at ~10 GB and swap at 0 B.
 test-threads = 8
 
+# Overrides are matched in order and, per setting, the first match wins; the
+# `ci` profile checks its own overrides first, then falls back to these, so the
+# priorities below apply to both profiles.
 [[profile.default.overrides]]
-filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
-threads-required = "num-test-threads"
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) | test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+test-group = "rss-serial"
+priority = 100
+
+[[profile.default.overrides]]
+filter = 'binary(/^114_streaming_cluster_regressions/)'
+priority = 90
+
+[[profile.default.overrides]]
+filter = """
+    test(=perfect_kernel_batch56::codehigh_dochighinput_is_bounded)
+  | test(=dump_gate_init::nodump_latex_branch_converts_healthily)
+  | test(=dump_gate_init::latex_ltx_init_has_zero_errors)
+  | binary(=114_streaming_structure)
+"""
+priority = 80
+
+[[profile.default.overrides]]
+filter = """
+    binary(/^114_streaming_/)
+  | binary(=120_midscale_streaming)
+  | test(=removed_subtrees_leave_no_c_heap_residue)
+  | test(=perfect_kernel_batch56::inline_pictures_in_paragraphs_stay_memory_bounded)
+  | test(=forest_chemnum::forest_replay_stops_when_the_budget_is_spent)
+"""
+priority = 70
+
+[[profile.default.overrides]]
+filter = """
+    test(=perfect_kernel_batch56::tcolorbox_pictures_stay_memory_bounded)
+  | test(=perfect_kernel_gemini::resident_glossary_does_not_sweep_every_yield)
+  | test(=perfect_kernel_gemini::spill_gated_node_boxes_stays_bounded)
+  | test(=fatal_salvages_partial_document::recoverable_fatal_keeps_the_already_digested_document)
+  | (binary(=86_tikz) & (test(=dominoes_test) | test(=unit_tests_by_silviu_test)))
+"""
+priority = 60
+
+[[profile.default.overrides]]
+filter = """
+    test(/^datatool_native_load::/)
+  | test(=perfect_kernel_batch56::iffontchar_bounds_unicodefonttable_to_font_coverage)
+  | test(=perfect_kernel_batch56::a_resource_fatal_rescues_the_digested_bodies_and_reads_no_further_input)
+  | test(=perfect_kernel_batch56::koma_part_is_a_part)
+  | test(=bibliography_names_fields::biblatex_style_decides_given_names)
+"""
+priority = 50
 
 [profile.ci]
 fail-fast = false
@@ -52,10 +122,14 @@ failure-output = "immediate-final"
 # RSS fuse than 2 threads sharing one process's address space.
 test-threads = 2
 # Surface a hung test instead of letting it eat the job timeout. The slowest
-# test here is ~86 s locally and CI builds at opt-level=0, so 60 s is a
-# "tell me", not a failure; 20 periods (20 min) is the hard stop.
+# tests take ~60 s on a CI-shaped build (workspace crates at opt-level 0,
+# dependencies + latexml_core at 1), so 60 s is a "tell me", not a failure;
+# 20 periods (20 min) is the hard stop.
 slow-timeout = { period = "60s", terminate-after = 20 }
 
+# The RSS pair runs alone on a CI runner (header). `@global` takes it out of the
+# local `rss-serial` group, which it would otherwise inherit from `default`.
 [[profile.ci.overrides]]
-filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) + test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
+filter = 'test(=streaming_flag_is_byte_identical_and_fatal_contract_holds) | test(=over_budget_build_degrades_gracefully_instead_of_being_killed)'
 threads-required = "num-test-threads"
+test-group = "@global"

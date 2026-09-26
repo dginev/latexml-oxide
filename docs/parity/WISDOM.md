@@ -1663,15 +1663,32 @@ name and bypasses Mach-O's `_` prefix. Functions get no `link_name`
 (bindgen trusts the platform C ABI for them), so only *statics* break,
 and only at final-binary link time, and only on non-ELF targets.
 
-**Fixes:** (a) consumer-side — resolve the global at runtime with
-`libc::dlsym(RTLD_DEFAULT, c"name")`, which applies the platform's own
-decoration (this is what `latexml_post::xslt::set_xslt_max_depth` does
-now; works identically on ELF and Mach-O); (b) upstream — drop the
-`link_name` attribute from statics (plain `extern "C"` statics get
-per-platform decoration), or generate bindings at build time.
+**Fixes:** (a) consumer-side — declare the static yourself, as a plain
+`unsafe extern "C" { static mut name: c_int; }` with no `link_name`:
+rustc applies the platform's decoration (ELF, Mach-O; COFF only for a
+statically linked library — a DLL's data needs `dllimport`), and the
+`-sys` crate's build script already puts the library on the link line
+(this is what `latexml_post::xslt::set_xslt_max_depth` does); (b)
+upstream — drop the `link_name` attribute from statics, or generate
+bindings at build time.
+
+**Settled dead end: `dlsym(RTLD_DEFAULT, c"name")`.** It was fix (a)
+first, and it links everywhere, but it only searches DYNAMIC symbol
+tables, so it returns NULL — and a "skip if absent" guard silently skips
+the write — whenever the library is linked statically (the
+`LIBXSLT_STATIC` release binary: an executable does not export the
+global; a C program over the release build's static libxslt 1.1.42 gets
+`dlsym` NULL beside a linked value of 3000) or not loaded at all (a binary whose live code has no other
+reference to the library, which the linker's `--as-needed` drops: the
+`latexml_post` unit-test binary once its dependencies built at
+opt-level 1). A link-time reference has neither failure mode.
+Guards: `xslt::max_depth_tests::extern_static_sets_perl_parity_cap`,
+`transform_aborts_past_perls_recursion_depth` (a 700-level recursion
+aborts at Perl's 1000 depth units, not libxslt's 3000).
 
 **Audit state:** `libxslt` 0.1.3 has 12 such statics (we referenced
-only `xsltMaxDepth`). `libxml` 0.3.12 has them only on glibc-internal
+only `xsltMaxDepth`); 0.1.5 still has them (`bindings.rs:14`), and we
+now reference none. `libxml` 0.3.12 has them only on glibc-internal
 `__isoc99_*scanf` symbols in its *fallback* `default_bindings.rs`; its
 build.rs regenerates real bindings per-platform, so it does not bite.
 `kpathsea_sys` bindings: statics-free in the referenced surface.

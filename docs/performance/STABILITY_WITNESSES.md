@@ -81,7 +81,10 @@ defect.** Engine verdict: healthy and surpassing Perl on these.
 **Landed (faithful, verified `cargo test` rc=0, identical output):**
 - **`xsltMaxDepth = 1000`** (hypothesis 3) — faithful port of Perl
   `XML::LibXSLT->max_depth(1000)`; graceful abort instead of stack-overflow OOM
-  on pathological recursion. `latexml_post/src/xslt.rs`.
+  on pathological recursion. `latexml_post/src/xslt.rs`. Effective in the
+  statically linked (`LIBXSLT_STATIC`) release binaries only since 2026-09-26:
+  until then the write went through `dlsym`, which does not see a statically
+  linked global, so they ran at libxslt's 3000 (WISDOM #56).
 - **`dup()` → Rc `clone()`** (hypothesis 1) — drops the transform-time deep DOM
   copy; measured **−120–130 MB/paper** (3.06→2.93, 2.89→2.76, 2.54→2.42 GB) with
   byte-identical output. `latexml_post/src/xslt.rs`.

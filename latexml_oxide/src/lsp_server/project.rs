@@ -268,6 +268,20 @@ mod tests {
     p
   }
 
+  /// A directory [`WALKUP_MAX`] levels below the tempdir, so a fragment's
+  /// walk-up (its own directory plus `WALKUP_MAX` parents) stays inside the
+  /// tempdir. Without the fence the walk reaches the tempdir's parent, the shared
+  /// `/tmp`: it lists every entry there (74k on the dev box: ~1 s per test at
+  /// opt-level 1, ~10 s at 0) and a stray `.tex` in it could answer the lookup.
+  fn fenced_dir(tmp: &tempfile::TempDir) -> PathBuf {
+    let mut dir = tmp.path().to_path_buf();
+    for level in 0..WALKUP_MAX {
+      dir.push(format!("fence{level}"));
+    }
+    fs::create_dir_all(&dir).unwrap();
+    dir
+  }
+
   #[test]
   fn magic_comment_resolves_relative_to_buffer() {
     let tmp = tempfile::tempdir().unwrap();
@@ -314,13 +328,14 @@ mod tests {
   #[test]
   fn unrelated_sibling_root_cannot_hijack_a_fragment() {
     let tmp = tempfile::tempdir().unwrap();
+    let dir = fenced_dir(&tmp);
     // A self-contained sibling that does NOT reference the fragment.
     write(
-      tmp.path(),
+      &dir,
       "other.tex",
       "\\documentclass{article}\\begin{document}standalone\\end{document}",
     );
-    let frag = write(tmp.path(), "notes.tex", "just a fragment");
+    let frag = write(&dir, "notes.tex", "just a fragment");
     let mut cache = RootCache::default();
     assert_eq!(
       resolve_root(&mut cache, None, &frag, Some("just a fragment")),
@@ -367,7 +382,7 @@ mod tests {
     );
     // Unsaved buffer in an empty dir: fallback to the buffer path.
     let empty = tempfile::tempdir().unwrap();
-    let ghost = empty.path().join("untitled.tex");
+    let ghost = fenced_dir(&empty).join("untitled.tex");
     assert_eq!(
       resolve_root(&mut cache, None, &ghost, Some("fragment")),
       normalize_path(&ghost)

@@ -14,7 +14,7 @@ description: >
 | Profile | Command | Use |
 |---|---|---|
 | `test` (default) | `cargo build` / `cargo test` / `cargo run` | **All day-to-day dev + triage.** Full debug info, debug-assertions, overflow-checks, fast incremental. Best diagnosability. |
-| `ci` | `cargo test --profile ci` | **GitHub runner only** (16 GB, fast compile). NOT what local dev should mimic. |
+| `ci` | `cargo nextest run --cargo-profile ci --profile ci` | **GitHub runner only** (16 GB): workspace crates at opt-level 0, dependencies + `latexml_core` at 1, no debuginfo. NOT what local dev should mimic. |
 | `release` | `cargo build --release` | **Sandbox sweeps + Perl-parity measurement.** Strong-optimized, thin-LTO. |
 | `bench` | `cargo build --profile bench` | **Wall-time benchmarks and profiling** (`perf`, flamegraph, callgrind). Inherits `release` but keeps `debug = "full"` and symbols. Built-in cargo profile, so the binary lands in **`target/release/`**, not `target/bench/`. |
 | `maxperf` | `cargo build --profile maxperf` | **Distribution artifact.** Fat-LTO, CGU=1, `panic=abort`. Slowest build; smallest+fastest binary. |

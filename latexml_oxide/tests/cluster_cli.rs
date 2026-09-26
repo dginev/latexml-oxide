@@ -2625,7 +2625,6 @@ mod resource_src_path {
         "--dest=out/doc.html",
         "doc.tex",
       ])
-      .env("LATEXML_NODUMP", "1")
       .current_dir(root)
       .output()
       .expect("spawn latexml_oxide");
@@ -2681,7 +2680,6 @@ mod resource_src_path {
         "--dest=out/doc.html",
         "doc.tex",
       ])
-      .env("LATEXML_NODUMP", "1")
       .current_dir(root.join("src"))
       .output()
       .expect("spawn latexml_oxide");

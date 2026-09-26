@@ -2738,7 +2738,7 @@ trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
 `preclass_iffileexists_test` / `preclass_kernel_cs_test`
 (`latexml_oxide/tests/structure/`) and
 `nodump_leaves_pre_documentclass_kernel_cs_undefined`
-(`latexml_oxide/tests/108_preclass_kernel_autoload.rs`).
+(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`).
 
 Candidate to upstream, though not as a straight port: Perl has no dump to use as
 the membership oracle, so the upstream-shaped fix is to extend

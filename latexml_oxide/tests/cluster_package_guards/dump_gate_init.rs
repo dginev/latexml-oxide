@@ -13,9 +13,11 @@
 //! - latex.ltx:19582-19585 "Control sequence \CurrentFile… already defined" ×4 —
 //!   Base defined the `\CurrentFile` family (RUST-ONLY); latex.ltx owns it now.
 //!
-//! The latex init takes ~23 s in the `test` profile (~160 s in `ci`). Repros:
+//! The latex init takes ~23 s in the `test` profile (~28 s in `ci`, ~160 s at
+//! opt-level 0 throughout). Repros:
 //! `tools/perfect_kernel/repros/singletons/radical_{is_a_primitive_radical,let_sqrt}.tex`,
-//! `tools/perfect_kernel/repros/loader/current_file_*.tex`.
+//! `tools/perfect_kernel/repros/loader/current_file_*.tex`,
+//! `tools/perfect_kernel/repros/loader/nodump_latex_branch.tex`.
 use std::{path::Path, process::Command};
 
 use latexml::util::test::assert_element;
@@ -71,8 +73,9 @@ fn run_init(init: &str) -> (String, String) {
 
 /// Convert `tex` with the CLI binary in a tempdir, with no preload (so a
 /// document without `\documentclass` stays plain TeX), the given `--timeout`
-/// and extra child-process environment. Returns (ANSI-stripped stderr, XML).
-fn convert_cli(tex: &str, timeout: u32, env: &[(&str, &str)]) -> (String, String) {
+/// and extra child-process environment. Returns (exit success, ANSI-stripped
+/// stderr, XML).
+fn convert_cli(tex: &str, timeout: u32, env: &[(&str, &str)]) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
@@ -85,7 +88,7 @@ fn convert_cli(tex: &str, timeout: u32, env: &[(&str, &str)]) -> (String, String
     .expect("spawn latexml_oxide");
   let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
   let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
-  (stderr, xml)
+  (output.status.success(), stderr, xml)
 }
 
 fn has_record(dump: &str, record: &str) -> bool { dump.lines().any(|line| line == record) }
@@ -212,32 +215,83 @@ fn radical_survives_a_let_sqrt() {
 fn current_file_comes_from_latex_not_plain() {
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/loader/current_file_is_latex_not_plain.tex");
-  let (stderr, xml) = convert_cli(tex, 110, &[]);
+  let (_, stderr, xml) = convert_cli(tex, 110, &[]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(&xml, "p", &[], "<p>[undefined]</p>");
 }
 
+/// `\CurrentFile` and `\CurrentFilePathUsed` empty, and `\CurrentFile` equal to
+/// `\CurrentFileUsed`: what pdflatex typesets for the repro's `\texttt` line.
+const CURRENT_FILE_EMPTY: &str = r#"<text font="typewriter">[macro:-&gt;][macro:-&gt;]
+same</text>"#;
+
 /// Under LaTeX the family is defined and empty (pdflatex `[macro:->]`, `same`):
 /// from the dump, and — without one — from `latex.rs`'s fallback, made before
 /// `latex_constructs` (witnesses 2204.03209, 2205.10749, 2311.06870). The NODUMP
-/// run raw-loads latex.ltx (~20 s in `test`, several times that in `ci`, hence
-/// the long timeout, as `expl3_degraded_no_dump`) and warns once, for that
-/// degraded path's `recursion:LaTeX.pool` re-entrance.
+/// half is `nodump_latex_branch_converts_healthily`, which shares one raw kernel
+/// load with the other NODUMP guards.
 #[test]
 fn current_file_is_defined_empty_under_latex() {
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/loader/current_file_defined_by_latex.tex");
-  let expected = r#"<text font="typewriter">[macro:-&gt;][macro:-&gt;]
-same</text>"#;
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  assert_element(&xml, "text", &["font=\"typewriter\""], expected);
+  assert_element(&xml, "text", &["font=\"typewriter\""], CURRENT_FILE_EMPTY);
+}
 
-  let (stderr, xml) = convert_cli(tex, 900, &[("LATEXML_NODUMP", "1")]);
+/// The degraded `LoadFormat('latex')` branch (no dump: bootstrap → base →
+/// constructs, CLAUDE.md parity rule 1). Every NODUMP conversion raw-loads
+/// latex.ltx and expl3-code.tex (~24 s in `test`, several times that at
+/// opt-level 0), so the three NODUMP guards share this ONE conversion, with a
+/// timeout far over the 60 s CLI default (which is calibrated for the dump path)
+/// and under nextest's 20 min terminate-after, so a genuine hang still surfaces:
+/// - issue #651 (witness: a bare `\usepackage{fvextra}` reported "Conversion
+///   failed: 1 fatal error"): the symptom — an expl3-using document converts,
+///   exits 0 and keeps its body. Not the `expl3_sty.rs` mechanism that fixed it
+///   (scoping out the raw-load-only expl3-code.tex cascade, L33074-33180):
+///   `latex.rs`'s degraded branch has already raw-loaded expl3-code.tex, so
+///   `\tex_let:D` is defined and `expl3.sty` skips its own re-load;
+/// - issue #719 (witness: user MWE): under `\parindent=0pt` the FIRST paragraph
+///   is `ltx_noindent`. The first landing keyed the stamp on a one-shot that a
+///   begin-document `\par` consumed first on this branch only; the stamp is now
+///   structural (first `ltx:para` of its parent). Dump half:
+///   `06_cluster_regressions::cluster_first_para_noindent_719`;
+/// - the `\CurrentFile` family is defined and empty from `latex.rs`'s fallback
+///   (dump half: `current_file_is_defined_empty_under_latex`), and the branch
+///   warns once, for its `recursion:LaTeX.pool` re-entrance.
+#[test]
+fn nodump_latex_branch_converts_healthily() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/nodump_latex_branch.tex");
+  let (ok, stderr, xml) = convert_cli(tex, 900, &[("LATEXML_NODUMP", "1")]);
+  assert!(ok, "the NODUMP conversion exited non-zero:\n{stderr}");
+  assert!(!stderr.contains("fatal error"), "{stderr}");
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert!(stderr.contains("Warning:recursion:LaTeX.pool"), "{stderr}");
-  assert_element(&xml, "text", &["font=\"typewriter\""], expected);
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para class="ltx_noindent" xml:id="p1"><p>First line</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para class="ltx_noindent" xml:id="p2"><p>second lines</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p3\""],
+    &format!(r#"<para class="ltx_noindent" xml:id="p3"><p>{CURRENT_FILE_EMPTY}</p></para>"#),
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p4\""],
+    r#"<para class="ltx_noindent" xml:id="p4"><p>degraded-body-text</p></para>"#,
+  );
 }

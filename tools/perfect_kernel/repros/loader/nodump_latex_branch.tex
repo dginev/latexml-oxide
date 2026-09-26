@@ -1,0 +1,25 @@
+% witness: issue #651 (a bare \usepackage{fvextra} failed "1 fatal error" without a dump);
+%   issue #719 (user MWE: \parindent=0pt, first paragraph noindent); arXiv 2204.03209,
+%   2205.10749, 2311.06870 (read \CurrentFile under LaTeX)
+% oracle:  pdflatex 0 errors; no first-line indent; [macro:->][macro:->] same
+% engines: rust=0 errors, 1 warning under LATEXML_NODUMP (recursion:LaTeX.pool) (2026-09-26)
+% expect:  0 errors, 1 warning; four ltx_noindent paragraphs, the \CurrentFile family empty
+% status:  GREEN (guard dump_gate_init::nodump_latex_branch_converts_healthily)
+% mechanism: the degraded LoadFormat('latex') branch (bootstrap -> base -> constructs, raw
+%   latex.ltx + expl3-code.tex; CLAUDE.md parity rule 1). Each NODUMP conversion pays that raw
+%   kernel load (~24 s at opt-level 1, minutes at 0), so the three NODUMP guards share this one
+%   document: an expl3 document converts cleanly (#651's symptom), the first paragraph is stamped
+%   ltx_noindent structurally (#719), and latex.rs defines the \CurrentFile family empty.
+\documentclass[12pt]{article}
+\usepackage{expl3}
+\setlength{\parindent}{0pt}
+\begin{document}
+First line
+
+second lines
+
+\texttt{[\meaning\CurrentFile][\meaning\CurrentFilePathUsed]
+\ifx\CurrentFile\CurrentFileUsed same\else differ\fi}
+
+degraded-body-text
+\end{document}

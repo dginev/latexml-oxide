@@ -153,7 +153,7 @@ jobs:
   # interner / arena bounds-skip (resolve_unchecked) + re-entrant `&mut *ptr`
   # sites (docs/release/SAFETY.md categories B/C), the only `unsafe` here with genuine
   # UB potential that Miri can execute. The FFI-bearing unsafe (libc / kpathsea
-  # / libxml2 / libxslt dlsym / getrusage / signal) CANNOT run under Miri, so
+  # / libxml2 / libxslt globals / getrusage / signal) CANNOT run under Miri, so
   # coverage is deliberately scoped via tools/miri_check.sh. Build scripts
   # (libxml/kpathsea/marpa) still compile C natively, hence the dev headers.
   miri:
@@ -271,7 +271,15 @@ jobs:
     # Splitting the test list across runners is the fix that does NOT raise
     # per-runner memory: each shard still runs 2 tests at a time inside its own
     # 16 GB (see `test-threads` in .config/nextest.toml). `--partition` is
-    # exact — measured 524 + 462 + 433 + 416 = 1835, the whole suite.
+    # exact — measured 850 + 876 + 882 + 814 = 3422, the whole suite
+    # (2026-09-26).
+    #
+    # `hash:` assigns each test by a hash of its binary + name. `count:` dealt
+    # tests round-robin WITHIN each binary, so every single-test binary (the 10
+    # streaming sweeps, the two serialized RSS tests, …: 18 of them, the
+    # heaviest tests in the suite) landed in shard 1, which was the critical
+    # path of every run. `hash:` spreads them 3-7 per shard, and a test keeps
+    # its shard when others are added.
     name: latexml-oxide CI (shard ${{ matrix.shard }}/4)
     needs: changes
     # Full Linux suite on every code change (PR and main push); skipped only
@@ -290,12 +298,16 @@ jobs:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
       # All build settings live on the dedicated `ci` profile in the
-      # workspace `Cargo.toml` (`[profile.ci]` + per-package overrides
-      # for `latexml_contrib` / `latexml_package`). That profile is
+      # workspace `Cargo.toml` (`[profile.ci]`: workspace crates at
+      # opt-level 0, and per-package overrides putting every dependency
+      # and `latexml_core` at opt-level 1 — test CPU 88 → 23.8 min for
+      # +46 s of build over warm deps, +1:55 cold). That profile is
       # version-controlled and reviewable; previously the same knobs
       # lived as `CARGO_PROFILE_RELEASE_*` env-vars here, which had the
       # side-effect of contaminating the `release` profile used for
-      # distribution. Use `--profile ci` from every cargo invocation.
+      # distribution. Select it in every cargo invocation:
+      # `--cargo-profile ci` for nextest, `--profile ci` for plain cargo,
+      # `PROFILE=ci` for tools/make_formats.sh.
       #
       # Other knobs:
       #  * CARGO_BUILD_JOBS=2 — two rustc workers fit comfortably in
@@ -387,7 +399,7 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -476,7 +488,7 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
 
   # Single aggregating gate. Branch protection matches required checks BY NAME,
   # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR

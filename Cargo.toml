@@ -166,27 +166,43 @@ incremental = true
 split-debuginfo = "unpacked"
 
 # CI profile — GitHub Actions ubuntu-latest (4 vCPU / 16 GB RAM /
-# 50 min). Single goal: prove the test suite passes, using the
-# absolute minimum compile work and RAM. Not a deployment artifact;
-# nobody benchmarks or distributes from this profile.
+# 50 min). Goal: prove the test suite passes at the lowest build +
+# test wall time that fits the runner's RAM. Not a deployment
+# artifact; nobody benchmarks or distributes from this profile.
 #
-# Used by `cargo test --profile ci` from `.github/workflows/CI.yml`.
-# Distinct from `[profile.test]` because local-dev machines have far
-# more RAM (32-64 GB) and benefit from -O2 runtime speed, while CI
-# wants the cheapest possible build.
+# Used by `cargo nextest run --cargo-profile ci` from
+# `.github/workflows/CI.yml`. Distinct from `[profile.test]` because
+# local-dev machines have far more RAM (32-64 GB) and want full
+# debuginfo, while CI wants the cheapest build that still runs the
+# suite fast.
 #
-# Settings, all chosen for "lowest RAM × fastest build, tests still pass":
+# Settings:
 #
 #   inherits = "dev"
 #       The dev profile already optimises for compile speed
-#       (codegen-units = 256, opt-level = 0). We start from there
-#       and just turn off debug info we don't need.
+#       (codegen-units = 256, opt-level = 0) and keeps
+#       `debug-assertions` / `overflow-checks` on, so CI checks every
+#       `debug_assert!` the local `test` profile does. We start from
+#       there and just turn off debug info we don't need.
 #
-#   opt-level = 0
-#       Skip the LLVM optimization phase entirely. This is the
-#       biggest single RAM and time saver. The runtime cost (tests
-#       run a few × slower) is far less than the build-time cost
-#       of running -O1+ over the whole dep graph.
+#   opt-level = 0 for the workspace crates; 1 for every dependency
+#   (`[profile.ci.package."*"]`) and for `latexml_core`
+#       The suite is conversion-bound, and at opt-level 0 everywhere the
+#       fixed cost of each conversion (the dump load + `latex_constructs`:
+#       581 ms, vs 107 ms at opt-level 1) made the same 3384 tests cost
+#       88 test-CPU minutes, against 22 with everything at opt-level 1.
+#       Optimizing only the dependencies and `latexml_core` (the Mouth /
+#       Gullet / Stomach / State hot path) recovers nearly all of it:
+#       23.8 test-min. The cost is +46 s of build for a PR's
+#       workspace-crate rebuild over rust-cache's warm dependencies
+#       (2:02 → 2:48 on 4 cores, CARGO_BUILD_JOBS=2) and +1:55 for a
+#       cold one (2:37 → 4:32, e.g. after a nightly bump changes the
+#       cache key), with peak build RSS unchanged at ≈3.5 GB.
+#       Everything at opt-level 1 would save only 1.8 test-min more for
+#       4:58 of warm build. (Measured 2026-09-26 on 6c3d50f2bc /
+#       f9c571ab9c; with the NODUMP guards no longer overrunning, a
+#       CI-shaped run — 4 hash shards × 2 test threads — took 19.5
+#       test-min, slowest shard 2.8 min.)
 #
 #   debug = false / strip = "symbols"
 #       No DWARF, no symbol table — every byte saved on rustc
@@ -209,10 +225,9 @@ split-debuginfo = "unpacked"
 #       just consume disk + complicate the per-CGU split.
 #
 # Past CI failures (runs 25051556164, 25055232786) OOM-killed exit
-# 143 inside `latexml_contrib`'s LLVM optimization phase. With
-# opt-level=0 globally there IS no LLVM optimization phase to OOM in
-# — that whole class of failures goes away. No per-package overrides
-# needed.
+# 143 inside `latexml_contrib`'s LLVM optimization phase. It stays at
+# opt-level 0 with the rest of the workspace, so there is no LLVM
+# optimization phase for it to OOM in.
 [profile.ci]
 inherits = "dev"
 opt-level = 0
@@ -221,6 +236,12 @@ lto = false
 incremental = false
 debug = false
 strip = "symbols"
+
+[profile.ci.package."*"]
+opt-level = 1
+
+[profile.ci.package.latexml_core]
+opt-level = 1
 
 
 

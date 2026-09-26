@@ -83,30 +83,6 @@ mod subdir_dispatch_no_strip;
 mod texinputs_usepackage;
 mod unicode_caret_notation;
 
-/// A no-dump (degraded raw-load) conversion of an expl3-using document must
-/// still succeed. Witness issue #651: a bare `\usepackage{fvextra}` reported
-/// "Conversion failed: 1 fatal error" under DEGRADED mode even though the output
-/// (`<p>text</p>`) was correct. The failure was a benign expl3-code.tex
-/// group-end codepoint cascade (L33074-33180) that the dump avoids and Perl's
-/// own raw-load never produces, leaking a fatal into the conversion status.
-/// `expl3_sty.rs` now snapshots the error report across the degraded raw expl3
-/// load (gated on `raw_load_will_run`, so dump mode — which short-circuits the
-/// re-load — is untouched). The fixture uses `\usepackage{expl3}` directly (the
-/// l3kernel is always present, unlike a trimmed-TL `fvextra`), which triggers
-/// the same raw-load path.
-///
-/// Linux-only: the degraded raw-load re-runs the whole ~33k-line expl3-code.tex,
-/// which under the unoptimized `ci`/`dev` test profile takes ~2 min (measured
-/// 124 s local `dev`); the behavior is OS-independent, so guarding one platform
-/// keeps the ~2-min cost off all four macOS shards. It also needs an explicit
-/// `--timeout` far above the 60 s CLI default (which is calibrated for the fast
-/// dump path): with the default, the legitimate slow bootstrap is killed as a
-/// `Fatal:timeout:wallclock` before the load can finish. Release-optimized
-/// binaries — what real degraded users run — complete the same load well under
-/// 60 s, so this large timeout is purely a slow-test-build accommodation.
-#[cfg(target_os = "linux")]
-mod expl3_degraded_no_dump;
-
 /// Regression: minted's `\newmintinline`/`\newminted`/`\newmint` take an optional
 /// `[env-name]` before the two mandatory `{language}{options}` args (real
 /// minted.sty: `\newcommand{..}[3][]`). The Rust binding declared them with a

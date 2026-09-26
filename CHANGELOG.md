@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **The XSLT recursion cap now applies in the statically linked release
+    binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
+    written through `dlsym`, which cannot see a global of a statically linked
+    libxslt, so those binaries kept libxslt's default of 3000. A stylesheet that
+    recursed between 1000 and 3000 levels deep now aborts in post-processing, as
+    in Perl and in dynamically linked builds. Guard
+    `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`

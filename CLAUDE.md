@@ -137,7 +137,7 @@ Requires **Rust nightly**.
 | Profile | Use | Tuned for |
 |---------|-----|-----------|
 | `test`  | `cargo test` / `cargo run` / `cargo build` (default = `dev`/`test`) | Maximum debug info, debug-assertions, overflow-checks, incremental rebuilds. **All local development and triage** — the only profile to use day-to-day. |
-| `ci`    | `cargo test --profile ci` (only used in `.github/workflows/CI.yml`) | Lowest RAM (16 GB GitHub Actions runner) and fastest compile. `opt-level = 0`, `codegen-units = 256`. |
+| `ci`    | `cargo nextest run --cargo-profile ci --profile ci` (CI workflows only; `tools/make_formats.sh` via `PROFILE=ci`) | Fastest build + test on the 4 vCPU / 16 GB GitHub runner. Workspace crates at `opt-level = 0`, every dependency and `latexml_core` at `1`, `codegen-units = 256`, debug-assertions on, no debuginfo. Measured vs all-`0`: test CPU 88 → 23.8 min for +46 s of build over warm deps (2:02 → 2:48, 4 cores / 2 jobs; cold +1:55, 2:37 → 4:32), peak build RSS ≈3.5 GB either way. |
 | `release` | `cargo build --release` / `cargo run --release` | Strong-optimized binary tuned for our 32 GB / 20-thread laptop. `opt-level = 3`, `lto = "thin"`, `codegen-units = 20`, `strip = "symbols"`. Used for **sandbox sweeps and Perl-parity measurements**, NOT distribution. |
 | `maxperf` | `cargo build --profile maxperf` | **Distribution / publish-grade artifact**. Inherits release, plus `lto = "fat"`, `codegen-units = 1`. Slowest build, smallest + fastest binary. **Reserved for shipping a stable state.** |
 

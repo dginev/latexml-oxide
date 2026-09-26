@@ -128,7 +128,8 @@ LoadDefinitions!({
   // Not in Base: there latex.ltx's `\tl_new:N` found them taken and every
   // format build logged "Control sequence \CurrentFile already defined".
   // Guards: `dump_gate_init::current_file_comes_from_latex_not_plain`,
-  // `dump_gate_init::current_file_is_defined_empty_under_latex`.
+  // `dump_gate_init::current_file_is_defined_empty_under_latex` (dump) and
+  // `dump_gate_init::nodump_latex_branch_converts_healthily` (NODUMP).
   for name in [
     "\\CurrentFile",
     "\\CurrentFilePath",
