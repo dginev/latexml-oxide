@@ -3278,6 +3278,328 @@ fn clean_index_key(key: &str) -> String {
   }
   key.trim_end_matches(['.', ',', ';']).to_string()
 }
+/// The kernel's `env/<name>/<point>` hook call, in its own token shapes:
+/// bare `\UseHook{env/#1/<point>}` for before/begin/after
+/// (latex.ltx:15347/15362/15391) and, for `end`,
+/// `\romannumeral\IfHookEmptyTF{env/#1/end}{\expandafter\z@}{\z@\UseHook
+/// {env/#1/end}}` (:15386-15388): an empty hook vanishes at EXPANSION time,
+/// so nothing sits between an alignment's last cell and `\endtabular`'s
+/// implicit `\crcr` (a trailing `\multicolumn` row leaked its group when an
+/// unexpandable token stood there). Emitted only when the L3 hook system
+/// exists and reports code for the hook (its own `\IfHookEmptyTF`,
+/// dialect.rs): with no hook there is nothing to fire, and a line-reading
+/// environment (comment.sty) must not see extra tokens at its `\end`.
+pub(crate) fn env_hook_tokens(name: &str, point: &str) -> Vec<Token> {
+  if !env_hook_has_code(name, point) {
+    return Vec::new();
+  }
+  let hook = |v: &mut Vec<Token>| {
+    v.push(T_CS!("\\UseHook"));
+    v.push(T_BEGIN!());
+    v.extend(ExplodeText!(s!("env/{name}/{point}")));
+    v.push(T_END!());
+  };
+  let mut v = Vec::new();
+  if point == "end" {
+    v.push(T_CS!("\\romannumeral"));
+    v.push(T_CS!("\\IfHookEmptyTF"));
+    v.push(T_BEGIN!());
+    v.extend(ExplodeText!(s!("env/{name}/end")));
+    v.push(T_END!());
+    v.extend([T_BEGIN!(), T_CS!("\\expandafter"), T_CS!("\\z@"), T_END!()]);
+    v.push(T_BEGIN!());
+    v.push(T_CS!("\\z@"));
+    hook(&mut v);
+    v.push(T_END!());
+  } else {
+    hook(&mut v);
+  }
+  v
+}
+
+/// LaTeX's `\begin{name}` for an environment defined by macros
+/// (latex.ltx:15346-15364): the `before` hook outside the group, then inside
+/// it `\@currenvir`, the `begin` hook and `\name` — `\begin`'s path whenever
+/// no `\begin{name}` constructor is defined. `env` is the name as written.
+pub(crate) fn begin_environment_by_macro(name: &str, env: Tokens) -> Result<Vec<Token>> {
+  let mut out = lookup_tokens(&format!("@environment@{name}@beforebegin"))
+    .map(Tokens::unlist)
+    .unwrap_or_default();
+  out.extend(env_hook_tokens(name, "before"));
+  out.push(T_CS!("\\begingroup"));
+  if let Some(after) = lookup_tokens(&format!("@environment@{name}@atbegin")) {
+    out.extend(after.unlist());
+  }
+  out.extend(Invocation!(T_CS!("\\lx@setcurrenvir"), vec![env]).unlist());
+  out.extend(env_hook_tokens(name, "begin"));
+  out.push(T_CS!(format!("\\{name}")));
+  Ok(out)
+}
+
+/// LaTeX's `\end{name}` for an environment defined by macros
+/// (latex.ltx:15386-15391): the `end` hook inside the group before
+/// `\endname`, the `after` hook after the `\endgroup`. The epilogue `\end`
+/// shares with every path (`\if@ignore…\fi`) is the caller's.
+pub(crate) fn end_environment_by_macro(name: &str) -> Vec<Token> {
+  let mut out = lookup_tokens(&format!("@environment@{name}@atend"))
+    .map(Tokens::unlist)
+    .unwrap_or_default();
+  out.extend(env_hook_tokens(name, "end"));
+  let end = T_CS!(format!("\\end{name}"));
+  if is_defined_token(&end) {
+    out.push(end);
+  }
+  out.push(T_CS!("\\endgroup"));
+  out.extend(env_hook_tokens(name, "after"));
+  if let Some(afterend) = lookup_tokens(&format!("@environment@{name}@afterend")) {
+    out.extend(afterend.unlist());
+  }
+  out
+}
+
+/// The makeindex characters an entry is written with: makeindex(1)'s style
+/// keys `level`, `actual`, `encap` and `quote` (defaults `!`, `@`, `|`, `"`).
+/// A document that writes its entries for a style of its own declares them:
+/// doc.sty:521-524 defines `\levelchar` `>`, `\actualchar` `=`, `\encapchar`
+/// `|` and `\quotechar` `!` to match gind.ist/gglo.ist and assembles every
+/// `\index`/`\glossary` entry from those macros (doc.sty:626-650, 1054-1093);
+/// amsldoc.cls:74-77 and tvz-user.sty:99-102 spell out makeindex's defaults
+/// the same way. Split with the defaults, each doc.sty entry stayed ONE
+/// phrase (`foo=\verb!*+\foo+`, `v1.0>!!=General:>…`); split with the
+/// characters in force it parses as the pdflatex + makeindex run does.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct IndexChars {
+  level:  String,
+  actual: String,
+  encap:  String,
+  quote:  String,
+}
+
+/// The macros a writer spells its makeindex characters with (doc.sty:521-524).
+const INDEX_CHAR_MACROS: [&str; 4] = ["\\levelchar", "\\actualchar", "\\encapchar", "\\quotechar"];
+
+impl IndexChars {
+  /// makeindex's own characters: `!`, `@`, `|`, `"`.
+  pub(crate) fn makeindex_default() -> Self {
+    IndexChars {
+      level:  "!".to_string(),
+      actual: "@".to_string(),
+      encap:  "|".to_string(),
+      quote:  "\"".to_string(),
+    }
+  }
+
+  /// The characters an `\index` entry was written with. The style is chosen
+  /// per index FILE, outside the document (`makeindex -s gind.ist`), and one
+  /// document can hold entries of both kinds: keytheorems-doc and
+  /// csvsimple-l3 load doc.sty (through ltxdoc) but index with tcolorbox's
+  /// documentation library, which writes makeindex's defaults
+  /// (tcbdocumentation.code.tex:214 `index default settings`: `@`) for a
+  /// default `makeindex` run; read in doc's characters their sort keys were
+  /// never split off and raised `Script _`. So an entry is read in the
+  /// declared characters only when it shows them — spelled with
+  /// `\levelchar` & co., as every doc.sty writer's entry is (doc.sty:541,
+  /// 1054-1093; hypdoc.sty:351; amsldoc.cls:88), or holding the declared
+  /// actual character itself at its top level, as nlctdoc.cls:496-570 writes
+  /// `\index{#1=\appfmt{#1}…}` for its own style (nlctdoc.cls:140-150) — and
+  /// in makeindex's defaults otherwise.
+  pub(crate) fn for_index_entry(entry: &Tokens) -> Self {
+    let declared = Self::in_force();
+    let default = Self::makeindex_default();
+    if declared == default {
+      return default;
+    }
+    let mut depth = 0i32;
+    let mut in_math = false;
+    for t in entry.unlist_ref() {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        Catcode::MATH if depth == 0 => in_math = !in_math,
+        Catcode::CS if t.with_str(|s| INDEX_CHAR_MACROS.contains(&s)) => return declared,
+        _ => {},
+      }
+      if depth == 0
+        && !in_math
+        && declared.actual != default.actual
+        && t.get_catcode() != Catcode::CS
+        && t.with_str(|s| s == declared.actual)
+      {
+        return declared;
+      }
+    }
+    default
+  }
+
+  /// The characters in force. Each of `\levelchar`, `\actualchar`,
+  /// `\encapchar` and `\quotechar` that is a parameterless macro whose body
+  /// is one character overrides makeindex's default for its key. (hypdoc
+  /// re-`\def`s `\encapchar` WITH parameters inside its own writers,
+  /// hypdoc.sty:344-353 — no declaration; the default stands.) A `\glossary`
+  /// entry is always read in them: the `.glo` file needs a style that names
+  /// its `\glossaryentry` keyword (gglo.ist `keyword`), and doc.sty's
+  /// `\changes` expands the characters into the entry before writing it
+  /// (doc.sty:627 `\protected@edef`), so they leave no spelling to see.
+  pub(crate) fn in_force() -> Self {
+    let default = Self::makeindex_default();
+    let pick = |cs: &str, default: String| declared_index_char(cs).unwrap_or(default);
+    IndexChars {
+      level:  pick("\\levelchar", default.level),
+      actual: pick("\\actualchar", default.actual),
+      encap:  pick("\\encapchar", default.encap),
+      quote:  pick("\\quotechar", default.quote),
+    }
+  }
+}
+
+/// The one character a `\def\levelchar{>}`-style declaration stands for.
+fn declared_index_char(cs: &str) -> Option<String> {
+  let defn = lookup_definition(&T_CS!(cs)).ok()??;
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return None;
+  }
+  match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().as_slice() {
+      [t] if !t.get_catcode().is_active_or_cs() => Some(t.with_str(|s| s.to_string())),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
+/// The next token of a `\verb` run as the `.ind` re-read receives it. A
+/// control sequence is EXPANDED, as `\protected@write` expands a
+/// macro-assembled entry (doc.sty's `\verb\quotechar*\verbatimchar…`;
+/// l3doc.cls:2151 `\verbatimchar` = `&`, an unexpanded `&` is a stray
+/// alignment tab — ltx-talk, postnotes, pythonimmediate). Returns the token,
+/// the unconsumed rest, and whether a macro supplied it; None when nothing is
+/// left. A failed expansion is the caller's error.
+fn written_index_token(toks: Vec<Token>) -> Result<Option<(Token, Vec<Token>, bool)>> {
+  let Some(first) = toks.first().copied() else {
+    return Ok(None);
+  };
+  if first.get_catcode() != Catcode::CS {
+    return Ok(Some((first, toks[1..].to_vec(), false)));
+  }
+  let tail = Tokens::new(toks);
+  let expanded: Result<(Option<Token>, Vec<Token>)> =
+    reading_from_mouth(Mouth::new("", None).expect("empty mouth"), move || {
+      unread(tail);
+      let first = read_x_token(None, false, None)?;
+      let mut remaining = Vec::new();
+      while let Some(t) = read_token()? {
+        remaining.push(t);
+      }
+      Ok((first, remaining))
+    });
+  let (first, remaining) = expanded?;
+  Ok(first.map(|t| (t, remaining, true)))
+}
+
+/// [`written_index_token`] after makeindex has read it: the QUOTE character
+/// takes the next character literally and is dropped (makeindex(1) `quote`),
+/// so doc.sty's `\verb!*+\foo+` is `\verb*+\foo+` and lshort's
+/// `\index{^@\verb"|^"|}` is `\verb|^|` (lshort-*/math.tex; real makeindex
+/// output checked).
+fn unquoted_index_token(
+  toks: Vec<Token>,
+  chars: &IndexChars,
+) -> Result<Option<(Token, Vec<Token>, bool)>> {
+  let Some((t, rest, from_macro)) = written_index_token(toks)? else {
+    return Ok(None);
+  };
+  if t.get_catcode() != Catcode::CS && t.with_str(|s| s == chars.quote) && !rest.is_empty() {
+    return Ok(
+      written_index_token(rest)?
+        .map(|(quoted, rest, quoted_from_macro)| (quoted, rest, from_macro || quoted_from_macro)),
+    );
+  }
+  Ok(Some((t, rest, from_macro)))
+}
+
+/// A `\verb` body as makeindex hands it on: the quote character is dropped
+/// and makes the next character literal — a quoted delimiter still closes
+/// the run, since makeindex writes it out bare — and a control SYMBOL named
+/// by the quote character is makeindex's ESCAPE rule (`\"` stays `\"`, the
+/// umlaut) unless the backslash is itself quoted: amsldoc.tex's
+/// `\index{"|@\verb"*+"\"|+}` is `\verb*+\|+` (makeindex output checked).
+/// The re-tokenization of the entry welded that `\` and `"` into one token.
+struct IndexVerbBody<'q> {
+  delim:  String,
+  quote:  &'q str,
+  quoted: bool,
+  body:   Vec<Token>,
+}
+
+impl IndexVerbBody<'_> {
+  /// Take one written token; true when it closes the run.
+  fn feed(&mut self, t: Token) -> bool {
+    let is_cs = t.get_catcode() == Catcode::CS;
+    let s = t.with_str(|s| s.to_string());
+    if !self.quoted {
+      if !is_cs && s == self.quote {
+        self.quoted = true;
+        return false;
+      }
+    } else if is_cs && s.strip_prefix('\\') == Some(self.quote) {
+      self.body.push(T_OTHER!("\\"));
+      return false;
+    }
+    self.quoted = false;
+    if s == self.delim {
+      return true;
+    }
+    self.body.push(t);
+    false
+  }
+}
+
+/// The script characters of an entry's display as the `.ind`/`.gls` re-read
+/// gives them. The entry was re-tokenized with the internal catcodes (`_`
+/// subscript, `^` superscript); makeindex's output is read back in the
+/// document, where underscore.sty makes `_` active (underscore.sty:29-31,
+/// `\catcode`_\active` at begin document; l3doc.cls:432 loads it): active in
+/// the document, the character is active here too. Outside math, where the
+/// entry was read under a `\@sanitize` (doc.sty's `\changes`, :626-650) or the
+/// document made the character text, it is the text character — an other `_`
+/// would print through OT1's slot as `˙`. lt3graph's `\changes{…}{…}{\texttt{
+/// \textbackslash graph_(g)put_vertex}}` prints `\graph_(g)put_vertex` (golden
+/// lt3graph.pdf) where the subscript raised `Script _ can only appear in math
+/// mode`. A subscript `_` of the document stays one, in math and out (pdflatex
+/// reports the latter too).
+fn reread_script_chars(phrase: Vec<Token>) -> Vec<Token> {
+  let mut in_math = false;
+  phrase
+    .into_iter()
+    .map(|t| {
+      let cc = t.get_catcode();
+      if cc == Catcode::MATH {
+        in_math = !in_math;
+      }
+      if cc != Catcode::SUB && cc != Catcode::SUPER {
+        return t;
+      }
+      let Some(c) = t.with_str(|s| {
+        let mut chars = s.chars();
+        chars.next().filter(|_| chars.next().is_none())
+      }) else {
+        return t;
+      };
+      match lookup_catcode(c) {
+        Some(Catcode::ACTIVE) => T_ACTIVE!(c),
+        Some(Catcode::SUB | Catcode::SUPER) | None => t,
+        Some(_) if in_math => t,
+        Some(_) if cc == Catcode::SUB => T_CS!("\\textunderscore"),
+        Some(_) => T_CS!("\\textasciicircum"),
+      }
+    })
+    .collect()
+}
+
 /// Perl: process_index_phrases — expand \index{a!b@c|see{d}} into
 /// \@index{\@indexphrase{a}\@indexphrase[c]{b}} etc.
 ///
@@ -3293,71 +3615,118 @@ fn clean_index_key(key: &str) -> String {
 /// `\@internal@text@verb{star}{D}{body}` (a non-expandable constructor, so the
 /// run also survives the `\protected@write` expansion below) so the body
 /// renders as typewriter.
-fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
+///
+/// The run is read as makeindex reads the written entry
+/// ([`unquoted_index_token`], [`IndexVerbBody`]). When a MACRO supplied the
+/// head (doc.sty:1054-1093 `\verb\quotechar*\verbatimchar\bslash\@gtempa
+/// \verbatimchar`), the body was assembled by macros too and is expanded
+/// before it is scanned — `\protected@write` expands it before makeindex ever
+/// sees it — so it is `\foo`, closed by the expanded `\verbatimchar`, not the
+/// literal `\bslash\@gtempa\verbatimchar…` running to the end of the entry
+/// (every doc.sty usage entry: source2e, sunpath). A literal head keeps its
+/// body literal (`\index{\verb+\delta+}` is `\delta`, not δ). The caller
+/// runs this inside its `\protected@write` frame (`\protect`, inert symbols).
+fn absorb_index_verb_runs(toks: &[Token], chars: &IndexChars) -> Result<Vec<Token>> {
   let mut out: Vec<Token> = Vec::with_capacity(toks.len());
   let mut i = 0;
   while i < toks.len() {
     let tok = toks[i];
     i += 1;
+    // `\string\verb` WRITES the characters `\verb`, and the `.ind` re-read
+    // makes them the command again: amsldoc.cls:87-92 `\@indexcs`
+    // (`\string\verb\quotechar*\verbatimchar…`), doc.sty's `\changes`
+    // (:641). Left in place, the `\string` stringified the run's opening
+    // brace (`–` through OT1, amsldoc-it, amsldoc-vi).
+    if tok == T_CS!("\\string") && toks.get(i) == Some(&T_CS!("\\verb")) {
+      continue;
+    }
     if tok != T_CS!("\\verb") {
       out.push(tok);
       continue;
-    }
-    let mut starred = false;
-    if i < toks.len() && toks[i] == T_OTHER!("*") {
-      starred = true;
-      i += 1;
     }
     if i >= toks.len() {
       out.push(tok);
       continue;
     }
-    // A control sequence in the delimiter slot is expanded to the character
-    // it stands for, as `\verb`'s own delimiter scan (a `read_x_token`) would:
-    // doc.sty's `\SpecialMacroIndex` writes `\verb\verbatimchar…\verbatimchar`
-    // (l3doc.cls:2151 `\verbatimchar` = `&` — an unexpanded `&` in the phrase
-    // is a stray alignment tab; ltx-talk, postnotes, pythonimmediate), and
-    // amsldoc.cls:87-114 `\index{foo@\string\verb\string"bar}` reaches
-    // `\string"` = `"` with no closing `"` (amsldoc-it/-vn): the body then runs
-    // to the end of the ENTRY, never past it (`readBalanced ran out of input`
-    // when `\verb` itself was expanded; Perl never expands the entry).
-    let (delim, rest): (Token, Vec<Token>) = if toks[i].get_catcode() == Catcode::CS {
-      let tail = Tokens::new(toks[i..].to_vec());
-      let expanded: Result<(Option<Token>, Vec<Token>)> =
-        reading_from_mouth(Mouth::new("", None).expect("empty mouth"), move || {
-          unread(tail);
-          let first = read_x_token(None, false, None)?;
-          let mut remaining = Vec::new();
-          while let Some(t) = read_token()? {
-            remaining.push(t);
-          }
-          Ok((first, remaining))
-        });
-      match expanded {
-        Ok((Some(d), remaining)) => (d, remaining),
-        _ => {
-          // Not a verbatim invocation at all: keep `\verb` as index text.
-          out.extend(Explode!("\\verb"));
-          if starred {
-            out.push(T_OTHER!("*"));
-          }
-          continue;
-        },
-      }
-    } else {
-      (toks[i], toks[i + 1..].to_vec())
+    // The head: an optional `*`, then the delimiter.
+    let head = match unquoted_index_token(toks[i..].to_vec(), chars)? {
+      Some((first, rest, m1)) if first == T_OTHER!("*") => {
+        unquoted_index_token(rest, chars)?.map(|(delim, rest, m2)| (true, delim, rest, m1 || m2))
+      },
+      Some((first, rest, m1)) => Some((false, first, rest, m1)),
+      None => None,
     };
-    let delim_s = delim.with_str(|d| d.to_string());
-    let mut j = 0;
-    while j < rest.len() && rest[j].with_str(|d| d != delim_s.as_str()) {
-      j += 1;
+    let Some((starred, delim, rest, from_macro)) = head else {
+      // Not a verbatim invocation at all: keep `\verb` as index text.
+      out.extend(Explode!("\\verb"));
+      continue;
+    };
+    let mut body = IndexVerbBody {
+      delim:  delim.with_str(|d| d.to_string()),
+      quote:  &chars.quote,
+      quoted: false,
+      body:   Vec::new(),
+    };
+    // A macro-assembled run is `\protected@write`-expanded before it is read
+    // (robust and `\protected` commands stay, as in the `\write`): source2e's
+    // `\DescribeMacro{\g__hook_\meta{hook}_code_prop}` (lthooks.dtx) carries
+    // doc.sty's `\meta` into the body; read with `read_x_token`, which
+    // expands robust commands, it ran through `\meta`'s internals (65
+    // errors on lthooks.dtx). The remainder is handed on expanded; the
+    // entry's own expansion then finds nothing more to expand in it (a
+    // `\protect`ed command re-protects itself).
+    //
+    // The run may close inside a group of the expanded entry: doc.sty:544-548
+    // `\LeftBraceIndex` writes `…\verbatimchar\quotechar\bslash{\verbatimchar
+    // \string\iffalse}\string\fi`, whose re-read makes `\iffalse…\fi` hide the
+    // `}` again; a remainder that does not balance is read literally instead.
+    let literal_rest = rest.clone();
+    let mut rest = if from_macro {
+      do_expand_partially(Tokens::new(rest))?.unlist()
+    } else {
+      rest
+    };
+    let scan = |rest: &[Token], body: &mut IndexVerbBody| {
+      let mut j = 0;
+      while j < rest.len() && !body.feed(rest[j]) {
+        j += 1;
+      }
+      // consume the closing delimiter
+      rest[(j + 1).min(rest.len())..].to_vec()
+    };
+    let mut after: Vec<Token> = scan(&rest, &mut body);
+    if from_macro && !Tokens::new(after.clone()).is_balanced() {
+      body.body.clear();
+      body.quoted = false;
+      rest = literal_rest;
+      after = scan(&rest, &mut body);
     }
     // The re-tokenized body collapsed `\verb`'s raw chars back into control
     // sequences; `untex` + `Explode!` restores them to catcode-OTHER literals
     // so the digested `#3` renders as typewriter text instead of re-expanding
     // (which is exactly the `\delta`→math-δ leak this fixes).
-    let body_str = Tokens::new(rest[..j].to_vec()).untex();
-    let after = if j < rest.len() { j + 1 } else { j }; // consume the closing delimiter
+    let mut body_toks = body.body;
+    if from_macro {
+      // A robust command is written by its name: the `.idx` line of
+      // `\DescribeMacro{\foo\meta{name}}` reads `\verb!*+\foo\meta  {name}+`
+      // (pdflatex), without the `\protect` the expansion stops at.
+      let protect = T_CS!("\\protect");
+      let mut kept = Vec::with_capacity(body_toks.len());
+      for (k, t) in body_toks.iter().enumerate() {
+        let next_is_cs = body_toks
+          .get(k + 1)
+          .is_some_and(|n| n.get_catcode() == Catcode::CS);
+        if !(*t == protect && next_is_cs) {
+          kept.push(*t);
+        }
+      }
+      body_toks = kept;
+    }
+    let body_str = Tokens::new(body_toks).untex();
+    // In a group, as `\verb` itself is: the constructor's typewriter font
+    // must not run on into the rest of the phrase (doc.sty's change entry
+    // `\verb*+\foo+:` → the `:` and the next level were typewriter).
+    out.push(T_BEGIN!());
     out.push(T_CS!("\\@internal@text@verb"));
     out.push(T_BEGIN!());
     if starred {
@@ -3370,18 +3739,43 @@ fn absorb_index_verb_runs(toks: &[Token]) -> Vec<Token> {
     out.push(T_BEGIN!());
     out.extend(Explode!(body_str));
     out.push(T_END!());
+    out.push(T_END!());
     // The remainder may hold further runs; it is a fresh slice now.
-    out.extend(absorb_index_verb_runs(&rest[after..]));
-    return out;
+    out.extend(absorb_index_verb_runs(&after, chars)?);
+    return Ok(out);
   }
-  out
+  Ok(out)
 }
 
-fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
-  let token_list = tokens.unlist();
-  if token_list.is_empty() {
+/// `chars` are the makeindex characters the entry is split with
+/// ([`IndexChars::in_force`]); `inlist` names the list the mark belongs to
+/// (Perl's third argument: `\@index[style][inlist]`) — `\glossary` marks
+/// list `glo`, collected by a `.gls` stand-in's `<ltx:index lists="glo">`.
+pub(crate) fn process_index_phrases(
+  tokens: Tokens,
+  chars: &IndexChars,
+  inlist: Option<&str>,
+) -> Result<Tokens> {
+  if tokens.is_empty() {
     return Ok(Tokens::new(vec![]));
   }
+  // Perl pool:4332-4336: an entry whose groups do not balance is discarded, as
+  // makeindex rejects it. doc.sty's `\changes{v1.2i}{…}{Use \cs{protected} for
+  // \cs{\bslash} variant}` (ltmath.dtx, source2e) writes `\cs{\}`, whose
+  // re-read `\}` leaves the `{` open (the golden change history has no such
+  // entry); read as a phrase it ran the entry's reader off its end.
+  if !tokens.is_balanced() {
+    Warn!(
+      "malformed",
+      "indexentry",
+      s!(
+        "index entry has unbalanced groups, discarding: \"{}\"",
+        tokens
+      )
+    );
+    return Ok(Tokens::new(vec![]));
+  }
+  let token_list = tokens.unlist();
   // Real `\index` (latex.ltx:17720-17725 `\@wrindex`) writes the entry with
   // `\protected@write`, i.e. the argument is EXPANDED (robust/`\protected`
   // commands deferred) before makeindex ever sees the `@`/`!`/`|` separators.
@@ -3402,7 +3796,6 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // and `\proc@letter`'s caller-closing `\fi` (manyind.sty:148) surfaced as a
   // stray `\fi` (mindsample; Perl, which never expands here, is clean).
   // Guard: `perfect_kernel_batch54::index_entry_defers_protected_macros`.
-  let toks = absorb_index_verb_runs(&token_list);
   // A control SYMBOL in the entry is never expanded here. After `\@sanitize`
   // (latex.ltx:1778) real `\@wrindex` writes a `\string`ed control symbol as
   // two characters, makeindex drops the sort key entirely and `\printindex`
@@ -3432,7 +3825,7 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   // unexpandable for the pass, stringifies by NAME, and is restored to its
   // real (or undefined) meaning when the frame pops. Guard:
   // `cluster_package_guards::index_string_of_undefined_command_stringifies_its_name`.
-  let inert: Vec<Token> = toks
+  let inert: Vec<Token> = token_list
     .iter()
     .filter(|t| {
       t.get_catcode() == Catcode::CS
@@ -3454,7 +3847,14 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   for t in &inert {
     let_i(t, &T_CS!("\\relax"), Some(Scope::Local));
   }
-  let expanded = do_expand_partially(Tokens::new(toks));
+  // The `\verb` runs are absorbed inside the same frame: a macro-assembled
+  // run's body is expanded as it is scanned, and amsldoc's `\cn{\\*}`
+  // entry (`\@indexcs`, amsldoc.cls:87-92) carries the control symbol `\*`
+  // into it, whose amsldoc.cls:213 `\def\*#1` ate the rest of the entry and
+  // spilled keyval errors (amsldoc-it, amsldoc-vi).
+  // A Fatal inside either stays Fatal; the frame pops first.
+  let expanded = absorb_index_verb_runs(&token_list, chars)
+    .and_then(|toks| do_expand_partially(Tokens::new(toks)));
   pop_frame()?;
   // The `.ind` re-read: `\printindex` `\input`s the written entry in the
   // document body, where `@` is OTHER, so a control word that still carries
@@ -3480,21 +3880,22 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       }
     })
     .collect();
-  // Add terminal ! if not present
+  // Add a terminal level character if not present
   let mut toks = token_list;
   if toks
     .last()
-    .map(|t| t.with_str(|s| s != "!"))
+    .map(|t| t.with_str(|s| s != chars.level))
     .unwrap_or(true)
   {
-    toks.push(T_OTHER!("!"));
+    toks.push(T_OTHER!(chars.level.as_str()));
   }
   let mut expansion: Vec<Token> = Vec::new();
   let mut phrase: Vec<Token> = Vec::new();
   let mut sortas: Vec<Token> = Vec::new();
   let mut style: Option<String> = None;
   let mut i = 0;
-  // Separator chars (`"`/`@`/`!`/`|`) act ONLY at brace depth 0. A flat
+  // Separator chars (makeindex's quote/actual/level/encap, by default
+  // `"`/`@`/`!`/`|`) act ONLY at brace depth 0. A flat
   // scan (Perl latex_constructs.pool.ltxml L4326-4350 — Perl shares this
   // byte-identically) cuts through nested groups: packdoc.sty L328/L331
   // writes `\index{#2@\PDElement{#1}{#2}\csuse{packdoc@#1@IndexRemark}}`,
@@ -3535,11 +3936,11 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
     }
     let s = tok.with_str(|s| s.to_string());
     i += 1;
-    if s == "\"" && i < toks.len() {
+    if s == chars.quote && i < toks.len() {
       // Escaped character: take next token literally
       phrase.push(toks[i]);
       i += 1;
-    } else if s == "@" {
+    } else if s == chars.actual {
       // Sort key: everything before @ is the sort key
       while phrase
         .last()
@@ -3560,6 +3961,16 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       // `\index{\A>@…}`, `\index{\AB@…}` — manyind's sort-key idiom), and
       // digesting it can only raise `undefined` (Perl shares that error).
       // Guard: `perfect_kernel_batch56::index_sort_key_undefined_word_is_text`.
+      // So is an implicit brace (`\bgroup`/`\egroup`, a `\let` to `{`/`}`):
+      // doc.sty:544-555 `\LeftBraceIndex`/`\RightBraceIndex` sort their entries
+      // under `\bgroup`/`\egroup`, and digested they opened or closed a group
+      // of the document.
+      let implicit_brace = |t: &Token| {
+        with_meaning(t, |m| {
+          matches!(m, Some(Stored::Token(l))
+            if matches!(l.get_catcode(), Catcode::BEGIN | Catcode::END))
+        })
+      };
       sortas = phrase
         .drain(..)
         .flat_map(|t| match t.get_catcode() {
@@ -3569,7 +3980,7 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
           | Catcode::SUPER
           | Catcode::SUB
           | Catcode::ACTIVE => vec![T_OTHER!(t.with_str(|s| s.to_string()))],
-          Catcode::CS if lookup_meaning(&t).is_none() => {
+          Catcode::CS if lookup_meaning(&t).is_none() || implicit_brace(&t) => {
             // `\textbackslash` + the name: an OTHER `\` would typeset
             // through the OT1 slot (“).
             let mut lit = vec![T_CS!("\\textbackslash")];
@@ -3581,7 +3992,7 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
           _ => vec![t],
         })
         .collect();
-    } else if s == "!" || s == "|" {
+    } else if s == chars.level || s == chars.encap {
       // End of phrase
       while phrase
         .last()
@@ -3606,19 +4017,19 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
           expansion.push(T_OTHER!("]"));
         }
         expansion.push(T_BEGIN!());
-        expansion.append(&mut phrase);
+        expansion.extend(reread_script_chars(std::mem::take(&mut phrase)));
         expansion.push(T_END!());
       }
       sortas.clear();
-      if s == "|" {
+      if s == chars.encap {
         // Collect remaining tokens as style/see/seealso
         if i < toks.len()
           && toks
             .last()
-            .map(|t| t.with_str(|s| s == "!"))
+            .map(|t| t.with_str(|s| s == chars.level))
             .unwrap_or(false)
         {
-          // Remove terminal ! stopbit
+          // Remove the terminal level-character stopbit
           toks.pop();
         }
         let extra: String = toks[i..]
@@ -3659,7 +4070,15 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
             "textbf" | "bf" => "bold".to_string(),
             "textit" | "it" | "emph" => "italic".to_string(),
             "textrm" | "rm" => String::new(),
-            other => other.to_string(),
+            // An encap with arguments is `\cmd{args}{page}`; the style is
+            // the command — hypdoc's `hdpindex{main}` / `hdclindex{2}{usage}`
+            // (hypdoc.sty:344-364, every doc.sty index entry under
+            // hyperref) are `hdpindex` / `hdclindex`. Perl keeps the whole
+            // encap, a `font` no stylesheet names (`ltx_font_hdpindex{main}`).
+            other => match other.split_once('{') {
+              Some((cmd, _)) if !cmd.trim().is_empty() => cmd.trim().to_string(),
+              _ => other.to_string(),
+            },
           });
         }
         break; // Consumed everything after |
@@ -3670,13 +4089,23 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
       phrase.push(tok);
     }
   }
-  // Wrap in \@index[style]{...}
+  // Wrap in \@index[style][inlist]{...} (Perl: the `[style]` slot is
+  // written, possibly empty, whenever a list follows it).
   let mut result = vec![T_BEGIN!(), T_CS!("\\normalfont"), T_CS!("\\@index")];
-  if let Some(ref sty) = style
-    && !sty.is_empty()
-  {
+  let style = style.filter(|sty| !sty.is_empty());
+  if style.is_some() || inlist.is_some() {
     result.push(T_OTHER!("["));
-    result.extend(Explode!(sty));
+    if let Some(sty) = style {
+      // ONE token, as Perl's `T_OTHER($style)`: exploded, the braces of an
+      // encap with arguments (hypdoc's `hdpindex{main}`, hypdoc.sty:344-353) were
+      // digested through the OT1 slots into `hdpindex–main˝`.
+      result.push(T_OTHER!(sty.as_str()));
+    }
+    result.push(T_OTHER!("]"));
+  }
+  if let Some(list) = inlist {
+    result.push(T_OTHER!("["));
+    result.extend(Explode!(list));
     result.push(T_OTHER!("]"));
   }
   result.push(T_BEGIN!());

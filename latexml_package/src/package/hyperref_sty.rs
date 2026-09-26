@@ -594,8 +594,9 @@ LoadDefinitions!({
     Tokens::new(invocation_tokens)
   });
 
-  // RE-define from url w
-  DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true);
+  // RE-define from url w. Robust, as hyperref.sty:4801
+  // `\DeclareRobustCommand*{\url}` (see url_sty.rs).
+  DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true, protected => true);
 
   // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
   // present. enter_horizontal => true was missing in the Rust port —

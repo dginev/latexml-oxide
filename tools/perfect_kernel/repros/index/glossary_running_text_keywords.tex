@@ -1,0 +1,14 @@
+% witness: arXiv cs/9809003 (7 \glossary), math/9608214 (\gloss -> #1\glossary{\protect #1}),
+%          nucl-th/9311001 (\glossary{$\lambda$ \>\' thermal conductivity})
+% oracle:  pdflatex 0 errors: "A term and a symbol x." (the .glo entry is written, never typeset)
+% engines: rust (56jm) = 1 Warning:unexpected:glossary per call, entry dropped; perl 0.8.8 alike
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: after \makeglossary, \glossary is an invisible ltx:indexmark in list glo (the
+%   witnesses call no \makeglossary: their entries are read and dropped, latex.ltx:17742); only
+%   list idx phrases become the HTML head keywords.
+\documentclass{article}
+\makeglossary
+\begin{document}
+A term\index{alpha} and a symbol $x$\glossary{$x$ the unknown}.
+\end{document}

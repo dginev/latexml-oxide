@@ -32,6 +32,7 @@ mod cleveref_class_stubs;
 mod currsize_default;
 mod deferred_load_retry;
 mod defplain_skips_blanks_before_brace;
+mod doc_changes_index;
 mod document_indirection;
 mod dump_gate_init;
 mod expanded_protected_brace_hunt;

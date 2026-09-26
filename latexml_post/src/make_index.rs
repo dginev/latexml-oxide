@@ -16,6 +16,31 @@ use crate::{
   processor::{ProcessResult, Processor},
 };
 
+/// The list an `ltx:indexmark` without `inlist` belongs to, and the list an
+/// `ltx:index` without `lists` collects: `\index` writes `\jobname.idx`
+/// (Perl MakeIndex.pm:77 `$defaultlistname`).
+pub const DEFAULT_INDEX_LIST: &str = "idx";
+
+/// The ObjectDB key of an index entry: `INDEX:<phrase keys>` in the default
+/// list (Perl's key, unchanged), `INDEX@<list>:<phrase keys>` in another —
+/// one entry per list, as `GLOSSARY:<list>:<key>`.
+pub fn index_db_key(list: &str, phrase_keys: &[String]) -> String {
+  if list == DEFAULT_INDEX_LIST {
+    format!("INDEX:{}", phrase_keys.join(":"))
+  } else {
+    format!("INDEX@{list}:{}", phrase_keys.join(":"))
+  }
+}
+
+/// The list of an index-entry key, and its phrase keys joined by `:` —
+/// the inverse of [`index_db_key`]; None for any other key.
+fn index_db_list(key: &str) -> Option<(&str, &str)> {
+  if let Some(phrases) = key.strip_prefix("INDEX:") {
+    return Some((DEFAULT_INDEX_LIST, phrases));
+  }
+  key.strip_prefix("INDEX@")?.split_once(':')
+}
+
 /// A see/see-also cross reference extracted from an `ltx:indexsee` node.
 #[derive(Debug)]
 struct SeeAlso {
@@ -96,15 +121,25 @@ impl MakeIndex {
     }
   }
 
-  /// Build the index tree from ObjectDB INDEX:* entries.
+  /// Build the index tree from the ObjectDB entries of `lists` (the
+  /// `ltx:index` element's `lists`).
   ///
-  /// Port of `MakeIndex::build_tree`.
-  fn build_tree(&self, index_id: &str) -> Option<(IndexTree, HashMap<String, String>)> {
+  /// Port of `MakeIndex::build_tree`. Perl names the list but builds only
+  /// `idx` ("Eventually customizable for different indices?",
+  /// MakeIndex.pm:78), and its :89 test compares the scanned `inlist` HASH
+  /// with `idx`, so a mark with any list is skipped. Every `ltx:index` here
+  /// collects its own lists: the `.gls` stand-in's `glo` change history
+  /// beside the `idx` index (OXIDIZED_DESIGN_DIVERGENCES #318).
+  fn build_tree(
+    &self,
+    index_id: &str,
+    lists: &[&str],
+  ) -> Option<(IndexTree, HashMap<String, String>)> {
     let keys: Vec<String> = self
       .db
       .get_keys()
       .into_iter()
-      .filter(|k| k.starts_with("INDEX:"))
+      .filter(|k| index_db_list(k).is_some_and(|(list, _)| lists.contains(&list)))
       .cloned()
       .collect();
     if keys.is_empty() {
@@ -146,9 +181,8 @@ impl MakeIndex {
           }
         }
         if phrase_refs.is_empty() {
-          phrase_refs = key
-            .strip_prefix("INDEX:")
-            .unwrap_or("")
+          phrase_refs = index_db_list(key)
+            .map_or("", |(_, phrases)| phrases)
             .split(':')
             .filter(|s| !s.is_empty())
             .map(|s| PhraseRef {
@@ -688,7 +722,11 @@ impl Processor for MakeIndex {
       let id = crate::document::get_xml_id(node).unwrap_or_default();
 
       if tag == "ltx:index" {
-        if let Some((tree, all_phrases)) = self.build_tree(&id) {
+        let lists = node
+          .get_attribute("lists")
+          .unwrap_or_else(|| DEFAULT_INDEX_LIST.to_string());
+        let lists: Vec<&str> = lists.split_whitespace().collect();
+        if let Some((tree, all_phrases)) = self.build_tree(&id, &lists) {
           if let Some(index_list) = self.make_index_list(&all_phrases, &tree, &[]) {
             let mut node_mut = node.clone();
             doc.add_nodes(&mut node_mut, &[index_list]);

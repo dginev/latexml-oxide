@@ -1,0 +1,18 @@
+% witness: base/source2e (ltsect.dtx `\changes{v1.1b}{2018/09/02}{Prevent protrusion
+%          (\url{https://tex.stackexchange.com/q/172785/10109})}`: mode errors, then a runaway
+%          Fatal:Mouth:EoF that ended the conversion, recall 95.8% -> 82.0%)
+% oracle:  pdflatex + makeindex -s gglo.ist, 0 errors: "Change History v1.1b General: Prevent
+%          protrusion (https://tex.stackexchange.com/q/172785/10109) 1"
+% engines: rust (56js before the fix) = 3 errors; perl 0.8.8 drops the entry (\glossary)
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: \changes \protected@edef's its text (doc.sty:627); \url is robust in LaTeX
+%   (hyperref.sty:4801 \DeclareRobustCommand*; url.sty:166 \Url@unmove), but the url and
+%   hyperref bindings made it a plain macro, so the edef expanded its reader.
+\documentclass{ltxdoc}
+\RecordChanges
+\begin{document}
+Text.\changes{v1.1b}{2018/09/02}{Prevent protrusion
+    (\url{https://tex.stackexchange.com/q/172785/10109})}
+\PrintChanges
+\end{document}

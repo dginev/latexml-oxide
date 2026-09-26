@@ -49,9 +49,11 @@ LoadDefinitions!({
 
   // \DeclareUrlCommand\cmd{settings}
   // Have this expand into \lx@url@url w/ the declared cmd as arg, so it gets reflected in XML.
+  // `\protected`, as `\url` below: every url command keeps whole in a moving
+  // argument (url.sty:166 `\Url@unmove`).
   DefMacro!(
     "\\DeclareUrlCommand{}{}",
-    r#"\def#1{\begingroup #2\lx@url@url#1}"#
+    r#"\protected\def#1{\begingroup #2\lx@url@url#1}"#
   );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
@@ -156,8 +158,15 @@ LoadDefinitions!({
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path");
-  DefMacro!("\\url", r"\begingroup\lx@url@url\url", locked => true);
+  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  // `protected`: a `\url` in a moving argument must reach the typeset text
+  // whole, as url.sty's own `\Url@unmove` (url.sty:166) writes `\protect\Url`
+  // (and hyperref's `\url` is `\DeclareRobustCommand*`, hyperref.sty:4801).
+  // Expanded by doc.sty's `\changes` `\protected@edef` (doc.sty:627), ltsect.dtx's
+  // `\changes{v1.1b}{…}{Prevent protrusion (\url{https://…})}` reached the
+  // glossary entry as `\begingroup` + the reader's internals — mode errors and
+  // a runaway that ended source2e early. Same flag as `\href` (hyperref_sty.rs).
+  DefMacro!("\\url", r"\begingroup\lx@url@url\url", locked => true, protected => true);
 
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd

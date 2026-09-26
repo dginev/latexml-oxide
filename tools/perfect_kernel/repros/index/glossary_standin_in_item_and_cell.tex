@@ -1,0 +1,18 @@
+% witness: merge review 56js (rev56js/env/glo3.tex)
+% oracle:  pdflatex 0 errors (the .gls is typeset where it is input)
+% engines: rust (56js before the fix) = Error:malformed:ltx:index isn't allowed in <ltx:p>/<ltx:td>
+%          (+ jing errors); the kernel {theindex} (\printindex) errs the same way, unchanged
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: the stand-in ends the environment's open paragraph (makeindex's postamble is a blank
+%   line), and an ltx:index that no open element admits goes after the enclosing list or table.
+\documentclass{article}
+\makeglossary
+\newenvironment{theglossary}{\noindent Glossary prologue text}{ and epilogue}
+\begin{document}
+\section{S}
+Text\glossary{gamma}\glossary{delta!sub}.
+\begin{itemize}\item In a list \makeatletter\@input@{\jobname.gls}\makeatother\end{itemize}
+Inline \makeatletter\@input@{\jobname.gls}\makeatother{} after.
+\begin{tabular}{l} cell \makeatletter\@input@{\jobname.gls}\makeatother \end{tabular}
+\end{document}

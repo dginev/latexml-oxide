@@ -1,0 +1,26 @@
+% witness: merge review 56js (rev56js/env/glomov.tex, glomov2.tex)
+% oracle:  pdflatex 0 errors; the list of figures reads "1 Cap", "2 Plot" and the reference "(A)"
+%          (a mark typesets nothing)
+% engines: rust 56js before the fix 0 errors, but list-of-figures entries "1Cap icap", "2Plot gplot",
+%          the index link titled "1 Title gsec isec" and the reference "(A t)"; perl 4 errors (its
+%          \glossary phrase is malformed in a title or caption), "1 Cap", "2 Plotgplot",
+%          "1 Titlegsec", "(A)" (2026-09-26)
+% expect:  0 errors, 0 warnings; (HTML) list-of-figures entries "1Cap" and "2Plot" (the space after
+%          the number is a pre-existing loss: captions are stored as text), the index link to
+%          section 1 titled "1 Title", and the reference "(A)"
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: Perl Scan::cleanNode (Scan.pm:206-214) removes every ltx:indexmark from the copy
+%   of a title, caption, tag, note or anchor it stores; the Rust Scan stored them uncleaned.
+\documentclass{article}
+\usepackage{amsmath,makeidx}
+\makeindex
+\makeglossary
+\begin{document}
+\section{Title\glossary{gsec}\index{isec}}
+\begin{figure}\caption{Cap\index{icap}}\end{figure}
+\begin{figure}\caption{Plot\glossary{gplot}}\end{figure}
+\begin{equation}x\tag{A\index{t}}\label{e}\end{equation}
+\textbf{See \eqref{e}.}
+\listoffigures
+\printindex
+\end{document}

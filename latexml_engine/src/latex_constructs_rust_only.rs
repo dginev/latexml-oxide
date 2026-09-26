@@ -25,7 +25,12 @@
 //! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
 //! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
 //! witnesses and the reasoning — do not re-add the family.
-use crate::prelude::*;
+use latexml_core::document::{can_auto_close, can_contain};
+
+use crate::{
+  latex_constructs::{begin_environment_by_macro, end_environment_by_macro},
+  prelude::*,
+};
 
 // The expl3 PDF/tagging API names this pool stubs as no-ops (`\tagpdfsetup`,
 // `\tag_struct_begin:n`, `\pdffile_embed_file:nnn`, `\pdfdict_*`,
@@ -1169,4 +1174,136 @@ LoadDefinitions!({
     assign_value(&s!("lx@queue@{}", name.to_string()),
       Stored::VecDequeStored(VecDeque::new()), Some(Scope::Global));
   });
+
+  //======================================================================
+  // 14. The makeindex stand-in. A LaTeX document prints its index and its
+  // change history by `\input`ting what makeindex made of the `.idx`/`.glo`
+  // entries, `\jobname.ind` and `\jobname.gls` (doc.sty:624 `\PrintIndex`,
+  // :680 `\PrintChanges`; makeidx.sty:48, imakeidx.sty:339 — all through
+  // `\@input@`). No makeindex runs here, so the file is missing and nothing
+  // was typeset: doc.sty's Change History and index prologue were lost from
+  // every doc-based TeX Live manual. When the file is missing but the
+  // document had its entries written (`\makeindex`/`\makeglossary` allocated
+  // the stream), `\@input@` digests what the makeindex style writes AROUND
+  // the entries — gind.ist/gglo.ist's preamble `\begin{theindex}` /
+  // `\begin{theglossary}` and their postamble — and leaves the entries to
+  // the post-processor: an `<ltx:index lists="…">` that MakeIndex fills from
+  // the marks of that list (`idx` from `\index`, `glo` from `\glossary`).
+  // The environment runs as LaTeX's `\begin` runs it: a package's own
+  // `\theindex` (doc.sty:570-581 and hypdoc.sty:184-212 — the prologue and
+  // the columns) when one replaced ours; otherwise our `{theindex}`
+  // constructor, whose `ltx:index` is itself the placeholder, as for
+  // makeidx's `\printindex`. Beyond Perl: OXIDIZED_DESIGN_DIVERGENCES #318,
+  // KNOWN_PERL_ERRORS #281. Guard: `cluster_package_guards::doc_changes_index`.
+  //======================================================================
+  DefMacro!("\\lx@makeindex@output{}", sub[(file)] {
+    let requested = ::latexml_core::gullet::expand_as_csname_text(file.clone())?.to_string();
+    let jobname = Expand!(T_CS!("\\jobname")).to_string();
+    let output = if requested == s!("{jobname}.ind") {
+      Some(("theindex", "idx", "\\@indexfile"))
+    } else if requested == s!("{jobname}.gls") {
+      Some(("theglossary", "glo", "\\@glossaryfile"))
+    } else {
+      None
+    };
+    let standin = output.filter(|(env, _, stream)| {
+      is_defined_token(&T_CS!(*stream)) && is_defined_token(&T_CS!(s!("\\{env}")))
+    });
+    let Some((env, list, _)) = standin else {
+      // latex.ltx `\@input@`'s own missing-file branch.
+      let mut no_file = vec![T_CS!("\\typeout"), T_BEGIN!()];
+      no_file.extend(ExplodeText!("No file "));
+      no_file.extend(file.unlist());
+      no_file.push(T_OTHER!("."));
+      no_file.push(T_END!());
+      return Ok(Tokens::new(no_file));
+    };
+    let env_cs = T_CS!(s!("\\{env}"));
+    let replaced = lookup_definition(&env_cs)
+      .ok()
+      .flatten()
+      .is_some_and(|defn| defn.is_expandable());
+    let mut out = Vec::new();
+    if is_defined(&s!("\\begin{{{env}}}")) && !replaced {
+      for cs in ["\\begin", "\\end"] {
+        out.push(T_CS!(cs));
+        out.push(T_BEGIN!());
+        out.extend(ExplodeText!(env));
+        out.push(T_END!());
+      }
+    } else {
+      // The list follows the environment rather than filling it: the
+      // environment is the package's page layout for makeindex's `\item`s —
+      // doc.sty's multicols, makeglos.sty:10-12's `description` (where an
+      // `ltx:index` is not allowed) — and MakeIndex renders the entries as
+      // an `ltx:indexlist` of its own, after the prologue the environment
+      // typeset.
+      out.extend(begin_environment_by_macro(env, Tokens::new(ExplodeText!(env)))?);
+      out.extend(end_environment_by_macro(env));
+      // `\end`'s epilogue (latex.ltx:15393).
+      out.extend([
+        T_CS!("\\if@ignore"),
+        T_CS!("\\@ignorefalse"),
+        T_CS!("\\ignorespaces"),
+        T_CS!("\\fi"),
+      ]);
+      // makeindex's postamble ends the list with a blank line (gind.ist,
+      // gglo.ist `postamble "\n\n \\end{…}\n"`): the paragraph an environment
+      // left open ends before the list.
+      out.push(T_CS!("\\par"));
+      out.push(T_CS!("\\lx@makeindex@list"));
+      out.push(T_BEGIN!());
+      out.extend(ExplodeText!(list));
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
+  // The list placeholder after a package's own index environment: an empty
+  // `ltx:index` MakeIndex fills from the marks of list #1. It stays where the
+  // environment left off (after the prologue, in the section the prologue
+  // opened) — no backmatter relocation. Where an `ltx:index` cannot stand
+  // there, not even by closing the open paragraph — the file input from an
+  // `\item` or a tabular cell — it goes after the list or table, into the
+  // nearest element that admits it: the schema has no index inside an item or
+  // a cell (our `{theindex}` errs `malformed` there too).
+  DefConstructor!("\\lx@makeindex@list{}", sub[document, _args, props] {
+    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+    attrs.insert("xml:id".to_string(), prop_string!(props, "id"));
+    attrs.insert("lists".to_string(), prop_string!(props, "list"));
+    let mut node = document.get_element();
+    let mut blocked = None;
+    while let Some(n) = node {
+      if can_contain(&n, "ltx:index") {
+        break;
+      }
+      if !can_auto_close(&n) {
+        blocked = Some(n);
+        break;
+      }
+      node = n.get_parent();
+    }
+    match blocked {
+      None => {
+        document.insert_element("ltx:index", Vec::new(), Some(attrs))?;
+      },
+      Some(blocker) => {
+        let mut host = blocker.get_parent();
+        while let Some(h) = host.as_ref().filter(|h| !can_contain(h, "ltx:index")) {
+          host = h.get_parent();
+        }
+        if let Some(mut host) = host {
+          let mut index = document.open_element_at(&mut host, "ltx:index", Some(attrs), None)?;
+          document.close_element_at(&mut index)?;
+        }
+      },
+    }
+  },
+    properties => sub[args] {
+      let list = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let docid = Expand!(T_CS!("\\thedocument@ID")).to_string();
+      let id = if docid.is_empty() { list.clone() } else { s!("{docid}.{list}") };
+      Ok(stored_map!("id" => id, "list" => list))
+    },
+    sizer => 0
+  );
 });

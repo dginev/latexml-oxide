@@ -7,7 +7,7 @@
 %          56ji-rel 1 error ("Expected opening '{'") plus the glossary warning, as Perl
 %          (24 errors on the witness) (2026-09-25)
 % expect:  0 errors, 0 warnings; <p>Text more.</p>
-% status:  RED (kernel root, latexml_engine sect11.rs \glossary; SHARED / PERL-ORIGIN)
+% status:  RED (kernel root, latexml_engine sect11.rs \glossary; SHARED / PERL-ORIGIN) -> GREEN (56js)
 % mechanism: doc.sty:629-645 \changes@ \protected@edef's the entry, so \glossary receives
 %   `\def{\relax}` — as in TeX. latex.ltx:17742 \glossary -> \@index, which gobbles its argument
 %   without \makeglossary (:17726) or writes it (:17737); it is never executed. The binding

@@ -1,0 +1,18 @@
+% witness: lshort-{slovenian,mongol,vietnamese,finnish,persian,spanish}/math.tex
+%          (\index{^@\verb"|^"|}), amsmath/amsldoc.tex (\index{"|@\verb"*+"\"|+})
+% oracle:  pdflatex + makeindex, 0 errors: "Index ^, 1 _, 1 \|, 1 Müller, 1"
+% engines: rust (56jm) = 0 err, entries "|^", "|_", "*+¨" (font "+"); perl 0.8.8 = 6 err,
+%          entries "_—", "^—", no "\|" (KNOWN_PERL_ERRORS #282)
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: makeindex's quote character makes the next character literal and is dropped
+%   (`"|` is a `|` that is no encap), except after its escape `\` (`\"u` stays); the `\verb`
+%   run inside the entry was absorbed before that, taking `"` as its delimiter.
+\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+Superscripts\index{^@\verb"|^"|} and subscripts\index{_@\verb"|_"|}, a bar\index{"|@\verb"*+"\"|+}
+and M\"uller\index{M\"uller}.
+\printindex
+\end{document}

@@ -11,7 +11,7 @@
 //! - `SITE_ROOT` — root document of the site
 //! - `BIBLABEL:<list>:<key>` — bibliography key → item ID
 //! - `GLOSSARY:<list>:<key>` — glossary entries
-//! - `INDEX:<phrase1>:<phrase2>:...` — index entries
+//! - `INDEX:<phrase1>:<phrase2>:...` — index entries (`INDEX@<list>:…` outside the default `idx` list)
 //! - `DECLARATION:(global|local):<name>` — declared symbols
 //! - `NOTATION:<name>` — notation entries
 

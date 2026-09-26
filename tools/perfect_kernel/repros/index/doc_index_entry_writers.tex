@@ -1,0 +1,24 @@
+% witness: base/source2e (lthooks.dtx \DescribeMacro{\g__hook_\meta{hook}_code_prop}: 65 errors),
+%          keytheorems-doc, csvsimple-l3 (tcolorbox entries in a doc.sty document),
+%          lt3graph (\changes text with `_` under underscore.sty), testidx-manual (nlctdoc.cls
+%          writes a literal `=`: `\index{#1=\appfmt{#1}}`)
+% oracle:  pdflatex + makeindex -s gglo.ist/-s gind.ist, 0 errors: "Change History v2.0
+%          General: Renamed \graph_put to graph_get 1 ... Beta 1 ... \foo\meta␣␣{name} 1"; the plain entry, written for
+%          makeindex's defaults, is "Alpha" under a plain makeindex run ("alpha@Alpha" under gind.ist)
+% engines: rust (56js before the fix) = 20+ `Script _`/runaway errors on the witnesses
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: an \index entry is split in doc.sty's characters only when it shows them
+%   (IndexChars::for_index_entry); a macro-assembled \verb body is \protected@write-expanded
+%   (no robust command runs); a `_` of the display is re-read with the document's catcode.
+\documentclass{ltxdoc}
+\usepackage{underscore}
+\RecordChanges
+\PageIndex
+\begin{document}
+A plain entry\index{alpha@\textit{Alpha}}, a doc-style one\index{beta=\textsf{Beta}} and
+\DescribeMacro{\foo\meta{name}}a macro.
+\changes{v2.0}{2020/01/01}{Renamed \texttt{\textbackslash graph_put} to graph_get}
+\PrintChanges
+\PrintIndex
+\end{document}

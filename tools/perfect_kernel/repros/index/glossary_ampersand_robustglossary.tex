@@ -1,0 +1,19 @@
+% witness: robustindex/robustsample (robustsample.tex:45,59 \glossary{$...$&...}; robustglossary.sty:29-43
+%   writes the entry to the .glo as it is, and the document's own \glossaryentry splits the `&`,
+%   robustsample.tex:231-263): robustsample 0 -> 2 errors in 56js, one per entry
+% oracle:  pdflatex 0 errors, "Text."; the entry goes to the .glo only (\glossaryentry{$x$&the unknown}{...})
+% engines: rust 56jp-rel 0 errors + Warning:unexpected:glossary (the entry was dropped);
+%          56js 1 error `Error:unexpected:& Stray alignment "&"`, 0 warnings;
+%          perl 0 errors + the glossary warning, raw-loaded or not (2026-09-26)
+% expect:  0 errors, 0 warnings; <p>Text.</p> keeps its glo indexmark
+% status:  RED (56js)
+% mechanism: after \makeglossary, 56js records \glossary as an ltx:indexmark whose phrase is
+%   digested from the entry. The `&` of robustglossary's `formula&explanation` convention is then
+%   digested as an alignment tab outside any alignment; makeindex reads `&` as an ordinary
+%   character. Fix (open): the phrase keeps `&` as text, or the entry is not digested.
+\documentclass{article}
+\usepackage{robustglossary}
+\makeglossary
+\begin{document}
+Text\glossary{$x$&the unknown}.
+\end{document}

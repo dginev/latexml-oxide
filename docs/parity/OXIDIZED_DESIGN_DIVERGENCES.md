@@ -9832,6 +9832,134 @@ calc_error_redefined_picture_sty,picture_length_default_units,floatingtable_tabl
 braced_length_undefined_cs,calc_braced_length_undefined_cs,braced_length_tail_between_rows,
 setcounter_undefined_counter_value}.tex`.
 
+### 318. `\glossary` entries are index marks; a missing makeindex output is stood in for; MakeIndex builds every list; entries are read as makeindex reads them (Perl: `\glossary` dropped in text; "No file"; one list; default characters)
+
+**Rust** (batch 56js, worker W19). Perl's side is KNOWN_PERL_ERRORS #281 and #282.
+
+- **`\glossary`** (sect11.rs) reads its argument `SanitizedVerbatim`, as `\index` does, and yields an
+  invisible `ltx:indexmark inlist="glo"`. latex.ltx's `\@wrglossary` is `\@wrindex` writing to the
+  `.glo` file, and the file extension names the list, as `idx`, `toc` and `lof` do.
+  - The mark is made only after `\makeglossary` (latex.ltx:17727-17736; doc.sty's `\RecordChanges`)
+    has allocated `\@glossaryfile`. Before that, `\glossary` is latex.ltx:17742's `\@index`, which
+    reads the entry and drops it (:17726).
+  - guitar.dtx:397-399's `\changes`, recorded without `\RecordChanges`, `\protected@edef`s to
+    `\def{\relax}`. Digesting it raised "Missing control sequence inserted" (repro
+    `index/glossary_digests_argument_guitar.tex`).
+- **The makeindex stand-in** (`\lx@makeindex@output`, latex_constructs_rust_only.rs §14). It runs in
+  `\@input@`'s missing-file branch, only for `\jobname.ind` and `\jobname.gls`, and only when
+  `\makeindex`/`\makeglossary` allocated the stream and the environment is defined. It digests what
+  gind.ist/gglo.ist write around the entries: `\begin{theindex}` or `\begin{theglossary}`, and its
+  postamble.
+  - While `\theindex` is still our constructor, the stand-in is `\begin{theindex}\end{theindex}`.
+    Our `ltx:index` is the placeholder, as for makeidx's `\printindex`.
+  - When a package has replaced the environment, the stand-in runs it as LaTeX's `\begin` would.
+    Examples are doc.sty:570-581 with hypdoc.sty:184-212 (the prologue and the columns), and
+    makeglos.sty:10-12 (`\section*` plus `description`). The code is `begin_environment_by_macro` /
+    `end_environment_by_macro`, shared with `\begin`/`\end` in sect01.rs. The stand-in then puts
+    `<ltx:index lists="idx|glo" xml:id="<docid>.<list>">` after the environment, with no backmatter
+    relocation.
+  - Scope (coordinator ruling A, 2026-09-25): only this path. The kernel `{theindex}` DefEnvironment and
+    makeidx's `\printindex` are unchanged. KOMA, memoir and imakeidx manuals are byte-identical apart
+    from timestamps.
+- **multicols** reads `{multicols}{Number}[][Dimension]` (multicol.sty:145, :172-186). doc.sty's
+  `\begin{multicols}\c@IndexColumns[\index@prologue][\IndexMin]` had printed `[]` and raised two
+  "Missing number" warnings.
+- **Scan and MakeIndex** (scan.rs, make_index.rs). Scan registers one `INDEX` entry per list:
+  `INDEX:<keys>` for `idx` (Perl's key, unchanged) and `INDEX@<list>:<keys>` for any other list.
+  MakeIndex builds each `ltx:index` from the lists in its `lists` attribute, defaulting to `idx`. The
+  webpage stylesheet's head keywords take only `idx` phrases.
+  - Scan stores its titles, captions, tags, notes, anchor titles and declaration descriptions
+    without their `ltx:indexmark`s, as Perl's `cleanNode` does (Scan.pm:206-214; the port had
+    skipped it). A mark in a caption had reached the list-of-figures entry (`1Cap icap`) and one in
+    a section title the links' tooltip (`1 Title isec`).
+- **Reading an entry** (`process_index_phrases`, `IndexChars`, `absorb_index_verb_runs`; coordinator
+  ruling B, 2026-09-25).
+  - The makeindex characters are a parameter. `\glossary` uses the declared ones: doc.sty's
+    `\levelchar`/`\actualchar`/`\encapchar`/`\quotechar` (doc.sty:521-524), where a macro whose body
+    is a single character is a declaration. The `.glo` file needs a style that names its
+    `\glossaryentry` keyword (gglo.ist), and `\changes` expands the characters before writing
+    (doc.sty:627).
+  - An `\index` entry uses the declared characters only when it shows them: spelled with the macros
+    (doc.sty, hypdoc.sty:351, amsldoc.cls:88), or holding the declared actual character at top level
+    (nlctdoc.cls:496-570). Otherwise it uses makeindex's defaults. The style is chosen per file,
+    outside the document: tcolorbox's documentation library writes `@` for a default run inside
+    ltxdoc manuals (keytheorems-doc, csvsimple-l3).
+  - makeindex's quote character acts inside a `\verb` run too, in its delimiter slot and in its body.
+    A quoted `\` before the quote stays a backslash (amsldoc.tex `"\"|`); an unquoted `\"` stays the
+    escape.
+  - `\string\verb` is the command.
+  - A run whose head a macro supplied is `\protected@write`-expanded (`do_expand_partially`) inside
+    the entry's frame, with control symbols and undefined words inert. A robust command is written by
+    its name, without `\protect`.
+  - When the rest of the entry after such a run does not balance, the run is read literally. doc.sty's
+    `\LeftBraceIndex` closes its run inside a `{…}` that the re-read's `\iffalse…\fi` would hide.
+  - A Fatal inside either stays Fatal.
+  - The run is grouped, so its typewriter font stops at its end. This changes existing entries
+    toward pdflatex: `tilda ( ~)`, `\; (espacement)`, and 354 entries of latex-via-exemplos.
+  - An encap with arguments takes its command as the style (hypdoc's `hdpindex{main}` becomes
+    `hdpindex`), and the style is read from the argument's tokens.
+  - A `_`/`^` of the display that is active in the document (underscore.sty) is active.
+  - Outside math, a `_`/`^` that reads as text is `\textunderscore`/`\textasciicircum`. This covers
+    the character inside `\changes`'s `\@sanitize`, where an other `_` would print through OT1's slot
+    as `˙`.
+  - A subscript `_` stays a subscript.
+  - A sort key's implicit braces (`\bgroup`/`\egroup`, doc.sty's brace entries) are text, like its
+    undefined words.
+  - An entry whose groups do not balance is discarded with `Warning:malformed:indexentry`
+    (Perl pool:4332-4336, which the port had dropped). makeindex rejects such an entry too:
+    ltmath.dtx v1.2i `\cs{\bslash}` is absent from the golden change history.
+- **`\url`** (url_sty.rs, hyperref_sty.rs) is `protected`, as hyperref.sty:4801
+  `\DeclareRobustCommand*` makes it, and as url.sty:166 `\Url@unmove` treats a moving argument.
+  So are `\path` and every `\DeclareUrlCommand` command. `\changes`'s `\protected@edef` had
+  expanded the reader (ltsect.dtx v1.1b).
+
+**Measured** (228 TL manuals: every `\PrintIndex`/`\PrintChanges`/`\printindex` or
+`unexpected:glossary` manual; the 56jp release → this batch, mono HTML, each manual's sweep preload, recall by
+`pdf_recall.py --min-len 4`):
+
+- No manual loses recall, and 49 gain.
+- Distinct PDF words found go from 214,097 to 215,171.
+- Errors go from 3,053 to 3,051 (guitar 1 → 0, paracol-man 3 → 0), and warnings from 13,643 to 9,573. `Warning:unexpected:glossary`
+  goes from 4,079 to 0.
+- Stream A cluster 1 (the 63 manuals with missing change-history or index-prologue words, plus
+  source2e) gains 960 words: 54,992 → 55,952.
+  Examples: biblatex-chem 76.5% → 99.7%, biblatex-ieee 81.1% → 99.5%, source2e 95.8% → 98.9% (127 s → 117 s),
+  sunpath 88.7% → 96.8%, joinbox 78.4% → 83.0%.
+- New diagnostics. robustsample raises 2 errors (residual below). compsci gains `Missing phrases in
+  indexmark`: doc.sty writes its `|...|` entry unquoted, so the key is empty. lettre
+  gains `Missing index see-also term`, because its index is built now.
+- The arXiv `\glossary` witnesses (cs/9809003, math/9608214, nucl-th/9311001) call no
+  `\makeglossary`. Their entries are dropped as in LaTeX, without the `unexpected:glossary`
+  warnings. Their HTML text and head keywords are unchanged.
+
+**Residuals** (SYNC_STATUS): doc.sty's code-line index is still missing. Its writers
+(`\codeline@wrindex`, hypdoc `\HD@codeline@wrindex`, l3doc `\__codedoc_index_*`) write
+`\indexentry` to `\@indexfile` themselves and never reach `\index`, so a dtx manual's index lists
+only its `\index`-level (usage) entries. imakeidx documents get no index at all, before and after
+this batch. robustglossary's `&`-column entries raise `Stray alignment` at the mark (robustsample, 2
+errors; RED repro `index/glossary_ampersand_robustglossary.tex`). xindy styles' separators
+(makeglos.xdy `:`) are read as text. `\@SpecialIndexHelper@` keys of control symbols (`\cn{\\}`)
+remain garbled. A `\changes` whose nearest identified ancestor is the document (biblatex-ieee's
+follow its bibliography in vertical mode) refers to the document itself, so its link repeats the
+document title as its text. That is MakeIndex's convention: its refs ask for `show=typerefnum`
+(Perl MakeIndex.pm:303-304), a document has none, and CrossRef falls back to the title
+(CrossRef.pm:686). biblatex-ieee's change history shows its title 56 times where the PDF prints
+page "4".
+
+The re-read of the written entry is modelled only for `\string\verb`. amsldoc.cls:99-103's
+`\string\texttt{#2}` prints `“texttt…` (RED repro `index/index_string_command_amsldoc.tex`), and
+doc.sty's brace entries show their internals. `\verb*` in an entry shows no visible spaces. Under
+hypdoc the encap style is `hdpindex`/`hdclindex`, not doc's `usage`/`main`; the CSS styles neither. A
+body-grabbing `theindex` (environ) would not see an `\end{theindex}` in the stand-in.
+
+**Guards**: `cluster_package_guards::doc_changes_index::*` (13). Repros
+`tools/perfect_kernel/repros/index/{doc_changes_index_prologue, index_quote_verb_lshort,
+doc_index_entry_writers, index_string_verb_amsldoc, glossary_list_env_makeglos,
+glossary_running_text_keywords, changes_url_moving_argument, glossary_digests_argument_guitar,
+changes_unbalanced_discarded, glossary_standin_in_item_and_cell,
+indexmark_cleaned_from_titles_captions}.tex`; RED `index_string_command_amsldoc.tex` and
+`glossary_ampersand_robustglossary.tex`.
+
 ### 319. A node's box follows Perl's `appendNodeBox`, one flat list in horizontal mode (Perl: a new list per append)
 
 Perl records on every element the box that created it, and `openElementAt` (Core/Document.pm:1861)

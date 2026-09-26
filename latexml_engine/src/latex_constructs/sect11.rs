@@ -733,9 +733,13 @@ pub(crate) fn load() -> Result<()> {
     "\\@input{}",
     "\\IfFileExists{#1}{\\@@input\\@filef@und}{\\typeout{No file #1.}}"
   );
+  // Perl's `\@input@` (pool:4230) with `\typeout{No file #1.}` in the
+  // missing-file branch; `\lx@makeindex@output` (latex_constructs_rust_only)
+  // stands in for a missing makeindex output file there and falls back to
+  // that `\typeout` for any other file. OXIDIZED_DESIGN_DIVERGENCES #318.
   DefMacro!(
     "\\@input@{}",
-    "\\InputIfFileExists{#1}{}{\\typeout{No file #1.}}"
+    "\\InputIfFileExists{#1}{}{\\lx@makeindex@output{#1}}"
   );
 
   DefMacro!("\\quote@name{}", "\"\\quote@@name#1\\@gobble\"\"");
@@ -801,7 +805,17 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // \@index[style][inlist]{phrases} → <ltx:indexmark>
-  DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#1' inlist='#2'>#3</ltx:indexmark>",
+  // The style is the makeindex encap STRING, read back from the argument's
+  // tokens: digested as text, the braces of an encap with arguments
+  // (hypdoc's `hdpindex{main}`, hypdoc.sty:344-353) went through the OT1 slots
+  // 0x7B/0x7D as `hdpindex–main˝`. Perl's string is the token's own.
+  DefConstructor!("\\@index[][]{}", "^<ltx:indexmark style='#style' inlist='#2'>#3</ltx:indexmark>",
+    properties => sub[args] {
+      let style = args[0].as_ref()
+        .map(|a| a.revert().unwrap_or_default().to_string())
+        .unwrap_or_default();
+      Ok(if style.is_empty() { stored_map!() } else { stored_map!("style" => style) })
+    },
     bounded => true,
     mode => "restricted_horizontal",
     sizer => 0
@@ -871,7 +885,9 @@ pub(crate) fn load() -> Result<()> {
   // parameter type so that `\index{a_b}`, `\index{with spaces}`, etc. don't
   // fail tokenization on chars that normally have non-OTHER catcodes.
   DefMacro!("\\index SanitizedVerbatim", sub[(phrases)] {
-    process_index_phrases(Tokens::new(phrases.revert()))
+    let entry = Tokens::new(phrases.revert());
+    let chars = IndexChars::for_index_entry(&entry);
+    process_index_phrases(entry, &chars, None)
   });
 
   DefMacro!("\\indexname", "Index");
@@ -942,57 +958,33 @@ pub(crate) fn load() -> Result<()> {
   );
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 
-  // Perl latex_constructs.pool.ltxml L4481-4493 — `\glossary{}` uses a
-  // closure constructor that guards on the current node: if we're inside
-  // `ltx:p` or `ltx:text`, emit a Warn and skip the element entirely
-  // (schema disallows `ltx:glossaryphrase` in those parents). Otherwise
-  // insert the element. The earlier Rust port used a static template that
-  // unconditionally produced `<ltx:glossaryphrase>`, which surfaced as
-  // `Error:malformed:ltx:glossaryphrase isn't allowed in <ltx:p>` on
-  // papers calling `\glossary{...}` in the body flow (where most papers
-  // actually use it). Witnesses: arXiv:cs/9809003, math/9608214,
-  // nucl-th/9311001.
-  DefConstructor!("\\glossary{}", sub[document, args, props] {
-    use latexml_core::document::get_node_qname;
-    let current = document.get_node().clone();
-    let current_name = with(get_node_qname(&current), |s| s.to_string());
-    let parent_name = if current_name == "#PCDATA" {
-      match current.get_parent() { Some(p) => {
-        with(get_node_qname(&p), |s| s.to_string())
-      } _ => { current_name }}
-    } else { current_name };
-    // Beyond the ltx:p/ltx:text guard, verify the SCHEMA actually admits a
-    // glossaryphrase here. The doc-family `\changes`→`\glossary` path fires
-    // at DOCUMENT level (between sections, during Building), where the
-    // static check passed but insertion still produced
-    // `malformed:ltx:glossaryphrase isn't allowed in <ltx:document>` —
-    // 9 TL doc bundles (abntex2, the biblatex-* style manuals, pixelart…).
-    let in_flow = parent_name.starts_with("ltx:p")
-      || parent_name == "ltx:text"
-      || !document.is_openable("ltx:glossaryphrase");
-    if in_flow {
-      Warn!("unexpected", "glossary",
-        "glossary support is not yet ready for use in the main text flow.");
-    } else {
-      let key = prop_string!(props, "key");
-      let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
-      attrs.insert("role".to_string(), "glossary".to_string());
-      attrs.insert("key".to_string(), key);
-      let body: Vec<&Digested> = match args.first().and_then(|a| a.as_ref()) {
-        Some(d) => vec![d],
-        None => Vec::new(),
-      };
-      document.insert_element("ltx:glossaryphrase", body, Some(attrs))?;
+  // `\glossary` writes a makeindex entry exactly as `\index` does —
+  // latex.ltx's `\@wrglossary` is `\@wrindex` onto the `.glo` file — so it
+  // is read and split the same way, into an invisible `ltx:indexmark` in
+  // list `glo` (the file extension names the list, as `idx`, `toc` and
+  // `lof` do). A makeindex stand-in's `<ltx:index lists="glo">` collects the
+  // marks (`\lx@makeindex@output`, post MakeIndex). Perl (pool:4424-4436)
+  // inserts an `ltx:glossaryphrase` only outside `ltx:p`/`ltx:text` and
+  // otherwise DROPS the entry with `Warning:unexpected:glossary`: every
+  // doc.sty `\changes` (doc.sty:626-650) was lost that way (source2e alone
+  // 3,518 warnings, about 70 TeX Live manuals: abntex2, the biblatex-* style
+  // manuals, pixelart…, where the document-level insertion had also erred
+  // `malformed:ltx:glossaryphrase isn't allowed in <ltx:document>`), and the
+  // arXiv papers that call `\glossary` in running text (cs/9809003,
+  // math/9608214, nucl-th/9311001) warned once per call. KNOWN_PERL_ERRORS #281,
+  // OXIDIZED_DESIGN_DIVERGENCES #318.
+  // Until `\makeglossary` (latex.ltx:17727-17736; doc.sty's `\RecordChanges`)
+  // allocated `\@glossaryfile`, `\glossary` is latex.ltx:17742's
+  // `\@bsphack\begingroup\@sanitize\@index`: the entry is read and dropped
+  // (`\@index`, :17726), never typeset — the arXiv papers above call none, and
+  // guitar.dtx:397-399's `\changes` text `\protected@edef`s to `\def{\relax}`
+  // (repro `index/glossary_digests_argument_guitar.tex`).
+  DefMacro!("\\glossary SanitizedVerbatim", sub[(phrases)] {
+    if !is_defined_token(&T_CS!("\\@glossaryfile")) {
+      return Ok(Tokens!());
     }
-  },
-    properties => sub[args] {
-      let key = args[0].as_ref()
-        .map(|a| clean_index_key(&a.to_string()))
-        .unwrap_or_default();
-      Ok(stored_map!("key" => key))
-    },
-    sizer => 0
-  );
+    process_index_phrases(Tokens::new(phrases.revert()), &IndexChars::in_force(), Some("glo"))
+  });
 
   // Standard English caption names set by babel-english.ldf's
   // \captionsenglish hook (and by letter.cls for the letter-specific

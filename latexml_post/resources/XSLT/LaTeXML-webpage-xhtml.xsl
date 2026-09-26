@@ -352,11 +352,15 @@
        deduplicate in O(n) (Muenchian method) instead of the O(n^2)
        not(.=preceding::ltx:indexphrase) scan. Local perf divergence from
        upstream LaTeXML (output-neutral); candidate to upstream. -->
-  <xsl:key name="f:indexphrase-by-value" match="ltx:indexphrase" use="."/>
+  <!-- Only the phrases of the document's index (list idx) are keywords: the
+       marks and lists of another list - the change history of doc.sty's
+       \changes, list glo (OXIDIZED_DESIGN_DIVERGENCES #318) - are not. -->
+  <xsl:key name="f:indexphrase-by-value" match="ltx:indexphrase[not(ancestor::ltx:indexmark[@inlist and not(contains(concat(' ',normalize-space(@inlist),' '),' idx '))] or ancestor::ltx:index[@lists and not(contains(concat(' ',normalize-space(@lists),' '),' idx '))])]" use="."/>
 
   <!-- Generate a keywords meta entry for the head; typically from indexphrase's or keywords-->
   <xsl:template match="/" mode="head-keywords">
-    <xsl:if test="//ltx:indexphrase | //ltx:keywords">
+    <xsl:variable name="phrases" select="//ltx:indexphrase[not(ancestor::ltx:indexmark[@inlist and not(contains(concat(' ',normalize-space(@inlist),' '),' idx '))] or ancestor::ltx:index[@lists and not(contains(concat(' ',normalize-space(@lists),' '),' idx '))])]"/>
+    <xsl:if test="$phrases | //ltx:keywords">
       <xsl:text>&#x0A;</xsl:text>
       <xsl:element name="meta" namespace="{$html_ns}">
         <xsl:attribute name="name">keywords</xsl:attribute>
@@ -365,10 +369,10 @@
         </xsl:attribute>
         <xsl:attribute name="content">
           <xsl:value-of select="f:subst(//ltx:keywords/text(),',',', ')"/>
-          <xsl:if test="//ltx:indexphrase and //ltx:keywords">
+          <xsl:if test="$phrases and //ltx:keywords">
             <xsl:text>, </xsl:text>
           </xsl:if>
-          <xsl:for-each select="//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]">
+          <xsl:for-each select="$phrases[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]">
             <xsl:sort select="text()"/>
             <xsl:if test="position() &gt; 1">, </xsl:if>
             <xsl:value-of select="text()"/>

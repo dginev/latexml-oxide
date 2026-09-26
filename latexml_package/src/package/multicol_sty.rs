@@ -21,10 +21,18 @@ LoadDefinitions!({
   // `ltx:p` itself and the explicit close then errored "Attempt to close
   // </ltx:p>, which isn't open" (Perl multicol.sty.ltxml:22 identical, KPE
   // #150); for inline `#2` the following `<ltx:para>` open closes it.
-  DefEnvironment!("{multicols}{}[]",
+  // multicol.sty:145 reads the column count as a NUMBER (`\col@number#1
+  // \relax`), and :172-186 take a SECOND optional argument, the free space
+  // needed to start — a dimension (`\mult@@cols#1[#2]` → `\enough@room{#2}`).
+  // doc.sty:572/656 writes both:
+  // `\begin{multicols}\c@IndexColumns[\index@prologue][\IndexMin]`. Read as
+  // `{}[]`, the register digested as an assignment (`Missing number`,
+  // `role="start__columns"`) and `[\IndexMin]` stayed in the body as `[`, a
+  // dimen assignment, `]` (Perl multicol.sty.ltxml:21 shares both).
+  DefEnvironment!("{multicols}{Number}[][Dimension]",
     r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
-  DefEnvironment!("{multicols*}{}[]",
+  DefEnvironment!("{multicols*}{Number}[][Dimension]",
     r###"?#2(<ltx:para><ltx:p>#2<ltx:para>)<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
     mode => "internal_vertical");
 

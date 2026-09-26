@@ -7080,3 +7080,69 @@ braced_length_tail_box_commands,calc_braced_length_expression,calc_braced_length
 picture_length_default_units,floatingtable_table_argument}.tex`; guards `braced_quantity_tail::*`.
 
 The same Perl bindings declare package dimens as counts: lineno.sty.ltxml:46 and :64 (`\linenumbersep`, `\quotelinenumbersep`, `\newdimen` at lineno.sty:1549 and :2852) and floatflt/floatfig.sty.ltxml (`\htdone`, floatflt.sty:35), so `\the\linenumbersep` prints `0` (pdflatex `10.0pt`) and `\setlength{\linenumbersep}{2.5pt}` assigns 2, whose `.5pt` Perl drops and Rust (56jr) would print. Rust declares them `Dimension` with the package initial values (guard `braced_quantity_tail::package_registers_are_dimens`; witness 2605.07149).
+
+## 281. `\glossary` in text is dropped, a missing makeindex output prints nothing, and MakeIndex builds one list (FIXED in Rust)
+
+Perl's `\glossary{}` (latex_constructs.pool.ltxml:4424-4436) warns `unexpected:glossary` and
+discards the entry inside `ltx:p`/`ltx:text`; elsewhere it inserts an `ltx:glossaryphrase`, which the
+schema rejects at document level (`Error:malformed:ltx:glossaryphrase isn't allowed in
+<ltx:document>`). doc.sty's `\changes` is a `\glossary` entry (doc.sty:626-650), so every change
+record is lost. `\PrintChanges` and `\PrintIndex` input `\jobname.gls` and `\jobname.ind`
+(doc.sty:680, :624), which only makeindex writes: Perl's `\@input@` (pool:4230) prints "No file",
+so the Change History and the index prologue (doc.sty:583-597, `\IndexPrologue`) never appear. Even
+when the file exists, Perl's `\begin` runs its own `{theindex}` constructor first (pool:193-213), not
+doc.sty's `\theindex`, so the prologue is lost anyway. Perl's MakeIndex fixes the list to `idx`
+(MakeIndex.pm:77-78). Its :89 test compares the scanned `inlist` hash with `'idx'`, so any mark that
+has a list is skipped. Trigger:
+
+```latex
+\documentclass{ltxdoc}
+\RecordChanges
+\begin{document}
+Text.\changes{v1.0}{2011/01/10}{Alpha stable release}
+\PrintChanges
+\end{document}
+```
+
+Perl 0.8.8 (same host, `[rawstyles,rawclasses]`): one `Warning:unexpected:glossary` and "Text."
+only. pdflatex + `makeindex -s gglo.ist`: "Change History v1.0 General: Alpha stable release 1".
+Rust (batch 56js): after `\makeglossary`, `\glossary` is an `ltx:indexmark` in list `glo`; before
+it, the entry is read and dropped, as latex.ltx:17742 does. A missing `\jobname.ind`/`.gls`
+is stood in for, and MakeIndex builds each list (OXIDIZED_DESIGN_DIVERGENCES #318). Witnesses: stream
+A cluster 1, 38 TL manuals with 832 missing words (source2e 244, biblatex-ieee 110, biblatex-chem 81;
+joinbox, circledtext and sunpath prologues). Repro
+`index/doc_changes_index_prologue.tex`; guards `doc_changes_index::*`.
+
+## 282. `\index` entries are split in makeindex's default characters, and a `\verb` inside one ignores makeindex's quoting (FIXED in Rust)
+
+Perl's `process_index_phrases` (latex_constructs.pool.ltxml:4326-4371) splits every entry at `"`,
+`@`, `!` and `|`. It never expands the entry and handles the quote only in its split loop, after
+`SanitizedVerbatim` has re-tokenized the entry (pool:4376-4395). Three consequences follow.
+First, an entry written for another makeindex style stays one phrase. doc.sty writes
+`\@gtempa\actualchar\verb\quotechar*\verbatimchar\bslash\@gtempa\verbatimchar…` for gind.ist
+(`actual '='`, `quote '!'`, `level '>'`; doc.sty:521-524, 1054-1093). Perl's key is then
+`foo=“verb!*+“foo+`, where pdflatex + `makeindex -s gind.ist` prints `\verb*+\foo+`. Second, a
+quoted `\verb` delimiter is taken literally. lshort's `\index{^@\verb"|^"|}` (math.tex in the
+Slovenian, Mongolian, Vietnamese, Finnish, Persian and Spanish translations) and amsldoc.tex's
+`\index{"|@\verb"*+"\"|+}` are `\verb|^|` and `\verb*+\|+` for makeindex. Trigger:
+
+```latex
+\documentclass{article}
+\usepackage{makeidx}\makeindex
+\begin{document}
+Superscripts\index{^@\verb"|^"|} and a bar\index{"|@\verb"*+"\"|+}.
+\printindex
+\end{document}
+```
+
+Perl 0.8.8: `Error:unexpected:^ Script ^ can only appear in math mode` ×2,
+`Error:expected:{} Missing argument {}`, `Error:misdefined`, and index entries "^—" with no `\|`.
+pdflatex + makeindex: "^, 1" and "\|, 1".
+
+Third, `\string\verb` (amsldoc.cls:87-92 `\@indexcs`) writes the characters `\verb`, which the
+`.ind` re-read makes the command. Neither engine treated it that way. Rust (batch 56js) reads the
+entry as makeindex reads the written line (OXIDIZED_DESIGN_DIVERGENCES #318). Repros
+`index/index_quote_verb_lshort.tex`, `index/index_string_verb_amsldoc.tex` and
+`index/doc_index_entry_writers.tex`; guards `doc_changes_index::{index_verb_reads_makeindex_quotes,
+index_string_verb_is_the_command, doc_index_entries_read_their_macros,
+index_entries_follow_their_writers}`.

@@ -1,0 +1,20 @@
+% witness: amsldoc-it/itamsldoc, amsldoc-vn/amsldoc-vi (amsldoc.cls:99-103 \@category@index:
+%          `#2\actualchar\string\texttt{#2}`; \pkg/\env/\cls/\opt/\bst at :136-143),
+%          amscls/amsdtx.cls:95/425-429; doc.sty:544-555 \LeftBraceIndex/\RightBraceIndex
+% oracle:  pdflatex + makeindex, 0 errors: "Index align environment, 1 amsmath package, 1"
+%          (`\indexentry{amsmath@\texttt{amsmath} package}`: the .ind re-read makes the
+%          written `\texttt` a command again)
+% engines: rust (56js) = 0 errors, entries "“textttamsmath package", "“textttalign environment";
+%          perl 0.8.8 alike
+% expect:  0 errors, 0 warnings
+% status:  RED (56js)
+% mechanism: after the \protected@write expansion `\string\texttt` is the characters `\texttt`;
+%   the re-read of the written entry (a `\` and letters make a control word, as when \printindex
+%   inputs the .ind) is not modelled, except for `\string\verb` (absorb_index_verb_runs).
+\documentclass{amsldoc}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+The package \pkg{amsmath} and the environment \env{align}.
+\printindex
+\end{document}
