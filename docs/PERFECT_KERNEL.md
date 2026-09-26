@@ -138,7 +138,7 @@ names the scoreboard column it must move.
 
 **Speed gate:** every batch's L3 arXiv A/B prints `secs A→B` and the papers slower by more than 50 % and 5 s (`arxiv_ab_compare.py`). Each slow paper needs a reason. L5 must not raise cpu_h by more than 3 %, or the >60 s / >120 s counts, without an attributed cause. Manual-subset timings run beside another A/B are not comparable: re-time a flagged document alone.
 
-**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1; cpu_h = the sum of per-document conversion seconds):
+**Scoreboard** (`tools/perfect_kernel/scoreboard.py`; clean = status 0-1; cpu_h = the sum of per-document conversion seconds; from s125 recall uses the inline-glue audit walker, 0d10215663 — s124 re-scored with it reads mean 95.60, missing 30,222):
 
 | sweep | clean | fatal | timeout | errors | valid | recall mean | median | %≥95 | missing | cpu_h | p90 s | p99 s | >60 s | >120 s |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -150,6 +150,7 @@ names the scoreboard column it must move.
 | 122 | 1912 | 66 | 8 | 10529 | 2246 | 94.73 | 98.7 | 78.6 | 35374 | 2.41 | 3.6 | 67.0 | 28 | 17 |
 | 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 | 2.42 | 3.5 | 69.6 | 29 | 18 |
 | 124 | 1923 | 67 | 8 | 12045 | 2269 | 95.27 | 98.8 | 80.4 | 32133 | 2.45 | 4.1 | 74.7 | 31 | 17 |
+| 125 | 1920 | 67 | 6 | 11222 | 2271 | 95.64 | 99.1 | 82.0 | 29519 | 2.23 | 3.9 | 64.7 | 29 | 16 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading
