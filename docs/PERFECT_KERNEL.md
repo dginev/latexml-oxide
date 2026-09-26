@@ -151,6 +151,7 @@ names the scoreboard column it must move.
 | 123 | 1908 | 70 | 7 | 11853 | 2269 | 95.05 | 98.8 | 79.8 | 34203 | 2.42 | 3.5 | 69.6 | 29 | 18 |
 | 124 | 1923 | 67 | 8 | 12045 | 2269 | 95.27 | 98.8 | 80.4 | 32133 | 2.45 | 4.1 | 74.7 | 31 | 17 |
 | 125 | 1920 | 67 | 6 | 11222 | 2271 | 95.64 | 99.1 | 82.0 | 29519 | 2.23 | 3.9 | 64.7 | 29 | 16 |
+| 126 | 1927 | 69 | 6 | 11165 | 2271 | 95.75 | 99.1 | 82.9 | 29473 | 2.13 | 3.8 | 60.5 | 26 | 14 |
 
 **Open leads (ranked; updated after sweep 118 and batches 56gw-56hd):**
 1. **Hidden macro-delimiter misses — landed 56iq.** A call that misses its `\def`'s leading

@@ -298,7 +298,12 @@ each a claim that can disagree with the real macro:
 - has the wrong shape: arydshln's `\hdashline[..]` and `;{..}` (56jx, KPE #291); listings' Invocation
   reverted against cleveref's `\label[]` (56jw B).
 The rest policy is itself per reader: 56jr's fix produced three sweep-#126 regressions (tkz-grapheur
-Fatal "infinite digestion loop", bxcalc 13 calc errors, PixelArtTikz 2).
+Fatal "infinite digestion loop", bxcalc 13 calc errors, PixelArtTikz 2). Root-caused: bxcalc's is this
+theme exactly — 56jr's braced-length evaluator calls calc's expression reader directly, where latex.ltx
+passes the length through whatever `\setlength` currently means (`\@hspace` 9425, `\@vspace@calcify` 9254;
+bxcalcux.sty:290-293 and pgf's `\pgf@setlength` redefine it), so `\hspace{6tm}` lost the custom unit;
+PixelArtTikz's is a stub reader that takes `*{\count}` only as a literal integer (tabularray evaluates an
+integer expression, tabularray.sty:3361).
 
 **Fix shape.** (a) A binding-conformance detector: load each package raw in a scratch state, record every
 public macro's real signature (parameter text and delimiters, `\newcommand` arity and optional default,
@@ -323,6 +328,12 @@ paragraph/cell trim (56jy) is Perl's `s/\s+$//` on the last text node, and Perl'
 appendTextNode split text differently from libxml2's merging add_child (`<p>U+2006</p>` vs `<p/>`; RED
 repro `block-model/paragraph_trim_text_node_split.tex`); babel-french `;` keeps the space before it
 (RED repro `babel-lang/french_highpunct_unskips_space.tex`).
+
+The same gap misleads the stomach's loop guard (`cycle_guard_record`, stomach.rs): content-free items —
+the stray space of pgflibraryplothandlers.code.tex:59, empty brace-group lists from `\pgf@process` — are
+boxes like any other, so a finite `plot[smooth]` of 11,000 points reads as a 5-box cycle and is a Fatal
+(tkz-grapheur-doc, sweep #126; TeX accumulates them as glue under `\nullfont`, pgfcorescopes.code.tex:243).
+Typed items would let the guard fingerprint content only.
 
 **Fix shape.** Keep a typed tail of the current horizontal list in the stomach (the last item's kind and
 amount: glue, kern, penalty, char, box) so `\unskip`, `\lastskip`, `\ifdim\lastskip`,
