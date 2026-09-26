@@ -15,9 +15,8 @@
 # xelatex, LuaTeX/LuaHBTeX → lualatex), then the remaining engines, and the first
 # clean one is recorded. xelatex was never tried before, so run_doc.sh's xetex
 # persona never fired (the 2026-09-25 refresh: 54 docs newly clean, 24 of them
-# under xelatex). A clean first run is kept as before. Producer-first for such runs
-# would change the persona of ~750 manuals whose golden came from another engine;
-# that is a measured experiment of its own (roadmap stream A, char-list).
+# under xelatex). A clean first run is kept as before, except that a clean head-check
+# lualatex yields to a clean pdflatex when the golden's Producer is pdfTeX (below).
 # When no engine is clean, a pdflatex run without a PDF records lualatex, as before
 # batch 56is (run_doc.sh's luatex retry reads the column as the required engine).
 # REFRESH=<file of tex paths>: drop those docs' rows and re-run only them.
@@ -72,6 +71,23 @@ oracle_one() {
     [[ -f "$tmp/$name.pdf" ]] && has_pdf=1
   }
   run_engine "$engine"
+  # The head check's lualatex yields to pdflatex when the golden is pdfTeX's and
+  # pdflatex is clean: the luatex persona typesets a document's Unicode branch
+  # (`\UnicodeEncodingName` defined) where the golden has the 8-bit one
+  # (textalpha-doc.tex:187-190; stream A, sweep #124: textalpha-doc 79.9 -> 97.9,
+  # alphabeta-doc 87.0 -> 95.4, char-list 66.3 -> 77.9, char-list-alphabeta 63.2 ->
+  # 65.6, hyperref-with-greek 93.7 -> 89.0, 15 others unchanged). The reverse flip
+  # (pdflatex where the golden came from lualatex/xelatex) moved no recall and added
+  # errors, so it is not made.
+  if [[ $engine == lualatex && $produced == pdflatex && $exit_code -eq 0 && $errors -eq 0 ]]; then
+    local head_pdf=$has_pdf
+    run_engine pdflatex
+    if [[ $exit_code -eq 0 && $errors -eq 0 ]]; then
+      engine=pdflatex
+    else
+      exit_code=0 errors=0 has_pdf=$head_pdf
+    fi
+  fi
   local first="$engine" first_exit=$exit_code first_errors=$errors first_pdf=$has_pdf
   local lua_exit="" lua_errors=""
   [[ $first == lualatex ]] && lua_exit=$exit_code lua_errors=$errors

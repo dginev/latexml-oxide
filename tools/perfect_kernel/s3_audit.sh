@@ -33,13 +33,56 @@ pdf="$DOCROOT/$DOC.pdf"
 
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 pdftotext -q "$pdf" "$tmp/pdf.txt"
-# Tag-strip with a SPACE per tag (a bare string(/) glues text across element
-# boundaries — `Wolczko<break/>mario` read as "wolczkomario" and produced a
-# false missing-word). Entities are then decoded by xmllint on the wrapped
-# remainder.
+# Tag-strip: a block or layout element is a SPACE (a bare string(/) glues text
+# across element boundaries — `Wolczko<break/>mario` read as "wolczkomario" and
+# produced a false missing word).
 # MathML annotations carry the TeX source; drop them so HTML recall counts
 # rendered text only (they could only inflate "found").
-perl -0pe 's{<(m:)?annotation\b.*?</(m:)?annotation>}{ }gs; s{<[^>]*>}{ }g' "$xml" > "$tmp/xml.txt" 2>/dev/null
+# An inline text element (`span`, `em`, `a`, `sup`, the core XML's `text`/`emph`,
+# …) glues its text to its neighbours, as a browser renders it: `\LaTeX` is
+# `L<span>a</span>T<span>e</span>X`, and a space per tag made "latex" a missing
+# word in 335 manuals (stream A, sweep #124). Spans whose LaTeXML.css class is
+# a block or inline-block (tabular cells `ltx_td`, inline-blocks, minipages,
+# paragraphs, lists, notes, pubnotes, tags, listings, framed boxes) and anything
+# with a `display:` style still separate, as does every other element (SVG
+# `text` too: the core XML's `text`/`emph` glue only with S3_EXT=xml); a closing
+# tag does what its opening tag did, and an HTML void element (`br`, `img`, …)
+# opens nothing. A tag's quoted attributes may hold a raw `<`/`>` (libxml2's
+# `href="mailto:<a@b>"`). Text under `visibility:hidden` or
+# `display:none` is not rendered and is dropped (`\phantom{pf}`'s content
+# would otherwise glue to the next word).
+XMLMODE=$([[ $S3_EXT == xml ]] && echo 1 || echo 0) perl -0777 -ne '
+  my $xmlmode = $ENV{XMLMODE};
+  s{<(m:)?annotation\b.*?</(m:)?annotation>}{ }gs;
+  s{<!--.*?-->}{ }gs;
+  my (@stack, $out);
+  my $hidden = 0;
+  for my $piece (split /(<(?:[^>"]|"[^"]*")*>)/) {
+    if ($piece =~ m{^<(/?)([A-Za-z][\w:.-]*)((?:[^>"]|"[^"]*")*?)(/?)>$}s) {
+      my ($close, $name, $attrs, $empty) = ($1, lc $2, $3, $4);
+      my ($g, $h) = (0, 0);
+      if ($close) {
+        ($g, $h) = @{ pop(@stack) // [0, 0] };
+        $hidden -= $h;
+      } else {
+        $name =~ s/^\w+://;
+        $empty ||= $name =~ /^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/;
+        $g = (($name =~ /^(?:span|a|em|strong|b|i|u|s|sub|sup|small|big|code|tt|abbr|cite|q|del|ins|mark|kbd|samp|var|font)$/
+          || ($xmlmode && $name =~ /^(?:text|emph)$/))
+          && $attrs !~ /class="[^"]*\bltx_(?:td|th|tr|tabular|tbody|thead|tfoot|inline-block|inline-logical-block|logical-block|minipage|parbox|p|para|block|item|itemize|enumerate|description|quote|centering|tag|listing|listingline|bibblock|note|pubnotes|pubnote|author_notes|contact|transformed_inner|transformed_outer|framed|ERROR)\b/
+          && $attrs !~ /display\s*:/) ? 1 : 0;
+        $h = ($attrs =~ /visibility\s*:\s*hidden|display\s*:\s*none/) ? 1 : 0;
+        unless ($empty) { push @stack, [$g, $h]; $hidden += $h; }
+      }
+      $out .= $g ? "" : " ";
+    } elsif ($piece =~ /^</) {
+      $out .= " ";
+    } elsif (!$hidden) {
+      $out .= $piece;
+    }
+  }
+  print $out;
+' "$xml" > "$tmp/xml.txt" 2>/dev/null
 
 # Word extraction is Unicode-aware on BOTH sides (the byte-wise `tr -cs
 # '[:alpha:]'` split every non-ASCII letter: "Schriftgröße" → "schriftgr",
