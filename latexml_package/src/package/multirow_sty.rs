@@ -78,7 +78,12 @@ LoadDefinitions!({
   // to peek for an actual `{`-arg and only emit `\hbox{...}` when
   // content is present; otherwise emit `\lx@multirow@setup` alone
   // and leave `&` (or whatever comes next) for the outer tabular.
-  DefMacro!("\\multirow[]{Float}[Number]{}[Dimension]",
+  // `[<bigstruts>]` is a count with an optional `t`/`b` prefix (multirow.sty
+  // :158-166 `\multirow@piii`, `[b2]`) and `[<vmove>]` a length added to the
+  // `\newlength` `\multirow@dima` (:197); both unused here, so read untyped and as
+  // a skip — a `{Number}`/`{Dimension}` would put `b2` or a `plus` part back in
+  // the input (OXIDIZED_DESIGN #317).
+  DefMacro!("\\multirow[]{Float}[]{}[Glue]",
     "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox}{}");
   DefMacro!("\\lx@multirow@hbox{}",
     "\\hbox{\\let\\\\\\lx@newline\\multirowsetup #1}");

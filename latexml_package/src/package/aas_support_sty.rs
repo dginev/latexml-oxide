@@ -240,7 +240,9 @@ LoadDefinitions!({
   Let!("\\leftfig", "\\fig");
   Let!("\\rightfig", "\\fig");
   Let!("\\boxedfig", "\\fig");
-  DefMacro!("\\rotatefig{Number} Semiverbatim {Dimension}{}",
+  // The angle is a decimal (aastex701.cls:12337-12342 `angle=#1` → trig.sty:55):
+  // a `{Number}` put the `.5` of `{22.5}` back in the input (OXIDIZED_DESIGN #317).
+  DefMacro!("\\rotatefig{Float} Semiverbatim {Dimension}{}",
     "\\begin{figure}\\caption{#4}\\includegraphics[width=#3,angle=#1]{#2}\\end{figure}");
 
   // 2.9 Acknowledgements

@@ -136,7 +136,9 @@ LoadDefinitions!({
   // (`\close@column@grid\clearpage\twocolumngrid`) calls it: arXiv 2605.07942.
   def_macro_noop("\\close@column@grid")?;
   def_primitive_noop("\\twocolumn")?;
-  DefConstructor!("\\rotatebox{Number}{}", "#2", enter_horizontal => true);
+  // The angle is a decimal (graphics.sty:445-452 → trig.sty:55 `\dimen@=#1\p@`):
+  // a `{Number}` put the `.5` of `{22.5}` back in the input (OXIDIZED_DESIGN #317).
+  DefConstructor!("\\rotatebox{Float}{}", "#2", enter_horizontal => true);
   def_macro_noop("\\pagesofar")?;
 
   // Endnotes — Perl revtex4_support.sty.ltxml L120-149.

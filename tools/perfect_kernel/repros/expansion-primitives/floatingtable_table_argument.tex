@@ -1,0 +1,16 @@
+% mechanism: floatflt's `\begin{floatingtable}[<pos>]{<table>}` takes the TABLE as its argument
+%   (floatflt.sty:96, :131-139 `\settowidth{\tabbredd}{#2}` ... `#2`); the binding read it as a
+%   `{Dimension}` (Perl floatflt.sty.ltxml:44) and dropped the table without a diagnostic.
+% witness: batch 56jr inventory (floatflt_sty.rs `{floatingtable}`)
+% oracle:  pdflatex 0 errors: the table "Alpha Beta" then the caption "Table 1: Cap"
+% engines: rust (before 56jr) = 0 errors, table cells lost; perl the same
+% expect:  0 errors, 0 warnings; the ltx:table holds the tabular and the caption
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\usepackage{floatflt}
+\begin{document}
+\begin{floatingtable}{\begin{tabular}{cc}Alpha & Beta\end{tabular}}
+\caption{Cap}
+\end{floatingtable}
+Text after.
+\end{document}

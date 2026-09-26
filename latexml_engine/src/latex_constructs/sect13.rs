@@ -269,7 +269,8 @@ pub(crate) fn load() -> Result<()> {
   // argument is the one
   // exception: Perl's digests to itself (Object.pm:156), this port's to a
   // text box of its digits (common/float.rs `be_digested`), so a constructor
-  // with a `{Float}` states Perl's size as its `sizer` — the box arguments
+  // with a `{Float}` (a `{DefaultUnits}` since batch 56jr, OXIDIZED_DESIGN #317,
+  // which digests the same way) states Perl's size as its `sizer` — the box arguments
   // Perl would sum (none for `\line`/`\vector`, the `*` of `\circle*`, the
   // `[part]` of `\oval`). Guard:
   // `node_box_append::drawing_objects_measure_no_coordinates`.
@@ -294,8 +295,11 @@ pub(crate) fn load() -> Result<()> {
       Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
     }
   });
-  // The actual picture-mode \line dispatched from the peek above.
-  DefConstructor!("\\lx@pic@line Pair {Float}",
+  // The actual picture-mode \line dispatched from the peek above. Its length,
+  // like `\vector`'s, `\circle`'s, `\dashbox`'s and `\oval`'s radius, is a
+  // `DefaultUnits` (latex.ltx:16766-16767 `\@defaultunitsset`: a number of
+  // `\unitlength`s or a length; Perl's `{Float}`; OXIDIZED_DESIGN #317).
+  DefConstructor!("\\lx@pic@line Pair {DefaultUnits}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
     sizer => 0,
@@ -385,7 +389,7 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // \vector(slope){length} — Perl: DefConstructor('\vector Pair:Number {Float}', ...)
-  DefConstructor!("\\vector Pair {Float}",
+  DefConstructor!("\\vector Pair {DefaultUnits}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
     alias => "\\vector",
     sizer => 0,
@@ -416,7 +420,7 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // \circle*{diameter} — filled or unfilled circle
-  DefConstructor!("\\circle OptionalMatch:* {Float}",
+  DefConstructor!("\\circle OptionalMatch:* {DefaultUnits}",
     "<ltx:circle x='0' y='0' r='#radius' fill='#fill' stroke='#stroke' stroke-width='#thick'/>",
     alias => "\\circle",
     sizer => "#1",
@@ -450,7 +454,7 @@ pub(crate) fn load() -> Result<()> {
   );
 
   // \oval[radius](width,height)[part] — Perl: DefConstructor('\oval [Float] Pair []', …)
-  DefConstructor!("\\oval [Float] Pair []",
+  DefConstructor!("\\oval [DefaultUnits] Pair []",
     "<ltx:rect x='#ox' y='#oy' width='#owidth' height='#oheight' rx='#radius'\
       stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
     sizer => "#3",
@@ -773,7 +777,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\pic@makebox", "\\pic@makebox@{\\makebox}{}");
   DefMacro!("\\pic@framebox", "\\pic@makebox@{\\framebox}{framed=true}");
   DefMacro!(
-    "\\lx@pic@dashbox{Float}",
+    "\\lx@pic@dashbox{DefaultUnits}",
     "\\pic@makebox@{\\dashbox(#1)}{framed=true,dash={#1}}"
   );
   DefMacro!(

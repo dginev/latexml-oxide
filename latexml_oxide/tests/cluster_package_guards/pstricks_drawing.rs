@@ -274,15 +274,17 @@ fn pstricks_coordinate_modes_are_the_raw_ones() {
 }
 
 /// hexgame.sty's board (`\PstHexagon`, pst-poly) converts without the
-/// "\@nil undefined" error. The 7 warnings are the `\multirput[]{}{}{}{}`
-/// stub reading `(x,y)(dx,dy)` as brace arguments (10 before P1; Perl
-/// defines `\multirput` with `PSCoord PSCoord`, :926-932).
+/// "\@nil undefined" error. The 3 warnings are pstcol's banner and two
+/// "Missing number"s (10 before P1; Perl defines `\multirput` with `PSCoord
+/// PSCoord`, :926-932). Four more, "Illegal unit of measure", were calc
+/// reading `((\value{modulocounter})-1)` (hexgame.sty:77) up to its first `)`
+/// until batch 56jr (`braced_quantity_tail`, OXIDIZED_DESIGN #317).
 #[test]
 fn hexgame_board_converts() {
   let tex = "\\documentclass{article}\n\\usepackage{hexgame}\n\\begin{document}\n\\begin{hexgame}{3}\n\\colorhex{2}{playerone}\n\\labelhex{5}{7}\n\\end{hexgame}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 7, "{stderr}");
+  assert_eq!(warning_count(&stderr), 3, "{stderr}");
   assert_element(
     &xml,
     "rect",

@@ -361,17 +361,7 @@ LoadDefinitions!({
     if inside_cell_group() {
       return Ok(in_cell_newline(optional));
     }
-    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
-    if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
-      tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist());
-      tokens.push(T_END!());
-    } else {
-      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-    }
-    tokens.push(T_END!());
-    Tokens::new(tokens)
+    alignment_newline_tokens(optional)?
   });
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
@@ -381,17 +371,7 @@ LoadDefinitions!({
     if inside_cell_group() {
       return Ok(in_cell_newline(optional));
     }
-    let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
-    if let Some(opt_tks) = optional {
-      tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
-      tokens.push(T_BEGIN!());
-      tokens.extend(opt_tks.unlist());
-      tokens.push(T_END!());
-    } else {
-      tokens.push(T_CS!("\\lx@alignment@newline@marker"));
-    }
-    tokens.push(T_END!());
-    Tokens::new(tokens)
+    alignment_newline_tokens(optional)?
   });
   // These are the markers that produce \\ in the reversion,
   // and (eventually will) add vertical space to the row!
@@ -1038,7 +1018,18 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // loop (`peek_mode`'s Drop, ended before any row/cell group opens). Guard:
     // `perfect_kernel_batch56::alignment_cell_head_peeks_in_internal_vertical_mode`.
     let mut peek_mode = Some(AlignPeekMode::enter());
-    while let Some(xtoken) = read_x_token(Some(true), false, Some(false))? {
+    loop {
+      // Between rows a command's argument tail has no place: handed back it
+      // would open the next row (`dropping_argument_tails`).
+      let between_rows = !alignment.borrow().is_in_row();
+      let next = if between_rows {
+        dropping_argument_tails(BETWEEN_ALIGNMENT_ROWS, || {
+          read_x_token(Some(true), false, Some(false))
+        })?
+      } else {
+        read_x_token(Some(true), false, Some(false))?
+      };
+      let Some(xtoken) = next else { break };
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
       // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
@@ -1561,6 +1552,27 @@ fn in_cell_newline(_optional: Option<Tokens>) -> Tokens { Tokens!(T_CS!("\\newli
 fn inside_cell_group() -> bool {
   let c = align_group_count();
   c > 0 && c < 500_000
+}
+
+/// The row end `\\[<dim>]` expands to: `\lx@hidden@cr{<marker>}`. The optional
+/// length is read here, a `\dimen` as `\@xtabularcr`'s `\ifdim #1>\z@`
+/// (latex.ltx:16590-16602) reads it, and what follows it in the brackets is
+/// dropped with a warning: the marker sits inside `\lx@hidden@cr`'s argument,
+/// whose rest nobody reads (OXIDIZED_DESIGN #317).
+fn alignment_newline_tokens(optional: Option<Tokens>) -> Result<Tokens> {
+  let mut tokens = vec![T_CS!("\\lx@hidden@cr"), T_BEGIN!()];
+  if let Some(opt_tks) = optional {
+    let (value, tail) = read_braced_value(opt_tks, RegisterType::Dimension)?;
+    drop_argument_tail(&T_CS!("\\\\"), tail, BETWEEN_ALIGNMENT_ROWS);
+    tokens.push(T_CS!("\\lx@alignment@newline@markertall"));
+    tokens.push(T_BEGIN!());
+    tokens.extend(value.revert()?.unlist());
+    tokens.push(T_END!());
+  } else {
+    tokens.push(T_CS!("\\lx@alignment@newline@marker"));
+  }
+  tokens.push(T_END!());
+  Ok(Tokens::new(tokens))
 }
 
 fn read_newline_args(skipspaces: bool) -> Result<(bool, Option<Tokens>)> {

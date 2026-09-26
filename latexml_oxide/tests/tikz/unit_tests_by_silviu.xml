@@ -1645,32 +1645,29 @@ Hello</p>
                   <svg:g>
                     <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z" style="stroke:none"/>
                   </svg:g>
-                  <svg:defs>
-                    <svg:pattern id="pgfupat12" xlink:href="#pgfpat21">
-                      <svg:g fill="#000000" stroke="#000000">
-                        <svg:use xlink:href="#pgfsym21"/>
-                      </svg:g>
-                    </svg:pattern>
-                  </svg:defs>
-                  <svg:g fill="#000000">
-                    <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
-                  </svg:g>
-                  <svg:g fill="url(#pgfupat12)"/>
-                  <svg:g>
-                    <svg:defs>
-                      <svg:pattern id="pgfupat13" xlink:href="#pgfpat21">
-                        <svg:g fill="#FF0000" stroke="#FF0000">
-                          <svg:use xlink:href="#pgfsym21"/>
-                        </svg:g>
-                      </svg:pattern>
-                    </svg:defs>
-                  </svg:g>
-                  <svg:g fill="#000000">
-                    <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
-                  </svg:g>
                 </svg:symbol>
               </svg:pattern>
             </svg:defs>
+            <svg:defs>
+              <svg:pattern id="pgfupat12" xlink:href="#pgfpat21">
+                <svg:g fill="#000000" stroke="#000000">
+                  <svg:use xlink:href="#pgfsym21"/>
+                </svg:g>
+              </svg:pattern>
+            </svg:defs>
+            <svg:g fill="url(#pgfupat12)">
+              <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
+            </svg:g>
+            <svg:defs>
+              <svg:pattern id="pgfupat13" xlink:href="#pgfpat21">
+                <svg:g fill="#FF0000" stroke="#FF0000">
+                  <svg:use xlink:href="#pgfsym21"/>
+                </svg:g>
+              </svg:pattern>
+            </svg:defs>
+            <svg:g fill="url(#pgfupat13)">
+              <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
+            </svg:g>
           </svg:g>
         </svg:svg>
       </picture>
@@ -1681,18 +1678,15 @@ Hello</p>
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,79.29) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)">
             <svg:defs>
               <svg:pattern height="39" id="pgfpat22" patternUnits="userSpaceOnUse" width="39">
-                <svg:symbol id="pgfsym22">
-                  <svg:g fill="#000000">
-                    <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z"/>
-                  </svg:g>
-                  <svg:g/>
-                  <svg:g fill="#000000">
-                    <svg:path d="M 0 0 M 0 0 L 0 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
-                  </svg:g>
-                  <svg:g fill="url(#pgfpat22)"/>
-                </svg:symbol>
+                <svg:g fill="#000000">
+                  <svg:path d="M 35.43 19.69 L 6.94 28.94 L 24.55 4.71 L 24.55 34.66 L 6.94 10.43 Z"/>
+                </svg:g>
+                <svg:g/>
               </svg:pattern>
             </svg:defs>
+            <svg:g fill="url(#pgfpat22)">
+              <svg:path d="M 0 0 M 0 0 L 0 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
+            </svg:g>
           </svg:g>
         </svg:svg>
       </picture>
@@ -1708,10 +1702,10 @@ Hello</p>
                 </svg:g>
               </svg:pattern>
             </svg:defs>
-            <svg:g fill="#000000">
+            <svg:g fill="url(#pgfupat14)">
               <svg:path d="M 0 0 M 0 0 L 0 78.74 L 59.06 78.74 L 59.06 0 Z M 59.06 78.74"/>
             </svg:g>
-            <svg:g fill="#000000">
+            <svg:g fill="url(#pgfpat22)">
               <svg:path d="M 59.06 0 M 59.06 0 L 59.06 78.74 L 118.11 78.74 L 118.11 0 Z M 118.11 78.74"/>
             </svg:g>
           </svg:g>

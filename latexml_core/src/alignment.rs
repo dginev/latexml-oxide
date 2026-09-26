@@ -1022,7 +1022,10 @@ pub fn read_alignment_template() -> Result<Template> {
     } else {
       match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
         Some(defn) => {
-          let invoked = defn.invoke(true)?;
+          let invoked =
+            crate::parameter::dropping_argument_tails(crate::parameter::IN_EVERY_CELL, || {
+              defn.invoke(true)
+            })?;
           gullet::unread(invoked);
         },
         _ => {

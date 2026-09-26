@@ -5,6 +5,24 @@
 
 use super::*;
 
+/// The type TeX scans for an assignment to a register of `register` type
+/// (`\setlength#1#2{#1 #2\relax}`, latex.ltx:10253): its own, a `\chardef`'s
+/// being a number. A register of no numeric type falls back to a dimension,
+/// Perl's `{Dimension}`.
+fn length_register_type(register: Option<RegisterType>) -> RegisterType {
+  match register {
+    Some(
+      kind @ (RegisterType::Number
+      | RegisterType::Dimension
+      | RegisterType::Glue
+      | RegisterType::MuDimension
+      | RegisterType::MuGlue),
+    ) => kind,
+    Some(RegisterType::CharDef) => RegisterType::Number,
+    _ => RegisterType::Dimension,
+  }
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -63,22 +81,34 @@ pub(crate) fn load() -> Result<()> {
   // Perl parity: `return unless $defn && ($defn ne 'missing');` — silently
   // skip when the target variable has no register definition (e.g. undefined
   // length register). Matches calc_sty.rs's \setlength/\addtolength fallback.
-  DefPrimitive!("\\setlength {Variable}{Dimension}", sub[(variable,length)] {
+  //
+  // The value is read the way latex.ltx:10253-10254 reads it — `\setlength#1#2{#1
+  // #2\relax}`, `\addtolength#1#2{\advance#1 #2\relax}`: by the register's own
+  // type (a skip keeps its `plus`/`minus`, where Perl's `{Dimension}` read the
+  // natural width only), and what follows the value in the braces stays in the
+  // input, read after the assignment (`\setlength{\parindent}{2pt\foo}G` with
+  // `\def\foo{x}` typesets "xG"; Perl drops it, KNOWN_PERL_ERRORS #275).
+  // OXIDIZED_DESIGN #317; guard `braced_quantity_tail`.
+  DefPrimitive!("\\setlength {Variable}{}", sub[(variable, length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
       if let Some(defn) = rtoken.to_register() {
-        defn.set_value(length.into(), None, params);
+        let (value, tail) = read_braced_value(length, length_register_type(defn.register_type()))?;
+        defn.set_value(value, None, params);
+        unread_vec(tail);
       }
     }
     Ok(Vec::new())
   });
-  DefPrimitive!("\\addtolength {Variable}{Dimension}", sub[(variable,length)] {
+  DefPrimitive!("\\addtolength {Variable}{}", sub[(variable, length)] {
     if let ArgWrap::RegisterDefinition(dbox) = variable {
       let (rtoken, params) = *dbox;
       if let Some(defn) = rtoken.to_register() {
+        let (value, tail) = read_braced_value(length, length_register_type(defn.register_type()))?;
         // TODO: can we avoid cloning the params?
         let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-        defn.set_value(oldlength.add(length), None, params);
+        defn.set_value(oldlength.add(value), None, params);
+        unread_vec(tail);
       }
     }
     Ok(Vec::new())
@@ -110,7 +140,14 @@ pub(crate) fn load() -> Result<()> {
   // C.13.2 Space
   //======================================================================
 
-  DefPrimitive!("\\hspace OptionalMatch:* {Dimension}", sub[(_star,length)] {
+  // The length is a skip: latex.ltx:9425 `\@hspace#1{\setlength\sp@ce@skip{#1}…}`,
+  // `\sp@ce@skip` a `\newskip` (:9424). Perl's `{Dimension}` stopped before a
+  // `plus`/`minus`, which then passed for text after the value (OXIDIZED_DESIGN
+  // #317): `\hspace{0pt plus 1fil}`, `\hspace{\stretch{1}}`. The space is the
+  // natural width, as `\hskip`'s.
+  DefPrimitive!("\\hspace OptionalMatch:* {Glue}", sub[(_star,skip)] {
+    let skip: Glue = skip;
+    let length = Dimension::new(skip.value_of());
     // Perl `latex_constructs.pool.ltxml:4686-4691` always emits a Box once
     // `DimensionToSpaces` returns a defined value — and `''` is defined,
     // so a literal `\hspace{0pt}` still yields an `isSpace` whatsit. In
@@ -119,7 +156,7 @@ pub(crate) fn load() -> Result<()> {
     // `unexpected:double-superscript` reported on 1603.08690 and similar
     // papers. Do NOT gate on `!s.is_empty()`.
     let s = dimension_to_spaces(length);
-    let length_tokens = length.revert()?;
+    let length_tokens = skip.revert()?;
     let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
     Tbox::new(pin(&s), None, None, tokens,
       stored_map!("width" => length, "isSpace" => true))

@@ -1,0 +1,22 @@
+% mechanism: a picture length is latex.ltx:16766-16767 `\@defaultunitsset#1#2#3{\@defaultunits
+%   #1\dimexpr#2#3\relax\relax\@nnil}` with #3 = \unitlength: a number of units or a length of its
+%   own, scanned as one \dimexpr, the rest discarded (`\remove@to@nnil`, :10537). The bindings read a
+%   `{Float}` (Perl latex_constructs.pool.ltxml:4992-5001): `1cm` was 1 unit, and once a braced
+%   argument's rest re-enters the input its `cm` would be typeset (OXIDIZED_DESIGN #317).
+% witness: batch 56jr inventory (\line, \vector, \circle, \dashbox, pict2e \oval[<radius>])
+% oracle:  pdflatex 0 errors; the 1cm line is as long as the 10-unit one, no "cm"/"pt" text
+% engines: rust (before 56jr) = the 1cm line 1 unit (3.94px) long, the .5\linewidth vector 0.5 unit,
+%          the 10pt circle 10 units (r 19.72px); perl the same
+% expect:  0 errors, 0 warnings; <line points="0,0 39.44,0"> twice, vector 239.09px, circle r 6.93px
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\begin{document}
+\setlength{\unitlength}{1mm}
+\begin{picture}(40,20)
+\put(0,0){\line(1,0){10}}
+\put(0,5){\line(1,0){1cm}}
+\put(0,10){\vector(1,0){.5\linewidth}}
+\put(20,10){\circle{5}}
+\put(30,10){\circle{10pt}}
+\end{picture}
+\end{document}

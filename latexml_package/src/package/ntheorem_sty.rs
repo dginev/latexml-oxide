@@ -50,10 +50,12 @@ LoadDefinitions!({
   // Registers
   DefRegister!("\\theoremindent"                => Dimension::new(0));
   DefRegister!("\\theoremrightindent"           => Dimension::new(0));
-  DefRegister!("\\theorempreskipamount"         => Dimension::new(0));
-  DefRegister!("\\theorempostskipamount"        => Dimension::new(0));
-  DefRegister!("\\theoremframepreskipamount"    => Dimension::new(0));
-  DefRegister!("\\theoremframepostskipamount"   => Dimension::new(0));
+  // The skip amounts are skips (ntheorem.sty:584-587 `\newskip`): `\setlength`
+  // scans by the register's type (OXIDIZED_DESIGN #317).
+  DefRegister!("\\theorempreskipamount"         => Glue::new(0));
+  DefRegister!("\\theorempostskipamount"        => Glue::new(0));
+  DefRegister!("\\theoremframepreskipamount"    => Glue::new(0));
+  DefRegister!("\\theoremframepostskipamount"   => Glue::new(0));
   // ntheorem.sty:714-715 `\newskip\thm@topsep \newskip\thm@topsepadd` —
   // internals that packages copying ntheorem's theorem code reach
   // (dlfltxbcodetips.sty:102-106 `\thm@topsepadd\theorempostskipamount`).

@@ -14,6 +14,7 @@ use crate::{
   definition::register::{RegisterType, RegisterValue},
   digested::Digested,
   state::*,
+  tokens::Tokens,
 };
 
 /// Positively silly enum, but it solves all kinds of issues with the Glue struct
@@ -275,6 +276,19 @@ impl fmt::Display for Glue {
   }
 }
 impl Object for Glue {
+  /// Perl `Common/Number.pm` `revert` (inherited by Glue): `ExplodeText($self->toString)`.
+  /// The default (no tokens) reverted `\hspace{10pt}` to a bare `\hskip`. A
+  /// glue ending in a `fil` unit takes a space after it, which ends the unit
+  /// (tex.web §454 reads further `l`s): `$x\hspace{\stretch{1}}l$` reverted to
+  /// `\hskip 0.0pt plus 1.0filll`, which swallows the `l`.
+  fn revert(&self) -> Result<Tokens> {
+    let string = self.to_string();
+    let mut tokens = ExplodeText!(&string);
+    if string.ends_with("fil") || string.ends_with("fill") || string.ends_with("filll") {
+      tokens.push(crate::token::Token::new(" ", crate::token::Catcode::SPACE));
+    }
+    Ok(Tokens::new(tokens))
+  }
   fn be_digested(self) -> Result<Digested> { Ok(RegisterValue::Glue(self).into()) }
 }
 

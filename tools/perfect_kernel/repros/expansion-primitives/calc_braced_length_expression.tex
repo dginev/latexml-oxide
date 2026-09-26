@@ -1,0 +1,26 @@
+% mechanism: with calc, `\setlength` evaluates its whole argument (calc.sty:86, :51-53), and
+%   latex.ltx hands every box/space length to `\setlength` (`\@imakebox` :16101 "support calc").
+%   The binding's `[Dimension]` read stopped after `\widthof{ab}` and dropped `+\widthof{…}`.
+% witness: batch 56jm review (SYNC_STATUS "Tokens after a {Dimension}/{Glue} argument's scan")
+% oracle:  pdflatex 0 errors: "[38.6112pt]", makebox 38.6pt wide, "[7.0pt]", "[1.0pt plus 2.0pt]",
+%          "[3.0pt plus 1.0pt minus 1.0pt]", "[7]"
+% engines: rust (before 56jr) = makebox width 10.6pt (first term only), 0 errors; perl width 0.0pt,
+%          1 warning
+% expect:  0 errors, 0 warnings; <text align="center" width="38.6pt">M</text>
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\usepackage{calc}
+\newlength\mylen
+\begin{document}
+\setlength{\mylen}{\widthof{ab}+\widthof{cdefgh}}[\the\mylen]
+
+\makebox[\widthof{ab}+\widthof{cdefgh}]{M}N
+
+\setlength{\mylen}{2pt*3 + 1pt}[\the\mylen]
+
+\setlength{\mylen}{1pt plus 2pt}[\the\mylen]
+
+\setlength{\parskip}{3pt plus 1pt minus 1pt}[\the\parskip]
+
+\newcounter{cc}\setcounter{cc}{2*3+1}[\thecc]
+\end{document}

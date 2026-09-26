@@ -28,9 +28,11 @@ LoadDefinitions!({
   def_macro_noop("\\usethanksrule")?;
   def_macro_noop("\\cancelthanksrule")?;
   def_macro_noop("\\calccentering{}{}")?;
-  DefRegister!("\\droptitle" =>       Dimension::new(0));
-  DefRegister!("\\thanksmarkwidth" => Dimension::from_str("1.8em")?);
-  DefRegister!("\\thanksmargin" =>    Dimension::from_str("-1.8em")?);
+  // `\newlength`s, i.e. skips (titling.sty:76-77, :112): `\setlength` scans by
+  // the register's type (OXIDIZED_DESIGN #317).
+  DefRegister!("\\droptitle" =>       Glue::new(0));
+  DefRegister!("\\thanksmarkwidth" => Glue!("1.8em"));
+  DefRegister!("\\thanksmargin" =>    Glue!("-1.8em"));
   Let!("\\lx@titling@maketitle", "\\maketitle");
   DefMacro!("\\maketitle",
     "\\global\\let\\theauthor\\@author\\global\\let\\thedate\\@date\\global\\let\\thetitle\\@title\\lx@titling@maketitle");

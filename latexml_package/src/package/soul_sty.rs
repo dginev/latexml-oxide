@@ -34,8 +34,14 @@ LoadDefinitions!({
   // 1,   beforeDigest => sub { Digest($font); });
   // We store spacing + font per CS in state. The generic constructor reads them
   // via get_current_token() which preserves the original CS name through Let resolution.
-  DefPrimitive!("\\sodef Token {} {Dimension}{Dimension}{Dimension}",
+  // The three spacings are skips (soul-ori.sty:652-660, `\hskip`/`\spaceskip`;
+  // soul's own `\resetso` passes `.65em\@plus.08em\@minus.06em`, :668-669): a
+  // `{Dimension}` would put the `plus`/`minus` back in the input (OXIDIZED_DESIGN
+  // #317). The letter spacing is its natural width.
+  DefPrimitive!("\\sodef Token {} {Glue}{Glue}{Glue}",
   sub[(cs, font, letterspace, _innerspace, _outerspace)] {
+    let letterspace: Glue = letterspace;
+    let letterspace = Dimension::new(letterspace.value_of());
     let cs_name = cs.to_string();
     let px = letterspace.px_value(Some(2));
     let spacing_key = s!("soul_spacing_{cs_name}");
@@ -92,7 +98,10 @@ LoadDefinitions!({
   RawTeX!("\\sodef\\textcaps{\\capsfont}{0.28em}{0.37em}{.37em}");
 
   // Ignorable caps customization
-  def_macro_noop("\\capsdef {} {Dimension}{Dimension}{Dimension}")?;
+  // soul-ori.sty:697-700 `\capsdef#1#2#3#4#5`: a font match, the font commands
+  // (`{\scshape}`) and three skips. With a `{Dimension}` for the font commands
+  // they were put back in the input and switched the font (OXIDIZED_DESIGN #317).
+  def_macro_noop("\\capsdef {}{}{Glue}{Glue}{Glue}")?;
   def_macro_noop("\\capssave{}")?;
   def_macro_noop("\\capsselect{}")?;
   def_macro_noop("\\capsreset")?;

@@ -1,0 +1,37 @@
+% mechanism: LaTeX's assignments leave what follows the value in the input — latex.ltx:10253
+%   `\def\setlength#1#2{#1 #2\relax}`, :10254 `\addtolength`, :10115-10122 `\setcounter`/
+%   `\addtocounter` (`\global\csname c@#1\endcsname#2\relax`). The binding read a braced
+%   {Dimension}/{Number} and dropped the tail (parameter.rs reparse_argument, as Perl
+%   Gullet.pm:131-135 readingFromMouth; KNOWN_PERL_ERRORS #275).
+% witness: batch 56jm review (SYNC_STATUS "Tokens after a {Dimension}/{Glue} argument's scan")
+% oracle:  pdflatex 0 errors: "xG", "yH", "zY5", "wW6", "xV[3.0pt]" (a conditional cut by the
+%          scan closes after its taken branch's tail, tex.web §448), "6.0ptD" (after `3\U` a dimen
+%          scan looks no further, §455: `\the\xd` is read after the assignment), "5.0ptS" (a glue
+%          scan's `plus` look-ahead expands `\the\xs` before it, §461)
+% engines: rust (before 56jr) = "G", "H", "Y5", "W6", "V[3.0pt]", "D", "S" and a false "Missing \fi"
+%          warning (the drain met the mouth end after expanding the \fi); perl the text alike
+% expect:  0 errors, 0 warnings
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\def\foo{x}\def\bar{y}\def\baz{z}\def\qux{w}
+\newlength\mylen
+\newcounter{cc}
+\newlength\U \setlength\U{2pt}
+\newdimen\xd \xd=5pt
+\newlength\xs \setlength\xs{5pt}
+\def\a{a}\def\b{b}
+\begin{document}
+\setlength{\parindent}{2pt\foo}G
+
+\addtolength{\mylen}{1pt\bar}H
+
+\setcounter{cc}{5\baz}Y\thecc
+
+\addtocounter{cc}{1\qux}W\thecc
+
+\setlength{\mylen}{\ifnum1=1 3pt\foo\else 4pt\fi}V[\the\mylen]
+
+\setlength{\xd}{\ifx\a\b 1pt\else 3\U\fi\the\xd}D
+
+\setlength{\xs}{\ifx\a\b 1pt\else 3\U\fi\the\xs}S
+\end{document}

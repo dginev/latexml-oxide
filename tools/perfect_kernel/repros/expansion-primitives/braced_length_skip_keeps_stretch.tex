@@ -1,0 +1,24 @@
+% mechanism: `\setlength`/`\addtolength` scan by the register's type (latex.ltx:10253-10254),
+%   and `\hspace`'s length is a skip (latex.ltx:9423-9425, `\sp@ce@skip` a \newskip). Perl's
+%   `{Dimension}` read only the natural width and dropped `plus`/`minus`; once a braced
+%   argument's tail re-enters the input (OXIDIZED_DESIGN #317) a Dimension read would typeset
+%   it. A \dimen register keeps TeX's behaviour: the `plus 1pt` IS text there.
+% witness: batch 56jm review (SYNC_STATUS "Tokens after a {Dimension}/{Glue} argument's scan")
+% oracle:  pdflatex 0 errors: "[1.0pt plus 2.0pt minus 3.0pt]", "[3.0pt plus 1.0pt minus 1.0pt]",
+%          "[2.0pt plus 1.0fil minus 3.0pt]", "AB C D", "plus 1pt[0.0pt]"
+% engines: rust (before 56jr) = "[1.0pt]", "[3.0pt]", "[2.0pt]", "[0.0pt]" (stretch lost); perl the same
+% expect:  0 errors, 0 warnings
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\newlength\mylen
+\begin{document}
+\setlength{\mylen}{1pt plus 2pt minus 3pt}[\the\mylen]
+
+\setlength{\parskip}{3pt plus 1pt minus 1pt}[\the\parskip]
+
+\addtolength{\mylen}{1pt plus 1fil}[\the\mylen]
+
+A\hspace{0pt plus 1fil}B\hspace{\stretch{1}}C\hspace{\fill}D
+
+\setlength{\parindent}{0pt plus 1pt}[\the\parindent]
+\end{document}

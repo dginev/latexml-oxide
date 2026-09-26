@@ -7053,3 +7053,30 @@ figure gives `<block><p>ONE</p><p>TWO</p><graphics/></block>` (pdflatex: the ima
 row carry-over gone the merge also runs after a paragraph. Rust puts the panel first in the block.
 Guard `node_box_append::a_panel_merged_into_a_block_keeps_its_place`; repro
 `graphics-tikz/node_box_panel_merge_keeps_order.tex`.
+
+## 275. A braced `{Dimension}`/`{Glue}`/`{Number}` argument drops what follows its value (FIXED in Rust)
+
+A typed braced argument is a `Plain` parameter re-read by its inner type (Package.pm:212-218,
+Parameters.pm:78-85 `reparseArgument`), inside `readingFromMouth` (Gullet.pm:108-146), which closes
+the argument's mouth with whatever the scan left unread (:134-135, a forced `closeMouth`) — no
+diagnostic. TeX never sees those braces: latex.ltx hands every such length to `\setlength#1#2{#1
+#2\relax}` (:10253) and every count to `\global\csname c@#1\endcsname#2\relax` (:10115-10122), so the
+rest stays in the input. Triggers, with `\def\foo{x}`: `A\hspace{1em\foo}B` — pdflatex "Ax B", Perl
+"A B"; `\setlength{\parindent}{2pt\foo}G` — pdflatex "xG", Perl "G"; `\setcounter{c}{5\foo}` drops
+the `x`. The same loss hides a type narrower than TeX's scan: `\setlength`/`\addtolength`
+(latex_constructs.pool.ltxml:4603-4615) and `\hspace` (:4629) read a `{Dimension}`, so
+`\setlength{\parskip}{3pt plus 1pt}` keeps 3pt and `\hspace{\stretch{1}}` is 0pt; `\rotatebox{Number}`
+(revtex4_support.sty.ltxml:118) drops the `.5` of `22.5`; floatflt's `{floatingtable}{Dimension}`
+(floatflt.sty.ltxml:44) drops the table itself, which is that argument. calc's expression reader
+(calc.sty.ltxml:114-121) drops an unparsable rest where calc.sty reports it (calc.sty:281-284), and
+reads a parenthesized group up to its FIRST `)` (:183-184), so `1.5\x*((\value{c})-1)` (hexgame.sty:77)
+loses its `-1)`; and a `[Dimension]` read of `\makebox[\widthof{ab}+\widthof{cd}]` stops after the first
+term (pdflatex with calc 38.6pt; Perl 0.0pt). Related binding drift: pgfsys-latexml.def.ltxml:492
+reads `\pgfsys@declarepattern` with nine arguments, pgf 3.1 passes fifteen (a matrix before the code,
+pgfcorepatterns.code.tex:159-164), so a pattern's code is lost and the call's rest runs loose. Rust
+(batch 56jr): OXIDIZED_DESIGN_DIVERGENCES #317.
+Repros `expansion-primitives/{braced_value_tail_after_assignment,braced_length_skip_keeps_stretch,
+braced_length_tail_box_commands,calc_braced_length_expression,calc_braced_length_invalid_tail,
+picture_length_default_units,floatingtable_table_argument}.tex`; guards `braced_quantity_tail::*`.
+
+The same Perl bindings declare package dimens as counts: lineno.sty.ltxml:46 and :64 (`\linenumbersep`, `\quotelinenumbersep`, `\newdimen` at lineno.sty:1549 and :2852) and floatflt/floatfig.sty.ltxml (`\htdone`, floatflt.sty:35), so `\the\linenumbersep` prints `0` (pdflatex `10.0pt`) and `\setlength{\linenumbersep}{2.5pt}` assigns 2, whose `.5pt` Perl drops and Rust (56jr) would print. Rust declares them `Dimension` with the package initial values (guard `braced_quantity_tail::package_registers_are_dimens`; witness 2605.07149).

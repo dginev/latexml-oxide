@@ -1136,7 +1136,16 @@ LoadDefinitions!({
   // In Rust, Dimension::value_of returns sp (scaled points); state::convert_unit("bp")
   // returns sp/bp. Their quotient is the bp value. Explode tokenizes the stringified
   // float into character tokens.
-  DefMacro!("\\hypercalcbp {Dimension}", sub[(dimen)] {
+  // The argument is a `\dimexpr` expression (hyperref.sty:364-366
+  // `\dimexpr(#1)\relax`), so `\hypercalcbp{\linewidth-2cm}` is one length —
+  // a `{Dimension}` read `\linewidth` and put `-2cm` back in the input
+  // (OXIDIZED_DESIGN #317).
+  DefMacro!("\\hypercalcbp {}", sub[(expression)] {
+    let mut tokens = vec![T_CS!("\\dimexpr"), T_OTHER!("(")];
+    let expression: Tokens = expression;
+    tokens.extend(expression.unlist());
+    tokens.extend([T_OTHER!(")"), T_CS!("\\relax")]);
+    let (dimen, _) = read_braced(Tokens::new(tokens), read_dimension)?;
     let sp = dimen.value_of() as f64;
     let bp = sp / convert_unit("bp");
     Ok(Tokens::new(Explode!(format!("{}", bp))))

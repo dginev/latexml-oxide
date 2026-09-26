@@ -9705,8 +9705,8 @@ Perl defines `\line` as `DefConstructor('\line Pair:Number {Float}', …)`
 `Fatal:misdefined` (`slopeToPicCoord`: "Can't call method 'getX'"), so the conversion fails, where pdflatex sets "Left … Right" across the line. Plain TeX's
 `\line` is `\hbox to\hsize` (plain.tex:575), and papers use it outside pictures as a length or box
 (witness 2306.13101, `\diagbox[height=2.5\line]{…}{…}`). **Rust** (`latex_constructs/sect13.rs`)
-makes `\line` a `DefMacro` that peeks for `(`: with it, `\lx@pic@line Pair {Float}` (Perl's
-constructor, alias `\line`); without it, `\hbox to \hsize`. Picture output is Perl's.
+makes `\line` a `DefMacro` that peeks for `(`: with it, `\lx@pic@line Pair {DefaultUnits}` (Perl's
+constructor, alias `\line`, its `{Float}` a `DefaultUnits` since #317); without it, `\hbox to \hsize`. Picture output is Perl's.
 
 Perl's `\lx@pic@bezier` template (:5034-5038) has no `stroke`, so `\bezier`'s curve inherits the
 `{picture}`'s `stroke='none'` and is invisible (KNOWN_PERL_ERRORS #271); the Rust `\lx@pic@bezier`
@@ -9717,6 +9717,121 @@ Perl's `displayedpoints` for a nonzero count only.
 bezier_is_stroked_and_counts_its_points}`.
 
 ---
+### 317. What follows the value in a braced typed argument stays in the input; assignments scan by the register's type; calc evaluates a braced length whole (Perl: dropped silently; `{Dimension}`; the first term)
+
+**Rust** (batch 56jr, worker W18). A binding's braced or bracketed typed argument (`{Dimension}`,
+`{Glue}`, `{Number}`, `{Float}`, `[Dimension]`, `CommaList:Number` items) is re-read by
+`Parameters::reparse_argument` in a mouth of its own; Perl closes that mouth with whatever the scan
+left (Gullet.pm:131-135; KNOWN_PERL_ERRORS #275). TeX never sees those braces — latex.ltx passes the
+argument to `\setlength#1#2{#1 #2\relax}` (:10253) or `\global\csname c@#1\endcsname#2\relax`
+(:10115-10122) — so the rest is read next. `parameter.rs` `read_braced` returns the tail (tokens a
+look-ahead put back, the rest of the argument, and what a conditional cut by the scan still holds —
+it is expanded to its `\fi` there, #193, one expansion at a time so nothing after the `\fi` is
+expanded early: `\setlength{\xd}{\ifx\a\b 1pt\else 3\U\fi\the\xd}` typesets the new value, as
+pdflatex, whose dimen scan stops at `3\U`, §455), and `ArgumentTails` holds it until the command's whole
+argument list is read, then puts it back in the input: TeX grabs a macro's arguments before
+scanning any of them (`\@rule[#1]#2#3`, latex.ltx:16360-16366). The tail is read right after the
+command. The assignments `\setlength`, `\addtolength`, `\setcounter`, `\addtocounter` (and
+calc's) instead read their value in the body with `read_braced_value` and put the tail back after
+assigning — TeX's place (`xG`, `zY5`), silently, as pdflatex. A command that outputs a box or space
+scans its length BEFORE the output in TeX (`\@hspace`, `\@imakebox`, `\@rule`, `\@iiiparbox`,
+`\@iiiminipage`), so there the tail lands one step late — after the space or box (`\parbox`, a
+macro, after its expansion's box), or at the start of a `minipage`/`tabular*` body. A handed-back
+tail with more than spaces and `\relax` gets a `Warning:unexpected` ("Unexpected text after the
+value in an argument of \hspace ('x'); it is read after \hspace"): pdflatex is silent, but such a
+tail is almost always an authoring slip (a length expression without calc). Where a handed-back
+tail would be misread it is dropped with that warning (`parameter::dropping_argument_tails`, an RAII
+scope, as are the `ArgumentTails` and `in_braced_read` counts, so a panic caught by cortex_worker
+leaves none set on the pool thread): a column type's, which the template reader took for more column
+letters (`p{\textwidth-1pt}c` grew a `p` column of width `t`; TeX typesets it in every cell,
+array.sty:189-191 `\@startpbox`), and one left at the head of an alignment row between rows
+(`digest_alignment_column`), which opened the next row with a cell where the next `\noalign`
+failed. booktabs' widths and spaces are unused and read untyped (`\cmidrule[lr]{1-2}
+\cmidrule[lr]{3-4}` for `(lr)`: 2605.27476, 0 → 14 errors in the first cut, 2605.25272;
+`\addlinespace[2pt plus 1pt]`), and the `\\[…]` of a tabular reads its length when it expands and
+drops the rest, which sat in `\lx@hidden@cr`'s argument. An undefined control sequence the scan
+met was reported and stubbed as it was expanded; TeX discards it (tex.web §370), so it is stripped
+from the head of the tail (`is_error_stub`) and skipped by calc's post-scan: kept, it came back at
+every use as `<ERROR>` text, or with calc as "invalid at this point" (2605.25073, `\hspace{6\@p@t}`
+without USG.cls: 10 → 242 errors in the first cut; 2605.08378). `\setcounter`/`\addtocounter` of an
+undefined counter read no value (latex.ltx:10115-10122 `\@nocounterr`, "AB C").
+
+Types now follow TeX's scan, since a narrower one would turn the rest into text: `\setlength`/
+`\addtolength` read by the register's own type (a `\newlength` is a skip: `plus`/`minus` kept, and
+`\the\parskip` prints them; a `\dimen` register's `plus 1pt` is text, as in pdflatex); `\hspace`,
+tabbing's `\\[…]`, soul's `\sodef` spacings, multirow's `[<vmove>]` read a `Glue` (`Glue` gained
+Perl's `revert`, Number.pm:74-76, which it lacked: `x\hspace{10pt}y` kept its `\hskip 10.00002pt`);
+revtex's `\rotatebox` and aastex's `\rotatefig` read a `Float` angle; multirow's `[<bigstruts>]`
+(`[b2]`) is untyped; soul's `\capsdef` takes its five arguments (soul-ori.sty:697-700); hyperref's
+`\hypercalcbp` evaluates `\dimexpr(#1)\relax` (hyperref.sty:364-366); floatflt's
+`{floatingtable}` typesets its table argument (floatflt.sty:131-139) where Perl read it as a
+`{Dimension}` and dropped it. A picture length (`\line`, `\vector`, `\circle`, `\dashbox`,
+pict2e's `\oval[…]`) is the new `DefaultUnits` type, latex.ltx:16766-16767 `\@defaultunitsset`:
+`\dimexpr<arg>\unitlength`, the rest discarded (`\remove@to@nnil`, :10537), so `\circle{1cm}` and
+`\line(1,0){.5\linewidth}` are lengths (Perl's `{Float}` took 1 unit), a plain number stays exact.
+A `fil` glue reverts with a space after its unit (`$x\hspace{\stretch{1}}l$` reverted to `…fill`
+followed by the `l`, read as `filll`, tex.web §454). ntheorem's skip amounts, titling's `\droptitle`/
+`\thanksmarkwidth`/`\thanksmargin` and authblk's `\affilsep` are skips, as their `.sty` allocates
+them.
+
+calc (`calc_sty.rs`; calc is loaded in most arXiv papers, about 78 % of the 56jr review sample,
+through algorithmic, mathtools and others): a braced `{Dimension}`/`{Glue}` argument is evaluated as
+a calc expression when the document loaded calc (`gullet::set_braced_length_fn`, gated per document by the
+`calc_expressions` State flag, which now also gates the internal-dimension seam of #115/#141 — its
+thread-local closure had outlived the document that loaded calc). latex.ltx hands these lengths to
+`\setlength`, which calc redefines (calc.sty:86, :51-53): `\makebox[\widthof{ab}+\widthof{cdefgh}]`
+is 38.6pt (pdflatex), not 10.6pt. It also applies to `{Dimension}` bindings whose LaTeX original
+assigns directly — booktabs rule widths, `\tablewidth`, and the driver internals `\pgfsys@moveto`/
+`lineto`/`curveto`/`rect`, `\lxSVG@*`, `\pIIe@*`, `\Gscale@box@dd` — where only input that is not a
+plain length differs (a pgf coordinate is always `\the\pgf@x`); a 6000-path tikzpicture with calc
+loaded ran in 4.39 s against 4.34 s (median of 5, release, 8 cores).
+calc's reader reports a token it cannot parse after a term (calc.sty:144-160, 281-284: "`x' invalid at
+this point") and consumes it, the rest staying in the input; it reads a parenthesized group in place
+so parentheses nest (Perl reads to the first `)`, calc.sty.ltxml:183-184: hexgame.sty:77
+`1.5\halfhexwidth*((\value{modulocounter})-1)` lost `-1)`, 4 "Illegal unit" warnings); and a braced
+group is spliced in, as `\calc@pre@scan`'s undelimited argument (calc.sty:88-89; mhchem.sty:1020
+`{2em}` in `\makebox[#7]`). calc's `!` sentinel, which pdflatex typesets after the error, is not. A
+package may take calc's error over — picture.sty:79-120 `\let`s `\calc@error` to a handler that accepts
+a `\unitlength` after a length (`\setlength\dimen@{#1\unitlength}`) and gobbles the rest to calc's `!`
+and passes any other token to calc's own (:88-107). That handler runs on calc.sty internals the
+binding lacks, so its decision is taken in `calc_post_scan`: while `\calc@error` is not calc's own
+(`\lx@calc@error`), a `\unitlength` ends the expression silently and anything else is reported
+(circledsteps under picture.sty, 2605.09094/2605.10684: 6 and 15 false errors in the first cut; its
+circles now sized by their lengths, where the `{Float}` read gave r=0).
+
+pgf 3.1's `\pgfsys@declarepattern` has fifteen arguments, a six-entry matrix before the code
+(pgfcorepatterns.code.tex:126, 159-164; pgfsys-common-svg.def:677-690); Perl's binding reads nine
+(pgfsys-latexml.def.ltxml:492), so the matrix's `{1.0}` was the code and `{0.0}` the flag. Its `.0`
+now re-entered the input and was warned about; before, the call's unread rest ran the pattern code after
+`\lxSVG@(un)coloredpattern`, which left `<svg:defs><svg:pattern>` open for it, so everything the
+picture drew afterwards (a `\node`'s text) sat inside the invisible `<svg:defs>`. The binding takes
+the fifteen arguments (the matrix is not applied) and the pattern constructors absorb their code and
+close their elements (Perl's templates hold `#4`, pgfsys-latexml.def.ltxml:509-532). Setting a
+pattern also sets the fill a path inherits (`pgf@svg@fillcolor`), since the Rust-only per-path colour
+group of `\lxSVG@drawpath@unclipped` otherwise painted a pattern-filled path in pgf's last solid
+colour: tikz/unit_tests_by_silviu now has Perl's 41 `url(#pgf…)` fills (38 before, with the drawing
+hidden in `<svg:defs>`).
+
+Only an argument list with a re-parsed parameter (an inner spec) opens a tail scope: every macro
+call paid for it, +1.6 % instructions on 2605.29846, +0.14 % after (388.20e9 against 387.66e9).
+
+Residuals: a keyval value's rest (`Parameter::reparse`, keyvals.rs) is still dropped; `\vspace` is
+Perl's `\vskip #2\relax` (latex.ltx:9362-9372 sets `\sp@ce@skip` first, so TeX reads the tail
+before the skip); a column type's tail is dropped (warned; 2605.19386's `;{1pt/1pt}` under the
+arydshln stub); `\lx@@genfrac`'s `after_digest` reads its numerator after a re-inserted tail; a
+constructor with a `DigestedBody` (`\@@tabularx`, `\@@supertabular@`) hands its width's tail back
+after the whole body; a `\scantokens` mouth left open on top of a braced argument's own hides that
+argument's rest from `take_rest_of_mouth` (the forced close drops it); `DefaultUnits` read bare (no
+spec does) takes the rest of the CURRENT mouth only inside a braced read (`in_braced_read`, a depth
+count, not the mouth's identity).
+
+**Guards**: `braced_quantity_tail::*` (16), `pstricks_drawing::hexgame_board_converts` (3 warnings);
+repros `expansion-primitives/{braced_value_tail_after_assignment,braced_length_skip_keeps_stretch,
+braced_length_tail_box_commands,calc_braced_length_expression,calc_braced_length_invalid_tail,
+calc_error_redefined_picture_sty,picture_length_default_units,floatingtable_table_argument,
+braced_length_undefined_cs,calc_braced_length_undefined_cs,braced_length_tail_between_rows,
+setcounter_undefined_counter_value}.tex`.
+
 ### 319. A node's box follows Perl's `appendNodeBox`, one flat list in horizontal mode (Perl: a new list per append)
 
 Perl records on every element the box that created it, and `openElementAt` (Core/Document.pm:1861)

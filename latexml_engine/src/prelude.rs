@@ -66,7 +66,10 @@ pub use latexml_core::{
   list::List,
   mouth,
   mouth::{Mouth, MouthOptions},
-  parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure},
+  parameter::{
+    BETWEEN_ALIGNMENT_ROWS, IN_EVERY_CELL, Parameter, Parameters, ReaderClosure, ReversionClosure,
+    drop_argument_tail, dropping_argument_tails, in_braced_read, read_braced, read_braced_value,
+  },
   pin,
   rewrite::{Rewrite, RewriteOptions},
   state::*,
@@ -168,6 +171,12 @@ pub fn capture_raw_lines_until(end_markers: &[&str]) -> (Vec<String>, Option<Str
     lines.push(line);
   }
   (lines, matched)
+}
+
+/// Whether the LaTeX counter `name` exists: latex.ltx's `\@ifundefined{c@#1}`
+/// test in `\setcounter`/`\addtocounter` (:10115-10122).
+pub fn counter_is_defined(name: &str) -> bool {
+  lookup_register_definition(&T_CS!(s!("\\c@{name}"))).is_some()
 }
 
 /// Empty-body `DefMacro!("\\cs[opt-spec]", "")` stub via runtime call.

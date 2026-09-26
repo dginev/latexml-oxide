@@ -1,0 +1,25 @@
+% mechanism: a command between alignment rows leaves no text in a row: booktabs' widths are read
+%   untyped (they are unused), and any other command's argument rest met at a row's head is dropped
+%   with a warning (`dropping_argument_tails`). Handed back (OXIDIZED_DESIGN #317) it opened the next
+%   row with a cell of its own, where the next rule's `\noalign` failed.
+% witness: 2605.27476 (`\cmidrule[lr]{1-2} \cmidrule[lr]{3-4}` for `(lr)`: 0 -> 14 errors in the
+%   first cut, borders lost in S4.T1 and S4.T3), 2605.25272 (the same typo four times)
+% oracle:  pdflatex 4 errors (Missing number, Illegal unit, per `[lr]`), "lr" printed between the
+%          rows, both rules
+% engines: rust (56jm) = 0 errors, 2 "Missing number" warnings, both rules; the first 56jr cut "lr lr" in the next row's first
+%          cell, "\noalign cannot be used here", the second rule lost
+% expect:  0 errors, 0 warnings; row 2 cells e f g h with border "t"
+% status:  GREEN (56jr)
+\documentclass{article}
+\usepackage{booktabs}
+\begin{document}
+\begin{tabular}{llll}
+\toprule
+a & b & c & d\\
+\cmidrule[lr]{1-2} \cmidrule[lr]{3-4}
+e & f & g & h\\
+\addlinespace[2pt plus 1pt]
+i & j & k & l\\
+\bottomrule
+\end{tabular}
+\end{document}

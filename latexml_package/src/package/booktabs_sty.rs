@@ -4,13 +4,19 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: booktabs.sty.ltxml
   // Adjust thickness of rules? Currently no support for variable thickness.
+  // The widths and spaces are therefore read untyped: they are unused, and a
+  // typed read hands what follows the value back to the input (OXIDIZED_DESIGN
+  // #317), which between rows opens a cell — `\cmidrule[lr]{1-2}` for `(lr)`
+  // put "lr" in the next row and lost the next rule (2605.27476, 2605.25272),
+  // `\addlinespace[2pt plus 1pt]` put "plus 1pt" there (booktabs.sty:80-82 reads
+  // a skip). Perl reads `[Dimension]` (booktabs.sty.ltxml) and drops the rest.
 
   // \toprule[thickness]  doubled
-  DefMacro!("\\toprule[Dimension]", "\\hline\\hline");
+  DefMacro!("\\toprule[]", "\\hline\\hline");
   // \midrule[thickness]
-  DefMacro!("\\midrule[Dimension]", "\\hline");
+  DefMacro!("\\midrule[]", "\\hline");
   // \bottomrule[thickness] doubled
-  DefMacro!("\\bottomrule[Dimension]", "\\hline\\hline");
+  DefMacro!("\\bottomrule[]", "\\hline\\hline");
 
   // \cmidrule[thickness](trim){col-col}
   DefMacro!("\\@afterfi Until:\\fi", "\\fi#1");
@@ -27,15 +33,15 @@ LoadDefinitions!({
   // KNOWN_PERL_ERRORS) would otherwise loop until the conditional limit.
   // Witnesses: arXiv 2506.23179, 2511.17056 (both `\let\cline\cmidrule`).
   // Output-neutral for ordinary `\cmidrule` (saved CS == `\cline` at load).
-  DefMacro!("\\ltx@@cmidrule[Dimension] SkipMatch:( Until:){}", "\\ltx@saved@cline{#3}");
-  DefMacro!("\\ltx@cmidrule[Dimension]{}", "\\ltx@saved@cline{#2}");
+  DefMacro!("\\ltx@@cmidrule[] SkipMatch:( Until:){}", "\\ltx@saved@cline{#3}");
+  DefMacro!("\\ltx@cmidrule[]{}", "\\ltx@saved@cline{#2}");
 
   // add vspace
-  def_macro_noop("\\addlinespace[Dimension]")?;
+  def_macro_noop("\\addlinespace[]")?;
   // adjust spacing to make double line
   def_macro_noop("\\morecmidrules")?;
   // \specialrule{thickness}{above}{below}
-  DefMacro!("\\specialrule{Dimension}{Dimension}{Dimension}", "\\hline");
+  DefMacro!("\\specialrule{}{}{}", "\\hline");
 
   // Capture the real `\cline` at load time (before any document redefinition)
   // so `\cmidrule` can draw its rule without depending on the live `\cline`.

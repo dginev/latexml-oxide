@@ -47,6 +47,24 @@ fn floatflt_pct_width(whatsit: &Whatsit) -> String {
   s!("{pct}%")
 }
 
+/// `{floatingtable}`'s width: its table argument's (floatflt.sty:131-132
+/// `\settowidth{\tabbredd}{#2}`), as a percentage of `\textwidth`; none when
+/// the table's width is unknown.
+fn floatflt_table_pct_width(whatsit: &Whatsit) -> String {
+  let width = whatsit
+    .get_arg(2)
+    .and_then(|table| table.get_width(None).ok().flatten())
+    .map(|width| width.value_of())
+    .unwrap_or(0);
+  let Some(tw) = lookup_dimension("\\textwidth") else {
+    return String::new();
+  };
+  if width == 0 || tw.value_of() == 0 {
+    return String::new();
+  }
+  s!("{}%", (100 * width) / tw.value_of())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   assign_value("floatfltpos", Stored::from("v"), None);
@@ -79,14 +97,20 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
     });
-  DefEnvironment!("{floatingtable}[]{Dimension}",
-    "<ltx:table xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:table>",
+  // `\begin{floatingtable}[<pos>]{<table>}`: #2 is the table itself, typeset
+  // before the environment's body (floatflt.sty:96, :131-139 `\settowidth
+  // {\tabbredd}{#2}` … `#2\vspace{…}`), not a width. Perl's `{Dimension}`
+  // (floatflt.sty.ltxml:44) dropped the table; once a braced argument's rest
+  // re-enters the input it came back after "Missing number" errors
+  // (OXIDIZED_DESIGN #317).
+  DefEnvironment!("{floatingtable}[]{}",
+    "<ltx:table xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #2 #body</ltx:table>",
     before_digest => {
       engine::latex_constructs::before_float("table", None);
     },
     after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatflt_float_direction(whatsit));
-      whatsit.set_property("pctwidth", Stored::from(floatflt_pct_width(whatsit)));
+      whatsit.set_property("pctwidth", Stored::from(floatflt_table_pct_width(whatsit)));
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
@@ -110,7 +134,8 @@ LoadDefinitions!({
   DefRegister!("\\nosuccesstrytab" => Number(0));
   DefRegister!("\\figgutter" => Dimension::from_str("1pc")?);
   DefRegister!("\\tabgutter" => Dimension::from_str("1pc")?);
-  DefRegister!("\\htdone" =>      Number(0));
+  // floatflt.sty:35 `\newdimen\htdone \htdone=0pt` (Perl: `Number(0)`).
+  DefRegister!("\\htdone" =>      Dimension(0));
   DefRegister!("\\pageht" =>      Dimension::new(0));
   DefRegister!("\\startpageht" => Dimension::new(0));
   DefRegister!("\\tabbredd" =>      Dimension::new(0));

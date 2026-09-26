@@ -15,8 +15,10 @@ LoadDefinitions!({
 
   // Bookkeeping — Perl L30-38
   DefConditional!("\\ifnewaffil");
-  DefRegister!("\\affilsep" =>  Dimension::from_str("1em")?);
-  DefRegister!("\\@affilsep" => Dimension::from_str("1em")?);
+  // `\newlength`s, i.e. skips (authblk.sty:76-77): `\setlength` scans by the
+  // register's type (OXIDIZED_DESIGN #317).
+  DefRegister!("\\affilsep" =>  Glue!("1em"));
+  DefRegister!("\\@affilsep" => Glue!("1em"));
   NewCounter!("Maxaffil");
   RawTeX!("\\setcounter{Maxaffil}{2}");
   NewCounter!("authors");

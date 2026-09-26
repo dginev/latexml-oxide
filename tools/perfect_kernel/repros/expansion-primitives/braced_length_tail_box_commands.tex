@@ -1,0 +1,19 @@
+% mechanism: a box or space command scans its length with `\setlength` BEFORE it outputs the
+%   box (latex.ltx:9425 `\@hspace`, :16099-16102 `\@imakebox`, :16360-16366 `\@rule`), so TeX
+%   typesets the tail first. A binding reads all its arguments and outputs at once; the tail
+%   now re-enters the input right after the command, with a warning (OXIDIZED_DESIGN #317) —
+%   no longer dropped (Perl Gullet.pm:131-135, KNOWN_PERL_ERRORS #275).
+% witness: batch 56jm review (SYNC_STATUS "Tokens after a {Dimension}/{Glue} argument's scan")
+% oracle:  pdflatex 0 errors: "Ax B", "xMN", "xZ" (the rule after x)
+% engines: rust (before 56jr) = "A B", "MN", "Z"; perl the same
+% expect:  0 errors, 3 warnings; "A xB", "MxN", "xZ" (x after the space, box, rule)
+% status:  RED (56jr) -> GREEN (56jr)
+\documentclass{article}
+\def\foo{x}
+\begin{document}
+A\hspace{1em\foo}B
+
+\makebox[1em\foo]{M}N
+
+\rule{1pt\foo}{2pt}Z
+\end{document}

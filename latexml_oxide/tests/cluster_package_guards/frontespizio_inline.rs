@@ -5,7 +5,12 @@
 //! empty `<titlepage>` and all six shipped manuals lost their whole content
 //! (S3 0/27). The binding forces the package's own inline route
 //! (`[nowrite,infront]`, `\preparefrontpage<shape>`); the whole
-//! `<titlepage>` of the standard shape is pinned.
+//! `<titlepage>` of the standard shape is pinned. The `Matricola` row's
+//! `\\[\frontcandidatesep]` = `\\[3ex]` (frontespizio.sty:296, :304) is 3ex of
+//! the cell's `\frontsmallfont` (`\fontsize{9}{11}`, :293), where `\@xtabularcr`
+//! evaluates it (latex.ltx:16590-16602): 12.0pt since batch 56jr reads it as the
+//! `\\` expands (pdflatex's cmr9 ex gives 11.6pt); 15.99994pt before, in the
+//! row-end marker's later font.
 
 #[test]
 fn standard_shape_title_page_is_typeset_inline() {
@@ -19,7 +24,7 @@ fn standard_shape_title_page_is_typeset_inline() {
     &xml,
     "titlepage",
     &[],
-    r##"<titlepage><p><text font="bold" fontsize="140%">Università degli Studi di Padova</text></p><p><rule height="1px" width="100%"/><text fontsize="120%">FACOLTÀ DI SCIENZE MATEMATICHE, FISICHE E NATURALI<break/>Corso di Laurea in Matematica</text></p><p><text font="smallcaps">Tesi di laurea</text></p><p><text font="bold" fontsize="170%">Equivalenze fra categorie di moduli</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Enrico Gregorio</text></td></tr><tr><td align="left" class="ltx_nopad_r" cssstyle="padding-bottom: 15.99994pt"><text font="bold" fontsize="90%">Matricola 145822</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Ch.mo Prof. Adalberto Orsatti</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold" fontsize="120%">Anno Accademico 1999-2000</text></p></titlepage>"##,
+    r##"<titlepage><p><text font="bold" fontsize="140%">Università degli Studi di Padova</text></p><p><rule height="1px" width="100%"/><text fontsize="120%">FACOLTÀ DI SCIENZE MATEMATICHE, FISICHE E NATURALI<break/>Corso di Laurea in Matematica</text></p><p><text font="smallcaps">Tesi di laurea</text></p><p><text font="bold" fontsize="170%">Equivalenze fra categorie di moduli</text></p><p><tabular vattach="middle"><tbody><tr><td align="left" class="ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Candidato:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Enrico Gregorio</text></td></tr><tr><td align="left" class="ltx_nopad_r" cssstyle="padding-bottom: 12.0pt"><text font="bold" fontsize="90%">Matricola 145822</text></td></tr></tabular></td><td align="left" class="ltx_nopad_l ltx_nopad_r"><tabular vattach="top"><tr><td align="left" class="ltx_nopad_r">Relatore:</td></tr><tr><td align="left" class="ltx_nopad_r"><text font="bold" fontsize="120%">Ch.mo Prof. Adalberto Orsatti</text></td></tr></tabular></td></tr></tbody></tabular></p><p><rule height="1px" width="100%"/><text font="bold" fontsize="120%">Anno Accademico 1999-2000</text></p></titlepage>"##,
   );
 }
 /// `Preambolo*` (preamble material for the external title-page document,

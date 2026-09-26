@@ -93,7 +93,8 @@ LoadDefinitions!({
   DefRegister!("\\nosuccesstryfig", Number(0));
   // Perl L64: figgutter default is 1pc, not 0pt.
   DefRegister!("\\figgutter", Dimension::from_str("1pc")?);
-  DefRegister!("\\htdone",      Number(0));
+  // floatflt.sty:35 `\newdimen\htdone` (Perl: `Number(0)`).
+  DefRegister!("\\htdone",      Dimension(0));
   DefRegister!("\\pageht",      Dimension(0));
   DefRegister!("\\startpageht", Dimension(0));
   DefRegister!("\\floatfltwidth", Dimension(0));

@@ -1287,13 +1287,34 @@ pub(crate) fn load() -> Result<()> {
 
   // \newcounter moved to latex_bootstrap.rs (Perl latex_bootstrap.pool.ltxml L51-53,
   // locked => 1) so it's available before the dump and constructs phases.
-  DefPrimitive!("\\setcounter{}{Number}", sub[(cs, default)] {
+  // The value is read as latex.ltx:10115-10122 reads it (`\global\csname
+  // c@#1\endcsname#2\relax`): what follows the number in the braces stays in
+  // the input, read after the assignment (Perl's `{Number}` drops it,
+  // KNOWN_PERL_ERRORS #275). OXIDIZED_DESIGN #317; guard `braced_quantity_tail`.
+  // An undefined counter's value is not read at all (`\@ifundefined{c@#1}
+  // {\@nocounterr{#1}}`, latex.ltx:10115-10122): the counter macros report it
+  // (a warning here) and nothing of `#2` is typeset.
+  DefPrimitive!("\\setcounter{}{}", sub[(cs, value)] {
     let cs_expanded = &Expand!(cs).to_string();
-    SetCounter!(cs_expanded, default);
+    if !counter_is_defined(cs_expanded) {
+      SetCounter!(cs_expanded, Number::new(0));
+      return Ok(Vec::new());
+    }
+    let (value, tail) = read_braced_value(value, RegisterType::Number)?;
+    let number = Number::from(value);
+    SetCounter!(cs_expanded, number);
+    unread_vec(tail);
   });
-  DefPrimitive!("\\addtocounter{}{Number}", sub[(cs,default)] {
+  DefPrimitive!("\\addtocounter{}{}", sub[(cs, value)] {
     let cs_expanded = &Expand!(cs).to_string();
-    AddToCounter!(cs_expanded, default);
+    if !counter_is_defined(cs_expanded) {
+      AddToCounter!(cs_expanded, Number::new(0));
+      return Ok(Vec::new());
+    }
+    let (value, tail) = read_braced_value(value, RegisterType::Number)?;
+    let number = Number::from(value);
+    AddToCounter!(cs_expanded, number);
+    unread_vec(tail);
   });
   DefPrimitive!("\\stepcounter{}",    sub[(cs)] {
     let cs_expanded = &Expand!(cs).to_string();

@@ -28,16 +28,11 @@ LoadDefinitions!({
       digest(Tokens!(T_CS!("\\epigraphsize")))?;
     },
     after_digest => sub[whatsit] {
-      let rule = LookupRegisterOrDefault!("\\epigraphrule");
-      let rule_pt = match rule {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 0.4,
-      };
-      let width = LookupRegisterOrDefault!("\\epigraphwidth");
-      let width_pt = match width {
-        RegisterValue::Dimension(d) => d.pt_value(None),
-        _ => 0.0,
-      };
+      // Both are `\newlength`s — skips (epigraph.sty:30-35), holding glue once
+      // `\setlength` scans by the register's type (OXIDIZED_DESIGN #317): the
+      // natural width.
+      let rule_pt = Dimension::from(LookupRegisterOrDefault!("\\epigraphrule")).pt_value(None);
+      let width_pt = Dimension::from(LookupRegisterOrDefault!("\\epigraphwidth")).pt_value(None);
       let qa = do_expand(T_CS!("\\epigraphflush"))?.to_string();
       let ta = do_expand(T_CS!("\\textflush"))?.to_string();
       let sa = do_expand(T_CS!("\\sourceflush"))?.to_string();

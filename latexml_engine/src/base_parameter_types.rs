@@ -51,6 +51,30 @@ fn optional_arg_reversion(
   Ok(Tokens::new(read_tokens))
 }
 
+/// `tokens` as a TeX decimal constant (tex.web §441, `<optional signs>` and
+/// digits with a `.` or `,`), when they are nothing else but spaces around it.
+fn plain_decimal(tokens: &[Token]) -> Option<f64> {
+  let is_space = |t: &&Token| t.get_catcode() == Catcode::SPACE;
+  let start = tokens.iter().position(|t| !is_space(&t))?;
+  let end = tokens.len() - tokens.iter().rev().position(|t| !is_space(&t))?;
+  let mut negative = false;
+  let mut digits = String::new();
+  for token in &tokens[start..end] {
+    if token.get_catcode() != Catcode::OTHER {
+      return None;
+    }
+    match token.with_str(|s| s.chars().next())? {
+      '-' if digits.is_empty() => negative = !negative,
+      '+' if digits.is_empty() => {},
+      c @ '0'..='9' => digits.push(c),
+      '.' | ',' if !digits.contains('.') => digits.push('.'),
+      _ => return None,
+    }
+  }
+  let value: f64 = digits.parse().ok()?;
+  Some(if negative { -value } else { value })
+}
+
 // ======================================================================
 // Define parsers for standard parameter types.
 /// Run `body` under LaTeX's `\protected@edef` regime: `\protect` `\let` to
@@ -313,6 +337,43 @@ LoadDefinitions!({
   // Read a floating point number
   DefParameterType!(Float, sub[_inner, _extra] {
     read_float()?
+  });
+
+  // A picture-mode length: latex.ltx:16766-16767 `\@defaultunitsset#1#2#3{%
+  // \@defaultunits#1\dimexpr#2#3\relax\relax\@nnil}` with `#3` = `\unitlength`
+  // (`\line`, `\vector`, `\dashbox`, `\circle`: :16828, :16884, :16938, :17059;
+  // pict2e's `\oval[<radius>]`, pict2e.sty:529-530). The argument is a number
+  // of `\unitlength`s or a length of its own (`\circle{1cm}`,
+  // `\line(1,0){.5\linewidth}`), scanned as ONE `\dimexpr`, and `\@defaultunits`
+  // (`\afterassignment\remove@to@nnil`, :10537) discards what the scan left —
+  // unlike a `{Dimension}`'s, this argument's rest never re-enters the input.
+  // Perl reads a `{Float}` (latex_constructs.pool.ltxml:4992-5076), which took
+  // `1cm` for one unit. The value is the Float count of `\unitlength`s the
+  // picture bindings scale by. As a braced or bracketed argument's type
+  // (`{DefaultUnits}`, `[DefaultUnits]`) it reads the rest of that argument; bare,
+  // an argument of its own. OXIDIZED_DESIGN #317.
+  DefParameterType!(DefaultUnits, sub[_inner, _extra] {
+    let argument = if in_braced_read() {
+      take_rest_of_mouth()
+    } else {
+      read_arg(ExpansionLevel::Off)?.unlist()
+    };
+    // A number as written: TeX's `<factor>` keeps 16 bits of it (0.15 → 0.14999),
+    // a sub-`sp` difference that would only change the digits the picture
+    // bindings revert.
+    if let Some(units) = plain_decimal(&argument) {
+      return Ok(ArgWrap::Float(Float(units)));
+    }
+    let mut expression = vec![T_CS!("\\dimexpr")];
+    expression.extend(argument);
+    expression.extend([T_CS!("\\unitlength"), T_CS!("\\relax"), T_CS!("\\relax")]);
+    // In a mouth of its own; the rest is `\remove@to@nnil`'s.
+    let (length, _rest) = read_braced(Tokens::new(expression), read_dimension)?;
+    let unit = match lookup_register("\\unitlength", Vec::new())? {
+      Some(RegisterValue::Dimension(unit)) => unit.value_of(),
+      _ => 0,
+    };
+    Float(if unit == 0 { 0.0 } else { length.value_of() as f64 / unit as f64 })
   });
 
   // ??? DG: is this needed?

@@ -1,0 +1,20 @@
+% mechanism: picture.sty:79-120 takes calc's error over (`\let\calc@error\Pc@calc@error`) so a
+%   picture coordinate may be a length: `\setlength\dimen@{#1\unitlength}` with #1 = `1cm` makes calc
+%   meet `\unitlength` after a complete length, which the handler accepts, gobbling the rest of the
+%   expression. calc_sty.rs reports an unparsable token only while `\calc@error` is calc's own
+%   (OXIDIZED_DESIGN #317); circledsteps loads picture.sty and draws its \oval/\circle this way.
+% witness: 2605.09094, 2605.10684 (circledsteps + calc via todonotes; 6 and 15 false errors in the
+%   56jr draft)
+% oracle:  pdflatex 0 errors: "Step 1 done." with the 1 circled; "A B" with a 1cm-radius picture
+% engines: rust (56jm) = 0 errors, both circles sized in units (r 0 and 2.77px: the length was
+%          read as a number); perl 0 errors
+% expect:  0 errors; circles r="7.23" (the circled 1) and r="7.87" (4mm)
+% status:  GREEN (56jr)
+\documentclass{article}
+\usepackage{calc}
+\usepackage{circledsteps}
+\begin{document}
+Step \Circled{1} done.
+
+A\begin{picture}(1cm,5mm)\put(5mm,0){\circle{4mm}}\end{picture}B
+\end{document}

@@ -40,8 +40,10 @@ pub(crate) fn load() -> Result<()> {
   // Wrapper macros that expand to marker + & (column separator)
   DefMacro!("\\@tabbing@tabset", "\\@tabbing@tabset@marker&");
   DefMacro!("\\@tabbing@nexttab", "\\@tabbing@nexttab@marker&");
+  // `\\[<skip>]` in tabbing: latex.ltx:16465-16467 hands it to `\@vspace@calcify`
+  // (:9254), a `\setlength` of the skip `\sp@ce@skip` (OXIDIZED_DESIGN #317).
   DefMacro!(
-    "\\@tabbing@newline OptionalMatch:* [Dimension]",
+    "\\@tabbing@newline OptionalMatch:* [Glue]",
     "\\@tabbing@newline@marker\\cr"
   );
   DefMacro!(

@@ -71,7 +71,8 @@ LoadDefinitions!({
   def_macro_noop("\\modulolinenumbers [Number]")?;
 
   def_macro_noop("\\linenumberfont")?;
-  DefRegister!("\\linenumbersep", Number(0));
+  // lineno.sty:1549-1552 `\newdimen\linenumbersep \linenumbersep=10pt` (Perl: `Number(0)`).
+  DefRegister!("\\linenumbersep", Dimension(655360)); // 10pt
   DefRegister!("\\linenumberwidth", Dimension(655360)); // 10pt
 
   def_macro_noop("\\thelinenumber")?;
@@ -94,7 +95,8 @@ LoadDefinitions!({
   DefMacro!("\\endnumquotation", "\\endquote");
 
   def_macro_noop("\\quotelinenumberfont")?;
-  DefRegister!("\\quotelinenumbersep", Number(0));
+  // lineno.sty:2852-2853 `\newdimen\quotelinenumbersep \quotelinenumbersep=\linenumbersep`.
+  DefRegister!("\\quotelinenumbersep", Dimension(655360)); // 10pt
 
   // lineno.sty:1077 `\newif\ifLineNumbers \LineNumbersfalse`, :1934-1935
   // `\newif\ifoddNumberedPage`, `\newif\ifcolumnwiselinenumbers`. Classes test

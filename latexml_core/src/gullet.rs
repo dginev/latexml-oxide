@@ -3200,14 +3200,93 @@ pub fn set_internal_dimension_fn(f: InternalDimensionFn) {
   INTERNAL_DIMENSION_FN.with(|c| *c.borrow_mut() = Some(f));
 }
 
-/// Consult the installed resolver for `tok`. `Ok(None)` when none is installed
-/// or it declines; `tok` is left for the caller to un-read in that case.
+/// Consult the installed resolver for `tok`. `Ok(None)` when none is installed,
+/// the document has not loaded calc ([`calc_expressions_active`]), or it
+/// declines; `tok` is left for the caller to un-read in that case.
 fn resolve_internal_dimension(tok: &Token) -> Result<Option<RegisterValue>> {
+  if !calc_expressions_active() {
+    return Ok(None);
+  }
   let f = INTERNAL_DIMENSION_FN.with(|c| c.borrow().clone());
   match f {
     Some(f) => f(tok),
     None => Ok(None),
   }
+}
+
+/// A package-installed evaluator for a braced LENGTH argument — calc.sty's
+/// expression scanner. latex.ltx hands every user length to `\setlength`
+/// (`\@hspace`, `\@imakebox`, `\@rule`, `\@iiiparbox`, `\@iiiminipage`, array's
+/// `\@startpbox`: latex.ltx:9425, 16099-16102, 16360-16366, 16249, 16305), and
+/// calc redefines `\setlength` to evaluate its whole argument as an expression
+/// (calc.sty:86, `\calc@assign@skip` → `\calc@open(#4!`, :51-53). A binding's
+/// `{Dimension}`/`{Glue}` argument is that `\setlength` operand, so with calc
+/// loaded [`crate::parameter::Parameters::reparse_argument`] evaluates it here:
+/// `\makebox[\widthof{ab}+\widthof{cd}]` gets the sum, not the first term. The
+/// evaluator reads from the argument's own mouth, leaving unread whatever calc
+/// could not parse (after reporting it, as calc.sty:281-284 does).
+pub type BracedLengthFn = std::rc::Rc<dyn Fn(RegisterType) -> Result<RegisterValue>>;
+
+thread_local! {
+  static BRACED_LENGTH_FN: RefCell<Option<BracedLengthFn>> = const { RefCell::new(None) };
+}
+
+/// The State flag calc's binding sets when it loads. The resolvers above are
+/// thread-local closures that outlive a document; this per-document flag keeps
+/// them from reaching a later document on the same thread that never loaded calc.
+const CALC_EXPRESSIONS: &str = "calc_expressions";
+
+/// Install the braced-length evaluator and switch the calc seams on for the
+/// current document (calc.sty at load time).
+pub fn set_braced_length_fn(f: BracedLengthFn) {
+  BRACED_LENGTH_FN.with(|c| *c.borrow_mut() = Some(f));
+  assign_value(CALC_EXPRESSIONS, true, Some(Scope::Global));
+}
+
+/// Whether the current document loaded calc, whose seams
+/// ([`set_internal_dimension_fn`], [`set_braced_length_fn`]) are then in force.
+pub fn calc_expressions_active() -> bool { lookup_bool(CALC_EXPRESSIONS) }
+
+/// The braced-length evaluator, when the current document loaded calc.
+pub fn braced_length_evaluator() -> Option<BracedLengthFn> {
+  if calc_expressions_active() {
+    BRACED_LENGTH_FN.with(|c| c.borrow().clone())
+  } else {
+    None
+  }
+}
+
+/// Take everything still unread in the CURRENT mouth — its pushback, then the
+/// rest of its source — as raw tokens, leaving it exhausted. The enclosing
+/// input is untouched. This is how a braced argument hands back what followed
+/// the quantity scanned from it ([`crate::parameter::Parameters::reparse_argument`]):
+/// TeX leaves that tail in the input (`\setlength#1#2{#1 #2\relax}`,
+/// latex.ltx:10253). The tokens count as READ for the alignment brace ledger
+/// (as [`read_token`] counts them), so a caller that puts them back uses
+/// [`unread_vec`], which retracts them again.
+pub fn take_rest_of_mouth() -> Vec<Token> {
+  let rest = {
+    let mut g = gullet_mut!();
+    let Some(runtime) = g.runtime.as_mut() else {
+      return Vec::new();
+    };
+    // The pushback is a stack whose LAST element is read next.
+    let mut rest: Vec<Token> = runtime.pushback.drain(..).rev().collect();
+    rest.extend(runtime.mouth.read_tokens().unlist());
+    rest
+  };
+  let level: i32 = rest
+    .iter()
+    .map(|token| match token.get_catcode() {
+      Catcode::BEGIN => 1,
+      Catcode::END => -1,
+      _ => 0,
+    })
+    .sum();
+  if level != 0 {
+    set_align_group_count(align_group_count() + level);
+  }
+  rest
 }
 
 pub fn read_register_value(value_type: RegisterType) -> Result<Option<RegisterValue>> {

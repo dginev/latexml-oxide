@@ -904,6 +904,17 @@ LoadDefinitions!({
         }
       }
       document.open_element("svg:g", Some(attrs), None)?;
+    },
+    // A colored pattern's fill (`\pgfsys@setpatterncolored`, a `fill=url(…)`
+    // group) is the fill a path inherits, as the uncolored one's
+    // (`\lxSVG@setpatternuncolored@`).
+    after_digest => sub[whatsit] {
+      if let Some(DigestedData::KeyVals(kv)) = whatsit.get_arg(1).map(|arg| arg.data())
+        && let Some(fill) = kv.get_hash().get("fill")
+        && fill.starts_with("url(")
+      {
+        assign_value("pgf@svg@fillcolor", Stored::String(pin(fill)), None);
+      }
     }
   );
 
@@ -1234,7 +1245,14 @@ LoadDefinitions!({
 
   // Perl L487-492: \pgfsys@declarepattern{name}{x1}{y1}{x2}{y2}{x step}{y step}{code}{flag}
   // Expands to \pgfsysprotocol@literal{\lxSVG@setpattern{...}}\lxSVG@(un)coloredpattern{...}
-  DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{Number}", sub[args] {
+  // pgf 3.1 inserts the six-entry transformation matrix before the code:
+  // pgfcorepatterns.code.tex:159-164 passes `\pgfsys@patternmatrix` (:126,
+  // `{1.0}{0.0}{0.0}{1.0}{0.0pt}{0.0pt}`), which the svg driver reads as the
+  // first six arguments of `\pgfsys@@declarepattern` (pgfsys-common-svg.def:677-690).
+  // Perl's nine arguments took the matrix's first entry for the code and its
+  // second (`0.0`) for the flag; the rest of the call was left in the input. The
+  // matrix is read and not applied (the identity, except for patterns.meta).
+  DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{}{}{}{}{} {}{Number}", sub[args] {
     let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x1 = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let y1 = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
@@ -1242,8 +1260,8 @@ LoadDefinitions!({
     let y2 = args.get(4).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x_step = args.get(5).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let y_step = args.get(6).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
-    let code = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
-    let flag: i64 = args.get(8).map(|a| a.value_of()).unwrap_or(0);
+    let code = args.get(13).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let flag: i64 = args.get(14).map(|a| a.value_of()).unwrap_or(0);
     let op = if flag == 1 {
       T_CS!("\\lxSVG@coloredpattern")
     } else {
@@ -1332,7 +1350,14 @@ LoadDefinitions!({
         "width" => x_step,
         "height" => y_step
       )), None)?;
-      // #4 — the pattern code content is absorbed by the constructor framework
+      // #4, the pattern code (Perl `#4` in the template). It was left open for
+      // the code to fill, which only the old nine-argument read supplied: the
+      // call's unread rest ran the code after this constructor.
+      if let Some(code) = args.get(3).and_then(|a| a.as_ref()) {
+        document.absorb(code, None)?;
+      }
+      document.close_element("svg:pattern")?;
+      document.close_element("svg:defs")?;
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
@@ -1364,8 +1389,14 @@ LoadDefinitions!({
       document.open_element("svg:symbol", Some(string_map!(
         "id" => format!("pgfsym{}", name)
       )), None)?;
-      // #4 — the pattern code content is absorbed by the constructor framework
-      // The svg:symbol, svg:pattern, and svg:defs will be auto-closed
+      // #4, the pattern code (Perl `<svg:symbol …>#4</svg:symbol>`); see
+      // `\lxSVG@coloredpattern`.
+      if let Some(code) = args.get(3).and_then(|a| a.as_ref()) {
+        document.absorb(code, None)?;
+      }
+      document.close_element("svg:symbol")?;
+      document.close_element("svg:pattern")?;
+      document.close_element("svg:defs")?;
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
@@ -1424,6 +1455,11 @@ LoadDefinitions!({
         (r * 255.0).round().clamp(0.0, 255.0) as u8,
         (g * 255.0).round().clamp(0.0, 255.0) as u8,
         (b * 255.0).round().clamp(0.0, 255.0) as u8);
+      // The pattern is now the fill a path inherits: `\lxSVG@drawpath@unclipped`
+      // wraps a path whose `pgf@svg@fillcolor` differs from the enclosing fill in
+      // a group of that colour, which painted a pattern-filled path solid (the
+      // colour pgf set before the pattern; tikz/unit_tests_by_silviu).
+      assign_value("pgf@svg@fillcolor", Stored::String(pin(format!("url(#pgfupat{obj})"))), None);
       Ok(stored_map!("obj" => obj, "color" => color))
     },
     sizer => 0

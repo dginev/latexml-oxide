@@ -1,4 +1,8 @@
-use std::{fmt, rc::Rc};
+use std::{
+  cell::{Cell, RefCell},
+  fmt,
+  rc::Rc,
+};
 
 use once_cell::sync::Lazy;
 #[cfg(feature = "codegen")]
@@ -15,7 +19,10 @@ use crate::{
     object::Object,
   },
   definition::{
-    BeforeDigestClosure, Definition, DigestionClosure, argument::ArgWrap, constructor::Constructor,
+    BeforeDigestClosure, Definition, DigestionClosure,
+    argument::ArgWrap,
+    constructor::Constructor,
+    register::{RegisterType, RegisterValue},
   },
   gullet,
   mouth::Mouth,
@@ -750,6 +757,7 @@ impl Parameters {
         .as_deref()
         .is_some_and(|want| d.get_cs().to_string() == want)
     });
+    let tails = self.may_defer_tails().then(ArgumentTails::open);
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if traced && let Some(d) = fordefn {
@@ -774,6 +782,9 @@ impl Parameters {
         args.push(values);
       }
     }
+    if let Some(tails) = tails {
+      tails.hand_back(fordefn);
+    }
     Ok(Some(args))
   }
 
@@ -786,6 +797,7 @@ impl Parameters {
     let traced = TRACE_ARGS
       .as_deref()
       .is_some_and(|want| fordefn.get_cs().to_string() == want);
+    let tails = self.may_defer_tails().then(ArgumentTails::open);
     for parameter in &self.0 {
       let value = parameter.read(Some(fordefn))?;
       if traced {
@@ -801,36 +813,94 @@ impl Parameters {
         args.push(digested_value);
       }
     }
+    if let Some(tails) = tails {
+      tails.hand_back(Some(fordefn));
+    }
     Ok(args)
   }
 
+  /// Re-read an argument already read as tokens (`{Dimension}`, `[Number]`,
+  /// `CommaList:Number`: a braced or bracketed argument whose inner spec gives
+  /// its type). Perl `Parameters::reparseArgument` (Parameters.pm:78-85).
+  ///
+  /// What follows the value inside the braces is NOT dropped (Perl's
+  /// `readingFromMouth` closes the argument's mouth unread, Gullet.pm:131-135;
+  /// KNOWN_PERL_ERRORS #275): TeX leaves it in the input — `\setlength#1#2{#1
+  /// #2\relax}` (latex.ltx:10253), through which latex.ltx passes every such
+  /// length — so `A\hspace{1em\foo}B` typesets the `x` of `\def\foo{x}`. The
+  /// tail is handed back at the end of the command's argument list
+  /// (`ArgumentTails`). With calc loaded, a length is evaluated as a whole
+  /// expression ([`gullet::braced_length_evaluator`]). OXIDIZED_DESIGN #317.
   pub fn reparse_argument(&self, value: ArgWrap) -> Result<Vec<ArgWrap>> {
     if value.is_none() {
       return Ok(Vec::new());
     }
-    let value_tokens = value.revert()?;
-    let init_if_depth = crate::definition::conditional::if_stack_depth();
-    // start with empty mouth
-    let reader_mouth = Mouth::new("", None)?;
-    gullet::reading_from_mouth(reader_mouth, || {
-      gullet::unread(value_tokens); // but put back tokens to be read
-      let values = self.read_arguments(None)?;
-      // If a conditional was opened during parsing of the argument and not closed
-      // (e.g. \hspace{\ifx\a\b\Lreg\else\a\U\fi} where read_dimension stopped at \U),
-      // drain the remaining tokens in this argument's mouth so any \else/\fi
-      // are expanded and the conditional is cleanly closed. This is what TeX's
-      // `get_x_token` after `scan_dimen` (tex.web §448/§461) does with the trailing
-      // `\fi`; Perl's `reparseArgument` (Parameters.pm:78 → Gullet.pm:131-146)
-      // discards the leftovers unexpanded and leaks the if-frame — OXIDIZED_DESIGN #193.
-      // Witness: typog-example (`parbox_dimen_conditional_double.tex`).
-      while crate::definition::conditional::if_stack_depth() > init_if_depth {
-        match gullet::read_x_token(Some(false), false, None)? {
-          Some(_) => {},
-          None => {
-            // Mouth exhausted before conditional was closed (a genuinely unbalanced
-            // argument such as `\hspace{\iftrue 3pt}`): pdflatex reports
-            // "\iftrue … was incomplete", Perl warns at `\end{document}`; say so
-            // here, then drop the orphaned frames so they cannot leak outward.
+    let calc = self
+      .braced_length_type()
+      .zip(gullet::braced_length_evaluator());
+    let (values, tail) = read_braced(value.revert()?, || match calc {
+      Some((kind, evaluate)) => Ok(vec![ArgWrap::from(coerce_length(evaluate(kind)?, kind))]),
+      None => self.read_arguments(None),
+    })?;
+    ArgumentTails::defer(tail);
+    Ok(values)
+  }
+
+  /// Whether reading these parameters can defer a tail: only a parameter with
+  /// an inner spec re-parses its argument ([`Self::reparse_argument`]). The
+  /// others open no `ArgumentTails` scope, which every macro call would pay for.
+  fn may_defer_tails(&self) -> bool { self.0.iter().any(|parameter| parameter.inner.is_some()) }
+
+  /// The register type of a lone `Dimension`/`Glue` inner spec: the braced
+  /// lengths latex.ltx hands to `\setlength` (see [`gullet::BracedLengthFn`]).
+  fn braced_length_type(&self) -> Option<RegisterType> {
+    match self.0.as_slice() {
+      [only] if only.name == pin!("Dimension") => Some(RegisterType::Dimension),
+      [only] if only.name == pin!("Glue") => Some(RegisterType::Glue),
+      _ => None,
+    }
+  }
+
+  pub fn as_keysets(&self) -> Vec<String> { self.0.iter().map(|p| p.stringify()).collect() }
+}
+
+/// Read a value from a braced argument's `tokens`, in a mouth of their own,
+/// and return it with the argument's TAIL: whatever `read` left unread — what
+/// an expanding scan looked ahead at and put back, and the rest of the
+/// argument. Perl `readingFromMouth` (Gullet.pm:108-146) drops the tail; TeX
+/// has never seen braces here and leaves it in the input, so every caller hands
+/// it back (`ArgumentTails`, or [`read_braced_value`]'s callers).
+pub fn read_braced<R>(tokens: Tokens, read: impl FnOnce() -> Result<R>) -> Result<(R, Vec<Token>)> {
+  let init_if_depth = crate::definition::conditional::if_stack_depth();
+  gullet::reading_from_mouth(Mouth::new("", None)?, || {
+    gullet::unread(tokens);
+    let value = {
+      let _braced = BracedRead::enter();
+      read()?
+    };
+    // A conditional opened inside the argument and cut by the scan
+    // (`\hspace{\ifx\a\b\Lreg\else\a\U\fi}`, read_dimension stops at `\U`)
+    // is expanded to its `\fi` HERE, as TeX's `get_x_token` after `scan_dimen`
+    // (tex.web §448/§461) meets it next — the conditional must not outlive the
+    // argument's mouth (OXIDIZED_DESIGN #193; witness typog-example,
+    // `parbox_dimen_conditional_double.tex`). What the taken branch still
+    // holds heads the tail. One expansion at a time, stopping as the frame
+    // closes: what follows the `\fi` is expanded where TeX expands it, after
+    // the command (`\setlength\x{\ifx…\U\fi\the\x}` reads `\x`'s new value).
+    let mut tail = Vec::new();
+    while crate::definition::conditional::if_stack_depth() > init_if_depth {
+      match gullet::read_token()? {
+        Some(token) => {
+          if !gullet::expand_once_partial(token)? {
+            tail.push(token);
+          }
+        },
+        None => {
+          if crate::definition::conditional::if_stack_depth() > init_if_depth {
+            // A genuinely unbalanced argument (`\hspace{\iftrue 3pt}`):
+            // pdflatex reports "\iftrue … was incomplete", Perl warns at
+            // `\end{document}`; say so here, then drop the orphaned frames so
+            // they cannot leak outward.
             Warn!(
               "expected",
               "\\fi",
@@ -839,17 +909,241 @@ impl Parameters {
             while crate::definition::conditional::if_stack_depth() > init_if_depth {
               crate::definition::conditional::pop_if_frame()?;
             }
-            break;
-          },
-        }
+          }
+          break;
+        },
       }
+    }
+    if tail.is_empty() {
       gullet::skip_spaces()?;
-      Ok(values)
-    })
+    }
+    tail.extend(gullet::take_rest_of_mouth());
+    strip_scanned_error_stubs(&mut tail);
+    Ok((value, tail))
+  })
+}
+
+/// Read a `kind` value from a braced argument's `tokens` the way LaTeX's
+/// assignments scan it — `\setlength#1#2{#1 #2\relax}`, `\addtolength`,
+/// `\setcounter`, `\addtocounter` (latex.ltx:10253-10254, 10115-10122): by
+/// the register's own type, a length through calc when it is loaded (see
+/// [`gullet::BracedLengthFn`]). Returns the value and the argument's tail; the
+/// caller assigns, then puts the tail back (`gullet::unread_vec`) — exactly
+/// where TeX leaves it, after the assignment.
+pub fn read_braced_value(
+  tokens: Tokens,
+  kind: RegisterType,
+) -> Result<(RegisterValue, Vec<Token>)> {
+  let calc = if matches!(kind, RegisterType::Dimension | RegisterType::Glue) {
+    gullet::braced_length_evaluator()
+  } else {
+    None
+  };
+  read_braced(tokens, || match calc {
+    Some(evaluate) => Ok(coerce_length(evaluate(kind)?, kind)),
+    None => gullet::read_value(kind),
+  })
+}
+
+/// A calc result (always a skip, calc.sty:56) as the `kind` of length read.
+fn coerce_length(value: RegisterValue, kind: RegisterType) -> RegisterValue {
+  match kind {
+    RegisterType::Dimension => RegisterValue::Dimension(value.into()),
+    RegisterType::Glue => RegisterValue::Glue(value.into()),
+    _ => value,
+  }
+}
+
+thread_local! {
+  /// Braced-argument tails ([`read_braced`]) waiting for their command's
+  /// argument list to end, in reading order. See [`ArgumentTails`].
+  static ARGUMENT_TAILS: RefCell<Vec<Token>> = const { RefCell::new(Vec::new()) };
+  /// How many [`ArgumentTails`] scopes are open.
+  static TAIL_SCOPES: Cell<usize> = const { Cell::new(0) };
+  /// How many [`read_braced`] reads are running, for [`in_braced_read`].
+  static BRACED_READS: Cell<usize> = const { Cell::new(0) };
+  /// Why tails are dropped instead of handed back, innermost last
+  /// ([`dropping_argument_tails`]).
+  static DROPPING_TAILS: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+}
+
+/// One running [`read_braced`], counted for [`in_braced_read`]; the count is
+/// restored on every exit, a caught panic included (cortex_worker reuses the
+/// thread for the next paper).
+struct BracedRead;
+impl BracedRead {
+  fn enter() -> Self {
+    BRACED_READS.with(|reads| reads.set(reads.get() + 1));
+    BracedRead
+  }
+}
+impl Drop for BracedRead {
+  fn drop(&mut self) { BRACED_READS.with(|reads| reads.set(reads.get().saturating_sub(1))); }
+}
+
+/// Where a handed-back tail would be misread, so `invoke` runs with the tails
+/// its commands leave DROPPED, and warned about, `why` naming what TeX does
+/// with the text:
+/// - a column type (`\NC@rewrite@p`, alignment.rs): the template reader would
+///   read a tail as more column letters (`p{\textwidth-1pt}c` a second `p`
+///   column of width `t`); TeX typesets it in every cell (array.sty:189-191
+///   `\@startpbox` → `\setlength\hsize{#1}`);
+/// - the head of an alignment row, between rows (tex_tables.rs
+///   `digest_alignment_column`): a tail would open the next row with a cell
+///   of its own, where `\noalign` then fails (`\cmidrule[lr]{1-2}
+///   \cmidrule[lr]{3-4}` for `(lr)`: 2605.27476, 2605.25272; pdflatex prints
+///   the `lr` between the rows, with 2 errors).
+///
+/// The drop scope is restored on every exit, a caught panic included.
+/// OXIDIZED_DESIGN #317.
+pub fn dropping_argument_tails<R>(
+  why: &'static str,
+  invoke: impl FnOnce() -> Result<R>,
+) -> Result<R> {
+  struct Dropping;
+  impl Drop for Dropping {
+    fn drop(&mut self) {
+      DROPPING_TAILS.with(|stack| {
+        stack.borrow_mut().pop();
+      });
+    }
+  }
+  DROPPING_TAILS.with(|stack| stack.borrow_mut().push(why));
+  let _dropping = Dropping;
+  invoke()
+}
+
+/// TeX's treatment of a tail dropped between the rows of an alignment.
+pub const BETWEEN_ALIGNMENT_ROWS: &str = "TeX typesets it between the rows";
+/// TeX's treatment of a column type's tail.
+pub const IN_EVERY_CELL: &str = "TeX typesets it in every cell of the column";
+
+/// Drop `tail`, the rest of an argument of `cs` that has no place to go,
+/// with the warning `ArgumentTails` gives when it holds more than spaces and
+/// `\relax`.
+pub fn drop_argument_tail(cs: &Token, tail: Vec<Token>, why: &str) {
+  if let Some(first) = tail.iter().find(|token| !is_inert_tail_token(token)) {
+    Warn!(
+      "unexpected",
+      first.stringify(),
+      s!(
+        "Unexpected text after the value in an argument of {} ('{}'); it is dropped ({why})",
+        cs,
+        Tokens::new(tail.clone())
+      )
+    );
+  }
+}
+
+/// Whether a parameter reader runs on a braced argument's own mouth
+/// ([`read_braced`]), where the rest of the current mouth is the rest of that
+/// argument (`DefaultUnits`, base_parameter_types.rs).
+pub fn in_braced_read() -> bool { BRACED_READS.with(|reads| reads.get() > 0) }
+
+/// One argument list's share of the deferred braced-argument tails.
+///
+/// TeX grabs a macro's arguments as token lists and scans a quantity out of one
+/// only afterwards (`\@rule[#1]#2#3{… \setlength\@tempdimb{#2}…}`,
+/// latex.ltx:16360-16366), so what follows the quantity never meets the next
+/// argument. A binding reads each typed argument as it goes, so a tail waits
+/// here until the list is complete and is then put back in the input: read
+/// next, after the command. For an assignment that is TeX's place (those read
+/// their value with [`read_braced_value`] instead, without a warning); a command
+/// that outputs a box or space (`\hspace`, `\makebox`, `\parbox`, `\rule`,
+/// `minipage`) scans its length BEFORE that output in TeX, so there the tail
+/// lands one step late. Either way a tail with more than spaces and `\relax` is
+/// almost always an authoring slip (a length expression without calc), and a
+/// warning names it. OXIDIZED_DESIGN #317.
+struct ArgumentTails {
+  mark: usize,
+}
+
+impl ArgumentTails {
+  fn open() -> Self {
+    TAIL_SCOPES.with(|scopes| scopes.set(scopes.get() + 1));
+    ArgumentTails {
+      mark: ARGUMENT_TAILS.with(|tails| tails.borrow().len()),
+    }
   }
 
-  pub fn as_keysets(&self) -> Vec<String> { self.0.iter().map(|p| p.stringify()).collect() }
+  /// Hold `tail` for the argument list being read; with none open (a re-parse
+  /// outside a definition's arguments) it goes back in the input at once.
+  fn defer(tail: Vec<Token>) {
+    if tail.is_empty() {
+    } else if TAIL_SCOPES.with(|scopes| scopes.get()) == 0 {
+      gullet::unread_vec(tail);
+    } else {
+      ARGUMENT_TAILS.with(|tails| tails.borrow_mut().extend(tail));
+    }
+  }
+
+  /// Put the tails deferred since [`Self::open`] back in the input. `fordefn`
+  /// is the command whose output the tail now follows, and is warned about;
+  /// None for a nested re-parse, whose tail travels on with its enclosing
+  /// argument's.
+  fn hand_back(self, fordefn: Option<&dyn Definition>) {
+    let tail = ARGUMENT_TAILS.with(|tails| tails.borrow_mut().split_off(self.mark));
+    if tail.is_empty() {
+      return;
+    }
+    let Some(defn) = fordefn else {
+      // A nested re-parse: the tail travels on with its enclosing argument's.
+      gullet::unread_vec(tail);
+      return;
+    };
+    if let Some(why) = DROPPING_TAILS.with(|stack| stack.borrow().last().copied()) {
+      drop_argument_tail(&defn.get_cs(), tail, why);
+      return;
+    }
+    if let Some(first) = tail.iter().find(|token| !is_inert_tail_token(token)) {
+      Warn!(
+        "unexpected",
+        first.stringify(),
+        s!(
+          "Unexpected text after the value in an argument of {} ('{}'); it is read after {0}",
+          defn.get_cs(),
+          Tokens::new(tail.clone())
+        )
+      );
+    }
+    gullet::unread_vec(tail);
+  }
 }
+
+impl Drop for ArgumentTails {
+  /// An argument list abandoned by an error or a mismatched macro call (tex.web
+  /// §392/§398 drop its arguments) takes its tails with it.
+  fn drop(&mut self) {
+    ARGUMENT_TAILS.with(|tails| tails.borrow_mut().truncate(self.mark));
+    TAIL_SCOPES.with(|scopes| scopes.set(scopes.get().saturating_sub(1)));
+  }
+}
+
+/// Drop the undefined control sequences at the head of `tail`: the scan's
+/// look-ahead expanded them, which reported them and stubbed them as
+/// `<ltx:ERROR>` (`generate_error_stub`), and TeX discards an undefined control
+/// sequence it expands (tex.web §370) — it must not come back as text.
+/// `\hspace{6\@p@t}` with USG.cls's `\@p@t` missing (2605.25073). Spaces the
+/// look-ahead passed on the way go with them.
+fn strip_scanned_error_stubs(tail: &mut Vec<Token>) {
+  loop {
+    let Some(first) = tail.iter().position(|t| t.get_catcode() != Catcode::SPACE) else {
+      return;
+    };
+    if !is_error_stub(&tail[first]) {
+      return;
+    }
+    tail.drain(..=first);
+  }
+}
+
+/// A tail token that does nothing when read: a space or `\relax` (`\stretch{1}`
+/// = `0pt plus 1fill\relax` leaves its `\relax`, which TeX's own `\relax` after
+/// `#2` would have ended the scan with).
+fn is_inert_tail_token(token: &Token) -> bool {
+  token.get_catcode() == Catcode::SPACE || token.defined_as(&crate::token::TOKEN_RELAX)
+}
+
 impl fmt::Display for Parameters {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut content = String::new();
