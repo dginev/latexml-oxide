@@ -227,7 +227,7 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
 /// defined, expands to the type the entry is processed as (Perl L119-122,
 /// L139-142). Most aliases are pure-text macros ("thesis"), so one expansion
 /// is enough.
-fn resolve_entry_type(origtype: &str) -> Result<String> {
+pub fn resolve_entry_type(origtype: &str) -> Result<String> {
   let alias_tok = T_CS!(format!("\\bib@entry@{origtype}@alias").as_str());
   Ok(match lookup_definition(&alias_tok)? {
     Some(_) => match do_expand(alias_tok) {

@@ -856,3 +856,261 @@ fn bare_thebibliography_twice_arms_once() {
   );
   assert!(xml.contains("<p>After.</p>"), "{xml}");
 }
+
+/// biblatex's own entry types take the standard drivers standard.bbx:740-752
+/// aliases them to (`\DeclareBibliographyAlias`, a no-op in the binding before):
+/// `@review` is formatted as an article, with its journal and pages,
+/// `@bookinbook` as an inbook, with its host title, and `@software` as a misc,
+/// with its authors. pdflatex + biber: "Review of Things. In: Atlantic Monthly,
+/// pp. 12–14.", "Timaeus. In: Complete Works. Hackett." Witnesses
+/// biblatex-chicago cms-notes/dates/trad-sample, biblatex-apa-test.
+#[test]
+fn biblatex_entry_type_aliases_take_the_standard_drivers() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_type_aliases.tex");
+  let bib =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_type_aliases.bib");
+  let (stderr, html) = convert_html(tex, &[("biblatex_type_aliases.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, item) in [
+    (
+      "bib.bib1",
+      r##"<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Author (2000)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Ann Author</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Review of Things</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Atlantic Monthly</span>, <span class="ltx_text ltx_bib_pages">pp. 12–14</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+    ),
+    (
+      "bib.bib2",
+      r##"<li id="bib.bib2" class="ltx_bibitem ltx_bib_inbook"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Plato (1997)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Plato</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Timaeus</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Complete Works</span>,
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Hackett</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+    ),
+    (
+      "bib.bib3",
+      r##"<li id="bib.bib3" class="ltx_bibitem ltx_bib_misc"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Borenstein and Hedges (2014)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Mary Borenstein and Larry Hedges</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Meta Analysis</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Biostat</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&html, "li", &[&format!("id=\"{id}\"")], item);
+  }
+}
+
+/// A document's (or a raw-loaded style's) `\DeclareBibliographyAlias` retypes
+/// only to an entry type (blx-dm.def:419-471): chicago-notes.bbx:2261-2265
+/// aliases to its own drivers (`cite:legal`), which must not become the data's
+/// type. Read through biber's `.bbl`, as arXiv papers ship it: `{review}{cite:review}`
+/// is ignored (review keeps standard.bbx's article), `{customa}{article}` applies.
+#[test]
+fn biblatex_alias_declarations_retype_only_to_entry_types() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_alias_declarations.tex");
+  let bbl =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_alias_declarations.bbl");
+  let (stderr, html) = convert_html(tex, &[("t.bbl", bbl)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  for (id, item) in [
+    (
+      "bib.bib3",
+      r##"<li id="bib.bib3" class="ltx_bibitem ltx_bib_misc"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Borenstein and Hedges (2014)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Mary Borenstein and Larry Hedges</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Meta Analysis</span>.
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Biostat</span>.
+</span></li>"##,
+    ),
+    (
+      "bib.bib4",
+      r##"<li id="bib.bib4" class="ltx_bibitem ltx_bib_inbook"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Plato (1997)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Plato</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Timaeus</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Complete Works</span>,
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">Hackett</span>.
+</span></li>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&html, "li", &[&format!("id=\"{id}\"")], item);
+  }
+  for (id, year, title) in [
+    ("bib.bib1", "2000b", "Review of Things"),
+    ("bib.bib2", "2000a", "Custom Thing"),
+  ] {
+    latexml::util::test::assert_element(
+      &html,
+      "li",
+      &[&format!("id=\"{id}\"")],
+      &format!(
+        r##"<li id="{id}" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Author ({year})</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Ann Author</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">{title}</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Atlantic Monthly</span>, <span class="ltx_text ltx_bib_pages">pp. 12–14</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##
+      ),
+    );
+  }
+}
+
+/// biblatex's article driver prints the editors after the journal and before the
+/// pages (standard.bbx:46-48 `byeditor+others`, `note+pages`): "Chronicle 12
+/// (3). Edited by Clare Naudziunas, pp. 12–14." (biber: "In: Chronicle 12.3. Ed.
+/// by Clare Naudziunas, pp. 12–14."). A `.bst` article prints none, so the row is
+/// biblatex's only. Witnesses biblatex-chicago cms-notes/dates/trad-sample.
+#[test]
+fn biblatex_articles_print_their_editors() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_article_editor.tex");
+  let bib =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/biblatex_article_editor.bib");
+  let (stderr, html) = convert_html(tex, &[("biblatex_article_editor.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "li",
+    &[r#"id="bib.bib1""#],
+    r##"<li id="bib.bib1" class="ltx_bibitem ltx_bib_article"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Kessler (2001)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Tom Kessler</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Letters</span>.
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_journal">Chronicle</span> <span class="ltx_text ltx_bib_volume">12</span> (<span class="ltx_text ltx_bib_number">3</span>). Edited by <span class="ltx_text ltx_bib_editor">Clare Naudziunas</span>, <span class="ltx_text ltx_bib_pages">pp. 12–14</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+  );
+}
+
+/// The host's edition is printed: `\bib@field@incollection@edition` and
+/// `@inbook@edition` (bibtex.rs; Perl the same) file it under the host
+/// `bib-related`, where no format row read it, so a `.bst` incollection lost its
+/// "third edition" (plain.bst prints it: "In Olga Editor, editor, Plain Book,
+/// pages 5--9. Pub, City, third edition, 2007."). Perl drops it too.
+#[test]
+fn bst_incollection_prints_its_host_edition() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/index-bib/bib_host_edition.tex");
+  let bib = include_str!("../../../tools/perfect_kernel/repros/index-bib/bib_host_edition.bib");
+  let (stderr, html) = convert_html(tex, &[("bib_host_edition.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "li",
+    &[r#"id="bib.bib1""#],
+    r##"<li id="bib.bib1" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem">[1]</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Ann Author</span><span class="ltx_text ltx_bib_year"> (2007)</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Chapter</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Plain Book</span>,  <span class="ltx_text ltx_bib_editor">Olga Editor (Ed.)</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_edition">Third edition</span>,  <span class="ltx_text ltx_bib_publisher">Pub</span>, <span class="ltx_text ltx_bib_place">City</span>, <span class="ltx_text ltx_bib_pages">pp. 5–9</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+  );
+}
+
+/// An aliased `@inreference` (standard.bbx:748, → incollection) files its
+/// editor and edition under the host; in a biblatex bibliography the label
+/// still falls back to that editor, as biblatex labels by the editor wherever
+/// it is (biber "Grabowski (2022)"; the label had fallen back to the entry
+/// number, biblatex-apa-test 10.2:35d), and the host's edition is printed
+/// ("2 edition"; biber "2nd ed.", cms-notes-sample's OED).
+#[test]
+fn biblatex_inreference_keeps_its_editor_label_and_edition() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/biblatex_inreference_editor_label.tex"
+  );
+  let bib = include_str!(
+    "../../../tools/perfect_kernel/repros/index-bib/biblatex_inreference_editor_label.bib"
+  );
+  let (stderr, html) = convert_html(tex, &[("biblatex_inreference_editor_label.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "cite",
+    &[r#"class="ltx_cite ltx_citemacro_citet""#],
+    r##"<cite class="ltx_cite ltx_citemacro_citet">Grabowski (<a href="#bib.bib1" title="Cleveland FreeNet" class="ltx_ref">2022</a>)</cite>"##,
+  );
+  for (id, item) in [
+    (
+      "bib.bib1",
+      r##"<li id="bib.bib1" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">John J. Grabowski (Ed.) (2022)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Cleveland FreeNet</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">Encyclopedia of Cleveland History</span>,  <span class="ltx_text ltx_bib_editor">John J. Grabowski (Ed.)</span>,
+</span>
+<span class="ltx_bibblock"> <span class="ltx_text ltx_bib_publisher">CWRU</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+    ),
+    (
+      "bib.bib2",
+      r##"<li id="bib.bib2" class="ltx_bibitem ltx_bib_incollection"><span class="ltx_tag ltx_bib_author-year ltx_role_refnum ltx_tag_bibitem">Johnson (1989)</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_author">Samuel Johnson</span>
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_title">Freenet</span>.
+</span>
+<span class="ltx_bibblock">In <span class="ltx_text ltx_bib_inbook">The Oxford English Dictionary</span>,
+</span>
+<span class="ltx_bibblock"><span class="ltx_text ltx_bib_edition">2 edition</span>,  <span class="ltx_text ltx_bib_publisher">OUP</span>.
+</span>
+<span class="ltx_bibblock ltx_bib_cited">Cited by: <a href="#p1" title="" class="ltx_ref">p1</a>.
+</span></li>"##,
+    ),
+  ] {
+    latexml::util::test::assert_element(&html, "li", &[&format!("id=\"{id}\"")], item);
+  }
+}
+
+/// With both a host editor and an untyped `editora` (filed as an own `editor`
+/// name), biblatex labels by its `editor` field — the host's: "Host (2010)".
+/// The two are tried in order, not joined ("Host and Own" was the union).
+#[test]
+fn biblatex_label_prefers_the_host_editor() {
+  let tex = "\\documentclass{article}\n\\usepackage[style=authoryear]{biblatex}\n\
+             \\addbibresource{both.bib}\n\\begin{document}\n\\textcite{both}\n\
+             \\printbibliography\n\\end{document}\n";
+  let bib = "@incollection{both, editor={Hanna Host}, editora={Otto Own}, title={Both Editors \
+             Chapter}, booktitle={Host Book}, publisher={Pub}, date={2010}}\n";
+  let (stderr, html) = convert_html(tex, &[("both.bib", bib)]);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &html,
+    "cite",
+    &[r#"class="ltx_cite ltx_citemacro_citet""#],
+    r##"<cite class="ltx_cite ltx_citemacro_citet">Host (<a href="#bib.bib1" title="Both Editors Chapter" class="ltx_ref">2010</a>)</cite>"##,
+  );
+}

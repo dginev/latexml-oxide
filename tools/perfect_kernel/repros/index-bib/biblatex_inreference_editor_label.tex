@@ -1,0 +1,15 @@
+% witness: biblatex-apa/biblatex-apa-test (entry 10.2:35d, "(Grabowski, 2022)"); biblatex-chicago/cms-notes-sample (OED "2nd ed.")
+% oracle:  pdflatex+biber: "Grabowski (2022)"; "The Oxford English Dictionary. 2nd ed."
+% engines: rust=0 errors (56kc before the review fix): the aliased @inreference's editor sits under its
+%          host and the label fell back to the entry number ("1")
+% expect:  0 errors; \textcite gives "Grabowski (2022)"; the OED entry prints its edition
+% status:  RED (56kc review) -> GREEN (56kc)
+% standard.bbx:748 aliases inreference to incollection, whose reader files editor and edition under
+% the host `bib-related`; biblatex labels by the editor wherever it is.
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{biblatex_inreference_editor_label.bib}
+\begin{document}
+\textcite{fn} \cite{oed}
+\printbibliography
+\end{document}

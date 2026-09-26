@@ -1,0 +1,16 @@
+% witness: biblatex-chicago/cms-notes-sample, cms-dates-sample, cms-trad-sample; biblatex-apa/biblatex-apa-test
+% oracle:  pdflatex+biber: "Review of Things. In: Atlantic Monthly, pp. 12–14.", "Timaeus. In: Complete Works. Hackett."
+% engines: rust=0 errors (2026-09-26): "Review of Things." (journal and pages dropped), "Timaeus. Hackett."
+% expect:  0 errors; the review shows its journal and pages, the bookinbook its host title
+% status:  RED (56kb) -> GREEN (56kc)
+% standard.bbx:740-752 aliases biblatex's own entry types to the standard drivers (review and
+% suppperiodical → article, bookinbook and suppbook → inbook, …, software → misc). The binding
+% had \DeclareBibliographyAlias as a no-op, so @review was formatted as a book and
+% @bookinbook's booktitle found no field handler.
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{biblatex_type_aliases.bib}
+\begin{document}
+\cite{rev} \cite{bib} \cite{sw}
+\printbibliography
+\end{document}

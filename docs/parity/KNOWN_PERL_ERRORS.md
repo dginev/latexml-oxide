@@ -7447,3 +7447,22 @@ still splits the paragraph for another reason, its `internal_vertical` body (SYN
 `mbox_argument_is_bounded::box_commands_start_the_paragraph`; repro
 `tools/perfect_kernel/repros/boxes-groups/mbox_leavevmode_space.tex`.
 
+## 294. biblatex's own entry types and an article's editors are unknown to the formatter (FIXED in Rust)
+
+biblatex's standard styles alias its entry types to the standard drivers (standard.bbx:740-752:
+`review`/`suppperiodical` → article, `bookinbook`/`suppbook` → inbook, `mv*`, `reference`,
+`inreference`, `software` → misc) and print an article's editors after the journal (standard.bbx:46-48
+`byeditor+others`). Perl's formatter knows neither (`MakeBibliography.pm:410`
+`@{ $FMT_SPEC{$type} || [] }`): through `\bibliography{}` a `@review` or `@bookinbook` is an empty
+"[n] Cited by" and a `@software` its title alone, and an article's editor is not printed (Perl `latexmlc`
+on biblatex's `\addbibresource` builds no bibliography: `\addbibresource`, `\printbibliography`
+undefined). An in-book or in-collection entry's edition, filed under its host, is printed by no row
+either. Trigger: `@review{rev, author={Ann Author}, title={Review of Things}, journaltitle={Atlantic
+Monthly}, pages={12--14}}` — biber "Review of Things. In: Atlantic Monthly, pp. 12–14."
+Rust (batch 56kc): OXIDIZED_DESIGN_DIVERGENCES #324. Guards
+`bibliography_names_fields::{biblatex_entry_type_aliases_take_the_standard_drivers,
+biblatex_alias_declarations_retype_only_to_entry_types, biblatex_articles_print_their_editors,
+biblatex_inreference_keeps_its_editor_label_and_edition, bst_incollection_prints_its_host_edition}`;
+repros `tools/perfect_kernel/repros/index-bib/biblatex_{type_aliases,alias_declarations,article_editor,
+inreference_editor_label}.tex`, `bib_host_edition.tex`.
+

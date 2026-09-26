@@ -1,4 +1,4 @@
-use latexml_engine::bibtex::{BibEntry, register_entry};
+use latexml_engine::bibtex::{BibEntry, register_entry, resolve_entry_type};
 use latexml_package::prelude::*;
 
 // === biblatex .bbl reader ===
@@ -934,6 +934,99 @@ fn blx_opt_kv(opt: &str) -> Option<(String, String)> {
 const BBL_START: &str = "\\let\\biblatex@saved@verb\\verb\\let\\verb\\biblatex@bbl@verb\\let\\biblatex@saved@endverb\\endverb\\let\\endverb\\biblatex@bbl@endverb\\let\\biblatex@saved@datalist\\datalist\\let\\datalist\\biblatex@bbl@datalist\\let\\biblatex@saved@enddatalist\\enddatalist\\let\\enddatalist\\biblatex@bbl@enddatalist\\let\\biblatex@saved@entry\\entry\\let\\entry\\biblatex@bbl@entry\\let\\biblatex@saved@endentry\\endentry\\let\\endentry\\biblatex@bbl@endentry\\let\\biblatex@saved@name\\name\\let\\name\\biblatex@bbl@name\\let\\biblatex@saved@list\\list\\let\\list\\biblatex@bbl@list\\let\\biblatex@saved@field\\field\\let\\field\\biblatex@bbl@field\\let\\biblatex@saved@strng\\strng\\let\\strng\\biblatex@bbl@strng\\let\\biblatex@saved@keyw\\keyw\\let\\keyw\\biblatex@bbl@keyw\\let\\biblatex@saved@range\\range\\let\\range\\biblatex@bbl@range\\let\\biblatex@saved@preamble\\preamble\\let\\preamble\\biblatex@bbl@preamble\\let\\biblatex@saved@warn\\warn\\let\\warn\\biblatex@bbl@warn\\let\\biblatex@saved@xref\\xref\\let\\xref\\biblatex@bbl@xref\\let\\biblatex@saved@fakeset\\fakeset\\let\\fakeset\\biblatex@bbl@fakeset\\let\\biblatex@saved@refsection\\refsection\\let\\refsection\\biblatex@bbl@refsection\\let\\biblatex@saved@endrefsection\\endrefsection\\let\\endrefsection\\biblatex@bbl@endrefsection";
 const BBL_END: &str = "\\let\\verb\\biblatex@saved@verb\\let\\endverb\\biblatex@saved@endverb\\let\\datalist\\biblatex@saved@datalist\\let\\enddatalist\\biblatex@saved@enddatalist\\let\\entry\\biblatex@saved@entry\\let\\endentry\\biblatex@saved@endentry\\let\\name\\biblatex@saved@name\\let\\list\\biblatex@saved@list\\let\\field\\biblatex@saved@field\\let\\strng\\biblatex@saved@strng\\let\\keyw\\biblatex@saved@keyw\\let\\range\\biblatex@saved@range\\let\\preamble\\biblatex@saved@preamble\\let\\warn\\biblatex@saved@warn\\let\\xref\\biblatex@saved@xref\\let\\fakeset\\biblatex@saved@fakeset\\let\\refsection\\biblatex@saved@refsection\\let\\endrefsection\\biblatex@saved@endrefsection";
 
+/// standard.bbx:740-752's `\DeclareBibliographyAlias` list, in its order (an
+/// alias of an alias, `mvreference` → `reference`, resolves at declaration).
+const STANDARD_BBX_ALIASES: [(&str, &str); 13] = [
+  ("mvbook", "book"),
+  ("bookinbook", "inbook"),
+  ("suppbook", "inbook"),
+  ("mvcollection", "collection"),
+  ("suppcollection", "incollection"),
+  ("mvproceedings", "proceedings"),
+  ("reference", "collection"),
+  ("mvreference", "reference"),
+  ("inreference", "incollection"),
+  ("suppperiodical", "article"),
+  ("review", "article"),
+  ("software", "misc"),
+  ("*", "misc"),
+];
+
+/// biblatex's data-model entry types (blx-dm.def:419-471): the targets an alias
+/// may give the BibTeX reader.
+const BLX_ENTRY_TYPES: [&str; 51] = [
+  "article",
+  "artwork",
+  "audio",
+  "bibnote",
+  "book",
+  "bookinbook",
+  "booklet",
+  "collection",
+  "commentary",
+  "customa",
+  "customb",
+  "customc",
+  "customd",
+  "custome",
+  "customf",
+  "dataset",
+  "inbook",
+  "incollection",
+  "inproceedings",
+  "inreference",
+  "image",
+  "jurisdiction",
+  "legal",
+  "legislation",
+  "letter",
+  "manual",
+  "misc",
+  "movie",
+  "music",
+  "mvcollection",
+  "mvreference",
+  "mvproceedings",
+  "mvbook",
+  "online",
+  "patent",
+  "performance",
+  "periodical",
+  "proceedings",
+  "reference",
+  "report",
+  "review",
+  "set",
+  "software",
+  "standard",
+  "suppbook",
+  "suppcollection",
+  "suppperiodical",
+  "thesis",
+  "unpublished",
+  "video",
+  "xdata",
+];
+
+/// `\DeclareBibliographyAlias{alias}{entrytype}`: define the BibTeX reader's
+/// `\bib@entry@<alias>@alias` as `entrytype`, itself resolved through its own
+/// alias. Only an entry type reaches the reader: a raw-loaded style may alias to
+/// one of its drivers instead (chicago-notes.bbx:2261-2265 `cite:legal`, where
+/// the type would become `cite:legal`), and the catch-all `*` is no type name (an
+/// unknown type already takes misc's format, `format_type`'s fallback).
+fn declare_bibliography_alias(alias: &str, entrytype: &str) -> Result<()> {
+  if alias == "*" || !BLX_ENTRY_TYPES.contains(&entrytype) {
+    return Ok(());
+  }
+  let target = resolve_entry_type(entrytype)?;
+  def_macro(
+    T_CS!(s!("\\bib@entry@{alias}@alias").as_str()),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(target)),
+    None,
+  )
+}
+
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
   // (803 lines): its macro definitions, conditionals, registers, the
@@ -1408,8 +1501,23 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareDatamodelEntryfields[]{}")?;
   def_macro_noop("\\DeclareDatamodelEntrytypes[]{}")?;
   def_macro_noop("\\DeclareDatamodelConstant[]{}{}")?;
-  // \DeclareBibliographyAlias{alias}{entrytype} (biblatex.sty L2297).
-  def_macro_noop("\\DeclareBibliographyAlias{}{}")?;
+  // \DeclareBibliographyAlias{alias}{entrytype} (biblatex.sty:2297): an entry of
+  // type `alias` is typeset by `entrytype`'s driver. The BibTeX reader processes a
+  // type as its `\bib@entry@<type>@alias` (bibtex.rs `resolve_entry_type`, Perl
+  // BibTeX.pool.ltxml:67-68, 121-123), so the declaration defines that macro.
+  DefPrimitive!("\\DeclareBibliographyAlias{}{}", sub[args] {
+    declare_bibliography_alias(&args[0].to_string(), &args[1].to_string())?;
+    Ok(Vec::new())
+  });
+  // The aliases every standard style inherits from standard.bbx:740-752 (a native
+  // style's `.bbx` is not read; a raw-loaded one's own `\DeclareBibliographyAlias`
+  // calls reach the primitive above, e.g. mla-strict.bbx:355-370's retyping to
+  // `article`). Unaliased, `@review` was formatted as a book (its journal and pages
+  // dropped) and `@bookinbook`'s `booktitle` found no handler (biblatex-chicago
+  // cms-*-sample, biblatex-apa-test; arXiv 2605.16053's `@software`).
+  for (alias, entrytype) in STANDARD_BBX_ALIASES {
+    declare_bibliography_alias(alias, entrytype)?;
+  }
   def_macro_noop("\\DeclareNumChars OptionalMatch:* {}")?;
   // Declaration-only biber/data-model and setup hooks reached by raw-loaded
   // style chains (oxref.bbx, biblatex-sbl.def, chicago): they shape biber's

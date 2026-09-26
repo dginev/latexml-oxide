@@ -10186,3 +10186,46 @@ titlesec (`\fbox{2.9}` version marks), etoolbox-DE, arXiv 2605.21713 (`\colorbox
 **Guards**: `mbox_argument_is_bounded::box_commands_start_the_paragraph`,
 `::boxes_fire_everypar_first_and_stay_out_of_math`.
 
+### 324. biblatex bibliographies: standard.bbx's entry-type aliases, an article's editors, a host's edition (Perl: book format, no article editor, no host edition)
+
+**Rust** (batch 56kc):
+- The biblatex binding's `\DeclareBibliographyAlias{alias}{type}` (a no-op before) defines the BibTeX
+  reader's `\bib@entry@<alias>@alias` (Perl's alias mechanism, BibTeX.pool.ltxml:67-68, 121-123),
+  resolving an aliased target at declaration, and the binding declares standard.bbx:740-752's list (the
+  style's `.bbx` is not read for the native styles). Only a target that is an entry type of biblatex's
+  data model (blx-dm.def:419-471) reaches the reader: raw-loaded styles also alias to their own drivers
+  (chicago-notes.bbx:2261-2265 `{legal}{cite:legal}`), which are not types, and `*` is the formatter's
+  existing fallback. Both the `.bib` session (it preloads the article's packages) and biber's `.bbl`
+  (read in the document's session, where a preamble declaration also applies) go through it: `@review`
+  is formatted as an article, `@bookinbook` as an inbook (its `booktitle` then finds the inbook
+  handler), `@software` as a misc. A raw-loaded style's retyping to a real type now applies too
+  (mla-strict.bbx:355-370 `misc`/`online`/`patent` → article), as that style prints them.
+- A biblatex bibliography's article prints "Edited by …" after the journal and before the pages
+  (make_bibliography.rs `get_fmt_spec`, gated on the bibliography's `bibstyle`); a `.bst` article prints
+  no editor (plain.bst), so BibTeX bibliographies are unchanged.
+- The incollection format prints the host's edition (`\bib@field@inbook@edition` /
+  `@incollection@edition` file it under the host `bib-related`, where no row read it): "2 edition" of
+  the Oxford English Dictionary entry, ungated — a `.bst`'s `incollection`/`inbook` print the edition too
+  (plain.bst "…, third edition, 2007").
+- In a biblatex bibliography the author-less label and sort key fall back to the host's editor as well
+  (`label_editors`, host editor first, then the entry's own — tried in order, not joined): an aliased `@inreference` files its editor under the host, and biblatex labels
+  by the editor wherever it is (biber "Grabowski (2022)", biblatex-apa-test 10.2:35d, which the aliases
+  alone had turned into "(80)"). A `.bst` incollection keeps Perl's author-or-key label.
+
+Not done: `editortype` as the editor's role (biblatex.def:2875-2892). Given in the reader it broke the
+author-year label of author-less entries, `.bst` bibliographies and undecoded (ctex) roles; RED repro
+`tools/perfect_kernel/repros/index-bib/biblatex_editortype_role.tex` (SYNC_STATUS).
+
+**Perl**: KNOWN_PERL_ERRORS #294.
+
+**Witnesses** (second review of 56kc, before → after, words with tags stripped; error, warning and fatal
+counts unchanged everywhere): cms-notes-sample +112, cms-dates-sample +100, cms-trad-sample +87,
+biblatex-apa-test +153, mla examples +175, caspervector +45, fiwi +23, cms-legal-sample 0 (the `cite:`
+targets filtered), arXiv 2605.16053 +4 (`@software` gains its author), 2605.00219/.18215/.02768/.06336/
+.09091 identical.
+
+**Guards**: `bibliography_names_fields::biblatex_entry_type_aliases_take_the_standard_drivers`,
+`::biblatex_alias_declarations_retype_only_to_entry_types`, `::biblatex_articles_print_their_editors`,
+`::biblatex_inreference_keeps_its_editor_label_and_edition`, `::biblatex_label_prefers_the_host_editor`,
+`::bst_incollection_prints_its_host_edition`.
+

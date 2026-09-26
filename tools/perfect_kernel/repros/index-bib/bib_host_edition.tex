@@ -1,0 +1,13 @@
+% witness: review of 56kc (plain/plainnat/abbrv/alpha probes); biblatex-chicago/cms-notes-sample (OED "2nd ed.")
+% oracle:  pdflatex+bibtex (plain.bst): "Ann Author. Chapter. In Olga Editor, editor, Plain Book, pages 5--9. Pub, City, third edition, 2007."
+% engines: rust=0 errors (56kb): no edition; Perl the same
+% expect:  0 errors; the incollection prints "Third edition"
+% status:  RED (56kb) -> GREEN (56kc)
+% \bib@field@incollection@edition (bibtex.rs; Perl the same) files the edition under the host
+% `bib-related`, where no format row read it.
+\documentclass{article}
+\begin{document}
+\cite{inc}
+\bibliographystyle{plain}
+\bibliography{bib_host_edition}
+\end{document}

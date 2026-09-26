@@ -87,6 +87,9 @@ thread_local! {
   /// ([`PeriodRule`]); set per `ltx:bibliography`, read by `format_blocks`.
   static PERIOD_RULE: std::cell::Cell<PeriodRule> =
     const { std::cell::Cell::new(PeriodRule::AddPeriod) };
+  /// Whether the bibliography being formatted is biblatex's (its `bibstyle` is
+  /// one the biblatex binding records): its drivers print rows a `.bst` does not.
+  static BIBLATEX_BIBLIOGRAPHY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// Which marks already end a unit, so that the period a row adds after it
@@ -105,6 +108,30 @@ enum PeriodRule {
   AddPeriod,
   /// biblatex's punctuation tracker ([`ends_with_punctuation`]).
   Tracker,
+}
+
+/// Whether the bibliography being formatted is biblatex's.
+fn is_biblatex_bibliography() -> bool { BIBLATEX_BIBLIOGRAPHY.with(std::cell::Cell::get) }
+
+/// The editor names that stand in for missing authors in a label or sort key,
+/// found by `find` (`tail` selects inside each, e.g. `/ltx:surname`). In a
+/// biblatex bibliography that is biblatex's `editor` field wherever the reader
+/// filed it: an in-book entry's (`@incollection`, `@inreference` and
+/// `@bookinbook` once aliased) is under its host, where it comes first — biber
+/// "Grabowski (2022)", biblatex-apa-test — and any other entry's is its own. The
+/// two are tried in order, not joined: an untyped `editora` is also an own
+/// `editor` name and is not in biblatex's label. A `.bst` labels only by the
+/// entry's own editor (Perl), an incollection by author or key.
+fn label_editors(tail: &str, find: impl Fn(&str) -> Vec<Node>) -> Vec<Node> {
+  if is_biblatex_bibliography() {
+    let host = find(&format!(
+      "ltx:bib-related[@role='host']/ltx:bib-name[@role='editor']{tail}"
+    ));
+    if !host.is_empty() {
+      return host;
+    }
+  }
+  find(&format!("ltx:bib-name[@role='editor']{tail}"))
 }
 
 impl PeriodRule {
@@ -1069,7 +1096,7 @@ impl MakeBibliography {
         let mut refnum_children: Vec<NodeData> = if !authors.is_empty() {
           do_names_short(authors)
         } else {
-          let editors = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
+          let editors = label_editors("", |x| PostDocument::findnodes_foreign(x, bibentry));
           if !editors.is_empty() {
             do_editors_a(editors)
           } else {
@@ -1205,7 +1232,7 @@ impl MakeBibliography {
     let mut surnames: Vec<Node> =
       doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
     if surnames.is_empty() {
-      surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+      surnames = label_editors("/ltx:surname", |x| doc.findnodes_at(x, Some(bibentry)));
     }
 
     if surnames.len() > 2 {
@@ -1347,7 +1374,7 @@ impl MakeBibliography {
     let mut surnames: Vec<Node> =
       doc.findnodes_at("ltx:bib-name[@role='author']/ltx:surname", Some(bibentry));
     if surnames.is_empty() {
-      surnames = doc.findnodes_at("ltx:bib-name[@role='editor']/ltx:surname", Some(bibentry));
+      surnames = label_editors("/ltx:surname", |x| doc.findnodes_at(x, Some(bibentry)));
     }
     if surnames.len() > 1 {
       // Perl L497-500: `join('', map { substr($_->textContent, 0, 1) })`,
@@ -1502,6 +1529,11 @@ impl Processor for MakeBibliography {
       doc.release_id(&mut entry);
     }
     for bib in &nodes {
+      // Set before the entries are read: their sort names consult it.
+      let biblatex = bib
+        .get_attribute("bibstyle")
+        .is_some_and(|style| style.starts_with("biblatex"));
+      BIBLATEX_BIBLIOGRAPHY.with(|flag| flag.set(biblatex));
       // Skip if already populated
       if !doc.findnodes_at(".//ltx:bibitem", Some(bib)).is_empty() {
         continue;
@@ -2435,6 +2467,19 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
         },
       ],
       vec![
+        // The host's edition: `\bib@field@inbook@edition` and
+        // `\bib@field@incollection@edition` (bibtex.rs) file it under the host
+        // `bib-related`, where no row read it — an in-book/in-collection entry lost
+        // its edition, as `@inreference`/`@bookinbook` do once aliased (Oxford
+        // English Dictionary "2nd ed.", cms-notes-sample).
+        FieldSpec {
+          xpath:     "ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]/ltx:bib-edition",
+          punct:     "",
+          pre:       "",
+          class:     "edition",
+          formatter: Formatter::Edition,
+          post:      "",
+        },
         FieldSpec {
           xpath:     "ltx:bib-edition",
           punct:     "",
@@ -3045,6 +3090,31 @@ fn get_fmt_spec(format_type: &str) -> Vec<Vec<FieldSpec>> {
       break;
     }
   }
+  // biblatex's article driver prints the editors after the journal and before
+  // the pages (standard.bbx:46-48 `byeditor+others` then `note+pages`: "In:
+  // Chronicle. Ed. by Clare Naudziunas, pp. 12–14."); a `.bst`'s `article`
+  // prints none (plain.bst), so the row is biblatex's only. Witnesses
+  // biblatex-chicago cms-notes/dates/trad-sample.
+  if format_type == "article"
+    && is_biblatex_bibliography()
+    && let Some(block) = blocks.iter_mut().find(|block| {
+      block
+        .iter()
+        .any(|f| f.xpath == "ltx:bib-part[@role='pages']")
+    })
+    && let Some(at) = block
+      .iter()
+      .position(|f| f.xpath == "ltx:bib-part[@role='pages']")
+  {
+    block.insert(at, FieldSpec {
+      xpath:     "ltx:bib-name[@role='editor']",
+      punct:     ". ",
+      pre:       "Edited by ",
+      class:     "editor",
+      formatter: Formatter::Authors,
+      post:      "",
+    });
+  }
   blocks.extend(meta_block);
   blocks
 }
@@ -3620,7 +3690,7 @@ fn extract_names(doc: &PostDocument, bibentry: &Node) -> (String, String, String
   let mut name_nodes: Vec<Node> =
     PostDocument::findnodes_foreign("ltx:bib-name[@role='author']", bibentry);
   if name_nodes.is_empty() {
-    name_nodes = PostDocument::findnodes_foreign("ltx:bib-name[@role='editor']", bibentry);
+    name_nodes = label_editors("", |x| PostDocument::findnodes_foreign(x, bibentry));
   }
 
   if name_nodes.is_empty() {
