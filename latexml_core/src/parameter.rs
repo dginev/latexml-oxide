@@ -12,7 +12,7 @@ use quote::{ToTokens, quote};
 use regex::Regex;
 
 use crate::{
-  Digested,
+  BoxOps, Digested,
   common::{
     arena::{self, SymStr},
     error::{emit_warn, *},
@@ -606,7 +606,8 @@ impl Parameter {
         let mut tokens = tokens.unlist();
         if !tokens.is_empty() // Strip outer braces from dimensions & friends
           && arena::with(self.name,|name|
-              matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
+              matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"
+                |"SetlengthDimension"|"SetlengthGlue"))
           && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN)
               .unwrap_or(false)
           && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false)
@@ -835,12 +836,20 @@ impl Parameters {
     if value.is_none() {
       return Ok(Vec::new());
     }
-    let calc = self
-      .braced_length_type()
-      .zip(gullet::braced_length_evaluator());
-    let (values, tail) = read_braced(value.revert()?, || match calc {
-      Some((kind, evaluate)) => Ok(vec![ArgWrap::from(coerce_length(evaluate(kind)?, kind))]),
-      None => self.read_arguments(None),
+    let length = self.braced_length_type();
+    let calc = length.and_then(|_| gullet::braced_length_evaluator());
+    let (values, tail) = read_braced(value.revert()?, || {
+      if let Some((kind, true)) = length
+        && let Some(value) = read_through_redefined_setlength(kind)?
+      {
+        return Ok(vec![ArgWrap::from(value)]);
+      }
+      match (length, calc) {
+        (Some((kind, _)), Some(evaluate)) => {
+          Ok(vec![ArgWrap::from(coerce_length(evaluate(kind)?, kind))])
+        },
+        _ => self.read_arguments(None),
+      }
     })?;
     ArgumentTails::defer(tail);
     Ok(values)
@@ -851,13 +860,25 @@ impl Parameters {
   /// others open no `ArgumentTails` scope, which every macro call would pay for.
   fn may_defer_tails(&self) -> bool { self.0.iter().any(|parameter| parameter.inner.is_some()) }
 
-  /// The register type of a lone `Dimension`/`Glue` inner spec: the braced
-  /// lengths latex.ltx hands to `\setlength` (see [`gullet::BracedLengthFn`]).
-  fn braced_length_type(&self) -> Option<RegisterType> {
-    match self.0.as_slice() {
-      [only] if only.name == pin!("Dimension") => Some(RegisterType::Dimension),
-      [only] if only.name == pin!("Glue") => Some(RegisterType::Glue),
-      _ => None,
+  /// The register type of a lone `Dimension`/`Glue` inner spec, the braced
+  /// lengths calc evaluates whole (see [`gullet::BracedLengthFn`]), and whether
+  /// it is declared a `\setlength` operand (`SetlengthDimension`/`SetlengthGlue`,
+  /// read through a redefined `\setlength`: [`read_through_redefined_setlength`]).
+  fn braced_length_type(&self) -> Option<(RegisterType, bool)> {
+    let [only] = self.0.as_slice() else {
+      return None;
+    };
+    let name = only.name;
+    if name == pin!("Dimension") {
+      Some((RegisterType::Dimension, false))
+    } else if name == pin!("Glue") {
+      Some((RegisterType::Glue, false))
+    } else if name == pin!("SetlengthDimension") {
+      Some((RegisterType::Dimension, true))
+    } else if name == pin!("SetlengthGlue") {
+      Some((RegisterType::Glue, true))
+    } else {
+      None
     }
   }
 
@@ -943,6 +964,60 @@ pub fn read_braced_value(
     Some(evaluate) => Ok(coerce_length(evaluate(kind)?, kind)),
     None => gullet::read_value(kind),
   })
+}
+
+thread_local! {
+  /// Set while [`read_through_redefined_setlength`] runs a redefined
+  /// `\setlength`: a braced length read inside it takes the direct path.
+  static THROUGH_SETLENGTH: Cell<bool> = const { Cell::new(false) };
+}
+
+/// A `SetlengthDimension`/`SetlengthGlue` argument is the operand latex.ltx
+/// hands to `\setlength` (see [`gullet::BracedLengthFn`]), so a package that
+/// redefines `\setlength` as a macro changes how it reads. bxcalcux.sty's
+/// `\bxcx@decl@patch\setlength` parses custom units (`\newcalcunit{tm}{0.05em}`
+/// makes `\hspace{6tm}` 3pt; bxcalc manual), and pgf's pictures swap in
+/// `\pgf@setlength` (pgfcorescopes.code.tex:238-242, 311-317). Then the length
+/// is assigned as latex.ltx assigns it, `\setlength<register>{<argument>}`
+/// digested (`\@hspace`, latex.ltx:9425; a dimen register for a `Dimension`, as
+/// `\@tempdima` is, so a scan stops before `plus`), and the register read back.
+/// Whatever the assignment left in the input is typeset there, before the
+/// command's own output, as TeX typesets it for the boxes and `\hspace`; for
+/// `\\[..]` TeX typesets it after the break (inside `\vadjust`, latex.ltx:9260).
+/// `None` when `\setlength` is a primitive (the kernel's or calc's binding) or
+/// is undefined (plain TeX: the registers are LaTeX-only). OXIDIZED_DESIGN #325.
+///
+/// Precondition: called directly inside [`read_braced`]'s reader, whose mouth
+/// holds exactly the rest of the argument: the whole mouth is taken as the
+/// operand. The reentrancy flag covers the whole digestion, the tail's included.
+pub fn read_through_redefined_setlength(kind: RegisterType) -> Result<Option<RegisterValue>> {
+  if THROUGH_SETLENGTH.with(Cell::get) || !in_braced_read() {
+    return Ok(None);
+  }
+  let setlength = crate::T_CS!("\\setlength");
+  let register = if matches!(kind, RegisterType::Glue) {
+    crate::T_CS!("\\lx@braced@skip")
+  } else {
+    crate::T_CS!("\\lx@braced@dimen")
+  };
+  if !lookup_definition(&setlength)?.is_some_and(|defn| defn.is_expandable())
+    || lookup_definition(&register)?.is_none()
+  {
+    return Ok(None);
+  }
+  struct Through;
+  impl Drop for Through {
+    fn drop(&mut self) { THROUGH_SETLENGTH.with(|through| through.set(false)); }
+  }
+  THROUGH_SETLENGTH.with(|through| through.set(true));
+  let _through = Through;
+  let mut call = vec![setlength, register, crate::T_BEGIN!()];
+  call.extend(gullet::take_rest_of_mouth());
+  call.push(crate::T_END!());
+  let typeset = crate::stomach::digest(Tokens::new(call))?;
+  crate::stomach::extend_box_list(typeset.unlist());
+  let value = lookup_register_token(&register, Vec::new())?.unwrap_or_default();
+  Ok(Some(coerce_length(value, kind)))
 }
 
 /// A calc result (always a skip, calc.sty:56) as the `kind` of length read.

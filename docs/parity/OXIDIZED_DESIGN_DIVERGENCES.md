@@ -10231,3 +10231,49 @@ targets filtered), arXiv 2605.16053 +4 (`@software` gains its author), 2605.0021
 `::biblatex_inreference_keeps_its_editor_label_and_edition`, `::biblatex_label_prefers_the_host_editor`,
 `::bst_incollection_prints_its_host_edition`.
 
+### 325. A `\setlength` operand goes through a package's or document's own `\setlength` (Perl: read by the binding)
+
+**Rust** (batch 56kf): latex.ltx hands the user lengths of eight commands to `\setlength`: `\hspace`
+(`\@hspace` 9425), `\\[..]` (`\@newline` → `\@vspace@calcify`, 9254-9261), `\makebox` (`\@imakebox` 16101),
+`\framebox` (16199), `\parbox` (width and height, 16252-16255), `minipage` (16308), `\rule` (16363-16365) and
+`\raisebox` (16380-16390); graphics.sty:555-568 does the same in `\Gscale@box@dd`/`@dddd`, behind
+`\resizebox`. Their bindings declare these arguments `SetlengthDimension`/`SetlengthGlue`
+(base_parameter_types.rs; sect01.rs `\lx@newline`, sect12.rs, graphics_sty.rs; graphicx's
+`GraphixDimension` takes the route explicitly). When `\setlength` is a macro, not the kernel's or
+calc's primitive, a package or the document has redefined it, and such an argument is read through it:
+`\setlength<register>{<argument>}` is digested (`read_through_redefined_setlength`, parameter.rs, from
+`Parameters::reparse_argument`) and the register read back. The registers are its own
+(latex_constructs_rust_only.rs), as `\sp@ce@skip` and `\@tempdima` are latex.ltx's: `\lx@braced@skip` for a
+Glue, `\lx@braced@dimen` for a Dimension, whose scan stops before `plus` as `\@tempdima`'s does. What the
+assignment leaves in the input is typeset where TeX typesets it, before the command's output, except
+after `\\[..]`, where TeX typesets it after the break (inside `\vadjust`, latex.ltx:9260) and it lands
+before the break here: an authoring slip (`\\[12pt w]`) under a redefined `\setlength`. A read inside
+the redefinition takes the direct path. bxcalcux.sty's `\bxcx@decl@patch\setlength` then parses its
+units (`\newcalcunit{tm}{0.05em}`: `\hspace{6tm}` is 3pt, `\makebox[20tm]` 10pt, `\\[2tm]` a 1pt break,
+pdflatex's sizes). Plain TeX (miniltx's `\setlength` macro) keeps the direct read: the registers are
+LaTeX-only.
+
+A binding's plain `Dimension`/`Glue` stands for no `\setlength`, and a redefined one does not read it
+(with calc loaded, #317's evaluator still reads every braced length as calc's operand; narrowing that
+to the declared operands is K14 work). Taking every braced length through a redefined `\setlength` (the
+first cut) recursed to the pushback limit inside a nested `\pgfpicture`, whose `\setlength` is
+`\pgf@setlength` saved as its own original (pgfcorescopes.code.tex:238-241): `\pgfsetlinewidth{..}`,
+which TeX reads through pgfmath, called it (arXiv 2605.15377, 2605.22769, pgf-blur's `blur shadow`,
+tikzlibraryshadows.blur.code.tex:181). A declared operand met there still recurses (`\hspace` in the text
+of a node inside a `\pgfpicture` nested directly in a picture): pdflatex dies there too ("TeX capacity
+exceeded [grouping levels=255]"), so the Fatal is faithful. A tikz node's text is typeset with the
+original `\setlength` restored (`\pgfinterruptpicture`, :751), in pdflatex as here. Not yet declared: the
+`p{..}` column width (array.sty's `\@startpbox`, `\setlength\hsize{#1}`) and `\vspace` (a raw
+`\vskip #2\relax` macro; latex.ltx:9361-9373 reads it through `\@vspace@calcify`).
+
+**Perl** reads the length itself (KNOWN_PERL_ERRORS #296).
+
+**Witnesses**: sample-bxcalc (13 errors and 26 warnings → 0 and 0: the "`t' invalid" errors and the
+"m"/"s+2tm" text typeset after each command since 56jr); bxcalcux and bxcalcize byte-identical; arXiv
+2605.15377 and 2605.22769 byte-identical to 56ke (the first cut's Fatal); 125 further arXiv papers
+(40 adjustbox, 20 tikz-heavy, 3 realboxes, 60 random) byte-identical (56kf review).
+
+**Guards**: `braced_quantity_tail::redefined_setlength_reads_a_braced_length`,
+`::redefined_setlength_scans_a_dimension_as_a_dimen`, `::nested_pgfpicture_lengths_stay_off_setlength`;
+repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength.tex`,
+`braced_length_redefined_setlength_dimen.tex`, `braced_length_nested_pgfpicture.tex`.

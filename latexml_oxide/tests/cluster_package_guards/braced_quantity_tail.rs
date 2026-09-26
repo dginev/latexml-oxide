@@ -109,6 +109,100 @@ fn calc_evaluates_a_braced_length() {
   assert_para(&xml, "p6", "<p>[7]</p>");
 }
 
+/// A package or document that redefines `\setlength` as a macro decides how a
+/// binding's braced length reads, since latex.ltx hands that length to
+/// `\setlength` (`\@hspace` 9425, `\@imakebox` 16101, `\@rule` 16363,
+/// graphics.sty:555-568): bxcalc's `\newcalcunit{tm}{0.05em}` makes
+/// `\hspace{6tm}` 3pt (pdflatex), where the binding's own read met "tm" (8 "`t'
+/// invalid" errors, an "m" typeset after each command since 56jr), and a
+/// `\setlength` that doubles its operand doubles `\hspace{4pt}`.
+/// OXIDIZED_DESIGN #325.
+#[test]
+fn redefined_setlength_reads_a_braced_length() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_para(
+    &xml,
+    "p1",
+    "<p>[13.55577pt]\n[10.00061pt]\n[5.0003pt]\n[3.00018pt]\n[8.0pt]</p>",
+  );
+  assert_para(
+    &xml,
+    "p2",
+    "<p>A\u{2005}B <text align=\"right\" width=\"10.0pt\">C</text> <rule height=\"1.0pt\" \
+     width=\"5.0pt\"/> <inline-block depth=\"0.0pt\" height=\"8.2pt\" width=\"10.0pt\" \
+     xscale=\"1.89484396593097\" xtranslate=\"2.4pt\" yscale=\"1.89484396593097\" \
+     ytranslate=\"-1.9pt\"><p>x</p></inline-block></p>",
+  );
+  // `\\[2tm]`: latex.ltx's `\@newline` → `\@vspace@calcify` (9254, 9260-9261).
+  assert_para(
+    &xml,
+    "p3",
+    "<p>C<break cssstyle=\"--ltx-break-space:1.0pt\"/>D</p>",
+  );
+}
+
+/// A `SetlengthDimension` is assigned to a dimen register, as latex.ltx's
+/// `\@tempdima`/`\@tempdimb` are (`\@imakebox` 16101, `\@rule` 16363-16365,
+/// graphics.sty:555-568): the scan stops before `plus`, and what is left is
+/// typeset before the box (pdflatex "Aplus 1pt xB"), where a skip register
+/// swallowed it without a word. OXIDIZED_DESIGN #325.
+#[test]
+fn redefined_setlength_scans_a_dimension_as_a_dimen() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength_dimen.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_para(
+    &xml,
+    "p1",
+    "<p>Aplus 1pt<text align=\"right\" width=\"20.0pt\">x</text>B</p>",
+  );
+  assert_para(
+    &xml,
+    "p2",
+    "<p>Cplus 2pt<rule height=\"1.0pt\" width=\"3.0pt\"/>D</p>",
+  );
+  assert_para(
+    &xml,
+    "p3",
+    "<p>Eplus 1pt<inline-block depth=\"3.7pt\" height=\"8.2pt\" width=\"10.0pt\" \
+     xscale=\"1.89472832089185\" xtranslate=\"2.4pt\" yscale=\"1.89472832089185\" \
+     ytranslate=\"-2.8pt\"><p>y</p></inline-block>F</p>",
+  );
+}
+
+/// Only latex.ltx's `\setlength` operands (`SetlengthDimension`/`SetlengthGlue`)
+/// read through a redefined `\setlength`, not every braced length: inside a
+/// nested `\pgfpicture`, `\setlength` is `\pgf@setlength` saved as its own
+/// original (pgfcorescopes.code.tex:238-241), and TeX never calls it there,
+/// since `\pgfsetlinewidth` reads through pgfmath. Taking every `{Dimension}`
+/// through it recursed to the pushback limit (arXiv 2605.15377, 2605.22769:
+/// pgf-blur's `blur shadow` paints its fading in a nested picture,
+/// tikzlibraryshadows.blur.code.tex:181). OXIDIZED_DESIGN #325.
+#[test]
+fn nested_pgfpicture_lengths_stay_off_setlength() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/braced_length_nested_pgfpicture.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  // The nested picture's `\pgfsetlinewidth{1pt}` is its group's stroke width.
+  assert_element(
+    &xml,
+    "svg:g",
+    &["class=\"ltx_nestedsvg\""],
+    r##"<svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="1.0pt" transform="matrix(1 0 0 1 0 0) translate(0.69,0) translate(0,0.69)"><svg:path d="M 0 0 L 39.37 0" style="fill:none"/></svg:g>"##,
+  );
+}
+
 /// calc reports the token it cannot parse after a term and consumes it
 /// (calc.sty:281-284; pdflatex 3 errors, no `x` typeset).
 #[test]

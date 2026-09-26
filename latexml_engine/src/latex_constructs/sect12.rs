@@ -145,7 +145,7 @@ pub(crate) fn load() -> Result<()> {
   // `plus`/`minus`, which then passed for text after the value (OXIDIZED_DESIGN
   // #317): `\hspace{0pt plus 1fil}`, `\hspace{\stretch{1}}`. The space is the
   // natural width, as `\hskip`'s.
-  DefPrimitive!("\\hspace OptionalMatch:* {Glue}", sub[(_star,skip)] {
+  DefPrimitive!("\\hspace OptionalMatch:* {SetlengthGlue}", sub[(_star,skip)] {
     let skip: Glue = skip;
     let length = Dimension::new(skip.value_of());
     // Perl `latex_constructs.pool.ltxml:4686-4691` always emits a Box once
@@ -244,7 +244,7 @@ pub(crate) fn load() -> Result<()> {
   // (latex.ltx:16077-16078 `\leavevmode`), which the mode alone does not give:
   // the space after a box starting a paragraph was dropped (batch 54n's mode
   // change; arXiv 2605.21322's `\makebox[0pt][c]` figure panels).
-  DefConstructor!("\\@makebox[Dimension][] HBoxArgContents",
+  DefConstructor!("\\@makebox[SetlengthDimension][] HBoxArgContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     alias => "\\makebox", sizer => "#3",
@@ -297,7 +297,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
-  DefConstructor!("\\@framebox[Dimension][] HBoxArgContents",
+  DefConstructor!("\\@framebox[SetlengthDimension][] HBoxArgContents",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
@@ -473,10 +473,10 @@ pub(crate) fn load() -> Result<()> {
   // form (:4748) raised `Extra \else` (SHARED). Guard:
   // `perfect_kernel_batch56::parbox_body_dangling_conditional_is_not_the_wrappers`.
   DefMacro!(
-    "\\parbox[] [] [] {Dimension}{}",
+    "\\parbox[] [] [] {SetlengthDimension}{}",
     r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
   );
-  DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
+  DefConstructor!("\\lx@parbox[][SetlengthDimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
       let mut attr = string_map!("class" => "ltx_parbox");
@@ -568,7 +568,7 @@ pub(crate) fn load() -> Result<()> {
   DefConditional!("\\if@minipage");
   def_macro_noop("\\@setminipage")?;
   // Perl: latex_constructs.pool.ltxml lines 4822-4846
-  DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
+  DefEnvironment!("{minipage}[] OptionalUndigested [] {SetlengthDimension}",
     sub[document, args, props] {
       let attachment = args
         .first()
@@ -640,7 +640,7 @@ pub(crate) fn load() -> Result<()> {
   // `\@rule`: height h + raise, depth -raise, each floored at 0 by hpack
   // (tex.web §653; Perl ignores the raise; DIVERGENCES #298). Guard:
   // `perfect_kernel_batch56::rule_box_has_its_size`.
-  DefConstructor!("\\rule[Dimension]{Dimension}{Dimension}",
+  DefConstructor!("\\rule[SetlengthDimension]{SetlengthDimension}{SetlengthDimension}",
     "<ltx:rule ?#offset(yoffset='#offset') width='#rwidth' height='#rheight'/>",
     enter_horizontal => true,
     properties => sub[args] {
@@ -660,7 +660,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml:4800-4802: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
   // (latex.ltx:16373-16374 `\leavevmode`).
-  DefConstructor!("\\raisebox{Dimension}[Dimension][Dimension] HBoxArgContents",
+  DefConstructor!("\\raisebox{SetlengthDimension}[SetlengthDimension][SetlengthDimension] HBoxArgContents",
     "<ltx:text yoffset='#1' _noautoclose='1'>#4</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     // TODO

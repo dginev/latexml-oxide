@@ -223,7 +223,11 @@ catcodes (P18, dialect.rs:478), `\index` never sanitized (P29),
 multi-char token (P53, dialect.rs:1193), the `#`-PARAM storms
 (cnltx/endiagram/memman `\@sharp`). Policy: carry `Tokens` through; where
 a string is unavoidable, re-enter with `\detokenize` semantics (all OTHER,
-`\escapechar`-aware); audit `to_string()`→`Tokenize!` pairs.
+`\escapechar`-aware); audit `to_string()`→`Tokenize!` pairs. Evidence 2026-09-26: an `\index`/`\glossary` entry's display is re-tokenized
+with the internal catcodes and digested *at the mark* (`SanitizedVerbatim`, mod.rs `process_index_phrases`),
+where TeX only writes it to the `.idx`/`.glo` and re-reads it at `\printindex`; so robustglossary's
+`formula&explanation` raises "Stray alignment" at the mark (robustsample, sweep #126), and a fix that
+inspects the phrase after `do_expand_partially` finds `\begin`/`\(` already expanded away (56kd review).
 
 **(b) Isolated mouths invent EOFs.** In tex.web only a *file* end is an
 EOF (§362); token lists and backed-up levels are transparent, so a
@@ -303,7 +307,15 @@ theme exactly — 56jr's braced-length evaluator calls calc's expression reader 
 passes the length through whatever `\setlength` currently means (`\@hspace` 9425, `\@vspace@calcify` 9254;
 bxcalcux.sty:290-293 and pgf's `\pgf@setlength` redefine it), so `\hspace{6tm}` lost the custom unit;
 PixelArtTikz's is a stub reader that takes `*{\count}` only as a literal integer (tabularray evaluates an
-integer expression, tabularray.sty:3361).
+integer expression, tabularray.sty:3361). Both landed at their one seam, not by the fix shape below:
+56ke evaluates the count as `\numexpr`; 56kf digests `\setlength<scratch>{<argument>}` when `\setlength`
+is a macro, the typed reader stepping aside for the real one (DIVERGENCES #325). 56kf's first cut is
+this theme's cost in one line: it read every braced `{Dimension}` as a `\setlength` operand, a claim true
+of latex.ltx's commands and false of `\pgfsetlinewidth` (pgfmath), and the arXiv A/B caught two papers
+recursing to the pushback limit in a nested `\pgfpicture`; the operand is now a declared type
+(`SetlengthDimension`), the claim made explicit per command. The same side finding
+shows the claim reaching past reading: a box's typed width is right in its XML attribute but not in its
+measured `\wd`/`\ht` (`\framebox[w]`, `\raisebox`, `\resizebox`; SYNC_STATUS).
 
 **Fix shape.** (a) A binding-conformance detector: load each package raw in a scratch state, record every
 public macro's real signature (parameter text and delimiters, `\newcommand` arity and optional default,

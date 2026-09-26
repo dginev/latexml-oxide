@@ -7478,3 +7478,19 @@ Rust (batch 56kd): book_cls.rs and report_cls.rs define it as `\@schapter`'s dis
 repro `tools/perfect_kernel/repros/sectioning-frontmatter/makeschapterhead_renewed_theindex.tex`
 (ryethesis/ryesample).
 
+## 296. A binding's braced length ignores a redefined `\setlength` (FIXED in Rust)
+
+latex.ltx passes the user lengths of `\hspace`, `\\[..]`, `\makebox`, `\framebox`, `\parbox`, `minipage`,
+`\rule` and `\raisebox` to `\setlength` (`\@hspace#1{\setlength\sp@ce@skip{#1}\hskip\sp@ce@skip}`,
+latex.ltx:9425; `\@imakebox` 16101, `\@rule` 16363), so a package that redefines `\setlength` extends what
+such a length may be: bxcalcux.sty's `\bxcx@decl@patch\setlength` adds units
+(`\newcalcunit{tm}{0.05em}`), adjustbox and combinedgraphics swap in their own. Perl's
+`\hspace{Dimension}` (latex_constructs.pool.ltxml:4629), `\lx@newline [Glue]` (:254),
+`\makebox[Dimension]`, `\rule{Dimension}` read the length themselves, so the redefinition is bypassed.
+Trigger: `\let\old\setlength \renewcommand*\setlength[2]{\old{#1}{2\dimexpr#2\relax}}` then
+`\setbox0\hbox{\hspace{4pt}}\the\wd0` — pdflatex 8.0pt, Perl 4.0pt. With bxcalc raw-loaded
+(`--includestyles`; there is no binding), Perl's `\hspace{6tm}` warns "Illegal unit of measure" and drops
+the letters (#275); without it `\newcalcunit` is undefined. Rust (batch 56kf): OXIDIZED_DESIGN_DIVERGENCES
+#325. Guards `braced_quantity_tail::redefined_setlength_reads_a_braced_length`,
+`::redefined_setlength_scans_a_dimension_as_a_dimen`, `::nested_pgfpicture_lengths_stay_off_setlength`; repro
+`tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined_setlength.tex`.

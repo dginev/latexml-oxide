@@ -1,0 +1,15 @@
+% witness: side finding of batch 56kf (bxcalc repro); plain units, no package but graphicx
+% oracle:  pdflatex [10.00002pt] [6.30554pt] [50.00008pt] [10.00081pt]
+% engines: rust 56kd/56kf [12.07779pt] [4.30554pt] [50.0pt] [49.72238pt]
+% expect:  the pdflatex sizes: `\framebox[w]` is w wide in all (latex.ltx:16181-16199, the frame inside the width);
+%          `\raisebox{2pt}{x}` is 2pt taller (16373-16388 `\ht` raised); `\parbox{5em}` is 5em, not rounded to 0.1pt;
+%          `\resizebox{1em}{!}{x}` is 1em wide (its own width attribute already is 10.0pt; `\wd` measures the unscaled box)
+% status:  RED
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\setbox0\hbox{\framebox[1em]{x}}[\the\wd0]
+\setbox0\hbox{\raisebox{2pt}{x}}[\the\ht0]
+\setbox0\hbox{\parbox{5em}{x}}[\the\wd0]
+\setbox0\hbox{\resizebox{1em}{!}{x}}[\the\wd0]
+\end{document}

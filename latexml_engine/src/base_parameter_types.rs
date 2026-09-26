@@ -387,6 +387,16 @@ LoadDefinitions!({
     read_dimension()? });
   // Read a Glue (aka skip)
   DefParameterType!(Glue, sub[_inner, _extra] { read_glue()? });
+  // A length latex.ltx hands to `\setlength` (`\@hspace` 9425, `\@imakebox`
+  // 16101, `\@iframebox` 16199, `\@iiiparbox` 16252, `\@iiiminipage` 16308,
+  // `\@rule` 16363-16365, `\@irsbox`/`\@iirsbox` 16380-16390): read as a
+  // `Dimension`/`Glue`, and braced, through a package's or the document's own
+  // `\setlength` when one is in force (`read_through_redefined_setlength`,
+  // parameter.rs; OXIDIZED_DESIGN #325). A binding's plain `Dimension` stands for
+  // no `\setlength`: pgf's `\pgfsetlinewidth` reads through pgfmath, and inside
+  // a nested `\pgfpicture` `\setlength` is `\pgf@setlength` calling itself.
+  DefParameterType!(SetlengthDimension, sub[_inner, _extra] { read_dimension()? });
+  DefParameterType!(SetlengthGlue, sub[_inner, _extra] { read_glue()? });
   // Read a MuDimension (math)
   DefParameterType!(MuDimension, sub[_inner, _extra] {
     read_mu_dimension()? });

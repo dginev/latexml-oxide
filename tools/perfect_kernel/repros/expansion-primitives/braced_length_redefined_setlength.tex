@@ -1,0 +1,30 @@
+% witness: bxcalc manual (bxcalcux.sty `\bxcx@decl@patch\setlength`; sweep #126, since 56jr)
+% oracle:  pdflatex 0 errors; [13.55577pt] [10.00061pt] [5.0003pt] [3.00018pt] [8.0pt]; the resized box 10pt wide;
+%          `\\[2tm]` a 1pt break (latex.ltx:9260-9261 `\@newline` -> `\@vspace@calcify`)
+%          (latex.ltx:9425 `\@hspace`, 16101 `\@imakebox`, 16363 `\@rule`, graphics.sty:555-568 hand the length to `\setlength`)
+% engines: rust 56jr-56ke 8 errors "`t' invalid at this point" + "m" typeset after each command; 56jq "Illegal unit" + the same text;
+%          Perl reads the length itself (bxcalc raw-loaded: "Illegal unit", the letters dropped; the document-level
+%          redefinition gives 4.0pt)
+% expect:  0 errors, 0 warnings; the widths above; `A\hspace{6tm}B` etc. without stray letters, the resized
+%          `x` width="10.0pt" (its `\wd` is a separate gap: boxes-groups/box_dimensions_measured.tex)
+% status:  RED (56jr) -> GREEN (56kf)
+% A binding reads `{Dimension}`/`{Glue}` itself (calc's evaluator with calc loaded); a package or document that redefines
+% `\setlength` as a macro was bypassed.
+\documentclass{article}
+\usepackage{bxcalc}
+\usepackage{graphicx}
+\newcalcunit{tm}{0.05em}
+\newlength\x
+\begin{document}
+\setbox0\hbox{a\hspace{6tm}b}[\the\wd0]
+\setbox0\hbox{\makebox[20tm]{x}}[\the\wd0]
+\setbox0\hbox{\rule{10tm}{1pt}}[\the\wd0]
+\setlength{\x}{6tm}[\the\x]
+{\let\CUXsetlengthorig\setlength
+ \renewcommand*\setlength[2]{\CUXsetlengthorig{#1}{2\dimexpr#2\relax}}%
+ \setbox0\hbox{\hspace{4pt}}[\the\wd0]}
+
+A\hspace{6tm}B \makebox[20tm][r]{C} \rule{10tm}{2tm} \resizebox{20tm}{!}{x}
+
+C\\[2tm]D
+\end{document}

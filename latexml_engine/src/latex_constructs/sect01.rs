@@ -623,7 +623,10 @@ pub(crate) fn load() -> Result<()> {
   //   - no context or _CaptureBlock_: skip
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
-  DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document, args] {
+  // `[SetlengthGlue]`: latex.ltx:9260-9261 `\@newline[#1]` → `\@vspace@calcify{#1}`
+  // = `\setlength\sp@ce@skip{#1}` (9254), so a package's `\setlength` reads it
+  // (bxcalc's `\\[1ex-1ls]`; OXIDIZED_DESIGN #325).
+  DefConstructor!("\\lx@newline OptionalMatch:* [SetlengthGlue]", sub[document, args] {
     if lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {

@@ -347,6 +347,15 @@ LoadDefinitions!({
   DefMacro!("\\@gobbletwo{}{}", None);
   DefMacro!("\\@gobblefour{}{}{}{}", None);
 
+  // The registers a `\setlength` operand is assigned to when a package has
+  // redefined `\setlength` (`read_through_redefined_setlength`, parameter.rs),
+  // as latex.ltx assigns `\sp@ce@skip` (`\@hspace` 9425, `\@vspace@calcify` 9254)
+  // and `\@tempdima` (`\@imakebox` 16101 and the other boxes): their own, so that
+  // no document register is overwritten. A dimen's scan stops before `plus`,
+  // which then stays in the input as it does in TeX. OXIDIZED_DESIGN #325.
+  DefRegister!("\\lx@braced@skip" => Glue!("0pt"));
+  DefRegister!("\\lx@braced@dimen" => Dimension!("0pt"));
+
   // LaTeXML aliases for the file-loaded predicates.
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   Let!("\\ltx@ifclassloaded", r"\@ifclassloaded");

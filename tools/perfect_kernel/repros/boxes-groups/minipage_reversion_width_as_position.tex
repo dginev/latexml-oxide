@@ -1,0 +1,14 @@
+% witness: side finding of batch 56kf's review (adjustbox `minipage=` key)
+% oracle:  pdflatex 0 errors; "second mini" set in a 3cm minipage on a red background
+% engines: rust 56ke: an empty-width minipage holding "econd mini"; 56kf: no minipage, "econd mini)" (adjcalc's
+%          `\glueexpr(...)` now reads the bogus width through its `\setlength`)
+% expect:  0 errors; one minipage of width 85.4pt holding "second mini"
+% status:  RED
+% The minipage's reversion, re-digested by adjustbox's `\lx@RE@BOXCONTENT`, reads `\begin{minipage}[85.35826pt]`:
+% the width lands in the position optional, and `{second mini}` is then taken as the width (LXML_TRACE_ARGS).
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{adjustbox}
+\begin{document}
+\adjustbox{minipage=3cm,bgcolor=red}{second mini}
+\end{document}

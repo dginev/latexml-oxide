@@ -179,7 +179,9 @@ LoadDefinitions!({
   // from a register lookup that resolved to a Dimension/Dimension form.
   // Without a Rust port, papers using these intermediate CSes (rare but
   // present in some templates) would error with undefined CS.
-  DefConstructor!("\\Gscale@box@dd {Dimension}{Dimension}{}",
+  // Its lengths are `\setlength` operands (graphics.sty:555-568): read through a
+  // redefined `\setlength` (OXIDIZED_DESIGN #325).
+  DefConstructor!("\\Gscale@box@dd {SetlengthDimension}{SetlengthDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -199,7 +201,7 @@ LoadDefinitions!({
 
   // \Gscale@box@dddd {xnum}{xdenom}{ynum}{ydenom}{body} — Perl L112-118.
   // Same idea, but separate xscale/yscale ratios.
-  DefConstructor!("\\Gscale@box@dddd {Dimension}{Dimension}{Dimension}{Dimension}{}",
+  DefConstructor!("\\Gscale@box@dddd {SetlengthDimension}{SetlengthDimension}{SetlengthDimension}{SetlengthDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#5</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -237,10 +239,14 @@ LoadDefinitions!({
       // lengths with `\setlength`, which calc redefines (calc.sty:86): with
       // calc loaded, `\resizebox{\width}{\ht\cut@boxi+\dp\cut@boxi}` is
       // one expression (perfectcut.sty:119), whose `+\dp\cut@boxi` came
-      // back as text since 56jr (OXIDIZED_DESIGN #317).
-      let dim: Dimension = match braced_length_evaluator() {
-        Some(evaluate) if in_braced_read() => evaluate(RegisterType::Dimension)?.into(),
-        _ => read_dimension()?,
+      // back as text since 56jr (OXIDIZED_DESIGN #317). A package's own
+      // `\setlength` (bxcalc's units) reads it first (OXIDIZED_DESIGN #325).
+      let dim: Dimension = match read_through_redefined_setlength(RegisterType::Dimension)? {
+        Some(value) => value.into(),
+        None => match braced_length_evaluator() {
+          Some(evaluate) if in_braced_read() => evaluate(RegisterType::Dimension)?.into(),
+          _ => read_dimension()?,
+        },
       };
       // Return the raw sp value as tokens for lossless round-trip.
       // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
