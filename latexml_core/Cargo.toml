@@ -54,6 +54,9 @@ token-locators = []
 # direct dependency of latexml_engine / latexml_post / latexml_oxide, so this
 # adds no crate to the tree.
 flate2 = "1"
+# memchr: SIMD byte search for the PDF size and page-count probes (util/image.rs);
+# already in the tree through regex, so it adds no crate.
+memchr = "2"
 once_cell = "1.17.0"
 # Trimmed regex unicode features — see DEP-10 note in
 # latexml_codegen/Cargo.toml. Same set across the workspace.

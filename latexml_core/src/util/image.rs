@@ -881,16 +881,13 @@ pub fn read_pdf_page_box(path: &Path) -> Option<(f64, f64)> {
 
 fn read_pdf_page_box_uncached(path: &Path) -> Option<(f64, f64)> {
   let bytes = read_file_resilient(path)?;
-  if byte_find(&bytes, b"/CropBox").is_some() || byte_find(&bytes, b"/MediaBox").is_some() {
-    let content = String::from_utf8_lossy(&bytes);
-    if let Some(box_) =
-      parse_pdf_box(&content, "/CropBox").or_else(|| parse_pdf_box(&content, "/MediaBox"))
-    {
-      return Some(box_);
-    }
+  if let Some(box_) =
+    parse_pdf_box(&bytes, b"/CropBox").or_else(|| parse_pdf_box(&bytes, b"/MediaBox"))
+  {
+    return Some(box_);
   }
   let inflated = inflate_object_streams(&bytes)?;
-  parse_pdf_box(&inflated, "/CropBox").or_else(|| parse_pdf_box(&inflated, "/MediaBox"))
+  parse_pdf_box(&inflated, b"/CropBox").or_else(|| parse_pdf_box(&inflated, b"/MediaBox"))
 }
 
 /// The page count of a PDF, as pdfTeX's `\pdflastximagepages` reports it
@@ -917,8 +914,7 @@ std::thread_local! {
 
 fn read_pdf_page_count_uncached(path: &Path) -> Option<u32> {
   let bytes = read_file_resilient(path)?;
-  let raw = String::from_utf8_lossy(&bytes);
-  if let Some(n) = max_pages_count(&raw) {
+  if let Some(n) = max_pages_count(&bytes) {
     return Some(n);
   }
   let inflated = inflate_object_streams(&bytes);
@@ -927,7 +923,7 @@ fn read_pdf_page_count_uncached(path: &Path) -> Option<u32> {
   {
     return Some(n);
   }
-  let pages = count_page_objects(&raw) + inflated.as_deref().map_or(0, count_page_objects);
+  let pages = count_page_objects(&bytes) + inflated.as_deref().map_or(0, count_page_objects);
   if pages > 0 { Some(pages) } else { None }
 }
 
@@ -935,23 +931,21 @@ fn read_pdf_page_count_uncached(path: &Path) -> Option<u32> {
 /// `/Type /Pages` (with or without the space) scan forward to the `/Count` at
 /// the dictionary's own brace depth — a nested `/Resources << … >>` before it
 /// must not end the search — stopping at the dictionary's closing `>>`.
-fn max_pages_count(content: &str) -> Option<u32> {
+fn max_pages_count(content: &[u8]) -> Option<u32> {
   let mut best: Option<u32> = None;
-  for key in ["/Type /Pages", "/Type/Pages"] {
-    let mut from = 0;
-    while let Some(rel) = content[from..].find(key) {
-      let start = from + rel + key.len();
-      from = start;
+  for key in [&b"/Type /Pages"[..], b"/Type/Pages"] {
+    for at in memchr::memmem::find_iter(content, key) {
+      let start = at + key.len();
       let mut depth = 0i32;
       let mut i = start;
-      let b = content.as_bytes();
-      while i < b.len() {
-        if b[i] == b'<' && i + 1 < b.len() && b[i + 1] == b'<' {
+      while i < content.len() {
+        let rest = &content[i..];
+        if rest.starts_with(b"<<") {
           depth += 1;
           i += 2;
           continue;
         }
-        if b[i] == b'>' && i + 1 < b.len() && b[i + 1] == b'>' {
+        if rest.starts_with(b">>") {
           if depth == 0 {
             break;
           }
@@ -959,13 +953,8 @@ fn max_pages_count(content: &str) -> Option<u32> {
           i += 2;
           continue;
         }
-        if depth == 0 && content[i..].starts_with("/Count") {
-          let digits: String = content[i + 6..]
-            .trim_start()
-            .chars()
-            .take_while(char::is_ascii_digit)
-            .collect();
-          if let Ok(n) = digits.parse::<u32>() {
+        if depth == 0 && rest.starts_with(b"/Count") {
+          if let Some(n) = leading_u32(trim_start_pdf_whitespace(&rest[6..])) {
             best = Some(best.map_or(n, |b| b.max(n)));
           }
           break;
@@ -977,20 +966,34 @@ fn max_pages_count(content: &str) -> Option<u32> {
   best
 }
 
-fn count_page_objects(content: &str) -> u32 {
+fn count_page_objects(content: &[u8]) -> u32 {
   let mut n = 0;
-  for key in ["/Type /Page", "/Type/Page"] {
-    let mut from = 0;
-    while let Some(rel) = content[from..].find(key) {
-      let at = from + rel + key.len();
+  for key in [&b"/Type /Page"[..], b"/Type/Page"] {
+    for at in memchr::memmem::find_iter(content, key) {
       // `/Page` followed by a delimiter, not `/Pages`.
-      if !content[at..].starts_with('s') {
+      if content.get(at + key.len()) != Some(&b's') {
         n += 1;
       }
-      from = at;
     }
   }
   n
+}
+
+/// PDF's white-space characters: NUL, HT, LF, FF, CR and SP (ISO 32000-1
+/// §7.2.2, Table 1). They separate an array's numbers; nothing else does — a
+/// non-ASCII space next to a digit (a UTF-8 NBSP) is not one, where the earlier
+/// reading of a UTF-8 copy split on any Unicode white space.
+fn is_pdf_whitespace(b: u8) -> bool { matches!(b, 0 | b'\t' | b'\n' | 0x0c | b'\r' | b' ') }
+
+fn trim_start_pdf_whitespace(bytes: &[u8]) -> &[u8] {
+  let skip = bytes.iter().take_while(|&&b| is_pdf_whitespace(b)).count();
+  &bytes[skip..]
+}
+
+/// The run of ASCII digits `bytes` opens with, as a `u32`.
+fn leading_u32(bytes: &[u8]) -> Option<u32> {
+  let len = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
+  std::str::from_utf8(&bytes[..len]).ok()?.parse().ok()
 }
 
 /// Concatenate the inflated contents of every `/Type /ObjStm` in `bytes`.
@@ -1005,7 +1008,7 @@ fn count_page_objects(content: &str) -> u32 {
 /// script, Cairo or matplotlib use for object streams), and only the first
 /// [`MAX_OBJSTM_SCAN`] of them, so a pathological file cannot turn a size probe
 /// into an unbounded decompression.
-fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
+fn inflate_object_streams(bytes: &[u8]) -> Option<Vec<u8>> {
   use std::io::Read;
 
   /// Enough for any real document; a figure PDF has one or two.
@@ -1014,7 +1017,7 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
   /// figure. A page dictionary is a few hundred bytes.
   const MAX_INFLATED: u64 = 8 << 20;
 
-  let mut out = String::new();
+  let mut out = Vec::new();
   let mut from = 0;
   let mut seen = 0;
   while seen < MAX_OBJSTM_SCAN {
@@ -1052,31 +1055,39 @@ fn inflate_object_streams(bytes: &[u8]) -> Option<String> {
       // error is only fatal when nothing at all came out.
       continue;
     }
-    out.push_str(&String::from_utf8_lossy(&buf));
-    out.push('\n');
+    out.extend_from_slice(&buf);
+    out.push(b'\n');
   }
   (!out.is_empty()).then_some(out)
 }
 
 /// Parse `TOKEN [ llx lly urx ury ]` from PDF content, returning `(w, h)`.
-fn parse_pdf_box(content: &str, token: &str) -> Option<(f64, f64)> {
-  let start = content.find(token)? + token.len();
+///
+/// The PDF's bytes are searched as they are. The key, the brackets and the
+/// numbers are ASCII, which a lossy UTF-8 copy keeps in the same order, so the
+/// same box is found; the separators are PDF's own white space
+/// ([`is_pdf_whitespace`]). Making that copy of a whole figure PDF cost, in
+/// release instructions with `--preload=ar5iv.sty`, 18.7 % of arXiv
+/// 2605.13583's conversion, 14.5 % of 2605.09543's and 8.0 % of 2605.08504's.
+fn parse_pdf_box(content: &[u8], token: &[u8]) -> Option<(f64, f64)> {
+  let start = byte_find(content, token)? + token.len();
   let rest = &content[start..];
-  let lb = rest.find('[')?;
-  let rb = rest[lb..].find(']')? + lb;
+  let lb = memchr::memchr(b'[', rest)?;
+  let rb = memchr::memchr(b']', &rest[lb..])? + lb;
   let mut it = rest[lb + 1..rb]
-    .split_whitespace()
-    .filter_map(|s| s.parse::<f64>().ok());
+    .split(|&b| is_pdf_whitespace(b))
+    .filter(|s| !s.is_empty())
+    .filter_map(|s| std::str::from_utf8(s).ok()?.parse::<f64>().ok());
   let (x0, y0, x1, y1) = (it.next()?, it.next()?, it.next()?, it.next()?);
   Some(((x1 - x0).abs(), (y1 - y0).abs()))
 }
 
-/// Byte-level substring search — avoids a UTF-8 conversion for the fast-fail.
+/// Byte-level substring search.
 fn byte_find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
   if needle.is_empty() || needle.len() > haystack.len() {
     return None;
   }
-  haystack.windows(needle.len()).position(|w| w == needle)
+  memchr::memmem::find(haystack, needle)
 }
 
 /// Natural SVG size in pt, from the root `<svg>` element: the root
@@ -1717,6 +1728,51 @@ mod sizing_characterization_tests {
       b"%PDF-1.5\n<< /Type /ObjStm /N 12 /Filter /FlateDecode >>\nstream\nnot-zlib\nendstream\n",
     );
     assert_eq!(read_pdf_page_box(&opaque), None);
+  }
+
+  /// The size and page-count probes search the PDF's bytes, which need not be
+  /// UTF-8 (binary comment line, text strings in a dictionary). A byte that is
+  /// not UTF-8 inside the `/Pages` dictionary, before its `/Count`: the count
+  /// scan sliced a lossy UTF-8 copy of the file at every byte index and
+  /// panicked inside the U+FFFD that byte had become.
+  #[test]
+  fn pdf_probes_read_through_non_utf8_bytes() {
+    let pages = fixture(
+      "p8.pdf",
+      b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n<< /Type /Pages /Title (\xE9t\xE9) /Count 3 >>\n",
+    );
+    assert_eq!(read_pdf_page_count(&pages), Some(3));
+
+    // The box's numbers may be separated by any PDF white space, here FF and HT.
+    let boxed = fixture(
+      "b8.pdf",
+      b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n<< /Title (\xE9) /MediaBox [0\x0c0 200\t100] >>\n",
+    );
+    assert_eq!(read_pdf_page_box(&boxed), Some((200.0, 100.0)));
+
+    // The same through an object stream, and a token that is not UTF-8 in the box.
+    let streamed = fixture(
+      "s8.pdf",
+      &objstm_pdf(b"2 0 << /Type /Pages /T (\xE9) /Count 4 >>"),
+    );
+    assert_eq!(read_pdf_page_count(&streamed), Some(4));
+    let odd = fixture("o8.pdf", b"%PDF-1.4\n<< /MediaBox [0 0 \xFF 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&odd), Some((200.0, 100.0)));
+    // NUL is PDF white space; a UTF-8 NBSP between digits is not.
+    let nul = fixture("n8.pdf", b"%PDF-1.4\n<< /MediaBox [0\x000 200 100] >>\n");
+    assert_eq!(read_pdf_page_box(&nul), Some((200.0, 100.0)));
+    let nbsp = fixture(
+      "nb8.pdf",
+      b"%PDF-1.4\n<< /MediaBox [0 0 200\xC2\xA0100 50] >>\n",
+    );
+    assert_eq!(read_pdf_page_box(&nbsp), None);
+
+    // No `/Pages` dictionary: the `/Type /Page` objects are counted, not `/Pages`.
+    let loose = fixture(
+      "l8.pdf",
+      b"%PDF-1.4\n<< /Type /Page /T (\xFF) >>\n<< /Type/Page >>\n<< /Type /Pagesx >>\n",
+    );
+    assert_eq!(read_pdf_page_count(&loose), Some(2));
   }
 
   /// `natural_size_pt` is the only place a file-read number is actually
