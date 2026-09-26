@@ -14,9 +14,19 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // pdfcomment.sty:25, 1332-1350: the packages it loads, which a document
+  // using it can rely on — calc's expressions above all (dataref-doc.tex:120
+  // `\begin{minipage}{#1-2\fboxsep}`, pdfcomment its only loader of calc).
+  // zref-savepos and soulpos place the PDF annotations; datetime2 dates them.
   RequirePackage!("xkeyval");
+  RequirePackage!("etoolbox");
+  RequirePackage!("refcount");
+  RequirePackage!("ifthen");
+  RequirePackage!("calc");
+  RequirePackage!("marginnote");
+  RequirePackage!("ifpdf");
+  RequirePackage!("ifluatex");
   RequirePackage!("hyperref");
-  RequirePackage!("marginnote"); // pdfcomment.sty:1347
   // pd1enc.def:82 `\DeclareTextCommand{\textCR}{PD1}{\015}` — a line break
   // inside an annotation's text (example.tex:144).
   DefMacro!("\\textCR", "\\newline");

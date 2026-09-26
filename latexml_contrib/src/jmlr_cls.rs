@@ -3,6 +3,8 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // jmlr.cls:46: a paper can rely on its calc (OXIDIZED_DESIGN #317).
+  RequirePackage!("calc");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");

@@ -1,0 +1,22 @@
+% mechanism: graphics.sty:555-568 `\Gscale@box@dd`/`\Gscale@box@dddd` read `\resizebox`'s lengths with
+%   `\setlength`, which calc redefines (calc.sty:86), so with calc loaded a height is one expression.
+%   The binding's GraphixDimension read a plain dimension (Perl: `readDimension`, the rest dropped);
+%   since 56jr the rest `+\dp\bx` came back as text after the box, and `\dp` in horizontal mode read
+%   no number ("Missing number").
+% witness: TL manual perfectcut (4 -> 134 warnings in 56jr; perfectcut.sty:119
+%   `\resizebox{\width}{\ht\cut@boxi+\dp\cut@boxi}{…}`, calc from perfectcut.sty:27)
+% oracle:  pdflatex 0 errors: "AB C", "DEF"; B scaled to the box's height plus depth (8.77pt)
+% engines: rust 56jr = 2 warnings, "+" typeset, B at 6.8pt; perl = B at 6.8pt, silently
+% note:    `!` keeps the aspect ratio; perfectcut's `\width` is 0pt here, as in Perl (graphics.sty.ltxml:61
+%          "Need to arrange for \width,\height,\depth,\totalheight to be bound"; SYNC_STATUS)
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{calc,graphicx}
+\newsavebox\bx
+\begin{document}
+\sbox{\bx}{Hy}
+A\resizebox{!}{\ht\bx+\dp\bx}{B}C
+
+D\resizebox{!}{\ht\bx}{E}F
+\end{document}

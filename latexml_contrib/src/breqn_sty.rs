@@ -1,6 +1,10 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // breqn.sty:56 `\RequirePackage{keyval,calc}`: a document can rely on them
+  // (OXIDIZED_DESIGN #317).
+  RequirePackage!("keyval");
+  RequirePackage!("calc");
   Warn!(
     "missing_file",
     "breqn.sty",

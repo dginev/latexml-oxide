@@ -233,7 +233,15 @@ LoadDefinitions!({
       if let Some(tok) = next {
         unread_one(tok);
       }
-      let dim = read_dimension()?;
+      // graphics.sty:555-568 `\Gscale@box@dd`/`\Gscale@box@dddd` read the
+      // lengths with `\setlength`, which calc redefines (calc.sty:86): with
+      // calc loaded, `\resizebox{\width}{\ht\cut@boxi+\dp\cut@boxi}` is
+      // one expression (perfectcut.sty:119), whose `+\dp\cut@boxi` came
+      // back as text since 56jr (OXIDIZED_DESIGN #317).
+      let dim: Dimension = match braced_length_evaluator() {
+        Some(evaluate) if in_braced_read() => evaluate(RegisterType::Dimension)?.into(),
+        _ => read_dimension()?,
+      };
       // Return the raw sp value as tokens for lossless round-trip.
       // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
       Ok(Tokenize!(TeXString::assembled(dim.value_of().to_string())))

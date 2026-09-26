@@ -101,6 +101,8 @@ LoadDefinitions!({
   // on a long-running worker thread (chemnum resets the same way).
   ANIM_STACK.with(|s| s.borrow_mut().clear());
   RequirePackage!("graphicx");
+  // animate.sty:23: a document can rely on its calc (OXIDIZED_DESIGN #317).
+  RequirePackage!("calc");
 
   // animate.sty:3197-3201: the per-frame `begin`/`end` code keys (the ones
   // the single-frame model consumes; the rest are read and skipped).

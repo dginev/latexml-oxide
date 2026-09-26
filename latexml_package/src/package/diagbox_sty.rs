@@ -40,6 +40,8 @@ fn build_diagbox_invocation(dir: &str, args: Vec<ArgWrap>) -> Tokens {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // diagbox.sty:26: a document can rely on its calc (OXIDIZED_DESIGN #317).
+  RequirePackage!("calc");
   // Ensure <ltx:picture> gets xml:id generation (in case makecell isn't loaded)
   Tag!("ltx:picture", after_open => sub[document, node] {
     let _ = document.generate_id(node, "pic");

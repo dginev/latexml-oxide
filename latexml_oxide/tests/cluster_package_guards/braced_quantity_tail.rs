@@ -442,3 +442,233 @@ fn package_registers_are_dimens() {
   assert_para(&xml, "p1", "<p>[10.0pt][10.0pt][0.0pt]</p>");
   assert_para(&xml, "p2", "<p>[2.5pt][1.5pt]</p>");
 }
+
+/// Self-skip helper: is this file in the host TeX tree?
+fn kpsewhich_has(name: &str) -> bool {
+  std::process::Command::new("kpsewhich")
+    .arg(name)
+    .output()
+    .map(|o| o.status.success() && !o.stdout.is_empty())
+    .unwrap_or(false)
+}
+
+/// multido's Number variable starts as written and steps in fixed point
+/// (multido.tex:193-197, 215-283): `\n=1+1` is `1`, whose calc `\y*\n` has no
+/// `.0` to report; `2.00+-3.05` keeps two decimals. pdflatex's output
+/// (bardiag, bardiag2: 10 and 4 calc errors in 56jr).
+#[test]
+fn multido_number_variable_starts_as_written() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/multido_number_variable_as_written.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_para(&xml, "p1", "<p>[1:1.0pt][2:2.0pt][3:3.0pt]</p>");
+  assert_para(&xml, "p2", "<p>[2.00][-1.05][-4.10]</p>");
+  // A space before the list's end is no decimal.
+  assert_para(&xml, "p3", "<p>[0][0.5][1.0]</p>");
+}
+
+/// pstricks reads an angle argument whole (pstricks.tex:990-999): a
+/// coordinate is the angle of its vector, a node's and PostScript code are
+/// unresolved, and none of the argument is typeset (pst-eucl-docBG's
+/// `\pstMarkAngle`: `(F)(A_1)` and a "Script _" error in 56jr).
+#[test]
+fn pstricks_angle_argument_is_read_whole() {
+  if !kpsewhich_has("pstricks.sty") {
+    return;
+  }
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/pstricks_angle_argument_read_whole.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("The PostScript length '! 0.5 2 mul' is not evaluated"),
+    "{stderr}"
+  );
+  // The (1,1) and (0,1) angles are 45 and 90 degrees, `\diag` expands to
+  // (1,1); the arcs at a node's and a PostScript angle are not drawn, and the
+  // PostScript radius is 0.
+  assert_para(
+    &xml,
+    "p1",
+    r#"<picture fill="none" height="113.81pt" stroke="none" unitlength="28.45pt" width="113.81pt" xml:id="p1.pic1">
+      <arc angle1="45" angle2="90" fill="none" r="39.37" stroke="black" stroke-width="0.8" x="0" y="0"/>
+      <arc angle1="45" angle2="180" fill="none" r="19.69" stroke="black" stroke-width="0.8" x="0" y="0"/>
+      <circle fill="none" r="0" stroke="black" stroke-width="0.8" x="39.37" y="39.37"/>
+    </picture><p>Z</p>"#,
+  );
+}
+
+/// nicematrix's `X[<keys>]` column takes its keys, `c` centring the cells
+/// (nicematrix.sty:2788-2826); read as columns, `m]` was an `m` column of
+/// width `]` (nicematrix manuals: 5 calc errors each in 56jr).
+#[test]
+fn nicematrix_x_column_takes_its_keys() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/nicematrix_x_column_keys.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r#"<tr>
+      <td align="left"><inline-block vattach="top"><p align="center">a rather long text</p></inline-block></td>
+      <td align="left"><inline-block vattach="top"><p align="center">another text</p></inline-block></td>
+    </tr>"#,
+  );
+  // `X[r]` right-aligns its cell (`\raggedleft`); `X[m]` and `X` justify.
+  assert_element(
+    &xml,
+    "p",
+    &[r#"class="ltx_align_right""#],
+    r#"<p class="ltx_align_right">B</p>"#,
+  );
+  assert_eq!(xml.matches("ltx_align_right").count(), 1, "{xml}");
+}
+
+/// tabularray's `\NewColumnType` defines a column type whose body, its
+/// arguments put in, is more colspec (tabularray.sty:3291-3334): `Y` is its
+/// default `Q[c]`. A no-op, the spec became the template and a `b` read `l`
+/// as its width (non-decimal-units: 11 -> 15 errors in 56jr).
+#[test]
+fn tabularray_new_column_type_expands() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/tabularray_new_column_type.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r#"<tr>
+      <td align="right">a</td>
+      <td align="right" border="r">1.2.3</td>
+      <td align="center">x</td>
+      <td align="left">u</td>
+    </tr>"#,
+  );
+}
+
+/// tabularray's rule options `|[1pt]`, `|[dashed]` and its `j`/`t{…}` columns
+/// are part of the colspec (tabularray.sty:3172-3181, 3336-3346); bailing on
+/// them made the spec the template (logoetalab-doc: 0 -> 2 errors in 56jr).
+#[test]
+fn tabularray_rule_options_are_colspec() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/tabularray_rule_options_colspec.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "tr",
+    &[],
+    r#"<tr>
+      <td align="left" border="l r" thead="row">alpha</td>
+      <td align="left" vattach="top"><inline-block vattach="top" width="56.9pt"><p>beta</p></inline-block></td>
+    </tr>"#,
+  );
+}
+
+/// With calc, `\resizebox`'s height is one expression (graphics.sty:555-568
+/// `\setlength`): `\ht\bx+\dp\bx` scales B to 8.8pt, its width in
+/// proportion (`!`), and nothing of it is typeset (perfectcut: 4 -> 134
+/// warnings in 56jr).
+#[test]
+fn calc_evaluates_a_resizebox_length() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/calc_resizebox_length_expression.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_para(
+    &xml,
+    "p1",
+    r#"<p>A<inline-block depth="0.0pt" height="8.8pt" width="9.1pt" xscale="1.28455344462606" xtranslate="1.0pt" yscale="1.28455344462606" ytranslate="-1.0pt"><p>B</p></inline-block>C</p>"#,
+  );
+  assert_para(
+    &xml,
+    "p2",
+    r#"<p>D<inline-block depth="0.0pt" height="6.8pt" width="6.8pt" xscale="1" xtranslate="0.0pt" yscale="1" ytranslate="0.0pt"><p>E</p></inline-block>F</p>"#,
+  );
+}
+
+/// `\DeclareTextAccent` keeps its slot argument in the command it defines
+/// (latex.ltx:9903-9904): nothing after the slot comes back as input
+/// (amsldoc-vi: 2 tail warnings in 56jr).
+#[test]
+fn declare_text_accent_keeps_its_slot() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/declare_text_accent_slot_stays_stored.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    !stderr.contains("Unexpected text after the value"),
+    "{stderr}"
+  );
+  // The one warning: the slot is not a number (read at declaration, as Perl).
+  assert!(
+    stderr.contains("Missing number, treated as zero"),
+    "{stderr}"
+  );
+  assert_para(&xml, "p1", "<p>X</p>");
+}
+
+/// pdfcomment loads calc and ifthen (pdfcomment.sty:1345-1346): the minipage
+/// is `\linewidth-2\fboxsep` wide, nothing of it typeset, and `\ifthenelse`
+/// is defined (dataref-doc: 6 -> 58 warnings in 56jr).
+#[test]
+fn pdfcomment_loads_calc_and_ifthen() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/pdfcomment_loads_calc_and_ifthen.tex"
+  );
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p1""#],
+    r#"<para class="ltx_minipage" vattach="middle" width="339.0pt" xml:id="p1"><p>A</p></para>"#,
+  );
+  assert_para(&xml, "p2", "<p>B</p>");
+  assert_para(&xml, "p3", "<p>C</p>");
+}
+
+/// A binding loads calc where its package does (diagbox.sty:26, animate.sty:23,
+/// savetrees.sty:194 by default, breqn.sty:56, jmlr.cls:46): a document's
+/// `\linewidth-2cm` is one expression, whose `-2cm` 56jr typeset otherwise.
+#[test]
+fn bindings_load_calc_where_their_packages_do() {
+  let body =
+    "\\begin{document}\n\\begin{minipage}{\\linewidth-2cm}A\\end{minipage}B\n\\end{document}\n";
+  let minipage =
+    r#"<para class="ltx_minipage" vattach="middle" width="288.1pt" xml:id="p1"><p>A</p></para>"#;
+  for (preamble, warnings) in [
+    ("\\documentclass{article}\\usepackage{diagbox}", 0),
+    ("\\documentclass{article}\\usepackage{animate}", 0),
+    ("\\documentclass{article}\\usepackage{savetrees}", 0),
+    // The stub's own "breqn.sty is not implemented" warning.
+    ("\\documentclass{article}\\usepackage{breqn}", 1),
+    ("\\documentclass{jmlr}", 0),
+  ] {
+    let (stderr, xml) = convert(&format!("{preamble}\n{body}"), true);
+    assert_eq!(error_count(&stderr), 0, "{preamble}\n{stderr}");
+    assert_eq!(warning_count(&stderr), warnings, "{preamble}\n{stderr}");
+    assert_element(&xml, "para", &[r#"xml:id="p1""#], minipage);
+    assert_para(&xml, "p2", "<p>B</p>");
+  }
+}

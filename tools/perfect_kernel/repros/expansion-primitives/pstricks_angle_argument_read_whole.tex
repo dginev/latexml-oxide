@@ -1,0 +1,29 @@
+% mechanism: pstricks `\xdef`s an angle argument and reads it whole (pstricks.tex:790-802, 990-999
+%   `\special@angle#1#2)#3\@nil`, SpecialCoor): `(x,y)` is the angle of that vector, a node's `(F)`
+%   and `! <code>` are resolved in PostScript, text after a number is `\pst@checknum`'s "Bad number"
+%   (:534-563); `! <code>` is also a PostScript length (:1001-1004 `\special@length`). The binding's PSAngle read only names and
+%   numbers ("Missing argument PSAngle", as Perl), and since 56jr handed the unread argument back as
+%   text: `(F)(A_1)` typeset after the arc, `A_1` a "Script _" error; `! 0.5 2 mul` after the circle.
+% witness: TL manual pst-eucl-docBG (27 -> 28 errors in 56jr; pst-eucl.tex:528 `\pstMarkAngle`'s
+%   `\psarc(0,0){\psk@MarkAngleRadius}{(#2)}{(#4)}`), 8 arcs
+% oracle:  latex (DVI; pdflatex cannot run pstricks) 0 errors; "Z" is the only text
+% engines: rust 56jr = 6 errors, the arguments typeset; perl = angles 0 (dropped silently), 1 error
+%          (`\pnode`'s name `A_1` typeset); rust after: angles 45/90 for (1,1)/(0,1), 45/180 for
+%          `\diag`; the node and PostScript arcs are not drawn (their angles are unresolved)
+% expect:  0 errors, 1 warning (the PostScript length is not evaluated)
+% engine:  latex
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{pstricks,pst-node}
+\def\diag{(1,1)}
+\begin{document}
+\begin{pspicture}(4,4)
+\pnode(3,0){F}\pnode(0,3){A_1}
+\psarc(0,0){1}{(1,1)}{(0,1)}
+\psarc(0,0){1.5}{(F)}{(A_1)}
+\psarc(0,0){2}{! 10 20 add}{90}
+\psarc(0,0){0.5}{\diag}{180}
+\pscircle(1,1){ ! 0.5 2 mul}
+\end{pspicture}
+Z
+\end{document}

@@ -17,9 +17,87 @@ use latexml_package::prelude::*;
 /// `None` on anything it does not fully understand** (e.g. `S` siunitx columns),
 /// so the caller falls back to the unchanged stub behaviour — the column count
 /// is therefore always either correct or exactly as before, never worse.
+#[cfg(test)]
 fn translate_tblr_colspec(inner: &str) -> Option<String> {
+  translate_tblr_colspec_with(inner, &|_| None)
+}
+
+/// [`translate_tblr_colspec`] with the column types `\NewColumnType` defined
+/// (`types`, by name).
+fn translate_tblr_colspec_with(inner: &str, types: ColumnTypes) -> Option<String> {
   let spec = extract_colspec_value(inner)?;
-  parse_colspec(&spec)
+  parse_colspec(&spec, types)
+}
+
+/// A column type `\NewColumnType{<name>}[<n>][<default>]{<body>}` defined
+/// (tabularray.sty:3291-3334: an xparse command `tblr_Column_type_<name>`
+/// whose `n` arguments, the first optional when a default is given, are put
+/// into `body`, which is then read as more colspec).
+struct TblrColumnType {
+  nargs:   usize,
+  default: Option<String>,
+  body:    String,
+}
+
+/// The `\NewColumnType`s of the document, by name.
+type ColumnTypes<'a> = &'a dyn Fn(char) -> Option<TblrColumnType>;
+
+/// The State key of a `\NewColumnType`.
+fn tblr_column_type_key(name: &str) -> String { s!("tblr_column_type_{name}") }
+
+/// The `\NewColumnType` named `name`, if the document defined one.
+fn tblr_column_type(name: char) -> Option<TblrColumnType> {
+  let Some(Stored::Strings(fields)) = lookup_value(&tblr_column_type_key(&name.to_string())) else {
+    return None;
+  };
+  let [nargs, has_default, default, body] = &fields[..] else {
+    return None;
+  };
+  Some(TblrColumnType {
+    nargs:   to_string(*nargs).parse().unwrap_or(0),
+    default: (to_string(*has_default) == "1").then(|| to_string(*default)),
+    body:    to_string(*body),
+  })
+}
+
+/// Expand a use of `ty` at `*i` (after its name) into its body, advancing past
+/// its arguments; `None` when an argument is missing or unbalanced.
+fn expand_tblr_column_type(
+  ty: &TblrColumnType,
+  b: &[u8],
+  spec: &str,
+  i: &mut usize,
+) -> Option<String> {
+  let mut args: Vec<String> = Vec::with_capacity(ty.nargs);
+  for n in 0..ty.nargs {
+    while *i < b.len() && (b[*i] as char).is_ascii_whitespace() {
+      *i += 1;
+    }
+    if n == 0
+      && let Some(default) = &ty.default
+    {
+      if *i < b.len() && b[*i] == b'[' {
+        let close = spec[*i..].find(']')? + *i;
+        args.push(spec[*i + 1..close].to_string());
+        *i = close + 1;
+      } else {
+        args.push(default.clone());
+      }
+      continue;
+    }
+    if *i < b.len() && b[*i] == b'{' {
+      args.push(parse_braced_group(b, spec, i)?);
+    } else {
+      let c = spec[*i..].chars().next()?;
+      args.push(c.to_string());
+      *i += c.len_utf8();
+    }
+  }
+  let mut body = ty.body.clone();
+  for (n, arg) in args.iter().enumerate().rev() {
+    body = body.replace(&s!("#{}", n + 1), arg);
+  }
+  Some(body)
 }
 
 /// Find `colspec` in the key-value inner spec and return its value text.
@@ -74,9 +152,9 @@ fn extract_colspec_value(inner: &str) -> Option<String> {
 
 /// Parse a tabularray colspec body into a classic `\tabular` template, or `None`
 /// if it contains a construct we don't translate (bail → stub fallback).
-fn parse_colspec(spec: &str) -> Option<String> {
+fn parse_colspec(spec: &str, types: ColumnTypes) -> Option<String> {
   let mut total = 0usize;
-  parse_colspec_capped(spec, 0, &mut total)
+  parse_colspec_capped(spec, 0, &mut total, types)
 }
 
 /// Caps: recursion depth ≤ 8 and ≤ 512 total columns — nested `*{n}{…}`
@@ -84,7 +162,12 @@ fn parse_colspec(spec: &str) -> Option<String> {
 /// `*{1}{…}` nesting is otherwise unbounded recursion (PR_READINESS
 /// should-fix 13). Exceeding a cap bails to the stub, like any other
 /// untranslatable spec.
-fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<String> {
+fn parse_colspec_capped(
+  spec: &str,
+  depth: usize,
+  total: &mut usize,
+  types: ColumnTypes,
+) -> Option<String> {
   if depth > 8 {
     return None;
   }
@@ -95,8 +178,21 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
     let c = b[i] as char;
     match c {
       ' ' | '\t' | '\n' | '\r' => i += 1,
+      // tabularray.sty:3172-3181 `|` takes `O{}` rule options (`|[1pt]`,
+      // `|[dashed]`): styling, dropped (logoetalab-doc.tex:143
+      // `colspec={|[1pt]X[j]}`; bailing left the keys to be read as columns).
       '|' => {
         cols.push('|');
+        i += 1;
+        skip_bracket_group(b, &mut i)?;
+      },
+      // tabularray.sty:3339 `j` is `Q[j]`, justified: the default alignment.
+      'j' => {
+        cols.push('l');
+        *total += 1;
+        if *total > 512 {
+          return None;
+        }
         i += 1;
       },
       'c' | 'l' | 'r' => {
@@ -145,7 +241,18 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
           return None;
         }
       },
-      // p/m/b{width}: copy verbatim (classic understands these).
+      // p/m/b{width}: copy verbatim (classic understands these); tabularray's
+      // t/h/f{width} (:3341-3346, `Q[t,wd=#1]`, …) are top/head/foot-aligned
+      // paragraph columns, a `p` here.
+      't' | 'h' | 'f' => {
+        i += 1;
+        let width = parse_braced_group(b, spec, &mut i)?;
+        cols.push_str(&s!("p{{{width}}}"));
+        *total += 1;
+        if *total > 512 {
+          return None;
+        }
+      },
       'p' | 'm' | 'b' => {
         let start = i;
         i += 1;
@@ -185,7 +292,7 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
         // Count the sub-spec's columns once, then charge n× the delta so the
         // TOTAL cap holds under multiplication.
         let before = *total;
-        let sub_cols = parse_colspec_capped(&sub, depth + 1, total)?;
+        let sub_cols = parse_colspec_capped(&sub, depth + 1, total, types)?;
         let per = *total - before;
         let extra = per.checked_mul(n.saturating_sub(1))?;
         *total = total.checked_add(extra)?;
@@ -205,6 +312,15 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
       '@' | '!' | '>' | '<' => {
         let start = i;
         i += 1;
+        // tabularray.sty:3194, :3234 `>`/`<` take `O{} m`: the optional is the
+        // column's inner separation, dropped.
+        let classic_start = if matches!(c, '>' | '<') && i < b.len() && b[i] == b'[' {
+          skip_bracket_group(b, &mut i)?;
+          cols.push(c);
+          i
+        } else {
+          start
+        };
         if i < b.len() && b[i] == b'{' {
           let mut depth = 0usize;
           while i < b.len() {
@@ -222,15 +338,38 @@ fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<S
           if depth != 0 {
             return None;
           }
-          cols.push_str(&spec[start..i]);
+          cols.push_str(&spec[classic_start..i]);
         } else {
           return None;
         }
       },
-      _ => return None, // unknown column type → bail to the stub
+      // A `\NewColumnType`: its body, with its arguments, is more colspec
+      // (non-decimal-units.sty:778 `\NewColumnType{#1}[2]{Q[r, cmd=…]}`,
+      // `U{danish rigsdaler}{add to variable=…}`: bailing left the keys to
+      // be read as columns, whose `b` read `l` as a width).
+      _ => {
+        let ty = types(c)?;
+        i += c.len_utf8();
+        let body = expand_tblr_column_type(&ty, b, spec, &mut i)?;
+        cols.push_str(&parse_colspec_capped(&body, depth + 1, total, types)?);
+      },
     }
   }
   if cols.is_empty() { None } else { Some(cols) }
+}
+
+/// Skip a `[…]` group at `*i` (after spaces), if there is one; `None` when it
+/// is unclosed.
+fn skip_bracket_group(b: &[u8], i: &mut usize) -> Option<()> {
+  let mut j = *i;
+  while j < b.len() && (b[j] == b' ' || b[j] == b'\t') {
+    j += 1;
+  }
+  if j < b.len() && b[j] == b'[' {
+    let close = b[j..].iter().position(|&c| c == b']')? + j;
+    *i = close + 1;
+  }
+  Some(())
 }
 
 /// Parse a `{<digits>}` group at `*i`, advancing past it. Returns the integer.
@@ -356,6 +495,47 @@ mod tests {
     ); // siunitx S
     assert_eq!(translate_tblr_colspec("hlines,vlines"), None); // no colspec
     assert_eq!(translate_tblr_colspec("colspec={Q[c]z}"), None); // unknown 'z'
+    // Rule options, `>[sep]{…}`, `j` and `t{…}` columns.
+    assert_eq!(
+      translate_tblr_colspec("width=15cm,colspec={|[1pt]X[j]},cells={font=\\footnotesize}")
+        .as_deref(),
+      Some("|l")
+    );
+    assert_eq!(
+      translate_tblr_colspec("colspec={>[2pt]{\\bfseries}j|[dashed]t{2cm}}").as_deref(),
+      Some(">{\\bfseries}l|p{2cm}")
+    );
+  }
+
+  #[test]
+  fn new_column_types_expand_into_colspec() {
+    use super::{TblrColumnType, translate_tblr_colspec_with};
+    let types = |name: char| match name {
+      'U' => Some(TblrColumnType {
+        nargs:   2,
+        default: None,
+        body:    String::from("Q[r, cmd=\\cell {#1} {#2}]"),
+      }),
+      'Y' => Some(TblrColumnType {
+        nargs:   1,
+        default: Some(String::from("c")),
+        body:    String::from("Q[#1]"),
+      }),
+      _ => None,
+    };
+    assert_eq!(
+      translate_tblr_colspec_with(
+        "r U{danish rigsdaler}{add to variable=total}| U{a}{b}",
+        &types
+      )
+      .as_deref(),
+      Some("rr|r")
+    );
+    assert_eq!(
+      translate_tblr_colspec_with("Y Y[l]", &types).as_deref(),
+      Some("cl")
+    );
+    assert_eq!(translate_tblr_colspec_with("U{a}", &types), None); // missing argument
   }
 }
 
@@ -389,7 +569,7 @@ LoadDefinitions!({
     } else {
       format!("{stored},{inner_str}")
     };
-    let cols = match translate_tblr_colspec(&combined) {
+    let cols = match translate_tblr_colspec_with(&combined, &tblr_column_type) {
       Some(c) => c,
       None if extract_colspec_value(&combined).is_none() => String::from("*{32}{l}"),
       None => inner_str,
@@ -493,7 +673,39 @@ LoadDefinitions!({
     Ok(TokenizeInternal!(TeXString::assembled(format!(
       "\\@ifundefined{{{n}}}{{\\newenvironment{{{n}}}{{\\lx@tblr@env{{{n}}}}}{{\\endtabular}}}}{{}}"))))
   });
-  def_macro_noop("\\NewColumnType{}[]{}")?;
+  // tabularray.sty:3291-3297 `\NewTblrColumnType{<name>}[<n>][<default>]
+  // {<body>}` (`m O{0} o m`) and its alias `\NewColumnType`: recorded for the
+  // colspec translation (`expand_tblr_column_type`). Row types have no place
+  // in the reduction.
+  // `\NewTblrColumnRowType`/`\NewColumnRowType` (:3306-3313) define the type
+  // for rows too, which the reduction has no use for.
+  for cs in [
+    "\\NewTblrColumnType",
+    "\\NewColumnType",
+    "\\NewTblrColumnRowType",
+    "\\NewColumnRowType",
+  ] {
+    DefMacro!(T_CS!(cs), "{}[][]{}", sub[(name, nargs, default, body)] {
+      let nargs = if nargs.is_none() { String::from("0") } else { nargs.to_string().trim().to_string() };
+      let (has_default, default) = if default.is_none() {
+        ("0", String::new())
+      } else {
+        ("1", default.to_string())
+      };
+      let fields: Vec<SymStr> = vec![
+        pin(nargs),
+        pin(String::from(has_default)),
+        pin(default),
+        pin(body.to_string()),
+      ];
+      assign_value(
+        &tblr_column_type_key(name.to_string().trim()),
+        Stored::Strings(fields.into()),
+        Some(Scope::Global),
+      );
+      Ok(Tokens!())
+    });
+  }
   def_macro_noop("\\NewTblrTheme{}{}")?;
   // Template API (tabularray.sty:5673-5807): `\DeclareTblrTemplate` is the
   // primary and `\DefTblrTemplate` its alias (:5680); `\UseTblrTemplate`

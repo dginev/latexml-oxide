@@ -101,14 +101,45 @@ fn read_ps_float() -> Result<Option<f64>> {
   Ok(Some(if negative { -value } else { value }))
 }
 
+/// pstricks `\xdef`s an angle or length argument before it looks at it
+/// (pstricks.tex:790-802, SpecialCoor's `\pssetlength`/`\pst@@getangle`):
+/// inside a braced argument, its rest is fully expanded here, so a macro that
+/// expands to `(1,1)` or `! code` is seen as one.
+fn ps_expand_braced_rest() -> Result<()> {
+  let rest = take_rest_of_mouth();
+  if !rest.is_empty() {
+    unread(do_expand(Tokens::new(rest))?);
+  }
+  Ok(())
+}
+
 /// Perl `ReadPSDimension` (pstricks_support.sty.ltxml:25-38): a dimension
 /// register, a number with a unit, or a bare number scaled by `scale`
 /// (`\psunit` by default). In points.
+///
+/// In a braced argument, `! <code>` is a PostScript length (pstricks.tex:
+/// 1001-1004 `\special@length`), which takes the whole argument: this port
+/// cannot run it, so it is zero, and none of it comes back as text (the tail
+/// of a plain length does, as from `\special@length`'s assignment `#3
+/// #1#2\@psunit`; OXIDIZED_DESIGN #317).
 fn read_ps_dimension(scale: Option<f64>) -> Result<f64> {
   let scale = match scale {
     Some(s) => s,
     None => ps_register_pt("\\psunit", PS_CM)?,
   };
+  if in_braced_read() {
+    ps_expand_braced_rest()?;
+    skip_spaces()?;
+  }
+  if in_braced_read() && if_next(T_OTHER!("!"))? {
+    let code = Tokens::new(take_rest_of_mouth());
+    Warn!(
+      "unexpected",
+      "!",
+      s!("The PostScript length '{code}' is not evaluated; treated as zero.")
+    );
+    return Ok(0.0);
+  }
   let sign = if read_optional_signs()? { -1.0 } else { 1.0 };
   if let Some(value) = read_register_value_coerce(RegisterType::Dimension, true)? {
     let d: Dimension = value.into();
@@ -400,13 +431,19 @@ fn ps_set_radius(whatsit: &mut Whatsit, n: usize) {
   }
 }
 
-/// `angle1`/`angle2` of a wedge or arc (`&trunc2(#n)`).
-fn ps_set_angles(whatsit: &mut Whatsit, n1: usize, n2: usize) {
+/// `angle1`/`angle2` of a wedge or arc (`&trunc2(#n)`); whether both are
+/// resolved. An arc at angles it does not have (a node's, PostScript's) is
+/// geometry pdflatex never draws, as for an unresolved coordinate
+/// (`ps_arg_coord`); Perl draws it from 0°.
+fn ps_set_angles(whatsit: &mut Whatsit, n1: usize, n2: usize) -> bool {
+  let mut resolved = true;
   for (key, n) in [("angle1", n1), ("angle2", n2)] {
-    if let Some(angle) = ps_trunc2(ps_angle_arg(whatsit.get_arg(n))) {
-      whatsit.set_property(key, Stored::from(angle));
+    match ps_trunc2(ps_angle_arg(whatsit.get_arg(n))) {
+      Some(angle) => whatsit.set_property(key, Stored::from(angle)),
+      None => resolved = false,
     }
   }
+  resolved
 }
 
 /// `\pscurve`, `\psecurve`, `\psccurve` (Perl :783-796): the points of the
@@ -483,7 +520,22 @@ fn ps_named_angle(name: &str) -> f64 {
 /// scaled to 360. A `*` angle undoes the accumulated `\rput` rotation
 /// (`_psActiveSRotation`), which this port does not track: `\rput`'s
 /// rotation is dropped with the rest of its placement transform.
+///
+/// In its braced argument (`{PSAngle}`), the angle is read as pstricks reads
+/// it, whole (pstricks.tex:990-999 `\special@angle#1#2)#3\@nil`, SpecialCoor):
+/// a coordinate `(x,y)` is the angle of that vector (`\pst@coor exch
+/// \tx@Atan`), a node's `(A)` one this port cannot place, as `! <code>` is
+/// PostScript it cannot run — both an unresolved angle, whose arc or wedge is
+/// not drawn (`ps_set_angles`; pst-eucl.tex:528 `\psarc(0,0){…}{(#2)}{(#4)}`:
+/// `\pstMarkAngle`) — and text after a number is `\pst@checknum`'s "Bad
+/// number", 0 substituted (:534-563). The argument is expanded first, as
+/// pstricks `\xdef`s it (`ps_expand_braced_rest`). Perl's reader takes neither
+/// form (angle 0, the rest dropped); none of the argument may come back as
+/// text (OXIDIZED_DESIGN #317).
 fn read_ps_angle() -> Result<ArgWrap> {
+  if in_braced_read() {
+    ps_expand_braced_rest()?;
+  }
   skip_spaces()?;
   for prefix in [":", "*"] {
     if if_next(T_OTHER!(prefix))? {
@@ -491,6 +543,50 @@ fn read_ps_angle() -> Result<ArgWrap> {
       skip_spaces()?;
     }
   }
+  if in_braced_read() {
+    if if_next(T_OTHER!("!"))? {
+      take_rest_of_mouth();
+      return Ok(ArgWrap::Tokens(Tokens::new(Vec::new())));
+    }
+    if if_next(T_OTHER!("("))? {
+      let coord = read_ps_coord()?;
+      take_rest_of_mouth();
+      return Ok(match coord {
+        Some(PsCoord::Point(x, y)) if x != 0.0 || y != 0.0 => {
+          ArgWrap::Float(Float(y.atan2(x).to_degrees().rem_euclid(360.0)))
+        },
+        // PostScript's `atan` of (0,0) fails; `\tx@Atan` stops it with 0.
+        Some(PsCoord::Point(..)) => ArgWrap::Float(Float(0.0)),
+        _ => ArgWrap::Tokens(Tokens::new(Vec::new())),
+      });
+    }
+    // No angle at all is the caller's "Missing argument"; its text goes too.
+    let angle = read_ps_angle_value()?;
+    let rest = take_rest_of_mouth();
+    // An undefined control sequence the scan met was reported; TeX discards
+    // it (as `read_braced` does).
+    if !matches!(angle, ArgWrap::None)
+      && let Some(first) = rest
+        .iter()
+        .find(|t| t.get_catcode() != Catcode::SPACE && !is_error_stub(t))
+    {
+      Error!(
+        "unexpected",
+        first.stringify(),
+        s!(
+          "Bad number: text '{}' after the angle. 0 substituted.",
+          Tokens::new(rest.clone())
+        )
+      );
+      return Ok(ArgWrap::Float(Float(0.0)));
+    }
+    return Ok(angle);
+  }
+  read_ps_angle_value()
+}
+
+/// The direction name or number of a `PSAngle`, after its prefixes.
+fn read_ps_angle_value() -> Result<ArgWrap> {
   let mut name = String::new();
   for letter in [
     "N", "W", "S", "E", "U", "L", "D", "R", "u", "d", "l", "r", "u", "d",
@@ -1320,8 +1416,8 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       after_ps_object(whatsit, "\\pswedge", &["fill", "linecolor", "linewidth", "dash"], |whatsit| {
         ps_set_radius(whatsit, 3);
-        ps_set_angles(whatsit, 4, 5);
-        Ok(ps_set_center(whatsit, 2))
+        let angles = ps_set_angles(whatsit, 4, 5);
+        Ok(ps_set_center(whatsit, 2) && angles)
       })
     });
   // One pair is the radii of an ellipse centred at the origin (:728); a
@@ -1357,10 +1453,10 @@ LoadDefinitions!({
       after_ps_object(whatsit, "\\psarc",
         &["fill", "linecolor", "linewidth", "dash", "showpoints", "arcsepA", "arcsepB"], |whatsit| {
         ps_set_radius(whatsit, 4);
-        ps_set_angles(whatsit, 5, 6);
+        let angles = ps_set_angles(whatsit, 5, 6);
         let arrows = ps_arrows_arg(whatsit, 2);
         ps_terminators(whatsit, arrows)?;
-        Ok(ps_set_center(whatsit, 3))
+        Ok(ps_set_center(whatsit, 3) && angles)
       })
     });
   // The clockwise arc: angles and arc separations swapped, arrows reversed
@@ -1376,10 +1472,10 @@ LoadDefinitions!({
       after_ps_object(whatsit, "\\psarcn",
         &["fill", "linecolor", "linewidth", "dash", "showpoints", "arcsepA", "arcsepB"], |whatsit| {
         ps_set_radius(whatsit, 4);
-        ps_set_angles(whatsit, 5, 6);
+        let angles = ps_set_angles(whatsit, 5, 6);
         let arrows = ps_arrows_arg(whatsit, 2).and_then(|a| ps_reverse_arrow(&a));
         ps_terminators(whatsit, arrows)?;
-        Ok(ps_set_center(whatsit, 3))
+        Ok(ps_set_center(whatsit, 3) && angles)
       })
     });
 

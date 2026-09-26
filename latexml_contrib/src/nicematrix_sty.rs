@@ -135,35 +135,70 @@ fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
   (fr, fc, rects)
 }
 
-/// Strip nicematrix's rule-option brackets from a colspec token stream:
-/// `|[color=blue,start=2]` → `|` (nicematrix.sty attaches an optional
-/// `[keys]` to the `|` specifier for rule color/thickness — styling the
-/// standard template reader must not see, or every following letter of the
-/// key text is miscounted as a column and the whole tabular desyncs — the
-/// nicematrix manual's ×54 `Extra alignment tab` cascade + a readBalanced
-/// runaway to EOF).
+/// Rewrite nicematrix's own column options, which the standard template
+/// reader must not see (nicematrix parses its preamble itself,
+/// nicematrix.sty `\__nicematrix_rec_preamble:n`):
+/// - `|[color=blue,start=2]` → `|`: the rule color/thickness keys are styling;
+///   unstripped, every following letter of the key text is miscounted as a
+///   column and the whole tabular desyncs (the nicematrix manual's ×54 `Extra
+///   alignment tab` cascade + a readBalanced runaway to EOF).
+/// - `X[<keys>]` → `X`, after the `>{…}` of the horizontal position the keys
+///   give (:2788-2826 `\__nicematrix_make_preamble_X_i:n` sets the
+///   `nicematrix / p-column` keys, :2390; `c`/`l`/`r` are `\centering`/
+///   `\raggedright`/`\raggedleft`, :2400-2415, justified without one); the
+///   weight and the vertical position are print layout. Unstripped, `X[c,m]`
+///   read an `m` column of width `]`, which calc reports (nicematrix manual
+///   ×5, `X[0.5,c,m]`, `X[m]`).
 fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
+  let is_char = |t: &Token, c: &str| t.get_catcode() != Catcode::CS && t.with_str(|s| s == c);
   let mut out: Vec<Token> = Vec::with_capacity(toks.len());
   let mut i = 0;
   while i < toks.len() {
     let t = toks[i];
-    out.push(t);
-    let is_bar = t.get_catcode() != Catcode::CS && t.with_str(|s| s == "|");
-    if is_bar
-      && let Some(next) = toks.get(i + 1)
-      && next.get_catcode() != Catcode::CS
-      && next.with_str(|s| s == "[")
-    {
-      // skip to the matching ]
-      let mut j = i + 2;
-      while j < toks.len()
-        && !(toks[j].get_catcode() != Catcode::CS && toks[j].with_str(|s| s == "]"))
+    let is_bar = is_char(&t, "|");
+    let is_x = t.get_catcode() == Catcode::LETTER && t.with_str(|s| s == "X");
+    // `\__nicematrix_X: #1 #2` reads the next token as an undelimited
+    // argument, past spaces.
+    let mut open = i + 1;
+    if is_x {
+      while toks
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
       {
-        j += 1;
+        open += 1;
       }
-      i = j + 1;
+    }
+    if (is_bar || is_x) && toks.get(open).is_some_and(|next| is_char(next, "[")) {
+      let mut close = open + 1;
+      while close < toks.len() && !is_char(&toks[close], "]") {
+        close += 1;
+      }
+      if is_x {
+        let keys = Tokens::new(toks[open + 1..close.min(toks.len())].to_vec()).to_string();
+        let hpos = keys
+          .split(',')
+          .map(str::trim)
+          .rfind(|key| matches!(*key, "c" | "l" | "r"));
+        if let Some(hpos) = hpos {
+          let ragged = match hpos {
+            "c" => "\\centering",
+            "l" => "\\raggedright",
+            _ => "\\raggedleft",
+          };
+          out.extend([
+            T_OTHER!(">"),
+            T_BEGIN!(),
+            T_CS!(ragged),
+            T_CS!("\\arraybackslash"),
+            T_END!(),
+          ]);
+        }
+      }
+      out.push(t);
+      i = close + 1;
       continue;
     }
+    out.push(t);
     i += 1;
   }
   out

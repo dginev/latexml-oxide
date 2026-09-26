@@ -1,0 +1,23 @@
+% mechanism: nicematrix parses its preamble itself; its `X[<keys>]` column takes the `nicematrix /
+%   p-column` keys (nicematrix.sty:2788-2826, :2390-2415: `c`/`l`/`r` -> \centering/\raggedright/
+%   \raggedleft, a weight, a vertical position). The binding handed `X[c,m]` to the standard
+%   template reader, which read `[`, `c`, `,` as columns and `m]` as an `m` column of width `]`;
+%   since calc evaluates a braced length whole (56jr) that is "`]' invalid at this point".
+% witness: TL manuals nicematrix, nicematrix-french (0 -> 5 errors each in 56jr; `X[c,m]X[0.5,c,m]`,
+%   `X[m]X[m]X[m]`)
+% oracle:  pdflatex 0 errors; the first table's cells centered
+% engines: rust 56jr = 3 errors, 14 warnings; perl = 109 errors (no nicematrix binding)
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{calc,nicematrix}
+\begin{document}
+\begin{NiceTabular}[width=9cm]{X[c,m]X[0.5,c,m]}[hvlines]
+a rather long text & another text \\
+short & text
+\end{NiceTabular}
+
+\begin{NiceTabular}{X[m]X[r]X}[width=6cm]
+A & B & C
+\end{NiceTabular}
+\end{document}

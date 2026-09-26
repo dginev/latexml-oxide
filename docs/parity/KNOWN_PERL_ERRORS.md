@@ -7081,6 +7081,22 @@ picture_length_default_units,floatingtable_table_argument}.tex`; guards `braced_
 
 The same Perl bindings declare package dimens as counts: lineno.sty.ltxml:46 and :64 (`\linenumbersep`, `\quotelinenumbersep`, `\newdimen` at lineno.sty:1549 and :2852) and floatflt/floatfig.sty.ltxml (`\htdone`, floatflt.sty:35), so `\the\linenumbersep` prints `0` (pdflatex `10.0pt`) and `\setlength{\linenumbersep}{2.5pt}` assigns 2, whose `.5pt` Perl drops and Rust (56jr) would print. Rust declares them `Dimension` with the package initial values (guard `braced_quantity_tail::package_registers_are_dimens`; witness 2605.07149).
 
+Some Perl readers take less of an argument than TeX. The rest is dropped silently, so the loss
+does not show:
+- multido.sty.ltxml:71 starts a Number variable at `readFloat->revert`, so `\multido{\n=1+1}{3}{\n}`
+  gives `1.0, 2, 3` (pdflatex `1, 2, 3`: multido.tex:193-197 `\edef#3{#1}`).
+- Its `\fpAdd` sums two Floats (:112-119), so `2.00+-3.05` steps to `-4.1` (pdflatex `-4.10`, in
+  the step's decimals, :215-283).
+- pstricks_support.sty.ltxml:198-215 `ReadPSAngle` reads no coordinate angle and no PostScript
+  angle, so `\psarc(0,0){1}{(1,1)}{(0,1)}` has angles 0 (pdflatex 45 and 90, pstricks.tex:990-999).
+- graphics.sty.ltxml:26-36 `GraphixDimension` is a plain `readDimension`, so with calc
+  `\resizebox{\width}{\ht\x+\dp\x}{…}` scales to the height alone (graphics.sty:555-568 reads
+  it with `\setlength`).
+
+Rust (batch 56ju): OXIDIZED_DESIGN_DIVERGENCES #317, "Readers that took less than TeX". Repros
+`expansion-primitives/{multido_number_variable_as_written,pstricks_angle_argument_read_whole,
+calc_resizebox_length_expression}.tex`.
+
 ## 276. glossaries: an entry added by `\glsadd`/`\glsaddall`, or any entry of a glossaries-extra document, is never listed (FIXED in Rust)
 
 makeindex lists every entry written to the glossary file. `\glsadd` (glossaries.sty:5280-5292)

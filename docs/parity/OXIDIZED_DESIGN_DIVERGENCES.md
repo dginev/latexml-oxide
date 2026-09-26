@@ -9825,12 +9825,72 @@ argument's rest from `take_rest_of_mouth` (the forced close drops it); `DefaultU
 spec does) takes the rest of the CURRENT mouth only inside a braced read (`in_braced_read`, a depth
 count, not the mouth's identity).
 
-**Guards**: `braced_quantity_tail::*` (16), `pstricks_drawing::hexgame_board_converts` (3 warnings);
+**Readers that took less than TeX** (batch 56ju, worker W18b). The TL-manual A/B of 56jq against
+56jr (341 manuals) found seven manuals with new errors and four with new warnings. In each, a
+binding read less than TeX, and the rest it left was now either handed back as text or reported by
+calc. Counts are 56jt → 56ju, the same dumps:
+- multido's Number variable (`\n=1+1`) started as `1.0`. Perl's `readFloat->revert` gives that
+  (multido.sty.ltxml:71), and calc's `\yunitlength*\real{…}*\n` then reported the `.0`
+  (bardiag.sty:667). It now starts as its text, as multido.tex:193-198 does (`\edef#3{#1}`), and
+  `\fpAdd`/`\fpSub` port `\FPadd@` (:217-282) literally, so `2.00+-3.05` steps to `-1.05`,
+  `-4.10`, as pdflatex prints them (Perl: `-4.1`); spaces count for nothing. This also fixed
+  pst-eucl-docBG's 5 "Expected a relational token … Got `.`" errors. Manuals bardiag 10 → 0
+  errors and bardiag2 4 → 0; `expansion/testmultido` reblessed to pdflatex's text.
+- nicematrix parses its own preamble. Its `X[<keys>]` (nicematrix.sty:2788-2826) is now `X` after
+  the `>{\centering\arraybackslash}` (or `\raggedright`/`\raggedleft`) its `c`/`l`/`r` key gives.
+  Before, `X[c,m]` reached the template reader, whose `m` took `]` as its width (manuals
+  nicematrix and nicematrix-french, 5 → 0 errors and 43 → 27 warnings each).
+- tabularray: `\NewColumnType`/`\NewTblrColumnType` (and `…ColumnRowType`,
+  tabularray.sty:3291-3334) are recorded, and the colspec translation expands their uses with their
+  arguments. The translation also takes `|[<rule options>]`, `>`/`<` with their `[sep]`, and the
+  predefined `j`, `t`, `h`, `f` (:3172-3181, 3336-3346). Before, it bailed on these and the whole
+  inner spec became the template, where a `b` or `m` in the key text took a letter as its width
+  (non-decimal-units 15 → 4 errors; logoetalab-doc 2 → 0).
+- pstricks `\xdef`s an angle argument and reads it whole (pstricks.tex:790-802, 990-999
+  `\special@angle`, SpecialCoor): `(x,y)` is its vector's angle, while a node's `(A)` and
+  PostScript `! <code>` are unresolved, and the arc or wedge at such an angle is not drawn (as for
+  an unresolved coordinate); text after a number is `\pst@checknum`'s "Bad number", 0 substituted
+  (:534-563). A PostScript length `{! <code>}` takes its argument whole too (:1001-1004), is 0,
+  and is warned about. Perl's `ReadPSAngle` (pstricks_support.sty.ltxml:198-215) reads neither
+  form and draws from 0°. The rest came back as text, e.g. `(F)(A_1)` after pst-eucl's
+  `\pstMarkAngle` arc (pst-eucl.tex:528), whose `A_1` was a "Script _" error (pst-eucl-docBG 28
+  → 6 errors, with the multido item; its 16 "Missing argument PSAngle" were Perl's too).
+- graphics' `GraphixDimension` evaluates through calc when calc is loaded. graphics.sty:555-568
+  reads `\resizebox`'s lengths with `\setlength`, so perfectcut.sty:119
+  `\resizebox{\width}{\ht\cut@boxi+\dp\cut@boxi}` is one expression (perfectcut: 134 → 4
+  warnings).
+- The pdfcomment binding loads what pdfcomment.sty:25, 1332-1350 loads (etoolbox, refcount, ifthen,
+  calc, ifpdf, ifluatex). dataref-doc.tex:120 `\begin{minipage}{#1-2\fboxsep}` relies on its calc
+  (54 → 2 warnings). An audit of the 553 bindings with a TL original found five more whose package
+  loads calc and whose binding did not: diagbox (diagbox.sty:26), animate (animate.sty:23),
+  savetrees (savetrees.sty:194, under its default `lists=tight`), breqn (breqn.sty:56) and jmlr.cls
+  (:46). They now load it (`\linewidth-2cm` in a minipage is 288.1pt, not 345pt and a typeset
+  `-2cm`).
+- `\DeclareTextAccent` reads its slot inside `read_braced` and discards the rest: latex.ltx:9903-
+  9904 stores the argument in the command it defines, to be scanned at use (vntex pd1supp.def:5-6
+  `{\texthookabove}`; manual amsldoc-vi, 6 → 2 warnings).
+
+The other 331 manuals are unchanged (errors, warnings, recall).
+Not regressions:
+- latexsheet-esmx's `p{\linewidth-\the\MyLen}` has no calc (its `\usepackage{calc}` is commented
+  out), so the column's rest is dropped with the warning above.
+- arydshln-man's stub column tails, as 2605.19386.
+
+Open (shared with Perl or print layout): `\width`, `\height`, `\depth` and `\totalheight` are
+`0pt` (sect12.rs:184-187; Perl graphics.sty.ltxml:61 "Need to arrange for \width,… to be
+bound"), so perfectcut's `\resizebox{\width}{…}` delimiters have `xscale="0"`; tabularray's
+`cmd=` key is not applied (non-decimal-units' cells keep their raw `1.2.3`); nicematrix's `X[S]`
+(siunitx) key and its ragged2e forms (`\Centering`, nicematrix.sty:2403-2410) are not modelled.
+
+**Guards**: `braced_quantity_tail::*` (26), `pstricks_drawing::hexgame_board_converts` (3 warnings);
 repros `expansion-primitives/{braced_value_tail_after_assignment,braced_length_skip_keeps_stretch,
 braced_length_tail_box_commands,calc_braced_length_expression,calc_braced_length_invalid_tail,
 calc_error_redefined_picture_sty,picture_length_default_units,floatingtable_table_argument,
 braced_length_undefined_cs,calc_braced_length_undefined_cs,braced_length_tail_between_rows,
-setcounter_undefined_counter_value}.tex`.
+setcounter_undefined_counter_value,multido_number_variable_as_written,nicematrix_x_column_keys,
+tabularray_new_column_type,tabularray_rule_options_colspec,pstricks_angle_argument_read_whole,
+calc_resizebox_length_expression,pdfcomment_loads_calc_and_ifthen,
+declare_text_accent_slot_stays_stored}.tex`.
 
 ### 318. `\glossary` entries are index marks; a missing makeindex output is stood in for; MakeIndex builds every list; entries are read as makeindex reads them (Perl: `\glossary` dropped in text; "No file"; one list; default characters)
 

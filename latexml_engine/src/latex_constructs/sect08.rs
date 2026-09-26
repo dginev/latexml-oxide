@@ -359,10 +359,16 @@ pub(crate) fn load() -> Result<()> {
   // its encoding-specific slot, so the native accent path with its dotless-i
   // and typewriter rules stays in charge. Guard:
   // `perfect_kernel_batch54::declare_text_accent_defines_greek_diacritics`.
-  DefPrimitive!("\\DeclareTextAccent DefToken {}{Number}", sub[(cs, encoding, code)] {
+  // latex.ltx:9903-9904 keeps the slot argument in the command it defines
+  // (`\DeclareTextCommand#1{#2}{\add@accent{#3}}`), for `\accent` to scan at
+  // each use: its slot is read here only to find the combining mark, and
+  // nothing of it comes back as input (pd1supp.def:5-6 `{\texthookabove}`,
+  // `{\textdotbelow}`: amsldoc-vi, OXIDIZED_DESIGN #317).
+  DefPrimitive!("\\DeclareTextAccent DefToken {}{}", sub[(cs, encoding, code)] {
     if IsDefined!(&cs) {
       return Ok(vec![]);
     }
+    let (code, _stored_with_the_command) = read_braced(Tokens::new(code.revert()), read_number)?;
     let cs_str = cs.to_string();
     let encoding_str = Expand!(encoding).to_string();
     let ecs = T_CS!(s!("\\{encoding_str}{cs_str}"));
