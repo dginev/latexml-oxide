@@ -1,0 +1,25 @@
+% status: RED (56jy review side finding)
+% oracle: pdflatex (all four tables' cells centred or as specified, no padding at `@{..}`)
+% engines: perl first cell align="left" class="... ltx_nopad_l", third table's second
+%   cell ltx_nopad_l; rust align="right", no ltx_nopad_l on either (56jy)
+% expect: 0 errors; `{:c:c:}`'s first cell align="center"; `c@{\,}c`'s second cell ltx_nopad_l
+% A leading arydshln `:` makes the first `c` cell right-aligned (Perl: left, with
+% ltx_nopad_l), and the cell keeps the rule's U+2002 U+200A gap as leading text, which
+% doubles with the CSS padding. `@{\,}` pads neither neighbour here where Perl marks the
+% right one ltx_nopad_l (`r@{\quad}l` agrees). The `@{..}` material itself is dropped by
+% Rust and Perl alike.
+\documentclass{article}
+\usepackage{arydshln}
+\begin{document}
+\begin{tabular}{:c:c:}
+a & b\\
+\end{tabular}
+
+\begin{tabular}{c@{\,}c}
+a & b\\
+\end{tabular}
+
+\begin{tabular}{r@{\quad}l}
+a & b\\
+\end{tabular}
+\end{document}

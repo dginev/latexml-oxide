@@ -6421,12 +6421,14 @@ impl Document {
       match last_child.get_type() {
         Some(NodeType::TextNode) => {
           let content = last_child.get_content();
-          // Perl: s/\s+$// — but we can't trim all Unicode whitespace because some
-          // tests have significant thin spaces (U+2009) from DimensionToSpaces.
-          // Trim: ASCII whitespace, nbsp (U+00A0), em-space (U+2003), en-space (U+2002).
-          let trimmed_content = content.trim_end_matches(|c: char| {
-            c.is_ascii_whitespace() || c == '\u{00A0}' || c == '\u{2003}' || c == '\u{2002}'
-          });
+          // Perl: s/\s+$// (TeX_Paragraph.pool.ltxml:190), all Unicode
+          // whitespace: a U+2009 after text (babel french), the U+2002 U+200A
+          // a classed column rule leaves at a cell's end (arydshln `:`/`;`,
+          // repro kernel-alignment/cell_trim_unicode_space.tex). Like Perl's,
+          // the trim reaches only the last text node, and the two engines
+          // split text into nodes differently (SYNC_STATUS "A paragraph's
+          // trailing whitespace").
+          let trimmed_content = content.trim_end_matches(char::is_whitespace);
           if !content.is_empty() && (trimmed_content != content) {
             if trimmed_content.is_empty() {
               // Remove AND free the entirely-whitespace text node (see

@@ -1,11 +1,11 @@
-% status: RED (56jx)
+% status: RED (56jx) -> GREEN (56jy)
 % expect: 0
 % A cell before a classed column rule (arydshln's `:`, whose between-column material is
-% `\vrule\@ADDCLASS{ltx_border_r_dashed}`) keeps a trailing U+2002 U+200A: the Rust cell
-% trim (latexml_core/src/document.rs, ~:6428) strips ASCII spaces, U+00A0, U+2003 and
-% U+2002 only, so the U+200A that ends `\lx@text@intercol`'s gap stops it and the U+2002
-% before it stays. Perl trims all Unicode whitespace (TeX_Paragraph.pool.ltxml:190
-% `s/\s+$//`) and gives the cell "a".
+% `\vrule\@ADDCLASS{ltx_border_r_dashed}`) kept a trailing U+2002 U+200A: the Rust cell
+% trim stripped ASCII spaces, U+00A0, U+2003 and U+2002 only, so the U+200A that ends
+% `\lx@text@intercol`'s gap stopped it. The trim is now Perl's (TeX_Paragraph.pool.ltxml:190
+% `s/\s+$//`, all Unicode whitespace; document.rs trim_node_right_whitespace), and the cell
+% is "a". Guard regress_2605_clusters::arydshln_dash_spec_column_and_hdashline_option.
 % pdflatex: "a b" / "c d"; expected cell text "a", "c" with no trailing whitespace
 \documentclass{article}
 \usepackage{arydshln}
