@@ -9367,3 +9367,39 @@ fn xetex_persona_has_strcmp() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(&xml, "p", &[], "<p>[same][-1]</p>");
 }
+
+/// A tblr `*{<count>}{…}` whose count is not a literal is an integer
+/// expression, as tabularray evaluates it (tabularray.sty:3361
+/// `\prg_replicate:nn`): PixelArtTikz.sty:865's `*{\ListeCoulCaseslen}{Q[m,c]}`.
+/// Read only as a literal, the whole spec fell back to the kernel template,
+/// where "colspec"'s `p` took `e` as a width (calc: "`e' invalid",
+/// PixelArtTikz-doc-fr, sweep #126). The binding pads a spec with 16 columns
+/// continuing its last one, so only the `l` after `*{\n+1}{Q[r]}` (r r r l) and
+/// `*{1+1}{Q[r]}` (r r l) shows the count evaluated right.
+#[test]
+fn tblr_colspec_count_is_an_integer_expression() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_colspec_count_expression.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  latexml::util::test::assert_element(
+    &xml,
+    "tabular",
+    &["xml:id=\"p1.1\""],
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">a</td><td align="center" xml:id="p1.1.1.2">b</td></tr></tbody></tabular>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "tabular",
+    &["xml:id=\"p2.1\""],
+    r#"<tabular vattach="middle" xml:id="p2.1"><tbody><tr xml:id="p2.1.1"><td align="right" xml:id="p2.1.1.1">a</td><td align="right" xml:id="p2.1.1.2">b</td><td align="right" xml:id="p2.1.1.3">c</td><td align="left" xml:id="p2.1.1.4">d</td></tr></tbody></tabular>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "tabular",
+    &["xml:id=\"p3.1\""],
+    r#"<tabular vattach="middle" xml:id="p3.1"><tbody><tr xml:id="p3.1.1"><td align="right" xml:id="p3.1.1.1">a</td><td align="right" xml:id="p3.1.1.2">b</td><td align="left" xml:id="p3.1.1.3">c</td></tr></tbody></tabular>"#,
+  );
+}

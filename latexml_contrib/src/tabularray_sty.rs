@@ -372,13 +372,32 @@ fn skip_bracket_group(b: &[u8], i: &mut usize) -> Option<()> {
   Some(())
 }
 
-/// Parse a `{<digits>}` group at `*i`, advancing past it. Returns the integer.
+/// Parse a `{<count>}` group at `*i`, advancing past it. Returns the integer.
 fn parse_braced_uint(b: &[u8], spec: &str, i: &mut usize) -> Option<usize> {
   let g = parse_braced_group(b, spec, i)?;
-  g.trim()
-    .parse::<usize>()
+  let g = g.trim();
+  g.parse::<usize>()
     .ok()
+    .or_else(|| evaluate_count(g))
     .filter(|&n| n > 0 && n <= 1000)
+}
+
+/// A count that is not a literal is an integer expression, as tabularray
+/// evaluates it (tabularray.sty:3361 `\prg_replicate:nn` → `\int_eval:n`):
+/// PixelArtTikz.sty:865's `colspec={*{\ListeCoulCaseslen}{Q[m,c]}}`. Read as
+/// `\number\numexpr … \relax` in the current state (the colspec is translated
+/// while `\lx@tblr@env` expands); unread, the whole spec had fallen back to the
+/// kernel template and its `p` took `e` as a width (PixelArtTikz-doc-fr, sweep
+/// #126). Any count that is not a literal goes through the engine, `1+1` as
+/// well as `\n+1`. The expression is the spec's text, so a control word keeps
+/// no space after it (`\csname n\endcsname` reads `\csnamen`), as for the
+/// kernel template the spec falls back to; that fallback expands a bad count
+/// again, and its "Missing number" is reported a second time.
+fn evaluate_count(expr: &str) -> Option<usize> {
+  let tokens = mouth::tokenize_internal(TeXString::assembled(format!(
+    "\\number\\numexpr {expr}\\relax"
+  )));
+  do_expand(tokens).ok()?.to_string().trim().parse().ok()
 }
 
 /// Parse a brace-balanced `{…}` group at `*i`, advancing past it. Returns the

@@ -9847,7 +9847,9 @@ calc. Counts are 56jt → 56ju, the same dumps:
   arguments. The translation also takes `|[<rule options>]`, `>`/`<` with their `[sep]`, and the
   predefined `j`, `t`, `h`, `f` (:3172-3181, 3336-3346). Before, it bailed on these and the whole
   inner spec became the template, where a `b` or `m` in the key text took a letter as its width
-  (non-decimal-units 15 → 4 errors; logoetalab-doc 2 → 0).
+  (non-decimal-units 15 → 4 errors; logoetalab-doc 2 → 0). A `*{<count>}` that is not a literal is
+  evaluated as the integer expression tabularray makes of it (:3361, `\prg_replicate:nn`), `*{\n+1}`
+  and `*{1+1}` alike (batch 56ke; PixelArtTikz-doc-fr 2 → 0 errors).
 - pstricks `\xdef`s an angle argument and reads it whole (pstricks.tex:790-802, 990-999
   `\special@angle`, SpecialCoor): `(x,y)` is its vector's angle, while a node's `(A)` and
   PostScript `! <code>` are unresolved, and the arc or wedge at such an angle is not drawn (as for

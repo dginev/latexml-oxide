@@ -1,0 +1,28 @@
+% witness: pixelarttikz/PixelArtTikz-doc-fr (PixelArtTikz.sty:865 `colspec={*{\ListeCoulCaseslen}{Q[m,c]}}`)
+% oracle:  pdflatex 0 errors; one 2-column table (tabularray.sty:3361 evaluates the count as an integer expression)
+% engines: rust 56jr-56kd 1 error "`e' invalid at this point" + 26 warnings (25 "Unrecognized tabular template",
+%          1 "Missing number"); 56jq 0 errors + 26 warnings;
+%          Perl raw-loads tabularray: "No obvious problems"
+% expect:  0 errors, 0 warnings; the witness's two centred cells; `*{\n+1}{Q[r]}l` is r r r l and `*{1+1}{Q[r]}l`
+%          r r l (the binding pads each spec with 16 columns continuing the last one, so only an `l` after the
+%          repeat shows the count)
+% status:  RED (56jr) -> GREEN (56ke)
+% The tabularray binding translates the colspec as text and read `*{n}` only as a literal count, so the whole
+% spec fell back to the kernel template, where "colspec"'s `p` took `e` as its width (calc, since 56jr).
+\documentclass{article}
+\usepackage{calc}
+\usepackage{tabularray}
+\begin{document}
+\def\n{2}
+\begin{tblr}{hlines,vlines,colspec={*{\n}{Q[m,c]}}}
+a & b \\
+\end{tblr}
+
+\begin{tblr}{colspec={*{\n+1}{Q[r]}l}}
+a & b & c & d \\
+\end{tblr}
+
+\begin{tblr}{colspec={*{1+1}{Q[r]}l}}
+a & b & c \\
+\end{tblr}
+\end{document}
