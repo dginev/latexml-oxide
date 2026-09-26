@@ -5,8 +5,9 @@
 //! font prints it (LGR `\"i` → ϊ); a raw definitions file `\input` twice is read
 //! twice (tuenc-greek.def re-reads greek-fontenc.def for TU after lgrenc.def
 //! read it for LGR), and a re-declared text command is wrapped for its
-//! composites again. Expected output is the intended engine's (lualatex for the
-//! TU docs, pdflatex for LGR).
+//! composites again; under babel a `\fontencoding` moves `\cf@encoding`, so text
+//! commands dispatch on the encoding in force. Expected output is the intended
+//! engine's (lualatex for the TU docs, pdflatex for LGR).
 //! Witnesses: greek-fontenc test-tuenc-greek, hyperref-with-greek,
 //! char-list-alphabeta, alphabeta-doc, test-lgrenc, char-list; teubner-doc;
 //! arXiv 2605.01889.
@@ -39,6 +40,10 @@ const UNICODE_DEFAULT: &str = include_str!(
 
 const REWRAP: &str = include_str!(
   "../../../tools/perfect_kernel/repros/unicode-catcodes/text_composite_rewrap_after_redeclare.tex"
+);
+
+const BABEL_CF_ENCODING: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/unicode-catcodes/babel_cf_encoding_follows_fontencoding.tex"
 );
 
 /// LGR slots decode to the CB fonts' glyphs (CB.enc, lgrenc.def): `U` Υ, `j`
@@ -338,4 +343,38 @@ fn empty_argument_takes_the_empty_composite() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(&xml, "p", &[], "<p>[\u{1fc1}] [~] [^] [a~b]</p>");
+}
+
+/// latex.ltx:10502-10516 `\@@enc@update`: a `\fontencoding` that changes the
+/// encoding moves `\cf@encoding`, on which every text command dispatches. babel's
+/// language switch makes `\cf@encoding` concrete (T1 once english is selected);
+/// ours never moved it, so under `[LGR,T1]{fontenc}` + `[greek,english]{babel}`
+/// UTF-8 Greek (`\ensuregreek{\accpsili\textepsilon}`, lgrenc.dfu:220),
+/// `\textgreek` and `{\fontencoding{LGR}\selectfont …}` reached `\T1\accpsili`
+/// and `\T1\textepsilon`, undefined, and printed nothing. pdflatex's text: breathings
+/// ἐἑ, acute and grave άὰ, perispomeni ῶ, iota subscript ᾳ ᾀ ᾷ ᾧ, dialytika ϊΰ,
+/// the capital's psili as the spacing ᾿ before Α, a capital with the iota ᾼ ῌ ῟ῼ —
+/// the iota forms are the CB fonts' ligatures of a vowel slot and `|`
+/// (grmn1000.tfm; ἀͺ ᾶͺ Αͺ before, with or without babel); ά and ΰ come out as
+/// the LGR slots' U+1F71/U+1FE3, canonically pdflatex's U+03AC/U+03B0. Inside the group
+/// `\cf@encoding` names LGR (printed in LGR, ΛΓΡ); after it babel's concrete T1 is
+/// back and `\ifx`-equal to `\bbl@t@one`. Witness: greek-fontenc
+/// hyperref-with-greek (Perl drops the same letters, KNOWN_PERL_ERRORS #290).
+#[test]
+fn babel_keeps_text_commands_in_the_selected_encoding() {
+  let (stderr, xml) = convert(BABEL_CF_ENCODING, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let expected = [
+    concat!(
+      "<para xml:id=\"p1\"><p>A \u{1f10}\u{1f11} \u{1f71}\u{1f70} \u{1ff6} \u{1fb3} \u{1f80} \u{1fb7} ",
+      "\u{1fa7} \u{3ca}\u{1fe3} \u{1fbf}\u{391} \u{1fbc} \u{1fcc} \u{1fdf}\u{1ffc} B</p></para>"
+    ),
+    "<para xml:id=\"p2\"><p>[\u{1f10}] [\u{1f71}]\n[\u{1f41}] B</p></para>",
+    "<para xml:id=\"p3\"><p>[\u{39b}\u{393}\u{3a1}][T1]</p></para>",
+  ];
+  for (n, want) in expected.iter().enumerate() {
+    let id = format!(r#"xml:id="p{}""#, n + 1);
+    assert_element(&xml, "para", &[&id], want);
+  }
 }

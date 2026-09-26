@@ -96,6 +96,71 @@ LoadDefinitions!({
     '\u{1FB3}', '\u{1FC3}', '\u{1FF3}', '\u{1FE5}', '\u{1FE4}', None,       '\u{0374}', '\u{0375}'
   ]);
 
+  // The CB fonts' iota ligatures (grmn1000.tfm LIGTABLE: a vowel slot followed
+  // by `|`, O 174, is its iota-subscript slot — `(LABEL O 202) (LIG O 174 O
+  // 206)`, ἀ → ᾀ; the capitals `(LABEL C A) (LIG O 174 O 11)`, Α → ᾼ). The
+  // accent table below composes only the separate marks (`>a|`), and a kernel
+  // accent's declared composite prints the precomposed vowel itself
+  // (`\accpsili\textalpha` is slot 130 ἀ, lgrenc.def:615), so UTF-8 ᾀ
+  // (lgrenc.dfu `\ensuregreek{\accpsili\textalpha\ypogegrammeni}`) came out ἀͺ
+  // and ῼ Ωͺ where pdflatex prints ᾀ and ῼ (greek-fontenc hyperref-with-greek,
+  // char-list). Perl has no composites and no such ligatures (KNOWN_PERL_ERRORS
+  // #290, OXIDIZED_DESIGN_DIVERGENCES #312). α η ω are in the table below. One
+  // pass for the 36 vowels, defined first, so it applies after every accent
+  // ligature has composed its vowel.
+  const IOTA_FORMS: [(char, char); 36] = [
+    ('\u{0391}', '\u{1FBC}'),
+    ('\u{0397}', '\u{1FCC}'),
+    ('\u{03A9}', '\u{1FFC}'),
+    ('\u{1F70}', '\u{1FB2}'),
+    ('\u{1F01}', '\u{1F81}'),
+    ('\u{1F00}', '\u{1F80}'),
+    ('\u{1F03}', '\u{1F83}'),
+    ('\u{1F71}', '\u{1FB4}'),
+    ('\u{1F05}', '\u{1F85}'),
+    ('\u{1F04}', '\u{1F84}'),
+    ('\u{1F02}', '\u{1F82}'),
+    ('\u{1FB6}', '\u{1FB7}'),
+    ('\u{1F07}', '\u{1F87}'),
+    ('\u{1F06}', '\u{1F86}'),
+    ('\u{1F74}', '\u{1FC2}'),
+    ('\u{1F21}', '\u{1F91}'),
+    ('\u{1F20}', '\u{1F90}'),
+    ('\u{1F75}', '\u{1FC4}'),
+    ('\u{1F25}', '\u{1F95}'),
+    ('\u{1F24}', '\u{1F94}'),
+    ('\u{1F23}', '\u{1F93}'),
+    ('\u{1FC6}', '\u{1FC7}'),
+    ('\u{1F27}', '\u{1F97}'),
+    ('\u{1F26}', '\u{1F96}'),
+    ('\u{1F22}', '\u{1F92}'),
+    ('\u{1F7C}', '\u{1FF2}'),
+    ('\u{1F61}', '\u{1FA1}'),
+    ('\u{1F60}', '\u{1FA0}'),
+    ('\u{1F63}', '\u{1FA3}'),
+    ('\u{1F7D}', '\u{1FF4}'),
+    ('\u{1F65}', '\u{1FA5}'),
+    ('\u{1F64}', '\u{1FA4}'),
+    ('\u{1F62}', '\u{1FA2}'),
+    ('\u{1FF6}', '\u{1FF7}'),
+    ('\u{1F67}', '\u{1FA7}'),
+    ('\u{1F66}', '\u{1FA6}'),
+  ];
+  let vowels: String = IOTA_FORMS.iter().map(|(vowel, _)| *vowel).collect();
+  DefLigature!(
+    &format!("([{vowels}])\u{037A}"),
+    |caps: &regex::Captures| {
+      let vowel = caps[1].chars().next();
+      IOTA_FORMS
+        .iter()
+        .find(|(form_of, _)| Some(*form_of) == vowel)
+        .map_or_else(
+          || caps[0].to_string(),
+          |(_, with_iota)| with_iota.to_string(),
+        )
+    }
+  );
+
   // Greek polytonic accent ligatures.
   // These map sequences of LGR-encoded characters (accents + base letters) to precomposed forms.
   // Generated from the Perl ligature computation in lgr.fontmap.ltxml, over the

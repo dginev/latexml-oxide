@@ -252,8 +252,9 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@fontencoding{}", sub[(encoding)] {
     let encoding = Expand!(encoding).to_string();
-    if load_font_map(&encoding).is_some() {
-      MergeFont!(encoding => encoding);
+    let merged = if load_font_map(&encoding).is_some() {
+      MergeFont!(encoding => encoding.clone());
+      encoding
     } else {
       // Report once per encoding, not once per switch. Perl has no Info
       // here at all (TeX_Fonts.pool.ltxml L169-176); its equivalent
@@ -269,6 +270,32 @@ LoadDefinitions!({
       }
       // Default to OT1 encoding if no map found
       MergeFont!(encoding => "OT1");
+      String::from("OT1")
+    };
+    // latex.ltx:10490-10516: a `\fontencoding` that changes the encoding arms
+    // `\@@enc@update`, which the next `\selectfont` runs. Here the switch is
+    // complete at once (the font is merged above; `\selectfont` never reads
+    // `\f@encoding`), so the step of it that concerns us runs now, its last line
+    // `\let\cf@encoding\f@encoding` (:10515), when `\cf@encoding` does not name
+    // the encoding just merged (:10495 `\ifx\cf@encoding\f@encoding`); the
+    // `-cmd` rebinds and `\T@<enc>`/`\D@<enc>` never ran here. The kernel's own
+    // `\cf@encoding` reads the font and always matches; a concrete one — babel's
+    // language switch (babel_support_sty.rs, Perl babel_support.sty.ltxml:151)
+    // — did not move, so after `\usepackage[english]{babel}` every text command
+    // inside `\ensuregreek`, `\textgreek` or `{\fontencoding{LGR}\selectfont …}`
+    // dispatched to T1: `\T1\accpsili` and `\T1\textepsilon` are undefined, the
+    // `?` defaults too, and the letters vanished (UTF-8 ἐ is
+    // `\ensuregreek{\accpsili\textepsilon}`, lgrenc.dfu:220). After the `\let`
+    // `\cf@encoding` is the live macro again: right through the merges that
+    // bypass this primitive (fontenc, Semiverbatim's ASCII), but not
+    // `\ifx`-equal to a name (babel.sty:1694 `\allowhyphens`) until the next
+    // language switch makes it concrete again. Perl shares the loss
+    // (KNOWN_PERL_ERRORS #290). Witness: greek-fontenc hyperref-with-greek.
+    // Guard: `greek_text::babel_keeps_text_commands_in_the_selected_encoding`.
+    let cf_encoding = T_CS!("\\cf@encoding");
+    let f_encoding = T_CS!("\\f@encoding");
+    if lookup_definition(&f_encoding)?.is_some() && Expand!(cf_encoding).to_string() != merged {
+      Let!(cf_encoding, f_encoding);
     }
     Ok(Vec::new())
   });

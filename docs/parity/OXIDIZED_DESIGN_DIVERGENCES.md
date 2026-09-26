@@ -9525,11 +9525,12 @@ recall unchanged. Guards: `package_leads_56::*` (4), `nomencl_nomentbl`.
 Measured (worker W11): 176 manuals (68 Greek, 8 babel-greek, 100 random) and 60 arXiv papers:
 errors, fatals and warnings unchanged; 8 recall gains, 0 losses (test-athnum 78.4 → 100, usage
 95.7 → 98.9, teubner-doc 96.8 → 98.4, hyperref-with-greek 92.4 → 93.7). Residuals: LGR `\~a` →
-α̃ (pdflatex ᾶ; LGR's own `\~`, lgrenc.def:484-487), final sigma (KPE #148), ἀͺ → ᾀ, a
+α̃ (pdflatex ᾶ; LGR's own `\~`, lgrenc.def:484-487), final sigma (KPE #148), a
 `\textgreek{t'eqnh}` ligature (apprends-latex), babel language tags under the luatex profile
-(luababel.def; red repro `babel-lang/luababel_language_tag_luatex.tex`).
+(luababel.def; red repro `babel-lang/luababel_language_tag_luatex.tex`). ἀͺ → ᾀ is
+the CB fonts' iota ligature since batch 56jv (KNOWN_PERL_ERRORS #290).
 
-**Guards**: `greek_text::*` (9), `perfect_kernel_batch54` (θ as pdflatex).
+**Guards**: `greek_text::*` (10), `perfect_kernel_batch54` (θ as pdflatex).
 
 ### 313. A primitive's token read crosses a file end; a token-list assignment takes an implicit brace; `\message` and `\mark` read their text as `scan_toks`; a definition's name that is no control sequence is "Missing control sequence inserted" (Perl: Fatal or "Missing argument"; a `{}` argument; any token defined)
 

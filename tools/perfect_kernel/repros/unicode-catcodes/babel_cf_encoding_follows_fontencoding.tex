@@ -1,0 +1,35 @@
+% Under babel, a text command dispatches on the encoding a `\fontencoding` selected.
+% babel's language switch (babel_support_sty.rs, Perl babel_support.sty.ltxml:151)
+% makes `\cf@encoding` a concrete macro, T1 once english is selected at
+% \begin{document}; our `\fontencoding` never moved it (latex.ltx:10502-10516
+% `\@@enc@update`: `\let\cf@encoding\f@encoding`). UTF-8 ἐ is
+% `\ensuregreek{\accpsili\textepsilon}` (lgrenc.dfu:220): the switch to LGR happened,
+% but `\accpsili` and `\textepsilon` dispatched to `\T1\…` and `\?\…`, both
+% undefined, and the letters vanished. Without babel the kernel's `\cf@encoding`
+% reads the font and all of this was right. Second, the CB fonts' ligature of a
+% vowel slot with the iota `|` (grmn1000.tfm `(LABEL O 202) (LIG O 174 O 206)`, ἀ → ᾀ;
+% `(LABEL C A) (LIG O 174 O 11)`, Α → ᾼ): ᾀ ᾷ ᾧ ᾼ ῌ ᾯ were ἀͺ ᾶͺ ὧͺ Αͺ Ηͺ ῟Ωͺ even then.
+% witness: greek-fontenc hyperref-with-greek (recall 88.2 under the pdftex persona),
+%          char-list, char-list-alphabeta, textalpha-doc, alphabeta-doc, test-lgrenc,
+%          teubner-doc
+% oracle:  pdflatex 0 errors: A ἐἑ άὰ ῶ ᾳ ᾀ ᾷ ᾧ ϊΰ ᾿Α ᾼ ῌ ῟ῼ B / [ἐ] [ά] [ὁ] B / [ΛΓΡ][T1] (the
+%          encoding's name in LGR; after the group babel's concrete T1 is back)
+% engines: rust (56js) = A B / [] [][] B / [Τ1][T1]; perl = A Β / [] [] [] Β (shares it,
+%          KNOWN_PERL_ERRORS #290)
+% expect:  0 errors, 0 warnings; the pdflatex text (ά ΰ as U+1F71 U+1FE3, the
+%          canonical equivalents of pdflatex's U+03AC U+03B0: the LGR fontmap's slots)
+% guard:   greek_text::babel_keeps_text_commands_in_the_selected_encoding
+% status:  RED (56jv) -> GREEN (56jv)
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[greek,english]{babel}
+\begin{document}
+A ἐἑ άὰ ῶ ᾳ ᾀ ᾷ ᾧ ϊΰ Ἀ ᾼ ῌ ᾯ B
+
+[\textgreek{\accpsili\textepsilon}] [{\fontencoding{LGR}\selectfont\acctonos\textalpha}]
+[\ensuregreek{\accdasia\textomicron}] B
+
+\makeatletter
+{\fontencoding{LGR}\selectfont[\cf@encoding]}\ifx\cf@encoding\bbl@t@one[T1]\else[no]\fi
+\makeatother
+\end{document}

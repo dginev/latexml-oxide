@@ -7274,3 +7274,40 @@ entry as makeindex reads the written line (OXIDIZED_DESIGN_DIVERGENCES #318). Re
 `index/doc_index_entry_writers.tex`; guards `doc_changes_index::{index_verb_reads_makeindex_quotes,
 index_string_verb_is_the_command, doc_index_entries_read_their_macros,
 index_entries_follow_their_writers}`.
+
+## 290. Under babel, a `\fontencoding` switch leaves text commands in the language's encoding (FIXED in Rust)
+
+babel_support.sty.ltxml:151 (upstream PR #2233) defines `\cf@encoding` as the expansion of
+`\f@encoding` at every language switch, so `\ifx\cf@encoding\bbl@t@one` (babel.sty:3925) sees
+concrete tokens. Nothing moves it afterwards: LaTeX's `\selectfont` does, through `\@@enc@update`
+(latex.ltx:10502-10516, `\let\cf@encoding\f@encoding`), but Perl's `\fontencoding`
+(`\lx@fontencoding`, TeX_Fonts.pool.ltxml:169-176) only merges the font. Once babel has selected
+english at `\begin{document}`, `\cf@encoding` stays T1 for the whole body, and every text command
+dispatches there, whatever `\fontencoding` selected. UTF-8 Greek under inputenc is
+`\ensuregreek{\accpsili\textepsilon}` (lgrenc.dfu:220): `\greekscript` switches to LGR, then
+`\T1\accpsili` and `\T1\textepsilon` are undefined, and so are the `\?\…` defaults, and the letter
+prints nothing. `\textgreek{…}` and `{\fontencoding{LGR}\selectfont\acctonos\textalpha}` lose
+theirs the same way. Trigger:
+
+```latex
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[greek,english]{babel}
+\begin{document}
+A ἐἑ άέ B
+\end{document}
+```
+
+Perl 0.8.8: "A   Β" and `Warning:unexpected:\end{document}` (open groups). pdflatex: "A ἐἑ άέ B".
+Without babel the kernel's `\cf@encoding` reads the font and both engines are right. Rust (batch
+56jv): `\lx@fontencoding` ends with `\@@enc@update`'s `\let\cf@encoding\f@encoding` when
+`\cf@encoding` does not name the encoding just merged (latex.ltx:10495). babel's concrete value
+stays until the next switch and comes back at the group's end; after the `\let` `\cf@encoding` is
+the live macro, so `\ifx\cf@encoding\bbl@t@one` (babel.sty:1694 `\allowhyphens`) is false after
+an ungrouped switch until the next language switch. Perl's lgr.fontmap.ltxml ligatures also
+lack the CB fonts' capital with the iota (grmn1000.tfm `(LABEL C A) (LIG O 174 O 11)`, H → O 12,
+W → O 13): UTF-8 ᾼ ᾯ print Αͺ ῟Ωͺ where pdflatex prints ᾼ ῟ῼ. Rust takes all of the font's iota
+ligatures (lgr_fontmap.rs), which also compose the precomposed vowel a declared composite prints
+(`\accpsili\textalpha` + `\ypogegrammeni` → ᾀ, not ἀͺ). Witness: greek-fontenc
+hyperref-with-greek. Repro `unicode-catcodes/babel_cf_encoding_follows_fontencoding.tex`; guard
+`greek_text::babel_keeps_text_commands_in_the_selected_encoding`.
