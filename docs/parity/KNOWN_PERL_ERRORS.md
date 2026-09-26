@@ -7466,3 +7466,15 @@ biblatex_inreference_keeps_its_editor_label_and_edition, bst_incollection_prints
 repros `tools/perfect_kernel/repros/index-bib/biblatex_{type_aliases,alias_declarations,article_editor,
 inreference_editor_label}.tex`, `bib_host_edition.tex`.
 
+## 295. `\@makeschapterhead` is undefined under book and report (FIXED in Rust)
+
+book.cls:396 and report.cls:369 define `\@makeschapterhead{title}`, the unnumbered chapter head that
+classes and packages call for their own starred heads (thesis classes' renewed `theindex`, toc/lof
+renewals, apacite, sectsty; 110 files in TeX Live). Perl's book/report bindings do not define it, so a
+direct call is "undefined". Trigger: `\documentclass{book}` … `\makeatletter\@makeschapterhead{Index}`.
+Rust (batch 56kd): book_cls.rs and report_cls.rs define it as `\@schapter`'s dispatch
+(`\@startsection{chapter}{0}{}{}{}{}*{#1}`); article keeps none (texilikechaps.sty:89 tests
+`\@ifundefined{@makeschapterhead}`). Guard `doc_changes_index::renewed_theindex_opens_an_unnumbered_chapter`;
+repro `tools/perfect_kernel/repros/sectioning-frontmatter/makeschapterhead_renewed_theindex.tex`
+(ryethesis/ryesample).
+

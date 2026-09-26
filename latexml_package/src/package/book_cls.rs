@@ -112,6 +112,17 @@ LoadDefinitions!({
   DefMacro!("\\thesubparagraph", "\\theparagraph.\\arabic{subparagraph}");
 
   def_macro_noop("\\chaptermark{}")?;
+  // `\@makeschapterhead{title}` typesets an unnumbered chapter head (book.cls:396-405);
+  // classes and packages call it directly for their own starred heads — a
+  // renewed `theindex` (ryethesis.cls:481-490 `\begin{multicols}{2}[\@makeschapterhead
+  // {\indexname}…]`), toc/lof renewals, apacite, sectsty. It is `\@schapter`'s
+  // dispatch (latex_constructs_rust_only.rs), as the class's `\@schapter` is this
+  // head plus `\@afterheading`; article.cls has none (texilikechaps.sty:89 tests
+  // `\@ifundefined{@makeschapterhead}` to detect a chapter class).
+  DefMacro!(
+    "\\@makeschapterhead{}",
+    "\\@startsection{chapter}{0}{}{}{}{}*{#1}"
+  );
 
   NewCounter!("equation",       "chapter",  idprefix => "E");
   NewCounter!("@equationgroup", "document", idprefix => "EG", idwithin => "section");

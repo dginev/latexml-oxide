@@ -432,3 +432,25 @@ fn index_marks_stay_out_of_stored_titles_and_captions() {
     r##"<span class="ltx_text ltx_font_bold">See (<a href="#S1.Ex1" title="In 1 Title" class="ltx_ref"><span class="ltx_text ltx_ref_tag">A</span></a>).</span>"##,
   );
 }
+
+/// `\@makeschapterhead` (book.cls:396, report.cls:369) is the unnumbered
+/// chapter head classes call for their own starred heads: ryethesis's renewed
+/// `theindex` opens with it, so once the makeindex stand-in ran the class's
+/// environment (56js) the index raised "undefined \@makeschapterhead". It is
+/// `\@schapter`'s dispatch: an unnumbered chapter "Index" holding the index.
+#[test]
+fn renewed_theindex_opens_an_unnumbered_chapter() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/makeschapterhead_renewed_theindex.tex"
+  );
+  let (stderr, xml) =
+    super::perfect_kernel_batch46::convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "chapter",
+    &[r#"xml:id="Chx1""#],
+    r#"<chapter xml:id="Chx1"><title>Index</title><pagination role="newpage"/><index lists="idx" xml:id="idx"/></chapter>"#,
+  );
+}

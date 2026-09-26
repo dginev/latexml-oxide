@@ -1,0 +1,19 @@
+% witness: ryethesis/ryesample (ryethesis.cls:476-490: \printindex = \@input@{\jobname.ind}; its theindex
+%   opens \begin{multicols}{2}[\@makeschapterhead{\indexname}...]); 110 TL files call \@makeschapterhead
+% oracle:  pdflatex 0 errors; pass 2 prints an "Index" chapter
+% engines: rust 56js-56kc 1 error `Error:undefined:\@makeschapterhead` (the makeindex stand-in now runs
+%          the class's theindex); Perl never runs theindex here (4 other errors); a direct call errors in both
+% expect:  0 errors; an unnumbered chapter "Index" holding the index
+% status:  RED (56js) -> GREEN (56kd)
+% book.cls:396 / report.cls:369 define \@makeschapterhead (an unnumbered chapter head); neither binding did.
+\documentclass{book}
+\makeatletter
+\makeindex
+\renewenvironment{theindex}{\@makeschapterhead{\indexname}\parindent\z@\let\item\@idxitem}{\clearpage}
+\providecommand\printindex{\@input@{\jobname.ind}}
+\makeatother
+\begin{document}
+\chapter{One}
+Text\index{alpha}.
+\printindex
+\end{document}
